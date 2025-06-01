@@ -409,6 +409,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/RepairDockUpdate.h
     Include/GameLogic/Module/ReplaceObjectUpgrade.h
     Include/GameLogic/Module/RiderChangeContain.h
+    Include/GameLogic/Module/RiftSlowDeathUpdate.h
     Include/GameLogic/Module/SabotageCommandCenterCrateCollide.h
     Include/GameLogic/Module/SabotageFakeBuildingCrateCollide.h
     Include/GameLogic/Module/SabotageInternetCenterCrateCollide.h
@@ -1037,6 +1038,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Update/RadarUpdate.cpp
     Source/GameLogic/Object/Update/RadiusDecalUpdate.cpp
     Source/GameLogic/Object/Update/RadiusDecalBehavior.cpp
+    Source/GameLogic/Object/Update/RiftSlowDeathUpdate.cpp
     Source/GameLogic/Object/Update/ScatterShotUpdate.cpp
     Source/GameLogic/Object/Update/SlavedUpdate.cpp
     Source/GameLogic/Object/Update/SmartBombTargetHomingUpdate.cpp

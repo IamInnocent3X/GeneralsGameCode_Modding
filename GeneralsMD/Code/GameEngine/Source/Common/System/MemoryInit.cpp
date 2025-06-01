@@ -722,6 +722,7 @@ static PoolSizeRec sizes[] =
 	{ "ThumbnailManagerClass", 32, 32},
 	{ "SmudgeSet", 32, 32},
 	{ "Smudge", 128, 32},
+	{ "RiftSlowDeathBehavior", 8, 8 },
 	{ 0, 0, 0 }
 };
 

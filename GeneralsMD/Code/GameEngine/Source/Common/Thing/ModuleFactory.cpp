@@ -285,6 +285,8 @@
 #include "GameClient/Module/SwayClientUpdate.h"
 #include "GameClient/Module/BeaconClientUpdate.h"
 
+#include "GameLogic/Module/RiftSlowDeathUpdate.h"
+
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 ModuleFactory *TheModuleFactory = NULL;  ///< the module factory singleton
 
@@ -342,6 +344,7 @@ void ModuleFactory::init( void )
 	addModule( SlowDeathBehavior );
 	addModule( HelicopterSlowDeathBehavior );
 	addModule( NeutronMissileSlowDeathBehavior );
+	addModule( RiftSlowDeathBehavior );
 	addModule( CaveContain );
 	addModule( OpenContain );
 	addModule( OverchargeBehavior );
