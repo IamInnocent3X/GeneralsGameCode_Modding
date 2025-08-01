@@ -87,7 +87,7 @@ PoisonedBehavior::~PoisonedBehavior( void )
 void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 {
 	// @bugfix hanfield 01/08/2025 Check m_sourceID to see if we are causing damage. If we are - ignore.
-	if( damageInfo->in.m_damageType == DAMAGE_POISON && 
+	if( ( damageInfo->in.m_damageType == DAMAGE_POISON || damageInfo->in.m_isPoison == TRUE ) &&
 		damageInfo->in.m_sourceID != INVALID_ID) 
 		startPoisonedEffects( damageInfo );      
 }
