@@ -47,7 +47,6 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 {
 	m_poisonDamageIntervalData = 0; // How often I retake poison damage dealt me
 	m_poisonDurationData = 0;				// And how long after the last poison dose I am poisoned
-	m_poisonIsNotAbsoluteKill = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -58,7 +57,6 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 	{
 		{ "PoisonDamageInterval", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDamageIntervalData) },
 		{ "PoisonDuration", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDurationData) },
-		{ "IsNotAbsoluteKill", INI::parseBool, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonIsNotAbsoluteKill) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -88,7 +86,8 @@ PoisonedBehavior::~PoisonedBehavior( void )
 //-------------------------------------------------------------------------------------------------
 void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 {
-	if( damageInfo->in.m_damageType == DAMAGE_POISON || damageInfo->in.m_isPoison == TRUE )
+	// @bugfix hanfield 01/08/2025 Check m_sourceID to see if we are causing damage. If we are - ignore.
+	if( ( damageInfo->in.m_damageType == DAMAGE_POISON || damageInfo->in.m_isPoison == TRUE ) && damageInfo->in.m_sourceID != INVALID_ID) 
 		startPoisonedEffects( damageInfo );
 }
 
@@ -121,10 +120,9 @@ UpdateSleepTime PoisonedBehavior::update()
 		DamageInfo damage;
 		damage.in.m_amount = m_poisonDamageAmount;
 		damage.in.m_sourceID = INVALID_ID;
-		damage.in.m_damageType = DAMAGE_UNRESISTABLE; // Not poison, as that will infect us again
-		damage.in.m_damageFXOverride = DAMAGE_POISON; // but this will ensure that the right effect is played
+		damage.in.m_damageType = DAMAGE_POISON; // @bugfix hanfield 01/08/2025 Since we now check for sourceID, this damage will not cause an infinite poison loop
+		damage.in.m_damageFXOverride = DAMAGE_POISON; // Not necessary anymore, but can help to make sure proper FX are used, if template is wonky
 		damage.in.m_deathType = m_deathType;
-		if(d->m_poisonIsNotAbsoluteKill) damage.in.m_notAbsoluteKill = TRUE;
 		getObject()->attemptDamage( &damage );
 
 		m_poisonDamageFrame = now + d->m_poisonDamageIntervalData;
