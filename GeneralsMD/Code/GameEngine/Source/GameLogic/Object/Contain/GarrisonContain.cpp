@@ -868,7 +868,16 @@ void GarrisonContain::updateEffects( void )
 				if( effect )
 				{
 					const Weapon *passengerWeapon = obj->getCurrentWeapon();
-					if( passengerWeapon && passengerWeapon->getDamageType() != DAMAGE_POISON )// No muzzle flash with poison weapon
+					Bool passable;
+					if( passengerWeapon )
+					{
+						passable = TRUE;
+						// No muzzle flash with poison weapon, unless customized.
+						if(!passengerWeapon->getPoisonMuzzleFlashesGarrison() && (passengerWeapon->getDamageType() == DAMAGE_POISON || passengerWeapon->getIsPoison()))
+							passable = FALSE;
+					}
+					// No muzzle flash with poison weapon, unless customized.
+					if( passable )
 					{
 						// set the model condition
 						effect->setModelConditionState( MODELCONDITION_FIRING_A );

@@ -261,6 +261,24 @@ void StickyBombUpdate::detonate()
 			damageInfo.in.m_sourceID = getObject()->getID();
 			damageInfo.in.m_sourcePlayerMask = getObject()->getControllingPlayer()->getPlayerMask();
 			damageInfo.in.m_damageStatusType = data->m_geometryBasedDamageWeaponTemplate->getDamageStatusType();
+
+			damageInfo.in.m_isFlame = data->m_geometryBasedDamageWeaponTemplate->getIsFlame();
+			damageInfo.in.m_projectileCollidesWithBurn = data->m_geometryBasedDamageWeaponTemplate->getProjectileCollidesWithBurn();
+			damageInfo.in.m_isPoison = data->m_geometryBasedDamageWeaponTemplate->getIsPoison();
+			damageInfo.in.m_poisonMuzzleFlashesGarrison = data->m_geometryBasedDamageWeaponTemplate->getPoisonMuzzleFlashesGarrison();
+			damageInfo.in.m_isDisarm = data->m_geometryBasedDamageWeaponTemplate->getIsDisarm();
+			damageInfo.in.m_killsGarrison = data->m_geometryBasedDamageWeaponTemplate->getKillsGarrison();
+			damageInfo.in.m_killsGarrisonAmount = data->m_geometryBasedDamageWeaponTemplate->getKillsGarrisonAmount();
+			damageInfo.in.m_playSpecificVoice = data->m_geometryBasedDamageWeaponTemplate->PlaySpecificVoice();
+			damageInfo.in.m_statusDuration = data->m_geometryBasedDamageWeaponTemplate->getStatusDuration();
+			damageInfo.in.m_doStatusDamage = data->m_geometryBasedDamageWeaponTemplate->getDoStatusDamage();
+			damageInfo.in.m_statusDurationTypeCorrelate = data->m_geometryBasedDamageWeaponTemplate->getStatusDurationTypeCorrelate();
+			damageInfo.in.m_tintStatus = data->m_geometryBasedDamageWeaponTemplate->getTintStatusType();
+			damageInfo.in.m_customTintStatus = data->m_geometryBasedDamageWeaponTemplate->getCustomTintStatusType();
+
+			damageInfo.in.m_customDamageType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageType();
+			damageInfo.in.m_customDeathType = data->m_geometryBasedDamageWeaponTemplate->getCustomDeathType();
+			damageInfo.in.m_customDamageStatusType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageStatusType();
 			
 			for (; curVictim != NULL; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
 			{

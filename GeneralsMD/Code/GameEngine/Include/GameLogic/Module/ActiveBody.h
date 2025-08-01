@@ -85,6 +85,7 @@ public:
 	virtual BodyDamageType getDamageState() const;
 	virtual void setDamageState( BodyDamageType newState );	///< control damage state directly.  Will adjust hitpoints.
 	virtual void setAflame( Bool setting );///< This is a major change like a damage state.  
+	virtual Real getSubdualDamageCap() const;
 	virtual UnsignedInt getSubdualDamageHealRate() const;
 	virtual Real getSubdualDamageHealAmount() const;
 	virtual Bool hasAnySubdualDamage() const;
@@ -109,6 +110,9 @@ public:
 
 	virtual void setInitialHealth(Int initialPercent); ///< Sets the inital load health %.
 	virtual void setMaxHealth( Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH ); ///< Sets the inital max health
+	virtual void setSubdualCap( Real subdualCap );
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate );
+	virtual void setSubdualHealAmount( Real subdualHealAmount );
 
 	virtual Bool getFrontCrushed() const { return m_frontCrushed; }
 	virtual Bool getBackCrushed() const { return m_backCrushed; }
@@ -167,6 +171,10 @@ private:
   Real									m_maxHealth;						///< max health this object can have
   Real									m_initialHealth;				///< starting health for this object
 	Real									m_currentSubdualDamage;	///< Starts at zero and goes up.  Inherited modules will do something when "subdued".
+
+	Real 									m_subdualDamageCap;								///< Subdual damage will never accumulate past this
+	UnsignedInt 						m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
+	Real 								m_subdualDamageHealAmount;					///< by this much.
 	Real									m_currentChronoDamage;	///< Same as Subdual, but for CHRONO_GUN
 
 	BodyDamageType				m_curDamageState;				///< last known damage state

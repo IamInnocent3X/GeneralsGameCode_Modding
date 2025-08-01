@@ -43,6 +43,22 @@ class UndeadBodyModuleData : public ActiveBodyModuleData
 {
 public:
 	Real m_secondLifeMaxHealth;
+	Real m_secondLifeSubdualCap;
+	UnsignedInt m_secondLifeSubdualHealRate;
+	Real m_secondLifeSubdualHealAmount;
+	Int m_secondLifeArmorSetSwitch;
+	Int m_multipleLives;
+	Real m_multipleLivesMaxHealthRatio;
+	Bool m_multipleLivesMaxHealthRatioScale;
+	std::vector<Int> m_multipleLivesOverrideTrigger;
+	std::vector<Real> m_multipleLivesMaxHealthOverride;
+	std::vector<Real> m_multipleLivesSubdualCapOverride;
+	std::vector<UnsignedInt> m_multipleLivesSubdualHealRate;
+	std::vector<Real> m_multipleLivesSubdualHealAmount;
+	std::vector<AsciiString> m_secondLifeUpgradeNames;
+	std::vector<AsciiString> m_secondLifeUpgradeRemoveNames;
+	std::vector<AsciiString> m_multipleLivesUpgradeList;
+	std::vector<AsciiString> m_multipleLivesUpgradeRemoveList;
 
 	UndeadBodyModuleData();
 
@@ -69,6 +85,7 @@ protected:
 	Bool m_isSecondLife;	/** This is false until I detect death the first time, then I 
 														change my Max, Initial, and Current health and stop intercepting anything.
 												*/
+	Int m_currentMultipleLives;
 	void startSecondLife(DamageInfo *damageInfo);
 
 };

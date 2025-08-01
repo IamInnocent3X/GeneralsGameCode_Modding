@@ -2964,6 +2964,7 @@ namespace
     const ThingTemplate *type;
     NameKeyType linkKey;
     Bool        checkProductionInterface;
+	std::vector<AsciiString> linkedObjects;
   };
 }
 
@@ -2985,6 +2986,26 @@ static void countExisting( Object *obj, void *userData )
     typeCountData->count++;
   }
 
+  // Consider Max Simultaneous Link Objects to Count
+  if (!typeCountData->linkedObjects.empty())
+  {
+	  const ThingTemplate* tmpls;
+	  Int cnt = typeCountData->linkedObjects.size();
+	  for (int i = 0; i < cnt; i++) {
+		  tmpls = TheThingFactory->findTemplate( typeCountData->linkedObjects[i] );
+			
+		  if( !tmpls->isEquivalentTo( obj->getTemplate() ) )
+		  {
+		  	  continue;
+		  }
+
+		  //if( obj->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		  //	continue;
+			
+		  typeCountData->count++;
+	  }
+  }
+
   // Also consider objects that have a production update interface
   if ( typeCountData->checkProductionInterface )
   {
@@ -2993,6 +3014,18 @@ static void countExisting( Object *obj, void *userData )
     { 
       // add the count of this type that are in the queue
       typeCountData->count += pui->countUnitTypeInQueue( typeCountData->type ); 
+
+	  // Consider Max Simultaneous Link Objects to Count that are currently in production.
+	  if (!typeCountData->linkedObjects.empty())
+	  {
+		  const ThingTemplate* tmpls;
+		  Int cnt = typeCountData->linkedObjects.size();
+		  for (int i = 0; i < cnt; i++) {
+			  tmpls = TheThingFactory->findTemplate( typeCountData->linkedObjects[i] );
+
+			  typeCountData->count += pui->countUnitTypeInQueue( tmpls ); 
+		  }
+	  }
     }  // end if
   }  
 }  // end countInProduction
@@ -3003,6 +3036,32 @@ Bool Player::canBuildMoreOfType( const ThingTemplate *whatToBuild ) const
 {
   // make sure we're not maxed out for this type of unit.
   UnsignedInt maxSimultaneousOfType = whatToBuild->getMaxSimultaneousOfType();
+  MaxSimultaneousOfTypeDifficulty maxSimultaneousOfTypeDifficulty = whatToBuild->getMaxSimultaneousOfTypeDifficulty();
+  MaxSimultaneousOfTypeDifficulty maxSimultaneousOfTypeDifficultyAI = whatToBuild->getMaxSimultaneousOfTypeDifficultyAI();
+  if(!maxSimultaneousOfTypeDifficulty.empty())
+  {
+	GameDifficulty difficulty = getPlayerDifficulty();
+	if (!maxSimultaneousOfTypeDifficultyAI.empty() && getPlayerType() == PLAYER_COMPUTER) {
+		for( MaxSimultaneousOfTypeDifficulty::const_iterator it  = maxSimultaneousOfTypeDifficultyAI.begin(); it != maxSimultaneousOfTypeDifficultyAI.end(); it++)
+		{
+			if((it->first) == difficulty)
+				maxSimultaneousOfType = it->second;
+		}
+		/*MaxSimultaneousOfTypeDifficulty::const_iterator it = maxSimultaneousOfTypeDifficultyAI.find(difficulty);
+		if( it != maxSimultaneousOfTypeDifficultyAI.end())
+		{
+			maxSimultaneousOfType = it->second;
+		}*/
+	}
+	else
+	{
+		for( MaxSimultaneousOfTypeDifficulty::const_iterator it  = maxSimultaneousOfTypeDifficulty.begin(); it != maxSimultaneousOfTypeDifficulty.end(); it++)
+		{
+			if((it->first) == difficulty)
+				maxSimultaneousOfType = it->second;
+		}
+	}
+  }
   if (maxSimultaneousOfType != 0)
   {
 
@@ -3010,6 +3069,7 @@ Bool Player::canBuildMoreOfType( const ThingTemplate *whatToBuild ) const
     typeCountData.count = 0;
     typeCountData.type = whatToBuild;
     typeCountData.linkKey = whatToBuild->getMaxSimultaneousLinkKey();
+	typeCountData.linkedObjects = whatToBuild->getMaxSimultaneousLinkObjects();
     // Assumption: Things with a KINDOF_STRUCTURE flag can never be built from 
     // a factory (ProductionUpdateInterface), because the building can't move
     // out of the factory. When we do our Starcraft port and have flying Terran
@@ -3051,6 +3111,12 @@ Bool Player::canBuild(const ThingTemplate *tmplate) const
 		{
 			const ProductionPrerequisite *pre = tmplate->getNthPrereq(i);
 			if (pre->isSatisfied(this) == false )
+				prereqsOK = false;
+		}
+		for (Int i = 0; i < tmplate->getNegPrereqCount(); i++)
+		{
+			const ProductionPrerequisite *pre = tmplate->getNthNegPrereq(i);
+			if (pre->isSatisfied(this) == false)
 				prereqsOK = false;
 		}
 
@@ -3261,6 +3327,49 @@ void Player::removeUpgrade( const UpgradeTemplate *upgradeTemplate )
 
 }  // end removeUpgrade
 
+//=================================================================================================
+/** 
+	Find existing upgrades queue among a player that are currently in production and cancel them.
+*/  
+void Player::findUpgradeInQueuesAndCancelThem( const UpgradeTemplate *upgradeTemplate )
+{
+	if( hasUpgradeInProduction( upgradeTemplate ) == FALSE )
+		return;
+
+	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin(); 
+			 it != m_playerTeamPrototypes.end(); ++it) 
+	{
+		for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance()) 
+		{
+			Team *team = iter.cur();
+			if( team == NULL ) 
+			{
+				continue;
+			}
+			for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance()) 
+			{
+				Object *obj = iterObj.cur();
+				if( obj == NULL ) 
+				{
+					continue;
+				}
+				// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
+
+				// Don't care about dead objects
+				if ( obj->isEffectivelyDead() )
+					continue;
+
+				ProductionUpdateInterface *pui = obj->getProductionUpdateInterface();
+				if( pui )
+				{
+					pui->cancelUpgrade( upgradeTemplate );
+				}
+
+				// end MEAT
+			}
+		}
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 Bool Player::okToPlayRadarEdgeSound( void )

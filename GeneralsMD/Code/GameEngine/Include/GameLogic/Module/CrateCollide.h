@@ -39,6 +39,7 @@
 class Thing;
 class Anim2DTemplate;
 class FXList;
+class ObjectCreationList;
 enum ScienceType CPP_11(: Int);
 
 //-------------------------------------------------------------------------------------------------
@@ -57,6 +58,10 @@ public:
 	Real m_executeAnimationDisplayTimeInSeconds;		///< time to play animation for
 	Real m_executeAnimationZRisePerSecond;					///< rise animation up while playing
 	Bool m_executeAnimationFades;										///< animation fades out
+
+	Bool m_destroyOnCollide;							///Destroy/Delete the Object after executing the ability
+	FXList 			*m_fxOnCollide; //< FX Spawned on the Object after finish executing the ability
+	ObjectCreationList *m_oclOnCollide; //< OCL Spawned on the Object after finish executing the ability
 
 	CrateCollideModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);

@@ -215,6 +215,7 @@ void PointDefenseLaserUpdate::fireWhenReady()
 			{
 				Weapon* w = TheWeaponStore->allocateNewWeapon( wt, TERTIARY_WEAPON );
 				w->loadAmmoNow( getObject() );
+				w->computeFiringTrackerBonus( getObject(), target );
 				w->fireWeapon( getObject(), target );
 				deleteInstance(w);
 

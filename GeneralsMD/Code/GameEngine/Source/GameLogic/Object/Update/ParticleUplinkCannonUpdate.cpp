@@ -55,7 +55,9 @@
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/LaserUpdate.h"
 #include "GameLogic/Module/ActiveBody.h"
+
 
 
 
@@ -90,6 +92,8 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
 	m_swathOfDeathAmplitude					= 0.0f;
 	m_swathOfDeathDistance					=	0.0f;
 	//
+	m_customDamageType = NULL;
+	m_customDeathType = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -151,6 +155,11 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
     { "ManualFastDrivingSpeed",								INI::parseReal,									NULL, offsetof( ParticleUplinkCannonUpdateModuleData, m_manualFastDrivingSpeed ) },
     { "DoubleClickToFastDriveDelay",					INI::parseDurationUnsignedInt,	NULL, offsetof( ParticleUplinkCannonUpdateModuleData, m_doubleClickToFastDriveDelay ) },
 
+	// New Features
+	// Custom DamageTypes
+	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDamageType) },		
+	{ "CustomDeathType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDeathType) },
+	
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -699,6 +708,9 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 				damageInfo.in.m_sourceID = me->getID();
 				damageInfo.in.m_damageType = data->m_damageType;
 				damageInfo.in.m_deathType = data->m_deathType;
+
+				damageInfo.in.m_customDamageType = data->m_customDamageType;
+				damageInfo.in.m_customDeathType = data->m_customDeathType;
 
 				PartitionFilterAlive filterAlive;
 				PartitionFilter *filters[] = { &filterAlive, NULL };

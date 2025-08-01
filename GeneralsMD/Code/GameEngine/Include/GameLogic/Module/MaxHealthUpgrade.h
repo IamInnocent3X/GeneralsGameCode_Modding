@@ -52,6 +52,12 @@ public:
 
 	Real								m_addMaxHealth;
 	Real								m_multiplyMaxHealth;
+	Real								m_addSubdualCap;
+	Real								m_multiplySubdualCap;
+	Real								m_addSubdualHealRate;
+	Real								m_multiplySubdualHealRate;
+	Real								m_addSubdualHealAmount;
+	Real								m_multiplySubdualHealAmount;
 	MaxHealthChangeType m_maxHealthChangeType;
 
 };

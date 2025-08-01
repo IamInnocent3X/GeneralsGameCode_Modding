@@ -50,6 +50,7 @@ public:
 	AudioEventRTS m_recoverSoundLoop;
 
 	TintStatus	m_tintStatus;  ///< tint color to apply when recovering from teleport
+	AsciiString	m_customTintStatus; ///< custom tint color to apply when recovering from teleport
 
 	Real m_opacityStart;
 	Real m_opacityEnd;

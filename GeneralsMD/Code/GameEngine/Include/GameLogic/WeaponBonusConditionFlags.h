@@ -31,5 +31,9 @@
 #define __WEAPONBONUSCONDITIONFLAGS_H__
 
 typedef UnsignedInt WeaponBonusConditionFlags;
+// TO-DO: Change to Hash_Map. DONE.
+//typedef std::pair<AsciiString, Bool> PairAsciiStringBool;
+//typedef std::vector<PairAsciiStringBool> ObjectCustomStatusType;
+typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ObjectCustomStatusType;
 
 #endif /* __WEAPONBONUSCONDITIONFLAGS_H__ */

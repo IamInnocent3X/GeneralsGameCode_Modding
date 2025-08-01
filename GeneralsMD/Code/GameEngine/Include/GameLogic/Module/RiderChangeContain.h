@@ -49,6 +49,7 @@ struct RiderInfo
 	ObjectStatusType m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
+	AsciiString m_objectCustomStatusType;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -57,13 +58,17 @@ class RiderChangeContainModuleData : public TransportContainModuleData
 public:
 	
 	RiderInfo m_riders[ MAX_RIDERS ];
+	std::vector<RiderInfo> m_ridersCustom;
 	UnsignedInt m_scuttleFrames;
 	ModelConditionFlagType m_scuttleState;
+	Bool m_riderNotRequired;
+	Bool m_useUpgradeNames;
 
 	RiderChangeContainModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseRiderInfo( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	static void parseRiderInfoCustom( INI* ini, void *instance, void *store, const void* /*userData*/ );
 
 };
 
@@ -100,6 +105,24 @@ public:
 
 	virtual Bool getContainerPipsToShow( Int& numTotal, Int& numFull );
 
+	void changeRiderTemplateOnStatusUpdate();
+	//Bool riderTemplateIsValidChange(ObjectStatusMaskType newCStatus, const AsciiString& newCustomStatus);
+	Bool riderTemplateIsValidChange(ObjectStatusMaskType newStatus, Bool set);
+	Bool riderTemplateIsValidChange(const AsciiString& newCustomStatus, Bool set);
+	void riderRemoveTemplate(Int RiderIndex, const AsciiString& RiderName);
+	//void riderGiveTemplate(Int RiderIndex, const AsciiString& RiderName);
+	void riderGiveTemplate(Int RiderIndex, const AsciiString& RiderName);
+	void riderGiveTemplateStatus(Int RiderIndex, const AsciiString& RiderName); //Status Giver Only. A hackky way for fixing saving and loading.
+	void riderRemoveAll(); // The more expensive option. Execute once for loaded units to fix object states.
+	void riderResetModel();
+	void riderReset();
+
+	void doRegisterUpgradeNames();
+	void riderUpdateUpgradeModules();
+	
+	Bool doRiderChangeOnContaining( Object *rider, const RiderInfo& riderInfo );
+	Bool doRiderChangeOnRemoving( Object *rider, const RiderInfo& riderInfo );
+
 protected:
 
 	// exists primarily for RiderChangeContain to override
@@ -114,6 +137,60 @@ private:
 	UnsignedInt m_scuttledOnFrame;
 
 	Bool m_containing; //doesn't require xfer.
+	Bool m_loaded; //same
+	Bool m_dontCompare; //me too
+	Bool m_firstChange; //me three
+	Bool m_firstUpgrade; //me four
+	Bool m_firstStatusRemoval; //me five, because there's Xfers don't work.
+	Bool m_statusDelayCheck; //me last. Six Bullets
+
+	Bool m_doRemovalOnLoad; //not me
+
+	// Default value for assigning Status and Upgrade Types as Rider Templates
+	Int m_theRiderToChange;
+	AsciiString m_theRiderName;
+
+	// Applies when the Status is last removed to change back to the last Valid Rider. 
+	// Overridens if new Rider or new Upgrade Template is assigned.
+	Int m_theRiderLastValid;
+	AsciiString m_theRiderLastName;
+
+	// Preserves the values of the Last Valid Riders for Xfer hackyy fixes.
+	// Does nothing if you don't use Save/Load functions
+	Int m_theRiderLastValidBackup;
+	AsciiString m_theRiderLastNameBackup;
+
+	// Preserves the values of the Upgrade Template Riders for Xfer hackyy fixes.
+	// Does nothing if you don't use Save/Load functions
+	Int m_theRiderLastUpgrade;
+	AsciiString m_theRiderLastUpgradeName;
+
+	// The last tiny bit about the loading of Applied Status fix.
+	// And, you guessed it, it's about Xfer.
+	Int m_theRiderToChangeBackup;
+	AsciiString m_theRiderNameBackup;
+
+	Bool m_checkedRemove;
+	ObjectStatusMaskType m_prevStatus;
+	ObjectCustomStatusType m_prevCustomStatusTypes;
+
+	Bool m_registeredUpgradeNames;
+	Int m_addDelay;
+	Int m_statusLoadDelay;
+	Int m_resetLaterFrame;
+
+	struct RiderUpgrade
+	{
+		AsciiString									templateName;
+		Int											templateRider;
+
+		RiderUpgrade() : templateName(NULL), templateRider(-1)
+		{
+		}
+	};
+
+	std::vector<RiderUpgrade>			m_upgradeTemplates;
+	UpgradeMaskType						m_prevMaskToCheck;
 
 };
 

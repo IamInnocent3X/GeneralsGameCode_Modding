@@ -35,7 +35,9 @@
 #include "Common/Science.h"
 #include "Common/SpecialPower.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "Common/BitFlagsIO.h"
+#include "GameClient/FXList.h"
 
 
 // GLOBAL /////////////////////////////////////////////////////////////////////////////////////////
@@ -222,6 +224,9 @@ void SpecialPowerStore::parseSpecialPowerDefinition( INI *ini )
 	{ "EvaReadyOwn",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_own) },
 	{ "EvaReadyAlly",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_ally) },
 	{ "EvaReadyEnemy",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_enemy) },
+	{ "DeleteUserOnExecute",					INI::parseBool,					NULL,	offsetof( SpecialPowerTemplate, m_destroyOnExecute ) },
+	{ "FXOnExecute",							INI::parseFXList,					NULL, offsetof( SpecialPowerTemplate, m_fxOnExecute ) },
+	{ "OCLOnExecute", 							INI::parseObjectCreationList, 		NULL, offsetof( SpecialPowerTemplate, m_oclOnExecute ) },
 
 	{ NULL,	NULL, NULL,	0 }  // keep this last
 
@@ -252,6 +257,9 @@ SpecialPowerTemplate::SpecialPowerTemplate()
 	m_eva_ready_own = EVA_Invalid;
 	m_eva_ready_ally = EVA_Invalid;
 	m_eva_ready_enemy = EVA_Invalid;
+	m_destroyOnExecute = FALSE;
+	m_fxOnExecute = NULL;
+	m_oclOnExecute = NULL;
 
 }  // end SpecialPowerTemplate
 

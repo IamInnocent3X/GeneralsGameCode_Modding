@@ -43,6 +43,8 @@
 
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameClient/FXList.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/Module/DeletionUpdate.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
@@ -487,6 +489,21 @@ void SpecialPowerModule::triggerSpecialPower( const Coord3D *location )
 	
 	// we won't be able to use the power for X number of frames now
 	startPowerRecharge();
+
+	if( getSpecialPowerTemplate()->getOCLOnExecute() != NULL )
+	{
+		ObjectCreationList::create(getSpecialPowerTemplate()->getOCLOnExecute(), getObject(), NULL);
+	}
+
+	if( getSpecialPowerTemplate()->getFXOnExecute() != NULL )
+	{
+		FXList::doFXObj(getSpecialPowerTemplate()->getFXOnExecute(), getObject(), NULL);
+	}
+
+	if( getSpecialPowerTemplate()->getDestroyOnExecute() )
+	{
+		TheGameLogic->destroyObject( getObject() );
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

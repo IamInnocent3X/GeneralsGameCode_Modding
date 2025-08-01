@@ -114,6 +114,7 @@ FreeFallProjectileBehavior::FreeFallProjectileBehavior(Thing* thing, const Modul
 	m_detonationWeaponTmpl = NULL;
 	m_lifespanFrame = 0;
 	m_extraBonusFlags = 0;
+	m_extraBonusCustomFlags.clear();
 
 	m_hasDetonated = FALSE;
 }
@@ -143,9 +144,20 @@ void FreeFallProjectileBehavior::projectileLaunchAtObjectOrPosition(
 
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
 	m_extraBonusFlags = launcher ? launcher->getWeaponBonusCondition() : 0;
+	if(launcher)
+	{
+		m_extraBonusCustomFlags = launcher->getCustomWeaponBonusCondition();
+	}
+	else 
+	{
+		m_extraBonusCustomFlags.clear();
+	}
 
-	if (d->m_applyLauncherBonus && m_extraBonusFlags != 0) {
-		getObject()->setWeaponBonusConditionFlags(m_extraBonusFlags);
+	if (d->m_applyLauncherBonus) {
+		if(m_extraBonusFlags != 0)
+			getObject()->setWeaponBonusConditionFlags(m_extraBonusFlags);
+		if(!m_extraBonusCustomFlags.empty())
+			getObject()->setCustomWeaponBonusConditionFlags(m_extraBonusCustomFlags);
 	}
 
 	m_victimID = victim ? victim->getID() : INVALID_ID;
@@ -240,7 +252,7 @@ Bool FreeFallProjectileBehavior::projectileHandleCollision(Object* other)
 		// if it's not the specific thing we were targeting, see if we should incidentally collide...
 		if (!m_detonationWeaponTmpl->shouldProjectileCollideWith(projectileLauncher, getObject(), other, m_victimID))
 		{
-			//DEBUG_LOG(("ignoring projectile collision with %s at frame %d\n",other->getTemplate()->getName().str(),TheGameLogic->getFrame()));
+			//DEBUG_LOG(("ignoring projectile collision with %s at frame %d",other->getTemplate()->getName().str(),TheGameLogic->getFrame()));
 			return true;
 		}
 
@@ -260,7 +272,7 @@ Bool FreeFallProjectileBehavior::projectileHandleCollision(Object* other)
 						Object* thingToKill = *it++;
 						if (!thingToKill->isEffectivelyDead() && thingToKill->isKindOfMulti(d->m_garrisonHitKillKindof, d->m_garrisonHitKillKindofNot))
 						{
-							//DEBUG_LOG(("Killed a garrisoned unit (%08lx %s) via Flash-Bang!\n",thingToKill,thingToKill->getTemplate()->getName().str()));
+							//DEBUG_LOG(("Killed a garrisoned unit (%08lx %s) via Flash-Bang!",thingToKill,thingToKill->getTemplate()->getName().str()));
 							if (projectileLauncher)
 								projectileLauncher->scoreTheKill(thingToKill);
 							thingToKill->kill();
@@ -309,7 +321,7 @@ void FreeFallProjectileBehavior::detonate()
 	Object* obj = getObject();
 	if (m_detonationWeaponTmpl)
 	{
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, TRUE);
 
 		if (getFreeFallProjectileBehaviorModuleData()->m_detonateCallsKill)
 		{
@@ -455,7 +467,7 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 			if (m_detonationWeaponTmpl == NULL)
 			{
 
-				DEBUG_CRASH(("FreeFallProjectileBehavior::xfer - Unknown weapon template '%s'\n",
+				DEBUG_CRASH(("FreeFallProjectileBehavior::xfer - Unknown weapon template '%s'",
 					weaponTemplateName.str()));
 				throw SC_INVALID_DATA;
 

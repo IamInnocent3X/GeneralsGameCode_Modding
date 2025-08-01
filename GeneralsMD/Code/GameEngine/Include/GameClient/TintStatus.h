@@ -48,6 +48,11 @@ struct DrawableColorTint
 };
 
 typedef BitFlags<TINT_STATUS_COUNT> TintStatusFlags;
+//TO-DO: Convert AsciiString to NameKeyType. NOTE: DONE.
+//NOTE: REVERTED. As for some reason hashmap is unusable. Needs investigation.
+typedef std::pair<AsciiString, DrawableColorTint> CustomTintStatusType;
+typedef std::vector<CustomTintStatusType> CustomTintStatusVec;
+//typedef std::hash_map< NameKeyType, DrawableColorTint, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > CustomTintStatusMap;
 
 // --------
 #endif /* __TINTSTATUS_H__ */

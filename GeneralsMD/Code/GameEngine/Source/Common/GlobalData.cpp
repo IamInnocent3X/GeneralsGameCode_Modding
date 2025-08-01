@@ -37,6 +37,7 @@
 #define DEFINE_WEATHER_NAMES
 #define DEFINE_BODYDAMAGETYPE_NAMES
 #define DEFINE_PANNING_NAMES
+#define DEFINE_WEAPONBONUSCONDITION_NAMES
 
 #include "Common/crc.h"
 #include "Common/file.h"
@@ -46,6 +47,7 @@
 #include "Common/Registry.h"
 #include "Common/UserPreferences.h"
 #include "Common/version.h"
+#include "Common/AsciiString.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/Weapon.h"
@@ -78,6 +80,99 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	INI::parseUnsignedInt(ini, instance, &tintEntry->attackFrames, NULL);
 	INI::parseUnsignedInt(ini, instance, &tintEntry->decayFrames, NULL);
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void GlobalData::parseTintCustomStatusType(INI* ini, void* instance, void* store, const void* userData)
+{
+	// TO-DO Convert HashMap. NOTE: DONE!
+	//NOTE: REVERTED. As for some reason hashmap is unusable. Needs investigation.
+
+	CustomTintStatusType cst;
+	cst.first = ini->getNextQuotedAsciiString();
+
+	INI::parseRGBColorReal(ini, instance, &cst.second.color, NULL);
+	INI::parseRGBColorReal(ini, instance, &cst.second.colorInfantry, NULL);
+
+	INI::parseUnsignedInt(ini, instance, &cst.second.attackFrames, NULL);
+	INI::parseUnsignedInt(ini, instance, &cst.second.decayFrames, NULL);
+
+	CustomTintStatusVec* s = (CustomTintStatusVec*)(store);
+	s->push_back(cst);
+
+	// Add it to the hash table.
+	//&colorTintCustomTypes[string] = tintEntry;
+}
+
+/*static*/ void GlobalData::parseTrackerWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData)
+{
+	TrackerBonusCT TrackType;
+
+	TrackType.bonus = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusNames);
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		ObjectStatusTypes ost = (ObjectStatusTypes)ObjectStatusMaskType::getSingleBitFromName(token);
+		if(ost >= 0 && ost != OBJECT_STATUS_COUNT)
+		{
+			TrackType.status.push_back(ost);
+		}
+		else
+		{
+			TrackType.c_status.push_back(token);
+		}
+	}
+
+	std::vector<TrackerBonusCT>* s = (std::vector<TrackerBonusCT>*)(store);
+	s->push_back(TrackType);
+
+	// Doesn't work
+	/*
+	Bool addMore = FALSE;
+	for (std::vector<TrackerBonusCT>::const_iterator it = s->begin(); it != s->end(); ++it)
+	{
+		if((*it).bonus == TrackType.bonus)
+		{
+			addMore = TRUE;
+			for (std::vector<ObjectStatusTypes>::const_iterator it2 = TrackType.status.begin(); it2 != TrackType.status.end(); ++it2)
+			{
+				(*it)->status.push_back(*it2);
+			}
+			for (std::vector<AsciiString>::const_iterator it3 = TrackType.c_status.begin(); it3 != TrackType.c_status.end(); ++it3)
+			{
+				(*it)->c_status.push_back(*it3);
+			}
+			break;
+		}
+	}
+	if(addMore == FALSE)
+	{
+		s->push_back(TrackType);
+	}
+	*/
+}
+
+/*static*/ void GlobalData::parseTrackerCustomWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData)
+{
+	TrackerCustomBonusCT TrackType;
+
+	TrackType.bonus = ini->getNextQuotedAsciiString();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		ObjectStatusTypes ost = (ObjectStatusTypes)ObjectStatusMaskType::getSingleBitFromName(token);
+		if(ost >= 0 && ost != OBJECT_STATUS_COUNT)
+		{
+			TrackType.status.push_back(ost);
+		}
+		else
+		{
+			TrackType.c_status.push_back(token);
+		}
+	}
+	
+	std::vector<TrackerCustomBonusCT>* s = (std::vector<TrackerCustomBonusCT>*)(store);
+	s->push_back(TrackType);
 }
 
 
@@ -433,6 +528,10 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "AISoloPlayerHealthBonus_Hard",				INI::parsePercentToReal,			NULL,			offsetof( GlobalData, m_soloPlayerHealthBonusForDifficulty[PLAYER_COMPUTER][DIFFICULTY_HARD] ) },
 
 	{ "WeaponBonus",								WeaponBonusSet::parseWeaponBonusSetPtr,	NULL,	offsetof( GlobalData, m_weaponBonusSet ) },
+	{ "CustomWeaponBonus",					WeaponBonusSet::parseCustomWeaponBonusSetPtr,	NULL,	offsetof( GlobalData, m_weaponBonusSet ) },
+
+	{ "FiringTrackerWeaponBonusStatus",					GlobalData::parseTrackerWeaponBonusStatus,	NULL,	offsetof( GlobalData, m_statusWeaponBonus ) },
+	{ "FiringTrackerCustomWeaponBonusStatus",			GlobalData::parseTrackerCustomWeaponBonusStatus,	NULL,	offsetof( GlobalData, m_statusCustomWeaponBonus ) },
 
 	{ "DefaultStructureRubbleHeight",	INI::parseReal,			NULL,			offsetof( GlobalData, m_defaultStructureRubbleHeight ) },
 
@@ -543,6 +642,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "UseVanillaDiagonalMoveSpeed",	      INI::parseBool,		NULL,			offsetof(GlobalData, m_useOldMoveSpeed) },
 	{ "TintStatus",	 GlobalData::parseTintStatusType, NULL, offsetof(GlobalData, m_colorTintTypes) },
+	{ "CustomTintStatus",	 GlobalData::parseTintCustomStatusType, NULL, offsetof(GlobalData, m_colorTintCustomTypes) },
 	
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1024,6 +1124,8 @@ GlobalData::GlobalData()
 
 	m_defaultStructureRubbleHeight = 1.0f;
 	m_weaponBonusSet = newInstance(WeaponBonusSet);
+	m_statusWeaponBonus.clear();
+	m_statusCustomWeaponBonus.clear();
 
 	m_shellMapName.set("Maps\\ShellMap1\\ShellMap1.map");
 	m_shellMapOn =TRUE;
@@ -1119,6 +1221,16 @@ GlobalData::GlobalData()
 			i, tc.color.red, tc.color.green, tc.color.blue, tc.colorInfantry.red, tc.colorInfantry.green, tc.colorInfantry.blue,
 			tc.attackFrames, tc.decayFrames));
 	}
+	
+	for (CustomTintStatusVec::const_iterator it = m_colorTintCustomTypes.begin(); it != m_colorTintCustomTypes.end(); ++it)
+	{
+		DrawableColorTint tc = it->second;
+
+		DEBUG_LOG((">> GLOBAL_DATA: m_colorTintCustomTypes for %s = {(%f, %f, %f), (%f, %f, %f), %d, %d}\n",
+			it->first.str(), tc.color.red, tc.color.green, tc.color.blue, tc.colorInfantry.red, tc.colorInfantry.green, tc.colorInfantry.blue,
+			tc.attackFrames, tc.decayFrames));
+	}
+	
 	// ------------------------------------------------------------------------------
 
 	m_chronoDamageDisableThreshold = 0.1;

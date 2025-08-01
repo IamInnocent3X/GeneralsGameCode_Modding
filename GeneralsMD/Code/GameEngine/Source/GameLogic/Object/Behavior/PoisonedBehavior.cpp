@@ -38,6 +38,7 @@
 #include "GameLogic/Object.h"
 
 
+
 // tinting is all handled in drawable, now, Graham look near the bottom of Drawable::UpdateDrawable()
 //static const RGBColor poisonedTint = {0.0f, 1.0f, 0.0f};
 
@@ -46,6 +47,7 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 {
 	m_poisonDamageIntervalData = 0; // How often I retake poison damage dealt me
 	m_poisonDurationData = 0;				// And how long after the last poison dose I am poisoned
+	m_poisonIsNotAbsoluteKill = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -56,6 +58,7 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 	{
 		{ "PoisonDamageInterval", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDamageIntervalData) },
 		{ "PoisonDuration", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDurationData) },
+		{ "IsNotAbsoluteKill", INI::parseBool, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonIsNotAbsoluteKill) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -85,7 +88,7 @@ PoisonedBehavior::~PoisonedBehavior( void )
 //-------------------------------------------------------------------------------------------------
 void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 {
-	if( damageInfo->in.m_damageType == DAMAGE_POISON )
+	if( damageInfo->in.m_damageType == DAMAGE_POISON || damageInfo->in.m_isPoison == TRUE )
 		startPoisonedEffects( damageInfo );
 }
 
@@ -121,6 +124,7 @@ UpdateSleepTime PoisonedBehavior::update()
 		damage.in.m_damageType = DAMAGE_UNRESISTABLE; // Not poison, as that will infect us again
 		damage.in.m_damageFXOverride = DAMAGE_POISON; // but this will ensure that the right effect is played
 		damage.in.m_deathType = m_deathType;
+		if(d->m_poisonIsNotAbsoluteKill) damage.in.m_notAbsoluteKill = TRUE;
 		getObject()->attemptDamage( &damage );
 
 		m_poisonDamageFrame = now + d->m_poisonDamageIntervalData;

@@ -35,8 +35,10 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/BitFlags.h"
 #include "Common/GameType.h"
+#include "Common/KindOf.h"
 #include "Common/ObjectStatusTypes.h" // Precompiled header anyway, no detangling possibility
 #include "Common/Snapshot.h"
+#include "GameClient/TintStatus.h"
 
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -179,6 +181,35 @@ extern DamageTypeFlags DAMAGE_TYPE_FLAGS_NONE;
 extern DamageTypeFlags DAMAGE_TYPE_FLAGS_ALL;
 void initDamageTypeFlags();
 
+typedef std::pair<AsciiString, Int>		AsciiStringIntPair;	
+typedef std::vector<AsciiStringIntPair>	CustomFlags;
+
+typedef std::pair<DamageTypeFlags, AsciiString>		DamageFlagsCustom;	
+
+inline Bool getCustomTypeFlag( const AsciiString& set , const CustomFlags& CustomTypes , const AsciiString& CustomType )
+{
+	Bool returnTrue = TRUE;
+	
+	if(!set.isEmpty())
+	{
+		if (strcmp(set.str(), "NONE") == 0)
+			returnTrue = FALSE;
+	}
+
+	if(CustomTypes.empty())
+		return returnTrue;
+
+	for (CustomFlags::const_iterator it = CustomTypes.begin(); 
+				it != CustomTypes.end();
+				++it)
+	{
+		if (it->second == 2 && (*it).first == CustomType)
+			return FALSE;
+		if (it->second == 1 && (*it).first == CustomType)
+			returnTrue = TRUE;
+	}
+	return returnTrue;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Death types, keep this in sync with TheDeathNames[] */
@@ -257,6 +288,8 @@ static const char *TheDeathNames[] =
 
 typedef UnsignedInt DeathTypeFlags;
 
+typedef std::pair<DeathTypeFlags, AsciiString>		DeathFlagsCustom;	
+
 const DeathTypeFlags DEATH_TYPE_FLAGS_ALL = 0xffffffff;
 const DeathTypeFlags DEATH_TYPE_FLAGS_NONE = 0x00000000;
 
@@ -294,11 +327,34 @@ public:
 		m_deathType = DEATH_NORMAL; 
 		m_amount = 0; 
 		m_kill = FALSE;
+
+		m_customDamageType = NULL;
+		m_customDamageStatusType = NULL;
+		m_customDeathType = NULL;
     
     m_shockWaveVector.zero();	
     m_shockWaveAmount   = 0.0f;	
     m_shockWaveRadius   = 0.0f;	
     m_shockWaveTaperOff = 0.0f;
+
+	m_isFlame = FALSE;
+	m_projectileCollidesWithBurn = FALSE;
+	m_isPoison = FALSE;
+	m_poisonMuzzleFlashesGarrison = FALSE;
+	m_isDisarm = FALSE;
+	m_killsGarrison = FALSE;
+	m_killsGarrisonAmount = 0;
+	m_playSpecificVoice = NULL;
+	m_statusDuration = 0.0f;
+	m_doStatusDamage = FALSE;
+	m_statusDurationTypeCorrelate = FALSE;
+	m_tintStatus = TINT_STATUS_INVALID;
+	m_customTintStatus = NULL;
+	m_isSubdual = FALSE;
+	m_subdualDealsNormalDamage = FALSE;
+	m_subdualDamageMultiplier = 1.0f;	
+	m_subdualForbiddenKindOf.clear();
+	m_notAbsoluteKill = FALSE;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -317,6 +373,30 @@ public:
 	Real					 m_shockWaveRadius;			  ///< This represents the effect radius of the shockwave. 
 	Real					 m_shockWaveTaperOff;			///< This represents the taper off effect of the shockwave at the tip of the radius. 0.0 means shockwave is 0% at the radius edge.
 
+	AsciiString m_customDamageType;
+	AsciiString m_customDamageStatusType;
+	AsciiString m_customDeathType;
+
+	Bool m_isFlame;
+	Bool m_projectileCollidesWithBurn;
+	Bool m_isPoison;
+	Bool m_poisonMuzzleFlashesGarrison;
+	Bool m_isDisarm;
+	Bool m_killsGarrison;
+	Int m_killsGarrisonAmount;
+	AsciiString m_playSpecificVoice;
+	Real m_statusDuration;
+	Bool m_doStatusDamage;
+	Bool m_statusDurationTypeCorrelate;
+	TintStatus m_tintStatus;
+	AsciiString m_customTintStatus;
+
+	Bool m_isSubdual;
+	Bool m_subdualDealsNormalDamage;
+	Real m_subdualDamageMultiplier;
+	KindOfMaskType m_subdualForbiddenKindOf;
+
+	Bool m_notAbsoluteKill;
 
 protected:
 

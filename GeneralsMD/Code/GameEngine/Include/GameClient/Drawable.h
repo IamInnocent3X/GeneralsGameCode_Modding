@@ -303,6 +303,11 @@ public:
 	void setTintStatus(TintStatus statusType) { m_tintStatus.set(statusType); };
 	void clearTintStatus(TintStatus statusType) { m_tintStatus.set(statusType, 0); };
 	Bool testTintStatus(TintStatus statusType) const { return m_tintStatus.test(statusType); };
+	// TO-DO: Change AsciiString to NameKeyType
+	// TO-DO: REVERTED. Game will not register.
+	void setCustomTintStatus(const AsciiString& customStatusType);
+	void clearCustomTintStatus() { m_tintCustomStatus = NULL; };
+	
 	
 	TintEnvelope *getColorTintEnvelope( void ) { return m_colorTintEnvelope; }
 	void setColorTintEnvelope( TintEnvelope &source ) { if (m_colorTintEnvelope) *m_colorTintEnvelope = source; }
@@ -677,6 +682,8 @@ private:
 	UnsignedInt m_status;				///< status bits (see DrawableStatus enum)
 	TintStatusFlags m_tintStatus;				///< tint color status bits (see TintStatus enum)
 	TintStatusFlags m_prevTintStatus;///< for edge testing with m_tintStatus
+	AsciiString m_tintCustomStatus;
+	AsciiString m_prevTintCustomStatus;
 	
 	enum FadingMode
 	{

@@ -175,6 +175,9 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_prevHealth = getActiveBodyModuleData()->m_initialHealth;
 	m_maxHealth = getActiveBodyModuleData()->m_maxHealth;
 	m_initialHealth = getActiveBodyModuleData()->m_initialHealth;
+	m_subdualDamageCap = getActiveBodyModuleData()->m_subdualDamageCap;
+	m_subdualDamageHealRate = getActiveBodyModuleData()->m_subdualDamageHealRate;
+	m_subdualDamageHealAmount = getActiveBodyModuleData()->m_subdualDamageHealAmount;
 
 	// force an initially-valid armor setup
 	validateArmorAndDamageFX();
@@ -306,8 +309,17 @@ Real ActiveBody::estimateDamage( DamageInfoInput& damageInfo ) const
 			return 0.0f;
 		}
 	}
+	// Compute Armor Bonuses (from weapons) first
+	Real amount = 1.0f;
+	const Weapon* w = NULL;
+	w = getObject()->getCurrentWeapon();
+	amount = w ? w->getArmorBonus(getObject()) : 1.0f;
 
-	Real amount = m_curArmor.adjustDamage(damageInfo.m_damageType, damageInfo.m_amount);
+	// Compute Armor Bonuses based on Status Types, Weapon Bonus Conditions and Custom Weapon Bonus Conditions
+	amount *= m_curArmor.scaleArmorBonus(getObject()->getStatusBits(), getObject()->getWeaponBonusCondition(), getObject()->getCustomStatus(), getObject()->getCustomWeaponBonusCondition());
+	// Compute damage according to Armor Coefficient.
+	amount *= m_curArmor.adjustDamage(damageInfo.m_damageType, damageInfo.m_amount, damageInfo.m_customDamageType);
+	//if(!damageInfo.m_customDamageType.isEmpty()) amount = m_curArmor.adjustDamageCustom(damageInfo.m_customDamageType, damageInfo.m_amount);
 
 	return amount;
 }
@@ -370,7 +382,9 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool allowModifier = TRUE;
 	Bool doDamageModules = TRUE;
 	Bool adjustConditions = TRUE;
-	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount);
+	Bool killsGarrisoned = FALSE;
+	Bool isStatusDamage = FALSE;
+	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
 
 	// Units that get disabled by Chrono damage cannot take damage:
 	if (obj->isDisabledByType(DISABLED_CHRONO) &&
@@ -454,6 +468,8 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			// are performed in DumbProjectileBehavior::projectileHandleCollision(), so my
 			// hope is that this message will save you some research time!
 
+			killsGarrisoned = TRUE;
+
 			Int killsToMake = REAL_TO_INT_FLOOR(damageInfo->in.m_amount);
 			ContainModuleInterface* contain = obj->getContain();
 			if( contain && contain->getContainCount() > 0 && contain->isGarrisonable() && !contain->isImmuneToClearBuildingAttacks() )
@@ -486,9 +502,16 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		
 		case DAMAGE_STATUS:
 		{
+			isStatusDamage = TRUE;
 			// Damage amount is msec time we set the status given in damageStatusType
 			Real realFramesToStatusFor = ConvertDurationFromMsecsToFrames(amount);
-			obj->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) );
+			if (damageInfo->in.m_statusDuration > 0) {
+				realFramesToStatusFor = ConvertDurationFromMsecsToFrames(damageInfo->in.m_statusDuration);
+				if (damageInfo->in.m_statusDurationTypeCorrelate) {
+					realFramesToStatusFor = m_curArmor.adjustDamage(damageInfo->in.m_damageType, realFramesToStatusFor, damageInfo->in.m_customDamageType);
+				}
+			}
+			obj->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );
 			alreadyHandled = TRUE;
 			allowModifier = FALSE;
 			break;
@@ -535,23 +558,84 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		}
 	}
 
-	if( IsSubdualDamage(damageInfo->in.m_damageType) )
+	if(!killsGarrisoned && damageInfo->in.m_killsGarrison == TRUE)
 	{
-		if( !canBeSubdued() )
-			return;
-		
-		Bool wasSubdued = isSubdued();
-		internalAddSubdualDamage(amount);
-		Bool nowSubdued = isSubdued();
-		alreadyHandled = TRUE;
-		allowModifier = FALSE;
-
-		if( wasSubdued != nowSubdued )
+		Int killsToMake = REAL_TO_INT_FLOOR(damageInfo->in.m_amount);
+		if(damageInfo->in.m_killsGarrisonAmount > 0)
 		{
-			onSubdualChange(nowSubdued);
+			killsToMake = damageInfo->in.m_killsGarrisonAmount;
 		}
+		ContainModuleInterface* contain = obj->getContain();
+		if( contain && contain->getContainCount() > 0 && contain->isGarrisonable() && !contain->isImmuneToClearBuildingAttacks() )
+		{
+			Int numKilled = 0;
 
-		getObject()->notifySubdualDamage(amount);
+			// garrisonable buildings subvert the normal process here.
+			const ContainedItemsList* items = contain->getContainedItemsList();
+			if (items)
+			{
+				for( ContainedItemsList::const_iterator it = items->begin(); (it != items->end()) && (numKilled < killsToMake); it++ )
+				{
+					Object* thingToKill = *it;
+					if (!thingToKill->isEffectivelyDead() )
+					{
+						if (damager)
+							damager->scoreTheKill( thingToKill );
+						thingToKill->kill();
+						++numKilled;
+						thingToKill->getControllingPlayer()->getAcademyStats()->recordClearedGarrisonedBuilding();
+					}
+				} // next contained item
+
+			} // if items
+		}	// if a garrisonable thing
+	}
+
+	if (!isStatusDamage && damageInfo->in.m_doStatusDamage)
+	{
+		Real realFramesToStatusFor = ConvertDurationFromMsecsToFrames(amount);
+		if (damageInfo->in.m_statusDuration > 0) {
+			realFramesToStatusFor = ConvertDurationFromMsecsToFrames(damageInfo->in.m_statusDuration);
+			if (damageInfo->in.m_statusDurationTypeCorrelate) {
+				realFramesToStatusFor = m_curArmor.adjustDamage(damageInfo->in.m_damageType, realFramesToStatusFor, damageInfo->in.m_customDamageType);
+			}
+		}
+		obj->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );
+	}
+
+	if( IsSubdualDamage(damageInfo->in.m_damageType) || damageInfo->in.m_isSubdual == TRUE )
+	{
+		if( !canBeSubdued() || obj->isAnyKindOf(damageInfo->in.m_subdualForbiddenKindOf) )
+		{
+			if( IsSubdualDamage(damageInfo->in.m_damageType) )
+				return;
+		}
+		else 
+		{
+			Real Subdualamount = amount;
+			if(damageInfo->in.m_subdualDamageMultiplier != 1.0f)
+			{
+				Subdualamount *= damageInfo->in.m_subdualDamageMultiplier;
+			}
+			Subdualamount *= m_damageScalar;
+			
+			Bool wasSubdued = isSubdued();
+			internalAddSubdualDamage(Subdualamount);
+			Bool nowSubdued = isSubdued();
+
+			if(damageInfo->in.m_subdualDealsNormalDamage == FALSE)
+			{
+				alreadyHandled = TRUE;
+				allowModifier = FALSE;
+			}
+
+			if( wasSubdued != nowSubdued )
+			{
+				onSubdualChange(nowSubdued);
+			}
+
+			getObject()->notifySubdualDamage(Subdualamount);
+		}
 	}
 
 	if (allowModifier)
@@ -865,7 +949,7 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 	damageInfo->out.m_actualDamageDealt = 0.0f;
 	damageInfo->out.m_actualDamageClipped = 0.0f;
 
-	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount);
+	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
 
 	// sanity check the damage value -- can't apply negative healing
 	if( amount > 0.0f )
@@ -1301,10 +1385,10 @@ void ActiveBody::internalChangeHealth( Real delta, Bool changeModelCondition)
 //-------------------------------------------------------------------------------------------------
 void ActiveBody::internalAddSubdualDamage( Real delta )
 {
-	const ActiveBodyModuleData *data = getActiveBodyModuleData();
+	//const ActiveBodyModuleData *data = getActiveBodyModuleData();
 
 	m_currentSubdualDamage += delta;
-	m_currentSubdualDamage = min(m_currentSubdualDamage, data->m_subdualDamageCap);
+	m_currentSubdualDamage = min(m_currentSubdualDamage, m_subdualDamageCap);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1316,6 +1400,21 @@ void ActiveBody::internalAddChronoDamage(Real delta)
     m_currentChronoDamage += delta;
 	//m_currentChronoDamage = min(m_currentChronoDamage, chronoDamageCap);
 }
+
+void ActiveBody::setSubdualCap( Real subdualCap )
+{
+	m_subdualDamageCap = subdualCap;
+} 
+
+void ActiveBody::setSubdualHealRate( UnsignedInt subdualHealRate )
+{
+	m_subdualDamageHealRate = subdualHealRate;
+} 
+
+void ActiveBody::setSubdualHealAmount( Real subdualHealAmount )
+{
+	m_subdualDamageHealAmount = subdualHealAmount;
+} 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -1502,18 +1601,23 @@ Real ActiveBody::getMaxHealth() const
 	return m_maxHealth;
 }  ///< return max health
 
+Real ActiveBody::getSubdualDamageCap() const
+{
+	return m_subdualDamageCap;
+} 
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 UnsignedInt ActiveBody::getSubdualDamageHealRate() const
 {
-	return getActiveBodyModuleData()->m_subdualDamageHealRate;
+	return m_subdualDamageHealRate;
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 Real ActiveBody::getSubdualDamageHealAmount() const
 {
-	return getActiveBodyModuleData()->m_subdualDamageHealAmount;
+	return m_subdualDamageHealAmount;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1750,6 +1854,12 @@ void ActiveBody::xfer( Xfer *xfer )
 
 	// current health
 	xfer->xferReal( &m_currentHealth );
+
+	xfer->xferReal( &m_subdualDamageCap );
+
+	xfer->xferUnsignedInt( &m_subdualDamageHealRate );
+	
+	xfer->xferReal( &m_subdualDamageHealAmount );
 
 	xfer->xferReal( &m_currentSubdualDamage );
 

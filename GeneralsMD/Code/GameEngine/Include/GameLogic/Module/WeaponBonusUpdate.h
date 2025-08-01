@@ -81,6 +81,8 @@ public:
 	UnsignedInt								m_bonusDelay;							///< How often to pulse
 	Real											m_bonusRange;							///< How far to affect
 	WeaponBonusConditionType	m_bonusConditionType;			///< Status to give
+	AsciiString					m_bonusCustomConditionType;
+	AsciiString					m_customTintStatus;
 	TintStatus m_tintStatus;         ///< tint color to apply
 
 	static void buildFieldParse(MultiIniFieldParse& p);

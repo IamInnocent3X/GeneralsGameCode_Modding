@@ -195,6 +195,7 @@ public:
 
 	virtual Bool isWeaponBonusPassedToPassengers() const = 0;
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const = 0;
+	virtual ObjectCustomStatusType getCustomWeaponBonusPassedToPassengers() const = 0;
 
 
 	// this exists really just so someone can override it to prevent pip showings...

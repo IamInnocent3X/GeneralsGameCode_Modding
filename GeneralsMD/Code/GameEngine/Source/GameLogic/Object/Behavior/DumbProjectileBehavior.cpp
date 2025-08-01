@@ -121,6 +121,7 @@ DumbProjectileBehavior::DumbProjectileBehavior( Thing *thing, const ModuleData* 
 	m_flightPathEnd.zero();
 	m_currentFlightPathStep = 0;
 	m_extraBonusFlags = 0;
+	m_extraBonusCustomFlags.clear();
 
   m_hasDetonated = FALSE;
 } 
@@ -338,9 +339,20 @@ void DumbProjectileBehavior::projectileLaunchAtObjectOrPosition(
 
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
 	m_extraBonusFlags = launcher ? launcher->getWeaponBonusCondition() : 0;
+	if(launcher)
+	{
+		m_extraBonusCustomFlags = launcher->getCustomWeaponBonusCondition();
+	}
+	else 
+	{
+		m_extraBonusCustomFlags.clear();
+	}
 
-	if (d->m_applyLauncherBonus && m_extraBonusFlags != 0) {
-		getObject()->setWeaponBonusConditionFlags(m_extraBonusFlags);
+	if (d->m_applyLauncherBonus) {
+		if(m_extraBonusFlags != 0)
+			getObject()->setWeaponBonusConditionFlags(m_extraBonusFlags);
+		if(!m_extraBonusCustomFlags.empty())
+			getObject()->setCustomWeaponBonusConditionFlags(m_extraBonusCustomFlags);
 	}
 
 	m_victimID = victim ? victim->getID() : INVALID_ID;
@@ -540,7 +552,7 @@ void DumbProjectileBehavior::detonate()
 	Object* obj = getObject();
 	if (m_detonationWeaponTmpl)
 	{
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, TRUE);
 
 		if ( getDumbProjectileBehaviorModuleData()->m_detonateCallsKill )
 		{

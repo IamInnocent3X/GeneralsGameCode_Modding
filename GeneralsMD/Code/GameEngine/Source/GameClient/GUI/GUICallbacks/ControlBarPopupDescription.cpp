@@ -248,8 +248,10 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 
 	Player *player = ThePlayerList->getLocalPlayer();
 	UnicodeString name, cost, descrip;
-	UnicodeString requiresFormat = UnicodeString::TheEmptyString, requiresList;
+	UnicodeString requiresFormat = UnicodeString::TheEmptyString, requiresList, requiresNegativeFormat = UnicodeString::TheEmptyString, requiresNegativeList, requiresNegativeFormatS = UnicodeString::TheEmptyString, requiresNegativeListS;
 	Bool firstRequirement = true;
+	Bool firstNegativeRequirement = true;
+	//Bool firstNegativeRequirementS = true;
 	const ProductionPrerequisite *prereq;
 	Bool fireScienceButton = false;
 	UnsignedInt costToBuild = 0;
@@ -354,9 +356,13 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 							break;
 						case CANMAKE_MAXED_OUT_FOR_PLAYER:
 							descrip.concat( L"\n\n" );
-              if ( thingTemplate->isKindOf( KINDOF_STRUCTURE ) )
+			  if( thingTemplate->getCustomMaxedOutMessage() != UnicodeString::TheEmptyString)
+			  {
+					descrip.concat( thingTemplate->getCustomMaxedOutMessage() );
+			  }
+              else if ( thingTemplate->isKindOf( KINDOF_STRUCTURE ) )
               {
-                descrip.concat( TheGameText->fetch( "TOOLTIP:TooltipCannotBuildBuildingBecauseMaximumNumber" ) );
+					descrip.concat( TheGameText->fetch( "TOOLTIP:TooltipCannotBuildBuildingBecauseMaximumNumber" ) );
               }
               else
               {
@@ -432,6 +438,44 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					descrip.concat(L"\n");
 				descrip.concat(requiresFormat);
 
+			}
+
+			// Do not ask for Negative Prerequisites if the Object wants to Hide its Info
+			if(!thingTemplate->getNegPrereqHideInfo())
+			{
+				// ask each negative prerequisite to give us a list of the satisfied negative prerequisites
+				for( Int i=0; i<thingTemplate->getNegPrereqCount(); i++ ) 
+				{
+					prereq = thingTemplate->getNthNegPrereq(i);
+					requiresNegativeList = prereq->getNegativeRequiresList(player);
+					requiresNegativeListS = prereq->getNegativeRequiresListScience(player);
+
+					requiresNegativeFormat.concat(requiresNegativeList);
+
+					requiresNegativeFormatS.concat(requiresNegativeListS);
+				}
+				if( !requiresNegativeFormat.isEmpty() || !requiresNegativeFormatS.isEmpty() )
+				{
+					UnicodeString requireNegativeFormat = TheGameText->fetch("CONTROLBAR:NegativeRequirements");
+					UnicodeString requireNegativeFormatS = TheGameText->fetch("CONTROLBAR:GeneralsPromotionNeg");
+					if (!requiresNegativeFormat.isEmpty())
+					{
+						requiresNegativeFormat.format(requireNegativeFormat.str(), requiresNegativeFormat.str());
+						firstNegativeRequirement = false;
+					}
+					if (!requiresNegativeFormatS.isEmpty())
+					{
+						requiresNegativeFormatS.format(requireNegativeFormatS.str(), requiresNegativeFormatS.str());
+					}
+					if(!descrip.isEmpty())
+						descrip.concat(L"\n");
+					descrip.concat(requiresNegativeFormat);
+
+					if(firstNegativeRequirement == false && !requiresNegativeFormatS.isEmpty())
+						descrip.concat(L"\n");
+					descrip.concat(requiresNegativeFormatS);
+
+				}
 			}
 		}
 		else if( upgradeTemplate )
@@ -549,6 +593,43 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					if(!descrip.isEmpty())
 						descrip.concat(L"\n");
 					descrip.concat(requiresFormat);
+				}
+
+				if(!thingTemplate->getNegPrereqHideInfo())
+				{
+					// ask each negative prerequisite to give us a list of the satisfied negative prerequisites
+					for( Int i=0; i<thingTemplate->getNegPrereqCount(); i++ ) 
+					{
+						prereq = thingTemplate->getNthNegPrereq(i);
+						requiresNegativeList = prereq->getNegativeRequiresList(player);
+						requiresNegativeListS = prereq->getNegativeRequiresListScience(player);
+
+						requiresNegativeFormat.concat(requiresNegativeList);
+
+						requiresNegativeFormatS.concat(requiresNegativeListS);
+					}
+					if( !requiresNegativeFormat.isEmpty() || !requiresNegativeFormatS.isEmpty() )
+					{
+						UnicodeString requireNegativeFormat = TheGameText->fetch("CONTROLBAR:NegativeRequirements");
+						UnicodeString requireNegativeFormatS = TheGameText->fetch("CONTROLBAR:GeneralsPromotionNeg");
+						if (!requiresNegativeFormat.isEmpty())
+						{
+							requiresNegativeFormat.format(requireNegativeFormat.str(), requiresNegativeFormat.str());
+							firstNegativeRequirement = false;
+						}
+						if (!requiresNegativeFormatS.isEmpty())
+						{
+							requiresNegativeFormatS.format(requireNegativeFormatS.str(), requiresNegativeFormatS.str());
+						}
+						if(!descrip.isEmpty())
+							descrip.concat(L"\n");
+						descrip.concat(requiresNegativeFormat);
+
+						if(firstNegativeRequirement == false && !requiresNegativeFormatS.isEmpty())
+							descrip.concat(L"\n");
+						descrip.concat(requiresNegativeFormatS);
+
+					}
 				}
 			}
 

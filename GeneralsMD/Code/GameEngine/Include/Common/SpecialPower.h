@@ -46,6 +46,7 @@
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class ObjectCreationList;
+class FXList;
 class Object;
 enum ScienceType CPP_11(: Int);
 struct FieldParse;
@@ -138,6 +139,9 @@ public:
 	EvaMessage getEvaReadyOwn(void) const { return getFO()->m_eva_ready_own; }
 	EvaMessage getEvaReadyAlly(void) const { return getFO()->m_eva_ready_ally; }
 	EvaMessage getEvaReadyEnemy(void) const { return getFO()->m_eva_ready_enemy; }
+	Bool getDestroyOnExecute( void ) const { return getFO()->m_destroyOnExecute; }
+	const ObjectCreationList* getOCLOnExecute( void ) const { return getFO()->m_oclOnExecute; }
+	const FXList* getFXOnExecute( void ) const { return getFO()->m_fxOnExecute; }
  
 private: 
 
@@ -169,6 +173,10 @@ private:
 	EvaMessage m_eva_ready_own; //< eva event when own ready
 	EvaMessage m_eva_ready_ally; //< eva event when ally ready
 	EvaMessage m_eva_ready_enemy; //< eva event when enemy ready
+
+	Bool m_destroyOnExecute; //< Destroy the Object after finish executing the ability
+	const FXList 			*m_fxOnExecute; //< FX Spawned on the Object after finish executing the ability
+	const ObjectCreationList *m_oclOnExecute; //< OCL Spawned on the Object after finish executing the ability
 
 	static const FieldParse m_specialPowerFieldParse[];		///< the parse table
 

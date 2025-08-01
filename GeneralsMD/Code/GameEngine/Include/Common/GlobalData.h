@@ -51,6 +51,8 @@ class INI;
 class WeaponBonusSet;
 enum BodyDamageType CPP_11(: Int);
 enum AIDebugOptions CPP_11(: Int);
+enum ObjectStatusTypes CPP_11(: Int);
+enum WeaponBonusConditionType CPP_11(: Int);
 typedef UnsignedInt DeathTypeFlags;
 //enum DrawableColorTint CPP_11(: Int);
 
@@ -103,6 +105,20 @@ public:
 		RGBColor ambient;
 		RGBColor diffuse;
 		Coord3D lightPos;
+	};
+
+	struct TrackerBonusCT
+	{
+		WeaponBonusConditionType bonus;
+		std::vector<ObjectStatusTypes> status;
+		std::vector<AsciiString> c_status;
+	};
+
+	struct TrackerCustomBonusCT
+	{
+		AsciiString bonus;
+		std::vector<ObjectStatusTypes> status;
+		std::vector<AsciiString> c_status;
 	};
 
 	//-----------------------------------------------------------------------------------------------
@@ -361,6 +377,8 @@ public:
 	WeaponBonusSet* m_weaponBonusSet;
 	Real m_healthBonus[LEVEL_COUNT];			///< global bonuses to health for veterancy.
 	Real m_defaultStructureRubbleHeight;	///< for rubbled structures, compress height to this if none specified
+	std::vector<TrackerBonusCT> m_statusWeaponBonus;
+	std::vector<TrackerCustomBonusCT> m_statusCustomWeaponBonus;
 
 	AsciiString m_shellMapName;				///< Holds the shell map name
 	Bool m_shellMapOn;								///< User can set the shell map not to load
@@ -550,6 +568,7 @@ public:
 	//Bool m_allAdvice;
 
 	DrawableColorTint	m_colorTintTypes[TINT_STATUS_COUNT];
+	CustomTintStatusVec m_colorTintCustomTypes;
 	Bool	m_colorTintTypes2; // [TINT_STATUS_COUNT] ;
 
 	Bool m_useOldMoveSpeed;
@@ -599,6 +618,9 @@ private:
 
 	static void setColorTintEntry(DrawableColorTint* arr, int index, RGBColor color, RGBColor colorInfantry, UnsignedInt attackFrames, UnsignedInt decayFrames);
 	static void parseTintStatusType(INI* ini, void* instance, void* store, const void* userData);
+	static void parseTintCustomStatusType(INI* ini, void* instance, void* store, const void* userData);
+	static void parseTrackerWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData);
+	static void parseTrackerCustomWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData);
 
 };
 

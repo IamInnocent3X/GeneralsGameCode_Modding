@@ -71,6 +71,7 @@ public:
 	mutable std::vector<AsciiString>	m_activationUpgradeNames;
 	mutable std::vector<AsciiString>	m_conflictingUpgradeNames;
 	mutable std::vector<AsciiString>	m_removalUpgradeNames;
+	mutable std::vector<AsciiString>	m_grantUpgradeNames;
 	
 	mutable const FXList*							m_fxListUpgrade;
 	mutable UpgradeMaskType						m_activationMask;				///< Activation only supports a single name currently
@@ -83,6 +84,7 @@ public:
 		m_activationUpgradeNames.clear();
 		m_conflictingUpgradeNames.clear();
 		m_removalUpgradeNames.clear();
+		m_grantUpgradeNames.clear();
 
 		m_fxListUpgrade = NULL;
 		m_activationMask.clear();
@@ -97,6 +99,7 @@ public:
 			{ "TriggeredBy",		INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_activationUpgradeNames ) },
 			{ "ConflictsWith",	INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_conflictingUpgradeNames ) },
 			{ "RemovesUpgrades",INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_removalUpgradeNames ) },
+			{ "GrantUpgrades",		INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_grantUpgradeNames ) },
 			{ "FXListUpgrade",	INI::parseFXList, NULL, offsetof( UpgradeMuxData, m_fxListUpgrade ) },
 			{ "RequiresAllTriggers", INI::parseBool, NULL, offsetof( UpgradeMuxData, m_requiresAllTriggers ) },
 			{ 0, 0, 0, 0 }
@@ -107,6 +110,7 @@ public:
 	void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const;	///< The first time someone looks at my mask, I'll figure it out.
 	void performUpgradeFX(Object* obj) const;
 	void muxDataProcessUpgradeRemoval(Object* obj) const;
+	void muxDataProcessUpgradeGrant(Object* obj) const;
 	Bool isTriggeredBy(const std::string &upgrade) const;
 };
 
@@ -136,6 +140,7 @@ protected:
 	virtual Bool requiresAllActivationUpgrades() const = 0;
 	virtual Bool isSubObjectsUpgrade() = 0;
 	virtual void processUpgradeRemoval() = 0;
+	virtual void processUpgradeGrant() = 0;
 	
 	void giveSelfUpgrade();
 
@@ -188,6 +193,12 @@ public:
 	bool isTriggeredBy(const std::string & upgrade) const { return getUpgradeModuleData()->m_upgradeMuxData.isTriggeredBy(upgrade); }
 
 protected:
+
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getUpgradeModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
 
 	virtual void processUpgradeRemoval()
 	{

@@ -34,6 +34,7 @@
 #include "Common/Player.h"
 #include "Common/Upgrade.h"
 #include "Common/Xfer.h"
+#include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/GrantUpgradeCreate.h"
 #include "GameLogic/Object.h"
 
@@ -42,6 +43,8 @@
 GrantUpgradeCreateModuleData::GrantUpgradeCreateModuleData()
 {
 	m_upgradeName = "";
+	m_upgradeNames.clear();
+	m_upgradeNamesRemove.clear();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -53,6 +56,8 @@ void GrantUpgradeCreateModuleData::buildFieldParse(MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] = 
 	{
 		{ "UpgradeToGrant",	INI::parseAsciiString,							NULL, offsetof( GrantUpgradeCreateModuleData, m_upgradeName ) },
+		{ "UpgradesToGrant",	INI::parseAsciiStringVector,							NULL, offsetof( GrantUpgradeCreateModuleData, m_upgradeNames ) },
+		{ "UpgradesToRemove",	INI::parseAsciiStringVector,							NULL, offsetof( GrantUpgradeCreateModuleData, m_upgradeNamesRemove ) },
 		{ "ExemptStatus",		ObjectStatusMaskType::parseFromINI, NULL, offsetof( GrantUpgradeCreateModuleData, m_exemptStatus ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -100,14 +105,113 @@ void GrantUpgradeCreate::onCreate( void )
 			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 			{
 				// get the player
+				player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
 				player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
 			}
 			else
 			{
+				// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+				ProductionUpdateInterface *pui = getObject()->getProductionUpdateInterface();
+				if( pui )
+				{
+					pui->cancelUpgrade( upgradeTemplate );
+				}
 				getObject()->giveUpgrade( upgradeTemplate );
 			}
 			
 			player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+
+			std::vector<AsciiString> upgradeNames = getGrantUpgradeCreateModuleData()->m_upgradeNames;
+
+			if( !upgradeNames.empty() )
+			{
+				std::vector<AsciiString>::const_iterator it;
+				for( it = upgradeNames.begin();
+							it != upgradeNames.end();
+							it++)
+				{
+					const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade( *it );
+					if( !upgradeTemplate )
+					{
+						DEBUG_CRASH(("An upgrade module references %s, which is not an Upgrade", it->str()));
+						throw INI_INVALID_DATA;
+					}
+
+			//if( upgradeNames.size() > 0 )
+			//{
+			//	for (int i; i < upgradeNames.size() ; i++)
+			//	{
+			//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->upgradeNames[i] );
+					if( !upgradeTemplate )
+					{
+						DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+						return;
+					}
+					Player *player = getObject()->getControllingPlayer();
+					if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+					{
+						// get the player
+						player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
+						player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
+					}
+					else
+					{
+						// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+						ProductionUpdateInterface *pui = getObject()->getProductionUpdateInterface();
+						if( pui )
+						{
+							pui->cancelUpgrade( upgradeTemplate );
+						}
+						getObject()->giveUpgrade( upgradeTemplate );
+					}
+					
+					player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+				}
+			}
+
+			std::vector<AsciiString> upgradeNamesRemove = getGrantUpgradeCreateModuleData()->m_upgradeNamesRemove;
+
+			if( !upgradeNamesRemove.empty() )
+			{
+				std::vector<AsciiString>::const_iterator it;
+				for( it = upgradeNamesRemove.begin();
+							it != upgradeNamesRemove.end();
+							it++)
+				{
+					const UpgradeTemplate* upgrade = TheUpgradeCenter->findUpgrade( *it );
+					if( !upgrade )
+					{
+						DEBUG_CRASH(("An upgrade module references %s, which is not an Upgrade", it->str()));
+						throw INI_INVALID_DATA;
+					}
+
+			//if( m_upgradeNames.size() > 0 )
+			//{
+			//	for (int i; i < m_upgradeNames.size() ; i++)
+			//	{
+			//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeNames[i] );
+					if( upgrade )
+					{
+						//Check if it's a player Upgrade...
+						if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+						{
+							player->removeUpgrade( upgrade );
+						}
+						//We found the upgrade, now see if the parent object has it set...
+						else if( getObject()->hasUpgrade( upgrade ) )
+						{
+							//Cool, now remove it.
+							getObject()->removeUpgrade( upgrade );
+						}
+						else
+						{
+							DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
+								getObject()->getTemplate()->getName().str(),
+								it->str() ) );
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -133,10 +237,17 @@ void GrantUpgradeCreate::onBuildComplete( void )
 	{
 		// get the player
 		Player *player = getObject()->getControllingPlayer();
+		player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
 		player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
 	}
 	else
 	{
+		// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+		ProductionUpdateInterface *pui = getObject()->getProductionUpdateInterface();
+		if( pui )
+		{
+			pui->cancelUpgrade( upgradeTemplate );
+		}
 		getObject()->giveUpgrade( upgradeTemplate );
 	}
 }  // end onBuildComplete

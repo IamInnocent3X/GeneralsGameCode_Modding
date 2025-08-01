@@ -69,6 +69,8 @@ void ProductionPrerequisite::init()
 {
 	m_prereqUnits.clear();
 	m_prereqSciences.clear();
+	m_prenegreqUnits.clear();
+	m_prenegreqSciences.clear();
 	
 }
 
@@ -97,6 +99,22 @@ void ProductionPrerequisite::resolveNames()
 
 	}
 
+	for (size_t i = 0; i < m_prenegreqUnits.size(); i++)
+	{
+
+		// Do the same for negative prerequisites
+		//
+		if( m_prenegreqUnits[ i ].name.isNotEmpty() )
+		{
+			m_prenegreqUnits[i].unit = TheThingFactory->findTemplate(m_prenegreqUnits[i].name);	// might be null
+
+			DEBUG_ASSERTCRASH(m_prenegreqUnits[i].unit,("could not find prenegreq %s",m_prenegreqUnits[i].name.str()));
+
+			m_prenegreqUnits[i].name.clear(); // we're done with it
+		}
+
+	}
+
 }
 
 //-----------------------------------------------------------------------------
@@ -108,6 +126,18 @@ Int ProductionPrerequisite::calcNumPrereqUnitsOwned(const Player *player, Int co
 		cnt = MAX_PREREQ;
 	for (int i = 0; i < cnt; i++)
 		tmpls[i] = m_prereqUnits[i].unit;
+	player->countObjectsByThingTemplate(cnt, tmpls, false, counts);
+	return cnt;
+}
+
+Int ProductionPrerequisite::calcNumNegPrereqUnitsOwned(const Player *player, Int counts[MAX_PREREQ]) const
+{
+	const ThingTemplate *tmpls[MAX_PREREQ];
+	Int cnt = m_prenegreqUnits.size();
+	if (cnt > MAX_PREREQ)
+		cnt = MAX_PREREQ;
+	for (int i = 0; i < cnt; i++)
+		tmpls[i] = m_prenegreqUnits[i].unit;
 	player->countObjectsByThingTemplate(cnt, tmpls, false, counts);
 	return cnt;
 }
@@ -183,6 +213,35 @@ Bool ProductionPrerequisite::isSatisfied(const Player *player) const
 			return false;
 	}
 
+	// Negative Prerequisites
+
+	for (i = 0; i < m_prenegreqSciences.size(); i++)
+	{
+		if (player->hasScience(m_prenegreqSciences[i]))
+			return false;
+	}
+
+	Int ownCountNeg[MAX_PREREQ];
+	cnt = calcNumNegPrereqUnitsOwned(player, ownCountNeg);
+
+	// fix up the "or" cases. (start at 1!)
+	for (i = 1; i < cnt; i++)
+	{
+		if (m_prenegreqUnits[i].flags & UNIT_OR_WITH_PREV)
+		{
+			ownCountNeg[i] += ownCountNeg[i-1];	// lump 'em together for prereq purposes
+			ownCountNeg[i-1] = -1;						// flag for "ignore me"
+		}
+	}
+
+	for (i = 0; i < cnt; i++)
+	{
+		if (ownCountNeg[i] == -1)	// the magic "ignore me" flag
+			continue;	
+		if (ownCountNeg[i] >= 1)		// everything not ignored, is required
+			return false;
+	}
+
 	return true;
 }
 
@@ -203,6 +262,19 @@ void ProductionPrerequisite::addUnitPrereq( AsciiString unit, Bool orUnitWithPre
 }  // end addUnitPrereq
 
 //-------------------------------------------------------------------------------------------------
+// New Feature: Add Negative Prequisites
+//-------------------------------------------------------------------------------------------------
+void ProductionPrerequisite::addUnitNegPrereq( AsciiString unit, Bool orUnitWithPrevious )
+{
+	PrereqUnitRec info;
+	info.name = unit;
+	info.flags = orUnitWithPrevious ? UNIT_OR_WITH_PREV : 0;
+	info.unit = NULL;
+	m_prenegreqUnits.push_back(info);
+
+}  // end addUnitNegPrereq
+
+//-------------------------------------------------------------------------------------------------
 /** Add a unit prerequisite, if 'orWithPrevious' is set then this unit is said
 	* to be an alternate prereq to the previously added unit, otherwise this becomes
 	* a new 'block' and is required in ADDDITION to other entries. 
@@ -218,6 +290,17 @@ void ProductionPrerequisite::addUnitPrereq( const std::vector<AsciiString>& unit
 	}
 
 }  // end addUnitPrereq
+
+void ProductionPrerequisite::addUnitNegPrereq( const std::vector<AsciiString>& units )
+{
+	Bool orWithPrevious = false;
+	for (size_t i = 0; i < units.size(); ++i)
+	{
+		addUnitNegPrereq(units[i], orWithPrevious);
+		orWithPrevious = true;
+	}
+
+}  // end addUnitNegPrereq
 
 //-------------------------------------------------------------------------------------------------
 // returns an asciistring which is a list of all the prerequisites
@@ -314,4 +397,62 @@ UnicodeString ProductionPrerequisite::getRequiresList(const Player *player) cons
 
 	// return final list
 	return requiresList;
+}
+
+UnicodeString ProductionPrerequisite::getNegativeRequiresList(const Player *player) const
+{
+
+	// if player is invalid, return empty string
+	if (!player)
+		return UnicodeString::TheEmptyString;
+
+	UnicodeString negativeRequiresList = UnicodeString::TheEmptyString;
+
+	Int i;
+
+	// check to see if anything is required
+	const ThingTemplate *unit;
+	UnicodeString unitName;
+
+	for (i = 0; i < m_prenegreqUnits.size(); i++)
+	{
+		unit = m_prenegreqUnits[i].unit;
+		unitName = unit->getDisplayName();
+
+		if (i != m_prenegreqUnits.size()-1)
+			unitName.concat(L", ");
+
+		// add it to the list
+		negativeRequiresList.concat(unitName);
+	}
+	// return final list
+	return negativeRequiresList;
+}
+
+UnicodeString ProductionPrerequisite::getNegativeRequiresListScience(const Player *player) const
+{
+
+	// if player is invalid, return empty string
+	if (!player)
+		return UnicodeString::TheEmptyString;
+
+	UnicodeString negativeRequiresListS = UnicodeString::TheEmptyString;
+
+	Int i;
+
+	// check to see if anything is required
+	UnicodeString scienceName, descrip;
+
+	for (i = 0; i < m_prenegreqSciences.size(); i++)
+	{
+		TheScienceStore->getNameAndDescription(m_prenegreqSciences[i], scienceName, descrip);
+
+		if (i != m_prenegreqSciences.size()-1)
+			scienceName.concat(L", ");
+
+		negativeRequiresListS.concat(scienceName);
+	}
+
+	// return final list
+	return negativeRequiresListS;
 }

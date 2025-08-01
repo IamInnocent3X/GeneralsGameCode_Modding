@@ -1034,6 +1034,7 @@ protected:
 
 		if (m_inheritsWeaponBonus && sourceObj) {
 			obj->setWeaponBonusConditionFlags(sourceObj->getWeaponBonusCondition());
+			obj->setCustomWeaponBonusConditionFlags(sourceObj->getCustomWeaponBonusCondition());
 		}
 
 		if ( m_invulnerableTime > 0 )

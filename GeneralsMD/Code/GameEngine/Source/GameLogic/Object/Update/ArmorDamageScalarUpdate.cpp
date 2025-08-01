@@ -83,6 +83,7 @@ ArmorDamageScalarUpdateModuleData::ArmorDamageScalarUpdateModuleData()
 	m_effectParticleSystem = NULL;
 	m_scaleParticleCount = false;
 	m_tintStatus = TINT_STATUS_INVALID;
+	m_customTintStatus = NULL;
 	//m_applyTint = false;
 	// m_sparksPerCubicFoot = 0.001f;
 }
@@ -105,6 +106,7 @@ void ArmorDamageScalarUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "EffectParticleSystem",		INI::parseParticleSystemTemplate, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_effectParticleSystem) },
 		{ "ScaleParticleSystem",			INI::parseBool, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_scaleParticleCount) },
 		{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_tintStatus) },
+		{ "CustomTintStatusType",			INI::parseQuotedAsciiString,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_customTintStatus) },
 		//{ "ApplyColorTint",					INI::parseBool, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_applyTint)},
 		//{ "ParticlesPerCubicFoot",		INI::parseReal, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_sparksPerCubicFoot) },
 		{ 0, 0, 0, 0 }
@@ -245,7 +247,12 @@ void ArmorDamageScalarUpdate::applyEffectToObject(Object *obj) {
 	Drawable* drw = obj->getDrawable();
 	if (drw)
 	{
-		if (data->m_tintStatus > TINT_STATUS_INVALID && data->m_tintStatus < TINT_STATUS_COUNT)
+		
+		if(!data->m_customTintStatus.isEmpty())
+		{
+			drw->setCustomTintStatus(data->m_customTintStatus);
+		}
+		else if (data->m_tintStatus > TINT_STATUS_INVALID && data->m_tintStatus < TINT_STATUS_COUNT)
 		{
 			drw->setTintStatus(data->m_tintStatus);
 		}
@@ -304,6 +311,10 @@ void ArmorDamageScalarUpdate::removeEffectFromObject(Object* obj) {
 
 	Drawable* drw = obj->getDrawable();
 
+	if(!data->m_customTintStatus.isEmpty())
+	{
+		drw->clearCustomTintStatus();
+	}
 	if (data->m_tintStatus > TINT_STATUS_INVALID && data->m_tintStatus < TINT_STATUS_COUNT)
 	{
 		drw->clearTintStatus(data->m_tintStatus);

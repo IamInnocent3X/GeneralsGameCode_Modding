@@ -62,10 +62,12 @@ public:
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
 	virtual UpdateSleepTime update();
 
-	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID);
+	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
 
 protected:
 	WeaponBonusConditionType m_currentBonus;
+	AsciiString m_currentCustomBonus;
+	AsciiString m_customTintStatus;
 	TintStatus m_currentTint;
 	UnsignedInt m_frameToRemove;
 	void clearTempWeaponBonus();

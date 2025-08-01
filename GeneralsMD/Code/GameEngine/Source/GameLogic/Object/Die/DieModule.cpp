@@ -46,9 +46,13 @@
 DieMuxData::DieMuxData() {
 	m_deathTypes = DEATH_TYPE_FLAGS_ALL;
 	m_veterancyLevels = VETERANCY_LEVEL_FLAGS_ALL;
+	m_deathTypesCustom.first = DEATH_TYPE_FLAGS_ALL;
+	m_deathTypesCustom.second.format("ALL");
+	m_customDeathTypes.clear();
 
 	if (TheGlobalData) {
 		m_deathTypes &= ~TheGlobalData->m_defaultExcludedDeathTypes;
+		m_deathTypesCustom.first &= ~TheGlobalData->m_defaultExcludedDeathTypes;
 	}
 }
 
@@ -57,10 +61,12 @@ const FieldParse* DieMuxData::getFieldParse()
 {
 	static const FieldParse dataFieldParse[] = 
 	{
-		{ "DeathTypes",				INI::parseDeathTypeFlags,						NULL, offsetof( DieMuxData, m_deathTypes ) },
+		//{ "DeathTypes",				INI::parseDeathTypeFlags,						NULL, offsetof( DieMuxData, m_deathTypes ) },
+		{ "DeathTypes",			INI::parseDeathTypeFlagsCustom,				NULL, offsetof(DieMuxData, m_deathTypesCustom) },
 		{ "VeterancyLevels",	INI::parseVeterancyLevelFlags,			NULL, offsetof( DieMuxData, m_veterancyLevels ) },
 		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	NULL,	offsetof( DieMuxData, m_exemptStatus ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, NULL,	offsetof( DieMuxData, m_requiredStatus ) },
+		{ "CustomDeathTypes",		INI::parseCustomTypes,			NULL, offsetof( DieMuxData, m_customDeathTypes ) },
 		{ 0, 0, 0, 0 }
 	};
   return dataFieldParse;
@@ -70,8 +76,16 @@ const FieldParse* DieMuxData::getFieldParse()
 Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo) const
 {
 	// wrong death type? punt
-	if (!getDeathTypeFlag(m_deathTypes, damageInfo->in.m_deathType))
-		return false;
+	if(damageInfo->in.m_customDeathType.isEmpty())
+	{
+		if (!getDeathTypeFlag(m_deathTypesCustom.first, damageInfo->in.m_deathType))
+			return false;
+	}
+	else
+	{
+		if(!getCustomTypeFlag(m_deathTypesCustom.second, m_customDeathTypes, damageInfo->in.m_customDeathType))
+			return false;
+	}
 
 	// wrong vet level? punt
 	if (!getVeterancyLevelFlag(m_veterancyLevels, obj->getVeterancyLevel()))

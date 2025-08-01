@@ -45,6 +45,7 @@ TempWeaponBonusHelper::TempWeaponBonusHelper( Thing *thing, const ModuleData *mo
 	m_currentBonus = WEAPONBONUSCONDITION_INVALID;
 	m_currentTint = TINT_STATUS_INVALID;
 	m_frameToRemove = 0;
+	m_currentCustomBonus = NULL;
 
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
@@ -70,14 +71,23 @@ UpdateSleepTime TempWeaponBonusHelper::update()
 // ------------------------------------------------------------------------------------------------
 void TempWeaponBonusHelper::clearTempWeaponBonus()
 {
-	if( m_currentBonus != WEAPONBONUSCONDITION_INVALID )
+	if( m_currentBonus != WEAPONBONUSCONDITION_INVALID || !m_currentCustomBonus.isEmpty() )
 	{
-		getObject()->clearWeaponBonusCondition(m_currentBonus);
+		if(m_currentBonus != WEAPONBONUSCONDITION_INVALID){
+			getObject()->clearWeaponBonusCondition(m_currentBonus);
+			getObject()->clearWeaponBonusConditionIgnoreClear(m_currentBonus);
+		}
 		m_currentBonus = WEAPONBONUSCONDITION_INVALID;
+		if(!m_currentCustomBonus.isEmpty()){
+			getObject()->clearCustomWeaponBonusCondition(m_currentCustomBonus);
+			getObject()->clearCustomWeaponBonusConditionIgnoreClear(m_currentCustomBonus);
+		}
+		m_currentCustomBonus = NULL;
 		m_frameToRemove = 0;
 
 		if (getObject()->getDrawable())
 		{
+			getObject()->getDrawable()->clearCustomTintStatus();
 			if (m_currentTint > TINT_STATUS_INVALID && m_currentTint < TINT_STATUS_COUNT) {
 				getObject()->getDrawable()->clearTintStatus(m_currentTint);
 				m_currentTint = TINT_STATUS_INVALID;
@@ -92,19 +102,37 @@ void TempWeaponBonusHelper::clearTempWeaponBonus()
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus)
+void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	// Clear any different status we may have.  Re-getting the same status will just reset the timer
-	if( m_currentBonus != status )
-		clearTempWeaponBonus();
+	if(!customStatus.isEmpty())
+	{
+		if( m_currentCustomBonus != customStatus )
+			clearTempWeaponBonus();
 
-	getObject()->setWeaponBonusCondition(status);
-	m_currentBonus = status;
+		getObject()->setCustomWeaponBonusCondition(customStatus);
+		getObject()->setCustomWeaponBonusConditionIgnoreClear(customStatus);
+		m_currentCustomBonus = customStatus;
+	}
+	else
+	{
+		if( m_currentBonus != status )
+			clearTempWeaponBonus();
+
+		getObject()->setWeaponBonusCondition(status);
+		getObject()->setWeaponBonusConditionIgnoreClear(status);
+		m_currentBonus = status;
+	}
+
 	m_frameToRemove = TheGameLogic->getFrame() + duration;
 
 	if (getObject()->getDrawable())
 	{
-		if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
+		if(!customTintStatus.isEmpty())
+		{
+			getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
+		}
+		else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
 			getObject()->getDrawable()->setTintStatus(tintStatus);
 			m_currentTint = tintStatus;
 		}
@@ -147,6 +175,7 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 
 	xfer->xferUser( &m_currentBonus, sizeof(WeaponBonusConditionType) );// an enum
 	xfer->xferUser( &m_currentTint, sizeof(TintStatus) );// an enum
+	xfer->xferAsciiString( &m_currentCustomBonus );
 	xfer->xferUnsignedInt( &m_frameToRemove );
 
 }  // end xfer

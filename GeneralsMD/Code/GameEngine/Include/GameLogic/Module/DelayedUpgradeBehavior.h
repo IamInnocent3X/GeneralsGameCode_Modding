@@ -129,6 +129,12 @@ protected:
 	{
 		getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
+	
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
 
 	virtual void processUpgradeRemoval()
 	{

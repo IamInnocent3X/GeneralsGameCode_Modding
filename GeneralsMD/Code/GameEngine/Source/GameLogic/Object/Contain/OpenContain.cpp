@@ -1582,6 +1582,13 @@ WeaponBonusConditionFlags OpenContain::getWeaponBonusPassedToPassengers() const
 }
 
 //-------------------------------------------------------------------------------------------------
+ObjectCustomStatusType OpenContain::getCustomWeaponBonusPassedToPassengers() const
+{
+	// Our entire weapon bonus flag set is passed on.  Maybe that could be limited in the future.
+	return getObject()->getCustomWeaponBonusCondition();
+}
+
+//-------------------------------------------------------------------------------------------------
 Real OpenContain::getDamagePercentageToUnits( void ) 
 { 
 	return getOpenContainModuleData()->m_damagePercentageToUnits; 

@@ -50,6 +50,8 @@ class GrantUpgradeCreateModuleData : public CreateModuleData
 {
 public:
 	AsciiString		m_upgradeName;			///< name of the upgrade to be granted.
+	std::vector<AsciiString>	m_upgradeNames;
+	std::vector<AsciiString>	m_upgradeNamesRemove;
 	ObjectStatusMaskType m_exemptStatus; ///< do not execute if this status is set in the object
 
 	GrantUpgradeCreateModuleData();

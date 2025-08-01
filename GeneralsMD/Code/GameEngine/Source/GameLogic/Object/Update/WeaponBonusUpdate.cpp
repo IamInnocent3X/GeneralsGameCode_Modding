@@ -75,6 +75,8 @@ WeaponBonusUpdateModuleData::WeaponBonusUpdateModuleData()
 	m_bonusRange = 0;
 	m_bonusConditionType = WEAPONBONUSCONDITION_INVALID;
 	m_tintStatus = TINT_STATUS_FRENZY;
+	m_bonusCustomConditionType = NULL;
+	m_customTintStatus = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -91,7 +93,9 @@ void WeaponBonusUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "BonusDelay",							INI::parseDurationUnsignedInt,	NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusDelay ) },
 		{ "BonusRange",							INI::parseReal,									NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusRange ) },
 		{ "BonusConditionType",			INI::parseIndexList,	TheWeaponBonusNames, offsetof( WeaponBonusUpdateModuleData, m_bonusConditionType ) },
+		{ "CustomBonusConditionType",		INI::parseAsciiString,	NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusCustomConditionType ) },
 		{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( WeaponBonusUpdateModuleData, m_tintStatus ) },
+		{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( WeaponBonusUpdateModuleData, m_customTintStatus ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -121,6 +125,8 @@ struct tempWeaponBonusData // Hey Steven, bite me!  hahahaha  _Lowercase_ since 
 	KindOfMaskType m_forbiddenMask;
 	TintStatus m_tintStatus;
 	Bool m_isAffectAirborne;
+	AsciiString	m_customType;
+	AsciiString m_customTintStatus;
 };
 void containIteratingDoTempWeaponBonus( Object *passenger, void *voidData)
 {
@@ -128,7 +134,7 @@ void containIteratingDoTempWeaponBonus( Object *passenger, void *voidData)
 
 	if (passenger->isKindOfMulti(data->m_requiredMask, data->m_forbiddenMask)) {
 		if (data->m_isAffectAirborne || !passenger->isAirborneTarget()) {
-			passenger->doTempWeaponBonus(data->m_type, data->m_duration, data->m_tintStatus);
+			passenger->doTempWeaponBonus(data->m_type, data->m_customType, data->m_duration, data->m_customTintStatus, data->m_tintStatus );
 		}
 	}
 }
@@ -167,6 +173,8 @@ UpdateSleepTime WeaponBonusUpdate::update( void )
 	weaponBonusData.m_forbiddenMask = data->m_forbiddenAffectKindOf;
 	weaponBonusData.m_tintStatus = data->m_tintStatus;
 	weaponBonusData.m_isAffectAirborne = data->m_isAffectAirborne;
+	weaponBonusData.m_customType = data->m_bonusCustomConditionType;
+	weaponBonusData.m_customTintStatus = data->m_customTintStatus;
 
 	
 	for( Object *currentObj = iter->first(); currentObj != NULL; currentObj = iter->next() )
@@ -174,7 +182,7 @@ UpdateSleepTime WeaponBonusUpdate::update( void )
 		if( currentObj->isKindOfMulti(data->m_requiredAffectKindOf, data->m_forbiddenAffectKindOf) )
 		{
 			if (data->m_isAffectAirborne || !currentObj->isAirborneTarget()) {
-				currentObj->doTempWeaponBonus(data->m_bonusConditionType, data->m_bonusDuration, data->m_tintStatus);
+				currentObj->doTempWeaponBonus(data->m_bonusConditionType, data->m_bonusCustomConditionType, data->m_bonusDuration, data->m_customTintStatus, data->m_tintStatus);
 			}
 		}
 

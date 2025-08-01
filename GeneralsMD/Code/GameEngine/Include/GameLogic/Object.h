@@ -234,6 +234,8 @@ public:
 	void kill( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL );	///< kill the object with an optional type of damage and death.
 	void healCompletely();														///< Restore max health to this Object
 	void notifySubdualDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
+	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
+	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 	void notifyChronoDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
 	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
@@ -342,6 +344,8 @@ public:
 	inline Bool testStatus( ObjectStatusTypes bit ) const { return m_status.test( bit ); }
 	void setStatus( ObjectStatusMaskType objectStatus, Bool set = true );
 	inline void clearStatus( ObjectStatusMaskType objectStatus ) { setStatus( objectStatus, false ); }
+	void setCustomStatus( const AsciiString& objectCustomStatus, Bool set = true );
+	inline void clearCustomStatus( const AsciiString& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
 	void updateUpgradeModules();	///< We need to go through our Upgrade Modules and see which should be activated
 	UpgradeMaskType getObjectCompletedUpgradeMask() const { return m_objectUpgradesCompleted; } ///< Upgrades I complete locally
 
@@ -555,6 +559,8 @@ public:
 	void releaseWeaponLock(WeaponLockType lockType){ m_weaponSet.releaseWeaponLock(lockType); }
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 
+	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; } 
+
 	void setArmorSetFlag(ArmorSetType ast);
 	void clearArmorSetFlag(ArmorSetType ast);
 	Bool testArmorSetFlag(ArmorSetType ast) const;
@@ -566,11 +572,33 @@ public:
 
 	void setWeaponBonusCondition(WeaponBonusConditionType wst);
 	void clearWeaponBonusCondition(WeaponBonusConditionType wst);
+
+	void setCustomWeaponBonusCondition(const AsciiString& cst);
+	void clearCustomWeaponBonusCondition(const AsciiString& cst);
+
+	void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
+	void clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
+
+	void setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
+	void clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
 	
   // note, the !=0 at the end is important, to convert this into a boolean type! (srj)
 	Bool testWeaponBonusCondition(WeaponBonusConditionType wst) const { return (m_weaponBonusCondition & (1 << wst)) != 0; }
 	inline WeaponBonusConditionFlags getWeaponBonusCondition() const { return m_weaponBonusCondition; }
 	inline void setWeaponBonusConditionFlags(WeaponBonusConditionFlags flags) { m_weaponBonusCondition = flags; }
+
+	inline ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
+	// TO-DO: Change to Hash_Map. DONE.
+	inline void setCustomWeaponBonusConditionFlags(ObjectCustomStatusType customFlags) { 
+		m_customWeaponBonusCondition.clear();
+		m_customWeaponBonusCondition = customFlags;
+	}
+
+	inline WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
+	inline ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
+
+	// TO-DO: Change to Hash_Map. DONE.
+	//inline ObjectCustomStatusType setCustomWeaponBonusConditions(ObjectCustomStatusType customFlagsInheriter, ObjectCustomStatusType customFlagsGiver) const ;
 
 	Bool getSingleLogicalBonePosition(const char* boneName, Coord3D* position, Matrix3D* transform) const;
 	Bool getSingleLogicalBonePositionOnTurret(WhichTurretType whichTurret, const char* boneName, Coord3D* position, Matrix3D* transform) const;
@@ -709,6 +737,8 @@ private:
 	Object *			m_next;
 	Object *			m_prev;
 	ObjectStatusMaskType		m_status;									///< status bits (see ObjectStatusMaskType)
+	ObjectCustomStatusType		m_customStatus;	
+
 
 	GeometryInfo	m_geometryInfo;
 
@@ -784,6 +814,12 @@ private:
 	WeaponSet											m_weaponSet;
 	WeaponSetFlags								m_curWeaponSetFlags;
 	WeaponBonusConditionFlags			m_weaponBonusCondition;
+	ObjectCustomStatusType				m_customWeaponBonusCondition;
+
+	//Ignore Bonus Types to clear if it is bonus granted outside of new Firing Tracker system.
+	WeaponBonusConditionFlags			m_weaponBonusConditionIC;
+	ObjectCustomStatusType				m_customWeaponBonusConditionIC;
+
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 
 	SpecialPowerMaskType					m_specialPowerBits; ///< bits determining what kind of special abilities this object has access to.

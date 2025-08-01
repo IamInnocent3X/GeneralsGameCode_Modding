@@ -33,6 +33,7 @@
 
 #include "GameLogic/Module/StatusDamageHelper.h"
 
+#include "GameClient/Drawable.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 
@@ -42,6 +43,8 @@ StatusDamageHelper::StatusDamageHelper( Thing *thing, const ModuleData *modData 
 { 
 	m_statusToHeal = OBJECT_STATUS_NONE;
 	m_frameToHeal = 0;
+	m_currentTint = TINT_STATUS_INVALID;
+	m_customStatusToHeal = NULL;
 
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
@@ -57,39 +60,103 @@ StatusDamageHelper::~StatusDamageHelper( void )
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime StatusDamageHelper::update()
 {
-	DEBUG_ASSERTCRASH(m_frameToHeal <= TheGameLogic->getFrame(), ("StatusDamageHelper woke up too soon.") );
+	Bool clearStatus;
 
-	clearStatusCondition(); // We are sleep driven, so seeing an update means our timer is ready implicitly
-	return UPDATE_SLEEP_FOREVER;
+	if(!m_customStatusToHeal.isEmpty())
+	{
+		ObjectCustomStatusType myCustomStatus = getObject()->getCustomStatus();
+		ObjectCustomStatusType::const_iterator it = myCustomStatus.find(m_customStatusToHeal);
+		if(it != myCustomStatus.end() && it->second == 0)
+		{
+			clearStatus = TRUE;
+		}
+	}
+	if( ( m_statusToHeal != OBJECT_STATUS_NONE && !getObject()->getStatusBits().test( m_statusToHeal ) ) ||
+		clearStatus == TRUE ||
+		m_frameToHeal <= TheGameLogic->getFrame() )
+	{
+		//DEBUG_ASSERTCRASH(m_frameToHeal <= TheGameLogic->getFrame(), ("StatusDamageHelper woke up too soon.") );
+
+		clearStatusCondition(); // We are sleep driven, so seeing an update means our timer is ready implicitly
+		return UPDATE_SLEEP_FOREVER;
+	}
+	return UPDATE_SLEEP_NONE;
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 void StatusDamageHelper::clearStatusCondition()
 {
-	if( m_statusToHeal != OBJECT_STATUS_NONE )
+	if( m_statusToHeal != OBJECT_STATUS_NONE || !m_customStatusToHeal.isEmpty() )
 	{
-		getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK(m_statusToHeal) );
+		if(m_statusToHeal != OBJECT_STATUS_NONE)
+			getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK(m_statusToHeal) );
 		m_statusToHeal = OBJECT_STATUS_NONE;
 		m_frameToHeal = 0;
+		if(!m_customStatusToHeal.isEmpty())
+			getObject()->clearCustomStatus( m_customStatusToHeal );
+		m_customStatusToHeal = NULL;
+
+		if (getObject()->getDrawable())
+		{
+			getObject()->getDrawable()->clearCustomTintStatus();
+			if (m_currentTint > TINT_STATUS_INVALID && m_currentTint < TINT_STATUS_COUNT) {
+				getObject()->getDrawable()->clearTintStatus(m_currentTint);
+				m_currentTint = TINT_STATUS_INVALID;
+			}
+
+			// getObject()->getDrawable()->clearTintStatus(TINT_STATUS_FRENZY);
+			//      if (getObject()->isKindOf(KINDOF_INFANTRY))
+			//        getObject()->getDrawable()->setSecondMaterialPassOpacity( 0.0f );
+		}
 	}
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration )
+void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	Int durationAsInt = REAL_TO_INT_FLOOR(duration);
 	
 	// Clear any different status we may have.  Re-getting the same status will just reset the timer
-	if( m_statusToHeal != status )
-		clearStatusCondition();
+	if(!customStatus.isEmpty())
+	{
+		if( m_customStatusToHeal != customStatus )
+			clearStatusCondition();
 
-	getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
-	m_statusToHeal = status;
+		getObject()->setCustomStatus( customStatus );
+		m_customStatusToHeal = customStatus;
+	}
+	else
+	{
+		if( m_statusToHeal != status )
+			clearStatusCondition();
+			
+		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
+		m_statusToHeal = status;
+	}
+
 	m_frameToHeal = TheGameLogic->getFrame() + durationAsInt;
 
-	setWakeFrame( getObject(), UPDATE_SLEEP(durationAsInt) );
+	if (getObject()->getDrawable())
+	{
+		if(!customTintStatus.isEmpty())
+		{
+			getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
+		}
+		else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
+			getObject()->getDrawable()->setTintStatus(tintStatus);
+			m_currentTint = tintStatus;
+		}
+
+		// getObject()->getDrawable()->setTintStatus(TINT_STATUS_FRENZY);
+
+		//    if (getObject()->isKindOf(KINDOF_INFANTRY))
+		//      getObject()->getDrawable()->setSecondMaterialPassOpacity( 1.0f );
+	}
+
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	//setWakeFrame( getObject(), UPDATE_SLEEP(durationAsInt) );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -120,6 +187,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 	ObjectHelper::xfer( xfer );
 
 	xfer->xferUser( &m_statusToHeal, sizeof(ObjectStatusTypes) );// an enum
+	xfer->xferUser( &m_currentTint, sizeof(TintStatus) );// an enum
+	xfer->xferAsciiString( &m_customStatusToHeal );
 	xfer->xferUnsignedInt( &m_frameToHeal );
 
 }  // end xfer

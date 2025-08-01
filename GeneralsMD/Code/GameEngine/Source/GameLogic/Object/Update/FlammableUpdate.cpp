@@ -101,7 +101,7 @@ FlammableUpdate::~FlammableUpdate( void )
 //-------------------------------------------------------------------------------------------------
 void FlammableUpdate::onDamage( DamageInfo *damageInfo )
 {
-	if( damageInfo->in.m_damageType == DAMAGE_FLAME || damageInfo->in.m_damageType == DAMAGE_PARTICLE_BEAM )
+	if( damageInfo->in.m_damageType == DAMAGE_FLAME || damageInfo->in.m_damageType == DAMAGE_PARTICLE_BEAM || damageInfo->in.m_isFlame == TRUE)
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
 		if( now - getFlammableUpdateModuleData()->m_flameDamageExpirationDelay > m_lastFlameDamageDealt )

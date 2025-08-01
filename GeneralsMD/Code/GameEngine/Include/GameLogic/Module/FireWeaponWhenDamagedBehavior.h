@@ -56,6 +56,9 @@ public:
 	const WeaponTemplate*	m_continuousWeaponReallyDamaged;
 	const WeaponTemplate*	m_continuousWeaponRubble;
 
+	DamageFlagsCustom	m_damageTypesCustom;
+	CustomFlags 	m_customDamageTypes;
+
 	FireWeaponWhenDamagedBehaviorModuleData()
 	{
 		m_initiallyActive = false;
@@ -69,6 +72,10 @@ public:
 		m_continuousWeaponRubble = NULL;	
 		m_damageTypes = DAMAGE_TYPE_FLAGS_ALL;
 		m_damageAmount = 0;
+
+		m_damageTypesCustom.first = DAMAGE_TYPE_FLAGS_ALL;
+		m_damageTypesCustom.second.format("ALL");
+		m_customDamageTypes.clear();
 	}
 
 
@@ -85,8 +92,11 @@ public:
 			{ "ContinuousWeaponDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousWeaponDamaged) },
 			{ "ContinuousWeaponReallyDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousWeaponReallyDamaged) },
 			{ "ContinuousWeaponRubble", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousWeaponRubble) },
-			{ "DamageTypes", INI::parseDamageTypeFlags, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageTypes ) },
+			{ "DamageTypes", INI::parseDamageTypeFlagsCustom, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageTypesCustom ) },
 			{ "DamageAmount", INI::parseReal, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageAmount ) },
+			
+			{ "CustomDamageTypes", INI::parseCustomTypes, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_customDamageTypes ) },
+
 			{ 0, 0, 0, 0 }
 		};
 
@@ -145,6 +155,12 @@ protected:
 	virtual void performUpgradeFX()
 	{
 		getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
 	virtual void processUpgradeRemoval()

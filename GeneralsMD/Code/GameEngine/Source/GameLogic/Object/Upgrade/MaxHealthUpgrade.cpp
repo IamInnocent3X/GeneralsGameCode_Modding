@@ -44,6 +44,12 @@ MaxHealthUpgradeModuleData::MaxHealthUpgradeModuleData( void )
 	m_addMaxHealth = 0.0f;
 	m_multiplyMaxHealth = 1.0f;
 	m_maxHealthChangeType = SAME_CURRENTHEALTH;
+	m_addSubdualCap = 0.0f;
+	m_multiplySubdualCap = 0.0f;
+	m_addSubdualHealRate = 0;
+	m_multiplySubdualHealRate = 0.0f;
+	m_addSubdualHealAmount = 0.0f;
+	m_multiplySubdualHealAmount = 0.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -57,6 +63,12 @@ void MaxHealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "AddMaxHealth",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addMaxHealth ) },
 		{ "MultiplyMaxHealth",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplyMaxHealth ) },
+		{ "AddSubdualCap",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualCap ) },
+		{ "MultiplySubdualCap",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualCap ) },
+		{ "AddSubdualHealRate",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealRate ) },
+		{ "MultiplySubdualHealRate",		INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealRate ) },
+		{ "AddSubdualHealAmount",			INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealAmount ) },
+		{ "MultiplySubdualHealAmount",		INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealAmount ) },
 		{ "ChangeType",						INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( MaxHealthUpgradeModuleData, m_maxHealthChangeType ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -87,12 +99,41 @@ void MaxHealthUpgrade::upgradeImplementation( )
 	Object *obj = getObject();
 
 	BodyModuleInterface *body = obj->getBodyModule();
+
 	if( body )
 	{
-		Real newVal = (body->getMaxHealth() * data->m_multiplyMaxHealth) + data->m_addMaxHealth;
-		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
-		//  	body->getMaxHealth(), data->m_multiplyMaxHealth, data->m_addMaxHealth, newVal));
-		body->setMaxHealth( newVal, data->m_maxHealthChangeType );
+		if(data->m_addMaxHealth > 0 || data->m_multiplyMaxHealth != 1.0f)
+		{
+			Real newVal = (body->getMaxHealth() * data->m_multiplyMaxHealth) + data->m_addMaxHealth;
+			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+			//  	body->getMaxHealth(), data->m_multiplyMaxHealth, data->m_addMaxHealth, newVal));
+			body->setMaxHealth( newVal, data->m_maxHealthChangeType );
+		}
+
+		if(body->canBeSubdued() && (data->m_addSubdualCap > 0 || data->m_multiplySubdualCap != 1.0f))
+		{
+			Real newVal = (body->getSubdualDamageCap() * data->m_multiplySubdualCap) + data->m_addSubdualCap;
+			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+			//  	body->getSubdualCap(), data->m_multiplySubdualCap, data->m_addSubdualCap, newVal));
+			body->setSubdualCap( newVal );
+		}
+
+		if(data->m_addSubdualHealRate > 0 || data->m_multiplySubdualHealRate != 1.0f)
+		{
+			Real realVal = INT_TO_REAL((int)(body->getSubdualDamageHealRate()));
+			Real newVal = ( realVal * data->m_multiplySubdualHealRate) + data->m_addSubdualHealRate;
+			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+			//  	realVal, data->m_multiplySubdualHealRate, data->m_addSubdualHealRate, newVal));
+			body->setSubdualHealRate( (UnsignedInt)(REAL_TO_INT(newVal)) );
+		}
+
+		if(data->m_addSubdualHealAmount > 0 || data->m_multiplySubdualHealAmount != 1.0f)
+		{
+			Real newVal = (body->getSubdualDamageHealAmount() * data->m_multiplySubdualHealAmount) + data->m_addSubdualHealAmount;
+			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+			//  	body->getSubdualHealAmount(), data->m_multiplySubdualHealAmount, data->m_addSubdualHealAmount, newVal));
+			body->setSubdualHealAmount( newVal );
+		}
 	}
 }
 

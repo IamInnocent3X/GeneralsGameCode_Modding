@@ -42,6 +42,7 @@ class DamageInfo;
 class SpecialPowerTemplate;
 class SpecialPowerModule;
 class FXList;
+class ObjectCreationList;
 enum SpecialPowerType CPP_11(: Int);
 
 #define SPECIAL_ABILITY_HUGE_DISTANCE 10000000.0f
@@ -79,6 +80,9 @@ public:
 	Bool									m_approachRequiresLOS;
   Bool                  m_needToFaceTarget;
   Bool                  m_persistenceRequiresRecharge;
+  Bool					m_destroyOnExecute;
+  const FXList 			*m_fxOnExecute;
+  const ObjectCreationList *m_oclOnExecute;
 
 	const ParticleSystemTemplate *m_disableFXParticleSystem;
 	AudioEventRTS					m_packSound;
@@ -116,6 +120,9 @@ public:
 		m_preTriggerUnstealthFrames = 0;
     m_needToFaceTarget = TRUE;
     m_persistenceRequiresRecharge = FALSE;
+	m_destroyOnExecute = FALSE;
+	m_fxOnExecute = NULL;
+	m_oclOnExecute = NULL;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p) 
@@ -162,6 +169,9 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+	  		{ "DeleteUserOnExecute",					INI::parseBool,							NULL, offsetof( SpecialAbilityUpdateModuleData, m_destroyOnExecute ) },
+			{ "FXOnExecute",							INI::parseFXList,					NULL, offsetof( SpecialAbilityUpdateModuleData, m_fxOnExecute ) },
+			{ "OCLOnExecute", 							INI::parseObjectCreationList, 		NULL, offsetof( SpecialAbilityUpdateModuleData, m_oclOnExecute ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

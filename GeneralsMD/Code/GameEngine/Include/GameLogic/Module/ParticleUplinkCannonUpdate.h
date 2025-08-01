@@ -103,6 +103,9 @@ public:
 	AsciiString		m_annihilationSoundName;
 	AsciiString		m_damagePulseRemnantObjectName;
 
+	AsciiString m_customDamageType;
+	AsciiString m_customDeathType;
+
   Real					m_manualDrivingSpeed;
   Real					m_manualFastDrivingSpeed;
   UnsignedInt		m_doubleClickToFastDriveDelay;

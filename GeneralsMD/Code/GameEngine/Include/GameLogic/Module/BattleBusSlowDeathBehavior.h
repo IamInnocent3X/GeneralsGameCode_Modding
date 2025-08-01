@@ -60,6 +60,46 @@ public:
 	Real m_percentDamageToPassengers;							///< At the moment we throw up, how hard the people inside are hit
 	UnsignedInt m_emptyHulkDestructionDelay;			///< Another reason this is a BattleBus module, and not a generic two stage death.  If non-zero, time empty before we kill ourselves.
 
+	Bool m_percentDamageToPassengersScale;
+	Real m_percentDamageToPassengersScaleRatio;
+
+	Int m_sleepsafteramountofdeaths;
+	Int m_modelswitchafteramountofdeaths;
+	Int m_triggerfxafteramountofdeaths;
+	Int m_triggeroclafteramountofdeaths;
+	Int m_throwForceafteramountofdeaths;
+	Int m_damageToPassengerafteramountofdeaths;
+	Int m_noPassengersAmountOfDeathTrigger;
+	
+	struct IntFX
+	{
+		Int								m_deathTrigger;
+		const FXList*					m_deathfx;
+
+		IntFX() : m_deathTrigger(0), m_deathfx(NULL)
+		{
+		}
+	};
+
+	struct IntOCL
+	{
+		Int								m_deathTrigger;
+		const ObjectCreationList*		m_deathocl;
+
+		IntOCL() : m_deathTrigger(0), m_deathocl(NULL)
+		{
+		}
+	};
+
+	std::vector<IntFX> m_multipleLivesfxStartUndeathList;	
+	std::vector<IntOCL> m_multipleLivesoclStartUndeathList;	
+
+	std::vector<IntFX> m_multipleLivesfxHitGroundList;
+	std::vector<IntOCL> m_multipleLivesoclHitGroundList;
+
+	static void parseOCLIntPair( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ );
+	static void parseFXIntPair( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ );
+	
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -86,7 +126,10 @@ protected:
 	Bool m_isInFirstDeath;						///< Flag that controls lifetime of alternate processing.  Prevented by RealDeath flag.
 	UnsignedInt m_groundCheckFrame;		///< Don't check for bouncing until at least here.
 	UnsignedInt m_penaltyDeathFrame;	///< If non zero, kill us with Penalty damage at this frame
+	int m_amountofDeaths;				///< How many times this unit has died? 
 
+	const FXList* findFX(int type, int amountofDeaths) const;
+	const ObjectCreationList* findOCL(int type, int amountofDeaths) const;
 };
 
 

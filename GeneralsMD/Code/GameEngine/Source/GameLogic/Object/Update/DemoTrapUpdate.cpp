@@ -206,7 +206,7 @@ UpdateSleepTime DemoTrapUpdate::update()
 		{
 			//If we're dealing with a dozer... check if it's trying to disarm me. If so, don't blow up!
 			Weapon *weapon = other->getCurrentWeapon();
-			if( weapon && weapon->getDamageType() == DAMAGE_DISARM )
+			if( weapon && ( weapon->getDamageType() == DAMAGE_DISARM || weapon->getIsDisarm() == TRUE) )
 			{
 				//Also check if it's attacking, because it seems to stay in disarm mode.
 				if( other->testStatus( OBJECT_STATUS_IS_ATTACKING ) )

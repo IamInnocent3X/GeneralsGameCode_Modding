@@ -657,6 +657,13 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 							}
 							break;
 					}
+					// Users may want it to play different voices
+					if( !weapon->PlaySpecificVoice().isEmpty() )
+					{
+						soundToPlayPtr = templ->getPerUnitSound( weapon->PlaySpecificVoice() );
+						objectWithSound = obj;
+						skip = true;
+					}
 				}
 				break;
 			}
@@ -716,6 +723,13 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 								objectWithSound = obj;
 								skip = true;
 							}
+					}
+					// Users may want it to play different voices
+					if( !weapon->PlaySpecificVoice().isEmpty() )
+					{
+						soundToPlayPtr = templ->getPerUnitSound( weapon->PlaySpecificVoice() );
+						objectWithSound = obj;
+						skip = true;
 					}
 				}
 				break;

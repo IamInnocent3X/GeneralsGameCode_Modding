@@ -71,6 +71,8 @@ class FXList;
 // TYPEDEFS FOR FILE //////////////////////////////////////////////////////////////////////////////
 typedef std::map<AsciiString, AudioEventRTS> PerUnitSoundMap;
 typedef std::map<AsciiString, const FXList*> PerUnitFXMap;
+typedef std::pair<GameDifficulty, UnsignedInt> MaxSimultaneousOfTypeDifficultyPair;
+typedef std::vector<MaxSimultaneousOfTypeDifficultyPair> MaxSimultaneousOfTypeDifficulty;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -257,6 +259,16 @@ static const char* AmmoPipsStyleNames[] =
 };
 #endif  // end DEFINE_AMMO_PIPS_STYLE_NAMES
 
+#ifdef DEFINE_DIFFICULTY_NAMES
+static const char *TheDifficultyNames[] = 
+{
+	"EASY",			
+	"NORMAL",			
+	"HARD",					
+
+	NULL
+};
+#endif // end DEFINE_DIFFICULTY_NAMES
 //-------------------------------------------------------------------------------------------------
 enum ModuleParseMode CPP_11(: Int)
 {
@@ -555,6 +567,11 @@ public:
 
 	const std::vector<AsciiString>& getBuildVariations() const { return m_buildVariations; }
 
+	const std::vector<AsciiString>& getMaxSimultaneousLinkObjects() const { return m_maxSimultaneousLinkObjects; }
+
+	const UnicodeString& getCustomMaxedOutMessage() const { return m_maxSimultaneousCustomMessage; }
+
+
 	Real getAssetScale() const { return m_assetScale; }						///< return uniform scaling
 	Real getInstanceScaleFuzziness() const { return m_instanceScaleFuzziness; }						///< return uniform scaling
 	Real getStructureRubbleHeight() const { return (Real)m_structureRubbleHeight; }						///< return uniform scaling
@@ -590,6 +607,10 @@ public:
 	
 	Int getPrereqCount() const { return m_prereqInfo.size(); }
 	const ProductionPrerequisite *getNthPrereq(Int i) const { return &m_prereqInfo[i]; }
+
+	Int getNegPrereqCount() const { return m_negprereqInfo.size(); }
+	const ProductionPrerequisite *getNthNegPrereq(Int i) const { return &m_negprereqInfo[i]; }
+	Bool getNegPrereqHideInfo() const { return m_negprereqHideInfo; }
 
 	/** 
 		return the BuildFacilityTemplate, if any. 
@@ -651,6 +672,9 @@ public:
 
 	const WeaponTemplateSetVector& getWeaponTemplateSets(void) const {return m_weaponTemplateSets;}
 
+	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
+	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }
+
 protected:
 
 	//
@@ -684,8 +708,12 @@ protected:
   static void OverrideableByLikeKind(INI *ini, void *instance, void *store, const void *userData);
 
   static void parseMaxSimultaneous(INI *ini, void *instance, void *store, const void *userData);
+  static void parseMaxSimultaneousOfTypeDifficulty(INI *ini, void *instance, void *store, const void *userData);
 
 	Bool removeModuleInfo(const AsciiString& moduleToRemove, AsciiString& clearedModuleNameOut);
+
+	static void parseNegativePrerequisites( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
+
 
 private:
 	static const FieldParse s_objectFieldParseTable[];		///< the parse table
@@ -734,6 +762,14 @@ private:
 	std::vector<ProductionPrerequisite>	m_prereqInfo;				///< the unit Prereqs for this tech
 	std::vector<AsciiString>						m_buildVariations;	/**< if we build a unit of this type via script or ui, randomly choose one
 																														of these templates instead. (doesn't apply to MapObject-created items) */
+	std::vector<ProductionPrerequisite>				m_negprereqInfo;				///< the unit Negative Prereqs for this tech
+	Bool											m_negprereqHideInfo;
+	std::vector<AsciiString>						m_maxSimultaneousLinkObjects; ///< counting other objects towards unit Max
+	UnicodeString										m_maxSimultaneousCustomMessage;
+	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficulty;
+	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficultyAI;
+
+
 	WeaponTemplateSetVector							m_weaponTemplateSets;					///< our weaponsets
 	WeaponTemplateSetFinder							m_weaponTemplateSetFinder;		///< helper to allow us to find the best sets, quickly
 	ArmorTemplateSetVector							m_armorTemplateSets;	///< our armorsets

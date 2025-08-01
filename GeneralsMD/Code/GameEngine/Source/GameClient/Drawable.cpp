@@ -1131,6 +1131,17 @@ Real Drawable::getScale (void) const
 }
 
 //-------------------------------------------------------------------------------------------------
+void Drawable::setCustomTintStatus( const AsciiString& customStatusType)
+{ 
+	CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+	for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+	{
+		if (customStatusType == (*it).first)
+			m_tintCustomStatus = customStatusType;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void Drawable::reactToBodyDamageStateChange(BodyDamageType newState)
 {
@@ -1283,6 +1294,55 @@ void Drawable::updateDrawable( void )
 		}
 	}
 
+	if( !m_tintCustomStatus.isEmpty() )
+	{
+		if(m_tintCustomStatus != m_prevTintCustomStatus || m_prevTintCustomStatus.isEmpty())
+		{
+			CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+
+			if(!tintColorCustom.empty())
+			{
+				// New: Check the global custom list
+
+				bool hasStatus = false;
+
+				for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+				{
+					if ((*it).first == m_tintCustomStatus) 
+					{
+						if (m_colorTintEnvelope == NULL)
+							m_colorTintEnvelope = newInstance(TintEnvelope);
+
+						DrawableColorTint tintColor = it->second;
+
+						m_colorTintEnvelope->play(
+							isKindOf(KINDOF_INFANTRY) ? &tintColor.colorInfantry : &tintColor.color,
+							tintColor.attackFrames, tintColor.decayFrames, SUSTAIN_INDEFINITELY);
+
+						hasStatus = true;
+
+						//Set the Tint Status to a previous frame to indicate that it already has a custom status and does not need to be set to another status
+						m_tintStatus = m_prevTintStatus;
+
+						break;
+					}
+				}
+				if (!hasStatus) {
+					// NO TINTING SHOULD BE PRESENT
+					if (m_colorTintEnvelope == NULL)
+						m_colorTintEnvelope = newInstance(TintEnvelope);
+					m_colorTintEnvelope->release(); // head on back to normal, now
+				}
+			}
+		}
+	} else if ( !m_prevTintCustomStatus.isEmpty()) {
+		// NO TINTING SHOULD BE PRESENT
+		if (m_colorTintEnvelope == NULL)
+			m_colorTintEnvelope = newInstance(TintEnvelope);
+		m_colorTintEnvelope->release(); // head on back to normal, now
+		m_prevTintCustomStatus = NULL;
+	}
+
 	//Lets figure out whether we should be changing colors right about now
 	// we'll use an ifelseif ladder since we are scanning bits
 	if( m_prevTintStatus != m_tintStatus )// edge test 
@@ -1368,6 +1428,7 @@ void Drawable::updateDrawable( void )
 
 	}
 
+	if(!m_tintCustomStatus.isEmpty()) m_prevTintCustomStatus = m_tintCustomStatus;
 	m_prevTintStatus = m_tintStatus;//for next frame
 
 	if ( obj )
@@ -5283,6 +5344,10 @@ void Drawable::xfer( Xfer *xfer )
 	// prev tint status
 	//xfer->xferUnsignedInt( &m_prevTintStatus );
 	m_prevTintStatus.xfer(xfer);
+
+	xfer->xferAsciiString( &m_tintCustomStatus );
+
+	xfer->xferAsciiString( &m_prevTintCustomStatus );
 
 	// fading mode
 	xfer->xferUser( &m_fadeMode, sizeof( FadingMode ) );

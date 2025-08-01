@@ -881,6 +881,7 @@ void SpawnBehavior::computeAggregateStates(void)
 	Object *currentSpawn = NULL;
 
 	WeaponBonusConditionFlags spawnWeaponBonus; 
+	ObjectCustomStatusType spawnWeaponCustomBonus;
 
 
 	m_selfTaskingSpawnCount = 0;
@@ -916,6 +917,7 @@ void SpawnBehavior::computeAggregateStates(void)
 			}
 
 			spawnWeaponBonus = currentSpawn->getWeaponBonusCondition();
+			spawnWeaponCustomBonus = currentSpawn->getCustomWeaponBonusCondition();
 
 			avgSpawnPos.add(currentSpawn->getPosition());
 

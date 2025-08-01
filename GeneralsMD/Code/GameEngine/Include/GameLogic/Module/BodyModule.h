@@ -148,6 +148,8 @@ public:
 	virtual Real getInitialHealth() const = 0;
 
 	virtual Real getPreviousHealth() const = 0;
+
+	virtual Real getSubdualDamageCap() const = 0;
 	
 	virtual UnsignedInt getSubdualDamageHealRate() const = 0;
 	virtual Real getSubdualDamageHealAmount() const = 0;
@@ -179,6 +181,9 @@ public:
 
 	virtual void setInitialHealth(Int initialPercent)  = 0;
 	virtual void setMaxHealth( Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH )  = 0;
+	virtual void setSubdualCap( Real subdualCap ) = 0;
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate ) = 0;
+	virtual void setSubdualHealAmount( Real subdualHealAmount ) = 0;
 
 	virtual void setFrontCrushed(Bool v) = 0;
 	virtual void setBackCrushed(Bool v) = 0;
@@ -198,6 +203,7 @@ public:
 
 	virtual void setIndestructible( Bool indestructible ) = 0;
 	virtual Bool isIndestructible( void ) const = 0;
+	virtual Bool canBeSubdued( void ) const = 0;
 
 	virtual void evaluateVisualCondition() = 0;
 	virtual void updateBodyParticleSystems() = 0; // made public for topple and building collapse updates -ML
@@ -247,6 +253,7 @@ public:
 	virtual Real getMaxHealth() const {return 0.0f;}  ///< return max health
 	virtual Real getPreviousHealth() const { return 0.0f; } ///< return previous health
 
+	virtual Real getSubdualDamageCap() const {return 0.0f;}
 	virtual UnsignedInt getSubdualDamageHealRate() const {return 0;}
 	virtual Real getSubdualDamageHealAmount() const {return 0.0f;}
 	virtual Bool hasAnySubdualDamage() const{return FALSE;}
@@ -279,6 +286,9 @@ public:
 
 	virtual void setInitialHealth(Int initialPercent)  {  } ///< Sets the inital load health %.
 	virtual void setMaxHealth(Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH )  {  } ///< Sets the max health.
+	virtual void setSubdualCap( Real subdualCap )  {  } 
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate )  {  } 
+	virtual void setSubdualHealAmount( Real subdualHealAmount )  {  } 
 
 	virtual void setFrontCrushed(Bool v) { DEBUG_CRASH(("you should never call this for generic Bodys")); }
 	virtual void setBackCrushed(Bool v) { DEBUG_CRASH(("you should never call this for generic Bodys")); }
@@ -286,6 +296,7 @@ public:
 
 	virtual void setIndestructible( Bool indestructible ) { }
 	virtual Bool isIndestructible( void ) const { return TRUE; }
+	virtual Bool canBeSubdued( void ) const { return TRUE; }
 
 	//Allows outside systems to apply defensive bonuses or penalties (they all stack as a multiplier!)
 	virtual void applyDamageScalar( Real scalar ) { m_damageScalar *= scalar; }

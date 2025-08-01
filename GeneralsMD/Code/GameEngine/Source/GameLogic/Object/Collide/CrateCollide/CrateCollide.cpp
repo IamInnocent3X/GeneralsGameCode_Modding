@@ -40,6 +40,7 @@
 #include "GameClient/Drawable.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/Module/CrateCollide.h"
 
 
@@ -55,6 +56,9 @@ CrateCollideModuleData::CrateCollideModuleData()
 	m_isHumanOnlyPickup = FALSE;
 	m_executeFX = NULL;
 	m_pickupScience = SCIENCE_INVALID;
+	m_destroyOnCollide = FALSE;
+	m_fxOnCollide = NULL;
+	m_oclOnCollide = NULL;
 
 	// Added By Sadullah Nader
 	// Initializations missing and needed
@@ -83,6 +87,9 @@ void CrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "ExecuteAnimationTime", INI::parseReal, NULL, offsetof( CrateCollideModuleData, m_executeAnimationDisplayTimeInSeconds ) },
 		{ "ExecuteAnimationZRise", INI::parseReal, NULL, offsetof( CrateCollideModuleData, m_executeAnimationZRisePerSecond ) },
 		{ "ExecuteAnimationFades", INI::parseBool, NULL, offsetof( CrateCollideModuleData, m_executeAnimationFades ) },
+		{ "DeleteUserOnCollide", INI::parseBool, NULL, offsetof( CrateCollideModuleData, m_destroyOnCollide ) },
+		{ "FXOnCollide", INI::parseFXList, NULL, offsetof( CrateCollideModuleData, m_fxOnCollide ) },
+		{ "OCLOnCollide", INI::parseObjectCreationList, NULL, offsetof( CrateCollideModuleData, m_oclOnCollide ) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -113,6 +120,15 @@ void CrateCollide::onCollide( Object *other, const Coord3D *, const Coord3D * )
 	// If the crate can be picked up, perform the game logic and destroy the crate.
 	if( isValidToExecute( other ) )
 	{
+		if( modData->m_fxOnCollide != NULL )
+		{
+			FXList::doFXObj( modData->m_fxOnCollide, getObject() );
+		}
+		if( modData->m_oclOnCollide != NULL )
+		{
+			ObjectCreationList::create( modData->m_oclOnCollide, getObject(), NULL );
+		}
+
 		if( executeCrateBehavior( other ) )
 		{
 			if( modData->m_executeFX != NULL )
@@ -122,6 +138,10 @@ void CrateCollide::onCollide( Object *other, const Coord3D *, const Coord3D * )
 				FXList::doFXObj( modData->m_executeFX, other );
 			}
 
+			TheGameLogic->destroyObject( getObject() );
+		} 
+		else if( modData->m_destroyOnCollide == TRUE)
+		{
 			TheGameLogic->destroyObject( getObject() );
 		}
 

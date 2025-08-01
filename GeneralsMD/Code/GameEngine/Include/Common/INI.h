@@ -245,6 +245,7 @@ public:
 	static void parseCredits( INI* ini );
 	static void parseWindowTransitions( INI* ini );
 	static void parseChallengeModeDefinition( INI* ini );
+	static void parseCustomDamageTypesDefinition( INI *ini );
 
 	inline AsciiString getFilename( void ) const { return m_filename; }
 	inline INILoadType getLoadType( void ) const { return m_loadType; }
@@ -264,7 +265,9 @@ public:
 	static void parseUnsignedShort( INI *ini, void *instance, void *store, const void* userData );
 	static void parseInt( INI *ini, void *instance, void *store, const void* userData );
 	static void parseUnsignedInt( INI *ini, void *instance, void *store, const void* userData );
+	static void parseUnsignedIntVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseReal( INI *ini, void *instance, void *store, const void* userData );
+	static void parseRealVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parsePositiveNonZeroReal( INI *ini, void *instance, void *store, const void* userData );
 	static void parseBool( INI *ini, void *instance, void *store, const void* userData );
 	static void parseBitInInt32( INI *ini, void *instance, void *store, const void* userData );
@@ -272,6 +275,8 @@ public:
 	static void parseQuotedAsciiString( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAsciiStringVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAsciiStringVectorAppend( INI *ini, void *instance, void *store, const void* userData );
+	static void parseAsciiStringWithColonVector( INI *ini, void *instance, void *store, const void* userData );
+	static void parseAsciiStringWithColonVectorAppend( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAndTranslateLabel( INI *ini, void *instance, void *store, const void* userData );
 	static void parseMappedImage( INI *ini, void *instance, void *store, const void *userData );
 	static void parseAnim2DTemplate( INI *ini, void *instance, void *store, const void *userData );
@@ -323,6 +328,12 @@ public:
 	static void parseDeathTypeFlagsList(INI* ini, void* instance, void* store, const void* userData);
 	static void parseVeterancyLevelFlags(INI* ini, void* instance, void* store, const void* userData);
 	static void parseSoundsList( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	static void parseIntVector( INI *ini, void *instance, void *store, const void* userData );
+	static void parseIntVectorAppend( INI *ini, void *instance, void *store, const void* userData );
+
+	static void parseDamageTypeFlagsCustom(INI* ini, void* instance, void* store, const void* userData);
+	static void parseDeathTypeFlagsCustom(INI* ini, void* instance, void* store, const void* userData);
+	static void parseCustomTypes(INI* ini, void* instance, void* store, const void* userData);
 	
 	// like parseIndexList but special handling for NONE to return -2 (EVA_None)
 	static void parseEvaNameIndexList(INI* ini, void* instance, void* store, const void* userData);

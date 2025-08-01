@@ -51,6 +51,7 @@
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Weapon.h"
 #include "GameLogic/ExperienceTracker.h"
@@ -1613,6 +1614,21 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
     {
       stealth->markAsDetected();
     }
+  }
+
+  if( data->m_oclOnExecute != NULL )
+	{
+		ObjectCreationList::create(data->m_oclOnExecute, object, NULL);
+	}
+
+	if( data->m_fxOnExecute != NULL )
+	{
+		FXList::doFXObj(data->m_fxOnExecute, object, NULL);
+	}
+
+  if( data->m_destroyOnExecute )
+  {
+    TheGameLogic->destroyObject( object );
   }
 }
 

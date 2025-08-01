@@ -84,6 +84,7 @@ static const BlockParse theTypeTable[] =
 	{ "Animation",					INI::parseAnim2DDefinition },
 	{ "Armor",							INI::parseArmorDefinition },
 	{ "ArmorExtend",							INI::parseArmorExtendDefinition },
+	{ "CustomDamageTypes",						INI::parseCustomDamageTypesDefinition },
 	{ "AudioEvent",					INI::parseAudioEventDefinition },
 	{ "AudioSettings",			INI::parseAudioSettingsDefinition },
 	{ "Bridge",							INI::parseTerrainBridgeDefinition },
@@ -542,6 +543,29 @@ void INI::parseInt( INI* ini, void * /*instance*/, void *store, const void* /*us
 
 } 
 
+void INI::parseIntVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<int>* asv = (std::vector<int>*)store;
+	asv->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(scanInt(token));
+	}
+} 
+
+
+void INI::parseIntVectorAppend( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<int>* asv = (std::vector<int>*)store;
+	// nope, don't clear. duh.
+	// asv->clear();
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(scanInt(token));
+	}
+} 
+
 //-------------------------------------------------------------------------------------------------
 /** Parse unsigned integer from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
@@ -550,6 +574,17 @@ void INI::parseUnsignedInt( INI* ini, void * /*instance*/, void *store, const vo
 	const char *token = ini->getNextToken();
 	*(UnsignedInt *)store = scanUnsignedInt(token);
 
+}
+
+void INI::parseUnsignedIntVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<UnsignedInt>* asv = (std::vector<UnsignedInt>*)store;
+	asv->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(scanUnsignedInt(token));
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -561,6 +596,17 @@ void INI::parseReal( INI* ini, void * /*instance*/, void *store, const void* /*u
 	*(Real *)store = scanReal(token);
 
 } 
+
+void INI::parseRealVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<Real>* asv = (std::vector<Real>*)store;
+	asv->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(scanReal(token));
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse real from buffer and assign at location 'store' */
@@ -688,6 +734,29 @@ void INI::parseAsciiStringVectorAppend( INI* ini, void * /*instance*/, void *sto
 	// nope, don't clear. duh.
 	// asv->clear();
 	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(token);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseAsciiStringWithColonVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
+	asv->clear();
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(token);
+	}
+}
+
+void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
+	// nope, don't clear. duh.
+	// asv->clear();
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(token);
 	}
@@ -2000,6 +2069,134 @@ void INI::parseDeathTypeFlagsList(INI* ini, void* /*instance*/, void* store, con
 		flags = setDeathTypeFlag(flags, dt);
 	}
 	*(DeathTypeFlags*)store = flags;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseDamageTypeFlagsCustom(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
+{
+	DamageFlagsCustom flagsCustom;
+	AsciiString customFront;
+	DamageTypeFlags flags = DAMAGE_TYPE_FLAGS_NONE;
+	flags.flip();
+
+	for (const char* token = ini->getNextToken(); token; token = ini->getNextTokenOrNull())
+	{
+		if (stricmp(token, "ALL") == 0)
+		{
+			flags = DAMAGE_TYPE_FLAGS_NONE;
+			flags.flip();
+
+			customFront = NULL;
+			customFront.format("ALL");
+			continue;
+		}
+		if (stricmp(token, "NONE") == 0)
+		{
+			flags = DAMAGE_TYPE_FLAGS_NONE;
+
+			customFront = NULL;
+			customFront.format("NONE");
+			continue;
+		}
+		if (token[0] == '+')
+		{
+			DamageType dt = (DamageType)DamageTypeFlags::getSingleBitFromName(token+1);
+			flags = setDamageTypeFlag(flags, dt);
+			continue;
+		}
+		if (token[0] == '-')
+		{
+			DamageType dt = (DamageType)DamageTypeFlags::getSingleBitFromName(token+1);
+			flags = clearDamageTypeFlag(flags, dt);
+			continue;
+		}
+		throw INI_UNKNOWN_TOKEN;
+	}
+
+	flagsCustom.first = flags;
+	flagsCustom.second = customFront; 
+	*(DamageFlagsCustom*)store = flagsCustom;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseDeathTypeFlagsCustom(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
+{
+	DeathFlagsCustom flagsCustom;
+	AsciiString customFront;
+	DeathTypeFlags flags = DEATH_TYPE_FLAGS_ALL;
+	for (const char* token = ini->getNextToken(); token; token = ini->getNextTokenOrNull())
+	{
+		if (stricmp(token, "ALL") == 0)
+		{
+			flags = DEATH_TYPE_FLAGS_ALL;
+
+			if (TheGlobalData) {
+				flags &= ~TheGlobalData->m_defaultExcludedDeathTypes;
+				DEBUG_LOG(("INI::parseDeathTypeFlags - flags = %X\n", flags));
+			}
+			else {
+				DEBUG_LOG(("INI::parseDeathTypeFlags - TheGlobalData is NULL\n"));
+			}
+
+			customFront = NULL;
+			customFront.format("ALL");
+			continue;
+		}
+		if (stricmp(token, "NONE") == 0)
+		{
+			flags = DEATH_TYPE_FLAGS_NONE;
+
+			customFront = NULL;
+			customFront.format("NONE");
+			continue;
+		}
+		if (token[0] == '+')
+		{
+			DeathType dt = (DeathType)INI::scanIndexList(token+1, TheDeathNames);
+			flags = setDeathTypeFlag(flags, dt);
+			continue;
+		}
+		if (token[0] == '-')
+		{
+			DeathType dt = (DeathType)INI::scanIndexList(token+1, TheDeathNames);
+			flags = clearDeathTypeFlag(flags, dt);
+			continue;
+		}
+		throw INI_UNKNOWN_TOKEN;
+	}
+	flagsCustom.first = flags;
+	flagsCustom.second = customFront; 
+	*(DeathFlagsCustom*)store = flagsCustom;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseCustomTypes(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
+{
+	AsciiStringIntPair type;
+	CustomFlags* s = (CustomFlags*)store;
+	
+	for (const char *token = ini->getNextToken(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		type.first = NULL;
+		if (token[0] == '+')
+		{
+			type.first.format(token+1);
+			type.second = 1; //Required
+			s->push_back(type);
+			continue;
+		}
+		if (token[0] == '-')
+		{	
+			type.first.format(token+1);
+			type.second = 2; //Forbidden
+			s->push_back(type);
+			continue;
+		}
+		throw INI_UNKNOWN_TOKEN;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

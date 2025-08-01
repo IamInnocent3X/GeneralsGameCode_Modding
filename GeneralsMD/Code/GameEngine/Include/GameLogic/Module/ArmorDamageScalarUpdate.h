@@ -84,6 +84,7 @@ public:
 	const ParticleSystemTemplate*		m_effectParticleSystem;					///< particles attached to random points of the object
 	Bool								m_scaleParticleCount;					///< scales emission rate of attached particle based on object's size
 	TintStatus							m_tintStatus;                       ///< tint color to apply
+	AsciiString							m_customTintStatus;                 ///< custom tint color to apply
 	
 	//Bool								m_applyTint;							///< apply SHIELDED color tint on objects
 	// Real								m_sparksPerCubicFoot;						///< just like it sounds

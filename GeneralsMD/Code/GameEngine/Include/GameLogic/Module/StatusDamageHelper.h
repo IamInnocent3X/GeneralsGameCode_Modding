@@ -34,6 +34,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
+#include "GameClient/TintStatus.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -58,10 +59,13 @@ public:
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
 	virtual UpdateSleepTime update();
 
-	void doStatusDamage( ObjectStatusTypes status, Real duration );
+	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
 
 protected:
 	ObjectStatusTypes m_statusToHeal;
+	AsciiString m_customStatusToHeal;
+	AsciiString m_customTintStatus;
+	TintStatus m_currentTint;
 	UnsignedInt m_frameToHeal;
 	void clearStatusCondition();
 };

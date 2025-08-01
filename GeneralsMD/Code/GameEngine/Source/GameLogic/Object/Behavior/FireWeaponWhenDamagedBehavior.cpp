@@ -176,9 +176,16 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 	const FireWeaponWhenDamagedBehaviorModuleData* d = getFireWeaponWhenDamagedBehaviorModuleData();
 
 	// right type?
-	if (!getDamageTypeFlag(d->m_damageTypes, damageInfo->in.m_damageType))
-		return;
-
+	if(damageInfo->in.m_customDamageType.isEmpty())
+	{
+		if (!getDamageTypeFlag(d->m_damageTypesCustom.first, damageInfo->in.m_damageType))
+			return;
+	}
+	else
+	{
+		if(!getCustomTypeFlag(d->m_damageTypesCustom.second, d->m_customDamageTypes, damageInfo->in.m_customDamageType))
+			return;
+	}
 	// right amount? (use actual [post-armor] damage dealt)
 	if (damageInfo->out.m_actualDamageDealt < d->m_damageAmount)
 		return;

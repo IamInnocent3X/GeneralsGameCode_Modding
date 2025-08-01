@@ -81,6 +81,8 @@ void StatusBitsUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToSet ) },
 		{ "StatusToClear",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToClear ) },
+		{ "CustomStatusToSet",	INI::parseQuotedAsciiString, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToSet ) },
+		{ "CustomStatusToClear",	INI::parseQuotedAsciiString, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToClear ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -105,6 +107,8 @@ void StatusBitsUpgrade::upgradeImplementation( )
 	Object *obj = getObject();	
 	obj->setStatus( getStatusBitsUpgradeModuleData()->m_statusToSet );
 	obj->clearStatus( getStatusBitsUpgradeModuleData()->m_statusToClear );
+	obj->setCustomStatus( getStatusBitsUpgradeModuleData()->m_customStatusToSet );
+	obj->clearCustomStatus( getStatusBitsUpgradeModuleData()->m_customStatusToClear );
 }
 
 // ------------------------------------------------------------------------------------------------
