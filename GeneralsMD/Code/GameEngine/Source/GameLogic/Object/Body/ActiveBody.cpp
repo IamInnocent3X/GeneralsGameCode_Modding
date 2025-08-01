@@ -316,7 +316,12 @@ Real ActiveBody::estimateDamage( DamageInfoInput& damageInfo ) const
 	amount = w ? w->getArmorBonus(getObject()) : 1.0f;
 
 	// Compute Armor Bonuses based on Status Types, Weapon Bonus Conditions and Custom Weapon Bonus Conditions
-	amount *= m_curArmor.scaleArmorBonus(getObject()->getStatusBits(), getObject()->getWeaponBonusCondition(), getObject()->getCustomStatus(), getObject()->getCustomWeaponBonusCondition());
+	ObjectStatusMaskType objStatus = getObject()->getStatusBits();
+	WeaponBonusConditionFlags objFlags = getObject()->getWeaponBonusCondition();
+	ObjectCustomStatusType objCustomStatus = getObject()->getCustomStatus();
+	ObjectCustomStatusType objCustomFlags = getObject()->getCustomWeaponBonusCondition();
+	amount *= m_curArmor.scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
+	
 	// Compute damage according to Armor Coefficient.
 	amount *= m_curArmor.adjustDamage(damageInfo.m_damageType, damageInfo.m_amount, damageInfo.m_customDamageType);
 	//if(!damageInfo.m_customDamageType.isEmpty()) amount = m_curArmor.adjustDamageCustom(damageInfo.m_customDamageType, damageInfo.m_amount);
@@ -385,6 +390,17 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool killsGarrisoned = FALSE;
 	Bool isStatusDamage = FALSE;
 	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
+	const Weapon* w = NULL;
+	w = obj->getCurrentWeapon();
+	Real armorBonus = w ? w->getArmorBonus(obj) : 1.0f;
+
+	ObjectStatusMaskType objStatus = obj->getStatusBits();
+	WeaponBonusConditionFlags objFlags = obj->getWeaponBonusCondition();
+	ObjectCustomStatusType objCustomStatus = obj->getCustomStatus();
+	ObjectCustomStatusType objCustomFlags = obj->getCustomWeaponBonusCondition();
+	armorBonus *= m_curArmor.scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
+
+	amount *= armorBonus;
 
 	// Units that get disabled by Chrono damage cannot take damage:
 	if (obj->isDisabledByType(DISABLED_CHRONO) &&
@@ -509,6 +525,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				realFramesToStatusFor = ConvertDurationFromMsecsToFrames(damageInfo->in.m_statusDuration);
 				if (damageInfo->in.m_statusDurationTypeCorrelate) {
 					realFramesToStatusFor = m_curArmor.adjustDamage(damageInfo->in.m_damageType, realFramesToStatusFor, damageInfo->in.m_customDamageType);
+					realFramesToStatusFor *= armorBonus;
 				}
 			}
 			obj->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );

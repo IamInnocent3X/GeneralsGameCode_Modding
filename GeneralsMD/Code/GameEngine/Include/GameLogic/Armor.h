@@ -81,6 +81,7 @@ private:
 	Real						m_statusCoefficient[OBJECT_STATUS_COUNT];	///< modifiers to damage
 	Real						m_weaponBonusCoefficient[WEAPONBONUSCONDITION_COUNT];	///< modifiers to damage
 	std::vector<ObjectStatusTypes>	m_statusFlags;
+	WeaponBonusConditionTypeVec		m_weaponBonusFlags;
 	CustomDamageTypeMap			m_customCoefficients;
 	CustomDamageTypeMap			m_customStatusArmorBonus;
 };  

@@ -450,6 +450,7 @@ UnicodeString ProductionPrerequisite::getNegativeRequiresListScience(const Playe
 		if (i != m_prenegreqSciences.size()-1)
 			scienceName.concat(L", ");
 
+		// add it to the list
 		negativeRequiresListS.concat(scienceName);
 	}
 

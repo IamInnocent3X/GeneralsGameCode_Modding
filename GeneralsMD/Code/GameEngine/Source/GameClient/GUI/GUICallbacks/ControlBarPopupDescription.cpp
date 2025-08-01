@@ -251,7 +251,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 	UnicodeString requiresFormat = UnicodeString::TheEmptyString, requiresList, requiresNegativeFormat = UnicodeString::TheEmptyString, requiresNegativeList, requiresNegativeFormatS = UnicodeString::TheEmptyString, requiresNegativeListS;
 	Bool firstRequirement = true;
 	Bool firstNegativeRequirement = true;
-	//Bool firstNegativeRequirementS = true;
+	Bool firstNegativeRequirementS = true;
 	const ProductionPrerequisite *prereq;
 	Bool fireScienceButton = false;
 	UnsignedInt costToBuild = 0;
@@ -450,6 +450,24 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					requiresNegativeList = prereq->getNegativeRequiresList(player);
 					requiresNegativeListS = prereq->getNegativeRequiresListScience(player);
 
+					if( requiresNegativeList != UnicodeString::TheEmptyString ) 
+					{
+						// make sure to put in 'returns' to space things correctly
+						if (firstNegativeRequirement)
+							firstNegativeRequirement = false;
+						else
+							requiresNegativeFormat.concat(L", ");
+					}
+
+					if( requiresNegativeListS != UnicodeString::TheEmptyString ) 
+					{
+						// make sure to put in 'returns' to space things correctly
+						if (firstNegativeRequirementS)
+							firstNegativeRequirementS = false;
+						else
+							requiresNegativeFormatS.concat(L", ");
+					}
+
 					requiresNegativeFormat.concat(requiresNegativeList);
 
 					requiresNegativeFormatS.concat(requiresNegativeListS);
@@ -461,7 +479,6 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					if (!requiresNegativeFormat.isEmpty())
 					{
 						requiresNegativeFormat.format(requireNegativeFormat.str(), requiresNegativeFormat.str());
-						firstNegativeRequirement = false;
 					}
 					if (!requiresNegativeFormatS.isEmpty())
 					{
@@ -471,7 +488,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 						descrip.concat(L"\n");
 					descrip.concat(requiresNegativeFormat);
 
-					if(firstNegativeRequirement == false && !requiresNegativeFormatS.isEmpty())
+					if(!requiresNegativeFormat.isEmpty() && !requiresNegativeFormatS.isEmpty())
 						descrip.concat(L"\n");
 					descrip.concat(requiresNegativeFormatS);
 
@@ -604,6 +621,24 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 						requiresNegativeList = prereq->getNegativeRequiresList(player);
 						requiresNegativeListS = prereq->getNegativeRequiresListScience(player);
 
+						if( requiresNegativeList != UnicodeString::TheEmptyString ) 
+						{
+							// make sure to put in 'returns' to space things correctly
+							if (firstNegativeRequirement)
+								firstNegativeRequirement = false;
+							else
+								requiresNegativeFormat.concat(L", ");
+						}
+
+						if( requiresNegativeListS != UnicodeString::TheEmptyString ) 
+						{
+							// make sure to put in 'returns' to space things correctly
+							if (firstNegativeRequirementS)
+								firstNegativeRequirementS = false;
+							else
+								requiresNegativeFormatS.concat(L", ");
+						}
+
 						requiresNegativeFormat.concat(requiresNegativeList);
 
 						requiresNegativeFormatS.concat(requiresNegativeListS);
@@ -615,7 +650,6 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 						if (!requiresNegativeFormat.isEmpty())
 						{
 							requiresNegativeFormat.format(requireNegativeFormat.str(), requiresNegativeFormat.str());
-							firstNegativeRequirement = false;
 						}
 						if (!requiresNegativeFormatS.isEmpty())
 						{
@@ -625,7 +659,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 							descrip.concat(L"\n");
 						descrip.concat(requiresNegativeFormat);
 
-						if(firstNegativeRequirement == false && !requiresNegativeFormatS.isEmpty())
+						if(!requiresNegativeFormat.isEmpty() && !requiresNegativeFormatS.isEmpty())
 							descrip.concat(L"\n");
 						descrip.concat(requiresNegativeFormatS);
 

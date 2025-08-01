@@ -74,6 +74,7 @@ void ArmorTemplate::clear()
 	}
 	m_customCoefficients.clear();
 	m_customStatusArmorBonus.clear();
+	m_weaponBonusFlags.clear();
 	m_statusFlags.clear();
 }
 
@@ -90,14 +91,16 @@ void ArmorTemplate::copyFrom(const ArmorTemplate* other) {
 	{
 		m_weaponBonusCoefficient[i] = other->m_weaponBonusCoefficient[i];
 	}
-	for (CustomDamageTypeMap::const_iterator it = other->m_customCoefficients.begin(); it != other->m_customCoefficients.end(); ++it)
+
+	m_customCoefficients = other->m_customCoefficients;
+
+	m_customStatusArmorBonus = other->m_customStatusArmorBonus;
+
+	for (int i = 0; i < other->m_weaponBonusFlags.size(); i++)
 	{
-		m_customCoefficients[it->first] = it->second;
+		m_weaponBonusFlags.push_back(other->m_weaponBonusFlags[i]);
 	}
-	for (CustomDamageTypeMap::const_iterator it = other->m_customStatusArmorBonus.begin(); it != other->m_customStatusArmorBonus.end(); ++it)
-	{
-		m_customStatusArmorBonus[it->first] = it->second;
-	}
+
 	for (int i = 0; i < other->m_statusFlags.size(); i++)
 	{
 		m_statusFlags.push_back(other->m_statusFlags[i]);
@@ -108,14 +111,14 @@ void ArmorTemplate::copyFrom(const ArmorTemplate* other) {
 Real ArmorTemplate::scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, ObjectCustomStatusType customStatusType, ObjectCustomStatusType customBonusType) const
 {
 	Real damage = 1.0f;
-	if(weaponBonusType != 0)
+	if(weaponBonusType != 0 && !m_weaponBonusFlags.empty())
 	{
-		for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+		for (int i = 0; i < m_weaponBonusFlags.size(); i++)
 		{
-			if ((weaponBonusType & (1 << i)) == 0)
+			if ((weaponBonusType & (1 << m_weaponBonusFlags[i])) == 0)
 				continue;
 
-			damage *= m_weaponBonusCoefficient[i];
+			damage *= m_weaponBonusCoefficient[m_weaponBonusFlags[i]];
 		}
 	}
 	if(!m_statusFlags.empty())
@@ -123,26 +126,28 @@ Real ArmorTemplate::scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonus
 		for (int i = 0; i < m_statusFlags.size(); i++)
 		{
 			if (statusType.test(m_statusFlags[i]))
-			{
 				damage *= m_statusCoefficient[m_statusFlags[i]];
-			}
 		}
 	}
-	if(!customStatusType.empty() && !m_customStatusArmorBonus.empty())
+	if(!m_customStatusArmorBonus.empty())
 	{
 		for(CustomDamageTypeMap::const_iterator it = m_customStatusArmorBonus.begin(); it != m_customStatusArmorBonus.end(); ++it)
 		{
-			ObjectCustomStatusType::const_iterator it2 = customBonusType.find(it->first);
-			if (it2 != customBonusType.end())
+			if(!customBonusType.empty())
 			{
-				if(it2->second == 1) 
-					damage *= it->second;
-				continue;
+				ObjectCustomStatusType::const_iterator it2 = customBonusType.find(it->first);
+				if (it2 != customBonusType.end())
+				{
+					if(it2->second == 1) 
+						damage *= it->second;
+					continue;
+				}
 			}
-			ObjectCustomStatusType::const_iterator it3 = customStatusType.find(it->first);
-			if (it3 != customStatusType.end() && it3->second == 1)
+			if(!customStatusType.empty())
 			{
-				damage *= it->second;
+				ObjectCustomStatusType::const_iterator it3 = customStatusType.find(it->first);
+				if (it3 != customStatusType.end() && it3->second == 1)
+					damage *= it->second;
 			}
 		}
 	}
@@ -269,8 +274,10 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 {
 	ArmorTemplate* self = (ArmorTemplate*) instance;
 
-	AsciiString damageNameStr = ini->getNextQuotedAsciiString();
-	const char* damageName = damageNameStr.str();
+	const char* damageName = ini->getNextToken();
+	AsciiString damageNameStr;
+	damageNameStr.format(damageName);
+
 	Real pct = INI::scanPercentToReal(ini->getNextToken());
 
 	if (stricmp(damageName, "Default") == 0)
@@ -308,43 +315,42 @@ void ArmorTemplate::parseArmorBonus(INI* ini, void* instance, void* /* store */,
 {
 	ArmorTemplate* self = (ArmorTemplate*)instance;
 
-	AsciiString conditionNameStr = ini->getNextQuotedAsciiString();
-	const char* conditionName = conditionNameStr.str(); //ini->getNextToken();
+	const char* conditionName = ini->getNextToken();
+	AsciiString conditionNameStr;
+	conditionNameStr.format(conditionName);
+
 	Real pct = INI::scanPercentToReal(ini->getNextToken());
 
-	Bool isObjectStatus;
-	Bool isWeaponBonusCondition;
+	Bool isObjectStatus = false;
+	Bool isWeaponBonusCondition = false;
 
 	Int count = 0;
 	for(ConstCharPtrArray name = TheWeaponBonusNames; *name; name++, count++ )
 	{
 		if( stricmp( *name, conditionName ) == 0 )
 		{
-			isWeaponBonusCondition = TRUE;
+			isWeaponBonusCondition = true;
+			self->m_weaponBonusCoefficient[count] = pct;
+			self->m_weaponBonusFlags.push_back((WeaponBonusConditionType)count);
 			break;
 		}
 	}
-	if (count >= 0 && isWeaponBonusCondition == TRUE)
-	{
-		self->m_weaponBonusCoefficient[count] = pct;
-	}
-	else
+	if (isWeaponBonusCondition == false)
 	{
 		ObjectStatusTypes ost = (ObjectStatusTypes)ObjectStatusMaskType::getSingleBitFromName(conditionName);
-		count = ost;
-		if(count >= 0 && isWeaponBonusCondition == FALSE)
+		if(ost >= 0)
 		{
-			isObjectStatus = TRUE;
-			self->m_statusCoefficient[count] = pct;
+			isObjectStatus = true;
+			self->m_statusCoefficient[ost] = pct;
 			self->m_statusFlags.push_back(ost);
 		}
 	}
-	if (isObjectStatus == FALSE && isWeaponBonusCondition == FALSE)
+	if (isObjectStatus == false && isWeaponBonusCondition == false)
 	{
 		// Compatible with ArmorExtend
 		CustomDamageTypeMap::iterator it = self->m_customStatusArmorBonus.find(conditionNameStr);
 
-		// The found the CustomDamageType at the declared CustomDamageTypes data.
+		// The found CustomDamageType at the declared CustomDamageTypes data.
 		if (it != self->m_customStatusArmorBonus.end())
 		{
 			it->second = pct;
