@@ -119,6 +119,7 @@ static PoolSizeRec sizes[] =
 	{ "WindowLayoutPool", 32, 32 },
 	{ "AnimatedParticleSysBoneClientUpdate", 16, 16 },
 	{ "SwayClientUpdate", 32, 32 },
+	{ "DynamicGeometryClientUpdate", 32, 32 },
 	{ "BeaconClientUpdate", 64, 32 },
 	{ "AIGroupPool", 64, 32 },  
 	{ "AIDockMachinePool", 256, 32 },
@@ -728,6 +729,7 @@ static PoolSizeRec sizes[] =
 	{ "ThumbnailManagerClass", 32, 32},
 	{ "SmudgeSet", 32, 32},
 	{ "Smudge", 128, 32},
+	{ "ResetSpecialPowerTimerWhileAliveUpdate", 8, 8 },
 	{ 0, 0, 0 }
 };
 

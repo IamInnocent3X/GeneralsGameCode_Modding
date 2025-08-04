@@ -197,6 +197,7 @@
 #include "GameLogic/Module/PowerPlantUpdate.h"
 #include "GameLogic/Module/CheckpointUpdate.h"
 #include "GameLogic/Module/EMPUpdate.h"
+#include "GameLogic/Module/ResetSpecialPowerTimerWhileAliveUpdate.h"
 
 // upgrade includes
 #include "GameLogic/Module/ActiveShroudUpgrade.h"
@@ -289,6 +290,7 @@
 // client update includes
 #include "GameClient/Module/AnimatedParticleSysBoneClientUpdate.h"
 #include "GameClient/Module/SwayClientUpdate.h"
+#include "GameClient/Module/DynamicGeometryClientUpdate.h"
 #include "GameClient/Module/BeaconClientUpdate.h"
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
@@ -485,6 +487,7 @@ void ModuleFactory::init( void )
 	addModule( WorkerAIUpdate );
 	addModule( PowerPlantUpdate );
 	addModule( CheckpointUpdate );
+	addModule( ResetSpecialPowerTimerWhileAliveUpdate );
 
 	// upgrade modules
 	addModule( CostModifierUpgrade );
@@ -577,6 +580,7 @@ void ModuleFactory::init( void )
 	// client update modules
 	addModule( AnimatedParticleSysBoneClientUpdate );
 	addModule( SwayClientUpdate );
+	addModule( DynamicGeometryClientUpdate );
 	addModule( BeaconClientUpdate );
 
 }  // end init
