@@ -140,10 +140,12 @@ void NeutronMissileUpdate::onDelete( void )
 {
 }
 
-void NeutronMissileUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames )
+void NeutronMissileUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID )
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 	m_framesTillDecoyed = now + frames;
+	m_detonateDistance = distance;
+	m_decoyID = victimID;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -536,10 +538,35 @@ UpdateSleepTime NeutronMissileUpdate::update( void )
 
 	//If this missile has been marked to divert to countermeasures, check when
 	//that will occur, then do it when the timer expires.
-	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() )
+	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() && m_state != DEAD )
 	{
-		// Since it doesn't have a tracker, blow it up instead.
-		detonate();
+		// Since it doesn't have a tracker, we want blow it up instead.
+		// If there's no configured distance, blow it up.
+		if(m_detonateDistance == 0)
+		{
+			m_framesTillDecoyed = 0;
+			detonate();
+			return UPDATE_SLEEP_NONE;
+		}
+		// Calculate if the Projectile is near to the victim.
+		Object *victim = NULL;
+		if(m_decoyID != INVALID_ID)
+		{
+			victim = TheGameLogic->findObjectByID( m_decoyID );
+		}
+		if (victim)
+		{
+			Coord3D curVictimPos;
+			victim->getGeometryInfo().getCenterPosition(*victim->getPosition(), curVictimPos);
+			Real victimDistance = sqrt(ThePartitionManager->getDistanceSquared( getObject(), &curVictimPos, FROM_CENTER_2D ) );
+			// If the distance is close enough, blow it up 
+			if(victimDistance && m_detonateDistance >= victimDistance)
+			{
+				m_framesTillDecoyed = 0;
+				detonate();
+				return UPDATE_SLEEP_NONE;
+			}
+		}
 	}
 
 	return UPDATE_SLEEP_NONE;
@@ -652,6 +679,8 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 	if( version >= 5 )
 	{
 		xfer->xferUnsignedInt( &m_framesTillDecoyed );
+		xfer->xferUnsignedInt(&m_detonateDistance);
+		xfer->xferObjectID(&m_decoyID);
 	}
 
 }  // end xfer

@@ -643,6 +643,8 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "UseVanillaDiagonalMoveSpeed",	      INI::parseBool,		NULL,			offsetof(GlobalData, m_useOldMoveSpeed) },
 	{ "TintStatus",	 GlobalData::parseTintStatusType, NULL, offsetof(GlobalData, m_colorTintTypes) },
 	{ "CustomTintStatus",	 GlobalData::parseTintCustomStatusType, NULL, offsetof(GlobalData, m_colorTintCustomTypes) },
+
+	{ "CountermeasuresDetonateNonTrackingMissiles",	 INI::parseBool, NULL, offsetof(GlobalData, m_countermeasuresDetonateNonTracking) },
 	
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1193,6 +1195,8 @@ GlobalData::GlobalData()
 	//m_allAdvice = FALSE;
 
 	m_clientRetaliationModeEnabled = TRUE; //On by default.
+
+	m_countermeasuresDetonateNonTracking = FALSE; //More realistic destruction. Won't seemingly home onto the immovable target dealing no damage.
 
 	m_useOldMoveSpeed = FALSE;  //Fix is enabled by default
 

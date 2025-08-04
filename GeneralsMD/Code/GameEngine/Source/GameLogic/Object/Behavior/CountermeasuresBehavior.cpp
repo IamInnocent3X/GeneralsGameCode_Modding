@@ -92,6 +92,7 @@ CountermeasuresBehavior::CountermeasuresBehavior( Thing *thing, const ModuleData
 	m_incomingMissiles = 0;
 	m_nextVolleyFrame = 0;
 	m_parked = FALSE;
+	m_currentVolley = 0;
 	m_dockObjectID = INVALID_ID;
 
 	if (data->m_initiallyActive)
@@ -122,6 +123,7 @@ void CountermeasuresBehavior::reportMissileForCountermeasures( Object *missile )
   if( m_availableCountermeasures + m_activeCountermeasures > 0 )
 	{
 		m_parked = FALSE;
+		m_currentVolley = 0;
 
 		//We have countermeasures we can use. Determine now whether or not the incoming missile will 
 		//be diverted.
@@ -139,7 +141,7 @@ void CountermeasuresBehavior::reportMissileForCountermeasures( Object *missile )
 					//the countermeasure reaction time or else the missile won't have a countermeasure to divert to!
 					DEBUG_ASSERTCRASH( data->m_countermeasureReactionFrames < data->m_missileDecoyFrames, 
 						("MissileDecoyDelay needs to be less than CountermeasureReactionTime in order to function properly.") );
-					pui->setFramesTillCountermeasureDiversionOccurs( data->m_missileDecoyFrames );
+					pui->setFramesTillCountermeasureDiversionOccurs( data->m_missileDecoyFrames, data->m_detonateDistance, getObject()->getID() );
 					m_divertedMissiles++;
 
 					if( m_activeCountermeasures == 0 && m_reactionFrame == 0 )
@@ -398,8 +400,8 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 		}
 	}
 	
-	//if( obj->isAirborneTarget() )
-	//{
+	if( ( obj->isAirborneTarget() && data->m_continuousVolleyInAir == TRUE ) || data->m_volleyLimit == 0 || m_currentVolley < data->m_volleyLimit )
+	{
 
 		//Handle flare volley launching (initial reaction, and continuation firing).
 		if( m_availableCountermeasures )
@@ -424,7 +426,7 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 				m_nextVolleyFrame = now + data->m_framesBetweenVolleys;
 			}
 		}
-	//}
+	}
 
 	//Handle auto-reloading (data->m_reloadFrames of zero means it's not possible to auto-reload).
 	//Aircraft that don't auto-reload require landing at an airfield for resupply.
@@ -474,6 +476,8 @@ void CountermeasuresBehavior::launchVolley()
 {
 	const CountermeasuresBehaviorModuleData *data = getCountermeasuresBehaviorModuleData();
 	Object *obj = getObject();
+
+	m_currentVolley++;
 
 	Real volleySize = (Real)data->m_volleySize;
 	for( UnsignedInt i = 0; i < data->m_volleySize; i++ )
@@ -574,6 +578,7 @@ void CountermeasuresBehavior::xfer( Xfer *xfer )
 		xfer->xferUnsignedInt( &m_reactionFrame );
 		xfer->xferUnsignedInt( &m_nextVolleyFrame );
 		xfer->xferObjectID(&m_dockObjectID);
+		xfer->xferUnsignedInt( &m_currentVolley );
 		xfer->xferBool(&m_parked);
 	}
 

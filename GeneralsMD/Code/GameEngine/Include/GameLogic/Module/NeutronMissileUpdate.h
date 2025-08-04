@@ -104,7 +104,7 @@ public:
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual const Coord3D *getVelocity() const { return &m_vel; }		///< get current velocity
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames );
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
 	virtual void projectileNowJammed() {}
 	virtual Object* getTargetObject() { return NULL; }
 	virtual const Coord3D* getTargetPosition();
@@ -135,6 +135,8 @@ private:
 	RadiusDecal	m_deliveryDecal;
 
 	UnsignedInt	m_framesTillDecoyed;
+	UnsignedInt	m_detonateDistance;
+	ObjectID m_decoyID;
 
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 

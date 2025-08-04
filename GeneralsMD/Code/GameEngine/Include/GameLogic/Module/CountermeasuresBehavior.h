@@ -67,8 +67,11 @@ public:
 	Bool							m_noAirborne;
 	Bool							m_considerGround;
 	Bool							m_initiallyActive;
+	Bool							m_continuousVolleyInAir;
 	std::vector<AsciiString>		m_reloadNearObjects;
 	Real							m_dockDistance;
+	Int								m_volleyLimit;
+	UnsignedInt						m_detonateDistance;
 
 
 	CountermeasuresBehaviorModuleData()
@@ -78,6 +81,7 @@ public:
     m_framesBetweenVolleys  = 0;
 		m_numberOfVolleys       = 0;
     m_reloadFrames          = 0;
+	m_volleyLimit			= 0;
     m_evasionRate           = 0.0f;
 		m_mustReloadAtAirfield	= FALSE;
 		m_mustReloadNearDock	= FALSE;
@@ -86,10 +90,12 @@ public:
 		m_volleyVelocityFactor  = 1.0f;
 		m_reactingKindofs = KINDOFMASK_NONE;
 		m_reloadNearObjects.clear();
+		m_continuousVolleyInAir = TRUE;
 		m_noAirborne = FALSE;
 		m_considerGround = FALSE;
 		m_initiallyActive = FALSE;
 		m_dockDistance = 100.0f;
+		m_detonateDistance = 0;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p) 
@@ -110,9 +116,12 @@ public:
 			{ "ReactionLaunchLatency",	INI::parseDurationUnsignedInt,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_countermeasureReactionFrames ) },
 			
 			{ "StartsActive",	INI::parseBool, 				NULL, offsetof( CountermeasuresBehaviorModuleData, m_initiallyActive ) },
+			{ "VolleyLimitPerMissile",	INI::parseInt,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_volleyLimit ) },
+			{ "ContinuousVolleyInAir",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_continuousVolleyInAir ) },
 			{ "ReactingToKindOfs",	KindOfMaskType::parseFromINI,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_reactingKindofs ) },
 			{ "NoAirboneCountermeasures",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_noAirborne ) },
 			{ "GroundCountermeasures",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_considerGround ) },
+			{ "NonTrackingDetonateDistance", INI::parseUnsignedInt,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_detonateDistance ) },
 			{ "MustReloadAtBarracks",		INI::parseBool,									NULL, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadAtBarracks ) },
 			{ "MustReloadNearRepairDocks",		INI::parseBool,								NULL, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadNearDock ) },
 			{ "MustReloadObjectDistance",	INI::parseReal,							NULL,		offsetof( CountermeasuresBehaviorModuleData, m_dockDistance ) },
@@ -237,6 +246,7 @@ private:
 	UnsignedInt m_reactionFrame;						//The frame countermeasures will be launched after initial hostile act.
 	UnsignedInt m_nextVolleyFrame;					//Frame the next volley is fired.
 	UnsignedInt m_reloadFrame;							//The frame countermeasures will be ready to use again.
+	UnsignedInt m_currentVolley;
 	Bool m_parked;
 	ObjectID m_dockObjectID;
 };

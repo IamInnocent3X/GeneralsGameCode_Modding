@@ -589,6 +589,8 @@ public:
 
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 
+	Bool m_countermeasuresDetonateNonTracking;
+
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

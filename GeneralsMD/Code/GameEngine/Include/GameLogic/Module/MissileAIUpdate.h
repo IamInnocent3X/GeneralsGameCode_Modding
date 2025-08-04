@@ -108,7 +108,7 @@ public:
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ); ///< Number of frames till missile diverts to countermeasures.
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ); ///< Number of frames till missile diverts to countermeasures.
 	virtual void projectileNowJammed();///< We lose our Object target and scatter to the ground
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
@@ -147,6 +147,9 @@ private:
 	Bool									m_noDamage;								///< if true, missile will not cause damage when it detonates. (Used for flares).
 	Bool									m_isJammed;								///< No target, just shooting at a scattered position
 	
+	UnsignedInt						m_detonateDistance;
+	ObjectID						m_decoyID;
+
 	void doPrelaunchState();
 	void doLaunchState();
 	void doIgnitionState();

@@ -136,10 +136,12 @@ DumbProjectileBehavior::~DumbProjectileBehavior()
 //-------------------------------------------------------------------------------------------------
 // Set number of frames till missile diverts to countermeasures.
 //-------------------------------------------------------------------------------------------------
-void DumbProjectileBehavior::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames )
+void DumbProjectileBehavior::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID )
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 	m_framesTillDecoyed = now + frames;
+	m_detonateDistance = distance;
+	m_decoyID = victimID;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -625,12 +627,41 @@ UpdateSleepTime DumbProjectileBehavior::update()
 	
 	//If this missile has been marked to divert to countermeasures, check when
 	//that will occur, then do it when the timer expires.
-	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() )
+	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() && !m_hasDetonated )
 	{
-		// Since it doesn't have a tracker, blow it up instead.
-		m_noDamage = TRUE;
-		detonate();
-		return UPDATE_SLEEP_NONE;
+		// Since it doesn't have a tracker, we want blow it up instead.
+		// If there's no configured distance, blow it up.
+		if(m_detonateDistance == 0)
+		{
+			m_framesTillDecoyed = 0;
+			m_noDamage = TRUE;
+			detonate();
+			return UPDATE_SLEEP_NONE;
+		}
+		// Calculate if the Projectile is near to the victim.
+		Object *victim = NULL;
+		if(m_victimID != INVALID_ID)
+		{
+			victim = TheGameLogic->findObjectByID( m_victimID );
+		}
+		else if(m_decoyID != INVALID_ID)
+		{
+			victim = TheGameLogic->findObjectByID( m_decoyID );
+		}
+		if (victim)
+		{
+			Coord3D curVictimPos;
+			victim->getGeometryInfo().getCenterPosition(*victim->getPosition(), curVictimPos);
+			Real victimDistance = sqrt(ThePartitionManager->getDistanceSquared( getObject(), &curVictimPos, FROM_CENTER_2D ) );
+			// If the distance is close enough, blow it up 
+			if(victimDistance && m_detonateDistance >= victimDistance)
+			{
+				m_framesTillDecoyed = 0;
+				m_noDamage = TRUE;
+				detonate();
+				return UPDATE_SLEEP_NONE;
+			}
+		}
 	}
 
 	if (m_victimID != INVALID_ID && d->m_flightPathAdjustDistPerFrame > 0.0f)
@@ -837,6 +868,9 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 	{
 		xfer->xferUnsignedInt( &m_framesTillDecoyed );
 		xfer->xferBool( &m_noDamage );
+
+		xfer->xferUnsignedInt(&m_detonateDistance);
+		xfer->xferObjectID(&m_decoyID);
 	}
 
 }  // end xfer

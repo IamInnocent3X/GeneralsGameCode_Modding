@@ -95,7 +95,7 @@ public:
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return true; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames );
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
 	virtual void projectileNowJammed() {}
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
@@ -121,6 +121,8 @@ private:
 	ObjectCustomStatusType 			m_extraBonusCustomFlags;
 	Bool                  			m_noDamage;
 	UnsignedInt						m_framesTillDecoyed;
+	UnsignedInt						m_detonateDistance;
+	ObjectID						m_decoyID;
   
   Bool                  m_hasDetonated;           ///< 
 
