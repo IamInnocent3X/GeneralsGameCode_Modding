@@ -13,7 +13,7 @@
 
 # IamInnocent's Implementation Changelog
 
-This is a forked expansion towards a the implementation of [Generals Game Modding](https://github.com/Andreas-W/GeneralsGameCode_Modding) of which is a feature implementation of [Generals Game Code](https://github.com/TheSuperHackers/GeneralsGameCode) with *Modding* in mind.
+This is a forked expansion towards [Generals Game Modding](https://github.com/Andreas-W/GeneralsGameCode_Modding) which is a feature expansion of [Generals Game Code](https://github.com/TheSuperHackers/GeneralsGameCode) that is designed for INI *Modding*.
 
 You can find the changelog of the extra features listed in this version
 [here.](https://docs.google.com/document/d/1TColmJupsZFrKGLTg5I4UuLZ_e0nzpId)
