@@ -11,6 +11,13 @@
 [![GitHub issues by-label](https://img.shields.io/github/issues/TheSuperHackers/GeneralsGameCode/critical?style=flat&label=Critical%20Issues&labelColor=%23c4c4c4&color=%23424242)](https://github.com/TheSuperHackers/GeneralsGameCode/issues?q=label%3ACritical)
 [![GitHub issues by-label](https://img.shields.io/github/issues/TheSuperHackers/GeneralsGameCode/blocker?style=flat&label=Blocker%20Issues&labelColor=%23c4c4c4&color=%23424242)](https://github.com/TheSuperHackers/GeneralsGameCode/issues?q=label%3ABlocker)
 
+# IamInnocent's Implementation Changelog
+
+This is a forked expansion towards a the implementation of [Generals Game Modding](https://github.com/Andreas-W/GeneralsGameCode_Modding) of which is a feature implementation of [Generals Game Code](https://github.com/TheSuperHackers/GeneralsGameCode) with *Modding* in mind.
+
+You can find the changelog of the extra features listed in this version
+[here](docs.google.com/document/d/1TColmJupsZFrKGLTg5I4UuLZ_e0nzpId/)
+
 # Welcome to the Generals Game Code Project
 
 GeneralsGameCode is a community-driven project aimed at fixing and improving the classic RTS game, *Command &
