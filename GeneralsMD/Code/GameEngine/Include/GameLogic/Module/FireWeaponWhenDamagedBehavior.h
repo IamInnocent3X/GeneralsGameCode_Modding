@@ -55,9 +55,23 @@ public:
 	const WeaponTemplate*	m_continuousWeaponDamaged;
 	const WeaponTemplate*	m_continuousWeaponReallyDamaged;
 	const WeaponTemplate*	m_continuousWeaponRubble;
+	UnsignedInt				m_continuousDurationPristine;
+	UnsignedInt				m_continuousDurationDamaged;
+	UnsignedInt				m_continuousDurationReallyDamaged;
+	UnsignedInt				m_continuousDurationRubble;
+	UnsignedInt				m_continuousIntervalPristine;
+	UnsignedInt				m_continuousIntervalDamaged;
+	UnsignedInt				m_continuousIntervalReallyDamaged;
+	UnsignedInt				m_continuousIntervalRubble;
+	AsciiString				m_weaponSlotName;
 
 	DamageFlagsCustom	m_damageTypesCustom;
 	CustomFlags 	m_customDamageTypes;
+
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
 
 	FireWeaponWhenDamagedBehaviorModuleData()
 	{
@@ -73,9 +87,22 @@ public:
 		m_damageTypes = DAMAGE_TYPE_FLAGS_ALL;
 		m_damageAmount = 0;
 
+		m_weaponSlotName.format("PRIMARY");
 		m_damageTypesCustom.first = DAMAGE_TYPE_FLAGS_ALL;
 		m_damageTypesCustom.second.format("ALL");
+		m_requiredCustomStatus.clear();
+		m_forbiddenCustomStatus.clear();
+
 		m_customDamageTypes.clear();
+
+		m_continuousDurationPristine = 0;  
+		m_continuousDurationDamaged = 0; 	
+		m_continuousDurationReallyDamaged = 0; 	
+		m_continuousDurationRubble = 0; 	
+		m_continuousIntervalPristine = 0;  
+		m_continuousIntervalDamaged = 0; 	
+		m_continuousIntervalReallyDamaged = 0; 	
+		m_continuousIntervalRubble = 0; 
 	}
 
 
@@ -96,6 +123,20 @@ public:
 			{ "DamageAmount", INI::parseReal, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageAmount ) },
 			
 			{ "CustomDamageTypes", INI::parseCustomTypes, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_customDamageTypes ) },
+			{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredStatus ) },
+			{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenStatus ) },
+			{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredCustomStatus ) },
+			{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenCustomStatus ) },
+			{ "WeaponSlot",		INI::parseQuotedAsciiString,	NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_weaponSlotName ) },
+
+			{ "ContinuousDurationPristine", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationPristine) },
+			{ "ContinuousDurationDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationDamaged) },
+			{ "ContinuousDurationReallyDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousDurationReallyDamaged) },
+			{ "ContinuousDurationRubble", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousDurationRubble) },
+			{ "ContinuousIntervalPristine", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalPristine) },
+			{ "ContinuousIntervalDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalDamaged) },
+			{ "ContinuousIntervalReallyDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousIntervalReallyDamaged) },
+			{ "ContinuousIntervalRubble", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousIntervalRubble) },
 
 			{ 0, 0, 0, 0 }
 		};
@@ -187,6 +228,9 @@ private:
 	Weapon *m_continuousWeaponDamaged;
 	Weapon *m_continuousWeaponReallyDamaged;
 	Weapon *m_continuousWeaponRubble;
+	UnsignedInt	m_duration;
+	UnsignedInt	m_interval;
+	Bool m_innate;
 
 };
 

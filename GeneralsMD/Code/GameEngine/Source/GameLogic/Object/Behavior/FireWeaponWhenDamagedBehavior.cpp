@@ -31,6 +31,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #define DEFINE_SLOWDEATHPHASE_NAMES
+#define DEFINE_WEAPONSLOTTYPE_NAMES  //TheWeaponSlotTypeNamesLookupList
 
 #include "Common/Thing.h"
 #include "Common/ThingTemplate.h"
@@ -47,6 +48,7 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/WeaponSet.h"
 #include "GameClient/Drawable.h"
 
 const Int MAX_IDX = 32;
@@ -65,34 +67,39 @@ FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, cons
 	m_continuousWeaponPristine( NULL ),
 	m_continuousWeaponDamaged( NULL ),
 	m_continuousWeaponReallyDamaged( NULL ),
-	m_continuousWeaponRubble( NULL )
+	m_continuousWeaponRubble( NULL ),
+	m_duration( 0 ),
+	m_interval( 0 ),
+	m_innate( TRUE )
 {
 
 	const FireWeaponWhenDamagedBehaviorModuleData *d = getFireWeaponWhenDamagedBehaviorModuleData();
 	const Object* obj = getObject();
 
+	WeaponSlotType wslot = (WeaponSlotType)INI::scanLookupList(d->m_weaponSlotName.str(), TheWeaponSlotTypeNamesLookupList);
+
 	if ( d->m_reactionWeaponPristine )
 	{
 		m_reactionWeaponPristine				= TheWeaponStore->allocateNewWeapon(
-			d->m_reactionWeaponPristine,					PRIMARY_WEAPON);
+			d->m_reactionWeaponPristine,					wslot);
 		m_reactionWeaponPristine->reloadAmmo( obj );
 	}
 	if ( d->m_reactionWeaponDamaged )
 	{
 		m_reactionWeaponDamaged					= TheWeaponStore->allocateNewWeapon(
-			d->m_reactionWeaponDamaged,					PRIMARY_WEAPON);
+			d->m_reactionWeaponDamaged,					wslot);
 		m_reactionWeaponDamaged->reloadAmmo( obj );
 	}
 	if ( d->m_reactionWeaponReallyDamaged )
 	{
 		m_reactionWeaponReallyDamaged		= TheWeaponStore->allocateNewWeapon(
-			d->m_reactionWeaponReallyDamaged,		PRIMARY_WEAPON); 
+			d->m_reactionWeaponReallyDamaged,		wslot); 
 		m_reactionWeaponReallyDamaged->reloadAmmo( obj );
 	}
 	if ( d->m_reactionWeaponRubble )
 	{
 		m_reactionWeaponRubble					= TheWeaponStore->allocateNewWeapon(
-			d->m_reactionWeaponRubble,						PRIMARY_WEAPON);
+			d->m_reactionWeaponRubble,						wslot);
 		m_reactionWeaponRubble->reloadAmmo( obj );
 	}
 
@@ -100,31 +107,36 @@ FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, cons
 	if ( d->m_continuousWeaponPristine )
 	{
 		m_continuousWeaponPristine			= TheWeaponStore->allocateNewWeapon(
-			d->m_continuousWeaponPristine,				PRIMARY_WEAPON);
+			d->m_continuousWeaponPristine,				wslot);
 		m_continuousWeaponPristine->reloadAmmo( obj );
 	}
 	if ( d->m_continuousWeaponDamaged )
 	{
 		m_continuousWeaponDamaged				= TheWeaponStore->allocateNewWeapon(
-			d->m_continuousWeaponDamaged,				PRIMARY_WEAPON);
+			d->m_continuousWeaponDamaged,				wslot);
 		m_continuousWeaponDamaged->reloadAmmo( obj );
 	}
 	if ( d->m_continuousWeaponReallyDamaged )
 	{
 		m_continuousWeaponReallyDamaged = TheWeaponStore->allocateNewWeapon(
-			d->m_continuousWeaponReallyDamaged,	PRIMARY_WEAPON);
+			d->m_continuousWeaponReallyDamaged,	wslot);
 		m_continuousWeaponReallyDamaged->reloadAmmo( obj );
 	}
 	if ( d->m_continuousWeaponRubble )
 	{
 		m_continuousWeaponRubble				= TheWeaponStore->allocateNewWeapon(
-			d->m_continuousWeaponRubble,					PRIMARY_WEAPON);
+			d->m_continuousWeaponRubble,					wslot);
 		m_continuousWeaponRubble->reloadAmmo( obj );
 	}
 
 	if (d->m_initiallyActive)
 	{
 		giveSelfUpgrade();
+	}
+
+	if (d->m_continuousDurationPristine > 0 )
+	{
+		m_innate = FALSE;
 	}
 
 	if (isUpgradeActive() &&
@@ -191,10 +203,50 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 		return;
 
 	const Object *obj = getObject();
+
+	//We need all required status or else we fail
+	// If we have any requirements
+	if( d->m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( d->m_requiredStatus ) )
+		return; 
+
+	//If we have any forbidden statii, then fail
+	if( obj->getStatusBits().testForAny( d->m_forbiddenStatus ) )
+		return; 
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_requiredCustomStatus.begin(); it != d->m_requiredCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
+		if (it2 != obj->getCustomStatus().end()) 
+		{
+			if(it2->second == 0)
+				return;
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
+		if (it2 != obj->getCustomStatus().end() && it2->second == 1) 
+			return;
+	}
+
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
+
+	UnsignedInt now = TheGameLogic->getFrame();
+	m_duration = 0;
+	m_innate = TRUE;
 
 	if ( bdt == BODY_RUBBLE )
 	{
+		if(d->m_continuousDurationRubble > 0)
+		{
+			m_duration =  now + d->m_continuousDurationRubble;
+			m_innate = FALSE;
+		}
 		if( m_reactionWeaponRubble && m_reactionWeaponRubble->getStatus() == READY_TO_FIRE )
 		{
 			m_reactionWeaponRubble->forceFireWeapon( obj, obj->getPosition() );
@@ -203,6 +255,11 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 	}
 	else if ( bdt == BODY_REALLYDAMAGED )
 	{
+		if(d->m_continuousDurationReallyDamaged > 0)
+		{
+			m_duration = now + d->m_continuousDurationReallyDamaged;
+			m_innate = FALSE;
+		}
 		if( m_reactionWeaponReallyDamaged && m_reactionWeaponReallyDamaged->getStatus() == READY_TO_FIRE )
 		{
 			m_reactionWeaponReallyDamaged->forceFireWeapon( obj, obj->getPosition() );
@@ -210,6 +267,11 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 	}
 	else if ( bdt == BODY_DAMAGED )
 	{
+		if(d->m_continuousDurationDamaged > 0)
+		{
+			m_duration = now + d->m_continuousDurationDamaged;
+			m_innate = FALSE;
+		}
 		if( m_reactionWeaponDamaged && m_reactionWeaponDamaged->getStatus() == READY_TO_FIRE )
 		{
 			m_reactionWeaponDamaged->forceFireWeapon( obj, obj->getPosition() );
@@ -217,6 +279,11 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 	}
 	else // not damaged yet
 	{
+		if(d->m_continuousDurationPristine > 0)
+		{
+			m_duration = now + d->m_continuousDurationPristine;
+			m_innate = FALSE;
+		}
 		if( m_reactionWeaponPristine && m_reactionWeaponPristine->getStatus() == READY_TO_FIRE )
 		{
 			m_reactionWeaponPristine->forceFireWeapon( obj, obj->getPosition() );
@@ -236,36 +303,48 @@ UpdateSleepTime FireWeaponWhenDamagedBehavior::update( void )
 		return UPDATE_SLEEP_FOREVER;
 	}
 
+	const FireWeaponWhenDamagedBehaviorModuleData* d = getFireWeaponWhenDamagedBehaviorModuleData();
+
 	const Object *obj = getObject();
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
 
+	UnsignedInt now = TheGameLogic->getFrame();
+
 	if ( bdt == BODY_RUBBLE )
 	{
-		if( m_continuousWeaponRubble && m_continuousWeaponRubble->getStatus() == READY_TO_FIRE )
+		if( m_continuousWeaponRubble && m_continuousWeaponRubble->getStatus() == READY_TO_FIRE && ( m_innate == TRUE || m_duration > now ) && now > m_interval )
 		{
 			m_continuousWeaponRubble->forceFireWeapon( obj, obj->getPosition() );
+			if(d->m_continuousIntervalRubble > 0)
+				m_interval = now + d->m_continuousIntervalRubble;
 		}
 
 	}
 	else if ( bdt == BODY_REALLYDAMAGED )
 	{
-		if( m_continuousWeaponReallyDamaged && m_continuousWeaponReallyDamaged->getStatus() == READY_TO_FIRE )
+		if( m_continuousWeaponReallyDamaged && m_continuousWeaponReallyDamaged->getStatus() == READY_TO_FIRE && ( m_innate == TRUE || m_duration > now ) && now > m_interval )
 		{
 			m_continuousWeaponReallyDamaged->forceFireWeapon( obj, obj->getPosition() );
+			if(d->m_continuousIntervalReallyDamaged > 0)
+				m_interval = now + d->m_continuousIntervalReallyDamaged;
 		}
 	}
 	else if ( bdt == BODY_DAMAGED )
 	{
-		if( m_continuousWeaponDamaged && m_continuousWeaponDamaged->getStatus() == READY_TO_FIRE )
+		if( m_continuousWeaponDamaged && m_continuousWeaponDamaged->getStatus() == READY_TO_FIRE && ( m_innate == TRUE || m_duration > now ) && now > m_interval )
 		{
 			m_continuousWeaponDamaged->forceFireWeapon( obj, obj->getPosition() );
+			if(d->m_continuousIntervalDamaged > 0)
+				m_interval = now + d->m_continuousIntervalDamaged;
 		}
 	}
 	else // not damaged yet
 	{
-		if( m_continuousWeaponPristine && m_continuousWeaponPristine->getStatus() == READY_TO_FIRE )
+		if( m_continuousWeaponPristine && m_continuousWeaponPristine->getStatus() == READY_TO_FIRE && ( m_innate == TRUE || m_duration > now ) && now > m_interval )
 		{
 			m_continuousWeaponPristine->forceFireWeapon( obj, obj->getPosition() );
+			if(d->m_continuousIntervalPristine > 0)
+				m_interval = now + d->m_continuousIntervalPristine;
 		}
 	}
 
@@ -354,6 +433,10 @@ void FireWeaponWhenDamagedBehavior::xfer( Xfer *xfer )
 	xfer->xferBool( &weaponPresent );
 	if( weaponPresent )
 		xfer->xferSnapshot( m_continuousWeaponRubble );
+
+	xfer->xferUnsignedInt( &m_duration );
+	xfer->xferUnsignedInt( &m_interval );
+	xfer->xferBool( &m_innate );
 
 }  // end xfer
 

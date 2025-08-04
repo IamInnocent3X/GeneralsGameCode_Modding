@@ -109,6 +109,8 @@ public:
 	Bool					m_teamDisguised;
 	Bool					m_useRiderStealth;
   Bool          m_grantedBySpecialPower;
+  std::vector<AsciiString> m_requiredCustomStatus;
+  std::vector<AsciiString> m_forbiddenCustomStatus;
 
   StealthUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);

@@ -328,6 +328,7 @@ public:
 	// because we want to do this in a lot of places throughout the code
 	//
 	DockUpdateInterface *getDockUpdateInterface( void );
+	RepairDockUpdateInterface *getRepairDockUpdateInterface( void );
 
 	// Ditto for special powers -- Kris
 	SpecialPowerModuleInterface* findSpecialPowerModuleInterface( SpecialPowerType type ) const;
@@ -402,6 +403,7 @@ public:
 	void removeUpgrade( const UpgradeTemplate *upgradeT );	///< remove upgrade from this object
 
 	Bool hasCountermeasures() const;
+	Bool hasCountermeasuresExpanded(const Object* projectile) const;
 	void reportMissileForCountermeasures( Object *missile );
 	ObjectID calculateCountermeasureToDivertTo( const Object& victim );
 

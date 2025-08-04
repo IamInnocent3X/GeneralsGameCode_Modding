@@ -51,9 +51,12 @@ public:
 
 };
 
+class RepairDockUpdateInterface{};
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-class RepairDockUpdate : public DockUpdate
+class RepairDockUpdate : public DockUpdate,
+																	public RepairDockUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( RepairDockUpdate, "RepairDockUpdate" )
@@ -65,6 +68,8 @@ public:
 	// virtual destructor prototype provided by MemoryPoolObject base class
 
 	virtual DockUpdateInterface* getDockUpdateInterface() { return this; }
+
+	virtual RepairDockUpdateInterface* getRepairDockUpdateInterface() { return this; }
 
 	virtual Bool action( Object *docker, Object *drone = NULL );	///< for me this means do some repair
 

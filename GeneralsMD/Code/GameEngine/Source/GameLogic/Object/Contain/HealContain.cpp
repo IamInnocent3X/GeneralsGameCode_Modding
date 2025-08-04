@@ -36,6 +36,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/HealContain.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CountermeasuresBehavior.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,6 +176,12 @@ Bool HealContain::doHeal( Object *obj, UnsignedInt framesForFullHeal )
 		body->attemptHealing( &healInfo );
 
 	}  // end else
+
+	CountermeasuresBehaviorInterface *cbi = obj->getCountermeasuresBehaviorInterface();
+	if( cbi && cbi->getCountermeasuresMustReloadAtBarracks() )
+	{
+		cbi->reloadCountermeasures();
+	}
 
 	// return if we're done healing
 	return doneHealing;

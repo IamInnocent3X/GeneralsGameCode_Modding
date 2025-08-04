@@ -66,6 +66,7 @@ class ProjectileUpdateInterface;
 class AIUpdateInterface;
 class ExitInterface;
 class DockUpdateInterface;
+class RepairDockUpdateInterface;
 class RailedTransportDockUpdateInterface;
 class SpecialPowerUpdateInterface;
 class SlavedUpdateInterface;
@@ -129,6 +130,7 @@ public:
 	virtual AIUpdateInterface* getAIUpdateInterface() = 0;
 	virtual ExitInterface* getUpdateExitInterface() = 0;
 	virtual DockUpdateInterface* getDockUpdateInterface() = 0;
+	virtual RepairDockUpdateInterface *getRepairDockUpdateInterface() = 0;
 	virtual RailedTransportDockUpdateInterface *getRailedTransportDockUpdateInterface( void ) = 0;
 	virtual SlowDeathBehaviorInterface* getSlowDeathBehaviorInterface() = 0;
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() = 0;
@@ -184,6 +186,7 @@ public:
 	virtual AIUpdateInterface* getAIUpdateInterface() { return NULL; }
 	virtual ExitInterface* getUpdateExitInterface() { return NULL; }
 	virtual DockUpdateInterface* getDockUpdateInterface() { return NULL; }
+	virtual RepairDockUpdateInterface *getRepairDockUpdateInterface() { return NULL; }
 	virtual RailedTransportDockUpdateInterface *getRailedTransportDockUpdateInterface( void ) { return NULL; }
 	virtual SlowDeathBehaviorInterface* getSlowDeathBehaviorInterface() { return NULL; }
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return NULL; }

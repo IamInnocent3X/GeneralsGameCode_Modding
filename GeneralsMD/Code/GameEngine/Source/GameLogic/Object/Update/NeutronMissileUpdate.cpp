@@ -123,6 +123,7 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 	m_attach_specificBarrelToUse = 0;
 	m_heightAtLaunch = 0;
 	m_frameAtLaunch = 0;
+	m_framesTillDecoyed = 0;
 
 	m_exhaustSysTmpl = NULL;
 
@@ -137,6 +138,12 @@ NeutronMissileUpdate::~NeutronMissileUpdate( void )
 //-------------------------------------------------------------------------------------------------
 void NeutronMissileUpdate::onDelete( void )
 {
+}
+
+void NeutronMissileUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames )
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	m_framesTillDecoyed = now + frames;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -526,6 +533,15 @@ UpdateSleepTime NeutronMissileUpdate::update( void )
 		normal.z = -1.0f;
 		getObject()->onCollide(NULL, getObject()->getPosition(), &normal);
 	}
+
+	//If this missile has been marked to divert to countermeasures, check when
+	//that will occur, then do it when the timer expires.
+	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() )
+	{
+		// Since it doesn't have a tracker, blow it up instead.
+		detonate();
+	}
+
 	return UPDATE_SLEEP_NONE;
 }
 // ------------------------------------------------------------------------------------------------
@@ -632,6 +648,11 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 		}  // end if
 
 	}  // end if
+
+	if( version >= 5 )
+	{
+		xfer->xferUnsignedInt( &m_framesTillDecoyed );
+	}
 
 }  // end xfer
 

@@ -47,6 +47,8 @@ void FireWeaponCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "FireOnce",					INI::parseBool,											NULL, offsetof( FireWeaponCollideModuleData, m_fireOnce ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponCollideModuleData, m_requiredStatus ) },
 		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponCollideModuleData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus",		INI::parseAsciiStringVector,	NULL, offsetof( FireWeaponCollideModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector,	NULL, offsetof( FireWeaponCollideModuleData, m_forbiddenCustomStatus ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -98,6 +100,7 @@ Bool FireWeaponCollide::shouldFireWeapon()
 	const FireWeaponCollideModuleData *d = getFireWeaponCollideModuleData();
 
 	ObjectStatusMaskType status = getObject()->getStatusBits();
+	ObjectCustomStatusType c_status = getObject()->getCustomStatus();
 	
 	//We need all required status or else we fail
 	if( !status.testForAll( d->m_requiredStatus ) )
@@ -109,6 +112,28 @@ Bool FireWeaponCollide::shouldFireWeapon()
 
 	if( m_everFired && d->m_fireOnce )
 		return FALSE;// can only fire once ever
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_requiredCustomStatus.begin(); it != d->m_requiredCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = c_status.find(*it);
+		if (it2 != c_status.end()) 
+		{
+			if(it2->second == 0)
+				return FALSE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = c_status.find(*it);
+		if (it2 != c_status.end() && it2->second == 1) 
+			return FALSE;
+	}
+
 
 	return TRUE;
 }

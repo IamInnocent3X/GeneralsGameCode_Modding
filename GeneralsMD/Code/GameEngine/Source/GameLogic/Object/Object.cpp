@@ -5810,6 +5810,11 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 
 			case GUI_COMMAND_SWITCH_WEAPON:
 				{
+					// Clear Firing Tracker Bonuses First
+					Weapon* weapon = m_weaponSet.getCurWeapon();
+					if(weapon)
+						weapon->computeFiringTrackerBonusClear(this);
+					
 					WeaponSlotType weaponSlot = commandButton->getWeaponSlot();
 					// GUI_COMMAND_SWITCH_WEAPON switches until un-switched, or switched to something else.
 					setWeaponLock( weaponSlot, LOCKED_PERMANENTLY );
@@ -5821,6 +5826,11 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 				{
 					if( !BitIsSet( commandButton->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) && !BitIsSet( commandButton->getOptions(), NEED_TARGET_POS ) )
 					{
+						// Clear Firing Tracker Bonuses First
+						Weapon* weapon = m_weaponSet.getCurWeapon();
+						if(weapon)
+							weapon->computeFiringTrackerBonusClear(this);
+
 						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
 						//LOCATION BASED FIRE WEAPON
 						ai->aiAttackPosition( NULL, commandButton->getMaxShotsToFire(), cmdSource );
@@ -5960,6 +5970,11 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 							break;
 						}
 
+						// Clear Firing Tracker Bonuses First
+						Weapon* weapon = m_weaponSet.getCurWeapon();
+						if(weapon)
+							weapon->computeFiringTrackerBonusClear(this);
+
 						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
 
 						if( BitIsSet( commandButton->getOptions(), ATTACK_OBJECTS_POSITION ) )
@@ -6075,6 +6090,12 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 						{
 							break;
 						}
+
+						// Clear Firing Tracker Bonuses First
+						Weapon* weapon = m_weaponSet.getCurWeapon();
+						if(weapon)
+							weapon->computeFiringTrackerBonusClear(this);
+
 						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
 						ai->aiAttackPosition( pos, commandButton->getMaxShotsToFire(), cmdSource );
 					}
@@ -6761,6 +6782,24 @@ Bool Object::hasCountermeasures() const
 	if( cbi && cbi->isActive() )
 	{
 		return TRUE;
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::hasCountermeasuresExpanded(const Object* projectile) const
+{
+	const CountermeasuresBehaviorInterface* cbi = getCountermeasuresBehaviorInterface();
+	if( cbi && cbi->isActive() )
+	{
+		if( ( isAirborneTarget() && cbi->getCountermeasuresNoAirborne() == TRUE ) || 
+				( !isAirborneTarget() && cbi->getCountermeasuresConsiderGround() == FALSE ) )
+			return FALSE;
+
+		KindOfMaskType CountermeasuresKindOfs = cbi->getCountermeasuresKindOfs();
+		if(CountermeasuresKindOfs == KINDOFMASK_NONE && projectile->isKindOf( KINDOF_SMALL_MISSILE ) ||
+				projectile->isAnyKindOf(CountermeasuresKindOfs))
+			return TRUE;
 	}
 	return FALSE;
 }

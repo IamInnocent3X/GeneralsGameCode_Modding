@@ -98,7 +98,7 @@ public:
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return true; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) {}
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames );
 	virtual void projectileNowJammed() {}
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
@@ -117,6 +117,8 @@ private:
 	UnsignedInt						m_lifespanFrame;					///< if we haven't collided by this frame, blow up anyway
 	WeaponBonusConditionFlags		m_extraBonusFlags;
 	ObjectCustomStatusType 			m_extraBonusCustomFlags;
+	Bool                  	m_noDamage;
+	UnsignedInt				m_framesTillDecoyed;
   
     Bool                  m_hasDetonated;           ///< 
 

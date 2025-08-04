@@ -495,9 +495,10 @@ public:
 		{
 			//Instantly reload flares.
 			CountermeasuresBehaviorInterface *cbi = jet->getCountermeasuresBehaviorInterface();
-			if( cbi )
+			if( cbi && cbi->getCountermeasuresMustReloadAtAirfield() )
 			{
-				cbi->reloadCountermeasures();
+				cbi->setCountermeasuresParked();
+				//cbi->reloadCountermeasures();
 			}
 		}
 

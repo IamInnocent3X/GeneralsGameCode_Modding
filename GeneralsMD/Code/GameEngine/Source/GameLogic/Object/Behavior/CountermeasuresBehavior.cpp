@@ -91,6 +91,13 @@ CountermeasuresBehavior::CountermeasuresBehavior( Thing *thing, const ModuleData
 	m_divertedMissiles = 0;
 	m_incomingMissiles = 0;
 	m_nextVolleyFrame = 0;
+	m_parked = FALSE;
+	m_dockObjectID = INVALID_ID;
+
+	if (data->m_initiallyActive)
+	{
+		giveSelfUpgrade();
+	}
 	
 	setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 }
@@ -114,6 +121,8 @@ void CountermeasuresBehavior::reportMissileForCountermeasures( Object *missile )
 
   if( m_availableCountermeasures + m_activeCountermeasures > 0 )
 	{
+		m_parked = FALSE;
+
 		//We have countermeasures we can use. Determine now whether or not the incoming missile will 
 		//be diverted.
 		const CountermeasuresBehaviorModuleData *data = getCountermeasuresBehaviorModuleData();
@@ -201,6 +210,42 @@ Bool CountermeasuresBehavior::isActive() const
 }	
 
 //-------------------------------------------------------------------------------------------------
+Bool CountermeasuresBehavior::getCountermeasuresMustReloadAtAirfield() const
+{
+	return getCountermeasuresBehaviorModuleData()->m_mustReloadAtAirfield;
+}	
+
+//-------------------------------------------------------------------------------------------------
+Bool CountermeasuresBehavior::getCountermeasuresMustReloadAtDocks() const
+{
+	return getCountermeasuresBehaviorModuleData()->m_mustReloadNearDock;
+}	
+
+//-------------------------------------------------------------------------------------------------
+Bool CountermeasuresBehavior::getCountermeasuresMustReloadAtBarracks() const
+{
+	return getCountermeasuresBehaviorModuleData()->m_mustReloadAtBarracks;
+}	
+
+//-------------------------------------------------------------------------------------------------
+Bool CountermeasuresBehavior::getCountermeasuresNoAirborne() const
+{
+	return getCountermeasuresBehaviorModuleData()->m_noAirborne;
+}	
+
+//-------------------------------------------------------------------------------------------------
+Bool CountermeasuresBehavior::getCountermeasuresConsiderGround() const
+{
+	return getCountermeasuresBehaviorModuleData()->m_considerGround;
+}	
+
+//-------------------------------------------------------------------------------------------------
+KindOfMaskType CountermeasuresBehavior::getCountermeasuresKindOfs() const
+{ 
+	return getCountermeasuresBehaviorModuleData()->m_reactingKindofs;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime CountermeasuresBehavior::update( void )
@@ -232,9 +277,129 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 			++it;
 		}
 	}
-	
-	if( obj->isAirborneTarget() )
+
+	if(m_dockObjectID != INVALID_ID)
 	{
+		Object *dockObj = NULL;
+		dockObj = TheGameLogic->findObjectByID(m_dockObjectID);
+		if(dockObj)
+		{
+			Real distToDock = ThePartitionManager->getDistanceSquared( obj, dockObj, FROM_CENTER_2D );
+			if( distToDock <= sqr( data->m_dockDistance ) )
+			{
+				setCountermeasuresParked();
+			}
+			else
+			{
+				m_parked = FALSE;
+				m_dockObjectID = INVALID_ID;
+			}
+		}
+		else
+		{
+			m_parked = FALSE;
+			m_dockObjectID = INVALID_ID;
+		}
+	}
+	
+	if(!m_availableCountermeasures && m_dockObjectID == INVALID_ID && ( !data->m_reloadNearObjects.empty() || data->m_mustReloadNearDock == TRUE ))
+	{
+		Player::PlayerTeamList::const_iterator it;
+		for (it = obj->getControllingPlayer()->getPlayerTeams()->begin();
+				it != obj->getControllingPlayer()->getPlayerTeams()->end(); ++it)
+		{
+			if ( m_dockObjectID != INVALID_ID )
+			{
+				break;
+			}
+			for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance()) 
+			{
+				if ( m_dockObjectID != INVALID_ID )
+				{
+					break;
+				}
+				Team *team = iter.cur();
+				if( team == NULL ) 
+				{
+					continue;
+				}
+				if( team->getRelationship( obj->getTeam() ) != ALLIES )
+				{
+					continue;
+				}
+				for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance()) 
+				{
+					Object *dockObj = iterObj.cur();
+					if( dockObj == NULL ) 
+					{
+						continue;
+					}
+					// Don't consider Objects that are effectively Dead.
+					if( dockObj->isEffectivelyDead() ) 
+					{
+						continue;
+					}
+					// Don't consider any Objects under construction.
+					if( dockObj->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+					{
+						continue;
+					}
+					
+					// Consider the Docking Distance
+					Real distSqr = ThePartitionManager->getDistanceSquared( obj, dockObj, FROM_CENTER_2D );
+					if( distSqr > sqr( data->m_dockDistance ) )
+					{
+						continue;
+					}
+
+					// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
+
+					if(!data->m_reloadNearObjects.empty())
+					{
+						const ThingTemplate* tmpls;
+						Int cnt = data->m_reloadNearObjects.size();
+						for (int i = 0; i < cnt; i++) {
+							tmpls = TheThingFactory->findTemplate( data->m_reloadNearObjects[i] );
+								
+							if( !tmpls->isEquivalentTo( dockObj->getTemplate() ) )
+							{
+								continue;
+							}
+
+							m_dockObjectID = dockObj->getID();
+							setCountermeasuresParked();
+							break;
+						}
+					}
+					
+					if( data->m_mustReloadNearDock == TRUE )
+					{
+						// look for a dock interface
+						RepairDockUpdateInterface *di = NULL;
+						for (BehaviorModule **u = obj->getBehaviorModules(); *u; ++u)
+						{
+							if ((di = (*u)->getRepairDockUpdateInterface()) != NULL)
+							{
+								m_dockObjectID = dockObj->getID();
+								setCountermeasuresParked();
+								break;
+							}
+						}
+					}
+
+					if ( m_dockObjectID != INVALID_ID )
+					{
+						break;
+					}
+
+					// end MEAT
+				}
+			}
+		}
+	}
+	
+	//if( obj->isAirborneTarget() )
+	//{
 
 		//Handle flare volley launching (initial reaction, and continuation firing).
 		if( m_availableCountermeasures )
@@ -259,12 +424,16 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 				m_nextVolleyFrame = now + data->m_framesBetweenVolleys;
 			}
 		}
-	}
+	//}
 
 	//Handle auto-reloading (data->m_reloadFrames of zero means it's not possible to auto-reload).
 	//Aircraft that don't auto-reload require landing at an airfield for resupply.
 	if( !m_availableCountermeasures && data->m_reloadFrames )
 	{
+		if( ( data->m_mustReloadAtAirfield == TRUE || data->m_mustReloadNearDock == TRUE || data->m_mustReloadAtBarracks == TRUE || !data->m_reloadNearObjects.empty() )
+			&& m_parked == FALSE )
+			return UPDATE_SLEEP( UPDATE_SLEEP_NONE );
+
 		if( m_reloadFrame != 0 )
 		{
 			if( m_reloadFrame <= now )
@@ -291,6 +460,15 @@ void CountermeasuresBehavior::reloadCountermeasures()
 	m_reloadFrame = 0;
 }
  
+
+//-------------------------------------------------------------------------------------------------
+void CountermeasuresBehavior::setCountermeasuresParked()
+{
+	m_parked = TRUE;
+	if(getCountermeasuresBehaviorModuleData()->m_reloadFrames == 0)
+		reloadCountermeasures();
+}
+
 //-------------------------------------------------------------------------------------------------
 void CountermeasuresBehavior::launchVolley()
 {
@@ -395,6 +573,8 @@ void CountermeasuresBehavior::xfer( Xfer *xfer )
 		xfer->xferUnsignedInt( &m_incomingMissiles );
 		xfer->xferUnsignedInt( &m_reactionFrame );
 		xfer->xferUnsignedInt( &m_nextVolleyFrame );
+		xfer->xferObjectID(&m_dockObjectID);
+		xfer->xferBool(&m_parked);
 	}
 
 }  // end xfer

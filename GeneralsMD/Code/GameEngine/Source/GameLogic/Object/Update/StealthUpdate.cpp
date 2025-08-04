@@ -116,6 +116,8 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
     { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
 		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
     { "GrantedBySpecialPower",        INI::parseBool,                 NULL, offsetof( StealthUpdateModuleData, m_grantedBySpecialPower ) },
+	{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( StealthUpdateModuleData, m_requiredCustomStatus ) },
+	{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( StealthUpdateModuleData, m_forbiddenCustomStatus ) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -338,6 +340,26 @@ Bool StealthUpdate::allowedToStealth( Object *stealthOwner ) const
 	if( self->getStatusBits().testForAny( data->m_forbiddenStatus ) )
 		return FALSE; 
 
+	for(std::vector<AsciiString>::const_iterator it = data->m_requiredCustomStatus.begin(); it != data->m_requiredCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = self->getCustomStatus().find(*it);
+		if (it2 != self->getCustomStatus().end()) 
+		{
+			if(it2->second == 0)
+				return FALSE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+
+	for(std::vector<AsciiString>::const_iterator it = data->m_forbiddenCustomStatus.begin(); it != data->m_forbiddenCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = self->getCustomStatus().find(*it);
+		if (it2 != self->getCustomStatus().end() && it2->second == 1) 
+			return FALSE;
+	}
 
 	//Do a quick preliminary test to see if we are restricted by firing particular weapons and we fired a shot last frame or this frame.
 	if( flags & STEALTH_NOT_WHILE_FIRING_WEAPON && self->getStatusBits().test( OBJECT_STATUS_IS_FIRING_WEAPON ) )

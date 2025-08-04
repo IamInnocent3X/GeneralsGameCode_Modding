@@ -48,6 +48,7 @@ DieMuxData::DieMuxData() {
 	m_veterancyLevels = VETERANCY_LEVEL_FLAGS_ALL;
 	m_deathTypesCustom.first = DEATH_TYPE_FLAGS_ALL;
 	m_deathTypesCustom.second.format("ALL");
+	m_requiredCustomStatus.clear();
 	m_customDeathTypes.clear();
 
 	if (TheGlobalData) {
@@ -66,6 +67,7 @@ const FieldParse* DieMuxData::getFieldParse()
 		{ "VeterancyLevels",	INI::parseVeterancyLevelFlags,			NULL, offsetof( DieMuxData, m_veterancyLevels ) },
 		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	NULL,	offsetof( DieMuxData, m_exemptStatus ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, NULL,	offsetof( DieMuxData, m_requiredStatus ) },
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL,	offsetof( DieMuxData, m_requiredCustomStatus ) },
 		{ "CustomDeathTypes",		INI::parseCustomTypes,			NULL, offsetof( DieMuxData, m_customDeathTypes ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -99,6 +101,20 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	// But only if we have a required status to check
 	if( m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( m_requiredStatus ) )
 		return false;
+
+	for(std::vector<AsciiString>::const_iterator it = m_requiredCustomStatus.begin(); it != m_requiredCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
+		if (it2 != obj->getCustomStatus().end()) 
+		{
+			if(it2->second == 0)
+				return FALSE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
 
 	return true;
 }

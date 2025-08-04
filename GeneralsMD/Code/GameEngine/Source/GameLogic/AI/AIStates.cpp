@@ -5911,6 +5911,12 @@ void AIAttackState::onExit( StateExitType status )
 
 	obj->clearLeechRangeModeForAllWeapons();
 
+	Weapon *curWeapon = obj->getCurrentWeapon();
+	if (curWeapon)
+	{
+		curWeapon->computeFiringTrackerBonusClear(obj);
+	}
+
 	AIUpdateInterface *ai = obj->getAI();
 	if (ai) 
 	{	

@@ -115,6 +115,8 @@ FreeFallProjectileBehavior::FreeFallProjectileBehavior(Thing* thing, const Modul
 	m_lifespanFrame = 0;
 	m_extraBonusFlags = 0;
 	m_extraBonusCustomFlags.clear();
+	m_framesTillDecoyed = 0;
+	m_noDamage = FALSE;
 
 	m_hasDetonated = FALSE;
 }
@@ -124,6 +126,14 @@ FreeFallProjectileBehavior::~FreeFallProjectileBehavior()
 {
 }
 
+//-------------------------------------------------------------------------------------------------
+// Set number of frames till missile diverts to countermeasures.
+//-------------------------------------------------------------------------------------------------
+void FreeFallProjectileBehavior::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames )
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	m_framesTillDecoyed = now + frames;
+}
 
 //-------------------------------------------------------------------------------------------------
 // Prepares the missile for launch via proper weapon-system channels.
@@ -321,7 +331,7 @@ void FreeFallProjectileBehavior::detonate()
 	Object* obj = getObject();
 	if (m_detonationWeaponTmpl)
 	{
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, TRUE);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, !m_noDamage);
 
 		if (getFreeFallProjectileBehaviorModuleData()->m_detonateCallsKill)
 		{
@@ -368,6 +378,16 @@ UpdateSleepTime FreeFallProjectileBehavior::update()
 	if (m_lifespanFrame != 0 && TheGameLogic->getFrame() >= m_lifespanFrame)
 	{
 		// lifetime demands detonation
+		detonate();
+		return UPDATE_SLEEP_NONE;
+	}
+	
+	//If this missile has been marked to divert to countermeasures, check when
+	//that will occur, then do it when the timer expires.
+	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() )
+	{
+		// Since it doesn't have a tracker, blow it up instead.
+		m_noDamage = TRUE;
 		detonate();
 		return UPDATE_SLEEP_NONE;
 	}
@@ -479,6 +499,12 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 
 	// lifespan frame
 	// xfer->xferUnsignedInt(&m_lifespanFrame);
+
+	if( version >= 5 )
+	{
+		xfer->xferUnsignedInt( &m_framesTillDecoyed );
+		xfer->xferBool( &m_noDamage );
+	}
 
 }  // end xfer
 

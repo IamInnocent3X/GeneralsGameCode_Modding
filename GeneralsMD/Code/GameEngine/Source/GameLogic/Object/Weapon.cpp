@@ -1332,7 +1332,8 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 
 		//If we're launching a missile at a unit with valid countermeasures, then communicate it
-		if( projectile->isKindOf( KINDOF_SMALL_MISSILE ) && victimObj && victimObj->hasCountermeasures() )
+		//if( projectile->isKindOf( KINDOF_SMALL_MISSILE ) && victimObj && victimObj->hasCountermeasures() )
+		if( projectile && victimObj && victimObj->hasCountermeasuresExpanded(projectile) )
 		{
 			const AIUpdateInterface *ai = victimObj->getAI();
 			//Only allow jets not currently supersonic to launch countermeasures
@@ -2265,7 +2266,7 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 			// A ground shot or the lack of the status on the target will clear this
 			if(!customWeaponBonusType.isEmpty())
 			{
-				// If the bonuns is currently granted by TempWeaponBonus, don't clear it.
+				// If the bonus is currently granted by TempWeaponBonus, don't clear it.
 				ObjectCustomStatusType::const_iterator it = customWeaponBonusTypeNoClear.find(customWeaponBonusType);
 
 				if(it != customWeaponBonusTypeNoClear.end())
@@ -2334,7 +2335,7 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 					// Remove the Custom Weapon Bonus from the Attacker
 					else
 					{
-						// If the bonuns is currently granted by TempWeaponBonus, don't clear it.
+						// If the bonus is currently granted by TempWeaponBonus, don't clear it.
 						ObjectCustomStatusType::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
 
 						if(it2 != customWeaponBonusTypeNoClear.end())
@@ -2401,7 +2402,7 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 					// Remove the Weapon Bonus from the Attacker
 					else
 					{
-						// If the bonuns is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
+						// If the bonus is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
 						if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
 						{
 							me->clearWeaponBonusCondition(it->bonus);
@@ -2433,7 +2434,7 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 
 	if(!customWeaponBonusType.isEmpty())
 	{
-		// If the bonuns is currently granted by TempWeaponBonus, don't clear it.
+		// If the bonus is currently granted by TempWeaponBonus, don't clear it.
 		ObjectCustomStatusType::const_iterator it = customWeaponBonusTypeNoClear.find(customWeaponBonusType);
 
 		if(it != customWeaponBonusTypeNoClear.end())
@@ -2449,7 +2450,7 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 	}
 	if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 	{
-		// If the bonuns is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
+		// If the bonus is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
 		if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
 		{
 			me->clearWeaponBonusCondition(weaponBonusType);
@@ -2465,7 +2466,7 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 		{
 			if(!it->bonus.isEmpty())
 			{
-				// If the bonuns is currently granted by TempWeaponBonus, don't clear it.
+				// If the bonus is currently granted by TempWeaponBonus, don't clear it.
 				ObjectCustomStatusType::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
 
 				if(it2 != customWeaponBonusTypeNoClear.end())
@@ -2489,7 +2490,7 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 		{
 			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
 			{
-				// If the bonuns is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
+				// If the bonus is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
 				if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
 				{
 					me->clearWeaponBonusCondition(it->bonus);

@@ -30,6 +30,9 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+
+#define DEFINE_DEATH_NAMES
+
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Module/PoisonedBehavior.h"
@@ -47,6 +50,30 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 {
 	m_poisonDamageIntervalData = 0; // How often I retake poison damage dealt me
 	m_poisonDurationData = 0;				// And how long after the last poison dose I am poisoned
+	m_poisonDamage = 0.0f;
+	m_poisonDamageMultiplier = 1.0f;
+	m_damageType = DAMAGE_POISON;
+	m_damageTypeFX = DAMAGE_POISON;
+	m_deathType = DEATH_NONE;
+	m_damageStatusType = OBJECT_STATUS_NONE;
+	m_customDamageType = NULL;
+	m_customDamageStatusType = NULL;
+	m_customDeathType = NULL;
+	m_statusDuration = 0.0f;
+	m_doStatusDamage = FALSE;
+	m_statusDurationTypeCorrelate = FALSE;
+	m_poisonUnpurgable = FALSE;
+	m_tintStatus = TINT_STATUS_POISONED;
+	m_customTintStatus = NULL;
+	m_damageTypesReaction.first = setDamageTypeFlag(DAMAGE_TYPE_FLAGS_NONE, DAMAGE_POISON);
+	m_damageTypesReaction.second.format("NONE");
+	m_damageTypesCure.first = DAMAGE_TYPE_FLAGS_NONE;
+	m_damageTypesCure.second.format("NONE");
+	m_customDamageTypesReaction.clear();
+	m_customDamageTypesCure.clear();
+	m_requiredCustomStatus.clear();
+	m_forbiddenCustomStatus.clear();
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -57,6 +84,35 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 	{
 		{ "PoisonDamageInterval", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDamageIntervalData) },
 		{ "PoisonDuration", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDurationData) },
+		
+		{ "PoisonDamage", 							INI::parseReal, 						NULL, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamage) },
+		{ "PoisonDamageMultiplier", 				INI::parseReal, 						NULL, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamageMultiplier) },
+		{ "PoisonDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageType) },		
+		{ "PoisonDamageTypeFX",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageTypeFX) },		
+		{ "PoisonDeathType",						INI::parseIndexList,								TheDeathNames,		offsetof(PoisonedBehaviorModuleData, m_deathType) },		
+		
+		{ "PoisonCustomDamageType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageType) },		
+		{ "PoisonCustomDamageStatusType",			INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageStatusType) },		
+		{ "PoisonCustomDeathType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDeathType) },
+		
+		{ "PoisonDamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	NULL,					offsetof(PoisonedBehaviorModuleData, m_damageStatusType) },		
+		{ "PoisonDoStatusDamageType",				INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_doStatusDamage) },	
+		{ "PoisonStatusDuration",					INI::parseReal,								NULL, 						offsetof(PoisonedBehaviorModuleData, m_statusDuration) },
+		{ "PoisonStatusDurationDamageCorrelation",	INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_statusDurationTypeCorrelate) },	
+		{ "PoisonStatusTintStatus",					TintStatusFlags::parseSingleBitFromINI,		NULL,						offsetof(PoisonedBehaviorModuleData, m_tintStatus) },	
+		{ "PoisonStatusCustomTintStatus",			INI::parseQuotedAsciiString,				NULL, 						offsetof(PoisonedBehaviorModuleData, m_customTintStatus) },
+
+		{ "DamageTypesReaction", 					INI::parseDamageTypeFlagsCustom, 		NULL, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesReaction) },
+		{ "CustomDamageTypesReaction", 				INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesReaction) },	
+		{ "DontCurePoisonOnHeal",					INI::parseBool,							NULL,							offsetof(PoisonedBehaviorModuleData, m_poisonUnpurgable) },
+		{ "DamageTypesCurePoison", 					INI::parseDamageTypeFlagsCustom, 		NULL, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesCure) },
+		{ "CustomDamageTypesCurePoison", 			INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesCure) },	
+
+		{ "RequiredStatus",							ObjectStatusMaskType::parseFromINI,		NULL, 							offsetof(PoisonedBehaviorModuleData, m_requiredStatus ) },
+		{ "ForbiddenStatus",						ObjectStatusMaskType::parseFromINI,		NULL, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus",					INI::parseAsciiStringVector,			NULL, 							offsetof(PoisonedBehaviorModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",					INI::parseAsciiStringVector,			NULL, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenCustomStatus ) },
+
 		{ 0, 0, 0, 0 }
 	};
 
@@ -71,6 +127,10 @@ PoisonedBehavior::PoisonedBehavior( Thing *thing, const ModuleData* moduleData )
 	m_poisonDamageFrame = 0;
 	m_poisonOverallStopFrame = 0;
 	m_poisonDamageAmount = 0.0f;
+	//DeathType dt = (DeathType)INI::scanIndexList(getPoisonedBehaviorModuleData()->m_deathTypeName.str(), TheDeathNames);
+	//if(dt != DEATH_NONE)
+	//	m_deathType = dt;
+	//else
 	m_deathType = DEATH_POISONED;
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
@@ -87,15 +147,92 @@ PoisonedBehavior::~PoisonedBehavior( void )
 void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 {
 	// @bugfix hanfield 01/08/2025 Check m_sourceID to see if we are causing damage. If we are - ignore.
-	if( ( damageInfo->in.m_damageType == DAMAGE_POISON || damageInfo->in.m_isPoison == TRUE ) &&
-		damageInfo->in.m_sourceID != INVALID_ID) 
-		startPoisonedEffects( damageInfo );      
+	if(damageInfo->in.m_sourceID == INVALID_ID) 
+		return;
+
+	// Universal Poison Trigger
+	if(damageInfo->in.m_isPoison == TRUE)
+	{
+		startPoisonedEffects( damageInfo ); 
+		return;
+	}
+
+	const PoisonedBehaviorModuleData* d = getPoisonedBehaviorModuleData();
+
+	// right type to cure poison?
+	if(damageInfo->in.m_customDamageType.isEmpty())
+	{
+		if (getDamageTypeFlag(d->m_damageTypesCure.first, damageInfo->in.m_damageType))
+		{
+			stopPoisonedEffects();
+			setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+			return;
+		}
+	}
+	else
+	{
+		if(getCustomTypeFlag(d->m_damageTypesCure.second, d->m_customDamageTypesCure, damageInfo->in.m_customDamageType))
+		{
+			stopPoisonedEffects();
+			setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+			return;
+		}
+	}
+
+	// right type?
+	if(damageInfo->in.m_customDamageType.isEmpty())
+	{
+		if (!getDamageTypeFlag(d->m_damageTypesReaction.first, damageInfo->in.m_damageType))
+			return;
+	}
+	else
+	{
+		if(!getCustomTypeFlag(d->m_damageTypesReaction.second, d->m_customDamageTypesReaction, damageInfo->in.m_customDamageType))
+			return;
+	}
+
+	const Object *obj = getObject();
+
+	//We need all required status or else we fail
+	// If we have any requirements
+	if( d->m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( d->m_requiredStatus ) )
+		return; 
+
+	//If we have any forbidden statii, then fail
+	if( obj->getStatusBits().testForAny( d->m_forbiddenStatus ) )
+		return; 
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_requiredCustomStatus.begin(); it != d->m_requiredCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
+		if (it2 != obj->getCustomStatus().end()) 
+		{
+			if(it2->second == 0)
+				return;
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
+		if (it2 != obj->getCustomStatus().end() && it2->second == 1) 
+			return;
+	}
+
+	startPoisonedEffects( damageInfo );      
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 void PoisonedBehavior::onHealing( DamageInfo *damageInfo )
 {
+	if(getPoisonedBehaviorModuleData()->m_poisonUnpurgable == TRUE)
+		return;
+	
 	stopPoisonedEffects();
 
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
@@ -121,9 +258,20 @@ UpdateSleepTime PoisonedBehavior::update()
 		DamageInfo damage;
 		damage.in.m_amount = m_poisonDamageAmount;
 		damage.in.m_sourceID = INVALID_ID;
-		damage.in.m_damageType = DAMAGE_POISON; // @bugfix hanfield 01/08/2025 Since we now check for sourceID, this damage will not cause an infinite poison loop
-		damage.in.m_damageFXOverride = DAMAGE_POISON; // Not necessary anymore, but can help to make sure proper FX are used, if template is wonky
+		damage.in.m_damageType = d->m_damageType; // @bugfix hanfield 01/08/2025 Since we now check for sourceID, this damage will not cause an infinite poison loop
+		damage.in.m_damageFXOverride = d->m_damageTypeFX; // Not necessary anymore, but can help to make sure proper FX are used, if template is wonky
 		damage.in.m_deathType = m_deathType;
+
+		damage.in.m_damageStatusType = d->m_damageStatusType;
+		damage.in.m_customDamageType = d->m_customDamageType;
+		damage.in.m_customDamageStatusType = d->m_customDamageStatusType;
+		damage.in.m_customDeathType = d->m_customDeathType;
+		damage.in.m_statusDuration = d->m_statusDuration;
+		damage.in.m_doStatusDamage = d->m_doStatusDamage;
+		damage.in.m_statusDurationTypeCorrelate = d->m_statusDurationTypeCorrelate;
+		damage.in.m_tintStatus = d->m_tintStatus;
+		damage.in.m_customTintStatus = d->m_customTintStatus;
+
 		getObject()->attemptDamage( &damage );
 
 		m_poisonDamageFrame = now + d->m_poisonDamageIntervalData;
@@ -160,7 +308,10 @@ void PoisonedBehavior::startPoisonedEffects( const DamageInfo *damageInfo )
 	UnsignedInt now = TheGameLogic->getFrame();
 
 	// We are going to take the damage dealt by the original poisoner every so often for a while.
-	m_poisonDamageAmount = damageInfo->out.m_actualDamageDealt;
+	if(d->m_poisonDamage != 0.0f)
+		m_poisonDamageAmount = d->m_poisonDamage;
+	else
+		m_poisonDamageAmount = damageInfo->out.m_actualDamageDealt * d->m_poisonDamageMultiplier;
 	
 	m_poisonOverallStopFrame = now + d->m_poisonDurationData;
 
@@ -170,11 +321,23 @@ void PoisonedBehavior::startPoisonedEffects( const DamageInfo *damageInfo )
 	else
 		m_poisonDamageFrame = now + d->m_poisonDamageIntervalData;
 
-	m_deathType = damageInfo->in.m_deathType;
+	if(d->m_deathType == DEATH_NONE)
+		m_deathType = damageInfo->in.m_deathType;
+	else
+		m_deathType = d->m_deathType;
 
 	Drawable *myDrawable = getObject()->getDrawable();
 	if( myDrawable )
-		myDrawable->setTintStatus( TINT_STATUS_POISONED );// Graham, It has changed, see UpdateDrawable()
+	{
+		if(!d->m_customTintStatus.isEmpty())
+		{
+			myDrawable->setCustomTintStatus(d->m_customTintStatus);
+		}
+		else if (d->m_tintStatus > TINT_STATUS_INVALID && d->m_tintStatus < TINT_STATUS_COUNT)
+		{
+			myDrawable->setTintStatus( d->m_tintStatus );// Graham, It has changed, see UpdateDrawable()
+		}
+	}
 
 	setWakeFrame(getObject(), calcSleepTime());
 }
@@ -189,7 +352,18 @@ void PoisonedBehavior::stopPoisonedEffects()
 
 	Drawable *myDrawable = getObject()->getDrawable();
 	if( myDrawable )
-		myDrawable->clearTintStatus( TINT_STATUS_POISONED );// Graham, It has changed, see UpdateDrawable()
+	{
+		const PoisonedBehaviorModuleData* d = getPoisonedBehaviorModuleData();
+		
+		if(!d->m_customTintStatus.isEmpty())
+		{
+			myDrawable->clearCustomTintStatus();
+		}
+		else if (d->m_tintStatus > TINT_STATUS_INVALID && d->m_tintStatus < TINT_STATUS_COUNT)
+		{
+			myDrawable->clearTintStatus( d->m_tintStatus );// Graham, It has changed, see UpdateDrawable()
+		}
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

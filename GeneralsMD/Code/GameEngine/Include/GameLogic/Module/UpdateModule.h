@@ -48,6 +48,7 @@ class ProjectileUpdateInterface;
 class AIUpdateInterface;		///< @todo Clean up this nasty hack (MSB)
 class ExitInterface;
 class DockUpdateInterface;
+class RepairDockUpdateInterface;
 class RailedTransportDockUpdateInterface;
 class SpecialPowerUpdateInterface;
 class SlavedUpdateInterface;
