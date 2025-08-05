@@ -57,6 +57,8 @@ struct CountermeasuresPlayerScanHelper
 	ObjectPointerList *m_objectList;	
 };
 
+static const UnsignedInt CHECK_DELAY = LOGICFRAMES_PER_SECOND * 1;
+
 static void checkForCountermeasures( Object *testObj, void *userData )
 {
 	CountermeasuresPlayerScanHelper *helper = (CountermeasuresPlayerScanHelper*)userData;
@@ -93,6 +95,7 @@ CountermeasuresBehavior::CountermeasuresBehavior( Thing *thing, const ModuleData
 	m_nextVolleyFrame = 0;
 	m_parked = FALSE;
 	m_currentVolley = 0;
+	m_checkDelay = 0;
 	m_dockObjectID = INVALID_ID;
 
 	if (data->m_initiallyActive)
@@ -280,7 +283,7 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 		}
 	}
 
-	if(m_dockObjectID != INVALID_ID)
+	if(!m_availableCountermeasures && m_dockObjectID != INVALID_ID)
 	{
 		Object *dockObj = NULL;
 		dockObj = TheGameLogic->findObjectByID(m_dockObjectID);
@@ -304,99 +307,68 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 		}
 	}
 	
-	if(!m_availableCountermeasures && m_dockObjectID == INVALID_ID && ( !data->m_reloadNearObjects.empty() || data->m_mustReloadNearDock == TRUE ))
+	if(!m_availableCountermeasures && ( !data->m_reloadNearObjects.empty() || data->m_mustReloadNearDock == TRUE ) && now > m_checkDelay && m_dockObjectID == INVALID_ID )
 	{
-		Player::PlayerTeamList::const_iterator it;
-		for (it = obj->getControllingPlayer()->getPlayerTeams()->begin();
-				it != obj->getControllingPlayer()->getPlayerTeams()->end(); ++it)
+		m_checkDelay = now + CHECK_DELAY;
+
+		// Modified from ArmorDamageScalarUpdate.cpp, or WeaponBonusUpdate.cpp
+		
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+
+		// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
+		// So these checks are on an individual basis, not in the Partition query
+		//	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
+		PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, NULL };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		data->m_dockDistance, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+		
+		for( Object *currentObj = iter->first(); currentObj != NULL; currentObj = iter->next() )
 		{
-			if ( m_dockObjectID != INVALID_ID )
+			if(!data->m_reloadNearObjects.empty())
 			{
-				break;
-			}
-			for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance()) 
-			{
-				if ( m_dockObjectID != INVALID_ID )
-				{
+				const ThingTemplate* tmpls;
+				Int cnt = data->m_reloadNearObjects.size();
+				for (int i = 0; i < cnt; i++) {
+					tmpls = TheThingFactory->findTemplate( data->m_reloadNearObjects[i] );
+						
+					if( !tmpls->isEquivalentTo( currentObj->getTemplate() ) )
+					{
+						continue;
+					}
+
+					m_dockObjectID = currentObj->getID();
+					setCountermeasuresParked();
 					break;
 				}
-				Team *team = iter.cur();
-				if( team == NULL ) 
+			}
+
+			if(m_dockObjectID != INVALID_ID)
+				break;
+			
+			if( data->m_mustReloadNearDock == TRUE )
+			{
+				// look for a dock interface
+				RepairDockUpdateInterface *di = NULL;
+				for (BehaviorModule **u = currentObj->getBehaviorModules(); *u; ++u)
 				{
-					continue;
-				}
-				if( team->getRelationship( obj->getTeam() ) != ALLIES )
-				{
-					continue;
-				}
-				for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance()) 
-				{
-					Object *dockObj = iterObj.cur();
-					if( dockObj == NULL ) 
+					if ((di = (*u)->getRepairDockUpdateInterface()) != NULL)
 					{
-						continue;
-					}
-					// Don't consider Objects that are effectively Dead.
-					if( dockObj->isEffectivelyDead() ) 
-					{
-						continue;
-					}
-					// Don't consider any Objects under construction.
-					if( dockObj->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
-					{
-						continue;
-					}
-					
-					// Consider the Docking Distance
-					Real distSqr = ThePartitionManager->getDistanceSquared( obj, dockObj, FROM_CENTER_2D );
-					if( distSqr > sqr( data->m_dockDistance ) )
-					{
-						continue;
-					}
-
-					// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
-
-					if(!data->m_reloadNearObjects.empty())
-					{
-						const ThingTemplate* tmpls;
-						Int cnt = data->m_reloadNearObjects.size();
-						for (int i = 0; i < cnt; i++) {
-							tmpls = TheThingFactory->findTemplate( data->m_reloadNearObjects[i] );
-								
-							if( !tmpls->isEquivalentTo( dockObj->getTemplate() ) )
-							{
-								continue;
-							}
-
-							m_dockObjectID = dockObj->getID();
-							setCountermeasuresParked();
-							break;
-						}
-					}
-					
-					if( data->m_mustReloadNearDock == TRUE )
-					{
-						// look for a dock interface
-						RepairDockUpdateInterface *di = NULL;
-						for (BehaviorModule **u = obj->getBehaviorModules(); *u; ++u)
-						{
-							if ((di = (*u)->getRepairDockUpdateInterface()) != NULL)
-							{
-								m_dockObjectID = dockObj->getID();
-								setCountermeasuresParked();
-								break;
-							}
-						}
-					}
-
-					if ( m_dockObjectID != INVALID_ID )
-					{
+						m_dockObjectID = currentObj->getID();
+						setCountermeasuresParked();
 						break;
 					}
-
-					// end MEAT
 				}
 			}
+
+			if(m_dockObjectID != INVALID_ID)
+				break;
 		}
 	}
 	

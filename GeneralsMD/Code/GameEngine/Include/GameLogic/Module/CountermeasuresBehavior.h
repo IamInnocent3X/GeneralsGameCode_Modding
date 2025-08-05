@@ -247,6 +247,7 @@ private:
 	UnsignedInt m_nextVolleyFrame;					//Frame the next volley is fired.
 	UnsignedInt m_reloadFrame;							//The frame countermeasures will be ready to use again.
 	UnsignedInt m_currentVolley;
+	UnsignedInt m_checkDelay;
 	Bool m_parked;
 	ObjectID m_dockObjectID;
 };
