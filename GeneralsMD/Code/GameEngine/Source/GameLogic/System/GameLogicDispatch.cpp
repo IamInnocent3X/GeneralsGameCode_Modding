@@ -435,6 +435,8 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				Int maxFPS = msg->getArgument( 3 )->integer;
 				if (maxFPS < 1 || maxFPS > 1000)
 					maxFPS = TheGlobalData->m_framesPerSecondLimit;
+				if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+					maxFPS = TheGlobalData->m_newfpsLimit;
 				DEBUG_LOG(("Setting max FPS limit to %d FPS", maxFPS));
 				TheGameEngine->setFramesPerSecondLimit(maxFPS);
 				TheWritableGlobalData->m_useFpsLimit = true;

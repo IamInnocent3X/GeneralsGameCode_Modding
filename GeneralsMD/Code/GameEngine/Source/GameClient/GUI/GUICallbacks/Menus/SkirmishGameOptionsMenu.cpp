@@ -406,7 +406,8 @@ void setFPSTextBox( Int sliderPos )
 		return;
 	UnicodeString text;
 	staticTextGameSpeed->winEnable(TRUE);
-	if(sliderPos > GREATER_NO_FPS_LIMIT)
+	if( ( sliderPos > GREATER_NO_FPS_LIMIT && TheGlobalData->m_newskirmishfpsSystem == FALSE ) || 
+			( TheGlobalData->m_newskirmishfpsSystem == TRUE && sliderPos > TheGlobalData->m_framesPerSecondLimit && TheGlobalData->m_framesPerSecondLimit >= GREATER_NO_FPS_LIMIT ) )
 	{
 		// set static text to --
 		text.set(L"--");
@@ -431,7 +432,8 @@ void reallyDoStart( void )
 	GameWindow *sliderGameSpeed = TheWindowManager->winGetWindowFromId( parentSkirmishGameOptions, sliderGameSpeedID );
 	Int maxFPS = GadgetSliderGetPosition( sliderGameSpeed );
 	DEBUG_LOG(("GameSpeedSlider was at %d", maxFPS));
-	if (maxFPS > GREATER_NO_FPS_LIMIT)
+	if ( ( maxFPS > GREATER_NO_FPS_LIMIT && TheGlobalData->m_newskirmishfpsSystem == FALSE ) ||
+			( TheGlobalData->m_newskirmishfpsSystem == TRUE && maxFPS > TheGlobalData->m_framesPerSecondLimit && TheGlobalData->m_framesPerSecondLimit >= GREATER_NO_FPS_LIMIT ) )
 		maxFPS = 1000;
 	if (maxFPS < 15)
 		maxFPS = 15;
@@ -1400,6 +1402,8 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 //	NameKeyType sliderGameSpeedID = TheNameKeyGenerator->nameToKey( AsciiString( "SkirmishGameOptionsMenu.wnd:SliderGameSpeed" ) );
 	GameWindow *sliderGameSpeed = TheWindowManager->winGetWindowFromId( parentSkirmishGameOptions, sliderGameSpeedID );
 	Int sliderPos = max(15,min(61,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit)));
+	if(TheGlobalData->m_newskirmishfpsSystem == TRUE && TheGlobalData->m_framesPerSecondLimit > 61)
+  		sliderPos = max(15,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit));
 	GadgetSliderSetPosition( sliderGameSpeed, sliderPos );
 	setFPSTextBox(sliderPos);
 	buttonStart->winSetText(TheGameText->fetch("GUI:Start"));

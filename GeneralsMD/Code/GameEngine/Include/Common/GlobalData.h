@@ -591,6 +591,9 @@ public:
 
 	Bool m_countermeasuresDetonateNonTracking;
 
+	Bool m_newskirmishfpsSystem;
+	UnsignedInt m_menufps;
+	UnsignedInt m_newfpsLimit;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

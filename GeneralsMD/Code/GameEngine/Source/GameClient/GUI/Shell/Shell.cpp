@@ -32,6 +32,7 @@
 
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioHandleSpecialValues.h"
+#include "Common/GameEngine.h"
 #include "Common/RandomValue.h"
 #include "GameClient/Shell.h"
 #include "GameClient/WindowLayout.h"
@@ -210,6 +211,17 @@ void Shell::update( void )
 			deleteInstance(m_background);
 			m_background = NULL;
 			
+		}
+		if(TheGameEngine)
+		{
+			if(TheGlobalData->m_shellMapOn && m_shellMapOn){
+				if(TheGlobalData->m_menufps > 0 && TheGlobalData->m_menufps <= TheGlobalData->m_framesPerSecondLimit)
+					TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_menufps);
+			}
+			else if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+			{
+				TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
+			}
 		}
 		
 		// Update the animate window manager

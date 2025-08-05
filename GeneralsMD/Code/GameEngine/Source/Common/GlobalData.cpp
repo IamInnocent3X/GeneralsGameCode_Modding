@@ -646,6 +646,10 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "CountermeasuresDetonateNonTrackingMissiles",	 INI::parseBool, NULL, offsetof(GlobalData, m_countermeasuresDetonateNonTracking) },
 	
+	{ "NewSkirmishFPSSystem",	 INI::parseBool, NULL, offsetof(GlobalData, m_newskirmishfpsSystem) },
+	{ "MenuScreenFPS",	 INI::parseUnsignedInt, NULL, offsetof(GlobalData, m_menufps) },
+	{ "InGameFPS",	 INI::parseUnsignedInt, NULL, offsetof(GlobalData, m_newfpsLimit) },
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1199,6 +1203,11 @@ GlobalData::GlobalData()
 	m_countermeasuresDetonateNonTracking = FALSE; //More realistic destruction. Won't seemingly home onto the immovable target dealing no damage.
 
 	m_useOldMoveSpeed = FALSE;  //Fix is enabled by default
+
+
+	m_newskirmishfpsSystem = FALSE;
+	m_menufps = 0;
+	m_newfpsLimit = 0;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:
