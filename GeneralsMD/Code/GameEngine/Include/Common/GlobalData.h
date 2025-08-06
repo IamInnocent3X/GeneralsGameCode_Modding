@@ -592,6 +592,7 @@ public:
 	Bool m_countermeasuresDetonateNonTracking;
 
 	Bool m_newskirmishfpsSystem;
+	Bool m_skirmishloadfps;
 	UnsignedInt m_menufps;
 	UnsignedInt m_newfpsLimit;
 

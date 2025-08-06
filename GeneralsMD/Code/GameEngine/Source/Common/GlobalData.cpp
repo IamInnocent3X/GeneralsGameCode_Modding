@@ -647,6 +647,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "CountermeasuresDetonateNonTrackingMissiles",	 INI::parseBool, NULL, offsetof(GlobalData, m_countermeasuresDetonateNonTracking) },
 	
 	{ "NewSkirmishFPSSystem",	 INI::parseBool, NULL, offsetof(GlobalData, m_newskirmishfpsSystem) },
+	{ "LoadSkirmishFPS",	 INI::parseBool, NULL, offsetof(GlobalData, m_skirmishloadfps) },
 	{ "MenuScreenFPS",	 INI::parseUnsignedInt, NULL, offsetof(GlobalData, m_menufps) },
 	{ "InGameFPS",	 INI::parseUnsignedInt, NULL, offsetof(GlobalData, m_newfpsLimit) },
 
@@ -1206,6 +1207,7 @@ GlobalData::GlobalData()
 
 
 	m_newskirmishfpsSystem = FALSE;
+	m_skirmishloadfps = FALSE;
 	m_menufps = 0;
 	m_newfpsLimit = 0;
 

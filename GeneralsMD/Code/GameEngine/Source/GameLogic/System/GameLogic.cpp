@@ -48,6 +48,7 @@
 #include "Common/Radar.h"
 #include "Common/RandomValue.h"
 #include "Common/Recorder.h"
+#include "Common/SkirmishPreferences.h"
 #include "Common/StatsCollector.h"
 #include "Common/ThingFactory.h"
 #include "Common/Team.h"
@@ -2407,6 +2408,21 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
   {
 		TheInGameUI->message( TheGameText->fetch( "GUI:FastForwardInstructions" ) );
   }
+
+  SkirmishPreferences prefs;
+  Int skirmishFPS = prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit);
+
+  if(skirmishFPS > 0 && ( TheGlobalData->m_skirmishloadfps == TRUE || !loadingSaveGame ) && m_gameMode == GAME_SKIRMISH)
+  {
+		if(skirmishFPS>TheGlobalData->m_framesPerSecondLimit)
+			skirmishFPS = 1000;
+		TheGameEngine->setFramesPerSecondLimit(skirmishFPS);
+  }
+  else if( (loadingSaveGame || ( isInSinglePlayerGame() ) ) && TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+  {
+		TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
+  }
+
 
 
 }  // end startNewGame
