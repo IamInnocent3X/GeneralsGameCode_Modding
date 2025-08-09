@@ -5875,6 +5875,11 @@ StateReturnType AIAttackState::update()
 	if (curWeapon == NULL || curWeapon->getMaxShotCount() <= 0)
 		return STATE_FAILURE;
 
+	AsciiString stopAttack;	
+	stopAttack.format("STOP_ATTACKING");
+	if( source->testCustomStatus(stopAttack) )
+		return STATE_FAILURE;
+
 	/**
 	 * Run the attack state sub-machine.
 	 * If the attack state machine returns anything other than CONTINUE,

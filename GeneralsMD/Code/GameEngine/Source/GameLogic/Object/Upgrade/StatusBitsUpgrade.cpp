@@ -81,8 +81,8 @@ void StatusBitsUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToSet ) },
 		{ "StatusToClear",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToClear ) },
-		{ "CustomStatusToSet",	INI::parseQuotedAsciiString, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToSet ) },
-		{ "CustomStatusToClear",	INI::parseQuotedAsciiString, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToClear ) },
+		{ "CustomStatusToSet",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToSet ) },
+		{ "CustomStatusToClear",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToClear ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -107,8 +107,14 @@ void StatusBitsUpgrade::upgradeImplementation( )
 	Object *obj = getObject();	
 	obj->setStatus( getStatusBitsUpgradeModuleData()->m_statusToSet );
 	obj->clearStatus( getStatusBitsUpgradeModuleData()->m_statusToClear );
-	obj->setCustomStatus( getStatusBitsUpgradeModuleData()->m_customStatusToSet );
-	obj->clearCustomStatus( getStatusBitsUpgradeModuleData()->m_customStatusToClear );
+	for(std::vector<AsciiString>::const_iterator it = getStatusBitsUpgradeModuleData()->m_customStatusToSet.begin(); it != getStatusBitsUpgradeModuleData()->m_customStatusToSet.end(); ++it)
+	{
+		obj->setCustomStatus( *it );
+	}
+	for(std::vector<AsciiString>::const_iterator it = getStatusBitsUpgradeModuleData()->m_customStatusToClear.begin(); it != getStatusBitsUpgradeModuleData()->m_customStatusToClear.end(); ++it)
+	{
+		obj->clearCustomStatus( *it );
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

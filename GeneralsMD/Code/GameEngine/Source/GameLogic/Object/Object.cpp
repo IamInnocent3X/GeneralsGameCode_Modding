@@ -1137,6 +1137,17 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 
 }
 
+Bool Object::testCustomStatus(const AsciiString& cst) const
+{
+	ObjectCustomStatusType::const_iterator it = m_customStatus.find(cst);
+
+	if (it != m_customStatus.end() && it->second == 1) 
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
 //=============================================================================
 void Object::setScriptStatus( ObjectScriptStatusBit bit, Bool set )
 {

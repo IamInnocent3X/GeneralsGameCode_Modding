@@ -73,8 +73,8 @@ class StatusBitsUpgradeModuleData : public UpgradeModuleData
 public:
 	ObjectStatusMaskType m_statusToSet;
 	ObjectStatusMaskType m_statusToClear;
-	AsciiString m_customStatusToSet;
-	AsciiString m_customStatusToClear;
+	std::vector<AsciiString> m_customStatusToSet;
+	std::vector<AsciiString> m_customStatusToClear;
 
 	StatusBitsUpgradeModuleData()
 	{

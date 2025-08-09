@@ -562,6 +562,7 @@ public:
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 
 	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; } 
+	Bool testCustomStatus(const AsciiString& cst) const;
 
 	void setArmorSetFlag(ArmorSetType ast);
 	void clearArmorSetFlag(ArmorSetType ast);
