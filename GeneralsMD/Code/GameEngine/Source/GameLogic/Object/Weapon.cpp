@@ -3276,6 +3276,11 @@ Real Weapon::estimateWeaponDamage(const Object *sourceObj, const Object *victimO
 {
 	if (!m_template)
 		return 0.0f;
+	
+	AsciiString zeroDamage;	
+	zeroDamage.format("ZERO_DAMAGE");
+	if (sourceObj->testCustomStatus(zeroDamage))
+		return 0.0f;
 
 	// if the weapon is just reloading, it's ok. if it's out of ammo
 	// (and won't autoreload), then we aren't gonna do any damage.
@@ -3428,6 +3433,13 @@ Bool Weapon::privateFireWeapon(
 
 	if (!m_template)
 		return false;
+
+	AsciiString aimNoAtk;	
+	aimNoAtk.format("AIM_NO_ATTACK");
+	if (sourceObj->testCustomStatus(aimNoAtk))
+	{
+		return false;
+	}
 
 	// If we are a networked weapon, tell everyone nearby they might want to get in on this shot
 	if( m_template->getRequestAssistRange()  &&  victimObj )

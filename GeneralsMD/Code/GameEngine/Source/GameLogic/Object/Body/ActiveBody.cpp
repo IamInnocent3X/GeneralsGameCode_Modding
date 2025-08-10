@@ -381,6 +381,13 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		//Store the template so later if the attacking object dies, we use script conditions to look at the 
 		//damager's template inside evaluateTeamAttackedByType or evaluateNameAttackedByType.
 		damageInfo->in.m_sourceTemplate = damager->getTemplate();
+		
+		//If damager is affected by Zero Damage or No Damage Status, return
+		AsciiString zeroDamage, noDamage;	
+		zeroDamage.format("ZERO_DAMAGE");
+		noDamage.format("NO_DAMAGE");
+		if (damager->testCustomStatus(zeroDamage) || damager->testCustomStatus(noDamage))
+			return;
 	}
 
 	Bool alreadyHandled = FALSE;

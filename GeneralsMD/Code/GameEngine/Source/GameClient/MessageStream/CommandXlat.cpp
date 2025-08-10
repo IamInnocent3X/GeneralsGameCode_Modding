@@ -229,9 +229,16 @@ static Bool canSelectionSalvage( const Object *targetObj)
 //-------------------------------------------------------------------------------------------------
 static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, const Coord3D *pos )
 {
+	AsciiString zeroDamage;
+	zeroDamage.format("ZERO_DAMAGE");
+	if( !victim && obj->testCustomStatus(zeroDamage) )
+	{
+		return ATTACKRESULT_INVALID_SHOT;
+	}
+
 	CanAttackResult result;
 	result = obj->isAbleToAttack() ? ATTACKRESULT_POSSIBLE : ATTACKRESULT_NOT_POSSIBLE;
-	if( result == ATTACKRESULT_NOT_POSSIBLE )
+	if( result == ATTACKRESULT_NOT_POSSIBLE || obj->testCustomStatus(zeroDamage) )
 	{
 		return ATTACKRESULT_NOT_POSSIBLE;
 	}

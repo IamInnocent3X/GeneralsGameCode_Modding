@@ -4707,7 +4707,12 @@ Bool InGameUI::canSelectedObjectsEffectivelyUseWeapon( const CommandButton *comm
 		other = *it;
 		count++;
 
-		if( !doAtObject && !doAtPosition )
+		AsciiString zeroDamage;	
+		zeroDamage.format("ZERO_DAMAGE");
+		if ( other->getObject()->testCustomStatus(zeroDamage) )
+		{
+		}
+		else if( !doAtObject && !doAtPosition )
 		{
 			if( TheActionManager->canFireWeapon( other->getObject(), slot, CMD_FROM_PLAYER ) )
 			{

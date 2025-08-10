@@ -646,6 +646,12 @@ CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attac
 //supports both victim or position.
 CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
 {
+	AsciiString zeroDamage;
+	zeroDamage.format("ZERO_DAMAGE");
+	if( source->testCustomStatus(zeroDamage) )
+	{
+		return ATTACKRESULT_INVALID_SHOT;
+	}
 
 	//First determine if we are attacking an object or the ground and get the 
 	//appropriate weapon anti mask.
@@ -844,6 +850,11 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 		will choose the missile, then choose the gun, then want to choose the missile until the gun reloads,
 		then choose the gun and go back to wanting to choose the missile, etc
 	*/
+
+	AsciiString zeroDamage;
+	zeroDamage.format("ZERO_DAMAGE");
+	if( obj->testCustomStatus(zeroDamage) )
+		return FALSE;
 
 	if( isCurWeaponLocked() )
 		return TRUE; // I have been forced into choosing a specific weapon, so it is right until someone says otherwise

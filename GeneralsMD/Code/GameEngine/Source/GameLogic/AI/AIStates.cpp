@@ -5369,6 +5369,13 @@ StateReturnType AIAttackFireWeaponState::update()
 	Object *obj = getMachineOwner();
 	Object* victim = getMachineGoalObject();
 
+	AsciiString aimNoAtk;	
+	aimNoAtk.format("AIM_NO_ATTACK");
+	if (obj->testCustomStatus(aimNoAtk))
+	{
+		return STATE_CONTINUE;
+	}
+
 	if (m_att->isAttackingObject())
 	{
 		// if our target is dead, go ahead and stop.
