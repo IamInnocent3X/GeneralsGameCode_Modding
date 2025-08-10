@@ -56,6 +56,7 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Weapon.h"
 #include "Common/ObjectStatusTypes.h"
 
 //-----------------------------------------------------------------------------
@@ -75,9 +76,19 @@ public:
 	ObjectStatusMaskType m_statusToClear;
 	std::vector<AsciiString> m_customStatusToSet;
 	std::vector<AsciiString> m_customStatusToClear;
+	WeaponBonusConditionTypeVec m_bonusToSet;
+	WeaponBonusConditionTypeVec m_bonusToClear;
+	std::vector<AsciiString> m_customBonusToSet;
+	std::vector<AsciiString> m_customBonusToClear;
 
 	StatusBitsUpgradeModuleData()
 	{
+		m_customStatusToSet.clear();
+		m_customStatusToClear.clear();
+		m_bonusToSet.clear();
+		m_bonusToClear.clear();
+		m_customBonusToSet.clear();
+		m_customBonusToClear.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
