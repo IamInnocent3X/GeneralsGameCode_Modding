@@ -646,9 +646,7 @@ CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attac
 //supports both victim or position.
 CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
 {
-	AsciiString zeroDamage;
-	zeroDamage.format("ZERO_DAMAGE");
-	if( source->testCustomStatus(zeroDamage) )
+	if( source->testCustomStatus("ZERO_DAMAGE") )
 	{
 		return ATTACKRESULT_INVALID_SHOT;
 	}
@@ -851,9 +849,7 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 		then choose the gun and go back to wanting to choose the missile, etc
 	*/
 
-	AsciiString zeroDamage;
-	zeroDamage.format("ZERO_DAMAGE");
-	if( obj->testCustomStatus(zeroDamage) )
+	if( obj->testCustomStatus("ZERO_DAMAGE") )
 		return FALSE;
 
 	if( isCurWeaponLocked() )

@@ -59,6 +59,10 @@ public:
 	UnsignedInt m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
 	Real m_subdualDamageHealAmount;					///< by this much.
 
+	CustomSubdualDamageMap m_subdualDamageCapCustom;
+	CustomSubdualHealRateMap m_subdualDamageHealRateCustom;
+	CustomSubdualDamageMap m_subdualDamageHealAmountCustom;
+
 	ActiveBodyModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -90,6 +94,14 @@ public:
 	virtual Real getSubdualDamageHealAmount() const;
 	virtual Bool hasAnySubdualDamage() const;
 	virtual Real getCurrentSubdualDamageAmount() const { return m_currentSubdualDamage; }
+
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const;
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const;
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const;
+	virtual Bool hasAnySubdualDamageCustom() const;
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const;
+	virtual CustomSubdualDamageMap getCurrentSubdualDamageAmountCustom() const { return m_currentSubdualDamageCustom; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualDamageMap currentSubdualCustom) { m_currentSubdualDamageCustom = currentSubdualCustom; }
 
 	virtual UnsignedInt getChronoDamageHealRate() const;
 	virtual Real getChronoDamageHealAmount() const;
@@ -137,6 +149,12 @@ public:
 	virtual Bool isSubdued() const; 
 	virtual Bool canBeSubdued() const; 
 	virtual void onSubdualChange( Bool isNowSubdued );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualChangeAttractor( Bool isNowSubdued, ObjectID attractorID );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+
+	// Custom Subdual Damage
+	virtual Bool isSubduedCustom(const AsciiString &customStatus) const; 
+	virtual Bool canBeSubduedCustom(const AsciiString &customStatus) const; 
+	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Int statusFrames );///< Override this if you want a totally different effect than DISABLED_SUBDUED
 
 	// Chrono
 	virtual Bool isSubduedChrono() const;
@@ -160,6 +178,7 @@ protected:
 	Bool shouldRetaliateAgainstAggressor(Object *obj, Object *damager);
 
 	virtual void internalAddSubdualDamage( Real delta );								///< change health
+	virtual void internalAddSubdualDamageCustom( Real delta, const AsciiString &customStatus );	///< change health
 	virtual void internalAddChronoDamage( Real delta );								///< change health
 
 	virtual void applyChronoParticleSystems(void);
@@ -176,6 +195,11 @@ private:
 	UnsignedInt 						m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
 	Real 								m_subdualDamageHealAmount;					///< by this much.
 	Real									m_currentChronoDamage;	///< Same as Subdual, but for CHRONO_GUN
+
+	CustomSubdualDamageMap 				m_currentSubdualDamageCustom;
+	CustomSubdualDamageMap 				m_subdualDamageCapCustom;
+	CustomSubdualHealRateMap 			m_subdualDamageHealRateCustom;
+	CustomSubdualDamageMap 				m_subdualDamageHealAmountCustom;
 
 	BodyDamageType				m_curDamageState;				///< last known damage state
 	UnsignedInt						m_nextDamageFXTime;

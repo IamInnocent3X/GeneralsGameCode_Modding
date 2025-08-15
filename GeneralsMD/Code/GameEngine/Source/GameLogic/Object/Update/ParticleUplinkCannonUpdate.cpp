@@ -445,7 +445,8 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 			if( me->isDisabledByType( DISABLED_UNDERPOWERED ) || 
 					me->isDisabledByType( DISABLED_EMP ) ||
 					me->isDisabledByType( DISABLED_SUBDUED ) ||
-					me->isDisabledByType( DISABLED_HACKED ) )
+					me->isDisabledByType( DISABLED_HACKED ) ||
+					me->isDisabledByType( DISABLED_FROZEN ) )
 			{
 				//We must end the special power early! ABORT! ABORT!
 				m_startDecayFrame = now;

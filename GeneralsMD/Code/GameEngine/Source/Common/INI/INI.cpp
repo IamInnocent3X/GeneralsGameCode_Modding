@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #define DEFINE_DEATH_NAMES
 #define DEFINE_WEAPONBONUSCONDITION_NAMES
+#define DEFINE_PROTECTION_NAMES
 
 #include "Common/INI.h"
 #include "Common/INIException.h"
@@ -2197,6 +2198,41 @@ void INI::parseCustomTypes(INI* ini, void* /*instance*/, void* store, const void
 		}
 		throw INI_UNKNOWN_TOKEN;
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseProtectionTypeFlags(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
+{
+	ProtectionTypeFlags flags = DEATH_TYPE_FLAGS_ALL;	//A const that indicates all
+
+	for (const char* token = ini->getNextToken(); token; token = ini->getNextTokenOrNull())
+	{
+		if (stricmp(token, "ALL") == 0)
+		{
+			flags = DEATH_TYPE_FLAGS_ALL;	//A const that indicates all
+			continue;
+		}
+		if (stricmp(token, "NONE") == 0)
+		{
+			flags = DEATH_TYPE_FLAGS_NONE;	//A const that indicates none
+			continue;
+		}
+		if (token[0] == '+')
+		{
+			ProtectionType pt = (ProtectionType)INI::scanIndexList(token+1, TheProtectionNames);
+			flags = setProtectionTypeFlag(flags, pt);
+			continue;
+		}
+		if (token[0] == '-')
+		{
+			ProtectionType pt = (ProtectionType)INI::scanIndexList(token+1, TheProtectionNames);
+			flags = clearProtectionTypeFlag(flags, pt);
+			continue;
+		}
+		throw INI_UNKNOWN_TOKEN;
+	}
+	*(ProtectionTypeFlags*)store = flags;
 }
 
 //-------------------------------------------------------------------------------------------------

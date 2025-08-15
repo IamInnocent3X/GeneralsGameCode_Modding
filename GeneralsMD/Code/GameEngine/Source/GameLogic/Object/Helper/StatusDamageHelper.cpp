@@ -41,10 +41,16 @@
 // ------------------------------------------------------------------------------------------------
 StatusDamageHelper::StatusDamageHelper( Thing *thing, const ModuleData *modData ) : ObjectHelper( thing, modData ) 
 { 
-	m_statusToHeal = OBJECT_STATUS_NONE;
+	//m_statusToHeal = OBJECT_STATUS_NONE;
 	m_frameToHeal = 0;
-	m_currentTint = TINT_STATUS_INVALID;
-	m_customStatusToHeal = NULL;
+	//m_currentTint = TINT_STATUS_INVALID;
+	//m_customStatusToHeal = NULL;
+
+	earliestDurationAsInt = 0;
+	m_statusToHeal.clear();
+	m_currentTint.clear();
+	m_customStatusToHeal.clear();
+	m_customTintStatus.clear();
 
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
@@ -60,56 +66,108 @@ StatusDamageHelper::~StatusDamageHelper( void )
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime StatusDamageHelper::update()
 {
-	Bool clearStatus;
-
-	if(!m_customStatusToHeal.isEmpty())
+	UnsignedInt now = TheGameLogic->getFrame();
+	UnsignedInt nextStatusDuration = 1e9; //Approximate, but lower than UPDATE_SLEEP_FOREVER
+	for(StatusTypeMap::iterator it = m_statusToHeal.begin(); it != m_statusToHeal.end(); ++it)
 	{
-		ObjectCustomStatusType myCustomStatus = getObject()->getCustomStatus();
-		ObjectCustomStatusType::const_iterator it = myCustomStatus.find(m_customStatusToHeal);
-		if(it != myCustomStatus.end() && it->second == 0)
+		if((*it).second == 0)
+			continue;
+
+		if((*it).second <= now)
 		{
-			clearStatus = TRUE;
+			getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK((*it).first) );
+			(*it).second = 0;
+			//DEBUG_LOG(( "StatusDamageHelper Cleared Status: %d", (*it).first ));
+		}
+		else if((*it).second < now + nextStatusDuration)
+		{
+			nextStatusDuration = (*it).second - now;
+			//DEBUG_LOG(( "StatusDamageHelper Status To Clear: %d, Frame to Clear: %d", (*it).first, (*it).second ));
 		}
 	}
-	if( ( m_statusToHeal != OBJECT_STATUS_NONE && !getObject()->getStatusBits().test( m_statusToHeal ) ) ||
-		clearStatus == TRUE ||
-		m_frameToHeal <= TheGameLogic->getFrame() )
+	for(CustomStatusTypeMap::iterator it = m_customStatusToHeal.begin(); it != m_customStatusToHeal.end(); ++it)
 	{
-		//DEBUG_ASSERTCRASH(m_frameToHeal <= TheGameLogic->getFrame(), ("StatusDamageHelper woke up too soon.") );
-
-		clearStatusCondition(); // We are sleep driven, so seeing an update means our timer is ready implicitly
-		return UPDATE_SLEEP_FOREVER;
+		if((*it).second == 0)
+			continue;
+			
+		if((*it).second <= now)
+		{
+			getObject()->clearCustomStatus( (*it).first );
+			(*it).second = 0;
+			//DEBUG_LOG(( "StatusDamageHelper Cleared Custom Status: %s", (*it).first.str() ));
+		}
+		else if((*it).second < now + nextStatusDuration)
+		{
+			nextStatusDuration = (*it).second - now;
+			//DEBUG_LOG(( "StatusDamageHelper Custom Status To Clear: %s, Frame to Clear: %d", (*it).first.str(), (*it).second ));
+		}
 	}
-	return UPDATE_SLEEP_NONE;
+
+	if (getObject()->getDrawable())
+	{
+		for(TintStatusDurationVec::iterator it = m_currentTint.begin(); it != m_currentTint.end(); ++it)
+		{
+			if((*it).second == 0)
+				continue;
+			
+			if((*it).second <= now)
+			{
+				getObject()->getDrawable()->clearTintStatus((*it).first);
+				(*it).second = 0;
+				//DEBUG_LOG(( "StatusDamageHelper Cleared Tint Status: %d", (*it).first ));
+			}
+			else if((*it).second < now + nextStatusDuration)
+			{
+				nextStatusDuration = (*it).second - now;
+				//DEBUG_LOG(( "StatusDamageHelper TintStatus To Clear: %d, Frame to Clear: %d", (*it).first, (*it).second ));
+			}
+		}
+		for(CustomTintStatusDurationVec::iterator it = m_customTintStatus.begin(); it != m_customTintStatus.end(); ++it)
+		{
+			if((*it).second == 0)
+				continue;
+			
+			if((*it).second <= now)
+			{
+				getObject()->getDrawable()->clearCustomTintStatus();
+				(*it).second = 0;
+				//DEBUG_LOG(( "StatusDamageHelper Cleared CustomTintStatus: %s", (*it).first.str() ));
+			}
+			else if((*it).second < now + nextStatusDuration)
+			{
+				nextStatusDuration = (*it).second - now;
+				//DEBUG_LOG(( "StatusDamageHelper CustomTintStatus To Clear: %s, Frame to Clear: %d", (*it).first.str(), (*it).second ));
+			}
+		}
+	}
+
+	//DEBUG_LOG(( "StatusDamageHelper Update Frame: %d, Sleep Duration: %d, Next Frame to Clear Status: %d", now, nextStatusDuration, now + nextStatusDuration ));
+
+	if(nextStatusDuration < 1e9)
+	{
+		earliestDurationAsInt = nextStatusDuration;
+		return UPDATE_SLEEP(nextStatusDuration);
+	}
+	
+	earliestDurationAsInt = 0;
+	return UPDATE_SLEEP_FOREVER;
+
+	//DEBUG_ASSERTCRASH(m_frameToHeal <= TheGameLogic->getFrame(), ("StatusDamageHelper woke up too soon.") );
+
+	//clearStatusCondition(); // We are sleep driven, so seeing an update means our timer is ready implicitly
+	//return UPDATE_SLEEP_FOREVER;
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 void StatusDamageHelper::clearStatusCondition()
 {
-	if( m_statusToHeal != OBJECT_STATUS_NONE || !m_customStatusToHeal.isEmpty() )
-	{
-		if(m_statusToHeal != OBJECT_STATUS_NONE)
-			getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK(m_statusToHeal) );
-		m_statusToHeal = OBJECT_STATUS_NONE;
-		m_frameToHeal = 0;
-		if(!m_customStatusToHeal.isEmpty())
-			getObject()->clearCustomStatus( m_customStatusToHeal );
-		m_customStatusToHeal = NULL;
-
-		if (getObject()->getDrawable())
-		{
-			getObject()->getDrawable()->clearCustomTintStatus();
-			if (m_currentTint > TINT_STATUS_INVALID && m_currentTint < TINT_STATUS_COUNT) {
-				getObject()->getDrawable()->clearTintStatus(m_currentTint);
-				m_currentTint = TINT_STATUS_INVALID;
-			}
-
-			// getObject()->getDrawable()->clearTintStatus(TINT_STATUS_FRENZY);
-			//      if (getObject()->isKindOf(KINDOF_INFANTRY))
-			//        getObject()->getDrawable()->setSecondMaterialPassOpacity( 0.0f );
-		}
-	}
+	//if( m_statusToHeal != OBJECT_STATUS_NONE )
+	//{
+	//	getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK(m_statusToHeal) );
+	//	m_statusToHeal = OBJECT_STATUS_NONE;
+	//	m_frameToHeal = 0;
+	//}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -117,36 +175,91 @@ void StatusDamageHelper::clearStatusCondition()
 void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	Int durationAsInt = REAL_TO_INT_FLOOR(duration);
+	UnsignedInt frameToHeal = TheGameLogic->getFrame() + durationAsInt;
 	
 	// Clear any different status we may have.  Re-getting the same status will just reset the timer
+	
+	// Scratch that, we can now assign as many Statuses as we want!
+	// Starting with custom status.
 	if(!customStatus.isEmpty())
 	{
-		if( m_customStatusToHeal != customStatus )
-			clearStatusCondition();
+		CustomStatusTypeMap::iterator it = m_customStatusToHeal.find(customStatus);
+		if(it != m_customStatusToHeal.end())
+		{
+			(*it).second = frameToHeal;
+		}
+		else
+		{
+			m_customStatusToHeal[customStatus] = frameToHeal;
+		}
 
 		getObject()->setCustomStatus( customStatus );
-		m_customStatusToHeal = customStatus;
 	}
+	// If custom status is not present, assign the status type instead!
 	else
 	{
-		if( m_statusToHeal != status )
-			clearStatusCondition();
-			
+		StatusTypeMap::iterator it = m_statusToHeal.find(status);
+		if(it != m_statusToHeal.end())
+		{
+			(*it).second = frameToHeal;
+		}
+		else
+		{
+			m_statusToHeal[status] = frameToHeal;
+		}
+
 		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
-		m_statusToHeal = status;
 	}
 
-	m_frameToHeal = TheGameLogic->getFrame() + durationAsInt;
+	//m_frameToHeal = TheGameLogic->getFrame() + durationAsInt;
 
+	// Now for the Tint Statuses
 	if (getObject()->getDrawable())
 	{
+		Bool assignTintStatus = TRUE;
+
 		if(!customTintStatus.isEmpty())
 		{
+			for(CustomTintStatusDurationVec::iterator it = m_customTintStatus.begin(); it != m_customTintStatus.end(); ++it)
+			{
+				if((*it).first == customTintStatus)
+				{
+					(*it).second = frameToHeal;
+					assignTintStatus = FALSE;
+					break;
+				}
+			}
+			if(assignTintStatus == TRUE)
+			{
+				CustomTintStatusDurationPair statusPair;
+				statusPair.first = customTintStatus;
+				statusPair.second = frameToHeal;
+				m_customTintStatus.push_back(statusPair);
+			}
+		
 			getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
+
 		}
 		else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
+			for(TintStatusDurationVec::iterator it = m_currentTint.begin(); it != m_currentTint.end(); ++it)
+			{
+				if((*it).first == tintStatus)
+				{
+					(*it).second = frameToHeal;
+					assignTintStatus = FALSE;
+					break;
+				}
+			}
+			if(assignTintStatus == TRUE)
+			{
+				TintStatusDurationPair statusPair;
+				statusPair.first = tintStatus;
+				statusPair.second = frameToHeal;
+				m_currentTint.push_back(statusPair);
+			}
+			
 			getObject()->getDrawable()->setTintStatus(tintStatus);
-			m_currentTint = tintStatus;
+
 		}
 
 		// getObject()->getDrawable()->setTintStatus(TINT_STATUS_FRENZY);
@@ -155,8 +268,17 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 		//      getObject()->getDrawable()->setSecondMaterialPassOpacity( 1.0f );
 	}
 
-	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
-	//setWakeFrame( getObject(), UPDATE_SLEEP(durationAsInt) );
+	//setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
+	// We set the wake frame for updating, because running for loops everyframe is expensive
+	if(frameToHeal < m_frameToHeal || !earliestDurationAsInt)
+	{
+		earliestDurationAsInt = durationAsInt;
+		m_frameToHeal = frameToHeal;
+		setWakeFrame( getObject(), UPDATE_SLEEP(durationAsInt) );
+
+		//DEBUG_LOG(( "StatusDamageHelper, Current Frame: %d, Sleep Duration: %d, Frame For Clearing Status: %d", now, durationAsInt, frameToHeal ));
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -186,10 +308,148 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 	// object helper base class
 	ObjectHelper::xfer( xfer );
 
-	xfer->xferUser( &m_statusToHeal, sizeof(ObjectStatusTypes) );// an enum
-	xfer->xferUser( &m_currentTint, sizeof(TintStatus) );// an enum
-	xfer->xferAsciiString( &m_customStatusToHeal );
+	//xfer->xferUser( &m_statusToHeal, sizeof(ObjectStatusTypes) );// an enum
+	//xfer->xferUser( &m_currentTint, sizeof(TintStatus) );// an enum
+	//xfer->xferAsciiString( &m_customStatusToHeal );
 	xfer->xferUnsignedInt( &m_frameToHeal );
+	xfer->xferUnsignedInt( &earliestDurationAsInt );
+
+	// Modified from W3DModelDraw.cpp
+	TintStatusDurationPair currentTintInfo;
+	CustomTintStatusDurationPair customTintStatusInfo;
+
+	UnsignedShort currentTintSize = m_currentTint.size();
+	UnsignedShort customTintStatusSize = m_customTintStatus.size();
+	xfer->xferUnsignedShort( &currentTintSize );
+	xfer->xferUnsignedShort( &customTintStatusSize );
+
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		TintStatusDurationVec::const_iterator it;
+		for( it = m_currentTint.begin(); it != m_currentTint.end(); ++it )
+		{
+
+			currentTintInfo.first = (*it).first;
+			xfer->xferUser( &currentTintInfo.first, sizeof(TintStatus) );// an enum
+
+			currentTintInfo.second = (*it).second;
+			xfer->xferUnsignedInt( &currentTintInfo.second );
+
+		}  // end for, it
+
+		CustomTintStatusDurationVec::const_iterator it2;
+		for( it2 = m_customTintStatus.begin(); it2 != m_customTintStatus.end(); ++it2 )
+		{
+
+			customTintStatusInfo.first = (*it2).first;
+			xfer->xferAsciiString( &customTintStatusInfo.first );
+
+			customTintStatusInfo.second = (*it2).second;
+			xfer->xferUnsignedInt( &customTintStatusInfo.second );
+
+		}  // end for, it2
+
+	}  // end if, save
+	else
+	{
+
+		// the vector must be emtpy
+		m_currentTint.clear();
+		m_customTintStatus.clear();
+
+		// read each data item
+		for( UnsignedShort i = 0; i < currentTintSize; ++i )
+		{
+
+			xfer->xferUser( &currentTintInfo.first, sizeof(TintStatus) );// an enum
+
+			xfer->xferUnsignedInt( &currentTintInfo.second );
+
+			// stuff in vector
+			m_currentTint.push_back( currentTintInfo );
+
+		}  // end for, i
+
+		for( UnsignedShort i = 0; i < customTintStatusSize; ++i )
+		{
+
+			xfer->xferAsciiString( &customTintStatusInfo.first );
+
+			xfer->xferUnsignedInt( &customTintStatusInfo.second );
+
+			// stuff in vector
+			m_customTintStatus.push_back( customTintStatusInfo );
+
+		}  // end for, i
+
+	}  // end else, load
+
+	// Modified from Team.cpp
+	StatusTypeMap::iterator statusIt;
+	CustomStatusTypeMap::iterator customStatusIt;
+
+	UnsignedShort statusCount = m_statusToHeal.size();
+	UnsignedShort customStatusCount = m_customStatusToHeal.size();
+	xfer->xferUnsignedShort( &statusCount );
+	xfer->xferUnsignedShort( &customStatusCount );
+
+	ObjectStatusTypes statusName;
+	UnsignedInt statusTime;
+	AsciiString customStatusName;
+	UnsignedInt customStatusTime;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		for( statusIt = m_statusToHeal.begin(); statusIt != m_statusToHeal.end(); ++statusIt )
+		{
+
+			statusName = (*statusIt).first;
+			xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+
+			statusTime = (*statusIt).second;
+			xfer->xferUnsignedInt( &statusTime );
+
+		}  // end for
+
+		for( customStatusIt = m_customStatusToHeal.begin(); customStatusIt != m_customStatusToHeal.end(); ++customStatusIt )
+		{
+
+			customStatusName = (*customStatusIt).first;
+			xfer->xferAsciiString( &customStatusName );
+
+			customStatusTime = (*customStatusIt).second;
+			xfer->xferUnsignedInt( &customStatusTime );
+
+		}  // end for
+
+	}  // end if, save
+	else
+	{
+
+		for( UnsignedShort i = 0; i < statusCount; ++i )
+		{
+
+			xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+
+			xfer->xferUnsignedInt( &statusTime );
+
+			m_statusToHeal[statusName] = statusTime;
+			
+		}  // end for, i
+
+		for( UnsignedShort i = 0; i < customStatusCount; ++i )
+		{
+
+			xfer->xferAsciiString( &customStatusName );
+
+			xfer->xferUnsignedInt( &customStatusTime );
+
+			m_customStatusToHeal[customStatusName] = customStatusTime;
+			
+		}  // end for, i
+
+	}  // end else load
 
 }  // end xfer
 

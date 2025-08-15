@@ -1136,10 +1136,12 @@ UpdateSleepTime AIUpdateInterface::update( void )
 
 	if (! obj->isEffectivelyDead() &&
 			! obj->isDisabledByType( DISABLED_PARALYZED ) &&
+			! obj->isDisabledByType( DISABLED_STUNNED ) &&
 			! obj->isDisabledByType( DISABLED_UNMANNED ) &&
 			! obj->isDisabledByType( DISABLED_EMP ) &&
 			! obj->isDisabledByType( DISABLED_SUBDUED ) &&
-			! obj->isDisabledByType( DISABLED_HACKED ) )
+			! obj->isDisabledByType( DISABLED_HACKED ) &&
+			! obj->isDisabledByType( DISABLED_FROZEN ) )
 	{
 		// If we are dead, don't let the turrets do anything anymore, or else they will keep attacking
 		for (int i = 0; i < MAX_TURRETS; ++i) 
@@ -3887,7 +3889,7 @@ void AIUpdateInterface::privateExit( Object *objectToExit, CommandSourceType cmd
 	if (!objectToExit)
 		return;
 
-  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) || objectToExit->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 
@@ -3916,7 +3918,7 @@ void AIUpdateInterface::privateExitInstantly( Object *objectToExit, CommandSourc
 	if (!objectToExit)
 		return;
 
-  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) || objectToExit->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 	// we must go thru this state (rather than calling exitObjectViaDoor directly!), 
@@ -3956,7 +3958,7 @@ void AIUpdateInterface::doQuickExit( const std::vector<Coord3D>* path )
 void AIUpdateInterface::privateEvacuate( Int exposeStealthUnits, CommandSourceType cmdSource )
 {
 
-  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) || getObject()->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 
@@ -3978,7 +3980,7 @@ void AIUpdateInterface::privateEvacuate( Int exposeStealthUnits, CommandSourceTy
 void AIUpdateInterface::privateEvacuateInstantly( Int exposeStealthUnits, CommandSourceType cmdSource )
 {
 
-  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) || getObject()->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 

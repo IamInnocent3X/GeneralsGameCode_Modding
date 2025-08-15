@@ -37,6 +37,7 @@
 #define DEFINE_WEAPONAFFECTSMASK_NAMES
 #define DEFINE_WEAPONRELOAD_NAMES
 #define DEFINE_WEAPONPREFIRE_NAMES
+#define DEFINE_PROTECTION_NAMES
 
 #include "Common/crc.h"
 #include "Common/CRCDebug.h"
@@ -285,6 +286,12 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 
 	{ "WeaponNotAbsoluteKill",						INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_notAbsoluteKill) },	
 	
+	{ "SubdualMissileAttractor",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isMissileAttractor) },
+	{ "ShielderProtectionType",						INI::parseProtectionTypeFlags,	NULL, 					offsetof(WeaponTemplate, m_protectionTypes) },		
+	{ "ShielderImmune",								INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isShielderImmune) },
+
+	{ "CustomSubdualDisabledTypes",				DisabledMaskType::parseFromINI, NULL, offsetof( WeaponTemplate, m_customSubdualDisableType ) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -403,6 +410,14 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_firingTrackerCustomStatusTrigger.clear();
 	m_firingTrackerCustomBonusConditionGive = NULL;
 	m_notAbsoluteKill = FALSE;
+
+	m_isMissileAttractor = FALSE;
+
+	m_customSubdualDisableType = DISABLED_COUNT;
+
+	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
+
+	m_isShielderImmune = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -699,12 +714,18 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	TintStatus TintStatusType = getTintStatusType();
 	AsciiString CustomTintStatusType = getCustomTintStatusType();
 
-	Bool isSubdual = getIsSubdual();
+	Bool IsSubdual = getIsSubdual();
 	Bool subdualDealsNormalDamage = getSubdualDealsNormalDamage();
 	Real subdualDamageMultiplier = getSubdualDamageMultiplier();
 	KindOfMaskType subdualForbiddenKindOf = getSubdualForbiddenKindOf();
 
 	Bool IsNotAbsoluteKill = getIsNotAbsoluteKill();
+
+	Bool IsMissileAttractor = getIsMissileAttractor();
+
+	DisabledType CustomSubdualDisableType = getCustomSubdualDisableType();
+
+	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
 
 	if ( victimObj->isKindOf(KINDOF_SHRUBBERY) )
 	{
@@ -782,11 +803,14 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	damageInfo.m_statusDurationTypeCorrelate = StatusDurationTypeCorrelate;
 	damageInfo.m_tintStatus = TintStatusType;
 	damageInfo.m_customTintStatus = CustomTintStatusType;
-	damageInfo.m_isSubdual = isSubdual;
+	damageInfo.m_isSubdual = IsSubdual;
 	damageInfo.m_subdualDealsNormalDamage = subdualDealsNormalDamage;
 	damageInfo.m_subdualDamageMultiplier = subdualDamageMultiplier;
 	damageInfo.m_subdualForbiddenKindOf = subdualForbiddenKindOf;
 	damageInfo.m_notAbsoluteKill = IsNotAbsoluteKill;
+	damageInfo.m_isMissileAttractor = IsMissileAttractor;
+	damageInfo.m_customSubdualDisableType = CustomSubdualDisableType;
+	damageInfo.m_protectionTypes = ProtectionTypes;
 	return victimObj->estimateDamage(damageInfo);
 }
 
@@ -1040,6 +1064,23 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			return 0;
 		}
 	}
+	
+	// New feature, similar to Black Hole Armor.
+	Object* retarget = NULL;
+	ObjectID ShielderID = INVALID_ID;
+	ProtectionTypeFlags ShieldedType;
+
+	if(!getIsShielderImmune() && !isProjectileDetonation && !isLeechRangeWeapon() && victimObj && victimObj->testCustomStatus("SHIELDED_TARGET"))
+	{
+		ShielderID = victimObj->getShieldByTargetID();
+		if(ShielderID != INVALID_ID)
+		{
+			ShieldedType = victimObj->getShieldByTargetType();
+			retarget = TheGameLogic->findObjectByID(ShielderID);
+		}
+	}
+
+	// We start from the FX
 
 	// call this even if FXList is null, because this also handles stuff like Gun Barrel Recoil
 	if (sourceObj && sourceObj->getDrawable())
@@ -1060,6 +1101,19 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		
 		if ( TheGameLogic->getFrame() < firingWeapon->getSuspendFXFrame() )
 			fx = NULL;
+		
+		Coord3D protectorPos;
+		protectorPos.set(&targetPos);
+
+		if( retarget && (
+			( firingWeapon->isLaser() && getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) ) ||
+			( getProjectileTemplate() == NULL && !firingWeapon->isLaser() && getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS) ) ||
+			( getProjectileTemplate() && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES) ))
+		)
+		{
+			retarget->getGeometryInfo().getCenterPosition( *retarget->getPosition(), protectorPos );
+			reDir = reAngle != 0.0f ? (atan2(retarget->getPosition()->y - sourcePos->y, retarget->getPosition()->x - sourcePos->x)) : 0.0f;
+		}
 
 		Bool handled;
 		
@@ -1081,7 +1135,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 																															getWeaponSpeed(), 
 																															reAngle, 
 																															reDir, 
-																															&targetPos,
+																															&protectorPos,
 																															getPrimaryDamageRadius(bonus)
 																															);
 		}
@@ -1091,7 +1145,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			// bah. just play it at the drawable's pos.
 			//DEBUG_LOG(("*** WeaponFireFX not fully handled by the client"));
 			const Coord3D* where = isContactWeapon() ? &targetPos : sourceObj->getDrawable()->getPosition();
-			FXList::doFXPos(fx, where, sourceObj->getDrawable()->getTransformMatrix(), getWeaponSpeed(), &targetPos, getPrimaryDamageRadius(bonus));
+			FXList::doFXPos(fx, where, sourceObj->getDrawable()->getTransformMatrix(), getWeaponSpeed(), &protectorPos, getPrimaryDamageRadius(bonus));
 		}
 	}
 
@@ -1164,18 +1218,34 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 		if( firingWeapon->isLaser() )
 		{
+			if(retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_LASER))
+			{
+				projectileDestination.set( retarget->getPosition() );
+				damageID = ShielderID;
+			}
+
 			if( scatterRadius <= getPrimaryDamageRadius( bonus ) || scatterRadius <= getSecondaryDamageRadius( bonus ) )
 			{
 				//The laser is close enough to damage the object, so just hit it directly. Some victim objects
 				//adjust the laser's position to prevent it from hitting the ground.
-				if( victimObj )
+				if( retarget && !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) )
 				{
-					projectileDestination.set( victimObj->getPosition() );
+					if (firingWeapon->getContinuousLaserLoopTime() > 0)
+						firingWeapon->handleContinuousLaser(sourceObj, retarget, &projectileDestination);
+					else
+						firingWeapon->createLaser(sourceObj, retarget, &projectileDestination);
 				}
-				if (firingWeapon->getContinuousLaserLoopTime() > 0)
-					firingWeapon->handleContinuousLaser(sourceObj, victimObj, &projectileDestination);
 				else
-					firingWeapon->createLaser(sourceObj, victimObj, &projectileDestination);
+				{
+					if( victimObj )
+					{
+						projectileDestination.set( victimObj->getPosition() );
+					}
+					if (firingWeapon->getContinuousLaserLoopTime() > 0)
+						firingWeapon->handleContinuousLaser(sourceObj, victimObj, &projectileDestination);
+					else
+						firingWeapon->createLaser(sourceObj, victimObj, &projectileDestination);
+				}
 			}
 			else
 			{
@@ -1229,7 +1299,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			//DEBUG_LOG(("WeaponTemplate::fireWeaponTemplate: firing weapon immediately!"));
 			if( inflictDamage )
 			{
-				dealDamageInternal(sourceID, damageID, damagePos, bonus, isProjectileDetonation);
+				if(retarget && !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS))
+					dealDamageInternal(sourceID, ShielderID, retarget->getPosition(), bonus, isProjectileDetonation);
+				else
+					dealDamageInternal(sourceID, damageID, damagePos, bonus, isProjectileDetonation);
 			}
 
 			//-extraLogging 
@@ -1250,7 +1323,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				UnsignedInt delayInWholeFrames = REAL_TO_INT_CEIL(delayInFrames);
 				when = TheGameLogic->getFrame() + delayInWholeFrames;
 				//DEBUG_LOG(("WeaponTemplate::fireWeaponTemplate: firing weapon in %d frames (= %d)!", delayInWholeFrames,when));
-				TheWeaponStore->setDelayedDamage(this, damagePos, when, sourceID, damageID, bonus);
+				if(retarget && !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS))
+					TheWeaponStore->setDelayedDamage(this, retarget->getPosition(), when, sourceID, ShielderID, bonus);
+				else
+					TheWeaponStore->setDelayedDamage(this, damagePos, when, sourceID, damageID, bonus);
 			}
 
 			//-extraLogging 
@@ -1303,7 +1379,15 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			}
 		}
 
-		firingWeapon->newProjectileFired( sourceObj, projectile, victimObj, victimPos );//The actual logic weapon needs to know this was created. 
+		if(retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES))
+		{
+			projectileDestination.set( retarget->getPosition() );
+			firingWeapon->newProjectileFired( sourceObj, projectile, retarget, retarget->getPosition() );//The actual logic weapon needs to know this was created. 
+		}
+		else
+		{
+			firingWeapon->newProjectileFired( sourceObj, projectile, victimObj, victimPos );//The actual logic weapon needs to know this was created. 
+		}
 
 		ProjectileUpdateInterface* pui = NULL;
 		for (BehaviorModule** u = projectile->getBehaviorModules(); *u; ++u)
@@ -1314,7 +1398,11 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		if (pui)
 		{
 			VeterancyLevel v = sourceObj->getVeterancyLevel();
-			if( scatterRadius > 0.0f )
+			if(retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES))
+			{
+				pui->projectileLaunchAtObjectOrPosition(retarget, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v]);
+			}
+			else if( scatterRadius > 0.0f )
 			{
 				//With a scatter radius, don't follow the victim (overriding the intent).
 				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v] );
@@ -1333,7 +1421,19 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 		//If we're launching a missile at a unit with valid countermeasures, then communicate it
 		//if( projectile->isKindOf( KINDOF_SMALL_MISSILE ) && victimObj && victimObj->hasCountermeasures() )
-		if( projectile && victimObj && victimObj->hasCountermeasuresExpanded(projectile) )
+		if(projectile && retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES) && retarget->hasCountermeasuresExpanded(projectile) )
+		{
+			const AIUpdateInterface *ai = retarget->getAI();
+			//Only allow jets not currently supersonic to launch countermeasures
+			if( ai && ai->getCurLocomotorSetType() != LOCOMOTORSET_SUPERSONIC )
+			{
+				//This function will determine now whether or not the fired projectile will be diverted to
+				//an available decoy flare.
+				retarget->reportMissileForCountermeasures( projectile );
+			}
+			
+		}
+		else if( projectile && victimObj && victimObj->hasCountermeasuresExpanded(projectile) )
 		{
 			const AIUpdateInterface *ai = victimObj->getAI();
 			//Only allow jets not currently supersonic to launch countermeasures
@@ -1517,11 +1617,14 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Bool StatusDurationTypeCorrelate = getStatusDurationTypeCorrelate();
 	TintStatus TintStatusType = getTintStatusType();
 	AsciiString CustomTintStatusType = getCustomTintStatusType();
-	Bool isSubdual = getIsSubdual();
+	Bool IsSubdual = getIsSubdual();
 	Bool subdualDealsNormalDamage = getSubdualDealsNormalDamage();
 	Real subdualDamageMultiplier = getSubdualDamageMultiplier();
 	KindOfMaskType subdualForbiddenKindOf = getSubdualForbiddenKindOf();
 	Bool IsNotAbsoluteKill = getIsNotAbsoluteKill();
+	Bool IsMissileAttractor = getIsMissileAttractor();
+	DisabledType CustomSubdualDisableType = getCustomSubdualDisableType();
+	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
@@ -1672,12 +1775,16 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_tintStatus = TintStatusType;
 			damageInfo.in.m_customTintStatus = CustomTintStatusType;
 
-			damageInfo.in.m_isSubdual = isSubdual;
+			damageInfo.in.m_isSubdual = IsSubdual;
 			damageInfo.in.m_subdualDealsNormalDamage = subdualDealsNormalDamage;
 			damageInfo.in.m_subdualDamageMultiplier = subdualDamageMultiplier;
 			damageInfo.in.m_subdualForbiddenKindOf = subdualForbiddenKindOf;
 
 			damageInfo.in.m_notAbsoluteKill = IsNotAbsoluteKill;
+
+			damageInfo.in.m_isMissileAttractor = IsMissileAttractor;
+			damageInfo.in.m_customSubdualDisableType = CustomSubdualDisableType;
+			damageInfo.in.m_protectionTypes = ProtectionTypes;
 			
 			Coord3D damageDirection;
 			damageDirection.zero();
@@ -3277,9 +3384,7 @@ Real Weapon::estimateWeaponDamage(const Object *sourceObj, const Object *victimO
 	if (!m_template)
 		return 0.0f;
 	
-	AsciiString zeroDamage;	
-	zeroDamage.format("ZERO_DAMAGE");
-	if (sourceObj->testCustomStatus(zeroDamage))
+	if (sourceObj->testCustomStatus("ZERO_DAMAGE"))
 		return 0.0f;
 
 	// if the weapon is just reloading, it's ok. if it's out of ammo
@@ -3434,9 +3539,7 @@ Bool Weapon::privateFireWeapon(
 	if (!m_template)
 		return false;
 
-	AsciiString aimNoAtk;	
-	aimNoAtk.format("AIM_NO_ATTACK");
-	if (sourceObj->testCustomStatus(aimNoAtk))
+	if (sourceObj->testCustomStatus("AIM_NO_ATTACK"))
 	{
 		return false;
 	}

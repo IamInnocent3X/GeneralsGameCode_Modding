@@ -673,8 +673,10 @@ Bool Drawable::getShouldAnimate( Bool considerPower ) const
 
         (  obj->isDisabledByType( DISABLED_HACKED ) 
 				|| obj->isDisabledByType( DISABLED_PARALYZED ) 
+				|| obj->isDisabledByType( DISABLED_STUNNED )
 				|| obj->isDisabledByType( DISABLED_EMP ) 
 				|| obj->isDisabledByType( DISABLED_SUBDUED ) 
+				|| obj->isDisabledByType( DISABLED_FROZEN )
 				// srj sez: unmanned things also should not animate. (eg, gattling tanks,
 				// which have a slight barrel animation even when at rest). if this causes
 				// a problem, we will need to fix gattling tanks in another way.

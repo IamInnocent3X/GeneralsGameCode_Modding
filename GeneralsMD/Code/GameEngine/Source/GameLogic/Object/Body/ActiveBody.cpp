@@ -49,6 +49,7 @@
 #include "GameLogic/Armor.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/Damage.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/TerrainLogic.h"
@@ -131,6 +132,9 @@ ActiveBodyModuleData::ActiveBodyModuleData()
 	m_subdualDamageCap = 0;
 	m_subdualDamageHealRate = 0;
 	m_subdualDamageHealAmount = 0;
+	m_subdualDamageCapCustom.clear();
+	m_subdualDamageHealRateCustom.clear();
+	m_subdualDamageHealAmountCustom.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -171,13 +175,21 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_indestructible(false),
 	m_damageFXOverride(false)
 {
+	const ActiveBodyModuleData *data = getActiveBodyModuleData();
+
 	m_currentHealth = getActiveBodyModuleData()->m_initialHealth;
 	m_prevHealth = getActiveBodyModuleData()->m_initialHealth;
 	m_maxHealth = getActiveBodyModuleData()->m_maxHealth;
 	m_initialHealth = getActiveBodyModuleData()->m_initialHealth;
-	m_subdualDamageCap = getActiveBodyModuleData()->m_subdualDamageCap;
-	m_subdualDamageHealRate = getActiveBodyModuleData()->m_subdualDamageHealRate;
-	m_subdualDamageHealAmount = getActiveBodyModuleData()->m_subdualDamageHealAmount;
+	m_subdualDamageCap = data->m_subdualDamageCap;
+	m_subdualDamageHealRate = data->m_subdualDamageHealRate;
+	m_subdualDamageHealAmount = data->m_subdualDamageHealAmount;
+
+	m_currentSubdualDamageCustom.clear();
+
+	m_subdualDamageCapCustom = data->m_subdualDamageCapCustom;
+	m_subdualDamageHealRateCustom = data->m_subdualDamageHealRateCustom;
+	m_subdualDamageHealAmountCustom = data->m_subdualDamageHealAmountCustom;
 
 	// force an initially-valid armor setup
 	validateArmorAndDamageFX();
@@ -383,10 +395,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		damageInfo->in.m_sourceTemplate = damager->getTemplate();
 		
 		//If damager is affected by Zero Damage or No Damage Status, return
-		AsciiString zeroDamage, noDamage;	
-		zeroDamage.format("ZERO_DAMAGE");
-		noDamage.format("NO_DAMAGE");
-		if (damager->testCustomStatus(zeroDamage) || damager->testCustomStatus(noDamage))
+		if (damager->testCustomStatus("ZERO_DAMAGE") || damager->testCustomStatus("NO_DAMAGE"))
 			return;
 	}
 
@@ -397,6 +406,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool killsGarrisoned = FALSE;
 	Bool isStatusDamage = FALSE;
 	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
+	Real realFramesToStatusFor = 0.0f;
 	const Weapon* w = NULL;
 	w = obj->getCurrentWeapon();
 	Real armorBonus = w ? w->getArmorBonus(obj) : 1.0f;
@@ -408,6 +418,18 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	armorBonus *= m_curArmor.scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
 
 	amount *= armorBonus;
+
+	if(damageInfo->in.m_damageStatusType != OBJECT_STATUS_NONE || !damageInfo->in.m_customDamageStatusType.isEmpty())
+	{
+		realFramesToStatusFor = ConvertDurationFromMsecsToFrames(amount);
+		if (damageInfo->in.m_statusDuration > 0) {
+			realFramesToStatusFor = ConvertDurationFromMsecsToFrames(damageInfo->in.m_statusDuration);
+			if (damageInfo->in.m_statusDurationTypeCorrelate) {
+				realFramesToStatusFor = m_curArmor.adjustDamage(damageInfo->in.m_damageType, realFramesToStatusFor, damageInfo->in.m_customDamageType);
+				realFramesToStatusFor *= armorBonus;
+			}
+		}
+	}
 
 	// Units that get disabled by Chrono damage cannot take damage:
 	if (obj->isDisabledByType(DISABLED_CHRONO) &&
@@ -527,15 +549,13 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		{
 			isStatusDamage = TRUE;
 			// Damage amount is msec time we set the status given in damageStatusType
-			Real realFramesToStatusFor = ConvertDurationFromMsecsToFrames(amount);
-			if (damageInfo->in.m_statusDuration > 0) {
-				realFramesToStatusFor = ConvertDurationFromMsecsToFrames(damageInfo->in.m_statusDuration);
-				if (damageInfo->in.m_statusDurationTypeCorrelate) {
-					realFramesToStatusFor = m_curArmor.adjustDamage(damageInfo->in.m_damageType, realFramesToStatusFor, damageInfo->in.m_customDamageType);
-					realFramesToStatusFor *= armorBonus;
-				}
-			}
+			// Real realFramesToStatusFor = ConvertDurationFromMsecsToFrames(amount);
 			obj->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );
+			
+			// Custom feature, similar to Black Hole Armor
+			if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
+				obj->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
+			
 			alreadyHandled = TRUE;
 			allowModifier = FALSE;
 			break;
@@ -617,14 +637,11 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 
 	if (!isStatusDamage && damageInfo->in.m_doStatusDamage)
 	{
-		Real realFramesToStatusFor = ConvertDurationFromMsecsToFrames(amount);
-		if (damageInfo->in.m_statusDuration > 0) {
-			realFramesToStatusFor = ConvertDurationFromMsecsToFrames(damageInfo->in.m_statusDuration);
-			if (damageInfo->in.m_statusDurationTypeCorrelate) {
-				realFramesToStatusFor = m_curArmor.adjustDamage(damageInfo->in.m_damageType, realFramesToStatusFor, damageInfo->in.m_customDamageType);
-			}
-		}
 		obj->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );
+		
+		// Custom feature, similar to Black Hole Armor
+		if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
+			obj->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
 	}
 
 	if( IsSubdualDamage(damageInfo->in.m_damageType) || damageInfo->in.m_isSubdual == TRUE )
@@ -641,7 +658,9 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			{
 				Subdualamount *= damageInfo->in.m_subdualDamageMultiplier;
 			}
-			Subdualamount *= m_damageScalar;
+			if (damageInfo->in.m_damageType != DAMAGE_SUBDUAL_UNRESISTABLE || damageInfo->in.m_customDamageStatusType.isEmpty() ) {
+				Subdualamount *= m_damageScalar;
+			}
 			
 			Bool wasSubdued = isSubdued();
 			internalAddSubdualDamage(Subdualamount);
@@ -655,12 +674,45 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 
 			if( wasSubdued != nowSubdued )
 			{
-				onSubdualChange(nowSubdued);
+				if(damageInfo->in.m_isMissileAttractor)
+					onSubdualChangeAttractor(nowSubdued, damageInfo->in.m_sourceID);
+				else
+					onSubdualChange(nowSubdued);
 			}
 
 			getObject()->notifySubdualDamage(Subdualamount);
 		}
 	}
+
+	/*if( !damageInfo->in.m_subdualCustomType.isEmpty() )
+	{
+		if( canBeSubduedCustom(damageInfo->in.m_subdualCustomType) )
+		{
+			Real Subdualamount = amount;
+			if(damageInfo->in.m_subdualDamageMultiplier != 1.0f)
+			{
+				Subdualamount *= damageInfo->in.m_subdualDamageMultiplier;
+			}
+			Subdualamount *= m_damageScalar;
+			
+			Bool wasSubdued = isSubduedCustom(damageInfo->in.m_subdualCustomType);
+			internalAddSubdualDamageCustom(Subdualamount,damageInfo->in.m_subdualCustomType);
+			Bool nowSubdued = isSubduedCustom(damageInfo->in.m_subdualCustomType);
+
+			if(damageInfo->in.m_subdualDealsNormalDamage == FALSE)
+			{
+				alreadyHandled = TRUE;
+				allowModifier = FALSE;
+			}
+
+			if( wasSubdued != nowSubdued )
+			{
+				onSubdualChangeCustom(nowSubdued, damageInfo, REAL_TO_INT_CEIL(realFramesToStatusFor));
+			}
+
+			getObject()->notifySubdualDamageCustom(Subdualamount, damageInfo->in.m_subdualCustomType, damageInfo->in.m_customTintStatus, damageInfo->in.m_tintStatus );
+		}
+	}*/
 
 	if (allowModifier)
 	{
@@ -1428,16 +1480,37 @@ void ActiveBody::internalAddChronoDamage(Real delta)
 void ActiveBody::setSubdualCap( Real subdualCap )
 {
 	m_subdualDamageCap = subdualCap;
+	if(!m_subdualDamageCapCustom.empty())
+	{
+		Real ratio = subdualCap;
+		ratio /= m_subdualDamageCap;
+		for (CustomSubdualDamageMap::iterator it = m_subdualDamageCapCustom.begin(); it != m_subdualDamageCapCustom.end(); ++it )
+			it->second *= ratio;
+	}
 } 
 
 void ActiveBody::setSubdualHealRate( UnsignedInt subdualHealRate )
 {
 	m_subdualDamageHealRate = subdualHealRate;
+	if(!m_subdualDamageHealRateCustom.empty())
+	{
+		Real ratio = subdualHealRate;
+		ratio /= m_subdualDamageHealRate;
+		for (CustomSubdualHealRateMap::iterator it = m_subdualDamageHealRateCustom.begin(); it != m_subdualDamageHealRateCustom.end(); ++it )
+			it->second *= ratio;
+	}
 } 
 
 void ActiveBody::setSubdualHealAmount( Real subdualHealAmount )
 {
 	m_subdualDamageHealAmount = subdualHealAmount;
+	if(!m_subdualDamageHealAmountCustom.empty())
+	{
+		Real ratio = subdualHealAmount;
+		ratio /= m_subdualDamageHealAmount;
+		for (CustomSubdualDamageMap::iterator it = m_subdualDamageHealAmountCustom.begin(); it != m_subdualDamageHealAmountCustom.end(); ++it )
+			it->second *= ratio;
+	}
 } 
 
 //-------------------------------------------------------------------------------------------------
@@ -1445,7 +1518,7 @@ void ActiveBody::setSubdualHealAmount( Real subdualHealAmount )
 Bool ActiveBody::canBeSubdued() const
 {
 	// Any body with subdue listings can be subdued.
-	return getActiveBodyModuleData()->m_subdualDamageCap > 0;
+	return m_subdualDamageCap > 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1490,6 +1563,172 @@ void ActiveBody::onSubdualChange( Bool isNowSubdued )
 	}
 }
 
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ActiveBody::onSubdualChangeAttractor( Bool isNowSubdued, ObjectID attractorID )
+{
+	if( !getObject()->isKindOf(KINDOF_PROJECTILE) )
+	{
+		Object *me = getObject();
+		
+		if( isNowSubdued )
+		{
+			me->setDisabled(DISABLED_SUBDUED);
+
+      ContainModuleInterface *contain = me->getContain();
+      if ( contain )
+        contain->orderAllPassengersToIdle( CMD_FROM_AI );
+
+		}
+		else
+		{
+			me->clearDisabled(DISABLED_SUBDUED);
+
+			if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) )
+			{
+				//Kris: October 20, 2003 - Patch 1.01
+				//Any unit inside an internet center is a hacker! Order
+				//them to start hacking again.
+				ContainModuleInterface *contain = me->getContain();
+				if ( contain )
+					contain->orderAllPassengersToHackInternet( CMD_FROM_AI );
+			}
+		}
+	}
+	else if( isNowSubdued )// There is no coming back from being jammed, and projectiles can't even heal, but this makes it clear.
+	{
+		ProjectileUpdateInterface *pui = getObject()->getProjectileUpdateInterface();
+		if( pui )
+		{
+			pui->projectileNowDrawn(attractorID);
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ActiveBody::canBeSubduedCustom(const AsciiString &customStatus) const
+{
+	CustomSubdualDamageMap::const_iterator it = m_subdualDamageCapCustom.find(customStatus);
+	if(it != m_subdualDamageCapCustom.end())
+		return it->second > 0;
+	// Any body with subdue listings can be subdued.
+	return m_subdualDamageCap > 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ActiveBody::isSubduedCustom(const AsciiString &customStatus) const
+{
+	CustomSubdualDamageMap::const_iterator it = m_currentSubdualDamageCustom.find(customStatus);
+	if(it != m_subdualDamageCapCustom.end())
+		return m_maxHealth <= it->second;
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ActiveBody::internalAddSubdualDamageCustom( Real delta, const AsciiString &customStatus )
+{
+	CustomSubdualDamageMap::iterator it = m_currentSubdualDamageCustom.find(customStatus);
+	if(it != m_currentSubdualDamageCustom.end())
+	{
+		it->second += delta;
+		if(it->second < 0)
+			it->second = 0.0f;
+	}
+	else
+	{
+		m_currentSubdualDamageCustom[customStatus] = delta;
+	}
+
+	CustomSubdualDamageMap::iterator it2 = m_subdualDamageCapCustom.find(customStatus);
+	if(it2 != m_subdualDamageCapCustom.end())
+	{
+		m_currentSubdualDamageCustom[customStatus] = min(m_currentSubdualDamageCustom[customStatus], it->second);
+	}
+	else
+	{
+		m_currentSubdualDamageCustom[customStatus] = min(m_currentSubdualDamageCustom[customStatus], m_subdualDamageCap);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Int statusFrames )
+{
+	/*if( !getObject()->isKindOf(KINDOF_PROJECTILE) )
+	{
+		Object *me = getObject();
+		
+		if(damageinfo->in.m_customSubdualDisableType != DISABLED_COUNT)
+		{
+			if( isNowSubdued )
+			{
+				me->setDisabled(damageinfo->in.m_customSubdualDisableType);
+
+				if(damageinfo->in.m_customSubdualDisableType == DISABLED_HACKED
+							|| damageinfo->in.m_customSubdualDisableType == DISABLED_EMP
+							|| damageinfo->in.m_customSubdualDisableType == DISABLED_SUBDUED
+							|| damageinfo->in.m_customSubdualDisableType == DISABLED_PARALYZED
+							|| damageinfo->in.m_customSubdualDisableType == DISABLED_STUNNED
+							|| damageinfo->in.m_customSubdualDisableType == DISABLED_FROZEN )
+				ContainModuleInterface *contain = me->getContain();
+				if ( contain )
+					contain->orderAllPassengersToIdle( CMD_FROM_AI );
+			}
+			else
+			{
+				me->clearDisabled(damageinfo->in.m_customSubdualDisableType);
+
+				if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) )
+				{
+					//Kris: October 20, 2003 - Patch 1.01
+					//Any unit inside an internet center is a hacker! Order
+					//them to start hacking again.
+					ContainModuleInterface *contain = me->getContain();
+					if ( contain )
+						contain->orderAllPassengersToHackInternet( CMD_FROM_AI );
+				}
+			}
+		}
+
+		m_isMissileAttractor
+			m_subdualCustomType
+			m_subdualCustomType
+			m_customSubdualClearOnComplete
+			m_customSubdualOCL
+			m_customSubdualDoStatus
+
+		if( isNowSubdued )
+		{
+			if(damageinfo->in.m_customSubdualClearOnComplete) {
+				CustomSubdualDamageMap::iterator it = m_currentSubdualDamageCustom.find(damageInfo->in.m_subdualCustomType);
+				if(it != m_currentSubdualDamageCustom.end())
+					it->second = 0;
+			}
+
+			if(damageinfo->in.m_customSubdualOCL != NULL)
+				ObjectCreationList::create(damageinfo->in.m_customSubdualOCL, me, NULL );
+
+			if(damageinfo->in.m_customSubdualDoStatus)
+				me->doStatusDamage( damageInfo->in.m_damageStatusType , statusFrames , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );
+
+		}
+	}
+	else if( isNowSubdued )// There is no coming back from being jammed, and projectiles can't even heal, but this makes it clear.
+	{
+		ProjectileUpdateInterface *pui = getObject()->getProjectileUpdateInterface();
+		if( pui )
+		{
+			if(damageInfo->in.m_isMissileAttractor)
+				pui->projectileNowDrawn(damageInfo->in.m_sourceID);
+			else
+				pui->projectileNowJammed();
+		}
+	}*/
+}
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void ActiveBody::onSubdualChronoChange( Bool isNowSubdued )
@@ -1649,6 +1888,70 @@ Real ActiveBody::getSubdualDamageHealAmount() const
 Bool ActiveBody::hasAnySubdualDamage() const
 {
 	return m_currentSubdualDamage > 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ActiveBody::hasAnySubdualDamageCustom() const
+{
+	for(CustomSubdualDamageMap::const_iterator it = m_currentSubdualDamageCustom.begin(); it != m_currentSubdualDamageCustom.end(); ++it)
+	{
+		if(it->second > 0)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+std::vector<AsciiString> ActiveBody::getAnySubdualDamageCustom() const
+{
+	std::vector<AsciiString> stringVec;
+	for(CustomSubdualDamageMap::const_iterator it = m_currentSubdualDamageCustom.begin(); it != m_currentSubdualDamageCustom.end(); ++it)
+	{
+		if(it->second > 0)
+		{
+			stringVec.push_back(it->first);
+		}
+	}
+	return stringVec;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Real ActiveBody::getSubdualDamageCapCustom(const AsciiString& customStatus) const
+{
+	CustomSubdualDamageMap::const_iterator it = m_subdualDamageCapCustom.find(customStatus);
+	if(it != m_subdualDamageCapCustom.end())
+	{
+		return it->second;
+	}
+	return m_subdualDamageCap;
+} 
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+UnsignedInt ActiveBody::getSubdualDamageHealRateCustom(const AsciiString& customStatus) const
+{
+	CustomSubdualHealRateMap::const_iterator it = m_subdualDamageHealRateCustom.find(customStatus);
+	if(it != m_subdualDamageHealRateCustom.end())
+	{
+		return it->second;
+	}
+	return m_subdualDamageHealRate;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Real ActiveBody::getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const
+{
+	CustomSubdualDamageMap::const_iterator it = m_subdualDamageHealAmountCustom.find(customStatus);
+	if(it != m_subdualDamageHealAmountCustom.end())
+	{
+		return it->second;
+	}
+	return m_subdualDamageHealAmount;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1980,6 +2283,129 @@ void ActiveBody::xfer( Xfer *xfer )
 
 	// armor set flags
 	m_curArmorSetFlags.xfer( xfer );
+
+	// Modified from Team.cpp
+	CustomSubdualDamageMap::iterator customSubdualIt;
+	CustomSubdualDamageMap::iterator customSubdualIt2;
+	CustomSubdualHealRateMap::iterator customSubdualIt3;
+	CustomSubdualDamageMap::iterator customSubdualIt4;
+
+	UnsignedShort customSubdualCount = m_currentSubdualDamageCustom.size();
+	UnsignedShort customSubdualCount2 = m_subdualDamageCapCustom.size();
+	UnsignedShort customSubdualCount3 = m_subdualDamageHealRateCustom.size();
+	UnsignedShort customSubdualCount4 = m_subdualDamageHealAmountCustom.size();
+	
+	xfer->xferUnsignedShort( &customSubdualCount );
+	xfer->xferUnsignedShort( &customSubdualCount2 );
+	xfer->xferUnsignedShort( &customSubdualCount3 );
+	xfer->xferUnsignedShort( &customSubdualCount4 );
+
+	AsciiString customSubdualName;
+	AsciiString customSubdualName2;
+	AsciiString customSubdualName3;
+	AsciiString customSubdualName4;
+	
+	Real customSubdualAmount;
+	Real customSubdualAmount2;
+	UnsignedInt customSubdualAmount3;
+	Real customSubdualAmount4;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		for( customSubdualIt = m_currentSubdualDamageCustom.begin(); customSubdualIt != m_currentSubdualDamageCustom.end(); ++customSubdualIt )
+		{
+
+			customSubdualName = (*customSubdualIt).first;
+			xfer->xferAsciiString( &customSubdualName );
+
+			customSubdualAmount = (*customSubdualIt).second;
+			xfer->xferReal( &customSubdualAmount );
+
+		}  // end for
+
+		for( customSubdualIt2 = m_subdualDamageCapCustom.begin(); customSubdualIt2 != m_subdualDamageCapCustom.end(); ++customSubdualIt2 )
+		{
+
+			customSubdualName2 = (*customSubdualIt2).first;
+			xfer->xferAsciiString( &customSubdualName2 );
+
+			customSubdualAmount2 = (*customSubdualIt2).second;
+			xfer->xferReal( &customSubdualAmount2 );
+
+		}  // end for
+
+		for( customSubdualIt3 = m_subdualDamageHealRateCustom.begin(); customSubdualIt3 != m_subdualDamageHealRateCustom.end(); ++customSubdualIt3 )
+		{
+
+			customSubdualName3 = (*customSubdualIt3).first;
+			xfer->xferAsciiString( &customSubdualName3 );
+
+			customSubdualAmount3 = (*customSubdualIt3).second;
+			xfer->xferUnsignedInt( &customSubdualAmount3 );
+
+		}  // end for
+
+		for( customSubdualIt4 = m_subdualDamageHealAmountCustom.begin(); customSubdualIt4 != m_subdualDamageHealAmountCustom.end(); ++customSubdualIt4 )
+		{
+
+			customSubdualName4 = (*customSubdualIt4).first;
+			xfer->xferAsciiString( &customSubdualName4 );
+
+			customSubdualAmount4 = (*customSubdualIt4).second;
+			xfer->xferReal( &customSubdualAmount4 );
+
+		}  // end for
+
+
+	}  // end if, save
+	else
+	{
+
+		for( UnsignedShort i = 0; i < customSubdualCount; ++i )
+		{
+
+			xfer->xferAsciiString( &customSubdualName );
+
+			xfer->xferReal( &customSubdualAmount );
+
+			m_currentSubdualDamageCustom[customSubdualName] = customSubdualAmount;
+			
+		}  // end for, i
+
+		for( UnsignedShort i = 0; i < customSubdualCount2; ++i )
+		{
+
+			xfer->xferAsciiString( &customSubdualName2 );
+
+			xfer->xferReal( &customSubdualAmount2 );
+
+			m_subdualDamageCapCustom[customSubdualName2] = customSubdualAmount2;
+			
+		}  // end for, i
+
+		for( UnsignedShort i = 0; i < customSubdualCount3; ++i )
+		{
+
+			xfer->xferAsciiString( &customSubdualName3 );
+
+			xfer->xferUnsignedInt( &customSubdualAmount3 );
+
+			m_subdualDamageHealRateCustom[customSubdualName3] = customSubdualAmount3;
+			
+		}  // end for, i
+
+		for( UnsignedShort i = 0; i < customSubdualCount4; ++i )
+		{
+
+			xfer->xferAsciiString( &customSubdualName4 );
+
+			xfer->xferReal( &customSubdualAmount4 );
+
+			m_subdualDamageHealAmountCustom[customSubdualName4] = customSubdualAmount4;
+			
+		}  // end for, i
+
+	}  // end else load
 
 }  // end xfer
 

@@ -1729,7 +1729,7 @@ Bool GarrisonContain::isPassengerAllowedToFire( ObjectID id ) const
 {
 
   const Object *self = getObject();
-  if ( self && self->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( self && ( self->isDisabledByType( DISABLED_SUBDUED ) || self->isDisabledByType( DISABLED_FROZEN ) ) )
     return FALSE;
 
 	return TRUE;

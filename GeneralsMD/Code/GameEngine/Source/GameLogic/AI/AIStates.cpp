@@ -1440,9 +1440,11 @@ StateReturnType AIIdleState::update()
 
 		
 		if (! obj->isDisabledByType( DISABLED_PARALYZED ) &&
+				! obj->isDisabledByType( DISABLED_STUNNED ) &&
 				! obj->isDisabledByType( DISABLED_UNMANNED ) &&
 				! obj->isDisabledByType( DISABLED_EMP ) &&
 				! obj->isDisabledByType( DISABLED_SUBDUED ) &&
+				! obj->isDisabledByType( DISABLED_FROZEN ) &&
 				! obj->isDisabledByType( DISABLED_HACKED ) )
 		{
 			// mood targeting
@@ -5369,9 +5371,7 @@ StateReturnType AIAttackFireWeaponState::update()
 	Object *obj = getMachineOwner();
 	Object* victim = getMachineGoalObject();
 
-	AsciiString aimNoAtk;	
-	aimNoAtk.format("AIM_NO_ATTACK");
-	if (obj->testCustomStatus(aimNoAtk))
+	if (obj->testCustomStatus("AIM_NO_ATTACK"))
 	{
 		return STATE_CONTINUE;
 	}
@@ -5882,9 +5882,7 @@ StateReturnType AIAttackState::update()
 	if (curWeapon == NULL || curWeapon->getMaxShotCount() <= 0)
 		return STATE_FAILURE;
 
-	AsciiString stopAttack;	
-	stopAttack.format("STOP_ATTACKING");
-	if( source->testCustomStatus(stopAttack) )
+	if( source->testCustomStatus("STOP_ATTACKING") )
 		return STATE_FAILURE;
 
 	/**

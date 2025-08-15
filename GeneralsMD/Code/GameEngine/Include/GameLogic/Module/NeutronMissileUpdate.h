@@ -59,6 +59,9 @@ public:
 	const FXList*	m_ignitionFX;			///< FXList to do when missile 'ignites'
 	RadiusDecalTemplate	m_deliveryDecalTemplate;
 	Real					m_deliveryDecalRadius;
+	Bool					m_allowSubdual;
+	Bool					m_allowAttract;
+	Real					m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
 	NeutronMissileUpdateModuleData();
 
@@ -105,7 +108,8 @@ public:
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual const Coord3D *getVelocity() const { return &m_vel; }		///< get current velocity
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
-	virtual void projectileNowJammed() {}
+	virtual void projectileNowJammed(Bool noDamage = FALSE);
+	virtual void projectileNowDrawn(ObjectID attractorID);
 	virtual Object* getTargetObject() { return NULL; }
 	virtual const Coord3D* getTargetPosition();
 
@@ -137,6 +141,11 @@ private:
 	UnsignedInt	m_framesTillDecoyed;
 	UnsignedInt	m_detonateDistance;
 	ObjectID m_decoyID;
+	ObjectID m_attractedID;
+	Coord3D m_intermedPosBackup;
+
+	Bool m_isJammed;
+	Bool m_assignedBackup;
 
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 

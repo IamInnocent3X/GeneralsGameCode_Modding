@@ -36,6 +36,13 @@
 #include "GameLogic/Module/ObjectHelper.h"
 #include "GameClient/TintStatus.h"
 
+typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomStatusTypeMap;
+typedef std::hash_map<ObjectStatusTypes, UnsignedInt, rts::hash<ObjectStatusTypes>, rts::equal_to<ObjectStatusTypes> > StatusTypeMap;
+typedef std::pair<TintStatus, UnsignedInt> TintStatusDurationPair;
+typedef std::pair<AsciiString, UnsignedInt> CustomTintStatusDurationPair;
+typedef std::vector<TintStatusDurationPair> TintStatusDurationVec;
+typedef std::vector<CustomTintStatusDurationPair> CustomTintStatusDurationVec;
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 class StatusDamageHelperModuleData : public ModuleData
@@ -62,11 +69,12 @@ public:
 	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
 
 protected:
-	ObjectStatusTypes m_statusToHeal;
-	AsciiString m_customStatusToHeal;
-	AsciiString m_customTintStatus;
-	TintStatus m_currentTint;
+	StatusTypeMap m_statusToHeal;
+	CustomStatusTypeMap m_customStatusToHeal;
+	CustomTintStatusDurationVec m_customTintStatus;
+	TintStatusDurationVec m_currentTint;
 	UnsignedInt m_frameToHeal;
+	UnsignedInt earliestDurationAsInt;
 	void clearStatusCondition();
 };
 

@@ -269,7 +269,8 @@ public:
 	virtual ObjectID projectileGetLauncherID() const = 0;								///< All projectiles need to keep track of their firer
 	virtual Bool projectileHandleCollision(Object *other) = 0;
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) = 0; ///< Number of frames till missile diverts to countermeasures.
-	virtual void projectileNowJammed() = 0;
+	virtual void projectileNowJammed(Bool noDamage = FALSE) = 0;
+	virtual void projectileNowDrawn(ObjectID attractorID) = 0;
 
 	virtual Object* getTargetObject() = 0;
 	virtual const Coord3D* getTargetPosition() = 0;

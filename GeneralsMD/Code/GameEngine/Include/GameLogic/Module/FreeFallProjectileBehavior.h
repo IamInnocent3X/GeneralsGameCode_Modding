@@ -69,6 +69,9 @@ public:
 	KindOfMaskType	m_garrisonHitKillKindof;			///< the kind(s) of units that can be collided with
 	KindOfMaskType	m_garrisonHitKillKindofNot;		///< the kind(s) of units that CANNOT be collided with
 	const FXList*   m_garrisonHitKillFX;
+	Bool			m_allowSubdual;
+	Bool			m_allowAttract;
+	Real			m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
 	FreeFallProjectileBehaviorModuleData();
 
@@ -99,7 +102,8 @@ public:
 	virtual Bool projectileIsArmed() const { return true; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
-	virtual void projectileNowJammed() {}
+	virtual void projectileNowJammed(Bool noDamage = FALSE);
+	virtual void projectileNowDrawn(ObjectID attractorID);
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
 
@@ -121,8 +125,12 @@ private:
 	UnsignedInt				m_framesTillDecoyed;
 	UnsignedInt				m_detonateDistance;
 	ObjectID				m_decoyID;
+	ObjectID 				m_attractedID;
+	Coord3D					m_targetPosBackup;
   
     Bool                  m_hasDetonated;           ///< 
+	Bool                  m_isJammed;
+	Bool                  m_assignedBackup;
 
 };
 

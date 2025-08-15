@@ -62,6 +62,9 @@ enum DisabledType CPP_11(: Int)
 	DISABLED_TELEPORT,    // Chrono Legionnaire after teleporting
 	DISABLED_CHRONO,    // Chrono Gun removal
 
+	DISABLED_STUNNED,   //DISABLED_PARALYZED but without the Powered Off Icon
+	DISABLED_FROZEN, // Frozen, DISABLED_SUBDUAL but without the Powered Off Icon
+
 	DISABLED_COUNT,
 	
 	DISABLED_ANY = 65535		///< Do not use this value for setting disabled types (read-only)

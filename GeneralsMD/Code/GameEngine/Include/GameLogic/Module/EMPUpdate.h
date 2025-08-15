@@ -33,9 +33,11 @@
 #define __EMPUPDATE_H_
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "GameClient/TintStatus.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/Damage.h"
 
 
 //-------------------------------------------------------------------------------------------------
@@ -59,6 +61,13 @@ public:
   KindOfMaskType m_victimKindOf;
   KindOfMaskType m_victimKindOfNot;
 	Bool				m_doesNotAffectMyOwnBuildings;
+	DisabledType		m_disabledType;
+	TintStatus			m_tintStatus;
+	AsciiString			m_customTintStatus;
+	KindOfMaskType 		m_affectsKindOf;
+	Bool				m_empProjectileSubdual;
+	AsciiString			m_empProjectileDeathType;
+	AsciiString			m_empProjectileCustomDeathType;
 
 	EMPUpdateModuleData()
 	{
@@ -76,8 +85,15 @@ public:
 		m_effectRadius = 200;
 		m_rejectMask = 0;
 		m_doesNotAffectMyOwnBuildings = FALSE;
+		m_disabledType = DISABLED_EMP;
+		m_tintStatus = TINT_STATUS_DISABLED;
+		m_customTintStatus = NULL;
+		m_empProjectileSubdual = FALSE;
+		m_empProjectileDeathType.format("LASERED");
+		m_empProjectileCustomDeathType = NULL;
 
-    m_victimKindOf.clear();
+    m_affectsKindOf = KINDOFMASK_NONE;
+	m_victimKindOf.clear();
     m_victimKindOfNot.clear();
 	}
 
@@ -100,6 +116,14 @@ public:
 			{ "EffectRadius",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_effectRadius ) },
 			{ "DoesNotAffect", INI::parseBitString32,	TheWeaponAffectsMaskNames, offsetof(EMPUpdateModuleData, m_rejectMask) },
 			{ "DoesNotAffectMyOwnBuildings", INI::parseBool, NULL, offsetof( EMPUpdateModuleData, m_doesNotAffectMyOwnBuildings ) },
+			{ "DisabledType",	DisabledMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_disabledType ) },
+			{ "AffectsKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_affectsKindOf ) },
+			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( EMPUpdateModuleData, m_tintStatus ) },
+			{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( EMPUpdateModuleData, m_customTintStatus ) },
+
+			{ "EMPProjectileJammed",	INI::parseBool,	NULL, offsetof( EMPUpdateModuleData, m_empProjectileSubdual) },	
+			{ "EMPProjectileDeathType", INI::parseAsciiString, NULL, offsetof( EMPUpdateModuleData, m_empProjectileDeathType) },	
+			{ "EMPProjectileCustomDeathType", INI::parseQuotedAsciiString, NULL, offsetof( EMPUpdateModuleData, m_empProjectileCustomDeathType) },	
 
       { "VictimRequiredKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_victimKindOf ) },
 		  { "VictimForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_victimKindOfNot ) },
@@ -137,6 +161,10 @@ protected:
 	Real				m_targetScale;  ///How big will I get
 	//Real				m_spinRate;			///HowMuch To Spin each frame;
 	Real				m_currentScale; ///< how big I am drawing this frame
+	KindOfMaskType 		m_affectsKindOf;
+	Int					m_rejectMask;
+	Real				m_radius;
+	DeathType			m_projectileDeathType;
 
 	//static Bool s_lastInstanceSpunPositive;/// so that only every other instance spins positive direction
 
@@ -155,11 +183,11 @@ protected:
 
 
 //-------------------------------------------------------------------------------------------------
-class LeafletDropBehaviorModuleData : public UpdateModuleData
+class LeafletDropBehaviorModuleData : public EMPUpdateModuleData
 {
 public:
 	UnsignedInt m_delayFrames;	
-	UnsignedInt m_disabledDuration;
+	//UnsignedInt m_disabledDuration;
   Real m_radius;
 	const ParticleSystemTemplate *m_leafletFXParticleSystem;
 
@@ -167,18 +195,18 @@ public:
 	LeafletDropBehaviorModuleData()
 	{
 		m_delayFrames = 1;
-		m_disabledDuration = 0;
+		//m_disabledDuration = 0;
     m_radius = 60.0f;
     m_leafletFXParticleSystem = NULL;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p) 
 	{
-    UpdateModuleData::buildFieldParse(p);
+    EMPUpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] = 
 		{
 			{ "Delay",	        INI::parseDurationUnsignedInt,	NULL, offsetof( LeafletDropBehaviorModuleData, m_delayFrames ) },
-			{ "DisabledDuration",	INI::parseDurationUnsignedInt,	NULL, offsetof( LeafletDropBehaviorModuleData, m_disabledDuration ) },
+			//{ "DisabledDuration",	INI::parseDurationUnsignedInt,	NULL, offsetof( LeafletDropBehaviorModuleData, m_disabledDuration ) },
       { "AffectRadius",     INI::parseReal,                 NULL, offsetof( LeafletDropBehaviorModuleData, m_radius ) },
       { "LeafletFXParticleSystem", INI::parseParticleSystemTemplate,  NULL, offsetof( LeafletDropBehaviorModuleData, m_leafletFXParticleSystem ) },
 
@@ -192,7 +220,7 @@ public:
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class LeafletDropBehavior : public UpdateModule,
+class LeafletDropBehavior : public EMPUpdate,
 													public DieModuleInterface
 
 {
@@ -206,7 +234,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual UpdateSleepTime update( void );
-	void doDisableAttack( void );
+	//void doDisableAttack( void );
 
   // BehaviorModule
 	virtual DieModuleInterface* getDie() { return this; }

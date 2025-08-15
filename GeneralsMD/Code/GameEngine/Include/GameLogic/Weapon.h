@@ -37,6 +37,7 @@
 #include "Common/GameCommon.h"
 
 #include "GameLogic/Damage.h"
+#include "Common/DisabledTypes.h"
 #include "Common/STLTypedefs.h"
 #include "GameClient/TintStatus.h"
 
@@ -260,7 +261,7 @@ typedef std::vector<WeaponBonusConditionType> WeaponBonusConditionTypeVec;
 // Converted to Hash_map;
 typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomWeaponBonus;
 
-enum Field CPP_11(: Int);
+//enum Field CPP_11(: Int);
 
 
 // For WeaponBonusConditionFlags
@@ -555,6 +556,14 @@ public:
 
 	inline Bool getIsNotAbsoluteKill() const { return m_notAbsoluteKill; }
 
+	inline Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
+
+	inline DisabledType getCustomSubdualDisableType() const { return m_customSubdualDisableType; }
+
+	inline ProtectionTypeFlags getProtectionTypes() const { return m_protectionTypes; }
+
+	inline Bool getIsShielderImmune() const { return m_isShielderImmune; }
+
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher, 
 		const Object* projectile, 
@@ -705,6 +714,14 @@ private:
 	AsciiString m_firingTrackerCustomBonusConditionGive;
 
 	Bool m_notAbsoluteKill;
+
+	Bool m_isMissileAttractor;
+
+	DisabledType m_customSubdualDisableType;
+
+	ProtectionTypeFlags m_protectionTypes;
+
+	Bool m_isShielderImmune;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };  
@@ -896,6 +913,12 @@ public:
 	inline const AsciiString& getFiringTrackerCustomBonusCondition() const { return m_template->getFiringTrackerCustomBonusCondition(); }
 
 	inline Bool getIsNotAbsoluteKill() const { return m_template->getIsNotAbsoluteKill(); }
+
+	inline Bool getIsMissileAttractor() const { return m_template->getIsMissileAttractor(); }
+
+	inline DisabledType getCustomSubdualDisableType() const { return m_template->getCustomSubdualDisableType(); }
+
+	inline ProtectionTypeFlags getProtectionTypes() const { return m_template->getProtectionTypes(); }
 
 	Int getClipReloadTime(const Object *source) const;
 

@@ -127,6 +127,8 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 				newBody->attemptDamage( &damInfo );
 			}
 
+			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
+
 		}
 
 		//Transfer attackers.

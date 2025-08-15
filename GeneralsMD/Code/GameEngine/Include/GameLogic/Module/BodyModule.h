@@ -37,6 +37,9 @@
 #include "GameLogic/ArmorSet.h"
 #include "GameLogic/Module/BehaviorModule.h"
 
+typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualDamageMap;
+typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualHealRateMap;
+
 //-------------------------------------------------------------------------------------------------
 /** OBJECT BODY MODULE base class */
 //-------------------------------------------------------------------------------------------------
@@ -156,6 +159,14 @@ public:
 	virtual Bool hasAnySubdualDamage() const = 0;
 	virtual Real getCurrentSubdualDamageAmount() const = 0;
 
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const = 0;
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const = 0;
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const = 0;
+	virtual Bool hasAnySubdualDamageCustom() const = 0;
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const = 0;
+	virtual CustomSubdualDamageMap getCurrentSubdualDamageAmountCustom() const = 0;
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualDamageMap currentSubdualCustom) = 0;
+
 	virtual UnsignedInt getChronoDamageHealRate() const = 0;
 	virtual Real getChronoDamageHealAmount() const = 0;
 	virtual Bool hasAnyChronoDamage() const = 0;
@@ -258,6 +269,14 @@ public:
 	virtual Real getSubdualDamageHealAmount() const {return 0.0f;}
 	virtual Bool hasAnySubdualDamage() const{return FALSE;}
 	virtual Real getCurrentSubdualDamageAmount() const { return 0.0f; }
+
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const {return 0.0f;}
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const {return 0;}
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const {return 0.0f;}
+	virtual Bool hasAnySubdualDamageCustom() const{return FALSE;}
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const { std::vector<AsciiString> dummy; return dummy; }
+	virtual CustomSubdualDamageMap getCurrentSubdualDamageAmountCustom() const { CustomSubdualDamageMap dummy; return dummy; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualDamageMap currentSubdualCustom)  { }
 
 	virtual UnsignedInt getChronoDamageHealRate() const { return 0; }
 	virtual Real getChronoDamageHealAmount() const { return 0.0f; }

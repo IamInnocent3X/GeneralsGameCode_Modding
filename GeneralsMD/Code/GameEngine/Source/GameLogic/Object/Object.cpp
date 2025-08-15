@@ -315,6 +315,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_producerID = INVALID_ID;
 	m_builderID = INVALID_ID;
 
+	m_shielderID = INVALID_ID;
+	m_shielderType = DEATH_TYPE_FLAGS_ALL;
+
 	m_status = objectStatusMask;
 	m_customStatus.clear();
 	m_layer = LAYER_GROUND;
@@ -1975,7 +1978,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 		body->attemptDamage( damageInfo );
 			
 	// Process any shockwave forces that might affect this object due to the incurred damage
-	if (damageInfo->in.m_shockWaveAmount > 0.0f && damageInfo->in.m_shockWaveRadius > 0.0f)
+	if (damageInfo->in.m_shockWaveAmount != 0.0f && damageInfo->in.m_shockWaveRadius > 0.0f)
 	{
 	  //KindOfMaskType immuneToShockwaveKindofs;                                                                      //NEW RESTRICTIONS ADDED
 	  //immuneToShockwaveKindofs.set(KINDOF_PROJECTILE);// projectiles go idle in midair when they get sw'd           //NEW RESTRICTIONS ADDED
@@ -2120,6 +2123,21 @@ void Object::kill( DamageType damageType, DeathType deathType )
 
 }  // end kill
 
+void Object::killCustom( DamageType damageType, DeathType deathType, AsciiString customDeathType )
+{
+	DamageInfo damageInfo;
+
+	// Do unmodifiable damage equal to their max health to kill.
+	damageInfo.in.m_damageType = damageType;
+	damageInfo.in.m_deathType = deathType;
+	damageInfo.in.m_customDeathType = customDeathType;
+	damageInfo.in.m_sourceID = INVALID_ID;
+	damageInfo.in.m_amount = getBodyModule()->getMaxHealth();
+	damageInfo.in.m_kill = TRUE; // Triggers object to die no matter what.
+	attemptDamage( &damageInfo );
+
+}  // end kill
+
 //-------------------------------------------------------------------------------------------------
 /** Restore max health to this Object */
 //-------------------------------------------------------------------------------------------------
@@ -2224,7 +2242,7 @@ void Object::setDisabled( DisabledType type )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
+void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus tintStatus, AsciiString customTintStatus )
 {
 	Bool edgeCase = !isDisabled();
 
@@ -2243,13 +2261,14 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 		sound.setPosition( getPosition() );
 		TheAudio->addAudioEvent( &sound );
 	}
-	else if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_HACKED )
+	else if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_FROZEN || type == DISABLED_HACKED )
 	{
 		//We've lost power -- make sure we aren't already out of power as the sounds shouldn't happen
 		//if you were already disabled.
 		if( !isDisabledByType( DISABLED_UNDERPOWERED ) && 
 				!isDisabledByType( DISABLED_EMP ) &&
 				!isDisabledByType( DISABLED_SUBDUED ) &&
+				!isDisabledByType( DISABLED_FROZEN ) &&
 				!isDisabledByType( DISABLED_HACKED ) )
 		{
 			if( isKindOf( KINDOF_STRUCTURE ) )
@@ -2286,9 +2305,20 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 				// Doh. Also shouldn't be tinting when disabled by scripting.
 				// Doh^2. Also shouldn't be CLEARING tinting if we're disabling by held or script disabledness
 				// Doh^3. Unmanned is no tint too
-				if( type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED && type != DISABLED_TELEPORT && type != DISABLED_CHRONO)
+				if( tintStatus == TINT_STATUS_INVALID && type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED && type != DISABLED_TELEPORT && type != DISABLED_CHRONO && type != DISABLED_FROZEN && type != DISABLED_STUNNED)
 				{
-					m_drawable->setTintStatus( TINT_STATUS_DISABLED );
+					tintStatus = TINT_STATUS_DISABLED;
+				}
+				if(!customTintStatus.isEmpty())
+				{
+					m_drawable->setCustomTintStatus( customTintStatus );
+					m_customDisabledTintToClear = customTintStatus;
+				}
+				else if(tintStatus != TINT_STATUS_INVALID)
+				{
+					m_drawable->setTintStatus( tintStatus );
+					m_disabledTintToClear = tintStatus;
+					m_customDisabledTintToClear = NULL;
 				}
 			}
 		}
@@ -2402,13 +2432,14 @@ Bool Object::clearDisabled( DisabledType type )
 		return FALSE;
 	}
 
-	if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_HACKED )
+	if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_FROZEN || type == DISABLED_HACKED )
 	{
 		//We've regained power-- make sure we aren't still disabled by another type.
 	 	AudioEventRTS sound;
 		if( (!isDisabledByType( DISABLED_UNDERPOWERED ) || type == DISABLED_UNDERPOWERED ) &&
 				(!isDisabledByType( DISABLED_EMP ) || type == DISABLED_EMP ) &&
 				(!isDisabledByType( DISABLED_SUBDUED ) || type == DISABLED_SUBDUED ) &&
+				(!isDisabledByType( DISABLED_FROZEN ) || type == DISABLED_FROZEN ) &&
 				(!isDisabledByType( DISABLED_HACKED ) || type == DISABLED_HACKED ) )
 		{
 			if( isKindOf( KINDOF_STRUCTURE ) )
@@ -2477,7 +2508,20 @@ Bool Object::clearDisabled( DisabledType type )
 	{
 		// I have no disabled flag that is not one of the exceptions above.
 		if (m_drawable)
-			m_drawable->clearTintStatus( TINT_STATUS_DISABLED );
+		{
+			if(!m_customDisabledTintToClear.isEmpty())
+			{
+				m_drawable->clearCustomTintStatus();
+			}
+			else if(m_disabledTintToClear != TINT_STATUS_INVALID)
+			{
+				m_drawable->clearTintStatus( m_disabledTintToClear );
+			}
+			m_customDisabledTintToClear = NULL;
+			m_disabledTintToClear = TINT_STATUS_INVALID;
+		
+			//m_drawable->clearTintStatus( TINT_STATUS_DISABLED );
+		}
 	}
 
 	checkDisabledStatus();// in case we just edged
@@ -3356,7 +3400,7 @@ Bool Object::isAbleToAttack() const
 	if( testStatus(OBJECT_STATUS_SOLD) )
 		return false;
 
-  if ( isDisabledByType( DISABLED_SUBDUED ) )
+  if ( isDisabledByType( DISABLED_SUBDUED ) || isDisabledByType( DISABLED_FROZEN ) )
     return FALSE; // A Microwave Tank is cooking me
 
 	//We can't fire if we, as a portable structure, are aptly disabled 
@@ -3376,7 +3420,7 @@ Bool Object::isAbleToAttack() const
           if ( slaverID != INVALID_ID )
           {
             Object *slaver = TheGameLogic->findObjectByID( slaverID );
-            if ( slaver && slaver->isDisabledByType( DISABLED_SUBDUED ))
+            if ( slaver && ( slaver->isDisabledByType( DISABLED_SUBDUED ) || slaver->isDisabledByType( DISABLED_FROZEN ) ) )
               return FALSE;// if my stinger site is subdued, so am I
           }
 
@@ -4217,6 +4261,10 @@ void Object::xfer( Xfer *xfer )
 	// builder id
 	xfer->xferObjectID( &m_builderID );
 
+	xfer->xferObjectID( &m_shielderID );
+
+	xfer->xferUser( &m_shielderType, sizeof( ProtectionType ) );
+
 	// drawable id
 	Drawable *draw = getDrawable();
 	DrawableID drawableID = draw ? draw->getID() : INVALID_DRAWABLE_ID;
@@ -4231,6 +4279,10 @@ void Object::xfer( Xfer *xfer )
 
 	// internal name
 	xfer->xferAsciiString( &m_name );
+
+	xfer->xferAsciiString( &m_customDisabledTintToClear );
+
+	xfer->xferUser( &m_disabledTintToClear, sizeof(TintStatus) );
 
 	// status
 	if( version >= 8 )
@@ -5623,6 +5675,12 @@ void Object::doTempWeaponBonus( WeaponBonusConditionType status, const AsciiStri
 		m_tempWeaponBonusHelper->doTempWeaponBonus(status, customStatus, duration, customTintStatus, tintStatus);
 }
 
+void Object::setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes )
+{
+	m_shielderID = retargetID;
+	m_shielderType = protectionTypes;
+}
+
 //-------------------------------------------------------------------------------------------------
 void Object::notifySubdualDamage( Real amount )
 {
@@ -5636,6 +5694,38 @@ void Object::notifySubdualDamage( Real amount )
 			getDrawable()->setTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
 		else
 			getDrawable()->clearTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::notifySubdualDamageCustom( Real amount, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus )
+{
+	if(m_subdualDamageHelper)
+		//m_subdualDamageHelper->notifySubdualDamageCustom( amount, customStatus );
+	
+	// If we are gaining subdual damage, we are slowly tinting
+	if( getDrawable() )
+	{
+		if( amount > 0 )
+		{
+			if(!customTintStatus.isEmpty())
+			{
+				getDrawable()->setCustomTintStatus(customTintStatus);
+			}
+			else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->setTintStatus(tintStatus);
+			}
+		}
+		else
+		{
+			if(!customTintStatus.isEmpty())
+			{
+				getDrawable()->clearCustomTintStatus();
+			}
+			else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(tintStatus);
+			}
+		}
 	}
 }
 

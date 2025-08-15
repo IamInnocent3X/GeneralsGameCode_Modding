@@ -69,6 +69,9 @@ NeutronMissileUpdateModuleData::NeutronMissileUpdateModuleData()
 	m_specialSpeedHeight = 0.0f;
 	m_specialJitterDistance = 0.0f;
 	m_deliveryDecalRadius = 0;
+	m_allowSubdual = TRUE;
+	m_allowAttract = TRUE;
+	m_distanceScatterWhenJammed = 75.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -91,6 +94,11 @@ void NeutronMissileUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "IgnitionFX",				INI::parseFXList,		NULL, offsetof( NeutronMissileUpdateModuleData, m_ignitionFX ) },
 		{ "DeliveryDecal",						RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( NeutronMissileUpdateModuleData, m_deliveryDecalTemplate ) },
 		{ "DeliveryDecalRadius",			INI::parseReal,									NULL,	offsetof( NeutronMissileUpdateModuleData, m_deliveryDecalRadius ) },
+
+		{ "AllowSubdual", INI::parseBool, NULL, offsetof( NeutronMissileUpdateModuleData, m_allowSubdual ) },
+		{ "AllowAttract", INI::parseBool, NULL, offsetof( NeutronMissileUpdateModuleData, m_allowAttract ) },
+		{ "DistanceScatterWhenJammed",INI::parseReal,		NULL, offsetof( NeutronMissileUpdateModuleData, m_distanceScatterWhenJammed ) },
+
 		{ 0, 0, 0, 0 }
 	};
 
@@ -111,6 +119,8 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 
 	m_targetPos.zero();
 	m_intermedPos.zero();
+	m_intermedPosBackup.zero();
+	m_assignedBackup = FALSE;
 	m_accel.zero();
 	m_vel.zero();
 
@@ -124,6 +134,9 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 	m_heightAtLaunch = 0;
 	m_frameAtLaunch = 0;
 	m_framesTillDecoyed = 0;
+	m_decoyID = INVALID_ID;
+	m_attractedID = INVALID_ID;
+	m_isJammed = FALSE;
 
 	m_exhaustSysTmpl = NULL;
 
@@ -146,6 +159,47 @@ void NeutronMissileUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedI
 	m_framesTillDecoyed = now + frames;
 	m_detonateDistance = distance;
 	m_decoyID = victimID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeutronMissileUpdate::projectileNowJammed(Bool noDamage)
+{
+	if( m_isJammed )
+		return; // Already jammed
+
+	const NeutronMissileUpdateModuleData* d = getNeutronMissileUpdateModuleData();
+
+	if(!d->m_allowSubdual)
+		return;
+
+	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
+
+	if(!m_assignedBackup)
+		m_intermedPosBackup.set(&m_intermedPos);
+
+	m_assignedBackup = TRUE;
+
+	Coord3D targetPosition;
+	targetPosition.set(&m_intermedPosBackup);
+
+	Real scatter = d->m_distanceScatterWhenJammed;
+	targetPosition.x += GameLogicRandomValue(-scatter, scatter);
+	targetPosition.y += GameLogicRandomValue(-scatter, scatter);
+	targetPosition.z = TheTerrainLogic->getLayerHeight(	targetPosition.x, 
+																											targetPosition.y, 
+																											TheTerrainLogic->getHighestLayerForDestination(&targetPosition) );
+																											
+	m_intermedPos.set(&targetPosition);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeutronMissileUpdate::projectileNowDrawn(ObjectID attractorID)
+{
+	if(!m_isJammed && getNeutronMissileUpdateModuleData()->m_allowAttract)
+	{
+		m_attractedID = attractorID;
+		m_isJammed = TRUE;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -482,6 +536,16 @@ UpdateSleepTime NeutronMissileUpdate::update( void )
 {
 	m_deliveryDecal.update();
 
+	if(m_attractedID != INVALID_ID)
+	{
+		Object* attracted = NULL;
+		attracted = TheGameLogic->findObjectByID( m_attractedID );
+		if (attracted)
+		{
+			m_intermedPos = *attracted->getPosition();
+			m_intermedPos.z += getNeutronMissileUpdateModuleData()->m_targetFromDirectlyAbove;
+		}
+	}
 	if (!m_reachedIntermediatePos)
 	{
 		Real distSqr = ThePartitionManager->getDistanceSquared(getObject(), &m_intermedPos, FROM_CENTER_3D);
@@ -613,6 +677,10 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 	// intermed pos
 	xfer->xferCoord3D( &m_intermedPos );
 
+	xfer->xferCoord3D( &m_intermedPosBackup );
+
+	xfer->xferBool( &m_assignedBackup );
+
 	// launcher ID
 	xfer->xferObjectID( &m_launcherID );
 
@@ -676,12 +744,11 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 
 	}  // end if
 
-	if( version >= 5 )
-	{
-		xfer->xferUnsignedInt( &m_framesTillDecoyed );
-		xfer->xferUnsignedInt(&m_detonateDistance);
-		xfer->xferObjectID(&m_decoyID);
-	}
+	xfer->xferUnsignedInt( &m_framesTillDecoyed );
+	xfer->xferUnsignedInt(&m_detonateDistance);
+	xfer->xferObjectID(&m_decoyID);
+	xfer->xferObjectID( &m_attractedID );
+	xfer->xferBool( &m_isJammed );
 
 }  // end xfer
 

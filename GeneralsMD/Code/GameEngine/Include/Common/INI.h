@@ -334,6 +334,8 @@ public:
 	static void parseDamageTypeFlagsCustom(INI* ini, void* instance, void* store, const void* userData);
 	static void parseDeathTypeFlagsCustom(INI* ini, void* instance, void* store, const void* userData);
 	static void parseCustomTypes(INI* ini, void* instance, void* store, const void* userData);
+
+	static void parseProtectionTypeFlags(INI* ini, void* instance, void* store, const void* userData);
 	
 	// like parseIndexList but special handling for NONE to return -2 (EVA_None)
 	static void parseEvaNameIndexList(INI* ini, void* instance, void* store, const void* userData);

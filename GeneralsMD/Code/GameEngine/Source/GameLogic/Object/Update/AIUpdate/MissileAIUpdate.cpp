@@ -96,6 +96,8 @@ MissileAIUpdateModuleData::MissileAIUpdateModuleData()
 	// m_turnRateAttacking = BIGNUM;
 	m_zDirFactor = 2.0f;
 	m_applyLauncherBonus = FALSE;
+	m_allowSubdual = TRUE;
+	m_allowAttract = TRUE;
 }
 
 //-----------------------------------------------------------------------------
@@ -131,6 +133,10 @@ void MissileAIUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "KillSelfDelay",     INI::parseDurationUnsignedInt, NULL, offsetof( MissileAIUpdateModuleData, m_killSelfDelay ) },
 		{ "ZCorrectionFactor", INI::parseReal,   NULL, offsetof(MissileAIUpdateModuleData, m_zDirFactor) },
 		{ "ApplyLauncherBonus", INI::parseBool,  NULL, offsetof(MissileAIUpdateModuleData, m_applyLauncherBonus) },
+
+		{ "AllowSubdual", INI::parseBool, NULL, offsetof(MissileAIUpdateModuleData, m_allowSubdual) },
+		{ "AllowAttract", INI::parseBool, NULL, offsetof(MissileAIUpdateModuleData, m_allowAttract) },
+		
 		{ 0, 0, 0, 0 }
 	};
 
@@ -1016,12 +1022,18 @@ void MissileAIUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedInt fr
 }
 
 //-------------------------------------------------------------------------------------------------
-void MissileAIUpdate::projectileNowJammed()
+void MissileAIUpdate::projectileNowJammed(Bool noDamage)
 {
+	if( noDamage )
+		m_noDamage = TRUE;
+		
 	if( m_isJammed )
 		return; // Already jammed
 
 	const MissileAIUpdateModuleData *data = getMissileAIUpdateModuleData();
+
+	if(!data->m_allowSubdual)
+		return;
 
 	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
 
@@ -1048,6 +1060,31 @@ void MissileAIUpdate::projectileNowJammed()
 	m_isTrackingTarget = FALSE;
 	m_originalTargetPos = targetPosition;
 	m_victimID = INVALID_ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void MissileAIUpdate::projectileNowDrawn(ObjectID attractorID)
+{
+	if( m_isJammed )
+		return; // Already jammed
+
+	if(!getMissileAIUpdateModuleData()->m_allowAttract)
+		return;
+
+	m_isJammed = TRUE;
+
+	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
+
+	Object *attractor = TheGameLogic->findObjectByID( attractorID );
+	if( attractor )
+	{
+		getStateMachine()->setGoalPosition(attractor->getPosition());
+		getStateMachine()->setGoalObject(attractor);
+		aiMoveToObject(const_cast<Object*>(attractor), CMD_FROM_AI );
+		m_originalTargetPos = *attractor->getPosition();
+		m_isTrackingTarget = TRUE;
+		m_victimID = attractorID;
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -579,7 +579,7 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 	}
 
 
-  if (objectToEnter->isDisabledByType( DISABLED_SUBDUED ))
+  if (objectToEnter->isDisabledByType( DISABLED_SUBDUED ) || objectToEnter->isDisabledByType( DISABLED_FROZEN ))
     return FALSE; // a microwave tank has soldered the doors shut
 
 

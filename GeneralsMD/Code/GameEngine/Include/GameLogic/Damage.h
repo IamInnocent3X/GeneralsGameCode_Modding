@@ -34,6 +34,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/BitFlags.h"
+#include "Common/DisabledTypes.h"
 #include "Common/GameType.h"
 #include "Common/KindOf.h"
 #include "Common/ObjectStatusTypes.h" // Precompiled header anyway, no detangling possibility
@@ -308,6 +309,47 @@ inline DeathTypeFlags clearDeathTypeFlag(DeathTypeFlags flags, DeathType dt)
 	return (flags & ~(1UL << (dt - 1)));
 }
 
+
+enum ProtectionType CPP_11(: Int)
+{
+	PROTECTION_NONE = 0,
+	PROTECTION_BULLETS = 1,
+	PROTECTION_LASER = 2,
+	PROTECTION_PROJECTILES = 3,
+
+	PROTECTION_COUNT
+
+};
+
+#ifdef DEFINE_PROTECTION_NAMES
+static const char *TheProtectionNames[] = 
+{
+	"NONE",
+	"BULLETS",
+	"LASER",
+	"PROJECTILES",
+
+	NULL
+};
+#endif
+
+typedef UnsignedInt ProtectionTypeFlags;
+
+inline Bool getProtectionTypeFlag(ProtectionTypeFlags flags, ProtectionType pt)
+{
+	return (flags & (1UL << (pt - 1))) != 0;
+}
+
+inline ProtectionTypeFlags setProtectionTypeFlag(ProtectionTypeFlags flags, ProtectionType pt)
+{
+	return (flags | (1UL << (pt - 1)));
+}
+
+inline ProtectionTypeFlags clearProtectionTypeFlag(ProtectionTypeFlags flags, ProtectionType pt)
+{
+	return (flags & ~(1UL << (pt - 1)));
+}
+
 //-------------------------------------------------------------------------------------------------
 /** Damage info inputs */
 //-------------------------------------------------------------------------------------------------
@@ -355,6 +397,9 @@ public:
 	m_subdualDamageMultiplier = 1.0f;	
 	m_subdualForbiddenKindOf.clear();
 	m_notAbsoluteKill = FALSE;
+	m_isMissileAttractor = FALSE;
+	m_customSubdualDisableType = DISABLED_COUNT;
+	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -397,6 +442,12 @@ public:
 	KindOfMaskType m_subdualForbiddenKindOf;
 
 	Bool m_notAbsoluteKill;
+
+	Bool m_isMissileAttractor;
+
+	DisabledType m_customSubdualDisableType;
+
+	ProtectionTypeFlags m_protectionTypes;
 
 protected:
 

@@ -229,16 +229,10 @@ static Bool canSelectionSalvage( const Object *targetObj)
 //-------------------------------------------------------------------------------------------------
 static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, const Coord3D *pos )
 {
-	AsciiString zeroDamage;
-	zeroDamage.format("ZERO_DAMAGE");
-	if( !victim && obj->testCustomStatus(zeroDamage) )
-	{
-		return ATTACKRESULT_INVALID_SHOT;
-	}
 
 	CanAttackResult result;
 	result = obj->isAbleToAttack() ? ATTACKRESULT_POSSIBLE : ATTACKRESULT_NOT_POSSIBLE;
-	if( result == ATTACKRESULT_NOT_POSSIBLE || obj->testCustomStatus(zeroDamage) )
+	if( result == ATTACKRESULT_NOT_POSSIBLE )
 	{
 		return ATTACKRESULT_NOT_POSSIBLE;
 	}
@@ -332,6 +326,8 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
 static CanAttackResult canAnyForceAttack(const DrawableList *allSelected, const Object *victim, const Coord3D *pos )
 {
 	// check to make sure that allSelected can attack obj.
+	CanAttackResult result = ATTACKRESULT_NOT_POSSIBLE;
+	
 	for (DrawableListCIt cit = allSelected->begin(); cit != allSelected->end(); ++cit) 
 	{
 		Drawable *draw = *cit;
@@ -346,10 +342,16 @@ static CanAttackResult canAnyForceAttack(const DrawableList *allSelected, const 
 			continue;
 		}
 
+		if( obj->testCustomStatus("ZERO_DAMAGE") )
+		{
+			result = ATTACKRESULT_INVALID_SHOT;
+			continue;
+		}
+
 		return canObjectForceAttack( obj, victim, pos );
 	}
 
-	return ATTACKRESULT_NOT_POSSIBLE;
+	return result;
 }
 
 //-------------------------------------------------------------------------------------------------

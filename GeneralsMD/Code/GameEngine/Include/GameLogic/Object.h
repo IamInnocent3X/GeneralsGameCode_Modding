@@ -232,13 +232,19 @@ public:
 
 	Real estimateDamage( DamageInfoInput& damageInfo ) const;
 	void kill( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL );	///< kill the object with an optional type of damage and death.
+	void killCustom( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL, AsciiString customDeathType = NULL );	///< kill the object with an optional type of damage and death.
 	void healCompletely();														///< Restore max health to this Object
 	void notifySubdualDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
+	void notifySubdualDamageCustom( Real amount, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper and do a special tint
 	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 	void notifyChronoDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
 	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
+
+	void setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes );
+	ObjectID getShieldByTargetID() const { return m_shielderID; };
+	ProtectionTypeFlags getShieldByTargetType() const { return m_shielderType; };
 
 	void scoreTheKill( const Object *victim );						///< I just killed this object.  
 	void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback = TRUE );	///< I just achieved this level right this moment
@@ -623,7 +629,7 @@ public:
 	Bool clearDisabled( DisabledType type );
 
 	void setDisabled( DisabledType type );
-	void setDisabledUntil( DisabledType type, UnsignedInt frame );
+	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL );
 	Bool isDisabledByType( DisabledType type ) const { return TEST_DISABLEDMASK( m_disabledMask, type ); }
 
 	UnsignedInt getDisabledUntil( DisabledType type = DISABLED_ANY ) const;
@@ -742,6 +748,9 @@ private:
 	ObjectStatusMaskType		m_status;									///< status bits (see ObjectStatusMaskType)
 	ObjectCustomStatusType		m_customStatus;	
 
+	ObjectID			m_shielderID;
+	ProtectionTypeFlags	m_shielderType;
+
 
 	GeometryInfo	m_geometryInfo;
 
@@ -767,6 +776,9 @@ private:
 
 	DisabledMaskType	m_disabledMask;
 	UnsignedInt				m_disabledTillFrame[ DISABLED_COUNT ];
+
+	TintStatus				m_disabledTintToClear;
+	AsciiString				m_customDisabledTintToClear;
 
 	UnsignedInt		m_smcUntil;
 

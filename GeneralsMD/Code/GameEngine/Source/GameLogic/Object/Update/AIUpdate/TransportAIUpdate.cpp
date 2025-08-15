@@ -84,7 +84,9 @@ void TransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire,
 					if( passenger->isDisabledByType( DISABLED_HACKED ) 
 						|| passenger->isDisabledByType( DISABLED_EMP ) 
 						|| passenger->isDisabledByType( DISABLED_SUBDUED ) 
-						|| passenger->isDisabledByType( DISABLED_PARALYZED) )
+						|| passenger->isDisabledByType( DISABLED_PARALYZED) 
+						|| passenger->isDisabledByType( DISABLED_STUNNED) 
+						|| passenger->isDisabledByType( DISABLED_FROZEN) )
 						continue;
 				}
 				
@@ -129,7 +131,9 @@ void TransportAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsTo
 					if( passenger->isDisabledByType( DISABLED_HACKED ) 
 						|| passenger->isDisabledByType( DISABLED_EMP ) 
 						|| passenger->isDisabledByType( DISABLED_SUBDUED ) 
-						|| passenger->isDisabledByType( DISABLED_PARALYZED) )
+						|| passenger->isDisabledByType( DISABLED_PARALYZED) 
+						|| passenger->isDisabledByType( DISABLED_STUNNED) 
+						|| passenger->isDisabledByType( DISABLED_FROZEN) )
 						continue;
 				}
 				
@@ -174,7 +178,9 @@ void TransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsT
 					if( passenger->isDisabledByType( DISABLED_HACKED ) 
 						|| passenger->isDisabledByType( DISABLED_EMP) 
 						|| passenger->isDisabledByType( DISABLED_SUBDUED ) 
-						|| passenger->isDisabledByType( DISABLED_PARALYZED) )
+						|| passenger->isDisabledByType( DISABLED_PARALYZED) 
+						|| passenger->isDisabledByType( DISABLED_STUNNED) 
+						|| passenger->isDisabledByType( DISABLED_FROZEN) )
 						continue;
 				}
 

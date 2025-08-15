@@ -67,7 +67,10 @@ FreeFallProjectileBehaviorModuleData::FreeFallProjectileBehaviorModuleData() :
 	m_garrisonHitKillCount(0),
 	m_garrisonHitKillFX(NULL),
 	m_detonateOnGround(TRUE),
-	m_detonateOnCollide(TRUE)
+	m_detonateOnCollide(TRUE),
+	m_allowSubdual(TRUE),
+	m_allowAttract(TRUE),
+	m_distanceScatterWhenJammed(75.0f)
 {
 }
 
@@ -95,6 +98,10 @@ void FreeFallProjectileBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p
 		{ "GarrisonHitKillCount", INI::parseUnsignedInt, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillCount) },
 		{ "GarrisonHitKillFX", INI::parseFXList, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillFX) },
 
+		{ "AllowSubdual", INI::parseBool, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_allowSubdual) },
+		{ "AllowAttract", INI::parseBool, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_allowAttract) },
+		{ "DistanceScatterWhenJammed",INI::parseReal,		NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_distanceScatterWhenJammed) },
+
 		{ 0, 0, 0, 0 }
 	};
 
@@ -111,12 +118,17 @@ FreeFallProjectileBehavior::FreeFallProjectileBehavior(Thing* thing, const Modul
 	m_launcherID = INVALID_ID;
 	m_victimID = INVALID_ID;
 	m_targetPos.zero();
+	m_targetPosBackup.zero();
+	m_assignedBackup = FALSE;
 	m_detonationWeaponTmpl = NULL;
 	m_lifespanFrame = 0;
 	m_extraBonusFlags = 0;
 	m_extraBonusCustomFlags.clear();
 	m_framesTillDecoyed = 0;
 	m_noDamage = FALSE;
+	m_decoyID = INVALID_ID;
+	m_attractedID = INVALID_ID;
+	m_isJammed = FALSE;
 
 	m_hasDetonated = FALSE;
 }
@@ -135,6 +147,50 @@ void FreeFallProjectileBehavior::setFramesTillCountermeasureDiversionOccurs( Uns
 	m_framesTillDecoyed = now + frames;
 	m_detonateDistance = distance;
 	m_decoyID = victimID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void FreeFallProjectileBehavior::projectileNowJammed(Bool noDamage)
+{
+	if( noDamage )
+		m_noDamage = TRUE;
+		
+	if( m_isJammed )
+		return; // Already jammed
+
+	const FreeFallProjectileBehaviorModuleData* d = getFreeFallProjectileBehaviorModuleData();
+
+	if(!d->m_allowSubdual)
+		return;
+
+	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
+
+	if(!m_assignedBackup)
+		m_targetPosBackup.set(&m_targetPos);
+
+	m_assignedBackup = TRUE;
+
+	Coord3D targetPosition;
+	targetPosition.set(&m_targetPosBackup);
+
+	Real scatter = d->m_distanceScatterWhenJammed;
+	targetPosition.x += GameLogicRandomValue(-scatter, scatter);
+	targetPosition.y += GameLogicRandomValue(-scatter, scatter);
+	targetPosition.z = TheTerrainLogic->getLayerHeight(	targetPosition.x, 
+																											targetPosition.y, 
+																											TheTerrainLogic->getHighestLayerForDestination(&targetPosition) );
+																											
+	m_targetPos.set(&targetPosition);
+}
+
+//-------------------------------------------------------------------------------------------------
+void FreeFallProjectileBehavior::projectileNowDrawn(ObjectID attractorID)
+{
+	if(!m_isJammed && getFreeFallProjectileBehaviorModuleData()->m_allowAttract)
+	{
+		m_attractedID = attractorID;
+		m_isJammed = TRUE;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -423,6 +479,13 @@ UpdateSleepTime FreeFallProjectileBehavior::update()
 		}
 	}
 
+	if(m_attractedID != INVALID_ID)
+	{
+		Object* attracted = TheGameLogic->findObjectByID(m_attractedID);
+		if (attracted)
+			m_targetPos = *attracted->getPosition();
+	}
+
 	{ // SmartBombTargetingUpdate
 		Object* self = getObject();
 		if (!self)
@@ -459,6 +522,8 @@ const Coord3D* FreeFallProjectileBehavior::getTargetPosition()
 // ------------------------------------------------------------------------------------------------
 Object* FreeFallProjectileBehavior::getTargetObject()
 {
+	if(m_attractedID != INVALID_ID)
+		return TheGameLogic->findObjectByID(m_attractedID);
 	return TheGameLogic->findObjectByID(m_victimID);
 }
 
@@ -498,6 +563,10 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 	// target pos
 	xfer->xferCoord3D(&m_targetPos);
 
+	xfer->xferCoord3D(&m_targetPosBackup);
+
+	xfer->xferBool( &m_assignedBackup );
+
 	// weapon template
 	AsciiString weaponTemplateName = AsciiString::TheEmptyString;
 	if (m_detonationWeaponTmpl)
@@ -531,14 +600,14 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 	// lifespan frame
 	// xfer->xferUnsignedInt(&m_lifespanFrame);
 
-	if( version >= 5 )
-	{
-		xfer->xferUnsignedInt( &m_framesTillDecoyed );
-		xfer->xferBool( &m_noDamage );
+	xfer->xferUnsignedInt( &m_framesTillDecoyed );
+	xfer->xferBool( &m_noDamage );
 
-		xfer->xferUnsignedInt(&m_detonateDistance);
-		xfer->xferObjectID(&m_decoyID);
-	}
+	xfer->xferUnsignedInt(&m_detonateDistance);
+	xfer->xferObjectID(&m_decoyID);
+
+	xfer->xferObjectID( &m_attractedID );
+	xfer->xferBool( &m_isJammed );
 
 }  // end xfer
 
