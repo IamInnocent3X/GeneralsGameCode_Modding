@@ -357,7 +357,7 @@ void PoisonedBehavior::stopPoisonedEffects()
 		
 		if(!d->m_customTintStatus.isEmpty())
 		{
-			myDrawable->clearCustomTintStatus();
+			myDrawable->clearCustomTintStatus(d->m_customTintStatus);
 		}
 		else if (d->m_tintStatus > TINT_STATUS_INVALID && d->m_tintStatus < TINT_STATUS_COUNT)
 		{

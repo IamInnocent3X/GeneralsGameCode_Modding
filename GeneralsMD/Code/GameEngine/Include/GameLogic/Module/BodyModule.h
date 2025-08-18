@@ -37,8 +37,27 @@
 #include "GameLogic/ArmorSet.h"
 #include "GameLogic/Module/BehaviorModule.h"
 
+struct SubdualCustomData
+{
+	Real damage;
+	TintStatus tintStatus;
+	AsciiString customTintStatus;
+	DisabledType disableType;
+	Bool isSubdued;
+};
+
+struct SubdualCustomHealData
+{
+	UnsignedInt healFrame;
+	TintStatus tintStatus;
+	AsciiString customTintStatus;
+	DisabledType disableType;
+};
+
 typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualDamageMap;
 typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualHealRateMap;
+typedef std::hash_map<AsciiString, SubdualCustomData, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualCurrentDamageMap;
+typedef std::hash_map<AsciiString, SubdualCustomHealData, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualCurrentHealMap;
 
 //-------------------------------------------------------------------------------------------------
 /** OBJECT BODY MODULE base class */
@@ -164,8 +183,8 @@ public:
 	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const = 0;
 	virtual Bool hasAnySubdualDamageCustom() const = 0;
 	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const = 0;
-	virtual CustomSubdualDamageMap getCurrentSubdualDamageAmountCustom() const = 0;
-	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualDamageMap currentSubdualCustom) = 0;
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const = 0;
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) = 0;
 
 	virtual UnsignedInt getChronoDamageHealRate() const = 0;
 	virtual Real getChronoDamageHealAmount() const = 0;
@@ -211,6 +230,11 @@ public:
 		you probably want "attemptDamage" or "attemptHealing")
 	*/
 	virtual void internalChangeHealth(Real delta, Bool changeModelCondition = TRUE ) = 0;
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) = 0;
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) = 0;
+
+	virtual Bool isAboutToBeSubdued( Real low, Real high ) const = 0; 
+	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void setIndestructible( Bool indestructible ) = 0;
 	virtual Bool isIndestructible( void ) const = 0;
@@ -275,8 +299,8 @@ public:
 	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const {return 0.0f;}
 	virtual Bool hasAnySubdualDamageCustom() const{return FALSE;}
 	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const { std::vector<AsciiString> dummy; return dummy; }
-	virtual CustomSubdualDamageMap getCurrentSubdualDamageAmountCustom() const { CustomSubdualDamageMap dummy; return dummy; }
-	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualDamageMap currentSubdualCustom)  { }
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const { CustomSubdualCurrentDamageMap dummy; return dummy; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) { }
 
 	virtual UnsignedInt getChronoDamageHealRate() const { return 0; }
 	virtual Real getChronoDamageHealAmount() const { return 0.0f; }
@@ -330,6 +354,11 @@ public:
 		you probably want "attemptDamage" or "attemptHealing")
 	*/
 	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE) = 0;
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) = 0;
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) = 0;
+
+	virtual Bool isAboutToBeSubdued( Real low, Real high ) const = 0; 
+	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void evaluateVisualCondition() { }
 	virtual void updateBodyParticleSystems() { };// made public for topple anf building collapse updates -ML

@@ -114,6 +114,7 @@ private:
 	ObjectID			m_targetID;
 	UnsignedInt		m_dieFrame;
 	UnsignedInt   m_nextPingFrame;
+	VeterancyLevel m_veterancyLevel;
 
 	Anim2DTemplate* m_animBaseTemplate;
 	Anim2DTemplate* m_animTimedTemplate;

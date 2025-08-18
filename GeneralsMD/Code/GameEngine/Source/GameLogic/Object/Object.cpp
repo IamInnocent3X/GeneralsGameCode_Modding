@@ -2305,20 +2305,28 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 				// Doh. Also shouldn't be tinting when disabled by scripting.
 				// Doh^2. Also shouldn't be CLEARING tinting if we're disabling by held or script disabledness
 				// Doh^3. Unmanned is no tint too
-				if( tintStatus == TINT_STATUS_INVALID && type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED && type != DISABLED_TELEPORT && type != DISABLED_CHRONO && type != DISABLED_FROZEN && type != DISABLED_STUNNED)
-				{
-					tintStatus = TINT_STATUS_DISABLED;
-				}
 				if(!customTintStatus.isEmpty())
 				{
+					if(m_customDisabledTintToClear != customTintStatus && !m_customDisabledTintToClear.isEmpty())
+					{
+						m_drawable->clearCustomTintStatus(m_customDisabledTintToClear);
+					}
 					m_drawable->setCustomTintStatus( customTintStatus );
 					m_customDisabledTintToClear = customTintStatus;
 				}
-				else if(tintStatus != TINT_STATUS_INVALID)
+				else
 				{
-					m_drawable->setTintStatus( tintStatus );
-					m_disabledTintToClear = tintStatus;
-					m_customDisabledTintToClear = NULL;
+					if( tintStatus == TINT_STATUS_INVALID && type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED && type != DISABLED_TELEPORT && type != DISABLED_CHRONO && type != DISABLED_FROZEN && type != DISABLED_STUNNED)
+					{
+						tintStatus = TINT_STATUS_DISABLED;
+					}
+					if(tintStatus != TINT_STATUS_INVALID)
+					{
+						if(m_disabledTintToClear != tintStatus && m_disabledTintToClear != TINT_STATUS_INVALID)
+							m_drawable->clearTintStatus( m_disabledTintToClear );
+						m_drawable->setTintStatus( tintStatus );
+						m_disabledTintToClear = tintStatus;
+					}
 				}
 			}
 		}
@@ -2420,7 +2428,7 @@ UnsignedInt Object::getDisabledUntil( DisabledType type ) const
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool Object::clearDisabled( DisabledType type )
+Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 {
 	if( type < 0 || type >= DISABLED_COUNT )
 	{
@@ -2511,14 +2519,14 @@ Bool Object::clearDisabled( DisabledType type )
 		{
 			if(!m_customDisabledTintToClear.isEmpty())
 			{
-				m_drawable->clearCustomTintStatus();
+				m_drawable->clearCustomTintStatus(m_customDisabledTintToClear, clearTintLater );
+				m_customDisabledTintToClear = NULL;
 			}
-			else if(m_disabledTintToClear != TINT_STATUS_INVALID)
+			if(m_disabledTintToClear != TINT_STATUS_INVALID)
 			{
-				m_drawable->clearTintStatus( m_disabledTintToClear );
+				m_drawable->clearTintStatus( m_disabledTintToClear, clearTintLater );
+				m_disabledTintToClear = TINT_STATUS_INVALID;
 			}
-			m_customDisabledTintToClear = NULL;
-			m_disabledTintToClear = TINT_STATUS_INVALID;
 		
 			//m_drawable->clearTintStatus( TINT_STATUS_DISABLED );
 		}
@@ -5690,7 +5698,9 @@ void Object::notifySubdualDamage( Real amount )
 	// If we are gaining subdual damage, we are slowly tinting
 	if( getDrawable() )
 	{
-		if( amount > 0 )
+		
+		// Attempt to Fix Subdual Tint Color Correction Issues
+		if( amount > 0 && getBodyModule()->isAboutToBeSubdued( -amount+1 , -amount*2+1 ) )
 			getDrawable()->setTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
 		else
 			getDrawable()->clearTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
@@ -5698,32 +5708,33 @@ void Object::notifySubdualDamage( Real amount )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::notifySubdualDamageCustom( Real amount, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus )
+void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, const AsciiString& customStatus )
 {
 	if(m_subdualDamageHelper)
-		//m_subdualDamageHelper->notifySubdualDamageCustom( amount, customStatus );
+		m_subdualDamageHelper->notifySubdualDamageCustom( subdualData.damage, customStatus, subdualData.customTintStatus, subdualData.tintStatus, subdualData.disableType );
 	
 	// If we are gaining subdual damage, we are slowly tinting
 	if( getDrawable() )
 	{
-		if( amount > 0 )
+		// Attempt to Fix Subdual Tint Color Correction Issues
+		if( subdualData.damage > 0 && ( !subdualData.hasDisable || getBodyModule()->isAboutToBeSubduedCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) ) )
 		{
-			if(!customTintStatus.isEmpty())
+			if(!subdualData.customTintStatus.isEmpty())
 			{
-				getDrawable()->setCustomTintStatus(customTintStatus);
+				getDrawable()->setCustomTintStatus(subdualData.customTintStatus);
 			}
-			else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
-				getDrawable()->setTintStatus(tintStatus);
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->setTintStatus(subdualData.tintStatus);
 			}
 		}
 		else
 		{
-			if(!customTintStatus.isEmpty())
+			if(!subdualData.customTintStatus.isEmpty())
 			{
-				getDrawable()->clearCustomTintStatus();
+				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
 			}
-			else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
-				getDrawable()->clearTintStatus(tintStatus);
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(subdualData.tintStatus);
 			}
 		}
 	}

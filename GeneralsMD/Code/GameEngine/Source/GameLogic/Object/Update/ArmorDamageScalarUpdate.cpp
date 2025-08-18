@@ -313,7 +313,7 @@ void ArmorDamageScalarUpdate::removeEffectFromObject(Object* obj) {
 
 	if(!data->m_customTintStatus.isEmpty())
 	{
-		drw->clearCustomTintStatus();
+		drw->clearCustomTintStatus(data->m_customTintStatus);
 	}
 	if (data->m_tintStatus > TINT_STATUS_INVALID && data->m_tintStatus < TINT_STATUS_COUNT)
 	{

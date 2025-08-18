@@ -337,15 +337,6 @@ void EMPUpdate::doDisableAttack( void )
 			if ( drw )
 			{
 
-				// If Disabled type is custom, set the Tint Status
-				// NOTE: Only the Types below will be able to retain their Tint Status
-				// DISABLED_HELD
-				// DISABLED_SCRIPT_DISABLED 
-				// DISABLED_UNMANNED 
-				// DISABLED_TELEPORT 
-				// DISABLED_CHRONO 
-				// DISABLED_FROZEN 
-				// DISABLED_STUNNED 
 				if(!data->m_customTintStatus.isEmpty())
 					drw->setCustomTintStatus( data->m_customTintStatus );
 				else if (data->m_tintStatus != TINT_STATUS_INVALID )

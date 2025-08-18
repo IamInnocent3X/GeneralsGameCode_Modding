@@ -87,7 +87,11 @@ void TempWeaponBonusHelper::clearTempWeaponBonus()
 
 		if (getObject()->getDrawable())
 		{
-			getObject()->getDrawable()->clearCustomTintStatus();
+			if(!m_currentCustomTint.isEmpty())
+			{
+				getObject()->getDrawable()->clearCustomTintStatus(m_currentCustomTint);
+				m_currentCustomTint = NULL;
+			}
 			if (m_currentTint > TINT_STATUS_INVALID && m_currentTint < TINT_STATUS_COUNT) {
 				getObject()->getDrawable()->clearTintStatus(m_currentTint);
 				m_currentTint = TINT_STATUS_INVALID;
@@ -131,6 +135,7 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 		if(!customTintStatus.isEmpty())
 		{
 			getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
+			m_currentCustomTint = customTintStatus;
 		}
 		else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
 			getObject()->getDrawable()->setTintStatus(tintStatus);
@@ -177,6 +182,7 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 	xfer->xferUser( &m_currentTint, sizeof(TintStatus) );// an enum
 	xfer->xferAsciiString( &m_currentCustomBonus );
 	xfer->xferUnsignedInt( &m_frameToRemove );
+	xfer->xferAsciiString( &m_currentCustomTint );
 
 }  // end xfer
 

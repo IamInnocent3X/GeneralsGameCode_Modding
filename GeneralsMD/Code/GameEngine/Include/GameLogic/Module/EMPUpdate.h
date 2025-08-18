@@ -116,7 +116,7 @@ public:
 			{ "EffectRadius",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_effectRadius ) },
 			{ "DoesNotAffect", INI::parseBitString32,	TheWeaponAffectsMaskNames, offsetof(EMPUpdateModuleData, m_rejectMask) },
 			{ "DoesNotAffectMyOwnBuildings", INI::parseBool, NULL, offsetof( EMPUpdateModuleData, m_doesNotAffectMyOwnBuildings ) },
-			{ "DisabledType",	DisabledMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_disabledType ) },
+			{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( EMPUpdateModuleData, m_disabledType ) },
 			{ "AffectsKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_affectsKindOf ) },
 			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( EMPUpdateModuleData, m_tintStatus ) },
 			{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( EMPUpdateModuleData, m_customTintStatus ) },

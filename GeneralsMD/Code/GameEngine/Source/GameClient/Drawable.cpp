@@ -540,6 +540,15 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	m_selectionFlashEnvelope = NULL;	// lazily allocate!
 	m_colorTintEnvelope = NULL;				// lazily allocate!
 
+	m_tintCustomStatus.clear();
+	m_prevTintCustomStatus.clear();
+
+	m_eraseTint = TINT_STATUS_INVALID;
+	m_eraseCustomTint = NULL;
+	m_countFrames = 0;
+
+	m_changedCustomStatus = FALSE;
+
 	initStaticImages(); 
 
   // If we are inside GameLogic::startNewGame(), then starting the ambient sound 
@@ -1135,12 +1144,60 @@ Real Drawable::getScale (void) const
 //-------------------------------------------------------------------------------------------------
 void Drawable::setCustomTintStatus( const AsciiString& customStatusType)
 { 
+	// Don't assign if already have it
+	for (std::vector<AsciiString>::const_iterator it2 = m_tintCustomStatus.begin(); it2 != m_tintCustomStatus.end(); ++it2)
+	{
+		if(customStatusType == (*it2))
+		{
+			return;
+		}
+	}
+
 	CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
 	for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
 	{
 		if (customStatusType == (*it).first)
-			m_tintCustomStatus = customStatusType;
+		{
+			m_changedCustomStatus = TRUE;
+			m_tintCustomStatus.push_back(customStatusType);
+			break;
+		}
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::clearCustomTintStatus( const AsciiString& customStatusType, bool clearLater )
+{ 
+	if(clearLater)
+	{
+		m_eraseCustomTint = customStatusType;
+		return;
+	}
+
+	std::vector<AsciiString>::iterator it;
+	for (it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end();)
+	{
+		if (customStatusType == (*it))
+		{
+			m_changedCustomStatus = TRUE;
+			it = m_tintCustomStatus.erase(it);
+			break;
+		}
+		++it;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Drawable::testCustomTintStatus( const AsciiString& customStatusType) const
+{ 
+	for (std::vector<AsciiString>::const_iterator it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end(); ++it)
+	{
+		if (customStatusType == (*it))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1296,61 +1353,52 @@ void Drawable::updateDrawable( void )
 		}
 	}
 
-	if( !m_tintCustomStatus.isEmpty() )
+	bool hasStatus = false;
+	bool releaseTint = false;
+
+	if( m_changedCustomStatus )
 	{
-		if(m_tintCustomStatus != m_prevTintCustomStatus || m_prevTintCustomStatus.isEmpty())
+		m_changedCustomStatus = FALSE;
+
+		CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+
+		// New: Check the global custom list
+
+		for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
 		{
-			CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
-
-			if(!tintColorCustom.empty())
+			for(std::vector<AsciiString>::const_iterator it2 = m_tintCustomStatus.begin(); it2 != m_tintCustomStatus.end(); ++it2)
 			{
-				// New: Check the global custom list
-
-				bool hasStatus = false;
-
-				for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+				if ((*it).first == (*it2)) 
 				{
-					if ((*it).first == m_tintCustomStatus) 
-					{
-						if (m_colorTintEnvelope == NULL)
-							m_colorTintEnvelope = newInstance(TintEnvelope);
-
-						DrawableColorTint tintColor = it->second;
-
-						m_colorTintEnvelope->play(
-							isKindOf(KINDOF_INFANTRY) ? &tintColor.colorInfantry : &tintColor.color,
-							tintColor.attackFrames, tintColor.decayFrames, SUSTAIN_INDEFINITELY);
-
-						hasStatus = true;
-
-						//Set the Tint Status to a previous frame to indicate that it already has a custom status and does not need to be set to another status
-						m_tintStatus = m_prevTintStatus;
-
-						break;
-					}
-				}
-				if (!hasStatus) {
-					// NO TINTING SHOULD BE PRESENT
 					if (m_colorTintEnvelope == NULL)
 						m_colorTintEnvelope = newInstance(TintEnvelope);
-					m_colorTintEnvelope->release(); // head on back to normal, now
+
+					DrawableColorTint tintColor = it->second;
+
+					m_colorTintEnvelope->play(
+						isKindOf(KINDOF_INFANTRY) ? &tintColor.colorInfantry : &tintColor.color,
+						tintColor.attackFrames, tintColor.decayFrames, SUSTAIN_INDEFINITELY);
+
+					hasStatus = true;
+
+					break;
 				}
 			}
+			if (hasStatus)
+				break;
 		}
-	} else if ( !m_prevTintCustomStatus.isEmpty()) {
-		// NO TINTING SHOULD BE PRESENT
-		if (m_colorTintEnvelope == NULL)
-			m_colorTintEnvelope = newInstance(TintEnvelope);
-		m_colorTintEnvelope->release(); // head on back to normal, now
-		m_prevTintCustomStatus = NULL;
+		if (!hasStatus)
+			releaseTint = true;
 	}
 
 	//Lets figure out whether we should be changing colors right about now
 	// we'll use an ifelseif ladder since we are scanning bits
-	if( m_prevTintStatus != m_tintStatus )// edge test 
+	if( !hasStatus && m_prevTintStatus != m_tintStatus )// edge test 
 	{
 
-		bool hasStatus = false;
+		//bool hasStatus = false;
+
+		releaseTint = false;
 
 		// New: Check the global list
 		for (int i = 0; i < TINT_STATUS_COUNT; i++) {
@@ -1430,7 +1478,13 @@ void Drawable::updateDrawable( void )
 
 	}
 
-	if(!m_tintCustomStatus.isEmpty()) m_prevTintCustomStatus = m_tintCustomStatus;
+	if (releaseTint) {
+		// NO TINTING SHOULD BE PRESENT
+		if (m_colorTintEnvelope == NULL)
+			m_colorTintEnvelope = newInstance(TintEnvelope);
+		m_colorTintEnvelope->release(); // head on back to normal, now
+	}
+
 	m_prevTintStatus = m_tintStatus;//for next frame
 
 	if ( obj )
@@ -1444,6 +1498,45 @@ void Drawable::updateDrawable( void )
 
 	if (m_selectionFlashEnvelope)
 		m_selectionFlashEnvelope->update(); // selection flashing
+	
+	// Subdual Color Correction Fix
+	if(m_eraseTint != TINT_STATUS_INVALID)
+	{
+		if(!m_countFrames)
+		{
+			UnsignedInt frames = max(15, (Int)(TheGlobalData->m_colorTintTypes[m_eraseTint].decayFrames - 10));
+			m_countFrames = now + frames;
+		}
+		if(now>m_countFrames)
+		{
+			clearTintStatus(m_eraseTint);
+			m_eraseTint = TINT_STATUS_INVALID;
+			m_countFrames = 0;
+		}
+	}
+	
+	if(!m_eraseCustomTint.isEmpty())
+	{
+		if(!m_countFrames)
+		{
+			CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+			for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+			{
+				if((*it).first == m_eraseCustomTint)
+				{
+					UnsignedInt frames = max(15, (Int)((*it).second.decayFrames - 10));
+					m_countFrames = now + frames;
+					break;
+				}
+			}
+		}
+		if(now>m_countFrames)
+		{
+			clearCustomTintStatus(m_eraseCustomTint);
+			m_eraseCustomTint = NULL;
+			m_countFrames = 0;
+		}
+	}
 
 	//If we have an ambient sound, and we aren't currently playing it, attempt to play it now.
   // However, if the attached sound is a one-shot (non-looping) sound, don't restart it -- only
@@ -5366,9 +5459,54 @@ void Drawable::xfer( Xfer *xfer )
 	//xfer->xferUnsignedInt( &m_prevTintStatus );
 	m_prevTintStatus.xfer(xfer);
 
-	xfer->xferAsciiString( &m_tintCustomStatus );
+	// Modified from Team.cpp
+	UnsignedShort statusSize = m_tintCustomStatus.size();
+	UnsignedShort prevStatusSize = m_prevTintCustomStatus.size();
+	xfer->xferUnsignedShort( &statusSize );
+	xfer->xferUnsignedShort( &prevStatusSize );
 
-	xfer->xferAsciiString( &m_prevTintCustomStatus );
+	AsciiString customStatusName;
+	AsciiString prevCustomStatusName;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		for( std::vector<AsciiString>::iterator it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end(); ++it )
+		{
+
+			customStatusName = (*it);
+			xfer->xferAsciiString( &customStatusName );
+
+		}  // end for
+
+		for( std::vector<AsciiString>::iterator it2 = m_prevTintCustomStatus.begin(); it2 != m_prevTintCustomStatus.end(); ++it2 )
+		{
+
+			prevCustomStatusName = (*it2);
+			xfer->xferAsciiString( &prevCustomStatusName );
+
+		}  // end for
+
+	}  // end if, save
+	else
+	{
+
+		for( UnsignedShort i = 0; i < statusSize; ++i )
+		{
+
+			xfer->xferAsciiString( &customStatusName );
+			m_tintCustomStatus.push_back(customStatusName);
+			
+		}  // end for, i
+
+		for( UnsignedShort i = 0; i < prevStatusSize; ++i )
+		{
+
+			xfer->xferAsciiString( &prevCustomStatusName );
+			m_prevTintCustomStatus.push_back(prevCustomStatusName);
+			
+		}  // end for, i
+
+	}  // end else load
 
 	// fading mode
 	xfer->xferUser( &m_fadeMode, sizeof( FadingMode ) );

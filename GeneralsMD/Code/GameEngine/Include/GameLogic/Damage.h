@@ -40,6 +40,7 @@
 #include "Common/ObjectStatusTypes.h" // Precompiled header anyway, no detangling possibility
 #include "Common/Snapshot.h"
 #include "GameClient/TintStatus.h"
+#include "GameLogic/ObjectCreationList.h"
 
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -398,7 +399,18 @@ public:
 	m_subdualForbiddenKindOf.clear();
 	m_notAbsoluteKill = FALSE;
 	m_isMissileAttractor = FALSE;
-	m_customSubdualDisableType = DISABLED_COUNT;
+	m_subduedProjectileNoDamage = FALSE;
+	m_subdualCustomType = NULL;
+	m_customSubdualCustomTint = NULL;
+	m_customSubdualTint = TINT_STATUS_GAINING_SUBDUAL_DAMAGE;
+	m_customSubdualHasDisable = TRUE;
+	m_customSubdualHasDisableProjectiles = TRUE;
+	m_customSubdualClearOnTrigger = FALSE;
+	m_customSubdualDoStatus = FALSE;
+	m_customSubdualOCL = NULL;
+	m_customSubdualDisableType = DISABLED_SUBDUED;
+	m_customSubdualDisableTint = TINT_STATUS_INVALID;
+	m_customSubdualDisableCustomTint = NULL;
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 	}
 
@@ -444,8 +456,19 @@ public:
 	Bool m_notAbsoluteKill;
 
 	Bool m_isMissileAttractor;
-
+	Bool m_subduedProjectileNoDamage;
+	
+	AsciiString m_subdualCustomType;
+	AsciiString m_customSubdualCustomTint;
+	TintStatus m_customSubdualTint;
+	Bool m_customSubdualHasDisable;
+	Bool m_customSubdualHasDisableProjectiles;
+	Bool m_customSubdualClearOnTrigger;
+	Bool m_customSubdualDoStatus;
+	const ObjectCreationList* m_customSubdualOCL;
 	DisabledType m_customSubdualDisableType;
+	TintStatus m_customSubdualDisableTint;
+	AsciiString m_customSubdualDisableCustomTint;
 
 	ProtectionTypeFlags m_protectionTypes;
 

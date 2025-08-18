@@ -33,7 +33,9 @@
 #define __SubdualDamageHelper_H_
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "Common/DisabledTypes.h"
 #include "GameLogic/Module/ObjectHelper.h"
+#include "GameLogic/Module/BodyModule.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -59,9 +61,13 @@ public:
 	virtual UpdateSleepTime update();
 
 	void notifySubdualDamage( Real amount );
+	void notifySubdualDamageCustom( Real amount, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID, DisabledType disableType = DISABLED_SUBDUED );
 
 protected:
 	UnsignedInt m_healingStepCountdown;
+	UnsignedInt m_healingStepFrame;
+	UnsignedInt m_nextHealingStepFrame;
+	CustomSubdualCurrentHealMap m_healingStepCountdownCustomMap;
 };
 
 

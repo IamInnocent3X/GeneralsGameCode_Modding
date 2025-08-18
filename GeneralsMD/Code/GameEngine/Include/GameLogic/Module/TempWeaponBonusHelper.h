@@ -67,7 +67,7 @@ public:
 protected:
 	WeaponBonusConditionType m_currentBonus;
 	AsciiString m_currentCustomBonus;
-	AsciiString m_customTintStatus;
+	AsciiString m_currentCustomTint;
 	TintStatus m_currentTint;
 	UnsignedInt m_frameToRemove;
 	void clearTempWeaponBonus();

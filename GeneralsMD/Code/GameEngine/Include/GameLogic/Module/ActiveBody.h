@@ -100,8 +100,8 @@ public:
 	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const;
 	virtual Bool hasAnySubdualDamageCustom() const;
 	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const;
-	virtual CustomSubdualDamageMap getCurrentSubdualDamageAmountCustom() const { return m_currentSubdualDamageCustom; }
-	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualDamageMap currentSubdualCustom) { m_currentSubdualDamageCustom = currentSubdualCustom; }
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const { return m_currentSubdualDamageCustom; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) { m_currentSubdualDamageCustom = currentSubdualCustom; }
 
 	virtual UnsignedInt getChronoDamageHealRate() const;
 	virtual Real getChronoDamageHealAmount() const;
@@ -141,6 +141,11 @@ public:
 	virtual Bool isIndestructible( void ) const { return m_indestructible; }
 
 	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE);								///< change health
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE );
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE );
+
+	virtual Bool isAboutToBeSubdued( Real low, Real high ) const; 
+	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const; 
 
 	virtual void evaluateVisualCondition();
 	virtual void updateBodyParticleSystems( void );// made public for topple anf building collapse updates -ML
@@ -148,13 +153,14 @@ public:
 	// Subdual Damage
 	virtual Bool isSubdued() const; 
 	virtual Bool canBeSubdued() const; 
-	virtual void onSubdualChange( Bool isNowSubdued );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualChange( Bool isNowSubdued, Bool subduedProjectileNoDamage, Bool clearTintLater = FALSE );///< Override this if you want a totally different effect than DISABLED_SUBDUED
 	virtual void onSubdualChangeAttractor( Bool isNowSubdued, ObjectID attractorID );///< Override this if you want a totally different effect than DISABLED_SUBDUED
 
 	// Custom Subdual Damage
 	virtual Bool isSubduedCustom(const AsciiString &customStatus) const; 
 	virtual Bool canBeSubduedCustom(const AsciiString &customStatus) const; 
-	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Int statusFrames );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater = FALSE);
 
 	// Chrono
 	virtual Bool isSubduedChrono() const;
@@ -177,8 +183,8 @@ protected:
 	Bool shouldRetaliate(Object *obj);
 	Bool shouldRetaliateAgainstAggressor(Object *obj, Object *damager);
 
-	virtual void internalAddSubdualDamage( Real delta );								///< change health
-	virtual void internalAddSubdualDamageCustom( Real delta, const AsciiString &customStatus );	///< change health
+	//virtual void internalAddSubdualDamage( Real delta );								///< change health
+	//virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus );	///< change health
 	virtual void internalAddChronoDamage( Real delta );								///< change health
 
 	virtual void applyChronoParticleSystems(void);
@@ -196,7 +202,7 @@ private:
 	Real 								m_subdualDamageHealAmount;					///< by this much.
 	Real									m_currentChronoDamage;	///< Same as Subdual, but for CHRONO_GUN
 
-	CustomSubdualDamageMap 				m_currentSubdualDamageCustom;
+	CustomSubdualCurrentDamageMap 		m_currentSubdualDamageCustom;
 	CustomSubdualDamageMap 				m_subdualDamageCapCustom;
 	CustomSubdualHealRateMap 			m_subdualDamageHealRateCustom;
 	CustomSubdualDamageMap 				m_subdualDamageHealAmountCustom;
@@ -212,6 +218,7 @@ private:
 	Bool									m_lastDamageCleared;
 	Bool									m_indestructible;				///< is this object indestructible?
 	Bool									m_damageFXOverride;
+	Bool									m_hasBeenSubdued;
 
 	BodyParticleSystem *m_particleSystems;				///< particle systems created and attached to this object
 	

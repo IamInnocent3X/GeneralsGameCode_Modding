@@ -129,7 +129,7 @@ UpdateSleepTime StatusDamageHelper::update()
 			
 			if((*it).second <= now)
 			{
-				getObject()->getDrawable()->clearCustomTintStatus();
+				getObject()->getDrawable()->clearCustomTintStatus((*it).first);
 				(*it).second = 0;
 				//DEBUG_LOG(( "StatusDamageHelper Cleared CustomTintStatus: %s", (*it).first.str() ));
 			}

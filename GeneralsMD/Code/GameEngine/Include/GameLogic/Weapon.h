@@ -40,6 +40,7 @@
 #include "Common/DisabledTypes.h"
 #include "Common/STLTypedefs.h"
 #include "GameClient/TintStatus.h"
+#include "GameLogic/ObjectCreationList.h"
 
 #include "WWMath/matrix3d.h"
 
@@ -539,14 +540,14 @@ public:
 	inline const AsciiString& PlaySpecificVoice() const { return m_playSpecificVoice; }
 
 	inline Real getStatusDuration() const { return m_statusDuration; }
-	inline Bool getDoStatusDamage() const { return m_doStatusDamage; }
+	inline Bool getDoStatusDamage(VeterancyLevel v) const { return m_doStatusDamage[v]; }
 	inline Bool getStatusDurationTypeCorrelate() const { return m_statusDurationTypeCorrelate; }
-	inline TintStatus getTintStatusType() const { return m_tintStatus; }
-	inline const AsciiString& getCustomTintStatusType() const { return m_customTintStatus; }
+	inline TintStatus getTintStatusType(VeterancyLevel v) const { return m_tintStatus[v]; }
+	inline const AsciiString& getCustomTintStatusType(VeterancyLevel v) const { return m_customTintStatus[v]; }
 
-	inline Bool getIsSubdual() const { return m_isSubdual; }
-	inline Bool getSubdualDealsNormalDamage() const { return m_subdualDealsNormalDamage; }
-	inline Real getSubdualDamageMultiplier() const { return m_subdualDamageMultiplier; }
+	inline Bool getIsSubdual(VeterancyLevel v) const { return m_isSubdual[v]; }
+	inline Bool getSubdualDealsNormalDamage(VeterancyLevel v) const { return m_subdualDealsNormalDamage[v]; }
+	inline Real getSubdualDamageMultiplier(VeterancyLevel v) const { return m_subdualDamageMultiplier[v]; }
 	inline KindOfMaskType getSubdualForbiddenKindOf() const { return m_subdualForbiddenKindOf; }
 
 	inline std::vector<ObjectStatusTypes> getFiringTrackerStatusTypes() const { return m_firingTrackerStatusTrigger; }
@@ -557,8 +558,19 @@ public:
 	inline Bool getIsNotAbsoluteKill() const { return m_notAbsoluteKill; }
 
 	inline Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
+	inline Bool getSubdueProjectileNoDamage() const { return m_subduedProjectileNoDamage; }
 
+	inline const AsciiString& getSubdualCustomType() const { return m_subdualCustomType; }
+	inline const AsciiString& getCustomSubdualCustomTint(VeterancyLevel v) const { return m_customSubdualCustomTint[v]; }
+	inline TintStatus getCustomSubdualTint(VeterancyLevel v) const { return m_customSubdualTint[v]; }
+	inline Bool getCustomSubdualHasDisable(VeterancyLevel v) const { return m_customSubdualHasDisable[v]; }
+	inline Bool getCustomSubdualHasDisableProjectiles(VeterancyLevel v) const { return m_customSubdualHasDisableProjectiles[v]; }
+	inline Bool getCustomSubdualClearOnTrigger(VeterancyLevel v) const { return m_customSubdualClearOnTrigger[v]; }
+	inline Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_customSubdualDoStatus[v]; }
+	inline const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_customSubdualOCLs[v]; }
 	inline DisabledType getCustomSubdualDisableType() const { return m_customSubdualDisableType; }
+	inline TintStatus getCustomSubdualDisableTint() const { return m_customSubdualDisableTint; }
+	inline const AsciiString& getCustomSubdualDisableCustomTint() const { return m_customSubdualDisableCustomTint; }
 
 	inline ProtectionTypeFlags getProtectionTypes() const { return m_protectionTypes; }
 
@@ -698,14 +710,14 @@ private:
 	Int m_killsGarrisonAmount;
 	AsciiString m_playSpecificVoice;
 	Real m_statusDuration;
-	Bool m_doStatusDamage;
+	Bool m_doStatusDamage[LEVEL_COUNT];
 	Bool m_statusDurationTypeCorrelate;
-	TintStatus m_tintStatus;
-	AsciiString m_customTintStatus;
+	TintStatus m_tintStatus[LEVEL_COUNT];
+	AsciiString m_customTintStatus[LEVEL_COUNT];
 
-	Bool m_isSubdual;
-	Bool m_subdualDealsNormalDamage;
-	Real m_subdualDamageMultiplier;
+	Bool m_isSubdual[LEVEL_COUNT];
+	Bool m_subdualDealsNormalDamage[LEVEL_COUNT];
+	Real m_subdualDamageMultiplier[LEVEL_COUNT];
 	KindOfMaskType m_subdualForbiddenKindOf;
 
 	std::vector<ObjectStatusTypes> m_firingTrackerStatusTrigger;
@@ -716,8 +728,20 @@ private:
 	Bool m_notAbsoluteKill;
 
 	Bool m_isMissileAttractor;
+	Bool m_subduedProjectileNoDamage;
 
+	AsciiString m_subdualCustomType;
+	AsciiString m_customSubdualCustomTint[LEVEL_COUNT];
+	TintStatus m_customSubdualTint[LEVEL_COUNT];
+	Bool m_customSubdualHasDisable[LEVEL_COUNT];
+	Bool m_customSubdualHasDisableProjectiles[LEVEL_COUNT];
+	Bool m_customSubdualClearOnTrigger[LEVEL_COUNT];
+	Bool m_customSubdualDoStatus[LEVEL_COUNT];
+	AsciiString m_customSubdualOCLNames[LEVEL_COUNT];
+	const ObjectCreationList* m_customSubdualOCLs[LEVEL_COUNT];
 	DisabledType m_customSubdualDisableType;
+	TintStatus m_customSubdualDisableTint;
+	AsciiString m_customSubdualDisableCustomTint;
 
 	ProtectionTypeFlags m_protectionTypes;
 
@@ -897,14 +921,14 @@ public:
 	inline const AsciiString& PlaySpecificVoice() const { return m_template->PlaySpecificVoice(); }
 
 	inline Real getStatusDuration() const { return m_template->getStatusDuration(); }
-	inline Bool getDoStatusDamage() const { return m_template->getDoStatusDamage(); }
+	inline Bool getDoStatusDamage(VeterancyLevel v) const { return m_template->getDoStatusDamage(v); }
 	inline Bool getStatusDurationTypeCorrelate() const { return m_template->getStatusDurationTypeCorrelate(); }
-	inline TintStatus getTintStatusType() const { return m_template->getTintStatusType(); }
-	inline const AsciiString& getCustomTintStatusType() const { return m_template->getCustomTintStatusType(); }
+	inline TintStatus getTintStatusType(VeterancyLevel v) const { return m_template->getTintStatusType(v); }
+	inline const AsciiString& getCustomTintStatusType(VeterancyLevel v) const { return m_template->getCustomTintStatusType(v); }
 
-	inline Bool getIsSubdual() const { return m_template->getIsSubdual(); }
-	inline Bool getSubdualDealsNormalDamage() const { return m_template->getSubdualDealsNormalDamage(); }
-	inline Real getSubdualDamageMultiplier() const { return m_template->getSubdualDamageMultiplier(); }
+	inline Bool getIsSubdual(VeterancyLevel v) const { return m_template->getIsSubdual(v); }
+	inline Bool getSubdualDealsNormalDamage(VeterancyLevel v) const { return m_template->getSubdualDealsNormalDamage(v); }
+	inline Real getSubdualDamageMultiplier(VeterancyLevel v) const { return m_template->getSubdualDamageMultiplier(v); }
 	inline KindOfMaskType getSubdualForbiddenKindOf() const { return m_template->getSubdualForbiddenKindOf(); }
 
 	inline std::vector<ObjectStatusTypes> getFiringTrackerStatusTypes() const { return m_template->getFiringTrackerStatusTypes(); }
@@ -915,8 +939,19 @@ public:
 	inline Bool getIsNotAbsoluteKill() const { return m_template->getIsNotAbsoluteKill(); }
 
 	inline Bool getIsMissileAttractor() const { return m_template->getIsMissileAttractor(); }
+	inline Bool getSubdueProjectileNoDamage() const { return m_template->getSubdueProjectileNoDamage(); }
 
+	inline const AsciiString& getSubdualCustomType() const { return m_template->getSubdualCustomType(); }
+	inline const AsciiString& getCustomSubdualCustomTint(VeterancyLevel v) const { return m_template->getCustomSubdualCustomTint(v); }
+	inline TintStatus getCustomSubdualTint(VeterancyLevel v) const { return m_template->getCustomSubdualTint(v); }
+	inline Bool getCustomSubdualHasDisable(VeterancyLevel v) const { return m_template->getCustomSubdualHasDisable(v); }
+	inline Bool getCustomSubdualHasDisableProjectiles(VeterancyLevel v) const { return m_template->getCustomSubdualHasDisableProjectiles(v); }
+	inline Bool getCustomSubdualClearOnTrigger(VeterancyLevel v) const { return m_template->getCustomSubdualClearOnTrigger(v); }
+	inline Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_template->getCustomSubdualDoStatus(v); }
+	inline const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_template->getCustomSubdualOCL(v); }
 	inline DisabledType getCustomSubdualDisableType() const { return m_template->getCustomSubdualDisableType(); }
+	inline TintStatus getCustomSubdualDisableTint() const { return m_template->getCustomSubdualDisableTint(); }
+	inline const AsciiString& getCustomSubdualDisableCustomTint() const { return m_template->getCustomSubdualDisableCustomTint(); }
 
 	inline ProtectionTypeFlags getProtectionTypes() const { return m_template->getProtectionTypes(); }
 
