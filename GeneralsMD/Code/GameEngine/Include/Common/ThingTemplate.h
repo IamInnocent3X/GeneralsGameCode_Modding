@@ -571,7 +571,6 @@ public:
 
 	const UnicodeString& getCustomMaxedOutMessage() const { return m_maxSimultaneousCustomMessage; }
 
-
 	Real getAssetScale() const { return m_assetScale; }						///< return uniform scaling
 	Real getInstanceScaleFuzziness() const { return m_instanceScaleFuzziness; }						///< return uniform scaling
 	Real getStructureRubbleHeight() const { return (Real)m_structureRubbleHeight; }						///< return uniform scaling
@@ -611,7 +610,6 @@ public:
 	Int getNegPrereqCount() const { return m_negprereqInfo.size(); }
 	const ProductionPrerequisite *getNthNegPrereq(Int i) const { return &m_negprereqInfo[i]; }
 	Bool getNegPrereqHideInfo() const { return m_negprereqHideInfo; }
-
 	/**
 		return the BuildFacilityTemplate, if any.
 
@@ -714,7 +712,6 @@ protected:
 
 	static void parseNegativePrerequisites( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 
-
 private:
 	static const FieldParse s_objectFieldParseTable[];		///< the parse table
 	static const FieldParse s_objectReskinFieldParseTable[];		///< the parse table
@@ -768,7 +765,6 @@ private:
 	UnicodeString										m_maxSimultaneousCustomMessage;
 	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficulty;
 	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficultyAI;
-
 
 	WeaponTemplateSetVector							m_weaponTemplateSets;					///< our weaponsets
 	WeaponTemplateSetFinder							m_weaponTemplateSetFinder;		///< helper to allow us to find the best sets, quickly
