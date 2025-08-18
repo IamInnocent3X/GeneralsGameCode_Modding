@@ -49,12 +49,12 @@ class ParticleSystemTemplate;
 //-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
-class ActiveBodyModuleData : public BodyModuleData 
+class ActiveBodyModuleData : public BodyModuleData
 {
 public:
 	Real m_maxHealth;
 	Real m_initialHealth;
-	
+
 	Real m_subdualDamageCap;								///< Subdual damage will never accumulate past this
 	UnsignedInt m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
 	Real m_subdualDamageHealAmount;					///< by this much.
@@ -174,7 +174,7 @@ protected:
 	void validateArmorAndDamageFX() const;
 	void doDamageFX( const DamageInfo *damageInfo );
 
-	void createParticleSystems( const AsciiString &boneBaseName, 
+	void createParticleSystems( const AsciiString &boneBaseName,
 															const ParticleSystemTemplate *systemTemplate,
 															Int maxSystems );
 	void deleteAllParticleSystems( void );

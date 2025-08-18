@@ -44,7 +44,7 @@
 class EMPUpdateModuleData : public UpdateModuleData
 {
 public:
-	UnsignedInt m_lifeFrames;	
+	UnsignedInt m_lifeFrames;
 	UnsignedInt m_startFadeFrame;
 	UnsignedInt m_disabledDuration;
 	Real				m_startScale; ///< how big I start drawing
@@ -73,7 +73,7 @@ public:
 	{
 		m_lifeFrames = 1;
 		m_startFadeFrame = 0;
-		m_startScale = 1.0f; 
+		m_startScale = 1.0f;
 		m_targetScaleMax = 1.0f;
 		m_targetScaleMin = 1.0f;
 		m_startColor.setFromInt(0xffffffff);
@@ -97,10 +97,10 @@ public:
     m_victimKindOfNot.clear();
 	}
 
-	static void buildFieldParse(MultiIniFieldParse& p) 
+	static void buildFieldParse(MultiIniFieldParse& p)
 	{
     UpdateModuleData::buildFieldParse(p);
-		static const FieldParse dataFieldParse[] = 
+		static const FieldParse dataFieldParse[] =
 		{
 			{ "Lifetime",	INI::parseDurationUnsignedInt,		NULL, offsetof( EMPUpdateModuleData, m_lifeFrames ) },
 			{ "StartFadeTime",	INI::parseDurationUnsignedInt,		NULL, offsetof( EMPUpdateModuleData, m_startFadeFrame ) },
@@ -127,7 +127,7 @@ public:
 
       { "VictimRequiredKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_victimKindOf ) },
 		  { "VictimForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_victimKindOfNot ) },
-      
+
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -200,7 +200,7 @@ public:
     m_leafletFXParticleSystem = NULL;
 	}
 
-	static void buildFieldParse(MultiIniFieldParse& p) 
+	static void buildFieldParse(MultiIniFieldParse& p)
 	{
     EMPUpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] = 
@@ -267,4 +267,4 @@ protected:
 
 #endif // __EMPUPDATE_H_
 
- 
+

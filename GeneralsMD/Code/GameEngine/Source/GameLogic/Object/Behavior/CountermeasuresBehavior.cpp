@@ -54,7 +54,7 @@ struct CountermeasuresPlayerScanHelper
 {
 	KindOfMaskType m_kindOfToTest;
 	Object *m_theHealer;
-	ObjectPointerList *m_objectList;	
+	ObjectPointerList *m_objectList;
 };
 
 static const UnsignedInt CHECK_DELAY = LOGICFRAMES_PER_SECOND * 1;
@@ -142,16 +142,16 @@ void CountermeasuresBehavior::reportMissileForCountermeasures( Object *missile )
 				{
 					//Make sure the missile diverts after a delay. The delay needs to be larger than
 					//the countermeasure reaction time or else the missile won't have a countermeasure to divert to!
-					DEBUG_ASSERTCRASH( data->m_countermeasureReactionFrames < data->m_missileDecoyFrames, 
+					DEBUG_ASSERTCRASH( data->m_countermeasureReactionFrames < data->m_missileDecoyFrames,
 						("MissileDecoyDelay needs to be less than CountermeasureReactionTime in order to function properly.") );
 					pui->setFramesTillCountermeasureDiversionOccurs( data->m_missileDecoyFrames, data->m_detonateDistance, getObject()->getID() );
 					m_divertedMissiles++;
 
 					if( m_activeCountermeasures == 0 && m_reactionFrame == 0 )
 					{
-						//We need to launch our first volley of countermeasures, but we can't do it now. If we 
+						//We need to launch our first volley of countermeasures, but we can't do it now. If we
 						//do, it'll look too artificial. Instead, we need to set up a timer to fake a reaction
-						//delay. 
+						//delay.
 						m_reactionFrame = TheGameLogic->getFrame() + data->m_countermeasureReactionFrames;
 					}
 					break;
@@ -172,7 +172,7 @@ ObjectID CountermeasuresBehavior::calculateCountermeasureToDivertTo( const Objec
 
 	Real closestFlareDist = 1e15f;
 	Object *closestFlare = NULL;
-	
+
 	const int volleySize = data->m_volleySize;
 	int volleyFlaresCounted = 0;
 
@@ -434,7 +434,6 @@ void CountermeasuresBehavior::reloadCountermeasures()
 	m_reloadFrame = 0;
 }
  
-
 //-------------------------------------------------------------------------------------------------
 void CountermeasuresBehavior::setCountermeasuresParked()
 {
@@ -454,7 +453,7 @@ void CountermeasuresBehavior::launchVolley()
 	Real volleySize = (Real)data->m_volleySize;
 	for( UnsignedInt i = 0; i < data->m_volleySize; i++ )
 	{
-		//Each flare in a volley will calculate a different vector to fly out. We have a +/- angle to 
+		//Each flare in a volley will calculate a different vector to fly out. We have a +/- angle to
 		//spread out equally. With only one flare, it'll come straight out the back. Two flares will
 		//launch at the extreme positive and negative angle. Three flares will launch at extreme angles
 		//plus straight back. Four or more will divy it up equally.

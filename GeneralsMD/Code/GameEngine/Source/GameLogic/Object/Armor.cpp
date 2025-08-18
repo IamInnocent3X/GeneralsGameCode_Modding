@@ -265,7 +265,7 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 
 	if (damage < 0.0f)
 		damage = 0.0f;
-	
+
 	return damage;
 }
 
@@ -466,7 +466,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 {
 	NameKeyType namekey = TheNameKeyGenerator->nameToKey(name);
   ArmorTemplateMap::const_iterator it = m_armorTemplates.find(namekey);
-  if (it == m_armorTemplates.end()) 
+  if (it == m_armorTemplates.end())
 	{
 		return NULL;
 	}
@@ -479,7 +479,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 //-------------------------------------------------------------------------------------------------
 /*static */ void ArmorStore::parseArmorDefinition(INI *ini)
 {
-	static const FieldParse myFieldParse[] = 
+	static const FieldParse myFieldParse[] =
 	{
 		{ "Armor", ArmorTemplate::parseArmorCoefficients, NULL, 0 },
 		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, NULL, 0 },

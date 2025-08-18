@@ -79,7 +79,7 @@ protected:
 
   ObjectID m_lastRepair;			///< object we were repairing last
 	Real m_healthToAddPerFrame;	///< health to add per frame to current docked object
-	
+
 };
 
 #endif

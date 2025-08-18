@@ -24,7 +24,7 @@
 
 // FILE: DieModule.cpp ////////////////////////////////////////////////////////////////////////////
 // Author:
-// Desc:   
+// Desc:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
@@ -58,9 +58,9 @@ DieMuxData::DieMuxData() {
 }
 
 //-------------------------------------------------------------------------------------------------
-const FieldParse* DieMuxData::getFieldParse() 
+const FieldParse* DieMuxData::getFieldParse()
 {
-	static const FieldParse dataFieldParse[] = 
+	static const FieldParse dataFieldParse[] =
 	{
 		//{ "DeathTypes",				INI::parseDeathTypeFlags,						NULL, offsetof( DieMuxData, m_deathTypes ) },
 		{ "DeathTypes",			INI::parseDeathTypeFlagsCustom,				NULL, offsetof(DieMuxData, m_deathTypesCustom) },

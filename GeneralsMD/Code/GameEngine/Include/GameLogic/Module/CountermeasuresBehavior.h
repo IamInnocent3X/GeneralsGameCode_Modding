@@ -98,9 +98,9 @@ public:
 		m_detonateDistance = 0;
 	}
 
-	static void buildFieldParse(MultiIniFieldParse& p) 
+	static void buildFieldParse(MultiIniFieldParse& p)
 	{
-		static const FieldParse dataFieldParse[] = 
+		static const FieldParse dataFieldParse[] =
 		{
 			{ "FlareTemplateName",			INI::parseAsciiString,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_flareTemplateName ) },
 			{ "FlareBoneBaseName",			INI::parseAsciiString,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_flareBoneBaseName ) },
@@ -199,8 +199,8 @@ public:
 
 protected:
 
-	virtual void upgradeImplementation() 
-	{ 
+	virtual void upgradeImplementation()
+	{
 		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 	}
 
@@ -232,7 +232,7 @@ protected:
 	}
 
 	inline Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
-	
+
 	virtual Bool isSubObjectsUpgrade() { return false; }
 
 	void launchVolley();

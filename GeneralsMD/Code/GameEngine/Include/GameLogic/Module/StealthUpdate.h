@@ -61,7 +61,7 @@ enum
 };
 
 #ifdef DEFINE_STEALTHLEVEL_NAMES
-static const char *TheStealthLevelNames[] = 
+static const char *TheStealthLevelNames[] =
 {
 	"ATTACKING",
 	"MOVING",
@@ -156,7 +156,7 @@ public:
 
   Bool isGrantedBySpecialPower( void ) { return getStealthUpdateModuleData()->m_grantedBySpecialPower; }
 	Bool isTemporaryGrant() { return m_framesGranted > 0; }
-  
+
 protected:
 
 	StealthLookType calcStealthedStatusForPlayer(const Object* obj, const Player* player);
@@ -173,7 +173,7 @@ private:
 	UnsignedInt						m_detectionExpiresFrame;
 	mutable UnsignedInt		m_nextBlackMarketCheckFrame;
 	Bool									m_enabled;
-	
+
 	Real                  m_pulsePhaseRate;
 	Real                  m_pulsePhase;
 
@@ -193,5 +193,5 @@ private:
 };
 
 
-#endif 
+#endif
 

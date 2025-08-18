@@ -40,8 +40,8 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-SubdualDamageHelper::SubdualDamageHelper( Thing *thing, const ModuleData *modData ) : ObjectHelper( thing, modData ) 
-{ 
+SubdualDamageHelper::SubdualDamageHelper( Thing *thing, const ModuleData *modData ) : ObjectHelper( thing, modData )
+{
 	m_healingStepCountdown = 0;
 	m_healingStepFrame = 0;
 	m_healingStepCountdownCustomMap.clear();
