@@ -300,12 +300,14 @@ public:
 	//void clearTintStatus( TintStatus statusBits ) { BitClear( m_tintStatus, statusBits ); };
 	//Bool testTintStatus( TintStatus statusBits ) const { return BitIsSet( m_tintStatus, statusBits ); };
 
-	void setTintStatus(TintStatus statusType) { m_tintStatus.set(statusType); };
+	void setTintStatus(TintStatus statusType) { if(m_countFrames || m_dontAssignFrames) return; m_tintStatus.set(statusType); };
+	void setAndClearTintFast(TintStatus statusType);
 	void clearTintStatus(TintStatus statusType, bool clearLater = FALSE) { if(clearLater) m_eraseTint = statusType; else m_tintStatus.set(statusType, 0); }
 	Bool testTintStatus(TintStatus statusType) const { return m_tintStatus.test(statusType); };
 	// TO-DO: Change AsciiString to NameKeyType
 	// TO-DO: REVERTED. Game will not register.
 	void setCustomTintStatus(const AsciiString& customStatusType);
+	void setAndClearCustomTintFast(const AsciiString& customStatusType);
 	void clearCustomTintStatus(const AsciiString& customStatusType, bool clearLater = FALSE);
 	Bool hasCustomTintStatus() const { return m_tintCustomStatus.size() > 0; };
 	Bool testCustomTintStatus(const AsciiString& customStatusType) const;
@@ -688,8 +690,11 @@ private:
 	std::vector<AsciiString> m_tintCustomStatus;
 	std::vector<AsciiString> m_prevTintCustomStatus;
 	TintStatus m_eraseTint;
+	TintStatus m_tintStatusTypeQuick;
 	AsciiString m_eraseCustomTint;
+	AsciiString m_customTintStatusTypeQuick;
 	UnsignedInt m_countFrames;
+	UnsignedInt m_dontAssignFrames;
 	Bool m_changedCustomStatus;
 	
 	enum FadingMode

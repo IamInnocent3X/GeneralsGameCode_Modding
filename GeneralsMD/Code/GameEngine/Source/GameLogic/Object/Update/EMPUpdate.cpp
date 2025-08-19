@@ -410,11 +410,11 @@ void EMPUpdate::doDisableAttack( void )
 					if(data->m_empProjectileSubdual)
 						pui->projectileNowJammed(TRUE);
 					else
-						intendedVictim->kill(DAMAGE_UNRESISTABLE, m_projectileDeathType);
+						intendedVictim->killCustom(DAMAGE_UNRESISTABLE, m_projectileDeathType, data->m_empProjectileCustomDeathType);
 				}
 				else
 				{
-					intendedVictim->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_disabledDuration );
+					intendedVictim->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_disabledDuration, data->m_tintStatus, data->m_customTintStatus );
 				}
 			}
 		}

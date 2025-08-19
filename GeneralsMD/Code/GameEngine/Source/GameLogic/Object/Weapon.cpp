@@ -321,9 +321,10 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "WeaponKillsGarrisonAmount",				INI::parseInt,			NULL,							offsetof(WeaponTemplate, m_killsGarrisonAmount) },
 
 	{ "WeaponUseSpecificVoice",					INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_playSpecificVoice) },
+	{ "OverrideDamageTypeFX",					DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_damageFXOverride) },
 
-	{ "WeaponDoStatusDamageType",				parseAllVetLevelsBool,			NULL,							offsetof(WeaponTemplate, m_doStatusDamage) },
-	{ "VeterancyWeaponDoStatusDamageType",		parsePerVetLevelBool,			NULL,							offsetof(WeaponTemplate, m_doStatusDamage) },
+	{ "WeaponDoStatusDamageType",				parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_doStatusDamage) },
+	{ "VeterancyWeaponDoStatusDamageType",		parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_doStatusDamage) },
 	{ "WeaponStatusDuration",					INI::parseReal,			NULL, 							offsetof(WeaponTemplate, m_statusDuration) },
 	{ "WeaponStatusDurationDamageCorrelation",	INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_statusDurationTypeCorrelate) },
 	{ "WeaponStatusTintStatus",					parseAllVetLevelsTintStatus,				NULL,		offsetof(WeaponTemplate, m_tintStatus) },
@@ -494,6 +495,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_killsGarrison 						= FALSE;
 	m_killsGarrisonAmount 					= 0;
 	m_playSpecificVoice						= NULL;
+	m_damageFXOverride						= DAMAGE_UNRESISTABLE;
 	m_statusDuration 						= 0.0f;
 	//m_doStatusDamage 						= FALSE;
 	m_statusDurationTypeCorrelate 			= FALSE;
@@ -826,6 +828,7 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	Bool KillsGarrison = getKillsGarrison();
 	Int KillsGarrisonAmount = getKillsGarrisonAmount();
 	AsciiString SpecificVoice = PlaySpecificVoice();
+	DamageType DamageFXOverride = getDamageFXOverride();
 	
 	Real StatusDuration = getStatusDuration();
 	Bool DoStatusDamage = getDoStatusDamage(v);
@@ -933,6 +936,7 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	damageInfo.m_killsGarrison = KillsGarrison;
 	damageInfo.m_killsGarrisonAmount = KillsGarrisonAmount;
 	damageInfo.m_playSpecificVoice = SpecificVoice;
+	damageInfo.m_damageFXOverride = DamageFXOverride;
 	damageInfo.m_statusDuration = StatusDuration;
 	damageInfo.m_doStatusDamage = DoStatusDamage;
 	damageInfo.m_statusDurationTypeCorrelate = StatusDurationTypeCorrelate;
@@ -1766,6 +1770,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Bool KillsGarrison = getKillsGarrison();
 	Int KillsGarrisonAmount = getKillsGarrisonAmount();
 	AsciiString SpecificVoice = PlaySpecificVoice();
+	DamageType DamageFXOverride = getDamageFXOverride();
 	Real StatusDuration = getStatusDuration();
 	Bool DoStatusDamage = getDoStatusDamage(v);
 	Bool StatusDurationTypeCorrelate = getStatusDurationTypeCorrelate();
@@ -1834,6 +1839,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_sourcePlayerMask = 0;
 				damageInfo.in.m_damageStatusType = damageStatusType;
 				damageInfo.in.m_playSpecificVoice = SpecificVoice;
+				damageInfo.in.m_damageFXOverride = DamageFXOverride;
 				damageInfo.in.m_statusDuration = StatusDuration;
 				damageInfo.in.m_doStatusDamage = DoStatusDamage;
 				damageInfo.in.m_statusDurationTypeCorrelate = StatusDurationTypeCorrelate;
@@ -1936,6 +1942,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_killsGarrison = KillsGarrison;
 			damageInfo.in.m_killsGarrisonAmount = KillsGarrisonAmount;
 			damageInfo.in.m_playSpecificVoice = SpecificVoice;
+			damageInfo.in.m_damageFXOverride = DamageFXOverride;
 
 			damageInfo.in.m_statusDuration = StatusDuration;
 			damageInfo.in.m_doStatusDamage = DoStatusDamage;

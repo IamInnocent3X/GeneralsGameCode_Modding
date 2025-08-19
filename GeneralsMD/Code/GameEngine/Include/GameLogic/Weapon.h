@@ -538,6 +538,7 @@ public:
 	inline Bool getKillsGarrison() const { return m_killsGarrison; }
 	inline Int getKillsGarrisonAmount() const { return m_killsGarrisonAmount; }
 	inline const AsciiString& PlaySpecificVoice() const { return m_playSpecificVoice; }
+	inline DamageType getDamageFXOverride() const { return m_damageFXOverride; }
 
 	inline Real getStatusDuration() const { return m_statusDuration; }
 	inline Bool getDoStatusDamage(VeterancyLevel v) const { return m_doStatusDamage[v]; }
@@ -712,6 +713,7 @@ private:
 	Bool m_killsGarrison;
 	Int m_killsGarrisonAmount;
 	AsciiString m_playSpecificVoice;
+	DamageType m_damageFXOverride;
 	Real m_statusDuration;
 	Bool m_doStatusDamage[LEVEL_COUNT];
 	Bool m_statusDurationTypeCorrelate;
@@ -925,6 +927,7 @@ public:
 	inline Bool getKillsGarrison() const { return m_template->getKillsGarrison(); }
 	inline Int getKillsGarrisonAmount() const { return m_template->getKillsGarrisonAmount(); }
 	inline const AsciiString& PlaySpecificVoice() const { return m_template->PlaySpecificVoice(); }
+	inline DamageType getDamageFXOverride() const { return m_template->getDamageFXOverride(); }
 
 	inline Real getStatusDuration() const { return m_template->getStatusDuration(); }
 	inline Bool getDoStatusDamage(VeterancyLevel v) const { return m_template->getDoStatusDamage(v); }

@@ -151,6 +151,10 @@ void ActiveBodyModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "SubdualDamageCap",					INI::parseReal,									NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageCap ) },
 		{ "SubdualDamageHealRate",		INI::parseDurationUnsignedInt,	NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealRate ) },
 		{ "SubdualDamageHealAmount",	INI::parseReal,									NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealAmount ) },
+
+		{ "CustomSubdualDamageCap", 		INI::parseAsciiStringWithColonVectorAppend, NULL, offsetof( ActiveBodyModuleData, m_subdualDamageCapCustom ) },
+		{ "CustomSubdualDamageHealRate",	INI::parseAsciiStringWithColonVectorAppend,	NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealRateCustom ) },
+		{ "CustomSubdualDamageHealAmount",	INI::parseAsciiStringWithColonVectorAppend,	NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealAmountCustom ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -176,8 +180,9 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_damageFXOverride(false),
 	m_hasBeenSubdued(false),
 	m_customSubdualDisabledSound(NULL),
-	m_customSubdualDisableRemovalSound(NULL)
-
+	m_customSubdualDisableRemovalSound(NULL),
+	m_clearedSubdued(FALSE),
+	m_clearedSubduedCustom(FALSE)
 {
 	const ActiveBodyModuleData *data = getActiveBodyModuleData();
 
@@ -190,10 +195,57 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_subdualDamageHealAmount = data->m_subdualDamageHealAmount;
 
 	m_currentSubdualDamageCustom.clear();
+	m_subdualDamageCapCustom.clear();
+	m_subdualDamageHealRateCustom.clear();
+	m_subdualDamageHealAmountCustom.clear();
 
-	m_subdualDamageCapCustom = data->m_subdualDamageCapCustom;
-	m_subdualDamageHealRateCustom = data->m_subdualDamageHealRateCustom;
-	m_subdualDamageHealAmountCustom = data->m_subdualDamageHealAmountCustom;
+	Bool parseName = TRUE;
+	AsciiString customStatus = NULL;
+	for(std::vector<AsciiString>::const_iterator it = data->m_subdualDamageCapCustom.begin(); it != data->m_subdualDamageCapCustom.end(); ++it)
+	{
+		if(parseName)
+		{
+			customStatus = (*it);
+			parseName = FALSE;
+		}
+		else
+		{
+			m_subdualDamageCapCustom[customStatus] = INI::scanReal((*it).str());
+			parseName = TRUE;
+		}
+	}
+
+	parseName = TRUE;
+	customStatus = NULL;
+	for(std::vector<AsciiString>::const_iterator it2 = data->m_subdualDamageHealRateCustom.begin(); it2 != data->m_subdualDamageHealRateCustom.end(); ++it2)
+	{
+		if(parseName)
+		{
+			customStatus = (*it2);
+			parseName = FALSE;
+		}
+		else
+		{
+			m_subdualDamageHealRateCustom[customStatus] = INI::scanUnsignedInt((*it2).str());
+			parseName = TRUE;
+		}
+	}
+
+	parseName = TRUE;
+	customStatus = NULL;
+	for(std::vector<AsciiString>::const_iterator it3 = data->m_subdualDamageHealAmountCustom.begin(); it3 != data->m_subdualDamageHealAmountCustom.end(); ++it3)
+	{
+		if(parseName)
+		{
+			customStatus = (*it3);
+			parseName = FALSE;
+		}
+		else
+		{
+			m_subdualDamageHealAmountCustom[customStatus] = INI::scanReal((*it3).str());
+			parseName = TRUE;
+		}
+	}
 
 	// force an initially-valid armor setup
 	validateArmorAndDamageFX();
@@ -686,15 +738,37 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 
 				nowSubdued = m_maxHealth <= it->second.damage ? TRUE : FALSE; //isSubduedCustom(damageInfo->in.m_subdualCustomType);
 
-				if(nowSubdued && damageInfo->in.m_customSubdualClearOnTrigger) 
+				if(damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued)
+				{
 					it->second.damage = 0.1f;
+				}
+
+				if( it->second.disableType != subdualData.disableType && getObject()->isDisabledByType(it->second.disableType) )
+				{
+					wasSubdued = FALSE;
+
+					obj->clearDisabled(it->second.disableType);
+					//DEBUG_LOG(( "SubdualCustomType: %s, Changed Disabled Type, Cleared: %d, Now: %d", damageInfo->in.m_subdualCustomType.str(), it->second.disableType, subdualData.disableType ));
+				}
+
+				if( ( it->second.tintStatus != subdualData.tintStatus || it->second.customTintStatus != subdualData.customTintStatus ) && obj->getDrawable() )
+				{
+					wasSubdued = FALSE;
+
+					if(!it->second.customTintStatus.isEmpty())
+						getObject()->getDrawable()->clearCustomTintStatus(it->second.customTintStatus);
+					else if(it->second.tintStatus > TINT_STATUS_INVALID && it->second.tintStatus < TINT_STATUS_COUNT)
+						getObject()->getDrawable()->clearTintStatus(it->second.tintStatus);
+				}
 			}
 			else
 			{
-				nowSubdued = m_maxHealth <= Subdualamount;
+				nowSubdued = m_maxHealth <= Subdualamount ? TRUE : FALSE;
 
-				if(damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued) 
-					subdualData.damage = 0.1f;
+				if(damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued)
+				{
+					it->second.damage = 0.1f;
+				}
 				
 				internalAddSubdualDamageCustom(subdualData,damageInfo->in.m_subdualCustomType);
 			}
@@ -705,9 +779,12 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				allowModifier = FALSE;
 			}
 
+			if(damageInfo->in.m_customSubdualClearOnTrigger && obj->isDisabledByType(damageInfo->in.m_customSubdualDisableType) && damageInfo->in.m_customSubdualHasDisable && !obj->isKindOf(KINDOF_PROJECTILE))
+				onSubdualRemovalCustom(damageInfo->in.m_customSubdualDisableType, TRUE);
+
 			if( wasSubdued != nowSubdued )
 			{
-				onSubdualChangeCustom(nowSubdued, damageInfo);
+				onSubdualChangeCustom(nowSubdued, damageInfo, damageInfo->in.m_customSubdualClearOnTrigger);
 			}
 
 			if( nowSubdued )
@@ -726,6 +803,10 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			subdualNotifyData.disableType = subdualData.disableType;
 			subdualNotifyData.hasDisable = damageInfo->in.m_customSubdualHasDisable;
 			subdualNotifyData.removeTintOnDisable = damageInfo->in.m_customSubdualRemoveSubdualTintOnDisable;
+			subdualNotifyData.paintDisableTint = damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued ? TRUE : FALSE;
+			subdualNotifyData.clearOnTrigger = damageInfo->in.m_customSubdualClearOnTrigger;
+			subdualNotifyData.disableTint = damageInfo->in.m_customSubdualDisableTint;
+			subdualNotifyData.disableCustomTint = damageInfo->in.m_customSubdualDisableCustomTint;
 
 			getObject()->notifySubdualDamageCustom(subdualNotifyData, damageInfo->in.m_subdualCustomType );
 		}
@@ -1537,7 +1618,7 @@ void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 			getObject()->getDrawable()->clearTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
 		}
 
-		if( !getObject()->isKindOf(KINDOF_PROJECTILE) && !isSubdued() && m_maxHealth <= m_currentSubdualDamage + delta)
+		if( !getObject()->isKindOf(KINDOF_PROJECTILE) && !m_clearedSubdued)
 		{
 			onSubdualChange(isSubdued(), FALSE, clearLater);
 		}
@@ -1618,6 +1699,8 @@ void ActiveBody::onSubdualChange( Bool isNowSubdued, Bool subduedProjectileNoDam
 		
 		if( isNowSubdued )
 		{
+			m_clearedSubdued = FALSE;
+			
 			me->setDisabled(DISABLED_SUBDUED);
 
       ContainModuleInterface *contain = me->getContain();
@@ -1627,6 +1710,8 @@ void ActiveBody::onSubdualChange( Bool isNowSubdued, Bool subduedProjectileNoDam
 		}
 		else
 		{
+			m_clearedSubdued = TRUE;
+			
 			me->clearDisabled(DISABLED_SUBDUED, clearTintLater);
 
 			if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) )
@@ -1661,6 +1746,8 @@ void ActiveBody::onSubdualChangeAttractor( Bool isNowSubdued, ObjectID attractor
 
 		if( isNowSubdued )
 		{
+			m_clearedSubdued = FALSE;
+			
 			me->setDisabled(DISABLED_SUBDUED);
 
       ContainModuleInterface *contain = me->getContain();
@@ -1670,6 +1757,8 @@ void ActiveBody::onSubdualChangeAttractor( Bool isNowSubdued, ObjectID attractor
 		}
 		else
 		{
+			m_clearedSubdued = TRUE;
+			
 			me->clearDisabled(DISABLED_SUBDUED);
 
 			if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) )
@@ -1738,7 +1827,9 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 			// The function of this feature is to Fix Tint Color Correction Bug, which is why it is assigned after the calculation.
 			//if(isSubduedCustom(customStatus))
 			if(m_maxHealth <= it->second.damage) // Yes.
+			{
 				it->second.isSubdued = TRUE;
+			}
 
 			Bool clearLater;
 
@@ -1758,25 +1849,13 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 				}
 			}
 			
-			if( !getObject()->isKindOf(KINDOF_PROJECTILE) && m_maxHealth <= it->second.damage + delta.damage && m_maxHealth > it->second.damage)
+			if( !getObject()->isKindOf(KINDOF_PROJECTILE) && !m_clearedSubduedCustom && m_maxHealth > it->second.damage )
 			{
 				onSubdualRemovalCustom(it->second.disableType, clearLater);
 			}
 		}
 		else
 		{
-			
-			if( it->second.disableType != delta.disableType && getObject()->isDisabled() )
-				getObject()->clearDisabled(it->second.disableType);
-
-			if( ( it->second.tintStatus != delta.tintStatus || it->second.customTintStatus != delta.customTintStatus ) && getObject()->getDrawable() )
-			{
-				if(!it->second.customTintStatus.isEmpty())
-					getObject()->getDrawable()->clearCustomTintStatus(it->second.customTintStatus);
-				else if(it->second.tintStatus > TINT_STATUS_INVALID && it->second.tintStatus < TINT_STATUS_COUNT)
-					getObject()->getDrawable()->clearTintStatus(it->second.tintStatus);
-			}
-			
 			it->second.damage += delta.damage;
 			it->second.tintStatus = delta.tintStatus;
 			it->second.customTintStatus = delta.customTintStatus;
@@ -1806,7 +1885,7 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo )
+void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Bool dontPaintTint )
 {
 	if( !getObject()->isKindOf(KINDOF_PROJECTILE) )
 	{
@@ -1816,6 +1895,8 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 		{
 			if( isNowSubdued )
 			{
+				m_clearedSubduedCustom = FALSE;
+				
 				if(!damageInfo->in.m_customSubdualDisableSound.isEmpty())
 				{
 					AudioEventRTS disableSound;
@@ -1829,9 +1910,14 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 						m_customSubdualDisableRemovalSound = damageInfo->in.m_customSubdualDisableRemoveSound;// For clearing later
 					}
 				}
-
-				me->setDisabledUntil( damageInfo->in.m_customSubdualDisableType, FOREVER, damageInfo->in.m_customSubdualDisableTint, damageInfo->in.m_customSubdualDisableCustomTint );
-
+				if(dontPaintTint)
+				{
+					me->setDisabledUntil( damageInfo->in.m_customSubdualDisableType, FOREVER, TINT_STATUS_INVALID, "DontPaint" );
+				}
+				else
+				{
+					me->setDisabledUntil( damageInfo->in.m_customSubdualDisableType, FOREVER, damageInfo->in.m_customSubdualDisableTint, damageInfo->in.m_customSubdualDisableCustomTint );
+				}
 				if(damageInfo->in.m_customSubdualDisableType == DISABLED_SUBDUED || 
 						damageInfo->in.m_customSubdualDisableType == DISABLED_FROZEN )
 				{
@@ -1862,6 +1948,9 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 				}
 				
 				me->clearDisabled(damageInfo->in.m_customSubdualDisableType);
+
+				if(!me->isDisabled())
+					m_clearedSubduedCustom = TRUE;
 
 				if(me->isKindOf( KINDOF_FS_INTERNET_CENTER ) &&
 						( damageInfo->in.m_customSubdualDisableType == DISABLED_SUBDUED || 
@@ -1894,6 +1983,15 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 //-------------------------------------------------------------------------------------------------
 void ActiveBody::onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater)
 {
+	// Check if there's other existing custom subdual types that uses the same DISABLED_TYPE
+	for(CustomSubdualCurrentDamageMap::const_iterator it = m_currentSubdualDamageCustom.begin(); it != m_currentSubdualDamageCustom.end(); ++it)
+	{
+		if(it->second.damage >= m_maxHealth && it->second.disableType == SubdualDisableType)
+		{
+			return;
+		}
+	}
+	
 	Object *me = getObject();
 
 	if(!m_customSubdualDisableRemovalSound.isEmpty())
@@ -1916,6 +2014,9 @@ void ActiveBody::onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool cl
 	}
 
 	me->clearDisabled(SubdualDisableType, clearTintLater);
+
+	if(!me->isDisabled())
+		m_clearedSubduedCustom = TRUE;
 
 	if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) &&
 			( SubdualDisableType == DISABLED_SUBDUED || 
@@ -2449,6 +2550,8 @@ void ActiveBody::xfer( Xfer *xfer )
 	xfer->xferBool( &m_indestructible );
 
 	xfer->xferBool( &m_hasBeenSubdued );
+	xfer->xferBool( &m_clearedSubdued );
+	xfer->xferBool( &m_clearedSubduedCustom );
 
 	// particle system count
 	BodyParticleSystem *system;

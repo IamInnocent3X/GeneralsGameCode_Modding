@@ -158,6 +158,10 @@ struct SubdualCustomNotifyData
 	DisabledType disableType;
 	Bool hasDisable;
 	Bool removeTintOnDisable;
+	Bool paintDisableTint;
+	Bool clearOnTrigger;
+	TintStatus disableTint;
+	AsciiString disableCustomTint;
 };
 
 //----------------------------------------------------

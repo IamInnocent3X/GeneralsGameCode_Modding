@@ -546,6 +546,10 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	m_eraseTint = TINT_STATUS_INVALID;
 	m_eraseCustomTint = NULL;
 	m_countFrames = 0;
+	m_dontAssignFrames = 0;
+	
+	m_tintStatusTypeQuick = TINT_STATUS_INVALID;
+	m_customTintStatusTypeQuick = NULL;
 
 	m_changedCustomStatus = FALSE;
 
@@ -1144,6 +1148,10 @@ Real Drawable::getScale (void) const
 //-------------------------------------------------------------------------------------------------
 void Drawable::setCustomTintStatus( const AsciiString& customStatusType)
 { 
+	// Don't assign while Subdual is On
+	if(m_countFrames || m_dontAssignFrames)
+		return;
+
 	// Don't assign if already have it
 	for (std::vector<AsciiString>::const_iterator it2 = m_tintCustomStatus.begin(); it2 != m_tintCustomStatus.end(); ++it2)
 	{
@@ -1198,6 +1206,18 @@ Bool Drawable::testCustomTintStatus( const AsciiString& customStatusType) const
 		}
 	}
 	return FALSE;
+}
+
+void Drawable::setAndClearTintFast(TintStatus statusType)
+{  
+	m_tintStatus.set(statusType);
+	m_tintStatusTypeQuick = statusType;
+}
+
+void Drawable::setAndClearCustomTintFast(const AsciiString& customStatusType)
+{ 
+	setCustomTintStatus(customStatusType);
+	m_customTintStatusTypeQuick = customStatusType;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1409,6 +1429,7 @@ void Drawable::updateDrawable( void )
 				if (m_colorTintEnvelope == NULL)
 					m_colorTintEnvelope = newInstance(TintEnvelope);
 
+					
 				DrawableColorTint tintColor = TheGlobalData->m_colorTintTypes[i];
 
 				m_colorTintEnvelope->play(
@@ -1500,7 +1521,7 @@ void Drawable::updateDrawable( void )
 		m_selectionFlashEnvelope->update(); // selection flashing
 	
 	// Subdual Color Correction Fix
-	if(m_eraseTint != TINT_STATUS_INVALID)
+	if(m_eraseTint != TINT_STATUS_INVALID && !m_dontAssignFrames)
 	{
 		if(!m_countFrames)
 		{
@@ -1512,10 +1533,11 @@ void Drawable::updateDrawable( void )
 			clearTintStatus(m_eraseTint);
 			m_eraseTint = TINT_STATUS_INVALID;
 			m_countFrames = 0;
+			m_dontAssignFrames = now + 60;
 		}
 	}
 	
-	if(!m_eraseCustomTint.isEmpty())
+	if(!m_eraseCustomTint.isEmpty() && !m_dontAssignFrames)
 	{
 		if(!m_countFrames)
 		{
@@ -1535,8 +1557,58 @@ void Drawable::updateDrawable( void )
 			clearCustomTintStatus(m_eraseCustomTint);
 			m_eraseCustomTint = NULL;
 			m_countFrames = 0;
+			m_dontAssignFrames = now + 60;
 		}
 	}
+
+	if(m_tintStatusTypeQuick != TINT_STATUS_INVALID && !m_dontAssignFrames)
+	{
+		if(!m_countFrames)
+		{
+			UnsignedInt frames = max(60, (Int)(TheGlobalData->m_colorTintTypes[m_tintStatusTypeQuick].attackFrames + TheGlobalData->m_colorTintTypes[m_tintStatusTypeQuick].decayFrames));
+			m_countFrames = now + frames;
+		}
+		if(now>m_countFrames)
+		{
+			clearTintStatus(m_tintStatusTypeQuick);
+			if(!testTintStatus(m_tintStatusTypeQuick))
+			{
+				m_tintStatusTypeQuick = TINT_STATUS_INVALID;
+				m_countFrames = 0;
+				m_dontAssignFrames = now + 15;
+			}
+		}
+	}
+	
+	if(!m_customTintStatusTypeQuick.isEmpty() && !m_dontAssignFrames)
+	{
+		if(!m_countFrames)
+		{
+			CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+			for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+			{
+				if((*it).first == m_customTintStatusTypeQuick)
+				{
+					UnsignedInt frames = max(60, (Int)((*it).second.attackFrames + (*it).second.decayFrames));
+					m_countFrames = now + frames;
+					break;
+				}
+			}
+		}
+		if(now>m_countFrames)
+		{
+			clearCustomTintStatus(m_customTintStatusTypeQuick);
+			if(!testCustomTintStatus(m_customTintStatusTypeQuick))
+			{
+				m_customTintStatusTypeQuick = NULL;
+				m_countFrames = 0;
+				m_dontAssignFrames = now + 15;
+			}
+		}
+	}
+
+	if(now>m_dontAssignFrames)
+		m_dontAssignFrames = 0;
 
 	//If we have an ambient sound, and we aren't currently playing it, attempt to play it now.
   // However, if the attached sound is a one-shot (non-looping) sound, don't restart it -- only
@@ -5459,6 +5531,13 @@ void Drawable::xfer( Xfer *xfer )
 	// prev tint status
 	//xfer->xferUnsignedInt( &m_prevTintStatus );
 	m_prevTintStatus.xfer(xfer);
+
+	xfer->xferUnsignedInt( &m_countFrames );
+	xfer->xferUnsignedInt( &m_dontAssignFrames );
+	xfer->xferUser( &m_eraseTint, sizeof(TintStatus) );
+	xfer->xferUser( &m_tintStatusTypeQuick, sizeof(TintStatus) );
+	xfer->xferAsciiString( &m_eraseCustomTint );
+	xfer->xferAsciiString( &m_customTintStatusTypeQuick );
 
 	// Modified from Team.cpp
 	UnsignedShort statusSize = m_tintCustomStatus.size();

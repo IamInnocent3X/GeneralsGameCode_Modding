@@ -92,7 +92,7 @@ UpdateSleepTime SubdualDamageHelper::update()
 				if ( !nextHealingStep || nextHealingStep > it->second.healFrame - now )
 				{
 					nextHealingStep = it->second.healFrame - now;
-					//DEBUG_LOG(( "SubdualDamageHelper No Custom Subdual Healed For: %s, Current Frame: %d, Next Frame to Heal: %d", it->first.str(), now, m_healingStepFrame ));
+					//DEBUG_LOG(( "SubdualDamageHelper No Custom Subdual Healed For: %s, Current Frame: %d, Next Frame to Heal: %d", it->first.str(), now, it->second.healFrame ));
 				}
 			}
 		}

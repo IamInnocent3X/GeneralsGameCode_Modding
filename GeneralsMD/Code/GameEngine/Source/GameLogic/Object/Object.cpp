@@ -5711,13 +5711,51 @@ void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, con
 {
 	if(m_subdualDamageHelper)
 		m_subdualDamageHelper->notifySubdualDamageCustom( subdualData.damage, customStatus, subdualData.customTintStatus, subdualData.tintStatus, subdualData.disableType );
-	
 	// If we are gaining subdual damage, we are slowly tinting
 	if( getDrawable() )
 	{
 		// Attempt to Fix Subdual Tint Color Correction Issues
-		if( subdualData.damage > 0 && 
-			( !subdualData.removeTintOnDisable || !isDisabled() ) &&
+		if(subdualData.paintDisableTint && subdualData.hasDisable)
+		{
+			if(!subdualData.disableCustomTint.isEmpty() && getDrawable()->testCustomTintStatus( subdualData.disableCustomTint ) )
+				return;
+			else if( subdualData.disableCustomTint.isEmpty() && subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT && getDrawable()->testTintStatus(subdualData.disableTint) )
+				return;
+				
+			if(!subdualData.customTintStatus.isEmpty())
+			{
+				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
+			}
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(subdualData.tintStatus);
+			}
+
+			if(!subdualData.disableCustomTint.isEmpty())
+				getDrawable()->setAndClearCustomTintFast(subdualData.disableCustomTint);
+			else if (subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT)
+				getDrawable()->setAndClearTintFast(subdualData.disableTint);
+
+			return;
+		}
+		// Yeah...
+		else if( subdualData.clearOnTrigger && subdualData.hasDisable &&
+			( ( !subdualData.disableCustomTint.isEmpty() && getDrawable()->testCustomTintStatus( subdualData.disableCustomTint ) ) ||
+			( subdualData.disableCustomTint.isEmpty() && subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT && getDrawable()->testTintStatus(subdualData.disableTint) ) )
+		)
+		{
+			if(!subdualData.customTintStatus.isEmpty())
+			{
+				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
+			}
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(subdualData.tintStatus);
+			}
+
+			return;
+		}
+		// Two for trigger functions, two for non-trigger
+		else if( subdualData.damage > 0 && 
+			( !subdualData.removeTintOnDisable || !isDisabledByType(subdualData.disableType) ) &&
 			( !subdualData.hasDisable || getBodyModule()->isAboutToBeSubduedCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) )
 		)
 		{
@@ -5728,9 +5766,25 @@ void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, con
 			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
 				getDrawable()->setTintStatus(subdualData.tintStatus);
 			}
+
+			if(subdualData.hasDisable && !isDisabledByType(subdualData.disableType))
+			{
+				if(!subdualData.disableCustomTint.isEmpty())
+					getDrawable()->clearCustomTintStatus(subdualData.disableCustomTint);
+				else if (subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT)
+					getDrawable()->clearTintStatus(subdualData.disableTint);
+			}
 		}
 		else
 		{
+			if(subdualData.hasDisable && isDisabledByType(subdualData.disableType))
+			{
+				if(!subdualData.disableCustomTint.isEmpty())
+					getDrawable()->setCustomTintStatus(subdualData.disableCustomTint);
+				else if (subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT)
+					getDrawable()->setTintStatus(subdualData.disableTint);
+			}
+
 			if(!subdualData.customTintStatus.isEmpty())
 			{
 				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
