@@ -411,6 +411,9 @@ public:
 	m_customSubdualDisableType = DISABLED_SUBDUED;
 	m_customSubdualDisableTint = TINT_STATUS_INVALID;
 	m_customSubdualDisableCustomTint = NULL;
+	m_customSubdualRemoveSubdualTintOnDisable = FALSE;
+	m_customSubdualDisableSound = NULL;
+	m_customSubdualDisableRemoveSound = NULL;
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 	}
 
@@ -467,8 +470,11 @@ public:
 	Bool m_customSubdualDoStatus;
 	const ObjectCreationList* m_customSubdualOCL;
 	DisabledType m_customSubdualDisableType;
+	Bool m_customSubdualRemoveSubdualTintOnDisable;
 	TintStatus m_customSubdualDisableTint;
 	AsciiString m_customSubdualDisableCustomTint;
+	AsciiString m_customSubdualDisableSound;
+	AsciiString m_customSubdualDisableRemoveSound;
 
 	ProtectionTypeFlags m_protectionTypes;
 

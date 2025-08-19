@@ -174,7 +174,10 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_currentSubdualDamage(0),
 	m_indestructible(false),
 	m_damageFXOverride(false),
-	m_hasBeenSubdued(false)
+	m_hasBeenSubdued(false),
+	m_customSubdualDisabledSound(NULL),
+	m_customSubdualDisableRemovalSound(NULL)
+
 {
 	const ActiveBodyModuleData *data = getActiveBodyModuleData();
 
@@ -660,7 +663,9 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			{
 				Subdualamount *= damageInfo->in.m_subdualDamageMultiplier;
 			}
-			Subdualamount *= m_damageScalar;
+			if ( ( damageInfo->in.m_damageType != DAMAGE_SUBDUAL_UNRESISTABLE && damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE ) || !damageInfo->in.m_customDamageType.isEmpty() ) {
+				Subdualamount *= m_damageScalar;
+			}
 
 			SubdualCustomData subdualData;
 			subdualData.damage = Subdualamount;
@@ -720,6 +725,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			subdualNotifyData.customTintStatus = subdualData.customTintStatus;
 			subdualNotifyData.disableType = subdualData.disableType;
 			subdualNotifyData.hasDisable = damageInfo->in.m_customSubdualHasDisable;
+			subdualNotifyData.removeTintOnDisable = damageInfo->in.m_customSubdualRemoveSubdualTintOnDisable;
 
 			getObject()->notifySubdualDamageCustom(subdualNotifyData, damageInfo->in.m_subdualCustomType );
 		}
@@ -739,7 +745,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			{
 				Subdualamount *= damageInfo->in.m_subdualDamageMultiplier;
 			}
-			if (damageInfo->in.m_damageType != DAMAGE_SUBDUAL_UNRESISTABLE && damageInfo->in.m_customDamageType.isEmpty() ) {
+			if ( ( damageInfo->in.m_damageType != DAMAGE_SUBDUAL_UNRESISTABLE && damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE ) || !damageInfo->in.m_customDamageType.isEmpty() ) {
 				Subdualamount *= m_damageScalar;
 			}
 			
@@ -1518,6 +1524,7 @@ void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 		m_currentSubdualDamage -= delta;
 		m_currentSubdualDamage = max(0.0f, m_currentSubdualDamage);
 
+		// The function of this feature is to Fix Tint Color Correction Bug, which is why it is assigned after the calculation.
 		if(isSubdued())
 			m_hasBeenSubdued = TRUE;
 		
@@ -1530,8 +1537,10 @@ void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 			getObject()->getDrawable()->clearTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
 		}
 
-		if( !getObject()->isKindOf(KINDOF_PROJECTILE) )
+		if( !getObject()->isKindOf(KINDOF_PROJECTILE) && !isSubdued() && m_maxHealth <= m_currentSubdualDamage + delta)
+		{
 			onSubdualChange(isSubdued(), FALSE, clearLater);
+		}
 
 		//DEBUG_LOG(( "Subdual Healed, Current Subdual Damage: %f", m_currentSubdualDamage ));
 	}
@@ -1726,6 +1735,7 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 			it->second.damage -= delta.damage;
 			it->second.damage = max(0.0f, it->second.damage);
 
+			// The function of this feature is to Fix Tint Color Correction Bug, which is why it is assigned after the calculation.
 			//if(isSubduedCustom(customStatus))
 			if(m_maxHealth <= it->second.damage) // Yes.
 				it->second.isSubdued = TRUE;
@@ -1748,8 +1758,10 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 				}
 			}
 			
-			if( !getObject()->isKindOf(KINDOF_PROJECTILE) && m_maxHealth > it->second.damage)
+			if( !getObject()->isKindOf(KINDOF_PROJECTILE) && m_maxHealth <= it->second.damage + delta.damage && m_maxHealth > it->second.damage)
+			{
 				onSubdualRemovalCustom(it->second.disableType, clearLater);
+			}
 		}
 		else
 		{
@@ -1804,6 +1816,20 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 		{
 			if( isNowSubdued )
 			{
+				if(!damageInfo->in.m_customSubdualDisableSound.isEmpty())
+				{
+					AudioEventRTS disableSound;
+					disableSound.setEventName( damageInfo->in.m_customSubdualDisableSound );
+					disableSound.setPosition( me->getPosition() );
+					TheAudio->addAudioEvent( &disableSound );
+
+					if(!damageInfo->in.m_customSubdualDisableRemoveSound.isEmpty())
+					{
+						m_customSubdualDisabledSound = damageInfo->in.m_customSubdualDisableSound;
+						m_customSubdualDisableRemovalSound = damageInfo->in.m_customSubdualDisableRemoveSound;// For clearing later
+					}
+				}
+
 				me->setDisabledUntil( damageInfo->in.m_customSubdualDisableType, FOREVER, damageInfo->in.m_customSubdualDisableTint, damageInfo->in.m_customSubdualDisableCustomTint );
 
 				if(damageInfo->in.m_customSubdualDisableType == DISABLED_SUBDUED || 
@@ -1816,9 +1842,30 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 			}
 			else
 			{
+				if(!damageInfo->in.m_customSubdualDisableRemoveSound.isEmpty())
+				{
+					AudioEventRTS removeSound;
+					removeSound.setEventName( damageInfo->in.m_customSubdualDisableRemoveSound );
+					removeSound.setPosition( me->getPosition() );
+					TheAudio->addAudioEvent( &removeSound );
+
+					m_customSubdualDisableRemovalSound = NULL;
+
+					if(!damageInfo->in.m_customSubdualDisableSound.isEmpty())
+					{
+						AudioEventRTS disableSound;
+						disableSound.setEventName( damageInfo->in.m_customSubdualDisableSound );
+						TheAudio->removeAudioEvent(disableSound.getPlayingHandle());
+
+						m_customSubdualDisabledSound = NULL;
+					}
+				}
+				
 				me->clearDisabled(damageInfo->in.m_customSubdualDisableType);
 
-				if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) )
+				if(me->isKindOf( KINDOF_FS_INTERNET_CENTER ) &&
+						( damageInfo->in.m_customSubdualDisableType == DISABLED_SUBDUED || 
+						damageInfo->in.m_customSubdualDisableType == DISABLED_FROZEN ) )
 				{
 					//Kris: October 20, 2003 - Patch 1.01
 					//Any unit inside an internet center is a hacker! Order
@@ -1849,9 +1896,30 @@ void ActiveBody::onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool cl
 {
 	Object *me = getObject();
 
+	if(!m_customSubdualDisableRemovalSound.isEmpty())
+	{
+		AudioEventRTS removeSound;
+		removeSound.setEventName( m_customSubdualDisableRemovalSound );
+		removeSound.setPosition( me->getPosition() );
+		TheAudio->addAudioEvent( &removeSound );
+
+		m_customSubdualDisableRemovalSound = NULL;
+		
+		if(!m_customSubdualDisabledSound.isEmpty())
+		{
+			AudioEventRTS disableSound;
+			disableSound.setEventName( m_customSubdualDisabledSound );
+			TheAudio->removeAudioEvent(disableSound.getPlayingHandle());
+
+			m_customSubdualDisabledSound = NULL;
+		}
+	}
+
 	me->clearDisabled(SubdualDisableType, clearTintLater);
 
-	if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) )
+	if( me->isKindOf( KINDOF_FS_INTERNET_CENTER ) &&
+			( SubdualDisableType == DISABLED_SUBDUED || 
+			SubdualDisableType == DISABLED_FROZEN ) )
 	{
 		//Kris: October 20, 2003 - Patch 1.01
 		//Any unit inside an internet center is a hacker! Order
@@ -2436,6 +2504,10 @@ void ActiveBody::xfer( Xfer *xfer )
 
 	// armor set flags
 	m_curArmorSetFlags.xfer( xfer );
+
+	// For Disable Removal
+	xfer->xferAsciiString( &m_customSubdualDisabledSound );
+	xfer->xferAsciiString( &m_customSubdualDisableRemovalSound );
 
 	// Modified from Team.cpp
 	CustomSubdualCurrentDamageMap::iterator customSubdualIt;

@@ -2262,14 +2262,13 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 		sound.setPosition( getPosition() );
 		TheAudio->addAudioEvent( &sound );
 	}
-	else if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_FROZEN || type == DISABLED_HACKED )
+	else if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_HACKED )
 	{
 		//We've lost power -- make sure we aren't already out of power as the sounds shouldn't happen
 		//if you were already disabled.
 		if( !isDisabledByType( DISABLED_UNDERPOWERED ) &&
 				!isDisabledByType( DISABLED_EMP ) &&
 				!isDisabledByType( DISABLED_SUBDUED ) &&
-				!isDisabledByType( DISABLED_FROZEN ) &&
 				!isDisabledByType( DISABLED_HACKED ) )
 		{
 			if( isKindOf( KINDOF_STRUCTURE ) )
@@ -2441,14 +2440,13 @@ Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 		return FALSE;
 	}
 
-	if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_FROZEN || type == DISABLED_HACKED )
+	if( type == DISABLED_UNDERPOWERED || type == DISABLED_EMP || type == DISABLED_SUBDUED || type == DISABLED_HACKED )
 	{
 		//We've regained power-- make sure we aren't still disabled by another type.
 	 	AudioEventRTS sound;
 		if( (!isDisabledByType( DISABLED_UNDERPOWERED ) || type == DISABLED_UNDERPOWERED ) &&
 				(!isDisabledByType( DISABLED_EMP ) || type == DISABLED_EMP ) &&
 				(!isDisabledByType( DISABLED_SUBDUED ) || type == DISABLED_SUBDUED ) &&
-				(!isDisabledByType( DISABLED_FROZEN ) || type == DISABLED_FROZEN ) &&
 				(!isDisabledByType( DISABLED_HACKED ) || type == DISABLED_HACKED ) )
 		{
 			if( isKindOf( KINDOF_STRUCTURE ) )
@@ -5718,7 +5716,10 @@ void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, con
 	if( getDrawable() )
 	{
 		// Attempt to Fix Subdual Tint Color Correction Issues
-		if( subdualData.damage > 0 && ( !subdualData.hasDisable || getBodyModule()->isAboutToBeSubduedCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) ) )
+		if( subdualData.damage > 0 && 
+			( !subdualData.removeTintOnDisable || !isDisabled() ) &&
+			( !subdualData.hasDisable || getBodyModule()->isAboutToBeSubduedCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) )
+		)
 		{
 			if(!subdualData.customTintStatus.isEmpty())
 			{

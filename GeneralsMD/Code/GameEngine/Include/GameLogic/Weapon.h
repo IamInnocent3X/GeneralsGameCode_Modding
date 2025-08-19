@@ -569,8 +569,11 @@ public:
 	inline Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_customSubdualDoStatus[v]; }
 	inline const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_customSubdualOCLs[v]; }
 	inline DisabledType getCustomSubdualDisableType() const { return m_customSubdualDisableType; }
+	inline Bool getCustomSubdualRemoveSubdualTintOnDisable() const { return m_customSubdualRemoveSubdualTintOnDisable; }
 	inline TintStatus getCustomSubdualDisableTint() const { return m_customSubdualDisableTint; }
 	inline const AsciiString& getCustomSubdualDisableCustomTint() const { return m_customSubdualDisableCustomTint; }
+	inline const AsciiString& getCustomSubdualDisableSound() const { return m_customSubdualDisableSound; }
+	inline const AsciiString& getCustomSubdualDisableRemoveSound() const { return m_customSubdualDisableRemoveSound; }
 
 	inline ProtectionTypeFlags getProtectionTypes() const { return m_protectionTypes; }
 
@@ -740,8 +743,11 @@ private:
 	AsciiString m_customSubdualOCLNames[LEVEL_COUNT];
 	const ObjectCreationList* m_customSubdualOCLs[LEVEL_COUNT];
 	DisabledType m_customSubdualDisableType;
+	Bool m_customSubdualRemoveSubdualTintOnDisable;
 	TintStatus m_customSubdualDisableTint;
 	AsciiString m_customSubdualDisableCustomTint;
+	AsciiString m_customSubdualDisableSound;
+	AsciiString m_customSubdualDisableRemoveSound;
 
 	ProtectionTypeFlags m_protectionTypes;
 
@@ -950,6 +956,9 @@ public:
 	inline Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_template->getCustomSubdualDoStatus(v); }
 	inline const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_template->getCustomSubdualOCL(v); }
 	inline DisabledType getCustomSubdualDisableType() const { return m_template->getCustomSubdualDisableType(); }
+	inline Bool getCustomSubdualRemoveSubdualTintOnDisable() const { return m_template->getCustomSubdualRemoveSubdualTintOnDisable(); }
+	inline const AsciiString& getCustomSubdualDisableSound() const { return m_template->getCustomSubdualDisableSound(); }
+	inline const AsciiString& getCustomSubdualDisableRemoveSound() const { return m_template->getCustomSubdualDisableRemoveSound(); }
 	inline TintStatus getCustomSubdualDisableTint() const { return m_template->getCustomSubdualDisableTint(); }
 	inline const AsciiString& getCustomSubdualDisableCustomTint() const { return m_template->getCustomSubdualDisableCustomTint(); }
 

@@ -308,63 +308,66 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ContinuousLaserLoopTime",				INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_continuousLaserLoopTime) },
 	
 	// New Features
-	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageType) },		
-	{ "CustomDamageStatusType",					INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageStatusType) },		
+	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageType) },
+	{ "CustomDamageStatusType",					INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageStatusType) },
 	{ "CustomDeathType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDeathType) },
 
-	{ "WeaponIsFlame",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isFlame) },		
-	{ "WeaponFlameCollidesWithBurning",			INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_projectileCollidesWithBurn) },		
-	{ "WeaponIsPoison",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isPoison) },	
-	{ "WeaponPoisonMuzzleFlashesGarrison",		INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_poisonMuzzleFlashesGarrison) },	
-	{ "WeaponIsDisarm",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isDisarm) },	
-	{ "WeaponKillsGarrison",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_killsGarrison) },	
+	{ "WeaponIsFlame",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isFlame) },
+	{ "WeaponFlameCollidesWithBurning",			INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_projectileCollidesWithBurn) },
+	{ "WeaponIsPoison",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isPoison) },
+	{ "WeaponPoisonMuzzleFlashesGarrison",		INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_poisonMuzzleFlashesGarrison) },
+	{ "WeaponIsDisarm",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isDisarm) },
+	{ "WeaponKillsGarrison",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_killsGarrison) },
 	{ "WeaponKillsGarrisonAmount",				INI::parseInt,			NULL,							offsetof(WeaponTemplate, m_killsGarrisonAmount) },
 
 	{ "WeaponUseSpecificVoice",					INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_playSpecificVoice) },
 
-	{ "WeaponDoStatusDamageType",				parseAllVetLevelsBool,			NULL,							offsetof(WeaponTemplate, m_doStatusDamage) },	
-	{ "VeterancyWeaponDoStatusDamageType",		parsePerVetLevelBool,			NULL,							offsetof(WeaponTemplate, m_doStatusDamage) },	
+	{ "WeaponDoStatusDamageType",				parseAllVetLevelsBool,			NULL,							offsetof(WeaponTemplate, m_doStatusDamage) },
+	{ "VeterancyWeaponDoStatusDamageType",		parsePerVetLevelBool,			NULL,							offsetof(WeaponTemplate, m_doStatusDamage) },
 	{ "WeaponStatusDuration",					INI::parseReal,			NULL, 							offsetof(WeaponTemplate, m_statusDuration) },
-	{ "WeaponStatusDurationDamageCorrelation",	INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_statusDurationTypeCorrelate) },	
-	{ "WeaponStatusTintStatus",					parseAllVetLevelsTintStatus,				NULL,		offsetof(WeaponTemplate, m_tintStatus) },	
-	{ "VeterancyWeaponStatusTintStatus",		parsePerVetLevelTintStatus,					NULL,		offsetof(WeaponTemplate, m_tintStatus) },	
+	{ "WeaponStatusDurationDamageCorrelation",	INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_statusDurationTypeCorrelate) },
+	{ "WeaponStatusTintStatus",					parseAllVetLevelsTintStatus,				NULL,		offsetof(WeaponTemplate, m_tintStatus) },
+	{ "VeterancyWeaponStatusTintStatus",		parsePerVetLevelTintStatus,					NULL,		offsetof(WeaponTemplate, m_tintStatus) },
 	{ "WeaponStatusCustomTintStatus",			parseAllVetLevelsAsciiString,				NULL, 		offsetof(WeaponTemplate, m_customTintStatus) },
 	{ "VeterancyWeaponStatusCustomTintStatus",	parsePerVetLevelAsciiString,				NULL, 		offsetof(WeaponTemplate, m_customTintStatus) },
 
-	{ "WeaponIsSubdual",						parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_isSubdual) },	
-	{ "VeterancyWeaponIsSubdual",				parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_isSubdual) },	
+	{ "WeaponIsSubdual",						parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_isSubdual) },
+	{ "VeterancyWeaponIsSubdual",				parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_isSubdual) },
 	{ "SubdualDealsNormalDamage",				parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_subdualDealsNormalDamage) },
 	{ "VeterancySubdualDealsNormalDamage",		parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_subdualDealsNormalDamage) },
 	{ "SubdualDamageMultiplier",				parseAllVetLevelsReal,			NULL,					offsetof(WeaponTemplate, m_subdualDamageMultiplier) },
 	{ "VeterancySubdualDamageMultiplier",		parsePerVetLevelReal,			NULL,					offsetof(WeaponTemplate, m_subdualDamageMultiplier) },
 	{ "SubdualForbiddenKindOf",					KindOfMaskType::parseFromINI,	NULL, 					offsetof( WeaponTemplate, m_subdualForbiddenKindOf ) },
 
-	{ "FiringTrackerStatusTrigger",				ObjectStatusMaskType::parseSingleBitFromINIVector,	NULL,		offsetof(WeaponTemplate, m_firingTrackerStatusTrigger) },		
-	{ "FiringTrackerBonusConditionType",		INI::parseIndexList,	TheWeaponBonusNames, 				offsetof(WeaponTemplate, m_firingTrackerBonusConditionGive ) },	
+	{ "FiringTrackerStatusTrigger",				ObjectStatusMaskType::parseSingleBitFromINIVector,	NULL,		offsetof(WeaponTemplate, m_firingTrackerStatusTrigger) },	
+	{ "FiringTrackerBonusConditionType",		INI::parseIndexList,	TheWeaponBonusNames, 				offsetof(WeaponTemplate, m_firingTrackerBonusConditionGive ) },
 	{ "FiringTrackerCustomStatusTrigger",				INI::parseAsciiStringVector,	NULL,			offsetof(WeaponTemplate, m_firingTrackerCustomStatusTrigger) },
 	{ "FiringTrackerCustomBonusConditionType",			INI::parseQuotedAsciiString,	NULL,			offsetof(WeaponTemplate, m_firingTrackerCustomBonusConditionGive ) },
 
-	{ "WeaponNotAbsoluteKill",						INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_notAbsoluteKill) },	
+	{ "WeaponNotAbsoluteKill",						INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_notAbsoluteKill) },
 	
 	{ "SubduedProjectileNoDamage",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_subduedProjectileNoDamage) },
 	{ "SubdualMissileAttractor",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isMissileAttractor) },
-	{ "ShielderProtectionType",						INI::parseProtectionTypeFlags,	NULL, 					offsetof(WeaponTemplate, m_protectionTypes) },		
+	{ "ShielderProtectionType",						INI::parseProtectionTypeFlags,	NULL, 					offsetof(WeaponTemplate, m_protectionTypes) },
 	{ "IgnoresShielder",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isShielderImmune) },
 
-	{ "SubdualCustomType",							INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_subdualCustomType) },		
-	{ "CustomSubdualTintStatus",					parseAllVetLevelsTintStatus,		NULL,				offsetof(WeaponTemplate, m_customSubdualTint) },	
-	{ "CustomSubdualCustomTintStatus",				parseAllVetLevelsAsciiString,		NULL, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },	
+	{ "SubdualCustomType",							INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_subdualCustomType) },
+	{ "CustomSubdualTintStatus",					parseAllVetLevelsTintStatus,		NULL,				offsetof(WeaponTemplate, m_customSubdualTint) },
+	{ "CustomSubdualCustomTintStatus",				parseAllVetLevelsAsciiString,		NULL, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },
 	{ "CustomSubdualHasDisable",					parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisable) },
 	{ "CustomSubdualHasDisableProjectile",			parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisableProjectiles) },
 	{ "CustomSubdualClearOnTrigger",				parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualClearOnTrigger) },
 	{ "CustomSubdualDoStatus",						parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualDoStatus) },
 	{ "CustomSubdualOCL",							parseAllVetLevelsAsciiString,	NULL,					offsetof(WeaponTemplate, m_customSubdualOCLNames) },
-	{ "CustomSubdualDisableType",					DisabledMaskType::parseSingleBitFromINI, NULL,			offsetof(WeaponTemplate, m_customSubdualDisableType ) },	
-	{ "CustomSubdualDisableTint",					TintStatusFlags::parseSingleBitFromINI,		NULL,		offsetof(WeaponTemplate, m_customSubdualDisableTint) },	
-	{ "CustomSubdualDisableCustomTint",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableCustomTint) },	
+	{ "CustomSubdualDisableType",					DisabledMaskType::parseSingleBitFromINI, NULL,			offsetof(WeaponTemplate, m_customSubdualDisableType ) },
+	{ "CustomSubdualDisableTint",					TintStatusFlags::parseSingleBitFromINI,		NULL,		offsetof(WeaponTemplate, m_customSubdualDisableTint) },
+	{ "CustomSubdualDisableCustomTint",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableCustomTint) },
+	{ "CustomSubdualRemoveSubdualTintOnDisable",	INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_customSubdualRemoveSubdualTintOnDisable) },
+	{ "CustomSubdualDisableSound",					INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableSound) },
+	{ "CustomSubdualDisableRemoveSound",			INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableRemoveSound) },
 	
-	{ "VeterancyCustomSubdualTintStatus",			parsePerVetLevelTintStatus,			NULL,				offsetof(WeaponTemplate, m_customSubdualTint) },	
-	{ "VeterancyCustomSubdualCustomTintStatus",		parsePerVetLevelAsciiString,		NULL, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },	
+	{ "VeterancyCustomSubdualTintStatus",			parsePerVetLevelTintStatus,			NULL,				offsetof(WeaponTemplate, m_customSubdualTint) },
+	{ "VeterancyCustomSubdualCustomTintStatus",		parsePerVetLevelAsciiString,		NULL, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },
 	{ "VeterancyCustomSubdualHasDisable",			parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisable) },
 	{ "VeterancyCustomSubdualHasDisableProjectile",	parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisableProjectiles) },
 	{ "VeterancyCustomSubdualClearOnTrigger",		parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualClearOnTrigger) },
@@ -511,9 +514,12 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_subduedProjectileNoDamage = FALSE;
 
 	m_subdualCustomType = NULL;
+	m_customSubdualRemoveSubdualTintOnDisable = FALSE;
 	m_customSubdualDisableType = DISABLED_SUBDUED;
 	m_customSubdualDisableTint = TINT_STATUS_INVALID;
 	m_customSubdualDisableCustomTint = NULL;
+	m_customSubdualDisableSound = NULL;
+	m_customSubdualDisableRemoveSound = NULL;
 
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 
@@ -848,8 +854,11 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	const ObjectCreationList *CustomSubdualOCL = getCustomSubdualOCL(v);
 
 	DisabledType CustomSubdualDisableType = getCustomSubdualDisableType();
+	Bool CustomSubdualRemoveSubdualTintOnDisable =  getCustomSubdualRemoveSubdualTintOnDisable();
 	TintStatus CustomSubdualDisableTint = getCustomSubdualDisableTint();
-	AsciiString CustomSubdualDisableCustomTint =  getCustomSubdualDisableCustomTint();
+	AsciiString CustomSubdualDisableCustomTint = getCustomSubdualDisableCustomTint();
+	AsciiString CustomSubdualDisableSound =  getCustomSubdualDisableSound();
+	AsciiString CustomSubdualDisableRemoveSound =  getCustomSubdualDisableRemoveSound();
 
 	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
 
@@ -947,6 +956,9 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	damageInfo.m_customSubdualDisableType = CustomSubdualDisableType;
 	damageInfo.m_customSubdualDisableTint = CustomSubdualDisableTint;
 	damageInfo.m_customSubdualDisableCustomTint = CustomSubdualDisableCustomTint;
+	damageInfo.m_customSubdualRemoveSubdualTintOnDisable = CustomSubdualRemoveSubdualTintOnDisable;
+	damageInfo.m_customSubdualDisableSound = CustomSubdualDisableSound;
+	damageInfo.m_customSubdualDisableRemoveSound = CustomSubdualDisableRemoveSound;
 	damageInfo.m_protectionTypes = ProtectionTypes;
 	return victimObj->estimateDamage(damageInfo);
 }
@@ -1775,8 +1787,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Bool CustomSubdualDoStatus = getCustomSubdualDoStatus(v);
 	const ObjectCreationList *CustomSubdualOCL = getCustomSubdualOCL(v);
 	DisabledType CustomSubdualDisableType = getCustomSubdualDisableType();
+	Bool CustomSubdualRemoveSubdualTintOnDisable =  getCustomSubdualRemoveSubdualTintOnDisable();
 	TintStatus CustomSubdualDisableTint = getCustomSubdualDisableTint();
-	AsciiString CustomSubdualDisableCustomTint =  getCustomSubdualDisableCustomTint();
+	AsciiString CustomSubdualDisableCustomTint = getCustomSubdualDisableCustomTint();
+	AsciiString CustomSubdualDisableSound =  getCustomSubdualDisableSound();
+	AsciiString CustomSubdualDisableRemoveSound =  getCustomSubdualDisableRemoveSound();
 	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
@@ -1949,6 +1964,9 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_customSubdualDisableType = CustomSubdualDisableType;
 			damageInfo.in.m_customSubdualDisableTint = CustomSubdualDisableTint;
 			damageInfo.in.m_customSubdualDisableCustomTint = CustomSubdualDisableCustomTint;
+			damageInfo.in.m_customSubdualRemoveSubdualTintOnDisable = CustomSubdualRemoveSubdualTintOnDisable;
+			damageInfo.in.m_customSubdualDisableSound = CustomSubdualDisableSound;
+			damageInfo.in.m_customSubdualDisableRemoveSound = CustomSubdualDisableRemoveSound;
 
 			damageInfo.in.m_protectionTypes = ProtectionTypes;
 			

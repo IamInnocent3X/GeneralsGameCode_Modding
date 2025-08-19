@@ -220,6 +220,10 @@ private:
 	Bool									m_damageFXOverride;
 	Bool									m_hasBeenSubdued;
 
+	AsciiString								m_customSubdualDisabledSound;
+	AsciiString								m_customSubdualDisableRemovalSound;
+
+
 	BodyParticleSystem *m_particleSystems;				///< particle systems created and attached to this object
 	
 	AudioEventRTS m_chronoDisabledSoundLoop;

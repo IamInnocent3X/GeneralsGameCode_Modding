@@ -157,6 +157,7 @@ struct SubdualCustomNotifyData
 	AsciiString customTintStatus;
 	DisabledType disableType;
 	Bool hasDisable;
+	Bool removeTintOnDisable;
 };
 
 //----------------------------------------------------
