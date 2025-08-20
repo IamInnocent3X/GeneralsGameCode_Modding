@@ -198,14 +198,14 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 	// If custom status is not present, assign the status type instead!
 	else
 	{
-		StatusTypeMap::iterator it = m_statusToHeal.find(status);
+		StatusTypeMap::iterator it = m_statusToHeal.find((UnsignedShort)status);
 		if(it != m_statusToHeal.end())
 		{
 			(*it).second = frameToHeal;
 		}
 		else
 		{
-			m_statusToHeal[status] = frameToHeal;
+			m_statusToHeal[(UnsignedShort)status] = frameToHeal;
 		}
 
 		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
@@ -394,7 +394,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 	xfer->xferUnsignedShort( &statusCount );
 	xfer->xferUnsignedShort( &customStatusCount );
 
-	ObjectStatusTypes statusName;
+	//ObjectStatusTypes statusName;
+	UnsignedShort statusName; 
 	UnsignedInt statusTime;
 	AsciiString customStatusName;
 	UnsignedInt customStatusTime;
@@ -405,7 +406,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 		{
 
 			statusName = (*statusIt).first;
-			xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			//xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			xfer->xferUnsignedShort( &statusName );
 
 			statusTime = (*statusIt).second;
 			xfer->xferUnsignedInt( &statusTime );
@@ -430,7 +432,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 		for( UnsignedShort i = 0; i < statusCount; ++i )
 		{
 
-			xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			//xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			xfer->xferUnsignedShort( &statusName );
 
 			xfer->xferUnsignedInt( &statusTime );
 
