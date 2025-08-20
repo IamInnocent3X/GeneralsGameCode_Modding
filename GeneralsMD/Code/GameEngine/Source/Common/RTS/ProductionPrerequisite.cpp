@@ -99,18 +99,18 @@ void ProductionPrerequisite::resolveNames()
 
 	}
 
-	for (size_t i = 0; i < m_prenegreqUnits.size(); i++)
+	for (size_t i_n = 0; i_n < m_prenegreqUnits.size(); i_n++)
 	{
 
 		// Do the same for negative prerequisites
 		//
-		if( m_prenegreqUnits[ i ].name.isNotEmpty() )
+		if( m_prenegreqUnits[ i_n ].name.isNotEmpty() )
 		{
-			m_prenegreqUnits[i].unit = TheThingFactory->findTemplate(m_prenegreqUnits[i].name);	// might be null
+			m_prenegreqUnits[i_n].unit = TheThingFactory->findTemplate(m_prenegreqUnits[i_n].name);	// might be null
 
-			DEBUG_ASSERTCRASH(m_prenegreqUnits[i].unit,("could not find prenegreq %s",m_prenegreqUnits[i].name.str()));
+			DEBUG_ASSERTCRASH(m_prenegreqUnits[i_n].unit,("could not find prenegreq %s",m_prenegreqUnits[i_n].name.str()));
 
-			m_prenegreqUnits[i].name.clear(); // we're done with it
+			m_prenegreqUnits[i_n].name.clear(); // we're done with it
 		}
 
 	}
