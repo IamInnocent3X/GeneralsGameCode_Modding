@@ -2006,7 +2006,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			// Grab the vector between the source object causing the damage and the victim in order that we can
 			// simulate a shockwave pushing objects around
 			damageInfo.in.m_shockWaveAmount = m_shockWaveAmount;
-			if (damageInfo.in.m_shockWaveAmount > 0.0f)
+			if (damageInfo.in.m_shockWaveAmount != 0.0f)
 			{
 				// Calculate the vector of the shockwave
 				Coord3D shockWaveVector = damageDirection;
