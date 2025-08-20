@@ -407,7 +407,7 @@ void ArmorTemplate::parseCustomDamageType(INI* ini, void*/*instance*/, void* /* 
 		}
 		else
 		{
-			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", customDamageName.str()));
+			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", TheArmorStore->m_customDamageTypeParseNext.str()));
 		}
 	}
 }
