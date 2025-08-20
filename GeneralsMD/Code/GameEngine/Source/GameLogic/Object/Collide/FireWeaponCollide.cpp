@@ -127,10 +127,10 @@ Bool FireWeaponCollide::shouldFireWeapon()
 		}
 	}
 
-	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	for(std::vector<AsciiString>::const_iterator it3 = d->m_forbiddenCustomStatus.begin(); it3 != d->m_forbiddenCustomStatus.end(); ++it3)
 	{
-		ObjectCustomStatusType::const_iterator it2 = c_status.find(*it);
-		if (it2 != c_status.end() && it2->second == 1) 
+		ObjectCustomStatusType::const_iterator it4 = c_status.find(*it3);
+		if (it4 != c_status.end() && it4->second == 1) 
 			return FALSE;
 	}
 

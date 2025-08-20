@@ -216,10 +216,10 @@ void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 		}
 	}
 
-	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	for(std::vector<AsciiString>::const_iterator it3 = d->m_forbiddenCustomStatus.begin(); it3 != d->m_forbiddenCustomStatus.end(); ++it3)
 	{
-		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
-		if (it2 != obj->getCustomStatus().end() && it2->second == 1) 
+		ObjectCustomStatusType::const_iterator it4 = obj->getCustomStatus().find(*it3);
+		if (it4 != obj->getCustomStatus().end() && it4->second == 1) 
 			return;
 	}
 
