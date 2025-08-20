@@ -2732,7 +2732,7 @@ void ActiveBody::xfer( Xfer *xfer )
 			
 		}  // end for, i
 
-		for( UnsignedShort i = 0; i < customSubdualCount2; ++i )
+		for( UnsignedShort i_2 = 0; i_2 < customSubdualCount2; ++i_2 )
 		{
 
 			xfer->xferAsciiString( &customSubdualName2 );
@@ -2743,7 +2743,7 @@ void ActiveBody::xfer( Xfer *xfer )
 			
 		}  // end for, i
 
-		for( UnsignedShort i = 0; i < customSubdualCount3; ++i )
+		for( UnsignedShort i_3 = 0; i_3 < customSubdualCount3; ++i_3 )
 		{
 
 			xfer->xferAsciiString( &customSubdualName3 );
@@ -2754,7 +2754,7 @@ void ActiveBody::xfer( Xfer *xfer )
 			
 		}  // end for, i
 
-		for( UnsignedShort i = 0; i < customSubdualCount4; ++i )
+		for( UnsignedShort i_4 = 0; i_4 < customSubdualCount4; ++i_4 )
 		{
 
 			xfer->xferAsciiString( &customSubdualName4 );

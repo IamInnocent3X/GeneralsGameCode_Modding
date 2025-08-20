@@ -387,7 +387,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 						else
 						{
 							DEBUG_ASSERTCRASH( 0, ("Object %s just Triggered Undead Body for Multiple Lives: %d, but is trying to remove upgrade %s",
-								getObject()->getTemplate()->getName().str(),
+								getObject()->getName().str(),
 								value,
 								it->str() ) );
 						}
