@@ -5578,7 +5578,7 @@ void Drawable::xfer( Xfer *xfer )
 			
 		}  // end for, i
 
-		for( UnsignedShort i = 0; i < prevStatusSize; ++i )
+		for( UnsignedShort i_2 = 0; i_2 < prevStatusSize; ++i_2 )
 		{
 
 			xfer->xferAsciiString( &prevCustomStatusName );
