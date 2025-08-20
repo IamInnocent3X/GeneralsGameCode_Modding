@@ -68,8 +68,8 @@ public:
 	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) {}
 	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) {}
 
-	virtual Bool isAboutToBeSubdued( Real low, Real high ) const { return FALSE; }
-	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const { return FALSE; }
+	virtual Bool isNearSubduedRange( Real low, Real high ) const { return FALSE; }
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const { return FALSE; }
 
 private:
 	Bool m_dieCalled;

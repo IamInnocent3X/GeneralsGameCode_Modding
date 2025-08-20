@@ -5699,7 +5699,7 @@ void Object::notifySubdualDamage( Real amount )
 	{
 		
 		// Attempt to Fix Subdual Tint Color Correction Issues
-		if( amount > 0 && getBodyModule()->isAboutToBeSubdued( -amount+1 , -amount*2+1 ) )
+		if( amount > 0 && getBodyModule()->isNearSubduedRange( -amount+1 , -amount*2+1 ) )
 			getDrawable()->setTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
 		else
 			getDrawable()->clearTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
@@ -5715,7 +5715,7 @@ void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, con
 	if( getDrawable() )
 	{
 		// Attempt to Fix Subdual Tint Color Correction Issues
-		if(subdualData.paintDisableTint && subdualData.hasDisable)
+		if(subdualData.clearOnTrigger && subdualData.isSubdued && subdualData.hasDisable)
 		{
 			if(!subdualData.disableCustomTint.isEmpty() && getDrawable()->testCustomTintStatus( subdualData.disableCustomTint ) )
 				return;
@@ -5754,9 +5754,9 @@ void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, con
 			return;
 		}
 		// Two for trigger functions, two for non-trigger
-		else if( subdualData.damage > 0 && 
-			( !subdualData.removeTintOnDisable || !isDisabledByType(subdualData.disableType) ) &&
-			( !subdualData.hasDisable || getBodyModule()->isAboutToBeSubduedCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) )
+		else if( subdualData.damage > 0 && ( !subdualData.hasDisable || 
+				(( !subdualData.removeTintOnDisable || !isDisabledByType(subdualData.disableType) ) &&
+				( getBodyModule()->isNearSubduedRangeCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) )) )
 		)
 		{
 			if(!subdualData.customTintStatus.isEmpty())

@@ -233,8 +233,8 @@ public:
 	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) = 0;
 	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) = 0;
 
-	virtual Bool isAboutToBeSubdued( Real low, Real high ) const = 0; 
-	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
+	virtual Bool isNearSubduedRange( Real low, Real high ) const = 0; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void setIndestructible( Bool indestructible ) = 0;
 	virtual Bool isIndestructible( void ) const = 0;
@@ -357,8 +357,8 @@ public:
 	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) = 0;
 	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) = 0;
 
-	virtual Bool isAboutToBeSubdued( Real low, Real high ) const = 0; 
-	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
+	virtual Bool isNearSubduedRange( Real low, Real high ) const = 0; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void evaluateVisualCondition() { }
 	virtual void updateBodyParticleSystems() { };// made public for topple anf building collapse updates -ML

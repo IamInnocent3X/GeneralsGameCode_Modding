@@ -144,8 +144,8 @@ public:
 	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE );
 	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE );
 
-	virtual Bool isAboutToBeSubdued( Real low, Real high ) const; 
-	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const; 
+	virtual Bool isNearSubduedRange( Real low, Real high ) const; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const; 
 
 	virtual void evaluateVisualCondition();
 	virtual void updateBodyParticleSystems( void );// made public for topple anf building collapse updates -ML

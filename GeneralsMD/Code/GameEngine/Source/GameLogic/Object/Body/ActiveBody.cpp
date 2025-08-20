@@ -803,7 +803,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			subdualNotifyData.disableType = subdualData.disableType;
 			subdualNotifyData.hasDisable = damageInfo->in.m_customSubdualHasDisable;
 			subdualNotifyData.removeTintOnDisable = damageInfo->in.m_customSubdualRemoveSubdualTintOnDisable;
-			subdualNotifyData.paintDisableTint = damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued ? TRUE : FALSE;
+			subdualNotifyData.isSubdued = nowSubdued;
 			subdualNotifyData.clearOnTrigger = damageInfo->in.m_customSubdualClearOnTrigger;
 			subdualNotifyData.disableTint = damageInfo->in.m_customSubdualDisableTint;
 			subdualNotifyData.disableCustomTint = damageInfo->in.m_customSubdualDisableCustomTint;
@@ -1805,7 +1805,7 @@ Bool ActiveBody::isSubduedCustom(const AsciiString &customStatus) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool ActiveBody::isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const
+Bool ActiveBody::isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const
 {
 	CustomSubdualCurrentDamageMap::const_iterator it = m_currentSubdualDamageCustom.find(customStatus);
 	if(it != m_currentSubdualDamageCustom.end())
@@ -2158,7 +2158,7 @@ Bool ActiveBody::isSubdued() const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool ActiveBody::isAboutToBeSubdued( Real low, Real high ) const
+Bool ActiveBody::isNearSubduedRange( Real low, Real high ) const
 {
 	return m_maxHealth > m_currentSubdualDamage - low || m_maxHealth <= m_currentSubdualDamage + high;
 }
