@@ -175,6 +175,12 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferReal( &m_shockWaveRadius );
 	xfer->xferReal( &m_shockWaveTaperOff );
 
+	xfer->xferCoord3D(&m_magnetVector);
+	xfer->xferReal( &m_magnetAmount );
+	xfer->xferReal( &m_magnetLiftHeight );
+	xfer->xferReal( &m_magnetLiftForce );
+	xfer->xferReal( &m_magnetLiftForceToHeight );
+
 	if( version >= 3 )
 	{
 		AsciiString thingString = m_sourceTemplate ? m_sourceTemplate->getName() : AsciiString::TheEmptyString;

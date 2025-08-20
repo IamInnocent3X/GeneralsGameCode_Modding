@@ -2016,6 +2016,43 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 		}
 	}
 
+	// Process any magnet forces that might affect this object due to the incurred damage
+	if (damageInfo->in.m_magnetAmount != 0.0f)
+	{
+
+		PhysicsBehavior *behavior = getPhysics();
+		if ( behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
+		{
+			Real mass = behavior->getMass();
+
+			// Set up the magnet force to use apply on object
+			Coord3D magnetForce;
+			magnetForce.set( &damageInfo->in.m_magnetVector );
+			magnetForce.normalize();
+			// where is fast inverse square root when you need one?
+			if(mass)
+				magnetForce.scale( damageInfo->in.m_magnetAmount / mass );
+			else
+				magnetForce.scale( damageInfo->in.m_magnetAmount );
+
+			if (!isAirborneTarget())
+			{
+				if(calculateHeightAboveTerrain() < damageInfo->in.m_magnetLiftHeight)
+					magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight;
+				else
+					magnetForce.z = damageInfo->in.m_magnetLiftForce;
+			}
+
+			behavior->applyForce( &magnetForce );
+
+			// Set stunned state due to the shock for the object
+      behavior->setStunned(true);
+	  //setDisabled(DISABLED_STUNNED);
+
+      //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
+		}
+	}
+
 
 	/// @todo track damage dealt/attempted
 

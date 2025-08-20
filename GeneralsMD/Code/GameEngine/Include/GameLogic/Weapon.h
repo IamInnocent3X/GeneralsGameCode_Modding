@@ -580,6 +580,8 @@ public:
 
 	inline Bool getIsShielderImmune() const { return m_isShielderImmune; }
 
+	inline Real getMagnetAmount() const { return m_magnetAmount; }
+
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
 		const Object* projectile,
@@ -754,6 +756,20 @@ private:
 	ProtectionTypeFlags m_protectionTypes;
 
 	Bool m_isShielderImmune;
+
+	Bool m_shockWaveUseCenter;
+	Bool m_shockWaveRespectsCenter;
+
+	Real m_magnetAmount;
+	Real m_magnetInfantryAmount;
+	Real m_magnetTaperOffDistance;
+	Real m_magnetTaperOffRatio;
+	Real m_magnetTaperOnDistance;
+	Real m_magnetTaperOnRatio;
+	Real m_magnetLiftHeight;
+	Real m_magnetLiftForce;
+	Real m_magnetLiftForceToHeight;
+	Bool m_magnetUseCenter;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };

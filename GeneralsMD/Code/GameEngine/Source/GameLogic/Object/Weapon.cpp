@@ -375,6 +375,20 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "VeterancyCustomSubdualDoStatus",				parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualDoStatus) },
 	{ "VeterancyCustomSubdualOCL",					parsePerVetLevelAsciiString,	NULL,					offsetof(WeaponTemplate, m_customSubdualOCLNames) },
 
+	{ "ShockWaveUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveUseCenter) },
+	{ "ShockWaveRespectsCenter",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveRespectsCenter) },
+	
+	{ "MagnetAmount",								INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAmount) },
+	{ "MagnetInfantryAmount",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetInfantryAmount) },
+	{ "MagnetTaperOffDistance",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOffDistance) },
+	{ "MagnetTaperOffRatio",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOffRatio) },
+	{ "MagnetTaperOnDistance",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOnDistance) },
+	{ "MagnetTaperOnRatio",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOnRatio) },
+	{ "MagnetLiftHeight",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftHeight) },
+	{ "MagnetLiftForce",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForce) },
+	{ "MagnetLiftForceToHeight",					INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
+	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -522,6 +536,20 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_customSubdualDisableCustomTint = NULL;
 	m_customSubdualDisableSound = NULL;
 	m_customSubdualDisableRemoveSound = NULL;
+
+	m_shockWaveUseCenter = FALSE;
+	m_shockWaveRespectsCenter = FALSE;
+
+	m_magnetAmount = 0.0f;
+	m_magnetInfantryAmount = 0.0f;
+	m_magnetTaperOffDistance = 0.0f;
+	m_magnetTaperOffRatio = 1.0f;
+	m_magnetTaperOnDistance = 0.0f;
+	m_magnetTaperOnRatio = 1.0f;
+	m_magnetLiftHeight = 0.0f;
+	m_magnetLiftForce = 5.0f;
+	m_magnetLiftForceToHeight = 10.0f;
+	m_magnetUseCenter = FALSE;
 
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 
@@ -1255,8 +1283,8 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		if ( TheGameLogic->getFrame() < firingWeapon->getSuspendFXFrame() )
 			fx = NULL;
 		
-		Coord3D protectorPos;
-		protectorPos.set(&targetPos);
+		Coord3D targetedPos;
+		targetedPos.set(&targetPos);
 
 		if( retarget && (
 			( firingWeapon->isLaser() && getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) ) ||
@@ -1264,7 +1292,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			( getProjectileTemplate() && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES) ))
 		)
 		{
-			retarget->getGeometryInfo().getCenterPosition( *retarget->getPosition(), protectorPos );
+			retarget->getGeometryInfo().getCenterPosition( *retarget->getPosition(), targetedPos );
 			reDir = reAngle != 0.0f ? (atan2(retarget->getPosition()->y - sourcePos->y, retarget->getPosition()->x - sourcePos->x)) : 0.0f;
 		}
 
@@ -1288,7 +1316,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 																															getWeaponSpeed(),
 																															reAngle,
 																															reDir,
-																															&protectorPos,
+																															&targetedPos,
 																															getPrimaryDamageRadius(bonus)
 																															);
 		}
@@ -1298,7 +1326,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			// bah. just play it at the drawable's pos.
 			//DEBUG_LOG(("*** WeaponFireFX not fully handled by the client"));
 			const Coord3D* where = isContactWeapon() ? &targetPos : sourceObj->getDrawable()->getPosition();
-			FXList::doFXPos(fx, where, sourceObj->getDrawable()->getTransformMatrix(), getWeaponSpeed(), &protectorPos, getPrimaryDamageRadius(bonus));
+			FXList::doFXPos(fx, where, sourceObj->getDrawable()->getTransformMatrix(), getWeaponSpeed(), &targetedPos, getPrimaryDamageRadius(bonus));
 		}
 	}
 
@@ -2010,6 +2038,52 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			{
 				// Calculate the vector of the shockwave
 				Coord3D shockWaveVector = damageDirection;
+				
+				if(damageInfo.in.m_shockWaveAmount < 0)
+				{
+					damageInfo.in.m_shockWaveAmount *= -1;
+					if(m_shockWaveUseCenter)
+					{
+						shockWaveVector.set( pos );
+						shockWaveVector.sub( curVictim->getPosition() );
+					}
+					else if(source)
+					{
+						shockWaveVector.set( source->getPosition() );
+						shockWaveVector.sub( curVictim->getPosition() );
+					}
+					if(m_shockWaveRespectsCenter)
+					{
+						if(m_shockWaveUseCenter)
+						{
+							if(damageInfo.in.m_shockWaveAmount > shockWaveVector.length())
+								damageInfo.in.m_shockWaveAmount = shockWaveVector.length();
+						}
+						else
+						{
+							Coord3D centerVector;
+
+							centerVector.set( curVictim->getPosition() );
+							centerVector.sub( pos );
+
+							if(damageInfo.in.m_shockWaveAmount > centerVector.length())
+								damageInfo.in.m_shockWaveAmount = centerVector.length();
+						}
+
+						/*if(fabs(centerVector.x) < damageInfo.in.m_shockWaveAmount)
+							shockWaveVector.x = centerVector.x / damageInfo.in.m_shockWaveAmount;
+						if(fabs(centerVector.y) < damageInfo.in.m_shockWaveAmount)
+							shockWaveVector.y = centerVector.y / damageInfo.in.m_shockWaveAmount;
+						if(fabs(centerVector.z) < damageInfo.in.m_shockWaveAmount)
+							shockWaveVector.z = centerVector.z / damageInfo.in.m_shockWaveAmount;*/
+					}
+
+				}
+				else if(m_shockWaveUseCenter)
+				{
+					shockWaveVector.set( curVictim->getPosition() );
+					shockWaveVector.sub( pos );
+				}
 
 				// Guard against zero vector. Make vector stright up if that is the case
 				if (fabs(shockWaveVector.x) < WWMATH_EPSILON &&
@@ -2023,6 +2097,85 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_shockWaveVector = shockWaveVector;
 				damageInfo.in.m_shockWaveRadius = m_shockWaveRadius;
 				damageInfo.in.m_shockWaveTaperOff = m_shockWaveTaperOff;
+			}
+
+			if (m_magnetInfantryAmount && curVictim && curVictim->isKindOf(KINDOF_INFANTRY))
+				damageInfo.in.m_magnetAmount = m_magnetInfantryAmount;
+			else
+				damageInfo.in.m_magnetAmount = m_magnetAmount;
+			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && curVictim->getAIUpdateInterface() && curVictim->getAIUpdateInterface()->getCurLocomotorSpeed())
+			{
+				// Populate the damge information with the magnet information
+				if(m_magnetTaperOffDistance > 0 && curVictimDistSqr > m_magnetTaperOffDistance * m_magnetTaperOffDistance)
+				{
+					Real curVictimDist = sqrt(curVictimDistSqr);
+					Real ratio = max(0.0f, 1.0f - ( curVictimDist - m_magnetTaperOffDistance ) * m_magnetTaperOffRatio / m_magnetTaperOffDistance);
+					
+					damageInfo.in.m_magnetAmount *= 1.0f - ratio;
+				}
+				else if(m_magnetTaperOnDistance > 0 && curVictimDistSqr < m_magnetTaperOnDistance * m_magnetTaperOnDistance)
+				{
+					Real curVictimDist = sqrt(curVictimDistSqr);
+					Real ratio = 1.0f + ( m_magnetTaperOnDistance - curVictimDist ) * m_magnetTaperOnRatio / m_magnetTaperOnDistance;
+					
+					damageInfo.in.m_magnetAmount *= ratio;
+				}
+
+				if(damageInfo.in.m_magnetAmount != 0.0f)
+				{
+					Coord3D magnetVector;
+					magnetVector.zero();
+					if(damageInfo.in.m_magnetAmount < 0)
+					{
+						damageInfo.in.m_magnetAmount *= -1;
+						if(m_magnetUseCenter)
+						{
+							magnetVector.set( pos );
+							magnetVector.sub( curVictim->getPosition() );
+						}
+						else if( source )
+						{
+							magnetVector.set( source->getDrawable()->getPosition() );
+							magnetVector.sub( curVictim->getPosition() );
+						}
+					}
+					else if(m_magnetUseCenter)
+					{
+						magnetVector.set( curVictim->getPosition() );
+						magnetVector.sub( pos );
+					}
+					else if( source )
+					{
+						magnetVector.set( curVictim->getPosition() );
+						magnetVector.sub( source->getDrawable()->getPosition() );
+					}
+					
+					Real mass = curVictim->getPhysics()->getMass();
+
+					if(mass)
+					{
+						if(damageInfo.in.m_magnetAmount > magnetVector.length() * mass)
+							damageInfo.in.m_magnetAmount = magnetVector.length() * mass;
+					}
+					else
+					{
+						if(damageInfo.in.m_magnetAmount > magnetVector.length())
+							damageInfo.in.m_magnetAmount = magnetVector.length();
+					}
+
+					// Guard against zero vector. Make vector stright up if that is the case
+					if ( fabs(magnetVector.x) < WWMATH_EPSILON &&
+							fabs(magnetVector.y) < WWMATH_EPSILON &&
+							fabs(magnetVector.z) < WWMATH_EPSILON)
+					{
+						magnetVector.z = 1.0f;
+					}
+
+					damageInfo.in.m_magnetVector = magnetVector;
+					damageInfo.in.m_magnetLiftHeight = m_magnetLiftHeight;
+					damageInfo.in.m_magnetLiftForce = m_magnetLiftForce;
+					damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
+				}
 			}
 
       if (source && source->getControllingPlayer()) {

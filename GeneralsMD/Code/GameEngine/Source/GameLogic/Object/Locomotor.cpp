@@ -892,7 +892,7 @@ void Locomotor::locoUpdate_moveTowardsAngle(Object* obj, Real goalAngle)
 	}
 
 	// Skip moveTowardsAngle if physics say you're stunned
-	if(physics->getIsStunned())
+	if(physics->getIsStunned() || obj->testCustomStatus("DISABLED_MOVEMENT"))
 	{
 		return;
 	}
@@ -985,7 +985,7 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	}
 
 	// Skip moveTowardsPosition if physics say you're stunned
-	if(physics->getIsStunned())
+	if(physics->getIsStunned() || obj->testCustomStatus("DISABLED_MOVEMENT"))
 	{
 		return;
 	}
