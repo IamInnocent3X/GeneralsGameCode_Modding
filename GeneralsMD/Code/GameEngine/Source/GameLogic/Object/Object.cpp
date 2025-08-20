@@ -2031,7 +2031,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 			magnetForce.normalize();
 			// where is fast inverse square root when you need one?
 			if(mass)
-				magnetForce.scale( damageInfo->in.m_magnetAmount / mass );
+				magnetForce.scale( damageInfo->in.m_magnetAmount / sqrt(mass) );
 			else
 				magnetForce.scale( damageInfo->in.m_magnetAmount );
 

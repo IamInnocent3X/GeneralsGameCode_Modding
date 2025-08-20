@@ -2154,6 +2154,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					if(mass)
 					{
+						mass = sqrt(mass);
 						if(damageInfo.in.m_magnetAmount > magnetVector.length() * mass)
 							damageInfo.in.m_magnetAmount = magnetVector.length() * mass;
 					}
