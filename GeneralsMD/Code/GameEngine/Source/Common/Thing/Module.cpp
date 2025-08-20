@@ -289,7 +289,7 @@ void UpgradeMuxData::muxDataProcessUpgradeGrant(Object* obj) const
 			}
 			if( !theTemplate )
 			{
-				DEBUG_ASSERTCRASH( 0, ("ProcessUpgradeGrant for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+				DEBUG_ASSERTCRASH( 0, ("ProcessUpgradeGrant for %s can't find upgrade template %s.", obj->getName(), it->str() ) );
 				return;
 			}
 
