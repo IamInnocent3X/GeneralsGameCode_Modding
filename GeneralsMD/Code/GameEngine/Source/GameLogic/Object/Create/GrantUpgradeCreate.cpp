@@ -206,7 +206,7 @@ void GrantUpgradeCreate::onCreate( void )
 						else
 						{
 							DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
-								getObject()->getTemplate()->getName().str(),
+								getObject()->getName().str(),
 								it->str() ) );
 						}
 					}
