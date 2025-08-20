@@ -3166,9 +3166,9 @@ Bool Player::canBuild(const ThingTemplate *tmplate) const
 			if (pre->isSatisfied(this) == false )
 				prereqsOK = false;
 		}
-		for (Int i = 0; i < tmplate->getNegPrereqCount(); i++)
+		for (Int i_n = 0; i_n < tmplate->getNegPrereqCount(); i_n++)
 		{
-			const ProductionPrerequisite *pre = tmplate->getNthNegPrereq(i);
+			const ProductionPrerequisite *pre = tmplate->getNthNegPrereq(i_n);
 			if (pre->isSatisfied(this) == false)
 				prereqsOK = false;
 		}
