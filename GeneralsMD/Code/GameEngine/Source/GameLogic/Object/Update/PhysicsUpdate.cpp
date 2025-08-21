@@ -373,18 +373,6 @@ void PhysicsBehavior::applyShock( const Coord3D *force )
 	applyForce(&resistedForce);
 }
 
-void PhysicsBehavior::applyMagnetForce( const Coord3D *force )
-{
-	Coord3D resistedForce = *force;
-	if(getPhysicsBehaviorModuleData()->m_magnetResistance )
-		resistedForce.scale( 1.0f - min( 1.0f, max( 0.0f, getPhysicsBehaviorModuleData()->m_shockResistance ) ) );
-	else
-		resistedForce.scale( 1.0f - min( 1.0f, max( 0.0f, getPhysicsBehaviorModuleData()->m_shockResistance ) ) );
-
-	// Apply the processed shock force to the object
-	applyForce(&resistedForce);
-}
-
 //-------------------------------------------------------------------------------------------------
 /**
  * Apply a random rotation at the object's CG

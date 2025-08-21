@@ -385,9 +385,13 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetTaperOnDistance",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOnDistance) },
 	{ "MagnetTaperOnRatio",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOnRatio) },
 	{ "MagnetLiftHeight",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftHeight) },
+	{ "MagnetLiftHeightSecond",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftHeightSecond) },
 	{ "MagnetLiftForce",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForce) },
 	{ "MagnetLiftForceToHeight",					INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
+	{ "MagnetLiftForceToHeightSecond",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeightSecond) },
+	{ "MagnetNoLiftAboveTerrain",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoLiftAboveTerrain) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
+	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
 
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
@@ -547,9 +551,13 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_magnetTaperOnDistance = 0.0f;
 	m_magnetTaperOnRatio = 1.0f;
 	m_magnetLiftHeight = 0.0f;
-	m_magnetLiftForce = 5.0f;
-	m_magnetLiftForceToHeight = 10.0f;
+	m_magnetLiftHeightSecond = 0.0f;
+	m_magnetLiftForce = 1.0f;
+	m_magnetLiftForceToHeight = 1.0f;
+	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetNoLiftAboveTerrain = FALSE;
 	m_magnetUseCenter = FALSE;
+	m_magnetRespectsCenter = TRUE;
 
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 
@@ -2103,20 +2111,18 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_magnetAmount = m_magnetInfantryAmount;
 			else
 				damageInfo.in.m_magnetAmount = m_magnetAmount;
-			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && curVictim->getAIUpdateInterface() && curVictim->getAIUpdateInterface()->getCurLocomotorSpeed())
+			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && curVictim->getAIUpdateInterface() && curVictim->getAIUpdateInterface()->getCurLocomotor())
 			{
 				// Populate the damge information with the magnet information
-				if(m_magnetTaperOffDistance > 0 && curVictimDistSqr > m_magnetTaperOffDistance * m_magnetTaperOffDistance)
+				if(m_magnetTaperOffDistance > 0 && curVictimDistSqr > sqr(m_magnetTaperOffDistance) && damageDirection.length() - m_magnetTaperOffDistance > 0)
 				{
-					Real curVictimDist = sqrt(curVictimDistSqr);
-					Real ratio = max(0.0f, 1.0f - ( curVictimDist - m_magnetTaperOffDistance ) * m_magnetTaperOffRatio / m_magnetTaperOffDistance);
+					Real ratio = max(0.0f, Real(1.0f - ( damageDirection.length() - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOnDistance ) ));
 					
-					damageInfo.in.m_magnetAmount *= 1.0f - ratio;
+					damageInfo.in.m_magnetAmount *= ratio;
 				}
-				else if(m_magnetTaperOnDistance > 0 && curVictimDistSqr < m_magnetTaperOnDistance * m_magnetTaperOnDistance)
+				else if(m_magnetTaperOnDistance > 0 && curVictimDistSqr < sqr(m_magnetTaperOnDistance) && m_magnetTaperOnDistance - damageDirection.length() > 0)
 				{
-					Real curVictimDist = sqrt(curVictimDistSqr);
-					Real ratio = 1.0f + ( m_magnetTaperOnDistance - curVictimDist ) * m_magnetTaperOnRatio / m_magnetTaperOnDistance;
+					Real ratio = max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - damageDirection.length() ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
 					
 					damageInfo.in.m_magnetAmount *= ratio;
 				}
@@ -2150,18 +2156,15 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						magnetVector.sub( source->getDrawable()->getPosition() );
 					}
 					
-					Real mass = curVictim->getPhysics()->getMass();
-
-					if(mass)
+					if(m_magnetRespectsCenter)
 					{
-						mass = sqrt(mass);
+						Real mass = curVictim->getPhysics()->getMass();
+						Real magnetScale = 1.0f;
+						if(mass)
+							magnetScale = max(0.15f, (Real)(1/sqrt(mass)));
+
 						if(damageInfo.in.m_magnetAmount > magnetVector.length() * mass)
 							damageInfo.in.m_magnetAmount = magnetVector.length() * mass;
-					}
-					else
-					{
-						if(damageInfo.in.m_magnetAmount > magnetVector.length())
-							damageInfo.in.m_magnetAmount = magnetVector.length();
 					}
 
 					// Guard against zero vector. Make vector stright up if that is the case
@@ -2174,8 +2177,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					damageInfo.in.m_magnetVector = magnetVector;
 					damageInfo.in.m_magnetLiftHeight = m_magnetLiftHeight;
+					damageInfo.in.m_magnetLiftHeightSecond = m_magnetLiftHeightSecond;
+					damageInfo.in.m_magnetNoLiftAboveTerrain = m_magnetNoLiftAboveTerrain;
 					damageInfo.in.m_magnetLiftForce = m_magnetLiftForce;
 					damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
+					damageInfo.in.m_magnetLiftForceToHeightSecond = m_magnetLiftForceToHeightSecond;
 				}
 			}
 

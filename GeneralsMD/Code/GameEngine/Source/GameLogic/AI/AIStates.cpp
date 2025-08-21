@@ -1739,6 +1739,9 @@ StateReturnType AIInternalMoveToState::onEnter()
 void AIInternalMoveToState::startMoveSound(void)
 {
 	Object *obj = getMachineOwner();
+	if(obj->testCustomStatus("DISABLED_MOVEMENT"))
+		return;
+	
 	const BodyModuleInterface *objBody = obj->getBodyModule();
 	if (objBody && IS_CONDITION_WORSE(objBody->getDamageState(), BODY_DAMAGED))
 	{

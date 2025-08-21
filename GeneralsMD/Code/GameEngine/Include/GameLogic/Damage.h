@@ -418,8 +418,11 @@ public:
 	m_magnetVector.zero();	
 	m_magnetAmount = 0.0f;
 	m_magnetLiftHeight = 0.0f;
-	m_magnetLiftForce = 5.0f;
-	m_magnetLiftForceToHeight = 10.0f;
+	m_magnetLiftHeightSecond = 0.0f;
+	m_magnetLiftForce = 1.0f;
+	m_magnetLiftForceToHeight = 1.0f;
+	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetNoLiftAboveTerrain = FALSE;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -441,8 +444,11 @@ public:
 	Coord3D				 	 m_magnetVector;				///< This represents the incoming damage vector
 	Real					 m_magnetAmount;				///< This represents the amount of magnet created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
 	Real					 m_magnetLiftHeight;
+	Real					 m_magnetLiftHeightSecond;
 	Real					 m_magnetLiftForce;
 	Real					 m_magnetLiftForceToHeight;
+	Real					 m_magnetLiftForceToHeightSecond;
+	Bool					 m_magnetNoLiftAboveTerrain;
 
 	AsciiString m_customDamageType;
 	AsciiString m_customDamageStatusType;

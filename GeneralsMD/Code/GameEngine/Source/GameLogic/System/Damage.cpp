@@ -178,8 +178,11 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferCoord3D(&m_magnetVector);
 	xfer->xferReal( &m_magnetAmount );
 	xfer->xferReal( &m_magnetLiftHeight );
+	xfer->xferReal( &m_magnetLiftHeightSecond );
 	xfer->xferReal( &m_magnetLiftForce );
 	xfer->xferReal( &m_magnetLiftForceToHeight );
+	xfer->xferReal( &m_magnetLiftForceToHeightSecond );
+	xfer->xferBool( &m_magnetNoLiftAboveTerrain );
 
 	if( version >= 3 )
 	{

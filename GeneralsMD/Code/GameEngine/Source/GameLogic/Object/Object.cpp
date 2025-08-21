@@ -1979,7 +1979,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 		body->attemptDamage( damageInfo );
 
 	// Process any shockwave forces that might affect this object due to the incurred damage
-	if (damageInfo->in.m_shockWaveAmount != 0.0f && damageInfo->in.m_shockWaveRadius > 0.0f)
+	if (damageInfo->in.m_shockWaveAmount > 0.0f && damageInfo->in.m_shockWaveRadius > 0.0f)
 	{
 	  //KindOfMaskType immuneToShockwaveKindofs;                                                                      //NEW RESTRICTIONS ADDED
 	  //immuneToShockwaveKindofs.set(KINDOF_PROJECTILE);// projectiles go idle in midair when they get sw'd           //NEW RESTRICTIONS ADDED
@@ -2025,28 +2025,39 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 		{
 			Real mass = behavior->getMass();
 
+			Real magnetScale = 1.0f;
+
+			// where is fast inverse square root when you need one?
+			if(mass)
+				magnetScale = max(0.15f, (Real)(1/sqrt(mass)));
+
 			// Set up the magnet force to use apply on object
 			Coord3D magnetForce;
 			magnetForce.set( &damageInfo->in.m_magnetVector );
 			magnetForce.normalize();
-			// where is fast inverse square root when you need one?
-			if(mass)
-				magnetForce.scale( damageInfo->in.m_magnetAmount / sqrt(mass) );
-			else
-				magnetForce.scale( damageInfo->in.m_magnetAmount );
+			magnetForce.scale( damageInfo->in.m_magnetAmount * magnetScale);
 
 			if (!isAirborneTarget())
 			{
-				if(calculateHeightAboveTerrain() < damageInfo->in.m_magnetLiftHeight)
-					magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight;
-				else
-					magnetForce.z = damageInfo->in.m_magnetLiftForce;
+				if(!isAboveTerrain() || !damageInfo->in.m_magnetNoLiftAboveTerrain)
+				{
+					if(!mass)
+						mass = 1.0f;
+					else
+						mass = max(1.0f, mass * magnetScale);
+					if(calculateHeightAboveTerrain() < damageInfo->in.m_magnetLiftHeight)
+						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight * mass;
+					else if(calculateHeightAboveTerrain() < damageInfo->in.m_magnetLiftHeightSecond)
+						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeightSecond * mass;
+					else
+						magnetForce.z = damageInfo->in.m_magnetLiftForce * mass;
+				}
 			}
 
 			behavior->applyForce( &magnetForce );
 
 			// Set stunned state due to the shock for the object
-      behavior->setStunned(true);
+      //behavior->setStunned(true);
 	  //setDisabled(DISABLED_STUNNED);
 
       //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);

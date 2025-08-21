@@ -767,9 +767,13 @@ private:
 	Real m_magnetTaperOnDistance;
 	Real m_magnetTaperOnRatio;
 	Real m_magnetLiftHeight;
+	Real m_magnetLiftHeightSecond;
 	Real m_magnetLiftForce;
 	Real m_magnetLiftForceToHeight;
+	Real m_magnetLiftForceToHeightSecond;
+	Bool m_magnetNoLiftAboveTerrain;
 	Bool m_magnetUseCenter;
+	Bool m_magnetRespectsCenter;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };
