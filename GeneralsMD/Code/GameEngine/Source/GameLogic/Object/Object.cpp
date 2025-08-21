@@ -2056,6 +2056,10 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 						magnetForce.z = damageInfo->in.m_magnetLiftForce * mass;
 				}
 			}
+			else
+			{
+				magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * magnetScale;
+			}
 
 			behavior->applyForce( &magnetForce );
 

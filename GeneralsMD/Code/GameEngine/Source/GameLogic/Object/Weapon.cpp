@@ -392,6 +392,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetLiftForceToHeight",					INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
 	{ "MagnetLiftForceToHeightSecond",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeightSecond) },
 	{ "MagnetNoLiftAboveTerrain",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoLiftAboveTerrain) },
+	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
+	{ "MagnetNoAirborneZForce",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborneZForce) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
 	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
 
@@ -559,7 +561,9 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_magnetLiftForce = 1.0f;
 	m_magnetLiftForceToHeight = 1.0f;
 	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetAirborneZForce = 0.0f;
 	m_magnetNoLiftAboveTerrain = FALSE;
+	m_magnetNoAirborneZForce = FALSE;
 	m_magnetUseCenter = FALSE;
 	m_magnetRespectsCenter = TRUE;
 
@@ -2136,10 +2140,12 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				if(damageInfo.in.m_magnetAmount != 0.0f)
 				{
 					Coord3D magnetVector;
+					Bool isPull = FALSE;
 					magnetVector.zero();
 					if(damageInfo.in.m_magnetAmount < 0)
 					{
 						damageInfo.in.m_magnetAmount *= -1;
+						isPull = TRUE;
 						if(m_magnetUseCenter)
 						{
 							magnetVector.set( pos );
@@ -2164,13 +2170,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					
 					if(m_magnetRespectsCenter)
 					{
-						Real mass = curVictim->getPhysics()->getMass();
-						Real magnetScale = 1.0f;
-						if(mass)
-							magnetScale = max(0.15f, (Real)(1/sqrt(mass)));
-
-						if(damageInfo.in.m_magnetAmount > magnetVector.length() * mass)
-							damageInfo.in.m_magnetAmount = magnetVector.length() * mass;
+						if(damageInfo.in.m_magnetAmount > magnetVector.length())
+							damageInfo.in.m_magnetAmount = magnetVector.length();
 					}
 
 					// Guard against zero vector. Make vector stright up if that is the case
@@ -2188,6 +2189,17 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					damageInfo.in.m_magnetLiftForce = m_magnetLiftForce;
 					damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
 					damageInfo.in.m_magnetLiftForceToHeightSecond = m_magnetLiftForceToHeightSecond;
+					if(m_magnetAirborneZForce && !m_magnetNoAirborneZForce)
+					{
+						damageInfo.in.m_magnetAirborneZForce = m_magnetAirborneZForce;
+					}
+					else if(!m_magnetNoAirborneZForce)
+					{
+						if(isPull)
+							damageInfo.in.m_magnetAirborneZForce = -damageInfo.in.m_magnetAmount;
+						else
+							damageInfo.in.m_magnetAirborneZForce = damageInfo.in.m_magnetAmount;
+					}
 				}
 			}
 

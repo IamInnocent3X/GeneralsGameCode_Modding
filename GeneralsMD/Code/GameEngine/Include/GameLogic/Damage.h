@@ -424,6 +424,7 @@ public:
 	m_magnetLiftForce = 1.0f;
 	m_magnetLiftForceToHeight = 1.0f;
 	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetAirborneZForce = 0.0f;
 	m_magnetNoLiftAboveTerrain = FALSE;
 	}
 
@@ -452,6 +453,7 @@ public:
 	Real					 m_magnetLiftForce;
 	Real					 m_magnetLiftForceToHeight;
 	Real					 m_magnetLiftForceToHeightSecond;
+	Real 					 m_magnetAirborneZForce;
 	Bool					 m_magnetNoLiftAboveTerrain;
 
 	AsciiString m_customDamageType;

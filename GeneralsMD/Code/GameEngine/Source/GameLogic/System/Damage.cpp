@@ -185,6 +185,7 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferReal( &m_magnetLiftForceToHeight );
 	xfer->xferReal( &m_magnetLiftForceToHeightSecond );
 	xfer->xferBool( &m_magnetNoLiftAboveTerrain );
+	xfer->xferReal( &m_magnetAirborneZForce );
 
 	if( version >= 3 )
 	{

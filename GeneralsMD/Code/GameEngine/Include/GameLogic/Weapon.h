@@ -773,7 +773,9 @@ private:
 	Real m_magnetLiftForce;
 	Real m_magnetLiftForceToHeight;
 	Real m_magnetLiftForceToHeightSecond;
+	Real m_magnetAirborneZForce;
 	Bool m_magnetNoLiftAboveTerrain;
+	Bool m_magnetNoAirborneZForce;
 	Bool m_magnetUseCenter;
 	Bool m_magnetRespectsCenter;
 
