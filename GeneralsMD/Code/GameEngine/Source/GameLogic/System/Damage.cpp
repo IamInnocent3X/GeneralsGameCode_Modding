@@ -174,6 +174,8 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferReal( &m_shockWaveAmount );
 	xfer->xferReal( &m_shockWaveRadius );
 	xfer->xferReal( &m_shockWaveTaperOff );
+	xfer->xferBool( &m_shockWaveAffectsAirborne );
+	xfer->xferBool( &m_shockWavePullsAirborne );
 
 	xfer->xferCoord3D(&m_magnetVector);
 	xfer->xferReal( &m_magnetAmount );

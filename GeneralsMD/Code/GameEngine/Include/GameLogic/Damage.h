@@ -415,6 +415,8 @@ public:
 	m_customSubdualDisableSound = NULL;
 	m_customSubdualDisableRemoveSound = NULL;
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
+	m_shockWaveAffectsAirborne = FALSE;
+	m_shockWavePullsAirborne = FALSE;
 	m_magnetVector.zero();	
 	m_magnetAmount = 0.0f;
 	m_magnetLiftHeight = 0.0f;
@@ -440,7 +442,9 @@ public:
 	Real					 m_shockWaveAmount;				///< This represents the amount of shockwave created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
 	Real					 m_shockWaveRadius;			  ///< This represents the effect radius of the shockwave.
 	Real					 m_shockWaveTaperOff;			///< This represents the taper off effect of the shockwave at the tip of the radius. 0.0 means shockwave is 0% at the radius edge.
-
+	Bool					 m_shockWaveAffectsAirborne;
+	Bool					 m_shockWavePullsAirborne;
+	
 	Coord3D				 	 m_magnetVector;				///< This represents the incoming damage vector
 	Real					 m_magnetAmount;				///< This represents the amount of magnet created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
 	Real					 m_magnetLiftHeight;

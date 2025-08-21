@@ -759,6 +759,8 @@ private:
 
 	Bool m_shockWaveUseCenter;
 	Bool m_shockWaveRespectsCenter;
+	Bool m_shockWaveAffectsAirborne;
+	Bool m_shockWavePullsAirborne;
 
 	Real m_magnetAmount;
 	Real m_magnetInfantryAmount;

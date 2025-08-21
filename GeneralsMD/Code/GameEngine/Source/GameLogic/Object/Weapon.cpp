@@ -377,6 +377,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 
 	{ "ShockWaveUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveUseCenter) },
 	{ "ShockWaveRespectsCenter",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveRespectsCenter) },
+	{ "ShockWaveAffectsAirborne",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveAffectsAirborne) },
+	{ "ShockWavePullsAirborne",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWavePullsAirborne) },
 	
 	{ "MagnetAmount",								INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAmount) },
 	{ "MagnetInfantryAmount",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetInfantryAmount) },
@@ -543,6 +545,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 
 	m_shockWaveUseCenter = FALSE;
 	m_shockWaveRespectsCenter = FALSE;
+	m_shockWaveAffectsAirborne = FALSE;
+	m_shockWavePullsAirborne = FALSE;
 
 	m_magnetAmount = 0.0f;
 	m_magnetInfantryAmount = 0.0f;
@@ -2060,37 +2064,37 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						shockWaveVector.set( source->getPosition() );
 						shockWaveVector.sub( curVictim->getPosition() );
 					}
-					if(m_shockWaveRespectsCenter)
-					{
-						if(m_shockWaveUseCenter)
-						{
-							if(damageInfo.in.m_shockWaveAmount > shockWaveVector.length())
-								damageInfo.in.m_shockWaveAmount = shockWaveVector.length();
-						}
-						else
-						{
-							Coord3D centerVector;
-
-							centerVector.set( curVictim->getPosition() );
-							centerVector.sub( pos );
-
-							if(damageInfo.in.m_shockWaveAmount > centerVector.length())
-								damageInfo.in.m_shockWaveAmount = centerVector.length();
-						}
-
-						/*if(fabs(centerVector.x) < damageInfo.in.m_shockWaveAmount)
-							shockWaveVector.x = centerVector.x / damageInfo.in.m_shockWaveAmount;
-						if(fabs(centerVector.y) < damageInfo.in.m_shockWaveAmount)
-							shockWaveVector.y = centerVector.y / damageInfo.in.m_shockWaveAmount;
-						if(fabs(centerVector.z) < damageInfo.in.m_shockWaveAmount)
-							shockWaveVector.z = centerVector.z / damageInfo.in.m_shockWaveAmount;*/
-					}
-
 				}
 				else if(m_shockWaveUseCenter)
 				{
 					shockWaveVector.set( curVictim->getPosition() );
 					shockWaveVector.sub( pos );
+				}
+
+				if(m_shockWaveRespectsCenter)
+				{
+					if(m_shockWaveUseCenter)
+					{
+						if(damageInfo.in.m_shockWaveAmount > shockWaveVector.length())
+							damageInfo.in.m_shockWaveAmount = shockWaveVector.length();
+					}
+					else
+					{
+						Coord3D centerVector;
+
+						centerVector.set( curVictim->getPosition() );
+						centerVector.sub( pos );
+
+						if(damageInfo.in.m_shockWaveAmount > centerVector.length())
+							damageInfo.in.m_shockWaveAmount = centerVector.length();
+					}
+
+					/*if(fabs(centerVector.x) < damageInfo.in.m_shockWaveAmount)
+						shockWaveVector.x = centerVector.x / damageInfo.in.m_shockWaveAmount;
+					if(fabs(centerVector.y) < damageInfo.in.m_shockWaveAmount)
+						shockWaveVector.y = centerVector.y / damageInfo.in.m_shockWaveAmount;
+					if(fabs(centerVector.z) < damageInfo.in.m_shockWaveAmount)
+						shockWaveVector.z = centerVector.z / damageInfo.in.m_shockWaveAmount;*/
 				}
 
 				// Guard against zero vector. Make vector stright up if that is the case
@@ -2105,6 +2109,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_shockWaveVector = shockWaveVector;
 				damageInfo.in.m_shockWaveRadius = m_shockWaveRadius;
 				damageInfo.in.m_shockWaveTaperOff = m_shockWaveTaperOff;
+				damageInfo.in.m_shockWaveAffectsAirborne = m_shockWaveAffectsAirborne;
+				damageInfo.in.m_shockWavePullsAirborne = m_shockWavePullsAirborne;
 			}
 
 			if (m_magnetInfantryAmount && curVictim && curVictim->isKindOf(KINDOF_INFANTRY))
@@ -2114,13 +2120,13 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && curVictim->getAIUpdateInterface() && curVictim->getAIUpdateInterface()->getCurLocomotor())
 			{
 				// Populate the damge information with the magnet information
-				if(m_magnetTaperOffDistance > 0 && curVictimDistSqr > sqr(m_magnetTaperOffDistance) && damageDirection.length() - m_magnetTaperOffDistance > 0)
+				if(m_magnetTaperOffDistance > 0 && curVictimDistSqr > sqr(m_magnetTaperOffDistance) && damageDirection.length() > m_magnetTaperOffDistance)
 				{
 					Real ratio = max(0.0f, Real(1.0f - ( damageDirection.length() - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOnDistance ) ));
 					
 					damageInfo.in.m_magnetAmount *= ratio;
 				}
-				else if(m_magnetTaperOnDistance > 0 && curVictimDistSqr < sqr(m_magnetTaperOnDistance) && m_magnetTaperOnDistance - damageDirection.length() > 0)
+				else if(m_magnetTaperOnDistance > 0 && curVictimDistSqr < sqr(m_magnetTaperOnDistance) && damageDirection.length() < m_magnetTaperOnDistance)
 				{
 					Real ratio = max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - damageDirection.length() ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
 					

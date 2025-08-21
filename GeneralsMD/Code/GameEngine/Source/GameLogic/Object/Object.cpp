@@ -1986,7 +1986,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	  //immuneToShockwaveKindofs.set(KINDOF_PRODUCED_AT_HELIPAD);//helicopters go all wonky when they get shockwaved  //NEW RESTRICTIONS ADDED
 
 		PhysicsBehavior *behavior = getPhysics();
-		if ( behavior && (isAirborneTarget() == FALSE) && (! isKindOf(KINDOF_PROJECTILE) ) )
+		if ( behavior && (isAirborneTarget() == FALSE || damageInfo->in.m_shockWaveAffectsAirborne) && (! isKindOf(KINDOF_PROJECTILE) ) )
 //		if (behavior && isAnyKindOf( immuneToShockwaveKindofs ) == FALSE )//NEW RESTRICTIONS ADDED
 		{
 			// Calculate the shockwave taperoff amount due to distance from ground zero
@@ -2001,6 +2001,9 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 			shockWaveForce.normalize();
 			shockWaveForce.scale( damageInfo->in.m_shockWaveAmount * shockTaperMult );
 			shockWaveForce.z = shockWaveForce.length(); // Apply up force equal to the lateral force for dramatic effect
+
+			if(isAirborneTarget() && damageInfo->in.m_shockWavePullsAirborne)
+				shockWaveForce.z *= -1;
 
 			// Apply the shock to the object
 			behavior->applyShock(&shockWaveForce);
