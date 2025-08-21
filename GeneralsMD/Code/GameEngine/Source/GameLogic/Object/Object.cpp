@@ -2084,7 +2084,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 
       //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
 		}
-		if(m_dontLevitate)
+		else if(m_dontLevitate)
 		{
 			Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
 			if ( attacker && attacker->getAIUpdateInterface())
