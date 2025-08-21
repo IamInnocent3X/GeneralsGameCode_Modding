@@ -3883,6 +3883,7 @@ void GameLogic::update( void )
 			{
 				obj->checkDisabledStatus();
 			}
+			obj->checkLevitate();
 		}
 	}
 

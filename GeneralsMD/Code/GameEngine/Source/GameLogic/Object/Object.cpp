@@ -322,6 +322,14 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_customStatus.clear();
 	m_layer = LAYER_GROUND;
 
+	m_weaponBonusConditionIC = 0;
+	m_customWeaponBonusConditionIC.clear();
+
+	m_magnetLevitateHeight = 0;
+	m_levitateCheckFrame = 0;
+	m_levitateCheckCount = 0;
+	m_dontLevitate = FALSE;
+
 	m_group = NULL;
 
 	m_constructionPercent = CONSTRUCTION_COMPLETE;  // complete by default
@@ -552,6 +560,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	// emit message announcing object's creation
 	TheGameLogic->sendObjectCreated( this );
+	
 
 }  // end Object
 
@@ -2024,7 +2033,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	{
 
 		PhysicsBehavior *behavior = getPhysics();
-		if ( behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
+		if ( !m_dontLevitate && behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
 		{
 			Real mass = behavior->getMass();
 
@@ -2055,6 +2064,12 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 					else
 						magnetForce.z = damageInfo->in.m_magnetLiftForce * mass;
 				}
+				if( damageInfo->in.m_magnetLevitationHeight && ( m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= calculateHeightAboveTerrain() ) )
+				{
+					m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
+					m_levitateCheckCount = 0;
+					m_levitateCheckFrame = 0;
+				}
 			}
 			else
 			{
@@ -2068,6 +2083,14 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	  //setDisabled(DISABLED_STUNNED);
 
       //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
+		}
+		if(m_dontLevitate)
+		{
+			Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
+			if ( attacker && attacker->getAIUpdateInterface())
+			{
+				attacker->getAIUpdateInterface()->aiIdle(CMD_FROM_AI);
+			}
 		}
 	}
 
@@ -2612,6 +2635,62 @@ void Object::checkDisabledStatus()
 				clearDisabled( type ); // This will also DECREMENT m_pauseCount in all specialpowers
 				m_disabledMask.set( type, 0 );
 			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::checkLevitate()
+{
+	if(m_magnetLevitateHeight)
+	{
+		if(m_levitateCheckCount<11)
+		{
+			Coord3D newPos = *getPosition();
+			Real terrainZ = TheTerrainLogic->getGroundHeight( newPos.x, newPos.y );
+			Bool doLevitate;
+			if(newPos.z - terrainZ < m_magnetLevitateHeight)
+			{
+				doLevitate = TRUE;
+
+				newPos.z = m_magnetLevitateHeight + terrainZ + 0.5f;
+				setPosition( &newPos );
+
+				newPos.zero();
+				newPos.z = 12.5;
+				getPhysics()->applyForce( &newPos );
+			}
+
+			m_levitateCheckCount++;
+			
+			if(m_levitateCheckCount>10)
+			{
+				if(doLevitate)
+				{
+					getPhysics()->resetDynamicPhysics();
+					m_dontLevitate = TRUE;
+				}
+				//getPhysics()->scrubVelocity2D(0);
+				m_magnetLevitateHeight = 0;
+			}
+		}
+	}
+	if(m_dontLevitate)
+	{
+		UnsignedInt now = TheGameLogic->getFrame();
+
+		// Descending effect
+		Coord3D magnetForce;
+		magnetForce.zero();
+		magnetForce.z = 0.35;
+		getPhysics()->applyForce( &magnetForce );
+
+		if(!m_levitateCheckFrame)
+			m_levitateCheckFrame = now + LOGICFRAMES_PER_SECOND;
+		if(now > m_levitateCheckFrame)
+		{
+			m_dontLevitate = FALSE;
+			m_levitateCheckFrame = 0;
 		}
 	}
 }
@@ -4595,6 +4674,14 @@ void Object::xfer( Xfer *xfer )
 
 	// health box offset
 	xfer->xferCoord3D( &m_healthBoxOffset );
+
+	xfer->xferReal( &m_magnetLevitateHeight );
+
+	xfer->xferUnsignedInt( &m_levitateCheckFrame );
+
+	xfer->xferUnsignedInt( &m_levitateCheckCount );
+
+	xfer->xferBool ( &m_dontLevitate );
 
 	// Entered & exited housekeeping.
 	Int i;

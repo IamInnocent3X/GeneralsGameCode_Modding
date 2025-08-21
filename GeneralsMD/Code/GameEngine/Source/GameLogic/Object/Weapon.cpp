@@ -392,6 +392,9 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetLiftForceToHeight",					INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
 	{ "MagnetLiftForceToHeightSecond",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeightSecond) },
 	{ "MagnetNoLiftAboveTerrain",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoLiftAboveTerrain) },
+	{ "MagnetLevitationHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationHeight) },
+	{ "MagnetLevitationMinDistance",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationMinDistance) },
+	{ "MagnetLevitationMaxDistance",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationMaxDistance) },
 	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
 	{ "MagnetNoAirborneZForce",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborneZForce) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
@@ -561,6 +564,9 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_magnetLiftForce = 1.0f;
 	m_magnetLiftForceToHeight = 1.0f;
 	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetLevitationHeight = 0.0f;
+	m_magnetLevitationMinDistance = 0.0f;
+	m_magnetLevitationMaxDistance = HUGE_DAMAGE_AMOUNT;
 	m_magnetAirborneZForce = 0.0f;
 	m_magnetNoLiftAboveTerrain = FALSE;
 	m_magnetNoAirborneZForce = FALSE;
@@ -2189,6 +2195,16 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					damageInfo.in.m_magnetLiftForce = m_magnetLiftForce;
 					damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
 					damageInfo.in.m_magnetLiftForceToHeightSecond = m_magnetLiftForceToHeightSecond;
+
+					if(damageDirection.length() > m_magnetLevitationMinDistance && damageDirection.length() < m_magnetLevitationMaxDistance )
+					{
+						damageInfo.in.m_magnetLevitationHeight = m_magnetLevitationHeight;
+					}
+					else
+					{
+						damageInfo.in.m_magnetLevitationHeight = 0;
+					}
+
 					if(m_magnetAirborneZForce && !m_magnetNoAirborneZForce)
 					{
 						damageInfo.in.m_magnetAirborneZForce = m_magnetAirborneZForce;

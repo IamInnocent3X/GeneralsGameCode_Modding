@@ -654,6 +654,8 @@ public:
 	//Checks any timers and clears disabled statii that have expired.
 	void checkDisabledStatus();
 
+	void checkLevitate();
+
 	//When an AIAttackState is over, it needs to clean up any weapons that might be in leech range mode
 	//or else those weapons will have unlimited range!
 	void clearLeechRangeModeForAllWeapons();
@@ -849,6 +851,11 @@ private:
 	//Ignore Bonus Types to clear if it is bonus granted outside of new Firing Tracker system.
 	WeaponBonusConditionFlags			m_weaponBonusConditionIC;
 	ObjectCustomStatusType				m_customWeaponBonusConditionIC;
+
+	Real								m_magnetLevitateHeight;
+	UnsignedInt							m_levitateCheckFrame;
+	UnsignedInt							m_levitateCheckCount;
+	Bool								m_dontLevitate;
 
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 
