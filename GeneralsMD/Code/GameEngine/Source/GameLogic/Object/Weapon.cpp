@@ -38,6 +38,7 @@
 #define DEFINE_WEAPONRELOAD_NAMES
 #define DEFINE_WEAPONPREFIRE_NAMES
 #define DEFINE_PROTECTION_NAMES
+#define DEFINE_MAGNET_FORMULA_NAMES
 
 #include "Common/crc.h"
 #include "Common/CRCDebug.h"
@@ -391,14 +392,16 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetLiftForce",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForce) },
 	{ "MagnetLiftForceToHeight",					INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
 	{ "MagnetLiftForceToHeightSecond",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeightSecond) },
-	{ "MagnetNoLiftAboveTerrain",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoLiftAboveTerrain) },
+	{ "MagnetMaxLiftHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxLiftHeight) },
 	{ "MagnetLevitationHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationHeight) },
-	{ "MagnetLevitationMinDistance",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationMinDistance) },
-	{ "MagnetLevitationMaxDistance",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationMaxDistance) },
+	{ "MagnetMinDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMinDistance) },
+	{ "MagnetMaxDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxDistance) },
 	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
+	{ "MagnetAirborneUseStaticForce",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneFormatStatic) },
 	{ "MagnetNoAirborneZForce",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborneZForce) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
 	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
+	{ "MagnetFormula",								INI::parseIndexList,			TheMagnetFormulaNames,	offsetof(WeaponTemplate, m_magnetFormula) },
 
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
@@ -564,14 +567,16 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_magnetLiftForce = 1.0f;
 	m_magnetLiftForceToHeight = 1.0f;
 	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetMaxLiftHeight = 0.0f;
 	m_magnetLevitationHeight = 0.0f;
-	m_magnetLevitationMinDistance = 0.0f;
-	m_magnetLevitationMaxDistance = HUGE_DAMAGE_AMOUNT;
+	m_magnetMinDistance = 0.0f;
+	m_magnetMaxDistance = 0.0f;
 	m_magnetAirborneZForce = 0.0f;
-	m_magnetNoLiftAboveTerrain = FALSE;
 	m_magnetNoAirborneZForce = FALSE;
+	m_magnetAirboneFormatStatic = TRUE;
 	m_magnetUseCenter = FALSE;
 	m_magnetRespectsCenter = TRUE;
+	m_magnetFormula = MAGNET_STATIC;
 
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 
@@ -2129,92 +2134,79 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_magnetAmount = m_magnetAmount;
 			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && curVictim->getAIUpdateInterface() && curVictim->getAIUpdateInterface()->getCurLocomotor())
 			{
-				// Populate the damge information with the magnet information
-				if(m_magnetTaperOffDistance > 0 && curVictimDistSqr > sqr(m_magnetTaperOffDistance) && damageDirection.length() > m_magnetTaperOffDistance)
-				{
-					Real ratio = max(0.0f, Real(1.0f - ( damageDirection.length() - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOnDistance ) ));
-					
-					damageInfo.in.m_magnetAmount *= ratio;
-				}
-				else if(m_magnetTaperOnDistance > 0 && curVictimDistSqr < sqr(m_magnetTaperOnDistance) && damageDirection.length() < m_magnetTaperOnDistance)
-				{
-					Real ratio = max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - damageDirection.length() ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
-					
-					damageInfo.in.m_magnetAmount *= ratio;
-				}
+				Real distance = ThePartitionManager->getDistanceSquared(source, curVictim->getPosition(), ATTACK_RANGE_CALC_TYPE);
+				distance = sqrt(distance);
 
-				if(damageInfo.in.m_magnetAmount != 0.0f)
+				if(distance > m_magnetMinDistance && ( !m_magnetMaxDistance || distance < m_magnetMaxDistance ))
 				{
-					Coord3D magnetVector;
-					Bool isPull = FALSE;
-					magnetVector.zero();
-					if(damageInfo.in.m_magnetAmount < 0)
+					// Populate the damge information with the magnet information
+					if(m_magnetTaperOffDistance > 0 && distance > m_magnetTaperOffDistance)
 					{
-						damageInfo.in.m_magnetAmount *= -1;
-						isPull = TRUE;
-						if(m_magnetUseCenter)
+						Real ratio = max(0.0f, Real(1.0f - ( distance - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOnDistance ) ));
+						
+						damageInfo.in.m_magnetAmount *= ratio;
+					}
+					else if(m_magnetTaperOnDistance > 0 && distance < m_magnetTaperOffDistance)
+					{
+						Real ratio = max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - distance ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
+						
+						damageInfo.in.m_magnetAmount *= ratio;
+					}
+
+					if(damageInfo.in.m_magnetAmount != 0.0f)
+					{
+						Coord3D magnetVector;
+						magnetVector.zero();
+						if(damageInfo.in.m_magnetAmount < 0)
 						{
-							magnetVector.set( pos );
-							magnetVector.sub( curVictim->getPosition() );
+							damageInfo.in.m_magnetAmount *= -1;
+							if(m_magnetUseCenter)
+							{
+								magnetVector.set( pos );
+								magnetVector.sub( curVictim->getPosition() );
+							}
+							else if( source )
+							{
+								magnetVector.set( source->getDrawable()->getPosition() );
+								magnetVector.sub( curVictim->getPosition() );
+							}
+						}
+						else if(m_magnetUseCenter)
+						{
+							magnetVector.set( curVictim->getPosition() );
+							magnetVector.sub( pos );
 						}
 						else if( source )
 						{
-							magnetVector.set( source->getDrawable()->getPosition() );
-							magnetVector.sub( curVictim->getPosition() );
+							magnetVector.set( curVictim->getPosition() );
+							magnetVector.sub( source->getDrawable()->getPosition() );
 						}
-					}
-					else if(m_magnetUseCenter)
-					{
-						magnetVector.set( curVictim->getPosition() );
-						magnetVector.sub( pos );
-					}
-					else if( source )
-					{
-						magnetVector.set( curVictim->getPosition() );
-						magnetVector.sub( source->getDrawable()->getPosition() );
-					}
-					
-					if(m_magnetRespectsCenter)
-					{
-						if(damageInfo.in.m_magnetAmount > magnetVector.length())
-							damageInfo.in.m_magnetAmount = magnetVector.length();
-					}
+						
+						if(m_magnetRespectsCenter)
+						{
+							if(damageInfo.in.m_magnetAmount > magnetVector.length())
+								damageInfo.in.m_magnetAmount = magnetVector.length();
+						}
 
-					// Guard against zero vector. Make vector stright up if that is the case
-					if ( fabs(magnetVector.x) < WWMATH_EPSILON &&
-							fabs(magnetVector.y) < WWMATH_EPSILON &&
-							fabs(magnetVector.z) < WWMATH_EPSILON)
-					{
-						magnetVector.z = 1.0f;
-					}
+						// Guard against zero vector. Make vector stright up if that is the case
+						if ( fabs(magnetVector.x) < WWMATH_EPSILON &&
+								fabs(magnetVector.y) < WWMATH_EPSILON &&
+								fabs(magnetVector.z) < WWMATH_EPSILON)
+						{
+							magnetVector.z = 1.0f;
+						}
 
-					damageInfo.in.m_magnetVector = magnetVector;
-					damageInfo.in.m_magnetLiftHeight = m_magnetLiftHeight;
-					damageInfo.in.m_magnetLiftHeightSecond = m_magnetLiftHeightSecond;
-					damageInfo.in.m_magnetNoLiftAboveTerrain = m_magnetNoLiftAboveTerrain;
-					damageInfo.in.m_magnetLiftForce = m_magnetLiftForce;
-					damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
-					damageInfo.in.m_magnetLiftForceToHeightSecond = m_magnetLiftForceToHeightSecond;
-
-					if(damageDirection.length() > m_magnetLevitationMinDistance && damageDirection.length() < m_magnetLevitationMaxDistance )
-					{
+						damageInfo.in.m_magnetVector = magnetVector;
+						damageInfo.in.m_magnetLiftHeight = m_magnetLiftHeight;
+						damageInfo.in.m_magnetLiftHeightSecond = m_magnetLiftHeightSecond;
+						damageInfo.in.m_magnetLiftForce = m_magnetLiftForce;
+						damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
+						damageInfo.in.m_magnetLiftForceToHeightSecond = m_magnetLiftForceToHeightSecond;
+						damageInfo.in.m_magnetMaxLiftHeight = m_magnetMaxLiftHeight;
+						damageInfo.in.m_magnetAirboneFormatStatic = m_magnetAirboneFormatStatic;
+						damageInfo.in.m_magnetFormula = m_magnetFormula;
 						damageInfo.in.m_magnetLevitationHeight = m_magnetLevitationHeight;
-					}
-					else
-					{
-						damageInfo.in.m_magnetLevitationHeight = 0;
-					}
-
-					if(m_magnetAirborneZForce && !m_magnetNoAirborneZForce)
-					{
 						damageInfo.in.m_magnetAirborneZForce = m_magnetAirborneZForce;
-					}
-					else if(!m_magnetNoAirborneZForce)
-					{
-						if(isPull)
-							damageInfo.in.m_magnetAirborneZForce = -damageInfo.in.m_magnetAmount;
-						else
-							damageInfo.in.m_magnetAirborneZForce = damageInfo.in.m_magnetAmount;
 					}
 				}
 			}

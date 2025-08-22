@@ -321,6 +321,7 @@ public:
 	SpawnBehaviorInterface* getSpawnBehaviorInterface() const;
 	ProjectileUpdateInterface* getProjectileUpdateInterface() const;
 
+	inline void clearInvSqrtMass() { m_invsqrt_mass = 0; }
 
 	// special case for the AIUpdateInterface, since it will be referred to a great deal
 	inline AIUpdateInterface *getAIUpdateInterface() { return m_ai; }
@@ -852,6 +853,7 @@ private:
 	WeaponBonusConditionFlags			m_weaponBonusConditionIC;
 	ObjectCustomStatusType				m_customWeaponBonusConditionIC;
 
+	Real								m_invsqrt_mass;
 	Real								m_magnetLevitateHeight;
 	UnsignedInt							m_levitateCheckFrame;
 	UnsignedInt							m_levitateCheckCount;

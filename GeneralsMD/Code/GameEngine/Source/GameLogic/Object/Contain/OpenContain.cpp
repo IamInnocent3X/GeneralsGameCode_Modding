@@ -360,6 +360,7 @@ void OpenContain::addToContain( Object *rider )
 	if( getObject()->getContain() )
 	{
 		getObject()->getContain()->onContaining( rider, wasSelected );
+		getObject()->clearInvSqrtMass();
 	}
 
 	// ensure our occupants are positioned correctly.
@@ -692,6 +693,7 @@ void OpenContain::removeFromContainViaIterator( ContainedItemsList::iterator it,
 	if( getObject()->getContain() )
 	{
 		getObject()->getContain()->onRemoving( rider );
+		getObject()->clearInvSqrtMass();
 	}
 
 	// trigger an onRemovedFrom event for 'remove'

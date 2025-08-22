@@ -325,6 +325,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_weaponBonusConditionIC = 0;
 	m_customWeaponBonusConditionIC.clear();
 
+	m_invsqrt_mass = 0.0f;
 	m_magnetLevitateHeight = 0;
 	m_levitateCheckFrame = 0;
 	m_levitateCheckCount = 0;
@@ -2036,49 +2037,83 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 		if ( !m_dontLevitate && behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
 		{
 			Real mass = behavior->getMass();
-
+			Real mult = 0.335;
 			Real magnetScale = 1.0f;
 
-			// where is fast inverse square root when you need one?
 			if(mass)
-				magnetScale = max(0.15f, (Real)(1/sqrt(mass)));
+			{
+				// It's ZA INVESE SQUARE ROOT!!!
+				if(!m_invsqrt_mass)
+					m_invsqrt_mass = 1/sqrt(mass);
+				magnetScale = max(0.15f, m_invsqrt_mass);
+			}
+				
+			if(damageInfo->in.m_magnetFormula == MAGNET_STATIC || damageInfo->in.m_magnetFormula == MAGNET_DYNAMIC)
+				behavior->scrubVelocity2D(0);
+
+			if(damageInfo->in.m_magnetFormula == MAGNET_DYNAMIC || damageInfo->in.m_magnetFormula == MAGNET_HYPERDYNAMIC)
+				mult = magnetScale;
 
 			// Set up the magnet force to use apply on object
 			Coord3D magnetForce;
 			magnetForce.set( &damageInfo->in.m_magnetVector );
 			magnetForce.normalize();
-			magnetForce.scale( damageInfo->in.m_magnetAmount * magnetScale);
 
 			if (!isAirborneTarget())
 			{
-				if(!isAboveTerrain() || !damageInfo->in.m_magnetNoLiftAboveTerrain)
+				Real posZ = calculateHeightAboveTerrain();
+
+				magnetForce.scale( damageInfo->in.m_magnetAmount * mult );
+				magnetScale = max(0.15f, magnetScale);
+				
+				if( damageInfo->in.m_magnetLiftHeight || !isSignificantlyAboveTerrain() )
 				{
 					if(!mass)
 						mass = 1.0f;
 					else
 						mass = max(1.0f, mass * magnetScale);
-					if(calculateHeightAboveTerrain() < damageInfo->in.m_magnetLiftHeight)
+					if(posZ < damageInfo->in.m_magnetLiftHeight)
 						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight * mass;
-					else if(calculateHeightAboveTerrain() < damageInfo->in.m_magnetLiftHeightSecond)
+					else if(posZ < damageInfo->in.m_magnetLiftHeightSecond)
 						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeightSecond * mass;
 					else
 						magnetForce.z = damageInfo->in.m_magnetLiftForce * mass;
 				}
-				if( damageInfo->in.m_magnetLevitationHeight && ( m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= calculateHeightAboveTerrain() ) )
+				
+				if(damageInfo->in.m_magnetMaxLiftHeight && damageInfo->in.m_magnetMaxLiftHeight < posZ && magnetForce.z > 0)
+				{
+					magnetForce.z *= magnetScale;
+					if(magnetForce.z > 1.0f)
+						magnetForce.z = 0;
+				}
+
+				if( damageInfo->in.m_magnetLevitationHeight && ( m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= posZ ) )
 				{
 					m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
 					m_levitateCheckCount = 0;
 					m_levitateCheckFrame = 0;
 				}
-			}
-			else
-			{
-				magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * magnetScale;
-			}
 
-			behavior->applyForce( &magnetForce );
+				behavior->applyForce( &magnetForce );
+			}
+			else if(getAIUpdateInterface())
+			{
+				behavior->resetDynamicPhysics();
+
+				if(isAboveTerrain() || getAIUpdateInterface()->isMoving() )
+					magnetForce.scale( damageInfo->in.m_magnetAmount * 0.01 );
+					
+				if(damageInfo->in.m_magnetAirborneZForce)
+					magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * mult * 0.01 ;
+
+				if(damageInfo->in.m_magnetAirboneFormatStatic)
+					behavior->addVelocityTo(&magnetForce);
+				else
+					behavior->applyForce(&magnetForce);
+			}
 
 			// Set stunned state due to the shock for the object
+			//behavior->applyForce( &magnetForce );
       //behavior->setStunned(true);
 	  //setDisabled(DISABLED_STUNNED);
 
@@ -4674,6 +4709,8 @@ void Object::xfer( Xfer *xfer )
 
 	// health box offset
 	xfer->xferCoord3D( &m_healthBoxOffset );
+
+	xfer->xferReal( &m_invsqrt_mass );
 
 	xfer->xferReal( &m_magnetLevitateHeight );
 

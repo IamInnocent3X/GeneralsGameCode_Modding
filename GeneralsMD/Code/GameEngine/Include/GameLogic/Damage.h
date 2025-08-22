@@ -352,6 +352,28 @@ inline ProtectionTypeFlags clearProtectionTypeFlag(ProtectionTypeFlags flags, Pr
 }
 
 //-------------------------------------------------------------------------------------------------
+enum MagnetType CPP_11(: Int)
+{
+	MAGNET_STATIC,
+	MAGNET_DYNAMIC,
+	MAGNET_ROTATORY,
+	MAGNET_HYPERDYNAMIC,
+
+	MAGNET_COUNT
+};
+
+#ifdef DEFINE_MAGNET_FORMULA_NAMES
+static const char *TheMagnetFormulaNames[] =
+{
+	"STATIC",
+	"DYNAMIC",
+	"ROTATORY",
+	"HYPERDYNAMIC",
+	NULL
+};
+#endif
+
+//-------------------------------------------------------------------------------------------------
 /** Damage info inputs */
 //-------------------------------------------------------------------------------------------------
 class DamageInfoInput : public Snapshot
@@ -424,9 +446,11 @@ public:
 	m_magnetLiftForce = 1.0f;
 	m_magnetLiftForceToHeight = 1.0f;
 	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetMaxLiftHeight = 0.0f;
 	m_magnetAirborneZForce = 0.0f;
+	m_magnetAirboneFormatStatic = TRUE;
 	m_magnetLevitationHeight = 0.0f;
-	m_magnetNoLiftAboveTerrain = FALSE;
+	m_magnetFormula = MAGNET_STATIC;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -454,9 +478,11 @@ public:
 	Real					 m_magnetLiftForce;
 	Real					 m_magnetLiftForceToHeight;
 	Real					 m_magnetLiftForceToHeightSecond;
+	Real					 m_magnetMaxLiftHeight;
 	Real 					 m_magnetAirborneZForce;
 	Real					 m_magnetLevitationHeight;
-	Bool					 m_magnetNoLiftAboveTerrain;
+	Bool					 m_magnetAirboneFormatStatic;
+	MagnetType				 m_magnetFormula;
 
 	AsciiString m_customDamageType;
 	AsciiString m_customDamageStatusType;

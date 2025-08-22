@@ -773,14 +773,16 @@ private:
 	Real m_magnetLiftForce;
 	Real m_magnetLiftForceToHeight;
 	Real m_magnetLiftForceToHeightSecond;
+	Real m_magnetMaxLiftHeight;
 	Real m_magnetAirborneZForce;
 	Real m_magnetLevitationHeight;
-	Real m_magnetLevitationMinDistance;
-	Real m_magnetLevitationMaxDistance;
-	Bool m_magnetNoLiftAboveTerrain;
+	Real m_magnetMinDistance;
+	Real m_magnetMaxDistance;
 	Bool m_magnetNoAirborneZForce;
+	Bool m_magnetAirboneFormatStatic;
 	Bool m_magnetUseCenter;
 	Bool m_magnetRespectsCenter;
+	MagnetType m_magnetFormula;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };

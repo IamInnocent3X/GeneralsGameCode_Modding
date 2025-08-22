@@ -184,9 +184,11 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferReal( &m_magnetLiftForce );
 	xfer->xferReal( &m_magnetLiftForceToHeight );
 	xfer->xferReal( &m_magnetLiftForceToHeightSecond );
+	xfer->xferReal( &m_magnetMaxLiftHeight );
 	xfer->xferReal( &m_magnetLevitationHeight );
-	xfer->xferBool( &m_magnetNoLiftAboveTerrain );
 	xfer->xferReal( &m_magnetAirborneZForce );
+	xfer->xferBool( &m_magnetAirboneFormatStatic );
+	xfer->xferUser( &m_magnetFormula, sizeof( MagnetType ) );
 
 	if( version >= 3 )
 	{
