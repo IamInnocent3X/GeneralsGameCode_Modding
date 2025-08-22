@@ -2034,7 +2034,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	{
 
 		PhysicsBehavior *behavior = getPhysics();
-		if ( !m_dontLevitate && behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
+		if ( behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
 		{
 			Real mass = behavior->getMass();
 			Real mult = 0.335;
@@ -2057,27 +2057,28 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 			// Set up the magnet force to use apply on object
 			Coord3D magnetForce;
 			magnetForce.set( &damageInfo->in.m_magnetVector );
-			magnetForce.normalize();
 
 			if (!isAirborneTarget())
 			{
 				Real posZ = calculateHeightAboveTerrain();
 
+				magnetForce.normalize();
 				magnetForce.scale( damageInfo->in.m_magnetAmount * mult );
 				magnetScale = max(0.15f, magnetScale);
 				
-				if( damageInfo->in.m_magnetLiftHeight || !isSignificantlyAboveTerrain() )
+				if( damageInfo->in.m_magnetLiftForce || ( damageInfo->in.m_magnetLiftHeight && damageInfo->in.m_magnetLiftForceToHeight ) || ( damageInfo->in.m_magnetLiftHeightSecond && damageInfo->in.m_magnetLiftForceToHeightSecond ) )
 				{
 					if(!mass)
-						mass = 1.0f;
+						mult = 1.0f;
 					else
-						mass = max(1.0f, mass * magnetScale);
+						mult = max(1.0f, mass * magnetScale);
+					
 					if(posZ < damageInfo->in.m_magnetLiftHeight)
-						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight * mass;
+						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight * mult;
 					else if(posZ < damageInfo->in.m_magnetLiftHeightSecond)
-						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeightSecond * mass;
-					else
-						magnetForce.z = damageInfo->in.m_magnetLiftForce * mass;
+						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeightSecond * mult;
+					else if(damageInfo->in.m_magnetLiftForce)
+						magnetForce.z = damageInfo->in.m_magnetLiftForce * mult;
 				}
 				
 				if(damageInfo->in.m_magnetMaxLiftHeight && damageInfo->in.m_magnetMaxLiftHeight < posZ && magnetForce.z > 0)
@@ -2098,10 +2099,20 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 			}
 			else if(getAIUpdateInterface())
 			{
+				Real airborneMult = 1.0f;
+				
 				behavior->resetDynamicPhysics();
 
+				if(damageInfo->in.m_magnetAirboneFormatStatic)
+					magnetForce.normalize();
+				else
+					airborneMult = mult;
+
+				if(damageInfo->in.m_magnetFormula == MAGNET_ROTATORY || damageInfo->in.m_magnetFormula == MAGNET_HYPERDYNAMIC)
+					airborneMult *= 16.5;
+
 				if(isAboveTerrain() || getAIUpdateInterface()->isMoving() )
-					magnetForce.scale( damageInfo->in.m_magnetAmount * 0.01 );
+					magnetForce.scale( damageInfo->in.m_magnetAmount * 0.01 * airborneMult );
 					
 				if(damageInfo->in.m_magnetAirborneZForce)
 					magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * mult * 0.01 ;
@@ -2119,13 +2130,13 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 
       //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
 		}
-		else if(m_dontLevitate)
+	}
+	else if(m_dontLevitate && m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight )
+	{
+		Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
+		if ( attacker && attacker->getAIUpdateInterface())
 		{
-			Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
-			if ( attacker && attacker->getAIUpdateInterface())
-			{
-				attacker->getAIUpdateInterface()->aiIdle(CMD_FROM_AI);
-			}
+			attacker->getAIUpdateInterface()->aiIdle(CMD_FROM_AI);
 		}
 	}
 
@@ -2706,7 +2717,6 @@ void Object::checkLevitate()
 					m_dontLevitate = TRUE;
 				}
 				//getPhysics()->scrubVelocity2D(0);
-				m_magnetLevitateHeight = 0;
 			}
 		}
 	}
@@ -2726,6 +2736,7 @@ void Object::checkLevitate()
 		{
 			m_dontLevitate = FALSE;
 			m_levitateCheckFrame = 0;
+			m_magnetLevitateHeight = 0;
 		}
 	}
 }

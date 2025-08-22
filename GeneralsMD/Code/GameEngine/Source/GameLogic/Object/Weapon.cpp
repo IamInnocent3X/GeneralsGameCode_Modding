@@ -2212,6 +2212,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						damageInfo.in.m_magnetAirborneZForce = m_magnetAirborneZForce;
 					}
 				}
+				else
+				{
+					damageInfo.in.m_magnetAmount = 0.0f;
+					damageInfo.in.m_magnetLevitationHeight = m_magnetLevitationHeight;
+				}
 			}
 
       if (source && source->getControllingPlayer()) {
