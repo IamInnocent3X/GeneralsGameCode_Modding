@@ -396,9 +396,9 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetLevitationHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationHeight) },
 	{ "MagnetMinDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMinDistance) },
 	{ "MagnetMaxDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxDistance) },
+	{ "MagnetNoAirborne",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborne) },
 	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
 	{ "MagnetAirborneUseStaticForce",				INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneFormatStatic) },
-	{ "MagnetNoAirborneZForce",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborneZForce) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
 	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
 	{ "MagnetFormula",								INI::parseIndexList,			TheMagnetFormulaNames,	offsetof(WeaponTemplate, m_magnetFormula) },
@@ -571,8 +571,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_magnetLevitationHeight = 0.0f;
 	m_magnetMinDistance = 0.0f;
 	m_magnetMaxDistance = 0.0f;
+	m_magnetNoAirborne = FALSE;
 	m_magnetAirborneZForce = 0.0f;
-	m_magnetNoAirborneZForce = FALSE;
 	m_magnetAirboneFormatStatic = TRUE;
 	m_magnetUseCenter = FALSE;
 	m_magnetRespectsCenter = TRUE;
@@ -2132,7 +2132,10 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_magnetAmount = m_magnetInfantryAmount;
 			else
 				damageInfo.in.m_magnetAmount = m_magnetAmount;
-			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && curVictim->getAIUpdateInterface() && curVictim->getAIUpdateInterface()->getCurLocomotor())
+			if (damageInfo.in.m_magnetAmount != 0.0f && curVictim && 
+				  curVictim->getAIUpdateInterface() && 
+				  curVictim->getAIUpdateInterface()->getCurLocomotor() &&
+				  (!curVictim->isAirborneTarget() || !m_magnetNoAirborne ))
 			{
 				Real distance = ThePartitionManager->getDistanceSquared(source, curVictim->getPosition(), ATTACK_RANGE_CALC_TYPE);
 				distance = sqrt(distance);

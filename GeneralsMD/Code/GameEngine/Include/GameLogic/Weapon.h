@@ -778,7 +778,7 @@ private:
 	Real m_magnetLevitationHeight;
 	Real m_magnetMinDistance;
 	Real m_magnetMaxDistance;
-	Bool m_magnetNoAirborneZForce;
+	Bool m_magnetNoAirborne;
 	Bool m_magnetAirboneFormatStatic;
 	Bool m_magnetUseCenter;
 	Bool m_magnetRespectsCenter;
