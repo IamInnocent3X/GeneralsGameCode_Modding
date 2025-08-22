@@ -397,7 +397,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetMinDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMinDistance) },
 	{ "MagnetMaxDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxDistance) },
 	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
-	{ "MagnetAirborneUseStaticForce",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneFormatStatic) },
+	{ "MagnetAirborneUseStaticForce",				INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneFormatStatic) },
 	{ "MagnetNoAirborneZForce",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborneZForce) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
 	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
