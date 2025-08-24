@@ -2103,10 +2103,10 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 				
 				behavior->resetDynamicPhysics();
 
-				if(damageInfo->in.m_magnetAirboneFormatStatic)
-					magnetForce.normalize();
-				else
+				if(damageInfo->in.m_magnetAirboneAffectedByYaw)
 					airborneMult = mult;
+				else
+					magnetForce.normalize();
 
 				if(damageInfo->in.m_magnetFormula == MAGNET_ROTATORY || damageInfo->in.m_magnetFormula == MAGNET_HYPERDYNAMIC)
 					airborneMult *= 16.5;
@@ -2117,10 +2117,10 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 				if(damageInfo->in.m_magnetAirborneZForce)
 					magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * mult * 0.01 ;
 
-				if(damageInfo->in.m_magnetAirboneFormatStatic)
-					behavior->addVelocityTo(&magnetForce);
-				else
+				if(damageInfo->in.m_magnetAirboneAffectedByYaw)
 					behavior->applyForce(&magnetForce);
+				else
+					behavior->addVelocityTo(&magnetForce);
 			}
 
 			// Set stunned state due to the shock for the object

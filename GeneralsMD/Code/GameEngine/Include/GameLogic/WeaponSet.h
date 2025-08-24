@@ -136,6 +136,26 @@ enum WeaponSetConditionType CPP_11(: Int)
 };
 
 //-------------------------------------------------------------------------------------------------
+enum WeaponChoiceCriteria CPP_11(: Int)
+{
+	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
+	PREFER_LONGEST_RANGE,	///< choose the weapon with the longest range (that will do nonzero damage)
+
+	PREFER_CRITERIA_COUNT
+};
+
+
+#ifdef DEFINE_WEAPON_CHOICE_CRITERIA_NAMES
+static const char *TheWeaponChoiceCriteriaNames[] = 
+{
+	"DAMAGE",
+	"RANGE",
+
+	NULL
+};
+#endif
+
+//-------------------------------------------------------------------------------------------------
 class WeaponTemplateSet
 {
 private:
@@ -147,6 +167,7 @@ private:
 	Bool										m_isReloadTimeShared;
 	Bool										m_isWeaponLockSharedAcrossSets; ///< A weapon set so similar that it is safe to hold locks across
 	Bool										m_isWeaponReloadSharedAcrossSets; ///< Keep current ammo count and reload progress between sets
+	WeaponChoiceCriteria			m_weaponChoiceCriteria;
 
 	static void parseWeapon(INI* ini, void *instance, void *store, const void* userData);
 	static void parseAutoChoose(INI* ini, void *instance, void *store, const void* userData);
@@ -167,6 +188,7 @@ public:
 	Bool isSharedReloadTime( void ) const { return m_isReloadTimeShared; }
 	Bool isWeaponLockSharedAcrossSets() const {return m_isWeaponLockSharedAcrossSets; }
 	Bool isWeaponReloadSharedAcrossSets() const { return m_isWeaponReloadSharedAcrossSets; }
+	WeaponChoiceCriteria getWeaponChoiceCriteria() const { return m_weaponChoiceCriteria; }
 
 	Bool hasAnyWeapons() const;
 	inline const WeaponTemplate* getNth(WeaponSlotType n) const { return m_template[n]; }
@@ -184,18 +206,12 @@ public:
 typedef std::vector<WeaponTemplateSet> WeaponTemplateSetVector;
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponChoiceCriteria CPP_11(: Int)
-{
-	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
-	PREFER_LONGEST_RANGE	///< choose the weapon with the longest range (that will do nonzero damage)
-};
-
-//-------------------------------------------------------------------------------------------------
 enum WeaponLockType CPP_11(: Int)
 {
 	NOT_LOCKED,							///< Weapon is not locked
 	LOCKED_TEMPORARILY,			///< Weapon is locked until clip is empty, or current "attack" state exits
-	LOCKED_PERMANENTLY			///< Weapon is locked until explicitly unlocked or lock is changed to another weapon
+	LOCKED_PERMANENTLY,			///< Weapon is locked until explicitly unlocked or lock is changed to another weapon
+	LOCKED_PRIORITY
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -582,6 +582,13 @@ public:
 
 	inline Real getMagnetAmount() const { return m_magnetAmount; }
 
+	inline Real getMinDamageHeight() const { return m_minDamageHeight; }
+	inline Real getMaxDamageHeight() const { return m_maxDamageHeight; }
+	inline Real getMinTargetHeight() const { return m_minTargetHeight; }
+	inline Real getMaxTargetHeight() const { return m_maxTargetHeight; }
+	inline Real getAttackRangePriority() const { return m_attackRangePriority; }
+	inline Real getOutsideAttackRangePriority() const { return m_outsideAttackRangePriority; }
+
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
 		const Object* projectile,
@@ -778,11 +785,19 @@ private:
 	Real m_magnetLevitationHeight;
 	Real m_magnetMinDistance;
 	Real m_magnetMaxDistance;
+	Bool m_magnetLinearDistanceCalc;
 	Bool m_magnetNoAirborne;
-	Bool m_magnetAirboneFormatStatic;
+	Bool m_magnetAirboneAffectedByYaw;
 	Bool m_magnetUseCenter;
 	Bool m_magnetRespectsCenter;
 	MagnetType m_magnetFormula;
+
+	Real m_minDamageHeight;
+	Real m_maxDamageHeight;
+	Real m_minTargetHeight;
+	Real m_maxTargetHeight;
+	Int m_attackRangePriority;
+	Int m_outsideAttackRangePriority;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };
@@ -996,6 +1011,16 @@ public:
 
 	inline ProtectionTypeFlags getProtectionTypes() const { return m_template->getProtectionTypes(); }
 
+	inline Real getMinDamageHeight() const { return m_template->getMinDamageHeight(); }
+	inline Real getMaxDamageHeight() const { return m_template->getMaxDamageHeight(); }
+	inline Real getMinTargetHeight() const { return m_template->getMinTargetHeight(); }
+	inline Real getMaxTargetHeight() const { return m_template->getMaxTargetHeight(); }
+	inline Real getAttackRangePriority() const { return m_template->getAttackRangePriority(); }
+	inline Real getOutsideAttackRangePriority() const { return m_template->getOutsideAttackRangePriority(); }
+
+	Int getWeaponPriority(const Object *source, const Object *target) const;
+	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;
+
 	Int getClipReloadTime(const Object *source) const;
 
 	Real getPrimaryDamageRadius(const Object *source) const;
@@ -1008,6 +1033,8 @@ public:
 
 	Bool isPitchLimited() const { return m_pitchLimited; }
 	Bool isWithinTargetPitch(const Object *source, const Object *victim) const;
+
+	Bool isWithinTargetHeight(const Object *victim) const;
 
 	//Leech range functionality simply means this weapon has unlimited range temporarily. How it works is if the
 	//weapon template has the LeechRangeWeapon set, it means that once the unit has closed to standard weapon range

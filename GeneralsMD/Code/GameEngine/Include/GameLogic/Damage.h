@@ -448,9 +448,11 @@ public:
 	m_magnetLiftForceToHeightSecond = 1.0f;
 	m_magnetMaxLiftHeight = 0.0f;
 	m_magnetAirborneZForce = 0.0f;
-	m_magnetAirboneFormatStatic = TRUE;
+	m_magnetAirboneAffectedByYaw = FALSE;
 	m_magnetLevitationHeight = 0.0f;
 	m_magnetFormula = MAGNET_STATIC;
+	m_minDamageHeight = 0.0f;
+	m_maxDamageHeight = 0.0f;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -481,7 +483,7 @@ public:
 	Real					 m_magnetMaxLiftHeight;
 	Real 					 m_magnetAirborneZForce;
 	Real					 m_magnetLevitationHeight;
-	Bool					 m_magnetAirboneFormatStatic;
+	Bool					 m_magnetAirboneAffectedByYaw;
 	MagnetType				 m_magnetFormula;
 
 	AsciiString m_customDamageType;
@@ -528,6 +530,9 @@ public:
 	AsciiString m_customSubdualDisableRemoveSound;
 
 	ProtectionTypeFlags m_protectionTypes;
+
+	Real m_minDamageHeight;
+	Real m_maxDamageHeight;
 
 protected:
 

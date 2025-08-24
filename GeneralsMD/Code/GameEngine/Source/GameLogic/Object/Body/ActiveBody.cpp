@@ -443,6 +443,22 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	if( obj->isEffectivelyDead() )
 		return;
 
+	Real objHeight;
+	// Structures don't have altitudes
+	if( obj->isKindOf( KINDOF_STRUCTURE ) )
+	{
+		// But they have geometrical heights
+		objHeight = obj->getGeometryInfo().getMaxHeightAbovePosition();
+	}
+	else
+	{
+		objHeight = obj->getHeightAboveTerrain();
+	}
+
+	if( objHeight < damageInfo->in.m_minDamageHeight || ( damageInfo->in.m_maxDamageHeight && damageInfo->in.m_maxDamageHeight < objHeight ))
+		return;
+	
+
 	Object *damager = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
 	if( damager )
 	{

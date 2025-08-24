@@ -33,6 +33,7 @@
 
 #define DEFINE_WEAPONSLOTTYPE_NAMES
 #define DEFINE_COMMANDSOURCEMASK_NAMES
+#define DEFINE_WEAPON_CHOICE_CRITERIA_NAMES
 
 #include "GameLogic/WeaponSet.h"
 
@@ -111,6 +112,7 @@ void WeaponTemplateSet::clear()
 	m_isReloadTimeShared = false;
 	m_isWeaponLockSharedAcrossSets = FALSE;
 	m_isWeaponReloadSharedAcrossSets = FALSE;
+	m_weaponChoiceCriteria = PREFER_MOST_DAMAGE;
 	m_types.clear();
 	for (int i = 0; i < WEAPONSLOT_COUNT; ++i)
 	{
@@ -167,6 +169,7 @@ void WeaponTemplateSet::parseWeaponTemplateSet( INI* ini, const ThingTemplate* t
 		{ "ShareWeaponReloadTime", INI::parseBool, NULL, offsetof( WeaponTemplateSet, m_isReloadTimeShared ) },
 		{ "WeaponLockSharedAcrossSets", INI::parseBool, NULL, offsetof( WeaponTemplateSet, m_isWeaponLockSharedAcrossSets ) },
 		{ "WeaponReloadSharedAcrossSets", INI::parseBool, NULL, offsetof(WeaponTemplateSet, m_isWeaponReloadSharedAcrossSets) },
+		{ "WeaponChoiceCriteria", INI::parseIndexList, TheWeaponChoiceCriteriaNames, offsetof( WeaponTemplateSet, m_weaponChoiceCriteria ) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -871,6 +874,9 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	Real longestRangeBackup = 0.0f;
 	Real bestDamageBackup = 0.0f;
 
+	Int bestWeaponPriority = 0;
+	Bool LockPriority = FALSE;
+
 	WeaponSlotType currentDecision = PRIMARY_WEAPON;
 	WeaponSlotType currentDecisionBackup = PRIMARY_WEAPON;
 
@@ -915,6 +921,11 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 		if (!weapon->isWithinTargetPitch(obj, victim))
 			continue;
 
+		if (!weapon->isWithinTargetHeight(victim))
+			continue;
+
+		Int weaponPriority = weapon->getWeaponPriority(obj, victim);
+
 		Real damage = weapon->estimateWeaponDamage(obj, victim);
 		Real attackRange = weapon->getAttackRange(obj);
 		Bool weaponIsReady = (weapon->getStatus() == READY_TO_FIRE);
@@ -944,57 +955,93 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 		{
 			const Real HUGE_DAMAGE = 1e10;		// wow, that's a lot of damage.
 			const Real HUGE_RANGE = 1e10;
+			const Int HUGE_VALUE = 1e10;
 			damage = HUGE_DAMAGE;
 			attackRange = HUGE_RANGE;
 			// preferred weapons are also kept if they are merely reloading. (if out of ammo, we can punt.)
 			weaponIsReady = (weapon->getStatus() != OUT_OF_AMMO);
+
+			weaponPriority = HUGE_VALUE;
 		}
 
-		switch (criteria)
+		// Get the Weapon Priority
+		if( weaponPriority > bestWeaponPriority )
 		{
-			case PREFER_MOST_DAMAGE:
+			const Int HUGE_VALUE = 1e10;
+			
+			bestWeaponPriority = weaponPriority;
+
+			if(weaponPriority == HUGE_VALUE)
+			{
 				if( !weaponIsReady )
 				{
-					// If this weapon is not ready, the best it can do is qualify as the Best Backup choice
-					if (damage >= bestDamageBackup)
-					{
-						bestDamageBackup = damage;
-						currentDecisionBackup = (WeaponSlotType)i;
-						foundBackup = true;
-					}
+					currentDecisionBackup = (WeaponSlotType)i;
+					foundBackup = true;
 				}
 				else
 				{
-					if (damage >= bestDamage)
-					{
-						bestDamage = damage;
-						currentDecision = (WeaponSlotType)i;
-						found = true;
-					}
+					currentDecision = (WeaponSlotType)i;
+					found = true;
 				}
-				break;
-			case PREFER_LONGEST_RANGE:
-				{
+			}
+			else
+			{
+				LockPriority = TRUE;
+				currentDecision = (WeaponSlotType)i;
+				found = true;
+			}
+		}
+
+		WeaponChoiceCriteria currentCriteria = m_curWeaponTemplateSet->getWeaponChoiceCriteria();
+
+		if( weaponPriority >= bestWeaponPriority )
+		{
+			switch (currentCriteria)
+			{
+				case PREFER_MOST_DAMAGE:
 					if( !weaponIsReady )
 					{
-						if (attackRange > longestRangeBackup)
+						// If this weapon is not ready, the best it can do is qualify as the Best Backup choice
+						if (damage >= bestDamageBackup)
 						{
-							longestRangeBackup = attackRange;
+							bestDamageBackup = damage;
 							currentDecisionBackup = (WeaponSlotType)i;
 							foundBackup = true;
 						}
 					}
 					else
 					{
-						if (attackRange > longestRange)
+						if (damage >= bestDamage)
 						{
-							longestRange = attackRange;
+							bestDamage = damage;
 							currentDecision = (WeaponSlotType)i;
 							found = true;
 						}
 					}
-				}
-				break;
+					break;
+				case PREFER_LONGEST_RANGE:
+					{
+						if( !weaponIsReady )
+						{
+							if (attackRange > longestRangeBackup)
+							{
+								longestRangeBackup = attackRange;
+								currentDecisionBackup = (WeaponSlotType)i;
+								foundBackup = true;
+							}
+						}
+						else
+						{
+							if (attackRange > longestRange)
+							{
+								longestRange = attackRange;
+								currentDecision = (WeaponSlotType)i;
+								found = true;
+							}
+						}
+					}
+					break;
+			}
 		}
 	}
 
@@ -1013,6 +1060,12 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	{
 		// No weapon at all was found, so we go back to primary.
 		m_curWeapon = PRIMARY_WEAPON;
+	}
+
+	// Lock the weapon for Priority Lock
+	if( LockPriority )
+	{
+		setWeaponLock( m_curWeapon, LOCKED_PRIORITY );
 	}
 
 	//DEBUG_LOG(("WeaponSet::chooseBestWeaponForTarget -- changed curweapon to %s\n",getCurWeapon()->getName().str()));
@@ -1123,7 +1176,12 @@ Bool WeaponSet::setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockTyp
 			m_curWeaponLockedStatus = lockType;
 			//DEBUG_LOG(("WeaponSet::setWeaponLock permanently -- changed curweapon to %s\n",getCurWeapon()->getName().str()));
 		}
-		else if( lockType == LOCKED_TEMPORARILY && m_curWeaponLockedStatus != LOCKED_PERMANENTLY )
+		else if( lockType == LOCKED_PRIORITY && m_curWeaponLockedStatus != LOCKED_PERMANENTLY )
+		{
+			m_curWeapon = weaponSlot;
+			m_curWeaponLockedStatus = lockType;
+		}
+		else if( lockType == LOCKED_TEMPORARILY && m_curWeaponLockedStatus != LOCKED_PERMANENTLY && m_curWeaponLockedStatus != LOCKED_PRIORITY )
 		{
 			m_curWeapon = weaponSlot;
 			m_curWeaponLockedStatus = lockType;
@@ -1149,6 +1207,11 @@ void WeaponSet::releaseWeaponLock(WeaponLockType lockType)
 	{
 		// all locks released.
 		m_curWeaponLockedStatus = NOT_LOCKED;
+	}
+	else if( lockType == LOCKED_PRIORITY )
+	{
+		if (m_curWeaponLockedStatus == LOCKED_PRIORITY || m_curWeaponLockedStatus == LOCKED_TEMPORARILY)
+			m_curWeaponLockedStatus = NOT_LOCKED;
 	}
 	else if (lockType == LOCKED_TEMPORARILY)
 	{

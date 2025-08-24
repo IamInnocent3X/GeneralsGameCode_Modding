@@ -396,12 +396,20 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MagnetLevitationHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationHeight) },
 	{ "MagnetMinDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMinDistance) },
 	{ "MagnetMaxDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxDistance) },
+	{ "MagnetLinearDistanceCalc",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetLinearDistanceCalc) },
 	{ "MagnetNoAirborne",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborne) },
 	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
-	{ "MagnetAirborneUseStaticForce",				INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneFormatStatic) },
+	{ "MagnetAirborneAffectedByYaw",				INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneAffectedByYaw) },
 	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
 	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
 	{ "MagnetFormula",								INI::parseIndexList,			TheMagnetFormulaNames,	offsetof(WeaponTemplate, m_magnetFormula) },
+
+	{ "MinDamageAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_minDamageHeight) },
+	{ "MaxDamageAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_maxDamageHeight) },
+	{ "MinTargetAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_minTargetHeight) },
+	{ "MaxTargetAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_maxTargetHeight) },
+	{ "PriorityWithinAttackRange",					INI::parseInt,					NULL,					offsetof(WeaponTemplate, m_attackRangePriority) },
+	{ "PriorityOutsideAttackRange",					INI::parseInt,					NULL,					offsetof(WeaponTemplate, m_outsideAttackRangePriority) },
 
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
@@ -571,9 +579,10 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_magnetLevitationHeight = 0.0f;
 	m_magnetMinDistance = 0.0f;
 	m_magnetMaxDistance = 0.0f;
+	m_magnetLinearDistanceCalc = FALSE;
 	m_magnetNoAirborne = FALSE;
 	m_magnetAirborneZForce = 0.0f;
-	m_magnetAirboneFormatStatic = TRUE;
+	m_magnetAirboneAffectedByYaw = FALSE;
 	m_magnetUseCenter = FALSE;
 	m_magnetRespectsCenter = TRUE;
 	m_magnetFormula = MAGNET_STATIC;
@@ -581,6 +590,13 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 
 	m_isShielderImmune = FALSE;
+
+	m_minDamageHeight = 0.0f;
+	m_maxDamageHeight = 0.0f;
+	m_minTargetHeight = 0.0f;
+	m_maxTargetHeight = 0.0f;
+	m_attackRangePriority = 0;
+	m_outsideAttackRangePriority = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -920,6 +936,9 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 
 	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
 
+	Real MinDamageHeight = getMinDamageHeight();
+	Real MaxDamageHeight = getMaxDamageHeight();
+
 	if ( victimObj->isKindOf(KINDOF_SHRUBBERY) )
 	{
 		if (deathType == DEATH_BURNED)
@@ -1019,6 +1038,8 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	damageInfo.m_customSubdualDisableSound = CustomSubdualDisableSound;
 	damageInfo.m_customSubdualDisableRemoveSound = CustomSubdualDisableRemoveSound;
 	damageInfo.m_protectionTypes = ProtectionTypes;
+	damageInfo.m_minDamageHeight = MinDamageHeight;
+	damageInfo.m_maxDamageHeight = MaxDamageHeight;
 	return victimObj->estimateDamage(damageInfo);
 }
 
@@ -1853,6 +1874,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	AsciiString CustomSubdualDisableSound =  getCustomSubdualDisableSound();
 	AsciiString CustomSubdualDisableRemoveSound =  getCustomSubdualDisableRemoveSound();
 	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
+	Real MinDamageHeight = getMinDamageHeight();
+	Real MaxDamageHeight = getMaxDamageHeight();
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
@@ -2031,6 +2054,9 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_customSubdualDisableRemoveSound = CustomSubdualDisableRemoveSound;
 
 			damageInfo.in.m_protectionTypes = ProtectionTypes;
+
+			damageInfo.in.m_minDamageHeight = MinDamageHeight;
+			damageInfo.in.m_maxDamageHeight = MaxDamageHeight;
 			
 			Coord3D damageDirection;
 			damageDirection.zero();
@@ -2137,8 +2163,17 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				  curVictim->getAIUpdateInterface()->getCurLocomotor() &&
 				  (!curVictim->isAirborneTarget() || !m_magnetNoAirborne ))
 			{
-				Real distance = ThePartitionManager->getDistanceSquared(source, curVictim->getPosition(), ATTACK_RANGE_CALC_TYPE);
-				distance = sqrt(distance);
+				Real distance;
+
+				if(m_magnetLinearDistanceCalc)
+				{
+					distance = ThePartitionManager->getDistanceSquared(source, curVictim->getPosition(), ATTACK_RANGE_CALC_TYPE);
+					distance = sqrt(distance);
+				}
+				else
+				{
+					distance = damageDirection.length();
+				}
 
 				if(distance > m_magnetMinDistance && ( !m_magnetMaxDistance || distance < m_magnetMaxDistance ))
 				{
@@ -2206,7 +2241,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						damageInfo.in.m_magnetLiftForceToHeight = m_magnetLiftForceToHeight;
 						damageInfo.in.m_magnetLiftForceToHeightSecond = m_magnetLiftForceToHeightSecond;
 						damageInfo.in.m_magnetMaxLiftHeight = m_magnetMaxLiftHeight;
-						damageInfo.in.m_magnetAirboneFormatStatic = m_magnetAirboneFormatStatic;
+						damageInfo.in.m_magnetAirboneAffectedByYaw = m_magnetAirboneAffectedByYaw;
 						damageInfo.in.m_magnetFormula = m_magnetFormula;
 						damageInfo.in.m_magnetLevitationHeight = m_magnetLevitationHeight;
 						damageInfo.in.m_magnetAirborneZForce = m_magnetAirborneZForce;
@@ -3632,6 +3667,43 @@ Bool Weapon::isTooClose( const Object *source, const Coord3D *pos ) const
 }
 
 //-------------------------------------------------------------------------------------------------
+Int Weapon::getWeaponPriority(const Object *source, const Object *target) const
+{
+	Real minAttackRange = m_template->getMinimumAttackRange();
+	Real AttackRange = getAttackRange(source);
+
+	Real distSqr = ThePartitionManager->getDistanceSquared( source, target, ATTACK_RANGE_CALC_TYPE );
+	if (distSqr < sqr(minAttackRange))
+	{
+		return m_template->getOutsideAttackRangePriority();
+	}
+	else if (distSqr <= sqr(AttackRange))
+	{
+		return m_template->getAttackRangePriority();
+	}
+	return m_template->getOutsideAttackRangePriority();
+}
+
+//-------------------------------------------------------------------------------------------------
+Int Weapon::getWeaponPriority( const Object *source, const Coord3D *pos ) const
+{
+	Real minAttackRange = m_template->getMinimumAttackRange();
+	Real AttackRange = getAttackRange(source);
+
+	Real distSqr = ThePartitionManager->getDistanceSquared( source, pos, ATTACK_RANGE_CALC_TYPE );
+	if (distSqr < sqr(minAttackRange))
+	{
+		return m_template->getOutsideAttackRangePriority();
+	}
+	else if (distSqr <= sqr(AttackRange))
+	{
+		return m_template->getAttackRangePriority();
+	}
+	return m_template->getOutsideAttackRangePriority();
+}
+
+
+//-------------------------------------------------------------------------------------------------
 Bool Weapon::isGoalPosWithinAttackRange(const Object *source, const Coord3D* goalPos, const Object *target, const Coord3D* targetPos)	const
 {
 	Real distSqr;
@@ -4382,6 +4454,28 @@ Bool Weapon::isWithinTargetPitch(const Object *source, const Object *victim) con
 
 	//DEBUG_LOG(("pitch %f-%f is out of range",rad2deg(minPitch),rad2deg(maxPitch),rad2deg(m_template->getMinTargetPitch()),rad2deg(m_template->getMaxTargetPitch())));
 	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Weapon::isWithinTargetHeight(const Object *victim) const
+{	
+	Real height;
+	
+	// Structures don't have altitudes
+	if( victim->isKindOf( KINDOF_STRUCTURE ) )
+	{
+		// But they have geometrical heights
+		height = victim->getGeometryInfo().getMaxHeightAbovePosition();
+	}
+	else
+	{
+		height = victim->getHeightAboveTerrain();
+	}
+
+	if (m_template->getMinTargetHeight() <= height && ( !m_template->getMaxTargetHeight() || height <= m_template->getMaxTargetHeight() )) 
+		return true;
+	else
+		return false;
 }
 
 //-------------------------------------------------------------------------------------------------
