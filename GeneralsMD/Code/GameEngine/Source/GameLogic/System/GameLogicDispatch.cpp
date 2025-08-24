@@ -121,7 +121,7 @@ static void doMoveTo( Object *obj, const Coord3D *pos )
 		{
 			ai->clearWaypointQueue();
 			obj->leaveGroup();
-			obj->releaseWeaponLock(LOCKED_TEMPORARILY);	// release any temporary locks.
+			obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 			ai->aiMoveToPosition( pos, CMD_FROM_PLAYER );
 		}
 	}
@@ -1041,7 +1041,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			if( objectWantingToExit->getControllingPlayer() != thisPlayer )
 				break;
 
-			objectWantingToExit->releaseWeaponLock(LOCKED_TEMPORARILY);	// release any temporary locks.
+			objectWantingToExit->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 
 			// exit whatever objectWantingToExit is INSIDE of
 			AIUpdateInterface *ai = objectWantingToExit->getAIUpdateInterface();

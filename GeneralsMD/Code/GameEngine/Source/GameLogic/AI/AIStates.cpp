@@ -7358,7 +7358,7 @@ void AIHuntState::onExit( StateExitType status )
 	Object *obj = getMachineOwner();
 	if (obj)
 	{
-		obj->releaseWeaponLock(LOCKED_TEMPORARILY);	// release any temporary locks.
+		obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 	}
 }
 
