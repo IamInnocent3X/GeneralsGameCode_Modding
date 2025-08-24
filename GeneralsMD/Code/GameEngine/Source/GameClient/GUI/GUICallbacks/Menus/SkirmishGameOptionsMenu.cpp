@@ -440,8 +440,8 @@ void reallyDoStart( void )
 
   TheWritableGlobalData->m_mapName = TheSkirmishGameInfo->getMap();
   TheSkirmishGameInfo->startGame(0);
-	if(TheGlobalData->m_initRandomNonDeterministic)
-		InitGameLogicRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	if(TheGlobalData->m_initRandomTimeDeterministic)
+		InitGameLogicRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)+GameLogicRandomValue(0,5)));
 	else
 		InitGameLogicRandom(TheSkirmishGameInfo->getSeed());
 

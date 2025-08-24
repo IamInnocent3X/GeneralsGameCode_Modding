@@ -739,8 +739,8 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 	if( getSaveGameInfo()->saveFileType == SAVE_FILE_TYPE_MISSION )
 	{
 
-		if(TheGlobalData->m_initRandomNonDeterministic)
-			InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+		if(TheGlobalData->m_initRandomTimeDeterministic)
+			InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)+GameLogicRandomValue(0,5)));
 		else
 			InitRandom(0);
 

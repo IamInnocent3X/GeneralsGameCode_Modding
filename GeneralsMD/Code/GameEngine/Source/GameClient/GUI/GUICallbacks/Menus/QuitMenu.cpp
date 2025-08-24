@@ -241,8 +241,8 @@ static void restartMissionMenu()
 							);
 		//if (TheGlobalData->m_fixedSeed >= 0)
 			//InitRandom(TheGlobalData->m_fixedSeed);
-			if(TheGlobalData->m_initRandomNonDeterministic)
-				InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+			if(TheGlobalData->m_initRandomTimeDeterministic)
+				InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)+GameLogicRandomValue(0,5)));
 			else
 				InitRandom(0);
 		//else

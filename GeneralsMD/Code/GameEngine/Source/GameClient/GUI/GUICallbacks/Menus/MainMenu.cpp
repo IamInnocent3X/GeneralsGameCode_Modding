@@ -334,8 +334,8 @@ static void doGameStart( void )
 	msg->appendIntegerArgument(GAME_SINGLE_PLAYER);
 	msg->appendIntegerArgument(TheCampaignManager->getGameDifficulty());
 	msg->appendIntegerArgument(TheCampaignManager->getRankPoints());
-	if(TheGlobalData->m_initRandomNonDeterministic)
-		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	if(TheGlobalData->m_initRandomTimeDeterministic)
+		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)+GameLogicRandomValue(0,5)));
 	else
 		InitRandom(0);
 

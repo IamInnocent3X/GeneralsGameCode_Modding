@@ -85,8 +85,8 @@ static void doGameStart( void )
 	else
 		InitGameLogicRandom(GameClientRandomValue(0, INT_MAX - 1));
 	*/
-	if(TheGlobalData->m_initRandomNonDeterministic)
-		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	if(TheGlobalData->m_initRandomTimeDeterministic)
+		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)+GameLogicRandomValue(0,5)));
 	else
 		InitRandom(0);
 
