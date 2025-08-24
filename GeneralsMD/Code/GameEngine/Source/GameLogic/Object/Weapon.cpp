@@ -4472,7 +4472,8 @@ Bool Weapon::isWithinTargetHeight(const Object *victim) const
 		height = victim->getHeightAboveTerrain();
 	}
 
-	if (m_template->getMinTargetHeight() <= height && ( !m_template->getMaxTargetHeight() || height <= m_template->getMaxTargetHeight() )) 
+	// Structures don't have a Max Target Height since all Structures are built on ground
+	if (m_template->getMinTargetHeight() <= height && ( victim->isKindOf( KINDOF_STRUCTURE ) || !m_template->getMaxTargetHeight() || height <= m_template->getMaxTargetHeight() )) 
 		return true;
 	else
 		return false;

@@ -440,7 +440,10 @@ void reallyDoStart( void )
 
   TheWritableGlobalData->m_mapName = TheSkirmishGameInfo->getMap();
   TheSkirmishGameInfo->startGame(0);
-	InitGameLogicRandom(TheSkirmishGameInfo->getSeed());
+	if(TheGlobalData->m_initRandomNonDeterministic)
+		InitGameLogicRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	else
+		InitGameLogicRandom(TheSkirmishGameInfo->getSeed());
 
 		Bool isSkirmish = TRUE;
 	const MapMetaData *md = TheMapCache->findMap(TheSkirmishGameInfo->getMap());

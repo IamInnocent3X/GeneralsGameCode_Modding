@@ -739,7 +739,10 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 	if( getSaveGameInfo()->saveFileType == SAVE_FILE_TYPE_MISSION )
 	{
 
-		InitRandom(0);
+		if(TheGlobalData->m_initRandomNonDeterministic)
+			InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+		else
+			InitRandom(0);
 
 		TheWritableGlobalData->m_pendingFile = getSaveGameInfo()->missionMapName;
 		GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_NEW_GAME );

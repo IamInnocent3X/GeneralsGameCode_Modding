@@ -78,13 +78,17 @@ static void doGameStart( void )
 	msg->appendIntegerArgument(0);
 
 	/// @todo: when Campaign & skirmish are separated, make campaign have fixed seed and skirmish random.
-	InitRandom(0);
+	//InitRandom(0);
 	/*
 	if (TheGlobalData->m_fixedSeed >= 0)
 		InitGameLogicRandom(TheGlobalData->m_fixedSeed);
 	else
 		InitGameLogicRandom(GameClientRandomValue(0, INT_MAX - 1));
 	*/
+	if(TheGlobalData->m_initRandomNonDeterministic)
+		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	else
+		InitRandom(0);
 
 	isShuttingDown = true;
 }

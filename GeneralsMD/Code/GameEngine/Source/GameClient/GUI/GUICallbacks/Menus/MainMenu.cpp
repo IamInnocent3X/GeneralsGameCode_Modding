@@ -334,7 +334,10 @@ static void doGameStart( void )
 	msg->appendIntegerArgument(GAME_SINGLE_PLAYER);
 	msg->appendIntegerArgument(TheCampaignManager->getGameDifficulty());
 	msg->appendIntegerArgument(TheCampaignManager->getRankPoints());
-	InitRandom(0);
+	if(TheGlobalData->m_initRandomNonDeterministic)
+		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	else
+		InitRandom(0);
 
 	isShuttingDown = TRUE;
 }

@@ -691,7 +691,10 @@ void GameEngine::init()
 				msg->appendIntegerArgument(GAME_SINGLE_PLAYER);
 				msg->appendIntegerArgument(DIFFICULTY_NORMAL);
 				msg->appendIntegerArgument(0);
-				InitRandom(0);
+				if(TheGlobalData->m_initRandomNonDeterministic)
+					InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+				else
+					InitRandom(0);
 			}
 		}
 

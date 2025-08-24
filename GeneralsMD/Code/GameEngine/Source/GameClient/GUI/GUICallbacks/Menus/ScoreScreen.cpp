@@ -221,7 +221,10 @@ void startNextCampaignGame(void)
 	msg->appendIntegerArgument(TheCampaignManager->getGameDifficulty());
 	msg->appendIntegerArgument(TheCampaignManager->getRankPoints());
 
-	InitRandom(0);
+	if(TheGlobalData->m_initRandomNonDeterministic)
+		InitRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)));
+	else
+		InitRandom(0);
 }
 
 

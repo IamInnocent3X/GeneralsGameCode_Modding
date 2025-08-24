@@ -455,7 +455,8 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		objHeight = obj->getHeightAboveTerrain();
 	}
 
-	if( objHeight < damageInfo->in.m_minDamageHeight || ( damageInfo->in.m_maxDamageHeight && damageInfo->in.m_maxDamageHeight < objHeight ))
+	// Structures don't have a Max Target Height since all Structures are built on ground
+	if( objHeight < damageInfo->in.m_minDamageHeight || ( !obj->isKindOf( KINDOF_STRUCTURE ) && damageInfo->in.m_maxDamageHeight && damageInfo->in.m_maxDamageHeight < objHeight ))
 		return;
 	
 
