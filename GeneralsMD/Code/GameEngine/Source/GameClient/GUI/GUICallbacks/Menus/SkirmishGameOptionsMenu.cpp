@@ -440,10 +440,7 @@ void reallyDoStart( void )
 
   TheWritableGlobalData->m_mapName = TheSkirmishGameInfo->getMap();
   TheSkirmishGameInfo->startGame(0);
-	if(TheGlobalData->m_initRandomTimeDeterministic)
-		InitGameLogicRandom(Int(GameLogicRandomValueReal(-PI,PI)*time(NULL)+GameLogicRandomValue(0,5)));
-	else
-		InitGameLogicRandom(TheSkirmishGameInfo->getSeed());
+	InitGameLogicRandom(TheSkirmishGameInfo->getSeed());
 
 		Bool isSkirmish = TRUE;
 	const MapMetaData *md = TheMapCache->findMap(TheSkirmishGameInfo->getMap());
@@ -1364,7 +1361,39 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 	TheSkirmishGameInfo->setSlot(1, gSlot);
 
 	ParseAsciiStringToGameInfo(TheSkirmishGameInfo, prefs.getSlotList());
-	TheSkirmishGameInfo->setSeed(GetTickCount());
+	//TheSkirmishGameInfo->setSeed(GetTickCount());
+
+	Real seed;
+	if(TheGlobalData->m_initRandomType == "MORE_RANDOM")
+	{
+		seed = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
+		seed*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-seed, seed)))));
+	}
+	else if(TheGlobalData->m_initRandomType == "EXHAUSTIVE")
+	{
+		// 
+		UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
+		Int verysilly = silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3));
+		silly = GameLogicRandomValue(0, verysilly);
+		for (UnsignedInt poo = 0; poo < silly; ++poo)
+		{
+			GameLogicRandomValue(0, 1);	// ignore result
+		}
+		silly *= silly;
+		Int fullsilly = max(Int(silly+1), Int(1e10));
+		seed = GameLogicRandomValue(silly, fullsilly);
+	}
+	else if(TheGlobalData->m_initRandomType == "TIME")
+	{
+		seed = time(NULL);
+	}
+	else
+	{
+		seed = GetTickCount();
+	}
+	TheSkirmishGameInfo->setSeed(Int(seed));
+
+	//DEBUG_LOG(("Skirmish Initiated. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), UnsignedInt(seed)));
 
 	UnsignedInt isPreorder = 0;
 	GetUnsignedIntFromRegistry("", "Preorder", isPreorder);

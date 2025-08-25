@@ -652,7 +652,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "MenuScreenFPS",	 INI::parseUnsignedInt, NULL, offsetof(GlobalData, m_menufps) },
 	{ "InGameFPS",	 INI::parseUnsignedInt, NULL, offsetof(GlobalData, m_newfpsLimit) },
 
-	{ "UseTimeDeterministicRandom",	 INI::parseBool, NULL, offsetof(GlobalData, m_initRandomTimeDeterministic) },
+	{ "SeedRandomType",	 INI::parseAsciiString, NULL, offsetof(GlobalData, m_initRandomType) },
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1215,7 +1215,7 @@ GlobalData::GlobalData()
 	m_skirmishloadfps = FALSE;
 	m_menufps = 0;
 	m_newfpsLimit = 0;
-	m_initRandomTimeDeterministic = FALSE;
+	m_initRandomType = NULL;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

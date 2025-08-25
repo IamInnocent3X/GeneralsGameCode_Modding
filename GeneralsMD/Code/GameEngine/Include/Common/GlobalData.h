@@ -597,7 +597,7 @@ public:
 	Bool m_skirmishloadfps;
 	UnsignedInt m_menufps;
 	UnsignedInt m_newfpsLimit;
-	Bool m_initRandomTimeDeterministic;
+	AsciiString m_initRandomType;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
