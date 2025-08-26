@@ -36,8 +36,13 @@ class Object;
 class TunnelTracker; // The player owns one such object for his Tunnels, so instead of duplicating
 // so much code, this SubSystem will manage all of the Cave systems.
 
+#include "Common/Team.h"
 #include "Common/Snapshot.h"
 #include "Common/SubsystemInterface.h"
+
+
+typedef std::vector<TunnelTracker*> TunnelTrackerPtrVec;
+typedef std::hash_map< TeamID, TunnelTrackerPtrVec, std::hash<TeamID>, std::equal_to<TeamID> > TeamTunnelTrackerMapType;
 
 /**
 		System responsible for Crates as code objects - ini, new/delete etc
@@ -58,6 +63,11 @@ public:
 	void unregisterCave( Int theIndex );				//
 	TunnelTracker *getTunnelTrackerForCaveIndex( Int theIndex );
 
+	Bool canSwitchIndexToIndexTeam( Int oldIndex, const Team *oldTeam, Int newIndex, const Team *newTeam ); // If either Index has guys in it, no, you can't
+	void registerNewCaveTeam( Int theIndex, const Team *theTeam );			// All Caves are born with a default index, which could be new
+	TunnelTracker *getTunnelTrackerForCaveIndexTeam( Int theIndex, const Team *theTeam );
+	TunnelTracker *getTunnelTracker( Bool useTeams, Int theIndex, const Team *theTeam );
+
 protected:
 
 	// snapshot methods
@@ -67,6 +77,7 @@ protected:
 
 private:
 	std::vector<TunnelTracker*> m_tunnelTrackerVector;// A vector of pointers where the indexes are known by
+	TeamTunnelTrackerMapType m_tunnelTrackerTeamMap;
 	// others, so it can have NULLs in it to keep position.  I've been advised against a map, so don't be a jerk
 	// and use spot 20 first.
 

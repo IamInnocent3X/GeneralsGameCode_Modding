@@ -83,6 +83,8 @@ class ParticleSystemTemplate;
 class StealthUpdate;
 class SpyVisionUpdate;
 
+//class TunnelContainInterface;
+
 
 //-------------------------------------------------------------------------------------------------
 class BehaviorModuleData : public ModuleData
@@ -141,6 +143,7 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() = 0;
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() = 0;
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const = 0;
+	//virtual TunnelContainInterface *getTunnelContainInterface( void ) = 0; 
 
 };
 
@@ -197,6 +200,7 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return NULL; }
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return NULL; }
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return NULL; }
+	//virtual TunnelContainInterface *getTunnelContainInterface( void ) { return NULL; } 
 
 protected:
 
@@ -271,6 +275,7 @@ class CaveInterface
 public:
 	virtual void tryToSetCaveIndex( Int newIndex ) = 0;	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam ) = 0;	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
+	virtual void switchOwners() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
