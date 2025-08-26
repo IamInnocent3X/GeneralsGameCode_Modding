@@ -54,6 +54,7 @@ TunnelTracker::TunnelTracker()
 	m_containListSize = 0;
 	m_curNemesisID = INVALID_ID;
 	m_nemesisTimestamp = 0;
+	m_bunkerIDs.clear();
 }
 
 // ------------------------------------------------------------------------

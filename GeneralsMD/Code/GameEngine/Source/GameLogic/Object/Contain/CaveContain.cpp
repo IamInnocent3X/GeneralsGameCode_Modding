@@ -130,6 +130,71 @@ void CaveContain::removeAllContained( Bool exposeStealthUnits )
 	}
 }
 
+//--------------------------------------------------------------------------------------------------------
+/** Force all contained objects in the contained list to exit, and kick them in the pants on the way out*/
+//--------------------------------------------------------------------------------------------------------
+void CaveContain::harmAndForceExitAllContained( DamageInfo *info )
+{
+	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	if(!myTracker)
+		return;
+
+	const ContainedItemsList *fullList = myTracker->getContainedItemsList();
+
+	Object *obj;
+	ContainedItemsList::const_iterator it;
+
+	//Kris: Patch 1.01 -- November 6, 2003
+	//No longer advances the iterator and saves it. The iterator is fetched from the beginning after
+	//each loop. This is to prevent a crash where dropping a bunker buster on a tunnel network containing
+	//multiple units (if they have the suicide bomb upgrade - demo general). In this case, multiple bunker
+	//busters would hit the tunnel network in close succession. Missile #1 would iterate the list, killing
+	//infantry #1. Infantry #1 would explode and destroy Missile #2. Missile #2 would start iterating the
+	//same list, killing the remaining units. When Missile #1 picked up and continued processing the list
+	//it would crash because it's iterator was deleted from under it.
+	it = (*fullList).begin();
+	while( it != (*fullList).end() )
+	{
+		obj = *it;
+		removeFromContain( obj, true );
+    obj->attemptDamage( info );
+		it = (*fullList).begin();
+	}  // end while
+
+}  // end removeAllContained
+
+
+//-------------------------------------------------------------------------------------------------
+/** Remove all contained objects from the contained list */
+//-------------------------------------------------------------------------------------------------
+void CaveContain::killAllContained( void )
+{
+	// TheSuperHackers @bugfix xezon 04/06/2025 Empty the TunnelSystem's Contained Items List
+	// straight away to prevent a potential child call to catastrophically modify it as well.
+	// This scenario can happen if the killed occupant(s) apply deadly damage on death
+	// to the host container, which then attempts to remove all remaining occupants
+	// on the death of the host container. This is reproducible by shooting with
+	// Neutron Shells on a GLA Tunnel containing GLA Terrorists.
+
+	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	if(!myTracker)
+		return;
+
+	const ContainedItemsList *fullList = myTracker->getContainedItemsList();
+
+	Object *obj;
+	ContainedItemsList::const_iterator it;
+	it = (*fullList).begin();
+	while( it != (*fullList).end() )
+	{
+		obj = *it;
+		it++;
+		removeFromContain( obj, true );
+
+		obj->kill();
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 /** Iterate the contained list and call the callback on each of the objects */
 //-------------------------------------------------------------------------------------------------
@@ -331,7 +396,7 @@ void CaveContain::onObjectCreated()
 
 	m_needToRunOnBuildComplete = false;
 
-	// Don't do it here. It will crash the save fixes from updates. Do it after the game has been loaded, like updates.
+	// Don't do it here. It will crash the game after loading from a game save. Do it after the game has been loaded, like updates.
 
 	/*registerNewCave();
 

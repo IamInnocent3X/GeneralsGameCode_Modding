@@ -98,6 +98,7 @@
 #include "GameLogic/Module/ToppleUpdate.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/TunnelContain.h"
 
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -2846,6 +2847,20 @@ void Object::updateUpgradeModules()
 			upgrade->attemptUpgrade( maskToCheck );
 		}
 	}
+
+	/*for( BehaviorModule** i = getBehaviorModules(); *i; ++i )
+	{
+		TunnelContainInterface* tci = (*i)->getTunnelContainInterface();
+		if( tci )
+		{
+			return tci->doUpgradeChecks();
+		}
+	}*/
+	static const NameKeyType key_TunnelContain = NAMEKEY("TunnelContain");
+	TunnelContain* tc = (TunnelContain*)(findUpdateModule( key_TunnelContain ));
+	if (tc)
+		tc->doUpgradeChecks();
+
 }
 
 //-------------------------------------------------------------------------------------------------

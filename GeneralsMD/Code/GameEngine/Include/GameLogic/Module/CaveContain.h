@@ -105,6 +105,10 @@ public:
 	virtual void removeFromContain( Object *obj, Bool exposeStealthUnits = FALSE );	///< remove 'obj' from contain list
 	virtual void removeAllContained( Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
 
+	// Bunker Buster Properties
+	virtual void harmAndForceExitAllContained( DamageInfo *info );
+  virtual void killAllContained( void );				///< kill all objects on contain list
+
 	/**
 		return the player that *appears* to control this unit. if null, use getObject()->getControllingPlayer() instead.
 	*/

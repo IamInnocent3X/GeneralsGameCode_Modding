@@ -47,18 +47,24 @@ class TunnelContainModuleData : public OpenContainModuleData
 public:
 
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully healed
+	Bool m_removeOtherUpgrades;
+	std::vector<AsciiString> m_activationUpgradeNames;
+
 
 	TunnelContainModuleData()
 	{
 
 		// by default, takes no time to heal ppl
 		m_framesForFullHeal = 1.0f;
+		m_removeOtherUpgrades = FALSE;
+		m_activationUpgradeNames.clear();
 
 		//
 		// by default we say that transports can have infantry inside them, this will be totally
 		// overwritten by any data provided from the INI entry tho
 		//
 		m_allowInsideKindOf = MAKE_KINDOF_MASK(KINDOF_INFANTRY);
+		m_allowInsideKindOf.set(KINDOF_VEHICLE);
 
 	}
 
@@ -69,6 +75,8 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
+			{ "UpgradesToTriggerBunker", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_activationUpgradeNames ) },
+			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherUpgrades ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -104,6 +112,8 @@ public:
 
 	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
 	virtual void orderAllPassengersToIdle( CommandSourceType commandSource ); ///< Just like it sounds
+	
+	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const;	///< Hey, can I shoot out of this container?
 
 	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const;
 	virtual void addToContainList( Object *obj );		///< The part of AddToContain that inheritors can override (Can't do whole thing because of all the private stuff involved)
@@ -129,14 +139,20 @@ public:
 	virtual void onBuildComplete();
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
+	void doUpgradeChecks();
+
 	// so that the ppl within the tunnel network can get healed
 	virtual UpdateSleepTime update();												///< called once per frame
 
 protected:
 
 	void scatterToNearbyPosition(Object* obj);
+	void doOpenFire();
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
+
+private:
+	UnsignedInt m_checkAttackFrames;
 
 };
 
