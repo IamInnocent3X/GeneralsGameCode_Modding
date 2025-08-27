@@ -237,32 +237,11 @@ TunnelTracker *CaveSystem::getTunnelTrackerForCaveIndexTeam( Int theIndex, const
 
 TunnelTracker *CaveSystem::getTunnelTracker( Bool useTeams, Int theIndex, const Team *theTeam )
 {
-	TunnelTracker *theTracker = NULL;
+	// That was quick
 	if(useTeams)
-	{
-		if(m_tunnelTrackerTeamMap.empty())
-			return NULL;
-		
-		TeamTunnelTrackerMapType::const_iterator it = m_tunnelTrackerTeamMap.find(theTeam->getID());
-		if (it != m_tunnelTrackerTeamMap.end())
-		{
-			if( theIndex < (*it).second.size() )
-			{
-				theTracker = (*it).second[theIndex];
-			}
-		}
-	} 
+		return getTunnelTrackerForCaveIndexTeam( theIndex, theTeam );
 	else
-	{
-		if( theIndex < m_tunnelTrackerVector.size() )
-		{
-			theTracker = m_tunnelTrackerVector[theIndex];
-		}
-	}
-
-	DEBUG_ASSERTCRASH( theTracker != NULL, ("No one should be interested in a sub-cave that doesn't exist.") );
-
-	return theTracker;
+		return getTunnelTrackerForCaveIndex( theIndex );
 }
 
 // ------------------------------------------------------------------------------------------------

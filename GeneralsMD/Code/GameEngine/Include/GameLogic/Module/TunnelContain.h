@@ -147,13 +147,14 @@ public:
 protected:
 
 	void scatterToNearbyPosition(Object* obj);
-	void doOpenFire();
+	void doOpenFire(Bool isAttacking = TRUE);
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
 private:
-	UnsignedInt m_checkAttackFrames;
-
+	ObjectID m_lastFiringObjID;
+	Coord3D m_lastFiringPos;
+	UnsignedInt m_dontLoadSoundFrame;
 };
 
 #endif  // end __TUNNEL_CONTAIN_H_
