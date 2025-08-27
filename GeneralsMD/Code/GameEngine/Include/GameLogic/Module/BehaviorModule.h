@@ -286,6 +286,7 @@ class TunnelInterface
 {
 public:
 	virtual void removeBunker() = 0;
+	virtual void removeGuard() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

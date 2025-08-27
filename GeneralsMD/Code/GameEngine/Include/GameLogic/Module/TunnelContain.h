@@ -49,6 +49,8 @@ public:
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully healed
 	Bool m_removeOtherUpgrades;
 	std::vector<AsciiString> m_activationUpgradeNames;
+	std::vector<AsciiString> m_upgradeDisableOtherNames;
+	std::vector<AsciiString> m_upgradeDisableOwnNames;
 
 
 	TunnelContainModuleData()
@@ -58,6 +60,8 @@ public:
 		m_framesForFullHeal = 1.0f;
 		m_removeOtherUpgrades = FALSE;
 		m_activationUpgradeNames.clear();
+		m_upgradeDisableOtherNames.clear();
+		m_upgradeDisableOwnNames.clear();
 
 		//
 		// by default we say that transports can have infantry inside them, this will be totally
@@ -77,6 +81,8 @@ public:
 			{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
 			{ "UpgradesToTriggerBunker", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_activationUpgradeNames ) },
 			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherUpgrades ) },
+			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
+			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -147,11 +153,14 @@ public:
 	virtual UpdateSleepTime update();												///< called once per frame
 
 	virtual void removeBunker();
+	virtual void removeGuard() { m_hasTunnelGuard = FALSE; }
 
 protected:
 
 	void scatterToNearbyPosition(Object* obj);
 	void doOpenFire(Bool isAttacking = TRUE);
+	void checkRemoveOwnGuard();
+	void checkRemoveOtherGuard();
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
@@ -159,6 +168,7 @@ private:
 	ObjectID m_lastFiringObjID;
 	Coord3D m_lastFiringPos;
 	Bool m_hasBunker;
+	Bool m_hasTunnelGuard;
 };
 
 #endif  // end __TUNNEL_CONTAIN_H_

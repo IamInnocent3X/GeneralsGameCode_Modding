@@ -56,6 +56,7 @@ TunnelContain::TunnelContain( Thing *thing, const ModuleData* moduleData ) : Ope
 	m_isCurrentlyRegistered = FALSE;
 	m_lastFiringObjID = INVALID_ID;
 	m_lastFiringPos.zero();
+	m_hasTunnelGuard = TRUE;
 	if(getTunnelContainModuleData()->m_activationUpgradeNames.empty())
 		m_hasBunker = getTunnelContainModuleData()->m_passengersAllowedToFire;
 	else
@@ -391,16 +392,23 @@ void TunnelContain::doUpgradeChecks()
 
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
 
-	// Only enable this feature if the Open Fire feature is configured.
+	// Check for Tunnel Guard Designation Upgrades
+	checkRemoveOtherGuard();
+	
+	// Check for self Guard Disabling Upgrades
+	checkRemoveOwnGuard();
+
+	// Only enable Fire Ports if the Open Fire feature is configured.
 	if(!modData->m_passengersAllowedToFire)
 		return;
-	
-	// No upgrades? No names.
+
+	// Check for Bunker enabling Upgrades.
 	if(modData->m_activationUpgradeNames.empty())
 		return;
 
 	Object *obj = getObject();
-	
+	const std::list<ObjectID> *tunnels = tunnelTracker->getContainerList();
+
 	// Reset existing properties to check whether it has the appropriate upgrades to apply.
 	m_hasBunker = FALSE;
 	
@@ -424,7 +432,6 @@ void TunnelContain::doUpgradeChecks()
 		if( obj->hasUpgrade(ut) )
 		{
 			// Assign the bunker according to the list of upgrades.
-			const std::list<ObjectID> *tunnels = tunnelTracker->getContainerList();
 			for( std::list<ObjectID>::const_iterator iter = tunnels->begin(); iter != tunnels->end(); iter++ )
 			{
 				if( *iter == obj->getID())
@@ -820,6 +827,8 @@ UpdateSleepTime TunnelContain::update( void )
 			if(openFireUpgrade)
 				return UPDATE_SLEEP_NONE;
 		}
+		if(!m_hasTunnelGuard)
+			return UPDATE_SLEEP_NONE;
 		// check for attacked.
 		BodyModuleInterface *body = obj->getBodyModule();
 		if (body) {
@@ -1007,6 +1016,116 @@ void TunnelContain::removeBunker()
 		}
 	}
 }
+
+// Function to remove its own Tunnel Guard to prevent Units to exit from the Tunnel to protect the Tunnel
+void TunnelContain::checkRemoveOwnGuard()
+{
+	const TunnelContainModuleData *modData = getTunnelContainModuleData();
+
+	if(modData->m_upgradeDisableOwnNames.empty())
+		return;
+
+	Object *obj = getObject();
+
+	Player *owningPlayer = obj->getControllingPlayer();
+	if( owningPlayer == NULL )
+		return;
+	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
+	if( tunnelTracker == NULL )
+		return;
+	
+	if(!tunnelTracker->getOtherTunnelsGuardDisabled())
+		m_hasTunnelGuard = TRUE;
+
+	if(!m_hasTunnelGuard)
+		return;
+
+	std::vector<AsciiString>::const_iterator it_o;
+	for( it_o = modData->m_upgradeDisableOwnNames.begin();
+				it_o != modData->m_upgradeDisableOwnNames.end();
+				it_o++)
+	{
+		const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_o );
+		if( !ut )
+		{
+			DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_o->str()));
+			throw INI_INVALID_DATA;
+		}
+
+		if( getObject()->hasUpgrade(ut) )
+		{
+			removeGuard();
+			break;
+		}
+	}
+		
+}
+
+void TunnelContain::checkRemoveOtherGuard()
+{
+	const TunnelContainModuleData *modData = getTunnelContainModuleData();
+
+	if(modData->m_upgradeDisableOtherNames.empty())
+		return;
+
+	Object *obj = getObject();
+
+	Player *owningPlayer = obj->getControllingPlayer();
+	if( owningPlayer == NULL )
+		return;
+	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
+	if( tunnelTracker == NULL )
+		return;
+
+	tunnelTracker->setOtherTunnelsGuardDisabled(FALSE);
+
+	if(!modData->m_upgradeDisableOtherNames.empty())
+	{
+		const std::list<ObjectID> *tunnels = tunnelTracker->getContainerList();
+
+		std::vector<AsciiString>::const_iterator it_n;
+		for( it_n = modData->m_upgradeDisableOtherNames.begin();
+					it_n != modData->m_upgradeDisableOtherNames.end();
+					it_n++)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_n );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_n->str()));
+				throw INI_INVALID_DATA;
+			}
+
+			if( obj->hasUpgrade(ut) )
+			{
+				// Designate which tunnel Guard according to the list of upgrades.
+				for( std::list<ObjectID>::const_iterator iter = tunnels->begin(); iter != tunnels->end(); iter++ )
+				{
+					if( *iter == obj->getID())
+					{
+						m_hasTunnelGuard = TRUE;
+						tunnelTracker->setOtherTunnelsGuardDisabled(TRUE);
+					}
+					else
+					{
+						Object *other = NULL;
+						other = TheGameLogic->findObjectByID( (*iter) );
+						if( other )
+						{
+							if(other->hasUpgrade(ut))
+								other->removeUpgrade(ut);
+							TunnelInterface *tunnelModule = findTunnel(other);
+							if( tunnelModule == NULL )
+								continue;
+							tunnelModule->removeGuard();
+						}
+					}
+				}
+				break;
+			}
+		}
+	}
+}
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -1041,6 +1160,8 @@ void TunnelContain::xfer( Xfer *xfer )
 	xfer->xferBool( &m_isCurrentlyRegistered );
 
 	xfer->xferBool( &m_hasBunker );
+
+	xfer->xferBool( &m_hasTunnelGuard );
 
 }  // end xfer
 

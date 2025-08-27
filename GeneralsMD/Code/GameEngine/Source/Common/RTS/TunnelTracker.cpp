@@ -56,6 +56,7 @@ TunnelTracker::TunnelTracker()
 	m_nemesisTimestamp = 0;
 	m_checkOpenFireFrames = 0;
 	m_dontLoadSoundFrames = 0;
+	m_otherTunnelGuardDisabled = FALSE;
 }
 
 // ------------------------------------------------------------------------
@@ -402,6 +403,8 @@ void TunnelTracker::xfer( Xfer *xfer )
 
 	// tunnel count
 	xfer->xferUnsignedInt( &m_tunnelCount );
+
+	xfer->xferBool( &m_otherTunnelGuardDisabled );
 
 }  // end xfer
 

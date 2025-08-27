@@ -77,6 +77,9 @@ public:
 	void setDontLoadSound(UnsignedInt count);
 	void removeDontLoadSound(UnsignedInt count);
 
+	void setOtherTunnelsGuardDisabled(Bool set) { m_otherTunnelGuardDisabled = set; };
+	Bool getOtherTunnelsGuardDisabled() const { return m_otherTunnelGuardDisabled; };
+
 protected:
 
 	virtual void crc( Xfer *xfer );
@@ -95,6 +98,7 @@ private:
 	UnsignedInt m_nemesisTimestamp;					///< We only keep nemesis for a couple of seconds.
 	UnsignedInt m_checkOpenFireFrames;
 	UnsignedInt m_dontLoadSoundFrames;
+	Bool m_otherTunnelGuardDisabled;
 };
 
 #endif
