@@ -161,6 +161,7 @@ protected:
 	void doOpenFire(Bool isAttacking = TRUE);
 	void checkRemoveOwnGuard();
 	void checkRemoveOtherGuard();
+	void doHoleRebuildChecks();
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
@@ -169,6 +170,7 @@ private:
 	Coord3D m_lastFiringPos;
 	Bool m_hasBunker;
 	Bool m_hasTunnelGuard;
+	Bool m_rebuildChecked;
 };
 
 #endif  // end __TUNNEL_CONTAIN_H_

@@ -56,6 +56,7 @@ TunnelContain::TunnelContain( Thing *thing, const ModuleData* moduleData ) : Ope
 	m_isCurrentlyRegistered = FALSE;
 	m_lastFiringObjID = INVALID_ID;
 	m_lastFiringPos.zero();
+	m_rebuildChecked = TRUE;
 
 	if(getObject() && 
 	   getObject()->getControllingPlayer() && 
@@ -319,6 +320,10 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
 	if ( me->isDisabledByType( DISABLED_SUBDUED ) || me->isDisabledByType( DISABLED_FROZEN ) )
 		return FALSE;
 
+	// Don't make it applicable if I'm Under Construction (Or being a Hole)
+	if( me->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		return FALSE;
+
 	// Check for upgrades needed for the Contained to Open Fire
 	if(!modData->m_activationUpgradeNames.empty())
 	{
@@ -472,6 +477,49 @@ void TunnelContain::doUpgradeChecks()
 		doOpenFire(FALSE);
 	else
 		removeBunker();
+}
+
+void TunnelContain::doHoleRebuildChecks()
+{
+	if ( !getObject() )
+    	return;
+	Player *owningPlayer = getObject()->getControllingPlayer();
+	if( owningPlayer == NULL )
+		return;
+	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
+	if( tunnelTracker == NULL )
+		return;
+
+	const TunnelContainModuleData *modData = getTunnelContainModuleData();
+	
+	// Check for upgrades needed for the Contained to Open Fire
+	std::vector<AsciiString>::const_iterator it;
+	for( it = modData->m_activationUpgradeNames.begin();
+				it != modData->m_activationUpgradeNames.end();
+				it++)
+	{
+		const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it );
+		if( !ut )
+		{
+			DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+			throw INI_INVALID_DATA;
+		}
+		else if(modData->m_removeOtherUpgrades && ut->getUpgradeType() == UPGRADE_TYPE_PLAYER)
+		{
+			DEBUG_CRASH(("Upgrade '%s', is not an Object Upgrade. Not compatible with RemoveOtherOpenContainOnUpgrade feature.", it->str()));
+		}
+
+		if( getObject()->hasUpgrade(ut) )
+		{
+			m_hasBunker = TRUE;
+			break;
+		}
+	
+	}
+
+	// For switching all the units onto its attacking position
+	if(m_hasBunker)
+		doOpenFire(FALSE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -637,6 +685,10 @@ void TunnelContain::onDie( const DamageInfo * damageInfo )
 
 	tunnelTracker->onTunnelDestroyed( getObject() );
 	m_isCurrentlyRegistered = FALSE;
+
+	// Triggers when you turn into a hole
+	m_rebuildChecked = FALSE;
+	removeBunker();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -656,6 +708,9 @@ void TunnelContain::onDelete( void )
 
 	tunnelTracker->onTunnelDestroyed( getObject() );
 	m_isCurrentlyRegistered = FALSE;
+
+	m_rebuildChecked = FALSE;
+	removeBunker();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -778,7 +833,8 @@ UpdateSleepTime TunnelContain::update( void )
 		Bool openFireCheck;
 
 		// Check if the Tunnel has OpenContained Upgrade enabled. If so, skip updateNemesis
-		if(m_hasBunker)
+		// Also don't check for Dead Tunnels, or Tunnels that are Holes.
+		if(m_hasBunker && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ))
 		{
 			Bool openFireUpgrade = TRUE;
 
@@ -834,6 +890,15 @@ UpdateSleepTime TunnelContain::update( void )
 
 			if(openFireUpgrade)
 				return UPDATE_SLEEP_NONE;
+		}
+		if (!m_hasBunker && modData->m_passengersAllowedToFire && !m_rebuildChecked && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ))
+		{
+			if(modData->m_activationUpgradeNames.empty())
+				m_hasBunker = TRUE;
+			else
+				doHoleRebuildChecks();
+
+			m_rebuildChecked = TRUE;
 		}
 		// Tested and working as intended.
 		if(!m_hasTunnelGuard)
@@ -1021,7 +1086,7 @@ void TunnelContain::removeBunker()
 		while ( it_test != items->end() )
 		{
 			Object *test_obj = *it_test++;
-			if( test_obj->getAI() && test_obj->getContainedBy() == me )
+			if( test_obj->getAI() && ( test_obj->getContainedBy() == me || *test_obj->getPosition() == *me->getPosition() ))
 				test_obj->getAI()->aiIdle(CMD_FROM_AI);
 		}
 	}
@@ -1190,6 +1255,8 @@ void TunnelContain::xfer( Xfer *xfer )
 	xfer->xferBool( &m_hasBunker );
 
 	xfer->xferBool( &m_hasTunnelGuard );
+
+	xfer->xferBool( &m_rebuildChecked );
 
 }  // end xfer
 
