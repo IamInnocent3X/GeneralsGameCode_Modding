@@ -56,7 +56,15 @@ TunnelContain::TunnelContain( Thing *thing, const ModuleData* moduleData ) : Ope
 	m_isCurrentlyRegistered = FALSE;
 	m_lastFiringObjID = INVALID_ID;
 	m_lastFiringPos.zero();
-	m_hasTunnelGuard = TRUE;
+
+	if(getObject() && 
+	   getObject()->getControllingPlayer() && 
+	   getObject()->getControllingPlayer()->getTunnelSystem() && 
+	  !getObject()->getControllingPlayer()->getTunnelSystem()->getOtherTunnelsGuardDisabled())
+		m_hasTunnelGuard = TRUE;
+	else
+		m_hasTunnelGuard = FALSE;
+
 	if(getTunnelContainModuleData()->m_activationUpgradeNames.empty())
 		m_hasBunker = getTunnelContainModuleData()->m_passengersAllowedToFire;
 	else
@@ -827,6 +835,7 @@ UpdateSleepTime TunnelContain::update( void )
 			if(openFireUpgrade)
 				return UPDATE_SLEEP_NONE;
 		}
+		// Tested and working as intended.
 		if(!m_hasTunnelGuard)
 			return UPDATE_SLEEP_NONE;
 		// check for attacked.
@@ -894,29 +903,27 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	// Set it after a while so units doesn't get confused every now and then if multiple tunnels are attacking
 	tunnelTracker->setCheckOpenFireFrames(now + 3*LOGICFRAMES_PER_SECOND);
 
-	Bool changeTunnels = TRUE;
+	Bool changeTunnels = FALSE;
 	
 	ContainModuleInterface *contain = me->getContain();
 
 	// Check if the Occupants are within this Tunnel. If yes, only do the targeting and don't need to change tunnels.
+	// ...This first statement is a sanity check.
 	if(contain)
 	{
 		const ContainedItemsList* items = tunnelTracker->getContainedItemsList();
 		
-		// Don't do change if there's nothing in the Tunnel System.
-		if(items->empty())
-			changeTunnels = FALSE;
-
-		// Check if this is the Tunnel where the object is currently at
-		ContainedItemsList::const_iterator it_test = items->begin();
-		while ( changeTunnels && it_test != items->end() )
+		// Do change only if there's nothing in the Tunnel System.
+		if(!items->empty())
 		{
-			Object *test_obj = *it_test++;
-			if( test_obj->getContainedBy() == me )
-				changeTunnels = FALSE;
-
-			//Check Once
-			break;
+			// Check if this is the Tunnel where the object is currently at, change if there is one that is not in the current Object
+			ContainedItemsList::const_iterator it_test = items->begin();
+			while ( !changeTunnels && it_test != items->end() )
+			{
+				Object *test_obj = *it_test++;
+				if( test_obj->getContainedBy() != me )
+					changeTunnels = TRUE;
+			}
 		}
 	}
 
@@ -988,10 +995,10 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	}
 }
 
+// Remove my Fire Ports
 void TunnelContain::removeBunker()
 { 
-	m_hasBunker = FALSE;
-
+	// Sanity checks
 	Object *me = getObject();
 	Player *owningPlayer = me->getControllingPlayer();
 
@@ -1000,6 +1007,9 @@ void TunnelContain::removeBunker()
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
 	if( tunnelTracker == NULL )
 		return;
+
+	// Disable the main function
+	m_hasBunker = FALSE;
 
 	// If I am occupied, tell everyone in my current Tunnel to stop Firing
 	const ContainedItemsList* items = tunnelTracker->getContainedItemsList();
@@ -1022,11 +1032,13 @@ void TunnelContain::checkRemoveOwnGuard()
 {
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
 
+	// There's no variable that enables this feature, end
 	if(modData->m_upgradeDisableOwnNames.empty())
 		return;
 
 	Object *obj = getObject();
 
+	// Sanity Checks
 	Player *owningPlayer = obj->getControllingPlayer();
 	if( owningPlayer == NULL )
 		return;
@@ -1034,12 +1046,15 @@ void TunnelContain::checkRemoveOwnGuard()
 	if( tunnelTracker == NULL )
 		return;
 	
+	// If the whole Tunnel System is affected by UpgradesDisableOtherTunnelGuard, do not reset Tunnel Guard if turned off
 	if(!tunnelTracker->getOtherTunnelsGuardDisabled())
 		m_hasTunnelGuard = TRUE;
 
+	// Already disabled Tunnel Guard
 	if(!m_hasTunnelGuard)
 		return;
 
+	// Scan for any Upgrades that disables Tunnel Guard
 	std::vector<AsciiString>::const_iterator it_o;
 	for( it_o = modData->m_upgradeDisableOwnNames.begin();
 				it_o != modData->m_upgradeDisableOwnNames.end();
@@ -1052,6 +1067,7 @@ void TunnelContain::checkRemoveOwnGuard()
 			throw INI_INVALID_DATA;
 		}
 
+		// One Upgrade is enough
 		if( getObject()->hasUpgrade(ut) )
 		{
 			removeGuard();
@@ -1061,15 +1077,18 @@ void TunnelContain::checkRemoveOwnGuard()
 		
 }
 
+// Function to make this Tunnel the only focus for Tunnel Guard and Disables other Tunnels from performing Tunnel Guard
 void TunnelContain::checkRemoveOtherGuard()
 {
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
 
+	// There's no variable that enables this feature, end
 	if(modData->m_upgradeDisableOtherNames.empty())
 		return;
 
 	Object *obj = getObject();
 
+	// Sanity Checks
 	Player *owningPlayer = obj->getControllingPlayer();
 	if( owningPlayer == NULL )
 		return;
@@ -1077,6 +1096,7 @@ void TunnelContain::checkRemoveOtherGuard()
 	if( tunnelTracker == NULL )
 		return;
 
+	// Remove the limitation that disables other Tunnels from turning back on their Tunnel Guard
 	tunnelTracker->setOtherTunnelsGuardDisabled(FALSE);
 
 	if(!modData->m_upgradeDisableOtherNames.empty())
@@ -1102,17 +1122,24 @@ void TunnelContain::checkRemoveOtherGuard()
 				{
 					if( *iter == obj->getID())
 					{
+						// Turn on the Tunnel Guard in case it is off
 						m_hasTunnelGuard = TRUE;
+
+						// Sets the limitation that disables other Tunnels from turning on their Tunnel Guard, since there can be only one Tunnel that is focused for this function
 						tunnelTracker->setOtherTunnelsGuardDisabled(TRUE);
 					}
 					else
 					{
+						// Now to turn off other Tunnels' Tunnel Guard
 						Object *other = NULL;
 						other = TheGameLogic->findObjectByID( (*iter) );
 						if( other )
 						{
+							// Remove Upgrades from other Tunnels, as similar types possesses the same feature that enables all tunnels to focus towards them.
 							if(other->hasUpgrade(ut))
 								other->removeUpgrade(ut);
+
+							// Turn off the Tunnel Guard
 							TunnelInterface *tunnelModule = findTunnel(other);
 							if( tunnelModule == NULL )
 								continue;
@@ -1120,6 +1147,7 @@ void TunnelContain::checkRemoveOtherGuard()
 						}
 					}
 				}
+				// Only one upgrade is enough
 				break;
 			}
 		}
