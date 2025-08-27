@@ -7219,3 +7219,12 @@ ObjectID Object::calculateCountermeasureToDivertTo( const Object& victim )
 	}
 	return INVALID_ID;
 }
+
+void Object::doClearTunnelContainTargetID()
+{
+	// Reset targetID each time ordering an attack
+	static const NameKeyType key_TunnelContain = NAMEKEY("TunnelContain");
+	TunnelContain* tc = (TunnelContain*)(findUpdateModule( key_TunnelContain ));
+	if (tc)
+		tc->clearTargetID();
+}

@@ -71,10 +71,6 @@ public:
 	Object *getCurNemesis(void);
 	void updateNemesis(const Object *target);
 
-	std::vector<ObjectID> getBunkerIDs() const {return m_bunkerIDs;}
-	void registerBunkerID(ObjectID bunkerID) {m_bunkerIDs.push_back(bunkerID);}
-	void clearAllOtherBunkerIDs(ObjectID bunkerID) {m_bunkerIDs.clear(); registerBunkerID(bunkerID);}
-
 	UnsignedInt getCheckOpenFireFrames() const {return m_checkOpenFireFrames;}
 
 	void setCheckOpenFireFrames(UnsignedInt count) { m_checkOpenFireFrames = count; }
@@ -97,7 +93,6 @@ private:
 
 	ObjectID		m_curNemesisID;							///< If we have team(s) guarding a tunnel network system, this is one of the current targets.
 	UnsignedInt m_nemesisTimestamp;					///< We only keep nemesis for a couple of seconds.
-	std::vector< ObjectID > m_bunkerIDs;
 	UnsignedInt m_checkOpenFireFrames;
 	UnsignedInt m_dontLoadSoundFrames;
 };

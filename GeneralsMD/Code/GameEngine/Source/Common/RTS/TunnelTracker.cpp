@@ -56,7 +56,6 @@ TunnelTracker::TunnelTracker()
 	m_nemesisTimestamp = 0;
 	m_checkOpenFireFrames = 0;
 	m_dontLoadSoundFrames = 0;
-	m_bunkerIDs.clear();
 }
 
 // ------------------------------------------------------------------------

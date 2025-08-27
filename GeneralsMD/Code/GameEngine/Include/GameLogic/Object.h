@@ -695,6 +695,8 @@ public:
 	// player. These are friend_s for player.
 	void friend_adjustPowerForPlayer( Bool incoming );
 
+	void doClearTunnelContainTargetID();
+
 protected:
 
 	void setOrRestoreTeam( Team* team, Bool restoring );

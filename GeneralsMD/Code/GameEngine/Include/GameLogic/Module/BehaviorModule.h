@@ -60,6 +60,7 @@ class BridgeScaffoldBehaviorInterface;
 class OverchargeBehaviorInterface;
 class TransportPassengerInterface;
 class CaveInterface;
+class TunnelInterface;
 class LandMineInterface;
 
 class ProjectileUpdateInterface;
@@ -125,6 +126,7 @@ public:
 	virtual OverchargeBehaviorInterface* getOverchargeBehaviorInterface() = 0;
 	virtual TransportPassengerInterface* getTransportPassengerInterface() = 0;
 	virtual CaveInterface* getCaveInterface() = 0;
+	virtual TunnelInterface* getTunnelInterface() = 0;
 	virtual LandMineInterface* getLandMineInterface() = 0;
 	virtual DieModuleInterface* getEjectPilotDieInterface() = 0;
 	// move from UpdateModuleInterface (srj)
@@ -182,6 +184,7 @@ public:
 	virtual OverchargeBehaviorInterface* getOverchargeBehaviorInterface() { return NULL; }
 	virtual TransportPassengerInterface* getTransportPassengerInterface() { return NULL; }
 	virtual CaveInterface* getCaveInterface() { return NULL; }
+	virtual TunnelInterface* getTunnelInterface() { return NULL; }
 	virtual LandMineInterface* getLandMineInterface() { return NULL; }
 	virtual DieModuleInterface* getEjectPilotDieInterface() { return NULL; }
 	// interface acquisition (moved from UpdateModule)
@@ -276,6 +279,13 @@ public:
 	virtual void tryToSetCaveIndex( Int newIndex ) = 0;	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam ) = 0;	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
 	virtual void switchOwners() = 0;
+};
+
+//-------------------------------------------------------------------------------------------------
+class TunnelInterface
+{
+public:
+	virtual void removeBunker() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

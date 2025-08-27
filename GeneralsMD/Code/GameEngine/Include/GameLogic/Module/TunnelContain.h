@@ -83,7 +83,7 @@ public:
 	}
 };
 
-class TunnelContain : public OpenContain, public CreateModuleInterface
+class TunnelContain : public OpenContain, public CreateModuleInterface, public TunnelInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( TunnelContain, "TunnelContain" )
@@ -95,6 +95,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual TunnelInterface* getTunnelInterface() { return this; }
 	static Int getInterfaceMask() { return OpenContain::getInterfaceMask() | (MODULEINTERFACE_CREATE); }
 
 	virtual OpenContain *asOpenContain() { return this; }  ///< treat as open container
@@ -139,10 +140,13 @@ public:
 	virtual void onBuildComplete();
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
-	void doUpgradeChecks();
+	virtual void doUpgradeChecks();
+	virtual void clearTargetID() { m_lastFiringObjID = INVALID_ID; }
 
 	// so that the ppl within the tunnel network can get healed
 	virtual UpdateSleepTime update();												///< called once per frame
+
+	virtual void removeBunker();
 
 protected:
 
@@ -154,7 +158,7 @@ protected:
 private:
 	ObjectID m_lastFiringObjID;
 	Coord3D m_lastFiringPos;
-	UnsignedInt m_dontLoadSoundFrame;
+	Bool m_hasBunker;
 };
 
 #endif  // end __TUNNEL_CONTAIN_H_
