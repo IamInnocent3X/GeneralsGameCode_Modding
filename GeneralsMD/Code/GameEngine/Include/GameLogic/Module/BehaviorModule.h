@@ -278,7 +278,7 @@ class CaveInterface
 public:
 	virtual void tryToSetCaveIndex( Int newIndex ) = 0;	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam ) = 0;	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
-	virtual void switchOwners() = 0;
+	virtual Bool getIsCaptured() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -63,10 +63,10 @@ void CaveSystem::reset()
 	{
 		for( TunnelTrackerPtrVec::iterator iter_3 = (*iter_2).second.begin(); iter_3 != (*iter_2).second.end(); iter_3++ )
 		{
-			TunnelTracker *currentTracker = *iter_3;
-			if( currentTracker )// could be NULL, since we don't slide back to fill deleted entries so offsets don't shift
+			TunnelTracker *currentTracker_team = *iter_3;
+			if( currentTracker_team )// could be NULL, since we don't slide back to fill deleted entries so offsets don't shift
 			{
-				deleteInstance(currentTracker);
+				deleteInstance(currentTracker_team);
 			}
 		}
 	}
@@ -269,7 +269,11 @@ void CaveSystem::xfer( Xfer *xfer )
 		{
 
 			// xfer data
-			tracker = *it;
+			if( *it )
+				tracker = *it;
+			else
+				tracker = newInstance( TunnelTracker );
+
 			xfer->xferSnapshot( tracker );
 
 		}  // end
@@ -331,7 +335,11 @@ void CaveSystem::xfer( Xfer *xfer )
 			{
 
 				// xfer data
-				tracker_t = *it_2;
+				if( *it_2 )
+					tracker_t = *it_2;
+				else
+					tracker_t = newInstance( TunnelTracker );
+
 				xfer->xferSnapshot( tracker_t );
 
 			}  // end

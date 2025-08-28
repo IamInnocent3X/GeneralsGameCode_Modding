@@ -134,16 +134,16 @@ public:
 	// Unique to Cave Contain
 	virtual void tryToSetCaveIndex( Int newIndex );	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam );	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
-	virtual void switchOwners();
+	virtual Bool getIsCaptured();
 
 	virtual UpdateSleepTime update();												///< called once per frame
-
-	void recalcApparentControllingPlayerAndEvacuateUnits( void );
 
 protected:
 
 	void changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginalTeams );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
+	void changeTeamOnAllConnectedCavesByTeam( Team *newTeam, Bool setOriginalTeams );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
 	void registerNewCave();
+	void switchCaveOwners( Team *oldTeam );
 
 	Bool m_needToRunOnBuildComplete;
 	Int m_caveIndex;
@@ -153,6 +153,8 @@ protected:
 private:
 
 	Bool m_loaded;
+	Bool m_switchingOwners;
+	Team *m_capturedTeam;
 };
 
 #endif  // end __CAVE_CONTAIN_H_

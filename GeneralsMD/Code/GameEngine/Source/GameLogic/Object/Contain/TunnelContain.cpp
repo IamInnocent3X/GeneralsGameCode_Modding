@@ -491,6 +491,12 @@ void TunnelContain::doHoleRebuildChecks()
 		return;
 
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
+
+	if(modData->m_activationUpgradeNames.empty())
+	{
+		m_hasBunker = TRUE;
+		return;
+	}
 	
 	// Check for upgrades needed for the Contained to Open Fire
 	std::vector<AsciiString>::const_iterator it;
@@ -516,10 +522,6 @@ void TunnelContain::doHoleRebuildChecks()
 		}
 	
 	}
-
-	// For switching all the units onto its attacking position
-	if(m_hasBunker)
-		doOpenFire(FALSE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -834,7 +836,7 @@ UpdateSleepTime TunnelContain::update( void )
 
 		// Check if the Tunnel has OpenContained Upgrade enabled. If so, skip updateNemesis
 		// Also don't check for Dead Tunnels, or Tunnels that are Holes.
-		if(m_hasBunker && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ))
+		if(m_hasBunker && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
 		{
 			Bool openFireUpgrade = TRUE;
 
@@ -891,13 +893,9 @@ UpdateSleepTime TunnelContain::update( void )
 			if(openFireUpgrade)
 				return UPDATE_SLEEP_NONE;
 		}
-		if (!m_hasBunker && modData->m_passengersAllowedToFire && !m_rebuildChecked && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ))
+		if (!m_hasBunker && modData->m_passengersAllowedToFire && !m_rebuildChecked && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
 		{
-			if(modData->m_activationUpgradeNames.empty())
-				m_hasBunker = TRUE;
-			else
-				doHoleRebuildChecks();
-
+			doHoleRebuildChecks();
 			m_rebuildChecked = TRUE;
 		}
 		// Tested and working as intended.
@@ -1086,7 +1084,7 @@ void TunnelContain::removeBunker()
 		while ( it_test != items->end() )
 		{
 			Object *test_obj = *it_test++;
-			if( test_obj->getAI() && ( test_obj->getContainedBy() == me || *test_obj->getPosition() == *me->getPosition() ))
+			if( test_obj->getAI() && ( test_obj->getContainedBy() == me || !m_rebuildChecked ))
 				test_obj->getAI()->aiIdle(CMD_FROM_AI);
 		}
 	}

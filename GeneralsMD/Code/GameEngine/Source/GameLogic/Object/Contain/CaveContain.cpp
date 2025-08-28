@@ -57,6 +57,7 @@ CaveContain::CaveContain( Thing *thing, const ModuleData* moduleData ) : OpenCon
 	m_loaded = false;
 	m_caveIndex = 0;
 	m_originalTeam = NULL;
+	m_switchingOwners = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -210,24 +211,34 @@ void CaveContain::iterateContained( ContainIterateFunc func, void *userData, Boo
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime CaveContain::update( void )
 {
-	if (!m_originalTeam && getObject()->getControllingPlayer() && getObject()->getControllingPlayer()->getRelationship(getObject()->getTeam()) != NEUTRAL )
-		m_originalTeam = getObject()->getTeam();
-	
 	// Loading fixes. Cave System does not register properly while the game is loaded.
-	if(!m_needToRunOnBuildComplete && !m_loaded)
+	if( (!m_needToRunOnBuildComplete || !getObject()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION )) && !m_loaded)
 	{
 		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 		if( myTracker == NULL )
 		{
-			m_loaded = true;
-			
 			registerNewCave();
-
-			TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
-			if(myTracker)
-				myTracker->onTunnelCreated( getObject() );
 		}
+		Bool registerMyTunnel = TRUE;
+		
+		TunnelTracker *newTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+		const std::list<ObjectID> *allCaves = newTracker->getContainerList();
+		for( std::list<ObjectID>::const_iterator iter = allCaves->begin(); iter != allCaves->end(); iter++ )
+		{
+			// For each ID, look it up and change its team.  We all get captured together.
+			if( *iter == getObject()->getID())
+			{
+				registerMyTunnel = FALSE;
+				break;
+			}
+		}
+
+		if(registerMyTunnel)
+			newTracker->onTunnelCreated( getObject() );
+
+		m_loaded = true;
 	}
+
 	OpenContain::update();
 	return UPDATE_SLEEP_NONE;
 }
@@ -244,7 +255,8 @@ void CaveContain::onContaining( Object *obj, Bool wasSelected )
 	// to save our original team tho so that we can revert back to it when all the
 	// occupants are gone
 	//
-	if(!getCaveContainModuleData()->m_caveUsesTeams)
+
+	if(!getCaveContainModuleData()->m_caveHasOwner && !m_switchingOwners)
 		recalcApparentControllingPlayer();
 
 }
@@ -266,15 +278,17 @@ void CaveContain::onRemoving( Object *obj )
 
 	doUnloadSound();
 
-	if( getContainCount() == 0 )
+	if( getContainCount() == 0 && !m_switchingOwners)
 	{
 
 		// put us back on our original team
 		// (hokey exception: if our team is null, don't bother -- this
 		// usually means we are being called during game-teardown and
 		// the teams are no longer valid...)
-		if (getObject()->getTeam() != NULL && !getCaveContainModuleData()->m_caveHasOwner)
+		if (getObject()->getTeam() != NULL && !getCaveContainModuleData()->m_caveHasOwner )
 		{
+			//if(m_capturedTeam != NULL)
+			//	m_originalTeam = NULL;
 			changeTeamOnAllConnectedCaves( m_originalTeam, FALSE );
 			m_originalTeam = NULL;
 		}
@@ -312,6 +326,49 @@ void CaveContain::onSelling()
 
 Bool CaveContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
+	const Object *us = getObject();
+	const CaveContainModuleData *modData = getCaveContainModuleData();
+
+	// if we have any kind of masks set then we must make that check
+	if (obj->isAnyKindOf( modData->m_allowInsideKindOf ) == FALSE ||
+			obj->isAnyKindOf( modData->m_forbidInsideKindOf ) == TRUE)
+	{
+		return false;
+	}
+
+ 	//
+ 	// check relationship, note that this behavior is defined as the relation between
+ 	// 'obj' and the container 'us', and not the reverse
+ 	//
+ 	Bool relationshipRestricted = FALSE;
+ 	Relationship r = obj->getRelationship( us );
+ 	switch( r )
+ 	{
+ 		case ALLIES:
+ 			if( modData->m_allowAlliesInside == FALSE )
+ 				relationshipRestricted = TRUE;
+ 			break;
+
+ 		case ENEMIES:
+ 			if( modData->m_allowEnemiesInside == FALSE )
+ 				relationshipRestricted = TRUE;
+ 			break;
+
+ 		case NEUTRAL:
+ 			if( modData->m_allowNeutralInside == FALSE )
+ 				relationshipRestricted = TRUE;
+ 			break;
+
+ 		default:
+ 			DEBUG_CRASH(( "isValidContainerFor: Undefined relationship (%d) between '%s' and '%s'",
+ 										r, getObject()->getTemplate()->getName().str(),
+ 										obj->getTemplate()->getName().str() ));
+ 			return FALSE;
+
+ 	}  // end switch
+ 	if( relationshipRestricted == TRUE )
+ 		return FALSE;
+
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 	if(!myTracker)
 		return FALSE;
@@ -430,32 +487,43 @@ void CaveContain::onBuildComplete( void )
 // ------------------------------------------------------------------------------------------------
 void CaveContain::onCapture( Player *oldOwner, Player *newOwner )
 {
-	// TO-DO use Hash_Maps to register TeamIDs to have their own Cave Systems.
-	/*TunnelTracker *curTracker = TheCaveSystem->getTunnelTrackerForCaveIndex( m_caveIndex );
-	if( curTracker )
+	if(m_switchingOwners)
 	{
-		TheCaveSystem->unregisterCave( m_caveIndex );
-		curTracker->onTunnelDestroyed(getObject());
+		OpenContain::onCapture( oldOwner, newOwner );
+		return;
 	}
-	
-	TheCaveSystem->registerNewCave( m_caveIndex );
 
-	TunnelTracker *newTracker = TheCaveSystem->getTunnelTrackerForCaveIndex( m_caveIndex );
-	
-	if( newTracker )
-		newTracker->onTunnelCreated(getObject());*/
+	if(getCaveContainModuleData()->m_caveUsesTeams)
+		switchCaveOwners(oldOwner->getDefaultTeam());
 
-	if(getCaveContainModuleData()->m_caveUsesTeams && !getCaveContainModuleData()->m_caveCaptureLinkCaves)
+	// If this is newly captured, make it ours permanently.
+	//if(getContainCount() == 0 && newOwner->getDefaultTeam() != oldOwner->getDefaultTeam() && newOwner->getDefaultTeam() != NULL && newOwner->getDefaultTeam() != ThePlayerList->getNeutralPlayer()->getDefaultTeam())
+	//	setOriginalTeam(newOwner->getDefaultTeam());
+	
+	//if(newOwner->getDefaultTeam() != ThePlayerList->getNeutralPlayer()->getDefaultTeam())
+	//	setOriginalTeam( newOwner->getDefaultTeam() );
+
+	// If we are captured, not defected, grant the ownership to the Player permanently.
+	if(ThePlayerList && ThePlayerList->getLocalPlayer() && ThePlayerList->getLocalPlayer()->getRelationship(getObject()->getTeam()) != NEUTRAL && getContainCount() == 0)
+		m_capturedTeam = newOwner->getDefaultTeam();
+	
+	if(getCaveContainModuleData()->m_caveUsesTeams && getCaveContainModuleData()->m_caveCaptureLinkCaves && m_capturedTeam != NULL)
 	{
-		switchOwners();
-		setOriginalTeam( getObject()->getTeam() );
+		changeTeamOnAllConnectedCaves( newOwner->getDefaultTeam(), TRUE );
 	}
 	else
 	{
-		recalcApparentControllingPlayerAndEvacuateUnits();
+		// Handle the team color that is rendered
+		const Player* controller = getApparentControllingPlayer(ThePlayerList->getLocalPlayer());
+		if (controller)
+		{
+			if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
+				getObject()->getDrawable()->setIndicatorColor( controller->getPlayerNightColor() );
+			else
+				getObject()->getDrawable()->setIndicatorColor( controller->getPlayerColor() );
+		}
 	}
 	
-
 	// extend base class
 	OpenContain::onCapture( oldOwner, newOwner );
 }
@@ -545,6 +613,12 @@ static CaveInterface* findCave(Object* obj)
 /////////////////////////////////////////////////////////////////////////////////////
 void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginalTeams )
 {
+	if(getCaveContainModuleData()->m_caveUsesTeams)
+	{
+		changeTeamOnAllConnectedCavesByTeam( newTeam, setOriginalTeams );
+		return;
+	}
+
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTrackerForCaveIndex( m_caveIndex );
 	const std::list<ObjectID> *allCaves = myTracker->getContainerList();
 	for( std::list<ObjectID>::const_iterator iter = allCaves->begin(); iter != allCaves->end(); iter++ )
@@ -564,56 +638,104 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 				caveModule->setOriginalTeam( NULL );
 
 			// Now do the actual switch for this one.
-
-			currentCave->defect( newTeam, 0 );
+			if( !caveModule->getIsCaptured() )
+				currentCave->defect( newTeam, 0 );
 //			currentCave->setTeam( newTeam );
 		}
 	}
 }
 
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-void CaveContain::recalcApparentControllingPlayerAndEvacuateUnits( void )
+/////////////////////////////////////////////////////////////////////////////////////
+void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *newTeam, Bool setOriginalTeams )
 {
-	// (hokey trick: if our team is null, nuke originalTeam -- this
-	// usually means we are being called during game-teardown and
-	// the teams are no longer valid...)
-	if (getObject()->getTeam() == NULL)
+	ContainModuleInterface *contain = getObject()->getContain();
+
+	if(!contain)
 		return;
 
-	TunnelTracker *oldTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, m_originalTeam );
-	const std::list<ObjectID> *allCaves = oldTracker->getContainerList();
+	// Since we are switching Teams, we will destroy the teams of the Old Tunnels and add to our own.
+	TunnelTracker *currTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, getObject()->getTeam() );
+	const ContainedItemsList* items = currTracker->getContainedItemsList();
+	std::vector<ObjectID> vecContainedIDs, vecCaveIDs;
+	
+	// Remove the Contained Objects first
+	ContainedItemsList::const_iterator it_test = items->begin();
+	while ( it_test != items->end() )
+	{
+		Object *test_obj = *it_test++;
+		vecContainedIDs.push_back(test_obj->getID());
+	}
+
+	// Tell the Module to not do shenenigans with OnContaining and OnRemoving
+	m_switchingOwners = TRUE;
+	removeAllContained();
+
+	// Get all the current Caves and switch their properties
+	const std::list<ObjectID> *allCaves = currTracker->getContainerList();
 	for( std::list<ObjectID>::const_iterator iter = allCaves->begin(); iter != allCaves->end(); iter++ )
 	{
 		// For each ID, look it up and change its team.  We all get captured together.
 		Object *currentCave = TheGameLogic->findObjectByID( *iter );
 		if( currentCave )
 		{
+			// ...while registering them to remove them from their Tunnels list and add it to our own later.
+			vecCaveIDs.push_back(*iter);
 			// This is a distributed Garrison in terms of capturing, so when one node
 			// triggers the change, he needs to tell everyone, so anyone can do the un-change.
 			CaveInterface *caveModule = findCave(currentCave);
 			if( caveModule == NULL )
 				continue;
-
-			caveModule->switchOwners();
-			caveModule->setOriginalTeam( currentCave->getTeam() );
+			if( setOriginalTeams )
+				caveModule->setOriginalTeam( currentCave->getTeam() );
+			else
+				caveModule->setOriginalTeam( NULL );
 
 			// Now do the actual switch for this one.
 
-			if(*iter != getObject()->getID())
-				currentCave->defect( currentCave->getTeam(), 0 );
+//			currentCave->defect( newTeam, 0 );
+//			currentCave->setTeam( newTeam );
+					
+			// Do it later, or we will screw up the list
+			// News, functions are carried out through onCapture. No need to do anything here.
+			//currTracker->onTunnelDestroyed( getObject() );
+			//TheCaveSystem->unregisterCave( m_caveIndex );
+			//newTracker->onTunnelCreated( getObject() );
+		}
+	}
+	
+	TheCaveSystem->registerNewCaveTeam( m_caveIndex, newTeam );
+
+	TunnelTracker *newTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, newTeam );
+	
+	// Wasn't so hard now was it?
+	if(newTracker)
+	{
+		for(int i = 0; i < vecCaveIDs.size(); i++)
+		{
+			Object *cave = TheGameLogic->findObjectByID( vecCaveIDs[i] );
+			if(cave)
+			{
+				//currTracker->onTunnelDestroyed( cave );
+				CaveInterface *caveModule = findCave(cave);
+				if( caveModule == NULL || !caveModule->getIsCaptured() )
+					cave->defect( newTeam, 0 );
+				//newTracker->onTunnelCreated( cave );
+			}
+		}
+		
+		
+		for(int i_2 = 0; i_2 < vecContainedIDs.size(); i_2++)
+		{
+			Object *add = TheGameLogic->findObjectByID( vecContainedIDs[i_2] );
+			if(add)
+			{
+				contain->addToContain(add);
+			}
 		}
 	}
 
-	// Handle the team color that is rendered
-	const Player* controller = getApparentControllingPlayer(ThePlayerList->getLocalPlayer());
-	if (controller)
-	{
-		if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
-			getObject()->getDrawable()->setIndicatorColor( controller->getPlayerNightColor() );
-		else
-			getObject()->getDrawable()->setIndicatorColor( controller->getPlayerColor() );
-	}
+	// Also enable the OnContaining and OnRemoving Shenenigans
+	m_switchingOwners = FALSE;
 }
 
 void CaveContain::registerNewCave()
@@ -624,20 +746,22 @@ void CaveContain::registerNewCave()
 		TheCaveSystem->registerNewCave( m_caveIndex );
 }
 
-void CaveContain::switchOwners()
+void CaveContain::switchCaveOwners( Team *oldTeam )
 {
-	TunnelTracker *curTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, m_originalTeam );
+	TunnelTracker *curTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, oldTeam );
 	if(curTracker)
 	{
 		// Switching Owners, check if there's still other tunnels.  If not, evacuate everyone.
-		if( curTracker->friend_getTunnelCount() == 1 )
+		m_switchingOwners = TRUE;
+		if( curTracker->friend_getTunnelCount() == 1)
 			removeAllContained(FALSE);
 		TheCaveSystem->unregisterCave( m_caveIndex );
 		curTracker->onTunnelDestroyed(getObject());
+		m_switchingOwners = FALSE;
 	}
 
 	registerNewCave();
-	TunnelTracker *newTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	TunnelTracker *newTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, getObject()->getTeam() );
 	if( newTracker )
 		newTracker->onTunnelCreated(getObject());
 }
@@ -645,7 +769,14 @@ void CaveContain::switchOwners()
 /////////////////////////////////////////////////////////////////////////////////////
 void CaveContain::setOriginalTeam( Team *oldTeam )
 {
-	m_originalTeam = oldTeam;
+	if(m_capturedTeam == NULL)
+		m_originalTeam = oldTeam;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+Bool CaveContain::getIsCaptured()
+{
+	return m_capturedTeam != NULL;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -684,6 +815,8 @@ void CaveContain::xfer( Xfer *xfer )
 	// original team
 	TeamID teamID = m_originalTeam ? m_originalTeam->getID() : TEAM_ID_INVALID;
 	xfer->xferUser( &teamID, sizeof( TeamID ) );
+	TeamID capturedID = m_capturedTeam ? m_capturedTeam->getID() : TEAM_ID_INVALID;
+	xfer->xferUser( &capturedID, sizeof( TeamID ) );
 	if( xfer->getXferMode() == XFER_LOAD )
 	{
 
@@ -702,6 +835,22 @@ void CaveContain::xfer( Xfer *xfer )
 		}  // end if
 		else
 			m_originalTeam = NULL;
+
+		if( capturedID != TEAM_ID_INVALID )
+		{
+
+			m_capturedTeam = TheTeamFactory->findTeamByID( capturedID );
+			if( m_capturedTeam == NULL )
+			{
+
+				DEBUG_CRASH(( "CaveContain::xfer - Unable to find captured team by id" ));
+				throw SC_INVALID_DATA;
+
+			}  // end if
+
+		}  // end if
+		else
+			m_capturedTeam = NULL;
 
 	}  // end if
 
