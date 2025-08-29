@@ -138,6 +138,40 @@ void CaveContain::removeAllContained( Bool exposeStealthUnits )
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+void CaveContain::orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly )
+{
+	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	if(!myTracker)
+		return;
+
+	for( ContainedItemsList::const_iterator it = getContainedItemsList()->begin(); it != getContainedItemsList()->end(); )
+	{
+		// save the rider...
+		Object* rider = *it;
+
+		// incr the iterator BEFORE calling the func (if the func removes the rider,
+		// the iterator becomes invalid)
+		++it;
+
+		if(rider->getTeam() != getObject()->getTeam())
+			continue;
+
+		// call it
+		if( rider->getAI() )
+		{
+			if( instantly )
+			{
+				rider->getAI()->aiExitInstantly( getObject(), commandSource );
+			}
+			else
+			{
+				rider->getAI()->aiExit( getObject(), commandSource );
+			}
+		}
+	}
+}
+
 //--------------------------------------------------------------------------------------------------------
 /** Force all contained objects in the contained list to exit, and kick them in the pants on the way out*/
 //--------------------------------------------------------------------------------------------------------
@@ -389,6 +423,13 @@ void CaveContain::onRemoving( Object *obj )
 		// the teams are no longer valid...)
 		if (getObject()->getTeam() != NULL )
 		{
+			// Set it so it doesn't get treated as "capturing"
+			TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getOldTeam() );
+			if(myTracker)
+				myTracker->setIsContaining(TRUE);
+
+			m_containingFrames = TheGameLogic->getFrame() + 2;
+
 			changeTeamOnAllConnectedCaves( m_originalTeam, FALSE );
 			if(!getHasPermanentOwner())
 				m_originalTeam = NULL;
@@ -588,11 +629,6 @@ void CaveContain::onBuildComplete( void )
 // ------------------------------------------------------------------------------------------------
 void CaveContain::onCapture( Player *oldOwner, Player *newOwner )
 {
-	/*if(m_switchingOwners)
-	{
-		OpenContain::onCapture( oldOwner, newOwner );
-		return;
-	}*/
 
 	// do the tunnel tracker stuff later, since onContaining Registers after onCapture
 	m_oldTeam = oldOwner->getDefaultTeam();
@@ -694,8 +730,6 @@ void CaveContain::recalcApparentControllingPlayer( void )
 		// Check like the hokey trick mentioned above
 		if( rider->getControllingPlayer() )
 		{
-			changeTeamOnAllConnectedCaves( rider->getControllingPlayer()->getDefaultTeam(), TRUE );
-
 			if(getCaveContainModuleData()->m_caveUsesTeams)
 			{
 				TheCaveSystem->registerNewCaveTeam( m_caveIndex, rider->getControllingPlayer()->getDefaultTeam() );
@@ -706,6 +740,8 @@ void CaveContain::recalcApparentControllingPlayer( void )
 				newTracker->setIsContaining(TRUE);
 
 			m_containingFrames = TheGameLogic->getFrame() + 2;
+
+			changeTeamOnAllConnectedCaves( rider->getControllingPlayer()->getDefaultTeam(), TRUE );
 		}
 
 	}
@@ -743,7 +779,7 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 {
 	if(getCaveContainModuleData()->m_caveUsesTeams)
 	{
-		changeTeamOnAllConnectedCavesByTeam( newTeam, setOriginalTeams, newTeam );
+		changeTeamOnAllConnectedCavesByTeam( getObject()->getTeam(), setOriginalTeams, newTeam );
 		return;
 	}
 
@@ -797,6 +833,11 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 	ContainedItemsList::const_iterator it_test = items->begin();
 	while ( it_test != items->end() )
 	{
+		// On Removing
+		// If the Cave is captured, but other Team's "occupants" are still in their Cave, do not clear them.
+		if(getContainCount() == 0)
+			break;
+		
 		Object *obj = *it_test++;
 		vecContainedIDs.push_back(obj->getID());
 
@@ -903,8 +944,6 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 			}
 		}
 	}
-
-	// Also enable the OnContaining and OnRemoving Shenenigans
 	m_switchingOwners = FALSE;
 }
 
@@ -921,75 +960,68 @@ void CaveContain::registerNewCave()
 void CaveContain::switchCaveOwners( Team *oldTeam, Team *newTeam )
 {
 	TunnelTracker *curTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, oldTeam );
-	if(curTracker)
+
+	// Disable OnContaining or OnRemoving from triggering their shenenigans
+	m_switchingOwners = TRUE;
+	
+	// Function differs if the person uses Teams system
+	if(curTracker && !curTracker->getIsContaining() && !getCaveContainModuleData()->m_caveUsesTeams)
 	{
-		// Disable OnContaining or OnRemoving from triggering their shenenigans
-		m_switchingOwners = TRUE;
-
 		// Switching Owners, evacuate everyone if it is Captured
-		if(!getCaveContainModuleData()->m_caveUsesTeams && !curTracker->getIsContaining())
-			removeAllNonOwnContained(newTeam, TRUE);
+		removeAllNonOwnContained(newTeam, TRUE);
 
-		// Reenable their shinenigans
+		// Reenable them
 		m_switchingOwners = FALSE;
-	}
 
-	// If we don't use teams, we stop here
-	if(!getCaveContainModuleData()->m_caveUsesTeams)
+		// If we don't use teams, we stop here
 		return;
+	}
 
 	TunnelTracker *newTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, newTeam );
-	if( newTracker )
+	if( curTracker && newTracker && !newTracker->getIsContaining() )
 	{
-		// Disable OnContaining or OnRemoving from triggering their shenenigans
-		m_switchingOwners = TRUE;
-		
-		if(!newTracker->getIsContaining() && curTracker)
+		//removeAllContained(TRUE);
+
+		// Remove from Old Teams
+		if(curTracker->friend_getTunnelCount() == 1)
 		{
-			//removeAllContained(TRUE);
+			const ContainedItemsList *fullList = curTracker->getContainedItemsList();
 
-			// Remove from Old Teams
-			if(curTracker->friend_getTunnelCount() == 1)
+			// Basically RemoveAllContained but for the team it was captured from
+			Object *obj;
+			ContainedItemsList::const_iterator it;
+			it = (*fullList).begin();
+			while( it != (*fullList).end() )
 			{
-				const ContainedItemsList *fullList = curTracker->getContainedItemsList();
+				obj = *it;
+				it++;
 
-				// Basically RemoveAllContained but for the team it was captured from
-				Object *obj;
-				ContainedItemsList::const_iterator it;
-				it = (*fullList).begin();
-				while( it != (*fullList).end() )
+				if( curTracker->isInContainer( obj ) )
 				{
-					obj = *it;
-					it++;
+					// This must come before the onRemov*, because CaveContain's version has a edge-0 triggered event.
+					// If that were to go first, the number would still be 1 at that time.  Noone else cares about
+					// order.
+					curTracker->removeFromContain( obj, TRUE );
 
-					if( curTracker->isInContainer( obj ) )
-					{
-						// This must come before the onRemov*, because CaveContain's version has a edge-0 triggered event.
-						// If that were to go first, the number would still be 1 at that time.  Noone else cares about
-						// order.
-						curTracker->removeFromContain( obj, TRUE );
+					// trigger an onRemoving event for 'm_object' no longer containing 'itemToRemove->m_object'
+					if (getObject()->getContain())
+						getObject()->getContain()->onRemoving( obj );
 
-						// trigger an onRemoving event for 'm_object' no longer containing 'itemToRemove->m_object'
-						if (getObject()->getContain())
-							getObject()->getContain()->onRemoving( obj );
-
-						// trigger an onRemovedFrom event for 'remove'
-						obj->onRemovedFrom( getObject() );
-					}
+					// trigger an onRemovedFrom event for 'remove'
+					obj->onRemovedFrom( getObject() );
 				}
 			}
-
-			// Destroy the other team's tunnels if we are using Teams
-			//TheCaveSystem->unregisterCave( m_caveIndex );
-			curTracker->onTunnelDestroyed(getObject());
-			curTracker->setIsContaining(FALSE);
 		}
 
-		newTracker->onTunnelCreated(getObject());
+		// Destroy the other team's tunnels if we are using Teams
+		//TheCaveSystem->unregisterCave( m_caveIndex );
+		curTracker->onTunnelDestroyed(getObject());
+		//curTracker->setIsContaining(FALSE);
 
-		// Reenable their shinenigans
-		m_switchingOwners = FALSE;
+		newTracker->onTunnelCreated(getObject());
 	}
+
+	m_switchingOwners = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1026,6 +1058,7 @@ Bool CaveContain::getHasPermanentOwner() const
 	return m_isCaptured || getCaveContainModuleData()->m_caveHasOwner;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
 Team *CaveContain::getOldTeam() const
 {
 	return m_capturedTeam;

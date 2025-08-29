@@ -126,6 +126,8 @@ public:
 	virtual void removeFromContain( Object *obj, Bool exposeStealthUnits = FALSE );	///< remove 'obj' from contain list
 	virtual void removeAllContained( Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
 
+	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
+
 	// Bunker Buster Properties
 	virtual void harmAndForceExitAllContained( DamageInfo *info );
   virtual void killAllContained( void );				///< kill all objects on contain list
