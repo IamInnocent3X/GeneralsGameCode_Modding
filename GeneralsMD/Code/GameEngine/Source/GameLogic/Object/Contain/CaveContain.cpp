@@ -774,7 +774,7 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 			}
 
 			// Now do the actual switch for this one.
-			if( !caveModule->getHasPermanentOwner() )
+			if( !caveModule->getHasPermanentOwner() || myTracker->getIsCapturingLinkedCaves() )
 				currentCave->defect( teamToSet, 0 );
 //			currentCave->setTeam( newTeam );
 		}
@@ -882,7 +882,7 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 					teamToSet = caveModule->getOldTeam();
 				}
 
-				if(!caveModule->getHasPermanentOwner())
+				if(!caveModule->getHasPermanentOwner() || newTracker->getIsCapturingLinkedCaves())
 					cave->defect( teamToSet, 0 );
 				//newTracker->onTunnelCreated( cave );
 			}
