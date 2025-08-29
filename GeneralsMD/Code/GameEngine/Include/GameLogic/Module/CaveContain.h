@@ -45,10 +45,17 @@ class Team;
 class CaveContainModuleData : public OpenContainModuleData
 {
 public:
+	struct InitialPayload
+	{
+		AsciiString name;
+		Int count;
+	};
+
 	Int m_caveIndexData;
 	Bool m_caveHasOwner;
 	Bool m_caveUsesTeams;
 	Bool m_caveCaptureLinkCaves;
+	InitialPayload m_initialPayload;
 
 	CaveContainModuleData()
 	{
@@ -56,6 +63,19 @@ public:
 		m_caveHasOwner = FALSE;
 		m_caveUsesTeams = FALSE;
 		m_caveCaptureLinkCaves = FALSE;
+		m_initialPayload.count = 0;
+		m_initialPayload.name = NULL;
+	}
+
+	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
+	{
+		CaveContainModuleData* self = (CaveContainModuleData*)instance;
+		const char* name = ini->getNextToken();
+		const char* countStr = ini->getNextTokenOrNull();
+		Int count = countStr ? INI::scanInt(countStr) : 1;
+
+		self->m_initialPayload.name.set(name);
+		self->m_initialPayload.count = count;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -68,6 +88,7 @@ public:
 			{ "CaveHasOwner", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveHasOwner ) },
 			{ "CaveUsesTeams", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveUsesTeams ) },
 			{ "CaveCaptureLinkCaves", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveCaptureLinkCaves ) },
+			{ "InitialPayload", parseInitialPayload, NULL, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -134,16 +155,19 @@ public:
 	// Unique to Cave Contain
 	virtual void tryToSetCaveIndex( Int newIndex );	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam );	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
-	virtual Bool getIsCaptured();
+	virtual Bool getHasPermanentOwner() const;
+	virtual Team* getOldTeam() const;
 
 	virtual UpdateSleepTime update();												///< called once per frame
 
 protected:
 
 	void changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginalTeams );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
-	void changeTeamOnAllConnectedCavesByTeam( Team *newTeam, Bool setOriginalTeams );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
+	void changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool setOriginalTeams, Team *newTeam );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
 	void registerNewCave();
-	void switchCaveOwners( Team *oldTeam );
+	void switchCaveOwners( Team *oldTeam, Team *newTeam );
+	void doCapture( Team *oldTeam, Team *newTeam );
+	void removeAllNonOwnContained( Team *myTeam, Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
 
 	Bool m_needToRunOnBuildComplete;
 	Int m_caveIndex;
@@ -154,7 +178,12 @@ private:
 
 	Bool m_loaded;
 	Bool m_switchingOwners;
+	Bool m_payloadCreated;
+	Bool m_isCaptured;
+	UnsignedInt m_containingFrames;
 	Team *m_capturedTeam;
+	Team *m_oldTeam;
+	Team *m_newTeam;
 };
 
 #endif  // end __CAVE_CONTAIN_H_

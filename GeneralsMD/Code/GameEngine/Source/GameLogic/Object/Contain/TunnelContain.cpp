@@ -33,6 +33,7 @@
 
 #include "Common/Player.h"
 #include "Common/RandomValue.h"
+#include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
 #include "Common/TunnelTracker.h"
 #include "Common/Xfer.h"
@@ -830,6 +831,7 @@ UpdateSleepTime TunnelContain::update( void )
 		{
 			tunnelSystem->healObjects(modData->m_framesForFullHeal);
 			tunnelSystem->removeDontLoadSound(TheGameLogic->getFrame());
+			createPayload();
 		}
 
 		Bool openFireCheck;
@@ -1217,6 +1219,47 @@ void TunnelContain::checkRemoveOtherGuard()
 	}
 }
 
+void TunnelContain::createPayload()
+{
+	// Payload System
+	if(m_payloadCreated)
+		return;
+
+	// A TunnelContain tells everyone to leave if this is the last tunnel
+	Player *owningPlayer = getObject()->getControllingPlayer();
+	if( owningPlayer == NULL )
+		return;
+	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
+	if( tunnelTracker == NULL )
+		return;
+
+	ContainModuleInterface *contain = getObject()->getContain();
+	if(contain && tunnelTracker)
+	{
+		contain->enableLoadSounds( FALSE );
+
+		Int count = getTunnelContainModuleData()->m_initialPayload.count;
+
+		for( int i = 0; i < count; i++ )
+		{
+			//We are creating a transport that comes with a initial payload, so add it now!
+			const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( getTunnelContainModuleData()->m_initialPayload.name );
+			Object* payload = TheThingFactory->newObject( payloadTemplate, getObject()->getTeam() );
+			if( tunnelTracker->isValidContainerFor( payload, true ) )
+			{
+				contain->addToContain( payload );
+			}
+			else
+			{
+				scatterToNearbyPosition( payload );
+			}
+		}
+
+		contain->enableLoadSounds( TRUE );
+	}
+	
+	m_payloadCreated = TRUE;
+}
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -1255,6 +1298,8 @@ void TunnelContain::xfer( Xfer *xfer )
 	xfer->xferBool( &m_hasTunnelGuard );
 
 	xfer->xferBool( &m_rebuildChecked );
+
+	xfer->xferBool( &m_payloadCreated );
 
 }  // end xfer
 

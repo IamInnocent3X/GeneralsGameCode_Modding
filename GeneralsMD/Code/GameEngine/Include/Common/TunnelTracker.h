@@ -80,6 +80,12 @@ public:
 	void setOtherTunnelsGuardDisabled(Bool set) { m_otherTunnelGuardDisabled = set; };
 	Bool getOtherTunnelsGuardDisabled() const { return m_otherTunnelGuardDisabled; };
 
+	void setIsContaining(Bool set) { m_isContaining = set; }
+	Bool getIsContaining() const { return m_isContaining; };
+
+	void setIsCapturingLinkedCaves(Bool set) { m_isCapturingLinkedCaves = set; }
+	Bool getIsCapturingLinkedCaves() const { return m_isCapturingLinkedCaves; }
+
 protected:
 
 	virtual void crc( Xfer *xfer );
@@ -99,6 +105,8 @@ private:
 	UnsignedInt m_checkOpenFireFrames;
 	UnsignedInt m_dontLoadSoundFrames;
 	Bool m_otherTunnelGuardDisabled;
+	Bool m_isContaining;						/// CaveSystems to register OnCapture of CaveContain later.
+	Bool m_isCapturingLinkedCaves;
 };
 
 #endif

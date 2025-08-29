@@ -57,6 +57,8 @@ TunnelTracker::TunnelTracker()
 	m_checkOpenFireFrames = 0;
 	m_dontLoadSoundFrames = 0;
 	m_otherTunnelGuardDisabled = FALSE;
+	m_isContaining = FALSE;
+	m_isCapturingLinkedCaves = FALSE;
 }
 
 // ------------------------------------------------------------------------
