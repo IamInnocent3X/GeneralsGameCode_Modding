@@ -63,6 +63,8 @@ public:
 	ModelConditionFlagType m_scuttleState;
 	Bool m_riderNotRequired;
 	Bool m_useUpgradeNames;
+	Bool m_dontScuttle;
+	Bool m_dontDestroyRiderOnKill;
 
 	RiderChangeContainModuleData();
 
