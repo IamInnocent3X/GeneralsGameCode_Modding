@@ -49,19 +49,19 @@ class ParticleSystemTemplate;
 //-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
-class ActiveBodyModuleData : public BodyModuleData 
+class ActiveBodyModuleData : public BodyModuleData
 {
 public:
 	Real m_maxHealth;
 	Real m_initialHealth;
-	
+
 	Real m_subdualDamageCap;								///< Subdual damage will never accumulate past this
 	UnsignedInt m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
 	Real m_subdualDamageHealAmount;					///< by this much.
 
-	CustomSubdualDamageMap m_subdualDamageCapCustom;
-	CustomSubdualHealRateMap m_subdualDamageHealRateCustom;
-	CustomSubdualDamageMap m_subdualDamageHealAmountCustom;
+	std::vector<AsciiString> m_subdualDamageCapCustom;
+	std::vector<AsciiString> m_subdualDamageHealRateCustom;
+	std::vector<AsciiString> m_subdualDamageHealAmountCustom;
 
 	ActiveBodyModuleData();
 
@@ -144,8 +144,8 @@ public:
 	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE );
 	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE );
 
-	virtual Bool isAboutToBeSubdued( Real low, Real high ) const; 
-	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const; 
+	virtual Bool isNearSubduedRange( Real low, Real high ) const; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const; 
 
 	virtual void evaluateVisualCondition();
 	virtual void updateBodyParticleSystems( void );// made public for topple anf building collapse updates -ML
@@ -159,7 +159,7 @@ public:
 	// Custom Subdual Damage
 	virtual Bool isSubduedCustom(const AsciiString &customStatus) const; 
 	virtual Bool canBeSubduedCustom(const AsciiString &customStatus) const; 
-	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Bool dontPaintTint );///< Override this if you want a totally different effect than DISABLED_SUBDUED
 	virtual void onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater = FALSE);
 
 	// Chrono
@@ -174,7 +174,7 @@ protected:
 	void validateArmorAndDamageFX() const;
 	void doDamageFX( const DamageInfo *damageInfo );
 
-	void createParticleSystems( const AsciiString &boneBaseName, 
+	void createParticleSystems( const AsciiString &boneBaseName,
 															const ParticleSystemTemplate *systemTemplate,
 															Int maxSystems );
 	void deleteAllParticleSystems( void );
@@ -219,6 +219,12 @@ private:
 	Bool									m_indestructible;				///< is this object indestructible?
 	Bool									m_damageFXOverride;
 	Bool									m_hasBeenSubdued;
+	Bool									m_clearedSubdued;
+	Bool									m_clearedSubduedCustom;
+
+	AsciiString								m_customSubdualDisabledSound;
+	AsciiString								m_customSubdualDisableRemovalSound;
+
 
 	BodyParticleSystem *m_particleSystems;				///< particle systems created and attached to this object
 	

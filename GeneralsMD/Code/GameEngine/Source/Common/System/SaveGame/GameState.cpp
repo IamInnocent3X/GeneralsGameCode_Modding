@@ -119,7 +119,7 @@ Bool SaveDate::isNewerThan( SaveDate *other )
 			return FALSE;
 		else
 		{
-			
+
 			// day
 			if( day > other->day )
 				return TRUE;
@@ -205,7 +205,7 @@ GameState::SnapshotBlock *GameState::findBlockInfoByToken( AsciiString token, Sn
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal) 
+UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal)
 {
 	// setup date buffer for local region date format
 	#define DATE_BUFFER_SIZE 256
@@ -215,7 +215,7 @@ UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal)
 	if (GetVersionEx(&osvi))
 	{	//check if we're running Win9x variant since they may need different characters
 		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-		{		
+		{
 			char dateBuffer[ DATE_BUFFER_SIZE ];
 			GetDateFormat( LOCALE_SYSTEM_DEFAULT,
 										 DATE_SHORTDATE,
@@ -224,7 +224,7 @@ UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal)
 										 dateBuffer, sizeof(dateBuffer) );
 			displayDateBuffer.translate(dateBuffer);
 			return displayDateBuffer;
-		}	
+		}
 	}
 	wchar_t dateBuffer[ DATE_BUFFER_SIZE ];
 	GetDateFormatW( LOCALE_SYSTEM_DEFAULT,
@@ -235,9 +235,9 @@ UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal)
 	displayDateBuffer.set(dateBuffer);
 	return displayDateBuffer;
 	//displayDateBuffer.format( L"%ls", dateBuffer );
-}															
+}
 
-UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal) 
+UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal)
 {
 	// setup time buffer for local region time format
 	UnicodeString displayTimeBuffer;
@@ -246,7 +246,7 @@ UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal)
 	if (GetVersionEx(&osvi))
 	{	//check if we're running Win9x variant since they may need different characters
 		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-		{		
+		{
 			char timeBuffer[ DATE_BUFFER_SIZE ];
 			GetTimeFormat( LOCALE_SYSTEM_DEFAULT,
 										 TIME_NOSECONDS|TIME_FORCE24HOURFORMAT|TIME_NOTIMEMARKER,
@@ -293,7 +293,7 @@ GameState::~GameState( void )
 	// make certain that the post process list is clean
 	m_snapshotPostProcessList.clear();
 
-	// clear any available game 
+	// clear any available game
 	clearAvailableGames();
 
 }  // end ~GameState
@@ -344,7 +344,7 @@ void GameState::reset( void )
 	// clear the post process snapshot list
 	m_snapshotPostProcessList.clear();
 
-	// clear any available game 
+	// clear any available game
 	clearAvailableGames();
 
 	m_isInLoadGame = FALSE;
@@ -409,7 +409,7 @@ static void findHighFileNumber( AsciiString filename, void *userData )
 	// strip off the extension at the end of the filename
 	AsciiString nameOnly = filename;
 	nameOnly.truncateBy( strlen( SAVE_GAME_EXTENSION ) );
-	
+
 	// convert filename (which is only numbers) to a number
 	Int fileNumber = atoi( nameOnly.str() );
 
@@ -462,8 +462,8 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 	//
 	// This method has code to support two modes of finding the next filename, one of
 	// them starts with a filename of 00000000.sav and counts up the number looking for
-	// a file that doesn't exist and therefore a filename we can use (LOWEST_NUMBER).  
-	// The other method iterates all save files and returns a filename that is one larger 
+	// a file that doesn't exist and therefore a filename we can use (LOWEST_NUMBER).
+	// The other method iterates all save files and returns a filename that is one larger
 	// than the largest filename number encountered (HIGHEST_NUMBER)
 	//
 	enum FindNextFileType { LOWEST_NUMBER = 0, HIGHEST_NUMBER = 1 };
@@ -484,7 +484,7 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 		AsciiString filename;
 		filename.format( "%08d%s", highFileNumber + 1, SAVE_GAME_EXTENSION );
 		return filename;
-				
+
 	}  // end if
 	else if( searchType == LOWEST_NUMBER )
 	{
@@ -533,7 +533,7 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 /** Save the current state of the engine in a save file
 	* NOTE: filename is a *filename only* */
 // ------------------------------------------------------------------------------------------------
-SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc, 
+SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 															SaveFileType saveType, SnapshotType which )
 {
 
@@ -604,7 +604,7 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 		// close the file and get out of here
 		xferSave.close();
 		return SC_ERROR;
-		
+
 	}  // end catch
 
 	// close the file
@@ -739,7 +739,36 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 	if( getSaveGameInfo()->saveFileType == SAVE_FILE_TYPE_MISSION )
 	{
 
-		InitRandom(0);
+		if(TheGlobalData->m_initRandomType == "MORE_RANDOM")
+		{
+			Real value = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
+			value*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-value, value)))));
+			InitRandom(Int(value));
+		}
+		else if(TheGlobalData->m_initRandomType == "EXHAUSTIVE")
+		{
+			// 
+			UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
+			Int verysilly = silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3));
+			silly = GameLogicRandomValue(0, verysilly);
+			for (UnsignedInt poo = 0; poo < silly; ++poo)
+			{
+				GameLogicRandomValue(0, 1);	// ignore result
+			}
+			silly *= silly;
+			Int fullsilly = max(Int(silly+1), Int(1e10));
+			Int value = GameLogicRandomValue(silly, fullsilly);
+			InitRandom(value);
+		}
+		else if(TheGlobalData->m_initRandomType == "TIME")
+		{
+			InitRandom();
+		}
+		else
+		{
+			InitRandom(0);
+		}
+		//DEBUG_LOG(("Saving Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 
 		TheWritableGlobalData->m_pendingFile = getSaveGameInfo()->missionMapName;
 		GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_NEW_GAME );
@@ -753,7 +782,7 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 		gameInfo->missionMapName.clear();
 
 	}  // end if
-		
+
 	return SC_OK;
 
 }  // end loadGame
@@ -941,7 +970,7 @@ AsciiString GameState::portableMapPathToRealMapPath(const AsciiString& in) const
 // ------------------------------------------------------------------------------------------------
 /** Does the save game file exist */
 // ------------------------------------------------------------------------------------------------
-Bool GameState::doesSaveGameExist( AsciiString filename ) 
+Bool GameState::doesSaveGameExist( AsciiString filename )
 {
 
 	// construct full path to file
@@ -963,7 +992,7 @@ Bool GameState::doesSaveGameExist( AsciiString filename )
 		return FALSE;
 
 	}  // end catch
-	
+
 	// close the file, we don't want to to anything with it right now
 	xfer.close();
 
@@ -997,7 +1026,7 @@ void GameState::getSaveGameInfoFromFile( AsciiString filename, SaveGameInfo *sav
 	//
 	// disable post processing cause we're not really doing a load of game data that
 	// needs post processing and we don't want to keep track of any snapshots we loaded
-	// 
+	//
 	xferLoad.setOptions( XO_NO_POST_PROCESSING );
 
 	// read all data blocks in the file
@@ -1051,7 +1080,7 @@ void GameState::getSaveGameInfoFromFile( AsciiString filename, SaveGameInfo *sav
 
 				// data was found, copy game state info over
 				*saveGameInfo = *tempGameState.getSaveGameInfo();
-				
+
 				// we're all done with this file now
 				done = TRUE;
 
@@ -1086,13 +1115,13 @@ static void addGameToAvailableList( AsciiString filename, void *userData )
 	// sanity
 	DEBUG_ASSERTCRASH( listHead != NULL, ("addGameToAvailableList - Illegal parameters") );
 	DEBUG_ASSERTCRASH( filename.isEmpty() == FALSE, ("addGameToAvailableList - Illegal filename") );
- 
+
 	try {
 	// get header info from this listbox
 	SaveGameInfo saveGameInfo;
 	TheGameState->getSaveGameInfoFromFile( filename, &saveGameInfo );
 
-	// allocate new info 
+	// allocate new info
 	AvailableGameInfo *newInfo = new AvailableGameInfo;
 
 	// assign data
@@ -1172,7 +1201,7 @@ void GameState::populateSaveGameListbox( GameWindow *listbox, SaveLoadLayoutType
 
 		index = GadgetListBoxAddEntryText( listbox, newGameText, newGameColor, -1 );
 		GadgetListBoxSetItemData( listbox, NULL, index );
-	
+
 	}  // end if
 
 	// clear the available games
@@ -1213,7 +1242,7 @@ void GameState::populateSaveGameListbox( GameWindow *listbox, SaveLoadLayoutType
 		if( displayLabel.isEmpty() == TRUE )
 		{
 			Bool exists = FALSE;
-			
+
 			displayLabel = TheGameText->fetch( saveGameInfo->mapLabel, &exists );
 			if( exists == FALSE )
 				displayLabel.format( L"%S", saveGameInfo->mapLabel.str() );
@@ -1357,7 +1386,7 @@ void GameState::xferSaveData( Xfer *xfer, SnapshotType which )
 		SnapshotBlockListIterator it;
 		for( it = m_snapshotBlockList[which].begin(); it != m_snapshotBlockList[which].end(); ++it )
 		{
-		
+
 			// get list data
 			blockInfo = &(*it);
 
@@ -1370,7 +1399,7 @@ void GameState::xferSaveData( Xfer *xfer, SnapshotType which )
 			// for mission save files, we only save the game state block and campaign manager
 			// because anything else is not needed.
 			//
-			if( getSaveGameInfo()->saveFileType != SAVE_FILE_TYPE_MISSION || 
+			if( getSaveGameInfo()->saveFileType != SAVE_FILE_TYPE_MISSION ||
 					(blockName.compareNoCase( GAME_STATE_BLOCK_STRING ) == 0 ||
 					 blockName.compareNoCase( CAMPAIGN_BLOCK_STRING ) == 0) )
 			{
@@ -1408,7 +1437,7 @@ void GameState::xferSaveData( Xfer *xfer, SnapshotType which )
 		// write an end of file token
 		AsciiString eofToken = SAVE_FILE_EOF;
 		xfer->xferAsciiString( &eofToken );
-				
+
 	}  // end if, save
 	else
 	{
@@ -1461,7 +1490,7 @@ void GameState::xferSaveData( Xfer *xfer, SnapshotType which )
 
 					// read block start
 					blockSize = xfer->beginBlock();
-				
+
 					// parse this data
 					xfer->xferSnapshot( blockInfo->snapshot );
 
@@ -1560,9 +1589,9 @@ void GameState::gameStatePostProcessLoad( void )
 }  // end loadPostProcess
 
 // ------------------------------------------------------------------------------------------------
-/** Xfer method for the game state itself 
+/** Xfer method for the game state itself
 	* Version Info:
-	* 1: Initial version 
+	* 1: Initial version
 	* 2: Added save file type and mission map name (regular save vs automatic mission save) */
 // ------------------------------------------------------------------------------------------------
 void GameState::xfer( Xfer *xfer )
@@ -1653,7 +1682,7 @@ void GameState::xfer( Xfer *xfer )
 		saveGameInfo->missionNumber = TheCampaignManager->getCurrentMissionNumber();
 		xfer->xferInt( &saveGameInfo->missionNumber );
 
-		
+
 	}  // end if
 	else
 	{

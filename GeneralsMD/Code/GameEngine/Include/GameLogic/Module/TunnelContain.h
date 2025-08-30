@@ -45,48 +45,83 @@ class Team;
 class TunnelContainModuleData : public OpenContainModuleData
 {
 public:
-
+	struct InitialPayload
+	{
+		AsciiString name;
+		Int count;
+	};
+	
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully healed
+	Bool m_removeOtherUpgrades;
+	std::vector<AsciiString> m_activationUpgradeNames;
+	std::vector<AsciiString> m_upgradeDisableOtherNames;
+	std::vector<AsciiString> m_upgradeDisableOwnNames;
+	InitialPayload m_initialPayload;
+
 
 	TunnelContainModuleData()
 	{
 
 		// by default, takes no time to heal ppl
 		m_framesForFullHeal = 1.0f;
+		m_removeOtherUpgrades = FALSE;
+		m_activationUpgradeNames.clear();
+		m_upgradeDisableOtherNames.clear();
+		m_upgradeDisableOwnNames.clear();
+		m_initialPayload.count = 0;
+		m_initialPayload.name = NULL;
 
 		//
 		// by default we say that transports can have infantry inside them, this will be totally
 		// overwritten by any data provided from the INI entry tho
 		//
 		m_allowInsideKindOf = MAKE_KINDOF_MASK(KINDOF_INFANTRY);
+		m_allowInsideKindOf.set(KINDOF_VEHICLE);
 
 	}
 
-	static void buildFieldParse(MultiIniFieldParse& p) 
+	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
+	{
+		TunnelContainModuleData* self = (TunnelContainModuleData*)instance;
+		const char* name = ini->getNextToken();
+		const char* countStr = ini->getNextTokenOrNull();
+		Int count = countStr ? INI::scanInt(countStr) : 1;
+
+		self->m_initialPayload.name.set(name);
+		self->m_initialPayload.count = count;
+	}
+
+	static void buildFieldParse(MultiIniFieldParse& p)
 	{
     OpenContainModuleData::buildFieldParse(p);
 
-		static const FieldParse dataFieldParse[] = 
+		static const FieldParse dataFieldParse[] =
 		{
 			{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
+			{ "UpgradesToTriggerBunker", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_activationUpgradeNames ) },
+			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherUpgrades ) },
+			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
+			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
+			{ "InitialPayload", parseInitialPayload, NULL, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
 	}
 };
 
-class TunnelContain : public OpenContain, public CreateModuleInterface
+class TunnelContain : public OpenContain, public CreateModuleInterface, public TunnelInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( TunnelContain, "TunnelContain" )
 	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( TunnelContain, TunnelContainModuleData )
-	
+
 public:
 
 	TunnelContain( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual TunnelInterface* getTunnelInterface() { return this; }
 	static Int getInterfaceMask() { return OpenContain::getInterfaceMask() | (MODULEINTERFACE_CREATE); }
 
 	virtual OpenContain *asOpenContain() { return this; }  ///< treat as open container
@@ -104,6 +139,8 @@ public:
 
 	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
 	virtual void orderAllPassengersToIdle( CommandSourceType commandSource ); ///< Just like it sounds
+	
+	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const;	///< Hey, can I shoot out of this container?
 
 	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const;
 	virtual void addToContainList( Object *obj );		///< The part of AddToContain that inheritors can override (Can't do whole thing because of all the private stuff involved)
@@ -116,7 +153,7 @@ public:
 	virtual void iterateContained( ContainIterateFunc func, void *userData, Bool reverse );
 	virtual UnsignedInt getContainCount() const;
 	virtual Int getContainMax( void ) const;
-	virtual const ContainedItemsList* getContainedItemsList() const;	
+	virtual const ContainedItemsList* getContainedItemsList() const;
 	virtual Bool isDisplayedOnControlBar() const { return TRUE; } ///< Does this container display its contents on the ControlBar?
 	virtual Bool isKickOutOnCapture(){ return FALSE; }///< Caves and Tunnels don't kick out on capture.
 
@@ -129,15 +166,33 @@ public:
 	virtual void onBuildComplete();
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
-	// so that the ppl within the tunnel network can get healed	
+	virtual void doUpgradeChecks();
+	virtual void clearTargetID() { m_lastFiringObjID = INVALID_ID; }
+
+	// so that the ppl within the tunnel network can get healed
 	virtual UpdateSleepTime update();												///< called once per frame
+
+	virtual void removeBunker();
+	virtual void removeGuard() { m_hasTunnelGuard = FALSE; }
 
 protected:
 
 	void scatterToNearbyPosition(Object* obj);
-	Bool m_needToRunOnBuildComplete; 
+	void doOpenFire(Bool isAttacking = TRUE);
+	void checkRemoveOwnGuard();
+	void checkRemoveOtherGuard();
+	void doHoleRebuildChecks();
+	void createPayload();
+	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
+private:
+	ObjectID m_lastFiringObjID;
+	Coord3D m_lastFiringPos;
+	Bool m_payloadCreated;
+	Bool m_hasBunker;
+	Bool m_hasTunnelGuard;
+	Bool m_rebuildChecked;
 };
 
 #endif  // end __TUNNEL_CONTAIN_H_

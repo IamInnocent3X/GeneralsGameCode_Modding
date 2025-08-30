@@ -45,7 +45,7 @@ struct RiderInfo
 {
 	AsciiString m_templateName;
 	WeaponSetType m_weaponSetFlag;
-	ModelConditionFlagType m_modelConditionFlagType; 
+	ModelConditionFlagType m_modelConditionFlagType;
 	ObjectStatusType m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
@@ -56,7 +56,7 @@ struct RiderInfo
 class RiderChangeContainModuleData : public TransportContainModuleData
 {
 public:
-	
+
 	RiderInfo m_riders[ MAX_RIDERS ];
 	std::vector<RiderInfo> m_ridersCustom;
 	UnsignedInt m_scuttleFrames;
@@ -92,7 +92,7 @@ public:
 	virtual UpdateSleepTime update();							///< called once per frame
 
 	virtual Bool isRiderChangeContain() const { return TRUE; }
-	virtual const Object *friend_getRider() const; 
+	virtual const Object *friend_getRider() const;
 
 	virtual Int getContainMax( void ) const;
 
@@ -129,7 +129,7 @@ protected:
 	virtual void killRidersWhoAreNotFreeToExit();
 	virtual Bool isSpecificRiderFreeToExit(Object* obj);
 	virtual void createPayload();
-	
+
 private:
 
 	Int m_extraSlotsInUse;

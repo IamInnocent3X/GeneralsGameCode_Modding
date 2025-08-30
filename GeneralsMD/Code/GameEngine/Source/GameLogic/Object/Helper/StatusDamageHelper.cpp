@@ -85,21 +85,21 @@ UpdateSleepTime StatusDamageHelper::update()
 			//DEBUG_LOG(( "StatusDamageHelper Status To Clear: %d, Frame to Clear: %d", (*it).first, (*it).second ));
 		}
 	}
-	for(CustomStatusTypeMap::iterator it = m_customStatusToHeal.begin(); it != m_customStatusToHeal.end(); ++it)
+	for(CustomStatusTypeMap::iterator it2 = m_customStatusToHeal.begin(); it2 != m_customStatusToHeal.end(); ++it2)
 	{
-		if((*it).second == 0)
+		if((*it2).second == 0)
 			continue;
 			
-		if((*it).second <= now)
+		if((*it2).second <= now)
 		{
-			getObject()->clearCustomStatus( (*it).first );
-			(*it).second = 0;
-			//DEBUG_LOG(( "StatusDamageHelper Cleared Custom Status: %s", (*it).first.str() ));
+			getObject()->clearCustomStatus( (*it2).first );
+			(*it2).second = 0;
+			//DEBUG_LOG(( "StatusDamageHelper Cleared Custom Status: %s", (*it2).first.str() ));
 		}
-		else if((*it).second < now + nextStatusDuration)
+		else if((*it2).second < now + nextStatusDuration)
 		{
-			nextStatusDuration = (*it).second - now;
-			//DEBUG_LOG(( "StatusDamageHelper Custom Status To Clear: %s, Frame to Clear: %d", (*it).first.str(), (*it).second ));
+			nextStatusDuration = (*it2).second - now;
+			//DEBUG_LOG(( "StatusDamageHelper Custom Status To Clear: %s, Frame to Clear: %d", (*it2).first.str(), (*it2).second ));
 		}
 	}
 
@@ -122,21 +122,21 @@ UpdateSleepTime StatusDamageHelper::update()
 				//DEBUG_LOG(( "StatusDamageHelper TintStatus To Clear: %d, Frame to Clear: %d", (*it).first, (*it).second ));
 			}
 		}
-		for(CustomTintStatusDurationVec::iterator it = m_customTintStatus.begin(); it != m_customTintStatus.end(); ++it)
+		for(CustomTintStatusDurationVec::iterator it2 = m_customTintStatus.begin(); it2 != m_customTintStatus.end(); ++it2)
 		{
-			if((*it).second == 0)
+			if((*it2).second == 0)
 				continue;
 			
-			if((*it).second <= now)
+			if((*it2).second <= now)
 			{
-				getObject()->getDrawable()->clearCustomTintStatus((*it).first);
-				(*it).second = 0;
-				//DEBUG_LOG(( "StatusDamageHelper Cleared CustomTintStatus: %s", (*it).first.str() ));
+				getObject()->getDrawable()->clearCustomTintStatus((*it2).first);
+				(*it2).second = 0;
+				//DEBUG_LOG(( "StatusDamageHelper Cleared CustomTintStatus: %s", (*it2).first.str() ));
 			}
-			else if((*it).second < now + nextStatusDuration)
+			else if((*it2).second < now + nextStatusDuration)
 			{
-				nextStatusDuration = (*it).second - now;
-				//DEBUG_LOG(( "StatusDamageHelper CustomTintStatus To Clear: %s, Frame to Clear: %d", (*it).first.str(), (*it).second ));
+				nextStatusDuration = (*it2).second - now;
+				//DEBUG_LOG(( "StatusDamageHelper CustomTintStatus To Clear: %s, Frame to Clear: %d", (*it2).first.str(), (*it2).second ));
 			}
 		}
 	}
@@ -198,14 +198,14 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 	// If custom status is not present, assign the status type instead!
 	else
 	{
-		StatusTypeMap::iterator it = m_statusToHeal.find(status);
+		StatusTypeMap::iterator it = m_statusToHeal.find((UnsignedShort)status);
 		if(it != m_statusToHeal.end())
 		{
 			(*it).second = frameToHeal;
 		}
 		else
 		{
-			m_statusToHeal[status] = frameToHeal;
+			m_statusToHeal[(UnsignedShort)status] = frameToHeal;
 		}
 
 		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
@@ -371,7 +371,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 
 		}  // end for, i
 
-		for( UnsignedShort i = 0; i < customTintStatusSize; ++i )
+		for( UnsignedShort i_2 = 0; i_2 < customTintStatusSize; ++i_2 )
 		{
 
 			xfer->xferAsciiString( &customTintStatusInfo.first );
@@ -394,7 +394,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 	xfer->xferUnsignedShort( &statusCount );
 	xfer->xferUnsignedShort( &customStatusCount );
 
-	ObjectStatusTypes statusName;
+	//ObjectStatusTypes statusName;
+	UnsignedShort statusName; 
 	UnsignedInt statusTime;
 	AsciiString customStatusName;
 	UnsignedInt customStatusTime;
@@ -405,7 +406,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 		{
 
 			statusName = (*statusIt).first;
-			xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			//xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			xfer->xferUnsignedShort( &statusName );
 
 			statusTime = (*statusIt).second;
 			xfer->xferUnsignedInt( &statusTime );
@@ -430,7 +432,8 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 		for( UnsignedShort i = 0; i < statusCount; ++i )
 		{
 
-			xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			//xfer->xferUser( &statusName, sizeof(ObjectStatusTypes) );// an enum
+			xfer->xferUnsignedShort( &statusName );
 
 			xfer->xferUnsignedInt( &statusTime );
 
@@ -438,7 +441,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			
 		}  // end for, i
 
-		for( UnsignedShort i = 0; i < customStatusCount; ++i )
+		for( UnsignedShort i_2 = 0; i_2 < customStatusCount; ++i_2 )
 		{
 
 			xfer->xferAsciiString( &customStatusName );

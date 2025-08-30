@@ -50,12 +50,12 @@ public:
 
 	UpgradeDieModuleData(){}
 
-	static void buildFieldParse(MultiIniFieldParse& p) 
+	static void buildFieldParse(MultiIniFieldParse& p)
 	{
-    
+
 		DieModuleData::buildFieldParse(p);
 
-		static const FieldParse dataFieldParse[] = 
+		static const FieldParse dataFieldParse[] =
 		{
 			{ "UpgradeToRemove",					INI::parseAsciiString,		NULL, offsetof( UpgradeDieModuleData, m_upgradeName ) },
 			{ "UpgradesToRemove",					INI::parseAsciiStringVector,NULL, offsetof( UpgradeDieModuleData, m_upgradeNames ) },
@@ -79,7 +79,7 @@ public:
 	UpgradeDie( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual void onDie( const DamageInfo *damageInfo ); 
+	virtual void onDie( const DamageInfo *damageInfo );
 
 };
 

@@ -37,7 +37,7 @@
 #include "GameClient/TintStatus.h"
 
 typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomStatusTypeMap;
-typedef std::hash_map<ObjectStatusTypes, UnsignedInt, rts::hash<ObjectStatusTypes>, rts::equal_to<ObjectStatusTypes> > StatusTypeMap;
+typedef std::hash_map<UnsignedShort, UnsignedInt, rts::hash<UnsignedShort>, rts::equal_to<UnsignedShort> > StatusTypeMap;
 typedef std::pair<TintStatus, UnsignedInt> TintStatusDurationPair;
 typedef std::pair<AsciiString, UnsignedInt> CustomTintStatusDurationPair;
 typedef std::vector<TintStatusDurationPair> TintStatusDurationVec;
@@ -56,7 +56,7 @@ class StatusDamageHelper : public ObjectHelper
 {
 
 	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( StatusDamageHelper, StatusDamageHelperModuleData )
-	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(StatusDamageHelper, "StatusDamageHelper" )	
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(StatusDamageHelper, "StatusDamageHelper" )
 
 public:
 

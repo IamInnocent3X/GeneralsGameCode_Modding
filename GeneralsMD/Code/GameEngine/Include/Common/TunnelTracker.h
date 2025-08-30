@@ -48,7 +48,7 @@ public:
 	void iterateContained( ContainIterateFunc func, void *userData, Bool reverse );
 	UnsignedInt getContainCount() const { return m_containListSize; }
 	Int getContainMax() const;
-	const ContainedItemsList* getContainedItemsList() const { return &m_containList; }	
+	const ContainedItemsList* getContainedItemsList() const { return &m_containList; }
 	void swapContainedItemsList(ContainedItemsList& newList);
 
 	Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const;
@@ -63,13 +63,28 @@ public:
 	static void healObject( Object *obj, void *frames ); ///< Callback for Iterate Contained system
 
 	void healObjects(Real frames);	///< heal all objects within the tunnel
-	
+
 	UnsignedInt friend_getTunnelCount() const {return m_tunnelCount;}///< TunnelContains are allowed to ask if they are the last one ahead of deletion time
 
 	const std::list< ObjectID > *getContainerList() const {return &m_tunnelIDs;}
 
 	Object *getCurNemesis(void);
 	void updateNemesis(const Object *target);
+
+	UnsignedInt getCheckOpenFireFrames() const {return m_checkOpenFireFrames;}
+
+	void setCheckOpenFireFrames(UnsignedInt count) { m_checkOpenFireFrames = count; }
+	void setDontLoadSound(UnsignedInt count);
+	void removeDontLoadSound(UnsignedInt count);
+
+	void setOtherTunnelsGuardDisabled(Bool set) { m_otherTunnelGuardDisabled = set; };
+	Bool getOtherTunnelsGuardDisabled() const { return m_otherTunnelGuardDisabled; };
+
+	void setIsContaining(Bool set) { m_isContaining = set; }
+	Bool getIsContaining() const { return m_isContaining; };
+
+	void setIsCapturingLinkedCaves(Bool set) { m_isCapturingLinkedCaves = set; }
+	Bool getIsCapturingLinkedCaves() const { return m_isCapturingLinkedCaves; }
 
 protected:
 
@@ -78,7 +93,7 @@ protected:
 	virtual void loadPostProcess( void );
 
 private:
-	
+
 	std::list< ObjectID > m_tunnelIDs;			///< I have to try to keep track of these because Caves need to iterate on them.
 	ContainedItemsList m_containList;				///< the contained object pointers list
 	std::list< ObjectID > m_xferContainList;///< for loading of m_containList during post processing
@@ -87,6 +102,11 @@ private:
 
 	ObjectID		m_curNemesisID;							///< If we have team(s) guarding a tunnel network system, this is one of the current targets.
 	UnsignedInt m_nemesisTimestamp;					///< We only keep nemesis for a couple of seconds.
+	UnsignedInt m_checkOpenFireFrames;
+	UnsignedInt m_dontLoadSoundFrames;
+	Bool m_otherTunnelGuardDisabled;
+	Bool m_isContaining;						/// CaveSystems to register OnCapture of CaveContain later.
+	Bool m_isCapturingLinkedCaves;
 };
 
 #endif

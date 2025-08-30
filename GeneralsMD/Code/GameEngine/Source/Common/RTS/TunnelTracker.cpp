@@ -54,6 +54,11 @@ TunnelTracker::TunnelTracker()
 	m_containListSize = 0;
 	m_curNemesisID = INVALID_ID;
 	m_nemesisTimestamp = 0;
+	m_checkOpenFireFrames = 0;
+	m_dontLoadSoundFrames = 0;
+	m_otherTunnelGuardDisabled = FALSE;
+	m_isContaining = FALSE;
+	m_isCapturingLinkedCaves = FALSE;
 }
 
 // ------------------------------------------------------------------------
@@ -73,11 +78,11 @@ void TunnelTracker::iterateContained( ContainIterateFunc func, void *userData, B
 		{
 			// save the obj...
 			Object* obj = *it;
-			
+
 			// incr the iterator BEFORE calling the func (if the func removes the obj,
 			// the iterator becomes invalid)
 			++it;
-			
+
 			// call it
 			(*func)( obj, userData );
 		}
@@ -90,11 +95,11 @@ void TunnelTracker::iterateContained( ContainIterateFunc func, void *userData, B
 		{
 			// save the obj...
 			Object* obj = *it;
-			
+
 			// incr the iterator BEFORE calling the func (if the func removes the obj,
 			// the iterator becomes invalid)
 			++it;
-			
+
 			// call it
 			(*func)( obj, userData );
 		}
@@ -135,7 +140,7 @@ Object *TunnelTracker::getCurNemesis(void)
 {
 	if (m_curNemesisID == INVALID_ID) {
 		return NULL;
-	}		
+	}
 	if (m_nemesisTimestamp + 4*LOGICFRAMES_PER_SECOND < TheGameLogic->getFrame()) {
 		m_curNemesisID = INVALID_ID;
 		return NULL;
@@ -143,7 +148,7 @@ Object *TunnelTracker::getCurNemesis(void)
 	Object *target = TheGameLogic->findObjectByID(m_curNemesisID);
 	if (target) {
 		//If the enemy unit is stealthed and not detected, then we can't attack it!
-	if( target->testStatus( OBJECT_STATUS_STEALTHED ) && 
+	if( target->testStatus( OBJECT_STATUS_STEALTHED ) &&
 			!target->testStatus( OBJECT_STATUS_DETECTED ) &&
 			!target->testStatus( OBJECT_STATUS_DISGUISED ) )
 		{
@@ -163,7 +168,7 @@ Object *TunnelTracker::getCurNemesis(void)
 Bool TunnelTracker::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
 	//October 11, 2002 -- Kris : Dustin wants ALL units to be able to use tunnels!
-	// srj sez: um, except aircraft. 
+	// srj sez: um, except aircraft.
 	if (obj && !obj->isKindOf(KINDOF_AIRCRAFT))
 	{
 		if (checkCapacity)
@@ -197,7 +202,7 @@ void TunnelTracker::removeFromContain( Object *obj, Bool exposeStealthUnits )
 		// note that this invalidates the iterator!
 		m_containList.erase(it);
 		--m_containListSize;
-	}	
+	}
 
 }
 
@@ -230,7 +235,7 @@ void TunnelTracker::onTunnelDestroyed( const Object *deadTunnel )
 	else
 	{
 		Object *validTunnel = TheGameLogic->findObjectByID( m_tunnelIDs.front() );
-		// Otherwise, make sure nobody inside remembers the dead tunnel as the one they entered 
+		// Otherwise, make sure nobody inside remembers the dead tunnel as the one they entered
 		// (scripts need to use so there must be something valid here)
 		for(ContainedItemsList::iterator it = m_containList.begin(); it != m_containList.end(); )
 		{
@@ -262,7 +267,7 @@ void TunnelTracker::healObjects(Real frames)
 	// heal one object within the tunnel network system
 void TunnelTracker::healObject( Object *obj, void *frames)
 {
-	
+
 	//get the number of frames to heal
 	Real *framesForFullHeal = (Real*)frames;
 
@@ -278,10 +283,10 @@ void TunnelTracker::healObject( Object *obj, void *frames)
 	// if we've been in here long enough ... set our health to max
 	if( TheGameLogic->getFrame() - obj->getContainedByFrame() >= *framesForFullHeal )
 	{
-	
+
 		// set the amount to max just to be sure we're at the top
 		healInfo.in.m_amount = body->getMaxHealth();
-		
+
 		// set max health
 		body->attemptHealing( &healInfo );
 
@@ -299,6 +304,48 @@ void TunnelTracker::healObject( Object *obj, void *frames)
 		body->attemptHealing( &healInfo );
 
 	}  // end else
+}
+
+void TunnelTracker::setDontLoadSound(UnsignedInt count)
+{
+	if(m_dontLoadSoundFrames)
+		return;
+	
+	m_dontLoadSoundFrames = count;
+
+	for( std::list<ObjectID>::const_iterator iter = m_tunnelIDs.begin(); iter != m_tunnelIDs.end(); iter++ )
+	{
+		Object *currTunnel = TheGameLogic->findObjectByID( *iter );
+		if(currTunnel)
+		{
+			ContainModuleInterface *currContain = currTunnel->getContain();
+			if (currContain)
+			{
+				currContain->enableLoadSounds(FALSE);
+			}
+		}
+	}
+}
+
+void TunnelTracker::removeDontLoadSound(UnsignedInt count)
+{
+	if(!m_dontLoadSoundFrames || m_dontLoadSoundFrames > count)
+		return;
+
+	m_dontLoadSoundFrames = 0;
+
+	for( std::list<ObjectID>::const_iterator iter = m_tunnelIDs.begin(); iter != m_tunnelIDs.end(); iter++ )
+	{
+		Object *currTunnel = TheGameLogic->findObjectByID( *iter );
+		if(currTunnel)
+		{
+			ContainModuleInterface *currContain = currTunnel->getContain();
+			if (currContain)
+			{
+				currContain->enableLoadSounds(TRUE);
+			}
+		}
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -359,6 +406,8 @@ void TunnelTracker::xfer( Xfer *xfer )
 	// tunnel count
 	xfer->xferUnsignedInt( &m_tunnelCount );
 
+	xfer->xferBool( &m_otherTunnelGuardDisabled );
+
 }  // end xfer
 
 // ------------------------------------------------------------------------------------------------
@@ -398,18 +447,18 @@ void TunnelTracker::loadPostProcess( void )
 		{
 			// remove object from its group (if any)
 			obj->leaveGroup();
-			
+
 			// remove rider from partition manager
 			ThePartitionManager->unRegisterObject( obj );
-			
+
 			// hide the drawable associated with rider
 			if( obj->getDrawable() )
 				obj->getDrawable()->setDrawableHidden( true );
-			
+
 			// remove object from pathfind map
 			if( TheAI )
 				TheAI->pathfinder()->removeObjectFromPathfindMap( obj );
-			
+
 		}
 	}  // end for, it
 

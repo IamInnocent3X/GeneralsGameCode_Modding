@@ -68,7 +68,7 @@ enum WeaponReloadType CPP_11(: Int)
 };
 
 #ifdef DEFINE_WEAPONRELOAD_NAMES
-static const char *TheWeaponReloadNames[] = 
+static const char *TheWeaponReloadNames[] =
 {
 	"YES",
 	"NO",
@@ -88,7 +88,7 @@ enum WeaponPrefireType CPP_11(: Int)
 };
 
 #ifdef DEFINE_WEAPONPREFIRE_NAMES
-static const char *TheWeaponPrefireNames[] = 
+static const char *TheWeaponPrefireNames[] =
 {
 	"PER_SHOT",
 	"PER_ATTACK",
@@ -123,7 +123,7 @@ enum WeaponAffectsMaskType CPP_11(: Int)
 };
 
 //#ifdef DEFINE_WEAPONAFFECTSMASK_NAMES ; Removed protection so other clases can use these strings... not sure why this was protected in the 1st place
-static const char *TheWeaponAffectsMaskNames[] = 
+static const char *TheWeaponAffectsMaskNames[] =
 {
 	"SELF",
 	"ALLIES",
@@ -141,19 +141,19 @@ enum WeaponCollideMaskType CPP_11(: Int)
 {
 	// all of these apply to *nontargeted* things that might just happen to get in the way...
 	// the target can always be collided with, regardless of flags
-	WEAPON_COLLIDE_ALLIES									= 0x0001,	
-	WEAPON_COLLIDE_ENEMIES								= 0x0002,	
+	WEAPON_COLLIDE_ALLIES									= 0x0001,
+	WEAPON_COLLIDE_ENEMIES								= 0x0002,
 	WEAPON_COLLIDE_STRUCTURES							= 0x0004,	// this is "all structures EXCEPT for structures belonging to the projectile's controller".
 	WEAPON_COLLIDE_SHRUBBERY							= 0x0008,
 	WEAPON_COLLIDE_PROJECTILE							= 0x0010,
 	WEAPON_COLLIDE_WALLS									= 0x0020,
-	WEAPON_COLLIDE_SMALL_MISSILES					= 0x0040, //All missiles are also projectiles! 
+	WEAPON_COLLIDE_SMALL_MISSILES					= 0x0040, //All missiles are also projectiles!
 	WEAPON_COLLIDE_BALLISTIC_MISSILES			= 0x0080, //All missiles are also projectiles!
 	WEAPON_COLLIDE_CONTROLLED_STRUCTURES	= 0x0100	//this is "ONLY structures belonging to the projectile's controller".
 };
 
 #ifdef DEFINE_WEAPONCOLLIDEMASK_NAMES
-static const char *TheWeaponCollideMaskNames[] = 
+static const char *TheWeaponCollideMaskNames[] =
 {
 	"ALLIES",
 	"ENEMIES",
@@ -214,7 +214,7 @@ enum WeaponBonusConditionType CPP_11(: Int)
 	WEAPONBONUSCONDITION_COUNT
 };
 #ifdef DEFINE_WEAPONBONUSCONDITION_NAMES
-static const char *TheWeaponBonusNames[] = 
+static const char *TheWeaponBonusNames[] =
 {
 	// This is a RHS enum (weapon.ini will have WeaponBonus = IT) so it is all caps
 	"GARRISONED",
@@ -340,7 +340,7 @@ private:
 };
 
 #ifdef DEFINE_WEAPONBONUSFIELD_NAMES
-static const char *TheWeaponBonusFieldNames[] = 
+static const char *TheWeaponBonusFieldNames[] =
 {
 	"DAMAGE",
 	"RADIUS",
@@ -410,9 +410,9 @@ public:
 	/// field table for loading the values from an INI
 	inline const FieldParse *getFieldParse() const { return TheWeaponTemplateFieldParseTable; }
 
-	/** 
+	/**
 		fire the weapon. return the logic-frame in which the damage will be dealt.
-		
+
 		If the damage will be determined at an indeterminate later date (eg, via Projectile),
 		or will never be dealt (eg, target was out of range), return zero.
 
@@ -420,11 +420,11 @@ public:
 	*/
 	UnsignedInt fireWeaponTemplate
 	(
-		const Object *sourceObj, 
-		WeaponSlotType wslot, 
-		Int specificBarrelToUse, 
-		Object *victimObj, 
-		const Coord3D* victimPos, 
+		const Object *sourceObj,
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		Object *victimObj,
+		const Coord3D* victimPos,
 		const WeaponBonus& bonus,
 		Bool isProjectileDetonation,
 		Bool ignoreRanges,
@@ -440,9 +440,9 @@ public:
 		take weapon range into account -- it ASSUMES that the victim is within range!
 	*/
 	Real estimateWeaponTemplateDamage(
-		const Object *sourceObj, 
-		const Object *victimObj, 
-		const Coord3D* victimPos, 
+		const Object *sourceObj,
+		const Object *victimObj,
+		const Coord3D* victimPos,
 		const WeaponBonus& bonus
 	) const;
 
@@ -538,6 +538,7 @@ public:
 	inline Bool getKillsGarrison() const { return m_killsGarrison; }
 	inline Int getKillsGarrisonAmount() const { return m_killsGarrisonAmount; }
 	inline const AsciiString& PlaySpecificVoice() const { return m_playSpecificVoice; }
+	inline DamageType getDamageFXOverride() const { return m_damageFXOverride; }
 
 	inline Real getStatusDuration() const { return m_statusDuration; }
 	inline Bool getDoStatusDamage(VeterancyLevel v) const { return m_doStatusDamage[v]; }
@@ -569,16 +570,28 @@ public:
 	inline Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_customSubdualDoStatus[v]; }
 	inline const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_customSubdualOCLs[v]; }
 	inline DisabledType getCustomSubdualDisableType() const { return m_customSubdualDisableType; }
+	inline Bool getCustomSubdualRemoveSubdualTintOnDisable() const { return m_customSubdualRemoveSubdualTintOnDisable; }
 	inline TintStatus getCustomSubdualDisableTint() const { return m_customSubdualDisableTint; }
 	inline const AsciiString& getCustomSubdualDisableCustomTint() const { return m_customSubdualDisableCustomTint; }
+	inline const AsciiString& getCustomSubdualDisableSound() const { return m_customSubdualDisableSound; }
+	inline const AsciiString& getCustomSubdualDisableRemoveSound() const { return m_customSubdualDisableRemoveSound; }
 
 	inline ProtectionTypeFlags getProtectionTypes() const { return m_protectionTypes; }
 
 	inline Bool getIsShielderImmune() const { return m_isShielderImmune; }
 
+	inline Real getMagnetAmount() const { return m_magnetAmount; }
+
+	inline Real getMinDamageHeight() const { return m_minDamageHeight; }
+	inline Real getMaxDamageHeight() const { return m_maxDamageHeight; }
+	inline Real getMinTargetHeight() const { return m_minTargetHeight; }
+	inline Real getMaxTargetHeight() const { return m_maxTargetHeight; }
+	inline Real getAttackRangePriority() const { return m_attackRangePriority; }
+	inline Real getOutsideAttackRangePriority() const { return m_outsideAttackRangePriority; }
+
 	Bool shouldProjectileCollideWith(
-		const Object* projectileLauncher, 
-		const Object* projectile, 
+		const Object* projectileLauncher,
+		const Object* projectile,
 		const Object* thingWeCollidedWith,
 		ObjectID intendedVictimID	// could be INVALID_ID for a position-shot
 	) const;
@@ -603,7 +616,7 @@ protected:
 	void trimOldHistoricDamage() const;
 
 private:
-	
+
 	// NOTE: m_nextTemplate will be cleaned up if it is NON-NULL.
 	WeaponTemplate *m_nextTemplate;
 
@@ -622,8 +635,8 @@ private:
 	Real m_primaryDamage;										///< primary damage amount
 	Real m_primaryDamageRadius;							///< primary damage radius range
 	Real m_secondaryDamage;									///< secondary damage amount
-	Real m_secondaryDamageRadius;						///< secondary damage radius range	
-	Real m_shockWaveAmount;									///( How much shockwave generated 
+	Real m_secondaryDamageRadius;						///< secondary damage radius range
+	Real m_shockWaveAmount;									///( How much shockwave generated
 	Real m_shockWaveRadius;									///( How far shockwave effect affects objects
 	Real m_shockWaveTaperOff;								///( How much shockwave is left at the tip of the shockwave radius
 	Real m_attackRange;											///< max distance the weapon can deal damage
@@ -709,6 +722,7 @@ private:
 	Bool m_killsGarrison;
 	Int m_killsGarrisonAmount;
 	AsciiString m_playSpecificVoice;
+	DamageType m_damageFXOverride;
 	Real m_statusDuration;
 	Bool m_doStatusDamage[LEVEL_COUNT];
 	Bool m_statusDurationTypeCorrelate;
@@ -740,15 +754,53 @@ private:
 	AsciiString m_customSubdualOCLNames[LEVEL_COUNT];
 	const ObjectCreationList* m_customSubdualOCLs[LEVEL_COUNT];
 	DisabledType m_customSubdualDisableType;
+	Bool m_customSubdualRemoveSubdualTintOnDisable;
 	TintStatus m_customSubdualDisableTint;
 	AsciiString m_customSubdualDisableCustomTint;
+	AsciiString m_customSubdualDisableSound;
+	AsciiString m_customSubdualDisableRemoveSound;
 
 	ProtectionTypeFlags m_protectionTypes;
 
 	Bool m_isShielderImmune;
 
+	Bool m_shockWaveUseCenter;
+	Bool m_shockWaveRespectsCenter;
+	Bool m_shockWaveAffectsAirborne;
+	Bool m_shockWavePullsAirborne;
+
+	Real m_magnetAmount;
+	Real m_magnetInfantryAmount;
+	Real m_magnetTaperOffDistance;
+	Real m_magnetTaperOffRatio;
+	Real m_magnetTaperOnDistance;
+	Real m_magnetTaperOnRatio;
+	Real m_magnetLiftHeight;
+	Real m_magnetLiftHeightSecond;
+	Real m_magnetLiftForce;
+	Real m_magnetLiftForceToHeight;
+	Real m_magnetLiftForceToHeightSecond;
+	Real m_magnetMaxLiftHeight;
+	Real m_magnetAirborneZForce;
+	Real m_magnetLevitationHeight;
+	Real m_magnetMinDistance;
+	Real m_magnetMaxDistance;
+	Bool m_magnetLinearDistanceCalc;
+	Bool m_magnetNoAirborne;
+	Bool m_magnetAirboneAffectedByYaw;
+	Bool m_magnetUseCenter;
+	Bool m_magnetRespectsCenter;
+	MagnetType m_magnetFormula;
+
+	Real m_minDamageHeight;
+	Real m_maxDamageHeight;
+	Real m_minTargetHeight;
+	Real m_maxTargetHeight;
+	Int m_attackRangePriority;
+	Int m_outsideAttackRangePriority;
+
 	mutable HistoricWeaponDamageList m_historicDamage;
-};  
+};
 
 // ---------------------------------------------------------
 class Weapon : public MemoryPoolObject,
@@ -809,7 +861,7 @@ public:
 	{
 		return estimateWeaponDamage(source, NULL, pos);
 	}
-	
+
 	void onWeaponBonusChange(const Object *source);///< Our Object's weapon bonus changed, so we need to update to reflect that instead of waiting
 
 	/** return true if the target is within attack range, false otherwise.
@@ -865,15 +917,15 @@ public:
 
 	// we must pass the source object for these (and for ANY FUTURE ADDITIONS)
 	// so that we can take the source's weapon bonuses, if any, into account.
-	// Also note: you should RARELY need to call getAttackRange. If what you want is to 
+	// Also note: you should RARELY need to call getAttackRange. If what you want is to
 	// determine if you are within attack range, please call isWithinAttackRange instead.
 	Real getAttackRange(const Object *source) const;
 
 	// Returns the max distance between the centerpoints of source & victim	for victim to be in range.
 	Real getAttackDistance(const Object *source, const Object *victim, const Coord3D* victimPos) const;
 
-	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos );///<I just made this projectile and may need to keep track of it 
-	
+	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos );///<I just made this projectile and may need to keep track of it
+
 	Bool isLaser() const { return m_template->getLaserName().isNotEmpty(); }
 	// void createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos );
 	ObjectID createLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos); //now returns the object ID
@@ -919,6 +971,7 @@ public:
 	inline Bool getKillsGarrison() const { return m_template->getKillsGarrison(); }
 	inline Int getKillsGarrisonAmount() const { return m_template->getKillsGarrisonAmount(); }
 	inline const AsciiString& PlaySpecificVoice() const { return m_template->PlaySpecificVoice(); }
+	inline DamageType getDamageFXOverride() const { return m_template->getDamageFXOverride(); }
 
 	inline Real getStatusDuration() const { return m_template->getStatusDuration(); }
 	inline Bool getDoStatusDamage(VeterancyLevel v) const { return m_template->getDoStatusDamage(v); }
@@ -950,10 +1003,23 @@ public:
 	inline Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_template->getCustomSubdualDoStatus(v); }
 	inline const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_template->getCustomSubdualOCL(v); }
 	inline DisabledType getCustomSubdualDisableType() const { return m_template->getCustomSubdualDisableType(); }
+	inline Bool getCustomSubdualRemoveSubdualTintOnDisable() const { return m_template->getCustomSubdualRemoveSubdualTintOnDisable(); }
+	inline const AsciiString& getCustomSubdualDisableSound() const { return m_template->getCustomSubdualDisableSound(); }
+	inline const AsciiString& getCustomSubdualDisableRemoveSound() const { return m_template->getCustomSubdualDisableRemoveSound(); }
 	inline TintStatus getCustomSubdualDisableTint() const { return m_template->getCustomSubdualDisableTint(); }
 	inline const AsciiString& getCustomSubdualDisableCustomTint() const { return m_template->getCustomSubdualDisableCustomTint(); }
 
 	inline ProtectionTypeFlags getProtectionTypes() const { return m_template->getProtectionTypes(); }
+
+	inline Real getMinDamageHeight() const { return m_template->getMinDamageHeight(); }
+	inline Real getMaxDamageHeight() const { return m_template->getMaxDamageHeight(); }
+	inline Real getMinTargetHeight() const { return m_template->getMinTargetHeight(); }
+	inline Real getMaxTargetHeight() const { return m_template->getMaxTargetHeight(); }
+	inline Real getAttackRangePriority() const { return m_template->getAttackRangePriority(); }
+	inline Real getOutsideAttackRangePriority() const { return m_template->getOutsideAttackRangePriority(); }
+
+	Int getWeaponPriority(const Object *source, const Object *target) const;
+	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;
 
 	Int getClipReloadTime(const Object *source) const;
 
@@ -968,7 +1034,9 @@ public:
 	Bool isPitchLimited() const { return m_pitchLimited; }
 	Bool isWithinTargetPitch(const Object *source, const Object *victim) const;
 
-	//Leech range functionality simply means this weapon has unlimited range temporarily. How it works is if the 
+	Bool isWithinTargetHeight(const Object *victim) const;
+
+	//Leech range functionality simply means this weapon has unlimited range temporarily. How it works is if the
 	//weapon template has the LeechRangeWeapon set, it means that once the unit has closed to standard weapon range
 	//it fires the weapon, and will be able to hit the target even if it moves out of range! The unit will simply
 	//stand there. This functionality is used by hack attacks.
@@ -988,17 +1056,17 @@ public:
 	void setBonusRefObjID(ObjectID id) { m_bonusRefObjID = id; }
 
 	static void calcProjectileLaunchPosition(
-		const Object* launcher, 
-		WeaponSlotType wslot, 
+		const Object* launcher,
+		WeaponSlotType wslot,
 		Int specificBarrelToUse,
 		Matrix3D& worldTransform,
 		Coord3D& worldPos
 	);
 
 	static void positionProjectileForLaunch(
-		Object* projectile, 
-		const Object *launcher, 
-		WeaponSlotType wslot, 
+		Object* projectile,
+		const Object *launcher,
+		WeaponSlotType wslot,
 		Int specificBarrelToUse
 	);
 
@@ -1020,11 +1088,11 @@ protected:
 
 	// return true if we auto-reloaded our clip after firing.
 	Bool privateFireWeapon(
-		const Object *sourceObj, 
-		Object *victimObj, 
-		const Coord3D* victimPos, 
-		Bool isProjectileDetonation, 
-		Bool ignoreRanges, 
+		const Object *sourceObj,
+		Object *victimObj,
+		const Coord3D* victimPos,
+		Bool isProjectileDetonation,
+		Bool ignoreRanges,
 		WeaponBonusConditionFlags extraBonusFlags,
 		ObjectID* projectileID,
 		Bool inflictDamage,
@@ -1045,7 +1113,7 @@ protected:
 private:
 	const WeaponTemplate*			m_template;									///< the kind of weapon this is
 	WeaponSlotType						m_wslot;										///< are we primary, secondary, etc. weapon? (used for projectile placement on reload)
-	mutable WeaponStatus			m_status;										///< weapon status 
+	mutable WeaponStatus			m_status;										///< weapon status
 	UnsignedInt								m_ammoInClip;								///< how many shots left in current clip
 	UnsignedInt								m_whenWeCanFireAgain;				///< the first frame the weapon can fire again
 	UnsignedInt								m_whenPreAttackFinished;		///< the frame the pre attack will complete.
@@ -1110,7 +1178,7 @@ public:
 
 protected:
 
-	WeaponTemplate *findWeaponTemplatePrivate( NameKeyType key ) const;	
+	WeaponTemplate *findWeaponTemplatePrivate( NameKeyType key ) const;
 
 	WeaponTemplate *newWeaponTemplate( AsciiString name );
 	WeaponTemplate *newOverride( WeaponTemplate *weaponTemplate );

@@ -54,7 +54,7 @@ enum DamageType CPP_11(: Int);
 #include "GameLogic/WeaponSetFlags.h"
 
 #ifdef DEFINE_WEAPONSLOTTYPE_NAMES
-static const char *TheWeaponSlotTypeNames[] = 
+static const char *TheWeaponSlotTypeNames[] =
 {
 	"PRIMARY",
 	"SECONDARY",
@@ -68,7 +68,7 @@ static const char *TheWeaponSlotTypeNames[] =
 	NULL
 };
 
-static const LookupListRec TheWeaponSlotTypeNamesLookupList[] = 
+static const LookupListRec TheWeaponSlotTypeNamesLookupList[] =
 {
 	{ "PRIMARY",		PRIMARY_WEAPON },
 	{ "SECONDARY",	SECONDARY_WEAPON },
@@ -82,21 +82,21 @@ static const LookupListRec TheWeaponSlotTypeNamesLookupList[] =
 	{ NULL, 0	}// keep this last!
 };
 
-#endif  
+#endif
 
 //-------------------------------------------------------------------------------------------------
 #ifdef DEFINE_WEAPONCONDITIONMAP
 
 //Kris: I did not write this code, but I am adding comments to clarify it.
 //When I ran into this, I discovered that it was grossly out of date. It wasn't
-//clearly identified as a "lookup table", but hopefully now it makes sense. I've 
+//clearly identified as a "lookup table", but hopefully now it makes sense. I've
 //updated it as of May 2003 when I added RIDER1-8 conditions.
 
 //Purpose: Whenever you change a weaponset, the model condition state associated with it
 //will be properly set exclusively.
 static const ModelConditionFlagType TheWeaponSetTypeToModelConditionTypeMap[WEAPONSET_COUNT] =
 {
-	/*WEAPONSET_VETERAN*/								MODELCONDITION_WEAPONSET_VETERAN,		
+	/*WEAPONSET_VETERAN*/								MODELCONDITION_WEAPONSET_VETERAN,
 	/*WEAPONSET_ELITE*/									MODELCONDITION_WEAPONSET_ELITE,
 	/*WEAPONSET_HERO*/									MODELCONDITION_WEAPONSET_HERO,
 	/*WEAPONSET_PLAYER_UPGRADE*/				MODELCONDITION_WEAPONSET_PLAYER_UPGRADE,
@@ -136,6 +136,26 @@ enum WeaponSetConditionType CPP_11(: Int)
 };
 
 //-------------------------------------------------------------------------------------------------
+enum WeaponChoiceCriteria CPP_11(: Int)
+{
+	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
+	PREFER_LONGEST_RANGE,	///< choose the weapon with the longest range (that will do nonzero damage)
+
+	PREFER_CRITERIA_COUNT
+};
+
+
+#ifdef DEFINE_WEAPON_CHOICE_CRITERIA_NAMES
+static const char *TheWeaponChoiceCriteriaNames[] = 
+{
+	"DAMAGE",
+	"RANGE",
+
+	NULL
+};
+#endif
+
+//-------------------------------------------------------------------------------------------------
 class WeaponTemplateSet
 {
 private:
@@ -147,6 +167,7 @@ private:
 	Bool										m_isReloadTimeShared;
 	Bool										m_isWeaponLockSharedAcrossSets; ///< A weapon set so similar that it is safe to hold locks across
 	Bool										m_isWeaponReloadSharedAcrossSets; ///< Keep current ammo count and reload progress between sets
+	WeaponChoiceCriteria			m_weaponChoiceCriteria;
 
 	static void parseWeapon(INI* ini, void *instance, void *store, const void* userData);
 	static void parseAutoChoose(INI* ini, void *instance, void *store, const void* userData);
@@ -167,11 +188,12 @@ public:
 	Bool isSharedReloadTime( void ) const { return m_isReloadTimeShared; }
 	Bool isWeaponLockSharedAcrossSets() const {return m_isWeaponLockSharedAcrossSets; }
 	Bool isWeaponReloadSharedAcrossSets() const { return m_isWeaponReloadSharedAcrossSets; }
+	WeaponChoiceCriteria getWeaponChoiceCriteria() const { return m_weaponChoiceCriteria; }
 
 	Bool hasAnyWeapons() const;
-	inline const WeaponTemplate* getNth(WeaponSlotType n) const { return m_template[n]; } 
-	inline UnsignedInt getNthCommandSourceMask(WeaponSlotType n) const { return m_autoChooseMask[n]; } 
-	inline const KindOfMaskType& getNthPreferredAgainstMask(WeaponSlotType n) const { return m_preferredAgainst[n]; } 
+	inline const WeaponTemplate* getNth(WeaponSlotType n) const { return m_template[n]; }
+	inline UnsignedInt getNthCommandSourceMask(WeaponSlotType n) const { return m_autoChooseMask[n]; }
+	inline const KindOfMaskType& getNthPreferredAgainstMask(WeaponSlotType n) const { return m_preferredAgainst[n]; }
 
 	inline Int getConditionsYesCount() const { return 1; }
 	inline const WeaponSetFlags& getNthConditionsYes(Int i) const { return m_types; }
@@ -184,18 +206,12 @@ public:
 typedef std::vector<WeaponTemplateSet> WeaponTemplateSetVector;
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponChoiceCriteria CPP_11(: Int)
-{
-	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
-	PREFER_LONGEST_RANGE	///< choose the weapon with the longest range (that will do nonzero damage)
-};
-
-//-------------------------------------------------------------------------------------------------
 enum WeaponLockType CPP_11(: Int)
 {
 	NOT_LOCKED,							///< Weapon is not locked
 	LOCKED_TEMPORARILY,			///< Weapon is locked until clip is empty, or current "attack" state exits
-	LOCKED_PERMANENTLY			///< Weapon is locked until explicitly unlocked or lock is changed to another weapon
+	LOCKED_PERMANENTLY,			///< Weapon is locked until explicitly unlocked or lock is changed to another weapon
+	LOCKED_PRIORITY
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -250,7 +266,7 @@ public:
 	const Weapon* findAmmoPipShowingWeapon() const;
 	void weaponSetOnWeaponBonusChange(const Object *source);
 	UnsignedInt getMostPercentReadyToFireAnyWeapon() const;
-	inline UnsignedInt getNthCommandSourceMask( WeaponSlotType n ) const { return m_curWeaponTemplateSet ? m_curWeaponTemplateSet->getNthCommandSourceMask( n ) : NULL; } 
+	inline UnsignedInt getNthCommandSourceMask( WeaponSlotType n ) const { return m_curWeaponTemplateSet ? m_curWeaponTemplateSet->getNthCommandSourceMask( n ) : NULL; }
 
 	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType );
 	void releaseWeaponLock(WeaponLockType lockType);
@@ -262,7 +278,7 @@ public:
 
 	/**
 		Determines if the unit has any weapon that could conceivably
-		harm the victim. this does not take range, ammo, etc. into 
+		harm the victim. this does not take range, ammo, etc. into
 		account, but immutable weapon properties, such as "can you
 		target airborne victims".
 	*/

@@ -45,7 +45,7 @@ typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<A
 typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > StringListCheckMap;
 
 //-------------------------------------------------------------------------------------------------
-/** 
+/**
 	An Armor encapsulates the a particular type of actual modifier to damage taken, in order
 	to simulate different materials, and to help make game balance easier to adjust.
 */
@@ -91,8 +91,8 @@ class Armor
 {
 public:
 
-	inline Armor(const ArmorTemplate* tmpl = NULL) : m_template(tmpl) 
-	{ 
+	inline Armor(const ArmorTemplate* tmpl = NULL) : m_template(tmpl)
+	{
 	}
 
 	inline Real scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, ObjectCustomStatusType customStatusType, ObjectCustomStatusType customBonusType) const

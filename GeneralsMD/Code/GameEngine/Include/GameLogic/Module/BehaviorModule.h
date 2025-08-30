@@ -24,7 +24,7 @@
 
 // FILE: BehaviorModule.h /////////////////////////////////////////////////////////////////////////////////
 // Author: Steven Johnson
-// Desc:	 
+// Desc:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
@@ -60,6 +60,7 @@ class BridgeScaffoldBehaviorInterface;
 class OverchargeBehaviorInterface;
 class TransportPassengerInterface;
 class CaveInterface;
+class TunnelInterface;
 class LandMineInterface;
 
 class ProjectileUpdateInterface;
@@ -83,6 +84,8 @@ class ParticleSystemTemplate;
 class StealthUpdate;
 class SpyVisionUpdate;
 
+//class TunnelContainInterface;
+
 
 //-------------------------------------------------------------------------------------------------
 class BehaviorModuleData : public ModuleData
@@ -92,7 +95,7 @@ public:
 	{
 	}
 
-	static void buildFieldParse(MultiIniFieldParse& p) 
+	static void buildFieldParse(MultiIniFieldParse& p)
 	{
     ModuleData::buildFieldParse(p);
 	}
@@ -123,6 +126,7 @@ public:
 	virtual OverchargeBehaviorInterface* getOverchargeBehaviorInterface() = 0;
 	virtual TransportPassengerInterface* getTransportPassengerInterface() = 0;
 	virtual CaveInterface* getCaveInterface() = 0;
+	virtual TunnelInterface* getTunnelInterface() = 0;
 	virtual LandMineInterface* getLandMineInterface() = 0;
 	virtual DieModuleInterface* getEjectPilotDieInterface() = 0;
 	// move from UpdateModuleInterface (srj)
@@ -141,6 +145,7 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() = 0;
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() = 0;
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const = 0;
+	//virtual TunnelContainInterface *getTunnelContainInterface( void ) = 0; 
 
 };
 
@@ -179,6 +184,7 @@ public:
 	virtual OverchargeBehaviorInterface* getOverchargeBehaviorInterface() { return NULL; }
 	virtual TransportPassengerInterface* getTransportPassengerInterface() { return NULL; }
 	virtual CaveInterface* getCaveInterface() { return NULL; }
+	virtual TunnelInterface* getTunnelInterface() { return NULL; }
 	virtual LandMineInterface* getLandMineInterface() { return NULL; }
 	virtual DieModuleInterface* getEjectPilotDieInterface() { return NULL; }
 	// interface acquisition (moved from UpdateModule)
@@ -197,6 +203,7 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return NULL; }
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return NULL; }
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return NULL; }
+	//virtual TunnelContainInterface *getTunnelContainInterface( void ) { return NULL; } 
 
 protected:
 
@@ -222,9 +229,9 @@ class ParkingPlaceBehaviorInterface
 public:
 	struct PPInfo
 	{
-		Coord3D		parkingSpace; 
+		Coord3D		parkingSpace;
 		Real			parkingOrientation;
-		Coord3D		runwayPrep; 
+		Coord3D		runwayPrep;
 		Coord3D		runwayStart;
 		Coord3D		runwayEnd;
 		Coord3D		runwayExit;
@@ -235,15 +242,15 @@ public:
 		Real			runwayTakeoffDist;
 		Real			hangarInternalOrient;
 	};
-	virtual Bool shouldReserveDoorWhenQueued(const ThingTemplate* thing) const = 0; 
-	virtual Bool hasAvailableSpaceFor(const ThingTemplate* thing) const = 0; 
-	virtual Bool hasReservedSpace(ObjectID id) const = 0; 
+	virtual Bool shouldReserveDoorWhenQueued(const ThingTemplate* thing) const = 0;
+	virtual Bool hasAvailableSpaceFor(const ThingTemplate* thing) const = 0;
+	virtual Bool hasReservedSpace(ObjectID id) const = 0;
 	virtual Int  getSpaceIndex( ObjectID id ) const = 0;
 	virtual Bool reserveSpace(ObjectID id, Real parkingOffset, PPInfo* info) = 0;
-	virtual void releaseSpace(ObjectID id) = 0; 
+	virtual void releaseSpace(ObjectID id) = 0;
 	virtual Bool reserveRunway(ObjectID id, Bool forLanding) = 0;
 	virtual void calcPPInfo( ObjectID id, PPInfo *info ) = 0;
-	virtual void releaseRunway(ObjectID id) = 0; 
+	virtual void releaseRunway(ObjectID id) = 0;
 	virtual Int getRunwayCount() const = 0;
 	virtual ObjectID getRunwayReservation( Int r, RunwayReservationType type = RESERVATION_TAKEOFF ) = 0;
 	virtual void transferRunwayReservationToNextInLineForTakeoff(ObjectID id) = 0;
@@ -271,6 +278,16 @@ class CaveInterface
 public:
 	virtual void tryToSetCaveIndex( Int newIndex ) = 0;	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam ) = 0;	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
+	virtual Bool getHasPermanentOwner() const = 0;
+	virtual Team* getOldTeam() const = 0;
+};
+
+//-------------------------------------------------------------------------------------------------
+class TunnelInterface
+{
+public:
+	virtual void removeBunker() = 0;
+	virtual void removeGuard() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

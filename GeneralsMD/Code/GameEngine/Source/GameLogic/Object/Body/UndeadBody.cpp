@@ -40,10 +40,10 @@
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-void UndeadBodyModuleData::buildFieldParse(MultiIniFieldParse& p) 
+void UndeadBodyModuleData::buildFieldParse(MultiIniFieldParse& p)
 {
   ActiveBodyModuleData::buildFieldParse(p);
-	static const FieldParse dataFieldParse[] = 
+	static const FieldParse dataFieldParse[] =
 	{
 		{ "SecondLifeMaxHealth",			INI::parseReal,	NULL,		offsetof( UndeadBodyModuleData, m_secondLifeMaxHealth ) },
 		{ "SecondLifeUpgradesToGrant",		INI::parseAsciiStringVector,							NULL, offsetof( UndeadBodyModuleData, m_secondLifeUpgradeNames ) },
@@ -92,7 +92,7 @@ UndeadBodyModuleData::UndeadBodyModuleData()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UndeadBody::UndeadBody( Thing *thing, const ModuleData* moduleData ) 
+UndeadBody::UndeadBody( Thing *thing, const ModuleData* moduleData )
 						 : ActiveBody( thing, moduleData )
 {
 	m_isSecondLife = FALSE;
@@ -113,7 +113,7 @@ void UndeadBody::attemptDamage( DamageInfo *damageInfo )
 	// If we are on our first life, see if this damage will kill us.  If it will, bind it to one hitpoint
 	// remaining, then go ahead and take it.
 	Bool shouldStartSecondLife = FALSE;
-	
+
 	if( ( damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE || damageInfo->in.m_notAbsoluteKill == TRUE ) 
 			&& (!m_isSecondLife || m_currentMultipleLives > 0)
 			&& damageInfo->in.m_amount >= getHealth()
@@ -206,7 +206,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 				else
 				{
 					DEBUG_ASSERTCRASH( 0, ("Object %s just Triggered Undead Body but is trying to remove upgrade %s",
-						getObject()->getTemplate()->getName().str(),
+						getObject()->getName().str(),
 						it->str() ) );
 				}
 			}
@@ -387,7 +387,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 						else
 						{
 							DEBUG_ASSERTCRASH( 0, ("Object %s just Triggered Undead Body for Multiple Lives: %d, but is trying to remove upgrade %s",
-								getObject()->getTemplate()->getName().str(),
+								getObject()->getName().str(),
 								value,
 								it->str() ) );
 						}

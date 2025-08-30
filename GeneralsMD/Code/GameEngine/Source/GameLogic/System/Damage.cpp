@@ -40,39 +40,39 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<>
-const char* DamageTypeFlags::s_bitNameList[] = 
+const char* DamageTypeFlags::s_bitNameList[] =
 {
-	"EXPLOSION",			
-	"CRUSH",					
+	"EXPLOSION",
+	"CRUSH",
 	"ARMOR_PIERCING",
-	"SMALL_ARMS",		
-	"GATTLING",			
-	"RADIATION",			
-	"FLAME",					
-	"LASER",					
-	"SNIPER",				
-	"POISON",			
-	"HEALING",	
-	"UNRESISTABLE",	
+	"SMALL_ARMS",
+	"GATTLING",
+	"RADIATION",
+	"FLAME",
+	"LASER",
+	"SNIPER",
+	"POISON",
+	"HEALING",
+	"UNRESISTABLE",
 	"WATER",
-	"DEPLOY",	
-	"SURRENDER",	
-	"HACK",	
-	"KILL_PILOT",	
-	"PENALTY",	
-	"FALLING",	
-	"MELEE",	
-	"DISARM",	
-	"HAZARD_CLEANUP",	
+	"DEPLOY",
+	"SURRENDER",
+	"HACK",
+	"KILL_PILOT",
+	"PENALTY",
+	"FALLING",
+	"MELEE",
+	"DISARM",
+	"HAZARD_CLEANUP",
 	"PARTICLE_BEAM",
 	"TOPPLING",
-	"INFANTRY_MISSILE",	
-	"AURORA_BOMB",	
-	"LAND_MINE",	
-	"JET_MISSILES",	
-	"STEALTHJET_MISSILES",	
-	"MOLOTOV_COCKTAIL",	
-	"COMANCHE_VULCAN",	
+	"INFANTRY_MISSILE",
+	"AURORA_BOMB",
+	"LAND_MINE",
+	"JET_MISSILES",
+	"STEALTHJET_MISSILES",
+	"MOLOTOV_COCKTAIL",
+	"COMANCHE_VULCAN",
 	"SUBDUAL_MISSILE",
 	"SUBDUAL_VEHICLE",
 	"SUBDUAL_BUILDING",
@@ -131,7 +131,7 @@ void DamageInfo::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version 
+	* 1: Initial version
 	* 2: Damage FX override
 */
 // ------------------------------------------------------------------------------------------------
@@ -174,6 +174,21 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferReal( &m_shockWaveAmount );
 	xfer->xferReal( &m_shockWaveRadius );
 	xfer->xferReal( &m_shockWaveTaperOff );
+	xfer->xferBool( &m_shockWaveAffectsAirborne );
+	xfer->xferBool( &m_shockWavePullsAirborne );
+
+	xfer->xferCoord3D(&m_magnetVector);
+	xfer->xferReal( &m_magnetAmount );
+	xfer->xferReal( &m_magnetLiftHeight );
+	xfer->xferReal( &m_magnetLiftHeightSecond );
+	xfer->xferReal( &m_magnetLiftForce );
+	xfer->xferReal( &m_magnetLiftForceToHeight );
+	xfer->xferReal( &m_magnetLiftForceToHeightSecond );
+	xfer->xferReal( &m_magnetMaxLiftHeight );
+	xfer->xferReal( &m_magnetLevitationHeight );
+	xfer->xferReal( &m_magnetAirborneZForce );
+	xfer->xferBool( &m_magnetAirboneAffectedByYaw );
+	xfer->xferUser( &m_magnetFormula, sizeof( MagnetType ) );
 
 	if( version >= 3 )
 	{

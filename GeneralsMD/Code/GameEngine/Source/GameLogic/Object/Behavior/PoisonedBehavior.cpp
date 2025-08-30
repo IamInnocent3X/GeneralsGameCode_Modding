@@ -77,36 +77,36 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 }
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ void PoisonedBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p) 
+/*static*/ void PoisonedBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p)
 {
 
-	static const FieldParse dataFieldParse[] = 
+	static const FieldParse dataFieldParse[] =
 	{
 		{ "PoisonDamageInterval", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDamageIntervalData) },
 		{ "PoisonDuration", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDurationData) },
 		
 		{ "PoisonDamage", 							INI::parseReal, 						NULL, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamage) },
 		{ "PoisonDamageMultiplier", 				INI::parseReal, 						NULL, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamageMultiplier) },
-		{ "PoisonDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageType) },		
-		{ "PoisonDamageTypeFX",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageTypeFX) },		
-		{ "PoisonDeathType",						INI::parseIndexList,								TheDeathNames,		offsetof(PoisonedBehaviorModuleData, m_deathType) },		
+		{ "PoisonDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageType) },
+		{ "PoisonDamageTypeFX",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageTypeFX) },
+		{ "PoisonDeathType",						INI::parseIndexList,								TheDeathNames,		offsetof(PoisonedBehaviorModuleData, m_deathType) },
 		
-		{ "PoisonCustomDamageType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageType) },		
-		{ "PoisonCustomDamageStatusType",			INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageStatusType) },		
+		{ "PoisonCustomDamageType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageType) },
+		{ "PoisonCustomDamageStatusType",			INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageStatusType) },
 		{ "PoisonCustomDeathType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDeathType) },
 		
-		{ "PoisonDamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	NULL,					offsetof(PoisonedBehaviorModuleData, m_damageStatusType) },		
-		{ "PoisonDoStatusDamageType",				INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_doStatusDamage) },	
+		{ "PoisonDamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	NULL,					offsetof(PoisonedBehaviorModuleData, m_damageStatusType) },
+		{ "PoisonDoStatusDamageType",				INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_doStatusDamage) },
 		{ "PoisonStatusDuration",					INI::parseReal,								NULL, 						offsetof(PoisonedBehaviorModuleData, m_statusDuration) },
-		{ "PoisonStatusDurationDamageCorrelation",	INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_statusDurationTypeCorrelate) },	
-		{ "PoisonStatusTintStatus",					TintStatusFlags::parseSingleBitFromINI,		NULL,						offsetof(PoisonedBehaviorModuleData, m_tintStatus) },	
+		{ "PoisonStatusDurationDamageCorrelation",	INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_statusDurationTypeCorrelate) },
+		{ "PoisonStatusTintStatus",					TintStatusFlags::parseSingleBitFromINI,		NULL,						offsetof(PoisonedBehaviorModuleData, m_tintStatus) },
 		{ "PoisonStatusCustomTintStatus",			INI::parseQuotedAsciiString,				NULL, 						offsetof(PoisonedBehaviorModuleData, m_customTintStatus) },
 
 		{ "DamageTypesReaction", 					INI::parseDamageTypeFlagsCustom, 		NULL, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesReaction) },
-		{ "CustomDamageTypesReaction", 				INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesReaction) },	
+		{ "CustomDamageTypesReaction", 				INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesReaction) },
 		{ "DontCurePoisonOnHeal",					INI::parseBool,							NULL,							offsetof(PoisonedBehaviorModuleData, m_poisonUnpurgable) },
 		{ "DamageTypesCurePoison", 					INI::parseDamageTypeFlagsCustom, 		NULL, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesCure) },
-		{ "CustomDamageTypesCurePoison", 			INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesCure) },	
+		{ "CustomDamageTypesCurePoison", 			INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesCure) },
 
 		{ "RequiredStatus",							ObjectStatusMaskType::parseFromINI,		NULL, 							offsetof(PoisonedBehaviorModuleData, m_requiredStatus ) },
 		{ "ForbiddenStatus",						ObjectStatusMaskType::parseFromINI,		NULL, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenStatus ) },
@@ -216,10 +216,10 @@ void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 		}
 	}
 
-	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	for(std::vector<AsciiString>::const_iterator it3 = d->m_forbiddenCustomStatus.begin(); it3 != d->m_forbiddenCustomStatus.end(); ++it3)
 	{
-		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
-		if (it2 != obj->getCustomStatus().end() && it2->second == 1) 
+		ObjectCustomStatusType::const_iterator it4 = obj->getCustomStatus().find(*it3);
+		if (it4 != obj->getCustomStatus().end() && it4->second == 1) 
 			return;
 	}
 
@@ -277,9 +277,9 @@ UpdateSleepTime PoisonedBehavior::update()
 		m_poisonDamageFrame = now + d->m_poisonDamageIntervalData;
 	}
 
-	// If we are now at zero we need to turn off our special effects... 
+	// If we are now at zero we need to turn off our special effects...
 	// unless the poison killed us, then we continue to be a pulsating toxic pus ball
-	if( m_poisonOverallStopFrame != 0 && 
+	if( m_poisonOverallStopFrame != 0 &&
 			now >= m_poisonOverallStopFrame &&
 			!getObject()->isEffectivelyDead())
 	{
@@ -293,7 +293,7 @@ UpdateSleepTime PoisonedBehavior::update()
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime PoisonedBehavior::calcSleepTime()
 {
-	// UPDATE_SLEEP requires a count-of-frames, not an absolute-frame, so subtract 'now' 
+	// UPDATE_SLEEP requires a count-of-frames, not an absolute-frame, so subtract 'now'
 	UnsignedInt now = TheGameLogic->getFrame();
 	if (m_poisonOverallStopFrame == 0 || m_poisonOverallStopFrame == now)
 		return UPDATE_SLEEP_FOREVER;
@@ -385,7 +385,7 @@ void PoisonedBehavior::crc( Xfer *xfer )
 void PoisonedBehavior::xfer( Xfer *xfer )
 {
 
-	// version 
+	// version
 	const XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );

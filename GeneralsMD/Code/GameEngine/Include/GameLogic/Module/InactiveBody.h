@@ -56,7 +56,7 @@ public:
 	virtual Real getHealth() const;													///< get current health
 	virtual BodyDamageType getDamageState() const;
 	virtual void setDamageState( BodyDamageType newState );	///< control damage state directly.  Will adjust hitpoints.
-	virtual void setAflame( Bool setting ){}///< This is a major change like a damage state.  
+	virtual void setAflame( Bool setting ){}///< This is a major change like a damage state.
 
 	void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback ) { /* nothing */ }
 
@@ -68,8 +68,8 @@ public:
 	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) {}
 	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) {}
 
-	virtual Bool isAboutToBeSubdued( Real low, Real high ) const { return FALSE; }
-	virtual Bool isAboutToBeSubduedCustom( Real low, Real high, const AsciiString &customStatus ) const { return FALSE; }
+	virtual Bool isNearSubduedRange( Real low, Real high ) const { return FALSE; }
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const { return FALSE; }
 
 private:
 	Bool m_dieCalled;

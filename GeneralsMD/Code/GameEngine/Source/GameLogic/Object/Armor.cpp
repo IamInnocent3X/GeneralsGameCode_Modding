@@ -64,13 +64,13 @@ void ArmorTemplate::clear()
 	{
 		m_damageCoefficient[i] = 1.0f;
 	}
-	for (int i = 0; i < OBJECT_STATUS_COUNT; ++i)
+	for (int i_2 = 0; i_2 < OBJECT_STATUS_COUNT; ++i_2)
 	{
-		m_statusCoefficient[i] = 1.0f;
+		m_statusCoefficient[i_2] = 1.0f;
 	}
-	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+	for (int i_3 = 0; i_3 < WEAPONBONUSCONDITION_COUNT; ++i_3)
 	{
-		m_weaponBonusCoefficient[i] = 1.0f;
+		m_weaponBonusCoefficient[i_3] = 1.0f;
 	}
 	m_customCoefficients.clear();
 	m_customStatusArmorBonus.clear();
@@ -83,27 +83,27 @@ void ArmorTemplate::copyFrom(const ArmorTemplate* other) {
 	{
 		m_damageCoefficient[i] = other->m_damageCoefficient[i];
 	}
-	for (int i = 0; i < OBJECT_STATUS_COUNT; ++i)
+	for (int i_2 = 0; i_2 < OBJECT_STATUS_COUNT; ++i_2)
 	{
-		m_statusCoefficient[i] = other->m_statusCoefficient[i];
+		m_statusCoefficient[i_2] = other->m_statusCoefficient[i_2];
 	}
-	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+	for (int i_3 = 0; i_3 < WEAPONBONUSCONDITION_COUNT; ++i_3)
 	{
-		m_weaponBonusCoefficient[i] = other->m_weaponBonusCoefficient[i];
+		m_weaponBonusCoefficient[i_3] = other->m_weaponBonusCoefficient[i_3];
 	}
 
 	m_customCoefficients = other->m_customCoefficients;
 
 	m_customStatusArmorBonus = other->m_customStatusArmorBonus;
 
-	for (int i = 0; i < other->m_weaponBonusFlags.size(); i++)
+	for (int i_4 = 0; i_4 < other->m_weaponBonusFlags.size(); i_4++)
 	{
-		m_weaponBonusFlags.push_back(other->m_weaponBonusFlags[i]);
+		m_weaponBonusFlags.push_back(other->m_weaponBonusFlags[i_4]);
 	}
 
-	for (int i = 0; i < other->m_statusFlags.size(); i++)
+	for (int i_5 = 0; i_5 < other->m_statusFlags.size(); i_5++)
 	{
-		m_statusFlags.push_back(other->m_statusFlags[i]);
+		m_statusFlags.push_back(other->m_statusFlags[i_5]);
 	}
 }
 
@@ -265,7 +265,7 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 
 	if (damage < 0.0f)
 		damage = 0.0f;
-	
+
 	return damage;
 }
 
@@ -367,7 +367,7 @@ void ArmorTemplate::parseDefaultDamage(INI* ini, void*/*instance*/, void* /* sto
 	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
 
 	if (customType->m_declaredCoefficient == TRUE)
-		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", customType->m_customDamageType.str()));
+		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", TheArmorStore->m_customDamageTypeParseNext.str()));
 
 	INI::parsePercentToReal(ini, NULL, &customType->m_coefficient, NULL);
 	customType->m_declaredCoefficient = TRUE;
@@ -407,7 +407,7 @@ void ArmorTemplate::parseCustomDamageType(INI* ini, void*/*instance*/, void* /* 
 		}
 		else
 		{
-			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", customDamageName.str()));
+			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", TheArmorStore->m_customDamageTypeParseNext.str()));
 		}
 	}
 }
@@ -417,7 +417,7 @@ void ArmorTemplate::parseLinkDamageType(INI* ini, void*/*instance*/, void* /* st
 	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
 
 	if (customType->m_declaredLinkDamageType == TRUE)
-		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", customType->m_customDamageType.str()));
+		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", TheArmorStore->m_customDamageTypeParseNext.str()));
 
 	DamageTypeFlags::parseSingleBitFromINI(ini, NULL, &customType->m_linkDamageType, NULL);
 	customType->m_declaredLinkDamageType = TRUE;
@@ -466,7 +466,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 {
 	NameKeyType namekey = TheNameKeyGenerator->nameToKey(name);
   ArmorTemplateMap::const_iterator it = m_armorTemplates.find(namekey);
-  if (it == m_armorTemplates.end()) 
+  if (it == m_armorTemplates.end())
 	{
 		return NULL;
 	}
@@ -479,7 +479,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 //-------------------------------------------------------------------------------------------------
 /*static */ void ArmorStore::parseArmorDefinition(INI *ini)
 {
-	static const FieldParse myFieldParse[] = 
+	static const FieldParse myFieldParse[] =
 	{
 		{ "Armor", ArmorTemplate::parseArmorCoefficients, NULL, 0 },
 		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, NULL, 0 },

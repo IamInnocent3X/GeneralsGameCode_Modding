@@ -24,7 +24,7 @@
 
 // FILE: FireWeaponWhenDamagedBehavior.cpp ///////////////////////////////////////////////////////////////////////
 // Author:
-// Desc:  
+// Desc:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -58,7 +58,7 @@ const Real END_MIDPOINT_RATIO = 0.65f;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, const ModuleData* moduleData ) : 
+FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, const ModuleData* moduleData ) :
 	UpdateModule( thing, moduleData ),
 	m_reactionWeaponPristine( NULL ),
 	m_reactionWeaponDamaged( NULL ),
@@ -93,7 +93,7 @@ FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, cons
 	if ( d->m_reactionWeaponReallyDamaged )
 	{
 		m_reactionWeaponReallyDamaged		= TheWeaponStore->allocateNewWeapon(
-			d->m_reactionWeaponReallyDamaged,		wslot); 
+			d->m_reactionWeaponReallyDamaged,		wslot);
 		m_reactionWeaponReallyDamaged->reloadAmmo( obj );
 	}
 	if ( d->m_reactionWeaponRubble )
@@ -227,10 +227,10 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 		}
 	}
 
-	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	for(std::vector<AsciiString>::const_iterator it3 = d->m_forbiddenCustomStatus.begin(); it3 != d->m_forbiddenCustomStatus.end(); ++it3)
 	{
-		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
-		if (it2 != obj->getCustomStatus().end() && it2->second == 1) 
+		ObjectCustomStatusType::const_iterator it4 = obj->getCustomStatus().find(*it3);
+		if (it4 != obj->getCustomStatus().end() && it4->second == 1) 
 			return;
 	}
 

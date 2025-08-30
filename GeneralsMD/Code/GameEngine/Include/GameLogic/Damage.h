@@ -52,20 +52,20 @@ class ThingTemplate;
 /** Damage types, keep this in sync with DamageTypeFlags::s_bitNameList[] */
 //-------------------------------------------------------------------------------------------------
 enum DamageType CPP_11(: Int)
-{	
-	DAMAGE_EXPLOSION							= 0,			
-	DAMAGE_CRUSH									= 1,					
+{
+	DAMAGE_EXPLOSION							= 0,
+	DAMAGE_CRUSH									= 1,
 	DAMAGE_ARMOR_PIERCING					= 2,
-	DAMAGE_SMALL_ARMS							= 3,		
-	DAMAGE_GATTLING								= 4,				
-	DAMAGE_RADIATION							= 5,			
-	DAMAGE_FLAME									= 6,					
-	DAMAGE_LASER									= 7,					
-	DAMAGE_SNIPER									= 8,				
-	DAMAGE_POISON									= 9,			
-	DAMAGE_HEALING								= 10,	
+	DAMAGE_SMALL_ARMS							= 3,
+	DAMAGE_GATTLING								= 4,
+	DAMAGE_RADIATION							= 5,
+	DAMAGE_FLAME									= 6,
+	DAMAGE_LASER									= 7,
+	DAMAGE_SNIPER									= 8,
+	DAMAGE_POISON									= 9,
+	DAMAGE_HEALING								= 10,
 	DAMAGE_UNRESISTABLE						= 11,		// this is for scripting to cause 'armorproof' damage
-	DAMAGE_WATER									= 12,	
+	DAMAGE_WATER									= 12,
 	DAMAGE_DEPLOY									= 13,					// for transports to deploy units and order them to all attack.
 	DAMAGE_SURRENDER							= 14,				// if something "dies" to surrender damage, they surrender.... duh!
 	DAMAGE_HACK										= 15,
@@ -77,13 +77,13 @@ enum DamageType CPP_11(: Int)
 	DAMAGE_HAZARD_CLEANUP					= 21,	// special damage type for cleaning up hazards like radiation or bio-poison.
 	DAMAGE_PARTICLE_BEAM					= 22,	// Incinerates virtually everything (insanely powerful orbital beam)
 	DAMAGE_TOPPLING								= 23,	// damage from getting toppled.
-	DAMAGE_INFANTRY_MISSILE				= 24,	
-	DAMAGE_AURORA_BOMB						= 25,	
-	DAMAGE_LAND_MINE							= 26,	
-	DAMAGE_JET_MISSILES						= 27,	
-	DAMAGE_STEALTHJET_MISSILES		= 28,	
-	DAMAGE_MOLOTOV_COCKTAIL				= 29,	
-	DAMAGE_COMANCHE_VULCAN				= 30,	
+	DAMAGE_INFANTRY_MISSILE				= 24,
+	DAMAGE_AURORA_BOMB						= 25,
+	DAMAGE_LAND_MINE							= 26,
+	DAMAGE_JET_MISSILES						= 27,
+	DAMAGE_STEALTHJET_MISSILES		= 28,
+	DAMAGE_MOLOTOV_COCKTAIL				= 29,
+	DAMAGE_COMANCHE_VULCAN				= 30,
 	DAMAGE_SUBDUAL_MISSILE				= 31,	///< Damage that does not kill you, but produces some special effect based on your Body Module. Seperate HP from normal damage.
 	DAMAGE_SUBDUAL_VEHICLE				= 32,
 	DAMAGE_SUBDUAL_BUILDING				= 33,
@@ -217,12 +217,12 @@ inline Bool getCustomTypeFlag( const AsciiString& set , const CustomFlags& Custo
 /** Death types, keep this in sync with TheDeathNames[] */
 //-------------------------------------------------------------------------------------------------
 enum DeathType CPP_11(: Int)
-{	
+{
 	// note that these DELIBERATELY have (slightly) different names from the damage names,
 	// since there isn't necessarily a one-to-one correspondence. e.g., DEATH_BURNED
 	// can come from DAMAGE_FLAME but also from DAMAGE_PARTICLE_BEAM.
 	DEATH_NORMAL		= 0,
-	DEATH_NONE			= 1,					///< this is a "special case" that can't normally cause death			
+	DEATH_NONE			= 1,					///< this is a "special case" that can't normally cause death
   DEATH_CRUSHED		= 2,
   DEATH_BURNED		= 3,
   DEATH_EXPLODED	= 4,
@@ -234,17 +234,17 @@ enum DeathType CPP_11(: Int)
 	DEATH_DETONATED	= 10,		/**< this is the "death" that occurs when a missile/warhead/etc detonates normally,
 														as opposed to being shot down, etc */
 	DEATH_SPLATTED	= 11,		/**< the death that results from DAMAGE_FALLING */
-	DEATH_POISONED_BETA	= 12,	
+	DEATH_POISONED_BETA	= 12,
 
 	// these are the "extra" types for yet-to-be-defined stuff. Don't bother renaming or adding
 	// or removing these; they are reserved for modders :-)
-	DEATH_EXTRA_2		= 13,	
-	DEATH_EXTRA_3		= 14,	
-	DEATH_EXTRA_4		= 15,	
-	DEATH_EXTRA_5		= 16,	
-	DEATH_EXTRA_6		= 17,	
-	DEATH_EXTRA_7		= 18,	
-	DEATH_EXTRA_8		= 19,	
+	DEATH_EXTRA_2		= 13,
+	DEATH_EXTRA_3		= 14,
+	DEATH_EXTRA_4		= 15,
+	DEATH_EXTRA_5		= 16,
+	DEATH_EXTRA_6		= 17,
+	DEATH_EXTRA_7		= 18,
+	DEATH_EXTRA_8		= 19,
 	DEATH_POISONED_GAMMA = 20,
 
 	//New Death Types
@@ -254,12 +254,12 @@ enum DeathType CPP_11(: Int)
 };
 
 #ifdef DEFINE_DEATH_NAMES
-static const char *TheDeathNames[] = 
+static const char *TheDeathNames[] =
 {
-	"NORMAL",			
-	"NONE",			
-	"CRUSHED",					
-	"BURNED",		
+	"NORMAL",
+	"NONE",
+	"CRUSHED",
+	"BURNED",
 	"EXPLODED",
 	"POISONED",
 	"TOPPLED",
@@ -352,6 +352,28 @@ inline ProtectionTypeFlags clearProtectionTypeFlag(ProtectionTypeFlags flags, Pr
 }
 
 //-------------------------------------------------------------------------------------------------
+enum MagnetType CPP_11(: Int)
+{
+	MAGNET_STATIC,
+	MAGNET_DYNAMIC,
+	MAGNET_ROTATORY,
+	MAGNET_HYPERDYNAMIC,
+
+	MAGNET_COUNT
+};
+
+#ifdef DEFINE_MAGNET_FORMULA_NAMES
+static const char *TheMagnetFormulaNames[] =
+{
+	"STATIC",
+	"DYNAMIC",
+	"ROTATORY",
+	"HYPERDYNAMIC",
+	NULL
+};
+#endif
+
+//-------------------------------------------------------------------------------------------------
 /** Damage info inputs */
 //-------------------------------------------------------------------------------------------------
 class DamageInfoInput : public Snapshot
@@ -359,16 +381,16 @@ class DamageInfoInput : public Snapshot
 
 public:
 
-	DamageInfoInput( void ) 
-	{ 
-		m_sourceID = INVALID_ID; 
+	DamageInfoInput( void )
+	{
+		m_sourceID = INVALID_ID;
 		m_sourceTemplate = NULL;
 		m_sourcePlayerMask = 0;
-		m_damageType = DAMAGE_EXPLOSION; 
+		m_damageType = DAMAGE_EXPLOSION;
 		m_damageStatusType = OBJECT_STATUS_NONE;
 		m_damageFXOverride = DAMAGE_UNRESISTABLE;
-		m_deathType = DEATH_NORMAL; 
-		m_amount = 0; 
+		m_deathType = DEATH_NORMAL;
+		m_amount = 0;
 		m_kill = FALSE;
 
 		m_customDamageType = NULL;
@@ -411,7 +433,26 @@ public:
 	m_customSubdualDisableType = DISABLED_SUBDUED;
 	m_customSubdualDisableTint = TINT_STATUS_INVALID;
 	m_customSubdualDisableCustomTint = NULL;
+	m_customSubdualRemoveSubdualTintOnDisable = FALSE;
+	m_customSubdualDisableSound = NULL;
+	m_customSubdualDisableRemoveSound = NULL;
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
+	m_shockWaveAffectsAirborne = FALSE;
+	m_shockWavePullsAirborne = FALSE;
+	m_magnetVector.zero();	
+	m_magnetAmount = 0.0f;
+	m_magnetLiftHeight = 0.0f;
+	m_magnetLiftHeightSecond = 0.0f;
+	m_magnetLiftForce = 1.0f;
+	m_magnetLiftForceToHeight = 1.0f;
+	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetMaxLiftHeight = 0.0f;
+	m_magnetAirborneZForce = 0.0f;
+	m_magnetAirboneAffectedByYaw = FALSE;
+	m_magnetLevitationHeight = 0.0f;
+	m_magnetFormula = MAGNET_STATIC;
+	m_minDamageHeight = 0.0f;
+	m_maxDamageHeight = 0.0f;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -427,8 +468,23 @@ public:
 	// These are used for damage causing shockwave, forcing units affected to be pushed around
 	Coord3D				 m_shockWaveVector;				///< This represents the incoming damage vector
 	Real					 m_shockWaveAmount;				///< This represents the amount of shockwave created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
-	Real					 m_shockWaveRadius;			  ///< This represents the effect radius of the shockwave. 
+	Real					 m_shockWaveRadius;			  ///< This represents the effect radius of the shockwave.
 	Real					 m_shockWaveTaperOff;			///< This represents the taper off effect of the shockwave at the tip of the radius. 0.0 means shockwave is 0% at the radius edge.
+	Bool					 m_shockWaveAffectsAirborne;
+	Bool					 m_shockWavePullsAirborne;
+	
+	Coord3D				 	 m_magnetVector;				///< This represents the incoming damage vector
+	Real					 m_magnetAmount;				///< This represents the amount of magnet created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
+	Real					 m_magnetLiftHeight;
+	Real					 m_magnetLiftHeightSecond;
+	Real					 m_magnetLiftForce;
+	Real					 m_magnetLiftForceToHeight;
+	Real					 m_magnetLiftForceToHeightSecond;
+	Real					 m_magnetMaxLiftHeight;
+	Real 					 m_magnetAirborneZForce;
+	Real					 m_magnetLevitationHeight;
+	Bool					 m_magnetAirboneAffectedByYaw;
+	MagnetType				 m_magnetFormula;
 
 	AsciiString m_customDamageType;
 	AsciiString m_customDamageStatusType;
@@ -467,10 +523,16 @@ public:
 	Bool m_customSubdualDoStatus;
 	const ObjectCreationList* m_customSubdualOCL;
 	DisabledType m_customSubdualDisableType;
+	Bool m_customSubdualRemoveSubdualTintOnDisable;
 	TintStatus m_customSubdualDisableTint;
 	AsciiString m_customSubdualDisableCustomTint;
+	AsciiString m_customSubdualDisableSound;
+	AsciiString m_customSubdualDisableRemoveSound;
 
 	ProtectionTypeFlags m_protectionTypes;
+
+	Real m_minDamageHeight;
+	Real m_maxDamageHeight;
 
 protected:
 
@@ -478,7 +540,7 @@ protected:
 	virtual void crc( Xfer *xfer ) { }
 	virtual void xfer( Xfer *xfer );
 	virtual void loadPostProcess( void ) { }
-	
+
 };
 
 const Real HUGE_DAMAGE_AMOUNT = 999999.0f;
@@ -491,15 +553,15 @@ class DamageInfoOutput : public Snapshot
 
 public:
 
-	DamageInfoOutput( void ) 
-	{ 
-		m_actualDamageDealt = 0; 
-		m_actualDamageClipped = 0; 
+	DamageInfoOutput( void )
+	{
+		m_actualDamageDealt = 0;
+		m_actualDamageClipped = 0;
 		m_noEffect = false;
 	}
 
-	/** 
-		m_actualDamageDealt is the damage we tried to apply to object (after multipliers and such). 
+	/**
+		m_actualDamageDealt is the damage we tried to apply to object (after multipliers and such).
 		m_actualDamageClipped is the value of m_actualDamageDealt, but clipped to the max health remaining of the obj.
 		example:
 			a mammoth tank fires a round at a small tank, attempting 100 damage.
@@ -507,7 +569,7 @@ public:
 			furthermore, the small tank has only 30 health remaining.
 			so: m_actualDamageDealt = 50, m_actualDamageClipped = 30.
 
-		this distinction is useful, since visual fx really wants to do the fx for "50 damage", 
+		this distinction is useful, since visual fx really wants to do the fx for "50 damage",
 		even though it was more than necessary to kill this object; game logic, on the other hand,
 		may want to know the "clipped" damage for ai purposes.
 	*/
