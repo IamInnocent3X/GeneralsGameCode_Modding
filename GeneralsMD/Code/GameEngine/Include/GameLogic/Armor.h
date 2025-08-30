@@ -85,6 +85,7 @@ private:
 	WeaponBonusConditionTypeVec		m_weaponBonusFlags;
 	CustomDamageTypeMap			m_customCoefficients;
 	CustomDamageTypeMap			m_customStatusArmorBonus;
+	CustomDamageTypeMap			m_customMultCoefficients;
 };  
 
 //-------------------------------------------------------------------------------------------------

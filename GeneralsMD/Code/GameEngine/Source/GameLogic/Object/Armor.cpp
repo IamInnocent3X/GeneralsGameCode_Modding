@@ -74,6 +74,7 @@ void ArmorTemplate::clear()
 	}
 	m_customCoefficients.clear();
 	m_customStatusArmorBonus.clear();
+	m_customMultCoefficients.clear();
 	m_weaponBonusFlags.clear();
 	m_statusFlags.clear();
 }
@@ -95,6 +96,8 @@ void ArmorTemplate::copyFrom(const ArmorTemplate* other) {
 	m_customCoefficients = other->m_customCoefficients;
 
 	m_customStatusArmorBonus = other->m_customStatusArmorBonus;
+
+	m_customMultCoefficients = other->m_customMultCoefficients;
 
 	for (int i_4 = 0; i_4 < other->m_weaponBonusFlags.size(); i_4++)
 	{
@@ -159,6 +162,16 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 {
 	if (ct.isNotEmpty())
 	{
+		// Custom Damage Types have a different configuration, so we multiply the damage by it first before doing the damage calculation
+		if(!m_customMultCoefficients.empty())
+		{
+			CustomDamageTypeMap::const_iterator it_m = m_customMultCoefficients.find(ct);
+			if (it_m != m_customMultCoefficients.end())
+			{
+				damage *= it_m->second;
+			}
+		}
+
 		// Find and return the Custom Coefficient assigned, easy.
 		if(!m_customCoefficients.empty())
 		{
@@ -311,6 +324,47 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 	}
 }
 
+void ArmorTemplate::parseArmorMultiplier(INI* ini, void* instance, void* /* store */, const void* userData)
+{
+	ArmorTemplate* self = (ArmorTemplate*)instance;
+
+	const char* damageName = ini->getNextToken();
+	AsciiString damageNameStr;
+	damageNameStr.format(damageName);
+
+	Real mult = INI::scanPercentToReal(ini->getNextToken());
+
+	if (stricmp(damageName, "Default") == 0)
+	{
+		for (Int i = 0; i < DAMAGE_NUM_TYPES; i++)
+		{
+			self->m_damageCoefficient[i] = self->m_damageCoefficient[i] * mult;
+		}
+		return;
+	}
+
+	DamageType dt = (DamageType)DamageTypeFlags::getSingleBitFromName(damageName);
+	if (dt >= 0)
+	{
+		self->m_damageCoefficient[dt] = self->m_damageCoefficient[dt] * mult;
+	}
+	else
+	{
+		CustomDamageTypeMap::const_iterator it_check = self->m_customCoefficients.find(damageNameStr);
+
+		// The found the CustomDamageType at the declared CustomDamageTypes data.
+		CustomDamageTypeMap::iterator it = self->m_customMultCoefficients.find(damageNameStr);
+		if (it != self->m_customMultCoefficients.end())
+		{
+			it->second = it->second * mult;
+		}
+		else
+		{
+			self->m_customMultCoefficients[damageNameStr] = mult;
+		}
+	}
+}
+
 void ArmorTemplate::parseArmorBonus(INI* ini, void* instance, void* /* store */, const void* userData)
 {
 	ArmorTemplate* self = (ArmorTemplate*)instance;
@@ -430,26 +484,6 @@ void ArmorTemplate::parseLinkCustomDamageTypes(INI* ini, void*/*instance*/, void
 	INI::parseAsciiStringVectorAppend(ini, NULL, &customType->m_customDamageTypeLink, NULL);
 }
 
-void ArmorTemplate::parseArmorMultiplier(INI* ini, void* instance, void* /* store */, const void* userData)
-{
-	ArmorTemplate* self = (ArmorTemplate*)instance;
-
-	const char* damageName = ini->getNextToken();
-	Real mult = INI::scanPercentToReal(ini->getNextToken());
-
-	if (stricmp(damageName, "Default") == 0)
-	{
-		for (Int i = 0; i < DAMAGE_NUM_TYPES; i++)
-		{
-			self->m_damageCoefficient[i] = self->m_damageCoefficient[i] * mult;
-		}
-		return;
-	}
-
-	DamageType dt = (DamageType)DamageTypeFlags::getSingleBitFromName(damageName);
-	self->m_damageCoefficient[dt] = self->m_damageCoefficient[dt] * mult;
-}
-
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -502,6 +536,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 	static const FieldParse myFieldParse[] =
 	{
 		{ "Armor", ArmorTemplate::parseArmorCoefficients, NULL, 0 },
+		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, NULL, 0 },
 		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, NULL, 0 },
 		{ NULL, NULL, NULL, NULL }
 	};
