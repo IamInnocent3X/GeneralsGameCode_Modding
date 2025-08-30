@@ -414,22 +414,26 @@ void CaveContain::onRemoving( Object *obj )
 
 	doUnloadSound();
 
-	if( getContainCount() == 0 && !m_switchingOwners)
+	if( getContainCount() == 0 )
 	{
 
+		// Set it so it doesn't get treated as "capturing"
+		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getOldTeam() );
+		if(myTracker)
+			myTracker->setIsContaining(TRUE);
+
+		m_containingFrames = TheGameLogic->getFrame() + 2;
+
+		// Don't do Shenenigans if it is currently switching this one
+		if(m_switchingOwners)
+			return;
+		
 		// put us back on our original team
 		// (hokey exception: if our team is null, don't bother -- this
 		// usually means we are being called during game-teardown and
 		// the teams are no longer valid...)
 		if (getObject()->getTeam() != NULL )
 		{
-			// Set it so it doesn't get treated as "capturing"
-			TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getOldTeam() );
-			if(myTracker)
-				myTracker->setIsContaining(TRUE);
-
-			m_containingFrames = TheGameLogic->getFrame() + 2;
-
 			changeTeamOnAllConnectedCaves( m_originalTeam, FALSE );
 			if(!getHasPermanentOwner())
 				m_originalTeam = NULL;
@@ -779,7 +783,12 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 {
 	if(getCaveContainModuleData()->m_caveUsesTeams)
 	{
-		changeTeamOnAllConnectedCavesByTeam( getObject()->getTeam(), setOriginalTeams, newTeam );
+		// Fixes Captured Caves may still have their "old data" registered onto them, thus will defect their Non-Captured counterparts
+		// How??? OnCapture.
+		if( !setOriginalTeams || newTeam != getObject() -> getTeam())
+			changeTeamOnAllConnectedCavesByTeam( getObject()->getTeam(), setOriginalTeams, newTeam );
+		if( newTeam == getObject() -> getTeam() )
+			setOriginalTeam( getObject()->getTeam() );
 		return;
 	}
 
@@ -821,15 +830,18 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 //-------------------------------------------------------------------------------------------------
 void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool setOriginalTeams, Team *newTeam )
 {
-	// Since we are switching Teams, we will destroy the teams of the Old Tunnels and add to our own.
+	// Since we are switching Teams, we will destroy the teams of the Old Caves and add to our own.
 	TunnelTracker *currTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, checkTeam );
+	if(!currTracker)
+		return;
+
 	const ContainedItemsList* items = currTracker->getContainedItemsList();
 	std::vector<ObjectID> vecContainedIDs, vecCaveIDs;
 	
 	// Tell the Module to not do shenenigans with OnContaining and OnRemoving
 	m_switchingOwners = TRUE;
 
-	// Remove the Contained Objects first
+	// By destroying the Caves, we first need to remove occupants from the Old Team
 	ContainedItemsList::const_iterator it_test = items->begin();
 	while ( it_test != items->end() )
 	{
@@ -870,8 +882,10 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 		{
 			// ...while registering them to remove them from their Tunnels list and add it to our own later.
 			vecCaveIDs.push_back(*iter);
-			// This is a distributed Garrison in terms of capturing, so when one node
-			// triggers the change, he needs to tell everyone, so anyone can do the un-change.
+
+			// Do it later, or we will screw up the list
+			// News, functions are carried out through onCapture. No need to do anything here.
+
 			//CaveInterface *caveModule = findCave(currentCave);
 			//if( caveModule == NULL )
 			//	continue;
@@ -884,21 +898,27 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 
 //			currentCave->defect( newTeam, 0 );
 //			currentCave->setTeam( newTeam );
-					
-			// Do it later, or we will screw up the list
-			// News, functions are carried out through onCapture. No need to do anything here.
+
 			//currTracker->onTunnelDestroyed( getObject() );
 			//TheCaveSystem->unregisterCave( m_caveIndex );
 			//newTracker->onTunnelCreated( getObject() );
 		}
 	}
-	
-	TheCaveSystem->registerNewCaveTeam( m_caveIndex, newTeam );
 
-	TunnelTracker *newTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, newTeam );
+	// Fixes regarding exiting the Tunnel from a Captured cave onto a non-captured cave that results in the newTeam being a null
+	TunnelTracker *newTracker = NULL;
+
+	// newTeam could be NULL, and this will give nullptr and crashes the game
+	if(setOriginalTeams && newTeam != NULL)
+	{
+		TheCaveSystem->registerNewCaveTeam( m_caveIndex, newTeam );
+
+		newTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, newTeam );
+	}
 	
 	// Wasn't so hard now was it?
-	if(newTracker)
+	// Fixes bugs relating to exiting from Caves with newTeam that does not have any reference or NULL.
+	if(newTracker || !setOriginalTeams)
 	{
 		for(int i = 0; i < vecCaveIDs.size(); i++)
 		{
@@ -923,13 +943,13 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 					teamToSet = caveModule->getOldTeam();
 				}
 
-				if(!caveModule->getHasPermanentOwner() || newTracker->getIsCapturingLinkedCaves())
+				if(!caveModule->getHasPermanentOwner() || ( newTracker && newTracker->getIsCapturingLinkedCaves()) )
 					cave->defect( teamToSet, 0 );
 				//newTracker->onTunnelCreated( cave );
 			}
 		}
 
-		// I added this.. for what reason?
+		// I added this.. for what reason? Oh yeah. We clear all the occupants out and assign them to this new one.
 		ContainModuleInterface *contain = getObject()->getContain();
 
 		if(contain)
@@ -967,13 +987,19 @@ void CaveContain::switchCaveOwners( Team *oldTeam, Team *newTeam )
 	// Function differs if the person uses Teams system
 	if(curTracker && !curTracker->getIsContaining() && !getCaveContainModuleData()->m_caveUsesTeams)
 	{
-		// Switching Owners, evacuate everyone if it is Captured
+		// Switching Owners, evacuate everyone that is not owned by the Capturer after Captured
 		removeAllNonOwnContained(newTeam, TRUE);
 
-		// Reenable them
-		m_switchingOwners = FALSE;
+		// Removing Containing Objects will set the value to TRUE, which makes our capturning attempt invalid
+		// We don't need this for CaveUsesTeams because the ownership is granted to the Owning Team, which uses a seperate Tunnel that determines its status
+		curTracker->setIsContaining(FALSE);
+	}
 
-		// If we don't use teams, we stop here
+	// If we don't use teams, we stop here
+	if(!getCaveContainModuleData()->m_caveUsesTeams)
+	{
+		// Reenable the shenenigans
+		m_switchingOwners = FALSE;
 		return;
 	}
 
@@ -1013,11 +1039,12 @@ void CaveContain::switchCaveOwners( Team *oldTeam, Team *newTeam )
 			}
 		}
 
-		// Destroy the other team's tunnels if we are using Teams
+		// Destroy the other team's cave if we are using Teams
 		//TheCaveSystem->unregisterCave( m_caveIndex );
 		curTracker->onTunnelDestroyed(getObject());
 		//curTracker->setIsContaining(FALSE);
 
+		// Set the cave as your own
 		newTracker->onTunnelCreated(getObject());
 	}
 
