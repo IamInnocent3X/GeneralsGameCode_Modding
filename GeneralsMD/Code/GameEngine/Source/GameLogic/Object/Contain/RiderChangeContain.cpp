@@ -67,6 +67,8 @@ RiderChangeContainModuleData::RiderChangeContainModuleData()
 	m_ridersCustom.clear();
 	m_riderNotRequired = FALSE;
 	m_useUpgradeNames = FALSE;
+	m_dontScuttle = FALSE;
+	m_dontDestroyRiderOnKill = FALSE;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -186,6 +188,8 @@ void RiderChangeContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "RiderUseUpgradeNames",		INI::parseBool,					NULL, offsetof(RiderChangeContainModuleData, m_useUpgradeNames) },
     { "ScuttleDelay",   INI::parseDurationUnsignedInt,	NULL, offsetof( RiderChangeContainModuleData, m_scuttleFrames ) },
     { "ScuttleStatus",  INI::parseIndexList,		ModelConditionFlags::getBitNames(), offsetof( RiderChangeContainModuleData, m_scuttleState ) },
+	{ "DontDestroyRiderOnKill",		INI::parseBool,				NULL, offsetof( RiderChangeContainModuleData, m_dontDestroyRiderOnKill ) },
+	{ "DontScuttleOnExit",		INI::parseBool,					NULL, offsetof( RiderChangeContainModuleData, m_dontScuttle ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -505,8 +509,9 @@ Bool RiderChangeContain::doRiderChangeOnContaining(Object* rider, const RiderInf
 void RiderChangeContain::onRemoving( Object *rider )
 {
 	Object *bike = getObject();
+	const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
 	//Note if the bike dies, the rider dies too.
-	if( bike->isEffectivelyDead() )
+	if( !data->m_dontDestroyRiderOnKill && bike->isEffectivelyDead() )
 	{
 		TheGameLogic->destroyObject( rider );
 		return;
@@ -519,7 +524,6 @@ void RiderChangeContain::onRemoving( Object *rider )
 	}
 
 	//Find the rider in the list and clear various data.
-	const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
 	Bool found = FALSE;
 	for( int i = 0; i < MAX_RIDERS; i++ )
 	{
@@ -566,7 +570,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 	//If we're not replacing the rider, then if the cycle is selected, transfer selection
 	//to the rider getting off (because the bike is gonna blow).
-	if( !m_containing )
+	if( !m_containing && !data->m_dontScuttle)
 	{
 		Drawable *containDraw = bike->getDrawable();
 		Drawable *riderDraw = rider->getDrawable();
