@@ -810,7 +810,13 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					ObjectCreationList::create(damageInfo->in.m_customSubdualOCL, getObject(), NULL );
 
 				if(damageInfo->in.m_customSubdualDoStatus)
+				{
 					getObject()->doStatusDamage( damageInfo->in.m_damageStatusType , REAL_TO_INT_CEIL(realFramesToStatusFor) , damageInfo->in.m_customDamageStatusType , damageInfo->in.m_customTintStatus , damageInfo->in.m_tintStatus );
+				
+					// Custom feature, similar to Black Hole Armor
+					if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
+						getObject()->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
+				}
 			}
 
 			SubdualCustomNotifyData subdualNotifyData;
