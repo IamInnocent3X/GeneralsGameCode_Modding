@@ -68,6 +68,7 @@ public:
 	Real scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, ObjectCustomStatusType customStatusType, ObjectCustomStatusType customBonusType) const;
 
 	static void parseArmorCoefficients( INI* ini, void *instance, void* /* store */, const void* userData );
+	static void parseArmorMultiplier( INI* ini, void *instance, void* /* store */, const void* userData );
 	static void parseArmorBonus(INI* ini, void* instance, void* /* store */, const void* userData);
 	static void parseDefaultDamage(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/);
 	static void parseCustomDamageType(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/);

@@ -430,6 +430,26 @@ void ArmorTemplate::parseLinkCustomDamageTypes(INI* ini, void*/*instance*/, void
 	INI::parseAsciiStringVectorAppend(ini, NULL, &customType->m_customDamageTypeLink, NULL);
 }
 
+void ArmorTemplate::parseArmorMultiplier(INI* ini, void* instance, void* /* store */, const void* userData)
+{
+	ArmorTemplate* self = (ArmorTemplate*)instance;
+
+	const char* damageName = ini->getNextToken();
+	Real mult = INI::scanPercentToReal(ini->getNextToken());
+
+	if (stricmp(damageName, "Default") == 0)
+	{
+		for (Int i = 0; i < DAMAGE_NUM_TYPES; i++)
+		{
+			self->m_damageCoefficient[i] = self->m_damageCoefficient[i] * mult;
+		}
+		return;
+	}
+
+	DamageType dt = (DamageType)DamageTypeFlags::getSingleBitFromName(damageName);
+	self->m_damageCoefficient[dt] = self->m_damageCoefficient[dt] * mult;
+}
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -499,6 +519,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 	static const FieldParse myFieldParse[] =
 	{
 		{ "Armor", ArmorTemplate::parseArmorCoefficients, NULL, 0 },
+		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, NULL, 0 },
 		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, NULL, 0 },
 		{ NULL, NULL, NULL, NULL }
 	};
