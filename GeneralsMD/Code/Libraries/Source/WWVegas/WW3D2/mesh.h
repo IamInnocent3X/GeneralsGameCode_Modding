@@ -17,22 +17,22 @@
 */
 
 /* $Header: /Commando/Code/ww3d2/mesh.h 16    11/07/01 5:50p Jani_p $ */
-/*********************************************************************************************** 
- ***                            Confidential - Westwood Studios                              *** 
- *********************************************************************************************** 
- *                                                                                             * 
- *                 Project Name : Commando / G 3D engine                                       * 
- *                                                                                             * 
- *                    File Name : MESH.H                                                       * 
- *                                                                                             * 
- *                   Programmer : Greg Hjelstrom                                               * 
- *                                                                                             * 
- *                   Start Date : 06/11/97                                                     * 
- *                                                                                             * 
- *                  Last Update : June 11, 1997 [GH]                                           * 
- *                                                                                             * 
- *---------------------------------------------------------------------------------------------* 
- * Functions:                                                                                  * 
+/***********************************************************************************************
+ ***                            Confidential - Westwood Studios                              ***
+ ***********************************************************************************************
+ *                                                                                             *
+ *                 Project Name : Commando / G 3D engine                                       *
+ *                                                                                             *
+ *                    File Name : MESH.H                                                       *
+ *                                                                                             *
+ *                   Programmer : Greg Hjelstrom                                               *
+ *                                                                                             *
+ *                   Start Date : 06/11/97                                                     *
+ *                                                                                             *
+ *                  Last Update : June 11, 1997 [GH]                                           *
+ *                                                                                             *
+ *---------------------------------------------------------------------------------------------*
+ * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
@@ -82,7 +82,7 @@ public:
 	virtual ~MeshClass(void);
 
 	/////////////////////////////////////////////////////////////////////////////
-	// Render Object Interface 
+	// Render Object Interface
 	/////////////////////////////////////////////////////////////////////////////
 	virtual RenderObjClass *	Clone(void) const;
 	virtual int						Class_ID(void) const { return CLASSID_MESH; }
@@ -95,13 +95,13 @@ public:
 
 	/////////////////////////////////////////////////////////////////////////////
 	// Render Object Interface - Collision Detection
-	/////////////////////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////////////////////
 	virtual bool					Cast_Ray(RayCollisionTestClass & raytest);
 	virtual bool					Cast_AABox(AABoxCollisionTestClass & boxtest);
 	virtual bool					Cast_OBBox(OBBoxCollisionTestClass & boxtest);
 	virtual bool					Intersect_AABox(AABoxIntersectionTestClass & boxtest);
 	virtual bool					Intersect_OBBox(OBBoxIntersectionTestClass & boxtest);
-   
+
 	/////////////////////////////////////////////////////////////////////////////
 	// Render Object Interface - Bounding Volumes
 	/////////////////////////////////////////////////////////////////////////////
@@ -114,9 +114,9 @@ public:
 	virtual void					Scale(float scale);
 	virtual void					Scale(float scalex, float scaley, float scalez);
 	virtual MaterialInfoClass * Get_Material_Info(void);
-	
+
    virtual int						Get_Sort_Level(void) const;
-   virtual void					Set_Sort_Level(int level);	
+   virtual void					Set_Sort_Level(int level);
 
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -124,7 +124,7 @@ public:
 	/////////////////////////////////////////////////////////////////////////////
 	virtual void					Create_Decal(DecalGeneratorClass * generator);
 	virtual void					Delete_Decal(uint32 decal_id);
-	
+
 	/////////////////////////////////////////////////////////////////////////////
 	// MeshClass Interface
 	/////////////////////////////////////////////////////////////////////////////
@@ -145,6 +145,7 @@ public:
 	void								Set_Lighting_Environment(LightEnvironmentClass * light_env) { if (light_env) {m_localLightEnv=*light_env;LightEnvironment = &m_localLightEnv;} else {LightEnvironment = NULL;} }
 	LightEnvironmentClass *		Get_Lighting_Environment(void) { return LightEnvironment; }
 	inline float	Get_Alpha_Override(void) { return m_alphaOverride;}
+	inline float	Get_Emissive_Override(void) { return m_emissiveOverride;}
 
 	void								Set_Next_Visible_Skin(MeshClass * next_visible) { NextVisibleSkin = next_visible; }
 	MeshClass *						Peek_Next_Visible_Skin(void) { return NextVisibleSkin; }
@@ -181,6 +182,7 @@ protected:
 	LightEnvironmentClass *		LightEnvironment;		// cached pointer to the light environment for this mesh
 	LightEnvironmentClass     m_localLightEnv;	//added for 'Generals'
 	float					m_alphaOverride;	//added for 'Generals' to allow variable alpha on meshes.
+	float					m_emissiveOverride;	//added by AW for variable additive scaling
 	float					m_materialPassEmissiveOverride;	//added for 'Generals' to allow variable emissive on additional passes.
 	float					m_materialPassAlphaOverride;	//added for 'Generals' to allow variable alpha on additional render passes.
 	int								BaseVertexOffset;		// offset to our first vertex in whatever vb this mesh is in.
