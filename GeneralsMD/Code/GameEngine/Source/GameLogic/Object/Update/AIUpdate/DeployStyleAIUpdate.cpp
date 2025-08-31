@@ -56,6 +56,8 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 {
 	m_state = READY_TO_MOVE;
 	m_frameToWaitForDeploy = 0;
+	m_doDeploy = FALSE;
+	m_doUndeploy = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -102,14 +104,36 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
 
 	//Are we attempting to move? If so we can't do it unless we are undeployed.
-	Bool isTryingToMove = isWaitingForPath() || getPath();
+	Bool isTryingToMove = isWaitingForPath() || getPath() || ( data->m_statusToUndeploy.any() && self->getStatusBits().testForAny( data->m_statusToUndeploy ) );
+	if(!isTryingToMove)
+	{
+		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+		{
+			if (self->testCustomStatus(*it))
+			{
+				isTryingToMove = TRUE;
+				break;
+			}
+		}
+	}
 
 	//Are we trying to attack something. If so, we need to be in range before we can do so.
 	Bool isTryingToAttack = getStateMachine()->isInAttackState();
 	Bool isInRange = FALSE;
 
 	//Are we in guard mode? If so, are we idle... idle guarders deploy for fastest response against attackers.
-	Bool isInGuardIdleState = getStateMachine()->isInGuardIdleState();
+	Bool isInGuardIdleState = getStateMachine()->isInGuardIdleState() || ( data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ) );
+	if(!isInGuardIdleState)
+	{
+		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+		{
+			if (self->testCustomStatus(*it))
+			{
+				isInGuardIdleState = TRUE;
+				break;
+			}
+		}
+	}
 
 	AIUpdateInterface *ai = self->getAI();
 
@@ -143,35 +167,12 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 		}
 	}
 
-	if( isInRange || isInGuardIdleState )
+	// Fixed moving while deployed. 
+	if( ( isTryingToMove || m_doUndeploy ) && !m_doDeploy )
 	{
-		switch( m_state )
-		{
-			case READY_TO_MOVE:
-				//We're need to deploy before we can attack.
-				setMyState( DEPLOY );
-				break;
-			case READY_TO_ATTACK:
-				//Let the AI handle attacking.
-				break;
-			case DEPLOY:
-				//We can't start attacking until we are fully deployed.
-				break;
-			case UNDEPLOY:
-				if( m_frameToWaitForDeploy != 0 )
-				{
-					//Reverse the undeploy at it's current frame!
-					setMyState( DEPLOY, TRUE );
-				}
-				break;
-			case ALIGNING_TURRETS:
-				//If turrets are aligning, we are able to attack right now.
-				setMyState( READY_TO_ATTACK );
-				break;
-		}
-	}
-	else if( isTryingToMove )
-	{
+		//if( m_state == DEPLOY && m_frameToWaitForDeploy != 0 )
+		//	m_frameToWaitForDeploy++;
+
 		switch( m_state )
 		{
 			case READY_TO_MOVE:
@@ -216,6 +217,48 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 				break;
 			}
 		}
+		if( m_state == READY_TO_MOVE && m_doUndeploy )
+		{
+			m_doUndeploy = FALSE;
+			if(isInRange || isInGuardIdleState || m_doDeploy)
+				ai->aiIdle(CMD_FROM_AI);	// Also remember to clear its current attack state
+		}
+	}
+	else if( isInRange || isInGuardIdleState || m_doDeploy )
+	{
+		switch( m_state )
+		{
+			case READY_TO_MOVE:
+				//We're need to deploy before we can attack.
+				setMyState( DEPLOY );
+				break;
+			case READY_TO_ATTACK:
+				//Let the AI handle attacking.
+				break;
+			case DEPLOY:
+				//We can't start attacking until we are fully deployed.
+				break;
+			case UNDEPLOY:
+				if( m_frameToWaitForDeploy != 0 )
+				{
+					//Reverse the undeploy at it's current frame!
+					setMyState( DEPLOY, TRUE );
+				}
+				break;
+			case ALIGNING_TURRETS:
+				//If turrets are aligning, we are able to attack right now.
+				setMyState( READY_TO_ATTACK );
+				break;
+		}
+		if( m_doDeploy )
+		{
+			if( m_state == READY_TO_ATTACK )
+				m_doDeploy = FALSE;
+			else
+				ai->aiIdle(CMD_FROM_AI);	// Also remember to clear its moving state
+		}
+		
+		m_doUndeploy = FALSE;
 	}
 
 	switch( m_state )
@@ -262,6 +305,36 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 			getStateMachine()->setTemporaryState( AI_BUSY, UPDATE_SLEEP_NONE );
 			setLocomotorGoalNone();
 			break;
+	}
+
+	if(data->m_removeStatusAfterTrigger)
+	{
+		if(data->m_statusToDeploy.any()  && self->getStatusBits().testForAny( data->m_statusToDeploy ))
+		{
+			m_doDeploy = TRUE;
+			self->clearStatus( data->m_statusToDeploy );
+		}
+		if(data->m_statusToUndeploy.any()  && self->getStatusBits().testForAny( data->m_statusToUndeploy ))
+		{
+			m_doUndeploy = TRUE;
+			self->clearStatus( data->m_statusToUndeploy );
+		}
+		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+		{
+			if (self->testCustomStatus(*it))
+			{
+				m_doUndeploy = TRUE;
+				self->setCustomStatus((*it), FALSE);
+			}
+		}
+		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+		{
+			if (self->testCustomStatus(*it))
+			{
+				m_doDeploy = TRUE;
+				self->setCustomStatus((*it), FALSE);
+			}
+		}
 	}
 
 	AIUpdateInterface::update();

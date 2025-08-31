@@ -55,6 +55,11 @@ public:
 	Bool						m_turretsFunctionOnlyWhenDeployed;
 	Bool						m_turretsMustCenterBeforePacking;
 	Bool						m_manualDeployAnimations;
+	Bool						m_removeStatusAfterTrigger;
+	ObjectStatusMaskType 		m_statusToDeploy;
+	ObjectStatusMaskType 		m_statusToUndeploy;
+	std::vector<AsciiString> 	m_customStatusToDeploy;
+	std::vector<AsciiString> 	m_customStatusToUndeploy;
 
 	DeployStyleAIUpdateModuleData()
 	{
@@ -67,6 +72,9 @@ public:
 		m_turretsMustCenterBeforePacking = FALSE;
 		// End Add
 		m_manualDeployAnimations = FALSE;
+		m_removeStatusAfterTrigger = FALSE;
+		m_customStatusToDeploy.clear();
+		m_customStatusToUndeploy.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -81,6 +89,11 @@ public:
 			{ "TurretsFunctionOnlyWhenDeployed", INI::parseBool,		NULL, offsetof( DeployStyleAIUpdateModuleData, m_turretsFunctionOnlyWhenDeployed ) },
 			{ "TurretsMustCenterBeforePacking", INI::parseBool,			NULL, offsetof( DeployStyleAIUpdateModuleData, m_turretsMustCenterBeforePacking ) },
 			{ "ManualDeployAnimations",	INI::parseBool,							NULL, offsetof( DeployStyleAIUpdateModuleData, m_manualDeployAnimations ) },
+			{ "StatusToDeploy",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( DeployStyleAIUpdateModuleData, m_statusToDeploy ) },
+			{ "StatusToUndeploy",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( DeployStyleAIUpdateModuleData, m_statusToUndeploy ) },
+			{ "CustomStatusToDeploy",	INI::parseAsciiStringVector, NULL, 	offsetof( DeployStyleAIUpdateModuleData, m_customStatusToDeploy ) },
+			{ "CustomStatusToUndeploy",	INI::parseAsciiStringVector, NULL, 	offsetof( DeployStyleAIUpdateModuleData, m_customStatusToUndeploy ) },
+			{ "RemoveStatusAfterTrigger",	INI::parseBool, NULL, 	offsetof( DeployStyleAIUpdateModuleData, m_removeStatusAfterTrigger ) },
 			{ 0, 0, 0, 0 }
 		};
 		p.add(dataFieldParse);
@@ -115,6 +128,8 @@ protected:
 
 	DeployStateTypes				m_state;
 	UnsignedInt							m_frameToWaitForDeploy;
+	Bool							m_doDeploy;
+	Bool							m_doUndeploy;
 };
 
 #endif
