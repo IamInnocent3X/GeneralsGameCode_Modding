@@ -191,6 +191,7 @@ Bool WeaponTemplateSet::testWeaponSetFlag( WeaponSetType wst ) const
 WeaponSet::WeaponSet()
 {
 	m_curWeapon = PRIMARY_WEAPON;
+	m_curDefaultWeapon = PRIMARY_WEAPON;
 	m_curWeaponLockedStatus = NOT_LOCKED;
 	m_curWeaponTemplateSet = NULL;
 	m_filledWeaponSlotMask = 0;
@@ -290,6 +291,7 @@ void WeaponSet::xfer( Xfer *xfer )
 	}
 	xfer->xferUser(&m_curWeapon, sizeof(m_curWeapon));
 	xfer->xferUser(&m_curWeaponLockedStatus, sizeof(m_curWeaponLockedStatus));
+	xfer->xferUser(&m_curDefaultWeapon, sizeof(m_curWeapon));
 	xfer->xferUnsignedInt(&m_filledWeaponSlotMask);
 	xfer->xferInt(&m_totalAntiMask);
 	xfer->xferBool(&m_hasDamageWeapon);
@@ -386,6 +388,37 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 		}
 		m_curWeaponTemplateSet = set;
 		//DEBUG_LOG(("WeaponSet::updateWeaponSet -- changed curweapon to %s\n",getCurWeapon()->getName().str()));
+	}
+	if(m_curWeaponTemplateSet && ! set->isWeaponLockSharedAcrossSets())
+	{
+		Int curWeaponUsed = 1;
+		for (Int i_2 = PRIMARY_WEAPON; i_2 < WEAPONSLOT_COUNT ; i_2++)
+		{
+			if(m_weapons[i_2] == NULL)
+				continue;
+			if(!m_weapons[i_2]->getTemplate()->passRequirements(obj) && curWeaponUsed == i_2+1)
+			{
+				curWeaponUsed = 0;
+			}
+			if(curWeaponUsed == 0 && m_weapons[i_2]->getTemplate()->passRequirements(obj))
+			{
+				curWeaponUsed = i_2+1;
+				break;
+			}
+
+			DEBUG_LOG(("CurWeaponSlotToCheck -- %d\n",i_2));
+		}
+		DEBUG_LOG(("CurWeaponSlot -- %d\n",curWeaponUsed-1));
+		if(curWeaponUsed > 0)
+		{
+			m_curDefaultWeapon = (WeaponSlotType)(curWeaponUsed-1);
+			m_curWeapon = m_curDefaultWeapon;
+		}
+		else
+		{
+			m_curDefaultWeapon = PRIMARY_WEAPON;
+			m_curWeapon = PRIMARY_WEAPON;
+		}
 	}
 }
 
@@ -862,7 +895,10 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	{
 		// Weapon lock is checked first for specific attack- ground powers.  Otherwise, we will reproduce the old behavior
 		// and make only Primary attack the ground.
-		m_curWeapon = PRIMARY_WEAPON;
+		if(m_curDefaultWeapon)
+			m_curWeapon = m_curDefaultWeapon;
+		else
+			m_curWeapon = PRIMARY_WEAPON;
 		return TRUE;
 	}
 
@@ -903,6 +939,9 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 
 		Weapon* weapon = m_weapons[i];
 		if (weapon == NULL)
+			continue;
+
+		if(!weapon->getTemplate()->passRequirements(obj))
 			continue;
 
 		// No bad wrong!  Being out of range does not mean this weapon can not affect the target!
@@ -1059,7 +1098,10 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	else
 	{
 		// No weapon at all was found, so we go back to primary.
-		m_curWeapon = PRIMARY_WEAPON;
+		if(m_curDefaultWeapon)
+			m_curWeapon = m_curDefaultWeapon;
+		else
+			m_curWeapon = PRIMARY_WEAPON;
 	}
 
 	// Lock the weapon for Priority Lock

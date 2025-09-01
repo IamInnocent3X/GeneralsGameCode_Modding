@@ -100,7 +100,6 @@ Bool FireWeaponCollide::shouldFireWeapon()
 	const FireWeaponCollideModuleData *d = getFireWeaponCollideModuleData();
 
 	ObjectStatusMaskType status = getObject()->getStatusBits();
-	ObjectCustomStatusType c_status = getObject()->getCustomStatus();
 	
 	//We need all required status or else we fail
 	if( !status.testForAll( d->m_requiredStatus ) )
@@ -113,27 +112,14 @@ Bool FireWeaponCollide::shouldFireWeapon()
 	if( m_everFired && d->m_fireOnce )
 		return FALSE;// can only fire once ever
 
-	for(std::vector<AsciiString>::const_iterator it = d->m_requiredCustomStatus.begin(); it != d->m_requiredCustomStatus.end(); ++it)
-	{
-		ObjectCustomStatusType::const_iterator it2 = c_status.find(*it);
-		if (it2 != c_status.end()) 
-		{
-			if(it2->second == 0)
-				return FALSE;
-		}
-		else
-		{
-			return FALSE;
-		}
-	}
+	if(!getObject()->testCustomStatusForAll(d->m_requiredCustomStatus))
+		return FALSE;
 
-	for(std::vector<AsciiString>::const_iterator it3 = d->m_forbiddenCustomStatus.begin(); it3 != d->m_forbiddenCustomStatus.end(); ++it3)
+	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
 	{
-		ObjectCustomStatusType::const_iterator it4 = c_status.find(*it3);
-		if (it4 != c_status.end() && it4->second == 1) 
+		if(getObject()->testCustomStatus(*it))
 			return FALSE;
 	}
-
 
 	return TRUE;
 }

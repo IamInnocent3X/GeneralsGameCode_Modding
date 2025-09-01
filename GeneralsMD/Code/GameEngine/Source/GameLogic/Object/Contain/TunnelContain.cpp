@@ -393,7 +393,7 @@ static TunnelInterface* findTunnel(Object* obj)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-void TunnelContain::doUpgradeChecks()
+void TunnelContain::doUpgradeChecks( void )
 {
 	if ( !getObject() )
     	return;
@@ -902,7 +902,10 @@ UpdateSleepTime TunnelContain::update( void )
 		}
 		// Tested and working as intended.
 		if(!m_hasTunnelGuard)
+		{
+			removeAllContained(FALSE);
 			return UPDATE_SLEEP_NONE;
+		}
 		// check for attacked.
 		BodyModuleInterface *body = obj->getBodyModule();
 		if (body) {

@@ -588,6 +588,15 @@ public:
 	inline Real getMaxTargetHeight() const { return m_maxTargetHeight; }
 	inline Real getAttackRangePriority() const { return m_attackRangePriority; }
 	inline Real getOutsideAttackRangePriority() const { return m_outsideAttackRangePriority; }
+	
+	inline const std::vector<AsciiString>& getActivationUpgradeNames() const { return m_activationUpgradeNames; }
+	inline const std::vector<AsciiString>& getConflictingUpgradeNames() const { return m_conflictingUpgradeNames; }
+	inline ObjectStatusMaskType getRequiredStatus() const { return m_requiredStatus; }
+	inline ObjectStatusMaskType getForbiddenStatus() const { return m_forbiddenStatus; }
+	inline const std::vector<AsciiString>& getCustomStatusRequired() const { return m_requiredCustomStatus; }
+	inline const std::vector<AsciiString>& getCustomStatusForbidden() const { return m_forbiddenCustomStatus; }
+
+	Bool passRequirements (const Object *source) const;
 
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
@@ -798,6 +807,13 @@ private:
 	Real m_maxTargetHeight;
 	Int m_attackRangePriority;
 	Int m_outsideAttackRangePriority;
+
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
+	std::vector<AsciiString> m_activationUpgradeNames;
+	std::vector<AsciiString> m_conflictingUpgradeNames;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };

@@ -340,24 +340,12 @@ Bool StealthUpdate::allowedToStealth( Object *stealthOwner ) const
 	if( self->getStatusBits().testForAny( data->m_forbiddenStatus ) )
 		return FALSE;
 
-	for(std::vector<AsciiString>::const_iterator it = data->m_requiredCustomStatus.begin(); it != data->m_requiredCustomStatus.end(); ++it)
-	{
-		ObjectCustomStatusType::const_iterator it2 = self->getCustomStatus().find(*it);
-		if (it2 != self->getCustomStatus().end()) 
-		{
-			if(it2->second == 0)
-				return FALSE;
-		}
-		else
-		{
-			return FALSE;
-		}
-	}
+	if(!self->testCustomStatusForAll( data->m_requiredCustomStatus ))
+		return FALSE;
 
 	for(std::vector<AsciiString>::const_iterator it = data->m_forbiddenCustomStatus.begin(); it != data->m_forbiddenCustomStatus.end(); ++it)
 	{
-		ObjectCustomStatusType::const_iterator it2 = self->getCustomStatus().find(*it);
-		if (it2 != self->getCustomStatus().end() && it2->second == 1) 
+		if(self->testCustomStatus(*it))
 			return FALSE;
 	}
 

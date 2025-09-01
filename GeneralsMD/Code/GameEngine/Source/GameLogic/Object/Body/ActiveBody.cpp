@@ -1075,7 +1075,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					continue;
 				}
 				//If we have AI and we're mobile, then assist!
-				if( !them->isKindOf( KINDOF_IMMOBILE ))
+				if( !them->isKindOf( KINDOF_IMMOBILE ) && !them->testStatus( OBJECT_STATUS_IMMOBILE) )
 				{
 					//But only if we can attack it!
 					CanAttackResult result = them->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, damager, CMD_FROM_AI );
@@ -1128,7 +1128,7 @@ Bool ActiveBody::shouldRetaliate(Object *obj)
 	if (obj->isKindOf(KINDOF_CANNOT_RETALIATE)) {
 		return false;
 	}
-	if (obj->isKindOf( KINDOF_IMMOBILE )) {
+	if (obj->isKindOf( KINDOF_IMMOBILE ) || obj->testStatus( OBJECT_STATUS_IMMOBILE)) {
 		return false;
 	}
 	// Drones never retaliate. [8/25/2003]

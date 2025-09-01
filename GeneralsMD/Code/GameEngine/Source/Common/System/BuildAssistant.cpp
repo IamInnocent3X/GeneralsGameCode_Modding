@@ -721,7 +721,7 @@ LegalBuildCode BuildAssistant::isLocationClearOfObjects( const Coord3D *worldPos
 			continue;
 
 		// an immobile object may obstruct our building depending on flags.
-		if( them->isKindOf( KINDOF_IMMOBILE ) )
+		if( them->isKindOf( KINDOF_IMMOBILE ) || them->testStatus( OBJECT_STATUS_IMMOBILE ))
 		{
 			if (onlyCheckEnemies && builderObject && rel != ENEMIES )
 			{
@@ -870,7 +870,7 @@ LegalBuildCode BuildAssistant::isLocationClearOfObjects( const Coord3D *worldPos
 		}
 
 		// an immobile object will obstruct our building no matter what team it's on
-		if ( them->isKindOf( KINDOF_IMMOBILE ) )	{
+		if ( them->isKindOf( KINDOF_IMMOBILE ) || them->testStatus( OBJECT_STATUS_IMMOBILE ))	{
 			/* Check for overlap of my exit rectangle to his geom info. */
 			if (checkMyExit && ThePartitionManager->geomCollidesWithGeom(them->getPosition(), hisBounds, them->getOrientation(),
 				&myExitPos, myGeom, angle)) {
@@ -989,7 +989,7 @@ LegalBuildCode BuildAssistant::isLocationLegalToBuild( const Coord3D *worldPos,
 	}
 
 	// if clear path is requested check to see if the builder object can get there (unless it's a structure)
-	if( BitIsSet( options, CLEAR_PATH ) && builderObject && !builderObject->isKindOf( KINDOF_IMMOBILE ) )
+	if( BitIsSet( options, CLEAR_PATH ) && builderObject && !builderObject->isKindOf( KINDOF_IMMOBILE ) && !builderObject->testStatus( OBJECT_STATUS_IMMOBILE ))
 	{
 		AIUpdateInterface *ai = builderObject->getAIUpdateInterface();
 
@@ -1085,7 +1085,7 @@ void BuildAssistant::addBibs(const Coord3D *worldPos,
 		if( isRemovableForConstruction( them ) == TRUE )
 			continue;
 
-		if( them->isKindOf( KINDOF_IMMOBILE ) )	{
+		if( them->isKindOf( KINDOF_IMMOBILE ) || them->testStatus( OBJECT_STATUS_IMMOBILE ))	{
 			TheTerrainVisual->addFactionBib(them, true);
 		}
 

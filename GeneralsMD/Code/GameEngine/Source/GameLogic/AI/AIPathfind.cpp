@@ -9437,7 +9437,7 @@ Bool Pathfinder::isAttackViewBlockedByObstacle(const Object* attacker, const Coo
 #define LOS_TERRAIN
 #ifdef LOS_TERRAIN
 	const Weapon* w = attacker->getCurrentWeapon();
-	if (attacker->isKindOf(KINDOF_IMMOBILE)) {
+	if (attacker->isKindOf(KINDOF_IMMOBILE) || attacker->testStatus( OBJECT_STATUS_IMMOBILE )) {
 		// Don't take terrain blockage into account, since we can't move around it. jba.
 		w = NULL;
 	}

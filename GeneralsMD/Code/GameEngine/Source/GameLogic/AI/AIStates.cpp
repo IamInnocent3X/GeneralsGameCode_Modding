@@ -325,7 +325,7 @@ AttackStateMachine::AttackStateMachine( Object *obj, AIAttackState* att, AsciiSt
 								attackingObject ? objectConditions : positionConditions );
 
 
-	if (obj->isKindOf(KINDOF_IMMOBILE) == FALSE)
+	if (obj->isKindOf(KINDOF_IMMOBILE) == FALSE && obj->testStatus( OBJECT_STATUS_IMMOBILE ) == FALSE)
 	{
 		if (obj->isKindOf(KINDOF_PORTABLE_STRUCTURE) && obj->isKindOf(KINDOF_CAN_ATTACK))
 		{
@@ -1137,7 +1137,7 @@ Bool outOfWeaponRangeObject( State *thisState, void* userData )
 		if (ai) {
 			onGround = ai->isDoingGroundMovement();
 		}
-		if( obj->isKindOf(KINDOF_IMMOBILE) ) {
+		if( obj->isKindOf(KINDOF_IMMOBILE) || obj->testStatus( OBJECT_STATUS_IMMOBILE )) {
 			onGround = true;
 		}
 		// brutal special case for stinger soldiers, who
@@ -1225,7 +1225,7 @@ Bool outOfWeaponRangePosition( State *thisState, void* userData )
 		if (ai) {
 			onGround = ai->isDoingGroundMovement();
 		}
-		if( obj->isKindOf(KINDOF_IMMOBILE) ) {
+		if( obj->isKindOf(KINDOF_IMMOBILE) || obj->testStatus( OBJECT_STATUS_IMMOBILE )) {
 			onGround = true;
 		}
 		// brutal special case for stinger soldiers, who
@@ -1669,17 +1669,36 @@ StateReturnType AIInternalMoveToState::onEnter()
 	AIUpdateInterface *ai = obj->getAI();
 	m_waitingForPath = ai->isWaitingForPath();
 
-	if( obj->testStatus( OBJECT_STATUS_IMMOBILE ) )
-	{
-		return STATE_FAILURE;
-	}
-
 	if (ai->getCurLocomotor()) {
 		ai->getCurLocomotor()->startMove();
 		if (ai->getCurLocomotor()->isUltraAccurate())
 		{
 			setAdjustsDestination(false); // if we're being ultra accurate, we can't adjust the destination. jba.
 		}
+	}
+	if( obj->testStatus( OBJECT_STATUS_IMMOBILE ) )
+	{
+		// We only adjust the end path for the Object if this status is set
+		if( getAdjustsDestination() && !obj->testStatus( OBJECT_STATUS_RIDER8 ) )
+		{
+			if (!TheAI->pathfinder()->adjustDestination(obj, ai->getLocomotorSet(), &m_goalPosition))
+			{
+				TheAI->pathfinder()->snapClosestGoalPosition(obj, &m_goalPosition);
+			}
+			TheAI->pathfinder()->updateGoal(obj, &m_goalPosition, TheTerrainLogic->getLayerForDestination(&m_goalPosition));
+		}
+		
+		// request a path to the destination
+		if (!computePath())
+		{
+			ai->friend_endingMove();
+			return STATE_FAILURE;
+		}
+		// Target to stop at the end of this path.
+		// This value will be overriden by the FollowWaypoint ai state.
+		ai->setPathExtraDistance(0);
+		ai->setDesiredSpeed( FAST_AS_POSSIBLE );
+		return STATE_CONTINUE;
 	}
 	m_tryOneMoreRepath = true;  // We may try one more repath after the first one is finished.
 	ai->friend_startingMove();

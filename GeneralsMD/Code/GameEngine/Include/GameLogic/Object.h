@@ -216,6 +216,7 @@ public:
 
 	// physical properties
 	Bool isMobile() const;																	///< returns true if object is currently able to move
+	Bool isMobileNonStatusNotAttacking(Bool checkDisable = TRUE) const;	
 	Bool isAbleToAttack() const;														///< returns true if object currently has some kind of attack capability
 
 	void maskObject( Bool mask );				///< mask/unmask object
@@ -585,6 +586,8 @@ public:
 
 	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; } 
 	Bool testCustomStatus(const AsciiString& cst) const;
+	Bool testCustomStatusForAll(const std::vector<AsciiString>& cst) const;
+
 
 	void setArmorSetFlag(ArmorSetType ast);
 	void clearArmorSetFlag(ArmorSetType ast);
@@ -696,6 +699,9 @@ public:
 	void friend_adjustPowerForPlayer( Bool incoming );
 
 	void doClearTunnelContainTargetID();
+
+	void doObjectUpgradeChecks();
+	void doObjectStatusChecks();
 
 protected:
 

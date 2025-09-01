@@ -28,6 +28,8 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#define DEFINE_LOCOMOTORSET_NAMES
+
 #include "Common/Player.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -58,6 +60,43 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 	m_frameToWaitForDeploy = 0;
 	m_doDeploy = FALSE;
 	m_doUndeploy = FALSE;
+	m_deployTurretFunctionChangeUpgrade.clear();
+	m_deployObjectFunctionChangeUpgrade.clear();
+	m_turretDeployedFunctionChangeUpgrade.clear();
+
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+	if(!data->m_deployFunctionChangeUpgrade.empty())
+	{
+		Int parsing = 0;
+
+		for(std::vector<AsciiString>::const_iterator it = data->m_deployFunctionChangeUpgrade.begin(); it != data->m_deployFunctionChangeUpgrade.end(); ++it)
+		{
+			if(parsing == 1 && stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0 )
+			{
+				m_deployTurretFunctionChangeUpgrade.push_back(*it);
+			}
+			else if(parsing == 2 && stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0 )
+			{
+				m_deployObjectFunctionChangeUpgrade.push_back(*it);
+			}
+			else if(parsing == 3 && stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0 )
+			{
+				m_turretDeployedFunctionChangeUpgrade.push_back(*it);
+			}
+			else if(stricmp((*it).str(), "TURRET") == 0)
+			{
+				parsing = 1;
+			}
+			else if(stricmp((*it).str(), "OBJECT") == 0)
+			{
+				parsing = 2;
+			}
+			else if(stricmp((*it).str(), "DEPLOYED") == 0)
+			{
+				parsing = 3;
+			}
+		}
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -104,38 +143,89 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
 
 	//Are we attempting to move? If so we can't do it unless we are undeployed.
-	Bool isTryingToMove = isWaitingForPath() || getPath() || ( data->m_statusToUndeploy.any() && self->getStatusBits().testForAny( data->m_statusToUndeploy ) );
-	if(!isTryingToMove)
+	Bool isTryingToMove = isWaitingForPath() || getPath();
+	if(!m_doUndeploy)
 	{
-		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+		m_doUndeploy = data->m_statusToUndeploy.any() && self->getStatusBits().testForAny( data->m_statusToUndeploy );
+		if(!m_doUndeploy)
 		{
-			if (self->testCustomStatus(*it))
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
 			{
-				isTryingToMove = TRUE;
-				break;
+				if (self->testCustomStatus(*it))
+				{
+					m_doUndeploy = TRUE;
+					break;
+				}
 			}
 		}
 	}
+
+	if(m_doUndeploy && !data->m_removeStatusAfterTrigger )
+		m_doDeploy = FALSE;
 
 	//Are we trying to attack something. If so, we need to be in range before we can do so.
 	Bool isTryingToAttack = getStateMachine()->isInAttackState();
 	Bool isInRange = FALSE;
 
 	//Are we in guard mode? If so, are we idle... idle guarders deploy for fastest response against attackers.
-	Bool isInGuardIdleState = getStateMachine()->isInGuardIdleState() || ( data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ) );
-	if(!isInGuardIdleState)
+	Bool isInGuardIdleState = getStateMachine()->isInGuardIdleState();
+	if(!m_doDeploy && !m_doUndeploy )
 	{
-		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+		m_doDeploy = ( data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ) );
+		if(!m_doDeploy)
 		{
-			if (self->testCustomStatus(*it))
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
 			{
-				isInGuardIdleState = TRUE;
-				break;
+				if (self->testCustomStatus(*it))
+				{
+					m_doDeploy = TRUE;
+					break;
+				}
 			}
 		}
 	}
 
+	if(m_doDeploy && !data->m_removeStatusAfterTrigger)
+		m_doUndeploy = FALSE;		// There can only be One! ...Unless you are checking whether which status trigger rules first
+
 	AIUpdateInterface *ai = self->getAI();
+
+	// Check whether we are Deploying while in the middle of Moving
+	if(m_doDeploy && isTryingToMove && ( m_state == READY_TO_MOVE || m_state == UNDEPLOY || m_state == ALIGNING_TURRETS ) )
+	{
+		ai->aiIdle(CMD_FROM_AI);
+		isTryingToMove = FALSE;
+		m_doUndeploy = FALSE;
+	}
+
+	// Check whether we are Undeploying while Deploying or Fully Deployed
+	if(m_doUndeploy && ( m_state == READY_TO_ATTACK || m_state == DEPLOY ) )
+	{
+		ai->aiIdle(CMD_FROM_AI);
+		isTryingToAttack = FALSE;
+		isInGuardIdleState = FALSE;
+		m_doDeploy = FALSE;
+	}
+
+	// New function that determines whether an Object requires to be Deployed to Fire its Weapon
+	Bool needsDeployToFire = TRUE;
+
+	if(data->m_deployInitiallyDisabled)
+	{
+		needsDeployToFire = FALSE;
+	}
+
+	if(!m_deployObjectFunctionChangeUpgrade.empty())
+	{
+		needsDeployToFire = checkForDeployUpgrades("OBJECT");
+	}
+
+	if(!needsDeployToFire)
+	{
+		isTryingToMove = FALSE;
+		isInGuardIdleState = FALSE;
+		isTryingToAttack = FALSE;
+	}
 
 	if( isTryingToAttack && weapon )
 	{
@@ -154,6 +244,30 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 		}
 	}
 
+	// New features
+	Bool moveAfterDeploy = checkAfterDeploy("HAS_MOVEMENT");
+	Bool deployNoRelocate = checkAfterDeploy("NO_RELOCATE");
+
+	// Able to move after deploying
+	if(moveAfterDeploy && ( m_state == DEPLOY || m_state == READY_TO_ATTACK || m_doDeploy ))
+	{
+		isTryingToMove = FALSE;
+	}
+
+	// New feature, disables relocating after Deploying
+	if(deployNoRelocate && !moveAfterDeploy && !m_doUndeploy && ( m_state != READY_TO_MOVE || m_doDeploy ) )
+	{
+		// No moving, but you can still designate next destinations
+		self->setStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IMMOBILE) );
+
+		isTryingToMove = FALSE;
+	}
+	// You can only clear this status by Undeploying
+	else if((deployNoRelocate || moveAfterDeploy) && self->testStatus(OBJECT_STATUS_IMMOBILE) && m_doUndeploy )
+	{
+		self->clearStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IMMOBILE) );
+	}
+
 	if( m_frameToWaitForDeploy != 0 && now >= m_frameToWaitForDeploy)
 	{
 		switch( m_state )
@@ -168,11 +282,8 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 	}
 
 	// Fixed moving while deployed. 
-	if( ( isTryingToMove || m_doUndeploy ) && !m_doDeploy )
+	if( isTryingToMove || m_doUndeploy )
 	{
-		//if( m_state == DEPLOY && m_frameToWaitForDeploy != 0 )
-		//	m_frameToWaitForDeploy++;
-
 		switch( m_state )
 		{
 			case READY_TO_MOVE:
@@ -217,12 +328,13 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 				break;
 			}
 		}
-		if( m_state == READY_TO_MOVE && m_doUndeploy )
+
+		// After sequence checks
+		if( m_state == READY_TO_MOVE )
 		{
 			m_doUndeploy = FALSE;
-			if(isInRange || isInGuardIdleState || m_doDeploy)
-				ai->aiIdle(CMD_FROM_AI);	// Also remember to clear its current attack state
 		}
+
 	}
 	else if( isInRange || isInGuardIdleState || m_doDeploy )
 	{
@@ -250,12 +362,14 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 				setMyState( READY_TO_ATTACK );
 				break;
 		}
+
+		// After sequence checks
 		if( m_doDeploy )
 		{
 			if( m_state == READY_TO_ATTACK )
+			{
 				m_doDeploy = FALSE;
-			else
-				ai->aiIdle(CMD_FROM_AI);	// Also remember to clear its moving state
+			}
 		}
 		
 		m_doUndeploy = FALSE;
@@ -311,28 +425,38 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 	{
 		if(data->m_statusToDeploy.any()  && self->getStatusBits().testForAny( data->m_statusToDeploy ))
 		{
+			m_doUndeploy = FALSE;
 			m_doDeploy = TRUE;
 			self->clearStatus( data->m_statusToDeploy );
 		}
 		if(data->m_statusToUndeploy.any()  && self->getStatusBits().testForAny( data->m_statusToUndeploy ))
 		{
+			m_doDeploy = FALSE;
 			m_doUndeploy = TRUE;
 			self->clearStatus( data->m_statusToUndeploy );
 		}
-		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+		if(!m_doDeploy)
 		{
-			if (self->testCustomStatus(*it))
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
 			{
-				m_doUndeploy = TRUE;
-				self->setCustomStatus((*it), FALSE);
+				if (self->testCustomStatus(*it))
+				{
+					m_doUndeploy = FALSE;
+					m_doDeploy = TRUE;
+					self->setCustomStatus((*it), FALSE);
+				}
 			}
 		}
-		for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+		if(!m_doUndeploy)
 		{
-			if (self->testCustomStatus(*it))
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
 			{
-				m_doDeploy = TRUE;
-				self->setCustomStatus((*it), FALSE);
+				if (self->testCustomStatus(*it))
+				{
+					m_doDeploy = FALSE;
+					m_doUndeploy = TRUE;
+					self->setCustomStatus((*it), FALSE);
+				}
 			}
 		}
 	}
@@ -485,6 +609,152 @@ void DeployStyleAIUpdate::setMyState( DeployStateTypes stateID, Bool reverseDepl
 		}
 	}
 
+	if(!m_deployTurretFunctionChangeUpgrade.empty())
+	{
+		if(stateID == READY_TO_MOVE || stateID == UNDEPLOY)
+		{
+			Bool needsDeployToFire = checkForDeployUpgrades("TURRET");
+			WhichTurretType tur = getWhichTurretForCurWeapon();
+			if( tur != TURRET_INVALID )
+			{
+				setTurretEnabled( tur, !needsDeployToFire );
+			}
+		}
+	}
+
+	if(!m_turretDeployedFunctionChangeUpgrade.empty() && stateID == READY_TO_ATTACK)
+	{
+		Bool needsDeployToFire = checkForDeployUpgrades("DEPLOYED");
+		WhichTurretType tur = getWhichTurretForCurWeapon();
+		if( tur != TURRET_INVALID )
+		{
+			setTurretEnabled( tur, !needsDeployToFire );
+		}
+	}
+
+}
+
+Bool DeployStyleAIUpdate::checkForDeployUpgrades(const AsciiString& type) const
+{
+	const Object *self = getObject();
+	std::vector<AsciiString> checkVector;
+	Bool checkUpgrade = TRUE;
+	Bool dontCheckValue = FALSE;
+	Bool needsDeployToFire = TRUE;
+
+	if(type == "OBJECT")
+	{
+		checkVector = m_deployObjectFunctionChangeUpgrade;
+	}
+	else if(type == "TURRET")
+	{
+		checkVector = m_deployTurretFunctionChangeUpgrade;
+	}
+	else if(type == "DEPLOYED")
+	{
+		checkVector = m_turretDeployedFunctionChangeUpgrade;
+		if(doTurretsFunctionOnlyWhenDeployed())
+			needsDeployToFire = FALSE;
+	}
+
+	for(std::vector<AsciiString>::const_iterator it = checkVector.begin(); it != checkVector.end(); ++it)
+	{
+		if(checkUpgrade)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(!self->getControllingPlayer()->hasUpgradeComplete(ut))
+				{
+					dontCheckValue = TRUE;
+				}
+			}
+			else if( !self->hasUpgrade(ut) )
+			{
+				dontCheckValue = TRUE;
+			}
+		}
+		else if(dontCheckValue)
+		{
+			dontCheckValue = FALSE;
+		}
+		else
+		{
+			if(stricmp( it->str(), "yes" ) == 0)
+			{
+				needsDeployToFire = TRUE;
+			}
+			else if(stricmp( it->str(), "no" ) == 0)
+			{
+				needsDeployToFire = FALSE;
+			}
+		}
+
+		if(checkUpgrade)
+			checkUpgrade = FALSE;
+		else
+			checkUpgrade = TRUE;
+	}
+
+	return needsDeployToFire;
+}
+
+Bool DeployStyleAIUpdate::checkAfterDeploy(const AsciiString& type) const
+{
+	const Object *self = getObject();
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+	std::vector<AsciiString> checkVector;
+	Bool checkUpgrade = TRUE;
+	Bool checkValue = FALSE;
+
+	if( type == "NO_RELOCATE")
+		checkVector = data->m_deployNoRelocateUpgrades;
+	else if( type == "HAS_MOVEMENT")
+		checkVector = data->m_moveAfterDeployUpgrades;
+
+	for(std::vector<AsciiString>::const_iterator it = checkVector.begin(); it != checkVector.end(); ++it)
+	{
+		if(checkUpgrade)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
+				{
+					checkValue = TRUE;
+				}
+			}
+			else if( self->hasUpgrade(ut) )
+			{
+				checkValue = TRUE;
+			}
+		}
+		else if(checkValue)
+		{
+			return INI::scanBool((*it).str());
+		}
+
+		if(checkUpgrade)
+			checkUpgrade = FALSE;
+		else
+			checkUpgrade = TRUE;
+	}
+	if( type == "NO_RELOCATE")
+		return data->m_deployNoRelocate;
+	else if( type == "HAS_MOVEMENT")
+		return data->m_moveAfterDeploy;
+	else
+		return FALSE;
 }
 
 // ------------------------------------------------------------------------------------------------

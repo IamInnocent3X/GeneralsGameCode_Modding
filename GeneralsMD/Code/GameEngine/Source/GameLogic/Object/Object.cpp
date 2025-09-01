@@ -1088,6 +1088,8 @@ void Object::setStatus( ObjectStatusMaskType objectStatus, Bool set )
 				m_partitionData->makeDirty(true);
 		}
 
+		doObjectStatusChecks();
+
 	}
 
 }
@@ -1148,6 +1150,8 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 			}
 		}
 
+		doObjectStatusChecks();
+
 	}
 
 }
@@ -1161,6 +1165,24 @@ Bool Object::testCustomStatus(const AsciiString& cst) const
 		return TRUE;
 	}
 	return FALSE;
+}
+
+Bool Object::testCustomStatusForAll(const std::vector<AsciiString>& cst) const
+{
+	for(std::vector<AsciiString>::const_iterator it = cst.begin(); it != cst.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = m_customStatus.find(*it);
+		if (it2 != m_customStatus.end()) 
+		{
+			if(it2->second == 0)
+				return FALSE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
 }
 
 //=============================================================================
@@ -2848,19 +2870,7 @@ void Object::updateUpgradeModules()
 		}
 	}
 
-	/*for( BehaviorModule** i = getBehaviorModules(); *i; ++i )
-	{
-		TunnelContainInterface* tci = (*i)->getTunnelContainInterface();
-		if( tci )
-		{
-			return tci->doUpgradeChecks();
-		}
-	}*/
-	static const NameKeyType key_TunnelContain = NAMEKEY("TunnelContain");
-	TunnelContain* tc = (TunnelContain*)(findUpdateModule( key_TunnelContain ));
-	if (tc)
-		tc->doUpgradeChecks();
-
+	doObjectUpgradeChecks();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3002,7 +3012,7 @@ void Object::setTriggerAreaFlagsForChangeInPosition()
 		return; // didn't move enough to change integer position.
 	}
 
-	if (!isKindOf(KINDOF_IMMOBILE)) {
+	if (!isKindOf(KINDOF_IMMOBILE) && !testStatus(OBJECT_STATUS_IMMOBILE)) {
 		if (isKindOf(KINDOF_INFANTRY) || isKindOf(KINDOF_VEHICLE) ) {
 			TheGameClient->notifyTerrainObjectMoved(this);
 		}
@@ -3302,11 +3312,47 @@ Module* Object::findModule(NameKeyType key) const
  */
 Bool Object::isMobile() const
 {
-	if (isKindOf(KINDOF_IMMOBILE))
+	if (isKindOf(KINDOF_IMMOBILE) || testStatus(OBJECT_STATUS_IMMOBILE))
 		return false;
 
 	// AW: This excemption is needed, because teleporters still need to listen to AI commands when disabled
 	if( isDisabled() && !isDisabledByType(DISABLED_TELEPORT) )
+		return false;
+
+	return true;
+}
+
+Bool Object::isMobileNonStatusNotAttacking(Bool checkDisable) const
+{
+	if (isKindOf(KINDOF_IMMOBILE))
+		return false;
+
+	if( testStatus(OBJECT_STATUS_IMMOBILE) )
+	{
+		const AIUpdateInterface *ai = getAI();
+		const Weapon *weapon = getCurrentWeapon();
+		if( ai && ai->isAttacking() && weapon )
+		{
+			Object *victim = ai->getCurrentVictim();
+			if( victim )
+			{
+				if(weapon->isWithinAttackRange( this, victim ))
+					return false;
+			}
+			else
+			{
+				const Coord3D *pos = ai->getCurrentVictimPos();
+				if( pos )
+				{
+					if(weapon->isWithinAttackRange( this, pos ))
+						return false;
+				}
+			}
+		}
+	}
+
+	// AW: This excemption is needed, because teleporters still need to listen to AI commands when disabled
+	if( checkDisable && isDisabled() && !isDisabledByType(DISABLED_TELEPORT) )
 		return false;
 
 	return true;
@@ -5014,6 +5060,8 @@ void Object::giveUpgrade( const UpgradeTemplate *upgradeT )
 		//
 		updateUpgradeModules();
 	}
+
+	doObjectUpgradeChecks();
 }  // end giveUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -5031,6 +5079,34 @@ void Object::removeUpgrade( const UpgradeTemplate *upgradeT )
 		// Whoa, please note that while the function is called Object::RemoveUpgrade, it is not removing anything
 		// in the sense of undoing the effects.  It is just resetting the upgrade so it may be run again.
 		upgrade->resetUpgrade( upgradeT->getUpgradeMask() );
+	}
+
+	doObjectUpgradeChecks();
+}
+
+void Object::doObjectUpgradeChecks()
+{
+	// Upgrade Weapon Sets
+	m_weaponSet.updateWeaponSet(this);
+
+	// Applicable to RiderChangeContain and TunnelContain
+	ContainModuleInterface *cmod = getContain();
+	if( cmod )
+	{
+		cmod->doUpgradeChecks();
+	}
+}
+
+void Object::doObjectStatusChecks()
+{
+	// Check Weapon Sets
+	m_weaponSet.updateWeaponSet(this);
+
+	// Applicable to RiderChangeContain
+	ContainModuleInterface *cmod = getContain();
+	if( cmod )
+	{
+		cmod->doStatusChecks();
 	}
 }
 

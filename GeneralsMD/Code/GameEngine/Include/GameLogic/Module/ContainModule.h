@@ -197,6 +197,9 @@ public:
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const = 0;
 	virtual ObjectCustomStatusType getCustomWeaponBonusPassedToPassengers() const = 0;
 
+	virtual void doUpgradeChecks( void ) = 0;
+  	virtual void doStatusChecks( void ) = 0;
+
 
 	// this exists really just so someone can override it to prevent pip showings...
 	virtual Bool getContainerPipsToShow(Int& numTotal, Int& numFull)

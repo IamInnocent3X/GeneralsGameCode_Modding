@@ -411,6 +411,13 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "PriorityWithinAttackRange",					INI::parseInt,					NULL,					offsetof(WeaponTemplate, m_attackRangePriority) },
 	{ "PriorityOutsideAttackRange",					INI::parseInt,					NULL,					offsetof(WeaponTemplate, m_outsideAttackRangePriority) },
 
+	{ "TriggeredBy",								INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_activationUpgradeNames ) },
+	{ "ConflictsWith",								INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_conflictingUpgradeNames ) },
+	{ "RequiredStatus",								ObjectStatusMaskType::parseFromINI,	NULL, 				offsetof(WeaponTemplate, m_requiredStatus ) },
+	{ "ForbiddenStatus",							ObjectStatusMaskType::parseFromINI,	NULL, 				offsetof(WeaponTemplate, m_forbiddenStatus ) },
+	{ "RequiredCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_requiredCustomStatus ) },
+	{ "ForbiddenCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_forbiddenCustomStatus ) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -597,6 +604,11 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_maxTargetHeight = 0.0f;
 	m_attackRangePriority = 0;
 	m_outsideAttackRangePriority = 0;
+
+	m_activationUpgradeNames.clear();
+	m_conflictingUpgradeNames.clear();
+	m_requiredCustomStatus.clear();
+	m_forbiddenCustomStatus.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3528,6 +3540,89 @@ Bool Weapon::computeApproachTarget(const Object *source, const Object *target, c
 
 		return false;
 	}
+}
+
+Bool WeaponTemplate::passRequirements(const Object *source) const
+{
+	std::vector<AsciiString> activationUpgrades = getActivationUpgradeNames();
+	std::vector<AsciiString> conflictingUpgrades = getConflictingUpgradeNames();
+	ObjectStatusMaskType statusRequired = getRequiredStatus();
+	ObjectStatusMaskType statusForbidden = getForbiddenStatus();
+	std::vector<AsciiString> customStatusRequired = getCustomStatusRequired();
+	std::vector<AsciiString> customStatusForbidden = getCustomStatusForbidden();
+
+	if(!activationUpgrades.empty())
+	{
+		Bool gotUpgrade = FALSE;
+		std::vector<AsciiString>::const_iterator it_a;
+		for( it_a = activationUpgrades.begin(); it_a != activationUpgrades.end(); it_a++)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_a->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(source->getControllingPlayer()->hasUpgradeComplete(ut))
+				{
+					gotUpgrade = TRUE;
+					break;
+				}
+			}
+			else if( source->hasUpgrade(ut) )
+			{
+				gotUpgrade = TRUE;
+				break;
+			}
+		}
+		if(!gotUpgrade)
+			return FALSE;
+	}
+
+	if(!conflictingUpgrades.empty())
+	{
+		std::vector<AsciiString>::const_iterator it_c;
+		for( it_c = conflictingUpgrades.begin(); it_c != conflictingUpgrades.end(); it_c++)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_c );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_c->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(source->getControllingPlayer()->hasUpgradeComplete(ut))
+					return FALSE;
+			}
+			else if( source->hasUpgrade(ut) )
+			{
+				return FALSE;
+			}
+		}
+	}
+
+	//We need all required status or else we fail
+	// If we have any requirements
+	if(statusRequired.any() && !source->getStatusBits().testForAll(statusRequired))
+		return FALSE;
+
+	//If we have any forbidden statii, then fail
+	if(source->getStatusBits().testForAny(statusForbidden))
+		return FALSE;
+
+	if(!source->testCustomStatusForAll(customStatusRequired))
+		return FALSE;
+
+	for(std::vector<AsciiString>::const_iterator it = customStatusForbidden.begin(); it != customStatusForbidden.end(); ++it)
+	{
+		if(source->testCustomStatus(*it))
+			return FALSE;
+	}
+
+	return TRUE;
 }
 
 //-------------------------------------------------------------------------------------------------

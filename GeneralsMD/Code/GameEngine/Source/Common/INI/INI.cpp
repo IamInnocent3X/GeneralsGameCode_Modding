@@ -765,6 +765,51 @@ void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
+	//asv->clear();
+	
+	Int parsing = 1;
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		if(parsing == 3)
+		{
+			if(stricmp(token, "yes") != 0 && stricmp(token, "no") != 0)
+			{
+				DEBUG_CRASH(("invalid boolean token %s -- expected Yes or No",token));
+				throw INI_INVALID_DATA;
+			}
+			parsing = 1;
+		}
+		else if(parsing == 2)
+		{
+			parsing++;
+		}
+		else if(parsing == 1)
+		{
+			if(stricmp(token, "TURRET") != 0 && stricmp(token, "OBJECT") != 0 && stricmp(token, "DEPLOYED") != 0)
+			{
+				DEBUG_CRASH(("%s is invalid, can only parse OBJECT or TURRET." token));
+				throw INI_INVALID_DATA;
+			}
+			parsing++;
+		}
+		else
+		{
+			DEBUG_CRASH(("It shouldn't happen..."));
+		}
+		asv->push_back(token);
+	}
+	if( parsing != 1 )
+	{
+		DEBUG_CRASH(("Declaration for parseDeployFunctionChangeUpgrade is incomplete."));
+		throw INI_INVALID_DATA;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 /* static */void INI::parseScienceVector( INI *ini, void * /*instance*/, void *store, const void *userData )
 {
 	ScienceVec* asv = (ScienceVec*)store;

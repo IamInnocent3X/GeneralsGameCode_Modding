@@ -166,7 +166,7 @@ public:
 	virtual void onBuildComplete();
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
-	virtual void doUpgradeChecks();
+	virtual void doUpgradeChecks( void );
 	virtual void clearTargetID() { m_lastFiringObjID = INVALID_ID; }
 
 	// so that the ppl within the tunnel network can get healed

@@ -2184,7 +2184,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 {
 	USE_PERF_TIMER(doLocomotor)
 
-	if (getObject()->isKindOf(KINDOF_IMMOBILE))
+	if (getObject()->isKindOf(KINDOF_IMMOBILE) || getObject()->testStatus( OBJECT_STATUS_IMMOBILE))
 		return UPDATE_SLEEP_FOREVER;
 
 	chooseGoodLocomotorFromCurrentSet();
@@ -2942,7 +2942,7 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
  */
 void AIUpdateInterface::privateMoveToPosition( const Coord3D *pos, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -2984,7 +2984,7 @@ void AIUpdateInterface::privateMoveToObject( Object *obj, CommandSourceType cmdS
 	if (m_isAiDead)
 		return;
 
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3084,7 +3084,7 @@ void AIUpdateInterface::privateRappelInto( Object *target, const Coord3D& pos, C
  */
 void AIUpdateInterface::privateMoveToAndEvacuate( const Coord3D *pos, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3110,7 +3110,7 @@ void AIUpdateInterface::privateMoveToAndEvacuate( const Coord3D *pos, CommandSou
  */
 void AIUpdateInterface::privateMoveToAndEvacuateAndExit( const Coord3D *pos, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3330,7 +3330,7 @@ void AIUpdateInterface::privateMoveAwayFromUnit( Object *unit, CommandSourceType
  */
 void AIUpdateInterface::privateFollowWaypointPath( const Waypoint *way, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3351,7 +3351,7 @@ void AIUpdateInterface::privateFollowWaypointPath( const Waypoint *way, CommandS
  */
 void AIUpdateInterface::privateFollowWaypointPathExact( const Waypoint *way, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3443,7 +3443,7 @@ void AIUpdateInterface::privateFollowPathAppend( const Coord3D *pos, CommandSour
  */
 void AIUpdateInterface::privateFollowPath( const std::vector<Coord3D>* path, Object *ignoreObject, CommandSourceType cmdSource, Bool exitProduction )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3831,7 +3831,7 @@ void AIUpdateInterface::privateGetRepaired( Object *repairDepot, CommandSourceTy
 void AIUpdateInterface::privateEnter( Object *obj, CommandSourceType cmdSource )
 {
 	Object *me = getObject();
-	if( me->isMobile() == FALSE )
+	if( me->isMobileNonStatusNotAttacking() == FALSE )
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3855,7 +3855,7 @@ void AIUpdateInterface::privateEnter( Object *obj, CommandSourceType cmdSource )
  */
 void AIUpdateInterface::privateDock( Object *obj, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	getStateMachine()->clear();

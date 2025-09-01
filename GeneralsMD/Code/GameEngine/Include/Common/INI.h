@@ -277,6 +277,7 @@ public:
 	static void parseAsciiStringVectorAppend( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAsciiStringWithColonVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAsciiStringWithColonVectorAppend( INI *ini, void *instance, void *store, const void* userData );
+	static void parseDeployFunctionChangeUpgrade( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAndTranslateLabel( INI *ini, void *instance, void *store, const void* userData );
 	static void parseMappedImage( INI *ini, void *instance, void *store, const void *userData );
 	static void parseAnim2DTemplate( INI *ini, void *instance, void *store, const void *userData );

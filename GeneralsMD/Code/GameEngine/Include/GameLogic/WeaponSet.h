@@ -232,6 +232,7 @@ private:
 	Weapon*										m_weapons[WEAPONSLOT_COUNT];
 	WeaponSlotType						m_curWeapon;
 	WeaponLockType						m_curWeaponLockedStatus;
+	WeaponSlotType						m_curDefaultWeapon;
 	UnsignedInt								m_filledWeaponSlotMask;
 	Int												m_totalAntiMask;						///< anti mask of all current weapons
 	DamageTypeFlags						m_totalDamageTypeMask;			///< damagetype mask of all current weapons

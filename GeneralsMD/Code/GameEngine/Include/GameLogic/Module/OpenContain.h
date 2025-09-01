@@ -212,6 +212,9 @@ public:
   virtual Bool isSpecialOverlordStyleContainer() const { return false; }
   virtual Bool isAnyRiderAttacking( void ) const;
 
+  	virtual void doUpgradeChecks( void ) {}
+  	virtual void doStatusChecks( void ) {}
+
 	/**
 		this is used for containers that must do something to allow people to enter or exit...
 		eg, land (for Chinook), open door (whatever)... it's called with wants=WANTS_TO_ENTER

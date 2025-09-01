@@ -456,7 +456,7 @@ void AIGroup::recompute( void )
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		// don't consider immobile things for leadership
-		if ((*i)->isKindOf(KINDOF_IMMOBILE))
+		if ((*i)->isKindOf(KINDOF_IMMOBILE) || (*i)->testStatus( OBJECT_STATUS_IMMOBILE ))
 			continue;
 
 		// don't consider (chrono) teleporters (they are very fast, or currently disabled)
@@ -1707,7 +1707,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 		{
 			continue; // don't bother telling the occupants to move.
 		}
-		if( (*i)->isKindOf( KINDOF_IMMOBILE ) )
+		if( !(*i)->isMobileNonStatusNotAttacking(FALSE) )
 		{
 			continue;
 		}
@@ -1841,7 +1841,7 @@ void AIGroup::groupScatter( CommandSourceType cmdSource )
 		{
 			continue; // don't bother telling the occupants to move.
 		}
-		if( (*i)->isKindOf( KINDOF_IMMOBILE ) )
+		if( (*i)->isKindOf( KINDOF_IMMOBILE ) || (*i)->testStatus( OBJECT_STATUS_IMMOBILE ))
 		{
 			continue;
 		}
@@ -1939,7 +1939,7 @@ void AIGroup::groupTightenToPosition( const Coord3D *pos, Bool addWaypoint, Comm
 		{
 			continue; // don't bother telling the occupants to move.
 		}
-		if( (*i)->isKindOf( KINDOF_IMMOBILE ) )
+		if( (*i)->isKindOf( KINDOF_IMMOBILE ) || (*i)->testStatus( OBJECT_STATUS_IMMOBILE ))
 		{
 			continue;
 		}
