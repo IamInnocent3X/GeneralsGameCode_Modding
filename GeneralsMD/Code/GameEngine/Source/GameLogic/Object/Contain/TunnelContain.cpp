@@ -1247,6 +1247,7 @@ void TunnelContain::createPayload()
 			Object* payload = TheThingFactory->newObject( payloadTemplate, getObject()->getTeam() );
 			if( tunnelTracker->isValidContainerFor( payload, true ) )
 			{
+				payload->setPosition( getObject()->getPosition() );
 				contain->addToContain( payload );
 			}
 			else

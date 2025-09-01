@@ -300,6 +300,7 @@ UpdateSleepTime CaveContain::update( void )
 					Object* payload = TheThingFactory->newObject( payloadTemplate, m_originalTeam );
 					if( newTracker->isValidContainerFor( payload, true ) )
 					{
+						payload->setPosition( getObject()->getPosition() );
 						contain->addToContain( payload );
 					}
 					else
