@@ -902,10 +902,7 @@ UpdateSleepTime TunnelContain::update( void )
 		}
 		// Tested and working as intended.
 		if(!m_hasTunnelGuard)
-		{
-			removeAllContained(FALSE);
 			return UPDATE_SLEEP_NONE;
-		}
 		// check for attacked.
 		BodyModuleInterface *body = obj->getBodyModule();
 		if (body) {
