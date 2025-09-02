@@ -31,6 +31,7 @@
 #include "GameLogic/Module/ModelConditionUpgrade.h"
 
 #include "Common/ModelState.h"
+#include "Common/Player.h"
 #include "GameLogic/Object.h"
 
 // ------------------------------------------------------------------------------------------------
@@ -74,8 +75,26 @@ void ModelConditionUpgrade::upgradeImplementation( )
 
 	Object *me = getObject();
 
-	if( data->m_conditionFlag != MODELCONDITION_INVALID )
+	if( data->m_conditionFlag == MODELCONDITION_INVALID )
+		return;
+
+	UpgradeMaskType objectMask = me->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	if( UpgradeStatus == 1 )
+	{
 		me->setModelConditionState(data->m_conditionFlag);
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		me->clearModelConditionState(data->m_conditionFlag);
+		setUpgradeExecuted(FALSE);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

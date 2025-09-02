@@ -90,6 +90,9 @@ public:
 	AudioEventRTS					m_prepSoundLoop;
 	AudioEventRTS					m_triggerSound;
 
+	KindOfMaskType 				m_kindOf;
+	KindOfMaskType 				m_forbiddenKindOf;
+
 	SpecialAbilityUpdateModuleData()
 	{
 		m_specialPowerTemplate = NULL;
@@ -120,6 +123,8 @@ public:
 		m_preTriggerUnstealthFrames = 0;
     m_needToFaceTarget = TRUE;
     m_persistenceRequiresRecharge = FALSE;
+	m_kindOf = KINDOFMASK_NONE;
+	m_forbiddenKindOf.clear();
 	m_destroyOnExecute = FALSE;
 	m_fxOnExecute = NULL;
 	m_oclOnExecute = NULL;
@@ -169,6 +174,8 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+	  		{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_kindOf ) },
+			{ "ForbiddenKindOf",			KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_forbiddenKindOf ) },
 	  		{ "DeleteUserOnExecute",					INI::parseBool,							NULL, offsetof( SpecialAbilityUpdateModuleData, m_destroyOnExecute ) },
 			{ "FXOnExecute",							INI::parseFXList,					NULL, offsetof( SpecialAbilityUpdateModuleData, m_fxOnExecute ) },
 			{ "OCLOnExecute", 							INI::parseObjectCreationList, 		NULL, offsetof( SpecialAbilityUpdateModuleData, m_oclOnExecute ) },
@@ -212,6 +219,9 @@ public:
 	UnsignedInt getSpecialObjectMax() const;
 	Object* findSpecialObjectWithProducerID( const Object *target );
 	SpecialPowerType getSpecialPowerType( void ) const;
+
+	const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }
+	const KindOfMaskType& getForbiddenKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_forbiddenKindOf; }
 
 protected:
 	void onExit( Bool cleanup );

@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/Xfer.h"
+#include "Common/Player.h"
 #include "GameLogic/Module/ActiveShroudUpgrade.h"
 #include "GameLogic/Object.h"
 
@@ -67,7 +68,7 @@ ActiveShroudUpgradeModuleData::ActiveShroudUpgradeModuleData( void )
 ActiveShroudUpgrade::ActiveShroudUpgrade( Thing *thing, const ModuleData* moduleData ) :
 							UpgradeModule( thing, moduleData )
 {
-
+	m_oldShroudRange = 0.0f;
 }  // end ActiveShroudUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -81,11 +82,41 @@ ActiveShroudUpgrade::~ActiveShroudUpgrade( void )
 //-------------------------------------------------------------------------------------------------
 void ActiveShroudUpgrade::upgradeImplementation( void )
 {
+	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+	
 	// Set my object's ability to actively shroud.
 	if( getActiveShroudUpgradeModuleData() )
 	{
-		getObject()->setShroudRange( getActiveShroudUpgradeModuleData()->m_newShroudRange );
-		getObject()->handlePartitionCellMaintenance();// To shroud where I am without waiting.
+		if(UpgradeStatus == 1)
+		{
+			m_oldShroudRange = getObject()->getShroudRange();
+			getObject()->setShroudRange( getActiveShroudUpgradeModuleData()->m_newShroudRange );
+			getObject()->handlePartitionCellMaintenance();// To shroud where I am without waiting.
+		}
+		else if(UpgradeStatus == 2)
+		{
+			getObject()->setShroudRange( m_oldShroudRange );
+			getObject()->handlePartitionCellMaintenance();// To shroud where I am without waiting.
+		}
 	}
 }  // end upgradeImplementation
 
@@ -115,6 +146,8 @@ void ActiveShroudUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferReal(&m_oldShroudRange);
 
 }  // end xfer
 

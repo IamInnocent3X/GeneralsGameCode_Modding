@@ -56,11 +56,16 @@ public:
 	virtual void onDelete( void );																///< we have some work to do when this module goes away
 	virtual void onCapture( Player *oldOwner, Player *newOwner );	///< object containing upgrade has changed teams
 
+	void forceRefreshMyUpgrade();
+
 protected:
 
 	virtual void upgradeImplementation( void ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; } /// This module works differently, as a fire and forget module, so we do it differently
 
+private:
+	Bool m_hasExecuted;
 };
 
 #endif // __POWERPLANTUPGRADE_H_

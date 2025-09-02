@@ -73,7 +73,11 @@ protected:
 
 	virtual void upgradeImplementation( void ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+
+	Real m_oldShroudRange;
 };
 
 #endif // __ACTIVE_SHROUD_UPGRADE_H_

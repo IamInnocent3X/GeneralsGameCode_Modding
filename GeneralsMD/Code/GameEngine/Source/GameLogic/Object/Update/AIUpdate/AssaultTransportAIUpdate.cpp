@@ -82,6 +82,12 @@ AssaultTransportAIUpdate::~AssaultTransportAIUpdate( void )
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::aiDoCommand(const AICommandParms* parms)
 {
+	ContainModuleInterface *contain = getObject()->getContain();
+	if( contain && contain->isPassengerAllowedToFire())
+	{
+		AIUpdateInterface::aiDoCommand( parms );
+		return;
+	}
 	//Inspect the command and reset everything when necessary.
 	if( parms->m_cmdSource != CMD_FROM_AI )
 	{
@@ -121,6 +127,11 @@ void AssaultTransportAIUpdate::aiDoCommand(const AICommandParms* parms)
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::beginAssault( const Object *designatedTarget ) const
 {
+	ContainModuleInterface *contain = getObject()->getContain();
+	if( contain && contain->isPassengerAllowedToFire())
+	{
+		return;
+	}
 	//The transport has determined it is in range to begin the assault (via weapon system).
 	//Now order the evacuation of healthy troops, and let the update handle moving them.
 	if( designatedTarget )
@@ -383,6 +394,11 @@ Bool AssaultTransportAIUpdate::isAttackPointless() const
 	//If all members are new members (thus can't attack), and the transport itself
 	//is still attacking, stop!
 	const Object *transport = getObject();
+	ContainModuleInterface *contain = transport->getContain();
+	if( contain && contain->isPassengerAllowedToFire())
+	{
+		return FALSE;
+	}
 	if( transport->testStatus( OBJECT_STATUS_IS_ATTACKING ) )
 	{
 		for( int i = 0; i < m_currentMembers; i++ )
@@ -478,6 +494,148 @@ void AssaultTransportAIUpdate::giveFinalOrders()
 			ai->setAllowedToChase( FALSE );
 		}
 	}
+}
+
+
+//-------------------------------------------------------------------------------------------------
+/**
+ * Attack given object
+ */
+void AssaultTransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
+{
+	ContainModuleInterface* contain = getObject()->getContain();
+	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	{
+		// As an extension of the normal attack, I may want to tell my passengers to attack
+		// too, but only if this is a direct command.  (As opposed to a passive aquire)
+		if( cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT )
+		{
+			const ContainedItemsList *passengerList = contain->getContainedItemsList();
+			ContainedItemsList::const_iterator passengerIterator;
+			passengerIterator = passengerList->begin();
+
+			while( passengerIterator != passengerList->end() )
+			{
+				Object *passenger = *passengerIterator;
+				//Advance to the next iterator
+				passengerIterator++;
+
+				// If I am an overlord with a gattling upgrade, I do not tell it to fire if it is disabled
+				if ( passenger->isKindOf( KINDOF_PORTABLE_STRUCTURE ) )
+				{
+					if( passenger->isDisabledByType( DISABLED_HACKED )
+						|| passenger->isDisabledByType( DISABLED_EMP )
+						|| passenger->isDisabledByType( DISABLED_SUBDUED )
+						|| passenger->isDisabledByType( DISABLED_PARALYZED)
+						|| passenger->isDisabledByType( DISABLED_STUNNED)
+						|| passenger->isDisabledByType( DISABLED_FROZEN) )
+						continue;
+				}
+
+				AIUpdateInterface *passengerAI = passenger->getAIUpdateInterface();
+				if( passengerAI )
+				{
+					passengerAI->aiAttackObject( victim, maxShotsToFire, cmdSource );
+				}
+			}
+		}
+	}
+
+	AIUpdateInterface::privateAttackObject( victim, maxShotsToFire, cmdSource );
+}
+
+//-------------------------------------------------------------------------------------------------
+/**
+ * Attack given object
+ */
+void AssaultTransportAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
+{
+	ContainModuleInterface* contain = getObject()->getContain();
+	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	{
+		// As an extension of the normal attack, I may want to tell my passengers to attack
+		// too, but only if this is a direct command.  (As opposed to a passive aquire)
+		if( cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT )
+		{
+			const ContainedItemsList *passengerList = contain->getContainedItemsList();
+			ContainedItemsList::const_iterator passengerIterator;
+			passengerIterator = passengerList->begin();
+
+			while( passengerIterator != passengerList->end() )
+			{
+				Object *passenger = *passengerIterator;
+				//Advance to the next iterator
+				passengerIterator++;
+
+				// If I am an overlord with a gattling upgrade, I do not tell it to fire if it is disabled
+				if ( passenger->isKindOf( KINDOF_PORTABLE_STRUCTURE ) )
+				{
+					if( passenger->isDisabledByType( DISABLED_HACKED )
+						|| passenger->isDisabledByType( DISABLED_EMP )
+						|| passenger->isDisabledByType( DISABLED_SUBDUED )
+						|| passenger->isDisabledByType( DISABLED_PARALYZED) 
+						|| passenger->isDisabledByType( DISABLED_STUNNED)
+						|| passenger->isDisabledByType( DISABLED_FROZEN) )
+						continue;
+				}
+
+				AIUpdateInterface *passengerAI = passenger->getAIUpdateInterface();
+				if( passengerAI )
+				{
+					passengerAI->aiForceAttackObject( victim, maxShotsToFire, cmdSource );
+				}
+			}
+		}
+	}
+
+	AIUpdateInterface::privateForceAttackObject( victim, maxShotsToFire, cmdSource );
+}
+
+//-------------------------------------------------------------------------------------------------
+/**
+ * Attack given position
+ */
+void AssaultTransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource )
+{
+	ContainModuleInterface* contain = getObject()->getContain();
+	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	{
+		// As an extension of the normal attack, I may want to tell my passengers to attack
+		// too, but only if this is a direct command.  (As opposed to a passive aquire)
+		if( cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT )
+		{
+			const ContainedItemsList *passengerList = contain->getContainedItemsList();
+			ContainedItemsList::const_iterator passengerIterator;
+			passengerIterator = passengerList->begin();
+
+			while( passengerIterator != passengerList->end() )
+			{
+				Object *passenger = *passengerIterator;
+				//Advance to the next iterator
+				passengerIterator++;
+
+				// If I am an overlord with a gattling upgrade, I do not tell it ti fire if it is disabled
+				if ( passenger->isKindOf( KINDOF_PORTABLE_STRUCTURE ) )
+				{
+					if( passenger->isDisabledByType( DISABLED_HACKED )
+						|| passenger->isDisabledByType( DISABLED_EMP)
+						|| passenger->isDisabledByType( DISABLED_SUBDUED )
+						|| passenger->isDisabledByType( DISABLED_PARALYZED)
+						|| passenger->isDisabledByType( DISABLED_STUNNED)
+						|| passenger->isDisabledByType( DISABLED_FROZEN) )
+						continue;
+				}
+
+				AIUpdateInterface *passengerAI = passenger->getAIUpdateInterface();
+				if( passengerAI )
+				{
+					passengerAI->aiAttackPosition( pos, maxShotsToFire, cmdSource );
+				}
+			}
+		}
+	}
+
+	AIUpdateInterface::privateAttackPosition( pos, maxShotsToFire, cmdSource );
 }
 
 //-------------------------------------------------------------------------------------------------

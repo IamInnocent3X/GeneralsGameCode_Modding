@@ -90,6 +90,8 @@ public:
 	Bool							m_updateModuleStartsAttack;	///< update module determines when the special power actually starts! If true, update module is required.
 	Bool							m_startsPaused; ///< Paused on creation, someone else will have to unpause (like upgrade module, or script)
 	Bool							m_scriptedSpecialPowerOnly;
+	KindOfMaskType 					m_kindOf;
+	KindOfMaskType 					m_forbiddenKindOf;
 };
 
 //-------------------------------------------------------------------------------------------------

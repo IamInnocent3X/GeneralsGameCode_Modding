@@ -57,7 +57,9 @@ public:
 	virtual Bool attemptUpgrade( UpgradeMaskType keyMask ) = 0;
 	virtual Bool wouldUpgrade( UpgradeMaskType keyMask ) const = 0;
 	virtual Bool resetUpgrade( UpgradeMaskType keyMask ) = 0;
+	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask ) const = 0;
 	virtual Bool isSubObjectsUpgrade() = 0;
+	virtual Bool hasUpgradeRefresh() = 0;
 	virtual void forceRefreshUpgrade() = 0;
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const = 0;
 
@@ -128,6 +130,7 @@ public:
 	virtual void forceRefreshUpgrade();
 	virtual Bool attemptUpgrade( UpgradeMaskType keyMask );
 	virtual Bool wouldUpgrade( UpgradeMaskType keyMask ) const;
+	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask ) const;
 	virtual Bool resetUpgrade( UpgradeMaskType keyMask );
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const;
 
@@ -139,6 +142,7 @@ protected:
 	virtual void performUpgradeFX() = 0;	///< perform the associated fx list
 	virtual Bool requiresAllActivationUpgrades() const = 0;
 	virtual Bool isSubObjectsUpgrade() = 0;
+	virtual Bool hasUpgradeRefresh() = 0;
 	virtual void processUpgradeRemoval() = 0;
 	virtual void processUpgradeGrant() = 0;
 	

@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/ExperienceTracker.h"
@@ -81,11 +82,39 @@ void ExperienceScalarUpgrade::upgradeImplementation( )
 
 	//Simply add the xp scalar to the xp tracker!
 	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	Real value, scalar;
+
+	if( UpgradeStatus == 1 )
+	{
+		value = data->m_addXPScalar;
+		scalar = data->m_addXPValueScalar;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		value = -data->m_addXPScalar;
+		scalar = -data->m_addXPValueScalar;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+	else
+	{
+		return;
+	}
+
 	ExperienceTracker *xpTracker = obj->getExperienceTracker();
 	if( xpTracker )
 	{
-		xpTracker->setExperienceScalar( xpTracker->getExperienceScalar() + data->m_addXPScalar );
-		xpTracker->setExperienceValueScalar( xpTracker->getExperienceValueScalar() + data->m_addXPValueScalar );
+		xpTracker->setExperienceScalar( xpTracker->getExperienceScalar() + value );
+		xpTracker->setExperienceValueScalar( xpTracker->getExperienceValueScalar() + scalar );
 	}
 }
 

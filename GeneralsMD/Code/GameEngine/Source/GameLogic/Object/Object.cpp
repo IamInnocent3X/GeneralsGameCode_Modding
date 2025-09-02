@@ -2897,6 +2897,34 @@ void Object::forceRefreshSubObjectUpgradeStatus()
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Added a function to enable upgrade refresh EXCEPT for the intended SubObjectUpgrade. */
+//-------------------------------------------------------------------------------------------------
+void Object::forceRefreshUpgradeStatus()
+{
+	// PowerPlantUpgrade clears its execution status after Upgrade, so we do it differently.
+	static NameKeyType powerPlant = NAMEKEY("PowerPlantUpgrade");
+
+	for (BehaviorModule** module = m_behaviors; *module; ++module)
+	{
+		if((*module)->getModuleNameKey() == powerPlant)
+		{
+			PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) (*module);
+			powerPlantMod->forceRefreshMyUpgrade();
+			continue;
+		}
+
+		UpgradeModuleInterface* upgrade = (*module)->getUpgrade();
+		if (!upgrade)
+			continue;
+
+		if( upgrade->hasUpgradeRefresh() )
+		{
+			upgrade->forceRefreshUpgrade();
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Returns whether an object entered or exited an area. */
 //-------------------------------------------------------------------------------------------------
 Bool Object::didEnterOrExit() const
@@ -5081,11 +5109,15 @@ void Object::removeUpgrade( const UpgradeTemplate *upgradeT )
 		upgrade->resetUpgrade( upgradeT->getUpgradeMask() );
 	}
 
+	forceRefreshUpgradeStatus();
 	doObjectUpgradeChecks();
 }
 
 void Object::doObjectUpgradeChecks()
 {
+	if( testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || testStatus( OBJECT_STATUS_DESTROYED ) || getControllingPlayer() == NULL )
+		return; // The same as UpdateUpgradeModules.
+
 	// Upgrade Weapon Sets
 	m_weaponSet.updateWeaponSet(this);
 
@@ -5099,6 +5131,9 @@ void Object::doObjectUpgradeChecks()
 
 void Object::doObjectStatusChecks()
 {
+	if( testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || testStatus( OBJECT_STATUS_DESTROYED ) )
+		return;
+
 	// Check Weapon Sets
 	m_weaponSet.updateWeaponSet(this);
 

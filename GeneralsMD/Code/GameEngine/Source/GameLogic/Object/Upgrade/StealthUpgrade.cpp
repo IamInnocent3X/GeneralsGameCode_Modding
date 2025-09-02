@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Module/StealthUpgrade.h"
 #include "GameLogic/Module/SpawnBehavior.h"
@@ -52,7 +53,28 @@ void StealthUpgrade::upgradeImplementation( )
 {
 	// The logic that does the stealthupdate will notice this and start stealthing
 	Object *me = getObject();
-	me->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_STEALTH ) );
+
+	UpgradeMaskType objectMask = me->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+
+	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	// Remove the Upgrade Execution Status so it is treated as activation again
+	if(!isAdd)
+		setUpgradeExecuted(false);
+
+	me->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_STEALTH ), isAdd );
 
 	//Grant stealth to spawns if applicable.
 	if( me->isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ) )
@@ -60,7 +82,7 @@ void StealthUpgrade::upgradeImplementation( )
 		SpawnBehaviorInterface *sbInterface = me->getSpawnBehaviorInterface();
 		if( sbInterface )
 		{
-			sbInterface->giveSlavesStealthUpgrade( TRUE );
+			sbInterface->giveSlavesStealthUpgrade( isAdd );
 		}
 	}
 }

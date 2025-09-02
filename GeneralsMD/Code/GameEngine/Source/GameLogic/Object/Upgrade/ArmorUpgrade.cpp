@@ -90,6 +90,8 @@ void ArmorUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 ArmorUpgrade::ArmorUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_lastTerrainDecalType = TERRAIN_DECAL_NONE;
+	m_clearedArmorSetFlags.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -130,21 +132,63 @@ void ArmorUpgrade::upgradeImplementation( )
 
 	DEBUG_LOG(("ArmorUpgrade::upgradeImplementation 1\n"));
 
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+
+	Bool isImplement = UpgradeStatus == 1 ? TRUE : FALSE;
+
 	BodyModuleInterface* body = obj->getBodyModule();
 	if (body) {
-		body->setArmorSetFlag(data->m_armorSetFlag);
+		if( isImplement )
+		{
+			body->setArmorSetFlag(data->m_armorSetFlag);
 
-		DEBUG_LOG(("ArmorUpgrade::upgradeImplementation 2 - flagsToClear = %d\n", data->m_armorSetFlagsToClear));
+			DEBUG_LOG(("ArmorUpgrade::upgradeImplementation 2 - flagsToClear = %d\n", data->m_armorSetFlagsToClear));
 
-		if (data->m_armorSetFlagsToClear.any()) {
-			// We loop over each armorset type and see if we have it set.
-			// Andi: Not sure if this is cleaner solution than storing an array of flags.
-			for (int i = 0; i < ARMORSET_COUNT; i++) {
-				ArmorSetType type = (ArmorSetType)i;
-				if (data->m_armorSetFlagsToClear.test(type)) {
-					body->clearArmorSetFlag(type);
-					// obj->clearWeaponSetFlag(type);
+			if (data->m_armorSetFlagsToClear.any()) {
+				// We loop over each armorset type and see if we have it set.
+				// Andi: Not sure if this is cleaner solution than storing an array of flags.
+				for (int i = 0; i < ARMORSET_COUNT; i++) {
+					ArmorSetType type = (ArmorSetType)i;
+					if (data->m_armorSetFlagsToClear.test(type)) {
+						body->clearArmorSetFlag(type);
+						m_clearedArmorSetFlags.set(type);
+						// obj->clearWeaponSetFlag(type);
+					}
 				}
+			}
+		}
+		else
+		{
+			if(body->testArmorSetFlag(data->m_armorSetFlag))
+				body->clearArmorSetFlag(data->m_armorSetFlag);
+
+			DEBUG_LOG(("ArmorUpgrade::upgradeImplementation, upgrade removal 2 - flagsToSet Back = %d\n", data->m_armorSetFlagsToClear));
+
+			if (m_clearedArmorSetFlags.any()) {
+				for (int i = 0; i < ARMORSET_COUNT; i++) {
+					ArmorSetType type = (ArmorSetType)i;
+					if (m_clearedArmorSetFlags.test(type)) {
+						body->clearArmorSetFlag(type);
+					}
+				}
+				m_clearedArmorSetFlags.clear();
 			}
 		}
 	}
@@ -154,12 +198,21 @@ void ArmorUpgrade::upgradeImplementation( )
 	{
 		Drawable* draw = obj->getDrawable();
 		if (draw) {
-			draw->setTerrainDecal(TERRAIN_DECAL_CHEMSUIT);
+			if(isImplement)
+			{
+				m_lastTerrainDecalType = draw->getTerrainDecalType();
+				draw->setTerrainDecal(TERRAIN_DECAL_CHEMSUIT);
+			}
+			else if( draw->getTerrainDecalType() == TERRAIN_DECAL_CHEMSUIT && !isImplement )
+			{
+				draw->setTerrainDecal(m_lastTerrainDecalType);
+			}
 		}
 		/*else {
 			DEBUG_LOG(("ArmorUpgrade::upgradeImplementation 3b - no draw?.\n"));
 		}*/
 	}
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -188,6 +241,10 @@ void ArmorUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	m_clearedArmorSetFlags.xfer( xfer );
+	//m_lastTerrainDecalType.xfer( xfer );
+	xfer->xferUser( &m_lastTerrainDecalType, sizeof( m_lastTerrainDecalType ) );
 
 }  // end xfer
 

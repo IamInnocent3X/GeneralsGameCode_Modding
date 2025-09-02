@@ -263,7 +263,7 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 	{
 		return UPDATE_SLEEP_FOREVER;
 	}
-	if( !isUpgradeActive()  )
+	if( !isUpgradeActive() )
 	{
 		return UPDATE_SLEEP_FOREVER;
 	}
@@ -505,6 +505,26 @@ void CountermeasuresBehavior::launchVolley()
 	}
 }
 
+void CountermeasuresBehavior::upgradeImplementation()
+{
+	UpgradeMaskType objectMask = getObject()->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = getObject()->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	if( UpgradeStatus == 1 )
+	{
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		// this upgrade module is now "not upgraded"
+		setUpgradeExecuted(FALSE);
+	}
+}
 
 //------------------------------------------------------------------------------------------------
 /** CRC */

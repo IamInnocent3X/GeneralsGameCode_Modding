@@ -291,7 +291,7 @@ void WeaponSet::xfer( Xfer *xfer )
 	}
 	xfer->xferUser(&m_curWeapon, sizeof(m_curWeapon));
 	xfer->xferUser(&m_curWeaponLockedStatus, sizeof(m_curWeaponLockedStatus));
-	xfer->xferUser(&m_curDefaultWeapon, sizeof(m_curWeapon));
+	xfer->xferUser(&m_curDefaultWeapon, sizeof(m_curDefaultWeapon));
 	xfer->xferUnsignedInt(&m_filledWeaponSlotMask);
 	xfer->xferInt(&m_totalAntiMask);
 	xfer->xferBool(&m_hasDamageWeapon);
@@ -406,9 +406,9 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 				break;
 			}
 
-			DEBUG_LOG(("CurWeaponSlotToCheck -- %d\n",i_2));
+			//DEBUG_LOG(("CurWeaponSlotToCheck -- %d\n",i_2));
 		}
-		DEBUG_LOG(("CurWeaponSlot -- %d\n",curWeaponUsed-1));
+		//DEBUG_LOG(("CurWeaponSlot -- %d\n",curWeaponUsed-1));
 		if(curWeaponUsed > 0)
 		{
 			m_curDefaultWeapon = (WeaponSlotType)(curWeaponUsed-1);

@@ -135,18 +135,7 @@ void ProductionTimeModifierUpgrade::onDelete( void )
 	if( isAlreadyUpgraded() == FALSE )
 		return;
 
-	Bool stackWithAny = d->m_stackingType == SAME_TYPE;
-	Bool stackUniqueType = d->m_stackingType == OTHER_TYPE;
-
-	// remove the radar from the player
-	Player* player = getObject()->getControllingPlayer();
-	if (player) {
-		player->removeKindOfProductionTimeChange(d->m_kindOf, d->m_percentage,
-			getObject()->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny);
-	}
-
-	// this upgrade module is now "not upgraded"
-	setUpgradeExecuted(FALSE);
+	doProductionModifierRemoval();
 
 }  // end onDelete
 
@@ -181,12 +170,47 @@ void ProductionTimeModifierUpgrade::onCapture( Player *oldOwner, Player *newOwne
 //-------------------------------------------------------------------------------------------------
 void ProductionTimeModifierUpgrade::upgradeImplementation( void )
 {
+	Object *obj = getObject();
 	Player *player = getObject()->getControllingPlayer();
 
-	// update the player with another TypeOfProductionTimeChange
-	player->addKindOfProductionTimeChange(getProductionTimeModifierUpgradeModuleData()->m_kindOf, getProductionTimeModifierUpgradeModuleData()->m_percentage );
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = player->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 1 )
+	{
+		// update the player with another TypeOfProductionTimeChange
+		player->addKindOfProductionTimeChange(getProductionTimeModifierUpgradeModuleData()->m_kindOf, getProductionTimeModifierUpgradeModuleData()->m_percentage );
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		doProductionModifierRemoval();
+	}
 
 }  // end upgradeImplementation
+
+void ProductionTimeModifierUpgrade::doProductionModifierRemoval()
+{
+	const ProductionTimeModifierUpgradeModuleData* d = getProductionTimeModifierUpgradeModuleData();
+	
+	Bool stackWithAny = d->m_stackingType == SAME_TYPE;
+	Bool stackUniqueType = d->m_stackingType == OTHER_TYPE;
+
+	// remove the radar from the player
+	Player* player = getObject()->getControllingPlayer();
+	if (player) {
+		player->removeKindOfProductionTimeChange(d->m_kindOf, d->m_percentage,
+			getObject()->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny);
+	}
+
+	// this upgrade module is now "not upgraded"
+	setUpgradeExecuted(FALSE);
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

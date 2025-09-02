@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #define DEFINE_MAXHEALTHCHANGETYPE_NAMES
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/ExperienceTracker.h"
@@ -93,47 +94,106 @@ MaxHealthUpgrade::~MaxHealthUpgrade( void )
 //-------------------------------------------------------------------------------------------------
 void MaxHealthUpgrade::upgradeImplementation( )
 {
-	const MaxHealthUpgradeModuleData *data = getMaxHealthUpgradeModuleData();
-
 	//Simply add the xp scalar to the xp tracker!
 	Object *obj = getObject();
 
-	BodyModuleInterface *body = obj->getBodyModule();
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
 
-	if( body )
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
 	{
-		if(data->m_addMaxHealth > 0 || data->m_multiplyMaxHealth != 1.0f)
-		{
-			Real newVal = (body->getMaxHealth() * data->m_multiplyMaxHealth) + data->m_addMaxHealth;
-			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
-			//  	body->getMaxHealth(), data->m_multiplyMaxHealth, data->m_addMaxHealth, newVal));
-			body->setMaxHealth( newVal, data->m_maxHealthChangeType );
-		}
+		return;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
 
-		if(body->canBeSubdued() && (data->m_addSubdualCap > 0 || data->m_multiplySubdualCap != 1.0f))
-		{
-			Real newVal = (body->getSubdualDamageCap() * data->m_multiplySubdualCap) + data->m_addSubdualCap;
-			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
-			//  	body->getSubdualCap(), data->m_multiplySubdualCap, data->m_addSubdualCap, newVal));
-			body->setSubdualCap( newVal );
-		}
+	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
 
-		if(data->m_addSubdualHealRate > 0 || data->m_multiplySubdualHealRate != 1.0f)
-		{
-			Real realVal = INT_TO_REAL((int)(body->getSubdualDamageHealRate()));
-			Real newVal = ( realVal * data->m_multiplySubdualHealRate) + data->m_addSubdualHealRate;
-			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
-			//  	realVal, data->m_multiplySubdualHealRate, data->m_addSubdualHealRate, newVal));
-			body->setSubdualHealRate( (UnsignedInt)(REAL_TO_INT(newVal)) );
-		}
+	doMaxHealthUpgrade(isAdd);
+}
 
-		if(data->m_addSubdualHealAmount > 0 || data->m_multiplySubdualHealAmount != 1.0f)
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void MaxHealthUpgrade::doMaxHealthUpgrade( Bool isAdd )
+{
+	const MaxHealthUpgradeModuleData *data = getMaxHealthUpgradeModuleData();
+	BodyModuleInterface *body = getObject()->getBodyModule();
+
+	if(!body)
+		return;
+
+	if(data->m_addMaxHealth > 0 || data->m_multiplyMaxHealth != 1.0f)
+	{
+		Real newVal;
+		if(isAdd)
 		{
-			Real newVal = (body->getSubdualDamageHealAmount() * data->m_multiplySubdualHealAmount) + data->m_addSubdualHealAmount;
-			// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
-			//  	body->getSubdualHealAmount(), data->m_multiplySubdualHealAmount, data->m_addSubdualHealAmount, newVal));
-			body->setSubdualHealAmount( newVal );
+			newVal = (body->getMaxHealth() * data->m_multiplyMaxHealth) + data->m_addMaxHealth;
 		}
+		else
+		{
+			newVal = (body->getMaxHealth() - data->m_addMaxHealth ) / data->m_multiplyMaxHealth; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	body->getMaxHealth(), data->m_multiplyMaxHealth, data->m_addMaxHealth, newVal));
+		body->setMaxHealth( newVal, data->m_maxHealthChangeType );
+	}
+
+	if(body->canBeSubdued() && (data->m_addSubdualCap > 0 || data->m_multiplySubdualCap != 1.0f))
+	{
+		Real newVal;
+		if(isAdd)
+		{
+			newVal = (body->getSubdualDamageCap() * data->m_multiplySubdualCap) + data->m_addSubdualCap;
+		}
+		else
+		{
+			newVal = (body->getSubdualDamageCap() - data->m_addSubdualCap) / data->m_multiplySubdualCap; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	body->getSubdualCap(), data->m_multiplySubdualCap, data->m_addSubdualCap, newVal));
+		body->setSubdualCap( newVal );
+	}
+
+	if(data->m_addSubdualHealRate > 0 || data->m_multiplySubdualHealRate != 1.0f)
+	{
+		Real realVal = INT_TO_REAL((int)(body->getSubdualDamageHealRate()));
+		Real newVal = realVal;
+		if(isAdd)
+		{
+			newVal = ( realVal * data->m_multiplySubdualHealRate) + data->m_addSubdualHealRate;
+		}
+		else
+		{
+			newVal = ( realVal - data->m_addSubdualHealRate ) / data->m_multiplySubdualHealRate; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	realVal, data->m_multiplySubdualHealRate, data->m_addSubdualHealRate, newVal));
+		body->setSubdualHealRate( (UnsignedInt)(REAL_TO_INT(newVal)) );
+	}
+
+	if(data->m_addSubdualHealAmount > 0 || data->m_multiplySubdualHealAmount != 1.0f)
+	{
+		Real newVal;
+		if(isAdd)
+		{
+			newVal = (body->getSubdualDamageHealAmount() * data->m_multiplySubdualHealAmount) + data->m_addSubdualHealAmount;
+		}
+		else
+		{
+			newVal = (body->getSubdualDamageHealAmount() - data->m_addSubdualHealAmount ) / data->m_multiplySubdualHealAmount; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	body->getSubdualHealAmount(), data->m_multiplySubdualHealAmount, data->m_addSubdualHealAmount, newVal));
+		body->setSubdualHealAmount( newVal );
 	}
 }
 

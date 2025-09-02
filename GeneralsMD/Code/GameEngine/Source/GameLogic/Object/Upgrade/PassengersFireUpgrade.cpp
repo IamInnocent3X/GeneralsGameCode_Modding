@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/PassengersFireUpgrade.h"
@@ -53,16 +54,40 @@ void PassengersFireUpgrade::upgradeImplementation( )
 {
 	// Just need to flag the containmodule having the passengersallowedtofire true, .
 
-
   Object *obj = getObject();
-//	obj->setWeaponSetFlag( WEAPONSET_PLAYER_UPGRADE );
 
   ContainModuleInterface *contain = obj->getContain();
-  if ( contain )
+  if ( !contain )
+	return;
+
+  UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+  UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+  UpgradeMaskType maskToCheck = playerMask;
+  maskToCheck.set( objectMask );
+
+  //First make sure we have the right combination of upgrades
+  Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+  // Apply the Upgrade if the Object has not yet been Upgraded
+  if( UpgradeStatus == 1 )
   {
-    contain->setPassengerAllowedToFire( TRUE );
+  	  contain->setPassengerAllowedToFire( TRUE );
+  }
+  else if( UpgradeStatus == 2 )
+  {
+	  contain->setPassengerAllowedToFire( FALSE );
+	  // Remove the Upgrade Execution Status so it is treated as activation again
+  	  setUpgradeExecuted(false);
   }
 
+//	obj->setWeaponSetFlag( WEAPONSET_PLAYER_UPGRADE );
+
+//  ContainModuleInterface *contain = obj->getContain();
+//  if ( contain )
+//  {
+//    contain->setPassengerAllowedToFire( TRUE );
+//  }
+//
 }
 
 // ------------------------------------------------------------------------------------------------

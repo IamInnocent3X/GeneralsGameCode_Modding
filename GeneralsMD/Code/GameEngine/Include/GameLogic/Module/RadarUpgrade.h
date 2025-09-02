@@ -71,10 +71,13 @@ public:
 	virtual void onCapture( Player *oldOwner, Player *newOwner );	///< object containing upgrade has changed teams
 	Bool getIsDisableProof(void) const { return getRadarUpgradeModuleData()->m_isDisableProof; }
 
+	void doRadarUpgrade(Bool isAdd);
+
 protected:
 
 	virtual void upgradeImplementation( void ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 
 };

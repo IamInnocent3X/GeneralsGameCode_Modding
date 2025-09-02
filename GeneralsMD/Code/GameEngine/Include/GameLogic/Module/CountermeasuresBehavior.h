@@ -195,14 +195,10 @@ public:
 	virtual Bool getCountermeasuresNoAirborne() const;
 	virtual Bool getCountermeasuresConsiderGround() const;
 	virtual KindOfMaskType getCountermeasuresKindOfs() const;
-	
 
 protected:
 
-	virtual void upgradeImplementation()
-	{
-		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
-	}
+	virtual void upgradeImplementation();
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
 	{
@@ -234,6 +230,7 @@ protected:
 	inline Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 	void launchVolley();
 

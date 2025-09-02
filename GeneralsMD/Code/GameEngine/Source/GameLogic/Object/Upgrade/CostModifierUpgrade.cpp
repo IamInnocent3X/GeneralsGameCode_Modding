@@ -135,18 +135,7 @@ void CostModifierUpgrade::onDelete( void )
 	if( isAlreadyUpgraded() == FALSE )
 		return;
 
-	Bool stackWithAny = d->m_stackingType == SAME_TYPE;
-	Bool stackUniqueType = d->m_stackingType == OTHER_TYPE;
-
-	// remove the bonus from the player
-	Player *player = getObject()->getControllingPlayer();
-	if (player) {
-		player->removeKindOfProductionCostChange(d->m_kindOf, d->m_percentage,
-			getObject()->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny);
-	}
-
-	// this upgrade module is now "not upgraded"
-	setUpgradeExecuted(FALSE);
+	doCostModifier(FALSE);
 
 }  // end onDelete
 
@@ -192,20 +181,55 @@ void CostModifierUpgrade::onCapture( Player *oldOwner, Player *newOwner )
 //-------------------------------------------------------------------------------------------------
 void CostModifierUpgrade::upgradeImplementation( void )
 {
-	const CostModifierUpgradeModuleData * d = getCostModifierUpgradeModuleData();
+	Object *obj = getObject();
 
-	Player *player = getObject()->getControllingPlayer();
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
 
-	// update the player with another TypeOfProductionCostChange
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+
+	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	doCostModifier(isAdd);
+
+}  // end upgradeImplementation
+
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void CostModifierUpgrade::doCostModifier(Bool isAdd)
+{
+	const CostModifierUpgradeModuleData* d = getCostModifierUpgradeModuleData();
 
 	Bool stackWithAny = d->m_stackingType == SAME_TYPE;
 	Bool stackUniqueType = d->m_stackingType == OTHER_TYPE;
 
-	player->addKindOfProductionCostChange(d->m_kindOf, d->m_percentage,
-		getObject()->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny);
+	Player *player = getObject()->getControllingPlayer();
+	if (player) {
+		if(isAdd) {
+			player->addKindOfProductionCostChange(d->m_kindOf, d->m_percentage,
+				getObject()->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny);
+		} else {
+			player->removeKindOfProductionCostChange(d->m_kindOf, d->m_percentage,
+				getObject()->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny);
+		}
+	}
 
-}  // end upgradeImplementation
-
+	if(!isAdd)
+	{
+		// this upgrade module is now "not upgraded"
+		setUpgradeExecuted(FALSE);
+	}
+}
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------

@@ -737,6 +737,9 @@ void Player::update()
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
 		//Only check and post the message once every second so we don't spam the message stream to account for lag.
+		// If anyone wants to optimize this to not use Modulo: 
+		// if( now <= m_nextUpdateFrame )
+		// m_nextUpdateFrame = now + LOGICFRAMES_PER_SECOND
 		if( now % LOGICFRAMES_PER_SECOND == 0 )
 		{
 			if( TheGlobalData->m_clientRetaliationModeEnabled != isLogicalRetaliationModeEnabled() )
@@ -3340,6 +3343,40 @@ void Player::onUpgradeCompleted( const UpgradeTemplate *upgradeTemplate )
 				// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
 
 				obj->updateUpgradeModules();
+
+				// end MEAT
+			}
+		}
+	}
+}
+
+//=================================================================================================
+/**
+	An upgrade has just been removed, tell everyone to recheck UpgradeModules
+*/
+void Player::onUpgradeRemoved()
+{
+	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin();
+			 it != m_playerTeamPrototypes.end(); ++it)
+	{
+		for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance())
+		{
+			Team *team = iter.cur();
+			if( team == NULL )
+			{
+				continue;
+			}
+			for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance())
+			{
+				Object *obj = iterObj.cur();
+				if( obj == NULL )
+				{
+					continue;
+				}
+				// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
+
+				obj->forceRefreshUpgradeStatus();
+				obj->doObjectUpgradeChecks();
 
 				// end MEAT
 			}

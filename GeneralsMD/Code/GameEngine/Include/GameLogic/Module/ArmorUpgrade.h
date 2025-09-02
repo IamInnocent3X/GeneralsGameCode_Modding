@@ -63,6 +63,7 @@
 //-----------------------------------------------------------------------------
 class Thing;
 enum ArmorSetType CPP_11(: Int);
+enum TerrainDecalType CPP_11(: Int);
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -95,9 +96,13 @@ public:
 protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 	virtual Bool attemptUpgrade(UpgradeMaskType keyMask);
 
+private:
+	TerrainDecalType m_lastTerrainDecalType;
+	ArmorSetFlags m_clearedArmorSetFlags;
 };
 
 //-----------------------------------------------------------------------------

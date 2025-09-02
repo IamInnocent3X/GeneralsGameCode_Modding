@@ -381,6 +381,8 @@ public:
 	//recalculate those upgraded subobjects.
 	void forceRefreshSubObjectUpgradeStatus();
 
+	void forceRefreshUpgradeStatus();
+
 	// Useful for status bits that can be set by the scripting system
 	inline Bool testScriptStatusBit(ObjectScriptStatusBit b) const { return BitIsSet(m_scriptStatus, b); }
 	void setScriptStatus( ObjectScriptStatusBit bit, Bool set = true );

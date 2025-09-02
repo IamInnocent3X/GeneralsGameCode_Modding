@@ -75,10 +75,13 @@ public:
 	MaxHealthUpgrade( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype defined by MemoryPoolObject
 
+	void doMaxHealthUpgrade( Bool isAdd );
+
 protected:
 
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 };
 

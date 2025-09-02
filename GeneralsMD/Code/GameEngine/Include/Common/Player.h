@@ -332,7 +332,7 @@ public:
 
 	void onUpgradeCompleted( const UpgradeTemplate *upgradeTemplate );				///< An upgrade just finished, do things like tell all objects to recheck UpgradeModules
 	void findUpgradeInQueuesAndCancelThem( const UpgradeTemplate *upgradeTemplate );	///< Find existing upgrades queue among a player that are currently in production and cancel them.
-	void onUpgradeRemoved(){}					///< An upgrade just got removed, this doesn't do anything now.
+	void onUpgradeRemoved();					///< An upgrade just got removed, this doesn't do anything now.
 
 #if defined(RTS_DEBUG)
 	/// Prereq disabling cheat key

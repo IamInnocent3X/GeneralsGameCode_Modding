@@ -71,8 +71,6 @@ RadarUpgrade::~RadarUpgrade( void )
 //-------------------------------------------------------------------------------------------------
 void RadarUpgrade::onDelete( void )
 {
-	const RadarUpgradeModuleData *md = getRadarUpgradeModuleData();
-
 	// if we haven't been upgraded there is nothing to clean up
 	if( isAlreadyUpgraded() == FALSE )
 		return;
@@ -81,13 +79,7 @@ void RadarUpgrade::onDelete( void )
 	if ( getObject()->isDisabled() )
 		return;
 
-	// remove the radar from the player
-	Player *player = getObject()->getControllingPlayer();
-	if( player )
-		player->removeRadar( md->m_isDisableProof );
-
-	// this upgrade module is now "not upgraded"
-	setUpgradeExecuted(FALSE);
+	doRadarUpgrade(FALSE);
 
 }  // end onDelete
 
@@ -127,20 +119,61 @@ void RadarUpgrade::onCapture( Player *oldOwner, Player *newOwner )
 //-------------------------------------------------------------------------------------------------
 void RadarUpgrade::upgradeImplementation( void )
 {
+	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+
+	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	doRadarUpgrade(isAdd);
+}  // end upgradeImplementation
+
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void RadarUpgrade::doRadarUpgrade( Bool isAdd )
+{
+
 	const RadarUpgradeModuleData *md = getRadarUpgradeModuleData();
 
 	Player *player = getObject()->getControllingPlayer();
 
-	// update the player with another radar facility
-	player->addRadar( md->m_isDisableProof );
+	if(!player)
+		return;
 
-	// find the radar update module of this object
-	NameKeyType radarUpdateKey = NAMEKEY( "RadarUpdate" );
-	RadarUpdate *radarUpdate = (RadarUpdate *)getObject()->findUpdateModule( radarUpdateKey );
-	if( radarUpdate )
-		radarUpdate->extendRadar();
+	if(isAdd)
+	{
+		// update the player with another radar facility
+		player->addRadar( md->m_isDisableProof );
 
-}  // end upgradeImplementation
+		// find the radar update module of this object
+		NameKeyType radarUpdateKey = NAMEKEY( "RadarUpdate" );
+		RadarUpdate *radarUpdate = (RadarUpdate *)getObject()->findUpdateModule( radarUpdateKey );
+		if( radarUpdate )
+			radarUpdate->extendRadar();
+	}
+	else
+	{
+		// remove the radar from the player
+		player->removeRadar( md->m_isDisableProof );
+
+		// this upgrade module is now "not upgraded"
+		setUpgradeExecuted(FALSE);
+	}
+
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

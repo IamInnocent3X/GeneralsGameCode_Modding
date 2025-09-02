@@ -44,7 +44,7 @@
 PowerPlantUpgrade::PowerPlantUpgrade( Thing *thing, const ModuleData* moduleData ) :
 							UpgradeModule( thing, moduleData )
 {
-
+	m_hasExecuted = FALSE;
 }  // end PowerPlantUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -109,12 +109,53 @@ void PowerPlantUpgrade::onCapture( Player *oldOwner, Player *newOwner )
 //-------------------------------------------------------------------------------------------------
 void PowerPlantUpgrade::upgradeImplementation( void )
 {
+	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// Because this module does things differently, we need to take a different approach
+	if( UpgradeStatus == 0 )
+	{
+		// If we do not have the Upgrade, yet we have not executed, do nothing
+		if(!m_hasExecuted)
+		{
+			return;
+		}
+		else
+		{
+			// Remove the Upgrade Execution Status so it is treated as activation again
+			m_hasExecuted = false;
+			setUpgradeExecuted(false);
+		}
+	}
+
+	Bool isApply = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	if(isApply)
+	{
+		// If we have yet to do the Upgrade, proceed to do the Upgrade, but if we already have the Upgrade, don't do anything.
+		if(!m_hasExecuted)
+			m_hasExecuted = isApply;
+		else
+			return;
+	}
 
 	Player *player = getObject()->getControllingPlayer();
 
 	// add the new power production to the object
 	if( player )
-		player->addPowerBonus(getObject());
+	{
+		if(isApply)
+			player->addPowerBonus(getObject());
+		else
+			player->removePowerBonus( getObject() );
+	}
 
 
 	PowerPlantUpdateInterface *ppui;
@@ -122,11 +163,15 @@ void PowerPlantUpgrade::upgradeImplementation( void )
 	{
 		ppui = (*umi)->getPowerPlantUpdateInterface();
 		if( ppui )
-			ppui->extendRods(TRUE);
+			ppui->extendRods(isApply);
 	}
 
 }  // end upgradeImplementation
 
+void PowerPlantUpgrade::forceRefreshMyUpgrade()
+{
+	upgradeImplementation();
+}
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -153,6 +198,8 @@ void PowerPlantUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool( &m_hasExecuted );
 
 }  // end xfer
 

@@ -111,6 +111,10 @@ public:
 
 protected:
 
+	virtual void privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );///< Extension.  Also tell occupants to attackObject
+	virtual void privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource );///< Extension.  Also tell occupants to attackPosition
+	virtual void privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );///< Extension.  Also tell occupants to forceAttackObject
+
   ObjectID					m_memberIDs[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_memberHealing[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_newMember[ MAX_TRANSPORT_SLOTS ];

@@ -1771,10 +1771,33 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 				break;
 
 			case SPECIAL_DISGUISE_AS_VEHICLE:
-				if( target->isKindOf( KINDOF_VEHICLE )
+			{
+				Bool canDisguise = FALSE;
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_DISGUISE_AS_VEHICLE );
+
+				// Condition 1: I have the declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						break;
+					
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							canDisguise = TRUE;
+						else
+							break;
+					}
+				}
+				// Condition 2: I do not declare any types, so I use the Default modules.
+				if( !canDisguise && target->isKindOf( KINDOF_VEHICLE )
 						&& !target->isKindOf( KINDOF_AIRCRAFT )
 						&& !target->isKindOf( KINDOF_BOAT )
 						&& !target->isKindOf( KINDOF_CLIFF_JUMPER ) )
+				{
+					canDisguise = TRUE;
+				}
+				if(canDisguise)
 				{
 					//Don't allow it to disguise as another bomb truck -- that's just plain dumb.
 					//if( target->getTemplate() != obj->getTemplate() )
@@ -1790,6 +1813,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					}
 				}
 				break;
+			}
 
 			case SPECIAL_DEFECTOR:
 				//buildings do not defect

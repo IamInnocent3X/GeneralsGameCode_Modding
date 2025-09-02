@@ -102,6 +102,7 @@ protected:
 	}
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 	void resetStats();
 	void fireOCL();

@@ -52,6 +52,7 @@
 //-----------------------------------------------------------------------------
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/WeaponBonusUpgrade.h"
@@ -88,7 +89,26 @@ void WeaponBonusUpgrade::upgradeImplementation( )
 	// Very simple; just need to flag the Object as having the player upgrade, and the WeaponSet chooser
 	// will do the work of picking the right one from ini.  This comment is as long as the code.
 	Object *obj = getObject();
-	obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_PLAYER_UPGRADE );
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 1 )
+	{
+		obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_PLAYER_UPGRADE );
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		obj->clearWeaponBonusCondition( WEAPONBONUSCONDITION_PLAYER_UPGRADE );
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
 
 }
 
