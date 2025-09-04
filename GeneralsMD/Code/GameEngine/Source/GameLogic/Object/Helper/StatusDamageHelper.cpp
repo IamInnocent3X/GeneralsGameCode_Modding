@@ -77,7 +77,10 @@ UpdateSleepTime StatusDamageHelper::update()
 		{
 			getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK((*it).first) );
 			(*it).second = 0;
-			//DEBUG_LOG(( "StatusDamageHelper Cleared Status: %d", (*it).first ));
+			//DEBUG_LOG(( "StatusDamageHelper Cleared Status: %d. Frame: %d", (*it).first, now ));
+
+			//Fixes bugs for not checking after clearing Statuses
+			getObject()->doObjectStatusChecks();
 		}
 		else if((*it).second < now + nextStatusDuration)
 		{
@@ -94,7 +97,10 @@ UpdateSleepTime StatusDamageHelper::update()
 		{
 			getObject()->clearCustomStatus( (*it2).first );
 			(*it2).second = 0;
-			//DEBUG_LOG(( "StatusDamageHelper Cleared Custom Status: %s", (*it2).first.str() ));
+			//DEBUG_LOG(( "StatusDamageHelper Cleared Custom Status: %s. Frame: %d", (*it2).first.str(), now ));
+
+			//Fixes bugs for not checking after clearing Statuses
+			getObject()->doObjectStatusChecks();
 		}
 		else if((*it2).second < now + nextStatusDuration)
 		{
@@ -114,7 +120,7 @@ UpdateSleepTime StatusDamageHelper::update()
 			{
 				getObject()->getDrawable()->clearTintStatus((*it).first);
 				(*it).second = 0;
-				//DEBUG_LOG(( "StatusDamageHelper Cleared Tint Status: %d", (*it).first ));
+				//DEBUG_LOG(( "StatusDamageHelper Cleared Tint Status: %d. Frame: %d", (*it).first, now ));
 			}
 			else if((*it).second < now + nextStatusDuration)
 			{
@@ -131,7 +137,7 @@ UpdateSleepTime StatusDamageHelper::update()
 			{
 				getObject()->getDrawable()->clearCustomTintStatus((*it2).first);
 				(*it2).second = 0;
-				//DEBUG_LOG(( "StatusDamageHelper Cleared CustomTintStatus: %s", (*it2).first.str() ));
+				//DEBUG_LOG(( "StatusDamageHelper Cleared CustomTintStatus: %s. Frame: %d", (*it2).first.str(), now ));
 			}
 			else if((*it2).second < now + nextStatusDuration)
 			{
@@ -277,7 +283,7 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 		m_frameToHeal = frameToHeal;
 		setWakeFrame( getObject(), UPDATE_SLEEP(durationAsInt) );
 
-		//DEBUG_LOG(( "StatusDamageHelper, Current Frame: %d, Sleep Duration: %d, Frame For Clearing Status: %d", now, durationAsInt, frameToHeal ));
+		//DEBUG_LOG(( "StatusDamageHelper, Current Frame: %d, Sleep Duration: %d, Frame For Clearing Status: %d", TheGameLogic->getFrame(), durationAsInt, frameToHeal ));
 	}
 }
 
