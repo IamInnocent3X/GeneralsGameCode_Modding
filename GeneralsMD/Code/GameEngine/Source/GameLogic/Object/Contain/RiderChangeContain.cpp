@@ -325,14 +325,6 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 	Object *obj = getObject();
 	m_containing = TRUE;
 
-	if(!checkHasRiderTemplate(rider))
-	{
-		TransportContain::onContaining( rider, wasSelected );
-
-		m_containing = FALSE;
-		return;
-	}
-
 	Int containMax = getContainMax();
 	Int containCount = getContainCount();
 
@@ -340,6 +332,14 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 	if( m_payloadCreated && !data->m_dontEvacuateOnEnter )
 	{
 		obj->getAI()->aiEvacuateInstantly( TRUE, CMD_FROM_AI );
+	}
+
+	if(!checkHasRiderTemplate(rider))
+	{
+		TransportContain::onContaining( rider, wasSelected );
+
+		m_containing = FALSE;
+		return;
 	}
 
 	if( data->m_dontEvacuateOnEnter && m_extraSlotsInUse + containCount > containMax )
@@ -427,39 +427,74 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 //-------------------------------------------------------------------------------------------------
 void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly )
 {
-	// Do it in reverse so that the Rider exits last
-	for (ContainedItemsList::const_iterator it = getContainedItemsList()->end(); it != getContainedItemsList()->begin(); --it)
+	if(m_containing && !getRiderChangeContainModuleData()->m_dontEvacuateOnEnter)
 	{
-		// save the rider...
-		Object* rider = *it;
-
-		// decr the iterator BEFORE calling the func (if the func removes the rider,
-		// the iterator becomes invalid)
-		//--it;
-
-		// call it
-		if( rider && rider->getAI() )
+		// Do it the default way for Evacuate on Enter
+		for( ContainedItemsList::const_iterator it = getContainedItemsList()->begin(); it != getContainedItemsList()->end(); )
 		{
-			if( instantly )
+			// save the rider...
+			Object* rider = *it;
+
+			// incr the iterator BEFORE calling the func (if the func removes the rider,
+			// the iterator becomes invalid)
+			++it;
+
+			// call it
+			if( rider->getAI() )
 			{
-				rider->getAI()->aiExitInstantly( getObject(), commandSource );
-			}
-			else
-			{
-				rider->getAI()->aiExit( getObject(), commandSource );
+				if( instantly )
+				{
+					rider->getAI()->aiExitInstantly( getObject(), commandSource );
+				}
+				else
+				{
+					rider->getAI()->aiExit( getObject(), commandSource );
+				}
 			}
 		}
 	}
-	Object* first_rider = *getContainedItemsList()->begin();
-	if( first_rider && first_rider->getAI() )
+	else
 	{
-		if( instantly )
+		Bool first = TRUE;
+		// Do it in reverse so that the Rider exits last
+		for (ContainedItemsList::const_iterator it = getContainedItemsList()->end(); it != getContainedItemsList()->begin();)
 		{
-			first_rider->getAI()->aiExitInstantly( getObject(), commandSource );
+			if(first)
+			{
+				first = FALSE;
+				continue;
+			}
+			// save the rider...
+			Object* rider = *it;
+
+			// decr the iterator BEFORE calling the func (if the func removes the rider,
+			// the iterator becomes invalid)
+			--it;
+
+			// call it
+			if( rider && rider->getAI() )
+			{
+				if( instantly )
+				{
+					rider->getAI()->aiExitInstantly( getObject(), commandSource );
+				}
+				else
+				{
+					rider->getAI()->aiExit( getObject(), commandSource );
+				}
+			}
 		}
-		else
+		Object* first_rider = *getContainedItemsList()->begin();
+		if( first_rider && first_rider->getAI() )
 		{
-			first_rider->getAI()->aiExit( getObject(), commandSource );
+			if( instantly )
+			{
+				first_rider->getAI()->aiExitInstantly( getObject(), commandSource );
+			}
+			else
+			{
+				first_rider->getAI()->aiExit( getObject(), commandSource );
+			}
 		}
 	}
 }
@@ -792,15 +827,15 @@ void RiderChangeContain::onRemoving( Object *rider )
 			}
 		}
 
-		for(int i = 0; i < m_theRiderDataRecord.size(); i++)
-			DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
+		//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+		//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
 		
+		// Remove the Data from the Data Record
+		removeRiderDataRecord(removeTemplate);
+
 		// If we have multiple Riders and the Bike has its Template and it is being removed
 		if(switchTemplate && GrantIndex >= 0)
 		{
-			// Remove the Data from the Data Record
-			removeRiderDataRecord(removeTemplate);
-
 			if(data->m_moreThanOneRiders)
 				GrantIndex = m_theRiderDataRecord.size()-1;
 
@@ -813,11 +848,6 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 			// Grant the Rider the last Template before the Removed Rider
 			riderGiveTemplate(riderData);
-		}
-		else
-		{
-			// Remove the Data from the Data Record
-			removeRiderDataRecord(removeTemplate);
 		}
 	}
 
