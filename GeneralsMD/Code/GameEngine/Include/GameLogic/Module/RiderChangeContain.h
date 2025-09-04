@@ -60,6 +60,30 @@ struct RiderData
 	AsciiString customStatusType;
 };
 
+enum ScuttleType CPP_11(: Int)
+{
+	SCUTTLE_INVALID = 0,
+	SCUTTLE_ON_EXIT = 1,
+	SCUTTLE_ON_NO_PASSENGERS = 2,
+	SCUTTLE_NEVER = 3,
+
+	SCUTTLE_COUNT
+
+};
+
+#ifdef DEFINE_SCUTTLE_NAMES
+static const char *TheScuttleNames[] = 
+{
+	"INVALID",
+	"ON_EXIT",
+	"ON_NO_PASSENGERS",
+	"NEVER",
+
+	NULL
+};
+#endif
+
+
 //-------------------------------------------------------------------------------------------------
 class RiderChangeContainModuleData : public TransportContainModuleData
 {
@@ -71,8 +95,11 @@ public:
 	ModelConditionFlagType m_scuttleState;
 	Bool m_riderNotRequired;
 	Bool m_useUpgradeNames;
-	Bool m_dontScuttle;
-	Bool m_dontDestroyRiderOnKill;
+	Bool m_dontDestroyPassengersOnKill;
+	Bool m_dontEvacuateOnEnter;
+	Bool m_canContainNonRiders;
+	Bool m_moreThanOneRiders;
+	ScuttleType m_scuttleType;
 
 	RiderChangeContainModuleData();
 
@@ -115,6 +142,8 @@ public:
 
 	virtual Bool getContainerPipsToShow( Int& numTotal, Int& numFull );
 
+	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
+
 	virtual void doUpgradeChecks( void );
 	virtual void doStatusChecks( void );
 
@@ -128,9 +157,12 @@ public:
 
 	void loadPreviousState(); // Loads the previous Rider Template of the existing unit if StatusCheck or UpgradeCheck is enabled
 	void doRegisterUpgradeNames();
+	void registerNewRiderDataOnContain(const AsciiString& riderTemplate);
 	void removeRiderTemplate(const AsciiString& rider, Bool clearStatus); // Remove the template
 	void removeRiderDataRecord(const AsciiString& rider); // Use in line with Remove Template, also clears it from the Rider Change Records
+	void clearAllTimeFramedDataRecords();
 	
+	Bool checkHasRiderTemplate( const Object *rider ) const;
 	Bool riderChangeContainingCheck( Object *rider, const RiderInfo& riderInfo );
 	Bool riderChangeRemoveCheck( Object *rider, const RiderInfo& riderInfo );
 
