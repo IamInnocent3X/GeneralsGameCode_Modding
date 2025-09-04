@@ -2486,7 +2486,15 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 			{
 				rider->setDisabledUntil(type, frame);
 			}
+
+			const std::list<Object*>* addOnList = contain->getAddOnList();
+			if (addOnList) {
+				for (Object* addOn : *addOnList) {
+					addOn->setDisabledUntil(type, frame);
+				}
+			}
 		}
+
 
 		if ( isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ) )
 		{
@@ -2625,6 +2633,13 @@ Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 		if( rider  &&  (m_disabledTillFrame[ type ] == FOREVER) )
 		{
 			rider->clearDisabled(type);
+		}
+
+		const std::list<Object*>* addOnList = contain->getAddOnList();
+		if (addOnList) {
+			for (Object* addOn : *addOnList) {
+				addOn->clearDisabled(type);
+			}
 		}
 	}
 

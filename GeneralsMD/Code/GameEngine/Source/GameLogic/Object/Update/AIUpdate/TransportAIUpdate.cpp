@@ -61,22 +61,24 @@ TransportAIUpdate::~TransportAIUpdate( void )
  */
 void TransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
 {
+	DEBUG_LOG((">>> TransportAIUpdate::privateAttackObject 0"));
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	if( contain != NULL)
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)
 		if( cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT )
 		{
-			const ContainedItemsList *passengerList = contain->getContainedItemsList();
-			ContainedItemsList::const_iterator passengerIterator;
-			passengerIterator = passengerList->begin();
+			if (contain->isPassengerAllowedToFire()) {
+				const ContainedItemsList *passengerList = contain->getContainedItemsList();
+				ContainedItemsList::const_iterator passengerIterator;
+				passengerIterator = passengerList->begin();
 
-			while( passengerIterator != passengerList->end() )
-			{
-				Object *passenger = *passengerIterator;
-				//Advance to the next iterator
-				passengerIterator++;
+				while (passengerIterator != passengerList->end())
+				{
+					Object* passenger = *passengerIterator;
+					//Advance to the next iterator
+					passengerIterator++;
 
 				// If I am an overlord with a gattling upgrade, I do not tell it to fire if it is disabled
 				if ( passenger->isKindOf( KINDOF_PORTABLE_STRUCTURE ) )
@@ -90,10 +92,29 @@ void TransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire,
 						continue;
 				}
 
-				AIUpdateInterface *passengerAI = passenger->getAIUpdateInterface();
-				if( passengerAI )
-				{
-					passengerAI->aiAttackObject( victim, maxShotsToFire, cmdSource );
+					AIUpdateInterface* passengerAI = passenger->getAIUpdateInterface();
+					if (passengerAI)
+					{
+						passengerAI->aiAttackObject(victim, maxShotsToFire, cmdSource);
+					}
+				}
+			}
+			const std::list<Object*>* addOnList = contain->getAddOnList();
+			if (addOnList) {
+				for (Object* obj : *addOnList) {
+					if (obj
+						&& obj->isKindOf(KINDOF_PORTABLE_STRUCTURE)
+						&& !obj->isDisabledByType(DISABLED_HACKED)
+						&& !obj->isDisabledByType(DISABLED_EMP)
+						&& !obj->isDisabledByType(DISABLED_SUBDUED)
+						&& !obj->isDisabledByType(DISABLED_PARALYZED))
+					{
+						AIUpdateInterface* riderAI = obj->getAIUpdateInterface();
+						if (riderAI)
+						{
+							riderAI->aiAttackObject(victim, maxShotsToFire, cmdSource);
+						}
+					}
 				}
 			}
 		}
@@ -108,22 +129,24 @@ void TransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire,
  */
 void TransportAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
 {
+	DEBUG_LOG((">>> TransportAIUpdate::privateForceAttackObject 0"));
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	if( contain)
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)
 		if( cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT )
 		{
-			const ContainedItemsList *passengerList = contain->getContainedItemsList();
-			ContainedItemsList::const_iterator passengerIterator;
-			passengerIterator = passengerList->begin();
+			if (contain->isPassengerAllowedToFire()) {
+				const ContainedItemsList* passengerList = contain->getContainedItemsList();
+				ContainedItemsList::const_iterator passengerIterator;
+				passengerIterator = passengerList->begin();
 
-			while( passengerIterator != passengerList->end() )
-			{
-				Object *passenger = *passengerIterator;
-				//Advance to the next iterator
-				passengerIterator++;
+				while (passengerIterator != passengerList->end())
+				{
+					Object* passenger = *passengerIterator;
+					//Advance to the next iterator
+					passengerIterator++;
 
 				// If I am an overlord with a gattling upgrade, I do not tell it to fire if it is disabled
 				if ( passenger->isKindOf( KINDOF_PORTABLE_STRUCTURE ) )
@@ -137,10 +160,31 @@ void TransportAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsTo
 						continue;
 				}
 
-				AIUpdateInterface *passengerAI = passenger->getAIUpdateInterface();
-				if( passengerAI )
-				{
-					passengerAI->aiForceAttackObject( victim, maxShotsToFire, cmdSource );
+					AIUpdateInterface* passengerAI = passenger->getAIUpdateInterface();
+					if (passengerAI)
+					{
+						passengerAI->aiForceAttackObject(victim, maxShotsToFire, cmdSource);
+					}
+				}
+			}
+			DEBUG_LOG((">>> TransportAIUpdate::privateForceAttackObject 1"));
+			const std::list<Object*>* addOnList = contain->getAddOnList();
+			if (addOnList) {
+				for (Object* obj : *addOnList) {
+					if (obj
+						&& obj->isKindOf(KINDOF_PORTABLE_STRUCTURE)
+						&& !obj->isDisabledByType(DISABLED_HACKED)
+						&& !obj->isDisabledByType(DISABLED_EMP)
+						&& !obj->isDisabledByType(DISABLED_SUBDUED)
+						&& !obj->isDisabledByType(DISABLED_PARALYZED))
+					{
+						AIUpdateInterface* riderAI = obj->getAIUpdateInterface();
+						if (riderAI)
+						{
+							DEBUG_LOG((">>> TransportAIUpdate::privateForceAttackObject -> pass to rider"));
+							riderAI->aiForceAttackObject(victim, maxShotsToFire, cmdSource);
+						}
+					}
 				}
 			}
 		}
@@ -155,22 +199,24 @@ void TransportAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsTo
  */
 void TransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource )
 {
+	DEBUG_LOG((">>> TransportAIUpdate::privateAttackPosition 0"));
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	if( contain != NULL)
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)
 		if( cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT )
 		{
-			const ContainedItemsList *passengerList = contain->getContainedItemsList();
-			ContainedItemsList::const_iterator passengerIterator;
-			passengerIterator = passengerList->begin();
+			if (contain->isPassengerAllowedToFire()) {
+				const ContainedItemsList* passengerList = contain->getContainedItemsList();
+				ContainedItemsList::const_iterator passengerIterator;
+				passengerIterator = passengerList->begin();
 
-			while( passengerIterator != passengerList->end() )
-			{
-				Object *passenger = *passengerIterator;
-				//Advance to the next iterator
-				passengerIterator++;
+				while (passengerIterator != passengerList->end())
+				{
+					Object* passenger = *passengerIterator;
+					//Advance to the next iterator
+					passengerIterator++;
 
 				// If I am an overlord with a gattling upgrade, I do not tell it ti fire if it is disabled
 				if ( passenger->isKindOf( KINDOF_PORTABLE_STRUCTURE ) )
@@ -184,10 +230,31 @@ void TransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsT
 						continue;
 				}
 
-				AIUpdateInterface *passengerAI = passenger->getAIUpdateInterface();
-				if( passengerAI )
-				{
-					passengerAI->aiAttackPosition( pos, maxShotsToFire, cmdSource );
+					AIUpdateInterface* passengerAI = passenger->getAIUpdateInterface();
+					if (passengerAI)
+					{
+						passengerAI->aiAttackPosition(pos, maxShotsToFire, cmdSource);
+					}
+				}
+			}
+
+			const std::list<Object*>* addOnList = contain->getAddOnList();
+			if (addOnList) {
+				for (Object* obj : *addOnList) {
+					if (obj
+						&& obj->isKindOf(KINDOF_PORTABLE_STRUCTURE)
+						&& !obj->isDisabledByType(DISABLED_HACKED)
+						&& !obj->isDisabledByType(DISABLED_EMP)
+						&& !obj->isDisabledByType(DISABLED_SUBDUED)
+						&& !obj->isDisabledByType(DISABLED_PARALYZED))
+					{
+						AIUpdateInterface* riderAI = obj->getAIUpdateInterface();
+						if (riderAI)
+						{
+							DEBUG_LOG((">>> TransportAIUpdate::privateAttackPosition - order rider!\n"));
+							riderAI->aiAttackPosition(pos, maxShotsToFire, cmdSource);
+						}
+					}
 				}
 			}
 		}
