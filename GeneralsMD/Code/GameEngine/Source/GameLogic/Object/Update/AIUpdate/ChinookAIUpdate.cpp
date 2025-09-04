@@ -1524,7 +1524,9 @@ void ChinookAIUpdate::private___TellPortableStructureToAttackWithMe( Object *vic
 					&& !obj->isDisabledByType(DISABLED_HACKED)
 					&& !obj->isDisabledByType(DISABLED_EMP)
 					&& !obj->isDisabledByType(DISABLED_SUBDUED)
-					&& !obj->isDisabledByType(DISABLED_PARALYZED))
+					&& !obj->isDisabledByType(DISABLED_PARALYZED)
+					&& !obj->isDisabledByType(DISABLED_STUNNED)
+					&& !obj->isDisabledByType(DISABLED_FROZEN))
 				{
 					AIUpdateInterface* riderAI = obj->getAIUpdateInterface();
 					if (riderAI)
@@ -1621,7 +1623,9 @@ void ChinookAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsToFi
 						&& !obj->isDisabledByType(DISABLED_HACKED)
 						&& !obj->isDisabledByType(DISABLED_EMP)
 						&& !obj->isDisabledByType(DISABLED_SUBDUED)
-						&& !obj->isDisabledByType(DISABLED_PARALYZED))
+						&& !obj->isDisabledByType(DISABLED_PARALYZED)
+						&& !obj->isDisabledByType(DISABLED_STUNNED)
+						&& !obj->isDisabledByType(DISABLED_FROZEN))
 					{
 						AIUpdateInterface* riderAI = obj->getAIUpdateInterface();
 						if (riderAI)
@@ -1719,7 +1723,9 @@ void ChinookAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsToF
 						&& !obj->isDisabledByType(DISABLED_HACKED)
 						&& !obj->isDisabledByType(DISABLED_EMP)
 						&& !obj->isDisabledByType(DISABLED_SUBDUED)
-						&& !obj->isDisabledByType(DISABLED_PARALYZED))
+						&& !obj->isDisabledByType(DISABLED_PARALYZED)
+						&& !obj->isDisabledByType(DISABLED_STUNNED)
+						&& !obj->isDisabledByType(DISABLED_FROZEN))
 					{
 						AIUpdateInterface* riderAI = obj->getAIUpdateInterface();
 						if (riderAI)

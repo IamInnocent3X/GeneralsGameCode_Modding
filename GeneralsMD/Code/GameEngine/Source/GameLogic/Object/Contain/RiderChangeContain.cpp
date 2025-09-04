@@ -220,27 +220,8 @@ RiderChangeContain::RiderChangeContain( Thing *thing, const ModuleData *moduleDa
 	m_containing = FALSE;
 	m_scuttledOnFrame = 0;
 	m_dontCompare = FALSE;
-	//m_theRiderToChange = -1;
-	//m_theRiderName = NULL;
-	//m_theRiderLastValid = -1;
-	//m_theRiderLastName = NULL;
-	//m_theRiderLastUpgrade = -1;
-	//m_theRiderLastUpgradeName = NULL;
-	//m_theRiderLastValidBackup = -1;
-	//m_theRiderLastNameBackup = NULL;
-	//m_theRiderToChangeBackup = -1;
-	//m_theRiderNameBackup = NULL;
-	//m_checkedRemove = TRUE;
 	m_loaded = FALSE;
-	//m_firstChange = FALSE;
-	//m_firstUpgrade = FALSE;
-	//m_firstStatusRemoval = FALSE;
-	//m_statusDelayCheck = FALSE;
-	//m_doRemovalOnLoad = FALSE;
-	//m_addDelay = 0;
-	//m_statusLoadDelay = 0;
-	//m_resetLaterFrame = 0;
-	m_theRiderDataRecord.clear(); // This is a better version of the features above
+	m_theRiderDataRecord.clear(); // A better non-sleepy update version of Status and Upgrade Checking
 	m_registeredUpgradeNames = FALSE;
 	m_prevStatus.clear();
 	m_prevCustomStatusTypes.clear();
@@ -340,24 +321,7 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 		found = riderChangeContainingCheck(rider, data->m_riders[ i ]);
 		if (found == TRUE)
 		{
-			// Prevent the template from being removed if there is currently any Status Affecting the Unit
-			//m_checkedRemove = TRUE;
-
-			// Hackky way to fix the Upgrade Template on Loading issue.
-			//if(m_loaded == TRUE)
-			//{
-				//m_theRiderLastUpgrade = -1;
-				//m_theRiderLastUpgradeName = NULL;
-
-				// Clear the Data Record since the New Rider is given by Containing
-				// m_theRiderDataRecord.clear();
-			//}
-
-			// Register the new rider index for checking.
-			//m_theRiderToChange = i;
-			//m_theRiderName = NULL;
-
-			// Clear the Rider Data Record and assign it as the Last Template, only if the game is loaded or its past its first frame,
+			// Clear the Rider Data Record and assign it as the Last Template, only if the game is loaded or its the Inital Rider,
 			// or else it will register new values on loading.
 			// Register it as the first Template becuase the Upgrade and Status Checks will always need a template to refer to.
 			if(m_loaded || m_theRiderDataRecord.empty())
@@ -377,48 +341,6 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 
 			break;
 		}
-
-		/*const ThingTemplate* thing = TheThingFactory->findTemplate(data->m_riders[i].m_templateName);
-		if( thing && thing->isEquivalentTo( rider->getTemplate() ) )
-		{
-
-			//This is our rider, so set the correct model condition.
-			obj->setModelConditionState( data->m_riders[ i ].m_modelConditionFlagType );
-
-			//Also set the correct weaponset flag
-			obj->setWeaponSetFlag( data->m_riders[ i ].m_weaponSetFlag );
-
-			//Also set the object status
-			obj->setStatus( MAKE_OBJECT_STATUS_MASK( data->m_riders[ i ].m_objectStatusType ) );
-
-			//Set the new commandset override
-			obj->setCommandSetStringOverride( data->m_riders[ i ].m_commandSet );
-			TheControlBar->markUIDirty();	// Refresh the UI in case we are selected
-
-			//Change the locomotor.
-			AIUpdateInterface* ai = obj->getAI();
-			if( ai )
-			{
-				ai->chooseLocomotorSet( data->m_riders[ i ].m_locomotorSetType );
-			}
-
-			if( obj->getStatusBits().test( OBJECT_STATUS_STEALTHED ) )
-			{
-				StealthUpdate* stealth = obj->getStealth();
-				if( stealth )
-				{
-					stealth->markAsDetected();
-				}
-			}
-
-			//Transfer experience from the rider to the bike.
-			ExperienceTracker *riderTracker = rider->getExperienceTracker();
-			ExperienceTracker *bikeTracker = obj->getExperienceTracker();
-			bikeTracker->setVeterancyLevel( riderTracker->getVeterancyLevel(), FALSE );
-			riderTracker->setExperienceAndLevel( 0, FALSE );
-
-			break;
-		}*/
 	}
 	if (!found && !data->m_ridersCustom.empty())
 	{
@@ -427,23 +349,7 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 			found = riderChangeContainingCheck( rider, (*it) );
 			if (found == TRUE)
 			{
-				// Set this in case when the new Status Types fade out and the Object depends on the status type for weapon switching 
-				//m_checkedRemove = TRUE;
-
-				// Hackky way to fix the Upgrade Template and Stautus Change List on Loading issue.
-				//if(m_loaded == TRUE)
-				//{
-					//m_theRiderLastUpgrade = -1;
-					//m_theRiderLastUpgradeName = NULL;
-
-					// Clear the Data Record since the New Rider is given by Containing
-					// m_theRiderDataRecord.clear();
-				//}
-
-				// Register the new rider name for checking.
-				//m_theRiderName = (*it).m_templateName;
-
-				// Clear the Rider Data Record and assign it as the Last Template, only if the game is loaded or its past its first frame,
+				// Clear the Rider Data Record and assign it as the Last Template, only if the game is loaded or its the Inital Rider,
 				// or else it will register new values on loading.
 				// Register it as the first Template becuase the Upgrade and Status Checks will always need a template to refer to.
 				if(m_loaded || m_theRiderDataRecord.empty())
@@ -464,16 +370,11 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 		}
 	}
 
+	//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+	//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
+
 	//Extend base class
 	TransportContain::onContaining( rider, wasSelected );
-
-	// Save Load Stuff, must do Everytime the game is loaded because OnContaining screws up the current status after loaded.
-	//if(m_firstChange)
-	//{
-	//	riderRemoveAll();
-	//	riderGiveTemplate(m_theRiderToChange, m_theRiderName);
-	//	m_checkedRemove = FALSE;
-	//}
 
 	m_containing = FALSE;
 }
@@ -484,19 +385,8 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 	const ThingTemplate* thing = TheThingFactory->findTemplate( riderInfo.m_templateName );
 	if (thing->isEquivalentTo(rider->getTemplate() ) )
 	{
-		//if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-		//{
-		//	riderRemoveTemplate(m_theRiderToChangeBackup, m_theRiderNameBackup);
-		//	m_theRiderToChangeBackup = -1;
-		//}
-
-		// If the applied status is removed from the unit, remove the statuses respectively from the unit.
-		//riderRemoveTemplate(m_theRiderToChange, m_theRiderName);
-
 		// Skip an instance of Comparison after the New Rider has been set. Mandatory everytime a new Template is set.
 		m_dontCompare = TRUE;
-
-		//riderRemoveAll();
 
 		//This is our rider, so set the correct model condition.
 		obj->setModelConditionState( riderInfo.m_modelConditionFlagType );
@@ -577,33 +467,6 @@ void RiderChangeContain::onRemoving( Object *rider )
 			removeRiderDataRecord(charName);
 			break;
 		}
-
-		/*const ThingTemplate* thing = TheThingFactory->findTemplate(data->m_riders[i].m_templateName);
-		if( thing && thing->isEquivalentTo( rider->getTemplate() ) )
-		{
-			//This is our rider, so clear the current model condition.
-			bike->clearModelConditionFlags( MAKE_MODELCONDITION_MASK2( data->m_riders[ i ].m_modelConditionFlagType, MODELCONDITION_DOOR_1_CLOSING ) );
-
-			//Also clear the current weaponset flag
-			bike->clearWeaponSetFlag( data->m_riders[ i ].m_weaponSetFlag );
-
-			//Also clear the object status
-			bike->clearStatus( MAKE_OBJECT_STATUS_MASK( data->m_riders[ i ].m_objectStatusType ) );
-
-			if( rider->getControllingPlayer() != NULL )
-			{
-				//Wow, completely unforseeable game teardown order crash.  SetVeterancyLevel results in a call to player
-				//about upgrade masks.  So if we have a null player, it is game teardown, so don't worry about transfering exp.
-
-				//Transfer experience from the bike to the rider.
-				ExperienceTracker *riderTracker = rider->getExperienceTracker();
-				ExperienceTracker *bikeTracker = bike->getExperienceTracker();
-				riderTracker->setVeterancyLevel( bikeTracker->getVeterancyLevel(), FALSE );
-				bikeTracker->setExperienceAndLevel( 0, FALSE );
-			}
-
-			break;
-		}*/
 	}
 	if (!found && !data->m_ridersCustom.empty())
 	{
@@ -736,6 +599,22 @@ UpdateSleepTime RiderChangeContain::update()
 		loadPreviousState();
 		m_loaded = TRUE;
 	}
+	else if(m_loaded && m_theRiderDataRecord.empty())
+	{
+		// If there isn't a Rider template in the Record, we need to make one so it is compatible with the Status and Upgrade Checks.
+		RiderData riderData;
+		char charName[2];
+		sprintf( charName, "%d", 0 );
+		riderData.templateName = charName;
+		riderData.timeFrame = 1; // For indicating it as a Containing Template, in case of usage
+		riderData.statusType = (ObjectStatusType)0;
+		riderData.customStatusType = NULL;
+
+		m_theRiderDataRecord.push_back(riderData);
+
+		//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+		//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
+	}
 
 	// Don't compare the Status Types after the Template Switch, because OnContaining also sets and removes Statuses
 	if(m_dontCompare)
@@ -781,46 +660,21 @@ Bool RiderChangeContain::riderTemplateIsValidChange(const AsciiString& newCustom
 		if (!data->m_riders[ i ].m_objectCustomStatusType.isEmpty() && data->m_riders[ i ].m_objectCustomStatusType == newCustomStatus)
 		{
 			isValidChange = TRUE;
-			
-				// Save Load Stuff, clear everything once loaded because OnContaining screws up loading existing statuses on Riders
-				//if(m_firstChange)
-				//	riderRemoveAll();
 
-				// Also Save Load Stuff, related to fix Real Time Statuses not loaded on saves.
-				//if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-				//{
-				//	m_theRiderToChangeBackup = -1;
-				//}
+			//Find the rider in the latest list and clear various data.
+			removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
 
-				// Remove both the current and last Rider Templates because if a new status is applied on top of the other
-				// It will only remove one (invalid) template that has been updated from last time a Status is set
-				//riderRemoveTemplate(m_theRiderToChange, m_theRiderName);
+			// Register the current Frame for assigning the New Template
+			RiderData riderData;
+			char charName[2];
+			sprintf( charName, "%d", i );
+			riderData.templateName = charName;
+			riderData.timeFrame = TheGameLogic->getFrame();
+			riderData.statusType = (ObjectStatusType)0;
+			riderData.customStatusType = newCustomStatus;
 
-				//riderRemoveTemplate(m_theRiderLastValid, m_theRiderLastName);
-
-				// Statuses screwed up this system, so just reset everything
-				//riderRemoveAll();
-
-				//m_theRiderLastValid = m_theRiderToChange;
-				//m_theRiderLastName = m_theRiderName;
-
-				//Find the rider in the latest list and clear various data.
-				removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
-
-				// Register the current Frame for assigning the New Template
-				RiderData riderData;
-				char charName[2];
-				sprintf( charName, "%d", i );
-				riderData.templateName = charName;
-				riderData.timeFrame = TheGameLogic->getFrame();
-				riderData.statusType = (ObjectStatusType)0;
-				riderData.customStatusType = newCustomStatus;
-
-				// Give the new template
-				riderGiveTemplate(riderData);
-
-				//m_theRiderToChange = i;
-				//m_theRiderName = NULL;
+			// Give the new template
+			riderGiveTemplate(riderData);
 
 			break;
 		}
@@ -833,43 +687,19 @@ Bool RiderChangeContain::riderTemplateIsValidChange(const AsciiString& newCustom
 			if ( !(*it).m_objectCustomStatusType.isEmpty() && (*it).m_objectCustomStatusType == newCustomStatus )
 			{
 				isValidChange = TRUE;
+
+				//Find the rider in the latest list and clear various data.
+				removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
+
+				// Register the current Frame for assigning the New Template
+				RiderData riderData;
+				riderData.templateName = (*it).m_templateName;
+				riderData.timeFrame = TheGameLogic->getFrame();
+				riderData.statusType = (ObjectStatusType)0;
+				riderData.customStatusType = newCustomStatus;
 				
-					// Save Load Stuff, clear everything once loaded because OnContaining screws up loading existing statuses on Riders
-					//if(m_firstChange)
-					//	riderRemoveAll();
-
-					// Also Save Load Stuff, related to fix Real Time Statuses not loaded on saves.
-					//if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-					//{
-					//	m_theRiderToChangeBackup = -1;
-					//}
-
-					// Remove both the current and last Rider Templates because if a new status is applied on top of the other
-					// It will only remove one (invalid) template that has been updated from last time a Status is set
-					//riderRemoveTemplate(m_theRiderToChange, m_theRiderName);
-
-					//riderRemoveTemplate(m_theRiderLastValid, m_theRiderLastName);
-
-					// Statuses screwed up this system, so just reset everything
-					//riderRemoveAll();
-					
-					//m_theRiderLastValid = m_theRiderToChange;
-					//m_theRiderLastName = m_theRiderName;
-
-					//Find the rider in the latest list and clear various data.
-					removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
-
-					// Register the current Frame for assigning the New Template
-					RiderData riderData;
-					riderData.templateName = (*it).m_templateName;
-					riderData.timeFrame = TheGameLogic->getFrame();
-					riderData.statusType = (ObjectStatusType)0;
-					riderData.customStatusType = newCustomStatus;
-					
-					// Give the new template
-					riderGiveTemplate(riderData);
-
-					//m_theRiderName = (*it).m_templateName;
+				// Give the new template
+				riderGiveTemplate(riderData);
 
 				break;
 			}
@@ -892,45 +722,20 @@ Bool RiderChangeContain::riderTemplateIsValidChange(ObjectStatusMaskType newStat
 		{
 			isValidChange = TRUE;
 
-				// Save Load Stuff, clear everything once loaded because OnContaining screws up loading existing statuses on Riders
-				//if(m_firstChange)
-				//	riderRemoveAll();
+			//Find the rider in the latest list and clear various data.
+			removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
 
-				// Also Save Load Stuff, related to fix Real Time Statuses not loaded on saves.
-				//if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-				//{
-				//	m_theRiderToChangeBackup = -1;
-				//}
+			// Register the current Frame for assigning the New Template
+			RiderData riderData;
+			char charName[2];
+			sprintf( charName, "%d", i );
+			riderData.templateName = charName;
+			riderData.timeFrame = TheGameLogic->getFrame();
+			riderData.statusType = data->m_riders[ i ].m_objectStatusType;
+			riderData.customStatusType = NULL;
 
-				// Remove both the current and last Rider Templates because if a new status is applied on top of the other
-				// It will only remove one (invalid) template that has been updated from last time a Status is set
-				//riderRemoveTemplate(m_theRiderToChange, m_theRiderName);
-
-				//riderRemoveTemplate(m_theRiderLastValid, m_theRiderLastName);
-
-				// Statuses screwed up this system, so just reset everything
-				//riderRemoveAll();
-
-				//m_theRiderLastValid = m_theRiderToChange;
-				//m_theRiderLastName = m_theRiderName;
-
-				//Find the rider in the latest list and clear various data.
-				removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
-
-				// Register the current Frame for assigning the New Template
-				RiderData riderData;
-				char charName[2];
-				sprintf( charName, "%d", i );
-				riderData.templateName = charName;
-				riderData.timeFrame = TheGameLogic->getFrame();
-				riderData.statusType = data->m_riders[ i ].m_objectStatusType;
-				riderData.customStatusType = NULL;
-
-				// Give the new template
-				riderGiveTemplate(riderData);
-
-				//m_theRiderToChange = i;
-				//m_theRiderName = NULL;
+			// Give the new template
+			riderGiveTemplate(riderData);
 
 			break;
 		}
@@ -944,38 +749,19 @@ Bool RiderChangeContain::riderTemplateIsValidChange(ObjectStatusMaskType newStat
 			{
 				isValidChange = TRUE;
 
-					// Also Save Load Stuff, related to fix Real Time Statuses not loaded on saves.
-					//if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-					//{
-					//	m_theRiderToChangeBackup = -1;
-					//}
+				//Find the rider in the latest list and clear various data.
+				removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
 
-					// Remove both the current and last Rider Templates because if a new status is applied on top of the other
-					// It will only remove one (invalid) template that has been updated from last time a Status is set
-					//riderRemoveTemplate(m_theRiderToChange, m_theRiderName);
+				// Register the current Frame for assigning the New Template
+				RiderData riderData;
+				riderData.templateName = (*it).m_templateName;
+				riderData.timeFrame = TheGameLogic->getFrame();
+				riderData.statusType = (ObjectStatusType)(*it).m_objectStatusType;
+				riderData.customStatusType = NULL;
+				
+				// Give the new template
+				riderGiveTemplate(riderData);
 
-					//riderRemoveTemplate(m_theRiderLastValid, m_theRiderLastName);
-
-					// Statuses screwed up this system, so just reset everything
-					//riderRemoveAll();
-
-					//m_theRiderLastValid = m_theRiderToChange;
-					//m_theRiderLastName = m_theRiderName;
-
-					//Find the rider in the latest list and clear various data.
-					removeRiderTemplate(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName, FALSE);
-
-					// Register the current Frame for assigning the New Template
-					RiderData riderData;
-					riderData.templateName = (*it).m_templateName;
-					riderData.timeFrame = TheGameLogic->getFrame();
-					riderData.statusType = (ObjectStatusType)(*it).m_objectStatusType;
-					riderData.customStatusType = NULL;
-					
-					// Give the new template
-					riderGiveTemplate(riderData);
-
-					//m_theRiderName = (*it).m_templateName;
 
 				break;
 			}
@@ -1188,13 +974,6 @@ void RiderChangeContain::riderGiveTemplate(RiderData riderData)
 			stealth->markAsDetected();
 		}
 	}
-
-	// Set this in case when the new Status Types fade out and the Object depends on the status type for weapon switching 
-	//m_checkedRemove = TRUE;
-
-	// Hackky way to fix the Upgrade Template on Loading issue.
-	//m_theRiderLastUpgrade = -1;
-	//m_theRiderLastUpgradeName = NULL;
 }
 
 
@@ -1278,7 +1057,7 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 
 // Stripping function that basically removes all Rider Templates from the Unit. 
 //... Desperate times calls for desperate measures. 
-void RiderChangeContain::riderRemoveAll()
+/*void RiderChangeContain::riderRemoveAll()
 {
 	//m_firstChange = FALSE;
 	m_dontCompare = TRUE;
@@ -1317,7 +1096,7 @@ void RiderChangeContain::riderRemoveAll()
 			obj->clearCustomStatus((*it).m_objectCustomStatusType);
 		}
 	}
-}
+}*/
 
 // Register the Upgrades declared within Rider Names 
 // This process is carried out only once. As it get from the Riders List
@@ -1483,9 +1262,8 @@ void RiderChangeContain::doStatusChecks()
 		}
 	}
 
-	// Register the Status Types for future checking
-	//m_prevStatus = NewStatus;
-	//m_prevCustomStatusTypes = NewCustomStatusTypes;
+	//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+	//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
 }
 
 void RiderChangeContain::doUpgradeChecks()
@@ -1647,668 +1425,10 @@ void RiderChangeContain::doUpgradeChecks()
 			break;
 		}
 	}
+
+	//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+	//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
 }
-
-// Obselete Codes
-
-/*
-UpdateSleepTime RiderChangeContain::update()
-{
-	// HOORAY NO MORE FRAME BASED UPDATES
-	Object* obj = getObject();
-
-	//A hackyy way to fix register upgrades and statuses on loading.
-	if(m_doRemovalOnLoad && !m_loaded)
-	{
-		m_firstChange = TRUE;
-		m_firstUpgrade = TRUE;
-		m_firstStatusRemoval = TRUE;
-		m_statusLoadDelay = 5;
-	}
-
-	// Skip instances of template update if the the object is currently doing template switch from Riders.
-	if(!m_containing)
-	{
-		// A hackky way of fixing loading and spawning templates
-		if(!m_dontCompare && ( m_addDelay > 0) )
-		{
-			if(m_statusLoadDelay>0 && !m_loaded)
-				m_statusDelayCheck = TRUE;
-			m_doRemovalOnLoad = TRUE;
-			m_loaded = TRUE;
-		}
-
-		// Only switch templates if the Rider is not required to. For this instance, a Status Type
-		if (data->m_riderNotRequired == TRUE)
-		{
-			if(!m_dontCompare) {
-				changeRiderTemplateOnStatusUpdate();
-			} else {
-				if(!m_loaded && m_theRiderLastValidBackup >=0 && m_theRiderToChangeBackup >= 0)
-					riderGiveTemplateStatus(m_theRiderToChangeBackup, m_theRiderNameBackup);
-				m_dontCompare = FALSE;
-				// Only do the upgrade changes on the Next Frame after it is just being produced.
-				// The value is 2, but we require only a one frame delay after the Status Update is executed.
-				// Therefore the countdown starts from below.
-				m_addDelay = 2;
-			}
-
-			// If both Rider Status Switch and 
-			if(data->m_useUpgradeNames == FALSE)
-			{
-				m_prevStatus = obj->getStatusBits();
-				m_prevCustomStatusTypes = obj->getCustomStatus();
-			}
-		}
-		
-		// Switch the template everytime a New Upgrade has been triggered.
-		if(data->m_useUpgradeNames == TRUE)
-		{
-			if (!m_dontCompare)
-			{ 
-				if(!m_registeredUpgradeNames)
-					doRegisterUpgradeNames();
-				else if (m_addDelay <= 0)
-					riderUpdateUpgradeModules();
-			}
-			else
-			{
-				// Only do the upgrade changes on the Next Frame after it is just being produced.
-				// The value is 2, but we require only a one frame delay after the Status Update is executed.
-				// Therefore the countdown starts from below.
-				m_addDelay = 2;
-				m_dontCompare = FALSE;
-			}
-
-			if(data->m_riderNotRequired == TRUE)
-			{
-				m_prevStatus = obj->getStatusBits();
-				m_prevCustomStatusTypes = obj->getCustomStatus();
-			}
-		}
-
-		if(m_addDelay > 0)
-			m_addDelay--;
-
-		if(m_statusLoadDelay > 0)
-			m_statusLoadDelay--;
-
-		if(m_loaded && m_resetLaterFrame > 0)
-		{
-			m_resetLaterFrame--;
-			if(m_resetLaterFrame < 1)
-			{
-				riderReset();
-			}
-		}
-	}
-}
-
-// The main Rider Switching function for StatusTypes
-void RiderChangeContain::changeRiderTemplateOnStatusUpdate()
-{
-	if(m_firstStatusRemoval && m_statusLoadDelay > 0 && m_theRiderToChangeBackup >= 0)
-	{
-		riderGiveTemplateStatus(m_theRiderToChangeBackup, m_theRiderNameBackup);
-		m_checkedRemove = FALSE;
-	}
-
-	Object* obj = getObject();
-
-	ObjectStatusMaskType NewStatus = obj->getStatusBits();
-	ObjectCustomStatusType NewCustomStatusTypes = obj->getCustomStatus();
-	AsciiString NewCustomStatus;
-
-	Bool checkChange = FALSE;
-
-	// Check for the differences in the change in statuses.
-	// Also get the values changed to register the new condition to the unit.
-	if(NewStatus != m_prevStatus)
-	{
-		ObjectStatusMaskType oldStatus = m_prevStatus;
-		oldStatus.clear(NewStatus);
-		NewStatus.clear(m_prevStatus);
-		if(riderTemplateIsValidChange( NewStatus, TRUE ) )
-		{
-			checkChange = TRUE;
-			m_checkedRemove = FALSE;
-		}
-		else if(!m_checkedRemove)
-		{
-			if(riderTemplateIsValidChange( oldStatus, FALSE ) )
-			{
-				// Statuses screwed up this system, so just reset everything
-				riderRemoveAll();
-
-				// Also Save Load Stuff, related to fix Real Time Statuses not loaded on saves.
-				if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-				{
-					m_theRiderToChangeBackup = -1;
-				}
-				
-				// Save Load Stuff, related to granting the Last Template before the Status was granted. Due to how Save Load system works,
-				// it scrambles both existing Rider Info.
-				if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderLastValidBackup >= 0)
-				{
-					m_firstStatusRemoval = FALSE;
-					m_theRiderToChange = m_theRiderLastValidBackup;
-					m_theRiderName = m_theRiderLastNameBackup;
-
-					riderGiveTemplate(m_theRiderLastValidBackup, m_theRiderLastNameBackup);
-				}
-				else
-				{
-					m_theRiderToChange = m_theRiderLastValid;
-					m_theRiderName = m_theRiderLastName;
-
-					riderGiveTemplate(m_theRiderLastValid, m_theRiderLastName);
-				}
-
-				checkChange = TRUE;
-			}
-		}
-	}
-	if(!checkChange && !NewCustomStatusTypes.empty() && NewCustomStatusTypes != m_prevCustomStatusTypes)
-	{
-		for (ObjectCustomStatusType::const_iterator it = NewCustomStatusTypes.begin(); it != NewCustomStatusTypes.end(); ++it)
-		{
-			if((*it).second == 1)
-			{
-				ObjectCustomStatusType::const_iterator it2 = m_prevCustomStatusTypes.find((*it).first);
-				if(m_prevCustomStatusTypes.empty() || it2 == m_prevCustomStatusTypes.end() || ( it2 != m_prevCustomStatusTypes.end() && (*it2).second == 0) )
-				{
-					if(riderTemplateIsValidChange( (*it).first, TRUE ) )
-					{
-						m_checkedRemove = FALSE;
-						break;
-					}
-				} 
-			}
-			else if(!m_checkedRemove)
-			{
-				ObjectCustomStatusType::const_iterator it2 = m_prevCustomStatusTypes.find((*it).first);
-				if(it2 != m_prevCustomStatusTypes.end() && (*it2).second == 1)
-				{
-					if(riderTemplateIsValidChange( (*it).first, FALSE) )
-					{
-						// Statuses screwed up this system, so just reset everything
-						riderRemoveAll();
-
-						// Also Save Load Stuff, related to fix Real Time Statuses not loaded on saves.
-						if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderToChangeBackup>= 0)
-						{
-							m_theRiderToChangeBackup = -1;
-						}
-						
-						// Save Load Stuff, related to granting the Last Template before the Status was granted. Due to how Save Load system works,
-						// it scrambles both existing Rider Info.
-						if(m_firstStatusRemoval && m_statusLoadDelay <= 0 && m_statusDelayCheck == TRUE && m_theRiderLastValidBackup >= 0)
-						{
-							m_firstStatusRemoval = FALSE;
-							m_theRiderToChange = m_theRiderLastValidBackup;
-							m_theRiderName = m_theRiderLastNameBackup;
-
-							riderGiveTemplate(m_theRiderLastValidBackup, m_theRiderLastNameBackup);
-						}
-						else
-						{
-							m_theRiderToChange = m_theRiderLastValid;
-							m_theRiderName = m_theRiderLastName;
-
-							riderGiveTemplate(m_theRiderLastValid, m_theRiderLastName);
-						}
-
-						break;
-					}
-				}
-			}
-		}
-	}
-}
-
-void RiderChangeContain::riderGiveTemplateStatus(Int RiderIndex, const AsciiString& RiderName)
-{
-	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
-
-	Object* obj = getObject();
-
-	// After we clear the previous condition types, we register the new conditions.
-	// We first check whether the Rider is within Custom List. 
-	if(!RiderName.isEmpty())
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			if((*it).m_templateName == RiderName)
-			{
-				if ( (*it).m_objectCustomStatusType.isEmpty() )
-				{
-					obj->setStatus( MAKE_OBJECT_STATUS_MASK( (*it).m_objectStatusType ) );
-				}
-				else
-				{
-					obj->setCustomStatus( (*it).m_objectCustomStatusType );
-				}
-
-				break;
-			}
-		}
-	}
-	// If it is not within Custom List, then it must be from the Index List.
-	else
-	{
-		if (data->m_riders[RiderIndex].m_objectCustomStatusType.isEmpty())
-		{
-			obj->setStatus( MAKE_OBJECT_STATUS_MASK( data->m_riders[RiderIndex].m_objectStatusType ) );
-		}
-		else
-		{
-			obj->setCustomStatus( data->m_riders[RiderIndex].m_objectCustomStatusType );
-		}
-	}
-}
-
-// Function to Remove a Rider Template from the Object.
-void RiderChangeContain::riderRemoveTemplate(const AsciiString& RiderTemplate)
-{
-	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
-
-	Object* obj = getObject();
-
-	const char* RiderChar = RiderTemplate.str();
-
-	// For clearing a Rider Set. Although this is mainly use for clearing Old Conditions.
-	// There cannot be any mistakes since if the Object will be random if there are two conditions co-existing.
-	if(isdigit(*RiderChar))
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			if((*it).m_templateName == RiderName)
-			{
-				obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK( (*it).m_modelConditionFlagType ) );
-
-				obj->clearWeaponSetFlag( (*it).m_weaponSetFlag );
-
-				if ((*it).m_objectCustomStatusType.isEmpty())
-				{
-					obj->clearStatus(MAKE_OBJECT_STATUS_MASK((*it).m_objectStatusType));
-				}
-				else
-				{
-					obj->clearCustomStatus((*it).m_objectCustomStatusType);
-				}
-
-				break;
-			}
-		}
-	}
-	else
-	{
-		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK( data->m_riders[ RiderIndex ].m_modelConditionFlagType ) );
-
-		obj->clearWeaponSetFlag( data->m_riders[ RiderIndex ].m_weaponSetFlag );
-
-		if (data->m_riders[ RiderIndex ].m_objectCustomStatusType.isEmpty())
-		{
-			obj->clearStatus(MAKE_OBJECT_STATUS_MASK(data->m_riders[ RiderIndex ].m_objectStatusType));
-		}
-		else
-		{
-			obj->clearCustomStatus(data->m_riders[ RiderIndex ].m_objectCustomStatusType);
-		}
-	}
-
-	// Make sure the object does not check for removal again if the Template is removed.
-	// m_checkedRemove = TRUE;
-
-}
-
-void RiderChangeContain::riderReset()
-{
-	// Do this, a bit costly but nonetheless
-	riderRemoveAll();
-	
-	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
-
-	Object* obj = getObject();
-
-	// After we clear the previous condition types, we register the new conditions.
-	// We first check whether the Rider is within Custom List. 
-	if(!m_theRiderName.isEmpty())
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			if((*it).m_templateName == m_theRiderName)
-			{
-				if ( (*it).m_objectCustomStatusType.isEmpty() )
-				{
-					obj->setStatus( MAKE_OBJECT_STATUS_MASK( (*it).m_objectStatusType ) );
-				}
-				else
-				{
-					obj->setCustomStatus( (*it).m_objectCustomStatusType );
-				}
-				
-				//This is our rider, so set the correct model condition.
-				obj->setModelConditionState((*it).m_modelConditionFlagType);
-
-				//Also set the correct weaponset flag
-				obj->setWeaponSetFlag((*it).m_weaponSetFlag);
-
-				//Set the new commandset override
-				obj->setCommandSetStringOverride((*it).m_commandSet);
-				TheControlBar->markUIDirty();	// Refresh the UI in case we are selected
-
-				//Change the locomotor.
-				AIUpdateInterface* ai = obj->getAI();
-				if (ai)
-				{
-					ai->chooseLocomotorSet((*it).m_locomotorSetType);
-				}
-
-				break;
-			}
-		}
-	}
-	// If it is not within Custom List, then it must be from the Index List.
-	else
-	{
-		for( int i = 0; i < MAX_RIDERS; i++ )
-		{
-			if(i == m_theRiderToChange)
-			{
-				if (data->m_riders[ i ].m_objectCustomStatusType.isEmpty())
-				{
-					obj->setStatus( MAKE_OBJECT_STATUS_MASK( data->m_riders[ i ].m_objectStatusType ) );
-				}
-				else
-				{
-					obj->setCustomStatus( data->m_riders[ i ].m_objectCustomStatusType );
-				}
-
-				//This is our rider, so set the correct model condition.
-				obj->setModelConditionState(data->m_riders[i].m_modelConditionFlagType); 
-
-				//Also set the correct weaponset flag
-				obj->setWeaponSetFlag(data->m_riders[ i ].m_weaponSetFlag);
-
-				//Set the new commandset override
-				obj->setCommandSetStringOverride(data->m_riders[ i ].m_commandSet);
-				TheControlBar->markUIDirty();	// Refresh the UI in case we are selected
-
-				//Change the locomotor.
-				AIUpdateInterface* ai = obj->getAI();
-				if (ai)
-				{
-					ai->chooseLocomotorSet(data->m_riders[ i ].m_locomotorSetType);
-				}
-
-				break;
-			} 
-		}
-	}
-
-	// Skip an instance of Comparison after the New Rider has been set. Mandatory everytime a new Template is set.
-	m_dontCompare = TRUE;
-
-	// Set this in case when the new Status Types fade out and the Object depends on the status type for weapon switching 
-	m_checkedRemove = TRUE;
-}
-
-// Function not working. Leave it here for future improvements.
-// I have been working on this for 3 days and finally its robust, functional with both save and load.
-// This is the previous find function that determines the Template based on StatusTypes
-Bool RiderChangeContain::riderTemplateIsValidChange(ObjectStatusMaskType newStatus, const AsciiString& newCustomStatus)
-{
-	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
-
-	Bool isValidChange = FALSE;
-
-	// Get if the new Status Type is within the Unit's Rider list.
-	for( int i = 0; i < MAX_RIDERS; i++ )
-	{
-		if (data->m_riders[ i ].m_objectCustomStatusType.isEmpty())
-		{
-			if( newStatus.test( data->m_riders[ i ].m_objectStatusType ) )
-				isValidChange = TRUE;
-		}
-		else
-		{
-			if (!newCustomStatus.isEmpty() && data->m_riders[ i ].m_objectCustomStatusType == newCustomStatus)
-				isValidChange = TRUE;
-		}
-		// If it is within the Unit's Rider list, clear the Old Rider Template and register the new Rider Template.
-		if(isValidChange)
-		{
-			m_theRiderLastValid = m_theRiderToChange;
-			m_theRiderLastName = m_theRiderName;
-			m_theRiderToChange = i;
-			m_theRiderName = NULL;
-			break;
-		}
-	}
-	// If not found within default Rider List, check Custom Rider List
-	if(!isValidChange)
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			if ( (*it).m_objectCustomStatusType.isEmpty() )
-			{
-				if( newStatus.test( (*it).m_objectStatusType ) )
-					isValidChange = TRUE;
-			}
-			else
-			{
-				if ( !newCustomStatus.isEmpty() && (*it).m_objectCustomStatusType == newCustomStatus )
-					isValidChange = TRUE;
-			}
-			// If it is within the Unit's Custom Rider list, clear the Old Rider Template and register the new Rider Template.
-			if(isValidChange)
-			{
-				m_theRiderLastValid = m_theRiderToChange;
-				m_theRiderLastName = m_theRiderName;
-				m_theRiderName = (*it).m_templateName;
-				break;
-			}
-		}
-	}
-	return isValidChange;
-}
-
-// Find whether the new statuses exist within the Riders List
-// This is only used for status checking, you can also modify the function for other values.
-Bool RiderChangeContain::riderRemoveTemplateStatusTypes(ObjectStatusType oldStatus, const AsciiString& oldCustomStatus)
-{
-	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
-
-	Object* obj = getObject();
-
-	Bool doRemove = FALSE;
-
-	// Get if the new Status Type is within the Unit's Rider list.
-	for( int i = 0; i < MAX_RIDERS; i++ )
-	{
-		if (data->m_riders[ i ].m_objectCustomStatusType.isEmpty())
-		{
-			if( data->m_riders[i].m_objectStatusType == oldStatus )
-				doRemove = TRUE;
-		}
-		else
-		{
-			if (data->m_riders[ i ].m_objectCustomStatusType == oldCustomStatus)
-				doRemove = TRUE;
-		}
-		if(doRemove)
-		{
-			obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK( data->m_riders[ i ].m_modelConditionFlagType ) );
-
-			obj->clearWeaponSetFlag( data->m_riders[ i ].m_weaponSetFlag );
-
-			if (data->m_riders[ i ].m_objectCustomStatusType.isEmpty())
-			{
-				obj->clearStatus(MAKE_OBJECT_STATUS_MASK(data->m_riders[ i ].m_objectStatusType));
-			}
-			else
-			{
-				obj->clearCustomStatus(data->m_riders[ i ].m_objectCustomStatusType);
-			}
-
-			break;
-		}
-	}
-	// If not found within default Rider List, check Custom Rider List
-	if(!doRemove)
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			if ( (*it).m_objectCustomStatusType.isEmpty() )
-			{
-				if( (*it).m_objectStatusType == oldStatus )
-					doRemove = TRUE;
-			}
-			else
-			{
-				if ( (*it).m_objectCustomStatusType == oldCustomStatus )
-					doRemove = TRUE;
-			}
-			if(doRemove)
-			{
-				obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK( (*it).m_modelConditionFlagType ) );
-
-				obj->clearWeaponSetFlag( (*it).m_weaponSetFlag );
-
-				if ((*it).m_objectCustomStatusType.isEmpty())
-				{
-					obj->clearStatus(MAKE_OBJECT_STATUS_MASK((*it).m_objectStatusType));
-				}
-				else
-				{
-					obj->clearCustomStatus((*it).m_objectCustomStatusType);
-				}
-
-				break;
-			}
-		}
-	}
-	// Make sure the object does not recheck on loop if the Template is removed.
-	m_checkedRemove = TRUE;
-	return doRemove;
-}
-
-
-void RiderChangeContain::riderUpdateUpgradeModules()
-{
-	// Prevent Switching States
-	if(m_dontCompare)
-		return;
-	
-	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
-
-	if (data->m_useUpgradeNames == FALSE)
-		return;
-	
-	if (!m_registeredUpgradeNames)
-		doRegisterUpgradeNames();
-
-	if (m_upgradeTemplates.empty())
-		return;
-
-	Object *obj = getObject();	
-
-	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
-	UpgradeMaskType maskToCheck = playerMask;
-	maskToCheck.set( objectMask );
-
-	// Save Load fixes for Upgrades
-	if(m_firstUpgrade == TRUE)
-	{
-		// We only do this Once!
-		m_firstUpgrade = FALSE;
-
-		// First things first, reset everything.
-		riderRemoveAll();
-
-		// If the Unit's last Template is granted by an Upgrade, set the current Template Info to that Upgrade, because the game reloads Everything when triggering OnContaining.
-		if(m_theRiderLastUpgrade >= 0)
-		{
-			m_theRiderToChange = m_theRiderLastUpgrade;
-			m_theRiderName = m_theRiderLastUpgradeName;
-			m_theRiderToChangeBackup = m_theRiderToChange;
-			m_theRiderNameBackup = m_theRiderName;
-			m_theRiderLastValidBackup = m_theRiderToChange;
-			m_theRiderLastNameBackup = m_theRiderName;
-
-			// Also prevent other Template Changes from triggering
-			m_firstStatusRemoval = FALSE;
-			m_statusLoadDelay = 0;
-			m_theRiderToChangeBackup = -1;
-			m_resetLaterFrame = 4;
-		}
-		// Sets the Unit's Template to the Intended Template Info.
-		riderGiveTemplate(m_theRiderToChange, m_theRiderName);
-
-		// The Upgrade System checks for the current Upgrade State Existed is the same for the last frame. As we have just set the intended Template, configure it to return.
-		m_prevMaskToCheck = maskToCheck;
-		return;
-	}
-
-	if(maskToCheck == m_prevMaskToCheck)
-		return;
-
-	// If any new Upgrades are installed check for that instead.
-	UpgradeMaskType newMask = maskToCheck;
-	newMask.clear( m_prevMaskToCheck );
-
-	for (std::vector<RiderUpgrade>::const_iterator it = m_upgradeTemplates.begin(); it != m_upgradeTemplates.end(); ++it)
-	{
-		Bool doChange = FALSE;
-		
-		const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade( (*it).templateName );
-		UpgradeMaskType upgradeMask = upgradeTemplate->getUpgradeMask();
-
-		// See if upgrade is found in the player completed upgrades or within the object completed upgrades
-		if ( newMask.testForAny(upgradeMask) && ( playerMask.testForAny(upgradeMask) || objectMask.testForAny(upgradeMask) ) )
-		{
-			doChange = TRUE;
-		}
-		
-		//if ( obj->hasUpgrade(upgradeTemplate) || player->hasUpgradeComplete(upgradeTemplate) )
-		if (doChange)
-		{
-			// Save Load Stuff, clear everything once loaded because OnContaining screws up loading existing statuses on Riders
-			if(m_firstChange)
-				riderRemoveAll();
-
-			// First remove the previous Rider Template.
-			riderRemoveTemplate(m_theRiderToChange, m_theRiderName);
-			
-			// Then we add the new Rider Template.
-			if((*it).templateRider >= 0)
-			{
-				riderGiveTemplate((*it).templateRider, NULL);
-				m_theRiderToChange = (*it).templateRider;
-				m_theRiderName = NULL;
-			}
-			else
-			{
-				riderGiveTemplate(0, (*it).templateName);
-				m_theRiderName = (*it).templateName;
-			}
-
-			// Register the Template so for Status Change.
-			m_theRiderLastValid = m_theRiderToChange;
-			m_theRiderLastName = m_theRiderName;
-
-			// Register the Template so that the game recognizes the last Template is granted by an Upgrade
-			m_theRiderLastUpgrade = m_theRiderToChange;
-			m_theRiderLastUpgradeName = m_theRiderName;
-			break;
-		}
-	}
-
-	m_prevMaskToCheck = maskToCheck;
-}*/
-
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -2478,152 +1598,6 @@ void RiderChangeContain::xfer( Xfer *xfer )
 		}  // end for, i
 
 	}  // end else, laod
-
-	/*xfer->xferBool( &m_checkedRemove );
-
-	xfer->xferBool ( &m_doRemovalOnLoad );
-
-	xfer->xferInt( &m_addDelay );
-
-	xfer->xferInt( &m_theRiderToChange );
-
-	xfer->xferAsciiString( &m_theRiderName );
-
-	xfer->xferInt( &m_theRiderLastValid );
-
-	xfer->xferAsciiString( &m_theRiderLastName );
-
-	xfer->xferInt( &m_theRiderLastUpgrade );
-
-	xfer->xferAsciiString( &m_theRiderLastUpgradeName );
-
-	if( xfer->getXferMode() == XFER_SAVE )
-	{
-		AsciiString templateName = m_theRiderLastName;
-		Int templateIndex = m_theRiderLastValid;
-		xfer->xferAsciiString(&templateName);
-		xfer->xferInt(&templateIndex);
-
-		AsciiString templateName2 = m_theRiderName;
-		Int templateIndex2 = m_theRiderToChange;
-		xfer->xferAsciiString(&templateName2);
-		xfer->xferInt(&templateIndex2);
-	}
-	else if (xfer->getXferMode() == XFER_LOAD)
-	{
-		AsciiString templateName;
-		xfer->xferAsciiString(&templateName);
-		Int templateIndex;
-		xfer->xferInt(&templateIndex);
-		m_theRiderLastNameBackup = templateName;
-		m_theRiderLastValidBackup = templateIndex;
-
-		AsciiString templateName2;
-		xfer->xferAsciiString(&templateName2);
-		Int templateIndex2;
-		xfer->xferInt(&templateIndex2);
-		m_theRiderNameBackup = templateName2;
-		m_theRiderToChangeBackup = templateIndex2;
-	}
-
-	// Xfer Source Code from GameLogic.cpp
-	// Xfer-Hash_Map
-	// Might need checking.
-	if (version >= 7) 
-	{
-		if( xfer->getXferMode() == XFER_SAVE )
-		{
-			for (ObjectCustomStatusType::const_iterator it = m_prevCustomStatusTypes.begin(); it != m_prevCustomStatusTypes.end(); ++it )
-			{
-				AsciiString statusName = it->first;
-				Int flag = it->second;
-				xfer->xferAsciiString(&statusName);
-				xfer->xferInt(&flag);
-			}
-			AsciiString empty;
-			xfer->xferAsciiString(&empty);
-		}
-		else if (xfer->getXferMode() == XFER_LOAD)
-		{
-			if (m_prevCustomStatusTypes.empty() == false)
-			{
-				DEBUG_CRASH(( "GameLogic::xfer - m_prevCustomStatusTypes should be empty, but is not\n"));
-				//throw SC_INVALID_DATA;
-			}
-			
-			for (;;) 
-			{
-				AsciiString statusName;
-				xfer->xferAsciiString(&statusName);
-				if (statusName.isEmpty())
-					break;
-				Int flag;
-				xfer->xferInt(&flag);
-				m_prevCustomStatusTypes[statusName] = flag;
-			}
-		}
-
-		if( xfer->getXferMode() == XFER_SAVE )
-		{
-			for (std::vector<RiderUpgrade>::const_iterator it = m_upgradeTemplates.begin(); it != m_upgradeTemplates.end(); ++it )
-			{
-				AsciiString riderName = it->templateName;
-				Int rider = it->templateRider;
-				xfer->xferAsciiString(&riderName);
-				xfer->xferInt(&rider);
-			}
-			AsciiString empty;
-			xfer->xferAsciiString(&empty);
-		}
-		else if (xfer->getXferMode() == XFER_LOAD)
-		{
-			if (m_upgradeTemplates.empty() == false)
-			{
-				DEBUG_CRASH(( "GameLogic::xfer - m_upgradeTemplates should be empty, but is not\n"));
-				//throw SC_INVALID_DATA;
-			}
-			
-			for (;;) 
-			{
-				AsciiString riderName;
-				xfer->xferAsciiString(&riderName);
-				if (riderName.isEmpty())
-					break;
-				Int rider;
-				xfer->xferInt(&rider);
-				
-				RiderUpgrade rd;
-				rd.templateName = riderName;
-				rd.templateRider = rider;
-				m_upgradeTemplates.push_back(rd);
-			}
-		}
-	}
-
-	// status
-	if( version >= 8 )
-	{
-		m_prevStatus.xfer( xfer );
-	}
-	else
-	{
-		//We are loading an old version, so we must convert it from a 32-bit int to a bitflag
-		UnsignedInt oldStatus;
-		xfer->xferUnsignedInt( &oldStatus );
-
-		//Clear our status
-		m_prevStatus.clear();
-
-		for( int i = 0; i < 32; i++ )
-		{
-			UnsignedInt bit = 1<<i;
-			if( oldStatus & bit )
-			{
-				ObjectStatusTypes status = (ObjectStatusTypes)(i+1);
-				m_prevStatus.set( MAKE_OBJECT_STATUS_MASK( status ) );
-			}
-		}
-	}*/
 
 }  // end xfer
 
