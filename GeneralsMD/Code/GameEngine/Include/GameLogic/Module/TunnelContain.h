@@ -66,7 +66,6 @@ public:
 		// by default, takes no time to heal ppl
 		m_framesForFullHeal = 1.0f;
 		m_removeOtherPassengersAllowToFire = FALSE;
-		//m_activationUpgradeNames.clear();
 		m_upgradeDisableOtherNames.clear();
 		m_upgradeDisableOwnNames.clear();
 		m_initialPayload.count = 0;
@@ -99,8 +98,7 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
-			//{ "UpgradesToTriggerBunker", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_activationUpgradeNames ) },
-			{ "RemoveOtherTunnelsBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
+			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
 			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
 			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
 			{ "InitialPayload", parseInitialPayload, NULL, 0 },
