@@ -163,6 +163,7 @@ public:
 	void clearAllTimeFramedDataRecords();
 	
 	Bool checkHasRiderTemplate( const Object *rider ) const;
+	Bool compareRiderStatus(const AsciiString& rider, Int checkIndex) const;
 	Bool riderChangeContainingCheck( Object *rider, const RiderInfo& riderInfo );
 	Bool riderChangeRemoveCheck( Object *rider, const RiderInfo& riderInfo );
 

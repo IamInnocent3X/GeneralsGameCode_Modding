@@ -427,74 +427,68 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 //-------------------------------------------------------------------------------------------------
 void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly )
 {
-	if(m_containing && !getRiderChangeContainModuleData()->m_dontEvacuateOnEnter)
+	Bool reverse = !m_containing || getRiderChangeContainModuleData()->m_dontEvacuateOnEnter ? TRUE : FALSE;
+	Bool first = TRUE;
+
+	ContainedItemsList::const_iterator it;
+	ContainedItemsList::const_iterator it_last;
+
+	if(reverse)
 	{
-		// Do it the default way for Evacuate on Enter
-		for( ContainedItemsList::const_iterator it = getContainedItemsList()->begin(); it != getContainedItemsList()->end(); )
-		{
-			// save the rider...
-			Object* rider = *it;
-
-			// incr the iterator BEFORE calling the func (if the func removes the rider,
-			// the iterator becomes invalid)
-			++it;
-
-			// call it
-			if( rider->getAI() )
-			{
-				if( instantly )
-				{
-					rider->getAI()->aiExitInstantly( getObject(), commandSource );
-				}
-				else
-				{
-					rider->getAI()->aiExit( getObject(), commandSource );
-				}
-			}
-		}
+		it = getContainedItemsList()->end();
+		it_last = getContainedItemsList()->begin();
 	}
 	else
 	{
-		Bool first = TRUE;
-		// Do it in reverse so that the Rider exits last
-		for (ContainedItemsList::const_iterator it = getContainedItemsList()->end(); it != getContainedItemsList()->begin();)
+		it = getContainedItemsList()->begin();
+		it_last = getContainedItemsList()->end();
+	}
+
+	for(it; it != it_last;)
+	{
+		if(first && reverse)
 		{
-			if(first)
-			{
-				first = FALSE;
-				continue;
-			}
-			// save the rider...
-			Object* rider = *it;
-
-			// decr the iterator BEFORE calling the func (if the func removes the rider,
-			// the iterator becomes invalid)
-			--it;
-
-			// call it
-			if( rider && rider->getAI() )
-			{
-				if( instantly )
-				{
-					rider->getAI()->aiExitInstantly( getObject(), commandSource );
-				}
-				else
-				{
-					rider->getAI()->aiExit( getObject(), commandSource );
-				}
-			}
+			first = FALSE;
+			continue;
 		}
-		Object* first_rider = *getContainedItemsList()->begin();
-		if( first_rider && first_rider->getAI() )
+
+		// save the rider...
+		Object* rider = *it;
+
+		// incr/derc the iterator BEFORE calling the func (if the func removes the rider,
+		// the iterator becomes invalid)
+		if(reverse)
+			--it;
+		else
+			++it;
+
+		// call it
+		if( rider && rider->getAI() )
 		{
 			if( instantly )
 			{
-				first_rider->getAI()->aiExitInstantly( getObject(), commandSource );
+				rider->getAI()->aiExitInstantly( getObject(), commandSource );
 			}
 			else
 			{
-				first_rider->getAI()->aiExit( getObject(), commandSource );
+				rider->getAI()->aiExit( getObject(), commandSource );
 			}
+		}
+	}
+
+	if(!reverse)
+		return;
+
+	Object* first_rider = *getContainedItemsList()->begin();
+	if( first_rider->getAI() )
+	{
+		if( instantly )
+		{
+			first_rider->getAI()->aiExitInstantly( getObject(), commandSource );
+		}
+		else
+		{
+			first_rider->getAI()->aiExit( getObject(), commandSource );
 		}
 	}
 }
@@ -723,6 +717,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 		Int RemoveIndex = 0;
 		Int GrantIndex = -1;
 
+		// If we are exiting or evacuating when not trying to Contain a Rider
 		if(!m_containing && getContainCount() > 0)
 		{
 			Bool isCurRider = FALSE;
@@ -775,56 +770,8 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 			if(!isCurRider)
 				GrantIndex = -1;
-			
-			const char* RiderChar = removeTemplate.str();
-			// Register the Status for checking later
-			if(isdigit(*RiderChar))
-			{
-				Int RiderIndex;
-				if (sscanf( RiderChar, "%d", &RiderIndex ) != 1)
-				{
-					DEBUG_ASSERTCRASH( 0, ("RiderIndex isn't a valid digit: %s.", RiderChar) );
-					throw INI_INVALID_DATA;
-				}
-				if(RiderIndex < 0 || RiderIndex > 8)
-				{
-					DEBUG_ASSERTCRASH( 0, ("RiderIndex is invalid: %d.", RiderIndex) );
-					throw INI_INVALID_DATA;
-				}
-
-				if (data->m_riders[RiderIndex].m_objectCustomStatusType.isEmpty())
-				{
-					if(m_theRiderDataRecord[RemoveIndex].statusType == data->m_riders[RiderIndex].m_objectStatusType)
-						switchTemplate = TRUE;
-				}
-				else
-				{
-					if(m_theRiderDataRecord[RemoveIndex].customStatusType == data->m_riders[RiderIndex].m_objectCustomStatusType)
-						switchTemplate = TRUE;
-				}
-			}
-			// If it is not within Index List, then it must be from the Custom List.
 			else
-			{
-				for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-				{
-					if((*it).m_templateName == removeTemplate)
-					{
-						if ( (*it).m_objectCustomStatusType.isEmpty() )
-						{
-							if(m_theRiderDataRecord[RemoveIndex].statusType == (*it).m_objectStatusType)
-								switchTemplate = TRUE;
-						}
-						else
-						{
-							if(m_theRiderDataRecord[RemoveIndex].customStatusType == (*it).m_objectCustomStatusType)
-								switchTemplate = TRUE;
-						}
-
-						break;
-					}
-				}
-			}
+				switchTemplate = compareRiderStatus(removeTemplate, RemoveIndex);
 		}
 
 		//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
@@ -937,6 +884,7 @@ Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& 
 //-------------------------------------------------------------------------------------------------
 void RiderChangeContain::removeRiderDataRecord(const AsciiString& rider)
 {
+	// Sanity
 	if(m_theRiderDataRecord.empty())
 		return;
 
@@ -950,6 +898,64 @@ void RiderChangeContain::removeRiderDataRecord(const AsciiString& rider)
 		}
 		++it;
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool RiderChangeContain::compareRiderStatus(const AsciiString& rider, Int checkIndex) const
+{
+	// Checking the Status and returns TRUE if the check Index matches the current rider
+	const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
+	const char* RiderChar = rider.str();
+
+	// Check whether rider to check is an Index
+	if(isdigit(*RiderChar))
+	{
+		Int RiderIndex;
+		if (sscanf( RiderChar, "%d", &RiderIndex ) != 1)
+		{
+			DEBUG_ASSERTCRASH( 0, ("RiderIndex isn't a valid digit: %s.", RiderChar) );
+			throw INI_INVALID_DATA;
+		}
+		if(RiderIndex < 0 || RiderIndex > 8)
+		{
+			DEBUG_ASSERTCRASH( 0, ("RiderIndex is invalid: %d.", RiderIndex) );
+			throw INI_INVALID_DATA;
+		}
+
+		if (data->m_riders[RiderIndex].m_objectCustomStatusType.isEmpty())
+		{
+			if(m_theRiderDataRecord[checkIndex].statusType == data->m_riders[RiderIndex].m_objectStatusType)
+				return TRUE;
+		}
+		else
+		{
+			if(m_theRiderDataRecord[checkIndex].customStatusType == data->m_riders[RiderIndex].m_objectCustomStatusType)
+				return TRUE;
+		}
+	}
+	// If it is not within Index List, then it must be from the Custom List.
+	else
+	{
+		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
+		{
+			if((*it).m_templateName == rider)
+			{
+				if ( (*it).m_objectCustomStatusType.isEmpty() )
+				{
+					if(m_theRiderDataRecord[checkIndex].statusType == (*it).m_objectStatusType)
+						return TRUE;
+				}
+				else
+				{
+					if(m_theRiderDataRecord[checkIndex].customStatusType == (*it).m_objectCustomStatusType)
+						return TRUE;
+				}
+			}
+		}
+	}
+
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
