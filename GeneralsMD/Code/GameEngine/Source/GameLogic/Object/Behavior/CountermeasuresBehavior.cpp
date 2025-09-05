@@ -94,6 +94,7 @@ CountermeasuresBehavior::CountermeasuresBehavior( Thing *thing, const ModuleData
 	m_incomingMissiles = 0;
 	m_nextVolleyFrame = 0;
 	m_parked = FALSE;
+	m_hasExecuted = FALSE;
 	m_currentVolley = 0;
 	m_checkDelay = 0;
 	m_dockObjectID = INVALID_ID;
@@ -513,14 +514,16 @@ void CountermeasuresBehavior::upgradeImplementation()
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	if( UpgradeStatus == 1 )
 	{
+		m_hasExecuted = TRUE;
 		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 	}
 	else if( UpgradeStatus == 2 )
 	{
+		m_hasExecuted = FALSE;
 		// this upgrade module is now "not upgraded"
 		setUpgradeExecuted(FALSE);
 	}
@@ -571,6 +574,7 @@ void CountermeasuresBehavior::xfer( Xfer *xfer )
 		xfer->xferObjectID(&m_dockObjectID);
 		xfer->xferUnsignedInt( &m_currentVolley );
 		xfer->xferBool(&m_parked);
+		xfer->xferBool(&m_hasExecuted);
 	}
 
 }  // end xfer

@@ -80,6 +80,7 @@ protected:
 
 private:
 	WeaponSetFlags m_clearedWeaponSetFlags;
+	Bool m_hasExecuted;
 };
 
 

@@ -78,6 +78,7 @@ protected:
 private:
 
 	Real m_oldShroudRange;
+	Bool m_hasExecuted;
 };
 
 #endif // __ACTIVE_SHROUD_UPGRADE_H_

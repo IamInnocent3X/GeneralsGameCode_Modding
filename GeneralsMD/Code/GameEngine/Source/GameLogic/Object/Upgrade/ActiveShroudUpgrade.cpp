@@ -69,6 +69,7 @@ ActiveShroudUpgrade::ActiveShroudUpgrade( Thing *thing, const ModuleData* module
 							UpgradeModule( thing, moduleData )
 {
 	m_oldShroudRange = 0.0f;
+	m_hasExecuted = FALSE;
 }  // end ActiveShroudUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -90,7 +91,7 @@ void ActiveShroudUpgrade::upgradeImplementation( void )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 0 )
@@ -108,12 +109,14 @@ void ActiveShroudUpgrade::upgradeImplementation( void )
 	{
 		if(UpgradeStatus == 1)
 		{
+			m_hasExecuted = TRUE;
 			m_oldShroudRange = getObject()->getShroudRange();
 			getObject()->setShroudRange( getActiveShroudUpgradeModuleData()->m_newShroudRange );
 			getObject()->handlePartitionCellMaintenance();// To shroud where I am without waiting.
 		}
 		else if(UpgradeStatus == 2)
 		{
+			m_hasExecuted = FALSE;
 			getObject()->setShroudRange( m_oldShroudRange );
 			getObject()->handlePartitionCellMaintenance();// To shroud where I am without waiting.
 		}
@@ -148,6 +151,8 @@ void ActiveShroudUpgrade::xfer( Xfer *xfer )
 	UpgradeModule::xfer( xfer );
 
 	xfer->xferReal(&m_oldShroudRange);
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

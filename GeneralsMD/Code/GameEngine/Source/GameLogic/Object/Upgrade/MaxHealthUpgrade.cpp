@@ -37,6 +37,7 @@
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/Module/MaxHealthUpgrade.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/ContainModule.h"
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -82,6 +83,7 @@ void MaxHealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 MaxHealthUpgrade::MaxHealthUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -103,22 +105,36 @@ void MaxHealthUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
-	// If there's no Upgrade Status, do Nothing;
-	if( UpgradeStatus == 0 )
+	// Because this module does things differently, we need to take a different approach
+	if( UpgradeStatus != 1 )
 	{
-		return;
+		// If we do not have the Upgrade, yet we have not executed, do nothing
+		if(!m_hasExecuted)
+		{
+			return;
+		}
+		else
+		{
+			// Remove the Upgrade Execution Status so it is treated as activation again
+			m_hasExecuted = false;
+			setUpgradeExecuted(false);
+		}
 	}
-	else if( UpgradeStatus == 2 )
+
+	Bool isApply = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	if(isApply)
 	{
-		// Remove the Upgrade Execution Status so it is treated as activation again
-		setUpgradeExecuted(false);
+		// If we have yet to do the Upgrade, proceed to do the Upgrade, but if we already have the Upgrade, don't do anything.
+		if(!m_hasExecuted)
+			m_hasExecuted = isApply;
+		else
+			return;
 	}
 
-	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
-
-	doMaxHealthUpgrade(isAdd);
+	doMaxHealthUpgrade(m_hasExecuted);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -223,6 +239,8 @@ void MaxHealthUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

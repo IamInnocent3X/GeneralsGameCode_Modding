@@ -65,6 +65,8 @@ public:
 		m_caveCaptureLinkCaves = FALSE;
 		m_initialPayload.count = 0;
 		m_initialPayload.name = NULL;
+		
+		m_allowEnemiesInside = FALSE;
 	}
 
 	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )

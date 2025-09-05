@@ -111,7 +111,7 @@ ProductionTimeModifierUpgradeModuleData::ProductionTimeModifierUpgradeModuleData
 ProductionTimeModifierUpgrade::ProductionTimeModifierUpgrade( Thing *thing, const ModuleData* moduleData ) :
 							UpgradeModule( thing, moduleData )
 {
-
+	m_hasExecuted = FALSE;
 }  // end ProductionTimeModifierUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -179,15 +179,42 @@ void ProductionTimeModifierUpgrade::upgradeImplementation( void )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// Because this module does things differently, we need to take a different approach
+	if( UpgradeStatus != 1 )
+	{
+		// If we do not have the Upgrade, yet we have not executed, do nothing
+		if(!m_hasExecuted)
+		{
+			return;
+		}
+		else
+		{
+			// Remove the Upgrade Execution Status so it is treated as activation again
+			m_hasExecuted = false;
+			setUpgradeExecuted(false);
+		}
+	}
+
+	Bool isApply = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	if(isApply)
+	{
+		// If we have yet to do the Upgrade, proceed to do the Upgrade, but if we already have the Upgrade, don't do anything.
+		if(!m_hasExecuted)
+			m_hasExecuted = true;
+		else
+			return;
+	}
 
 	// If there's no Upgrade Status, do Nothing;
-	if( UpgradeStatus == 1 )
+	if( m_hasExecuted )
 	{
 		// update the player with another TypeOfProductionTimeChange
 		player->addKindOfProductionTimeChange(getProductionTimeModifierUpgradeModuleData()->m_kindOf, getProductionTimeModifierUpgradeModuleData()->m_percentage );
 	}
-	else if( UpgradeStatus == 2 )
+	else
 	{
 		doProductionModifierRemoval();
 	}
@@ -209,6 +236,7 @@ void ProductionTimeModifierUpgrade::doProductionModifierRemoval()
 	}
 
 	// this upgrade module is now "not upgraded"
+	m_hasExecuted = FALSE;
 	setUpgradeExecuted(FALSE);
 }
 
@@ -238,6 +266,8 @@ void ProductionTimeModifierUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

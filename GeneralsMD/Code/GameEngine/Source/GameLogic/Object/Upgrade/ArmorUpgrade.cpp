@@ -91,6 +91,7 @@ void ArmorUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 ArmorUpgrade::ArmorUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
 	m_lastTerrainDecalType = TERRAIN_DECAL_NONE;
+	m_hasExecuted = FALSE;
 	m_clearedArmorSetFlags.clear();
 }
 
@@ -138,24 +139,28 @@ void ArmorUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 0 )
 	{
 		return;
 	}
-	else if( UpgradeStatus == 2 )
+	
+	m_hasExecuted = TRUE;
+	
+	if( UpgradeStatus == 2 )
 	{
+		m_hasExecuted = FALSE;
 		// Remove the Upgrade Execution Status so it is treated as activation again
 		setUpgradeExecuted(false);
 	}
 
-	Bool isImplement = UpgradeStatus == 1 ? TRUE : FALSE;
+	m_hasExecuted = UpgradeStatus == 1 ? TRUE : FALSE;
 
 	BodyModuleInterface* body = obj->getBodyModule();
 	if (body) {
-		if( isImplement )
+		if( m_hasExecuted )
 		{
 			body->setArmorSetFlag(data->m_armorSetFlag);
 
@@ -198,12 +203,12 @@ void ArmorUpgrade::upgradeImplementation( )
 	{
 		Drawable* draw = obj->getDrawable();
 		if (draw) {
-			if(isImplement)
+			if(m_hasExecuted)
 			{
 				m_lastTerrainDecalType = draw->getTerrainDecalType();
 				draw->setTerrainDecal(TERRAIN_DECAL_CHEMSUIT);
 			}
-			else if( draw->getTerrainDecalType() == TERRAIN_DECAL_CHEMSUIT && !isImplement )
+			else if( draw->getTerrainDecalType() == TERRAIN_DECAL_CHEMSUIT && !m_hasExecuted )
 			{
 				draw->setTerrainDecal(m_lastTerrainDecalType);
 			}
@@ -245,6 +250,8 @@ void ArmorUpgrade::xfer( Xfer *xfer )
 	m_clearedArmorSetFlags.xfer( xfer );
 	//m_lastTerrainDecalType.xfer( xfer );
 	xfer->xferUser( &m_lastTerrainDecalType, sizeof( m_lastTerrainDecalType ) );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

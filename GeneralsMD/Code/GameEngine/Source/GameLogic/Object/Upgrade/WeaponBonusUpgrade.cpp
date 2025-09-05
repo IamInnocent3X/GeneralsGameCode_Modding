@@ -74,6 +74,7 @@
 //-------------------------------------------------------------------------------------------------
 WeaponBonusUpgrade::WeaponBonusUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -96,15 +97,17 @@ void WeaponBonusUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 1 )
 	{
+		m_hasExecuted = TRUE;
 		obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_PLAYER_UPGRADE );
 	}
 	else if( UpgradeStatus == 2 )
 	{
+		m_hasExecuted = FALSE;
 		obj->clearWeaponBonusCondition( WEAPONBONUSCONDITION_PLAYER_UPGRADE );
 		// Remove the Upgrade Execution Status so it is treated as activation again
 		setUpgradeExecuted(false);
@@ -138,6 +141,8 @@ void WeaponBonusUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

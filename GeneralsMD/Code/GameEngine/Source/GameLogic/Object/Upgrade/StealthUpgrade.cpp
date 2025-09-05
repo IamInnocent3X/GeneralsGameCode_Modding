@@ -40,6 +40,7 @@
 //-------------------------------------------------------------------------------------------------
 StealthUpgrade::StealthUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ void StealthUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 0 )
@@ -68,13 +69,13 @@ void StealthUpgrade::upgradeImplementation( )
 		return;
 	}
 
-	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
+	m_hasExecuted = UpgradeStatus == 1 ? TRUE : FALSE;
 
 	// Remove the Upgrade Execution Status so it is treated as activation again
-	if(!isAdd)
+	if(!m_hasExecuted)
 		setUpgradeExecuted(false);
 
-	me->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_STEALTH ), isAdd );
+	me->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_STEALTH ), m_hasExecuted );
 
 	//Grant stealth to spawns if applicable.
 	if( me->isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ) )
@@ -82,7 +83,7 @@ void StealthUpgrade::upgradeImplementation( )
 		SpawnBehaviorInterface *sbInterface = me->getSpawnBehaviorInterface();
 		if( sbInterface )
 		{
-			sbInterface->giveSlavesStealthUpgrade( isAdd );
+			sbInterface->giveSlavesStealthUpgrade( m_hasExecuted );
 		}
 	}
 }
@@ -113,6 +114,8 @@ void StealthUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

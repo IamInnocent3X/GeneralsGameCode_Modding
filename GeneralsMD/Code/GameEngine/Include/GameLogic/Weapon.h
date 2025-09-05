@@ -595,6 +595,7 @@ public:
 	inline ObjectStatusMaskType getForbiddenStatus() const { return m_forbiddenStatus; }
 	inline const std::vector<AsciiString>& getCustomStatusRequired() const { return m_requiredCustomStatus; }
 	inline const std::vector<AsciiString>& getCustomStatusForbidden() const { return m_forbiddenCustomStatus; }
+	inline Bool getRequiresAllTriggers() const { return m_requiresAllTriggers; }
 
 	Bool passRequirements (const Object *source) const;
 
@@ -814,6 +815,7 @@ private:
 	std::vector<AsciiString> m_forbiddenCustomStatus;
 	std::vector<AsciiString> m_activationUpgradeNames;
 	std::vector<AsciiString> m_conflictingUpgradeNames;
+	Bool m_requiresAllTriggers;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };

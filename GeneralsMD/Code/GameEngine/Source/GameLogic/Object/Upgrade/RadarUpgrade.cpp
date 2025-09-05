@@ -57,7 +57,7 @@ void RadarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 RadarUpgrade::RadarUpgrade( Thing *thing, const ModuleData* moduleData ) :
 							UpgradeModule( thing, moduleData )
 {
-
+	m_hasExecuted = FALSE;
 }  // end RadarUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ void RadarUpgrade::upgradeImplementation( void )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 0 )
@@ -135,9 +135,9 @@ void RadarUpgrade::upgradeImplementation( void )
 		return;
 	}
 
-	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
+	m_hasExecuted = UpgradeStatus == 1 ? TRUE : FALSE;
 
-	doRadarUpgrade(isAdd);
+	doRadarUpgrade(m_hasExecuted);
 }  // end upgradeImplementation
 
 
@@ -201,6 +201,8 @@ void RadarUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool( &m_hasExecuted );
 
 }  // end xfer
 

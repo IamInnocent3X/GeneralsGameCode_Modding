@@ -57,10 +57,11 @@ public:
 	virtual Bool attemptUpgrade( UpgradeMaskType keyMask ) = 0;
 	virtual Bool wouldUpgrade( UpgradeMaskType keyMask ) const = 0;
 	virtual Bool resetUpgrade( UpgradeMaskType keyMask ) = 0;
-	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask ) const = 0;
+	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted ) const = 0;
 	virtual Bool isSubObjectsUpgrade() = 0;
 	virtual Bool hasUpgradeRefresh() = 0;
 	virtual void forceRefreshUpgrade() = 0;
+	virtual void forceRefreshMyUpgrade() = 0;
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const = 0;
 
 };
@@ -128,9 +129,10 @@ public:
 	virtual Bool isAlreadyUpgraded() const ;
 	// ***DANGER! DANGER! Don't use this, unless you are forcing an already made upgrade to refresh!!
 	virtual void forceRefreshUpgrade();
+	virtual void forceRefreshMyUpgrade() { upgradeImplementation(); }
 	virtual Bool attemptUpgrade( UpgradeMaskType keyMask );
 	virtual Bool wouldUpgrade( UpgradeMaskType keyMask ) const;
-	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask ) const;
+	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted ) const;
 	virtual Bool resetUpgrade( UpgradeMaskType keyMask );
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const;
 
@@ -196,6 +198,11 @@ public:
 
 	bool isTriggeredBy(const std::string & upgrade) const { return getUpgradeModuleData()->m_upgradeMuxData.isTriggeredBy(upgrade); }
 
+	const std::vector<AsciiString>& getActivationUpgradeNames() const
+	{ 
+		return getUpgradeModuleData()->m_upgradeMuxData.m_triggerUpgradeNames;
+	}
+	
 protected:
 
 	virtual void processUpgradeGrant()

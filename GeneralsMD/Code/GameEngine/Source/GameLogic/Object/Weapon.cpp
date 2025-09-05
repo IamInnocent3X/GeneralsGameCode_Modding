@@ -413,6 +413,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 
 	{ "TriggeredBy",								INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_activationUpgradeNames ) },
 	{ "ConflictsWith",								INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_conflictingUpgradeNames ) },
+	{ "RequiresAllTriggers", 						INI::parseBool, 				NULL, 					offsetof(WeaponTemplate, m_requiresAllTriggers ) },
 	{ "RequiredStatus",								ObjectStatusMaskType::parseFromINI,	NULL, 				offsetof(WeaponTemplate, m_requiredStatus ) },
 	{ "ForbiddenStatus",							ObjectStatusMaskType::parseFromINI,	NULL, 				offsetof(WeaponTemplate, m_forbiddenStatus ) },
 	{ "RequiredCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_requiredCustomStatus ) },
@@ -609,6 +610,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_conflictingUpgradeNames.clear();
 	m_requiredCustomStatus.clear();
 	m_forbiddenCustomStatus.clear();
+	m_requiresAllTriggers = false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3546,6 +3548,7 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 {
 	std::vector<AsciiString> activationUpgrades = getActivationUpgradeNames();
 	std::vector<AsciiString> conflictingUpgrades = getConflictingUpgradeNames();
+	Bool RequiresAllTriggers = getRequiresAllTriggers();
 	ObjectStatusMaskType statusRequired = getRequiredStatus();
 	ObjectStatusMaskType statusForbidden = getForbiddenStatus();
 	std::vector<AsciiString> customStatusRequired = getCustomStatusRequired();
@@ -3557,6 +3560,7 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 		std::vector<AsciiString>::const_iterator it_a;
 		for( it_a = activationUpgrades.begin(); it_a != activationUpgrades.end(); it_a++)
 		{
+			gotUpgrade = FALSE;
 			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
 			if( !ut )
 			{
@@ -3568,13 +3572,15 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 				if(source->getControllingPlayer()->hasUpgradeComplete(ut))
 				{
 					gotUpgrade = TRUE;
-					break;
+					if(!RequiresAllTriggers)
+						break;
 				}
 			}
 			else if( source->hasUpgrade(ut) )
 			{
 				gotUpgrade = TRUE;
-				break;
+				if(!RequiresAllTriggers)
+					break;
 			}
 		}
 		if(!gotUpgrade)

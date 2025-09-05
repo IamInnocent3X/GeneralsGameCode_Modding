@@ -117,10 +117,10 @@ void PowerPlantUpgrade::upgradeImplementation( void )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// Because this module does things differently, we need to take a different approach
-	if( UpgradeStatus == 0 )
+	if( UpgradeStatus != 1 )
 	{
 		// If we do not have the Upgrade, yet we have not executed, do nothing
 		if(!m_hasExecuted)
@@ -168,10 +168,6 @@ void PowerPlantUpgrade::upgradeImplementation( void )
 
 }  // end upgradeImplementation
 
-void PowerPlantUpgrade::forceRefreshMyUpgrade()
-{
-	upgradeImplementation();
-}
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------

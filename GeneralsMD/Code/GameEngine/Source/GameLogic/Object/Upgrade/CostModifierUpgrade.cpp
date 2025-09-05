@@ -111,7 +111,7 @@ CostModifierUpgradeModuleData::CostModifierUpgradeModuleData( void )
 CostModifierUpgrade::CostModifierUpgrade( Thing *thing, const ModuleData* moduleData ) :
 							UpgradeModule( thing, moduleData )
 {
-
+	m_hasExecuted = FALSE;
 }  // end CostModifierUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -189,17 +189,36 @@ void CostModifierUpgrade::upgradeImplementation( void )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
-	// If there's no Upgrade Status, do Nothing;
-	if( UpgradeStatus == 0 )
+	// Because this module does things differently, we need to take a different approach
+	if( UpgradeStatus != 1 )
 	{
-		return;
+		// If we do not have the Upgrade, yet we have not executed, do nothing
+		if(!m_hasExecuted)
+		{
+			return;
+		}
+		else
+		{
+			// Remove the Upgrade Execution Status so it is treated as activation again
+			m_hasExecuted = false;
+			setUpgradeExecuted(false);
+		}
 	}
 
-	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
+	Bool isApply = UpgradeStatus == 1 ? TRUE : FALSE;
 
-	doCostModifier(isAdd);
+	if(isApply)
+	{
+		// If we have yet to do the Upgrade, proceed to do the Upgrade, but if we already have the Upgrade, don't do anything.
+		if(!m_hasExecuted)
+			m_hasExecuted = true;
+		else
+			return;
+	}
+
+	doCostModifier(m_hasExecuted);
 
 }  // end upgradeImplementation
 
@@ -226,6 +245,7 @@ void CostModifierUpgrade::doCostModifier(Bool isAdd)
 
 	if(!isAdd)
 	{
+		m_hasExecuted = FALSE;
 		// this upgrade module is now "not upgraded"
 		setUpgradeExecuted(FALSE);
 	}
@@ -256,6 +276,8 @@ void CostModifierUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

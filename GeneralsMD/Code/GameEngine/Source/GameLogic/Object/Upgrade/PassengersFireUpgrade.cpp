@@ -40,6 +40,7 @@
 //-------------------------------------------------------------------------------------------------
 PassengersFireUpgrade::PassengersFireUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -66,18 +67,20 @@ void PassengersFireUpgrade::upgradeImplementation( )
   maskToCheck.set( objectMask );
 
   //First make sure we have the right combination of upgrades
-  Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+  Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
   // Apply the Upgrade if the Object has not yet been Upgraded
   if( UpgradeStatus == 1 )
   {
-  	  contain->setPassengerAllowedToFire( TRUE );
+  	m_hasExecuted = TRUE;  
+	contain->setPassengerAllowedToFire( TRUE );
   }
   else if( UpgradeStatus == 2 )
   {
-	  contain->setPassengerAllowedToFire( FALSE );
-	  // Remove the Upgrade Execution Status so it is treated as activation again
-  	  setUpgradeExecuted(false);
+	m_hasExecuted = FALSE;  
+	contain->setPassengerAllowedToFire( FALSE );
+	// Remove the Upgrade Execution Status so it is treated as activation again
+  	setUpgradeExecuted(false);
   }
 
 //	obj->setWeaponSetFlag( WEAPONSET_PLAYER_UPGRADE );
@@ -116,6 +119,8 @@ void PassengersFireUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

@@ -2916,25 +2916,16 @@ void Object::forceRefreshSubObjectUpgradeStatus()
 //-------------------------------------------------------------------------------------------------
 void Object::forceRefreshUpgradeStatus()
 {
-	// PowerPlantUpgrade clears its execution status after Upgrade, so we do it differently.
-	static NameKeyType powerPlant = NAMEKEY("PowerPlantUpgrade");
-
 	for (BehaviorModule** module = m_behaviors; *module; ++module)
 	{
-		if((*module)->getModuleNameKey() == powerPlant)
-		{
-			PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) (*module);
-			powerPlantMod->forceRefreshMyUpgrade();
-			continue;
-		}
-
 		UpgradeModuleInterface* upgrade = (*module)->getUpgrade();
 		if (!upgrade)
 			continue;
 
 		if( upgrade->hasUpgradeRefresh() )
 		{
-			upgrade->forceRefreshUpgrade();
+			upgrade->forceRefreshMyUpgrade();
+			continue;
 		}
 	}
 }
@@ -5103,8 +5094,6 @@ void Object::giveUpgrade( const UpgradeTemplate *upgradeT )
 		//
 		updateUpgradeModules();
 	}
-
-	doObjectUpgradeChecks();
 }  // end giveUpgrade
 
 //-------------------------------------------------------------------------------------------------
@@ -5122,10 +5111,20 @@ void Object::removeUpgrade( const UpgradeTemplate *upgradeT )
 		// Whoa, please note that while the function is called Object::RemoveUpgrade, it is not removing anything
 		// in the sense of undoing the effects.  It is just resetting the upgrade so it may be run again.
 		upgrade->resetUpgrade( upgradeT->getUpgradeMask() );
+
+		// Due to how the nature of how Object upgrade works, Upgrade Refresh needs to be redefined on a separate bool
+		if( upgrade->hasUpgradeRefresh() )
+		{
+			upgrade->forceRefreshMyUpgrade();
+			continue;
+		}
 	}
 
-	forceRefreshUpgradeStatus();
-	doObjectUpgradeChecks();
+	if(upgradeT)
+	{
+		//forceRefreshUpgradeStatus();
+		doObjectUpgradeChecks();
+	}
 }
 
 void Object::doObjectUpgradeChecks()

@@ -103,6 +103,7 @@ protected:
 private:
 	TerrainDecalType m_lastTerrainDecalType;
 	ArmorSetFlags m_clearedArmorSetFlags;
+	Bool m_hasExecuted;
 };
 
 //-----------------------------------------------------------------------------

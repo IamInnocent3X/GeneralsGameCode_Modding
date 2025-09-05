@@ -59,6 +59,7 @@ void ModelConditionUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 ModelConditionUpgrade::ModelConditionUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -84,14 +85,16 @@ void ModelConditionUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	if( UpgradeStatus == 1 )
 	{
+		m_hasExecuted = TRUE;
 		me->setModelConditionState(data->m_conditionFlag);
 	}
 	else if( UpgradeStatus == 2 )
 	{
+		m_hasExecuted = FALSE;
 		me->clearModelConditionState(data->m_conditionFlag);
 		setUpgradeExecuted(FALSE);
 	}
@@ -123,6 +126,8 @@ void ModelConditionUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

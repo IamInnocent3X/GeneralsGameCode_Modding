@@ -73,6 +73,8 @@ protected:
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+	Bool m_hasExecuted;
 };
 
 

@@ -40,6 +40,7 @@
 #include "GameLogic/Module/CreateModule.h"
 #include "Common/GameMemory.h"
 class Team;
+class PassengersFireUpgrade;
 
 //-------------------------------------------------------------------------------------------------
 class TunnelContainModuleData : public OpenContainModuleData
@@ -52,8 +53,8 @@ public:
 	};
 	
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully healed
-	Bool m_removeOtherUpgrades;
-	std::vector<AsciiString> m_activationUpgradeNames;
+	Bool m_removeOtherPassengersAllowToFire;
+	//std::vector<AsciiString> m_activationUpgradeNames;
 	std::vector<AsciiString> m_upgradeDisableOtherNames;
 	std::vector<AsciiString> m_upgradeDisableOwnNames;
 	InitialPayload m_initialPayload;
@@ -64,8 +65,8 @@ public:
 
 		// by default, takes no time to heal ppl
 		m_framesForFullHeal = 1.0f;
-		m_removeOtherUpgrades = FALSE;
-		m_activationUpgradeNames.clear();
+		m_removeOtherPassengersAllowToFire = FALSE;
+		//m_activationUpgradeNames.clear();
 		m_upgradeDisableOtherNames.clear();
 		m_upgradeDisableOwnNames.clear();
 		m_initialPayload.count = 0;
@@ -98,8 +99,8 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
-			{ "UpgradesToTriggerBunker", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_activationUpgradeNames ) },
-			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherUpgrades ) },
+			//{ "UpgradesToTriggerBunker", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_activationUpgradeNames ) },
+			{ "RemoveOtherTunnelsBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
 			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
 			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
 			{ "InitialPayload", parseInitialPayload, NULL, 0 },
@@ -179,9 +180,10 @@ protected:
 
 	void scatterToNearbyPosition(Object* obj);
 	void doOpenFire(Bool isAttacking = TRUE);
+	void doRemoveOtherPassengersAllowToFire();
 	void checkRemoveOwnGuard();
 	void checkRemoveOtherGuard();
-	void doHoleRebuildChecks();
+	//void doHoleRebuildChecks();
 	void createPayload();
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up

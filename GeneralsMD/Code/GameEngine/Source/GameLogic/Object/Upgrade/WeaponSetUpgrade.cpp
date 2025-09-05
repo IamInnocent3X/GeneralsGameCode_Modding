@@ -69,6 +69,7 @@ void WeaponSetUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 WeaponSetUpgrade::WeaponSetUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 	m_clearedWeaponSetFlags.clear();
 }
 
@@ -121,22 +122,24 @@ void WeaponSetUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 0 )
 	{
 		return;
 	}
-	else if( UpgradeStatus == 2 )
+	
+	m_hasExecuted = TRUE;
+	
+	if( UpgradeStatus == 2 )
 	{
+		m_hasExecuted = FALSE;
 		// Remove the Upgrade Execution Status so it is treated as activation again
 		setUpgradeExecuted(false);
 	}
 
-	Bool isAdd = UpgradeStatus == 1 ? TRUE : FALSE;
-
-	if (isAdd && data->m_weaponSetFlag > WEAPONSET_NONE) {
+	if (m_hasExecuted && data->m_weaponSetFlag > WEAPONSET_NONE) {
 		obj->setWeaponSetFlag(data->m_weaponSetFlag);
 	}
 	else if (data->m_weaponSetFlag > WEAPONSET_NONE) {
@@ -146,7 +149,7 @@ void WeaponSetUpgrade::upgradeImplementation( )
 	/*DEBUG_LOG((">>> WSU: m_weaponSetFlagsToClear = %d\n",
 		data->m_weaponSetFlag));*/
 
-	if (isAdd && data->m_weaponSetFlagsToClear.any()) {
+	if (m_hasExecuted && data->m_weaponSetFlagsToClear.any()) {
 		// We loop over each weaponset type and see if we have it set.
 		// Andi: Not sure if this is cleaner solution than storing an array of flags.
 		for (int i = 0; i < WEAPONSET_COUNT; i++) {
@@ -196,6 +199,8 @@ void WeaponSetUpgrade::xfer( Xfer *xfer )
 	UpgradeModule::xfer( xfer );
 
 	m_clearedWeaponSetFlags.xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 

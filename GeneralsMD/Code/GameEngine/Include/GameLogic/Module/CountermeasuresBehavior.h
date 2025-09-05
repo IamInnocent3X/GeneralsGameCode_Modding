@@ -246,6 +246,7 @@ private:
 	UnsignedInt m_currentVolley;
 	UnsignedInt m_checkDelay;
 	Bool m_parked;
+	Bool m_hasExecuted;
 	ObjectID m_dockObjectID;
 };
 

@@ -41,9 +41,11 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/OpenContain.h"
 #include "GameLogic/Module/TunnelContain.h"
+#include "GameLogic/Module/PassengersFireUpgrade.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 
+class PassengersFireUpgrade;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
@@ -67,10 +69,10 @@ TunnelContain::TunnelContain( Thing *thing, const ModuleData* moduleData ) : Ope
 	else
 		m_hasTunnelGuard = FALSE;
 
-	if(getTunnelContainModuleData()->m_activationUpgradeNames.empty())
-		m_hasBunker = getTunnelContainModuleData()->m_passengersAllowedToFire;
-	else
-		m_hasBunker = FALSE;
+	//if(getTunnelContainModuleData()->m_activationUpgradeNames.empty())
+		//setPassengerAllowedToFire( getTunnelContainModuleData()->m_passengersAllowedToFire );
+	//else
+	//	setPassengerAllowedToFire( FALSE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -304,7 +306,7 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
 	if ( ! getObject() )
     	return FALSE;
 
-	if( ! m_hasBunker )
+	if( ! hasPassengerAllowedToFire() )
 		return FALSE;// Just no, no matter what.
 	
 	Player *owningPlayer = getObject()->getControllingPlayer();
@@ -326,7 +328,7 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
 		return FALSE;
 
 	// Check for upgrades needed for the Contained to Open Fire
-	if(!modData->m_activationUpgradeNames.empty())
+	/*if(!modData->m_activationUpgradeNames.empty())
 	{
 		std::vector<AsciiString>::const_iterator it;
 		for( it = modData->m_activationUpgradeNames.begin();
@@ -345,7 +347,7 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
 				return FALSE;
 			}
 		}
-	}
+	}*/
 
 	Object *passenger = TheGameLogic->findObjectByID(id);
 
@@ -371,12 +373,7 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
       return hisContain->isPassengerAllowedToFire( id );
   }
 
-	// If we are ourselves contained, our passengers need to check with them if they get past us
-	if( me->getContainedBy() != NULL )
-		return me->getContainedBy()->getContain()->isPassengerAllowedToFire();
-
-	return TRUE;
-	//return OpenContain::isPassengerAllowedToFire();
+	return OpenContain::isPassengerAllowedToFire();
 }
 
 
@@ -404,7 +401,7 @@ void TunnelContain::doUpgradeChecks( void )
 	if( tunnelTracker == NULL )
 		return;
 
-	const TunnelContainModuleData *modData = getTunnelContainModuleData();
+	//const TunnelContainModuleData *modData = getTunnelContainModuleData();
 
 	// Check for Tunnel Guard Designation Upgrades
 	checkRemoveOtherGuard();
@@ -413,7 +410,7 @@ void TunnelContain::doUpgradeChecks( void )
 	checkRemoveOwnGuard();
 
 	// Only enable Fire Ports if the Open Fire feature is configured.
-	if(!modData->m_passengersAllowedToFire)
+	/*if(!modData->m_passengersAllowedToFire)
 		return;
 
 	// Check for Bunker enabling Upgrades.
@@ -424,7 +421,7 @@ void TunnelContain::doUpgradeChecks( void )
 	const std::list<ObjectID> *tunnels = tunnelTracker->getContainerList();
 
 	// Reset existing properties to check whether it has the appropriate upgrades to apply.
-	m_hasBunker = FALSE;
+	setPassengerAllowedToFire( FALSE );
 	
 	// Check for upgrades needed for the Contained to Open Fire
 	std::vector<AsciiString>::const_iterator it;
@@ -450,7 +447,7 @@ void TunnelContain::doUpgradeChecks( void )
 			{
 				if( *iter == obj->getID())
 				{
-					m_hasBunker = TRUE;
+					setPassengerAllowedToFire( TRUE );
 				}
 				// If we want to assign only 1 fireable tunnel, remove other upgrades
 				else if( modData->m_removeOtherUpgrades )
@@ -471,16 +468,95 @@ void TunnelContain::doUpgradeChecks( void )
 			break;
 		}
 	
-	}
+	}*/
 
 	// For switching all the units onto its attacking position
-	if(m_hasBunker)
+	if(hasPassengerAllowedToFire())
+	{
+		// If we want to assign only 1 fireable tunnel, remove other ability for passengers allowed to fire
+		if(getTunnelContainModuleData()->m_removeOtherPassengersAllowToFire)
+		{
+			static const NameKeyType key_PassengersFireUpgrade = NAMEKEY("PassengersFireUpgrade");
+			PassengersFireUpgrade* pfu = (PassengersFireUpgrade*)(getObject()->findUpdateModule( key_PassengersFireUpgrade ));
+			if (pfu)
+			{
+				std::vector<AsciiString> UpgradeNames = pfu->getActivationUpgradeNames();
+
+				if(!UpgradeNames.empty())
+					doRemoveOtherPassengersAllowToFire();
+			}
+		}
 		doOpenFire(FALSE);
+	}
 	else
+	{
 		removeBunker();
+	}
 }
 
-void TunnelContain::doHoleRebuildChecks()
+//-------------------------------------------------------------------------------------------------
+void TunnelContain::doRemoveOtherPassengersAllowToFire()
+{
+	Player *owningPlayer = getObject()->getControllingPlayer();
+	if( owningPlayer == NULL )
+		return;
+	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
+	if( tunnelTracker == NULL )
+		return;
+
+	static const NameKeyType key_PassengersFireUpgrade = NAMEKEY("PassengersFireUpgrade");
+	const std::list<ObjectID> *tunnels = tunnelTracker->getContainerList();
+	for( std::list<ObjectID>::const_iterator iter = tunnels->begin(); iter != tunnels->end(); iter++ )
+	{
+		if( !(*iter == getObject()->getID()) )
+		{
+			Object *other = NULL;
+			other = TheGameLogic->findObjectByID( (*iter) );
+			if( other )
+			{
+				// Set other Tunnels to not allow Passengers to Fire
+				if(other->getContain())
+					other->getContain()->setPassengerAllowedToFire( FALSE );
+				TunnelInterface *tunnelModule = findTunnel(other);
+				if( tunnelModule == NULL )
+					continue;
+				tunnelModule->removeBunker();
+
+				PassengersFireUpgrade* pfu = (PassengersFireUpgrade*)(other->findUpdateModule( key_PassengersFireUpgrade ));
+				if (pfu)
+				{
+					std::vector<AsciiString> UpgradeNames = pfu->getActivationUpgradeNames();
+
+					//Remove the Upgrade from Passengers Fire Upgrade
+					std::vector<AsciiString>::const_iterator it;
+					for( it = UpgradeNames.begin();
+								it != UpgradeNames.end();
+								it++)
+					{
+						const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it );
+						if( !ut )
+						{
+							DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+							throw INI_INVALID_DATA;
+						}
+						else if(ut->getUpgradeType() == UPGRADE_TYPE_PLAYER)
+						{
+							DEBUG_CRASH(("Upgrade '%s', is not an Object Upgrade. Not compatible with RemoveOtherOpenContainOnUpgrade feature.", it->str()));
+						}
+
+						if( other->hasUpgrade(ut) )
+						{
+							other->removeUpgrade( ut );
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+/*void TunnelContain::doHoleRebuildChecks()
 {
 	if ( !getObject() )
     	return;
@@ -495,7 +571,7 @@ void TunnelContain::doHoleRebuildChecks()
 
 	if(modData->m_activationUpgradeNames.empty())
 	{
-		m_hasBunker = TRUE;
+		setPassengerAllowedToFire( TRUE );
 		return;
 	}
 	
@@ -518,12 +594,12 @@ void TunnelContain::doHoleRebuildChecks()
 
 		if( getObject()->hasUpgrade(ut) )
 		{
-			m_hasBunker = TRUE;
+			setPassengerAllowedToFire( TRUE );
 			break;
 		}
 	
 	}
-}
+}*/
 
 //-------------------------------------------------------------------------------------------------
 Bool TunnelContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
@@ -838,14 +914,14 @@ UpdateSleepTime TunnelContain::update( void )
 
 		// Check if the Tunnel has OpenContained Upgrade enabled. If so, skip updateNemesis
 		// Also don't check for Dead Tunnels, or Tunnels that are Holes.
-		if(m_hasBunker && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+		if(hasPassengerAllowedToFire() && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
 		{
-			Bool openFireUpgrade = TRUE;
+			//Bool openFireUpgrade = TRUE;
 
 			if(obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) || obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) || obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) || obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
 				openFireCheck = TRUE;
 
-			if(!modData->m_activationUpgradeNames.empty() && openFireCheck)
+			/*if(!modData->m_activationUpgradeNames.empty() && openFireCheck)
 			{
 				openFireCheck = FALSE;
 				openFireUpgrade = FALSE;
@@ -875,7 +951,7 @@ UpdateSleepTime TunnelContain::update( void )
 				{
 					removeBunker();
 				}
-			}
+			}*/
 
 			if(openFireCheck)
 			{
@@ -892,15 +968,15 @@ UpdateSleepTime TunnelContain::update( void )
 					doOpenFire();
 			}
 
-			if(openFireUpgrade)
+			//if(openFireUpgrade)
 				return UPDATE_SLEEP_NONE;
 		}
-		if (!m_hasBunker && modData->m_passengersAllowedToFire && !m_rebuildChecked && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+		if (!hasPassengerAllowedToFire() && modData->m_passengersAllowedToFire && !m_rebuildChecked && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
 		{
-			doHoleRebuildChecks();
+			//doHoleRebuildChecks();
 			m_rebuildChecked = TRUE;
 		}
-		// Tested and working as intended.
+		// Conditional Statements tested.
 		if(!m_hasTunnelGuard)
 			return UPDATE_SLEEP_NONE;
 		// check for attacked.
@@ -966,7 +1042,7 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 		return;
 
 	// Set it after a while so units doesn't get confused every now and then if multiple tunnels are attacking
-	tunnelTracker->setCheckOpenFireFrames(now + 3*LOGICFRAMES_PER_SECOND);
+	tunnelTracker->setCheckOpenFireFrames(now + LOGICFRAMES_PER_SECOND + 1);
 
 	Bool changeTunnels = FALSE;
 	
@@ -1074,7 +1150,7 @@ void TunnelContain::removeBunker()
 		return;
 
 	// Disable the main function
-	m_hasBunker = FALSE;
+	setPassengerAllowedToFire( FALSE );
 
 	// If I am occupied, tell everyone in my current Tunnel to stop Firing
 	const ContainedItemsList* items = tunnelTracker->getContainedItemsList();
@@ -1293,8 +1369,6 @@ void TunnelContain::xfer( Xfer *xfer )
 
 	// Currently registered with owning player
 	xfer->xferBool( &m_isCurrentlyRegistered );
-
-	xfer->xferBool( &m_hasBunker );
 
 	xfer->xferBool( &m_hasTunnelGuard );
 

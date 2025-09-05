@@ -165,6 +165,7 @@ public:
   virtual void harmAndForceExitAllContained( DamageInfo *info ); // apply canned damage against those containes
 	virtual Bool isEnclosingContainerFor( const Object *obj ) const;	///< Does this type of Contain Visibly enclose its contents?
 	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const;	///< Hey, can I shoot out of this container?
+	virtual Bool hasPassengerAllowedToFire() const { return m_passengerAllowedToFire; }	///< Hey, can I shoot out of this container?
 
   virtual void setPassengerAllowedToFire( Bool permission = TRUE ) { m_passengerAllowedToFire = permission; }	///< Hey, can I shoot out of this container?
 

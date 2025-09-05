@@ -56,8 +56,6 @@ public:
 	virtual void onDelete( void );																///< we have some work to do when this module goes away
 	virtual void onCapture( Player *oldOwner, Player *newOwner );	///< object containing upgrade has changed teams
 
-	void forceRefreshMyUpgrade();
-
 protected:
 
 	virtual void upgradeImplementation( void ); ///< Here's the actual work of Upgrading

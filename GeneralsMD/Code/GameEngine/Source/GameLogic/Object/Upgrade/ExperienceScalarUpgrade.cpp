@@ -66,6 +66,7 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 ExperienceScalarUpgrade::ExperienceScalarUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -89,17 +90,19 @@ void ExperienceScalarUpgrade::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
 	Real value, scalar;
 
 	if( UpgradeStatus == 1 )
 	{
+		m_hasExecuted = TRUE;
 		value = data->m_addXPScalar;
 		scalar = data->m_addXPValueScalar;
 	}
 	else if( UpgradeStatus == 2 )
 	{
+		m_hasExecuted = FALSE;
 		value = -data->m_addXPScalar;
 		scalar = -data->m_addXPValueScalar;
 		// Remove the Upgrade Execution Status so it is treated as activation again
@@ -144,6 +147,8 @@ void ExperienceScalarUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }  // end xfer
 
