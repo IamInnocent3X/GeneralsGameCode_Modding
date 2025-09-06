@@ -230,6 +230,8 @@ RiderChangeContain::RiderChangeContain( Thing *thing, const ModuleData *moduleDa
 	m_loaded = FALSE;
 	m_theRiderDataRecord.clear(); // A better non-sleepy update version of Status and Upgrade Checking
 	m_registeredUpgradeNames = FALSE;
+	m_riderDataStatusRegister = (ObjectStatusType)0;
+	m_riderDataCustomStatusRegister = NULL;
 	m_prevStatus.clear();
 	m_prevCustomStatusTypes.clear();
 	m_prevMaskToCheck.clear();
@@ -325,13 +327,17 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 	Object *obj = getObject();
 	m_containing = TRUE;
 
+	Bool hasEvacuated = FALSE;
 	Int containMax = getContainMax();
 	Int containCount = getContainCount();
+	Int transportSlotCount = rider->getTransportSlotCount();
 
-	//Remove our existing rider
-	if( m_payloadCreated && !data->m_dontEvacuateOnEnter )
+	//Remove riders if conditions are met
+	if( ( m_payloadCreated && !data->m_dontEvacuateOnEnter ) ||
+		transportSlotCount >= containMax )
 	{
 		obj->getAI()->aiEvacuateInstantly( TRUE, CMD_FROM_AI );
+		hasEvacuated = TRUE;
 	}
 
 	if(!checkHasRiderTemplate(rider))
@@ -342,27 +348,43 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 		return;
 	}
 
-	if( data->m_dontEvacuateOnEnter && m_extraSlotsInUse + containCount > containMax )
+	//DEBUG_LOG(("Object to Contain: %s. Object Transport Slot Count: %d. Current Slots Available: %d. ContainMax: %d. ExtraSlotsInUse: %d", rider->getTemplate()->getName().str(), rider->getTransportSlotCount(), containMax - m_extraSlotsInUse - containCount, containMax, m_extraSlotsInUse));
+	//if(hasEvacuated)
+	//{
+	//	DEBUG_LOG(("Evacuated to leave Contain for: %s.  Object Transport Slot Count: %d. ContainMax: %d", rider->getTemplate()->getName().str(), rider->getTransportSlotCount(), containMax));
+	//}
+	if( !hasEvacuated && transportSlotCount > 0 && m_extraSlotsInUse + containCount + transportSlotCount > containMax )
 	{
 		// I get contained, but remove the last rider before me
 		ContainedItemsList::iterator it = m_containList.end();
-		while(m_containListSize > 1)
+		while(getContainCount() > 1)
 		{
-			it--;
-			it--;
-			removeFromContainViaIterator( it, TRUE );
-			
-			/*if(!data->m_moreThanOneRiders && getContainCount() > 1)
-			{
-				TransportContain::onContaining( rider, wasSelected );
+			// containCount variable doesn't update as getContainCount()
+			// + 1 because the current Rider is already considered 'Contained' so it would consider exiting an extra slot to make way to contain
+			if(m_extraSlotsInUse + getContainCount() + transportSlotCount <= containMax + 1)
+				break;
 
-				m_dontCompare = TRUE;
-				m_containing = FALSE;
-				return;
-			}*/
-			break;
+			it = m_containList.end();
+			it--;
+			it--;
+
+			//const char* name = "Nothing";
+			//Int slots = 0;
+			//if((*it) && (*it)->getTemplate())
+			//{
+			//	name = (*it)->getTemplate()->getName().str();
+			//	slots = (*it)->getTransportSlotCount();
+			//}
+
+			removeFromContainViaIterator( it, TRUE );
+
+			//DEBUG_LOG(("Removed Object: %s. Object Transport Slot Count: %d. Current Slots Available: %d. ContainMax: %d. ExtraSlotsInUse: %d", name, slots, containMax - m_extraSlotsInUse - getContainCount(), containMax, m_extraSlotsInUse));
 		}
 	}
+
+	// Add the extra slot count after the calculation
+	m_extraSlotsInUse += transportSlotCount - 1;
+	//DEBUG_LOG(("Registered Extra Slots: %d. Current Slots Available: %d. ExtraSlotsInUse: %d", transportSlotCount - 1, containMax - m_extraSlotsInUse - getContainCount(), m_extraSlotsInUse));
 
 	//If the rider is currently selected, transfer selection to the container and preserve other units
 	//that may be already selected. Note that containing the rider will automatically cause it to be
@@ -386,6 +408,11 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 		return;
 	}
 
+	// For registering RiderData, clear all the previous statuses first
+	RiderData riderData;
+	m_riderDataStatusRegister = (ObjectStatusType)0;
+	m_riderDataCustomStatusRegister = NULL;
+	
 	//Find the rider in the list and set the appropriate model condition
 	Bool found;
 	for( int i = 0; i < MAX_RIDERS; i++ )
@@ -395,7 +422,11 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 		{
 			char charName[2];
 			sprintf( charName, "%d", i );
-			registerNewRiderDataOnContain(charName);
+			
+			riderData.templateName = charName;
+			riderData.timeFrame = 1;
+			riderData.statusType = m_riderDataStatusRegister;
+			riderData.customStatusType = m_riderDataCustomStatusRegister;
 
 			break;
 		}
@@ -407,12 +438,19 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 			found = riderChangeContainingCheck( rider, (*it) );
 			if (found == TRUE)
 			{
-				registerNewRiderDataOnContain((*it).m_templateName);
+				riderData.templateName = (*it).m_templateName;
+				riderData.timeFrame = 1;
+				riderData.statusType = m_riderDataStatusRegister;
+				riderData.customStatusType = m_riderDataCustomStatusRegister;
 
 				break;
 			}
 		}
 	}
+
+	// Register the new Data Record
+	if(found)
+		registerNewRiderDataOnContain(riderData);
 
 	//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
 	//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
@@ -423,7 +461,7 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 	m_containing = FALSE;
 }
 
-
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly )
 {
@@ -463,7 +501,7 @@ void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSour
 			++it;
 
 		// call it
-		if( rider && rider->getAI() )
+		if( rider && rider->getAI() && rider->getContainedBy() )
 		{
 			if( instantly )
 			{
@@ -494,92 +532,32 @@ void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSour
 }
 
 //-------------------------------------------------------------------------------------------------
-void RiderChangeContain::registerNewRiderDataOnContain(const AsciiString& riderTemplate)
+void RiderChangeContain::registerNewRiderDataOnContain(RiderData riderData)
 {
-	const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
-
-	// Clear the Rider Data Record and assign it as the Last Template, only if the game is loaded or its the Inital Rider,
-	// or else it will register new values on loading.
-	// Register it as the first Template becuase the Upgrade and Status Checks will always need a template to refer to.
 	Bool cond_1 = m_loaded || m_theRiderDataRecord.empty() ? TRUE : FALSE;
 	//Bool cond_2 = data->m_moreThanOneRiders || getContainCount() == 1 ? TRUE : FALSE;
 
 	if(!cond_1)
 		return;
 
-	RiderData riderData;
-	riderData.templateName = riderTemplate;
-	riderData.timeFrame = 1; // For indicating it as a Containing Template, in case of usage
-	riderData.statusType = (ObjectStatusType)0;
-	riderData.customStatusType = NULL;
-
-	// Clear the Records if we only register one Rider
-	/*if(!data->m_moreThanOneRiders)
-	{
-		m_theRiderDataRecord.clear();
-	}*/
-
 	// If the record is empty, register an Empty Template for reference to Status Check and Upgrade Check, or even when Emptying Rider Templates
 	if(m_theRiderDataRecord.empty())
 	{
+		RiderData firstTemplate;
+		
 		char charName[2];
 		sprintf( charName, "%d", 0 );
-		riderData.templateName = charName;
+		firstTemplate.templateName = charName;
+		firstTemplate.timeFrame = 1;
+		firstTemplate.statusType = (ObjectStatusType)0;
+		firstTemplate.customStatusType = NULL;
 
-		m_theRiderDataRecord.push_back(riderData);
-
-		riderData.templateName = riderTemplate;
+		m_theRiderDataRecord.push_back(firstTemplate);
 	}
 	else
 	{
 		// If we register more than one rider, we need to clear all the previous Status and Upgrade Templates and assign the new Template 
 		clearAllTimeFramedDataRecords();
-	}
-
-	const char* RiderChar = riderTemplate.str();
-	// Register the Status for checking later
-	if(isdigit(*RiderChar))
-	{
-		Int RiderIndex;
-		if (sscanf( RiderChar, "%d", &RiderIndex ) != 1)
-		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex isn't a valid digit: %s.", RiderChar) );
-			throw INI_INVALID_DATA;
-		}
-		if(RiderIndex < 0 || RiderIndex > 8)
-		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex is invalid: %d.", RiderIndex) );
-			throw INI_INVALID_DATA;
-		}
-
-		if (data->m_riders[RiderIndex].m_objectCustomStatusType.isEmpty())
-		{
-			riderData.statusType = data->m_riders[RiderIndex].m_objectStatusType;
-		}
-		else
-		{
-			riderData.customStatusType = data->m_riders[RiderIndex].m_objectCustomStatusType;
-		}
-	}
-	// If it is not within Index List, then it must be from the Custom List.
-	else
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			if((*it).m_templateName == riderTemplate)
-			{
-				if ( (*it).m_objectCustomStatusType.isEmpty() )
-				{
-					riderData.statusType = (*it).m_objectStatusType;
-				}
-				else
-				{
-					riderData.customStatusType = (*it).m_objectCustomStatusType;
-				}
-
-				break;
-			}
-		}
 	}
 
 	// Register the new Data Record
@@ -620,10 +598,12 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 		if (riderInfo.m_objectCustomStatusType.isEmpty())
 		{
 			obj->setStatus( MAKE_OBJECT_STATUS_MASK( riderInfo.m_objectStatusType ) );
+			m_riderDataStatusRegister = riderInfo.m_objectStatusType;
 		}
 		else
 		{
 			obj->setCustomStatus( riderInfo.m_objectCustomStatusType );
+			m_riderDataCustomStatusRegister = riderInfo.m_objectCustomStatusType;
 		}
 
 		//Set the new commandset override
@@ -663,6 +643,13 @@ void RiderChangeContain::onRemoving( Object *rider )
 {
 	Object *bike = getObject();
 	const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
+	
+	Int transportSlotCount = rider->getTransportSlotCount();
+	Bool checkRecord = FALSE;
+	Bool hasScuttle = FALSE;
+
+	m_extraSlotsInUse -= transportSlotCount - 1;
+
 	//Note if the bike dies, the rider dies too.
 	if( !data->m_dontDestroyPassengersOnKill && bike->isEffectivelyDead() )
 	{
@@ -676,12 +663,26 @@ void RiderChangeContain::onRemoving( Object *rider )
 		TransportContain::onRemoving( rider );
 	}
 
-	// If we do not scutttle on exit or if we only register One rider while we are currently unloading, leave it at here
-	/*if(!data->m_moreThanOneRiders && getContainCount() > 0 && data->m_scuttleType != SCUTTLE_ON_EXIT)
+	if(data->m_scuttleType == SCUTTLE_ON_EXIT || (getContainCount() == 0 && data->m_scuttleType == SCUTTLE_ON_NO_PASSENGERS) )
 	{
-		m_dontCompare = TRUE;
-		return;
-	}*/
+		hasScuttle = TRUE;
+	}
+
+
+	// If we exit a Passenger from an Object that Contains more than one Passengers while we're Entering and we did not eject the First Passenger
+	// While that passenger has the same Template as the Rider, we will remove the Rider Template and leave it with the First Template.
+	// This happens specifically while MoreThanOneRiders is set to 'No'
+	// Example, a Bike has 3 Slot Capacity, Containing 3 Rebels, and a different Rider enters the Bike, exiting a Rebel and Removed its Template
+	if(m_containing && !data->m_moreThanOneRiders && getContainCount() > 1 && !hasScuttle)
+	{
+		for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+		{
+			DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
+		}
+		DEBUG_LOG(("My Contain Count: %d", getContainCount()));
+
+		checkRecord = TRUE;
+	}
 
 	//Find the rider in the list and clear various data.
 	Bool found = FALSE;
@@ -689,7 +690,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 	for( int i = 0; i < MAX_RIDERS; i++ )
 	{
-		found = riderChangeRemoveCheck( rider, data->m_riders[ i ] );
+		found = riderChangeRemoveCheck( rider, data->m_riders[ i ], checkRecord );
 		if (found == TRUE)
 		{
 			char charName[2];
@@ -702,7 +703,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 	{
 		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
 		{
-			found = riderChangeRemoveCheck(rider, (*it));
+			found = riderChangeRemoveCheck(rider, (*it), checkRecord);
 			if (found == TRUE)
 			{
 				removeTemplate = (*it).m_templateName;
@@ -711,11 +712,10 @@ void RiderChangeContain::onRemoving( Object *rider )
 		}
 	}
 
-	if(!removeTemplate.isEmpty() && data->m_scuttleType != SCUTTLE_ON_EXIT)
+	if(!removeTemplate.isEmpty() && !hasScuttle)
 	{
 		Bool switchTemplate = FALSE;
-		Int RemoveIndex = 0;
-		Int GrantIndex = -1;
+		Int CheckIndex = -1;
 
 		// If we are exiting or evacuating when not trying to Contain a Rider
 		if(!m_containing && getContainCount() > 0)
@@ -726,9 +726,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 			{
 				if(m_theRiderDataRecord[m_theRiderDataRecord.size()-1].timeFrame == 1)
 				{
-					GrantIndex = m_theRiderDataRecord.size()-1;
-					RemoveIndex = m_theRiderDataRecord.size()-1;
-					switchTemplate = TRUE;
+					CheckIndex = m_theRiderDataRecord.size()-1;
 					isCurRider = TRUE;
 				}
 				else
@@ -747,9 +745,9 @@ void RiderChangeContain::onRemoving( Object *rider )
 					isCurRider = TRUE;
 					if(m_theRiderDataRecord[i].timeFrame == 1)
 					{
-						if(i > GrantIndex && GrantIndex == -1)
+						if(CheckIndex == -1)
 						{
-							GrantIndex = i;
+							CheckIndex = i;
 						}
 					}
 					else
@@ -761,30 +759,37 @@ void RiderChangeContain::onRemoving( Object *rider )
 					first = false;
 				}
 
-				if(isCurRider)
-				{
-					RemoveIndex = 1;
-					switchTemplate = TRUE;
-				}
 			}
 
 			if(!isCurRider)
-				GrantIndex = -1;
+				CheckIndex = -1;
 			else
-				switchTemplate = compareRiderStatus(removeTemplate, RemoveIndex);
+				switchTemplate = compareRiderStatus(removeTemplate, CheckIndex);
 		}
 
-		//for(int i = 0; i < m_theRiderDataRecord.size(); i++)
-		//	DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
+		/*for(int i = 0; i < m_theRiderDataRecord.size(); i++)
+		{
+			DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
+		}
+
+		if(CheckIndex == -1)
+		{
+			DEBUG_LOG(("Removing Rider, No Template Found"));
+		}*/
+
 		
 		// Remove the Data from the Data Record
 		removeRiderDataRecord(removeTemplate);
 
 		// If we have multiple Riders and the Bike has its Template and it is being removed
-		if(switchTemplate && GrantIndex >= 0)
+		if(switchTemplate && CheckIndex >= 0)
 		{
+			Int GrantIndex = 0;
+
 			if(data->m_moreThanOneRiders)
 				GrantIndex = m_theRiderDataRecord.size()-1;
+			else
+				GrantIndex = CheckIndex;
 
 			// Grant the last Template before the Removed Template of the Data Record, but don't Register it
 			RiderData riderData;
@@ -795,15 +800,14 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 			// Grant the Rider the last Template before the Removed Rider
 			riderGiveTemplate(riderData);
+
+			//DEBUG_LOG(("Template to Grant: %d, Template Name: %s", GrantIndex, m_theRiderDataRecord[GrantIndex].templateName.str()));
 		}
 	}
 
 	//If we're not replacing the rider, then if the cycle is selected, transfer selection
 	//to the rider getting off (because the bike is gonna blow).
-	if( !m_containing && 
-		(data->m_scuttleType == SCUTTLE_ON_EXIT ||
-		(getContainCount() == 0 && data->m_scuttleType == SCUTTLE_ON_NO_PASSENGERS) )
-	)
+	if( !m_containing && hasScuttle )
 	{
 		Drawable *containDraw = bike->getDrawable();
 		Drawable *riderDraw = rider->getDrawable();
@@ -838,12 +842,15 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& riderInfo)
+Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& riderInfo, Bool checkRecordOnly)
 {
 	Object* bike = getObject();
 	const ThingTemplate* thing = TheThingFactory->findTemplate(riderInfo.m_templateName);
 	if( thing && thing->isEquivalentTo( rider->getTemplate() ) )
 	{
+		if(checkRecordOnly == TRUE)
+			return TRUE;
+		
 		// Skip an instance of Comparison after the An Old Rider has been removed, as the Status Type may change.
 		m_dontCompare = TRUE;
 		
@@ -891,6 +898,12 @@ void RiderChangeContain::removeRiderDataRecord(const AsciiString& rider)
 	std::vector<RiderData>::iterator it;
 	for (it = m_theRiderDataRecord.begin(); it != m_theRiderDataRecord.end();)
 	{
+		if(it == m_theRiderDataRecord.begin() && (*it).templateName == "0")
+		{
+			++it;
+			if(it == m_theRiderDataRecord.end())
+				break;
+		}
 		if ((*it).templateName == rider)
 		{
 			it = m_theRiderDataRecord.erase(it);

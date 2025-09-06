@@ -168,6 +168,8 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 	// The extra slots bit means that a tank that takes up three slots will make two transport
 	// buttons disappear off the end to show he takes up more room.
 	transportMax = transportMax - contain->getExtraSlotsInUse();
+	if(transportMax <= 0)
+		transportMax = 1; // For RiderChangeContain
 
 	Int firstInventoryIndex = -1;
 	Int lastInventoryIndex = -1;

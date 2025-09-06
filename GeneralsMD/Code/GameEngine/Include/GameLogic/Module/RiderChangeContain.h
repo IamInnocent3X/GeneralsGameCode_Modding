@@ -157,7 +157,7 @@ public:
 
 	void loadPreviousState(); // Loads the previous Rider Template of the existing unit if StatusCheck or UpgradeCheck is enabled
 	void doRegisterUpgradeNames();
-	void registerNewRiderDataOnContain(const AsciiString& riderTemplate);
+	void registerNewRiderDataOnContain(RiderData riderData);
 	void removeRiderTemplate(const AsciiString& rider, Bool clearStatus); // Remove the template
 	void removeRiderDataRecord(const AsciiString& rider); // Use in line with Remove Template, also clears it from the Rider Change Records
 	void clearAllTimeFramedDataRecords();
@@ -165,7 +165,7 @@ public:
 	Bool checkHasRiderTemplate( const Object *rider ) const;
 	Bool compareRiderStatus(const AsciiString& rider, Int checkIndex) const;
 	Bool riderChangeContainingCheck( Object *rider, const RiderInfo& riderInfo );
-	Bool riderChangeRemoveCheck( Object *rider, const RiderInfo& riderInfo );
+	Bool riderChangeRemoveCheck( Object *rider, const RiderInfo& riderInfo, Bool checkRecordOnly);
 
 protected:
 
@@ -187,6 +187,9 @@ private:
 
 	ObjectStatusMaskType m_prevStatus;
 	ObjectCustomStatusType m_prevCustomStatusTypes;
+
+	ObjectStatusType m_riderDataStatusRegister;
+	AsciiString m_riderDataCustomStatusRegister;
 
 	struct RiderUpgrade
 	{
