@@ -39,6 +39,7 @@
 #include "../../GameEngine/Include/Common/MapObject.h"
 
 #include "Common/STLTypedefs.h"
+#include "Common/GlobalData.h"
 typedef std::vector<ICoord2D> VecICoord2D;
 
 
@@ -235,8 +236,8 @@ public:  // height map info.
 	inline Int getDrawOrgX(void) {return m_drawOriginX;}
 	inline Int getDrawOrgY(void) {return m_drawOriginY;}
 
-	inline Int getDrawWidth(void) {return m_drawWidthX;}
-	inline Int getDrawHeight(void) {return m_drawHeightY;}
+	inline Int getDrawWidth(void) {return m_drawWidthX*TheGlobalData->m_drawWidthFactor;}
+	inline Int getDrawHeight(void) {return m_drawHeightY*TheGlobalData->m_drawHeightFactor;}
 	inline void setDrawWidth(Int width) {m_drawWidthX = width; if (m_drawWidthX>m_width) m_drawWidthX = m_width;}
 	inline void setDrawHeight(Int height) {m_drawHeightY = height; if (m_drawHeightY>m_height) m_drawHeightY = m_height;}
 	virtual Int getBorderSize(void) {return m_borderSize;}

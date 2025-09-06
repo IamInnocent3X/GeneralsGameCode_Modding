@@ -654,6 +654,9 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "SeedRandomType",	 INI::parseAsciiString, NULL, offsetof(GlobalData, m_initRandomType) },
 
+	{ "DrawWidthFactor", INI::parseReal, NULL, offsetof( GlobalData, m_drawWidthFactor ) },
+	{ "DrawHeightFactor", INI::parseReal, NULL, offsetof( GlobalData, m_drawHeightFactor ) },
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1216,6 +1219,9 @@ GlobalData::GlobalData()
 	m_menufps = 0;
 	m_newfpsLimit = 0;
 	m_initRandomType = NULL;
+
+	m_drawWidthFactor = 1.0f;
+	m_drawHeightFactor = 1.0f;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

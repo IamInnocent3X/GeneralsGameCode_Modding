@@ -599,6 +599,9 @@ public:
 	UnsignedInt m_newfpsLimit;
 	AsciiString m_initRandomType;
 
+	Real m_drawWidthFactor;
+	Real m_drawHeightFactor;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

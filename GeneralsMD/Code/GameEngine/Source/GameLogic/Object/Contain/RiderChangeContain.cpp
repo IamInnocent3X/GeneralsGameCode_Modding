@@ -675,12 +675,6 @@ void RiderChangeContain::onRemoving( Object *rider )
 	// Example, a Bike has 3 Slot Capacity, Containing 3 Rebels, and a different Rider enters the Bike, exiting a Rebel and Removed its Template
 	if(m_containing && !data->m_moreThanOneRiders && getContainCount() > 1 && !hasScuttle)
 	{
-		for(int i = 0; i < m_theRiderDataRecord.size(); i++)
-		{
-			DEBUG_LOG(("Template Slot: %d, Template Name: %s, Time Frame: %d", i, m_theRiderDataRecord[i].templateName.str(), m_theRiderDataRecord[i].timeFrame));
-		}
-		DEBUG_LOG(("My Contain Count: %d", getContainCount()));
-
 		checkRecord = TRUE;
 	}
 
