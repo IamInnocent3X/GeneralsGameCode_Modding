@@ -83,9 +83,8 @@ class DamageInfo;
 class ParticleSystemTemplate;
 class StealthUpdate;
 class SpyVisionUpdate;
-
-//class TunnelContainInterface;
-
+// -----------------
+class BattlePlanBonusBehaviorInterface;
 
 //-------------------------------------------------------------------------------------------------
 class BehaviorModuleData : public ModuleData
@@ -145,7 +144,8 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() = 0;
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() = 0;
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const = 0;
-	//virtual TunnelContainInterface *getTunnelContainInterface( void ) = 0; 
+
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() = 0;
 
 };
 
@@ -203,7 +203,7 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return NULL; }
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return NULL; }
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return NULL; }
-	//virtual TunnelContainInterface *getTunnelContainInterface( void ) { return NULL; } 
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return NULL; };
 
 protected:
 

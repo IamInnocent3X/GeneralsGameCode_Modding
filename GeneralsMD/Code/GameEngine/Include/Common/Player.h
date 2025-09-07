@@ -710,7 +710,7 @@ private:
 	 this call externally, you probably don't... you should probably be
 	 using grantScience() instead.
 	*/
-	Bool addScience(ScienceType science);
+	Bool addScience(ScienceType science, Bool playerAction = FALSE);
 
 public:
 	Int getSkillPoints() const						{ return m_skillPoints; }
@@ -744,7 +744,7 @@ public:
 		attempt to purchase the science, but use prereqs, and charge points.
 		return true if successful.
 	*/
-	Bool attemptToPurchaseScience(ScienceType science);
+	Bool attemptToPurchaseScience(ScienceType science, Bool playerAction = FALSE);
 
 	/**
 		grant the science, ignore prereqs & charge no points,
@@ -756,6 +756,8 @@ public:
 
 	/** return true attemptToPurchaseScience() would succeed for this science. */
 	Bool isCapableOfPurchasingScience(ScienceType science) const;
+
+	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
 
 protected:
 
