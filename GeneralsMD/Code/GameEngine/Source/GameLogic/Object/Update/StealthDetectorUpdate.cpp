@@ -73,6 +73,8 @@ void StealthDetectorUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "ExtraForbiddenKindOf",				KindOfMaskType::parseFromINI,				NULL, offsetof( StealthDetectorUpdateModuleData, m_extraDetectKindofNot ) },
 		{ "CanDetectWhileGarrisoned",		INI::parseBool,											NULL, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileGarrisoned ) },
 		{ "CanDetectWhileContained",		INI::parseBool,											NULL, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileTransported ) },
+		{ "TriggeredBy",						INI::parseAsciiStringVector, 				NULL, 		offsetof( StealthDetectorUpdateModuleData, m_activationUpgradeNames ) },
+		{ "ConflictsWith",						INI::parseAsciiStringVector, 				NULL, 		offsetof( StealthDetectorUpdateModuleData, m_conflictingUpgradeNames ) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -136,6 +138,68 @@ Bool PartitionFilterStealthedOrStealthGarrisoned::allow( Object *objOther)
 	return FALSE;
 }
 
+Bool StealthDetectorUpdate::testUpgrade()
+{
+	const StealthDetectorUpdateModuleData *data = getStealthDetectorUpdateModuleData();
+	Object* self = getObject();
+
+	if(!data->m_activationUpgradeNames.empty())
+	{
+		Bool gotUpgrade = FALSE;
+		std::vector<AsciiString>::const_iterator it_a;
+		for( it_a = data->m_activationUpgradeNames.begin(); it_a != data->m_activationUpgradeNames.end(); it_a++)
+		{
+			gotUpgrade = FALSE;
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_a->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
+				{
+					gotUpgrade = TRUE;
+					break;
+				}
+			}
+			else if( self->hasUpgrade(ut) )
+			{
+				gotUpgrade = TRUE;
+				break;
+			}
+		}
+		if(!gotUpgrade)
+			return FALSE;
+	}
+
+	if(!data->m_conflictingUpgradeNames.empty())
+	{
+		std::vector<AsciiString>::const_iterator it_c;
+		for( it_c = data->m_conflictingUpgradeNames.begin(); it_c != data->m_conflictingUpgradeNames.end(); it_c++)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_c );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_c->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
+					return FALSE;
+			}
+			else if( self->hasUpgrade(ut) )
+			{
+				return FALSE;
+			}
+		}
+	}
+
+	return TRUE;
+}
+
 //-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
@@ -154,6 +218,10 @@ UpdateSleepTime StealthDetectorUpdate::update( void )
 	// We turn off forever the moment we are sold.
 	if( self->testStatus(OBJECT_STATUS_SOLD) )
 		return UPDATE_SLEEP_FOREVER;
+
+	// If we do not have the Upgrade, wait until we have the Upgrade then enable it.
+	if( !testUpgrade() )
+		return UPDATE_SLEEP_NONE;
 
 	//Are we contained by anything?
 	Object *containedBy = self->getContainedBy();
