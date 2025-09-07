@@ -158,6 +158,8 @@ void StealthUpgrade::xfer( Xfer *xfer )
 
 	xfer->xferBool(&m_hasExecuted);
 
+	xfer->xferUnsignedInt(&m_prevStealthLevel);
+
 }  // end xfer
 
 // ------------------------------------------------------------------------------------------------
