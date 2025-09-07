@@ -58,6 +58,7 @@ void StealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 StealthUpgrade::StealthUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
 	m_hasExecuted = FALSE;
+	m_prevStealthLevel = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -69,20 +70,53 @@ StealthUpgrade::~StealthUpgrade( void )
 //-------------------------------------------------------------------------------------------------
 void StealthUpgrade::upgradeImplementation()
 {
+	// The logic that does the stealthupdate will notice this and start stealthing
+	Object *me = getObject();
+
+	UpgradeMaskType objectMask = me->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
 
 	const StealthUpgradeModuleData* d = getStealthUpgradeModuleData();
 
+	// Get whether the Upgrade wants to Enable or Disable the Stealth
+	Bool isEnable = d->m_enableStealth;
+
+	m_hasExecuted = UpgradeStatus == 1 ? TRUE : FALSE;
+
+	// Remove the Upgrade Execution Status so it is treated as activation again
+	if(!m_hasExecuted)
+	{
+		setUpgradeExecuted(false);
+
+		// Set its Given Status as Reversed, so its treated as the opposite
+		isEnable = !isEnable;
+	}
+	
 	if (d->m_stealthLevel > 0) {
 		StealthUpdate* stealth = getObject()->getStealth();
 		if (stealth) {  // we should always have a stealth update module
-			stealth->setStealthLevelOverride(d->m_stealthLevel);
+			if(m_hasExecuted) {
+				m_prevStealthLevel = stealth->getStealthLevel();
+				stealth->setStealthLevelOverride(d->m_stealthLevel);
+			} else {
+				stealth->setStealthLevelOverride(m_prevStealthLevel);
+			}
 		}
 		return;  // Note AW: There should be no reason to enable/disable stealth if you change the stealthLevel
 	}
 
-	// The logic that does the stealthupdate will notice this and start stealthing
-	Object* me = getObject();
-	me->setStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_CAN_STEALTH), d->m_enableStealth);
+	me->setStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_CAN_STEALTH), isEnable);
 
 	//Grant stealth to spawns if applicable.
 	if (me->isKindOf(KINDOF_SPAWNS_ARE_THE_WEAPONS))
@@ -90,7 +124,7 @@ void StealthUpgrade::upgradeImplementation()
 		SpawnBehaviorInterface* sbInterface = me->getSpawnBehaviorInterface();
 		if (sbInterface)
 		{
-			sbInterface->giveSlavesStealthUpgrade(d->m_enableStealth);
+			sbInterface->giveSlavesStealthUpgrade(isEnable);
 		}
 	}
 }

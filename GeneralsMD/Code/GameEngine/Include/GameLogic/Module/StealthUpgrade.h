@@ -71,6 +71,7 @@ protected:
 	virtual Bool hasUpgradeRefresh() { return true; }
 
 private:
+	UnsignedInt m_prevStealthLevel;
 	Bool m_hasExecuted;
 };
 
