@@ -1816,6 +1816,23 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 			}
 
 			case SPECIAL_DEFECTOR:
+			{
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_DEFECTOR );
+
+				// Condition: I have declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						break;
+					
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							return canMakeObjectDefector( obj, target, commandSource );
+						else
+							break;
+					}
+				}
 				//buildings do not defect
 				if( ! target->isKindOf( KINDOF_STRUCTURE ) )
 				{
@@ -1833,6 +1850,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					}
 				}
 				break;
+			}
 
 			//These special powers require locations, not objects!
 			case SPECIAL_DAISY_CUTTER:
