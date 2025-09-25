@@ -1661,9 +1661,11 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 				Subdualamount *= m_damageScalar;
 			}
 			
+			// TheSuperHackers @bugfix Stubbjax 20/09/2025 The isSubdued() function now directly checks status instead
+			// of health to prevent indefinite subdue status when internally shifting health across the threshold.
 			Bool wasSubdued = isSubdued();
 			internalAddSubdualDamage(Subdualamount);
-			Bool nowSubdued = isSubdued();
+			Bool nowSubdued = m_maxHealth <= m_currentSubdualDamage;
 
 			if(damageInfo->in.m_subdualDealsNormalDamage == FALSE)
 			{
@@ -2268,7 +2270,11 @@ Bool ActiveBody::isSubduedChrono() const
 //-------------------------------------------------------------------------------------------------
 Bool ActiveBody::isSubdued() const
 {
+#if RETAIL_COMPATIBLE_CRC
 	return m_maxHealth <= m_currentSubdualDamage;
+#else
+	return getObject()->isDisabledByType(DISABLED_SUBDUED);
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
