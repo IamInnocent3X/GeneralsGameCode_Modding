@@ -203,6 +203,7 @@ enum GUICommandType CPP_11(: Int)
 	GUICOMMANDMODE_HIJACK_VEHICLE,
 	GUICOMMANDMODE_CONVERT_TO_CARBOMB,
 	GUICOMMANDMODE_SABOTAGE_BUILDING,
+	GUICOMMANDMODE_EQUIP_OBJECT,
 #ifdef ALLOW_SURRENDER
 	GUICOMMANDMODE_PICK_UP_PRISONER,			///< POW Truck assigned to pick up a specific prisoner
 #endif
@@ -257,6 +258,7 @@ static const char *TheGuiCommandNames[] =
 	"HIJACK_VEHICLE",
 	"CONVERT_TO_CARBOMB",
 	"SABOTAGE_BUILDING",
+	"EQUIP_OBJECT",
 #ifdef ALLOW_SURRENDER
 	"PICK_UP_PRISONER",
 #endif
@@ -337,6 +339,7 @@ public:
 	const UpgradeTemplate* getUpgradeTemplate() const { return m_upgradeTemplate; }
 	const SpecialPowerTemplate* getSpecialPowerTemplate() const { return m_specialPower; }
 	RadiusCursorType getRadiusCursorType() const { return m_radiusCursor; }
+	const AsciiString& getCustomRadiusCursorType() const { return m_customRadiusCursor; }
 	WeaponSlotType getWeaponSlot() const { return m_weaponSlot; }
 	Int getMaxShotsToFire() const { return m_maxShotsToFire; }
 	const ScienceVec& getScienceVec() const { return m_science; }
@@ -377,7 +380,7 @@ private:
 	RadiusCursorType							m_radiusCursor;								///< radius cursor, if any
 	AsciiString										m_cursorName;									///< cursor name for placement (NEED_TARGET_POS) or valid version (CONTEXTMODE_COMMAND)
 	AsciiString										m_invalidCursorName;					///< cursor name for invalid version
-
+	AsciiString										m_customRadiusCursor;								///< radius cursor, if any
 	// bleah. shouldn't be mutable, but is. sue me. (Kris) -snork!
 	mutable AsciiString										m_textLabel;									///< string manager text label
 	mutable AsciiString										m_descriptionLabel;						///< The description of the current command, read in from the ini

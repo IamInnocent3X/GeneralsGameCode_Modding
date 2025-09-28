@@ -182,6 +182,8 @@ Bool SabotageInternetCenterCrateCollide::executeCrateBehavior( Object *other )
 	ContainModuleInterface *contain = other->getContain();
 	contain->iterateContained( disableHacker, (void*)frame, FALSE );
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

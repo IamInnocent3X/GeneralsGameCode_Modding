@@ -141,6 +141,8 @@ Bool SabotagePowerPlantCrateCollide::executeCrateBehavior( Object *other )
 		//Note: Player::update() will check to turn it back on again once the timer expires.
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

@@ -51,6 +51,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/CollideModule.h"
+#include "GameLogic/Module/CountermeasuresBehavior.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
 #include "GameLogic/Module/RailroadGuideAIUpdate.h"
 #include "GameLogic/Module/RailedTransportDockUpdate.h"
@@ -536,7 +537,7 @@ Bool ActionManager::canResumeConstructionOf( const Object *obj,
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode )
+Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck )
 {
 
 	// sanity
@@ -632,21 +633,24 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 	}
 
 	// first, see if we'd like to collide with 'other'
-	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+	if(CollideCheck)
 	{
-		CollideModuleInterface* collide = (*m)->getCollide();
-		if (!collide)
-			continue;
-
-		if( collide->wouldLikeToCollideWith( objectToEnter ) )
+		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
 		{
-			//I thought this was a little confusing that it would return TRUE here before
-			//getting to any of the other checks. The key is that it usually doesn't return
-			//TRUE because most things aren't trying to collide with objects. This is different
-			//for terrorist converting carbombs, and pilots entering vehicles. In these cases,
-			//the vehicles don't have transport capacities, therefore returning true here
-			//foregoes that checking later on.
-			return TRUE;
+			CollideModuleInterface* collide = (*m)->getCollide();
+			if (!collide)
+				continue;
+
+			if( collide->wouldLikeToCollideWith( objectToEnter ) )
+			{
+				//I thought this was a little confusing that it would return TRUE here before
+				//getting to any of the other checks. The key is that it usually doesn't return
+				//TRUE because most things aren't trying to collide with objects. This is different
+				//for terrorist converting carbombs, and pilots entering vehicles. In these cases,
+				//the vehicles don't have transport capacities, therefore returning true here
+				//foregoes that checking later on.
+				return TRUE;
+			}
 		}
 	}
 
@@ -676,7 +680,9 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 	if( contain->isHealContain() )
 	{
 		BodyModuleInterface *body = obj->getBodyModule();
-		if( body->getHealth() == body->getMaxHealth() )
+		const CountermeasuresBehaviorInterface *cbi = obj->getCountermeasuresBehaviorInterface();
+		if( body->getHealth() == body->getMaxHealth() && 
+			  (!cbi || !cbi->getCountermeasuresMustReloadAtBarracks()) )
 		{
 			//This container is only used for the purposes of healing and we cannot
 			//enter it with full health. This is not a normal container.
@@ -980,6 +986,46 @@ Bool ActionManager::canSabotageBuilding( const Object *obj, const Object *object
 			continue;
 
 		if( collide->wouldLikeToCollideWith( objectToSabotage ) && collide->isSabotageBuildingCrateCollide() )
+		{
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource )
+{
+	// sanity
+	if( obj == NULL || objectToEquip == NULL )
+	{
+		return FALSE;
+	}
+
+	//Make sure it's alive.
+	if( objectToEquip->isEffectivelyDead() )
+	{
+		return FALSE;
+	}
+
+	if (objectToEquip->isDisabledByType( DISABLED_CHRONO ))
+		return FALSE;
+
+	// if the target is in the shroud, we can't do anything
+	if (isObjectShroudedForAction(obj, objectToEquip, commandSource))
+	{
+		return FALSE;
+	}
+
+	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+	{
+		CollideModuleInterface* collide = (*m)->getCollide();
+		if (!collide)
+			continue;
+
+		if( collide->wouldLikeToCollideWith( objectToEquip ) && collide->isEquipCrateCollide() )
 		{
 			return TRUE;
 		}
@@ -1827,7 +1873,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					
 					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
 					{
-						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) && r == ENEMIES)
 							return canMakeObjectDefector( obj, target, commandSource );
 						else
 							break;

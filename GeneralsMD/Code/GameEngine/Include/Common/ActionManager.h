@@ -77,7 +77,7 @@ public:
 	Bool canGetHealedAt( const Object *obj, const Object *healDest, CommandSourceType commandSource );
 	Bool canRepairObject( const Object *obj, const Object *objectToRepair, CommandSourceType commandSource );
 	Bool canResumeConstructionOf( const Object *obj, const Object *objectBeingConstructed, CommandSourceType commandSource );
-	Bool canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode );
+	Bool canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck = TRUE );
 	CanAttackResult getCanAttackObject( const Object *obj, const Object *objectToAttack, CommandSourceType commandSource, AbleToAttackType attackType );
 	Bool canConvertObjectToCarBomb( const Object *obj, const Object *objectToConvert, CommandSourceType commandSource );
 	Bool canHijackVehicle( const Object *obj, const Object *ObjectToHijack, CommandSourceType commandSource ); // LORENZEN
@@ -104,6 +104,8 @@ public:
 
 	//Player to unit check
 	Bool canPlayerGarrison( const Player *player, const Object *target, CommandSourceType commandSource );
+
+	Bool canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource );
 
 protected:
 

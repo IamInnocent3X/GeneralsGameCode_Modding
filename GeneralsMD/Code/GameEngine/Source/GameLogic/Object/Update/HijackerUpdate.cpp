@@ -45,6 +45,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Module/EjectPilotDie.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/ExperienceTracker.h"
 
@@ -55,6 +56,16 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	m_targetID = INVALID_ID;
 	setUpdate( FALSE );
 	setIsInVehicle( FALSE );
+	setNoLeechExp( FALSE );
+	setDestroyOnRepair( FALSE );
+	setEject( FALSE );
+	setHealed( FALSE );
+	setNoSelfDamage( FALSE );
+	setPercentDamage( 0.0f );
+	m_statusToRemove.clear();
+	m_statusToDestroy.clear();
+	m_customStatusToRemove.clear();
+	m_customStatusToDestroy.clear();
 	m_wasTargetAirborne = false;
 	m_ejectPos.zero();
 //	m_ejectPilotDMI = NULL;
@@ -71,11 +82,12 @@ HijackerUpdate::~HijackerUpdate( void )
 UpdateSleepTime HijackerUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done.
 
-	if ( ! m_update) // have not flagged for updating
-	{
-		return UPDATE_SLEEP_NONE;
-	}
+	//if ( ! m_update) // have not flagged for updating
+	//{
+	//	return UPDATE_SLEEP_FOREVER;
+	//}
 
 	if (m_isInVehicle)
 	{
@@ -84,12 +96,115 @@ UpdateSleepTime HijackerUpdate::update( void )
 		// If hijacker has hijacked a vehicle, he needs to move along with it...
 		//Continually reset position of hijacker to match the position of the target.
 		Object *target = getTargetObject();
+		Bool isDestroyed = FALSE;
+		Bool isRemoved = FALSE;
+		Bool isKilled = FALSE;
+		Bool revertedCollide = FALSE;
+
+		if( target )
+		{
+			if( target->getStatusBits().testForAny( m_statusToDestroy ) )
+			{
+				isDestroyed = TRUE;
+			}
+			for(std::vector<AsciiString>::const_iterator it = m_customStatusToDestroy.begin(); it != m_customStatusToDestroy.end(); ++it)
+			{
+				if(isDestroyed)
+					break;
+
+				if(target->testCustomStatus(*it))
+				{
+					isDestroyed = TRUE;
+					break;
+				}
+			}
+			if( !isDestroyed && m_statusToRemove.any() && target->getStatusBits().testForAny(m_statusToRemove) )
+			{
+				isRemoved = TRUE;
+			}
+			for(std::vector<AsciiString>::const_iterator it = m_customStatusToRemove.begin(); it != m_customStatusToRemove.end(); ++it)
+			{
+				if(isRemoved || isDestroyed)
+					break;
+
+				if(target->testCustomStatus(*it))
+				{
+					isRemoved = TRUE;
+					break;
+				}
+			}
+
+			Real curHealth = 0.0f;
+			BodyModuleInterface *body = target->getBodyModule();
+			if( body )
+				curHealth = body->getHealth();
+
+			if(!isDestroyed && m_targetObjHealth && curHealth != m_targetObjHealth)
+			{
+				if ( m_destroyOnRepair && m_healed )
+				{
+					isDestroyed = TRUE;
+				}
+
+				//Calculate the damage to be inflicted on each unit.
+				Real damage = m_noSelfDamage ? 0.0f : (m_targetObjHealth - curHealth) * m_percentDamage;
+
+				if(obj->getBodyModule() && damage > obj->getBodyModule()->getHealth())
+				{
+					isKilled = TRUE;
+				}
+				else if(!isDestroyed && damage > 0)
+				{
+					DamageInfo damageInfo;
+					damageInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
+					damageInfo.in.m_deathType = DEATH_NORMAL;
+					damageInfo.in.m_sourceID = obj->getID();
+					damageInfo.in.m_amount = damage;
+					obj->attemptDamage( &damageInfo );
+				}
+
+				m_targetObjHealth = curHealth;
+			}
+			else if(!m_targetObjHealth)
+			{
+				m_targetObjHealth = curHealth;
+			}
+
+			// If the equipped Object or Hijacker is removed, revert the behavior
+			if(isRemoved || isDestroyed || isKilled || m_eject)
+			{
+				for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+				{
+					CollideModuleInterface* collide = (*m)->getCollide();
+					if (!collide)
+						continue;
+
+					if( collide->revertCollideBehavior(target) )
+						break;
+				}
+
+				// Make the target NULL for reverting the behavior
+				setTargetObject( NULL );
+
+				// Inform the module we have reverted
+				revertedCollide = TRUE;
+			}
+		}
+
+		setEject( FALSE );
+		setHealed( FALSE );
+		setNoSelfDamage( FALSE );
+
 		if( target )
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
 			obj->setPosition( target->getPosition() );
 			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 			m_ejectPos = *target->getPosition();
+
+			// If I do not leech Exp as an Equipped Object, then I do not receive any EXP that should be given to the attached Object
+			if(m_noLeechExp)
+				return UPDATE_SLEEP_NONE;
 
 			// So, if while I am driving this American war vehicle, I gain skill points, I get to keep them when I wreck the vehicle
 			ExperienceTracker *targetExp = target->getExperienceTracker();
@@ -125,7 +240,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 					ai->aiIdle( CMD_FROM_AI );
 				}
 
-				if (m_wasTargetAirborne)
+				if (m_wasTargetAirborne && !isDestroyed && !isKilled)
 				{
 					const ThingTemplate* putInContainerTmpl = TheThingFactory->findTemplate(getHijackerUpdateModuleData()->m_parachuteName);
 					DEBUG_ASSERTCRASH(putInContainerTmpl,("DeliverPayload: PutInContainer %s not found!",getHijackerUpdateModuleData()->m_parachuteName.str()));
@@ -148,10 +263,40 @@ UpdateSleepTime HijackerUpdate::update( void )
 
 			}// end if (! hostVehicleHasEjection)
 
+			if(!revertedCollide)
+			{
+				for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+				{
+					CollideModuleInterface* collide = (*m)->getCollide();
+					if (!collide)
+						continue;
+
+					if( collide->revertCollideBehavior(NULL) )
+						break;
+				}
+			}
+
 			setTargetObject( NULL );
 			setIsInVehicle( FALSE );
 			setUpdate( FALSE );
+			setNoLeechExp( FALSE );
+			setDestroyOnRepair( FALSE );
+			setPercentDamage( 0.0f );
+			m_targetObjHealth = 0.0f;
+			m_statusToRemove.clear();
+			m_statusToDestroy.clear();
+			m_customStatusToRemove.clear();
+			m_customStatusToDestroy.clear();
 			m_wasTargetAirborne = false;
+
+			if(isDestroyed)
+			{
+				TheGameLogic->destroyObject( obj );
+			}
+			else if(isKilled)
+			{
+				obj->kill();
+			}
 
 		}// end if( target )
 
@@ -160,8 +305,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 	{
 		m_wasTargetAirborne = false;
 	}
-
-	return UPDATE_SLEEP_NONE;
+	return UPDATE_SLEEP_FOREVER;
 }
 
 
@@ -235,13 +379,83 @@ void HijackerUpdate::xfer( Xfer *xfer )
 	xfer->xferCoord3D( &m_ejectPos );
 
 	// udpate
-	xfer->xferBool( &m_update );
+	//xfer->xferBool( &m_update );
 
 	// is in vehicle
 	xfer->xferBool( &m_isInVehicle );
 
 	// was target airborne
 	xfer->xferBool( &m_wasTargetAirborne );
+
+	// will leech EXP
+	xfer->xferBool( &m_noLeechExp );
+
+	// destroy on repair
+	xfer->xferBool( &m_destroyOnRepair );
+
+	// Damage Percentage
+	xfer->xferReal( &m_percentDamage );
+
+	// Health of target
+	xfer->xferReal( &m_targetObjHealth );
+
+	// status to remove
+	m_statusToRemove.xfer( xfer );
+
+	// status to destroy
+	m_statusToDestroy.xfer( xfer );
+
+	UnsignedShort customStatusToRemoveCount = m_customStatusToRemove.size();
+	UnsignedShort customStatusToDestroyCount = m_customStatusToDestroy.size();
+	xfer->xferUnsignedShort( &customStatusToRemoveCount );
+	xfer->xferUnsignedShort( &customStatusToDestroyCount );
+	AsciiString customStatusToRemove = NULL;
+	AsciiString customStatusToDestroy = NULL;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		// go through all IDs
+		for (int i = 0; i < customStatusToRemoveCount; i++)
+		{
+			customStatusToRemove = m_customStatusToRemove[i];
+			xfer->xferAsciiString( &customStatusToRemove );
+		}  // end for, i
+
+		for (int i_2 = 0; i_2 < customStatusToDestroyCount; i_2++)
+		{
+			customStatusToDestroy = m_customStatusToDestroy[i_2];
+			xfer->xferAsciiString( &customStatusToDestroy );
+		}  // end for, i_2
+
+	}  // end if, save
+	else
+	{
+		// this list should be empty on loading
+		if( m_customStatusToRemove.size() != 0 || m_customStatusToDestroy.size() != 0 )
+		{
+
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_customStatusToRemove and m_customStatusToDestroy should be empty but is not" ));
+
+		}  // end if
+
+		// read all IDs
+		for( UnsignedShort i = 0; i < customStatusToRemoveCount; ++i )
+		{
+			// read and register ID
+			xfer->xferAsciiString( &customStatusToRemove );
+			m_customStatusToRemove.push_back(customStatusToRemove);
+
+		}  // end for
+
+		for( UnsignedShort i_2 = 0; i_2 < customStatusToDestroyCount; ++i_2 )
+		{
+			// read and register ID
+			xfer->xferAsciiString( &customStatusToDestroy );
+			m_customStatusToDestroy.push_back(customStatusToDestroy);
+
+		}  // end for
+
+	}  // end else, load
 
 }  // end xfer
 

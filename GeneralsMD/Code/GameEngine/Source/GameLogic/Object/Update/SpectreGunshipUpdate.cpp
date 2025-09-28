@@ -92,6 +92,7 @@ SpectreGunshipUpdateModuleData::SpectreGunshipUpdateModuleData()
   m_howitzerFiringRate = 10;
   m_howitzerFollowLag = 0;
   m_randomOffsetForHowitzer = 20.0f;
+  m_cursorName = NULL;
 }
 
 static Real zero = 0.0f;
@@ -117,6 +118,7 @@ static Real zero = 0.0f;
 		{ "GattlingStrafeFXParticleSystem",	INI::parseParticleSystemTemplate, NULL, offsetof( SpectreGunshipUpdateModuleData, m_gattlingStrafeFXParticleSystem ) },
 		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( SpectreGunshipUpdateModuleData, m_attackAreaDecalTemplate ) },
 		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( SpectreGunshipUpdateModuleData, m_targetingReticleDecalTemplate ) },
+    { "CursorName",		                  INI::parseAsciiString,	                        NULL,	offsetof( SpectreGunshipUpdateModuleData, m_cursorName) },
 
 
 

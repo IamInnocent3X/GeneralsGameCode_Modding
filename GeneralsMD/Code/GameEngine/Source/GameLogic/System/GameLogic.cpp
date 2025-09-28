@@ -4430,7 +4430,8 @@ void GameLogic::pauseGameInput(Bool paused)
 
 		// Make sure the mouse is visible and the cursor is an arrow
 		TheMouse->setVisibility(TRUE);
-		TheMouse->setCursor( Mouse::ARROW );
+		//TheMouse->setCursor( Mouse::ARROW );
+		TheInGameUI->friend_setMouseCursor(Mouse::ARROW, "Dummy", 2);
 
 		// if Input is enabled, disable it
 		if(m_inputEnabledMemory)

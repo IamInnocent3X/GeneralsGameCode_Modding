@@ -37,6 +37,7 @@
 #ifndef __HIJACKER_UPDATE_H
 #define __HIJACKER_UPDATE_H
 
+#include "Common/ObjectStatusTypes.h"
 #include "GameLogic/Module/UpdateModule.h"
 
 //-------------------------------------------------------------------------------------------------
@@ -77,8 +78,18 @@ public:
 
 	void setTargetObject( const Object *object );
 	Object* getTargetObject() const;
-	void setUpdate(Bool u ) {m_update = u;}
+	void setUpdate(Bool u ) {m_update = u; if(u) setWakeFrame(getObject(), UPDATE_SLEEP_NONE);}
 	void setIsInVehicle(Bool i ) {m_isInVehicle = i;}
+	void setNoLeechExp(Bool i ) {m_noLeechExp = i;}
+	void setDestroyOnRepair(Bool i ) {m_destroyOnRepair = i;}
+	void setPercentDamage(Real i ) {m_percentDamage = i;}
+	void setStatusToRemove(ObjectStatusMaskType i ) {m_statusToRemove = i;}
+	void setStatusToDestroy(ObjectStatusMaskType i ) {m_statusToDestroy = i;}
+	void setCustomStatusToRemove(const std::vector<AsciiString>& i ) {m_customStatusToRemove = i;}
+	void setCustomStatusToDestroy(const std::vector<AsciiString>& i ) {m_customStatusToDestroy = i;}
+	void setEject(Bool u ) {m_eject = u;}
+	void setHealed(Bool u ) {m_healed = u;}
+	void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to themselves
 
 private:
 
@@ -87,6 +98,17 @@ private:
 	Bool     m_update;
 	Bool		 m_isInVehicle;
 	Bool		 m_wasTargetAirborne;
+	Bool		 m_noLeechExp;
+	Bool		 m_destroyOnRepair;
+	Bool     	 m_eject;
+	Bool     	 m_healed;
+	Bool     	 m_noSelfDamage;
+	Real		 m_percentDamage;
+	Real		 m_targetObjHealth;
+	ObjectStatusMaskType 	m_statusToRemove;
+	ObjectStatusMaskType 	m_statusToDestroy;
+	std::vector<AsciiString> 	m_customStatusToRemove;
+	std::vector<AsciiString> 	m_customStatusToDestroy;
 
 //	DieModuleInterface *m_ejectPilotDMI; // point to ejectpilotdiemodule
 																			 // of target vehicle if it has one

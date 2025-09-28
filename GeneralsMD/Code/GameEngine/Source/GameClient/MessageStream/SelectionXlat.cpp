@@ -578,11 +578,13 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				{
 					if( CanSelectDrawable( draw, FALSE ) )
 					{
-						TheMouse->setCursor(Mouse::SELECTING);
+						//TheMouse->setCursor(Mouse::SELECTING);
+						TheInGameUI->friend_setMouseCursor(Mouse::SELECTING, draw->getTemplate()->friend_getSelectingCursorName(), 3);
 					}
 					else
 					{
-						TheMouse->setCursor( Mouse::ARROW );
+						//TheMouse->setCursor( Mouse::ARROW );
+						TheInGameUI->friend_setMouseCursor(Mouse::ARROW, "Dummy", 2);
 					}
 				}
 			}

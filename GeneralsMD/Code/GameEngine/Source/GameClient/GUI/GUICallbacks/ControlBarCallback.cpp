@@ -126,7 +126,8 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				}
 
 				// Groovy
-				TheMouse->setCursor(cur);
+				//TheMouse->setCursor(cur);
+				TheInGameUI->friend_setMouseCursor(cur, "Dummy", 2);
 
 			}  // end if
 
@@ -182,10 +183,15 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					Int index = TheMouse->getCursorIndex( command->getCursorName() );
 
+					//if( index != Mouse::INVALID_MOUSE_CURSOR )
+					//	TheMouse->setCursor( (Mouse::MouseCursor)index );
+					//else
+					//	TheMouse->setCursor( Mouse::CROSS );
+
 					if( index != Mouse::INVALID_MOUSE_CURSOR )
 						TheMouse->setCursor( (Mouse::MouseCursor)index );
 					else
-						TheMouse->setCursor( Mouse::CROSS );
+						TheInGameUI->friend_setMouseCursor( Mouse::CROSS, "Dummy", 2 );
 
 				}  // end if
 				else
@@ -209,7 +215,8 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					}
 
 					// Groovy
-					TheMouse->setCursor(cur);
+					//TheMouse->setCursor(cur);
+					TheInGameUI->friend_setMouseCursor(cur, "Dummy", 2);
 				}
 
 			}  // end if

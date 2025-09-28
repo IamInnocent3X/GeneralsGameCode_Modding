@@ -69,15 +69,20 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 
 		for(std::vector<AsciiString>::const_iterator it = data->m_deployFunctionChangeUpgrade.begin(); it != data->m_deployFunctionChangeUpgrade.end(); ++it)
 		{
-			if(parsing == 1 && stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0 )
+			Bool isNotParse = FALSE;
+			if(stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0)
+			{
+				isNotParse = TRUE;
+			}
+			if(parsing == 1 && isNotParse)
 			{
 				m_deployTurretFunctionChangeUpgrade.push_back(*it);
 			}
-			else if(parsing == 2 && stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0 )
+			else if(parsing == 2 && isNotParse)
 			{
 				m_deployObjectFunctionChangeUpgrade.push_back(*it);
 			}
-			else if(parsing == 3 && stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0 )
+			else if(parsing == 3  && isNotParse)
 			{
 				m_turretDeployedFunctionChangeUpgrade.push_back(*it);
 			}

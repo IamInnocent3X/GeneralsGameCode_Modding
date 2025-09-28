@@ -172,6 +172,8 @@ Bool SabotageSupplyCenterCrateCollide::executeCrateBehavior( Object *other )
 		}
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

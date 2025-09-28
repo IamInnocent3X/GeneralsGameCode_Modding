@@ -2245,6 +2245,30 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 			spawnInterface->orderSlavesToAttackTarget( victim, maxShotsToFire, cmdSource );
 		}
 
+		if(!theUnit->getEquipAttackableObjectIDs().empty())
+		{
+			std::vector<ObjectID> IDs = theUnit->getEquipAttackableObjectIDs();
+			for( std::vector<ObjectID>::const_iterator it = IDs.begin(); it != IDs.end(); ++it )
+			{
+				Object* equipMember = TheGameLogic->findObjectByID(*it);
+				if(equipMember)
+				{
+					CanAttackResult result = equipMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource );
+					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+					{
+						AIUpdateInterface *equipAI = equipMember->getAI();
+						if( equipAI )
+						{
+							if (forced)
+								equipAI->aiForceAttackObject( victim, maxShotsToFire, cmdSource );
+							else
+								equipAI->aiAttackObject( victim, maxShotsToFire, cmdSource );
+						}
+					}
+				}
+			}
+		}
+	
 		//Order the specific group object to attack!
 		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
 		if( ai && theUnit != victim )
@@ -2331,6 +2355,27 @@ void AIGroup::groupAttackPosition( const Coord3D *pos, Int maxShotsToFire, Comma
 		if( spawnInterface && !spawnInterface->doSlavesHaveFreedom() )
 		{
 			spawnInterface->orderSlavesToAttackPosition( &attackPos, maxShotsToFire, cmdSource );
+		}
+
+		if(!(*i)->getEquipAttackableObjectIDs().empty())
+		{
+			std::vector<ObjectID> IDs = (*i)->getEquipAttackableObjectIDs();
+			for( std::vector<ObjectID>::const_iterator it = IDs.begin(); it != IDs.end(); ++it )
+			{
+				Object* equipMember = TheGameLogic->findObjectByID(*it);
+				if(equipMember)
+				{
+					CanAttackResult result = equipMember->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, &attackPos, cmdSource ) ;
+					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+					{
+						AIUpdateInterface *equipAI = equipMember->getAI();
+						if( equipAI )
+						{
+							equipAI->aiAttackPosition( &attackPos, maxShotsToFire, cmdSource );
+						}
+					}
+				}
+			}
 		}
 
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();

@@ -5438,6 +5438,27 @@ Bool PartitionFilterPossibleToHijack::allow(Object *objOther)
 		return FALSE;
 }
 
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+PartitionFilterPossibleToEquip::PartitionFilterPossibleToEquip(const Object *obj, CommandSourceType commandSource) :
+	m_obj(obj),
+	m_commandSource(commandSource)
+{
+}
+
+//-----------------------------------------------------------------------------
+Bool PartitionFilterPossibleToEquip::allow(Object *objOther)
+{
+	if (!objOther || !m_obj)
+		return FALSE;
+
+	if( TheActionManager->canEquipObject( m_obj, objOther, m_commandSource) )
+		return TRUE;
+	else
+		return FALSE;
+}
+
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 

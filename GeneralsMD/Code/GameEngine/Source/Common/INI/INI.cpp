@@ -146,6 +146,7 @@ static const BlockParse theTypeTable[] =
 	{	"ReallyLowMHz",				parseReallyLowMHz },
 	{	"ScriptAction",				ScriptEngine::parseScriptAction },
 	{	"ScriptCondition",		ScriptEngine::parseScriptCondition },
+	{ "CustomRadiusCursor",			INI::parseCustomRadiusDecalDefinition },
 
 	{ NULL,									NULL },		// keep this last!
 };

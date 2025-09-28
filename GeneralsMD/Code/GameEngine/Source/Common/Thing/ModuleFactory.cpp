@@ -245,6 +245,7 @@
 
 #include "GameLogic/Module/ConvertToCarBombCrateCollide.h"
 #include "GameLogic/Module/ConvertToHijackedVehicleCrateCollide.h"
+#include "GameLogic/Module/EquipCrateCollide.h"
 #include "GameLogic/Module/HealCrateCollide.h"
 #include "GameLogic/Module/MoneyCrateCollide.h"
 #include "GameLogic/Module/SabotageCommandCenterCrateCollide.h"
@@ -543,6 +544,7 @@ void ModuleFactory::init( void )
 	addModule( VeterancyCrateCollide );
 	addModule( ConvertToCarBombCrateCollide );
 	addModule( ConvertToHijackedVehicleCrateCollide );
+	addModule( EquipCrateCollide );
 	addModule( SabotageCommandCenterCrateCollide );
 	addModule( SabotageFakeBuildingCrateCollide );
 	addModule( SabotageInternetCenterCrateCollide );

@@ -169,6 +169,8 @@ Bool VeterancyCrateCollide::executeCrateBehavior( Object *other )
 		TheScriptEngine->transferObjectName( getObject()->getName(), other );
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

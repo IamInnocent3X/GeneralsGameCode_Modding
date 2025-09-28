@@ -139,6 +139,8 @@ Bool SabotageMilitaryFactoryCrateCollide::executeCrateBehavior( Object *other )
 	UnsignedInt frame = TheGameLogic->getFrame() + getSabotageMilitaryFactoryCrateCollideModuleData()->m_sabotageFrames;
 	other->setDisabledUntil( DISABLED_HACKED, frame );
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

@@ -136,6 +136,29 @@ public:
 	AsciiString getLoadScreenMusic( void ) const {return m_loadScreenMusic;	}
 	AsciiString getScoreScreenMusic() const { return m_scoreScreenMusic; }
 
+	inline const AsciiString& getArrowCursorName() const {return m_arrowCursorName;	}
+	inline const AsciiString& getScrollCursorName() const {return m_scrollCursorName;	}
+	inline const AsciiString& getTargetCursorName() const {return m_targetCursorName;	}
+	inline const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
+	inline const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
+	inline const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
+	inline const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
+	inline const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
+	inline const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
+	inline const AsciiString& getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
+	inline const AsciiString& getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
+	inline const AsciiString& getOutrangeCursorName() const {return m_outrangeCursorName;	}
+	inline const AsciiString& getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
+	inline const AsciiString& getDockCursorName() const {return m_dockCursorName;	}
+	inline const AsciiString& getGetHealedCursorName() const {return m_getHealedCursorName;	}
+	inline const AsciiString& getDoRepairCursorName() const {return m_doRepairCursorName;	}
+	inline const AsciiString& getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
+	inline const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
+	inline const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
+	inline const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	inline const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
+	inline const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
+
   inline Bool isOldFaction( void ) const { return m_oldFaction; }
 
 	static const FieldParse* getFieldParse();
@@ -197,6 +220,29 @@ private:
 	AsciiString m_strMedallionNormal;
 	AsciiString m_strMedallionHilite;
 	AsciiString m_strMedallionSelected;
+
+	AsciiString m_arrowCursorName;
+	AsciiString m_scrollCursorName;
+	AsciiString m_targetCursorName;
+	AsciiString m_genericInvalidCursorName;
+	AsciiString m_selectingCursorName;
+	AsciiString m_moveToCursorName;
+	AsciiString m_attackMoveToCursorName;
+	AsciiString m_waypointCursorName;
+	AsciiString m_attackObjectCursorName;
+	AsciiString m_forceAttackObjectCursorName;
+	AsciiString m_forceAttackGroundCursorName;
+	AsciiString m_outrangeCursorName;
+	AsciiString m_getRepairAtCursorName;
+	AsciiString m_dockCursorName;
+	AsciiString m_getHealedCursorName;
+	AsciiString m_doRepairCursorName;
+	AsciiString m_resumeConstructionCursorName;
+	AsciiString m_enterCursorName;
+	AsciiString m_enterAggressiveCursorName;
+	AsciiString m_setRallyPointCursorName;
+	AsciiString m_buildCursorName;
+	AsciiString m_invalidBuildCursorName;
 };
 
 // ----------------------------------------------------------------------------------------------

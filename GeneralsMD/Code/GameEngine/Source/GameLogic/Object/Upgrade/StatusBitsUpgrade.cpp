@@ -124,21 +124,17 @@ void StatusBitsUpgrade::upgradeImplementation( )
 	}
 	for (Int i = 0; i < d->m_bonusToSet.size(); i++) {
 		obj->setWeaponBonusCondition(d->m_bonusToSet[i]);
-		obj->setWeaponBonusConditionIgnoreClear(d->m_bonusToSet[i]);
 	}
 	for (Int i = 0; i < d->m_bonusToClear.size(); i++) {
 		obj->clearWeaponBonusCondition(d->m_bonusToClear[i]);
-		obj->clearWeaponBonusConditionIgnoreClear(d->m_bonusToClear[i]);
 	}
 	for(std::vector<AsciiString>::const_iterator it = d->m_customBonusToSet.begin(); it != d->m_customBonusToSet.end(); ++it)
 	{
 		obj->setCustomWeaponBonusCondition( *it );
-		obj->setCustomWeaponBonusConditionIgnoreClear( *it );
 	}
 	for(std::vector<AsciiString>::const_iterator it = d->m_customBonusToClear.begin(); it != d->m_customBonusToClear.end(); ++it)
 	{
 		obj->clearCustomWeaponBonusCondition( *it );
-		obj->clearCustomWeaponBonusConditionIgnoreClear( *it );
 	}
 }
 

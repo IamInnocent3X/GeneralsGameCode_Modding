@@ -1034,7 +1034,12 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				damager->scoreTheKill( obj );
 			}
 
+			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_sourceID );
 			obj->onDie( damageInfo );
+		}
+		else if( m_currentHealth < m_prevHealth)
+		{
+			obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_sourceID );
 		}
 	}
 
@@ -1218,6 +1223,8 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 
 				d->onHealing( damageInfo );
 			}
+
+			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_sourceID);
 		}
 
 		if (m_curDamageState != oldState)

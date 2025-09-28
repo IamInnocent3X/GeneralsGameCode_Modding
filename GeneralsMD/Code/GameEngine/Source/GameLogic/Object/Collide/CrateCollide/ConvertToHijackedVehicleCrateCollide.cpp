@@ -162,6 +162,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	other->setTeam( obj->getControllingPlayer()->getDefaultTeam() );
 	other->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );// I claim this car in the name of the GLA
+	other->setHijackerID(obj->getID());
 
 	AIUpdateInterface* targetAI = other->getAIUpdateInterface();
 	targetAI->aiMoveToPosition( other->getPosition(), CMD_FROM_AI );
@@ -213,6 +214,8 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 		return TRUE;
 	}
 
+	const ConvertToHijackedVehicleCrateCollideModuleData *data = getConvertToHijackedVehicleCrateCollideModuleData();
+
 	// I we have made it this far, we are going to ride in this vehicle for a while
 	// get the name of the hijackerupdate
 	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
@@ -222,6 +225,12 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 		hijackerUpdate->setTargetObject( other );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
+
+		hijackerUpdate->setPercentDamage( data->m_damagePercentageToUnit );
+		hijackerUpdate->setStatusToRemove( data->m_statusToRemove );
+		hijackerUpdate->setStatusToDestroy( data->m_statusToDestroy );
+		hijackerUpdate->setCustomStatusToRemove( data->m_customStatusToRemove );
+		hijackerUpdate->setCustomStatusToDestroy( data->m_customStatusToDestroy );
 
 		// flag bits so hijacker won't be selectible or collideable
 		//while within the vehicle
@@ -248,9 +257,47 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 	if( obj->getDrawable() )
 		obj->getDrawable()->setDrawableHidden( true );
 
+	CrateCollide::executeCrateBehavior(other);
+
 	// By returning FALSE, we will not remove the object (Hijacker)
 	return FALSE;
 //	return TRUE;
+}
+
+Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
+{
+	CrateCollide::revertCollideBehavior(other);
+
+	// If the Object doesn't exist, or is destroyed we stop here.
+	if(!other || other->isDestroyed() || other->isEffectivelyDead())
+		return FALSE;
+
+	// We are not hijacked
+	if(other->getTeam() != getObject()->getTeam())
+		return FALSE;
+
+	// Clear the status to make it Hijackable
+	other->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );
+
+	// Copied from NeutronBlastBehavior
+	// Make it unmanned, so units can easily check the ability to "take control of it"
+	other->setDisabled( DISABLED_UNMANNED );
+
+	if ( other->getAI() )
+	other->getAI()->aiIdle( CMD_FROM_AI );
+
+	TheGameLogic->deselectObject(other, PLAYERMASK_ALL, TRUE);
+
+	// Clear any terrain decals here
+	Drawable* draw = other->getDrawable();
+	if (draw)
+		draw->setTerrainDecal(TERRAIN_DECAL_NONE);
+
+	// Convert it to the neutral team so it renders gray giving visual representation that it is unmanned.
+	other->setTeam( ThePlayerList->getNeutralPlayer()->getDefaultTeam() );
+
+	// Indicate that we have reverted the Collied Behavior and no need to continue 
+	return TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------

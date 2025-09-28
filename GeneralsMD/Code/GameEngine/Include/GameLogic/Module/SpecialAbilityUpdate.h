@@ -93,6 +93,9 @@ public:
 	KindOfMaskType 				m_kindOf;
 	KindOfMaskType 				m_forbiddenKindOf;
 
+	AsciiString					m_cursorName;
+	AsciiString					m_invalidCursorName;
+
 	SpecialAbilityUpdateModuleData()
 	{
 		m_specialPowerTemplate = NULL;
@@ -125,6 +128,8 @@ public:
     m_persistenceRequiresRecharge = FALSE;
 	m_kindOf = KINDOFMASK_NONE;
 	m_forbiddenKindOf.clear();
+	m_cursorName = NULL;
+	m_invalidCursorName = NULL;
 	m_destroyOnExecute = FALSE;
 	m_fxOnExecute = NULL;
 	m_oclOnExecute = NULL;
@@ -174,6 +179,8 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+	  		{ "CursorName",						INI::parseAsciiString,			 	NULL, offsetof( SpecialAbilityUpdateModuleData, m_cursorName ) },
+			{ "InvalidCursorName",				INI::parseAsciiString,       		NULL, offsetof( SpecialAbilityUpdateModuleData, m_invalidCursorName ) },
 	  		{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_kindOf ) },
 			{ "ForbiddenKindOf",			KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_forbiddenKindOf ) },
 	  		{ "DeleteUserOnExecute",					INI::parseBool,							NULL, offsetof( SpecialAbilityUpdateModuleData, m_destroyOnExecute ) },
@@ -206,6 +213,8 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+	virtual const AsciiString& getCursorName() const { return getSpecialAbilityUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return getSpecialAbilityUpdateModuleData()->m_invalidCursorName; }
 
 //	virtual Bool isBusy() const { return m_isBusy; }
 

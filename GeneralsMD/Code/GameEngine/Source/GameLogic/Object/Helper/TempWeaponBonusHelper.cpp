@@ -75,12 +75,10 @@ void TempWeaponBonusHelper::clearTempWeaponBonus()
 	{
 		if(m_currentBonus != WEAPONBONUSCONDITION_INVALID){
 			getObject()->clearWeaponBonusCondition(m_currentBonus);
-			getObject()->clearWeaponBonusConditionIgnoreClear(m_currentBonus);
 		}
 		m_currentBonus = WEAPONBONUSCONDITION_INVALID;
 		if(!m_currentCustomBonus.isEmpty()){
 			getObject()->clearCustomWeaponBonusCondition(m_currentCustomBonus);
-			getObject()->clearCustomWeaponBonusConditionIgnoreClear(m_currentCustomBonus);
 		}
 		m_currentCustomBonus = NULL;
 		m_frameToRemove = 0;
@@ -115,7 +113,6 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 			clearTempWeaponBonus();
 
 		getObject()->setCustomWeaponBonusCondition(customStatus);
-		getObject()->setCustomWeaponBonusConditionIgnoreClear(customStatus);
 		m_currentCustomBonus = customStatus;
 	}
 	else
@@ -124,7 +121,6 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 			clearTempWeaponBonus();
 
 		getObject()->setWeaponBonusCondition(status);
-		getObject()->setWeaponBonusConditionIgnoreClear(status);
 		m_currentBonus = status;
 	}
 

@@ -101,11 +101,15 @@ public:
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
 	/// this is used for things like pilots, to determine if they can "enter" something
 	virtual Bool wouldLikeToCollideWith(const Object* other) const { return false; }
+	virtual Bool revertCollideBehavior(Object *other) { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const { return false; }
 	virtual Bool isCarBombCrateCollide() const { return false; }
 	virtual Bool isRailroad() const { return false; }
 	virtual Bool isSalvageCrateCollide() const { return false; }
 	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
+	virtual Bool isEquipCrateCollide() const { return FALSE; }
+	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
+	virtual const AsciiString& getCursorName() const { return NULL; }
 
 protected:
 

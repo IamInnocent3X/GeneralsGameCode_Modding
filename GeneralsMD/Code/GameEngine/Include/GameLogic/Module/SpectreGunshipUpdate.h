@@ -69,6 +69,7 @@ public:
   Real                  m_strafingIncrement;
   Real                  m_orbitInsertionSlope;
   Real                  m_randomOffsetForHowitzer;
+  AsciiString				    m_cursorName;
 
 	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystem;
 
@@ -109,6 +110,9 @@ public:
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return this; }
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+
+  virtual const AsciiString& getCursorName() const { return getSpectreGunshipUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();

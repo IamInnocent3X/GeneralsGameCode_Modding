@@ -117,6 +117,7 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "InvalidCursorName",		INI::parseAsciiString,       NULL, offsetof( CommandButton, m_invalidCursorName ) },
 	{ "ButtonBorderType",			INI::parseLookupList,				 CommandButtonMappedBorderTypeNames, offsetof( CommandButton, m_commandButtonBorder ) },
 	{ "RadiusCursorType",			INI::parseIndexList,				 TheRadiusCursorNames, offsetof( CommandButton, m_radiusCursor ) },
+	{ "CustomRadiusCursorType",			INI::parseAsciiString,			NULL, offsetof( CommandButton, m_customRadiusCursor ) },
 	{ "UnitSpecificSound",		INI::parseAudioEventRTS,		 NULL, offsetof( CommandButton, m_unitSpecificSound ) },
 
 	{ NULL,						NULL,												 NULL, 0 }  // keep this last
@@ -570,6 +571,7 @@ CommandButton::CommandButton( void )
 	//m_prev = NULL;
 	m_next = NULL;
 	m_radiusCursor = RADIUSCURSOR_NONE;
+	m_customRadiusCursor = NULL;
 
 }
 

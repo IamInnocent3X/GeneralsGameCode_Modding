@@ -139,6 +139,8 @@ Bool SabotageFakeBuildingCrateCollide::executeCrateBehavior( Object *other )
 		other->attemptDamage( &damageInfo );
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

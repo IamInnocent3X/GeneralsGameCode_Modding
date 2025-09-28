@@ -153,6 +153,8 @@ Bool ConvertToCarBombCrateCollide::executeCrateBehavior( Object *other )
 	TheRadar->removeObject( other );
 	TheRadar->addObject( other );
 
+	CrateCollide::executeCrateBehavior(other);
+
 
 
 

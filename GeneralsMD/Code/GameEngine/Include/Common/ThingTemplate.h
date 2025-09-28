@@ -502,6 +502,8 @@ public:
 	Bool isTrainable() const{return m_isTrainable; }
 	Bool isEnterGuard() const{return m_enterGuard; }
 	Bool isHijackGuard() const{return m_hijackGuard; }
+	Bool isEquipGuard() const{return m_equipGuard; }
+	Bool isParasiteGuard() const{return m_parasiteGuard; }
 
 	const AudioEventRTS *getVoiceSelect() const								{ return getAudio(TTAUDIO_voiceSelect); }
 	const AudioEventRTS *getVoiceGroupSelect() const					{ return getAudio(TTAUDIO_voiceGroupSelect); }
@@ -673,6 +675,33 @@ public:
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }
 
+	const AsciiString& friend_getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
+	const AsciiString& friend_getSelectingCursorName() const {return m_selectingCursorName;	}
+	const AsciiString& friend_getMoveToCursorName() const {return m_moveToCursorName;	}
+	const AsciiString& friend_getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
+	const AsciiString& friend_getWaypointCursorName() const {return m_waypointCursorName;	}
+	const AsciiString& friend_getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
+	const AsciiString& friend_getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
+	const AsciiString& friend_getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
+	const AsciiString& friend_getOutrangeCursorName() const {return m_outrangeCursorName;	}
+	const AsciiString& friend_getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
+	const AsciiString& friend_getDockCursorName() const {return m_dockCursorName;	}
+	const AsciiString& friend_getGetHealedCursorName() const {return m_getHealedCursorName;	}
+	const AsciiString& friend_getDoRepairCursorName() const {return m_doRepairCursorName;	}
+	const AsciiString& friend_getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
+	const AsciiString& friend_getEnterCursorName() const {return m_enterCursorName;	}
+	const AsciiString& friend_getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
+	const AsciiString& friend_getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	const AsciiString& friend_getBuildCursorName() const {return m_buildCursorName;	}
+	const AsciiString& friend_getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
+	const AsciiString& friend_getSalvageCursorName() const {return m_salvageCursorName;	}
+	
+	Bool friend_getUseMyGetRepairAtCursor() const {return m_useMyGetRepairAtCursor;	}
+	Bool friend_getUseMyDockCursor() const {return m_useMyDockCursor;	}
+	Bool friend_getUseMyGetHealedCursor() const {return m_useMyGetHealedCursor;	}
+	Bool friend_getUseMyEnterCursor() const {return m_useMyEnterCursor;	}
+	Bool friend_getUseMySalvageCursor() const {return m_useMySalvageCursor;	}
+
 protected:
 
 	//
@@ -733,6 +762,27 @@ private:
 #ifdef LOAD_TEST_ASSETS
 	AsciiString				m_LTAName;
 #endif
+
+	AsciiString				m_genericInvalidCursorName;
+	AsciiString				m_selectingCursorName;
+	AsciiString				m_moveToCursorName;
+	AsciiString				m_attackMoveToCursorName;
+	AsciiString				m_waypointCursorName;
+	AsciiString				m_attackObjectCursorName;
+	AsciiString				m_forceAttackObjectCursorName;
+	AsciiString				m_forceAttackGroundCursorName;
+	AsciiString				m_outrangeCursorName;
+	AsciiString				m_getRepairAtCursorName;
+	AsciiString				m_dockCursorName;
+	AsciiString				m_getHealedCursorName;
+	AsciiString				m_doRepairCursorName;
+	AsciiString				m_resumeConstructionCursorName;
+	AsciiString				m_enterCursorName;
+	AsciiString				m_enterAggressiveCursorName;
+	AsciiString				m_setRallyPointCursorName;
+	AsciiString				m_salvageCursorName;
+	AsciiString				m_buildCursorName;
+	AsciiString				m_invalidBuildCursorName;
 
 	// ---- Misc Larger-than-int things
 	GeometryInfo			m_geometryInfo;			///< geometry information
@@ -821,6 +871,13 @@ private:
 	Bool					m_isForbidden;								///< useful when overriding in <mapfile>.ini
 	Bool					m_armorCopiedFromDefault;
 	Bool					m_weaponsCopiedFromDefault;
+	Bool					m_useMyGetRepairAtCursor;
+	Bool					m_useMyDockCursor;
+	Bool					m_useMyGetHealedCursor;
+	Bool					m_useMyEnterCursor;
+	Bool					m_useMySalvageCursor;
+	Bool          m_equipGuard;
+	Bool          m_parasiteGuard;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority

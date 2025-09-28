@@ -39,6 +39,7 @@
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
+#include "Common/PlayerTemplate.h"
 #include "Common/Radar.h"
 #include "Common/Team.h"
 #include "Common/ThingFactory.h"
@@ -82,7 +83,9 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Module/ContainModule.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/Module/ProductionUpdate.h"
+#include "GameLogic/Module/SpecialAbilityUpdate.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/SupplyWarehouseDockUpdate.h"
@@ -532,15 +535,126 @@ void InGameUI::loadPostProcess( void )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void InGameUI::setMouseCursor(Mouse::MouseCursor c)
+void InGameUI::setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorName, Int checkString)
 {
 	if (!TheMouse)
 		return;
 
-	TheMouse->setCursor(c);
+	Bool registerCursor = checkString == 0 || (checkString != 2 && checkString != 3 && c != Mouse::ARROW && c != Mouse::SCROLL) ? TRUE : FALSE;
+	Int index = (Int)c;
 
-	if (m_mouseMode == MOUSEMODE_GUI_COMMAND && c != Mouse::ARROW && c != Mouse::SCROLL)
-		m_mouseModeCursor = c;
+	if(cursorName.isEmpty() )
+	{
+		Player *curPlayer = NULL;
+		if( TheControlBar && TheControlBar->isObserverControlBarOn())
+			curPlayer = TheControlBar->getObserverLookAtPlayer();
+		else
+			curPlayer = ThePlayerList->getLocalPlayer();
+		if( curPlayer && curPlayer->getPlayerTemplate() )
+		{
+			switch(c)
+			{
+				case Mouse::ARROW:
+					if(!curPlayer->getPlayerTemplate()->getArrowCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getArrowCursorName() );
+					break;
+				case Mouse::SCROLL:
+					if(!curPlayer->getPlayerTemplate()->getScrollCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getScrollCursorName() );
+					break;
+				case Mouse::CROSS:
+					if(!curPlayer->getPlayerTemplate()->getTargetCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getTargetCursorName() );
+					break;
+				case Mouse::GENERIC_INVALID:
+					if(!curPlayer->getPlayerTemplate()->getGenericInvalidCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getGenericInvalidCursorName() );
+					break;
+				case Mouse::SELECTING:
+					if(!curPlayer->getPlayerTemplate()->getSelectingCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getSelectingCursorName() );
+					break;
+				case Mouse::MOVETO:
+					if(!curPlayer->getPlayerTemplate()->getMoveToCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getMoveToCursorName() );
+					break;
+				case Mouse::ATTACKMOVETO:
+					if(!curPlayer->getPlayerTemplate()->getAttackMoveToCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getAttackMoveToCursorName() );
+					break;
+				case Mouse::WAYPOINT:
+					if(!curPlayer->getPlayerTemplate()->getWaypointCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getWaypointCursorName() );
+					break;
+				case Mouse::ATTACK_OBJECT:
+					if(!curPlayer->getPlayerTemplate()->getAttackObjectCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getAttackObjectCursorName() );
+					break;
+				case Mouse::FORCE_ATTACK_OBJECT:
+					if(!curPlayer->getPlayerTemplate()->getForceAttackObjectCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getForceAttackObjectCursorName() );
+					break;
+				case Mouse::FORCE_ATTACK_GROUND:
+					if(!curPlayer->getPlayerTemplate()->getForceAttackGroundCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getForceAttackGroundCursorName() );
+					break;
+				case Mouse::OUTRANGE:
+					if(!curPlayer->getPlayerTemplate()->getOutrangeCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getOutrangeCursorName() );
+					break;
+				case Mouse::GET_REPAIRED:
+					if(!curPlayer->getPlayerTemplate()->getGetRepairAtCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getGetRepairAtCursorName() );
+					break;
+				case Mouse::DOCK:
+					if(!curPlayer->getPlayerTemplate()->getDockCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getDockCursorName() );
+					break;
+				case Mouse::GET_HEALED:
+					if(!curPlayer->getPlayerTemplate()->getGetHealedCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getGetHealedCursorName() );
+					break;
+				case Mouse::DO_REPAIR:
+					if(!curPlayer->getPlayerTemplate()->getDoRepairCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getDoRepairCursorName() );
+					break;
+				case Mouse::RESUME_CONSTRUCTION:
+					if(!curPlayer->getPlayerTemplate()->getResumeConstructionCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getResumeConstructionCursorName() );
+					break;
+				case Mouse::ENTER_FRIENDLY:
+					if(!curPlayer->getPlayerTemplate()->getEnterCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getEnterCursorName() );
+					break;
+				case Mouse::ENTER_AGGRESSIVELY:
+					if(!curPlayer->getPlayerTemplate()->getEnterAggressiveCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getEnterAggressiveCursorName() );
+					break;
+				case Mouse::SET_RALLY_POINT:
+					if(!curPlayer->getPlayerTemplate()->getSetRallyPointCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getSetRallyPointCursorName() );
+					break;
+				case Mouse::BUILD_PLACEMENT:
+					if(!curPlayer->getPlayerTemplate()->getBuildCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getBuildCursorName() );
+					break;
+				case Mouse::INVALID_BUILD_PLACEMENT:
+					if(!curPlayer->getPlayerTemplate()->getInvalidBuildCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getInvalidBuildCursorName() );
+					break;
+			}
+		}
+	}
+	else if(checkString != 0 && checkString != 2)
+	{
+		index = TheMouse->getCursorIndex( cursorName );
+	}
+	
+	TheMouse->setCursor((Mouse::MouseCursor)index);
+
+	//if (m_mouseMode == MOUSEMODE_GUI_COMMAND && c != Mouse::ARROW && c != Mouse::SCROLL)
+	if (m_mouseMode == MOUSEMODE_GUI_COMMAND && registerCursor)
+		m_mouseModeCursor = (Mouse::MouseCursor)index;
 
 }
 
@@ -764,6 +878,22 @@ void InGameUI::removeNamedTimer( const AsciiString& timerName )
 void InGameUI::showNamedTimerDisplay( Bool show )
 {
 	m_showNamedTimers = show;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void INI::parseCustomRadiusDecalDefinition(INI *ini)
+{
+	InGameUI::parseCustomRadiusDecalDefinition(ini);
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static */ void InGameUI::parseCustomRadiusDecalDefinition(INI *ini)
+{
+	const char *c = ini->getNextToken();
+	NameKeyType key = TheNameKeyGenerator->nameToKey(c);
+	RadiusDecalTemplate& decalTmpl = TheInGameUI->m_customRadiusCursors[key];
+	RadiusDecalTemplate::parseRadiusDecalTemplate(ini, NULL, &decalTmpl, NULL);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1085,6 +1215,7 @@ InGameUI::InGameUI()
 	m_preferSelection		= false;
 
 	m_curRcType = RADIUSCURSOR_NONE;
+	m_curCusRcType = NULL;
 
 	m_soloNexusSelectedDrawableID = INVALID_DRAWABLE_ID;
 
@@ -1223,15 +1354,16 @@ void InGameUI::init( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void InGameUI::setRadiusCursor(RadiusCursorType cursorType, const SpecialPowerTemplate* specPowTempl, WeaponSlotType weaponSlot)
+void InGameUI::setRadiusCursor(RadiusCursorType cursorType, const AsciiString& customCursorType, const SpecialPowerTemplate* specPowTempl, WeaponSlotType weaponSlot)
 {
-	if (cursorType == m_curRcType)
+	if (cursorType == m_curRcType && customCursorType == m_curCusRcType)
 		return;
 
 	m_curRadiusCursor.clear();
 	m_curRcType = RADIUSCURSOR_NONE;
+	m_curCusRcType = NULL;
 
-	if (cursorType == RADIUSCURSOR_NONE)
+	if (cursorType == RADIUSCURSOR_NONE && customCursorType.isEmpty())
 		return;
 
 	Object* obj = NULL;
@@ -1263,62 +1395,106 @@ void InGameUI::setRadiusCursor(RadiusCursorType cursorType, const SpecialPowerTe
 
 	Real radius = 0.0f;
 	const Weapon* w = NULL;
-	switch (cursorType)
+	if(!customCursorType.isEmpty())
 	{
-		// already handled
-		//case RADIUSCURSOR_NONE:
-		//	return;
-		case RADIUSCURSOR_ATTACK_DAMAGE_AREA:
-			w = obj->getWeaponInWeaponSlot(weaponSlot);
-			radius = w ? w->getPrimaryDamageRadius(obj) : 0.0f;
-			break;
-		case RADIUSCURSOR_ATTACK_SCATTER_AREA:
-			w = obj->getWeaponInWeaponSlot(weaponSlot);
-			radius = w ? (w->getScatterRadius() + w->getScatterTargetScalar()) : 0.0f;
-			break;
-		case RADIUSCURSOR_ATTACK_CONTINUE_AREA:
-		case RADIUSCURSOR_CLEARMINES:
-			w = obj->getWeaponInWeaponSlot(weaponSlot);
-			radius = w ? w->getContinueAttackRange() : 0.0f;
-			break;
-		case RADIUSCURSOR_GUARD_AREA:
-			radius = AIGuardMachine::getStdGuardRange(obj);
-			break;
-		case RADIUSCURSOR_FRIENDLY_SPECIALPOWER:
-		case RADIUSCURSOR_OFFENSIVE_SPECIALPOWER:
-		case RADIUSCURSOR_SUPERWEAPON_SCATTER_AREA:
-		case RADIUSCURSOR_EMERGENCY_REPAIR:
-		case RADIUSCURSOR_PARTICLECANNON:
-		case RADIUSCURSOR_A10STRIKE:
-		case RADIUSCURSOR_SPECTREGUNSHIP:
-    case RADIUSCURSOR_HELIX_NAPALM_BOMB:
-		case RADIUSCURSOR_DAISYCUTTER:
-		case RADIUSCURSOR_CARPETBOMB:
-		case RADIUSCURSOR_PARADROP:
-		case RADIUSCURSOR_SPYSATELLITE:
-		case RADIUSCURSOR_NUCLEARMISSILE:
-		case RADIUSCURSOR_EMPPULSE:
-		case RADIUSCURSOR_ARTILLERYBARRAGE:
-		case RADIUSCURSOR_FRENZY:
-		case RADIUSCURSOR_NAPALMSTRIKE:
-		case RADIUSCURSOR_CLUSTERMINES:
-		case RADIUSCURSOR_SCUDSTORM:
-		case RADIUSCURSOR_ANTHRAXBOMB:
-		case RADIUSCURSOR_AMBUSH:
-		case RADIUSCURSOR_RADAR:
-		case RADIUSCURSOR_SPYDRONE:
-		case RADIUSCURSOR_AMBULANCE:
-			radius = specPowTempl ? specPowTempl->getRadiusCursorRadius() : 0.0f;
-			break;
-
+		if(specPowTempl)
+		{
+			radius = specPowTempl->getRadiusCursorRadius();
+		}
+		else
+		{
+			switch (cursorType)
+			{
+				case RADIUSCURSOR_ATTACK_DAMAGE_AREA:
+					w = obj->getWeaponInWeaponSlot(weaponSlot);
+					radius = w ? w->getPrimaryDamageRadius(obj) : 0.0f;
+					break;
+				case RADIUSCURSOR_ATTACK_SCATTER_AREA:
+					w = obj->getWeaponInWeaponSlot(weaponSlot);
+					radius = w ? (w->getScatterRadius() + w->getScatterTargetScalar()) : 0.0f;
+					break;
+				case RADIUSCURSOR_ATTACK_CONTINUE_AREA:
+				case RADIUSCURSOR_CLEARMINES:
+					w = obj->getWeaponInWeaponSlot(weaponSlot);
+					radius = w ? w->getContinueAttackRange() : 0.0f;
+					break;
+				case RADIUSCURSOR_GUARD_AREA:
+					radius = AIGuardMachine::getStdGuardRange(obj);
+					break;
+			}
+		}
 	}
+	else if(cursorType != RADIUSCURSOR_NONE)
+	{
+		switch (cursorType)
+		{
+			// already handled
+			//case RADIUSCURSOR_NONE:
+			//	return;
+			case RADIUSCURSOR_ATTACK_DAMAGE_AREA:
+				w = obj->getWeaponInWeaponSlot(weaponSlot);
+				radius = w ? w->getPrimaryDamageRadius(obj) : 0.0f;
+				break;
+			case RADIUSCURSOR_ATTACK_SCATTER_AREA:
+				w = obj->getWeaponInWeaponSlot(weaponSlot);
+				radius = w ? (w->getScatterRadius() + w->getScatterTargetScalar()) : 0.0f;
+				break;
+			case RADIUSCURSOR_ATTACK_CONTINUE_AREA:
+			case RADIUSCURSOR_CLEARMINES:
+				w = obj->getWeaponInWeaponSlot(weaponSlot);
+				radius = w ? w->getContinueAttackRange() : 0.0f;
+				break;
+			case RADIUSCURSOR_GUARD_AREA:
+				radius = AIGuardMachine::getStdGuardRange(obj);
+				break;
+			case RADIUSCURSOR_FRIENDLY_SPECIALPOWER:
+			case RADIUSCURSOR_OFFENSIVE_SPECIALPOWER:
+			case RADIUSCURSOR_SUPERWEAPON_SCATTER_AREA:
+			case RADIUSCURSOR_EMERGENCY_REPAIR:
+			case RADIUSCURSOR_PARTICLECANNON:
+			case RADIUSCURSOR_A10STRIKE:
+			case RADIUSCURSOR_SPECTREGUNSHIP:
+		case RADIUSCURSOR_HELIX_NAPALM_BOMB:
+			case RADIUSCURSOR_DAISYCUTTER:
+			case RADIUSCURSOR_CARPETBOMB:
+			case RADIUSCURSOR_PARADROP:
+			case RADIUSCURSOR_SPYSATELLITE:
+			case RADIUSCURSOR_NUCLEARMISSILE:
+			case RADIUSCURSOR_EMPPULSE:
+			case RADIUSCURSOR_ARTILLERYBARRAGE:
+			case RADIUSCURSOR_FRENZY:
+			case RADIUSCURSOR_NAPALMSTRIKE:
+			case RADIUSCURSOR_CLUSTERMINES:
+			case RADIUSCURSOR_SCUDSTORM:
+			case RADIUSCURSOR_ANTHRAXBOMB:
+			case RADIUSCURSOR_AMBUSH:
+			case RADIUSCURSOR_RADAR:
+			case RADIUSCURSOR_SPYDRONE:
+			case RADIUSCURSOR_AMBULANCE:
+				radius = specPowTempl ? specPowTempl->getRadiusCursorRadius() : 0.0f;
+				break;
+
+		}
+	}
+
 
 	if (radius <= 0.0f)
 		return;
 
 	Coord3D pos = { 0, 0, 0 };	// will be updated right away
-	m_radiusCursors[cursorType].createRadiusDecal(pos, radius, controller, m_curRadiusCursor);
-	m_curRcType = cursorType;
+	if(!customCursorType.isEmpty())
+	{
+		NameKeyType cursKey = TheNameKeyGenerator->nameToKey(customCursorType);
+		m_customRadiusCursors[cursKey].createRadiusDecal(pos, radius, controller, m_curRadiusCursor);
+		m_curCusRcType = customCursorType;
+		if(cursorType != RADIUSCURSOR_NONE)
+			m_curRcType = cursorType;
+	}
+	else
+	{
+		m_radiusCursors[cursorType].createRadiusDecal(pos, radius, controller, m_curRadiusCursor);
+		m_curRcType = cursorType;
+	}
 
 	handleRadiusCursor();
 }
@@ -2571,7 +2747,7 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 
 			if( drawSelectable && obj->isLocallyControlled() )
 			{
-				setMouseCursor(Mouse::SELECTING);
+				setMouseCursor(Mouse::SELECTING, obj->getSelectingCursorName());
 			}
 			else
 			{
@@ -2623,10 +2799,20 @@ void InGameUI::createCommandHint( const GameMessage *msg )
   {
     if ( --m_duringDoubleClickAttackMoveGuardHintTimer > 0 )
     {
-      setMouseCursor(Mouse::FORCE_ATTACK_GROUND);
+	  AsciiString cursorName = NULL;
+	  const Drawable *srcDraw = NULL;
+	  const Object *srcObj = NULL;
+	  if (getSelectCount() >= 1) {
+		  srcDraw = getAllSelectedDrawables()->front();
+		  srcObj = (srcDraw ? srcDraw->getObject() : NULL);
+		  if(srcObj && srcObj->isLocallyControlled())
+			cursorName = srcObj->getForceAttackGroundCursorName();
+	  }
+      setMouseCursor(Mouse::FORCE_ATTACK_GROUND, cursorName);
 		  setRadiusCursor(RADIUSCURSOR_GUARD_AREA,
 										  NULL,
-										  PRIMARY_WEAPON);
+										  NULL,
+										  srcObj ? srcObj->getCurrentWeaponSlot() : PRIMARY_WEAPON);
       return;
     }
   }
@@ -2671,9 +2857,12 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 	// Note: These are only non-NULL if there is exactly one thing selected.
 	const Drawable *srcDraw = NULL;
 	const Object *srcObj = NULL;
-	if (getSelectCount() == 1) {
+	Bool hasSrcObj = FALSE;
+	if (getSelectCount() >= 1) {
 		srcDraw = getAllSelectedDrawables()->front();
 		srcObj = (srcDraw ? srcDraw->getObject() : NULL);
+		if( srcObj && srcObj->isLocallyControlled() )
+			hasSrcObj = TRUE;
 	}
 
 	switch (m_mouseMode)
@@ -2686,100 +2875,274 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					setMouseCursor(Mouse::ARROW);
 					return;
 				}
+				Bool AttackObject = FALSE;
 				switch (t)
 				{
 					case GameMessage::MSG_DO_MOVETO_HINT:
 					{
 						if( !drawSelectable && srcObj && srcObj->isLocallyControlled() && srcObj->isKindOf(KINDOF_STRUCTURE))
-							setMouseCursor( Mouse::GENERIC_INVALID );
+							setMouseCursor( Mouse::GENERIC_INVALID, srcObj->getGenericInvalidCursorName() );
 						else if( drawSelectable && obj->isLocallyControlled() && !obj->isKindOf(KINDOF_MINE))
-							setMouseCursor( Mouse::SELECTING );
+							setMouseCursor( Mouse::SELECTING, obj->getSelectingCursorName() );	
 						else if( TheRadar->isRadarWindow( window ) &&
 										 TheRadar->isRadarForced() == FALSE &&
 										 (TheRadar->isRadarHidden() ||
 										 ThePlayerList->getLocalPlayer()->hasRadar() == FALSE) )
 							setMouseCursor( Mouse::ARROW );
 						else
-							setMouseCursor( Mouse::MOVETO );
+							setMouseCursor( Mouse::MOVETO, hasSrcObj ? srcObj->getMoveToCursorName() : NULL );
 						break;
 					}
 					case GameMessage::MSG_DO_ATTACKMOVETO_HINT:
 						if( drawSelectable && obj->isLocallyControlled()  )
-							setMouseCursor( Mouse::SELECTING );
+							setMouseCursor( Mouse::SELECTING, hasSrcObj ? srcObj->getSelectingCursorName() : NULL );
 						else
-							setMouseCursor( Mouse::ATTACKMOVETO );
+							setMouseCursor( Mouse::ATTACKMOVETO, hasSrcObj ? srcObj->getAttackMoveToCursorName() : NULL );
 						break;
 					case GameMessage::MSG_ADD_WAYPOINT_HINT:
-						setMouseCursor( Mouse::WAYPOINT );
+						setMouseCursor( Mouse::WAYPOINT, hasSrcObj ? srcObj->getWaypointCursorName() : NULL );
 						break;
 					case GameMessage::MSG_DO_ATTACK_OBJECT_HINT:
-						setMouseCursor( Mouse::ATTACK_OBJECT );
+						//setMouseCursor( Mouse::ATTACK_OBJECT );
+						AttackObject = TRUE;
 						break;
 					case GameMessage::MSG_DO_ATTACK_OBJECT_AFTER_MOVING_HINT:
-						setMouseCursor( Mouse::OUTRANGE );
+						//setMouseCursor( Mouse::OUTRANGE );
+						setMouseCursor( Mouse::OUTRANGE, hasSrcObj ? srcObj->getOutrangeCursorName() : NULL );
 						break;
 					case GameMessage::MSG_DO_FORCE_ATTACK_OBJECT_HINT:
-						setMouseCursor( Mouse::FORCE_ATTACK_OBJECT );
+						//setMouseCursor( Mouse::FORCE_ATTACK_OBJECT );
+						AttackObject = TRUE;
 						break;
 					case GameMessage::MSG_DO_FORCE_ATTACK_GROUND_HINT:
-						setMouseCursor( Mouse::FORCE_ATTACK_GROUND );
+						//setMouseCursor( Mouse::FORCE_ATTACK_GROUND );
+						AttackObject = TRUE;
 						break;
 					case GameMessage::MSG_GET_REPAIRED_HINT:
-						setMouseCursor( Mouse::GET_REPAIRED );
+						if(drawSelectable && obj->useMyGetRepairAtCursor() && !obj->getGetRepairAtCursorName().isEmpty())
+							setMouseCursor( Mouse::GET_REPAIRED, obj->getGetRepairAtCursorName());
+						else
+							setMouseCursor( Mouse::GET_REPAIRED, hasSrcObj ? srcObj->getGetRepairAtCursorName() : NULL );
 						break;
 					case GameMessage::MSG_DOCK_HINT:
-						setMouseCursor( Mouse::DOCK );
+						if(drawSelectable && obj->useMyDockCursor() && !obj->getDockCursorName().isEmpty())
+							setMouseCursor( Mouse::DOCK, obj->getDockCursorName());
+						else
+							setMouseCursor( Mouse::DOCK, hasSrcObj ? srcObj->getDockCursorName() : NULL );
 						break;
 					case GameMessage::MSG_GET_HEALED_HINT:
-						setMouseCursor( Mouse::GET_HEALED );
+						if(drawSelectable && obj->useMyGetHealedCursor() && !obj->getGetHealedCursorName().isEmpty())
+							setMouseCursor( Mouse::GET_HEALED, obj->getGetHealedCursorName());
+						else
+							setMouseCursor( Mouse::GET_HEALED, hasSrcObj ? srcObj->getGetHealedCursorName() : NULL );
 						break;
 					case GameMessage::MSG_DO_REPAIR_HINT:
-						setMouseCursor( Mouse::DO_REPAIR );
+						setMouseCursor( Mouse::DO_REPAIR, hasSrcObj ? srcObj->getDoRepairCursorName() : NULL );
 						break;
 					case GameMessage::MSG_RESUME_CONSTRUCTION_HINT:
-						setMouseCursor( Mouse::RESUME_CONSTRUCTION );
+						setMouseCursor( Mouse::RESUME_CONSTRUCTION, hasSrcObj ? srcObj->getResumeConstructionCursorName() : NULL );
 						break;
 					case GameMessage::MSG_ENTER_HINT:
-						setMouseCursor( Mouse::ENTER_FRIENDLY );
+						//setMouseCursor( Mouse::ENTER_FRIENDLY );
+						if(drawSelectable && obj->useMyEnterCursor() && !obj->getEnterCursorName().isEmpty())
+							setMouseCursor( Mouse::ENTER_FRIENDLY, obj->getEnterCursorName());
+						else
+							setMouseCursor( Mouse::ENTER_FRIENDLY, hasSrcObj ? srcObj->getEnterCursorName() : NULL );
 						break;
 					case GameMessage::MSG_CONVERT_TO_CARBOMB_HINT:
 					case GameMessage::MSG_HIJACK_HINT:
 					case GameMessage::MSG_SABOTAGE_HINT:
-						setMouseCursor( Mouse::ENTER_AGGRESSIVELY );
-						break;
+					case GameMessage::MSG_EQUIP_HINT:
+					{
+						Bool equipIsParasite = FALSE;
+						Bool cursorSet = FALSE;
+						if(drawSelectable && hasSrcObj)
+						{
+							for (BehaviorModule** m = srcObj->getBehaviorModules(); *m; ++m)
+							{
+								CollideModuleInterface* collide = (*m)->getCollide();
+								if (!collide)
+									continue;
+
+								if( collide->isParasiteEquipCrateCollide() )
+								{
+									equipIsParasite = TRUE;
+								}
+
+								if( !collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( obj ) )
+								{
+									Int index = TheMouse->getCursorIndex( collide->getCursorName() );
+									setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
+									cursorSet = TRUE;
+									break;
+								}
+							}
+							if(cursorSet)
+								break;
+						}
+						if(t == GameMessage::MSG_EQUIP_HINT && !equipIsParasite)
+						{
+							setMouseCursor( Mouse::ENTER_FRIENDLY, hasSrcObj ? srcObj->getEnterCursorName() : NULL );
+							break;
+						}
+						else
+						{
+							setMouseCursor( Mouse::ENTER_AGGRESSIVELY, hasSrcObj ? srcObj->getEnterAggressiveCursorName() : NULL );
+							break;
+						}
+					}
 					case GameMessage::MSG_DEFECTOR_HINT:
+					{
+						if( hasSrcObj )
+						{
+							SpecialAbilityUpdate *spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_DEFECTOR );
+							if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+							{
+								setMouseCursor( Mouse::DEFECTOR, spUpdate->getCursorName() );
+								break;
+							}
+						}
 						setMouseCursor( Mouse::DEFECTOR );
 						break;
+					}
 #ifdef ALLOW_SURRENDER
 					case GameMessage::MSG_PICK_UP_PRISONER_HINT:
 						setMouseCursor( Mouse::PICK_UP_PRISONER );
 						break;
 #endif
 					case GameMessage::MSG_CAPTUREBUILDING_HINT:
+					{
+						if( hasSrcObj )
+						{
+							SpecialAbilityUpdate *spUpdate;
+							if( srcObj->hasSpecialPower( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING ) )
+							{
+								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
+							}
+							else if( srcObj->hasSpecialPower( SPECIAL_INFANTRY_CAPTURE_BUILDING ) )
+							{
+								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_INFANTRY_CAPTURE_BUILDING );
+							}
+
+							if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+							{
+								setMouseCursor( Mouse::CAPTUREBUILDING, spUpdate->getCursorName() );
+								break;
+							}
+						}
 						setMouseCursor( Mouse::CAPTUREBUILDING );
 						break;
+					}
 					case GameMessage::MSG_HACK_HINT:
+					{
+						if( hasSrcObj )
+						{
+							SpecialAbilityUpdate *spUpdate;
+							
+							if( srcObj->hasSpecialPower( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK ) && obj && obj->isKindOf( KINDOF_VEHICLE ) )
+							{
+								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK );
+							}
+							else if( srcObj->hasSpecialPower( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK ) && obj && obj->isKindOf( KINDOF_CASH_GENERATOR ) )
+							{
+								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
+							}
+							else if( srcObj->hasSpecialPower( SPECIAL_HACKER_DISABLE_BUILDING ) && obj && obj->isKindOf( KINDOF_STRUCTURE ) )
+							{
+								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_HACKER_DISABLE_BUILDING );
+							}
+
+							if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+							{
+								setMouseCursor( Mouse::HACK, spUpdate->getCursorName() );
+								break;
+							}
+						}
 						setMouseCursor( Mouse::HACK );
 						break;
+					}
 					case GameMessage::MSG_IMPOSSIBLE_ATTACK_HINT:
-						setMouseCursor( Mouse::GENERIC_INVALID );
+					//	setMouseCursor( Mouse::GENERIC_INVALID );
+						AttackObject = TRUE;
 						break;
 					case GameMessage::MSG_SET_RALLY_POINT_HINT:
+					{
 						if ( !drawSelectable )
-							setMouseCursor( Mouse::SET_RALLY_POINT );
+							setMouseCursor( Mouse::SET_RALLY_POINT, hasSrcObj ? srcObj->getSetRallyPointCursorName() : NULL );
 						else
-							setMouseCursor( Mouse::SELECTING );
+							setMouseCursor( Mouse::SELECTING, hasSrcObj ? srcObj->getSelectingCursorName() : NULL );
 						break;
+					}
 					case GameMessage::MSG_DO_SPECIAL_POWER_OVERRIDE_DESTINATION_HINT:
+					{
+						if( hasSrcObj )
+						{
+							SpecialPowerUpdateInterface* spuInterface = srcObj->findSpecialPowerWithOverridableDestinationActive();
+							if( spuInterface )
+							{
+								setMouseCursor( Mouse::PARTICLE_UPLINK_CANNON, spuInterface->getCursorName() );
+								break;
+							}
+						}
 						setMouseCursor( Mouse::PARTICLE_UPLINK_CANNON );
 						break;
+					}
 					case GameMessage::MSG_DO_SALVAGE_HINT:
-						setMouseCursor( Mouse::MOVETO );
+					{
+						if(drawSelectable && obj->useMySalvageCursor() && !obj->getSalvageCursorName().isEmpty())
+							setMouseCursor( Mouse::MOVETO, obj->getSalvageCursorName());
+						else
+							setMouseCursor( Mouse::MOVETO, hasSrcObj ? srcObj->getSalvageCursorName() : NULL );
 						break;
+					}
 					case GameMessage::MSG_DO_INVALID_HINT:
-						setMouseCursor( Mouse::GENERIC_INVALID );
+					{
+						setMouseCursor( Mouse::GENERIC_INVALID, hasSrcObj ? srcObj->getGenericInvalidCursorName() : NULL );
 						break;
+					}
 				}
+
+				if( AttackObject == TRUE )
+				{
+					AsciiString cursorName = NULL;
+					const Weapon* w = NULL;
+					if(hasSrcObj && srcObj->getCurrentWeapon())
+					{
+						w = srcObj->getCurrentWeapon();
+						if(t == GameMessage::MSG_IMPOSSIBLE_ATTACK_HINT)
+						{
+							if(!w->getInvalidCursorName().isEmpty())
+								cursorName = w->getInvalidCursorName();
+						}
+						else
+						{
+							if(!w->getCursorName().isEmpty())
+								cursorName = w->getCursorName();
+						}
+
+						if( t == GameMessage::MSG_DO_FORCE_ATTACK_OBJECT_HINT && !w->getForceAttackObjectCursorName().isEmpty())
+							cursorName = w->getForceAttackObjectCursorName();
+						else if ( t == GameMessage::MSG_DO_FORCE_ATTACK_GROUND_HINT && !w->getForceAttackGroundCursorName().isEmpty())
+							cursorName = w->getForceAttackGroundCursorName();
+					}
+
+					switch (t)
+					{
+						case GameMessage::MSG_DO_ATTACK_OBJECT_HINT:
+							setMouseCursor( Mouse::ATTACK_OBJECT, cursorName.isEmpty() ? ( hasSrcObj ? srcObj->getAttackObjectCursorName() : NULL ) : cursorName );
+							break;
+						case GameMessage::MSG_DO_FORCE_ATTACK_OBJECT_HINT:
+							setMouseCursor( Mouse::FORCE_ATTACK_OBJECT, cursorName.isEmpty() ? ( hasSrcObj ? srcObj->getForceAttackObjectCursorName() : NULL ) : cursorName );
+							break;
+						case GameMessage::MSG_DO_FORCE_ATTACK_GROUND_HINT:
+							setMouseCursor( Mouse::FORCE_ATTACK_GROUND, cursorName.isEmpty() ? ( hasSrcObj ? srcObj->getForceAttackGroundCursorName() : NULL ) : cursorName );
+							break;
+						case GameMessage::MSG_IMPOSSIBLE_ATTACK_HINT:
+							setMouseCursor( Mouse::GENERIC_INVALID, cursorName.isEmpty() ? ( hasSrcObj ? srcObj->getGenericInvalidCursorName() : NULL ) : cursorName );
+							break;
+					}
+				}
+
 			}
 			break;
 		case MOUSEMODE_BUILD_PLACE:
@@ -2794,11 +3157,11 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					case GameMessage::MSG_DO_MOVETO_HINT:
 					case GameMessage::MSG_DO_ATTACKMOVETO_HINT:
 					case GameMessage::MSG_ADD_WAYPOINT:
-						setMouseCursor(Mouse::BUILD_PLACEMENT);
+						setMouseCursor(Mouse::BUILD_PLACEMENT, hasSrcObj ? srcObj->getBuildCursorName() : NULL);
 						break;
 					case GameMessage::MSG_DO_ATTACK_OBJECT_HINT:
 					case GameMessage::MSG_DO_ATTACK_OBJECT_AFTER_MOVING_HINT:
-						setMouseCursor(Mouse::INVALID_BUILD_PLACEMENT);
+						setMouseCursor(Mouse::INVALID_BUILD_PLACEMENT, hasSrcObj ? srcObj->getInvalidBuildCursorName() : NULL);
 						break;
 				}
 			}
@@ -2836,13 +3199,14 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 						Int index = TheMouse->getCursorIndex(cursorName);
 						if( index != Mouse::INVALID_MOUSE_CURSOR )
 						{
-							setMouseCursor( (Mouse::MouseCursor)index );
+							setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
 						}
 						else
 						{
 							setMouseCursor( Mouse::CROSS );
 						}
 						setRadiusCursor(m_pendingGUICommand->getRadiusCursorType(), //*****************************************************************
+														m_pendingGUICommand->getCustomRadiusCursorType(), 
 														m_pendingGUICommand->getSpecialPowerTemplate(),
 														m_pendingGUICommand->getWeaponSlot());
 					}
@@ -2850,10 +3214,11 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					{
 						Int index = TheMouse->getCursorIndex(m_pendingGUICommand->getCursorName());
 						if (index != Mouse::INVALID_MOUSE_CURSOR)
-							setMouseCursor( (Mouse::MouseCursor)index );
+							setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
 						else
 							setMouseCursor( Mouse::CROSS );
 						setRadiusCursor(m_pendingGUICommand->getRadiusCursorType(), //*****************************************************************
+														m_pendingGUICommand->getCustomRadiusCursorType(), 
 														m_pendingGUICommand->getSpecialPowerTemplate(),
 														m_pendingGUICommand->getWeaponSlot());
 					}
@@ -2995,6 +3360,7 @@ void InGameUI::setGUICommand( const CommandButton *command )
 		// but we will set the radius cursor here, so you can see it bleeding out from beneath the panel
 
 		setRadiusCursor(command->getRadiusCursorType(), //*****************************************************************
+										command->getCustomRadiusCursorType(),
 										command->getSpecialPowerTemplate(),
 										command->getWeaponSlot());
 	}
@@ -4373,6 +4739,7 @@ CanAttackResult InGameUI::getCanSelectedObjectsAttack( ActionType action, const 
 			case ACTIONTYPE_HIJACK_VEHICLE:
 			case ACTIONTYPE_SABOTAGE_BUILDING:
 			case ACTIONTYPE_CONVERT_OBJECT_TO_CARBOMB:
+			case ACTIONTYPE_EQUIP_OBJECT:
 			case ACTIONTYPE_CAPTURE_BUILDING:
 			case ACTIONTYPE_DISABLE_VEHICLE_VIA_HACKING:
 #ifdef ALLOW_SURRENDER
@@ -4497,6 +4864,9 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 				break;
 			case ACTIONTYPE_CONVERT_OBJECT_TO_CARBOMB:
 				success = TheActionManager->canConvertObjectToCarBomb( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );
+				break;
+			case ACTIONTYPE_EQUIP_OBJECT:
+				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );
 				break;
 			case ACTIONTYPE_CAPTURE_BUILDING:
 				success = TheActionManager->canCaptureBuilding( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );

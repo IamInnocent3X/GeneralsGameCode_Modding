@@ -30,6 +30,8 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#define DEFINE_WEAPONSLOTTYPE_NAMES
+
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/FireWeaponUpdate.h"
@@ -44,6 +46,7 @@ FireWeaponUpdateModuleData::FireWeaponUpdateModuleData()
 	m_weaponTemplate = NULL;
   m_initialDelayFrames = 0;
 	m_exclusiveWeaponDelay = 0;
+	m_weaponSlot = PRIMARY_WEAPON;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -56,6 +59,7 @@ FireWeaponUpdateModuleData::FireWeaponUpdateModuleData()
 		{ "Weapon",								INI::parseWeaponTemplate,	      NULL, offsetof( FireWeaponUpdateModuleData, m_weaponTemplate ) },
 		{ "InitialDelay",					INI::parseDurationUnsignedInt,	NULL, offsetof( FireWeaponUpdateModuleData, m_initialDelayFrames ) },
 		{ "ExclusiveWeaponDelay",	INI::parseDurationUnsignedInt,	NULL, offsetof( FireWeaponUpdateModuleData, m_exclusiveWeaponDelay ) },
+		{ "WeaponSlot",	INI::parseLookupList,	TheWeaponSlotTypeNamesLookupList, offsetof( FireWeaponUpdateModuleData, m_weaponSlot ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -70,7 +74,7 @@ FireWeaponUpdate::FireWeaponUpdate( Thing *thing, const ModuleData* moduleData )
 	const WeaponTemplate *tmpl = getFireWeaponUpdateModuleData()->m_weaponTemplate;
 	if (tmpl)
 	{
-		m_weapon = TheWeaponStore->allocateNewWeapon(tmpl, PRIMARY_WEAPON);
+		m_weapon = TheWeaponStore->allocateNewWeapon(tmpl, getFireWeaponUpdateModuleData()->m_weaponSlot);
 		m_weapon->loadAmmoNow( getObject() );
 	}
 
@@ -99,6 +103,7 @@ UpdateSleepTime FireWeaponUpdate::update( void )
 	// If my weapon is ready, shoot it.
 	if( isOkayToFire() )
 	{
+		getObject()->setContainedPosition();
 		m_weapon->forceFireWeapon( getObject(), getObject()->getPosition() );
 	}
 	return UPDATE_SLEEP_NONE;
@@ -120,6 +125,9 @@ Bool FireWeaponUpdate::isOkayToFire()
 
 	if( me->testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) )
 		return FALSE; // no hitting with a 0% building, cheater
+
+	if(!m_weapon->getTemplate()->passRequirements(me))
+		return FALSE;
 
 	// Firing a real weapon surpresses this module
 	if( data->m_exclusiveWeaponDelay > 0  &&  ( TheGameLogic->getFrame() < (me->getLastShotFiredFrame() + data->m_exclusiveWeaponDelay) ) )

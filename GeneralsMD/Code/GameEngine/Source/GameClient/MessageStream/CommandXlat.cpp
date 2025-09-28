@@ -438,6 +438,7 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 				objectWithSound = obj;
 				skip = true;
 				break;
+			case GameMessage::MSG_EQUIP:
 			case GameMessage::MSG_ENTER:
 				if( target && target->isKindOf( KINDOF_HEAL_PAD ) )
 				{
@@ -1670,6 +1671,9 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 				case GUICOMMANDMODE_SABOTAGE_BUILDING:
 					currentlyValid = TheInGameUI->canSelectedObjectsDoAction( InGameUI::ACTIONTYPE_SABOTAGE_BUILDING, obj, InGameUI::SELECTION_ANY );
 					break;
+				case GUICOMMANDMODE_EQUIP_OBJECT:
+					currentlyValid = TheInGameUI->canSelectedObjectsDoAction( InGameUI::ACTIONTYPE_EQUIP_OBJECT, obj, InGameUI::SELECTION_ANY );
+					break;
 #ifdef ALLOW_SURRENDER
 				case GUICOMMANDMODE_PICK_UP_PRISONER:
 					currentlyValid = TheInGameUI->canSelectedObjectsDoAction( InGameUI::ACTIONTYPE_PICK_UP_PRISONER, obj, InGameUI::SELECTION_ANY );
@@ -1704,6 +1708,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 						case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 						case GUICOMMANDMODE_HIJACK_VEHICLE:
 						case GUICOMMANDMODE_SABOTAGE_BUILDING:
+						case GUICOMMANDMODE_EQUIP_OBJECT:
 							msgType = createEnterMessage( draw, type );
 							break;
 #ifdef ALLOW_SURRENDER
@@ -2039,6 +2044,29 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 			}  // end else
 
 		}  // end else if
+		// ********************************************************************************************
+		else if( draw && draw->getObject() && !TheInGameUI->isInForceAttackMode() &&
+						 TheInGameUI->canSelectedObjectsDoAction( InGameUI::ACTIONTYPE_EQUIP_OBJECT,
+																											draw->getObject(),
+																											InGameUI::SELECTION_ANY ) )
+		{
+
+			if( type == DO_COMMAND || type == EVALUATE_ONLY )
+			{
+
+        msgType = createEnterMessage( draw, type );
+
+			}  // end if
+			else
+			{
+				msgType = GameMessage::MSG_EQUIP_HINT;
+				hintMessage = TheMessageStream->appendMessage( msgType );
+				hintMessage->appendObjectIDArgument( draw->getObject()->getID() );
+
+			}  // end else
+
+		}  // end else if
+		// ********************************************************************************************
 		// ********************************************************************************************
 		else if( draw && !TheInGameUI->isInForceAttackMode() && canSelectionSalvage(obj) )
 		{
@@ -3907,6 +3935,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
  												|| command->getCommandType() == GUI_COMMAND_FIRE_WEAPON
 												|| command->getCommandType() == GUI_COMMAND_COMBATDROP
 												|| command->getCommandType() == GUICOMMANDMODE_HIJACK_VEHICLE
+												|| command->getCommandType() == GUICOMMANDMODE_EQUIP_OBJECT
 												|| command->getCommandType() == GUICOMMANDMODE_CONVERT_TO_CARBOMB));
 
 			// in alternate mouse mode, this left click is only actioned here if we're firing a gui command

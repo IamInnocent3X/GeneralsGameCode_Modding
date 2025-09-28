@@ -54,7 +54,7 @@ public:
 	UpgradeMuxData				m_upgradeMuxData;
 	Bool									m_initiallyActive;
 	Bool									m_singleBurst;
-	Int										m_healingAmount;
+	Real										m_healingAmount;
 	UnsignedInt						m_healingDelay;
 	UnsignedInt						m_startHealingDelay;	///< how long since our last damage till autoheal starts.
 	Real									m_radius; //If non-zero, then it becomes a area effect.
@@ -69,7 +69,7 @@ public:
 	{
 		m_initiallyActive = false;
 		m_singleBurst = FALSE;
-		m_healingAmount = 0;
+		m_healingAmount = 0.0f;
 		m_healingDelay = UINT_MAX;
 		m_startHealingDelay = 0;
 		m_radius = 0.0f;
@@ -87,7 +87,7 @@ public:
 		{
 			{ "StartsActive",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
 			{ "SingleBurst",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_singleBurst ) },
-			{ "HealingAmount",		INI::parseInt,												NULL, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
+			{ "HealingAmount",		INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
 			{ "HealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_healingDelay ) },
 			{ "Radius",						INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_radius ) },
 			{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( AutoHealBehaviorModuleData, m_kindOf ) },

@@ -94,6 +94,7 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
 	//
 	m_customDamageType = NULL;
 	m_customDeathType = NULL;
+	m_cursorName = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -157,8 +158,11 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
 
 	// New Features
 	// Custom DamageTypes
-	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDamageType) },		
+	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDamageType) },
 	{ "CustomDeathType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDeathType) },
+
+	// Custom Cursor
+	{ "CursorName",								INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_cursorName) },
 	
 		{ 0, 0, 0, 0 }
 	};

@@ -43,6 +43,7 @@ public:
 	const WeaponTemplate* m_weaponTemplate;
   UnsignedInt m_initialDelayFrames;
 	UnsignedInt m_exclusiveWeaponDelay;	///< If non-zero, any other weapon having fired this recently will keep us from doing anything
+	WeaponSlotType m_weaponSlot;
 
 	FireWeaponUpdateModuleData();
 

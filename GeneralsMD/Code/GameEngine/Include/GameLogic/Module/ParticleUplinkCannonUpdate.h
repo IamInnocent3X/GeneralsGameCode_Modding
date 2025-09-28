@@ -106,6 +106,8 @@ public:
 	AsciiString m_customDamageType;
 	AsciiString m_customDeathType;
 
+	AsciiString m_cursorName;
+
   Real					m_manualDrivingSpeed;
   Real					m_manualFastDrivingSpeed;
   UnsignedInt		m_doubleClickToFastDriveDelay;
@@ -169,6 +171,8 @@ public:
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
 	virtual ScienceType getExtraRequiredScience() const { return SCIENCE_INVALID; } //Does this object have more than one special power module with the same spTemplate?
+	virtual const AsciiString& getCursorName() const { return getParticleUplinkCannonUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();

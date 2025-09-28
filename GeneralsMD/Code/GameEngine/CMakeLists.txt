@@ -314,6 +314,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/DockUpdate.h
     Include/GameLogic/Module/DozerAIUpdate.h
     Include/GameLogic/Module/DumbProjectileBehavior.h
+    Include/GameLogic/Module/EquipCrateCollide.h
     Include/GameLogic/Module/FreeFallProjectileBehavior.h
     Include/GameLogic/Module/DynamicGeometryInfoUpdate.h
     Include/GameLogic/Module/DynamicShroudClearingRangeUpdate.h
@@ -906,6 +907,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Collide/CrateCollide/ConvertToCarBombCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/ConvertToHijackedVehicleCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/CrateCollide.cpp
+    Source/GameLogic/Object/Collide/CrateCollide/EquipCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/HealCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/MoneyCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/SabotageCommandCenterCrateCollide.cpp

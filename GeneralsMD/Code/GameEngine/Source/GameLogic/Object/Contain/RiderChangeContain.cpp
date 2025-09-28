@@ -568,7 +568,7 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 {
 	Object* obj = getObject();
 	const ThingTemplate* thing = TheThingFactory->findTemplate( riderInfo.m_templateName );
-	if (thing->isEquivalentTo(rider->getTemplate() ) )
+	if ( thing && thing->isEquivalentTo(rider->getTemplate() ) )
 	{
 		const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
 		

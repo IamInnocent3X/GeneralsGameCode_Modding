@@ -234,6 +234,8 @@ Bool AIGuardMachine::lookForInnerTarget(void)
 	PartitionFilterRelationship					f5(owner, PartitionFilterRelationship::ALLOW_NEUTRAL);
 	PartitionFilterPossibleToEnter			f6(owner, CMD_FROM_AI);
 	PartitionFilterPossibleToHijack			f7(owner, CMD_FROM_AI);
+	PartitionFilterPossibleToEquip			f8(owner, CMD_FROM_AI);
+	PartitionFilterRelationship				f9(owner, PartitionFilterRelationship::ALLOW_ALLIES);
 
 	PartitionFilter *filters[16];
 	Int count = 0;
@@ -248,6 +250,15 @@ Bool AIGuardMachine::lookForInnerTarget(void)
 		{
 			filters[count++] = &f1;
 			filters[count++] = &f7;
+		}
+		else if (owner->getTemplate()->isEquipGuard() || owner->getTemplate()->isParasiteGuard())
+		{
+			if(owner->getTemplate()->isParasiteGuard())
+				filters[count++] = &f1;
+			else
+				filters[count++] = &f9;
+
+			filters[count++] = &f8;
 		}
 		else
 		{

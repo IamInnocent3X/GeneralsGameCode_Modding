@@ -116,6 +116,8 @@ Bool SalvageCrateCollide::executeCrateBehavior( Object *other )
 
 	other->getControllingPlayer()->getAcademyStats()->recordSalvageCollected();
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

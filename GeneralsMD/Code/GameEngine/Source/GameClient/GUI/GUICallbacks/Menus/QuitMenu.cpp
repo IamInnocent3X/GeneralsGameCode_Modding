@@ -385,7 +385,8 @@ void ToggleQuitMenu()
 		//Added By Sadullah Nader
 		//Added to compensate for the quit confirmation window pop-up
 
-		TheMouse->setCursor( Mouse::ARROW );
+		//TheMouse->setCursor(Mouse::ARROW);
+		TheInGameUI->friend_setMouseCursor(Mouse::ARROW, "Dummy", 2);
 
 		TheControlBar->hidePurchaseScience();
 		if ( TheGameLogic->isInMultiplayerGame()  || TheGameLogic->isInReplayGame() )

@@ -133,6 +133,8 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "IsTrainable",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_isTrainable ) },
 	{ "EnterGuard",						INI::parseBool,												NULL,									offsetof( ThingTemplate, m_enterGuard ) },
 	{ "HijackGuard",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_hijackGuard ) },
+	{ "EquipGuard",						INI::parseBool,												NULL,									offsetof( ThingTemplate, m_equipGuard ) },
+	{ "ParasiteGuard",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_parasiteGuard ) },
 
 	{ "Side",									INI::parseAsciiString,								NULL,	offsetof( ThingTemplate, m_defaultOwningSide ) },
 
@@ -259,6 +261,36 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
   	{ "MaxSimultaneousOfTypeDifficulty",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficulty ) },
 	{ "MaxSimultaneousOfTypeDifficultyAIOverride",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficultyAI ) },
 	{ "MaxSimultaneousOfTypeCustomMessage",			INI::parseAndTranslateLabel,				NULL,		offsetof( ThingTemplate, m_maxSimultaneousCustomMessage ) },
+
+	// Customize Action Cursors
+	{ "SelectingCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_selectingCursorName ) },
+	{ "MoveCursorName",						INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_moveToCursorName ) },
+	{ "AttackMoveCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_attackMoveToCursorName ) },
+	{ "WaypointCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_waypointCursorName ) },
+	{ "GenericInvalidCursorName",			INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_genericInvalidCursorName ) },
+	{ "EnterCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_enterCursorName ) },
+	{ "EnterAggressiveCursorName",			INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_enterAggressiveCursorName ) },
+	{ "AttackCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_attackObjectCursorName ) },
+	{ "ForceAttackCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_forceAttackObjectCursorName ) },
+	{ "ForceAttackGroundCursorName",		INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_forceAttackGroundCursorName ) },
+	{ "OutrangeCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_outrangeCursorName ) },
+	{ "GetRepairAtCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_getRepairAtCursorName ) },
+	{ "DockCursorName",						INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_dockCursorName ) },
+	{ "GetHealedCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_getHealedCursorName ) },
+	{ "DoRepairCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_doRepairCursorName ) },
+	{ "ResumeConstructionCursorName",		INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_resumeConstructionCursorName ) },
+	{ "SetRallyPointCursorName",			INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_setRallyPointCursorName ) },
+	{ "SalvageCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_salvageCursorName ) },
+	{ "BuildCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_buildCursorName ) },
+	{ "InvalidBuildCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_invalidBuildCursorName ) },
+
+	// Enables the Target Object to use their Cursor instead of the Selected Object's Cursor
+	{ "UseMyDockCursor",					INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyDockCursor ) },
+	{ "UseMyGetHealedCursor",				INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyGetHealedCursor ) },
+	{ "UseMyGetRepairAtCursor",				INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyGetRepairAtCursor ) },
+	{ "UseMyEnterCursor",					INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyEnterCursor ) },
+	{ "UseMySalvageCursor",					INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMySalvageCursor ) },
+
 
 	{ 0, 0, 0, 0 }  // keep this last
 
@@ -1105,6 +1137,8 @@ ThingTemplate::ThingTemplate() :
 	m_isTrainable = FALSE;
 	m_enterGuard = FALSE;
 	m_hijackGuard = FALSE;
+	m_equipGuard = FALSE;
+	m_parasiteGuard = FALSE;
 
 	m_templateID = 0;
 	m_kindof = KINDOFMASK_NONE;
@@ -1139,6 +1173,33 @@ ThingTemplate::ThingTemplate() :
 	m_maxSimultaneousOfTypeDifficulty.clear();
 	m_maxSimultaneousOfTypeDifficultyAI.clear();
 	m_maxSimultaneousCustomMessage = UnicodeString::TheEmptyString;
+
+	m_genericInvalidCursorName = NULL;
+	m_selectingCursorName = NULL;
+	m_moveToCursorName = NULL;
+	m_attackMoveToCursorName = NULL;
+	m_waypointCursorName = NULL;
+	m_attackObjectCursorName = NULL;
+	m_forceAttackObjectCursorName = NULL;
+	m_forceAttackGroundCursorName = NULL;
+	m_outrangeCursorName = NULL;
+	m_getRepairAtCursorName = NULL;
+	m_dockCursorName = NULL;
+	m_getHealedCursorName = NULL;
+	m_doRepairCursorName = NULL;
+	m_resumeConstructionCursorName = NULL;
+	m_enterCursorName = NULL;
+	m_enterAggressiveCursorName = NULL;
+	m_setRallyPointCursorName = NULL;
+	m_salvageCursorName = NULL;
+	m_buildCursorName = NULL;
+	m_invalidBuildCursorName = NULL;
+
+	m_useMyGetRepairAtCursor = FALSE;
+	m_useMyDockCursor = FALSE;
+	m_useMyGetHealedCursor = FALSE;
+	m_useMyEnterCursor = FALSE;
+	m_useMySalvageCursor = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -597,6 +597,11 @@ public:
 	inline const std::vector<AsciiString>& getCustomStatusForbidden() const { return m_forbiddenCustomStatus; }
 	inline Bool getRequiresAllTriggers() const { return m_requiresAllTriggers; }
 
+	inline const AsciiString& getCursorName() const { return m_cursorName; }
+	inline const AsciiString& getForceAttackObjectCursorName() const { return m_forceAttackObjectCursorName; }
+	inline const AsciiString& getForceAttackGroundCursorName() const { return m_forceAttackGroundCursorName; }
+	inline const AsciiString& getInvalidCursorName() const { return m_invalidCursorName; }
+
 	Bool passRequirements (const Object *source) const;
 
 	Bool shouldProjectileCollideWith(
@@ -817,6 +822,11 @@ private:
 	std::vector<AsciiString> m_conflictingUpgradeNames;
 	Bool m_requiresAllTriggers;
 
+	AsciiString m_cursorName;
+	AsciiString m_forceAttackObjectCursorName;
+	AsciiString m_forceAttackGroundCursorName;
+	AsciiString m_invalidCursorName;
+
 	mutable HistoricWeaponDamageList m_historicDamage;
 };
 
@@ -1035,6 +1045,11 @@ public:
 	inline Real getMaxTargetHeight() const { return m_template->getMaxTargetHeight(); }
 	inline Real getAttackRangePriority() const { return m_template->getAttackRangePriority(); }
 	inline Real getOutsideAttackRangePriority() const { return m_template->getOutsideAttackRangePriority(); }
+	
+	inline const AsciiString& getCursorName() const { return m_template->getCursorName(); }
+	inline const AsciiString& getForceAttackObjectCursorName() const { return m_template->getForceAttackObjectCursorName(); }
+	inline const AsciiString& getForceAttackGroundCursorName() const { return m_template->getForceAttackGroundCursorName(); }
+	inline const AsciiString& getInvalidCursorName() const { return m_template->getInvalidCursorName(); }
 
 	Int getWeaponPriority(const Object *source, const Object *target) const;
 	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;

@@ -64,6 +64,9 @@ public:
 	//Real m_movementSpeedScalarEntries[BATTLE_PLAN_COUNT];
 	ObjectStatusTypes m_statusToSetEntries[BATTLE_PLAN_COUNT];
 	ObjectStatusTypes m_statusToClearEntries[BATTLE_PLAN_COUNT];
+	AsciiString m_customWeaponBonusEntries[BATTLE_PLAN_COUNT];
+	AsciiString m_customStatusToSetEntries[BATTLE_PLAN_COUNT];
+	AsciiString m_customStatusToClearEntries[BATTLE_PLAN_COUNT];
 
 	//std::vector<std::vector<WeaponBonusConditionType>> m_weaponBonusEntries;
 	//std::vector<std::vector<WeaponSetType>> m_weaponSetFlagEntries;
@@ -85,6 +88,10 @@ private:
 	//static void parseBPMovementSpeedScalar(INI* ini, void* instance, void* store, const void* userData);
 	static void parseBPStatusToSet(INI* ini, void* instance, void* store, const void* userData);
 	static void parseBPStatusToClear(INI* ini, void* instance, void* store, const void* userData);
+	
+	static void parseBPCustomWeaponBonus(INI* ini, void* instance, void* store, const void* userData);
+	static void parseBPCustomStatusToSet(INI* ini, void* instance, void* store, const void* userData);
+	static void parseBPCustomStatusToClear(INI* ini, void* instance, void* store, const void* userData);
 };
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

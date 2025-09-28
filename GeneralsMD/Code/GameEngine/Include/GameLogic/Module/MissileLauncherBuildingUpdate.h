@@ -116,6 +116,8 @@ public:
 
 	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
 
 private:
 	enum DoorStateType

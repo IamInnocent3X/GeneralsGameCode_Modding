@@ -230,7 +230,8 @@ Bool CountermeasuresBehavior::getCountermeasuresMustReloadAtDocks() const
 //-------------------------------------------------------------------------------------------------
 Bool CountermeasuresBehavior::getCountermeasuresMustReloadAtBarracks() const
 {
-	return getCountermeasuresBehaviorModuleData()->m_mustReloadAtBarracks;
+	const CountermeasuresBehaviorModuleData *data = getCountermeasuresBehaviorModuleData();
+	return getCountermeasuresBehaviorModuleData()->m_mustReloadAtBarracks && m_availableCountermeasures < data->m_numberOfVolleys * data->m_volleySize;
 }	
 
 //-------------------------------------------------------------------------------------------------

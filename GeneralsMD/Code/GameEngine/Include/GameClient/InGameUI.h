@@ -37,6 +37,7 @@
 #include "Common/GameType.h"
 #include "Common/MessageStream.h"		// for GameMessageTranslator
 #include "Common/KindOf.h"
+#include "Common/NameKeyGenerator.h"
 #include "Common/SpecialPowerType.h"
 #include "Common/Snapshot.h"
 #include "Common/STLTypedefs.h"
@@ -348,6 +349,7 @@ public:  // ********************************************************************
 		ACTIONTYPE_ENTER_OBJECT,
 		ACTIONTYPE_HIJACK_VEHICLE,
 		ACTIONTYPE_CONVERT_OBJECT_TO_CARBOMB,
+		ACTIONTYPE_EQUIP_OBJECT,
 		ACTIONTYPE_CAPTURE_BUILDING,
 		ACTIONTYPE_DISABLE_VEHICLE_VIA_HACKING,
 #ifdef ALLOW_SURRENDER
@@ -464,8 +466,8 @@ public:  // ********************************************************************
 	virtual Bool isAnySelectedKindOf( KindOfType kindOf ) const;		///< is any selected object a kind of
 	virtual Bool isAllSelectedKindOf( KindOfType kindOf ) const;		///< are all selected objects a kind of
 
-	virtual void setRadiusCursor(RadiusCursorType r, const SpecialPowerTemplate* sp, WeaponSlotType wslot);
-	virtual void setRadiusCursorNone() { setRadiusCursor(RADIUSCURSOR_NONE, NULL, PRIMARY_WEAPON); }
+	virtual void setRadiusCursor(RadiusCursorType r, const AsciiString& cr, const SpecialPowerTemplate* sp, WeaponSlotType wslot);
+	virtual void setRadiusCursorNone() { setRadiusCursor(RADIUSCURSOR_NONE, NULL, NULL, PRIMARY_WEAPON); }
 
 	virtual void setInputEnabled( Bool enable );										///< Set the input enabled or disabled
 	virtual Bool getInputEnabled( void ) { return m_inputEnabled; }	///< Get the current input status
@@ -584,6 +586,10 @@ public:  // ********************************************************************
 	void setDrawRMBScrollAnchor(Bool b) { m_drawRMBScrollAnchor = b; }
 	void setMoveRMBScrollAnchor(Bool b) { m_moveRMBScrollAnchor = b; }
 
+	static void parseCustomRadiusDecalDefinition(INI *ini);
+
+	void friend_setMouseCursor(Mouse::MouseCursor c, const AsciiString& cn, Int check) { setMouseCursor(c, cn, check); }
+
 private:
 	virtual Int getIdleWorkerCount( void );
 	virtual Object *findIdleWorker( Object *obj);
@@ -696,7 +702,7 @@ protected:
 	void createControlBar( void );			///< create the control bar user interface
 	void createReplayControl( void );		///< create the replay control window
 
-	void setMouseCursor(Mouse::MouseCursor c);
+	void setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorName = NULL, Int checkString = 1);
 
 
 	void addMessageText( const UnicodeString& formattedMessage, const RGBColor *rgbColor = NULL );  ///< internal workhorse for adding plain text for messages
@@ -826,6 +832,7 @@ protected:
 	Bool												m_isSelecting;
 	MouseMode										m_mouseMode;
 	Int													m_mouseModeCursor;
+	AsciiString											m_mouseModeCustomCursor;
 	DrawableID									m_mousedOverDrawableID;
 	Coord2D											m_scrollAmt;
 	Bool												m_isQuitMenuVisible;
@@ -856,6 +863,10 @@ protected:
 	RadiusDecalTemplate					m_radiusCursors[RADIUSCURSOR_COUNT];
 	RadiusDecal									m_curRadiusCursor;
 	RadiusCursorType						m_curRcType;
+
+	typedef std::hash_map< NameKeyType, RadiusDecalTemplate, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > RadiusDecalTemplateMap;
+	RadiusDecalTemplateMap m_customRadiusCursors;
+	AsciiString			   m_curCusRcType;
 
 	//Floating Text Data
 	FloatingTextList						m_floatingTextList;				///< Our list of floating text

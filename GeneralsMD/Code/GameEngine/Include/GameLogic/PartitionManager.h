@@ -786,6 +786,24 @@ public:
 
 //=====================================
 /**
+	Only objects that Can Possibly be equppped by the given object
+*/
+class PartitionFilterPossibleToEquip : public PartitionFilter
+{
+private:
+	const Object *m_obj;
+	CommandSourceType m_commandSource;
+
+public:
+	PartitionFilterPossibleToEquip(const Object *obj, CommandSourceType commandSource);
+	virtual Bool allow(Object *objOther);
+#if defined(RTS_DEBUG)
+	virtual const char* debugGetName() { return "PartitionFilterPossibleToEquip"; }
+#endif
+};
+
+//=====================================
+/**
  * Accept only the last object who attacked me. Very fast.
  */
 class PartitionFilterLastAttackedBy : public PartitionFilter

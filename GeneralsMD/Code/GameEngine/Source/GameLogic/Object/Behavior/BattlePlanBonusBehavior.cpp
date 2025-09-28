@@ -60,6 +60,9 @@ BattlePlanBonusBehaviorModuleData::BattlePlanBonusBehaviorModuleData()
 		//m_movementSpeedScalarEntries[i] = 1.0;
 		m_statusToSetEntries[i] = OBJECT_STATUS_NONE;
 		m_statusToClearEntries[i] = OBJECT_STATUS_NONE;
+		m_customWeaponBonusEntries[i] = NULL;
+		m_customStatusToSetEntries[i] = NULL;
+		m_customStatusToClearEntries[i] = NULL;
 	}
 }
 //-------------------------------------------------------------------------------------------------
@@ -142,6 +145,38 @@ void BattlePlanBonusBehaviorModuleData::parseBPStatusToClear(INI* ini, void* ins
 
 	self->m_statusToClearEntries[plan - 1] = (ObjectStatusTypes)INI::scanIndexList(ini->getNextToken(), ObjectStatusMaskType::getBitNames());
 }
+//-------------------------------------------------------------------------------------------------
+//-- Custom Types ---------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void BattlePlanBonusBehaviorModuleData::parseBPCustomWeaponBonus(INI* ini, void* instance, void* store, const void* userData)
+{
+	BattlePlanBonusBehaviorModuleData* self = (BattlePlanBonusBehaviorModuleData*)instance;
+	BattlePlanStatus plan = (BattlePlanStatus)INI::scanIndexList(ini->getNextToken(), TheBattlePlanStatusNames);
+	if ((plan) == PLANSTATUS_NONE)
+		return;
+
+	self->m_customWeaponBonusEntries[plan-1] = ini->getNextToken();
+}
+//-------------------------------------------------------------------------------------------------
+void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToSet(INI* ini, void* instance, void* store, const void* userData)
+{
+	BattlePlanBonusBehaviorModuleData* self = (BattlePlanBonusBehaviorModuleData*)instance;
+	BattlePlanStatus plan = (BattlePlanStatus)INI::scanIndexList(ini->getNextToken(), TheBattlePlanStatusNames);
+	if ((plan) == PLANSTATUS_NONE)
+		return;
+
+	self->m_customStatusToSetEntries[plan - 1] = ini->getNextToken();
+}
+//-------------------------------------------------------------------------------------------------
+void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToClear(INI* ini, void* instance, void* store, const void* userData)
+{
+	BattlePlanBonusBehaviorModuleData* self = (BattlePlanBonusBehaviorModuleData*)instance;
+	BattlePlanStatus plan = (BattlePlanStatus)INI::scanIndexList(ini->getNextToken(), TheBattlePlanStatusNames);
+	if ((plan) == PLANSTATUS_NONE)
+		return;
+
+	self->m_customStatusToClearEntries[plan - 1] = ini->getNextToken();
+}
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ void BattlePlanBonusBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p)
@@ -160,6 +195,10 @@ void BattlePlanBonusBehaviorModuleData::parseBPStatusToClear(INI* ini, void* ins
 		//{ "MovementSpeedScalar",	parseBPMovementSpeedScalar, NULL, 0 },
 		{ "StatusToSet",	parseBPStatusToSet, NULL, 0 },
 		{ "StatusToClear",	parseBPStatusToClear, NULL, 0 },
+
+		{ "CustomWeaponBonus",	parseBPCustomWeaponBonus, NULL, 0 },
+		{ "CustomStatusToSet",	parseBPCustomStatusToSet, NULL, 0 },
+		{ "CustomStatusToClear",	parseBPCustomStatusToClear, NULL, 0 },
 		
 		{ 0, 0, 0, 0 }
 	};
@@ -316,6 +355,15 @@ void BattlePlanBonusBehavior::addBonusForType(BattlePlanStatus plan)
 	if (d->m_statusToClearEntries[idx] != -1) {
 		obj->setStatus(MAKE_OBJECT_STATUS_MASK(d->m_statusToClearEntries[idx]), FALSE);
 	}
+	if (!d->m_customWeaponBonusEntries[idx].isEmpty()) {
+		obj->setCustomWeaponBonusCondition(d->m_customWeaponBonusEntries[idx]);
+	}
+	if (!d->m_customStatusToSetEntries[idx].isEmpty()) {
+		obj->setCustomStatus(d->m_customStatusToSetEntries[idx]);
+	}
+	if (!d->m_customStatusToClearEntries[idx].isEmpty()) {
+		obj->setCustomStatus(d->m_customStatusToClearEntries[idx], FALSE);
+	}
 
 	m_effectApplied[idx] = TRUE;
 }
@@ -367,6 +415,15 @@ void BattlePlanBonusBehavior::removeBonusForType(BattlePlanStatus plan)
 	}
 	if (d->m_statusToClearEntries[idx] != -1) {
 		obj->setStatus(MAKE_OBJECT_STATUS_MASK(d->m_statusToClearEntries[idx]));
+	}
+	if (!d->m_customWeaponBonusEntries[idx].isEmpty()) {
+		obj->clearCustomWeaponBonusCondition(d->m_customWeaponBonusEntries[idx]);
+	}
+	if (!d->m_customStatusToSetEntries[idx].isEmpty()) {
+		obj->setCustomStatus(d->m_customStatusToSetEntries[idx], FALSE);
+	}
+	if (!d->m_customStatusToClearEntries[idx].isEmpty()) {
+		obj->setCustomStatus(d->m_customStatusToClearEntries[idx]);
 	}
 
 	m_effectApplied[idx] = FALSE;

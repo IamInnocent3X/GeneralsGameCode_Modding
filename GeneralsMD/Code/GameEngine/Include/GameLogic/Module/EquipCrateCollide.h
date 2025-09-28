@@ -24,56 +24,84 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// FILE: ConvertToHijackedVehicleCrateCollide.h
-// Author: Mark Lorenzen, July 2002
-// Desc:   A crate (actually a terrorist - mobile crate) that makes the target vehicle switch
-//				 sides, and kills its driver
+// FILE: EquipCrateCollide.h
+// Author: IamInnocent, September 2025
+// Desc:   A crate module that makes the makes the user to latch onto a target
+//				 granting either positive and negative attributes
+//				 such as granting bonuses to allies, or dealing DoT on enemies
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
-#ifndef CONVERT_TO_HIJACKED_VEHICLE_CRATE_COLLIDE_H_
-#define CONVERT_TO_HIJACKED_VEHICLE_CRATE_COLLIDE_H_
+#ifndef EQUIP_CRATE_COLLIDE_H_
+#define EQUIP_CRATE_COLLIDE_H_
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
+#include "GameLogic/Object.h"
 #include "GameLogic/Module/CrateCollide.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Thing;
 
 //-------------------------------------------------------------------------------------------------
-class ConvertToHijackedVehicleCrateCollideModuleData : public CrateCollideModuleData
+class EquipCrateCollideModuleData : public CrateCollideModuleData
 {
 public:
 	UnsignedInt m_rangeOfEffect;
+	Bool m_isContain;
+	Bool m_isParasite;
+	Bool m_isUnique;
+	Bool m_equipCanPassiveAcquire;
+	Bool m_leechExpFromObject;
+	Bool m_destroyOnRepair;
 
-	ConvertToHijackedVehicleCrateCollideModuleData()
+	EquipCrateCollideModuleData()
 	{
 		m_rangeOfEffect = 0;
+		m_isContain = FALSE;
+		m_isParasite = FALSE;
+		m_isUnique = FALSE;
+		m_equipCanPassiveAcquire = FALSE;
+		m_leechExpFromObject = FALSE;
+		m_destroyOnRepair = FALSE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
     CrateCollideModuleData::buildFieldParse(p);
+		static const FieldParse dataFieldParse[] =
+		{
+			{ "IsContain",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isContain ) },
+			{ "IsParasite",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isParasite ) },
+			{ "IsUnique",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isUnique ) },
+			{ "CanPassiveAcquire",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_equipCanPassiveAcquire ) },
+			{ "LeechExpFromObject",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_leechExpFromObject ) },
+			{ "DestroyOnRepair",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnRepair ) },
+			{ 0, 0, 0, 0 }
+		};
+    p.add(dataFieldParse);
+
 	}
 
 };
 
 //-------------------------------------------------------------------------------------------------
-class ConvertToHijackedVehicleCrateCollide : public CrateCollide
+class EquipCrateCollide : public CrateCollide
 {
 
-	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( ConvertToHijackedVehicleCrateCollide, "ConvertToHijackedVehicleCrateCollide" )
-	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( ConvertToHijackedVehicleCrateCollide, ConvertToHijackedVehicleCrateCollideModuleData );
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( EquipCrateCollide, "EquipCrateCollide" )
+	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( EquipCrateCollide, EquipCrateCollideModuleData );
 
 public:
 
-	ConvertToHijackedVehicleCrateCollide( Thing *thing, const ModuleData* moduleData );
+	EquipCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual Bool revertCollideBehavior( Object *other );
+	ObjectID getEquipObjectID() const { return m_equipToID; }
+	void setEquipStatus(Object *other);
+	void clearEquipStatus();
 
 protected:
 
@@ -83,7 +111,13 @@ protected:
 	/// This is the game logic execution function that all real CrateCollides will implement
 	virtual Bool executeCrateBehavior( Object *other );
 
-	virtual Bool isHijackedVehicleCrateCollide() const { return TRUE; }
+	virtual Bool revertCollideBehavior(Object *other);
+
+	virtual Bool isEquipCrateCollide() const { return TRUE; }
+	virtual Bool isParasiteEquipCrateCollide() const  { return getEquipCrateCollideModuleData()->m_isParasite; }
+
+private:
+	ObjectID m_equipToID;
 };
 
 #endif

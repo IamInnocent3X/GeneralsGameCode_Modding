@@ -77,6 +77,8 @@
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/EquipCrateCollide.h"
+#include "GameLogic/Module/HijackerUpdate.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
 #include "GameLogic/Module/ObjectSMCHelper.h"
@@ -96,9 +98,9 @@
 #include "GameLogic/Module/ChronoDamageHelper.h"
 #include "GameLogic/Module/TempWeaponBonusHelper.h"
 #include "GameLogic/Module/ToppleUpdate.h"
+#include "GameLogic/Module/TunnelContain.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
-#include "GameLogic/Module/TunnelContain.h"
 
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -557,6 +559,12 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_soleHealingBenefactorID = INVALID_ID; ///< who is the only other object that can give me this non-stacking heal benefit?
 	m_soleHealingBenefactorExpirationFrame = 0; ///< on what frame can I accept healing (thus to switch) from a new benefactor
 
+	m_equipObjIDs.clear();
+	m_equipAttackableObjIDs.clear();
+	m_rejectKeys.clear();
+
+	m_hijackerID = INVALID_ID;
+
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
 
@@ -767,6 +775,16 @@ void Object::onRemovedFrom( Object *removedFrom )
 	clearStatus( MAKE_OBJECT_STATUS_MASK2( OBJECT_STATUS_MASKED, OBJECT_STATUS_UNSELECTABLE ) );
 	m_containedBy = NULL;
 	m_containedByFrame = 0;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)
+	{
+		CollideModuleInterface* collide = (*m)->getCollide();
+		if (!collide)
+			continue;
+
+		if( collide->isEquipCrateCollide() && collide->revertCollideBehavior(removedFrom) )
+			break;
+	}
 
   handlePartitionCellMaintenance(); // get a clean look, now that I am outdoors, again
 
@@ -1586,6 +1604,15 @@ const Weapon* Object::getCurrentWeapon(WeaponSlotType* wslot) const
 	if (wslot)
 		*wslot = m_weaponSet.getCurWeaponSlot();
 	return m_weaponSet.getCurWeapon();
+}
+
+//=============================================================================
+WeaponSlotType Object::getCurrentWeaponSlot() const
+{
+	if (!m_weaponSet.hasAnyWeapon())
+		return PRIMARY_WEAPON;
+
+	return m_weaponSet.getCurWeaponSlot();
 }
 
 //=============================================================================
@@ -4967,6 +4994,76 @@ void Object::xfer( Xfer *xfer )
 
 	}  // end else, load
 
+	UnsignedShort equipIDCount = m_equipObjIDs.size();
+	UnsignedShort equipAttackableIDCount = m_equipAttackableObjIDs.size();
+	UnsignedShort rejectKeysCount = m_rejectKeys.size();
+	xfer->xferUnsignedShort( &equipIDCount );
+	xfer->xferUnsignedShort( &equipAttackableIDCount );
+	xfer->xferUnsignedShort( &rejectKeysCount );
+	ObjectID equipObjID = INVALID_ID;
+	ObjectID equipAttackableObjID = INVALID_ID;
+	AsciiString rejectKey = NULL;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		// go through all IDs
+		for (int i = 0; i < equipIDCount; i++)
+		{
+			equipObjID = m_equipObjIDs[i];
+			xfer->xferObjectID( &equipObjID );
+		}  // end for, i
+
+		for (int i_2 = 0; i_2 < equipAttackableIDCount; i_2++)
+		{
+			equipAttackableObjID = m_equipAttackableObjIDs[i_2];
+			xfer->xferObjectID( &equipAttackableObjID );
+		}  // end for, i_2
+
+		for (int i_3 = 0; i_3 < rejectKeysCount; i_3++)
+		{
+			rejectKey = m_rejectKeys[i_3];
+			xfer->xferAsciiString( &rejectKey );
+		}  // end for, i_3
+
+	}  // end if, save
+	else
+	{
+		// this list should be empty on loading
+		if( m_equipObjIDs.size() != 0 || m_equipAttackableObjIDs.size() != 0 || m_rejectKeys.size() != 0 )
+		{
+
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_equipObjIDs, m_equipAttackableObjIDs and m_rejectKeys should be empty but is not" ));
+			throw SC_INVALID_DATA;
+
+		}  // end if
+
+		// read all IDs
+		for( UnsignedShort i = 0; i < equipIDCount; ++i )
+		{
+			// read and register ID
+			xfer->xferObjectID( &equipObjID );
+			m_equipObjIDs.push_back(equipObjID);
+
+		}  // end for
+
+		for( UnsignedShort i_2 = 0; i_2 < equipAttackableIDCount; ++i_2 )
+		{
+			// read and register ID
+			xfer->xferObjectID( &equipAttackableObjID );
+			m_equipAttackableObjIDs.push_back(equipAttackableObjID);
+
+		}  // end for
+
+		for ( UnsignedShort i_3 = 0; i_3 < rejectKeysCount; ++i_3)
+		{
+			xfer->xferAsciiString( &rejectKey );
+			m_rejectKeys.push_back(rejectKey);
+		}  // end for
+
+
+	}  // end else, load
+
+	xfer->xferObjectID( &m_hijackerID );
 
 	if ( version >= 3 )
 	{
@@ -5303,11 +5400,14 @@ void Object::onDie( DamageInfo *damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setWeaponBonusCondition(WeaponBonusConditionType wst)
+void Object::setWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
 	m_weaponBonusCondition |= (1 << wst);
 
+	if(setIgnoreClear)
+		setWeaponBonusConditionIgnoreClear(wst);
+
 	if( oldCondition != m_weaponBonusCondition )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
@@ -5316,11 +5416,14 @@ void Object::setWeaponBonusCondition(WeaponBonusConditionType wst)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst)
+void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
 	m_weaponBonusCondition &= ~(1 << wst);
 
+	if(setIgnoreClear)
+		clearWeaponBonusConditionIgnoreClear(wst);
+
 	if( oldCondition != m_weaponBonusCondition )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
@@ -5329,7 +5432,7 @@ void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setCustomWeaponBonusCondition(const AsciiString& cst) 
+void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
 {
 	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
 	// TO-DO: Change to Hash_Map. DONE.
@@ -5343,6 +5446,10 @@ void Object::setCustomWeaponBonusCondition(const AsciiString& cst)
 	{
 		m_customWeaponBonusCondition[cst] = 1;
 	}
+
+	if(setIgnoreClear)
+		setCustomWeaponBonusConditionIgnoreClear(cst);
+
 	if( oldCondition.empty() || oldCondition != m_customWeaponBonusCondition )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
@@ -5351,7 +5458,7 @@ void Object::setCustomWeaponBonusCondition(const AsciiString& cst)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::clearCustomWeaponBonusCondition(const AsciiString& cst) 
+void Object::clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
 {
 	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
 	// TO-DO: Change to Hash_Map. DONE.
@@ -5365,6 +5472,9 @@ void Object::clearCustomWeaponBonusCondition(const AsciiString& cst)
 	{
 		m_customWeaponBonusCondition[cst] = 0;
 	}
+
+	if(setIgnoreClear)
+		clearCustomWeaponBonusConditionIgnoreClear(cst);
 
 	if( !oldCondition.empty() && oldCondition != m_customWeaponBonusCondition )
 	{
@@ -5382,7 +5492,7 @@ void Object::setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst)
 //-------------------------------------------------------------------------------------------------
 void Object::clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
 {
-	m_weaponBonusConditionIC &= ~(1 << wst); 
+	m_weaponBonusConditionIC &= ~(1 << wst);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -6407,6 +6517,7 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 #endif
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
 #endif
@@ -6507,6 +6618,7 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 				if( ai )
 				{
 					ai->aiEnter( obj, cmdSource );
@@ -6641,6 +6753,7 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_SWITCH_WEAPON:
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
 #endif
@@ -6708,6 +6821,7 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_SWITCH_WEAPON:
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
 #endif
@@ -7345,6 +7459,7 @@ ObjectID Object::calculateCountermeasureToDivertTo( const Object& victim )
 	return INVALID_ID;
 }
 
+//-------------------------------------------------------------------------------------------------
 void Object::doClearTunnelContainTargetID()
 {
 	// Reset targetID each time ordering an attack
@@ -7353,3 +7468,207 @@ void Object::doClearTunnelContainTargetID()
 	if (tc)
 		tc->clearTargetID();
 }
+
+//-------------------------------------------------------------------------------------------------
+void Object::setEquipObjectID(ObjectID equipObjID)
+{
+	if(equipObjID == INVALID_ID)
+		return;
+
+	m_equipObjIDs.push_back(equipObjID);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setEquipAttackableObjectID(ObjectID equipObjID)
+{
+	if(equipObjID == INVALID_ID)
+		return;
+
+	m_equipAttackableObjIDs.push_back(equipObjID);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearEquipObjectID(ObjectID equipObjID)
+{ 
+	if(equipObjID == INVALID_ID)
+		return;
+
+	// Remove the ID from the Equip list
+	std::vector<ObjectID>::iterator it;
+	for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end();)
+	{
+		if (equipObjID == (*it))
+		{
+			it = m_equipObjIDs.erase(it);
+			break;
+		}
+		++it;
+	}
+
+	// Also from the Equip Attackable list, if any
+	std::vector<ObjectID>::iterator it_2;
+	for (it_2 = m_equipAttackableObjIDs.begin(); it_2 != m_equipAttackableObjIDs.end();)
+	{
+		if (equipObjID == (*it_2))
+		{
+			it_2 = m_equipAttackableObjIDs.erase(it_2);
+			break;
+		}
+		++it_2;
+	}
+}
+
+void Object::setRejectKey(const AsciiString& keyStr)
+{ 
+	if(keyStr.isEmpty())
+		return;
+
+	// Objects with the same Reject keys cannot Equip and set new reject keys with the same name
+	// No need to check if the Reject Key is already present
+	m_rejectKeys.push_back(keyStr);
+}
+
+void Object::clearRejectKey(const AsciiString& keyStr)
+{ 
+	if(keyStr.isEmpty())
+		return;
+
+	// Remove the ID from the Equip list
+	std::vector<AsciiString>::iterator it;
+	for (it = m_rejectKeys.begin(); it != m_rejectKeys.end();)
+	{
+		if (keyStr == (*it))
+		{
+			it = m_rejectKeys.erase(it);
+			break;
+		}
+		++it;
+	}
+}
+
+Bool Object::hasRejectKey(const AsciiString& keyStr) const
+{
+	for(std::vector<AsciiString>::const_iterator it = m_rejectKeys.begin(); it != m_rejectKeys.end(); ++it)
+	{
+		if((*it) == keyStr)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setContainedPosition()
+{
+	static const NameKeyType key_EquipCrateCollide = NAMEKEY("EquipCrateCollide");
+	EquipCrateCollide* eqc = (EquipCrateCollide*)(findUpdateModule( key_EquipCrateCollide ));
+	if (eqc && eqc->getEquipObjectID() != INVALID_ID)
+	{
+		Object* equipObject = TheGameLogic->findObjectByID( eqc->getEquipObjectID() );
+		if ( equipObject )
+		{
+			setPosition( equipObject->getPosition() );
+		}
+	}
+	else if(getContainedBy())
+	{
+		setPosition( getContainedBy()->getPosition() );
+	}
+	else
+	{
+		static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+		HijackerUpdate *hijackerUpdate = (HijackerUpdate*)(findUpdateModule( key_HijackerUpdate ));
+		if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+		{
+			setPosition( hijackerUpdate->getTargetObject()->getPosition() );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setHijackerID(ObjectID HijackerID)
+{
+	m_hijackerID = HijackerID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerID)
+{
+	if( testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
+	{
+		Object *hijacker = TheGameLogic->findObjectByID( m_hijackerID );
+
+		if(hijacker)
+		{
+			static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+			HijackerUpdate *hijackerUpdate = (HijackerUpdate*)hijacker->findUpdateModule( key_HijackerUpdate );
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setUpdate( TRUE );
+				// If I am self healing or the damager is me dont deal damage to me 
+				if(damagerID == m_hijackerID || checkHealed)
+					hijackerUpdate->setNoSelfDamage( TRUE );
+				if(checkDie)
+					hijackerUpdate->setEject( TRUE );
+				else if(checkHealed)
+					hijackerUpdate->setHealed( TRUE );
+			}
+		}
+	}
+
+	if( !m_equipObjIDs.empty() )
+	{
+		Object *damager = TheGameLogic->findObjectByID( damagerID );
+		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		{
+			Object *equipObj = TheGameLogic->findObjectByID( (*it) );
+
+			if(equipObj)
+			{
+				static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+				HijackerUpdate *hijackerUpdate = (HijackerUpdate*)equipObj->findUpdateModule( key_HijackerUpdate );
+				if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+				{
+					hijackerUpdate->setUpdate( TRUE );
+
+					// If I am self healing or the damager is my ally dont deal damage to me
+					if((damager && equipObj->getRelationship( damager ) == ALLIES) || checkHealed)
+						hijackerUpdate->setNoSelfDamage( TRUE );
+					if(checkDie)
+						hijackerUpdate->setEject( TRUE );
+					else if(checkHealed)
+						hijackerUpdate->setHealed( TRUE );
+				}
+			}
+		}
+	}
+}
+
+//=============================================================================
+//== Custom Cursor List
+//=============================================================================
+const AsciiString& Object::getGenericInvalidCursorName() const {return getTemplate()->friend_getGenericInvalidCursorName();	}
+const AsciiString& Object::getSelectingCursorName() const {return getTemplate()->friend_getSelectingCursorName();	}
+const AsciiString& Object::getMoveToCursorName() const {return getTemplate()->friend_getMoveToCursorName();	}
+const AsciiString& Object::getAttackMoveToCursorName() const {return getTemplate()->friend_getAttackMoveToCursorName();	}
+const AsciiString& Object::getWaypointCursorName() const {return getTemplate()->friend_getWaypointCursorName();	}
+const AsciiString& Object::getAttackObjectCursorName() const {return getTemplate()->friend_getAttackObjectCursorName();	}
+const AsciiString& Object::getForceAttackObjectCursorName() const {return getTemplate()->friend_getForceAttackObjectCursorName();	}
+const AsciiString& Object::getForceAttackGroundCursorName() const {return getTemplate()->friend_getForceAttackGroundCursorName();	}
+const AsciiString& Object::getOutrangeCursorName() const {return getTemplate()->friend_getOutrangeCursorName();	}
+const AsciiString& Object::getGetRepairAtCursorName() const {return getTemplate()->friend_getGetRepairAtCursorName();	}
+const AsciiString& Object::getDockCursorName() const {return getTemplate()->friend_getDockCursorName();	}
+const AsciiString& Object::getGetHealedCursorName() const {return getTemplate()->friend_getGetHealedCursorName();	}
+const AsciiString& Object::getDoRepairCursorName() const {return getTemplate()->friend_getDoRepairCursorName();	}
+const AsciiString& Object::getResumeConstructionCursorName() const {return getTemplate()->friend_getResumeConstructionCursorName();	}
+const AsciiString& Object::getEnterCursorName() const {return getTemplate()->friend_getEnterCursorName();	}
+const AsciiString& Object::getEnterAggressiveCursorName() const {return getTemplate()->friend_getEnterAggressiveCursorName();	}
+const AsciiString& Object::getSetRallyPointCursorName() const {return getTemplate()->friend_getSetRallyPointCursorName();	}
+const AsciiString& Object::getBuildCursorName() const {return getTemplate()->friend_getBuildCursorName();	}
+const AsciiString& Object::getInvalidBuildCursorName() const {return getTemplate()->friend_getInvalidBuildCursorName();	}
+const AsciiString& Object::getSalvageCursorName() const {return getTemplate()->friend_getSalvageCursorName();	}
+
+Bool Object::useMyGetRepairAtCursor() const {return getTemplate()->friend_getUseMyGetRepairAtCursor();	}
+Bool Object::useMyDockCursor() const {return getTemplate()->friend_getUseMyDockCursor();	}
+Bool Object::useMyGetHealedCursor() const {return getTemplate()->friend_getUseMyGetHealedCursor();	}
+Bool Object::useMyEnterCursor() const {return getTemplate()->friend_getUseMyEnterCursor();	}
+Bool Object::useMySalvageCursor() const {return getTemplate()->friend_getUseMySalvageCursor();	}

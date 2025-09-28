@@ -65,6 +65,8 @@ Bool MoneyCrateCollide::executeCrateBehavior( Object *other )
 	soundToPlay.setObjectID( other->getID() );
 	TheAudio->addAudioEvent(&soundToPlay);
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

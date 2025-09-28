@@ -419,6 +419,11 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "RequiredCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_requiredCustomStatus ) },
 	{ "ForbiddenCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_forbiddenCustomStatus ) },
 
+	{ "AttackCursorName",							INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_cursorName ) },
+	{ "ForceAttackObjectCursorName",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_forceAttackObjectCursorName ) },
+	{ "ForceAttackGroundCursorName",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_forceAttackGroundCursorName ) },
+	{ "InvalidCursorName",							INI::parseAsciiString,       	NULL, 					offsetof(WeaponTemplate, m_invalidCursorName ) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -611,6 +616,11 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_requiredCustomStatus.clear();
 	m_forbiddenCustomStatus.clear();
 	m_requiresAllTriggers = false;
+
+	m_cursorName = NULL;
+	m_forceAttackObjectCursorName = NULL;
+	m_forceAttackGroundCursorName = NULL;
+	m_invalidCursorName = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2751,7 +2761,7 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
 	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
 
-	// Get bonuses granted by TempWeaponBonus
+	// Get bonuses granted outside of FiringTrackerBonus
 	WeaponBonusConditionFlags weaponBonusTypeNoClear = me->getWeaponBonusConditionIgnoreClear();
 	ObjectCustomStatusType customWeaponBonusTypeNoClear = me->getCustomWeaponBonusConditionIgnoreClear();
 
@@ -2790,14 +2800,14 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 		{
 			if(!customWeaponBonusType.isEmpty())
 			{
-				me->setCustomWeaponBonusCondition(customWeaponBonusType);
+				me->setCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
 			}
 			if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 			{
 				if( !me->testWeaponBonusCondition(weaponBonusType) )
 				{
 					// We shoot faster at guys marked thusly
-					me->setWeaponBonusCondition(weaponBonusType);
+					me->setWeaponBonusCondition(weaponBonusType, FALSE);
 				}
 			}
 		}
@@ -2806,25 +2816,25 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 			// A ground shot or the lack of the status on the target will clear this
 			if(!customWeaponBonusType.isEmpty())
 			{
-				// If the bonus is currently granted by TempWeaponBonus, don't clear it.
+				// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
 				ObjectCustomStatusType::const_iterator it = customWeaponBonusTypeNoClear.find(customWeaponBonusType);
 
 				if(it != customWeaponBonusTypeNoClear.end())
 				{
-					// If the bonus has been cleared by TempWeaponBonus, clear it.
+					// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
 					if(it->second == 0) 
-						me->clearCustomWeaponBonusCondition(customWeaponBonusType);
+						me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
 				}
 				else
 				{
-					me->clearCustomWeaponBonusCondition(customWeaponBonusType);
+					me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
 				}
 			}
 			if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 			{
 				if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
 				{
-					me->clearWeaponBonusCondition(weaponBonusType);
+					me->clearWeaponBonusCondition(weaponBonusType, FALSE);
 				}
 			}
 		}
@@ -2870,23 +2880,23 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 				{
 					if( DoBuffGlobal == TRUE )
 					{
-						me->setCustomWeaponBonusCondition(it->bonus);
+						me->setCustomWeaponBonusCondition(it->bonus, FALSE);
 					}
 					// Remove the Custom Weapon Bonus from the Attacker
 					else
 					{
-						// If the bonus is currently granted by TempWeaponBonus, don't clear it.
+						// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
 						ObjectCustomStatusType::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
 
 						if(it2 != customWeaponBonusTypeNoClear.end())
 						{
-							// If the bonus has been cleared by TempWeaponBonus, clear it.
+							// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
 							if(it2->second == 0) 
-								me->clearCustomWeaponBonusCondition(it->bonus);
+								me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
 						}
 						else
 						{
-							me->clearCustomWeaponBonusCondition(it->bonus);
+							me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
 						}
 					}
 				}
@@ -2936,16 +2946,16 @@ void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 					{
 						if( !me->testWeaponBonusCondition(it->bonus) )
 						{
-							me->setWeaponBonusCondition(it->bonus);
+							me->setWeaponBonusCondition(it->bonus, FALSE);
 						}
 					}
 					// Remove the Weapon Bonus from the Attacker
 					else
 					{
-						// If the bonus is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
+						// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
 						if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
 						{
-							me->clearWeaponBonusCondition(it->bonus);
+							me->clearWeaponBonusCondition(it->bonus, FALSE);
 						}
 					}
 				}
@@ -2968,32 +2978,32 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
 	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
 
-	// Get bonuses granted by TempWeaponBonus
+	// Get bonuses granted outside of FiringTrackerBonus
 	WeaponBonusConditionFlags weaponBonusTypeNoClear = me->getWeaponBonusConditionIgnoreClear();
 	ObjectCustomStatusType customWeaponBonusTypeNoClear = me->getCustomWeaponBonusConditionIgnoreClear();
 
 	if(!customWeaponBonusType.isEmpty())
 	{
-		// If the bonus is currently granted by TempWeaponBonus, don't clear it.
+		// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
 		ObjectCustomStatusType::const_iterator it = customWeaponBonusTypeNoClear.find(customWeaponBonusType);
 
 		if(it != customWeaponBonusTypeNoClear.end())
 		{
-			// If the bonus has been cleared by TempWeaponBonus, clear it.
+			// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
 			if(it->second == 0) 
-				me->clearCustomWeaponBonusCondition(customWeaponBonusType);
+				me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
 		}
 		else
 		{
-			me->clearCustomWeaponBonusCondition(customWeaponBonusType);
+			me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
 		}
 	}
 	if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 	{
-		// If the bonus is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
+		// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
 		if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
 		{
-			me->clearWeaponBonusCondition(weaponBonusType);
+			me->clearWeaponBonusCondition(weaponBonusType, FALSE);
 		}
 	}
 
@@ -3006,18 +3016,18 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 		{
 			if(!it->bonus.isEmpty())
 			{
-				// If the bonus is currently granted by TempWeaponBonus, don't clear it.
+				// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
 				ObjectCustomStatusType::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
 
 				if(it2 != customWeaponBonusTypeNoClear.end())
 				{
-					// If the bonus has been cleared by TempWeaponBonus, clear it.
+					// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
 					if(it2->second == 0) 
-						me->clearCustomWeaponBonusCondition(it->bonus);
+						me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
 				}
 				else
 				{
-					me->clearCustomWeaponBonusCondition(it->bonus);
+					me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
 				}
 			}
 		}
@@ -3030,10 +3040,10 @@ void Weapon::computeFiringTrackerBonusClear(Object *me)
 		{
 			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
 			{
-				// If the bonus is currently granted by TempWeaponBonus, and it exists within the Unit's WeaponBonus don't clear it.
+				// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
 				if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
 				{
-					me->clearWeaponBonusCondition(it->bonus);
+					me->clearWeaponBonusCondition(it->bonus, FALSE);
 				}
 			}
 		}
@@ -4096,11 +4106,6 @@ Bool Weapon::privateFireWeapon(
 	if (!m_template)
 		return false;
 
-	if (sourceObj->testCustomStatus("AIM_NO_ATTACK"))
-	{
-		return false;
-	}
-
 	// If we are a networked weapon, tell everyone nearby they might want to get in on this shot
 	if( m_template->getRequestAssistRange()  &&  victimObj )
 		processRequestAssistance( sourceObj, victimObj );
@@ -4468,6 +4473,12 @@ void Weapon::preFireWeapon(const Object* source, const Coord3D* pos)
 //-------------------------------------------------------------------------------------------------
 Bool Weapon::fireWeapon(const Object *source, Object *target, ObjectID* projectileID)
 {
+	if (source->testCustomStatus("AIM_NO_ATTACK"))
+	{
+		if (projectileID)
+			*projectileID = INVALID_ID;
+		return false;
+	}
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s at %s", DescribeObject(source).str(), DescribeObject(target).str()));
 	ObjectCustomStatusType dummy;
 	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE, dummy );
@@ -4477,6 +4488,12 @@ Bool Weapon::fireWeapon(const Object *source, Object *target, ObjectID* projecti
 // return true if we auto-reloaded our clip after firing.
 Bool Weapon::fireWeapon(const Object *source, const Coord3D* pos, ObjectID* projectileID)
 {
+	if (source->testCustomStatus("AIM_NO_ATTACK"))
+	{
+		if (projectileID)
+			*projectileID = INVALID_ID;
+		return false;
+	}
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
 	ObjectCustomStatusType dummy;
 	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, dummy );

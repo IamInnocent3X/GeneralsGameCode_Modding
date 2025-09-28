@@ -49,7 +49,7 @@ class GrantStealthBehaviorModuleData : public UpdateModuleData
 public:
 	Bool									m_initiallyActive;
 	Bool									m_singleBurst;
-	Int										m_healingAmount;
+	Real										m_healingAmount;
 	Real									m_startRadius;
 	Real									m_finalRadius;
 	Real									m_radiusGrowRate;

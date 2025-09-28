@@ -535,6 +535,8 @@ public:
 	Weapon* findWaypointFollowingCapableWeapon();
 	Bool getAmmoPipShowingInfo(Int& numTotal, Int& numFull) const;
 
+	WeaponSlotType getCurrentWeaponSlot() const;
+
   void notifyFiringTrackerShotFired( const Weapon* weaponFired, ObjectID victimID ) ;
 
   /**
@@ -600,11 +602,11 @@ public:
 	Bool hasSpecialPower( SpecialPowerType type ) const;
 	Bool hasAnySpecialPower() const;
 
-	void setWeaponBonusCondition(WeaponBonusConditionType wst);
-	void clearWeaponBonusCondition(WeaponBonusConditionType wst);
+	void setWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear = TRUE);
+	void clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear = TRUE);
 
-	void setCustomWeaponBonusCondition(const AsciiString& cst);
-	void clearCustomWeaponBonusCondition(const AsciiString& cst);
+	void setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear = TRUE);
+	void clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear = TRUE);
 
 	void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
 	void clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
@@ -702,8 +704,49 @@ public:
 
 	void doClearTunnelContainTargetID();
 
+	void setEquipObjectID(ObjectID equipObjID);
+	void clearEquipObjectID(ObjectID equipObjID);
+	void setEquipAttackableObjectID(ObjectID equipObjID);
+	void setRejectKey(const AsciiString& keyStr);
+	void clearRejectKey(const AsciiString& keyStr);
+	Bool hasRejectKey(const AsciiString& keyStr) const;
+	void setContainedPosition();
+
+	inline std::vector<ObjectID> getEquipAttackableObjectIDs() const { return m_equipAttackableObjIDs; }
+	inline std::vector<ObjectID> getEquipObjectIDs() const { return m_equipObjIDs; }
+
+	void setHijackerID(ObjectID HijackerID);
+	void doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerID);
+
 	void doObjectUpgradeChecks();
 	void doObjectStatusChecks();
+
+	const AsciiString& getGenericInvalidCursorName() const;
+	const AsciiString& getSelectingCursorName() const;
+	const AsciiString& getMoveToCursorName() const;
+	const AsciiString& getAttackMoveToCursorName() const;
+	const AsciiString& getWaypointCursorName() const;
+	const AsciiString& getAttackObjectCursorName() const;
+	const AsciiString& getForceAttackObjectCursorName() const;
+	const AsciiString& getForceAttackGroundCursorName() const;
+	const AsciiString& getOutrangeCursorName() const;
+	const AsciiString& getGetRepairAtCursorName() const;
+	const AsciiString& getDockCursorName() const;
+	const AsciiString& getGetHealedCursorName() const;
+	const AsciiString& getDoRepairCursorName() const;
+	const AsciiString& getResumeConstructionCursorName() const;
+	const AsciiString& getEnterCursorName() const;
+	const AsciiString& getEnterAggressiveCursorName() const;
+	const AsciiString& getSetRallyPointCursorName() const;
+	const AsciiString& getBuildCursorName() const;
+	const AsciiString& getInvalidBuildCursorName() const;
+	const AsciiString& getSalvageCursorName() const;
+	
+	Bool useMyGetRepairAtCursor() const;
+	Bool useMyDockCursor() const;
+	Bool useMyGetHealedCursor() const;
+	Bool useMyEnterCursor() const;
+	Bool useMySalvageCursor() const;
 
 protected:
 
@@ -906,6 +949,11 @@ private:
 	Byte													m_numTriggerAreasActive;
 	Bool													m_singleUseCommandUsed;
 	Bool													m_isReceivingDifficultyBonus;
+
+	std::vector<AsciiString>						m_rejectKeys;
+	std::vector<ObjectID> 							m_equipObjIDs;
+	std::vector<ObjectID> 							m_equipAttackableObjIDs;
+	ObjectID 										m_hijackerID;
 
 };  // end class Object
 

@@ -280,6 +280,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "VeterancyGainCreate", 512, 128 },
 	{ "ConvertToCarBombCrateCollide", 256, 128 },
 	{ "ConvertToHijackedVehicleCrateCollide", 256, 128 },
+	{ "EquipCrateCollide", 256, 128 },
 	{ "SabotageCommandCenterCrateCollide", 256, 128 },
 	{ "SabotageFakeBuildingCrateCollide", 256, 128 },
 	{ "SabotageInternetCenterCrateCollide", 256, 128 },

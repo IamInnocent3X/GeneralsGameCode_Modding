@@ -159,6 +159,7 @@ Bool StickyBombCrateCollide::executeCrateBehavior( Object *other )
 		}
 	}
 
+	CrateCollide::executeCrateBehavior(other);
 	m_hasCollided = TRUE;
 	return TRUE;
 }

@@ -144,6 +144,8 @@ Bool SabotageSuperweaponCrateCollide::executeCrateBehavior( Object *other )
 		sp->startPowerRecharge();
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

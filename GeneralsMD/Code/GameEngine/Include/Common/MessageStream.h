@@ -458,6 +458,7 @@ public:
 		MSG_SABOTAGE_HINT,
 		MSG_FIREBOMB_HINT,								///< throw a molotov cocktail
 		MSG_CONVERT_TO_CARBOMB_HINT,								///< if clicked, selected unit(s) will attempt to convert clicked object into a carbomb.
+		MSG_EQUIP_HINT,									///< if clicked, selected unit(s) will attempt to equip itself onto the Object.
 		MSG_CAPTUREBUILDING_HINT,
 #ifdef ALLOW_SURRENDER
 		MSG_PICK_UP_PRISONER_HINT,
@@ -564,6 +565,7 @@ public:
 		MSG_DO_REPAIR,															///< dozer will go repair the clicked target
 		MSG_RESUME_CONSTRUCTION,										///< resume construction on a structure
 		MSG_ENTER,																	///< Enter object
+		MSG_EQUIP,
 		MSG_DOCK,																		///< Dock with this object
 		MSG_DO_MOVETO,															///< location
 		MSG_DO_ATTACKMOVETO,												///< location
