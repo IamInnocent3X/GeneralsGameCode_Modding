@@ -2451,6 +2451,22 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 
 	}  // end if
 
+	const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
+	// loop through all the selected drawables
+	for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
+	{
+		Object *other = (*it) ? (*it)->getObject() : NULL;
+		AIUpdateInterface *ai = other ? other->getAI() : NULL;
+		if( ai )
+		{
+			// obj is the current draw->getObject()
+			if(obj && obj->getRelationship(other) == ALLIES && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ))
+				other->setParasiteAbleToTargetAllies(TRUE);
+			else if(!ai->getGoalObject())
+				other->setParasiteAbleToTargetAllies(FALSE);
+		}
+	}
+
 	// return the message type
 	return msgType;
 

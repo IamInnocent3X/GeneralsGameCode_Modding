@@ -5453,7 +5453,7 @@ Bool PartitionFilterPossibleToEquip::allow(Object *objOther)
 	if (!objOther || !m_obj)
 		return FALSE;
 
-	if( TheActionManager->canEquipObject( m_obj, objOther, m_commandSource) )
+	if( TheActionManager->canEquipObject( m_obj, objOther, m_commandSource ) )
 		return TRUE;
 	else
 		return FALSE;

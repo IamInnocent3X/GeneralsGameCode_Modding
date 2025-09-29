@@ -43,6 +43,7 @@
 #include "Common/Team.h"
 #include "Common/ThingTemplate.h"
 
+#include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/InGameUI.h"
 
@@ -641,6 +642,12 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 			if (!collide)
 				continue;
 
+			// Crate Collide requires Enter Mechanics to work side-by-side
+			// Don't want Parasites to enter volunteeringly but enables them is they are forcibly attacking their allies 
+			if( collide->isParasiteEquipCrateCollide() &&
+				  !obj->getParasiteAbleToTargetAllies())
+				continue;
+			
 			if( collide->wouldLikeToCollideWith( objectToEnter ) )
 			{
 				//I thought this was a little confusing that it would return TRUE here before
@@ -1025,9 +1032,19 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 		if (!collide)
 			continue;
 
-		if( collide->wouldLikeToCollideWith( objectToEquip ) && collide->isEquipCrateCollide() )
+		if( collide->wouldLikeToCollideWith( objectToEquip ) )
 		{
-			return TRUE;
+			// If we are not volutarily forcing Parasite onto our Allies, do not allow Parasite to target Allies
+			if( collide->isParasiteEquipCrateCollide() &&
+				  obj->getRelationship(objectToEquip) == ALLIES &&
+				  !obj->getParasiteAbleToTargetAllies() &&
+				  !TheInGameUI->isInForceAttackMode() &&
+				  ( !TheInGameUI->getGUICommand() || TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
+			  )
+				return FALSE;
+
+			if(collide->isEquipCrateCollide())
+				return TRUE;
 		}
 	}
 

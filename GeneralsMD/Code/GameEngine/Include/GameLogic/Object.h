@@ -699,6 +699,9 @@ public:
 	inline UnsignedInt getSafeOcclusionFrame(void) { return m_safeOcclusionFrame; }	//< this is an object specific frame at which it's safe to enable building occlusion.
 	inline void	setSafeOcclusionFrame(UnsignedInt frame) { m_safeOcclusionFrame = frame;}
 
+	inline void setParasiteAbleToTargetAllies(Bool set) { m_parasiteAbleToTargetAllies = set;}
+	inline const Bool getParasiteAbleToTargetAllies() const { return m_parasiteAbleToTargetAllies;}
+
 	// All of our cheating for radars and power go here.
 	// This is the function that we now call in becomingTeamMember to adjust our power.
 	// If incoming is true, we're working on the incoming player, if its false, we're on the outgoing
@@ -954,6 +957,7 @@ private:
 	Byte													m_numTriggerAreasActive;
 	Bool													m_singleUseCommandUsed;
 	Bool													m_isReceivingDifficultyBonus;
+	Bool													m_parasiteAbleToTargetAllies;
 
 	std::vector<AsciiString>						m_rejectKeys;
 	std::vector<ObjectID> 							m_equipObjIDs;
