@@ -241,8 +241,8 @@ public:
 
 	// health and damage
 	void attemptDamage( DamageInfo *damageInfo );			///< damage object as specified by the info
-	void attemptHealing(Real amount, const Object* source);		///< heal object as specified by the info
-	Bool attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration );///< for the non-stacking healers like ambulance and propaganda
+	void attemptHealing(Real amount, const Object* source, Bool clearsParasite = TRUE );		///< heal object as specified by the info
+	Bool attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration, Bool clearsParasite = TRUE );///< for the non-stacking healers like ambulance and propaganda
 	ObjectID getSoleHealingBenefactor( void ) const;
 
 	Real estimateDamage( DamageInfoInput& damageInfo ) const;
@@ -716,7 +716,9 @@ public:
 	inline std::vector<ObjectID> getEquipObjectIDs() const { return m_equipObjIDs; }
 
 	void setHijackerID(ObjectID HijackerID);
-	void doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerID);
+	void setCarBombConverterID(ObjectID ConverterID);
+	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, ObjectID damagerID);
+	Bool checkToSquishHijack(const Object *other) const;
 
 	void doObjectUpgradeChecks();
 	void doObjectStatusChecks();
@@ -953,6 +955,7 @@ private:
 	std::vector<AsciiString>						m_rejectKeys;
 	std::vector<ObjectID> 							m_equipObjIDs;
 	std::vector<ObjectID> 							m_equipAttackableObjIDs;
+	ObjectID										m_carbombConverterID;
 	ObjectID 										m_hijackerID;
 
 };  // end class Object

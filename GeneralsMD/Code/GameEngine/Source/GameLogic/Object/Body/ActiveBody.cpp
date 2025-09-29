@@ -478,6 +478,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool adjustConditions = TRUE;
 	Bool killsGarrisoned = FALSE;
 	Bool isStatusDamage = FALSE;
+	Bool isKilled = FALSE;
 	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
 	Real realFramesToStatusFor = 0.0f;
 	const Weapon* w = NULL;
@@ -1034,13 +1035,16 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				damager->scoreTheKill( obj );
 			}
 
-			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_sourceID );
+			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
 			obj->onDie( damageInfo );
+
+			isKilled = TRUE;
 		}
-		else if( m_currentHealth < m_prevHealth)
-		{
-			obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_sourceID );
-		}
+	}
+
+	if( !isKilled )
+	{
+		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
 	}
 
 	doDamageFX(damageInfo);
@@ -1224,7 +1228,7 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 				d->onHealing( damageInfo );
 			}
 
-			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_sourceID);
+			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID);
 		}
 
 		if (m_curDamageState != oldState)

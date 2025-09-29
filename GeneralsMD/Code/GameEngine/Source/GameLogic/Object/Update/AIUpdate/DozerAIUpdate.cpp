@@ -715,7 +715,7 @@ StateReturnType DozerActionDoActionState::update( void )
 												LOGICFRAMES_PER_SECOND;
 
 					// try to give it a little bit-o-health
-					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2) )//this frame and the next
+					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2, dozerAI->getRepairClearsParasite() ) )//this frame and the next
 					{
 						// goalObject->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
 						// This bit used to be set way back in DozerAIUpdate::privateRepair(), but it has been outmoded
@@ -1413,6 +1413,7 @@ DozerAIUpdateModuleData::DozerAIUpdateModuleData( void )
 {
 
 	m_repairHealthPercentPerSecond = 0.0f;
+	m_repairClearsParasite = TRUE;
 	m_boredTime = 0.0f;
 	m_boredRange = 0.0f;
 
@@ -1426,6 +1427,7 @@ void DozerAIUpdateModuleData::buildFieldParse( MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	NULL, offsetof( DozerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+		{ "RepairClearsParasite",			INI::parseBool,	NULL, offsetof( DozerAIUpdateModuleData, m_repairClearsParasite ) },
 		{ "BoredTime",										INI::parseDurationReal,		NULL, offsetof( DozerAIUpdateModuleData, m_boredTime ) },
 		{ "BoredRange",										INI::parseReal,						NULL, offsetof( DozerAIUpdateModuleData, m_boredRange ) },
 		{ 0, 0, 0, 0 }
@@ -2314,6 +2316,11 @@ const Coord3D* DozerAIUpdate::getDockPoint( DozerTask task, DozerDockPoint point
 Real DozerAIUpdate::getRepairHealthPerSecond( void ) const
 {
 	return getDozerAIUpdateModuleData()->m_repairHealthPercentPerSecond;
+}
+// ------------------------------------------------------------------------------------------------
+Bool DozerAIUpdate::getRepairClearsParasite( void ) const
+{
+	return getDozerAIUpdateModuleData()->m_repairClearsParasite;
 }
 // ------------------------------------------------------------------------------------------------
 Real DozerAIUpdate::getBoredTime( void ) const

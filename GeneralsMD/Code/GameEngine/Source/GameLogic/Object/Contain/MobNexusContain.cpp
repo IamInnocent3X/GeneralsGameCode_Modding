@@ -369,7 +369,7 @@ UpdateSleepTime MobNexusContain::update()
 //						damageInfo.in.m_sourceID = getObject()->getID();
 //						damageInfo.in.m_amount = regen;
 //						object->attemptDamage( &damageInfo );
-						object->attemptHealing( regen, getObject() );
+						object->attemptHealing( regen, getObject(), FALSE );
 					}
 				}
 			}

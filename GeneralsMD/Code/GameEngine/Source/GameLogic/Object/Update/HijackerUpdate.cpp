@@ -43,6 +43,7 @@
 #include "GameLogic/Module/HijackerUpdate.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/Weapon.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Module/EjectPilotDie.h"
 #include "GameLogic/Module/CollideModule.h"
@@ -56,9 +57,14 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	m_targetID = INVALID_ID;
 	setUpdate( FALSE );
 	setIsInVehicle( FALSE );
+	setIsParasite( FALSE );
 	setNoLeechExp( FALSE );
-	setDestroyOnRepair( FALSE );
+	setDestroyOnHeal( FALSE );
+	setRemoveOnHeal( FALSE );
+	setDestroyOnClear( FALSE );
+	setDestroyOnTargetDie( FALSE );
 	setEject( FALSE );
+	setClear( FALSE );
 	setHealed( FALSE );
 	setNoSelfDamage( FALSE );
 	setPercentDamage( 0.0f );
@@ -118,7 +124,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 					break;
 				}
 			}
-			if( !isDestroyed && m_statusToRemove.any() && target->getStatusBits().testForAny(m_statusToRemove) )
+			if( !isDestroyed && target->getStatusBits().testForAny(m_statusToRemove) )
 			{
 				isRemoved = TRUE;
 			}
@@ -134,6 +140,22 @@ UpdateSleepTime HijackerUpdate::update( void )
 				}
 			}
 
+			if(!isDestroyed && m_clear && m_isParasite)
+			{
+				if(m_destroyOnClear)
+					isDestroyed = TRUE;
+				else
+					isRemoved = TRUE;
+			}
+
+			if(!isDestroyed && m_eject)
+			{
+				if(m_destroyOnTargetDie)
+					isDestroyed = TRUE;
+				else
+					isRemoved = TRUE;
+			}
+
 			Real curHealth = 0.0f;
 			BodyModuleInterface *body = target->getBodyModule();
 			if( body )
@@ -141,26 +163,32 @@ UpdateSleepTime HijackerUpdate::update( void )
 
 			if(!isDestroyed && m_targetObjHealth && curHealth != m_targetObjHealth)
 			{
-				if ( m_destroyOnRepair && m_healed )
+				if ( m_healed )
 				{
-					isDestroyed = TRUE;
+					if( m_destroyOnHeal )
+						isDestroyed = TRUE;
+					else if( m_removeOnHeal )
+						isRemoved = TRUE;
 				}
 
-				//Calculate the damage to be inflicted on each unit.
-				Real damage = m_noSelfDamage ? 0.0f : (m_targetObjHealth - curHealth) * m_percentDamage;
+				if(!m_noSelfDamage && !isDestroyed && m_targetObjHealth > curHealth)
+				{
+					//Calculate the damage to be inflicted on each unit.
+					Real damage = (m_targetObjHealth - curHealth) * m_percentDamage;
 
-				if(obj->getBodyModule() && damage > obj->getBodyModule()->getHealth())
-				{
-					isKilled = TRUE;
-				}
-				else if(!isDestroyed && damage > 0)
-				{
-					DamageInfo damageInfo;
-					damageInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-					damageInfo.in.m_deathType = DEATH_NORMAL;
-					damageInfo.in.m_sourceID = obj->getID();
-					damageInfo.in.m_amount = damage;
-					obj->attemptDamage( &damageInfo );
+					if(obj->getBodyModule() && damage > obj->getBodyModule()->getHealth())
+					{
+						isKilled = TRUE;
+					}
+					else if(damage > 0)
+					{
+						DamageInfo damageInfo;
+						damageInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
+						damageInfo.in.m_deathType = DEATH_NORMAL;
+						damageInfo.in.m_sourceID = obj->getID();
+						damageInfo.in.m_amount = damage;
+						obj->attemptDamage( &damageInfo );
+					}
 				}
 
 				m_targetObjHealth = curHealth;
@@ -171,7 +199,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 			}
 
 			// If the equipped Object or Hijacker is removed, revert the behavior
-			if(isRemoved || isDestroyed || isKilled || m_eject)
+			if(isRemoved || isDestroyed || isKilled)
 			{
 				for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
 				{
@@ -183,6 +211,11 @@ UpdateSleepTime HijackerUpdate::update( void )
 						break;
 				}
 
+				// Update the Position for ejection
+				obj->setPosition( target->getPosition() );
+				m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
+				m_ejectPos = *target->getPosition();
+
 				// Make the target NULL for reverting the behavior
 				setTargetObject( NULL );
 
@@ -192,10 +225,11 @@ UpdateSleepTime HijackerUpdate::update( void )
 		}
 
 		setEject( FALSE );
+		setClear( FALSE );
 		setHealed( FALSE );
 		setNoSelfDamage( FALSE );
 
-		if( target )
+		if( target && !revertedCollide )
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
 			obj->setPosition( target->getPosition() );
@@ -204,7 +238,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 
 			// If I do not leech Exp as an Equipped Object, then I do not receive any EXP that should be given to the attached Object
 			if(m_noLeechExp)
-				return UPDATE_SLEEP_NONE;
+				return UPDATE_SLEEP_FOREVER;
 
 			// So, if while I am driving this American war vehicle, I gain skill points, I get to keep them when I wreck the vehicle
 			ExperienceTracker *targetExp = target->getExperienceTracker();
@@ -271,16 +305,19 @@ UpdateSleepTime HijackerUpdate::update( void )
 					if (!collide)
 						continue;
 
-					if( collide->revertCollideBehavior(NULL) )
+					if( collide->revertCollideBehavior(target) )
 						break;
 				}
 			}
 
 			setTargetObject( NULL );
 			setIsInVehicle( FALSE );
-			setUpdate( FALSE );
+			//setUpdate( FALSE );
 			setNoLeechExp( FALSE );
-			setDestroyOnRepair( FALSE );
+			setDestroyOnHeal( FALSE );
+			setRemoveOnHeal( FALSE );
+			setDestroyOnClear( FALSE );
+			setDestroyOnTargetDie( FALSE );
 			setPercentDamage( 0.0f );
 			m_targetObjHealth = 0.0f;
 			m_statusToRemove.clear();
@@ -305,6 +342,9 @@ UpdateSleepTime HijackerUpdate::update( void )
 	{
 		m_wasTargetAirborne = false;
 	}
+
+	setUpdate( FALSE );
+
 	return UPDATE_SLEEP_FOREVER;
 }
 
@@ -387,11 +427,23 @@ void HijackerUpdate::xfer( Xfer *xfer )
 	// was target airborne
 	xfer->xferBool( &m_wasTargetAirborne );
 
+	// is Parasite
+	xfer->xferBool( &m_isParasite );
+
 	// will leech EXP
 	xfer->xferBool( &m_noLeechExp );
 
 	// destroy on repair
-	xfer->xferBool( &m_destroyOnRepair );
+	xfer->xferBool( &m_destroyOnHeal );
+
+	// remove on repair
+	xfer->xferBool( &m_removeOnHeal );
+
+	// destroy on clear, exclusive for parasites
+	xfer->xferBool( &m_destroyOnClear );
+
+	// destroy on target die
+	xfer->xferBool( &m_destroyOnTargetDie );
 
 	// Damage Percentage
 	xfer->xferReal( &m_percentDamage );

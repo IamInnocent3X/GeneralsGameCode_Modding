@@ -558,6 +558,8 @@ public:
 
 	inline Bool getIsNotAbsoluteKill() const { return m_notAbsoluteKill; }
 
+	inline Bool getClearsParasite() const { return m_clearsParasite; }
+
 	inline Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
 	inline Bool getSubdueProjectileNoDamage() const { return m_subduedProjectileNoDamage; }
 
@@ -755,6 +757,8 @@ private:
 	AsciiString m_firingTrackerCustomBonusConditionGive;
 
 	Bool m_notAbsoluteKill;
+
+	Bool m_clearsParasite;
 
 	Bool m_isMissileAttractor;
 	Bool m_subduedProjectileNoDamage;
@@ -1018,6 +1022,8 @@ public:
 	inline const AsciiString& getFiringTrackerCustomBonusCondition() const { return m_template->getFiringTrackerCustomBonusCondition(); }
 
 	inline Bool getIsNotAbsoluteKill() const { return m_template->getIsNotAbsoluteKill(); }
+
+	inline Bool getClearsParasite() const { return m_template->getClearsParasite(); }
 
 	inline Bool getIsMissileAttractor() const { return m_template->getIsMissileAttractor(); }
 	inline Bool getSubdueProjectileNoDamage() const { return m_template->getSubdueProjectileNoDamage(); }

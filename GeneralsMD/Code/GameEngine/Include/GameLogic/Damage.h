@@ -420,6 +420,7 @@ public:
 	m_subdualDamageMultiplier = 1.0f;	
 	m_subdualForbiddenKindOf.clear();
 	m_notAbsoluteKill = FALSE;
+	m_clearsParasite = FALSE;
 	m_isMissileAttractor = FALSE;
 	m_subduedProjectileNoDamage = FALSE;
 	m_subdualCustomType = NULL;
@@ -510,6 +511,8 @@ public:
 	KindOfMaskType m_subdualForbiddenKindOf;
 
 	Bool m_notAbsoluteKill;
+	
+	Bool m_clearsParasite;
 
 	Bool m_isMissileAttractor;
 	Bool m_subduedProjectileNoDamage;

@@ -89,6 +89,7 @@ public:
 	ObjectCreationList *m_oclOnCollide; //< OCL Spawned on the Object after finish executing the ability
 
 	Real m_damagePercentageToUnit;
+	Bool m_destroyOnTargetDie;
 
 	CrateCollideModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);

@@ -563,6 +563,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_equipAttackableObjIDs.clear();
 	m_rejectKeys.clear();
 
+	m_carbombConverterID = INVALID_ID;
 	m_hijackerID = INVALID_ID;
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
@@ -1291,6 +1292,12 @@ Bool Object::canCrushOrSquish(Object *otherObj, CrushSquishTestType testType ) c
 	if( !crusherLevel )
 	{
 		//Can't crush anything!
+		return false;
+	}
+
+	if( !checkToSquishHijack( otherObj ) )
+	{
+		//don't crush the hijacker after it has been removed!
 		return false;
 	}
 
@@ -2211,7 +2218,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::attemptHealing(Real amount, const Object* source)
+void Object::attemptHealing(Real amount, const Object* source, Bool clearsParasite)
 {
 	BodyModuleInterface* body = getBodyModule();
 	if (body)
@@ -2221,6 +2228,7 @@ void Object::attemptHealing(Real amount, const Object* source)
 		damageInfo.in.m_deathType = DEATH_NONE;
 		damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
 		damageInfo.in.m_amount = amount;
+		damageInfo.in.m_clearsParasite = clearsParasite;
 		body->attemptHealing( &damageInfo );
 	}
 }
@@ -2235,7 +2243,7 @@ ObjectID Object::getSoleHealingBenefactor( void ) const
 
 }
 
-Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration )
+Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration, Bool clearsParasite )
 {///< for the non-stacking healers like ambulance and propaganda
 
 	if( ! source ) // sanity
@@ -2258,6 +2266,7 @@ Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* sourc
 			damageInfo.in.m_deathType = DEATH_NONE;
 			damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
 			damageInfo.in.m_amount = amount;
+			damageInfo.in.m_clearsParasite = clearsParasite;
 			body->attemptHealing( &damageInfo );
 		}
 
@@ -5063,6 +5072,7 @@ void Object::xfer( Xfer *xfer )
 
 	}  // end else, load
 
+	xfer->xferObjectID( &m_carbombConverterID );
 	xfer->xferObjectID( &m_hijackerID );
 
 	if ( version >= 3 )
@@ -7591,8 +7601,39 @@ void Object::setHijackerID(ObjectID HijackerID)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerID)
+void Object::setCarBombConverterID(ObjectID ConverterID)
 {
+	m_carbombConverterID = ConverterID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, ObjectID damagerID)
+{
+	if( testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
+	{
+		Object *converter = TheGameLogic->findObjectByID( m_carbombConverterID );
+
+		if(converter)
+		{
+			static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+			HijackerUpdate *hijackerUpdate = (HijackerUpdate*)converter->findUpdateModule( key_HijackerUpdate );
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setUpdate( TRUE );
+				// If I am self healing or the damager is me dont deal damage to me 
+				if(damagerID == m_carbombConverterID || checkHealed)
+					hijackerUpdate->setNoSelfDamage( TRUE );
+				
+				hijackerUpdate->setClear( checkClear );
+					
+				if(checkDie)
+					hijackerUpdate->setEject( TRUE );
+				else if(checkHealed)
+					hijackerUpdate->setHealed( TRUE );
+			}
+		}
+	}
+	
 	if( testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
 	{
 		Object *hijacker = TheGameLogic->findObjectByID( m_hijackerID );
@@ -7607,6 +7648,9 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerI
 				// If I am self healing or the damager is me dont deal damage to me 
 				if(damagerID == m_hijackerID || checkHealed)
 					hijackerUpdate->setNoSelfDamage( TRUE );
+				
+				hijackerUpdate->setClear( checkClear );
+					
 				if(checkDie)
 					hijackerUpdate->setEject( TRUE );
 				else if(checkHealed)
@@ -7617,7 +7661,18 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerI
 
 	if( !m_equipObjIDs.empty() )
 	{
+		Bool isEquippedInMe = FALSE;
 		Object *damager = TheGameLogic->findObjectByID( damagerID );
+
+		// Find if the damager is equipped in me. If so, does things differently
+		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		{
+			if((*it) == damagerID)
+			{
+				isEquippedInMe = TRUE;
+				break;
+			}
+		}
 		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
 		{
 			Object *equipObj = TheGameLogic->findObjectByID( (*it) );
@@ -7630,9 +7685,12 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerI
 				{
 					hijackerUpdate->setUpdate( TRUE );
 
-					// If I am self healing or the damager is my ally dont deal damage to me
-					if((damager && equipObj->getRelationship( damager ) == ALLIES) || checkHealed)
+					// If I am self healing or the damager is my ally and is from the equipped object, dont deal damage to me
+					if((damager && equipObj->getRelationship( damager ) == ALLIES && isEquippedInMe ) || checkHealed)
 						hijackerUpdate->setNoSelfDamage( TRUE );
+
+					hijackerUpdate->setClear( checkClear );
+
 					if(checkDie)
 						hijackerUpdate->setEject( TRUE );
 					else if(checkHealed)
@@ -7641,6 +7699,25 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, ObjectID damagerI
 			}
 		}
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::checkToSquishHijack(const Object *other) const
+{
+	if( m_carbombConverterID != INVALID_ID && other->getID() == m_carbombConverterID )
+	{
+		//don't crush the converter after it has been removed!
+		return false;
+	}
+	
+	if( m_hijackerID != INVALID_ID && other->getID() == m_hijackerID )
+	{
+		//don't crush the hijacker after it has been removed!
+		return false;
+	}
+
+	return true;
+
 }
 
 //=============================================================================

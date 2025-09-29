@@ -424,6 +424,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ForceAttackGroundCursorName",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_forceAttackGroundCursorName ) },
 	{ "InvalidCursorName",							INI::parseAsciiString,       	NULL, 					offsetof(WeaponTemplate, m_invalidCursorName ) },
 
+	{ "ClearsParasite",								INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_clearsParasite) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -560,6 +562,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_firingTrackerCustomStatusTrigger.clear();
 	m_firingTrackerCustomBonusConditionGive = NULL;
 	m_notAbsoluteKill = FALSE;
+	m_clearsParasite = FALSE;
 
 	m_isMissileAttractor = FALSE;
 	m_subduedProjectileNoDamage = FALSE;
@@ -938,6 +941,8 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 
 	Bool IsNotAbsoluteKill = getIsNotAbsoluteKill();
 
+	Bool ClearsParasite = getClearsParasite();
+
 	Bool IsMissileAttractor = getIsMissileAttractor();
 	Bool SubdueProjectileNoDamage = getSubdueProjectileNoDamage();
 
@@ -1045,6 +1050,7 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	damageInfo.m_subdualDamageMultiplier = subdualDamageMultiplier;
 	damageInfo.m_subdualForbiddenKindOf = subdualForbiddenKindOf;
 	damageInfo.m_notAbsoluteKill = IsNotAbsoluteKill;
+	damageInfo.m_clearsParasite = ClearsParasite;
 	damageInfo.m_isMissileAttractor = IsMissileAttractor;
 	damageInfo.m_subduedProjectileNoDamage = SubdueProjectileNoDamage;
 	damageInfo.m_subdualCustomType = SubdualCustomType;
@@ -1881,6 +1887,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Real subdualDamageMultiplier = getSubdualDamageMultiplier(v);
 	KindOfMaskType subdualForbiddenKindOf = getSubdualForbiddenKindOf();
 	Bool IsNotAbsoluteKill = getIsNotAbsoluteKill();
+	Bool ClearsParasite = getClearsParasite();
 	Bool IsMissileAttractor = getIsMissileAttractor();
 	Bool SubdueProjectileNoDamage = getSubdueProjectileNoDamage();
 	AsciiString SubdualCustomType = getSubdualCustomType();
@@ -1948,6 +1955,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_tintStatus = TintStatusType;
 				damageInfo.in.m_customTintStatus = CustomTintStatusType;
 				damageInfo.in.m_notAbsoluteKill = IsNotAbsoluteKill;
+				damageInfo.in.m_clearsParasite = ClearsParasite;
 				damageInfo.in.m_customDamageType = customDamageType;
 				damageInfo.in.m_customDamageStatusType = customDamageStatusType;
 				damageInfo.in.m_customDeathType = customDeathType;
@@ -2058,6 +2066,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_subdualForbiddenKindOf = subdualForbiddenKindOf;
 
 			damageInfo.in.m_notAbsoluteKill = IsNotAbsoluteKill;
+			damageInfo.in.m_clearsParasite = ClearsParasite;
 
 			damageInfo.in.m_isMissileAttractor = IsMissileAttractor;
 			damageInfo.in.m_subduedProjectileNoDamage = SubdueProjectileNoDamage;

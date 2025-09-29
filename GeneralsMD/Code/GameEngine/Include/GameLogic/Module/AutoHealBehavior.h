@@ -60,6 +60,7 @@ public:
 	Real									m_radius; //If non-zero, then it becomes a area effect.
 	Bool									m_affectsWholePlayer; ///< I have more than a range, I try to affect everything the player owns
 	Bool									m_skipSelfForHealing; ///< Don't heal myself.
+	Bool									m_clearsParasite; ///< Healing clears parasite
 	KindOfMaskType				m_kindOf;	//Only these types can heal -- defaults to everything.
 	KindOfMaskType				m_forbiddenKindOf;	//Only these types can heal -- defaults to everything.
 	const ParticleSystemTemplate*				m_radiusParticleSystemTmpl;					//Optional particle system meant to apply to entire effect for entire duration.
@@ -77,6 +78,7 @@ public:
 		m_unitHealPulseParticleSystemTmpl = NULL;
 		m_affectsWholePlayer = FALSE;
 		m_skipSelfForHealing = FALSE;
+		m_clearsParasite = FALSE;
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 		m_forbiddenKindOf.clear();
 	}
@@ -97,6 +99,7 @@ public:
 			{ "StartHealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_startHealingDelay ) },
 			{ "AffectsWholePlayer",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_affectsWholePlayer ) },
 			{ "SkipSelfForHealing",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_skipSelfForHealing ) },
+			{ "ClearsParasite",				INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
 			{ 0, 0, 0, 0 }
 		};
 

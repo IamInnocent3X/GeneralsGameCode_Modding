@@ -35,6 +35,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
+#include "Common/Team.h"
 #include "GameLogic/Module/CrateCollide.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -51,6 +52,7 @@ public:
 	ConvertToCarBombCrateCollideModuleData()
 	{
 		m_rangeOfEffect = 0;
+		m_destroyOnTargetDie = TRUE;
 		m_fxList = NULL;
 	}
 
@@ -86,8 +88,15 @@ protected:
 
 	/// This is the game logic execution function that all real CrateCollides will implement
 	virtual Bool executeCrateBehavior( Object *other );
+	virtual Bool revertCollideBehavior(Object *other);
 	virtual Bool isRailroad() const { return FALSE;};
 	virtual Bool isCarBombCrateCollide() const { return TRUE; }
+
+private:
+	AsciiString m_originalName;
+	Real m_originalVisionRange;
+	Real m_originalShroudClearingRange;
+	Team *m_originalTeam;
 };
 
 #endif

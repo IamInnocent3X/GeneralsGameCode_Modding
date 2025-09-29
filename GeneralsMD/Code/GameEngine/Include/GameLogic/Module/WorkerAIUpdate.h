@@ -78,6 +78,7 @@ public:
 	Real m_warehouseScanDistance;
  	AudioEventRTS m_suppliesDepletedVoice;						///< Sound played when I take the last box.
 	Int m_upgradedSupplyBoost;
+	Bool m_repairClearsParasite;								///< repairing object clears any parasite within them
 
 	WorkerAIUpdateModuleData()
 	{
@@ -89,6 +90,7 @@ public:
 		m_warehouseDelay = 0;
 		m_warehouseScanDistance = 100;
 		m_upgradedSupplyBoost = 0;
+		m_repairClearsParasite = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -99,6 +101,7 @@ public:
 		{
 			{ "MaxBoxes",					INI::parseInt,		NULL, offsetof( WorkerAIUpdateModuleData, m_maxBoxesData ) },
 			{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	NULL, offsetof( WorkerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+			{ "RepairClearsParasite",			INI::parseBool,	NULL, offsetof( WorkerAIUpdateModuleData, m_repairClearsParasite ) },
 			{ "BoredTime",										INI::parseDurationReal,		NULL, offsetof( WorkerAIUpdateModuleData, m_boredTime ) },
 			{ "BoredRange",										INI::parseReal,						NULL, offsetof( WorkerAIUpdateModuleData, m_boredRange ) },
 			{ "SupplyCenterActionDelay", INI::parseDurationUnsignedInt, NULL, offsetof( WorkerAIUpdateModuleData, m_centerDelay ) },
@@ -142,6 +145,7 @@ public:
 	virtual Real getRepairHealthPerSecond( void ) const;	///< get health to repair per second
 	virtual Real getBoredTime( void ) const;							///< how long till we're bored
 	virtual Real getBoredRange( void ) const;							///< when we're bored, we look this far away to do things
+	virtual Bool getRepairClearsParasite( void ) const;					///< whether repairing clears parasite
 
 	virtual Object *construct( const ThingTemplate *what,
 														 const Coord3D *pos, Real angle,

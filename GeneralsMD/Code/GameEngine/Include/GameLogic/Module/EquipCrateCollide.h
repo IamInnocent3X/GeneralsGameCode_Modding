@@ -55,7 +55,9 @@ public:
 	Bool m_isUnique;
 	Bool m_equipCanPassiveAcquire;
 	Bool m_leechExpFromObject;
-	Bool m_destroyOnRepair;
+	Bool m_destroyOnHeal;
+	Bool m_removeOnHeal;
+	Bool m_destroyOnClear;
 
 	EquipCrateCollideModuleData()
 	{
@@ -65,7 +67,9 @@ public:
 		m_isUnique = FALSE;
 		m_equipCanPassiveAcquire = FALSE;
 		m_leechExpFromObject = FALSE;
-		m_destroyOnRepair = FALSE;
+		m_destroyOnHeal = FALSE;
+		m_removeOnHeal = FALSE;
+		m_destroyOnClear = FALSE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -78,7 +82,9 @@ public:
 			{ "IsUnique",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isUnique ) },
 			{ "CanPassiveAcquire",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_equipCanPassiveAcquire ) },
 			{ "LeechExpFromObject",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_leechExpFromObject ) },
-			{ "DestroyOnRepair",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnRepair ) },
+			{ "DestroyOnHeal",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnHeal ) },
+			{ "RemoveOnHeal",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_removeOnHeal ) },
+			{ "DestroyOnClear",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnClear ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

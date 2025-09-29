@@ -84,6 +84,7 @@ PropagandaTowerBehaviorModuleData::PropagandaTowerBehaviorModuleData( void )
 	m_upgradeRequired = NULL;
 	m_upgradedPulseFX = NULL;
 	m_affectsSelf = FALSE;
+	m_autoHealClearsParasite = FALSE;
 
 }  // end PropagandaTowerBehaviorModuleData
 
@@ -103,6 +104,7 @@ PropagandaTowerBehaviorModuleData::PropagandaTowerBehaviorModuleData( void )
 		{ "UpgradeRequired",				INI::parseAsciiString,					NULL, offsetof( PropagandaTowerBehaviorModuleData, m_upgradeRequired ) },
 		{ "UpgradedPulseFX",				INI::parseFXList,								NULL, offsetof( PropagandaTowerBehaviorModuleData, m_upgradedPulseFX ) },
 		{ "AffectsSelf",						INI::parseBool,									NULL, offsetof( PropagandaTowerBehaviorModuleData, m_affectsSelf ) },
+		{ "HealingClearsParasite",			INI::parseBool,	NULL, offsetof( PropagandaTowerBehaviorModuleData, m_autoHealClearsParasite ) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -329,7 +331,7 @@ void PropagandaTowerBehavior::effectLogic( Object *obj, Bool giving,
 	// and cannot change healing senders until the previous one expires (its scandelay)
 
 //		obj->attemptHealing(amount, getObject()); // the regular way to give healing...
-			obj->attemptHealingFromSoleBenefactor( amount, getObject(), modData->m_scanDelayInFrames );//the non-stacking way
+			obj->attemptHealingFromSoleBenefactor( amount, getObject(), modData->m_scanDelayInFrames, modData->m_autoHealClearsParasite );//the non-stacking way
 
 		}  // end if
 

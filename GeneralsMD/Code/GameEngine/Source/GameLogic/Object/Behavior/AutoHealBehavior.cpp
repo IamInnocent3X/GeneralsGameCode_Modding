@@ -300,9 +300,9 @@ void AutoHealBehavior::pulseHealObject( Object *obj )
 
 
 	if ( data->m_radius == 0.0f )
-		obj->attemptHealing(data->m_healingAmount, getObject());
+		obj->attemptHealing(data->m_healingAmount, getObject(), data->m_clearsParasite);
 	else
-		obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay );
+		obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite );
 
 
 	if( data->m_unitHealPulseParticleSystemTmpl )

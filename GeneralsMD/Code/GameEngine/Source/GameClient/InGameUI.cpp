@@ -2958,27 +2958,25 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 						Bool cursorSet = FALSE;
 						if(drawSelectable && hasSrcObj)
 						{
-							for (BehaviorModule** m = srcObj->getBehaviorModules(); *m; ++m)
+							// iterate every drawable until we found the cursor we need
+							const DrawableList *selected = getAllSelectedDrawables();
+							for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
 							{
-								CollideModuleInterface* collide = (*m)->getCollide();
-								if (!collide)
-									continue;
-
-								if( collide->isParasiteEquipCrateCollide() )
+								// get this drawable
+								Drawable* curDraw = *it;
+								// expensive and very confusing, but needed
+								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
 								{
-									equipIsParasite = TRUE;
-								}
+									cursorSet = findCrateCollideCommandHint(curDraw->getObject(), obj, msg, equipIsParasite);
 
-								if( !collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( obj ) )
-								{
-									Int index = TheMouse->getCursorIndex( collide->getCursorName() );
-									setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
-									cursorSet = TRUE;
-									break;
+									if(cursorSet)
+										break;
 								}
 							}
 							if(cursorSet)
+							{
 								break;
+							}
 						}
 						if(t == GameMessage::MSG_EQUIP_HINT && !equipIsParasite)
 						{
@@ -2995,10 +2993,27 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					{
 						if( hasSrcObj )
 						{
-							SpecialAbilityUpdate *spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_DEFECTOR );
-							if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+							Bool cursorSet = FALSE;
+							
+							// iterate every drawable until we found the cursor we need
+							const DrawableList *selected = getAllSelectedDrawables();
+							for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
 							{
-								setMouseCursor( Mouse::DEFECTOR, spUpdate->getCursorName() );
+								// get this drawable
+								Drawable* curDraw = *it;
+								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
+								{
+									SpecialAbilityUpdate *spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_DEFECTOR );
+									if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+									{
+										setMouseCursor( Mouse::DEFECTOR, spUpdate->getCursorName() );
+										cursorSet = TRUE;
+										break;
+									}
+								}
+							}
+							if(cursorSet)
+							{
 								break;
 							}
 						}
@@ -3015,18 +3030,35 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 						if( hasSrcObj )
 						{
 							SpecialAbilityUpdate *spUpdate;
-							if( srcObj->hasSpecialPower( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING ) )
-							{
-								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
-							}
-							else if( srcObj->hasSpecialPower( SPECIAL_INFANTRY_CAPTURE_BUILDING ) )
-							{
-								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_INFANTRY_CAPTURE_BUILDING );
-							}
+							Bool cursorSet = FALSE;
 
-							if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+							// iterate every drawable until we found the cursor we need
+							const DrawableList *selected = getAllSelectedDrawables();
+							for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
 							{
-								setMouseCursor( Mouse::CAPTUREBUILDING, spUpdate->getCursorName() );
+								// get this drawable
+								Drawable* curDraw = *it;
+								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
+								{
+									if( curDraw->getObject()->hasSpecialPower( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING ) )
+									{
+										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
+									}
+									else if( curDraw->getObject()->hasSpecialPower( SPECIAL_INFANTRY_CAPTURE_BUILDING ) )
+									{
+										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_INFANTRY_CAPTURE_BUILDING );
+									}
+
+									if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+									{
+										setMouseCursor( Mouse::CAPTUREBUILDING, spUpdate->getCursorName() );
+										cursorSet = TRUE;
+										break;
+									}
+								}
+							}
+							if(cursorSet)
+							{
 								break;
 							}
 						}
@@ -3038,23 +3070,39 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 						if( hasSrcObj )
 						{
 							SpecialAbilityUpdate *spUpdate;
-							
-							if( srcObj->hasSpecialPower( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK ) && obj && obj->isKindOf( KINDOF_VEHICLE ) )
-							{
-								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK );
-							}
-							else if( srcObj->hasSpecialPower( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK ) && obj && obj->isKindOf( KINDOF_CASH_GENERATOR ) )
-							{
-								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
-							}
-							else if( srcObj->hasSpecialPower( SPECIAL_HACKER_DISABLE_BUILDING ) && obj && obj->isKindOf( KINDOF_STRUCTURE ) )
-							{
-								spUpdate = srcObj->findSpecialAbilityUpdate( SPECIAL_HACKER_DISABLE_BUILDING );
-							}
+							Bool cursorSet = FALSE;
 
-							if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+							// iterate every drawable until we found the cursor we need
+							const DrawableList *selected = getAllSelectedDrawables();
+							for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
 							{
-								setMouseCursor( Mouse::HACK, spUpdate->getCursorName() );
+								// get this drawable
+								Drawable* curDraw = *it;
+								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
+								{
+									if( curDraw->getObject()->hasSpecialPower( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK ) && obj && obj->isKindOf( KINDOF_VEHICLE ) )
+									{
+										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK );
+									}
+									else if( curDraw->getObject()->hasSpecialPower( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK ) && obj && obj->isKindOf( KINDOF_CASH_GENERATOR ) )
+									{
+										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
+									}
+									else if( curDraw->getObject()->hasSpecialPower( SPECIAL_HACKER_DISABLE_BUILDING ) && obj && obj->isKindOf( KINDOF_STRUCTURE ) )
+									{
+										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_HACKER_DISABLE_BUILDING );
+									}
+
+									if( spUpdate && !spUpdate->getCursorName().isEmpty() )
+									{
+										setMouseCursor( Mouse::HACK, spUpdate->getCursorName() );
+										cursorSet = TRUE;
+										break;
+									}
+								}
+							}
+							if(cursorSet)
+							{
 								break;
 							}
 						}
@@ -3077,10 +3125,27 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					{
 						if( hasSrcObj )
 						{
-							SpecialPowerUpdateInterface* spuInterface = srcObj->findSpecialPowerWithOverridableDestinationActive();
-							if( spuInterface )
+							Bool cursorSet = FALSE;
+							
+							// iterate every drawable until we found the cursor we need
+							const DrawableList *selected = getAllSelectedDrawables();
+							for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
 							{
-								setMouseCursor( Mouse::PARTICLE_UPLINK_CANNON, spuInterface->getCursorName() );
+								// get this drawable
+								Drawable* curDraw = *it;
+								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
+								{
+									SpecialPowerUpdateInterface* spuInterface = curDraw->getObject()->findSpecialPowerWithOverridableDestinationActive();
+									if( spuInterface )
+									{
+										setMouseCursor( Mouse::PARTICLE_UPLINK_CANNON, spuInterface->getCursorName() );
+										cursorSet = TRUE;
+										break;
+									}
+								}
+							}
+							if(cursorSet)
+							{
 								break;
 							}
 						}
@@ -3230,6 +3295,68 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 			}
 			break;
 	}
+}
+
+Bool InGameUI::findCrateCollideCommandHint( const Object *obj, const Object *other, const GameMessage *msg, Bool isParasite )
+{
+	GameMessage::Type t = msg->getType();
+	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+	{
+		CollideModuleInterface* collide = (*m)->getCollide();
+		if (!collide)
+			continue;
+
+		switch (t)
+		{
+			case GameMessage::MSG_CONVERT_TO_CARBOMB_HINT:
+			{
+				if( collide->isCarBombCrateCollide() && !collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( other ) )
+				{
+					Int index = TheMouse->getCursorIndex( collide->getCursorName() );
+					setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
+					return TRUE;
+				}
+				break;
+			}
+			case GameMessage::MSG_HIJACK_HINT:
+			{
+				if( collide->isHijackedVehicleCrateCollide() && !collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( other ) )
+				{
+					Int index = TheMouse->getCursorIndex( collide->getCursorName() );
+					setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
+					return TRUE;
+				}
+				break;
+			}
+			case GameMessage::MSG_SABOTAGE_HINT:
+			{
+				if( collide->isSabotageBuildingCrateCollide() && !collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( other ) )
+				{
+					Int index = TheMouse->getCursorIndex( collide->getCursorName() );
+					setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
+					return TRUE;
+				}
+				break;
+			}
+			case GameMessage::MSG_EQUIP_HINT:
+			{
+				if( collide->isEquipCrateCollide() )
+				{
+					if( collide->isParasiteEquipCrateCollide() )
+						isParasite = TRUE;
+					
+					if(!collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( other ))
+					{
+						Int index = TheMouse->getCursorIndex( collide->getCursorName() );
+						setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 0 );
+						return TRUE;
+					}
+				}
+				break;
+			}
+		}
+	}
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------

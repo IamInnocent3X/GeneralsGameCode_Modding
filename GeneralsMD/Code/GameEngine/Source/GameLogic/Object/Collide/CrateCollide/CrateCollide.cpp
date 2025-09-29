@@ -73,6 +73,7 @@ CrateCollideModuleData::CrateCollideModuleData()
 	m_requiresAllTriggers = false;
 
 	m_damagePercentageToUnit = 0.0f;
+	m_destroyOnTargetDie = FALSE;
 	m_customStatusToSet.clear();
 	m_customStatusToGive.clear();
 	m_bonusToGive.clear();
@@ -136,6 +137,7 @@ void CrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "CustomWeaponBonusToGive",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customBonusToGive ) },
 
 		{ "DamagePercentToUnit",	INI::parsePercentToReal,		NULL, offsetof( CrateCollideModuleData, m_damagePercentageToUnit ) },
+		{ "DestroyOnTargetDie",		INI::parseBool,		NULL, offsetof( CrateCollideModuleData, m_destroyOnTargetDie ) },
 
 		{ "CursorName", INI::parseAsciiString, NULL, offsetof( CrateCollideModuleData, m_cursorName ) },
 

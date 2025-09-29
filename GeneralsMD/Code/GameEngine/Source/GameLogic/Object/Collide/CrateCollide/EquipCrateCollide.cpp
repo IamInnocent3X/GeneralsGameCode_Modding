@@ -158,7 +158,11 @@ Bool EquipCrateCollide::executeCrateBehavior( Object *other )
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
 		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
-		hijackerUpdate->setDestroyOnRepair( data->m_destroyOnRepair );
+		hijackerUpdate->setIsParasite( data->m_isParasite );
+		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
+		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
+		hijackerUpdate->setDestroyOnClear( data->m_destroyOnClear );
+		hijackerUpdate->setDestroyOnTargetDie( data->m_destroyOnTargetDie );
 		hijackerUpdate->setPercentDamage( data->m_damagePercentageToUnit );
 		hijackerUpdate->setStatusToRemove( data->m_statusToRemove );
 		hijackerUpdate->setStatusToDestroy( data->m_statusToDestroy );

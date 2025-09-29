@@ -81,15 +81,20 @@ public:
 	void setUpdate(Bool u ) {m_update = u; if(u) setWakeFrame(getObject(), UPDATE_SLEEP_NONE);}
 	void setIsInVehicle(Bool i ) {m_isInVehicle = i;}
 	void setNoLeechExp(Bool i ) {m_noLeechExp = i;}
-	void setDestroyOnRepair(Bool i ) {m_destroyOnRepair = i;}
+	void setIsParasite(Bool i ) {m_isParasite = i;}
+	void setDestroyOnHeal(Bool i ) {m_destroyOnHeal = i;}
+	void setRemoveOnHeal(Bool i ) {m_removeOnHeal = i;}
+	void setDestroyOnClear(Bool i ) {m_destroyOnClear = i;}
+	void setDestroyOnTargetDie(Bool i ) {m_destroyOnTargetDie = i;}
 	void setPercentDamage(Real i ) {m_percentDamage = i;}
 	void setStatusToRemove(ObjectStatusMaskType i ) {m_statusToRemove = i;}
 	void setStatusToDestroy(ObjectStatusMaskType i ) {m_statusToDestroy = i;}
 	void setCustomStatusToRemove(const std::vector<AsciiString>& i ) {m_customStatusToRemove = i;}
 	void setCustomStatusToDestroy(const std::vector<AsciiString>& i ) {m_customStatusToDestroy = i;}
+	void setClear(Bool u ) {m_clear = u;}
 	void setEject(Bool u ) {m_eject = u;}
 	void setHealed(Bool u ) {m_healed = u;}
-	void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to themselves
+	void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
 
 private:
 
@@ -98,8 +103,13 @@ private:
 	Bool     m_update;
 	Bool		 m_isInVehicle;
 	Bool		 m_wasTargetAirborne;
+	Bool		 m_isParasite;
 	Bool		 m_noLeechExp;
-	Bool		 m_destroyOnRepair;
+	Bool		 m_destroyOnHeal;
+	Bool		 m_removeOnHeal;
+	Bool		 m_destroyOnClear;
+	Bool		 m_destroyOnTargetDie;
+	Bool     	 m_clear;
 	Bool     	 m_eject;
 	Bool     	 m_healed;
 	Bool     	 m_noSelfDamage;

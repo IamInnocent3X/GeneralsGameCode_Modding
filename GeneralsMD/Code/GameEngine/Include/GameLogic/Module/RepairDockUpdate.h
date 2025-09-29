@@ -48,6 +48,7 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully repaired
+	Bool m_repairClearsParasite;		///< repairing object clears any parasite within them
 
 };
 

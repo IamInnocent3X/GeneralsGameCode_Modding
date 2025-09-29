@@ -168,6 +168,11 @@ Real WorkerAIUpdate::getRepairHealthPerSecond( void ) const
 	return getWorkerAIUpdateModuleData()->m_repairHealthPercentPerSecond;
 }
 // ------------------------------------------------------------------------------------------------
+Bool WorkerAIUpdate::getRepairClearsParasite( void ) const
+{
+	return getWorkerAIUpdateModuleData()->m_repairClearsParasite;
+}
+// ------------------------------------------------------------------------------------------------
 Real WorkerAIUpdate::getBoredTime( void ) const
 {
 	return getWorkerAIUpdateModuleData()->m_boredTime;
