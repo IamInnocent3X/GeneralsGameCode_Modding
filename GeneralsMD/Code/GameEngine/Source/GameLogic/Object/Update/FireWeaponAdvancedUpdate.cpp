@@ -343,6 +343,7 @@ UpdateSleepTime FireWeaponAdvancedUpdate::update( void )
 	// If my weapon is ready, shoot it.
 	if( isOkayToFire() )
 	{
+		getObject()->setContainedPosition();
 		Coord3D targetPos = getNextTargetPos();
 		Coord3D firingOffset = getScatterRadiusOffset(data->m_scatterRadius);
 		targetPos.add(&firingOffset);

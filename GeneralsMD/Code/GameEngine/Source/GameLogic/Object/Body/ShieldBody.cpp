@@ -292,7 +292,21 @@ void ShieldBody::attemptDamage(DamageInfo* damageInfo)
 	}
 
 	Real rawDamage = damageInfo->in.m_amount;
-	Real damageToShield = getCurrentArmor().adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount);
+
+	// Armor bonuses for damage reduction
+	const Weapon* w = NULL;
+	w = obj->getCurrentWeapon();
+	Real armorBonus = w ? w->getArmorBonus(obj) : 1.0f;
+
+	ObjectStatusMaskType objStatus = obj->getStatusBits();
+	WeaponBonusConditionFlags objFlags = obj->getWeaponBonusCondition();
+	ObjectCustomStatusType objCustomStatus = obj->getCustomStatus();
+	ObjectCustomStatusType objCustomFlags = obj->getCustomWeaponBonusCondition();
+	armorBonus *= getCurrentArmor().scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
+
+	damageInfo->in.m_amount *= armorBonus;
+
+	Real damageToShield = getCurrentArmor().adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
 
 	//Note: we apply the damage scalar only to the damage to the actual shield.
 	// It's later applied again for overkill damage

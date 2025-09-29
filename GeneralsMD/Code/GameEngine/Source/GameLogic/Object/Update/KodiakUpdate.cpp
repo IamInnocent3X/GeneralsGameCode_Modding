@@ -71,6 +71,8 @@ KodiakUpdateModuleData::KodiakUpdateModuleData()
   m_numAATurrets = 0;
   m_turretRecenterFramesBeforeExit = 0;
   m_initialAttackDelayFrames = 0;
+
+  m_cursorName = NULL;
 }
 
 static Real zero = 0.0f;
@@ -101,6 +103,7 @@ static Real zero = 0.0f;
     { "MissileScatterRadius",	        INI::parseReal,		NULL, offsetof(KodiakUpdateModuleData, m_missileScatterRadius) },
     { "TurretRecenterTimeBeforeExit", INI::parseDurationUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_turretRecenterFramesBeforeExit) },
     { "InitialAttackDelay",           INI::parseDurationUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_initialAttackDelayFrames) },
+    { "CursorName",		                  INI::parseAsciiString,	        NULL,	offsetof(KodiakUpdateModuleData, m_cursorName) },
 
 
     { 0, 0, 0, 0 }
