@@ -51,6 +51,7 @@
 #include "GameLogic/Module/BridgeTowerBehavior.h"
 #include "GameLogic/Module/CountermeasuresBehavior.h"
 #include "GameLogic/Module/BattlePlanBonusBehavior.h"
+#include "GameLogic/Module/EnergyShieldBehavior.h"
 #include "GameLogic/Module/DumbProjectileBehavior.h"
 #include "GameLogic/Module/FreeFallProjectileBehavior.h"
 #include "GameLogic/Module/InstantDeathBehavior.h"
@@ -125,6 +126,7 @@
 #include "GameLogic/Module/FireSpreadUpdate.h"
 #include "GameLogic/Module/FirestormDynamicGeometryInfoUpdate.h"
 #include "GameLogic/Module/FireWeaponUpdate.h"
+#include "GameLogic/Module/FireWeaponAdvancedUpdate.h"
 #include "GameLogic/Module/FlammableUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/TensileFormationUpdate.h"
@@ -145,6 +147,8 @@
 #include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
 #include "GameLogic/Module/SpectreGunshipUpdate.h"
 #include "GameLogic/Module/SpectreGunshipDeploymentUpdate.h"
+#include "GameLogic/Module/KodiakUpdate.h"
+#include "GameLogic/Module/KodiakDeploymentUpdate.h"
 #include "GameLogic/Module/BaikonurLaunchPower.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
 #include "GameLogic/Module/LifetimeUpdate.h"
@@ -269,6 +273,7 @@
 #include "GameLogic/Module/ImmortalBody.h"
 #include "GameLogic/Module/StructureBody.h"
 #include "GameLogic/Module/HiveStructureBody.h"
+#include "GameLogic/Module/ShieldBody.h"
 #include "GameLogic/Module/UndeadBody.h"
 
 // contain includes
@@ -344,6 +349,7 @@ void ModuleFactory::init( void )
 	addModule( BridgeTowerBehavior );
 	addModule( CountermeasuresBehavior );
 	addModule( BattlePlanBonusBehavior );
+	addModule( EnergyShieldBehavior );
 	addModule( DumbProjectileBehavior );
 	addModule( FreeFallProjectileBehavior );
 	addModule( PhysicsBehavior );
@@ -429,6 +435,7 @@ void ModuleFactory::init( void )
 	addModule( NeutronMissileUpdate );
 	addModule( FireSpreadUpdate );
 	addModule( FireWeaponUpdate );
+	addModule( FireWeaponAdvancedUpdate );
 	addModule( FlammableUpdate );
 	addModule( FloatUpdate );
 	addModule( TensileFormationUpdate );
@@ -451,6 +458,8 @@ void ModuleFactory::init( void )
 	addModule( ParticleUplinkCannonUpdate );
 	addModule( SpectreGunshipUpdate );
 	addModule( SpectreGunshipDeploymentUpdate );
+	addModule( KodiakUpdate );
+	addModule( KodiakDeploymentUpdate );
 	addModule( BaikonurLaunchPower );
 	addModule( BattlePlanUpdate );
 	addModule( ProjectileStreamUpdate );
@@ -563,6 +572,7 @@ void ModuleFactory::init( void )
 	addModule( ImmortalBody );
 	addModule( StructureBody );
 	addModule( HiveStructureBody );
+	addModule( ShieldBody );
 	addModule( UndeadBody );
 
 	// contain modules

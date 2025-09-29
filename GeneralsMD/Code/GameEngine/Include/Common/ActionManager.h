@@ -108,7 +108,8 @@ public:
 	Bool canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource );
 
 protected:
-
+	//used to assign behaviour types for new special power enums
+	SpecialPowerType getFallbackBehaviorType(SpecialPowerType type);
 };
 
 // EXTERNALS //////////////////////////////////////////////////////////////////////////////////////

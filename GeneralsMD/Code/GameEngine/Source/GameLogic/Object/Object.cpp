@@ -77,6 +77,7 @@
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/LifeTimeUpdate.h"
 #include "GameLogic/Module/EquipCrateCollide.h"
 #include "GameLogic/Module/HijackerUpdate.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
@@ -101,6 +102,7 @@
 #include "GameLogic/Module/TunnelContain.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/EnergyShieldBehavior.h"
 
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -1643,6 +1645,49 @@ Bool Object::getAmmoPipShowingInfo(Int& numTotal, Int& numFull) const
 	{
 		return false;
 	}
+}
+
+//=============================================================================
+Bool Object::getProgressBarShowingInfo(bool selected, Real& progress, Int& type, RGBAColorInt& color, RGBAColorInt& colorBG) const
+{
+	if (!isKindOf(KINDOF_SHOW_PROGRESS_BAR))
+		return FALSE;
+
+	// We put every case of Progress bars here.
+	// Maybe we should require a KindOf for performance?
+
+	type = 0;  // TODO
+	color = { 255, 255, 255, 255 };  // Default = white
+	colorBG = { 0, 0, 0, 255 };  // Default = black
+
+	// Energy Shields
+	// TODO: This is kinda bad, there should be a better way to do this, if we have multiple shield sources.
+	// This should come from the Body?
+	EnergyShieldBehaviorInterface* esbi = NULL;
+
+	for (BehaviorModule** u = m_behaviors; *u; ++u)
+	{
+		if ((esbi = (*u)->getEnergyShieldBehaviorInterface()) != NULL) {
+			if (esbi->shouldShowHealthBar(selected)) {
+				progress = esbi->getShieldPercent();
+				color = esbi->getHealthBarColor();
+				colorBG = esbi->getHealthBarBackgroundColor();
+				return true;
+			}
+		}
+		else if ((*u)->getModuleNameKey() == NAMEKEY("LifetimeUpdate")) {
+			LifetimeUpdate* ltu = (LifetimeUpdate*)(*u);
+			if (ltu->showProgressBar()) {
+				// always show healthbar or when selected?
+				progress = 1.0 - ltu->getProgress();
+				return true;
+			}
+		}
+		
+	}
+
+	return false;
+	
 }
 
 //=============================================================================

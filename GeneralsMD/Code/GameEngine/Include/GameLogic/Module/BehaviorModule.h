@@ -85,6 +85,7 @@ class StealthUpdate;
 class SpyVisionUpdate;
 // -----------------
 class BattlePlanBonusBehaviorInterface;
+class EnergyShieldBehaviorInterface;
 
 //-------------------------------------------------------------------------------------------------
 class BehaviorModuleData : public ModuleData
@@ -146,6 +147,7 @@ public:
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const = 0;
 
 	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() = 0;
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() = 0;
 
 };
 
@@ -203,7 +205,8 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return NULL; }
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return NULL; }
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return NULL; }
-	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return NULL; };
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return NULL; }
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() { return NULL; }
 
 protected:
 

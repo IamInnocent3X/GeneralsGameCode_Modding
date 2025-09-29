@@ -294,6 +294,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/UnitProductionBonusUpgrade.h
     Include/GameLogic/Module/CountermeasuresBehavior.h
     Include/GameLogic/Module/BattlePlanBonusBehavior.h
+    Include/GameLogic/Module/EnergyShieldBehavior.h
     Include/GameLogic/Module/CrateCollide.h
     Include/GameLogic/Module/CreateCrateDie.h
     Include/GameLogic/Module/CreateModule.h
@@ -328,6 +329,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/FireWeaponCollide.h
     Include/GameLogic/Module/FireWeaponPower.h
     Include/GameLogic/Module/FireWeaponUpdate.h
+    Include/GameLogic/Module/FireWeaponAdvancedUpdate.h
     Include/GameLogic/Module/FireWeaponWhenDamagedBehavior.h
     Include/GameLogic/Module/FireWeaponWhenDeadBehavior.h
     Include/GameLogic/Module/DelayedUpgradeBehavior.h
@@ -350,6 +352,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/HighlanderBody.h
     Include/GameLogic/Module/HijackerUpdate.h
     Include/GameLogic/Module/HiveStructureBody.h
+    Include/GameLogic/Module/ShieldBody.h
     Include/GameLogic/Module/HordeUpdate.h
     Include/GameLogic/Module/ImmortalBody.h
     Include/GameLogic/Module/InactiveBody.h
@@ -492,6 +495,8 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/WeaponBonusUpgrade.h
     Include/GameLogic/Module/WeaponSetUpgrade.h
     Include/GameLogic/Module/WorkerAIUpdate.h
+    Include/GameLogic/Module/KodiakDeploymentUpdate.h
+    Include/GameLogic/Module/KodiakUpdate.h
     Include/GameLogic/Object.h
     Include/GameLogic/ObjectCreationList.h
     Include/GameLogic/ObjectIter.h
@@ -870,6 +875,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Behavior/BunkerBusterBehavior.cpp
     Source/GameLogic/Object/Behavior/CountermeasuresBehavior.cpp
     Source/GameLogic/Object/Behavior/BattlePlanBonusBehavior.cpp
+    Source/GameLogic/Object/Behavior/EnergyShieldBehavior.cpp
     Source/GameLogic/Object/Behavior/DumbProjectileBehavior.cpp
     Source/GameLogic/Object/Behavior/FreeFallProjectileBehavior.cpp
     Source/GameLogic/Object/Behavior/FireWeaponWhenDamagedBehavior.cpp
@@ -899,6 +905,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Body/BodyModule.cpp
     Source/GameLogic/Object/Body/HighlanderBody.cpp
     Source/GameLogic/Object/Body/HiveStructureBody.cpp
+    Source/GameLogic/Object/Body/ShieldBody.cpp
     Source/GameLogic/Object/Body/ImmortalBody.cpp
     Source/GameLogic/Object/Body/InactiveBody.cpp
     Source/GameLogic/Object/Body/StructureBody.cpp
@@ -1036,6 +1043,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Update/FireSpreadUpdate.cpp
     Source/GameLogic/Object/Update/FirestormDynamicGeometryInfoUpdate.cpp
     Source/GameLogic/Object/Update/FireWeaponUpdate.cpp
+    Source/GameLogic/Object/Update/FireWeaponAdvancedUpdate.cpp
     Source/GameLogic/Object/Update/FlammableUpdate.cpp
     Source/GameLogic/Object/Update/FloatUpdate.cpp
     Source/GameLogic/Object/Update/HeightDieUpdate.cpp
@@ -1084,6 +1092,8 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Update/WaveGuideUpdate.cpp
     Source/GameLogic/Object/Update/WeaponBonusUpdate.cpp
     Source/GameLogic/Object/Update/ArmorDamageScalarUpdate.cpp
+    Source/GameLogic/Object/Update/KodiakDeploymentUpdate.cpp
+    Source/GameLogic/Object/Update/KodiakUpdate.cpp
     Source/GameLogic/Object/Upgrade/ActiveShroudUpgrade.cpp
     Source/GameLogic/Object/Upgrade/ArmorUpgrade.cpp
     Source/GameLogic/Object/Upgrade/CommandSetUpgrade.cpp

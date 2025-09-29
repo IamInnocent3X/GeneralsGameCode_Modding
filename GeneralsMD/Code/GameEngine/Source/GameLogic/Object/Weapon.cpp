@@ -307,6 +307,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "VeterancyPreAttackFX", parsePerVetLevelFXList, NULL, offsetof(WeaponTemplate, m_preAttackFXs) },
 	{ "PreAttackFXDelay",						INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_preAttackFXDelay) },
 	{ "ContinuousLaserLoopTime",				INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_continuousLaserLoopTime) },
+	{ "LaserGroundTargetHeight",				INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_laserGroundTargetHeight) },
+	{ "LaserGroundUnitTargetHeight",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_laserGroundUnitTargetHeight) },
 	
 	// New Features
 	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageType) },
@@ -535,6 +537,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_scatterTargetCenteredAtShooter = FALSE;
 	m_scatterTargetResetTime = 0;
 	m_preAttackFXDelay = 6; // Non-Zero default! 6 frames = 200ms. This should be a good base value to avoid spamming
+	m_laserGroundUnitTargetHeight = 10; // Default Height offset
 	m_customDamageType						= NULL;
 	m_customDamageStatusType				= NULL;
 	m_customDeathType						= NULL;
@@ -1519,11 +1522,16 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			// Handle Detonation OCL
 			Coord3D targetPos; // We need a better position to match the visual laser;
 			targetPos.set(&projectileDestination);
-			if (victimObj && !victimObj->isKindOf(KINDOF_PROJECTILE) && !victimObj->isAirborneTarget())
-			{
-				//Targets are positioned on the ground, so raise the beam up so we're not shooting their feet.
-				//Projectiles are a different story, target their exact position.
-				targetPos.z += 10.0f;
+
+			if (victimObj) {
+				if (!victimObj->isKindOf(KINDOF_PROJECTILE) && !victimObj->isAirborneTarget()) {
+					//Targets are positioned on the ground, so raise the beam up so we're not shooting their feet.
+					//Projectiles are a different story, target their exact position.
+					targetPos.z += m_laserGroundUnitTargetHeight;
+				}
+			}
+			else { // We target the ground
+				targetPos.z += m_laserGroundTargetHeight;
 			}
 
 			VeterancyLevel vet = sourceObj->getVeterancyLevel();
@@ -4031,11 +4039,15 @@ ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, 
 		if( update )
 		{
 			Coord3D pos = *victimPos;
-			if( victimObj && !victimObj->isKindOf( KINDOF_PROJECTILE ) && !victimObj->isAirborneTarget() )
-			{
-				//Targets are positioned on the ground, so raise the beam up so we're not shooting their feet.
-				//Projectiles are a different story, target their exact position.
-				pos.z += 10.0f;
+			if( victimObj) {
+				if (!victimObj->isKindOf(KINDOF_PROJECTILE) && !victimObj->isAirborneTarget()) {
+					//Targets are positioned on the ground, so raise the beam up so we're not shooting their feet.
+					//Projectiles are a different story, target their exact position.
+					pos.z += getTemplate()->getLaserGroundUnitTargetHeight();
+				}
+			}
+			else { // We target the ground
+				pos.z += getTemplate()->getLaserGroundTargetHeight();
 			}
 			update->initLaser( sourceObj, victimObj, sourceObj->getPosition(), &pos, m_template->getLaserBoneName() );
 		}

@@ -172,6 +172,14 @@ enum KindOfType CPP_11(: Int)
 	KINDOF_IGNORE_DOCKING_BONES,		///< Structure will not look up docking bones. Patch 1.03 hack.
 
 	// NEW KINDOFs
+  KINDOF_CAN_RETALIATE,                 ///< Required for Drones to override hardcoded retaliate behavior
+
+	KINDOF_NO_BATTLE_PLAN,					///< No implicit logic, but can be used for BattlePlan ValidKindof lists
+
+	KINDOF_ENABLE_INFANTRY_LIGHTING,   ///< Enable infantry-style ambient lighting for this object
+	KINDOF_DISABLE_INFANTRY_LIGHTING,  ///< Use regular lighting on this infantry object
+
+	KINDOF_SHOW_PROGRESS_BAR,  ///< Show progress bar for this unit (Shields, deploy, teleport, etc.)
 
 	KINDOF_VTOL,
 	KINDOF_LARGE_AIRCRAFT,
