@@ -428,6 +428,9 @@ Bool FireWeaponAdvancedUpdate::isOkayToFire()
 	if( me->testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) )
 		return FALSE; // no hitting with a 0% building, cheater
 
+	if(!m_weapon->getTemplate()->passRequirements(me))
+		return FALSE;
+
 	// Firing a real weapon surpresses this module
 	if( data->m_exclusiveWeaponDelay > 0  &&  ( TheGameLogic->getFrame() < (me->getLastShotFiredFrame() + data->m_exclusiveWeaponDelay) ) )
 		return FALSE;
