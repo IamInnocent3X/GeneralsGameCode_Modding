@@ -568,7 +568,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_carbombConverterID = INVALID_ID;
 	m_hijackerID = INVALID_ID;
 
-	m_parasiteAbleToTargetAllies = FALSE;
+	m_parasiteCollideActive = FALSE;
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.

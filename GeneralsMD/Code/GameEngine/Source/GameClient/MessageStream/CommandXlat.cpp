@@ -2460,10 +2460,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 		if( ai )
 		{
 			// obj is the current draw->getObject()
-			if(obj && obj->getRelationship(other) == ALLIES && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ))
-				other->setParasiteAbleToTargetAllies(TRUE);
+			if(obj && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ))
+				other->setParasiteCollideActive(TRUE);
 			else if(!ai->getGoalObject())
-				other->setParasiteAbleToTargetAllies(FALSE);
+				other->setParasiteCollideActive(FALSE);
 		}
 	}
 

@@ -724,40 +724,44 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 	const Object *containedBy = source->getContainedBy();
 	Bool hasAWeaponInRange = FALSE;
 	Bool hasAWeapon				 = FALSE;
-	for (Int slot = 0; slot < WEAPONSLOT_COUNT - 1; ++slot)
-	{
+
+	// IamInnocent - Removed Unnecessary checks 30/9/2025
+	//for (Int slot = 0; slot < WEAPONSLOT_COUNT - 1; ++slot)
+	//{
 		Weapon *weaponToTestForRange = m_weapons[ m_curWeapon ];
 		if ( weaponToTestForRange )
 		{
 			hasAWeapon = TRUE;
-			if ((m_totalAntiMask & targetAntiMask) == 0)//we don't care to check for this weapon
-				continue;
-
-			Bool handled = FALSE;
-			ContainModuleInterface *contain = containedBy ? containedBy->getContain() : NULL;
-			if( contain && contain->isGarrisonable() && contain->isEnclosingContainerFor( source ))
-			{                                       // non enclosing garrison containers do not use firepoints. Lorenzen, 6/11/03
-				//For contained things, we need to fake-move objects to the best garrison point in order
-				//to get precise range checks.
-				Coord3D targetPos = *pos;
-				Coord3D goalPos;
-				if( contain->calcBestGarrisonPosition( &goalPos, &targetPos) )
+			//if ((m_totalAntiMask & targetAntiMask) == 0)//we don't care to check for this weapon
+			//	continue;
+			if ((m_totalAntiMask & targetAntiMask) != 0)
+			{
+				Bool handled = FALSE;
+				ContainModuleInterface *contain = containedBy ? containedBy->getContain() : NULL;
+				if( contain && contain->isGarrisonable() && contain->isEnclosingContainerFor( source ))
+				{                                       // non enclosing garrison containers do not use firepoints. Lorenzen, 6/11/03
+					//For contained things, we need to fake-move objects to the best garrison point in order
+					//to get precise range checks.
+					Coord3D targetPos = *pos;
+					Coord3D goalPos;
+					if( contain->calcBestGarrisonPosition( &goalPos, &targetPos) )
+					{
+						withinAttackRange = weaponToTestForRange->isSourceObjectWithGoalPositionWithinAttackRange( source, &goalPos, victim, &targetPos );
+						handled = TRUE;
+					}
+				}
+				else if( victim )
+					withinAttackRange = weaponToTestForRange->isWithinAttackRange( source, victim );
+				else
+					withinAttackRange = weaponToTestForRange->isWithinAttackRange( source, pos );
+				if( withinAttackRange )
 				{
-					withinAttackRange = weaponToTestForRange->isSourceObjectWithGoalPositionWithinAttackRange( source, &goalPos, victim, &targetPos );
-					handled = TRUE;
+					hasAWeaponInRange = TRUE;
+					//break;
 				}
 			}
-			else if( victim )
-				withinAttackRange = weaponToTestForRange->isWithinAttackRange( source, victim );
-			else
-				withinAttackRange = weaponToTestForRange->isWithinAttackRange( source, pos );
-			if( withinAttackRange )
-			{
-				hasAWeaponInRange = TRUE;
-				break;
-			}
 		}
-	}
+	//}
 
 	if( source->isKindOf( KINDOF_IMMOBILE ) || source->isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ) || containedBy )
 	{
@@ -805,7 +809,7 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 		for( Int i = first; i >= last ; --i )
 		{
 			Weapon *weapon = m_weapons[ i ];
-			if (weapon && weapon->estimateWeaponDamage( source, victim ))
+			if (weapon && weapon->getTemplate()->passRequirements(source) && weapon->estimateWeaponDamage( source, victim ))
 			{
 				//Kris: Aug 22, 2003
 				//Surgical fix so Jarmen Kell doesn't get a targeting cursor on enemy vehicles unless he is in snipe mode.

@@ -643,9 +643,9 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 				continue;
 
 			// Crate Collide requires Enter Mechanics to work side-by-side
-			// Don't want Parasites to enter volunteeringly but enables them is they are forcibly attacking their allies 
+			// Don't want Parasites to enter volunteeringly but enables them only when the condition is right
 			if( collide->isParasiteEquipCrateCollide() &&
-				  !obj->getParasiteAbleToTargetAllies())
+				  !obj->getParasiteCollideActive())
 				continue;
 			
 			if( collide->wouldLikeToCollideWith( objectToEnter ) )
@@ -1034,14 +1034,23 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 
 		if( collide->wouldLikeToCollideWith( objectToEquip ) )
 		{
-			// If we are not volutarily forcing Parasite onto our Allies, do not allow Parasite to target Allies
+			// Don't use Parasite Volunteeringly if the Object is not attacking while it is able to use weapon against the target
 			if( collide->isParasiteEquipCrateCollide() &&
-				  obj->getRelationship(objectToEquip) == ALLIES &&
-				  !obj->getParasiteAbleToTargetAllies() &&
 				  !TheInGameUI->isInForceAttackMode() &&
+				  !obj->getParasiteCollideActive() &&
+				  !obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) &&
+				  !obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) &&
+				  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
+				  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ) &&
 				  ( !TheInGameUI->getGUICommand() || TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
 			  )
-				return FALSE;
+			{
+				CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, objectToEquip, CMD_FROM_PLAYER );
+				if( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT )
+				{
+					return FALSE;
+				}
+			}
 
 			if(collide->isEquipCrateCollide())
 				return TRUE;

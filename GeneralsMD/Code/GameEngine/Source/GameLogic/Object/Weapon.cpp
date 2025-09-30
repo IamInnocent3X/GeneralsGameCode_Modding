@@ -2034,8 +2034,12 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 						if( !(affects & requiredMask) )
 						{
-							//Skip if we aren't affected by this weapon.
-							continue;
+							//IamInnocent - Fix Not Skipping for Self Check in this aspect 30/9/2025
+							if( (affects & WEAPON_AFFECTS_SELF) == 0 || !(source == curVictim || source->getProducerID() == curVictim->getID()) )
+							{
+								//Skip if we aren't affected by this weapon.
+								continue;
+							}
 						}
 					}
 				}
@@ -2234,8 +2238,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					if(damageInfo.in.m_magnetAmount != 0.0f)
 					{
-						Coord3D magnetVector;
-						magnetVector.zero();
+						Coord3D magnetVector = damageDirection;
+						//magnetVector.zero();
 						if(damageInfo.in.m_magnetAmount < 0)
 						{
 							damageInfo.in.m_magnetAmount *= -1;
