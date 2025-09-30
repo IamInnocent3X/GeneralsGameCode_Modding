@@ -82,6 +82,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
+#include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/Module/ProductionUpdate.h"
@@ -4978,7 +4979,7 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 				break;
 			case ACTIONTYPE_ENTER_OBJECT:
 				//additionalChecking is TRUE only if we want to check if transport is full first.
-				success = TheActionManager->canEnterObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, additionalChecking ? CHECK_CAPACITY : DONT_CHECK_CAPACITY );
+				success = TheActionManager->canEnterObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, additionalChecking ? CHECK_CAPACITY : DONT_CHECK_CAPACITY, TRUE, !other->getObject()->getParasiteCollideActive() );
 				break;
 			case ACTIONTYPE_ATTACK_OBJECT:
 				DEBUG_CRASH( ("Called InGameUI::canSelectedObjectsDoAction() with ACTIONTYPE_ATTACK_OBJECT. You must use InGameUI::getCanSelectedObjectsAttack() instead.") );
@@ -4993,7 +4994,7 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 				success = TheActionManager->canConvertObjectToCarBomb( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );
 				break;
 			case ACTIONTYPE_EQUIP_OBJECT:
-				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );
+				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, other->getObject()->getAI() && other->getObject()->getAI()->getGoalObject() ? TRUE : FALSE );
 				break;
 			case ACTIONTYPE_CAPTURE_BUILDING:
 				success = TheActionManager->canCaptureBuilding( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );

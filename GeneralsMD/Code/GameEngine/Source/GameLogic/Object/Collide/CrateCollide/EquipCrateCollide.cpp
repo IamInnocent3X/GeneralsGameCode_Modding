@@ -44,6 +44,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
 
+#include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/Eva.h"
 #include "GameClient/InGameUI.h"  // useful for printing quick debug strings when we need to
@@ -92,6 +93,7 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 	}
 
 	const EquipCrateCollideModuleData* data = getEquipCrateCollideModuleData();
+	const Object *obj = getObject();
 
 	// If we can only consider one equipped object as a time and the object is already equipped, return false
 	if(data->m_isUnique && !other->getEquipObjectIDs().empty())
@@ -105,9 +107,33 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 		if(!other->getContain())
 			return FALSE;
 
-		const Object *obj = getObject();
 		if(obj->isContained() || !TheActionManager->canEnterObject( obj, other, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY, FALSE ))
 			return FALSE;
+	}
+
+	// Don't use Parasite Volunteeringly if the Object is an Ally 
+	// Or if the Unit is not attacking while it is able to use weapon against the target
+	if( data->m_isParasite && 
+		!obj->getParasiteCollideActive() &&
+		!TheInGameUI->isInForceAttackMode() &&
+		(!TheInGameUI->getGUICommand() || TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT ))
+	{
+		if( !obj->getParasiteCollideActive() &&
+			  !obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) &&
+			  !obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) &&
+			  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
+			  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
+		  {
+			  CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, other, CMD_FROM_PLAYER );
+			  if(( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) || obj->getRelationship(other) == ALLIES)
+			  {
+				  return FALSE;
+			  }
+		  }
+		else if(obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY, FALSE ))
+		  {
+			  return FALSE;
+		  }
 	}
 
 	return TRUE;

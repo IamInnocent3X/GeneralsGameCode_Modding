@@ -538,7 +538,7 @@ Bool ActionManager::canResumeConstructionOf( const Object *obj,
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck )
+Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck, Bool ShowCursorOnParasiteCollide )
 {
 
 	// sanity
@@ -645,7 +645,7 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 			// Crate Collide requires Enter Mechanics to work side-by-side
 			// Don't want Parasites to enter volunteeringly but enables them only when the condition is right
 			if( collide->isParasiteEquipCrateCollide() &&
-				  !obj->getParasiteCollideActive())
+				  (!obj->getParasiteCollideActive() || !ShowCursorOnParasiteCollide))
 				continue;
 			
 			if( collide->wouldLikeToCollideWith( objectToEnter ) )
@@ -1003,7 +1003,7 @@ Bool ActionManager::canSabotageBuilding( const Object *obj, const Object *object
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource )
+Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource, Bool ParasiteHideCursor )
 {
 	// sanity
 	if( obj == NULL || objectToEquip == NULL )
@@ -1032,28 +1032,23 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 		if (!collide)
 			continue;
 
-		if( collide->wouldLikeToCollideWith( objectToEquip ) )
+		if( collide->wouldLikeToCollideWith( objectToEquip ) && collide->isEquipCrateCollide() )
 		{
-			// Don't use Parasite Volunteeringly if the Object is not attacking while it is able to use weapon against the target
-			if( collide->isParasiteEquipCrateCollide() &&
-				  !TheInGameUI->isInForceAttackMode() &&
-				  !obj->getParasiteCollideActive() &&
-				  !obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) &&
-				  !obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) &&
-				  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
-				  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ) &&
-				  ( !TheInGameUI->getGUICommand() || TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
+			if( collide->isParasiteEquipCrateCollide() && 
+				  obj->getParasiteCollideActive() &&
+				  ParasiteHideCursor &&
+				  ( !TheInGameUI->getGUICommand() || 
+				  TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
 			  )
-			{
-				CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, objectToEquip, CMD_FROM_PLAYER );
-				if( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT )
-				{
-					return FALSE;
-				}
-			}
-
-			if(collide->isEquipCrateCollide())
-				return TRUE;
+			  {
+				  CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, objectToEquip, CMD_FROM_PLAYER );
+				  if((result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) || obj->getRelationship(objectToEquip) == ALLIES )
+				  {
+					  return FALSE;
+				  }
+			  }
+			
+			return TRUE;
 		}
 	}
 

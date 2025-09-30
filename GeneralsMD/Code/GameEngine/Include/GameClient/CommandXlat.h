@@ -58,6 +58,13 @@ private:
 	ICoord2D m_mouseRightDragLift;			// the location of a possible mouse drag end
 	UnsignedInt m_mouseRightDown;	// when the mouse down happened
 	UnsignedInt m_mouseRightUp;		// when the mouse up happened
+	Bool m_mouseRightClickEvaluate;
+
+	ICoord2D m_mouseLeftDragAnchor;		// the location of a possible mouse drag start
+	ICoord2D m_mouseLeftDragLift;			// the location of a possible mouse drag end
+	UnsignedInt m_mouseLeftDown;	// when the mouse down happened
+	UnsignedInt m_mouseLeftUp;		// when the mouse up happened
+	Bool m_mouseLeftClickEvaluate;
 
 	GameMessage::Type createMoveToLocationMessage( Drawable *draw, const Coord3D *dest, CommandEvaluateType commandType );
 	GameMessage::Type createAttackMessage( Drawable *draw, Drawable *other, CommandEvaluateType commandType );
