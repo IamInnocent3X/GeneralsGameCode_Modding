@@ -1416,6 +1416,7 @@ CommandTranslator::CommandTranslator() :
 	m_mouseRightUp(0),
 	m_mouseLeftDown(0),
 	m_mouseLeftUp(0),
+	m_mouseOverDrawableEvaluate(FALSE),
 	m_mouseRightClickEvaluate(FALSE),
 	m_mouseLeftClickEvaluate(FALSE)
 {
@@ -2466,27 +2467,31 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 	//																								(PickType) pickType);
 	//Object* obj = draw ? draw->getObject() : NULL;
 
-	const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
-	// loop through all the selected drawables
-	for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
+	if( m_mouseOverDrawableEvaluate || isClick )
 	{
-		Object *other = (*it) ? (*it)->getObject() : NULL;
-		AIUpdateInterface *ai = other ? other->getAI() : NULL;
-		if( ai )
+		const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
+		// loop through all the selected drawables
+		for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
 		{
-			// obj is the current draw->getObject()
-			if( !other->getParasiteCollideActive() && obj && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ) )
+			Object *other = (*it) ? (*it)->getObject() : NULL;
+			AIUpdateInterface *ai = other ? other->getAI() : NULL;
+			if( ai )
 			{
-				other->setParasiteCollideActive(TRUE);
-			}
-			else if( isClick && ( !ai->getGoalObject() || 
-					( obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) )))
-			{
-				other->setParasiteCollideActive(FALSE);
+				// obj is the current draw->getObject()
+				if( !other->getParasiteCollideActive() && obj && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ) )
+				{
+					other->setParasiteCollideActive(TRUE);
+				}
+				else if( isClick && ( !ai->getGoalObject() || 
+						( obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) )))
+				{
+					other->setParasiteCollideActive(FALSE);
+				}
 			}
 		}
 	}
 
+	m_mouseOverDrawableEvaluate = FALSE;
 	m_mouseLeftClickEvaluate = FALSE;
 	m_mouseRightClickEvaluate = FALSE;
 
@@ -3779,6 +3784,8 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 		// --------------------------------------------------------------------------------------------
 		case GameMessage::MSG_MOUSEOVER_DRAWABLE_HINT:
 		{
+			m_mouseOverDrawableEvaluate = TRUE;
+			
 			const CommandButton *command = TheInGameUI->getGUICommand();
 			if( TheInGameUI->getSelectCount() > 0
 					|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT) ) // If something is selected

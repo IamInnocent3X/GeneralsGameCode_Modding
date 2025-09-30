@@ -2034,7 +2034,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 						if( !(affects & requiredMask) )
 						{
-							//IamInnocent - Fix Not Skipping for Self Check in this aspect 30/9/2025
+							//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 30/9/2025
 							if( (affects & WEAPON_AFFECTS_SELF) == 0 || !(source == curVictim || source->getProducerID() == curVictim->getID()) )
 							{
 								//Skip if we aren't affected by this weapon.
