@@ -118,8 +118,7 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 		!TheInGameUI->isInForceAttackMode() &&
 		(!TheInGameUI->getGUICommand() || TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT ))
 	{
-		if( !obj->getParasiteCollideActive() &&
-			  !obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) &&
+		if( !obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) &&
 			  !obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) &&
 			  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
 			  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))

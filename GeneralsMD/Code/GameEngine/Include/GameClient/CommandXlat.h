@@ -46,7 +46,7 @@ public:
 
 
 	GameMessage::Type evaluateForceAttack( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
-	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
+	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type, Bool AdditionalCheck = FALSE );
 
 private:
 
@@ -66,7 +66,7 @@ private:
 	UnsignedInt m_mouseLeftUp;		// when the mouse up happened
 	Bool m_mouseLeftClickEvaluate;
 
-	Bool m_mouseOverDrawableEvaluate;
+	Drawable *m_mouseOverDrawable;
 
 	GameMessage::Type createMoveToLocationMessage( Drawable *draw, const Coord3D *dest, CommandEvaluateType commandType );
 	GameMessage::Type createAttackMessage( Drawable *draw, Drawable *other, CommandEvaluateType commandType );

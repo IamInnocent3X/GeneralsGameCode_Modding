@@ -4994,8 +4994,12 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 				success = TheActionManager->canConvertObjectToCarBomb( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );
 				break;
 			case ACTIONTYPE_EQUIP_OBJECT:
-				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, other->getObject()->getAI() && other->getObject()->getAI()->getGoalObject() ? TRUE : FALSE );
+			{
+				Object *obj = other ? other->getObject() : NULL;
+				AIUpdateInterface *ai = obj ? obj->getAI() : NULL;
+				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, ai && (obj->getParasiteCollideActive() || ai->getGoalObject()) ? TRUE : FALSE );
 				break;
+			}
 			case ACTIONTYPE_CAPTURE_BUILDING:
 				success = TheActionManager->canCaptureBuilding( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER );
 				break;
