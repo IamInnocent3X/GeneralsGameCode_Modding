@@ -100,6 +100,10 @@ Bool FireWeaponCollide::shouldFireWeapon()
 	const FireWeaponCollideModuleData *d = getFireWeaponCollideModuleData();
 
 	ObjectStatusMaskType status = getObject()->getStatusBits();
+
+	// Sanity
+	if( m_collideWeapon == NULL )
+		return FALSE;
 	
 	//We need all required status or else we fail
 	if( !status.testForAll( d->m_requiredStatus ) )
@@ -120,6 +124,10 @@ Bool FireWeaponCollide::shouldFireWeapon()
 		if(getObject()->testCustomStatus(*it))
 			return FALSE;
 	}
+
+	// If it does not need the weapon's requirements, do not fire
+	if(!m_collideWeapon->getTemplate()->passRequirements(getObject()))
+		return FALSE;
 
 	return TRUE;
 }
