@@ -604,6 +604,7 @@ public:
 
 	Real m_drawWidthFactor;
 	Real m_drawHeightFactor;
+	Bool m_drawFullMap;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

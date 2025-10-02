@@ -46,6 +46,7 @@
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/SidesList.h"
 
+#include "GameClient/View.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "W3DDevice/GameClient/TileData.h"
 #include "W3DDevice/GameClient/HeightMap.h"
@@ -2571,3 +2572,18 @@ Bool  WorldHeightMap::getRawTileData(Short tileNdx, Int width,
 	return(false);
 }
 
+Int WorldHeightMap::getDrawWidth(void)
+{
+	if(TheGlobalData->m_drawFullMap || m_drawWidthX*TheGlobalData->m_drawWidthFactor > getXExtent()-1 )
+		return REAL_TO_INT(getXExtent()-1 );
+	else 
+		return REAL_TO_INT(m_drawWidthX*TheGlobalData->m_drawWidthFactor);
+}
+
+Int WorldHeightMap::getDrawHeight(void)
+{
+	if(TheGlobalData->m_drawFullMap || m_drawHeightY*TheGlobalData->m_drawHeightFactor > getYExtent()-1 )
+		return REAL_TO_INT(getYExtent()-1 );
+	else 
+		return REAL_TO_INT(m_drawHeightY*TheGlobalData->m_drawHeightFactor);
+}
