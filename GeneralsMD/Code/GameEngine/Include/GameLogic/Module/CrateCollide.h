@@ -58,7 +58,7 @@ public:
 	FXList *m_executeFX;						///< FXList to play when activated
 	Int m_targetsMask;
 	AsciiString m_cursorName;
-	AsciiString m_rejectKey;
+	std::vector<AsciiString> m_rejectKeys;
 
 	ObjectStatusMaskType m_requiredStatus;
 	ObjectStatusMaskType m_forbiddenStatus;

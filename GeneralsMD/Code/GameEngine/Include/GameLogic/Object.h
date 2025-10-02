@@ -713,9 +713,9 @@ public:
 	void setEquipObjectID(ObjectID equipObjID);
 	void clearEquipObjectID(ObjectID equipObjID);
 	void setEquipAttackableObjectID(ObjectID equipObjID);
-	void setRejectKey(const AsciiString& keyStr);
-	void clearRejectKey(const AsciiString& keyStr);
-	Bool hasRejectKey(const AsciiString& keyStr) const;
+	void setRejectKey(const std::vector<AsciiString>& keys);
+	void clearRejectKey(const std::vector<AsciiString>& keys);
+	Bool hasRejectKey(const std::vector<AsciiString>& keys) const;
 	void setContainedPosition();
 
 	inline std::vector<ObjectID> getEquipAttackableObjectIDs() const { return m_equipAttackableObjIDs; }

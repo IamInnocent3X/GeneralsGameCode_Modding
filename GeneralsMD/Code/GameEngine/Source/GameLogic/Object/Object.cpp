@@ -7575,40 +7575,52 @@ void Object::clearEquipObjectID(ObjectID equipObjID)
 	}
 }
 
-void Object::setRejectKey(const AsciiString& keyStr)
+void Object::setRejectKey(const std::vector<AsciiString>& keys)
 { 
-	if(keyStr.isEmpty())
+	if(keys.empty())
 		return;
 
 	// Objects with the same Reject keys cannot Equip and set new reject keys with the same name
 	// No need to check if the Reject Key is already present
-	m_rejectKeys.push_back(keyStr);
-}
-
-void Object::clearRejectKey(const AsciiString& keyStr)
-{ 
-	if(keyStr.isEmpty())
-		return;
-
-	// Remove the ID from the Equip list
-	std::vector<AsciiString>::iterator it;
-	for (it = m_rejectKeys.begin(); it != m_rejectKeys.end();)
+	for(std::vector<AsciiString>::const_iterator it = keys.begin(); it != keys.end(); ++it)
 	{
-		if (keyStr == (*it))
-		{
-			it = m_rejectKeys.erase(it);
-			break;
-		}
-		++it;
+		m_rejectKeys.push_back(*it);
 	}
 }
 
-Bool Object::hasRejectKey(const AsciiString& keyStr) const
+void Object::clearRejectKey(const std::vector<AsciiString>& keys)
+{ 
+	if(keys.empty())
+		return;
+
+	// Remove the ID from the Equip list
+	for(std::vector<AsciiString>::const_iterator it2 = keys.begin(); it2 != keys.end(); ++it2)
+	{
+		std::vector<AsciiString>::iterator it;
+		for (it = m_rejectKeys.begin(); it != m_rejectKeys.end();)
+		{
+			if ((*it) == (*it2))
+			{
+				it = m_rejectKeys.erase(it);
+				break;
+			}
+			++it;
+		}
+	}
+}
+
+Bool Object::hasRejectKey(const std::vector<AsciiString>& keys) const
 {
+	if(keys.empty())
+		return FALSE;
+	
 	for(std::vector<AsciiString>::const_iterator it = m_rejectKeys.begin(); it != m_rejectKeys.end(); ++it)
 	{
-		if((*it) == keyStr)
-			return TRUE;
+		for(std::vector<AsciiString>::const_iterator it2 = keys.begin(); it2 != keys.end(); ++it2)
+		{
+			if((*it) == (*it2))
+				return TRUE;
+		}
 	}
 	return FALSE;
 }

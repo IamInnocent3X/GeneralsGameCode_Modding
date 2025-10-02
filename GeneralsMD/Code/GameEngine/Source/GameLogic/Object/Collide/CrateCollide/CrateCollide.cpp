@@ -65,7 +65,7 @@ CrateCollideModuleData::CrateCollideModuleData()
 	m_fxOnCollide = NULL;
 	m_oclOnCollide = NULL;
 	m_cursorName = NULL;
-	m_rejectKey = NULL;
+	m_rejectKeys.clear();
 	m_activationUpgradeNames.clear();
 	m_conflictingUpgradeNames.clear();
 	m_requiredCustomStatus.clear();
@@ -124,7 +124,7 @@ void CrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "FXOnCollide", INI::parseFXList, NULL, offsetof( CrateCollideModuleData, m_fxOnCollide ) },
 		{ "OCLOnCollide", INI::parseObjectCreationList, NULL, offsetof( CrateCollideModuleData, m_oclOnCollide ) },
 
-		{ "RejectKey",				INI::parseAsciiString,		NULL, offsetof( CrateCollideModuleData, m_rejectKey ) },
+		{ "RejectKeys",				INI::parseAsciiStringVector,		NULL, offsetof( CrateCollideModuleData, m_rejectKeys ) },
 		{ "StatusToRemove",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_statusToRemove ) },
 		{ "CustomStatusToRemove",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customStatusToRemove ) },
 		{ "StatusToDestroy",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_statusToDestroy ) },
@@ -218,9 +218,9 @@ Bool CrateCollide::executeCrateBehavior( Object *other )
 	Object *obj = getObject();
 	
 	// Set the Reject Key
-	if(!md->m_rejectKey.isEmpty())
+	if(!md->m_rejectKeys.empty())
 	{
-		other->setRejectKey( md->m_rejectKey );
+		other->setRejectKey( md->m_rejectKeys );
 	}
 
 	// Set the Statuses
@@ -262,9 +262,9 @@ Bool CrateCollide::revertCollideBehavior( Object *other )
 		return FALSE;
 
 	// Remove the Reject Key from the Object
-	if(!md->m_rejectKey.isEmpty())
+	if(!md->m_rejectKeys.empty())
 	{
-		other->clearRejectKey( md->m_rejectKey );
+		other->clearRejectKey( md->m_rejectKeys );
 	}
 
 	// Clear the statuses and bonuses of the Object after removed from Hijacking
@@ -335,7 +335,7 @@ Bool CrateCollide::isValidToExecute( const Object *other ) const
 	if( other->isKindOf( KINDOF_PARACHUTE ) )
 		return FALSE;
 
-	if( !md->m_rejectKey.isEmpty() && other->hasRejectKey(md->m_rejectKey) )
+	if( !md->m_rejectKeys.empty() && other->hasRejectKey(md->m_rejectKeys) )
 	{
 		return FALSE; // If the object already have the reject key set, return false
 	}
