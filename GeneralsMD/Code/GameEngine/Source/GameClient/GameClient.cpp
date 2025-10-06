@@ -82,6 +82,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/GhostObject.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"		// For TheScriptEngine - jkmcd
 
 #define DRAWABLE_HASH_SIZE	8192
@@ -790,19 +791,38 @@ void GameClient::updateHeadless()
  */
 void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr userFunc, void *userData )
 {
-	Drawable *draw, *nextDrawable;
-
-	for( draw = m_drawableList; draw; draw=nextDrawable )
+	if(region == NULL || ThePartitionManager->hasNoOffset() || !TheGlobalData->m_usePartitionManagerToIterateDrawables)
 	{
-		nextDrawable = draw->getNextDrawable();
+		Drawable *draw, *nextDrawable;
 
-		Coord3D pos = *draw->getPosition();
-		if( region == NULL ||
-			  (pos.x >= region->lo.x && pos.x <= region->hi.x &&
-			   pos.y >= region->lo.y && pos.y <= region->hi.y &&
-				 pos.z >= region->lo.z && pos.z <= region->hi.z) )
+		for( draw = m_drawableList; draw; draw=nextDrawable )
 		{
-			(*userFunc)( draw, userData );
+			nextDrawable = draw->getNextDrawable();
+
+			Coord3D pos = *draw->getPosition();
+			if( region == NULL ||
+				(pos.x >= region->lo.x && pos.x <= region->hi.x &&
+				pos.y >= region->lo.y && pos.y <= region->hi.y &&
+					pos.z >= region->lo.z && pos.z <= region->hi.z) )
+			{
+				(*userFunc)( draw, userData );
+			}
+		}
+	}
+	else
+	{
+		//IamInnocent - Attempted to use PartitionManager code to use WorldCell for Finding Drawables - 6/10/2025
+		std::list< Drawable* > drawables = ThePartitionManager->getDrawablesInRegion( NULL );
+		
+		for( std::list< Drawable* >::iterator it = drawables.begin(); it != drawables.end(); ++it )
+		{
+			Coord3D pos = *(*it)->getPosition();
+			if( pos.x >= region->lo.x && pos.x <= region->hi.x &&
+				pos.y >= region->lo.y && pos.y <= region->hi.y &&
+					pos.z >= region->lo.z && pos.z <= region->hi.z )
+			{
+				(*userFunc)( (*it), userData );
+			}
 		}
 	}
 }

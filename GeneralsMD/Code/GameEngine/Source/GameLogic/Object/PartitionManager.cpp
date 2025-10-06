@@ -78,6 +78,7 @@
 
 #include "GameClient/Line2D.h"
 #include "GameClient/ControlBar.h"
+#include "GameClient/InGameUI.h"
 
 #ifdef RTS_DEBUG
 //#include "GameClient/InGameUI.h"	// for debugHints
@@ -3464,6 +3465,172 @@ Object *PartitionManager::getClosestObjects(
 	return closestObj;	// might be null...
 }
 
+std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D )
+{
+	//IamInnocent - Attempted to use PartitionManager code to use WorldCell for Finding Drawables - 6/10/2025
+	std::list<Drawable*> drawables;
+
+	ICoord2D loRegion, hiRegion;
+	Coord3D loWorld, hiWorld;
+
+	if(region2D != NULL)
+	{
+		loRegion.x = region2D->lo.x;
+		loRegion.y = region2D->lo.y;
+		hiRegion.x = region2D->hi.x;
+		hiRegion.y = region2D->hi.y;
+	}
+	else
+	{
+		IRegion2D region;
+		ICoord2D origin;
+		ICoord2D size;
+
+		TheTacticalView->getOrigin( &origin.x, &origin.y );
+		size.x = TheTacticalView->getWidth();
+		size.y = TheTacticalView->getHeight();
+
+		TheInGameUI->buildRegion( &origin, &size, &region );
+		loRegion.x = region.lo.x;
+		loRegion.y = region.lo.y;
+		hiRegion.x = region.hi.x;
+		hiRegion.y = region.hi.y;
+		//loRegion.x = region3D->lo.x;
+		//loRegion.y = region3D->lo.y;
+		//hiRegion.x = region3D->hi.x;
+		//hiRegion.y = region3D->hi.y;
+	}
+	TheTacticalView->screenToTerrain( &loRegion, &loWorld );
+	TheTacticalView->screenToTerrain( &hiRegion, &hiWorld );
+	Int cellCenterX, cellCenterY;
+	Real centerX = loWorld.x + (hiWorld.x - loWorld.x) / 2;
+	Real centerY = loWorld.y + (hiWorld.y - loWorld.y) / 2;
+	worldToCell(centerX, centerY, &cellCenterX, &cellCenterY);
+
+	/*
+		m_radiusVec[curRadius] contains a list of the cells (foo) that could
+		contain objects that are <= (curRadius * cellSize) distance away from cell (0,0).
+	*/
+#ifdef FASTER_GCO
+
+	Int maxRadius = m_maxGcoRadius;
+	Real maxDist = hiWorld.x - loWorld.x > hiWorld.y - loWorld.y ? hiWorld.x - loWorld.x : hiWorld.y - loWorld.y;
+	if (maxDist < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(maxDist));
+	}
+#if defined(INTENSE_DEBUG)
+	/*
+		Note, if you ever enable this code, be forewarned that it can give
+		you "false positives" for objects that are located just off the map... (srj)
+	*/
+	Int maxRadiusLimit = maxRadius + 3;
+	if (maxRadiusLimit > m_maxGcoRadius) maxRadiusLimit = m_maxGcoRadius;
+#else
+	Int maxRadiusLimit = maxRadius;
+#endif
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	/*
+		m_radiusVec[curRadius] contains a list of the cells (foo) that could
+		contain objects that are <= (curRadius * cellSize) distance away from cell (0,0).
+	*/
+  for (Int curRadius = 0; curRadius <= maxRadiusLimit; ++curRadius)
+  {
+    const OffsetVec& offsets = m_radiusVec[curRadius];
+		if (offsets.empty())
+			continue;
+    for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
+		{
+			PartitionCell* thisCell = getCellAt(cellCenterX + it->x, cellCenterY + it->y);
+			if (thisCell == NULL)
+				continue;
+
+			for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
+			{
+				PartitionData *thisMod = thisCoi->getModule();
+				Object *thisObj = thisMod->getObject();
+
+				if (thisObj == NULL || !thisObj->getDrawable())
+					continue;
+
+				// since an object can exist in multiple COIs, we use this to avoid processing
+				// the same one more than once.
+				if (thisMod->friend_getDoneFlag() == theIterFlag)
+					continue;
+				thisMod->friend_setDoneFlag(theIterFlag);
+
+				/*Coord3D objPos = *thisObj->getDrawable()->getPosition();
+
+				if( objPos.x < loRegion.x || objPos.x > hiRegion.x ||
+					 objPos.y < loRegion.y || objPos.y > hiRegion.y )
+					continue;
+
+				if(region3D != NULL && (objPos.z < region3D->lo.z || objPos.z > region3D->hi.z))
+					continue;*/
+
+				drawables.push_back( thisObj->getDrawable() );
+
+			} // next coi
+		}	// next cell in this radius
+  } // next radius
+
+#else // not FASTER_GCO
+
+	CellOutwardIterator iter(this, cellCenterX, cellCenterY);
+	if (maxDist < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		Int max = worldToCellDist(maxDist) + 1;
+		// default value for "max" is largest possible, based on map size, so we should
+		// never make it any larger than that
+		if (max < iter.getMaxRadius())
+			iter.setMaxRadius(max);
+	}
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	PartitionCell *thisCell;
+	while ((thisCell = iter.nextNonEmpty()) != NULL)
+	{
+		CellAndObjectIntersection *nextCoi;
+		for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
+		{
+			nextCoi = thisCoi->getNextCoi();
+
+			PartitionData *thisMod = thisCoi->getModule();
+
+			Object *thisObj = thisMod->getObject();
+
+			if (thisObj == NULL || !thisObj->getDrawable())
+				continue;
+
+			if (thisMod->friend_getDoneFlag() == theIterFlag)
+				continue;
+
+			thisMod->friend_setDoneFlag(theIterFlag);
+
+			// hmm, ok, calc the distance.
+			/*Coord3D objPos = *thisObj->getPosition();
+
+			if( objPos.x < loRegion.x || objPos.x > hiRegion.x ||
+				 objPos.y < loRegion.y || objPos.y > hiRegion.y )
+				continue;
+
+			if(region3D != NULL && (objPos.z < region3D->lo.z || objPos.z > region3D->hi.z))
+				continue;*/
+
+			drawables.push_back( thisObj->getDrawable() );
+		}
+	}
+
+#endif  // not FASTER_GCO
+	return drawables;
+}
 
 //-----------------------------------------------------------------------------
 Object *PartitionManager::getClosestObject(

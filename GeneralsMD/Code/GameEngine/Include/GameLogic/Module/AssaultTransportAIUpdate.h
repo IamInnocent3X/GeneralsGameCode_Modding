@@ -109,6 +109,10 @@ public:
 	void giveFinalOrders();
   Bool isAttackPointless() const;
 
+	void checkMembersList();
+	void addMember();
+    void onAttack();
+
 protected:
 
 	virtual void privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );///< Extension.  Also tell occupants to attackObject

@@ -606,6 +606,8 @@ public:
 	Real m_drawHeightFactor;
 	Bool m_drawFullMap;
 
+	Bool m_usePartitionManagerToIterateDrawables;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

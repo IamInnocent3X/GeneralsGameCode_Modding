@@ -59,6 +59,9 @@
 #include "Common/Snapshot.h"
 #include "Common/Geometry.h"
 #include "GameClient/Display.h"	// for ShroudLevel
+#include "GameClient/Drawable.h"
+
+class Drawable;
 
 //-----------------------------------------------------------------------------
 //           defines
@@ -1553,6 +1556,9 @@ public:
 	// If saveToFog is false, then we are writing STORE_PERMENANT_REVEAL
 	void storeFoggedCells(ShroudStatusStoreRestore &outPartitionStore, Bool storeToFog) const;
 	void restoreFoggedCells(const ShroudStatusStoreRestore &inPartitionStore, Bool restoreToFog);
+
+	std::list<Drawable*> getDrawablesInRegion( IRegion2D *region2D );
+	inline Bool hasNoOffset() const { return m_radiusVec.empty(); }
 };  // end class PartitionManager
 
 // -----------------------------------------------------------------------------
