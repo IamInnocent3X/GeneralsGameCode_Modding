@@ -663,6 +663,8 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "DrawFullMap", INI::parseBool, NULL, offsetof( GlobalData, m_drawFullMap ) },
 
 	{ "UsePartitionManagerToIterateDrawables",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawables) },
+	{ "UsePartitionManagerToIterateDrawablesOnlySelect",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawablesOnlySelect) },
+	{ "UseEfficientIterateDrawablesScheme",	 INI::parseBool, NULL, offsetof(GlobalData, m_useEfficientDrawableScheme) },
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1234,6 +1236,8 @@ GlobalData::GlobalData()
 	m_drawFullMap = FALSE;
 
 	m_usePartitionManagerToIterateDrawables = FALSE;
+	m_usePartitionManagerToIterateDrawablesOnlySelect = FALSE;
+	m_useEfficientDrawableScheme = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

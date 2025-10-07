@@ -45,6 +45,7 @@
 #include "Common/Team.h"
 #include "Lib/trig.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameClient/GameClient.h"
 
 
 //=============================================================================
@@ -158,6 +159,8 @@ void Thing::setPositionZ( Real z )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
+	if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme && AsObject(this) && AsObject(this)->getDrawable())
+		TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
 }
 
 //=============================================================================
@@ -187,6 +190,8 @@ void Thing::setPosition( const Coord3D *pos )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
+	if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme && AsObject(this) && AsObject(this)->getDrawable())
+		TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
 }
 
 //=============================================================================

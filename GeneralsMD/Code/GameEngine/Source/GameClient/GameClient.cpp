@@ -112,6 +112,8 @@ GameClient::GameClient()
 
 	m_nextDrawableID = (DrawableID)1;
 	TheDrawGroupInfo = new DrawGroupInfo;
+
+	m_drawablesList.clear();
 }
 
 //std::vector<std::string>	preloadTextureNamesGlobalHack;
@@ -133,6 +135,8 @@ GameClient::~GameClient()
 
 	// clear any drawable TOC we might have
 	m_drawableTOC.clear();
+
+	m_drawablesList.clear();
 
 	//DEBUG_LOG(("Preloaded texture files ------------------------------------------"));
 	//for (Int oog=0; oog<preloadTextureNamesGlobalHack2.size(); ++oog)
@@ -478,6 +482,8 @@ void GameClient::reset( void )
 	// clear any drawable TOC we might have
 	m_drawableTOC.clear();
 
+	m_drawablesList.clear();
+
 	// TheSuperHackers @fix Mauller 13/04/2025 Reset the drawable id so it does not keep growing over the lifetime of the game.
 	m_nextDrawableID = (DrawableID)1;
 
@@ -791,7 +797,45 @@ void GameClient::updateHeadless()
  */
 void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr userFunc, void *userData )
 {
-	if(region == NULL || ThePartitionManager->hasNoOffset() || !TheGlobalData->m_usePartitionManagerToIterateDrawables)
+	if(region != NULL && TheGlobalData->m_useEfficientDrawableScheme && !m_drawablesList.empty())
+	{
+		//IamInnocent - Attempted to use an Efficient Implementation of PartitionManager code to use WorldCell for Finding Drawables - 7/10/2025
+		for( std::list< Drawable* >::iterator it = m_drawablesList.begin(); it != m_drawablesList.end();)
+		{
+			Coord3D pos = *(*it)->getPosition();
+			if( pos.x >= region->lo.x && pos.x <= region->hi.x &&
+				pos.y >= region->lo.y && pos.y <= region->hi.y &&
+					pos.z >= region->lo.z && pos.z <= region->hi.z )
+			{
+				(*userFunc)( (*it), userData );
+			}
+			else
+			{
+				it = m_drawablesList.erase(it);
+				continue;
+			}
+			++it;
+		}
+
+		std::list< Drawable* > newDrawables = ThePartitionManager->getDrawablesInRegionEfficient();
+
+		if(!newDrawables.empty())
+		{
+			for( std::list< Drawable* >::const_iterator it_new = newDrawables.begin(); it_new != newDrawables.end(); ++it_new )
+			{
+				Coord3D pos_new = *(*it_new)->getPosition();
+				if( pos_new.x >= region->lo.x && pos_new.x <= region->hi.x &&
+					pos_new.y >= region->lo.y && pos_new.y <= region->hi.y &&
+						pos_new.z >= region->lo.z && pos_new.z <= region->hi.z )
+				{
+					addDrawableToEfficientList(*it_new);
+					(*userFunc)( (*it_new), userData );
+				}
+			}
+		}
+	}
+	else if(region == NULL || ThePartitionManager->hasNoOffset() || 
+	    ( !TheGlobalData->m_usePartitionManagerToIterateDrawables || TheGlobalData->m_usePartitionManagerToIterateDrawablesOnlySelect ) )
 	{
 		Drawable *draw, *nextDrawable;
 
@@ -805,6 +849,8 @@ void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr u
 				pos.y >= region->lo.y && pos.y <= region->hi.y &&
 					pos.z >= region->lo.z && pos.z <= region->hi.z) )
 			{
+				if(TheGlobalData->m_useEfficientDrawableScheme)
+					addDrawableToEfficientList(draw);
 				(*userFunc)( draw, userData );
 			}
 		}
@@ -821,9 +867,41 @@ void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr u
 				pos.y >= region->lo.y && pos.y <= region->hi.y &&
 					pos.z >= region->lo.z && pos.z <= region->hi.z )
 			{
+				if(TheGlobalData->m_useEfficientDrawableScheme)
+					addDrawableToEfficientList(*it);
 				(*userFunc)( (*it), userData );
 			}
 		}
+	}
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * Inform the Client to add this Unit to the Efficient Drawable Lisst
+ */
+void GameClient::informClientNewDrawable(Drawable *draw)
+{
+	// sanity
+	if( draw == NULL )
+		return;
+
+	// Efficient drawing scheme is not on
+	// Checked on the Thing.cpp
+	//if(!TheGlobalData->m_useEfficientDrawableScheme)
+	//	return;
+
+	// Only inform New Drawable if the drawables are checked at least once.
+	if(m_drawablesList.empty())
+		return;
+
+	addDrawableToEfficientList(draw);
+}
+
+void GameClient::addDrawableToEfficientList(Drawable *draw)
+{
+	std::list< Drawable* >::iterator it = std::find(m_drawablesList.begin(), m_drawablesList.end(), draw);
+	if (it == m_drawablesList.end())
+	{
+		m_drawablesList.push_back( draw );
 	}
 }
 

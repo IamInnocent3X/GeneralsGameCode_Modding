@@ -2970,9 +2970,19 @@ void Drawable::draw( View *view )
 
 	applyPhysicsXform(&transformMtx);
 
-	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	if(TheGlobalData->m_useEfficientDrawableScheme)
 	{
-		(*dm)->doDrawModule(&transformMtx);
+		for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
+		{
+			(*dm)->doDrawModule(&transformMtx);
+		}
+	}
+	else
+	{
+		for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+		{
+			(*dm)->doDrawModule(&transformMtx);
+		}
 	}
 }
 
@@ -4469,11 +4479,23 @@ DrawModule** Drawable::getDrawModules()
 		}
 		else
 		{
-			for (DrawModule** dm2 = dm; *dm2; ++dm2)
+			if(TheGlobalData->m_useEfficientDrawableScheme)
 			{
-				ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
-				if (di)
-					di->replaceModelConditionState( m_conditionState );
+				for (DrawModule** dm2 = dm; dm2 != nullptr && *dm2; ++dm2)
+				{
+					ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
+					if (di)
+						di->replaceModelConditionState( m_conditionState );
+				}
+			}
+			else
+			{
+				for (DrawModule** dm2 = dm; *dm2; ++dm2)
+				{
+					ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
+					if (di)
+						di->replaceModelConditionState( m_conditionState );
+				}
 			}
 			m_isModelDirty = false;
 		}

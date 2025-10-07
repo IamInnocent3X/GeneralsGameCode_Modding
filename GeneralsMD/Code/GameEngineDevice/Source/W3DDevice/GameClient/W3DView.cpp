@@ -181,6 +181,7 @@ W3DView::W3DView()
 	m_shakerAngles.X =0.0f;							// Proper camera shake generator & sources
 	m_shakerAngles.Y =0.0f;
 	m_shakerAngles.Z =0.0f;
+	m_updateEfficient = FALSE;
 
 }  // end W3DView
 
@@ -1038,6 +1039,12 @@ Bool W3DView::updateCameraMovements()
 {
 	Bool didUpdate = false;
 
+	if(TheGlobalData->m_useEfficientDrawableScheme && 
+		(m_doingZoomCamera || m_doingPitchCamera || m_doingRotateCamera || m_doingMoveCameraOnWaypointPath || m_doingScriptedCameraLock || m_previousLookAtPosition != *getPosition()))
+	{
+		m_updateEfficient = TRUE;
+	}
+
 	if (m_doingZoomCamera)
 	{
 		zoomCameraOneFrame();
@@ -1239,6 +1246,10 @@ void W3DView::update(void)
 					}
 				}
 				if (!(TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript()) && !TheGameLogic->isGamePaused()) {
+					if(TheGlobalData->m_useEfficientDrawableScheme && m_previousLookAtPosition != *getPosition())
+					{
+						m_updateEfficient = TRUE;
+					}
 					m_previousLookAtPosition = *getPosition();
 				}
 				setPosition(&curpos);
@@ -1388,8 +1399,10 @@ void W3DView::update(void)
 	// render all of the visible Drawables
 	/// @todo this needs to use a real region partition or something
 	//// IamInnocent - Attempted usage to register regions and drawables
-	if (WW3D::Get_Frame_Time())	//make sure some time actually elapsed
+	if (WW3D::Get_Frame_Time() || m_updateEfficient)	//make sure some time actually elapsed
 		TheGameClient->iterateDrawablesInRegion( &axisAlignedRegion, drawDrawable, this );
+
+	m_updateEfficient = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------

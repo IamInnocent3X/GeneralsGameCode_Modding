@@ -1558,6 +1558,7 @@ public:
 	void restoreFoggedCells(const ShroudStatusStoreRestore &inPartitionStore, Bool restoreToFog);
 
 	std::list<Drawable*> getDrawablesInRegion( IRegion2D *region2D );
+	std::list<Drawable*> getDrawablesInRegionEfficient();
 	inline Bool hasNoOffset() const { return m_radiusVec.empty(); }
 };  // end class PartitionManager
 

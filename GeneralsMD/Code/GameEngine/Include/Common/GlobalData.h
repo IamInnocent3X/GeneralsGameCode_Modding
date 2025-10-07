@@ -607,6 +607,8 @@ public:
 	Bool m_drawFullMap;
 
 	Bool m_usePartitionManagerToIterateDrawables;
+	Bool m_usePartitionManagerToIterateDrawablesOnlySelect;
+	Bool m_useEfficientDrawableScheme;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

@@ -155,6 +155,9 @@ public:
 	void incrementRenderedObjectCount() { m_renderedObjectCount++; }
 	virtual void notifyTerrainObjectMoved(Object *obj) = 0;
 
+	void informClientNewDrawable(Drawable *draw);
+	void addDrawableToEfficientList(Drawable *draw);
+
 
 protected:
 
@@ -213,6 +216,8 @@ private:
 	typedef std::list< Drawable* > TextBearingDrawableList;
 	typedef TextBearingDrawableList::iterator TextBearingDrawableListIterator;
 	TextBearingDrawableList m_textBearingDrawableList;	///< the drawables that have registered here during drawablepostdraw
+
+	std::list< Drawable* > m_drawablesList;
 };
 
 //Kris: Try not to use this if possible. In every case I found in the code base, the status was always Drawable::SELECTED.
