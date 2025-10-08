@@ -659,6 +659,7 @@ protected:
 
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
 	void updateHiddenStatus();
+	Bool checkDrawModuleNullptr(DrawModule** dm);
 
 private:
 

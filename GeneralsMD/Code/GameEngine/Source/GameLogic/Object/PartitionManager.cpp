@@ -3515,7 +3515,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 #ifdef FASTER_GCO
 
 	Int maxRadius = m_maxGcoRadius;
-	Real maxDist = hiWorld.x - loWorld.x > hiWorld.y - loWorld.y ? hiWorld.x - loWorld.x : hiWorld.y - loWorld.y;
+	Real maxDist = hiWorld.x - loWorld.x > loWorld.y - hiWorld.y ? hiWorld.x - loWorld.x : loWorld.y - hiWorld.y;
 	if (maxDist < HUGE_DIST)
 	{
 		// don't go outwards any farther than necessary.
@@ -3670,6 +3670,9 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 	worldToCell(loWorld.x, loWorld.y, &loCellCenterX, &loCellCenterY);
 	worldToCell(hiWorld.x, hiWorld.y, &hiCellCenterX, &hiCellCenterY);
 
+	// Prevents scanning the border of the edge that may cause lags
+	hiCellCenterY++;
+
   for (Int direction = 0; direction < 2; direction++)
   {
 		Int curCell, endCell;
@@ -3740,7 +3743,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 				static Int theIterFlag = 1;	// nonzero, thanks
 				++theIterFlag;
 
-				for (Int curRadius = 0; curRadius <= 1; ++curRadius)
+				for (Int curRadius = 0; curRadius <= 2; ++curRadius)
 				{
 					const OffsetVec& offsets = m_radiusVec[curRadius];
 						if (offsets.empty())

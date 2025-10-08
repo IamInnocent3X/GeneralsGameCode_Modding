@@ -2448,6 +2448,9 @@ void W3DView::lookAt( const Coord3D *o )
 
 	setCameraTransform();
 
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+		TheGameClient->clearEfficientDrawablesList();
+
 }
 
 //-------------------------------------------------------------------------------------------------

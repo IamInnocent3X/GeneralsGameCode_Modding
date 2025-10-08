@@ -2970,20 +2970,12 @@ void Drawable::draw( View *view )
 
 	applyPhysicsXform(&transformMtx);
 
-	if(TheGlobalData->m_useEfficientDrawableScheme)
+	for (DrawModule** dm = getDrawModules(); checkDrawModuleNullptr(dm) && *dm; ++dm)
 	{
-		for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
-		{
-			(*dm)->doDrawModule(&transformMtx);
-		}
+		(*dm)->doDrawModule(&transformMtx);
 	}
-	else
-	{
-		for (DrawModule** dm = getDrawModules(); *dm; ++dm)
-		{
-			(*dm)->doDrawModule(&transformMtx);
-		}
-	}
+	//(!TheGlobalData->m_useEfficientDrawableScheme || dm != nullptr)
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -4479,23 +4471,11 @@ DrawModule** Drawable::getDrawModules()
 		}
 		else
 		{
-			if(TheGlobalData->m_useEfficientDrawableScheme)
+			for (DrawModule** dm2 = dm; checkDrawModuleNullptr(dm2) && *dm2; ++dm2)
 			{
-				for (DrawModule** dm2 = dm; dm2 != nullptr && *dm2; ++dm2)
-				{
-					ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
-					if (di)
-						di->replaceModelConditionState( m_conditionState );
-				}
-			}
-			else
-			{
-				for (DrawModule** dm2 = dm; *dm2; ++dm2)
-				{
-					ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
-					if (di)
-						di->replaceModelConditionState( m_conditionState );
-				}
+				ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
+				if (di)
+					di->replaceModelConditionState( m_conditionState );
 			}
 			m_isModelDirty = false;
 		}
@@ -4532,6 +4512,20 @@ DrawModule const** Drawable::getDrawModules() const
 	}
 #endif
 	return dm;
+}
+
+Bool Drawable::checkDrawModuleNullptr(DrawModule** dm)
+{
+	if(!TheGlobalData->m_useEfficientDrawableScheme)
+		return TRUE;
+
+	if(dm == nullptr)
+	{
+		//TheGameClient->removeDrawableFromEfficientList(this);
+		//TheGameClient->clearEfficientDrawablesList();
+		return FALSE;
+	}
+	return TRUE;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -157,6 +157,8 @@ public:
 
 	void informClientNewDrawable(Drawable *draw);
 	void addDrawableToEfficientList(Drawable *draw);
+	void removeDrawableFromEfficientList(Drawable *draw);
+	inline void clearEfficientDrawablesList() { m_drawablesListMarkedForClear = TRUE; }
 
 
 protected:
@@ -218,6 +220,7 @@ private:
 	TextBearingDrawableList m_textBearingDrawableList;	///< the drawables that have registered here during drawablepostdraw
 
 	std::list< Drawable* > m_drawablesList;
+	Bool m_drawablesListMarkedForClear;
 };
 
 //Kris: Try not to use this if possible. In every case I found in the code base, the status was always Drawable::SELECTED.

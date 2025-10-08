@@ -114,6 +114,7 @@ GameClient::GameClient()
 	TheDrawGroupInfo = new DrawGroupInfo;
 
 	m_drawablesList.clear();
+	m_drawablesListMarkedForClear = FALSE;
 }
 
 //std::vector<std::string>	preloadTextureNamesGlobalHack;
@@ -137,6 +138,8 @@ GameClient::~GameClient()
 	m_drawableTOC.clear();
 
 	m_drawablesList.clear();
+
+	m_drawablesListMarkedForClear = FALSE;
 
 	//DEBUG_LOG(("Preloaded texture files ------------------------------------------"));
 	//for (Int oog=0; oog<preloadTextureNamesGlobalHack2.size(); ++oog)
@@ -484,6 +487,8 @@ void GameClient::reset( void )
 
 	m_drawablesList.clear();
 
+	m_drawablesListMarkedForClear = FALSE;
+
 	// TheSuperHackers @fix Mauller 13/04/2025 Reset the drawable id so it does not keep growing over the lifetime of the game.
 	m_nextDrawableID = (DrawableID)1;
 
@@ -797,6 +802,12 @@ void GameClient::updateHeadless()
  */
 void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr userFunc, void *userData )
 {
+	if(m_drawablesListMarkedForClear)
+	{
+		m_drawablesList.clear();
+		m_drawablesListMarkedForClear = FALSE;
+	}
+	
 	if(region != NULL && TheGlobalData->m_useEfficientDrawableScheme && !m_drawablesList.empty())
 	{
 		//IamInnocent - Attempted to use an Efficient Implementation of PartitionManager code to use WorldCell for Finding Drawables - 7/10/2025
@@ -902,6 +913,15 @@ void GameClient::addDrawableToEfficientList(Drawable *draw)
 	if (it == m_drawablesList.end())
 	{
 		m_drawablesList.push_back( draw );
+	}
+}
+
+void GameClient::removeDrawableFromEfficientList(Drawable *draw)
+{
+	std::list< Drawable* >::iterator it = std::find(m_drawablesList.begin(), m_drawablesList.end(), draw);
+	if (it != m_drawablesList.end())
+	{
+		m_drawablesList.erase(it);
 	}
 }
 

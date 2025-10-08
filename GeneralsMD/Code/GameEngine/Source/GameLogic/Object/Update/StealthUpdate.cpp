@@ -802,6 +802,12 @@ UpdateSleepTime StealthUpdate::update( void )
 		}
 
 		self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
+
+		if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
+		{
+			// Redraw everything as Stealth Detection bugs out how existing Drawables work
+			TheGameClient->clearEfficientDrawablesList();
+		}
 	}
 	else
 	{
