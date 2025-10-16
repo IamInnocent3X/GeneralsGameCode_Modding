@@ -358,6 +358,11 @@ public:
 	virtual Bool isClearingMines() const;
 	virtual Bool isTaxiingToParking() const { return FALSE; } //only applies to jets interacting with runways.
 
+	virtual void doIdleUpdate() { }
+	virtual void doStateChange() { }
+	virtual void doStatusUpdate() { }
+	virtual void doUpgradeUpdate() { }
+
 	//Definition of busy -- when explicitly in the busy state. Moving or attacking is not considered busy!
 	virtual Bool isBusy() const;
 

@@ -147,6 +147,7 @@ UpdateSleepTime AutoDepositUpdate::update( void )
 {
 	const AutoDepositUpdateModuleData *modData = getAutoDepositUpdateModuleData();
 /// @todo srj use SLEEPY_UPDATE here
+//// IamInnocent 13/10/2025 - Done.
 	if( TheGameLogic->getFrame() >= m_depositOnFrame)
 	{
 		if (!m_initialized) {
@@ -212,7 +213,11 @@ UpdateSleepTime AutoDepositUpdate::update( void )
 		}
 	}
 
-	return UPDATE_SLEEP_NONE;
+	if(m_depositOnFrame > TheGameLogic->getFrame())
+		return UPDATE_SLEEP(m_depositOnFrame - TheGameLogic->getFrame());
+	else
+		return UPDATE_SLEEP_FOREVER;
+	//return UPDATE_SLEEP_NONE;
 }
 
 //------------------------------------------------------------------------------------------------

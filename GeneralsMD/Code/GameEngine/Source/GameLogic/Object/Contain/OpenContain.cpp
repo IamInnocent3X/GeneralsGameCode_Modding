@@ -50,6 +50,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/OpenContain.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -144,6 +145,7 @@ OpenContain::OpenContain( Thing *thing, const ModuleData* moduleData ) : UpdateM
 	m_noFirePointsInArt = false;
 	m_whichExitPath = 1;
 	m_loadSoundsEnabled = TRUE;
+	m_containMass = 0.0f;
 
   m_passengerAllowedToFire = getOpenContainModuleData()->m_passengersAllowedToFire;
   // overridable by setPass...()  in the parent interface (for use by upgrade module)
@@ -360,6 +362,7 @@ void OpenContain::addToContain( Object *rider )
 	if( getObject()->getContain() )
 	{
 		getObject()->getContain()->onContaining( rider, wasSelected );
+		getObject()->getContain()->setContainedItemsMass(0.0f);
 		getObject()->clearInvSqrtMass();
 	}
 
@@ -374,6 +377,16 @@ void OpenContain::addToContain( Object *rider )
 	rider->onContainedBy( getObject() );
 
 	doLoadSound();
+
+	AIUpdateInterface *ai = getObject()->getAI();
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			atInterface->doAddMembers();
+		}
+	}
 
 }
 
@@ -693,6 +706,7 @@ void OpenContain::removeFromContainViaIterator( ContainedItemsList::iterator it,
 	if( getObject()->getContain() )
 	{
 		getObject()->getContain()->onRemoving( rider );
+		getObject()->getContain()->setContainedItemsMass(0.0f);
 		getObject()->clearInvSqrtMass();
 	}
 
@@ -791,6 +805,13 @@ void OpenContain::onRemoving( Object *rider)
 Real OpenContain::getContainedItemsMass() const
 {
 	/// @todo srj -- may want to cache this information.
+	////IamInnocent 13/10/2025 - Done.
+	if(m_containListSize == 0)
+		return 0.0f;
+
+	if(m_containMass)
+		return m_containMass;
+
 	Real mass = 0;
 	for(ContainedItemsList::const_iterator it = m_containList.begin(); it != m_containList.end(); ++it)
 	{
@@ -1807,6 +1828,9 @@ void OpenContain::xfer( Xfer *xfer )
 
 	// rally point exists
 	xfer->xferBool( &m_rallyPointExists );
+
+	// contained items mass
+	xfer->xferReal( &m_containMass );
 
 	// enter exit map info
 	UnsignedShort enterExitCount = m_objectEnterExitInfo.size();

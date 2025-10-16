@@ -90,6 +90,9 @@ public:
 
 	Real m_damagePercentageToUnit;
 	Bool m_destroyOnTargetDie;
+	Bool m_destroyOnHeal;
+	Bool m_removeOnHeal;
+	Bool m_leechExpFromObject;
 
 	CrateCollideModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);

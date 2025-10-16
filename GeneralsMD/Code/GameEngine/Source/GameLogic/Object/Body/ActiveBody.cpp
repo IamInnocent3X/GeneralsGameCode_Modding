@@ -1044,6 +1044,8 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 
 	if( !isKilled )
 	{
+		if(m_currentHealth < m_prevHealth)
+			obj->doAssaultTransportHealthUpdate();
 		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
 	}
 
@@ -1228,6 +1230,7 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 				d->onHealing( damageInfo );
 			}
 
+			obj->doAssaultTransportHealthUpdate();
 			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID);
 		}
 

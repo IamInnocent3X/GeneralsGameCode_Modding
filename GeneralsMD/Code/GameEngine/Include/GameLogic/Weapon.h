@@ -608,6 +608,8 @@ public:
 
 	Bool passRequirements (const Object *source) const;
 
+	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
+
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
 		const Object* projectile,

@@ -2769,6 +2769,82 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 		extra->appendBonuses(flags, bonus, customFlags);
 }
 
+//-------------------------------------------------------------------------------------------------
+void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const
+{
+	// Sanity
+	if(source == NULL)
+		return;
+
+	bonus.clear();
+	WeaponBonusConditionFlags flags = source->getWeaponBonusCondition();
+	ObjectCustomStatusType customFlags = source->getCustomWeaponBonusCondition();
+	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
+	flags |= extraBonusFlags;
+
+	if(!extraBonusCustomFlags.empty())
+	{
+		for( ObjectCustomStatusType::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
+		{
+			ObjectCustomStatusType::iterator it2 = customFlags.find(it->first);
+
+			if (it2 != customFlags.end()) 
+			{
+				if (it->second == 1)
+					it2->second = 1;
+			}
+			else 
+			{
+				if (it->second == 1)
+					customFlags[it->first] = 1;
+				else 
+					customFlags[it->first] = 0;
+			}
+		}
+	}
+	
+	if (source->getContainedBy())
+	{
+		// We may be able to add in our container's flags
+		const ContainModuleInterface *theirContain = source->getContainedBy()->getContain();
+		if( theirContain && theirContain->isWeaponBonusPassedToPassengers() )
+		{
+			flags |= theirContain->getWeaponBonusPassedToPassengers();
+
+			// CustomFlags
+			ObjectCustomStatusType unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
+
+			if(!unitCustomFlags.empty())
+			{
+				for( ObjectCustomStatusType::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
+				{
+					ObjectCustomStatusType::iterator it2 = customFlags.find(it->first);
+
+					if (it2 != customFlags.end()) 
+					{
+						if (it->second == 1)
+							it2->second = 1;
+					}
+					else 
+					{
+						if (it->second == 1)
+							customFlags[it->first] = 1;
+						else 
+							customFlags[it->first] = 0;
+					}
+				}
+			}
+		}
+	}
+
+	if (TheGlobalData->m_weaponBonusSet)
+		TheGlobalData->m_weaponBonusSet->appendBonuses(flags, bonus, customFlags);
+	const WeaponBonusSet* extra = getExtraBonus();
+	if (extra)
+		extra->appendBonuses(flags, bonus, customFlags);
+}
+
+//-------------------------------------------------------------------------------------------------
 void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
 {
 	if(!me || !victim)

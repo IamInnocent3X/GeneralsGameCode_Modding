@@ -471,6 +471,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_nextScorchMarkFrame = now;
 					m_damagePulsesMade = 0;
 					m_nextDamagePulseFrame = now;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			case LASERSTATUS_BORN:

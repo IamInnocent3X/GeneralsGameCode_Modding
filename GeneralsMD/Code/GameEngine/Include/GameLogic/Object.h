@@ -345,6 +345,7 @@ public:
 	// because we do this in a lot of places in the code and I want a convenient way to get thsi (CBD)
 	//
 	ProductionUpdateInterface* getProductionUpdateInterface( void );
+	const ProductionUpdateInterface* getProductionUpdateInterface( void ) const;
 
 	//
 	// Find us our dock update interface if we have one.  Again, this method exists simple
@@ -729,6 +730,12 @@ public:
 	void doObjectUpgradeChecks();
 	void doObjectStatusChecks();
 
+	void registerAssaultTransportID(ObjectID transportID);
+	void removeMeFromAssaultTransport();
+	void doAssaultTransportHealthUpdate();
+
+	inline ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;
@@ -964,6 +971,7 @@ private:
 	std::vector<ObjectID> 							m_equipAttackableObjIDs;
 	ObjectID										m_carbombConverterID;
 	ObjectID 										m_hijackerID;
+	mutable ObjectID 										m_assaultTransportID;
 
 };  // end class Object
 

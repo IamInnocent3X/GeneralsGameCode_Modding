@@ -68,12 +68,29 @@ void AssaultTransportAIUpdate::reset()
   m_attackMoveGoalPos.zero();
   m_designatedTarget = INVALID_ID;
 	m_state = IDLE;
-	m_framesRemaining = 0;
+	//m_framesRemaining = 0;
+	m_isAttackMove = FALSE;
+	m_isAttackObject = FALSE;
+	m_newOccupantsAreNewMembers = FALSE;
+	m_maxNumInTransport = 0;
+	m_maxNumAttacking = 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+void AssaultTransportAIUpdate::goalReset()
+{
+	for( int i = 0; i < m_currentMembers; i++ )
+	{
+		m_newMember[ i ] = FALSE;
+	}
+  m_attackMoveGoalPos.zero();
+  m_designatedTarget = INVALID_ID;
+  m_state = IDLE;
+  	//m_framesRemaining = 0;
 	m_isAttackMove = FALSE;
 	m_isAttackObject = FALSE;
 	m_newOccupantsAreNewMembers = FALSE;
 }
-
 //-------------------------------------------------------------------------------------------------
 AssaultTransportAIUpdate::~AssaultTransportAIUpdate( void )
 {
@@ -96,25 +113,49 @@ void AssaultTransportAIUpdate::aiDoCommand(const AICommandParms* parms)
 		{
 			case AICMD_ATTACKMOVE_TO_POSITION:
 				//Reset because we have been ordered to do something.
-				reset();
+				//reset();
+				// IamInnocent - Reworked for optimizing performance
+				goalReset();
 				m_attackMoveGoalPos = parms->m_pos;
 				m_isAttackMove = TRUE;
+				//IamInnocent - Added SleepyUpdates
+				setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 				break;
 			case AICMD_ATTACK_OBJECT:
 				//Reset because we have been ordered to do something.
-				reset();
+				//reset();
+				// IamInnocent - Reworked for optimizing performance
+				goalReset();
 				//m_designatedTarget = parms->m_obj ? parms->m_obj->getID() : INVALID_ID;
 				m_isAttackObject = TRUE;
+				//IamInnocent - Added SleepyUpdates
+				setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 				break;
 			case AICMD_IDLE:
 				m_designatedTarget = INVALID_ID;
 				//Order all outside members back inside!
 				retrieveMembers();
-				reset();
+				//reset();
+				// IamInnocent - Reworked for optimizing performance
+				goalReset();
+				break;
+			case AICMD_EVACUATE:
+				removeAllMembers();
+				//reset();
+				// IamInnocent - Reworked for optimizing performance
+				goalReset();
+				break;
+			case AICMD_EVACUATE_INSTANTLY:
+				removeAllMembers();
+				//reset();
+				// IamInnocent - Reworked for optimizing performance
+				goalReset();
 				break;
 			default:
 				//Reset because we have been ordered to do something we're not handling.
-				reset();
+				//reset();
+				// IamInnocent - Reworked for optimizing performance
+				goalReset();
 				break;
 		}
 	}
@@ -127,11 +168,6 @@ void AssaultTransportAIUpdate::aiDoCommand(const AICommandParms* parms)
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::beginAssault( const Object *designatedTarget ) const
 {
-	ContainModuleInterface *contain = getObject()->getContain();
-	if( contain && contain->isPassengerAllowedToFire())
-	{
-		return;
-	}
 	//The transport has determined it is in range to begin the assault (via weapon system).
 	//Now order the evacuation of healthy troops, and let the update handle moving them.
 	if( designatedTarget )
@@ -141,7 +177,7 @@ void AssaultTransportAIUpdate::beginAssault( const Object *designatedTarget ) co
 }
 
 //-------------------------------------------------------------------------------------------------
-void AssaultTransportAIUpdate::checkMembersList()
+/*void AssaultTransportAIUpdate::checkMembersList()
 {
 	if( m_currentMembers )
 	{
@@ -172,15 +208,127 @@ void AssaultTransportAIUpdate::checkMembersList()
 					//Generally only player commands allow this, so this flag allows AI commands to do the same.
 					//We need to turn this off though, because this ex-member is no longer under transport control.
 					ai->setAllowedToChase( FALSE );
+					if(ai->getLastCommandSource() != CMD_FROM_AI)
+						member->registerAssaultTransportID(INVALID_ID);
 				}
 				m_currentMembers--;
 			}
 		}
 	}
+}*/
+
+//-------------------------------------------------------------------------------------------------
+void AssaultTransportAIUpdate::removeMember( ObjectID passengerID )
+{
+	if( passengerID != INVALID_ID && m_currentMembers )
+	{
+		for( int i = 0; i < m_currentMembers; i++ )
+		{
+			if(passengerID != m_memberIDs[ i ])
+				continue;
+			
+			Object *member = TheGameLogic->findObjectByID( passengerID );
+			AIUpdateInterface *ai = member ? member->getAI() : NULL;
+			if( !member || member->isEffectivelyDead() || ai->getLastCommandSource() != CMD_FROM_AI )
+			{
+				// If we have not already removed it from Assaulting Member number count, remove it.
+				if(getAssaultTransportAIUpdateModuleData()->m_retreatWoundedMembersOnAssault && !m_memberHealing[ i ])
+				{
+					if(m_maxNumInTransport)
+						m_maxNumInTransport--;
+					if(m_maxNumAttacking)
+						m_maxNumAttacking--;
+				}
+
+				//Member is toast -- so remove him from our list!
+				if( m_currentMembers - 1 > i )
+				{
+					//Move the last slot to this slot to keep array contiguous.
+					m_memberIDs[ i ]			= m_memberIDs[ m_currentMembers - 1 ];
+					m_memberHealing[ i ]	= m_memberHealing[ m_currentMembers - 1 ];
+					m_newMember[ i ]			= m_newMember[ m_currentMembers - 1 ];
+				}
+				else
+				{
+					//Just clean out last slot.
+					m_memberIDs[ i ]			= INVALID_ID;
+					m_memberHealing[ i ]	= FALSE;
+					m_newMember[ i ]			= FALSE;
+				}
+				if( ai )
+				{
+					//Important! Members of our assault transport must be allowed to chase down designated enemies.
+					//Generally only player commands allow this, so this flag allows AI commands to do the same.
+					//We need to turn this off though, because this ex-member is no longer under transport control.
+					ai->setAllowedToChase( FALSE );
+				}
+				m_currentMembers--;
+			}
+			break;
+		}
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
-void AssaultTransportAIUpdate::addMember()
+void AssaultTransportAIUpdate::checkPassengerHealth( ObjectID passengerID )
+{
+	if( passengerID != INVALID_ID && m_currentMembers )
+	{
+		for( int i = 0; i < m_currentMembers; i++ )
+		{
+			if(passengerID != m_memberIDs[ i ])
+				continue;
+			
+			Object *member = TheGameLogic->findObjectByID( passengerID );
+			if( member )
+			{
+				Bool prevHealingStatus = m_memberHealing[ i ];
+				m_memberHealing[ i ] = isMemberWounded( member );
+				
+				// If I am previously not wounded, retreat me back to Assault Transport
+				if(m_memberHealing[ i ] && prevHealingStatus != m_memberHealing[ i ] && getAssaultTransportAIUpdateModuleData()->m_retreatWoundedMembersOnAssault)
+				{
+					AIUpdateInterface *ai = member->getAI();
+					if( ai && ai->getAIStateType() != AI_ENTER )
+					{
+						//Remove it from the attacking list
+						if(m_maxNumInTransport)
+							m_maxNumInTransport--;
+						if(m_maxNumAttacking)
+							m_maxNumAttacking--;
+
+						//Order wounded members back to get healed.
+						ai->aiEnter( getObject(), CMD_FROM_AI );
+					}
+				}
+			}
+			break;
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void AssaultTransportAIUpdate::removeAllMembers()
+{
+	if( m_currentMembers )
+	{
+		for( int i = 0; i < m_currentMembers; i++ )
+		{
+			Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
+			m_memberIDs[ i ]			= INVALID_ID;
+			m_memberHealing[ i ]	= FALSE;
+			m_newMember[ i ]			= FALSE;
+			if( member )
+			{
+				member->registerAssaultTransportID(INVALID_ID);
+			}
+		}
+		m_currentMembers = 0;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void AssaultTransportAIUpdate::addMembers()
 {
 	Object *transport = getObject();
 	ContainModuleInterface *contain = transport->getContain();
@@ -217,6 +365,10 @@ void AssaultTransportAIUpdate::addMember()
 			{
 				//Not in list, so add him!
 				m_memberIDs[ m_currentMembers ] = passenger->getID();
+
+				// Register the current transport to inform whenever it leaves its transport
+				passenger->registerAssaultTransportID(transport->getID());
+
 				if( passenger->getAI() )
 				{
 					//Important! Members of our assault transport must be allowed to chase down designated enemies.
@@ -225,40 +377,58 @@ void AssaultTransportAIUpdate::addMember()
 				}
 
 				//Check if the passenger is wounded below threshhold (if so make sure we heal him before ordering him to fight!)
-				if( isMemberWounded( passenger ) )
-				{
-					m_memberHealing[ m_currentMembers ] = TRUE;
-				}
-				if( m_newOccupantsAreNewMembers )
-				{
+				//if( isMemberWounded( passenger ) )
+				//{
+					m_memberHealing[ m_currentMembers ] = isMemberWounded( passenger ); //TRUE;
+				//}
+				//if( m_newOccupantsAreNewMembers )
+				//{
 					//New members won't eject out until a new attack order is issued.
-					m_newMember[ m_currentMembers ] = TRUE;
-				}
+					m_newMember[ m_currentMembers ] = m_newOccupantsAreNewMembers; //TRUE;
+				//}
 
 				m_currentMembers++;
 			}
 		}
 		m_newOccupantsAreNewMembers = TRUE;
 	}
+
+	m_doAddMember = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::onAttack()
 {
 	Object *transport = getObject();
-	Coord3D fighterCentroidPos;
-	UnsignedInt fightingMembers = 0;
-	fighterCentroidPos.zero();
+
+	// IamInnocent - Added compatibility with PassengersAllowedToFire
+	ContainModuleInterface *contain = transport->getContain();
+	if( contain && contain->isPassengerAllowedToFire())
+	{
+		return;
+	}
+
+	//Coord3D fighterCentroidPos;
+	//UnsignedInt fightingMembers = 0;
+	//fighterCentroidPos.zero();
 
 	//If we're already in the process, reacquire the designated target again... see if
 	//it's still alive.
 	Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
-	if( designatedTarget && designatedTarget->isEffectivelyDead() )
+	//if( designatedTarget && designatedTarget->isEffectivelyDead() )
+	//{
+	//	designatedTarget = NULL;
+	//}
+
+	if( designatedTarget && !designatedTarget->isEffectivelyDead() )
 	{
-		designatedTarget = NULL;
-	}
-	if( designatedTarget )
-	{
+		// If we are assaulting, do nothing.
+		if(m_state == ASSAULTING)
+		{
+			m_isAttackObject = TRUE;
+			return;
+		}
+		
 		//Look for members not currently attacking this target.
 		for( int i = 0; i < m_currentMembers; i++ )
 		{
@@ -268,12 +438,14 @@ void AssaultTransportAIUpdate::onAttack()
 			if( member && ai )
 			{
 				Bool contained = member->isContained();
-				Bool wounded = isMemberWounded( member );
+				Bool wounded = m_memberHealing[ m_currentMembers ]; //isMemberWounded( member );
 				if( contained && isMemberHealthy( member ) && !m_newMember[ i ] )
 				{
 					//This contained member is healthy so order him to exit to start fighting!
 					//New members are exempt!
 					ai->aiExit( transport, CMD_FROM_AI );
+					if(i+1>m_maxNumInTransport)
+						m_maxNumInTransport = i+1;
 				}
 				if( !contained )
 				{
@@ -288,24 +460,37 @@ void AssaultTransportAIUpdate::onAttack()
 					else
 					{
 						//Increment the number of fighters and their position.
-						fighterCentroidPos.add( member->getPosition() );
-						fightingMembers++;
+						//fighterCentroidPos.add( member->getPosition() );
+						//fightingMembers++;
 
 						if( !ai->isMoving() )
 						{
-							if( ai->getGoalObject() != designatedTarget )
+							if( ai->getGoalObject() != designatedTarget || !ai->isAttacking() )
 							{
 								//Okay, this dude is outside and waiting... order him to attack the designated target
 								ai->aiAttackObject( designatedTarget, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
+								m_isAttackObject = TRUE;
 							}
+							else if(i+1>m_maxNumAttacking)
+								m_maxNumAttacking = i+1;
 						}
 					}
 				}
 			}
 		}
+		if(m_maxNumAttacking && m_maxNumAttacking >= m_maxNumInTransport)
+		{
+			//m_maxNumInTransport = 0;
+			//m_maxNumAttacking = 0;
+			m_state = ASSAULTING;
+		}
 	}
 	else
 	{
+		m_state = IDLE;
+		m_maxNumInTransport = 0;
+		m_maxNumAttacking = 0;
+
 		if( m_isAttackMove && getAIStateType() != AI_ATTACK_MOVE_TO )
 		{
 			//Continue to move towards the attackmove area.
@@ -318,11 +503,12 @@ void AssaultTransportAIUpdate::onAttack()
 	}
 
 	//Keep near the troops.
+	/*
 	if( !m_framesRemaining )
 	{
-		if( !isMoving() && fightingMembers && designatedTarget )
+		if( !isMoving() && fightingMembers && designatedTarget && !designatedTarget->isEffectivelyDead() )
 		{
-			m_framesRemaining = 45;
+			m_framesRemaining = TheGameLogic->getFrame() + 45;
 
 			//Get centriod pos now that we know the number of fighting members.
 			Real scale = 1.0f / (Real)fightingMembers;
@@ -342,7 +528,7 @@ void AssaultTransportAIUpdate::onAttack()
 			transportGoalPos.set( &designatedTargetPos );
 			transportGoalPos.add( &vector );
 
-			Real distanceSqrd = ThePartitionManager->getDistanceSquared( transport, &transportGoalPos, FROM_CENTER_2D );
+			//Real distanceSqrd = ThePartitionManager->getDistanceSquared( transport, &transportGoalPos, FROM_CENTER_2D );
 			if( distanceSqrd > 40.0f * 40.0f )
 			{
 				//Order the transport to move to the safer position
@@ -350,15 +536,12 @@ void AssaultTransportAIUpdate::onAttack()
 			}
 		}
 	}
-	else
-	{
-		m_framesRemaining--;
-	}
-	if( designatedTarget && !isMoving() )
+	if( designatedTarget && !designatedTarget->isEffectivelyDead() && !isMoving() )
 	{
 		//Order the transport to face the designated target!
 		//aiFaceObject( designatedTarget, CMD_FROM_AI );
 	}
+	*/
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -368,10 +551,11 @@ Bool AssaultTransportAIUpdate::isIdle() const
 }
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime calcSleepTime()
-{
-	return UPDATE_SLEEP_NONE;
-}
+// IamInnocent - Unused
+//UpdateSleepTime calcSleepTime()
+//{
+//	return UPDATE_SLEEP_NONE;
+//}
 
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime AssaultTransportAIUpdate::update( void )
@@ -421,8 +605,9 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 			}
 		}
 	}*/
-	checkMembersList();
-	addMember();
+	//checkMembersList();
+	if(m_doAddMember)
+		addMembers();
 
 	//Now add any potentially new members to the group.
 	/*
@@ -472,6 +657,10 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 				{
 					m_memberHealing[ m_currentMembers ] = TRUE;
 				}
+				else
+				{
+					m_memberHealing[ m_currentMembers ] = FALSE;
+				}
 				if( m_newOccupantsAreNewMembers )
 				{
 					//New members won't eject out until a new attack order is issued.
@@ -487,8 +676,10 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 	if( isAttackPointless() )
 	{
 		aiIdle( CMD_FROM_AI );
-		return UPDATE_SLEEP_NONE;
+		//return UPDATE_SLEEP_NONE;
+		return AIUpdateInterface::update();
 	}
+
 	onAttack();
 
 	//Keep track of the average position of all combat units assigned to me.
@@ -514,7 +705,7 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 			if( member && ai )
 			{
 				Bool contained = member->isContained();
-				Bool wounded = isMemberWounded( member );
+				Bool wounded = m_memberHealing[ m_currentMembers ]; //isMemberWounded( member );
 				if( contained && isMemberHealthy( member ) && !m_newMember[ i ] )
 				{
 					//This contained member is healthy so order him to exit to start fighting!
@@ -605,13 +796,31 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 	{
 		//Order the transport to face the designated target!
 		//aiFaceObject( designatedTarget, CMD_FROM_AI );
-	}*/
+	}
+	*/
 	
 
-	/*UpdateSleepTime ret =*/ AIUpdateInterface::update();
-	//return (mine < ret) ? mine : ret;
+	UpdateSleepTime ret = AIUpdateInterface::update();
+	/*
+	UnsignedInt framesRemaining = m_framesRemaining ? m_framesRemaining - TheGameLogic->getFrame() : 0;
+
+	DEBUG_ASSERTCRASH(framesRemaining >= 0, ("m_framesRemaining Wake Up too late"));
+
+	if(m_framesRemaining && framesRemaining <= 1)
+	{
+		m_framesRemaining = 0;
+		framesRemaining = 1;
+	}
+
+	ret = (framesRemaining && framesRemaining < UnsignedInt(ret)) ? UPDATE_SLEEP(framesRemaining) : ret;
+	*/
+	if(m_isAttackObject)
+		return UPDATE_SLEEP_NONE;
+	else
+		return ret;
 	/// @todo srj -- someday, make sleepy. for now, must not sleep.
-	return UPDATE_SLEEP_NONE;
+	////return UPDATE_SLEEP_NONE;
+	///// IamInnocent 11/10/2025 - Made Sleepy
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -620,6 +829,7 @@ Bool AssaultTransportAIUpdate::isAttackPointless() const
 	//If all members are new members (thus can't attack), and the transport itself
 	//is still attacking, stop!
 	const Object *transport = getObject();
+	// IamInnocent - Added compatibility with PassengersAllowedToFire
 	ContainModuleInterface *contain = transport->getContain();
 	if( contain && contain->isPassengerAllowedToFire())
 	{
@@ -637,8 +847,6 @@ Bool AssaultTransportAIUpdate::isAttackPointless() const
 		}
 
 		//We are trying to attack, but can't because all our members are new.
-		// IamInnocent - Revamp sleepy updates
-		//aiIdle( CMD_FROM_AI );
 		return TRUE;
 	}
 
@@ -905,9 +1113,12 @@ void AssaultTransportAIUpdate::xfer( Xfer *xfer )
 	xfer->xferInt( &state );
 	m_state = (AssaultStateTypes)state;
 
-	xfer->xferUnsignedInt( &m_framesRemaining );
+	//xfer->xferUnsignedInt( &m_framesRemaining );
 	xfer->xferBool( &m_isAttackMove );
 	xfer->xferBool( &m_isAttackObject );
+
+	xfer->xferInt( &m_maxNumInTransport );
+	xfer->xferInt( &m_maxNumAttacking );
 
 }  // end xfer
 

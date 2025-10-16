@@ -52,6 +52,7 @@ public:
 	ConvertToHijackedVehicleCrateCollideModuleData()
 	{
 		m_rangeOfEffect = 0;
+		m_leechExpFromObject = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)

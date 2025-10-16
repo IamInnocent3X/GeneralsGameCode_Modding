@@ -65,6 +65,7 @@
 #include "GameLogic/Locomotor.h"
 
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/AutoHealBehavior.h"
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -567,6 +568,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_carbombConverterID = INVALID_ID;
 	m_hijackerID = INVALID_ID;
+
+	m_assaultTransportID = INVALID_ID;
 
 	m_parasiteCollideActive = FALSE;
 
@@ -5122,6 +5125,8 @@ void Object::xfer( Xfer *xfer )
 	xfer->xferObjectID( &m_carbombConverterID );
 	xfer->xferObjectID( &m_hijackerID );
 
+	xfer->xferObjectID( &m_assaultTransportID );
+
 	if ( version >= 3 )
 	{
 		xfer->xferObjectID( &m_soleHealingBenefactorID );
@@ -5295,6 +5300,12 @@ void Object::doObjectUpgradeChecks()
 	{
 		cmod->doUpgradeChecks();
 	}
+
+	//Applicable for DeployStyleAIUpdate Only
+	if( getAIUpdateInterface() )
+	{
+		getAIUpdateInterface()->doUpgradeUpdate();
+	}
 }
 
 void Object::doObjectStatusChecks()
@@ -5311,6 +5322,13 @@ void Object::doObjectStatusChecks()
 	{
 		cmod->doStatusChecks();
 	}
+
+	//AI Sleepy Updates
+	if( getAIUpdateInterface() )
+	{
+		getAIUpdateInterface()->doStatusUpdate();
+	}
+	
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5452,6 +5470,13 @@ void Object::onDie( DamageInfo *damageInfo )
 				ai->transferAttack( getID(), hole->getID() );
 			}
 		}
+	}
+
+	// Assault Transport Matters
+	removeMeFromAssaultTransport();
+	if( getAI() && getAI()->getAssaultTransportAIInterface() )
+	{
+		getAI()->update();
 	}
 
 }
@@ -6917,6 +6942,24 @@ ProductionUpdateInterface* Object::getProductionUpdateInterface( void )
 
 }  // end getProductionUpdateInterface
 
+const ProductionUpdateInterface* Object::getProductionUpdateInterface( void ) const
+{
+	ProductionUpdateInterface *pui;
+
+	// tell our update modules that we intend to do this special power.
+	for( BehaviorModule** u = m_behaviors; *u; ++u )
+	{
+
+		pui = (*u)->getProductionUpdateInterface();
+		if( pui )
+			return pui;
+
+	}  // end for
+
+	return NULL;
+
+}  // end getProductionUpdateInterface
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 DockUpdateInterface *Object::getDockUpdateInterface( void )
@@ -7777,6 +7820,51 @@ Bool Object::checkToSquishHijack(const Object *other) const
 
 	return true;
 
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::registerAssaultTransportID(ObjectID transportID)
+{
+	m_assaultTransportID = transportID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::removeMeFromAssaultTransport()
+{
+	if(m_assaultTransportID == INVALID_ID)
+		return;
+
+	Object *transport = TheGameLogic->findObjectByID( m_assaultTransportID );
+	// Don't count dead assault transports, they give final orders
+	AIUpdateInterface *ai = transport && !transport->isEffectivelyDead() ? transport->getAI() : NULL;
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			atInterface->removeMember( getID() );
+		}
+	}
+	m_assaultTransportID = INVALID_ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doAssaultTransportHealthUpdate()
+{
+	if(m_assaultTransportID == INVALID_ID)
+		return;
+
+	Object *transport = TheGameLogic->findObjectByID( m_assaultTransportID );
+	// Don't count dead assault transports, they give final orders
+	AIUpdateInterface *ai = transport && !transport->isEffectivelyDead() ? transport->getAI() : NULL;
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			atInterface->checkPassengerHealth( getID() );
+		}
+	}
 }
 
 //=============================================================================

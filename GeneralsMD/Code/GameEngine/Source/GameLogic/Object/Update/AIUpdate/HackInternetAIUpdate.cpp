@@ -114,10 +114,11 @@ UpdateSleepTime HackInternetAIUpdate::update( void )
 		}
 	}
 
-	/*UpdateSleepTime ret =*/ AIUpdateInterface::update();
+	/*UpdateSleepTime ret =*/ return AIUpdateInterface::update();
 	//return (mine < ret) ? mine : ret;
 	/// @todo srj -- someday, make sleepy. for now, must not sleep.
-	return UPDATE_SLEEP_NONE;
+	////return UPDATE_SLEEP_NONE;
+	///// IamInnocent 11/10/2025 - Made Sleepy
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -141,6 +142,10 @@ void HackInternetAIUpdate::aiDoCommand(const AICommandParms* parms)
 	//then
 	if( currentState == HACK_INTERNET || currentState == PACKING )
 	{
+		// IamInnocent - Added SleepyUpdates
+		if(isIdle())
+			wakeUpNow();
+		
 		// nuke any existing pending cmd
 		m_pendingCommand.store(*parms);
 		m_hasPendingCommand = true;

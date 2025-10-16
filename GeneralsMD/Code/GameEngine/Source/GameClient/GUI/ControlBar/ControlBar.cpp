@@ -621,7 +621,9 @@ Bool CommandButton::isValidToUseOn(const Object *sourceObj, const Object *target
 	if (m_upgradeTemplate) {
 		// @todo: Make a const version of pui. We're not altering the production queue, so this const-cast
 		// is okay.
-		ProductionUpdateInterface *pui = const_cast<Object*>(sourceObj)->getProductionUpdateInterface();
+		//ProductionUpdateInterface *pui = const_cast<Object*>(sourceObj)->getProductionUpdateInterface();
+		/// IamInnocent - Done this misc
+		const ProductionUpdateInterface *pui = sourceObj->getProductionUpdateInterface();
 		if (pui) {
 			const ProductionEntry *pe = pui->firstProduction();
 			while (pe) {

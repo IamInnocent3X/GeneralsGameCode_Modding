@@ -1127,7 +1127,11 @@ Real PhysicsBehavior::getMass() const
 	Real mass = m_mass;
 	ContainModuleInterface* contain = getObject()->getContain();
 	if (contain)
-		mass += contain->getContainedItemsMass();
+	{
+		Real cmass = contain->getContainedItemsMass();
+		contain->setContainedItemsMass(cmass);
+		mass += cmass;
+	}
 	return mass;
 }
 

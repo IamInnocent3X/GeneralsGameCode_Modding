@@ -226,6 +226,9 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
 
+		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
+		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
+		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
 		hijackerUpdate->setDestroyOnTargetDie( data->m_destroyOnTargetDie );
 		hijackerUpdate->setPercentDamage( data->m_damagePercentageToUnit );
 		hijackerUpdate->setStatusToRemove( data->m_statusToRemove );

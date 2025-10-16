@@ -214,6 +214,7 @@ public:
 	virtual UpdateSleepTime update();
 
 	virtual Bool isIdle() const;
+	virtual void doIdleUpdate() { if(m_hasPendingCommand) wakeUpNow(); }
 
 	virtual HackInternetAIInterface* getHackInternetAIInterface() { return this; }
 	virtual const HackInternetAIInterface* getHackInternetAIInterface() const { return this; }

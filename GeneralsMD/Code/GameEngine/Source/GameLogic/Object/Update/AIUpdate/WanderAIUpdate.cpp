@@ -62,10 +62,11 @@ UpdateSleepTime WanderAIUpdate::update( void )
 	}
 
 	// extend
-	/*UpdateSleepTime ret =*/ AIUpdateInterface::update();
+	/*UpdateSleepTime ret =*/ return AIUpdateInterface::update();
 	//return (mine < ret) ? mine : ret;
 	/// @todo srj -- someday, make sleepy. for now, must not sleep.
-	return UPDATE_SLEEP_NONE;
+	////return UPDATE_SLEEP_NONE;
+	///// IamInnocent 11/10/2025 - Made Sleepy
 }  // end update
 
 // ------------------------------------------------------------------------------------------------

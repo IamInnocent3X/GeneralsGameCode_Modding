@@ -39,6 +39,7 @@
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
@@ -204,6 +205,21 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 	{
     Int containMax = getContainMax();
     Int containCount = getContainCount();
+
+	const AIUpdateInterface *ai = getObject()->getAI();
+	if( ai )
+	{
+		const AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			// Count the current Assaulting members of the deployment
+			containCount += atInterface->getCurrentAssaultingMembers();
+
+			// we are originally from this transport, so we can come in if its not occupied.
+			if (atInterface->getCurrentAssaultingMembers() > 0 && rider->getAssaultTransportObjectID() != INVALID_ID && rider->getAssaultTransportObjectID() == getObject()->getID())
+				containCount -= transportSlotCount;
+		}
+	}
 
 		return (m_extraSlotsInUse + containCount + transportSlotCount <= containMax);
 

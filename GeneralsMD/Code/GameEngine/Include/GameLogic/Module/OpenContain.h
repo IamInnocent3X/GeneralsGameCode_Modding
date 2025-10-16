@@ -184,6 +184,7 @@ public:
 	virtual const ContainedItemsList* getContainedItemsList() const { return &m_containList; }
 	virtual const Object *friend_getRider() const{return NULL;} ///< Damn.  The draw order dependency bug for riders means that our draw module needs to cheat to get around it.
 	virtual Real getContainedItemsMass() const;
+	virtual void setContainedItemsMass(Real mass) { m_containMass = mass; }
 	virtual UnsignedInt getStealthUnitsContained() const { return m_stealthUnitsContained; }
 
 	virtual PlayerMaskType getPlayerWhoEntered(void) const { return m_playerEnteredMask; }
@@ -300,6 +301,8 @@ private:
 	Bool								m_rallyPointExists;										///< Only move to the rally point if this is true
 	Bool								m_loadSoundsEnabled;								///< Don't serialize -- used for disabling sounds during payload creation.
   Bool                m_passengerAllowedToFire;      ///< Newly promoted from the template data to the module for upgrade overriding access
+
+	Real			  m_containMass;
 };
 
 #endif  // end __OPENCONTAIN_H_

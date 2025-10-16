@@ -1011,9 +1011,17 @@ void FlightDeckBehavior::defectAllParkedUnits(Team* newTeam, UnsignedInt detecti
 				continue;
 
 			// srj sez: evil. fix better someday.
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
-			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
-			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+			/// IamInnocent - Done
+			//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			//JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
+			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+
+			Bool takeoffOrLanding = false;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			if( jetAI )
+			{
+				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
+			}
 
 			if (obj->isAboveTerrain() && !takeoffOrLanding)
 			{
@@ -1052,9 +1060,17 @@ void FlightDeckBehavior::killAllParkedUnits()
 				continue;
 
 			// srj sez: evil. fix better someday.
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
-			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
-			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+			/// IamInnocent - Done
+			//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			//JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
+			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+
+			Bool takeoffOrLanding = false;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			if( jetAI )
+			{
+				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
+			}
 
 			if (obj->isAboveTerrain() && !takeoffOrLanding)
 				continue;
@@ -1325,9 +1341,16 @@ void FlightDeckBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitDoo
 	//validateAssignments();
 
 	/// @todo srj -- this is evil. fix.
-	static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
-	JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
-	Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
+	//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
+	//JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
+	//Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
+
+	Real parkingOffset = 0.0f;
+	JetAIUpdate *jetAI = newObj->getAI() ? (JetAIUpdate*)newObj->getAI()->getJetAIUpdate() : NULL;
+	if( jetAI )
+	{
+		parkingOffset = jetAI->friend_getParkingOffset();
+	}
 
 	PPInfo ppinfo;
 	Matrix3D mtx;

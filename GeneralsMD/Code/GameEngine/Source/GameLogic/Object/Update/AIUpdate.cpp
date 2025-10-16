@@ -365,6 +365,7 @@ void AIUpdateInterface::setSurrendered( const Object *objWeSurrenderedTo, Bool s
 			// meaning we won't respong to aiDoCommand! so go straight to the metal here:
 			getStateMachine()->clear();
 			getStateMachine()->setState( AI_IDLE );
+			doIdleUpdate();
 			setLastCommandSource(CMD_FROM_AI);
 
 			// Play our sound surrendered
@@ -1054,6 +1055,7 @@ void AIUpdateInterface::wakeUpNow()
 //-------------------------------------------------------------------------------------------------
 void AIUpdateInterface::friend_notifyStateMachineChanged()
 {
+	doStateChange();
 	wakeUpNow();
 }
 
@@ -2938,6 +2940,11 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 			DEBUG_CRASH(("unhandled AI command!"));
 			break;
 	}
+
+	if(parms->m_cmdSource != CMD_FROM_AI)
+	{
+		getObject()->removeMeFromAssaultTransport();
+	}
 }
 
 
@@ -3158,6 +3165,7 @@ void AIUpdateInterface::privateIdle(CommandSourceType cmdSource)
 
 	getStateMachine()->clear();
 	getStateMachine()->setState( AI_IDLE );
+	doIdleUpdate();
 	setLastCommandSource( cmdSource );
 
 	ContainModuleInterface *contain = getObject()->getContain();

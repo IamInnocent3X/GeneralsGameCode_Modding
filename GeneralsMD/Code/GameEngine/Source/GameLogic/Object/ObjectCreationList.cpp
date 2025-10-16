@@ -630,7 +630,10 @@ public:
 		if (primary)
 		{
 			/// @todo srj -- ack. const_cast is evil.
-			PhysicsBehavior* p = const_cast<Object*>(primary)->getPhysics();
+			//PhysicsBehavior* p = const_cast<Object*>(primary)->getPhysics();
+			///IamInnocent - Edited... It's still bad hack.
+			///Making m_physics mutable will have a big risk and that is even a worse malpractice.
+			PhysicsBehavior* p = TheGameLogic->findObjectByID(primary->getID())->getPhysics();
       if (p)
       {
 				Coord3D force;

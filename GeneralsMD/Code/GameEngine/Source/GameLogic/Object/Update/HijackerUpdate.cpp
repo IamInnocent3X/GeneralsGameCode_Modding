@@ -236,9 +236,12 @@ UpdateSleepTime HijackerUpdate::update( void )
 			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 			m_ejectPos = *target->getPosition();
 
-			// If I do not leech Exp as an Equipped Object, then I do not receive any EXP that should be given to the attached Object
+			// If I do not leech Exp, then I do not receive any EXP that should be given to the attached Object
 			if(m_noLeechExp)
+			{
+				setUpdate( FALSE );
 				return UPDATE_SLEEP_FOREVER;
+			}
 
 			// So, if while I am driving this American war vehicle, I gain skill points, I get to keep them when I wreck the vehicle
 			ExperienceTracker *targetExp = target->getExperienceTracker();

@@ -56,13 +56,21 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 {
 	m_state = READY_TO_MOVE;
 	m_frameToWaitForDeploy = 0;
+	m_isInRange = FALSE;
 	m_doDeploy = FALSE;
 	m_doUndeploy = FALSE;
+	m_hasDeploy = FALSE;
+	m_hasUndeploy = FALSE;
+	m_doRemoveStatusAfterTrigger = FALSE;
 	m_deployTurretFunctionChangeUpgrade.clear();
 	m_deployObjectFunctionChangeUpgrade.clear();
 	m_turretDeployedFunctionChangeUpgrade.clear();
 
 	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+
+	m_moveAfterDeploy = data->m_moveAfterDeploy;
+	m_deployNoRelocate = data->m_deployNoRelocate;
+
 	if(!data->m_deployFunctionChangeUpgrade.empty())
 	{
 		Int parsing = 0;
@@ -100,6 +108,18 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 			}
 		}
 	}
+
+	m_needsDeployToFireObject = TRUE;
+	m_needsDeployToFireTurret = TRUE;
+
+	if(doTurretsFunctionOnlyWhenDeployed())
+	{
+		m_needsDeployToFireDeployed = FALSE;
+	}
+	else
+	{
+		m_needsDeployToFireDeployed = TRUE;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -132,6 +152,8 @@ void DeployStyleAIUpdate::aiDoCommand( const AICommandParms* parms )
 			break;
 	}
 	*/
+	// IamInnocent - Added SleepyUpdates
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 	AIUpdateInterface::aiDoCommand( parms );
 }
 
@@ -147,51 +169,20 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 
 	//Are we attempting to move? If so we can't do it unless we are undeployed.
 	Bool isTryingToMove = isWaitingForPath() || getPath();
-	if(!m_doUndeploy)
-	{
-		m_doUndeploy = data->m_statusToUndeploy.any() && self->getStatusBits().testForAny( data->m_statusToUndeploy );
-		if(!m_doUndeploy)
-		{
-			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
-			{
-				if (self->testCustomStatus(*it))
-				{
-					m_doUndeploy = TRUE;
-					break;
-				}
-			}
-		}
-	}
-
-	if(m_doUndeploy && !data->m_removeStatusAfterTrigger )
-		m_doDeploy = FALSE;
 
 	//Are we trying to attack something. If so, we need to be in range before we can do so.
 	Bool isTryingToAttack = getStateMachine()->isInAttackState();
-	Bool isInRange = FALSE;
+	//Bool isInRange = FALSE;
 
 	//Are we in guard mode? If so, are we idle... idle guarders deploy for fastest response against attackers.
 	Bool isInGuardIdleState = getStateMachine()->isInGuardIdleState();
-	if(!m_doDeploy && !m_doUndeploy )
-	{
-		m_doDeploy = ( data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ) );
-		if(!m_doDeploy)
-		{
-			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
-			{
-				if (self->testCustomStatus(*it))
-				{
-					m_doDeploy = TRUE;
-					break;
-				}
-			}
-		}
-	}
-
-	if(m_doDeploy && !data->m_removeStatusAfterTrigger)
-		m_doUndeploy = FALSE;		// There can only be One! ...Unless you are checking whether which status trigger rules first
 
 	AIUpdateInterface *ai = self->getAI();
+
+	if(m_hasDeploy)
+		m_doDeploy = TRUE;
+	else if(m_hasUndeploy)
+		m_doUndeploy = TRUE;
 
 	// Check whether we are Deploying while in the middle of Moving
 	if(m_doDeploy && isTryingToMove && ( m_state == READY_TO_MOVE || m_state == UNDEPLOY || m_state == ALIGNING_TURRETS ) )
@@ -218,10 +209,15 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 		needsDeployToFire = FALSE;
 	}
 
+	//if(!m_deployObjectFunctionChangeUpgrade.empty())
+	//{
+	//	needsDeployToFire = checkForDeployUpgrades("OBJECT");
+	//}
 	if(!m_deployObjectFunctionChangeUpgrade.empty())
 	{
-		needsDeployToFire = checkForDeployUpgrades("OBJECT");
+		needsDeployToFire = m_needsDeployToFireObject;
 	}
+
 
 	if(!needsDeployToFire)
 	{
@@ -230,35 +226,36 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 		isTryingToAttack = FALSE;
 	}
 
-	if( isTryingToAttack && weapon )
+	if( isTryingToAttack && weapon && !m_isInRange )
 	{
 		Object *victim = ai->getCurrentVictim();
 		if( victim )
 		{
-			isInRange = weapon->isWithinAttackRange( self, victim );
+			m_isInRange = weapon->isWithinAttackRange( self, victim );
 		}
 		else
 		{
 			const Coord3D *pos = ai->getCurrentVictimPos();
 			if( pos )
 			{
-				isInRange = weapon->isWithinAttackRange( self, pos );
+				m_isInRange = weapon->isWithinAttackRange( self, pos );
 			}
 		}
 	}
+	else if( !isTryingToAttack )
+	{
+		m_isInRange = FALSE;
+	}
 
 	// New features
-	Bool moveAfterDeploy = checkAfterDeploy("HAS_MOVEMENT");
-	Bool deployNoRelocate = checkAfterDeploy("NO_RELOCATE");
-
 	// Able to move after deploying
-	if(moveAfterDeploy && ( m_state == DEPLOY || m_state == READY_TO_ATTACK || m_doDeploy ))
+	if(m_moveAfterDeploy && ( m_state == DEPLOY || m_state == READY_TO_ATTACK || m_doDeploy ))
 	{
 		isTryingToMove = FALSE;
 	}
 
 	// New feature, disables relocating after Deploying
-	if(deployNoRelocate && !moveAfterDeploy && !m_doUndeploy && ( m_state != READY_TO_MOVE || m_doDeploy ) )
+	if(m_deployNoRelocate && !m_moveAfterDeploy && !m_doUndeploy && ( m_state != READY_TO_MOVE || m_doDeploy ) )
 	{
 		// No moving, but you can still designate next destinations
 		self->setStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IMMOBILE) );
@@ -266,7 +263,7 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 		isTryingToMove = FALSE;
 	}
 	// You can only clear this status by Undeploying
-	else if((deployNoRelocate || moveAfterDeploy) && self->testStatus(OBJECT_STATUS_IMMOBILE) && m_doUndeploy )
+	else if((m_deployNoRelocate || m_moveAfterDeploy) && self->testStatus(OBJECT_STATUS_IMMOBILE) && m_doUndeploy )
 	{
 		self->clearStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IMMOBILE) );
 	}
@@ -339,7 +336,7 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 		}
 
 	}
-	else if( isInRange || isInGuardIdleState || m_doDeploy )
+	else if( m_isInRange || isInGuardIdleState || m_doDeploy )
 	{
 		switch( m_state )
 		{
@@ -424,56 +421,153 @@ UpdateSleepTime DeployStyleAIUpdate::update( void )
 			break;
 	}
 
-	if(data->m_removeStatusAfterTrigger)
+	if(m_doRemoveStatusAfterTrigger)
 	{
-		if(data->m_statusToDeploy.any()  && self->getStatusBits().testForAny( data->m_statusToDeploy ))
-		{
-			m_doUndeploy = FALSE;
-			m_doDeploy = TRUE;
-			self->clearStatus( data->m_statusToDeploy );
-		}
-		if(data->m_statusToUndeploy.any()  && self->getStatusBits().testForAny( data->m_statusToUndeploy ))
-		{
-			m_doDeploy = FALSE;
-			m_doUndeploy = TRUE;
-			self->clearStatus( data->m_statusToUndeploy );
-		}
-		if(!m_doDeploy)
-		{
-			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
-			{
-				if (self->testCustomStatus(*it))
-				{
-					m_doUndeploy = FALSE;
-					m_doDeploy = TRUE;
-					self->setCustomStatus((*it), FALSE);
-				}
-			}
-		}
-		if(!m_doUndeploy)
+		doRemoveStatusTrigger();
+		m_doRemoveStatusAfterTrigger = FALSE;
+	}
+
+	UpdateSleepTime ret = AIUpdateInterface::update();
+
+	// IamInnocent - Added Sleepy Updates
+	if(m_frameToWaitForDeploy || m_state == ALIGNING_TURRETS || getStateMachine()->getTemporaryState() == AI_BUSY)
+		return UPDATE_SLEEP_NONE;
+	else
+		return ret;
+	//We can't sleep the deploy AI because any new commands need to be caught and sent
+	//into busy state during the update.
+	///return UPDATE_SLEEP_NONE;
+	//// IamInnocent 11/10/2025 - Made Sleepy
+
+}
+
+void DeployStyleAIUpdate::doStatusUpdate()
+{
+	Object *self = getObject();
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+	Bool prevHasUndeploy = m_hasUndeploy;
+	Bool prevHasDeploy = m_hasDeploy;
+	m_hasUndeploy = FALSE;
+	m_hasDeploy = FALSE;
+
+	if(!m_hasUndeploy)
+	{
+		m_hasUndeploy = data->m_statusToUndeploy.any() && self->getStatusBits().testForAny( data->m_statusToUndeploy );
+		if(!m_hasUndeploy)
 		{
 			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
 			{
 				if (self->testCustomStatus(*it))
 				{
-					m_doDeploy = FALSE;
-					m_doUndeploy = TRUE;
-					self->setCustomStatus((*it), FALSE);
+					m_hasUndeploy = TRUE;
+					break;
 				}
 			}
 		}
 	}
 
-	AIUpdateInterface::update();
-	//We can't sleep the deploy AI because any new commands need to be caught and sent
-	//into busy state during the update.
-	return UPDATE_SLEEP_NONE;
+	if(m_hasUndeploy && !data->m_removeStatusAfterTrigger )
+		m_hasDeploy = FALSE;
 
+	if(!m_hasDeploy && !m_hasUndeploy )
+	{
+		m_hasDeploy = ( data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ) );
+		if(!m_hasDeploy)
+		{
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+			{
+				if (self->testCustomStatus(*it))
+				{
+					m_hasDeploy = TRUE;
+					break;
+				}
+			}
+		}
+	}
+
+	if(m_hasDeploy && !data->m_removeStatusAfterTrigger)
+		m_hasUndeploy = FALSE;		// There can only be One! ...Unless you are checking whether which status trigger rules first
+
+	// Trigger the Update
+	if(prevHasDeploy != m_hasDeploy || prevHasUndeploy != m_hasUndeploy)
+		wakeUpNow();
+
+	if(data->m_removeStatusAfterTrigger)
+	{
+		if(m_hasDeploy)
+		{
+			m_doDeploy = TRUE;
+			m_hasDeploy = FALSE;
+			m_doRemoveStatusAfterTrigger = TRUE;
+		}
+		if(m_hasUndeploy)
+		{
+			m_doUndeploy = TRUE;
+			m_hasUndeploy = FALSE;
+			m_doRemoveStatusAfterTrigger = TRUE;
+		}
+	}
+}
+
+void DeployStyleAIUpdate::doRemoveStatusTrigger()
+{
+	Object *self = getObject();
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+
+	if(data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ))
+	{
+		m_doUndeploy = FALSE;
+		m_doDeploy = TRUE;
+		self->clearStatus( data->m_statusToDeploy );
+	}
+	for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+	{
+		if (self->testCustomStatus(*it))
+		{
+			m_doUndeploy = FALSE;
+			m_doDeploy = TRUE;
+			self->setCustomStatus((*it), FALSE);
+		}
+	}
+	if(data->m_statusToUndeploy.any()  && self->getStatusBits().testForAny( data->m_statusToUndeploy ))
+	{
+		m_doDeploy = FALSE;
+		m_doUndeploy = TRUE;
+		self->clearStatus( data->m_statusToUndeploy );
+	}
+	for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+	{
+		if (self->testCustomStatus(*it))
+		{
+			m_doDeploy = FALSE;
+			m_doUndeploy = TRUE;
+			self->setCustomStatus((*it), FALSE);
+		}
+	}
+}
+
+void DeployStyleAIUpdate::doUpgradeUpdate()
+{
+	m_moveAfterDeploy = checkAfterDeploy("HAS_MOVEMENT");
+	m_deployNoRelocate = checkAfterDeploy("NO_RELOCATE");
+	m_needsDeployToFireObject = checkForDeployUpgrades("OBJECT"); 
+	m_needsDeployToFireTurret = checkForDeployUpgrades("TURRET");
+	m_needsDeployToFireDeployed = checkForDeployUpgrades("DEPLOYED");
+
+	// Trigger the Update
+	wakeUpNow();
 }
 
 //-------------------------------------------------------------------------------------------------
 void DeployStyleAIUpdate::setMyState( DeployStateTypes stateID, Bool reverseDeploy )
 {
+	// Sleepy Updates
+	if(m_state == stateID &&
+		 !m_frameToWaitForDeploy &&
+		 getStateMachine()->getTemporaryState() != AI_BUSY
+	  )
+		return;
+
 	m_state = stateID;
 	Object *self = getObject();
 	UnsignedInt now = TheGameLogic->getFrame();
@@ -616,7 +710,7 @@ void DeployStyleAIUpdate::setMyState( DeployStateTypes stateID, Bool reverseDepl
 	{
 		if(stateID == READY_TO_MOVE || stateID == UNDEPLOY)
 		{
-			Bool needsDeployToFire = checkForDeployUpgrades("TURRET");
+			Bool needsDeployToFire = m_needsDeployToFireTurret;
 			WhichTurretType tur = getWhichTurretForCurWeapon();
 			if( tur != TURRET_INVALID )
 			{
@@ -627,7 +721,7 @@ void DeployStyleAIUpdate::setMyState( DeployStateTypes stateID, Bool reverseDepl
 
 	if(!m_turretDeployedFunctionChangeUpgrade.empty() && stateID == READY_TO_ATTACK)
 	{
-		Bool needsDeployToFire = checkForDeployUpgrades("DEPLOYED");
+		Bool needsDeployToFire = m_needsDeployToFireDeployed;
 		WhichTurretType tur = getWhichTurretForCurWeapon();
 		if( tur != TURRET_INVALID )
 		{
@@ -786,6 +880,17 @@ void DeployStyleAIUpdate::xfer( Xfer *xfer )
 
  // extend base class
 	AIUpdateInterface::xfer(xfer);
+
+	xfer->xferBool( &m_isInRange );
+	xfer->xferBool( &m_doDeploy );
+	xfer->xferBool( &m_doUndeploy );
+	xfer->xferBool( &m_hasDeploy );
+	xfer->xferBool( &m_hasUndeploy );
+	xfer->xferBool( &m_moveAfterDeploy );
+	xfer->xferBool( &m_deployNoRelocate );
+	xfer->xferBool( &m_needsDeployToFireObject );
+	xfer->xferBool( &m_needsDeployToFireTurret );
+	xfer->xferBool( &m_needsDeployToFireDeployed );
 
 	if( version >= 4 )
 	{
