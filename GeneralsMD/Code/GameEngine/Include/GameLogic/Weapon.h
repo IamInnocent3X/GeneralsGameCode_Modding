@@ -512,6 +512,7 @@ public:
 	inline Real getLaserGroundUnitTargetHeight() const { return m_laserGroundUnitTargetHeight; }
 	inline Real getLaserGroundTargetHeight() const { return m_laserGroundTargetHeight; }
 	inline UnsignedInt getScatterTargetResetTime() const { return m_scatterTargetResetTime; }
+	inline Bool isScatterTargetResetRecenter() const { return m_scatterTargetResetRecenter; }
 	inline const std::vector<Coord2D>& getScatterTargetsVector() const { return m_scatterTargets; }
 	inline const WeaponBonusSet* getExtraBonus() const { return m_extraBonus; }
 	inline Int getShotsPerBarrel() const { return m_shotsPerBarrel; }
@@ -733,6 +734,7 @@ private:
 	Bool m_scatterTargetCenteredAtShooter;  ///< if the scatter target pattern is centered at the shooter
 
 	UnsignedInt m_scatterTargetResetTime;  ///< if this much time between shots has passed, we reset the scatter targets
+	Bool m_scatterTargetResetRecenter;  ///< when resetting scatter targets, use indices in the "middle" of the list, to keep the target centered for Line based attacks 
 
 	AsciiString m_customDamageType;
 	AsciiString m_customDamageStatusType;
@@ -1153,7 +1155,7 @@ protected:
 
 	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
 
-	void rebuildScatterTargets();
+	void rebuildScatterTargets(Bool recenter = false);
 
 
 private:
