@@ -153,7 +153,7 @@ void DeployStyleAIUpdate::aiDoCommand( const AICommandParms* parms )
 	}
 	*/
 	// IamInnocent - Added SleepyUpdates
-	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	wakeUpNow();
 	AIUpdateInterface::aiDoCommand( parms );
 }
 

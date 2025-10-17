@@ -156,6 +156,7 @@ private:
 	UnsignedInt						m_detonateDistance;
 	ObjectID						m_decoyID;
 
+	UnsignedInt						m_killSelfTime;
 	UnsignedInt						m_nextWakeUpTime;
 
 	void doPrelaunchState();

@@ -175,6 +175,7 @@ MissileAIUpdate::MissileAIUpdate( Thing *thing, const ModuleData* moduleData ) :
 	m_framesTillDecoyed = 0;
 	m_noDamage = FALSE;
 	m_isJammed = FALSE;
+	m_killSelfTime = 0;
 	m_nextWakeUpTime = 0;
 }
 
@@ -507,6 +508,8 @@ void MissileAIUpdate::doKillSelfState()
 	{
 		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_stateTimestamp + modData->m_killSelfDelay)
 			m_nextWakeUpTime = m_stateTimestamp + modData->m_killSelfDelay;
+
+		m_killSelfTime = m_stateTimestamp + modData->m_killSelfDelay;
 	}
 	if (m_stateTimestamp > TheGameLogic->getFrame() - modData->m_killSelfDelay )
   {
@@ -1028,14 +1031,28 @@ UpdateSleepTime MissileAIUpdate::update()
 	}
 	else
 	{
+		UnsignedInt now = TheGameLogic->getFrame();
+		if( getMissileAIUpdateModuleData()->m_fuelLifetime && m_fuelExpirationDate && m_fuelExpirationDate >= now && ( !m_nextWakeUpTime || m_nextWakeUpTime > m_fuelExpirationDate ))
+		{
+			m_nextWakeUpTime = m_fuelExpirationDate;
+		}
+		if( m_killSelfTime && m_killSelfTime >= now && ( !m_nextWakeUpTime || m_nextWakeUpTime > m_killSelfTime ))
+		{
+			m_nextWakeUpTime = m_killSelfTime;
+		}
+		if( m_framesTillDecoyed && m_framesTillDecoyed >= now && (!m_nextWakeUpTime || m_nextWakeUpTime > m_framesTillDecoyed))
+		{
+			m_nextWakeUpTime = m_framesTillDecoyed;
+		}
+		
 		if (m_nextWakeUpTime)
 		{
-			DEBUG_ASSERTCRASH(m_nextWakeUpTime >= TheGameLogic->getFrame(), ("MissileAIUpdate wake up too late."));
+			DEBUG_ASSERTCRASH(m_nextWakeUpTime >= now, ("MissileAIUpdate wake up too late."));
 			
 			Int frames = UnsignedInt(ret);
-			if(frames > m_nextWakeUpTime - TheGameLogic->getFrame())
-				ret = UPDATE_SLEEP(max(1,(Int)(m_nextWakeUpTime - TheGameLogic->getFrame())));
-			if(m_nextWakeUpTime <= TheGameLogic->getFrame())
+			if(frames > m_nextWakeUpTime - now)
+				ret = UPDATE_SLEEP(max(1,(Int)(m_nextWakeUpTime - now)));
+			if(m_nextWakeUpTime <= now)
 			{
 				m_nextWakeUpTime = 0;
 				ret = UPDATE_SLEEP_NONE;
@@ -1093,10 +1110,6 @@ static Int getVictimAntiMask(const Object* victim)
 		{
 			return WEAPON_ANTI_PARACHUTE;
 		}
-		else if( !victim->isKindOf( KINDOF_UNATTACKABLE ) )
-		{
-			DEBUG_CRASH( ("Object %s is being targetted as airborne, but is not infantry, nor vehicle. Is this legit? -- tell Kris", victim->getTemplate()->getName().str() ) );
-		}
 		return 0;
 	}
 	else
@@ -1144,7 +1157,8 @@ void MissileAIUpdate::airborneTargetGone()
 		for( Object *curVictim = iter->first(); curVictim != NULL; curVictim = iter->next() )
 		{
 			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
-			if( (m_detonationWeaponTmpl->getAntiMask() & targetAntiMask) == 0 || 
+			if( curVictim->isKindOf( KINDOF_UNATTACKABLE ) ||
+				 (m_detonationWeaponTmpl->getAntiMask() & targetAntiMask) == 0 || 
 				 m_detonationWeaponTmpl->estimateWeaponTemplateDamage(source, curVictim, curVictim->getPosition(), bonus) == 0.0f )
 			{
 				continue;
@@ -1174,6 +1188,9 @@ void MissileAIUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedInt fr
 	m_framesTillDecoyed = now + frames;
 	m_detonateDistance = distance;
 	m_decoyID = victimID;
+	if(!m_nextWakeUpTime || m_nextWakeUpTime > m_framesTillDecoyed)
+		m_nextWakeUpTime = m_framesTillDecoyed;
+	wakeUpNow();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1290,6 +1307,7 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt(&m_fuelExpirationDate);
 	xfer->xferReal(&m_noTurnDistLeft);
 	xfer->xferReal(&m_maxAccel);
+	xfer->xferUnsignedInt(&m_killSelfTime);
 	xfer->xferUnsignedInt(&m_nextWakeUpTime);
 
 	AsciiString weaponName;
