@@ -60,6 +60,11 @@ void AdvancedCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "RequiredKindOf",   KindOfMaskType::parseFromINI, NULL, offsetof(AdvancedCollideModuleData, m_kindof) },
 		{ "ForbiddenKindOf",  KindOfMaskType::parseFromINI, NULL, offsetof(AdvancedCollideModuleData, m_kindofnot) },
 
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_forbiddenCustomStatus ) },
+		{ "TargetRequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_targetRequiredCustomStatus ) },
+		{ "TargetForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_targetForbiddenCustomStatus ) },
+
 		{ "ChanceToTriggerPercent",  INI::parsePercentToReal, NULL, offsetof(AdvancedCollideModuleData, m_triggerChance) },
 		{ "RollOnceForTrigger",  INI::parseBool, NULL, offsetof(AdvancedCollideModuleData, m_rollOnce) },
 
@@ -106,7 +111,8 @@ void AdvancedCollide::onCollide( Object *other, const Coord3D *loc, const Coord3
 	{
 		Object* me = getObject();
 
-		if (m_collideWeapon) {
+		if (m_collideWeapon && 
+			m_collideWeapon->getTemplate()->passRequirements(me)) {
 			m_collideWeapon->loadAmmoNow(me);
 			m_collideWeapon->fireWeapon(me, other);
 		}
@@ -137,6 +143,16 @@ Bool AdvancedCollide::shouldTrigger(Object* other)
 	if( status.testForAny( d->m_forbiddenStatus ) )
 		return FALSE;
 
+	// Support custom statuses
+	if(!getObject()->testCustomStatusForAll(d->m_requiredCustomStatus))
+		return FALSE;
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	{
+		if(getObject()->testCustomStatus(*it))
+			return FALSE;
+	}
+
 	// -----------------------
 	// Check Target Object
 	if (other) {
@@ -153,6 +169,16 @@ Bool AdvancedCollide::shouldTrigger(Object* other)
 		// must match our kindof flags (if any)
 		if (!other->isKindOfMulti(d->m_kindof, d->m_kindofnot))
 			return FALSE;
+	
+		// Support custom statuses
+		if(!other->testCustomStatusForAll(d->m_targetRequiredCustomStatus))
+			return FALSE;
+
+		for(std::vector<AsciiString>::const_iterator it = d->m_targetForbiddenCustomStatus.begin(); it != d->m_targetForbiddenCustomStatus.end(); ++it)
+		{
+			if(other->testCustomStatus(*it))
+				return FALSE;
+		}
 	}
 
 	if (d->m_triggerChance < 1.0) {

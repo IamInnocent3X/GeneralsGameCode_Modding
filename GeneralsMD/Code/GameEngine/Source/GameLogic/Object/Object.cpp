@@ -5301,7 +5301,7 @@ void Object::doObjectUpgradeChecks()
 		cmod->doUpgradeChecks();
 	}
 
-	//Applicable for DeployStyleAIUpdate Only
+	//Applicable currently for DeployStyleAIUpdate
 	if( getAIUpdateInterface() )
 	{
 		getAIUpdateInterface()->doUpgradeUpdate();

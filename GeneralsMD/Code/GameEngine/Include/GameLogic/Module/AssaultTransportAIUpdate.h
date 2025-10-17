@@ -141,6 +141,8 @@ protected:
   ObjectID					m_memberIDs[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_memberHealing[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_newMember[ MAX_TRANSPORT_SLOTS ];
+	Bool							m_countedSlotMember[ MAX_TRANSPORT_SLOTS ];
+	Bool							m_countedAssaultingMember[ MAX_TRANSPORT_SLOTS ];
   Coord3D						m_attackMoveGoalPos;
   mutable ObjectID	m_designatedTarget;
 	AssaultStateTypes	m_state;

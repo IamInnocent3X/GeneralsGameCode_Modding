@@ -924,6 +924,7 @@ void OpenContain::onDie( const DamageInfo * damageInfo )
 // ------------------------------------------------------------------------------------------------
 Bool OpenContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
+	
 	//if (obj->isDisabledByType(DISABLED_TELEPORT))
 	//	return false;
 

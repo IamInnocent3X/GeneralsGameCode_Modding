@@ -63,6 +63,8 @@ void AssaultTransportAIUpdate::reset()
 		m_memberIDs[ i ] = INVALID_ID;
 		m_memberHealing[ i ] = FALSE;
 		m_newMember[ i ] = FALSE;
+		m_countedSlotMember[ i ] = FALSE;
+		m_countedAssaultingMember[ i ] = FALSE;
 	}
 	m_currentMembers = 0;
   m_attackMoveGoalPos.zero();
@@ -229,41 +231,47 @@ void AssaultTransportAIUpdate::removeMember( ObjectID passengerID )
 			
 			Object *member = TheGameLogic->findObjectByID( passengerID );
 			AIUpdateInterface *ai = member ? member->getAI() : NULL;
-			if( !member || member->isEffectivelyDead() || ai->getLastCommandSource() != CMD_FROM_AI )
-			{
-				// If we have not already removed it from Assaulting Member number count, remove it.
-				if(getAssaultTransportAIUpdateModuleData()->m_retreatWoundedMembersOnAssault && !m_memberHealing[ i ])
-				{
-					if(m_maxNumInTransport)
-						m_maxNumInTransport--;
-					if(m_maxNumAttacking)
-						m_maxNumAttacking--;
-				}
 
-				//Member is toast -- so remove him from our list!
-				if( m_currentMembers - 1 > i )
+			// If we have not already removed it from Assaulting Member number count, remove it.
+			//if(getAssaultTransportAIUpdateModuleData()->m_retreatWoundedMembersOnAssault && member && !m_memberHealing[ i ])
+			{
+				if(m_countedSlotMember[ i ])
 				{
-					//Move the last slot to this slot to keep array contiguous.
-					m_memberIDs[ i ]			= m_memberIDs[ m_currentMembers - 1 ];
-					m_memberHealing[ i ]	= m_memberHealing[ m_currentMembers - 1 ];
-					m_newMember[ i ]			= m_newMember[ m_currentMembers - 1 ];
+					m_maxNumInTransport -= member->getTransportSlotCount();
+					m_countedSlotMember[ i ] = FALSE;
 				}
-				else
+				if(m_countedAssaultingMember[ i ])
 				{
-					//Just clean out last slot.
-					m_memberIDs[ i ]			= INVALID_ID;
-					m_memberHealing[ i ]	= FALSE;
-					m_newMember[ i ]			= FALSE;
+					m_maxNumAttacking -= member->getTransportSlotCount();
+					m_countedAssaultingMember[ i ] = FALSE;
 				}
-				if( ai )
-				{
-					//Important! Members of our assault transport must be allowed to chase down designated enemies.
-					//Generally only player commands allow this, so this flag allows AI commands to do the same.
-					//We need to turn this off though, because this ex-member is no longer under transport control.
-					ai->setAllowedToChase( FALSE );
-				}
-				m_currentMembers--;
 			}
+
+			//Member is toast -- so remove him from our list!
+			if( m_currentMembers - 1 > i )
+			{
+				//Move the last slot to this slot to keep array contiguous.
+				m_memberIDs[ i ]			= m_memberIDs[ m_currentMembers - 1 ];
+				m_memberHealing[ i ]	= m_memberHealing[ m_currentMembers - 1 ];
+				m_newMember[ i ]			= m_newMember[ m_currentMembers - 1 ];
+				m_countedSlotMember[ i ] = m_countedSlotMember[ m_currentMembers - 1 ];
+				m_countedAssaultingMember[ i ] = m_countedAssaultingMember[ m_currentMembers - 1 ];
+			}
+			else
+			{
+				//Just clean out last slot.
+				m_memberIDs[ i ]			= INVALID_ID;
+				m_memberHealing[ i ]	= FALSE;
+				m_newMember[ i ]			= FALSE;
+			}
+			if( ai )
+			{
+				//Important! Members of our assault transport must be allowed to chase down designated enemies.
+				//Generally only player commands allow this, so this flag allows AI commands to do the same.
+				//We need to turn this off though, because this ex-member is no longer under transport control.
+				ai->setAllowedToChase( FALSE );
+			}
+			m_currentMembers--;
 			break;
 		}
 	}
@@ -291,12 +299,6 @@ void AssaultTransportAIUpdate::checkPassengerHealth( ObjectID passengerID )
 					AIUpdateInterface *ai = member->getAI();
 					if( ai && ai->getAIStateType() != AI_ENTER )
 					{
-						//Remove it from the attacking list
-						if(m_maxNumInTransport)
-							m_maxNumInTransport--;
-						if(m_maxNumAttacking)
-							m_maxNumAttacking--;
-
 						//Order wounded members back to get healed.
 						ai->aiEnter( getObject(), CMD_FROM_AI );
 					}
@@ -310,6 +312,9 @@ void AssaultTransportAIUpdate::checkPassengerHealth( ObjectID passengerID )
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::removeAllMembers()
 {
+	m_maxNumInTransport = 0;
+	m_maxNumAttacking = 0;
+
 	if( m_currentMembers )
 	{
 		for( int i = 0; i < m_currentMembers; i++ )
@@ -318,6 +323,8 @@ void AssaultTransportAIUpdate::removeAllMembers()
 			m_memberIDs[ i ]			= INVALID_ID;
 			m_memberHealing[ i ]	= FALSE;
 			m_newMember[ i ]			= FALSE;
+			m_countedSlotMember[ i ] = FALSE;
+			m_countedAssaultingMember[ i ] = FALSE;
 			if( member )
 			{
 				member->registerAssaultTransportID(INVALID_ID);
@@ -351,6 +358,22 @@ void AssaultTransportAIUpdate::addMembers()
 				{
 					//He is in the list... so skip him.
 					found = TRUE;
+
+					//If he's previously from the Assaulting Members List, remove him
+					Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
+					if(member)
+					{
+						if(m_countedSlotMember[ i ])
+						{
+							m_maxNumInTransport -= member->getTransportSlotCount();
+							m_countedSlotMember[ i ] = FALSE;
+						}
+						if(m_countedAssaultingMember[ i ])
+						{
+							m_maxNumAttacking -= member->getTransportSlotCount();
+							m_countedAssaultingMember[ i ] = FALSE;
+						}
+					}
 					break;
 				}
 			}
@@ -386,6 +409,9 @@ void AssaultTransportAIUpdate::addMembers()
 					//New members won't eject out until a new attack order is issued.
 					m_newMember[ m_currentMembers ] = m_newOccupantsAreNewMembers; //TRUE;
 				//}
+
+				m_countedSlotMember[ m_currentMembers ] = FALSE;
+				m_countedAssaultingMember[ m_currentMembers ] = FALSE;
 
 				m_currentMembers++;
 			}
@@ -444,8 +470,14 @@ void AssaultTransportAIUpdate::onAttack()
 					//This contained member is healthy so order him to exit to start fighting!
 					//New members are exempt!
 					ai->aiExit( transport, CMD_FROM_AI );
-					if(i+1>m_maxNumInTransport)
-						m_maxNumInTransport = i+1;
+					m_isAttackObject = TRUE;
+					//if(i+1>m_maxNumInTransport)
+					//	m_maxNumInTransport = i+1;
+					if(!m_countedSlotMember[ i ])
+					{
+						m_maxNumInTransport += member->getTransportSlotCount();
+						m_countedSlotMember[ i ] = TRUE;
+					}
 				}
 				if( !contained )
 				{
@@ -469,10 +501,14 @@ void AssaultTransportAIUpdate::onAttack()
 							{
 								//Okay, this dude is outside and waiting... order him to attack the designated target
 								ai->aiAttackObject( designatedTarget, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
-								m_isAttackObject = TRUE;
+								if(!m_countedAssaultingMember[ i ])
+								{
+									m_maxNumAttacking += member->getTransportSlotCount();
+									m_countedAssaultingMember[ i ] = TRUE;
+								}
 							}
-							else if(i+1>m_maxNumAttacking)
-								m_maxNumAttacking = i+1;
+							//else if(i+1>m_maxNumAttacking)
+							//	m_maxNumAttacking = i+1;
 						}
 					}
 				}
@@ -487,10 +523,6 @@ void AssaultTransportAIUpdate::onAttack()
 	}
 	else
 	{
-		m_state = IDLE;
-		m_maxNumInTransport = 0;
-		m_maxNumAttacking = 0;
-
 		if( m_isAttackMove && getAIStateType() != AI_ATTACK_MOVE_TO )
 		{
 			//Continue to move towards the attackmove area.
@@ -887,9 +919,15 @@ Bool AssaultTransportAIUpdate::isMemberHealthy( const Object *member ) const
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::retrieveMembers()
 {
+	m_state = IDLE;
+	m_maxNumInTransport = 0;
+	m_maxNumAttacking = 0;
+
 	//Order all outside members back inside!
 	for( int i = 0; i < m_currentMembers; i++ )
 	{
+		m_countedSlotMember[ i ] = FALSE;
+		m_countedAssaultingMember[ i ] = FALSE;
 		Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
 		AIUpdateInterface *ai = member ? member->getAI() : NULL;
 		if( member && ai )
@@ -1104,6 +1142,8 @@ void AssaultTransportAIUpdate::xfer( Xfer *xfer )
 	{
 		xfer->xferObjectID( &(m_memberIDs[ i ]) );
 		xfer->xferBool( &(m_memberHealing[ i ]) );
+		xfer->xferBool( &(m_countedSlotMember[ i ]) );
+		xfer->xferBool( &(m_countedAssaultingMember[ i ]) );
 	}
 
 	xfer->xferCoord3D( &m_attackMoveGoalPos );

@@ -5942,8 +5942,9 @@ Bool PartitionFilterStealthedAndUndetected::allow( Object *objOther )
 	{
 		//This handles neutral containers that hold stealth units. This specifically fixes a bug where hunt scripts would ignore
 		//this case -- units would acquire the building Jarmen Kell occupied even though it was not stealth detected.
+		///IamInnocent 16/10/2025 - HotFix: Could return NULL from CaveContain.
 		const ContainModuleInterface* contain = objOther->getContain();
-		if( contain && !contain->getContainedItemsList()->empty() )
+		if( contain && contain->getContainedItemsList() && !contain->getContainedItemsList()->empty() )
 		{
 			const Player* victimApparentController = contain->getApparentControllingPlayer( m_obj->getControllingPlayer() );
 			//Check if it's stealthed!

@@ -57,6 +57,11 @@ public:
 	ObjectStatusMaskType m_targetRequiredStatus;
 	ObjectStatusMaskType m_targetForbiddenStatus;
 
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
+	std::vector<AsciiString> m_targetRequiredCustomStatus;
+	std::vector<AsciiString> m_targetForbiddenCustomStatus;
+
 	Bool m_fireOnce;     ///< trigger effects only once
 	Bool m_collideWithGround;    ///< trigger on collide with Ground
 	Bool m_collideWithObjects;   ///< trigger on collide with Objects
@@ -75,6 +80,10 @@ public:
 		m_collideWithObjects = TRUE;
 		m_triggerChance = 1.0;
 		m_rollOnce = FALSE;
+		m_requiredCustomStatus.clear();
+		m_forbiddenCustomStatus.clear();
+		m_targetRequiredCustomStatus.clear();
+		m_targetForbiddenCustomStatus.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);

@@ -216,7 +216,7 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 			containCount += atInterface->getCurrentAssaultingMembers();
 
 			// we are originally from this transport, so we can come in if its not occupied.
-			if (atInterface->getCurrentAssaultingMembers() > 0 && rider->getAssaultTransportObjectID() != INVALID_ID && rider->getAssaultTransportObjectID() == getObject()->getID())
+			if (atInterface->getCurrentAssaultingMembers() >= transportSlotCount && rider->getAssaultTransportObjectID() != INVALID_ID && rider->getAssaultTransportObjectID() == getObject()->getID())
 				containCount -= transportSlotCount;
 		}
 	}
