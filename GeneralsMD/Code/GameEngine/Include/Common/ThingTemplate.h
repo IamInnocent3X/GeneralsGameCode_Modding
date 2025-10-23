@@ -91,7 +91,7 @@ typedef std::vector<MaxSimultaneousOfTypeDifficultyPair> MaxSimultaneousOfTypeDi
 //-------------------------------------------------------------------------------------------------
 enum
 {
-	MAX_UPGRADE_CAMEO_UPGRADES = 5
+	MAX_UPGRADE_CAMEO_UPGRADES = 9
 };
 
 //-------------------------------------------------------------------------------------------------
