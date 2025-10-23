@@ -85,10 +85,10 @@ public:
 	virtual UpdateSleepTime update();
 
 	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onCreate( void ) { }
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 
 	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	void detonate();

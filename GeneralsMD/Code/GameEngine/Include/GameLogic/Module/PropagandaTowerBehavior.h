@@ -88,8 +88,8 @@ public:
 	void onObjectCreated( void );
 
 	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onCreate( void ) { }
 	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 
 	// update module methods

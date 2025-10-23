@@ -89,8 +89,8 @@ public:
 	virtual void onDisabledEdge( Bool nowDisabled );
 	virtual void onCapture( Player *oldOwner, Player *newOwner );
 	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onCreate( void ) { }
 	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 	UpdateSleepTime calcSleepTime() const;
 
