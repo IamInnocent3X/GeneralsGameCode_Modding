@@ -126,6 +126,7 @@ void CleanupHazardUpdate::onObjectCreated()
 UpdateSleepTime CleanupHazardUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done. Very hackky
 	const CleanupHazardUpdateModuleData *data = getCleanupHazardUpdateModuleData();
 	Object *obj = getObject();
 
@@ -150,14 +151,16 @@ UpdateSleepTime CleanupHazardUpdate::update()
 		}
 	}
 
+	UnsignedInt now = TheGameLogic->getFrame();
+
 	//Optimized firing at acquired target
-	if( m_nextScanFrames > 0 )
+	if( m_nextScanFrames > 0 && m_nextScanFrames <= 3 )
 	{
 		m_nextScanFrames--;
 		fireWhenReady(); //Only happens if something is tracked.
 		return UPDATE_SLEEP_NONE;
 	}
-	m_nextScanFrames = data->m_scanFrames;
+	m_nextScanFrames = now + data->m_scanFrames;
 
 	//Periodic scanning (expensive)
 	if( scanClosestTarget() )
@@ -185,7 +188,8 @@ UpdateSleepTime CleanupHazardUpdate::update()
 			}
 		}
 	}
-	return UPDATE_SLEEP_NONE;
+	return m_nextScanFrames > now ? UPDATE_SLEEP(m_nextScanFrames - now) : UPDATE_SLEEP_NONE;
+	//return UPDATE_SLEEP_NONE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -221,7 +225,7 @@ void CleanupHazardUpdate::fireWhenReady()
 				if( !m_nextScanFrames )
 				{
 					scanClosestTarget();
-					m_nextScanFrames = data->m_scanFrames;
+					m_nextScanFrames = TheGameLogic->getFrame() + data->m_scanFrames;
 					target = NULL; //Set target to NULL so we don't shoot at it (might be out of range)
 				}
 			}
@@ -233,6 +237,7 @@ void CleanupHazardUpdate::fireWhenReady()
 		}
 	}
 
+	// Unused
 	if( m_nextShotAvailableInFrames > 0 )
 	{
 		//We can't fire this frame.
@@ -254,6 +259,9 @@ void CleanupHazardUpdate::fireWhenReady()
 			}
 		}
 	}
+
+	if(m_nextScanFrames > 3 && m_nextScanFrames <= TheGameLogic->getFrame())
+		m_nextScanFrames = 0;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -131,7 +131,9 @@ JetSlowDeathBehavior::JetSlowDeathBehavior( Thing *thing, const ModuleData *modu
 
 	m_timerDeathFrame = 0;
 	m_timerOnGroundFrame = 0;
-	m_rollRate = 0.0f;
+	//m_rollRate = 0.0f;
+	m_setRoll = FALSE;
+	m_nextWakeUpTime = 0;
 
 }  // end JetSlowDeathBehavior
 
@@ -205,7 +207,7 @@ void JetSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 	}  // end if
 
 	// initialize our roll rate to that defined as the initial value in the module data
-	m_rollRate = modData->m_rollRate;
+	//m_rollRate = modData->m_rollRate;
 
 	// set the locomotor so that the plane starts falling
 	Locomotor *locomotor = us->getAIUpdateInterface()->getCurLocomotor();
@@ -220,27 +222,40 @@ void JetSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime JetSlowDeathBehavior::update( void )
 {
+	/// IamInnocent - Made Sleepy
 
 	// extend functionality of base class
-	SlowDeathBehavior::update();
+	UpdateSleepTime ret = SlowDeathBehavior::update();
 
 	// if the death is not activated, do nothing else
 	if( isSlowDeathActivated() == FALSE )
-		return UPDATE_SLEEP_NONE;
+		return ret; //UPDATE_SLEEP_NONE;
 
 	// get object info
 	Object *us = getObject();
 	const JetSlowDeathBehaviorModuleData *modData = getJetSlowDeathBehaviorModuleData();
 
 	// roll us around in the air
-	PhysicsBehavior *physics = us->getPhysics();
-	DEBUG_ASSERTCRASH( physics, ("JetSlowDeathBehavior::beginSlowDeath - '%s' has no physics",
-															us->getTemplate()->getName().str()) );
-	if( physics )
-		physics->setRollRate( m_rollRate );
+	if(!m_setRoll)
+	{
+		PhysicsBehavior *physics = us->getPhysics();
+		DEBUG_ASSERTCRASH( physics, ("JetSlowDeathBehavior::beginSlowDeath - '%s' has no physics",
+																us->getTemplate()->getName().str()) );
+		if( physics )
+		{
+			physics->setRollRateConstant( modData->m_rollRate, modData->m_rollRateDelta );
+			m_setRoll = TRUE;
+			//physics->setRollRate( m_rollRate );
+		}
+	}
 
 	// adjust the roll rate over time
-	m_rollRate *= modData->m_rollRateDelta;
+	//m_rollRate *= modData->m_rollRateDelta;
+
+	UnsignedInt now = TheGameLogic->getFrame();
+
+	if(now >= m_nextWakeUpTime)
+		m_nextWakeUpTime = 0;
 
 	// do effects for death while in the air
 	if( m_timerOnGroundFrame == 0 )
@@ -269,7 +284,8 @@ UpdateSleepTime JetSlowDeathBehavior::update( void )
 		Bool hitATree = FALSE;
 		// Here we want to make sure we crash if we collide with a tree on the way down
 		PhysicsBehavior *phys = us->getPhysics();
-		if ( m_timerOnGroundFrame == 0 && phys )
+		//if ( m_timerOnGroundFrame == 0 && phys )
+		if( phys )
 		{
 			ObjectID treeID = phys->getLastCollidee();
 			Object *tree = TheGameLogic->findObjectByID( treeID );
@@ -294,33 +310,41 @@ UpdateSleepTime JetSlowDeathBehavior::update( void )
 			ObjectCreationList::create( modData->m_oclHitGround, us, NULL );
 
 			// we are now on the ground
-			m_timerOnGroundFrame = TheGameLogic->getFrame();
+			m_timerOnGroundFrame = now;
 
 			// start us rolling on another axis too
-			if( physics )
-				physics->setPitchRate( modData->m_pitchRate );
+			if( phys )
+				phys->setPitchRateConstant( modData->m_pitchRate );
 
 		}  // end if
 
 		// timers for the secondary effect
-		if( m_timerDeathFrame != 0 &&
-				TheGameLogic->getFrame() - m_timerDeathFrame >= modData->m_delaySecondaryFromInitialDeath )
+		//if( m_timerDeathFrame != 0 &&
+		if( m_timerDeathFrame != 0 )
 		{
+			if(	now - m_timerDeathFrame >= modData->m_delaySecondaryFromInitialDeath )
+			{
 
-			// do some effects
-			FXList::doFXObj( modData->m_fxSecondary, us );
-			ObjectCreationList::create( modData->m_oclSecondary, us, NULL );
+				// do some effects
+				FXList::doFXObj( modData->m_fxSecondary, us );
+				ObjectCreationList::create( modData->m_oclSecondary, us, NULL );
 
-			// clear the death frame timer since we've already executed the event now
-			m_timerDeathFrame = 0;
+				// clear the death frame timer since we've already executed the event now
+				m_timerDeathFrame = 0;
 
-		}  //end if
+			}  //end if
+			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath)
+			{
+				if(m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath > now)
+					m_nextWakeUpTime = m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath;
+			}
+		}
 
 	}  // end if
 	else
 	{
 		// we are on the ground, pay attention to the final explosion timers
-		if( TheGameLogic->getFrame() - m_timerOnGroundFrame >= modData->m_delayFinalBlowUpFromHitGround )
+		if( now - m_timerOnGroundFrame >= modData->m_delayFinalBlowUpFromHitGround )
 		{
 
 			// do some effects
@@ -331,12 +355,40 @@ UpdateSleepTime JetSlowDeathBehavior::update( void )
 			TheGameLogic->destroyObject( us );
 
 		}  // end if
+		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_timerOnGroundFrame + modData->m_delayFinalBlowUpFromHitGround)
+		{
+			if(m_timerOnGroundFrame + modData->m_delayFinalBlowUpFromHitGround > now)
+				m_nextWakeUpTime = m_timerOnGroundFrame + modData->m_delayFinalBlowUpFromHitGround;
+		}
 
 	}  // end else
 
-	return UPDATE_SLEEP_NONE;
+	UpdateSleepTime mine = m_nextWakeUpTime > now ? UPDATE_SLEEP(m_nextWakeUpTime - now) : UPDATE_SLEEP_FOREVER;
+	return (mine < ret) ? mine : ret;
+	//return UPDATE_SLEEP_NONE;
 
 }  // end update
+
+// ------------------------------------------------------------------------------------------------
+Bool JetSlowDeathBehavior::layerUpdate(Bool doModifier)
+{
+	// call the base class cause we're extending functionality
+	if(!SlowDeathBehavior::layerUpdate(FALSE))
+	{
+		if(m_timerOnGroundFrame != 0)
+		{
+			if(doModifier)
+				getObject()->setNoSlowDeathLayerUpdate();
+
+			return FALSE;
+		}
+	}
+
+	if(doModifier)
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
+	return TRUE;
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -372,7 +424,13 @@ void JetSlowDeathBehavior::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_timerOnGroundFrame );
 
 	// roll rate
-	xfer->xferReal( &m_rollRate );
+	//xfer->xferReal( &m_rollRate );
+
+	// set Roll
+	xfer->xferBool( &m_setRoll );
+
+	// next wake up time
+	xfer->xferUnsignedInt( &m_nextWakeUpTime );
 
 }  // end xfer
 

@@ -75,12 +75,15 @@
 #include "GameLogic/Module/CreateModule.h"
 #include "GameLogic/Module/DamageModule.h"
 #include "GameLogic/Module/DeletionUpdate.h"
+#include "GameLogic/Module/DemoTrapUpdate.h"
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/LifeTimeUpdate.h"
 #include "GameLogic/Module/EquipCrateCollide.h"
 #include "GameLogic/Module/HijackerUpdate.h"
+//#include "GameLogic/Module/MobMemberSlavedUpdate.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
 #include "GameLogic/Module/ObjectSMCHelper.h"
@@ -91,6 +94,7 @@
 #include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/RadarUpgrade.h"
 #include "GameLogic/Module/RebuildHoleBehavior.h"
+#include "GameLogic/Module/SlowDeathBehavior.h"
 #include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/SpecialAbilityUpdate.h"
@@ -573,6 +577,15 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_parasiteCollideActive = FALSE;
 
+	m_mobJustUpdated = FALSE;
+	m_isMobMember = FALSE;
+
+	m_noSlavedBehavior = FALSE;
+	m_noSlaverBehavior = FALSE;
+	m_noSlowDeathBehavior = FALSE;
+	m_noSlowDeathLayerUpdate = FALSE;
+	m_noFloatUpdate = FALSE;
+
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
 
@@ -786,6 +799,10 @@ void Object::onRemovedFrom( Object *removedFrom )
 
 	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)
 	{
+		UpdateModuleInterface* update = (*m)->getUpdate();
+		if( update )
+			update->doRemovedFrom();
+
 		CollideModuleInterface* collide = (*m)->getCollide();
 		if (!collide)
 			continue;
@@ -1542,6 +1559,12 @@ void Object::setModelConditionFlags( const ModelConditionFlags& set )
 	if (m_drawable)
 	{
 		m_drawable->setModelConditionFlags(set);
+		
+		const ModelConditionFlags flags = m_drawable->getModelConditionFlags();
+		if (flags.anyIntersectionWith(MAKE_MODELCONDITION_MASK(MODELCONDITION_WEAPONSET_PLAYER_UPGRADE)))
+		{
+			doMobMemberSlavedUpdate();
+		}
 	}
 }
 
@@ -1551,6 +1574,12 @@ void Object::clearAndSetModelConditionFlags( const ModelConditionFlags& clr, con
 	if (m_drawable)
 	{
 		m_drawable->clearAndSetModelConditionFlags(clr, set);
+
+		const ModelConditionFlags flags = m_drawable->getModelConditionFlags();
+		if (flags.anyIntersectionWith(MAKE_MODELCONDITION_MASK(MODELCONDITION_WEAPONSET_PLAYER_UPGRADE)))
+		{
+			doMobMemberSlavedUpdate();
+		}
 	}
 }
 
@@ -2669,6 +2698,21 @@ UnsignedInt Object::getDisabledUntil( DisabledType type ) const
 }
 
 //-------------------------------------------------------------------------------------------------
+UnsignedInt Object::getDisabledUntilMask( DisabledMaskType mask ) const
+{
+	UnsignedInt highestFrame = 0;
+	//Iterate through each disabled type and return the one with the highest frame.
+	for( Int i = 0; i < DISABLED_COUNT; i++ )
+	{
+		if( mask.test( i ) && m_disabledMask.test( i ) && m_disabledTillFrame[ i ] > highestFrame )
+		{
+			highestFrame = m_disabledTillFrame[ i ];
+		}
+	}
+	return highestFrame;
+}
+
+//-------------------------------------------------------------------------------------------------
 Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 {
 	if( type < 0 || type >= DISABLED_COUNT )
@@ -3623,6 +3667,7 @@ void Object::setWeaponSetFlag(WeaponSetType wst)
 {
 	m_curWeaponSetFlags.set(wst);
 	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
 	if (m_drawable)
 	{
 		m_drawable->setModelConditionState(TheWeaponSetTypeToModelConditionTypeMap[wst]);
@@ -3634,6 +3679,7 @@ void Object::clearWeaponSetFlag(WeaponSetType wst)
 {
 	m_curWeaponSetFlags.set(wst, 0);
 	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
 	if (m_drawable)
 	{
 		m_drawable->clearModelConditionState(TheWeaponSetTypeToModelConditionTypeMap[wst]);
@@ -3736,6 +3782,7 @@ void Object::onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel ne
 		TheAudio->addAudioEvent( &soundToPlay );
 	}
 
+	doSlaveBehaviorUpdate(TRUE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5127,6 +5174,8 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferObjectID( &m_assaultTransportID );
 
+	xfer->xferBool( &m_isMobMember );
+
 	if ( version >= 3 )
 	{
 		xfer->xferObjectID( &m_soleHealingBenefactorID );
@@ -5293,6 +5342,7 @@ void Object::doObjectUpgradeChecks()
 
 	// Upgrade Weapon Sets
 	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
 
 	// Applicable to RiderChangeContain and TunnelContain
 	ContainModuleInterface *cmod = getContain();
@@ -5315,6 +5365,7 @@ void Object::doObjectStatusChecks()
 
 	// Check Weapon Sets
 	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
 
 	// Applicable to RiderChangeContain
 	ContainModuleInterface *cmod = getContain();
@@ -7864,6 +7915,231 @@ void Object::doAssaultTransportHealthUpdate()
 		{
 			atInterface->checkPassengerHealth( getID() );
 		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlaveBehaviorUpdate( Bool doSlaver )
+{
+	// If I do not have a slaver module, don't update me
+	if(m_noSlavedBehavior && m_noSlaverBehavior)
+		return;
+
+	m_noSlavedBehavior = TRUE;
+	m_noSlaverBehavior = TRUE;
+	Bool doneSlaver = FALSE;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		// SpawnBehavior Sleepy Updates
+		if(doSlaver && !doneSlaver)
+		{
+			SpawnBehaviorInterface *spawnInterface = (*m)->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				spawnInterface->friend_refreshUpdate();
+				m_noSlaverBehavior = FALSE;
+				doneSlaver = TRUE;
+				continue;
+			}
+		}
+		
+		SlavedUpdateInterface* sdu = (*m)->getSlavedUpdateInterface();
+		if ( !sdu )
+			continue;
+
+		ObjectID slaverID = sdu->getSlaverID();
+		if ( slaverID != INVALID_ID )
+		{
+			Object *slaver = TheGameLogic->findObjectByID( slaverID );
+			if ( slaver )
+			{
+				SpawnBehaviorInterface *slaverInterface = slaver->getSpawnBehaviorInterface();
+				if( slaverInterface )
+				{
+					slaverInterface->friend_refreshUpdate();
+					m_noSlavedBehavior = FALSE;
+				}
+			}
+		}
+
+		break;//only expect one slavedupdate, so stop searching
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doWeaponSetUpdate()
+{
+	static NameKeyType key_DemoTrapUpdate = NAMEKEY("DemoTrapUpdate");
+	DemoTrapUpdate *dtu = (DemoTrapUpdate*)findUpdateModule(key_DemoTrapUpdate);
+	if( dtu )
+	{
+		dtu->refreshUpdate();
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doObjectLocomotorUpdate()
+{
+	doSlavedUpdate(FALSE);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doMovingUpdate()
+{
+	doSlavedUpdate(TRUE);
+
+	// No float update, we stop here
+	if(m_noFloatUpdate)
+		return;
+	
+	// Float Update
+	m_noFloatUpdate = TRUE;
+	
+	static NameKeyType key_float = NAMEKEY( "FloatUpdate" );
+	FloatUpdate *floatUpdate = (FloatUpdate *)findUpdateModule( key_float );
+
+	if( floatUpdate )
+	{
+		floatUpdate->refreshUpdate();
+		m_noFloatUpdate = FALSE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doMobMemberSlavedUpdate()
+{
+	doSlavedUpdate(FALSE);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlavedUpdate( Bool doSlaver )
+{
+	// I had just updated, don't iterate through my behaviors.
+	if(m_isMobMember && m_mobJustUpdated)
+		return;
+
+	// If I do not have a slaved module, don't update me
+	if(m_noSlavedBehavior && !doSlaver)
+		return;
+
+	// If I do not have a slaver module, don't update me
+	if(m_noSlaverBehavior && m_noSlavedBehavior)
+		return;
+
+	m_noSlavedBehavior = TRUE;
+	m_noSlaverBehavior = TRUE;
+
+	//static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		if(doSlaver)
+		{
+			// if we are the slaver, get the interface and update all the mobs
+			SpawnBehaviorInterface *spawnInterface = (*m)->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				m_noSlaverBehavior = FALSE;
+				spawnInterface->updateMobMembers();
+				// If this module is a slaver, and is not a slave, we stop here
+				if(!(*m)->getSlavedUpdateInterface())
+					return;
+			}
+		}
+
+		// if we are one among all, get the interface and update all the mobs
+		SlavedUpdateInterface* sdu = (*m)->getSlavedUpdateInterface();
+		if ( !sdu )
+			continue;
+
+		m_noSlavedBehavior = FALSE;
+
+		//if((*m)->getModuleNameKey() == key_MobMemberSlavedUpdate)
+		if(m_isMobMember)
+		{
+			ObjectID slaverID = sdu->getSlaverID();
+			if ( slaverID != INVALID_ID )
+			{
+				Object *slaver = TheGameLogic->findObjectByID( slaverID );
+				if ( slaver )
+				{
+					SpawnBehaviorInterface *slaverInterface = slaver->getSpawnBehaviorInterface();
+					if( slaverInterface )
+					{
+						slaverInterface->updateMobMembers();
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			sdu->friend_refreshUpdate();
+		}
+	}
+	
+	/*static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
+	MobMemberSlavedUpdate *MMSUpdate = (MobMemberSlavedUpdate*)findUpdateModule( key_MobMemberSlavedUpdate );
+	if( MMSUpdate )
+	{
+		Object *slaver = TheGameLogic->findObjectByID(MMSUpdate->getSlaverID());
+		if ( slaver )
+		{
+			SpawnBehaviorInterface *spawnInterface = slaver->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				spawnInterface->updateMobMembers();
+			}
+		}
+	}*/
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlowDeathRefreshUpdate()
+{
+	// I'm not dead yet, don't update me
+	if(!isEffectivelyDead())
+		return;
+
+	// If I do not have a slow death behavior module, don't update me
+	if(m_noSlowDeathBehavior)
+		return;
+
+	m_noSlowDeathBehavior = TRUE;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		SlowDeathBehaviorInterface* sdu = (*m)->getSlowDeathBehaviorInterface();
+		if (!sdu)
+			continue;
+		
+		sdu->friend_refreshUpdate();
+		m_noSlowDeathBehavior = FALSE;
+	}
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlowDeathLayerUpdate()
+{
+	// I'm not dead yet, don't update me
+	if(!isEffectivelyDead())
+		return;
+
+	// If I do not have a slow death behavior module, don't update me
+	if(m_noSlowDeathBehavior || m_noSlowDeathLayerUpdate)
+		return;
+
+	m_noSlowDeathLayerUpdate = TRUE;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		SlowDeathBehaviorInterface* sdu = (*m)->getSlowDeathBehaviorInterface();
+		if (!sdu)
+			continue;
+		
+		m_noSlowDeathLayerUpdate = FALSE;
+		sdu->layerUpdate(TRUE);
 	}
 }
 

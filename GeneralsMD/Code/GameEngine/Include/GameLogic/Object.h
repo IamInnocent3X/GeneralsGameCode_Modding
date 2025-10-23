@@ -588,7 +588,7 @@ public:
 	void clearWeaponSetFlag(WeaponSetType wst);
 	inline Bool testWeaponSetFlag(WeaponSetType wst) const { return m_curWeaponSetFlags.test(wst); }
 	inline const WeaponSetFlags& getWeaponSetFlags() const { return m_curWeaponSetFlags; }
-	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType ){ return m_weaponSet.setWeaponLock( weaponSlot, lockType ); }
+	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType ){ if(lockType == LOCKED_PERMANENTLY) doWeaponSetUpdate(); return m_weaponSet.setWeaponLock( weaponSlot, lockType ); }
 	void releaseWeaponLock(WeaponLockType lockType){ m_weaponSet.releaseWeaponLock(lockType); }
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 
@@ -660,6 +660,7 @@ public:
 	Bool isDisabledByType( DisabledType type ) const { return TEST_DISABLEDMASK( m_disabledMask, type ); }
 
 	UnsignedInt getDisabledUntil( DisabledType type = DISABLED_ANY ) const;
+	UnsignedInt getDisabledUntilMask( DisabledMaskType mask ) const;
 
 	void pauseAllSpecialPowers( const Bool disabling ) const;
 
@@ -735,6 +736,20 @@ public:
 	void doAssaultTransportHealthUpdate();
 
 	inline ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
+
+	void doSlaveBehaviorUpdate( Bool doSlaver );
+	void doSlavedUpdate( Bool doSlaver );
+	void doMobMemberSlavedUpdate();
+	void doWeaponSetUpdate();
+	void doMovingUpdate();
+	void doObjectLocomotorUpdate();
+	void doSlowDeathLayerUpdate();
+	void doSlowDeathRefreshUpdate();
+
+	inline void setIsMobMember(Bool set) { m_isMobMember = set; }
+	inline void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }
+	inline Bool getMobUpdateRefreshed() const { return m_mobJustUpdated; }
+	inline void setNoSlowDeathLayerUpdate() { m_noSlowDeathLayerUpdate = TRUE; }
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
@@ -972,6 +987,15 @@ private:
 	ObjectID										m_carbombConverterID;
 	ObjectID 										m_hijackerID;
 	mutable ObjectID 										m_assaultTransportID;
+
+	Bool											m_isMobMember;
+	Bool											m_mobJustUpdated;
+
+	Bool											m_noFloatUpdate;
+	Bool											m_noSlavedBehavior;
+	Bool											m_noSlaverBehavior;
+	Bool											m_noSlowDeathBehavior;
+	Bool											m_noSlowDeathLayerUpdate;
 
 };  // end class Object
 

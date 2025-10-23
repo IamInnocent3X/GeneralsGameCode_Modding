@@ -950,6 +950,9 @@ void AIUpdateInterface::chooseGoodLocomotorFromCurrentSet( void )
 		m_curLocomotor->setNoSlowDownAsApproachingDest(FALSE);
 		// ditto for ultra-accuracy.
 		m_curLocomotor->setUltraAccurate(FALSE);
+
+		// do update for any relevant modules for the Object
+		getObject()->doObjectLocomotorUpdate();
 	}
 }
 
@@ -2103,6 +2106,10 @@ void AIUpdateInterface::destroyPath( void )
  */
 void AIUpdateInterface::friend_startingMove(void)
 {
+	// If I started move, do an Update
+	if(m_isMoving == FALSE)
+		getObject()->doMovingUpdate();
+	
 	m_movementComplete = FALSE; // we aren't finished moving.
 	m_isMoving = TRUE;
 	m_blockedFrames = 0;
@@ -2387,6 +2394,8 @@ void AIUpdateInterface::setLocomotorGoalPositionOnPath()
 {
 	m_locomotorGoalType = POSITION_ON_PATH;
 	m_locomotorGoalData.zero();
+
+	getObject()->doMovingUpdate();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2394,6 +2403,8 @@ void AIUpdateInterface::setLocomotorGoalPositionExplicit(const Coord3D& newPos)
 {
 	m_locomotorGoalType = POSITION_EXPLICIT;
 	m_locomotorGoalData = newPos;
+
+	getObject()->doMovingUpdate();
 #ifdef RTS_DEBUG
 if (_isnan(m_locomotorGoalData.x) || _isnan(m_locomotorGoalData.y) || _isnan(m_locomotorGoalData.z))
 {
@@ -2407,6 +2418,8 @@ void AIUpdateInterface::setLocomotorGoalOrientation(Real angle)
 {
 	m_locomotorGoalType = ANGLE;
 	m_locomotorGoalData.x = angle;
+
+	getObject()->doMovingUpdate();
 #ifdef RTS_DEBUG
 if (_isnan(m_locomotorGoalData.x) || _isnan(m_locomotorGoalData.y) || _isnan(m_locomotorGoalData.z))
 {

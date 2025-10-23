@@ -1565,6 +1565,7 @@ void DozerAIUpdate::removeBridgeScaffolding( Object *bridgeTower )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime DozerAIUpdate::update( void )
 {
+	/// IamInnocent - Made Sleepy
 
 	//
 	// NOTE: Any changes to DozerAIUpdate::* you probably want to reflect and copy into
@@ -1591,7 +1592,8 @@ UpdateSleepTime DozerAIUpdate::update( void )
 	// do nothing if we're dead
 	///@todo shouldn't this be at a higher level?
 	if( getObject()->isEffectivelyDead() )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// get and validate our current task
 	DozerTask currentTask = getCurrentTask();
@@ -1617,9 +1619,12 @@ UpdateSleepTime DozerAIUpdate::update( void )
 		getObject()->setWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL);//maybe go clear some mines, if I feel like it
 
 	// run our own state machine
-	m_dozerMachine->updateStateMachine();
+	StateReturnType stRet = m_dozerMachine->updateStateMachine();
 
-	return UPDATE_SLEEP_NONE;
+	UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	return (mine < result) ? mine : result;
+	//return UPDATE_SLEEP_NONE;
 
 }  // end update
 

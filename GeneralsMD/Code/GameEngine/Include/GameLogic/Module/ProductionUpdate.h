@@ -81,7 +81,7 @@ public:
 	ProductionType getProductionType( void ) const { return m_type; }
 
 	/// how much progress is done on this entry
-	Real getPercentComplete( void ) const { return m_percentComplete; }
+	Real getPercentComplete( void ) const; // { return m_percentComplete; }
 
 	/// get the unique (to the producer object) production ID
 	ProductionID getProductionID( void ) const { return m_productionID; }
@@ -232,6 +232,8 @@ public:
 
 	virtual UpdateSleepTime update( void );					///< the update
 
+	virtual void onCapture( Player *oldOwner, Player *newOwner );		///< when we are captured
+
 	//These functions keep track of the special power construction of a new building via a special power instead of standard production interface.
 	//This was added for the sneak attack building functionality.
 	virtual const CommandButton* getSpecialPowerConstructionCommandButton() const { return m_specialPowerConstructionCommandButton; }
@@ -239,6 +241,8 @@ public:
 
 	// DieModuleInterface
 	virtual void onDie( const DamageInfo *damageInfo );
+
+	UpdateSleepTime calcSleepTime() const;
 
 protected:
 
@@ -266,6 +270,7 @@ protected:
 	ModelConditionFlags m_clearFlags;										///< flags to clear from model
 	ModelConditionFlags m_setFlags;											///< flags to set in model
 	Bool								m_flagsDirty;										///< clearFlags/setFlags needs to be set into the model
+	UnsignedInt							m_nextWakeUpTime;
 
 };
 

@@ -267,7 +267,7 @@ UpdateSleepTime DeliverPayloadAIUpdate::update( void )
 	}
 	else
 	{
-		UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_FOREVER;
+		UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
 		mine = m_wakeUpTime && m_wakeUpTime < GET_STATE_SLEEP_FRAMES(mine) ? UPDATE_SLEEP(m_wakeUpTime) : mine;
 		return (mine < ret) ? mine : ret;
 	}

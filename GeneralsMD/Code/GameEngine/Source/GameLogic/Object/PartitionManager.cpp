@@ -3782,11 +3782,11 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 
 				CellOutwardIterator iter(this, useX, useY);
 				// don't go outwards any farther than necessary.
-				Int max = worldToCellDist(1) + 1;
+				Int max = worldToCellDist(2) + 1;
 				// default value for "max" is largest possible, based on map size, so we should
 				// never make it any larger than that
-				if (1 < iter.getMaxRadius())
-					iter.setMaxRadius(1);
+				if (2 < iter.getMaxRadius())
+					iter.setMaxRadius(2);
 
 				static Int theIterFlag = 1;	// nonzero, thanks
 				++theIterFlag;

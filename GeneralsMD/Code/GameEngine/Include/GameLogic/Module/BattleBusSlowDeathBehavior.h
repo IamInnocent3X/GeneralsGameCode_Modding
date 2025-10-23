@@ -120,6 +120,8 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo );
 	virtual UpdateSleepTime update( void );
 
+	virtual void refreshUpdate() { }
+
 protected:
 
 	Bool m_isRealDeath;								///< Flag set by onDie that prevents the alternate processing caused by beginSlowDeath.

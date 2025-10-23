@@ -435,6 +435,15 @@ void PhysicsBehavior::resetDynamicPhysics()
 	m_yawRate = 0;
 	m_rollRate = 0;
 	m_pitchRate = 0;
+	m_rollRateStatic = 0;
+	m_rollStaticFactor = 1.0f;
+	m_pitchRateStatic = 0;
+	m_forwardAngle = 0;
+	m_forwardSpeed = 0;
+	m_spiralOrbitTurnRate = 0;
+	m_spiralOrbitForwardSpeedDamping = 0;
+	m_orbitDirection = 0;
+	m_spinRate = 0;
 	setFlag(HAS_PITCHROLLYAW, false);
 #ifdef SLEEPY_PHYSICS
 	DEBUG_ASSERTCRASH(!getFlag(IS_IN_UPDATE), ("hmm, should not happen, may not work"));
@@ -623,6 +632,74 @@ void PhysicsBehavior::setBounceSound(const AudioEventRTS* bounceSound)
 }
 
 //-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setRollRateConstant(Real roll, Real rollFactor)
+{
+	setRollRate(roll);
+
+	m_rollRateStatic = roll;
+	m_rollStaticFactor = rollFactor;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setPitchRateConstant(Real pitch)
+{
+	setPitchRate(pitch);
+
+	m_pitchRateStatic = pitch;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::applyHelicopterSlowDeathSpin( Real spinRate )
+{
+	if(!m_spinRate)
+		doHelicopterSlowDeathSpin( spinRate );
+
+	m_spinRate = spinRate;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::doHelicopterSlowDeathSpin( Real spinRate )
+{
+	Matrix3D xfrm = *getObject()->getTransformMatrix();
+	xfrm.In_Place_Pre_Rotate_Z(spinRate);
+	getObject()->setTransformMatrix( &xfrm );
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping )
+{
+	if(!m_forwardSpeed)
+		doHelicopterSlowDeathForce(forwardAngle, forwardSpeed);
+
+	m_forwardAngle = forwardAngle;
+	m_forwardSpeed = forwardSpeed;
+	m_spiralOrbitTurnRate = spiralOrbitTurnRate;
+	m_spiralOrbitForwardSpeedDamping = spiralOrbitForwardSpeedDamping;
+	m_orbitDirection = orbitDirection;
+	
+	// update our forward angle for travelling along the large spiral downward circle
+	m_forwardAngle += (m_spiralOrbitTurnRate * m_orbitDirection);
+
+	// adjust our forward spiral orbit by the damping factor specified
+	m_forwardSpeed *= m_spiralOrbitForwardSpeedDamping;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed )
+{
+	// If there's no force to apply, do nothing
+	if(!forwardSpeed)
+		return;
+
+	Coord3D force;
+	force.x = DOUBLE_TO_REAL( Cos( forwardAngle ) ) * forwardSpeed;
+	force.y = DOUBLE_TO_REAL( Sin( forwardAngle ) ) * forwardSpeed;
+	force.z = 0.0f;
+	applyMotiveForce( &force );
+}
+
+//-------------------------------------------------------------------------------------------------
 /**
  * Basic rigid body physics using an Euler integrator.
  * @todo Currently, only translations are integrated. Rotations should also be integrated. (MSB)
@@ -647,6 +724,23 @@ UpdateSleepTime PhysicsBehavior::update()
 	{
 		// set the flag so that we don't get bogus "collisions" on the first frame.
 		setFlag(WAS_AIRBORNE_LAST_FRAME, airborneAtStart);
+	}
+
+	// HelicopterSlowDeathBehavior stuff.
+	// Update here and make the behavior Sleept
+	if(m_spinRate)
+	{
+		doHelicopterSlowDeathSpin( m_spinRate );
+	}
+	if(m_forwardSpeed)
+	{
+		doHelicopterSlowDeathForce( m_forwardAngle, m_forwardSpeed );
+		
+		// update our forward angle for travelling along the large spiral downward circle
+		m_forwardAngle += (m_spiralOrbitTurnRate * m_orbitDirection);
+
+		// adjust our forward spiral orbit by the damping factor specified
+		m_forwardSpeed *= m_spiralOrbitForwardSpeedDamping;
 	}
 
 	Coord3D prevPos = *obj->getPosition();
@@ -741,6 +835,16 @@ UpdateSleepTime PhysicsBehavior::update()
 			Real pitchRateToUse = m_pitchRate * d->m_pitchRollYawFactor;
 			Real rollRateToUse = m_rollRate * d->m_pitchRollYawFactor;
 
+			if(m_rollRateStatic)
+			{
+				setRollRate(m_rollRateStatic * m_rollStaticFactor);
+				m_rollStaticFactor *= m_rollStaticFactor;
+			}
+			if(m_pitchRateStatic)
+			{
+				setPitchRate(m_pitchRateStatic);
+			}
+
 			// With a center of mass listing, pitchRate needs to dampen towards straight down/straight up
 			Real offset = getCenterOfMassOffset();
 
@@ -830,6 +934,9 @@ UpdateSleepTime PhysicsBehavior::update()
 		}
 	} // if not held
 
+	// Update SlowDeathBehavior to set their layers for sleepy Updates
+	obj->doSlowDeathLayerUpdate();
+
 	// reset the acceleration for accumulation next frame
 	m_accel.zero();
 
@@ -905,6 +1012,9 @@ UpdateSleepTime PhysicsBehavior::update()
 		if (obj->isDisabledByType(DISABLED_FREEFALL))
 			obj->clearDisabled(DISABLED_FREEFALL);
 		obj->clearModelConditionState(MODELCONDITION_FREEFALL);
+
+		if(getFlag(WAS_AIRBORNE_LAST_FRAME))
+			obj->doSlowDeathRefreshUpdate();
 	}
 
 
@@ -1356,6 +1466,10 @@ void PhysicsBehavior::onCollide( Object *other, const Coord3D *loc, const Coord3
 
 
 	m_lastCollidee = other->getID();
+	if(other->isKindOf( KINDOF_SHRUBBERY ))
+	{
+		obj->doSlowDeathLayerUpdate();
+	}
 
 	Real dist = sqrtf(distSqr);
 	Real overlap = usRadius + themRadius - dist;
@@ -1891,6 +2005,28 @@ void PhysicsBehavior::xfer( Xfer *xfer )
 
 	// pitch rate
 	xfer->xferReal( &m_pitchRate );
+
+	// roll that never changes
+	xfer->xferReal( &m_rollRateStatic );
+
+	// roll static constant factor
+	xfer->xferReal( &m_rollStaticFactor );
+
+	// pitch that never changes
+	xfer->xferReal( &m_pitchRateStatic );
+
+	xfer->xferReal( &m_forwardAngle );
+
+	xfer->xferReal( &m_forwardSpeed );
+
+	xfer->xferReal( &m_spiralOrbitTurnRate );
+
+	xfer->xferReal( &m_spiralOrbitForwardSpeedDamping );
+
+	xfer->xferInt( &m_orbitDirection );
+
+	// helicopter slow death spin
+	xfer->xferReal( &m_spinRate );
 
 	// we dont' need to mess with sound stuff
 	// m_bounceSound <---- do nothing with this

@@ -120,7 +120,7 @@ public:
 
 	void addMembers();
 
-	UpdateSleepTime calcSleepTime();
+	//UpdateSleepTime calcSleepTime();
 
 	void reset();
 	Bool isMemberWounded( const Object *member ) const;	//Member requires medical attention?

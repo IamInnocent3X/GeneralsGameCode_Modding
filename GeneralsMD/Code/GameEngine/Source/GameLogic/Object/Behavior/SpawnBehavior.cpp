@@ -44,10 +44,11 @@
 #include "GameClient/InGameUI.h" // selection logic
 #include "GameLogic/ExperienceTracker.h" //veterancy logic
 #include "GameLogic/Module/StealthUpdate.h"
+#include "GameLogic/Module/MobMemberSlavedUpdate.h"
 
 
 #define NONE_SPAWNED_YET (0xffffffff)
-
+#define COUNT_SPAWN_RATE
 
 
 
@@ -88,9 +89,14 @@ SpawnBehavior::SpawnBehavior( Thing *thing, const ModuleData* moduleData )
 
 	m_aggregateHealth = md->m_aggregateHealth;
 
+	m_computedAggregation = FALSE;
+	m_nextWakeUpTime = 0;
+
 	m_spawnCount = NONE_SPAWNED_YET;
 	m_active = TRUE;
 	m_selfTaskingSpawnCount = 0;
+
+	m_spawnIDsInfo.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -195,20 +201,34 @@ void SpawnBehavior::onDie( const DamageInfo *damageInfo )
 UpdateSleepTime SpawnBehavior::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 
 	//EVERY FRAME
+	Bool aggregateIsMoving = FALSE;
 	if ( m_aggregateHealth )
 	{
 		computeAggregateStates();
+
+		AIUpdateInterface *ai = getObject()->getAI();
+		if ( ai && ( !m_computedAggregation || ai->isMoving() || ai->getPath() ) )
+		{
+			computeAggregateMembers();
+
+			if(ai->isMoving() || ai->getPath())
+				aggregateIsMoving = TRUE;
+		}
+
+		m_computedAggregation = TRUE;
 	}
 
 	const SpawnBehaviorModuleData* md = getSpawnBehaviorModuleData();
+	Int now = TheGameLogic->getFrame();
 	if ( ! m_initialBurstTimesInited )
 	{
 		m_initialBurstTimesInited = TRUE;
 
 		Bool runtimeProduced = getObject()->getProducerID()!=INVALID_ID; //this was produced by a production module, rather than a script or worldbuilder
-		Int now = TheGameLogic->getFrame();
+		//Int now = TheGameLogic->getFrame();
 		Int burstInitCount = m_initialBurstCountdown;
 		for( int listIndex = 0; listIndex < md->m_spawnNumberData; listIndex++ )
 		{
@@ -230,12 +250,24 @@ UpdateSleepTime SpawnBehavior::update( void )
 
 
 	//SPARSELY SOLVED
-	if (--m_framesToWait > 0)
+	//if (--m_framesToWait > 0)
+	//{
+	//	return UPDATE_SLEEP_NONE;
+	//}
+	//if (m_framesToWait > now)
+	//{
+	//	return UPDATE_SLEEP(m_framesToWait - now);
+	//}
+
+	//m_framesToWait = now + SPAWN_UPDATE_RATE;
+	if(m_nextWakeUpTime > now)
 	{
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP( aggregateIsMoving ? UPDATE_SLEEP_NONE : m_nextWakeUpTime - now );
 	}
 
-	m_framesToWait = SPAWN_UPDATE_RATE;
+	m_nextWakeUpTime = now + SPAWN_UPDATE_RATE;
+
+	Bool hasPassedItsSpawnTime = FALSE;
 
 	//Go through the list and make a spawn for each number that is less than now's frame
 	if( shouldTryToSpawn() )
@@ -248,23 +280,56 @@ UpdateSleepTime SpawnBehavior::update( void )
 		while( iterator != m_replacementTimes.end() )
 		{
 			Int replacementTime = *iterator;
-			UnsignedInt currentTime = TheGameLogic->getFrame();
-			if( currentTime > replacementTime )
+			//UnsignedInt currentTime = TheGameLogic->getFrame();
+			//if( currentTime > replacementTime )
+			if( now > replacementTime )
 			{
 				//If you create one, you pop the number off the list
 				if( createSpawn() )
+				{
 					iterator = m_replacementTimes.erase( iterator );
+					m_computedAggregation = FALSE;
+				}
 				else
+				{
+					hasPassedItsSpawnTime = TRUE;
 					iterator++;
+				}
 			}
 			else
+			{
+				if(!m_nextWakeUpTime || m_nextWakeUpTime > replacementTime + 1)
+					m_nextWakeUpTime = replacementTime + 1;
+
 				iterator++;
+			}
 		}
 
 		if( md->m_isOneShotData  &&  (m_oneShotCountdown <= 0) )
 			stopSpawning(); //I only trigger one batch.  ie on Creation.
 	}
-	return UPDATE_SLEEP_NONE;
+
+	// In case if we haven't create yet the object pass its replacement time
+	if(hasPassedItsSpawnTime)
+	{
+		m_nextWakeUpTime = now + SPAWN_UPDATE_RATE;
+		return UPDATE_SLEEP( aggregateIsMoving ? UPDATE_SLEEP_NONE : SPAWN_UPDATE_RATE );
+	}
+
+	// IamInnocent - True to origin, only spawn according to the spawn update rate.
+#ifdef COUNT_SPAWN_RATE
+	Int remainder = m_nextWakeUpTime ? (m_nextWakeUpTime - now) % SPAWN_UPDATE_RATE : 0;
+	if(remainder != 0)
+	{
+		m_nextWakeUpTime += SPAWN_UPDATE_RATE - remainder;
+	}
+#endif
+
+	//return UPDATE_SLEEP_NONE;
+	if(aggregateIsMoving)
+		return UPDATE_SLEEP_NONE;
+	else
+		return m_nextWakeUpTime > now ? UPDATE_SLEEP(m_nextWakeUpTime - now) : UPDATE_SLEEP_FOREVER;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -663,6 +728,16 @@ Bool SpawnBehavior::createSpawn()
 
 	m_spawnIDs.push_back( newSpawn->getID() );
 
+	if(newSpawn->getBodyModule())
+	{
+		SpawnInfo spawnInfo;
+		spawnInfo.health = newSpawn->getBodyModule()->getHealth();
+		spawnInfo.maxHealth = newSpawn->getBodyModule()->getMaxHealth();
+		spawnInfo.isSelfTasking = FALSE;
+		
+		m_spawnIDsInfo[newSpawn->getID()] = spawnInfo;
+	}
+
 	if( reclaimedOrphan == FALSE )
 	{
 		if ( md->m_exitByBudding )
@@ -755,6 +830,16 @@ void SpawnBehavior::onSpawnDeath( ObjectID deadSpawn, DamageInfo *damageInfo )
 	if (it == m_spawnIDs.end())
 		return;
 
+	spawnInfoMapIterator it_2 = m_spawnIDsInfo.find(deadSpawn);
+	if (it_2 != m_spawnIDsInfo.end())
+	{
+		m_spawnIDsInfo.erase( it_2 );
+	}
+	else
+	{
+		DEBUG_CRASH(("SpawnInfoMap does not have the same ID as m_spawnIDs."));
+	}
+
 	//When one dies, you push (now + delay) as the time a new one should be made
 	const SpawnBehaviorModuleData* md = getSpawnBehaviorModuleData();
 
@@ -775,6 +860,8 @@ void SpawnBehavior::onSpawnDeath( ObjectID deadSpawn, DamageInfo *damageInfo )
 		//getObject()->kill();
 		return;
 	}
+
+	refreshUpdate();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -787,6 +874,13 @@ void SpawnBehavior::stopSpawning()
 void SpawnBehavior::startSpawning()
 {
 	m_active = TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void SpawnBehavior::refreshUpdate()
+{
+	m_computedAggregation = FALSE;
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -857,19 +951,19 @@ Bool SpawnBehavior::shouldTryToSpawn()
 
 void SpawnBehavior::computeAggregateStates(void)
 {
-	if ( ! m_aggregateHealth ) // sanity
+	if ( ! m_aggregateHealth || m_computedAggregation ) // sanity
 		return;
 
 	Object* obj = getObject();
-	const SpawnBehaviorModuleData* md = getSpawnBehaviorModuleData();
+	//const SpawnBehaviorModuleData* md = getSpawnBehaviorModuleData();
 
-	Int spawnCount = 0;
-	Int spawnCountMax = md->m_spawnNumberData;
-	Coord3D avgSpawnPos;
+	//Int spawnCount = 0;
+	//Int spawnCountMax = md->m_spawnNumberData;
+	//Coord3D avgSpawnPos;
 
-	avgSpawnPos.set(0,0,0);
-	Real acrHealth = 0.0f;
-	Real avgHealthMax = 0.0f;
+	//avgSpawnPos.set(0,0,0);
+	//Real acrHealth = 0.0f;
+	//Real avgHealthMax = 0.0f;
 
 	ExperienceTracker *expTracker = obj->getExperienceTracker();
 	VeterancyLevel vetLevel = expTracker->getVeterancyLevel();
@@ -880,11 +974,11 @@ void SpawnBehavior::computeAggregateStates(void)
 	Drawable *spawnDraw = NULL;
 	Object *currentSpawn = NULL;
 
-	WeaponBonusConditionFlags spawnWeaponBonus; 
-	ObjectCustomStatusType spawnWeaponCustomBonus;
+	//WeaponBonusConditionFlags spawnWeaponBonus; 
+	//ObjectCustomStatusType spawnWeaponCustomBonus;
 
 
-	m_selfTaskingSpawnCount = 0;
+	//m_selfTaskingSpawnCount = 0;
 
 	for( objectIDListIterator iter = m_spawnIDs.begin(); iter != m_spawnIDs.end(); iter++)
 	{
@@ -894,7 +988,7 @@ void SpawnBehavior::computeAggregateStates(void)
 		{
 			//m_selfTaskingSpawnCount += ( currentSpawn->isSelf);
 
-			for (BehaviorModule** update = currentSpawn->getBehaviorModules(); *update; ++update)
+			/*for (BehaviorModule** update = currentSpawn->getBehaviorModules(); *update; ++update)
 			{
 				SlavedUpdateInterface* sdu = (*update)->getSlavedUpdateInterface();
 				if (sdu != NULL)
@@ -902,7 +996,7 @@ void SpawnBehavior::computeAggregateStates(void)
 					m_selfTaskingSpawnCount += ( sdu->isSelfTasking());;
 					break;
 				}
-			}
+			}*/
 
 
 			// VETERANCY LEVEL *************************************
@@ -916,14 +1010,14 @@ void SpawnBehavior::computeAggregateStates(void)
 				currentSpawn->getExperienceTracker()->setVeterancyLevel(vetLevel);
 			}
 
-			spawnWeaponBonus = currentSpawn->getWeaponBonusCondition();
-			spawnWeaponCustomBonus = currentSpawn->getCustomWeaponBonusCondition();
+			//spawnWeaponBonus = currentSpawn->getWeaponBonusCondition();
+			//spawnWeaponCustomBonus = currentSpawn->getCustomWeaponBonusCondition();
 
-			avgSpawnPos.add(currentSpawn->getPosition());
+			//avgSpawnPos.add(currentSpawn->getPosition());
 
-			BodyModuleInterface *body = currentSpawn->getBodyModule();
-			acrHealth    += body->getHealth();
-			avgHealthMax += body->getMaxHealth();
+			//BodyModuleInterface *body = currentSpawn->getBodyModule();
+			//acrHealth    += body->getHealth();
+			//avgHealthMax += body->getMaxHealth();
 
 			spawnDraw = currentSpawn->getDrawable();
 
@@ -936,7 +1030,7 @@ void SpawnBehavior::computeAggregateStates(void)
 				SomebodyIsNotSelected = TRUE;
 			}
 
-			spawnCount++;
+			//spawnCount++;
 		}
 	} // next iter
 
@@ -990,6 +1084,75 @@ void SpawnBehavior::computeAggregateStates(void)
 
 	// HEALTH BOX POSITION *****************************
 	// pick a centered, average spot to draw the health box
+	//avgSpawnPos.scale(1.0f / spawnCount);
+	//avgSpawnPos.sub(obj->getPosition());
+	//obj->setHealthBoxOffset(avgSpawnPos);
+
+
+
+	// HEALTH STATE *************************************
+	// make my health an aggregate of all my spawns' healths
+	/*if ( spawnCount )
+	{
+		avgHealthMax /= spawnCount;
+		Real perfectTotalHealth = avgHealthMax * spawnCountMax;
+		Real actualHealth  = acrHealth / perfectTotalHealth;
+		obj->getBodyModule()->setInitialHealth(100.0f * actualHealth);
+	}
+	else
+	{
+		obj->getBodyModule()->setInitialHealth(0);// I been sick <
+	}*/
+
+
+	// HOUSEKEEPING *************************************
+	//make sure no enemies are shooting at the nexus, since it doesn't 'exist'
+	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MASKED ) );
+
+}
+
+void SpawnBehavior::computeAggregateMembers()
+{
+	if ( ! m_aggregateHealth ) // sanity
+		return;
+
+	Object* obj = getObject();
+	const SpawnBehaviorModuleData* md = getSpawnBehaviorModuleData();
+
+	Object* currentSpawn = NULL;
+
+	Int spawnCount = 0;
+	Int spawnCountMax = md->m_spawnNumberData;
+	Coord3D avgSpawnPos;
+
+	avgSpawnPos.set(0,0,0);
+	Real acrHealth = 0.0f;
+	Real avgHealthMax = 0.0f;
+
+	m_selfTaskingSpawnCount = 0;
+
+	spawnCount = m_spawnIDsInfo.size();
+
+	for( spawnInfoMapIterator iter = m_spawnIDsInfo.begin(); iter != m_spawnIDsInfo.end(); iter++)
+	{
+		m_selfTaskingSpawnCount += iter->second.isSelfTasking;
+
+		currentSpawn = TheGameLogic->findObjectByID( iter->first );
+
+		if( currentSpawn )
+		{
+			avgSpawnPos.add(currentSpawn->getPosition());
+		}
+
+		acrHealth    += iter->second.health;
+		avgHealthMax += iter->second.maxHealth;
+
+		//spawnCount++;
+
+	} // next iter
+
+	// HEALTH BOX POSITION *****************************
+	// pick a centered, average spot to draw the health box
 	avgSpawnPos.scale(1.0f / spawnCount);
 	avgSpawnPos.sub(obj->getPosition());
 	obj->setHealthBoxOffset(avgSpawnPos);
@@ -1009,14 +1172,7 @@ void SpawnBehavior::computeAggregateStates(void)
 	{
 		obj->getBodyModule()->setInitialHealth(0);// I been sick <
 	}
-
-
-	// HOUSEKEEPING *************************************
-	//make sure no enemies are shooting at the nexus, since it doesn't 'exist'
-	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MASKED ) );
-
 }
-
 //-------------------------------------------------------------------------------------------------
 Bool SpawnBehavior::areAllSlavesStealthed() const
 {
@@ -1055,6 +1211,68 @@ void SpawnBehavior::revealSlaves()
 			}
 		}
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+void SpawnBehavior::updateMobMembers()
+{
+	Object *currentSpawn;
+	static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
+
+	for( objectIDListIterator iter = m_spawnIDs.begin(); iter != m_spawnIDs.end(); iter++)
+	{
+		currentSpawn = TheGameLogic->findObjectByID( (*iter) );
+		if( currentSpawn && !currentSpawn->getMobUpdateRefreshed() )
+		{
+			BodyModuleInterface *body = currentSpawn->getBodyModule();
+			if(body)
+				informSlaveInfo( currentSpawn->getID(), body->getHealth(), body->getMaxHealth() );
+
+			MobMemberSlavedUpdate *MMSUpdate = (MobMemberSlavedUpdate*)currentSpawn->findUpdateModule( key_MobMemberSlavedUpdate );
+			if( MMSUpdate )
+			{
+				MMSUpdate->refreshUpdate();
+
+				// This is a way to make the system know not to scan through the mob
+				// Because the function works by finding one among many.
+				// If more than one is marked for update, then this will iterate through the whole mob once for everytime a single mob starts to move
+				// Layman's math: a mob has 20 modules, an angry mob has 20 mobs.
+				// That means in worse case you will run through 400 loops per update session.
+				// This cuts it by roughly 95%.
+				currentSpawn->setMobUpdateRefreshed(TRUE);
+			}
+		}
+	}
+
+	refreshUpdate();
+}
+
+Bool SpawnBehavior::informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth)
+{
+	if(slaveID == INVALID_ID || ! m_aggregateHealth )
+		return FALSE;
+
+	spawnInfoMapIterator iter = m_spawnIDsInfo.find(slaveID);
+	if(iter != m_spawnIDsInfo.end())
+	{
+		iter->second.health = currHealth;
+		iter->second.maxHealth = currMaxHealth;
+	}
+	return TRUE;
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool SpawnBehavior::informSelfTasking(ObjectID slaveID, Bool selfTasking)
+{
+	if(slaveID == INVALID_ID || ! m_aggregateHealth )
+		return FALSE;
+
+	spawnInfoMapIterator iter = m_spawnIDsInfo.find(slaveID);
+	if(iter != m_spawnIDsInfo.end())
+	{
+		iter->second.isSelfTasking = selfTasking;
+	}
+	return TRUE;
 }
 
 
@@ -1144,6 +1362,77 @@ void SpawnBehavior::xfer( Xfer *xfer )
 
 	// self tasking spawn count
 	xfer->xferUnsignedInt( &m_selfTaskingSpawnCount );
+
+	// next wake up time
+	xfer->xferUnsignedInt( &m_nextWakeUpTime );
+
+	// spawn id Infos
+	ObjectID objectID;
+	Real currHealth;
+	Real currMaxHealth;
+	Bool isSelfTasking;
+	UnsignedShort spawnIDsInfoCount = m_spawnIDsInfo.size();
+	xfer->xferUnsignedShort( &spawnIDsInfoCount );
+	
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		// save all ids
+		spawnInfoMapIterator it;
+		for( it = m_spawnIDsInfo.begin(); it != m_spawnIDsInfo.end(); ++it )
+		{
+
+			objectID = it->first;
+			xfer->xferObjectID( &objectID );
+
+			currHealth = it->second.health;
+			xfer->xferReal( &currHealth );
+
+			currMaxHealth = it->second.maxHealth;
+			xfer->xferReal( &currMaxHealth );
+
+			isSelfTasking = it->second.isSelfTasking;
+			xfer->xferBool( &isSelfTasking );
+
+		}  // end for
+
+	}  // end if, save
+	else
+	{
+
+		// sanity, the list should be empty before we transfer more data into it
+		if( m_spawnIDsInfo.size() != 0 )
+		{
+
+			DEBUG_CRASH(( "m_spawnIDsInfo - should be empty before loading" ));
+			throw XFER_LIST_NOT_EMPTY;
+
+		}  // end if
+
+		// read all ids
+		for( UnsignedShort i = 0; i < spawnIDsInfoCount; ++i )
+		{
+
+			xfer->xferObjectID( &objectID );
+
+			xfer->xferReal( &currHealth );
+
+			xfer->xferReal( &currMaxHealth );
+
+			xfer->xferBool( &isSelfTasking );
+
+			SpawnInfo spawnInfo;
+			spawnInfo.health = currHealth;
+			spawnInfo.maxHealth = currMaxHealth;
+			spawnInfo.isSelfTasking = isSelfTasking;
+
+			m_spawnIDsInfo[objectID] = spawnInfo;
+
+		}  // end for, i
+
+	}  // end else, load
+
+	
 
 }  // end xfer
 

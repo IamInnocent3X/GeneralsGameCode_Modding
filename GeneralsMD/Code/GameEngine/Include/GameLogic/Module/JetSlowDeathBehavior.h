@@ -95,12 +95,17 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo );
 	virtual UpdateSleepTime update( void );
 
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual Bool layerUpdate(Bool doModifier);
+
 protected:
 
 	UnsignedInt m_timerDeathFrame;					///< fame we died on
 	UnsignedInt m_timerOnGroundFrame;				///< frame we landed on the ground on
 
-	Real m_rollRate;												///< our roll rate
+	//Real m_rollRate;												///< our roll rate
+	Bool m_setRoll;													///< set physics to update roll constantly
+	UnsignedInt m_nextWakeUpTime;
 
 	AudioEventRTS m_deathLoopSound;					///< death loop sound
 

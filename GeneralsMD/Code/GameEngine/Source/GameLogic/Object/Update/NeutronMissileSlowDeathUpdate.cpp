@@ -217,18 +217,21 @@ NeutronMissileSlowDeathBehavior::~NeutronMissileSlowDeathBehavior( void )
 UpdateSleepTime NeutronMissileSlowDeathBehavior::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done. Made Sleepy
 	// get the module data
 	const NeutronMissileSlowDeathBehaviorModuleData *modData = getNeutronMissileSlowDeathBehaviorModuleData();
 
 	// call the base class cause we're extending functionality
-	SlowDeathBehavior::update();
+	UpdateSleepTime ret = SlowDeathBehavior::update();
 
 	// get out of here if we're not activated yet
 	if( isSlowDeathActivated() == FALSE )
-		return UPDATE_SLEEP_NONE;
+		return ret;
+		//return UPDATE_SLEEP_NONE;
 
 	// get the current frame
 	UnsignedInt currFrame = TheGameLogic->getFrame();
+	UnsignedInt nextWakeUpTime = 0;
 
 	// when we become activated we want to do a few things
 	if( m_activationFrame == 0 )
@@ -255,35 +258,56 @@ UpdateSleepTime NeutronMissileSlowDeathBehavior::update( void )
 		if( modData->m_blastInfo[ i ].enabled == FALSE )
 			continue;
 
-		// has the time of this blast come
-		if( m_completedBlasts[ i ] == FALSE &&
-				(currFrame - m_activationFrame > modData->m_blastInfo[ i ].delay) )
+		if(m_completedBlasts[ i ] == FALSE)
 		{
+			// has the time of this blast come
+			//if( m_completedBlasts[ i ] == FALSE &&
+			if(		(currFrame - m_activationFrame > modData->m_blastInfo[ i ].delay) )
+			{
 
-			// do the blast
-			doBlast( &modData->m_blastInfo[ i ] );
+				// do the blast
+				doBlast( &modData->m_blastInfo[ i ] );
 
-			// mark this blast as complete now
-			m_completedBlasts[ i ] = TRUE;
+				// mark this blast as complete now
+				m_completedBlasts[ i ] = TRUE;
 
-		}  // end if
+			}  // end if
+			else
+			{
+				// get its time to blast so we can set the wake up frame
+				UnsignedInt delay = modData->m_blastInfo[ i ].delay - currFrame + m_activationFrame + 1;
+				if( !nextWakeUpTime || nextWakeUpTime > delay )
+					nextWakeUpTime = delay;
+			}
+		}
 
-		// has the time for a scorch blast come
-		if( m_completedScorchBlasts[ i ] == FALSE &&
-		    (currFrame - m_activationFrame > modData->m_blastInfo[ i ].scorchDelay) )
+		if( m_completedScorchBlasts[ i ] == FALSE )
 		{
+			// has the time for a scorch blast come
+			//if( m_completedScorchBlasts[ i ] == FALSE &&
+			if(	(currFrame - m_activationFrame > modData->m_blastInfo[ i ].scorchDelay) )
+			{
 
-			// do the scorch blast
-			doScorchBlast( &modData->m_blastInfo[ i ] );
+				// do the scorch blast
+				doScorchBlast( &modData->m_blastInfo[ i ] );
 
-			// mark this scorch blast as complete now
-			m_completedScorchBlasts[ i ] = TRUE;
+				// mark this scorch blast as complete now
+				m_completedScorchBlasts[ i ] = TRUE;
 
-		}  // end if
-
+			}  // end if
+			else
+			{
+				// get its time to blast so we can set the wake up frame
+				UnsignedInt delay = modData->m_blastInfo[ i ].scorchDelay - currFrame + m_activationFrame + 1;
+				if( !nextWakeUpTime || nextWakeUpTime > delay )
+					nextWakeUpTime = delay;
+			}
+		}
 	}  // end for i
 
-	return UPDATE_SLEEP_NONE;
+	//return UPDATE_SLEEP_NONE;
+	UpdateSleepTime mine = UPDATE_SLEEP( nextWakeUpTime ? nextWakeUpTime : UPDATE_SLEEP_FOREVER );
+	return ( mine < ret ) ? mine : ret;
 
 }  // end update
 

@@ -57,6 +57,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
@@ -1064,6 +1065,8 @@ void Drawable::onSelected()
 	Object* obj = getObject();
 	if ( obj )
 	{
+		obj->doSlaveBehaviorUpdate(FALSE);
+
 		ContainModuleInterface* contain = obj->getContain();
 		if ( contain )
 		{

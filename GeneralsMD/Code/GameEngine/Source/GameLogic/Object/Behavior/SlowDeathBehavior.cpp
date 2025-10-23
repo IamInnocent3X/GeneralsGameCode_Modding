@@ -157,6 +157,9 @@ SlowDeathBehavior::SlowDeathBehavior( Thing *thing, const ModuleData* moduleData
 	m_destructionFrame = 0;
 	m_acceleratedTimeScale = 1.0f;
 
+	m_isOnAirFrame = 0;
+	m_hasSunk = FALSE;
+
 	if (getSlowDeathBehaviorModuleData()->m_probabilityModifier < 1)
 	{
 		DEBUG_CRASH(("ProbabilityModifer must be >= 1."));
@@ -410,15 +413,19 @@ UpdateSleepTime SlowDeathBehavior::update()
 	{
 		if ((m_flags & (1<<BOUNCED)) == 0)
 		{
-			++m_sinkFrame;
-			++m_midpointFrame;
-			++m_destructionFrame;
-			if (!obj->isAboveTerrain())
-			{
-				obj->clearAndSetModelConditionFlags(MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING),
-																						MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING));
-				m_flags |= (1<<BOUNCED);
-			}
+			/// IamInnocent - Made Sleepy
+			//++m_sinkFrame;
+			//++m_midpointFrame;
+			//++m_destructionFrame;
+			//if (!obj->isAboveTerrain())
+			//{
+			//	obj->clearAndSetModelConditionFlags(MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING),
+			//																			MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING));
+			//	m_flags |= (1<<BOUNCED);
+			//}
+
+			if(!m_isOnAirFrame)
+				m_isOnAirFrame = now;
 
 			// Here we want to make sure we die if we collide with a tree on the way down
 			PhysicsBehavior *phys = obj->getPhysics();
@@ -447,13 +454,35 @@ UpdateSleepTime SlowDeathBehavior::update()
 		}
 	}
 
+	if(m_isOnAirFrame && !obj->isAboveTerrain())
+	{
+		obj->clearAndSetModelConditionFlags(MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING),
+																			MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING));
+		m_flags |= (1<<BOUNCED);
+
+		UnsignedInt frames = now - m_isOnAirFrame;
+		m_sinkFrame += frames;
+		m_midpointFrame += frames;
+		m_destructionFrame += frames;
+		m_isOnAirFrame = 0;
+	}
+
+	if( m_isOnAirFrame && !m_hasSunk )
+		return UPDATE_SLEEP_FOREVER; // Made Sleepy. Wake up when bouncing is removed
+
 	if ( (now >= m_sinkFrame && d->m_sinkRate > 0.0f) )
 	{
+		m_hasSunk = TRUE;
 		// disable Physics (if any) so that we can control the sink...
 		obj->setDisabled( DISABLED_HELD );
 		Coord3D pos = *obj->getPosition();
 		pos.z -= d->m_sinkRate / m_acceleratedTimeScale;
 		obj->setPosition( &pos );
+	}
+	else if(!m_hasSunk && !m_sinkFrame > now)
+	{
+		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_sinkFrame)
+			m_nextWakeUpTime = m_sinkFrame;
 	}
 
 	if( now >= m_midpointFrame && (m_flags & (1<<MIDPOINT_EXECUTED)) == 0 )
@@ -461,14 +490,46 @@ UpdateSleepTime SlowDeathBehavior::update()
 		doPhaseStuff(SDPHASE_MIDPOINT);
 		m_flags |= (1<<MIDPOINT_EXECUTED);
 	}
+	else if(!m_hasSunk && m_midpointFrame > now)
+	{
+		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_midpointFrame)
+			m_nextWakeUpTime = m_midpointFrame;
+	}
 
 	if (now >= m_destructionFrame)
 	{
 		doPhaseStuff(SDPHASE_FINAL);
 		TheGameLogic->destroyObject(obj);
 	}
+	else if(!m_hasSunk)
+	{
+		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_destructionFrame)
+			m_nextWakeUpTime = m_destructionFrame;
+	}
 
-	return UPDATE_SLEEP_NONE;
+	//return UPDATE_SLEEP_NONE;
+	// We have to always set new pos.z after sinking, therefore we cant sleep
+	if(m_hasSunk)
+		return UPDATE_SLEEP_NONE;
+	else
+		return UPDATE_SLEEP(  m_nextWakeUpTime > now ? m_nextWakeUpTime - now : UPDATE_SLEEP_NONE );
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool SlowDeathBehavior::layerUpdate(Bool doModifier)
+{
+	if(m_flags & (1<<FLUNG_INTO_AIR) == 0 || (m_flags & (1<<BOUNCED)) != 0)
+	{
+		if(doModifier)
+			getObject()->setNoSlowDeathLayerUpdate();
+
+		return FALSE;
+	}
+
+	if(doModifier)
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
+	return TRUE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -565,6 +626,12 @@ void SlowDeathBehavior::xfer( Xfer *xfer )
 
 	// flags
 	xfer->xferUnsignedInt( &m_flags );
+
+	// bounce frame
+	xfer->xferUnsignedInt( &m_isOnAirFrame );
+
+	// has sunk
+	xfer->xferBool( &m_hasSunk );
 
 }  // end xfer
 

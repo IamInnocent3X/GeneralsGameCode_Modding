@@ -119,6 +119,8 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo ) = 0;
 	virtual Int getProbabilityModifier( const DamageInfo *damageInfo ) const = 0;
 	virtual Bool isDieApplicable(const DamageInfo *damageInfo) const = 0;
+	virtual Bool layerUpdate(Bool doModifier) = 0;
+	virtual void friend_refreshUpdate() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -155,6 +157,10 @@ public:
 	virtual Int getProbabilityModifier( const DamageInfo *damageInfo ) const;
 	virtual Bool isDieApplicable(const DamageInfo *damageInfo) const { return getSlowDeathBehaviorModuleData()->m_dieMuxData.isDieApplicable(getObject(), damageInfo); }
 
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual Bool layerUpdate(Bool doModifier);
+
 protected:
 
 	void doPhaseStuff(SlowDeathPhaseType sdphase);
@@ -176,6 +182,9 @@ private:
 	UnsignedInt m_destructionFrame;
 	Real				m_acceleratedTimeScale;		///<used to speedup deaths when needed to improve game performance.
 	UnsignedInt	m_flags;
+	UnsignedInt	m_isOnAirFrame;
+	UnsignedInt m_nextWakeUpTime;
+	Bool m_hasSunk;
 };
 
 #endif // __SlowDeathBehavior_H_

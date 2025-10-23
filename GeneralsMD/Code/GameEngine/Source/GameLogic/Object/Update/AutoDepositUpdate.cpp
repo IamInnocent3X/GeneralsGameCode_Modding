@@ -213,10 +213,7 @@ UpdateSleepTime AutoDepositUpdate::update( void )
 		}
 	}
 
-	if(m_depositOnFrame > TheGameLogic->getFrame())
-		return UPDATE_SLEEP(m_depositOnFrame - TheGameLogic->getFrame());
-	else
-		return UPDATE_SLEEP_FOREVER;
+	return m_depositOnFrame > TheGameLogic->getFrame() ? UPDATE_SLEEP(m_depositOnFrame - TheGameLogic->getFrame()) : UPDATE_SLEEP_NONE;
 	//return UPDATE_SLEEP_NONE;
 }
 

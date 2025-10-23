@@ -237,12 +237,13 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 			if(!m_reactionWeaponRubble->getTemplate()->passRequirements(obj))
 				return;
 
-			if(d->m_continuousDurationRubble > 0)
-			{
-				m_duration =  now + d->m_continuousDurationRubble;
-				m_innate = FALSE;
-			}
 			m_reactionWeaponRubble->forceFireWeapon( obj, obj->getPosition() );
+		}
+		if(d->m_continuousDurationRubble > 0)
+		{
+			m_duration =  now + d->m_continuousDurationRubble;
+			m_innate = FALSE;
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 		}
 
 	}
@@ -253,12 +254,13 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 			if(!m_reactionWeaponReallyDamaged->getTemplate()->passRequirements(obj))
 				return;
 
-			if(d->m_continuousDurationReallyDamaged > 0)
-			{
-				m_duration = now + d->m_continuousDurationReallyDamaged;
-				m_innate = FALSE;
-			}
 			m_reactionWeaponReallyDamaged->forceFireWeapon( obj, obj->getPosition() );
+		}
+		if(d->m_continuousDurationReallyDamaged > 0)
+		{
+			m_duration = now + d->m_continuousDurationReallyDamaged;
+			m_innate = FALSE;
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 		}
 	}
 	else if ( bdt == BODY_DAMAGED )
@@ -268,12 +270,13 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 			if(!m_reactionWeaponDamaged->getTemplate()->passRequirements(obj))
 				return;
 
-			if(d->m_continuousDurationDamaged > 0)
-			{
-				m_duration = now + d->m_continuousDurationDamaged;
-				m_innate = FALSE;
-			}
 			m_reactionWeaponDamaged->forceFireWeapon( obj, obj->getPosition() );
+		}
+		if(d->m_continuousDurationDamaged > 0)
+		{
+			m_duration = now + d->m_continuousDurationDamaged;
+			m_innate = FALSE;
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 		}
 	}
 	else // not damaged yet
@@ -283,12 +286,13 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 			if(!m_reactionWeaponPristine->getTemplate()->passRequirements(obj))
 				return;
 
-			if(d->m_continuousDurationPristine > 0)
-			{
-				m_duration = now + d->m_continuousDurationPristine;
-				m_innate = FALSE;
-			}
 			m_reactionWeaponPristine->forceFireWeapon( obj, obj->getPosition() );
+		}
+		if(d->m_continuousDurationPristine > 0)
+		{
+			m_duration = now + d->m_continuousDurationPristine;
+			m_innate = FALSE;
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 		}
 	}
 
@@ -318,8 +322,9 @@ UpdateSleepTime FireWeaponWhenDamagedBehavior::update( void )
 		{
 			getObject()->setContainedPosition();
 			m_continuousWeaponRubble->forceFireWeapon( obj, obj->getPosition() );
-			if(d->m_continuousIntervalRubble > 0)
-				m_interval = now + d->m_continuousIntervalRubble;
+			WeaponBonus bonus;
+			UnsignedInt delay = d->m_continuousWeaponRubble->getDelayBetweenShots( bonus );
+			m_interval = now + (d->m_continuousIntervalRubble > delay ? d->m_continuousIntervalRubble : delay);
 		}
 
 	}
@@ -329,8 +334,9 @@ UpdateSleepTime FireWeaponWhenDamagedBehavior::update( void )
 		{
 			getObject()->setContainedPosition();
 			m_continuousWeaponReallyDamaged->forceFireWeapon( obj, obj->getPosition() );
-			if(d->m_continuousIntervalReallyDamaged > 0)
-				m_interval = now + d->m_continuousIntervalReallyDamaged;
+			WeaponBonus bonus;
+			UnsignedInt delay = d->m_continuousWeaponReallyDamaged->getDelayBetweenShots( bonus );
+			m_interval = now + (d->m_continuousIntervalReallyDamaged > delay ? d->m_continuousIntervalReallyDamaged : delay);
 		}
 	}
 	else if ( bdt == BODY_DAMAGED )
@@ -339,8 +345,9 @@ UpdateSleepTime FireWeaponWhenDamagedBehavior::update( void )
 		{
 			getObject()->setContainedPosition();
 			m_continuousWeaponDamaged->forceFireWeapon( obj, obj->getPosition() );
-			if(d->m_continuousIntervalDamaged > 0)
-				m_interval = now + d->m_continuousIntervalDamaged;
+			WeaponBonus bonus;
+			UnsignedInt delay = d->m_continuousWeaponDamaged->getDelayBetweenShots( bonus );
+			m_interval = now + (d->m_continuousIntervalDamaged > delay ? d->m_continuousIntervalDamaged : delay);
 		}
 	}
 	else // not damaged yet
@@ -349,12 +356,13 @@ UpdateSleepTime FireWeaponWhenDamagedBehavior::update( void )
 		{
 			getObject()->setContainedPosition();
 			m_continuousWeaponPristine->forceFireWeapon( obj, obj->getPosition() );
-			if(d->m_continuousIntervalPristine > 0)
-				m_interval = now + d->m_continuousIntervalPristine;
+			WeaponBonus bonus;
+			UnsignedInt delay = d->m_continuousWeaponPristine->getDelayBetweenShots( bonus );
+			m_interval = now + (d->m_continuousIntervalPristine > delay ? d->m_continuousIntervalPristine : delay);
 		}
 	}
 
-	return UPDATE_SLEEP_NONE;
+	return UPDATE_SLEEP( m_interval >= now ? m_interval - now + 1 : UPDATE_SLEEP_NONE );
 }
 
 // ------------------------------------------------------------------------------------------------

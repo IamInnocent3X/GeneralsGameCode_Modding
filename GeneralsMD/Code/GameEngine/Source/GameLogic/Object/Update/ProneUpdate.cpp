@@ -36,6 +36,7 @@
 
 #include "GameLogic/Damage.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/ProneUpdate.h"
 
 
@@ -78,13 +79,23 @@ ProneUpdate::~ProneUpdate( void )
 UpdateSleepTime ProneUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
-	if( m_proneFrames > 0 )
+/// IamInnocent - Done.
+	UnsignedInt now = TheGameLogic->getFrame();
+	if( m_proneFrames )
 	{
-		m_proneFrames--;
-		if( m_proneFrames == 0 )
+		//m_proneFrames--;
+		//if( m_proneFrames == 0 )
+		if(now >= m_proneFrames)
+		{
+			m_proneFrames = 0;
 			stopProneEffects();
+		}
+		else
+		{
+			return UPDATE_SLEEP(m_proneFrames - now);
+		}
 	}
-	return UPDATE_SLEEP_NONE;
+	return UPDATE_SLEEP_FOREVER;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -92,9 +103,14 @@ UpdateSleepTime ProneUpdate::update( void )
 void ProneUpdate::goProne( const DamageInfo *damageInfo )
 {
 	//add to the prone time
+	UnsignedInt now = TheGameLogic->getFrame();
 	Bool wasProne = (m_proneFrames > 0);
 	Int damageTaken = damageInfo->out.m_actualDamageDealt;
+	if(!m_proneFrames)
+		m_proneFrames = now;
 	m_proneFrames += damageTaken * getProneUpdateModuleData()->m_damageToFramesRatio;
+
+	setWakeFrame(getObject(), UPDATE_SLEEP(m_proneFrames - now));
 
 	if( !wasProne && (m_proneFrames > 0) )
 		startProneEffects();

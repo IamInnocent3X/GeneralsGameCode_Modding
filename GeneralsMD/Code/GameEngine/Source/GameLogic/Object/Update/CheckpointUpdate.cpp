@@ -38,6 +38,7 @@
 #include "GameClient/Drawable.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/GameLogic.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -68,9 +69,12 @@ CheckpointUpdate::~CheckpointUpdate( void )
 void CheckpointUpdate::checkForAlliesAndEnemies( void )
 {
 	// periodic enemy checks
-	if (m_enemyScanDelay == 0 || TRUE)
+	// IamInnocent - Remove if(TRUE)? Seems like debug statement.
+	//if (m_enemyScanDelay == 0 || TRUE)
+	UnsignedInt now = TheGameLogic->getFrame();
+	if (now >= m_enemyScanDelay)
 	{
-		m_enemyScanDelay = getCheckpointUpdateModuleData()->m_enemyScanDelayTime;
+		m_enemyScanDelay = now + getCheckpointUpdateModuleData()->m_enemyScanDelayTime;
 
 		// Kind of weird, but we have to set the geometry extents to the max extent
 		//before checking for nearest enemies and allies, or else the stretch reaction
@@ -95,10 +99,10 @@ void CheckpointUpdate::checkForAlliesAndEnemies( void )
 		obj->setGeometryInfo( geom );
 
 	}
-	else
-	{
-		--m_enemyScanDelay;
-	}
+	//else
+	//{
+	//	--m_enemyScanDelay;
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -107,6 +111,7 @@ void CheckpointUpdate::checkForAlliesAndEnemies( void )
 UpdateSleepTime CheckpointUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done;
 
 	Bool wasAnAlly  = m_allyNear;
 	Bool wasAnEnemy = m_enemyNear;
@@ -166,7 +171,7 @@ UpdateSleepTime CheckpointUpdate::update()
 
 	} // end if draw
 
-	return UPDATE_SLEEP_NONE;
+	return m_enemyScanDelay ? UPDATE_SLEEP(m_enemyScanDelay - TheGameLogic->getFrame()) : UPDATE_SLEEP_NONE;
 
 }
 

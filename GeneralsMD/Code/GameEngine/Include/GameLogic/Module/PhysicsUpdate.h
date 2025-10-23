@@ -172,6 +172,14 @@ public:
 	void setRollRate(Real roll);
 	void setYawRate(Real yaw);
 
+	void setRollRateConstant(Real roll, Real rollFactor = 1.0f );
+	void setPitchRateConstant(Real pitch);
+
+	void applyHelicopterSlowDeathSpin( Real spin );
+	void doHelicopterSlowDeathSpin( Real spin );
+	void applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping );
+	void doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed );
+
 	/*
 		stickToGround and allowToFall seem contradictory... here's the deal.
 
@@ -290,6 +298,18 @@ private:
 	mutable Real								m_velMag;									///< magnitude of cur vel (recalced when m_vel changes)
 
 	Bool												m_originalAllowBounce;		///< orignal state of allow bounce
+
+	Real										m_rollRateStatic;
+	Real										m_rollStaticFactor;
+
+	Real										m_pitchRateStatic;
+
+	Real 										m_forwardAngle;
+	Real 										m_forwardSpeed;
+	Real 										m_spiralOrbitTurnRate;
+	Real 										m_spiralOrbitForwardSpeedDamping;
+	Real 										m_spinRate;
+	Int 										m_orbitDirection;
 
 	inline void setFlag(PhysicsFlagsType f, Bool set) { if (set) m_flags |= f; else m_flags &= ~f; }
 	inline Bool getFlag(PhysicsFlagsType f) const { return (m_flags & f) != 0; }

@@ -155,6 +155,9 @@ public:
 	virtual void onObjectCreated();
 	virtual Bool isSelfTasking() const { return FALSE; };
 
+	virtual void informMySlaverSelfInfo();
+	virtual void informMySlaverSelfTasking(Bool set) { }
+
 
 	void doScoutLogic( const Coord3D *mastersDestination );
 	void doAttackLogic( const Object *target );
@@ -167,6 +170,12 @@ public:
 
 	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
 
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+
+	UpdateSleepTime calcSleepTime() const;
+
 private:
 	void startSlavedEffects( const Object *slaver );	///< We have been marked as Slaved, so we can't be selected or move too far or other stuff
 	void stopSlavedEffects();		///< We are no longer slaved.
@@ -176,6 +185,7 @@ private:
 	Int m_framesToWait;
 	RepairStates m_repairState;
 	Bool m_repairing;
+	Bool m_noAggregateHealth;
 };
 
 #endif

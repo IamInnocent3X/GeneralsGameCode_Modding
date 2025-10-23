@@ -114,8 +114,14 @@ public:
 	void setMobState( MobStates state ) { m_mobState = state; };
 	MobStates getMobState( void ) { return m_mobState; };
 
+	void informMySlaverSelfTasking(Bool set);
+	void informMySlaverSelfInfo();
+
 
 	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	UpdateSleepTime calcSleepTime() const;
 
 private:
 	void startSlavedEffects( const Object *slaver );	///< We have been marked as Slaved, so we can't be selected or move too far or other stuff
@@ -131,6 +137,9 @@ private:
 	UnsignedInt m_catchUpCrisisTimer;// how many consecutive frames have I remained outside the catchup radius
 	//This is a failsafe to make sure that an individual mobmember does not get isolated from his buddies
 	// thus causing the mob to become invincible, since they will continue to bud around the nexus
+
+	Coord3D m_masterlastCoord; // Slaving in 3D coord, only update when necessary
+	Bool m_noAggregateHealth;
 
 };
 #endif //_MOBMEMBER_AI_UPDATE_H_

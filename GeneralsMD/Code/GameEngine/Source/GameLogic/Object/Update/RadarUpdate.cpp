@@ -86,6 +86,9 @@ void RadarUpdate::extendRadar( void )
 	//Change this to make the radar active after extension...
 	m_radarActive = true;
 
+	// IamInnocent - Made Sleepy
+	setWakeFrame(getObject(), UPDATE_SLEEP(m_extendDoneFrame - TheGameLogic->getFrame() + 1));
+
 }  // end extendRadar
 
 //-------------------------------------------------------------------------------------------------
@@ -93,17 +96,21 @@ void RadarUpdate::extendRadar( void )
 UpdateSleepTime RadarUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 
 	// if no extend frame nothing to do
 	if( m_extendDoneFrame == 0 )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// check to see if our extension is already done
 	if( m_extendComplete == TRUE )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// see if it's time to stop the extension
-	if( TheGameLogic->getFrame() > m_extendDoneFrame )
+	UnsignedInt now = TheGameLogic->getFrame();
+	if( now > m_extendDoneFrame )
 	{
 
 		// mark extend as done
@@ -118,7 +125,8 @@ UpdateSleepTime RadarUpdate::update( void )
 
 	}  // end if
 
-	return UPDATE_SLEEP_NONE;
+	return UPDATE_SLEEP( m_extendDoneFrame > now ? m_extendDoneFrame - now + 1 : UPDATE_SLEEP_FOREVER );
+	//return UPDATE_SLEEP_NONE;
 
 }  // end update
 

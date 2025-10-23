@@ -128,6 +128,7 @@ WaveGuideUpdate::WaveGuideUpdate( Thing *thing, const ModuleData *moduleData )
 	m_shapePointCount = 0;
 	m_splashSoundFrame = 0;
 	m_finalDestination.zero();
+	m_lastPos.zero();
 
 	for( Int i = 0; i < MAX_WAVEGUIDE_SHAPE_POINTS; i++ )
 	{
@@ -753,34 +754,50 @@ void WaveGuideUpdate::doDamage( void )
 
 }  // end doDamage
 
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void WaveGuideUpdate::onDisabledEdge( Bool nowDisabled )
+{
+	if( !nowDisabled )
+	{
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	}
+}
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime WaveGuideUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - There is no way to make the Wave Features Sleepy, but such is physics.
 	Object *waveGuide = getObject();
 
 	if (m_needDisable)
 	{
 		m_needDisable = false;
 		getObject()->setDisabled( DISABLED_DEFAULT );
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 	}
 
 	// do nothing if we're disabled
 	if( waveGuide->isDisabled() )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// get module data
 	const WaveGuideUpdateModuleData *modData = getWaveGuideUpdateModuleData();
+	UnsignedInt now = TheGameLogic->getFrame();
 
 	// set the frame we became active on if not set
 	if( m_activeFrame == 0 )
-		m_activeFrame = TheGameLogic->getFrame();
+		m_activeFrame = now;
 
 	// if we're waiting for a delay check it and get out of here
-	if( TheGameLogic->getFrame() - m_activeFrame < modData->m_waveDelay )
-		return UPDATE_SLEEP_NONE;
+	if( now - m_activeFrame < modData->m_waveDelay )
+		return UPDATE_SLEEP(m_activeFrame + modData->m_waveDelay - now);
+		//return UPDATE_SLEEP_NONE;
 
 	// get our position
 //	const Coord3D *waveGuidePos = waveGuide->getPosition();
@@ -795,7 +812,8 @@ UpdateSleepTime WaveGuideUpdate::update( void )
 
 			// initialization failed, destroy object and get out of here
 			TheGameLogic->destroyObject( getObject() );
-			return UPDATE_SLEEP_NONE;
+			return UPDATE_SLEEP_FOREVER;
+			//return UPDATE_SLEEP_NONE;
 
 		}  // end if
 
@@ -805,11 +823,11 @@ UpdateSleepTime WaveGuideUpdate::update( void )
 	}  // end if
 
 	// every half second we try to play a random spash sound
-	if( TheGameLogic->getFrame() - m_splashSoundFrame > LOGICFRAMES_PER_SECOND / 2.0f )
+	if( now - m_splashSoundFrame > LOGICFRAMES_PER_SECOND / 2.0f )
 	{
 
 		// mark that we've had the opportunity to play
-		m_splashSoundFrame = TheGameLogic->getFrame();
+		m_splashSoundFrame = now;
 
 		// pick a random number and play according to frequency
 		if( GameLogicRandomValue( 1, 100 ) > modData->m_randomSplashSoundFrequency )
@@ -824,10 +842,12 @@ UpdateSleepTime WaveGuideUpdate::update( void )
 	// transform the wave shape points once for the current position ... we have this array
 	// because we access this data several times and don't want to recompute it every time
 	//
-	transformWaveShape();
-
-	// see if we are close enough to the end of our journey on the waypoint path
 	const Coord3D *currentPos = waveGuide->getPosition();
+	if(m_lastPos.x != currentPos->x || m_lastPos.y != currentPos->y || m_lastPos.z != currentPos->z)
+		transformWaveShape();
+
+	m_lastPos.set( currentPos );
+	// see if we are close enough to the end of our journey on the waypoint path
 	Real distSquared = PATH_EXTRA_DISTANCE * PATH_EXTRA_DISTANCE;
 	Coord2D v;
 	v.x = m_finalDestination.x - currentPos->x;
@@ -848,7 +868,8 @@ UpdateSleepTime WaveGuideUpdate::update( void )
 		// update the radar with the final new water levels
 		TheRadar->refreshTerrain( TheTerrainLogic );
 
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	}  // end if
 
