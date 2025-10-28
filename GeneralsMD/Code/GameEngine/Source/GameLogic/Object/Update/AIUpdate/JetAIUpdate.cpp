@@ -2418,25 +2418,35 @@ UpdateSleepTime JetAIUpdate::update()
 		minHeight += pp->getLandingDeckHeightOffset();
 	}*/
 
-	// For Ammo Reload
-	if(!m_doStateChange &&
-		(m_returnToBaseFrame != 0 && now >= m_returnToBaseFrame ||
-		(getStateMachine()->getCurrentStateID() != RETURNING_FOR_LANDING && isOutOfSpecialReloadAmmo() && getFlag(ALLOW_AIR_LOCO)) )
-	  )
-		m_doStateChange = TRUE;
+	// For Ammo Reload and heading back to Base
+	if(!m_doStateChange)
+	{
+		// For Heading Back to Base after the time is now
+		if(m_returnToBaseFrame != 0 && now >= m_returnToBaseFrame)
+			m_doStateChange = TRUE;
+		
+		// For Ammo Reloading or Returning Back to Base after time is up
+		if(!m_doStateChange && 
+			 getFlag(ALLOW_AIR_LOCO) && 
+			 getStateMachine()->getCurrentStateID() != RETURNING_FOR_LANDING &&
+			 (!getFlag(HAS_PENDING_COMMAND) || getStateMachine()->getCurrentStateID() == RELOAD_AMMO))
+		{
+			if( (m_returnToBaseFrame  == 0 && d->m_returnToBaseIdleTime > 0) || isOutOfSpecialReloadAmmo() )
+				m_doStateChange = TRUE;
+		}
+	}
 
 	if(m_doStateChange)
 		checkStateChange();
 
 	Drawable* draw = jet->getDrawable();
-	if (draw != NULL)
+	if (draw != NULL && m_updateHeightTransition)
 	{
-		/*StateID id = getStateMachine()->getCurrentStateID();
+		StateID id = getStateMachine()->getCurrentStateID();
 		Bool needToCheckMinHeight = (id >= JETAISTATETYPE_FIRST && id <= JETAISTATETYPE_LAST) ||
 																	!jet->isAboveTerrain() ||
 																	!getFlag(ALLOW_AIR_LOCO);
-		if( needToCheckMinHeight || jet->getStatusBits().test( OBJECT_STATUS_DECK_HEIGHT_OFFSET ) )*/
-		if (m_updateHeightTransition)
+		if( needToCheckMinHeight || jet->getStatusBits().test( OBJECT_STATUS_DECK_HEIGHT_OFFSET ) )
 		{
 			Real minHeight = friend_getMinHeight();
 			if( pp )
@@ -2445,10 +2455,6 @@ UpdateSleepTime JetAIUpdate::update()
 			}
 		
 			Real ht = jet->isAboveTerrain() ? jet->getHeightAboveTerrain() : 0;
-			if(!ht)
-			{
-				m_updateHeightTransition = FALSE;
-			}
 
 			if (ht < minHeight)
 			{
@@ -2459,11 +2465,13 @@ UpdateSleepTime JetAIUpdate::update()
 			else
 			{
 				draw->setInstanceMatrix(NULL);
+				m_updateHeightTransition = FALSE;
 			}
 		}
 		else
 		{
 			draw->setInstanceMatrix(NULL);
+			m_updateHeightTransition = FALSE;
 		}
 	}
 
@@ -2561,8 +2569,7 @@ UpdateSleepTime JetAIUpdate::update()
 	else if (getFlag(USE_SPECIAL_RETURN_LOCO))
 	{
 		chooseLocomotorSet(d->m_returningLoco);
-	}*/
-
+	}
 
 	if( !jet->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )
 	{
@@ -2589,7 +2596,7 @@ UpdateSleepTime JetAIUpdate::update()
 				m_enginesOn = FALSE;
 			}
 		}
-	}
+	}*/
 
 	UpdateSleepTime ret = AIUpdateInterface::update();
 	if(m_lockonDrawable || m_updateHeightTransition)
@@ -2711,6 +2718,33 @@ void JetAIUpdate::checkStateChange()
 	if (m_attackLocoExpireFrame == 0 && getFlag(USE_SPECIAL_RETURN_LOCO))
 	{
 		chooseLocomotorSet(d->m_returningLoco);
+	}
+
+	if( !jet->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )
+	{
+		Drawable *draw = jet->getDrawable();
+		if( draw )
+		{
+			if( getFlag(TAKEOFF_IN_PROGRESS)
+					|| getFlag(LANDING_IN_PROGRESS)
+					|| getObject()->isSignificantlyAboveTerrain()
+					|| isMoving()
+					|| isWaitingForPath() )
+			{
+				if( !m_enginesOn )
+				{
+					//We just started moving, therefore turn on the engines!
+					draw->enableAmbientSound( TRUE );
+					m_enginesOn = TRUE;
+				}
+			}
+			else if( m_enginesOn )
+			{
+				//We're no longer moving, so turn off the engines!
+				draw->enableAmbientSound( FALSE );
+				m_enginesOn = FALSE;
+			}
+		}
 	}
 
 	m_doStateChange = FALSE;

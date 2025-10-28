@@ -2198,10 +2198,11 @@ Bool AIUpdateInterface::isValidLocomotorPosition(const Coord3D* pos) const
 }
 
 // Spectre Gunship Orbiting factors
-#define ORBIT_INSERTION_SLOPE_MAX (0.8f)
+/*#define ORBIT_INSERTION_SLOPE_MAX (0.8f)
 #define ORBIT_INSERTION_SLOPE_MIN (0.5f)
 #define ONE (1.0f)
 #define ZERO (0.0f)
+*/
 
 //-------------------------------------------------------------------------------------------------
 DECLARE_PERF_TIMER(doLocomotor)
@@ -2420,6 +2421,8 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 			m_locomotorGoalData.x = m_orbitingPos.x + declination.x;
 			m_locomotorGoalData.y = m_orbitingPos.y + declination.y;
+
+			requiresConstantCalling = TRUE;
 
 			//aiMoveToPosition( &goalPos, CMD_FROM_AI );
 		}
