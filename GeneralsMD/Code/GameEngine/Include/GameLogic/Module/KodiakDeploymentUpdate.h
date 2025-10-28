@@ -101,6 +101,7 @@ public:
 
 	virtual const AsciiString& getCursorName() const { return NULL; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 	
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();

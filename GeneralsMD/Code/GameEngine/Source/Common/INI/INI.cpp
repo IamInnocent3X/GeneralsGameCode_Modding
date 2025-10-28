@@ -1933,6 +1933,19 @@ void INI::parseDurationUnsignedInt( INI *ini, void * /*instance*/, void *store, 
 	*(UnsignedInt *)store = (UnsignedInt)ceilf(ConvertDurationFromMsecsToFrames((Real)val));
 }
 
+//-------------------------------------------------------------------------------------------------
+void INI::parseDurationUnsignedIntVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<UnsignedInt>* asv = (std::vector<UnsignedInt>*)store;
+	asv->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		UnsignedInt val = scanUnsignedInt(token);
+		asv->push_back((UnsignedInt)ceilf(ConvertDurationFromMsecsToFrames((Real)val)));
+	}
+}
+
 // ------------------------------------------------------------------------------------------------
 // parse a duration in msec and convert to duration in integral number of frames, (unsignedshort) rounding UP
 void INI::parseDurationUnsignedShort( INI *ini, void * /*instance*/, void *store, const void* /*userData*/ )

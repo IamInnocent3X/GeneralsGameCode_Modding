@@ -78,6 +78,15 @@ public:
   Real                  m_gunshipOrbitRadius;
 	GunshipCreateLocType	m_createLoc;
 
+  std::vector<AsciiString>           m_gunshipTemplateNames;
+  std::vector<UnsignedInt>			 m_gunshipSpawnDelay;
+  Real								 m_createLocMinAreaVariation;
+  Real								 m_createLocMaxAreaVariation;
+  Real					m_attackMinAreaVariation;
+  Real					m_attackMaxAreaVariation;
+  Bool					m_createNewGunshipsOnExisting;
+  Bool					m_gunshipsHaveIndividualAttackRadius;
+
 
 	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystem;
 
@@ -123,6 +132,7 @@ public:
 
 	virtual const AsciiString& getCursorName() const { return NULL; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
@@ -145,6 +155,10 @@ protected:
 	SpecialPowerModuleInterface* m_specialPowerModule;
   Coord3D				m_initialTargetPosition;
   ObjectID        m_gunshipID;
+  std::vector<ObjectID> m_gunshipIDs;
+  std::vector<UnsignedInt> m_gunshipDelays;
+  std::vector<Coord3D>	m_attackCoords;
+  std::vector<Coord3D>	m_creationCoords;
 
 
 };

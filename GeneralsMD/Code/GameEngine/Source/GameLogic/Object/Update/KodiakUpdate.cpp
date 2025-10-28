@@ -135,6 +135,7 @@ KodiakUpdate::KodiakUpdate( Thing *thing, const ModuleData* moduleData ) : Speci
 	m_attackAreaDecal.clear();
 	m_targetingReticleDecal.clear();
   m_orbitEscapeFrame = 0;
+  m_delayFrame = 0;
 	m_afterburnerSound = *(getObject()->getTemplate()->getPerUnitSound("Afterburner"));
 
 #if defined TRACKERS
@@ -359,6 +360,19 @@ UpdateSleepTime KodiakUpdate::update()
    {
       if ( gunship->isEffectivelyDead() )
         return UPDATE_SLEEP_FOREVER;
+
+      UnsignedInt now = TheGameLogic->getFrame();
+      if ( m_delayFrame > now )
+      {
+        gunship->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IMMOBILE ) );
+        gunship->setCustomStatus( "DISABLED_MOVEMENT" );
+        return UPDATE_SLEEP(m_delayFrame - now);
+      }
+      else if( now == m_delayFrame )
+      {
+        gunship->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IMMOBILE ) );
+        gunship->setCustomStatus( "DISABLED_MOVEMENT" );
+      }
 
       m_attackAreaDecal.update();
       m_targetingReticleDecal.update();
@@ -928,6 +942,8 @@ void KodiakUpdate::xfer( Xfer *xfer )
 	xfer->xferUser( &m_status, sizeof( GunshipStatus ) );
 
   xfer->xferUnsignedInt( &m_orbitEscapeFrame );
+
+  xfer->xferUnsignedInt( &m_delayFrame );
 
 	if( version < 2 )
 	{

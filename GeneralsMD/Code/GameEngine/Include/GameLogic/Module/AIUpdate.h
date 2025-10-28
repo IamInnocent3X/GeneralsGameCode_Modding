@@ -442,6 +442,9 @@ public:
 	LocomotorSetType getCurLocomotorSetType() const { return m_curLocomotorSet; }
 	Bool hasLocomotorForSurface(LocomotorSurfaceType surfaceType);
 
+	void lockMyLocomotorToOrbit( const Coord3D *pos, Real radius, Real slope );
+	void releaseLocomotorLock();
+
 	// turret stuff.
 	WhichTurretType getWhichTurretForWeaponSlot(WeaponSlotType wslot, Real* turretAngle, Real* turretPitch = NULL) const;
 	WhichTurretType getWhichTurretForCurWeapon() const;
@@ -774,6 +777,11 @@ private:
 	LocoGoalType			m_locomotorGoalType;
 	Coord3D						m_locomotorGoalData;
 
+	// Orbiting ------------------------------------------------------------------------------------
+	//Coord3D				m_orbitingPos;
+	//Real				m_orbitingRadius;
+	//Real                m_orbitInsertionSlope;
+
 	// Turrets -------------------------------------------------------------------------------------------------
 	TurretAI*					m_turretAI[MAX_TURRETS];		// ai for our turret (or null if no turret)
 	WhichTurretType		m_turretSyncFlag;						///< for private use by multiturreted units where the turrets must sync with each other
@@ -817,6 +825,7 @@ private:
 	Bool				m_allowedToChase;						///< Allowed to pursue targets.
 	Bool				m_isInUpdate;								///< If true, we are inside our update method.
 	Bool				m_fixLocoInPostProcess;
+	//Bool				m_locomotorIsLocked;
 };
 
 //------------------------------------------------------------------------------------------------------------

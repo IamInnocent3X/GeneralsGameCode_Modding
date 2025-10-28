@@ -47,6 +47,8 @@ RadiusDecalTemplate::RadiusDecalTemplate() :
 	m_onlyVisibleToOwningPlayer(true),
 	m_name(AsciiString::TheEmptyString)  // Added By Sadullah Nader for Init purposes
 {
+	if(m_opacityThrobTime != 0)
+		m_invOpacityThrobTime = 1.0f/(Real)m_opacityThrobTime;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -105,6 +107,7 @@ void RadiusDecalTemplate::xferRadiusDecalTemplate( Xfer *xfer )
 	xfer->xferReal(&m_minOpacity);
   xfer->xferReal(&m_maxOpacity);
 	xfer->xferUnsignedInt(&m_opacityThrobTime);
+	xfer->xferReal(&m_invOpacityThrobTime);
 	xfer->xferColor(&m_color);
 	xfer->xferBool(&m_onlyVisibleToOwningPlayer);
 }
@@ -131,7 +134,9 @@ void RadiusDecalTemplate::xferRadiusDecalTemplate( Xfer *xfer )
 RadiusDecal::RadiusDecal() :
 	m_template(NULL),
 	m_decal(NULL),
-	m_empty(true)
+	m_empty(true),
+	m_lastOpacityThrobTime(0),
+	m_firstOpacityThrobCalculated(false)
 {
 }
 
@@ -139,7 +144,9 @@ RadiusDecal::RadiusDecal() :
 RadiusDecal::RadiusDecal(const RadiusDecal& that) :
 	m_template(NULL),
 	m_decal(NULL),
-	m_empty(true)
+	m_empty(true),
+	m_lastOpacityThrobTime(0),
+	m_firstOpacityThrobCalculated(false)
 {
 	DEBUG_CRASH(("not fully implemented"));
 }
@@ -154,6 +161,8 @@ RadiusDecal& RadiusDecal::operator=(const RadiusDecal& that)
 			m_decal->release();
 		m_decal = NULL;
 		m_empty = true;
+		m_lastOpacityThrobTime = 0;
+		m_firstOpacityThrobCalculated = false;
 		DEBUG_CRASH(("not fully implemented"));
 	}
 	return *this;
@@ -179,6 +188,8 @@ void RadiusDecal::clear()
 	}
 	m_decal = NULL;
 	m_empty = true;
+	m_lastOpacityThrobTime = 0;
+	m_firstOpacityThrobCalculated = false;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -196,9 +207,20 @@ void RadiusDecal::update()
 		if (TheGameLogic->getDrawIconUI())
 		{
 			if (m_template->m_opacityThrobTime > 0) {
-				UnsignedInt now = TheGameLogic->getFrame();
+				if(!m_firstOpacityThrobCalculated)
+				{
+					UnsignedInt now = TheGameLogic->getFrame();
+					m_lastOpacityThrobTime = now % m_template->m_opacityThrobTime;
+					m_firstOpacityThrobCalculated = TRUE;
+				}
+				else
+				{
+					if(++m_lastOpacityThrobTime > m_template->m_opacityThrobTime)
+						m_lastOpacityThrobTime = 0;
+				}
 				// m_template->debugPrint();
-				Real theta = (2 * PI) * (Real)(now % m_template->m_opacityThrobTime) / (Real)m_template->m_opacityThrobTime;
+				//Real theta = (2 * PI) * (Real)(now % m_template->m_opacityThrobTime) / (Real)m_template->m_opacityThrobTime;
+				Real theta = (2 * PI) * (Real)(m_lastOpacityThrobTime) * m_template->m_invOpacityThrobTime;
 				Real percent = 0.5f * (Sin(theta) + 1.0f);
 				opac = REAL_TO_INT((m_template->m_minOpacity + percent * (m_template->m_maxOpacity - m_template->m_minOpacity)) * 255.0f);
 			}

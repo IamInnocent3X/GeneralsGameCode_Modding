@@ -1011,10 +1011,13 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	}
 
 	// If the actual distance is farther, then use the actual distance so we get there.
-	Real dx = goalPos.x - obj->getPosition()->x;
-	Real dy = goalPos.y - obj->getPosition()->y;
-	Real dz = goalPos.z - obj->getPosition()->z;
-	Real dist = sqrt(dx*dx+dy*dy);
+	//Real dx = goalPos.x - obj->getPosition()->x;
+	//Real dy = goalPos.y - obj->getPosition()->y;
+	//Real dz = goalPos.z - obj->getPosition()->z;
+	//Real dist = sqrt(dx*dx+dy*dy);
+	Coord2D d(goalPos.x - obj->getPosition()->x, goalPos.y - obj->getPosition()->y);
+	Real dist = d.length();
+	//Real distSqr = ThePartitionManager->getDistanceSquared( obj, &goalPos, FROM_CENTER_2D );
 	if (dist>onPathDistToGoal)
 	{
 		if (!obj->isKindOf(KINDOF_PROJECTILE) && dist>2*onPathDistToGoal)
@@ -1043,7 +1046,8 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	// We apply a zero acceleration to all units, as the call to
 	// applyMotiveForce flags an object as being "driven" by a locomotor, rather
 	// than being pushed around by objects bumping it.
-	nullAccel.x = nullAccel.y = nullAccel.z = 0;
+	//nullAccel.x = nullAccel.y = nullAccel.z = 0;
+	nullAccel.zero();
 	physics->applyMotiveForce(&nullAccel);
 
 	if (*blocked)
@@ -1132,11 +1136,11 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 			// Projectiles never stop braking once they start.  jba.
 			obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_BRAKING ) );
 			// Projectiles cheat in 3 dimensions.
-			dist = sqrt(dx*dx+dy*dy+dz*dz);
+			//dist = sqrt(dx*dx+dy*dy+dz*dz);
 			Real vel = physics->getVelocityMagnitude();
 			if (vel < MIN_VEL)
 				vel = MIN_VEL;
-			if (vel > dist)
+			/*if (vel > dist)
 				vel = dist;	// do not overcompensate!
 			// Normalize.
 			if (dist > 0.001f)
@@ -1151,6 +1155,20 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 				pos.x += dx * vel;
 				pos.y += dy * vel;
 				pos.z += dz * vel;
+			}*/
+			/// IamInnocent - Changed to use Coord3D's inner function
+			Coord3D movePos = goalPos;
+			movePos.sub( &pos );
+			dist = movePos.length();
+			if (vel > dist)
+				vel = dist;	// do not overcompensate!
+			if (dist > 0.001f)
+			{
+				movePos.normalize();
+
+				pos.x += movePos.x * vel;
+				pos.y += movePos.y * vel;
+				pos.z += movePos.z * vel;
 			}
 		}
 		else
@@ -1165,10 +1183,10 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 				if (vel > dist)
 					vel = dist;	// do not overcompensate!
 				dist = 1.0f / dist;
-				dx *= dist;
-				dy *= dist;
-				pos.x += dx * vel;
-				pos.y += dy * vel;
+				d.x *= dist;
+				d.y *= dist;
+				pos.x += d.x * vel;
+				pos.y += d.y * vel;
 			}
 		}
 		obj->setPosition(&pos);
@@ -1209,8 +1227,9 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 		angleCoeff = 1.0;
 
 
-	Real dx = obj->getPosition()->x - goalPos.x;
-	Real dy = obj->getPosition()->y - goalPos.y;
+	/// IamInnocent - Changed to use PartitionManager
+	//Real dx = obj->getPosition()->x - goalPos.x;
+	//Real dy = obj->getPosition()->y - goalPos.y;
 
 
 	Real goalSpeed = (1.0f - angleCoeff) * desiredSpeed;
@@ -1223,7 +1242,9 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	Real slowDownTime = actualSpeed / getBraking();
 	Real slowDownDist = (actualSpeed/1.50f) * slowDownTime;
 
-	if (sqr(dx)+sqr(dy)<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
+	Real distSqr = ThePartitionManager->getDistanceSquared(obj, &goalPos, FROM_BOUNDINGSPHERE_2D);
+	//if (sqr(dx)+sqr(dy)<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
+	if (distSqr<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
 		goalSpeed = actualSpeed*0.6f;
 	}
 
@@ -1737,13 +1758,13 @@ void Locomotor::moveTowardsPositionClimb(Object* obj, PhysicsBehavior *physics, 
 
 	Bool moveBackwards = false;
 
-	Real dx, dy, dz;
+	//Real dx, dy, dz;
 
 	Coord3D pos = *obj->getPosition();
 
-	dx = pos.x - goalPos.x;
-	dy = pos.y - goalPos.y;
-	dz = pos.z - goalPos.z;
+	//dx = pos.x - goalPos.x;
+	//dy = pos.y - goalPos.y;
+	Real dz = pos.z - goalPos.z;
 	if (dz*dz > sqr(PATHFIND_CELL_SIZE_F)) {
 		setFlag(CLIMBING, true);
 	}

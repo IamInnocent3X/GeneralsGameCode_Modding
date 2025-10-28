@@ -215,6 +215,7 @@ public:
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
 	virtual const AsciiString& getCursorName() const { return getSpecialAbilityUpdateModuleData()->m_cursorName; }
 	virtual const AsciiString& getInvalidCursorName() const { return getSpecialAbilityUpdateModuleData()->m_invalidCursorName; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 //	virtual Bool isBusy() const { return m_isBusy; }
 

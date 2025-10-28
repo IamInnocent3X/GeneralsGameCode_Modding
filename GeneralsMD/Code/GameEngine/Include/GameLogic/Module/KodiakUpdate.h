@@ -93,6 +93,7 @@ public:
 
 	virtual const AsciiString& getCursorName() const { return getKodiakUpdateModuleData()->m_cursorName; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { m_delayFrame = delayFrame; }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
@@ -132,6 +133,7 @@ protected:
 	GunshipStatus		m_status;
 
   UnsignedInt     m_orbitEscapeFrame;
+  UnsignedInt	  m_delayFrame;
 
 	RadiusDecal			m_attackAreaDecal;
 	RadiusDecal			m_targetingReticleDecal;

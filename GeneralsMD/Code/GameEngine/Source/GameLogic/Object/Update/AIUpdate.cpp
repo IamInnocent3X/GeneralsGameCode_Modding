@@ -322,6 +322,11 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_retryPath = FALSE;
 	m_isInUpdate = FALSE;
 	m_fixLocoInPostProcess = FALSE;
+	//m_locomotorIsLocked = FALSE;
+
+	//m_orbitingRadius = 0.0f;
+	//m_orbitInsertionSlope = 0.0f;
+	//m_orbitingPos.zero();
 
 	// ---------------------------------------------
 
@@ -2192,6 +2197,12 @@ Bool AIUpdateInterface::isValidLocomotorPosition(const Coord3D* pos) const
 	return TheAI->pathfinder()->validMovementPosition( getObject()->getCrusherLevel()>0, getObject()->getLayer(), m_locomotorSet, pos );
 }
 
+// Spectre Gunship Orbiting factors
+#define ORBIT_INSERTION_SLOPE_MAX (0.8f)
+#define ORBIT_INSERTION_SLOPE_MIN (0.5f)
+#define ONE (1.0f)
+#define ZERO (0.0f)
+
 //-------------------------------------------------------------------------------------------------
 DECLARE_PERF_TIMER(doLocomotor)
 /**
@@ -2201,7 +2212,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 {
 	USE_PERF_TIMER(doLocomotor)
 
-	if (getObject()->isKindOf(KINDOF_IMMOBILE) || getObject()->testStatus( OBJECT_STATUS_IMMOBILE))
+	if (!getObject()->testCustomStatus("CAN_STILL_MOVE_WHEN_IMMOBILE") && (getObject()->isKindOf(KINDOF_IMMOBILE) || getObject()->testStatus( OBJECT_STATUS_IMMOBILE)))
 		return UPDATE_SLEEP_FOREVER;
 
 	chooseGoodLocomotorFromCurrentSet();
@@ -2373,6 +2384,46 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 		m_curMaxBlockedSpeed = FAST_AS_POSSIBLE;
 	}
+
+	/*if(m_locomotorIsLocked)
+	{
+		m_locomotorGoalType = POSITION_EXPLICIT;
+		// From privateMoveToPosition
+		m_blockedFrames = 0;
+		m_isBlocked = FALSE;
+		m_isBlockedAndStuck = FALSE;
+		if (m_orbitingRadius > 0)
+		{
+			Coord3D perigee = *getObject()->getPosition();
+			//Coord3D goalPos = perigee;
+			perigee.sub( &m_orbitingPos );
+			perigee.z = ZERO;
+			perigee.normalize();
+
+			//apogee is the anteclockwise point fathest from the perigee line
+			Coord3D apogee;
+			apogee.z = ZERO;
+			apogee.x = -perigee.y;
+			apogee.y =  perigee.x;
+
+			// declination intersects line [p][a], given an attack slope of n1/n2
+			Coord3D declination;
+			Real n1 = min( ORBIT_INSERTION_SLOPE_MAX, max(ORBIT_INSERTION_SLOPE_MIN, m_orbitInsertionSlope) );
+			Real n2 = ONE - n1;
+			declination.z = ZERO;
+			declination.x = ( perigee.x * n1 ) + ( apogee.x * n2 );
+			declination.y = ( perigee.y * n1 ) + ( apogee.y * n2 );
+
+			//scale out to the orbital radius
+			declination.x *= m_orbitingRadius;
+			declination.y *= m_orbitingRadius;
+
+			m_locomotorGoalData.x = m_orbitingPos.x + declination.x;
+			m_locomotorGoalData.y = m_orbitingPos.y + declination.y;
+
+			//aiMoveToPosition( &goalPos, CMD_FROM_AI );
+		}
+	}*/
 
 	if (m_curLocomotor != NULL
 			&& m_locomotorGoalType == NONE
@@ -5150,6 +5201,14 @@ void AIUpdateInterface::xfer( Xfer *xfer )
 
 	xfer->xferObjectID(&m_objectToGuard);
 
+	//xfer->xferBool(&m_locomotorIsLocked);
+
+	//xfer->xferReal(&m_orbitingRadius);
+	
+	//xfer->xferReal(&m_orbitInsertionSlope);
+
+	//xfer->xferCoord3D(&m_orbitingPos);
+
 	AsciiString triggerName;
 	if (m_areaToGuard) triggerName = m_areaToGuard->getTriggerName();
 	xfer->xferAsciiString(&triggerName);
@@ -5407,6 +5466,29 @@ Bool AIUpdateInterface::hasLocomotorForSurface(LocomotorSurfaceType surfaceType)
 		return TRUE;
 	else
 		return FALSE;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void AIUpdateInterface::lockMyLocomotorToOrbit( const Coord3D *pos, Real radius, Real slope )
+{
+	/*m_locomotorIsLocked = TRUE;
+	//m_curLocomotor->setOrbit(pos, radius, slope);
+	m_orbitingPos.set(pos);
+	m_orbitingRadius = radius;
+	m_orbitInsertionSlope = slope;
+	getStateMachine()->setTemporaryState(AI_MOVE_TO, LOGICFRAMES_PER_SECOND * 20);
+	//m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject());*/
+}
+
+// ------------------------------------------------------------------------------------------------
+void AIUpdateInterface::releaseLocomotorLock()
+{
+	/*m_locomotorIsLocked = FALSE;
+	//m_curLocomotor->setOrbit(getObject()->getPosition(), 0.0f, 0.0f);
+	m_orbitingPos.zero();
+	m_orbitingRadius = 0.0f;
+	m_orbitInsertionSlope = 0.0f;*/
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -39,6 +39,7 @@
 #include "Common/PlayerList.h"
 #include "Common/Xfer.h"
 #include "Common/ClientUpdateModule.h"
+#include "Common/ActionManager.h"
 
 #include "GameClient/ControlBar.h"
 #include "GameClient/GameClient.h"
@@ -47,6 +48,7 @@
 #include "GameClient/FXList.h"
 #include "GameClient/ParticleSys.h"
 
+#include "GameLogic/AIPathfind.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/PartitionManager.h"
@@ -92,6 +94,10 @@ SpectreGunshipUpdateModuleData::SpectreGunshipUpdateModuleData()
   m_howitzerFiringRate = 10;
   m_howitzerFollowLag = 0;
   m_randomOffsetForHowitzer = 20.0f;
+  m_useMyProducerForSpecialPower = FALSE;
+  m_useLocomotorToUpdateOrbit = FALSE;
+  m_gunshipDontUpdateOrbit = FALSE;
+  m_playSoundOnCreationWithSpawnDelay = FALSE;
   m_cursorName = NULL;
 }
 
@@ -118,6 +124,10 @@ static Real zero = 0.0f;
 		{ "GattlingStrafeFXParticleSystem",	INI::parseParticleSystemTemplate, NULL, offsetof( SpectreGunshipUpdateModuleData, m_gattlingStrafeFXParticleSystem ) },
 		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( SpectreGunshipUpdateModuleData, m_attackAreaDecalTemplate ) },
 		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( SpectreGunshipUpdateModuleData, m_targetingReticleDecalTemplate ) },
+    { "UseMyProducerToInitiateSpecialPower", INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_useMyProducerForSpecialPower ) },
+    //{ "UseLocomotorToUpdateOrbit",           INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_useLocomotorToUpdateOrbit ) },
+    { "UseMyLocomotorToOrbit",               INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_gunshipDontUpdateOrbit ) },
+    { "PlaySoundOnCreationWithSpawnDelay",   INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_playSoundOnCreationWithSpawnDelay ) },
     { "CursorName",		                  INI::parseAsciiString,	                        NULL,	offsetof( SpectreGunshipUpdateModuleData, m_cursorName) },
 
 
@@ -134,6 +144,7 @@ SpectreGunshipUpdate::SpectreGunshipUpdate( Thing *thing, const ModuleData* modu
 	m_specialPowerModule = NULL;
   m_gattlingID = INVALID_ID;
 	m_status = GUNSHIP_STATUS_IDLE;
+  m_lastStatus = GUNSHIP_STATUS_CHECK;
 	m_initialTargetPosition.zero();
 	m_overrideTargetDestination.zero();
   m_gattlingTargetPosition.zero();
@@ -145,6 +156,10 @@ SpectreGunshipUpdate::SpectreGunshipUpdate( Thing *thing, const ModuleData* modu
 	m_howitzerFireSound = *(getObject()->getTemplate()->getPerUnitSound("HowitzerFire"));
 
   m_okToFireHowitzerCounter = 0;
+  m_howitzerFiringCountdown = 0;
+  m_checkHowitzerCountdownFirst = FALSE;
+  m_delayFrame = 0;
+  m_first = FALSE;
 
 #if defined TRACKERS
 m_howitzerTrackerDecal.clear();
@@ -191,6 +206,23 @@ Bool SpectreGunshipUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemp
 	{
 		//Check to make sure our modules are connected.
 		return FALSE;
+	}
+
+  if(data->m_useMyProducerForSpecialPower)
+	{
+		Object *producer = TheGameLogic->findObjectByID(getObject()->getProducerID());
+		if(producer && TheActionManager->canDoSpecialPowerAtLocation( producer, targetPos, CMD_FROM_PLAYER, specialPowerTemplate, NULL, commandOptions, true ))
+		{
+			for( BehaviorModule** u = producer->getBehaviorModules(); *u; ++u )
+      {
+        SpecialPowerUpdateInterface* spu = (*u)->getSpecialPowerUpdateInterface();
+        if( spu && spu->initiateIntentToDoSpecialPower( specialPowerTemplate, targetObj, targetPos, way, commandOptions ) )
+        {
+          return TRUE;
+        }
+      }
+      return FALSE;
+		}
 	}
 
 	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) )
@@ -293,7 +325,8 @@ void SpectreGunshipUpdate::setSpecialPowerOverridableDestination( const Coord3D 
 	{
 		m_overrideTargetDestination = *loc;
 
-		if( me->getControllingPlayer()  &&  me->getControllingPlayer()->isLocalPlayer() )
+    if( me->getControllingPlayer()  &&  me->getControllingPlayer()->isLocalPlayer() && 
+        (getSpectreGunshipUpdateModuleData()->m_playSoundOnCreationWithSpawnDelay || TheGameLogic->getFrame() >= m_delayFrame) )
 		{
 			AudioEventRTS soundToPlay = *me->getTemplate()->getVoiceAttack();
 			soundToPlay.setObjectID( me->getID() );
@@ -366,7 +399,29 @@ UpdateSleepTime SpectreGunshipUpdate::update()
       if ( gunship->isEffectivelyDead() )
         return UPDATE_SLEEP_FOREVER;
 
+      UnsignedInt now = TheGameLogic->getFrame();
+      if ( m_delayFrame > now )
+      {
+        gunship->setStatus( MAKE_OBJECT_STATUS_MASK3( OBJECT_STATUS_IMMOBILE, OBJECT_STATUS_UNSELECTABLE, OBJECT_STATUS_MASKED ) );
+        gunship->setCustomStatus( "DISABLED_MOVEMENT" );
+        
+        ThePartitionManager->unRegisterObject( gunship );
 
+        if( gunship->getDrawable() )
+          gunship->getDrawable()->setDrawableHidden( true );
+
+        return UPDATE_SLEEP(m_delayFrame - now);
+      }
+      else if( now == m_delayFrame )
+      {
+        gunship->clearStatus( MAKE_OBJECT_STATUS_MASK3( OBJECT_STATUS_IMMOBILE, OBJECT_STATUS_UNSELECTABLE, OBJECT_STATUS_MASKED  ) );
+        gunship->clearCustomStatus( "DISABLED_MOVEMENT" );
+
+        ThePartitionManager->registerObject( gunship );
+
+        if( gunship->getDrawable() )
+          gunship->getDrawable()->setDrawableHidden( false );
+      }
 
 
       m_attackAreaDecal.update();
@@ -411,6 +466,9 @@ UpdateSleepTime SpectreGunshipUpdate::update()
         perigee.sub( &m_initialTargetPosition );
         perigee.z = zero;
         Real distanceToTarget = perigee.length();
+
+      if((!data->m_useLocomotorToUpdateOrbit && !data->m_gunshipDontUpdateOrbit) || !m_first)
+      {
         perigee.normalize();
 
         //apogee is the anteclockwise point fathest from the perigee line
@@ -437,8 +495,13 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 
         if ( shipAI)
         {
-           shipAI->aiMoveToPosition( &m_satellitePosition, CMD_FROM_AI );
+           if(data->m_gunshipDontUpdateOrbit)
+            shipAI->aiMoveToPosition( &m_initialTargetPosition, CMD_FROM_AI );
+           else
+            shipAI->aiMoveToPosition( &m_satellitePosition, CMD_FROM_AI );
         }
+      }
+        m_first = TRUE;
 
         Real constraintRadius = data->m_attackAreaRadius - data->m_targetingReticleRadius;
 
@@ -465,10 +528,19 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 #endif
 
 
-        if ( (m_status == GUNSHIP_STATUS_INSERTING) && (distanceToTarget < orbitalRadius ) )// close enough to shoot
+        Real distanceToClose = data->m_gunshipDontUpdateOrbit ? (!shipAI || !shipAI->isMoving() || !shipAI->getPath() ? 1e9 : PATHFIND_CELL_SIZE_F) : data->m_gunshipOrbitRadius;
+        /*if(data->m_gunshipDontUpdateOrbit && shipAI)
+        {
+          Real maxSpeed = shipAI->getCurLocomotor()->getMaxSpeedForCondition(gunship->getBodyModule()->getDamageState());
+
+          distanceToClose = (maxSpeed/shipAI->getCurLocomotor()->getBraking()) * (maxSpeed)/2.0f;
+        }*/
+        //if ( (m_status == GUNSHIP_STATUS_INSERTING) && (distanceToTarget < orbitalRadius ) )// close enough to shoot
+        if ( (m_status == GUNSHIP_STATUS_INSERTING) && (distanceToTarget < distanceToClose ) )// close enough to shoot
         {
           setLogicalStatus( GUNSHIP_STATUS_ORBITING );
-          m_orbitEscapeFrame = TheGameLogic->getFrame() + data->m_orbitFrames;
+          //m_orbitEscapeFrame = TheGameLogic->getFrame() + data->m_orbitFrames;
+          m_orbitEscapeFrame = now + data->m_orbitFrames;
 
           Object *gattling = TheGameLogic->findObjectByID( m_gattlingID );
           if ( gattling )
@@ -477,6 +549,10 @@ UpdateSleepTime SpectreGunshipUpdate::update()
           AIUpdateInterface *shipAI = gunship->getAIUpdateInterface();
           if ( shipAI)
           {
+            //if ( data->m_useLocomotorToUpdateOrbit && !data->m_gunshipDontUpdateOrbit)
+            //{
+            //    shipAI->lockMyLocomotorToOrbit( &m_initialTargetPosition, data->m_gunshipOrbitRadius, data->m_orbitInsertionSlope );
+            //}
             shipAI->chooseLocomotorSet( LOCOMOTORSET_NORMAL );
 	          shipAI->getCurLocomotor()->setAllowInvalidPosition(TRUE);
 	          shipAI->getCurLocomotor()->setUltraAccurate(TRUE);	// set ultra-accurate just so AI won't try to adjust our dest
@@ -494,10 +570,11 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 
       if ( m_status == GUNSHIP_STATUS_ORBITING )
       {
-        Object *validTargetObject = NULL;
+        //Object *validTargetObject = NULL;
 
 
-        if ( TheGameLogic->getFrame() >= m_orbitEscapeFrame )
+        //if ( TheGameLogic->getFrame() >= m_orbitEscapeFrame )
+        if ( now >= m_orbitEscapeFrame )
         {
           cleanUp();
           setLogicalStatus( GUNSHIP_STATUS_DEPARTING );
@@ -509,9 +586,21 @@ UpdateSleepTime SpectreGunshipUpdate::update()
         }//endif escapeframe
         else
         {
-
+          Object *validTargetObject = NULL;
+          
+          if(!m_checkHowitzerCountdownFirst)
+          {
+            m_howitzerFiringCountdown = now % data->m_howitzerFiringRate;
+            m_checkHowitzerCountdownFirst = TRUE;
+          }
+          else
+          {
+            if(++m_howitzerFiringCountdown > data->m_howitzerFiringRate)
+						  m_howitzerFiringCountdown = 0;
+          }
           // ONLY EVERY FEW FRAMES DO WE RE_EVALUATE THE TARGET OBJECT
-          if ( TheGameLogic->getFrame() %data->m_howitzerFiringRate < ONE )
+          //if ( TheGameLogic->getFrame() %data->m_howitzerFiringRate < ONE )
+          if ( m_howitzerFiringCountdown < ONE )
           {
 
             m_positionToShootAt = m_overrideTargetDestination; // unless we get a hit, below
@@ -692,6 +781,8 @@ UpdateSleepTime SpectreGunshipUpdate::update()
       cleanUp();
    }
 
+   m_lastStatus = m_status;
+
 
 
 
@@ -797,6 +888,10 @@ void SpectreGunshipUpdate::disengageAndDepartAO( Object *gunship )
     exitPoint.y *= mapSize;
     exitPoint.add( gunship->getPosition() );
 
+    //const SpectreGunshipUpdateModuleData *data = getSpectreGunshipUpdateModuleData();
+    //if(data->m_useLocomotorToUpdateOrbit && !data->m_gunshipDontUpdateOrbit)
+    //  shipAI->releaseLocomotorLock();
+  
     shipAI->aiMoveToPosition( &exitPoint, CMD_FROM_AI );
 
 
@@ -879,8 +974,13 @@ void SpectreGunshipUpdate::xfer( Xfer *xfer )
 	xfer->xferCoord3D( &m_satellitePosition );
 	// status
 	xfer->xferUser( &m_status, sizeof( GunshipStatus ) );
+  xfer->xferUser( &m_lastStatus, sizeof( GunshipStatus ) );
 
   xfer->xferUnsignedInt( &m_orbitEscapeFrame );
+
+  xfer->xferUnsignedInt( &m_delayFrame );
+
+  xfer->xferBool( &m_checkHowitzerCountdownFirst );
 
 
 	if( version < 2 )
@@ -898,6 +998,7 @@ void SpectreGunshipUpdate::xfer( Xfer *xfer )
 		xfer->xferCoord3D( &m_gattlingTargetPosition );
 		xfer->xferCoord3D( &m_positionToShootAt );
 	  xfer->xferUnsignedInt( &m_okToFireHowitzerCounter );
+    xfer->xferUnsignedInt( &m_howitzerFiringCountdown);
 		xfer->xferObjectID( &m_gattlingID );
 	}
 
