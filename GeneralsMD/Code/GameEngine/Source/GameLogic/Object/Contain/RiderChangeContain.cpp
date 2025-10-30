@@ -518,7 +518,7 @@ void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSour
 		return;
 
 	Object* first_rider = *getContainedItemsList()->begin();
-	if( first_rider->getAI() )
+	if( first_rider && first_rider->getAI() )
 	{
 		if( instantly )
 		{
