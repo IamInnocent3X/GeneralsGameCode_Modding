@@ -805,6 +805,11 @@ static void populateRandomSideAndColor( GameInfo *game )
 				DEBUG_LOG(("Setting playerTemplateIdx %d to %d", i, playerTemplateIdx));
 				slot->setPlayerTemplate(playerTemplateIdx);
 			}
+
+			if(slot->isAI() && !pt->isRandomableForAI())
+			{
+				playerTemplateIdx = -1; // only pick randomable factions
+			}
 		}
 
 		Int colorIdx = slot->getColor();

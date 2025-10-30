@@ -103,6 +103,7 @@ public:
 	inline const ProductionVeterancyMap& getProductionVeterancyLevels() const { return m_productionVeterancyLevels; }
 	inline Bool isObserver() const { return m_observer; }
 	inline Bool isPlayableSide() const { return m_playableSide; }
+	inline Bool isRandomableForAI() const { return m_randomableForAI; }
 
 	inline AsciiString getScoreScreen (void ) const { return m_scoreScreenImage;	}
 	inline AsciiString getLoadScreen (void ) const { return m_loadScreenImage;	}
@@ -199,6 +200,7 @@ private:
 	Bool							m_observer;
 	Bool							m_playableSide;
   Bool              m_oldFaction;                       ///< Faction existed in the original Generals
+	Bool							m_randomableForAI;
 
 	Int								m_intrinsicSPP;
 

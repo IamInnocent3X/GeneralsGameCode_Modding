@@ -3821,7 +3821,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 			#endif  // not FASTER_GCO
 			}   // next cell
 		}	// next direction2
-  } // next direction2
+  } // next direction
 
 	return drawables;
 }
