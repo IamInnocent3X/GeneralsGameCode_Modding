@@ -751,6 +751,8 @@ public:
 	inline Bool getMobUpdateRefreshed() const { return m_mobJustUpdated; }
 	inline void setNoSlowDeathLayerUpdate() { m_noSlowDeathLayerUpdate = TRUE; }
 
+	Bool isDozerDoingAnyTasks() const;
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;

@@ -610,6 +610,8 @@ public:
 	Bool m_usePartitionManagerToIterateDrawablesOnlySelect;
 	Bool m_useEfficientDrawableScheme;
 
+	Bool m_fixLocoClump;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

@@ -1520,7 +1520,7 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 		PathfindCell *c, *lastCell = NULL;
 		for( c = list; c; c = c->getNextOpen() )
 		{
-			if (c->m_info->m_totalCost > m_info->m_totalCost)
+			if (c && c->m_info && m_info && c->m_info->m_totalCost > m_info->m_totalCost)
 				break;
 
 			lastCell = c;

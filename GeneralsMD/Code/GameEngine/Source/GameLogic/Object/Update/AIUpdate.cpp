@@ -289,11 +289,14 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_curLocomotorSet = LOCOMOTORSET_INVALID;
 	m_locomotorGoalType = NONE;
 	m_locomotorGoalData.zero();
+	m_lastPos.zero();
+	m_lastRequestedDestination.zero();
 	for (i = 0; i < MAX_TURRETS; i++)
 		m_turretAI[i] = NULL;
 	m_turretSyncFlag = TURRET_INVALID;
 	m_attitude = ATTITUDE_NORMAL;
 	m_nextMoodCheckTime = 0;
+	m_locoClumpScanFrame = 0;
 #ifdef ALLOW_DEMORALIZE
 	m_demoralizedFramesLeft = 0;
 #endif
@@ -322,6 +325,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_retryPath = FALSE;
 	m_isInUpdate = FALSE;
 	m_fixLocoInPostProcess = FALSE;
+	m_continueToUpdateFixLocoClump = FALSE;
 	//m_locomotorIsLocked = FALSE;
 
 	//m_orbitingRadius = 0.0f;
@@ -478,6 +482,7 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 		}
 		return;
 	}
+	Bool hasUpdatedPath = FALSE;
 	if (m_isAttackPath) {
 		Object *victim = NULL;
 		if (m_requestedVictimID != INVALID_ID) {
@@ -498,7 +503,26 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 			m_requestedDestination = *victim->getPosition();
 			/* find a pathable destination near the victim.*/
 			TheAI->pathfinder()->adjustToPossibleDestination(getObject(), getLocomotorSet(), &m_requestedDestination);
+			hasUpdatedPath = TRUE;
 			ignoreObstacle(victim);
+		}
+	}
+	if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 &&
+		 !isAttacking() && !m_isAttackPath && !hasUpdatedPath &&
+		 !getObject()->isAboveTerrain() && getObject()->getLayer() == LAYER_GROUND)
+	{
+		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
+		const Coord3D *currPos = getObject()->getPosition();
+		if(fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < 0.25f &&
+			fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < 0.25f)
+		{
+			DEBUG_LOG(("Pathfind: Approach Path m_lastPos is near to currentPos. x:%f y:%f z:%f", m_lastPos.x, m_lastPos.y, m_lastPos.z));
+			setIgnoreCollisionTime(2*LOGICFRAMES_PER_SECOND);
+			m_blockedFrames = 0;
+			m_isBlocked = FALSE;
+			m_isBlockedAndStuck = FALSE;
+			TheAI->pathfinder()->adjustToPossibleDestination(getObject(), getLocomotorSet(), &m_requestedDestination);
+			m_lastPos = *currPos;
 		}
 	}
 	computePath(pathfinder, &m_requestedDestination);
@@ -2231,6 +2255,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 	Bool blocked = m_blockedFrames > 0;
 	Bool requiresConstantCalling = TRUE;	// assume the worst.
+	UnsignedInt now = TheGameLogic->getFrame();
 
 	if (m_curLocomotor)
 	{
@@ -2349,6 +2374,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 							if (dSqr < DARN_CLOSE)
 							{
 								m_doFinalPosition = FALSE;
+								//m_continueToUpdateFixLocoClump = FALSE;
 								if (onGround)
 									m_finalPosition.z = TheTerrainLogic->getGroundHeight( m_finalPosition.x, m_finalPosition.y );
 								else
@@ -2384,6 +2410,149 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_AIRBORNE_TARGET ) );
 
 		m_curMaxBlockedSpeed = FAST_AS_POSSIBLE;
+
+		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
+		if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5)
+		{
+			const Coord3D *currPos = getObject()->getPosition();
+			const Real DARN_CLOSE = 0.25f;
+			Object *source = getObject();
+			Bool currentlyAttacking = source->testStatus( OBJECT_STATUS_IS_ATTACKING ) || 
+						source->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) ||
+						source->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) ||
+						source->testStatus( OBJECT_STATUS_IGNORING_STEALTH );
+
+			if(!m_continueToUpdateFixLocoClump && !isAttacking() && !currentlyAttacking && !source->isAboveTerrain() && source->getLayer() == LAYER_GROUND &&
+				!isBusy() && !source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) && !source->isDozerDoingAnyTasks() &&
+				(m_isFinalGoal || m_doFinalPosition) &&
+				(isMoving() || getPath()) &&
+				(!isAiInDeadState() || m_curLocomotor->getLocomotorWorksWhenDead()) &&
+				fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
+				fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE
+			)
+			{
+				m_continueToUpdateFixLocoClump = TRUE;
+				m_lastRequestedDestination = m_requestedDestination;
+			}
+
+			if(m_continueToUpdateFixLocoClump && now >= m_locoClumpScanFrame)
+			{
+				const Coord3D *dest = getGoalPosition();
+				if(isAttacking() || currentlyAttacking)
+				{
+					if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
+						destroyPath();
+
+					m_continueToUpdateFixLocoClump = FALSE;
+
+					if(getLastCommandSource() != CMD_FROM_AI)
+					{
+						Weapon* weapon = source ? source->getCurrentWeapon() : NULL;
+						if(weapon)
+						{
+							Object *victim = getGoalObject(); //m_requestedVictimID != INVALID_ID ? TheGameLogic->findObjectByID(m_requestedVictimID) : NULL;
+							if (victim)
+							{
+								source->chooseBestWeaponForTarget(victim, PREFER_MOST_DAMAGE, getLastCommandSource());
+								weapon = source->getCurrentWeapon();
+								if(weapon->isWithinAttackRange( source, victim ))
+								{
+									destroyPath();
+									//aiForceAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
+									privateAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
+								}
+							}
+							else if(weapon->isWithinAttackRange( source, &m_requestedDestination ))
+							{
+								privateAttackPosition( &m_requestedDestination, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
+							}
+						}
+					}
+				}
+				else if(isBusy() ||
+						source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) ||
+						source->isDozerDoingAnyTasks() ||
+						source->isAboveTerrain() ||
+						source->getLayer() != LAYER_GROUND)
+				{
+					if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
+						destroyPath();
+
+					m_continueToUpdateFixLocoClump = FALSE;
+				}
+				
+				if(getLastCommandSource() != CMD_FROM_AI)
+				{
+					m_lastRequestedDestination = m_requestedDestination;
+				}
+				if( m_continueToUpdateFixLocoClump && !isMoving() && !isDoingGroundMovement() && !isAttacking() && !currentlyAttacking &&
+					fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
+					fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE)
+				{
+					Real dx = m_lastRequestedDestination.x - currPos->x;
+					Real dy = m_lastRequestedDestination.y - currPos->y;
+					Real dSqr = dx*dx+dy*dy;
+					if (dSqr > DARN_CLOSE && (m_locomotorGoalType != NONE || m_doFinalPosition == TRUE || dSqr > (100*100)))
+					{
+						/*Bool hasUpdate = FALSE;
+
+						if(isAttacking())
+						{
+							Weapon* weapon = source ? source->getCurrentWeapon() : NULL;
+							if(weapon)
+							{
+								Object *victim = m_requestedVictimID != INVALID_ID ? TheGameLogic->findObjectByID(m_requestedVictimID) : NULL;
+								if (victim && !weapon->isWithinAttackRange( source, victim ))
+								{
+									aiForceAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
+									m_requestedDestination = *victim->getPosition();
+									ignoreObstacle(victim);
+									hasUpdate = TRUE;
+								}
+								else if(!victim && !weapon->isWithinAttackRange( source, &m_requestedDestination ))
+								{
+									aiAttackPosition( &m_requestedDestination, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
+									hasUpdate = TRUE;
+								}
+							}
+						}
+						else if(isMoving() || getPath())
+						{
+							aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
+							hasUpdate = TRUE;
+						}
+						if(hasUpdate)*/
+						{
+							//DEBUG_LOG(("Loco Update: Approach Path m_lastPos is near to currentPos. x:%f y:%f z:%f", m_lastPos.x, m_lastPos.y, m_lastPos.z));
+							//hasUpdate = TRUE;
+							setIgnoreCollisionTime(LOGICFRAMES_PER_SECOND);
+							m_blockedFrames = 0;
+							m_isBlocked = FALSE;
+							m_isBlockedAndStuck = FALSE;
+							aiMoveToPosition( &m_lastRequestedDestination, CMD_FROM_AI );
+						}
+					}
+					else
+					{
+						m_continueToUpdateFixLocoClump = FALSE;
+						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
+					}
+				}
+				else if(m_continueToUpdateFixLocoClump)
+				{
+					m_continueToUpdateFixLocoClump = FALSE;
+
+					if(getLastCommandSource() != CMD_FROM_AI && (isAttacking() || currentlyAttacking))
+						destroyPath();
+					else
+						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
+				}
+
+				m_locoClumpScanFrame = now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5);
+				m_lastPos = *currPos;
+			}
+			//m_lastPos = *currPos;
+		}
 	}
 
 	/*if(m_locomotorIsLocked)
@@ -2434,7 +2603,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			&& m_isBlocked == FALSE
 			&& requiresConstantCalling == FALSE)
 	{
-		return UPDATE_SLEEP_FOREVER;
+		return m_continueToUpdateFixLocoClump && m_locoClumpScanFrame > now ? UPDATE_SLEEP(m_locoClumpScanFrame - now) : UPDATE_SLEEP_FOREVER;
 	}
 	else
 	{

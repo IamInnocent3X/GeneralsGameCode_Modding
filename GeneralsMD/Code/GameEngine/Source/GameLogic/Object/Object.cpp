@@ -8143,6 +8143,21 @@ void Object::doSlowDeathLayerUpdate()
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool Object::isDozerDoingAnyTasks() const
+{
+	const DozerAIInterface *dozerAI = getAI() ? getAI()->getDozerAIInterface() : NULL;
+	if( dozerAI && dozerAI->getCurrentTask() != DOZER_TASK_INVALID )
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+}
+
+
 //=============================================================================
 //== Custom Cursor List
 //=============================================================================
