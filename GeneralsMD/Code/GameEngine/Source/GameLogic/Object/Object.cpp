@@ -104,7 +104,6 @@
 #include "GameLogic/Module/ChronoDamageHelper.h"
 #include "GameLogic/Module/TempWeaponBonusHelper.h"
 #include "GameLogic/Module/ToppleUpdate.h"
-#include "GameLogic/Module/TunnelContain.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
 #include "GameLogic/Module/EnergyShieldBehavior.h"
@@ -1754,6 +1753,12 @@ CanAttackResult Object::getAbleToUseWeaponAgainstTarget( AbleToAttackType attack
 Bool Object::chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteria criteria, CommandSourceType cmdSource )
 {
 	return m_weaponSet.chooseBestWeaponForTarget(this, target, criteria, cmdSource );
+}
+
+//=============================================================================
+Bool Object::chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource )
+{
+	return m_weaponSet.chooseBestWeaponForPosition(this, pos, criteria, cmdSource );
 }
 
 //DECLARE_PERF_TIMER(fireCurrentWeapon)
@@ -6567,12 +6572,14 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 				{
 					if( !BitIsSet( commandButton->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) && !BitIsSet( commandButton->getOptions(), NEED_TARGET_POS ) )
 					{
-						// Clear Firing Tracker Bonuses First
+						// Clear the Firing Tracker Bonuses First and Choose the most Prioritized Weapon
 						Weapon* weapon = m_weaponSet.getCurWeapon();
+
 						if(weapon)
 							weapon->computeFiringTrackerBonusClear(this);
 
-						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
+						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
+						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
 						//LOCATION BASED FIRE WEAPON
 						// TheSuperHackers @bugfix Caball009 09/08/2025 Position should be irrelevant, but aiAttackPosition requires a valid position pointer to avoid a crash.
 						ai->aiAttackPosition( getPosition(), commandButton->getMaxShotsToFire(), cmdSource );
@@ -6726,9 +6733,10 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 						// Clear Firing Tracker Bonuses First
 						Weapon* weapon = m_weaponSet.getCurWeapon();
 						if(weapon)
-							weapon->computeFiringTrackerBonusClear(this);
+							weapon->computeFiringTrackerBonus(this, obj);
 
-						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
+						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
+						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
 
 						if( BitIsSet( commandButton->getOptions(), ATTACK_OBJECTS_POSITION ) )
 						{
@@ -6845,12 +6853,14 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 							break;
 						}
 
-						// Clear Firing Tracker Bonuses First
+						// Clear the Firing Tracker Bonuses First and Choose the most Prioritized Weapon
 						Weapon* weapon = m_weaponSet.getCurWeapon();
+
 						if(weapon)
 							weapon->computeFiringTrackerBonusClear(this);
 
-						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
+						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
+						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
 						ai->aiAttackPosition( pos, commandButton->getMaxShotsToFire(), cmdSource );
 					}
 					else
@@ -7614,10 +7624,8 @@ ObjectID Object::calculateCountermeasureToDivertTo( const Object& victim )
 void Object::doClearTunnelContainTargetID()
 {
 	// Reset targetID each time ordering an attack
-	static const NameKeyType key_TunnelContain = NAMEKEY("TunnelContain");
-	TunnelContain* tc = (TunnelContain*)(findUpdateModule( key_TunnelContain ));
-	if (tc)
-		tc->clearTargetID();
+	if( getContain() && getContain()->isTunnelContain() )
+		getContain()->clearTargetID();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -8155,6 +8163,12 @@ Bool Object::isDozerDoingAnyTasks() const
 	{
 		return FALSE;
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::isWeaponSetRestricted() const
+{
+	return m_weaponSet.isRestricted();
 }
 
 

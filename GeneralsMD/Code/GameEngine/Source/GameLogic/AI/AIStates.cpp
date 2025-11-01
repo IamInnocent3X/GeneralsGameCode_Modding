@@ -5711,11 +5711,16 @@ Bool AIAttackState::chooseWeapon()
 	AIUpdateInterface *ai = source->getAI();
 
 	Bool found = FALSE;
-//	if (victim) // Pardon?  We still need to pick a weapon if we are attacking the ground.
-//	{
+	if (victim) // Pardon?  We still need to pick a weapon if we are attacking the ground.
+	{
 		found = source->chooseBestWeaponForTarget(victim, PREFER_MOST_DAMAGE, ai->getLastCommandSource());
 		//DEBUG_ASSERTLOG(found, ("unable to autochoose any weapon for %s",source->getTemplate()->getName().str()));
-//	}
+	}
+	else
+	{
+		// IamInnocent - Edited to be able to fit requirements for Positions
+		found = source->chooseBestWeaponForPosition(getMachineGoalPosition(), PREFER_MOST_DAMAGE, ai->getLastCommandSource());
+	}
 
 	// Check if we need to update because of the weapon choice switch.
 	source->adjustModelConditionForWeaponStatus();

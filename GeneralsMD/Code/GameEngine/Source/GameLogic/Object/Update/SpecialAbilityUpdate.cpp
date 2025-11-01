@@ -29,6 +29,8 @@
 
 #include "PreRTS.h" // This must go first in EVERY cpp file int the GameEngine
 
+#define DEFINE_WEAPONSLOTTYPE_NAMES  //TheWeaponSlotTypeNamesLookupList
+
 #include "Common/GameAudio.h"
 #include "Common/GlobalData.h"
 #include "Common/Player.h"
@@ -303,7 +305,16 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
         }
         case SPECIAL_MISSILE_DEFENDER_LASER_GUIDED_MISSILES:
         {
-          if ( target->isKindOf( KINDOF_STRUCTURE ) )
+          Bool doFallthrough = FALSE;
+          if(target->isAnyKindOf( data->m_forbiddenKindOf ))
+            doFallthrough = TRUE;
+
+          if(!doFallthrough && data->m_kindOf != KINDOFMASK_NONE )
+          {
+            if(target->isAnyKindOf( data->m_kindOf ))
+              break;
+          }
+          if ( target->isKindOf( KINDOF_STRUCTURE ) || doFallthrough )
             shouldAbort = TRUE;
           FALLTHROUGH; //deliberately falling through
         }
@@ -1172,9 +1183,19 @@ Bool SpecialAbilityUpdate::continuePreparation()
       }
 
       Relationship r = getObject()->getRelationship(target);
-      if( r == ALLIES )
+      if(data->m_targetsMask == 0)
       {
-        //It's been captured by a colleague, so cancel!
+        if( r == ALLIES )
+        {
+          //It's been captured by a colleague, so cancel!
+          return false;
+        }
+      }
+      else if(((data->m_targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        ((data->m_targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        ((data->m_targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+            )
+      {
         return false;
       }
 
@@ -1291,6 +1312,7 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
 
 
   Bool okToLoseStealth = TRUE;
+  WeaponSlotType wslot = (WeaponSlotType)INI::scanLookupList(data->m_weaponSlotName.str(), TheWeaponSlotTypeNamesLookupList);
 
   switch( spTemplate->getSpecialPowerType() )
   {
@@ -1299,11 +1321,11 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       Object *target = TheGameLogic->findObjectByID( m_targetID );
       if( target )
       {
-        const Weapon *weapon = object->getWeaponInWeaponSlot( SECONDARY_WEAPON );
+        const Weapon *weapon = object->getWeaponInWeaponSlot( wslot );
         if( weapon )
         {
           // lock it just till the weapon is empty or the attack is "done"
-          object->setWeaponLock( SECONDARY_WEAPON, LOCKED_TEMPORARILY );
+          object->setWeaponLock( wslot, LOCKED_TEMPORARILY );
           AIUpdateInterface *ai = object->getAIUpdateInterface();
           if( ai )
           {

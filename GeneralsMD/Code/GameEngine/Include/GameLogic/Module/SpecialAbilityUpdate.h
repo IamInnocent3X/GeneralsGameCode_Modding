@@ -36,6 +36,7 @@
 #include "Common/AudioEventRTS.h"
 #include "Common/INI.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
+#include "GameLogic/Weapon.h"
 #include "GameClient/ParticleSys.h"
 
 class DamageInfo;
@@ -90,9 +91,11 @@ public:
 	AudioEventRTS					m_prepSoundLoop;
 	AudioEventRTS					m_triggerSound;
 
+	Int							m_targetsMask;
 	KindOfMaskType 				m_kindOf;
 	KindOfMaskType 				m_forbiddenKindOf;
 
+	AsciiString					m_weaponSlotName;
 	AsciiString					m_cursorName;
 	AsciiString					m_invalidCursorName;
 
@@ -126,8 +129,10 @@ public:
 		m_preTriggerUnstealthFrames = 0;
     m_needToFaceTarget = TRUE;
     m_persistenceRequiresRecharge = FALSE;
+	m_targetsMask = 0;
 	m_kindOf = KINDOFMASK_NONE;
 	m_forbiddenKindOf.clear();
+	m_weaponSlotName.format("SECONDARY");
 	m_cursorName = NULL;
 	m_invalidCursorName = NULL;
 	m_destroyOnExecute = FALSE;
@@ -179,8 +184,10 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+	  		{ "WeaponSlot",						INI::parseQuotedAsciiString,		NULL, offsetof( SpecialAbilityUpdateModuleData, m_weaponSlotName ) },
 	  		{ "CursorName",						INI::parseAsciiString,			 	NULL, offsetof( SpecialAbilityUpdateModuleData, m_cursorName ) },
 			{ "InvalidCursorName",				INI::parseAsciiString,       		NULL, offsetof( SpecialAbilityUpdateModuleData, m_invalidCursorName ) },
+			{ "AffectsTargets", 				INI::parseBitString32, 	TheWeaponAffectsMaskNames, offsetof( SpecialAbilityUpdateModuleData, m_targetsMask) },
 	  		{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_kindOf ) },
 			{ "ForbiddenKindOf",			KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_forbiddenKindOf ) },
 	  		{ "DeleteUserOnExecute",					INI::parseBool,							NULL, offsetof( SpecialAbilityUpdateModuleData, m_destroyOnExecute ) },
@@ -230,6 +237,7 @@ public:
 	Object* findSpecialObjectWithProducerID( const Object *target );
 	SpecialPowerType getSpecialPowerType( void ) const;
 
+	Int getTargetsMask() const { return getSpecialAbilityUpdateModuleData()->m_targetsMask; }
 	const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }
 	const KindOfMaskType& getForbiddenKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_forbiddenKindOf; }
 

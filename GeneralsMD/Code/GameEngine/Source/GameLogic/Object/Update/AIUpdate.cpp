@@ -2412,18 +2412,23 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 		m_curMaxBlockedSpeed = FAST_AS_POSSIBLE;
 
 		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
+		// NOTE: This is NOT to be treated as the main solution, but for as a temporary fix for a much bigger problem
 		if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5)
 		{
 			const Coord3D *currPos = getObject()->getPosition();
 			const Real DARN_CLOSE = 0.25f;
 			Object *source = getObject();
-			Bool currentlyAttacking = source->testStatus( OBJECT_STATUS_IS_ATTACKING ) || 
+			Bool currentlyAttacking = isAttacking() || source->testStatus( OBJECT_STATUS_IS_ATTACKING ) || 
 						source->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) ||
 						source->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) ||
 						source->testStatus( OBJECT_STATUS_IGNORING_STEALTH );
 
-			if(!m_continueToUpdateFixLocoClump && !isAttacking() && !currentlyAttacking && !source->isAboveTerrain() && source->getLayer() == LAYER_GROUND &&
-				!isBusy() && !source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) && !source->isDozerDoingAnyTasks() &&
+			Bool invalidConditions = source->isAboveTerrain() || source->getLayer() != LAYER_GROUND ||
+						isBusy() ||
+						source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) ||
+						source->isDozerDoingAnyTasks();
+
+			if(!m_continueToUpdateFixLocoClump && !currentlyAttacking && !invalidConditions &&
 				(m_isFinalGoal || m_doFinalPosition) &&
 				(isMoving() || getPath()) &&
 				(!isAiInDeadState() || m_curLocomotor->getLocomotorWorksWhenDead()) &&
@@ -2438,7 +2443,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			if(m_continueToUpdateFixLocoClump && now >= m_locoClumpScanFrame)
 			{
 				const Coord3D *dest = getGoalPosition();
-				if(isAttacking() || currentlyAttacking)
+				if(currentlyAttacking)
 				{
 					if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
 						destroyPath();
@@ -2469,11 +2474,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 						}
 					}
 				}
-				else if(isBusy() ||
-						source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) ||
-						source->isDozerDoingAnyTasks() ||
-						source->isAboveTerrain() ||
-						source->getLayer() != LAYER_GROUND)
+				else if(invalidConditions)
 				{
 					if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
 						destroyPath();
@@ -2485,7 +2486,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 				{
 					m_lastRequestedDestination = m_requestedDestination;
 				}
-				if( m_continueToUpdateFixLocoClump && !isMoving() && !isDoingGroundMovement() && !isAttacking() && !currentlyAttacking &&
+				if( m_continueToUpdateFixLocoClump && !isMoving() && !isDoingGroundMovement() && !currentlyAttacking &&
 					fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
 					fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE)
 				{
@@ -2494,43 +2495,11 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 					Real dSqr = dx*dx+dy*dy;
 					if (dSqr > DARN_CLOSE && (m_locomotorGoalType != NONE || m_doFinalPosition == TRUE || dSqr > (100*100)))
 					{
-						/*Bool hasUpdate = FALSE;
-
-						if(isAttacking())
-						{
-							Weapon* weapon = source ? source->getCurrentWeapon() : NULL;
-							if(weapon)
-							{
-								Object *victim = m_requestedVictimID != INVALID_ID ? TheGameLogic->findObjectByID(m_requestedVictimID) : NULL;
-								if (victim && !weapon->isWithinAttackRange( source, victim ))
-								{
-									aiForceAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
-									m_requestedDestination = *victim->getPosition();
-									ignoreObstacle(victim);
-									hasUpdate = TRUE;
-								}
-								else if(!victim && !weapon->isWithinAttackRange( source, &m_requestedDestination ))
-								{
-									aiAttackPosition( &m_requestedDestination, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
-									hasUpdate = TRUE;
-								}
-							}
-						}
-						else if(isMoving() || getPath())
-						{
-							aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
-							hasUpdate = TRUE;
-						}
-						if(hasUpdate)*/
-						{
-							//DEBUG_LOG(("Loco Update: Approach Path m_lastPos is near to currentPos. x:%f y:%f z:%f", m_lastPos.x, m_lastPos.y, m_lastPos.z));
-							//hasUpdate = TRUE;
-							setIgnoreCollisionTime(LOGICFRAMES_PER_SECOND);
-							m_blockedFrames = 0;
-							m_isBlocked = FALSE;
-							m_isBlockedAndStuck = FALSE;
-							aiMoveToPosition( &m_lastRequestedDestination, CMD_FROM_AI );
-						}
+						setIgnoreCollisionTime(LOGICFRAMES_PER_SECOND);
+						m_blockedFrames = 0;
+						m_isBlocked = FALSE;
+						m_isBlockedAndStuck = FALSE;
+						aiMoveToPosition( &m_lastRequestedDestination, CMD_FROM_AI );
 					}
 					else
 					{
@@ -2542,7 +2511,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 				{
 					m_continueToUpdateFixLocoClump = FALSE;
 
-					if(getLastCommandSource() != CMD_FROM_AI && (isAttacking() || currentlyAttacking))
+					if(getLastCommandSource() != CMD_FROM_AI && currentlyAttacking)
 						destroyPath();
 					else
 						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );

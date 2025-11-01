@@ -342,7 +342,7 @@ static CanAttackResult canAnyForceAttack(const DrawableList *allSelected, const 
 			continue;
 		}
 
-		if( obj->testCustomStatus("ZERO_DAMAGE") )
+		if( obj->testCustomStatus("ZERO_DAMAGE") || obj->isWeaponSetRestricted() )
 		{
 			result = ATTACKRESULT_INVALID_SHOT;
 			continue;

@@ -199,6 +199,7 @@ WeaponSet::WeaponSet()
 	m_totalDamageTypeMask.clear();
 	m_hasPitchLimit = false;
 	m_hasDamageWeapon = false;
+	m_restricted = false;
 	for (Int i = 0; i < WEAPONSLOT_COUNT; ++i)
 		m_weapons[i] = NULL;
 }
@@ -296,6 +297,7 @@ void WeaponSet::xfer( Xfer *xfer )
 	xfer->xferInt(&m_totalAntiMask);
 	xfer->xferBool(&m_hasDamageWeapon);
 	xfer->xferBool(&m_hasDamageWeapon);
+	xfer->xferBool(&m_restricted);
 
 	m_totalDamageTypeMask.xfer(xfer);// BitSet has built in xfer
 
@@ -458,32 +460,47 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 	if(m_curWeaponTemplateSet && ! set->isWeaponLockSharedAcrossSets())
 	{
 		Int curWeaponUsed = 1;
-		for (Int i_2 = PRIMARY_WEAPON; i_2 < WEAPONSLOT_COUNT ; i_2++)
+		for (Int slot = PRIMARY_WEAPON; slot < WEAPONSLOT_COUNT ; slot++)
 		{
-			if(m_weapons[i_2] == NULL)
+			if(m_weapons[slot] == NULL)
 				continue;
-			if(!m_weapons[i_2]->getTemplate()->passRequirements(obj) && curWeaponUsed == i_2+1)
+			if(curWeaponUsed == slot+1 && !m_weapons[slot]->getTemplate()->passRequirements(obj))
 			{
-				curWeaponUsed = 0;
+				curWeaponUsed = -1;
+				continue;
 			}
-			if(curWeaponUsed == 0 && m_weapons[i_2]->getTemplate()->passRequirements(obj))
+			if(curWeaponUsed == -1 && m_weapons[slot]->getTemplate()->passRequirements(obj))
 			{
-				curWeaponUsed = i_2+1;
+				curWeaponUsed = slot+1;
 				break;
 			}
 
-			//DEBUG_LOG(("CurWeaponSlotToCheck -- %d\n",i_2));
+			//DEBUG_LOG(("CurWeaponSlotToCheck -- %d\n",slot));
 		}
 		//DEBUG_LOG(("CurWeaponSlot -- %d\n",curWeaponUsed-1));
-		if(curWeaponUsed > 0)
+		if(curWeaponUsed == -1)
 		{
-			m_curDefaultWeapon = (WeaponSlotType)(curWeaponUsed-1);
-			m_curWeapon = m_curDefaultWeapon;
+			// Strip all our weapons capabilities.
+			if(!m_restricted)
+			{
+				//obj->setCustomStatus("ZERO_DAMAGE");
+				m_restricted = TRUE;
+				m_curDefaultWeapon = WEAPONSLOT_COUNT; // Invalid Usage
+			}
 		}
-		else
+		else if(m_curDefaultWeapon != curWeaponUsed - 1)
 		{
-			m_curDefaultWeapon = PRIMARY_WEAPON;
-			m_curWeapon = PRIMARY_WEAPON;
+			m_restricted = FALSE;
+			if(curWeaponUsed > 0)
+			{
+				m_curDefaultWeapon = (WeaponSlotType)(curWeaponUsed-1);
+				m_curWeapon = m_curDefaultWeapon;
+			}
+			else
+			{
+				m_curDefaultWeapon = PRIMARY_WEAPON;
+				m_curWeapon = PRIMARY_WEAPON;
+			}
 		}
 	}
 }
@@ -573,7 +590,7 @@ void WeaponSet::weaponSetOnWeaponBonusChange(const Object *source)
 //-------------------------------------------------------------------------------------------------
 Bool WeaponSet::isAnyWithinTargetPitch(const Object* obj, const Object* victim) const
 {
-	if (!m_hasPitchLimit)
+	if (!m_restricted || !m_hasPitchLimit)
 		return true;
 
 	for( Int i = 0; i < WEAPONSLOT_COUNT;	i++ )
@@ -748,7 +765,7 @@ CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attac
 //supports both victim or position.
 CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
 {
-	if( source->testCustomStatus("ZERO_DAMAGE") )
+	if( source->testCustomStatus("ZERO_DAMAGE") || m_restricted )
 	{
 		return ATTACKRESULT_INVALID_SHOT;
 	}
@@ -974,7 +991,7 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 		then choose the gun and go back to wanting to choose the missile, etc
 	*/
 
-	if( obj->testCustomStatus("ZERO_DAMAGE") )
+	if( obj->testCustomStatus("ZERO_DAMAGE") || m_restricted )
 		return FALSE;
 
 	if( isCurWeaponLocked() )
@@ -984,7 +1001,9 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	{
 		// Weapon lock is checked first for specific attack- ground powers.  Otherwise, we will reproduce the old behavior
 		// and make only Primary attack the ground.
-		if(m_curDefaultWeapon)
+		if(m_curDefaultWeapon == WEAPONSLOT_COUNT)
+			return FALSE;
+		else if(m_curDefaultWeapon)
 			m_curWeapon = m_curDefaultWeapon;
 		else
 			m_curWeapon = PRIMARY_WEAPON;
@@ -1187,7 +1206,7 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	else
 	{
 		// No weapon at all was found, so we go back to primary.
-		if(m_curDefaultWeapon)
+		if(m_curDefaultWeapon && m_curDefaultWeapon < WEAPONSLOT_COUNT)
 			m_curWeapon = m_curDefaultWeapon;
 		else
 			m_curWeapon = PRIMARY_WEAPON;
@@ -1204,6 +1223,161 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 	return found;
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool WeaponSet::chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource)
+{
+
+	if( obj->testCustomStatus("ZERO_DAMAGE") || m_restricted )
+		return FALSE;
+
+	if( isCurWeaponLocked() )
+		return TRUE; // I have been forced into choosing a specific weapon, so it is right until someone says otherwise
+
+	Bool found = FALSE;				// A Ready weapon has been found
+	Bool foundBackup = FALSE;	// An unready, but valid weapon has been found
+
+	Real longestRange = 0.0f;
+	Real bestDamage = 0.0f;
+	Real longestRangeBackup = 0.0f;
+	Real bestDamageBackup = 0.0f;
+
+	Int bestWeaponPriority = 0;
+	Bool LockPriority = FALSE;
+
+	WeaponSlotType currentDecision = PRIMARY_WEAPON;
+	WeaponSlotType currentDecisionBackup = PRIMARY_WEAPON;
+
+	// go backwards, so that in the event of ties, the primary weapon is preferred
+	for (Int i = WEAPONSLOT_COUNT - 1; i >= PRIMARY_WEAPON ; --i)
+	{
+		/*
+			First: eliminate the weapons that cannot be used.
+		*/
+
+		// no weapon in this slot.
+		if (!m_weapons[i])
+			continue;
+
+		// weapon not allowed to be specified via this command source.
+		CommandSourceMask okSrcs = m_curWeaponTemplateSet->getNthCommandSourceMask((WeaponSlotType)i);
+		if( ( okSrcs & (1 << cmdSource) ) == 0 )
+		{
+			if( !( okSrcs & CMD_DEFAULT_SWITCH_WEAPON ) )
+			{
+				continue;
+			}
+		}
+
+		Weapon* weapon = m_weapons[i];
+		if (weapon == NULL)
+			continue;
+
+		if(!weapon->getTemplate()->passRequirements(obj))
+			continue;
+
+		// weapon out of ammo.
+		if (weapon->getStatus() == OUT_OF_AMMO && !weapon->getAutoReloadsClip())
+			continue;
+
+		Int weaponPriority = weapon->getWeaponPriority(obj, victimPos);
+
+		Real damage = weapon->estimateWeaponDamage(obj, victimPos);
+		Real attackRange = weapon->getAttackRange(obj);
+		Bool weaponIsReady = (weapon->getStatus() == READY_TO_FIRE);
+
+		// Get the Weapon Priority
+		if( weaponPriority > bestWeaponPriority )
+		{
+			bestWeaponPriority = weaponPriority;
+
+			LockPriority = TRUE;
+			currentDecision = (WeaponSlotType)i;
+			found = true;
+		}
+
+		WeaponChoiceCriteria currentCriteria = m_curWeaponTemplateSet->getWeaponChoiceCriteria();
+
+		if( weaponPriority >= bestWeaponPriority )
+		{
+			switch (currentCriteria)
+			{
+				case PREFER_MOST_DAMAGE:
+					if( !weaponIsReady )
+					{
+						// If this weapon is not ready, the best it can do is qualify as the Best Backup choice
+						if (damage >= bestDamageBackup)
+						{
+							bestDamageBackup = damage;
+							currentDecisionBackup = (WeaponSlotType)i;
+							foundBackup = true;
+						}
+					}
+					else
+					{
+						if (damage >= bestDamage)
+						{
+							bestDamage = damage;
+							currentDecision = (WeaponSlotType)i;
+							found = true;
+						}
+					}
+					break;
+				case PREFER_LONGEST_RANGE:
+					{
+						if( !weaponIsReady )
+						{
+							if (attackRange > longestRangeBackup)
+							{
+								longestRangeBackup = attackRange;
+								currentDecisionBackup = (WeaponSlotType)i;
+								foundBackup = true;
+							}
+						}
+						else
+						{
+							if (attackRange > longestRange)
+							{
+								longestRange = attackRange;
+								currentDecision = (WeaponSlotType)i;
+								found = true;
+							}
+						}
+					}
+					break;
+			}
+		}
+	}
+
+	if ( found )
+	{
+		// If we found a good best one, then just use it
+		m_curWeapon = currentDecision;
+	}
+	else if ( foundBackup )
+	{
+		// No ready weapon was found, so return the most suitable unready one.
+		m_curWeapon = currentDecisionBackup;
+		found = TRUE;
+	}
+	else
+	{
+		// No weapon at all was found, so we go back to primary.
+		if(m_curDefaultWeapon && m_curDefaultWeapon < WEAPONSLOT_COUNT)
+			m_curWeapon = m_curDefaultWeapon;
+		else
+			m_curWeapon = PRIMARY_WEAPON;
+	}
+
+	// Lock the weapon for Priority Lock
+	if( LockPriority )
+	{
+		setWeaponLock( m_curWeapon, LOCKED_PRIORITY );
+	}
+
+	//DEBUG_LOG(("WeaponSet::chooseBestWeaponForPosition -- changed curweapon to %s\n",getCurWeapon()->getName().str()));
+
+	return found;
+}
 
 //-------------------------------------------------------------------------------------------------
 void WeaponSet::reloadAllAmmo(const Object *obj, Bool now)

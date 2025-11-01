@@ -394,6 +394,51 @@ Bool StealthUpdate::allowedToStealth( Object *stealthOwner ) const
 				return FALSE;
 			}
 		}
+		if( flags & STEALTH_NOT_WHILE_FIRING_FOUR )
+		{
+			//Check tertiary weapon status
+			weapon = self->getWeaponInWeaponSlot( WEAPON_FOUR );
+			if( weapon && weapon->getLastShotFrame() >= lastFrame )
+			{
+				return FALSE;
+			}
+		}
+		if( flags & STEALTH_NOT_WHILE_FIRING_FIVE )
+		{
+			//Check tertiary weapon status
+			weapon = self->getWeaponInWeaponSlot( WEAPON_FIVE );
+			if( weapon && weapon->getLastShotFrame() >= lastFrame )
+			{
+				return FALSE;
+			}
+		}
+		if( flags & STEALTH_NOT_WHILE_FIRING_SIX )
+		{
+			//Check tertiary weapon status
+			weapon = self->getWeaponInWeaponSlot( WEAPON_SIX );
+			if( weapon && weapon->getLastShotFrame() >= lastFrame )
+			{
+				return FALSE;
+			}
+		}
+		if( flags & STEALTH_NOT_WHILE_FIRING_SEVEN )
+		{
+			//Check tertiary weapon status
+			weapon = self->getWeaponInWeaponSlot( WEAPON_SEVEN );
+			if( weapon && weapon->getLastShotFrame() >= lastFrame )
+			{
+				return FALSE;
+			}
+		}
+		if( flags & STEALTH_NOT_WHILE_FIRING_EIGHT )
+		{
+			//Check tertiary weapon status
+			weapon = self->getWeaponInWeaponSlot( WEAPON_EIGHT );
+			if( weapon && weapon->getLastShotFrame() >= lastFrame )
+			{
+				return FALSE;
+			}
+		}
 	}
 
 	const Object *containedBy = self->getContainedBy();

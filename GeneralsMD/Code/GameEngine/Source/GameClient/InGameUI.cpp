@@ -5217,7 +5217,7 @@ Bool InGameUI::canSelectedObjectsEffectivelyUseWeapon( const CommandButton *comm
 		other = *it;
 		count++;
 
-		if ( other->getObject()->testCustomStatus("ZERO_DAMAGE") )
+		if ( other->getObject()->testCustomStatus("ZERO_DAMAGE") || other->getObject()->isWeaponSetRestricted() )
 		{
 		}
 		else if( !doAtObject && !doAtPosition )
