@@ -2442,6 +2442,16 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 			if(m_continueToUpdateFixLocoClump && now >= m_locoClumpScanFrame)
 			{
+				if(m_locoClumpScanFrame && source->getControllingPlayer()->getPlayerType() != PLAYER_HUMAN &&
+					fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
+					fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE
+				  )
+				{
+					destroyPath();
+					m_locoClumpScanFrame = 0;
+					return UPDATE_SLEEP_FOREVER;
+				}
+
 				const Coord3D *dest = getGoalPosition();
 				if(currentlyAttacking)
 				{
@@ -2517,7 +2527,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
 				}
 
-				m_locoClumpScanFrame = now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5);
+				m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 10;
 				m_lastPos = *currPos;
 			}
 			//m_lastPos = *currPos;
