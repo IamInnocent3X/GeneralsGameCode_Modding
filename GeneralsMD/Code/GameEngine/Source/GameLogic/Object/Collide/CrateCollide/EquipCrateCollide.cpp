@@ -94,6 +94,7 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 
 	const EquipCrateCollideModuleData* data = getEquipCrateCollideModuleData();
 	const Object *obj = getObject();
+	CommandSourceType lastCommandSource = obj->getAI() ? obj->getAI()->getLastCommandSource() : CMD_FROM_PLAYER;
 
 	// If we can only consider one equipped object as a time and the object is already equipped, return false
 	if(data->m_isUnique && !other->getEquipObjectIDs().empty())
@@ -107,7 +108,7 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 		if(!other->getContain())
 			return FALSE;
 
-		if(obj->isContained() || !TheActionManager->canEnterObject( obj, other, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY, FALSE ))
+		if(obj->isContained() || !TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
 			return FALSE;
 	}
 
@@ -124,12 +125,15 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 			  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
 		  {
 			  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, other, CMD_FROM_PLAYER );
-			  if(( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) || obj->getRelationship(other) == ALLIES)
+			  if(( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
+			  	   obj->getRelationship(other) == ALLIES ||
+				   ( obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
+		  		)
 			  {
 				  return FALSE;
 			  }
 		  }
-		else if(obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY, FALSE ))
+		else if(obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
 		  {
 			  return FALSE;
 		  }
