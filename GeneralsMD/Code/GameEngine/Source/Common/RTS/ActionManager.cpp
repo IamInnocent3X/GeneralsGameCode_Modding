@@ -1041,7 +1041,7 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 				  TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
 			  )
 			  {
-				  CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, objectToEquip, CMD_FROM_PLAYER );
+				  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, objectToEquip, CMD_FROM_PLAYER );
 				  if((result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) || obj->getRelationship(objectToEquip) == ALLIES )
 				  {
 					  return FALSE;

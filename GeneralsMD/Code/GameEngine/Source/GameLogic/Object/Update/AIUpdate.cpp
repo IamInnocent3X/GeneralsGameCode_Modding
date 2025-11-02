@@ -2527,7 +2527,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
 				}
 
-				m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 10;
+				m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 3;
 				m_lastPos = *currPos;
 			}
 			//m_lastPos = *currPos;

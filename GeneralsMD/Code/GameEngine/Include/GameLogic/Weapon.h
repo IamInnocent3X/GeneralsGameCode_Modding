@@ -566,6 +566,10 @@ public:
 	inline Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
 	inline Bool getSubdueProjectileNoDamage() const { return m_subduedProjectileNoDamage; }
 
+	inline Bool getDamagesSelfOnly() const { return m_damagesSelfOnly; }
+
+	inline const std::vector<AsciiString>& getRejectKeys() const { return m_rejectKeys; }
+
 	inline const AsciiString& getSubdualCustomType() const { return m_subdualCustomType; }
 	inline const AsciiString& getCustomSubdualCustomTint(VeterancyLevel v) const { return m_customSubdualCustomTint[v]; }
 	inline TintStatus getCustomSubdualTint(VeterancyLevel v) const { return m_customSubdualTint[v]; }
@@ -772,6 +776,8 @@ private:
 	Bool m_isMissileAttractor;
 	Bool m_subduedProjectileNoDamage;
 
+	Bool m_damagesSelfOnly;
+
 	AsciiString m_subdualCustomType;
 	AsciiString m_customSubdualCustomTint[LEVEL_COUNT];
 	TintStatus m_customSubdualTint[LEVEL_COUNT];
@@ -839,6 +845,8 @@ private:
 	AsciiString m_forceAttackObjectCursorName;
 	AsciiString m_forceAttackGroundCursorName;
 	AsciiString m_invalidCursorName;
+
+	std::vector<AsciiString> m_rejectKeys;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };

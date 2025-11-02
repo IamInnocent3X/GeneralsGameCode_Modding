@@ -427,6 +427,10 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ForceAttackGroundCursorName",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_forceAttackGroundCursorName ) },
 	{ "InvalidCursorName",							INI::parseAsciiString,       	NULL, 					offsetof(WeaponTemplate, m_invalidCursorName ) },
 
+	{ "DamagesSelfOnly",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_damagesSelfOnly) },
+
+	{ "RejectKeys",									INI::parseAsciiStringVector,			NULL,			offsetof(WeaponTemplate, m_rejectKeys) },
+
 	{ "ClearsParasite",								INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_clearsParasite) },
 
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
@@ -571,6 +575,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_isMissileAttractor = FALSE;
 	m_subduedProjectileNoDamage = FALSE;
 
+	m_damagesSelfOnly = FALSE;
+
 	m_subdualCustomType = NULL;
 	m_customSubdualRemoveSubdualTintOnDisable = FALSE;
 	m_customSubdualDisableType = DISABLED_SUBDUED;
@@ -628,6 +634,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_forceAttackObjectCursorName = NULL;
 	m_forceAttackGroundCursorName = NULL;
 	m_invalidCursorName = NULL;
+
+	m_rejectKeys.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1916,6 +1924,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
 	Real MinDamageHeight = getMinDamageHeight();
 	Real MaxDamageHeight = getMaxDamageHeight();
+	Bool DamagesSelfOnly = getDamagesSelfOnly();
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
@@ -1980,6 +1989,12 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			Bool killSelf = false;
 			if (source != NULL)
 			{
+				// Special, only deal damage to self
+				if(DamagesSelfOnly && source != curVictim)
+				{
+					continue;
+				}
+				
 				// anytime something is designated as the "primary victim" (ie, the direct target
 				// of the weapon), we ignore all the "affects" flags.
 				if (curVictim != primaryVictim)
@@ -1994,7 +2009,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 						// should object ever be allowed to damage themselves? methinks not...
 						// exception: a few weapons allow this (eg, for suicide bombers).
-						if( (affects & WEAPON_AFFECTS_SELF) == 0 )
+						if( (affects & WEAPON_AFFECTS_SELF) == 0 && !DamagesSelfOnly )
 						{
 							// Remember that source is a missile for some units, and they don't want to injure them'selves' either
 							if( source == curVictim || source->getProducerID() == curVictim->getID() )
@@ -2033,7 +2048,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						else /* r == NEUTRAL */
 							requiredMask = WEAPON_AFFECTS_NEUTRALS;
 
-						if( !(affects & requiredMask) )
+						if( !(affects & requiredMask) && !DamagesSelfOnly )
 						{
 							//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 30/9/2025
 							if( (affects & WEAPON_AFFECTS_SELF) == 0 || !(source == curVictim || source->getProducerID() == curVictim->getID()) )
@@ -2210,15 +2225,24 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				  (!curVictim->isAirborneTarget() || !m_magnetNoAirborne ))
 			{
 				Real distance;
+				Coord3D magnetVector = damageDirection;
 
 				if(m_magnetLinearDistanceCalc)
 				{
-					distance = ThePartitionManager->getDistanceSquared(source, curVictim->getPosition(), ATTACK_RANGE_CALC_TYPE);
+					if(m_magnetUseCenter)
+						distance = ThePartitionManager->getDistanceSquared(curVictim, pos, ATTACK_RANGE_CALC_TYPE);
+					else
+						distance = ThePartitionManager->getDistanceSquared(source, curVictim->getPosition(), ATTACK_RANGE_CALC_TYPE);
 					distance = sqrt(distance);
 				}
 				else
 				{
-					distance = damageDirection.length();
+					if(m_magnetUseCenter)
+					{
+						magnetVector.set( curVictim->getPosition() );
+						magnetVector.sub( pos );
+					}
+					distance = magnetVector.length();
 				}
 
 				if(distance > m_magnetMinDistance && ( !m_magnetMaxDistance || distance < m_magnetMaxDistance ))
@@ -2226,11 +2250,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					// Populate the damge information with the magnet information
 					if(m_magnetTaperOffDistance > 0 && distance > m_magnetTaperOffDistance)
 					{
-						Real ratio = max(0.0f, Real(1.0f - ( distance - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOnDistance ) ));
+						Real ratio = max(0.0f, Real(1.0f - ( distance - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOffDistance ) ));
 						
 						damageInfo.in.m_magnetAmount *= ratio;
 					}
-					else if(m_magnetTaperOnDistance > 0 && distance < m_magnetTaperOffDistance)
+					else if(m_magnetTaperOnDistance > 0 && distance < m_magnetTaperOnDistance)
 					{
 						Real ratio = max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - distance ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
 						
@@ -2239,8 +2263,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					if(damageInfo.in.m_magnetAmount != 0.0f)
 					{
-						Coord3D magnetVector = damageDirection;
-						//magnetVector.zero();
 						if(damageInfo.in.m_magnetAmount < 0)
 						{
 							damageInfo.in.m_magnetAmount *= -1;
@@ -2255,12 +2277,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 								magnetVector.sub( curVictim->getPosition() );
 							}
 						}
-						else if(m_magnetUseCenter)
-						{
-							magnetVector.set( curVictim->getPosition() );
-							magnetVector.sub( pos );
-						}
-						else if( source )
+						else if( !m_magnetUseCenter && source )
 						{
 							magnetVector.set( curVictim->getPosition() );
 							magnetVector.sub( source->getDrawable()->getPosition() );

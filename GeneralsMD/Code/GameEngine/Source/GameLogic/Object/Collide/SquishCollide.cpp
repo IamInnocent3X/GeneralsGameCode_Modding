@@ -73,8 +73,10 @@ void SquishCollide::onCollide( Object *other, const Coord3D *loc, const Coord3D 
 		//special circumstances:
 
 		//Hijacking!
-		static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-		HijackerUpdate *hijackUpdate = (HijackerUpdate*)self->findUpdateModule( key_HijackerUpdate );
+		//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+		//HijackerUpdate *hijackUpdate = (HijackerUpdate*)self->findUpdateModule( key_HijackerUpdate );
+		//if( hijackUpdate )
+		HijackerUpdateInterface *hijackUpdate = self->getHijackerUpdateInterface();
 		if( hijackUpdate )
 		{
 			return;

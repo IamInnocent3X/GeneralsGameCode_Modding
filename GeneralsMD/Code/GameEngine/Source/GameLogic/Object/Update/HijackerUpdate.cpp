@@ -229,7 +229,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 		setHealed( FALSE );
 		setNoSelfDamage( FALSE );
 
-		if( target && !revertedCollide )
+		if( target && !target->isEffectivelyDead() && !target->isDestroyed() && !revertedCollide)
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
 			obj->setPosition( target->getPosition() );

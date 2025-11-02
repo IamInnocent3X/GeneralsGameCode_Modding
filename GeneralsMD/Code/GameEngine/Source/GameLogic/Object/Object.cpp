@@ -225,6 +225,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_indicatorColor(0),
 	m_ai(NULL),
 	m_physics(NULL),
+	m_hijackerUpdate(NULL),
 	m_geometryInfo(tt->getTemplateGeometryInfo()),
 	m_containedBy(NULL),
 	m_xferContainedByID(INVALID_ID),
@@ -515,6 +516,13 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			DEBUG_ASSERTCRASH(m_physics == NULL, ("You should never have more than one Physics module (%s)",getTemplate()->getName().str()));
 			m_physics = (PhysicsBehavior*)newMod;
 		}
+
+		HijackerUpdateInterface* hijackUpdate = newMod->getHijackerUpdateInterface();
+		if (hijackUpdate)
+		{
+			DEBUG_ASSERTCRASH(hijackUpdate == NULL, ("Duplicate hijack updates"));
+			m_hijackerUpdate = hijackUpdate;
+		}
 	}
 
 	*curB = NULL;
@@ -566,11 +574,14 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_soleHealingBenefactorExpirationFrame = 0; ///< on what frame can I accept healing (thus to switch) from a new benefactor
 
 	m_equipObjIDs.clear();
+	m_lastEquipToIDs.clear();
 	m_equipAttackableObjIDs.clear();
 	m_rejectKeys.clear();
 
 	m_carbombConverterID = INVALID_ID;
 	m_hijackerID = INVALID_ID;
+	m_hijackingID = INVALID_ID;
+	m_equipToID = INVALID_ID;
 
 	m_assaultTransportID = INVALID_ID;
 
@@ -584,6 +595,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_noSlowDeathBehavior = FALSE;
 	m_noSlowDeathLayerUpdate = FALSE;
 	m_noFloatUpdate = FALSE;
+	m_noDemoTrapUpdate = FALSE;
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -733,6 +745,7 @@ Object::~Object()
 	// note, do NOT free these, there are just a shadow copy!
 	m_ai = NULL;
 	m_physics = NULL;
+	m_hijackerUpdate = NULL;
 
 	// delete any modules present
 	for (BehaviorModule** b = m_behaviors; *b; ++b)
@@ -806,7 +819,7 @@ void Object::onRemovedFrom( Object *removedFrom )
 		if (!collide)
 			continue;
 
-		if( collide->isEquipCrateCollide() && collide->revertCollideBehavior(removedFrom) )
+		if( collide->isEquipCrateCollide() && m_equipToID != INVALID_ID && collide->revertCollideBehavior(removedFrom) )
 			break;
 	}
 
@@ -5107,12 +5120,15 @@ void Object::xfer( Xfer *xfer )
 
 	UnsignedShort equipIDCount = m_equipObjIDs.size();
 	UnsignedShort equipAttackableIDCount = m_equipAttackableObjIDs.size();
+	UnsignedShort lastEquipIDCount = m_lastEquipToIDs.size();
 	UnsignedShort rejectKeysCount = m_rejectKeys.size();
 	xfer->xferUnsignedShort( &equipIDCount );
 	xfer->xferUnsignedShort( &equipAttackableIDCount );
+	xfer->xferUnsignedShort( &lastEquipIDCount );
 	xfer->xferUnsignedShort( &rejectKeysCount );
 	ObjectID equipObjID = INVALID_ID;
 	ObjectID equipAttackableObjID = INVALID_ID;
+	ObjectID lastEquipObjID = INVALID_ID;
 	AsciiString rejectKey = NULL;
 	if( xfer->getXferMode() == XFER_SAVE )
 	{
@@ -5130,20 +5146,27 @@ void Object::xfer( Xfer *xfer )
 			xfer->xferObjectID( &equipAttackableObjID );
 		}  // end for, i_2
 
-		for (int i_3 = 0; i_3 < rejectKeysCount; i_3++)
+		for (int i_3 = 0; i_3 < lastEquipIDCount; i_3++)
 		{
-			rejectKey = m_rejectKeys[i_3];
-			xfer->xferAsciiString( &rejectKey );
+			lastEquipObjID = m_lastEquipToIDs[i_3];
+			xfer->xferObjectID( &lastEquipObjID );
 		}  // end for, i_3
+
+
+		for (int i_4 = 0; i_4 < rejectKeysCount; i_4++)
+		{
+			rejectKey = m_rejectKeys[i_4];
+			xfer->xferAsciiString( &rejectKey );
+		}  // end for, i_4
 
 	}  // end if, save
 	else
 	{
 		// this list should be empty on loading
-		if( m_equipObjIDs.size() != 0 || m_equipAttackableObjIDs.size() != 0 || m_rejectKeys.size() != 0 )
+		if( m_equipObjIDs.size() != 0 || m_equipAttackableObjIDs.size() != 0 || m_lastEquipToIDs.size() != 0 || m_rejectKeys.size() != 0 )
 		{
 
-			DEBUG_CRASH(( "ScriptEngine::xfer - m_equipObjIDs, m_equipAttackableObjIDs and m_rejectKeys should be empty but is not" ));
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_equipObjIDs, m_equipAttackableObjIDs, m_lastEquipToIDs and m_rejectKeys should be empty but is not" ));
 			throw SC_INVALID_DATA;
 
 		}  // end if
@@ -5165,7 +5188,15 @@ void Object::xfer( Xfer *xfer )
 
 		}  // end for
 
-		for ( UnsignedShort i_3 = 0; i_3 < rejectKeysCount; ++i_3)
+		for (int i_3 = 0; i_3 < lastEquipIDCount; i_3++)
+		{
+			// read and register ID
+			xfer->xferObjectID( &lastEquipObjID );
+			m_lastEquipToIDs.push_back(lastEquipObjID);
+
+		}  // end for
+
+		for ( UnsignedShort i_4 = 0; i_4 < rejectKeysCount; ++i_4)
 		{
 			xfer->xferAsciiString( &rejectKey );
 			m_rejectKeys.push_back(rejectKey);
@@ -5176,6 +5207,8 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferObjectID( &m_carbombConverterID );
 	xfer->xferObjectID( &m_hijackerID );
+	xfer->xferObjectID( &m_hijackingID );
+	xfer->xferObjectID( &m_equipToID );
 
 	xfer->xferObjectID( &m_assaultTransportID );
 
@@ -7635,6 +7668,7 @@ void Object::setEquipObjectID(ObjectID equipObjID)
 		return;
 
 	m_equipObjIDs.push_back(equipObjID);
+	m_lastEquipToIDs.push_back(equipObjID);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -7677,6 +7711,26 @@ void Object::clearEquipObjectID(ObjectID equipObjID)
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+void Object::clearLastEquipObjectID(ObjectID equipObjID)
+{ 
+	if(equipObjID == INVALID_ID)
+		return;
+
+	// Remove the ID from the Equip list
+	std::vector<ObjectID>::iterator it;
+	for (it = m_lastEquipToIDs.begin(); it != m_lastEquipToIDs.end();)
+	{
+		if (equipObjID == (*it))
+		{
+			it = m_lastEquipToIDs.erase(it);
+			break;
+		}
+		++it;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::setRejectKey(const std::vector<AsciiString>& keys)
 { 
 	if(keys.empty())
@@ -7730,11 +7784,9 @@ Bool Object::hasRejectKey(const std::vector<AsciiString>& keys) const
 //-------------------------------------------------------------------------------------------------
 void Object::setContainedPosition()
 {
-	static const NameKeyType key_EquipCrateCollide = NAMEKEY("EquipCrateCollide");
-	EquipCrateCollide* eqc = (EquipCrateCollide*)(findUpdateModule( key_EquipCrateCollide ));
-	if (eqc && eqc->getEquipObjectID() != INVALID_ID)
+	if(m_equipToID != INVALID_ID)
 	{
-		Object* equipObject = TheGameLogic->findObjectByID( eqc->getEquipObjectID() );
+		Object* equipObject = TheGameLogic->findObjectByID( m_equipToID );
 		if ( equipObject )
 		{
 			setPosition( equipObject->getPosition() );
@@ -7744,13 +7796,12 @@ void Object::setContainedPosition()
 	{
 		setPosition( getContainedBy()->getPosition() );
 	}
-	else
+	else if(m_hijackingID != INVALID_ID)
 	{
-		static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-		HijackerUpdate *hijackerUpdate = (HijackerUpdate*)(findUpdateModule( key_HijackerUpdate ));
-		if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+		Object* hijackedObject = TheGameLogic->findObjectByID( m_hijackingID );
+		if ( hijackedObject )
 		{
-			setPosition( hijackerUpdate->getTargetObject()->getPosition() );
+			setPosition( hijackedObject->getPosition() );
 		}
 	}
 }
@@ -7768,6 +7819,18 @@ void Object::setCarBombConverterID(ObjectID ConverterID)
 }
 
 //-------------------------------------------------------------------------------------------------
+void Object::setEquipToID(ObjectID ID)
+{
+	m_equipToID = ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setHijackingID(ObjectID ID)
+{
+	m_hijackingID = ID;
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, ObjectID damagerID)
 {
 	if( testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
@@ -7776,8 +7839,7 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 
 		if(converter)
 		{
-			static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-			HijackerUpdate *hijackerUpdate = (HijackerUpdate*)converter->findUpdateModule( key_HijackerUpdate );
+			HijackerUpdateInterface *hijackerUpdate = converter->getHijackerUpdateInterface();
 			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
 			{
 				hijackerUpdate->setUpdate( TRUE );
@@ -7801,8 +7863,7 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 
 		if(hijacker)
 		{
-			static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-			HijackerUpdate *hijackerUpdate = (HijackerUpdate*)hijacker->findUpdateModule( key_HijackerUpdate );
+			HijackerUpdateInterface *hijackerUpdate = hijacker->getHijackerUpdateInterface();
 			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
 			{
 				hijackerUpdate->setUpdate( TRUE );
@@ -7840,8 +7901,7 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 
 			if(equipObj)
 			{
-				static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-				HijackerUpdate *hijackerUpdate = (HijackerUpdate*)equipObj->findUpdateModule( key_HijackerUpdate );
+				HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
 				if( hijackerUpdate && hijackerUpdate->getTargetObject() )
 				{
 					hijackerUpdate->setUpdate( TRUE );
@@ -7865,6 +7925,16 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 //-------------------------------------------------------------------------------------------------
 Bool Object::checkToSquishHijack(const Object *other) const
 {
+	if( !m_lastEquipToIDs.empty() )
+	{
+		for (std::vector<ObjectID>::const_iterator it = m_lastEquipToIDs.begin(); it != m_lastEquipToIDs.end(); ++it)
+		{
+			//don't crush the equipper after it has been removed!
+			if(other->getID() == (*it))
+				return false;
+		}
+	}
+	
 	if( m_carbombConverterID != INVALID_ID && other->getID() == m_carbombConverterID )
 	{
 		//don't crush the converter after it has been removed!
@@ -7978,11 +8048,20 @@ void Object::doSlaveBehaviorUpdate( Bool doSlaver )
 //-------------------------------------------------------------------------------------------------
 void Object::doWeaponSetUpdate()
 {
+	// IamInnocent - This triggers everytime Statuses Changed, which is very common.
+	// No demo trap update, we stop here
+	if(m_noDemoTrapUpdate)
+		return;
+	
+	// Demo Trap Update
+	m_noDemoTrapUpdate = TRUE;
+
 	static NameKeyType key_DemoTrapUpdate = NAMEKEY("DemoTrapUpdate");
 	DemoTrapUpdate *dtu = (DemoTrapUpdate*)findUpdateModule(key_DemoTrapUpdate);
 	if( dtu )
 	{
 		dtu->refreshUpdate();
+		m_noDemoTrapUpdate = FALSE;
 	}
 }
 

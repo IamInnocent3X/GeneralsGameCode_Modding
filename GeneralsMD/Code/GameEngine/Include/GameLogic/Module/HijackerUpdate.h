@@ -62,8 +62,34 @@ public:
 	}
 };
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+class HijackerUpdateInterface
+{
+public:
+	virtual void setTargetObject( const Object *object ) = 0;
+	virtual Object* getTargetObject() const = 0;
+	virtual void setUpdate(Bool u ) = 0;
+	virtual void setIsInVehicle(Bool i ) = 0;
+	virtual void setNoLeechExp(Bool i ) = 0;
+	virtual void setIsParasite(Bool i ) = 0;
+	virtual void setDestroyOnHeal(Bool i ) = 0;
+	virtual void setRemoveOnHeal(Bool i ) = 0;
+	virtual void setDestroyOnClear(Bool i ) = 0;
+	virtual void setDestroyOnTargetDie(Bool i ) = 0;
+	virtual void setPercentDamage(Real i ) = 0;
+	virtual void setStatusToRemove(ObjectStatusMaskType i ) = 0;
+	virtual void setStatusToDestroy(ObjectStatusMaskType i ) = 0;
+	virtual void setCustomStatusToRemove(const std::vector<AsciiString>& i ) = 0;
+	virtual void setCustomStatusToDestroy(const std::vector<AsciiString>& i ) = 0;
+	virtual void setClear(Bool u ) = 0;
+	virtual void setEject(Bool u ) = 0;
+	virtual void setHealed(Bool u ) = 0;
+	virtual void setNoSelfDamage(Bool u ) = 0; // This is to prevent Parasite from dealing damage to their allies
+};
+
 //-------------------------------------------------------------------------------------------------
-class HijackerUpdate : public UpdateModule
+class HijackerUpdate : public UpdateModule, public HijackerUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( HijackerUpdate, "HijackerUpdate" )
@@ -74,27 +100,28 @@ public:
 	HijackerUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() { return this; }
 	virtual UpdateSleepTime update();							///< called once per frame
 
-	void setTargetObject( const Object *object );
-	Object* getTargetObject() const;
-	void setUpdate(Bool u ) {m_update = u; if(u) setWakeFrame(getObject(), UPDATE_SLEEP_NONE);}
-	void setIsInVehicle(Bool i ) {m_isInVehicle = i;}
-	void setNoLeechExp(Bool i ) {m_noLeechExp = i;}
-	void setIsParasite(Bool i ) {m_isParasite = i;}
-	void setDestroyOnHeal(Bool i ) {m_destroyOnHeal = i;}
-	void setRemoveOnHeal(Bool i ) {m_removeOnHeal = i;}
-	void setDestroyOnClear(Bool i ) {m_destroyOnClear = i;}
-	void setDestroyOnTargetDie(Bool i ) {m_destroyOnTargetDie = i;}
-	void setPercentDamage(Real i ) {m_percentDamage = i;}
-	void setStatusToRemove(ObjectStatusMaskType i ) {m_statusToRemove = i;}
-	void setStatusToDestroy(ObjectStatusMaskType i ) {m_statusToDestroy = i;}
-	void setCustomStatusToRemove(const std::vector<AsciiString>& i ) {m_customStatusToRemove = i;}
-	void setCustomStatusToDestroy(const std::vector<AsciiString>& i ) {m_customStatusToDestroy = i;}
-	void setClear(Bool u ) {m_clear = u;}
-	void setEject(Bool u ) {m_eject = u;}
-	void setHealed(Bool u ) {m_healed = u;}
-	void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
+	virtual void setTargetObject( const Object *object );
+	virtual Object* getTargetObject() const;
+	virtual void setUpdate(Bool u ) {m_update = u; if(u) setWakeFrame(getObject(), UPDATE_SLEEP_NONE);}
+	virtual void setIsInVehicle(Bool i ) {m_isInVehicle = i;}
+	virtual void setNoLeechExp(Bool i ) {m_noLeechExp = i;}
+	virtual void setIsParasite(Bool i ) {m_isParasite = i;}
+	virtual void setDestroyOnHeal(Bool i ) {m_destroyOnHeal = i;}
+	virtual void setRemoveOnHeal(Bool i ) {m_removeOnHeal = i;}
+	virtual void setDestroyOnClear(Bool i ) {m_destroyOnClear = i;}
+	virtual void setDestroyOnTargetDie(Bool i ) {m_destroyOnTargetDie = i;}
+	virtual void setPercentDamage(Real i ) {m_percentDamage = i;}
+	virtual void setStatusToRemove(ObjectStatusMaskType i ) {m_statusToRemove = i;}
+	virtual void setStatusToDestroy(ObjectStatusMaskType i ) {m_statusToDestroy = i;}
+	virtual void setCustomStatusToRemove(const std::vector<AsciiString>& i ) {m_customStatusToRemove = i;}
+	virtual void setCustomStatusToDestroy(const std::vector<AsciiString>& i ) {m_customStatusToDestroy = i;}
+	virtual void setClear(Bool u ) {m_clear = u;}
+	virtual void setEject(Bool u ) {m_eject = u;}
+	virtual void setHealed(Bool u ) {m_healed = u;}
+	virtual void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
 
 private:
 

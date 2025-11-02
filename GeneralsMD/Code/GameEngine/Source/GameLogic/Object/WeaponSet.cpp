@@ -892,7 +892,7 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 		for( Int i = first; i >= last ; --i )
 		{
 			Weapon *weapon = m_weapons[ i ];
-			if (weapon && weapon->getTemplate()->passRequirements(source) && weapon->estimateWeaponDamage( source, victim ))
+			if (weapon && !victim->hasRejectKey(weapon->getTemplate()->getRejectKeys()) && weapon->getTemplate()->passRequirements(source) && weapon->estimateWeaponDamage( source, victim ))
 			{
 				//Kris: Aug 22, 2003
 				//Surgical fix so Jarmen Kell doesn't get a targeting cursor on enemy vehicles unless he is in snipe mode.
@@ -1047,6 +1047,9 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 
 		Weapon* weapon = m_weapons[i];
 		if (weapon == NULL)
+			continue;
+
+		if(victim->hasRejectKey(weapon->getTemplate()->getRejectKeys()))
 			continue;
 
 		if(!weapon->getTemplate()->passRequirements(obj))

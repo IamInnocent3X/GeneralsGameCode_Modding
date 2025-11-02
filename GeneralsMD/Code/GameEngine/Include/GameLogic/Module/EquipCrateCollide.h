@@ -96,7 +96,6 @@ public:
 	EquipCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	ObjectID getEquipObjectID() const { return m_equipToID; }
 	void setEquipStatus(Object *other);
 	void clearEquipStatus();
 

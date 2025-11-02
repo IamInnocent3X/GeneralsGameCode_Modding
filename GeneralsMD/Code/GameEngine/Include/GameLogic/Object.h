@@ -78,6 +78,7 @@ class ExitInterface;
 class ExperienceTracker;
 class FiringTracker;
 class Module;
+class HijackerUpdateInterface;
 class PartitionData;
 class PhysicsBehavior;
 class PhysicsUpdate;
@@ -334,6 +335,8 @@ public:
 	inline PhysicsBehavior* getPhysics() { return m_physics; }
 	inline const PhysicsBehavior* getPhysics() const { return m_physics; }
 	void topple( const Coord3D *toppleDirection, Real toppleSpeed, UnsignedInt options );
+
+	HijackerUpdateInterface* getHijackerUpdateInterface() const { return m_hijackerUpdate; }
 
 	UpdateModule* findUpdateModule(NameKeyType key) const { return (UpdateModule*)findModule(key); }
 	DamageModule* findDamageModule(NameKeyType key) const { return (DamageModule*)findModule(key); }
@@ -716,6 +719,7 @@ public:
 
 	void setEquipObjectID(ObjectID equipObjID);
 	void clearEquipObjectID(ObjectID equipObjID);
+	void clearLastEquipObjectID(ObjectID equipObjID);
 	void setEquipAttackableObjectID(ObjectID equipObjID);
 	void setRejectKey(const std::vector<AsciiString>& keys);
 	void clearRejectKey(const std::vector<AsciiString>& keys);
@@ -727,8 +731,12 @@ public:
 
 	void setHijackerID(ObjectID HijackerID);
 	void setCarBombConverterID(ObjectID ConverterID);
+	void setHijackingID(ObjectID ID);
+	void setEquipToID(ObjectID ID);
 	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, ObjectID damagerID);
 	Bool checkToSquishHijack(const Object *other) const;
+
+	inline ObjectID getEquipToID() const { return m_equipToID; }
 
 	void doObjectUpgradeChecks();
 	void doObjectStatusChecks();
@@ -909,6 +917,8 @@ private:
 	AIUpdateInterface*						m_ai;	///< ai interface (if any), cached for handy access. (duplicate of entry in the module array!)
 	PhysicsBehavior*							m_physics;	///< physics interface (if any), cached for handy access. (duplicate of entry in the module array!)
 
+	HijackerUpdateInterface*					m_hijackerUpdate;	///< hijacker update interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
 	PartitionData*								m_partitionData;	///< our PartitionData
 	RadarObject*									m_radarData;				///< radar data
 	ExperienceTracker*						m_experienceTracker;	///< Manages experience, gaining levels, and value when killed
@@ -988,13 +998,17 @@ private:
 	std::vector<AsciiString>						m_rejectKeys;
 	std::vector<ObjectID> 							m_equipObjIDs;
 	std::vector<ObjectID> 							m_equipAttackableObjIDs;
+	std::vector<ObjectID> 							m_lastEquipToIDs;
 	ObjectID										m_carbombConverterID;
 	ObjectID 										m_hijackerID;
+	ObjectID										m_hijackingID;
+	ObjectID										m_equipToID;
 	mutable ObjectID 										m_assaultTransportID;
 
 	Bool											m_isMobMember;
 	Bool											m_mobJustUpdated;
 
+	Bool											m_noDemoTrapUpdate;
 	Bool											m_noFloatUpdate;
 	Bool											m_noSlavedBehavior;
 	Bool											m_noSlaverBehavior;

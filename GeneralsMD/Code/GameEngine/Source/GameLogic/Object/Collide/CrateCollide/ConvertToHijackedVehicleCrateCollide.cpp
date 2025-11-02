@@ -218,10 +218,13 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	// I we have made it this far, we are going to ride in this vehicle for a while
 	// get the name of the hijackerupdate
-	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-	HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+	//HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//if( hijackerUpdate )
+	HijackerUpdateInterface *hijackerUpdate = obj->getHijackerUpdateInterface();
 	if( hijackerUpdate )
 	{
+		obj->setHijackingID( other->getID() );
 		hijackerUpdate->setTargetObject( other );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
@@ -271,6 +274,8 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
 {
 	CrateCollide::revertCollideBehavior(other);
+
+	getObject()->setHijackingID(INVALID_ID);
 
 	// If the Object doesn't exist, or is destroyed we stop here.
 	if(!other || other->isDestroyed() || other->isEffectivelyDead())
