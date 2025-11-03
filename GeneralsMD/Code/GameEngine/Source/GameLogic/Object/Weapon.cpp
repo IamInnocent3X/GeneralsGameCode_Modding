@@ -2004,12 +2004,12 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					{
 						killSelf = true;
 					}
-					else
+					else if(!DamagesSelfOnly)
 					{
 
 						// should object ever be allowed to damage themselves? methinks not...
 						// exception: a few weapons allow this (eg, for suicide bombers).
-						if( (affects & WEAPON_AFFECTS_SELF) == 0 && !DamagesSelfOnly )
+						if( (affects & WEAPON_AFFECTS_SELF) == 0 )
 						{
 							// Remember that source is a missile for some units, and they don't want to injure them'selves' either
 							if( source == curVictim || source->getProducerID() == curVictim->getID() )
@@ -2017,6 +2017,13 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 								//DEBUG_LOG(("skipping damage done to SELF..."));
 								continue;
 							}
+						}
+						
+						//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 3/11/2025
+						if( affects == WEAPON_AFFECTS_SELF )
+						{
+							if( !(source == curVictim || source->getProducerID() == curVictim->getID()) )
+								continue;
 						}
 
 						if( affects & WEAPON_DOESNT_AFFECT_SIMILAR )
@@ -2048,14 +2055,15 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						else /* r == NEUTRAL */
 							requiredMask = WEAPON_AFFECTS_NEUTRALS;
 
-						if( !(affects & requiredMask) && !DamagesSelfOnly )
+						if( affects == WEAPON_AFFECTS_SELF )
 						{
-							//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 30/9/2025
-							if( (affects & WEAPON_AFFECTS_SELF) == 0 || !(source == curVictim || source->getProducerID() == curVictim->getID()) )
-							{
-								//Skip if we aren't affected by this weapon.
-								continue;
-							}
+							requiredMask = WEAPON_AFFECTS_SELF;
+						}
+
+						if( !(affects & requiredMask) )
+						{
+							//Skip if we aren't affected by this weapon.
+							continue;
 						}
 					}
 				}
