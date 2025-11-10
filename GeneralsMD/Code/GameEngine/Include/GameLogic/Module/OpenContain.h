@@ -76,6 +76,11 @@ public:
 
 	WeaponBonusConditionTypeVec m_passengerWeaponBonusVec;  ///< weaponBonus types granted to passengers
 
+	Int m_containExtra;
+	std::vector<AsciiString> m_containMaxUpgradeList;
+	std::vector<AsciiString> m_containMaxUpgradeListConflicts;
+	std::vector<int> m_containMaxUpgradeListRequiresAll;
+
 	OpenContainModuleData( void );
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
@@ -189,6 +194,7 @@ public:
 
 	virtual PlayerMaskType getPlayerWhoEntered(void) const { return m_playerEnteredMask; }
 
+	virtual Int getRawContainMax() const;
 	virtual Int getContainMax() const;
 
 	// ExitInterface
@@ -218,7 +224,7 @@ public:
   virtual Bool isSpecialOverlordStyleContainer() const { return false; }
   virtual Bool isAnyRiderAttacking( void ) const;
 
-  	virtual void doUpgradeChecks( void ) {}
+  	virtual void doUpgradeChecks( void );
   	virtual void doStatusChecks( void ) {}
 
 	virtual void clearTargetID( void ) {}
@@ -276,6 +282,8 @@ protected:
 
 	ContainedItemsList	m_containList;						///< the list of contained objects
 	UnsignedInt					m_containListSize;							///< size of contained list
+
+	Int				  	m_containExtra;
 private:
 
 	typedef std::map< ObjectID, ObjectEnterExitType, std::less<ObjectID> > ObjectEnterExitMap;

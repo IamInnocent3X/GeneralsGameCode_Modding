@@ -747,7 +747,7 @@ void INI::parseAsciiStringWithColonVector( INI* ini, void * /*instance*/, void *
 {
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
 	}
@@ -758,7 +758,7 @@ void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, 
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	// nope, don't clear. duh.
 	// asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
 	}

@@ -139,6 +139,7 @@ public:
 	virtual void onCapture( Player *oldOwner, Player *newOwner ) = 0; // Very important to handle capture of container, don't want to differ in teams from passenger to us.
 	virtual void onSelling() = 0;///< Container is being sold.  Most people respond by kicking everyone out, but not all.
 
+	virtual Int getRawContainMax() const = 0; ///< The max needs to be virtual, but only two inheritors care.  -1 means "I don't care".
 	virtual Int getContainMax() const = 0; ///< The max needs to be virtual, but only two inheritors care.  -1 means "I don't care".
 
 	virtual ExitInterface* getContainExitInterface() = 0;

@@ -394,6 +394,10 @@ void TunnelContain::doUpgradeChecks( void )
 {
 	if ( !getObject() )
     	return;
+
+	// extend base class
+	OpenContain::doUpgradeChecks();
+
 	Player *owningPlayer = getObject()->getControllingPlayer();
 	if( owningPlayer == NULL )
 		return;
@@ -605,48 +609,9 @@ void TunnelContain::doRemoveOtherPassengersAllowToFire()
 //-------------------------------------------------------------------------------------------------
 Bool TunnelContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
-	const Object *us = getObject();
-	const TunnelContainModuleData *modData = getTunnelContainModuleData();
-
-	// if we have any kind of masks set then we must make that check
-	if (obj->isAnyKindOf( modData->m_allowInsideKindOf ) == FALSE ||
-			obj->isAnyKindOf( modData->m_forbidInsideKindOf ) == TRUE)
-	{
+	// extend functionality
+	if( OpenContain::isValidContainerFor( obj, checkCapacity ) == false )
 		return false;
-	}
-
- 	//
- 	// check relationship, note that this behavior is defined as the relation between
- 	// 'obj' and the container 'us', and not the reverse
- 	//
- 	Bool relationshipRestricted = FALSE;
- 	Relationship r = obj->getRelationship( us );
- 	switch( r )
- 	{
- 		case ALLIES:
- 			if( modData->m_allowAlliesInside == FALSE )
- 				relationshipRestricted = TRUE;
- 			break;
-
- 		case ENEMIES:
- 			if( modData->m_allowEnemiesInside == FALSE )
- 				relationshipRestricted = TRUE;
- 			break;
-
- 		case NEUTRAL:
- 			if( modData->m_allowNeutralInside == FALSE )
- 				relationshipRestricted = TRUE;
- 			break;
-
- 		default:
- 			DEBUG_CRASH(( "isValidContainerFor: Undefined relationship (%d) between '%s' and '%s'",
- 										r, getObject()->getTemplate()->getName().str(),
- 										obj->getTemplate()->getName().str() ));
- 			return FALSE;
-
- 	}  // end switch
- 	if( relationshipRestricted == TRUE )
- 		return FALSE;
 	
 	Player *owningPlayer = getObject()->getControllingPlayer();
 	if( owningPlayer && owningPlayer->getTunnelSystem() )
@@ -662,6 +627,17 @@ UnsignedInt TunnelContain::getContainCount() const
 	if( owningPlayer && owningPlayer->getTunnelSystem() )
 	{
 		return owningPlayer->getTunnelSystem()->getContainCount();
+	}
+	return 0;
+}
+
+// No implementation for Slot expansion... yet
+Int TunnelContain::getRawContainMax( void ) const
+{
+	Player *owningPlayer = getObject()->getControllingPlayer();
+	if( owningPlayer && owningPlayer->getTunnelSystem() )
+	{
+		return owningPlayer->getTunnelSystem()->getContainMax();
 	}
 	return 0;
 }
@@ -908,7 +884,8 @@ UpdateSleepTime TunnelContain::update( void )
 		{
 			tunnelSystem->healObjects(modData->m_framesForFullHeal);
 			tunnelSystem->removeDontLoadSound(TheGameLogic->getFrame());
-			createPayload();
+			if(!m_payloadCreated && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+				createPayload();
 		}
 
 		Bool openFireCheck;

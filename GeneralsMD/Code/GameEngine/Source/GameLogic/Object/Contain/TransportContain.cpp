@@ -125,10 +125,20 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int TransportContain::getContainMax( void ) const
+Int TransportContain::getRawContainMax( void ) const
 {
 	if (getTransportContainModuleData())
 		return getTransportContainModuleData()->m_slotCapacity;
+
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Int TransportContain::getContainMax( void ) const
+{
+	if (getTransportContainModuleData())
+		return getTransportContainModuleData()->m_slotCapacity + m_containExtra;
 
 	return 0;
 }
@@ -676,6 +686,14 @@ void TransportContain::onCapture( Player *oldOwner, Player *newOwner )
 			orderAllPassengersToExit( CMD_FROM_AI, FALSE );
 		}
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void TransportContain::doUpgradeChecks()
+{
+	// extend base class
+	OpenContain::doUpgradeChecks();
 }
 
 // ------------------------------------------------------------------------------------------------

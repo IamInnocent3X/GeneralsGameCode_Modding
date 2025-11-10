@@ -282,70 +282,71 @@ UpdateSleepTime CaveContain::update( void )
 		{
 			m_capturedTeam = m_originalTeam;
 		}
-		
-		// Payload System
-		if(!m_payloadCreated)
+
+		m_loaded = true;
+	}
+
+	// Payload System
+	if(!m_payloadCreated && !getObject()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !getObject()->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+	{
+		ContainModuleInterface *contain = getObject()->getContain();
+		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+		if(contain && myTracker)
 		{
-			ContainModuleInterface *contain = getObject()->getContain();
-			if(contain && newTracker)
+			contain->enableLoadSounds( FALSE );
+
+			Int count = getCaveContainModuleData()->m_initialPayload.count;
+
+			for( int i = 0; i < count; i++ )
 			{
-				contain->enableLoadSounds( FALSE );
-
-				Int count = getCaveContainModuleData()->m_initialPayload.count;
-
-				for( int i = 0; i < count; i++ )
+				//We are creating a transport that comes with a initial payload, so add it now!
+				const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( getCaveContainModuleData()->m_initialPayload.name );
+				Object* payload = TheThingFactory->newObject( payloadTemplate, m_originalTeam );
+				if( myTracker->isValidContainerFor( payload, true ) )
 				{
-					//We are creating a transport that comes with a initial payload, so add it now!
-					const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( getCaveContainModuleData()->m_initialPayload.name );
-					Object* payload = TheThingFactory->newObject( payloadTemplate, m_originalTeam );
-					if( newTracker->isValidContainerFor( payload, true ) )
+					payload->setPosition( getObject()->getPosition() );
+					contain->addToContain( payload );
+				}
+				else
+				{
+					Object *theContainer = getObject();
+
+					// Scatter to nearby Position from Tunnel Contain
+					Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
+				//	angle = TheTacticalView->getAngle();
+				//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
+
+					Real minRadius = theContainer->getGeometryInfo().getBoundingCircleRadius();
+					Real maxRadius = minRadius + minRadius / 2.0f;
+					const Coord3D *containerPos = theContainer->getPosition();
+					Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
+
+					Coord3D pos;
+					pos.x = dist * Cos( angle ) + containerPos->x;
+					pos.y = dist * Sin( angle ) + containerPos->y;
+					pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
+
+					// set orientation
+					payload->setOrientation( angle );
+
+					AIUpdateInterface *ai = payload->getAIUpdateInterface();
+					if( ai )
 					{
-						payload->setPosition( getObject()->getPosition() );
-						contain->addToContain( payload );
+						// set position of the object at center of building and move them toward pos
+						payload->setPosition( theContainer->getPosition() );
+						ai->ignoreObstacle(theContainer);
+						ai->aiMoveToPosition( &pos, CMD_FROM_AI );
 					}
 					else
 					{
-						Object *theContainer = getObject();
-
-						// Scatter to nearby Position
-						Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
-					//	angle = TheTacticalView->getAngle();
-					//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
-
-						Real minRadius = theContainer->getGeometryInfo().getBoundingCircleRadius();
-						Real maxRadius = minRadius + minRadius / 2.0f;
-						const Coord3D *containerPos = theContainer->getPosition();
-						Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
-
-						Coord3D pos;
-						pos.x = dist * Cos( angle ) + containerPos->x;
-						pos.y = dist * Sin( angle ) + containerPos->y;
-						pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
-
-						// set orientation
-						payload->setOrientation( angle );
-
-						AIUpdateInterface *ai = payload->getAIUpdateInterface();
-						if( ai )
-						{
-							// set position of the object at center of building and move them toward pos
-							payload->setPosition( theContainer->getPosition() );
-							ai->ignoreObstacle(theContainer);
-							ai->aiMoveToPosition( &pos, CMD_FROM_AI );
-						}
-						else
-						{
-							payload->setPosition( &pos );
-						}
+						payload->setPosition( &pos );
 					}
 				}
-
-				contain->enableLoadSounds( TRUE );
 			}
+
+			contain->enableLoadSounds( TRUE );
 			m_payloadCreated = TRUE;
 		}
-
-		m_loaded = true;
 	}
 
 	if(m_oldTeam != NULL && m_newTeam != NULL)
@@ -473,48 +474,9 @@ void CaveContain::onSelling()
 
 Bool CaveContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
-	const Object *us = getObject();
-	const CaveContainModuleData *modData = getCaveContainModuleData();
-
-	// if we have any kind of masks set then we must make that check
-	if (obj->isAnyKindOf( modData->m_allowInsideKindOf ) == FALSE ||
-			obj->isAnyKindOf( modData->m_forbidInsideKindOf ) == TRUE)
-	{
+	// extend functionality
+	if( OpenContain::isValidContainerFor( obj, checkCapacity ) == false )
 		return false;
-	}
-
- 	//
- 	// check relationship, note that this behavior is defined as the relation between
- 	// 'obj' and the container 'us', and not the reverse
- 	//
- 	Bool relationshipRestricted = FALSE;
- 	Relationship r = obj->getRelationship( us );
- 	switch( r )
- 	{
- 		case ALLIES:
- 			if( modData->m_allowAlliesInside == FALSE )
- 				relationshipRestricted = TRUE;
- 			break;
-
- 		case ENEMIES:
- 			if( modData->m_allowEnemiesInside == FALSE )
- 				relationshipRestricted = TRUE;
- 			break;
-
- 		case NEUTRAL:
- 			if( modData->m_allowNeutralInside == FALSE )
- 				relationshipRestricted = TRUE;
- 			break;
-
- 		default:
- 			DEBUG_CRASH(( "isValidContainerFor: Undefined relationship (%d) between '%s' and '%s'",
- 										r, getObject()->getTemplate()->getName().str(),
- 										obj->getTemplate()->getName().str() ));
- 			return FALSE;
-
- 	}  // end switch
- 	if( relationshipRestricted == TRUE )
- 		return FALSE;
 
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 	if(!myTracker)
@@ -528,6 +490,15 @@ UnsignedInt CaveContain::getContainCount() const
 	if(!myTracker)
 		return 0;
 	return myTracker->getContainCount();
+}
+
+// No implementation for Slot expansion... yet
+Int CaveContain::getRawContainMax( void ) const
+{
+	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	if(!myTracker)
+		return 0;
+	return myTracker->getContainMax();
 }
 
 Int CaveContain::getContainMax( void ) const
@@ -652,6 +623,7 @@ void CaveContain::doCapture( Team *oldTeam, Team *newTeam )
 	TunnelTracker *newTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, newTeam );
 
 	// If we are captured, not defected, grant the ownership to the Player permanently.
+	// To-do, comparison could be better. This is jank.
 	if(ThePlayerList->getLocalPlayer()->getRelationship(getObject()->getTeam()) != NEUTRAL && !newTracker->getIsContaining())
 	{
 		setOriginalTeam(m_capturedTeam);
@@ -972,7 +944,7 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 void CaveContain::registerNewCave()
 {
 	if(getCaveContainModuleData()->m_caveUsesTeams)
-		TheCaveSystem->registerNewCaveTeam( m_caveIndex, getObject()->getTeam() );
+		TheCaveSystem->registerNewCaveTeam( m_caveIndex, getHasPermanentOwner() && m_capturedTeam ? m_capturedTeam : getObject()->getTeam() );
 	else
 		TheCaveSystem->registerNewCave( m_caveIndex );
 }

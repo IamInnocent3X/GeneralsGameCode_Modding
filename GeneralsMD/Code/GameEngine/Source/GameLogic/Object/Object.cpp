@@ -5396,7 +5396,7 @@ void Object::doObjectUpgradeChecks()
 	m_weaponSet.updateWeaponSet(this);
 	doWeaponSetUpdate();
 
-	// Applicable to RiderChangeContain and TunnelContain
+	// Update Contain Upgrades
 	ContainModuleInterface *cmod = getContain();
 	if( cmod )
 	{
