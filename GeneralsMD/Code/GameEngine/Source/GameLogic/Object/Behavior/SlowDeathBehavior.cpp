@@ -468,7 +468,8 @@ UpdateSleepTime SlowDeathBehavior::update()
 	}
 
 	if( m_isOnAirFrame && !m_hasSunk )
-		return UPDATE_SLEEP_FOREVER; // Made Sleepy. Wake up when bouncing is removed
+		return UPDATE_SLEEP_NONE; // Made Sleepy. Wake up when bouncing is removed
+		//return UPDATE_SLEEP_FOREVER; // Made Sleepy. Wake up when bouncing is removed
 
 	if ( (now >= m_sinkFrame && d->m_sinkRate > 0.0f) )
 	{
@@ -518,7 +519,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 //-------------------------------------------------------------------------------------------------
 Bool SlowDeathBehavior::layerUpdate(Bool doModifier)
 {
-	if(m_flags & (1<<FLUNG_INTO_AIR) == 0 || (m_flags & (1<<BOUNCED)) != 0)
+	if((m_flags & (1<<FLUNG_INTO_AIR)) == 0 || (m_flags & (1<<BOUNCED)) != 0)
 	{
 		if(doModifier)
 			getObject()->setNoSlowDeathLayerUpdate();

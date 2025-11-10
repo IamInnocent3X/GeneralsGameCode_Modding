@@ -370,17 +370,17 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 			// we have made a change to the self spinning
 			m_lastSelfSpinUpdateFrame = now; //TheGameLogic->getFrame();
 
-			if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_selfSpinUpdateDelay)
-				m_nextWakeUpTime = now + modData->m_selfSpinUpdateDelay + 1; // +1 to meet the condition requirements
+			//if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_selfSpinUpdateDelay)
+			//	m_nextWakeUpTime = now + modData->m_selfSpinUpdateDelay + 1; // +1 to meet the condition requirements
 
 			DEBUG_LOG(("Helicopter Slow Death Wake Up Frame: %d", m_lastSelfSpinUpdateFrame));
 
 		}  // end if
-		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay )
-		{
-			if(m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay > now )
-				m_nextWakeUpTime = m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay;
-		}
+		//else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay )
+		//{
+		//	if(m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay > now )
+		//		m_nextWakeUpTime = m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay;
+		//}
 
 		// get the physics update module
 		PhysicsBehavior *physics = copter->getPhysics();
@@ -454,10 +454,10 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 
 			}  // end if
 
-			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_bladeFlyOffFrame)
-			{
-				m_nextWakeUpTime = m_bladeFlyOffFrame;
-			}
+			//else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_bladeFlyOffFrame)
+			//{
+			//	m_nextWakeUpTime = m_bladeFlyOffFrame;
+			//}
 
 		}  // endif
 
@@ -509,14 +509,14 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 			// Stop the sound from playing.
 			TheAudio->removeAudioEvent(m_deathSound.getPlayingHandle());
 
-			if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_delayFromGroundToFinalDeath)
-				m_nextWakeUpTime = now + modData->m_delayFromGroundToFinalDeath;
+			if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_delayFromGroundToFinalDeath + 1)
+				m_nextWakeUpTime = now + modData->m_delayFromGroundToFinalDeath + 1;
 
 		}  // end if
-		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath )
+		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 )
 		{
-			if(m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath > now )
-				m_nextWakeUpTime = m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath;
+			if(m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 > now )
+				m_nextWakeUpTime = m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1;
 		}
 
 	}  // end if, not on ground
@@ -580,29 +580,40 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 	}*/
 
 	// if we're on the ground, see if it's time for our final boom
-	if( m_hitGroundFrame &&
-			now - m_hitGroundFrame > modData->m_delayFromGroundToFinalDeath )
+	if( m_hitGroundFrame ) //&&
+			//now - m_hitGroundFrame > modData->m_delayFromGroundToFinalDeath )
 			//TheGameLogic->getFrame() - m_hitGroundFrame > modData->m_delayFromGroundToFinalDeath )
 	{
-
-		// make effect
-		FXList::doFXObj( modData->m_fxFinalBlowUp, copter );
-		ObjectCreationList::create( modData->m_oclFinalBlowUp, copter, NULL );
-
-		// we are now all done, destroy us and make a rubble shell copter
-		const ThingTemplate* ttn = TheThingFactory->findTemplate(modData->m_finalRubbleObject);
-		Object *rubble = TheThingFactory->newObject( ttn, copter->getTeam() );
-		if( rubble )
+		if( now - m_hitGroundFrame > modData->m_delayFromGroundToFinalDeath )
 		{
+			// make effect
+			FXList::doFXObj( modData->m_fxFinalBlowUp, copter );
+			ObjectCreationList::create( modData->m_oclFinalBlowUp, copter, NULL );
 
-			rubble->setTransformMatrix( copter->getTransformMatrix() );
+			// we are now all done, destroy us and make a rubble shell copter
+			const ThingTemplate* ttn = TheThingFactory->findTemplate(modData->m_finalRubbleObject);
+			Object *rubble = TheThingFactory->newObject( ttn, copter->getTeam() );
+			if( rubble )
+			{
 
-		}  // end if
+				rubble->setTransformMatrix( copter->getTransformMatrix() );
 
-		// destroy the copter finally
-		TheGameLogic->destroyObject( copter );
+			}  // end if
+
+			// destroy the copter finally
+			TheGameLogic->destroyObject( copter );
+		}
+		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 )
+		{
+			if(m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 > now )
+				m_nextWakeUpTime = m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1;
+		}
 
 	}  // end if
+	else
+	{
+		return UPDATE_SLEEP_NONE;
+	}
 
 	UpdateSleepTime mine = m_nextWakeUpTime > now ? UPDATE_SLEEP(m_nextWakeUpTime - now) : UPDATE_SLEEP_FOREVER;
 	return (mine < ret) ? mine : ret;

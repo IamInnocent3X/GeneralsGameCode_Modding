@@ -316,6 +316,9 @@ UpdateSleepTime JetSlowDeathBehavior::update( void )
 			if( phys )
 				phys->setPitchRateConstant( modData->m_pitchRate );
 
+			if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_delayFinalBlowUpFromHitGround)
+				m_nextWakeUpTime = now + modData->m_delayFinalBlowUpFromHitGround;
+
 		}  // end if
 
 		// timers for the secondary effect
@@ -333,12 +336,15 @@ UpdateSleepTime JetSlowDeathBehavior::update( void )
 				m_timerDeathFrame = 0;
 
 			}  //end if
-			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath)
-			{
-				if(m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath > now)
-					m_nextWakeUpTime = m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath;
-			}
+			//else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath)
+			//{
+			//	if(m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath > now)
+			//		m_nextWakeUpTime = m_timerDeathFrame + modData->m_delaySecondaryFromInitialDeath;
+			//}
 		}
+
+		if(m_timerOnGroundFrame && m_timerOnGroundFrame + modData->m_delayFinalBlowUpFromHitGround <= now)
+			return UPDATE_SLEEP_NONE;
 
 	}  // end if
 	else
@@ -362,6 +368,9 @@ UpdateSleepTime JetSlowDeathBehavior::update( void )
 		}
 
 	}  // end else
+
+	if(m_timerOnGroundFrame == 0)
+		return UPDATE_SLEEP_NONE;
 
 	UpdateSleepTime mine = m_nextWakeUpTime > now ? UPDATE_SLEEP(m_nextWakeUpTime - now) : UPDATE_SLEEP_FOREVER;
 	return (mine < ret) ? mine : ret;

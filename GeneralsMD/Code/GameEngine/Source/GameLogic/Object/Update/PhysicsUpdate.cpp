@@ -942,7 +942,9 @@ UpdateSleepTime PhysicsBehavior::update()
 	} // if not held
 
 	// Update SlowDeathBehavior to set their layers for sleepy Updates
-	obj->doSlowDeathLayerUpdate();
+	// To-Do: Rework. Horrible and unoptimized. Junk.
+	//if(!obj->isSignificantlyAboveTerrain() && obj->isAirborneTarget())
+	//	obj->doSlowDeathLayerUpdate();
 
 	// reset the acceleration for accumulation next frame
 	m_accel.zero();
