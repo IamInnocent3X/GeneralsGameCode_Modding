@@ -715,7 +715,7 @@ StateReturnType DozerActionDoActionState::update( void )
 												LOGICFRAMES_PER_SECOND;
 
 					// try to give it a little bit-o-health
-					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2, dozerAI->getRepairClearsParasite() ) )//this frame and the next
+					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2, dozerAI->getRepairClearsParasite(), dozerAI->getRepairClearsParasiteKeys() ) )//this frame and the next
 					{
 						// goalObject->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
 						// This bit used to be set way back in DozerAIUpdate::privateRepair(), but it has been outmoded
@@ -1414,6 +1414,7 @@ DozerAIUpdateModuleData::DozerAIUpdateModuleData( void )
 
 	m_repairHealthPercentPerSecond = 0.0f;
 	m_repairClearsParasite = TRUE;
+	m_repairClearsParasiteKeys.clear();
 	m_boredTime = 0.0f;
 	m_boredRange = 0.0f;
 
@@ -1428,6 +1429,7 @@ void DozerAIUpdateModuleData::buildFieldParse( MultiIniFieldParse& p)
 	{
 		{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	NULL, offsetof( DozerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
 		{ "RepairClearsParasite",			INI::parseBool,	NULL, offsetof( DozerAIUpdateModuleData, m_repairClearsParasite ) },
+		{ "RepairClearsParasiteKeys", 		INI::parseAsciiStringVector, NULL, offsetof( DozerAIUpdateModuleData, m_repairClearsParasiteKeys ) },
 		{ "BoredTime",										INI::parseDurationReal,		NULL, offsetof( DozerAIUpdateModuleData, m_boredTime ) },
 		{ "BoredRange",										INI::parseReal,						NULL, offsetof( DozerAIUpdateModuleData, m_boredRange ) },
 		{ 0, 0, 0, 0 }
@@ -2326,6 +2328,11 @@ Real DozerAIUpdate::getRepairHealthPerSecond( void ) const
 Bool DozerAIUpdate::getRepairClearsParasite( void ) const
 {
 	return getDozerAIUpdateModuleData()->m_repairClearsParasite;
+}
+// ------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& DozerAIUpdate::getRepairClearsParasiteKeys( void ) const
+{
+	return getDozerAIUpdateModuleData()->m_repairClearsParasiteKeys;
 }
 // ------------------------------------------------------------------------------------------------
 Real DozerAIUpdate::getBoredTime( void ) const

@@ -80,6 +80,9 @@ GarrisonContainModuleData::GarrisonContainModuleData( void )
 
 	m_passengerWeaponBonusVec.push_back(WEAPONBONUSCONDITION_GARRISONED);
 
+	m_healingClearsParasite = true;
+	m_healingClearsParasiteKeys.clear();
+
 }  // end if
 
 //-----------------------------------------------------------------------------
@@ -1160,10 +1163,14 @@ void GarrisonContain::healObjects( void )
 //-------------------------------------------------------------------------------------------------
 void GarrisonContain::healSingleObject( Object *obj, Real framesForFullHeal)
 {
+	const GarrisonContainModuleData *modData = getGarrisonContainModuleData();
+
 	// setup the healing damageInfo structure with all but the amount
 	DamageInfo healInfo;
 	healInfo.in.m_damageType = DAMAGE_HEALING;
 	healInfo.in.m_deathType = DEATH_NONE;
+	healInfo.in.m_clearsParasite = modData->m_healingClearsParasite;
+	healInfo.in.m_clearsParasiteKeys = modData->m_healingClearsParasiteKeys;
 	//healInfo.in.m_sourceID = getObject()->getID();
 
 	// get body module of the thing to heal

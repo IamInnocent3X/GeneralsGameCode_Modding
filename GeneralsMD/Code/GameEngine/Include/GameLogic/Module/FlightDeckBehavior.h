@@ -82,6 +82,8 @@ public:
 	UnsignedInt   m_launchRampFrames;
 	UnsignedInt   m_lowerRampFrames;
 	UnsignedInt		m_catapultFireFrames;
+	Bool			m_healingClearsParasite;
+	std::vector<AsciiString> m_healingClearsParasiteKeys;
 
 	FlightDeckBehaviorModuleData();
 	static void buildFieldParse( MultiIniFieldParse& p );

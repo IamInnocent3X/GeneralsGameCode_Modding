@@ -190,6 +190,8 @@ Bool EquipCrateCollide::executeCrateBehavior( Object *other )
 		hijackerUpdate->setUpdate( TRUE );
 		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
 		hijackerUpdate->setIsParasite( data->m_isParasite );
+		if(data->m_isParasite)
+			hijackerUpdate->setParasiteKey( data->m_parasiteKey );
 		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
 		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
 		hijackerUpdate->setDestroyOnClear( data->m_destroyOnClear );

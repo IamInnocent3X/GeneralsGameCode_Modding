@@ -63,6 +63,8 @@ FlightDeckBehaviorModuleData::FlightDeckBehaviorModuleData()
 	m_landingDeckHeightOffset = 0.0f;
 	m_dockAnimationFrames = 0;
 	m_catapultFireFrames = 0;
+	m_healingClearsParasite = TRUE;
+	m_healingClearsParasiteKeys.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -118,6 +120,9 @@ void FlightDeckBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "LaunchRampDelay",				INI::parseDurationUnsignedInt,		NULL, offsetof( FlightDeckBehaviorModuleData, m_launchRampFrames ) },
 		{ "LowerRampDelay",					INI::parseDurationUnsignedInt,		NULL, offsetof( FlightDeckBehaviorModuleData, m_lowerRampFrames ) },
 		{ "CatapultFireDelay",			INI::parseDurationUnsignedInt,		NULL, offsetof( FlightDeckBehaviorModuleData, m_catapultFireFrames ) },
+
+		{ "HealingClearsParasite",			INI::parseBool,	NULL, offsetof( FlightDeckBehaviorModuleData, m_healingClearsParasite ) },
+		{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, NULL, offsetof( FlightDeckBehaviorModuleData, m_healingClearsParasiteKeys ) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -1119,6 +1124,8 @@ UpdateSleepTime FlightDeckBehavior::update()
 					healInfo.in.m_deathType = DEATH_NONE;
 					healInfo.in.m_sourceID = getObject()->getID();
 					healInfo.in.m_amount = HEAL_RATE_FRAMES * data->m_healAmount * SECONDS_PER_LOGICFRAME_REAL;
+					healInfo.in.m_clearsParasite = data->m_healingClearsParasite;
+					healInfo.in.m_clearsParasiteKeys = data->m_healingClearsParasiteKeys;
 					BodyModuleInterface *body = objToHeal->getBodyModule();
 					body->attemptHealing( &healInfo );
 					++it;

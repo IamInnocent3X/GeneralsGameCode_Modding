@@ -594,7 +594,6 @@ public:
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 
 	Bool m_countermeasuresDetonateNonTracking;
-	Bool m_baseRegenClearsParasite;
 
 	Bool m_newskirmishfpsSystem;
 	Bool m_skirmishloadfps;

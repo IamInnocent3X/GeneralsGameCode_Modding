@@ -2329,7 +2329,22 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::attemptHealing(Real amount, const Object* source, Bool clearsParasite)
+void Object::attemptHealing(Real amount, const Object* source )
+{
+	BodyModuleInterface* body = getBodyModule();
+	if (body)
+	{
+		DamageInfo damageInfo;
+		damageInfo.in.m_damageType = DAMAGE_HEALING;
+		damageInfo.in.m_deathType = DEATH_NONE;
+		damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
+		damageInfo.in.m_amount = amount;
+		body->attemptHealing( &damageInfo );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::attemptHealingWithParasiteClear(Real amount, const Object* source, Bool clearsParasite, const std::vector<AsciiString>& clearsParasiteKeys )
 {
 	BodyModuleInterface* body = getBodyModule();
 	if (body)
@@ -2340,6 +2355,7 @@ void Object::attemptHealing(Real amount, const Object* source, Bool clearsParasi
 		damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
 		damageInfo.in.m_amount = amount;
 		damageInfo.in.m_clearsParasite = clearsParasite;
+		damageInfo.in.m_clearsParasiteKeys = clearsParasiteKeys;
 		body->attemptHealing( &damageInfo );
 	}
 }
@@ -2354,7 +2370,7 @@ ObjectID Object::getSoleHealingBenefactor( void ) const
 
 }
 
-Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration, Bool clearsParasite )
+Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration, Bool clearsParasite, const std::vector<AsciiString>& clearsParasiteKeys )
 {///< for the non-stacking healers like ambulance and propaganda
 
 	if( ! source ) // sanity
@@ -2378,6 +2394,7 @@ Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* sourc
 			damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
 			damageInfo.in.m_amount = amount;
 			damageInfo.in.m_clearsParasite = clearsParasite;
+			damageInfo.in.m_clearsParasiteKeys = clearsParasiteKeys;
 			body->attemptHealing( &damageInfo );
 		}
 
@@ -7859,7 +7876,7 @@ void Object::setHijackingID(ObjectID ID)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, ObjectID damagerID)
+void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID)
 {
 	if( testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
 	{
@@ -7939,6 +7956,7 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 						hijackerUpdate->setNoSelfDamage( TRUE );
 
 					hijackerUpdate->setClear( checkClear );
+					hijackerUpdate->setParasiteCheckKeys( clearKeys );
 
 					if(checkDie)
 						hijackerUpdate->setEject( TRUE );

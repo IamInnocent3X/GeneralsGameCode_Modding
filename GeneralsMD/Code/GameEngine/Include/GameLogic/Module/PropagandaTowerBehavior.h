@@ -64,6 +64,7 @@ public:
 	const FXList *m_upgradedPulseFX;						///< FXList to play for pulse when upgraded
 	Bool m_affectsSelf;													///< Allow effect to affect ourselves
 	Bool m_autoHealClearsParasite;										///< Destroys Parasites on Healing
+	std::vector<AsciiString> m_autoHealClearsParasiteKeys;				///< Parasite Keys able to Clear
 
 };
 

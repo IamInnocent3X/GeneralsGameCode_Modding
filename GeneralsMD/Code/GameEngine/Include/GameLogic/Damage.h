@@ -421,6 +421,7 @@ public:
 	m_subdualForbiddenKindOf.clear();
 	m_notAbsoluteKill = FALSE;
 	m_clearsParasite = FALSE;
+	m_clearsParasiteKeys.clear();
 	m_isMissileAttractor = FALSE;
 	m_subduedProjectileNoDamage = FALSE;
 	m_subdualCustomType = NULL;
@@ -513,6 +514,7 @@ public:
 	Bool m_notAbsoluteKill;
 	
 	Bool m_clearsParasite;
+	std::vector<AsciiString> m_clearsParasiteKeys;
 
 	Bool m_isMissileAttractor;
 	Bool m_subduedProjectileNoDamage;

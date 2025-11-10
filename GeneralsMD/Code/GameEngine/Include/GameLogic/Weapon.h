@@ -562,6 +562,7 @@ public:
 	inline Bool getIsNotAbsoluteKill() const { return m_notAbsoluteKill; }
 
 	inline Bool getClearsParasite() const { return m_clearsParasite; }
+	inline const std::vector<AsciiString>& getClearsParasiteKeys() const { return m_clearsParasiteKeys; }
 
 	inline Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
 	inline Bool getSubdueProjectileNoDamage() const { return m_subduedProjectileNoDamage; }
@@ -772,6 +773,7 @@ private:
 	Bool m_notAbsoluteKill;
 
 	Bool m_clearsParasite;
+	std::vector<AsciiString> m_clearsParasiteKeys;
 
 	Bool m_isMissileAttractor;
 	Bool m_subduedProjectileNoDamage;
@@ -1043,6 +1045,7 @@ public:
 	inline Bool getIsNotAbsoluteKill() const { return m_template->getIsNotAbsoluteKill(); }
 
 	inline Bool getClearsParasite() const { return m_template->getClearsParasite(); }
+	inline const std::vector<AsciiString>& getClearsParasiteKeys() const { return m_template->getClearsParasiteKeys(); }
 
 	inline Bool getIsMissileAttractor() const { return m_template->getIsMissileAttractor(); }
 	inline Bool getSubdueProjectileNoDamage() const { return m_template->getSubdueProjectileNoDamage(); }

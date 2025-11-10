@@ -49,6 +49,7 @@ public:
 
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully repaired
 	Bool m_repairClearsParasite;		///< repairing object clears any parasite within them
+	std::vector<AsciiString> m_repairClearsParasiteKeys;				///< Parasite Keys able to Clear
 
 };
 

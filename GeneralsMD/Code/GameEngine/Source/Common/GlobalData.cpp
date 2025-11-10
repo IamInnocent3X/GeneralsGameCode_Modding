@@ -648,8 +648,6 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "CustomTintStatus",	 GlobalData::parseTintCustomStatusType, NULL, offsetof(GlobalData, m_colorTintCustomTypes) },
 
 	{ "CountermeasuresDetonateNonTrackingMissiles",	 INI::parseBool, NULL, offsetof(GlobalData, m_countermeasuresDetonateNonTracking) },
-
-	{ "BaseRegenClearsParasite", INI::parseBool, NULL,	offsetof( GlobalData, m_baseRegenClearsParasite ) },
 	
 	{ "NewSkirmishFPSSystem",	 INI::parseBool, NULL, offsetof(GlobalData, m_newskirmishfpsSystem) },
 	{ "LoadSkirmishFPS",	 INI::parseBool, NULL, offsetof(GlobalData, m_skirmishloadfps) },
@@ -1221,8 +1219,6 @@ GlobalData::GlobalData()
 	m_clientRetaliationModeEnabled = TRUE; //On by default.
 
 	m_countermeasuresDetonateNonTracking = FALSE; //More realistic destruction. Won't seemingly home onto the immovable target dealing no damage.
-
-	m_baseRegenClearsParasite = FALSE; //Does base regen clears Parasites?
 
 	m_useOldMoveSpeed = FALSE;  //Fix is enabled by default
 

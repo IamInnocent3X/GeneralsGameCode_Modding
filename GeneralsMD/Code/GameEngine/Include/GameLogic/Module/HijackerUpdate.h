@@ -86,6 +86,8 @@ public:
 	virtual void setEject(Bool u ) = 0;
 	virtual void setHealed(Bool u ) = 0;
 	virtual void setNoSelfDamage(Bool u ) = 0; // This is to prevent Parasite from dealing damage to their allies
+	virtual void setParasiteKey(const AsciiString& ParasiteKey ) = 0;
+	virtual void setParasiteCheckKeys(const std::vector<AsciiString>& ParasiteKeys ) = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -122,6 +124,8 @@ public:
 	virtual void setEject(Bool u ) {m_eject = u;}
 	virtual void setHealed(Bool u ) {m_healed = u;}
 	virtual void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
+	virtual void setParasiteKey(const AsciiString& ParasiteKey ) {m_parasiteKey = ParasiteKey; }
+	virtual void setParasiteCheckKeys(const std::vector<AsciiString>& ParasiteKeys ) { if(m_isParasite) m_recentParasiteKeys = ParasiteKeys; }
 
 private:
 
@@ -142,10 +146,12 @@ private:
 	Bool     	 m_noSelfDamage;
 	Real		 m_percentDamage;
 	Real		 m_targetObjHealth;
+	AsciiString	 m_parasiteKey;
 	ObjectStatusMaskType 	m_statusToRemove;
 	ObjectStatusMaskType 	m_statusToDestroy;
 	std::vector<AsciiString> 	m_customStatusToRemove;
 	std::vector<AsciiString> 	m_customStatusToDestroy;
+	std::vector<AsciiString> 	m_recentParasiteKeys;
 
 //	DieModuleInterface *m_ejectPilotDMI; // point to ejectpilotdiemodule
 																			 // of target vehicle if it has one

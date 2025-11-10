@@ -1035,7 +1035,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				damager->scoreTheKill( obj );
 			}
 
-			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
+			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
 			obj->onDie( damageInfo );
 
 			isKilled = TRUE;
@@ -1049,7 +1049,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			obj->doAssaultTransportHealthUpdate();
 			obj->doSlavedUpdate(TRUE);
 		}
-		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
+		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
 	}
 
 	doDamageFX(damageInfo);
@@ -1234,7 +1234,7 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 			}
 
 			obj->doAssaultTransportHealthUpdate();
-			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID);
+			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
 			obj->doSlavedUpdate(TRUE);
 		}
 

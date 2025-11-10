@@ -530,6 +530,8 @@ void SlavedUpdate::doRepairLogic()
 			healingInfo.in.m_amount = repairAmount;
 			healingInfo.in.m_damageType = DAMAGE_HEALING;
 			healingInfo.in.m_deathType = DEATH_NONE;
+			healingInfo.in.m_clearsParasite = data->m_healingClearsParasite;
+			healingInfo.in.m_clearsParasiteKeys = data->m_healingClearsParasiteKeys;
 			body->attemptHealing(&healingInfo);
 		}
 	}

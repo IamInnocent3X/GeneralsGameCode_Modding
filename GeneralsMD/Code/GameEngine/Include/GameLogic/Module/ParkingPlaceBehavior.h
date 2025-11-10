@@ -57,6 +57,9 @@ public:
 	KindOfMaskType	m_kindof;			///< the kind(s) of units that can land here
 	KindOfMaskType	m_kindofnot;		///< the kind(s) of units that must not land here
 
+	Bool			m_healingClearsParasite;
+	std::vector<AsciiString>	m_healingClearsParasiteKeys;
+
 	ParkingPlaceBehaviorModuleData()
 	{
 		m_damageScalarUpgradeTrigger.clear();
@@ -71,6 +74,8 @@ public:
 		m_parkInHangars = false;
 		m_damageScalar = 1.0f;
 		m_damageScalarUpgraded = 1.0f;
+		m_healingClearsParasite = true;
+		m_healingClearsParasiteKeys.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -93,6 +98,9 @@ public:
 
 			{ "RequiredKindOf", KindOfMaskType::parseFromINI, NULL, offsetof(ParkingPlaceBehaviorModuleData, m_kindof) },
 			{ "ForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof(ParkingPlaceBehaviorModuleData, m_kindofnot) },
+
+			{ "HealingClearsParasite",			INI::parseBool,	NULL, offsetof( ParkingPlaceBehaviorModuleData, m_healingClearsParasite ) },
+			{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, NULL, offsetof( ParkingPlaceBehaviorModuleData, m_healingClearsParasiteKeys ) },
 
 			//{ "TimeForFullHeal",	INI::parseDurationUnsignedInt,	NULL, offsetof( ParkingPlaceBehaviorModuleData, m_framesForFullHeal ) },
 			{ 0, 0, 0, 0 }

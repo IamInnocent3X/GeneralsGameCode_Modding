@@ -173,6 +173,11 @@ Bool WorkerAIUpdate::getRepairClearsParasite( void ) const
 	return getWorkerAIUpdateModuleData()->m_repairClearsParasite;
 }
 // ------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& WorkerAIUpdate::getRepairClearsParasiteKeys( void ) const
+{
+	return getWorkerAIUpdateModuleData()->m_repairClearsParasiteKeys;
+}
+// ------------------------------------------------------------------------------------------------
 Real WorkerAIUpdate::getBoredTime( void ) const
 {
 	return getWorkerAIUpdateModuleData()->m_boredTime;
