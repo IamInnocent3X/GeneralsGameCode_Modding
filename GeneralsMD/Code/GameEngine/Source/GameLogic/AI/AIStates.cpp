@@ -5973,6 +5973,12 @@ void AIAttackState::onExit( StateExitType status )
 	if (curWeapon)
 	{
 		curWeapon->computeFiringTrackerBonusClear(obj);
+
+		// Release My Weapon Lock if I am currently Locked in Priority
+		if(obj->isCurWeaponLockedPriority())
+		{
+			obj->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 	}
 
 	AIUpdateInterface *ai = obj->getAI();

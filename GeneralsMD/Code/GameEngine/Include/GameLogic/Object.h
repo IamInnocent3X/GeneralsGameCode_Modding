@@ -596,6 +596,7 @@ public:
 	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType ){ if(lockType == LOCKED_PERMANENTLY) doWeaponSetUpdate(); return m_weaponSet.setWeaponLock( weaponSlot, lockType ); }
 	void releaseWeaponLock(WeaponLockType lockType){ m_weaponSet.releaseWeaponLock(lockType); }
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
+	Bool isCurWeaponLockedPriority() const { return m_weaponSet.isCurWeaponLockedPriority(); }
 
 	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; } 
 	Bool testCustomStatus(const AsciiString& cst) const;
@@ -634,6 +635,7 @@ public:
 		m_customWeaponBonusCondition.clear();
 		m_customWeaponBonusCondition = customFlags;
 	}
+	Bool testCustomWeaponBonusCondition(const AsciiString& cst) const;
 
 	inline WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
 	inline ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }

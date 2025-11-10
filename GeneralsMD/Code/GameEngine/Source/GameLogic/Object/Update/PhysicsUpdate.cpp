@@ -137,6 +137,7 @@ PhysicsBehaviorModuleData::PhysicsBehaviorModuleData()
 	m_vehicleCrashesIntoNonBuildingWeaponTemplate = TheWeaponStore->findWeaponTemplate("VehicleCrashesIntoNonBuildingWeapon");
 	m_vehicleCrashAllowAirborne = FALSE;
 	m_bounceFactor = 1.0f;
+	m_magnetResistance = 0.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -189,6 +190,12 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "VehicleCrashesIntoBuildingWeaponTemplate", INI::parseWeaponTemplate, NULL, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashesIntoBuildingWeaponTemplate) },
 		{ "VehicleCrashesIntoNonBuildingWeaponTemplate", INI::parseWeaponTemplate, NULL, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashesIntoNonBuildingWeaponTemplate) },
 		{ "VehicleCrashWeaponAllowAirborne", INI::parseBool, NULL, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashAllowAirborne) },
+
+		{ "MagnetResistance",		INI::parsePositiveNonZeroReal,		NULL, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
+
+		{ "ShockResistancePercent",		INI::parsePercentToReal,		NULL, offsetof( PhysicsBehaviorModuleData, m_shockResistance ) },
+		{ "MagnetResistancePercent",		INI::parsePercentToReal,		NULL, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
+
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);

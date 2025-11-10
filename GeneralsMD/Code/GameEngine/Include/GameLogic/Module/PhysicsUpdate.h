@@ -68,6 +68,7 @@ public:
 	Real	m_pitchRollYawFactor;
 	Bool    m_vehicleCrashAllowAirborne;
 	Real    m_bounceFactor;
+	Real	m_magnetResistance;
   
 	const WeaponTemplate* m_vehicleCrashesIntoBuildingWeaponTemplate;
 	const WeaponTemplate* m_vehicleCrashesIntoNonBuildingWeaponTemplate;
@@ -224,6 +225,9 @@ public:
 	Bool isIgnoringCollisionsWith(ObjectID id) const;
 
 	inline Bool getAllowCollideForce() const { return getFlag(ALLOW_COLLIDE_FORCE); }
+
+	inline Real getShockResistance() const { return getPhysicsBehaviorModuleData()->m_shockResistance; }
+	inline Real getMagnetResistance() const { return getPhysicsBehaviorModuleData()->m_magnetResistance; }
 
 protected:
 

@@ -542,6 +542,7 @@ void TunnelContain::doRemoveOtherPassengersAllowToFire()
 						else if(ut->getUpgradeType() == UPGRADE_TYPE_PLAYER)
 						{
 							DEBUG_CRASH(("Upgrade '%s', is not an Object Upgrade. Not compatible with RemoveOtherOpenContainOnUpgrade feature.", it->str()));
+							throw INI_INVALID_DATA;
 						}
 
 						if( other->hasUpgrade(ut) )

@@ -2150,7 +2150,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	  //immuneToShockwaveKindofs.set(KINDOF_PRODUCED_AT_HELIPAD);//helicopters go all wonky when they get shockwaved  //NEW RESTRICTIONS ADDED
 
 		PhysicsBehavior *behavior = getPhysics();
-		if ( behavior && (isAirborneTarget() == FALSE || damageInfo->in.m_shockWaveAffectsAirborne) && (! isKindOf(KINDOF_PROJECTILE) ) )
+		if ( behavior && (isAirborneTarget() == FALSE || damageInfo->in.m_shockWaveAffectsAirborne) && (! isKindOf(KINDOF_PROJECTILE) ) && behavior->getShockResistance() < 1.0f )
 //		if (behavior && isAnyKindOf( immuneToShockwaveKindofs ) == FALSE )//NEW RESTRICTIONS ADDED
 		{
 			// Calculate the shockwave taperoff amount due to distance from ground zero
@@ -2188,7 +2188,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	{
 
 		PhysicsBehavior *behavior = getPhysics();
-		if ( behavior && (! isKindOf(KINDOF_PROJECTILE) ) )
+		if ( behavior && (! isKindOf(KINDOF_PROJECTILE) ) && behavior->getMagnetResistance() < 1.0f )
 		{
 			Real mass = behavior->getMass();
 			Real mult = 0.335;
@@ -2201,7 +2201,8 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 					m_invsqrt_mass = 1/sqrt(mass);
 				magnetScale = max(0.15f, m_invsqrt_mass);
 			}
-				
+			
+			// Scale the magnet Force according to its declared formula
 			if(damageInfo->in.m_magnetFormula == MAGNET_STATIC || damageInfo->in.m_magnetFormula == MAGNET_DYNAMIC)
 				behavior->scrubVelocity2D(0);
 
@@ -2212,14 +2213,17 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 			Coord3D magnetForce;
 			magnetForce.set( &damageInfo->in.m_magnetVector );
 
+			// Process Magnet Force differently for Ground and Airborne targets
 			if (!isAirborneTarget())
 			{
 				Real posZ = calculateHeightAboveTerrain();
 
+				// Scale the Magnet Force applied to the Unit
 				magnetForce.normalize();
-				magnetForce.scale( damageInfo->in.m_magnetAmount * mult );
+				magnetForce.scale( damageInfo->in.m_magnetAmount * mult * (1.0f - behavior->getMagnetResistance()) );
 				magnetScale = max(0.15f, magnetScale);
-				
+
+				// Calculate the Magnet Lift Height
 				if( damageInfo->in.m_magnetLiftForce || ( damageInfo->in.m_magnetLiftHeight && damageInfo->in.m_magnetLiftForceToHeight ) || ( damageInfo->in.m_magnetLiftHeightSecond && damageInfo->in.m_magnetLiftForceToHeightSecond ) )
 				{
 					if(!mass)
@@ -2234,7 +2238,8 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 					else if(damageInfo->in.m_magnetLiftForce)
 						magnetForce.z = damageInfo->in.m_magnetLiftForce * mult;
 				}
-				
+
+				// Reduce the Magnet Lift ZForce if it reaches the Max Lift Height Threshold
 				if(damageInfo->in.m_magnetMaxLiftHeight && damageInfo->in.m_magnetMaxLiftHeight < posZ && magnetForce.z > 0)
 				{
 					magnetForce.z *= magnetScale;
@@ -2242,6 +2247,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 						magnetForce.z = 0;
 				}
 
+				// Check the Magnet Force for any Levitation
 				if( damageInfo->in.m_magnetLevitationHeight && ( m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= posZ ) )
 				{
 					m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
@@ -2249,28 +2255,35 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 					m_levitateCheckFrame = 0;
 				}
 
+				// Apply the Magnet Force
 				behavior->applyForce( &magnetForce );
 			}
 			else if(getAIUpdateInterface())
 			{
 				Real airborneMult = 1.0f;
 				
+				// Reset the physics variables so that the gravity doesn't accumulate for the object to fall through
 				behavior->resetDynamicPhysics();
 
+				// Get whether we want the Yaw of the Airborne Units to affect the Magnet Force
 				if(damageInfo->in.m_magnetAirboneAffectedByYaw)
 					airborneMult = mult;
 				else
 					magnetForce.normalize();
 
+				// Scale the Multiplier since Airborne Units operate differently from Ground Physics
 				if(damageInfo->in.m_magnetFormula == MAGNET_ROTATORY || damageInfo->in.m_magnetFormula == MAGNET_HYPERDYNAMIC)
 					airborneMult *= 16.5;
 
+				// Scale the Magnet Force
 				if(isAboveTerrain() || getAIUpdateInterface()->isMoving() )
-					magnetForce.scale( damageInfo->in.m_magnetAmount * 0.01 * airborneMult );
-					
+					magnetForce.scale( damageInfo->in.m_magnetAmount * 0.01 * airborneMult * (1.0f - behavior->getMagnetResistance()) );
+
+				// Apply the Magnet ZForce if declared
 				if(damageInfo->in.m_magnetAirborneZForce)
 					magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * mult * 0.01 ;
 
+				// Apply the Magnet Force according to the variables
 				if(damageInfo->in.m_magnetAirboneAffectedByYaw)
 					behavior->applyForce(&magnetForce);
 				else
@@ -2287,6 +2300,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	}
 	else if(m_dontLevitate && m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight )
 	{
+		// If we stop levitating, tell the levitator to stop using its weapon on us
 		Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
 		if ( attacker && attacker->getAIUpdateInterface())
 		{
@@ -5697,6 +5711,20 @@ void Object::clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst)
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool Object::testCustomWeaponBonusCondition(const AsciiString& cst) const
+{
+	ObjectCustomStatusType::const_iterator it = m_customWeaponBonusCondition.find(cst);
+
+	if (it != m_customWeaponBonusCondition.end() && it->second == 1) 
+	{
+		return TRUE;
+	}
+	else 
+	{
+		return FALSE;
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 /**

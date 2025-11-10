@@ -781,6 +781,8 @@ public:
 
 	Bool hasAnyShortcutSelection() const;
 
+	//Int getRemainingSciencePointsAvailableToPurchase( Player* player ) const;
+
 protected:
 	void updateRadarAttackGlow ( void );
 

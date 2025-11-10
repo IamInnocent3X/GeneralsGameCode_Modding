@@ -295,6 +295,7 @@ public:
 	static void parseFXList( INI *ini, void *instance, void *store, const void* userData );
 	static void parseParticleSystemTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parseObjectCreationList( INI *ini, void *instance, void *store, const void* userData );
+	static void parseObjectCreationListVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseSpecialPowerTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parseUpgradeTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parseScience( INI *ini, void *instance, void *store, const void *userData );
@@ -306,6 +307,7 @@ public:
 	static void parseBitString32( INI *ini, void *instance, void *store, const void* userData );
 	static void parseByteSizedIndexList( INI *ini, void *instance, void *store, const void* userData );
 	static void parseIndexList( INI *ini, void *instance, void *store, const void* userData );
+	static void parseIndexListVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseIndexListOrNone( INI *ini, void *instance, void *store, const void* userData );
 	static void parseLookupList( INI *ini, void *instance, void *store, const void* userData );
 	static void parseThingTemplate( INI *ini, void *instance, void *store, const void* userData );

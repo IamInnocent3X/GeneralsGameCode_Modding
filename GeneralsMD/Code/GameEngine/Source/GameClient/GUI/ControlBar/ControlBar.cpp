@@ -511,6 +511,112 @@ void ControlBar::updateContextPurchaseScience( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+/*Int ControlBar::getRemainingSciencePointsAvailableToPurchase( Player* player ) const
+{
+//	TheInGameUI->deselectAllDrawables();
+
+	const CommandSet *commandSet1;
+	const CommandSet *commandSet3;
+	const CommandSet *commandSet8;
+	Int i;
+	if(TheScriptEngine->isGameEnding())
+		return 0;
+	// get command set
+	if(!player ||!player->getPlayerTemplate() || player->getPlayerTemplate()->getPurchaseScienceCommandSetRank1().isEmpty() ||
+			player->getPlayerTemplate()->getPurchaseScienceCommandSetRank3().isEmpty() ||
+			player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8().isEmpty())
+		return 0;
+	commandSet1 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank1()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+	commandSet3 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank3()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+	commandSet8 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+
+
+	// if no command set match is found hide all the buttons
+	if( commandSet1 == NULL ||
+			commandSet3 == NULL ||
+			commandSet8 == NULL )
+		return 0;
+
+	// populate the button with commands defined
+	const CommandButton *commandButton;
+	Int cost = 0;
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_1; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet1->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == NULL && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st) &&
+				TheScienceStore->playerHasPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_3; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet3->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == NULL && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_8; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet8->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == NULL && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st) &&
+				TheScienceStore->playerHasPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	return cost;
+
+}*/
+
+//-------------------------------------------------------------------------------------------------
 /** parse command definition */
 //-------------------------------------------------------------------------------------------------
 void CommandButton::parseCommand( INI* ini, void *instance, void *store, const void *userData )
