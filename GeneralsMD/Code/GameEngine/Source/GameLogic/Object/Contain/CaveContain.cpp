@@ -620,18 +620,31 @@ void CaveContain::doCapture( Team *oldTeam, Team *newTeam )
 {
 	switchCaveOwners(oldTeam, newTeam);
 
+	// Handle the team color that is rendered
+	const Player* controller = getApparentControllingPlayer(ThePlayerList->getLocalPlayer());
+	if (controller)
+	{
+		if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
+			getObject()->getDrawable()->setIndicatorColor( controller->getPlayerNightColor() );
+		else
+			getObject()->getDrawable()->setIndicatorColor( controller->getPlayerColor() );
+	}
+
 	TunnelTracker *newTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, newTeam );
 
 	// If we are captured, not defected, grant the ownership to the Player permanently.
-	// To-do, comparison could be better. This is jank.
-	if(ThePlayerList->getLocalPlayer()->getRelationship(getObject()->getTeam()) != NEUTRAL && !newTracker->getIsContaining())
+	//if(ThePlayerList->getLocalPlayer()->getRelationship(getObject()->getTeam()) != NEUTRAL && !newTracker->getIsContaining())
+	if( !newTracker || newTracker->getIsContaining() )
+		return;
+
+	if( !( getObject()->isNeutralControlled()) ||(getObject()->getControllingPlayer()->getSide().compare("Civilian") == 0) )
 	{
 		setOriginalTeam(m_capturedTeam);
 		m_isCaptured = TRUE; // The actual factor to determine that it is captured.
 		m_capturedTeam = newTeam;
 	}
 
-	if( m_isCaptured && newTracker && !newTracker->getIsContaining() && getCaveContainModuleData()->m_caveCaptureLinkCaves && !newTracker->getIsCapturingLinkedCaves() )
+	if( m_isCaptured && getCaveContainModuleData()->m_caveCaptureLinkCaves && !newTracker->getIsCapturingLinkedCaves() )
 	{
 		newTracker->setIsCapturingLinkedCaves(TRUE);
 		m_containingFrames = TheGameLogic->getFrame() + 2;
@@ -643,16 +656,6 @@ void CaveContain::doCapture( Team *oldTeam, Team *newTeam )
 		{
 			changeTeamOnAllConnectedCavesByTeam( oldTeam, TRUE, newTeam );
 		}
-	}
-
-	// Handle the team color that is rendered
-	const Player* controller = getApparentControllingPlayer(ThePlayerList->getLocalPlayer());
-	if (controller)
-	{
-		if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
-			getObject()->getDrawable()->setIndicatorColor( controller->getPlayerNightColor() );
-		else
-			getObject()->getDrawable()->setIndicatorColor( controller->getPlayerColor() );
 	}
 }
 
@@ -977,12 +980,12 @@ void CaveContain::switchCaveOwners( Team *oldTeam, Team *newTeam )
 	}
 
 	TunnelTracker *newTracker = TheCaveSystem->getTunnelTrackerForCaveIndexTeam( m_caveIndex, newTeam );
-	if( curTracker && newTracker && !newTracker->getIsContaining() )
+	if( curTracker && newTracker )
 	{
 		//removeAllContained(TRUE);
 
 		// Remove from Old Teams
-		if(curTracker->friend_getTunnelCount() == 1)
+		if(curTracker->friend_getTunnelCount() == 1 && !newTracker->getIsContaining())
 		{
 			const ContainedItemsList *fullList = curTracker->getContainedItemsList();
 

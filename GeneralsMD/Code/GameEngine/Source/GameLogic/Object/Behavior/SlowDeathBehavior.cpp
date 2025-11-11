@@ -160,6 +160,10 @@ SlowDeathBehavior::SlowDeathBehavior( Thing *thing, const ModuleData* moduleData
 	m_isOnAirFrame = 0;
 	m_hasSunk = FALSE;
 
+	m_beginSlowDeathFrame = 0;
+	//m_count = 0;
+	//m_lastPos.zero();
+
 	if (getSlowDeathBehaviorModuleData()->m_probabilityModifier < 1)
 	{
 		DEBUG_CRASH(("ProbabilityModifer must be >= 1."));
@@ -321,9 +325,10 @@ void SlowDeathBehavior::beginSlowDeath(const DamageInfo *damageInfo)
 				whenToWakeTime = m_midpointFrame;
 			setWakeFrame(obj, UPDATE_SLEEP(whenToWakeTime));
 		}
-		m_sinkFrame += now;
-		m_destructionFrame += now;
-		m_midpointFrame += now;
+		m_beginSlowDeathFrame = now;
+		m_sinkFrame += m_beginSlowDeathFrame;
+		m_destructionFrame += m_beginSlowDeathFrame;
+		m_midpointFrame += m_beginSlowDeathFrame;
 
 		m_flags |= (1<<SLOW_DEATH_ACTIVATED);
 
@@ -400,13 +405,20 @@ UpdateSleepTime SlowDeathBehavior::update()
 			return UPDATE_SLEEP_NONE;
 		}
 
-		m_sinkFrame = (Real)m_sinkFrame * timeScale;
-		m_midpointFrame = (Real)m_midpointFrame * timeScale;
-		m_destructionFrame = (Real)m_destructionFrame * timeScale;
+		m_sinkFrame = (Real)(m_sinkFrame - m_beginSlowDeathFrame) * timeScale;
+		m_midpointFrame = (Real)(m_midpointFrame - m_beginSlowDeathFrame) * timeScale;
+		m_destructionFrame = (Real)(m_destructionFrame - m_beginSlowDeathFrame) * timeScale;
+		m_sinkFrame += m_beginSlowDeathFrame;
+		m_destructionFrame += m_beginSlowDeathFrame;
+		m_midpointFrame += m_beginSlowDeathFrame;
+		m_nextWakeUpTime = 0;
 		m_acceleratedTimeScale = timeScale;
 	};
 
 	UnsignedInt now = TheGameLogic->getFrame();
+
+	if(now >= m_nextWakeUpTime)
+		m_nextWakeUpTime = 0;
 
 
 	if ((m_flags & (1<<FLUNG_INTO_AIR)) != 0)
@@ -425,10 +437,16 @@ UpdateSleepTime SlowDeathBehavior::update()
 			//}
 
 			if(!m_isOnAirFrame)
+			{
 				m_isOnAirFrame = now;
 
+				if(obj->getPhysics())
+					obj->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_NORMAL );
+			}
+
+			/// IamInnocent - Moved the Behaviors below to Physics Update
 			// Here we want to make sure we die if we collide with a tree on the way down
-			PhysicsBehavior *phys = obj->getPhysics();
+			/*PhysicsBehavior *phys = obj->getPhysics();
 			if ( phys )
 			{
 				ObjectID treeID = phys->getLastCollidee();
@@ -447,54 +465,53 @@ UpdateSleepTime SlowDeathBehavior::update()
 
 					}
 				}
-			}
+			}*/
 
 
-
+			if( m_isOnAirFrame )
+				return UPDATE_SLEEP_FOREVER; // Made Sleepy. Wake up when bouncing is removed
 		}
 	}
 
-	if(m_isOnAirFrame && !obj->isAboveTerrain())
-	{
-		obj->clearAndSetModelConditionFlags(MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING),
-																			MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING));
-		m_flags |= (1<<BOUNCED);
+	Bool AboveTerrain = obj->isAboveTerrain();
 
-		UnsignedInt frames = now - m_isOnAirFrame;
-		m_sinkFrame += frames;
-		m_midpointFrame += frames;
-		m_destructionFrame += frames;
-		m_isOnAirFrame = 0;
+	if(d->m_sinkRate > 0.0f)
+	{
+		if ( now >= m_sinkFrame && (!TheGlobalData->m_infantryCorpsesAirDrag || !AboveTerrain))
+		{
+			m_hasSunk = TRUE;
+			// disable Physics (if any) so that we can control the sink...
+			if(!obj->isDisabledByType( DISABLED_HELD ))
+				obj->setDisabled( DISABLED_HELD );
+			Coord3D pos = *obj->getPosition();
+			pos.z -= d->m_sinkRate / m_acceleratedTimeScale;
+			obj->setPosition( &pos );
+		}
+		else
+		{
+			if(TheGlobalData->m_infantryCorpsesAirDrag && AboveTerrain && obj->isDisabledByType( DISABLED_HELD ))
+				obj->clearDisabled( DISABLED_HELD );
+
+			if(!m_hasSunk && m_sinkFrame && m_sinkFrame > now)
+			{
+				if(!m_nextWakeUpTime || m_nextWakeUpTime > m_sinkFrame)
+					m_nextWakeUpTime = m_sinkFrame;
+			}
+		}
 	}
 
-	if( m_isOnAirFrame && !m_hasSunk )
-		return UPDATE_SLEEP_NONE; // Made Sleepy. Wake up when bouncing is removed
-		//return UPDATE_SLEEP_FOREVER; // Made Sleepy. Wake up when bouncing is removed
-
-	if ( (now >= m_sinkFrame && d->m_sinkRate > 0.0f) )
+	if((m_flags & (1<<MIDPOINT_EXECUTED)) == 0)
 	{
-		m_hasSunk = TRUE;
-		// disable Physics (if any) so that we can control the sink...
-		obj->setDisabled( DISABLED_HELD );
-		Coord3D pos = *obj->getPosition();
-		pos.z -= d->m_sinkRate / m_acceleratedTimeScale;
-		obj->setPosition( &pos );
-	}
-	else if(!m_hasSunk && !m_sinkFrame > now)
-	{
-		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_sinkFrame)
-			m_nextWakeUpTime = m_sinkFrame;
-	}
-
-	if( now >= m_midpointFrame && (m_flags & (1<<MIDPOINT_EXECUTED)) == 0 )
-	{
-		doPhaseStuff(SDPHASE_MIDPOINT);
-		m_flags |= (1<<MIDPOINT_EXECUTED);
-	}
-	else if(!m_hasSunk && m_midpointFrame > now)
-	{
-		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_midpointFrame)
-			m_nextWakeUpTime = m_midpointFrame;
+		if( now >= m_midpointFrame )
+		{
+			doPhaseStuff(SDPHASE_MIDPOINT);
+			m_flags |= (1<<MIDPOINT_EXECUTED);
+		}
+		else if(!m_hasSunk && m_midpointFrame && m_midpointFrame > now)
+		{
+			if(!m_nextWakeUpTime || m_nextWakeUpTime > m_midpointFrame)
+				m_nextWakeUpTime = m_midpointFrame;
+		}
 	}
 
 	if (now >= m_destructionFrame)
@@ -502,7 +519,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 		doPhaseStuff(SDPHASE_FINAL);
 		TheGameLogic->destroyObject(obj);
 	}
-	else if(!m_hasSunk)
+	else if(!m_hasSunk && m_destructionFrame && m_destructionFrame > now)
 	{
 		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_destructionFrame)
 			m_nextWakeUpTime = m_destructionFrame;
@@ -510,27 +527,72 @@ UpdateSleepTime SlowDeathBehavior::update()
 
 	//return UPDATE_SLEEP_NONE;
 	// We have to always set new pos.z after sinking, therefore we cant sleep
-	if(m_hasSunk)
+	if(m_hasSunk || (AboveTerrain && (m_flags & (1<<BOUNCED)) != 0) )
+	{
 		return UPDATE_SLEEP_NONE;
+	}
 	else
 		return UPDATE_SLEEP(  m_nextWakeUpTime > now ? m_nextWakeUpTime - now : UPDATE_SLEEP_NONE );
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool SlowDeathBehavior::layerUpdate(Bool doModifier)
+Bool SlowDeathBehavior::layerUpdate(Bool hitTree)
 {
-	if((m_flags & (1<<FLUNG_INTO_AIR)) == 0 || (m_flags & (1<<BOUNCED)) != 0)
-	{
-		if(doModifier)
-			getObject()->setNoSlowDeathLayerUpdate();
-
+	if( isSlowDeathActivated() == FALSE )
 		return FALSE;
+
+	// Don't update me if I have never flung.
+	if( (m_flags & (1<<FLUNG_INTO_AIR)) == 0 || (m_flags & (1<<BOUNCED)) != 0)
+	{
+		// remove the Physics from checking Aerial Slow Death Behavior
+		if(getObject()->getPhysics())
+			getObject()->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_INVALID );
+		return TRUE;
 	}
 
-	if(doModifier)
-		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	const SlowDeathBehaviorModuleData* d = getSlowDeathBehaviorModuleData();
+	Object* obj = getObject();
+	Bool touchedGround = !obj->isAboveTerrain();
 
-	return TRUE;
+	if ( hitTree )
+	{
+		obj->setDisabled( DISABLED_HELD );
+		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING) );
+		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING) );
+		obj->setModelConditionFlags(   MAKE_MODELCONDITION_MASK(MODELCONDITION_PARACHUTING) ); //looks like he is snagged in a tree
+		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
+		if ( touchedGround )
+		{
+			TheGameLogic->destroyObject(obj);
+			if(obj->getPhysics())
+				obj->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_INVALID );
+			return TRUE;
+		}
+	}
+
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
+	if(m_isOnAirFrame && touchedGround)
+	{
+		obj->clearAndSetModelConditionFlags(MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING),
+																			MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING));
+		m_flags |= (1<<BOUNCED);
+
+		UnsignedInt frames = TheGameLogic->getFrame() - m_isOnAirFrame;
+		m_isOnAirFrame = 0;
+
+		m_sinkFrame += frames;
+		m_midpointFrame += frames;
+		m_destructionFrame += frames;
+		m_nextWakeUpTime = 0;
+
+		if(obj->getPhysics())
+			obj->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_INVALID );
+
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -633,6 +695,12 @@ void SlowDeathBehavior::xfer( Xfer *xfer )
 
 	// has sunk
 	xfer->xferBool( &m_hasSunk );
+
+	// wake up time
+	xfer->xferUnsignedInt( &m_nextWakeUpTime );
+
+	// begin slow death time
+	xfer->xferUnsignedInt( &m_beginSlowDeathFrame );
 
 }  // end xfer
 

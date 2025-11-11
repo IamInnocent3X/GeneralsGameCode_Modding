@@ -666,6 +666,8 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) },
 
+	{ "FlungInfantryCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_infantryCorpsesAirDrag) },
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1238,6 +1240,7 @@ GlobalData::GlobalData()
 	m_useEfficientDrawableScheme = FALSE;
 
 	m_fixLocoClump = FALSE;
+	m_infantryCorpsesAirDrag = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

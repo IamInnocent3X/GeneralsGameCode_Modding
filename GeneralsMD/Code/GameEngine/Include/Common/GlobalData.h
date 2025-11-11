@@ -610,6 +610,7 @@ public:
 	Bool m_useEfficientDrawableScheme;
 
 	Bool m_fixLocoClump;
+	Bool m_infantryCorpsesAirDrag;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

@@ -594,6 +594,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_noSlaverBehavior = FALSE;
 	m_noSlowDeathBehavior = FALSE;
 	m_noSlowDeathLayerUpdate = FALSE;
+	m_hasSlowDeathLayerUpdate = FALSE;
+	m_hasBattleBusSlowDeathBehavior = FALSE; // True for checking over once
+	m_checkSlowDeathBehavior = TRUE; // True for checking over once
 	m_noFloatUpdate = FALSE;
 	m_noDemoTrapUpdate = FALSE;
 
@@ -8231,29 +8234,48 @@ void Object::doSlavedUpdate( Bool doSlaver )
 void Object::doSlowDeathRefreshUpdate()
 {
 	// I'm not dead yet, don't update me
-	if(!isEffectivelyDead())
+	if(!isEffectivelyDead() && !m_hasBattleBusSlowDeathBehavior && !m_checkSlowDeathBehavior)
 		return;
 
 	// If I do not have a slow death behavior module, don't update me
 	if(m_noSlowDeathBehavior)
 		return;
 
+	// Controversial, if I have a Slow Death Layer Update, don't update me, update Layer Update instead
+	if(m_hasSlowDeathLayerUpdate && !m_hasBattleBusSlowDeathBehavior && !m_checkSlowDeathBehavior)
+		return;
+
 	m_noSlowDeathBehavior = TRUE;
+
+	static NameKeyType key_BattleBusSlowDeathBehavior = NAMEKEY("BattleBusSlowDeathBehavior");
 
 	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
 	{
+		if (m_checkSlowDeathBehavior)
+		{
+			if(!m_hasBattleBusSlowDeathBehavior && (*m)->getModuleNameKey() == key_BattleBusSlowDeathBehavior)
+				m_hasBattleBusSlowDeathBehavior = TRUE;
+
+			if(m_hasSlowDeathLayerUpdate && !m_hasBattleBusSlowDeathBehavior)
+				continue;
+		}
+		
 		SlowDeathBehaviorInterface* sdu = (*m)->getSlowDeathBehaviorInterface();
+
 		if (!sdu)
 			continue;
 		
-		sdu->friend_refreshUpdate();
+		if(sdu->friend_isSlowDeathActivated())
+			sdu->friend_refreshUpdate();
 		m_noSlowDeathBehavior = FALSE;
 	}
+
+	m_checkSlowDeathBehavior = FALSE;
 }
 
 
 //-------------------------------------------------------------------------------------------------
-void Object::doSlowDeathLayerUpdate()
+void Object::doSlowDeathLayerUpdate(Bool hitTree)
 {
 	// I'm not dead yet, don't update me
 	if(!isEffectivelyDead())
@@ -8271,8 +8293,9 @@ void Object::doSlowDeathLayerUpdate()
 		if (!sdu)
 			continue;
 		
-		m_noSlowDeathLayerUpdate = FALSE;
-		sdu->layerUpdate(TRUE);
+		m_noSlowDeathLayerUpdate = sdu->layerUpdate(hitTree);
+		if(!m_noSlowDeathLayerUpdate)
+			m_hasSlowDeathLayerUpdate = TRUE;
 	}
 }
 

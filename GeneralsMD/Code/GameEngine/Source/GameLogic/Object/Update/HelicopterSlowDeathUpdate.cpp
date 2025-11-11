@@ -333,10 +333,6 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 				//TheGameLogic->getFrame() - m_lastSelfSpinUpdateFrame > modData->m_selfSpinUpdateDelay )
 		{
 
-			PhysicsBehavior *p = copter->getPhysics();
-			if(p)
-				p->applyHelicopterSlowDeathSpin( m_selfSpin * m_orbitDirection );
-
 			// update the self spin
 			if( m_selfSpinTowardsMax == TRUE )
 			{
@@ -367,20 +363,24 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 
 			}  // end else
 
+			PhysicsBehavior *p = copter->getPhysics();
+			if(p)
+				p->applyHelicopterSlowDeathSpin( m_selfSpin );
+
 			// we have made a change to the self spinning
 			m_lastSelfSpinUpdateFrame = now; //TheGameLogic->getFrame();
 
-			//if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_selfSpinUpdateDelay)
-			//	m_nextWakeUpTime = now + modData->m_selfSpinUpdateDelay + 1; // +1 to meet the condition requirements
+			if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_selfSpinUpdateDelay)
+				m_nextWakeUpTime = now + modData->m_selfSpinUpdateDelay + 1; // +1 to meet the condition requirements
 
 			DEBUG_LOG(("Helicopter Slow Death Wake Up Frame: %d", m_lastSelfSpinUpdateFrame));
 
 		}  // end if
-		//else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay )
-		//{
-		//	if(m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay > now )
-		//		m_nextWakeUpTime = m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay;
-		//}
+		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay + 1 )
+		{
+			if(m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay + 1 > now )
+				m_nextWakeUpTime = m_lastSelfSpinUpdateFrame + modData->m_selfSpinUpdateDelay + 1;
+		}
 
 		// get the physics update module
 		PhysicsBehavior *physics = copter->getPhysics();
@@ -395,6 +395,7 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 		/// IamInnocent - Moved to PhysicsUpdate for Sleepy Updates
 		if(!m_passedVariablesToPhysics)
 		{
+			physics->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_HELICOPTER );
 			physics->applyHelicopterSlowDeathSpin( m_selfSpin * m_orbitDirection );
 			physics->applyHelicopterSlowDeathForce( m_forwardAngle, modData->m_spiralOrbitTurnRate, m_orbitDirection, m_forwardSpeed, modData->m_spiralOrbitForwardSpeedDamping );
 			m_passedVariablesToPhysics = TRUE;
@@ -454,77 +455,21 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 
 			}  // end if
 
-			//else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_bladeFlyOffFrame)
-			//{
-			//	m_nextWakeUpTime = m_bladeFlyOffFrame;
-			//}
+			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_bladeFlyOffFrame)
+			{
+				if(m_bladeFlyOffFrame > now)
+					m_nextWakeUpTime = m_bladeFlyOffFrame;
+			}
 
 		}  // endif
-
-
-		// Collision Update moved to this bracker
-		Bool hitATree = FALSE;
-		// Here we want to make sure we crash if we collide with a tree on the way down
-		PhysicsBehavior *phys = copter->getPhysics();
-		if ( phys )
-		{
-			ObjectID treeID = phys->getLastCollidee();
-			Object *tree = TheGameLogic->findObjectByID( treeID );
-			if ( tree )
-			{
-				if (tree->isKindOf( KINDOF_SHRUBBERY ) )
-				hitATree = TRUE;
-			}
-		}
-
-		// when we hit the ground
-		const Coord3D *pos = copter->getPosition();
-
-		// srj sez: if we haven't yet hit the ground, adjust our layer properly so we crash on bridges
-		Coord3D tmpPt = *pos;
-		tmpPt.z = 99999.0f;
-		PathfindLayerEnum newLayer = TheTerrainLogic->getHighestLayerForDestination(&tmpPt);
-		copter->setLayer(newLayer);
-
-		Real ground = TheTerrainLogic->getLayerHeight( tmpPt.x, tmpPt.y, newLayer );
-
-		if (pos->z <= ground + 1.0f || hitATree )
-		{
-
-			// mark the frame we hit the ground on
-			m_hitGroundFrame = now; //TheGameLogic->getFrame();
-
-			// make hit ground effect
-			FXList::doFXObj( modData->m_fxHitGround, copter );
-			ObjectCreationList::create( modData->m_oclHitGround, copter, NULL );
-
-			// hold the copter in place now
-			copter->setDisabled( DISABLED_HELD );
-
-			// special damage state ... has the blades no on anymore
-			Drawable *draw = copter->getDrawable();
-			if( draw )
-				draw->setModelConditionState( MODELCONDITION_SPECIAL_DAMAGED );
-
-			// Stop the sound from playing.
-			TheAudio->removeAudioEvent(m_deathSound.getPlayingHandle());
-
-			if(!m_nextWakeUpTime || m_nextWakeUpTime > now + modData->m_delayFromGroundToFinalDeath + 1)
-				m_nextWakeUpTime = now + modData->m_delayFromGroundToFinalDeath + 1;
-
-		}  // end if
-		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 )
-		{
-			if(m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 > now )
-				m_nextWakeUpTime = m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1;
-		}
 
 	}  // end if, not on ground
 
 
+	// IamInnocent - Passed the feature below to Physics for Update
 
-	/*
-	Bool hitATree = FALSE;
+	
+	/*Bool hitATree = FALSE;
 	// Here we want to make sure we crash if we collide with a tree on the way down
 	PhysicsBehavior *phys = copter->getPhysics();
 	if ( m_hitGroundFrame == 0 && phys )
@@ -603,17 +548,17 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 			// destroy the copter finally
 			TheGameLogic->destroyObject( copter );
 		}
-		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 )
+		else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath )
 		{
-			if(m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1 > now )
+			if(m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath > now )
 				m_nextWakeUpTime = m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath + 1;
 		}
 
 	}  // end if
-	else
-	{
-		return UPDATE_SLEEP_NONE;
-	}
+	//else
+	//{
+		//return UPDATE_SLEEP_NONE;
+	//}
 
 	UpdateSleepTime mine = m_nextWakeUpTime > now ? UPDATE_SLEEP(m_nextWakeUpTime - now) : UPDATE_SLEEP_FOREVER;
 	return (mine < ret) ? mine : ret;
@@ -622,24 +567,55 @@ UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
 }  // end update
 
 // ------------------------------------------------------------------------------------------------
-Bool HelicopterSlowDeathBehavior::layerUpdate(Bool doModifier)
+Bool HelicopterSlowDeathBehavior::layerUpdate(Bool hitTree)
 {
-	// call the base class cause we're extending functionality
-	if(!SlowDeathBehavior::layerUpdate(FALSE))
-	{
-		if(m_hitGroundFrame != 0)
-		{
-			if(doModifier)
-				getObject()->setNoSlowDeathLayerUpdate();
+	if( isSlowDeathActivated() == FALSE )
+		return FALSE;
 
-			return FALSE;
-		}
+	//Don't check again if we have hit Ground
+	if( m_hitGroundFrame != 0 )
+	{
+		// remove the Physics from checking Aerial Slow Death Behavior
+		if(getObject()->getPhysics())
+			getObject()->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_INVALID );
+		return TRUE;
 	}
 
-	if(doModifier)
+	//if ( hitGround || hitTree )
+	//{
+
+		Object *copter = getObject();
+		const HelicopterSlowDeathBehaviorModuleData *modData = getHelicopterSlowDeathBehaviorModuleData();
+
+		// mark the frame we hit the ground on
+		m_hitGroundFrame = TheGameLogic->getFrame();
+
+		// make hit ground effect
+		FXList::doFXObj( modData->m_fxHitGround, copter );
+		ObjectCreationList::create( modData->m_oclHitGround, copter, NULL );
+
+		// hold the copter in place now
+		copter->setDisabled( DISABLED_HELD );
+
+		// special damage state ... has the blades no on anymore
+		Drawable *draw = copter->getDrawable();
+		if( draw )
+			draw->setModelConditionState( MODELCONDITION_SPECIAL_DAMAGED );
+
+		// Stop the sound from playing.
+		TheAudio->removeAudioEvent(m_deathSound.getPlayingHandle());
+
+		if(!m_nextWakeUpTime || m_nextWakeUpTime > m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath)
+			m_nextWakeUpTime = m_hitGroundFrame + modData->m_delayFromGroundToFinalDeath;
+
 		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
-	return TRUE;
+		// remove the Physics from checking Aerial Slow Death Behavior
+		if(copter->getPhysics())
+			copter->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_INVALID );
+
+		return TRUE;
+	//}
 }
 
 // ------------------------------------------------------------------------------------------------

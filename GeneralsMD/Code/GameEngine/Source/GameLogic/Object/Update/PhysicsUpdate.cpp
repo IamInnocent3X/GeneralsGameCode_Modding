@@ -451,6 +451,7 @@ void PhysicsBehavior::resetDynamicPhysics()
 	m_spiralOrbitForwardSpeedDamping = 0;
 	m_orbitDirection = 0;
 	m_spinRate = 0;
+	m_aerialSlowDeathBehaviorCheck = SLOWDEATH_INVALID;
 	setFlag(HAS_PITCHROLLYAW, false);
 #ifdef SLEEPY_PHYSICS
 	DEBUG_ASSERTCRASH(!getFlag(IS_IN_UPDATE), ("hmm, should not happen, may not work"));
@@ -669,7 +670,7 @@ void PhysicsBehavior::applyHelicopterSlowDeathSpin( Real spinRate )
 void PhysicsBehavior::doHelicopterSlowDeathSpin( Real spinRate )
 {
 	Matrix3D xfrm = *getObject()->getTransformMatrix();
-	xfrm.In_Place_Pre_Rotate_Z(spinRate);
+	xfrm.In_Place_Pre_Rotate_Z(spinRate * m_orbitDirection);
 	getObject()->setTransformMatrix( &xfrm );
 }
 
@@ -731,23 +732,6 @@ UpdateSleepTime PhysicsBehavior::update()
 	{
 		// set the flag so that we don't get bogus "collisions" on the first frame.
 		setFlag(WAS_AIRBORNE_LAST_FRAME, airborneAtStart);
-	}
-
-	// HelicopterSlowDeathBehavior stuff.
-	// Update here and make the behavior Sleept
-	if(m_spinRate)
-	{
-		doHelicopterSlowDeathSpin( m_spinRate );
-	}
-	if(m_forwardSpeed)
-	{
-		doHelicopterSlowDeathForce( m_forwardAngle, m_forwardSpeed );
-		
-		// update our forward angle for travelling along the large spiral downward circle
-		m_forwardAngle += (m_spiralOrbitTurnRate * m_orbitDirection);
-
-		// adjust our forward spiral orbit by the damping factor specified
-		m_forwardSpeed *= m_spiralOrbitForwardSpeedDamping;
 	}
 
 	Coord3D prevPos = *obj->getPosition();
@@ -939,12 +923,10 @@ UpdateSleepTime PhysicsBehavior::update()
 		{
 			obj->setTransformMatrix(&mtx);
 		}
-	} // if not held
 
-	// Update SlowDeathBehavior to set their layers for sleepy Updates
-	// To-Do: Rework. Horrible and unoptimized. Junk.
-	//if(!obj->isSignificantlyAboveTerrain() && obj->isAirborneTarget())
-	//	obj->doSlowDeathLayerUpdate();
+		checkSlowDeathBehaviors();
+
+	} // if not held
 
 	// reset the acceleration for accumulation next frame
 	m_accel.zero();
@@ -1047,6 +1029,94 @@ UpdateSleepTime PhysicsBehavior::update()
 	return calcSleepTime();
 }
 
+void PhysicsBehavior::checkSlowDeathBehaviors()
+{
+	Object*	obj = getObject();
+
+	const Coord3D *pos = obj->getPosition();
+	
+	// HelicopterSlowDeathBehavior stuff.
+	// Update here and make the behavior Sleept
+	if(m_spinRate)
+	{
+		doHelicopterSlowDeathSpin( m_spinRate );
+	}
+	if(m_forwardSpeed)
+	{
+		doHelicopterSlowDeathForce( m_forwardAngle, m_forwardSpeed );
+		
+		// update our forward angle for travelling along the large spiral downward circle
+		m_forwardAngle += (m_spiralOrbitTurnRate * m_orbitDirection);
+
+		// adjust our forward spiral orbit by the damping factor specified
+		m_forwardSpeed *= m_spiralOrbitForwardSpeedDamping;
+	}
+
+	// Update SlowDeathBehavior to set their layers for sleepy Updates
+	// We ignore normal Slow Death because SlowDeathRefresh Update is below and checks after an Object hits the ground from Airborne
+	if(m_aerialSlowDeathBehaviorCheck > 0)
+	{
+		Bool doCheck = FALSE;
+		// do not allow object to pass through the ground
+		switch(m_aerialSlowDeathBehaviorCheck)
+		{
+			case SLOWDEATH_NORMAL:
+			{
+				if(!obj->isAboveTerrain())
+					doCheck = TRUE;
+
+				break;
+			}
+			case SLOWDEATH_HELICOPTER:
+			{
+				DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER"));
+				// srj sez: if we haven't yet hit the ground, adjust our layer properly so we crash on bridges
+				Coord3D tmpPt = *pos;
+				tmpPt.z = 99999.0f;
+				PathfindLayerEnum newLayer = TheTerrainLogic->getHighestLayerForDestination(&tmpPt);
+				obj->setLayer(newLayer);
+
+				Real ground = TheTerrainLogic->getLayerHeight( tmpPt.x, tmpPt.y, newLayer );
+				if (pos->z <= ground + 1.0f )
+				{
+					DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER Passed"));
+					doCheck = TRUE;
+				}
+				break;
+			}
+			case SLOWDEATH_JET:
+			{
+				DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET"));
+				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
+				obj->setLayer(layer);
+				Real height;
+				if (layer == LAYER_GROUND)
+				{
+					// (this is more efficient than getGroundHeight because the info is cached)
+					height = obj->getHeightAboveTerrain();
+				}
+				else
+				{
+					Real layerHeight = TheTerrainLogic->getLayerHeight( pos->x, pos->y, layer );
+					height = pos->z - layerHeight;
+					// slop a little bit for bridges, since we tend to end up fractionally
+					// above 'em, and it's easier to just slop it here
+					if (height >= 0.0f && height <= 1.0f)
+						height = 0.0f;
+				}
+				if( height <= 0.0f )
+				{
+					DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET Passed"));
+					doCheck = TRUE;
+				}
+				break;
+			}
+		}
+		if(doCheck)
+			obj->doSlowDeathLayerUpdate(FALSE);
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime PhysicsBehavior::calcSleepTime() const
 {
@@ -1056,6 +1126,7 @@ UpdateSleepTime PhysicsBehavior::calcSleepTime() const
 			&& !getFlag(HAS_PITCHROLLYAW)
 			&& !isMotive()
 			&& (getObject()->getLayer() == LAYER_GROUND && !getObject()->isAboveTerrain())
+			&& m_aerialSlowDeathBehaviorCheck == SLOWDEATH_INVALID
 			&& getCurrentOverlap() == INVALID_ID
 			&& getPreviousOverlap() == INVALID_ID
 			&& getFlag(UPDATE_EVER_RUN))
@@ -1477,7 +1548,7 @@ void PhysicsBehavior::onCollide( Object *other, const Coord3D *loc, const Coord3
 	m_lastCollidee = other->getID();
 	if(other->isKindOf( KINDOF_SHRUBBERY ))
 	{
-		obj->doSlowDeathLayerUpdate();
+		obj->doSlowDeathLayerUpdate(TRUE);
 	}
 
 	Real dist = sqrtf(distSqr);
@@ -2033,6 +2104,8 @@ void PhysicsBehavior::xfer( Xfer *xfer )
 	xfer->xferReal( &m_spiralOrbitForwardSpeedDamping );
 
 	xfer->xferInt( &m_orbitDirection );
+
+	xfer->xferUser( &m_aerialSlowDeathBehaviorCheck, sizeof( SlowDeathType ) );
 
 	// helicopter slow death spin
 	xfer->xferReal( &m_spinRate );

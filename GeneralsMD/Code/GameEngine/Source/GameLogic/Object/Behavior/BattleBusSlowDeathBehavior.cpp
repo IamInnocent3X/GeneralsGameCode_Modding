@@ -298,13 +298,14 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 				me->setDisabled(DISABLED_HELD);
 
 				// We can only sleep if we don't have to watch out for being empty.
-				if( data->m_emptyHulkDestructionDelay == 0 )
-					return UPDATE_SLEEP_FOREVER;
-				else
-					return UPDATE_SLEEP_NONE; // None, so we check for empty as soon as possible
+				//if( data->m_emptyHulkDestructionDelay == 0 )
+				//	return UPDATE_SLEEP_FOREVER;
+				//else
+				//	return UPDATE_SLEEP_NONE; // None, so we check for empty as soon as possible
 			}
 		}
-		return UPDATE_SLEEP_NONE;// None, since we are waiting to be able to check for ground collision
+		return UPDATE_SLEEP_FOREVER; // Physics now check for Slow Death Update everytime when it hits the ground
+		//return UPDATE_SLEEP_NONE;// None, since we are waiting to be able to check for ground collision
 	}
 	else if( m_isRealDeath )
 	{

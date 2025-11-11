@@ -46,6 +46,14 @@ enum PhysicsTurningType CPP_11(: Int)
 	TURN_POSITIVE = 1
 };
 
+enum SlowDeathType CPP_11(: Int)
+{
+	SLOWDEATH_INVALID = 0,
+	SLOWDEATH_NORMAL = 1,
+	SLOWDEATH_JET = 2,
+	SLOWDEATH_HELICOPTER = 3
+};
+
 //-------------------------------------------------------------------------------------------------
 class PhysicsBehaviorModuleData : public UpdateModuleData
 {
@@ -181,6 +189,8 @@ public:
 	void applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping );
 	void doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed );
 
+	inline void applyAerialSlowDeathBehaviorCheck( SlowDeathType type ) { m_aerialSlowDeathBehaviorCheck = type; }
+
 	/*
 		stickToGround and allowToFall seem contradictory... here's the deal.
 
@@ -257,6 +267,8 @@ protected:
 
 	void testStunnedUnitForDestruction(void);
 
+	void checkSlowDeathBehaviors();
+
 private:
 
 	enum PhysicsFlagsType
@@ -314,6 +326,8 @@ private:
 	Real 										m_spiralOrbitForwardSpeedDamping;
 	Real 										m_spinRate;
 	Int 										m_orbitDirection;
+
+	SlowDeathType								m_aerialSlowDeathBehaviorCheck;
 
 	inline void setFlag(PhysicsFlagsType f, Bool set) { if (set) m_flags |= f; else m_flags &= ~f; }
 	inline Bool getFlag(PhysicsFlagsType f) const { return (m_flags & f) != 0; }

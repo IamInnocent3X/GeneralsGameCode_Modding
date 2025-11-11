@@ -119,8 +119,9 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo ) = 0;
 	virtual Int getProbabilityModifier( const DamageInfo *damageInfo ) const = 0;
 	virtual Bool isDieApplicable(const DamageInfo *damageInfo) const = 0;
-	virtual Bool layerUpdate(Bool doModifier) = 0;
 	virtual void friend_refreshUpdate() = 0;
+	virtual Bool layerUpdate(Bool hitTree) = 0;
+	virtual Bool friend_isSlowDeathActivated() const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -159,7 +160,8 @@ public:
 
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 	virtual void friend_refreshUpdate() { refreshUpdate(); }
-	virtual Bool layerUpdate(Bool doModifier);
+	virtual Bool friend_isSlowDeathActivated() const { return isSlowDeathActivated(); }
+	virtual Bool layerUpdate(Bool hitTree);
 
 protected:
 
@@ -184,6 +186,7 @@ private:
 	UnsignedInt	m_flags;
 	UnsignedInt	m_isOnAirFrame;
 	UnsignedInt m_nextWakeUpTime;
+	UnsignedInt	m_beginSlowDeathFrame;
 	Bool m_hasSunk;
 };
 

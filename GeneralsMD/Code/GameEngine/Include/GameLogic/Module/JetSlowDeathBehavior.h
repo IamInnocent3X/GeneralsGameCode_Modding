@@ -96,7 +96,7 @@ public:
 	virtual UpdateSleepTime update( void );
 
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
-	virtual Bool layerUpdate(Bool doModifier);
+	virtual Bool layerUpdate(Bool hitTree);
 
 protected:
 

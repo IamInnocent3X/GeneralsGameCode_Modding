@@ -756,7 +756,7 @@ public:
 	void doWeaponSetUpdate();
 	void doMovingUpdate();
 	void doObjectLocomotorUpdate();
-	void doSlowDeathLayerUpdate();
+	void doSlowDeathLayerUpdate(Bool hitTree);
 	void doSlowDeathRefreshUpdate();
 
 	inline void setIsMobMember(Bool set) { m_isMobMember = set; }
@@ -1017,6 +1017,9 @@ private:
 	Bool											m_noSlaverBehavior;
 	Bool											m_noSlowDeathBehavior;
 	Bool											m_noSlowDeathLayerUpdate;
+	Bool											m_hasSlowDeathLayerUpdate;
+	Bool											m_checkSlowDeathBehavior;
+	Bool											m_hasBattleBusSlowDeathBehavior;
 
 };  // end class Object
 
