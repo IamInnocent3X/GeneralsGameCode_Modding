@@ -609,7 +609,7 @@ void CaveContain::onCapture( Player *oldOwner, Player *newOwner )
 	// do the tunnel tracker stuff later, since onContaining Registers after onCapture
 	m_oldTeam = oldOwner->getDefaultTeam();
 	m_newTeam = newOwner->getDefaultTeam();
-	
+
 	// extend base class
 	OpenContain::onCapture( oldOwner, newOwner );
 }

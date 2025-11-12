@@ -58,6 +58,8 @@
 #include "Common/ThingFactory.h"
 #include "Common/ThingSort.h"
 #include "Common/BitFlagsIO.h"
+#include "Common/DisabledTypes.h"
+#include "Common/ObjectStatusTypes.h"
 
 #include "GameClient/Drawable.h"
 #include "GameClient/FXList.h"
@@ -265,6 +267,14 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
   	{ "MaxSimultaneousOfTypeDifficulty",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficulty ) },
 	{ "MaxSimultaneousOfTypeDifficultyAIOverride",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficultyAI ) },
 	{ "MaxSimultaneousOfTypeCustomMessage",			INI::parseAndTranslateLabel,				NULL,		offsetof( ThingTemplate, m_maxSimultaneousCustomMessage ) },
+
+	// Set Underpowered Properties
+	{ "DisabledWhenUnderpowered",			INI::parseBool,		NULL, offsetof( ThingTemplate, m_setDisabledWhenUnderpowered ) },
+	{ "DisabledTypeWhenUnderpowered",		DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( ThingTemplate, m_disabledTypeUnderPowered ) },
+	{ "StatusDisabledUnderPowered",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( ThingTemplate, m_statusDisabledUnderPowered ) },
+	{ "CustomStatusDisabledUnderPowered",	INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customStatusDisabledUnderPowered ) },
+	{ "WeaponBonusDisabledUnderPowered",	INI::parseWeaponBonusVector, NULL, offsetof( ThingTemplate, m_bonusDisabledUnderPowered ) },
+	{ "CustomWeaponBonusDisabledUnderPowered",			INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customBonusDisabledUnderPowered ) },
 
 	// Customize Action Cursors
 	{ "SelectingCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_selectingCursorName ) },
@@ -1177,6 +1187,9 @@ ThingTemplate::ThingTemplate() :
 	m_maxSimultaneousOfTypeDifficulty.clear();
 	m_maxSimultaneousOfTypeDifficultyAI.clear();
 	m_maxSimultaneousCustomMessage = UnicodeString::TheEmptyString;
+
+	m_setDisabledWhenUnderpowered = TRUE;
+	m_disabledTypeUnderPowered = DISABLED_UNDERPOWERED;
 
 	m_genericInvalidCursorName = NULL;
 	m_selectingCursorName = NULL;

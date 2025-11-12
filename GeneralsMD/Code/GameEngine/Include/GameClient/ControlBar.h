@@ -217,6 +217,8 @@ enum GUICommandType CPP_11(: Int)
 
 	GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE,
 
+	GUI_COMMAND_DISABLE_POWER,							///< Power down an Object
+
 	// add more commands here, don't forget to update the string command list below too ...
 
 	GUI_COMMAND_NUM_COMMANDS							// keep this last
@@ -267,6 +269,8 @@ static const char *TheGuiCommandNames[] =
 	"SPECIAL_POWER_CONSTRUCT",
 	"SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT",
 	"SELECT_ALL_UNITS_OF_TYPE",
+
+	"DISABLE_POWER",
 
 	NULL
 };

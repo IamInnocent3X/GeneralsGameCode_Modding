@@ -899,6 +899,16 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		}  // end pick specialized science
 
 		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_DISABLE_POWER:
+		{
+
+			// command needs no additional data, send the message
+			TheMessageStream->appendMessage( GameMessage::MSG_DISABLE_POWER );
+			break;
+
+		}  // end sell
+
+		//---------------------------------------------------------------------------------------------
 		default:
 
 			DEBUG_ASSERTCRASH( 0, ("Unknown command '%d'", commandButton->getCommandType()) );

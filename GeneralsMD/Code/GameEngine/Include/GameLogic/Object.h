@@ -672,10 +672,19 @@ public:
 
 	void pauseAllSpecialPowers( const Bool disabling ) const;
 
+	void clearDisablePower(Bool isCommand);
+
+	void doDisablePower(Bool isCommand);
+
+	Bool isDisabledPowerByCommand() const { return m_disabledPowerFromCommand; }
+
 	//Checks any timers and clears disabled statii that have expired.
 	void checkDisabledStatus();
 
 	void checkLevitate();
+
+	void setLastActualSpeed(Real speed) { m_lastActualSpeed = speed; }
+	Real getLastActualSpeed() const { return m_lastActualSpeed; }
 
 	//When an AIAttackState is over, it needs to clean up any weapons that might be in leech range mode
 	//or else those weapons will have unlimited range!
@@ -959,6 +968,8 @@ private:
 	UnsignedInt							m_levitateCheckCount;
 	Bool								m_dontLevitate;
 
+	Real								m_lastActualSpeed;
+
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 
 	SpecialPowerMaskType					m_specialPowerBits; ///< bits determining what kind of special abilities this object has access to.
@@ -1007,6 +1018,8 @@ private:
 	ObjectID										m_hijackingID;
 	ObjectID										m_equipToID;
 	mutable ObjectID 										m_assaultTransportID;
+
+	Bool											m_disabledPowerFromCommand;
 
 	Bool											m_isMobMember;
 	Bool											m_mobJustUpdated;

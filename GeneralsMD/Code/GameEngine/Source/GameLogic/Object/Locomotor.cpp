@@ -1285,6 +1285,9 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	// Maintain goal speed
 	//
 	Real speedDelta = goalSpeed - actualSpeed;
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
 	if (speedDelta != 0.0f)
 	{
 		Real mass = physics->getMass();

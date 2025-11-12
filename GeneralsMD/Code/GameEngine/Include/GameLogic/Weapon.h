@@ -612,7 +612,12 @@ public:
 	inline const AsciiString& getForceAttackGroundCursorName() const { return m_forceAttackGroundCursorName; }
 	inline const AsciiString& getInvalidCursorName() const { return m_invalidCursorName; }
 
+	inline Real getROFMovingPenalty() const { return m_rofMovingPenalty; }
+	inline Real getROFMovingMaxSpeedCount() const { return m_rofMovingMaxSpeedCount; }
+	inline Bool getROFMovingScales() const { return m_rofMovingScales; }
+
 	Bool passRequirements (const Object *source) const;
+	Int calcROFForMoving(const Object *source, Int Delay) const;
 
 	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
 
@@ -850,6 +855,10 @@ private:
 
 	std::vector<AsciiString> m_rejectKeys;
 
+	Real m_rofMovingPenalty;
+	Real m_rofMovingMaxSpeedCount;
+	Bool m_rofMovingScales;
+
 	mutable HistoricWeaponDamageList m_historicDamage;
 };
 
@@ -1078,6 +1087,10 @@ public:
 	inline const AsciiString& getForceAttackObjectCursorName() const { return m_template->getForceAttackObjectCursorName(); }
 	inline const AsciiString& getForceAttackGroundCursorName() const { return m_template->getForceAttackGroundCursorName(); }
 	inline const AsciiString& getInvalidCursorName() const { return m_template->getInvalidCursorName(); }
+
+	inline Real getROFMovingPenalty() const { return m_template->getROFMovingPenalty(); }
+	inline Real getROFMovingMaxSpeedCount() const { return m_template->getROFMovingMaxSpeedCount(); }
+	inline Bool getROFMovingScales() const { return m_template->getROFMovingScales(); }
 
 	Int getWeaponPriority(const Object *source, const Object *target) const;
 	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;

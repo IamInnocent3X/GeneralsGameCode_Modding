@@ -1098,7 +1098,8 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				commandType != GUI_COMMAND_BEACON_DELETE &&
 				commandType != GUI_COMMAND_SET_RALLY_POINT &&
 				commandType != GUI_COMMAND_STOP &&
-				commandType != GUI_COMMAND_SWITCH_WEAPON )
+				commandType != GUI_COMMAND_SWITCH_WEAPON &&
+				commandType != GUI_COMMAND_DISABLE_POWER )
 		{
 			if( getCommandAvailability( command, obj, win, applyToWin, TRUE ) == COMMAND_HIDDEN )
 			{
@@ -1538,6 +1539,15 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		{
 			//We can *always* select a unit :)
 			return COMMAND_AVAILABLE;
+		}
+
+		
+		case GUI_COMMAND_DISABLE_POWER:
+		{
+			if (obj->isDisabledPowerByCommand())
+				return COMMAND_ACTIVE;
+
+			break;
 		}
 	}
 

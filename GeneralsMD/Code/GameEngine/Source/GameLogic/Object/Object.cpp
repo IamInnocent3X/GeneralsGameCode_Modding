@@ -341,6 +341,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_levitateCheckCount = 0;
 	m_dontLevitate = FALSE;
 
+	m_lastActualSpeed = 0.0f;
+
 	m_group = NULL;
 
 	m_constructionPercent = CONSTRUCTION_COMPLETE;  // complete by default
@@ -2906,6 +2908,112 @@ void Object::checkDisabledStatus()
 }
 
 //-------------------------------------------------------------------------------------------------
+//Checks for Status Application after Disabled
+//-------------------------------------------------------------------------------------------------
+void Object::doDisablePower(Bool isCommand)
+{
+	// Set the indication from command
+	if(isCommand)
+	{
+		m_disabledPowerFromCommand = TRUE;
+
+		// Do things later while we are under Construction
+		if( getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		{
+			return;
+		}  // end if
+
+		// adjust the power it takes, don't adjust the power it gives. It is already handled by DisabledEdge
+		if(getTemplate()->getEnergyProduction() < 0 && getControllingPlayer())
+		{
+			getControllingPlayer()->getEnergy()->adjustPower(getTemplate()->getEnergyProduction(), FALSE);
+		}
+
+	}
+	
+	// Set Disabled Type
+	if(getTemplate()->setDisabledUnderPowered())
+		setDisabled( getTemplate()->getDisabledTypeUnderPowered() );
+
+	// Weapon Bonuses to Set
+	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusDisabledUnderPowered();
+	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusDisabledUnderPowered();
+
+	for (Int i = 0; i < weaponBonuses.size(); i++) {
+		setWeaponBonusCondition(weaponBonuses[i]);
+	}
+	for(std::vector<AsciiString>::const_iterator it = customWeaponBonuses.begin(); it != customWeaponBonuses.end(); ++it)
+	{
+		setCustomWeaponBonusCondition( *it );
+	}
+
+	// Status to Set
+	setStatus(getTemplate()->getStatusDisabledUnderPowered());
+	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusDisabledUnderPowered();
+	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
+	{
+		setCustomStatus( *it );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//Checks for Status to Clear after Disabled
+//-------------------------------------------------------------------------------------------------
+void Object::clearDisablePower(Bool isCommand)
+{
+	// Don't clear us from Disabled Power if we are disabled from Command
+	if(!isCommand && m_disabledPowerFromCommand)
+		return;
+
+	// Clear the indication from command
+	if(isCommand)
+	{
+		m_disabledPowerFromCommand = FALSE;
+
+		// Do things later while we are under Construction
+		if( getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		{
+			return;
+		}  // end if
+
+		// adjust the power it takes, don't adjust the power it gives. It is already handled by DisabledEdge
+		if(getTemplate()->getEnergyProduction() < 0 && getControllingPlayer())
+		{
+			Player *player = getControllingPlayer();
+			player->getEnergy()->adjustPower(getTemplate()->getEnergyProduction(), TRUE);
+
+			// don't clear us from Disabled if we don't have sufficient Power
+			if(!player->getEnergy()->hasSufficientPower())
+				return;
+		}
+	}
+	
+	// Clear Disabled Type
+	if(getTemplate()->setDisabledUnderPowered())
+		clearDisabled( getTemplate()->getDisabledTypeUnderPowered() );
+
+	// Weapon Bonuses to Set
+	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusDisabledUnderPowered();
+	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusDisabledUnderPowered();
+
+	for (Int i = 0; i < weaponBonuses.size(); i++) {
+		clearWeaponBonusCondition(weaponBonuses[i]);
+	}
+	for(std::vector<AsciiString>::const_iterator it = customWeaponBonuses.begin(); it != customWeaponBonuses.end(); ++it)
+	{
+		clearCustomWeaponBonusCondition( *it );
+	}
+
+	// Status to Set
+	clearStatus(getTemplate()->getStatusDisabledUnderPowered());
+	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusDisabledUnderPowered();
+	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
+	{
+		clearCustomStatus( *it );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::checkLevitate()
 {
 	if(m_magnetLevitateHeight)
@@ -4466,6 +4574,12 @@ void Object::friend_adjustPowerForPlayer( Bool incoming )
 		return;
 	}
 
+	if(isDisabledPowerByCommand() && isEffectivelyDead() && getTemplate()->getEnergyProduction() < 0)
+	{
+		// Dont add power if we are already disabled by command after we have died
+		return;
+	}
+
 	if (incoming) {
 		getControllingPlayer()->getEnergy()->objectEnteringInfluence(this);
 	} else {
@@ -4529,21 +4643,39 @@ void Object::onDisabledEdge(Bool becomingDisabled)
 		static NameKeyType powerPlant = NAMEKEY("PowerPlantUpgrade");
 		static NameKeyType overCharge = NAMEKEY("OverchargeBehavior");
 
-		Module* mod = findModule(powerPlant);
-		if (mod) {
-			PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) mod;
-			if (powerPlantMod->isAlreadyUpgraded()) {
-				powerToAdjust += getTemplate()->getEnergyBonus();
+		for (BehaviorModule** b = m_behaviors; *b; ++b)
+		{
+			if ((*b)->getModuleNameKey() == powerPlant)
+			{
+				PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) *b;
+				if (powerPlantMod->isAlreadyUpgraded()) {
+					powerToAdjust += getTemplate()->getEnergyBonus();
+				}
+			}
+			if ((*b)->getModuleNameKey() == overCharge)
+			{
+				OverchargeBehavior *overChargeMod = (OverchargeBehavior*) *b;
+				if (overChargeMod->isOverchargeActive()) {
+					powerToAdjust += getTemplate()->getEnergyBonus();
+				}
 			}
 		}
 
-		mod = findModule(overCharge);
-		if (mod) {
-			OverchargeBehavior *overChargeMod = (OverchargeBehavior*) mod;
-			if (overChargeMod->isOverchargeActive()) {
-				powerToAdjust += getTemplate()->getEnergyBonus();
-			}
-		}
+		//Module* mod = findModule(powerPlant);
+		//if (mod) {
+		//	PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) mod;
+		//	if (powerPlantMod->isAlreadyUpgraded()) {
+		//		powerToAdjust += getTemplate()->getEnergyBonus();
+		//	}
+		//}
+
+		//mod = findModule(overCharge);
+		//if (mod) {
+		//	OverchargeBehavior *overChargeMod = (OverchargeBehavior*) mod;
+		//	if (overChargeMod->isOverchargeActive()) {
+		//		powerToAdjust += getTemplate()->getEnergyBonus();
+		//	}
+		//}
 
 		// Now, adjust the power for the player.
 		if (controller)
@@ -4636,6 +4768,7 @@ void Object::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	xfer->xferUnsignedInt(&m_weaponBonusCondition);
+	xfer->xferUnsignedInt(&m_weaponBonusConditionIC);
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -5010,6 +5143,8 @@ void Object::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_levitateCheckCount );
 
 	xfer->xferBool ( &m_dontLevitate );
+
+	xfer->xferBool ( &m_disabledPowerFromCommand );
 
 	// Entered & exited housekeeping.
 	Int i;
@@ -6733,6 +6868,7 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_BEACON_DELETE:
 			case GUI_COMMAND_SET_RALLY_POINT:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
@@ -6869,6 +7005,7 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
 			case GUI_COMMAND_SWITCH_WEAPON:
+			case GUI_COMMAND_DISABLE_POWER:
 
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
@@ -6970,6 +7107,7 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_SELL:
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
@@ -7038,6 +7176,7 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_FIRE_WEAPON:
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif

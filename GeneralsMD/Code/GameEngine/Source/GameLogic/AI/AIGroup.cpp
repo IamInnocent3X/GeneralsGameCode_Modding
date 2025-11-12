@@ -2949,6 +2949,39 @@ void AIGroup::groupToggleOvercharge( CommandSourceType cmdSource )
 
 }
 
+/**
+	* Tell all things in the group to disable their power ... if possible
+	*/
+void AIGroup::groupDisablePower( CommandSourceType cmdSource )
+{
+	std::list<Object *>::iterator i;
+	Object *obj;
+	Bool checked = FALSE;
+	Bool hasDisabledPower = FALSE;
+
+	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
+	{
+
+		// get object
+		obj = *i;
+		
+
+		if(!checked && obj->isDisabledPowerByCommand())
+		{
+			checked = TRUE;
+			hasDisabledPower = TRUE;
+			i = m_memberList.begin();
+		}
+
+		if(!hasDisabledPower)
+			obj->doDisablePower(TRUE);
+		else
+			obj->clearDisablePower(TRUE);
+
+	}  // end for, i
+
+}
+
 #ifdef ALLOW_SURRENDER
 /**
 	* Pick up prisoners of war

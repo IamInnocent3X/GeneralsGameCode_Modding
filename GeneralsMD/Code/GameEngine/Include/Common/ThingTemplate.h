@@ -45,7 +45,9 @@
 #include "Common/ProductionPrerequisite.h"
 #include "Common/Science.h"
 #include "Common/UnicodeString.h"
+#include "Common/ObjectStatusTypes.h"
 
+#include "GameLogic/Weapon.h"
 #include "GameLogic/ArmorSet.h"
 #include "GameLogic/WeaponSet.h"
 #include "Common/STLTypedefs.h"
@@ -64,6 +66,8 @@ enum RadarPriorityType CPP_11(: Int);
 enum ScienceType CPP_11(: Int);
 enum EditorSortingType CPP_11(: Int);
 enum ShadowType CPP_11(: Int);
+enum WeaponBonusConditionType CPP_11(: Int);
+enum DisabledType CPP_11(: Int);
 class WeaponTemplateSet;
 class ArmorTemplateSet;
 class FXList;
@@ -725,6 +729,13 @@ public:
 	Bool friend_getUseMyEnterCursor() const {return m_useMyEnterCursor;	}
 	Bool friend_getUseMySalvageCursor() const {return m_useMySalvageCursor;	}
 
+	Bool setDisabledUnderPowered() const  { return m_setDisabledWhenUnderpowered; }
+	DisabledType getDisabledTypeUnderPowered() const { return m_disabledTypeUnderPowered; }
+	WeaponBonusConditionTypeVec getWeaponBonusDisabledUnderPowered() const { return m_bonusDisabledUnderPowered; }
+	ObjectStatusMaskType getStatusDisabledUnderPowered() const { return m_statusDisabledUnderPowered; }
+	const std::vector<AsciiString>& getCustomWeaponBonusDisabledUnderPowered() const { return m_customBonusDisabledUnderPowered; }
+	const std::vector<AsciiString>& getCustomStatusDisabledUnderPowered() const { return m_customStatusDisabledUnderPowered; }
+
 protected:
 
 	//
@@ -839,6 +850,9 @@ private:
 	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficulty;
 	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficultyAI;
 
+	std::vector<AsciiString>						m_customBonusDisabledUnderPowered;		///< Weapon Bonus to apply when Underpowered
+	std::vector<AsciiString>						m_customStatusDisabledUnderPowered;		///< Status to apply when Underpowered
+
 	WeaponTemplateSetVector							m_weaponTemplateSets;					///< our weaponsets
 	WeaponTemplateSetFinder							m_weaponTemplateSetFinder;		///< helper to allow us to find the best sets, quickly
 	ArmorTemplateSetVector							m_armorTemplateSets;	///< our armorsets
@@ -901,6 +915,7 @@ private:
 	Bool					m_useMySalvageCursor;
 	Bool          m_equipGuard;
 	Bool          m_parasiteGuard;
+	Bool					m_setDisabledWhenUnderpowered;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority
@@ -914,6 +929,11 @@ private:
 	UnsignedByte	m_crusherLevel;							///< crusher > crushable level to actually crush
 	UnsignedByte	m_crushableLevel;						///< Specifies the level of crushability (must be hit by a crusher greater than this to crush me).
 	Byte					m_ammoPipsStyle;                ///< How ammo pips are displayed for this thing
+
+	// ---- Other
+	DisabledType							m_disabledTypeUnderPowered;
+	WeaponBonusConditionTypeVec 			m_bonusDisabledUnderPowered;
+	ObjectStatusMaskType					m_statusDisabledUnderPowered;
 
 };
 

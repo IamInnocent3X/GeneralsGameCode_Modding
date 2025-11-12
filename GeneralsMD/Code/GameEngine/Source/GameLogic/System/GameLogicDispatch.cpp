@@ -1547,6 +1547,19 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 		}  // end toggle overcharge
 
+		
+		// --------------------------------------------------------------------------------------------
+		case GameMessage::MSG_DISABLE_POWER:
+		{
+
+			// use the selected group
+			if( currentlySelectedGroup )
+				currentlySelectedGroup->groupDisablePower( CMD_FROM_PLAYER );
+
+			break;
+
+		}  // end disable power
+
 #ifdef ALLOW_SURRENDER
 		// --------------------------------------------------------------------------------------------
 		case GameMessage::MSG_PICK_UP_PRISONER:

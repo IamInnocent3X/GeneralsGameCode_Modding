@@ -2374,6 +2374,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 							if (dSqr < DARN_CLOSE)
 							{
 								m_doFinalPosition = FALSE;
+								getObject()->setLastActualSpeed(0.0f);
 								//m_continueToUpdateFixLocoClump = FALSE;
 								if (onGround)
 									m_finalPosition.z = TheTerrainLogic->getGroundHeight( m_finalPosition.x, m_finalPosition.y );

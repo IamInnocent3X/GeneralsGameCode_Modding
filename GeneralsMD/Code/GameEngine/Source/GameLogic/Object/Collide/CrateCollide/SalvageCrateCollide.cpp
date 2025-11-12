@@ -88,6 +88,9 @@ SalvageCrateCollideModuleData::SalvageCrateCollideModuleData()
 	m_crateGivesMultiBonus = FALSE;
 	m_multiPickupFlags = 0;
 	m_multiFlagCompletionInfos.clear();
+	m_removePreviousWeaponBonus = FALSE;
+	m_removePreviousStatus = FALSE;
+	m_removePreviousUpgrades = FALSE;
 	m_minimumSciencePurchasePoints = 0;
 	m_maximumSciencePurchasePoints = 0;
 	m_minimumSkillPoints = 0;

@@ -434,6 +434,10 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ClearsParasite",								INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_clearsParasite) },
 	{ "ClearsParasiteKeys",							INI::parseAsciiStringVector,			NULL,			offsetof(WeaponTemplate, m_clearsParasiteKeys) },
 
+	{ "ROFPenaltyWhenMoving",						INI::parsePercentToReal,			NULL,				offsetof(WeaponTemplate, m_rofMovingPenalty) },
+	{ "ROFMovingScalesWithMovingSpeed",				INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_rofMovingScales) },
+	{ "ROFMovingScalingSpeedMax",					INI::parseVelocityReal,		NULL,						offsetof(WeaponTemplate, m_rofMovingMaxSpeedCount) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -638,6 +642,10 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_invalidCursorName = NULL;
 
 	m_rejectKeys.clear();
+
+	m_rofMovingPenalty = 1.0f;
+	m_rofMovingScales = FALSE;
+	m_rofMovingMaxSpeedCount = 0.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3482,6 +3490,10 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 
 	m_status = RELOADING_CLIP;
 	Real reloadTime = loadInstantly ? 0 : m_template->getClipReloadTime(bonus);
+
+	if(m_template->getROFMovingPenalty() != 1.0f)
+		reloadTime = m_template->calcROFForMoving(sourceObj, reloadTime);
+
 	m_whenLastReloadStarted = TheGameLogic->getFrame();
 	m_whenWeCanFireAgain = m_whenLastReloadStarted + reloadTime;
 	//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::reloadWithBonus 1", m_whenWeCanFireAgain));
@@ -3548,6 +3560,11 @@ void Weapon::onWeaponBonusChange(const Object *source)
 	{
 		newDelay = m_template->getDelayBetweenShots(bonus);
 		needUpdate = TRUE;
+	}
+
+	if(m_template->getROFMovingPenalty() != 1.0f)
+	{
+		newDelay = m_template->calcROFForMoving(source, newDelay);
 	}
 
 	if( needUpdate )
@@ -3699,6 +3716,7 @@ Bool Weapon::computeApproachTarget(const Object *source, const Object *target, c
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
 Bool WeaponTemplate::passRequirements(const Object *source) const
 {
 	std::vector<AsciiString> activationUpgrades = getActivationUpgradeNames();
@@ -3784,6 +3802,38 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 	}
 
 	return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+Int WeaponTemplate::calcROFForMoving(const Object *source, Int Delay) const
+{
+	if(source == NULL || source->getPhysics() == NULL)
+		return Delay;
+
+	if(source->getPhysics()->isMotive())
+	{
+		Real value = getROFMovingPenalty();
+
+		if(getROFMovingScales() && source->getAI())
+		{
+			Real speed = source->getAI()->getCurLocomotorSpeed();
+
+			Real curSpeed = min(source->getLastActualSpeed(), speed);
+			Real maxSpeed = getROFMovingMaxSpeedCount() > 0 ? getROFMovingMaxSpeedCount() : speed;
+
+			DEBUG_LOG(("CurrSpeed: %f", curSpeed));
+			if(curSpeed < maxSpeed)
+			{
+				Real scalingRatio = min(1.0f, Real(curSpeed / maxSpeed));
+				value *= scalingRatio;
+			}
+		}
+
+		Int newDelay = Delay * (1.0f + value);
+		return newDelay;
+	}
+	
+	return Delay;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4519,6 +4569,10 @@ Bool Weapon::privateFireWeapon(
 			m_status = BETWEEN_FIRING_SHOTS;
 			//CRCDEBUG_LOG(("Weapon::privateFireWeapon() just set m_status to BETWEEN_FIRING_SHOTS"));
 			Int delay = m_template->getDelayBetweenShots(bonus);
+
+			if(m_template->getROFMovingPenalty() != 1.0f)
+				delay = m_template->calcROFForMoving(sourceObj, delay);
+
 			m_whenLastReloadStarted = now;
 			m_whenWeCanFireAgain = now + delay;
 			//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d (delay is %d) in Weapon::privateFireWeapon", m_whenWeCanFireAgain, delay));
