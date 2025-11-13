@@ -191,6 +191,9 @@ public:
 
 	inline void applyAerialSlowDeathBehaviorCheck( SlowDeathType type ) { m_aerialSlowDeathBehaviorCheck = type; }
 
+	void setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel);
+	void removeConstantMotionToLoc();
+
 	/*
 		stickToGround and allowToFall seem contradictory... here's the deal.
 
@@ -269,6 +272,8 @@ protected:
 
 	void checkSlowDeathBehaviors();
 
+	void locoUpdate_moveTowardsPositionForced();
+
 private:
 
 	enum PhysicsFlagsType
@@ -326,6 +331,11 @@ private:
 	Real 										m_spiralOrbitForwardSpeedDamping;
 	Real 										m_spinRate;
 	Int 										m_orbitDirection;
+
+	Bool										m_doConstantMotion;
+	Real 										m_constantMaxSpeed;
+	Real 										m_constantMaxAccel;
+	Coord3D										m_constantMotionToLoc;
 
 	SlowDeathType								m_aerialSlowDeathBehaviorCheck;
 

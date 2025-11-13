@@ -276,6 +276,7 @@ Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
 	CrateCollide::revertCollideBehavior(other);
 
 	getObject()->setHijackingID(INVALID_ID);
+	getObject()->setLastExitedFrame(TheGameLogic->getFrame() + 10*LOGICFRAMES_PER_SECOND);
 
 	// If the Object doesn't exist, or is destroyed we stop here.
 	if(!other || other->isDestroyed() || other->isEffectivelyDead())

@@ -365,6 +365,8 @@ Bool EquipCrateCollide::revertCollideBehavior(Object *other)
 	CrateCollide::revertCollideBehavior(other);
 	clearEquipStatus();
 
+	getObject()->setLastExitedFrame(TheGameLogic->getFrame() + 10*LOGICFRAMES_PER_SECOND);
+
 	// If the Object doesn't exist, or is destroyed we stop here.
 	if(!other || other->isDestroyed() || other->isEffectivelyDead())
 		return FALSE;

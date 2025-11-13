@@ -775,6 +775,12 @@ public:
 
 	Bool isDozerDoingAnyTasks() const;
 
+	inline void setLastExitedFrame(UnsignedInt frames) { m_lastExitedFrame = frames; }
+	inline UnsignedInt getLastExitedFrame() const { return m_lastExitedFrame; }
+
+	inline void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
+	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;
@@ -1021,6 +1027,7 @@ private:
 
 	Bool											m_disabledPowerFromCommand;
 
+	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;
 	Bool											m_mobJustUpdated;
 
@@ -1033,6 +1040,9 @@ private:
 	Bool											m_hasSlowDeathLayerUpdate;
 	Bool											m_checkSlowDeathBehavior;
 	Bool											m_hasBattleBusSlowDeathBehavior;
+
+	UnsignedInt										m_lastExitedFrame;
+	UnsignedInt										m_noAcceptOrdersFrame;
 
 };  // end class Object
 

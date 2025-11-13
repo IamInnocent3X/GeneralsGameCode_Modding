@@ -343,6 +343,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_lastActualSpeed = 0.0f;
 
+	m_lastExitedFrame = 0;
+	m_noAcceptOrdersFrame = 0;
+
 	m_group = NULL;
 
 	m_constructionPercent = CONSTRUCTION_COMPLETE;  // complete by default
@@ -5146,6 +5149,8 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferBool ( &m_disabledPowerFromCommand );
 
+	xfer->xferUnsignedInt( &m_lastExitedFrame );
+
 	// Entered & exited housekeeping.
 	Int i;
 	xfer->xferByte(&m_numTriggerAreasActive);
@@ -8113,23 +8118,25 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 //-------------------------------------------------------------------------------------------------
 Bool Object::checkToSquishHijack(const Object *other) const
 {
+	UnsignedInt now = TheGameLogic->getFrame();
+
 	if( !m_lastEquipToIDs.empty() )
 	{
 		for (std::vector<ObjectID>::const_iterator it = m_lastEquipToIDs.begin(); it != m_lastEquipToIDs.end(); ++it)
 		{
 			//don't crush the equipper after it has been removed!
-			if(other->getID() == (*it))
+			if(other->getID() == (*it) && other->getLastExitedFrame() > now)
 				return false;
 		}
 	}
 	
-	if( m_carbombConverterID != INVALID_ID && other->getID() == m_carbombConverterID )
+	if( m_carbombConverterID != INVALID_ID && other->getID() == m_carbombConverterID && other->getLastExitedFrame() > now)
 	{
 		//don't crush the converter after it has been removed!
 		return false;
 	}
 	
-	if( m_hijackerID != INVALID_ID && other->getID() == m_hijackerID )
+	if( m_hijackerID != INVALID_ID && other->getID() == m_hijackerID && other->getLastExitedFrame() > now)
 	{
 		//don't crush the hijacker after it has been removed!
 		return false;

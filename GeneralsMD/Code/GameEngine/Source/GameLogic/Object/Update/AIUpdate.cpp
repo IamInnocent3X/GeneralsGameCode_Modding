@@ -63,6 +63,7 @@
 #include "GameLogic/Module/DeliverPayloadAIUpdate.h"
 #include "GameLogic/Module/HackInternetAIUpdate.h"
 #include "GameLogic/Module/HordeUpdate.h"
+#include "GameLogic/Module/SupplyTruckAIUpdate.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/PolygonTrigger.h"
@@ -513,17 +514,18 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 	{
 		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
 		const Coord3D *currPos = getObject()->getPosition();
-		if(fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < 0.25f &&
-			fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < 0.25f)
+		if(fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < 0.0625f &&
+			fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < 0.0625f)
 		{
-			DEBUG_LOG(("Pathfind: Approach Path m_lastPos is near to currentPos. x:%f y:%f z:%f", m_lastPos.x, m_lastPos.y, m_lastPos.z));
+			//DEBUG_LOG(("Pathfind: Approach Path m_lastPos is near to currentPos. x:%f y:%f z:%f", m_lastPos.x, m_lastPos.y, m_lastPos.z));
+			//DEBUG_LOG(("Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
 			setIgnoreCollisionTime(2*LOGICFRAMES_PER_SECOND);
 			m_blockedFrames = 0;
 			m_isBlocked = FALSE;
 			m_isBlockedAndStuck = FALSE;
 			TheAI->pathfinder()->adjustToPossibleDestination(getObject(), getLocomotorSet(), &m_requestedDestination);
-			m_lastPos = *currPos;
 		}
+		m_lastPos = *currPos;
 	}
 	computePath(pathfinder, &m_requestedDestination);
 	if (m_isFinalGoal && isDoingGroundMovement() && getPath()) {
@@ -2374,7 +2376,6 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 							if (dSqr < DARN_CLOSE)
 							{
 								m_doFinalPosition = FALSE;
-								getObject()->setLastActualSpeed(0.0f);
 								//m_continueToUpdateFixLocoClump = FALSE;
 								if (onGround)
 									m_finalPosition.z = TheTerrainLogic->getGroundHeight( m_finalPosition.x, m_finalPosition.y );
@@ -2392,6 +2393,8 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 									pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
 								getObject()->setPosition(&pos);
 							}
+
+							getObject()->setLastActualSpeed(0.0f);
 						}
 						requiresConstantCalling = m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject());
 					}
@@ -2414,23 +2417,29 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
 		// NOTE: This is NOT to be treated as the main solution, but for as a temporary fix for a much bigger problem
-		if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5)
+		// Investigation Notes: The problem most likely occur due to the physics update
+		if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 && getObject()->isKindOf(KINDOF_SELECTABLE) && getObject()->getPhysics())
 		{
 			const Coord3D *currPos = getObject()->getPosition();
-			const Real DARN_CLOSE = 0.25f;
+			const Real DARN_CLOSE = 0.0625f;
 			Object *source = getObject();
+			PhysicsBehavior* physics = source->getPhysics();
+
 			Bool currentlyAttacking = isAttacking() || source->testStatus( OBJECT_STATUS_IS_ATTACKING ) || 
 						source->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) ||
 						source->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) ||
 						source->testStatus( OBJECT_STATUS_IGNORING_STEALTH );
 
-			Bool invalidConditions = source->isAboveTerrain() || source->getLayer() != LAYER_GROUND ||
-						isBusy() ||
+			Bool isAboveGround = source->isAboveTerrain() || source->getLayer() != LAYER_GROUND;
+
+			Bool invalidConditions = isBusy() || getJetAIUpdate() || 
+						(getSupplyTruckAIInterface() && getSupplyTruckAIInterface()->isCurrentlyFerryingSupplies()) ||
 						source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) ||
 						source->isDozerDoingAnyTasks();
 
-			if(!m_continueToUpdateFixLocoClump && !currentlyAttacking && !invalidConditions &&
-				(m_isFinalGoal || m_doFinalPosition) &&
+			if(!m_continueToUpdateFixLocoClump && !currentlyAttacking && !invalidConditions && !isAboveGround &&
+				//(m_isFinalGoal || m_doFinalPosition) &&
+				!physics->isMotive() &&
 				(isMoving() || getPath()) &&
 				(!isAiInDeadState() || m_curLocomotor->getLocomotorWorksWhenDead()) &&
 				fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
@@ -2439,25 +2448,36 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			{
 				m_continueToUpdateFixLocoClump = TRUE;
 				m_lastRequestedDestination = m_requestedDestination;
+
+				BodyDamageType bdt = source->getBodyModule()->getDamageState();
+				physics->setConstantMotionToLoc(&m_requestedDestination, m_curLocomotor->getMaxSpeedForCondition(bdt), m_curLocomotor->getMaxAcceleration(bdt));
+				//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+				//	DEBUG_LOG(("Human Object is Clumped. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				//else
+				//	DEBUG_LOG(("Computer Object is Clumped. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
 			}
 
-			if(m_continueToUpdateFixLocoClump && now >= m_locoClumpScanFrame)
+			if(m_continueToUpdateFixLocoClump && now >= m_locoClumpScanFrame )
 			{
-				if(m_locoClumpScanFrame && source->getControllingPlayer()->getPlayerType() != PLAYER_HUMAN &&
-					fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
-					fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE
-				  )
-				{
-					destroyPath();
-					m_locoClumpScanFrame = 0;
-					return UPDATE_SLEEP_FOREVER;
-				}
+				//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+				//	DEBUG_LOG(("Human Object attempt to Solve Clump. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				//else
+				//	DEBUG_LOG(("Computer Object attempt to Solve Clump. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				
+				Real dx = m_lastRequestedDestination.x - currPos->x;
+				Real dy = m_lastRequestedDestination.y - currPos->y;
+				Real dSqr = dx*dx+dy*dy;
 
-				const Coord3D *dest = getGoalPosition();
+				Bool isNotCloseToDestination = dSqr > 6*6*PATHFIND_CELL_SIZE*PATHFIND_CELL_SIZE;
+				
+				Bool isDarnClose = fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
+							   	   fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE;
+
+				//const Coord3D *dest = getGoalPosition();
 				if(currentlyAttacking)
 				{
-					if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
-						destroyPath();
+					//if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
+					//	destroyPath();
 
 					m_continueToUpdateFixLocoClump = FALSE;
 
@@ -2487,25 +2507,40 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 				}
 				else if(invalidConditions)
 				{
-					if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
-						destroyPath();
+					//if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
+					//	destroyPath();
 
 					m_continueToUpdateFixLocoClump = FALSE;
+				}
+
+				if(m_locoClumpScanFrame && source->getControllingPlayer()->getPlayerType() != PLAYER_HUMAN && isDarnClose && isNotCloseToDestination)
+				{
+					//DEBUG_LOG(("Object Template is: %s. Object ID: %d. Destroy Path and Dont let me do things.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+					//destroyPath();
+					m_continueToUpdateFixLocoClump = FALSE;
+					physics->removeConstantMotionToLoc();
+					source->setNoAcceptOrdersFrame(now + LOGICFRAMES_PER_SECOND * 3);
+					m_locoClumpScanFrame = 0;
+					return UPDATE_SLEEP_FOREVER;
 				}
 				
 				if(getLastCommandSource() != CMD_FROM_AI)
 				{
 					m_lastRequestedDestination = m_requestedDestination;
+					BodyDamageType bdt = source->getBodyModule()->getDamageState();
+					physics->setConstantMotionToLoc(&m_requestedDestination, m_curLocomotor->getMaxSpeedForCondition(bdt), m_curLocomotor->getMaxAcceleration(bdt));
 				}
-				if( m_continueToUpdateFixLocoClump && !isMoving() && !isDoingGroundMovement() && !currentlyAttacking &&
-					fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
-					fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE)
+				if( m_continueToUpdateFixLocoClump && (isDarnClose || isNotCloseToDestination))
 				{
-					Real dx = m_lastRequestedDestination.x - currPos->x;
-					Real dy = m_lastRequestedDestination.y - currPos->y;
-					Real dSqr = dx*dx+dy*dy;
-					if (dSqr > DARN_CLOSE && (m_locomotorGoalType != NONE || m_doFinalPosition == TRUE || dSqr > (100*100)))
+					//Real dx = m_lastRequestedDestination.x - currPos->x;
+					//Real dy = m_lastRequestedDestination.y - currPos->y;
+					//Real dSqr = dx*dx+dy*dy;
+					if (dSqr > (DARN_CLOSE * 4) && (m_locomotorGoalType != NONE || isNotCloseToDestination))
 					{
+						//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+						//	DEBUG_LOG(("Human Object Clumped, Tell Me To Move. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+						//else
+						//	DEBUG_LOG(("Computer Object Clumped, Tell Me To Move. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
 						setIgnoreCollisionTime(LOGICFRAMES_PER_SECOND);
 						m_blockedFrames = 0;
 						m_isBlocked = FALSE;
@@ -2528,9 +2563,23 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
 				}
 
+				if(!m_continueToUpdateFixLocoClump)
+				{
+					physics->removeConstantMotionToLoc();
+					//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+					//	DEBUG_LOG(("Human Object Clumped Solved. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+					//else
+					//	DEBUG_LOG(("Computer Object Clumped Solved. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				}
+
 				m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 3;
 				m_lastPos = *currPos;
 			}
+			//if(now >= m_locoClumpScanFrame)
+			//{
+			//	m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 3;
+			//	m_lastPos = *currPos;
+			//}
 			//m_lastPos = *currPos;
 		}
 	}
@@ -2877,6 +2926,9 @@ Bool AIUpdateInterface::isAllowedToRespondToAiCommands(const AICommandParms* par
 	// (unless they are seeking to feed on the brains of the living)
 	// [urrr, need brains]
 	if (getObject()->isEffectivelyDead())
+		return FALSE;
+
+	if ( parms->m_cmdSource == CMD_FROM_PLAYER && getObject()->getNoAcceptOrdersFrame() > TheGameLogic->getFrame() )
 		return FALSE;
 
 	// We're catching the sleep mood here. AI Units that are asleep actually ignore all commands.

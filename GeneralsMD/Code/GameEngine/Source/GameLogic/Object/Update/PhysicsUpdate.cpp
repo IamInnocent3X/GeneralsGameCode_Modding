@@ -44,6 +44,7 @@
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/Locomotor.h"
 #include "GameLogic/LogicRandomValue.h"
 
 const Real DEFAULT_MASS = 1.0f;
@@ -235,6 +236,24 @@ PhysicsBehavior::PhysicsBehavior( Thing *thing, const ModuleData* moduleData ) :
 
 	m_pui = NULL;
 	m_bounceSound = NULL;
+
+	m_rollRateStatic = 0.0f;
+	m_rollStaticFactor = 1.0f;
+	m_pitchRateStatic = 0.0f;
+
+	m_forwardAngle = 0.0f;
+	m_forwardSpeed = 0.0f;
+	m_spiralOrbitTurnRate = 0.0f;
+	m_spiralOrbitForwardSpeedDamping = 0.0f;
+	m_orbitDirection = 0;
+	m_spinRate = 0.0f;
+
+	m_aerialSlowDeathBehaviorCheck = SLOWDEATH_INVALID;
+
+	m_doConstantMotion = FALSE;
+	m_constantMotionToLoc.zero();
+	m_constantMaxSpeed = 0;
+	m_constantMaxAccel = 0;
 
 #ifdef SLEEPY_PHYSICS
 	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
@@ -442,16 +461,6 @@ void PhysicsBehavior::resetDynamicPhysics()
 	m_yawRate = 0;
 	m_rollRate = 0;
 	m_pitchRate = 0;
-	m_rollRateStatic = 0;
-	m_rollStaticFactor = 1.0f;
-	m_pitchRateStatic = 0;
-	m_forwardAngle = 0;
-	m_forwardSpeed = 0;
-	m_spiralOrbitTurnRate = 0;
-	m_spiralOrbitForwardSpeedDamping = 0;
-	m_orbitDirection = 0;
-	m_spinRate = 0;
-	m_aerialSlowDeathBehaviorCheck = SLOWDEATH_INVALID;
 	setFlag(HAS_PITCHROLLYAW, false);
 #ifdef SLEEPY_PHYSICS
 	DEBUG_ASSERTCRASH(!getFlag(IS_IN_UPDATE), ("hmm, should not happen, may not work"));
@@ -708,6 +717,20 @@ void PhysicsBehavior::doHelicopterSlowDeathForce( Real forwardAngle, Real forwar
 }
 
 //-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel)
+{
+	m_doConstantMotion = TRUE;
+	m_constantMotionToLoc.set(toPos);
+	m_constantMaxSpeed = maxSpeed;
+	m_constantMaxAccel = maxAccel;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::removeConstantMotionToLoc()
+{
+	m_doConstantMotion = FALSE;
+}
+//-------------------------------------------------------------------------------------------------
 /**
  * Basic rigid body physics using an Euler integrator.
  * @todo Currently, only translations are integrated. Rotations should also be integrated. (MSB)
@@ -739,6 +762,20 @@ UpdateSleepTime PhysicsBehavior::update()
 
 	if (!obj->isDisabledByType(DISABLED_HELD))
 	{
+		if(m_doConstantMotion)
+		{
+			//locoUpdate_moveTowardsPositionForced();
+			AIUpdateInterface* ai = obj->getAIUpdateInterface();
+			if(ai && ai->getCurLocomotor())
+			{
+				//DEBUG_LOG(("Applying Forced Locomotor. Frame: %d.", TheGameLogic->getFrame()));
+				
+				Bool blocked = FALSE;
+				ai->getCurLocomotor()->locoUpdate_moveTowardsPosition(getObject(),
+					m_constantMotionToLoc, 0.0f, m_constantMaxSpeed, &blocked);
+			}
+		}
+		
 		Matrix3D mtx = *obj->getTransformMatrix();
 
 		applyGravitationalForces();
@@ -1069,7 +1106,7 @@ void PhysicsBehavior::checkSlowDeathBehaviors()
 			}
 			case SLOWDEATH_HELICOPTER:
 			{
-				DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER"));
+				//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER"));
 				// srj sez: if we haven't yet hit the ground, adjust our layer properly so we crash on bridges
 				Coord3D tmpPt = *pos;
 				tmpPt.z = 99999.0f;
@@ -1086,7 +1123,7 @@ void PhysicsBehavior::checkSlowDeathBehaviors()
 			}
 			case SLOWDEATH_JET:
 			{
-				DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET"));
+				//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET"));
 				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
 				obj->setLayer(layer);
 				Real height;
@@ -1115,6 +1152,79 @@ void PhysicsBehavior::checkSlowDeathBehaviors()
 		if(doCheck)
 			obj->doSlowDeathLayerUpdate(FALSE);
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::locoUpdate_moveTowardsPositionForced()
+{
+	Object *obj = getObject();
+	// Skip moveTowardsPosition if physics say you're stunned
+	if(getIsStunned() || obj->testCustomStatus("DISABLED_MOVEMENT"))
+	{
+		return;
+	}
+
+	setTurning(TURN_NONE);
+
+	Real maxAcceleration = m_constantMaxAccel;
+
+	Real goalSpeed = m_constantMaxSpeed;
+	Real actualSpeed = getForwardSpeed2D();
+
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
+	// Locomotion for other things, ie don't know what it is jba :)
+	//
+	// Orient toward goal position
+	// exception: if very close (ie, we could get there in 2 frames or less),\
+	// and ULTRA_ACCURATE, just slide into place
+	//
+	//const Coord3D* pos =  obj->getPosition();
+	Coord3D dirToApplyForce = *obj->getUnitDirectionVector2D();
+
+//DEBUG_ASSERTLOG(!getFlag(ULTRA_ACCURATE),("thresh %f %f (%f %f)",
+//fabs(goalPos.y - pos->y),fabs(goalPos.x - pos->x),
+//fabs(goalPos.y - pos->y)/goalSpeed,fabs(goalPos.x - pos->x)/goalSpeed));
+	/*if (getFlag(ULTRA_ACCURATE) &&
+				fabs(goalPos.y - pos->y) <= goalSpeed * m_template->m_ultraAccurateSlideIntoPlaceFactor &&
+				fabs(goalPos.x - pos->x) <= goalSpeed * m_template->m_ultraAccurateSlideIntoPlaceFactor)
+	{
+		// don't turn, just slide in the right direction
+		physics->setTurning(TURN_NONE);
+		dirToApplyForce.x = goalPos.x - pos->x;
+		dirToApplyForce.y = goalPos.y - pos->y;
+		dirToApplyForce.z = 0.0f;
+		dirToApplyForce.normalize();
+	}*/
+
+	//
+	// Maintain goal speed
+	//
+	Real speedDelta = goalSpeed - actualSpeed;
+	//if (speedDelta != 0.0f)
+	//{
+	DEBUG_LOG(("Applying Forced Locomotor. Frame: %d.", TheGameLogic->getFrame()));
+	
+	Real mass = getMass();
+	Real acceleration = maxAcceleration;
+	Real accelForce = mass * acceleration;
+
+	/*
+		don't accelerate/brake more than necessary. do a quick calc to
+		see how much force we really need to achieve our goal speed...
+	*/
+	Real maxForceNeeded = mass * speedDelta;
+	if (fabs(accelForce) > fabs(maxForceNeeded))
+		accelForce = maxForceNeeded;
+
+	Coord3D force;
+	force.x = accelForce * dirToApplyForce.x;
+	force.y = accelForce * dirToApplyForce.y;
+	force.z = 0.0f;
+
+	// apply forces to object
+	applyMotiveForce( &force );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2095,16 +2205,22 @@ void PhysicsBehavior::xfer( Xfer *xfer )
 	// pitch that never changes
 	xfer->xferReal( &m_pitchRateStatic );
 
+	// forward angle from slow death
 	xfer->xferReal( &m_forwardAngle );
 
+	// forward speed from slow death
 	xfer->xferReal( &m_forwardSpeed );
 
+	// spiral orbit turn rate from slow death
 	xfer->xferReal( &m_spiralOrbitTurnRate );
 
+	// spiral orbit forward speed damping from slow death
 	xfer->xferReal( &m_spiralOrbitForwardSpeedDamping );
 
+	// orbit direction from slow death
 	xfer->xferInt( &m_orbitDirection );
 
+	// aerial slow death behavior check
 	xfer->xferUser( &m_aerialSlowDeathBehaviorCheck, sizeof( SlowDeathType ) );
 
 	// helicopter slow death spin
