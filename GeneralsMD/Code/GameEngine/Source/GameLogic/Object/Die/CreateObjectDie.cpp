@@ -60,6 +60,13 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	{
 		{ "CreationList",	INI::parseObjectCreationList,		NULL,											offsetof( CreateObjectDieModuleData, m_ocl ) },
 		{ "TransferPreviousHealth", INI::parseBool, NULL	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealth ) },
+		{ "TransferAttackers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferAttack ) },
+		{ "TransferStatuses",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferStatus ) },
+		{ "TransferWeaponBonuses",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferWeaponBonus ) },
+		{ "TransferBombs",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferBombs ) },
+		{ "TransferHijackers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferParasites ) },
+		{ "TransferParasites",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferParasites ) },
+		{ "TransferPassengers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferPassengers ) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -128,6 +135,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 			}
 
 			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
+			newObject->refreshSubdualHelper();
 
 		}
 

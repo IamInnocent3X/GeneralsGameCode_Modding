@@ -74,6 +74,7 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	m_customStatusToDestroy.clear();
 	m_wasTargetAirborne = false;
 	m_ejectPos.zero();
+	m_hijackType = HIJACK_NONE;
 //	m_ejectPilotDMI = NULL;
 }
 
@@ -218,6 +219,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 
 				// Make the target NULL for reverting the behavior
 				setTargetObject( NULL );
+				setHijackType( HIJACK_NONE );
 
 				// Inform the module we have reverted
 				revertedCollide = TRUE;
@@ -311,6 +313,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 			}
 
 			setTargetObject( NULL );
+			setHijackType( HIJACK_NONE );
 			setIsInVehicle( FALSE );
 			//setUpdate( FALSE );
 			setNoLeechExp( FALSE );
@@ -374,6 +377,38 @@ void HijackerUpdate::setTargetObject( const Object *object )
 //		m_ejectPilotDMI = NULL;
 	}
 
+}
+
+void HijackerUpdate::setRetargetObject( ObjectID ID )
+{
+	Object *object = TheGameLogic->findObjectByID( ID );
+	if(object)
+	{
+		Object *self = getObject();
+		switch(m_hijackType)
+		{
+			case HIJACK_CARBOMB:
+			{
+				self->setHijackingID( object->getID() );
+				object->setCarBombConverterID( self->getID() );
+				break;
+			}
+			case HIJACK_HIJACKER:
+			{
+				self->setHijackingID( object->getID() );
+				object->setHijackerID( self->getID() );
+				break;
+			}
+			case HIJACK_EQUIP:
+			{
+				self->setEquipToID( object->getID() );
+				object->setEquipObjectID( self->getID() );
+				if(!self->testStatus(OBJECT_STATUS_NO_ATTACK))
+					object->setEquipAttackableObjectID( self->getID() );
+				break;
+			}
+		}
+	}
 }
 
 Object* HijackerUpdate::getTargetObject() const
@@ -456,6 +491,9 @@ void HijackerUpdate::xfer( Xfer *xfer )
 
 	// status to destroy
 	m_statusToDestroy.xfer( xfer );
+
+	// hijack type
+	xfer->xferUser( &m_hijackType, sizeof(HijackType) );
 
 	UnsignedShort customStatusToRemoveCount = m_customStatusToRemove.size();
 	UnsignedShort customStatusToDestroyCount = m_customStatusToDestroy.size();

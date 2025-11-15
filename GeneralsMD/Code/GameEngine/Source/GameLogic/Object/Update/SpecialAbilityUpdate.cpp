@@ -1350,8 +1350,9 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       Object *charge = createSpecialObject();
       if( charge )
       {
-        static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-        StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+        //static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+			  //StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+			  StickyBombUpdateInterface *update = charge->getStickyBombUpdateInterface();
         if( !update )
         {
           DEBUG_ASSERTCRASH( 0,
@@ -1547,7 +1548,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
           Object *specialObject = TheGameLogic->findObjectByID( *i );
           if( specialObject )
           {
-            StickyBombUpdate *update = (StickyBombUpdate*)specialObject->findUpdateModule( key_StickyBombUpdate );
+            //StickyBombUpdate *update = (StickyBombUpdate*)specialObject->findUpdateModule( key_StickyBombUpdate );
+            StickyBombUpdateInterface *update = specialObject->getStickyBombUpdateInterface();
             if( update )
             {
               //Blow it up!!!
@@ -1572,7 +1574,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         Object *charge = createSpecialObject();
         if( charge )
         {
-          StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+          //StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+          StickyBombUpdateInterface *update = charge->getStickyBombUpdateInterface();
           if( !update )
           {
             DEBUG_ASSERTCRASH( 0,

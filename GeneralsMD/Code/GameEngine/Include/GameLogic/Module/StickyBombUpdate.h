@@ -80,8 +80,30 @@ public:
 	}
 };
 
+
+// ------------------------------------------------------------------------------------------------
+class StickyBombUpdateInterface
+{
+public:
+	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL ) = 0;
+	virtual void detonate() = 0;
+	virtual Bool isTimedBomb() const = 0;
+	virtual UnsignedInt getDetonationFrame() const = 0;
+	virtual Object* getTargetObject() const = 0;
+	virtual void setTargetObject( Object *obj ) = 0;
+
+	//AsciiString getAnimBaseTemplate() { return getStickyBombUpdateModuleData()->m_animBaseTemplate; }
+	//AsciiString getAnimTimedTemplate() { return getStickyBombUpdateModuleData()->m_animTimedTemplate; }
+
+	virtual Anim2DTemplate* getAnimBaseTemplate() = 0;
+	virtual Anim2DTemplate* getAnimTimedTemplate() = 0;
+
+	virtual Bool showAnimBaseTemplate() = 0;
+	virtual Bool showAnimTimedTemplate() = 0;
+};
+
 //-------------------------------------------------------------------------------------------------
-class StickyBombUpdate : public UpdateModule
+class StickyBombUpdate : public UpdateModule, public StickyBombUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( StickyBombUpdate, "StickyBombUpdate" )
@@ -96,18 +118,26 @@ public:
 
 	virtual UpdateSleepTime update();							///< called once per frame
 
-	void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL );
-	void detonate();
-	Bool isTimedBomb() const { return (m_dieFrame > 0) && getStickyBombUpdateModuleData()->m_showTimer; }
-	UnsignedInt getDetonationFrame() const { return m_dieFrame; }
-	Object* getTargetObject() const;
-	void setTargetObject( Object *obj );
+	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return this; }
+
+	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL );
+	virtual void detonate();
+	virtual Bool isTimedBomb() const { return (m_dieFrame > 0) && getStickyBombUpdateModuleData()->m_showTimer; }
+	virtual UnsignedInt getDetonationFrame() const { return m_dieFrame; }
+	virtual Object* getTargetObject() const;
+	virtual void setTargetObject( Object *obj );
 
 	//AsciiString getAnimBaseTemplate() { return getStickyBombUpdateModuleData()->m_animBaseTemplate; }
 	//AsciiString getAnimTimedTemplate() { return getStickyBombUpdateModuleData()->m_animTimedTemplate; }
 
-	Anim2DTemplate* getAnimBaseTemplate();
-	Anim2DTemplate* getAnimTimedTemplate();
+	virtual Anim2DTemplate* getAnimBaseTemplate();
+	virtual Anim2DTemplate* getAnimTimedTemplate();
+
+	//inline Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
+	//inline Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
+
+	virtual Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
+	virtual Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
 
 private:
 

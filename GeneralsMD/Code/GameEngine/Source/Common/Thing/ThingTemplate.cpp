@@ -262,6 +262,16 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "MaxSimultaneousOfTypeDifficultyAIOverride",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficultyAI ) },
 	{ "MaxSimultaneousOfTypeCustomMessage",			INI::parseAndTranslateLabel,				NULL,		offsetof( ThingTemplate, m_maxSimultaneousCustomMessage ) },
 
+	// Set Underpowered Properties
+	{ "DisabledWhenUnderpowered",			INI::parseBool,		NULL, offsetof( ThingTemplate, m_setDisabledWhenUnderpowered ) },
+	{ "DisabledTypeWhenUnderpowered",		DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( ThingTemplate, m_disabledTypeUnderPowered ) },
+	{ "StatusDisabledUnderPowered",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( ThingTemplate, m_statusDisabledUnderPowered ) },
+	{ "CustomStatusDisabledUnderPowered",	INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customStatusDisabledUnderPowered ) },
+	{ "WeaponBonusDisabledUnderPowered",	INI::parseWeaponBonusVector, NULL, offsetof( ThingTemplate, m_bonusDisabledUnderPowered ) },
+	{ "CustomWeaponBonusDisabledUnderPowered",			INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customBonusDisabledUnderPowered ) },
+	{ "TintStatusDisabledUnderPowered",			TintStatusFlags::parseSingleBitFromINI,		NULL, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
+	{ "CustomTintStatusDisabledUnderPowered",	INI::parseAsciiString, 	NULL, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
+
 	// Customize Action Cursors
 	{ "SelectingCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_selectingCursorName ) },
 	{ "MoveCursorName",						INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_moveToCursorName ) },
@@ -1173,6 +1183,11 @@ ThingTemplate::ThingTemplate() :
 	m_maxSimultaneousOfTypeDifficulty.clear();
 	m_maxSimultaneousOfTypeDifficultyAI.clear();
 	m_maxSimultaneousCustomMessage = UnicodeString::TheEmptyString;
+
+	m_setDisabledWhenUnderpowered = TRUE;
+	m_disabledTypeUnderPowered = DISABLED_UNDERPOWERED;
+	m_tintStatusUnderPowered = TINT_STATUS_INVALID;
+	m_customTintStatusUnderPowered = NULL;
 
 	m_genericInvalidCursorName = NULL;
 	m_selectingCursorName = NULL;

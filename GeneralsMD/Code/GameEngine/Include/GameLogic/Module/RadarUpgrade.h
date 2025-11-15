@@ -53,10 +53,18 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
 
+// ------------------------------------------------------------------------------------------------
+class RadarUpgradeInterface
+{
+public:
+	virtual Bool getIsDisableProof(void) const = 0;
+	virtual Bool isUpgraded(void) const = 0;
+};
+
 //-------------------------------------------------------------------------------------------------
 /** The Radar upgrade module */
 //-------------------------------------------------------------------------------------------------
-class RadarUpgrade : public UpgradeModule
+class RadarUpgrade : public UpgradeModule, public RadarUpgradeInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( RadarUpgrade, "RadarUpgrade" )
@@ -67,9 +75,12 @@ public:
 	RadarUpgrade( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype defined by MemoryPoolObject
 
+	virtual RadarUpgradeInterface* getRadarUpgradeInterface() { return this; }
+	
 	virtual void onDelete( void );																///< we have some work to do when this module goes away
 	virtual void onCapture( Player *oldOwner, Player *newOwner );	///< object containing upgrade has changed teams
-	Bool getIsDisableProof(void) const { return getRadarUpgradeModuleData()->m_isDisableProof; }
+	virtual Bool getIsDisableProof(void) const { return getRadarUpgradeModuleData()->m_isDisableProof; }
+	virtual Bool isUpgraded(void) const { return isAlreadyUpgraded(); }
 
 	void doRadarUpgrade(Bool isAdd);
 

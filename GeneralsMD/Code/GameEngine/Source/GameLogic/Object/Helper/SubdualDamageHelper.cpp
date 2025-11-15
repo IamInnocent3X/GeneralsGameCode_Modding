@@ -67,8 +67,8 @@ UpdateSleepTime SubdualDamageHelper::update()
 
 	std::vector<AsciiString> subdualDamageCustom;
 	subdualDamageCustom = body->getAnySubdualDamageCustom();
-	if( !subdualDamageCustom.empty() )
-	{
+	//if( !subdualDamageCustom.empty() )
+	//{
 		for(int i = 0; i < subdualDamageCustom.size(); i++)
 		{
 			UnsignedInt cooldown = body->getSubdualDamageHealRateCustom(subdualDamageCustom[i]);
@@ -83,6 +83,8 @@ UpdateSleepTime SubdualDamageHelper::update()
 					HealData.tintStatus = it->second.tintStatus;
 					HealData.customTintStatus = it->second.customTintStatus;
 					HealData.disableType = it->second.disableType;
+					HealData.disableTint = it->second.disableTint;
+					HealData.disableCustomTint = it->second.disableCustomTint;
 					HealData.isSubdued = FALSE;
 					
 					body->internalAddSubdualDamageCustom(HealData, subdualDamageCustom[i], TRUE);
@@ -96,7 +98,7 @@ UpdateSleepTime SubdualDamageHelper::update()
 				}
 			}
 		}
-	}
+	//}
 
 	//if(body->hasAnySubdualDamageCustom() && m_healingStepCountdown <= 0)
 	//	return UPDATE_SLEEP_NONE;
@@ -163,7 +165,7 @@ void SubdualDamageHelper::notifySubdualDamage( Real amount )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void SubdualDamageHelper::notifySubdualDamageCustom( Real amount, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus, DisabledType disableType )
+void SubdualDamageHelper::notifySubdualDamageCustom( SubdualCustomData subdualData, const AsciiString& customStatus )
 {
 	if( amount > 0 )
 	{
@@ -174,17 +176,21 @@ void SubdualDamageHelper::notifySubdualDamageCustom( Real amount, const AsciiStr
 		if(it != m_healingStepCountdownCustomMap.end())
 		{
 			it->second.healFrame = now + cooldown;
-			it->second.tintStatus = tintStatus;
-			it->second.customTintStatus = customTintStatus;
-			it->second.disableType = disableType;
+			it->second.tintStatus = subdualData.tintStatus;
+			it->second.customTintStatus = subdualData.customTintStatus;
+			it->second.disableType = subdualData.disableType;
+			it->second.disableTint = subdualData.disableTint;
+			it->second.disableCustomTint = subdualData.disableCustomTint;
 		}
 		else
 		{
 			SubdualCustomHealData HealData;
 			HealData.healFrame = now + cooldown;
-			HealData.tintStatus = tintStatus;
-			HealData.customTintStatus = customTintStatus;
-			HealData.disableType = disableType;
+			HealData.tintStatus = subdualData.tintStatus;
+			HealData.customTintStatus = subdualData.customTintStatus;
+			HealData.disableType = subdualData.disableType;
+			HealData.disableTint = subdualData.disableTint;
+			HealData.disableCustomTint = subdualData.disableCustomTint;
 
 			m_healingStepCountdownCustomMap[customStatus] = HealData;
 		}
@@ -240,6 +246,8 @@ void SubdualDamageHelper::xfer( Xfer *xfer )
 	UnsignedInt customSubdualTint;
 	AsciiString customSubdualCustomTint;
 	UnsignedInt customSubdualDisableType;
+	UnsignedInt customSubdualDisableTint;
+	AsciiString customSubdualDisableCustomTint;
 	if( xfer->getXferMode() == XFER_SAVE )
 	{
 
@@ -261,6 +269,12 @@ void SubdualDamageHelper::xfer( Xfer *xfer )
 			customSubdualDisableType = (*customSubdualIt).second.disableType;
 			xfer->xferUnsignedInt( &customSubdualDisableType );
 
+			customSubdualDisableTint = (*customSubdualIt).second.disableTint;
+			xfer->xferUnsignedInt( &customSubdualDisableTint );
+
+			customSubdualDisableCustomTint = (*customSubdualIt).second.disableCustomTint;
+			xfer->xferAsciiString( &customSubdualDisableCustomTint );
+
 		}  // end for
 
 	}  // end if, save
@@ -280,11 +294,17 @@ void SubdualDamageHelper::xfer( Xfer *xfer )
 
 			xfer->xferUnsignedInt( &customSubdualDisableType );
 
+			xfer->xferUnsignedInt( &customSubdualDisableTint );
+
+			xfer->xferAsciiString( &customSubdualDisableCustomTint );
+
 			SubdualCustomHealData data;
 			data.healFrame = customSubdualAmount;
 			data.tintStatus = (TintStatus)customSubdualTint;
 			data.customTintStatus = customSubdualCustomTint;
 			data.disableType = (DisabledType)customSubdualDisableType;
+			data.disableTint = (TintStatus)customSubdualDisableTint;
+			data.disableCustomTint = customSubdualDisableCustomTint;
 
 			m_healingStepCountdownCustomMap[customSubdualName] = data;
 			

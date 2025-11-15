@@ -76,6 +76,13 @@ class AssaultTransportAIInterface
 {
 public:
 	virtual void beginAssault( const Object *designatedTarget ) const = 0;
+	//virtual void checkMembersList() = 0;
+	virtual void removeMember( ObjectID passengerID ) = 0;
+	virtual void checkPassengerHealth( ObjectID passengerID ) = 0;
+	virtual void doAddMembers() = 0;
+	virtual void addMembers() = 0;
+	virtual void onAttack() = 0;
+	virtual Int getCurrentAssaultingMembers() const = 0;
 };
 
 
@@ -99,8 +106,16 @@ public:
 	virtual AssaultTransportAIInterface* getAssaultTransportAIInterface() { return this; }
 	virtual const AssaultTransportAIInterface* getAssaultTransportAIInterface() const { return this; }
 	virtual void beginAssault( const Object *designatedTarget ) const;
+	//virtual void checkMembersList();
+	virtual void removeMember( ObjectID passengerID );
+	virtual void checkPassengerHealth( ObjectID passengerID );
+	virtual void doAddMembers() { m_doAddMember = TRUE; wakeUpNow(); };
+	virtual void onAttack();
+	virtual Int getCurrentAssaultingMembers() const { return getAssaultTransportAIUpdateModuleData()->m_canEnterOnMembersExit ? 0 : m_maxNumInTransport; }
 
-	UpdateSleepTime calcSleepTime();
+	virtual void addMembers();
+
+	//UpdateSleepTime calcSleepTime();
 
 	void reset();
 	Bool isMemberWounded( const Object *member ) const;	//Member requires medical attention?

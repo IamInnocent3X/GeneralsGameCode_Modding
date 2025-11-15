@@ -2967,7 +2967,7 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 								// expensive and very confusing, but needed
 								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
 								{
-									cursorSet = findCrateCollideCommandHint(curDraw->getObject(), obj, msg, equipIsParasite);
+									cursorSet = findCrateCollideCommandHint(curDraw->getObject(), obj, msg, &equipIsParasite);
 
 									if(cursorSet)
 										break;
@@ -3297,7 +3297,7 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 	}
 }
 
-Bool InGameUI::findCrateCollideCommandHint( const Object *obj, const Object *other, const GameMessage *msg, Bool isParasite )
+Bool InGameUI::findCrateCollideCommandHint( const Object *obj, const Object *other, const GameMessage *msg, Bool *isParasite )
 {
 	GameMessage::Type t = msg->getType();
 	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -3343,7 +3343,7 @@ Bool InGameUI::findCrateCollideCommandHint( const Object *obj, const Object *oth
 				if( collide->isEquipCrateCollide() )
 				{
 					if( collide->isParasiteEquipCrateCollide() )
-						isParasite = TRUE;
+						*isParasite = TRUE;
 					
 					if(!collide->getCursorName().isEmpty() && collide->wouldLikeToCollideWith( other ))
 					{

@@ -223,6 +223,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 	if( hijackerUpdate )
 	{
 		hijackerUpdate->setTargetObject( other );
+		hijackerUpdate->setHijackType( HIJACK_HIJACKER );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
 

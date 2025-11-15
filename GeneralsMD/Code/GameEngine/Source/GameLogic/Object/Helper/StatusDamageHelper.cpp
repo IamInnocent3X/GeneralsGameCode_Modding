@@ -46,7 +46,7 @@ StatusDamageHelper::StatusDamageHelper( Thing *thing, const ModuleData *modData 
 	//m_currentTint = TINT_STATUS_INVALID;
 	//m_customStatusToHeal = NULL;
 
-	earliestDurationAsInt = 0;
+	m_earliestDurationAsInt = 0;
 	m_statusToHeal.clear();
 	m_currentTint.clear();
 	m_customStatusToHeal.clear();
@@ -151,11 +151,11 @@ UpdateSleepTime StatusDamageHelper::update()
 
 	if(nextStatusDuration < 1e9)
 	{
-		earliestDurationAsInt = nextStatusDuration;
+		m_earliestDurationAsInt = nextStatusDuration;
 		return UPDATE_SLEEP(nextStatusDuration);
 	}
 	
-	earliestDurationAsInt = 0;
+	m_earliestDurationAsInt = 0;
 	return UPDATE_SLEEP_FOREVER;
 
 	//DEBUG_ASSERTCRASH(m_frameToHeal <= TheGameLogic->getFrame(), ("StatusDamageHelper woke up too soon.") );
@@ -277,9 +277,9 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 	//setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 	// We set the wake frame for updating, because running for loops everyframe is expensive
-	if(frameToHeal < m_frameToHeal || !earliestDurationAsInt)
+	if(frameToHeal < m_frameToHeal || !m_earliestDurationAsInt)
 	{
-		earliestDurationAsInt = durationAsInt;
+		m_earliestDurationAsInt = durationAsInt;
 		m_frameToHeal = frameToHeal;
 		setWakeFrame( getObject(), UPDATE_SLEEP(durationAsInt) );
 
@@ -318,7 +318,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 	//xfer->xferUser( &m_currentTint, sizeof(TintStatus) );// an enum
 	//xfer->xferAsciiString( &m_customStatusToHeal );
 	xfer->xferUnsignedInt( &m_frameToHeal );
-	xfer->xferUnsignedInt( &earliestDurationAsInt );
+	xfer->xferUnsignedInt( &m_earliestDurationAsInt );
 
 	// Modified from W3DModelDraw.cpp
 	TintStatusDurationPair currentTintInfo;

@@ -176,6 +176,7 @@ Bool ConvertToCarBombCrateCollide::executeCrateBehavior( Object *other )
 	if( hijackerUpdate )
 	{
 		hijackerUpdate->setTargetObject( other );
+		hijackerUpdate->setHijackType( HIJACK_CARBOMB );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
 

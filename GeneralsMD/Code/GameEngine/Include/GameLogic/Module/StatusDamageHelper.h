@@ -43,6 +43,16 @@ typedef std::pair<AsciiString, UnsignedInt> CustomTintStatusDurationPair;
 typedef std::vector<TintStatusDurationPair> TintStatusDurationVec;
 typedef std::vector<CustomTintStatusDurationPair> CustomTintStatusDurationVec;
 
+struct StatusTransferData
+{
+	UnsignedInt frameToHeal;
+	UnsignedInt earliestDurationAsInt;
+	StatusTypeMap statusToHeal;
+	CustomStatusTypeMap customStatusToHeal;
+	TintStatusDurationVec currentTint;
+	CustomTintStatusDurationVec customTintStatus;
+}
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 class StatusDamageHelperModuleData : public ModuleData
@@ -64,9 +74,31 @@ public:
 	// virtual destructor prototype provided by memory pool object
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 	virtual UpdateSleepTime update();
 
 	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
+	StatusTransferData getStatusData() const
+	{
+		StatusTransferData transferData;
+		transferData.frameToHeal = m_frameToHeal;
+		transferData.earliestDurationAsInt = m_earliestDurationAsInt;
+		transferData.statusToHeal m_statusToHeal;
+		transferData.customStatusToHeal = m_customStatusToHeal;
+		transferData.currentTint = m_currentTint;
+		transferData.customTintStatus = m_customTintStatus;
+
+		return transferData;
+	}
+	void transferData(StatusTransferData transferData)
+	{
+		m_frameToHeal = transferData.frameToHeal;
+		m_earliestDurationAsInt = transferData.earliestDurationAsInt;
+		m_statusToHeal = transferData.statusToHeal;
+		m_customStatusToHeal = transferData.customStatusToHeal;
+		m_currentTint = transferData.currentTint;
+		m_customTintStatus = transferData.customTintStatus;
+	}
 
 protected:
 	StatusTypeMap m_statusToHeal;
@@ -74,7 +106,7 @@ protected:
 	CustomTintStatusDurationVec m_customTintStatus;
 	TintStatusDurationVec m_currentTint;
 	UnsignedInt m_frameToHeal;
-	UnsignedInt earliestDurationAsInt;
+	UnsignedInt m_earliestDurationAsInt;
 	void clearStatusCondition();
 };
 

@@ -155,6 +155,7 @@ Bool EquipCrateCollide::executeCrateBehavior( Object *other )
 	if( hijackerUpdate )
 	{
 		hijackerUpdate->setTargetObject( other );
+		hijackerUpdate->setHijackType( HIJACK_EQUIP );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
 		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );

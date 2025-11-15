@@ -50,6 +50,7 @@
 #include "GameLogic/WeaponSet.h"
 #include "Common/STLTypedefs.h"
 #include "GameClient/Color.h"
+#include "GameClient/TintStatus.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class AIUpdateModuleData;
@@ -702,6 +703,15 @@ public:
 	Bool friend_getUseMyEnterCursor() const {return m_useMyEnterCursor;	}
 	Bool friend_getUseMySalvageCursor() const {return m_useMySalvageCursor;	}
 
+	Bool setDisabledUnderPowered() const  { return m_setDisabledWhenUnderpowered; }
+	DisabledType getDisabledTypeUnderPowered() const { return m_disabledTypeUnderPowered; }
+	WeaponBonusConditionTypeVec getWeaponBonusDisabledUnderPowered() const { return m_bonusDisabledUnderPowered; }
+	ObjectStatusMaskType getStatusDisabledUnderPowered() const { return m_statusDisabledUnderPowered; }
+	const std::vector<AsciiString>& getCustomWeaponBonusDisabledUnderPowered() const { return m_customBonusDisabledUnderPowered; }
+	const std::vector<AsciiString>& getCustomStatusDisabledUnderPowered() const { return m_customStatusDisabledUnderPowered; }
+	TintStatus getTintStatusUnderPowered() const { return m_tintStatusUnderPowered; }
+	const AsciiString& getCustomTintStatusUnderPowered() const { return m_customTintStatusUnderPowered; }
+
 protected:
 
 	//
@@ -762,6 +772,8 @@ private:
 #ifdef LOAD_TEST_ASSETS
 	AsciiString				m_LTAName;
 #endif
+
+	AsciiString				m_customTintStatusUnderPowered;
 
 	AsciiString				m_genericInvalidCursorName;
 	AsciiString				m_selectingCursorName;
@@ -891,6 +903,12 @@ private:
 	UnsignedByte	m_crusherLevel;							///< crusher > crushable level to actually crush
 	UnsignedByte	m_crushableLevel;						///< Specifies the level of crushability (must be hit by a crusher greater than this to crush me).
 	Byte					m_ammoPipsStyle;                ///< How ammo pips are displayed for this thing
+
+	// ---- Other
+	DisabledType							m_disabledTypeUnderPowered;
+	WeaponBonusConditionTypeVec 			m_bonusDisabledUnderPowered;
+	ObjectStatusMaskType					m_statusDisabledUnderPowered;
+	TintStatus								m_tintStatusUnderPowered;
 
 };
 

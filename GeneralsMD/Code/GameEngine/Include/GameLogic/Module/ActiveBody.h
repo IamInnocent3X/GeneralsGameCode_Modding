@@ -160,7 +160,7 @@ public:
 	virtual Bool isSubduedCustom(const AsciiString &customStatus) const; 
 	virtual Bool canBeSubduedCustom(const AsciiString &customStatus) const; 
 	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Bool dontPaintTint );///< Override this if you want a totally different effect than DISABLED_SUBDUED
-	virtual void onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater = FALSE);
+	virtual void onSubdualRemovalCustom(SubdualCustomData subdualData, Bool clearTintLater = FALSE);
 
 	// Chrono
 	virtual Bool isSubduedChrono() const;
@@ -188,6 +188,10 @@ protected:
 	virtual void internalAddChronoDamage( Real delta );								///< change health
 
 	virtual void applyChronoParticleSystems(void);
+
+	inline const Armor getCurrentArmor() const { return m_curArmor; }
+
+	void doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, Bool *allowModifier, Real damageAmount, Real realFramesToStatusFor);
 
 private:
 

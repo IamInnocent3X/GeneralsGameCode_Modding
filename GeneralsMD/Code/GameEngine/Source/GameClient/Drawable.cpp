@@ -3903,8 +3903,9 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 	//
 	// Bombed?
 	//
-	static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-	StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
+	//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+	//StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
+	StickyBombUpdateInterface *update = obj->getStickyBombUpdateInterface();
 	if( update )
 	{
 

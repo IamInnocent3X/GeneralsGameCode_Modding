@@ -85,6 +85,11 @@ class StealthUpdate;
 class SpyVisionUpdate;
 // -----------------
 class BattlePlanBonusBehaviorInterface;
+class EnergyShieldBehaviorInterface;
+// -----------------
+class HijackerUpdateInterface;
+class RadarUpgradeInterface;
+class StickyBombUpdateInterface;
 
 //-------------------------------------------------------------------------------------------------
 class BehaviorModuleData : public ModuleData
@@ -146,6 +151,11 @@ public:
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const = 0;
 
 	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() = 0;
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() = 0;
+
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() = 0;
+	virtual RadarUpgradeInterface* getRadarUpgradeInterface() = 0;
+	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() = 0;
 
 };
 
@@ -203,7 +213,11 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return NULL; }
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return NULL; }
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return NULL; }
-	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return NULL; };
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return NULL; }
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() { return NULL; }
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() { return NULL; }
+	virtual RadarUpgradeInterface* getRadarUpgradeInterface() { return NULL; }
+	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return NULL; }
 
 protected:
 

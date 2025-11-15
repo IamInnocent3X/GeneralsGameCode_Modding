@@ -690,6 +690,8 @@ public:
 	//TEMP
 	inline int getLocomotorGoalType(void) { return m_locomotorGoalType; }
 
+	inline Bool friend_isInGuardIdleState() { return getStateMachine()->isInGuardIdleState(); }
+
 private:
 	// this should only be called by load/save, or by chooseLocomotorSet.
 	// it does no sanity checking; it just jams it in.

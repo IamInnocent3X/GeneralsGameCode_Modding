@@ -58,10 +58,13 @@ public:
 	// virtual destructor prototype provided by memory pool object
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 	virtual UpdateSleepTime update();
 
 	void notifySubdualDamage( Real amount );
-	void notifySubdualDamageCustom( Real amount, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID, DisabledType disableType = DISABLED_SUBDUED );
+	void notifySubdualDamageCustom( SubdualCustomData subdualData, const AsciiString& customStatus );
+	void replaceSubdualDamageCustom( CustomSubdualCurrentHealMap data ) { m_healingStepCountdownCustomMap = data; }
+	CustomSubdualCurrentHealMap getSubdualHelperData() const { return m_healingStepCountdownCustomMap; }
 
 protected:
 	UnsignedInt m_healingStepCountdown;

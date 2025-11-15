@@ -3731,8 +3731,9 @@ void ScriptActions::doNamedSetBoobytrapped( const AsciiString& thingTemplateName
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				//StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				StickyBombUpdateInterface *update = boobytrap->getStickyBombUpdateInterface();
 				if( update )
 				{
 					//The charge gets positioned randomly on the outside of the perimeter of the victim.
@@ -3770,8 +3771,9 @@ void ScriptActions::doTeamSetBoobytrapped( const AsciiString& thingTemplateName,
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				//StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				StickyBombUpdateInterface *update = boobytrap->getStickyBombUpdateInterface();
 				if( update )
 				{
 					//The charge gets positioned randomly on the outside of the perimeter of the victim.

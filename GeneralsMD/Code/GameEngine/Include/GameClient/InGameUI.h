@@ -715,7 +715,7 @@ protected:
 	void clearWorldAnimations( void );					///< delete all world animations
 	void updateAndDrawWorldAnimations( void );	///< update and draw visible world animations
 
-	Bool findCrateCollideCommandHint( const Object *obj, const Object *other, const GameMessage *msg, Bool isParasite );
+	Bool findCrateCollideCommandHint( const Object *obj, const Object *other, const GameMessage *msg, Bool *isParasite );
 
 	SuperweaponInfo* findSWInfo(Int playerIndex, const AsciiString& powerName, ObjectID id, const SpecialPowerTemplate *powerTemplate);
 

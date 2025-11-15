@@ -337,10 +337,10 @@ void EMPUpdate::doDisableAttack( void )
 			if ( drw )
 			{
 
-				if(!data->m_customTintStatus.isEmpty())
-					drw->setCustomTintStatus( data->m_customTintStatus );
-				else if (data->m_tintStatus != TINT_STATUS_INVALID )
-					drw->setTintStatus( data->m_tintStatus );
+				//if(!data->m_customTintStatus.isEmpty())
+				//	drw->setCustomTintStatus( data->m_customTintStatus );
+				//else if (data->m_tintStatus != TINT_STATUS_INVALID )
+				//	drw->setTintStatus( data->m_tintStatus );
 
 				const ParticleSystemTemplate *tmp = data->m_disableFXParticleSystem;
 				if (tmp)

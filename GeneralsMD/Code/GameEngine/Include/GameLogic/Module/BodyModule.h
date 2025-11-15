@@ -43,6 +43,8 @@ struct SubdualCustomData
 	TintStatus tintStatus;
 	AsciiString customTintStatus;
 	DisabledType disableType;
+	TintStatus disableTint;
+	AsciiString disableCustomTint;
 	Bool isSubdued;
 };
 
@@ -52,6 +54,8 @@ struct SubdualCustomHealData
 	TintStatus tintStatus;
 	AsciiString customTintStatus;
 	DisabledType disableType;
+	TintStatus disableTint;
+	AsciiString disableCustomTint;
 };
 
 typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualDamageMap;
@@ -99,6 +103,8 @@ enum MaxHealthChangeType CPP_11(: Int)
 	SAME_CURRENTHEALTH,
 	PRESERVE_RATIO,
 	ADD_CURRENT_HEALTH_TOO,
+	ADD_CURRENT_DAMAGE,
+	ADD_CURRENT_DAMAGE_NON_LETHAL,
 	FULLY_HEAL,
 };
 
@@ -108,6 +114,8 @@ static const char* TheMaxHealthChangeTypeNames[] =
 	"SAME_CURRENTHEALTH",
 	"PRESERVE_RATIO",
 	"ADD_CURRENT_HEALTH_TOO",
+	"ADD_CURRENT_DAMAGE",
+	"ADD_CURRENT_DAMAGE_NON_LETHAL",
 };
 #endif
 

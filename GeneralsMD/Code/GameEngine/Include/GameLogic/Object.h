@@ -99,6 +99,8 @@ class UpdateModuleInterface;
 class UpgradeModule;
 class UpgradeModuleInterface;
 class UpgradeTemplate;
+class RadarUpgradeInterface;
+class StickyBombUpdateInterface;
 
 class ObjectHeldHelper;
 class ObjectDisabledHelper;
@@ -256,11 +258,19 @@ public:
 	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 
+	void refreshSubdualHelper() { m_subdualDamageHelper->refreshUpdate(); }
+	void refreshStatusHelper() { m_statusDamageHelper->refreshUpdate(); }
+
 	void setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes );
 	ObjectID getShieldByTargetID() const { return m_shielderID; };
 	ProtectionTypeFlags getShieldByTargetType() const { return m_shielderType; };
 
 	void notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, const AsciiString& customStatus );///< At this level, we just pass this on to our helper and do a special tint
+	void transferSubdualHelperData( CustomSubdualCurrentHealMap data );
+	CustomSubdualCurrentHealMap getSubdualHelperData() const;
+
+	void transferStatusHelperData( StatusTransferData data );
+	StatusTransferData getStatusHelperData() const;
 
 	void scoreTheKill( const Object *victim );						///< I just killed this object.
 	void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback = TRUE );	///< I just achieved this level right this moment
@@ -334,6 +344,10 @@ public:
 	inline PhysicsBehavior* getPhysics() { return m_physics; }
 	inline const PhysicsBehavior* getPhysics() const { return m_physics; }
 	void topple( const Coord3D *toppleDirection, Real toppleSpeed, UnsignedInt options );
+
+	HijackerUpdateInterface* getHijackerUpdateInterface() const { return m_hijackerUpdate; }
+	RadarUpgradeInterface* getRadarUpgradeInterface() const { return m_radarUpgrade; }
+	StickyBombUpdateInterface* getStickyBombUpdateInterface() const { return m_stickyBombUpdate; }
 
 	UpdateModule* findUpdateModule(NameKeyType key) const { return (UpdateModule*)findModule(key); }
 	DamageModule* findDamageModule(NameKeyType key) const { return (DamageModule*)findModule(key); }
@@ -649,7 +663,7 @@ public:
 
 	DisabledMaskType getDisabledFlags() const { return m_disabledMask; }
 	Bool isDisabled() const { return m_disabledMask.any(); }
-	Bool clearDisabled( DisabledType type, bool clearTintLater = FALSE );
+	Bool clearDisabled( DisabledType type, bool clearTintLater = FALSE, TintStatus tintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL );
 
 	void setDisabled( DisabledType type );
 	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL );
@@ -722,6 +736,34 @@ public:
 
 	void doObjectUpgradeChecks();
 	void doObjectStatusChecks();
+
+	void registerAssaultTransportID(ObjectID transportID);
+	void removeMeFromAssaultTransport(ObjectID replaceID = INVALID_ID);
+	void doAssaultTransportHealthUpdate();
+
+	inline ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
+
+	void doSlaveBehaviorUpdate( Bool doSlaver );
+	void doSlavedUpdate( Bool doSlaver );
+	void doMobMemberSlavedUpdate();
+	void doWeaponSetUpdate();
+	void doMovingUpdate();
+	void doObjectLocomotorUpdate();
+	void doSlowDeathLayerUpdate(Bool hitTree);
+	void doSlowDeathRefreshUpdate();
+
+	inline void setIsMobMember(Bool set) { m_isMobMember = set; }
+	inline void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }
+	inline Bool getMobUpdateRefreshed() const { return m_mobJustUpdated; }
+	inline void setNoSlowDeathLayerUpdate() { m_noSlowDeathLayerUpdate = TRUE; }
+
+	Bool isDozerDoingAnyTasks() const;
+
+	inline void setLastExitedFrame(UnsignedInt frames) { m_lastExitedFrame = frames; }
+	inline UnsignedInt getLastExitedFrame() const { return m_lastExitedFrame; }
+
+	inline void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
+	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
@@ -876,6 +918,12 @@ private:
 
 	AIUpdateInterface*						m_ai;	///< ai interface (if any), cached for handy access. (duplicate of entry in the module array!)
 	PhysicsBehavior*							m_physics;	///< physics interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
+	HijackerUpdateInterface*					m_hijackerUpdate;	///< hijacker update interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
+	RadarUpgradeInterface*						m_radarUpgrade;		///< radar upgrade interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
+	StickyBombUpdateInterface* 					m_stickyBombUpdate; ///< sticky bomb update interface (if any), cached for handy access. (duplicate of entry in the module array!)
 
 	PartitionData*								m_partitionData;	///< our PartitionData
 	RadarObject*									m_radarData;				///< radar data
