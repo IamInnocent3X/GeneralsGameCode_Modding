@@ -85,6 +85,7 @@ PropagandaTowerBehaviorModuleData::PropagandaTowerBehaviorModuleData( void )
 	m_upgradedPulseFX = NULL;
 	m_affectsSelf = FALSE;
 	m_autoHealClearsParasite = FALSE;
+	m_autoHealClearsParasiteKeys.clear();
 
 }  // end PropagandaTowerBehaviorModuleData
 
@@ -105,6 +106,7 @@ PropagandaTowerBehaviorModuleData::PropagandaTowerBehaviorModuleData( void )
 		{ "UpgradedPulseFX",				INI::parseFXList,								NULL, offsetof( PropagandaTowerBehaviorModuleData, m_upgradedPulseFX ) },
 		{ "AffectsSelf",						INI::parseBool,									NULL, offsetof( PropagandaTowerBehaviorModuleData, m_affectsSelf ) },
 		{ "HealingClearsParasite",			INI::parseBool,	NULL, offsetof( PropagandaTowerBehaviorModuleData, m_autoHealClearsParasite ) },
+		{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, NULL, offsetof( PropagandaTowerBehaviorModuleData, m_autoHealClearsParasiteKeys ) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -179,12 +181,13 @@ void PropagandaTowerBehavior::onCapture( Player *oldOwner, Player *newOwner )
 UpdateSleepTime PropagandaTowerBehavior::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Made Sleepy
 	const PropagandaTowerBehaviorModuleData *modData = getPropagandaTowerBehaviorModuleData();
 
 	//Sep 27, 2002 (Kris): Added this code to prevent the tower from working while under construction.
 	Object *self = getObject();
 	if( self->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
 
 	if( self->testStatus(OBJECT_STATUS_SOLD) )
 	{
@@ -195,6 +198,7 @@ UpdateSleepTime PropagandaTowerBehavior::update( void )
 	if( self->isEffectivelyDead() )
 		return UPDATE_SLEEP_FOREVER;
 
+	UnsignedInt currentFrame = TheGameLogic->getFrame();
 	if( self->isDisabled() )
 	{
 		// We need to let go of everyone if we are EMPd or underpowered or yadda, but not if we are only held
@@ -205,7 +209,9 @@ UpdateSleepTime PropagandaTowerBehavior::update( void )
 		if( TEST_DISABLEDMASK_ANY(self->getDisabledFlags(), allButHeld) )
 		{
 			removeAllInfluence();
-			return UPDATE_SLEEP_NONE;
+			UnsignedInt lastScanFrame = modData->m_scanDelayInFrames && currentFrame - m_lastScanFrame < modData->m_scanDelayInFrames ? m_lastScanFrame + modData->m_scanDelayInFrames - currentFrame  : 1;
+			return UPDATE_SLEEP(max(lastScanFrame, self->getDisabledUntilMask(allButHeld) - currentFrame));
+			//return UPDATE_SLEEP_NONE;
 		}
 	}
 
@@ -215,19 +221,20 @@ UpdateSleepTime PropagandaTowerBehavior::update( void )
 		// attacking is guarded by the same check in isPassengersAllowedToFire.  We similarly work in a container,
 		// but not in a double container.
 		removeAllInfluence();
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 	}
 
 	// if it's not time to scan, nothing to do
-	UnsignedInt currentFrame = TheGameLogic->getFrame();
-	if( currentFrame - m_lastScanFrame >= modData->m_scanDelayInFrames )
-	{
+	//UnsignedInt currentFrame = TheGameLogic->getFrame();
+	//if( currentFrame - m_lastScanFrame >= modData->m_scanDelayInFrames )
+	//{
 
 		// do a scan
 		doScan();
 		m_lastScanFrame = currentFrame;
 
-	}  // end if
+	//}  // end if
 
 	// go through any objects in our area of influence and do the effect logic on them
 	Object *obj;
@@ -268,9 +275,24 @@ UpdateSleepTime PropagandaTowerBehavior::update( void )
 
 	}  // end for, curr
 
-	return UPDATE_SLEEP_NONE;
+	return UPDATE_SLEEP( modData->m_scanDelayInFrames ? modData->m_scanDelayInFrames : UPDATE_SLEEP_NONE );
+	//return UPDATE_SLEEP_NONE;
 
 }  // end update
+
+// ------------------------------------------------------------------------------------------------
+void PropagandaTowerBehavior::onBuildComplete()
+{
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
+// ------------------------------------------------------------------------------------------------
+void PropagandaTowerBehavior::doRemovedFrom()
+{
+	Object *self = getObject();
+	if(!self->getContainedBy()  ||  !self->getContainedBy()->getContainedBy())
+		setWakeFrame(self, UPDATE_SLEEP_NONE);
+}
 
 // ------------------------------------------------------------------------------------------------
 /** The death callback */
@@ -331,7 +353,7 @@ void PropagandaTowerBehavior::effectLogic( Object *obj, Bool giving,
 	// and cannot change healing senders until the previous one expires (its scandelay)
 
 //		obj->attemptHealing(amount, getObject()); // the regular way to give healing...
-			obj->attemptHealingFromSoleBenefactor( amount, getObject(), modData->m_scanDelayInFrames, modData->m_autoHealClearsParasite );//the non-stacking way
+			obj->attemptHealingFromSoleBenefactor( amount, getObject(), modData->m_scanDelayInFrames, modData->m_autoHealClearsParasite, modData->m_autoHealClearsParasiteKeys );//the non-stacking way
 
 		}  // end if
 

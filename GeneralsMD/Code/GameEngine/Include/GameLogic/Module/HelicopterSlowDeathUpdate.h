@@ -97,6 +97,9 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo );	///< begin the slow death cycle
 	virtual UpdateSleepTime update();
 
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual Bool layerUpdate(Bool hitTree);
+
 protected:
 
 	Int m_orbitDirection;			 ///< -1 or +1 ... use ORBIT_DIRECTION_LEFT/RIGHT
@@ -108,6 +111,9 @@ protected:
 	UnsignedInt m_lastSelfSpinUpdateFrame;	///< frame we last updated the self spin on
 	UnsignedInt m_bladeFlyOffFrame;		///< frame we throw the blade off at
 	UnsignedInt m_hitGroundFrame;			///< frame we hit the ground on
+
+	Bool m_passedVariablesToPhysics;
+	UnsignedInt m_nextWakeUpTime;
 
 	// @todo propagate this up to SlowDeathBehavior. I don't wanna do it today, cause its 4/3. jkmcd
 	AudioEventRTS m_deathSound;						///< Sound played during death sequence.

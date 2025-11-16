@@ -47,6 +47,8 @@ private:
 	const RadiusDecalTemplate*	m_template;
 	Shadow*											m_decal;
 	Bool												m_empty;
+	UnsignedInt										m_lastOpacityThrobTime;
+	Bool											m_firstOpacityThrobCalculated;
 public:
 	RadiusDecal();
 	RadiusDecal(const RadiusDecal& that);
@@ -75,6 +77,7 @@ private:
 	Real					m_minOpacity;
 	Real					m_maxOpacity;
 	UnsignedInt		m_opacityThrobTime;
+	Real 			m_invOpacityThrobTime;
 	Color					m_color;
 	Bool					m_onlyVisibleToOwningPlayer;
 

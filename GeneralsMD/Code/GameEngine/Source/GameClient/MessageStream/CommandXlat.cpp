@@ -342,7 +342,7 @@ static CanAttackResult canAnyForceAttack(const DrawableList *allSelected, const 
 			continue;
 		}
 
-		if( obj->testCustomStatus("ZERO_DAMAGE") )
+		if( obj->testCustomStatus("ZERO_DAMAGE") || obj->isWeaponSetRestricted() )
 		{
 			result = ATTACKRESULT_INVALID_SHOT;
 			continue;
@@ -1413,12 +1413,21 @@ CommandTranslator::CommandTranslator() :
 	m_objective(0),
 	m_teamExists(false),
 	m_mouseRightDown(0),
-	m_mouseRightUp(0)
+	m_mouseRightUp(0),
+	m_mouseLeftDown(0),
+	m_mouseLeftUp(0),
+	m_mouseRightClickEvaluate(FALSE),
+	m_mouseLeftClickEvaluate(FALSE),
+	m_mouseOverDrawable(NULL)
 {
 	m_mouseRightDragAnchor.x = 0;
 	m_mouseRightDragAnchor.y = 0;
 	m_mouseRightDragLift.x = 0;
 	m_mouseRightDragLift.y = 0;
+	m_mouseLeftDragAnchor.x = 0;
+	m_mouseLeftDragAnchor.y = 0;
+	m_mouseLeftDragLift.x = 0;
+	m_mouseLeftDragLift.y = 0;
 }
 
 //====================================================================================
@@ -1517,7 +1526,8 @@ GameMessage::Type CommandTranslator::evaluateForceAttack( Drawable *draw, const 
 // ------------------------------------------------------------------------------------------------
 GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 																														 const Coord3D *pos,
-																														 CommandEvaluateType type )
+																														 CommandEvaluateType type,
+																														 Bool AdditionalCheck )
 {
 	Object *obj = draw ? draw->getObject() : NULL;
 	Drawable *drawableInWay = draw;
@@ -2450,6 +2460,43 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 		}  // end else
 
 	}  // end if
+	
+	Bool isClick = m_mouseLeftClickEvaluate || m_mouseRightClickEvaluate;
+	//UnsignedInt pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
+	//Drawable *draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
+	//																								TheInGameUI->isInForceAttackMode(),
+	//																								(PickType) pickType);
+	//Object* obj = draw ? draw->getObject() : NULL;
+
+	if( AdditionalCheck )
+	{
+		const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
+		// loop through all the selected drawables
+		for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
+		{
+			Object *other = (*it) ? (*it)->getObject() : NULL;
+			AIUpdateInterface *ai = other ? other->getAI() : NULL;
+			if( ai )
+			{
+				// obj is the current draw->getObject()
+				if( !other->getParasiteCollideActive() && obj && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ) )
+				{
+					other->setParasiteCollideActive(TRUE);
+				}
+				else if( (!m_mouseOverDrawable && !ai->getGoalObject()) || 
+						( isClick && obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) ))
+				{
+					other->setParasiteCollideActive(FALSE);
+				}
+			}
+		}
+	}
+
+	if(isClick)
+	{
+		m_mouseLeftClickEvaluate = FALSE;
+		m_mouseRightClickEvaluate = FALSE;
+	}
 
 	// return the message type
 	return msgType;
@@ -3748,6 +3795,12 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				Drawable *draw = TheGameClient->findDrawableByID( msg->getArgument( 0 )->drawableID );
 				if( draw )
 				{
+					Bool additionalCheck = FALSE;
+					if(!m_mouseOverDrawable || m_mouseOverDrawable != draw)
+					{
+						m_mouseOverDrawable = draw;
+						additionalCheck = TRUE;
+					}
 
 					//
 					// given the drawable that we have moused over, pretend that we have actually
@@ -3758,7 +3811,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (TheInGameUI->isInForceAttackMode()) {
 						evaluateForceAttack(draw, draw->getPosition(), DO_HINT );
 					} else {
-						evaluateContextCommand( draw, draw->getPosition(), DO_HINT );
+						evaluateContextCommand( draw, draw->getPosition(), DO_HINT, additionalCheck );
 					}
 
 					// Do not eat this message, as it itself has another purpose in HintSpy
@@ -3775,6 +3828,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 		{
 			Coord3D position = msg->getArgument( 0 )->location;
 
+			Bool additionalCheck = (m_mouseLeftClickEvaluate || m_mouseRightClickEvaluate) && m_mouseOverDrawable;
 			//
 			// This message occurs whenever the mouse cursor moves off of a drawable, in which
 			// case we want to turn off the pick hint.
@@ -3782,8 +3836,11 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			if (TheInGameUI->isInForceAttackMode()) {
 				evaluateForceAttack( NULL, &position, DO_HINT );
 			} else {
-				evaluateContextCommand( NULL, &position, DO_HINT );
+				evaluateContextCommand( NULL, &position, DO_HINT, additionalCheck );
 			}
+
+			if(additionalCheck)
+				m_mouseOverDrawable = NULL;
 
 			// Do not eat this message, as it will do something itself at HintSpy
 			break;
@@ -3816,6 +3873,33 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			if( TheMouse->isClick(&m_mouseRightDragAnchor, &m_mouseRightDragLift, m_mouseRightDown, m_mouseRightUp) )
 			{
 				TheInGameUI->placeBuildAvailable( NULL, NULL );
+				m_mouseRightClickEvaluate = TRUE;
+			}
+
+			break;
+		}
+		
+		//-----------------------------------------------------------------------------
+		case GameMessage::MSG_RAW_MOUSE_LEFT_BUTTON_DOWN:
+		{
+			// There are two ways in which we can ignore this as a deselect:
+			// 1) 2-D position on screen
+			// 2) Time has exceeded the time which we allow for this to be a click.
+			m_mouseLeftDragAnchor = msg->getArgument( 0 )->pixel;
+			m_mouseLeftDown = (UnsignedInt) msg->getArgument( 2 )->integer;
+
+			break;
+		}
+
+		//-----------------------------------------------------------------------------
+		case GameMessage::MSG_RAW_MOUSE_LEFT_BUTTON_UP:
+		{
+			// register this event for determining if the click was fast or short enough not to be a drag
+			m_mouseLeftDragLift = msg->getArgument( 0 )->pixel;
+			m_mouseLeftUp = (UnsignedInt) msg->getArgument( 2 )->integer;
+			if( TheMouse->isClick(&m_mouseLeftDragAnchor, &m_mouseLeftDragLift, m_mouseLeftDown, m_mouseLeftUp) )
+			{
+				m_mouseLeftClickEvaluate = TRUE;
 			}
 
 			break;
@@ -3881,7 +3965,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (TheInGameUI->isInForceAttackMode()) {
 						evaluateForceAttack( draw, &pos, DO_COMMAND );
 					} else {
-						evaluateContextCommand( draw, &pos, DO_COMMAND );
+						evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
 					}
 
 					disp = DESTROY_MESSAGE;
@@ -3961,7 +4045,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				if (TheInGameUI->isInForceAttackMode()) {
 					evaluateForceAttack( draw, &pos, DO_COMMAND );
 				} else {
-					evaluateContextCommand( draw, &pos, DO_COMMAND );
+					evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
 				}
 
 				disp = DESTROY_MESSAGE;

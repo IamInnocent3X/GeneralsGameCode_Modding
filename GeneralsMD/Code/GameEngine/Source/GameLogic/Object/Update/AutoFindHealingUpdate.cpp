@@ -102,38 +102,43 @@ void AutoFindHealingUpdate::onObjectCreated()
 UpdateSleepTime AutoFindHealingUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	Object *obj = getObject();
 	if (obj->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN) {
-		return UPDATE_SLEEP_NONE;
+		// IamInnocent - I am not ai, I don't get to search;
+		return UPDATE_SLEEP_FOREVER;
 	}
 	const AutoFindHealingUpdateModuleData *data = getAutoFindHealingUpdateModuleData();
 
 	//Optimized firing at acquired target
 	if( m_nextScanFrames > 0 )
 	{
-		m_nextScanFrames--;
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//m_nextScanFrames--;
+		//return UPDATE_SLEEP_NONE;
 	}
-	m_nextScanFrames = data->m_scanFrames;
+	m_nextScanFrames = data->m_scanFrames + TheGameLogic->getFrame();
 
+	// IamInnocent - No ai =  no heal, dont wake up;
 	AIUpdateInterface *ai = obj->getAI();
-	if (ai==NULL) return UPDATE_SLEEP_NONE;
+	if (ai==NULL) return UPDATE_SLEEP_FOREVER;
 
 	// Check health.
 	BodyModuleInterface *body = obj->getBodyModule();
-	if (!body) return UPDATE_SLEEP_NONE;
+	// IamInnocent - No body =  no heal, dont wake up;
+	if (!body) return UPDATE_SLEEP_FOREVER;
 	//	If we're real healthy, don't bother looking for healing.
 	if (body->getHealth() > body->getMaxHealth()*data->m_neverHeal) {
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
 	}
 
 	if(  !ai->isIdle() )
 	{
 		// For now, only heal if idle.  jba.
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
 		//	If we're > min health, and busy, keep at it.
 		if (body->getHealth() > body->getMaxHealth()*data->m_alwaysHeal) {
-			return UPDATE_SLEEP_NONE;
+			return calcSleepTime();
 		}
 	}
 
@@ -143,7 +148,21 @@ UpdateSleepTime AutoFindHealingUpdate::update()
 	{
 		ai->aiGetHealed(healUnit, CMD_FROM_AI);
 	}
-	return UPDATE_SLEEP_NONE;
+	return calcSleepTime();
+}
+
+//-------------------------------------------------------------------------------------------------
+void AutoFindHealingUpdate::onCapture(Player* oldOwner, Player* newOwner)
+{ 
+	if(newOwner->getPlayerType() != PLAYER_HUMAN)
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
+//-------------------------------------------------------------------------------------------------
+UpdateSleepTime AutoFindHealingUpdate::calcSleepTime() const
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	return UPDATE_SLEEP( m_nextScanFrames > now ? m_nextScanFrames - now : UPDATE_SLEEP_NONE );
 }
 
 

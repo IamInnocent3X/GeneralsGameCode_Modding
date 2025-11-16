@@ -33,6 +33,7 @@
 
 #include "Common/StateMachine.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/DamageModule.h"
 #include "GameClient/RadiusDecal.h"
 
 class DeliverPayloadData;
@@ -312,7 +313,8 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-class DeliverPayloadAIUpdate : public AIUpdateInterface
+class DeliverPayloadAIUpdate : public AIUpdateInterface,
+												 public DamageModuleInterface
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( DeliverPayloadAIUpdate, "DeliverPayloadAIUpdate"  )
 	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( DeliverPayloadAIUpdate, DeliverPayloadAIUpdateModuleData )
@@ -324,6 +326,12 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual AIFreeToExitType getAiFreeToExit(const Object* exiter) const;
+
+	// For calculating distance towards AIUpdates.
+	virtual DamageModuleInterface* getDamage() { return this; }
+	virtual void onDamage( DamageInfo *damageInfo );
+	virtual void onHealing( DamageInfo *damageInfo ) { }
+	virtual void onBodyDamageStateChange(const DamageInfo* damageInfo, BodyDamageType oldState, BodyDamageType newState) { }
 
 	const Coord3D* getTargetPos() const { return &m_targetPos; }
 	const Coord3D* getMoveToPos() const { return &m_moveToPos; }
@@ -371,6 +379,8 @@ protected:
 	Real													m_previousDistanceSqr;
 	Bool													m_freeToExit;
 	Bool													m_acceptingCommands;
+	UnsignedInt												m_wakeUpTime;
+	UnsignedInt												m_reSleepFrame;
 
 	enum DiveState	// Stored in save file as int, don't renumber!  jba.
 	{

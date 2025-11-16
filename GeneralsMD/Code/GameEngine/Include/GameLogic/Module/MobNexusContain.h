@@ -86,6 +86,7 @@ public:
 	virtual void onRemoving( Object *obj );			///< object no longer contains 'obj'
 	virtual UpdateSleepTime update();							///< called once per frame
 
+	virtual Int getRawContainMax( void ) const;
 	virtual Int getContainMax( void ) const;
 
 	virtual void onObjectCreated();

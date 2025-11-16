@@ -358,6 +358,11 @@ public:
 	virtual Bool isClearingMines() const;
 	virtual Bool isTaxiingToParking() const { return FALSE; } //only applies to jets interacting with runways.
 
+	virtual void doIdleUpdate() { }
+	virtual void doStateChange() { }
+	virtual void doStatusUpdate() { }
+	virtual void doUpgradeUpdate() { }
+
 	//Definition of busy -- when explicitly in the busy state. Moving or attacking is not considered busy!
 	virtual Bool isBusy() const;
 
@@ -436,6 +441,9 @@ public:
 	Locomotor* getCurLocomotor() { return m_curLocomotor; }
 	LocomotorSetType getCurLocomotorSetType() const { return m_curLocomotorSet; }
 	Bool hasLocomotorForSurface(LocomotorSurfaceType surfaceType);
+
+	void lockMyLocomotorToOrbit( const Coord3D *pos, Real radius, Real slope );
+	void releaseLocomotorLock();
 
 	// turret stuff.
 	WhichTurretType getWhichTurretForWeaponSlot(WeaponSlotType wslot, Real* turretAngle, Real* turretPitch = NULL) const;
@@ -770,6 +778,13 @@ private:
 	LocomotorSetType	m_curLocomotorSet;
 	LocoGoalType			m_locomotorGoalType;
 	Coord3D						m_locomotorGoalData;
+	Coord3D					m_lastPos;
+	Coord3D					m_lastRequestedDestination;
+
+	// Orbiting ------------------------------------------------------------------------------------
+	//Coord3D				m_orbitingPos;
+	//Real				m_orbitingRadius;
+	//Real                m_orbitInsertionSlope;
 
 	// Turrets -------------------------------------------------------------------------------------------------
 	TurretAI*					m_turretAI[MAX_TURRETS];		// ai for our turret (or null if no turret)
@@ -778,6 +793,7 @@ private:
 	// AI -------------------------------------------------------------------------------------------
 	AttitudeType	m_attitude;
 	UnsignedInt		m_nextMoodCheckTime;
+	UnsignedInt		m_locoClumpScanFrame;
 
 	// Common AI "status" effects -------------------------------------------------------------------
 #ifdef ALLOW_DEMORALIZE
@@ -814,6 +830,8 @@ private:
 	Bool				m_allowedToChase;						///< Allowed to pursue targets.
 	Bool				m_isInUpdate;								///< If true, we are inside our update method.
 	Bool				m_fixLocoInPostProcess;
+	Bool				m_continueToUpdateFixLocoClump;
+	//Bool				m_locomotorIsLocked;
 };
 
 //------------------------------------------------------------------------------------------------------------

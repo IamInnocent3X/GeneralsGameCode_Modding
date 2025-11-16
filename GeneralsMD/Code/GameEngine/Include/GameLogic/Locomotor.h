@@ -231,6 +231,9 @@ public:
 	void locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalPos,
 		Real onPathDistToGoal, Real desiredSpeed, Bool *blocked);
 	void locoUpdate_moveTowardsAngle(Object* obj, Real angle);
+
+	void locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D& goalPos,
+		Real onPathDistToGoal, Real desiredSpeed, Bool *blocked);
 	/**
 		Kill any current (2D) velocity (but stay at current position, or as close as possible)
 

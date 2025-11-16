@@ -44,6 +44,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
 
+#include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/Eva.h"
 #include "GameClient/InGameUI.h"  // useful for printing quick debug strings when we need to
@@ -76,7 +77,7 @@ EquipCrateCollide::~EquipCrateCollide( void )
 Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 {
 	// If I am already attached to someone else, don't do anything.
-	if( m_equipToID != INVALID_ID )
+	if( getObject()->getEquipToID() != INVALID_ID )
 	{
 		return FALSE;
 	}
@@ -92,6 +93,8 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 	}
 
 	const EquipCrateCollideModuleData* data = getEquipCrateCollideModuleData();
+	const Object *obj = getObject();
+	CommandSourceType lastCommandSource = obj->getAI() ? obj->getAI()->getLastCommandSource() : CMD_FROM_PLAYER;
 
 	// If we can only consider one equipped object as a time and the object is already equipped, return false
 	if(data->m_isUnique && !other->getEquipObjectIDs().empty())
@@ -105,9 +108,35 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 		if(!other->getContain())
 			return FALSE;
 
-		const Object *obj = getObject();
-		if(obj->isContained() || !TheActionManager->canEnterObject( obj, other, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY, FALSE ))
+		if(obj->isContained() || !TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
 			return FALSE;
+	}
+
+	// Don't use Parasite Volunteeringly if the Object is an Ally 
+	// Or if the Unit is not attacking while it is able to use weapon against the target
+	if( data->m_isParasite && 
+		!obj->getParasiteCollideActive() &&
+		!TheInGameUI->isInForceAttackMode() &&
+		(!TheInGameUI->getGUICommand() || TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT ))
+	{
+		if( !obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) &&
+			  !obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) &&
+			  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
+			  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
+		  {
+			  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, other, CMD_FROM_PLAYER );
+			  if(( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
+			  	   obj->getRelationship(other) == ALLIES ||
+				   ( obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
+		  		)
+			  {
+				  return FALSE;
+			  }
+		  }
+		else if(obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
+		  {
+			  return FALSE;
+		  }
 	}
 
 	return TRUE;
@@ -150,8 +179,10 @@ Bool EquipCrateCollide::executeCrateBehavior( Object *other )
 
 	// I we have made it this far, we are going to ride in this vehicle for a while
 	// get the name of the hijackerupdate
-	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-	HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+	//HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//if( hijackerUpdate )
+	HijackerUpdateInterface *hijackerUpdate = obj->getHijackerUpdateInterface();
 	if( hijackerUpdate )
 	{
 		hijackerUpdate->setTargetObject( other );
@@ -160,6 +191,8 @@ Bool EquipCrateCollide::executeCrateBehavior( Object *other )
 		hijackerUpdate->setUpdate( TRUE );
 		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
 		hijackerUpdate->setIsParasite( data->m_isParasite );
+		if(data->m_isParasite)
+			hijackerUpdate->setParasiteKey( data->m_parasiteKey );
 		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
 		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
 		hijackerUpdate->setDestroyOnClear( data->m_destroyOnClear );
@@ -208,7 +241,16 @@ void EquipCrateCollide::setEquipStatus(Object *other)
 	Object *obj = getObject();
 	const EquipCrateCollideModuleData* data = getEquipCrateCollideModuleData();
 
+	// Clear the Equipper from the list of last Collided Object 
+	if(m_equipToID != INVALID_ID)
+	{
+		Object *lastEquipObj = TheGameLogic->findObjectByID(m_equipToID);
+		if(lastEquipObj)
+			lastEquipObj->clearLastEquipObjectID(obj->getID());
+	}
+
 	m_equipToID = other->getID();
+	obj->setEquipToID( m_equipToID );
 	other->setEquipObjectID(obj->getID());
 
 	if(data->m_equipCanPassiveAcquire)
@@ -232,8 +274,8 @@ void EquipCrateCollide::setEquipStatus(Object *other)
 //-------------------------------------------------------------------------------------------------
 void EquipCrateCollide::clearEquipStatus()
 {
-	// If we are not equipped, return
-	if(m_equipToID == INVALID_ID)
+	// If we are not equipped, or this is not the correct Equip Crate Collide module, return
+	if(getObject()->getEquipToID() == INVALID_ID || getObject()->getEquipToID() != m_equipToID)
 		return;
 	
 	Object *obj = getObject();
@@ -257,10 +299,14 @@ void EquipCrateCollide::clearEquipStatus()
 	//}
 
 	// Find the equipped Object ID and clear its given statuses and bonuses
-	Object *other = TheGameLogic->findObjectByID(m_equipToID);
+	Object *other = TheGameLogic->findObjectByID(obj->getEquipToID());
 
 	// clear the ID of the current equipped object to reenable new equip
-	m_equipToID = INVALID_ID;
+	obj->setEquipToID(INVALID_ID);
+
+	// We don't clear this one to prevent the Object from Squishing the Collider
+	// clear its own ID for verifying equip behavior
+	//m_equipToID = INVALID_ID;
 
 	// If the Object doesn't exist, or destroyed do nothing.
 	if(!other || other->isDestroyed() || other->isEffectivelyDead())
@@ -311,19 +357,23 @@ void EquipCrateCollide::clearEquipStatus()
 //-------------------------------------------------------------------------------------------------
 Bool EquipCrateCollide::revertCollideBehavior(Object *other)
 {
-	// If we are not equipped, do nothing
-	if(m_equipToID == INVALID_ID)
+	// If we are not equipped, or this is not the correct Equip Crate Collide module, return
+	if(getObject()->getEquipToID() == INVALID_ID || getObject()->getEquipToID() != m_equipToID)
 		return FALSE;
+
+	ObjectID currentEquippedID = getObject()->getEquipToID();
 
 	CrateCollide::revertCollideBehavior(other);
 	clearEquipStatus();
+
+	getObject()->setLastExitedFrame(TheGameLogic->getFrame() + 10*LOGICFRAMES_PER_SECOND);
 
 	// If the Object doesn't exist, or is destroyed we stop here.
 	if(!other || other->isDestroyed() || other->isEffectivelyDead())
 		return FALSE;
 
 	// Not the right equipped Object
-	if(other->getID() != m_equipToID)
+	if(other->getID() != currentEquippedID)
 		return FALSE;
 
 	// Indicate that we have reverted the Collied Behavior and no need to continue 

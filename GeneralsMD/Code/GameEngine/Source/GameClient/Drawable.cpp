@@ -57,6 +57,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
@@ -1064,6 +1065,8 @@ void Drawable::onSelected()
 	Object* obj = getObject();
 	if ( obj )
 	{
+		obj->doSlaveBehaviorUpdate(FALSE);
+
 		ContainModuleInterface* contain = obj->getContain();
 		if ( contain )
 		{
@@ -2970,10 +2973,12 @@ void Drawable::draw( View *view )
 
 	applyPhysicsXform(&transformMtx);
 
-	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	for (DrawModule** dm = getDrawModules(); checkDrawModuleNullptr(dm) && *dm; ++dm)
 	{
 		(*dm)->doDrawModule(&transformMtx);
 	}
+	//(!TheGlobalData->m_useEfficientDrawableScheme || dm != nullptr)
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -3103,6 +3108,8 @@ void Drawable::drawIconUI( void )
 
 		//Moved this to last so that it shows up over contained and ammo icons.
 		drawVeterancy( healthBarRegion );
+
+		drawProgress( healthBarRegion );
 
 #ifdef KRIS_BRUTAL_HACK_FOR_AIRCRAFT_CARRIER_DEBUGGING
 		drawUIText();
@@ -3326,6 +3333,61 @@ void Drawable::drawAmmo( const IRegion2D *healthBarRegion )
 
 		return;
 	}
+	}
+
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Drawable::drawProgress( const IRegion2D *healthBarRegion )
+{
+	if (!healthBarRegion)
+		return;
+
+	const Object* obj = getObject();
+
+	//if (!(
+	//			TheGlobalData->m_showObjectHealth &&
+	//			(isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID())))
+	//				//&& obj->getControllingPlayer() == ThePlayerList->getLocalPlayer()   // Shields are visible for all
+	//		))
+	//	return;
+	if (!TheGlobalData->m_showObjectHealth)
+		return;
+
+	Bool selected = isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID()));
+
+	Real progress;
+	Int type;  //not used yet
+
+	RGBAColorInt barColor;
+	RGBAColorInt barColorBG;
+
+	if (!obj->getProgressBarShowingInfo(selected, progress, type, barColor, barColorBG))
+		return;
+
+	Color color, outlineColor;
+
+	color = GameMakeColor(barColor.red, barColor.green, barColor.blue, barColor.alpha);
+	outlineColor = GameMakeColor(barColorBG.red, barColorBG.green, barColorBG.blue, barColorBG.alpha);
+
+
+	Real healthBoxWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
+
+	Real healthBoxHeight = max(3, healthBarRegion->hi.y - healthBarRegion->lo.y) * 1.5f;
+	Real healthBoxOutlineSize = 1.0f;
+
+	Real yOffset = -6 + TheGlobalData->m_progressBarYOffset;
+
+	// draw the health box outline
+	TheDisplay->drawOpenRect(healthBarRegion->lo.x, healthBarRegion->lo.y + yOffset, healthBoxWidth, healthBoxHeight,
+		healthBoxOutlineSize, outlineColor);
+
+	if (progress > 0) {
+
+		// draw a filled bar for the ammo count
+		TheDisplay->drawFillRect(healthBarRegion->lo.x + 1, healthBarRegion->lo.y + yOffset + 1,
+			(healthBoxWidth - 2) * progress, healthBoxHeight - 2,
+			color);
 	}
 
 }
@@ -3916,8 +3978,8 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 		{
 			if( update->isTimedBomb() )
 			{
-				//Timed bomb
-				if( !getIconInfo()->m_icon[ ICON_BOMB_TIMED ] )
+				//Timed bomb - Base layer
+				if (!getIconInfo()->m_icon[ICON_BOMB_REMOTE] && update->showAnimBaseTemplate())
 				{
 					Anim2DTemplate* templ = update->getAnimBaseTemplate();
 
@@ -3926,7 +3988,11 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 
 					getIconInfo()->m_icon[ICON_BOMB_REMOTE] = newInstance(Anim2D)(templ, TheAnim2DCollection);
 
-					templ = update->getAnimTimedTemplate();
+				}
+				//Timed bomb - Timer
+				if( !getIconInfo()->m_icon[ ICON_BOMB_TIMED ] && update->showAnimTimedTemplate())
+				{
+					Anim2DTemplate* templ = update->getAnimTimedTemplate();
 
 					if (templ == NULL)  // Default icon
 						templ = s_animationTemplates[ICON_BOMB_TIMED];
@@ -3957,7 +4023,9 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 					getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->setMinFrame(numFrames - seconds - 1);
 					getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->reset();
 				}
-				if( getIconInfo()->m_icon[ ICON_BOMB_TIMED ] )
+				Bool showTimedAnim = (getIconInfo()->m_icon[ICON_BOMB_TIMED]) != NULL;
+				Bool showBaseAnim = (getIconInfo()->m_icon[ICON_BOMB_REMOTE]) != NULL;
+				if( showTimedAnim || showBaseAnim)
 				{
 					//
 					// we are going to draw the healing icon relative to the size of the health bar region
@@ -3968,8 +4036,15 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 						Int barWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
 						Int barHeight = healthBarRegion->hi.y - healthBarRegion->lo.y;
 
-						Int frameWidth = getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->getCurrentFrameWidth();
-						Int frameHeight = getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->getCurrentFrameHeight();
+						Int frameWidth, frameHeight;
+						if (showTimedAnim) {
+							frameWidth = getIconInfo()->m_icon[ICON_BOMB_TIMED]->getCurrentFrameWidth();
+							frameHeight = getIconInfo()->m_icon[ICON_BOMB_TIMED]->getCurrentFrameHeight();
+						}
+						else {
+							frameWidth = getIconInfo()->m_icon[ICON_BOMB_REMOTE]->getCurrentFrameWidth();
+							frameHeight = getIconInfo()->m_icon[ICON_BOMB_REMOTE]->getCurrentFrameHeight();
+						}
 
 						// adjust the width to be a % of the health bar region size
 						Int size = REAL_TO_INT( barWidth * 0.65f );
@@ -3981,18 +4056,21 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 						screen.x = REAL_TO_INT( healthBarRegion->lo.x + (barWidth * 0.5f) - (frameWidth * 0.5f) );
 						screen.y = REAL_TO_INT( healthBarRegion->lo.y + barHeight * 0.5f ) + BOMB_ICON_EXTRA_OFFSET;
 
-						getIconInfo()->m_icon[ ICON_BOMB_REMOTE ]->draw( screen.x, screen.y, frameWidth, frameHeight );
-						getIconInfo()->m_keepTillFrame[ ICON_BOMB_REMOTE ] = now + 1;
-						getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->draw( screen.x, screen.y, frameWidth, frameHeight );
-						getIconInfo()->m_keepTillFrame[ ICON_BOMB_TIMED ] = now + 1;
+						if (showBaseAnim) {
+							getIconInfo()->m_icon[ICON_BOMB_REMOTE]->draw(screen.x, screen.y, frameWidth, frameHeight);
+							getIconInfo()->m_keepTillFrame[ICON_BOMB_REMOTE] = now + 1;
+						}
+						if (showTimedAnim) {
+							getIconInfo()->m_icon[ICON_BOMB_TIMED]->draw(screen.x, screen.y, frameWidth, frameHeight);
+							getIconInfo()->m_keepTillFrame[ICON_BOMB_TIMED] = now + 1;
+						}
 					}
 				}
 			}
 			else
 			{
 				//Remote charge
-				//Timed bomb
-				if( !getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] )
+				if( !getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] && update->showAnimBaseTemplate())
 				{
 					Anim2DTemplate* templ = update->getAnimBaseTemplate();
 
@@ -4413,7 +4491,7 @@ DrawModule** Drawable::getDrawModules()
 		}
 		else
 		{
-			for (DrawModule** dm2 = dm; *dm2; ++dm2)
+			for (DrawModule** dm2 = dm; checkDrawModuleNullptr(dm2) && *dm2; ++dm2)
 			{
 				ObjectDrawInterface* di = (*dm2)->getObjectDrawInterface();
 				if (di)
@@ -4454,6 +4532,20 @@ DrawModule const** Drawable::getDrawModules() const
 	}
 #endif
 	return dm;
+}
+
+Bool Drawable::checkDrawModuleNullptr(DrawModule** dm)
+{
+	if(!TheGlobalData->m_useEfficientDrawableScheme)
+		return TRUE;
+
+	if(dm == nullptr)
+	{
+		//TheGameClient->removeDrawableFromEfficientList(this);
+		//TheGameClient->clearEfficientDrawablesList();
+		return FALSE;
+	}
+	return TRUE;
 }
 
 //-------------------------------------------------------------------------------------------------

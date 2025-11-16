@@ -1520,7 +1520,7 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 		PathfindCell *c, *lastCell = NULL;
 		for( c = list; c; c = c->getNextOpen() )
 		{
-			if (c->m_info->m_totalCost > m_info->m_totalCost)
+			if (c && c->m_info && m_info && c->m_info->m_totalCost > m_info->m_totalCost)
 				break;
 
 			lastCell = c;
@@ -1586,16 +1586,23 @@ Int PathfindCell::releaseOpenList( PathfindCell *list )
 		DEBUG_ASSERTCRASH(list->m_info->m_closed==FALSE && list->m_info->m_open==TRUE, ("Serious error - Invalid flags. jba"));
 		PathfindCell *cur = list;
 		PathfindCellInfo *curInfo = list->m_info;
-		if (curInfo->m_nextOpen) {
+		// IamInnocent - Added sanity checks to prevent crashing
+		// NOTE: Although this prevents crashing, to have this to happen means that ground units can no longer move
+		// AIPathfind needs some serious rework.
+		if (curInfo && curInfo->m_nextOpen) {
 			list = curInfo->m_nextOpen->m_cell;
 		}	else {
 			list = NULL;
 		}
 		DEBUG_ASSERTCRASH(cur == curInfo->m_cell, ("Bad backpointer in PathfindCellInfo"));
-		curInfo->m_nextOpen = NULL;
-		curInfo->m_prevOpen = NULL;
-		curInfo->m_open = FALSE;
-		cur->releaseInfo();
+		if(curInfo)
+		{
+			curInfo->m_nextOpen = NULL;
+			curInfo->m_prevOpen = NULL;
+			curInfo->m_open = FALSE;
+		}
+		if(cur)
+			cur->releaseInfo();
 	}
 	return count;
 }
@@ -1610,16 +1617,20 @@ Int PathfindCell::releaseClosedList( PathfindCell *list )
 		DEBUG_ASSERTCRASH(list->m_info->m_closed==TRUE && list->m_info->m_open==FALSE, ("Serious error - Invalid flags. jba"));
 		PathfindCell *cur = list;
 		PathfindCellInfo *curInfo = list->m_info;
-		if (curInfo->m_nextOpen) {
+		if (curInfo && curInfo->m_nextOpen) {
 			list = curInfo->m_nextOpen->m_cell;
 		}	else {
 			list = NULL;
 		}
 		DEBUG_ASSERTCRASH(cur == curInfo->m_cell, ("Bad backpointer in PathfindCellInfo"));
-		curInfo->m_nextOpen = NULL;
-		curInfo->m_prevOpen = NULL;
-		curInfo->m_closed = FALSE;
-		cur->releaseInfo();
+		if(curInfo)
+		{
+			curInfo->m_nextOpen = NULL;
+			curInfo->m_prevOpen = NULL;
+			curInfo->m_closed = FALSE;
+		}
+		if(cur)
+			cur->releaseInfo();
 	}
 	return count;
 }
@@ -1637,7 +1648,7 @@ PathfindCell *PathfindCell::putOnClosedList( PathfindCell *list )
 
 		m_info->m_prevOpen = NULL;
 		m_info->m_nextOpen = list?list->m_info:NULL;
-		if (list)
+		if (list && list->m_info)
 			list->m_info->m_prevOpen = this->m_info;
 
 		list = this;

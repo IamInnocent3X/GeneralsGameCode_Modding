@@ -208,10 +208,20 @@ void RiderChangeContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int RiderChangeContain::getContainMax( void ) const
+Int RiderChangeContain::getRawContainMax( void ) const
 {
 	if (getRiderChangeContainModuleData())
 		return getRiderChangeContainModuleData()->m_slotCapacity;
+
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Int RiderChangeContain::getContainMax( void ) const
+{
+	if (getRiderChangeContainModuleData())
+		return getRiderChangeContainModuleData()->m_slotCapacity + m_containExtra;
 
 	return 0;
 }
@@ -518,7 +528,7 @@ void RiderChangeContain::orderAllPassengersToExit( CommandSourceType commandSour
 		return;
 
 	Object* first_rider = *getContainedItemsList()->begin();
-	if( first_rider->getAI() )
+	if( first_rider && first_rider->getAI() )
 	{
 		if( instantly )
 		{
@@ -1680,6 +1690,9 @@ void RiderChangeContain::doStatusChecks()
 
 void RiderChangeContain::doUpgradeChecks()
 {
+	// extend base class
+	TransportContain::doUpgradeChecks();
+
 	// Prevent Switching States
 	if(m_dontCompare)
 		return;

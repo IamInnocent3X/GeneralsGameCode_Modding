@@ -421,7 +421,10 @@ void ArmorTemplate::parseDefaultDamage(INI* ini, void*/*instance*/, void* /* sto
 	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
 
 	if (customType->m_declaredCoefficient == TRUE)
+	{
 		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", TheArmorStore->m_customDamageTypeParseNext.str()));
+		throw INI_INVALID_DATA;
+	}
 
 	INI::parsePercentToReal(ini, NULL, &customType->m_coefficient, NULL);
 	customType->m_declaredCoefficient = TRUE;
@@ -462,6 +465,7 @@ void ArmorTemplate::parseCustomDamageType(INI* ini, void*/*instance*/, void* /* 
 		else
 		{
 			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", TheArmorStore->m_customDamageTypeParseNext.str()));
+			throw INI_INVALID_DATA;
 		}
 	}
 }
@@ -471,7 +475,10 @@ void ArmorTemplate::parseLinkDamageType(INI* ini, void*/*instance*/, void* /* st
 	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
 
 	if (customType->m_declaredLinkDamageType == TRUE)
+	{
 		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", TheArmorStore->m_customDamageTypeParseNext.str()));
+		throw INI_INVALID_DATA;
+	}
 
 	DamageTypeFlags::parseSingleBitFromINI(ini, NULL, &customType->m_linkDamageType, NULL);
 	customType->m_declaredLinkDamageType = TRUE;

@@ -35,6 +35,7 @@
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Module/EnemyNearUpdate.h"
+#include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/Module/AIUpdate.h"
@@ -65,18 +66,19 @@ EnemyNearUpdate::~EnemyNearUpdate( void )
 void EnemyNearUpdate::checkForEnemies( void )
 {
 	// periodic enemy checks
-	if (m_enemyScanDelay == 0)
+	UnsignedInt now = TheGameLogic->getFrame();
+	if (now >= m_enemyScanDelay)
 	{
-		m_enemyScanDelay = getEnemyNearUpdateModuleData()->m_enemyScanDelayTime;
+		m_enemyScanDelay = now + getEnemyNearUpdateModuleData()->m_enemyScanDelayTime;
 
 		Real visionRange = getObject()->getVisionRange();
 		Object* enemy = TheAI->findClosestEnemy( getObject(), visionRange, AI::CAN_SEE );
 		m_enemyNear = (enemy != NULL);
 	}
-	else
-	{
-		--m_enemyScanDelay;
-	}
+	//else
+	//{
+	//	--m_enemyScanDelay;
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -85,6 +87,7 @@ void EnemyNearUpdate::checkForEnemies( void )
 UpdateSleepTime EnemyNearUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	Bool enemyWasNear = m_enemyNear;
 
 	checkForEnemies();
@@ -103,7 +106,9 @@ UpdateSleepTime EnemyNearUpdate::update()
 		if( draw )
 			draw->clearModelConditionState( MODELCONDITION_ENEMYNEAR );
 	}
-	return UPDATE_SLEEP_NONE;
+
+	UnsignedInt now = TheGameLogic->getFrame();
+	return m_enemyScanDelay > now ? UPDATE_SLEEP(m_enemyScanDelay - now) : UPDATE_SLEEP_NONE;
 }
 
 // ------------------------------------------------------------------------------------------------

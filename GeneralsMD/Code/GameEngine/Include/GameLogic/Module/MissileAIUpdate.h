@@ -77,6 +77,8 @@ public:
 	Bool						m_allowSubdual;
 	Bool						m_allowAttract;
 
+	Bool						m_allowRetargeting;
+
     MissileAIUpdateModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -153,6 +155,9 @@ private:
 
 	UnsignedInt						m_detonateDistance;
 	ObjectID						m_decoyID;
+
+	UnsignedInt						m_killSelfTime;
+	UnsignedInt						m_nextWakeUpTime;
 
 	void doPrelaunchState();
 	void doLaunchState();

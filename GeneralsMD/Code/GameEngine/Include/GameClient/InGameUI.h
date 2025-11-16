@@ -834,7 +834,6 @@ protected:
 	Bool												m_isSelecting;
 	MouseMode										m_mouseMode;
 	Int													m_mouseModeCursor;
-	AsciiString											m_mouseModeCustomCursor;
 	DrawableID									m_mousedOverDrawableID;
 	Coord2D											m_scrollAmt;
 	Bool												m_isQuitMenuVisible;

@@ -31,6 +31,7 @@
 #include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Module/CreateModule.h"
+#include "GameLogic/Object.h"
 
 // ------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -47,6 +48,19 @@ CreateModule::~CreateModule()
 {
 
 }  // end ~CreateModule
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void CreateModule::onBuildComplete()
+{ 
+	// After I finished construction while I am configured to Disable my Power, Disable Me
+	Object* me = getObject();
+	if(me->isDisabledPowerByCommand())
+	{
+		me->doDisablePower(TRUE);
+	}
+	m_needToRunOnBuildComplete = FALSE;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** CRC */

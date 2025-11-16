@@ -69,6 +69,7 @@
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/OpenContain.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/TerrainLogic.h"									///< @todo This should be TerrainVisual (client side)
 #include "Common/AudioEventInfo.h"
@@ -180,6 +181,7 @@ W3DView::W3DView()
 	m_shakerAngles.X =0.0f;							// Proper camera shake generator & sources
 	m_shakerAngles.Y =0.0f;
 	m_shakerAngles.Z =0.0f;
+	m_updateEfficient = FALSE;
 
 }  // end W3DView
 
@@ -1037,6 +1039,12 @@ Bool W3DView::updateCameraMovements()
 {
 	Bool didUpdate = false;
 
+	if(TheGlobalData->m_useEfficientDrawableScheme && 
+		(m_doingZoomCamera || m_doingPitchCamera || m_doingRotateCamera || m_doingMoveCameraOnWaypointPath || m_doingScriptedCameraLock || m_previousLookAtPosition != *getPosition()))
+	{
+		m_updateEfficient = TRUE;
+	}
+
 	if (m_doingZoomCamera)
 	{
 		zoomCameraOneFrame();
@@ -1238,6 +1246,10 @@ void W3DView::update(void)
 					}
 				}
 				if (!(TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript()) && !TheGameLogic->isGamePaused()) {
+					if(TheGlobalData->m_useEfficientDrawableScheme && m_previousLookAtPosition != *getPosition())
+					{
+						m_updateEfficient = TRUE;
+					}
 					m_previousLookAtPosition = *getPosition();
 				}
 				setPosition(&curpos);
@@ -1386,8 +1398,11 @@ void W3DView::update(void)
 
 	// render all of the visible Drawables
 	/// @todo this needs to use a real region partition or something
-	if (WW3D::Get_Frame_Time())	//make sure some time actually elapsed
+	//// IamInnocent - Attempted usage to register regions and drawables
+	if (WW3D::Get_Frame_Time() || m_updateEfficient)	//make sure some time actually elapsed
 		TheGameClient->iterateDrawablesInRegion( &axisAlignedRegion, drawDrawable, this );
+
+	m_updateEfficient = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2117,10 +2132,10 @@ Int W3DView::iterateDrawablesInRegion( IRegion2D *screenRegion,
 			regionIsPoint = TRUE;
 		}
 
-		normalizedRegion.lo.x = ((Real)(screenRegion->lo.x - m_originX) / (Real)getWidth()) * 2.0f - 1.0f;
-		normalizedRegion.lo.y = -(((Real)(screenRegion->hi.y - m_originY) / (Real)getHeight()) * 2.0f - 1.0f);
-		normalizedRegion.hi.x = ((Real)(screenRegion->hi.x - m_originX) / (Real)getWidth()) * 2.0f - 1.0f;
-		normalizedRegion.hi.y = -(((Real)(screenRegion->lo.y - m_originY) / (Real)getHeight()) * 2.0f - 1.0f);
+		normalizedRegion.lo.x = (INT_TO_REAL(screenRegion->lo.x - m_originX) / INT_TO_REAL(getWidth())) * 2.0f - 1.0f;
+		normalizedRegion.lo.y = -((INT_TO_REAL(screenRegion->hi.y - m_originY) / INT_TO_REAL(getHeight())) * 2.0f - 1.0f);
+		normalizedRegion.hi.x = (INT_TO_REAL(screenRegion->hi.x - m_originX) / INT_TO_REAL(getWidth())) * 2.0f - 1.0f;
+		normalizedRegion.hi.y = -((INT_TO_REAL(screenRegion->lo.y - m_originY) / INT_TO_REAL(getHeight())) * 2.0f - 1.0f);
 
 	}  // end if
 
@@ -2135,63 +2150,127 @@ Int W3DView::iterateDrawablesInRegion( IRegion2D *screenRegion,
 		}
 	}
 
-	for( draw = TheGameClient->firstDrawable();
-			 draw;
-			 draw = draw->getNextDrawable() )
+	
+	if(screenRegion == NULL || onlyDrawableToTest || ThePartitionManager->hasNoOffset() || !TheGlobalData->m_usePartitionManagerToIterateDrawables)
 	{
-		if (onlyDrawableToTest)
+		for( draw = TheGameClient->firstDrawable();
+				draw;
+				draw = draw->getNextDrawable() )
 		{
-		 draw = onlyDrawableToTest;
-		 inside = TRUE;
-		}
-		else
-		{
-
-			// not inside
-			inside = FALSE;
-
-			// no screen region, means all drawbles
-			if( screenRegion == NULL )
-				inside = TRUE;
+			if (onlyDrawableToTest)
+			{
+			draw = onlyDrawableToTest;
+			inside = TRUE;
+			}
 			else
 			{
 
-				// project the center of the drawable to the screen
-				/// @todo use a real 3D position in the drawable
-				pos = *draw->getPosition();
-				world.X = pos.x;
-				world.Y = pos.y;
-				world.Z = pos.z;
+				// not inside
+				inside = FALSE;
 
-				// project the world point to the screen
-				if( m_3DCamera->Project( screen, world ) == CameraClass::INSIDE_FRUSTUM &&
-						screen.X >= normalizedRegion.lo.x &&
-						screen.X <= normalizedRegion.hi.x &&
-						screen.Y >= normalizedRegion.lo.y &&
-						screen.Y <= normalizedRegion.hi.y )
+				// no screen region, means all drawbles
+				if( screenRegion == NULL )
+					inside = TRUE;
+				else
 				{
 
-					inside = TRUE;
+					// project the center of the drawable to the screen
+					/// @todo use a real 3D position in the drawable
+					pos = *draw->getPosition();
+					world.X = pos.x;
+					world.Y = pos.y;
+					world.Z = pos.z;
 
-				}  // end if
-			}
+					// project the world point to the screen
+					if( m_3DCamera->Project( screen, world ) == CameraClass::INSIDE_FRUSTUM &&
+							screen.X >= normalizedRegion.lo.x &&
+							screen.X <= normalizedRegion.hi.x &&
+							screen.Y >= normalizedRegion.lo.y &&
+							screen.Y <= normalizedRegion.hi.y )
+					{
 
-		}  //end else
+						inside = TRUE;
 
-		// if inside do the callback and count up
-		if( inside )
+					}  // end if
+				}
+
+			}  //end else
+
+			// if inside do the callback and count up
+			if( inside )
+			{
+
+				if( callback( draw, userData ) )
+					++count;
+
+			}  // end if
+
+			// If onlyDrawableToTest, then we should bail out now.
+			if (onlyDrawableToTest != NULL)
+				break;
+
+		}  // end for draw
+	}
+	else
+	{
+		std::list< Drawable* > drawables = ThePartitionManager->getDrawablesInRegion( screenRegion );
+
+		for( std::list< Drawable* >::iterator it = drawables.begin(); it != drawables.end(); ++it )
 		{
+			//if (onlyDrawableToTest)
+			//{
+			//draw = onlyDrawableToTest;
+			//inside = TRUE;
+			//}
+			//else
+			{
 
-			if( callback( draw, userData ) )
-				++count;
+				// not inside
+				inside = FALSE;
 
-		}  // end if
+				// no screen region, means all drawbles
+				//if( screenRegion == NULL )
+				//	inside = TRUE;
+				//else
+				{
 
-		// If onlyDrawableToTest, then we should bail out now.
-		if (onlyDrawableToTest != NULL)
-			break;
+					// project the center of the drawable to the screen
+					/// @todo use a real 3D position in the drawable
+					pos = *(*it)->getPosition();
+					world.X = pos.x;
+					world.Y = pos.y;
+					world.Z = pos.z;
 
-	}  // end for draw
+					// project the world point to the screen
+					if( m_3DCamera->Project( screen, world ) == CameraClass::INSIDE_FRUSTUM &&
+							screen.X >= normalizedRegion.lo.x &&
+							screen.X <= normalizedRegion.hi.x &&
+							screen.Y >= normalizedRegion.lo.y &&
+							screen.Y <= normalizedRegion.hi.y )
+					{
+
+						inside = TRUE;
+
+					}  // end if
+				}
+
+			}  //end else
+
+			// if inside do the callback and count up
+			if( inside )
+			{
+
+				if( callback( (*it), userData ) )
+					++count;
+
+			}  // end if
+
+			// If onlyDrawableToTest, then we should bail out now.
+			//if (onlyDrawableToTest != NULL)
+			//	break;
+
+		}  // end for draw
+	}
 
 	return count;
 
@@ -2368,6 +2447,9 @@ void W3DView::lookAt( const Coord3D *o )
 	m_doingScriptedCameraLock = false;
 
 	setCameraTransform();
+
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+		TheGameClient->clearEfficientDrawablesList();
 
 }
 

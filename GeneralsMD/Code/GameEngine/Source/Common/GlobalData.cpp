@@ -201,7 +201,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "Use3WayTerrainBlends",			INI::parseInt,				NULL,			offsetof( GlobalData, m_use3WayTerrainBlends ) },
 	{ "StretchTerrain",						INI::parseBool,				NULL,			offsetof( GlobalData, m_stretchTerrain ) },
 	{ "UseHalfHeightMap",					INI::parseBool,				NULL,			offsetof( GlobalData, m_useHalfHeightMap ) },
-
+	{ "ViewportHeightScale",      INI::parseReal,				NULL,			offsetof( GlobalData, m_viewportHeightScale ) },
 
 	{ "DrawEntireTerrain",					INI::parseBool,				NULL,			offsetof( GlobalData, m_drawEntireTerrain ) },
 	{ "TerrainLOD",									INI::parseIndexList,	TerrainLODNames,	offsetof( GlobalData, m_terrainLOD ) },
@@ -313,6 +313,8 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "ContainerPipWorldOffset",				INI::parseCoord3D,				NULL,			offsetof( GlobalData, m_containerPipWorldOffset ) },
 	{ "AmmoPipScreenOffset",						INI::parseCoord2D,				NULL,			offsetof( GlobalData, m_ammoPipScreenOffset ) },
 	{ "ContainerPipScreenOffset",				INI::parseCoord2D,				NULL,			offsetof( GlobalData, m_containerPipScreenOffset ) },
+
+	{ "ProgressBarYOffset",				INI::parseReal,				NULL,			offsetof(GlobalData, m_progressBarYOffset) },
 
 	{ "HistoricDamageLimit",				INI::parseDurationUnsignedInt,				NULL,			offsetof( GlobalData, m_historicDamageLimit ) },
 
@@ -646,8 +648,6 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "CustomTintStatus",	 GlobalData::parseTintCustomStatusType, NULL, offsetof(GlobalData, m_colorTintCustomTypes) },
 
 	{ "CountermeasuresDetonateNonTrackingMissiles",	 INI::parseBool, NULL, offsetof(GlobalData, m_countermeasuresDetonateNonTracking) },
-
-	{ "BaseRegenClearsParasite", INI::parseBool, NULL,	offsetof( GlobalData, m_baseRegenClearsParasite ) },
 	
 	{ "NewSkirmishFPSSystem",	 INI::parseBool, NULL, offsetof(GlobalData, m_newskirmishfpsSystem) },
 	{ "LoadSkirmishFPS",	 INI::parseBool, NULL, offsetof(GlobalData, m_skirmishloadfps) },
@@ -658,6 +658,15 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "DrawWidthFactor", INI::parseReal, NULL, offsetof( GlobalData, m_drawWidthFactor ) },
 	{ "DrawHeightFactor", INI::parseReal, NULL, offsetof( GlobalData, m_drawHeightFactor ) },
+	{ "DrawFullMap", INI::parseBool, NULL, offsetof( GlobalData, m_drawFullMap ) },
+
+	{ "UsePartitionManagerToIterateDrawables",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawables) },
+	{ "UsePartitionManagerToIterateDrawablesOnlySelect",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawablesOnlySelect) },
+	{ "UseEfficientIterateDrawablesScheme",	 INI::parseBool, NULL, offsetof(GlobalData, m_useEfficientDrawableScheme) },
+
+	{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) },
+
+	{ "FlungInfantryCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_infantryCorpsesAirDrag) },
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1213,8 +1222,6 @@ GlobalData::GlobalData()
 
 	m_countermeasuresDetonateNonTracking = FALSE; //More realistic destruction. Won't seemingly home onto the immovable target dealing no damage.
 
-	m_baseRegenClearsParasite = FALSE; //Does base regen clears Parasites?
-
 	m_useOldMoveSpeed = FALSE;  //Fix is enabled by default
 
 
@@ -1226,6 +1233,14 @@ GlobalData::GlobalData()
 
 	m_drawWidthFactor = 1.0f;
 	m_drawHeightFactor = 1.0f;
+	m_drawFullMap = FALSE;
+
+	m_usePartitionManagerToIterateDrawables = FALSE;
+	m_usePartitionManagerToIterateDrawablesOnlySelect = FALSE;
+	m_useEfficientDrawableScheme = FALSE;
+
+	m_fixLocoClump = FALSE;
+	m_infantryCorpsesAirDrag = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

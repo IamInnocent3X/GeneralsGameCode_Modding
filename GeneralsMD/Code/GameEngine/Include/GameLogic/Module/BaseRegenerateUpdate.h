@@ -45,6 +45,9 @@ class BaseRegenerateUpdateModuleData : public UpdateModuleData
 {
 
 public:
+	Bool 	m_baseRegenClearsParasite;
+	std::vector<AsciiString> m_baseRegenClearsParasiteKeys;
+
 	BaseRegenerateUpdateModuleData( void );
 	static void buildFieldParse( MultiIniFieldParse &p );
 

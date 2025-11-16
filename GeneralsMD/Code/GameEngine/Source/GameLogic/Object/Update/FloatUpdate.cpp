@@ -34,6 +34,7 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/FloatUpdate.h"
+#include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/GameLogic.h"
 
 #include "GameClient/Drawable.h"
@@ -94,7 +95,7 @@ FloatUpdate::~FloatUpdate( void )
 UpdateSleepTime FloatUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
-
+/// IamInnocent - Done
 	// if we're not enabled, do nothing
 	if( m_enabled == TRUE )
 	{
@@ -131,6 +132,15 @@ UpdateSleepTime FloatUpdate::update( void )
 		mx.Rotate_X(pitch);
 
 		draw->setInstanceMatrix(&mx);
+	}
+
+	if(getObject())
+	{
+		AIUpdateInterface *ai = getAIUpdateInterface();
+		if (ai && !ai->isMoving())
+		{
+			return UPDATE_SLEEP_FOREVER;
+		}
 	}
 
 	return UPDATE_SLEEP_NONE;

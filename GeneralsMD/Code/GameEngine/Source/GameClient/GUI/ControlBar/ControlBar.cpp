@@ -180,11 +180,14 @@ void ControlBar::populatePurchaseScience( Player* player )
 	commandSet8 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
 
 	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_1; i++ )
-		m_sciencePurchaseWindowsRank1[i]->winHide(TRUE);
+		if (m_sciencePurchaseWindowsRank1[i]!=nullptr)
+			m_sciencePurchaseWindowsRank1[i]->winHide(TRUE);
 	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_3; i++ )
-		m_sciencePurchaseWindowsRank3[i]->winHide(TRUE);
+		if (m_sciencePurchaseWindowsRank3[i] != nullptr)
+			m_sciencePurchaseWindowsRank3[i]->winHide(TRUE);
 	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_8; i++ )
-		m_sciencePurchaseWindowsRank8[i]->winHide(TRUE);
+		if (m_sciencePurchaseWindowsRank8[i] != nullptr)
+			m_sciencePurchaseWindowsRank8[i]->winHide(TRUE);
 
 
 	// if no command set match is found hide all the buttons
@@ -205,7 +208,8 @@ void ControlBar::populatePurchaseScience( Player* player )
 		if( commandButton == NULL || BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) )
 		{
 			// hide window on interface
-			m_sciencePurchaseWindowsRank1[ i ]->winHide( TRUE );
+			if(m_sciencePurchaseWindowsRank1[ i ] != nullptr) 
+				m_sciencePurchaseWindowsRank1[ i ]->winHide( TRUE );
 		}  // end if
 		else
 		{
@@ -265,7 +269,8 @@ void ControlBar::populatePurchaseScience( Player* player )
 		if( commandButton == NULL || BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) )
 		{
 			// hide window on interface
-			m_sciencePurchaseWindowsRank3[ i ]->winHide( TRUE );
+			if (m_sciencePurchaseWindowsRank3[ i ] != nullptr)
+				m_sciencePurchaseWindowsRank3[ i ]->winHide( TRUE );
 		}  // end if
 		else
 		{
@@ -328,7 +333,8 @@ void ControlBar::populatePurchaseScience( Player* player )
 		if( commandButton == NULL || BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) )
 		{
 			// hide window on interface
-			m_sciencePurchaseWindowsRank8[ i ]->winHide( TRUE );
+			if (m_sciencePurchaseWindowsRank8[ i ] != nullptr)
+				m_sciencePurchaseWindowsRank8[ i ]->winHide( TRUE );
 		}  // end if
 		else
 		{
@@ -505,6 +511,112 @@ void ControlBar::updateContextPurchaseScience( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+/*Int ControlBar::getRemainingSciencePointsAvailableToPurchase( Player* player ) const
+{
+//	TheInGameUI->deselectAllDrawables();
+
+	const CommandSet *commandSet1;
+	const CommandSet *commandSet3;
+	const CommandSet *commandSet8;
+	Int i;
+	if(TheScriptEngine->isGameEnding())
+		return 0;
+	// get command set
+	if(!player ||!player->getPlayerTemplate() || player->getPlayerTemplate()->getPurchaseScienceCommandSetRank1().isEmpty() ||
+			player->getPlayerTemplate()->getPurchaseScienceCommandSetRank3().isEmpty() ||
+			player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8().isEmpty())
+		return 0;
+	commandSet1 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank1()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+	commandSet3 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank3()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+	commandSet8 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+
+
+	// if no command set match is found hide all the buttons
+	if( commandSet1 == NULL ||
+			commandSet3 == NULL ||
+			commandSet8 == NULL )
+		return 0;
+
+	// populate the button with commands defined
+	const CommandButton *commandButton;
+	Int cost = 0;
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_1; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet1->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == NULL && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st) &&
+				TheScienceStore->playerHasPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_3; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet3->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == NULL && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_8; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet8->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == NULL && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st) &&
+				TheScienceStore->playerHasPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	return cost;
+
+}*/
+
+//-------------------------------------------------------------------------------------------------
 /** parse command definition */
 //-------------------------------------------------------------------------------------------------
 void CommandButton::parseCommand( INI* ini, void *instance, void *store, const void *userData )
@@ -621,7 +733,9 @@ Bool CommandButton::isValidToUseOn(const Object *sourceObj, const Object *target
 	if (m_upgradeTemplate) {
 		// @todo: Make a const version of pui. We're not altering the production queue, so this const-cast
 		// is okay.
-		ProductionUpdateInterface *pui = const_cast<Object*>(sourceObj)->getProductionUpdateInterface();
+		//ProductionUpdateInterface *pui = const_cast<Object*>(sourceObj)->getProductionUpdateInterface();
+		/// IamInnocent - Done this misc
+		const ProductionUpdateInterface *pui = sourceObj->getProductionUpdateInterface();
 		if (pui) {
 			const ProductionEntry *pe = pui->firstProduction();
 			while (pe) {
@@ -719,6 +833,20 @@ const FieldParse CommandSet::m_commandSetFieldParseTable[] =
 	{ "16",			CommandSet::parseCommandButton, (void *)15,		offsetof( CommandSet, m_command ) },
 	{ "17",			CommandSet::parseCommandButton, (void *)16,		offsetof( CommandSet, m_command ) },
 	{ "18",			CommandSet::parseCommandButton, (void *)17,		offsetof( CommandSet, m_command ) },
+	{ "19",			CommandSet::parseCommandButton, (void *)18,		offsetof( CommandSet, m_command ) },
+	{ "20",			CommandSet::parseCommandButton, (void *)19,		offsetof( CommandSet, m_command ) },
+	{ "21",			CommandSet::parseCommandButton, (void *)20,		offsetof( CommandSet, m_command ) },
+	{ "22",			CommandSet::parseCommandButton, (void *)21,		offsetof( CommandSet, m_command ) },
+	{ "23",			CommandSet::parseCommandButton, (void *)22,		offsetof( CommandSet, m_command ) },
+	{ "24",			CommandSet::parseCommandButton, (void *)23,		offsetof( CommandSet, m_command ) },
+	{ "25",			CommandSet::parseCommandButton, (void *)24,		offsetof( CommandSet, m_command ) },
+	{ "26",			CommandSet::parseCommandButton, (void *)25,		offsetof( CommandSet, m_command ) },
+	{ "27",			CommandSet::parseCommandButton, (void *)26,		offsetof( CommandSet, m_command ) },
+	{ "28",			CommandSet::parseCommandButton, (void *)27,		offsetof( CommandSet, m_command ) },
+	{ "29",			CommandSet::parseCommandButton, (void *)28,		offsetof( CommandSet, m_command ) },
+	{ "30",			CommandSet::parseCommandButton, (void *)29,		offsetof( CommandSet, m_command ) },
+	{ "31",			CommandSet::parseCommandButton, (void *)30,		offsetof( CommandSet, m_command ) },
+	{ "32",			CommandSet::parseCommandButton, (void *)31,		offsetof( CommandSet, m_command ) },
 	{ NULL,			NULL,														 NULL,				0	}  // keep this last
 
 };
@@ -1145,7 +1273,9 @@ void ControlBar::init( void )
 			id = TheNameKeyGenerator->nameToKey( windowName.str() );
 			m_sciencePurchaseWindowsRank1[ i ] =
 				TheWindowManager->winGetWindowFromId( m_contextParent[ CP_PURCHASE_SCIENCE ], id );
-			m_sciencePurchaseWindowsRank1[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
+			if (m_sciencePurchaseWindowsRank1[i] != nullptr) {
+				m_sciencePurchaseWindowsRank1[i]->winSetStatus(WIN_STATUS_USE_OVERLAY_STATES);
+			}
 		}  // end for i
 		for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_3; i++ )
 		{
@@ -1153,7 +1283,9 @@ void ControlBar::init( void )
 			id = TheNameKeyGenerator->nameToKey( windowName.str() );
 			m_sciencePurchaseWindowsRank3[ i ] =
 				TheWindowManager->winGetWindowFromId( m_contextParent[ CP_PURCHASE_SCIENCE ], id );
-			m_sciencePurchaseWindowsRank3[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
+			if (m_sciencePurchaseWindowsRank3[i] != nullptr) {
+				m_sciencePurchaseWindowsRank3[i]->winSetStatus(WIN_STATUS_USE_OVERLAY_STATES);
+			}
 		}  // end for i
 
 		for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_8; i++ )
@@ -1162,7 +1294,9 @@ void ControlBar::init( void )
 			id = TheNameKeyGenerator->nameToKey( windowName.str() );
 			m_sciencePurchaseWindowsRank8[ i ] =
 				TheWindowManager->winGetWindowFromId( m_contextParent[ CP_PURCHASE_SCIENCE ], id );
-			m_sciencePurchaseWindowsRank8[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
+			if (m_sciencePurchaseWindowsRank8[i] != nullptr) {
+				m_sciencePurchaseWindowsRank8[i]->winSetStatus(WIN_STATUS_USE_OVERLAY_STATES);
+			}
 		}  // end for i
 
 		// keep a pointer to the window making up the right HUD display
@@ -1180,7 +1314,9 @@ void ControlBar::init( void )
 			id = TheNameKeyGenerator->nameToKey( windowName.str() );
 			m_rightHUDUpgradeCameos[ i ] =
 				TheWindowManager->winGetWindowFromId( m_rightHUDWindow, id );
-			m_rightHUDUpgradeCameos[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
+			if (m_rightHUDUpgradeCameos[i] != nullptr) {
+				m_rightHUDUpgradeCameos[i]->winSetStatus(WIN_STATUS_USE_OVERLAY_STATES);
+			}
 		}
 
 //		m_transitionHandler = NEW GameWindowTransitionsHandler;
@@ -2640,6 +2776,9 @@ void ControlBar::setPortraitByObject( Object *obj )
 
 		for(Int i = 0; i < MAX_UPGRADE_CAMEO_UPGRADES; ++i)
 		{
+			if (m_rightHUDUpgradeCameos[i] == nullptr)
+				continue;
+
 			AsciiString upgradeName = thing->getUpgradeCameoName(i);
 			if(upgradeName.isEmpty())
 			{
@@ -2680,7 +2819,8 @@ void ControlBar::setPortraitByObject( Object *obj )
 		m_rightHUDWindow->winSetStatus( WIN_STATUS_IMAGE );
 		m_rightHUDCameoWindow->winClearStatus( WIN_STATUS_IMAGE );
 		for(Int i = 0; i < MAX_UPGRADE_CAMEO_UPGRADES; ++i)
-			m_rightHUDUpgradeCameos[i]->winHide(TRUE);
+			if (m_rightHUDUpgradeCameos[i] != nullptr)
+				m_rightHUDUpgradeCameos[i]->winHide(TRUE);
 
 		//Clear any overlay the portrait had on it.
 		GadgetButtonDrawOverlayImage( m_rightHUDCameoWindow, NULL );
@@ -3265,14 +3405,18 @@ void ControlBar::initSpecialPowershortcutBar( Player *player)
 		id = TheNameKeyGenerator->nameToKey( windowName.str() );
 		m_specialPowerShortcutButtons[ i ] =
 			TheWindowManager->winGetWindowFromId( m_specialPowerShortcutParent, id );
-		m_specialPowerShortcutButtons[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
-		// Oh god... this is a total hack for shortcut buttons to handle rendering text top left corner...
-		m_specialPowerShortcutButtons[ i ]->winSetStatus( WIN_STATUS_SHORTCUT_BUTTON );
 
-		windowName.format( parentName, i+1 );
-		id = TheNameKeyGenerator->nameToKey( windowName.str() );
-		m_specialPowerShortcutButtonParents[ i ] =
-			TheWindowManager->winGetWindowFromId( m_specialPowerShortcutParent, id );
+		if (m_specialPowerShortcutButtons[i] != nullptr) {
+
+			m_specialPowerShortcutButtons[i]->winSetStatus(WIN_STATUS_USE_OVERLAY_STATES);
+			// Oh god... this is a total hack for shortcut buttons to handle rendering text top left corner...
+			m_specialPowerShortcutButtons[i]->winSetStatus(WIN_STATUS_SHORTCUT_BUTTON);
+
+			windowName.format(parentName, i + 1);
+			id = TheNameKeyGenerator->nameToKey(windowName.str());
+			m_specialPowerShortcutButtonParents[i] =
+				TheWindowManager->winGetWindowFromId(m_specialPowerShortcutParent, id);
+		}
 	}  // end for i
 
 }
@@ -3482,16 +3626,18 @@ void ControlBar::populateSpecialPowerShortcut( Player *player)
 				}
 			}
 
-			// make sure the window is not hidden
-			m_specialPowerShortcutButtons[ currentButton ]->winHide( FALSE );
-			m_specialPowerShortcutButtonParents[ currentButton ]->winHide( FALSE );
-			// enable by default
-			m_specialPowerShortcutButtons[ currentButton ]->winEnable( TRUE );
-			m_specialPowerShortcutButtonParents[ currentButton ]->winEnable( TRUE );
+			if (m_specialPowerShortcutButtons[currentButton] != nullptr) {
+				// make sure the window is not hidden
+				m_specialPowerShortcutButtons[currentButton]->winHide(FALSE);
+				m_specialPowerShortcutButtonParents[currentButton]->winHide(FALSE);
+				// enable by default
+				m_specialPowerShortcutButtons[currentButton]->winEnable(TRUE);
+				m_specialPowerShortcutButtonParents[currentButton]->winEnable(TRUE);
 
-			// populate the visible button with data from the command button
-			setControlCommand( m_specialPowerShortcutButtons[ currentButton ], commandButton );
-			GadgetButtonSetAltSound(m_specialPowerShortcutButtons[ currentButton ], "GUIGenShortcutClick");
+				// populate the visible button with data from the command button
+				setControlCommand(m_specialPowerShortcutButtons[currentButton], commandButton);
+				GadgetButtonSetAltSound(m_specialPowerShortcutButtons[currentButton], "GUIGenShortcutClick");
+			}
 			currentButton++;
 
 		}  // end else
@@ -3514,7 +3660,7 @@ Bool ControlBar::hasAnyShortcutSelection() const
 		const CommandButton *command;
 
 		win = m_specialPowerShortcutButtons[ i ];
-		if( win->winIsHidden() == TRUE )
+		if( win == nullptr || win->winIsHidden() == TRUE )
 			continue;
 
 		// get the command from the control
@@ -3576,7 +3722,7 @@ void ControlBar::updateSpecialPowerShortcut( void )
 		// get the window
 		win = m_specialPowerShortcutButtons[ i ];
 
-		if( win->winIsHidden() == TRUE )
+		if( win==nullptr || win->winIsHidden() == TRUE )
 			continue;
 		// get the command from the control
 		command = (const CommandButton *)GadgetButtonGetData(win);
@@ -3669,7 +3815,7 @@ void ControlBar::drawSpecialPowerShortcutMultiplierText()
 		// get the window
 		win = m_specialPowerShortcutButtons[ i ];
 
-		if( win->winIsHidden() == TRUE )
+		if( win == nullptr || win->winIsHidden() == TRUE )
 			continue;
 		// get the command from the control
 		command = (const CommandButton *)GadgetButtonGetData(win);
@@ -3720,7 +3866,7 @@ void ControlBar::animateSpecialPowerShortcut( Bool isOn )
 	Bool dontAnimate = TRUE;
 	for( Int i = 0; i < m_currentlyUsedSpecialPowersButtons; ++i )
 	{
-		if (m_specialPowerShortcutButtons[i]->winGetUserData())
+		if (m_specialPowerShortcutButtons[i] && m_specialPowerShortcutButtons[i]->winGetUserData())
 		{
 			dontAnimate = FALSE;
 			break;
@@ -3748,7 +3894,7 @@ void ControlBar::showSpecialPowerShortcut( void )
 	Bool dontAnimate = TRUE;
 	for( Int i = 0; i < m_currentlyUsedSpecialPowersButtons; ++i )
 	{
-		if (m_specialPowerShortcutButtons[i]->winGetUserData())
+		if (m_specialPowerShortcutButtons[i] == nullptr || m_specialPowerShortcutButtons[i]->winGetUserData())
 		{
 			dontAnimate = FALSE;
 			break;

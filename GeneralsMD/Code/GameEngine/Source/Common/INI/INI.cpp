@@ -747,7 +747,7 @@ void INI::parseAsciiStringWithColonVector( INI* ini, void * /*instance*/, void *
 {
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
 	}
@@ -758,7 +758,7 @@ void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, 
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	// nope, don't clear. duh.
 	// asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
 	}
@@ -1508,6 +1508,20 @@ void INI::parseObjectCreationList( INI* ini, void * /*instance*/, void *store, c
 
 }
 
+void INI::parseObjectCreationListVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	typedef const ObjectCreationList *ConstObjectCreationListPtr;
+	std::vector<ConstObjectCreationListPtr>* v = (std::vector<ConstObjectCreationListPtr>*)store;
+	v->clear();
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		const ObjectCreationList *ocl = TheObjectCreationListStore->findObjectCreationList(token);	// could be null!
+		DEBUG_ASSERTCRASH(ocl || stricmp(token, "None") == 0, ("ObjectCreationList %s not found!",token));
+		// assign it, even if null!
+		v->push_back(ocl);
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 /** Parse a upgrade template string and store as template pointer */
 //-------------------------------------------------------------------------------------------------
@@ -1582,6 +1596,17 @@ void INI::parseIndexList( INI* ini, void * /*instance*/, void *store, const void
 	ConstCharPtrArray nameList = (ConstCharPtrArray)userData;
 	*(Int *)store = scanIndexList(ini->getNextToken(), nameList);
 }
+
+void INI::parseIndexListVector( INI* ini, void * /*instance*/, void *store, const void* userData )
+{
+	std::vector<int>* asv = (std::vector<int>*)store;
+	asv->clear();
+	ConstCharPtrArray nameList = (ConstCharPtrArray)userData;
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		asv->push_back(scanIndexList(token, nameList));
+	}
+} 
 
 //-------------------------------------------------------------------------------------------------
 /** returns -1 if "None", otherwise like parseIndexList **/
@@ -1931,6 +1956,19 @@ void INI::parseDurationUnsignedInt( INI *ini, void * /*instance*/, void *store, 
 {
 	UnsignedInt val = scanUnsignedInt(ini->getNextToken());
 	*(UnsignedInt *)store = (UnsignedInt)ceilf(ConvertDurationFromMsecsToFrames((Real)val));
+}
+
+//-------------------------------------------------------------------------------------------------
+void INI::parseDurationUnsignedIntVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<UnsignedInt>* asv = (std::vector<UnsignedInt>*)store;
+	asv->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		UnsignedInt val = scanUnsignedInt(token);
+		asv->push_back((UnsignedInt)ceilf(ConvertDurationFromMsecsToFrames((Real)val)));
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -578,6 +578,7 @@ public:
 		MSG_INTERNET_HACK,													///< Begin a persistent internet hack (free slow income)
 		MSG_DO_CHEER,																///< Orders selected units to play cheer animation (if possible)
 		MSG_TOGGLE_OVERCHARGE,											///< Toggle overcharge status of a power plant
+		MSG_DISABLE_POWER,											///< Toggle a powered object to disable its power
 		MSG_SWITCH_WEAPONS,													///< Switches which weapon slot to use for an object
 		MSG_CONVERT_TO_CARBOMB,
 		MSG_CAPTUREBUILDING,

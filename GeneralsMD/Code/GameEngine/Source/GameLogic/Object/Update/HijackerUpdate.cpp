@@ -68,10 +68,12 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	setHealed( FALSE );
 	setNoSelfDamage( FALSE );
 	setPercentDamage( 0.0f );
+	setParasiteKey( NULL );
 	m_statusToRemove.clear();
 	m_statusToDestroy.clear();
 	m_customStatusToRemove.clear();
 	m_customStatusToDestroy.clear();
+	m_recentParasiteKeys.clear();
 	m_wasTargetAirborne = false;
 	m_ejectPos.zero();
 	m_hijackType = HIJACK_NONE;
@@ -141,7 +143,23 @@ UpdateSleepTime HijackerUpdate::update( void )
 				}
 			}
 
-			if(!isDestroyed && m_clear && m_isParasite)
+			Bool hasCorrectParasiteKey = m_parasiteKey.isEmpty() ? TRUE : FALSE;
+			if(!m_recentParasiteKeys.empty())
+			{
+				if(!hasCorrectParasiteKey)
+				{
+					for(std::vector<AsciiString>::const_iterator it = m_recentParasiteKeys.begin(); it != m_recentParasiteKeys.end(); ++it)
+					{
+						if((*it) == m_parasiteKey)
+						{
+							hasCorrectParasiteKey = TRUE;
+							break;
+						}
+					}
+				}
+				m_recentParasiteKeys.clear();
+			}
+			if(!isDestroyed && m_clear && m_isParasite && hasCorrectParasiteKey)
 			{
 				if(m_destroyOnClear)
 					isDestroyed = TRUE;
@@ -231,16 +249,19 @@ UpdateSleepTime HijackerUpdate::update( void )
 		setHealed( FALSE );
 		setNoSelfDamage( FALSE );
 
-		if( target && !revertedCollide )
+		if( target && !target->isEffectivelyDead() && !target->isDestroyed() && !revertedCollide)
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
 			obj->setPosition( target->getPosition() );
 			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 			m_ejectPos = *target->getPosition();
 
-			// If I do not leech Exp as an Equipped Object, then I do not receive any EXP that should be given to the attached Object
+			// If I do not leech Exp, then I do not receive any EXP that should be given to the attached Object
 			if(m_noLeechExp)
+			{
+				setUpdate( FALSE );
 				return UPDATE_SLEEP_FOREVER;
+			}
 
 			// So, if while I am driving this American war vehicle, I gain skill points, I get to keep them when I wreck the vehicle
 			ExperienceTracker *targetExp = target->getExperienceTracker();
@@ -322,6 +343,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 			setDestroyOnClear( FALSE );
 			setDestroyOnTargetDie( FALSE );
 			setPercentDamage( 0.0f );
+			setParasiteKey( NULL );
 			m_targetObjHealth = 0.0f;
 			m_statusToRemove.clear();
 			m_statusToDestroy.clear();
@@ -485,6 +507,9 @@ void HijackerUpdate::xfer( Xfer *xfer )
 
 	// Health of target
 	xfer->xferReal( &m_targetObjHealth );
+
+	// Parasite Key
+	xfer->xferAsciiString( &m_parasiteKey );
 
 	// status to remove
 	m_statusToRemove.xfer( xfer );

@@ -238,6 +238,7 @@ private:
 	DamageTypeFlags						m_totalDamageTypeMask;			///< damagetype mask of all current weapons
 	Bool											m_hasPitchLimit;
 	Bool											m_hasDamageWeapon;
+	Bool											m_restricted;
 
 	Bool isAnyWithinTargetPitch(const Object* obj, const Object* victim) const;
 
@@ -255,11 +256,12 @@ public:
 	void updateWeaponSet(const Object* obj);
 	void reloadAllAmmo(const Object *obj, Bool now);
 	Bool isOutOfAmmo() const;
-	Bool hasAnyWeapon() const { return m_filledWeaponSlotMask != 0; }
-	Bool hasAnyDamageWeapon() const { return m_hasDamageWeapon; }
-	Bool hasWeaponToDealDamageType(DamageType typeToDeal) const { return m_totalDamageTypeMask.test(typeToDeal); }
-	Bool hasSingleDamageType(DamageType typeToDeal) const { return (m_totalDamageTypeMask.test(typeToDeal) && (m_totalDamageTypeMask.count() == 1) ); }
+	Bool hasAnyWeapon() const { return !m_restricted && m_filledWeaponSlotMask != 0; }
+	Bool hasAnyDamageWeapon() const { return !m_restricted && m_hasDamageWeapon; }
+	Bool hasWeaponToDealDamageType(DamageType typeToDeal) const { return !m_restricted && m_totalDamageTypeMask.test(typeToDeal); }
+	Bool hasSingleDamageType(DamageType typeToDeal) const { return (!m_restricted && m_totalDamageTypeMask.test(typeToDeal) && (m_totalDamageTypeMask.count() == 1) ); }
 	Bool isCurWeaponLocked() const { return m_curWeaponLockedStatus != NOT_LOCKED; }
+	Bool isCurWeaponLockedPriority() const { return m_curWeaponLockedStatus == LOCKED_PRIORITY; }
 	Weapon* getCurWeapon() { return m_weapons[m_curWeapon]; }
 	const Weapon* getCurWeapon() const { return m_weapons[m_curWeapon]; }
 	WeaponSlotType getCurWeaponSlot() const { return m_curWeapon; }
@@ -276,6 +278,8 @@ public:
 	//When an AIAttackState is over, it needs to clean up any weapons that might be in leech range mode
 	//or else those weapons will have unlimited range!
 	void clearLeechRangeModeForAllWeapons();
+
+	Bool isRestricted() const { return m_restricted; }
 
 	/**
 		Determines if the unit has any weapon that could conceivably
@@ -295,6 +299,7 @@ public:
 		Note that this DOES take weapon attack range into account.
 	*/
 	Bool chooseBestWeaponForTarget(const Object* obj, const Object* victim, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
+	Bool chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
 
 	Weapon* getWeaponInWeaponSlot(WeaponSlotType wslot) const;
 

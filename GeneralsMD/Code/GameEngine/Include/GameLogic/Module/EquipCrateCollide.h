@@ -54,10 +54,8 @@ public:
 	Bool m_isParasite;
 	Bool m_isUnique;
 	Bool m_equipCanPassiveAcquire;
-	Bool m_leechExpFromObject;
-	Bool m_destroyOnHeal;
-	Bool m_removeOnHeal;
 	Bool m_destroyOnClear;
+	AsciiString m_parasiteKey;
 
 	EquipCrateCollideModuleData()
 	{
@@ -66,10 +64,8 @@ public:
 		m_isParasite = FALSE;
 		m_isUnique = FALSE;
 		m_equipCanPassiveAcquire = FALSE;
-		m_leechExpFromObject = FALSE;
-		m_destroyOnHeal = FALSE;
-		m_removeOnHeal = FALSE;
 		m_destroyOnClear = FALSE;
+		m_parasiteKey = NULL;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -80,10 +76,8 @@ public:
 			{ "IsContain",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isContain ) },
 			{ "IsParasite",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isParasite ) },
 			{ "IsUnique",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isUnique ) },
+			{ "ParasiteKey",			INI::parseAsciiString,		NULL, offsetof( EquipCrateCollideModuleData, m_parasiteKey ) },
 			{ "CanPassiveAcquire",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_equipCanPassiveAcquire ) },
-			{ "LeechExpFromObject",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_leechExpFromObject ) },
-			{ "DestroyOnHeal",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnHeal ) },
-			{ "RemoveOnHeal",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_removeOnHeal ) },
 			{ "DestroyOnClear",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnClear ) },
 			{ 0, 0, 0, 0 }
 		};
@@ -105,7 +99,6 @@ public:
 	EquipCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	ObjectID getEquipObjectID() const { return m_equipToID; }
 	void setEquipStatus(Object *other);
 	void clearEquipStatus();
 

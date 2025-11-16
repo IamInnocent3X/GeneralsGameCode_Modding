@@ -236,8 +236,10 @@ public:  // height map info.
 	inline Int getDrawOrgX(void) {return m_drawOriginX;}
 	inline Int getDrawOrgY(void) {return m_drawOriginY;}
 
-	inline Int getDrawWidth(void) {return REAL_TO_INT(m_drawWidthX*TheGlobalData->m_drawWidthFactor);}
-	inline Int getDrawHeight(void) {return REAL_TO_INT(m_drawHeightY*TheGlobalData->m_drawHeightFactor);}
+	//inline Int getDrawWidth(void) {return REAL_TO_INT(m_drawWidthX*TheGlobalData->m_drawWidthFactor);}
+	//inline Int getDrawHeight(void) {return REAL_TO_INT(m_drawHeightY*TheGlobalData->m_drawHeightFactor);}
+	Int getDrawWidth(void);
+	Int getDrawHeight(void);
 	inline void setDrawWidth(Int width) {m_drawWidthX = width; if (m_drawWidthX>m_width) m_drawWidthX = m_width;}
 	inline void setDrawHeight(Int height) {m_drawHeightY = height; if (m_drawHeightY>m_height) m_drawHeightY = m_height;}
 	virtual Int getBorderSize(void) {return m_borderSize;}

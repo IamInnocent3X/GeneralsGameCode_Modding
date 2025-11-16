@@ -162,6 +162,7 @@ public:
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
 	virtual const AsciiString& getCursorName() const { return NULL; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	//Returns the currently active battle plan -- unpacked and ready... returns PLANSTATUS_NONE if in transition!
 	BattlePlanStatus getActiveBattlePlan() const;

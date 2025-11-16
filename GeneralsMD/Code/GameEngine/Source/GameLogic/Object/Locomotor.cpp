@@ -1011,10 +1011,13 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	}
 
 	// If the actual distance is farther, then use the actual distance so we get there.
-	Real dx = goalPos.x - obj->getPosition()->x;
-	Real dy = goalPos.y - obj->getPosition()->y;
-	Real dz = goalPos.z - obj->getPosition()->z;
-	Real dist = sqrt(dx*dx+dy*dy);
+	//Real dx = goalPos.x - obj->getPosition()->x;
+	//Real dy = goalPos.y - obj->getPosition()->y;
+	//Real dz = goalPos.z - obj->getPosition()->z;
+	//Real dist = sqrt(dx*dx+dy*dy);
+	Coord2D d(goalPos.x - obj->getPosition()->x, goalPos.y - obj->getPosition()->y);
+	Real dist = d.length();
+	//Real distSqr = ThePartitionManager->getDistanceSquared( obj, &goalPos, FROM_CENTER_2D );
 	if (dist>onPathDistToGoal)
 	{
 		if (!obj->isKindOf(KINDOF_PROJECTILE) && dist>2*onPathDistToGoal)
@@ -1043,7 +1046,8 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	// We apply a zero acceleration to all units, as the call to
 	// applyMotiveForce flags an object as being "driven" by a locomotor, rather
 	// than being pushed around by objects bumping it.
-	nullAccel.x = nullAccel.y = nullAccel.z = 0;
+	//nullAccel.x = nullAccel.y = nullAccel.z = 0;
+	nullAccel.zero();
 	physics->applyMotiveForce(&nullAccel);
 
 	if (*blocked)
@@ -1132,11 +1136,11 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 			// Projectiles never stop braking once they start.  jba.
 			obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_BRAKING ) );
 			// Projectiles cheat in 3 dimensions.
-			dist = sqrt(dx*dx+dy*dy+dz*dz);
+			//dist = sqrt(dx*dx+dy*dy+dz*dz);
 			Real vel = physics->getVelocityMagnitude();
 			if (vel < MIN_VEL)
 				vel = MIN_VEL;
-			if (vel > dist)
+			/*if (vel > dist)
 				vel = dist;	// do not overcompensate!
 			// Normalize.
 			if (dist > 0.001f)
@@ -1151,6 +1155,20 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 				pos.x += dx * vel;
 				pos.y += dy * vel;
 				pos.z += dz * vel;
+			}*/
+			/// IamInnocent - Changed to use Coord3D's inner function
+			Coord3D movePos = goalPos;
+			movePos.sub( &pos );
+			dist = movePos.length();
+			if (vel > dist)
+				vel = dist;	// do not overcompensate!
+			if (dist > 0.001f)
+			{
+				movePos.normalize();
+
+				pos.x += movePos.x * vel;
+				pos.y += movePos.y * vel;
+				pos.z += movePos.z * vel;
 			}
 		}
 		else
@@ -1165,14 +1183,144 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 				if (vel > dist)
 					vel = dist;	// do not overcompensate!
 				dist = 1.0f / dist;
-				dx *= dist;
-				dy *= dist;
-				pos.x += dx * vel;
-				pos.y += dy * vel;
+				d.x *= dist;
+				d.y *= dist;
+				pos.x += d.x * vel;
+				pos.y += d.y * vel;
 			}
 		}
 		obj->setPosition(&pos);
 	}
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void Locomotor::locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D& goalPos,
+																							 Real onPathDistToGoal, Real desiredSpeed, Bool *blocked)
+{
+	/*BodyDamageType bdt = obj->getBodyModule()->getDamageState();
+	Real maxSpeed = getMaxSpeedForCondition(bdt);
+
+	// sanity, we cannot use desired speed that is greater than our max speed we are capable of moving at
+	if( desiredSpeed > maxSpeed )
+		desiredSpeed = maxSpeed;
+
+	PhysicsBehavior *physics = obj->getPhysics();
+	if (physics == NULL)
+	{
+		DEBUG_CRASH(("you can only apply Locomotors to objects with Physics"));
+		return;
+	}
+
+	// Skip moveTowardsPosition if physics say you're stunned
+	if(physics->getIsStunned() || obj->testCustomStatus("DISABLED_MOVEMENT"))
+	{
+		return;
+	}
+/*
+#ifdef DEBUG_OBJECT_ID_EXISTS
+//	DEBUG_ASSERTLOG(obj->getID() != TheObjectIDToDebug, ("locoUpdate_moveTowardsPosition %f %f %f (dtg %f, spd %f), speed %f (%f)",goalPos.x,goalPos.y,goalPos.z,onPathDistToGoal,desiredSpeed,physics->getSpeed(),physics->getForwardSpeed2D()));
+#endif
+
+	//
+	// do not allow for invalid positions that the pathfinder cannot handle ... for airborne
+	// objects we don't need the pathfinder so we'll ignore this
+	//
+	if( BitIsSet( m_template->m_surfaces, LOCOMOTORSURFACE_AIR ) == false &&
+			!TheAI->pathfinder()->validMovementTerrain(obj->getLayer(), this, obj->getPosition()) &&
+			!getFlag(ALLOW_INVALID_POSITION))
+	{
+		// Somehow, we have gotten to an invalid location.
+		if (fixInvalidPosition(obj, physics))
+		{
+			// the we adjusted us toward a legal position, so just return.
+			return;
+		}
+	}
+
+	// If the actual distance is farther, then use the actual distance so we get there.
+	//Real dx = goalPos.x - obj->getPosition()->x;
+	//Real dy = goalPos.y - obj->getPosition()->y;
+	//Real dz = goalPos.z - obj->getPosition()->z;
+	//Real dist = sqrt(dx*dx+dy*dy);
+	Coord2D d(goalPos.x - obj->getPosition()->x, goalPos.y - obj->getPosition()->y);
+	Real dist = d.length();
+	//Real distSqr = ThePartitionManager->getDistanceSquared( obj, &goalPos, FROM_CENTER_2D );
+	if (dist>onPathDistToGoal)
+	{
+		if (!obj->isKindOf(KINDOF_PROJECTILE) && dist>2*onPathDistToGoal)
+		{
+			setFlag(IS_BRAKING, true);
+		}
+		onPathDistToGoal = dist;
+	}
+*/
+	/*physics->setTurning(TURN_NONE);
+	Real maxAcceleration = getMaxAcceleration(bdt);
+
+	Real goalSpeed = desiredSpeed;
+	Real actualSpeed = physics->getForwardSpeed2D();
+
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
+	//
+	// Maintain goal speed
+	//
+	/*Real speedDelta = goalSpeed - actualSpeed;
+	//if (speedDelta != 0.0f)
+	//{
+		DEBUG_LOG(("Applying Forced Locomotor. Frame: %d.", TheGameLogic->getFrame()));
+		
+		Real mass = physics->getMass();
+		Real acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
+		Real accelForce = mass * acceleration;*/
+
+		/*
+			don't accelerate/brake more than necessary. do a quick calc to
+			see how much force we really need to achieve our goal speed...
+		*/
+		/*
+		Real maxForceNeeded = mass * speedDelta;
+		if (fabs(accelForce) > fabs(maxForceNeeded))
+			accelForce = maxForceNeeded;
+
+		Coord3D force;
+		force.x = goalSpeed;
+		force.y = goalSpeed;
+		force.z = 0.0f;
+
+		// apply forces to object
+		physics->applyForce( &force );
+	//}
+
+	//handleBehaviorZ(obj, physics, goalPos);
+	if (m_preferredHeight != 0.0f || getFlag(PRECISE_Z_POS))
+	{
+		Coord3D pos = *obj->getPosition();
+
+		Bool surfaceRel = (m_template->m_behaviorZ == Z_SURFACE_RELATIVE_HEIGHT);
+		Real surfaceHt = surfaceRel ? getSurfaceHtAtPt(pos.x, pos.y) : 0.0f;
+		Real preferredHeight = m_preferredHeight + (surfaceRel ? surfaceHt : 0);
+		if (getFlag(PRECISE_Z_POS))
+			preferredHeight = goalPos.z;
+
+		Real delta = preferredHeight - pos.z;
+		delta *= getPreferredHeightDamping();
+		preferredHeight = pos.z + delta;
+
+		Real liftToUse = calcLiftToUseAtPt(obj, physics, pos.z, surfaceHt, preferredHeight);
+
+		//DEBUG_LOG(("HandleBZ %d LiftToUse %f",TheGameLogic->getFrame(),liftToUse));
+		if (liftToUse != 0.0f)
+		{
+			Coord3D force;
+			force.x = 0.0f;
+			force.y = 0.0f;
+			force.z = liftToUse * physics->getMass();
+			physics->applyForce(&force);
+		}
+	}*/
 
 }
 
@@ -1209,8 +1357,9 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 		angleCoeff = 1.0;
 
 
-	Real dx = obj->getPosition()->x - goalPos.x;
-	Real dy = obj->getPosition()->y - goalPos.y;
+	/// IamInnocent - Changed to use PartitionManager
+	//Real dx = obj->getPosition()->x - goalPos.x;
+	//Real dy = obj->getPosition()->y - goalPos.y;
 
 
 	Real goalSpeed = (1.0f - angleCoeff) * desiredSpeed;
@@ -1223,7 +1372,12 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	Real slowDownTime = actualSpeed / getBraking();
 	Real slowDownDist = (actualSpeed/1.50f) * slowDownTime;
 
-	if (sqr(dx)+sqr(dy)<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
+	Real distSqr = ThePartitionManager->getDistanceSquared(obj, &goalPos, FROM_BOUNDINGSPHERE_2D);
+	//if (sqr(dx)+sqr(dy)<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
+	if (distSqr<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
 		goalSpeed = actualSpeed*0.6f;
 	}
 
@@ -1264,6 +1418,7 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	// Maintain goal speed
 	//
 	Real speedDelta = goalSpeed - actualSpeed;
+
 	if (speedDelta != 0.0f)
 	{
 		Real mass = physics->getMass();
@@ -1323,6 +1478,10 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 
 
 	Real actualSpeed = physics->getForwardSpeed2D();
+
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
 	Bool do3pointTurn = false;
 #if 1
 	if (actualSpeed==0.0f) {
@@ -1651,6 +1810,9 @@ void Locomotor::moveTowardsPositionLegs(Object* obj, PhysicsBehavior *physics, c
 //	Real desiredAngle = angle + relAngle;
 	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
 
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
 	if (m_template->m_wanderWidthFactor != 0.0f) {
 		Real angleLimit = PI/8 * m_template->m_wanderWidthFactor;
 		// This is the wander offline code - it forces the desired angle away from the goal, so we wander back & forth.  jba.
@@ -1737,13 +1899,13 @@ void Locomotor::moveTowardsPositionClimb(Object* obj, PhysicsBehavior *physics, 
 
 	Bool moveBackwards = false;
 
-	Real dx, dy, dz;
+	//Real dx, dy, dz;
 
 	Coord3D pos = *obj->getPosition();
 
-	dx = pos.x - goalPos.x;
-	dy = pos.y - goalPos.y;
-	dz = pos.z - goalPos.z;
+	//dx = pos.x - goalPos.x;
+	//dy = pos.y - goalPos.y;
+	Real dz = pos.z - goalPos.z;
 	if (dz*dz > sqr(PATHFIND_CELL_SIZE_F)) {
 		setFlag(CLIMBING, true);
 	}
@@ -1803,6 +1965,9 @@ void Locomotor::moveTowardsPositionClimb(Object* obj, PhysicsBehavior *physics, 
 	Real goalSpeed = (1.0f - angleCoeff) * desiredSpeed;
 
 	Real actualSpeed = physics->getForwardSpeed2D();
+
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
 
 	if (moveBackwards) {
 		actualSpeed = -actualSpeed;
@@ -1931,6 +2096,9 @@ void Locomotor::moveTowardsPositionThrust(Object* obj, PhysicsBehavior *physics,
 	Real maxForwardSpeed = getMaxSpeedForCondition(bdt);
 	desiredSpeed = clamp(m_template->m_minSpeed, desiredSpeed, maxForwardSpeed);
 	Real actualForwardSpeed = physics->getForwardSpeed3D();
+
+	if(actualForwardSpeed > 0)
+		obj->setLastActualSpeed(actualForwardSpeed);
 
 	if (getBraking() > 0)
 	{
@@ -2391,6 +2559,9 @@ void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, 
 	Real goalSpeed = desiredSpeed;
 	Real actualSpeed = physics->getForwardSpeed2D();
 
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
 	// Locomotion for other things, ie don't know what it is jba :)
 	//
 	// Orient toward goal position
@@ -2594,6 +2765,10 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 		//
 		Real minSpeed = max( 1.0E-10f, m_template->m_minSpeed );
 		Real speedDelta = minSpeed - actualSpeed;
+
+		if(actualSpeed > 0)
+			obj->setLastActualSpeed(actualSpeed);
+
 		if (fabs(speedDelta) > minSpeed)
 		{
 			Real mass = physics->getMass();

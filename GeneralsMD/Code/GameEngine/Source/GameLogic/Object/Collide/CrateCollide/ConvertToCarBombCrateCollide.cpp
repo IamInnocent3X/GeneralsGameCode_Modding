@@ -171,15 +171,21 @@ Bool ConvertToCarBombCrateCollide::executeCrateBehavior( Object *other )
 	// New feature - Enable it to be compatible with hijackerupdate.
 	// Enables new features such as remove or destroy, to revert the carbomb properties
 	// get the name of the hijackerupdate
-	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-	HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+	//HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//if( hijackerUpdate )
+	HijackerUpdateInterface *hijackerUpdate = obj->getHijackerUpdateInterface();
 	if( hijackerUpdate )
 	{
+		obj->setHijackingID( other->getID() );
 		hijackerUpdate->setTargetObject( other );
 		hijackerUpdate->setHijackType( HIJACK_CARBOMB );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
 
+		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
+		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
+		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
 		hijackerUpdate->setDestroyOnTargetDie( data->m_destroyOnTargetDie );
 		hijackerUpdate->setPercentDamage( data->m_damagePercentageToUnit );
 		hijackerUpdate->setStatusToRemove( data->m_statusToRemove );
@@ -221,6 +227,9 @@ Bool ConvertToCarBombCrateCollide::executeCrateBehavior( Object *other )
 Bool ConvertToCarBombCrateCollide::revertCollideBehavior(Object *other)
 {
 	CrateCollide::revertCollideBehavior(other);
+
+	getObject()->setHijackingID(INVALID_ID);
+	getObject()->setLastExitedFrame(TheGameLogic->getFrame() + 10*LOGICFRAMES_PER_SECOND);
 
 	// If the Object doesn't exist, or is destroyed we stop here.
 	if(!other || other->isDestroyed() || other->isEffectivelyDead())

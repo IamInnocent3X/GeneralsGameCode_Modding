@@ -471,6 +471,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_nextScorchMarkFrame = now;
 					m_damagePulsesMade = 0;
 					m_nextDamagePulseFrame = now;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			case LASERSTATUS_BORN:
@@ -490,6 +496,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					}
 					m_orbitToTargetLaserRadius.setDecayFrames( data->m_widthGrowFrames );
 					m_laserStatus = LASERSTATUS_DECAYING;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			}
@@ -512,6 +524,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_laserStatus = LASERSTATUS_DEAD;
 					m_startAttackFrame = 0;
 					setLogicalStatus( STATUS_IDLE );
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			}

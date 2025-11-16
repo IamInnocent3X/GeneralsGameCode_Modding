@@ -118,6 +118,7 @@ public:
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
 	virtual const AsciiString& getCursorName() const { return NULL; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 private:
 	enum DoorStateType

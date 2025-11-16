@@ -2352,6 +2352,7 @@ void Player::garrisonAllUnits(CommandSourceType source)
 /// @todo srj -- we should really use iterateAllObjects() here instead, but I have no time to
 // test such a change... make someday
 	ObjectIterator *iterBuilding = ThePartitionManager->iterateObjectsInRange(&pos, 1e9f, FROM_CENTER_3D, filters, ITER_SORTED_NEAR_TO_FAR);
+	//ObjectIterator *iterBuilding = ThePartitionManager->iterateAllObjects(filters);
 	MemoryPoolObjectHolder hold(iterBuilding);
 
 	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin();
@@ -3622,9 +3623,9 @@ static void doPowerDisable( Object *obj, void *userData )
 	if( obj && obj->isKindOf(KINDOF_POWERED) )
 	{
 		if( disabling )
-			obj->setDisabled( DISABLED_UNDERPOWERED ); //set disabled has a pauseAllSpecialPowers that prevents double pausing
+			obj->doDisablePower(FALSE); //setDisabled( DISABLED_UNDERPOWERED ); //set disabled has a pauseAllSpecialPowers that prevents double pausing
 		else
-			obj->clearDisabled( DISABLED_UNDERPOWERED );
+			obj->clearDisablePower(FALSE); //clearDisabled( DISABLED_UNDERPOWERED );
 	}
 }
 

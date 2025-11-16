@@ -659,6 +659,7 @@ protected:
 
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
 	void updateHiddenStatus();
+	Bool checkDrawModuleNullptr(DrawModule** dm);
 
 private:
 
@@ -779,6 +780,9 @@ private:
 	void drawAmmo( const IRegion2D *healthBarRegion );							///< draw icons
 	void drawContained( const IRegion2D *healthBarRegion );					///< draw icons
 	void drawVeterancy( const IRegion2D *healthBarRegion );					///< draw veterency information
+
+	//new:
+	void drawProgress(const IRegion2D* healthBarRegion);							///< draw progress bar (shield, deploy, teleport, etc.)
 
 	void drawEmoticon( const IRegion2D* healthBarRegion );
 	void drawHealthBar( const IRegion2D* healthBarRegion );					///< draw heath bar

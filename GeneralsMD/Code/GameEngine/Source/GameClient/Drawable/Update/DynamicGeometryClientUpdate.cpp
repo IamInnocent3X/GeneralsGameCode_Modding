@@ -142,6 +142,7 @@ DynamicGeometryClientUpdate::DynamicGeometryClientUpdate( Thing *thing, const Mo
 	m_startFrame = TheGameLogic->getFrame();
 	m_overrideScale = 1.0;
 	m_overrideAlpha = 1.0;
+	m_prevScale = 1.0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -168,14 +169,14 @@ void DynamicGeometryClientUpdate::clientUpdate( void )
 	UnsignedInt now = TheGameLogic->getFrame();
 
 	Real alpha0, alpha1, scale0, scale1, progress;
-	if (now < m_startFrame + data->m_midpointFrames) {
+	if (now <= m_startFrame + data->m_midpointFrames) {
 		alpha0 = data->m_alphaInitial;
 		alpha1 = data->m_alphaMidpoint;
 		scale0 = data->m_scaleInitial;
 		scale1 = data->m_scaleMidpoint;
 		progress = INT_TO_REAL(now - m_startFrame) / INT_TO_REAL(data->m_midpointFrames);
 	}
-	else if (now < m_startFrame + data->m_totalFrames) {
+	else if (now <= m_startFrame + data->m_totalFrames) {
 		alpha0 = data->m_alphaMidpoint;
 		alpha1 = data->m_alphaFinal;
 		scale0 = data->m_scaleMidpoint;
@@ -194,8 +195,19 @@ void DynamicGeometryClientUpdate::clientUpdate( void )
 	Real alpha = (1.0 - progress) * alpha0 + progress * alpha1;
 	Real scale = (1.0 - progress) * scale0 + progress * scale1;
 
+	Real newScale = m_overrideScale * scale;
 
-	draw->setInstanceScale(m_overrideScale * scale);
+	Real currentScale = draw->getInstanceScale();
+	if (m_prevScale != 1.0) {
+		currentScale = currentScale / MAX(0.001, m_prevScale);
+	}
+
+	draw->setInstanceScale(currentScale * newScale);
+
+	DEBUG_LOG((">>> DGCU: currentScale = %f, newScale = %f, m_prevScale = %f, instanceScale = %f",
+		currentScale, newScale, m_prevScale, currentScale * newScale));
+
+	m_prevScale = newScale;
 
 	// This doesn't work for additive!
 	draw->setDrawableOpacity(m_overrideAlpha * alpha);

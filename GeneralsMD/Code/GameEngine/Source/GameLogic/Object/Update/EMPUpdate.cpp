@@ -139,6 +139,7 @@ EMPUpdate::~EMPUpdate( void )
 UpdateSleepTime EMPUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - done. Needs testing
 
 	Object *obj = getObject();
 
@@ -171,7 +172,14 @@ UpdateSleepTime EMPUpdate::update( void )
 	if( now >= m_dieFrame )
 		obj->kill();
 
-	return UPDATE_SLEEP_NONE;
+	if(m_targetScale != m_currentScale)
+		return UPDATE_SLEEP_NONE;
+	else if(now < m_tintEnvPlayFrame)
+		return UPDATE_SLEEP(m_tintEnvPlayFrame - now);
+	else if(now >= m_dieFrame)
+		return UPDATE_SLEEP_FOREVER;
+	else
+		return now >= m_tintEnvPlayFrame && m_dieFrame > now ? UPDATE_SLEEP(m_dieFrame - now) : UPDATE_SLEEP_NONE;
 }
 
 //-------------------------------------------------------------------------------------------------

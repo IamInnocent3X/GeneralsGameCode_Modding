@@ -58,7 +58,7 @@ public:
 	FXList *m_executeFX;						///< FXList to play when activated
 	Int m_targetsMask;
 	AsciiString m_cursorName;
-	AsciiString m_rejectKey;
+	std::vector<AsciiString> m_rejectKeys;
 
 	ObjectStatusMaskType m_requiredStatus;
 	ObjectStatusMaskType m_forbiddenStatus;
@@ -90,6 +90,9 @@ public:
 
 	Real m_damagePercentageToUnit;
 	Bool m_destroyOnTargetDie;
+	Bool m_destroyOnHeal;
+	Bool m_removeOnHeal;
+	Bool m_leechExpFromObject;
 
 	CrateCollideModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);

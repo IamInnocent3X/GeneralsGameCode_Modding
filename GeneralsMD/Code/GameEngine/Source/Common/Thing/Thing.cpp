@@ -45,6 +45,7 @@
 #include "Common/Team.h"
 #include "Lib/trig.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameClient/GameClient.h"
 
 
 //=============================================================================
@@ -158,6 +159,13 @@ void Thing::setPositionZ( Real z )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
+	if(AsObject(this))
+	{
+		if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme && AsObject(this)->getDrawable())
+			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
+
+		AsObject(this)->doMovingUpdate();
+	}
 }
 
 //=============================================================================
@@ -187,6 +195,13 @@ void Thing::setPosition( const Coord3D *pos )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
+	if(AsObject(this))
+	{
+		if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme && AsObject(this) && AsObject(this)->getDrawable())
+			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
+
+		AsObject(this)->doMovingUpdate();
+	}
 }
 
 //=============================================================================
@@ -345,10 +360,10 @@ void Thing::convertBonePosToWorldPos(const Coord3D* bonePos, const Matrix3D* bon
 	}
 	if (worldPos)
 	{
-		Vector3 vector;
-		vector.X = bonePos->x;
-		vector.Y = bonePos->y;
-		vector.Z = bonePos->z;
+		Vector3 vector(bonePos->x, bonePos->y, bonePos->z);
+		//vector.X = bonePos->x;
+		//vector.Y = bonePos->y;
+		//vector.Z = bonePos->z;
 		m_transform.Transform_Vector(m_transform, vector, &vector);
 		worldPos->x = vector.X;
 		worldPos->y = vector.Y;
@@ -367,14 +382,14 @@ void Thing::transformPoint( const Coord3D *in, Coord3D *out )
 		return;
 
 	// for conversion
-	Vector3 vectorIn;
+	Vector3 vectorIn(in->x, in->y, in->z);
 	Vector3 vectorOut;
 
 	///@ todo this is dumb and we should not have to convert types
 	// convert to Vector3 datatypes
-	vectorIn.X = in->x;
-	vectorIn.Y = in->y;
-	vectorIn.Z = in->z;
+	//vectorIn.X = in->x;
+	//vectorIn.Y = in->y;
+	//vectorIn.Z = in->z;
 
 	// do the transform
 	m_transform.Transform_Vector( m_transform, vectorIn, &vectorOut );

@@ -232,6 +232,8 @@ public:
 	Real m_ammoPipScaleFactor;
 	Real m_containerPipScaleFactor;
 
+	Real m_progressBarYOffset;
+
 	UnsignedInt m_historicDamageLimit;
 
 	//Settings for terrain tracks left by vehicles with treads or wheels
@@ -592,7 +594,6 @@ public:
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 
 	Bool m_countermeasuresDetonateNonTracking;
-	Bool m_baseRegenClearsParasite;
 
 	Bool m_newskirmishfpsSystem;
 	Bool m_skirmishloadfps;
@@ -602,6 +603,14 @@ public:
 
 	Real m_drawWidthFactor;
 	Real m_drawHeightFactor;
+	Bool m_drawFullMap;
+
+	Bool m_usePartitionManagerToIterateDrawables;
+	Bool m_usePartitionManagerToIterateDrawablesOnlySelect;
+	Bool m_useEfficientDrawableScheme;
+
+	Bool m_fixLocoClump;
+	Bool m_infantryCorpsesAirDrag;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

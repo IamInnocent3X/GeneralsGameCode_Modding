@@ -102,7 +102,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-class HijackerUpdate : public UpdateModule
+class HijackerUpdate : public UpdateModule, public HijackerUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( HijackerUpdate, "HijackerUpdate" )
@@ -113,6 +113,7 @@ public:
 	HijackerUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() { return this; }
 	virtual UpdateSleepTime update();							///< called once per frame
 
 	virtual void setTargetObject( const Object *object );
@@ -160,10 +161,12 @@ private:
 	Bool     	 m_noSelfDamage;
 	Real		 m_percentDamage;
 	Real		 m_targetObjHealth;
+	AsciiString	 m_parasiteKey;
 	ObjectStatusMaskType 	m_statusToRemove;
 	ObjectStatusMaskType 	m_statusToDestroy;
 	std::vector<AsciiString> 	m_customStatusToRemove;
 	std::vector<AsciiString> 	m_customStatusToDestroy;
+	std::vector<AsciiString> 	m_recentParasiteKeys;
 
 //	DieModuleInterface *m_ejectPilotDMI; // point to ejectpilotdiemodule
 																			 // of target vehicle if it has one

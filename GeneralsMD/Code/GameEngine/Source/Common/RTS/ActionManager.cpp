@@ -43,6 +43,7 @@
 #include "Common/Team.h"
 #include "Common/ThingTemplate.h"
 
+#include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/InGameUI.h"
 
@@ -537,7 +538,7 @@ Bool ActionManager::canResumeConstructionOf( const Object *obj,
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck )
+Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck, Bool ShowCursorOnParasiteCollide )
 {
 
 	// sanity
@@ -641,6 +642,12 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 			if (!collide)
 				continue;
 
+			// Crate Collide requires Enter Mechanics to work side-by-side
+			// Don't want Parasites to enter volunteeringly but enables them only when the condition is right
+			if( collide->isParasiteEquipCrateCollide() &&
+				  (!obj->getParasiteCollideActive() || !ShowCursorOnParasiteCollide))
+				continue;
+			
 			if( collide->wouldLikeToCollideWith( objectToEnter ) )
 			{
 				//I thought this was a little confusing that it would return TRUE here before
@@ -996,7 +1003,7 @@ Bool ActionManager::canSabotageBuilding( const Object *obj, const Object *object
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource )
+Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource, Bool ParasiteHideCursor )
 {
 	// sanity
 	if( obj == NULL || objectToEquip == NULL )
@@ -1027,6 +1034,22 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 
 		if( collide->wouldLikeToCollideWith( objectToEquip ) && collide->isEquipCrateCollide() )
 		{
+			if( collide->isParasiteEquipCrateCollide() && 
+				  obj->getParasiteCollideActive() &&
+				  ParasiteHideCursor &&
+				  ( !TheInGameUI->getGUICommand() || 
+				  TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
+			  )
+			  {
+				  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, objectToEquip, CMD_FROM_PLAYER );
+				  if((result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
+				  	   obj->getRelationship(objectToEquip) == ALLIES ||
+					   (obj->getRelationship(objectToEquip) != ENEMIES && canEnterObject( obj, objectToEquip, commandSource, CHECK_CAPACITY, FALSE )) )
+				  {
+					  return FALSE;
+				  }
+			  }
+			
 			return TRUE;
 		}
 	}
@@ -1574,7 +1597,7 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 		if (behaviorType >= SPECIAL_ION_CANNON) { //first custom SP
 			behaviorType = spTemplate->getSpecialPowerBehaviorType();
 			if (behaviorType == SPECIAL_INVALID) {
-				behaviorType = SPECIAL_NEUTRON_MISSILE; // Default to behave like neutron missile, common behavior
+				behaviorType = getFallbackBehaviorType(spTemplate->getSpecialPowerType()); // use predefined fallbacks
 			}
 		} 
 
@@ -1725,7 +1748,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 		if (behaviorType >= SPECIAL_ION_CANNON) { //first custom SP
 			behaviorType = spTemplate->getSpecialPowerBehaviorType();
 			if (behaviorType == SPECIAL_INVALID) {
-				behaviorType == SPECIAL_NEUTRON_MISSILE; // Default to behave like neutron missile, common behavior
+				behaviorType = getFallbackBehaviorType(spTemplate->getSpecialPowerType()); // use predefined fallbacks
 			}
 		}
 
@@ -1763,12 +1786,42 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 			}
 
 			case SPECIAL_MISSILE_DEFENDER_LASER_GUIDED_MISSILES:
+			{
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_MISSILE_DEFENDER_LASER_GUIDED_MISSILES );
+
+				// Condition: I have declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						break;
+
+					Int targetMask = spUpdate->getTargetsMask();
+					if(targetMask == 0)
+						targetMask = WEAPON_AFFECTS_ENEMIES;
+
+					if(((targetMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        	((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        	((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+					  )
+					{
+						break;
+					}
+
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							return true;
+						else
+							break;
+					}
+				}
 				//Can only use laser guided missiles on vehicles!
 				if( target->isKindOf( KINDOF_VEHICLE ) && r == ENEMIES )
 				{
 					return true;
 				}
 				break;
+			}
 
 			case SPECIAL_HACKER_DISABLE_BUILDING:
 				//Can only disable buildings...
@@ -2001,6 +2054,115 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 	return false;
 }
 
+SpecialPowerType ActionManager::getFallbackBehaviorType(SpecialPowerType type) {
+	/*For newly defined special power types a default fallback enum for same behavior can be defined here*/
+	switch (type) {
+	case AIRF_SPECIAL_PARADROP_AMERICA:
+	case SOCOM_SPECIAL_SUPPLY_DROP:
+	case SOCOM_SPECIAL_TANK_PARADROP:
+	case TANK_SPECIAL_TANK_PARADROP:
+	case TANK_SPECIAL_PARADROP:
+	case SUPW_SPECIAL_PARADROP_AMERICA:
+	case SUPW_SPECIAL_TANK_PARADROP:
+		return SPECIAL_PARADROP_AMERICA;
+
+	case SECW_SPECIAL_HUNTER_SEEKER:
+		return SPECIAL_CIA_INTELLIGENCE;
+
+	case CHINA_SPECIAL_SPY_SATELLITE:
+	case SECW_SPECIAL_SPY_SATELLITE:
+	case LAZR_SPECIAL_SPY_SATELLITE:
+		return SPECIAL_SPY_SATELLITE;
+
+	case AIRF_SPECIAL_SUPERSONIC_AIRSTRIKE:
+	case AIRF_SPECIAL_HEAVY_AIRSTRIKE:
+	case SOCOM_SPECIAL_COASTAL_BOMBARDEMENT:
+	case TANK_SPECIAL_NAPALM_BOMB:
+	case TANK_SPECIAL_CHINA_CARPET_BOMB:
+	case NUKE_SPECIAL_NUCLEAR_AIRSTRIKE:
+	case NUKE_SPECIAL_CHINA_CARPET_BOMB:
+	case NUKE_SPECIAL_BALLISTIC_MISSILE:
+	case SECW_SPECIAL_SYSTEM_HACK:
+	case DEMO_SPECIAL_SUICIDE_PLANE:
+	case DEMO_SPECIAL_CARPET_BOMB:
+	case CHEM_SPECIAL_CARPET_BOMB:
+	case CHEM_SPECIAL_AIRSTRIKE:
+	case FORT_SPECIAL_AIRSTRIKE:
+	case FORT_SPECIAL_CARPET_BOMB:
+	case LAZR_SPECIAL_DAISY_CUTTER:
+	case LAZR_SPECIAL_AIRSTRIKE:
+	case SUPW_SPECIAL_AIRSTRIKE:
+		return SPECIAL_CARPET_BOMB;
+
+	case AIRF_SPECIAL_HELICOPTER_AMBUSH:
+	case DEMO_SPECIAL_AMBUSH:
+	case CHEM_SPECIAL_AMBUSH:
+	case LAZR_SPECIAL_AMBUSH:
+		return SPECIAL_AMBUSH;
+
+	case AIRF_SPECIAL_HOLO_PLANES:
+	case TANK_SPECIAL_FRENZY:
+	case NUKE_SPECIAL_FRENZY:
+	case DEMO_SPECIAL_FRENZY:
+	case CHEM_SPECIAL_FRENZY:
+	case FORT_SPECIAL_FRENZY:
+		return SPECIAL_FRENZY;
+
+	case TANK_SPECIAL_CLUSTER_MINES:
+		return SPECIAL_CLUSTER_MINES;
+
+	case TANK_SPECIAL_REPAIR_VEHICLES:
+	case NUKE_SPECIAL_REPAIR_VEHICLES:
+	case DEMO_SPECIAL_REPAIR_VEHICLES:
+	case CHEM_SPECIAL_REPAIR_VEHICLES:
+	case FORT_SPECIAL_REPAIR_VEHICLES:
+	case LAZR_SPECIAL_NANO_SWARM:
+	case SUPW_SPECIAL_FORCEFIELD:
+		return SPECIAL_REPAIR_VEHICLES;
+
+	case TANK_SPECIAL_EMP_PULSE:
+	case NUKE_SPECIAL_NEUTRON_BOMB:
+	case SECW_SPECIAL_EMP_HACK:
+		return SPECIAL_EMP_PULSE;
+
+	case TANK_SPECIAL_ARTILLERY_BARRAGE:
+	case NUKE_SPECIAL_ARTILLERY_BARRAGE:
+	case DEMO_SPECIAL_ARTILLERY_BARRAGE:
+	case FORT_SPECIAL_ARTILLERY_BARRAGE:
+	case LAZR_SPECIAL_ORBITAL_STRIKE:
+	case SUPW_SPECIAL_ORBITAL_STRIKE:
+		return SPECIAL_ARTILLERY_BARRAGE;
+
+	case NUKE_SPECIAL_CASH_HACK:
+		return SPECIAL_CASH_HACK;
+
+	case SECW_SPECIAL_DRONE_GUNSHIP:
+	case LAZR_SPECIAL_SPECTRE_GUNSHIP:
+	case SUPW_SPECIAL_SPECTRE_GUNSHIP:
+		return SPECIAL_SPECTRE_GUNSHIP;
+
+	case DEMO_SPECIAL_SNEAK_ATTACK:
+	case CHEM_SPECIAL_SNEAK_ATTACK:
+		return SPECIAL_SNEAK_ATTACK;
+
+	case DEMO_SPECIAL_GPS_SCRAMBLER:
+	case CHEM_SPECIAL_GPS_SCRAMBLER:
+	case FORT_SPECIAL_GPS_SCRAMBLER:
+		return SPECIAL_GPS_SCRAMBLER;
+
+	case DEMO_SPECIAL_ANTHRAX_BOMB:
+	case CHEM_SPECIAL_ANTHRAX_BOMB:
+		return SPECIAL_ANTHRAX_BOMB;
+
+	case CHEM_SPECIAL_VIRUS:
+	case SUPW_SPECIAL_CRYOBOMB:
+		return SPECIAL_LEAFLET_DROP;
+
+	default:
+		return SPECIAL_NEUTRON_MISSILE;
+	}
+}
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 Bool ActionManager::canDoSpecialPower( const Object *obj, const SpecialPowerTemplate *spTemplate, CommandSourceType commandSource, UnsignedInt commandOptions, Bool checkSourceRequirements )
@@ -2031,7 +2193,7 @@ Bool ActionManager::canDoSpecialPower( const Object *obj, const SpecialPowerTemp
 		if (behaviorType >= SPECIAL_ION_CANNON) { //first custom SP
 			behaviorType = spTemplate->getSpecialPowerBehaviorType();
 			if (behaviorType == SPECIAL_INVALID) {
-				behaviorType = SPECIAL_NEUTRON_MISSILE; // Default to behave like neutron missile, common behavior
+				behaviorType = getFallbackBehaviorType(spTemplate->getSpecialPowerType()); // use predefined fallbacks
 			}
 		}
 

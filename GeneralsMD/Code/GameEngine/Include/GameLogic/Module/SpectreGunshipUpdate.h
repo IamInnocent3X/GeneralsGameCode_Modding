@@ -69,6 +69,10 @@ public:
   Real                  m_strafingIncrement;
   Real                  m_orbitInsertionSlope;
   Real                  m_randomOffsetForHowitzer;
+  Bool                  m_useMyProducerForSpecialPower;
+  Bool                  m_useLocomotorToUpdateOrbit;
+  Bool                  m_gunshipDontUpdateOrbit;
+  Bool                  m_playSoundOnCreationWithSpawnDelay;
   AsciiString				    m_cursorName;
 
 	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystem;
@@ -86,6 +90,7 @@ enum GunshipStatus CPP_11(: Int)
    GUNSHIP_STATUS_ORBITING,
    GUNSHIP_STATUS_DEPARTING,
    GUNSHIP_STATUS_IDLE,
+   GUNSHIP_STATUS_CHECK,
 };
 
 
@@ -114,6 +119,8 @@ public:
   virtual const AsciiString& getCursorName() const { return getSpectreGunshipUpdateModuleData()->m_cursorName; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
 
+  virtual void setDelay(UnsignedInt delayFrame) { m_delayFrame = delayFrame; }
+
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
 
@@ -130,11 +137,12 @@ public:
 
 protected:
 
-  void setLogicalStatus( GunshipStatus newStatus ) { m_status = newStatus; }
+  void setLogicalStatus( GunshipStatus newStatus ) { m_status = newStatus; m_lastStatus = GUNSHIP_STATUS_CHECK; }
   void disengageAndDepartAO( Object *gunship );
 
   Bool isPointOffMap( const Coord3D& testPos ) const;
   Bool isFairDistanceFromShip( Object *target );
+  Bool sameLastLogicalStatus() { return m_status == m_lastStatus; }
 
 	SpecialPowerModuleInterface* m_specialPowerModule;
 
@@ -151,9 +159,15 @@ protected:
 
 
 	GunshipStatus		m_status;
+  GunshipStatus		m_lastStatus;
 
   UnsignedInt     m_okToFireHowitzerCounter;
   UnsignedInt     m_orbitEscapeFrame;
+  UnsignedInt     m_howitzerFiringCountdown;
+  UnsignedInt     m_delayFrame;
+
+  Bool            m_checkHowitzerCountdownFirst;
+  Bool            m_first;
 
 
 //  ObjectID        m_howitzerID;

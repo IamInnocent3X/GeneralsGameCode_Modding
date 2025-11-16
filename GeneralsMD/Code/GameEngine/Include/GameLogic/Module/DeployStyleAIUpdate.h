@@ -134,6 +134,9 @@ public:
 
  	virtual void aiDoCommand(const AICommandParms* parms);
 	virtual Bool isIdle() const;
+	//virtual void doIdleUpdate() { wakeUpNow(); }
+	virtual void doStatusUpdate();
+	virtual void doUpgradeUpdate();
 	virtual UpdateSleepTime update();
 
 	UnsignedInt getUnpackTime()					const { return getDeployStyleAIUpdateModuleData()->m_unpackTime; }
@@ -141,15 +144,25 @@ public:
 	Bool doTurretsFunctionOnlyWhenDeployed() const { return getDeployStyleAIUpdateModuleData()->m_turretsFunctionOnlyWhenDeployed; }
 	Bool doTurretsHaveToCenterBeforePacking() const { return getDeployStyleAIUpdateModuleData()->m_turretsMustCenterBeforePacking; }
 	void setMyState( DeployStateTypes StateID, Bool reverseDeploy = FALSE );
+protected:
+
 	Bool checkForDeployUpgrades(const AsciiString& type) const;
 	Bool checkAfterDeploy(const AsciiString& type) const;
-
-protected:
+	void doRemoveStatusTrigger();
 
 	DeployStateTypes				m_state;
 	UnsignedInt							m_frameToWaitForDeploy;
+	Bool							m_isInRange;
 	Bool							m_doDeploy;
 	Bool							m_doUndeploy;
+	Bool							m_hasDeploy;
+	Bool							m_hasUndeploy;
+	Bool							m_moveAfterDeploy;
+	Bool							m_deployNoRelocate;
+	Bool							m_needsDeployToFireObject;
+	Bool							m_needsDeployToFireTurret;
+	Bool							m_needsDeployToFireDeployed;
+	Bool							m_doRemoveStatusAfterTrigger;
 	std::vector<AsciiString> 		m_deployObjectFunctionChangeUpgrade;
 	std::vector<AsciiString> 		m_deployTurretFunctionChangeUpgrade;
 	std::vector<AsciiString> 		m_turretDeployedFunctionChangeUpgrade;

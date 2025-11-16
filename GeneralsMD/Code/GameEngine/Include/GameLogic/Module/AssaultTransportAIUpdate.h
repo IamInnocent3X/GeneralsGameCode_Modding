@@ -51,11 +51,15 @@ class AssaultTransportAIUpdateModuleData : public AIUpdateModuleData
 public:
 	Real m_membersGetHealedAtLifeRatio;
 	Real m_clearRangeRequiredToContinueAttackMove;
+	Bool m_retreatWoundedMembersOnAssault;
+	Bool m_canEnterOnMembersExit;
 
 	AssaultTransportAIUpdateModuleData()
 	{
 		m_membersGetHealedAtLifeRatio = 0.0f;
 		m_clearRangeRequiredToContinueAttackMove = 50.0f;
+		m_retreatWoundedMembersOnAssault = TRUE;
+		m_canEnterOnMembersExit = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -65,6 +69,8 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "MembersGetHealedAtLifeRatio",						INI::parseReal,	NULL, offsetof( AssaultTransportAIUpdateModuleData, m_membersGetHealedAtLifeRatio ) },
+			{ "MembersRetreatOnWounded",						INI::parseBool,	NULL, offsetof( AssaultTransportAIUpdateModuleData, m_retreatWoundedMembersOnAssault ) },
+			{ "PassengersCanEnterOnMembersExit",						INI::parseBool,	NULL, offsetof( AssaultTransportAIUpdateModuleData, m_canEnterOnMembersExit ) },
 			{ "ClearRangeRequiredToContinueAttackMove", INI::parseReal, NULL, offsetof( AssaultTransportAIUpdateModuleData, m_clearRangeRequiredToContinueAttackMove ) },
 			{ 0, 0, 0, 0 }
 		};
@@ -130,17 +136,25 @@ protected:
 	virtual void privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource );///< Extension.  Also tell occupants to attackPosition
 	virtual void privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );///< Extension.  Also tell occupants to forceAttackObject
 
+	void removeAllMembers();
+	void goalReset();
+
   ObjectID					m_memberIDs[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_memberHealing[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_newMember[ MAX_TRANSPORT_SLOTS ];
+	Bool							m_countedSlotMember[ MAX_TRANSPORT_SLOTS ];
+	Bool							m_countedAssaultingMember[ MAX_TRANSPORT_SLOTS ];
   Coord3D						m_attackMoveGoalPos;
   mutable ObjectID	m_designatedTarget;
 	AssaultStateTypes	m_state;
-	UnsignedInt				m_framesRemaining;
+	//UnsignedInt				m_framesRemaining;
 	Int								m_currentMembers;
+	Int								m_maxNumInTransport;
+	Int								m_maxNumAttacking;
 	Bool							m_isAttackMove;
 	Bool							m_isAttackObject;
 	Bool							m_newOccupantsAreNewMembers;
+	Bool					m_doAddMember;
 };
 
 #endif

@@ -509,7 +509,10 @@ public:
 	inline const AudioEventRTS& getFireSound() const { return m_fireSound; }
 	inline UnsignedInt getFireSoundLoopTime() const { return m_fireSoundLoopTime; }
 	inline UnsignedInt getContinuousLaserLoopTime() const { return m_continuousLaserLoopTime; }
+	inline Real getLaserGroundUnitTargetHeight() const { return m_laserGroundUnitTargetHeight; }
+	inline Real getLaserGroundTargetHeight() const { return m_laserGroundTargetHeight; }
 	inline UnsignedInt getScatterTargetResetTime() const { return m_scatterTargetResetTime; }
+	inline Bool isScatterTargetResetRecenter() const { return m_scatterTargetResetRecenter; }
 	inline const std::vector<Coord2D>& getScatterTargetsVector() const { return m_scatterTargets; }
 	inline const WeaponBonusSet* getExtraBonus() const { return m_extraBonus; }
 	inline Int getShotsPerBarrel() const { return m_shotsPerBarrel; }
@@ -559,9 +562,14 @@ public:
 	inline Bool getIsNotAbsoluteKill() const { return m_notAbsoluteKill; }
 
 	inline Bool getClearsParasite() const { return m_clearsParasite; }
+	inline const std::vector<AsciiString>& getClearsParasiteKeys() const { return m_clearsParasiteKeys; }
 
 	inline Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
 	inline Bool getSubdueProjectileNoDamage() const { return m_subduedProjectileNoDamage; }
+
+	inline Bool getDamagesSelfOnly() const { return m_damagesSelfOnly; }
+
+	inline const std::vector<AsciiString>& getRejectKeys() const { return m_rejectKeys; }
 
 	inline const AsciiString& getSubdualCustomType() const { return m_subdualCustomType; }
 	inline const AsciiString& getCustomSubdualCustomTint(VeterancyLevel v) const { return m_customSubdualCustomTint[v]; }
@@ -604,7 +612,14 @@ public:
 	inline const AsciiString& getForceAttackGroundCursorName() const { return m_forceAttackGroundCursorName; }
 	inline const AsciiString& getInvalidCursorName() const { return m_invalidCursorName; }
 
+	inline Real getROFMovingPenalty() const { return m_rofMovingPenalty; }
+	inline Real getROFMovingMaxSpeedCount() const { return m_rofMovingMaxSpeedCount; }
+	inline Bool getROFMovingScales() const { return m_rofMovingScales; }
+
 	Bool passRequirements (const Object *source) const;
+	Int calcROFForMoving(const Object *source, Int Delay) const;
+
+	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
 
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
@@ -719,6 +734,9 @@ private:
 
 	UnsignedInt m_continuousLaserLoopTime;  ///< time between shots the continuos laser object is kept alive instead of creating a new one
 
+	Real m_laserGroundTargetHeight;     ///< when targeting the ground with a laser weapon, aim this much above
+	Real m_laserGroundUnitTargetHeight;   ///< when targeting ground units with a laser weapon, aim this much above
+
 	Bool m_scatterTargetAligned;		///< if the scatter target pattern is aligned to the shooter
 	Bool m_scatterTargetRandom;		///< if the scatter target pattern is fired in a random order
 	Bool m_scatterTargetRandomAngle;  ///< if the scatter target pattern is randomly aligned
@@ -726,6 +744,7 @@ private:
 	Bool m_scatterTargetCenteredAtShooter;  ///< if the scatter target pattern is centered at the shooter
 
 	UnsignedInt m_scatterTargetResetTime;  ///< if this much time between shots has passed, we reset the scatter targets
+	Bool m_scatterTargetResetRecenter;  ///< when resetting scatter targets, use indices in the "middle" of the list, to keep the target centered for Line based attacks 
 
 	AsciiString m_customDamageType;
 	AsciiString m_customDamageStatusType;
@@ -759,9 +778,12 @@ private:
 	Bool m_notAbsoluteKill;
 
 	Bool m_clearsParasite;
+	std::vector<AsciiString> m_clearsParasiteKeys;
 
 	Bool m_isMissileAttractor;
 	Bool m_subduedProjectileNoDamage;
+
+	Bool m_damagesSelfOnly;
 
 	AsciiString m_subdualCustomType;
 	AsciiString m_customSubdualCustomTint[LEVEL_COUNT];
@@ -830,6 +852,12 @@ private:
 	AsciiString m_forceAttackObjectCursorName;
 	AsciiString m_forceAttackGroundCursorName;
 	AsciiString m_invalidCursorName;
+
+	std::vector<AsciiString> m_rejectKeys;
+
+	Real m_rofMovingPenalty;
+	Real m_rofMovingMaxSpeedCount;
+	Bool m_rofMovingScales;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 };
@@ -947,6 +975,8 @@ public:
 	//Transfer the reload times and status from the passed in weapon.
 	void transferNextShotStatsFrom( const Weapon &weapon );
 
+	void transferReloadStateFrom( const Weapon &weapon, Real clipPercentage = 0.0);
+
 	// we must pass the source object for these (and for ANY FUTURE ADDITIONS)
 	// so that we can take the source's weapon bonuses, if any, into account.
 	// Also note: you should RARELY need to call getAttackRange. If what you want is to
@@ -1024,6 +1054,7 @@ public:
 	inline Bool getIsNotAbsoluteKill() const { return m_template->getIsNotAbsoluteKill(); }
 
 	inline Bool getClearsParasite() const { return m_template->getClearsParasite(); }
+	inline const std::vector<AsciiString>& getClearsParasiteKeys() const { return m_template->getClearsParasiteKeys(); }
 
 	inline Bool getIsMissileAttractor() const { return m_template->getIsMissileAttractor(); }
 	inline Bool getSubdueProjectileNoDamage() const { return m_template->getSubdueProjectileNoDamage(); }
@@ -1056,6 +1087,10 @@ public:
 	inline const AsciiString& getForceAttackObjectCursorName() const { return m_template->getForceAttackObjectCursorName(); }
 	inline const AsciiString& getForceAttackGroundCursorName() const { return m_template->getForceAttackGroundCursorName(); }
 	inline const AsciiString& getInvalidCursorName() const { return m_template->getInvalidCursorName(); }
+
+	inline Real getROFMovingPenalty() const { return m_template->getROFMovingPenalty(); }
+	inline Real getROFMovingMaxSpeedCount() const { return m_template->getROFMovingMaxSpeedCount(); }
+	inline Bool getROFMovingScales() const { return m_template->getROFMovingScales(); }
 
 	Int getWeaponPriority(const Object *source, const Object *target) const;
 	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;
@@ -1146,7 +1181,7 @@ protected:
 
 	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
 
-	void rebuildScatterTargets();
+	void rebuildScatterTargets(Bool recenter = false);
 
 
 private:

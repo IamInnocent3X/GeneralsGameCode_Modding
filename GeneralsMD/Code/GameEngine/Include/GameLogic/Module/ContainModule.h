@@ -139,6 +139,7 @@ public:
 	virtual void onCapture( Player *oldOwner, Player *newOwner ) = 0; // Very important to handle capture of container, don't want to differ in teams from passenger to us.
 	virtual void onSelling() = 0;///< Container is being sold.  Most people respond by kicking everyone out, but not all.
 
+	virtual Int getRawContainMax() const = 0; ///< The max needs to be virtual, but only two inheritors care.  -1 means "I don't care".
 	virtual Int getContainMax() const = 0; ///< The max needs to be virtual, but only two inheritors care.  -1 means "I don't care".
 
 	virtual ExitInterface* getContainExitInterface() = 0;
@@ -178,6 +179,7 @@ public:
 	virtual const ContainedItemsList* getContainedItemsList() const = 0;
 	virtual const Object *friend_getRider() const = 0; ///< Damn.  The draw order dependency bug for riders means that our draw module needs to cheat to get around it.
 	virtual Real getContainedItemsMass() const = 0;
+	virtual void setContainedItemsMass(Real mass) = 0;
 	virtual UnsignedInt getStealthUnitsContained() const = 0;
 
 	virtual Bool calcBestGarrisonPosition( Coord3D *sourcePos, const Coord3D *targetPos ) = 0;
@@ -201,6 +203,8 @@ public:
 	virtual void doUpgradeChecks( void ) = 0;
   	virtual void doStatusChecks( void ) = 0;
 
+	virtual void clearTargetID( void ) = 0;
+
 
 	// this exists really just so someone can override it to prevent pip showings...
 	virtual Bool getContainerPipsToShow(Int& numTotal, Int& numFull)
@@ -218,6 +222,7 @@ public:
 	virtual short getRiderSlot(ObjectID riderID) const = 0; 	// get the slot occupied by the object.
 	virtual short getPortableSlot(ObjectID portableID) const = 0; 	// get the slot occupied by the object.
 	virtual const ContainedItemsList* getAddOnList() const = 0;
+	virtual ContainedItemsList* getAddOnList() = 0;
 };
 //-------------------------------------------------------------------------------------------------
 

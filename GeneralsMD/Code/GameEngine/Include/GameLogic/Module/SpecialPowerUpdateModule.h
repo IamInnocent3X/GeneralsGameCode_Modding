@@ -53,6 +53,7 @@ public:
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const = 0;
 	virtual const AsciiString& getCursorName() const = 0;
 	virtual const AsciiString& getInvalidCursorName() const = 0;
+	virtual void setDelay(UnsignedInt delayFrame) = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -83,6 +84,7 @@ public:
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const = 0;
 	virtual const AsciiString& getCursorName() const = 0;
 	virtual const AsciiString& getInvalidCursorName() const = 0;
+	virtual void setDelay(UnsignedInt delayFrame) = 0;
 
 };
 

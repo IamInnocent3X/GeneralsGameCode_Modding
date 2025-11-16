@@ -75,6 +75,9 @@ public:
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
 
+	virtual void onCapture(Player* oldOwner, Player* newOwner);
+
+	UpdateSleepTime calcSleepTime() const;
 	Object* scanClosestTarget();
 
 protected:

@@ -318,18 +318,18 @@ public:
 	/// remove all cells from closed list.
 	static Int releaseOpenList( PathfindCell *list );
 
-	inline PathfindCell *getNextOpen(void) {return m_info->m_nextOpen?m_info->m_nextOpen->m_cell:NULL;}
+	inline PathfindCell *getNextOpen(void) {return m_info && m_info->m_nextOpen?m_info->m_nextOpen->m_cell:NULL;}
 
-	inline UnsignedShort getXIndex(void) const {return m_info->m_pos.x;}
-	inline UnsignedShort getYIndex(void) const {return m_info->m_pos.y;}
+	inline UnsignedShort getXIndex(void) const {return m_info ? m_info->m_pos.x : 0;}
+	inline UnsignedShort getYIndex(void) const {return m_info ? m_info->m_pos.y : 0;}
 
-	inline Bool isBlockedByAlly(void) const {return m_info->m_blockedByAlly;}
-	inline void setBlockedByAlly(Bool blocked)  {m_info->m_blockedByAlly = (blocked!=0);}
+	inline Bool isBlockedByAlly(void) const {return m_info ? m_info->m_blockedByAlly:FALSE;}
+	inline void setBlockedByAlly(Bool blocked)  { if( m_info ) m_info->m_blockedByAlly = (blocked!=0);}
 
-	inline Bool getOpen(void) const {return m_info->m_open;}
-	inline Bool getClosed(void) const {return m_info->m_closed;}
-	inline UnsignedInt getCostSoFar(void) const {return m_info->m_costSoFar;}
-	inline UnsignedInt getTotalCost(void) const {return m_info->m_totalCost;}
+	inline Bool getOpen(void) const {return m_info ? m_info->m_open:FALSE;}
+	inline Bool getClosed(void) const {return m_info ? m_info->m_closed:FALSE;}
+	inline UnsignedInt getCostSoFar(void) const {return m_info ? m_info->m_costSoFar : 0;}
+	inline UnsignedInt getTotalCost(void) const {return m_info ? m_info->m_totalCost : 0;}
 
 	inline void setCostSoFar(UnsignedInt cost) { if( m_info ) m_info->m_costSoFar = cost;}
 	inline void setTotalCost(UnsignedInt cost) { if( m_info ) m_info->m_totalCost = cost;}

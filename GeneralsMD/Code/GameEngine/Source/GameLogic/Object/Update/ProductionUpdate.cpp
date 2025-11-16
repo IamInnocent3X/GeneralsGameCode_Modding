@@ -172,6 +172,13 @@ ProductionEntry::~ProductionEntry( void )
 
 }  // end ~ProductionEntry
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Real ProductionEntry::getPercentComplete( void ) const
+{
+	return INT_TO_REAL( TheGameLogic->getFrame() - m_framesUnderConstruction ) * m_percentComplete * 100.0f;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -198,6 +205,7 @@ ProductionUpdate::ProductionUpdate( Thing *thing, const ModuleData* moduleData )
 	m_setFlags.clear();
 	m_flagsDirty = FALSE;
 	m_specialPowerConstructionCommandButton = NULL;
+	m_nextWakeUpTime = 0;
 
 }  // end ProductionUpdate
 
@@ -316,6 +324,9 @@ Bool ProductionUpdate::queueUpgrade( const UpgradeTemplate *upgrade )
 
 	// add this upgrade as in progress in the player
 	player->addUpgrade( upgrade, UPGRADE_STATUS_IN_PRODUCTION );
+
+	// wake us up after queueing
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 
 
@@ -454,6 +465,9 @@ Bool ProductionUpdate::queueCreateUnit( const ThingTemplate *unitType, Productio
 	// tie to the end of the production queue
 	addToProductionQueue( production );
 
+	// wake us up after queueing
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
 	return TRUE;  // unit queued
 
 }  // end queueMakeUnit
@@ -489,6 +503,9 @@ void ProductionUpdate::cancelUnitCreate( ProductionID productionID )
 		}  // end if
 
 	}  // end for
+
+	// wake us up for update
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 }  // end cancelUnitCreate
 
@@ -526,6 +543,9 @@ void ProductionUpdate::cancelAllUnitsOfType( const ThingTemplate *unitType)
 
 	}  // end for
 
+	// wake us up for update
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
 }  // end cancelAllUnitsOfType
 
 //-------------------------------------------------------------------------------------------------
@@ -561,26 +581,37 @@ void ProductionUpdate::updateDoors()
 				m_flagsDirty = TRUE;
 
 			}  // end if
+			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_doors[i].m_doorOpenedFrame + d->m_doorOpeningTime + 1)
+			{
+				m_nextWakeUpTime = m_doors[i].m_doorOpenedFrame + d->m_doorOpeningTime + 1;
+			}
 
 		}  // end if
 		else if( m_doors[i].m_doorWaitOpenFrame )
 		{
 
-			if( now - m_doors[i].m_doorWaitOpenFrame > d->m_doorWaitOpenTime && !m_doors[i].m_holdOpen )
+			if( !m_doors[i].m_holdOpen )
 			{
+				if( now - m_doors[i].m_doorWaitOpenFrame > d->m_doorWaitOpenTime  )
+				{
 
-				// set our frame marker for closing
-				m_doors[i].m_doorWaitOpenFrame = 0;
-				m_doors[i].m_doorClosedFrame = now;
+					// set our frame marker for closing
+					m_doors[i].m_doorWaitOpenFrame = 0;
+					m_doors[i].m_doorClosedFrame = now;
 
-				// set the flags that show the difference in the art
-				m_clearFlags.set( theWaitingOpenFlags[i], true );
-				m_setFlags.set( theWaitingOpenFlags[i], false );
+					// set the flags that show the difference in the art
+					m_clearFlags.set( theWaitingOpenFlags[i], true );
+					m_setFlags.set( theWaitingOpenFlags[i], false );
 
-				m_setFlags.set( theClosingFlags[i] );
-				m_flagsDirty = TRUE;
+					m_setFlags.set( theClosingFlags[i] );
+					m_flagsDirty = TRUE;
 
-			}  // end if
+				}  // end if
+				else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_doors[i].m_doorWaitOpenFrame + d->m_doorWaitOpenTime + 1)
+				{
+					m_nextWakeUpTime = m_doors[i].m_doorWaitOpenFrame + d->m_doorWaitOpenTime + 1;
+				}
+			}
 
 		}  // end if
 		else if( m_doors[i].m_doorClosedFrame && !m_doors[i].m_holdOpen )
@@ -598,9 +629,21 @@ void ProductionUpdate::updateDoors()
 				m_flagsDirty = TRUE;
 
 			}  // end if
+			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_doors[i].m_doorClosedFrame + d->m_doorClosingTime + 1)
+			{
+				m_nextWakeUpTime = m_doors[i].m_doorClosedFrame + d->m_doorClosingTime + 1;
+			}
 
 		}  // end else if
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void ProductionUpdate::onCapture( Player *oldOwner, Player *newOwner )
+{
+	// wake us up
+	setWakeFrame(getObject(),UPDATE_SLEEP_NONE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -608,10 +651,14 @@ void ProductionUpdate::updateDoors()
 UpdateSleepTime ProductionUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	ProductionEntry *production = m_productionQueue;
 	const ProductionUpdateModuleData *d = getProductionUpdateModuleData();
 	UnsignedInt now = TheGameLogic->getFrame();
 	Object *us = getObject();
+
+	if(now >= m_nextWakeUpTime)
+		m_nextWakeUpTime = 0;
 
 	// update the door behaviors
 	if( d->m_numDoorAnimations > 0 )
@@ -636,6 +683,11 @@ UpdateSleepTime ProductionUpdate::update( void )
 			m_flagsDirty = TRUE;
 
 		}  // end if
+		else if( !m_nextWakeUpTime || m_nextWakeUpTime > m_constructionCompleteFrame + d->m_constructionCompleteDuration + 1 )
+		{
+			m_nextWakeUpTime = m_constructionCompleteFrame + d->m_constructionCompleteDuration + 1;
+		}
+		
 
 	}  // end if
 
@@ -656,7 +708,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 
 	// if nothing in the queue get outta here
 	if( production == NULL )
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//return UPDATE_SLEEP_NONE;
 
 	//
 	// if we've become OBJECT_STATUS_SOLD, halt all production ... leave things in the
@@ -666,7 +719,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 	// at the start of sell, but we still don't want to do anything here.
 	//
 	if( us->getStatusBits().test( OBJECT_STATUS_SOLD ) )
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//return UPDATE_SLEEP_NONE;
 
 	// get the player that is building this thing
 	Player *player = us->getControllingPlayer();
@@ -681,7 +735,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 		// delete the production entry
 		deleteInstance(production);
 
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//return UPDATE_SLEEP_NONE;
 
 	}  // end if
 
@@ -705,7 +760,7 @@ UpdateSleepTime ProductionUpdate::update( void )
 	}  // end if
 
 	// increase the frames we've been under production for
-	production->m_framesUnderConstruction++;
+	//production->m_framesUnderConstruction++;
 
 	// how many total logic frames does it take to produce this unit
 	Int totalProductionFrames;
@@ -714,13 +769,26 @@ UpdateSleepTime ProductionUpdate::update( void )
 	else
 		totalProductionFrames = production->m_upgradeToResearch->calcTimeToBuild( player );
 
+	// New way to handle production, now SLEEPY
+	if(!production->m_framesUnderConstruction)
+		production->m_framesUnderConstruction = now;
+
+	if(!production->m_percentComplete)
+		production->m_percentComplete = 1.0f/INT_TO_REAL(totalProductionFrames);
+
+	if( !m_nextWakeUpTime || m_nextWakeUpTime > production->m_framesUnderConstruction + totalProductionFrames )
+	{
+		m_nextWakeUpTime = production->m_framesUnderConstruction + totalProductionFrames;
+	}
+
 	// figure out our percent complete
-	production->m_percentComplete = INT_TO_REAL( production->m_framesUnderConstruction ) /
-																	INT_TO_REAL( totalProductionFrames ) *
-																	100.0f;
+	//production->m_percentComplete = INT_TO_REAL( production->m_framesUnderConstruction ) /
+	//																INT_TO_REAL( totalProductionFrames ) *
+	//																100.0f;
 
 	// if we've reached 100% or more we're done, tada!
-	if( production->m_percentComplete >= 100.0f )
+	//if( production->m_percentComplete >= 100.0f )
+	if(now >= production->m_framesUnderConstruction + totalProductionFrames)
 	{
 
 		// handle unit production items
@@ -861,6 +929,9 @@ UpdateSleepTime ProductionUpdate::update( void )
 
 						}  // end if, door open or no door animation ... make the object
 
+						// Added to find the next wake up time
+						updateDoors();
+
 					}  // end, if we got a door reservation
 
 				} //end of trying to exit all the things we were planning on attempting
@@ -873,6 +944,9 @@ UpdateSleepTime ProductionUpdate::update( void )
 					// delete the production entry
 					deleteInstance(production);
 				}
+
+				// we're finish with the current production, move on to the next one
+				return UPDATE_SLEEP_NONE;
 
 			}  // end if we found an exit interface
 			else
@@ -976,12 +1050,23 @@ UpdateSleepTime ProductionUpdate::update( void )
 			// delete the production entry
 			deleteInstance(production);
 
+			// we're finish with the current production, move on to the next one
+			return UPDATE_SLEEP_NONE;
+
 		}  // end else, production upgrade
 
 	}  // end if, production is 100% complete
 
-	return UPDATE_SLEEP_NONE;
+	return calcSleepTime();
+	//return UPDATE_SLEEP_NONE;
 }  // end update
+
+//-------------------------------------------------------------------------------------------------
+UpdateSleepTime ProductionUpdate::calcSleepTime() const
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	return UPDATE_SLEEP( m_nextWakeUpTime > now ? m_nextWakeUpTime - now : UPDATE_SLEEP_FOREVER );
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Add the production entry to the *END* of the production queue list */
@@ -1389,6 +1474,9 @@ void ProductionUpdate::xfer( Xfer *xfer )
 
 	// flags dirty
 	xfer->xferBool( &m_flagsDirty );
+
+	// next wake up time
+	xfer->xferUnsignedInt( &m_nextWakeUpTime );
 
 }  // end xfer
 

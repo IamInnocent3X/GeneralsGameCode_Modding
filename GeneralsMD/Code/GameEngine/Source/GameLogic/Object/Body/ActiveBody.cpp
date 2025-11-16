@@ -879,7 +879,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				damager->scoreTheKill( obj );
 			}
 
-			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
+			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
 			obj->onDie( damageInfo );
 
 			isKilled = TRUE;
@@ -888,7 +888,12 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 
 	if( !isKilled )
 	{
-		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID );
+		if(m_currentHealth < m_prevHealth)
+		{
+			obj->doAssaultTransportHealthUpdate();
+			obj->doSlavedUpdate(TRUE);
+		}
+		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
 	}
 
 	doDamageFX(damageInfo);
@@ -984,8 +989,8 @@ Bool ActiveBody::shouldRetaliate(Object *obj)
 	if (obj->isKindOf( KINDOF_IMMOBILE ) || obj->testStatus( OBJECT_STATUS_IMMOBILE)) {
 		return false;
 	}
-	// Drones never retaliate. [8/25/2003]
-	if (obj->isKindOf(KINDOF_DRONE)) {
+	// Drones never retaliate [8/25/2003] except when they do [2025/09/07]
+	if (obj->isKindOf(KINDOF_DRONE) && !obj->isKindOf(KINDOF_CAN_RETALIATE)) {
 		return false;
 	}
 	// Any unit that isn't idle won't retaliate. [8/25/2003]
@@ -1072,7 +1077,9 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 				d->onHealing( damageInfo );
 			}
 
-			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_clearsParasite, damageInfo->in.m_sourceID);
+			obj->doAssaultTransportHealthUpdate();
+			obj->doHijackerUpdate(FALSE, TRUE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
+			obj->doSlavedUpdate(TRUE);
 		}
 
 		if (m_curDamageState != oldState)

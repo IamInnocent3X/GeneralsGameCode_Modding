@@ -76,6 +76,11 @@ public:
 
 	WeaponBonusConditionTypeVec m_passengerWeaponBonusVec;  ///< weaponBonus types granted to passengers
 
+	Int m_containExtra;
+	std::vector<AsciiString> m_containMaxUpgradeList;
+	std::vector<AsciiString> m_containMaxUpgradeListConflicts;
+	std::vector<int> m_containMaxUpgradeListRequiresAll;
+
 	OpenContainModuleData( void );
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
@@ -184,10 +189,12 @@ public:
 	virtual const ContainedItemsList* getContainedItemsList() const { return &m_containList; }
 	virtual const Object *friend_getRider() const{return NULL;} ///< Damn.  The draw order dependency bug for riders means that our draw module needs to cheat to get around it.
 	virtual Real getContainedItemsMass() const;
+	virtual void setContainedItemsMass(Real mass) { m_containMass = mass; }
 	virtual UnsignedInt getStealthUnitsContained() const { return m_stealthUnitsContained; }
 
 	virtual PlayerMaskType getPlayerWhoEntered(void) const { return m_playerEnteredMask; }
 
+	virtual Int getRawContainMax() const;
 	virtual Int getContainMax() const;
 
 	// ExitInterface
@@ -217,8 +224,10 @@ public:
   virtual Bool isSpecialOverlordStyleContainer() const { return false; }
   virtual Bool isAnyRiderAttacking( void ) const;
 
-  	virtual void doUpgradeChecks( void ) {}
+  	virtual void doUpgradeChecks( void );
   	virtual void doStatusChecks( void ) {}
+
+	virtual void clearTargetID( void ) {}
 
 	/**
 		this is used for containers that must do something to allow people to enter or exit...
@@ -267,11 +276,14 @@ protected:
 	virtual short getRiderSlot(ObjectID riderID) const { return -1; }
 	virtual short getPortableSlot(ObjectID portableID) const { return -1; }
 	virtual const ContainedItemsList* getAddOnList() const { return NULL; }
+	virtual ContainedItemsList* getAddOnList() { return NULL; }
 
 	void pruneDeadWanters();
 
 	ContainedItemsList	m_containList;						///< the list of contained objects
 	UnsignedInt					m_containListSize;							///< size of contained list
+
+	Int				  	m_containExtra;
 private:
 
 	typedef std::map< ObjectID, ObjectEnterExitType, std::less<ObjectID> > ObjectEnterExitMap;
@@ -299,6 +311,8 @@ private:
 	Bool								m_rallyPointExists;										///< Only move to the rally point if this is true
 	Bool								m_loadSoundsEnabled;								///< Don't serialize -- used for disabling sounds during payload creation.
   Bool                m_passengerAllowedToFire;      ///< Newly promoted from the template data to the module for upgrade overriding access
+
+	Real			  m_containMass;
 };
 
 #endif  // end __OPENCONTAIN_H_

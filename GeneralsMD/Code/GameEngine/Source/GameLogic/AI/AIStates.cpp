@@ -5540,9 +5540,16 @@ StateReturnType AIAttackFireWeaponState::update()
 		Weapon* weapon = obj->getWeaponInWeaponSlot((WeaponSlotType)slot);
 		if (weapon)
 		{
-			if (weapon->fireWeapon(obj, getMachineGoalPosition())) { //fire() returns 'reloaded'
-				obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
-				// DEBUG_LOG((">> On firing Weapon in slot %d: fire synced weapon slot %d. Shot Fired!\n", wslot, slot));
+			if (m_att->isAttackingObject()) {
+				if (weapon->fireWeapon(obj, victim)) { //fire() returns 'reloaded'
+					obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
+				}
+			}
+			else {
+				if (weapon->fireWeapon(obj, getMachineGoalPosition())) { //fire() returns 'reloaded'
+					obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
+					// DEBUG_LOG((">> On firing Weapon in slot %d: fire synced weapon slot %d. Shot Fired!\n", wslot, slot));
+				}
 			}
 
 			obj->notifyFiringTrackerShotFired(weapon, INVALID_ID);
@@ -5704,11 +5711,16 @@ Bool AIAttackState::chooseWeapon()
 	AIUpdateInterface *ai = source->getAI();
 
 	Bool found = FALSE;
-//	if (victim) // Pardon?  We still need to pick a weapon if we are attacking the ground.
-//	{
+	if (victim) // Pardon?  We still need to pick a weapon if we are attacking the ground.
+	{
 		found = source->chooseBestWeaponForTarget(victim, PREFER_MOST_DAMAGE, ai->getLastCommandSource());
 		//DEBUG_ASSERTLOG(found, ("unable to autochoose any weapon for %s",source->getTemplate()->getName().str()));
-//	}
+	}
+	else
+	{
+		// IamInnocent - Edited to be able to fit requirements for Positions
+		found = source->chooseBestWeaponForPosition(getMachineGoalPosition(), PREFER_MOST_DAMAGE, ai->getLastCommandSource());
+	}
 
 	// Check if we need to update because of the weapon choice switch.
 	source->adjustModelConditionForWeaponStatus();
@@ -5961,6 +5973,12 @@ void AIAttackState::onExit( StateExitType status )
 	if (curWeapon)
 	{
 		curWeapon->computeFiringTrackerBonusClear(obj);
+
+		// Release My Weapon Lock if I am currently Locked in Priority
+		if(obj->isCurWeaponLockedPriority())
+		{
+			obj->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 	}
 
 	AIUpdateInterface *ai = obj->getAI();

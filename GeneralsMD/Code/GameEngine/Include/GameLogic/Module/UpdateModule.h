@@ -102,6 +102,9 @@ public:
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const = 0;
 
+	virtual void doRemovedFrom() = 0;
+	virtual void refreshUpdate() = 0;
+
 #ifdef DIRECT_UPDATEMODULE_ACCESS
 	// these aren't in the interface; they are in the implementation,
 	// because making them virtual is simply too much overhead.
@@ -175,6 +178,9 @@ public:
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update() = 0;
+	
+	virtual void doRemovedFrom() { }
+	virtual void refreshUpdate() { }
 
 	DisabledMaskType getDisabledTypesToProcess() const
 	{
@@ -256,6 +262,9 @@ public:
 	virtual void onSlaverDie( const DamageInfo *info ) = 0;
 	virtual void onSlaverDamage( const DamageInfo *info ) = 0;
 	virtual	Bool isSelfTasking() const = 0;
+	virtual void informMySlaverSelfInfo() = 0;
+	virtual void informMySlaverSelfTasking(Bool set) = 0;
+	virtual void friend_refreshUpdate() = 0;
 
 };
 
