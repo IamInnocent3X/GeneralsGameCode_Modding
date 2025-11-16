@@ -50,6 +50,8 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 
 	AsciiString		m_upgradeName;			///< name of the upgrade to be granted.
+	std::vector<AsciiString>	m_upgradeNames;
+	std::vector<AsciiString>	m_upgradeNamesRemove;
 
 };
 

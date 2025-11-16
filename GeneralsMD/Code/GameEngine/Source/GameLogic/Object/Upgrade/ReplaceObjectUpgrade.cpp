@@ -28,7 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#define DEFINE_HEALTHTRANSFERTYPE_NAMES
+#define DEFINE_MAXHEALTHCHANGETYPE_NAMES						// for TheMaxHealthChangeTypeNames[]
 
 #include "GameLogic/Module/ReplaceObjectUpgrade.h"
 
@@ -303,7 +303,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 			DEBUG_ASSERTCRASH( obj, ("Contain list must not contain NULL element"));
 
 			// Remove Passenger from current contain
-			removeFromContain( obj, false );
+			contain->removeFromContain( obj, false );
 
 			// Add the Passenger to the list to put into the new container later
 			vecID.push_back(obj->getID());

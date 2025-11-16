@@ -2836,6 +2836,34 @@ void Object::checkDisabledStatus()
 }
 
 //-------------------------------------------------------------------------------------------------
+//Get Disabled Till Frame
+//-------------------------------------------------------------------------------------------------
+std::vector<UnsignedInt> Object::getDisabledTillFrame() const
+{
+	std::vector<UnsignedInt> disabledTillFrames;
+	for( int i = 0; i < DISABLED_COUNT; i++ )
+	{
+		disabledTillFrames.push_back(m_disabledTillFrame[ i ]);
+	}
+	return disabledTillFrames;
+}
+
+//-------------------------------------------------------------------------------------------------
+//Set Disabled Till Frame
+//-------------------------------------------------------------------------------------------------
+void Object::setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames)
+{
+	// Don't do anything if the till frame sizes are different
+	if(disabledTillFrames.size() != DISABLED_COUNT )
+		return;
+
+	for( int i = 0; i < DISABLED_COUNT; i++ )
+	{
+		m_disabledTillFrame[ i ] = disabledTillFrames[ i ];
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 //Checks for Status Application after Disabled
 //-------------------------------------------------------------------------------------------------
 void Object::doDisablePower(Bool isCommand)

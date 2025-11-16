@@ -468,7 +468,7 @@ const FXList* BattleBusSlowDeathBehavior::findFX(int type, int amountofDeaths) c
 	}
 	else
 	{
-		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findFX. Object: %s, FXType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName().str(), type, amountofDeaths));
+		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findFX. Object: %s, FXType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName(), type, amountofDeaths));
 	}
 	return NULL;
 }
@@ -538,7 +538,7 @@ const ObjectCreationList* BattleBusSlowDeathBehavior::findOCL(int type, int amou
 	}
 	else
 	{
-		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findOCL. Object: %s, OCLType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName().str(), type, amountofDeaths));
+		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findOCL. Object: %s, OCLType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName(), type, amountofDeaths));
 	}
 	return NULL;
 }

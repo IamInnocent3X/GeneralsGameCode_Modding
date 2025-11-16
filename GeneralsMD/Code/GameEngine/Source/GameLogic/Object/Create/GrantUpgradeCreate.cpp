@@ -94,32 +94,35 @@ void GrantUpgradeCreate::onCreate( void )
 	{
 		if(	!currentStatus.test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
 		{
-			const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( getGrantUpgradeCreateModuleData()->m_upgradeName );
-			if( !upgradeTemplate )
+			if(!m_upgradeName.isEmpty())
 			{
-				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName().str(), getGrantUpgradeCreateModuleData()->m_upgradeName.str() ) );
-				return;
-			}
-
-			Player *player = getObject()->getControllingPlayer();
-			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
-			{
-				// get the player
-				player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
-				player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
-			}
-			else
-			{
-				// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
-				ProductionUpdateInterface *pui = getObject()->getProductionUpdateInterface();
-				if( pui )
+				const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( getGrantUpgradeCreateModuleData()->m_upgradeName );
+				if( !upgradeTemplate )
 				{
-					pui->cancelUpgrade( upgradeTemplate );
+					DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), getGrantUpgradeCreateModuleData()->m_upgradeName.str() ) );
+					return;
 				}
-				getObject()->giveUpgrade( upgradeTemplate );
-			}
 
-			player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+				Player *player = getObject()->getControllingPlayer();
+				if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+				{
+					// get the player
+					player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
+					player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
+				}
+				else
+				{
+					// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+					ProductionUpdateInterface *pui = getObject()->getProductionUpdateInterface();
+					if( pui )
+					{
+						pui->cancelUpgrade( upgradeTemplate );
+					}
+					getObject()->giveUpgrade( upgradeTemplate );
+				}
+
+				player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+			}
 
 			std::vector<AsciiString> upgradeNames = getGrantUpgradeCreateModuleData()->m_upgradeNames;
 
@@ -206,7 +209,7 @@ void GrantUpgradeCreate::onCreate( void )
 						else
 						{
 							DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
-								getObject()->getName().str(),
+								getObject()->getName(),
 								it->str() ) );
 						}
 					}
@@ -226,10 +229,12 @@ void GrantUpgradeCreate::onBuildComplete( void )
 
 	CreateModule::onBuildComplete(); // extend
 
+  if(!getGrantUpgradeCreateModuleData()->m_upgradeName.isEmpty())
+  {
 	const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( getGrantUpgradeCreateModuleData()->m_upgradeName );
 	if( !upgradeTemplate )
 	{
-		DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName().str(), getGrantUpgradeCreateModuleData()->m_upgradeName.str() ) );
+		DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), getGrantUpgradeCreateModuleData()->m_upgradeName.str() ) );
 		return;
 	}
 
@@ -250,6 +255,100 @@ void GrantUpgradeCreate::onBuildComplete( void )
 		}
 		getObject()->giveUpgrade( upgradeTemplate );
 	}
+  }
+
+	std::vector<AsciiString> upgradeNames = getGrantUpgradeCreateModuleData()->m_upgradeNames;
+
+	if( !upgradeNames.empty() )
+	{
+		std::vector<AsciiString>::const_iterator it;
+		for( it = upgradeNames.begin();
+					it != upgradeNames.end();
+					it++)
+		{
+			const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade( *it );
+			if( !upgradeTemplate )
+			{
+				DEBUG_CRASH(("An upgrade module references %s, which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+
+	//if( upgradeNames.size() > 0 )
+	//{
+	//	for (int i; i < upgradeNames.size() ; i++)
+	//	{
+	//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->upgradeNames[i] );
+			if( !upgradeTemplate )
+			{
+				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+				return;
+			}
+			Player *player = getObject()->getControllingPlayer();
+			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				// get the player
+				player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
+				player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
+			}
+			else
+			{
+				// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+				ProductionUpdateInterface *pui = getObject()->getProductionUpdateInterface();
+				if( pui )
+				{
+					pui->cancelUpgrade( upgradeTemplate );
+				}
+				getObject()->giveUpgrade( upgradeTemplate );
+			}
+			
+			player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+		}
+	}
+
+	std::vector<AsciiString> upgradeNamesRemove = getGrantUpgradeCreateModuleData()->m_upgradeNamesRemove;
+
+	if( !upgradeNamesRemove.empty() )
+	{
+		std::vector<AsciiString>::const_iterator it;
+		for( it = upgradeNamesRemove.begin();
+					it != upgradeNamesRemove.end();
+					it++)
+		{
+			const UpgradeTemplate* upgrade = TheUpgradeCenter->findUpgrade( *it );
+			if( !upgrade )
+			{
+				DEBUG_CRASH(("An upgrade module references %s, which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+
+	//if( m_upgradeNames.size() > 0 )
+	//{
+	//	for (int i; i < m_upgradeNames.size() ; i++)
+	//	{
+	//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeNames[i] );
+			if( upgrade )
+			{
+				//Check if it's a player Upgrade...
+				if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+				{
+					player->removeUpgrade( upgrade );
+				}
+				//We found the upgrade, now see if the parent object has it set...
+				else if( getObject()->hasUpgrade( upgrade ) )
+				{
+					//Cool, now remove it.
+					getObject()->removeUpgrade( upgrade );
+				}
+				else
+				{
+					DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
+						getObject()->getName(),
+						it->str() ) );
+				}
+			}
+		}
+	}
+
 }  // end onBuildComplete
 
 // ------------------------------------------------------------------------------------------------

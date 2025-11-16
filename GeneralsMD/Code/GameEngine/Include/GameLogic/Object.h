@@ -676,6 +676,9 @@ public:
 	//Checks any timers and clears disabled statii that have expired.
 	void checkDisabledStatus();
 
+	std::vector<UnsignedInt> getDisabledTillFrame() const;
+	void setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames);
+
 	void checkLevitate();
 
 	//When an AIAttackState is over, it needs to clean up any weapons that might be in leech range mode

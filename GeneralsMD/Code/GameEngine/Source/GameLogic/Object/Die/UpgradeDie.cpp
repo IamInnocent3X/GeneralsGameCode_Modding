@@ -65,30 +65,33 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 	Object *producer = TheGameLogic->findObjectByID( getObject()->getProducerID() );
 	if( producer )
 	{
-		//Okay, we found our parent... now look for the upgrade.
-		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeName );
-
-		if( upgrade )
+		if(!m_upgradeName.isEmpty())
 		{
-			//Check if it's a player Upgrade...
-			if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			//Okay, we found our parent... now look for the upgrade.
+			const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeName );
+
+			if( upgrade )
 			{
-				Player *player = producer->getControllingPlayer();
-				player->removeUpgrade( upgrade );
-			}
-			//We found the upgrade, now see if the parent object has it set...
-			else if( producer->hasUpgrade( upgrade ) )
-			{
-				//Cool, now remove it.
-				producer->removeUpgrade( upgrade );
-			}
-			else
-			{
-				DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
-					getObject()->getTemplate()->getName().str(),
-					getUpgradeDieModuleData()->m_upgradeName.str(),
-					producer->getTemplate()->getName().str(),
-					", which the producer doesn't have. This is used in cases where the producer builds an upgrade that can die... like ranger building scout drones.") );
+				//Check if it's a player Upgrade...
+				if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+				{
+					Player *player = producer->getControllingPlayer();
+					player->removeUpgrade( upgrade );
+				}
+				//We found the upgrade, now see if the parent object has it set...
+				else if( producer->hasUpgrade( upgrade ) )
+				{
+					//Cool, now remove it.
+					producer->removeUpgrade( upgrade );
+				}
+				else
+				{
+					DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
+						getObject()->getTemplate()->getName().str(),
+						getUpgradeDieModuleData()->m_upgradeName.str(),
+						producer->getTemplate()->getName().str(),
+						", which the producer doesn't have. This is used in cases where the producer builds an upgrade that can die... like ranger building scout drones.") );
+				}
 			}
 		}
 		std::vector<AsciiString> upgradeNames = getUpgradeDieModuleData()->m_upgradeNames;
