@@ -47,6 +47,7 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Module/EjectPilotDie.h"
 #include "GameLogic/Module/CollideModule.h"
+#include "GameLogic/Module/EquipCrateCollide.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/ExperienceTracker.h"
 
@@ -410,23 +411,59 @@ void HijackerUpdate::setRetargetObject( ObjectID ID )
 		switch(m_hijackType)
 		{
 			case HIJACK_CARBOMB:
-			{
-				self->setHijackingID( object->getID() );
-				object->setCarBombConverterID( self->getID() );
-				break;
-			}
 			case HIJACK_HIJACKER:
 			{
+				// Set the new Object for Hijacking
 				self->setHijackingID( object->getID() );
-				object->setHijackerID( self->getID() );
+
+				// Set the vision range
+				object->setVisionRange(self->getVisionRange());
+				object->setShroudClearingRange(self->getShroudClearingRange());
+
+				// Set extra properties according to the Hijack Type
+				if(m_hijackType == HIJACK_CARBOMB)
+				{
+					object->setWeaponSetFlag( WEAPONSET_CARBOMB );
+					object->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IS_CARBOMB ) );
+					object->setCarBombConverterID( self->getID() );
+				}
+				else
+				{
+					object->setHijackerID( self->getID() );
+				}
 				break;
 			}
+			case HIJACK_PARASITE:
 			case HIJACK_EQUIP:
 			{
+				// We overwrite the module's EquipCrateCollide properties first
+				// The module checks for the Object's and the Modules equipToID to match for being able to overwrite 
+				for (BehaviorModule** m = self->getBehaviorModules(); *m; ++m)
+				{
+					CollideModuleInterface* collide = (*m)->getCollide();
+					if (!collide)
+						continue;
+
+					if( collide->isEquipCrateCollide() )
+					{
+						// Check if it is the correct type of EquipCrateCollide module before proceeding
+						if( (m_hijackType == HIJACK_PARASITE && !collide->isParasiteEquipCrateCollide()) ||
+							(m_hijackType == HIJACK_EQUIP && collide->isParasiteEquipCrateCollide()) )
+							continue;
+
+						EquipCrateCollide *eqc = (EquipCrateCollide*) collide;
+						if(eqc)
+							eqc->overwriteEquipToIDModule( ID );
+					}
+				}
+
+				// Change the current equipper properties to the retargeted object
 				self->setEquipToID( object->getID() );
+
 				object->setEquipObjectID( self->getID() );
 				if(!self->testStatus(OBJECT_STATUS_NO_ATTACK))
 					object->setEquipAttackableObjectID( self->getID() );
+
 				break;
 			}
 		}

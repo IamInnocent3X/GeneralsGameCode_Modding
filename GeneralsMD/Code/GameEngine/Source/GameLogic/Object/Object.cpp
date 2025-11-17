@@ -81,9 +81,10 @@
 #include "GameLogic/Module/DozerAIUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/LifeTimeUpdate.h"
-#include "GameLogic/Module/EquipCrateCollide.h"
+//#include "GameLogic/Module/EquipCrateCollide.h"
 #include "GameLogic/Module/HijackerUpdate.h"
 //#include "GameLogic/Module/MobMemberSlavedUpdate.h"
+#include "GameLogic/Module/ObjectHelper.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
 #include "GameLogic/Module/ObjectSMCHelper.h"
@@ -2579,7 +2580,7 @@ void Object::setDisabled( DisabledType type )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus tintStatus, AsciiString customTintStatus )
+void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus tintStatus, AsciiString customTintStatus, Bool paintTint )
 {
 	Bool edgeCase = !isDisabled();
 
@@ -2632,7 +2633,7 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 		m_disabledTillFrame[ type ] = frame;
 		m_disabledMask.set( type, frame > TheGameLogic->getFrame() );
 
-		if( m_drawable )
+		if( m_drawable && paintTint )
 		{
 			if( isDisabled() )
 			{
@@ -2745,9 +2746,18 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 			//Not only that, but it also loses any healing bonuses it may have earned in its prior life
 			{
 				static const NameKeyType key_AutoHealBehavior = NAMEKEY("AutoHealBehavior");
-				AutoHealBehavior* autoHeal = (AutoHealBehavior*)(findUpdateModule( key_AutoHealBehavior ));
-				if (autoHeal)
-					autoHeal->undoUpgrade();
+				//AutoHealBehavior* autoHeal = (AutoHealBehavior*)(findUpdateModule( key_AutoHealBehavior ));
+				//if (autoHeal)
+				//	autoHeal->undoUpgrade();
+				for (BehaviorModule** b = m_behaviors; *b; ++b)
+				{
+					if ((*b)->getModuleNameKey() == key_AutoHealBehavior)
+					{
+						AutoHealBehavior* autoHeal = (AutoHealBehavior*) *b;
+						if (autoHeal && autoHeal->disableWhenUnmanned())
+							autoHeal->undoUpgrade();
+					}
+				}
 
 
 			}
@@ -2977,7 +2987,7 @@ std::vector<UnsignedInt> Object::getDisabledTillFrame() const
 }
 
 //-------------------------------------------------------------------------------------------------
-//Set Disabled Till Frame
+//Set Disabled Till Frame + Disabled Tint
 //-------------------------------------------------------------------------------------------------
 void Object::setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames)
 {
@@ -2985,9 +2995,31 @@ void Object::setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFr
 	if(disabledTillFrames.size() != DISABLED_COUNT )
 		return;
 
+	UnsignedInt now = TheGameLogic->getFrame();
 	for( int i = 0; i < DISABLED_COUNT; i++ )
 	{
 		m_disabledTillFrame[ i ] = disabledTillFrames[ i ];
+		if(m_disabledTillFrame[i] > now)
+			setDisabledUntil( DisabledType(i), m_disabledTillFrame );
+	}
+
+	// Set disabled tint
+	if(!m_drawable)
+		return;
+
+	if(!m_customDisabledTintToClear.isEmpty())
+	{
+		if(m_disabledTintToClear != TINT_STATUS_INVALID)
+		{
+			m_drawable->clearTintStatus( m_disabledTintToClear );
+			m_disabledTintToClear = TINT_STATUS_INVALID;
+		}
+
+		m_drawable->setCustomTintStatus( customTintStatus );
+	}
+	else if(m_disabledTintToClear != TINT_STATUS_INVALID)
+	{
+		m_drawable->setTintStatus( disableTint );
 	}
 }
 
@@ -3081,7 +3113,7 @@ void Object::clearDisablePower(Bool isCommand)
 	
 	// Clear Disabled Type
 	if(getTemplate()->setDisabledUnderPowered())
-		clearDisabled( getTemplate()->getDisabledTypeUnderPowered(), FALSE, getTemplate()->getTintStatusUnderPowered(), getTemplate()->getCustomTintStatusUnderPowered() );
+		clearDisabled( getTemplate()->getDisabledTypeUnderPowered(), FALSE );
 	else if( m_drawable )
 	{
 		if(!getTemplate()->getCustomTintStatusUnderPowered().isEmpty())
@@ -6583,19 +6615,19 @@ void Object::doStatusDamage( ObjectStatusTypes status, Real duration, const Asci
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::transferStatusHelperData( StatusTransferData data )
+void Object::transferStatusHelperData( HelperTransferData data )
 {
 	if(m_statusDamageHelper)
 		m_statusDamageHelper->transferData(data);
 }
 
 //-------------------------------------------------------------------------------------------------
-StatusTransferData Object::getStatusHelperData() const
+HelperTransferData Object::getStatusHelperData() const
 {
 	if(m_statusDamageHelper)
-		return m_statusDamageHelper->getStatusData();
+		return m_statusDamageHelper->getHelperData();
 
-	StatusTransferData nullData;
+	HelperTransferData nullData;
 	return nullData;
 }
 
@@ -6604,6 +6636,23 @@ void Object::doTempWeaponBonus( WeaponBonusConditionType status, const AsciiStri
 {
 	if(m_tempWeaponBonusHelper)
 		m_tempWeaponBonusHelper->doTempWeaponBonus(status, customStatus, duration, customTintStatus, tintStatus);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::transferTempWeaponBonusHelperData( HelperTransferData data )
+{
+	if(m_tempWeaponBonusHelper)
+		m_tempWeaponBonusHelper->transferData(data);
+}
+
+//-------------------------------------------------------------------------------------------------
+HelperTransferData Object::getTempWeaponBonusHelperData() const
+{
+	if(m_tempWeaponBonusHelper)
+		return m_tempWeaponBonusHelper->getHelperData();
+
+	HelperTransferData nullData;
+	return nullData;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -6641,8 +6690,6 @@ void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, con
 		subdualNotifyData.tintStatus = subdualData.tintStatus;
 		subdualNotifyData.customTintStatus = subdualData.customTintStatus;
 		subdualNotifyData.disableType = subdualData.disableType;
-		subdualNotifyData.disableTint = subdualData.disableTint;
-		subdualNotifyData.disableCustomTint = subdualData.disableCustomTint;
 
 		m_subdualDamageHelper->notifySubdualDamageCustom( subdualNotifyData, customStatus );
 	}
@@ -8262,6 +8309,60 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 						hijackerUpdate->setEject( TRUE );
 					else if(checkHealed)
 						hijackerUpdate->setHealed( TRUE );
+				}
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite)
+{
+	if( transferHijacker && testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
+	{
+		Object *converter = TheGameLogic->findObjectByID( m_carbombConverterID );
+
+		if(converter)
+		{
+			HijackerUpdateInterface *hijackerUpdate = converter->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setRetargetObject(transferToID);
+			}
+		}
+	}
+	
+	if( transferHijacker && testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
+	{
+		Object *hijacker = TheGameLogic->findObjectByID( m_hijackerID );
+
+		if(hijacker)
+		{
+			HijackerUpdateInterface *hijackerUpdate = hijacker->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setRetargetObject(transferToID);
+			}
+		}
+	}
+
+	if( !m_equipObjIDs.empty() && (transferEquipper || transferParasite) )
+	{
+		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		{
+			Object *equipObj = TheGameLogic->findObjectByID( (*it) );
+
+			if(equipObj)
+			{
+				HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
+				if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+				{
+					if ( (hijackerUpdate->getHijackType() == HIJACK_PARASITE && transferParasite) ||
+						 (hijackerUpdate->getHijackType() == HIJACK_EQUIP && transferEquipper) )
+					{
+						hijackerUpdate->setRetargetObject(transferToID);
+					}
+					
 				}
 			}
 		}

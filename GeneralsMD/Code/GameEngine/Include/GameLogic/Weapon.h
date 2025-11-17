@@ -616,6 +616,8 @@ public:
 	inline Real getROFMovingMaxSpeedCount() const { return m_rofMovingMaxSpeedCount; }
 	inline Bool getROFMovingScales() const { return m_rofMovingScales; }
 
+	inline UnsignedInt getInvulnerabilityDuration() const { return m_invulnerabilityDuration; }
+
 	Bool passRequirements (const Object *source) const;
 	Int calcROFForMoving(const Object *source, Int Delay) const;
 
@@ -859,6 +861,8 @@ private:
 	Real m_rofMovingMaxSpeedCount;
 	Bool m_rofMovingScales;
 
+	UnsignedInt m_invulnerabilityDuration;
+
 	mutable HistoricWeaponDamageList m_historicDamage;
 };
 
@@ -1091,6 +1095,8 @@ public:
 	inline Real getROFMovingPenalty() const { return m_template->getROFMovingPenalty(); }
 	inline Real getROFMovingMaxSpeedCount() const { return m_template->getROFMovingMaxSpeedCount(); }
 	inline Bool getROFMovingScales() const { return m_template->getROFMovingScales(); }
+
+	inline UnsignedInt getInvulnerabilityDuration() const { return m_template->getInvulnerabilityDuration(); }
 
 	Int getWeaponPriority(const Object *source, const Object *target) const;
 	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;

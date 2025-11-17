@@ -1040,6 +1040,9 @@ protected:
 		if (m_inheritsWeaponBonus && sourceObj) {
 			obj->setWeaponBonusConditionFlags(sourceObj->getWeaponBonusCondition());
 			obj->setCustomWeaponBonusConditionFlags(sourceObj->getCustomWeaponBonusCondition());
+			obj->setWeaponBonusConditionIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
+			obj->setCustomWeaponBonusConditionIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
+			replacementObject->doWeaponBonusChange();
 		}
 
 		if ( m_invulnerableTime > 0 )

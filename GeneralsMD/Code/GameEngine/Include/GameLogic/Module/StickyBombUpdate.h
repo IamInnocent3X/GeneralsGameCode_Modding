@@ -145,9 +145,6 @@ public:
 	virtual Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
 	virtual Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
 
-	inline Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
-	inline Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
-
 private:
 
 	ObjectID			m_targetID;

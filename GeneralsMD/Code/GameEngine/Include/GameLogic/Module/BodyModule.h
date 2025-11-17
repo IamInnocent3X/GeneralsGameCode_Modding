@@ -43,8 +43,6 @@ struct SubdualCustomData
 	TintStatus tintStatus;
 	AsciiString customTintStatus;
 	DisabledType disableType;
-	TintStatus disableTint;
-	AsciiString disableCustomTint;
 	Bool isSubdued;
 };
 
@@ -54,8 +52,6 @@ struct SubdualCustomHealData
 	TintStatus tintStatus;
 	AsciiString customTintStatus;
 	DisabledType disableType;
-	TintStatus disableTint;
-	AsciiString disableCustomTint;
 };
 
 typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualDamageMap;

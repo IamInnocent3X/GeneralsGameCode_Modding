@@ -137,6 +137,9 @@ enum CanAttackResult CPP_11(: Int);
 // For TintStatus
 #include "GameClient/TintStatus.h"
 
+// For Transfer Helper Types
+#include "GameLogic/Module/ObjectHelper.h"
+
 //-----------------------------------------------------------------------------
 //           Type Defines
 //-----------------------------------------------------------------------------
@@ -262,6 +265,7 @@ public:
 
 	void refreshSubdualHelper() { m_subdualDamageHelper->refreshUpdate(); }
 	void refreshStatusHelper() { m_statusDamageHelper->refreshUpdate(); }
+	void refreshTempWeaponBonusHelper() { m_tempWeaponBonusHelper->refreshUpdate(); }
 
 	void setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes );
 	ObjectID getShieldByTargetID() const { return m_shielderID; };
@@ -271,8 +275,11 @@ public:
 	void transferSubdualHelperData( CustomSubdualCurrentHealMap data );
 	CustomSubdualCurrentHealMap getSubdualHelperData() const;
 
-	void transferStatusHelperData( StatusTransferData data );
-	StatusTransferData getStatusHelperData() const;
+	void transferStatusHelperData( HelperTransferData data );
+	HelperTransferData getStatusHelperData() const;
+
+	void transferTempWeaponBonusHelperData( HelperTransferData data );
+	HelperTransferData getTempWeaponBonusHelperData() const;
 
 	void scoreTheKill( const Object *victim );						///< I just killed this object.
 	void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback = TRUE );	///< I just achieved this level right this moment
@@ -611,7 +618,8 @@ public:
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 	Bool isCurWeaponLockedPriority() const { return m_weaponSet.isCurWeaponLockedPriority(); }
 
-	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; } 
+	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
+	void SetCustomStatusFlags(ObjectCustomStatusType customStatusMap) { return m_customStatus = customStatusMap; } 
 	Bool testCustomStatus(const AsciiString& cst) const;
 	Bool testCustomStatusForAll(const std::vector<AsciiString>& cst) const;
 
@@ -653,6 +661,11 @@ public:
 	inline WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
 	inline ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
 
+	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
+	inline void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
+
+	void doWeaponBonusChange() { m_weaponSet.weaponSetOnWeaponBonusChange(this); }
+
 	// TO-DO: Change to Hash_Map. DONE.
 	//inline ObjectCustomStatusType setCustomWeaponBonusConditions(ObjectCustomStatusType customFlagsInheriter, ObjectCustomStatusType customFlagsGiver) const ;
 
@@ -673,10 +686,10 @@ public:
 
 	DisabledMaskType getDisabledFlags() const { return m_disabledMask; }
 	Bool isDisabled() const { return m_disabledMask.any(); }
-	Bool clearDisabled( DisabledType type, bool clearTintLater = FALSE, TintStatus tintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL );
+	Bool clearDisabled( DisabledType type, bool clearTintLater = FALSE );
 
 	void setDisabled( DisabledType type );
-	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL );
+	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL, Bool paintTint = TRUE );
 	Bool isDisabledByType( DisabledType type ) const { return TEST_DISABLEDMASK( m_disabledMask, type ); }
 
 	UnsignedInt getDisabledUntil( DisabledType type = DISABLED_ANY ) const;
@@ -695,6 +708,11 @@ public:
 
 	std::vector<UnsignedInt> getDisabledTillFrame() const;
 	void setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames);
+
+	inline TintStatus getDisabledTint() const { return m_disabledTintToClear; };
+	inline const AsciiString& getDisabledTint() const { return m_customDisabledTintToClear; }
+	inline void setDisabledTint(TintStatus tintStatus) { m_disabledTintToClear = tintStatus; }
+	inline void setDisabledTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
 
 	void checkLevitate();
 
@@ -761,6 +779,7 @@ public:
 	void setHijackingID(ObjectID ID);
 	void setEquipToID(ObjectID ID);
 	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID);
+	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite);
 	Bool checkToSquishHijack(const Object *other) const;
 
 	inline ObjectID getEquipToID() const { return m_equipToID; }
@@ -1037,7 +1056,7 @@ private:
 	std::vector<AsciiString>						m_rejectKeys;
 	std::vector<ObjectID> 							m_equipObjIDs;
 	std::vector<ObjectID> 							m_equipAttackableObjIDs;
-	std::vector<ObjectID> 							m_lastEquipToIDs;
+	std::vector<ObjectID> 							m_lastEquipObjIDs;
 	ObjectID										m_carbombConverterID;
 	ObjectID 										m_hijackerID;
 	ObjectID										m_hijackingID;

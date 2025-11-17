@@ -36,23 +36,6 @@
 #include "GameLogic/Module/ObjectHelper.h"
 #include "GameClient/TintStatus.h"
 
-typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomStatusTypeMap;
-typedef std::hash_map<UnsignedShort, UnsignedInt, rts::hash<UnsignedShort>, rts::equal_to<UnsignedShort> > StatusTypeMap;
-typedef std::pair<TintStatus, UnsignedInt> TintStatusDurationPair;
-typedef std::pair<AsciiString, UnsignedInt> CustomTintStatusDurationPair;
-typedef std::vector<TintStatusDurationPair> TintStatusDurationVec;
-typedef std::vector<CustomTintStatusDurationPair> CustomTintStatusDurationVec;
-
-struct StatusTransferData
-{
-	UnsignedInt frameToHeal;
-	UnsignedInt earliestDurationAsInt;
-	StatusTypeMap statusToHeal;
-	CustomStatusTypeMap customStatusToHeal;
-	TintStatusDurationVec currentTint;
-	CustomTintStatusDurationVec customTintStatus;
-}
-
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 class StatusDamageHelperModuleData : public ModuleData
@@ -78,24 +61,24 @@ public:
 	virtual UpdateSleepTime update();
 
 	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
-	StatusTransferData getStatusData() const
+	HelperTransferData getHelperData() const
 	{
-		StatusTransferData transferData;
-		transferData.frameToHeal = m_frameToHeal;
+		HelperTransferData transferData;
+		transferData.frameEnd = m_frameToHeal;
 		transferData.earliestDurationAsInt = m_earliestDurationAsInt;
-		transferData.statusToHeal m_statusToHeal;
-		transferData.customStatusToHeal = m_customStatusToHeal;
+		transferData.statusMap m_statusToHeal;
+		transferData.customStatusMap = m_customStatusToHeal;
 		transferData.currentTint = m_currentTint;
 		transferData.customTintStatus = m_customTintStatus;
 
 		return transferData;
 	}
-	void transferData(StatusTransferData transferData)
+	void transferData(HelperTransferData transferData)
 	{
-		m_frameToHeal = transferData.frameToHeal;
+		m_frameToHeal = transferData.frameEnd;
 		m_earliestDurationAsInt = transferData.earliestDurationAsInt;
-		m_statusToHeal = transferData.statusToHeal;
-		m_customStatusToHeal = transferData.customStatusToHeal;
+		m_statusToHeal = transferData.statusMap;
+		m_customStatusToHeal = transferData.customStatusMap;
 		m_currentTint = transferData.currentTint;
 		m_customTintStatus = transferData.customTintStatus;
 	}

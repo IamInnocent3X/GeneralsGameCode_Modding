@@ -45,7 +45,8 @@ enum HijackType CPP_11(: Int)
 	HIJACK_NONE,
 	HIJACK_CARBOMB,
 	HIJACK_HIJACKER,
-	HIJACK_EQUIP
+	HIJACK_EQUIP,
+	HIJACK_PARASITE
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -64,6 +64,8 @@ public:
 	void setExperienceScalar( Real scalar ) { m_experienceScalar = scalar; }
 	void setExperienceValueScalar( Real scalar ) { m_experienceValueScalar = scalar; }
 
+	void setHighestExpOrLevel( Int experienceGain, VeterancyLevel newLevel, Bool provideFeedback = TRUE ); ///< Sets the Object according to the highest level from the given exp or the level set
+
 	// --------------- inherited from Snapshot interface --------------
 	void crc( Xfer *xfer );
 	void xfer( Xfer *xfer );

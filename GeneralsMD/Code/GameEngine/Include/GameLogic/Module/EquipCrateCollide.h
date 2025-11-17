@@ -102,6 +102,8 @@ public:
 	void setEquipStatus(Object *other);
 	void clearEquipStatus();
 
+	void overwriteEquipToIDModule(ObjectID ID);
+
 protected:
 
 	/// This allows specific vetoes to certain types of crates and their data

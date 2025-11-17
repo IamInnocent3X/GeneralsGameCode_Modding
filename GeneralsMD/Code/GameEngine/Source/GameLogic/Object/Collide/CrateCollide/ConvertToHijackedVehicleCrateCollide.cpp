@@ -61,6 +61,7 @@
 //-------------------------------------------------------------------------------------------------
 ConvertToHijackedVehicleCrateCollide::ConvertToHijackedVehicleCrateCollide( Thing *thing, const ModuleData* moduleData ) : CrateCollide( thing, moduleData )
 {
+	m_originalName = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -185,6 +186,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	//In order to make things easier for the designers, we are going to transfer the hijacker's name
 	//to the car... so the designer can control the car with their scripts.
+	m_originalName = other->getName();
 	TheScriptEngine->transferObjectName( obj->getName(), other );
 
 	ExperienceTracker *targetExp = other->getExperienceTracker();
@@ -290,6 +292,9 @@ Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
 	// Clear the status to make it Hijackable
 	other->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );
 
+	// Set its name back to the original name
+	TheScriptEngine->transferObjectName( m_originalName, other );
+
 	// Copied from NeutronBlastBehavior
 	// Make it unmanned, so units can easily check the ability to "take control of it"
 	other->setDisabled( DISABLED_UNMANNED );
@@ -337,6 +342,9 @@ void ConvertToHijackedVehicleCrateCollide::xfer( Xfer *xfer )
 
 	// extend base class
 	CrateCollide::xfer( xfer );
+
+	// original name
+	xfer->xferAsciiString( &m_originalName );
 
 }  // end xfer
 

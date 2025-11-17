@@ -192,7 +192,10 @@ Bool EquipCrateCollide::executeCrateBehavior( Object *other )
 		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
 		hijackerUpdate->setIsParasite( data->m_isParasite );
 		if(data->m_isParasite)
+		{
+			hijackerUpdate->setHijackType( HIJACK_PARASITE );
 			hijackerUpdate->setParasiteKey( data->m_parasiteKey );
+		}
 		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
 		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
 		hijackerUpdate->setDestroyOnClear( data->m_destroyOnClear );
@@ -378,6 +381,15 @@ Bool EquipCrateCollide::revertCollideBehavior(Object *other)
 
 	// Indicate that we have reverted the Collied Behavior and no need to continue 
 	return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void EquipCrateCollide::overwriteEquipToIDModule(ObjectID ID)
+{
+	// We only overwrite if we are equipped to the right object, this is compatible for objects with multiple EquipCrateCollide modules
+	if( ID != INVALID_ID && getObject()->getEquipToID() == m_equipToID )
+		m_equipToID = ID;
 }
 
 // ------------------------------------------------------------------------------------------------

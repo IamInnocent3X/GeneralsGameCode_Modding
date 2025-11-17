@@ -186,6 +186,11 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 					getObject()->setWeaponBonusConditionFlags(bonusFlags);
 					getObject()->setCustomWeaponBonusConditionFlags(customBonusFlags);
 
+					WeaponBonusConditionFlags bonusFlagsIC = launcher->getWeaponBonusConditionIgnoreClear();
+					ObjectCustomStatusType customBonusFlagsIC = launcher->getCustomWeaponBonusConditionIgnoreClear();
+					getObject()>setWeaponBonusConditionIgnoreClear(bonusFlagsIC);
+					getObject()->setCustomWeaponBonusConditionIgnoreClear(customBonusFlagsIC);
+
 					// Special Chain Scattershot case:
 					if (data->m_avoidPrevTarget) {
 						static NameKeyType ssu_key = NAMEKEY("ScatterShotUpdate");

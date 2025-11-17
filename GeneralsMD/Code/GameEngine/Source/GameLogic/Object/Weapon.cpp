@@ -438,6 +438,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ROFMovingScalesWithMovingSpeed",				INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_rofMovingScales) },
 	{ "ROFMovingScalingSpeedMax",					INI::parseVelocityReal,		NULL,						offsetof(WeaponTemplate, m_rofMovingMaxSpeedCount) },
 
+	{ "InvulnerabilityDuration",					INI::parseDurationUnsignedInt,			NULL,			offsetof(WeaponTemplate, m_invulnerabilityDuration) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -646,6 +648,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_rofMovingPenalty = 1.0f;
 	m_rofMovingScales = FALSE;
 	m_rofMovingMaxSpeedCount = 0.0f;
+
+	m_invulnerabilityDuration = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1938,6 +1942,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Real MinDamageHeight = getMinDamageHeight();
 	Real MaxDamageHeight = getMaxDamageHeight();
 	Bool DamagesSelfOnly = getDamagesSelfOnly();
+	UnsignedInt InvulnerabilityDuration = getInvulnerabilityDuration();
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
@@ -2082,6 +2087,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					}
 				}
 			}
+
+			// Invulnerable mechanic from OCL.
+			// Doesn't actually make you invulnerable, but makes your relationship considered ALLIES for targeting instead
+			if(InvulnerabilityDuration > 0)
+				curVictim->goInvulnerable(InvulnerabilityDuration);
 
 			DamageInfo damageInfo;
 			damageInfo.in.m_damageType = damageType;

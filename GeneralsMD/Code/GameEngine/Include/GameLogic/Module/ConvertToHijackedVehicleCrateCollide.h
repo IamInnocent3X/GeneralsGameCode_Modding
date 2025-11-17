@@ -85,6 +85,9 @@ protected:
 	virtual Bool executeCrateBehavior( Object *other );
 
 	virtual Bool isHijackedVehicleCrateCollide() const { return TRUE; }
+
+private:
+	AsciiString m_originalName;
 };
 
 #endif

@@ -33,6 +33,7 @@
 #define _REPLACE_OBJECT_UPGRADE_H
 
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/CreateObjectDie.h"
 
 //-----------------------------------------------------------------------------
 class ReplaceObjectUpgradeModuleData : public UpgradeModuleData
@@ -40,8 +41,48 @@ class ReplaceObjectUpgradeModuleData : public UpgradeModuleData
 public:
 	AsciiString m_replaceObjectName;
 
+	Bool											m_transferHealth;
+	Bool											m_transferAIStates;
+	Bool											m_transferExperience;
+	Bool											m_transferAttack;
+	Bool											m_transferStatus;
+	Bool											m_transferWeaponBonus;
+	Bool											m_transferBombs;
+	Bool											m_transferHijackers;
+	Bool											m_transferEquippers;
+	Bool											m_transferParasites;
+	Bool											m_transferPassengers;
+	Bool											m_transferObjectName;
+	MaxHealthChangeType 							m_transferHealthChangeType;
+	
+	Real											m_extraBounciness;
+	Real											m_extraFriction;
+	Coord3D											m_offset;
+	DispositionType									m_disposition;
+	Real											m_dispositionIntensity;
+	Real											m_spinRate;
+	Real											m_yawRate;
+	Real											m_rollRate;
+	Real											m_pitchRate;
+	Real											m_minMag, m_maxMag;
+	Real											m_minPitch, m_maxPitch;
+
 	ReplaceObjectUpgradeModuleData()
 	{
+		m_transferHealthChangeType = SAME_CURRENTHEALTH;
+		
+		m_extraBounciness = 0.0f;
+		m_extraFriction = 0.0f;
+		m_disposition = ON_GROUND_ALIGNED;
+		m_dispositionIntensity = 0.0f;
+		m_spinRate = -1.0f;
+		m_yawRate = -1.0f;
+		m_rollRate = -1.0f;
+		m_pitchRate = -1.0f;
+		m_minMag = 0.0f;
+		m_maxMag = 0.0f;
+		m_minPitch = 0.0f;
+		m_maxPitch = 0.0f;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -63,6 +104,8 @@ protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return false; }
+
+	void doDisposition(Object *sourceObj, Object* obj);
 
 };
 #endif // _COMMAND_SET_UPGRADE_H

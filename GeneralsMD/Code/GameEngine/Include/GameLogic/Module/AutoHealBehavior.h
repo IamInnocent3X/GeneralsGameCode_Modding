@@ -61,6 +61,7 @@ public:
 	Bool									m_affectsWholePlayer; ///< I have more than a range, I try to affect everything the player owns
 	Bool									m_skipSelfForHealing; ///< Don't heal myself.
 	Bool									m_clearsParasite; ///< Healing clears parasite
+	Bool									m_disableWhenUnmanned; ///< Disabled When Unmannered from Neutron Blast or Kill Pilot
 	std::vector<AsciiString> 				m_clearsParasiteKeys; ///< Parasite keys to clear
 	KindOfMaskType				m_kindOf;	//Only these types can heal -- defaults to everything.
 	KindOfMaskType				m_forbiddenKindOf;	//Only these types can heal -- defaults to everything.
@@ -80,6 +81,7 @@ public:
 		m_affectsWholePlayer = FALSE;
 		m_skipSelfForHealing = FALSE;
 		m_clearsParasite = FALSE;
+		m_disableWhenUnmanned = TRUE;
 		m_clearsParasiteKeys.clear();
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 		m_forbiddenKindOf.clear();
@@ -103,6 +105,7 @@ public:
 			{ "SkipSelfForHealing",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_skipSelfForHealing ) },
 			{ "ClearsParasite",				INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
 			{ "ClearsParasiteKeys",			INI::parseAsciiStringVector,								NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasiteKeys) },
+			{ "DisableWhenUnmanned",		INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_disableWhenUnmanned) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -146,6 +149,8 @@ public:
 
 	void stopHealing();
 	void undoUpgrade(); ///<pretend like we have not been activated yet, so we can be reactivated later
+
+	Bool disableWhenUnmanned() const { return getAutoHealBehaviorModuleData()->m_disableWhenUnmanned; }
 
 protected:
 

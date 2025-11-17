@@ -160,7 +160,7 @@ public:
 	virtual Bool isSubduedCustom(const AsciiString &customStatus) const; 
 	virtual Bool canBeSubduedCustom(const AsciiString &customStatus) const; 
 	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Bool dontPaintTint );///< Override this if you want a totally different effect than DISABLED_SUBDUED
-	virtual void onSubdualRemovalCustom(SubdualCustomData subdualData, Bool clearTintLater = FALSE);
+	virtual void onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater = FALSE);
 
 	// Chrono
 	virtual Bool isSubduedChrono() const;
