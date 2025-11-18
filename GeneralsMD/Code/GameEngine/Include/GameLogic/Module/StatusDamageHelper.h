@@ -66,7 +66,7 @@ public:
 		HelperTransferData transferData;
 		transferData.frameEnd = m_frameToHeal;
 		transferData.earliestDurationAsInt = m_earliestDurationAsInt;
-		transferData.statusMap m_statusToHeal;
+		transferData.statusMap = m_statusToHeal;
 		transferData.customStatusMap = m_customStatusToHeal;
 		transferData.currentTint = m_currentTint;
 		transferData.customTintStatus = m_customTintStatus;

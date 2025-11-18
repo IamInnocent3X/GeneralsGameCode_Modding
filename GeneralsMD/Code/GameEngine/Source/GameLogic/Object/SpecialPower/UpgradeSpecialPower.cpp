@@ -35,6 +35,7 @@
 #include "Common/Upgrade.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/UpgradeSpecialPower.h"
+#include "GameLogic/Module/ProductionUpdate.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -87,6 +88,7 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 
 	// get module data
 	const UpgradeSpecialPowerModuleData* modData = getUpgradeSpecialPowerModuleData();
+	Player* player = getObject()->getControllingPlayer();
 
   if(!modData->m_upgradeName.isEmpty())
   {
@@ -97,7 +99,6 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 		return;
 	}
 
-	Player* player = object->getControllingPlayer();
 	if (upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER)
 	{
 		// get the player
@@ -107,9 +108,10 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 	{
 		object->giveUpgrade(upgradeTemplate);
 	}
-  }
 
 	player->getAcademyStats()->recordUpgrade(upgradeTemplate, TRUE);
+
+  }
 
 	std::vector<AsciiString> upgradeNames = modData->m_upgradeNames;
 
@@ -137,7 +139,6 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 				return;
 			}
-			Player *player = getObject()->getControllingPlayer();
 			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 			{
 				// get the player

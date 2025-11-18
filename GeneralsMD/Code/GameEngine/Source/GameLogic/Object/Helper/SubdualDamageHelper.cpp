@@ -165,7 +165,7 @@ void SubdualDamageHelper::notifySubdualDamage( Real amount )
 // ------------------------------------------------------------------------------------------------
 void SubdualDamageHelper::notifySubdualDamageCustom( SubdualCustomData subdualData, const AsciiString& customStatus )
 {
-	if( amount > 0 )
+	if( subdualData.damage > 0 )
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
 		UnsignedInt cooldown = getObject()->getBodyModule()->getSubdualDamageHealRateCustom(customStatus);

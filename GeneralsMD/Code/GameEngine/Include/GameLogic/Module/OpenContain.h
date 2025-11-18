@@ -192,6 +192,8 @@ public:
 	virtual void setContainedItemsMass(Real mass) { m_containMass = mass; }
 	virtual UnsignedInt getStealthUnitsContained() const { return m_stealthUnitsContained; }
 
+	virtual void swapContainedItemsList(ContainedItemsList& newList);
+
 	virtual PlayerMaskType getPlayerWhoEntered(void) const { return m_playerEnteredMask; }
 
 	virtual Int getRawContainMax() const;

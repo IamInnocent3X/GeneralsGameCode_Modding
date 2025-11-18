@@ -3913,7 +3913,8 @@ void GameLogic::update( void )
 	TheLocomotorStore->UPDATE();
 	TheVictoryConditions->UPDATE();
 
-	{
+	// IamInnocent - Implemented Helpers for the features below
+	/*{
 		//Handle disabled statii (and re-enable objects once frame matches)
 		for( Object *obj = m_objList; obj; obj = obj->getNextObject() )
 		{
@@ -3923,7 +3924,7 @@ void GameLogic::update( void )
 			}
 			obj->checkLevitate();
 		}
-	}
+	}*/
 
 
 

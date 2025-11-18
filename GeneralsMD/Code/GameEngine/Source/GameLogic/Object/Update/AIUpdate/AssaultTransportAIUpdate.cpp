@@ -523,7 +523,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 					//	m_maxNumInTransport = i+1;
 					if(!m_countedSlotMember[ m_currentMembers - 1 ])
 					{
-						m_maxNumInTransport += member->getTransportSlotCount();
+						m_maxNumInTransport += replacer->getTransportSlotCount();
 						m_countedSlotMember[ m_currentMembers - 1 ] = TRUE;
 					}
 				}
@@ -541,7 +541,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 							ai->aiAttackObject( designatedTarget, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
 							if(!m_countedAssaultingMember[ m_currentMembers - 1 ])
 							{
-								m_maxNumAttacking += member->getTransportSlotCount();
+								m_maxNumAttacking += replacer->getTransportSlotCount();
 								m_countedAssaultingMember[ m_currentMembers - 1 ] = TRUE;
 							}
 						}

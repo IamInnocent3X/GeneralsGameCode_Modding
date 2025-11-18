@@ -38,21 +38,35 @@
 #include "Common/ThingTemplate.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
+#include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/HijackerUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
-#include "GameLogic/Module/StatusDamageHelper.h"
+#include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/SupplyTruckAIUpdate.h"
 #include "GameLogic/Module/CreateModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/CreateObjectDie.h"					// For DispositionNames
 #include "GameLogic/Object.h"
+#include "GameLogic/Weapon.h" // NoMaxShotsLimit
+#include "GameClient/Drawable.h"
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	Real fricPerSec = INI::scanReal(ini->getNextToken());
+	Real fricPerFrame = fricPerSec * SECONDS_PER_LOGICFRAME_REAL;
+	*(Real *)store = fricPerFrame;
+}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -70,11 +84,16 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "TransferAttackers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferAttack ) },
 		{ "TransferStatuses",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferStatus ) },
 		{ "TransferWeaponBonuses",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferWeaponBonus ) },
+		{ "TransferDisabledType",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferDisabledType ) },
 		{ "TransferBombs",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferBombs ) },
 		{ "TransferHijackers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferHijackers ) },
 		{ "TransferEquippers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferEquippers ) },
 		{ "TransferParasites",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferParasites ) },
 		{ "TransferPassengers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferPassengers ) },
+		{ "TransferToAssaultTransport",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferToAssaultTransport ) },
+		{ "TransferShieldedTargets",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldedTargets ) },
+		{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldingTargets ) },
+		{ "TransferSelection",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelection ) },
 		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealthChangeType ) },
 
@@ -180,13 +199,14 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		create->onBuildComplete();
 	}
 
-	// Transfer any bombs to the replacement Object
+	// Transfer any bombs onto the replacement Object
 	std::vector<ObjectID> BombsMarkedForDestroy;
 	Object *obj = TheGameLogic->getFirstObject();
 	while( obj )
 	{
-		if( obj->isKindOf( KINDOF_MINE ) )
-		{
+		// Transfer bombs to the replacement Object or destroy them
+		//if( obj->isKindOf( KINDOF_MINE ) )
+		//{
 			//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
 			//StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
 			StickyBombUpdateInterface *update = obj->getStickyBombUpdateInterface();
@@ -197,7 +217,17 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 				else
 					BombsMarkedForDestroy.push_back(obj->getID());
 			}
+		//}
+
+		// Transfer attackers
+		if (data->m_transferAttack)
+		{
+			AIUpdateInterface* aiInterface = obj->getAI();
+			if (aiInterface)
+				aiInterface->transferAttack(me->getID(), replacementObject->getID());
+
 		}
+
 		obj = obj->getNextObject();
 	}
 
@@ -259,11 +289,11 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 				if( ai->getAIStateType() == AI_ATTACK_MOVE_TO )
 				{
 					//Continue to move towards the attackmove area.
-					aiAttackMoveToPosition( ai->getGoalPosition(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
+					new_ai->aiAttackMoveToPosition( ai->getGoalPosition(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
 				}
 				else
 				{
-					aiMoveToPosition( ai->getGoalPosition(), ai->getLastCommandSource() );
+					new_ai->aiMoveToPosition( ai->getGoalPosition(), ai->getLastCommandSource() );
 				}
 			}
 
@@ -287,12 +317,13 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 				// If it is gathering supplies, tell its replacer to do the same
 				if(DozerAI->getCurrentTask() != DOZER_TASK_INVALID)
 				{
-					Object taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget(DozerAI->getCurrentTask()) );
+					DozerTask curTask = DozerAI->getCurrentTask();
+					Object *taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget(curTask) );
 					if(taskTarget)
 					{
-						switch(DozerAI->getCurrentTask())
+						switch(curTask)
 						{
-							case DOZER_TASK_BUILDING:
+							case DOZER_TASK_BUILD:
 								new_ai->aiResumeConstruction(taskTarget, ai->getLastCommandSource());
 								break;
 							case DOZER_TASK_REPAIR:
@@ -307,12 +338,12 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 					{
 						if( DozerAI->isTaskPending( (DozerTask)i ) )
 						{
-							Object taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget((DozerTask)i) );
+							Object *taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget((DozerTask)i) );
 							if(taskTarget)
 							{
 								switch((DozerTask)i)
 								{
-									case DOZER_TASK_BUILDING:
+									case DOZER_TASK_BUILD:
 										new_ai->aiResumeConstruction(taskTarget, ai->getLastCommandSource());
 										break;
 									case DOZER_TASK_REPAIR:
@@ -331,7 +362,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		}
 	}
 
-	if(data->m_transferPassengers)
+	if(data->m_transferPassengers && me->getContain())
 	{
 		// Get the unit's contain
 		ContainModuleInterface *contain = me->getContain();
@@ -342,7 +373,9 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		contain->enableLoadSounds(FALSE);
 
 		// Get Contain List
-		ContainedItemsList list = contain->getContainList();
+		ContainedItemsList list;
+		contain->swapContainedItemsList(list);
+
 		ContainedItemsList::iterator it = list.begin();
 		while ( it != list.end() )
 		{
@@ -391,33 +424,25 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		}
 	}
 
-	if (data->m_transferExperience)
+	// Transfer my experience
+	if (data->m_transferExperience && replacementObject->getExperienceTracker())
 	{
 		VeterancyLevel v = me->getVeterancyLevel();
 		replacementObject->getExperienceTracker()->setHighestExpOrLevel(me->getExperienceTracker()->getCurrentExperience(), v, FALSE);
 	}
 
-	
 	// Assault Transport Matters, switching Transports
-	if(me->getAssaultTransportObjectID() != INVALID_ID)
+	if(data->m_transferToAssaultTransport && me->getAssaultTransportObjectID() != INVALID_ID)
 	{
 		me->removeMeFromAssaultTransport(replacementObject->getID());
 	}
 
 	// Shielded Objects
-	replacementObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
+	if(data->m_transferShieldedTargets)
+		replacementObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
 
-	if (data->m_transferAttackers)
-	{
-		for ( Object *obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
-		{
-			AIUpdateInterface* aiInterface = obj->getAI();
-			if (!aiInterface)
-				continue;
-
-			aiInterface->transferAttack(me->getID(), replacementObject->getID());
-		}
-	}
+	if(data->m_transferShieldingTargets)
+		replacementObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
 
 	if( data->m_transferHealth )
 	{
@@ -437,6 +462,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 				newBody->attemptDamage( &damInfo );
 			}
 
+			// Then the Custom Subdual Damage
 			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
 			replacementObject->transferSubdualHelperData(me->getSubdualHelperData());
 			replacementObject->refreshSubdualHelper();
@@ -471,7 +497,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 					//200/500 (40%) - 100 becomes 160/400 (40%)
 					Real ratio = oldHealth / oldMaxHealth;
 					Real newHealth = newMaxHealth * ratio;
-					internalChangeHealth( newHealth - newMaxHealth );
+					newBody->internalChangeHealth( newHealth - newMaxHealth );
 					break;
 				}
 				// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
@@ -485,17 +511,18 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 					if(data->m_transferHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) > newMaxHealth)
 						replacementObject->kill();
 					else
-						internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth) );
+						newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth) );
 					break;
 				}
 				case SAME_CURRENTHEALTH:
 					//preserve past health amount
-					internalChangeHealth( oldHealth - newMaxHealth );
+					newBody->internalChangeHealth( oldHealth - newMaxHealth );
 					break;
 			}
 		}
 	}
 
+	// Transfer Statuses
 	if( data->m_transferStatus )
 	{
 		replacementObject->setStatus( prevStatus );
@@ -507,6 +534,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		replacementObject->refreshStatusHelper();
 	}
 
+	// Transfer Weapon Bonuses
 	if( data->m_transferWeaponBonus )
 	{
 		replacementObject->setWeaponBonusConditionFlags(me->getWeaponBonusCondition());
@@ -519,21 +547,25 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		replacementObject->refreshTempWeaponBonusHelper();
 	}
 
+	// Transfer Disabled Type
+	if(data->m_transferDisabledType)
+	{
+		replacementObject->setDisabledTint(me->getDisabledTint());
+		replacementObject->setDisabledCustomTint(me->getDisabledCustomTint());
+		replacementObject->transferDisabledTillFrame(me->getDisabledTillFrame());
+	}
+
 	// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
 	me->doTransferHijacker(replacementObject->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites);
 
-	if (data->m_transferAttackers)
+	// Transfer the Selection Status
+	if(data->m_transferSelection && replacementObject->isSelectable() && me->getDrawable() && replacementObject->getDrawable())
 	{
-		for ( Object *obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
-		{
-			AIUpdateInterface* aiInterface = obj->getAI();
-			if (!aiInterface)
-				continue;
-
-			aiInterface->transferAttack(me->getID(), replacementObject->getID());
-		}
+		if(me->getDrawable()->isSelected())
+			TheGameLogic->selectObject(replacementObject, FALSE, me->getControllingPlayer()->getPlayerMask(), me->isLocallyControlled());
 	}
 
+	// Transfer Object Name for Script Engine
 	if (data->m_transferObjectName)
 	{
 		TheScriptEngine->transferObjectName( me->getName(), replacementObject );
@@ -549,21 +581,45 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	}
 }
 
-void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
+//-------------------------------------------------------------------------------------------------
+static void calcRandomForce(Real minMag, Real maxMag, Real minPitch, Real maxPitch, Coord3D* force)
+{
+	Real angle = GameLogicRandomValueReal(0, 2*PI);
+	Real pitch = GameLogicRandomValueReal(minPitch, maxPitch);
+	Real mag = GameLogicRandomValueReal(minMag, maxMag);
+
+	Matrix3D mtx(1);
+	mtx.Scale(mag);
+	mtx.Rotate_Z(angle);
+	mtx.Rotate_Y(-pitch);
+
+	Vector3 v = mtx.Get_X_Vector();
+
+	force->x = v.X;
+	force->y = v.Y;
+	force->z = v.Z;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ReplaceObjectUpgrade::doDisposition(Object *sourceObj, Object* obj)
 {
 	// Sanity
 	if( obj == NULL )
 		return;
-	
-	Matrix3D mtx = *sourceObj->getTransformMatrix();
+
+	const ReplaceObjectUpgradeModuleData *data = getReplaceObjectUpgradeModuleData();
+
+	const Matrix3D *mtx = sourceObj->getTransformMatrix();
 	Coord3D offset = data->m_offset;
-	Coord3D chunkPos = *sourceObj->getPosition();
+
+	const Coord3D *pos = sourceObj->getPosition();
+	Coord3D chunkPos = *pos;
+	
 	Real orientation = sourceObj->getOrientation();
 	// Do nothing if vector is 0 or close to 0.
-	if (fabs(offset.x) < WWMATH_EPSILON &&
-		fabs(offset.y) < WWMATH_EPSILON &&
-		fabs(offset.z) < WWMATH_EPSILON)
-	else
+	if (fabs(offset.x) > WWMATH_EPSILON ||
+		fabs(offset.y) > WWMATH_EPSILON ||
+		fabs(offset.z) > WWMATH_EPSILON)
 	{
 		if (mtx)
 		{
@@ -574,9 +630,7 @@ void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
 			chunkPos.z += offset.z;
 		}
 	}
-	
-	const ReplaceObjectUpgradeModuleData *data = getReplaceObjectUpgradeModuleData();
-	
+
 	if( BitIsSet( data->m_disposition, INHERIT_VELOCITY ) && sourceObj )
 	{
 		const PhysicsBehavior *sourcePhysics = sourceObj->getPhysics();
@@ -666,11 +720,11 @@ void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
 	{
 		if (mtx)
 		{
-			DUMPMATRIX3D(mtx);
+			//DUMPMATRIX3D(mtx);
 			obj->setTransformMatrix(mtx);
 		}
 		obj->setPosition(&chunkPos);
-		DUMPCOORD3D(&chunkPos);
+		//DUMPCOORD3D(&chunkPos);
 		PhysicsBehavior* objUp = obj->getPhysics();
 		if (objUp)
 		{
@@ -681,8 +735,8 @@ void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
 			objUp->setExtraFriction(data->m_extraFriction);
 			objUp->setAllowBouncing(true);
 			objUp->setBounceSound(&data->m_bounceSound);
-			DUMPREAL(data->m_extraBounciness);
-			DUMPREAL(data->m_extraFriction);
+			//DUMPREAL(data->m_extraBounciness);
+			//DUMPREAL(data->m_extraFriction);
 
 			// if omitted from INI, calc it based on intensity.
 			Real spinRate		= data->m_spinRate >= 0.0f ? data->m_spinRate : (PI/32.0f) * data->m_dispositionIntensity;
@@ -692,17 +746,17 @@ void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
 			Real rollRate		= data->m_rollRate	>= 0.0f ? data->m_rollRate	: spinRate;
 			Real pitchRate	= data->m_pitchRate >= 0.0f ? data->m_pitchRate : spinRate;
 
-			DUMPREAL(spinRate);
-			DUMPREAL(yawRate);
-			DUMPREAL(rollRate);
-			DUMPREAL(pitchRate);
+			//DUMPREAL(spinRate);
+			//DUMPREAL(yawRate);
+			//DUMPREAL(rollRate);
+			//DUMPREAL(pitchRate);
 
 			Real yaw = GameLogicRandomValueReal( -yawRate, yawRate );
 			Real roll = GameLogicRandomValueReal( -rollRate, rollRate );
 			Real pitch = GameLogicRandomValueReal( -pitchRate, pitchRate );
-			DUMPREAL(yaw);
-			DUMPREAL(roll);
-			DUMPREAL(pitch);
+			//DUMPREAL(yaw);
+			//DUMPREAL(roll);
+			//DUMPREAL(pitch);
 
 			Coord3D force;
 			if( BitIsSet( data->m_disposition, SEND_IT_FLYING ) )
@@ -712,9 +766,9 @@ void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
 				force.x = GameLogicRandomValueReal( -horizForce, horizForce );
 				force.y = GameLogicRandomValueReal( -horizForce, horizForce );
 				force.z = GameLogicRandomValueReal( vertForce * 0.33f, vertForce );
-				DUMPREAL(horizForce);
-				DUMPREAL(vertForce);
-				DUMPCOORD3D(&force);
+				//DUMPREAL(horizForce);
+				//DUMPREAL(vertForce);
+				//DUMPCOORD3D(&force);
 			}
 			else if (BitIsSet(data->m_disposition, SEND_IT_UP) )
 			{
@@ -724,32 +778,32 @@ void ReplaceObjectUpgrade:doDisposition(Object *sourceObj, Object* obj)
 				force.x = GameLogicRandomValueReal( -horizForce, horizForce );
 				force.y = GameLogicRandomValueReal( -horizForce, horizForce );
 				force.z = GameLogicRandomValueReal( vertForce * 0.75f, vertForce );
-				DUMPREAL(horizForce);
-				DUMPREAL(vertForce);
-				DUMPCOORD3D(&force);
+				//DUMPREAL(horizForce);
+				//DUMPREAL(vertForce);
+				//DUMPCOORD3D(&force);
 			}
 			else
 			{
 				calcRandomForce(data->m_minMag, data->m_maxMag, data->m_minPitch, data->m_maxPitch, &force);
-				DUMPREAL(data->m_minMag);
-				DUMPREAL(data->m_maxMag);
-				DUMPREAL(data->m_minPitch);
-				DUMPREAL(data->m_maxPitch);
-				DUMPCOORD3D(&force);
+				//DUMPREAL(data->m_minMag);
+				//DUMPREAL(data->m_maxMag);
+				//DUMPREAL(data->m_minPitch);
+				//DUMPREAL(data->m_maxPitch);
+				//DUMPCOORD3D(&force);
 			}
 			objUp->applyForce(&force);
 			if (data->m_orientInForceDirection)
 			{
 				orientation = atan2(force.y, force.x);
 			}
-			DUMPREAL(orientation);
+			//DUMPREAL(orientation);
 			objUp->setAngles(orientation, 0, 0);
 			objUp->setYawRate(yaw);
 			objUp->setRollRate(roll);
 			objUp->setPitchRate(pitch);
-			DUMPCOORD3D(objUp->getAcceleration());
-			DUMPCOORD3D(objUp->getVelocity());
-			DUMPMATRIX3D(obj->getTransformMatrix());
+			//DUMPCOORD3D(objUp->getAcceleration());
+			//DUMPCOORD3D(objUp->getVelocity());
+			//DUMPMATRIX3D(obj->getTransformMatrix());
 
 		}
 	}

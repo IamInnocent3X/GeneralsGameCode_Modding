@@ -70,7 +70,7 @@ public:
 		HelperTransferData transferData;
 		transferData.frameEnd = m_frameToRemove;
 		transferData.earliestDurationAsInt = m_earliestDurationAsInt;
-		transferData.statusMap m_bonusMap;
+		transferData.statusMap = m_bonusMap;
 		transferData.customStatusMap = m_customBonusMap;
 		transferData.currentTint = m_currentTint;
 		transferData.customTintStatus = m_customTintStatus;

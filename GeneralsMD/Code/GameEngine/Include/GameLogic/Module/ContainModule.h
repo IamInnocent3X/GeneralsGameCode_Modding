@@ -182,6 +182,8 @@ public:
 	virtual void setContainedItemsMass(Real mass) = 0;
 	virtual UnsignedInt getStealthUnitsContained() const = 0;
 
+	virtual void swapContainedItemsList(ContainedItemsList& newList) = 0;
+
 	virtual Bool calcBestGarrisonPosition( Coord3D *sourcePos, const Coord3D *targetPos ) = 0;
 	virtual Bool attemptBestFirePointPosition( Object *source, Weapon *weapon, Object *victim ) = 0;
 	virtual Bool attemptBestFirePointPosition( Object *source, Weapon *weapon, const Coord3D *targetPos ) = 0;

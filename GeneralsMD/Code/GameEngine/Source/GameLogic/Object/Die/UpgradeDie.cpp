@@ -65,17 +65,19 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 	Object *producer = TheGameLogic->findObjectByID( getObject()->getProducerID() );
 	if( producer )
 	{
-		if(!m_upgradeName.isEmpty())
+		const UpgradeDieModuleData * data = getUpgradeDieModuleData();
+		Player *player = producer->getControllingPlayer();
+	
+		if(!data->m_upgradeName.isEmpty())
 		{
 			//Okay, we found our parent... now look for the upgrade.
-			const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeName );
+			const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( data->m_upgradeName );
 
 			if( upgrade )
 			{
 				//Check if it's a player Upgrade...
 				if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 				{
-					Player *player = producer->getControllingPlayer();
 					player->removeUpgrade( upgrade );
 				}
 				//We found the upgrade, now see if the parent object has it set...
@@ -88,13 +90,13 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 				{
 					DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
 						getObject()->getTemplate()->getName().str(),
-						getUpgradeDieModuleData()->m_upgradeName.str(),
+						data->m_upgradeName.str(),
 						producer->getTemplate()->getName().str(),
 						", which the producer doesn't have. This is used in cases where the producer builds an upgrade that can die... like ranger building scout drones.") );
 				}
 			}
 		}
-		std::vector<AsciiString> upgradeNames = getUpgradeDieModuleData()->m_upgradeNames;
+		std::vector<AsciiString> upgradeNames = data->m_upgradeNames;
 
 		if( !upgradeNames.empty() )
 		{
@@ -114,13 +116,12 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 		//{
 		//	for (int i; i < upgradeNames.size() ; i++)
 		//	{
-		//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeNames[i] );
+		//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( data->m_upgradeNames[i] );
 				if( upgrade )
 				{
 					//Check if it's a player Upgrade...
 					if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 					{
-						Player *player = producer->getControllingPlayer();
 						player->removeUpgrade( upgrade );
 					}
 					//We found the upgrade, now see if the parent object has it set...
@@ -140,7 +141,7 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 				}
 			}
 		}
-		std::vector<AsciiString> upgradeNamesGrant = getUpgradeDieModuleData()->m_upgradeNamesGrant;
+		std::vector<AsciiString> upgradeNamesGrant = data->m_upgradeNamesGrant;
 		if( !upgradeNamesGrant.empty() )
 		{
 			std::vector<AsciiString>::const_iterator it;
@@ -159,7 +160,7 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 		//{
 		//	for (int i; i < upgradeNamesGrant.size() ; i++)
 		//	{
-		//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->m_upgradeNames[i] );
+		//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( data->m_upgradeNames[i] );
 				if( !upgradeTemplate )
 				{
 					DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to give upgrade %s to it's producer %s",
@@ -167,7 +168,6 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 						it->str(),
 						producer->getTemplate()->getName().str()) );
 				}
-				Player *player = producer->getControllingPlayer();
 				if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 				{
 					// get the player

@@ -540,6 +540,13 @@ void OpenContain::harmAndForceExitAllContained( DamageInfo *info )
 }  // end harmAndForceExitAllContained
 
 
+// ------------------------------------------------------------------------
+void OpenContain::swapContainedItemsList(ContainedItemsList& newList)
+{
+	m_containList.swap(newList);
+	m_containListSize = (Int)m_containList.size();
+}
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void OpenContain::doLoadSound()

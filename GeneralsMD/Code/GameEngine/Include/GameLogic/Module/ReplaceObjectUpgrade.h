@@ -33,6 +33,7 @@
 #define _REPLACE_OBJECT_UPGRADE_H
 
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/CreateObjectDie.h"
 
 //-----------------------------------------------------------------------------
@@ -47,11 +48,16 @@ public:
 	Bool											m_transferAttack;
 	Bool											m_transferStatus;
 	Bool											m_transferWeaponBonus;
+	Bool											m_transferDisabledType;
 	Bool											m_transferBombs;
 	Bool											m_transferHijackers;
 	Bool											m_transferEquippers;
 	Bool											m_transferParasites;
 	Bool											m_transferPassengers;
+	Bool											m_transferToAssaultTransport;
+	Bool											m_transferShieldedTargets;
+	Bool											m_transferShieldingTargets;
+	Bool											m_transferSelection;
 	Bool											m_transferObjectName;
 	MaxHealthChangeType 							m_transferHealthChangeType;
 	
@@ -66,9 +72,28 @@ public:
 	Real											m_pitchRate;
 	Real											m_minMag, m_maxMag;
 	Real											m_minPitch, m_maxPitch;
+	AudioEventRTS							m_bounceSound;
+	Bool											m_orientInForceDirection;
 
 	ReplaceObjectUpgradeModuleData()
 	{
+		m_transferHealth = FALSE;
+		m_transferAIStates = FALSE;
+		m_transferExperience = FALSE;
+		m_transferAttack = FALSE;
+		m_transferStatus = FALSE;
+		m_transferWeaponBonus = FALSE;
+		m_transferDisabledType = FALSE;
+		m_transferBombs = FALSE;
+		m_transferHijackers = TRUE;
+		m_transferEquippers = TRUE;
+		m_transferParasites = TRUE;
+		m_transferPassengers = FALSE;
+		m_transferToAssaultTransport = FALSE;
+		m_transferShieldedTargets = FALSE;
+		m_transferShieldingTargets = FALSE;
+		m_transferSelection = FALSE;
+		m_transferObjectName = FALSE;
 		m_transferHealthChangeType = SAME_CURRENTHEALTH;
 		
 		m_extraBounciness = 0.0f;

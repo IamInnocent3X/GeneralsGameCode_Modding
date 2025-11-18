@@ -380,6 +380,8 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/NeutronMissileUpdate.h
     Include/GameLogic/Module/ObjectCreationUpgrade.h
     Include/GameLogic/Module/ObjectDefectionHelper.h
+    Include/GameLogic/Module/ObjectDisabledHelper.h
+    Include/GameLogic/Module/ObjectLevitationHelper.h
     Include/GameLogic/Module/ObjectHelper.h
     Include/GameLogic/Module/ObjectRepulsorHelper.h
     Include/GameLogic/Module/ObjectSMCHelper.h
@@ -976,10 +978,12 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/FiringTracker.cpp
     Source/GameLogic/Object/GhostObject.cpp
     Source/GameLogic/Object/Helper/ObjectDefectionHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectDisabledHelper.cpp
     Source/GameLogic/Object/Helper/ObjectHelper.cpp
     Source/GameLogic/Object/Helper/ObjectRepulsorHelper.cpp
     Source/GameLogic/Object/Helper/ObjectSMCHelper.cpp
     Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectLevitationHelper.cpp
     Source/GameLogic/Object/Helper/StatusDamageHelper.cpp
     Source/GameLogic/Object/Helper/SubdualDamageHelper.cpp
     Source/GameLogic/Object/Helper/ChronoDamageHelper.cpp

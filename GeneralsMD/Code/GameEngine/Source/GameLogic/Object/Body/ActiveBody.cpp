@@ -628,7 +628,11 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			
 			// Custom feature, similar to Black Hole Armor
 			if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
+			{
 				obj->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
+				if( damager )
+					damager->setShieldingTargetID(obj->getID(), damageInfo->in.m_protectionTypes);
+			}
 			
 			alreadyHandled = TRUE;
 			allowModifier = FALSE;
@@ -715,7 +719,11 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		
 		// Custom feature, similar to Black Hole Armor
 		if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
+		{
 			obj->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
+			if( damager )
+				damager->setShieldingTargetID(obj->getID(), damageInfo->in.m_protectionTypes);
+		}
 	}
 
 	doSubdual(damageInfo, &alreadyHandled, &allowModifier, amount, realFramesToStatusFor);
@@ -1588,7 +1596,12 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 				
 					// Custom feature, similar to Black Hole Armor
 					if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
+					{
 						getObject()->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
+						Object *damager = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
+						if( damager )
+							damager->setShieldingTargetID(getObject()->getID(), damageInfo->in.m_protectionTypes);
+					}
 				}
 			}
 

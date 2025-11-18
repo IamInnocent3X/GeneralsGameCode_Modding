@@ -87,23 +87,24 @@ GrantUpgradeCreate::~GrantUpgradeCreate( void )
 //-------------------------------------------------------------------------------------------------
 void GrantUpgradeCreate::onCreate( void )
 {
+	const GrantUpgradeCreateModuleData * data = getGrantUpgradeCreateModuleData();
 
-	ObjectStatusMaskType exemptStatus = getGrantUpgradeCreateModuleData()->m_exemptStatus;
+	ObjectStatusMaskType exemptStatus = data->m_exemptStatus;
 	ObjectStatusMaskType currentStatus = getObject()->getStatusBits();
 	if( exemptStatus.test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
 	{
 		if(	!currentStatus.test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
 		{
-			if(!m_upgradeName.isEmpty())
+			Player *player = getObject()->getControllingPlayer();
+			if(!data->m_upgradeName.isEmpty())
 			{
-				const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( getGrantUpgradeCreateModuleData()->m_upgradeName );
+				const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( data->m_upgradeName );
 				if( !upgradeTemplate )
 				{
-					DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), getGrantUpgradeCreateModuleData()->m_upgradeName.str() ) );
+					DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), data->m_upgradeName.str() ) );
 					return;
 				}
 
-				Player *player = getObject()->getControllingPlayer();
 				if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 				{
 					// get the player
@@ -124,7 +125,7 @@ void GrantUpgradeCreate::onCreate( void )
 				player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
 			}
 
-			std::vector<AsciiString> upgradeNames = getGrantUpgradeCreateModuleData()->m_upgradeNames;
+			std::vector<AsciiString> upgradeNames = data->m_upgradeNames;
 
 			if( !upgradeNames.empty() )
 			{
@@ -150,7 +151,7 @@ void GrantUpgradeCreate::onCreate( void )
 						DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 						return;
 					}
-					Player *player = getObject()->getControllingPlayer();
+
 					if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 					{
 						// get the player
@@ -172,7 +173,7 @@ void GrantUpgradeCreate::onCreate( void )
 				}
 			}
 
-			std::vector<AsciiString> upgradeNamesRemove = getGrantUpgradeCreateModuleData()->m_upgradeNamesRemove;
+			std::vector<AsciiString> upgradeNamesRemove = data->m_upgradeNamesRemove;
 
 			if( !upgradeNamesRemove.empty() )
 			{
@@ -229,19 +230,21 @@ void GrantUpgradeCreate::onBuildComplete( void )
 
 	CreateModule::onBuildComplete(); // extend
 
-  if(!getGrantUpgradeCreateModuleData()->m_upgradeName.isEmpty())
+	const GrantUpgradeCreateModuleData * data = getGrantUpgradeCreateModuleData();
+	Player *player = getObject()->getControllingPlayer();
+
+  if(!data->m_upgradeName.isEmpty())
   {
-	const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( getGrantUpgradeCreateModuleData()->m_upgradeName );
+	const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( data->m_upgradeName );
 	if( !upgradeTemplate )
 	{
-		DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), getGrantUpgradeCreateModuleData()->m_upgradeName.str() ) );
+		DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), data->m_upgradeName.str() ) );
 		return;
 	}
 
 	if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 	{
 		// get the player
-		Player *player = getObject()->getControllingPlayer();
 		player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
 		player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
 	}
@@ -257,7 +260,7 @@ void GrantUpgradeCreate::onBuildComplete( void )
 	}
   }
 
-	std::vector<AsciiString> upgradeNames = getGrantUpgradeCreateModuleData()->m_upgradeNames;
+	std::vector<AsciiString> upgradeNames = data->m_upgradeNames;
 
 	if( !upgradeNames.empty() )
 	{
@@ -283,7 +286,7 @@ void GrantUpgradeCreate::onBuildComplete( void )
 				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 				return;
 			}
-			Player *player = getObject()->getControllingPlayer();
+
 			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 			{
 				// get the player
@@ -305,7 +308,7 @@ void GrantUpgradeCreate::onBuildComplete( void )
 		}
 	}
 
-	std::vector<AsciiString> upgradeNamesRemove = getGrantUpgradeCreateModuleData()->m_upgradeNamesRemove;
+	std::vector<AsciiString> upgradeNamesRemove = data->m_upgradeNamesRemove;
 
 	if( !upgradeNamesRemove.empty() )
 	{

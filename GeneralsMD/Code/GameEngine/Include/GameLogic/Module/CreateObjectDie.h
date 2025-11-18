@@ -83,15 +83,20 @@ public:
 	MaxHealthChangeType 							m_previousHealthChangeType;
 
 	Bool											m_transferExperience;
+	Bool											m_transferAttackers;
 	Bool											m_transferAIStates;
-	Bool											m_transferAttack;
 	Bool											m_transferStatus;
 	Bool											m_transferWeaponBonus;
+	Bool											m_transferDisabledType;
 	Bool											m_transferBombs;
 	Bool											m_transferHijackers;
 	Bool											m_transferEquippers;
 	Bool											m_transferParasites;
 	Bool											m_transferPassengers;
+	Bool											m_transferToAssaultTransport;
+	Bool											m_transferShieldedTargets;
+	Bool											m_transferShieldingTargets;
+	Bool											m_transferSelection;
 	Bool											m_transferObjectName;
 	MaxHealthChangeType 							m_transferHealthChangeType;
 	
@@ -106,6 +111,8 @@ public:
 	Real											m_pitchRate;
 	Real											m_minMag, m_maxMag;
 	Real											m_minPitch, m_maxPitch;
+	AudioEventRTS							m_bounceSound;
+	Bool											m_orientInForceDirection;
 
 	CreateObjectDieModuleData();
 

@@ -51,7 +51,7 @@ struct HelperTransferData
 	CustomStatusTypeMap customStatusMap;
 	TintStatusDurationVec currentTint;
 	CustomTintStatusDurationVec customTintStatus;
-}
+};
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------

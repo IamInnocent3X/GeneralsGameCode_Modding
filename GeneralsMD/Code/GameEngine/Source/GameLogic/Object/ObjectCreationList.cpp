@@ -1042,7 +1042,7 @@ protected:
 			obj->setCustomWeaponBonusConditionFlags(sourceObj->getCustomWeaponBonusCondition());
 			obj->setWeaponBonusConditionIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
 			obj->setCustomWeaponBonusConditionIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
-			replacementObject->doWeaponBonusChange();
+			obj->doWeaponBonusChange();
 		}
 
 		if ( m_invulnerableTime > 0 )

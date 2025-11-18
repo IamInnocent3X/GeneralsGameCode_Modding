@@ -48,6 +48,7 @@
 #include "GameLogic/WeaponSet.h"
 #include "GameLogic/WeaponSetFlags.h"
 #include "GameLogic/Module/StealthUpdate.h"
+#include "GameLogic/Module/BodyModule.h" // Subdual Helper Data
 
 //-----------------------------------------------------------------------------
 //           Forward References
@@ -113,6 +114,7 @@ class ChronoDamageHelper;
 class TempWeaponBonusHelper;
 class ObjectWeaponStatusHelper;
 class ObjectDefectionHelper;
+class ObjectLevitationHelper;
 
 enum CommandSourceType CPP_11(: Int);
 enum HackerAttackMode CPP_11(: Int);
@@ -263,12 +265,15 @@ public:
 	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 
-	void refreshSubdualHelper() { m_subdualDamageHelper->refreshUpdate(); }
-	void refreshStatusHelper() { m_statusDamageHelper->refreshUpdate(); }
-	void refreshTempWeaponBonusHelper() { m_tempWeaponBonusHelper->refreshUpdate(); }
+	void refreshSubdualHelper();
+	void refreshStatusHelper();
+	void refreshTempWeaponBonusHelper();
 
 	void setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes );
+	void setShieldingTargetID( ObjectID targetID, ProtectionTypeFlags protectionTypes );
+	void setShielding( ObjectID targetID, ProtectionTypeFlags protectionTypes );
 	ObjectID getShieldByTargetID() const { return m_shielderID; };
+	ObjectID getShieldingTargetID() const { return m_shieldingID; };
 	ProtectionTypeFlags getShieldByTargetType() const { return m_shielderType; };
 
 	void notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, const AsciiString& customStatus );///< At this level, we just pass this on to our helper and do a special tint
@@ -618,8 +623,8 @@ public:
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 	Bool isCurWeaponLockedPriority() const { return m_weaponSet.isCurWeaponLockedPriority(); }
 
-	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
-	void SetCustomStatusFlags(ObjectCustomStatusType customStatusMap) { return m_customStatus = customStatusMap; } 
+	inline ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
+	inline void setCustomStatusFlags(ObjectCustomStatusType customStatusMap) { m_customStatus = customStatusMap; } 
 	Bool testCustomStatus(const AsciiString& cst) const;
 	Bool testCustomStatusForAll(const std::vector<AsciiString>& cst) const;
 
@@ -688,8 +693,10 @@ public:
 	Bool isDisabled() const { return m_disabledMask.any(); }
 	Bool clearDisabled( DisabledType type, bool clearTintLater = FALSE );
 
+	//void checkDisabledHelper() const;
+
 	void setDisabled( DisabledType type );
-	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL, Bool paintTint = TRUE );
+	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL, Bool paintTint = TRUE, Bool playSound = TRUE );
 	Bool isDisabledByType( DisabledType type ) const { return TEST_DISABLEDMASK( m_disabledMask, type ); }
 
 	UnsignedInt getDisabledUntil( DisabledType type = DISABLED_ANY ) const;
@@ -707,14 +714,14 @@ public:
 	void checkDisabledStatus();
 
 	std::vector<UnsignedInt> getDisabledTillFrame() const;
-	void setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames);
+	void transferDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames);
 
 	inline TintStatus getDisabledTint() const { return m_disabledTintToClear; };
-	inline const AsciiString& getDisabledTint() const { return m_customDisabledTintToClear; }
+	inline const AsciiString& getDisabledCustomTint() const { return m_customDisabledTintToClear; }
 	inline void setDisabledTint(TintStatus tintStatus) { m_disabledTintToClear = tintStatus; }
-	inline void setDisabledTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
+	inline void setDisabledCustomTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
 
-	void checkLevitate();
+	//void checkLevitate();
 
 	void setLastActualSpeed(Real speed) { m_lastActualSpeed = speed; }
 	Real getLastActualSpeed() const { return m_lastActualSpeed; }
@@ -914,6 +921,7 @@ private:
 	ObjectCustomStatusType		m_customStatus;	
 
 	ObjectID			m_shielderID;
+	ObjectID			m_shieldingID;
 	ProtectionTypeFlags	m_shielderType;
 
 
@@ -947,7 +955,7 @@ private:
 
 	UnsignedInt		m_smcUntil;
 
-	enum { NUM_SLEEP_HELPERS = 9 };
+	enum { NUM_SLEEP_HELPERS = 11 };
 	ObjectRepulsorHelper*					m_repulsorHelper;
 	ObjectSMCHelper*							m_smcHelper;
 	ObjectWeaponStatusHelper*			m_wsHelper;
@@ -957,6 +965,9 @@ private:
 	ChronoDamageHelper*					m_chronoDamageHelper;
 	TempWeaponBonusHelper*				m_tempWeaponBonusHelper;
 	FiringTracker*								m_firingTracker;	///< Tracker is really a "helper" and is included NUM_SLEEP_HELPERS
+
+	ObjectDisabledHelper*				m_disabledHelper;
+	ObjectLevitationHelper*				m_levitationHelper;
 
 	// modules
 	BehaviorModule**							m_behaviors;	// BehaviorModule, not BehaviorModuleInterface
@@ -1007,10 +1018,10 @@ private:
 	ObjectCustomStatusType				m_customWeaponBonusConditionIC;
 
 	Real								m_invsqrt_mass;
-	Real								m_magnetLevitateHeight;
-	UnsignedInt							m_levitateCheckFrame;
-	UnsignedInt							m_levitateCheckCount;
-	Bool								m_dontLevitate;
+	//Real								m_magnetLevitateHeight;
+	//UnsignedInt							m_levitateCheckFrame;
+	//UnsignedInt							m_levitateCheckCount;
+	//Bool								m_dontLevitate;
 
 	Real								m_lastActualSpeed;
 

@@ -271,12 +271,13 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	// Set Underpowered Properties
 	{ "DisabledWhenUnderpowered",			INI::parseBool,		NULL, offsetof( ThingTemplate, m_setDisabledWhenUnderpowered ) },
 	{ "DisabledTypeWhenUnderpowered",		DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( ThingTemplate, m_disabledTypeUnderPowered ) },
-	{ "StatusDisabledUnderPowered",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( ThingTemplate, m_statusDisabledUnderPowered ) },
-	{ "CustomStatusDisabledUnderPowered",	INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customStatusDisabledUnderPowered ) },
-	{ "WeaponBonusDisabledUnderPowered",	INI::parseWeaponBonusVector, NULL, offsetof( ThingTemplate, m_bonusDisabledUnderPowered ) },
-	{ "CustomWeaponBonusDisabledUnderPowered",			INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customBonusDisabledUnderPowered ) },
-	{ "TintStatusDisabledUnderPowered",			TintStatusFlags::parseSingleBitFromINI,		NULL, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
-	{ "CustomTintStatusDisabledUnderPowered",	INI::parseAsciiString, 	NULL, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
+	{ "StatusUnderPowered",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( ThingTemplate, m_statusUnderPowered ) },
+	{ "CustomStatusUnderPowered",	INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customStatusUnderPowered ) },
+	{ "WeaponBonusUnderPowered",	INI::parseWeaponBonusVector, NULL, offsetof( ThingTemplate, m_bonusUnderPowered ) },
+	{ "CustomWeaponBonusUnderPowered",			INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customBonusUnderPowered ) },
+	{ "TintStatusUnderPowered",			TintStatusFlags::parseSingleBitFromINI,		NULL, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
+	{ "CustomTintStatusUnderPowered",	INI::parseAsciiString, 	NULL, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
+	{ "ModelConditionUnderPowered", ModelConditionFlags::parseFromINI, NULL, offsetof( ThingTemplate, m_modelConditionUnderPowered ) },
 
 	// Customize Action Cursors
 	{ "SelectingCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_selectingCursorName ) },

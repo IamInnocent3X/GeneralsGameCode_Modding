@@ -86,6 +86,8 @@
 //#include "GameLogic/Module/MobMemberSlavedUpdate.h"
 #include "GameLogic/Module/ObjectHelper.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
+#include "GameLogic/Module/ObjectDisabledHelper.h"
+#include "GameLogic/Module/ObjectLevitationHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
 #include "GameLogic/Module/ObjectSMCHelper.h"
 #include "GameLogic/Module/ObjectWeaponStatusHelper.h"
@@ -251,6 +253,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_smcHelper(NULL),
 	m_wsHelper(NULL),
 	m_defectionHelper(NULL),
+	m_disabledHelper(NULL),
+	m_levitationHelper(NULL),
 	m_partitionLastLook(NULL),
 	m_partitionRevealAllLastLook(NULL),
 	m_partitionLastShroud(NULL),
@@ -327,6 +331,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_builderID = INVALID_ID;
 
 	m_shielderID = INVALID_ID;
+	m_shieldingID = INVALID_ID;
 	m_shielderType = DEATH_TYPE_FLAGS_ALL;
 
 	m_status = objectStatusMask;
@@ -337,10 +342,10 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_customWeaponBonusConditionIC.clear();
 
 	m_invsqrt_mass = 0.0f;
-	m_magnetLevitateHeight = 0;
-	m_levitateCheckFrame = 0;
-	m_levitateCheckCount = 0;
-	m_dontLevitate = FALSE;
+	//m_magnetLevitateHeight = 0.0f;
+	//m_levitateCheckFrame = 0;
+	//m_levitateCheckCount = 0;
+	//m_dontLevitate = FALSE;
 
 	m_lastActualSpeed = 0.0f;
 
@@ -473,6 +478,21 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		*curB++ = m_tempWeaponBonusHelper;
 	}
 
+	static const NameKeyType disabledHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_DisabledHelper" );
+	static ObjectDisabledHelperModuleData disabledModuleData;
+	disabledModuleData.setModuleTagNameKey( disabledHelperModuleDataTagNameKey );
+	m_disabledHelper = newInstance(ObjectDisabledHelper)(this, &disabledModuleData);
+	*curB++ = m_disabledHelper;
+
+	if( !tt->isKindOf(KINDOF_STRUCTURE) && !tt->isKindOf(KINDOF_IMMOBILE) )
+	{
+		static const NameKeyType levitationHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_LevitationHelper" );
+		static ObjectLevitationHelperModuleData levitationModuleData;
+		levitationModuleData.setModuleTagNameKey( levitationHelperModuleDataTagNameKey );
+		m_levitationHelper = newInstance(ObjectLevitationHelper)(this, &levitationModuleData);
+		*curB++ = m_levitationHelper;
+	}
+
 	// behaviors are always done first, so they get into the publicModule arrays
 	// before anything else.
 	for (modIdx = 0; modIdx < mi.getCount(); ++modIdx)
@@ -593,8 +613,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_soleHealingBenefactorID = INVALID_ID; ///< who is the only other object that can give me this non-stacking heal benefit?
 	m_soleHealingBenefactorExpirationFrame = 0; ///< on what frame can I accept healing (thus to switch) from a new benefactor
 
+	// HijackerUpdate, Crate Collide Variables
 	m_equipObjIDs.clear();
-	m_lastEquipToIDs.clear();
+	m_lastEquipObjIDs.clear();
 	m_equipAttackableObjIDs.clear();
 	m_rejectKeys.clear();
 
@@ -607,6 +628,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_parasiteCollideActive = FALSE;
 
+	// Sleepy Updates Revamp Variables
 	m_mobJustUpdated = FALSE;
 	m_isMobMember = FALSE;
 
@@ -798,6 +820,9 @@ Object::~Object()
 	m_smcHelper = NULL;
 	m_wsHelper = NULL;
 	m_defectionHelper = NULL;
+
+	m_disabledHelper = NULL;
+	m_levitationHelper = NULL;
 
 	// reset id to zero so we never mistaken grab "dead" objects
 	m_id = INVALID_ID;
@@ -2274,11 +2299,12 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 				}
 
 				// Check the Magnet Force for any Levitation
-				if( damageInfo->in.m_magnetLevitationHeight && ( m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= posZ ) )
+				if( damageInfo->in.m_magnetLevitationHeight && m_levitationHelper && ( m_levitationHelper->getLevitateHeight() == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= posZ ) )
 				{
-					m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
-					m_levitateCheckCount = 0;
-					m_levitateCheckFrame = 0;
+					//m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
+					m_levitationHelper->doLevitation(damageInfo->in.m_magnetLevitationHeight);
+					//m_levitateCheckCount = 0;
+					//m_levitateCheckFrame = 0;
 				}
 
 				// Apply the Magnet Force
@@ -2324,7 +2350,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
       //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
 		}
 	}
-	else if(m_dontLevitate && m_magnetLevitateHeight == damageInfo->in.m_magnetLevitationHeight )
+	else if(m_levitationHelper && m_levitationHelper->getDontLevitate() && m_levitationHelper->getLevitateHeight() == damageInfo->in.m_magnetLevitationHeight )
 	{
 		// If we stop levitating, tell the levitator to stop using its weapon on us
 		Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
@@ -2580,7 +2606,7 @@ void Object::setDisabled( DisabledType type )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus tintStatus, AsciiString customTintStatus, Bool paintTint )
+void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus tintStatus, AsciiString customTintStatus, Bool paintTint, Bool playSound )
 {
 	Bool edgeCase = !isDisabled();
 
@@ -2591,6 +2617,8 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 	}
 
 	//Handle audio events!
+  if(playSound)
+  {
  	AudioEventRTS sound;
 	if( type == DISABLED_UNMANNED && !isKindOf( KINDOF_DRONE ) )
 	{
@@ -2622,6 +2650,7 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 			}
 		}
 	}
+  }
 
 	if( m_disabledTillFrame[ type ] != frame )
 	{
@@ -2632,6 +2661,9 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus 
 
 		m_disabledTillFrame[ type ] = frame;
 		m_disabledMask.set( type, frame > TheGameLogic->getFrame() );
+
+		if(frame < FOREVER)
+			m_disabledHelper->setNextDisableUpdateFrame(frame);
 
 		if( m_drawable && paintTint )
 		{
@@ -2907,38 +2939,17 @@ Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 		// I have no disabled flag that is not one of the exceptions above.
 		if (m_drawable)
 		{
-			// Get the Tint if the Disabled Type has a Default Tint
-			TintStatus disableTint = tintStatus;
-			if( customTintStatus.isEmpty() && disableTint == TINT_STATUS_INVALID && type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED && type != DISABLED_TELEPORT && type != DISABLED_CHRONO && type != DISABLED_FROZEN && type != DISABLED_STUNNED)
+			if(!m_customDisabledTintToClear.isEmpty())
 			{
-				disableTint = TINT_STATUS_DISABLED;
+				m_drawable->clearCustomTintStatus(m_customDisabledTintToClear, clearTintLater );
+				m_customDisabledTintToClear = NULL;
 			}
-
-			// Do we clear our tint
-			Bool clear = FALSE;
-			if( (disableTint == TINT_STATUS_INVALID && customTintStatus.isEmpty()) ||
-			    (disableTint != TINT_STATUS_INVALID && m_disabledTintToClear == disableTint) ||
-				(!customTintStatus.isEmpty() && customTintStatus == m_customDisabledTintToClear)
-			  )
+			if(m_disabledTintToClear != TINT_STATUS_INVALID)
 			{
-				clear = TRUE;
+				m_drawable->clearTintStatus( m_disabledTintToClear, clearTintLater );
+				m_disabledTintToClear = TINT_STATUS_INVALID;
 			}
-
-			// Clear our Tint
-			if(clear)
-			{
-				if(!m_customDisabledTintToClear.isEmpty())
-				{
-					m_drawable->clearCustomTintStatus(m_customDisabledTintToClear, clearTintLater );
-					m_customDisabledTintToClear = NULL;
-				}
-				if(m_disabledTintToClear != TINT_STATUS_INVALID)
-				{
-					m_drawable->clearTintStatus( m_disabledTintToClear, clearTintLater );
-					m_disabledTintToClear = TINT_STATUS_INVALID;
-				}
-			}
-		
+	
 			//m_drawable->clearTintStatus( TINT_STATUS_DISABLED );
 		}
 	}
@@ -2959,6 +2970,7 @@ Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 void Object::checkDisabledStatus()
 {
 	UnsignedInt now = TheGameLogic->getFrame();
+	UnsignedInt nextWakeUpTime = 1e8; // Lower than FOREVER
 	for( int i = 0; i < DISABLED_COUNT; i++ )
 	{
 		DisabledType type = (DisabledType)i;
@@ -2969,9 +2981,27 @@ void Object::checkDisabledStatus()
 				clearDisabled( type ); // This will also DECREMENT m_pauseCount in all specialpowers
 				m_disabledMask.set( type, 0 );
 			}
+			else if( m_disabledTillFrame[ i ] < FOREVER ) // We don't check for duration that passes un-operable ranges
+			{
+				UnsignedInt WakeUpTime = m_disabledTillFrame[ i ] - now;
+				if( WakeUpTime < nextWakeUpTime )
+				{
+					nextWakeUpTime = WakeUpTime;
+				}
+			}
 		}
 	}
+	if(nextWakeUpTime < 1e8)
+	{
+		m_disabledHelper->setNextDisableUpdateFrame(now + nextWakeUpTime);
+	}
 }
+
+/*void Object::checkDisabledHelper() const
+{
+	if(m_disabledHelper)
+		m_disabledHelper->checkDisableUpdateStatus();
+}*/
 
 //-------------------------------------------------------------------------------------------------
 //Get Disabled Till Frame
@@ -2989,7 +3019,7 @@ std::vector<UnsignedInt> Object::getDisabledTillFrame() const
 //-------------------------------------------------------------------------------------------------
 //Set Disabled Till Frame + Disabled Tint
 //-------------------------------------------------------------------------------------------------
-void Object::setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames)
+void Object::transferDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames)
 {
 	// Don't do anything if the till frame sizes are different
 	if(disabledTillFrames.size() != DISABLED_COUNT )
@@ -3000,10 +3030,10 @@ void Object::setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFr
 	{
 		m_disabledTillFrame[ i ] = disabledTillFrames[ i ];
 		if(m_disabledTillFrame[i] > now)
-			setDisabledUntil( DisabledType(i), m_disabledTillFrame );
+			setDisabledUntil( DisabledType(i), m_disabledTillFrame[i], TINT_STATUS_INVALID, NULL, FALSE, FALSE );
 	}
 
-	// Set disabled tint
+	// Set disabled tint, transfer the Tint before applying this function first
 	if(!m_drawable)
 		return;
 
@@ -3015,11 +3045,11 @@ void Object::setDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFr
 			m_disabledTintToClear = TINT_STATUS_INVALID;
 		}
 
-		m_drawable->setCustomTintStatus( customTintStatus );
+		m_drawable->setCustomTintStatus( m_customDisabledTintToClear );
 	}
 	else if(m_disabledTintToClear != TINT_STATUS_INVALID)
 	{
-		m_drawable->setTintStatus( disableTint );
+		m_drawable->setTintStatus( m_disabledTintToClear );
 	}
 }
 
@@ -3059,8 +3089,8 @@ void Object::doDisablePower(Bool isCommand)
 	}
 
 	// Weapon Bonuses to Set
-	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusDisabledUnderPowered();
-	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusDisabledUnderPowered();
+	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusUnderPowered();
+	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusUnderPowered();
 
 	for (Int i = 0; i < weaponBonuses.size(); i++) {
 		setWeaponBonusCondition(weaponBonuses[i]);
@@ -3071,11 +3101,17 @@ void Object::doDisablePower(Bool isCommand)
 	}
 
 	// Status to Set
-	setStatus(getTemplate()->getStatusDisabledUnderPowered());
-	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusDisabledUnderPowered();
+	setStatus(getTemplate()->getStatusUnderPowered());
+	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusUnderPowered();
 	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
 	{
 		setCustomStatus( *it );
+	}
+
+	// Model Condition to Set
+	if (m_drawable)
+	{
+		m_drawable->setModelConditionFlags(getTemplate()->getModelConditionUnderPowered());
 	}
 }
 
@@ -3123,8 +3159,8 @@ void Object::clearDisablePower(Bool isCommand)
 	}
 
 	// Weapon Bonuses to Set
-	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusDisabledUnderPowered();
-	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusDisabledUnderPowered();
+	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusUnderPowered();
+	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusUnderPowered();
 
 	for (Int i = 0; i < weaponBonuses.size(); i++) {
 		clearWeaponBonusCondition(weaponBonuses[i]);
@@ -3135,16 +3171,22 @@ void Object::clearDisablePower(Bool isCommand)
 	}
 
 	// Status to Set
-	clearStatus(getTemplate()->getStatusDisabledUnderPowered());
-	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusDisabledUnderPowered();
+	clearStatus(getTemplate()->getStatusUnderPowered());
+	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusUnderPowered();
 	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
 	{
 		clearCustomStatus( *it );
 	}
+
+	// Model Condition to Set
+	if (m_drawable)
+	{
+		m_drawable->clearModelConditionFlags(getTemplate()->getModelConditionUnderPowered());
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::checkLevitate()
+/*void Object::checkLevitate()
 {
 	if(m_magnetLevitateHeight)
 	{
@@ -3197,7 +3239,7 @@ void Object::checkLevitate()
 			m_magnetLevitateHeight = 0;
 		}
 	}
-}
+}*/
 
 //-------------------------------------------------------------------------------------------------
 void Object::pauseAllSpecialPowers( const Bool disabling ) const
@@ -5006,6 +5048,8 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferObjectID( &m_shielderID );
 
+	xfer->xferObjectID( &m_shieldingID );
+
 	xfer->xferUser( &m_shielderType, sizeof( ProtectionType ) );
 
 	// drawable id
@@ -5279,13 +5323,13 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferReal( &m_invsqrt_mass );
 
-	xfer->xferReal( &m_magnetLevitateHeight );
+	//xfer->xferReal( &m_magnetLevitateHeight );
 
-	xfer->xferUnsignedInt( &m_levitateCheckFrame );
+	//xfer->xferUnsignedInt( &m_levitateCheckFrame );
 
-	xfer->xferUnsignedInt( &m_levitateCheckCount );
+	//xfer->xferUnsignedInt( &m_levitateCheckCount );
 
-	xfer->xferBool ( &m_dontLevitate );
+	//xfer->xferBool ( &m_dontLevitate );
 
 	xfer->xferBool ( &m_disabledPowerFromCommand );
 
@@ -5434,7 +5478,7 @@ void Object::xfer( Xfer *xfer )
 
 	UnsignedShort equipIDCount = m_equipObjIDs.size();
 	UnsignedShort equipAttackableIDCount = m_equipAttackableObjIDs.size();
-	UnsignedShort lastEquipIDCount = m_lastEquipToIDs.size();
+	UnsignedShort lastEquipIDCount = m_lastEquipObjIDs.size();
 	UnsignedShort rejectKeysCount = m_rejectKeys.size();
 	xfer->xferUnsignedShort( &equipIDCount );
 	xfer->xferUnsignedShort( &equipAttackableIDCount );
@@ -5462,7 +5506,7 @@ void Object::xfer( Xfer *xfer )
 
 		for (int i_3 = 0; i_3 < lastEquipIDCount; i_3++)
 		{
-			lastEquipObjID = m_lastEquipToIDs[i_3];
+			lastEquipObjID = m_lastEquipObjIDs[i_3];
 			xfer->xferObjectID( &lastEquipObjID );
 		}  // end for, i_3
 
@@ -5477,10 +5521,10 @@ void Object::xfer( Xfer *xfer )
 	else
 	{
 		// this list should be empty on loading
-		if( m_equipObjIDs.size() != 0 || m_equipAttackableObjIDs.size() != 0 || m_lastEquipToIDs.size() != 0 || m_rejectKeys.size() != 0 )
+		if( m_equipObjIDs.size() != 0 || m_equipAttackableObjIDs.size() != 0 || m_lastEquipObjIDs.size() != 0 || m_rejectKeys.size() != 0 )
 		{
 
-			DEBUG_CRASH(( "ScriptEngine::xfer - m_equipObjIDs, m_equipAttackableObjIDs, m_lastEquipToIDs and m_rejectKeys should be empty but is not" ));
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_equipObjIDs, m_equipAttackableObjIDs, m_lastEquipObjIDs and m_rejectKeys should be empty but is not" ));
 			throw SC_INVALID_DATA;
 
 		}  // end if
@@ -5506,7 +5550,7 @@ void Object::xfer( Xfer *xfer )
 		{
 			// read and register ID
 			xfer->xferObjectID( &lastEquipObjID );
-			m_lastEquipToIDs.push_back(lastEquipObjID);
+			m_lastEquipObjIDs.push_back(lastEquipObjID);
 
 		}  // end for
 
@@ -6615,6 +6659,13 @@ void Object::doStatusDamage( ObjectStatusTypes status, Real duration, const Asci
 }
 
 //-------------------------------------------------------------------------------------------------
+void Object::refreshStatusHelper()
+{ 
+	if(m_statusDamageHelper)
+		m_statusDamageHelper->refreshUpdate();
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::transferStatusHelperData( HelperTransferData data )
 {
 	if(m_statusDamageHelper)
@@ -6639,6 +6690,13 @@ void Object::doTempWeaponBonus( WeaponBonusConditionType status, const AsciiStri
 }
 
 //-------------------------------------------------------------------------------------------------
+void Object::refreshTempWeaponBonusHelper()
+{ 
+	if(m_tempWeaponBonusHelper)
+		m_tempWeaponBonusHelper->refreshUpdate();
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::transferTempWeaponBonusHelperData( HelperTransferData data )
 {
 	if(m_tempWeaponBonusHelper)
@@ -6660,6 +6718,24 @@ void Object::setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags prote
 {
 	m_shielderID = retargetID;
 	m_shielderType = protectionTypes;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setShieldingTargetID( ObjectID targetID, ProtectionTypeFlags protectionTypes )
+{
+	m_shieldingID = targetID;
+	m_shielderType = protectionTypes;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setShielding( ObjectID targetID, ProtectionTypeFlags protectionTypes )
+{
+	Object *target = TheGameLogic->findObjectByID( targetID );
+	if( target )
+	{
+		target->setShieldByTargetID(getID(), protectionTypes);
+		setShieldingTargetID(targetID, protectionTypes);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -6786,13 +6862,20 @@ void Object::transferSubdualHelperData(CustomSubdualCurrentHealMap data)
 }
 
 //-------------------------------------------------------------------------------------------------
-CustomSubdualCurrentHealMap Object::getSubdualHelperData()
+CustomSubdualCurrentHealMap Object::getSubdualHelperData() const
 {
 	if(m_subdualDamageHelper)
 		return m_subdualDamageHelper->getSubdualHelperData();
 
 	CustomSubdualCurrentHealMap nullData;
 	return nullData;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::refreshSubdualHelper()
+{ 
+	if(m_subdualDamageHelper)
+		m_subdualDamageHelper->refreshUpdate();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -8060,7 +8143,7 @@ void Object::setEquipObjectID(ObjectID equipObjID)
 		return;
 
 	m_equipObjIDs.push_back(equipObjID);
-	m_lastEquipToIDs.push_back(equipObjID);
+	m_lastEquipObjIDs.push_back(equipObjID);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -8111,11 +8194,11 @@ void Object::clearLastEquipObjectID(ObjectID equipObjID)
 
 	// Remove the ID from the Equip list
 	std::vector<ObjectID>::iterator it;
-	for (it = m_lastEquipToIDs.begin(); it != m_lastEquipToIDs.end();)
+	for (it = m_lastEquipObjIDs.begin(); it != m_lastEquipObjIDs.end();)
 	{
 		if (equipObjID == (*it))
 		{
-			it = m_lastEquipToIDs.erase(it);
+			it = m_lastEquipObjIDs.erase(it);
 			break;
 		}
 		++it;
@@ -8374,9 +8457,9 @@ Bool Object::checkToSquishHijack(const Object *other) const
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 
-	if( !m_lastEquipToIDs.empty() )
+	if( !m_lastEquipObjIDs.empty() )
 	{
-		for (std::vector<ObjectID>::const_iterator it = m_lastEquipToIDs.begin(); it != m_lastEquipToIDs.end(); ++it)
+		for (std::vector<ObjectID>::const_iterator it = m_lastEquipObjIDs.begin(); it != m_lastEquipObjIDs.end(); ++it)
 		{
 			//don't crush the equipper after it has been removed!
 			if(other->getID() == (*it) && other->getLastExitedFrame() > now)

@@ -732,10 +732,11 @@ public:
 
 	Bool setDisabledUnderPowered() const  { return m_setDisabledWhenUnderpowered; }
 	DisabledType getDisabledTypeUnderPowered() const { return m_disabledTypeUnderPowered; }
-	WeaponBonusConditionTypeVec getWeaponBonusDisabledUnderPowered() const { return m_bonusDisabledUnderPowered; }
-	ObjectStatusMaskType getStatusDisabledUnderPowered() const { return m_statusDisabledUnderPowered; }
-	const std::vector<AsciiString>& getCustomWeaponBonusDisabledUnderPowered() const { return m_customBonusDisabledUnderPowered; }
-	const std::vector<AsciiString>& getCustomStatusDisabledUnderPowered() const { return m_customStatusDisabledUnderPowered; }
+	WeaponBonusConditionTypeVec getWeaponBonusUnderPowered() const { return m_bonusUnderPowered; }
+	ObjectStatusMaskType getStatusUnderPowered() const { return m_statusUnderPowered; }
+	ModelConditionFlags getModelConditionUnderPowered() const { return m_modelConditionUnderPowered; }
+	const std::vector<AsciiString>& getCustomWeaponBonusUnderPowered() const { return m_customBonusUnderPowered; }
+	const std::vector<AsciiString>& getCustomStatusUnderPowered() const { return m_customStatusUnderPowered; }
 	TintStatus getTintStatusUnderPowered() const { return m_tintStatusUnderPowered; }
 	const AsciiString& getCustomTintStatusUnderPowered() const { return m_customTintStatusUnderPowered; }
 
@@ -855,8 +856,8 @@ private:
 	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficulty;
 	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficultyAI;
 
-	std::vector<AsciiString>						m_customBonusDisabledUnderPowered;		///< Weapon Bonus to apply when Underpowered
-	std::vector<AsciiString>						m_customStatusDisabledUnderPowered;		///< Status to apply when Underpowered
+	std::vector<AsciiString>						m_customBonusUnderPowered;		///< Weapon Bonus to apply when Underpowered
+	std::vector<AsciiString>						m_customStatusUnderPowered;		///< Status to apply when Underpowered
 
 	WeaponTemplateSetVector							m_weaponTemplateSets;					///< our weaponsets
 	WeaponTemplateSetFinder							m_weaponTemplateSetFinder;		///< helper to allow us to find the best sets, quickly
@@ -937,9 +938,10 @@ private:
 
 	// ---- Other
 	DisabledType							m_disabledTypeUnderPowered;
-	WeaponBonusConditionTypeVec 			m_bonusDisabledUnderPowered;
-	ObjectStatusMaskType					m_statusDisabledUnderPowered;
+	WeaponBonusConditionTypeVec 			m_bonusUnderPowered;
+	ObjectStatusMaskType					m_statusUnderPowered;
 	TintStatus								m_tintStatusUnderPowered;
+	ModelConditionFlags						m_modelConditionUnderPowered;
 
 };
 
