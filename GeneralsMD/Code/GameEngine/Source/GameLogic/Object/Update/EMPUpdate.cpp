@@ -289,7 +289,11 @@ void EMPUpdate::doDisableAttack( void )
 				Drawable *drw = curVictim->getDrawable();
 				if ( drw )
 				{
-					drw->setTintStatus( TINT_STATUS_DISABLED );// paint it black
+					//drw->setTintStatus( TINT_STATUS_DISABLED );// paint it black
+					if(!data->m_customTintStatus.isEmpty())
+						drw->setCustomTintStatus( data->m_customTintStatus );
+					else if (data->m_tintStatus != TINT_STATUS_INVALID )
+						drw->setTintStatus( data->m_tintStatus );
 				}
 				continue;
 			}

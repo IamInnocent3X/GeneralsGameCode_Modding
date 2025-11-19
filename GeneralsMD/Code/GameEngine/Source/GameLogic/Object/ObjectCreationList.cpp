@@ -33,6 +33,8 @@
 #define DEFINE_SHADOW_NAMES								// for TheShadowNames[]
 #define DEFINE_WEAPONSLOTTYPE_NAMES
 
+#define DEFINE_MAXHEALTHCHANGETYPE_NAMES						// for TheMaxHealthChangeTypeNames[]
+
 #define NO_DEBUG_CRC
 
 #include "Common/AudioEventRTS.h"
@@ -67,6 +69,15 @@
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Weapon.h"
 #include "GameLogic/WeaponSet.h"
+
+#include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
+#include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/FloatUpdate.h"
+#include "GameLogic/Module/HijackerUpdate.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/StickyBombUpdate.h"
+#include "GameLogic/Module/SupplyTruckAIUpdate.h"
 
 #include "GameLogic/AIPathfind.h"
 
@@ -782,7 +793,23 @@ public:
 		m_shadowType(SHADOW_NONE),
 		m_fxFinal(NULL),
 		m_preserveLayer(true),
-		m_objectCount(0) // Added By Sadullah Nader
+		m_objectCount(0), // Added By Sadullah Nader
+		m_inheritsHealth(false),
+		m_inheritsAIStates(false),
+		m_inheritsStatus(false),
+		m_inheritsDisabledType(false),
+		m_inheritsSelection(false),
+		m_inheritsHealthChangeType(SAME_CURRENTHEALTH),
+
+		m_transferBombs(false),
+		m_transferAttackers(false),
+		m_transferHijackers(false),
+		m_transferEquippers(false),
+		m_transferParasites(false),
+		m_transferPassengers(false),
+		m_transferToAssaultTransport(false),
+		m_transferShieldedTargets(false),
+		m_transferShieldingTargets(false)
 	{
 		// Change Made by Sadullah Nader
 		// for init purposes, easier to read
@@ -878,6 +905,24 @@ public:
 			{ "RequiresLivePlayer",	INI::parseBool, NULL, offsetof(GenericObjectCreationNugget, m_requiresLivePlayer) },
 			{ "InheritsWeaponBonus",	INI::parseBool, NULL, offsetof(GenericObjectCreationNugget, m_inheritsWeaponBonus) },
 			{ "ExperienceSinkForCaller",	INI::parseBool, NULL, offsetof(GenericObjectCreationNugget, m_experienceSink) },
+
+			{ "InheritsHealth",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsHealth ) },
+			{ "InheritsAIStates",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsAIStates ) },
+			{ "InheritsStatuses",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsStatus ) },
+			{ "InheritsDisabledType",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsDisabledType ) },
+			{ "InheritsSelection",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsSelection ) },
+			{ "HealthInheritType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( GenericObjectCreationNugget, m_inheritsHealthChangeType ) },
+
+			{ "TransferBombs",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferBombs ) },
+			{ "TransferAttackers",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferAttackers ) },
+			{ "TransferHijackers",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferHijackers ) },
+			{ "TransferEquippers",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferEquippers ) },
+			{ "TransferParasites",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferParasites ) },
+			{ "TransferPassengers",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferPassengers ) },
+			{ "TransferToAssaultTransport",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferToAssaultTransport ) },
+			{ "TransferShieldedTargets",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferShieldedTargets ) },
+			{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferShieldingTargets ) },
+
 			{ 0, 0, 0, 0 }
 		};
 
@@ -1043,12 +1088,359 @@ protected:
 			obj->setWeaponBonusConditionIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
 			obj->setCustomWeaponBonusConditionIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
 			obj->doWeaponBonusChange();
+
+			obj->transferTempWeaponBonusHelperData(sourceObj->getTempWeaponBonusHelperData());
+			obj->refreshTempWeaponBonusHelper();
 		}
 
 		if ( m_invulnerableTime > 0 )
 		{
 			obj->goInvulnerable( m_invulnerableTime );
 		}
+
+		// Unconst_cast the source. Dirty hack
+		Object *source = TheGameLogic->findObjectByID(sourceObj->getID()) ? TheGameLogic->findObjectByID(sourceObj->getID()) : NULL;
+
+		if( m_inheritsAIStates && source )
+		{
+			AIUpdateInterface *ai = source->getAI();
+			AIUpdateInterface *new_ai = obj->getAI();
+			if( ai && new_ai )
+			{
+				//This flag determines if the object has started moving yet... if not
+				//it's a good initial check.
+				Bool isEffectivelyMoving = ai->isMoving() || ai->isWaitingForPath();
+
+				//Are we trying to attack something. If so, we need to be in range before we can do so.
+				Bool isTryingToAttack = ai->isAttacking();
+
+				//Are we in guard mode? If so, are we idle... idle guarders deploy for fastest response against attackers.
+				Bool isInGuardIdleState = ai->friend_isInGuardIdleState();
+
+				// Inherits my Attack State
+				if( isTryingToAttack )
+				{
+					if(ai->getGoalObject() != NULL)
+					{
+						if(ai->getAIStateType() == AI_FORCE_ATTACK_OBJECT)
+							new_ai->aiForceAttackObject( ai->getGoalObject(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
+						else
+							new_ai->aiAttackObject( ai->getGoalObject(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
+					}
+					else if(ai->getGoalPosition()->length() > 1.0f )
+					{
+						new_ai->aiAttackPosition( ai->getGoalPosition(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
+					}
+				}
+				// Inherits my Guard State
+				else if( isInGuardIdleState )
+				{
+					if(ai->getGuardObject() != INVALID_ID)
+					{
+						Object *guardObj = TheGameLogic->findObjectByID(ai->getGuardObject());
+						if(guardObj)
+							new_ai->aiGuardObject( guardObj, ai->getGuardMode(), ai->getLastCommandSource() );
+					}
+					else if(ai->getGuardLocation()->length() > 1.0f )
+					{
+						new_ai->aiGuardPosition( ai->getGuardLocation(), ai->getGuardMode(), ai->getLastCommandSource() );
+					}
+				}
+				// Inherits my Moving State
+				else if( isEffectivelyMoving )
+				{
+					if( ai->getAIStateType() == AI_ATTACK_MOVE_TO )
+					{
+						//Continue to move towards the attackmove area.
+						new_ai->aiAttackMoveToPosition( ai->getGoalPosition(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
+					}
+					else
+					{
+						new_ai->aiMoveToPosition( ai->getGoalPosition(), ai->getLastCommandSource() );
+					}
+				}
+
+				// Inherits my Supply State
+				SupplyTruckAIInterface* supplyTruckAI = ai->getSupplyTruckAIInterface();
+				SupplyTruckAIInterface* supplyTruckNewAI = ai->getSupplyTruckAIInterface();
+				if( supplyTruckAI && supplyTruckNewAI ) {
+					// If it is gathering supplies, tell its replacer to do the same
+					if (supplyTruckAI->isCurrentlyFerryingSupplies() || supplyTruckAI->isForcedIntoWantingState())
+					{
+						supplyTruckNewAI->setForceWantingState(true);
+					}
+				}
+
+				// Inherits my Dozer State
+				DozerAIInterface* DozerAI = ai->getDozerAIInterface();
+				DozerAIInterface* DozerNewAI = ai->getDozerAIInterface();
+				if( DozerAI && DozerNewAI)
+				{
+					
+					// If it is gathering supplies, tell its replacer to do the same
+					if(DozerAI->getCurrentTask() != DOZER_TASK_INVALID)
+					{
+						DozerTask curTask = DozerAI->getCurrentTask();
+						Object *taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget(curTask) );
+						if(taskTarget)
+						{
+							switch(curTask)
+							{
+								case DOZER_TASK_BUILD:
+									new_ai->aiResumeConstruction(taskTarget, ai->getLastCommandSource());
+									break;
+								case DOZER_TASK_REPAIR:
+									new_ai->aiRepair(taskTarget, ai->getLastCommandSource());
+									break;
+							}
+						}
+					}
+					else if (DozerAI->isAnyTaskPending())
+					{
+						for( Int i = 0; i < DOZER_NUM_TASKS; i++ )
+						{
+							if( DozerAI->isTaskPending( (DozerTask)i ) )
+							{
+								Object *taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget((DozerTask)i) );
+								if(taskTarget)
+								{
+									switch((DozerTask)i)
+									{
+										case DOZER_TASK_BUILD:
+											new_ai->aiResumeConstruction(taskTarget, ai->getLastCommandSource());
+											break;
+										case DOZER_TASK_REPAIR:
+											new_ai->aiRepair(taskTarget, ai->getLastCommandSource());
+											break;
+									}
+								}
+
+								break;
+							}
+						}
+					}
+
+				}
+
+			}
+		}
+
+		
+		if( m_inheritsHealth )
+		{
+			//Convert old health to new health.
+			BodyModuleInterface *oldBody = sourceObj->getBodyModule();
+			BodyModuleInterface *newBody = obj->getBodyModule();
+			if( oldBody && newBody )
+			{
+				//First inherits subdual damage
+				DamageInfo damInfo;
+				Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
+				if( subdualDamageAmount > 0.0f )
+				{
+					damInfo.in.m_amount = subdualDamageAmount;
+					damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
+					damInfo.in.m_sourceID = INVALID_ID;
+					newBody->attemptDamage( &damInfo );
+				}
+
+				// Then the Custom Subdual Damage
+				newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
+				obj->transferSubdualHelperData(sourceObj->getSubdualHelperData());
+				obj->refreshSubdualHelper();
+
+				//Now inherits the previous health from the old object to the new.
+				/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
+				damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
+				damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
+				if( damInfo.in.m_amount > 0.0f )
+				{
+					newBody->attemptDamage( &damInfo );
+				}*/
+
+				Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
+				if( chronoDamageAmount > 0.0f )
+				{
+					damInfo.in.m_amount = chronoDamageAmount;
+					damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
+					damInfo.in.m_sourceID = INVALID_ID;
+					newBody->attemptDamage( &damInfo );
+				}
+
+				Real oldHealth = oldBody->getHealth();
+				Real oldMaxHealth = oldBody->getMaxHealth();
+				Real newMaxHealth = newBody->getMaxHealth();
+
+				switch( m_inheritsHealthChangeType )
+				{
+					case PRESERVE_RATIO:
+					{
+						//400/500 (80%) + 100 becomes 480/600 (80%)
+						//200/500 (40%) - 100 becomes 160/400 (40%)
+						Real ratio = oldHealth / oldMaxHealth;
+						Real newHealth = newMaxHealth * ratio;
+						newBody->internalChangeHealth( newHealth - newMaxHealth );
+						break;
+					}
+					// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
+					case ADD_CURRENT_DAMAGE_NON_LETHAL:
+					case ADD_CURRENT_DAMAGE:
+					{
+						//Add the same amount that we are adding to the max health.
+						//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
+						//400/500 (80%) + 100 becomes 500/600 (83%)
+						//200/500 (40%) - 100 becomes 100/400 (25%)
+						if(m_inheritsHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) > newMaxHealth)
+							obj->kill();
+						else
+							newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth) );
+						break;
+					}
+					case SAME_CURRENTHEALTH:
+						//preserve past health amount
+						newBody->internalChangeHealth( oldHealth - newMaxHealth );
+						break;
+				}
+			}
+		}
+
+		// Inherits Statuses
+		if( m_inheritsStatus )
+		{
+			obj->setStatus( sourceObj->getStatusBits() );
+			obj->setCustomStatusFlags( sourceObj->getCustomStatus() );
+
+			obj->doObjectStatusChecks();
+
+			obj->transferStatusHelperData(sourceObj->getStatusHelperData());
+			obj->refreshStatusHelper();
+		}
+
+		// Inherits Disabled Type
+		if(m_inheritsDisabledType)
+		{
+			obj->setDisabledTint(sourceObj->getDisabledTint());
+			obj->setDisabledCustomTint(sourceObj->getDisabledCustomTint());
+			obj->transferDisabledTillFrame(sourceObj->getDisabledTillFrame());
+		}
+
+		// Inherits the Selection Status
+		if(m_inheritsSelection && obj->isSelectable() && sourceObj->getDrawable() && obj->getDrawable())
+		{
+			if(sourceObj->getDrawable()->isSelected())
+				TheGameLogic->selectObject(obj, FALSE, sourceObj->getControllingPlayer()->getPlayerMask(), sourceObj->isLocallyControlled());
+		}
+
+		// Transfer any bombs onto the created Object
+		if(m_transferAttackers || m_transferBombs)
+		{
+			Object *iterObj = TheGameLogic->getFirstObject();
+			while( iterObj )
+			{
+				// Transfer bombs to the created Object
+				//if( iterObj->isKindOf( KINDOF_MINE ) )
+				//{
+					//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+					//StickyBombUpdate *update = (StickyBombUpdate*)iterObj->findUpdateModule( key_StickyBombUpdate );
+					StickyBombUpdateInterface *update = iterObj->getStickyBombUpdateInterface();
+					if( update && update->getTargetObject() == sourceObj )
+					{
+						if(m_transferBombs)
+							update->setTargetObject( obj );
+					}
+				//}
+
+				// Transfer attackers
+				if (m_transferAttackers)
+				{
+					AIUpdateInterface* aiInterface = iterObj->getAI();
+					if (aiInterface)
+						aiInterface->transferAttack(sourceObj->getID(), iterObj->getID());
+
+				}
+
+				iterObj = obj->getNextObject();
+			}
+		}
+
+		if(m_transferPassengers && sourceObj->getContain())
+		{
+			// Get the unit's contain
+			ContainModuleInterface *contain = sourceObj->getContain();
+
+			std::vector<ObjectID>vecID;
+
+			// Disable Enter/Exit Sounds
+			contain->enableLoadSounds(FALSE);
+
+			// Get Contain List
+			ContainedItemsList list;
+			contain->swapContainedItemsList(list);
+
+			ContainedItemsList::iterator it = list.begin();
+			while ( it != list.end() )
+			{
+				Object *obj = *it++;
+				DEBUG_ASSERTCRASH( obj, ("Contain list must not contain NULL element"));
+
+				// Remove Passenger from current contain
+				contain->removeFromContain( obj, false );
+
+				// Add the Passenger to the list to put into the new container later
+				vecID.push_back(obj->getID());
+			}
+
+			ContainModuleInterface *newContain = obj->getContain();
+
+			if(newContain)
+			{
+				// Disable Enter/Exit Sounds for Replacement Contain
+				newContain->enableLoadSounds(FALSE);
+
+				for(int i = 0; i < vecID.size(); i++)
+				{
+					Object *add = TheGameLogic->findObjectByID( vecID[i] );
+					if(add)
+					{
+						// Add Passenger to current contain if valid
+						if( newContain && newContain->isValidContainerFor(add, TRUE) )
+						{
+							newContain->addToContain(add);
+						}
+					}
+				}
+
+				// Enable Enter/Exit Sounds for Replacement Contain
+				newContain->enableLoadSounds(TRUE);
+			}
+
+		}
+		else
+		{
+			ContainModuleInterface *contain = sourceObj->getContain();
+
+			if(contain)
+			{
+				contain->removeAllContained();
+			}
+		}
+
+		// Assault Transport Matters, switching Transports
+		if(m_transferToAssaultTransport && source && source->getAssaultTransportObjectID() != INVALID_ID)
+		{
+			source->removeMeFromAssaultTransport(obj->getID());
+		}
+
+		// Shielded Objects
+		if(m_transferShieldedTargets)
+			obj->setShieldByTargetID(sourceObj->getShieldByTargetID(), sourceObj->getShieldByTargetType());
+
+		if(m_transferShieldingTargets)
+			obj->setShielding(sourceObj->getShieldingTargetID(), sourceObj->getShieldByTargetType());
+
+		// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
+		if(source)
+			source->doTransferHijacker(obj->getID(), m_transferHijackers, m_transferEquippers, m_transferParasites);
 
 		if( BitIsSet( m_disposition, INHERIT_VELOCITY ) && sourceObj )
 		{
@@ -1512,6 +1904,23 @@ private:
 	Bool											m_inheritsVeterancy;
   Bool                      m_diesOnBadLand;
 	Bool											m_skipIfSignificantlyAirborne;
+
+	Bool											m_inheritsHealth;
+	Bool											m_inheritsAIStates;
+	Bool											m_inheritsStatus;
+	Bool											m_inheritsDisabledType;
+	Bool											m_inheritsSelection;
+	MaxHealthChangeType								m_inheritsHealthChangeType;
+
+	Bool											m_transferBombs;
+	Bool											m_transferAttackers;
+	Bool											m_transferHijackers;
+	Bool											m_transferEquippers;
+	Bool											m_transferParasites;
+	Bool											m_transferPassengers;
+	Bool											m_transferToAssaultTransport;
+	Bool											m_transferShieldedTargets;
+	Bool											m_transferShieldingTargets;
 
 };
 EMPTY_DTOR(GenericObjectCreationNugget)
