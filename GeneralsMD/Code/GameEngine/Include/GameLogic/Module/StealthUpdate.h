@@ -110,6 +110,9 @@ public:
 	Bool					m_teamDisguised;
 	Bool					m_useRiderStealth;
   Bool          m_grantedBySpecialPower;
+	Bool					m_autoDisguiseWhenAvailable;
+	Bool					m_canStealthWhileDisguised;
+	Bool					m_retainHealthBarPositionWhenDisguised;
   std::vector<AsciiString> m_requiredCustomStatus;
   std::vector<AsciiString> m_forbiddenCustomStatus;
 
@@ -144,7 +147,7 @@ public:
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
 	void markAsDetected( UnsignedInt numFrames = 0 );
-	void disguiseAsObject( const Object *target ); //wrapper function for ease.
+	void disguiseAsObject( const Object *target, Bool doLast = FALSE ); //wrapper function for ease.
 	Real getFriendlyOpacity() const;
 	UnsignedInt getStealthDelay() const { return getStealthUpdateModuleData()->m_stealthDelay; }
 	UnsignedInt getStealthLevel() const { return getStealthUpdateModuleData()->m_stealthLevel; }
@@ -194,6 +197,9 @@ private:
 	// runtime xfer members (does not need saving)
 	Bool									m_xferRestoreDisguise;			//Tells us we need to restore our disguise
 	WeaponSetType					m_requiresWeaponSetType;
+
+	const ThingTemplate  *m_lastDisguiseAsTemplate;				//The disguise template (might not actually be using it yet)
+	Int					  m_lastDisguiseAsPlayerIndex;		//The player team we are wanting to disguise as (might not actually be disguised yet).
 };
 
 

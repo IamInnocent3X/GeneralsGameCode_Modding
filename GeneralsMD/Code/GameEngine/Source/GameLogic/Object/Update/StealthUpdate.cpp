@@ -57,7 +57,9 @@
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/ContainModule.h"
+#include "GameLogic/Module/RailroadGuideAIUpdate.h"
 #include "GameLogic/Module/SpawnBehavior.h"
+#include "GameLogic/Module/SpecialAbilityUpdate.h"
 
 
 
@@ -84,6 +86,9 @@ StealthUpdateModuleData::StealthUpdateModuleData()
     m_enemyDetectionEvaEvent = EVA_Invalid;
     m_ownDetectionEvaEvent = EVA_Invalid;
     m_grantedBySpecialPower = FALSE;
+	m_autoDisguiseWhenAvailable = FALSE;
+	m_canStealthWhileDisguised = FALSE;
+	m_retainHealthBarPositionWhenDisguised = FALSE;
 }
 
 
@@ -112,6 +117,9 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "DisguiseRevealTransitionTime",	INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseRevealTransitionFrames ) },
 		{ "InnateStealth",								INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_innateStealth ) },
 		{ "UseRiderStealth",							INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_useRiderStealth ) },
+		{ "AutoDisguiseWhenAvailable",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_autoDisguiseWhenAvailable ) },
+		{ "CanStealthWhileDisguised",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_canStealthWhileDisguised ) },
+		{ "RetainHealthBarPositionWhenDisguised",		INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_retainHealthBarPositionWhenDisguised ) },
     { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
     { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
 		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
@@ -152,10 +160,61 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	m_stealthLevelOverride = 0;
 
+	m_lastDisguiseAsTemplate = NULL;
+	m_lastDisguiseAsPlayerIndex			= -1;
+
 	if( data->m_innateStealth )
 	{
 		//Giving innate stealth units this status bit allows other code to easily check the status bit.
 		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_STEALTH ) );
+
+		if( canDisguise() )
+		{
+			// Added disguise to be able to use as innate
+			SpecialAbilityUpdate *spUpdate = getObject()->findSpecialAbilityUpdate( SPECIAL_DISGUISE_AS_VEHICLE );
+
+			if(spUpdate)
+			{
+				KindOfMaskType disguiseMask = spUpdate->getKindOfs();
+				KindOfMaskType forbiddenMask = spUpdate->getForbiddenKindOfs();
+				if(disguiseMask == KINDOFMASK_NONE)
+				{
+					disguiseMask.set( KINDOF_VEHICLE );
+					forbiddenMask.set( KINDOF_AIRCRAFT );
+					forbiddenMask.set( KINDOF_BOAT );
+					forbiddenMask.set( KINDOF_CLIFF_JUMPER );
+				}
+
+				Bool found = FALSE;
+				for(Object *disguiseObj = TheGameLogic->getFirstObject(); disguiseObj; disguiseObj = disguiseObj->getNextObject() )
+				{
+					if( disguiseObj->isAnyKindOf(forbiddenMask) )
+						continue;
+					
+					if( disguiseObj->isAnyKindOf(disguiseMask) )
+						found = TRUE;
+
+					if(found)
+					{
+						//Don't allow it to disguise as another bomb truck -- that's just plain dumb.
+						//if( disguiseObj->getTemplate() != obj->getTemplate() )
+						{
+							//Don't allow it to disguise as a train -- they don't have KINDOF_TRAIN yet, but
+							//if added, please change this code so it'll be faster!
+							static const NameKeyType key = NAMEKEY( "RailroadBehavior" );
+							RailroadBehavior *rBehavior = (RailroadBehavior*)disguiseObj->findUpdateModule( key );
+							if( !rBehavior )
+							{
+								disguiseAsObject( disguiseObj );
+								break;
+							}
+						}
+					}
+				}
+
+			}
+		}
+
 	}
 
 	// start active, since some stealths start enabled from the get-go
@@ -317,7 +376,8 @@ Bool StealthUpdate::allowedToStealth( Object *stealthOwner ) const
 		}
 	}
 
-	if( !stealthOwner->getStatusBits().test( OBJECT_STATUS_CAN_STEALTH ) )
+	// IamInnocent - Added ability to skip can_stealth check if object is disguised or able to disguise with auto Disguise
+	if( !stealthOwner->getStatusBits().test( OBJECT_STATUS_CAN_STEALTH ) && !isDisguised() && !(data->m_autoDisguiseWhenAvailable && m_lastDisguiseAsTemplate))
 	{
 		return FALSE;
 	}
@@ -698,11 +758,11 @@ UpdateSleepTime StealthUpdate::update( void )
 		return calcSleepTime();
 	}
 
+	const StealthUpdateModuleData *data = getStealthUpdateModuleData();
 	Drawable* draw = self->getDrawable();
 
 	if( draw )
 	{
-		const StealthUpdateModuleData *data = getStealthUpdateModuleData();
 		//Are we disguise transitioning (either gaining or losing disguise look?)
 		/** @todo srj -- evil hack here... this whole heat-vision thing is fucked.
 			don't want it on mines but no good way to do that. hack for now. */
@@ -737,10 +797,11 @@ UpdateSleepTime StealthUpdate::update( void )
 			Real opacity = fabs( 1.0f - (factor * 2.0f) );
 			Real overrideOpacity = opacity < 1.0f ? 0.0f : 1.0f;
 			draw->setEffectiveOpacity( opacity, overrideOpacity );
-			if( !m_disguiseTransitionFrames && !m_transitioningToDisguise )
+			if( !m_disguiseTransitionFrames && !m_transitioningToDisguise && !data->m_canStealthWhileDisguised )
 			{
 				//We're finished removing disguise so turn off stealth update.
-				m_enabled = false;
+				if(!(data->m_autoDisguiseWhenAvailable && m_lastDisguiseAsTemplate))
+					m_enabled = false;
 				self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
 				self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
 				return calcSleepTime();
@@ -814,6 +875,12 @@ UpdateSleepTime StealthUpdate::update( void )
 			TheAudio->addAudioEvent( &soundEvent );
 		}
 
+		// IamInnocent - New feature, enable disguised objects to switch back to their disguise after stealth delay
+		if(canDisguise() && data->m_autoDisguiseWhenAvailable && !isDisguised() && m_lastDisguiseAsTemplate)
+		{
+			disguiseAsObject( NULL, TRUE );
+		}
+
 		// The timer is zero, so if we aren't stealthed, do so now!
 		self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
 	}
@@ -827,6 +894,13 @@ UpdateSleepTime StealthUpdate::update( void )
 			AudioEventRTS soundEvent = *self->getTemplate()->getSoundStealthOn();
 			soundEvent.setObjectID(self->getID());
 			TheAudio->addAudioEvent( &soundEvent );
+		}
+
+		//If we are disguised, remove the disguise permanently!
+		if( isDisguised() )
+		{
+			disguiseAsObject( NULL );
+			//changeVisualDisguise();
 		}
 
 		self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
@@ -866,6 +940,12 @@ UpdateSleepTime StealthUpdate::update( void )
 				AudioEventRTS soundEvent = *self->getTemplate()->getSoundStealthOn();
 				soundEvent.setObjectID(self->getID());
 				TheAudio->addAudioEvent( &soundEvent );
+
+				// IamInnocent - New feature, enable disguised objects to switch back to their disguise after stealth delay
+				if(canDisguise() && data->m_autoDisguiseWhenAvailable && !isDisguised() && m_lastDisguiseAsTemplate)
+				{
+					disguiseAsObject( NULL, TRUE );
+				}
 			}
 		}
 
@@ -1001,7 +1081,7 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 }
 
 //-------------------------------------------------------------------------------------------------
-void StealthUpdate::disguiseAsObject( const Object *target )
+void StealthUpdate::disguiseAsObject( const Object *target, Bool doLast )
 {
 	Object *self = getObject();
 	const StealthUpdateModuleData *data = getStealthUpdateModuleData();
@@ -1024,9 +1104,25 @@ void StealthUpdate::disguiseAsObject( const Object *target )
 		m_disguiseTransitionFrames	= data->m_disguiseTransitionFrames;
 		m_disguiseHalfpointReached  = false;
 
+		m_lastDisguiseAsTemplate = m_disguiseAsTemplate;
+		m_lastDisguiseAsPlayerIndex = m_disguiseAsPlayerIndex;
+
 		//Wake up so I can process!
 		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 
+	}
+	else if( doLast )
+	{
+		m_disguiseAsTemplate			= m_lastDisguiseAsTemplate;
+		m_disguiseAsPlayerIndex			= m_lastDisguiseAsPlayerIndex;
+		
+		m_enabled										= true;
+		m_transitioningToDisguise		= true; //Means we are gaining disguise over time.
+		m_disguiseTransitionFrames	= data->m_disguiseTransitionFrames;
+		m_disguiseHalfpointReached  = false;
+
+		//Wake up so I can process!
+		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 	}
 	else if( m_disguised )
 	{
@@ -1232,13 +1328,18 @@ void StealthUpdate::xfer( Xfer *xfer )
 	// disguise as player index
 	xfer->xferInt( &m_disguiseAsPlayerIndex );
 
+	xfer->xferInt( &m_lastDisguiseAsPlayerIndex );
+
 	// disguise as template
 	AsciiString name = m_disguiseAsTemplate ? m_disguiseAsTemplate->getName() : AsciiString::TheEmptyString;
+	AsciiString name2 = m_lastDisguiseAsTemplate ? m_lastDisguiseAsTemplate->getName() : AsciiString::TheEmptyString;
 	xfer->xferAsciiString( &name );
+	xfer->xferAsciiString( &name2 );
 	if( xfer->getXferMode() == XFER_LOAD )
 	{
 
 		m_disguiseAsTemplate = NULL;
+		m_lastDisguiseAsTemplate = NULL;
 		if( name.isEmpty() == FALSE )
 		{
 
@@ -1247,6 +1348,20 @@ void StealthUpdate::xfer( Xfer *xfer )
 			{
 
 				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name.str() ));
+				throw SC_INVALID_DATA;
+
+			}  // end if
+
+		}  // end if
+
+		if( name2.isEmpty() == FALSE )
+		{
+
+			m_lastDisguiseAsTemplate = TheThingFactory->findTemplate( name2 );
+			if( m_lastDisguiseAsTemplate == NULL )
+			{
+
+				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name2.str() ));
 				throw SC_INVALID_DATA;
 
 			}  // end if

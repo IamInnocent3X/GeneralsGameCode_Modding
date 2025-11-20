@@ -822,6 +822,8 @@ public:
 	inline void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
 	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
 
+	Bool isDisguised() const;
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;

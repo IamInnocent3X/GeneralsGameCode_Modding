@@ -447,8 +447,17 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				//      when we're not in force attackable mode!
 				UnsignedInt pickType = getPickTypesForContext( true /*TheInGameUI->isInForceAttackMode()*/ );
 
-				Drawable *underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType) pickType );
+				// IamInnocent - Inefficient hackky way to select Objects disguised as trees
+				Drawable *underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType)0xffffffff );
 				Object *objUnderCursor = underCursor ? underCursor->getObject() : NULL;
+				if(objUnderCursor &&
+				   ThePlayerList->getLocalPlayer()->getRelationship(objUnderCursor->getTeam()) != ALLIES &&
+				   (objUnderCursor->isKindOf(KINDOF_MINE) || objUnderCursor->isKindOf(KINDOF_SHRUBBERY))
+				  )
+				{
+					underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType) pickType );
+					objUnderCursor = underCursor ? underCursor->getObject() : NULL;
+				}
 
 				if( objUnderCursor && (!objUnderCursor->isEffectivelyDead() || objUnderCursor->isKindOf( KINDOF_ALWAYS_SELECTABLE )) )
 				{
@@ -574,7 +583,8 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 						ignoreCommand = TRUE;
 					}
 				}
-				if( !ignoreCommand && !draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) )
+
+				if( !ignoreCommand && (!draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) || ThePlayerList->getLocalPlayer()->getRelationship(draw->getObject()->getTeam()) == ALLIES || (command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET )) ) )
 				{
 					if( CanSelectDrawable( draw, FALSE ) )
 					{

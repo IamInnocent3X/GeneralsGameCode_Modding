@@ -8804,6 +8804,12 @@ Bool Object::isWeaponSetRestricted() const
 	return m_weaponSet.isRestricted();
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool Object::isDisguised() const
+{
+	return getStealth() && getStealth()->isDisguised();
+}
+
 
 //=============================================================================
 //== Custom Cursor List
