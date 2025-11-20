@@ -5875,6 +5875,26 @@ Bool PartitionFilterRejectByObjectStatus::allow(Object *objOther)
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
+Bool PartitionFilterAcceptByObjectCustomStatus::allow(Object *objOther)
+{
+	Bool allow = objOther->testCustomStatusForAll( m_mustBeSet ) ? TRUE : FALSE;
+	if(allow)
+	{
+		for (std::vector<AsciiString>::const_iterator it = m_mustBeClear.begin(); it != m_mustBeClear.end(); ++it)
+		{
+			allow = objOther->testCustomStatus( *it );
+			if(!allow)
+				break;
+		}
+	}
+	return allow;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
 Bool PartitionFilterAcceptByKindOf::allow(Object *objOther)
 {
 	return objOther->isKindOfMulti(m_mustBeSet, m_mustBeClear);

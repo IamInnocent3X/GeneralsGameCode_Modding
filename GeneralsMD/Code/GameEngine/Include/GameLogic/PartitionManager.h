@@ -839,6 +839,22 @@ public:
 
 //=====================================
 /**
+	Only objects that match the given masks are accepted.
+*/
+class PartitionFilterAcceptByObjectCustomStatus : public PartitionFilter
+{
+private:
+	std::vector<AsciiString> m_mustBeSet, m_mustBeClear;
+public:
+	PartitionFilterAcceptByObjectCustomStatus( std::vector<AsciiString> mustBeSet, std::vector<AsciiString> mustBeClear) : m_mustBeSet(mustBeSet), m_mustBeClear(mustBeClear) { }
+	virtual Bool allow(Object *objOther);
+#if defined(RTS_DEBUG)
+	virtual const char* debugGetName() { return "PartitionFilterAcceptByObjectCustomStatus"; }
+#endif
+};
+
+//=====================================
+/**
 	Just like PartitionFilterAcceptByObjectStatus, except that objects
 	that match the given masks are REJECTED.
 */

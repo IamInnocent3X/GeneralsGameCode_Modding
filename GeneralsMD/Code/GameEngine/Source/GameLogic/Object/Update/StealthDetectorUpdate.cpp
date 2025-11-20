@@ -73,8 +73,12 @@ void StealthDetectorUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "ExtraForbiddenKindOf",				KindOfMaskType::parseFromINI,				NULL, offsetof( StealthDetectorUpdateModuleData, m_extraDetectKindofNot ) },
 		{ "CanDetectWhileGarrisoned",		INI::parseBool,											NULL, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileGarrisoned ) },
 		{ "CanDetectWhileContained",		INI::parseBool,											NULL, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileTransported ) },
-		{ "TriggeredBy",						INI::parseAsciiStringVector, 				NULL, 		offsetof( StealthDetectorUpdateModuleData, m_activationUpgradeNames ) },
-		{ "ConflictsWith",						INI::parseAsciiStringVector, 				NULL, 		offsetof( StealthDetectorUpdateModuleData, m_conflictingUpgradeNames ) },
+		{ "TriggeredBy",								INI::parseAsciiStringVector, 				NULL, 		offsetof( StealthDetectorUpdateModuleData, m_activationUpgradeNames ) },
+		{ "ConflictsWith",							INI::parseAsciiStringVector, 				NULL, 		offsetof( StealthDetectorUpdateModuleData, m_conflictingUpgradeNames ) },
+		{ "ExtraRequiredStatus",				ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StealthDetectorUpdateModuleData, m_extraRequiredStatus ) },
+		{ "ExtraForbiddenStatus",				ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StealthDetectorUpdateModuleData, m_extraForbiddenStatus ) },
+		{ "ExtraRequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( StealthDetectorUpdateModuleData, m_extraRequiredCustomStatus ) },
+		{ "ExtraForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( StealthDetectorUpdateModuleData, m_extraForbiddenCustomStatus ) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -251,10 +255,12 @@ UpdateSleepTime StealthDetectorUpdate::update( void )
 	// only consider items that are currently stealthed.
 	PartitionFilterStealthedOrStealthGarrisoned		filterStealthOrStealthGarrisoned;
 	//PartitionFilterAcceptByObjectStatus		filterStatus(OBJECT_STATUS_STEALTHED, 0);
+	PartitionFilterAcceptByObjectStatus			filterStatus(data->m_extraRequiredStatus, data->m_extraForbiddenStatus);
+	PartitionFilterAcceptByObjectCustomStatus		filterCustomStatus(data->m_extraRequiredCustomStatus, data->m_extraForbiddenCustomStatus);
 	PartitionFilterRelationship						filterTeam(self, PartitionFilterRelationship::ALLOW_ENEMIES | PartitionFilterRelationship::ALLOW_NEUTRAL );
 	PartitionFilterAcceptByKindOf					filterKindof(data->m_extraDetectKindof, data->m_extraDetectKindofNot);
 	PartitionFilterSameMapStatus					filterMapStatus(getObject());
-	PartitionFilter*											filters[] = { &filterStealthOrStealthGarrisoned, &filterTeam, &filterKindof, &filterMapStatus, NULL };
+	PartitionFilter*											filters[] = { &filterStealthOrStealthGarrisoned, &filterTeam, &filterStatus, &filterCustomStatus, &filterKindof, &filterMapStatus, NULL };
 
 	Real visionRange = self->getVisionRange();
 	if( data->m_detectionRange > 0.0f )
