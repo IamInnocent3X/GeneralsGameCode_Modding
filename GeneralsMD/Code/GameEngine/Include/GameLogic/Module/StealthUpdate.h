@@ -103,6 +103,7 @@ public:
 	UnsignedInt		m_stealthDelay;
 	UnsignedInt		m_stealthLevel;
 	UnsignedInt		m_blackMarketCheckFrames;
+	UnsignedInt		m_disguiseFriendlyFlickerDelay;
   EvaMessage    m_enemyDetectionEvaEvent;
   EvaMessage    m_ownDetectionEvaEvent;
   Bool					m_innateStealth;
@@ -110,9 +111,10 @@ public:
 	Bool					m_teamDisguised;
 	Bool					m_useRiderStealth;
   Bool          m_grantedBySpecialPower;
+    Bool					m_innateDisguise;
 	Bool					m_autoDisguiseWhenAvailable;
 	Bool					m_canStealthWhileDisguised;
-	Bool					m_retainHealthBarPositionWhenDisguised;
+	Bool					m_disguiseRetainAfterDetected;
   std::vector<AsciiString> m_requiredCustomStatus;
   std::vector<AsciiString> m_forbiddenCustomStatus;
 
@@ -144,6 +146,7 @@ public:
 
 	// ??? ugh
 	Bool isDisguised() const { return m_disguiseAsTemplate != NULL; }
+	Bool hasLastDisguiseTemplate() const { return m_lastDisguiseAsTemplate != NULL; }
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
 	void markAsDetected( UnsignedInt numFrames = 0 );
@@ -171,6 +174,7 @@ protected:
 	void hintDetectableWhileUnstealthed( void ) ;
 
 	void changeVisualDisguise();
+	void changeVisualDisguiseFlicker(Bool doFlick);
 
 	UpdateSleepTime calcSleepTime() const;
 
@@ -200,6 +204,10 @@ private:
 
 	const ThingTemplate  *m_lastDisguiseAsTemplate;				//The disguise template (might not actually be using it yet)
 	Int					  m_lastDisguiseAsPlayerIndex;		//The player team we are wanting to disguise as (might not actually be disguised yet).
+
+	Bool							m_flicked;							//Have I been flicked?
+	Bool							m_flicking;							//I am flicking, don't remove my statuses
+	UnsignedInt						m_flickerFrame;						//frames to flicker for disguised Objects
 };
 
 

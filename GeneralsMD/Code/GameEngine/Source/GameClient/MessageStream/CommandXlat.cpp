@@ -3950,7 +3950,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 														|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT);
 				if (isPoint && controllable)
 				{
-					UnsignedInt pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
+					UnsignedInt pickType = 0xffffffff; //getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
 					Drawable *draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
 																													TheInGameUI->isInForceAttackMode(),
 																													(PickType) pickType);
@@ -3960,6 +3960,24 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (!obj || (obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE)))
 					{
 						draw = NULL;
+					}
+
+					// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
+					if(obj &&
+					  ( obj->isKindOf(KINDOF_MINE) || 
+						obj->isKindOf(KINDOF_SHRUBBERY) ||
+						( obj->isDisguised() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
+					)
+					{
+						pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
+						draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
+																													TheInGameUI->isInForceAttackMode(),
+																													(PickType) pickType);
+						obj = draw ? draw->getObject() : NULL;
+						if (!obj || (obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE)))
+						{
+							draw = NULL;
+						}
 					}
 
 					if (TheInGameUI->isInForceAttackMode()) {
@@ -4030,7 +4048,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 													|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT);
 			if (isPoint && controllable)
 			{
-				UnsignedInt pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
+				UnsignedInt pickType = 0xffffffff; //getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
 				Drawable *draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
 																												TheInGameUI->isInForceAttackMode(),
 																												(PickType) pickType);
@@ -4040,6 +4058,24 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				if (!obj || (obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE)))
 				{
 					draw = NULL;
+				}
+
+				// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
+				if(obj &&
+				   ( obj->isKindOf(KINDOF_MINE) || 
+				     obj->isKindOf(KINDOF_SHRUBBERY) ||
+				     ( obj->isDisguised() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
+				  )
+				{
+					pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
+					draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
+																												TheInGameUI->isInForceAttackMode(),
+																												(PickType) pickType);
+					obj = draw ? draw->getObject() : NULL;
+					if (!obj || (obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE)))
+					{
+						draw = NULL;
+					}
 				}
 
 				if (TheInGameUI->isInForceAttackMode()) {

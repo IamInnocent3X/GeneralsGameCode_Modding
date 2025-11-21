@@ -349,12 +349,21 @@ Bool addDrawableToList( Drawable *draw, void *userData )
 	if (!pds->drawableListToFill)
 		return FALSE;
 
-	if (!draw->getTemplate()->isAnyKindOf(pds->kindofsToMatch))
+	const Object *obj = draw->getObject();
+	Bool checkDisguised = FALSE;
+
+	// IamInnocent - Allows you to select Objects disguised as Mines or Shrubberies
+	if (obj &&
+		((obj->isDisguised() && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) == ALLIES) || obj->hasDetectedDisguise()) &&
+		(draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)))
+		checkDisguised = TRUE;
+
+	if (!draw->getTemplate()->isAnyKindOf(pds->kindofsToMatch) && !checkDisguised)
 		return FALSE;
 
 	if (!draw->isSelectable())
   {
-    const Object *obj = draw->getObject();
+    //const Object *obj = draw->getObject();
     if ( obj && obj->getContainedBy() )//hmm, interesting... he is not selectable but he is contained
     {// What we are after here is to propagate the selection the selection ti the container
       // if the cobtainer is non-enclosing... see also selectionxlat, in the left_click case
@@ -371,7 +380,7 @@ Bool addDrawableToList( Drawable *draw, void *userData )
 	//Kris: Aug 9, 2003!!! Wow, this bug has been around a LONG time!!
 	//Basically, it was possible to drag select a single enemy/neutral unit even if you couldn't see it
 	//including stealthed units.
-	const Object *obj = draw->getObject();
+	//const Object *obj = draw->getObject();
 	if( obj )
 	{
 		const Player *player = ThePlayerList->getLocalPlayer();

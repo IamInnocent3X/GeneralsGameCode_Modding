@@ -447,12 +447,13 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				//      when we're not in force attackable mode!
 				UnsignedInt pickType = getPickTypesForContext( true /*TheInGameUI->isInForceAttackMode()*/ );
 
-				// IamInnocent - Inefficient hackky way to select Objects disguised as trees
+				// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
 				Drawable *underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType)0xffffffff );
 				Object *objUnderCursor = underCursor ? underCursor->getObject() : NULL;
 				if(objUnderCursor &&
-				   ThePlayerList->getLocalPlayer()->getRelationship(objUnderCursor->getTeam()) != ALLIES &&
-				   (objUnderCursor->isKindOf(KINDOF_MINE) || objUnderCursor->isKindOf(KINDOF_SHRUBBERY))
+				   ( objUnderCursor->isKindOf(KINDOF_MINE) || 
+				     objUnderCursor->isKindOf(KINDOF_SHRUBBERY) ||
+				     ( objUnderCursor->isDisguised() && (underCursor->getTemplate()->isKindOf(KINDOF_MINE) || underCursor->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(objUnderCursor->getTeam()) != ALLIES ) )
 				  )
 				{
 					underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType) pickType );
@@ -584,7 +585,11 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 					}
 				}
 
-				if( !ignoreCommand && (!draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) || ThePlayerList->getLocalPlayer()->getRelationship(draw->getObject()->getTeam()) == ALLIES || (command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET )) ) )
+				if( !ignoreCommand &&
+					(!draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) ||
+					 (draw->getObject()->isDisguised() && ThePlayerList->getLocalPlayer()->getRelationship(draw->getObject()->getTeam()) == ALLIES) ||
+					 (command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET )) )
+				  )
 				{
 					if( CanSelectDrawable( draw, FALSE ) )
 					{

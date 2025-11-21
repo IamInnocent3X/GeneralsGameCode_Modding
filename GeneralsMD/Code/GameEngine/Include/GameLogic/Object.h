@@ -823,6 +823,7 @@ public:
 	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
 
 	Bool isDisguised() const;
+	Bool hasDetectedDisguise() const;
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;

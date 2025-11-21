@@ -2144,7 +2144,18 @@ Int W3DView::iterateDrawablesInRegion( IRegion2D *screenRegion,
 	if (regionIsPoint)
 	{
 		// Allow all drawables to be picked.
-		onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) getPickTypesForContext(TheInGameUI->isInForceAttackMode()));
+		//onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) getPickTypesForContext(TheInGameUI->isInForceAttackMode()));
+		// IamInnocent - Hack to select Objects disguised as non-selectable drawables (trees, etc. )
+		onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) 0xffffffff);
+		Object *drawableObj = onlyDrawableToTest ? onlyDrawableToTest->getObject() : NULL;
+		if(drawableObj &&
+			( drawableObj->isKindOf(KINDOF_MINE) ||
+			  drawableObj->isKindOf(KINDOF_SHRUBBERY) ||
+			  ( drawableObj->isDisguised() && (onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_MINE) || onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(drawableObj->getTeam()) != ALLIES ) )
+		  )
+		{
+			onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) getPickTypesForContext(TheInGameUI->isInForceAttackMode()));
+		}
 		if (onlyDrawableToTest == NULL) {
 			return 0;
 		}

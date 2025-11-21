@@ -3738,7 +3738,7 @@ void W3DModelDraw::reactToTransformChange( const Matrix3D* oldMtx,
 		Object *obj = getDrawable()->getObject();
 		const Coord3D* pos = getDrawable()->getPosition();
 
-		if ( m_fullyObscuredByShroud || obj->testStatus( OBJECT_STATUS_STEALTHED ) == TRUE )
+		if ( m_fullyObscuredByShroud || (obj && obj->testStatus( OBJECT_STATUS_STEALTHED ) == TRUE) )
 		{
 				m_trackRenderObject->addCapEdgeToTrack(pos->x, pos->y);
 		}
