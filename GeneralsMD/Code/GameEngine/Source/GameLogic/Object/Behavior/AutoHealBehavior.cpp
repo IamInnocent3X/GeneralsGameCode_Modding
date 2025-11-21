@@ -34,6 +34,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/INI.h"
 #include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "Common/Xfer.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/Anim2D.h"
@@ -262,7 +263,16 @@ UpdateSleepTime AutoHealBehavior::update( void )
 					{
 						pulseHealObject( obj );
 
-						if( d->m_singleBurst && TheGameLogic->getDrawIconUI() )
+						// IamInnocent - Added disguise check to not show healing icon when disguised as Unselectable Objects (trees, etc. )
+						Bool isDisguised = FALSE;
+						if(obj->isDisguised() &&
+							ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES &&
+							obj->getDrawable() &&
+							(obj->getDrawable()->getTemplate()->isKindOf(KINDOF_MINE) || obj->getDrawable()->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
+						  )
+							isDisguised = TRUE;
+						
+						if( d->m_singleBurst && TheGameLogic->getDrawIconUI() && !isDisguised )
 						{
 							if( TheAnim2DCollection && TheGlobalData->m_getHealedAnimationName.isEmpty() == FALSE )
 							{
@@ -305,7 +315,15 @@ void AutoHealBehavior::pulseHealObject( Object *obj )
 		obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite, data->m_clearsParasiteKeys );
 
 
-	if( data->m_unitHealPulseParticleSystemTmpl )
+	Bool isDisguised = FALSE;
+	if(obj && obj->isDisguised() &&
+		ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES &&
+		obj->getDrawable() &&
+		(obj->getDrawable()->getTemplate()->isKindOf(KINDOF_MINE) || obj->getDrawable()->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
+	  )
+		isDisguised = TRUE;
+	
+	if( data->m_unitHealPulseParticleSystemTmpl && !isDisguised )
 	{
 		ParticleSystem *system = TheParticleSystemManager->createParticleSystem( data->m_unitHealPulseParticleSystemTmpl );
 		if( system )

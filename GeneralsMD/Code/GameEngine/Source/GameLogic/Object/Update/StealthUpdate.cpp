@@ -769,6 +769,8 @@ UpdateSleepTime StealthUpdate::update( void )
 	const StealthUpdateModuleData *data = getStealthUpdateModuleData();
 	Drawable* draw = self->getDrawable();
 
+	Bool isDetected = self->getStatusBits().test( OBJECT_STATUS_DETECTED ) || m_detectionExpiresFrame > now;
+
 	if( draw )
 	{
 		//Are we disguise transitioning (either gaining or losing disguise look?)
@@ -873,12 +875,6 @@ UpdateSleepTime StealthUpdate::update( void )
 		}
 	}
 
-	if(isDisguised() && data->m_disguiseFriendlyFlickerDelay && now > m_flickerFrame)
-	{
-		m_flickerFrame = now + data->m_disguiseFriendlyFlickerDelay;
-		changeVisualDisguiseFlicker(m_flicked);
-	}
-
 	if( allowedToStealth( stealthOwner ) )
 	{
 		// If I can stealth, don't attempt to Stealth until the timer is zero.
@@ -896,8 +892,14 @@ UpdateSleepTime StealthUpdate::update( void )
 			TheAudio->addAudioEvent( &soundEvent );
 		}
 
+		if(isDisguised() && data->m_disguiseFriendlyFlickerDelay && now > m_flickerFrame && !isDetected)
+		{
+			m_flickerFrame = now + data->m_disguiseFriendlyFlickerDelay;
+			changeVisualDisguiseFlicker(m_flicked);
+		}
+
 		// IamInnocent - New feature, enable disguised objects to switch back to their disguise after stealth delay
-		if(data->m_autoDisguiseWhenAvailable)
+		if(data->m_autoDisguiseWhenAvailable && !isDetected )
 		{
 			if(data->m_disguiseRetainAfterDetected && isDisguised() && !self->testStatus( OBJECT_STATUS_DISGUISED ))
 			{
@@ -928,7 +930,6 @@ UpdateSleepTime StealthUpdate::update( void )
 		if( isDisguised() )
 		{
 			disguiseAsObject( NULL );
-			//changeVisualDisguise();
 		}
 
 		self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
@@ -968,19 +969,6 @@ UpdateSleepTime StealthUpdate::update( void )
 				AudioEventRTS soundEvent = *self->getTemplate()->getSoundStealthOn();
 				soundEvent.setObjectID(self->getID());
 				TheAudio->addAudioEvent( &soundEvent );
-
-				// IamInnocent - New feature, enable disguised objects to switch back to their disguise after stealth delay
-				if(data->m_autoDisguiseWhenAvailable)
-				{
-					if(data->m_disguiseRetainAfterDetected && isDisguised() && !self->testStatus( OBJECT_STATUS_DISGUISED ))
-					{
-						self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DISGUISED ) );
-					}
-					else if(canDisguise() && !isDisguised() && m_lastDisguiseAsTemplate)
-					{
-						disguiseAsObject( NULL, TRUE );
-					}
-				}
 			}
 		}
 

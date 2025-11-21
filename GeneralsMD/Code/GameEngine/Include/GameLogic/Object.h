@@ -824,6 +824,7 @@ public:
 
 	Bool isDisguised() const;
 	Bool hasDetectedDisguise() const;
+	Bool hasDisguiseAndIsNotDetected() const;
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;

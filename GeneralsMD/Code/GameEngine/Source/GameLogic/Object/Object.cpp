@@ -8816,6 +8816,12 @@ Bool Object::hasDetectedDisguise() const
 	return getStealth() && !testStatus( OBJECT_STATUS_DISGUISED ) && getStealth()->hasLastDisguiseTemplate();
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool Object::hasDisguiseAndIsNotDetected() const
+{
+	return getStealth() && testStatus( OBJECT_STATUS_DISGUISED ) && getStealth()->hasLastDisguiseTemplate();
+}
+
 //=============================================================================
 //== Custom Cursor List
 //=============================================================================

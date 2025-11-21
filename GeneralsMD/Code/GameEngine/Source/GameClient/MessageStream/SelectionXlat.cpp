@@ -453,7 +453,7 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				if(objUnderCursor &&
 				   ( objUnderCursor->isKindOf(KINDOF_MINE) || 
 				     objUnderCursor->isKindOf(KINDOF_SHRUBBERY) ||
-				     ( objUnderCursor->isDisguised() && (underCursor->getTemplate()->isKindOf(KINDOF_MINE) || underCursor->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(objUnderCursor->getTeam()) != ALLIES ) )
+				     ( objUnderCursor->hasDisguiseAndIsNotDetected() && (underCursor->getTemplate()->isKindOf(KINDOF_MINE) || underCursor->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(objUnderCursor->getTeam()) != ALLIES ) )
 				  )
 				{
 					underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType) pickType );
@@ -588,6 +588,7 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				if( !ignoreCommand &&
 					(!draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) ||
 					 (draw->getObject()->isDisguised() && ThePlayerList->getLocalPlayer()->getRelationship(draw->getObject()->getTeam()) == ALLIES) ||
+					 (draw->getObject()->hasDetectedDisguise()) ||
 					 (command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET )) )
 				  )
 				{

@@ -2151,7 +2151,7 @@ Int W3DView::iterateDrawablesInRegion( IRegion2D *screenRegion,
 		if(drawableObj &&
 			( drawableObj->isKindOf(KINDOF_MINE) ||
 			  drawableObj->isKindOf(KINDOF_SHRUBBERY) ||
-			  ( drawableObj->isDisguised() && (onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_MINE) || onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(drawableObj->getTeam()) != ALLIES ) )
+			  ( drawableObj->hasDisguiseAndIsNotDetected() && (onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_MINE) || onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(drawableObj->getTeam()) != ALLIES ) )
 		  )
 		{
 			onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) getPickTypesForContext(TheInGameUI->isInForceAttackMode()));

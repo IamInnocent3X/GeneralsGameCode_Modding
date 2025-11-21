@@ -3966,7 +3966,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if(obj &&
 					  ( obj->isKindOf(KINDOF_MINE) || 
 						obj->isKindOf(KINDOF_SHRUBBERY) ||
-						( obj->isDisguised() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
+						( obj->hasDisguiseAndIsNotDetected() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
 					)
 					{
 						pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
@@ -4064,7 +4064,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				if(obj &&
 				   ( obj->isKindOf(KINDOF_MINE) || 
 				     obj->isKindOf(KINDOF_SHRUBBERY) ||
-				     ( obj->isDisguised() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
+				     ( obj->hasDisguiseAndIsNotDetected() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
 				  )
 				{
 					pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
