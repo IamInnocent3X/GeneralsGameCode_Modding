@@ -3963,7 +3963,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					}
 
 					// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
-					if(obj &&
+					if(obj && draw &&
 					  ( obj->isKindOf(KINDOF_MINE) || 
 						obj->isKindOf(KINDOF_SHRUBBERY) ||
 						( obj->hasDisguiseAndIsNotDetected() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
@@ -4061,7 +4061,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				}
 
 				// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
-				if(obj &&
+				if(obj && draw &&
 				   ( obj->isKindOf(KINDOF_MINE) || 
 				     obj->isKindOf(KINDOF_SHRUBBERY) ||
 				     ( obj->hasDisguiseAndIsNotDetected() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )

@@ -115,6 +115,7 @@ public:
 	Bool					m_autoDisguiseWhenAvailable;
 	Bool					m_canStealthWhileDisguised;
 	Bool					m_disguiseRetainAfterDetected;
+	Bool					m_preservePendingCommandWhenDetected;
   std::vector<AsciiString> m_requiredCustomStatus;
   std::vector<AsciiString> m_forbiddenCustomStatus;
 
@@ -166,6 +167,8 @@ public:
 
 	inline void setStealthLevelOverride(UnsignedInt stealthLevel) { m_stealthLevelOverride = stealthLevel; }
 
+	void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
 protected:
 
 	StealthLookType calcStealthedStatusForPlayer(const Object* obj, const Player* player);
@@ -177,6 +180,8 @@ protected:
 	void changeVisualDisguiseFlicker(Bool doFlick);
 
 	UpdateSleepTime calcSleepTime() const;
+
+	//const Object* calcStealthOwnerConst() const; //Is it me that can stealth or is it my rider?
 
 private:
 	UnsignedInt						m_stealthAllowedFrame;
@@ -208,6 +213,10 @@ private:
 	Bool							m_flicked;							//Have I been flicked?
 	Bool							m_flicking;							//I am flicking, don't remove my statuses
 	UnsignedInt						m_flickerFrame;						//frames to flicker for disguised Objects
+
+	mutable UnsignedInt				m_nextWakeUpFrame;					//Next Wake Up Frame, only use for calcSleepTime, dont xfer
+
+	Bool							m_preserveLastGUI;					//Select objects silently to not overwrite the Control Bar and GUI Commands
 };
 
 

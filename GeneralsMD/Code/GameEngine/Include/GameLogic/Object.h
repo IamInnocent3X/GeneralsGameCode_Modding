@@ -822,6 +822,8 @@ public:
 	inline void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
 	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
 
+	void doStealthUpdate() { if(getStealth()) getStealth()->refreshUpdate(); }
+
 	Bool isDisguised() const;
 	Bool hasDetectedDisguise() const;
 	Bool hasDisguiseAndIsNotDetected() const;

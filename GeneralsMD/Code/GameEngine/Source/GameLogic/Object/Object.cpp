@@ -5752,6 +5752,12 @@ void Object::doObjectUpgradeChecks()
 	{
 		getAIUpdateInterface()->doUpgradeUpdate();
 	}
+
+	// refresh stealth to indicate whether they are allowed to stealth
+	if( getStealth() )
+	{
+		getStealth()->refreshUpdate();
+	}
 }
 
 void Object::doObjectStatusChecks()
@@ -5774,6 +5780,12 @@ void Object::doObjectStatusChecks()
 	if( getAIUpdateInterface() )
 	{
 		getAIUpdateInterface()->doStatusUpdate();
+	}
+
+	// refresh stealth to indicate whether they are allowed to stealth
+	if( getStealth() )
+	{
+		getStealth()->refreshUpdate();
 	}
 	
 }
@@ -5814,6 +5826,12 @@ void Object::onCapture( Player *oldOwner, Player *newOwner )
 		if (isFactionStructure()) {
 			TheBuildAssistant->sellObject( this );
 		}
+	}
+
+	// refresh stealth to indicate whether they are allowed to stealth
+	if( getStealth() )
+	{
+		getStealth()->refreshUpdate();
 	}
 
 }  // end onCapture

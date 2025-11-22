@@ -1091,6 +1091,10 @@ void AIUpdateInterface::friend_notifyStateMachineChanged()
 {
 	doStateChange();
 	wakeUpNow();
+
+	// Refresh Stealth Update
+	if ( getObject() )
+		getObject()->doStealthUpdate();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3212,6 +3216,7 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 	if(parms->m_cmdSource != CMD_FROM_AI)
 	{
 		getObject()->removeMeFromAssaultTransport();
+		getObject()->doStealthUpdate();
 	}
 }
 

@@ -902,6 +902,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			obj->doSlavedUpdate(TRUE);
 		}
 		obj->doHijackerUpdate(FALSE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
+		obj->doStealthUpdate();
 	}
 
 	doDamageFX(damageInfo);

@@ -24,6 +24,7 @@
 
 // FILE: StealthUpdate.cpp ////////////////////////////////////////////////////////////////////////
 // Author: Kris Morness, May 2002
+// Modified by: IamInnocent, November 2025
 // Desc:	 An update that checks for a status bit to stealth the owning object
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,6 +92,7 @@ StealthUpdateModuleData::StealthUpdateModuleData()
 	m_autoDisguiseWhenAvailable = false;
 	m_canStealthWhileDisguised = false;
 	m_disguiseRetainAfterDetected = false;
+	m_preservePendingCommandWhenDetected = false;
 }
 
 
@@ -124,6 +126,7 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "AutoDisguiseWhenAvailable",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_autoDisguiseWhenAvailable ) },
 		{ "CanStealthWhileDisguised",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_canStealthWhileDisguised ) },
 		{ "DisguiseRetainAfterDetected",				INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_disguiseRetainAfterDetected ) },
+		{ "PreservePendingCommandWhenDetected",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_preservePendingCommandWhenDetected ) },
     { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
     { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
 		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
@@ -171,12 +174,17 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 	m_flicking = false;
 	m_flickerFrame = 0;
 
+	m_preserveLastGUI = false;
+
+	m_nextWakeUpFrame = 1;
+
 	if( data->m_innateStealth )
 	{
 		//Giving innate stealth units this status bit allows other code to easily check the status bit.
 		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_STEALTH ) );
 	}
 
+	Bool foundDisguise = FALSE;
 	if( data->m_innateDisguise && canDisguise() )
 	{
 		// Added disguise to be able to use as innate
@@ -194,16 +202,15 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 				forbiddenMask.set( KINDOF_CLIFF_JUMPER );
 			}
 
-			Bool found = FALSE;
 			for(Object *disguiseObj = TheGameLogic->getFirstObject(); disguiseObj; disguiseObj = disguiseObj->getNextObject() )
 			{
 				if( disguiseObj->isAnyKindOf(forbiddenMask) )
 					continue;
 				
 				if( disguiseObj->isAnyKindOf(disguiseMask) )
-					found = TRUE;
+					foundDisguise = TRUE;
 
-				if(found)
+				if(foundDisguise)
 				{
 					//Don't allow it to disguise as another bomb truck -- that's just plain dumb.
 					//if( disguiseObj->getTemplate() != obj->getTemplate() )
@@ -232,7 +239,7 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	// we do not need to restore a disguise
 	// we do need to set disguise first if innate
-	m_xferRestoreDisguise = data->m_innateDisguise && canDisguise(); //FALSE;
+	m_xferRestoreDisguise = foundDisguise; //FALSE;
 
 }
 
@@ -288,7 +295,8 @@ void StealthUpdate::receiveGrant( Bool active, UnsignedInt frames )
 		obj->setStatus( MAKE_OBJECT_STATUS_MASK2( OBJECT_STATUS_CAN_STEALTH, OBJECT_STATUS_STEALTHED ) );
 		m_stealthAllowedFrame = TheGameLogic->getFrame();
 	  setWakeFrame( obj, UPDATE_SLEEP_NONE );
-		m_framesGranted = frames;
+		//m_framesGranted = frames;
+		m_framesGranted = frames + m_stealthAllowedFrame;
 	}
 	else
 	{
@@ -706,7 +714,76 @@ Object* StealthUpdate::calcStealthOwner()
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime StealthUpdate::calcSleepTime() const
 {
-	return m_enabled ? UPDATE_SLEEP_NONE : UPDATE_SLEEP_FOREVER;
+	if(!m_enabled)
+	{
+		m_nextWakeUpFrame = 0;
+		return UPDATE_SLEEP_FOREVER;
+	}
+
+	// Update for one instance
+	if(m_nextWakeUpFrame == 1)
+	{
+		//DEBUG_LOG(("ObjectName: %s. ID: %d. nextWakeUpFrame 1, cleared to 0. Frame: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID(), TheGameLogic->getFrame()));
+		m_nextWakeUpFrame = 0;
+		return UPDATE_SLEEP_NONE;
+	}
+
+	// Disguise transitioning, we need to update every frame
+	if(m_disguiseTransitionFrames || !m_transitioningToDisguise)
+		return UPDATE_SLEEP_NONE;
+
+	UnsignedInt now = TheGameLogic->getFrame();
+
+	// Checking if there are any input commands for player from receiving Grant
+	// Added a check to AIUpdateInterface::aiDoCommand()
+	//if(m_framesGranted >= now)
+	//	return UPDATE_SLEEP_NONE;
+
+	if(now >= m_nextWakeUpFrame || m_nextWakeUpFrame > m_framesGranted)
+	{
+		if(m_framesGranted && m_framesGranted > now)
+			m_nextWakeUpFrame = m_framesGranted;
+	}
+
+	if(now >= m_nextWakeUpFrame || m_nextWakeUpFrame > m_stealthAllowedFrame)
+	{
+		if(m_stealthAllowedFrame && m_stealthAllowedFrame > now)
+			m_nextWakeUpFrame = m_stealthAllowedFrame;
+	}
+
+	if(now >= m_nextWakeUpFrame || m_nextWakeUpFrame > m_detectionExpiresFrame)
+	{
+		if(m_detectionExpiresFrame && m_detectionExpiresFrame > now)
+			m_nextWakeUpFrame = m_detectionExpiresFrame;
+	}
+
+	if(now >= m_nextWakeUpFrame || m_nextWakeUpFrame > m_flickerFrame + 1)
+	{
+		if(m_flickerFrame && m_flickerFrame  + 1 > now)
+			m_nextWakeUpFrame = m_flickerFrame + 1;
+	}
+
+	if(now >= m_nextWakeUpFrame || m_nextWakeUpFrame > m_nextBlackMarketCheckFrame + 1)
+	{
+		if(m_nextBlackMarketCheckFrame && m_nextBlackMarketCheckFrame  + 1 > now)
+			m_nextWakeUpFrame = m_nextBlackMarketCheckFrame + 1;
+	}
+
+	UnsignedInt UpdateTime = m_nextWakeUpFrame > now ? m_nextWakeUpFrame - now : UPDATE_SLEEP_FOREVER;
+
+	// If we are detected, but it has passed our detection duration, we need to update next frame and remove it.
+	if(getObject()->getStatusBits().test( OBJECT_STATUS_DETECTED ) && now >= m_detectionExpiresFrame && UpdateTime == UPDATE_SLEEP_FOREVER)
+		return UPDATE_SLEEP_NONE;
+
+	// Need to update it for an extra frame after the supposed Update Time for StealthUpdate to work properly for sleepy updates
+	// The wake up frame is set to 1 for the next update after this one.
+	if(m_nextWakeUpFrame > 1)
+	{
+		//DEBUG_LOG(("ObjectName: %s. ID: %d. Set nextWakeUpFrame to 1. Frame: %d. NextWakeUpFrame: %d", getObject()->getTemplate()->getName().str(), getObject()->getID(), now, m_nextWakeUpFrame));
+		m_nextWakeUpFrame = 1;
+	}
+
+	return UPDATE_SLEEP( UpdateTime ); //UPDATE_SLEEP_NONE : UPDATE_SLEEP_FOREVER;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -760,6 +837,7 @@ UpdateSleepTime StealthUpdate::update( void )
 
 /// @todo srj -- improve sleeping behavior. we currently just sleep when not enabled,
 // and demand every-frame attention when enabled. this could probably be smartened.
+// IamInnocent - Done. Made Sleepy.
 
 	if( !m_enabled )
 	{
@@ -854,9 +932,10 @@ UpdateSleepTime StealthUpdate::update( void )
 	}
 
 	//Deal with temporary stealth.
-	if( m_framesGranted > 0 )
+	//if( m_framesGranted > 0 )
+	if( m_framesGranted >= now )
 	{
-		m_framesGranted--;
+		//m_framesGranted--;
 
 		//If the last AI command given was by the player... then LOSE the stealth now!
 		AIUpdateInterface *ai = self->getAI();
@@ -868,7 +947,7 @@ UpdateSleepTime StealthUpdate::update( void )
 				receiveGrant( FALSE );
 			}
 		}
-		if( m_framesGranted == 0 )
+		if( m_framesGranted == 0 || m_framesGranted == now)
 		{
 			//Disable it now that it has officially expired.
 			receiveGrant( FALSE );
@@ -918,6 +997,9 @@ UpdateSleepTime StealthUpdate::update( void )
 	{
 		m_stealthAllowedFrame = now + stealthDelay;
 
+		// Add flicker frame so that it doesnt flicker instantly
+		m_flickerFrame = m_stealthAllowedFrame + data->m_disguiseFriendlyFlickerDelay;
+
 		// if you are destealthing on your own free will, play sound for all to hear
 		if( self->getStatusBits().test( OBJECT_STATUS_STEALTHED ) )
 		{
@@ -930,6 +1012,9 @@ UpdateSleepTime StealthUpdate::update( void )
 		if( isDisguised() )
 		{
 			disguiseAsObject( NULL );
+
+			// Also the last GUI to be preserved because selection overrides the current GUI
+			m_preserveLastGUI = true;
 		}
 
 		self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
@@ -950,6 +1035,27 @@ UpdateSleepTime StealthUpdate::update( void )
 		}
 
 		self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
+
+		//If we are disguised, remove the disguise permanently!
+		if( isDisguised() && data->m_autoDisguiseWhenAvailable )
+		{
+			// Retain the model even after deteccted
+			if(data->m_disguiseRetainAfterDetected )
+			{
+				self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DISGUISED ) );
+			}
+			else
+			{
+				disguiseAsObject( NULL );
+
+				// Also the last GUI to be preserved because selection overrides the current GUI
+				// IamInnocent - This is a switch up improvisation, because when Bomb Truck is exposed,
+				//				 The systems exposes the Bomb Truck and 'Selects' it, interrupting ANY Recent Pending Commands.
+				//				 I set this as an adjustable feature because Mirage Tank does not have any interruptable GUI when exposed.
+				if(data->m_preservePendingCommandWhenDetected)
+					m_preserveLastGUI = true;
+			}
+		}
 
 		if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
 		{
@@ -1075,6 +1181,13 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 		else
 		{
 			disguiseAsObject( NULL );
+
+			// Also the last GUI to be preserved because selection overrides the current GUI
+			// IamInnocent - This is a switch up improvisation, because when Bomb Truck is exposed,
+			//				 The systems exposes the Bomb Truck and 'Selects' it, interrupting ANY Recent Pending Commands.
+			//				 I set this as an adjustable feature because Mirage Tank does not have any interruptable GUI when exposed.
+			if(data->m_preservePendingCommandWhenDetected)
+				m_preserveLastGUI = true;
 		}
 	}
 
@@ -1089,6 +1202,9 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 	{
 		m_detectionExpiresFrame = now + numFrames;
 	}
+
+	// Add flicker frame so that it doesnt flicker instantly
+	m_flickerFrame = m_detectionExpiresFrame + data->m_disguiseFriendlyFlickerDelay;
 
 	if( orderIdlesToAttack )
 	{
@@ -1110,6 +1226,8 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 			player->iterateObjects(setWakeupIfInRange, self);
 		}
 	}
+
+	setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1153,6 +1271,8 @@ void StealthUpdate::disguiseAsObject( const Object *target, Bool doLast )
 		m_disguiseTransitionFrames	= data->m_disguiseTransitionFrames;
 		m_disguiseHalfpointReached  = false;
 
+		m_preserveLastGUI = true;
+
 		//Wake up so I can process!
 		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 	}
@@ -1185,6 +1305,7 @@ void StealthUpdate::changeVisualDisguise()
 	Drawable *draw = self->getDrawable();
 	// We need to maintain our selection across the un/disguise, so pull selected out here.
 	Bool selected = draw->isSelected();
+	const CommandButton *lastGUICommand = TheInGameUI->getGUICommand();
 
 	if( m_disguiseAsTemplate )
 	{
@@ -1277,6 +1398,13 @@ void StealthUpdate::changeVisualDisguise()
 			//stored in W3DDrawModule. When we revert back to the original bomb truck, we call this function to
 			//recalculate those upgraded subobjects.
 			self->forceRefreshSubObjectUpgradeStatus();
+
+			// Also refresh the Efficient Drawable List
+			if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
+			{
+				// Redraw everything as Stealth Detection bugs out how existing Drawables work
+				TheGameClient->clearEfficientDrawablesList();
+			}
 		}
 
 		Bool successfulReveal = false;
@@ -1309,12 +1437,20 @@ void StealthUpdate::changeVisualDisguise()
 		self->clearModelConditionState( MODELCONDITION_DISGUISED );
 	}
 
+	if( selected && m_preserveLastGUI && lastGUICommand )
+	{
+		TheInGameUI->setGUICommand(lastGUICommand);
+	}
+
 	//Reset the radar (determines color on add)
 	TheRadar->removeObject( self );
 	TheRadar->addObject( self );
 
 	// Remove flicking status to change drawable
 	m_flicking = false;
+
+	// Finished with current pending GUI Command
+	m_preserveLastGUI = false;
 
 	// couldn't possibly need to restore a disguise now :)
 	m_xferRestoreDisguise = FALSE;
@@ -1329,6 +1465,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 	Drawable *draw = self->getDrawable();
 	// We need to maintain our selection across the un/disguise, so pull selected out here.
 	Bool selected = draw->isSelected();
+	Bool refresh = FALSE;
 	const CommandButton *lastGUICommand = TheInGameUI->getGUICommand();
 
 	if( m_disguiseAsTemplate )
@@ -1343,7 +1480,6 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 		draw = TheThingFactory->newDrawable( m_disguiseAsTemplate );
 		Player *clientPlayer = ThePlayerList->getLocalPlayer();
 
-		Bool refresh = FALSE;
 		if( doFlick && self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) == ALLIES && clientPlayer->isPlayerActive() )
 		{
 			draw = TheThingFactory->newDrawable( self->getTemplate() );
@@ -1387,13 +1523,20 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 			//stored in W3DDrawModule. When we revert back to the original bomb truck, we call this function to
 			//recalculate those upgraded subobjects.
 			self->forceRefreshSubObjectUpgradeStatus();
+
+			// Also refresh the Efficient Drawable List
+			if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
+			{
+				// Redraw everything as Stealth Detection bugs out how existing Drawables work
+				TheGameClient->clearEfficientDrawablesList();
+			}
 		}
 
 		//Reset the radar (determines color on add)
 		TheRadar->removeObject( self );
 		TheRadar->addObject( self );
 
-		if( selected && lastGUICommand)
+		if( selected && lastGUICommand )
 		{
 			TheInGameUI->setGUICommand(lastGUICommand);
 		}
@@ -1519,6 +1662,8 @@ void StealthUpdate::xfer( Xfer *xfer )
 	xfer->xferBool( &m_flicking );
 
 	xfer->xferUnsignedInt( &m_flickerFrame );
+
+	xfer->xferBool( &m_preserveLastGUI );
 
 }  // end xfer
 

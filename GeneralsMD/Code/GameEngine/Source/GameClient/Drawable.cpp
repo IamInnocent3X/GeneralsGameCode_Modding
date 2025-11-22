@@ -5190,7 +5190,8 @@ void Drawable::updateHiddenStatus()
 	if( hidden )
 		TheInGameUI->deselectDrawable( this );
 
-	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	// IamInnocent - dm is able to give nullptr if there is auto disguise involved
+	for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
 		if (di)
