@@ -1305,7 +1305,6 @@ void StealthUpdate::changeVisualDisguise()
 	Drawable *draw = self->getDrawable();
 	// We need to maintain our selection across the un/disguise, so pull selected out here.
 	Bool selected = draw->isSelected();
-	const CommandButton *lastGUICommand = TheInGameUI->getGUICommand();
 
 	if( m_disguiseAsTemplate )
 	{
@@ -1314,7 +1313,10 @@ void StealthUpdate::changeVisualDisguise()
 		ModelConditionFlags flags = draw->getModelConditionFlags();
 
 		//Get rid of the old instance!
-		TheGameClient->destroyDrawable( draw );
+		if(m_preserveLastGUI)
+			TheGameClient->destroyDrawablePreserveGUI( draw );
+		else
+			TheGameClient->destroyDrawable( draw );
 
 		draw = TheThingFactory->newDrawable( m_disguiseAsTemplate );
 		if( draw )
@@ -1327,7 +1329,10 @@ void StealthUpdate::changeVisualDisguise()
 			self->getPhysics()->resetDynamicPhysics();
 			if( selected )
 			{
-				TheInGameUI->selectDrawable( draw );
+				if(m_preserveLastGUI)
+					TheInGameUI->selectDrawablePreserveGUI( draw );
+				else
+					TheInGameUI->selectDrawable( draw );
 			}
 			Player *clientPlayer = ThePlayerList->getLocalPlayer();
 			if( self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) != ALLIES && clientPlayer->isPlayerActive() )
@@ -1368,7 +1373,10 @@ void StealthUpdate::changeVisualDisguise()
 		ModelConditionFlags flags = draw->getModelConditionFlags();
 
 		//Get rid of the old instance!
-		TheGameClient->destroyDrawable( draw );
+		if(m_preserveLastGUI)
+			TheGameClient->destroyDrawablePreserveGUI( draw );
+		else
+			TheGameClient->destroyDrawable( draw );
 
 		const ThingTemplate *tTemplate = self->getTemplate();
 
@@ -1389,7 +1397,10 @@ void StealthUpdate::changeVisualDisguise()
 				draw->setIndicatorColor( self->getIndicatorColor() );
 			if( selected )
 			{
-				TheInGameUI->selectDrawable( draw );
+				if(m_preserveLastGUI)
+					TheInGameUI->selectDrawablePreserveGUI( draw );
+				else
+					TheInGameUI->selectDrawable( draw );
 			}
 
 			//UGH!
@@ -1437,11 +1448,6 @@ void StealthUpdate::changeVisualDisguise()
 		self->clearModelConditionState( MODELCONDITION_DISGUISED );
 	}
 
-	if( selected && m_preserveLastGUI && lastGUICommand )
-	{
-		TheInGameUI->setGUICommand(lastGUICommand);
-	}
-
 	//Reset the radar (determines color on add)
 	TheRadar->removeObject( self );
 	TheRadar->addObject( self );
@@ -1466,7 +1472,6 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 	// We need to maintain our selection across the un/disguise, so pull selected out here.
 	Bool selected = draw->isSelected();
 	Bool refresh = FALSE;
-	const CommandButton *lastGUICommand = TheInGameUI->getGUICommand();
 
 	if( m_disguiseAsTemplate )
 	{
@@ -1475,16 +1480,24 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 		ModelConditionFlags flags = draw->getModelConditionFlags();
 
 		//Get rid of the old instance!
-		TheGameClient->destroyDrawable( draw );
+		TheGameClient->destroyDrawablePreserveGUI( draw );
 
-		draw = TheThingFactory->newDrawable( m_disguiseAsTemplate );
 		Player *clientPlayer = ThePlayerList->getLocalPlayer();
 
+		//Get the drawable to show
+		const ThingTemplate  *drawTempl = NULL;
 		if( doFlick && self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) == ALLIES && clientPlayer->isPlayerActive() )
 		{
-			draw = TheThingFactory->newDrawable( self->getTemplate() );
+			drawTempl = self->getTemplate();
 			refresh = TRUE;
 		}
+		else
+		{
+			drawTempl = m_disguiseAsTemplate;
+		}
+
+		// Create the drawable and bind it to the Object
+		draw = TheThingFactory->newDrawable( drawTempl );
 		if( draw )
 		{
 			TheGameLogic->bindObjectAndDrawable(self, draw);
@@ -1495,7 +1508,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 			self->getPhysics()->resetDynamicPhysics();
 			if( selected )
 			{
-				TheInGameUI->selectDrawable( draw );
+				TheInGameUI->selectDrawablePreserveGUI( draw );
 			}
 		}
 		if( self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) != ALLIES && clientPlayer->isPlayerActive() )
@@ -1535,11 +1548,6 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 		//Reset the radar (determines color on add)
 		TheRadar->removeObject( self );
 		TheRadar->addObject( self );
-
-		if( selected && lastGUICommand )
-		{
-			TheInGameUI->setGUICommand(lastGUICommand);
-		}
 
 		// couldn't possibly need to restore a disguise now :)
 		//m_xferRestoreDisguise = FALSE;

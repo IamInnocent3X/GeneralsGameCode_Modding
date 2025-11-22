@@ -452,6 +452,7 @@ public:  // ********************************************************************
 
 	// Drawable selection mechanisms
 	virtual void selectDrawable( Drawable *draw );					///< Mark given Drawable as "selected"
+	virtual void selectDrawablePreserveGUI( Drawable *draw );					///< Mark given Drawable as "selected", but don't clear any Pending Commands.
 	virtual void deselectDrawable( Drawable *draw );				///< Clear "selected" status from Drawable
 	virtual void deselectAllDrawables( Bool postMsg = true );							///< Clear the "select" flag from all drawables
 	virtual Int getSelectCount( void ) { return m_selectCount; }		///< Get count of currently selected drawables
@@ -473,6 +474,7 @@ public:  // ********************************************************************
 	virtual Bool getInputEnabled( void ) { return m_inputEnabled; }	///< Get the current input status
 
 	virtual void disregardDrawable( Drawable *draw );				///< Drawable is being destroyed, clean up any UI elements associated with it
+	virtual void disregardDrawablePreserveGUI( Drawable *draw );	///< Drawable is being destroyed, clean up any UI elements associated with it, also preserve the GUI
 
 	virtual void preDraw( void );														///< Logic which needs to occur before the UI renders
 	virtual void draw( void ) = 0;													///< Render the in-game user interface

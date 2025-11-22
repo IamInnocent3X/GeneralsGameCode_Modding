@@ -979,6 +979,40 @@ void GameClient::destroyDrawable( Drawable *draw )
 
 }
 
+/** -----------------------------------------------------------------------------------------------
+ * Destroy the drawable immediately.
+ */
+void GameClient::destroyDrawablePreserveGUI( Drawable *draw )
+{
+
+	// remove any notion of the Drawable in the in-game user interface
+	TheInGameUI->disregardDrawablePreserveGUI( draw );
+
+	// remove from the master list
+	draw->removeFromList(&m_drawableList);
+
+	//
+	// because drawables and objects are tightly coupled, not only MUST we maintain
+	// our links in all instances, but it is NECESSARY for the client to actually
+	// modify data in the logic, that is the pointer in an object to *this* drawable
+	//
+	Object *obj = draw->getObject();
+	if( obj )
+	{
+
+		DEBUG_ASSERTCRASH( obj->getDrawable() == draw, ("Object/Drawable pointer mismatch!") );
+		obj->friend_bindToDrawable( NULL );
+
+	}  // end if
+
+	// remove the drawable from our hash of drawables
+	removeDrawableFromLookupTable( draw );
+
+	// free storage
+	deleteInstance(draw);
+
+}
+
 // ------------------------------------------------------------------------------------------------
 /** Add drawable to lookup table for fast id searching */
 // ------------------------------------------------------------------------------------------------

@@ -3776,6 +3776,37 @@ void InGameUI::selectDrawable( Drawable *draw )
 }  // end selectDrawable
 
 //-------------------------------------------------------------------------------------------------
+/** Mark given Drawable as "selected", but don't clear any Pending Commands. */
+//-------------------------------------------------------------------------------------------------
+void InGameUI::selectDrawablePreserveGUI( Drawable *draw )
+{
+
+	if( draw->isSelected() == FALSE )
+	{
+
+		//m_frameSelectionChanged = TheGameLogic->getFrame();
+
+		// set the selection in the drawable
+		draw->friend_setSelected();
+
+		// add to our selected list
+		m_selectedDrawables.push_front( draw );
+
+		// we now have one more selected drawable
+		incrementSelectCount();
+
+
+		// evaluate whether our selection consists of exactly one angry mob
+		evaluateSoloNexus( draw );
+
+		// the control needs to update its context sensitive display now
+		//TheControlBar->onDrawableSelected( draw );
+
+	}  // end if
+
+}  // end selectDrawable
+
+//-------------------------------------------------------------------------------------------------
 /** Clear "selected" status of Drawable. */
 //-------------------------------------------------------------------------------------------------
 void InGameUI::deselectDrawable( Drawable *draw )
@@ -4016,6 +4047,46 @@ void InGameUI::disregardDrawable( Drawable *draw )
 
 	// make sure drawable is no longer selected
 	deselectDrawable( draw );
+
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Drawable is being destroyed, clean up any UI elements associated with it, but also preserve the GUI. */
+//-------------------------------------------------------------------------------------------------
+void InGameUI::disregardDrawablePreserveGUI( Drawable *draw )
+{
+
+	// make sure drawable is no longer selected
+	if( draw->isSelected() )
+	{
+
+		//m_frameSelectionChanged = TheGameLogic->getFrame();
+		// clear the selected bit out of the drawable
+		draw->friend_clearSelected();
+
+		// find the drawable entry in our list
+		DrawableListIt findIt = std::find( m_selectedDrawables.begin(),
+																			 m_selectedDrawables.end(),
+																			 draw );
+
+		// sanity
+		DEBUG_ASSERTCRASH( findIt != m_selectedDrawables.end(),
+											 ("deselectDrawable: Drawable not found in the selected drawable list '%s'",
+											 draw->getTemplate()->getName().str()) );
+
+		// remove it from the selected drawable list
+		m_selectedDrawables.erase( findIt );
+
+		// keep out own internal count happy
+		decrementSelectCount();
+
+		// evaluate whether our selection consists of exactly one angry mob
+		evaluateSoloNexus();
+
+		// the control needs to update its context sensitive display now
+		//TheControlBar->onDrawableDeselected( draw );
+
+	}  // end if
 
 }
 
