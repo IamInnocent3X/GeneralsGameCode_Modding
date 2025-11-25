@@ -32,6 +32,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/Recorder.h"
+#include "Common/KindOf.h"
 
 #include "GameClient/InGameUI.h"
 #include "GameLogic/GameLogic.h"
@@ -60,6 +61,9 @@ GameMessage::GameMessage( GameMessage::Type type )
 	m_argTail = NULL;
 	m_argCount = 0;
 	m_list = 0;
+	m_orderNearbyRadius = 0.0f;
+	m_orderKindof = KINDOFMASK_NONE;
+	m_orderKindofNot = KINDOFMASK_NONE;
 }
 
 
@@ -618,6 +622,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_SELL)
 	CASE_LABEL(MSG_EXIT)
 	CASE_LABEL(MSG_EVACUATE)
+	CASE_LABEL(MSG_ENTER_ME)
 	CASE_LABEL(MSG_EXECUTE_RAILED_TRANSPORT)
 	CASE_LABEL(MSG_COMBATDROP_AT_LOCATION)
 	CASE_LABEL(MSG_COMBATDROP_AT_OBJECT)
@@ -630,6 +635,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_DO_REPAIR)
 	CASE_LABEL(MSG_RESUME_CONSTRUCTION)
 	CASE_LABEL(MSG_ENTER)
+	CASE_LABEL(MSG_EQUIP)
 	CASE_LABEL(MSG_DOCK)
 	CASE_LABEL(MSG_DO_MOVETO)
 	CASE_LABEL(MSG_DO_ATTACKMOVETO)
@@ -732,6 +738,34 @@ GameMessageList::~GameMessageList()
 void GameMessageList::appendMessage( GameMessage *msg )
 {
 	msg->friend_setNext(NULL);
+
+	if (m_lastMessage)
+	{
+		m_lastMessage->friend_setNext(msg);
+		msg->friend_setPrev(m_lastMessage);
+		m_lastMessage = msg;
+	}
+	else
+	{
+		// first message
+		m_firstMessage = msg;
+		m_lastMessage = msg;
+		msg->friend_setPrev(NULL);
+	}
+
+	// note containment within message itself
+	msg->friend_setList(this);
+}
+
+/**
+ * Append message to end of message list with order radius properties
+ */
+void GameMessageList::appendMessageWithOrderNearbyRadius( GameMessage *msg, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot )
+{
+	msg->friend_setNext(NULL);
+	msg->friend_setOrderNearbyRadius(radius);
+	msg->friend_setOrderKindofMask(orderKindOf);
+	msg->friend_setOrderKindofForbiddenMask(orderKindOfNot);
 
 	if (m_lastMessage)
 	{
@@ -879,6 +913,21 @@ GameMessage *MessageStream::appendMessage( GameMessage::Type type )
 
 	// add message to list
 	GameMessageList::appendMessage( msg );
+
+	return msg;
+}
+
+/**
+ * Create a new message of the given message type and append it
+ * to this message stream.  Return the message such that any data
+ * associated with this message can be attached to it.
+ */
+GameMessage *MessageStream::appendMessageWithOrderNearbyRadius( GameMessage::Type type, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot )
+{
+	GameMessage *msg = newInstance(GameMessage)( type );
+
+	// add message to list
+	GameMessageList::appendMessageWithOrderNearbyRadius( msg, radius, orderKindOf, orderKindOfNot );
 
 	return msg;
 }

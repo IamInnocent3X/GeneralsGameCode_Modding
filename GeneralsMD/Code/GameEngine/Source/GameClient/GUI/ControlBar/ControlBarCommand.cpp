@@ -1094,12 +1094,12 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		GUICommandType commandType = command->getCommandType();
 		if( commandType != GUI_COMMAND_SELL &&
 				commandType != GUI_COMMAND_EVACUATE &&
+				commandType != GUI_COMMAND_ENTER_ME &&
 				commandType != GUI_COMMAND_EXIT_CONTAINER &&
 				commandType != GUI_COMMAND_BEACON_DELETE &&
 				commandType != GUI_COMMAND_SET_RALLY_POINT &&
 				commandType != GUI_COMMAND_STOP &&
-				commandType != GUI_COMMAND_SWITCH_WEAPON &&
-				commandType != GUI_COMMAND_DISABLE_POWER )
+				commandType != GUI_COMMAND_SWITCH_WEAPON )
 		{
 			if( getCommandAvailability( command, obj, win, applyToWin, TRUE ) == COMMAND_HIDDEN )
 			{
@@ -1363,6 +1363,12 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		case GUI_COMMAND_GUARD:
 		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			// always available
 			break;
 
@@ -1395,6 +1401,20 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 			// if we have no contained objects we can't evacuate anything
 			if( !obj->getContain() || obj->getContain()->getContainCount() <= 0 )
+				return COMMAND_RESTRICTED;
+
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+        return COMMAND_RESTRICTED;
+
+
+			break;
+		}
+
+		case GUI_COMMAND_ENTER_ME:
+		{
+
+			// if we have no container or we are full to contain
+			if( !obj->getContain() || obj->getContain()->getContainMax() <= 0 || obj->getContain()->getContainCount() >= obj->getContain()->getContainMax() )
 				return COMMAND_RESTRICTED;
 
       if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )

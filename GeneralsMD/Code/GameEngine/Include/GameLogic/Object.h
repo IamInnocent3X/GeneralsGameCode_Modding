@@ -595,7 +595,7 @@ public:
 		Note that this DOES take weapon attack range into account.
 	*/
 	Bool chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
-	Bool chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
+	Bool chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly = FALSE);
 
 	// set and/or clear a single modelcondition flag
 	void setModelConditionState( ModelConditionFlagType a );

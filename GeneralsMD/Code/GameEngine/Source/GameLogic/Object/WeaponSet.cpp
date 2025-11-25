@@ -1227,7 +1227,7 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool WeaponSet::chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource)
+Bool WeaponSet::chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly)
 {
 
 	if( obj->testCustomStatus("ZERO_DAMAGE") || m_restricted )
@@ -1273,6 +1273,11 @@ Bool WeaponSet::chooseBestWeaponForPosition(const Object* obj, const Coord3D* vi
 
 		Weapon* weapon = m_weapons[i];
 		if (weapon == NULL)
+			continue;
+
+		// weapon not allowed to target airborne
+		Int mask = weapon->getAntiMask();
+		if (checkFlyingOnly && !(mask & WEAPON_ANTI_AIRBORNE_INFANTRY) && !(mask & WEAPON_ANTI_AIRBORNE_VEHICLE))
 			continue;
 
 		if(!weapon->getTemplate()->passRequirements(obj))

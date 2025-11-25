@@ -55,6 +55,7 @@
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
 #include "GameLogic/ObjectIter.h"
+#include "GameLogic/PartitionManager.h"
 
 
 /**
@@ -77,6 +78,7 @@ AIGroup::AIGroup( void )
 	m_id = TheAI->getNextGroupID();
 	m_memberListSize = 0;
 	m_memberList.clear();
+	m_memberListExtraID.clear();
 	//DEBUG_LOG(( "AIGroup #%d created", m_id ));
 }
 
@@ -315,6 +317,103 @@ Bool AIGroup::removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer )
 
 		++it;
 	}
+
+	return FALSE;
+}
+
+/**
+ * Add any objects that are nearby the current selected objects
+ */
+Bool AIGroup::doAddNearbyMembers( Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask )
+{
+	// Do nothing for invalid radius
+	if(radius <= 0.0f)
+		return FALSE;
+
+	ListObjectPtrIt it;
+	KindOfMaskType validNonAIKindofs;
+	validNonAIKindofs.set(KINDOF_STRUCTURE);
+	validNonAIKindofs.set(KINDOF_ALWAYS_SELECTABLE);
+
+	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
+		Object *obj = (*it);
+		if (!obj) {
+			continue;
+		}
+
+		// If we reached the end of the current list before the new members are added, break
+		if (!m_memberListExtraID.empty() && obj->getID() == m_memberListExtraID[0]) {
+			break;
+		}
+
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterAcceptByKindOf filterKindof( acceptMask, rejectMask );
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		radius, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+		
+		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
+		{
+			// Skip the check for current members
+			if( isMember(currentObj) )
+				continue;
+
+			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
+
+			//If this object doesn't have an AIUpdateInterface, then
+			//don't add it to the group UNLESS it is a structure! Structures
+			//with AIUpdateInterfaces also issue similar commands, but those
+			//commands don't need AI updates... they are instant commands like
+			//evacuate or triggering certain special powers...
+			if( ai == NULL && !currentObj->isAnyKindOf( validNonAIKindofs ) )
+			{
+				continue;
+			}
+
+			m_memberList.push_back( currentObj );
+			m_memberListExtraID.push_back( currentObj->getID() );
+			++m_memberListSize;
+
+		}
+
+		++it;
+	}
+
+	return FALSE;
+}
+
+/**
+ * Remove the nearby objects from the member list
+ */
+Bool AIGroup::clearExtraMembers()
+{
+	VecObjectIDIt it;
+	for (it = m_memberListExtraID.begin(); it != m_memberListExtraID.end(); ++it) {
+		Object *obj = TheGameLogic->findObjectByID(*it);
+		if (!obj) {
+			continue;
+		}
+
+		std::list<Object *>::iterator i = std::find( m_memberList.begin(), m_memberList.end(), obj );
+
+		// make sure object is actually in the group
+		if (i == m_memberList.end())
+			continue;
+
+		// remove it
+		m_memberList.erase( i );
+		--m_memberListSize;
+
+	}
+
+	m_memberListExtraID.clear();
 
 	return FALSE;
 }
@@ -2572,6 +2671,91 @@ void AIGroup::groupEvacuate( CommandSourceType cmdSource )
 	}
 }
 
+void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask )
+{
+	// Do nothing for invalid radius
+	if(radius <= 0.0f)
+		return;
+
+	ListObjectPtrIt it;
+	rejectMask.set(KINDOF_IMMOBILE);
+	rejectMask.set(KINDOF_STRUCTURE);
+
+	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
+		Object *obj = (*it);
+		// If we are not valid, or we don't have any contain, do nothing
+		if (!obj || !obj->getContain()) {
+			continue;
+		}
+
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterAcceptByKindOf filterKindof( acceptMask, rejectMask );
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		radius, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+		
+		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
+		{
+			// Don't contain ally objects
+			if( currentObj->getTeam() != obj->getTeam() )
+				continue;
+
+			// Don't do already designated objects
+			/*Bool alreadyDesignated = FALSE;
+			for(VecObjectIDIt::const_iterator it_2 = m_memberListExtraID.begin(); it_2 != m_memberListExtraID.end(); ++it_2)
+			{
+				if(currentObj->getID() == (*it_2))
+				{
+					alreadyDesignated = TRUE;
+					break;
+				}
+			}
+			if(alreadyDesignated)
+				continue;
+			*/
+
+			// Generally, selected object cant contain the Object
+			if( !TheActionManager->canEnterObject( currentObj, obj, cmdSource, CHECK_CAPACITY ) )
+			{
+				continue;
+			}
+
+			// Skip the check for current members
+			if( isMember(currentObj) )
+				continue;
+
+			// Skip check for members that are currently contained
+			if( currentObj->isContained() )
+				continue;
+
+			// If we are unselectable, don't tell us to contain
+			ObjectStatusMaskType status = currentObj->getStatusBits();
+			if( status.test(OBJECT_STATUS_NO_COLLISIONS) || status.test(OBJECT_STATUS_MASKED) || status.test(OBJECT_STATUS_UNSELECTABLE) )
+				continue;
+					
+			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
+
+			if( ai )
+			{
+				ai->aiEnter(obj, cmdSource);
+			}
+			
+			//m_memberListExtraID.push_back( currentObj->getID() );
+		}
+
+		++it;
+	}
+
+	//m_memberListExtraID.clear();
+}
+
 /**
 	* Execute railed transport behavior
 	*/
@@ -2609,9 +2793,14 @@ void AIGroup::groupGoProne( const DamageInfo *damageInfo, CommandSourceType cmdS
  */
 void AIGroup::groupGuardPosition( const Coord3D *pos, GuardMode guardMode, CommandSourceType cmdSource )
 {
-	if (!pos) {
+	if (!pos && guardMode != GUARDMODE_CURRENT_POS && guardMode != GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT && guardMode != GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY ) {
 		return;
 	}
+
+	Coord3D guardPos;
+	guardPos.set( pos );
+
+	Bool guardCurrentPos = guardMode == GUARDMODE_CURRENT_POS || guardMode == GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT || guardMode == GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY ? TRUE : FALSE;
 
 	std::list<Object *>::iterator i;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
@@ -2619,7 +2808,10 @@ void AIGroup::groupGuardPosition( const Coord3D *pos, GuardMode guardMode, Comma
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
 		if (ai)
 		{
-			ai->aiGuardPosition( pos, guardMode, cmdSource );
+			if(guardCurrentPos)
+				guardPos.set((*i)->getPosition());
+
+			ai->aiGuardPosition( &guardPos, guardMode, cmdSource );
 		}
 	}
 }

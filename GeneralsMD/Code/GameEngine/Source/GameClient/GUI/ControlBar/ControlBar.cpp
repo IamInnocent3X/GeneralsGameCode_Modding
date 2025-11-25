@@ -119,6 +119,9 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "RadiusCursorType",			INI::parseIndexList,				 TheRadiusCursorNames, offsetof( CommandButton, m_radiusCursor ) },
 	{ "CustomRadiusCursorType",			INI::parseAsciiString,			NULL, offsetof( CommandButton, m_customRadiusCursor ) },
 	{ "UnitSpecificSound",		INI::parseAudioEventRTS,		 NULL, offsetof( CommandButton, m_unitSpecificSound ) },
+	{ "OrderNearbyUnitsRadius",				INI::parseReal, NULL, offsetof( CommandButton, m_orderNearbyRadius ) },
+	{ "OrderNearbyUnitsKindof",					KindOfMaskType::parseFromINI,		NULL, offsetof( CommandButton, m_orderKindof ) },
+	{ "OrderNearbyUnitsForbiddenKindof",		KindOfMaskType::parseFromINI,		NULL, offsetof( CommandButton, m_orderKindofNot ) },
 
 	{ NULL,						NULL,												 NULL, 0 }  // keep this last
 
@@ -685,6 +688,9 @@ CommandButton::CommandButton( void )
 	m_radiusCursor = RADIUSCURSOR_NONE;
 	m_customRadiusCursor = NULL;
 
+	m_orderNearbyRadius = 0.0f;
+	m_orderKindof = KINDOFMASK_NONE;
+	m_orderKindofNot = KINDOFMASK_NONE;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -180,10 +180,17 @@ enum GUICommandType CPP_11(: Int)
 	GUI_COMMAND_GUARD,										///< guard command
 	GUI_COMMAND_GUARD_WITHOUT_PURSUIT,		///< guard command, no pursuit out of guard area
 	GUI_COMMAND_GUARD_FLYING_UNITS_ONLY,	///< guard command, ignore nonflyers
+	GUI_COMMAND_GUARD_CURRENT_POS,
+	GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT,
+	GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY,
+	GUI_COMMAND_GUARD_FAR,
+	GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT,
+	GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY,
 	GUI_COMMAND_STOP,											///< stop moving
 	GUI_COMMAND_WAYPOINTS,								///< create a set of waypoints for this unit
 	GUI_COMMAND_EXIT_CONTAINER,						///< an inventory box for a container like a structure or transport
 	GUI_COMMAND_EVACUATE,									///< dump all our contents
+	GUI_COMMAND_ENTER_ME,									///< tell nearby objects to enter me
 	GUI_COMMAND_EXECUTE_RAILED_TRANSPORT,	///< execute railed transport sequence
 	GUI_COMMAND_BEACON_DELETE,						///< delete a beacon
 	GUI_COMMAND_SET_RALLY_POINT,					///< set rally point for a structure
@@ -239,10 +246,17 @@ static const char *TheGuiCommandNames[] =
 	"GUARD",
 	"GUARD_WITHOUT_PURSUIT",
 	"GUARD_FLYING_UNITS_ONLY",
+	"GUARD_CURRENT_POS",
+	"GUARD_CURRENT_POS_WITHOUT_PURSUIT",
+	"GUARD_CURRENT_POS_FLYING_UNITS_ONLY",
+	"GUARD_FAR",
+	"GUARD_FAR_WITHOUT_PURSUIT",
+	"GUARD_FAR_FLYING_UNITS_ONLY",
 	"STOP",
 	"WAYPOINTS",
 	"EXIT_CONTAINER",
 	"EVACUATE",
+	"ENTER_ME",
 	"EXECUTE_RAILED_TRANSPORT",
 	"BEACON_DELETE",
 	"SET_RALLY_POINT",
@@ -354,6 +368,10 @@ public:
 	GameWindow* getWindow() const { return m_window;	}
 	Int getFlashCount() const { return m_flashCount; }
 
+	Real getOrderNearbyRadius() const { return m_orderNearbyRadius; }
+	KindOfMaskType getOrderKindofMask() const { return m_orderKindof; }
+	KindOfMaskType getOrderKindofForbiddenMask() const { return m_orderKindofNot; }
+
 	const CommandButton* getNext() const { return m_next; }
 
 	void setName(const AsciiString& n) { m_name = n; }
@@ -398,6 +416,10 @@ private:
 	AsciiString										m_buttonImageName;
 	GameWindow*										m_window;											///< used during the run-time assignment of a button to a gadget button window
 	AudioEventRTS									m_unitSpecificSound;					///< Unit sound played whenever button is clicked.
+
+	Real											m_orderNearbyRadius;
+	KindOfMaskType									m_orderKindof;
+	KindOfMaskType									m_orderKindofNot;
 
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
 	mutable const Image*					m_buttonImage;								///< button image

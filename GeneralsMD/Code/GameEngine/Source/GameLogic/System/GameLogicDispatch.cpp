@@ -389,6 +389,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 				if(TheStatsCollector)
 					TheStatsCollector->collectMsgStats(msg);
+
+				if(msg->getOrderNearbyRadius() > 0.0f && currentlySelectedGroup && msg->getType() != GameMessage::MSG_ENTER_ME)
+					currentlySelectedGroup->doAddNearbyMembers(msg->getOrderNearbyRadius(), msg->getOrderKindofMask(), msg->getOrderKindofForbiddenMask());
 			}
 		}
 	}
@@ -1086,6 +1089,20 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 		}  // end GameMessage::MSG_EVACUATE
 
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_ENTER_ME:
+		{
+			// issue command for either single object or for selected group
+			if( currentlySelectedGroup )
+			{
+				currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msg->getOrderNearbyRadius(), msg->getOrderKindofMask(), msg->getOrderKindofForbiddenMask() );
+
+			}  // end if, command for group
+
+			break;
+
+		}  // end GameMessage::MSG_EVACUATE
+
 		// --------------------------------------------------------------------------------------------
 		case GameMessage::MSG_EXECUTE_RAILED_TRANSPORT:
 		{
@@ -1419,7 +1436,11 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// get the unit production interface
 			ProductionUpdateInterface *pu = producer->getProductionUpdateInterface();
 			if( pu == NULL )
+			{
+				if(msg->getOrderNearbyRadius() > 0.0f && currentlySelectedGroup)
+					currentlySelectedGroup->clearExtraMembers();
 				return;
+			}
 
 			// cancel the production
 			pu->cancelUnitCreate( productionID );
@@ -2096,6 +2117,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 	if( currentlySelectedGroup != NULL )
 	{
+		if(msg->getOrderNearbyRadius() > 0.0f)
+			currentlySelectedGroup->clearExtraMembers();
+
 #if RETAIL_COMPATIBLE_AIGROUP
 		TheAI->destroyGroup(currentlySelectedGroup);
 #else

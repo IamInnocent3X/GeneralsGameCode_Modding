@@ -945,6 +945,7 @@ public:
 	void groupDock( Object *obj, CommandSourceType cmdSource );							///< get near given object and wait for enter clearance
 	void groupExit( Object *objectToExit, CommandSourceType cmdSource );			///< get out of this Object
 	void groupEvacuate( CommandSourceType cmdSource );												///< empty its contents
+	void groupEnterToSelected( CommandSourceType cmdSource, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );									///< tell nearby objects to enter the selected objects
 	void groupExecuteRailedTransport( CommandSourceType cmdSource );					///< execute railed transport events
 	void groupGoProne( const DamageInfo *damageInfo, CommandSourceType cmdSource );												///< life altering state change, if this AI can do it
 	void groupGuardPosition( const Coord3D *pos, GuardMode guardMode, CommandSourceType cmdSource );						///< guard the given spot
@@ -1013,6 +1014,12 @@ public:
 	// Removes any objects that aren't owned by the player, and returns true if the group was emptied.
 	Bool removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer );
 
+	// Add any objects that are nearby the current selected objects
+	Bool doAddNearbyMembers( Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
+
+	// Remove the nearby objects from the member list
+	Bool clearExtraMembers();
+
 	UnsignedInt getID( void );
 
 	///< get IDs for every object in this group
@@ -1051,6 +1058,8 @@ private:
 
 	ListObjectPtr m_memberList;							///< the list of member Objects
 	UnsignedInt	m_memberListSize;	 					///< the size of the list of member Objects
+
+	VecObjectID m_memberListExtraID;						///< the list of extra member 
 
 	Real m_speed;														///< maximum speed of group (slowest member)
 	Bool m_dirty;														///< "dirty bit" - if true then group speed, leader, needs recompute

@@ -299,7 +299,7 @@ public:
 		Note that this DOES take weapon attack range into account.
 	*/
 	Bool chooseBestWeaponForTarget(const Object* obj, const Object* victim, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
-	Bool chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
+	Bool chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly = FALSE);
 
 	Weapon* getWeaponInWeaponSlot(WeaponSlotType wslot) const;
 

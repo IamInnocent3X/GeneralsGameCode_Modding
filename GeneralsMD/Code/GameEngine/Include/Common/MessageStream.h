@@ -32,6 +32,7 @@
 #define _MESSAGE_STREAM_H_
 
 #include "Common/GameCommon.h"	// ensure we get DUMP_PERF_STATS, or not
+#include "Common/KindOf.h"
 #include "Common/SubsystemInterface.h"
 #include "Lib/BaseType.h"
 #include "Common/GameMemory.h"
@@ -553,6 +554,7 @@ public:
 		MSG_SELL,																		///< sell a structure
 		MSG_EXIT,																		///< WE want to exit from whatever WE are inside of
 		MSG_EVACUATE,																///< Dump out all of OUR contained objects
+		MSG_ENTER_ME,																///< Tell nearby containable objects to Enter Me.
 		MSG_EXECUTE_RAILED_TRANSPORT,								///< Execute railed transport sequence
 		MSG_COMBATDROP_AT_LOCATION,									///< dump out all rappellers
 		MSG_COMBATDROP_AT_OBJECT,										///< dump out all rappellers
@@ -635,6 +637,10 @@ public:
 	Type getType( void ) const { return m_type; }					///< Return the message type
 	UnsignedByte getArgumentCount( void ) const { return m_argCount; }	///< Return the number of arguments for this msg
 
+	Real getOrderNearbyRadius( void ) const { return m_orderNearbyRadius; }
+	KindOfMaskType getOrderKindofMask( void ) const { return m_orderKindof; }
+	KindOfMaskType getOrderKindofForbiddenMask( void ) const { return m_orderKindofNot; }
+
 	const char *getCommandAsString( void ) const; ///< returns a string representation of the command type.
 	static const char *getCommandTypeAsString(GameMessage::Type t);
 
@@ -666,6 +672,10 @@ public:
 	void friend_setList(GameMessageList* m) { m_list = m; }
 	void friend_setPlayerIndex(Int i) { m_playerIndex = i; }
 
+	void friend_setOrderNearbyRadius( Real r ) { m_orderNearbyRadius = r; }
+	void friend_setOrderKindofMask( KindOfMaskType k ) { m_orderKindof = k; }
+	void friend_setOrderKindofForbiddenMask( KindOfMaskType k ) { m_orderKindofNot = k; }
+
 private:
 	// friend classes are bad. don't use them. no, really.
 	// if for no other reason than the fact that they subvert MemoryPoolObject. (srj)
@@ -676,6 +686,10 @@ private:
 	Type m_type;										///< The type of this message
 
 	Int m_playerIndex;													///< The Player who issued the command
+
+	Real m_orderNearbyRadius;											///< IamInnocent: New! Order nearby objects to do things
+	KindOfMaskType	m_orderKindof;										///< IamInnocent: New! Order nearby objects to do things
+	KindOfMaskType	m_orderKindofNot;									///< IamInnocent: New! Order nearby objects to do things
 
 	/// @todo If a GameMessage needs more than 255 arguments, it needs to be split up into multiple GameMessage's.
 	UnsignedByte m_argCount;										///< The number of arguments of this message
@@ -710,6 +724,8 @@ public:
 	virtual void insertMessage( GameMessage *msg, GameMessage *messageToInsertAfter );	// Insert message after messageToInsertAfter.
 	virtual void removeMessage( GameMessage *msg );			///< Remove message from the list
 	virtual Bool containsMessageOfType( GameMessage::Type type );	///< Return true if a message of type is in the message stream
+
+	virtual void appendMessageWithOrderNearbyRadius( GameMessage *msg, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot );			///< Add message to end of the list with order radius properties
 
 
 
@@ -754,6 +770,8 @@ public:
 
 	virtual GameMessage *appendMessage( GameMessage::Type type );		///< Append a message to the end of the stream
 	virtual GameMessage *insertMessage( GameMessage::Type type, GameMessage *messageToInsertAfter );	// Insert message after messageToInsertAfter.
+
+	virtual GameMessage *appendMessageWithOrderNearbyRadius( GameMessage::Type type, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot );			///< Add message to end of the list with order radius properties
 
 	// Methods NOT Inherited ------------------------------------------------------------------------
 	void propagateMessages( void );													///< Propagate messages through attached translators

@@ -182,6 +182,7 @@ public:
 class HackInternetAIInterface
 {
 public:
+	virtual void hackInternet() = 0;
 	virtual Bool isHacking() const = 0;
 	virtual Bool isHackingPackingOrUnpacking() const = 0;
 };
@@ -210,7 +211,7 @@ public:
 	UnsignedInt getHeroicCashAmount()		const { return getHackInternetAIUpdateModuleData()->m_heroicCashAmount; }
 	UnsignedInt getXpPerCashUpdate()		const { return getHackInternetAIUpdateModuleData()->m_xpPerCashUpdate; }
 
-	void hackInternet();
+	virtual void hackInternet();
 	virtual UpdateSleepTime update();
 
 	virtual Bool isIdle() const;

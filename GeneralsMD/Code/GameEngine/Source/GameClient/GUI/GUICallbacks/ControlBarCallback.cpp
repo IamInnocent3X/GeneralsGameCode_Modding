@@ -295,7 +295,7 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					// Attack move has changed from a modifier to a command, so it moves up here.
 
-					GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_ATTACKMOVETO );
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_ATTACKMOVETO, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
 					msg->appendLocationArgument( world );
 
 					// Play the unit voice response

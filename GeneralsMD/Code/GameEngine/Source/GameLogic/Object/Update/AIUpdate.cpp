@@ -4512,18 +4512,24 @@ void AIUpdateInterface::privateHackInternet( CommandSourceType cmdSource )
 //	if (getObject()->isMobile() == FALSE)
 //		return;
 
-	getStateMachine()->clear();
-	setLastCommandSource( cmdSource );
-
-	static NameKeyType key_HackInternetAIUpdate = NAMEKEY("HackInternetAIUpdate");
-	HackInternetAIUpdate *ai = (HackInternetAIUpdate*)getObject()->findUpdateModule( key_HackInternetAIUpdate );
-	if( ai )
+	//static NameKeyType key_HackInternetAIUpdate = NAMEKEY("HackInternetAIUpdate");
+	//HackInternetAIUpdate *ai = (HackInternetAIUpdate*)getObject()->findUpdateModule( key_HackInternetAIUpdate );
+	AIUpdateInterface *ai = getObject()->getAI();
+	if( ai && ai->getHackInternetAIInterface() )
 	{
-		ai->hackInternet();
+		getStateMachine()->clear();
+		setLastCommandSource( cmdSource );
+
+		ai->getHackInternetAIInterface()->hackInternet();
+	//if( ai )
+	//{
+	//	ai->hackInternet();
+	//}
 	}
 	else
 	{
-		DEBUG_CRASH(("Unit %s is expecting a 'Update = HackInternetAIUpdate' entry in FactionUnit.ini", getObject()->getTemplate()->getName().str() ) );
+		// IamInnocent - you can now order groups to hack internet together, stop those without hack internet ai update
+		//DEBUG_CRASH(("Unit %s is expecting a 'Update = HackInternetAIUpdate' entry in FactionUnit.ini", getObject()->getTemplate()->getName().str() ) );
 	}
 }
 

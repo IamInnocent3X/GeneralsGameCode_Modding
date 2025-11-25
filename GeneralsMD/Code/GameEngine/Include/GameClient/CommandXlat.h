@@ -71,13 +71,17 @@ private:
 	GameMessage::Type createMoveToLocationMessage( Drawable *draw, const Coord3D *dest, CommandEvaluateType commandType );
 	GameMessage::Type createAttackMessage( Drawable *draw, Drawable *other, CommandEvaluateType commandType );
 	GameMessage::Type createEnterMessage( Drawable *enter, CommandEvaluateType commandType );
+	GameMessage::Type createEnterMessageWithOrderRadius( Drawable *enter, CommandEvaluateType commandType, const CommandButton *command );
 	GameMessage::Type issueMoveToLocationCommand( const Coord3D *pos, Drawable *drawableInWay, CommandEvaluateType commandType );
 	GameMessage::Type issueAttackCommand( Drawable *target, CommandEvaluateType commandType, GUICommandType command = (GUICommandType)0 );
+	GameMessage::Type issueAttackCommandWithOrderRadius( Drawable *target, CommandEvaluateType commandType, const CommandButton *command );
 	GameMessage::Type issueSpecialPowerCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos, Object* ignoreSelObj );
 	GameMessage::Type issueFireWeaponCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos );
 	GameMessage::Type issueCombatDropCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos );
 
 	virtual GameMessageDisposition translateGameMessage(const GameMessage *msg);
+
+	void checkOtherMembersForParasiteActive( const Object* obj, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
 };
 
 

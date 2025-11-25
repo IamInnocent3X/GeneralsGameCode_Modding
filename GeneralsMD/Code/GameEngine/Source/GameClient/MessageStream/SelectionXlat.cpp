@@ -577,7 +577,10 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 					if( command->getCommandType() == GUI_COMMAND_ATTACK_MOVE ||
 							command->getCommandType() == GUI_COMMAND_GUARD ||
 							command->getCommandType() == GUI_COMMAND_GUARD_WITHOUT_PURSUIT ||
-							command->getCommandType() == GUI_COMMAND_GUARD_FLYING_UNITS_ONLY )
+							command->getCommandType() == GUI_COMMAND_GUARD_FLYING_UNITS_ONLY ||
+							command->getCommandType() == GUI_COMMAND_GUARD_FAR ||
+							command->getCommandType() == GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT ||
+							command->getCommandType() == GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY )
 					{
 						//These GUI commands can take care of themselves -- don't let
 						//the selection translator meddle.

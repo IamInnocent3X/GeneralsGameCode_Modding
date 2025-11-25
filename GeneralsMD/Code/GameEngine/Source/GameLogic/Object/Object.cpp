@@ -1820,9 +1820,9 @@ Bool Object::chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteri
 }
 
 //=============================================================================
-Bool Object::chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource )
+Bool Object::chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly )
 {
-	return m_weaponSet.chooseBestWeaponForPosition(this, pos, criteria, cmdSource );
+	return m_weaponSet.chooseBestWeaponForPosition(this, pos, criteria, cmdSource, checkFlyingOnly );
 }
 
 //DECLARE_PERF_TIMER(fireCurrentWeapon)
@@ -7167,6 +7167,12 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -7301,6 +7307,12 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -7404,6 +7416,12 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -7472,6 +7490,12 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:

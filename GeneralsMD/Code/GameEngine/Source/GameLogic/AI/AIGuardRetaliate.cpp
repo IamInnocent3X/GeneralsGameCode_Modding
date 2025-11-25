@@ -502,7 +502,7 @@ AIGuardRetaliateOuterState::~AIGuardRetaliateOuterState(void)
 //--------------------------------------------------------------------------------------
 StateReturnType AIGuardRetaliateOuterState::onEnter( void )
 {
-	//if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT)
+	//if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT || getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_FAR_WITHOUT_PURSUIT )
 	//{
 	//	// "patrol" mode does not follow targets outside the guard area.
 	//	return STATE_SUCCESS;

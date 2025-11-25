@@ -188,7 +188,13 @@ enum GuardMode CPP_11(: Int)
 {
 	GUARDMODE_NORMAL,
 	GUARDMODE_GUARD_WITHOUT_PURSUIT,	// no pursuit out of guard area
-	GUARDMODE_GUARD_FLYING_UNITS_ONLY	// ignore nonflyers
+	GUARDMODE_GUARD_FLYING_UNITS_ONLY,	// ignore nonflyers
+	GUARDMODE_CURRENT_POS,
+	GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT,
+	GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY,
+	GUARDMODE_FAR,
+	GUARDMODE_FAR_WITHOUT_PURSUIT,	// no pursuit out of guard area
+	GUARDMODE_FAR_FLYING_UNITS_ONLY	// ignore nonflyers
 };
 
 // ---------------------------------------------------

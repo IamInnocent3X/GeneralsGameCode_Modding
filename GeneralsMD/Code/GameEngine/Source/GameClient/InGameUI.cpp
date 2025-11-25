@@ -5050,6 +5050,7 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 				break;
 			case ACTIONTYPE_ENTER_OBJECT:
 				//additionalChecking is TRUE only if we want to check if transport is full first.
+				// IamInnocent - hideParasiteCursor from showing when not hostile
 				success = TheActionManager->canEnterObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, additionalChecking ? CHECK_CAPACITY : DONT_CHECK_CAPACITY, TRUE, !other->getObject()->getParasiteCollideActive() );
 				break;
 			case ACTIONTYPE_ATTACK_OBJECT:
@@ -5068,7 +5069,8 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 			{
 				Object *obj = other ? other->getObject() : NULL;
 				AIUpdateInterface *ai = obj ? obj->getAI() : NULL;
-				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, ai && (obj->getParasiteCollideActive() || ai->getGoalObject()) ? TRUE : FALSE );
+				Bool hideParasiteCursor = ai && (obj->getParasiteCollideActive() || ai->getGoalObject()) ? TRUE : FALSE;
+				success = TheActionManager->canEquipObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, hideParasiteCursor );
 				break;
 			}
 			case ACTIONTYPE_CAPTURE_BUILDING:
