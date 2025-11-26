@@ -66,6 +66,20 @@ union GameMessageArgumentType														///< Union of possible data for given
 	WideChar				wChar;
 };
 
+struct OrderNearbyData
+{
+	Real 				Radius;
+	KindOfMaskType		RequiredMask;
+	KindOfMaskType		ForbiddenMask;
+	UnsignedInt			MinDelay;
+	UnsignedInt			MaxDelay;
+	UnsignedInt			IntervalDelay;
+
+	OrderNearbyData() : Radius(0.0f), RequiredMask(KINDOFMASK_NONE), ForbiddenMask(KINDOFMASK_NONE), MinDelay(0), MaxDelay(0), IntervalDelay(0)
+	{
+	}
+};
+
 enum GameMessageArgumentDataType CPP_11(: Int)
 {
 	ARGUMENTDATATYPE_INTEGER,
@@ -91,6 +105,12 @@ public:
 	GameMessageArgumentDataType	m_type;									///< The type of the argument.
 };
 EMPTY_DTOR(GameMessageArgument)
+
+struct GameMessageArgumentStruct
+{
+	GameMessageArgumentType		data;									///< The data storage of an argument
+	GameMessageArgumentDataType	type;									///< The type of the argument.
+};
 
 /**
  * A game message that either lives on TheMessageStream or TheCommandList.
@@ -637,9 +657,9 @@ public:
 	Type getType( void ) const { return m_type; }					///< Return the message type
 	UnsignedByte getArgumentCount( void ) const { return m_argCount; }	///< Return the number of arguments for this msg
 
-	Real getOrderNearbyRadius( void ) const { return m_orderNearbyRadius; }
-	KindOfMaskType getOrderKindofMask( void ) const { return m_orderKindof; }
-	KindOfMaskType getOrderKindofForbiddenMask( void ) const { return m_orderKindofNot; }
+	OrderNearbyData getOrderNearbyData( void ) const { return m_orderData; }
+	ObjectID getDoSingleID( void ) const { return m_doSingleID; }
+	Bool getDoSingleAddStat( void ) const { return m_doSingleAddStat; }
 
 	const char *getCommandAsString( void ) const; ///< returns a string representation of the command type.
 	static const char *getCommandTypeAsString(GameMessage::Type t);
@@ -672,9 +692,9 @@ public:
 	void friend_setList(GameMessageList* m) { m_list = m; }
 	void friend_setPlayerIndex(Int i) { m_playerIndex = i; }
 
-	void friend_setOrderNearbyRadius( Real r ) { m_orderNearbyRadius = r; }
-	void friend_setOrderKindofMask( KindOfMaskType k ) { m_orderKindof = k; }
-	void friend_setOrderKindofForbiddenMask( KindOfMaskType k ) { m_orderKindofNot = k; }
+	void friend_setOrderData( OrderNearbyData o ) { m_orderData = o; }
+	void friend_setDoSingleID(ObjectID ID) { m_doSingleID = ID; }
+	void friend_setDoSingleAddStat() { m_doSingleAddStat = TRUE; }
 
 private:
 	// friend classes are bad. don't use them. no, really.
@@ -687,9 +707,9 @@ private:
 
 	Int m_playerIndex;													///< The Player who issued the command
 
-	Real m_orderNearbyRadius;											///< IamInnocent: New! Order nearby objects to do things
-	KindOfMaskType	m_orderKindof;										///< IamInnocent: New! Order nearby objects to do things
-	KindOfMaskType	m_orderKindofNot;									///< IamInnocent: New! Order nearby objects to do things
+	OrderNearbyData m_orderData;										///< IamInnocent: New! Order nearby objects to do things
+	ObjectID		m_doSingleID;										///< IamInnocent: Set for order delays for conducting for a single specific Object.
+	Bool			m_doSingleAddStat;									///< IamInnocent: For using Special Power on shortcut to add stats when doing from a single specific Object. I.E. Special Power from Shortcut
 
 	/// @todo If a GameMessage needs more than 255 arguments, it needs to be split up into multiple GameMessage's.
 	UnsignedByte m_argCount;										///< The number of arguments of this message
@@ -725,7 +745,7 @@ public:
 	virtual void removeMessage( GameMessage *msg );			///< Remove message from the list
 	virtual Bool containsMessageOfType( GameMessage::Type type );	///< Return true if a message of type is in the message stream
 
-	virtual void appendMessageWithOrderNearbyRadius( GameMessage *msg, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot );			///< Add message to end of the list with order radius properties
+	virtual void appendMessageWithOrderNearby( GameMessage *msg, OrderNearbyData orderData );			///< Add message to end of the list with order radius properties
 
 
 
@@ -771,7 +791,7 @@ public:
 	virtual GameMessage *appendMessage( GameMessage::Type type );		///< Append a message to the end of the stream
 	virtual GameMessage *insertMessage( GameMessage::Type type, GameMessage *messageToInsertAfter );	// Insert message after messageToInsertAfter.
 
-	virtual GameMessage *appendMessageWithOrderNearbyRadius( GameMessage::Type type, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot );			///< Add message to end of the list with order radius properties
+	virtual GameMessage *appendMessageWithOrderNearby( GameMessage::Type type, OrderNearbyData orderData );			///< Add message to end of the list with order radius properties
 
 	// Methods NOT Inherited ------------------------------------------------------------------------
 	void propagateMessages( void );													///< Propagate messages through attached translators

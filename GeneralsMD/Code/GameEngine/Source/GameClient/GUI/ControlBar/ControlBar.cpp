@@ -122,6 +122,9 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "OrderNearbyUnitsRadius",				INI::parseReal, NULL, offsetof( CommandButton, m_orderNearbyRadius ) },
 	{ "OrderNearbyUnitsKindof",					KindOfMaskType::parseFromINI,		NULL, offsetof( CommandButton, m_orderKindof ) },
 	{ "OrderNearbyUnitsForbiddenKindof",		KindOfMaskType::parseFromINI,		NULL, offsetof( CommandButton, m_orderKindofNot ) },
+	{ "OrderNearbyUnitsMinDelay",		INI::parseDurationUnsignedInt,		NULL, offsetof( CommandButton, m_orderMinDelay ) },
+	{ "OrderNearbyUnitsMaxDelay",		INI::parseDurationUnsignedInt,		NULL, offsetof( CommandButton, m_orderMaxDelay ) },
+	{ "OrderNearbyUnitsIntervalDelay",	INI::parseDurationUnsignedInt,		NULL, offsetof( CommandButton, m_orderIntervalDelay ) },
 
 	{ NULL,						NULL,												 NULL, 0 }  // keep this last
 
@@ -691,6 +694,9 @@ CommandButton::CommandButton( void )
 	m_orderNearbyRadius = 0.0f;
 	m_orderKindof = KINDOFMASK_NONE;
 	m_orderKindofNot = KINDOFMASK_NONE;
+	m_orderMinDelay = 0;
+	m_orderMaxDelay = 0;
+	m_orderIntervalDelay = 0;
 }
 
 //-------------------------------------------------------------------------------------------------

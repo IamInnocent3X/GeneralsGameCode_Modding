@@ -322,12 +322,12 @@ Bool AIGroup::removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer )
 }
 
 /**
- * Add any objects that are nearby the current selected objects
+ * Do the orders delayed to any of the objects that are nearby
  */
-Bool AIGroup::doAddNearbyMembers( Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask )
+Bool AIGroup::doAddNearbyMembers( OrderNearbyData orderData )
 {
 	// Do nothing for invalid radius
-	if(radius <= 0.0f)
+	if(orderData.Radius <= 0.0f)
 		return FALSE;
 
 	ListObjectPtrIt it;
@@ -347,20 +347,28 @@ Bool AIGroup::doAddNearbyMembers( Real radius, KindOfMaskType acceptMask, KindOf
 		}
 
 		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
-		PartitionFilterAcceptByKindOf filterKindof( acceptMask, rejectMask );
+		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
 		PartitionFilterSameMapStatus filterMapStatus(obj);
 		PartitionFilterAlive filterAlive;
 		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
-																		radius, 
+																		orderData.Radius, 
 																		FROM_CENTER_2D, 
 																		filters, ITER_FASTEST );
 		MemoryPoolObjectHolder hold( iter );
 		
 		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
 		{
+			// Don't do command on ally objects
+			if( currentObj->getTeam() != obj->getTeam() )
+				continue;
+
+			// Don't do objects that are Under Construction
+			if( currentObj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) || currentObj->testStatus( OBJECT_STATUS_RECONSTRUCTING ) )
+				continue;
+
 			// Skip the check for current members
 			if( isMember(currentObj) )
 				continue;
@@ -385,6 +393,265 @@ Bool AIGroup::doAddNearbyMembers( Real radius, KindOfMaskType acceptMask, KindOf
 
 		++it;
 	}
+
+	return FALSE;
+}
+
+/**
+ * Add any objects that are nearby the current selected objects
+ */
+Bool AIGroup::doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments )
+{
+	// Do nothing for invalid radius or if no currently selected group
+	if(orderData.Radius <= 0.0f)
+		return FALSE;
+
+	ListObjectPtrIt it;
+	KindOfMaskType validNonAIKindofs;
+
+	// Only Selectables can have delayed order helper
+	orderData.RequiredMask.set(KINDOF_SELECTABLE);
+	validNonAIKindofs.set(KINDOF_STRUCTURE);
+	validNonAIKindofs.set(KINDOF_ALWAYS_SELECTABLE);
+
+	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
+		Object *obj = (*it);
+		if (!obj) {
+			continue;
+		}
+
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		orderData.Radius, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+
+		UnsignedInt delay = orderData.MinDelay > 0 || orderData.MaxDelay > 0 ? GameLogicRandomValue(orderData.MinDelay, orderData.MaxDelay) : 0;
+
+		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
+		{
+			// Don't do command on ally objects
+			if( currentObj->getTeam() != obj->getTeam() )
+				continue;
+
+			// Don't do objects that are Under Construction
+			if( currentObj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) || currentObj->testStatus( OBJECT_STATUS_RECONSTRUCTING ) )
+				continue;
+
+			// Skip the check for current members
+			if( isMember(currentObj) )
+				continue;
+
+			// Skip members that are already done
+			VecObjectIDIt it_2;
+			Bool done = FALSE;
+			for (it_2 = m_memberListExtraID.begin(); it_2 != m_memberListExtraID.end(); ++it_2) {
+				if((*it_2) == currentObj->getID())
+				{
+					done = TRUE;
+					break;
+				}
+			}
+			if(done)
+				continue;
+
+			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
+
+			//If this object doesn't have an AIUpdateInterface, then
+			//don't add it to the group UNLESS it is a structure! Structures
+			//with AIUpdateInterfaces also issue similar commands, but those
+			//commands don't need AI updates... they are instant commands like
+			//evacuate or triggering certain special powers...
+			if( ai == NULL && !currentObj->isAnyKindOf( validNonAIKindofs ) )
+			{
+				continue;
+			}
+
+			Bool canDoAction = TRUE;
+
+			// Exclusion for different message types
+			switch(type)
+			{
+				case GameMessage::MSG_DO_WEAPON:
+				case GameMessage::MSG_DO_WEAPON_AT_OBJECT:
+				case GameMessage::MSG_DO_WEAPON_AT_LOCATION:
+				{
+					CanAttackResult result; 
+					if(type == GameMessage::MSG_DO_WEAPON_AT_LOCATION)
+						result = currentObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, &arguments[1].data.location, CMD_FROM_PLAYER ) ;
+					else if(type == GameMessage::MSG_DO_WEAPON_AT_OBJECT)
+						result = currentObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, TheGameLogic->findObjectByID( arguments[1].data.objectID ), NULL, CMD_FROM_PLAYER ) ;
+					else if(type == GameMessage::MSG_DO_WEAPON)
+						result = currentObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, currentObj->getPosition(), CMD_FROM_PLAYER ) ;	
+
+					if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+					{
+						canDoAction = FALSE;
+					}
+
+					break;
+				}
+				case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
+				case GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION:
+				case GameMessage::MSG_DO_SPECIAL_POWER:
+				{
+					UnsignedInt specialPowerID = arguments[0].data.integer;
+					const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+					if( spTemplate )
+					{
+						SpecialPowerModuleInterface *mod = currentObj->getSpecialPowerModule( spTemplate );
+						// no special power
+						if( !mod )
+						{
+							canDoAction = FALSE;
+							break;
+						}
+
+						// cannot do special power
+						if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( currentObj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer ))
+							canDoAction = FALSE;
+						else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( currentObj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
+							canDoAction = FALSE;
+						else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( currentObj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer ) )
+							canDoAction = FALSE;
+					}
+					break;
+				}
+				case GameMessage::MSG_QUEUE_UPGRADE:
+				{
+					const UpgradeTemplate *upgradeT = TheUpgradeCenter->findUpgradeByKey( (NameKeyType)(arguments[1].data.integer) );
+					if (!upgradeT)	// sanity
+					{
+						canDoAction = FALSE;
+						break;
+					}
+					// make sure that the this object can actually build the upgrade
+					// There is an extra check for Object type only.  These are the same checks as in
+					// ControlCommandProcessing when the message was going out.  We are just revalidating on the
+					// way in to stop cheaters.
+					if( ! TheUpgradeCenter->canAffordUpgrade( currentObj->getControllingPlayer(), upgradeT, FALSE ) )
+					{
+						canDoAction = FALSE;
+						break;
+					}
+					if( upgradeT->getUpgradeType() == UPGRADE_TYPE_OBJECT )
+					{
+						if( currentObj->hasUpgrade( upgradeT )  || !currentObj->affectedByUpgrade( upgradeT ) )
+						{
+							canDoAction = FALSE;
+							break;
+						}
+					}
+
+					// Ever think to check if this thing can actually build the upgrade to "stop cheaters"?
+					if( !currentObj->canProduceUpgrade(upgradeT) )
+					{
+						canDoAction = FALSE;
+						break;
+					}// They have faked their button; go out of sync. (Cheater will execute it, non cheater will not execute it.)
+
+					// producer must have a production update
+					ProductionUpdateInterface *pu = currentObj->getProductionUpdateInterface();
+					if( pu == NULL )
+					{
+						canDoAction = FALSE;
+						break;
+					}
+
+					if ( pu->canQueueUpgrade( upgradeT ) == CANMAKE_QUEUE_FULL )
+					{
+						canDoAction = FALSE;
+					}//So we don't charge them for something that we can't build... happy happy
+
+					break;
+				}
+				case GameMessage::MSG_DISABLE_POWER:
+				{
+					if(!currentObj->isKindOf(KINDOF_POWERED))
+						canDoAction = FALSE;
+
+					break;
+				}
+				case GameMessage::MSG_TOGGLE_OVERCHARGE:
+				{
+					canDoAction = FALSE;
+
+					OverchargeBehaviorInterface *obi;
+					for( BehaviorModule **bmi = currentObj->getBehaviorModules(); *bmi; ++bmi )
+					{
+
+						obi = (*bmi)->getOverchargeBehaviorInterface();
+						if( obi )
+						{
+							canDoAction = TRUE;
+							break;
+						}
+					}
+
+					break;
+				}
+				case GameMessage::MSG_SELL:
+				{
+					if( currentObj->isKindOf( KINDOF_STRUCTURE ) == FALSE )
+						canDoAction = FALSE;
+
+					break;
+				}
+				case GameMessage::MSG_INTERNET_HACK:
+				{
+					if( !ai || !ai->getHackInternetAIInterface() )
+						canDoAction = FALSE;
+
+					break;
+				}
+				case GameMessage::MSG_EVACUATE:
+				{
+					if ( currentObj->isDisabledByType( DISABLED_SUBDUED ) || currentObj->isDisabledByType( DISABLED_FROZEN ) )
+					{
+						canDoAction = FALSE;
+						break;
+					}
+
+					ContainModuleInterface *contain = currentObj->getContain();
+					if( !contain || contain->getContainCount() == 0)
+						canDoAction = FALSE;
+
+					break;
+				}
+				case GameMessage::MSG_DO_FORCEMOVETO:
+				case GameMessage::MSG_DO_ATTACKMOVETO:
+				case GameMessage::MSG_DO_GUARD_POSITION:
+				case GameMessage::MSG_DO_GUARD_OBJECT:
+				{
+					if(!ai || !ai->getCurLocomotor())
+						canDoAction = FALSE;
+
+					break;
+				}
+
+			}
+
+			if(canDoAction == FALSE)
+				continue;
+
+			delay += orderData.IntervalDelay;
+			currentObj->appendDelayedCommand(type, arguments, delay);
+
+			m_memberListExtraID.push_back( currentObj->getID() );
+
+		}
+
+		++it;
+	}
+
+	m_memberListExtraID.clear();
 
 	return FALSE;
 }
@@ -2671,15 +2938,13 @@ void AIGroup::groupEvacuate( CommandSourceType cmdSource )
 	}
 }
 
-void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask )
+void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, OrderNearbyData orderData )
 {
 	// Do nothing for invalid radius
-	if(radius <= 0.0f)
+	if(orderData.Radius <= 0.0f)
 		return;
 
 	ListObjectPtrIt it;
-	rejectMask.set(KINDOF_IMMOBILE);
-	rejectMask.set(KINDOF_STRUCTURE);
 
 	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
 		Object *obj = (*it);
@@ -2689,18 +2954,20 @@ void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, Real radius, Ki
 		}
 
 		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
-		PartitionFilterAcceptByKindOf filterKindof( acceptMask, rejectMask );
+		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
 		PartitionFilterSameMapStatus filterMapStatus(obj);
 		PartitionFilterAlive filterAlive;
 		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
-																		radius, 
+																		orderData.Radius, 
 																		FROM_CENTER_2D, 
 																		filters, ITER_FASTEST );
 		MemoryPoolObjectHolder hold( iter );
-		
+
+		UnsignedInt delay = orderData.MinDelay > 0 || orderData.MaxDelay > 0 ? GameLogicRandomValue(orderData.MinDelay, orderData.MaxDelay) : 0;
+
 		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
 		{
 			// Don't contain ally objects
@@ -2739,12 +3006,28 @@ void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, Real radius, Ki
 			ObjectStatusMaskType status = currentObj->getStatusBits();
 			if( status.test(OBJECT_STATUS_NO_COLLISIONS) || status.test(OBJECT_STATUS_MASKED) || status.test(OBJECT_STATUS_UNSELECTABLE) )
 				continue;
-					
+
 			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
 
 			if( ai )
 			{
-				ai->aiEnter(obj, cmdSource);
+				delay += orderData.IntervalDelay;
+				if(delay)
+				{
+					std::vector<GameMessageArgumentStruct> arguments;
+					GameMessageArgumentStruct curArgument;
+
+					curArgument.type = ARGUMENTDATATYPE_OBJECTID;
+					curArgument.data.objectID = INVALID_ID;
+					arguments.push_back(curArgument);
+
+					curArgument.data.objectID = obj->getID();
+					arguments.push_back(curArgument);
+
+					currentObj->appendDelayedCommand(GameMessage::MSG_ENTER, arguments, delay);
+				}
+				else
+					ai->aiEnter(obj, cmdSource);
 			}
 			
 			//m_memberListExtraID.push_back( currentObj->getID() );
@@ -3156,7 +3439,10 @@ void AIGroup::groupDisablePower( CommandSourceType cmdSource )
 
 		// get object
 		obj = *i;
-		
+
+		// We can't disable you
+		if(!obj->isKindOf(KINDOF_POWERED))
+			continue;
 
 		if(!checked && obj->isDisabledPowerByCommand())
 		{

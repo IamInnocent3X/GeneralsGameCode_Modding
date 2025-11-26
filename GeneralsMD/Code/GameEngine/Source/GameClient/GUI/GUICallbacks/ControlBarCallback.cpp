@@ -295,7 +295,17 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					// Attack move has changed from a modifier to a command, so it moves up here.
 
-					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_ATTACKMOVETO, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+					OrderNearbyData orderData;
+					if(command->getOrderNearbyRadius())
+					{
+						orderData.Radius = command->getOrderNearbyRadius();
+						orderData.RequiredMask = command->getOrderKindofMask();
+						orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+						orderData.MinDelay = command->getOrderNearbyMinDelay();
+						orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+						orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+					}
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_ATTACKMOVETO, orderData );
 					msg->appendLocationArgument( world );
 
 					// Play the unit voice response

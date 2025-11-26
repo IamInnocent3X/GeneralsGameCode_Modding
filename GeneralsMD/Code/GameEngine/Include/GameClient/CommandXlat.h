@@ -81,7 +81,7 @@ private:
 
 	virtual GameMessageDisposition translateGameMessage(const GameMessage *msg);
 
-	void checkOtherMembersForParasiteActive( const Object* obj, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
+	void checkOtherMembersForParasiteActive( const Object* selectedObj, const Object* obj, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
 };
 
 

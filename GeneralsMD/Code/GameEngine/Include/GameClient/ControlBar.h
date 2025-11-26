@@ -371,6 +371,9 @@ public:
 	Real getOrderNearbyRadius() const { return m_orderNearbyRadius; }
 	KindOfMaskType getOrderKindofMask() const { return m_orderKindof; }
 	KindOfMaskType getOrderKindofForbiddenMask() const { return m_orderKindofNot; }
+	UnsignedInt getOrderNearbyMinDelay() const { return m_orderMinDelay; }
+	UnsignedInt getOrderNearbyMaxDelay() const { return m_orderMaxDelay; }
+	UnsignedInt getOrderNearbyIntervalDelay() const { return m_orderIntervalDelay; }
 
 	const CommandButton* getNext() const { return m_next; }
 
@@ -420,6 +423,9 @@ private:
 	Real											m_orderNearbyRadius;
 	KindOfMaskType									m_orderKindof;
 	KindOfMaskType									m_orderKindofNot;
+	UnsignedInt										m_orderMinDelay;
+	UnsignedInt										m_orderMaxDelay;
+	UnsignedInt										m_orderIntervalDelay;
 
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
 	mutable const Image*					m_buttonImage;								///< button image

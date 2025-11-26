@@ -40,6 +40,7 @@
 #include "Common/Thing.h"
 #include "Common/ObjectStatusTypes.h"
 #include "Common/Upgrade.h"
+#include "Common/MessageStream.h"
 
 #include "GameClient/Color.h"
 
@@ -114,6 +115,7 @@ class ChronoDamageHelper;
 class TempWeaponBonusHelper;
 class ObjectWeaponStatusHelper;
 class ObjectDefectionHelper;
+class ObjectDelayedOrderHelper;
 class ObjectLevitationHelper;
 
 enum CommandSourceType CPP_11(: Int);
@@ -791,6 +793,8 @@ public:
 
 	inline ObjectID getEquipToID() const { return m_equipToID; }
 
+	Bool hasParasiteCollide() const { return m_hasParasiteCrateCollide; }
+
 	void doObjectUpgradeChecks();
 	void doObjectStatusChecks();
 
@@ -823,6 +827,9 @@ public:
 	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
 
 	void doStealthUpdate() { if(getStealth()) getStealth()->refreshUpdate(); }
+
+	void appendDelayedCommand(GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments, UnsignedInt delay);
+	void clearDelayedCommand();
 
 	Bool isDisguised() const;
 	Bool hasDetectedDisguise() const;
@@ -961,7 +968,7 @@ private:
 
 	UnsignedInt		m_smcUntil;
 
-	enum { NUM_SLEEP_HELPERS = 11 };
+	enum { NUM_SLEEP_HELPERS = 12 };
 	ObjectRepulsorHelper*					m_repulsorHelper;
 	ObjectSMCHelper*							m_smcHelper;
 	ObjectWeaponStatusHelper*			m_wsHelper;
@@ -974,6 +981,8 @@ private:
 
 	ObjectDisabledHelper*				m_disabledHelper;
 	ObjectLevitationHelper*				m_levitationHelper;
+
+	ObjectDelayedOrderHelper*			m_delayedOrderHelper;
 
 	// modules
 	BehaviorModule**							m_behaviors;	// BehaviorModule, not BehaviorModuleInterface
@@ -1079,6 +1088,8 @@ private:
 	ObjectID										m_hijackingID;
 	ObjectID										m_equipToID;
 	mutable ObjectID 										m_assaultTransportID;
+
+	Bool											m_hasParasiteCrateCollide;
 
 	Bool											m_disabledPowerFromCommand;
 

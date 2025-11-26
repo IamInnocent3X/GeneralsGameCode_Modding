@@ -85,6 +85,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "ObjectWeaponStatusHelperPool", 4096, 256 },
 	{ "ObjectDefectionHelperPool", 2048, 256 },
 	{ "ObjectDisabledHelperPool", 4096, 256 },
+	{ "ObjectDelayedOrderHelper", 1024, 256 },
 	{ "ObjectLevitationHelper", 1024, 256 },
 	{ "StatusDamageHelper", 1500, 256 },
 	{ "SubdualDamageHelper", 1500, 256 },

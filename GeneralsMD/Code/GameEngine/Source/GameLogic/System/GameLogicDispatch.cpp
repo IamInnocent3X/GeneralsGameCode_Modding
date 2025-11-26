@@ -357,6 +357,8 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 	AIGroupPtr currentlySelectedGroup = NULL;
 
+	OrderNearbyData msgOrderData = msg->getOrderNearbyData();
+
 	if (isInGame())
 	{
 		if (msg->getType() >= GameMessage::MSG_BEGIN_NETWORK_MESSAGES && msg->getType() <= GameMessage::MSG_END_NETWORK_MESSAGES)
@@ -365,6 +367,16 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				currentlySelectedGroup = TheAI->createGroup(); // can't do this outside a game - it'll cause sync errors galore.
 				CRCGEN_LOG(( "Creating AIGroup %d in GameLogic::logicMessageDispatcher()", currentlySelectedGroup?currentlySelectedGroup->getID():0 ));
+
+			  if(msg->getDoSingleID() != INVALID_ID)
+			  {
+				  currentlySelectedGroup->add( TheGameLogic->findObjectByID( msg->getDoSingleID() ) );
+
+				  if(TheStatsCollector && msg->getDoSingleAddStat())
+					TheStatsCollector->collectMsgStats(msg);
+			  }
+			  else
+			  {
 #if RETAIL_COMPATIBLE_AIGROUP
 				thisPlayer->getCurrentSelectionAsAIGroup(currentlySelectedGroup);
 #else
@@ -389,9 +401,28 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 				if(TheStatsCollector)
 					TheStatsCollector->collectMsgStats(msg);
+			 }
 
-				if(msg->getOrderNearbyRadius() > 0.0f && currentlySelectedGroup && msg->getType() != GameMessage::MSG_ENTER_ME)
-					currentlySelectedGroup->doAddNearbyMembers(msg->getOrderNearbyRadius(), msg->getOrderKindofMask(), msg->getOrderKindofForbiddenMask());
+				if(msgOrderData.Radius > 0.0f && currentlySelectedGroup && msg->getType() != GameMessage::MSG_ENTER_ME)
+				{
+					if(msgOrderData.MinDelay > 0 || msgOrderData.MaxDelay > 0 || msgOrderData.IntervalDelay > 0)
+					{
+						std::vector<GameMessageArgumentStruct> msgArguments;
+						GameMessageArgumentStruct curArgument;
+
+						Int numArgs = msg->getArgumentCount();
+						for (Int i = 0; i < numArgs; ++i) {
+							curArgument.type = msg->getArgumentDataType(i);
+							curArgument.data = *(msg->getArgument(i));
+							msgArguments.push_back(curArgument);
+						}
+						currentlySelectedGroup->doDelayedNearbyMembers(msgOrderData, msg->getType(), msgArguments);
+					}
+					else
+					{
+						currentlySelectedGroup->doAddNearbyMembers(msgOrderData);
+					}
+				}
 			}
 		}
 	}
@@ -685,7 +716,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// check for possible specific source, ignoring selection.
 			ObjectID sourceID = msg->getArgument(2)->objectID;
 			Object* source = TheGameLogic->findObjectByID(sourceID);
-			if (source != NULL)
+			if (source != NULL && msg->getDoSingleID() == INVALID_ID)
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
@@ -730,7 +761,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// check for possible specific source, ignoring selection.
 			ObjectID sourceID = msg->getArgument(5)->objectID;
 			Object* source = TheGameLogic->findObjectByID(sourceID);
-			if (source != NULL)
+			if (source != NULL && msg->getDoSingleID() == INVALID_ID)
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
@@ -773,7 +804,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// check for possible specific source, ignoring selection.
 			ObjectID sourceID = msg->getArgument(3)->objectID;
 			Object* source = TheGameLogic->findObjectByID(sourceID);
-			if (source != NULL)
+			if (source != NULL && msg->getDoSingleID() == INVALID_ID)
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
@@ -1095,7 +1126,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// issue command for either single object or for selected group
 			if( currentlySelectedGroup )
 			{
-				currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msg->getOrderNearbyRadius(), msg->getOrderKindofMask(), msg->getOrderKindofForbiddenMask() );
+				currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msgOrderData );
 
 			}  // end if, command for group
 
@@ -1437,7 +1468,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			ProductionUpdateInterface *pu = producer->getProductionUpdateInterface();
 			if( pu == NULL )
 			{
-				if(msg->getOrderNearbyRadius() > 0.0f && currentlySelectedGroup)
+				if(msgOrderData.Radius > 0.0f && currentlySelectedGroup && msgOrderData.MinDelay == 0 && msgOrderData.MaxDelay == 0 && msgOrderData.IntervalDelay == 0)
 					currentlySelectedGroup->clearExtraMembers();
 				return;
 			}
@@ -2117,7 +2148,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 	if( currentlySelectedGroup != NULL )
 	{
-		if(msg->getOrderNearbyRadius() > 0.0f)
+		if(msgOrderData.Radius > 0.0f && currentlySelectedGroup && msgOrderData.MinDelay == 0 && msgOrderData.MaxDelay == 0 && msgOrderData.IntervalDelay == 0)
 			currentlySelectedGroup->clearExtraMembers();
 
 #if RETAIL_COMPATIBLE_AIGROUP

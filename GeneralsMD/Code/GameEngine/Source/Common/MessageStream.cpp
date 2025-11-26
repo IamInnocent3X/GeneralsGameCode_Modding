@@ -61,9 +61,14 @@ GameMessage::GameMessage( GameMessage::Type type )
 	m_argTail = NULL;
 	m_argCount = 0;
 	m_list = 0;
-	m_orderNearbyRadius = 0.0f;
-	m_orderKindof = KINDOFMASK_NONE;
-	m_orderKindofNot = KINDOFMASK_NONE;
+	m_orderData.Radius = 0.0f;
+	m_orderData.RequiredMask = KINDOFMASK_NONE;
+	m_orderData.ForbiddenMask = KINDOFMASK_NONE;
+	m_orderData.MinDelay = 0;
+	m_orderData.MaxDelay = 0;
+	m_orderData.IntervalDelay = 0;
+	m_doSingleID = INVALID_ID;
+	m_doSingleAddStat = FALSE;
 }
 
 
@@ -760,12 +765,10 @@ void GameMessageList::appendMessage( GameMessage *msg )
 /**
  * Append message to end of message list with order radius properties
  */
-void GameMessageList::appendMessageWithOrderNearbyRadius( GameMessage *msg, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot )
+void GameMessageList::appendMessageWithOrderNearby( GameMessage *msg, OrderNearbyData orderData )
 {
 	msg->friend_setNext(NULL);
-	msg->friend_setOrderNearbyRadius(radius);
-	msg->friend_setOrderKindofMask(orderKindOf);
-	msg->friend_setOrderKindofForbiddenMask(orderKindOfNot);
+	msg->friend_setOrderData(orderData);
 
 	if (m_lastMessage)
 	{
@@ -922,12 +925,12 @@ GameMessage *MessageStream::appendMessage( GameMessage::Type type )
  * to this message stream.  Return the message such that any data
  * associated with this message can be attached to it.
  */
-GameMessage *MessageStream::appendMessageWithOrderNearbyRadius( GameMessage::Type type, Real radius, KindOfMaskType orderKindOf, KindOfMaskType orderKindOfNot )
+GameMessage *MessageStream::appendMessageWithOrderNearby( GameMessage::Type type, OrderNearbyData orderData )
 {
 	GameMessage *msg = newInstance(GameMessage)( type );
 
 	// add message to list
-	GameMessageList::appendMessageWithOrderNearbyRadius( msg, radius, orderKindOf, orderKindOfNot );
+	GameMessageList::appendMessageWithOrderNearby( msg, orderData );
 
 	return msg;
 }

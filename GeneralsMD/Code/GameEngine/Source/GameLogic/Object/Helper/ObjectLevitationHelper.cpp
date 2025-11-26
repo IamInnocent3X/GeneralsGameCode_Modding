@@ -132,14 +132,6 @@ void ObjectLevitationHelper::crc( Xfer *xfer )
 	// object helper crc
 	ObjectHelper::crc( xfer );
 
-	xfer->xferReal( &m_magnetLevitateHeight );
-
-	xfer->xferUnsignedInt( &m_levitateFrame );
-
-	xfer->xferUnsignedInt( &m_levitateFlutterFrame );
-
-	xfer->xferBool ( &m_dontLevitate );
-
 }  // end crc
 
 // ------------------------------------------------------------------------------------------------
@@ -157,6 +149,14 @@ void ObjectLevitationHelper::xfer( Xfer *xfer )
 
 	// object helper base class
 	ObjectHelper::xfer( xfer );
+	
+	xfer->xferReal( &m_magnetLevitateHeight );
+
+	xfer->xferUnsignedInt( &m_levitateFrame );
+
+	xfer->xferUnsignedInt( &m_levitateFlutterFrame );
+
+	xfer->xferBool ( &m_dontLevitate );
 
 }  // end xfer
 

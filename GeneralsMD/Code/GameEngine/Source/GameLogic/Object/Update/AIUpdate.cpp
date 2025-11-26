@@ -3216,6 +3216,7 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 	if(parms->m_cmdSource != CMD_FROM_AI)
 	{
 		getObject()->removeMeFromAssaultTransport();
+		getObject()->clearDelayedCommand();
 		getObject()->doStealthUpdate();
 	}
 }

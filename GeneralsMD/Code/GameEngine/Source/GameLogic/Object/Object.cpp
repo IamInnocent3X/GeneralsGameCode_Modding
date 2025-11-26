@@ -49,6 +49,7 @@
 #include "Common/Xfer.h"
 #include "Common/XferCRC.h"
 #include "Common/PerfTimer.h"
+#include "Common/MessageStream.h"
 
 #include "GameClient/Anim2D.h"
 #include "GameClient/ControlBar.h"
@@ -86,6 +87,7 @@
 //#include "GameLogic/Module/MobMemberSlavedUpdate.h"
 #include "GameLogic/Module/ObjectHelper.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
+#include "GameLogic/Module/ObjectDelayedOrderHelper.h"
 #include "GameLogic/Module/ObjectDisabledHelper.h"
 #include "GameLogic/Module/ObjectLevitationHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
@@ -253,6 +255,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_smcHelper(NULL),
 	m_wsHelper(NULL),
 	m_defectionHelper(NULL),
+	m_delayedOrderHelper(NULL),
 	m_disabledHelper(NULL),
 	m_levitationHelper(NULL),
 	m_partitionLastLook(NULL),
@@ -493,6 +496,15 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		*curB++ = m_levitationHelper;
 	}
 
+	if( tt->isKindOf(KINDOF_SELECTABLE) )
+	{
+		static const NameKeyType delayedOrderHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_DelayedOrderHelper" );
+		static ObjectDelayedOrderHelperModuleData delayedModuleData;
+		delayedModuleData.setModuleTagNameKey( delayedOrderHelperModuleDataTagNameKey );
+		m_delayedOrderHelper = newInstance(ObjectDelayedOrderHelper)(this, &delayedModuleData);
+		*curB++ = m_delayedOrderHelper;
+	}
+
 	// behaviors are always done first, so they get into the publicModule arrays
 	// before anything else.
 	for (modIdx = 0; modIdx < mi.getCount(); ++modIdx)
@@ -563,6 +575,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			DEBUG_ASSERTCRASH(m_stickyBombUpdate == NULL, ("You should never have more than one StickyBombUpdate module (%s)",getTemplate()->getName().str()));
 			m_stickyBombUpdate = stickyBomb;
 		}
+
+		if (newMod->getCollide() && newMod->getCollide()->isParasiteEquipCrateCollide())
+			m_hasParasiteCrateCollide = TRUE;
 	}
 
 	*curB = NULL;
@@ -626,6 +641,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_assaultTransportID = INVALID_ID;
 
+	m_hasParasiteCrateCollide = FALSE;
 	m_parasiteCollideActive = FALSE;
 
 	// Sleepy Updates Revamp Variables
@@ -794,6 +810,8 @@ Object::~Object()
 	m_radarUpgrade = NULL;
 	m_stickyBombUpdate = NULL;
 
+	m_hasParasiteCrateCollide = FALSE;
+
 	// delete any modules present
 	for (BehaviorModule** b = m_behaviors; *b; ++b)
 	{
@@ -821,6 +839,7 @@ Object::~Object()
 	m_wsHelper = NULL;
 	m_defectionHelper = NULL;
 
+	m_delayedOrderHelper = NULL;
 	m_disabledHelper = NULL;
 	m_levitationHelper = NULL;
 
@@ -6729,6 +6748,20 @@ HelperTransferData Object::getTempWeaponBonusHelperData() const
 
 	HelperTransferData nullData;
 	return nullData;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::appendDelayedCommand(GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments, UnsignedInt delay)
+{
+	if(m_delayedOrderHelper)
+		m_delayedOrderHelper->appendCommand(type, arguments, delay);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearDelayedCommand()
+{
+	if(m_delayedOrderHelper)
+		m_delayedOrderHelper->clearCommand();
 }
 
 //-------------------------------------------------------------------------------------------------

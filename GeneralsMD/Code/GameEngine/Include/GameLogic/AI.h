@@ -37,6 +37,7 @@
 #include "Common/GameType.h"
 #include "GameLogic/Damage.h"
 #include "Common/STLTypedefs.h"
+#include "Common/MessageStream.h"
 #include "refcount.h"
 #include "ref_ptr.h"
 
@@ -945,7 +946,7 @@ public:
 	void groupDock( Object *obj, CommandSourceType cmdSource );							///< get near given object and wait for enter clearance
 	void groupExit( Object *objectToExit, CommandSourceType cmdSource );			///< get out of this Object
 	void groupEvacuate( CommandSourceType cmdSource );												///< empty its contents
-	void groupEnterToSelected( CommandSourceType cmdSource, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );									///< tell nearby objects to enter the selected objects
+	void groupEnterToSelected( CommandSourceType cmdSource, OrderNearbyData orderData );									///< tell nearby objects to enter the selected objects
 	void groupExecuteRailedTransport( CommandSourceType cmdSource );					///< execute railed transport events
 	void groupGoProne( const DamageInfo *damageInfo, CommandSourceType cmdSource );												///< life altering state change, if this AI can do it
 	void groupGuardPosition( const Coord3D *pos, GuardMode guardMode, CommandSourceType cmdSource );						///< guard the given spot
@@ -1015,7 +1016,10 @@ public:
 	Bool removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer );
 
 	// Add any objects that are nearby the current selected objects
-	Bool doAddNearbyMembers( Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
+	Bool doAddNearbyMembers( OrderNearbyData orderData );
+
+	// Do the orders delayed to any of the objects that are nearby
+	Bool doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments );
 
 	// Remove the nearby objects from the member list
 	Bool clearExtraMembers();

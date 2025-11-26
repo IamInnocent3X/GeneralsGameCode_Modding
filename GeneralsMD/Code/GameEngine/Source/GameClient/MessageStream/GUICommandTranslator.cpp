@@ -134,6 +134,17 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 
 	}  // end if
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	// create message and send to the logic
 	GameMessage *msg;
 	if( BitIsSet( command->getOptions(), NEED_TARGET_POS ) )
@@ -144,7 +155,7 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 		TheTacticalView->screenToTerrain( mouse, &world );
 
 		// create the message and append arguments
-		msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_WEAPON_AT_LOCATION, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+		msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON_AT_LOCATION, orderData );
 		msg->appendIntegerArgument( command->getWeaponSlot() );
 		msg->appendLocationArgument( world );
 		msg->appendIntegerArgument( command->getMaxShotsToFire() );
@@ -175,7 +186,7 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 		if( target )
 		{
 
-			msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_WEAPON_AT_OBJECT, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+			msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON_AT_OBJECT, orderData );
 			msg->appendIntegerArgument( command->getWeaponSlot() );
 			msg->appendObjectIDArgument( target->getID() );
 			msg->appendIntegerArgument( command->getMaxShotsToFire() );
@@ -185,7 +196,7 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 	}  // end else
 	else
 	{
-		msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_WEAPON, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+		msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON, orderData );
 		msg->appendIntegerArgument( command->getWeaponSlot() );
 		msg->appendIntegerArgument( command->getMaxShotsToFire() );
 
@@ -214,13 +225,24 @@ static CommandStatus doGuardCommand( const CommandButton *command, GuardMode gua
 
 	GameMessage *msg = NULL;
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	if ( msg == NULL && BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) )
 	{
 		// get the target object under the cursor
 		Object* target = validUnderCursor( mouse, command, PICK_TYPE_SELECTABLE );
 		if( target )
 		{
-			msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_GUARD_OBJECT, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+			msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_OBJECT, orderData );
 			msg->appendObjectIDArgument( target->getID() );
 			msg->appendIntegerArgument(guardMode);
 			pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_GUARD_OBJECT);
@@ -244,7 +266,7 @@ static CommandStatus doGuardCommand( const CommandButton *command, GuardMode gua
 		}
 
 		// create the message and append arguments
-		msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_GUARD_POSITION, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+		msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_POSITION, orderData );
 		msg->appendLocationArgument(world);
 		msg->appendIntegerArgument(guardMode);
 		pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_GUARD_POSITION);
@@ -279,8 +301,19 @@ static CommandStatus doAttackMoveCommand( const CommandButton *command, const IC
 	Coord3D world;
 	TheTacticalView->screenToTerrain( mouse, &world );
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	// send the message to set the rally point
-	GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_ATTACKMOVETO, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+	GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_ATTACKMOVETO, orderData );
 	msg->appendLocationArgument( world );
 
 	// Play the unit voice response
@@ -360,6 +393,17 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 	if( command == NULL )
 		return disp;
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	switch( msg->getType() )
 	{
 
@@ -416,7 +460,7 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 
 							TheTacticalView->screenToTerrain(&mouse, &worldPos);
 
-							GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_EVACUATE, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+							GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EVACUATE, orderData );
 							msg->appendLocationArgument(worldPos);
 
 							pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_EVACUATE );
@@ -435,7 +479,7 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 
 							TheTacticalView->screenToTerrain(&mouse, &worldPos);
 
-							GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_ENTER_ME, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask() );
+							GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_ENTER_ME, orderData );
 							msg->appendLocationArgument(worldPos);
 
 							pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER_ME );

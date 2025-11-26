@@ -131,6 +131,16 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		DEBUG_CRASH( ("ControlBar::processCommandUI() -- Button activated has no data. Ignoring...") );
 		return CBC_COMMAND_NOT_USED;
 	}
+	OrderNearbyData orderData;
+	if(commandButton->getOrderNearbyRadius())
+	{
+		orderData.Radius = commandButton->getOrderNearbyRadius();
+		orderData.RequiredMask = commandButton->getOrderKindofMask();
+		orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
+		orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
+		orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
+	}
 
 	// sanity, we won't process messages if we have no source object,
 	// unless we're CB_CONTEXT_PURCHASE_SCIENCE or GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
@@ -212,7 +222,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 	{
 		if (commandButton->getOptions() & USES_MINE_CLEARING_WEAPONSET)
 		{
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_SET_MINE_CLEARING_DETAIL, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SET_MINE_CLEARING_DETAIL, orderData );
 		}
 
 		//June 06, 2002 -- Major change
@@ -574,7 +584,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// send the message
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_QUEUE_UPGRADE, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_QUEUE_UPGRADE, orderData );
 			msg->appendObjectIDArgument( objID );
 			msg->appendIntegerArgument( upgradeT->getUpgradeNameKey() );
 
@@ -616,7 +626,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// send the message
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_CANCEL_UPGRADE, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_CANCEL_UPGRADE );
 			msg->appendIntegerArgument( upgradeT->getUpgradeNameKey() );
 
 			break;
@@ -625,14 +635,14 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_ATTACK_MOVE:
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_META_TOGGLE_ATTACKMOVE, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_META_TOGGLE_ATTACKMOVE, orderData );
 			break;
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_STOP:
 		{
 			// This message always works on the currently selected team
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_STOP, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_STOP, orderData );
 			break;
 		}
 
@@ -731,7 +741,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
 				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_EVACUATE );
-				TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_EVACUATE, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+				TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EVACUATE, orderData );
 			}
 
 			break;
@@ -745,7 +755,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
 				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER_ME );
-				TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_ENTER_ME, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+				TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_ENTER_ME, orderData );
 			}
 
 			break;
@@ -754,7 +764,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		// --------------------------------------------------------------------------------------------
 		case GUI_COMMAND_EXECUTE_RAILED_TRANSPORT:
 		{
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_EXECUTE_RAILED_TRANSPORT, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EXECUTE_RAILED_TRANSPORT, orderData );
 			break;
 		}  // end execute railed transport
 
@@ -762,7 +772,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_HACK_INTERNET:
 		{
 			pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_INTERNET_HACK );
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_INTERNET_HACK, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_INTERNET_HACK, orderData );
 			break;
 		}
 
@@ -778,7 +788,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		{
 
 			// command needs no additional data, send the message
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_SELL, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SELL, orderData );
 			break;
 
 		}  // end sell
@@ -787,7 +797,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_TOGGLE_OVERCHARGE:
 		{
 
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_TOGGLE_OVERCHARGE, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_TOGGLE_OVERCHARGE, orderData );
 			break;
 
 		}  // end overcharge
@@ -797,7 +807,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_POW_RETURN_TO_PRISON:
 		{
 
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_RETURN_TO_PRISON, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_RETURN_TO_PRISON, orderData );
 			break;
 
 		}  // end return to prison
@@ -831,7 +841,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			// Cancel GUI command mode.
 			TheInGameUI->setGUICommand( NULL );
 
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_GUARD_POSITION, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_POSITION, orderData );
 			GuardMode guardMode;
 			switch( commandButton->getCommandType() )
 			{
@@ -857,7 +867,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_SWITCH_WEAPON:
 		{
 				// command needs no additional data, send the message
-				GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_SWITCH_WEAPONS, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+				GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SWITCH_WEAPONS, orderData );
 
 				//Play mode change acknowledgement
 				PickAndPlayInfo info;
@@ -873,7 +883,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_FIRE_WEAPON:
 		{
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_WEAPON, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON, orderData );
 			msg->appendIntegerArgument( commandButton->getWeaponSlot() );
 			msg->appendIntegerArgument( commandButton->getMaxShotsToFire() );
 
@@ -892,7 +902,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_SPECIAL_POWER, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_SPECIAL_POWER, orderData );
 			msg->appendIntegerArgument( spTemplate->getID() );
 			msg->appendIntegerArgument( commandButton->getOptions() );
 			msg->appendObjectIDArgument( obj->getID() );
@@ -903,7 +913,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_SPECIAL_POWER:
 		{
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DO_SPECIAL_POWER, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_SPECIAL_POWER, orderData );
 			msg->appendIntegerArgument( commandButton->getSpecialPowerTemplate()->getID() );
 			msg->appendIntegerArgument( commandButton->getOptions() );
 			msg->appendObjectIDArgument( INVALID_ID );	// no specific source
@@ -935,7 +945,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			}
 
 
-			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_PURCHASE_SCIENCE, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_PURCHASE_SCIENCE, orderData );
 			msg->appendIntegerArgument( st );
 
 			markUIDirty();
@@ -950,7 +960,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 			// command needs no additional data, send the message
 
-			TheMessageStream->appendMessageWithOrderNearbyRadius( GameMessage::MSG_DISABLE_POWER, commandButton->getOrderNearbyRadius(), commandButton->getOrderKindofMask(), commandButton->getOrderKindofForbiddenMask() );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DISABLE_POWER, orderData );
 			break;
 
 		}  // end sell
