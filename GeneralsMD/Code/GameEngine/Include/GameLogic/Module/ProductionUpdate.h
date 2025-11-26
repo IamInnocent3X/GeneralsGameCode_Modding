@@ -56,6 +56,26 @@ enum ProductionType CPP_11(: Int)
 };
 
 //-------------------------------------------------------------------------------------------------
+struct QuantityModifier
+{
+	AsciiString m_templateName;
+	Int					m_quantity;
+};
+
+//-------------------------------------------------------------------------------------------------
+struct ProductionModifier
+{
+	AsciiString 			 m_templateName;
+	Int						 m_quantity;
+	std::vector<QuantityModifier>	m_otherTemplateNames;
+
+	ProductionModifier() : m_templateName(NULL), m_quantity(1)
+	{
+		m_otherTemplateNames.clear();
+	}
+};
+
+//-------------------------------------------------------------------------------------------------
 /** A ProductionEntry is a single entry representing something that we are supposed to
 	* produce */
 //-------------------------------------------------------------------------------------------------
@@ -90,6 +110,7 @@ public:
 	Int getProductionQuantityRemaining() const { return m_productionQuantityTotal - m_productionQuantityProduced; }//How many I have made
 
 	void oneProductionSuccessful() { ++m_productionQuantityProduced; m_exitDoor = DOOR_NONE_AVAILABLE; }//increment, and mark door to re-reserve
+	void setNewProduction(); //Set new production for production modifier
 
 	ExitDoorType getExitDoor() const { return m_exitDoor; }
 	void setExitDoor(ExitDoorType exitDoor) { m_exitDoor = exitDoor; }
@@ -107,18 +128,13 @@ protected:
 	Int m_framesUnderConstruction;										///< counter for how many frames we've been under construction (incremented once per update)
 	Int m_productionQuantityTotal;										///< it is now possible to construct multiple units simultaneously.
 	Int m_productionQuantityProduced;									///< And we need to allow pausing within an entry, so we keep track of number of sub-successes
+	Int m_newTemplateAmount;											///< Production Amount to indicate the production modifier template to use
+	std::vector<QuantityModifier> m_productionExtraData;				///< Extra production data
 	ExitDoorType m_exitDoor;
 
 	ProductionEntry *m_next;													///< next in list
 	ProductionEntry *m_prev;													///< prev in list
 
-};
-
-//-------------------------------------------------------------------------------------------------
-struct QuantityModifier
-{
-	AsciiString m_templateName;
-	Int					m_quantity;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -132,12 +148,14 @@ public:
 	UnsignedInt										m_doorClosingTime;							///< in frames, time it takes to close the door
 	UnsignedInt										m_constructionCompleteDuration; ///< in frames, how long we state in "construction complete" condition after making something
 	std::vector<QuantityModifier>	m_quantityModifiers;						///< Quantity modifiers modify the number of specified object to created whenever produced.
+	std::vector<ProductionModifier>	m_productionModifiers;						///< Production modifiers modify the number of specified object and whether they will create other objects to created whenever produced.
   Int														m_maxQueueEntries;							///< max things that can be queued at once.
 	DisabledMaskType							m_disabledTypesToProcess;
 
 	ProductionUpdateModuleData( void );
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseAppendQuantityModifier( INI* ini, void *instance, void *store, const void *userData );
+	static void parseAppendProductionModifier( INI* ini, void *instance, void *store, const void *userData );
 };
 
 //-------------------------------------------------------------------------------------------------

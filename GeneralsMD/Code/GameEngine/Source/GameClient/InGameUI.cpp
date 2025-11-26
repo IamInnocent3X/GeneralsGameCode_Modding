@@ -3030,7 +3030,7 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					{
 						if( hasSrcObj )
 						{
-							SpecialAbilityUpdate *spUpdate;
+							SpecialAbilityUpdate *spUpdate = NULL;
 							Bool cursorSet = FALSE;
 
 							// iterate every drawable until we found the cursor we need
@@ -3070,7 +3070,7 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 					{
 						if( hasSrcObj )
 						{
-							SpecialAbilityUpdate *spUpdate;
+							SpecialAbilityUpdate *spUpdate = NULL;
 							Bool cursorSet = FALSE;
 
 							// iterate every drawable until we found the cursor we need

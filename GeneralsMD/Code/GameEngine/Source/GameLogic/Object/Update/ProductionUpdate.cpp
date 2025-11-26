@@ -101,6 +101,7 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 	m_doorClosingTime = 0;
 	m_constructionCompleteDuration = 0;
 	m_quantityModifiers.clear();
+	m_productionModifiers.clear();
 	m_maxQueueEntries = 9;
 	m_disabledTypesToProcess = MAKE_DISABLED_MASK(DISABLED_HELD);
 }
@@ -120,6 +121,60 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+/*static*/ void ProductionUpdateModuleData::parseAppendProductionModifier( INI* ini, void *instance, void *store, const void* /*userData*/ )
+{
+	ProductionUpdateModuleData* data = (ProductionUpdateModuleData*)instance;
+	ProductionModifier pm;
+	QuantityModifier qm;
+	Bool parsedFirst = FALSE;
+	Bool parsedTemplate = FALSE;
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		if(isdigit(*token))
+		{
+			if(!parsedFirst)
+			{
+				if(pm.m_templateName.isEmpty())
+				{
+					DEBUG_CRASH(("Parsing quantity requires first the parsing of Template."));
+					throw INI_INVALID_DATA;
+				}
+				pm.m_quantity = INI::scanInt(token);
+			}
+			else
+			{
+				if(!parsedTemplate)
+				{
+					DEBUG_CRASH(("Parsing quantity requires first the parsing of Template."));
+					throw INI_INVALID_DATA;
+				}
+				qm.m_quantity = INI::scanInt(token);
+				pm.m_otherTemplateNames.push_back(qm);
+				qm.m_quantity = 1;
+				parsedTemplate = FALSE;
+			}
+		}
+		else
+		{
+			if(pm.m_templateName.isEmpty())
+			{
+				pm.m_templateName.set( token );
+			}
+			else
+			{
+				parsedFirst = TRUE;
+				if(parsedTemplate)
+					pm.m_otherTemplateNames.push_back(qm);
+				qm.m_templateName.set( token );
+				parsedTemplate = TRUE;
+				qm.m_quantity = 1;
+			}
+		}
+	}
+	data->m_productionModifiers.push_back( pm );
+}
+
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 /*static*/ void ProductionUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 {
@@ -134,6 +189,7 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 		{ "DoorCloseTime", INI::parseDurationUnsignedInt, NULL, offsetof( ProductionUpdateModuleData, m_doorClosingTime ) },
 		{ "ConstructionCompleteDuration", INI::parseDurationUnsignedInt, NULL, offsetof( ProductionUpdateModuleData, m_constructionCompleteDuration ) },
 		{ "QuantityModifier",	parseAppendQuantityModifier, NULL, offsetof( ProductionUpdateModuleData, m_quantityModifiers ) },
+		{ "ProductionModifier",	parseAppendProductionModifier, NULL, offsetof( ProductionUpdateModuleData, m_productionModifiers ) },
 		{ "DisabledTypesToProcess",	DisabledMaskType::parseFromINI, NULL, offsetof( ProductionUpdateModuleData, m_disabledTypesToProcess ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -162,6 +218,7 @@ ProductionEntry::ProductionEntry( void )
 	//Initializations inserted
 	m_productionQuantityProduced = 0;
 	m_productionQuantityTotal = 0;
+	m_productionExtraData.clear();
 	//
 }  // end ProductionEntry
 
@@ -177,6 +234,22 @@ ProductionEntry::~ProductionEntry( void )
 Real ProductionEntry::getPercentComplete( void ) const
 {
 	return INT_TO_REAL( TheGameLogic->getFrame() - m_framesUnderConstruction ) * m_percentComplete * 100.0f;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ProductionEntry::setNewProduction()
+{
+	if(m_productionExtraData.size() <= m_newTemplateAmount)
+		return;
+
+	m_objectToProduce = TheThingFactory->findTemplate( m_productionExtraData[m_newTemplateAmount].m_templateName );
+	if(m_objectToProduce)
+	{
+		m_productionQuantityProduced = 0;
+		m_productionQuantityTotal = m_productionExtraData[m_newTemplateAmount].m_quantity;
+	}
+	m_newTemplateAmount++;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -452,6 +525,17 @@ Bool ProductionUpdate::queueCreateUnit( const ThingTemplate *unitType, Productio
 		if( productionTemplate && productionTemplate->isEquivalentTo( unitType ) )
 		{
 			production->m_productionQuantityTotal = it->m_quantity;
+			break;
+		}
+	}
+
+	for( std::vector<ProductionModifier>::const_iterator it_p = data->m_productionModifiers.begin(); it_p != data->m_productionModifiers.end(); ++it_p )
+  {
+		const ThingTemplate* productionTemplate = TheThingFactory->findTemplate( it_p->m_templateName );
+		if( productionTemplate && productionTemplate->isEquivalentTo( unitType ) )
+		{
+			production->m_productionQuantityTotal = it_p->m_quantity;
+			production->m_productionExtraData = it_p->m_otherTemplateNames;
 			break;
 		}
 	}
@@ -936,6 +1020,12 @@ UpdateSleepTime ProductionUpdate::update( void )
 
 				} //end of trying to exit all the things we were planning on attempting
 
+				//update the production modifier
+				if( production->getProductionQuantityRemaining() == 0 )
+				{
+					production->setNewProduction();
+				}
+
 				if( production->getProductionQuantityRemaining() == 0 )
 				{
 					// remove this production entry so we can go on to the next if we are totally finished
@@ -954,7 +1044,7 @@ UpdateSleepTime ProductionUpdate::update( void )
 
 				// there is no exit interface, this is an error
 				DEBUG_ASSERTCRASH( 0, ("Cannot create '%s', there is no ExitUpdate interface defined for producer object '%s'",
-															production->m_objectToProduce->getName().str(),
+															unitType->getName().str(),
 															creationBuilding->getTemplate()->getName().str()) );
 
 				// remove this item from the production queue
@@ -1329,6 +1419,10 @@ void ProductionUpdate::xfer( Xfer *xfer )
 	{
 		AsciiString name;
 
+		AsciiString templateName;
+		Int quantity;
+		UnsignedShort extraDataCount;
+
 		// write all queue data
 		for( production = m_productionQueue; production; production = production->m_next )
 		{
@@ -1358,6 +1452,22 @@ void ProductionUpdate::xfer( Xfer *xfer )
 			// production quantity in progress
 			xfer->xferInt( &production->m_productionQuantityProduced );
 
+			// new template amount produced
+			xfer->xferInt( &production->m_newTemplateAmount );
+
+			// production extra data
+			extraDataCount = production->m_productionExtraData.size();
+			xfer->xferUnsignedShort( &extraDataCount );
+
+			for(std::vector<QuantityModifier>::iterator it = production->m_productionExtraData.begin(); it != production->m_productionExtraData.end(); ++it)
+			{
+				templateName = it->m_templateName;
+				xfer->xferAsciiString(&templateName);
+
+				quantity = it->m_quantity;
+				xfer->xferInt(&quantity);
+			}
+
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );
 
@@ -1367,6 +1477,10 @@ void ProductionUpdate::xfer( Xfer *xfer )
 	else
 	{
 		AsciiString name;
+
+		AsciiString templateName;
+		Int quantity;
+		UnsignedShort extraDataCount;
 
 		// the queue should be emtpy now
 		if( m_productionQueue != NULL )
@@ -1446,6 +1560,39 @@ void ProductionUpdate::xfer( Xfer *xfer )
 
 			// production quantity in progress
 			xfer->xferInt( &production->m_productionQuantityProduced );
+
+			// new template amount produced
+			xfer->xferInt( &production->m_newTemplateAmount );
+
+			// production extra data
+			xfer->xferUnsignedShort( &extraDataCount );
+
+			// sanity, list must be empty right now
+			if( production->m_productionExtraData.size() != 0 )
+			{
+
+				DEBUG_CRASH(( "ProductionUpdate::xfer - production->m_productionExtraData should be empty but is not" ));
+				throw SC_INVALID_DATA;
+
+			}  // end if
+
+			QuantityModifier qm;
+			// read each entry
+			for( UnsignedInt i = 0; i < extraDataCount; ++i )
+			{
+
+				// read data
+				xfer->xferAsciiString(&templateName);
+
+				xfer->xferInt(&quantity);
+
+				qm.m_templateName = templateName;
+				qm.m_quantity = quantity;
+
+				// put at end of list
+				production->m_productionExtraData.push_back( qm );
+
+			}  // end for i
 
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );
