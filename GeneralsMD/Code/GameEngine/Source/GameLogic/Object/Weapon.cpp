@@ -1434,7 +1434,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		{
 			handled = TRUE;		// then let's just pretend like we did the fx by returning true
 		}
-		else
+		else if( !launchPos )
 		{
 			handled = sourceObj->getDrawable()->handleWeaponFireFX(wslot,
 																															specificBarrelToUse,
@@ -1451,7 +1451,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		{
 			// bah. just play it at the drawable's pos.
 			//DEBUG_LOG(("*** WeaponFireFX not fully handled by the client"));
-			const Coord3D* where = isContactWeapon() ? &targetPos : sourceObj->getDrawable()->getPosition();
+			const Coord3D* where = isContactWeapon() ? &targetPos : (launchPos ? launchPos : sourceObj->getDrawable()->getPosition());
 			FXList::doFXPos(fx, where, sourceObj->getDrawable()->getTransformMatrix(), getWeaponSpeed(), &targetedPos, getPrimaryDamageRadius(bonus));
 		}
 	}
@@ -4498,7 +4498,7 @@ ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, 
 			else { // We target the ground
 				pos.z += getTemplate()->getLaserGroundTargetHeight();
 			}
-			update->initLaser( sourceObj, victimObj, launchPos ? launchPos : sourceObj->getPosition(), &pos, m_template->getLaserBoneName() );
+			update->initLaser( launchPos ? NULL : sourceObj, victimObj, launchPos ? launchPos : sourceObj->getPosition(), &pos, m_template->getLaserBoneName() );
 		}
 	}
 
@@ -4547,7 +4547,7 @@ void Weapon::handleContinuousLaser(const Object* sourceObj, const Object* victim
 				//Projectiles are a different story, target their exact position.
 				pos.z += 10.0f;
 			}
-			update->updateContinuousLaser(sourceObj, victimObj, launchPos ? launchPos : sourceObj->getPosition(), &pos);
+			update->updateContinuousLaser(launchPos ? NULL : sourceObj, victimObj, launchPos ? launchPos : sourceObj->getPosition(), &pos);
 		}
 	}
 }
