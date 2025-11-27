@@ -96,7 +96,7 @@ public:
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
 
 	// ProjectileUpdateInterface
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride);
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL, ObjectID shrapnelLaunchID = INVALID_ID );
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return true; }
@@ -106,6 +106,7 @@ public:
 	virtual void projectileNowDrawn(ObjectID attractorID);
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
 
 protected:
 
@@ -127,6 +128,7 @@ private:
 	ObjectID				m_decoyID;
 	ObjectID 				m_attractedID;
 	Coord3D					m_targetPosBackup;
+	ObjectID 				m_shrapnelLaunchID;
   
     Bool                  m_hasDetonated;           ///< 
 	Bool                  m_isJammed;

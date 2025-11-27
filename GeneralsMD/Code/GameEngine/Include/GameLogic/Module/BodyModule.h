@@ -247,6 +247,8 @@ public:
 	virtual void evaluateVisualCondition() = 0;
 	virtual void updateBodyParticleSystems() = 0; // made public for topple and building collapse updates -ML
 
+	virtual Bool cantBeKilled() const = 0;
+
 };
 
 //-------------------------------------------------------------------------------------------------

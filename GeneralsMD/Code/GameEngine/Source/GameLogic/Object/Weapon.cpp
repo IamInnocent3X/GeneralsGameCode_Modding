@@ -440,6 +440,12 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 
 	{ "InvulnerabilityDuration",					INI::parseDurationUnsignedInt,			NULL,			offsetof(WeaponTemplate, m_invulnerabilityDuration) },
 
+	{ "ShrapnelCount",				INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_shrapnelBonusCount) },
+	{ "ShrapnelWeapon",			INI::parseWeaponTemplate,								NULL,							offsetof(WeaponTemplate, m_shrapnelBonusWeapon) },
+	{ "ShrapnelDoesNotRequireVictim",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelDoesNotRequireVictim) },
+	{ "ShrapnelIgnoresStealth",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
+	{ "ShrapnelTargetMask",			INI::parseBitString32,	TheWeaponAffectsMaskNames,				offsetof(WeaponTemplate, m_shrapnelAffectsMask) },
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
@@ -531,6 +537,11 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_historicBonusCount						= 0;
 	m_historicBonusRadius						= 0;
 	m_historicBonusWeapon						= NULL;
+	m_shrapnelBonusCount						= 0;
+	m_shrapnelBonusWeapon						= NULL;
+	m_shrapnelDoesNotRequireVictim				= FALSE;
+	m_shrapnelIgnoresStealthStatus				= FALSE;
+	m_shrapnelAffectsMask						= (WEAPON_AFFECTS_ENEMIES | WEAPON_AFFECTS_NEUTRALS);
 	m_leechRangeWeapon							= FALSE;
 	m_capableOfFollowingWaypoint		= FALSE;
 	m_isShowsAmmoPips								= FALSE;
@@ -1106,7 +1117,8 @@ Bool WeaponTemplate::shouldProjectileCollideWith(
 	const Object* projectileLauncher,
 	const Object* projectile,
 	const Object* thingWeCollidedWith,
-	ObjectID intendedVictimID	// could be INVALID_ID for a position-shot
+	ObjectID intendedVictimID,	// could be INVALID_ID for a position-shot
+	ObjectID shrapnelLaunchID
 ) const
 {
  	if (!projectile || !thingWeCollidedWith)
@@ -1115,6 +1127,12 @@ Bool WeaponTemplate::shouldProjectileCollideWith(
 	// if it's our intended victim, we want to collide with it, regardless of any other considerations.
 	if (intendedVictimID == thingWeCollidedWith->getID())
 		return true;
+
+	// if we are launched from a shrapnel, do not collide with the current victim 
+	if (shrapnelLaunchID != INVALID_ID && shrapnelLaunchID == thingWeCollidedWith->getID())
+	{
+		return false;
+	}
 
  	if (projectileLauncher != NULL)
  	{
@@ -1213,7 +1231,9 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	Bool ignoreRanges,
 	Weapon *firingWeapon,
 	ObjectID* projectileID,
-	Bool inflictDamage
+	Bool inflictDamage,
+	const Coord3D* launchPos,
+	ObjectID shrapnelLaunchID
 ) const
 {
 
@@ -1253,7 +1273,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	DEBUG_ASSERTCRASH((m_primaryDamage > 0)  ||  (victimObj == NULL), ("You can't really shoot a zero damage weapon at an Object.") );
 
 	ObjectID sourceID = sourceObj->getID();
-	const Coord3D* sourcePos = sourceObj->getPosition();
+	const Coord3D* sourcePos = launchPos ? launchPos : sourceObj->getPosition();
 
 	Real distSqr;
 	ObjectID victimID;
@@ -1518,9 +1538,9 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				if( retarget && !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) )
 				{
 					if (firingWeapon->getContinuousLaserLoopTime() > 0)
-						firingWeapon->handleContinuousLaser(sourceObj, retarget, &projectileDestination);
+						firingWeapon->handleContinuousLaser(sourceObj, retarget, &projectileDestination, launchPos);
 					else
-						firingWeapon->createLaser(sourceObj, retarget, &projectileDestination);
+						firingWeapon->createLaser(sourceObj, retarget, &projectileDestination, launchPos);
 				}
 				else
 				{
@@ -1531,7 +1551,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 					if (firingWeapon->getContinuousLaserLoopTime() > 0)
 						firingWeapon->handleContinuousLaser(sourceObj, victimObj, &projectileDestination);
 					else
-						firingWeapon->createLaser(sourceObj, victimObj, &projectileDestination);
+						firingWeapon->createLaser(sourceObj, victimObj, &projectileDestination, launchPos);
 				}
 			}
 			else
@@ -1539,9 +1559,9 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				//We are missing our intended target, so now we want to aim at the ground at the projectile offset.
 				damageID = INVALID_ID;
 				if (firingWeapon->getContinuousLaserLoopTime() > 0)
-					firingWeapon->handleContinuousLaser(sourceObj, NULL, &projectileDestination);
+					firingWeapon->handleContinuousLaser(sourceObj, NULL, &projectileDestination, launchPos);
 				else
-					firingWeapon->createLaser(sourceObj, NULL, &projectileDestination);
+					firingWeapon->createLaser(sourceObj, NULL, &projectileDestination, launchPos);
 			}
 
 			// Handle Detonation OCL
@@ -1674,11 +1694,11 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		if(retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES))
 		{
 			projectileDestination.set( retarget->getPosition() );
-			firingWeapon->newProjectileFired( sourceObj, projectile, retarget, retarget->getPosition() );//The actual logic weapon needs to know this was created.
+			firingWeapon->newProjectileFired( sourceObj, projectile, retarget, retarget->getPosition(), launchPos );//The actual logic weapon needs to know this was created.
 		}
 		else
 		{
-			firingWeapon->newProjectileFired( sourceObj, projectile, victimObj, victimPos );//The actual logic weapon needs to know this was created.
+			firingWeapon->newProjectileFired( sourceObj, projectile, victimObj, victimPos, launchPos );//The actual logic weapon needs to know this was created.
 		}
 
 		ProjectileUpdateInterface* pui = NULL;
@@ -1692,16 +1712,16 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			VeterancyLevel v = sourceObj->getVeterancyLevel();
 			if(retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES))
 			{
-				pui->projectileLaunchAtObjectOrPosition(retarget, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v]);
+				pui->projectileLaunchAtObjectOrPosition(retarget, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos, shrapnelLaunchID );
 			}
 			else if( scatterRadius > 0.0f )
 			{
 				//With a scatter radius, don't follow the victim (overriding the intent).
-				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v] );
+				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos, shrapnelLaunchID );
 			}
 			else
 			{
-				pui->projectileLaunchAtObjectOrPosition(victimObj, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v]);
+				pui->projectileLaunchAtObjectOrPosition(victimObj, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos, shrapnelLaunchID );
 			}
 		}
 		else
@@ -1825,6 +1845,54 @@ static Bool is2DDistSquaredLessThan(const Coord3D& a, const Coord3D& b, Real dis
 }
 
 //-------------------------------------------------------------------------------------------------
+// Copied from WeaponSet.cpp
+//-------------------------------------------------------------------------------------------------
+static Int getVictimAntiMask(const Object* victim)
+{
+	if (victim->isKindOf(KINDOF_SMALL_MISSILE))
+	{
+		//All missiles are also projectiles!
+		return WEAPON_ANTI_SMALL_MISSILE;
+	}
+	else if (victim->isKindOf(KINDOF_BALLISTIC_MISSILE))
+	{
+		return WEAPON_ANTI_BALLISTIC_MISSILE;
+	}
+	else if (victim->isKindOf(KINDOF_PROJECTILE))
+	{
+		return WEAPON_ANTI_PROJECTILE;
+	}
+	else if (victim->isKindOf(KINDOF_MINE) || victim->isKindOf(KINDOF_DEMOTRAP))
+	{
+		return WEAPON_ANTI_MINE | WEAPON_ANTI_GROUND;
+	}
+	else if (victim->isAirborneTarget())
+	{
+		if (victim->isKindOf(KINDOF_VEHICLE))
+		{
+			return WEAPON_ANTI_AIRBORNE_VEHICLE;
+		}
+		else if (victim->isKindOf(KINDOF_INFANTRY))
+		{
+			return WEAPON_ANTI_AIRBORNE_INFANTRY;
+		}
+		else if (victim->isKindOf(KINDOF_PARACHUTE))
+		{
+			return WEAPON_ANTI_PARACHUTE;
+		}
+		else if (!victim->isKindOf(KINDOF_UNATTACKABLE))
+		{
+			DEBUG_CRASH(("Object %s is being targetted as airborne, but is not infantry, nor vehicle. Is this legit? -- tell Kris", victim->getName().str()));
+		}
+		return 0;
+	}
+	else
+	{
+		return WEAPON_ANTI_GROUND;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation) const
 {
 	if (sourceID == 0)	// must have a source
@@ -1844,7 +1912,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 	trimOldHistoricDamage();
 
-	if( m_historicBonusCount > 0 && m_historicBonusWeapon != this )
+	if( m_historicBonusCount > 0 && m_historicBonusWeapon != this && (!m_shrapnelBonusWeapon || m_shrapnelBonusWeapon != this))
 	{
 		Real radSqr = m_historicBonusRadius * m_historicBonusRadius;
 		Int count = 0;
@@ -1863,7 +1931,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 		if( count >= m_historicBonusCount - 1 )	// minus 1 since we include ourselves implicitly
 		{
-		  TheWeaponStore->createAndFireTempWeapon(m_historicBonusWeapon, source, pos);
+			TheWeaponStore->createAndFireTempWeapon(m_historicBonusWeapon, source, pos);
 
 			/** @todo E3 hack! Clear the list for now to make sure we don't have multiple firestorms
 				* remove this when the branches merge back into one.  What is causing the
@@ -1880,6 +1948,176 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		}  // end else
 
 	} // if historic bonuses
+
+	// Shrapnel Bonus Weapon
+	if( m_shrapnelBonusWeapon && m_shrapnelBonusCount > 0 && m_shrapnelBonusWeapon != this && (!m_historicBonusWeapon || m_historicBonusWeapon != this) && (m_shrapnelDoesNotRequireVictim || victimID != INVALID_ID) )
+	{
+		WeaponBonus bonus;
+		ObjectCustomStatusType dummy;
+		m_shrapnelBonusWeapon->private_computeBonus(source, 0, bonus, dummy);
+		Real range = m_shrapnelBonusWeapon->getAttackRange(bonus);
+
+		Int affects = m_shrapnelAffectsMask;
+		std::vector<ObjectID> victimIDVec;
+
+		PartitionFilterSameMapStatus filterMapStatus(source);
+		PartitionFilterStealthedAndUndetected filterStealth(source, false);
+		PartitionFilterAlive filterAlive;
+
+		// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
+		// So these checks are on an individual basis, not in the Partition query
+		//	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
+		PartitionFilter *filters[4];
+		Int numFilters = 0;
+		filters[numFilters++] = &filterMapStatus;
+		filters[numFilters++] = &filterAlive;
+		if(!m_shrapnelIgnoresStealthStatus)
+			filters[numFilters++] = &filterStealth;
+		filters[numFilters] = NULL;
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( pos, 
+																		range, 
+																		DAMAGE_RANGE_CALC_TYPE, 
+																		filters );
+		MemoryPoolObjectHolder hold( iter );
+		for( Object *curVictim = iter->first(); curVictim != NULL; curVictim = iter->next() )
+		{
+			if (source != NULL)
+			{
+				// Special, only deal damage to self
+				if(m_damagesSelfOnly)
+				{
+					if(source != curVictim)
+						continue;
+				}
+				
+				// anytime something is designated as the "primary victim" (ie, the direct target
+				// of the weapon), we ignore all the "affects" flags.
+				else if (curVictim->getID() != victimID)
+				{
+					WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
+					if( curVictim->isKindOf( KINDOF_UNATTACKABLE ) ||
+						curVictim->testStatus(OBJECT_STATUS_MASKED) ||
+						curVictim->testStatus(OBJECT_STATUS_NO_ATTACK_FROM_AI) ||
+						(m_shrapnelBonusWeapon->getAntiMask() & targetAntiMask) == 0 || 
+						m_shrapnelBonusWeapon->estimateWeaponTemplateDamage(source, curVictim, curVictim->getPosition(), bonus) == 0.0f )
+					{
+						continue;
+					}
+
+					BodyModuleInterface* body = curVictim->getBodyModule();
+					if( body && body->cantBeKilled())
+						continue;
+					
+					// should object ever be allowed to damage themselves? methinks not...
+					// exception: a few weapons allow this (eg, for suicide bombers).
+					if( (affects & WEAPON_AFFECTS_SELF) == 0 )
+					{
+						// Remember that source is a missile for some units, and they don't want to injure them'selves' either
+						if( source == curVictim || source->getProducerID() == curVictim->getID() )
+						{
+							//DEBUG_LOG(("skipping damage done to SELF..."));
+							continue;
+						}
+					}
+					
+					//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 3/11/2025
+					if( affects == WEAPON_AFFECTS_SELF )
+					{
+						if( !(source == curVictim || source->getProducerID() == curVictim->getID()) )
+							continue;
+					}
+
+					if( affects & WEAPON_DOESNT_AFFECT_SIMILAR )
+					{
+						//This means we probably are affecting allies, but don't want to kill nearby members that are the same type as us.
+						//A good example are a group of terrorists blowing themselves up. We don't want to cause a domino effect that kills
+						//all of them.
+						if( source->getTemplate()->isEquivalentTo(curVictim->getTemplate()) && source->getRelationship( curVictim ) == ALLIES )
+						{
+							continue;
+						}
+					}
+
+					if ((affects & WEAPON_DOESNT_AFFECT_AIRBORNE) != 0 && curVictim->isSignificantlyAboveTerrain())
+					{
+						continue;
+					}
+
+					/*
+						The idea here is: if its our ally(/enemies), AND it's not the direct target, AND the weapon doesn't
+						do radius-damage to allies(/enemies)... skip it.
+					*/
+					Relationship r = curVictim->getRelationship(source);
+					Int requiredMask;
+					if (r == ALLIES)
+						requiredMask = WEAPON_AFFECTS_ALLIES;
+					else if (r == ENEMIES)
+						requiredMask = WEAPON_AFFECTS_ENEMIES;
+					else /* r == NEUTRAL */
+						requiredMask = WEAPON_AFFECTS_NEUTRALS;
+
+					if( affects == WEAPON_AFFECTS_SELF )
+					{
+						requiredMask = WEAPON_AFFECTS_SELF;
+					}
+
+					if( !(affects & requiredMask) )
+					{
+						//Skip if we aren't affected by this weapon.
+						continue;
+					}
+				}
+
+				victimIDVec.push_back(curVictim->getID());
+			}
+		}
+
+		Coord3D spawnPos;
+		if(getProjectileTemplate() == NULL)
+			spawnPos.set( pos );
+		else
+			spawnPos.set( source->getPosition() );
+
+		Real groundHeight = TheTerrainLogic->getGroundHeight(spawnPos.x, spawnPos.y);
+		spawnPos.z = groundHeight > spawnPos.z ? groundHeight : spawnPos.z;
+
+		if( m_shrapnelBonusWeapon->getProjectileTemplate() != NULL )
+			spawnPos.z += (3*3*3*3)*TheGlobalData->m_gravity; // Make it significantly Above Terrain, so that it can properly fly
+
+		for(int i = 0; i < m_shrapnelBonusCount; i++)
+		{
+			if(!victimIDVec.empty())
+			{
+				Int randomValue = GameLogicRandomValue(0, victimIDVec.size() - 1);
+				Object* target = TheGameLogic->findObjectByID(victimIDVec[randomValue]);
+
+				TheWeaponStore->createAndFireTempWeaponOnSpot(m_shrapnelBonusWeapon, source, target, &spawnPos, victimID);
+
+				for( std::vector<ObjectID>::const_iterator it_ID = victimIDVec.begin(); it_ID != victimIDVec.end();)
+				{
+					if((*it_ID) == victimIDVec[randomValue])
+					{
+						it_ID = victimIDVec.erase(it_ID);
+						break;
+					}
+					++it_ID;
+				}
+			}
+			else
+			{
+				Real angle = GameLogicRandomValueReal(-PI, PI);
+				Coord3D targetPos;
+				targetPos.set( pos );
+				targetPos.x += range * Cos(angle);
+				targetPos.y += range * Sin(angle);
+				targetPos.z = TheTerrainLogic->getGroundHeight(targetPos.x, targetPos.y);
+
+				TheWeaponStore->createAndFireTempWeaponOnSpot(m_shrapnelBonusWeapon, source, &targetPos, &spawnPos, victimID);
+			}
+		}
+	} // if shrapnel bonuses
 
 //DEBUG_LOG(("WeaponTemplate::dealDamageInternal: dealing damage %s at frame %d",m_name.str(),TheGameLogic->getFrame()));
 
@@ -2449,6 +2687,29 @@ void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object
 	Weapon* w = TheWeaponStore->allocateNewWeapon(wt, PRIMARY_WEAPON);
 	w->loadAmmoNow(source);
 	w->fireWeapon(source, target);
+	deleteInstance(w);
+}
+
+//-------------------------------------------------------------------------------------------------
+void WeaponStore::createAndFireTempWeaponOnSpot(const WeaponTemplate* wt, const Object *source, const Coord3D* pos, const Coord3D* sourcePos, ObjectID shrapnelLaunchID)
+{
+	if (wt == NULL)
+		return;
+	Weapon* w = TheWeaponStore->allocateNewWeapon(wt, PRIMARY_WEAPON);
+	w->loadAmmoNow(source);
+	w->fireWeaponOnSpot(source, pos, NULL, sourcePos, shrapnelLaunchID);
+	deleteInstance(w);
+}
+
+//-------------------------------------------------------------------------------------------------
+void WeaponStore::createAndFireTempWeaponOnSpot(const WeaponTemplate* wt, const Object *source, Object *target, const Coord3D* sourcePos, ObjectID shrapnelLaunchID)
+{
+	//CRCDEBUG_LOG(("WeaponStore::createAndFireTempWeapon() for %s", DescribeObject(source)));
+	if (wt == NULL)
+		return;
+	Weapon* w = TheWeaponStore->allocateNewWeapon(wt, PRIMARY_WEAPON);
+	w->loadAmmoNow(source);
+	w->fireWeaponOnSpot(source, target, NULL, sourcePos, shrapnelLaunchID);
 	deleteInstance(w);
 }
 
@@ -4172,7 +4433,7 @@ Real Weapon::estimateWeaponDamage(const Object *sourceObj, const Object *victimO
 }
 
 //-------------------------------------------------------------------------------------------------
-void Weapon::newProjectileFired(const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos )
+void Weapon::newProjectileFired(const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos, const Coord3D *launchPos )
 {
 	// If I have a stream, I need to tell it about this new guy
 	if( m_template->getProjectileStreamName().isEmpty() )
@@ -4194,7 +4455,7 @@ void Weapon::newProjectileFired(const Object *sourceObj, const Object *projectil
 	ProjectileStreamUpdate* update = (ProjectileStreamUpdate*)projectileStream->findUpdateModule(key_ProjectileStreamUpdate);
 	if( update )
 	{
-		update->setPosition( sourceObj->getPosition() );
+		update->setPosition( launchPos ? launchPos : sourceObj->getPosition() );
 		update->addProjectile( sourceObj->getID(), projectile->getID(), victimObj ? victimObj->getID() : INVALID_ID, victimPos );
 		return;
 	}
@@ -4202,7 +4463,7 @@ void Weapon::newProjectileFired(const Object *sourceObj, const Object *projectil
 }
 
 //-------------------------------------------------------------------------------------------------
-ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos )
+ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos, const Coord3D *launchPos )
 {
 	const ThingTemplate* pst = TheThingFactory->findTemplate(m_template->getLaserName());
 	if( !pst )
@@ -4216,7 +4477,7 @@ ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, 
 		return INVALID_ID;
 
 	// Give it a good basis in reality to ensure it can draw when on screen.
-	laser->setPosition(sourceObj->getPosition());
+	laser->setPosition(launchPos ? launchPos : sourceObj->getPosition());
 
 	//Check for laser update
 	Drawable *draw = laser->getDrawable();
@@ -4237,14 +4498,14 @@ ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, 
 			else { // We target the ground
 				pos.z += getTemplate()->getLaserGroundTargetHeight();
 			}
-			update->initLaser( sourceObj, victimObj, sourceObj->getPosition(), &pos, m_template->getLaserBoneName() );
+			update->initLaser( sourceObj, victimObj, launchPos ? launchPos : sourceObj->getPosition(), &pos, m_template->getLaserBoneName() );
 		}
 	}
 
 	return laser->getID();
 }
 //-------------------------------------------------------------------------------------------------
-void Weapon::handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos)
+void Weapon::handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos )
 {
 	UnsignedInt frameNow = TheGameLogic->getFrame();
 	Object* continuousLaser = TheGameLogic->findObjectByID(m_continuousLaserID);
@@ -4252,7 +4513,7 @@ void Weapon::handleContinuousLaser(const Object* sourceObj, const Object* victim
 	if (m_lastFireFrame + m_template->getContinuousLaserLoopTime() < frameNow ||
 		continuousLaser == NULL) {
 		// We are outside the loop time, or the laser doesn't exist -> create a new laser
-		ObjectID laserId = createLaser(sourceObj, victimObj, victimPos);
+		ObjectID laserId = createLaser(sourceObj, victimObj, victimPos, launchPos);
 		continuousLaser = TheGameLogic->findObjectByID(laserId);
 		if (continuousLaser == NULL) {
 			return;
@@ -4262,7 +4523,7 @@ void Weapon::handleContinuousLaser(const Object* sourceObj, const Object* victim
 	}
 
 	// We have an existing laser
-	continuousLaser->setPosition(sourceObj->getPosition());
+	continuousLaser->setPosition(launchPos ? launchPos : sourceObj->getPosition());
 
 	//Check for laser update
 	Drawable* draw = continuousLaser->getDrawable();
@@ -4286,7 +4547,7 @@ void Weapon::handleContinuousLaser(const Object* sourceObj, const Object* victim
 				//Projectiles are a different story, target their exact position.
 				pos.z += 10.0f;
 			}
-			update->updateContinuousLaser(sourceObj, victimObj, sourceObj->getPosition(), &pos);
+			update->updateContinuousLaser(sourceObj, victimObj, launchPos ? launchPos : sourceObj->getPosition(), &pos);
 		}
 	}
 }
@@ -4304,7 +4565,9 @@ Bool Weapon::privateFireWeapon(
 	WeaponBonusConditionFlags extraBonusFlags,
 	ObjectID* projectileID,
 	Bool inflictDamage,
-	ObjectCustomStatusType extraBonusCustomFlags
+	ObjectCustomStatusType extraBonusCustomFlags,
+	const Coord3D* sourcePos,
+	ObjectID shrapnelLaunchID
 )
 {
 	//CRCDEBUG_LOG(("Weapon::privateFireWeapon() for %s", DescribeObject(sourceObj).str()));
@@ -4516,7 +4779,7 @@ Bool Weapon::privateFireWeapon(
 			if (m_template->isScatterTargetAligned() || m_scatterTargetsAngle != 0.0f) {
 				// DEBUG_LOG((">>> Weapon: m_scatterTargetsAngle = %f\n", m_scatterTargetsAngle));
 
-				const Coord3D srcPos = *sourceObj->getPosition();
+				const Coord3D srcPos = sourcePos ? *sourcePos : *sourceObj->getPosition();
 
 				Real angle = m_scatterTargetsAngle;
 				if (m_template->isScatterTargetAligned()) {
@@ -4533,7 +4796,7 @@ Bool Weapon::privateFireWeapon(
 			}
 
 			if (m_template->isScatterTargetCenteredAtShooter()) {
-				targetPos = *sourceObj->getPosition();
+				targetPos = sourcePos ? *sourcePos : *sourceObj->getPosition();
 			}
 
 			targetPos.x += scatterOffset.x;
@@ -4543,11 +4806,11 @@ Bool Weapon::privateFireWeapon(
 
 			// Note AW: We have to ignore Ranges when using ScatterTargets, or else the weapon can fail in the next stage
 			ignoreRanges = TRUE;
-			m_template->fireWeaponTemplate(sourceObj, m_wslot, m_curBarrel, victimObj, &targetPos, bonus, isProjectileDetonation, ignoreRanges, this, projectileID, inflictDamage );
+			m_template->fireWeaponTemplate(sourceObj, m_wslot, m_curBarrel, victimObj, &targetPos, bonus, isProjectileDetonation, ignoreRanges, this, projectileID, inflictDamage, sourcePos, shrapnelLaunchID );
 		}
 		else
 		{
-			m_template->fireWeaponTemplate(sourceObj, m_wslot, m_curBarrel, victimObj, victimPos, bonus, isProjectileDetonation, ignoreRanges, this, projectileID, inflictDamage );
+			m_template->fireWeaponTemplate(sourceObj, m_wslot, m_curBarrel, victimObj, victimPos, bonus, isProjectileDetonation, ignoreRanges, this, projectileID, inflictDamage, sourcePos, shrapnelLaunchID );
 		}
 
 		m_lastFireFrame = now;
@@ -4710,6 +4973,35 @@ Bool Weapon::fireWeapon(const Object *source, const Coord3D* pos, ObjectID* proj
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
 	ObjectCustomStatusType dummy;
 	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, dummy );
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Weapon::fireWeaponOnSpot(const Object *source, Object *target, ObjectID* projectileID, const Coord3D* sourcePos, ObjectID shrapnelLaunchID)
+{
+	if (source->testCustomStatus("AIM_NO_ATTACK"))
+	{
+		if (projectileID)
+			*projectileID = INVALID_ID;
+		return false;
+	}
+	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s at %s", DescribeObject(source).str(), DescribeObject(target).str()));
+	ObjectCustomStatusType dummy;
+	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE, dummy, sourcePos, shrapnelLaunchID );
+}
+
+//-------------------------------------------------------------------------------------------------
+// return true if we auto-reloaded our clip after firing.
+Bool Weapon::fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID* projectileID, const Coord3D* sourcePos, ObjectID shrapnelLaunchID)
+{
+	if (source->testCustomStatus("AIM_NO_ATTACK"))
+	{
+		if (projectileID)
+			*projectileID = INVALID_ID;
+		return false;
+	}
+	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
+	ObjectCustomStatusType dummy;
+	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, dummy, sourcePos, shrapnelLaunchID );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5041,7 +5333,9 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	Object* projectile,
 	const Object* launcher,
 	WeaponSlotType wslot,
-	Int specificBarrelToUse
+	Int specificBarrelToUse,
+	const Coord3D* launchPos,
+	ObjectID shrapnelLaunchID
 )
 {
 	//CRCDEBUG_LOG(("Weapon::positionProjectileForLaunch() for %s from %s",
@@ -5061,8 +5355,21 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 
 	projectile->getDrawable()->setDrawableHidden(false);
 	projectile->setTransformMatrix(&worldTransform);
-	projectile->setPosition(&worldPos);
+	projectile->setPosition(launchPos ? launchPos : &worldPos);
 	projectile->getExperienceTracker()->setExperienceSink( launcher->getID() );
+	if(launchPos)
+	{
+		ProjectileUpdateInterface* pui = NULL;
+		for (BehaviorModule** u = projectile->getBehaviorModules(); *u; ++u)
+		{
+			if ((pui = (*u)->getProjectileUpdateInterface()) != NULL)
+			{
+				pui->setShrapnelLaunchID(shrapnelLaunchID);
+				break;
+			}
+		}
+			
+	}
 
 	const PhysicsBehavior* launcherPhys = launcher->getPhysics();
 	PhysicsBehavior* missilePhys = projectile->getPhysics();

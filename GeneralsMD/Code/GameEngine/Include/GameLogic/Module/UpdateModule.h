@@ -272,7 +272,7 @@ public:
 class ProjectileUpdateInterface
 {
 public:
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride) = 0;						///< launch the projectile at the given victim
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL, ObjectID shrapnelLaunchID = INVALID_ID ) = 0;						///< launch the projectile at the given victim
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) = 0;
 	virtual Bool projectileIsArmed() const = 0;													///< return true if the projectile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const = 0;								///< All projectiles need to keep track of their firer
@@ -280,6 +280,7 @@ public:
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) = 0; ///< Number of frames till missile diverts to countermeasures.
 	virtual void projectileNowJammed(Bool noDamage = FALSE) = 0;
 	virtual void projectileNowDrawn(ObjectID attractorID) = 0;
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) = 0;
 
 	virtual Object* getTargetObject() = 0;
 	virtual const Coord3D* getTargetPosition() = 0;

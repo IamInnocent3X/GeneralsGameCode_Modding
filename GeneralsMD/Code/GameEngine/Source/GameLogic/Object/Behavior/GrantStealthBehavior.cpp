@@ -39,6 +39,7 @@
 #include "GameClient/InGameUI.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/GrantStealthBehavior.h"
+#include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/GameLogic.h"
@@ -203,6 +204,46 @@ void GrantStealthBehavior::grantStealthToObject( Object *obj )
     {
       draw->flashAsSelected();
     }
+
+		if(!d->m_upgradeName.isEmpty())
+		{
+			const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade( d->m_upgradeName );
+			if( !upgradeTemplate )
+			{
+				DEBUG_CRASH(("An upgrade module references %s, which is not an Upgrade", d->m_upgradeName.str()));
+				throw INI_INVALID_DATA;
+			}
+			if( !upgradeTemplate )
+			{
+				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), d->m_upgradeName.str()));
+				return;
+			}
+
+			Player *player = obj->getControllingPlayer();
+
+			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(!player->hasUpgradeComplete( upgradeTemplate ))
+				{
+					player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
+					player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
+					player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+				}
+			}
+			else if( !obj->hasUpgrade( upgradeTemplate ) )
+			{
+				// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+				ProductionUpdateInterface *pui = obj->getProductionUpdateInterface();
+				if( pui )
+				{
+					pui->cancelUpgrade( upgradeTemplate );
+				}
+				obj->giveUpgrade( upgradeTemplate );
+				player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+			}
+			
+		}
+
 	}
 
 

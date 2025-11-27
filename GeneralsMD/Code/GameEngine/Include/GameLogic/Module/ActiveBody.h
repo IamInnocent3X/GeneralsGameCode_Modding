@@ -147,6 +147,8 @@ public:
 	virtual Bool isNearSubduedRange( Real low, Real high ) const; 
 	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const; 
 
+	virtual Bool cantBeKilled( void ) const { return FALSE; }
+
 	virtual void evaluateVisualCondition();
 	virtual void updateBodyParticleSystems( void );// made public for topple anf building collapse updates -ML
 

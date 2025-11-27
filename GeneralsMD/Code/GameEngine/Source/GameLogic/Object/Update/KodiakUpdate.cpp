@@ -731,13 +731,16 @@ UpdateSleepTime KodiakUpdate::update()
                 }
 
                 if (targetLock != nullptr) {
+                  weap->computeFiringTrackerBonus(getObject(), targetLock);
                   weap->fireWeapon(getObject(), targetLock);
                 }
                 else {
+                  weap->computeFiringTrackerBonusClear(getObject());
                   weap->fireWeapon(getObject(), &targetPos);
                 }
               }
               else {
+                weap->computeFiringTrackerBonusClear(getObject());
                 weap->fireWeapon(getObject(), getObject()->getPosition());
               }
             }

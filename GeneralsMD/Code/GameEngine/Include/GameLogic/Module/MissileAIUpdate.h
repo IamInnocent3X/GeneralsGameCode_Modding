@@ -78,6 +78,7 @@ public:
 	Bool						m_allowAttract;
 
 	Bool						m_allowRetargeting;
+	Bool						m_allowRetargetingThroughFog;
 
     MissileAIUpdateModuleData();
 
@@ -109,7 +110,7 @@ public:
 
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride);
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL, ObjectID shrapnelLaunchID = INVALID_ID );
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
@@ -118,6 +119,7 @@ public:
 	virtual void projectileNowDrawn(ObjectID attractorID);
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
 
 	virtual Bool processCollision(PhysicsBehavior *physics, Object *other); ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
 
@@ -155,6 +157,7 @@ private:
 
 	UnsignedInt						m_detonateDistance;
 	ObjectID						m_decoyID;
+	ObjectID						m_shrapnelLaunchID;
 
 	UnsignedInt						m_killSelfTime;
 	UnsignedInt						m_nextWakeUpTime;

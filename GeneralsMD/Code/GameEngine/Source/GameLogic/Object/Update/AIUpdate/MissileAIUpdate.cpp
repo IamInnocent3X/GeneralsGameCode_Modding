@@ -32,6 +32,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/RandomValue.h"
 #include "Common/BitFlagsIO.h"
+#include "Common/Player.h"
 
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/ExperienceTracker.h"
@@ -138,6 +139,7 @@ void MissileAIUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "AllowAttract", INI::parseBool, NULL, offsetof(MissileAIUpdateModuleData, m_allowAttract) },
 
 		{ "AllowRetargeting", INI::parseBool, NULL, offsetof(MissileAIUpdateModuleData, m_allowRetargeting) },
+		{ "AllowRetargetingThroughFog", INI::parseBool, NULL, offsetof(MissileAIUpdateModuleData, m_allowRetargetingThroughFog) },
 		
 		{ 0, 0, 0, 0 }
 	};
@@ -159,6 +161,7 @@ MissileAIUpdate::MissileAIUpdate( Thing *thing, const ModuleData* moduleData ) :
 	m_nextTargetTrackTime = 0x7fffffff;	// so that we never recalc target pos, by default
 	m_launcherID = INVALID_ID;
 	m_victimID = INVALID_ID;
+	m_shrapnelLaunchID = INVALID_ID;
 	m_isArmed = false;
 	m_fuelExpirationDate = 0;
 	m_noTurnDistLeft = d->m_initialDist;
@@ -229,7 +232,9 @@ void MissileAIUpdate::projectileLaunchAtObjectOrPosition(
 	WeaponSlotType wslot,
 	Int specificBarrelToUse,
 	const WeaponTemplate* detWeap,
-	const ParticleSystemTemplate* exhaustSysOverride
+	const ParticleSystemTemplate* exhaustSysOverride,
+	const Coord3D *launchPos,
+	ObjectID shrapnelLaunchID
 )
 {
 	DEBUG_ASSERTCRASH(specificBarrelToUse>=0, ("specificBarrelToUse must now be explicit"));
@@ -253,7 +258,7 @@ void MissileAIUpdate::projectileLaunchAtObjectOrPosition(
 			getObject()->setCustomWeaponBonusConditionFlags(m_extraBonusCustomFlags);
 	}
 
-	Weapon::positionProjectileForLaunch(getObject(), launcher, wslot, specificBarrelToUse);
+	Weapon::positionProjectileForLaunch(getObject(), launcher, wslot, specificBarrelToUse, launchPos, shrapnelLaunchID);
 
 	projectileFireAtObjectOrPosition( victim, victimPos, detWeap, exhaustSysOverride );
 
@@ -396,7 +401,7 @@ Bool MissileAIUpdate::projectileHandleCollision( Object *other )
  		Object *projectileLauncher = TheGameLogic->findObjectByID( projectileGetLauncherID() );
 
  		// if it's not the specific thing we were targeting, see if we should incidentally collide...
- 		if (!m_detonationWeaponTmpl->shouldProjectileCollideWith(projectileLauncher, obj, other, m_victimID))
+ 		if (!m_detonationWeaponTmpl->shouldProjectileCollideWith(projectileLauncher, obj, other, m_victimID, m_shrapnelLaunchID))
 		{
 			//DEBUG_LOG(("ignoring projectile collision with %s at frame %d",other->getTemplate()->getName().str(),TheGameLogic->getFrame()));
 			return true;
@@ -1142,11 +1147,17 @@ void MissileAIUpdate::airborneTargetGone()
 		PartitionFilterRelationship relationship( source, PartitionFilterRelationship::ALLOW_ENEMIES);
 		PartitionFilterSameMapStatus filterMapStatus(obj);
 		PartitionFilterAlive filterAlive;
-
-		// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
-		// So these checks are on an individual basis, not in the Partition query
-		//	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
-		PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, NULL };
+		PartitionFilterStealthedAndUndetected filterStealth(source, false);
+		PartitionFilterFreeOfFog filterFogged(source->getControllingPlayer()->getPlayerIndex());
+		PartitionFilter* filters[7];
+		Int numFilters = 0;
+		filters[numFilters++] = &relationship;
+		filters[numFilters++] = &filterMapStatus;
+		filters[numFilters++] = &filterAlive;
+		filters[numFilters++] = &filterStealth;
+		if(!getMissileAIUpdateModuleData()->m_allowRetargetingThroughFog)
+			filters[numFilters++] = &filterFogged;
+		filters[numFilters] = NULL;
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
@@ -1158,6 +1169,8 @@ void MissileAIUpdate::airborneTargetGone()
 		{
 			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
 			if( curVictim->isKindOf( KINDOF_UNATTACKABLE ) ||
+				 curVictim->testStatus(OBJECT_STATUS_MASKED) ||
+				 curVictim->testStatus(OBJECT_STATUS_NO_ATTACK_FROM_AI) ||
 				 (m_detonationWeaponTmpl->getAntiMask() & targetAntiMask) == 0 || 
 				 m_detonationWeaponTmpl->estimateWeaponTemplateDamage(source, curVictim, curVictim->getPosition(), bonus) == 0.0f )
 			{
@@ -1390,6 +1403,8 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 
 		xfer->xferUnsignedInt(&m_detonateDistance);
 		xfer->xferObjectID(&m_decoyID);
+
+		xfer->xferObjectID(&m_shrapnelLaunchID);
 	}
 
 	if( version>= 6 )

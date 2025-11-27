@@ -71,6 +71,8 @@ public:
 	virtual Bool isNearSubduedRange( Real low, Real high ) const { return FALSE; }
 	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const { return FALSE; }
 
+	virtual Bool cantBeKilled( void ) const { return TRUE; }
+
 private:
 	Bool m_dieCalled;
 };

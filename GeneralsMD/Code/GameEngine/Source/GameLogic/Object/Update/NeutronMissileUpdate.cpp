@@ -205,7 +205,7 @@ void NeutronMissileUpdate::projectileNowDrawn(ObjectID attractorID)
 //-------------------------------------------------------------------------------------------------
 // Prepares the missile for launch via proper weapon-system channels.
 //-------------------------------------------------------------------------------------------------
-void NeutronMissileUpdate::projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride)
+void NeutronMissileUpdate::projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos, ObjectID shrapnelLaunchID )
 {
 	DEBUG_ASSERTCRASH(specificBarrelToUse>=0, ("specificBarrelToUse must now be explicit"));
 

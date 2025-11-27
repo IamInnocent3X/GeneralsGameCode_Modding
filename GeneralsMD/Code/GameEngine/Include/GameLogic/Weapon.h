@@ -430,7 +430,9 @@ public:
 		Bool ignoreRanges,
 		Weapon *firingWeapon,
 		ObjectID* projectileID,
-		Bool inflictDamage
+		Bool inflictDamage,
+		const Coord3D* launchPos = NULL,
+		ObjectID shrapnelLaunchID = INVALID_ID
 	) const;
 
 	/**
@@ -627,7 +629,8 @@ public:
 		const Object* projectileLauncher,
 		const Object* projectile,
 		const Object* thingWeCollidedWith,
-		ObjectID intendedVictimID	// could be INVALID_ID for a position-shot
+		ObjectID intendedVictimID,	// could be INVALID_ID for a position-shot
+		ObjectID shrapnelLaunchID
 	) const;
 
 	void createPreAttackFX
@@ -720,6 +723,11 @@ private:
 	Real m_historicBonusRadius;							///< see above
 	Int m_historicBonusCount;								///< see above
 	const WeaponTemplate* m_historicBonusWeapon;	///< see above
+	Int m_shrapnelBonusCount;								///< weapon fires shrapnel mechanics as seen in other franchises
+	const WeaponTemplate* m_shrapnelBonusWeapon;			///< see above
+	Int m_shrapnelAffectsMask;								///< see above
+	Bool m_shrapnelDoesNotRequireVictim;					///< see above	
+	Bool m_shrapnelIgnoresStealthStatus;					///< see above	
 	Bool m_leechRangeWeapon;								///< once the weapon has fired once at the proper range, the weapon gains unlimited range for the remainder of the attack cycle
 	Bool m_capableOfFollowingWaypoint;			///< determines if the weapon is capable of following a waypoint path.
 	Bool m_isShowsAmmoPips;									///< shows ammo pips
@@ -898,6 +906,12 @@ public:
 	// return true if we auto-reloaded our clip after firing.
 	Bool fireWeapon(const Object *source, const Coord3D* pos, ObjectID* projectileID = NULL);
 
+	// return true if we auto-reloaded our clip after firing.
+	Bool fireWeaponOnSpot(const Object *source, Object *target, ObjectID* projectileID = NULL, const Coord3D* sourcePos = NULL, ObjectID shrapnelLaunchID = INVALID_ID);
+
+	// return true if we auto-reloaded our clip after firing.
+	Bool fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID* projectileID = NULL, const Coord3D* sourcePos = NULL, ObjectID shrapnelLaunchID = INVALID_ID);
+
 	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
 	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
@@ -990,12 +1004,12 @@ public:
 	// Returns the max distance between the centerpoints of source & victim	for victim to be in range.
 	Real getAttackDistance(const Object *source, const Object *victim, const Coord3D* victimPos) const;
 
-	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos );///<I just made this projectile and may need to keep track of it
+	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos, const Coord3D *launchPos = NULL );///<I just made this projectile and may need to keep track of it
 
 	Bool isLaser() const { return m_template->getLaserName().isNotEmpty(); }
 	// void createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos );
-	ObjectID createLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos); //now returns the object ID
-	void handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos);
+	ObjectID createLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = NULL); //now returns the object ID
+	void handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = NULL); 
 
 	inline const WeaponTemplate* getTemplate() const { return m_template; }
 	inline WeaponSlotType getWeaponSlot() const { return m_wslot; }
@@ -1147,7 +1161,9 @@ public:
 		Object* projectile,
 		const Object *launcher,
 		WeaponSlotType wslot,
-		Int specificBarrelToUse
+		Int specificBarrelToUse,
+		const Coord3D* launchPos = NULL,
+		ObjectID shrapnelLaunchID = INVALID_ID
 	);
 
 	/**
@@ -1176,7 +1192,9 @@ protected:
 		WeaponBonusConditionFlags extraBonusFlags,
 		ObjectID* projectileID,
 		Bool inflictDamage,
-		ObjectCustomStatusType extraBonusCustomFlags
+		ObjectCustomStatusType extraBonusCustomFlags,
+		const Coord3D* sourcePos = NULL,
+		ObjectID shrapnelLaunchID = INVALID_ID
 	);
 	Real estimateWeaponDamage(const Object *sourceObj, const Object *victimObj, const Coord3D* victimPos);
 	void reloadWithBonus(const Object *source, const WeaponBonus& bonus, Bool loadInstantly);
@@ -1251,7 +1269,10 @@ public:
 
 	void createAndFireTempWeapon(const WeaponTemplate* w, const Object *source, const Coord3D* pos);
 	void createAndFireTempWeapon(const WeaponTemplate* w, const Object *source, Object *target);
-	
+
+	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, const Coord3D* pos, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
+	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, Object *target, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
+
 	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
 	static void parseWeaponTemplateDefinition(INI* ini);

@@ -119,6 +119,7 @@ DumbProjectileBehavior::DumbProjectileBehavior( Thing *thing, const ModuleData* 
 {
 	m_launcherID = INVALID_ID;
 	m_victimID = INVALID_ID;
+	m_shrapnelLaunchID = INVALID_ID;
 	m_detonationWeaponTmpl = NULL;
 	m_lifespanFrame = 0;
 	m_flightPath.clear();
@@ -405,7 +406,9 @@ void DumbProjectileBehavior::projectileLaunchAtObjectOrPosition(
 	WeaponSlotType wslot,
 	Int specificBarrelToUse,
 	const WeaponTemplate* detWeap,
-	const ParticleSystemTemplate* exhaustSysOverride
+	const ParticleSystemTemplate* exhaustSysOverride,
+	const Coord3D *launchPos,
+	ObjectID shrapnelLaunchID
 )
 {
 	const DumbProjectileBehaviorModuleData* d = getDumbProjectileBehaviorModuleData();
@@ -436,7 +439,7 @@ void DumbProjectileBehavior::projectileLaunchAtObjectOrPosition(
 
 	Object* projectile = getObject();
 
-	Weapon::positionProjectileForLaunch(projectile, launcher, wslot, specificBarrelToUse);
+	Weapon::positionProjectileForLaunch(projectile, launcher, wslot, specificBarrelToUse, launchPos, shrapnelLaunchID);
 
 	projectileFireAtObjectOrPosition( victim, victimPos, detWeap, exhaustSysOverride );
 }
@@ -562,7 +565,7 @@ Bool DumbProjectileBehavior::projectileHandleCollision( Object *other )
 		Object *projectileLauncher = TheGameLogic->findObjectByID( projectileGetLauncherID() );
 
 			// if it's not the specific thing we were targeting, see if we should incidentally collide...
-		if (!m_detonationWeaponTmpl->shouldProjectileCollideWith(projectileLauncher, getObject(), other, m_victimID))
+		if (!m_detonationWeaponTmpl->shouldProjectileCollideWith(projectileLauncher, getObject(), other, m_victimID, m_shrapnelLaunchID))
 		{
 			//DEBUG_LOG(("ignoring projectile collision with %s at frame %d",other->getTemplate()->getName().str(),TheGameLogic->getFrame()));
 			return true;
@@ -967,6 +970,8 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt(&m_detonateDistance);
 	xfer->xferObjectID(&m_decoyID);
 	xfer->xferBool( &m_isJammed );
+
+	xfer->xferObjectID(&m_shrapnelLaunchID);
 
 }  // end xfer
 
