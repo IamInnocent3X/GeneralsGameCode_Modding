@@ -188,7 +188,7 @@ UpdateSleepTime AutoDepositUpdate::update( void )
 		{
 
       const Object *owner = getObject();
-      if ( owner )
+      if ( owner && owner->showCashText() )
       {
 
 			  // OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!

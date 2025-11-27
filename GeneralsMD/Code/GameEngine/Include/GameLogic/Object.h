@@ -835,6 +835,8 @@ public:
 	Bool hasDetectedDisguise() const;
 	Bool hasDisguiseAndIsNotDetected() const;
 
+	Bool showCashText() const;
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;

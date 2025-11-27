@@ -2622,7 +2622,8 @@ void Player::doBountyForKill(const Object* killer, const Object* victim)
 		pos.zero();
 		pos.add( killer->getPosition() );
 		pos.z += 10.0f; //add a little z to make it show up above the unit.
-		TheInGameUI->addFloatingText( moneyString, &pos, GameMakeColor( 255, 255, 0, 255 ) );
+		if(killer->showCashText())
+			TheInGameUI->addFloatingText( moneyString, &pos, GameMakeColor( 255, 255, 0, 255 ) );
 	}
 }
 

@@ -1938,7 +1938,8 @@ Bool SalvageCrateCollide::doMoney( Object *other )
 		pos.set( getObject()->getPosition() );
 		pos.z += 10.0f; //add a little z to make it show up above the unit.
 		Color color = other->getControllingPlayer()->getPlayerColor() | GameMakeColor( 0, 0, 0, 230 );
-		TheInGameUI->addFloatingText( moneyString, &pos, color );
+		if(other->showCashText())
+			TheInGameUI->addFloatingText( moneyString, &pos, color );
 
 		return true;
 	}

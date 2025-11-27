@@ -813,7 +813,8 @@ void POWTruckAIUpdate::unloadPrisonersToPrison( Object *prison )
 
 				pos.z += prison->getGeometryInfo().getMaxHeightAbovePosition();
 				moneyString.format( TheGameText->fetch( "GUI:AddCash" ), prisonUnloadData.bounty );
-				TheInGameUI->addFloatingText( moneyString, &pos, moneyColor );
+				if(us->showCashText())
+					TheInGameUI->addFloatingText( moneyString, &pos, moneyColor );
 
 			}  // end if
 

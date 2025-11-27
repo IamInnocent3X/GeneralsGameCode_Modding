@@ -452,7 +452,7 @@ public:  // ********************************************************************
 
 	// Drawable selection mechanisms
 	virtual void selectDrawable( Drawable *draw );					///< Mark given Drawable as "selected"
-	virtual void selectDrawablePreserveGUI( Drawable *draw );					///< Mark given Drawable as "selected", but don't clear any Pending Commands.
+	virtual void selectDrawablePreserveGUI( Drawable *draw, Bool showFlash );					///< Mark given Drawable as "selected", but don't clear any Pending Commands.
 	virtual void deselectDrawable( Drawable *draw );				///< Clear "selected" status from Drawable
 	virtual void deselectAllDrawables( Bool postMsg = true );							///< Clear the "select" flag from all drawables
 	virtual Int getSelectCount( void ) { return m_selectCount; }		///< Get count of currently selected drawables

@@ -612,6 +612,9 @@ public:
 	Bool m_fixLocoClump;
 	Bool m_infantryCorpsesAirDrag;
 
+	Bool m_hideCashTextFromEnemies;
+	Bool m_hideCashTextFromEnemiesInvisibleUnitsOnly;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

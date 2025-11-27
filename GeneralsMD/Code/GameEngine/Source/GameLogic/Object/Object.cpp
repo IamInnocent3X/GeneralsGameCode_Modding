@@ -8897,6 +8897,29 @@ Bool Object::hasDisguiseAndIsNotDetected() const
 	return getStealth() && testStatus( OBJECT_STATUS_DISGUISED ) && getStealth()->hasLastDisguiseTemplate();
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool Object::showCashText() const
+{
+	// If I am not an enemy, always show cash text
+	if(ThePlayerList->getLocalPlayer()->getRelationship(getTeam()) != ENEMIES)
+		return TRUE;
+
+	// If the configuration is on, don't show if I am invisible
+	if(TheGlobalData->m_hideCashTextFromEnemiesInvisibleUnitsOnly)
+	{
+		if( getStealth() && !testStatus( OBJECT_STATUS_DETECTED ) && (hasDisguiseAndIsNotDetected() || testStatus(OBJECT_STATUS_STEALTHED)) )
+			return FALSE;
+		else
+			return TRUE;
+	}
+
+	// Don't show to enemies
+	if(TheGlobalData->m_hideCashTextFromEnemies)
+		return FALSE;
+	else
+		return TRUE;
+}
+
 //=============================================================================
 //== Custom Cursor List
 //=============================================================================

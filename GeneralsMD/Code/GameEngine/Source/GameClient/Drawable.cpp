@@ -990,6 +990,20 @@ void Drawable::friend_setSelected( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Same as above, but able to configure whether to show. */
+//-------------------------------------------------------------------------------------------------
+void Drawable::friend_setSelectedSetShowFlash( Bool showFlash )
+{
+	if(isSelected() == false)
+	{
+		m_selected = TRUE;
+		if(showFlash)
+			onSelected();
+	}
+
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Clear drawable's "selected" status, if not already clear.  Also update running
  * total count of selected drawables. */
 //-------------------------------------------------------------------------------------------------

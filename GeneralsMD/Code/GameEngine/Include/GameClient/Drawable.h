@@ -535,6 +535,8 @@ public:
 	void friend_setSelected( void );							///< mark drawable as "selected"
 	void friend_clearSelected( void );						///< clear drawable's "selected"
 
+	void friend_setSelectedSetShowFlash( Bool showFlash );		///< mark drawable as "selected"
+
 	Vector3 * getAmbientLight( void );					///< get color value to add to ambient light when drawing
 	void setAmbientLight( Vector3 *ambient );		///< set color value to add to ambient light when drawing
 

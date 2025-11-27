@@ -116,6 +116,7 @@ public:
 	Bool					m_canStealthWhileDisguised;
 	Bool					m_disguiseRetainAfterDetected;
 	Bool					m_preservePendingCommandWhenDetected;
+	Bool					m_dontFlashWhenFlickering;
   std::vector<AsciiString> m_requiredCustomStatus;
   std::vector<AsciiString> m_forbiddenCustomStatus;
 

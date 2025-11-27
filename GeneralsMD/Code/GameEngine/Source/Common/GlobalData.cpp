@@ -668,6 +668,9 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "FlungInfantryCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_infantryCorpsesAirDrag) },
 
+	{ "HideCashFromShowingToEnemies",	INI::parseBool, NULL, offsetof(GlobalData, m_hideCashTextFromEnemies) },
+	{ "HideCashShowingEnemiesInvisibleUnitsOnly",	INI::parseBool, NULL, offsetof(GlobalData, m_hideCashTextFromEnemiesInvisibleUnitsOnly) },
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1241,6 +1244,8 @@ GlobalData::GlobalData()
 
 	m_fixLocoClump = FALSE;
 	m_infantryCorpsesAirDrag = FALSE;
+	m_hideCashTextFromEnemies = FALSE;
+	m_hideCashTextFromEnemiesInvisibleUnitsOnly = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

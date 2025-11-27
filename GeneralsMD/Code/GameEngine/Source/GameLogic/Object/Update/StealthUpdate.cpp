@@ -93,6 +93,7 @@ StealthUpdateModuleData::StealthUpdateModuleData()
 	m_canStealthWhileDisguised = false;
 	m_disguiseRetainAfterDetected = false;
 	m_preservePendingCommandWhenDetected = false;
+	m_dontFlashWhenFlickering = false;
 }
 
 
@@ -127,6 +128,7 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "CanStealthWhileDisguised",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_canStealthWhileDisguised ) },
 		{ "DisguiseRetainAfterDetected",				INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_disguiseRetainAfterDetected ) },
 		{ "PreservePendingCommandWhenDetected",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_preservePendingCommandWhenDetected ) },
+		{ "DontFlashWhenFlickering",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_dontFlashWhenFlickering ) },
     { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
     { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
 		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
@@ -1330,7 +1332,7 @@ void StealthUpdate::changeVisualDisguise()
 			if( selected )
 			{
 				if(m_preserveLastGUI)
-					TheInGameUI->selectDrawablePreserveGUI( draw );
+					TheInGameUI->selectDrawablePreserveGUI( draw, TRUE );
 				else
 					TheInGameUI->selectDrawable( draw );
 			}
@@ -1398,7 +1400,7 @@ void StealthUpdate::changeVisualDisguise()
 			if( selected )
 			{
 				if(m_preserveLastGUI)
-					TheInGameUI->selectDrawablePreserveGUI( draw );
+					TheInGameUI->selectDrawablePreserveGUI( draw, TRUE );
 				else
 					TheInGameUI->selectDrawable( draw );
 			}
@@ -1508,7 +1510,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 			self->getPhysics()->resetDynamicPhysics();
 			if( selected )
 			{
-				TheInGameUI->selectDrawablePreserveGUI( draw );
+				TheInGameUI->selectDrawablePreserveGUI( draw, !getStealthUpdateModuleData()->m_dontFlashWhenFlickering );
 			}
 		}
 		if( self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) != ALLIES && clientPlayer->isPlayerActive() )

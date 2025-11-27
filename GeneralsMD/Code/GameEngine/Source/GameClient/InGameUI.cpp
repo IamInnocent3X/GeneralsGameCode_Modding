@@ -3778,7 +3778,7 @@ void InGameUI::selectDrawable( Drawable *draw )
 //-------------------------------------------------------------------------------------------------
 /** Mark given Drawable as "selected", but don't clear any Pending Commands. */
 //-------------------------------------------------------------------------------------------------
-void InGameUI::selectDrawablePreserveGUI( Drawable *draw )
+void InGameUI::selectDrawablePreserveGUI( Drawable *draw, Bool showFlash )
 {
 
 	if( draw->isSelected() == FALSE )
@@ -3787,7 +3787,7 @@ void InGameUI::selectDrawablePreserveGUI( Drawable *draw )
 		//m_frameSelectionChanged = TheGameLogic->getFrame();
 
 		// set the selection in the drawable
-		draw->friend_setSelected();
+		draw->friend_setSelectedSetShowFlash(showFlash);
 
 		// add to our selected list
 		m_selectedDrawables.push_front( draw );

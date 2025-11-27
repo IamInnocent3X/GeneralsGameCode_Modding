@@ -566,7 +566,7 @@ StateReturnType HackInternetState::update()
 					}
 				}
 
-				if( displayMoney )
+				if( displayMoney && owner->showCashText() )
 				{
 					// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
 					//Display cash income floating over the hacker.
