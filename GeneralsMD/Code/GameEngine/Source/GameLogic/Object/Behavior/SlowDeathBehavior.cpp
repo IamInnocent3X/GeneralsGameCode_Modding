@@ -420,6 +420,17 @@ UpdateSleepTime SlowDeathBehavior::update()
 		m_nextWakeUpTime = 0;
 
 
+	if(m_hitTree)
+	{
+		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
+		if ( !obj->isAboveTerrain() )
+		{
+			TheGameLogic->destroyObject(obj);
+			return UPDATE_SLEEP_FOREVER;
+		}
+		return UPDATE_SLEEP_NONE;
+	}
+
 	if ((m_flags & (1<<FLUNG_INTO_AIR)) != 0)
 	{
 		if ((m_flags & (1<<BOUNCED)) == 0)
@@ -470,17 +481,6 @@ UpdateSleepTime SlowDeathBehavior::update()
 			if( m_isOnAirFrame )
 				return UPDATE_SLEEP_FOREVER; // Made Sleepy. Wake up when bouncing is removed
 		}
-	}
-
-	if(m_hitTree)
-	{
-		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
-		if ( !obj->isAboveTerrain() )
-		{
-			TheGameLogic->destroyObject(obj);
-			return UPDATE_SLEEP_FOREVER;
-		}
-		return UPDATE_SLEEP_NONE;
 	}
 
 	Bool AboveTerrain = obj->isAboveTerrain();
@@ -589,6 +589,7 @@ Bool SlowDeathBehavior::layerUpdate(Bool hitTree)
 		obj->setModelConditionFlags(   MAKE_MODELCONDITION_MASK(MODELCONDITION_PARACHUTING) ); //looks like he is snagged in a tree
 		//obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
 		m_hitTree = TRUE;
+		m_nextWakeUpTime = 0;
 		if ( touchedGround )
 		{
 			TheGameLogic->destroyObject(obj);
