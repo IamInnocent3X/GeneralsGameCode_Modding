@@ -107,31 +107,21 @@ void MaxHealthUpgrade::upgradeImplementation( )
 	//First make sure we have the right combination of upgrades
 	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
 
-	// Because this module does things differently, we need to take a different approach
-	if( UpgradeStatus != 1 )
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
 	{
-		// If we do not have the Upgrade, yet we have not executed, do nothing
-		if(!m_hasExecuted)
-		{
-			return;
-		}
-		else
-		{
-			// Remove the Upgrade Execution Status so it is treated as activation again
-			m_hasExecuted = false;
-			setUpgradeExecuted(false);
-		}
+		return;
 	}
-
-	Bool isApply = UpgradeStatus == 1 ? TRUE : FALSE;
-
-	if(isApply)
+	else if( UpgradeStatus == 1 )
 	{
-		// If we have yet to do the Upgrade, proceed to do the Upgrade, but if we already have the Upgrade, don't do anything.
-		if(!m_hasExecuted)
-			m_hasExecuted = isApply;
-		else
-			return;
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
 	}
 
 	doMaxHealthUpgrade(m_hasExecuted);

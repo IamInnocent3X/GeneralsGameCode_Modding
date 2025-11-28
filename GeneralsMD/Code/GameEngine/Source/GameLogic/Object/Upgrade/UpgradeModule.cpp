@@ -163,7 +163,7 @@ Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted )
 	getUpgradeActivationMasks(activation, conflicting);
 
 	//Make sure we have activation conditions and we haven't performed the upgrade already.
-	if( keyMask.any() )
+	if( activation.any() && keyMask.any() )
 	{
 		//If we have conflicting upgrades, return the Value
 		if( keyMask.testForAny( conflicting))
@@ -204,11 +204,9 @@ Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted )
 	{
 		return 2; // remove the Upgrade if no upgrades are present
 	}
-	else
-	{
-		//We can't upgrade!
-		return 0;
-	}
+
+	//We can't upgrade!
+	return 0;
 }
 //-------------------------------------------------------------------------------------------------
 void UpgradeMux::giveSelfUpgrade()

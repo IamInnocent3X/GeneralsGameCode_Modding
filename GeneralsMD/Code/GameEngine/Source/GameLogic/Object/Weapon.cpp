@@ -446,6 +446,19 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ShrapnelIgnoresStealth",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
 	{ "ShrapnelTargetMask",			INI::parseBitString32,	TheWeaponAffectsMaskNames,				offsetof(WeaponTemplate, m_shrapnelAffectsMask) },
 
+	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
+	{ "MindControlRadius",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlRadius) },
+	{ "MindControlCount",				INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_mindControlCount) },
+	{ "MindControlTurnsNeutral",			INI::parseBool,								NULL,							offsetof(WeaponTemplate, m_mindControlTurnsNeutral) },
+	{ "MindControlIsPermanent",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlIsPermanent) },
+	{ "MindControlDefectDuration",			INI::parseDurationUnsignedInt,						NULL,							offsetof(WeaponTemplate, m_mindControlDefectDuration) },
+	{ "MindControlKey",				INI::parseAsciiString,					NULL,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
+
+	{ "CustomSubdualDoMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
+
+	{ "BreaksMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
+	{ "BreaksMindControlKey",				INI::parseAsciiStringVector,					NULL,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },*/
+
 	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };

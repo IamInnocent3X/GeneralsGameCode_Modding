@@ -169,6 +169,7 @@ BattleBusSlowDeathBehavior::BattleBusSlowDeathBehavior( Thing *thing, const Modu
 
 	m_isRealDeath = FALSE;
 	m_isInFirstDeath = FALSE;
+	m_checkNoDestructionHulk = FALSE;
 	m_groundCheckFrame = 0;
 	m_penaltyDeathFrame = 0;
 	m_amountofDeaths = 0;
@@ -187,6 +188,7 @@ void BattleBusSlowDeathBehavior::onDie( const DamageInfo *damageInfo )
 {
 	m_isRealDeath = TRUE;// Set beforehand because onDie could result in picking us to beginSlowDeath
 	m_isInFirstDeath = FALSE; // and clear this incase we died while in the alternate death
+	m_checkNoDestructionHulk = FALSE;
 
 	SlowDeathBehavior::onDie(damageInfo);
 }  // end onDie
@@ -251,18 +253,24 @@ void BattleBusSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 		SlowDeathBehavior::beginSlowDeath( damageInfo );
 	}
 
+	// Since PhysicsBehavior is now used to check for hitting ground, need to stop module from updating after its multiple lives to prevent it from killing itself
+	m_checkNoDestructionHulk = FALSE;
+
 }  // end beginSlowDeath
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 {
+	if(m_checkNoDestructionHulk)
+		return UPDATE_SLEEP_FOREVER;
+	
 	Object *me = getObject();
 	const BattleBusSlowDeathBehaviorModuleData * data = getBattleBusSlowDeathBehaviorModuleData();
 	const ContainModuleInterface *contain = me->getContain();
 
 	Bool notContained = FALSE;
-	if( data->m_noPassengersAmountOfDeathTrigger <= m_amountofDeaths && ( contain == NULL || ( contain != NULL && contain->getContainCount() == 0 ) ) )
+	if( data->m_noPassengersAmountOfDeathTrigger <= m_amountofDeaths && ( contain == NULL || contain->getContainCount() == 0 ) )
 	{
 		notContained = TRUE;
 	}
@@ -280,7 +288,7 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 
 			// We're done since we hit the ground
 			m_isInFirstDeath = FALSE;
-
+			
 			if(data->m_sleepsafteramountofdeaths <= m_amountofDeaths)
 			{
 				// And stop us forever
@@ -302,6 +310,10 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 				//	return UPDATE_SLEEP_FOREVER;
 				//else
 				//	return UPDATE_SLEEP_NONE; // None, so we check for empty as soon as possible
+
+				// Since PhysicsBehavior is now used to check for hitting ground, need to stop module from updating after its multiple lives to prevent it from killing itself
+				if( data->m_emptyHulkDestructionDelay == 0 )
+					m_checkNoDestructionHulk = TRUE;
 			}
 		}
 		return UPDATE_SLEEP_FOREVER; // Physics now check for Slow Death Update everytime when it hits the ground
@@ -388,6 +400,8 @@ void BattleBusSlowDeathBehavior::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_penaltyDeathFrame );
 
 	xfer->xferInt( &m_amountofDeaths );
+
+	xfer->xferBool( &m_checkNoDestructionHulk );
 
 }  // end xfer
 

@@ -129,10 +129,12 @@ void WeaponSetUpgrade::upgradeImplementation( )
 	{
 		return;
 	}
-	
-	m_hasExecuted = TRUE;
-	
-	if( UpgradeStatus == 2 )
+	else if( UpgradeStatus == 1 )
+	{
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
 	{
 		m_hasExecuted = FALSE;
 		// Remove the Upgrade Execution Status so it is treated as activation again

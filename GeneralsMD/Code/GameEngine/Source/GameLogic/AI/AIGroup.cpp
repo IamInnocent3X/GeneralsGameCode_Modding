@@ -398,6 +398,177 @@ Bool AIGroup::doAddNearbyMembers( OrderNearbyData orderData )
 }
 
 /**
+ * Check whether an Object can do the passed command
+ */
+static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments)
+{
+	Bool canDoAction = TRUE;
+	AIUpdateInterface *ai = obj->getAIUpdateInterface();
+
+	switch(type)
+	{
+		case GameMessage::MSG_DO_WEAPON:
+		case GameMessage::MSG_DO_WEAPON_AT_OBJECT:
+		case GameMessage::MSG_DO_WEAPON_AT_LOCATION:
+		{
+			CanAttackResult result; 
+			if(type == GameMessage::MSG_DO_WEAPON_AT_LOCATION)
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, &arguments[1].data.location, CMD_FROM_PLAYER ) ;
+			else if(type == GameMessage::MSG_DO_WEAPON_AT_OBJECT)
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, TheGameLogic->findObjectByID( arguments[1].data.objectID ), NULL, CMD_FROM_PLAYER ) ;
+			else if(type == GameMessage::MSG_DO_WEAPON)
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, obj->getPosition(), CMD_FROM_PLAYER ) ;	
+
+			if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+			{
+				canDoAction = FALSE;
+			}
+
+			break;
+		}
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION:
+		case GameMessage::MSG_DO_SPECIAL_POWER:
+		{
+			UnsignedInt specialPowerID = arguments[0].data.integer;
+			const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+			if( spTemplate )
+			{
+				SpecialPowerModuleInterface *mod = obj->getSpecialPowerModule( spTemplate );
+				// no special power
+				if( !mod )
+				{
+					canDoAction = FALSE;
+					break;
+				}
+
+				// cannot do special power
+				if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( obj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer ))
+					canDoAction = FALSE;
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( obj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
+					canDoAction = FALSE;
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( obj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer ) )
+					canDoAction = FALSE;
+			}
+			break;
+		}
+		case GameMessage::MSG_QUEUE_UPGRADE:
+		{
+			const UpgradeTemplate *upgradeT = TheUpgradeCenter->findUpgradeByKey( (NameKeyType)(arguments[1].data.integer) );
+			if (!upgradeT)	// sanity
+			{
+				canDoAction = FALSE;
+				break;
+			}
+			// make sure that the this object can actually build the upgrade
+			// There is an extra check for Object type only.  These are the same checks as in
+			// ControlCommandProcessing when the message was going out.  We are just revalidating on the
+			// way in to stop cheaters.
+			if( ! TheUpgradeCenter->canAffordUpgrade( obj->getControllingPlayer(), upgradeT, FALSE ) )
+			{
+				canDoAction = FALSE;
+				break;
+			}
+			if( upgradeT->getUpgradeType() == UPGRADE_TYPE_OBJECT )
+			{
+				if( obj->hasUpgrade( upgradeT )  || !obj->affectedByUpgrade( upgradeT ) )
+				{
+					canDoAction = FALSE;
+					break;
+				}
+			}
+
+			// Ever think to check if this thing can actually build the upgrade to "stop cheaters"?
+			if( !obj->canProduceUpgrade(upgradeT) )
+			{
+				canDoAction = FALSE;
+				break;
+			}// They have faked their button; go out of sync. (Cheater will execute it, non cheater will not execute it.)
+
+			// producer must have a production update
+			ProductionUpdateInterface *pu = obj->getProductionUpdateInterface();
+			if( pu == NULL )
+			{
+				canDoAction = FALSE;
+				break;
+			}
+
+			if ( pu->canQueueUpgrade( upgradeT ) == CANMAKE_QUEUE_FULL )
+			{
+				canDoAction = FALSE;
+			}//So we don't charge them for something that we can't build... happy happy
+
+			break;
+		}
+		case GameMessage::MSG_DISABLE_POWER:
+		{
+			if(!obj->isKindOf(KINDOF_POWERED))
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_TOGGLE_OVERCHARGE:
+		{
+			canDoAction = FALSE;
+
+			OverchargeBehaviorInterface *obi;
+			for( BehaviorModule **bmi = obj->getBehaviorModules(); *bmi; ++bmi )
+			{
+
+				obi = (*bmi)->getOverchargeBehaviorInterface();
+				if( obi )
+				{
+					canDoAction = TRUE;
+					break;
+				}
+			}
+
+			break;
+		}
+		case GameMessage::MSG_SELL:
+		{
+			if( obj->isKindOf( KINDOF_STRUCTURE ) == FALSE )
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_INTERNET_HACK:
+		{
+			if( !ai || !ai->getHackInternetAIInterface() )
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_EVACUATE:
+		{
+			if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+			{
+				canDoAction = FALSE;
+				break;
+			}
+
+			ContainModuleInterface *contain = obj->getContain();
+			if( !contain || contain->getContainCount() == 0)
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_DO_FORCEMOVETO:
+		case GameMessage::MSG_DO_ATTACKMOVETO:
+		case GameMessage::MSG_DO_GUARD_POSITION:
+		case GameMessage::MSG_DO_GUARD_OBJECT:
+		{
+			if(!ai || !ai->getCurLocomotor())
+				canDoAction = FALSE;
+
+			break;
+		}
+
+	}
+	return canDoAction;
+}
+
+/**
  * Add any objects that are nearby the current selected objects
  */
 Bool AIGroup::doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments )
@@ -474,169 +645,7 @@ Bool AIGroup::doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Ty
 				continue;
 			}
 
-			Bool canDoAction = TRUE;
-
-			// Exclusion for different message types
-			switch(type)
-			{
-				case GameMessage::MSG_DO_WEAPON:
-				case GameMessage::MSG_DO_WEAPON_AT_OBJECT:
-				case GameMessage::MSG_DO_WEAPON_AT_LOCATION:
-				{
-					CanAttackResult result; 
-					if(type == GameMessage::MSG_DO_WEAPON_AT_LOCATION)
-						result = currentObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, &arguments[1].data.location, CMD_FROM_PLAYER ) ;
-					else if(type == GameMessage::MSG_DO_WEAPON_AT_OBJECT)
-						result = currentObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, TheGameLogic->findObjectByID( arguments[1].data.objectID ), NULL, CMD_FROM_PLAYER ) ;
-					else if(type == GameMessage::MSG_DO_WEAPON)
-						result = currentObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, currentObj->getPosition(), CMD_FROM_PLAYER ) ;	
-
-					if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
-					{
-						canDoAction = FALSE;
-					}
-
-					break;
-				}
-				case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
-				case GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION:
-				case GameMessage::MSG_DO_SPECIAL_POWER:
-				{
-					UnsignedInt specialPowerID = arguments[0].data.integer;
-					const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
-					if( spTemplate )
-					{
-						SpecialPowerModuleInterface *mod = currentObj->getSpecialPowerModule( spTemplate );
-						// no special power
-						if( !mod )
-						{
-							canDoAction = FALSE;
-							break;
-						}
-
-						// cannot do special power
-						if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( currentObj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer ))
-							canDoAction = FALSE;
-						else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( currentObj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
-							canDoAction = FALSE;
-						else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( currentObj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer ) )
-							canDoAction = FALSE;
-					}
-					break;
-				}
-				case GameMessage::MSG_QUEUE_UPGRADE:
-				{
-					const UpgradeTemplate *upgradeT = TheUpgradeCenter->findUpgradeByKey( (NameKeyType)(arguments[1].data.integer) );
-					if (!upgradeT)	// sanity
-					{
-						canDoAction = FALSE;
-						break;
-					}
-					// make sure that the this object can actually build the upgrade
-					// There is an extra check for Object type only.  These are the same checks as in
-					// ControlCommandProcessing when the message was going out.  We are just revalidating on the
-					// way in to stop cheaters.
-					if( ! TheUpgradeCenter->canAffordUpgrade( currentObj->getControllingPlayer(), upgradeT, FALSE ) )
-					{
-						canDoAction = FALSE;
-						break;
-					}
-					if( upgradeT->getUpgradeType() == UPGRADE_TYPE_OBJECT )
-					{
-						if( currentObj->hasUpgrade( upgradeT )  || !currentObj->affectedByUpgrade( upgradeT ) )
-						{
-							canDoAction = FALSE;
-							break;
-						}
-					}
-
-					// Ever think to check if this thing can actually build the upgrade to "stop cheaters"?
-					if( !currentObj->canProduceUpgrade(upgradeT) )
-					{
-						canDoAction = FALSE;
-						break;
-					}// They have faked their button; go out of sync. (Cheater will execute it, non cheater will not execute it.)
-
-					// producer must have a production update
-					ProductionUpdateInterface *pu = currentObj->getProductionUpdateInterface();
-					if( pu == NULL )
-					{
-						canDoAction = FALSE;
-						break;
-					}
-
-					if ( pu->canQueueUpgrade( upgradeT ) == CANMAKE_QUEUE_FULL )
-					{
-						canDoAction = FALSE;
-					}//So we don't charge them for something that we can't build... happy happy
-
-					break;
-				}
-				case GameMessage::MSG_DISABLE_POWER:
-				{
-					if(!currentObj->isKindOf(KINDOF_POWERED))
-						canDoAction = FALSE;
-
-					break;
-				}
-				case GameMessage::MSG_TOGGLE_OVERCHARGE:
-				{
-					canDoAction = FALSE;
-
-					OverchargeBehaviorInterface *obi;
-					for( BehaviorModule **bmi = currentObj->getBehaviorModules(); *bmi; ++bmi )
-					{
-
-						obi = (*bmi)->getOverchargeBehaviorInterface();
-						if( obi )
-						{
-							canDoAction = TRUE;
-							break;
-						}
-					}
-
-					break;
-				}
-				case GameMessage::MSG_SELL:
-				{
-					if( currentObj->isKindOf( KINDOF_STRUCTURE ) == FALSE )
-						canDoAction = FALSE;
-
-					break;
-				}
-				case GameMessage::MSG_INTERNET_HACK:
-				{
-					if( !ai || !ai->getHackInternetAIInterface() )
-						canDoAction = FALSE;
-
-					break;
-				}
-				case GameMessage::MSG_EVACUATE:
-				{
-					if ( currentObj->isDisabledByType( DISABLED_SUBDUED ) || currentObj->isDisabledByType( DISABLED_FROZEN ) )
-					{
-						canDoAction = FALSE;
-						break;
-					}
-
-					ContainModuleInterface *contain = currentObj->getContain();
-					if( !contain || contain->getContainCount() == 0)
-						canDoAction = FALSE;
-
-					break;
-				}
-				case GameMessage::MSG_DO_FORCEMOVETO:
-				case GameMessage::MSG_DO_ATTACKMOVETO:
-				case GameMessage::MSG_DO_GUARD_POSITION:
-				case GameMessage::MSG_DO_GUARD_OBJECT:
-				{
-					if(!ai || !ai->getCurLocomotor())
-						canDoAction = FALSE;
-
-					break;
-				}
-
-			}
+			Bool canDoAction = checkActionTypeForCommand(currentObj, type, arguments);
 
 			if(canDoAction == FALSE)
 				continue;

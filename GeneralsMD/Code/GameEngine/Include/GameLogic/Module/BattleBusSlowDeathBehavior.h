@@ -127,6 +127,7 @@ protected:
 
 	Bool m_isRealDeath;								///< Flag set by onDie that prevents the alternate processing caused by beginSlowDeath.
 	Bool m_isInFirstDeath;						///< Flag that controls lifetime of alternate processing.  Prevented by RealDeath flag.
+	Bool m_checkNoDestructionHulk;				///< Since PhysicsBehavior is now used to check for hitting ground, need to stop module from updating after its multiple lives to prevent it from killing itself
 	UnsignedInt m_groundCheckFrame;		///< Don't check for bouncing until at least here.
 	UnsignedInt m_penaltyDeathFrame;	///< If non zero, kill us with Penalty damage at this frame
 	int m_amountofDeaths;				///< How many times this unit has died? 

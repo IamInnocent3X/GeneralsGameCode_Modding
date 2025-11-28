@@ -615,6 +615,8 @@ public:
 	Bool m_hideCashTextFromEnemies;
 	Bool m_hideCashTextFromEnemiesInvisibleUnitsOnly;
 
+	Bool m_fixHulksFreezingAboveTerrain;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

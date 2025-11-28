@@ -187,6 +187,9 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 
 	Object *newObject = ObjectCreationList::create( data->m_ocl, getObject(), damageDealer );
 
+	if(!newObject)
+		return;
+
 	Object *me = getObject();
 
 	doDisposition(me, newObject);

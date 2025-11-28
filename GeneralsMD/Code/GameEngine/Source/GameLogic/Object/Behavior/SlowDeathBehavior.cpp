@@ -161,8 +161,7 @@ SlowDeathBehavior::SlowDeathBehavior( Thing *thing, const ModuleData* moduleData
 	m_hasSunk = FALSE;
 
 	m_beginSlowDeathFrame = 0;
-	//m_count = 0;
-	//m_lastPos.zero();
+	m_hitTree = FALSE;
 
 	if (getSlowDeathBehaviorModuleData()->m_probabilityModifier < 1)
 	{
@@ -473,7 +472,36 @@ UpdateSleepTime SlowDeathBehavior::update()
 		}
 	}
 
+	if(m_hitTree)
+	{
+		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
+		if ( !obj->isAboveTerrain() )
+		{
+			TheGameLogic->destroyObject(obj);
+			return UPDATE_SLEEP_FOREVER;
+		}
+		return UPDATE_SLEEP_NONE;
+	}
+
 	Bool AboveTerrain = obj->isAboveTerrain();
+
+	if(TheGlobalData->m_fixHulksFreezingAboveTerrain && AboveTerrain)
+	{
+		if(!m_isOnAirFrame)
+			m_isOnAirFrame = now;
+
+		return UPDATE_SLEEP_FOREVER;
+	}
+	else if(m_isOnAirFrame)
+	{
+		UnsignedInt frames = TheGameLogic->getFrame() - m_isOnAirFrame;
+		m_sinkFrame += frames;
+		m_midpointFrame += frames;
+		m_destructionFrame += frames;
+
+		m_nextWakeUpTime = 0;
+		m_isOnAirFrame = 0;
+	}
 
 	if(d->m_sinkRate > 0.0f)
 	{
@@ -550,7 +578,6 @@ Bool SlowDeathBehavior::layerUpdate(Bool hitTree)
 		return TRUE;
 	}
 
-	const SlowDeathBehaviorModuleData* d = getSlowDeathBehaviorModuleData();
 	Object* obj = getObject();
 	Bool touchedGround = !obj->isAboveTerrain();
 
@@ -560,7 +587,8 @@ Bool SlowDeathBehavior::layerUpdate(Bool hitTree)
 		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING) );
 		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING) );
 		obj->setModelConditionFlags(   MAKE_MODELCONDITION_MASK(MODELCONDITION_PARACHUTING) ); //looks like he is snagged in a tree
-		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
+		//obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
+		m_hitTree = TRUE;
 		if ( touchedGround )
 		{
 			TheGameLogic->destroyObject(obj);
@@ -701,6 +729,9 @@ void SlowDeathBehavior::xfer( Xfer *xfer )
 
 	// begin slow death time
 	xfer->xferUnsignedInt( &m_beginSlowDeathFrame );
+
+	// whether we have hit a tree
+	xfer->xferBool( &m_hitTree );
 
 }  // end xfer
 

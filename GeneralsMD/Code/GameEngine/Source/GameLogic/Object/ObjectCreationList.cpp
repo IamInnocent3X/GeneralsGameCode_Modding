@@ -1415,15 +1415,6 @@ protected:
 			}
 
 		}
-		else
-		{
-			ContainModuleInterface *contain = sourceObj->getContain();
-
-			if(contain)
-			{
-				contain->removeAllContained();
-			}
-		}
 
 		// Assault Transport Matters, switching Transports
 		if(m_transferToAssaultTransport && source && source->getAssaultTransportObjectID() != INVALID_ID)

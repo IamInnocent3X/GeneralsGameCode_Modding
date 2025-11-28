@@ -69,8 +69,11 @@ public:
 protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+	Bool m_hasExecuted;
+	LocomotorSetType m_prevLocomotorType;
 };
 
 

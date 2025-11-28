@@ -188,6 +188,7 @@ private:
 	UnsignedInt m_nextWakeUpTime;
 	UnsignedInt	m_beginSlowDeathFrame;
 	Bool m_hasSunk;
+	Bool m_hitTree;
 };
 
 #endif // __SlowDeathBehavior_H_
