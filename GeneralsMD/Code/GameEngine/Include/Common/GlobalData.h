@@ -610,7 +610,7 @@ public:
 	Bool m_useEfficientDrawableScheme;
 
 	Bool m_fixLocoClump;
-	Bool m_infantryCorpsesAirDrag;
+	Bool m_corpsesHaveAirDrag;
 
 	Bool m_hideCashTextFromEnemies;
 	Bool m_hideCashTextFromEnemiesInvisibleUnitsOnly;

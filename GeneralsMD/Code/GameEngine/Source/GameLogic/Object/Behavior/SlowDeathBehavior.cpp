@@ -419,21 +419,9 @@ UpdateSleepTime SlowDeathBehavior::update()
 	if(now >= m_nextWakeUpTime)
 		m_nextWakeUpTime = 0;
 
-
-	if(m_hitTree)
-	{
-		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
-		if ( !obj->isAboveTerrain() )
-		{
-			TheGameLogic->destroyObject(obj);
-			return UPDATE_SLEEP_FOREVER;
-		}
-		return UPDATE_SLEEP_NONE;
-	}
-
 	if ((m_flags & (1<<FLUNG_INTO_AIR)) != 0)
 	{
-		if ((m_flags & (1<<BOUNCED)) == 0)
+		if ((m_flags & (1<<BOUNCED)) == 0 && !m_hitTree)
 		{
 			/// IamInnocent - Made Sleepy
 			//++m_sinkFrame;
@@ -485,10 +473,14 @@ UpdateSleepTime SlowDeathBehavior::update()
 
 	Bool AboveTerrain = obj->isAboveTerrain();
 
-	if(TheGlobalData->m_fixHulksFreezingAboveTerrain && AboveTerrain)
+	if(TheGlobalData->m_fixHulksFreezingAboveTerrain && AboveTerrain && !m_hasSunk)
 	{
 		if(!m_isOnAirFrame)
 			m_isOnAirFrame = now;
+
+		// Check for the next update when hitting ground
+		if(obj->getPhysics())
+			obj->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_NORMAL );
 
 		return UPDATE_SLEEP_FOREVER;
 	}
@@ -505,7 +497,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 
 	if(d->m_sinkRate > 0.0f)
 	{
-		if ( now >= m_sinkFrame && (!TheGlobalData->m_infantryCorpsesAirDrag || !AboveTerrain))
+		if ( now >= m_sinkFrame && (!TheGlobalData->m_corpsesHaveAirDrag || !AboveTerrain))
 		{
 			m_hasSunk = TRUE;
 			// disable Physics (if any) so that we can control the sink...
@@ -517,7 +509,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 		}
 		else
 		{
-			if(TheGlobalData->m_infantryCorpsesAirDrag && AboveTerrain && obj->isDisabledByType( DISABLED_HELD ))
+			if(TheGlobalData->m_corpsesHaveAirDrag && AboveTerrain && obj->isDisabledByType( DISABLED_HELD ))
 				obj->clearDisabled( DISABLED_HELD );
 
 			if(!m_hasSunk && m_sinkFrame && m_sinkFrame > now)
@@ -553,6 +545,22 @@ UpdateSleepTime SlowDeathBehavior::update()
 			m_nextWakeUpTime = m_destructionFrame;
 	}
 
+	
+	if(m_hitTree)
+	{
+		obj->setDisabled( DISABLED_HELD );
+		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING) );
+		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING) );
+		obj->setModelConditionFlags(   MAKE_MODELCONDITION_MASK(MODELCONDITION_PARACHUTING) ); //looks like he is snagged in a tree
+		obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
+		if ( !obj->isAboveTerrain() )
+		{
+			TheGameLogic->destroyObject(obj);
+			return UPDATE_SLEEP_FOREVER;
+		}
+		return UPDATE_SLEEP_NONE;
+	}
+
 	//return UPDATE_SLEEP_NONE;
 	// We have to always set new pos.z after sinking, therefore we cant sleep
 	if(m_hasSunk || (AboveTerrain && (m_flags & (1<<BOUNCED)) != 0) )
@@ -575,6 +583,15 @@ Bool SlowDeathBehavior::layerUpdate(Bool hitTree)
 		// remove the Physics from checking Aerial Slow Death Behavior
 		if(getObject()->getPhysics())
 			getObject()->getPhysics()->applyAerialSlowDeathBehaviorCheck( SLOWDEATH_INVALID );
+
+		// Wake up for updating the frame the object reached the ground
+		if(TheGlobalData->m_fixHulksFreezingAboveTerrain)
+		{
+			// disable Physics (if any) so that it doesn't bounce...
+			getObject()->setDisabled( DISABLED_HELD );
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+		}
+
 		return TRUE;
 	}
 
@@ -583,10 +600,10 @@ Bool SlowDeathBehavior::layerUpdate(Bool hitTree)
 
 	if ( hitTree )
 	{
-		obj->setDisabled( DISABLED_HELD );
-		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING) );
-		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING) );
-		obj->setModelConditionFlags(   MAKE_MODELCONDITION_MASK(MODELCONDITION_PARACHUTING) ); //looks like he is snagged in a tree
+		//obj->setDisabled( DISABLED_HELD );
+		//obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_FLAILING) );
+		//obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK(MODELCONDITION_EXPLODED_BOUNCING) );
+		//obj->setModelConditionFlags(   MAKE_MODELCONDITION_MASK(MODELCONDITION_PARACHUTING) ); //looks like he is snagged in a tree
 		//obj->setPositionZ( obj->getPosition()->z - (d->m_sinkRate * 50.0f) );// make him sink faster
 		m_hitTree = TRUE;
 		m_nextWakeUpTime = 0;

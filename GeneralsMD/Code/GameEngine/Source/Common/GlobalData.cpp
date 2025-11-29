@@ -666,7 +666,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) },
 
-	{ "FlungInfantryCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_infantryCorpsesAirDrag) },
+	{ "FlungCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 
 	{ "HideCashFromShowingToEnemies",	INI::parseBool, NULL, offsetof(GlobalData, m_hideCashTextFromEnemies) },
 	{ "HideCashFromShowingToEnemiesInvisibleUnitsOnly",	INI::parseBool, NULL, offsetof(GlobalData, m_hideCashTextFromEnemiesInvisibleUnitsOnly) },
@@ -1244,7 +1244,7 @@ GlobalData::GlobalData()
 	m_useEfficientDrawableScheme = FALSE;
 
 	m_fixLocoClump = FALSE;
-	m_infantryCorpsesAirDrag = FALSE;
+	m_corpsesHaveAirDrag = FALSE;
 	m_hideCashTextFromEnemies = FALSE;
 	m_hideCashTextFromEnemiesInvisibleUnitsOnly = FALSE;
 	m_fixHulksFreezingAboveTerrain = FALSE;

@@ -104,6 +104,7 @@ class UpgradeModuleInterface;
 class UpgradeTemplate;
 class RadarUpgradeInterface;
 class StickyBombUpdateInterface;
+class CounterUpdateInterface;
 
 class ObjectHeldHelper;
 class ObjectDisabledHelper;
@@ -114,6 +115,7 @@ class SubdualDamageHelper;
 class ChronoDamageHelper;
 class TempWeaponBonusHelper;
 class ObjectWeaponStatusHelper;
+class ObjectCounterHelper;
 class ObjectDefectionHelper;
 class ObjectDelayedOrderHelper;
 class ObjectLevitationHelper;
