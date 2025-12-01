@@ -87,6 +87,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "ObjectDisabledHelperPool", 4096, 256 },
 	{ "ObjectDelayedOrderHelper", 1024, 256 },
 	{ "ObjectLevitationHelper", 1024, 256 },
+//	{ "ObjectCounterHelper", 4096, 256 },
 	{ "StatusDamageHelper", 1500, 256 },
 	{ "SubdualDamageHelper", 1500, 256 },
 	{ "ChronoDamageHelper", 1500, 256 }, 
@@ -373,6 +374,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "EMPUpdate", 64, 32 },
 	{ "LeafletDropBehavior", 64, 32 },
 	{ "Overridable", 32, 32 },
+//	{ "CounterUpdate", 64, 32 },
 
 	{ "W3DGameWindow", 700, 256 },
 	{ "GameWindowDummy", 700, 256 },

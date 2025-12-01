@@ -155,6 +155,7 @@ void DumbProjectileBehavior::setFramesTillCountermeasureDiversionOccurs( Unsigne
 	m_framesTillDecoyed = now + frames;
 	m_detonateDistance = distance;
 	m_decoyID = victimID;
+	m_dontDetonateGroundFrames = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -407,8 +408,7 @@ void DumbProjectileBehavior::projectileLaunchAtObjectOrPosition(
 	Int specificBarrelToUse,
 	const WeaponTemplate* detWeap,
 	const ParticleSystemTemplate* exhaustSysOverride,
-	const Coord3D *launchPos,
-	ObjectID shrapnelLaunchID
+	const Coord3D *launchPos
 )
 {
 	const DumbProjectileBehaviorModuleData* d = getDumbProjectileBehaviorModuleData();
@@ -439,9 +439,12 @@ void DumbProjectileBehavior::projectileLaunchAtObjectOrPosition(
 
 	Object* projectile = getObject();
 
-	Weapon::positionProjectileForLaunch(projectile, launcher, wslot, specificBarrelToUse, launchPos, shrapnelLaunchID);
+	Weapon::positionProjectileForLaunch(projectile, launcher, wslot, specificBarrelToUse, launchPos);
 
 	projectileFireAtObjectOrPosition( victim, victimPos, detWeap, exhaustSysOverride );
+
+	if(launchPos)
+		m_dontDetonateGroundFrames = TheGameLogic->getFrame() + REAL_TO_INT_CEIL(LOGICFRAMES_PER_SECOND * 0.3);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -612,6 +615,10 @@ Bool DumbProjectileBehavior::projectileHandleCollision( Object *other )
 		}
 
 	}
+
+	// Don't detonate On Ground
+	if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
+		return true;
 
 	// collided with something... blow'd up!
 	detonate();
@@ -846,6 +853,10 @@ UpdateSleepTime DumbProjectileBehavior::update()
 			const Real FUDGE = 2.0f;
 			tmp.z = TheTerrainLogic->getLayerHeight(tmp.x, tmp.y, testLayer) + FUDGE;
 			getObject()->setPosition(&tmp);
+			if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
+			{
+				return UPDATE_SLEEP_NONE;
+			}
 			// blow'd up!
 			detonate();
 			return UPDATE_SLEEP_NONE;

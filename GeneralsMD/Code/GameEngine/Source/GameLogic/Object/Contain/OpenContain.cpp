@@ -937,6 +937,17 @@ void OpenContain::onDie( const DamageInfo * damageInfo )
 
 	killRidersWhoAreNotFreeToExit();
 
+	static NameKeyType createObjDie_key = NAMEKEY("CreateObjectDie");
+
+	for (BehaviorModule** b = getObject()->getBehaviorModules(); *b; ++b)
+	{
+		if ((*b)->getModuleNameKey() == createObjDie_key)
+		{
+			//we stop here and the module carry out the contain removal
+			return;
+		}
+	}
+
 	// Leaving this commented out to show it can't work.  We are about to die, so they will have zero
 	// chance to hit an exitState::Update.  At least we would clean them up in onDelete.
 //	orderAllPassengersToExit( CMD_FROM_AI, FALSE );

@@ -178,8 +178,10 @@ MissileAIUpdate::MissileAIUpdate( Thing *thing, const ModuleData* moduleData ) :
 	m_framesTillDecoyed = 0;
 	m_noDamage = FALSE;
 	m_isJammed = FALSE;
+	m_doVictimPosForLaunch = FALSE;
 	m_killSelfTime = 0;
 	m_nextWakeUpTime = 0;
+	m_dontDetonateGroundFrames = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -233,8 +235,7 @@ void MissileAIUpdate::projectileLaunchAtObjectOrPosition(
 	Int specificBarrelToUse,
 	const WeaponTemplate* detWeap,
 	const ParticleSystemTemplate* exhaustSysOverride,
-	const Coord3D *launchPos,
-	ObjectID shrapnelLaunchID
+	const Coord3D *launchPos
 )
 {
 	DEBUG_ASSERTCRASH(specificBarrelToUse>=0, ("specificBarrelToUse must now be explicit"));
@@ -258,10 +259,15 @@ void MissileAIUpdate::projectileLaunchAtObjectOrPosition(
 			getObject()->setCustomWeaponBonusConditionFlags(m_extraBonusCustomFlags);
 	}
 
-	Weapon::positionProjectileForLaunch(getObject(), launcher, wslot, specificBarrelToUse, launchPos, shrapnelLaunchID);
+	if(launchPos)
+	{
+		m_doVictimPosForLaunch = TRUE;
+		m_dontDetonateGroundFrames = TheGameLogic->getFrame() + LOGICFRAMES_PER_SECOND;
+	}
+
+	Weapon::positionProjectileForLaunch(getObject(), launcher, wslot, specificBarrelToUse, launchPos);
 
 	projectileFireAtObjectOrPosition( victim, victimPos, detWeap, exhaustSysOverride );
-
 }
 
 #define APPROACH_HEIGHT 10.0f
@@ -314,6 +320,14 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 	}
 
 	//DEBUG_LOG((">>> MissileAI FIREPROJ - dir = (%f/%f/%f)\n", dir.X, dir.Y, dir.Z));
+
+	if(m_doVictimPosForLaunch)
+	{
+		Real facingAngle = atan2(victimPos->x,victimPos->y);
+		dir.X = Cos(facingAngle);
+		dir.Y = Sin(facingAngle);
+		dir.Z = 0;
+	}
 	
 	PhysicsBehavior* physics = getObject()->getPhysics();
 	if (physics && initialVelToUse > 0)
@@ -366,6 +380,13 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 
     setCurrentVictim( victim );/// extending access to the victim via the parent class
 	m_prevPos = *getObject()->getPosition();
+
+	if(m_doVictimPosForLaunch)
+	{
+		doIgnitionState();
+		doAttackState(true);
+		switchToState(ATTACK);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -445,6 +466,10 @@ Bool MissileAIUpdate::projectileHandleCollision( Object *other )
 			}	// if a garrisonable thing
 		}
 	}
+
+	// Don't detonate On Ground
+	if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
+		return true;
 
 	// collided with something... blow'd up!
 	detonate();
@@ -943,7 +968,7 @@ UpdateSleepTime MissileAIUpdate::update()
 
 	}
 
-	if (newPos.z < 0)
+	if (newPos.z < 0 && TheGameLogic->getFrame() >= m_dontDetonateGroundFrames)
 	{
 		// we ended up under the world.  go away.
 		TheGameLogic->destroyObject(getObject());
@@ -1022,6 +1047,10 @@ UpdateSleepTime MissileAIUpdate::update()
 			const Real FUDGE = 2.0f;
 			tmp.z = TheTerrainLogic->getLayerHeight(tmp.x, tmp.y, testLayer) + FUDGE;
 			getObject()->setPosition(&tmp);
+			if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
+			{
+				return UPDATE_SLEEP_NONE;
+			}
 			// blow'd up!
 			detonate();
 			return UPDATE_SLEEP_NONE;

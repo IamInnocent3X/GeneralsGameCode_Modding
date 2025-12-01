@@ -443,7 +443,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ShrapnelCount",				INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_shrapnelBonusCount) },
 	{ "ShrapnelWeapon",			INI::parseWeaponTemplate,								NULL,							offsetof(WeaponTemplate, m_shrapnelBonusWeapon) },
 	{ "ShrapnelDoesNotRequireVictim",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelDoesNotRequireVictim) },
-	{ "ShrapnelIgnoresStealth",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
+	{ "ShrapnelCanTargetStealth",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
 	{ "ShrapnelTargetMask",			INI::parseBitString32,	TheWeaponAffectsMaskNames,				offsetof(WeaponTemplate, m_shrapnelAffectsMask) },
 
 	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
@@ -1722,19 +1722,44 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 		if (pui)
 		{
+			if(launchPos)
+			{
+				Coord3D tmp = *launchPos;
+				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(launchPos);
+
+				if (layer == LAYER_GROUND)
+				{
+					tmp.z = 99999.0f;
+					PathfindLayerEnum newLayer = TheTerrainLogic->getHighestLayerForDestination(&tmp);
+					projectile->setLayer(newLayer);
+
+					// ensure we are slightly above the bridge, to account for fudge & sloppy art
+					PathfindLayerEnum testLayer = TheTerrainLogic->getHighestLayerForDestination(&tmp);
+					const Real FUDGE = 2.0f;
+					tmp.z = TheTerrainLogic->getLayerHeight(tmp.x, tmp.y, testLayer) + FUDGE;
+				}
+
+				projectile->setPosition(&tmp);
+				
+				projectile->setOrientation(atan2(projectileDestination.x, projectileDestination.y));
+
+				if(shrapnelLaunchID != INVALID_ID)
+					pui->setShrapnelLaunchID(shrapnelLaunchID);
+			}
+
 			VeterancyLevel v = sourceObj->getVeterancyLevel();
 			if(retarget && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES))
 			{
-				pui->projectileLaunchAtObjectOrPosition(retarget, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos, shrapnelLaunchID );
+				pui->projectileLaunchAtObjectOrPosition(retarget, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos );
 			}
 			else if( scatterRadius > 0.0f )
 			{
 				//With a scatter radius, don't follow the victim (overriding the intent).
-				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos, shrapnelLaunchID );
+				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos );
 			}
 			else
 			{
-				pui->projectileLaunchAtObjectOrPosition(victimObj, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos, shrapnelLaunchID );
+				pui->projectileLaunchAtObjectOrPosition(victimObj, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos );
 			}
 		}
 		else
@@ -1962,176 +1987,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 	} // if historic bonuses
 
-	// Shrapnel Bonus Weapon
-	if( m_shrapnelBonusWeapon && m_shrapnelBonusCount > 0 && m_shrapnelBonusWeapon != this && (!m_historicBonusWeapon || m_historicBonusWeapon != this) && (m_shrapnelDoesNotRequireVictim || victimID != INVALID_ID) )
-	{
-		WeaponBonus bonus;
-		ObjectCustomStatusType dummy;
-		m_shrapnelBonusWeapon->private_computeBonus(source, 0, bonus, dummy);
-		Real range = m_shrapnelBonusWeapon->getAttackRange(bonus);
-
-		Int affects = m_shrapnelAffectsMask;
-		std::vector<ObjectID> victimIDVec;
-
-		PartitionFilterSameMapStatus filterMapStatus(source);
-		PartitionFilterStealthedAndUndetected filterStealth(source, false);
-		PartitionFilterAlive filterAlive;
-
-		// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
-		// So these checks are on an individual basis, not in the Partition query
-		//	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
-		PartitionFilter *filters[4];
-		Int numFilters = 0;
-		filters[numFilters++] = &filterMapStatus;
-		filters[numFilters++] = &filterAlive;
-		if(!m_shrapnelIgnoresStealthStatus)
-			filters[numFilters++] = &filterStealth;
-		filters[numFilters] = NULL;
-
-		// scan objects in our region
-		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( pos, 
-																		range, 
-																		DAMAGE_RANGE_CALC_TYPE, 
-																		filters );
-		MemoryPoolObjectHolder hold( iter );
-		for( Object *curVictim = iter->first(); curVictim != NULL; curVictim = iter->next() )
-		{
-			if (source != NULL)
-			{
-				// Special, only deal damage to self
-				if(m_damagesSelfOnly)
-				{
-					if(source != curVictim)
-						continue;
-				}
-				
-				// anytime something is designated as the "primary victim" (ie, the direct target
-				// of the weapon), we ignore all the "affects" flags.
-				else if (curVictim->getID() != victimID)
-				{
-					WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
-					if( curVictim->isKindOf( KINDOF_UNATTACKABLE ) ||
-						curVictim->testStatus(OBJECT_STATUS_MASKED) ||
-						curVictim->testStatus(OBJECT_STATUS_NO_ATTACK_FROM_AI) ||
-						(m_shrapnelBonusWeapon->getAntiMask() & targetAntiMask) == 0 || 
-						m_shrapnelBonusWeapon->estimateWeaponTemplateDamage(source, curVictim, curVictim->getPosition(), bonus) == 0.0f )
-					{
-						continue;
-					}
-
-					BodyModuleInterface* body = curVictim->getBodyModule();
-					if( body && body->cantBeKilled())
-						continue;
-					
-					// should object ever be allowed to damage themselves? methinks not...
-					// exception: a few weapons allow this (eg, for suicide bombers).
-					if( (affects & WEAPON_AFFECTS_SELF) == 0 )
-					{
-						// Remember that source is a missile for some units, and they don't want to injure them'selves' either
-						if( source == curVictim || source->getProducerID() == curVictim->getID() )
-						{
-							//DEBUG_LOG(("skipping damage done to SELF..."));
-							continue;
-						}
-					}
-					
-					//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 3/11/2025
-					if( affects == WEAPON_AFFECTS_SELF )
-					{
-						if( !(source == curVictim || source->getProducerID() == curVictim->getID()) )
-							continue;
-					}
-
-					if( affects & WEAPON_DOESNT_AFFECT_SIMILAR )
-					{
-						//This means we probably are affecting allies, but don't want to kill nearby members that are the same type as us.
-						//A good example are a group of terrorists blowing themselves up. We don't want to cause a domino effect that kills
-						//all of them.
-						if( source->getTemplate()->isEquivalentTo(curVictim->getTemplate()) && source->getRelationship( curVictim ) == ALLIES )
-						{
-							continue;
-						}
-					}
-
-					if ((affects & WEAPON_DOESNT_AFFECT_AIRBORNE) != 0 && curVictim->isSignificantlyAboveTerrain())
-					{
-						continue;
-					}
-
-					/*
-						The idea here is: if its our ally(/enemies), AND it's not the direct target, AND the weapon doesn't
-						do radius-damage to allies(/enemies)... skip it.
-					*/
-					Relationship r = curVictim->getRelationship(source);
-					Int requiredMask;
-					if (r == ALLIES)
-						requiredMask = WEAPON_AFFECTS_ALLIES;
-					else if (r == ENEMIES)
-						requiredMask = WEAPON_AFFECTS_ENEMIES;
-					else /* r == NEUTRAL */
-						requiredMask = WEAPON_AFFECTS_NEUTRALS;
-
-					if( affects == WEAPON_AFFECTS_SELF )
-					{
-						requiredMask = WEAPON_AFFECTS_SELF;
-					}
-
-					if( !(affects & requiredMask) )
-					{
-						//Skip if we aren't affected by this weapon.
-						continue;
-					}
-				}
-
-				victimIDVec.push_back(curVictim->getID());
-			}
-		}
-
-		Coord3D spawnPos;
-		if(getProjectileTemplate() == NULL)
-			spawnPos.set( pos );
-		else
-			spawnPos.set( source->getPosition() );
-
-		Real groundHeight = TheTerrainLogic->getGroundHeight(spawnPos.x, spawnPos.y);
-		spawnPos.z = groundHeight > spawnPos.z ? groundHeight : spawnPos.z;
-
-		if( m_shrapnelBonusWeapon->getProjectileTemplate() != NULL )
-			spawnPos.z += (3*3*3*3)*TheGlobalData->m_gravity; // Make it significantly Above Terrain, so that it can properly fly
-
-		for(int i = 0; i < m_shrapnelBonusCount; i++)
-		{
-			if(!victimIDVec.empty())
-			{
-				Int randomValue = GameLogicRandomValue(0, victimIDVec.size() - 1);
-				Object* target = TheGameLogic->findObjectByID(victimIDVec[randomValue]);
-
-				TheWeaponStore->createAndFireTempWeaponOnSpot(m_shrapnelBonusWeapon, source, target, &spawnPos, victimID);
-
-				for( std::vector<ObjectID>::const_iterator it_ID = victimIDVec.begin(); it_ID != victimIDVec.end();)
-				{
-					if((*it_ID) == victimIDVec[randomValue])
-					{
-						it_ID = victimIDVec.erase(it_ID);
-						break;
-					}
-					++it_ID;
-				}
-			}
-			else
-			{
-				Real angle = GameLogicRandomValueReal(-PI, PI);
-				Coord3D targetPos;
-				targetPos.set( pos );
-				targetPos.x += range * Cos(angle);
-				targetPos.y += range * Sin(angle);
-				targetPos.z = TheTerrainLogic->getGroundHeight(targetPos.x, targetPos.y);
-
-				TheWeaponStore->createAndFireTempWeaponOnSpot(m_shrapnelBonusWeapon, source, &targetPos, &spawnPos, victimID);
-			}
-		}
-	} // if shrapnel bonuses
-
 //DEBUG_LOG(("WeaponTemplate::dealDamageInternal: dealing damage %s at frame %d",m_name.str(),TheGameLogic->getFrame()));
 
 	// if there's a specific victim, use it's pos (overriding the value passed in)
@@ -2201,6 +2056,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		Object *curVictim;
 		Real curVictimDistSqr;
 
+		Bool doShrapnel = FALSE;
+
 		Real primaryRadius = getPrimaryDamageRadius(bonus);
 		Real secondaryRadius = getSecondaryDamageRadius(bonus);
 		Real primaryDamage = getPrimaryDamage(bonus);
@@ -2249,6 +2106,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageInfo.in.m_customDeathType = customDeathType;
 				damageInfo.in.m_amount = HUGE_DAMAGE_AMOUNT;
 				source->attemptDamage( &damageInfo );
+
+				privateDoShrapnel(sourceID, victimID, pos);
 				return;
 			}
 		}
@@ -2273,6 +2132,9 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					if( (affects & WEAPON_KILLS_SELF) && source == curVictim )
 					{
 						killSelf = true;
+
+						// Register the Weapon to do Shrapnel for Self / Producer Damaging Weapons, Only when it hits an Object
+						doShrapnel = primaryVictim ? TRUE : FALSE;
 					}
 					else if(!DamagesSelfOnly)
 					{
@@ -2335,7 +2197,24 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 							//Skip if we aren't affected by this weapon.
 							continue;
 						}
+
+						if( affects == WEAPON_AFFECTS_SELF )
+						{
+							// Register the Weapon to do Shrapnel for Self / Producer Damaging Weapons, Only when it hits an Object
+							doShrapnel = primaryVictim ? TRUE : FALSE;
+						}
 					}
+
+					if(DamagesSelfOnly)
+					{
+						// Register the Weapon to do Shrapnel for Self / Producer Damaging Weapons, Only when it hits an Object
+						doShrapnel = primaryVictim ? TRUE : FALSE;
+					}
+				}
+				else
+				{
+					// Register the Weapon to do Shrapnel, Only when it hits an Object
+					doShrapnel = primaryVictim ? TRUE : FALSE;
 				}
 			}
 
@@ -2643,10 +2522,192 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			//	curVictim->getTemplate()->getName().str(),curVictim,
 			//	damageInfo.in.m_amount, damageInfo.out.m_actualDamageDealt, damageInfo.out.m_actualDamageClipped));
 		}
+
+		if(doShrapnel || m_shrapnelDoesNotRequireVictim)
+			privateDoShrapnel(sourceID, victimID, pos);
 	}
 	else
 	{
 		DEBUG_CRASH(("projectile weapons should never get dealDamage called directly"));
+	}
+}
+
+void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, const Coord3D *pos) const
+{
+	// Don't do shrapnel
+	if(!m_shrapnelBonusWeapon || m_shrapnelBonusCount <= 0)
+		return;
+
+	// Don't do shrapnel from self or historic weapons
+	if( m_shrapnelBonusWeapon == this || (m_historicBonusWeapon && m_historicBonusWeapon == this) )
+		return;
+
+	Object *source = TheGameLogic->findObjectByID(sourceID);	// might be null...
+
+	// Don't do anything if source doesn't exist
+	if (source == NULL)
+		return;
+
+	// if there's a specific victim, use it's pos (overriding the value passed in)
+	Object *primaryVictim = victimID ? TheGameLogic->findObjectByID(victimID) : NULL;	// might be null...
+
+	// Shrapnel Bonus Weapon
+	WeaponBonus bonus;
+	ObjectCustomStatusType dummy;
+	m_shrapnelBonusWeapon->private_computeBonus(source, 0, bonus, dummy);
+	Real range = m_shrapnelBonusWeapon->getAttackRange(bonus);
+
+	Int affects = m_shrapnelAffectsMask;
+	std::vector<ObjectID> victimIDVec;
+
+	PartitionFilterSameMapStatus filterMapStatus(source);
+	PartitionFilterStealthedAndUndetected filterStealth(source, false);
+	PartitionFilterAlive filterAlive;
+
+	// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
+	// So these checks are on an individual basis, not in the Partition query
+	//	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
+	PartitionFilter *filters[4];
+	Int numFilters = 0;
+	filters[numFilters++] = &filterMapStatus;
+	filters[numFilters++] = &filterAlive;
+	if(!m_shrapnelIgnoresStealthStatus)
+		filters[numFilters++] = &filterStealth;
+	filters[numFilters] = NULL;
+
+	// scan objects in our region
+	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( pos, 
+																	range, 
+																	DAMAGE_RANGE_CALC_TYPE, 
+																	filters );
+	MemoryPoolObjectHolder hold( iter );
+	for( Object *curVictim = iter->first(); curVictim != NULL; curVictim = iter->next() )
+	{
+		// Don't check for the primary victim as target
+		if (curVictim == primaryVictim)
+			continue;
+
+		// Special, only deal damage to self
+		if(m_shrapnelBonusWeapon->getDamagesSelfOnly())
+		{
+			if(source != curVictim)
+				continue;
+		}
+		
+		// anytime something is designated as the "primary victim" (ie, the direct target
+		// of the weapon), we ignore all the "affects" flags.
+		else
+		{
+			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
+			if( curVictim->isKindOf( KINDOF_UNATTACKABLE ) ||
+				curVictim->testStatus(OBJECT_STATUS_MASKED) ||
+				curVictim->testStatus(OBJECT_STATUS_NO_ATTACK_FROM_AI) ||
+				(m_shrapnelBonusWeapon->getAntiMask() & targetAntiMask) == 0 || 
+				m_shrapnelBonusWeapon->estimateWeaponTemplateDamage(source, curVictim, curVictim->getPosition(), bonus) == 0.0f )
+			{
+				continue;
+			}
+
+			BodyModuleInterface* body = curVictim->getBodyModule();
+			if( body && body->cantBeKilled())
+				continue;
+			
+			// should object ever be allowed to damage themselves? methinks not...
+			// exception: a few weapons allow this (eg, for suicide bombers).
+			if( (affects & WEAPON_AFFECTS_SELF) == 0 )
+			{
+				// Remember that source is a missile for some units, and they don't want to injure them'selves' either
+				if( source == curVictim || source->getProducerID() == curVictim->getID() )
+				{
+					//DEBUG_LOG(("skipping damage done to SELF..."));
+					continue;
+				}
+			}
+			
+			//IamInnocent - Fix declaring RadiusDamageAffects = SELF solely not checking for Self and needed to be declared together with ALLIES 3/11/2025
+			if( affects == WEAPON_AFFECTS_SELF )
+			{
+				if( !(source == curVictim || source->getProducerID() == curVictim->getID()) )
+					continue;
+			}
+
+			if( affects & WEAPON_DOESNT_AFFECT_SIMILAR )
+			{
+				//This means we probably are affecting allies, but don't want to kill nearby members that are the same type as us.
+				//A good example are a group of terrorists blowing themselves up. We don't want to cause a domino effect that kills
+				//all of them.
+				if( source->getTemplate()->isEquivalentTo(curVictim->getTemplate()) && source->getRelationship( curVictim ) == ALLIES )
+				{
+					continue;
+				}
+			}
+
+			if ((affects & WEAPON_DOESNT_AFFECT_AIRBORNE) != 0 && curVictim->isSignificantlyAboveTerrain())
+			{
+				continue;
+			}
+
+			/*
+				The idea here is: if its our ally(/enemies), AND it's not the direct target, AND the weapon doesn't
+				do radius-damage to allies(/enemies)... skip it.
+			*/
+			Relationship r = curVictim->getRelationship(source);
+			Int requiredMask;
+			if (r == ALLIES)
+				requiredMask = WEAPON_AFFECTS_ALLIES;
+			else if (r == ENEMIES)
+				requiredMask = WEAPON_AFFECTS_ENEMIES;
+			else /* r == NEUTRAL */
+				requiredMask = WEAPON_AFFECTS_NEUTRALS;
+
+			if( affects == WEAPON_AFFECTS_SELF )
+			{
+				requiredMask = WEAPON_AFFECTS_SELF;
+			}
+
+			if( !(affects & requiredMask) )
+			{
+				//Skip if we aren't affected by this weapon.
+				continue;
+			}
+		}
+
+		victimIDVec.push_back(curVictim->getID());
+	}
+
+	Coord3D spawnPos;
+	spawnPos.set( getProjectileTemplate() != NULL ? source->getPosition() : pos );
+
+	for(int i = 0; i < m_shrapnelBonusCount; i++)
+	{
+		if(!victimIDVec.empty())
+		{
+			Int randomValue = GameLogicRandomValue(0, victimIDVec.size() - 1);
+			Object* target = TheGameLogic->findObjectByID(victimIDVec[randomValue]);
+
+			TheWeaponStore->createAndFireTempWeaponOnSpot(m_shrapnelBonusWeapon, source, target, &spawnPos, victimID);
+
+			for( std::vector<ObjectID>::const_iterator it_ID = victimIDVec.begin(); it_ID != victimIDVec.end();)
+			{
+				if((*it_ID) == victimIDVec[randomValue])
+				{
+					it_ID = victimIDVec.erase(it_ID);
+					break;
+				}
+				++it_ID;
+			}
+		}
+		else
+		{
+			Real angle = GameLogicRandomValueReal( 0, 2*PI );
+			Coord3D targetPos;
+			targetPos.set( pos );
+			targetPos.x += range * Cos(angle);
+			targetPos.y += range * Sin(angle);
+			targetPos.z = TheTerrainLogic->getGroundHeight(targetPos.x, targetPos.y);
+
+			TheWeaponStore->createAndFireTempWeaponOnSpot(m_shrapnelBonusWeapon, source, &targetPos, &spawnPos, victimID);
+		}
 	}
 }
 
@@ -5347,8 +5408,7 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	const Object* launcher,
 	WeaponSlotType wslot,
 	Int specificBarrelToUse,
-	const Coord3D* launchPos,
-	ObjectID shrapnelLaunchID
+	const Coord3D* launchPos
 )
 {
 	//CRCDEBUG_LOG(("Weapon::positionProjectileForLaunch() for %s from %s",
@@ -5364,31 +5424,23 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	Matrix3D worldTransform(true);
 	Coord3D worldPos;
 
-	Weapon::calcProjectileLaunchPosition(launcher, wslot, specificBarrelToUse, worldTransform, worldPos);
+	if(!launchPos)
+		Weapon::calcProjectileLaunchPosition(launcher, wslot, specificBarrelToUse, worldTransform, worldPos);
 
 	projectile->getDrawable()->setDrawableHidden(false);
-	projectile->setTransformMatrix(&worldTransform);
-	projectile->setPosition(launchPos ? launchPos : &worldPos);
-	projectile->getExperienceTracker()->setExperienceSink( launcher->getID() );
-	if(launchPos)
+	if(!launchPos)
 	{
-		ProjectileUpdateInterface* pui = NULL;
-		for (BehaviorModule** u = projectile->getBehaviorModules(); *u; ++u)
-		{
-			if ((pui = (*u)->getProjectileUpdateInterface()) != NULL)
-			{
-				pui->setShrapnelLaunchID(shrapnelLaunchID);
-				break;
-			}
-		}
-			
+		projectile->setTransformMatrix(&worldTransform);
+		projectile->setPosition(&worldPos);
 	}
+	projectile->getExperienceTracker()->setExperienceSink( launcher->getID() );
 
 	const PhysicsBehavior* launcherPhys = launcher->getPhysics();
 	PhysicsBehavior* missilePhys = projectile->getPhysics();
 	if (launcherPhys && missilePhys)
 	{
-		launcherPhys->transferVelocityTo(missilePhys);
+		if(!launchPos)
+			launcherPhys->transferVelocityTo(missilePhys);
 		missilePhys->setIgnoreCollisionsWith(launcher);
 	}
 }
