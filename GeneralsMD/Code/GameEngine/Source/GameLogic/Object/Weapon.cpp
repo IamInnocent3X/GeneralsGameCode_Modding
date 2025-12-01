@@ -1725,9 +1725,9 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if(launchPos)
 			{
 				Coord3D tmp = *launchPos;
-				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(launchPos);
+				Real groundHeight = TheTerrainLogic->getGroundHeight(tmp.x, tmp.y);
 
-				if (layer == LAYER_GROUND)
+				if (groundHeight + 2.0f >= tmp.z)
 				{
 					tmp.z = 99999.0f;
 					PathfindLayerEnum newLayer = TheTerrainLogic->getHighestLayerForDestination(&tmp);
@@ -1989,11 +1989,15 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 //DEBUG_LOG(("WeaponTemplate::dealDamageInternal: dealing damage %s at frame %d",m_name.str(),TheGameLogic->getFrame()));
 
+	Bool doShrapnel = FALSE;
+	ObjectID shrapnelVictimID = INVALID_ID;
+
 	// if there's a specific victim, use it's pos (overriding the value passed in)
 	Object *primaryVictim = victimID ? TheGameLogic->findObjectByID(victimID) : NULL;	// might be null...
 	if (primaryVictim)
 	{
 		pos = primaryVictim->getPosition();
+		shrapnelVictimID = victimID;
 	}
 
 	VeterancyLevel v = LEVEL_REGULAR;
@@ -2049,14 +2053,14 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Real MaxDamageHeight = getMaxDamageHeight();
 	Bool DamagesSelfOnly = getDamagesSelfOnly();
 	UnsignedInt InvulnerabilityDuration = getInvulnerabilityDuration();
+
+	const Real CLOSE_ENOUGH = 0.67f;
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
 		SimpleObjectIterator *iter;
 		Object *curVictim;
 		Real curVictimDistSqr;
-
-		Bool doShrapnel = FALSE;
 
 		Real primaryRadius = getPrimaryDamageRadius(bonus);
 		Real secondaryRadius = getSecondaryDamageRadius(bonus);
@@ -2132,9 +2136,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					if( (affects & WEAPON_KILLS_SELF) && source == curVictim )
 					{
 						killSelf = true;
-
-						// Register the Weapon to do Shrapnel for Self / Producer Damaging Weapons, Only when it hits an Object
-						doShrapnel = primaryVictim ? TRUE : FALSE;
 					}
 					else if(!DamagesSelfOnly)
 					{
@@ -2198,23 +2199,15 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 							continue;
 						}
 
-						if( affects == WEAPON_AFFECTS_SELF )
-						{
-							// Register the Weapon to do Shrapnel for Self / Producer Damaging Weapons, Only when it hits an Object
-							doShrapnel = primaryVictim ? TRUE : FALSE;
-						}
-					}
-
-					if(DamagesSelfOnly)
-					{
-						// Register the Weapon to do Shrapnel for Self / Producer Damaging Weapons, Only when it hits an Object
-						doShrapnel = primaryVictim ? TRUE : FALSE;
 					}
 				}
-				else
+
+				// Only do Shrapnel if we hit an enemy
+				if(curVictimDistSqr < CLOSE_ENOUGH)
 				{
-					// Register the Weapon to do Shrapnel, Only when it hits an Object
-					doShrapnel = primaryVictim ? TRUE : FALSE;
+					doShrapnel = TRUE;
+					if(shrapnelVictimID == INVALID_ID)
+						shrapnelVictimID = curVictim->getID();
 				}
 			}
 
@@ -2524,7 +2517,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		}
 
 		if(doShrapnel || m_shrapnelDoesNotRequireVictim)
-			privateDoShrapnel(sourceID, victimID, pos);
+			privateDoShrapnel(sourceID, shrapnelVictimID, pos);
 	}
 	else
 	{
