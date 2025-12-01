@@ -205,8 +205,7 @@ void FreeFallProjectileBehavior::projectileLaunchAtObjectOrPosition(
 	Int specificBarrelToUse,
 	const WeaponTemplate* detWeap,
 	const ParticleSystemTemplate* exhaustSysOverride,
-	const Coord3D *launchPos,
-	ObjectID shrapnelLaunchID
+	const Coord3D *launchPos
 )
 {
 	const FreeFallProjectileBehaviorModuleData* d = getFreeFallProjectileBehaviorModuleData();
@@ -237,7 +236,7 @@ void FreeFallProjectileBehavior::projectileLaunchAtObjectOrPosition(
 
 	Object* projectile = getObject();
 
-	Weapon::positionProjectileForLaunch(projectile, launcher, wslot, specificBarrelToUse, launchPos, shrapnelLaunchID);
+	Weapon::positionProjectileForLaunch(projectile, launcher, wslot, specificBarrelToUse, launchPos);
 
 	projectileFireAtObjectOrPosition(victim, victimPos, detWeap, exhaustSysOverride);
 }

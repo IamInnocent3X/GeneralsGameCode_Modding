@@ -70,4 +70,4 @@ private:
 };
 
 
-#endif  // end __OBJECT_LEVITATION_HELPER_H_
+#endif  // end __OBJECT_DELAYEDORDER_HELPER_H_

@@ -110,7 +110,7 @@ public:
 
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL, ObjectID shrapnelLaunchID = INVALID_ID );
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL );
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
@@ -154,10 +154,13 @@ private:
 	Bool									m_isArmed;								///< if true, missile will explode on contact
 	Bool									m_noDamage;								///< if true, missile will not cause damage when it detonates. (Used for flares).
 	Bool									m_isJammed;								///< No target, just shooting at a scattered position
+	Bool									m_doVictimPosForLaunch;
 
 	UnsignedInt						m_detonateDistance;
 	ObjectID						m_decoyID;
 	ObjectID						m_shrapnelLaunchID;
+
+	UnsignedInt						m_dontDetonateGroundFrames;
 
 	UnsignedInt						m_killSelfTime;
 	UnsignedInt						m_nextWakeUpTime;

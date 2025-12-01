@@ -625,6 +625,8 @@ public:
 
 	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
 
+	void privateDoShrapnel(ObjectID sourceID, ObjectID victimID, const Coord3D *pos) const;
+
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
 		const Object* projectile,
@@ -1162,8 +1164,7 @@ public:
 		const Object *launcher,
 		WeaponSlotType wslot,
 		Int specificBarrelToUse,
-		const Coord3D* launchPos = NULL,
-		ObjectID shrapnelLaunchID = INVALID_ID
+		const Coord3D* launchPos = NULL
 	);
 
 	/**

@@ -188,7 +188,15 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	Object *newObject = ObjectCreationList::create( data->m_ocl, getObject(), damageDealer );
 
 	if(!newObject)
+	{
+		ContainModuleInterface *contain = getObject()->getContain();
+
+		if(contain)
+		{
+			contain->removeAllContained();
+		}
 		return;
+	}
 
 	Object *me = getObject();
 
