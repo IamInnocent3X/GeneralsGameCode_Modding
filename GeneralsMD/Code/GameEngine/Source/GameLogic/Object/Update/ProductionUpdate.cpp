@@ -1495,6 +1495,9 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				xfer->xferInt(&quantity);
 			}
 
+			// bind selection on groups produced
+			xfer->xferBool(&production->m_bindsSelectionOnGroupsProduced);
+
 			// selection groups data
 			SelectionOnGroupsDataCount = production->m_bindsSelectionOnGroupsData.size();
 			xfer->xferUnsignedShort( &SelectionOnGroupsDataCount );
@@ -1633,6 +1636,9 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				production->m_productionExtraData.push_back( qm );
 
 			}  // end for i
+
+			// bind selection on groups produced
+			xfer->xferBool(&production->m_bindsSelectionOnGroupsProduced);
 
 			// selection groups data
 			xfer->xferUnsignedShort( &SelectionOnGroupsDataCount );

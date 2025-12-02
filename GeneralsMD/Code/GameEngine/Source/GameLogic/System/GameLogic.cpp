@@ -2791,6 +2791,10 @@ void GameLogic::selectObject(Object *obj, Bool createNewSelection, PlayerMaskTyp
 			if(!boundObj || !boundObj->getDrawable())
 				continue;
 
+			// Don't select if object is not applicable for selection
+			if(boundObj->isEffectivelyDead() || boundObj->isDestroyed())
+				continue;
+
 			// Don't select if defected
 			if(boundObj->getTeam() != obj->getTeam())
 				continue;
@@ -2860,8 +2864,17 @@ void GameLogic::deselectObject(Object *obj, PlayerMaskType playerMask, Bool affe
 			}
 		}
 	}
-
-	if(!obj->getDontDoGroupSelecting())
+	
+	// Don't do group deselect if we are not deselecting volunteeringly
+	ObjectStatusMaskType objStatus = obj->getStatusBits();
+	if(!obj->getDontDoGroupSelecting() &&
+	   !obj->isEffectivelyDead() &&
+	   !obj->isDestroyed() &&
+	   !objStatus.test(OBJECT_STATUS_UNSELECTABLE) &&
+	   !objStatus.test(OBJECT_STATUS_MASKED) &&
+	   !objStatus.test(OBJECT_STATUS_SOLD) &&
+	   !obj->isDisabledByType(DISABLED_UNMANNED)
+	  )
 	{
 		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
 		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
@@ -2869,6 +2882,10 @@ void GameLogic::deselectObject(Object *obj, PlayerMaskType playerMask, Bool affe
 			Object *boundObj = TheGameLogic->findObjectByID(*it);
 			// Sanity, must have drawable to be selected
 			if(!boundObj || !boundObj->getDrawable())
+				continue;
+
+			// Don't deselect if object is not applicable for selection
+			if(boundObj->isEffectivelyDead() || boundObj->isDestroyed())
 				continue;
 
 			// Don't deselect if defected
