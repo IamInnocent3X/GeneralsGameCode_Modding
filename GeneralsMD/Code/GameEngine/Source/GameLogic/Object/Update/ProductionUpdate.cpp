@@ -102,6 +102,7 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 	m_constructionCompleteDuration = 0;
 	m_quantityModifiers.clear();
 	m_productionModifiers.clear();
+	m_bindsSelection = FALSE;
 	m_maxQueueEntries = 9;
 	m_disabledTypesToProcess = MAKE_DISABLED_MASK(DISABLED_HELD);
 }
@@ -190,6 +191,7 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 		{ "ConstructionCompleteDuration", INI::parseDurationUnsignedInt, NULL, offsetof( ProductionUpdateModuleData, m_constructionCompleteDuration ) },
 		{ "QuantityModifier",	parseAppendQuantityModifier, NULL, offsetof( ProductionUpdateModuleData, m_quantityModifiers ) },
 		{ "ProductionModifier",	parseAppendProductionModifier, NULL, offsetof( ProductionUpdateModuleData, m_productionModifiers ) },
+		{ "BindsSelectionForGroupsProduced",	INI::parseBool, NULL, offsetof( ProductionUpdateModuleData, m_bindsSelection ) },
 		{ "DisabledTypesToProcess",	DisabledMaskType::parseFromINI, NULL, offsetof( ProductionUpdateModuleData, m_disabledTypesToProcess ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -219,6 +221,8 @@ ProductionEntry::ProductionEntry( void )
 	m_productionQuantityProduced = 0;
 	m_productionQuantityTotal = 0;
 	m_productionExtraData.clear();
+	m_bindsSelectionOnGroupsProduced = FALSE;
+	m_bindsSelectionOnGroupsData.clear();
 	//
 }  // end ProductionEntry
 
@@ -250,6 +254,21 @@ void ProductionEntry::setNewProduction()
 		m_productionQuantityTotal = m_productionExtraData[m_newTemplateAmount].m_quantity;
 	}
 	m_newTemplateAmount++;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ProductionEntry::setBindsSelection()
+{
+	if(m_bindsSelectionOnGroupsData.size()<=1)
+		return;
+	
+	for(std::vector<ObjectID>::iterator it = m_bindsSelectionOnGroupsData.begin(); it != m_bindsSelectionOnGroupsData.end(); ++it)
+	{
+		Object *obj = TheGameLogic->findObjectByID(*it);
+		if(obj)
+			obj->setSelectablesBoundTo(m_bindsSelectionOnGroupsData);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -545,6 +564,7 @@ Bool ProductionUpdate::queueCreateUnit( const ThingTemplate *unitType, Productio
 	production->m_objectToProduce = unitType;
 	production->m_productionID = productionID;
 	production->m_exitDoor = exitDoor;
+	production->m_bindsSelectionOnGroupsProduced = data->m_bindsSelection;
 
 	// tie to the end of the production queue
 	addToProductionQueue( production );
@@ -1010,6 +1030,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 							//We created one guy, but we may want to do more so we should stay in this node of production.
 							// This is last so the voice check can easily check for "first" guy
 							production->oneProductionSuccessful();
+							if(newObj->isKindOf(KINDOF_SELECTABLE))
+								production->oneProductionSuccessfulBindSelection(newObj->getID());
 
 						}  // end if, door open or no door animation ... make the object
 
@@ -1028,6 +1050,9 @@ UpdateSleepTime ProductionUpdate::update( void )
 
 				if( production->getProductionQuantityRemaining() == 0 )
 				{
+					// Bind the selection of the Units Produced
+					production->setBindsSelection();
+
 					// remove this production entry so we can go on to the next if we are totally finished
 					removeFromProductionQueue( production );
 
@@ -1422,6 +1447,8 @@ void ProductionUpdate::xfer( Xfer *xfer )
 		AsciiString templateName;
 		Int quantity;
 		UnsignedShort extraDataCount;
+		UnsignedShort SelectionOnGroupsDataCount;
+		ObjectID boundID = INVALID_ID;
 
 		// write all queue data
 		for( production = m_productionQueue; production; production = production->m_next )
@@ -1468,6 +1495,17 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				xfer->xferInt(&quantity);
 			}
 
+			// selection groups data
+			SelectionOnGroupsDataCount = production->m_bindsSelectionOnGroupsData.size();
+			xfer->xferUnsignedShort( &SelectionOnGroupsDataCount );
+
+			// go through all IDs
+			for (int i_a = 0; i_a < SelectionOnGroupsDataCount; i_a++)
+			{
+				boundID = production->m_bindsSelectionOnGroupsData[i_a];
+				xfer->xferObjectID( &boundID );
+			}  // end for, i_a
+
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );
 
@@ -1481,6 +1519,8 @@ void ProductionUpdate::xfer( Xfer *xfer )
 		AsciiString templateName;
 		Int quantity;
 		UnsignedShort extraDataCount;
+		UnsignedShort SelectionOnGroupsDataCount;
+		ObjectID boundID = INVALID_ID;
 
 		// the queue should be emtpy now
 		if( m_productionQueue != NULL )
@@ -1593,6 +1633,27 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				production->m_productionExtraData.push_back( qm );
 
 			}  // end for i
+
+			// selection groups data
+			xfer->xferUnsignedShort( &SelectionOnGroupsDataCount );
+
+			// this list should be empty on loading
+			if( production->m_bindsSelectionOnGroupsData.size() != 0 )
+			{
+
+				DEBUG_CRASH(( "ScriptEngine::xfer - m_bindsSelectionOnGroupsData should be empty but is not" ));
+				throw SC_INVALID_DATA;
+
+			}  // end if
+
+			// read all IDs
+			for( UnsignedShort i_a = 0; i_a < SelectionOnGroupsDataCount; ++i_a )
+			{
+				// read and register ID
+				xfer->xferObjectID( &boundID );
+				production->m_bindsSelectionOnGroupsData.push_back(boundID);
+
+			}  // end for
 
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );

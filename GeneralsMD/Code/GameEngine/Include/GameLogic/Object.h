@@ -839,6 +839,11 @@ public:
 
 	Bool showCashText() const;
 
+	void setSelectablesBoundTo(const std::vector<ObjectID>& IDs);
+	inline void setDontDoGroupSelecting(Bool e) { m_dontDoGroupSelecting = e; }
+	inline const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
+	inline const Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;
@@ -1092,6 +1097,10 @@ private:
 	ObjectID										m_hijackingID;
 	ObjectID										m_equipToID;
 	mutable ObjectID 										m_assaultTransportID;
+
+	std::vector<ObjectID>							m_selectionBoundsTo;
+
+	Bool											m_dontDoGroupSelecting;
 
 	Bool											m_hasParasiteCrateCollide;
 

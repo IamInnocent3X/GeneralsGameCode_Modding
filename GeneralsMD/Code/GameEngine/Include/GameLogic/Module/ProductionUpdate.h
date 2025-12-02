@@ -110,7 +110,9 @@ public:
 	Int getProductionQuantityRemaining() const { return m_productionQuantityTotal - m_productionQuantityProduced; }//How many I have made
 
 	void oneProductionSuccessful() { ++m_productionQuantityProduced; m_exitDoor = DOOR_NONE_AVAILABLE; }//increment, and mark door to re-reserve
+	void oneProductionSuccessfulBindSelection(ObjectID bindID) { if(m_bindsSelectionOnGroupsProduced) m_bindsSelectionOnGroupsData.push_back(bindID); }//increment, and mark door to re-reserve
 	void setNewProduction(); //Set new production for production modifier
+	void setBindsSelection(); //Binds the selection for the produced group
 
 	ExitDoorType getExitDoor() const { return m_exitDoor; }
 	void setExitDoor(ExitDoorType exitDoor) { m_exitDoor = exitDoor; }
@@ -130,6 +132,8 @@ protected:
 	Int m_productionQuantityProduced;									///< And we need to allow pausing within an entry, so we keep track of number of sub-successes
 	Int m_newTemplateAmount;											///< Production Amount to indicate the production modifier template to use
 	std::vector<QuantityModifier> m_productionExtraData;				///< Extra production data
+	std::vector<ObjectID> m_bindsSelectionOnGroupsData;					///< Binds selections for Units Produced in Groups. Selecting one of the units selects them all.
+	Bool m_bindsSelectionOnGroupsProduced;								///< See above
 	ExitDoorType m_exitDoor;
 
 	ProductionEntry *m_next;													///< next in list
@@ -149,6 +153,7 @@ public:
 	UnsignedInt										m_constructionCompleteDuration; ///< in frames, how long we state in "construction complete" condition after making something
 	std::vector<QuantityModifier>	m_quantityModifiers;						///< Quantity modifiers modify the number of specified object to created whenever produced.
 	std::vector<ProductionModifier>	m_productionModifiers;						///< Production modifiers modify the number of specified object and whether they will create other objects to created whenever produced.
+	Bool											m_bindsSelection;			///< Binds selections for Units Produced in Groups. Selecting one of the units selects them all.
   Int														m_maxQueueEntries;							///< max things that can be queued at once.
 	DisabledMaskType							m_disabledTypesToProcess;
 

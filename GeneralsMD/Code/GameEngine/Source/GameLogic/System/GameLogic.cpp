@@ -2780,6 +2780,35 @@ void GameLogic::selectObject(Object *obj, Bool createNewSelection, PlayerMaskTyp
 			}
 		}
 	}
+
+	if(!obj->getDontDoGroupSelecting())
+	{
+		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
+		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
+		{
+			Object *boundObj = TheGameLogic->findObjectByID(*it);
+			// Sanity, must have drawable to be selected
+			if(!boundObj || !boundObj->getDrawable())
+				continue;
+
+			// Don't select if defected
+			if(boundObj->getTeam() != obj->getTeam())
+				continue;
+
+			// Don't select if already selected
+			if(boundObj->getDrawable()->isSelected())
+				continue;
+
+			// Don't select if unselectable
+			ObjectStatusMaskType status = boundObj->getStatusBits();
+			if(status.test(OBJECT_STATUS_UNSELECTABLE) || status.test(OBJECT_STATUS_MASKED))
+				continue;
+
+			boundObj->setDontDoGroupSelecting(TRUE);
+			selectObject(boundObj, FALSE, obj->getControllingPlayer()->getPlayerMask(), obj->isLocallyControlled());
+			boundObj->setDontDoGroupSelecting(FALSE);
+		}
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2829,6 +2858,30 @@ void GameLogic::deselectObject(Object *obj, PlayerMaskType playerMask, Bool affe
 					TheInGameUI->deselectDrawable(draw);
 				}
 			}
+		}
+	}
+
+	if(!obj->getDontDoGroupSelecting())
+	{
+		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
+		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
+		{
+			Object *boundObj = TheGameLogic->findObjectByID(*it);
+			// Sanity, must have drawable to be selected
+			if(!boundObj || !boundObj->getDrawable())
+				continue;
+
+			// Don't deselect if defected
+			if(boundObj->getTeam() != obj->getTeam())
+				continue;
+
+			// Don't deselect if not selected
+			if(!boundObj->getDrawable()->isSelected())
+				continue;
+
+			boundObj->setDontDoGroupSelecting(TRUE);
+			deselectObject(boundObj, obj->getControllingPlayer()->getPlayerMask(), obj->isLocallyControlled());
+			boundObj->setDontDoGroupSelecting(FALSE);
 		}
 	}
 }

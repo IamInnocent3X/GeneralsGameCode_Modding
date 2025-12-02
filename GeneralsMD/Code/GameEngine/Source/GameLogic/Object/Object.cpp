@@ -658,6 +658,10 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_noFloatUpdate = FALSE;
 	m_noDemoTrapUpdate = FALSE;
 
+	m_selectionBoundsTo.clear();
+
+	m_dontDoGroupSelecting = FALSE;
+
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
 
@@ -5602,6 +5606,42 @@ void Object::xfer( Xfer *xfer )
 		m_soleHealingBenefactorExpirationFrame = 0;
 	}
 
+	UnsignedShort selectionBoundsToCount = m_selectionBoundsTo.size();
+	xfer->xferUnsignedShort( &selectionBoundsToCount );
+	ObjectID boundID = INVALID_ID;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		// go through all IDs
+		for (int i_a = 0; i_a < selectionBoundsToCount; i_a++)
+		{
+			boundID = m_selectionBoundsTo[i_a];
+			xfer->xferObjectID( &boundID );
+		}  // end for, i_a
+
+	}  // end if, save
+	else
+	{
+		// this list should be empty on loading
+		if( m_selectionBoundsTo.size() != 0 )
+		{
+
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_selectionBoundsTo should be empty but is not" ));
+			throw SC_INVALID_DATA;
+
+		}  // end if
+
+		// read all IDs
+		for( UnsignedShort i_a = 0; i_a < selectionBoundsToCount; ++i_a )
+		{
+			// read and register ID
+			xfer->xferObjectID( &boundID );
+			m_selectionBoundsTo.push_back(boundID);
+
+		}  // end for
+
+	}  // end else, load
+
 	// Doesn't need to be saved.  These are created as needed.  jba.
 	//m_group;
 
@@ -8925,6 +8965,18 @@ Bool Object::showCashText() const
 		return FALSE;
 	else
 		return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setSelectablesBoundTo(const std::vector<ObjectID>& IDs)
+{
+	for(std::vector<ObjectID>::const_iterator it = IDs.begin(); it != IDs.end(); ++it)
+	{
+		if((*it) != getID())
+		{
+			m_selectionBoundsTo.push_back(*it);
+		}
+	}
 }
 
 //=============================================================================
