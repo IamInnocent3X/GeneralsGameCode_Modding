@@ -603,7 +603,6 @@ public:
 
 	Real m_drawWidthFactor;
 	Real m_drawHeightFactor;
-	Bool m_drawFullMap;
 
 	Bool m_usePartitionManagerToIterateDrawables;
 	Bool m_usePartitionManagerToIterateDrawablesOnlySelect;

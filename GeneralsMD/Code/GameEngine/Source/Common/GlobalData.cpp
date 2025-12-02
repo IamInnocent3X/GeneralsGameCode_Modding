@@ -658,7 +658,6 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "DrawWidthFactor", INI::parseReal, NULL, offsetof( GlobalData, m_drawWidthFactor ) },
 	{ "DrawHeightFactor", INI::parseReal, NULL, offsetof( GlobalData, m_drawHeightFactor ) },
-	{ "DrawFullMap", INI::parseBool, NULL, offsetof( GlobalData, m_drawFullMap ) },
 
 	{ "UsePartitionManagerToIterateDrawables",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawables) },
 	{ "UsePartitionManagerToIterateDrawablesOnlySelect",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawablesOnlySelect) },
@@ -1237,7 +1236,6 @@ GlobalData::GlobalData()
 
 	m_drawWidthFactor = 1.0f;
 	m_drawHeightFactor = 1.0f;
-	m_drawFullMap = FALSE;
 
 	m_usePartitionManagerToIterateDrawables = FALSE;
 	m_usePartitionManagerToIterateDrawablesOnlySelect = FALSE;

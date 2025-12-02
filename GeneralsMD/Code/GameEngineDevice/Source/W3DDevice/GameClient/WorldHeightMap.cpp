@@ -2574,16 +2574,22 @@ Bool  WorldHeightMap::getRawTileData(Short tileNdx, Int width,
 
 Int WorldHeightMap::getDrawWidth(void)
 {
-	if(TheGlobalData->m_drawFullMap || m_drawWidthX*TheGlobalData->m_drawWidthFactor > getXExtent()-1 )
-		return REAL_TO_INT(getXExtent()-1 );
+	if(TheGlobalData->m_drawEntireTerrain)
+		return m_drawWidthX;
+
+	if(m_drawWidthX*TheGlobalData->m_drawWidthFactor >= m_width || m_drawWidthX  >= m_width )
+		return m_width;
 	else 
 		return REAL_TO_INT(m_drawWidthX*TheGlobalData->m_drawWidthFactor);
 }
 
 Int WorldHeightMap::getDrawHeight(void)
 {
-	if(TheGlobalData->m_drawFullMap || m_drawHeightY*TheGlobalData->m_drawHeightFactor > getYExtent()-1 )
-		return REAL_TO_INT(getYExtent()-1 );
+	if(TheGlobalData->m_drawEntireTerrain)
+		return m_drawHeightY;
+
+	if(m_drawHeightY*TheGlobalData->m_drawHeightFactor >= m_height || m_drawHeightY >= m_height )
+		return m_height;
 	else 
 		return REAL_TO_INT(m_drawHeightY*TheGlobalData->m_drawHeightFactor);
 }

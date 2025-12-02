@@ -221,6 +221,7 @@ void MissileAIUpdate::switchToState(MissileStateType s)
 		// DEBUG_LOG((">>> MissileAI enter state %d. prev state = %d\n", s, m_state));
 		m_state = s;
 		m_stateTimestamp = TheGameLogic->getFrame();
+		m_nextWakeUpTime = 1;
 	}
 }
 
@@ -701,6 +702,11 @@ void MissileAIUpdate::doAttackState(Bool turnOK, Bool randomPath)
 				switchToState(KILL); 
 				return;
 			}
+			else
+			{
+				// Set to update the next frame to see if the distance is covered
+				m_nextWakeUpTime = 1;
+			}
 		}
 	}
 
@@ -714,6 +720,11 @@ void MissileAIUpdate::doAttackState(Bool turnOK, Bool randomPath)
 			if (distanceToTargetSquared < diveDistanceSquared) {
 				curLoco->setUsePreciseZPos(true);
 				//DEBUG_LOG((">>> MissileAI - AttackState - DIVE - distanceToTarget = %f\n", sqrt(distanceToTargetSquared)));
+			}
+			else
+			{
+				// Set to update the next frame to see if the distance is covered
+				m_nextWakeUpTime = 1;
 			}
 
 		}
@@ -780,6 +791,9 @@ void MissileAIUpdate::doAttackState(Bool turnOK, Bool randomPath)
 			}
 
 			switchToState(ATTACK_RANDOM_PATH);
+
+			// Always update random path
+			m_nextWakeUpTime = 1;
 			// -----------------------------------
 		}
 		else {
