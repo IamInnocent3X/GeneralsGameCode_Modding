@@ -58,6 +58,7 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/Weapon.h" // NoMaxShotsLimit
 #include "GameClient/Drawable.h"
+#include "GameClient/InGameUI.h"
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -94,6 +95,7 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "TransferShieldedTargets",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldedTargets ) },
 		{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldingTargets ) },
 		{ "TransferSelection",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelection ) },
+		{ "TransferSelectionDontClearGroup",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelectionDontClearGroup ) },
 		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealthChangeType ) },
 
@@ -483,10 +485,21 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	me->doTransferHijacker(replacementObject->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites);
 
 	// Transfer the Selection Status
-	if(data->m_transferSelection && replacementObject->isSelectable() && me->getDrawable() && replacementObject->getDrawable())
+	/// IamInnocent 02/12/2025 - Integrated with the selection module from TheSuperHackers @bugfix Stubbjax 02/10/2025
+	if(data->m_transferSelection &&  me->getDrawable() && me->getDrawable()->isSelected())
 	{
-		if(me->getDrawable()->isSelected())
-			TheGameLogic->selectObject(replacementObject, FALSE, me->getControllingPlayer()->getPlayerMask(), me->isLocallyControlled());
+		GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+		if(data->m_transferSelectionDontClearGroup)
+		{
+			msg->appendBooleanArgument(FALSE);
+		}
+		else
+		{
+			msg->appendBooleanArgument(TRUE);
+		}
+
+		msg->appendObjectIDArgument(replacementObject->getID());
+		TheInGameUI->selectDrawable(replacementObject->getDrawable());
 	}
 
 	// Transfer Object Name for Script Engine

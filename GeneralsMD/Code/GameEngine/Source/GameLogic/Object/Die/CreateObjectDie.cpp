@@ -56,6 +56,7 @@
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/InGameUI.h"
 
 
 // ------------------------------------------------------------------------------------------------
@@ -68,6 +69,7 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 
 	m_transferExperience = FALSE;
 	m_transferAttackers = FALSE;
+	m_transferPreviousHealthDontTransferAttackers = FALSE;
 	m_transferAIStates = FALSE;
 	m_transferStatus = FALSE;
 	m_transferWeaponBonus = FALSE;
@@ -81,6 +83,7 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	m_transferShieldedTargets = FALSE;
 	m_transferShieldingTargets = FALSE;
 	m_transferSelection = FALSE;
+	m_transferSelectionDontClearGroup = FALSE;
 	m_transferObjectName = FALSE;
 	m_previousHealthChangeType = ADD_CURRENT_DAMAGE;
 
@@ -124,6 +127,7 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "TransferAIStates",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferAIStates ) },
 		{ "TransferExperience",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferExperience ) },
 		{ "TransferAttackers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferAttackers ) },
+		{ "TransferPreviousHealthDontTransferAttackers", INI::parseBool, NULL	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealthDontTransferAttackers ) },
 		{ "TransferStatuses",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferStatus ) },
 		{ "TransferWeaponBonuses",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferWeaponBonus ) },
 		{ "TransferDisabledType",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferDisabledType ) },
@@ -136,6 +140,7 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "TransferShieldedTargets",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferShieldedTargets ) },
 		{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferShieldingTargets ) },
 		{ "TransferSelection",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferSelection ) },
+		{ "TransferSelectionDontClearGroup",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferSelectionDontClearGroup ) },
 		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_previousHealthChangeType ) },
 
@@ -227,7 +232,8 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 		//}
 
 		// Transfer attackers
-		if (data->m_transferAttackers)
+		/// IamInnocent - Transfer Previous Health also transfer the Attackers for this module.
+		if ((data->m_transferPreviousHealth && !data->m_transferPreviousHealthDontTransferAttackers) || data->m_transferAttackers)
 		{
 			AIUpdateInterface* aiInterface = obj->getAI();
 			if (aiInterface)
@@ -491,10 +497,35 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	me->doTransferHijacker(newObject->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites);
 
 	// Transfer the Selection Status
-	if(data->m_transferSelection && newObject->isSelectable() && me->getDrawable() && newObject->getDrawable())
+	/// IamInnocent - Integrated with the selection module from TheSuperHackers below
+	/*if(data->m_transferSelection && newObject->isSelectable() && me->getDrawable() && newObject->getDrawable())
 	{
 		if(me->getDrawable()->isSelected())
 			TheGameLogic->selectObject(newObject, FALSE, me->getControllingPlayer()->getPlayerMask(), me->isLocallyControlled());
+	}*/
+
+	// TheSuperHackers @bugfix Stubbjax 02/10/2025 If the old object was selected, select the new one.
+	// This is important for the Sneak Attack, which is spawned via a CreateObjectDie module.
+	// IamInnocent 02/12/2025 - Edited for Multi-Select of modules
+	if (data->m_transferSelection && me->getDrawable() && me->getDrawable()->isSelected())
+	{
+		//Object* oldObject = getObject();
+		//Drawable* selectedDrawable = TheInGameUI->getFirstSelectedDrawable();
+		//Bool oldObjectSelected = selectedDrawable && selectedDrawable->getID() == oldObject->getDrawable()->getID();
+
+		//if (oldObjectSelected)
+		GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+		if(data->m_transferSelectionDontClearGroup)
+		{
+			msg->appendBooleanArgument(FALSE);
+		}
+		else
+		{
+			msg->appendBooleanArgument(TRUE);
+		}
+
+		msg->appendObjectIDArgument(newObject->getID());
+		TheInGameUI->selectDrawable(newObject->getDrawable());
 	}
 
 	// Transfer Object Name for Script Engine

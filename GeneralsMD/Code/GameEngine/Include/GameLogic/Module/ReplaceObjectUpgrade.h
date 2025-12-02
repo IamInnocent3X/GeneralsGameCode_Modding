@@ -58,6 +58,7 @@ public:
 	Bool											m_transferShieldedTargets;
 	Bool											m_transferShieldingTargets;
 	Bool											m_transferSelection;
+	Bool											m_transferSelectionDontClearGroup;
 	Bool											m_transferObjectName;
 	MaxHealthChangeType 							m_transferHealthChangeType;
 	
@@ -94,6 +95,7 @@ public:
 		m_transferShieldedTargets = FALSE;
 		m_transferShieldingTargets = FALSE;
 		m_transferSelection = FALSE;
+		m_transferSelectionDontClearGroup = TRUE;
 		m_transferObjectName = FALSE;
 		m_transferHealthChangeType = SAME_CURRENTHEALTH;
 		

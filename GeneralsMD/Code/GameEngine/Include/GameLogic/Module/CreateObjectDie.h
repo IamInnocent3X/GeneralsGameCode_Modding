@@ -84,6 +84,7 @@ public:
 
 	Bool											m_transferExperience;
 	Bool											m_transferAttackers;
+	Bool											m_transferPreviousHealthDontTransferAttackers;
 	Bool											m_transferAIStates;
 	Bool											m_transferStatus;
 	Bool											m_transferWeaponBonus;
@@ -97,6 +98,7 @@ public:
 	Bool											m_transferShieldedTargets;
 	Bool											m_transferShieldingTargets;
 	Bool											m_transferSelection;
+	Bool											m_transferSelectionDontClearGroup;
 	Bool											m_transferObjectName;
 	
 	Real											m_extraBounciness;

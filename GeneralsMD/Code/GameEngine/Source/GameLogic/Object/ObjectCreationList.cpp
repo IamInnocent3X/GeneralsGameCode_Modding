@@ -51,6 +51,7 @@
 #include "GameClient/FXList.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/Shadow.h"
+#include "GameClient/InGameUI.h"
 
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
@@ -799,6 +800,7 @@ public:
 		m_inheritsStatus(false),
 		m_inheritsDisabledType(false),
 		m_inheritsSelection(false),
+		m_inheritsSelectionClearsGroup(false),
 		m_inheritsHealthChangeType(SAME_CURRENTHEALTH),
 
 		m_transferBombs(false),
@@ -911,6 +913,7 @@ public:
 			{ "InheritsStatuses",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsStatus ) },
 			{ "InheritsDisabledType",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsDisabledType ) },
 			{ "InheritsSelection",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsSelection ) },
+			{ "InheritsSelectionClearsGroup",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_inheritsSelectionClearsGroup ) },
 			{ "HealthInheritType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( GenericObjectCreationNugget, m_inheritsHealthChangeType ) },
 
 			{ "TransferBombs",	INI::parseBool,	NULL, offsetof( GenericObjectCreationNugget, m_transferBombs ) },
@@ -1247,10 +1250,21 @@ protected:
 		}
 
 		// Inherits the Selection Status
-		if(m_inheritsSelection && obj->isSelectable() && sourceObj->getDrawable() && obj->getDrawable())
+		/// IamInnocent 02/12/2025 - Integrated with the selection module from TheSuperHackers @bugfix Stubbjax 02/10/2025
+		if(m_inheritsSelection && sourceObj->getDrawable() && sourceObj->getDrawable()->isSelected())
 		{
-			if(sourceObj->getDrawable()->isSelected())
-				TheGameLogic->selectObject(obj, FALSE, sourceObj->getControllingPlayer()->getPlayerMask(), sourceObj->isLocallyControlled());
+			GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+			if(m_inheritsSelectionClearsGroup)
+			{
+				msg->appendBooleanArgument(TRUE);
+			}
+			else
+			{
+				msg->appendBooleanArgument(FALSE);
+			}
+
+			msg->appendObjectIDArgument(obj->getID());
+			TheInGameUI->selectDrawable(obj->getDrawable());
 		}
 
 		// Transfer any bombs onto the created Object
@@ -1910,6 +1924,7 @@ private:
 	Bool											m_inheritsStatus;
 	Bool											m_inheritsDisabledType;
 	Bool											m_inheritsSelection;
+	Bool											m_inheritsSelectionClearsGroup;
 	MaxHealthChangeType								m_inheritsHealthChangeType;
 
 	Bool											m_transferBombs;
