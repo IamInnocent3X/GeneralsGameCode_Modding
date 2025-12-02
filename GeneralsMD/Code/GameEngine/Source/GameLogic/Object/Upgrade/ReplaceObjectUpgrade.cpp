@@ -97,6 +97,7 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealthChangeType ) },
 
+		{ "OrientInForceDirection", INI::parseBool, NULL, offsetof(CreateObjectDieModuleData, m_orientInForceDirection) },
 		{ "ExtraBounciness",				INI::parseReal,						NULL, offsetof( ReplaceObjectUpgradeModuleData, m_extraBounciness ) },
 		{ "ExtraFriction",				parseFrictionPerSec,						NULL, offsetof( ReplaceObjectUpgradeModuleData, m_extraFriction ) },
 		{ "Offset",						INI::parseCoord3D,				NULL, offsetof( ReplaceObjectUpgradeModuleData, m_offset ) },
@@ -110,6 +111,7 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "MaxForceMagnitude",	INI::parseReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_maxMag) },
 		{ "MinForcePitch",	INI::parseAngleReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_minPitch) },
 		{ "MaxForcePitch",	INI::parseAngleReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_maxPitch) },
+		{ "DiesOnBadLand",	INI::parseBool, NULL, offsetof(ReplaceObjectUpgradeModuleData, m_diesOnBadLand) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -174,11 +176,11 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	{
 		me->setStatus( MAKE_OBJECT_STATUS_MASK3( OBJECT_STATUS_NO_COLLISIONS, OBJECT_STATUS_MASKED, OBJECT_STATUS_UNSELECTABLE ) );
 		me->leaveGroup();
-		if( ai )
-		{
+		//if( ai )
+		//{
 			//By setting him to idle, we will prevent him from entering the target after this gets called.
-			ai->aiIdle( CMD_FROM_AI );
-		}
+		//	ai->aiIdle( CMD_FROM_AI );
+		//}
 		// remove from partition manager
 		ThePartitionManager->unRegisterObject( me );
 	}
@@ -444,84 +446,6 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	if(data->m_transferShieldingTargets)
 		replacementObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
 
-	if( data->m_transferHealth )
-	{
-		//Convert old health to new health.
-		BodyModuleInterface *oldBody = me->getBodyModule();
-		BodyModuleInterface *newBody = replacementObject->getBodyModule();
-		if( oldBody && newBody )
-		{
-			//First transfer subdual damage
-			DamageInfo damInfo;
-			Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
-			if( subdualDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = subdualDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			// Then the Custom Subdual Damage
-			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
-			replacementObject->transferSubdualHelperData(me->getSubdualHelperData());
-			replacementObject->refreshSubdualHelper();
-
-			//Now transfer the previous health from the old object to the new.
-			/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
-			damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-			damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
-			if( damInfo.in.m_amount > 0.0f )
-			{
-				newBody->attemptDamage( &damInfo );
-			}*/
-
-			Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
-			if( chronoDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = chronoDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			Real oldHealth = oldBody->getHealth();
-			Real oldMaxHealth = oldBody->getMaxHealth();
-			Real newMaxHealth = newBody->getMaxHealth();
-
-			switch( data->m_transferHealthChangeType )
-			{
-				case PRESERVE_RATIO:
-				{
-					//400/500 (80%) + 100 becomes 480/600 (80%)
-					//200/500 (40%) - 100 becomes 160/400 (40%)
-					Real ratio = oldHealth / oldMaxHealth;
-					Real newHealth = newMaxHealth * ratio;
-					newBody->internalChangeHealth( newHealth - newMaxHealth );
-					break;
-				}
-				// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
-				case ADD_CURRENT_DAMAGE_NON_LETHAL:
-				case ADD_CURRENT_DAMAGE:
-				{
-					//Add the same amount that we are adding to the max health.
-					//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
-					//400/500 (80%) + 100 becomes 500/600 (83%)
-					//200/500 (40%) - 100 becomes 100/400 (25%)
-					if(data->m_transferHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) > newMaxHealth)
-						replacementObject->kill();
-					else
-						newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth) );
-					break;
-				}
-				case SAME_CURRENTHEALTH:
-					//preserve past health amount
-					newBody->internalChangeHealth( oldHealth - newMaxHealth );
-					break;
-			}
-		}
-	}
-
 	// Transfer Statuses
 	if( data->m_transferStatus )
 	{
@@ -571,11 +495,139 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		TheScriptEngine->transferObjectName( me->getName(), replacementObject );
 	}
 
+	// Originally an aspect of Disposition, but carry forward unto end of the function because the object may be killed from damage dealt
+    if ( data->m_diesOnBadLand && replacementObject )
+    {
+	    // if we land in the water, we die. alas.
+	    const Coord3D* riderPos = replacementObject->getPosition();
+	    Real waterZ, terrainZ;
+	    if (TheTerrainLogic->isUnderwater(riderPos->x, riderPos->y, &waterZ, &terrainZ)
+			    && riderPos->z <= waterZ + 10.0f
+			    && replacementObject->getLayer() == LAYER_GROUND)
+	    {
+		    // don't call kill(); do it manually, so we can specify DEATH_FLOODED
+		    DamageInfo damageInfo;
+		    damageInfo.in.m_damageType = DAMAGE_WATER;	// use this instead of UNRESISTABLE so we don't get a dusty damage effect
+		    damageInfo.in.m_deathType = DEATH_FLOODED;
+		    damageInfo.in.m_sourceID = INVALID_ID;
+		    damageInfo.in.m_amount = HUGE_DAMAGE_AMOUNT;
+		    replacementObject->attemptDamage( &damageInfo );
+	    }
+
+	    // Kill if materialized on impassable ground
+	    Int cellX = REAL_TO_INT( replacementObject->getPosition()->x / PATHFIND_CELL_SIZE );
+	    Int cellY = REAL_TO_INT( replacementObject->getPosition()->y / PATHFIND_CELL_SIZE );
+
+	    PathfindCell* cell = TheAI->pathfinder()->getCell( replacementObject->getLayer(), cellX, cellY );
+	    PathfindCell::CellType cellType = cell ? cell->getType() : PathfindCell::CELL_IMPASSABLE;
+
+	    // If we land outside the map, we die too.
+	    // Otherwise we exist outside the PartitionManger like a cheater.
+	  if( replacementObject->isOffMap()
+      || (cellType == PathfindCell::CELL_CLIFF)
+      || (cellType == PathfindCell::CELL_WATER)
+      || (cellType == PathfindCell::CELL_IMPASSABLE) )
+	    {
+		    // We are sorry, for reasons beyond our control, we are experiencing technical difficulties. Please die.
+		    replacementObject->kill();
+	    }
+
+  // Note: for future enhancement of this feature, we should test the object against the cell type he is on,
+  // using obj->getAI()->hasLocomotorForSurface( __ ). We cshould not assume here that the object can not
+  // find happiness on cliffs or water or whatever.
+
+
+    }
+
+	if( data->m_transferHealth && replacementObject && !replacementObject->isEffectivelyDead() )
+	{
+		//Convert old health to new health.
+		BodyModuleInterface *oldBody = me->getBodyModule();
+		BodyModuleInterface *newBody = replacementObject->getBodyModule();
+		if( oldBody && newBody )
+		{
+			//First transfer subdual damage
+			DamageInfo damInfo;
+			Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
+			if( subdualDamageAmount > 0.0f )
+			{
+				damInfo.in.m_amount = subdualDamageAmount;
+				damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
+				damInfo.in.m_sourceID = INVALID_ID;
+				newBody->attemptDamage( &damInfo );
+			}
+
+			// Then the Custom Subdual Damage
+			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
+			replacementObject->transferSubdualHelperData(me->getSubdualHelperData());
+			replacementObject->refreshSubdualHelper();
+
+			//Now transfer the previous health from the old object to the new.
+			/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
+			damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
+			damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
+			if( damInfo.in.m_amount > 0.0f )
+			{
+				newBody->attemptDamage( &damInfo );
+			}*/
+
+			Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
+			if( chronoDamageAmount > 0.0f )
+			{
+				damInfo.in.m_amount = chronoDamageAmount;
+				damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
+				damInfo.in.m_sourceID = INVALID_ID;
+				newBody->attemptDamage( &damInfo );
+			}
+
+			Real oldHealth = oldBody->getHealth();
+			Real oldMaxHealth = oldBody->getMaxHealth();
+			Real newMaxHealth = newBody->getMaxHealth();
+
+			if(oldHealth <= 0 && (data->m_transferHealthChangeType == PRESERVE_RATIO || data->m_transferHealthChangeType == SAME_CURRENTHEALTH ))
+				replacementObject->kill(); // my that was easy
+			else
+			{
+				switch( data->m_transferHealthChangeType )
+				{
+					case PRESERVE_RATIO:
+					{
+						//400/500 (80%) + 100 becomes 480/600 (80%)
+						//200/500 (40%) - 100 becomes 160/400 (40%)
+						Real ratio = oldHealth / oldMaxHealth;
+						Real newHealth = newMaxHealth * ratio;
+						newBody->internalChangeHealth( newHealth - newMaxHealth, TRUE );
+						break;
+					}
+					// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
+					case ADD_CURRENT_DAMAGE_NON_LETHAL:
+					case ADD_CURRENT_DAMAGE:
+					{
+						//Add the same amount that we are adding to the max health.
+						//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
+						//400/500 (80%) + 100 becomes 500/600 (83%)
+						//200/500 (40%) - 100 becomes 100/400 (25%)
+						if(data->m_transferHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) >= newMaxHealth)
+							replacementObject->kill();
+						else
+							newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth), TRUE );
+						break;
+					}
+					case SAME_CURRENTHEALTH:
+						//preserve past health amount
+						newBody->internalChangeHealth( oldHealth - newMaxHealth, TRUE );
+						break;
+				}
+			}
+		}
+	}
+
+
 	// Now we destroy the Object
 	TheAI->pathfinder()->removeObjectFromPathfindMap( me );
 	TheGameLogic->destroyObject(me);
 
-	if( replacementObject->getControllingPlayer() )
+	if( replacementObject && replacementObject->getControllingPlayer() )
 	{
 		replacementObject->getControllingPlayer()->onStructureConstructionComplete(me, replacementObject, FALSE);
 	}

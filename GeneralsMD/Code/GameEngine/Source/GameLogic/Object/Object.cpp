@@ -6208,6 +6208,13 @@ void Object::handlePartitionCellMaintenance()
 	handleShroud();
 	handleValueMap();
 	handleThreatMap();
+
+	// A lot of removable and destruction functions run this process, so its fair to use it to remove efficient drawables list
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		TheGameClient->clearEfficientDrawablesList();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -82,7 +82,7 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	m_transferShieldingTargets = FALSE;
 	m_transferSelection = FALSE;
 	m_transferObjectName = FALSE;
-	m_previousHealthChangeType = SAME_CURRENTHEALTH;
+	m_previousHealthChangeType = ADD_CURRENT_DAMAGE;
 
 	m_extraBounciness = 0.0f;
 	m_extraFriction = 0.0f;
@@ -96,6 +96,8 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	m_maxMag = 0.0f;
 	m_minPitch = 0.0f;
 	m_maxPitch = 0.0f;
+	m_orientInForceDirection = FALSE;
+	m_diesOnBadLand = FALSE;
 
 }
 
@@ -137,6 +139,7 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_transferHealthChangeType ) },
 
+		{ "OrientInForceDirection", INI::parseBool, NULL, offsetof(CreateObjectDieModuleData, m_orientInForceDirection) },
 		{ "ExtraBounciness",				INI::parseReal,						NULL, offsetof( CreateObjectDieModuleData, m_extraBounciness ) },
 		{ "ExtraFriction",				parseFrictionPerSec,						NULL, offsetof( CreateObjectDieModuleData, m_extraFriction ) },
 		{ "Offset",						INI::parseCoord3D,				NULL, offsetof( CreateObjectDieModuleData, m_offset ) },
@@ -150,6 +153,7 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "MaxForceMagnitude",	INI::parseReal,	NULL, offsetof(CreateObjectDieModuleData, m_maxMag) },
 		{ "MinForcePitch",	INI::parseAngleReal,	NULL, offsetof(CreateObjectDieModuleData, m_minPitch) },
 		{ "MaxForcePitch",	INI::parseAngleReal,	NULL, offsetof(CreateObjectDieModuleData, m_maxPitch) },
+		{ "DiesOnBadLand",	INI::parseBool, NULL, offsetof(CreateObjectDieModuleData, m_diesOnBadLand) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -397,7 +401,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 
 		if(newContain)
 		{
-			// Disable Enter/Exit Sounds for Replacement Contain
+			// Disable Enter/Exit Sounds for New Contain
 			newContain->enableLoadSounds(FALSE);
 
 			for(int i = 0; i < vecID.size(); i++)
@@ -413,7 +417,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 				}
 			}
 
-			// Enable Enter/Exit Sounds for Replacement Contain
+			// Enable Enter/Exit Sounds for New Contain
 			newContain->enableLoadSounds(TRUE);
 		}
 
@@ -447,107 +451,6 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 
 	if(data->m_transferShieldingTargets)
 		newObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
-
-	//If we're transferring previous health, we're transfering the last known
-	//health before we died. In the case of the sneak attack tunnel network, it
-	//is killed after the lifetime update expires.
-	if( newObject && data->m_transferPreviousHealth )
-	{
-		//Convert old health to new health.
-		Object *oldObject = getObject();
-		BodyModuleInterface *oldBody = oldObject->getBodyModule();
-		BodyModuleInterface *newBody = newObject->getBodyModule();
-		if( oldBody && newBody )
-		{
-			//First transfer subdual damage
-			DamageInfo damInfo;
-			Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
-			if( subdualDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = subdualDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			//Now transfer the previous health from the old object to the new.
-			//damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
-			//damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-			//damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
-			//if( damInfo.in.m_amount > 0.0f )
-			//{
-			//	newBody->attemptDamage( &damInfo );
-			//}
-
-			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
-			newObject->transferSubdualHelperData(me->getSubdualHelperData());
-			newObject->refreshSubdualHelper();
-
-			//Now transfer the previous health from the old object to the new.
-			/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
-			damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-			damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
-			if( damInfo.in.m_amount > 0.0f )
-			{
-				newBody->attemptDamage( &damInfo );
-			}*/
-
-			Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
-			if( chronoDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = chronoDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			Real oldHealth = oldBody->getHealth();
-			Real oldMaxHealth = oldBody->getMaxHealth();
-			Real newMaxHealth = newBody->getMaxHealth();
-
-			switch( data->m_previousHealthChangeType )
-			{
-				case PRESERVE_RATIO:
-				{
-					//400/500 (80%) + 100 becomes 480/600 (80%)
-					//200/500 (40%) - 100 becomes 160/400 (40%)
-					Real ratio = oldHealth / oldMaxHealth;
-					Real newHealth = newMaxHealth * ratio;
-					newBody->internalChangeHealth( newHealth - newMaxHealth );
-					break;
-				}
-				// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
-				case ADD_CURRENT_DAMAGE_NON_LETHAL:
-				case ADD_CURRENT_DAMAGE:
-				{
-					//Add the same amount that we are adding to the max health.
-					//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
-					//400/500 (80%) + 100 becomes 500/600 (83%)
-					//200/500 (40%) - 100 becomes 100/400 (25%)
-					if(data->m_previousHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) > newMaxHealth)
-						newObject->kill();
-					else
-						newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth) );
-					break;
-				}
-				case SAME_CURRENTHEALTH:
-					//preserve past health amount
-					newBody->internalChangeHealth( oldHealth - newMaxHealth );
-					break;
-			}
-
-		}
-
-		//Transfer attackers.
-		/*for( Object *obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
-		{
-			AIUpdateInterface* ai = obj->getAI();
-			if (!ai)
-				continue;
-
-			ai->transferAttack( oldObject->getID(), newObject->getID() );
-		}*/
-	}
 
 	// Transfer Statuses
 	if( data->m_transferStatus )
@@ -598,6 +501,141 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	if (data->m_transferObjectName)
 	{
 		TheScriptEngine->transferObjectName( me->getName(), newObject );
+	}
+
+	// Originally an aspect of Disposition, but carry forward unto end of the function because the object may be killed from damage dealt
+    if ( data->m_diesOnBadLand )
+    {
+	    // if we land in the water, we die. alas.
+	    const Coord3D* riderPos = newObject->getPosition();
+	    Real waterZ, terrainZ;
+	    if (TheTerrainLogic->isUnderwater(riderPos->x, riderPos->y, &waterZ, &terrainZ)
+			    && riderPos->z <= waterZ + 10.0f
+			    && newObject->getLayer() == LAYER_GROUND)
+	    {
+		    // don't call kill(); do it manually, so we can specify DEATH_FLOODED
+		    DamageInfo damageInfo;
+		    damageInfo.in.m_damageType = DAMAGE_WATER;	// use this instead of UNRESISTABLE so we don't get a dusty damage effect
+		    damageInfo.in.m_deathType = DEATH_FLOODED;
+		    damageInfo.in.m_sourceID = INVALID_ID;
+		    damageInfo.in.m_amount = HUGE_DAMAGE_AMOUNT;
+		    newObject->attemptDamage( &damageInfo );
+	    }
+
+	    // Kill if materialized on impassable ground
+	    Int cellX = REAL_TO_INT( newObject->getPosition()->x / PATHFIND_CELL_SIZE );
+	    Int cellY = REAL_TO_INT( newObject->getPosition()->y / PATHFIND_CELL_SIZE );
+
+	    PathfindCell* cell = TheAI->pathfinder()->getCell( newObject->getLayer(), cellX, cellY );
+	    PathfindCell::CellType cellType = cell ? cell->getType() : PathfindCell::CELL_IMPASSABLE;
+
+	    // If we land outside the map, we die too.
+	    // Otherwise we exist outside the PartitionManger like a cheater.
+	  if( newObject->isOffMap()
+      || (cellType == PathfindCell::CELL_CLIFF)
+      || (cellType == PathfindCell::CELL_WATER)
+      || (cellType == PathfindCell::CELL_IMPASSABLE) )
+	    {
+		    // We are sorry, for reasons beyond our control, we are experiencing technical difficulties. Please die.
+		    newObject->kill();
+	    }
+
+  // Note: for future enhancement of this feature, we should test the object against the cell type he is on,
+  // using obj->getAI()->hasLocomotorForSurface( __ ). We cshould not assume here that the object can not
+  // find happiness on cliffs or water or whatever.
+
+
+    }
+	
+	//If we're transferring previous health, we're transfering the last known
+	//health before we died. In the case of the sneak attack tunnel network, it
+	//is killed after the lifetime update expires.
+	if( data->m_transferPreviousHealth && newObject && !newObject->isEffectivelyDead() )
+	{
+		//Convert old health to new health.
+		Object *oldObject = getObject();
+		BodyModuleInterface *oldBody = oldObject->getBodyModule();
+		BodyModuleInterface *newBody = newObject->getBodyModule();
+		if( oldBody && newBody )
+		{
+			//First transfer subdual damage
+			DamageInfo damInfo;
+			Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
+			if( subdualDamageAmount > 0.0f )
+			{
+				damInfo.in.m_amount = subdualDamageAmount;
+				damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
+				damInfo.in.m_sourceID = INVALID_ID;
+				newBody->attemptDamage( &damInfo );
+			}
+
+			Real oldHealth = oldBody->getHealth();
+			Real oldMaxHealth = oldBody->getMaxHealth();
+			Real newMaxHealth = newBody->getMaxHealth();
+
+			Real damageAmount;
+
+			switch( data->m_previousHealthChangeType )
+			{
+				case PRESERVE_RATIO:
+				{
+					//400/500 (80%) + 100 becomes 480/600 (80%)
+					//200/500 (40%) - 100 becomes 160/400 (40%)
+					Real ratio = oldHealth / oldMaxHealth;
+					Real newHealth = newMaxHealth * ratio;
+					damageAmount = newMaxHealth - newHealth;
+					break;
+				}
+				// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
+				case ADD_CURRENT_DAMAGE_NON_LETHAL:
+					damageAmount = min( oldMaxHealth - 1.0f, oldMaxHealth - oldHealth);
+					break;
+				case ADD_CURRENT_DAMAGE:
+					//Add the same amount that we are adding to the max health.
+					//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
+					//400/500 (80%) + 100 becomes 500/600 (83%)
+					//200/500 (40%) - 100 becomes 100/400 (25%)
+					damageAmount = oldMaxHealth - oldHealth;
+					break;
+				case SAME_CURRENTHEALTH:
+					//preserve past health amount
+					damageAmount = newMaxHealth - oldHealth;
+					break;
+			}
+
+			//Now transfer the previous health from the old object to the new.
+			damInfo.in.m_amount = damageAmount;
+			damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
+			damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
+			if( damInfo.in.m_amount > 0.0f )
+			{
+				newBody->attemptDamage( &damInfo );
+			}
+
+			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
+			newObject->transferSubdualHelperData(me->getSubdualHelperData());
+			newObject->refreshSubdualHelper();
+
+			Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
+			if( chronoDamageAmount > 0.0f )
+			{
+				damInfo.in.m_amount = chronoDamageAmount;
+				damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
+				damInfo.in.m_sourceID = INVALID_ID;
+				newBody->attemptDamage( &damInfo );
+			}
+
+		}
+
+		//Transfer attackers.
+		/*for( Object *obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
+		{
+			AIUpdateInterface* ai = obj->getAI();
+			if (!ai)
+				continue;
+
+			ai->transferAttack( oldObject->getID(), newObject->getID() );
+		}*/
 	}
 
 }  // end onDie

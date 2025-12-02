@@ -113,6 +113,7 @@ public:
 	Real											m_minPitch, m_maxPitch;
 	AudioEventRTS							m_bounceSound;
 	Bool											m_orientInForceDirection;
+	Bool											m_diesOnBadLand;
 
 	CreateObjectDieModuleData();
 

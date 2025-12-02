@@ -74,6 +74,7 @@ public:
 	Real											m_minPitch, m_maxPitch;
 	AudioEventRTS							m_bounceSound;
 	Bool											m_orientInForceDirection;
+	Bool											m_diesOnBadLand;
 
 	ReplaceObjectUpgradeModuleData()
 	{
@@ -108,6 +109,8 @@ public:
 		m_maxMag = 0.0f;
 		m_minPitch = 0.0f;
 		m_maxPitch = 0.0f;
+		m_orientInForceDirection = FALSE;
+		m_diesOnBadLand = FALSE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);

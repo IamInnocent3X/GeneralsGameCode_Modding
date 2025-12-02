@@ -1225,84 +1225,6 @@ protected:
 			}
 		}
 
-		
-		if( m_inheritsHealth )
-		{
-			//Convert old health to new health.
-			BodyModuleInterface *oldBody = sourceObj->getBodyModule();
-			BodyModuleInterface *newBody = obj->getBodyModule();
-			if( oldBody && newBody )
-			{
-				//First inherits subdual damage
-				DamageInfo damInfo;
-				Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
-				if( subdualDamageAmount > 0.0f )
-				{
-					damInfo.in.m_amount = subdualDamageAmount;
-					damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
-					damInfo.in.m_sourceID = INVALID_ID;
-					newBody->attemptDamage( &damInfo );
-				}
-
-				// Then the Custom Subdual Damage
-				newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
-				obj->transferSubdualHelperData(sourceObj->getSubdualHelperData());
-				obj->refreshSubdualHelper();
-
-				//Now inherits the previous health from the old object to the new.
-				/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
-				damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-				damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
-				if( damInfo.in.m_amount > 0.0f )
-				{
-					newBody->attemptDamage( &damInfo );
-				}*/
-
-				Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
-				if( chronoDamageAmount > 0.0f )
-				{
-					damInfo.in.m_amount = chronoDamageAmount;
-					damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
-					damInfo.in.m_sourceID = INVALID_ID;
-					newBody->attemptDamage( &damInfo );
-				}
-
-				Real oldHealth = oldBody->getHealth();
-				Real oldMaxHealth = oldBody->getMaxHealth();
-				Real newMaxHealth = newBody->getMaxHealth();
-
-				switch( m_inheritsHealthChangeType )
-				{
-					case PRESERVE_RATIO:
-					{
-						//400/500 (80%) + 100 becomes 480/600 (80%)
-						//200/500 (40%) - 100 becomes 160/400 (40%)
-						Real ratio = oldHealth / oldMaxHealth;
-						Real newHealth = newMaxHealth * ratio;
-						newBody->internalChangeHealth( newHealth - newMaxHealth );
-						break;
-					}
-					// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
-					case ADD_CURRENT_DAMAGE_NON_LETHAL:
-					case ADD_CURRENT_DAMAGE:
-					{
-						//Add the same amount that we are adding to the max health.
-						//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
-						//400/500 (80%) + 100 becomes 500/600 (83%)
-						//200/500 (40%) - 100 becomes 100/400 (25%)
-						if(m_inheritsHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) > newMaxHealth)
-							obj->kill();
-						else
-							newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth) );
-						break;
-					}
-					case SAME_CURRENTHEALTH:
-						//preserve past health amount
-						newBody->internalChangeHealth( oldHealth - newMaxHealth );
-						break;
-				}
-			}
-		}
 
 		// Inherits Statuses
 		if( m_inheritsStatus )
@@ -1394,7 +1316,7 @@ protected:
 
 			if(newContain)
 			{
-				// Disable Enter/Exit Sounds for Replacement Contain
+				// Disable Enter/Exit Sounds for New Contain
 				newContain->enableLoadSounds(FALSE);
 
 				for(int i = 0; i < vecID.size(); i++)
@@ -1410,9 +1332,12 @@ protected:
 					}
 				}
 
-				// Enable Enter/Exit Sounds for Replacement Contain
+				// Enable Enter/Exit Sounds for New Contain
 				newContain->enableLoadSounds(TRUE);
 			}
+
+			// Enable Enter/Exit Sounds for Previous Contain
+			contain->enableLoadSounds(FALSE);
 
 		}
 
@@ -1705,6 +1630,90 @@ protected:
 
 
     }
+
+		// Do this last because the object may be killed
+		if( m_inheritsHealth && obj && !obj->isEffectivelyDead() )
+		{
+			//Convert old health to new health.
+			BodyModuleInterface *oldBody = sourceObj->getBodyModule();
+			BodyModuleInterface *newBody = obj->getBodyModule();
+			if( oldBody && newBody )
+			{
+				//First inherits subdual damage
+				DamageInfo damInfo;
+				Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
+				if( subdualDamageAmount > 0.0f )
+				{
+					damInfo.in.m_amount = subdualDamageAmount;
+					damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
+					damInfo.in.m_sourceID = INVALID_ID;
+					newBody->attemptDamage( &damInfo );
+				}
+
+				// Then the Custom Subdual Damage
+				newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
+				obj->transferSubdualHelperData(sourceObj->getSubdualHelperData());
+				obj->refreshSubdualHelper();
+
+				//Now inherits the previous health from the old object to the new.
+				/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
+				damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
+				damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
+				if( damInfo.in.m_amount > 0.0f )
+				{
+					newBody->attemptDamage( &damInfo );
+				}*/
+
+				Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
+				if( chronoDamageAmount > 0.0f )
+				{
+					damInfo.in.m_amount = chronoDamageAmount;
+					damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
+					damInfo.in.m_sourceID = INVALID_ID;
+					newBody->attemptDamage( &damInfo );
+				}
+
+				Real oldHealth = oldBody->getHealth();
+				Real oldMaxHealth = oldBody->getMaxHealth();
+				Real newMaxHealth = newBody->getMaxHealth();
+
+				if(oldHealth <= 0 && (m_inheritsHealthChangeType == PRESERVE_RATIO || m_inheritsHealthChangeType == SAME_CURRENTHEALTH ))
+					obj->kill(); // my that was easy
+				else
+				{
+					switch( m_inheritsHealthChangeType )
+					{
+						case PRESERVE_RATIO:
+						{
+							//400/500 (80%) + 100 becomes 480/600 (80%)
+							//200/500 (40%) - 100 becomes 160/400 (40%)
+							Real ratio = oldHealth / oldMaxHealth;
+							Real newHealth = newMaxHealth * ratio;
+							newBody->internalChangeHealth( newHealth - newMaxHealth, TRUE );
+							break;
+						}
+						// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
+						case ADD_CURRENT_DAMAGE_NON_LETHAL:
+						case ADD_CURRENT_DAMAGE:
+						{
+							//Add the same amount that we are adding to the max health.
+							//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
+							//400/500 (80%) + 100 becomes 500/600 (83%)
+							//200/500 (40%) - 100 becomes 100/400 (25%)
+							if(m_inheritsHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) >= newMaxHealth)
+								obj->kill();
+							else
+								newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth), TRUE );
+							break;
+						}
+						case SAME_CURRENTHEALTH:
+							//preserve past health amount
+							newBody->internalChangeHealth( oldHealth - newMaxHealth, TRUE );
+							break;
+					}
+				}
+			}
+		}
 
 
 

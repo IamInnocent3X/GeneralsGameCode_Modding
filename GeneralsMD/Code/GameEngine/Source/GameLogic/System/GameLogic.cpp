@@ -4282,6 +4282,12 @@ void GameLogic::bindObjectAndDrawable(Object* obj, Drawable* draw)
 {
 	draw->friend_bindToObject( obj );
 	obj->friend_bindToDrawable( draw );
+
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		TheGameClient->clearEfficientDrawablesList();
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -625,6 +625,12 @@ void W3DView::setCameraTransform( void )
 		 it = NULL;
 		}
 	}
+
+	if (TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		TheGameClient->clearEfficientDrawablesList();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2458,10 +2464,6 @@ void W3DView::lookAt( const Coord3D *o )
 	m_doingScriptedCameraLock = false;
 
 	setCameraTransform();
-
-	if(TheGlobalData->m_useEfficientDrawableScheme)
-		TheGameClient->clearEfficientDrawablesList();
-
 }
 
 //-------------------------------------------------------------------------------------------------
