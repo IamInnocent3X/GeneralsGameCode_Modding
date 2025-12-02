@@ -98,7 +98,6 @@ public:
 	Bool											m_transferShieldingTargets;
 	Bool											m_transferSelection;
 	Bool											m_transferObjectName;
-	MaxHealthChangeType 							m_transferHealthChangeType;
 	
 	Real											m_extraBounciness;
 	Real											m_extraFriction;

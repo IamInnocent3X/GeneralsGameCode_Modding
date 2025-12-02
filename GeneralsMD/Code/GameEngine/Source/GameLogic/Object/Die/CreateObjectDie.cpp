@@ -137,7 +137,7 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferShieldingTargets ) },
 		{ "TransferSelection",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferSelection ) },
 		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferObjectName ) },
-		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_transferHealthChangeType ) },
+		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_previousHealthChangeType ) },
 
 		{ "OrientInForceDirection", INI::parseBool, NULL, offsetof(CreateObjectDieModuleData, m_orientInForceDirection) },
 		{ "ExtraBounciness",				INI::parseReal,						NULL, offsetof( CreateObjectDieModuleData, m_extraBounciness ) },
