@@ -46,6 +46,7 @@
 #include "GameLogic/Weapon.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/LogicRandomValue.h"
+#include "GameClient/GameCLient.h"
 
 const Real DEFAULT_MASS = 1.0f;
 
@@ -961,6 +962,7 @@ UpdateSleepTime PhysicsBehavior::update()
 			obj->setTransformMatrix(&mtx);
 		}
 
+		// IamInnocent - Passed SlowDeathBehaviors to Physics Update for Updates
 		checkSlowDeathBehaviors();
 
 	} // if not held
@@ -1057,6 +1059,16 @@ UpdateSleepTime PhysicsBehavior::update()
 			//3) Unmanned drone
 			obj->kill();
 		}
+	}
+
+	if(TheGlobalData->m_useEfficientDrawableScheme && obj->getDrawable())
+	{
+		Coord3D currPos = *obj->getPosition();
+		Coord3D LoWorld = *TheGameClient->getCameraLoWorld();
+		Coord3D HiWorld = *TheGameClient->getCameraHiWorld();
+
+		if( LoWorld.x >= currPos.x && currPos.x <= HiWorld.x && HiWorld.y >= currPos.y && currPos.y <= LoWorld.y )
+			TheGameClient->informClientNewDrawable(obj->getDrawable());
 	}
 
 	setFlag(UPDATE_EVER_RUN, true);

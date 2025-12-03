@@ -115,6 +115,9 @@ GameClient::GameClient()
 
 	m_drawablesList.clear();
 	m_drawablesListMarkedForClear = FALSE;
+
+	m_loWorld.zero();
+	m_hiWorld.zero();
 }
 
 //std::vector<std::string>	preloadTextureNamesGlobalHack;
@@ -140,6 +143,9 @@ GameClient::~GameClient()
 	m_drawablesList.clear();
 
 	m_drawablesListMarkedForClear = FALSE;
+
+	m_loWorld.zero();
+	m_hiWorld.zero();
 
 	//DEBUG_LOG(("Preloaded texture files ------------------------------------------"));
 	//for (Int oog=0; oog<preloadTextureNamesGlobalHack2.size(); ++oog)
@@ -489,6 +495,9 @@ void GameClient::reset( void )
 
 	m_drawablesListMarkedForClear = FALSE;
 
+	m_loWorld.zero();
+	m_hiWorld.zero();
+
 	// TheSuperHackers @fix Mauller 13/04/2025 Reset the drawable id so it does not keep growing over the lifetime of the game.
 	m_nextDrawableID = (DrawableID)1;
 
@@ -828,7 +837,9 @@ void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr u
 			++it;
 		}
 
-		std::list< Drawable* > newDrawables = ThePartitionManager->getDrawablesInRegionEfficient();
+		// IamInnocent - Removed the usage of PartitionManager. Now uses PhysicsUpdate to add drawables into the list
+		/// 			 PartitionManager will cause bugs when iterating from edges or borders. (Reason: Unknown.)
+		/*std::list< Drawable* > newDrawables = ThePartitionManager->getDrawablesInRegionEfficient();
 
 		if(!newDrawables.empty())
 		{
@@ -843,7 +854,7 @@ void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr u
 					(*userFunc)( (*it_new), userData );
 				}
 			}
-		}
+		}*/
 	}
 	else if(region == NULL || ThePartitionManager->hasNoOffset() || 
 	    ( !TheGlobalData->m_usePartitionManagerToIterateDrawables || TheGlobalData->m_usePartitionManagerToIterateDrawablesOnlySelect ) )
@@ -887,7 +898,7 @@ void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr u
 }
 
 /** -----------------------------------------------------------------------------------------------
- * Inform the Client to add this Unit to the Efficient Drawable Lisst
+ * Inform the Client to add this Unit to the Efficient Drawable List
  */
 void GameClient::informClientNewDrawable(Drawable *draw)
 {
@@ -907,6 +918,9 @@ void GameClient::informClientNewDrawable(Drawable *draw)
 	addDrawableToEfficientList(draw);
 }
 
+/** -----------------------------------------------------------------------------------------------
+ * Add drawable to the Efficient Drawable List
+ */
 void GameClient::addDrawableToEfficientList(Drawable *draw)
 {
 	std::list< Drawable* >::iterator it = std::find(m_drawablesList.begin(), m_drawablesList.end(), draw);
@@ -916,6 +930,9 @@ void GameClient::addDrawableToEfficientList(Drawable *draw)
 	}
 }
 
+/** -----------------------------------------------------------------------------------------------
+ * Remove drawable from the Efficient Drawable List
+ */
 void GameClient::removeDrawableFromEfficientList(Drawable *draw)
 {
 	std::list< Drawable* >::iterator it = std::find(m_drawablesList.begin(), m_drawablesList.end(), draw);

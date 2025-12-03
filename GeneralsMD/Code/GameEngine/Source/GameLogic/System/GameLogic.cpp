@@ -4356,7 +4356,8 @@ void GameLogic::bindObjectAndDrawable(Object* obj, Drawable* draw)
 	if(TheGlobalData->m_useEfficientDrawableScheme)
 	{
 		// Redraw everything
-		TheGameClient->clearEfficientDrawablesList();
+		//TheGameClient->clearEfficientDrawablesList();
+		TheGameClient->informClientNewDrawable(draw);
 	}
 }
 

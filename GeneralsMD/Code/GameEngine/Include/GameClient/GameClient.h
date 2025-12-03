@@ -160,6 +160,9 @@ public:
 	void addDrawableToEfficientList(Drawable *draw);
 	void removeDrawableFromEfficientList(Drawable *draw);
 	inline void clearEfficientDrawablesList() { m_drawablesListMarkedForClear = TRUE; }
+	inline void setEfficientDrawableRegion(const Coord3D *loWorld, const Coord3D *hiWorld) { m_loWorld.set(loWorld); m_hiWorld.set(hiWorld); }
+	inline const Coord3D* getCameraLoWorld() const { return &m_loWorld; }
+	inline const Coord3D* getCameraHiWorld() const { return &m_hiWorld; }
 
 
 protected:
@@ -222,6 +225,9 @@ private:
 
 	std::list< Drawable* > m_drawablesList;
 	Bool m_drawablesListMarkedForClear;
+
+	Coord3D m_loWorld;
+	Coord3D m_hiWorld;
 };
 
 //Kris: Try not to use this if possible. In every case I found in the code base, the status was always Drawable::SELECTED.

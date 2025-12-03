@@ -6253,7 +6253,9 @@ void Object::handlePartitionCellMaintenance()
 	if(TheGlobalData->m_useEfficientDrawableScheme)
 	{
 		// Redraw everything
-		TheGameClient->clearEfficientDrawablesList();
+		//TheGameClient->clearEfficientDrawablesList();
+		if(getDrawable())
+			TheGameClient->informClientNewDrawable(getDrawable());
 	}
 }
 

@@ -535,7 +535,9 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	if(TheGlobalData->m_useEfficientDrawableScheme)
 	{
 		// Redraw everything
-		TheGameClient->clearEfficientDrawablesList();
+		//TheGameClient->clearEfficientDrawablesList();
+
+		TheGameClient->informClientNewDrawable(this);
 	}
 
 	m_groupNumber = NULL;
@@ -663,7 +665,8 @@ void Drawable::onDestroy( void )
 	if (TheGlobalData->m_useEfficientDrawableScheme)
 	{
 		// Redraw everything
-		TheGameClient->clearEfficientDrawablesList();
+		//TheGameClient->clearEfficientDrawablesList();
+		TheGameClient->informClientNewDrawable(this);
 	}
 
 }  // end onDestroy
@@ -5219,7 +5222,8 @@ void Drawable::updateHiddenStatus()
 	if (TheGlobalData->m_useEfficientDrawableScheme)
 	{
 		// Redraw everything
-		TheGameClient->clearEfficientDrawablesList();
+		//TheGameClient->clearEfficientDrawablesList();
+		TheGameClient->informClientNewDrawable(this);
 	}
 
 	// IamInnocent - dm is able to give nullptr if there is auto disguise involved
