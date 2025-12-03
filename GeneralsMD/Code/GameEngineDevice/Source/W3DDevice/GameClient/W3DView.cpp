@@ -628,26 +628,6 @@ void W3DView::setCameraTransform( void )
 
 	if (TheGlobalData->m_useEfficientDrawableScheme)
 	{
-		// Register the current camera coordinates
-		ICoord2D loRegion, hiRegion;
-		Coord3D loWorld, hiWorld;
-		IRegion2D region;
-		ICoord2D origin;
-		ICoord2D size;
-
-		getOrigin( &origin.x, &origin.y );
-		size.x = getWidth();
-		size.y = getHeight();
-
-		TheInGameUI->buildRegion( &origin, &size, &region );
-		loRegion.x = region.lo.x;
-		loRegion.y = region.lo.y;
-		hiRegion.x = region.hi.x;
-		hiRegion.y = region.hi.y;
-		screenToTerrain( &loRegion, &loWorld );
-		screenToTerrain( &hiRegion, &hiWorld );
-		TheGameClient->setEfficientDrawableRegion(&loWorld, &hiWorld);
-
 		// Redraw everything
 		TheGameClient->clearEfficientDrawablesList();
 	}
@@ -1421,6 +1401,9 @@ void W3DView::update(void)
 
 	Region3D axisAlignedRegion;
 	getAxisAlignedViewRegion(axisAlignedRegion);
+
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+		TheGameClient->setEfficientDrawableRegion(&axisAlignedRegion);
 
 	// render all of the visible Drawables
 	/// @todo this needs to use a real region partition or something

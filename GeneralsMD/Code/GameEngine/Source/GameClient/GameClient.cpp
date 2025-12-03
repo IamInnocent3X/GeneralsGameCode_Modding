@@ -116,8 +116,12 @@ GameClient::GameClient()
 	m_drawablesList.clear();
 	m_drawablesListMarkedForClear = FALSE;
 
-	m_loWorld.zero();
-	m_hiWorld.zero();
+	m_axisAlignedRegion.lo.x = 0.0f;
+	m_axisAlignedRegion.lo.y = 0.0f;
+	m_axisAlignedRegion.lo.z = 0.0f;
+	m_axisAlignedRegion.hi.x = 0.0f;
+	m_axisAlignedRegion.hi.y = 0.0f;
+	m_axisAlignedRegion.hi.z = 0.0f;
 }
 
 //std::vector<std::string>	preloadTextureNamesGlobalHack;
@@ -144,8 +148,12 @@ GameClient::~GameClient()
 
 	m_drawablesListMarkedForClear = FALSE;
 
-	m_loWorld.zero();
-	m_hiWorld.zero();
+	m_axisAlignedRegion.lo.x = 0.0f;
+	m_axisAlignedRegion.lo.y = 0.0f;
+	m_axisAlignedRegion.lo.z = 0.0f;
+	m_axisAlignedRegion.hi.x = 0.0f;
+	m_axisAlignedRegion.hi.y = 0.0f;
+	m_axisAlignedRegion.hi.z = 0.0f;
 
 	//DEBUG_LOG(("Preloaded texture files ------------------------------------------"));
 	//for (Int oog=0; oog<preloadTextureNamesGlobalHack2.size(); ++oog)
@@ -495,8 +503,12 @@ void GameClient::reset( void )
 
 	m_drawablesListMarkedForClear = FALSE;
 
-	m_loWorld.zero();
-	m_hiWorld.zero();
+	m_axisAlignedRegion.lo.x = 0.0f;
+	m_axisAlignedRegion.lo.y = 0.0f;
+	m_axisAlignedRegion.lo.z = 0.0f;
+	m_axisAlignedRegion.hi.x = 0.0f;
+	m_axisAlignedRegion.hi.y = 0.0f;
+	m_axisAlignedRegion.hi.z = 0.0f;
 
 	// TheSuperHackers @fix Mauller 13/04/2025 Reset the drawable id so it does not keep growing over the lifetime of the game.
 	m_nextDrawableID = (DrawableID)1;

@@ -1064,10 +1064,10 @@ UpdateSleepTime PhysicsBehavior::update()
 	if(TheGlobalData->m_useEfficientDrawableScheme && obj->getDrawable())
 	{
 		Coord3D currPos = *obj->getPosition();
-		Coord3D LoWorld = *TheGameClient->getCameraLoWorld();
-		Coord3D HiWorld = *TheGameClient->getCameraHiWorld();
-
-		if( LoWorld.x >= currPos.x && currPos.x <= HiWorld.x && HiWorld.y >= currPos.y && currPos.y <= LoWorld.y )
+		Region3D *region = TheGameClient->getEfficientDrawableRegion();
+		if( currPos.x >= region->lo.x && currPos.x <= region->hi.x &&
+			currPos.y >= region->lo.y && currPos.y <= region->hi.y &&
+				currPos.z >= region->lo.z && currPos.z <= region->hi.z )
 			TheGameClient->informClientNewDrawable(obj->getDrawable());
 	}
 
