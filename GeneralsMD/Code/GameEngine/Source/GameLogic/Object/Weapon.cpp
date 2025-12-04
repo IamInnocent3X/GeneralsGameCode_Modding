@@ -2201,20 +2201,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					}
 				}
-
-				// Only do Shrapnel if we hit an enemy
-				if(curVictimDistSqr < CLOSE_ENOUGH)
-				{
-					doShrapnel = TRUE;
-					if(shrapnelVictimID == INVALID_ID)
-						shrapnelVictimID = curVictim->getID();
-				}
 			}
 
-			// Invulnerable mechanic from OCL.
-			// Doesn't actually make you invulnerable, but makes your relationship considered ALLIES for targeting instead
-			if(InvulnerabilityDuration > 0)
-				curVictim->goInvulnerable(InvulnerabilityDuration);
 
 			DamageInfo damageInfo;
 			damageInfo.in.m_damageType = damageType;
@@ -2300,6 +2288,25 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				if( Vector3::Dot_Product(sourceVector, damageVector) < Cos(allowedAngle) )
 					continue;// Too far to the side, can't hurt them.
 			}
+	
+			// Check whether we do Shrapnel
+			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
+			if( !doShrapnel && 
+				curVictimDistSqr < CLOSE_ENOUGH &&
+				!curVictim->isKindOf( KINDOF_UNATTACKABLE ) &&
+				( (curVictim->isKindOf(KINDOF_VEHICLE) || curVictim->isKindOf(KINDOF_AIRCRAFT) || curVictim->isKindOf(KINDOF_STRUCTURE) || curVictim->isKindOf(KINDOF_INFANTRY) || curVictim->isKindOf(KINDOF_MINE) || curVictim->isKindOf(KINDOF_SHRUBBERY) || curVictim->isKindOf(KINDOF_PARACHUTE)) ||
+				( (curVictim->isKindOf(KINDOF_SMALL_MISSILE) || curVictim->isKindOf(KINDOF_BALLISTIC_MISSILE) || curVictim->isKindOf(KINDOF_PROJECTILE)) && (getAntiMask() & targetAntiMask) != 0 && (curVictim == primaryVictim || source->getRelationship(curVictim) != ALLIES) ) )
+			  )
+			{
+				doShrapnel = TRUE;
+				if(shrapnelVictimID == INVALID_ID)
+					shrapnelVictimID = curVictim->getID();
+			}
+
+			// Invulnerable mechanic from OCL.
+			// Doesn't actually make you invulnerable, but makes your relationship considered ALLIES for targeting instead
+			if(InvulnerabilityDuration > 0)
+				curVictim->goInvulnerable(InvulnerabilityDuration);
 
 			// Grab the vector between the source object causing the damage and the victim in order that we can
 			// simulate a shockwave pushing objects around
@@ -2723,6 +2730,13 @@ WeaponStore::~WeaponStore()
 			deleteInstance(wt);
 	}
 	m_weaponTemplateVector.clear();
+	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
+	{
+		WeaponTemplate* wt = it->second;
+		if (wt)
+			deleteInstance(wt);
+	}
+	m_weaponTemplateHashMap.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2794,9 +2808,12 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( AsciiString name ) const
 WeaponTemplate *WeaponStore::findWeaponTemplatePrivate( NameKeyType key ) const
 {
 	// search weapon list for name
-	for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
+	/*for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
 		if( m_weaponTemplateVector[ i ]->getNameKey() == key )
-			return m_weaponTemplateVector[i];
+			return m_weaponTemplateVector[i];*/
+	WeaponTemplateMap::const_iterator it = m_weaponTemplateHashMap.find(key);
+	if(it != m_weaponTemplateHashMap.end())
+		return it->second;
 
 	return NULL;
 
@@ -2814,7 +2831,8 @@ WeaponTemplate *WeaponStore::newWeaponTemplate(AsciiString name)
 	WeaponTemplate *wt = newInstance(WeaponTemplate);
 	wt->m_name = name;
 	wt->m_nameKey = TheNameKeyGenerator->nameToKey( name );
-	m_weaponTemplateVector.push_back(wt);
+	//m_weaponTemplateVector.push_back(wt);
+	m_weaponTemplateHashMap[wt->m_nameKey] = wt;
 
 	return wt;
 }
@@ -2868,6 +2886,11 @@ void WeaponStore::resetWeaponTemplates( void )
 		WeaponTemplate* wt = m_weaponTemplateVector[i];
 		wt->reset();
 	}
+	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
+	{
+		WeaponTemplate* wt = it->second;
+		wt->reset();
+	}
 
 }
 
@@ -2878,6 +2901,16 @@ void WeaponStore::reset()
 	for (size_t i = 0; i < m_weaponTemplateVector.size(); ++i)
 	{
 		WeaponTemplate *wt = m_weaponTemplateVector[i];
+		if (wt->isOverride())
+		{
+			WeaponTemplate *override = wt;
+			wt = wt->friend_clearNextTemplate();
+			deleteInstance(override);
+		}
+	}
+	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
+	{
+		WeaponTemplate* wt = it->second;
 		if (wt->isOverride())
 		{
 			WeaponTemplate *override = wt;
@@ -2915,6 +2948,12 @@ void WeaponStore::postProcessLoad()
 	for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
 	{
 		WeaponTemplate* wt = m_weaponTemplateVector[i];
+		if (wt)
+			wt->postProcessLoad();
+	}
+	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
+	{
+		WeaponTemplate* wt = it->second;
 		if (wt)
 			wt->postProcessLoad();
 	}

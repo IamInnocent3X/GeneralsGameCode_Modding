@@ -261,8 +261,7 @@ typedef std::vector<WeaponBonusConditionType> WeaponBonusConditionTypeVec;
 //typedef std::vector<AsciiStringReal> CustomWeaponBonus;
 // Converted to Hash_map;
 typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomWeaponBonus;
-
-//enum Field CPP_11(: Int);
+typedef std::hash_map<NameKeyType, WeaponTemplate*, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > WeaponTemplateMap;
 
 
 // For WeaponBonusConditionFlags
@@ -1310,6 +1309,7 @@ private:
 	};
 
 	std::vector<WeaponTemplate*> m_weaponTemplateVector;
+	WeaponTemplateMap m_weaponTemplateHashMap;
 	std::list<WeaponDelayedDamageInfo> m_weaponDDI;
 };
 
