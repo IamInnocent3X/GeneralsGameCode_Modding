@@ -3462,6 +3462,14 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			break;
 
 		//-----------------------------------------------------------------------------------------
+		case GameMessage::MSG_META_MOVE_IN_FORMATION:
+			// This message always works on the currently selected team
+			TheMessageStream->appendMessage(GameMessage::MSG_MOVE_IN_FORMATION);
+
+			disp = DESTROY_MESSAGE;
+			break;
+
+		//-----------------------------------------------------------------------------------------
 		case GameMessage::MSG_META_DEPLOY:
 			#ifdef RTS_DEBUG
 			DEBUG_ASSERTCRASH(FALSE, ("unimplemented meta command MSG_META_DEPLOY !"));

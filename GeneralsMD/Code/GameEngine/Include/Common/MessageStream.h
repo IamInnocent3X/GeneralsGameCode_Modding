@@ -252,6 +252,7 @@ public:
 		MSG_META_STOP,															///< selected units stop
 		MSG_META_DEPLOY,														///< selected units 'deploy'
 		MSG_META_CREATE_FORMATION,									///< selected units become a formation
+		MSG_META_MOVE_IN_FORMATION,									///< selected units move in formation
 		MSG_META_FOLLOW,														///< selected units 'follow'
 		MSG_META_CHAT_PLAYERS,											///< send chat msg to all players
 		MSG_META_CHAT_ALLIES,												///< send chat msg to allied players
@@ -617,6 +618,7 @@ public:
 		MSG_SET_REPLAY_CAMERA,											///< Track camera pos for replays
 		MSG_SELF_DESTRUCT,													///< Destroys a player's units (for copy protection or to quit to observer)
 		MSG_CREATE_FORMATION,												///< Creates a formation.
+		MSG_MOVE_IN_FORMATION,												///< Units move in formation.
 		MSG_LOGIC_CRC,															///< CRC from the logic passed around in a network game :)
 		MSG_SET_MINE_CLEARING_DETAIL,								///< CRC from the logic passed around in a network game :)
 		MSG_ENABLE_RETALIATION_MODE,								///< Turn retaliation mode on or off for the specified player.

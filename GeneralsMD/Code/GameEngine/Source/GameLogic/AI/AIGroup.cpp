@@ -3182,7 +3182,7 @@ void AIGroup::groupHackInternet( CommandSourceType cmdSource )				///< Begin hac
 }
 
 
-void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create a formation.
+void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandMap )				///< Create a formation.
 {
 	Coord3D center;
 	Coord2D min;
@@ -3190,6 +3190,8 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create
 	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
 	std::list<Object *>::iterator i;
 	FormationID id = TheAI->getNextFormationID();
+	Bool createNewGroup = FALSE;
+	FormationID lastCountID = NO_FORMATION_ID;
 
 	Int count = 0;
 	FormationID countID = NO_FORMATION_ID;
@@ -3197,12 +3199,22 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create
 	{
 		count++;
 		countID = (*i)->getFormationID();
+
+		if(!isCommandMap)
+		{
+			if(countID == NO_FORMATION_ID && lastCountID != NO_FORMATION_ID)
+				createNewGroup = TRUE;
+			lastCountID = countID;
+		}
 	}
+	if(!isCommandMap && !createNewGroup && lastCountID != NO_FORMATION_ID)
+		return;
+
 	if (count==1 && countID!=NO_FORMATION_ID) {
 		isFormation = true;
 	}
 
-	if (isFormation) {
+	if (isFormation && !createNewGroup) {
 		id = NO_FORMATION_ID;
 	}
 

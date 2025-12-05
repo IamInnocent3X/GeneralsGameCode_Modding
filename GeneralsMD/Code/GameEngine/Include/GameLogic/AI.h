@@ -919,7 +919,7 @@ public:
 	void groupMoveToAndEvacuateAndExit( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position & unload transport.
 	void groupIdle(CommandSourceType cmdSource);						///< Enter idle state.
 	void groupScatter(CommandSourceType cmdSource);						///< Enter idle state.
-	void groupCreateFormation(CommandSourceType cmdSource); ///< Make the current selection a user formation.
+	void groupCreateFormation(CommandSourceType cmdSource, Bool isCommandMap); ///< Make the current selection a user formation.
 	void groupTightenToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource );			///< move to given position(s)
 	void groupFollowWaypointPath( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
 	void groupFollowWaypointPathAsTeam( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point

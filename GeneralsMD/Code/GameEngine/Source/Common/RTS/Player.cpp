@@ -338,6 +338,7 @@ Player::Player( Int playerIndex )
 	m_skillPoints = 0;
 	Int i;
 	m_upgradeList = NULL;
+	m_unitsMoveInFormation = FALSE;
 	for(i = 0; i < NUM_HOTKEY_SQUADS; i++)
 	{
 		m_squads[i] = NULL;
@@ -1472,6 +1473,11 @@ static void doFindExistingObjectWithThingTemplate( Object *obj, void *userData )
 			info->obj = obj;
 		}
 	}
+}
+
+static void clearGroupFormation( Object *obj, void *userData )
+{
+	obj->setFormationID(NO_FORMATION_ID);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5116,6 +5122,7 @@ void Player::xfer( Xfer *xfer )
 	else
 		m_unitsShouldHunt = FALSE;
 
+	xfer->xferBool( &m_unitsMoveInFormation );
 
 	// -------------------------
 	// Xfer ProductionCostChangeMap

@@ -759,6 +759,9 @@ public:
 
 	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
 
+	inline void setUnitsMoveInFormation(void) { m_unitsMoveInFormation = !m_unitsMoveInFormation; }
+	inline Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; } 
+
 protected:
 
 	// snapshot methods
@@ -864,6 +867,8 @@ private:
 
 	Bool									m_isPlayerDead;
 	Bool									m_logicalRetaliationModeEnabled;
+
+	Bool									m_unitsMoveInFormation;
 };
 
 #endif // _PLAYER_H_

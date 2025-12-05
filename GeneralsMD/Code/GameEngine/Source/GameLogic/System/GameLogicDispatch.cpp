@@ -340,6 +340,12 @@ void GameLogic::prepareNewGame( GameMode gameMode, GameDifficulty diff, Int rank
 
 }  // end prepareNewGame
 
+
+void clearGroupFormation( Object *obj, void *userData )
+{
+	obj->setFormationID(NO_FORMATION_ID);
+}
+
 //-------------------------------------------------------------------------------------------------
 /** This message handles dispatches object command messages to the
   * appropriate objects.
@@ -847,6 +853,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if (currentlySelectedGroup)
 			{
+				if( thisPlayer->getUnitsMoveInFormation() )
+					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
+
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
 			}
@@ -863,6 +872,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if( currentlySelectedGroup )
 			{
+				if( thisPlayer->getUnitsMoveInFormation() )
+					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
+
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
@@ -942,8 +954,18 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		{
 			if (currentlySelectedGroup)
 			{
-				currentlySelectedGroup->groupCreateFormation(CMD_FROM_PLAYER);
+				currentlySelectedGroup->groupCreateFormation(CMD_FROM_PLAYER, TRUE);
 			}
+
+			break;
+		}
+
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_MOVE_IN_FORMATION:
+		{
+			thisPlayer->setUnitsMoveInFormation();
+			if( !thisPlayer->getUnitsMoveInFormation() )
+				thisPlayer->iterateObjects( clearGroupFormation, NULL );
 
 			break;
 		}

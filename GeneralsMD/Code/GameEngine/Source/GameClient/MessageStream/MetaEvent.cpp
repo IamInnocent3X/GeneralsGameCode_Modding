@@ -143,6 +143,7 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STOP",																			GameMessage::MSG_META_STOP },
 	{ "DEPLOY",																		GameMessage::MSG_META_DEPLOY },
 	{ "CREATE_FORMATION",													GameMessage::MSG_META_CREATE_FORMATION },
+	{ "MOVE_IN_FORMATION",													GameMessage::MSG_META_MOVE_IN_FORMATION },
 	{ "FOLLOW",																		GameMessage::MSG_META_FOLLOW },
 	{ "CHAT_PLAYERS",															GameMessage::MSG_META_CHAT_PLAYERS },
 	{ "CHAT_ALLIES",															GameMessage::MSG_META_CHAT_ALLIES },
