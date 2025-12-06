@@ -1513,6 +1513,7 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 
 	// Move.
 	std::list<Object *>::iterator i;
+	std::list<Object *> skipFormUnits;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		if ((*i)->isDisabledByType( DISABLED_HELD ) )
@@ -1524,6 +1525,20 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 		if (ai == NULL)
 		{
 			continue;
+		}
+
+		if ( theUnit->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )//helicopter
+		{
+			skipFormUnits.push_back(theUnit);
+			continue;
+		}
+		else if ( theUnit->isKindOf( KINDOF_AIRCRAFT ) )// fixed wing aircraft only
+		{
+			if ( ai->isDoingGroundMovement() == FALSE ) //if unit is airborne
+			{
+				skipFormUnits.push_back(theUnit);
+				continue;//then keep spread formation after move
+			}
 		}
 
 		Bool isDifferentFormation = false;
@@ -1563,6 +1578,79 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 			ai->aiMoveToPosition( &dest, cmdSource );
 		}
 
+	}
+
+	if(skipFormUnits.empty())
+		return;
+
+	// Move.
+	MemoryPoolObjectHolder iterHolder;
+	SimpleObjectIterator *iter = newInstance(SimpleObjectIterator);
+	iterHolder.hold(iter);
+	for( i = skipFormUnits.begin(); i != skipFormUnits.end(); ++i )
+	{
+		Real dx, dy;
+		if( !(*i)->isMobileNonStatusNotAttacking(FALSE) )
+		{
+			continue;
+		}
+		Coord3D unitPos = *((*i)->getPosition());
+		TheAI->pathfinder()->removeGoal(*i);
+		dx = unitPos.x - pos->x;
+		dy = unitPos.y - pos->y;
+		// adjust so units are sorted first by move priority.
+		Real adjust = 0;
+#if 0	 // Nope.  jba.
+		LocomotorPriority movePriority = LOCO_MOVES_FRONT;
+		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
+		if (ai->getCurLocomotor()) {
+			movePriority = ai->getCurLocomotor()->getMovePriority();
+			if (movePriority == LOCO_MOVES_MIDDLE) {
+				adjust = 100*100*PATHFIND_CELL_SIZE_F*PATHFIND_CELL_SIZE_F;
+			} else if (movePriority == LOCO_MOVES_BACK) {
+				adjust = 200*200*PATHFIND_CELL_SIZE_F*PATHFIND_CELL_SIZE_F;
+			}
+		}
+#endif
+		iter->insert((*i), adjust + dx*dx+dy*dy);
+	}
+
+	Coord3D dest;
+	Coord3D goalPos = *pos;
+	iter->sort(ITER_SORTED_NEAR_TO_FAR);
+	// Works better if you let the near units get the first paths... jba.
+	// Move the ones nearest the goal first.  Reduces collision problems later.
+	Object *theUnit;
+	for (theUnit = iter->first(); theUnit; theUnit = iter->next())
+	{
+		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
+		computeIndividualDestination( &dest, &goalPos, theUnit, &center, FALSE );
+
+		if( cmdSource == CMD_FROM_PLAYER && theUnit->getStatusBits().test( OBJECT_STATUS_CAN_STEALTH ) && ai->canAutoAcquire() )
+		{
+			//When ordering a combat stealth unit to move, there is a single special case we want to handle.
+			//When a stealth unit is currently not stealthed and doesn't autoacquire while stealthed,
+			//then when the player specifically orders the unit to stop, we want to not autoacquire until
+			//he is able to stealth again. Of course, if he's detected, then don't bother trying.
+			if( !theUnit->getStatusBits().test( OBJECT_STATUS_STEALTHED ) && !theUnit->getStatusBits().test( OBJECT_STATUS_DETECTED ) )
+			{
+				//Not stealthed, not detected -- so do auto-acquire while stealthed?
+				if( !ai->canAutoAcquireWhileStealthed() )
+				{
+          StealthUpdate *stealth = theUnit->getStealth();
+					if( stealth )
+					{
+						//Delay the mood check time (for autoacquire) until after the unit can stealth again.
+						UnsignedInt stealthFrames = stealth->getStealthDelay();
+						//Skew it a little due to having a large group selected.
+						UnsignedInt randomFrames = GameLogicRandomValue( 0, LOGICFRAMES_PER_SECOND );
+						ai->setNextMoodCheckTime( TheGameLogic->getFrame() + stealthFrames + randomFrames );
+					}
+				}
+			}
+		}
+
+		ai->aiMoveToPosition( &dest, cmdSource );
 	}
 }
 //-------------------------------------------------------------------------------------------------
@@ -2030,7 +2118,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
     if ( groupMember->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )//helicopter
     {
-      isFormation = FALSE;
+      //isFormation = FALSE;
       extraMargin = MAX( extraMargin, groupMember->getGeometryInfo().getMajorRadius() );
     }
     else if ( groupMember->isKindOf( KINDOF_AIRCRAFT ) )// fixed wing aircraft only
@@ -2038,7 +2126,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 			if ( groupMember->getAI() && groupMember->getAI()->isDoingGroundMovement() == FALSE ) //if unit is airborne
       {
 				tightenGroup = FALSE;	// Don't tighten aircraft.  It is a bad idea. jba.
-				isFormation = FALSE;//then keep spread formation after move
+				//isFormation = FALSE;//then keep spread formation after move
       }
 
       extraMargin = MAX( extraMargin, STD_AIRCRAFT_EXTRA_MARGIN );
@@ -2135,6 +2223,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	for (theUnit = iter->first(); theUnit; theUnit = iter->next())
 	{
 		theUnit->setFormationID(NO_FORMATION_ID);
+		theUnit->setFormationIsCommandMap(FALSE);
 		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
 		if (firstUnit) {
 			if (isFormation) {
@@ -3184,12 +3273,12 @@ void AIGroup::groupHackInternet( CommandSourceType cmdSource )				///< Begin hac
 
 void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandMap )				///< Create a formation.
 {
-	Coord3D center;
-	Coord2D min;
-	Coord2D max;
-	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
+	//Coord3D center;
+	//Coord2D min;
+	//Coord2D max;
+	//Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
 	std::list<Object *>::iterator i;
-	FormationID id = TheAI->getNextFormationID();
+	//FormationID id = TheAI->getNextFormationID();
 	Bool createNewGroup = FALSE;
 	FormationID lastCountID = NO_FORMATION_ID;
 
@@ -3200,15 +3289,26 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 		count++;
 		countID = (*i)->getFormationID();
 
+		// New - If the command is not from command map but from Moving as formation, we count the whether to create a new formation based on members present
 		if(!isCommandMap)
 		{
 			if(countID == NO_FORMATION_ID && lastCountID != NO_FORMATION_ID)
 				createNewGroup = TRUE;
+
 			lastCountID = countID;
 		}
 	}
+
+	// New - If the command is not from command map but from Moving as formation
+	//       determine whether to create the group based on the information above and whether the last member counted has a group already
 	if(!isCommandMap && !createNewGroup && lastCountID != NO_FORMATION_ID)
 		return;
+
+	Coord3D center;
+	Coord2D min;
+	Coord2D max;
+	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
+	FormationID id = TheAI->getNextFormationID();
 
 	if (count==1 && countID!=NO_FORMATION_ID) {
 		isFormation = true;
@@ -3222,6 +3322,11 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 	{
 		Object *obj = (*i);
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
+
+		// New, don't overwrite the Formation set from Command Map and Those Moving in Groups
+		if(obj->getFormationIsCommandMap() && !isCommandMap)
+			continue;
+
 		if (ai)
 		{
 			Coord3D pos = *obj->getPosition();
@@ -3230,6 +3335,10 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 			offset.y = pos.y - center.y;
 			obj->setFormationID(id);
 			obj->setFormationOffset(offset);
+
+			// New, don't mix the Formation set from Command Map and Moving in Groups
+			if(isCommandMap)
+				obj->setFormationIsCommandMap(id!=NO_FORMATION_ID);
 		}
 	}
 }

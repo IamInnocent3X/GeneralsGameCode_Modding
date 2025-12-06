@@ -541,16 +541,28 @@ void InGameUI::setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorNam
 	if (!TheMouse)
 		return;
 
+	// IamInnocent - Brief description of the function of checkString for edited setMouseCursor function:
+	// Value - 0, commonly used for GUI Commands and Enter Cursors, will not check for custom Cursor Name, will always register cursor towards m_mouseModeCursor.
+	// Value - 1, default value, commonly used for InGameUI, will check for custom Cursor Name for GUI Commands, and it will only register cursor for non-ARROW and SCROLL cursors for m_mouseModeCursor.
+	// Value - 2, used in ARROW and Radar HUD, will not register cursor towards m_mouseModeCursor and will not check for custom Cursor Name
+	// Value - 3, only used while Selecting Objects, will not register cursor towards m_mouseModeCursor but will check for custom Cursor Names
 	Bool registerCursor = checkString == 0 || (checkString != 2 && checkString != 3 && c != Mouse::ARROW && c != Mouse::SCROLL) ? TRUE : FALSE;
-	Int index = (Int)c;
 
+	Player *curPlayer = NULL;
+	if( TheControlBar && TheControlBar->isObserverControlBarOn())
+		curPlayer = TheControlBar->getObserverLookAtPlayer();
+	else
+		curPlayer = ThePlayerList->getLocalPlayer();
+
+	if(curPlayer && c == Mouse::MOVETO)
+	{
+		if(curPlayer->getUnitsMoveInFormation())
+			c = Mouse::MOVE_IN_FORMATION_TO;
+	}
+
+	Int index = (Int)c;
 	if(cursorName.isEmpty() )
 	{
-		Player *curPlayer = NULL;
-		if( TheControlBar && TheControlBar->isObserverControlBarOn())
-			curPlayer = TheControlBar->getObserverLookAtPlayer();
-		else
-			curPlayer = ThePlayerList->getLocalPlayer();
 		if( curPlayer && curPlayer->getPlayerTemplate() )
 		{
 			switch(c)
@@ -578,6 +590,10 @@ void InGameUI::setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorNam
 				case Mouse::MOVETO:
 					if(!curPlayer->getPlayerTemplate()->getMoveToCursorName().isEmpty())
 						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getMoveToCursorName() );
+					break;
+				case Mouse::MOVE_IN_FORMATION_TO:
+					if(!curPlayer->getPlayerTemplate()->getMoveInFormationToCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getMoveInFormationToCursorName() );
 					break;
 				case Mouse::ATTACKMOVETO:
 					if(!curPlayer->getPlayerTemplate()->getAttackMoveToCursorName().isEmpty())

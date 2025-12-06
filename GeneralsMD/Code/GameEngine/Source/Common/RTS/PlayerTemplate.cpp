@@ -116,6 +116,7 @@
 		{ "ArrowCursorName",					INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_arrowCursorName ) },
 		{ "ScrollCursorName",					INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_scrollCursorName ) },
 		{ "MoveCursorName",						INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_moveToCursorName ) },
+		{ "MoveInFormationCursorName",			INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_moveInFormationToCursorName ) },
 		{ "AttackMoveCursorName",				INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_attackMoveToCursorName ) },
 		{ "WaypointCursorName",					INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_waypointCursorName ) },
 		{ "GenericInvalidCursorName",			INI::parseAsciiString,													NULL, offsetof( PlayerTemplate, m_genericInvalidCursorName ) },

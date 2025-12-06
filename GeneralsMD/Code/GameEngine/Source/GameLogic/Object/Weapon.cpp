@@ -452,7 +452,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "MindControlTurnsNeutral",			INI::parseBool,								NULL,							offsetof(WeaponTemplate, m_mindControlTurnsNeutral) },
 	{ "MindControlIsPermanent",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlIsPermanent) },
 	{ "MindControlDefectDuration",			INI::parseDurationUnsignedInt,						NULL,							offsetof(WeaponTemplate, m_mindControlDefectDuration) },
-	{ "MindControlKey",				INI::parseAsciiString,					NULL,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
+	{ "MindControlKey",				INI::parseAsciiString,					NULL,				offsetof(WeaponTemplate, m_mindControlKey) },
+	{ "MindControlAnimTemplate",				INI::parseAsciiString,					NULL,				offsetof(WeaponTemplate, m_mindControlAnimTemplate) },
 
 	{ "CustomSubdualDoMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
 

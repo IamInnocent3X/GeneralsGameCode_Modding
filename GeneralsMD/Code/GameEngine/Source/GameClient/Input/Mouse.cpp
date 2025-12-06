@@ -1297,6 +1297,8 @@ Int Mouse::getCursorIndex(const AsciiString& name)
 		"Hack",
 		"ParticleUplinkCannon",
 
+		"MoveInFormation",
+
 		"NukeAttack",
 		"MegaNukeAttack",
 		"VacuumAttack",

@@ -189,7 +189,7 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					//	TheMouse->setCursor( Mouse::CROSS );
 
 					if( index != Mouse::INVALID_MOUSE_CURSOR )
-						TheMouse->setCursor( (Mouse::MouseCursor)index );
+						TheInGameUI->friend_setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 2 );
 					else
 						TheInGameUI->friend_setMouseCursor( Mouse::CROSS, "Dummy", 2 );
 

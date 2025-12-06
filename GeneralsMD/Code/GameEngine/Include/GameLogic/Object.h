@@ -432,9 +432,11 @@ public:
 
 	// User specified formation.
 	void setFormationID(enum FormationID id) {m_formationID = id;}
+	void setFormationIsCommandMap(Bool e) {m_formationIsCommandMap = e;}
 	enum FormationID getFormationID(void) const {return m_formationID;}
 	void setFormationOffset(const Coord2D& offset) {m_formationOffset = offset;}
 	void getFormationOffset(Coord2D* offset) const {*offset = m_formationOffset;}
+	inline Bool getFormationIsCommandMap() const { return m_formationIsCommandMap; }
 
 
 //THIS FUNCTION BELONGS AT THE OBJECT LEVEL BECAUSE THERE IS AT LEAST ONE SPECIAL UNIT
@@ -1070,6 +1072,8 @@ private:
 	// User formations.
 	FormationID										m_formationID;
 	Coord2D												m_formationOffset;
+
+	Bool											m_formationIsCommandMap;
 
 	AsciiString										m_commandSetStringOverride;///< To allow specific object to switch command sets
 

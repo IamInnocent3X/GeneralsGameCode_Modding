@@ -1382,8 +1382,10 @@ Real AIUpdateInterface::calculateMaxBlockedSpeed(Object *other) const
 		return m_curMaxBlockedSpeed;
 	}
 	Real maxSpeed = awaySpeed / dotProduct;
-	if (other->getFormationID()!=NO_FORMATION_ID && getObject()->getFormationID()==other->getFormationID()) {
-		maxSpeed *= 0.55f; // don't let formations crowd each other.
+	if (other->getFormationID()!=NO_FORMATION_ID && getObject()->getFormationID()==other->getFormationID() && getObject()->getFormationIsCommandMap()) {
+		Bool isAirborne = getObject()->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (getObject()->isKindOf( KINDOF_AIRCRAFT ) && isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
+		if(!isAirborne)
+			maxSpeed *= 0.55f; // don't let formations crowd each other.
 	}
 	if (maxSpeed>m_curMaxBlockedSpeed) return m_curMaxBlockedSpeed;
 	return maxSpeed;

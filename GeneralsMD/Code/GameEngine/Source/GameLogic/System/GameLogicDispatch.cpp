@@ -341,9 +341,10 @@ void GameLogic::prepareNewGame( GameMode gameMode, GameDifficulty diff, Int rank
 }  // end prepareNewGame
 
 
-void clearGroupFormation( Object *obj, void *userData )
+void clearGroupMovingFormation( Object *obj, void *userData )
 {
-	obj->setFormationID(NO_FORMATION_ID);
+	if(!obj->getFormationIsCommandMap())
+		obj->setFormationID(NO_FORMATION_ID);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -965,7 +966,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		{
 			thisPlayer->setUnitsMoveInFormation();
 			if( !thisPlayer->getUnitsMoveInFormation() )
-				thisPlayer->iterateObjects( clearGroupFormation, NULL );
+				thisPlayer->iterateObjects( clearGroupMovingFormation, NULL );
 
 			break;
 		}

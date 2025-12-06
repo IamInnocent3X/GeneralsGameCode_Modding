@@ -266,6 +266,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_smcUntil(NEVER),
 	m_privateStatus(0),
 	m_formationID(NO_FORMATION_ID),
+	m_formationIsCommandMap(FALSE),
 	m_isReceivingDifficultyBonus(FALSE),
 	m_singleUseCommandUsed(FALSE),
 	m_scriptStatus(0),
@@ -5403,6 +5404,7 @@ void Object::xfer( Xfer *xfer )
 	if (m_formationID!=NO_FORMATION_ID) {
 		xfer->xferCoord2D(&m_formationOffset);
 	}
+	xfer->xferBool(&m_formationIsCommandMap);
 
 	// module count
 	UnsignedShort moduleCount = 0;

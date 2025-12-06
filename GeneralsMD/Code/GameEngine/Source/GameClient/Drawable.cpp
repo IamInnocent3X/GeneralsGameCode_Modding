@@ -3079,7 +3079,7 @@ Bool Drawable::drawsAnyUIText( void )
 	else
 		m_groupNumber = NULL;
 
-	if ( obj->getFormationID() != NO_FORMATION_ID )
+	if ( obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap() )
 		return TRUE;
 
 	return FALSE;
@@ -3648,7 +3648,7 @@ void Drawable::drawUIText()
 	}
 
 
-	if ( obj->getFormationID() != NO_FORMATION_ID )
+	if ( obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap() )
 	{
 		//draw an F, here
 		Coord3D p;

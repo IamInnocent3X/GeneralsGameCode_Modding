@@ -143,6 +143,7 @@ public:
 	inline const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
 	inline const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
 	inline const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
+	inline const AsciiString& getMoveInFormationToCursorName() const {return m_moveInFormationToCursorName;	}
 	inline const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
 	inline const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
 	inline const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
@@ -229,6 +230,7 @@ private:
 	AsciiString m_genericInvalidCursorName;
 	AsciiString m_selectingCursorName;
 	AsciiString m_moveToCursorName;
+	AsciiString m_moveInFormationToCursorName;
 	AsciiString m_attackMoveToCursorName;
 	AsciiString m_waypointCursorName;
 	AsciiString m_attackObjectCursorName;

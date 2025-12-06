@@ -1475,11 +1475,6 @@ static void doFindExistingObjectWithThingTemplate( Object *obj, void *userData )
 	}
 }
 
-static void clearGroupFormation( Object *obj, void *userData )
-{
-	obj->setFormationID(NO_FORMATION_ID);
-}
-
 //-------------------------------------------------------------------------------------------------
 Object* Player::findNaturalCommandCenter()
 {

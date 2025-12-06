@@ -2127,11 +2127,16 @@ StateReturnType AIMoveToState::onEnter()
 		m_goalPosition = *getMachineGoalPosition();
 
 	StateReturnType ret = AIInternalMoveToState::onEnter();
-	if (getMachineOwner()->getFormationID() != NO_FORMATION_ID) {
-		AIGroup *group = ai->getGroup();
-		if (group) {
-			Real speed = group->getSpeed();
-			ai->setDesiredSpeed(speed);
+	// New - Only set the speed to Desired if formation is from Command Map
+	if (getMachineOwner()->getFormationID() != NO_FORMATION_ID && getMachineOwner()->getFormationIsCommandMap()) {
+		Bool isAirborne = getMachineOwner()->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (getMachineOwner()->isKindOf( KINDOF_AIRCRAFT ) && ai->isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
+		if(!isAirborne)
+		{
+			AIGroup *group = ai->getGroup();
+			if (group) {
+				Real speed = group->getSpeed();
+				ai->setDesiredSpeed(speed);
+			}
 		}
 	}
 	return ret;
@@ -3348,11 +3353,16 @@ StateReturnType AIFollowPathState::onEnter()
 		m_adjustFinal = true;
 	}
 	StateReturnType ret = AIInternalMoveToState::onEnter();
-	if (obj->getFormationID() != NO_FORMATION_ID) {
-		AIGroup *group = ai->getGroup();
-		if (group) {
-			Real speed = group->getSpeed();
-			ai->setDesiredSpeed(speed);
+	// New - Only set the speed to Desired if formation is from Command Map
+	if (obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap()) {
+		Bool isAirborne = obj->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (obj->isKindOf( KINDOF_AIRCRAFT ) && ai->isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
+		if(!isAirborne)
+		{
+			AIGroup *group = ai->getGroup();
+			if (group) {
+				Real speed = group->getSpeed();
+				ai->setDesiredSpeed(speed);
+			}
 		}
 	}
  	if (nextPos)

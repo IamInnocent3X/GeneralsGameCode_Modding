@@ -357,10 +357,12 @@ class MetaMap : public SubsystemInterface
 
 private:
 	MetaMapRec *m_metaMaps;
+	std::vector<MappableKeyType> m_doubleDownKeysVec;
 
 protected:
 	GameMessage::Type findGameMessageMetaType(const char* name);
 	MetaMapRec *getMetaMapRec(GameMessage::Type t);
+	void pushDoubleDownKeyList(MappableKeyType m);
 
 public:
 
@@ -378,6 +380,7 @@ public:
 	static void generateMetaMap();
 
 	const MetaMapRec *getFirstMetaMapRec() const { return m_metaMaps; }
+	Bool hasDoubleDownKey(MappableKeyType m) const;
 };
 
 extern MetaMap *TheMetaMap;
