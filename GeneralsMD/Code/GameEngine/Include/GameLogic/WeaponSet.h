@@ -256,6 +256,7 @@ public:
 	void updateWeaponSet(const Object* obj);
 	void reloadAllAmmo(const Object *obj, Bool now);
 	Bool isOutOfAmmo() const;
+	Bool isFullAmmo() const; 	// Added for OFS
 	Bool hasAnyWeapon() const { return !m_restricted && m_filledWeaponSlotMask != 0; }
 	Bool hasAnyDamageWeapon() const { return !m_restricted && m_hasDamageWeapon; }
 	Bool hasWeaponToDealDamageType(DamageType typeToDeal) const { return !m_restricted && m_totalDamageTypeMask.test(typeToDeal); }
@@ -302,6 +303,7 @@ public:
 	Bool chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly = FALSE);
 
 	Weapon* getWeaponInWeaponSlot(WeaponSlotType wslot) const;
+
 
 	static ModelConditionFlags getModelConditionForWeaponSlot(WeaponSlotType wslot, WeaponSetConditionType a);
 };
