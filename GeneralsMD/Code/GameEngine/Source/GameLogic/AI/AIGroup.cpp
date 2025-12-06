@@ -1513,7 +1513,7 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 
 	// Move.
 	std::list<Object *>::iterator i;
-	std::list<Object *> skipFormUnits;
+	std::vector<Object *> skipFormUnits;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		if ((*i)->isDisabledByType( DISABLED_HELD ) )
@@ -1587,22 +1587,22 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 	MemoryPoolObjectHolder iterHolder;
 	SimpleObjectIterator *iter = newInstance(SimpleObjectIterator);
 	iterHolder.hold(iter);
-	for( i = skipFormUnits.begin(); i != skipFormUnits.end(); ++i )
+	for( size_t j = 0; j < skipFormUnits.size(); ++j )
 	{
 		Real dx, dy;
-		if( !(*i)->isMobileNonStatusNotAttacking(FALSE) )
+		if( !skipFormUnits[j]->isMobileNonStatusNotAttacking(FALSE) )
 		{
 			continue;
 		}
-		Coord3D unitPos = *((*i)->getPosition());
-		TheAI->pathfinder()->removeGoal(*i);
+		Coord3D unitPos = *(skipFormUnits[j]->getPosition());
+		TheAI->pathfinder()->removeGoal(skipFormUnits[j]);
 		dx = unitPos.x - pos->x;
 		dy = unitPos.y - pos->y;
 		// adjust so units are sorted first by move priority.
 		Real adjust = 0;
 #if 0	 // Nope.  jba.
 		LocomotorPriority movePriority = LOCO_MOVES_FRONT;
-		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
+		AIUpdateInterface *ai = skipFormUnits[j]->getAIUpdateInterface();
 		if (ai->getCurLocomotor()) {
 			movePriority = ai->getCurLocomotor()->getMovePriority();
 			if (movePriority == LOCO_MOVES_MIDDLE) {
@@ -1612,7 +1612,7 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 			}
 		}
 #endif
-		iter->insert((*i), adjust + dx*dx+dy*dy);
+		iter->insert(skipFormUnits[j], adjust + dx*dx+dy*dy);
 	}
 
 	Coord3D dest;
