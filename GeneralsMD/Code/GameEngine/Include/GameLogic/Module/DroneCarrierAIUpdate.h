@@ -71,6 +71,12 @@ public:
 	virtual void revealSlaves();
 	virtual Bool doSlavesHaveFreedom() const { return false; };
 
+	// IamInnocent - SpawnBehaviorInterface properties for MobMemberSlavedUpdate, required to be declared for SpawnBehaviorInterfaces
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual void updateMobMembers() {}
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) { return FALSE; }
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) { return FALSE; }
+
 	// DieModule
 	virtual void onDie(const DamageInfo* damageInfo);
 
