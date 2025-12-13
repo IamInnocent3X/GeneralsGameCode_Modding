@@ -5144,7 +5144,7 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 }
 
 //------------------------------------------------------------------------------
-Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj ) const
+Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Drawable *drawableToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj ) const
 {
 	//Get the special power template.
 	const SpecialPowerTemplate *spTemplate = command->getSpecialPowerTemplate();
@@ -5155,9 +5155,10 @@ Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, c
 	//3) NEED_TARGET_POS
 	Bool doAtPosition = BitIsSet( command->getOptions(), NEED_TARGET_POS );
 	Bool doAtObject = BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET );
+	Bool doShrubbery = BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) && drawableToInteractWith && drawableToInteractWith->getTemplate()->isKindOf(KINDOF_SHRUBBERY);
 
 	//Sanity checks
-	if( doAtObject && !objectToInteractWith )
+	if( doAtObject && !objectToInteractWith && !doShrubbery )
 	{
 		return false;
 	}
@@ -5201,7 +5202,8 @@ Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, c
 		}
 		else if( doAtObject )
 		{
-			if( TheActionManager->canDoSpecialPowerAtObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions ) )
+			if( TheActionManager->canDoSpecialPowerAtObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions ) ||
+				( doShrubbery && TheActionManager->canDoSpecialPowerAtDrawable( other->getObject(), drawableToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions ) ) )
 			{
 				//This requires a object target
 				if( rule == SELECTION_ANY )

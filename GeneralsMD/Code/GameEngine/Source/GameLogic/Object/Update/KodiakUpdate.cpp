@@ -175,7 +175,7 @@ void KodiakUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool KodiakUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool KodiakUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	const KodiakUpdateModuleData *data = getKodiakUpdateModuleData();
 

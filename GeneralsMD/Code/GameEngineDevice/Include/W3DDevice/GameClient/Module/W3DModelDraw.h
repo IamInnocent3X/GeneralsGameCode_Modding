@@ -439,6 +439,9 @@ public:
 	virtual void setTerrainDecalSize(Real x, Real y);
 	virtual void setTerrainDecalOpacity(Real o);
 
+	virtual void setModelName(const AsciiString& name);
+	virtual const AsciiString& getModelName() const;
+
 protected:
 
 	virtual void onRenderObjRecreated(void){};
@@ -518,6 +521,7 @@ private:
 	Bool													m_pauseAnimation;
 	Int														m_animationMode;
 	Bool													m_isFirstDrawModule;
+	AsciiString												m_modelName;
 
 	void adjustAnimation(const ModelConditionInfo* prevState, Real prevAnimFraction);
 	Real getCurrentAnimFraction() const;

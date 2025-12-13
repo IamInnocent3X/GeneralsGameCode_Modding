@@ -1711,6 +1711,12 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 // ------------------------------------------------------------------------------------------------
 Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *target, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, UnsignedInt commandOptions, Bool checkSourceRequirements )
 {
+	// Added checks for special power doing at drawable
+	if( !target )
+	{
+		return FALSE;
+	}
+	
 	if (checkSourceRequirements)
 	{
 		//First check, if our object can do this special power.
@@ -2049,6 +2055,93 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 				}
 				break;
 			}
+		}
+	}
+	return false;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Bool ActionManager::canDoSpecialPowerAtDrawable( const Object *obj, const Drawable *target, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, UnsignedInt commandOptions, Bool checkSourceRequirements )
+{
+	if (checkSourceRequirements)
+	{
+		//First check, if our object can do this special power.
+		if( !obj->hasSpecialPower( spTemplate->getSpecialPowerType() ) )
+		{
+			return false;
+		}
+	}
+
+	SpecialPowerModuleInterface *mod = obj->getSpecialPowerModule( spTemplate );
+	if( mod )
+	{
+		if (checkSourceRequirements)
+		{
+			if( mod->getPercentReady() < 1.0f )
+			{
+				//Not fully ready
+				return false;
+			}
+		}
+
+
+		//use a behaviortype for custom sp
+		SpecialPowerType behaviorType = spTemplate->getSpecialPowerType();
+		if (behaviorType >= SPECIAL_ION_CANNON) { //first custom SP
+			behaviorType = spTemplate->getSpecialPowerBehaviorType();
+			if (behaviorType == SPECIAL_INVALID) {
+				behaviorType = getFallbackBehaviorType(spTemplate->getSpecialPowerType()); // use predefined fallbacks
+			}
+		}
+
+		// if the target is in the shroud, we can't do anything
+		if (target->getObject() && isObjectShroudedForAction(obj, target->getObject(), commandSource))
+			return FALSE;
+
+		switch(behaviorType)
+		{
+			case SPECIAL_DISGUISE_AS_VEHICLE:
+			{
+				const ThingTemplate *thingTemplate = target->getTemplate();
+
+				if(!thingTemplate)
+					break;
+
+				Bool canDisguise = FALSE;
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_DISGUISE_AS_VEHICLE );
+
+				// Condition 1: I have the declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( thingTemplate->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						break;
+					
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( thingTemplate->isAnyKindOf(spUpdate->getKindOfs()) )
+							canDisguise = TRUE;
+						else
+							break;
+					}
+				}
+				// Condition 2: I do not declare any types, so I use the Default modules.
+				if( !canDisguise && thingTemplate->isKindOf( KINDOF_VEHICLE )
+						&& !thingTemplate->isKindOf( KINDOF_AIRCRAFT )
+						&& !thingTemplate->isKindOf( KINDOF_BOAT )
+						&& !thingTemplate->isKindOf( KINDOF_CLIFF_JUMPER ) )
+				{
+					canDisguise = TRUE;
+				}
+				if(canDisguise)
+				{
+					return true;
+				}
+				break;
+			}
+
+			default:
+				break;
 		}
 	}
 	return false;

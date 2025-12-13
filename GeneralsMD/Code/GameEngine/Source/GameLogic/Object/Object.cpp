@@ -7120,6 +7120,25 @@ void Object::doSpecialPowerAtLocation( const SpecialPowerTemplate *specialPowerT
 //-------------------------------------------------------------------------------------------------
 /** Execute special power */
 //-------------------------------------------------------------------------------------------------
+void Object::doSpecialPowerAtDrawable( const SpecialPowerTemplate *specialPowerTemplate, Drawable *drawable, UnsignedInt commandOptions, Bool forced )
+{
+
+	if (isDisabled())
+		return;
+
+	// sanity
+	if( !forced && TheSpecialPowerStore->canUseSpecialPower( this, specialPowerTemplate ) == FALSE )
+		return;
+
+	// get the module and execute
+	SpecialPowerModuleInterface *mod = getSpecialPowerModule( specialPowerTemplate );
+	if( mod )
+		mod->doSpecialPowerAtDrawable( drawable, commandOptions );
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Execute special power */
+//-------------------------------------------------------------------------------------------------
 void Object::doSpecialPowerUsingWaypoints( const SpecialPowerTemplate *specialPowerTemplate, const Waypoint *way, UnsignedInt commandOptions, Bool forced )
 {
 

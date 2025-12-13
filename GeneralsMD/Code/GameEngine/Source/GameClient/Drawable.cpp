@@ -809,6 +809,38 @@ void Drawable::showSubObject( const AsciiString& name, Bool show )
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+const AsciiString& Drawable::getModelName() const
+{
+	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		const ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		const TreeDrawInterface* ti = (*dm)->getTreeDrawInterface();
+		if (di && !di->getModelName().isEmpty())
+		{
+			return di->getModelName();
+		}
+		if(ti && !ti->getModelName().isEmpty())
+		{
+			return ti->getModelName();
+		}
+	}
+	return NULL;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::setModelName(const AsciiString& modelName)
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di)
+		{
+			di->setModelName(modelName);
+		}
+	}
+}
+
 #ifdef ALLOW_ANIM_INQUIRIES
 // srj sez: not sure if this is a good idea, for net sync reasons...
 //-------------------------------------------------------------------------------------------------

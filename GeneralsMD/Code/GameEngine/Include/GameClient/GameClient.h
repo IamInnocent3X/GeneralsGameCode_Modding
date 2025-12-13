@@ -155,6 +155,7 @@ public:
 	UnsignedInt getRenderedObjectCount() const { return m_renderedObjectCount; }
 	void incrementRenderedObjectCount() { m_renderedObjectCount++; }
 	virtual void notifyTerrainObjectMoved(Object *obj) = 0;
+	virtual const AsciiString& findTreeNameInPos(const Coord3D* loc) const = 0;
 
 	void informClientNewDrawable(Drawable *draw);
 	void addDrawableToEfficientList(Drawable *draw);

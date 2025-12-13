@@ -42,7 +42,7 @@ public:
 	virtual Bool doesSpecialPowerUpdatePassScienceTest() const = 0;
 	virtual ScienceType getExtraRequiredScience() const = 0; //Does this object have more than one special power module with the same spTemplate?
 
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) = 0;
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) = 0;
 	virtual Bool isSpecialAbility() const = 0;
 	virtual Bool isSpecialPower() const = 0;
 	virtual Bool isActive() const = 0;
@@ -73,7 +73,7 @@ public:
 	virtual ScienceType getExtraRequiredScience() const { return SCIENCE_INVALID; } //Does this object have more than one special power module with the same spTemplate?
 
 	//SpecialPowerUpdateInterface PURE virtual implementations
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) = 0;
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) = 0;
 	virtual Bool isSpecialAbility() const = 0;
 	virtual Bool isSpecialPower() const = 0;
 	virtual Bool isActive() const = 0;

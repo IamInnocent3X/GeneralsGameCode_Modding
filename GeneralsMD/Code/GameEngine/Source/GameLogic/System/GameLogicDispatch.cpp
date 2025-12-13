@@ -71,6 +71,7 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/Eva.h"
+#include "GameClient/GameClient.h"
 #include "GameClient/GameText.h"
 #include "GameClient/GameWindowTransitions.h"
 #include "GameClient/GameWindowManager.h"
@@ -792,6 +793,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		}  // end do special at location
 
 		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE:
 		case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
 		{
 			// first argument is the special power ID
@@ -800,7 +802,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// argument 2 is target object
 			ObjectID targetID = msg->getArgument(1)->objectID;
 			Object *target = TheGameLogic->findObjectByID( targetID );
-			if( !target )
+			DrawableID drawableID = msg->getArgument(4)->drawableID;
+			Drawable *drawable = TheGameClient->findDrawableByID(drawableID);
+			if( !target && !drawable )
 			{
 				break;
 			}
@@ -815,7 +819,10 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
-				theGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
+				if(drawable)
+					theGroup->groupDoSpecialPowerAtDrawable( specialPowerID, drawable, options );
+				else
+					theGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
 #if RETAIL_COMPATIBLE_AIGROUP
 				TheAI->destroyGroup(theGroup);
 #else
@@ -826,7 +833,10 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				if( currentlySelectedGroup )
 				{
-					currentlySelectedGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
+					if(drawable)
+						currentlySelectedGroup->groupDoSpecialPowerAtDrawable( specialPowerID, drawable, options );
+					else
+						currentlySelectedGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
 				}
 			}
 			break;

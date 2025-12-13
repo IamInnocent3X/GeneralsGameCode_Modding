@@ -156,7 +156,7 @@ void SpectreGunshipDeploymentUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
+Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Drawable *targetDraw, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
 {
 	const SpectreGunshipDeploymentUpdateModuleData* data = getSpectreGunshipDeploymentUpdateModuleData();
 

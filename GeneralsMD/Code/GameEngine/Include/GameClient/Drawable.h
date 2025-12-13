@@ -520,6 +520,8 @@ public:
 
 	void updateSubObjects();
 	void showSubObject( const AsciiString& name, Bool show );
+	const AsciiString& getModelName() const;
+	void setModelName(const AsciiString& modelName);
 
 #ifdef ALLOW_ANIM_INQUIRIES
 // srj sez: not sure if this is a good idea, for net sync reasons...

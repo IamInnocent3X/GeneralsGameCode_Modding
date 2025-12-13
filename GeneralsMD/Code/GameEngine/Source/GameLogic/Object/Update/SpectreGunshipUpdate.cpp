@@ -198,7 +198,7 @@ void SpectreGunshipUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool SpectreGunshipUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool SpectreGunshipUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	const SpectreGunshipUpdateModuleData *data = getSpectreGunshipUpdateModuleData();
 
@@ -216,7 +216,7 @@ Bool SpectreGunshipUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemp
 			for( BehaviorModule** u = producer->getBehaviorModules(); *u; ++u )
       {
         SpecialPowerUpdateInterface* spu = (*u)->getSpecialPowerUpdateInterface();
-        if( spu && spu->initiateIntentToDoSpecialPower( specialPowerTemplate, targetObj, targetPos, way, commandOptions ) )
+        if( spu && spu->initiateIntentToDoSpecialPower( specialPowerTemplate, targetObj, targetDraw, targetPos, way, commandOptions ) )
         {
           return TRUE;
         }

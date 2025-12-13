@@ -35,6 +35,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/GameState.h"
+#include "Common/MapObject.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/Radar.h"
@@ -178,6 +179,8 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	m_preserveLastGUI = false;
 
+	m_disguiseModelName = NULL;
+
 	m_nextWakeUpFrame = 1;
 
 	if( data->m_innateStealth )
@@ -227,6 +230,47 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 							break;
 						}
 					}
+				}
+			}
+
+			if(!foundDisguise)
+			{
+				const ThingTemplate *thingTemplate;
+				MapObject *pMapObj;
+				for (pMapObj = MapObject::getFirstMapObject(); pMapObj; pMapObj = pMapObj->getNext())
+				{
+					// get thing template based from map object name
+					thingTemplate = pMapObj->getThingTemplate();
+					if( thingTemplate == NULL )
+						continue;
+
+					if( thingTemplate->isAnyKindOf(forbiddenMask) )
+						continue;
+				
+					if( thingTemplate->isAnyKindOf(disguiseMask) )
+						foundDisguise = TRUE;
+
+					if(foundDisguise)
+					{
+						const ThingTemplate *givenTemplate = TheThingFactory->findTemplate( "GenericTree" );
+						if(givenTemplate)
+						{
+							Drawable *newDraw = TheThingFactory->newDrawable( givenTemplate );
+							if( newDraw )
+							{
+								Drawable *currDraw = TheThingFactory->newDrawable( thingTemplate );
+								if(currDraw)
+								{
+									AsciiString modelName = currDraw->getModelName();
+									TheGameClient->destroyDrawable( currDraw );
+									disguiseAsObject( NULL, newDraw );
+									m_disguiseModelName = modelName;
+									break;
+								}
+							}
+						}
+					}
+
 				}
 			}
 
@@ -973,7 +1017,7 @@ UpdateSleepTime StealthUpdate::update( void )
 			TheAudio->addAudioEvent( &soundEvent );
 		}
 
-		if(isDisguised() && data->m_disguiseFriendlyFlickerDelay && now > m_flickerFrame && !isDetected)
+		if(isDisguised() && data->m_disguiseFriendlyFlickerDelay && now > m_flickerFrame && !isDetected && getObject()->getDrawable() )
 		{
 			m_flickerFrame = now + data->m_disguiseFriendlyFlickerDelay;
 			changeVisualDisguiseFlicker(m_flicked);
@@ -988,7 +1032,7 @@ UpdateSleepTime StealthUpdate::update( void )
 			}
 			else if(canDisguise() && !isDisguised() && m_lastDisguiseAsTemplate)
 			{
-				disguiseAsObject( NULL, TRUE );
+				disguiseAsObject( NULL, NULL, TRUE );
 			}
 		}
 
@@ -1233,17 +1277,20 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 }
 
 //-------------------------------------------------------------------------------------------------
-void StealthUpdate::disguiseAsObject( const Object *target, Bool doLast )
+void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *drawTemplate, Bool doLast )
 {
 	Object *self = getObject();
 	const StealthUpdateModuleData *data = getStealthUpdateModuleData();
 	if( target && target->getControllingPlayer() )
 	{
     StealthUpdate* stealth = target->getStealth();
+		m_disguiseModelName	= NULL;
+
 		if( stealth && stealth->getDisguisedTemplate() )
 		{
 			m_disguiseAsTemplate				= stealth->getDisguisedTemplate();
 			m_disguiseAsPlayerIndex			= stealth->getDisguisedPlayerIndex();
+			m_disguiseModelName				= stealth->getDisguisedModelName();
 		}
 		else
 		{
@@ -1262,6 +1309,32 @@ void StealthUpdate::disguiseAsObject( const Object *target, Bool doLast )
 		//Wake up so I can process!
 		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 
+	}
+	else if(drawTemplate)
+	{
+		m_lastDisguiseAsTemplate				= drawTemplate->getTemplate();
+		m_disguiseAsPlayerIndex			= ThePlayerList->getNeutralPlayer()->getPlayerIndex();
+
+		m_disguiseModelName	= NULL;
+
+		if(m_lastDisguiseAsTemplate->isKindOf(KINDOF_SHRUBBERY))
+		{
+			m_disguiseModelName	= drawTemplate->getModelName();
+			const ThingTemplate *givenTemplate = TheThingFactory->findTemplate( "GenericTree" );
+			if(givenTemplate)
+				m_disguiseAsTemplate = givenTemplate;
+		}
+
+		m_enabled										= true;
+		m_transitioningToDisguise		= true; //Means we are gaining disguise over time.
+		m_disguiseTransitionFrames	= data->m_disguiseTransitionFrames;
+		m_disguiseHalfpointReached  = false;
+
+		m_lastDisguiseAsTemplate = m_disguiseAsTemplate;
+		m_lastDisguiseAsPlayerIndex = m_disguiseAsPlayerIndex;
+
+			//Wake up so I can process!
+			setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 	}
 	else if( doLast )
 	{
@@ -1323,6 +1396,10 @@ void StealthUpdate::changeVisualDisguise()
 		draw = TheThingFactory->newDrawable( m_disguiseAsTemplate );
 		if( draw )
 		{
+			// If we are disguised with Draw Template, we overwrite the model
+			if(!m_disguiseModelName.isEmpty())
+				draw->setModelName(m_disguiseModelName);
+
 			TheGameLogic->bindObjectAndDrawable(self, draw);
 			draw->setPosition( self->getPosition() );
 			draw->setOrientation( self->getOrientation() );
@@ -1502,6 +1579,10 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 		draw = TheThingFactory->newDrawable( drawTempl );
 		if( draw )
 		{
+			// If we are disguised with Draw Template, we overwrite the model
+			if(!m_disguiseModelName.isEmpty())
+				draw->setModelName(m_disguiseModelName);
+
 			TheGameLogic->bindObjectAndDrawable(self, draw);
 			draw->setPosition( self->getPosition() );
 			draw->setOrientation( self->getOrientation() );
@@ -1674,6 +1755,8 @@ void StealthUpdate::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_flickerFrame );
 
 	xfer->xferBool( &m_preserveLastGUI );
+
+	xfer->xferAsciiString( &m_disguiseModelName );
 
 }  // end xfer
 

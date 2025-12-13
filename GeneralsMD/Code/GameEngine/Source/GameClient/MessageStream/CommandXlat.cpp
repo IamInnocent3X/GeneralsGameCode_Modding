@@ -36,6 +36,7 @@
 #include "Common/GameEngine.h"
 #include "Common/GameType.h"
 #include "Common/GlobalData.h"
+#include "Common/MapObject.h"
 #include "Common/MessageStream.h"
 #include "Common/MiscAudio.h"
 #include "Common/MultiplayerSettings.h"
@@ -759,6 +760,7 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 			case GameMessage::MSG_DO_SPECIAL_POWER:
 			case GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION:
 			case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
+			case GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE:
 			{
 				if( info && info->m_specialPowerType != SPECIAL_INVALID )
 				{
@@ -1252,19 +1254,26 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 
 	if( BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) )
 	{
+		Bool isDoingShrubbery = BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) && target && target->getTemplate()->isKindOf(KINDOF_SHRUBBERY);
+		
 		// OBJECT BASED SPECIAL
-		if (!command->isValidObjectTarget(sourceDraw, target))
+		if (!isDoingShrubbery && !command->isValidObjectTarget(sourceDraw, target))
 			return msgType;
 
-		msgType = GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT;
+		if(target->getObject())
+			msgType = GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT;
+		else
+			msgType = GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE;
+
 		if( commandType == DO_COMMAND )
 		{
 			GameMessage *msg;
 			msg = TheMessageStream->appendMessageWithOrderNearby( msgType, orderData );
 			msg->appendIntegerArgument( command->getSpecialPowerTemplate()->getID() );
-			msg->appendObjectIDArgument( target->getObject()->getID() );
+			msg->appendObjectIDArgument( msgType == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT ? target->getObject()->getID() : INVALID_ID);
 			msg->appendIntegerArgument( command->getOptions() );
 			msg->appendObjectIDArgument( specificSource );
+			msg->appendDrawableIDArgument( msgType == GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE ? target->getID() : INVALID_DRAWABLE_ID );
 			
 			// A hack to determine if it uses special power from shortcut to fire the Special Power
 			if(specificSource != INVALID_ID && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f )
@@ -1720,6 +1729,28 @@ GameMessage::Type CommandTranslator::evaluateForceAttack( Drawable *draw, const 
 	return retVal;
 }
 
+//-----------------------------------------------------------------------------
+static Bool checkIsNotSelectable(Drawable* drawable)
+{
+	// Sanity
+	if(!drawable)
+		return FALSE;
+
+	Object *obj = drawable ? drawable->getObject() : NULL;
+	if(obj)
+	{
+		if(obj->isKindOf(KINDOF_MINE) || obj->isKindOf(KINDOF_SHRUBBERY))
+			return TRUE;
+
+		if( obj->hasDisguiseAndIsNotDetected() &&
+			(drawable->getTemplate()->isKindOf(KINDOF_MINE) || drawable->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) &&
+			ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES )
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
 // ------------------------------------------------------------------------------------------------
 /** This method and the order of operations in the check here, determine what command would
 	* actually happen (if type parameter == DO_COMMAND) if the user clicked on the drawable
@@ -1897,13 +1928,13 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 				{
 					Object* unit = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
 					if( unit )
-						currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, pos, InGameUI::SELECTION_ANY, command->getOptions(), unit );
+						currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, drawableInWay, pos, InGameUI::SELECTION_ANY, command->getOptions(), unit );
 					else
 						currentlyValid = false;
 					break;
 				}
 				case GUI_COMMAND_SPECIAL_POWER:
-					currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, pos, InGameUI::SELECTION_ANY, command->getOptions(), NULL );
+					currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, drawableInWay, pos, InGameUI::SELECTION_ANY, command->getOptions(), NULL );
 					break;
 				case GUI_COMMAND_FIRE_WEAPON:
 					currentlyValid = TheInGameUI->canSelectedObjectsEffectivelyUseWeapon( command, obj, pos, InGameUI::SELECTION_ANY );
@@ -1915,6 +1946,9 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 
 			if( currentlyValid )
 			{
+				if(BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) && drawableInWay && drawableInWay->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
+					draw = drawableInWay;
+
 				if( type == DO_COMMAND || type == EVALUATE_ONLY )
 				{
 					switch( command->getCommandType() )
@@ -4230,20 +4264,20 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					Drawable *draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
 																													TheInGameUI->isInForceAttackMode(),
 																													(PickType) pickType);
-					
+
 					// TheSuperHackers @bugfix Stubbjax 07/08/2025 Prevent dead units blocking positional context commands
 					Object* obj = draw ? draw->getObject() : NULL;
+					Bool isSelectingShrubbery = TheSelectionTranslator->getIsMouseOverATree() && command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET );
 					if (!obj || (obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE)))
 					{
 						draw = NULL;
 					}
 
+					if(!draw && isSelectingShrubbery)
+						draw = TheSelectionTranslator->getLastTreeDraw();
+
 					// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
-					if(obj && draw &&
-					  ( obj->isKindOf(KINDOF_MINE) || 
-						obj->isKindOf(KINDOF_SHRUBBERY) ||
-						( obj->hasDisguiseAndIsNotDetected() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
-					)
+					if(!isSelectingShrubbery && checkIsNotSelectable(draw))
 					{
 						pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
 						draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
@@ -4331,17 +4365,17 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				
 				// TheSuperHackers @bugfix Stubbjax 07/08/2025 Prevent dead units blocking positional context commands
 				Object* obj = draw ? draw->getObject() : NULL;
+				Bool isSelectingShrubbery = TheSelectionTranslator->getIsMouseOverATree() && command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET );
 				if (!obj || (obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE)))
 				{
 					draw = NULL;
 				}
 
+				if(!draw && isSelectingShrubbery)
+					draw = TheSelectionTranslator->getLastTreeDraw();
+
 				// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
-				if(obj && draw &&
-				   ( obj->isKindOf(KINDOF_MINE) || 
-				     obj->isKindOf(KINDOF_SHRUBBERY) ||
-				     ( obj->hasDisguiseAndIsNotDetected() && (draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES ) )
-				  )
+				if(!isSelectingShrubbery && checkIsNotSelectable(draw))
 				{
 					pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
 					draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,

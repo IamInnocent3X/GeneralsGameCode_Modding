@@ -2179,6 +2179,18 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 }
 
 //=============================================================================
+// BaseHeightMapRenderObjClass::findTreeNameInPos
+//=============================================================================
+/** Get the tree name under the given position.*/
+//=============================================================================
+const AsciiString& BaseHeightMapRenderObjClass::findTreeNameInPos(const Coord3D* loc) const
+{
+	if (m_treeBuffer) {
+		return m_treeBuffer->findTreeNameInPos(loc);
+	}
+	return NULL;
+}
+//=============================================================================
 // BaseHeightMapRenderObjClass::removeTreesAndPropsForConstruction
 //=============================================================================
 /** Tell that a unit moved.*/

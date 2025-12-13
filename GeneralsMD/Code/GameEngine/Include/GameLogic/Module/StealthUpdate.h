@@ -150,9 +150,10 @@ public:
 	Bool isDisguised() const { return m_disguiseAsTemplate != NULL; }
 	Bool hasLastDisguiseTemplate() const { return m_lastDisguiseAsTemplate != NULL; }
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
+	const AsciiString& getDisguisedModelName() const { return m_disguiseModelName; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
 	void markAsDetected( UnsignedInt numFrames = 0 );
-	void disguiseAsObject( const Object *target, Bool doLast = FALSE ); //wrapper function for ease.
+	void disguiseAsObject( const Object *target, const Drawable *drawTemplate = NULL, Bool doLast = FALSE ); //wrapper function for ease.
 	Real getFriendlyOpacity() const;
 	UnsignedInt getStealthDelay() const { return getStealthUpdateModuleData()->m_stealthDelay; }
 	UnsignedInt getStealthLevel() const { return getStealthUpdateModuleData()->m_stealthLevel; }
@@ -218,6 +219,8 @@ private:
 	mutable UnsignedInt				m_nextWakeUpFrame;					//Next Wake Up Frame, only use for calcSleepTime, dont xfer
 
 	Bool							m_preserveLastGUI;					//Select objects silently to not overwrite the Control Bar and GUI Commands
+
+	AsciiString						m_disguiseModelName;				//Disguise Model for overwriting the current template
 };
 
 

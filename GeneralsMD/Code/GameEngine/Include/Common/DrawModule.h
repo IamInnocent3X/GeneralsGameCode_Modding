@@ -54,6 +54,7 @@ class DebrisDrawInterface;
 class TracerDrawInterface;
 class RopeDrawInterface;
 class LaserDrawInterface;
+class TreeDrawInterface;
 class FXList;
 enum TerrainDecalType CPP_11(: Int);
 enum ShadowType CPP_11(: Int);
@@ -110,6 +111,9 @@ public:
 
 	virtual LaserDrawInterface* getLaserDrawInterface() { return NULL; }
 	virtual const LaserDrawInterface* getLaserDrawInterface() const { return NULL; }
+
+	virtual TreeDrawInterface* getTreeDrawInterface() { return NULL; }
+	virtual const TreeDrawInterface* getTreeDrawInterface() const { return NULL; }
 
 };
 inline DrawModule::DrawModule( Thing *thing, const ModuleData* moduleData ) : DrawableModule( thing, moduleData ) { }
@@ -220,6 +224,9 @@ public:
 	virtual void updateSubObjects() = 0;
 	virtual void showSubObject( const AsciiString& name, Bool show ) = 0;
 
+	virtual void setModelName(const AsciiString& name) = 0;
+	virtual const AsciiString& getModelName() const = 0;
+
 	/**
 		This call asks, "In the current animation (if any) how far along are you, from 0.0f to 1.0f".
 	*/
@@ -227,6 +234,12 @@ public:
 // srj sez: not sure if this is a good idea, for net sync reasons...
 	virtual Real getAnimationScrubScalar( void ) const { return 0.0f;};
 #endif
+};
+
+class TreeDrawInterface
+{
+public:
+	virtual const AsciiString& getModelName() const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

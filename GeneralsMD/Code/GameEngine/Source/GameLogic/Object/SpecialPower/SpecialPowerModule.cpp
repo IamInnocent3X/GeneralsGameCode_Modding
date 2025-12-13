@@ -428,7 +428,7 @@ void SpecialPowerModule::startPowerRecharge()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	Bool valid = false;
 	// tell our update modules that we intend to do this special power.
@@ -442,7 +442,7 @@ Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj
 			{
 				if( spu->doesSpecialPowerUpdatePassScienceTest() )
 				{
-					if( spu->initiateIntentToDoSpecialPower( getSpecialPowerModuleData()->m_specialPowerTemplate, targetObj, targetPos, way, commandOptions ) )
+					if( spu->initiateIntentToDoSpecialPower( getSpecialPowerModuleData()->m_specialPowerTemplate, targetObj, targetDraw, targetPos, way, commandOptions ) )
 					{
 						//Kris: Aug 2003
 						//We have executed the special power, so don't try to execute any more. This logic
@@ -809,7 +809,7 @@ void SpecialPowerModule::doSpecialPower( UnsignedInt commandOptions )
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( NULL, NULL, NULL, commandOptions );
+	initiateIntentToDoSpecialPower( NULL, NULL, NULL, NULL, commandOptions );
 
 	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
 	//An example of a case that wouldn't trigger immediately is for a unit that needs to
@@ -831,7 +831,7 @@ void SpecialPowerModule::doSpecialPowerAtObject( Object *obj, UnsignedInt comman
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( obj, NULL, NULL, commandOptions );
+	initiateIntentToDoSpecialPower( obj, NULL, NULL, NULL, commandOptions );
 
 	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
 	//An example of a case that wouldn't trigger immediately is for a unit that needs to
@@ -845,6 +845,28 @@ void SpecialPowerModule::doSpecialPowerAtObject( Object *obj, UnsignedInt comman
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void SpecialPowerModule::doSpecialPowerAtDrawable( Drawable *draw, UnsignedInt commandOptions )
+{
+	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+		return;
+	}
+
+	//This tells the update module that we want to do our special power. The update modules
+	//will then start processing each frame.
+	initiateIntentToDoSpecialPower( NULL, draw, NULL, NULL, commandOptions );
+
+	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
+	//An example of a case that wouldn't trigger immediately is for a unit that needs to
+	//close to range before firing the special attack. A case that would trigger immediately
+	//is the napalm strike. If we don't call this now, it's up to the update module to do so.
+	if( !getSpecialPowerModuleData()->m_updateModuleStartsAttack )
+	{
+		triggerSpecialPower( draw->getPosition() );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPowerAtLocation( const Coord3D *loc, Real angle, UnsignedInt commandOptions )
 {
 	if (m_pausedCount > 0 || getObject()->isDisabled()) {
@@ -853,7 +875,7 @@ void SpecialPowerModule::doSpecialPowerAtLocation( const Coord3D *loc, Real angl
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( NULL, loc, NULL, commandOptions );
+	initiateIntentToDoSpecialPower( NULL, NULL, loc, NULL, commandOptions );
 
 #if RETAIL_COMPATIBLE_CRC
 	// TheSuperHackers @info we need to leave early if we are in the MissileLauncherBuildingUpdate crash fix codepath
@@ -881,7 +903,7 @@ void SpecialPowerModule::doSpecialPowerUsingWaypoints( const Waypoint *way, Unsi
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( NULL, NULL, way, commandOptions );
+	initiateIntentToDoSpecialPower( NULL, NULL, NULL, way, commandOptions );
 
 	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
 	//An example of a case that wouldn't trigger immediately is for a unit that needs to

@@ -112,7 +112,7 @@ void KodiakDeploymentUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool KodiakDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
+Bool KodiakDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Drawable *targetDraw, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
 {
 	const KodiakDeploymentUpdateModuleData* data = getKodiakDeploymentUpdateModuleData();
 

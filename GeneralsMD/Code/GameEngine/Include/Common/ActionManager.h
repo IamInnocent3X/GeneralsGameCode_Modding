@@ -43,6 +43,7 @@
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Object;
 class Player;
+class Drawable;
 class SpecialPowerTemplate;
 enum SpecialPowerType CPP_11(: Int);
 enum WeaponSlotType CPP_11(: Int);
@@ -94,6 +95,7 @@ public:
 	Bool canDisableBuildingViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource );
 	Bool canDoSpecialPowerAtLocation( const Object *obj, const Coord3D *loc, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, const Object *objectInWay, UnsignedInt commandOptions, Bool checkSourceRequirements = true );
 	Bool canDoSpecialPowerAtObject( const Object *obj, const Object *target, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, UnsignedInt commandOptions, Bool checkSourceRequirements = true);
+	Bool canDoSpecialPowerAtDrawable( const Object *obj, const Drawable *target, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, UnsignedInt commandOptions, Bool checkSourceRequirements = true);
   Bool canDoSpecialPower( const Object *obj, const SpecialPowerTemplate *spTemplate, CommandSourceType commandSource, UnsignedInt commandOptions, Bool checkSourceRequirements = true );
 	Bool canMakeObjectDefector( const Object *obj, const Object *objectToMakeDefector, CommandSourceType commandSource );
 	Bool canFireWeaponAtLocation( const Object *obj, const Coord3D *loc, CommandSourceType commandSource, const WeaponSlotType slot, const Object *objectInWay );

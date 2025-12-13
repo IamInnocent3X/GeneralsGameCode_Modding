@@ -49,6 +49,7 @@
 #include "GameClient/InGameUI.h"
 #include "GameClient/ControlBar.h"
 #include "GameClient/GameText.h"
+#include "GameClient/GameClient.h"
 
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/GameLogic.h"
@@ -80,6 +81,7 @@ SpecialAbilityUpdate::SpecialAbilityUpdate( Thing *thing, const ModuleData* modu
   m_prepFrames = 0;
   m_animFrames = 0;
   m_targetID = INVALID_ID;
+  m_targetDrawID = INVALID_DRAWABLE_ID;
   m_targetPos.zero();
   m_locationCount = 0;
   m_specialObjectEntries = 0;
@@ -485,6 +487,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
 //-------------------------------------------------------------------------------------------------
 Bool SpecialAbilityUpdate::initiateIntentToDoSpecialPower( const SpecialPowerTemplate *specialPowerTemplate,
                                                            const Object *targetObj,
+                                                           const Drawable *targetDraw,
                                                            const Coord3D *targetPos,
                                                            const Waypoint *way,
                                                            UnsignedInt commandOptions )
@@ -500,6 +503,7 @@ Bool SpecialAbilityUpdate::initiateIntentToDoSpecialPower( const SpecialPowerTem
 
   //Clear target values
   m_targetID = INVALID_ID;
+  m_targetDrawID = INVALID_DRAWABLE_ID;
   m_targetPos.zero();
   m_locationCount = 0;
   m_prepFrames = 0;
@@ -518,6 +522,10 @@ Bool SpecialAbilityUpdate::initiateIntentToDoSpecialPower( const SpecialPowerTem
   {
     //Get the target!
     m_targetID = targetObj ? targetObj->getID() : INVALID_ID;
+  }
+  else if( targetDraw )
+  {
+    m_targetDrawID = targetDraw ? targetDraw->getID() : INVALID_DRAWABLE_ID;
   }
   else if( targetPos )
   {
@@ -1618,13 +1626,14 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
     case SPECIAL_DISGUISE_AS_VEHICLE:
     {
       Object *target = TheGameLogic->findObjectByID( m_targetID );
-      if( target )
+      Drawable *draw = TheGameClient->findDrawableByID( m_targetDrawID );
+      if( target || draw )
       {
         StealthUpdate* update = getObject()->getStealth();
 
         if( update )
         {
-          update->disguiseAsObject( target );
+          update->disguiseAsObject( target, draw );
         }
       }
 
@@ -2067,6 +2076,9 @@ void SpecialAbilityUpdate::xfer( Xfer *xfer )
 
 	// target ID
 	xfer->xferObjectID( &m_targetID );
+
+  // target drawable ID
+  xfer->xferDrawableID( &m_targetDrawID );
 
 	// target position
 	xfer->xferCoord3D( &m_targetPos );

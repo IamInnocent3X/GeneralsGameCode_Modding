@@ -41,6 +41,7 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/Line2D.h"
+#include "GameClient/GameClient.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
@@ -427,6 +428,7 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 			break;
 		}
 		case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE:
 		case GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION:
 		case GameMessage::MSG_DO_SPECIAL_POWER:
 		{
@@ -446,6 +448,8 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 				if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( obj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer ))
 					canDoAction = FALSE;
 				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( obj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
+					canDoAction = FALSE;
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE && !TheActionManager->canDoSpecialPowerAtDrawable( obj, TheGameClient->findDrawableByID( arguments[4].data.drawableID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
 					canDoAction = FALSE;
 				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( obj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer ) )
 					canDoAction = FALSE;
@@ -3461,6 +3465,40 @@ void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *t
 				if( TheActionManager->canDoSpecialPowerAtObject( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions ) )
 				{
 					mod->doSpecialPowerAtObject( target, commandOptions );
+
+					object->friend_setUndetectedDefector( FALSE );// My secret is out
+				}
+			}
+		}
+	}
+}
+
+void AIGroup::groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *target, UnsignedInt commandOptions )
+{
+	//This one requires a target
+	std::list<Object *>::iterator i;
+	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
+	{
+		//Special powers do a lot of different things, but the top level stuff doesn't use
+		//ai interface code. It finds the special power module and calls it directly for each object.
+
+		Object *object = (*i);
+		const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+		if( spTemplate )
+		{
+			// Have to justify the execution in case someone changed their button
+			if( spTemplate->getRequiredScience() != SCIENCE_INVALID )
+			{
+				if( !object->getControllingPlayer()->hasScience(spTemplate->getRequiredScience()) )
+					continue;// Nice try, smacktard.
+			}
+
+			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
+			if( mod )
+			{
+				if( TheActionManager->canDoSpecialPowerAtDrawable( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions ) )
+				{
+					mod->doSpecialPowerAtDrawable( target, commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
 				}

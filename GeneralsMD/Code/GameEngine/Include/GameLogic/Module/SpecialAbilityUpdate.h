@@ -212,7 +212,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return true; }
 	virtual Bool isSpecialPower() const { return false; }
 	virtual Bool isActive() const { return m_active; }
@@ -310,6 +310,7 @@ private:
 	UnsignedInt										m_prepFrames;
 	UnsignedInt										m_animFrames;	//Used for packing/unpacking unit before or after using ability.
 	ObjectID											m_targetID;
+	DrawableID											m_targetDrawID;
 	Coord3D												m_targetPos;
 	Int														m_locationCount;
 	std::list<ObjectID>						m_specialObjectIDList; //The list of special objects

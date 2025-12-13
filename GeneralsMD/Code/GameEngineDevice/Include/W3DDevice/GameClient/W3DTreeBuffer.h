@@ -191,6 +191,8 @@ public:
 		const GeometryInfo& geom,
 		Real angle
 	);
+	/// Get the tree name for any tree/grass/bush under the given position
+	const AsciiString& findTreeNameInPos(const Coord3D* loc) const;
 
 	void setTextureLOD(Int lod);	///<used to adjust maximum mip level sent to hardware.
 	/// Empties the tree buffer.

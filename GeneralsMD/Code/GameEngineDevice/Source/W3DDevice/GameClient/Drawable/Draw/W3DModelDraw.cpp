@@ -1771,6 +1771,7 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_terrainDecal = NULL;
 	m_trackRenderObject = NULL;
 	m_isFirstDrawModule = FALSE;
+	m_modelName = NULL;
 	m_whichAnimInCurState = -1;
 	m_nextState = NULL;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
@@ -4149,6 +4150,209 @@ void W3DModelDraw::updateSubObjects()
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void W3DModelDraw::setModelName(const AsciiString& name)
+{
+  	if (m_renderObject == NULL || name.isEmpty())
+		return; 
+
+		//Int hexColor = 0;
+		//if (color != 0)
+		//	hexColor = color | 0xFF000000;
+		
+		
+	// get this here, before we change anything... we'll need it to pass to adjustAnimation (srj)
+	//Real prevAnimFraction = getCurrentAnimFraction();
+
+	//
+	// Set up any particle effects for the new model.  Also stop the old ones, note that we
+	// will never allow the placement of new ones if the status bit is set that tells us
+	// we should not automatically create particle systems for the model condition states
+	//
+	//if( getDrawable()->testDrawableStatus( DRAWABLE_STATUS_NO_STATE_PARTICLES ) == FALSE )
+	//	m_needRecalcBoneParticleSystems = true;
+
+	// always stop particle systems now
+	stopClientParticleSystems();
+
+	// note that different states might use the same model; for these, don't go thru the
+	// expense of creating a new render-object. (exception: if color is changing, or subobjs are changing,
+	// or a few other things...)
+	//if (m_curState == NULL ||
+			//newState->m_modelName != m_curState->m_modelName ||
+			//turretNamesDiffer(newState, m_curState)
+			// srj sez: I'm not sure why we want to do the "hard stuff" if we have projectile bones; I think
+			// it is a holdover from days gone by when bones were handled quite differently, rather than being cached.
+			// but doing this hard stuff is a lot more work, and I think it's unnecessary, so let's remove this.
+			//|| (newState->m_validStuff & ModelConditionInfo::HAS_PROJECTILE_BONES)
+		//)
+	{
+		Matrix3D transform;
+		nukeCurrentRender(&transform);
+		Drawable* draw = getDrawable();
+
+		// create a new render object and set into drawable
+			m_renderObject = WW3DAssetManager::Get_Instance()->Create_Render_Obj(name.str());
+			//m_renderObject = W3DDisplay::m_assetManager->Create_Render_Obj(name.str(), draw->getScale(), hexColor);
+			DEBUG_ASSERTCRASH(m_renderObject, ("*** ASSET ERROR: Model %s not found!",name.str()));
+
+			if (m_renderObject->Class_ID() == RenderObjClass::CLASSID_HLOD) {
+				Vector3 offset(0,0,0);
+				RenderObjClass *hlod = m_renderObject;
+				m_renderObject = hlod->Get_Sub_Object(0);
+				const Matrix3D xfm = m_renderObject->Get_Bone_Transform(0);
+				xfm.Get_Translation(&offset);
+				REF_PTR_RELEASE(hlod);
+			}
+
+		//BONEPOS_LOG(("validateStuff() from within W3DModelDraw::setModelState()"));
+		//BONEPOS_DUMPREAL(draw->getScale());
+
+		//newState->validateStuff(m_renderObject, draw->getScale(), getW3DModelDrawModuleData()->m_extraPublicBones);
+		// ensure that any muzzle flashes from the *new* state, start out hidden...
+//		hideAllMuzzleFlashes(newState, m_renderObject);//moved to above
+		//rebuildWeaponRecoilInfo(newState);
+		//doHideShowSubObjs(&newState->m_hideShowVec);
+
+#if defined(RTS_DEBUG)	//art wants to see buildings without flags as a test.
+		if (TheGlobalData->m_hideGarrisonFlags && draw->isKindOf(KINDOF_STRUCTURE))
+			hideGarrisonFlags(TRUE);
+#endif
+
+			// add render object to our scene
+			if (W3DDisplay::m_3DScene != NULL)
+				W3DDisplay::m_3DScene->Add_Render_Object(m_renderObject);
+
+			// tie in our drawable as the user data pointer in the render object
+			m_renderObject->Set_User_Data(draw->getDrawableInfo());
+
+			setTerrainDecal(draw->getTerrainDecalType());
+
+			//We created a new render object so we need to preserve the visibility state
+			//of the previous render object.
+			if (draw->isDrawableEffectivelyHidden())
+			{
+				m_renderObject->Set_Hidden(TRUE);
+				if (m_shadow)
+					m_shadow->enableShadowRender(FALSE);
+				m_shadowEnabled = FALSE;
+			}
+
+			//
+			// set the transform for the new model to that we saved before, we do this so that the
+			// model transition is smooth and will immediately appear at the same orientation and location
+			// as the previous one
+			//
+			m_renderObject->Set_Transform(transform);
+
+			
+			const ThingTemplate *tmplate = draw->getTemplate();
+
+			// set up tracks, if not already set.
+			/*if (m_renderObject &&
+					TheGlobalData->m_makeTrackMarks &&
+					!m_trackRenderObject &&
+					TheTerrainTracksRenderObjClassSystem != NULL &&
+					!getW3DModelDrawModuleData()->m_trackFile.isEmpty())
+			{
+				m_trackRenderObject = TheTerrainTracksRenderObjClassSystem->bindTrack(m_renderObject, 1.0f*MAP_XY_FACTOR, getW3DModelDrawModuleData()->m_trackFile.str());
+				if (draw && m_trackRenderObject)
+					m_trackRenderObject->setOwnerDrawable(draw);
+			}*/
+
+			// set up shadows
+			ShadowType type = tmplate->getShadowType();
+			if (m_renderObject && TheW3DShadowManager && type != SHADOW_NONE &&
+				(m_isFirstDrawModule || !(type == SHADOW_DECAL || type == SHADOW_ALPHA_DECAL || type == SHADOW_ADDITIVE_DECAL)))
+			{
+				Shadow::ShadowTypeInfo shadowInfo;
+				strcpy(shadowInfo.m_ShadowName, tmplate->getShadowTextureName().str());
+				DEBUG_ASSERTCRASH(shadowInfo.m_ShadowName[0] != '\0', ("this should be validated in ThingTemplate now"));
+				shadowInfo.allowUpdates			= FALSE;		//shadow image will never update
+				shadowInfo.allowWorldAlign	= TRUE;	//shadow image will wrap around world objects
+				shadowInfo.m_type						= (ShadowType)tmplate->getShadowType();
+				shadowInfo.m_sizeX					= tmplate->getShadowSizeX();
+				shadowInfo.m_sizeY					= tmplate->getShadowSizeY();
+				shadowInfo.m_offsetX				= tmplate->getShadowOffsetX();
+				shadowInfo.m_offsetY				= tmplate->getShadowOffsetY();
+				m_shadow = TheW3DShadowManager->addShadow(m_renderObject, &shadowInfo, draw);
+				if (m_shadow)
+				{	m_shadow->enableShadowInvisible(m_fullyObscuredByShroud);
+					m_shadow->enableShadowRender(m_shadowEnabled);
+				}
+			}
+
+			if( m_renderObject )
+			{
+				// set collision type for render object.  Used by WW3D2 collision code.
+				if (tmplate->isKindOf(KINDOF_SELECTABLE))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_SELECTABLE );
+				}
+
+				if( tmplate->isKindOf( KINDOF_SHRUBBERY ))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_SHRUBBERY );
+				}
+				if( tmplate->isKindOf( KINDOF_MINE ))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_MINES );
+				}
+				if( tmplate->isKindOf( KINDOF_FORCEATTACKABLE ))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_FORCEATTACKABLE );
+				}
+				if( tmplate->isKindOf( KINDOF_CLICK_THROUGH ))
+				{
+					m_renderObject->Set_Collision_Type( 0 );
+				}
+
+				Object *obj = draw->getObject();
+				if( obj )
+			{
+
+					// for non bridge objects we adjust some collision types
+					if( obj->isKindOf( KINDOF_BRIDGE ) == FALSE &&
+							obj->isKindOf( KINDOF_BRIDGE_TOWER ) == FALSE )
+					{
+
+						if( obj->isKindOf( KINDOF_STRUCTURE ) && draw->getModelConditionFlags().test( MODELCONDITION_RUBBLE ) )
+						{
+							//A dead building, -- don't allow the user to click on rubble! Treat it as a location instead.
+						m_renderObject->Set_Collision_Type( 0 );
+						}
+						else if( obj->isEffectivelyDead() )
+						{
+							//A dead object, -- don't allow the user to click on rubble/hulks! Treat it as a location instead.
+						m_renderObject->Set_Collision_Type( 0 );
+						}
+					}
+			}
+			}
+
+			onRenderObjRecreated();
+	}
+
+	hideAllHeadlights(m_hideHeadlights);
+
+	//adjustAnimation(prevState, prevAnimFraction);
+
+		// save the model name and color
+		m_modelName = name;
+}
+
+// ------------------------------------------------------------------------------------------------
+const AsciiString& W3DModelDraw::getModelName() const
+{
+	if(!m_modelName.isEmpty())
+		return m_modelName;
+	if(m_curState)
+		return m_curState->m_modelName;
+	else
+		return NULL;
+}
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -4399,6 +4603,8 @@ void W3DModelDraw::xfer( Xfer *xfer )
 
 	// New stuff:
 	xfer->xferBool( &m_isFirstDrawModule );
+
+	xfer->xferAsciiString( &m_modelName );
 
 }  // end xfer
 

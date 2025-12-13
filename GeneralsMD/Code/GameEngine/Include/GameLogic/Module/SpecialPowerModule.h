@@ -40,6 +40,7 @@
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Object;
+class Drawable;
 class SpecialPowerTemplate;
 struct FieldParse;
 
@@ -64,6 +65,7 @@ public:
 	virtual void pauseCountdown( Bool pause ) = 0;
 	virtual void doSpecialPower( UnsignedInt commandOptions ) = 0;
 	virtual void doSpecialPowerAtObject( Object *obj, UnsignedInt commandOptions ) = 0;
+	virtual void doSpecialPowerAtDrawable( Drawable *draw, UnsignedInt commandOptions ) = 0;
 	virtual void doSpecialPowerAtLocation( const Coord3D *loc, Real angle, UnsignedInt commandOptions ) = 0;
 	virtual void doSpecialPowerUsingWaypoints( const Waypoint *way, UnsignedInt commandOptions ) = 0;
 	virtual void markSpecialPowerTriggered( const Coord3D *location ) = 0;
@@ -139,6 +141,7 @@ public:
 	//
 	virtual void doSpecialPower( UnsignedInt commandOptions );
 	virtual void doSpecialPowerAtObject( Object *obj, UnsignedInt commandOptions );
+	virtual void doSpecialPowerAtDrawable( Drawable *draw, UnsignedInt commandOptions );
 	virtual void doSpecialPowerAtLocation( const Coord3D *loc, Real angle, UnsignedInt commandOptions );
 	virtual void doSpecialPowerUsingWaypoints( const Waypoint *way, UnsignedInt commandOptions );
 
@@ -167,7 +170,7 @@ public:
 
 protected:
 
-	Bool initiateIntentToDoSpecialPower( const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	Bool initiateIntentToDoSpecialPower( const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	void triggerSpecialPower( const Coord3D *location );
 	void createViewObject( const Coord3D *location );
 	void resolveSpecialPower( void );
