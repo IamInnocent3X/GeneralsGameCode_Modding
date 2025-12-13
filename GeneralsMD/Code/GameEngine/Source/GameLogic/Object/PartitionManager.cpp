@@ -3520,7 +3520,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 	{
 		// don't go outwards any farther than necessary.
 		/// Need to increase the minimum value to be able to select air units under a small region
-		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(max(m_cellSize * 5.0f,maxDist)));
+		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(max(200.0f,maxDist)));
 	}
 #if defined(INTENSE_DEBUG)
 	/*

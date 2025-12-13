@@ -87,6 +87,7 @@ StealthUpdateModuleData::StealthUpdateModuleData()
     m_disguiseRevealTransitionFrames = 0;
     m_blackMarketCheckFrames = 0;
 	m_disguiseFriendlyFlickerDelay = 0;
+	m_disguiseFlickerTransitionTime = 0;
     m_enemyDetectionEvaEvent = EVA_Invalid;
     m_ownDetectionEvaEvent = EVA_Invalid;
     m_grantedBySpecialPower = false;
@@ -121,6 +122,7 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "DisguiseRevealFX",							INI::parseFXList,								NULL, offsetof( StealthUpdateModuleData, m_disguiseRevealFX ) },
 		{ "DisguiseTransitionTime",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseTransitionFrames ) },
 		{ "DisguiseRevealTransitionTime",	INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseRevealTransitionFrames ) },
+		{ "DisguiseFlickerTransitionTime",	INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseFlickerTransitionTime ) },
 		{ "DisguiseFriendlyFlickerDelay",	INI::parseDurationUnsignedInt,	NULL, offsetof( StealthUpdateModuleData, m_disguiseFriendlyFlickerDelay ) },
 		{ "InnateStealth",								INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_innateStealth ) },
 		{ "UseRiderStealth",							INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_useRiderStealth ) },
@@ -176,8 +178,12 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 	m_flicked = false;
 	m_flicking = false;
 	m_flickerFrame = 0;
+	m_disguiseTransitionIsFlicking = false;
 
 	m_preserveLastGUI = false;
+
+	m_markForClearStealthLater = false;
+	m_isNotAutoDisguise = false;
 
 	m_disguiseModelName = NULL;
 
@@ -775,8 +781,8 @@ UpdateSleepTime StealthUpdate::calcSleepTime() const
 	}
 
 	// Disguise transitioning, we need to update every frame
-	if(m_disguiseTransitionFrames || !m_transitioningToDisguise)
-		return UPDATE_SLEEP_NONE;
+	//if(m_disguiseTransitionFrames || !m_transitioningToDisguise)
+	//	return UPDATE_SLEEP_NONE;
 
 	UnsignedInt now = TheGameLogic->getFrame();
 
@@ -913,6 +919,10 @@ UpdateSleepTime StealthUpdate::update( void )
 			{
 				factor = 1.0f - ( (Real)m_disguiseTransitionFrames / (Real)data->m_disguiseTransitionFrames );
 			}
+			else if(m_disguiseTransitionIsFlicking)
+			{
+				factor = 1.0f - ( (Real)m_disguiseTransitionFrames / (Real)data->m_disguiseFlickerTransitionTime );
+			}
 			else
 			{
 				factor = 1.0f - ( (Real)m_disguiseTransitionFrames / (Real)data->m_disguiseRevealTransitionFrames );
@@ -926,7 +936,10 @@ UpdateSleepTime StealthUpdate::update( void )
 			  else
 			  {
 				//Switch models at the halfway point
-				changeVisualDisguise();
+				if(m_disguiseTransitionIsFlicking)
+					changeVisualDisguiseFlicker(m_flicked);
+				else
+					changeVisualDisguise();
 			  }
 				// TheSuperHackers @fix Skyaero 06/05/2025 obtain the new drawable
 				draw = getObject()->getDrawable();
@@ -937,22 +950,46 @@ UpdateSleepTime StealthUpdate::update( void )
 			//Opacity ranges from full to none at midpoint and full again at the end
 			Real opacity = fabs( 1.0f - (factor * 2.0f) );
 			Real overrideOpacity = opacity < 1.0f ? 0.0f : 1.0f;
-			draw->setEffectiveOpacity( opacity, overrideOpacity );
-			if( !m_disguiseTransitionFrames && !m_transitioningToDisguise && !data->m_canStealthWhileDisguised )
+
+			// IamInnocent - Don't change opacity if we are flickering for non-Allies
+			Player *clientPlayer = ThePlayerList->getLocalPlayer();
+			if(!m_disguiseTransitionIsFlicking || ( self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) == ALLIES && clientPlayer->isPlayerActive() ) )
+				draw->setEffectiveOpacity( opacity, overrideOpacity );
+
+			if( !m_disguiseTransitionFrames && !m_disguiseTransitionIsFlicking && !m_transitioningToDisguise && !data->m_canStealthWhileDisguised )
 			{
+				Bool hasAutoDisguise = (data->m_autoDisguiseWhenAvailable && m_lastDisguiseAsTemplate) || data->m_disguiseFriendlyFlickerDelay;
+				
 				//We're finished removing disguise so turn off stealth update.
-				if(!((data->m_autoDisguiseWhenAvailable && m_lastDisguiseAsTemplate) || data->m_disguiseFriendlyFlickerDelay))
+				if(!hasAutoDisguise)
 					m_enabled = false;
-				self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
-				self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
+
+				if(!hasAutoDisguise || !isDetected)
+				{
+					self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
+					self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
+					m_markForClearStealthLater = FALSE;
+				}
+
+				if(m_isNotAutoDisguise)
+				{
+					self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
+				}
+
 				return calcSleepTime();
 			}
+
+			// Always update for disguise
+			m_nextWakeUpFrame = 1;
 		}
-		else
+		else if(!isDisguised() && !data->m_canStealthWhileDisguised)
 		{
 			draw->setEffectiveOpacity( 0.5f + ( Sin( m_pulsePhase ) * 0.5f ) );
 			// between one half and full opacity
 			m_pulsePhase += m_pulsePhaseRate;
+
+			// Always update for pulsePhase
+			m_nextWakeUpFrame = 1;
 		}
 	}
 
@@ -1005,8 +1042,15 @@ UpdateSleepTime StealthUpdate::update( void )
 		// If I can stealth, don't attempt to Stealth until the timer is zero.
 		if( m_stealthAllowedFrame > now )
 		{
+			if(m_markForClearStealthLater && !isDetected)
+			{
+				self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
+				m_markForClearStealthLater = FALSE;
+			}
 			return calcSleepTime();
 		}
+
+		m_markForClearStealthLater = FALSE;
 
 		// If we haven't stealthed yet( still destealthed ), play stealthOn here
 		//if ( ( self->getStatusBits() && OBJECT_STATUS_STEALTHED ) == 0 )
@@ -1017,18 +1061,32 @@ UpdateSleepTime StealthUpdate::update( void )
 			TheAudio->addAudioEvent( &soundEvent );
 		}
 
-		if(isDisguised() && data->m_disguiseFriendlyFlickerDelay && now > m_flickerFrame && !isDetected && getObject()->getDrawable() )
+		if(isDisguised() && !m_disguiseTransitionFrames && !isDetected && data->m_disguiseFriendlyFlickerDelay && now > m_flickerFrame && getObject()->getDrawable() )
 		{
 			m_flickerFrame = now + data->m_disguiseFriendlyFlickerDelay;
-			changeVisualDisguiseFlicker(m_flicked);
+			if(data->m_disguiseFlickerTransitionTime > 0)
+			{
+				m_disguiseTransitionFrames	= data->m_disguiseFlickerTransitionTime;
+				m_disguiseHalfpointReached  = false;
+				m_disguiseTransitionIsFlicking = true;
+
+				// Update next frame
+				m_nextWakeUpFrame = 1;
+			}
+			else
+			{
+				changeVisualDisguiseFlicker(m_flicked);
+			}
 		}
 
 		// IamInnocent - New feature, enable disguised objects to switch back to their disguise after stealth delay
-		if(data->m_autoDisguiseWhenAvailable && !isDetected )
+		if(data->m_autoDisguiseWhenAvailable && !m_disguiseTransitionFrames && !isDetected )
 		{
-			if(data->m_disguiseRetainAfterDetected && isDisguised() && !self->testStatus( OBJECT_STATUS_DISGUISED ))
+			m_isNotAutoDisguise = false;
+			if(data->m_disguiseRetainAfterDetected)
 			{
-				self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DISGUISED ) );
+				if(isDisguised() && !self->testStatus( OBJECT_STATUS_DISGUISED ))
+					self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DISGUISED ) );
 			}
 			else if(canDisguise() && !isDisguised() && m_lastDisguiseAsTemplate)
 			{
@@ -1044,10 +1102,12 @@ UpdateSleepTime StealthUpdate::update( void )
 		m_stealthAllowedFrame = now + stealthDelay;
 
 		// Add flicker frame so that it doesnt flicker instantly
-		m_flickerFrame = m_stealthAllowedFrame + data->m_disguiseFriendlyFlickerDelay;
+		UnsignedInt delayFrame = m_stealthAllowedFrame + data->m_disguiseFriendlyFlickerDelay;
+		if(delayFrame > m_flickerFrame)
+			m_flickerFrame = delayFrame;
 
 		// if you are destealthing on your own free will, play sound for all to hear
-		if( self->getStatusBits().test( OBJECT_STATUS_STEALTHED ) )
+		if( !m_markForClearStealthLater && self->getStatusBits().test( OBJECT_STATUS_STEALTHED ) )
 		{
 			AudioEventRTS soundEvent = *self->getTemplate()->getSoundStealthOn();
 			soundEvent.setObjectID(self->getID());
@@ -1063,7 +1123,16 @@ UpdateSleepTime StealthUpdate::update( void )
 			m_preserveLastGUI = true;
 		}
 
-		self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
+		// Fix Disguises auto Disguise back when detected
+		if(canDisguise() && data->m_autoDisguiseWhenAvailable && m_lastDisguiseAsTemplate && isDetected)
+		{
+			m_markForClearStealthLater = TRUE;
+		}
+		else
+		{
+			self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_STEALTHED ) );
+			m_markForClearStealthLater = FALSE;
+		}
 
 		hintDetectableWhileUnstealthed();
 	}
@@ -1083,7 +1152,7 @@ UpdateSleepTime StealthUpdate::update( void )
 		self->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DETECTED ) );
 
 		//If we are disguised, remove the disguise permanently!
-		if( isDisguised() && data->m_autoDisguiseWhenAvailable )
+		if( !m_isNotAutoDisguise && isDisguised() && data->m_autoDisguiseWhenAvailable )
 		{
 			// Retain the model even after deteccted
 			if(data->m_disguiseRetainAfterDetected )
@@ -1215,6 +1284,7 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 
 
 	Player *thisPlayer = self->getControllingPlayer();
+	UnsignedInt now = TheGameLogic->getFrame();
 
 	//If we are disguised, remove the disguise permanently!
 	if( isDisguised() )
@@ -1237,7 +1307,8 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 		}
 	}
 
-	UnsignedInt now = TheGameLogic->getFrame();
+	m_isNotAutoDisguise = false;
+
 	if( !numFrames )
 	{
 		//Kris:
@@ -1250,7 +1321,9 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 	}
 
 	// Add flicker frame so that it doesnt flicker instantly
-	m_flickerFrame = m_detectionExpiresFrame + data->m_disguiseFriendlyFlickerDelay;
+	UnsignedInt delayFrame = m_detectionExpiresFrame + data->m_disguiseFriendlyFlickerDelay;
+	if(delayFrame > m_flickerFrame)
+		m_flickerFrame = delayFrame;
 
 	if( orderIdlesToAttack )
 	{
@@ -1306,6 +1379,8 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 		m_lastDisguiseAsTemplate = m_disguiseAsTemplate;
 		m_lastDisguiseAsPlayerIndex = m_disguiseAsPlayerIndex;
 
+		m_isNotAutoDisguise = true;
+
 		//Wake up so I can process!
 		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 
@@ -1332,6 +1407,8 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 
 		m_lastDisguiseAsTemplate = m_disguiseAsTemplate;
 		m_lastDisguiseAsPlayerIndex = m_disguiseAsPlayerIndex;
+
+		m_isNotAutoDisguise = true;
 
 			//Wake up so I can process!
 			setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
@@ -1368,6 +1445,7 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 
 	// Remove flicking status to change drawable
 	m_flicking = false;
+	m_disguiseTransitionIsFlicking = false;
 
 }
 
@@ -1533,6 +1611,7 @@ void StealthUpdate::changeVisualDisguise()
 
 	// Remove flicking status to change drawable
 	m_flicking = false;
+	m_disguiseTransitionIsFlicking = false;
 
 	// Finished with current pending GUI Command
 	m_preserveLastGUI = false;
@@ -1635,7 +1714,8 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 		// couldn't possibly need to restore a disguise now :)
 		//m_xferRestoreDisguise = FALSE;
 
-		m_flicking = true;
+		if(!m_disguiseTransitionIsFlicking)
+			m_flicking = true;
 
 		m_flicked = !m_flicked;
 	}
@@ -1752,9 +1832,15 @@ void StealthUpdate::xfer( Xfer *xfer )
 
 	xfer->xferBool( &m_flicking );
 
+	xfer->xferBool( &m_disguiseTransitionIsFlicking );
+
 	xfer->xferUnsignedInt( &m_flickerFrame );
 
 	xfer->xferBool( &m_preserveLastGUI );
+
+	xfer->xferBool( &m_markForClearStealthLater );
+
+	xfer->xferBool( &m_isNotAutoDisguise );
 
 	xfer->xferAsciiString( &m_disguiseModelName );
 

@@ -104,6 +104,7 @@ public:
 	UnsignedInt		m_stealthLevel;
 	UnsignedInt		m_blackMarketCheckFrames;
 	UnsignedInt		m_disguiseFriendlyFlickerDelay;
+	UnsignedInt		m_disguiseFlickerTransitionTime;
   EvaMessage    m_enemyDetectionEvaEvent;
   EvaMessage    m_ownDetectionEvaEvent;
   Bool					m_innateStealth;
@@ -216,9 +217,14 @@ private:
 	Bool							m_flicking;							//I am flicking, don't remove my statuses
 	UnsignedInt						m_flickerFrame;						//frames to flicker for disguised Objects
 
+	Bool							m_disguiseTransitionIsFlicking;		//Current transition is flicking
+
 	mutable UnsignedInt				m_nextWakeUpFrame;					//Next Wake Up Frame, only use for calcSleepTime, dont xfer
 
 	Bool							m_preserveLastGUI;					//Select objects silently to not overwrite the Control Bar and GUI Commands
+
+	Bool							m_markForClearStealthLater;			//Fix Disguises auto Disguise back when Detected
+	Bool							m_isNotAutoDisguise;				//Fix Disguises auto Disguise back when Detected
 
 	AsciiString						m_disguiseModelName;				//Disguise Model for overwriting the current template
 };
