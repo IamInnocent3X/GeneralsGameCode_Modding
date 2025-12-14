@@ -663,7 +663,9 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "UsePartitionManagerToIterateDrawablesOnlySelect",	 INI::parseBool, NULL, offsetof(GlobalData, m_usePartitionManagerToIterateDrawablesOnlySelect) },
 	{ "UseEfficientIterateDrawablesScheme",	 INI::parseBool, NULL, offsetof(GlobalData, m_useEfficientDrawableScheme) },
 
-	{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) },
+	//{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) }, // OBSELETE
+
+	{ "AllocateMemoryToFixPathfindForManyPlayers",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // Credits to: Mauller
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 
@@ -1241,7 +1243,8 @@ GlobalData::GlobalData()
 	m_usePartitionManagerToIterateDrawablesOnlySelect = FALSE;
 	m_useEfficientDrawableScheme = FALSE;
 
-	m_fixLocoClump = FALSE;
+	//m_fixLocoClump = FALSE;
+	m_fixAIPathfindClumpForManyPlayers = FALSE; // Credits to: Mauller
 	m_corpsesHaveAirDrag = FALSE;
 	m_hideCashTextFromEnemies = FALSE;
 	m_hideCashTextFromEnemiesInvisibleUnitsOnly = FALSE;

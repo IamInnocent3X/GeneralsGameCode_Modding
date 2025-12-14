@@ -508,7 +508,7 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 			ignoreObstacle(victim);
 		}
 	}
-	if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 &&
+	/*if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 &&
 		 !isAttacking() && !m_isAttackPath && !hasUpdatedPath &&
 		 !getObject()->isAboveTerrain() && getObject()->getLayer() == LAYER_GROUND)
 	{
@@ -526,7 +526,7 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 			TheAI->pathfinder()->adjustToPossibleDestination(getObject(), getLocomotorSet(), &m_requestedDestination);
 		}
 		m_lastPos = *currPos;
-	}
+	}*/
 	computePath(pathfinder, &m_requestedDestination);
 	if (m_isFinalGoal && isDoingGroundMovement() && getPath()) {
 		TheAI->pathfinder()->updateGoal(getObject(), getPath()->getLastNode()->getPosition(),
@@ -2424,7 +2424,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
 		// NOTE: This is NOT to be treated as the main solution, but for as a temporary fix for a much bigger problem
 		// Investigation Notes: The problem most likely occur due to the physics update
-		if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 && getObject()->isKindOf(KINDOF_SELECTABLE) && getObject()->getPhysics())
+		/*if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 && getObject()->isKindOf(KINDOF_SELECTABLE) && getObject()->getPhysics())
 		{
 			const Coord3D *currPos = getObject()->getPosition();
 			const Real DARN_CLOSE = 0.0625f;
@@ -2587,7 +2587,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			//	m_lastPos = *currPos;
 			//}
 			//m_lastPos = *currPos;
-		}
+		}*/
 	}
 
 	/*if(m_locomotorIsLocked)

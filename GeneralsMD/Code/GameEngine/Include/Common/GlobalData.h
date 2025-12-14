@@ -608,13 +608,15 @@ public:
 	Bool m_usePartitionManagerToIterateDrawablesOnlySelect;
 	Bool m_useEfficientDrawableScheme;
 
-	Bool m_fixLocoClump;
+	//Bool m_fixLocoClump;
 	Bool m_corpsesHaveAirDrag;
 
 	Bool m_hideCashTextFromEnemies;
 	Bool m_hideCashTextFromEnemiesInvisibleUnitsOnly;
 
 	Bool m_fixHulksFreezingAboveTerrain;
+
+	Bool m_fixAIPathfindClumpForManyPlayers; // Credits to: Mauller
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
