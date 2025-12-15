@@ -100,7 +100,7 @@ void W3DOverlordAircraftDraw::doDrawModule(const Matrix3D* transformMtx)
 						riderDraw->setColorTintEnvelope(*env);
 
 					riderDraw->notifyDrawableDependencyCleared();
-					riderDraw->draw(NULL);// What the hell?  This param isn't used for anything
+					riderDraw->draw();// What the hell?  This param isn't used for anything
 				}
 			}
 		}
@@ -114,8 +114,9 @@ void W3DOverlordAircraftDraw::doDrawModule(const Matrix3D* transformMtx)
 				if (env)
 					riderDraw->setColorTintEnvelope(*env);
 
-      riderDraw->notifyDrawableDependencyCleared();
-      riderDraw->draw();
+				riderDraw->notifyDrawableDependencyCleared();
+				riderDraw->draw();
+			}
     }
     DEBUG_ASSERTCRASH( riderDraw, ("OverlordAircraftDraw finds no rider's drawable") );
 

@@ -155,15 +155,18 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	const ReplaceObjectUpgradeModuleData *data = getReplaceObjectUpgradeModuleData();
 	const ThingTemplate* replacementTemplate = TheThingFactory->findTemplate(data->m_replaceObjectName);
 
-	Object *me = getObject();
+	Object *me;
 
 	Bool oldObjectSelected;
 	Int oldObjectSquadNumber;
 	Matrix3D myMatrix;
 	Team* myTeam;
 
+	AIUpdateInterface *ai;
+	ObjectStatusMaskType prevStatus;
+
 	{
-		Object* me = getObject();
+		me = getObject();
 
 		myMatrix = *me->getTransformMatrix();
 		myTeam = me->getTeam();// Team implies player.  It is a subset.
@@ -179,8 +182,8 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		oldObjectSelected = data->m_transferSelectionDontClearGroup ? me->getDrawable() && me->getDrawable()->isSelected() : selectedDrawable && selectedDrawable->getID() == me->getDrawable()->getID();
 		oldObjectSquadNumber = me->getControllingPlayer()->getSquadNumberForObject(me);
 
-	AIUpdateInterface *ai = me->getAI();
-	ObjectStatusMaskType prevStatus = me->getStatusBits();
+		ai = me->getAI();
+		prevStatus = me->getStatusBits();
 
 		// Remove us first since occupation of cells is apparently not a refcount, but a flag.  If I don't remove, then the new
 		// thing will be placed, and then on deletion I will remove "his" marks.

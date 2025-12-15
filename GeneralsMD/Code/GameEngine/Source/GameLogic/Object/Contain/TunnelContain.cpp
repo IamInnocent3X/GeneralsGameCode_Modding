@@ -887,10 +887,10 @@ UpdateSleepTime TunnelContain::update( void )
 	if (controllingPlayer)
 	{
 		TunnelTracker *tunnelSystem = controllingPlayer->getTunnelSystem();
+		const TunnelContainModuleData* modData = getTunnelContainModuleData();
 
 		if (tunnelSystem)
 		{
-			const TunnelContainModuleData* modData = getTunnelContainModuleData();
 #if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
 			tunnelSystem->healObjects(modData->m_framesForFullHeal);
 #endif

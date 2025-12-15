@@ -86,7 +86,7 @@ void W3DOverlordTankDraw::doDrawModule(const Matrix3D* transformMtx)
 				Drawable* riderDraw = (*it)->getDrawable();
 				riderDraw->setColorTintEnvelope(*getDrawable()->getColorTintEnvelope());
 				riderDraw->notifyDrawableDependencyCleared();
-				riderDraw->draw(NULL);
+				riderDraw->draw();
 			}
 		}
 		else if (me->getContain()->friend_getRider()
@@ -95,9 +95,10 @@ void W3DOverlordTankDraw::doDrawModule(const Matrix3D* transformMtx)
 			Drawable* riderDraw = me->getContain()->friend_getRider()->getDrawable();
 			riderDraw->setColorTintEnvelope(*getDrawable()->getColorTintEnvelope());
 
-		riderDraw->notifyDrawableDependencyCleared();
-		riderDraw->draw();
-	}
+			riderDraw->notifyDrawableDependencyCleared();
+			riderDraw->draw();
+		}
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

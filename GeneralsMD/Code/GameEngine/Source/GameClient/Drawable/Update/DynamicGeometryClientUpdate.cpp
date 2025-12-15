@@ -61,27 +61,37 @@ enum DynamicGeometryPhaseType CPP_11(: Int)
 {
 	DGPHASE_INITIAL = 0,
 	DGPHASE_MIDPOINT,
-	DGPHASE_FINAL
+	DGPHASE_FINAL,
+
+	DGPHASE_COUNT
+
 };
 
 static const char* TheDynamicGeometryPhaseNames[] =
 {
 	"INITIAL",
 	"MIDPOINT",
-	"FINAL"
+	"FINAL",
+	NULL
 };
+static_assert(ARRAY_SIZE(TheDynamicGeometryPhaseNames) == DGPHASE_COUNT + 1, "Array size");
 // -----------------------------------------------------------------------------------------------
 enum DynamicGeometryInterpolationType CPP_11(: Int)
 {
 	DGINTERP_LINEAR = 0,
-	DGINTERP_SMOOTH
+	DGINTERP_SMOOTH,
+
+	DGINTERP_COUNT
+
 };
 
 static const char* TheInterpolationTypeNames[] =
 {
 	"LINEAR",
-	"SMOOTH"
+	"SMOOTH",
+	NULL
 };
+static_assert(ARRAY_SIZE(TheInterpolationTypeNames) == DGINTERP_COUNT + 1, "Incorrect array size");
 
 //-------------------------------------------------------------------------------------------------
 static void parseAlpha(INI* ini, void* instance, void* /*store*/, const void* /*userData*/)

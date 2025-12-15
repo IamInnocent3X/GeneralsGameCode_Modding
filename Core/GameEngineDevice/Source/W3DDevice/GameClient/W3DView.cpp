@@ -1428,7 +1428,7 @@ void W3DView::update(void)
 	// render all of the visible Drawables
 	/// @todo this needs to use a real region partition or something
 	//// IamInnocent - Attempted usage to register regions and drawables
-	if (WW3D::Get_Frame_Time() || m_updateEfficient)	//make sure some time actually elapsed
+	if (!TheGlobalData->m_useEfficientDrawableScheme || WW3D::Get_Sync_Frame_Time() || m_updateEfficient)	//make sure some time actually elapsed
 		TheGameClient->iterateDrawablesInRegion( &axisAlignedRegion, drawDrawable, this );
 
 	m_updateEfficient = FALSE;

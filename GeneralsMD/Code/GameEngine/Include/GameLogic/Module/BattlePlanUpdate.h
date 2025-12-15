@@ -95,6 +95,16 @@ enum TransitionStatus CPP_11(: Int)
 	TRANSITIONSTATUS_PACKING,
 };
 
+enum BattlePlanStatus CPP_11(: Int)
+{
+	PLANSTATUS_NONE,
+	PLANSTATUS_BOMBARDMENT,
+	PLANSTATUS_HOLDTHELINE,
+	PLANSTATUS_SEARCHANDDESTROY,
+
+	PLANSTATUS_COUNT
+};
+
 #ifdef DEFINE_BATTLEPLANSTATUS_NAMES
 static const char* TheBattlePlanStatusNames[] =
 {
@@ -105,17 +115,8 @@ static const char* TheBattlePlanStatusNames[] =
 
 	NULL
 };
+static_assert(ARRAY_SIZE(TheBattlePlanStatusNames) == PLANSTATUS_COUNT + 1, "Array size");
 #endif
-
-enum BattlePlanStatus CPP_11(: Int)
-{
-	PLANSTATUS_NONE,
-	PLANSTATUS_BOMBARDMENT,
-	PLANSTATUS_HOLDTHELINE,
-	PLANSTATUS_SEARCHANDDESTROY,
-
-	PLANSTATUS_COUNT
-};
 
 class BattlePlanBonuses : public MemoryPoolObject
 {

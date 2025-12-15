@@ -435,10 +435,6 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 					deleteInstance(m_weapons[i]);
 					m_weapons[i] = NULL;
 				}
-		for (Int i = WEAPONSLOT_COUNT - 1; i >= PRIMARY_WEAPON ; --i)
-		{
-			deleteInstance(m_weapons[i]);
-			m_weapons[i] = NULL;
 
 				if (set->getNth((WeaponSlotType)i))
 				{

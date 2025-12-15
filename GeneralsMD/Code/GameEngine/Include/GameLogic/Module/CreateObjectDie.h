@@ -95,7 +95,6 @@ public:
 	Bool											m_transferToAssaultTransport;
 	Bool											m_transferShieldedTargets;
 	Bool											m_transferShieldingTargets;
-	Bool											m_transferSelection;
 	Bool											m_transferSelectionDontClearGroup;
 	Bool											m_transferObjectName;
 	

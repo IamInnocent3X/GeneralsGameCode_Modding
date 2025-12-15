@@ -97,6 +97,7 @@ enum DamageType CPP_11(: Int)
 	DAMAGE_ANTI_TANK_MISSILE,
 	DAMAGE_ANTI_AIR_GUN,
 	DAMAGE_ANTI_AIR_MISSILE,
+	DAMAGE_ARTILLERY,
 	DAMAGE_SEISMIC,
 	DAMAGE_RAD_BEAM,
 	DAMAGE_TESLA,
@@ -185,29 +186,29 @@ typedef std::vector<AsciiStringIntPair>	CustomFlags;
 
 typedef std::pair<DamageTypeFlags, AsciiString>		DamageFlagsCustom;	
 
-Bool getCustomTypeFlag( const AsciiString& set , const CustomFlags& CustomTypes , const AsciiString& CustomType )
+inline Bool getCustomTypeFlag( const AsciiString& set, const CustomFlags& CustomTypes, const AsciiString& CustomType )
 {
-	Bool returnTrue = TRUE;
+	Bool pass = TRUE;
 	
 	if(!set.isEmpty())
 	{
-		if (strcmp(set.str(), "NONE") == 0)
-			returnTrue = FALSE;
+		if (stricmp(set.str(), "NONE") == 0)
+			pass = FALSE;
 	}
 
 	if(CustomTypes.empty())
-		return returnTrue;
+		return pass;
 
 	for (CustomFlags::const_iterator it = CustomTypes.begin(); 
 				it != CustomTypes.end();
 				++it)
 	{
-		if (it->second == 2 && (*it).first == CustomType)
+		if (it->second == 2 && it->first == CustomType)
 			return FALSE;
-		if (it->second == 1 && (*it).first == CustomType)
-			returnTrue = TRUE;
+		if (it->second == 1 && it->first == CustomType)
+			pass = TRUE;
 	}
-	return returnTrue;
+	return pass;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -330,6 +331,7 @@ static const char *TheProtectionNames[] =
 
 	NULL
 };
+static_assert(ARRAY_SIZE(TheProtectionNames) == PROTECTION_COUNT + 1, "Incorrect array size");
 #endif
 
 typedef UnsignedInt ProtectionTypeFlags;
@@ -369,6 +371,7 @@ static const char *TheMagnetFormulaNames[] =
 	"HYPERDYNAMIC",
 	NULL
 };
+static_assert(ARRAY_SIZE(TheMagnetFormulaNames) == MAGNET_COUNT + 1, "Incorrect array size");
 #endif
 
 //-------------------------------------------------------------------------------------------------

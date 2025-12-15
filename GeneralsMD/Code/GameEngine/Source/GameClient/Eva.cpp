@@ -288,7 +288,6 @@ const ShouldPlayFunc Eva::s_shouldPlayFuncs[] =
   Eva::shouldPlayGenericHandler,
   Eva::shouldPlayGenericHandler,
   Eva::shouldPlayGenericHandler,
-	NULL,
 };
 
 

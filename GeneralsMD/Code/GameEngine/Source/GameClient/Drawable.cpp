@@ -117,7 +117,8 @@ static_assert(ARRAY_SIZE(TheDrawableIconNames) == MAX_ICONS + 1, "Incorrect arra
 
 
 // -----
-const char* TintStatusFlags::s_bitNameList[] =
+template<>
+const char* const TintStatusFlags::s_bitNameList[] =
 {
 	"NONE",
 	"DISABLED",
@@ -141,6 +142,7 @@ const char* TintStatusFlags::s_bitNameList[] =
 	"EXTRA8",
 	NULL
 };
+static_assert(ARRAY_SIZE(TintStatusFlags::s_bitNameList) == TintStatusFlags::NumBits + 1, "Incorrect array size");
 
 /** 
  * Returns a special DynamicAudioEventInfo which can be used to mark a sound as "no sound".

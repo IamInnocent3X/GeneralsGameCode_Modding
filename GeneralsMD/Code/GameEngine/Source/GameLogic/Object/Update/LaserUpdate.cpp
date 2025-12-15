@@ -87,20 +87,6 @@ LaserUpdateModuleData::LaserUpdateModuleData()
 	p.add(dataFieldParse);
 }
 
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-LaserRadiusUpdate::LaserRadiusUpdate()
-{
-	m_widening = false;
-	m_widenStartFrame = 0;
-	m_widenFinishFrame = 0;
-	m_currentWidthScalar = 1.0f;
-	m_decaying = false;
-	m_decayStartFrame = 0;
-	m_decayFinishFrame = 0;
-}
-
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 LaserUpdate::LaserUpdate( Thing *thing, const ModuleData* moduleData ) : ClientUpdateModule( thing, moduleData )

@@ -30,10 +30,8 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
-#include "Common/AudioEventRTS.h"
-#include "Common/AudioHandleSpecialValues.h"
-#include "Common/GameEngine.h"
 #include "Common/RandomValue.h"
+#include "Common/FramePacer.h"
 #include "GameClient/Shell.h"
 #include "GameClient/WindowLayout.h"
 #include "GameClient/GameWindowManager.h"
@@ -44,8 +42,6 @@
 #include "GameLogic/GameLogic.h"
 #include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/PeerDefsImplementation.h"
-
-#include <rts/profile.h>
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 Shell *TheShell = NULL;  ///< the shell singleton definition

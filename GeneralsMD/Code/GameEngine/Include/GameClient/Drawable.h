@@ -708,8 +708,8 @@ private:
   DynamicAudioEventInfo *m_customSoundAmbientInfo; ///< If not NULL, info about the ambient sound to attach to this object
 
 	DrawableStatusBits m_status;		///< status bits (see DrawableStatus enum)
-	TintStatus m_tintStatus;				///< tint color status bits (see TintStatus enum)
-	TintStatus m_prevTintStatus;///< for edge testing with m_tintStatus
+	TintStatusFlags m_tintStatus;				///< tint color status bits (see TintStatus enum)
+	TintStatusFlags m_prevTintStatus;///< for edge testing with m_tintStatus
 	std::vector<AsciiString> m_tintCustomStatus;
 	std::vector<AsciiString> m_prevTintCustomStatus;
 	TintStatus m_eraseTint;
