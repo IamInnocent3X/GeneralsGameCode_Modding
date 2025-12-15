@@ -575,7 +575,10 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				Bool selectAcrossMap = (BitIsSet(modifiers, KEY_STATE_ALT) ? TRUE : FALSE);
 
 				// only allow things that are selectable. Also, we aren't allowed to
-				Drawable *picked = TheTacticalView->pickDrawable( &region.lo, FALSE, PICK_TYPE_SELECTABLE);
+				Drawable *picked = TheTacticalView->pickDrawable( &region.lo, FALSE, (PickType)0xffffffff);
+
+				if(checkIsNotSelectable(picked))
+					picked = TheTacticalView->pickDrawable( &region.lo, FALSE, PICK_TYPE_SELECTABLE );
 
 				// If there wasn't anyone to pick, then we want to propagate this double click.
 				if (picked == NULL)
