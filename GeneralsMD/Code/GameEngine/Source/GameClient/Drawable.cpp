@@ -1237,13 +1237,29 @@ void Drawable::setCustomTintStatus( const AsciiString& customStatusType)
 }
 
 //-------------------------------------------------------------------------------------------------
+void Drawable::clearTintStatus(TintStatus statusType, bool clearLater)
+{ 
+	if(clearLater || ( m_countFrames > TheGameLogic->getFrame() && m_eraseTint == statusType ) )
+		m_eraseTint = statusType;
+	else
+		m_tintStatus.set(statusType, 0);
+}
+
+//-------------------------------------------------------------------------------------------------
 void Drawable::clearCustomTintStatus( const AsciiString& customStatusType, bool clearLater )
 { 
+	// do nothing for no custom status type
+	if(customStatusType.isEmpty())
+		return;
+	
 	if(clearLater)
 	{
 		m_eraseCustomTint = customStatusType;
 		return;
 	}
+
+	if(m_countFrames > TheGameLogic->getFrame() && m_eraseCustomTint == customStatusType)
+		return;
 
 	std::vector<AsciiString>::iterator it;
 	for (it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end();)
