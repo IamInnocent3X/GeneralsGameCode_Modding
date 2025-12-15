@@ -61,6 +61,7 @@
 //-------------------------------------------------------------------------------------------------
 ConvertToHijackedVehicleCrateCollide::ConvertToHijackedVehicleCrateCollide( Thing *thing, const ModuleData* moduleData ) : CrateCollide( thing, moduleData )
 {
+	m_originalName = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -162,6 +163,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	other->setTeam( obj->getControllingPlayer()->getDefaultTeam() );
 	other->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );// I claim this car in the name of the GLA
+	other->setHijackerID(obj->getID());
 
 	AIUpdateInterface* targetAI = other->getAIUpdateInterface();
 	targetAI->aiMoveToPosition( other->getPosition(), CMD_FROM_AI );
@@ -184,6 +186,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	//In order to make things easier for the designers, we are going to transfer the hijacker's name
 	//to the car... so the designer can control the car with their scripts.
+	m_originalName = other->getName();
 	TheScriptEngine->transferObjectName( obj->getName(), other );
 
 	ExperienceTracker *targetExp = other->getExperienceTracker();
@@ -213,15 +216,31 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 		return TRUE;
 	}
 
+	const ConvertToHijackedVehicleCrateCollideModuleData *data = getConvertToHijackedVehicleCrateCollideModuleData();
+
 	// I we have made it this far, we are going to ride in this vehicle for a while
 	// get the name of the hijackerupdate
-	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-	HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+	//HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//if( hijackerUpdate )
+	HijackerUpdateInterface *hijackerUpdate = obj->getHijackerUpdateInterface();
 	if( hijackerUpdate )
 	{
+		obj->setHijackingID( other->getID() );
 		hijackerUpdate->setTargetObject( other );
+		hijackerUpdate->setHijackType( HIJACK_HIJACKER );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
+
+		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
+		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
+		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
+		hijackerUpdate->setDestroyOnTargetDie( data->m_destroyOnTargetDie );
+		hijackerUpdate->setPercentDamage( data->m_damagePercentageToUnit );
+		hijackerUpdate->setStatusToRemove( data->m_statusToRemove );
+		hijackerUpdate->setStatusToDestroy( data->m_statusToDestroy );
+		hijackerUpdate->setCustomStatusToRemove( data->m_customStatusToRemove );
+		hijackerUpdate->setCustomStatusToDestroy( data->m_customStatusToDestroy );
 
 		// flag bits so hijacker won't be selectible or collideable
 		//while within the vehicle
@@ -248,9 +267,53 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 	if( obj->getDrawable() )
 		obj->getDrawable()->setDrawableHidden( true );
 
+	CrateCollide::executeCrateBehavior(other);
+
 	// By returning FALSE, we will not remove the object (Hijacker)
 	return FALSE;
 //	return TRUE;
+}
+
+Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
+{
+	CrateCollide::revertCollideBehavior(other);
+
+	getObject()->setHijackingID(INVALID_ID);
+	getObject()->setLastExitedFrame(TheGameLogic->getFrame() + 10*LOGICFRAMES_PER_SECOND);
+
+	// If the Object doesn't exist, or is destroyed we stop here.
+	if(!other || other->isDestroyed() || other->isEffectivelyDead())
+		return FALSE;
+
+	// We are not hijacked
+	if(other->getTeam() != getObject()->getTeam())
+		return FALSE;
+
+	// Clear the status to make it Hijackable
+	other->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );
+
+	// Set its name back to the original name
+	TheScriptEngine->transferObjectName( m_originalName, other );
+
+	// Copied from NeutronBlastBehavior
+	// Make it unmanned, so units can easily check the ability to "take control of it"
+	other->setDisabled( DISABLED_UNMANNED );
+
+	if ( other->getAI() )
+	other->getAI()->aiIdle( CMD_FROM_AI );
+
+	TheGameLogic->deselectObject(other, PLAYERMASK_ALL, TRUE);
+
+	// Clear any terrain decals here
+	Drawable* draw = other->getDrawable();
+	if (draw)
+		draw->setTerrainDecal(TERRAIN_DECAL_NONE);
+
+	// Convert it to the neutral team so it renders gray giving visual representation that it is unmanned.
+	other->setTeam( ThePlayerList->getNeutralPlayer()->getDefaultTeam() );
+
+	// Indicate that we have reverted the Collied Behavior and no need to continue 
+	return TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -279,6 +342,9 @@ void ConvertToHijackedVehicleCrateCollide::xfer( Xfer *xfer )
 
 	// extend base class
 	CrateCollide::xfer( xfer );
+
+	// original name
+	xfer->xferAsciiString( &m_originalName );
 
 }
 

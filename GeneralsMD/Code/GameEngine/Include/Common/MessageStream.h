@@ -29,6 +29,7 @@
 #pragma once
 
 #include "Common/GameCommon.h"	// ensure we get DUMP_PERF_STATS, or not
+#include "Common/KindOf.h"
 #include "Common/SubsystemInterface.h"
 #include "Lib/BaseType.h"
 #include "Common/GameMemory.h"
@@ -62,6 +63,20 @@ union GameMessageArgumentType														///< Union of possible data for given
 	WideChar				wChar;
 };
 
+struct OrderNearbyData
+{
+	Real 				Radius;
+	KindOfMaskType		RequiredMask;
+	KindOfMaskType		ForbiddenMask;
+	UnsignedInt			MinDelay;
+	UnsignedInt			MaxDelay;
+	UnsignedInt			IntervalDelay;
+
+	OrderNearbyData() : Radius(0.0f), RequiredMask(KINDOFMASK_NONE), ForbiddenMask(KINDOFMASK_NONE), MinDelay(0), MaxDelay(0), IntervalDelay(0)
+	{
+	}
+};
+
 enum GameMessageArgumentDataType CPP_11(: Int)
 {
 	ARGUMENTDATATYPE_INTEGER,
@@ -87,6 +102,12 @@ public:
 	GameMessageArgumentDataType	m_type;									///< The type of the argument.
 };
 EMPTY_DTOR(GameMessageArgument)
+
+struct GameMessageArgumentStruct
+{
+	GameMessageArgumentType		data;									///< The data storage of an argument
+	GameMessageArgumentDataType	type;									///< The type of the argument.
+};
 
 /**
  * A game message that either lives on TheMessageStream or TheCommandList.
@@ -228,6 +249,7 @@ public:
 		MSG_META_STOP,															///< selected units stop
 		MSG_META_DEPLOY,														///< selected units 'deploy'
 		MSG_META_CREATE_FORMATION,									///< selected units become a formation
+		MSG_META_MOVE_IN_FORMATION,									///< selected units move in formation
 		MSG_META_FOLLOW,														///< selected units 'follow'
 		MSG_META_CHAT_PLAYERS,											///< send chat msg to all players
 		MSG_META_CHAT_ALLIES,												///< send chat msg to allied players
@@ -464,6 +486,7 @@ public:
 		MSG_SABOTAGE_HINT,
 		MSG_FIREBOMB_HINT,								///< throw a molotov cocktail
 		MSG_CONVERT_TO_CARBOMB_HINT,								///< if clicked, selected unit(s) will attempt to convert clicked object into a carbomb.
+		MSG_EQUIP_HINT,									///< if clicked, selected unit(s) will attempt to equip itself onto the Object.
 		MSG_CAPTUREBUILDING_HINT,
 #ifdef ALLOW_SURRENDER
 		MSG_PICK_UP_PRISONER_HINT,
@@ -543,6 +566,7 @@ public:
 		MSG_DO_SPECIAL_POWER,												///< do special
 		MSG_DO_SPECIAL_POWER_AT_LOCATION,						///< do special with target location
 		MSG_DO_SPECIAL_POWER_AT_OBJECT,							///< do special at with target object
+		MSG_DO_SPECIAL_POWER_AT_DRAWABLE,						///< do special at with target drawable
 		MSG_SET_RALLY_POINT,												///< (objectID, location)
 		MSG_PURCHASE_SCIENCE,												///< purchase a science
 		MSG_QUEUE_UPGRADE,													///< queue the "research" of an upgrade
@@ -558,6 +582,7 @@ public:
 		MSG_SELL,																		///< sell a structure
 		MSG_EXIT,																		///< WE want to exit from whatever WE are inside of
 		MSG_EVACUATE,																///< Dump out all of OUR contained objects
+		MSG_ENTER_ME,																///< Tell nearby containable objects to Enter Me.
 		MSG_EXECUTE_RAILED_TRANSPORT,								///< Execute railed transport sequence
 		MSG_COMBATDROP_AT_LOCATION,									///< dump out all rappellers
 		MSG_COMBATDROP_AT_OBJECT,										///< dump out all rappellers
@@ -570,6 +595,7 @@ public:
 		MSG_DO_REPAIR,															///< dozer will go repair the clicked target
 		MSG_RESUME_CONSTRUCTION,										///< resume construction on a structure
 		MSG_ENTER,																	///< Enter object
+		MSG_EQUIP,
 		MSG_DOCK,																		///< Dock with this object
 		MSG_DO_MOVETO,															///< location
 		MSG_DO_ATTACKMOVETO,												///< location
@@ -582,6 +608,7 @@ public:
 		MSG_INTERNET_HACK,													///< Begin a persistent internet hack (free slow income)
 		MSG_DO_CHEER,																///< Orders selected units to play cheer animation (if possible)
 		MSG_TOGGLE_OVERCHARGE,											///< Toggle overcharge status of a power plant
+		MSG_DISABLE_POWER,											///< Toggle a powered object to disable its power
 		MSG_SWITCH_WEAPONS,													///< Switches which weapon slot to use for an object
 		MSG_CONVERT_TO_CARBOMB,
 		MSG_CAPTUREBUILDING,
@@ -598,6 +625,7 @@ public:
 		MSG_SET_REPLAY_CAMERA,											///< Track camera pos for replays
 		MSG_SELF_DESTRUCT,													///< Destroys a player's units (for copy protection or to quit to observer)
 		MSG_CREATE_FORMATION,												///< Creates a formation.
+		MSG_MOVE_IN_FORMATION,												///< Units move in formation.
 		MSG_LOGIC_CRC,															///< CRC from the logic passed around in a network game :)
 		MSG_SET_MINE_CLEARING_DETAIL,								///< CRC from the logic passed around in a network game :)
 		MSG_ENABLE_RETALIATION_MODE,								///< Turn retaliation mode on or off for the specified player.
@@ -638,6 +666,10 @@ public:
 	Type getType( void ) const { return m_type; }					///< Return the message type
 	UnsignedByte getArgumentCount( void ) const { return m_argCount; }	///< Return the number of arguments for this msg
 
+	OrderNearbyData getOrderNearbyData( void ) const { return m_orderData; }
+	ObjectID getDoSingleID( void ) const { return m_doSingleID; }
+	Bool getDoSingleAddStat( void ) const { return m_doSingleAddStat; }
+
 	const char *getCommandAsString( void ) const; ///< returns a string representation of the command type.
 	static const char *getCommandTypeAsString(GameMessage::Type t);
 
@@ -669,6 +701,10 @@ public:
 	void friend_setList(GameMessageList* m) { m_list = m; }
 	void friend_setPlayerIndex(Int i) { m_playerIndex = i; }
 
+	void friend_setOrderData( OrderNearbyData o ) { m_orderData = o; }
+	void friend_setDoSingleID(ObjectID ID) { m_doSingleID = ID; }
+	void friend_setDoSingleAddStat() { m_doSingleAddStat = TRUE; }
+
 private:
 	// friend classes are bad. don't use them. no, really.
 	// if for no other reason than the fact that they subvert MemoryPoolObject. (srj)
@@ -679,6 +715,10 @@ private:
 	Type m_type;										///< The type of this message
 
 	Int m_playerIndex;													///< The Player who issued the command
+
+	OrderNearbyData m_orderData;										///< IamInnocent: New! Order nearby objects to do things
+	ObjectID		m_doSingleID;										///< IamInnocent: Set for order delays for conducting for a single specific Object.
+	Bool			m_doSingleAddStat;									///< IamInnocent: For using Special Power on shortcut to add stats when doing from a single specific Object. I.E. Special Power from Shortcut
 
 	/// @todo If a GameMessage needs more than 255 arguments, it needs to be split up into multiple GameMessage's.
 	UnsignedByte m_argCount;										///< The number of arguments of this message
@@ -713,6 +753,8 @@ public:
 	virtual void insertMessage( GameMessage *msg, GameMessage *messageToInsertAfter );	// Insert message after messageToInsertAfter.
 	virtual void removeMessage( GameMessage *msg );			///< Remove message from the list
 	virtual Bool containsMessageOfType( GameMessage::Type type );	///< Return true if a message of type is in the message stream
+
+	virtual void appendMessageWithOrderNearby( GameMessage *msg, OrderNearbyData orderData );			///< Add message to end of the list with order radius properties
 
 
 
@@ -757,6 +799,8 @@ public:
 
 	virtual GameMessage *appendMessage( GameMessage::Type type );		///< Append a message to the end of the stream
 	virtual GameMessage *insertMessage( GameMessage::Type type, GameMessage *messageToInsertAfter );	// Insert message after messageToInsertAfter.
+
+	virtual GameMessage *appendMessageWithOrderNearby( GameMessage::Type type, OrderNearbyData orderData );			///< Add message to end of the list with order radius properties
 
 	// Methods NOT Inherited ------------------------------------------------------------------------
 	void propagateMessages( void );													///< Propagate messages through attached translators

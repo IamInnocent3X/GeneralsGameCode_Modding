@@ -54,7 +54,7 @@ HighlanderBody::~HighlanderBody( void )
 void HighlanderBody::attemptDamage( DamageInfo *damageInfo )
 {
 	// Bind to one hitpoint remaining afterwards, unless it is Unresistable damage
-	if( damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE )
+	if( damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE || damageInfo->in.m_notAbsoluteKill == TRUE )
 		damageInfo->in.m_amount = min( damageInfo->in.m_amount, getHealth() - 1 );
 
 	ActiveBody::attemptDamage(damageInfo);

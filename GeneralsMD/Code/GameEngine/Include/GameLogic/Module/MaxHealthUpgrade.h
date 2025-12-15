@@ -48,6 +48,13 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 
 	Real								m_addMaxHealth;
+	Real								m_multiplyMaxHealth;
+	Real								m_addSubdualCap;
+	Real								m_multiplySubdualCap;
+	Real								m_addSubdualHealRate;
+	Real								m_multiplySubdualHealRate;
+	Real								m_addSubdualHealAmount;
+	Real								m_multiplySubdualHealAmount;
 	MaxHealthChangeType m_maxHealthChangeType;
 
 };
@@ -65,9 +72,14 @@ public:
 	MaxHealthUpgrade( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype defined by MemoryPoolObject
 
+	void doMaxHealthUpgrade( Bool isAdd );
+
 protected:
 
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+	Bool m_hasExecuted;
 };

@@ -188,6 +188,7 @@ public:
 	// data type parsing (the highest level of what type of thing we're parsing)
 	static void parseObjectDefinition( INI *ini );
 	static void parseObjectReskinDefinition( INI *ini );
+	static void parseObjectExtendDefinition( INI* ini );
 	static void parseWeaponTemplateDefinition( INI *ini );
 	static void parseScienceDefinition( INI *ini );
 	static void parseRankDefinition( INI *ini );
@@ -209,6 +210,7 @@ public:
 	static void parseWeatherDefinition( INI *ini );
 	static void parseMappedImageDefinition( INI *ini );
 	static void parseArmorDefinition( INI *ini );
+	static void parseArmorExtendDefinition( INI *ini );
 	static void parseDamageFXDefinition( INI *ini );
 	static void parseDrawGroupNumberDefinition( INI *ini );
 	static void parseTerrainDefinition( INI *ini );
@@ -247,6 +249,8 @@ public:
 	static void parseCredits( INI* ini );
 	static void parseWindowTransitions( INI* ini );
 	static void parseChallengeModeDefinition( INI* ini );
+	static void parseCustomDamageTypesDefinition( INI *ini );
+	static void parseCustomRadiusDecalDefinition( INI *ini );
 
 	AsciiString getFilename( void ) const { return m_filename; }
 	INILoadType getLoadType( void ) const { return m_loadType; }
@@ -266,7 +270,9 @@ public:
 	static void parseUnsignedShort( INI *ini, void *instance, void *store, const void* userData );
 	static void parseInt( INI *ini, void *instance, void *store, const void* userData );
 	static void parseUnsignedInt( INI *ini, void *instance, void *store, const void* userData );
+	static void parseUnsignedIntVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseReal( INI *ini, void *instance, void *store, const void* userData );
+	static void parseRealVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parsePositiveNonZeroReal( INI *ini, void *instance, void *store, const void* userData );
 	static void parseBool( INI *ini, void *instance, void *store, const void* userData );
 	static void parseBitInInt32( INI *ini, void *instance, void *store, const void* userData );
@@ -274,11 +280,15 @@ public:
 	static void parseQuotedAsciiString( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAsciiStringVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAsciiStringVectorAppend( INI *ini, void *instance, void *store, const void* userData );
+	static void parseAsciiStringWithColonVector( INI *ini, void *instance, void *store, const void* userData );
+	static void parseAsciiStringWithColonVectorAppend( INI *ini, void *instance, void *store, const void* userData );
+	static void parseDeployFunctionChangeUpgrade( INI *ini, void *instance, void *store, const void* userData );
 	static void parseAndTranslateLabel( INI *ini, void *instance, void *store, const void* userData );
 	static void parseMappedImage( INI *ini, void *instance, void *store, const void *userData );
 	static void parseAnim2DTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parsePercentToReal( INI *ini, void *instance, void *store, const void* userData );
 	static void parseRGBColor( INI *ini, void *instance, void *store, const void* userData );
+	static void parseRGBColorReal( INI *ini, void *instance, void *store, const void* userData );
 	static void parseRGBAColorInt( INI *ini, void *instance, void *store, const void* userData );
 	static void parseColorInt( INI *ini, void *instance, void *store, const void* userData );
 	static void parseCoord3D( INI *ini, void *instance, void *store, const void* userData );
@@ -289,15 +299,20 @@ public:
 	static void parseFXList( INI *ini, void *instance, void *store, const void* userData );
 	static void parseParticleSystemTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parseObjectCreationList( INI *ini, void *instance, void *store, const void* userData );
+	static void parseObjectCreationListVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseSpecialPowerTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parseUpgradeTemplate( INI *ini, void *instance, void *store, const void *userData );
 	static void parseScience( INI *ini, void *instance, void *store, const void *userData );
 	static void parseScienceVector( INI *ini, void *instance, void *store, const void *userData );
+	static void parseWeaponBonusVector( INI *ini, void *instance, void *store, const void *userData );
+	static void parseWeaponBonusVectorKeepDefault( INI *ini, void *instance, void *store, const void *userData );
 	static void parseGameClientRandomVariable( INI* ini, void *instance, void *store, const void* userData );
 	static void parseBitString8( INI *ini, void *instance, void *store, const void* userData );
 	static void parseBitString32( INI *ini, void *instance, void *store, const void* userData );
 	static void parseByteSizedIndexList( INI *ini, void *instance, void *store, const void* userData );
 	static void parseIndexList( INI *ini, void *instance, void *store, const void* userData );
+	static void parseIndexListVector( INI *ini, void *instance, void *store, const void* userData );
+	static void parseIndexListOrNone( INI *ini, void *instance, void *store, const void* userData );
 	static void parseLookupList( INI *ini, void *instance, void *store, const void* userData );
 	static void parseThingTemplate( INI *ini, void *instance, void *store, const void* userData );
 	static void parseArmorTemplate( INI *ini, void *instance, void *store, const void* userData );
@@ -307,6 +322,7 @@ public:
 	static void parseDurationReal( INI *ini, void *instance, void *store, const void* userData );
 	// parse a duration in msec and convert to duration in integral number of frames, (unsignedint) rounding UP
 	static void parseDurationUnsignedInt( INI *ini, void *instance, void *store, const void* userData );
+	static void parseDurationUnsignedIntVector( INI *ini, void *instance, void *store, const void* userData );
 	static void parseDurationUnsignedShort( INI *ini, void *instance, void *store, const void *userData );
 	// parse acceleration in (dist/sec) and convert to (dist/frame)
 	static void parseVelocityReal( INI *ini, void *instance, void *store, const void* userData );
@@ -318,10 +334,21 @@ public:
 	static void parseAngularVelocityReal( INI *ini, void *instance, void *store, const void *userData );
 	static void parseDamageTypeFlags(INI* ini, void* instance, void* store, const void* userData);
 	static void parseDeathTypeFlags(INI* ini, void* instance, void* store, const void* userData);
+	static void parseDeathTypeFlagsList(INI* ini, void* instance, void* store, const void* userData);
 	static void parseVeterancyLevelFlags(INI* ini, void* instance, void* store, const void* userData);
 	static void parseSoundsList( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	static void parseIntVector( INI *ini, void *instance, void *store, const void* userData );
+	static void parseIntVectorAppend( INI *ini, void *instance, void *store, const void* userData );
 
+	static void parseDamageTypeFlagsCustom(INI* ini, void* instance, void* store, const void* userData);
+	static void parseDeathTypeFlagsCustom(INI* ini, void* instance, void* store, const void* userData);
+	static void parseCustomTypes(INI* ini, void* instance, void* store, const void* userData);
 
+	static void parseProtectionTypeFlags(INI* ini, void* instance, void* store, const void* userData);
+	
+	// like parseIndexList but special handling for NONE to return -2 (EVA_None)
+	static void parseEvaNameIndexList(INI* ini, void* instance, void* store, const void* userData);
+	
 	/**
 		return the next token. if seps is null (or omitted), the standard seps are used.
 

@@ -155,6 +155,59 @@ Bool UpgradeMux::wouldUpgrade( UpgradeMaskType keyMask ) const
 	return FALSE;
 }
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted ) const
+{
+	UpgradeMaskType activation, conflicting;
+	getUpgradeActivationMasks(activation, conflicting);
+
+	//Make sure we have activation conditions and we haven't performed the upgrade already.
+	if( activation.any() && keyMask.any() )
+	{
+		//If we have conflicting upgrades, return the Value
+		if( keyMask.testForAny( conflicting))
+		{
+			if(hasExecuted)
+				return 2; // Remove the Upgrade
+			else
+				return 0; // No Removal needed
+		}
+
+		//Finally check to see if our upgrade conditions match.
+		if( requiresAllActivationUpgrades() )
+		{
+			//Make sure ALL triggers requirements are upgraded
+			if( keyMask.testForAll( activation ) && !hasExecuted)
+			{
+				return 1; // Grant the Upgrade
+			}
+			else if(!keyMask.testForAll( activation ) && hasExecuted)
+			{
+				return 2; // Remove the Upgrade
+			}
+		}
+		else
+		{
+			//Check if ANY trigger requirements are met.
+			if( keyMask.testForAny( activation ) && !hasExecuted)
+			{
+				return 1; // Grant the Upgrade
+			}
+			else if( !keyMask.testForAny( activation ) && hasExecuted)
+			{
+				return 2; // Remove the Upgrade
+			}
+		}
+	}
+	else if( hasExecuted )
+	{
+		return 2; // remove the Upgrade if no upgrades are present
+	}
+
+	//We can't upgrade!
+	return 0;
+}
 //-------------------------------------------------------------------------------------------------
 void UpgradeMux::giveSelfUpgrade()
 {

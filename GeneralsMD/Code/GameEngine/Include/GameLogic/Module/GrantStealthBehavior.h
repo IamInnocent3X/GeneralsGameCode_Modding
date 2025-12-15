@@ -46,10 +46,11 @@ class GrantStealthBehaviorModuleData : public UpdateModuleData
 public:
 	Bool									m_initiallyActive;
 	Bool									m_singleBurst;
-	Int										m_healingAmount;
+	Real										m_healingAmount;
 	Real									m_startRadius;
 	Real									m_finalRadius;
 	Real									m_radiusGrowRate;
+	AsciiString					m_upgradeName;
 	KindOfMaskType				m_kindOf;	//Only these types can heal -- defaults to everything.
 	const ParticleSystemTemplate*				m_radiusParticleSystemTmpl;					//Optional particle system meant to apply to entire effect for entire duration.
 
@@ -59,6 +60,7 @@ public:
 		m_startRadius = 0.0f;
     m_radiusGrowRate = 10.0f;
 		m_radiusParticleSystemTmpl = NULL;
+		m_upgradeName = NULL;
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 	}
 
@@ -73,6 +75,7 @@ public:
 			{ "RadiusGrowRate",						       INI::parseReal,									 NULL, offsetof( GrantStealthBehaviorModuleData, m_radiusGrowRate ) },
 			{ "KindOf",						    KindOfMaskType::parseFromINI,					       NULL, offsetof( GrantStealthBehaviorModuleData, m_kindOf ) },
 			{ "RadiusParticleSystemName",				 INI::parseParticleSystemTemplate, NULL, offsetof( GrantStealthBehaviorModuleData, m_radiusParticleSystemTmpl ) },
+			{ "UpgradeToGrant",							INI::parseAsciiString,							NULL, offsetof( GrantStealthBehaviorModuleData, m_upgradeName ) },
 			{ 0, 0, 0, 0 }
 		};
 

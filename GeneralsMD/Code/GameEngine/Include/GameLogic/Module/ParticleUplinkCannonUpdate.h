@@ -100,6 +100,11 @@ public:
 	AsciiString		m_annihilationSoundName;
 	AsciiString		m_damagePulseRemnantObjectName;
 
+	AsciiString m_customDamageType;
+	AsciiString m_customDeathType;
+
+	AsciiString m_cursorName;
+
   Real					m_manualDrivingSpeed;
   Real					m_manualFastDrivingSpeed;
   UnsignedInt		m_doubleClickToFastDriveDelay;
@@ -155,7 +160,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const {return m_status != STATUS_IDLE;}
@@ -163,6 +168,9 @@ public:
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
 	virtual ScienceType getExtraRequiredScience() const { return SCIENCE_INVALID; } //Does this object have more than one special power module with the same spTemplate?
+	virtual const AsciiString& getCursorName() const { return getParticleUplinkCannonUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
@@ -185,7 +193,7 @@ public:
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc );
 
 	// Disabled conditions to process (termination conditions!)
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK4( DISABLED_SUBDUED, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK5( DISABLED_SUBDUED, DISABLED_FROZEN, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
 
 protected:
 

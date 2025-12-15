@@ -101,11 +101,15 @@ public:
 	// CollideModuleInterface
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
 	virtual Bool wouldLikeToCollideWith(const Object* other) const { return false; }
+	virtual Bool revertCollideBehavior(Object *other) { return FALSE; }
 	virtual Bool isHijackedVehicleCrateCollide() const { return false; }
 	virtual Bool isCarBombCrateCollide() const { return false; }
 	virtual Bool isRailroad() const { return false;}
 	virtual Bool isSalvageCrateCollide() const { return false; }
 	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
+	virtual Bool isEquipCrateCollide() const { return FALSE; }
+	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
+	virtual const AsciiString& getCursorName() const { return NULL; }
 
 	// Minefield specific methods
 	virtual void setScootParms(const Coord3D& start, const Coord3D& end);

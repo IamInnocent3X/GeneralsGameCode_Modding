@@ -147,6 +147,18 @@ template <size_t NUMBITS>
 	*storeAsInt = bitIndex;
 }
 
+template <size_t NUMBITS>
+void BitFlags<NUMBITS>::parseSingleBitFromINIVector(INI* ini, void* /*instance*/, void *store, const void* /*userData*/)
+{
+	std::vector<Int>* v = (std::vector<Int>*)store;
+	v->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		Int bitIndex = INI::scanIndexList(token, s_bitNameList);	// this throws if the token is not found
+		v->push_back(bitIndex);
+	}
+}
 //-------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:

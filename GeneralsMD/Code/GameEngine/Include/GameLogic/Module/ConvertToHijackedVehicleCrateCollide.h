@@ -49,6 +49,7 @@ public:
 	ConvertToHijackedVehicleCrateCollideModuleData()
 	{
 		m_rangeOfEffect = 0;
+		m_leechExpFromObject = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -70,6 +71,8 @@ public:
 	ConvertToHijackedVehicleCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	virtual Bool revertCollideBehavior( Object *other );
+
 protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
@@ -79,4 +82,7 @@ protected:
 	virtual Bool executeCrateBehavior( Object *other );
 
 	virtual Bool isHijackedVehicleCrateCollide() const { return TRUE; }
+
+private:
+	AsciiString m_originalName;
 };

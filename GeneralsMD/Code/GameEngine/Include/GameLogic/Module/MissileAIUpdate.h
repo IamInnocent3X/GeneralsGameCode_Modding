@@ -60,8 +60,24 @@ public:
 
 	Real						m_lockDistance;				///< If I get this close to my target, guaranteed hit.
 	Bool						m_detonateCallsKill;			///< if true, kill() will be called, instead of KILL_SELF state, which calls destroy.
-  Int             m_killSelfDelay;      ///< If I have detonated and entered the KILL-SELF state, how ling do I wait before I Kill/destroy self?
-	MissileAIUpdateModuleData();
+    Int             m_killSelfDelay;      ///< If I have detonated and entered the KILL-SELF state, how ling do I wait before I Kill/destroy self?
+	
+	// Real	m_turnRateAttacking;    ///< Turn rate of the missile after ignition and no-turn stage
+	// Real	m_turnRateInitial;      ///< Turn rate of the missile during no-turn stage
+
+	Real	m_zDirFactor;          ///< Z correction factor for AA weapons with no pitch
+
+	Real m_randomPathOffset;       ///< Max distance to scatter for random path offset
+
+	Bool m_applyLauncherBonus;     ///< Apply the launcher's weapon bonus flags (for any non-detonate triggered weapon)
+
+	Bool						m_allowSubdual;
+	Bool						m_allowAttract;
+
+	Bool						m_allowRetargeting;
+	Bool						m_allowRetargetingThroughFog;
+
+    MissileAIUpdateModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 
@@ -86,16 +102,21 @@ public:
 		DEAD					= 5,
 		KILL					= 6, ///< Hit victim (cheat).
 		KILL_SELF			= 7, ///< Destroy self.
+		ATTACK_RANDOM_PATH = 8, ///< fly toward victim
 	};
 
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride);
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL );
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ); ///< Number of frames till missile diverts to countermeasures.
-	virtual void projectileNowJammed();///< We lose our Object target and scatter to the ground
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ); ///< Number of frames till missile diverts to countermeasures.
+	virtual void projectileNowJammed(Bool noDamage = FALSE);///< We lose our Object target and scatter to the ground
+	virtual void projectileNowDrawn(ObjectID attractorID);
+	virtual Object* getTargetObject();
+	virtual const Coord3D* getTargetPosition();
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
 
 	virtual Bool processCollision(PhysicsBehavior *physics, Object *other); ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
 
@@ -116,10 +137,12 @@ private:
 	ObjectID							m_victimID;								///< ID of object that I am rocketing towards (INVALID_ID if not yet launched)
 	UnsignedInt						m_fuelExpirationDate;			///< how long 'til we run out of fuel
 	Real									m_noTurnDistLeft;					///< when zero, ok to start turning
+	Real									m_randomPathDistLeft;					///< when zero, leave random path
 	Real									m_maxAccel;
 	Coord3D								m_originalTargetPos;			///< When firing uphill, we aim high to clear the brow of the hill.  jba.
 	Coord3D								m_prevPos;
 	WeaponBonusConditionFlags		m_extraBonusFlags;
+	ObjectCustomStatusType 			m_extraBonusCustomFlags;
 	const WeaponTemplate*	m_detonationWeaponTmpl;		///< weapon to fire at end (or null)
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 	ParticleSystemID			m_exhaustID;								///< our exhaust particle system (if any)
@@ -128,11 +151,21 @@ private:
 	Bool									m_isArmed;								///< if true, missile will explode on contact
 	Bool									m_noDamage;								///< if true, missile will not cause damage when it detonates. (Used for flares).
 	Bool									m_isJammed;								///< No target, just shooting at a scattered position
+	Bool									m_doVictimPosForLaunch;
+
+	UnsignedInt						m_detonateDistance;
+	ObjectID						m_decoyID;
+	ObjectID						m_shrapnelLaunchID;
+
+	UnsignedInt						m_dontDetonateGroundFrames;
+
+	UnsignedInt						m_killSelfTime;
+	UnsignedInt						m_nextWakeUpTime;
 
 	void doPrelaunchState();
 	void doLaunchState();
 	void doIgnitionState();
-	void doAttackState(Bool turnOK);
+	void doAttackState(Bool turnOK, Bool randomPath = FALSE);
 	void doKillState();
 	void doKillSelfState();
 	void doDeadState();

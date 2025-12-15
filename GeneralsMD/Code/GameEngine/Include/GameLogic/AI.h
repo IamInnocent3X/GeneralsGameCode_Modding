@@ -34,12 +34,14 @@
 #include "Common/GameType.h"
 #include "GameLogic/Damage.h"
 #include "Common/STLTypedefs.h"
+#include "Common/MessageStream.h"
 #include "ref_ptr.h"
 
 class AIGroup;
 class AttackPriorityInfo;
 class BuildListInfo;
 class CommandButton;
+class Drawable;
 class Object;
 class PartitionFilter;
 class Path;
@@ -340,7 +342,14 @@ static const char *const TheCommandSourceMaskNames[] =
 	"FROM_AI",
 	"FROM_DOZER", //don't use this
 	"DEFAULT_SWITCH_WEAPON", //unit will pick this weapon when normal logic fails.
-
+	"SYNC_TO_PRIMARY",  //This weapon will be fired whenever PRIMARY is fired
+	"SYNC_TO_SECONDARY",  //This weapon will be fired whenever SECONDARY is fired
+	"SYNC_TO_TERTIARY",  //This weapon will be fired whenever TERTIARY is fired
+	"SYNC_TO_WEAPON_FOUR",  //This weapon will be fired whenever WEAPON_FOUR is fired
+	"SYNC_TO_WEAPON_FIVE",  //...
+	"SYNC_TO_WEAPON_SIX",  //...
+	"SYNC_TO_WEAPON_SEVEN",  //...
+	"SYNC_TO_WEAPON_EIGHT",  //...
 	NULL
 };
 static_assert(ARRAY_SIZE(TheCommandSourceMaskNames) == COMMAND_SOURCE_TYPE_COUNT + 1, "Incorrect array size");
@@ -906,7 +915,7 @@ public:
 	void groupMoveToAndEvacuateAndExit( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position & unload transport.
 	void groupIdle(CommandSourceType cmdSource);						///< Enter idle state.
 	void groupScatter(CommandSourceType cmdSource);						///< Enter idle state.
-	void groupCreateFormation(CommandSourceType cmdSource); ///< Make the current selection a user formation.
+	void groupCreateFormation(CommandSourceType cmdSource, Bool isCommandMap); ///< Make the current selection a user formation.
 	void groupTightenToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource );			///< move to given position(s)
 	void groupFollowWaypointPath( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
 	void groupFollowWaypointPathAsTeam( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
@@ -933,6 +942,7 @@ public:
 	void groupDock( Object *obj, CommandSourceType cmdSource );							///< get near given object and wait for enter clearance
 	void groupExit( Object *objectToExit, CommandSourceType cmdSource );			///< get out of this Object
 	void groupEvacuate( CommandSourceType cmdSource );												///< empty its contents
+	void groupEnterToSelected( CommandSourceType cmdSource, OrderNearbyData orderData );									///< tell nearby objects to enter the selected objects
 	void groupExecuteRailedTransport( CommandSourceType cmdSource );					///< execute railed transport events
 	void groupGoProne( const DamageInfo *damageInfo, CommandSourceType cmdSource );												///< life altering state change, if this AI can do it
 	void groupGuardPosition( const Coord3D *pos, GuardMode guardMode, CommandSourceType cmdSource );						///< guard the given spot
@@ -942,6 +952,7 @@ public:
 	void groupHackInternet( CommandSourceType cmdSource );				///< Begin hacking the internet for free cash from the heavens.
 	void groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions );
 	void groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *object, UnsignedInt commandOptions );
+	void groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *drawable, UnsignedInt commandOptions );
 	void groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *object, UnsignedInt commandOptions );
 #ifdef ALLOW_SURRENDER
 	void groupSurrender( const Object *objWeSurrenderedTo, Bool surrender, CommandSourceType cmdSource );
@@ -949,6 +960,7 @@ public:
 	void groupCheer( CommandSourceType cmdSource );
 	void groupSell( CommandSourceType cmdSource );
 	void groupToggleOvercharge( CommandSourceType cmdSource );
+	void groupDisablePower( CommandSourceType cmdSource );
 #ifdef ALLOW_SURRENDER
 	void groupPickUpPrisoner( Object *prisoner, CommandSourceType cmdSource );	///< pick up prisoner
 	void groupReturnToPrison( Object *prison, CommandSourceType cmdSource );		///< return to prison
@@ -1000,6 +1012,15 @@ public:
 	// Removes any objects that aren't owned by the player, and returns true if the group was emptied.
 	Bool removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer );
 
+	// Add any objects that are nearby the current selected objects
+	Bool doAddNearbyMembers( OrderNearbyData orderData );
+
+	// Do the orders delayed to any of the objects that are nearby
+	Bool doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments );
+
+	// Remove the nearby objects from the member list
+	Bool clearExtraMembers();
+
 	UnsignedInt getID( void );
 
 	///< get IDs for every object in this group
@@ -1038,6 +1059,8 @@ private:
 
 	ListObjectPtr m_memberList;							///< the list of member Objects
 	UnsignedInt	m_memberListSize;	 					///< the size of the list of member Objects
+
+	VecObjectID m_memberListExtraID;						///< the list of extra member 
 
 	Real m_speed;														///< maximum speed of group (slowest member)
 	Bool m_dirty;														///< "dirty bit" - if true then group speed, leader, needs recompute

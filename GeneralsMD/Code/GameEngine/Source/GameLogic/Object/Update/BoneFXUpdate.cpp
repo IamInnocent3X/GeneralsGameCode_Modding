@@ -289,8 +289,10 @@ void BoneFXUpdateModuleData::parseParticleSystem( INI *ini, void *instance,
 UpdateSleepTime BoneFXUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	const BoneFXUpdateModuleData *d = getBoneFXUpdateModuleData();
 	Int now = TheGameLogic->getFrame();
+	UnsignedInt nextWakeUpTime = 0;
 
 	if (m_active == FALSE) {
 		initTimes();
@@ -299,20 +301,41 @@ UpdateSleepTime BoneFXUpdate::update( void )
 
 	for (Int i = 0; i < BONE_FX_MAX_BONES; ++i) {
 		//Check to see if its time to fire off any cool stuff.
-		if ((m_nextFXFrame[m_curBodyState][i] != -1) && (m_nextFXFrame[m_curBodyState][i] <= now)) {
-			doFXListAtBone(d->m_fxList[m_curBodyState][i].fx, &(m_FXBonePositions[m_curBodyState][i]));
-			computeNextLogicFXTime(&(d->m_fxList[m_curBodyState][i]), m_nextFXFrame[m_curBodyState][i]);
+		if (m_nextFXFrame[m_curBodyState][i] != -1) {
+			if(m_nextFXFrame[m_curBodyState][i] <= now)
+			{
+				doFXListAtBone(d->m_fxList[m_curBodyState][i].fx, &(m_FXBonePositions[m_curBodyState][i]));
+				computeNextLogicFXTime(&(d->m_fxList[m_curBodyState][i]), m_nextFXFrame[m_curBodyState][i]);
+			}
+			else if(nextWakeUpTime == 0 || nextWakeUpTime > m_nextFXFrame[m_curBodyState][i])
+			{
+				nextWakeUpTime = m_nextFXFrame[m_curBodyState][i];
+			}
 		}
-		if ((m_nextOCLFrame[m_curBodyState][i] != -1) && (m_nextOCLFrame[m_curBodyState][i] <= now)) {
-			doOCLAtBone(d->m_OCL[m_curBodyState][i].ocl, &(m_OCLBonePositions[m_curBodyState][i]));
-			computeNextLogicFXTime(&(d->m_OCL[m_curBodyState][i]), m_nextOCLFrame[m_curBodyState][i]);
+		if (m_nextOCLFrame[m_curBodyState][i] != -1) {
+			if(m_nextOCLFrame[m_curBodyState][i] <= now)
+			{
+				doOCLAtBone(d->m_OCL[m_curBodyState][i].ocl, &(m_OCLBonePositions[m_curBodyState][i]));
+				computeNextLogicFXTime(&(d->m_OCL[m_curBodyState][i]), m_nextOCLFrame[m_curBodyState][i]);
+			}
+			else if(!nextWakeUpTime || nextWakeUpTime > m_nextOCLFrame[m_curBodyState][i])
+			{
+				nextWakeUpTime = m_nextOCLFrame[m_curBodyState][i];
+			}
 		}
-		if ((m_nextParticleSystemFrame[m_curBodyState][i] != -1) && (m_nextParticleSystemFrame[m_curBodyState][i] <= now)) {
-			doParticleSystemAtBone(d->m_particleSystem[m_curBodyState][i].particleSysTemplate, &(m_PSBonePositions[m_curBodyState][i]));
-			computeNextClientFXTime(&(d->m_particleSystem[m_curBodyState][i]), m_nextParticleSystemFrame[m_curBodyState][i]);
+		if (m_nextParticleSystemFrame[m_curBodyState][i] != -1) {
+			if(m_nextParticleSystemFrame[m_curBodyState][i] <= now)
+			{
+				doParticleSystemAtBone(d->m_particleSystem[m_curBodyState][i].particleSysTemplate, &(m_PSBonePositions[m_curBodyState][i]));
+				computeNextClientFXTime(&(d->m_particleSystem[m_curBodyState][i]), m_nextParticleSystemFrame[m_curBodyState][i]);
+			}
+			else if(!nextWakeUpTime || nextWakeUpTime > m_nextParticleSystemFrame[m_curBodyState][i])
+			{
+				nextWakeUpTime  = m_nextParticleSystemFrame[m_curBodyState][i];
+			}
 		}
 	}
-	return UPDATE_SLEEP_NONE;
+	return nextWakeUpTime ? UPDATE_SLEEP(nextWakeUpTime - now) : UPDATE_SLEEP_FOREVER;
 }
 
 //-------------------------------------------------------------------------------------------------

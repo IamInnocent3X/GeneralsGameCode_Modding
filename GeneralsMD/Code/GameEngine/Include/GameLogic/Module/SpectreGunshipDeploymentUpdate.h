@@ -77,6 +77,15 @@ public:
   Real                  m_gunshipOrbitRadius;
 	GunshipCreateLocType	m_createLoc;
 
+  std::vector<AsciiString>           m_gunshipTemplateNames;
+  std::vector<UnsignedInt>			 m_gunshipSpawnDelay;
+  Real								 m_createLocMinAreaVariation;
+  Real								 m_createLocMaxAreaVariation;
+  Real					m_attackMinAreaVariation;
+  Real					m_attackMaxAreaVariation;
+  Bool					m_createNewGunshipsOnExisting;
+  Bool					m_gunshipsHaveIndividualAttackRadius;
+
 
 	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystem;
 
@@ -111,7 +120,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const {return FALSE;}
@@ -119,6 +128,10 @@ public:
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
   virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const { return FALSE; };
 	virtual ScienceType getExtraRequiredScience() const { return getSpectreGunshipDeploymentUpdateModuleData()->m_extraRequiredScience; } //Does this object have more than one special power module with the same spTemplate?
+
+	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
@@ -132,7 +145,7 @@ public:
   virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {};
 
 	// Disabled conditions to process (termination conditions!)
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK4( DISABLED_SUBDUED, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK5( DISABLED_SUBDUED, DISABLED_FROZEN, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
 
 protected:
 
@@ -141,6 +154,10 @@ protected:
 	SpecialPowerModuleInterface* m_specialPowerModule;
   Coord3D				m_initialTargetPosition;
   ObjectID        m_gunshipID;
+  std::vector<ObjectID> m_gunshipIDs;
+  std::vector<UnsignedInt> m_gunshipDelays;
+  std::vector<Coord3D>	m_attackCoords;
+  std::vector<Coord3D>	m_creationCoords;
 
 
 };

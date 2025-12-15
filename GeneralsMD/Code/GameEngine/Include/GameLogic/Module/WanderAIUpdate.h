@@ -52,6 +52,7 @@ class WanderAIUpdate : public AIUpdateInterface
 public:
 
 	WanderAIUpdate( Thing *thing, const ModuleData* moduleData );
+	virtual void doIdleUpdate() { wakeUpNow(); }
 	// virtual destructor prototype provided by memory pool declaration
 
 

@@ -60,6 +60,7 @@
 #include "GameLogic/Module/ActiveBody.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/StealthDetectorUpdate.h"
+#include "GameLogic/Module/BattlePlanBonusBehavior.h"
 
 
 //-------------------------------------------------------------------------------------------------
@@ -254,7 +255,7 @@ void BattlePlanUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool BattlePlanUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool BattlePlanUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	if( m_specialPowerModule->getSpecialPowerTemplate() != specialPowerTemplate )
 	{
@@ -714,7 +715,18 @@ static void paralyzeTroop( Object *obj, void *userData )
 	{
 		if( !obj->isAnyKindOf( data->m_invalidMemberKindOf ) )
 		{
-			obj->setDisabledUntil( DISABLED_PARALYZED, TheGameLogic->getFrame() + data->m_battlePlanParalyzeFrames );
+			Bool shouldParalyze = true;
+			// Check Modules
+			for (BehaviorModule** b = obj->getBehaviorModules(); *b; ++b)
+			{
+				BattlePlanBonusBehaviorInterface* bpbi = (*b)->getBattlePlanBonusBehaviorInterface();
+				if (bpbi && !bpbi->shouldParalyze()) {
+					shouldParalyze = false;
+				}
+			}
+
+			if (shouldParalyze)
+				obj->setDisabledUntil( DISABLED_PARALYZED, TheGameLogic->getFrame() + data->m_battlePlanParalyzeFrames );
 		}
 	}
 }

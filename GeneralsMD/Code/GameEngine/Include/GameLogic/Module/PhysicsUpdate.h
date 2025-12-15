@@ -43,6 +43,14 @@ enum PhysicsTurningType CPP_11(: Int)
 	TURN_POSITIVE = 1
 };
 
+enum SlowDeathType CPP_11(: Int)
+{
+	SLOWDEATH_INVALID = 0,
+	SLOWDEATH_NORMAL = 1,
+	SLOWDEATH_JET = 2,
+	SLOWDEATH_HELICOPTER = 3
+};
+
 //-------------------------------------------------------------------------------------------------
 class PhysicsBehaviorModuleData : public UpdateModuleData
 {
@@ -63,7 +71,10 @@ public:
 	Real	m_minFallSpeedForDamage;
 	Real	m_fallHeightDamageFactor;
 	Real	m_pitchRollYawFactor;
-
+	Bool    m_vehicleCrashAllowAirborne;
+	Real    m_bounceFactor;
+	Real	m_magnetResistance;
+  
 	const WeaponTemplate* m_vehicleCrashesIntoBuildingWeaponTemplate;
 	const WeaponTemplate* m_vehicleCrashesIntoNonBuildingWeaponTemplate;
 
@@ -96,11 +107,15 @@ public:
 	// CollideModuleInterface
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
 	virtual Bool wouldLikeToCollideWith(const Object* other) const { return false; }
+	virtual Bool revertCollideBehavior(Object *other) { return FALSE; }
 	virtual Bool isCarBombCrateCollide() const { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const { return false; }
 	virtual Bool isRailroad() const { return false;}
 	virtual Bool isSalvageCrateCollide() const { return false; }
 	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
+	virtual Bool isEquipCrateCollide() const { return FALSE; }
+	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
+	virtual const AsciiString& getCursorName() const { return NULL; }
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update();
@@ -163,6 +178,19 @@ public:
 	void setRollRate(Real roll);
 	void setYawRate(Real yaw);
 
+	void setRollRateConstant(Real roll, Real rollFactor = 1.0f );
+	void setPitchRateConstant(Real pitch);
+
+	void applyHelicopterSlowDeathSpin( Real spin );
+	void doHelicopterSlowDeathSpin( Real spin );
+	void applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping );
+	void doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed );
+
+	inline void applyAerialSlowDeathBehaviorCheck( SlowDeathType type ) { m_aerialSlowDeathBehaviorCheck = type; }
+
+	void setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel);
+	void removeConstantMotionToLoc();
+
 	/*
 		stickToGround and allowToFall seem contradictory... here's the deal.
 
@@ -208,6 +236,9 @@ public:
 
 	Bool getAllowCollideForce() const { return getFlag(ALLOW_COLLIDE_FORCE); }
 
+	Real getShockResistance() const { return getPhysicsBehaviorModuleData()->m_shockResistance; }
+	Real getMagnetResistance() const { return getPhysicsBehaviorModuleData()->m_magnetResistance; }
+
 protected:
 
 	/*
@@ -235,6 +266,10 @@ protected:
 	Bool checkForOverlapCollision(Object *other);
 
 	void testStunnedUnitForDestruction(void);
+
+	void checkSlowDeathBehaviors();
+
+	void locoUpdate_moveTowardsPositionForced();
 
 private:
 
@@ -281,6 +316,25 @@ private:
 	mutable Real								m_velMag;									///< magnitude of cur vel (recalced when m_vel changes)
 
 	Bool												m_originalAllowBounce;		///< orignal state of allow bounce
+
+	Real										m_rollRateStatic;
+	Real										m_rollStaticFactor;
+
+	Real										m_pitchRateStatic;
+
+	Real 										m_forwardAngle;
+	Real 										m_forwardSpeed;
+	Real 										m_spiralOrbitTurnRate;
+	Real 										m_spiralOrbitForwardSpeedDamping;
+	Real 										m_spinRate;
+	Int 										m_orbitDirection;
+
+	Bool										m_doConstantMotion;
+	Real 										m_constantMaxSpeed;
+	Real 										m_constantMaxAccel;
+	Coord3D										m_constantMotionToLoc;
+
+	SlowDeathType								m_aerialSlowDeathBehaviorCheck;
 
 	void setFlag(PhysicsFlagsType f, Bool set) { if (set) m_flags |= f; else m_flags &= ~f; }
 	Bool getFlag(PhysicsFlagsType f) const { return (m_flags & f) != 0; }

@@ -45,12 +45,17 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully repaired
+	Bool m_repairClearsParasite;		///< repairing object clears any parasite within them
+	std::vector<AsciiString> m_repairClearsParasiteKeys;				///< Parasite Keys able to Clear
 
 };
 
+class RepairDockUpdateInterface{};
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-class RepairDockUpdate : public DockUpdate
+class RepairDockUpdate : public DockUpdate,
+																	public RepairDockUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( RepairDockUpdate, "RepairDockUpdate" )
@@ -62,6 +67,8 @@ public:
 	// virtual destructor prototype provided by MemoryPoolObject base class
 
 	virtual DockUpdateInterface* getDockUpdateInterface() { return this; }
+
+	virtual RepairDockUpdateInterface* getRepairDockUpdateInterface() { return this; }
 
 	virtual Bool action( Object *docker, Object *drone = NULL );	///< for me this means do some repair
 

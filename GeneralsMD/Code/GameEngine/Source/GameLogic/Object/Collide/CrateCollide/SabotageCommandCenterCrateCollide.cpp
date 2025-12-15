@@ -152,6 +152,8 @@ Bool SabotageCommandCenterCrateCollide::executeCrateBehavior( Object *other )
 		sp->startPowerRecharge();
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

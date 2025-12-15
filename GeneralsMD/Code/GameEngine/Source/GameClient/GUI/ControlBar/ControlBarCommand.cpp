@@ -42,6 +42,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/JetAIUpdate.h"
 #include "GameLogic/Module/OverchargeBehavior.h"
 #include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
@@ -166,6 +167,8 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 	// The extra slots bit means that a tank that takes up three slots will make two transport
 	// buttons disappear off the end to show he takes up more room.
 	transportMax = transportMax - contain->getExtraSlotsInUse();
+	if(transportMax <= 0)
+		transportMax = 1; // For RiderChangeContain
 
 	Int firstInventoryIndex = -1;
 	Int lastInventoryIndex = -1;
@@ -1052,14 +1055,26 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 	if( BitIsSet( command->getOptions(), MUST_BE_STOPPED ) )
 	{
-		//This button can only be activated when the unit isn't moving!
+		// This button can only be activated when the unit isn't moving!
+		// Jets can be idle while in the air, so we need to do more checks
 		AIUpdateInterface *ai = obj->getAI();
-		if( ai && ai->isMoving() )
-		{
-			return COMMAND_RESTRICTED;
+		if( ai ) {
+			JetAIUpdate* jetAI = ai->getJetAIUpdate();
+			if (jetAI) {
+				if (!jetAI->isParkedInHangar()) {
+					return COMMAND_RESTRICTED;
+				}
+			}
+			else if (ai->isMoving()) {
+				return COMMAND_RESTRICTED;
+			}
 		}
 	}
 
+	//Disabled Chrono does not allow *any* commands
+	if ( obj->isDisabledByType( DISABLED_CHRONO ) )
+        return COMMAND_RESTRICTED;
+ 
 	//Other disabled objects are unable to use buttons -- so gray them out.
 	Bool disabled = obj->isDisabled();
 
@@ -1078,6 +1093,7 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		GUICommandType commandType = command->getCommandType();
 		if( commandType != GUI_COMMAND_SELL &&
 				commandType != GUI_COMMAND_EVACUATE &&
+				commandType != GUI_COMMAND_ENTER_ME &&
 				commandType != GUI_COMMAND_EXIT_CONTAINER &&
 				commandType != GUI_COMMAND_BEACON_DELETE &&
 				commandType != GUI_COMMAND_SET_RALLY_POINT &&
@@ -1176,7 +1192,7 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				return COMMAND_HIDDEN;
 
     //since the container can be subdued, , M Lorenzen 8/11
-      if ( obj->isDisabledByType( DISABLED_SUBDUED ) )
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
         return COMMAND_RESTRICTED;
 
 			break;
@@ -1346,6 +1362,12 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		case GUI_COMMAND_GUARD:
 		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			// always available
 			break;
 
@@ -1367,7 +1389,7 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			//
 
     //since the container can be subdued, the above is no longer true, M Lorenzen 8/11
-      if ( obj->isDisabledByType( DISABLED_SUBDUED ) )
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
         return COMMAND_RESTRICTED;
 
 			break;
@@ -1380,7 +1402,21 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			if( !obj->getContain() || obj->getContain()->getContainCount() <= 0 )
 				return COMMAND_RESTRICTED;
 
-      if ( obj->isDisabledByType( DISABLED_SUBDUED ) )
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+        return COMMAND_RESTRICTED;
+
+
+			break;
+		}
+
+		case GUI_COMMAND_ENTER_ME:
+		{
+
+			// if we have no container or we are full to contain
+			if( !obj->getContain() || obj->getContain()->getContainMax() <= 0 || obj->getContain()->getContainCount() >= obj->getContain()->getContainMax() )
+				return COMMAND_RESTRICTED;
+
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
         return COMMAND_RESTRICTED;
 
 
@@ -1522,6 +1558,15 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		{
 			//We can *always* select a unit :)
 			return COMMAND_AVAILABLE;
+		}
+
+		
+		case GUI_COMMAND_DISABLE_POWER:
+		{
+			if (obj->isDisabledPowerByCommand())
+				return COMMAND_ACTIVE;
+
+			break;
 		}
 	}
 

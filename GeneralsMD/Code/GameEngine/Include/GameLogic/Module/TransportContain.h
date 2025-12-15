@@ -86,6 +86,7 @@ public:
 	virtual Bool isRiderChangeContain() const { return FALSE; }
   virtual Bool isSpecialOverlordStyleContainer() const {return FALSE;}
 
+	virtual Int getRawContainMax( void ) const;
 	virtual Int getContainMax( void ) const;
 
 	virtual Int getExtraSlotsInUse( void ) { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
@@ -94,6 +95,8 @@ public:
 	virtual ExitDoorType reserveDoorForExit( const ThingTemplate* objType, Object *specificObject );
 	virtual void unreserveDoorForExit( ExitDoorType exitDoor );
 	virtual Bool isDisplayedOnControlBar() const {return TRUE;}///< Does this container display its contents on the ControlBar?
+
+	virtual void doUpgradeChecks( void );
 
 protected:
 
@@ -106,10 +109,8 @@ protected:
 	void letRidersUpgradeWeaponSet( void );
 
 	Bool m_payloadCreated;
-
-private:
-
 	Int m_extraSlotsInUse;
+
 	UnsignedInt m_frameExitNotBusy;
 
 };

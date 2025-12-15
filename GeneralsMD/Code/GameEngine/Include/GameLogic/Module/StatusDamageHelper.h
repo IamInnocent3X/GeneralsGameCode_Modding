@@ -31,6 +31,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
+#include "GameClient/TintStatus.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -53,12 +54,38 @@ public:
 	// virtual destructor prototype provided by memory pool object
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 	virtual UpdateSleepTime update();
 
-	void doStatusDamage( ObjectStatusTypes status, Real duration );
+	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
+	HelperTransferData getHelperData() const
+	{
+		HelperTransferData transferData;
+		transferData.frameEnd = m_frameToHeal;
+		transferData.earliestDurationAsInt = m_earliestDurationAsInt;
+		transferData.statusMap = m_statusToHeal;
+		transferData.customStatusMap = m_customStatusToHeal;
+		transferData.currentTint = m_currentTint;
+		transferData.customTintStatus = m_customTintStatus;
+
+		return transferData;
+	}
+	void transferData(HelperTransferData transferData)
+	{
+		m_frameToHeal = transferData.frameEnd;
+		m_earliestDurationAsInt = transferData.earliestDurationAsInt;
+		m_statusToHeal = transferData.statusMap;
+		m_customStatusToHeal = transferData.customStatusMap;
+		m_currentTint = transferData.currentTint;
+		m_customTintStatus = transferData.customTintStatus;
+	}
 
 protected:
-	ObjectStatusTypes m_statusToHeal;
+	StatusTypeMap m_statusToHeal;
+	CustomStatusTypeMap m_customStatusToHeal;
+	CustomTintStatusDurationVec m_customTintStatus;
+	TintStatusDurationVec m_currentTint;
 	UnsignedInt m_frameToHeal;
+	UnsignedInt m_earliestDurationAsInt;
 	void clearStatusCondition();
 };

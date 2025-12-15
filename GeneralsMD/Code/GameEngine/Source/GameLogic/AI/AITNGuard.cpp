@@ -472,7 +472,8 @@ AITNGuardOuterState::~AITNGuardOuterState(void)
 //--------------------------------------------------------------------------------------
 StateReturnType AITNGuardOuterState::onEnter( void )
 {
-	if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT)
+	GuardMode guardMode = getGuardMachine()->getGuardMode();
+	if (guardMode == GUARDMODE_GUARD_WITHOUT_PURSUIT || guardMode == GUARDMODE_FAR_WITHOUT_PURSUIT || guardMode == GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT )
 	{
 		// "patrol" mode does not follow targets outside the guard area.
 		return STATE_SUCCESS;

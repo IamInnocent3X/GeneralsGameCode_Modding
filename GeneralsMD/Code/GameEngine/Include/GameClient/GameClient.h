@@ -130,6 +130,7 @@ public:
 
 	virtual Drawable *friend_createDrawable( const ThingTemplate *thing, DrawableStatusBits statusBits = DRAWABLE_STATUS_DEFAULT ) = 0;
 	virtual void destroyDrawable( Drawable *draw );											///< Destroy the given drawable
+	virtual void destroyDrawablePreserveGUI( Drawable *draw );								///< Destroy the given drawable, but don't refresh the GUI
 
 	virtual void setTimeOfDay( TimeOfDay tod );													///< Tell all the drawables what time of day it is now
 
@@ -154,6 +155,17 @@ public:
 	UnsignedInt getRenderedObjectCount() const { return m_renderedObjectCount; }
 	void incrementRenderedObjectCount() { m_renderedObjectCount++; }
 	virtual void notifyTerrainObjectMoved(Object *obj) = 0;
+	virtual const AsciiString& findTreeNameInPos(const Coord3D* loc) const = 0;
+
+	void informClientNewDrawable(Drawable *draw);
+	void addDrawableToEfficientList(Drawable *draw);
+	void removeDrawableFromEfficientList(Drawable *draw);
+	inline void clearEfficientDrawablesList() { m_drawablesListMarkedForClear = TRUE; }
+	inline void setEfficientDrawableRegion(Region3D *region) { m_axisAlignedRegion.lo = region->lo; m_axisAlignedRegion.hi = region->hi; }
+	inline Region3D *getEfficientDrawableRegion() { return &m_axisAlignedRegion; }
+	//inline void setEfficientDrawableRegion(const Coord3D *loWorld, const Coord3D *hiWorld) { m_loWorld.set(loWorld); m_hiWorld.set(hiWorld); }
+	//inline const Coord3D* getCameraLoWorld() const { return &m_loWorld; }
+	//inline const Coord3D* getCameraHiWorld() const { return &m_hiWorld; }
 
 
 protected:
@@ -213,6 +225,13 @@ private:
 	typedef std::list< Drawable* > TextBearingDrawableList;
 	typedef TextBearingDrawableList::iterator TextBearingDrawableListIterator;
 	TextBearingDrawableList m_textBearingDrawableList;	///< the drawables that have registered here during drawablepostdraw
+
+	std::list< Drawable* > m_drawablesList;
+	Bool m_drawablesListMarkedForClear;
+
+	Region3D m_axisAlignedRegion;
+	//Coord3D m_loWorld;
+	//Coord3D m_hiWorld;
 };
 
 //Kris: Try not to use this if possible. In every case I found in the code base, the status was always Drawable::SELECTED.

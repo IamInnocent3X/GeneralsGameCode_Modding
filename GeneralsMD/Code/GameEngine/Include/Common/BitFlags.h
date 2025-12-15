@@ -306,6 +306,7 @@ public:
 	void xfer(Xfer* xfer);
 	static void parseFromINI(INI* ini, void* /*instance*/, void *store, const void* /*userData*/); ///< Returns a BitFlag
 	static void parseSingleBitFromINI(INI* ini, void* /*instance*/, void *store, const void* /*userData*/); ///< Returns an int, the Index of the one bit
+	static void parseSingleBitFromINIVector(INI* ini, void* /*instance*/, void *store, const void* /*userData*/); ///< Returns an int, the Index of the one bit
 
 	void buildDescription( AsciiString* str ) const
 	{

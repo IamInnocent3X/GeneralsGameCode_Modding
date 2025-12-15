@@ -30,14 +30,47 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/WeaponSetUpgrade.h"
+#include "GameLogic/Module/JetAIUpdate.h"
+
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+WeaponSetUpgradeModuleData::WeaponSetUpgradeModuleData(void)
+{
+	m_weaponSetFlag = WEAPONSET_PLAYER_UPGRADE;
+	// m_weaponSetFlagsToClear = WEAPONSET_COUNT;  // = undefined;
+	m_needsParkedAircraft = FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void WeaponSetUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
+{
+
+	UpgradeModuleData::buildFieldParse(p);
+
+	static const FieldParse dataFieldParse[] =
+	{
+		{ "WeaponSetFlag", INI::parseIndexListOrNone, WeaponSetFlags::getBitNames(),offsetof(WeaponSetUpgradeModuleData, m_weaponSetFlag) },
+		{ "WeaponSetFlagsToClear", WeaponSetFlags::parseFromINI, NULL, offsetof(WeaponSetUpgradeModuleData, m_weaponSetFlagsToClear) },
+		{ "NeedsParkedAircraft", INI::parseBool, NULL, offsetof(WeaponSetUpgradeModuleData, m_needsParkedAircraft) },
+		{ 0, 0, 0, 0 }
+	};
+
+	p.add(dataFieldParse);
+
+}  // end buildFieldParse
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 WeaponSetUpgrade::WeaponSetUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
+	m_clearedWeaponSetFlags.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -48,12 +81,96 @@ WeaponSetUpgrade::~WeaponSetUpgrade( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+Bool WeaponSetUpgrade::wouldUpgrade(UpgradeMaskType keyMask) const
+{
+	if (UpgradeMux::wouldUpgrade(keyMask)) {
+
+		// Check additional conditions
+		const WeaponSetUpgradeModuleData* data = getWeaponSetUpgradeModuleData();
+
+		if (data->m_needsParkedAircraft) {
+			const AIUpdateInterface* ai = getObject()->getAI();
+			if (ai) {
+				const JetAIUpdate* jetAI = ai->getJetAIUpdate();
+				if ((jetAI) && jetAI->isParkedInHangar()){
+					return TRUE;
+				}
+			}
+		}
+		else {
+			return TRUE;
+		}
+	}
+
+	//We can't upgrade!
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 void WeaponSetUpgrade::upgradeImplementation( )
 {
 	// Very simple; just need to flag the Object as having the player upgrade, and the WeaponSet chooser
-	// will do the work of picking the right one from ini.  This comment is as long as the code.
+	// will do the work of picking the right one from ini.  This comment is as long as the code. Update: not anymore ;)
+	const WeaponSetUpgradeModuleData* data = getWeaponSetUpgradeModuleData();
+
 	Object *obj = getObject();
-	obj->setWeaponSetFlag( WEAPONSET_PLAYER_UPGRADE );
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+	else if( UpgradeStatus == 1 )
+	{
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+
+	if (m_hasExecuted && data->m_weaponSetFlag > WEAPONSET_NONE) {
+		obj->setWeaponSetFlag(data->m_weaponSetFlag);
+	}
+	else if (data->m_weaponSetFlag > WEAPONSET_NONE) {
+		obj->clearWeaponSetFlag(data->m_weaponSetFlag);
+	}
+
+	/*DEBUG_LOG((">>> WSU: m_weaponSetFlagsToClear = %d\n",
+		data->m_weaponSetFlag));*/
+
+	if (m_hasExecuted && data->m_weaponSetFlagsToClear.any()) {
+		// We loop over each weaponset type and see if we have it set.
+		// Andi: Not sure if this is cleaner solution than storing an array of flags.
+		for (int i = 0; i < WEAPONSET_COUNT; i++) {
+			WeaponSetType type = (WeaponSetType)i;
+			if (data->m_weaponSetFlagsToClear.test(type)) {
+				obj->clearWeaponSetFlag(type);
+				m_clearedWeaponSetFlags.set(type);
+			}
+		}
+	}
+	else if (m_clearedWeaponSetFlags.any()) {
+		for (int i = 0; i < WEAPONSET_COUNT; i++) {
+			WeaponSetType type = (WeaponSetType)i;
+			if (m_clearedWeaponSetFlags.test(type)) {
+				obj->setWeaponSetFlag(type);
+			}
+		}
+		m_clearedWeaponSetFlags.clear();
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -82,6 +199,10 @@ void WeaponSetUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	m_clearedWeaponSetFlags.xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }
 

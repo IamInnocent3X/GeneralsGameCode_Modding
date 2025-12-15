@@ -31,9 +31,13 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/BitFlags.h"
+#include "Common/DisabledTypes.h"
 #include "Common/GameType.h"
+#include "Common/KindOf.h"
 #include "Common/ObjectStatusTypes.h" // Precompiled header anyway, no detangling possibility
 #include "Common/Snapshot.h"
+#include "GameClient/TintStatus.h"
+#include "GameLogic/ObjectCreationList.h"
 
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -83,7 +87,26 @@ enum DamageType CPP_11(: Int)
 	DAMAGE_SUBDUAL_UNRESISTABLE		= 34,
 	DAMAGE_MICROWAVE							= 35, ///< Radiation that only affects infantry
 	DAMAGE_KILL_GARRISONED				= 36, ///< Kills Passengers up to the number specified in Damage
-	DAMAGE_STATUS									= 37, ///< Damage that gives a status condition, not that does hitpoint damage
+	DAMAGE_STATUS						= 37, ///< Damage that gives a status condition, not that does hitpoint damage
+	// --
+	// Generic additional damage types (no special logic)
+	DAMAGE_SONIC,
+	DAMAGE_ACID,
+	DAMAGE_JET_BOMB,
+	DAMAGE_ANTI_TANK_GUN,
+	DAMAGE_ANTI_TANK_MISSILE,
+	DAMAGE_ANTI_AIR_GUN,
+	DAMAGE_ANTI_AIR_MISSILE,
+	DAMAGE_SEISMIC,
+	DAMAGE_RAD_BEAM,
+	DAMAGE_TESLA,
+	
+	// Specific damage types with special logic attached
+	DAMAGE_CHRONO_GUN,   ///< Disable target and remove them once health threshold is reached
+	DAMAGE_CHRONO_UNRESISTABLE,  ///< Used for recovery from CHRONO_GUN
+	// DAMAGE_ZOMBIE_VIRUS,  // TODO
+	// DAMAGE_MIND_CONTROL,  // TODO
+
 
 	// Please note: There is a string array DamageTypeFlags::s_bitNameList[]
 
@@ -157,6 +180,35 @@ extern DamageTypeFlags DAMAGE_TYPE_FLAGS_NONE;
 extern DamageTypeFlags DAMAGE_TYPE_FLAGS_ALL;
 void initDamageTypeFlags();
 
+typedef std::pair<AsciiString, Int>		AsciiStringIntPair;	
+typedef std::vector<AsciiStringIntPair>	CustomFlags;
+
+typedef std::pair<DamageTypeFlags, AsciiString>		DamageFlagsCustom;	
+
+inline Bool getCustomTypeFlag( const AsciiString& set , const CustomFlags& CustomTypes , const AsciiString& CustomType )
+{
+	Bool returnTrue = TRUE;
+	
+	if(!set.isEmpty())
+	{
+		if (strcmp(set.str(), "NONE") == 0)
+			returnTrue = FALSE;
+	}
+
+	if(CustomTypes.empty())
+		return returnTrue;
+
+	for (CustomFlags::const_iterator it = CustomTypes.begin(); 
+				it != CustomTypes.end();
+				++it)
+	{
+		if (it->second == 2 && (*it).first == CustomType)
+			return FALSE;
+		if (it->second == 1 && (*it).first == CustomType)
+			returnTrue = TRUE;
+	}
+	return returnTrue;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Death types, keep this in sync with TheDeathNames[] */
@@ -192,6 +244,9 @@ enum DeathType CPP_11(: Int)
 	DEATH_EXTRA_8		= 19,
 	DEATH_POISONED_GAMMA = 20,
 
+	//New Death Types
+	DEATH_CHRONO,
+	
 	DEATH_NUM_TYPES
 };
 
@@ -210,15 +265,17 @@ static const char *const TheDeathNames[] =
 	"LASERED",
 	"DETONATED",
 	"SPLATTED",
-	"POISONED_BETA",
-	"EXTRA_2",
-	"EXTRA_3",
-	"EXTRA_4",
-	"EXTRA_5",
-	"EXTRA_6",
-	"EXTRA_7",
-	"EXTRA_8",
+	"POISONED_BETA",	
+	"EXTRA_2",	
+	"EXTRA_3",	
+	"EXTRA_4",	
+	"EXTRA_5",	
+	"EXTRA_6",	
+	"EXTRA_7",	
+	"EXTRA_8",	
 	"POISONED_GAMMA",
+	//New:
+	"CHRONO",	
 
 	NULL
 };
@@ -230,6 +287,8 @@ static_assert(ARRAY_SIZE(TheDeathNames) == DEATH_NUM_TYPES + 1, "Incorrect array
 //-------------------------------------------------------------------------------------------------
 
 typedef UnsignedInt DeathTypeFlags;
+
+typedef std::pair<DeathTypeFlags, AsciiString>		DeathFlagsCustom;	
 
 const DeathTypeFlags DEATH_TYPE_FLAGS_ALL = 0xffffffff;
 const DeathTypeFlags DEATH_TYPE_FLAGS_NONE = 0x00000000;
@@ -248,6 +307,69 @@ inline DeathTypeFlags clearDeathTypeFlag(DeathTypeFlags flags, DeathType dt)
 {
 	return (flags & ~(1UL << (dt - 1)));
 }
+
+
+enum ProtectionType CPP_11(: Int)
+{
+	PROTECTION_NONE = 0,
+	PROTECTION_BULLETS = 1,
+	PROTECTION_LASER = 2,
+	PROTECTION_PROJECTILES = 3,
+
+	PROTECTION_COUNT
+
+};
+
+#ifdef DEFINE_PROTECTION_NAMES
+static const char *TheProtectionNames[] = 
+{
+	"NONE",
+	"BULLETS",
+	"LASER",
+	"PROJECTILES",
+
+	NULL
+};
+#endif
+
+typedef UnsignedInt ProtectionTypeFlags;
+
+inline Bool getProtectionTypeFlag(ProtectionTypeFlags flags, ProtectionType pt)
+{
+	return (flags & (1UL << (pt - 1))) != 0;
+}
+
+inline ProtectionTypeFlags setProtectionTypeFlag(ProtectionTypeFlags flags, ProtectionType pt)
+{
+	return (flags | (1UL << (pt - 1)));
+}
+
+inline ProtectionTypeFlags clearProtectionTypeFlag(ProtectionTypeFlags flags, ProtectionType pt)
+{
+	return (flags & ~(1UL << (pt - 1)));
+}
+
+//-------------------------------------------------------------------------------------------------
+enum MagnetType CPP_11(: Int)
+{
+	MAGNET_STATIC,
+	MAGNET_DYNAMIC,
+	MAGNET_ROTATORY,
+	MAGNET_HYPERDYNAMIC,
+
+	MAGNET_COUNT
+};
+
+#ifdef DEFINE_MAGNET_FORMULA_NAMES
+static const char *TheMagnetFormulaNames[] =
+{
+	"STATIC",
+	"DYNAMIC",
+	"ROTATORY",
+	"HYPERDYNAMIC",
+	NULL
+};
+#endif
 
 //-------------------------------------------------------------------------------------------------
 /** Damage info inputs */
@@ -269,10 +391,68 @@ public:
 		m_amount = 0;
 		m_kill = FALSE;
 
-    m_shockWaveVector.zero();
-    m_shockWaveAmount   = 0.0f;
-    m_shockWaveRadius   = 0.0f;
+		m_customDamageType = NULL;
+		m_customDamageStatusType = NULL;
+		m_customDeathType = NULL;
+    
+    m_shockWaveVector.zero();	
+    m_shockWaveAmount   = 0.0f;	
+    m_shockWaveRadius   = 0.0f;	
     m_shockWaveTaperOff = 0.0f;
+
+	m_isFlame = FALSE;
+	m_projectileCollidesWithBurn = FALSE;
+	m_isPoison = FALSE;
+	m_poisonMuzzleFlashesGarrison = FALSE;
+	m_isDisarm = FALSE;
+	m_killsGarrison = FALSE;
+	m_killsGarrisonAmount = 0;
+	m_playSpecificVoice = NULL;
+	m_statusDuration = 0.0f;
+	m_doStatusDamage = FALSE;
+	m_statusDurationTypeCorrelate = FALSE;
+	m_tintStatus = TINT_STATUS_INVALID;
+	m_customTintStatus = NULL;
+	m_isSubdual = FALSE;
+	m_subdualDealsNormalDamage = FALSE;
+	m_subdualDamageMultiplier = 1.0f;	
+	m_subdualForbiddenKindOf.clear();
+	m_notAbsoluteKill = FALSE;
+	m_clearsParasite = FALSE;
+	m_clearsParasiteKeys.clear();
+	m_isMissileAttractor = FALSE;
+	m_subduedProjectileNoDamage = FALSE;
+	m_subdualCustomType = NULL;
+	m_customSubdualCustomTint = NULL;
+	m_customSubdualTint = TINT_STATUS_GAINING_SUBDUAL_DAMAGE;
+	m_customSubdualHasDisable = TRUE;
+	m_customSubdualHasDisableProjectiles = TRUE;
+	m_customSubdualClearOnTrigger = FALSE;
+	m_customSubdualDoStatus = FALSE;
+	m_customSubdualOCL = NULL;
+	m_customSubdualDisableType = DISABLED_SUBDUED;
+	m_customSubdualDisableTint = TINT_STATUS_INVALID;
+	m_customSubdualDisableCustomTint = NULL;
+	m_customSubdualRemoveSubdualTintOnDisable = FALSE;
+	m_customSubdualDisableSound = NULL;
+	m_customSubdualDisableRemoveSound = NULL;
+	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
+	m_shockWaveAffectsAirborne = FALSE;
+	m_shockWavePullsAirborne = FALSE;
+	m_magnetVector.zero();	
+	m_magnetAmount = 0.0f;
+	m_magnetLiftHeight = 0.0f;
+	m_magnetLiftHeightSecond = 0.0f;
+	m_magnetLiftForce = 1.0f;
+	m_magnetLiftForceToHeight = 1.0f;
+	m_magnetLiftForceToHeightSecond = 1.0f;
+	m_magnetMaxLiftHeight = 0.0f;
+	m_magnetAirborneZForce = 0.0f;
+	m_magnetAirboneAffectedByYaw = FALSE;
+	m_magnetLevitationHeight = 0.0f;
+	m_magnetFormula = MAGNET_STATIC;
+	m_minDamageHeight = 0.0f;
+	m_maxDamageHeight = 0.0f;
 	}
 
 	ObjectID		   m_sourceID;							///< source of the damage
@@ -290,7 +470,72 @@ public:
 	Real					 m_shockWaveAmount;				///< This represents the amount of shockwave created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
 	Real					 m_shockWaveRadius;			  ///< This represents the effect radius of the shockwave.
 	Real					 m_shockWaveTaperOff;			///< This represents the taper off effect of the shockwave at the tip of the radius. 0.0 means shockwave is 0% at the radius edge.
+	Bool					 m_shockWaveAffectsAirborne;
+	Bool					 m_shockWavePullsAirborne;
+	
+	Coord3D				 	 m_magnetVector;				///< This represents the incoming damage vector
+	Real					 m_magnetAmount;				///< This represents the amount of magnet created by the damage. 0 = no shockwave, 1.0 = shockwave equal to damage.
+	Real					 m_magnetLiftHeight;
+	Real					 m_magnetLiftHeightSecond;
+	Real					 m_magnetLiftForce;
+	Real					 m_magnetLiftForceToHeight;
+	Real					 m_magnetLiftForceToHeightSecond;
+	Real					 m_magnetMaxLiftHeight;
+	Real 					 m_magnetAirborneZForce;
+	Real					 m_magnetLevitationHeight;
+	Bool					 m_magnetAirboneAffectedByYaw;
+	MagnetType				 m_magnetFormula;
 
+	AsciiString m_customDamageType;
+	AsciiString m_customDamageStatusType;
+	AsciiString m_customDeathType;
+
+	Bool m_isFlame;
+	Bool m_projectileCollidesWithBurn;
+	Bool m_isPoison;
+	Bool m_poisonMuzzleFlashesGarrison;
+	Bool m_isDisarm;
+	Bool m_killsGarrison;
+	Int m_killsGarrisonAmount;
+	AsciiString m_playSpecificVoice;
+	Real m_statusDuration;
+	Bool m_doStatusDamage;
+	Bool m_statusDurationTypeCorrelate;
+	TintStatus m_tintStatus;
+	AsciiString m_customTintStatus;
+
+	Bool m_isSubdual;
+	Bool m_subdualDealsNormalDamage;
+	Real m_subdualDamageMultiplier;
+	KindOfMaskType m_subdualForbiddenKindOf;
+
+	Bool m_notAbsoluteKill;
+	
+	Bool m_clearsParasite;
+	std::vector<AsciiString> m_clearsParasiteKeys;
+
+	Bool m_isMissileAttractor;
+	Bool m_subduedProjectileNoDamage;
+	
+	AsciiString m_subdualCustomType;
+	AsciiString m_customSubdualCustomTint;
+	TintStatus m_customSubdualTint;
+	Bool m_customSubdualHasDisable;
+	Bool m_customSubdualHasDisableProjectiles;
+	Bool m_customSubdualClearOnTrigger;
+	Bool m_customSubdualDoStatus;
+	const ObjectCreationList* m_customSubdualOCL;
+	DisabledType m_customSubdualDisableType;
+	Bool m_customSubdualRemoveSubdualTintOnDisable;
+	TintStatus m_customSubdualDisableTint;
+	AsciiString m_customSubdualDisableCustomTint;
+	AsciiString m_customSubdualDisableSound;
+	AsciiString m_customSubdualDisableRemoveSound;
+
+	ProtectionTypeFlags m_protectionTypes;
+
+	Real m_minDamageHeight;
+	Real m_maxDamageHeight;
 
 protected:
 

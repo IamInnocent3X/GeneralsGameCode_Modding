@@ -134,6 +134,17 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 
 	}
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	// create message and send to the logic
 	GameMessage *msg;
 	if( BitIsSet( command->getOptions(), NEED_TARGET_POS ) )
@@ -144,7 +155,7 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 		TheTacticalView->screenToTerrain( mouse, &world );
 
 		// create the message and append arguments
-		msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_WEAPON_AT_LOCATION );
+		msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON_AT_LOCATION, orderData );
 		msg->appendIntegerArgument( command->getWeaponSlot() );
 		msg->appendLocationArgument( world );
 		msg->appendIntegerArgument( command->getMaxShotsToFire() );
@@ -175,7 +186,7 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 		if( target )
 		{
 
-			msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_WEAPON_AT_OBJECT );
+			msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON_AT_OBJECT, orderData );
 			msg->appendIntegerArgument( command->getWeaponSlot() );
 			msg->appendObjectIDArgument( target->getID() );
 			msg->appendIntegerArgument( command->getMaxShotsToFire() );
@@ -185,7 +196,7 @@ static CommandStatus doFireWeaponCommand( const CommandButton *command, const IC
 	}
 	else
 	{
-		msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_WEAPON );
+		msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON, orderData );
 		msg->appendIntegerArgument( command->getWeaponSlot() );
 		msg->appendIntegerArgument( command->getMaxShotsToFire() );
 
@@ -214,13 +225,24 @@ static CommandStatus doGuardCommand( const CommandButton *command, GuardMode gua
 
 	GameMessage *msg = NULL;
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	if ( msg == NULL && BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) )
 	{
 		// get the target object under the cursor
 		Object* target = validUnderCursor( mouse, command, PICK_TYPE_SELECTABLE );
 		if( target )
 		{
-			msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_GUARD_OBJECT );
+			msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_OBJECT, orderData );
 			msg->appendObjectIDArgument( target->getID() );
 			msg->appendIntegerArgument(guardMode);
 			pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_GUARD_OBJECT);
@@ -244,7 +266,7 @@ static CommandStatus doGuardCommand( const CommandButton *command, GuardMode gua
 		}
 
 		// create the message and append arguments
-		msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_GUARD_POSITION );
+		msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_POSITION, orderData );
 		msg->appendLocationArgument(world);
 		msg->appendIntegerArgument(guardMode);
 		pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_GUARD_POSITION);
@@ -279,8 +301,19 @@ static CommandStatus doAttackMoveCommand( const CommandButton *command, const IC
 	Coord3D world;
 	TheTacticalView->screenToTerrain( mouse, &world );
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	// send the message to set the rally point
-	GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_ATTACKMOVETO );
+	GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_ATTACKMOVETO, orderData );
 	msg->appendLocationArgument( world );
 
 	// Play the unit voice response
@@ -360,6 +393,17 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 	if( command == NULL )
 		return disp;
 
+	OrderNearbyData orderData;
+	if(command->getOrderNearbyRadius())
+	{
+		orderData.Radius = command->getOrderNearbyRadius();
+		orderData.RequiredMask = command->getOrderKindofMask();
+		orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+		orderData.MinDelay = command->getOrderNearbyMinDelay();
+		orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+	}
+
 	switch( msg->getType() )
 	{
 
@@ -416,10 +460,29 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 
 							TheTacticalView->screenToTerrain(&mouse, &worldPos);
 
-							GameMessage *msg = TheMessageStream->appendMessage(GameMessage::MSG_EVACUATE);
+							GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EVACUATE, orderData );
 							msg->appendLocationArgument(worldPos);
 
 							pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_EVACUATE );
+
+							commandStatus = COMMAND_COMPLETE;
+						}
+
+						break;
+					}
+
+					//---------------------------------------------------------------------------------------
+					case GUI_COMMAND_ENTER_ME:
+					{
+						if (BitIsSet(command->getOptions(), NEED_TARGET_POS)) {
+							Coord3D worldPos;
+
+							TheTacticalView->screenToTerrain(&mouse, &worldPos);
+
+							GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_ENTER_ME, orderData );
+							msg->appendLocationArgument(worldPos);
+
+							pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER_ME );
 
 							commandStatus = COMMAND_COMPLETE;
 						}
@@ -445,6 +508,27 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 					case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
 					{
 						commandStatus = doGuardCommand( command, GUARDMODE_GUARD_FLYING_UNITS_ONLY, &mouse );
+						break;
+					}
+
+					//---------------------------------------------------------------------------------------
+					case GUI_COMMAND_GUARD_FAR:
+					{
+						commandStatus = doGuardCommand( command, GUARDMODE_FAR, &mouse );
+						break;
+					}
+
+					//---------------------------------------------------------------------------------------
+					case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+					{
+						commandStatus = doGuardCommand( command, GUARDMODE_FAR_WITHOUT_PURSUIT, &mouse );
+						break;
+					}
+
+					//---------------------------------------------------------------------------------------
+					case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+					{
+						commandStatus = doGuardCommand( command, GUARDMODE_FAR_FLYING_UNITS_ONLY, &mouse );
 						break;
 					}
 

@@ -172,6 +172,48 @@ const char* const ModelConditionFlags::s_bitNameList[] =
 
 	"DISGUISED",
 
+	// New Weaponsets
+	"WEAPONSET_PLAYER_UPGRADE2",
+	"WEAPONSET_PLAYER_UPGRADE3",
+	"WEAPONSET_PLAYER_UPGRADE4",
+
+	// New Weaponslots (D-H)
+	
+	"PREATTACK_D",
+	"FIRING_D",
+	"BETWEEN_FIRING_SHOTS_D",
+	"RELOADING_D",
+	"USING_WEAPON_D",
+
+	"PREATTACK_E",
+	"FIRING_E",
+	"BETWEEN_FIRING_SHOTS_E",
+	"RELOADING_E",
+	"USING_WEAPON_E",
+
+	"PREATTACK_F",
+	"FIRING_F",
+	"BETWEEN_FIRING_SHOTS_F",
+	"RELOADING_F",
+	"USING_WEAPON_F",
+
+	"PREATTACK_G",
+	"FIRING_G",
+	"BETWEEN_FIRING_SHOTS_G",
+	"RELOADING_G",
+	"USING_WEAPON_G",
+
+	"PREATTACK_H",
+	"FIRING_H",
+	"BETWEEN_FIRING_SHOTS_H",
+	"RELOADING_H",
+	"USING_WEAPON_H",
+
+	"TAKEOFF",
+	"LANDING",
+
+	"TELEPORT_RECOVER",
+	
 	NULL
 };
 static_assert(ARRAY_SIZE(ModelConditionFlags::s_bitNameList) == ModelConditionFlags::NumBits + 1, "Incorrect array size");
@@ -187,6 +229,9 @@ const char* const ArmorSetFlags::s_bitNameList[] =
 	"SECOND_LIFE",
 	"CRATE_UPGRADE_ONE",
 	"CRATE_UPGRADE_TWO",
+	"PLAYER_UPGRADE2",
+	"PLAYER_UPGRADE3",
+	"PLAYER_UPGRADE4",
 
 	NULL
 };

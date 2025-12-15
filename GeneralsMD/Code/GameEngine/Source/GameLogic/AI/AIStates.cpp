@@ -325,7 +325,7 @@ AttackStateMachine::AttackStateMachine( Object *obj, AIAttackState* att, AsciiSt
 								attackingObject ? objectConditions : positionConditions );
 
 
-	if (obj->isKindOf(KINDOF_IMMOBILE) == FALSE)
+	if (obj->isKindOf(KINDOF_IMMOBILE) == FALSE && obj->testStatus( OBJECT_STATUS_IMMOBILE ) == FALSE)
 	{
 		if (obj->isKindOf(KINDOF_PORTABLE_STRUCTURE) && obj->isKindOf(KINDOF_CAN_ATTACK))
 		{
@@ -1087,6 +1087,33 @@ Squad *AIStateMachine::getGoalSquad( void )
 	return m_goalSquad;
 }
 
+
+//----------------------------------------------------------------------------------------------------------
+AIGuardMachine* AIStateMachine::getGuardMachine(void)
+{
+	if (getCurrentStateID() == AI_GUARD) {
+		AIGuardState* guardState = (AIGuardState*)(StateMachine::internalGetState(getCurrentStateID()));
+		if (guardState != NULL) {
+			return guardState->getGuardMachine();
+		}
+	}
+
+	return NULL;
+}
+
+//----------------------------------------------------------------------------------------------------------
+AIGuardRetaliateMachine* AIStateMachine::getGuardRetaliateMachine(void)
+{
+	if (getCurrentStateID() == AI_GUARD_RETALIATE) {
+		AIGuardRetaliateState* guardState = (AIGuardRetaliateState*)(StateMachine::internalGetState(getCurrentStateID()));
+		if (guardState != NULL) {
+			return guardState->getGuardRetaliateMachine();
+		}
+	}
+
+	return NULL;
+}
+
 // State transition conditions ----------------------------------------------------------------------------
 /**
  * Return true if the machine's owner's current weapon's range
@@ -1107,7 +1134,7 @@ Bool outOfWeaponRangeObject( State *thisState, void* userData )
 		if (ai) {
 			onGround = ai->isDoingGroundMovement();
 		}
-		if( obj->isKindOf(KINDOF_IMMOBILE) ) {
+		if( obj->isKindOf(KINDOF_IMMOBILE) || obj->testStatus( OBJECT_STATUS_IMMOBILE )) {
 			onGround = true;
 		}
 		// brutal special case for stinger soldiers, who
@@ -1195,7 +1222,7 @@ Bool outOfWeaponRangePosition( State *thisState, void* userData )
 		if (ai) {
 			onGround = ai->isDoingGroundMovement();
 		}
-		if( obj->isKindOf(KINDOF_IMMOBILE) ) {
+		if( obj->isKindOf(KINDOF_IMMOBILE) || obj->testStatus( OBJECT_STATUS_IMMOBILE )) {
 			onGround = true;
 		}
 		// brutal special case for stinger soldiers, who
@@ -1423,9 +1450,11 @@ StateReturnType AIIdleState::update()
 
 
 		if (! obj->isDisabledByType( DISABLED_PARALYZED ) &&
+				! obj->isDisabledByType( DISABLED_STUNNED ) &&
 				! obj->isDisabledByType( DISABLED_UNMANNED ) &&
 				! obj->isDisabledByType( DISABLED_EMP ) &&
 				! obj->isDisabledByType( DISABLED_SUBDUED ) &&
+				! obj->isDisabledByType( DISABLED_FROZEN ) &&
 				! obj->isDisabledByType( DISABLED_HACKED ) )
 		{
 			// mood targeting
@@ -1478,18 +1507,43 @@ StateReturnType AIDeadState::onEnter()
 		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_A);
 		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_B);
 		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_C);
+		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_D);
+		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_E);
+		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_F);
+		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_G);
+		nonDyingStuff.set(MODELCONDITION_USING_WEAPON_H);
 		nonDyingStuff.set(MODELCONDITION_FIRING_A);
 		nonDyingStuff.set(MODELCONDITION_FIRING_B);
 		nonDyingStuff.set(MODELCONDITION_FIRING_C);
+		nonDyingStuff.set(MODELCONDITION_FIRING_D);
+		nonDyingStuff.set(MODELCONDITION_FIRING_E);
+		nonDyingStuff.set(MODELCONDITION_FIRING_F);
+		nonDyingStuff.set(MODELCONDITION_FIRING_G);
+		nonDyingStuff.set(MODELCONDITION_FIRING_H);
 		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_A);
 		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_B);
 		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_C);
+		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_D);
+		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_E);
+		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_F);
+		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_G);
+		nonDyingStuff.set(MODELCONDITION_BETWEEN_FIRING_SHOTS_H);
 		nonDyingStuff.set(MODELCONDITION_RELOADING_A);
 		nonDyingStuff.set(MODELCONDITION_RELOADING_B);
 		nonDyingStuff.set(MODELCONDITION_RELOADING_C);
+		nonDyingStuff.set(MODELCONDITION_RELOADING_D);
+		nonDyingStuff.set(MODELCONDITION_RELOADING_E);
+		nonDyingStuff.set(MODELCONDITION_RELOADING_F);
+		nonDyingStuff.set(MODELCONDITION_RELOADING_G);
+		nonDyingStuff.set(MODELCONDITION_RELOADING_H);
 		nonDyingStuff.set(MODELCONDITION_PREATTACK_A);
 		nonDyingStuff.set(MODELCONDITION_PREATTACK_B);
 		nonDyingStuff.set(MODELCONDITION_PREATTACK_C);
+		nonDyingStuff.set(MODELCONDITION_PREATTACK_D);
+		nonDyingStuff.set(MODELCONDITION_PREATTACK_E);
+		nonDyingStuff.set(MODELCONDITION_PREATTACK_F);
+		nonDyingStuff.set(MODELCONDITION_PREATTACK_G);
+		nonDyingStuff.set(MODELCONDITION_PREATTACK_H);
 #ifdef ALLOW_SURRENDER
 		nonDyingStuff.set(MODELCONDITION_SURRENDER);
 #endif
@@ -1612,17 +1666,36 @@ StateReturnType AIInternalMoveToState::onEnter()
 	AIUpdateInterface *ai = obj->getAI();
 	m_waitingForPath = ai->isWaitingForPath();
 
-	if( obj->testStatus( OBJECT_STATUS_IMMOBILE ) )
-	{
-		return STATE_FAILURE;
-	}
-
 	if (ai->getCurLocomotor()) {
 		ai->getCurLocomotor()->startMove();
 		if (ai->getCurLocomotor()->isUltraAccurate())
 		{
 			setAdjustsDestination(false); // if we're being ultra accurate, we can't adjust the destination. jba.
 		}
+	}
+	if( obj->testStatus( OBJECT_STATUS_IMMOBILE ) )
+	{
+		// We only adjust the end path for the Object if this status is set
+		if( getAdjustsDestination() && !obj->testStatus( OBJECT_STATUS_RIDER8 ) )
+		{
+			if (!TheAI->pathfinder()->adjustDestination(obj, ai->getLocomotorSet(), &m_goalPosition))
+			{
+				TheAI->pathfinder()->snapClosestGoalPosition(obj, &m_goalPosition);
+			}
+			TheAI->pathfinder()->updateGoal(obj, &m_goalPosition, TheTerrainLogic->getLayerForDestination(&m_goalPosition));
+		}
+		
+		// request a path to the destination
+		if (!computePath())
+		{
+			ai->friend_endingMove();
+			return STATE_FAILURE;
+		}
+		// Target to stop at the end of this path.
+		// This value will be overriden by the FollowWaypoint ai state.
+		ai->setPathExtraDistance(0);
+		ai->setDesiredSpeed( FAST_AS_POSSIBLE );
+		return STATE_CONTINUE;
 	}
 	m_tryOneMoreRepath = true;  // We may try one more repath after the first one is finished.
 	ai->friend_startingMove();
@@ -1682,6 +1755,9 @@ StateReturnType AIInternalMoveToState::onEnter()
 void AIInternalMoveToState::startMoveSound(void)
 {
 	Object *obj = getMachineOwner();
+	if(obj->testCustomStatus("DISABLED_MOVEMENT"))
+		return;
+	
 	const BodyModuleInterface *objBody = obj->getBodyModule();
 	if (objBody && IS_CONDITION_WORSE(objBody->getDamageState(), BODY_DAMAGED))
 	{
@@ -2048,11 +2124,16 @@ StateReturnType AIMoveToState::onEnter()
 		m_goalPosition = *getMachineGoalPosition();
 
 	StateReturnType ret = AIInternalMoveToState::onEnter();
-	if (getMachineOwner()->getFormationID() != NO_FORMATION_ID) {
-		AIGroup *group = ai->getGroup();
-		if (group) {
-			Real speed = group->getSpeed();
-			ai->setDesiredSpeed(speed);
+	// New - Only set the speed to Desired if formation is from Command Map
+	if (getMachineOwner()->getFormationID() != NO_FORMATION_ID && getMachineOwner()->getFormationIsCommandMap()) {
+		Bool isAirborne = getMachineOwner()->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (getMachineOwner()->isKindOf( KINDOF_AIRCRAFT ) && ai->isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
+		if(!isAirborne)
+		{
+			AIGroup *group = ai->getGroup();
+			if (group) {
+				Real speed = group->getSpeed();
+				ai->setDesiredSpeed(speed);
+			}
 		}
 	}
 	return ret;
@@ -3269,11 +3350,16 @@ StateReturnType AIFollowPathState::onEnter()
 		m_adjustFinal = true;
 	}
 	StateReturnType ret = AIInternalMoveToState::onEnter();
-	if (obj->getFormationID() != NO_FORMATION_ID) {
-		AIGroup *group = ai->getGroup();
-		if (group) {
-			Real speed = group->getSpeed();
-			ai->setDesiredSpeed(speed);
+	// New - Only set the speed to Desired if formation is from Command Map
+	if (obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap()) {
+		Bool isAirborne = obj->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (obj->isKindOf( KINDOF_AIRCRAFT ) && ai->isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
+		if(!isAirborne)
+		{
+			AIGroup *group = ai->getGroup();
+			if (group) {
+				Real speed = group->getSpeed();
+				ai->setDesiredSpeed(speed);
+			}
 		}
 	}
  	if (nextPos)
@@ -4997,6 +5083,8 @@ StateReturnType AIAttackAimAtTargetState::onEnter()
 	m_setLocomotor = false;
 
 	source->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IS_AIMING_WEAPON ) );
+	if(m_isForceAttacking)
+		source->doClearTunnelContainTargetID();
 	return STATE_CONTINUE;
 }
 
@@ -5007,9 +5095,13 @@ StateReturnType AIAttackAimAtTargetState::onEnter()
 
 StateReturnType AIAttackAimAtTargetState::update()
 {
+
 	// contained by AIAttackState, so no separate timer
 	Object* source = getMachineOwner();
 	AIUpdateInterface* sourceAI = source->getAI();
+
+
+	// DEBUG_LOG((">>> attackAngle = %f, useAttackAngle = %d, mirrored = %d, canTurnInPlace = %d\n", sourceAI->getAttackAngle() * 180 / PI, sourceAI->useAttackAngle(), sourceAI->isAttackAngleMirrored(), m_canTurnInPlace));
 
 	if (!source->hasAnyWeapon())
 		return STATE_FAILURE;
@@ -5032,10 +5124,35 @@ StateReturnType AIAttackAimAtTargetState::update()
 		{
 			sourceAI->setTurretTargetPosition(tur, getMachineGoalPosition());
 		}
+		// If we have limited Turret Angle, we need to turn until we are in range
+		if (sourceAI->hasLimitedTurretAngle(tur)) {
+			Real relAngle = m_isAttackingObject ?
+				ThePartitionManager->getRelativeAngle2D(source, victim) :
+				ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+			Real maxAngle = sourceAI->getMaxTurretAngle(tur);
+			Real minAngle = sourceAI->getMinTurretAngle(tur);
+			if (maxAngle < minAngle) { // This might be a backwards facing configuration
+				maxAngle = nmod(maxAngle, 2.0 * PI);
+				relAngle = nmod(relAngle, 2.0 * PI);
+			}
+
+			// DEBUG_LOG((">>> (hasLimited) relAngle = %f, minAngle = %f, maxAngle = %f.\n", relAngle * 180 / PI, minAngle * 180 / PI, maxAngle * 180 / PI));
+
+			if ((relAngle < maxAngle) && (relAngle > minAngle)) {
+				// If the target is inside our maximum turret angle, we can continue
+				return STATE_CONTINUE;
+			}
+			else {
+				Locomotor* curLoco = sourceAI->getCurLocomotor();
+				if (!curLoco)
+					return STATE_FAILURE;
+			}
+
+		}
 		// if we have a turret, but it is incapable of turning, turn ourself.
 		// (gotta do this for units like the Comanche, which have fake "turrets"
 		// solely to allow for attacking-on-the-move...)
-		if (sourceAI->getTurretTurnRate(tur) != 0.0f)
+		else if (sourceAI->getTurretTurnRate(tur) != 0.0f)	
 		{
 			// The Body can never return Success if the weapon is on the turret, or else we end
 			// up shooting the current weapon (which is on the turret) in the wrong direction.
@@ -5065,19 +5182,107 @@ StateReturnType AIAttackAimAtTargetState::update()
 			aimDelta = REL_THRESH;
 		}
 
-		//DEBUG_LOG(("AIM: desired %f, actual %f, delta %f, aimDelta %f, goalpos %f %f",rad2deg(obj->getOrientation() + relAngle),rad2deg(obj->getOrientation()),rad2deg(relAngle),rad2deg(aimDelta),victim->getPosition()->x,victim->getPosition()->y));
-		if (m_canTurnInPlace)
-		{
-			if (fabs(relAngle) > aimDelta)
+		if (sourceAI->hasLimitedTurretAngle(tur) && !sourceAI->useAttackAngle()) {
+			Real maxAngle = sourceAI->getMaxTurretAngle(tur) + aimDelta;
+			Real minAngle = sourceAI->getMinTurretAngle(tur) - aimDelta;
+			if (maxAngle < minAngle) { // This might be a backwards facing configuration
+				maxAngle = nmod(maxAngle, 2.0 * PI);
+				relAngle = nmod(relAngle, 2.0 * PI);
+			}
+			
+			if (m_canTurnInPlace)
 			{
-				Real desiredAngle = source->getOrientation() + relAngle;
-				sourceAI->setLocomotorGoalOrientation(desiredAngle);
-				m_setLocomotor = true;
+				// if out of turret turn range:
+				if (relAngle > maxAngle || relAngle < minAngle) {
+
+					// if (fabs(relAngle - maxAngle) < fabs(relAngle - minAngle))
+					if (fabs(stdAngleDiffMod(relAngle, maxAngle)) < fabs(stdAngleDiffMod(relAngle, minAngle)))
+					{
+						Real desiredAngle = source->getOrientation() + relAngle - maxAngle + REL_THRESH * 2;
+						desiredAngle = normalizeAngle(desiredAngle);
+						//DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, minAngle = %f, maxAngle = %f, desiredAngle = %f.\n",
+						//	relAngle / PI * 180.0, aimDelta / PI * 180.0, minAngle / PI * 180.0, maxAngle / PI * 180.0, desiredAngle / PI * 180.0));
+
+						sourceAI->setLocomotorGoalOrientation(desiredAngle);
+						m_setLocomotor = true;
+					}
+					else {
+						Real desiredAngle = source->getOrientation() + relAngle - minAngle - REL_THRESH * 2;
+						desiredAngle = normalizeAngle(desiredAngle);
+						DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, minAngle = %f, maxAngle = %f, desiredAngle = %f.\n",
+							relAngle / PI * 180.0, aimDelta / PI * 180.0, minAngle / PI * 180.0, maxAngle / PI * 180.0, desiredAngle / PI * 180.0));
+
+
+						sourceAI->setLocomotorGoalOrientation(desiredAngle);
+						m_setLocomotor = true;
+					}
+				}
+			}
+
+			/*if (m_canTurnInPlace)
+			{
+				if (relAngle < aimDeltaNeg)
+				{
+					Real desiredAngle = source->getOrientation() + relAngle - aimDeltaNeg - REL_THRESH - attackAngle;
+					desiredAngle = normalizeAngle(desiredAngle);
+					DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, aimDeltaNeg = %f, desiredAngle = %f.\n",
+						relAngle / PI * 180.0, aimDelta / PI * 180.0, aimDeltaNeg / PI * 180.0, desiredAngle / PI * 180.0));
+
+					sourceAI->setLocomotorGoalOrientation(desiredAngle);
+					m_setLocomotor = true;
+				}
+				else if (relAngle > aimDelta) {
+					Real desiredAngle = source->getOrientation() + relAngle - aimDelta + REL_THRESH - attackAngle;
+					desiredAngle = normalizeAngle(desiredAngle);
+					DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, aimDeltaNeg = %f, desiredAngle = %f.\n",
+						relAngle /PI * 180.0, aimDelta / PI * 180.0, aimDeltaNeg / PI * 180.0, desiredAngle / PI * 180.0));
+
+
+					sourceAI->setLocomotorGoalOrientation(desiredAngle);
+					m_setLocomotor = true;
+				}
+			}*/
+			else
+			{
+				sourceAI->setLocomotorGoalPositionExplicit(m_isAttackingObject ? *victim->getPosition() : *getMachineGoalPosition());
 			}
 		}
-		else
-		{
-			sourceAI->setLocomotorGoalPositionExplicit(m_isAttackingObject ? *victim->getPosition() : *getMachineGoalPosition());
+		else {
+
+			// DEBUG_LOG((">>> (2) attackAngle = %f, useAttackAngle = %d, mirrored = %d, canTurnInPlace = %d\n", sourceAI->getAttackAngle() * 180 / PI, sourceAI->useAttackAngle(), sourceAI->isAttackAngleMirrored(), m_canTurnInPlace));
+
+
+			// Check preferredAttackAngle
+			if (sourceAI->useAttackAngle()) {
+				Real attackAngle = sourceAI->getAttackAngle();
+
+				if (sourceAI->isAttackAngleMirrored()) {
+
+					// check which side is closer
+					if (fabs(stdAngleDiffMod(relAngle, attackAngle)) > fabs(stdAngleDiffMod(relAngle, attackAngle + PI))) {
+						attackAngle = attackAngle + PI;
+					}
+				}
+
+				relAngle -= attackAngle;
+				relAngle = normalizeAngle(relAngle);
+			}
+
+
+			//DEBUG_LOG(("AIM: desired %f, actual %f, delta %f, aimDelta %f, goalpos %f %f\n",rad2deg(obj->getOrientation() + relAngle),rad2deg(obj->getOrientation()),rad2deg(relAngle),rad2deg(aimDelta),victim->getPosition()->x,victim->getPosition()->y));
+			if (m_canTurnInPlace)
+			{
+				if (fabs(relAngle) > aimDelta)
+				{
+					Real desiredAngle = source->getOrientation() + relAngle;
+					sourceAI->setLocomotorGoalOrientation(desiredAngle);
+					m_setLocomotor = true;
+				}
+			}
+			else
+			{
+				sourceAI->setLocomotorGoalPositionExplicit(m_isAttackingObject ? *victim->getPosition() : *getMachineGoalPosition());
+			}
 		}
 
 		if (fabs(relAngle) < aimDelta /*&& !m_preAttackFrames*/ )
@@ -5183,7 +5388,18 @@ StateReturnType AIAttackFireWeaponState::onEnter()
 	}
 
 	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IS_FIRING_WEAPON ) );
-	obj->preFireCurrentWeapon( getMachineGoalObject() );
+	if (victim) {
+		obj->preFireCurrentWeapon(victim);
+	}
+	else {
+		const Coord3D* pos = getMachineGoalPosition();
+		if (pos) {
+			obj->preFireCurrentWeapon(pos);
+		}
+		else {
+			obj->preFireCurrentWeapon(victim);
+		}
+	}
 	return STATE_CONTINUE;
 }
 
@@ -5198,6 +5414,11 @@ StateReturnType AIAttackFireWeaponState::update()
 
 	Object *obj = getMachineOwner();
 	Object* victim = getMachineGoalObject();
+
+	if (obj->testCustomStatus("AIM_NO_ATTACK"))
+	{
+		return STATE_CONTINUE;
+	}
 
 	if (m_att->isAttackingObject())
 	{
@@ -5238,10 +5459,10 @@ StateReturnType AIAttackFireWeaponState::update()
 
 	if (m_att->isAttackingObject())
 	{
-    // Since it is very late in the project, and there is no call for such code...
-    // there is currently no support here for linked turrets, as regards Attacking Objects (victims)
-    // If the concept of linked turrets is further developed then God help you, and put more code right here
-    // that lookl like the //LINKED TURRETS// block, below
+		// Since it is very late in the project, and there is no call for such code...
+		// there is currently no support here for linked turrets, as regards Attacking Objects (victims)
+		// If the concept of linked turrets is further developed then God help you, and put more code right here
+		// that lookl like the //LINKED TURRETS// block, below
 
 
 		obj->fireCurrentWeapon(victim);
@@ -5252,19 +5473,19 @@ StateReturnType AIAttackFireWeaponState::update()
 		//to transfer attackers (AIUpdateInterface::transferAttack), it is unable to modify our current victim in our attack state
 		//machine. When we move immediately to the aim state in the same frame as the transfer (after this call in fact), the victim
 		//was still pointing to the building and not the hole we transferred to. This code fixes that.
-		if( victim != obj->getAI()->getCurrentVictim() )
+		if (victim != obj->getAI()->getCurrentVictim())
 		{
-			getMachine()->setGoalObject( obj->getAI()->getCurrentVictim() );
+			getMachine()->setGoalObject(obj->getAI()->getCurrentVictim());
 		}
 
 		// clear this, just in case.
-		obj->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IGNORING_STEALTH ) );
+		obj->clearStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IGNORING_STEALTH));
 		Real continueRange = weapon->getContinueAttackRange();
 		if (
 			continueRange > 0.0f &&
 			victim &&
 			(victim->isDestroyed() || victim->isEffectivelyDead() || (victim->isKindOf(KINDOF_MINE) && victim->testStatus(OBJECT_STATUS_MASKED)))
-		)
+			)
 		{
 			const Coord3D* originalVictimPos = m_att ? m_att->getOriginalVictimPos() : NULL;
 			if (originalVictimPos)
@@ -5274,12 +5495,12 @@ StateReturnType AIAttackFireWeaponState::update()
 				// but not if they were ordered by ai.
 				AIUpdateInterface* ai = obj->getAI();
 				CommandSourceType lastCmdSource = ai ? ai->getLastCommandSource() : CMD_FROM_AI;
-				PartitionFilterSamePlayer filterPlayer( victim->getControllingPlayer() );
+				PartitionFilterSamePlayer filterPlayer(victim->getControllingPlayer());
 				PartitionFilterSameMapStatus filterMapStatus(obj);
 				PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, obj, lastCmdSource);
-				PartitionFilter *filters[] = { &filterAttack, &filterPlayer, &filterMapStatus, NULL };
+				PartitionFilter* filters[] = { &filterAttack, &filterPlayer, &filterMapStatus, NULL };
 				// note that we look around originalVictimPos, *not* the current victim's pos.
-				victim = ThePartitionManager->getClosestObject( originalVictimPos, continueRange, FROM_CENTER_2D, filters );// could be null. this is ok.
+				victim = ThePartitionManager->getClosestObject(originalVictimPos, continueRange, FROM_CENTER_2D, filters);// could be null. this is ok.
 				if (victim)
 				{
 					getMachine()->setGoalObject(victim);
@@ -5290,26 +5511,58 @@ StateReturnType AIAttackFireWeaponState::update()
 	}
 	else
 	{
+		if (getMachineOwner()->getAI()->areTurretsLinked()) //LINKED TURRETS
+		{// it doesn;t matter which weapon slot is locked, current or whatever
+			for (Int slot = PRIMARY_WEAPON; slot < WEAPONSLOT_COUNT; slot++)
+			{// were firing with all barrels
+				Weapon* weapon = obj->getWeaponInWeaponSlot((WeaponSlotType)slot);
+				if (weapon)
+				{
+					if (weapon->fireWeapon(obj, getMachineGoalPosition())) //fire() returns 'reloaded'
+						obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
 
-    if( getMachineOwner()->getAI()->areTurretsLinked() ) //LINKED TURRETS
-    {// it doesn;t matter which weapon slot is locked, current or whatever
-      for ( Int slot = PRIMARY_WEAPON; slot < WEAPONSLOT_COUNT ; slot++ )
-      {// were firing with all barrels
-        Weapon *weapon = obj->getWeaponInWeaponSlot( (WeaponSlotType)slot );
-        if ( weapon )
-        {
-          if ( weapon->fireWeapon(obj, getMachineGoalPosition()) ) //fire() returns 'reloaded'
-            obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
-
-	  	    obj->notifyFiringTrackerShotFired(weapon, INVALID_ID);
-        }
-      }
-    }
-    else
-		obj->fireCurrentWeapon(getMachineGoalPosition());
+					obj->notifyFiringTrackerShotFired(weapon, INVALID_ID);
+				}
+			}
+		}
+		else
+			obj->fireCurrentWeapon(getMachineGoalPosition());
 		// clear this, just in case.
-		obj->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IGNORING_STEALTH ) );
+		obj->clearStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IGNORING_STEALTH));
 	}
+
+
+	// Synced weapon Slots:
+	for (Int slot = PRIMARY_WEAPON; slot < WEAPONSLOT_COUNT; slot++)
+	{
+		// check this slot if the weapon should be synced to the currently fired slot
+		if (slot == wslot || !obj->getWeaponInWeaponSlotSyncedToSlot((WeaponSlotType)slot, wslot)) {
+			// DEBUG_LOG((">> Skipping slot %d.\n", slot));
+			continue;
+		}
+
+		// DEBUG_LOG((">> Slot %d is synced. Prepare to fire weapon.\n", slot));
+
+		// Yes, we are firing this weapon!
+		Weapon* weapon = obj->getWeaponInWeaponSlot((WeaponSlotType)slot);
+		if (weapon)
+		{
+			if (m_att->isAttackingObject()) {
+				if (weapon->fireWeapon(obj, victim)) { //fire() returns 'reloaded'
+					obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
+				}
+			}
+			else {
+				if (weapon->fireWeapon(obj, getMachineGoalPosition())) { //fire() returns 'reloaded'
+					obj->releaseWeaponLock(LOCKED_TEMPORARILY);// unlock, 'cause we're loaded
+					// DEBUG_LOG((">> On firing Weapon in slot %d: fire synced weapon slot %d. Shot Fired!\n", wslot, slot));
+				}
+			}
+
+			obj->notifyFiringTrackerShotFired(weapon, INVALID_ID);
+		}
+	}
+
 
 	m_att->notifyFired();
 
@@ -5465,11 +5718,16 @@ Bool AIAttackState::chooseWeapon()
 	AIUpdateInterface *ai = source->getAI();
 
 	Bool found = FALSE;
-//	if (victim) // Pardon?  We still need to pick a weapon if we are attacking the ground.
-//	{
+	if (victim) // Pardon?  We still need to pick a weapon if we are attacking the ground.
+	{
 		found = source->chooseBestWeaponForTarget(victim, PREFER_MOST_DAMAGE, ai->getLastCommandSource());
 		//DEBUG_ASSERTLOG(found, ("unable to autochoose any weapon for %s",source->getTemplate()->getName().str()));
-//	}
+	}
+	else
+	{
+		// IamInnocent - Edited to be able to fit requirements for Positions
+		found = source->chooseBestWeaponForPosition(getMachineGoalPosition(), PREFER_MOST_DAMAGE, ai->getLastCommandSource());
+	}
 
 	// Check if we need to update because of the weapon choice switch.
 	source->adjustModelConditionForWeaponStatus();
@@ -5679,6 +5937,9 @@ StateReturnType AIAttackState::update()
 	if (curWeapon == NULL || curWeapon->getMaxShotCount() <= 0)
 		return STATE_FAILURE;
 
+	if( source->testCustomStatus("STOP_ATTACKING") )
+		return STATE_FAILURE;
+
 	/**
 	 * Run the attack state sub-machine.
 	 * If the attack state machine returns anything other than CONTINUE,
@@ -5711,6 +5972,18 @@ void AIAttackState::onExit( StateExitType status )
 	obj->clearModelConditionState( MODELCONDITION_ATTACKING );
 
 	obj->clearLeechRangeModeForAllWeapons();
+
+	Weapon *curWeapon = obj->getCurrentWeapon();
+	if (curWeapon)
+	{
+		curWeapon->computeFiringTrackerBonusClear(obj);
+
+		// Release My Weapon Lock if I am currently Locked in Priority
+		if(obj->isCurWeaponLockedPriority())
+		{
+			obj->releaseWeaponLock(LOCKED_PRIORITY);
+		}
+	}
 
 	AIUpdateInterface *ai = obj->getAI();
 	if (ai)
@@ -7125,7 +7398,7 @@ void AIHuntState::onExit( StateExitType status )
 	Object *obj = getMachineOwner();
 	if (obj)
 	{
-		obj->releaseWeaponLock(LOCKED_TEMPORARILY);	// release any temporary locks.
+		obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 	}
 }
 

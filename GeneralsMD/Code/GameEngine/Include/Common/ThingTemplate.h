@@ -42,11 +42,14 @@
 #include "Common/ProductionPrerequisite.h"
 #include "Common/Science.h"
 #include "Common/UnicodeString.h"
+#include "Common/ObjectStatusTypes.h"
 
+#include "GameLogic/Weapon.h"
 #include "GameLogic/ArmorSet.h"
 #include "GameLogic/WeaponSet.h"
 #include "Common/STLTypedefs.h"
 #include "GameClient/Color.h"
+#include "GameClient/TintStatus.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class AIUpdateModuleData;
@@ -61,6 +64,8 @@ enum RadarPriorityType CPP_11(: Int);
 enum ScienceType CPP_11(: Int);
 enum EditorSortingType CPP_11(: Int);
 enum ShadowType CPP_11(: Int);
+enum WeaponBonusConditionType CPP_11(: Int);
+enum DisabledType CPP_11(: Int);
 class WeaponTemplateSet;
 class ArmorTemplateSet;
 class FXList;
@@ -68,6 +73,8 @@ class FXList;
 // TYPEDEFS FOR FILE //////////////////////////////////////////////////////////////////////////////
 typedef std::map<AsciiString, AudioEventRTS> PerUnitSoundMap;
 typedef std::map<AsciiString, const FXList*> PerUnitFXMap;
+typedef std::pair<GameDifficulty, UnsignedInt> MaxSimultaneousOfTypeDifficultyPair;
+typedef std::vector<MaxSimultaneousOfTypeDifficultyPair> MaxSimultaneousOfTypeDifficulty;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -86,7 +93,7 @@ typedef std::map<AsciiString, const FXList*> PerUnitFXMap;
 //-------------------------------------------------------------------------------------------------
 enum
 {
-	MAX_UPGRADE_CAMEO_UPGRADES = 5
+	MAX_UPGRADE_CAMEO_UPGRADES = 9
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -233,6 +240,60 @@ static const char *const BuildableStatusNames[] =
 };
 static_assert(ARRAY_SIZE(BuildableStatusNames) == BSTATUS_NUM_TYPES + 1, "Incorrect array size");
 #endif	// end DEFINE_BUILDABLE_STATUS_NAMES
+
+enum AmmoPipsStyle CPP_11(: Int)
+{
+		AMMO_PIPS_DEFAULT = 0,  ///< Default style, showing each shot in clip
+		AMMO_PIPS_BAR,	///< Show percentage bar
+		AMMO_PIPS_SINGLE,  ///< like default, but show a single pip only (full or empty)
+		AMMO_PIPS_THIN,  ///< like default, but half width
+	
+		AMMO_PIPS_NUM_TYPES								// leave this last
+};
+#ifdef DEFINE_AMMO_PIPS_STYLE_NAMES
+static const char* AmmoPipsStyleNames[] =
+{
+	"DEFAULT",
+	"PERCENTAGE_BAR",
+	"SINGLE",
+	"THIN",
+
+	NULL
+};
+#endif  // end DEFINE_AMMO_PIPS_STYLE_NAMES
+
+#ifdef DEFINE_DIFFICULTY_NAMES
+static const char *TheDifficultyNames[] = 
+{
+	"EASY",			
+	"NORMAL",			
+	"HARD",					
+
+	NULL
+};
+#endif // end DEFINE_DIFFICULTY_NAMES
+
+// ---
+//enum ProgressBarStyle CPP_11(: Int)
+//{
+//	  PROGRESS_BAR_NONE = 0,  ///< Default. No progress bar
+//		PROGRESS_BAR_SHIELD,	///< large white bar
+//		PROGRESS_BAR_SHIELD,  ///< like default, but show a single pip only (full or empty)
+//		AMMO_PIPS_THIN,  ///< like default, but half width
+//
+//		AMMO_PIPS_NUM_TYPES								// leave this last
+//};
+//#ifdef DEFINE_PROGRESS_BAR_STYLE_NAMES
+//static const char* ProgressBarStyleNames[] =
+//{
+//	"DEFAULT",
+//	"PERCENTAGE_BAR",
+//	"SINGLE",
+//	"THIN",
+//
+//	NULL
+//};
+//#endif  // end DEFINE_PROGRESS_BAR_STYLE_NAMES
 
 //-------------------------------------------------------------------------------------------------
 enum ModuleParseMode CPP_11(: Int)
@@ -419,6 +480,9 @@ public:
 
 	RadarPriorityType getDefaultRadarPriority() const { return (RadarPriorityType)m_radarPriority; }  ///< return radar priority from INI
 
+	AmmoPipsStyle getAmmoPipsStyle() const { return (AmmoPipsStyle)m_ammoPipsStyle; }  ///< return ammo pips style from ini
+
+
 	// note, you should not call this directly; rather, call Object::getTransportSlotCount().
 	Int getRawTransportSlotCount() const { return m_transportSlotCount; }
 
@@ -465,6 +529,8 @@ public:
 	Bool isTrainable() const{return m_isTrainable; }
 	Bool isEnterGuard() const{return m_enterGuard; }
 	Bool isHijackGuard() const{return m_hijackGuard; }
+	Bool isEquipGuard() const{return m_equipGuard; }
+	Bool isParasiteGuard() const{return m_parasiteGuard; }
 
 	const AudioEventRTS *getVoiceSelect() const								{ return getAudio(TTAUDIO_voiceSelect); }
 	const AudioEventRTS *getVoiceGroupSelect() const					{ return getAudio(TTAUDIO_voiceGroupSelect); }
@@ -530,6 +596,10 @@ public:
 
 	const std::vector<AsciiString>& getBuildVariations() const { return m_buildVariations; }
 
+	const std::vector<AsciiString>& getMaxSimultaneousLinkObjects() const { return m_maxSimultaneousLinkObjects; }
+
+	const UnicodeString& getCustomMaxedOutMessage() const { return m_maxSimultaneousCustomMessage; }
+
 	Real getAssetScale() const { return m_assetScale; }						///< return uniform scaling
 	Real getInstanceScaleFuzziness() const { return m_instanceScaleFuzziness; }						///< return uniform scaling
 	Real getStructureRubbleHeight() const { return (Real)m_structureRubbleHeight; }						///< return uniform scaling
@@ -566,6 +636,9 @@ public:
 	Int getPrereqCount() const { return m_prereqInfo.size(); }
 	const ProductionPrerequisite *getNthPrereq(Int i) const { return &m_prereqInfo[i]; }
 
+	Int getNegPrereqCount() const { return m_negprereqInfo.size(); }
+	const ProductionPrerequisite *getNthNegPrereq(Int i) const { return &m_negprereqInfo[i]; }
+	Bool getNegPrereqHideInfo() const { return m_negprereqHideInfo; }
 	/**
 		return the BuildFacilityTemplate, if any.
 
@@ -603,6 +676,9 @@ public:
 
 	void setCopiedFromDefault();
 
+	// Only set non removable modules as copied when using ObjectExtend
+	void setCopiedFromDefaultExtended();
+
 	void setReskinnedFrom(const ThingTemplate* tt) { DEBUG_ASSERTCRASH(m_reskinnedFrom == NULL, ("should be null")); m_reskinnedFrom = tt; }
 
 	Bool isPrerequisite() const { return m_isPrerequisite; }
@@ -622,6 +698,46 @@ public:
 	AsciiString getUpgradeCameoName( Int n)const{ return m_upgradeCameoUpgradeNames[n];	}
 
 	const WeaponTemplateSetVector& getWeaponTemplateSets(void) const {return m_weaponTemplateSets;}
+
+	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
+	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }
+
+	const AsciiString& friend_getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
+	const AsciiString& friend_getSelectingCursorName() const {return m_selectingCursorName;	}
+	const AsciiString& friend_getMoveToCursorName() const {return m_moveToCursorName;	}
+	const AsciiString& friend_getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
+	const AsciiString& friend_getWaypointCursorName() const {return m_waypointCursorName;	}
+	const AsciiString& friend_getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
+	const AsciiString& friend_getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
+	const AsciiString& friend_getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
+	const AsciiString& friend_getOutrangeCursorName() const {return m_outrangeCursorName;	}
+	const AsciiString& friend_getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
+	const AsciiString& friend_getDockCursorName() const {return m_dockCursorName;	}
+	const AsciiString& friend_getGetHealedCursorName() const {return m_getHealedCursorName;	}
+	const AsciiString& friend_getDoRepairCursorName() const {return m_doRepairCursorName;	}
+	const AsciiString& friend_getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
+	const AsciiString& friend_getEnterCursorName() const {return m_enterCursorName;	}
+	const AsciiString& friend_getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
+	const AsciiString& friend_getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	const AsciiString& friend_getBuildCursorName() const {return m_buildCursorName;	}
+	const AsciiString& friend_getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
+	const AsciiString& friend_getSalvageCursorName() const {return m_salvageCursorName;	}
+	
+	Bool friend_getUseMyGetRepairAtCursor() const {return m_useMyGetRepairAtCursor;	}
+	Bool friend_getUseMyDockCursor() const {return m_useMyDockCursor;	}
+	Bool friend_getUseMyGetHealedCursor() const {return m_useMyGetHealedCursor;	}
+	Bool friend_getUseMyEnterCursor() const {return m_useMyEnterCursor;	}
+	Bool friend_getUseMySalvageCursor() const {return m_useMySalvageCursor;	}
+
+	Bool setDisabledUnderPowered() const  { return m_setDisabledWhenUnderpowered; }
+	DisabledType getDisabledTypeUnderPowered() const { return m_disabledTypeUnderPowered; }
+	WeaponBonusConditionTypeVec getWeaponBonusUnderPowered() const { return m_bonusUnderPowered; }
+	ObjectStatusMaskType getStatusUnderPowered() const { return m_statusUnderPowered; }
+	ModelConditionFlags getModelConditionUnderPowered() const { return m_modelConditionUnderPowered; }
+	const std::vector<AsciiString>& getCustomWeaponBonusUnderPowered() const { return m_customBonusUnderPowered; }
+	const std::vector<AsciiString>& getCustomStatusUnderPowered() const { return m_customStatusUnderPowered; }
+	TintStatus getTintStatusUnderPowered() const { return m_tintStatusUnderPowered; }
+	const AsciiString& getCustomTintStatusUnderPowered() const { return m_customTintStatusUnderPowered; }
 
 protected:
 
@@ -656,8 +772,11 @@ protected:
   static void OverrideableByLikeKind(INI *ini, void *instance, void *store, const void *userData);
 
   static void parseMaxSimultaneous(INI *ini, void *instance, void *store, const void *userData);
+  static void parseMaxSimultaneousOfTypeDifficulty(INI *ini, void *instance, void *store, const void *userData);
 
 	Bool removeModuleInfo(const AsciiString& moduleToRemove, AsciiString& clearedModuleNameOut);
+
+	static void parseNegativePrerequisites( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 
 private:
 	static const FieldParse s_objectFieldParseTable[];		///< the parse table
@@ -680,6 +799,29 @@ private:
 #ifdef LOAD_TEST_ASSETS
 	AsciiString				m_LTAName;
 #endif
+
+	AsciiString				m_customTintStatusUnderPowered;
+
+	AsciiString				m_genericInvalidCursorName;
+	AsciiString				m_selectingCursorName;
+	AsciiString				m_moveToCursorName;
+	AsciiString				m_attackMoveToCursorName;
+	AsciiString				m_waypointCursorName;
+	AsciiString				m_attackObjectCursorName;
+	AsciiString				m_forceAttackObjectCursorName;
+	AsciiString				m_forceAttackGroundCursorName;
+	AsciiString				m_outrangeCursorName;
+	AsciiString				m_getRepairAtCursorName;
+	AsciiString				m_dockCursorName;
+	AsciiString				m_getHealedCursorName;
+	AsciiString				m_doRepairCursorName;
+	AsciiString				m_resumeConstructionCursorName;
+	AsciiString				m_enterCursorName;
+	AsciiString				m_enterAggressiveCursorName;
+	AsciiString				m_setRallyPointCursorName;
+	AsciiString				m_salvageCursorName;
+	AsciiString				m_buildCursorName;
+	AsciiString				m_invalidBuildCursorName;
 
 	// ---- Misc Larger-than-int things
 	GeometryInfo			m_geometryInfo;			///< geometry information
@@ -706,6 +848,16 @@ private:
 	std::vector<ProductionPrerequisite>	m_prereqInfo;				///< the unit Prereqs for this tech
 	std::vector<AsciiString>						m_buildVariations;	/**< if we build a unit of this type via script or ui, randomly choose one
 																														of these templates instead. (doesn't apply to MapObject-created items) */
+	std::vector<ProductionPrerequisite>				m_negprereqInfo;				///< the unit Negative Prereqs for this tech
+	Bool											m_negprereqHideInfo;
+	std::vector<AsciiString>						m_maxSimultaneousLinkObjects; ///< counting other objects towards unit Max
+	UnicodeString										m_maxSimultaneousCustomMessage;
+	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficulty;
+	MaxSimultaneousOfTypeDifficulty	m_maxSimultaneousOfTypeDifficultyAI;
+
+	std::vector<AsciiString>						m_customBonusUnderPowered;		///< Weapon Bonus to apply when Underpowered
+	std::vector<AsciiString>						m_customStatusUnderPowered;		///< Status to apply when Underpowered
+
 	WeaponTemplateSetVector							m_weaponTemplateSets;					///< our weaponsets
 	WeaponTemplateSetFinder							m_weaponTemplateSetFinder;		///< helper to allow us to find the best sets, quickly
 	ArmorTemplateSetVector							m_armorTemplateSets;	///< our armorsets
@@ -761,6 +913,14 @@ private:
 	Bool					m_isForbidden;								///< useful when overriding in <mapfile>.ini
 	Bool					m_armorCopiedFromDefault;
 	Bool					m_weaponsCopiedFromDefault;
+	Bool					m_useMyGetRepairAtCursor;
+	Bool					m_useMyDockCursor;
+	Bool					m_useMyGetHealedCursor;
+	Bool					m_useMyEnterCursor;
+	Bool					m_useMySalvageCursor;
+	Bool          m_equipGuard;
+	Bool          m_parasiteGuard;
+	Bool					m_setDisabledWhenUnderpowered;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority
@@ -773,7 +933,14 @@ private:
 	Byte					m_moduleParsingMode;
 	UnsignedByte	m_crusherLevel;							///< crusher > crushable level to actually crush
 	UnsignedByte	m_crushableLevel;						///< Specifies the level of crushability (must be hit by a crusher greater than this to crush me).
+	Byte					m_ammoPipsStyle;                ///< How ammo pips are displayed for this thing
 
+	// ---- Other
+	DisabledType							m_disabledTypeUnderPowered;
+	WeaponBonusConditionTypeVec 			m_bonusUnderPowered;
+	ObjectStatusMaskType					m_statusUnderPowered;
+	TintStatus								m_tintStatusUnderPowered;
+	ModelConditionFlags						m_modelConditionUnderPowered;
 
 };
 

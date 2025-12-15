@@ -29,6 +29,8 @@
 
 #include "PreRTS.h" // This must go first in EVERY cpp file in the GameEngine
 
+#define DEFINE_WEAPONSLOTTYPE_NAMES  //TheWeaponSlotTypeNamesLookupList
+
 #include "Common/GameAudio.h"
 #include "Common/GlobalData.h"
 #include "Common/Player.h"
@@ -47,10 +49,12 @@
 #include "GameClient/InGameUI.h"
 #include "GameClient/ControlBar.h"
 #include "GameClient/GameText.h"
+#include "GameClient/GameClient.h"
 
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Weapon.h"
 #include "GameLogic/ExperienceTracker.h"
@@ -74,6 +78,7 @@ SpecialAbilityUpdate::SpecialAbilityUpdate( Thing *thing, const ModuleData* modu
   m_prepFrames = 0;
   m_animFrames = 0;
   m_targetID = INVALID_ID;
+  m_targetDrawID = INVALID_DRAWABLE_ID;
   m_targetPos.zero();
   m_locationCount = 0;
   m_specialObjectEntries = 0;
@@ -299,7 +304,16 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
         }
         case SPECIAL_MISSILE_DEFENDER_LASER_GUIDED_MISSILES:
         {
-          if ( target->isKindOf( KINDOF_STRUCTURE ) )
+          Bool doFallthrough = FALSE;
+          if(target->isAnyKindOf( data->m_forbiddenKindOf ))
+            doFallthrough = TRUE;
+
+          if(!doFallthrough && data->m_kindOf != KINDOFMASK_NONE )
+          {
+            if(target->isAnyKindOf( data->m_kindOf ))
+              break;
+          }
+          if ( target->isKindOf( KINDOF_STRUCTURE ) || doFallthrough )
             shouldAbort = TRUE;
           FALLTHROUGH; //deliberately falling through
         }
@@ -470,6 +484,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
 //-------------------------------------------------------------------------------------------------
 Bool SpecialAbilityUpdate::initiateIntentToDoSpecialPower( const SpecialPowerTemplate *specialPowerTemplate,
                                                            const Object *targetObj,
+                                                           const Drawable *targetDraw,
                                                            const Coord3D *targetPos,
                                                            const Waypoint *way,
                                                            UnsignedInt commandOptions )
@@ -485,6 +500,7 @@ Bool SpecialAbilityUpdate::initiateIntentToDoSpecialPower( const SpecialPowerTem
 
   //Clear target values
   m_targetID = INVALID_ID;
+  m_targetDrawID = INVALID_DRAWABLE_ID;
   m_targetPos.zero();
   m_locationCount = 0;
   m_prepFrames = 0;
@@ -503,6 +519,10 @@ Bool SpecialAbilityUpdate::initiateIntentToDoSpecialPower( const SpecialPowerTem
   {
     //Get the target!
     m_targetID = targetObj ? targetObj->getID() : INVALID_ID;
+  }
+  else if( targetDraw )
+  {
+    m_targetDrawID = targetDraw ? targetDraw->getID() : INVALID_DRAWABLE_ID;
   }
   else if( targetPos )
   {
@@ -1168,9 +1188,19 @@ Bool SpecialAbilityUpdate::continuePreparation()
       }
 
       Relationship r = getObject()->getRelationship(target);
-      if( r == ALLIES )
+      if(data->m_targetsMask == 0)
       {
-        //It's been captured by a colleague, so cancel!
+        if( r == ALLIES )
+        {
+          //It's been captured by a colleague, so cancel!
+          return false;
+        }
+      }
+      else if(((data->m_targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        ((data->m_targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        ((data->m_targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+            )
+      {
         return false;
       }
 
@@ -1287,6 +1317,7 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
 
 
   Bool okToLoseStealth = TRUE;
+  WeaponSlotType wslot = (WeaponSlotType)INI::scanLookupList(data->m_weaponSlotName.str(), TheWeaponSlotTypeNamesLookupList);
 
   switch( spTemplate->getSpecialPowerType() )
   {
@@ -1295,11 +1326,11 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       Object *target = TheGameLogic->findObjectByID( m_targetID );
       if( target )
       {
-        const Weapon *weapon = object->getWeaponInWeaponSlot( SECONDARY_WEAPON );
+        const Weapon *weapon = object->getWeaponInWeaponSlot( wslot );
         if( weapon )
         {
           // lock it just till the weapon is empty or the attack is "done"
-          object->setWeaponLock( SECONDARY_WEAPON, LOCKED_TEMPORARILY );
+          object->setWeaponLock( wslot, LOCKED_TEMPORARILY );
           AIUpdateInterface *ai = object->getAIUpdateInterface();
           if( ai )
           {
@@ -1346,8 +1377,9 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       Object *charge = createSpecialObject();
       if( charge )
       {
-        static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-        StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+        //static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+			  //StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+			  StickyBombUpdateInterface *update = charge->getStickyBombUpdateInterface();
         if( !update )
         {
           DEBUG_ASSERTCRASH( 0,
@@ -1547,7 +1579,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
           Object *specialObject = TheGameLogic->findObjectByID( *i );
           if( specialObject )
           {
-            StickyBombUpdate *update = (StickyBombUpdate*)specialObject->findUpdateModule( key_StickyBombUpdate );
+            //StickyBombUpdate *update = (StickyBombUpdate*)specialObject->findUpdateModule( key_StickyBombUpdate );
+            StickyBombUpdateInterface *update = specialObject->getStickyBombUpdateInterface();
             if( update )
             {
               //Blow it up!!!
@@ -1572,7 +1605,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         Object *charge = createSpecialObject();
         if( charge )
         {
-          StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+          //StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
+          StickyBombUpdateInterface *update = charge->getStickyBombUpdateInterface();
           if( !update )
           {
             DEBUG_ASSERTCRASH( 0,
@@ -1593,13 +1627,14 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
     case SPECIAL_DISGUISE_AS_VEHICLE:
     {
       Object *target = TheGameLogic->findObjectByID( m_targetID );
-      if( target )
+      Drawable *draw = TheGameClient->findDrawableByID( m_targetDrawID );
+      if( target || draw )
       {
         StealthUpdate* update = getObject()->getStealth();
 
         if( update )
         {
-          update->disguiseAsObject( target );
+          update->disguiseAsObject( target, draw );
         }
       }
 
@@ -1614,6 +1649,21 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
     {
       stealth->markAsDetected();
     }
+  }
+
+  if( data->m_oclOnExecute != NULL )
+	{
+		ObjectCreationList::create(data->m_oclOnExecute, object, NULL);
+	}
+
+	if( data->m_fxOnExecute != NULL )
+	{
+		FXList::doFXObj(data->m_fxOnExecute, object, NULL);
+	}
+
+  if( data->m_destroyOnExecute )
+  {
+    TheGameLogic->destroyObject( object );
   }
 }
 
@@ -2027,6 +2077,9 @@ void SpecialAbilityUpdate::xfer( Xfer *xfer )
 
 	// target ID
 	xfer->xferObjectID( &m_targetID );
+
+  // target drawable ID
+  xfer->xferDrawableID( &m_targetDrawID );
 
 	// target position
 	xfer->xferCoord3D( &m_targetPos );

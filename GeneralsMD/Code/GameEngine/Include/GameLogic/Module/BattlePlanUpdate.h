@@ -95,12 +95,26 @@ enum TransitionStatus CPP_11(: Int)
 	TRANSITIONSTATUS_PACKING,
 };
 
+#ifdef DEFINE_BATTLEPLANSTATUS_NAMES
+static const char* TheBattlePlanStatusNames[] =
+{
+	"NONE",
+	"BOMBARDMENT",
+	"HOLD_THE_LINE",
+	"SEARCH_AND_DESTROY",
+
+	NULL
+};
+#endif
+
 enum BattlePlanStatus CPP_11(: Int)
 {
 	PLANSTATUS_NONE,
 	PLANSTATUS_BOMBARDMENT,
 	PLANSTATUS_HOLDTHELINE,
 	PLANSTATUS_SEARCHANDDESTROY,
+
+	PLANSTATUS_COUNT
 };
 
 class BattlePlanBonuses : public MemoryPoolObject
@@ -134,7 +148,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const {return m_status != TRANSITIONSTATUS_IDLE;}
@@ -143,6 +157,9 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	//Returns the currently active battle plan -- unpacked and ready... returns PLANSTATUS_NONE if in transition!
 	BattlePlanStatus getActiveBattlePlan() const;

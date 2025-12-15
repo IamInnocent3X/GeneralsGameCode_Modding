@@ -70,7 +70,7 @@ public:
 //-------------------------------------------------------------------------------------------------
 /** W3D tree draw */
 //-------------------------------------------------------------------------------------------------
-class W3DTreeDraw : public DrawModule
+class W3DTreeDraw : public DrawModule, public TreeDrawInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( W3DTreeDraw, "W3DTreeDraw" )
@@ -88,6 +88,11 @@ public:
 	virtual void setFullyObscuredByShroud(Bool fullyObscured) {}
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle) {}
 	virtual void reactToGeometryChange() {}
+
+	virtual const AsciiString& getModelName() const { return getW3DTreeDrawModuleData()->m_modelName; }
+
+	virtual TreeDrawInterface* getTreeDrawInterface() { return this; }
+	virtual const TreeDrawInterface* getTreeDrawInterface() const { return this; }
 
 protected:
 

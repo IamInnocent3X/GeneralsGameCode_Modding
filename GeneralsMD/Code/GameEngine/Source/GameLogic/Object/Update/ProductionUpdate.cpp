@@ -101,6 +101,8 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 	m_doorClosingTime = 0;
 	m_constructionCompleteDuration = 0;
 	m_quantityModifiers.clear();
+	m_productionModifiers.clear();
+	m_bindsSelection = FALSE;
 	m_maxQueueEntries = 9;
 	m_disabledTypesToProcess = MAKE_DISABLED_MASK(DISABLED_HELD);
 }
@@ -120,6 +122,60 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+/*static*/ void ProductionUpdateModuleData::parseAppendProductionModifier( INI* ini, void *instance, void *store, const void* /*userData*/ )
+{
+	ProductionUpdateModuleData* data = (ProductionUpdateModuleData*)instance;
+	ProductionModifier pm;
+	QuantityModifier qm;
+	Bool parsedFirst = FALSE;
+	Bool parsedTemplate = FALSE;
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		if(isdigit(*token))
+		{
+			if(!parsedFirst)
+			{
+				if(pm.m_templateName.isEmpty())
+				{
+					DEBUG_CRASH(("Parsing quantity requires first the parsing of Template."));
+					throw INI_INVALID_DATA;
+				}
+				pm.m_quantity = INI::scanInt(token);
+			}
+			else
+			{
+				if(!parsedTemplate)
+				{
+					DEBUG_CRASH(("Parsing quantity requires first the parsing of Template."));
+					throw INI_INVALID_DATA;
+				}
+				qm.m_quantity = INI::scanInt(token);
+				pm.m_otherTemplateNames.push_back(qm);
+				qm.m_quantity = 1;
+				parsedTemplate = FALSE;
+			}
+		}
+		else
+		{
+			if(pm.m_templateName.isEmpty())
+			{
+				pm.m_templateName.set( token );
+			}
+			else
+			{
+				parsedFirst = TRUE;
+				if(parsedTemplate)
+					pm.m_otherTemplateNames.push_back(qm);
+				qm.m_templateName.set( token );
+				parsedTemplate = TRUE;
+				qm.m_quantity = 1;
+			}
+		}
+	}
+	data->m_productionModifiers.push_back( pm );
+}
+
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 /*static*/ void ProductionUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 {
@@ -134,6 +190,8 @@ ProductionUpdateModuleData::ProductionUpdateModuleData( void )
 		{ "DoorCloseTime", INI::parseDurationUnsignedInt, NULL, offsetof( ProductionUpdateModuleData, m_doorClosingTime ) },
 		{ "ConstructionCompleteDuration", INI::parseDurationUnsignedInt, NULL, offsetof( ProductionUpdateModuleData, m_constructionCompleteDuration ) },
 		{ "QuantityModifier",	parseAppendQuantityModifier, NULL, offsetof( ProductionUpdateModuleData, m_quantityModifiers ) },
+		{ "ProductionModifier",	parseAppendProductionModifier, NULL, offsetof( ProductionUpdateModuleData, m_productionModifiers ) },
+		{ "BindsSelectionForGroupsProduced",	INI::parseBool, NULL, offsetof( ProductionUpdateModuleData, m_bindsSelection ) },
 		{ "DisabledTypesToProcess",	DisabledMaskType::parseFromINI, NULL, offsetof( ProductionUpdateModuleData, m_disabledTypesToProcess ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -160,6 +218,9 @@ ProductionEntry::ProductionEntry( void )
 	m_prev = NULL;
 	m_productionQuantityProduced = 0;
 	m_productionQuantityTotal = 0;
+	m_productionExtraData.clear();
+	m_bindsSelectionOnGroupsProduced = FALSE;
+	m_bindsSelectionOnGroupsData.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -167,6 +228,44 @@ ProductionEntry::ProductionEntry( void )
 ProductionEntry::~ProductionEntry( void )
 {
 
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Real ProductionEntry::getPercentComplete( void ) const
+{
+	return INT_TO_REAL( TheGameLogic->getFrame() - m_framesUnderConstruction ) * m_percentComplete * 100.0f;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ProductionEntry::setNewProduction()
+{
+	if(m_productionExtraData.size() <= m_newTemplateAmount)
+		return;
+
+	m_objectToProduce = TheThingFactory->findTemplate( m_productionExtraData[m_newTemplateAmount].m_templateName );
+	if(m_objectToProduce)
+	{
+		m_productionQuantityProduced = 0;
+		m_productionQuantityTotal = m_productionExtraData[m_newTemplateAmount].m_quantity;
+	}
+	m_newTemplateAmount++;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ProductionEntry::setBindsSelection()
+{
+	if(m_bindsSelectionOnGroupsData.size()<=1)
+		return;
+	
+	for(std::vector<ObjectID>::iterator it = m_bindsSelectionOnGroupsData.begin(); it != m_bindsSelectionOnGroupsData.end(); ++it)
+	{
+		Object *obj = TheGameLogic->findObjectByID(*it);
+		if(obj)
+			obj->setSelectablesBoundTo(m_bindsSelectionOnGroupsData);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,6 +294,7 @@ ProductionUpdate::ProductionUpdate( Thing *thing, const ModuleData* moduleData )
 	m_setFlags.clear();
 	m_flagsDirty = FALSE;
 	m_specialPowerConstructionCommandButton = NULL;
+	m_nextWakeUpTime = 0;
 
 }
 
@@ -313,6 +413,9 @@ Bool ProductionUpdate::queueUpgrade( const UpgradeTemplate *upgrade )
 
 	// add this upgrade as in progress in the player
 	player->addUpgrade( upgrade, UPGRADE_STATUS_IN_PRODUCTION );
+
+	// wake us up after queueing
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 
 
@@ -442,14 +545,29 @@ Bool ProductionUpdate::queueCreateUnit( const ThingTemplate *unitType, Productio
 		}
 	}
 
+	for( std::vector<ProductionModifier>::const_iterator it_p = data->m_productionModifiers.begin(); it_p != data->m_productionModifiers.end(); ++it_p )
+  {
+		const ThingTemplate* productionTemplate = TheThingFactory->findTemplate( it_p->m_templateName );
+		if( productionTemplate && productionTemplate->isEquivalentTo( unitType ) )
+		{
+			production->m_productionQuantityTotal = it_p->m_quantity;
+			production->m_productionExtraData = it_p->m_otherTemplateNames;
+			break;
+		}
+	}
+
 	// assing production entry data
 	production->m_type = PRODUCTION_UNIT;
 	production->m_objectToProduce = unitType;
 	production->m_productionID = productionID;
 	production->m_exitDoor = exitDoor;
+	production->m_bindsSelectionOnGroupsProduced = data->m_bindsSelection;
 
 	// tie to the end of the production queue
 	addToProductionQueue( production );
+
+	// wake us up after queueing
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 	return TRUE;  // unit queued
 
@@ -487,6 +605,9 @@ void ProductionUpdate::cancelUnitCreate( ProductionID productionID )
 
 	}
 
+	// wake us up for update
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -523,6 +644,9 @@ void ProductionUpdate::cancelAllUnitsOfType( const ThingTemplate *unitType)
 
 	}
 
+	// wake us up for update
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -558,25 +682,36 @@ void ProductionUpdate::updateDoors()
 				m_flagsDirty = TRUE;
 
 			}
+			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_doors[i].m_doorOpenedFrame + d->m_doorOpeningTime + 1)
+			{
+				m_nextWakeUpTime = m_doors[i].m_doorOpenedFrame + d->m_doorOpeningTime + 1;
+			}
 
 		}
 		else if( m_doors[i].m_doorWaitOpenFrame )
 		{
 
-			if( now - m_doors[i].m_doorWaitOpenFrame > d->m_doorWaitOpenTime && !m_doors[i].m_holdOpen )
+			if( !m_doors[i].m_holdOpen )
 			{
+				if( now - m_doors[i].m_doorWaitOpenFrame > d->m_doorWaitOpenTime  )
+				{
 
-				// set our frame marker for closing
-				m_doors[i].m_doorWaitOpenFrame = 0;
-				m_doors[i].m_doorClosedFrame = now;
+					// set our frame marker for closing
+					m_doors[i].m_doorWaitOpenFrame = 0;
+					m_doors[i].m_doorClosedFrame = now;
 
-				// set the flags that show the difference in the art
-				m_clearFlags.set( theWaitingOpenFlags[i], true );
-				m_setFlags.set( theWaitingOpenFlags[i], false );
+					// set the flags that show the difference in the art
+					m_clearFlags.set( theWaitingOpenFlags[i], true );
+					m_setFlags.set( theWaitingOpenFlags[i], false );
 
-				m_setFlags.set( theClosingFlags[i] );
-				m_flagsDirty = TRUE;
+					m_setFlags.set( theClosingFlags[i] );
+					m_flagsDirty = TRUE;
 
+				}
+				else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_doors[i].m_doorWaitOpenFrame + d->m_doorWaitOpenTime + 1)
+				{
+					m_nextWakeUpTime = m_doors[i].m_doorWaitOpenFrame + d->m_doorWaitOpenTime + 1;
+				}
 			}
 
 		}
@@ -595,9 +730,21 @@ void ProductionUpdate::updateDoors()
 				m_flagsDirty = TRUE;
 
 			}
+			else if(!m_nextWakeUpTime || m_nextWakeUpTime > m_doors[i].m_doorClosedFrame + d->m_doorClosingTime + 1)
+			{
+				m_nextWakeUpTime = m_doors[i].m_doorClosedFrame + d->m_doorClosingTime + 1;
+			}
 
 		}
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void ProductionUpdate::onCapture( Player *oldOwner, Player *newOwner )
+{
+	// wake us up
+	setWakeFrame(getObject(),UPDATE_SLEEP_NONE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -605,10 +752,14 @@ void ProductionUpdate::updateDoors()
 UpdateSleepTime ProductionUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	ProductionEntry *production = m_productionQueue;
 	const ProductionUpdateModuleData *d = getProductionUpdateModuleData();
 	UnsignedInt now = TheGameLogic->getFrame();
 	Object *us = getObject();
+
+	if(now >= m_nextWakeUpTime)
+		m_nextWakeUpTime = 0;
 
 	// update the door behaviors
 	if( d->m_numDoorAnimations > 0 )
@@ -633,6 +784,11 @@ UpdateSleepTime ProductionUpdate::update( void )
 			m_flagsDirty = TRUE;
 
 		}
+		else if( !m_nextWakeUpTime || m_nextWakeUpTime > m_constructionCompleteFrame + d->m_constructionCompleteDuration + 1 )
+		{
+			m_nextWakeUpTime = m_constructionCompleteFrame + d->m_constructionCompleteDuration + 1;
+		}
+		
 
 	}
 
@@ -653,7 +809,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 
 	// if nothing in the queue get outta here
 	if( production == NULL )
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//return UPDATE_SLEEP_NONE;
 
 	//
 	// if we've become OBJECT_STATUS_SOLD, halt all production ... leave things in the
@@ -663,7 +820,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 	// at the start of sell, but we still don't want to do anything here.
 	//
 	if( us->getStatusBits().test( OBJECT_STATUS_SOLD ) )
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//return UPDATE_SLEEP_NONE;
 
 	// get the player that is building this thing
 	Player *player = us->getControllingPlayer();
@@ -678,7 +836,8 @@ UpdateSleepTime ProductionUpdate::update( void )
 		// delete the production entry
 		deleteInstance(production);
 
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
+		//return UPDATE_SLEEP_NONE;
 
 	}
 
@@ -702,7 +861,7 @@ UpdateSleepTime ProductionUpdate::update( void )
 	}
 
 	// increase the frames we've been under production for
-	production->m_framesUnderConstruction++;
+	//production->m_framesUnderConstruction++;
 
 	// how many total logic frames does it take to produce this unit
 	Int totalProductionFrames;
@@ -711,13 +870,26 @@ UpdateSleepTime ProductionUpdate::update( void )
 	else
 		totalProductionFrames = production->m_upgradeToResearch->calcTimeToBuild( player );
 
+	// New way to handle production, now SLEEPY
+	if(!production->m_framesUnderConstruction)
+		production->m_framesUnderConstruction = now;
+
+	if(!production->m_percentComplete)
+		production->m_percentComplete = 1.0f/INT_TO_REAL(totalProductionFrames);
+
+	if( !m_nextWakeUpTime || m_nextWakeUpTime > production->m_framesUnderConstruction + totalProductionFrames )
+	{
+		m_nextWakeUpTime = production->m_framesUnderConstruction + totalProductionFrames;
+	}
+
 	// figure out our percent complete
-	production->m_percentComplete = INT_TO_REAL( production->m_framesUnderConstruction ) /
-																	INT_TO_REAL( totalProductionFrames ) *
-																	100.0f;
+	//production->m_percentComplete = INT_TO_REAL( production->m_framesUnderConstruction ) /
+	//																INT_TO_REAL( totalProductionFrames ) *
+	//																100.0f;
 
 	// if we've reached 100% or more we're done, tada!
-	if( production->m_percentComplete >= 100.0f )
+	//if( production->m_percentComplete >= 100.0f )
+	if(now >= production->m_framesUnderConstruction + totalProductionFrames)
 	{
 
 		// handle unit production items
@@ -855,15 +1027,29 @@ UpdateSleepTime ProductionUpdate::update( void )
 							//We created one guy, but we may want to do more so we should stay in this node of production.
 							// This is last so the voice check can easily check for "first" guy
 							production->oneProductionSuccessful();
+							if(newObj->isKindOf(KINDOF_SELECTABLE))
+								production->oneProductionSuccessfulBindSelection(newObj->getID());
 
 						}
+
+						// Added to find the next wake up time
+						updateDoors();
 
 					}
 
 				}
 
+				//update the production modifier
 				if( production->getProductionQuantityRemaining() == 0 )
 				{
+					production->setNewProduction();
+				}
+
+				if( production->getProductionQuantityRemaining() == 0 )
+				{
+					// Bind the selection of the Units Produced
+					production->setBindsSelection();
+
 					// remove this production entry so we can go on to the next if we are totally finished
 					removeFromProductionQueue( production );
 
@@ -871,13 +1057,16 @@ UpdateSleepTime ProductionUpdate::update( void )
 					deleteInstance(production);
 				}
 
+				// we're finish with the current production, move on to the next one
+				return UPDATE_SLEEP_NONE;
+
 			}
 			else
 			{
 
 				// there is no exit interface, this is an error
 				DEBUG_ASSERTCRASH( 0, ("Cannot create '%s', there is no ExitUpdate interface defined for producer object '%s'",
-															production->m_objectToProduce->getName().str(),
+															unitType->getName().str(),
 															creationBuilding->getTemplate()->getName().str()) );
 
 				// remove this item from the production queue
@@ -903,7 +1092,7 @@ UpdateSleepTime ProductionUpdate::update( void )
 				us->getID());
 
 			// print a message to the local player, if it wants one
-			if( us->isLocallyViewed() && !upgrade->getDisplayNameLabel().isEmpty() )
+			if( us->isLocallyViewed() && !upgrade->getDisplayNameLabel().isEmpty() && !upgrade->isSilentCompletion() )
 			{
 				UnicodeString msg;
 				UnicodeString format = TheGameText->fetch( "UPGRADE:UpgradeComplete" );
@@ -973,11 +1162,22 @@ UpdateSleepTime ProductionUpdate::update( void )
 			// delete the production entry
 			deleteInstance(production);
 
+			// we're finish with the current production, move on to the next one
+			return UPDATE_SLEEP_NONE;
+
 		}
 
 	}
 
-	return UPDATE_SLEEP_NONE;
+	return calcSleepTime();
+	//return UPDATE_SLEEP_NONE;
+}
+
+//-------------------------------------------------------------------------------------------------
+UpdateSleepTime ProductionUpdate::calcSleepTime() const
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	return UPDATE_SLEEP( m_nextWakeUpTime > now ? m_nextWakeUpTime - now : UPDATE_SLEEP_FOREVER );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1241,6 +1441,12 @@ void ProductionUpdate::xfer( Xfer *xfer )
 	{
 		AsciiString name;
 
+		AsciiString templateName;
+		Int quantity;
+		UnsignedShort extraDataCount;
+		UnsignedShort SelectionOnGroupsDataCount;
+		ObjectID boundID = INVALID_ID;
+
 		// write all queue data
 		for( production = m_productionQueue; production; production = production->m_next )
 		{
@@ -1270,6 +1476,36 @@ void ProductionUpdate::xfer( Xfer *xfer )
 			// production quantity in progress
 			xfer->xferInt( &production->m_productionQuantityProduced );
 
+			// new template amount produced
+			xfer->xferInt( &production->m_newTemplateAmount );
+
+			// production extra data
+			extraDataCount = production->m_productionExtraData.size();
+			xfer->xferUnsignedShort( &extraDataCount );
+
+			for(std::vector<QuantityModifier>::iterator it = production->m_productionExtraData.begin(); it != production->m_productionExtraData.end(); ++it)
+			{
+				templateName = it->m_templateName;
+				xfer->xferAsciiString(&templateName);
+
+				quantity = it->m_quantity;
+				xfer->xferInt(&quantity);
+			}
+
+			// bind selection on groups produced
+			xfer->xferBool(&production->m_bindsSelectionOnGroupsProduced);
+
+			// selection groups data
+			SelectionOnGroupsDataCount = production->m_bindsSelectionOnGroupsData.size();
+			xfer->xferUnsignedShort( &SelectionOnGroupsDataCount );
+
+			// go through all IDs
+			for (int i_a = 0; i_a < SelectionOnGroupsDataCount; i_a++)
+			{
+				boundID = production->m_bindsSelectionOnGroupsData[i_a];
+				xfer->xferObjectID( &boundID );
+			}  // end for, i_a
+
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );
 
@@ -1279,6 +1515,12 @@ void ProductionUpdate::xfer( Xfer *xfer )
 	else
 	{
 		AsciiString name;
+
+		AsciiString templateName;
+		Int quantity;
+		UnsignedShort extraDataCount;
+		UnsignedShort SelectionOnGroupsDataCount;
+		ObjectID boundID = INVALID_ID;
 
 		// the queue should be emtpy now
 		if( m_productionQueue != NULL )
@@ -1359,6 +1601,63 @@ void ProductionUpdate::xfer( Xfer *xfer )
 			// production quantity in progress
 			xfer->xferInt( &production->m_productionQuantityProduced );
 
+			// new template amount produced
+			xfer->xferInt( &production->m_newTemplateAmount );
+
+			// production extra data
+			xfer->xferUnsignedShort( &extraDataCount );
+
+			// sanity, list must be empty right now
+			if( production->m_productionExtraData.size() != 0 )
+			{
+
+				DEBUG_CRASH(( "ProductionUpdate::xfer - production->m_productionExtraData should be empty but is not" ));
+				throw SC_INVALID_DATA;
+
+			}  // end if
+
+			QuantityModifier qm;
+			// read each entry
+			for( UnsignedInt i = 0; i < extraDataCount; ++i )
+			{
+
+				// read data
+				xfer->xferAsciiString(&templateName);
+
+				xfer->xferInt(&quantity);
+
+				qm.m_templateName = templateName;
+				qm.m_quantity = quantity;
+
+				// put at end of list
+				production->m_productionExtraData.push_back( qm );
+
+			}  // end for i
+
+			// bind selection on groups produced
+			xfer->xferBool(&production->m_bindsSelectionOnGroupsProduced);
+
+			// selection groups data
+			xfer->xferUnsignedShort( &SelectionOnGroupsDataCount );
+
+			// this list should be empty on loading
+			if( production->m_bindsSelectionOnGroupsData.size() != 0 )
+			{
+
+				DEBUG_CRASH(( "ScriptEngine::xfer - m_bindsSelectionOnGroupsData should be empty but is not" ));
+				throw SC_INVALID_DATA;
+
+			}  // end if
+
+			// read all IDs
+			for( UnsignedShort i_a = 0; i_a < SelectionOnGroupsDataCount; ++i_a )
+			{
+				// read and register ID
+				xfer->xferObjectID( &boundID );
+				production->m_bindsSelectionOnGroupsData.push_back(boundID);
+
+			}  // end for
+
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );
 
@@ -1386,6 +1685,9 @@ void ProductionUpdate::xfer( Xfer *xfer )
 
 	// flags dirty
 	xfer->xferBool( &m_flagsDirty );
+
+	// next wake up time
+	xfer->xferUnsignedInt( &m_nextWakeUpTime );
 
 }
 

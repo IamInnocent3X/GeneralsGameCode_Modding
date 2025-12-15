@@ -31,6 +31,7 @@
 
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "Common/CRCDebug.h"
 #include "Common/GlobalData.h"
 #include "Common/LatchRestore.h"
@@ -1175,10 +1176,31 @@ void PathfindCellInfo::releaseCellInfos(void)
  */
 PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord2D &pos)
 {
+#if RETAIL_COMPATIBLE_PATHFINDING
 	PathfindCellInfo *info = s_firstFree;
 	if (s_firstFree) {
 		DEBUG_ASSERTCRASH(s_firstFree->m_isFree, ("Should be freed."));
 		s_firstFree = s_firstFree->m_pathParent;
+
+#else
+	Bool applyMaullersSolution = TRUE;
+	PathfindCellInfo *info;
+	if( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 )
+	{
+		applyMaullersSolution = FALSE;
+		info = s_firstFree;
+	}
+	else
+		info = cell->getCellInfo();
+
+	if (applyMaullersSolution || s_firstFree) {
+		if (!applyMaullersSolution)
+		{
+			DEBUG_ASSERTCRASH(s_firstFree->m_isFree, ("Should be freed."));
+			s_firstFree = s_firstFree->m_pathParent;
+		}
+#endif
+
 		info->m_isFree = false;  // Just allocated it.
 		info->m_cell = cell;
 		info->m_pos = pos;
@@ -1206,12 +1228,29 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
  */
 void PathfindCellInfo::releaseACellInfo(PathfindCellInfo *theInfo)
 {
+#if RETAIL_COMPATIBLE_PATHFINDING
 	DEBUG_ASSERTCRASH(!theInfo->m_isFree, ("Shouldn't be free."));
 	//@ todo -fix this assert on usa04.  jba.
 	//DEBUG_ASSERTCRASH(theInfo->m_obstacleID==0, ("Shouldn't be obstacle."));
 	theInfo->m_pathParent = s_firstFree;
 	s_firstFree = theInfo;
 	s_firstFree->m_isFree = true;
+#else
+if( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 )
+{
+	DEBUG_ASSERTCRASH(!theInfo->m_isFree, ("Shouldn't be free."));
+	//@ todo -fix this assert on usa04.  jba.
+	//DEBUG_ASSERTCRASH(theInfo->m_obstacleID==0, ("Shouldn't be obstacle."));
+	theInfo->m_pathParent = s_firstFree;
+	s_firstFree = theInfo;
+	s_firstFree->m_isFree = true;
+}
+else
+{
+	theInfo->m_pathParent = NULL;
+	theInfo->m_isFree = true;
+}
+#endif
 }
 
 //-----------------------------------------------------------------------------------
@@ -1237,6 +1276,15 @@ PathfindCell::~PathfindCell( void )
 		DEBUG_LOG( ("PathfindCell::~PathfindCell m_info Allocated."));
 	}
 }
+
+#if !RETAIL_COMPATIBLE_PATHFINDING
+PathfindCellInfo* PathfindCell::getCellInfo()
+{
+	m_pathfindCellInfo.m_pathParent = NULL;
+	m_pathfindCellInfo.m_isFree = true;
+	return &m_pathfindCellInfo;
+}
+#endif
 
 /**
  * Reset the cell to default values
@@ -1659,16 +1707,24 @@ Int PathfindCell::releaseOpenList( PathfindCell *list )
 		}
 #endif
 
-		if (curInfo->m_nextOpen) {
+		// IamInnocent - Added sanity checks to prevent crashing
+		// NOTE: Although this prevents crashing, to have this to happen means that ground units can no longer move
+		// AIPathfind needs some serious rework.
+		if (curInfo && curInfo->m_nextOpen) {
 			list = curInfo->m_nextOpen->m_cell;
 		} else {
 			list = NULL;
 		}
 		DEBUG_ASSERTCRASH(cur == curInfo->m_cell, ("Bad backpointer in PathfindCellInfo"));
-		curInfo->m_nextOpen = NULL;
-		curInfo->m_prevOpen = NULL;
-		curInfo->m_open = FALSE;
-		cur->releaseInfo();
+		// IamInnocent - Added sanity checks
+		if(curInfo)
+		{
+			curInfo->m_nextOpen = NULL;
+			curInfo->m_prevOpen = NULL;
+			curInfo->m_open = FALSE;
+		}
+		if(cur)
+			cur->releaseInfo();
 	}
 	return count;
 }
@@ -1694,16 +1750,22 @@ Int PathfindCell::releaseClosedList( PathfindCell *list )
 		}
 #endif
 
-		if (curInfo->m_nextOpen) {
+		// IamInnocent - Added sanity checks
+		if (curInfo && curInfo->m_nextOpen) {
 			list = curInfo->m_nextOpen->m_cell;
 		} else {
 			list = NULL;
 		}
 		DEBUG_ASSERTCRASH(cur == curInfo->m_cell, ("Bad backpointer in PathfindCellInfo"));
-		curInfo->m_nextOpen = NULL;
-		curInfo->m_prevOpen = NULL;
-		curInfo->m_closed = FALSE;
-		cur->releaseInfo();
+		// IamInnocent - Added sanity checks
+		if(curInfo)
+		{
+			curInfo->m_nextOpen = NULL;
+			curInfo->m_prevOpen = NULL;
+			curInfo->m_closed = FALSE;
+		}
+		if(cur)
+			cur->releaseInfo();
 	}
 	return count;
 }
@@ -1721,7 +1783,8 @@ PathfindCell *PathfindCell::putOnClosedList( PathfindCell *list )
 
 		m_info->m_prevOpen = NULL;
 		m_info->m_nextOpen = list?list->m_info:NULL;
-		if (list)
+		// IamInnocent - Added sanity checks
+		if (list && list->m_info)
 			list->m_info->m_prevOpen = this->m_info;
 
 		list = this;

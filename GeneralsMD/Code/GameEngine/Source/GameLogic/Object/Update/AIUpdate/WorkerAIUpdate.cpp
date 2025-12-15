@@ -158,6 +158,16 @@ Real WorkerAIUpdate::getRepairHealthPerSecond( void ) const
 	return getWorkerAIUpdateModuleData()->m_repairHealthPercentPerSecond;
 }
 // ------------------------------------------------------------------------------------------------
+Bool WorkerAIUpdate::getRepairClearsParasite( void ) const
+{
+	return getWorkerAIUpdateModuleData()->m_repairClearsParasite;
+}
+// ------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& WorkerAIUpdate::getRepairClearsParasiteKeys( void ) const
+{
+	return getWorkerAIUpdateModuleData()->m_repairClearsParasiteKeys;
+}
+// ------------------------------------------------------------------------------------------------
 Real WorkerAIUpdate::getBoredTime( void ) const
 {
 	return getWorkerAIUpdateModuleData()->m_boredTime;
@@ -234,6 +244,7 @@ Real WorkerAIUpdate::getWarehouseScanDistance() const
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime WorkerAIUpdate::update( void )
 {
+	/// IamInnocent - Made Sleepy
 
 	//
 	// NOTE: Any changes to DozerAIUpdate::* you probably want to reflect and copy into
@@ -253,15 +264,20 @@ UpdateSleepTime WorkerAIUpdate::update( void )
 		//getCurLocomotor()->setUltraAccurate( TRUE );
 
 	// extend the normal AI system
-	AIUpdateInterface::update();
+	UpdateSleepTime ret = AIUpdateInterface::update();
 
 	// do nothing if we're dead
 	///@todo shouldn't this be at a higher level?
 	if( getObject()->isEffectivelyDead() )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// run our own state machine, and the appropriate sub machine
-	m_workerMachine->updateStateMachine();
+	StateReturnType stRet = m_workerMachine->updateStateMachine();
+
+	UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	ret = (mine < ret) ? mine : ret;
 
 	if( m_workerMachine->getCurrentStateID() == AS_DOZER )
 	{
@@ -286,16 +302,20 @@ UpdateSleepTime WorkerAIUpdate::update( void )
 		}
 
 		// update dozer behavior
-		m_dozerMachine->updateStateMachine();
+		stRet = m_dozerMachine->updateStateMachine();
 
 	}
 	else
 	{
-		m_supplyTruckStateMachine->updateStateMachine();
+		stRet = m_supplyTruckStateMachine->updateStateMachine();
 		// If we are harvesting, we can be diverted to clear mines.  jba.
 		getObject()->setWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL);//maybe go clear some mines, if I feel like it
 	}
-	return UPDATE_SLEEP_NONE;
+
+	mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	return (mine < ret) ? mine : ret;
+	//return UPDATE_SLEEP_NONE;
 }
 
 

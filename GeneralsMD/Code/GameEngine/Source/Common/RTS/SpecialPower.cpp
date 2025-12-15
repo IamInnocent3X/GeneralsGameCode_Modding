@@ -35,7 +35,9 @@
 #include "Common/Science.h"
 #include "Common/SpecialPower.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "Common/BitFlagsIO.h"
+#include "GameClient/FXList.h"
 
 
 // GLOBAL /////////////////////////////////////////////////////////////////////////////////////////
@@ -129,6 +131,96 @@ const char* const SpecialPowerMaskType::s_bitNameList[] =
 
 	"SPECIAL_BATTLESHIP_BOMBARDMENT",
 
+	//new constants by OFS
+	"SPECIAL_ION_CANNON",
+	"SPECIAL_CLUSTER_MISSILE",
+	"SPECIAL_SUNSTORM_MISSILE",
+	"SPECIAL_METEOR_STRIKE",
+	"SPECIAL_PUNISHER_CANNON",
+	"SPECIAL_CHEMICAL_MISSILE",
+	"SPECIAL_CHRONOSPHERE",
+
+	"AIRF_SPECIAL_HOLO_PLANES",
+	"AIRF_SPECIAL_PARADROP_AMERICA",
+	"AIRF_SPECIAL_HELICOPTER_AMBUSH",
+	"AIRF_SPECIAL_SUPERSONIC_AIRSTRIKE",
+	"AIRF_SPECIAL_HEAVY_AIRSTRIKE",
+
+	"SOCOM_SPECIAL_SUPPLY_DROP",
+	"SOCOM_SPECIAL_TANK_PARADROP",
+	"SOCOM_SPECIAL_COASTAL_BOMBARDEMENT",
+	"SOCOM_SPECIAL_AIR_DEPLOY_MARKER",
+
+	"TANK_SPECIAL_CLUSTER_MINES",
+	"TANK_SPECIAL_TANK_PARADROP",
+	"TANK_SPECIAL_REPAIR_VEHICLES",
+	"TANK_SPECIAL_EMP_PULSE",
+	"TANK_SPECIAL_FRENZY",
+	"TANK_SPECIAL_PARADROP",
+	"TANK_SPECIAL_ARTILLERY_BARRAGE",
+	"TANK_SPECIAL_NAPALM_BOMB",
+	"TANK_SPECIAL_CHINA_CARPET_BOMB",
+
+	"NUKE_SPECIAL_CASH_HACK",
+	"NUKE_SPECIAL_REPAIR_VEHICLES",
+	"NUKE_SPECIAL_FRENZY",
+	"NUKE_SPECIAL_ARTILLERY_BARRAGE",
+	"NUKE_SPECIAL_NEUTRON_BOMB",
+	"NUKE_SPECIAL_NUCLEAR_AIRSTRIKE",
+	"NUKE_SPECIAL_CHINA_CARPET_BOMB",
+	"NUKE_SPECIAL_BALLISTIC_MISSILE",
+
+	"CHINA_SPECIAL_SPY_SATELLITE",
+
+	"SECW_SPECIAL_EMP_HACK",
+	"SECW_SPECIAL_HUNTER_SEEKER",
+	"SECW_SPECIAL_SPY_SATELLITE",
+	"SECW_SPECIAL_DRONE_GUNSHIP",
+	"SECW_SPECIAL_SYSTEM_HACK",
+
+	"DEMO_SPECIAL_AMBUSH",
+	"DEMO_SPECIAL_REPAIR_VEHICLES",
+	"DEMO_SPECIAL_SNEAK_ATTACK",
+	"DEMO_SPECIAL_GPS_SCRAMBLER",
+	"DEMO_SPECIAL_FRENZY",
+	"DEMO_SPECIAL_ANTHRAX_BOMB",
+	"DEMO_SPECIAL_SUICIDE_PLANE",
+	"DEMO_SPECIAL_CARPET_BOMB",
+	"DEMO_SPECIAL_ARTILLERY_BARRAGE",
+
+	"CHEM_SPECIAL_AMBUSH",
+	"CHEM_SPECIAL_REPAIR_VEHICLES",
+	"CHEM_SPECIAL_SNEAK_ATTACK",
+	"CHEM_SPECIAL_VIRUS",
+	"CHEM_SPECIAL_GPS_SCRAMBLER",
+	"CHEM_SPECIAL_FRENZY",
+	"CHEM_SPECIAL_ANTHRAX_BOMB",
+	"CHEM_SPECIAL_CARPET_BOMB",
+	"CHEM_SPECIAL_AIRSTRIKE",
+
+	"FORT_SPECIAL_REPAIR_VEHICLES",
+	"FORT_SPECIAL_GPS_SCRAMBLER",
+	"FORT_SPECIAL_FRENZY",
+	"FORT_SPECIAL_AIRSTRIKE",
+	"FORT_SPECIAL_CARPET_BOMB",
+	"FORT_SPECIAL_ARTILLERY_BARRAGE",
+
+	 "LAZR_SPECIAL_NANO_SWARM",
+	 "LAZR_SPECIAL_AMBUSH",
+	 "LAZR_SPECIAL_SPY_SATELLITE",
+	 "LAZR_SPECIAL_DAISY_CUTTER",
+	 "LAZR_SPECIAL_SPECTRE_GUNSHIP",
+	 "LAZR_SPECIAL_AIRSTRIKE",
+	 "LAZR_SPECIAL_ORBITAL_STRIKE",
+
+	 "SUPW_SPECIAL_FORCEFIELD",
+	 "SUPW_SPECIAL_PARADROP_AMERICA",
+	 "SUPW_SPECIAL_TANK_PARADROP",
+	 "SUPW_SPECIAL_AIRSTRIKE",
+	 "SUPW_SPECIAL_CRYOBOMB",
+	 "SUPW_SPECIAL_SPECTRE_GUNSHIP",
+	 "SUPW_SPECIAL_ORBITAL_STRIKE",
+
 	NULL
 };
 static_assert(ARRAY_SIZE(SpecialPowerMaskType::s_bitNameList) == SpecialPowerMaskType::NumBits + 1, "Incorrect array size");
@@ -204,6 +296,20 @@ void SpecialPowerStore::parseSpecialPowerDefinition( INI *ini )
 	{ "RadiusCursorRadius",				INI::parseReal,										NULL,	offsetof( SpecialPowerTemplate, m_radiusCursorRadius ) },
 	{ "ShortcutPower",						INI::parseBool,										NULL, offsetof( SpecialPowerTemplate, m_shortcutPower ) },
 	{ "AcademyClassify",					INI::parseIndexList,			TheAcademyClassificationTypeNames, offsetof( SpecialPowerTemplate, m_academyClassificationType ) },
+	{ "BehaviorEnum",						INI::parseIndexList,			SpecialPowerMaskType::getBitNames(), offsetof(SpecialPowerTemplate, m_type_behavior) },
+	{ "EvaDetectedOwn",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_detected_own) },
+	{ "EvaDetectedAlly",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_detected_ally) },
+	{ "EvaDetectedEnemy",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_detected_enemy) },
+	{ "EvaLaunchedOwn",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_launched_own) },
+	{ "EvaLaunchedAlly",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_launched_ally) },
+	{ "EvaLaunchedEnemy",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_launched_enemy) },
+	{ "EvaReadyOwn",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_own) },
+	{ "EvaReadyAlly",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_ally) },
+	{ "EvaReadyEnemy",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_enemy) },
+	{ "DeleteUserOnExecute",					INI::parseBool,					NULL,	offsetof( SpecialPowerTemplate, m_destroyOnExecute ) },
+	{ "FXOnExecute",							INI::parseFXList,					NULL, offsetof( SpecialPowerTemplate, m_fxOnExecute ) },
+	{ "OCLOnExecute", 							INI::parseObjectCreationList, 		NULL, offsetof( SpecialPowerTemplate, m_oclOnExecute ) },
+
 	{ NULL,	NULL, NULL,	0 }
 
 };
@@ -223,6 +329,19 @@ SpecialPowerTemplate::SpecialPowerTemplate()
 	m_viewObjectRange = 0;
 	m_radiusCursorRadius = 0;
 	m_shortcutPower = FALSE;
+	m_type_behavior = SPECIAL_INVALID;
+	m_eva_detected_own = EVA_Invalid;
+	m_eva_detected_ally = EVA_Invalid;
+	m_eva_detected_enemy = EVA_Invalid;
+	m_eva_launched_own = EVA_Invalid;
+	m_eva_launched_ally = EVA_Invalid;
+	m_eva_launched_enemy = EVA_Invalid;
+	m_eva_ready_own = EVA_Invalid;
+	m_eva_ready_ally = EVA_Invalid;
+	m_eva_ready_enemy = EVA_Invalid;
+	m_destroyOnExecute = FALSE;
+	m_fxOnExecute = NULL;
+	m_oclOnExecute = NULL;
 
 }
 

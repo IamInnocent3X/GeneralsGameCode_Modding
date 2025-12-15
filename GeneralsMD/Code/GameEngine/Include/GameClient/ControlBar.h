@@ -175,10 +175,17 @@ enum GUICommandType CPP_11(: Int)
 	GUI_COMMAND_GUARD,										///< guard command
 	GUI_COMMAND_GUARD_WITHOUT_PURSUIT,		///< guard command, no pursuit out of guard area
 	GUI_COMMAND_GUARD_FLYING_UNITS_ONLY,	///< guard command, ignore nonflyers
+	GUI_COMMAND_GUARD_CURRENT_POS,
+	GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT,
+	GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY,
+	GUI_COMMAND_GUARD_FAR,
+	GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT,
+	GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY,
 	GUI_COMMAND_STOP,											///< stop moving
 	GUI_COMMAND_WAYPOINTS,								///< create a set of waypoints for this unit
 	GUI_COMMAND_EXIT_CONTAINER,						///< an inventory box for a container like a structure or transport
 	GUI_COMMAND_EVACUATE,									///< dump all our contents
+	GUI_COMMAND_ENTER_ME,									///< tell nearby objects to enter me
 	GUI_COMMAND_EXECUTE_RAILED_TRANSPORT,	///< execute railed transport sequence
 	GUI_COMMAND_BEACON_DELETE,						///< delete a beacon
 	GUI_COMMAND_SET_RALLY_POINT,					///< set rally point for a structure
@@ -198,6 +205,7 @@ enum GUICommandType CPP_11(: Int)
 	GUICOMMANDMODE_HIJACK_VEHICLE,
 	GUICOMMANDMODE_CONVERT_TO_CARBOMB,
 	GUICOMMANDMODE_SABOTAGE_BUILDING,
+	GUICOMMANDMODE_EQUIP_OBJECT,
 #ifdef ALLOW_SURRENDER
 	GUICOMMANDMODE_PICK_UP_PRISONER,			///< POW Truck assigned to pick up a specific prisoner
 #endif
@@ -210,6 +218,8 @@ enum GUICommandType CPP_11(: Int)
 	GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT, ///< do a shortcut special power using the construct building interface
 
 	GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE,
+
+	GUI_COMMAND_DISABLE_POWER,							///< Power down an Object
 
 	// add more commands here, don't forget to update the string command list below too ...
 
@@ -231,10 +241,17 @@ static const char *const TheGuiCommandNames[] =
 	"GUARD",
 	"GUARD_WITHOUT_PURSUIT",
 	"GUARD_FLYING_UNITS_ONLY",
+	"GUARD_CURRENT_POS",
+	"GUARD_CURRENT_POS_WITHOUT_PURSUIT",
+	"GUARD_CURRENT_POS_FLYING_UNITS_ONLY",
+	"GUARD_FAR",
+	"GUARD_FAR_WITHOUT_PURSUIT",
+	"GUARD_FAR_FLYING_UNITS_ONLY",
 	"STOP",
 	"WAYPOINTS",
 	"EXIT_CONTAINER",
 	"EVACUATE",
+	"ENTER_ME",
 	"EXECUTE_RAILED_TRANSPORT",
 	"BEACON_DELETE",
 	"SET_RALLY_POINT",
@@ -252,6 +269,7 @@ static const char *const TheGuiCommandNames[] =
 	"HIJACK_VEHICLE",
 	"CONVERT_TO_CARBOMB",
 	"SABOTAGE_BUILDING",
+	"EQUIP_OBJECT",
 #ifdef ALLOW_SURRENDER
 	"PICK_UP_PRISONER",
 #endif
@@ -260,6 +278,8 @@ static const char *const TheGuiCommandNames[] =
 	"SPECIAL_POWER_CONSTRUCT",
 	"SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT",
 	"SELECT_ALL_UNITS_OF_TYPE",
+
+	"DISABLE_POWER",
 
 	NULL
 };
@@ -334,6 +354,7 @@ public:
 	const UpgradeTemplate* getUpgradeTemplate() const { return m_upgradeTemplate; }
 	const SpecialPowerTemplate* getSpecialPowerTemplate() const { return m_specialPower; }
 	RadiusCursorType getRadiusCursorType() const { return m_radiusCursor; }
+	const AsciiString& getCustomRadiusCursorType() const { return m_customRadiusCursor; }
 	WeaponSlotType getWeaponSlot() const { return m_weaponSlot; }
 	Int getMaxShotsToFire() const { return m_maxShotsToFire; }
 	const ScienceVec& getScienceVec() const { return m_science; }
@@ -343,6 +364,13 @@ public:
 
 	GameWindow* getWindow() const { return m_window;	}
 	Int getFlashCount() const { return m_flashCount; }
+
+	Real getOrderNearbyRadius() const { return m_orderNearbyRadius; }
+	KindOfMaskType getOrderKindofMask() const { return m_orderKindof; }
+	KindOfMaskType getOrderKindofForbiddenMask() const { return m_orderKindofNot; }
+	UnsignedInt getOrderNearbyMinDelay() const { return m_orderMinDelay; }
+	UnsignedInt getOrderNearbyMaxDelay() const { return m_orderMaxDelay; }
+	UnsignedInt getOrderNearbyIntervalDelay() const { return m_orderIntervalDelay; }
 
 	const CommandButton* getNext() const { return m_next; }
 
@@ -374,7 +402,7 @@ private:
 	RadiusCursorType							m_radiusCursor;								///< radius cursor, if any
 	AsciiString										m_cursorName;									///< cursor name for placement (NEED_TARGET_POS) or valid version (CONTEXTMODE_COMMAND)
 	AsciiString										m_invalidCursorName;					///< cursor name for invalid version
-
+	AsciiString										m_customRadiusCursor;								///< radius cursor, if any
 	// bleah. shouldn't be mutable, but is. sue me. (Kris) -snork!
 	mutable AsciiString										m_textLabel;									///< string manager text label
 	mutable AsciiString										m_descriptionLabel;						///< The description of the current command, read in from the ini
@@ -389,6 +417,13 @@ private:
 	GameWindow*										m_window;											///< used during the run-time assignment of a button to a gadget button window
 	AudioEventRTS									m_unitSpecificSound;					///< Unit sound played whenever button is clicked.
 
+	Real											m_orderNearbyRadius;
+	KindOfMaskType									m_orderKindof;
+	KindOfMaskType									m_orderKindofNot;
+	UnsignedInt										m_orderMinDelay;
+	UnsignedInt										m_orderMaxDelay;
+	UnsignedInt										m_orderIntervalDelay;
+
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
 	mutable const Image*					m_buttonImage;								///< button image
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
@@ -400,16 +435,16 @@ private:
 /** Command sets are collections of configurable command buttons.  They are used in the
 	* command context sensitive window in the battle user interface */
 //-------------------------------------------------------------------------------------------------
-enum { MAX_COMMANDS_PER_SET = 18 };  // user interface max is 14 (but internally it's 18 for script only buttons!)
-enum { MAX_RIGHT_HUD_UPGRADE_CAMEOS = 5};
+enum { MAX_COMMANDS_PER_SET = 32 };  // user interface max is 14 (but internally it's 18 for script only buttons!)
+enum { MAX_RIGHT_HUD_UPGRADE_CAMEOS = 9};
 enum {
-			 MAX_PURCHASE_SCIENCE_RANK_1 = 4,
-			 MAX_PURCHASE_SCIENCE_RANK_3 = 15,
-			 MAX_PURCHASE_SCIENCE_RANK_8 = 4,
+			 MAX_PURCHASE_SCIENCE_RANK_1 = 7,
+			 MAX_PURCHASE_SCIENCE_RANK_3 = 21,
+			 MAX_PURCHASE_SCIENCE_RANK_8 = 7,
 			};
 enum { MAX_STRUCTURE_INVENTORY_BUTTONS = 10 }; // there are this many physical buttons in "inventory" windows for structures
 enum { MAX_BUILD_QUEUE_BUTTONS = 9 };// physical button count for the build queue
-enum { MAX_SPECIAL_POWER_SHORTCUTS = 11};
+enum { MAX_SPECIAL_POWER_SHORTCUTS = 32};
 class CommandSet : public Overridable
 {
 
@@ -778,6 +813,8 @@ public:
 	void drawSpecialPowerShortcutMultiplierText();
 
 	Bool hasAnyShortcutSelection() const;
+
+	//Int getRemainingSciencePointsAvailableToPurchase( Player* player ) const;
 
 protected:
 	void updateRadarAttackGlow ( void );

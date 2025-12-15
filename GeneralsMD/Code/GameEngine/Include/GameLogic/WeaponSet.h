@@ -56,6 +56,11 @@ static const char *const TheWeaponSlotTypeNames[] =
 	"PRIMARY",
 	"SECONDARY",
 	"TERTIARY",
+	"WEAPON_FOUR",
+	"WEAPON_FIVE",
+	"WEAPON_SIX",
+	"WEAPON_SEVEN",
+	"WEAPON_EIGHT",
 
 	NULL
 };
@@ -66,7 +71,12 @@ static const LookupListRec TheWeaponSlotTypeNamesLookupList[] =
 	{ "PRIMARY",		PRIMARY_WEAPON },
 	{ "SECONDARY",	SECONDARY_WEAPON },
 	{ "TERTIARY",		TERTIARY_WEAPON },
-
+	{ "WEAPON_FOUR",	WEAPON_FOUR },
+	{ "WEAPON_FIVE",	WEAPON_FIVE },
+	{ "WEAPON_SIX",		WEAPON_SIX },
+	{ "WEAPON_SEVEN",	WEAPON_SEVEN },
+	{ "WEAPON_EIGHT",	WEAPON_EIGHT },
+	
 	{ NULL, 0	}
 };
 static_assert(ARRAY_SIZE(TheWeaponSlotTypeNamesLookupList) == WEAPONSLOT_COUNT + 1, "Incorrect array size");
@@ -102,6 +112,11 @@ static const ModelConditionFlagType TheWeaponSetTypeToModelConditionTypeMap[WEAP
 	/*WEAPONSET_RIDER6*/								MODELCONDITION_RIDER6,
 	/*WEAPONSET_RIDER7*/								MODELCONDITION_RIDER7,
 	/*WEAPONSET_RIDER8*/								MODELCONDITION_RIDER8,
+	/*WEAPONSET_PLAYER_UPGRADE2*/						MODELCONDITION_WEAPONSET_PLAYER_UPGRADE2,
+	/*WEAPONSET_PLAYER_UPGRADE3*/						MODELCONDITION_WEAPONSET_PLAYER_UPGRADE3,
+	/*WEAPONSET_PLAYER_UPGRADE4*/						MODELCONDITION_WEAPONSET_PLAYER_UPGRADE4,
+	/*WEAPONSET_GARRISONED*/							MODELCONDITION_INVALID,  //No actual conditionstates needed for Garrisoned and contained
+	/*WEAPONSET_CONTAINED*/								MODELCONDITION_INVALID
 };
 #endif
 
@@ -120,6 +135,26 @@ enum WeaponSetConditionType CPP_11(: Int)
 };
 
 //-------------------------------------------------------------------------------------------------
+enum WeaponChoiceCriteria CPP_11(: Int)
+{
+	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
+	PREFER_LONGEST_RANGE,	///< choose the weapon with the longest range (that will do nonzero damage)
+
+	PREFER_CRITERIA_COUNT
+};
+
+
+#ifdef DEFINE_WEAPON_CHOICE_CRITERIA_NAMES
+static const char *TheWeaponChoiceCriteriaNames[] = 
+{
+	"DAMAGE",
+	"RANGE",
+
+	NULL
+};
+#endif
+
+//-------------------------------------------------------------------------------------------------
 class WeaponTemplateSet
 {
 private:
@@ -130,6 +165,8 @@ private:
 	KindOfMaskType					m_preferredAgainst[WEAPONSLOT_COUNT];
 	Bool										m_isReloadTimeShared;
 	Bool										m_isWeaponLockSharedAcrossSets; ///< A weapon set so similar that it is safe to hold locks across
+	Bool										m_isWeaponReloadSharedAcrossSets; ///< Keep current ammo count and reload progress between sets
+	WeaponChoiceCriteria			m_weaponChoiceCriteria;
 
 	static void parseWeapon(INI* ini, void *instance, void *store, const void* userData);
 	static void parseAutoChoose(INI* ini, void *instance, void *store, const void* userData);
@@ -149,6 +186,8 @@ public:
 	Bool testWeaponSetFlag( WeaponSetType wst ) const;
 	Bool isSharedReloadTime( void ) const { return m_isReloadTimeShared; }
 	Bool isWeaponLockSharedAcrossSets() const {return m_isWeaponLockSharedAcrossSets; }
+	Bool isWeaponReloadSharedAcrossSets() const { return m_isWeaponReloadSharedAcrossSets; }
+	WeaponChoiceCriteria getWeaponChoiceCriteria() const { return m_weaponChoiceCriteria; }
 
 	Bool hasAnyWeapons() const;
 	inline const WeaponTemplate* getNth(WeaponSlotType n) const { return m_template[n]; }
@@ -166,18 +205,12 @@ public:
 typedef std::vector<WeaponTemplateSet> WeaponTemplateSetVector;
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponChoiceCriteria CPP_11(: Int)
-{
-	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
-	PREFER_LONGEST_RANGE	///< choose the weapon with the longest range (that will do nonzero damage)
-};
-
-//-------------------------------------------------------------------------------------------------
 enum WeaponLockType CPP_11(: Int)
 {
 	NOT_LOCKED,							///< Weapon is not locked
 	LOCKED_TEMPORARILY,			///< Weapon is locked until clip is empty, or current "attack" state exits
-	LOCKED_PERMANENTLY			///< Weapon is locked until explicitly unlocked or lock is changed to another weapon
+	LOCKED_PERMANENTLY,			///< Weapon is locked until explicitly unlocked or lock is changed to another weapon
+	LOCKED_PRIORITY
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -198,11 +231,13 @@ private:
 	Weapon*										m_weapons[WEAPONSLOT_COUNT];
 	WeaponSlotType						m_curWeapon;
 	WeaponLockType						m_curWeaponLockedStatus;
+	WeaponSlotType						m_curDefaultWeapon;
 	UnsignedInt								m_filledWeaponSlotMask;
 	Int												m_totalAntiMask;						///< anti mask of all current weapons
 	DamageTypeFlags						m_totalDamageTypeMask;			///< damagetype mask of all current weapons
 	Bool											m_hasPitchLimit;
 	Bool											m_hasDamageWeapon;
+	Bool											m_restricted;
 
 	Bool isAnyWithinTargetPitch(const Object* obj, const Object* victim) const;
 
@@ -220,11 +255,13 @@ public:
 	void updateWeaponSet(const Object* obj);
 	void reloadAllAmmo(const Object *obj, Bool now);
 	Bool isOutOfAmmo() const;
-	Bool hasAnyWeapon() const { return m_filledWeaponSlotMask != 0; }
-	Bool hasAnyDamageWeapon() const { return m_hasDamageWeapon; }
-	Bool hasWeaponToDealDamageType(DamageType typeToDeal) const { return m_totalDamageTypeMask.test(typeToDeal); }
-	Bool hasSingleDamageType(DamageType typeToDeal) const { return (m_totalDamageTypeMask.test(typeToDeal) && (m_totalDamageTypeMask.count() == 1) ); }
+	Bool isFullAmmo() const; 	// Added for OFS
+	Bool hasAnyWeapon() const { return !m_restricted && m_filledWeaponSlotMask != 0; }
+	Bool hasAnyDamageWeapon() const { return !m_restricted && m_hasDamageWeapon; }
+	Bool hasWeaponToDealDamageType(DamageType typeToDeal) const { return !m_restricted && m_totalDamageTypeMask.test(typeToDeal); }
+	Bool hasSingleDamageType(DamageType typeToDeal) const { return (!m_restricted && m_totalDamageTypeMask.test(typeToDeal) && (m_totalDamageTypeMask.count() == 1) ); }
 	Bool isCurWeaponLocked() const { return m_curWeaponLockedStatus != NOT_LOCKED; }
+	Bool isCurWeaponLockedPriority() const { return m_curWeaponLockedStatus == LOCKED_PRIORITY; }
 	Weapon* getCurWeapon() { return m_weapons[m_curWeapon]; }
 	const Weapon* getCurWeapon() const { return m_weapons[m_curWeapon]; }
 	WeaponSlotType getCurWeaponSlot() const { return m_curWeapon; }
@@ -241,6 +278,8 @@ public:
 	//When an AIAttackState is over, it needs to clean up any weapons that might be in leech range mode
 	//or else those weapons will have unlimited range!
 	void clearLeechRangeModeForAllWeapons();
+
+	Bool isRestricted() const { return m_restricted; }
 
 	/**
 		Determines if the unit has any weapon that could conceivably
@@ -260,8 +299,10 @@ public:
 		Note that this DOES take weapon attack range into account.
 	*/
 	Bool chooseBestWeaponForTarget(const Object* obj, const Object* victim, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
+	Bool chooseBestWeaponForPosition(const Object* obj, const Coord3D* victimPos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly = FALSE);
 
 	Weapon* getWeaponInWeaponSlot(WeaponSlotType wslot) const;
+
 
 	static ModelConditionFlags getModelConditionForWeaponSlot(WeaponSlotType wslot, WeaponSetConditionType a);
 };

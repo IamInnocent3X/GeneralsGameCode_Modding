@@ -51,6 +51,7 @@ class DebrisDrawInterface;
 class TracerDrawInterface;
 class RopeDrawInterface;
 class LaserDrawInterface;
+class TreeDrawInterface;
 class FXList;
 enum TerrainDecalType CPP_11(: Int);
 enum ShadowType CPP_11(: Int);
@@ -107,6 +108,9 @@ public:
 
 	virtual LaserDrawInterface* getLaserDrawInterface() { return NULL; }
 	virtual const LaserDrawInterface* getLaserDrawInterface() const { return NULL; }
+
+	virtual TreeDrawInterface* getTreeDrawInterface() { return NULL; }
+	virtual const TreeDrawInterface* getTreeDrawInterface() const { return NULL; }
 
 };
 inline DrawModule::DrawModule( Thing *thing, const ModuleData* moduleData ) : DrawableModule( thing, moduleData ) { }
@@ -184,6 +188,7 @@ public:
 	virtual void replaceModelConditionState(const ModelConditionFlags& a) = 0;
 	virtual void replaceIndicatorColor(Color color) = 0;
 	virtual Bool handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) = 0;
+	virtual Bool handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) = 0;
 	virtual Int getBarrelCount(WeaponSlotType wslot) const = 0;
 
 	virtual void setSelectable(Bool selectable) = 0;
@@ -195,6 +200,7 @@ public:
 		Note that you must call this AFTER setting the condition codes.
 	*/
 	virtual void setAnimationLoopDuration(UnsignedInt numFrames) = 0;
+	virtual bool isIgnoreAnimLoopDuration() const = 0;
 
 	/**
 		similar to the above, but assumes that the current state is a "ONCE",
@@ -215,6 +221,9 @@ public:
 	virtual void updateSubObjects() = 0;
 	virtual void showSubObject( const AsciiString& name, Bool show ) = 0;
 
+	virtual void setModelName(const AsciiString& name) = 0;
+	virtual const AsciiString& getModelName() const = 0;
+
 	/**
 		This call asks, "In the current animation (if any) how far along are you, from 0.0f to 1.0f".
 	*/
@@ -222,6 +231,12 @@ public:
 // srj sez: not sure if this is a good idea, for net sync reasons...
 	virtual Real getAnimationScrubScalar( void ) const { return 0.0f;};
 #endif
+};
+
+class TreeDrawInterface
+{
+public:
+	virtual const AsciiString& getModelName() const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

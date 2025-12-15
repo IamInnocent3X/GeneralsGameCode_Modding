@@ -211,6 +211,7 @@ const char *const theAudioControlNames[] =
 	"ALL",
 	"POSTDELAY",
 	"INTERRUPT",
+	"STOPEARLY",
 	NULL
 };
 

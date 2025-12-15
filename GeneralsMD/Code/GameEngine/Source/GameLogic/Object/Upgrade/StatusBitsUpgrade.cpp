@@ -57,6 +57,7 @@
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/Weapon.h"
 #include "GameLogic/Module/StatusBitsUpgrade.h"
 
 //-----------------------------------------------------------------------------
@@ -81,6 +82,12 @@ void StatusBitsUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToSet ) },
 		{ "StatusToClear",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToClear ) },
+		{ "CustomStatusToSet",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToSet ) },
+		{ "CustomStatusToClear",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToClear ) },
+		{ "BonusToSet",       INI::parseWeaponBonusVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_bonusToSet ) },
+		{ "BonusToClear",       INI::parseWeaponBonusVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_bonusToClear ) },
+		{ "CustomBonusToSet",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customBonusToSet ) },
+		{ "CustomBonusToClear",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customBonusToClear ) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -102,9 +109,33 @@ StatusBitsUpgrade::~StatusBitsUpgrade( void )
 //-------------------------------------------------------------------------------------------------
 void StatusBitsUpgrade::upgradeImplementation( )
 {
-	Object *obj = getObject();
-	obj->setStatus( getStatusBitsUpgradeModuleData()->m_statusToSet );
-	obj->clearStatus( getStatusBitsUpgradeModuleData()->m_statusToClear );
+	const StatusBitsUpgradeModuleData* d = getStatusBitsUpgradeModuleData();
+	Object *obj = getObject();	
+
+	obj->setStatus( d->m_statusToSet );
+	obj->clearStatus( d->m_statusToClear );
+	for(std::vector<AsciiString>::const_iterator it = d->m_customStatusToSet.begin(); it != d->m_customStatusToSet.end(); ++it)
+	{
+		obj->setCustomStatus( *it );
+	}
+	for(std::vector<AsciiString>::const_iterator it = d->m_customStatusToClear.begin(); it != d->m_customStatusToClear.end(); ++it)
+	{
+		obj->clearCustomStatus( *it );
+	}
+	for (Int i = 0; i < d->m_bonusToSet.size(); i++) {
+		obj->setWeaponBonusCondition(d->m_bonusToSet[i]);
+	}
+	for (Int i = 0; i < d->m_bonusToClear.size(); i++) {
+		obj->clearWeaponBonusCondition(d->m_bonusToClear[i]);
+	}
+	for(std::vector<AsciiString>::const_iterator it = d->m_customBonusToSet.begin(); it != d->m_customBonusToSet.end(); ++it)
+	{
+		obj->setCustomWeaponBonusCondition( *it );
+	}
+	for(std::vector<AsciiString>::const_iterator it = d->m_customBonusToClear.begin(); it != d->m_customBonusToClear.end(); ++it)
+	{
+		obj->clearCustomWeaponBonusCondition( *it );
+	}
 }
 
 // ------------------------------------------------------------------------------------------------

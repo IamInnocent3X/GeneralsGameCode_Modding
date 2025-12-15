@@ -54,8 +54,11 @@ public:
 	Bool m_mobileGarrison;
 	Bool m_immuneToClearBuildingAttacks;
   Bool m_isEnclosingContainer;
+	Bool m_healingClearsParasite;
 
 	InitialRoster		m_initialRoster;
+
+	std::vector<AsciiString>	m_healingClearsParasiteKeys;
 
 	GarrisonContainModuleData( void );
 
@@ -71,6 +74,8 @@ public:
 			{ "InitialRoster", parseInitialRoster, NULL, 0 },
 			{ "ImmuneToClearBuildingAttacks", INI::parseBool, NULL, offsetof( GarrisonContainModuleData, m_immuneToClearBuildingAttacks ) },
       { "IsEnclosingContainer", INI::parseBool, NULL, offsetof( GarrisonContainModuleData, m_isEnclosingContainer ) },
+			{ "HealingClearsParasite",			INI::parseBool,	NULL, offsetof( GarrisonContainModuleData, m_healingClearsParasite ) },
+			{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, NULL, offsetof( GarrisonContainModuleData, m_healingClearsParasiteKeys ) },
 
 			{ 0, 0, 0, 0 }
 		};

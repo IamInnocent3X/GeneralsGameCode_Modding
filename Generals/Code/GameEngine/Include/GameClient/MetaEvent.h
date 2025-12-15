@@ -357,6 +357,7 @@ private:
 
 	Int						m_lastKeyDown;	// really a MappableKeyType
 	Int						m_lastModState;	// really a MappableKeyModState
+	Int						m_lastKeyDownTime; // last key down time in real time
 
 	enum { NUM_MOUSE_BUTTONS = 3 };
 	ICoord2D m_mouseDownPosition[NUM_MOUSE_BUTTONS];

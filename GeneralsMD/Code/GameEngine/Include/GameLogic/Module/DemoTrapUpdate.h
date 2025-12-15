@@ -32,6 +32,8 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/KindOf.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CreateModule.h"
+#include "GameLogic/Weapon.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 
@@ -48,9 +50,12 @@ public:
 	WeaponSlotType  m_proximityModeWeaponSlot;
 	Real						m_triggerDetonationRange;
 	UnsignedInt			m_scanFrames;
+	UnsignedInt			m_detonationProducerDelay;
+	UnsignedInt 		m_initialDelayFrames;
 	Bool						m_defaultsToProximityMode;
 	Bool						m_friendlyDetonation;
 	Bool						m_detonateWhenKilled;
+	Bool						m_detonateDontKill;
 
 	DemoTrapUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -62,7 +67,7 @@ private:
 //-------------------------------------------------------------------------------------------------
 /** The default	update module */
 //-------------------------------------------------------------------------------------------------
-class DemoTrapUpdate : public UpdateModule
+class DemoTrapUpdate : public UpdateModule, public CreateModuleInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( DemoTrapUpdate, "DemoTrapUpdate" )
@@ -76,10 +81,23 @@ public:
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
 
+	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+
+	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
 	void detonate();
 
 protected:
 
 	Int m_nextScanFrames;
 	Bool m_detonated;
+	AsciiString m_weaponTemplateName;
+	AsciiString m_weaponTemplateNameXferCheckOnly;
+	WeaponSlotType m_lastDetonationWeaponSlot;
+	Weapon* m_weapon;
+	UnsignedInt m_detonationProducerFrames;
+	UnsignedInt m_initialDelayFrame;
 };

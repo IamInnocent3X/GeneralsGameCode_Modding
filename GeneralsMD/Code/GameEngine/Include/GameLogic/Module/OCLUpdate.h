@@ -31,6 +31,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 class ObjectCreationList;
 
@@ -64,7 +65,7 @@ private:
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class OCLUpdate : public UpdateModule
+class OCLUpdate : public UpdateModule, public CreateModuleInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( OCLUpdate, "OCLUpdate" )
@@ -82,10 +83,20 @@ public:
 	void resetTimer(); ///< added for sabotage purposes.
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
 
+	virtual void onDisabledEdge( Bool nowDisabled );
+	virtual void onCapture( Player *oldOwner, Player *newOwner );
+	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	UpdateSleepTime calcSleepTime() const;
+
 protected:
 
 	UnsignedInt			m_nextCreationFrame;
 	UnsignedInt			m_timerStartedFrame;
+	UnsignedInt			m_nextCreationDelay;
+	UnsignedInt			m_timerStartedDelay;
 	Bool						m_isFactionNeutral;
 	Color						m_currentPlayerColor;
 

@@ -42,6 +42,8 @@
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
 #include "Common/RandomValue.h"
+#include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "Common/ThingTemplate.h"
 #include "Common/GameLOD.h"
 #include "Common/Xfer.h"
@@ -82,6 +84,8 @@ static inline Bool isValidTimeToCalcLogicStuff()
 
 #if defined(DEBUG_CRC) && defined(RTS_DEBUG)
 #include <cstdarg>
+#include <Common/PlayerList.h>
+#include <Common/PlayerList.h>
 class LogClass
 {
 public:
@@ -878,7 +882,8 @@ void ModelConditionInfo::validateTurretInfo() const
 		{
 			if (findPristineBone(tur.m_turretAngleNameKey, &tur.m_turretAngleBone) == NULL)
 			{
-				DEBUG_CRASH(("*** ASSET ERROR: TurretBone %s not found! (%s)",KEYNAME(tur.m_turretAngleNameKey).str(),m_modelName.str()));
+				//DEBUG_CRASH(("*** ASSET ERROR: TurretBone %s not found! (%s)",KEYNAME(tur.m_turretAngleNameKey).str(),m_modelName.str()));
+				DEBUG_LOG(("*** ASSET ERROR: TurretBone %s not found! (%s)",KEYNAME(tur.m_turretAngleNameKey).str(),m_modelName.str()));
 				tur.m_turretAngleBone = 0;
 			}
 		}
@@ -891,7 +896,8 @@ void ModelConditionInfo::validateTurretInfo() const
 		{
 			if (findPristineBone(tur.m_turretPitchNameKey, &tur.m_turretPitchBone) == NULL)
 			{
-				DEBUG_CRASH(("*** ASSET ERROR: TurretBone %s not found! (%s)",KEYNAME(tur.m_turretPitchNameKey).str(),m_modelName.str()));
+				//DEBUG_CRASH(("*** ASSET ERROR: TurretBone %s not found! (%s)",KEYNAME(tur.m_turretPitchNameKey).str(),m_modelName.str()));
+				DEBUG_LOG(("*** ASSET ERROR: TurretBone %s not found! (%s)",KEYNAME(tur.m_turretPitchNameKey).str(),m_modelName.str()));
 				tur.m_turretPitchBone = 0;
 			}
 		}
@@ -900,6 +906,7 @@ void ModelConditionInfo::validateTurretInfo() const
 			tur.m_turretPitchBone = 0;
 		}
 	}
+
 
 	if (isValidTimeToCalcLogicStuff())
 	{
@@ -1095,10 +1102,10 @@ void W3DModelDrawModuleData::validateStuffForTimeAndWeather(const Drawable* draw
 		for (c_it = m_conditionStates.begin(); c_it != m_conditionStates.end(); ++c_it)
 		{
 
-			if (!a && c_it->m_transitionKey == src && c_it->matchesMode(night, snowy))
+			if (!a && c_it->m_transitionKey == src && (c_it->matchesMode(night, snowy) || c_it->matchesMode(false, false)))
 				a = true;
 
-			if (!b && c_it->m_transitionKey == dst && c_it->matchesMode(night, snowy))
+			if (!b && c_it->m_transitionKey == dst && (c_it->matchesMode(night, snowy) || c_it->matchesMode(false, false)))
 				b = true;
 
 		}
@@ -1217,6 +1224,9 @@ void W3DModelDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "AttachToBoneInAnotherModule", parseAsciiStringLC, NULL, offsetof(W3DModelDrawModuleData, m_attachToDrawableBone) },
 		{ "IgnoreConditionStates", ModelConditionFlags::parseFromINI, NULL, offsetof(W3DModelDrawModuleData, m_ignoreConditionStates) },
 		{ "ReceivesDynamicLights", INI::parseBool, NULL, offsetof(W3DModelDrawModuleData, m_receivesDynamicLights) },
+		{ "IgnoreAnimationSpeedScaling", INI::parseBool, NULL, offsetof(W3DModelDrawModuleData, m_ignoreAnimScaling) },
+		{ "IgnoreRotation", INI::parseBool, NULL, offsetof(W3DModelDrawModuleData, m_ignoreRotation) },
+		{ "OnlyVisibleToOwningPlayer", INI::parseBool, NULL, offsetof(W3DModelDrawModuleData, m_showForOwnerOnly) },
     { 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -1427,6 +1437,38 @@ void W3DModelDrawModuleData::parseConditionState(INI* ini, void *instance, void 
 		{ "AltTurretArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretArtAngle) },
 		{ "AltTurretPitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretPitchNameKey) },
 		{ "AltTurretArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretArtPitch) },
+		{ "Turret1",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[0].m_turretAngleNameKey) },
+		{ "Turret1ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[0].m_turretArtAngle) },
+		{ "Turret1Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[0].m_turretPitchNameKey) },
+		{ "Turret1ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[0].m_turretArtPitch) },
+		{ "Turret2",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretAngleNameKey) },
+		{ "Turret2ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretArtAngle) },
+		{ "Turret2Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretPitchNameKey) },
+		{ "Turret2ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[1].m_turretArtPitch) },
+		{ "Turret3",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[2].m_turretAngleNameKey) },
+		{ "Turret3ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[2].m_turretArtAngle) },
+		{ "Turret3Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[2].m_turretPitchNameKey) },
+		{ "Turret3ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[2].m_turretArtPitch) },
+		{ "Turret4",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[3].m_turretAngleNameKey) },
+		{ "Turret4ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[3].m_turretArtAngle) },
+		{ "Turret4Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[3].m_turretPitchNameKey) },
+		{ "Turret4ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[3].m_turretArtPitch) },
+		{ "Turret5",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[4].m_turretAngleNameKey) },
+		{ "Turret5ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[4].m_turretArtAngle) },
+		{ "Turret5Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[4].m_turretPitchNameKey) },
+		{ "Turret5ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[4].m_turretArtPitch) },
+		{ "Turret6",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[5].m_turretAngleNameKey) },
+		{ "Turret6ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[5].m_turretArtAngle) },
+		{ "Turret6Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[5].m_turretPitchNameKey) },
+		{ "Turret6ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[5].m_turretArtPitch) },
+		{ "Turret7",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[6].m_turretAngleNameKey) },
+		{ "Turret7ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[6].m_turretArtAngle) },
+		{ "Turret7Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[6].m_turretPitchNameKey) },
+		{ "Turret7ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[6].m_turretArtPitch) },
+		{ "Turret8",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[7].m_turretAngleNameKey) },
+		{ "Turret8ArtAngle", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[7].m_turretArtAngle) },
+		{ "Turret8Pitch",	parseBoneNameKey, NULL, offsetof(ModelConditionInfo, m_turrets[7].m_turretPitchNameKey) },
+		{ "Turret8ArtPitch", INI::parseAngleReal, NULL, offsetof(ModelConditionInfo, m_turrets[7].m_turretArtPitch) },
 		{ "ShowSubObject", parseShowHideSubObject, (void*)0, offsetof(ModelConditionInfo, m_hideShowVec) },
 		{ "HideSubObject", parseShowHideSubObject, (void*)1, offsetof(ModelConditionInfo, m_hideShowVec) },
 		{ "WeaponFireFXBone", parseWeaponBoneName, NULL, offsetof(ModelConditionInfo, m_weaponFireFXBoneName[0]) },
@@ -1733,6 +1775,8 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_shadowEnabled = TRUE;
 	m_terrainDecal = NULL;
 	m_trackRenderObject = NULL;
+	m_isFirstDrawModule = FALSE;
+	m_modelName = NULL;
 	m_whichAnimInCurState = -1;
 	m_nextState = NULL;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
@@ -1769,13 +1813,19 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 			  m_hexColor = obj->getIndicatorColor();
 	  }
 
-    // THE VAST MAJORITY OF THESE SHOULD BE TRUE
-    if ( ! getW3DModelDrawModuleData()->m_receivesDynamicLights)
-    {
-      draw->setReceivesDynamicLights( FALSE );
-		  DEBUG_LOG(("setReceivesDynamicLights = FALSE: %s", draw->getTemplate()->getName().str()));
-    }
-  }
+		// THE VAST MAJORITY OF THESE SHOULD BE TRUE
+		if (!getW3DModelDrawModuleData()->m_receivesDynamicLights)
+		{
+			draw->setReceivesDynamicLights(FALSE);
+			DEBUG_LOG(("setReceivesDynamicLights = FALSE: %s", draw->getTemplate()->getName().str()));
+		}
+
+		// Check existing draw modules. If they are null, we are the first!
+		DrawModule** drawModules = draw->getDrawModules();
+		if ((*drawModules) == NULL) {
+			m_isFirstDrawModule = TRUE;
+		}
+	}
 
 	setModelState(info);
 }
@@ -1858,7 +1908,9 @@ void W3DModelDraw::allocateShadows(void)
 	const ThingTemplate *tmplate=getDrawable()->getTemplate();
 
 	//Check if we don't already have a shadow but need one for this type of model.
-	if (m_shadow == NULL && m_renderObject && TheW3DShadowManager && tmplate->getShadowType() != SHADOW_NONE)
+	ShadowType type = tmplate->getShadowType();
+	if (m_shadow == NULL && m_renderObject && TheW3DShadowManager && type != SHADOW_NONE
+		&& (m_isFirstDrawModule || !(type == SHADOW_DECAL || type == SHADOW_ALPHA_DECAL || type == SHADOW_ADDITIVE_DECAL)))
 	{
 		Shadow::ShadowTypeInfo shadowInfo;
 		strlcpy(shadowInfo.m_ShadowName, tmplate->getShadowTextureName().str(), ARRAY_SIZE(shadowInfo.m_ShadowName));
@@ -2042,6 +2094,22 @@ void W3DModelDraw::adjustTransformMtx(Matrix3D& mtx) const
 //-------------------------------------------------------------------------------------------------
 void W3DModelDraw::doDrawModule(const Matrix3D* transformMtx)
 {
+	if (getW3DModelDrawModuleData()->m_showForOwnerOnly &&
+		getDrawable() && getDrawable()->getObject() && getDrawable()->getObject()->getControllingPlayer() &&
+		getDrawable()->getObject()->getControllingPlayer() != ThePlayerList->getLocalPlayer()) {
+		setHidden(TRUE);
+		return;
+	}
+
+	Matrix3D transformMtxLocal; // = Matrix3D::Identity;
+	if (getW3DModelDrawModuleData()->m_ignoreRotation) {
+		//transformMtxLocal = *transformMtx;
+		Vector3 trans;
+		transformMtx->Get_Translation(&trans);
+		transformMtxLocal.Set(trans);
+		transformMtx = &transformMtxLocal;
+	}
+
 	// update whether or not we should be animating.
 	setPauseAnimation( !getDrawable()->getShouldAnimate(getW3DModelDrawModuleData()->m_animationsRequirePower) );
 
@@ -2417,6 +2485,7 @@ void W3DModelDraw::stopClientParticleSystems()
 */
 void W3DModelDraw::handleClientTurretPositioning()
 {
+
 	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
 		return;
 
@@ -2733,6 +2802,8 @@ Bool W3DModelDraw::updateBonesForClientParticleSystems()
 //-------------------------------------------------------------------------------------------------
 void W3DModelDraw::setTerrainDecal(TerrainDecalType type)
 {
+	// DEBUG_LOG(("W3DModelDraw::setTerrainDecal - type = %d. invalid = %d\n", type, type == TERRAIN_DECAL_NONE || type >= TERRAIN_DECAL_MAX));
+
 	if (m_terrainDecal)
 		m_terrainDecal->release();
 
@@ -3068,7 +3139,9 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 		}
 
 		// set up shadows
-		if (m_renderObject && TheW3DShadowManager && tmplate->getShadowType() != SHADOW_NONE)
+		ShadowType type = tmplate->getShadowType();
+		if (m_renderObject && TheW3DShadowManager && type != SHADOW_NONE &&
+			(m_isFirstDrawModule || !(type == SHADOW_DECAL || type == SHADOW_ALPHA_DECAL || type == SHADOW_ADDITIVE_DECAL)))
 		{
 			Shadow::ShadowTypeInfo shadowInfo;
 			strlcpy(shadowInfo.m_ShadowName, tmplate->getShadowTextureName().str(), ARRAY_SIZE(shadowInfo.m_ShadowName));
@@ -3671,7 +3744,7 @@ void W3DModelDraw::reactToTransformChange( const Matrix3D* oldMtx,
 		Object *obj = getDrawable()->getObject();
 		const Coord3D* pos = getDrawable()->getPosition();
 
-		if ( m_fullyObscuredByShroud || obj->testStatus( OBJECT_STATUS_STEALTHED ) == TRUE )
+		if ( m_fullyObscuredByShroud || (obj && obj->testStatus( OBJECT_STATUS_STEALTHED ) == TRUE) )
 		{
 				m_trackRenderObject->addCapEdgeToTrack(pos->x, pos->y);
 		}
@@ -3770,6 +3843,72 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 		recoil.m_recoilRate = getW3DModelDrawModuleData()->m_initialRecoil;
 		if (info.m_muzzleFlashBone != 0)
 			info.setMuzzleFlashHidden(m_renderObject, false);
+	}
+
+	return handled;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+Bool W3DModelDraw::handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius)
+{
+	//Note: This is mostly a copy of handleWeaponFireFX
+
+	//DEBUG_LOG((">>> handleWeaponPreAttackFX - Slot: %d, Barrel: %d, Pos: '(%f, %f, %f)' \n",
+	//	(Int)wslot,
+	//	specificBarrelToUse,
+	//	victimPos->x, victimPos->y, victimPos->z));
+
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::BARRELS_VALID))
+		return false;
+
+	const ModelConditionInfo::WeaponBarrelInfoVec& wbvec = m_curState->m_weaponBarrelInfoVec[wslot];
+	if (wbvec.empty())
+	{
+		return false;
+	}
+
+	Bool handled = false;
+
+	if (specificBarrelToUse < 0 || specificBarrelToUse > wbvec.size())
+		specificBarrelToUse = 0;
+
+	const ModelConditionInfo::WeaponBarrelInfo& info = wbvec[specificBarrelToUse];
+
+	if (fxl)
+	{
+		if (info.m_fxBone && m_renderObject)
+		{
+			const Object* logicObject = getDrawable()->getObject();
+			/*DEBUG_LOG((">>> handleWeaponPreAttackFX - 1.5 - m_renderObject= '%s' \n",
+				m_renderObject ? "Not Null" : "Null"));*/
+			if (!m_renderObject->Is_Hidden() || (logicObject == NULL))
+			{
+				// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
+				Matrix3D mtx = m_renderObject->Get_Bone_Transform(info.m_fxBone);
+				Coord3D pos;
+				pos.x = mtx.Get_X_Translation();
+				pos.y = mtx.Get_Y_Translation();
+				pos.z = mtx.Get_Z_Translation();
+				FXList::doFXPos(fxl, &pos, &mtx, weaponSpeed, victimPos, damageRadius);
+			}
+			else
+			{
+				// Else, I should just use my logic position for the effect placement.
+				// Things in transports regularly fire from inside (hidden), so this is not weird.
+				const Matrix3D* mtx;
+				Coord3D pos;
+				mtx = logicObject->getTransformMatrix();
+				pos = *(logicObject->getPosition());
+				FXList::doFXPos(fxl, &pos, mtx, weaponSpeed, victimPos, damageRadius);
+			}
+
+			handled = true;
+		}
+		else
+		{
+			DEBUG_LOG(("*** no FXBone found for a non-null FXL\n"));
+		}
 	}
 
 	return handled;
@@ -4014,6 +4153,209 @@ void W3DModelDraw::updateSubObjects()
 			}
 		}
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void W3DModelDraw::setModelName(const AsciiString& name)
+{
+  	if (m_renderObject == NULL || name.isEmpty())
+		return; 
+
+		//Int hexColor = 0;
+		//if (color != 0)
+		//	hexColor = color | 0xFF000000;
+		
+		
+	// get this here, before we change anything... we'll need it to pass to adjustAnimation (srj)
+	//Real prevAnimFraction = getCurrentAnimFraction();
+
+	//
+	// Set up any particle effects for the new model.  Also stop the old ones, note that we
+	// will never allow the placement of new ones if the status bit is set that tells us
+	// we should not automatically create particle systems for the model condition states
+	//
+	//if( getDrawable()->testDrawableStatus( DRAWABLE_STATUS_NO_STATE_PARTICLES ) == FALSE )
+	//	m_needRecalcBoneParticleSystems = true;
+
+	// always stop particle systems now
+	stopClientParticleSystems();
+
+	// note that different states might use the same model; for these, don't go thru the
+	// expense of creating a new render-object. (exception: if color is changing, or subobjs are changing,
+	// or a few other things...)
+	//if (m_curState == NULL ||
+			//newState->m_modelName != m_curState->m_modelName ||
+			//turretNamesDiffer(newState, m_curState)
+			// srj sez: I'm not sure why we want to do the "hard stuff" if we have projectile bones; I think
+			// it is a holdover from days gone by when bones were handled quite differently, rather than being cached.
+			// but doing this hard stuff is a lot more work, and I think it's unnecessary, so let's remove this.
+			//|| (newState->m_validStuff & ModelConditionInfo::HAS_PROJECTILE_BONES)
+		//)
+	{
+		Matrix3D transform;
+		nukeCurrentRender(&transform);
+		Drawable* draw = getDrawable();
+
+		// create a new render object and set into drawable
+			m_renderObject = WW3DAssetManager::Get_Instance()->Create_Render_Obj(name.str());
+			//m_renderObject = W3DDisplay::m_assetManager->Create_Render_Obj(name.str(), draw->getScale(), hexColor);
+			DEBUG_ASSERTCRASH(m_renderObject, ("*** ASSET ERROR: Model %s not found!",name.str()));
+
+			if (m_renderObject->Class_ID() == RenderObjClass::CLASSID_HLOD) {
+				Vector3 offset(0,0,0);
+				RenderObjClass *hlod = m_renderObject;
+				m_renderObject = hlod->Get_Sub_Object(0);
+				const Matrix3D xfm = m_renderObject->Get_Bone_Transform(0);
+				xfm.Get_Translation(&offset);
+				REF_PTR_RELEASE(hlod);
+			}
+
+		//BONEPOS_LOG(("validateStuff() from within W3DModelDraw::setModelState()"));
+		//BONEPOS_DUMPREAL(draw->getScale());
+
+		//newState->validateStuff(m_renderObject, draw->getScale(), getW3DModelDrawModuleData()->m_extraPublicBones);
+		// ensure that any muzzle flashes from the *new* state, start out hidden...
+//		hideAllMuzzleFlashes(newState, m_renderObject);//moved to above
+		//rebuildWeaponRecoilInfo(newState);
+		//doHideShowSubObjs(&newState->m_hideShowVec);
+
+#if defined(RTS_DEBUG)	//art wants to see buildings without flags as a test.
+		if (TheGlobalData->m_hideGarrisonFlags && draw->isKindOf(KINDOF_STRUCTURE))
+			hideGarrisonFlags(TRUE);
+#endif
+
+			// add render object to our scene
+			if (W3DDisplay::m_3DScene != NULL)
+				W3DDisplay::m_3DScene->Add_Render_Object(m_renderObject);
+
+			// tie in our drawable as the user data pointer in the render object
+			m_renderObject->Set_User_Data(draw->getDrawableInfo());
+
+			setTerrainDecal(draw->getTerrainDecalType());
+
+			//We created a new render object so we need to preserve the visibility state
+			//of the previous render object.
+			if (draw->isDrawableEffectivelyHidden())
+			{
+				m_renderObject->Set_Hidden(TRUE);
+				if (m_shadow)
+					m_shadow->enableShadowRender(FALSE);
+				m_shadowEnabled = FALSE;
+			}
+
+			//
+			// set the transform for the new model to that we saved before, we do this so that the
+			// model transition is smooth and will immediately appear at the same orientation and location
+			// as the previous one
+			//
+			m_renderObject->Set_Transform(transform);
+
+			
+			const ThingTemplate *tmplate = draw->getTemplate();
+
+			// set up tracks, if not already set.
+			/*if (m_renderObject &&
+					TheGlobalData->m_makeTrackMarks &&
+					!m_trackRenderObject &&
+					TheTerrainTracksRenderObjClassSystem != NULL &&
+					!getW3DModelDrawModuleData()->m_trackFile.isEmpty())
+			{
+				m_trackRenderObject = TheTerrainTracksRenderObjClassSystem->bindTrack(m_renderObject, 1.0f*MAP_XY_FACTOR, getW3DModelDrawModuleData()->m_trackFile.str());
+				if (draw && m_trackRenderObject)
+					m_trackRenderObject->setOwnerDrawable(draw);
+			}*/
+
+			// set up shadows
+			ShadowType type = tmplate->getShadowType();
+			if (m_renderObject && TheW3DShadowManager && type != SHADOW_NONE &&
+				(m_isFirstDrawModule || !(type == SHADOW_DECAL || type == SHADOW_ALPHA_DECAL || type == SHADOW_ADDITIVE_DECAL)))
+			{
+				Shadow::ShadowTypeInfo shadowInfo;
+				strcpy(shadowInfo.m_ShadowName, tmplate->getShadowTextureName().str());
+				DEBUG_ASSERTCRASH(shadowInfo.m_ShadowName[0] != '\0', ("this should be validated in ThingTemplate now"));
+				shadowInfo.allowUpdates			= FALSE;		//shadow image will never update
+				shadowInfo.allowWorldAlign	= TRUE;	//shadow image will wrap around world objects
+				shadowInfo.m_type						= (ShadowType)tmplate->getShadowType();
+				shadowInfo.m_sizeX					= tmplate->getShadowSizeX();
+				shadowInfo.m_sizeY					= tmplate->getShadowSizeY();
+				shadowInfo.m_offsetX				= tmplate->getShadowOffsetX();
+				shadowInfo.m_offsetY				= tmplate->getShadowOffsetY();
+				m_shadow = TheW3DShadowManager->addShadow(m_renderObject, &shadowInfo, draw);
+				if (m_shadow)
+				{	m_shadow->enableShadowInvisible(m_fullyObscuredByShroud);
+					m_shadow->enableShadowRender(m_shadowEnabled);
+				}
+			}
+
+			if( m_renderObject )
+			{
+				// set collision type for render object.  Used by WW3D2 collision code.
+				if (tmplate->isKindOf(KINDOF_SELECTABLE))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_SELECTABLE );
+				}
+
+				if( tmplate->isKindOf( KINDOF_SHRUBBERY ))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_SHRUBBERY );
+				}
+				if( tmplate->isKindOf( KINDOF_MINE ))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_MINES );
+				}
+				if( tmplate->isKindOf( KINDOF_FORCEATTACKABLE ))
+				{
+					m_renderObject->Set_Collision_Type( PICK_TYPE_FORCEATTACKABLE );
+				}
+				if( tmplate->isKindOf( KINDOF_CLICK_THROUGH ))
+				{
+					m_renderObject->Set_Collision_Type( 0 );
+				}
+
+				Object *obj = draw->getObject();
+				if( obj )
+			{
+
+					// for non bridge objects we adjust some collision types
+					if( obj->isKindOf( KINDOF_BRIDGE ) == FALSE &&
+							obj->isKindOf( KINDOF_BRIDGE_TOWER ) == FALSE )
+					{
+
+						if( obj->isKindOf( KINDOF_STRUCTURE ) && draw->getModelConditionFlags().test( MODELCONDITION_RUBBLE ) )
+						{
+							//A dead building, -- don't allow the user to click on rubble! Treat it as a location instead.
+						m_renderObject->Set_Collision_Type( 0 );
+						}
+						else if( obj->isEffectivelyDead() )
+						{
+							//A dead object, -- don't allow the user to click on rubble/hulks! Treat it as a location instead.
+						m_renderObject->Set_Collision_Type( 0 );
+						}
+					}
+			}
+			}
+
+			onRenderObjRecreated();
+	}
+
+	hideAllHeadlights(m_hideHeadlights);
+
+	//adjustAnimation(prevState, prevAnimFraction);
+
+		// save the model name and color
+		m_modelName = name;
+}
+
+// ------------------------------------------------------------------------------------------------
+const AsciiString& W3DModelDraw::getModelName() const
+{
+	if(!m_modelName.isEmpty())
+		return m_modelName;
+	if(m_curState)
+		return m_curState->m_modelName;
+	else
+		return NULL;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -4263,6 +4605,11 @@ void W3DModelDraw::xfer( Xfer *xfer )
 	// when loading, update the sub objects if we have any
 	if( xfer->getXferMode() == XFER_LOAD && m_subObjectVec.empty() == FALSE )
 		updateSubObjects();
+
+	// New stuff:
+	xfer->xferBool( &m_isFirstDrawModule );
+
+	xfer->xferAsciiString( &m_modelName );
 
 }
 

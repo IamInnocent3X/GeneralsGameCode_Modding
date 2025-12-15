@@ -61,6 +61,8 @@ Bool HealCrateCollide::executeCrateBehavior( Object *other )
 	soundToPlay.setPosition( other->getPosition() );
 	TheAudio->addAudioEvent(&soundToPlay);
 
+	CrateCollide::executeCrateBehavior(other);
+
 	return TRUE;
 }
 

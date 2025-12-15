@@ -48,6 +48,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/WeaponSetType.h"
 
 #include "GameClient/Drawable.h"
 #include "GameClient/GameClient.h"
@@ -76,6 +77,12 @@ GarrisonContainModuleData::GarrisonContainModuleData( void )
   m_isEnclosingContainer = TRUE; ///< a sensible default for a garrison container... few exceptions, firebase is one
 
 	m_initialRoster.count = 0;
+
+	m_passengerWeaponBonusVec.push_back(WEAPONBONUSCONDITION_GARRISONED);
+
+	m_healingClearsParasite = true;
+	m_healingClearsParasiteKeys.clear();
+
 }
 
 //-----------------------------------------------------------------------------
@@ -864,7 +871,16 @@ void GarrisonContain::updateEffects( void )
 				if( effect )
 				{
 					const Weapon *passengerWeapon = obj->getCurrentWeapon();
-					if( passengerWeapon && passengerWeapon->getDamageType() != DAMAGE_POISON )// No muzzle flash with poison weapon
+					Bool passable;
+					if( passengerWeapon )
+					{
+						passable = TRUE;
+						// No muzzle flash with poison weapon, unless customized.
+						if(!passengerWeapon->getPoisonMuzzleFlashesGarrison() && (passengerWeapon->getDamageType() == DAMAGE_POISON || passengerWeapon->getIsPoison()))
+							passable = FALSE;
+					}
+					// No muzzle flash with poison weapon, unless customized.
+					if( passable )
 					{
 						// set the model condition
 						effect->setModelConditionState( MODELCONDITION_FIRING_A );
@@ -1147,10 +1163,14 @@ void GarrisonContain::healObjects( void )
 //-------------------------------------------------------------------------------------------------
 void GarrisonContain::healSingleObject( Object *obj, Real framesForFullHeal)
 {
+	const GarrisonContainModuleData *modData = getGarrisonContainModuleData();
+
 	// setup the healing damageInfo structure with all but the amount
 	DamageInfo healInfo;
 	healInfo.in.m_damageType = DAMAGE_HEALING;
 	healInfo.in.m_deathType = DEATH_NONE;
+	healInfo.in.m_clearsParasite = modData->m_healingClearsParasite;
+	healInfo.in.m_clearsParasiteKeys = modData->m_healingClearsParasiteKeys;
 	//healInfo.in.m_sourceID = getObject()->getID();
 
 	// get body module of the thing to heal
@@ -1624,7 +1644,8 @@ void GarrisonContain::onContaining( Object *obj, Bool wasSelected )
 	structure->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_CAN_ATTACK ) );
 
 	// give the object a garrisoned version of its weapon
-	obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
+	// obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
+	obj->setWeaponSetFlag(WEAPONSET_GARRISONED);
 
 	// put the object in the center of the building
   if (isEnclosingContainerFor( obj ))
@@ -1665,6 +1686,7 @@ void GarrisonContain::onRemoving( Object *obj )
   }
 	// give the object back a regular weapon
 	obj->clearWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
+	obj->clearWeaponSetFlag(WEAPONSET_GARRISONED);
 
 	// object is no longer held inside a garrisoned building
 	obj->clearDisabled( DISABLED_HELD );
@@ -1714,7 +1736,7 @@ Bool GarrisonContain::isPassengerAllowedToFire( ObjectID id ) const
 {
 
   const Object *self = getObject();
-  if ( self && self->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( self && ( self->isDisabledByType( DISABLED_SUBDUED ) || self->isDisabledByType( DISABLED_FROZEN ) ) )
     return FALSE;
 
 	return TRUE;

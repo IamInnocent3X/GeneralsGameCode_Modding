@@ -114,10 +114,11 @@ UpdateSleepTime HackInternetAIUpdate::update( void )
 		}
 	}
 
-	/*UpdateSleepTime ret =*/ AIUpdateInterface::update();
+	/*UpdateSleepTime ret =*/ return AIUpdateInterface::update();
 	//return (mine < ret) ? mine : ret;
 	/// @todo srj -- someday, make sleepy. for now, must not sleep.
-	return UPDATE_SLEEP_NONE;
+	////return UPDATE_SLEEP_NONE;
+	///// IamInnocent 11/10/2025 - Made Sleepy
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -141,6 +142,10 @@ void HackInternetAIUpdate::aiDoCommand(const AICommandParms* parms)
 	//then
 	if( currentState == HACK_INTERNET || currentState == PACKING )
 	{
+		// IamInnocent - Added SleepyUpdates
+		if(isIdle())
+			wakeUpNow();
+		
 		// nuke any existing pending cmd
 		m_pendingCommand.store(*parms);
 		m_hasPendingCommand = true;
@@ -543,8 +548,30 @@ StateReturnType HackInternetState::update()
 				//Grant the unit some experience for a successful hack.
 				xp->addExperiencePoints( ai->getXpPerCashUpdate() );
 
+				Bool displayMoney = FALSE;
 				Drawable* outerDrawable = owner->getOuterObject()->getDrawable();
 				if (outerDrawable && outerDrawable->isVisible())
+				{
+					displayMoney = TRUE;
+					if( owner->testStatus(OBJECT_STATUS_STEALTHED) )
+					{
+						// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
+						if( !owner->isLocallyControlled() && !owner->testStatus(OBJECT_STATUS_DETECTED) )
+						{
+							displayMoney = FALSE;
+						}
+					}
+					if( owner->getContainedBy() && owner->getContainedBy()->testStatus(OBJECT_STATUS_STEALTHED) )
+					{
+						// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
+						if( !owner->getContainedBy()->isLocallyControlled() && !owner->getContainedBy()->testStatus(OBJECT_STATUS_DETECTED) )
+						{
+							displayMoney = FALSE;
+						}
+					}
+				}
+
+				if( displayMoney && owner->showCashText() )
 				{
 					// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
 					//Display cash income floating over the hacker.

@@ -71,6 +71,9 @@ public:
 
 	Bool m_stayOnSameLayerAsMaster;
 
+	Bool m_healingClearsParasite;
+	std::vector<AsciiString> m_healingClearsParasiteKeys;
+
 	SlavedUpdateModuleData()
 	{
 		m_guardMaxRange = 0;
@@ -89,6 +92,8 @@ public:
 		m_minReadyFrames = 0;
 		m_maxReadyFrames = 0;
 		m_stayOnSameLayerAsMaster = false;
+		m_healingClearsParasite = true;
+		m_healingClearsParasiteKeys.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -115,6 +120,8 @@ public:
 			{ "RepairWeldingSys",		INI::parseAsciiString,	NULL, offsetof( SlavedUpdateModuleData, m_weldingSysName ) },
 			{ "RepairWeldingFXBone", INI::parseAsciiString, NULL, offsetof( SlavedUpdateModuleData, m_weldingFXBone ) },
 			{ "StayOnSameLayerAsMaster", INI::parseBool, NULL, offsetof( SlavedUpdateModuleData, m_stayOnSameLayerAsMaster ) },
+			{ "HealingClearsParasite",	INI::parseBool,	NULL, offsetof( SlavedUpdateModuleData, m_healingClearsParasite ) },
+			{ "HealingClearsParasiteKeys",	INI::parseAsciiStringVector, NULL, offsetof( SlavedUpdateModuleData, m_healingClearsParasiteKeys ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -153,6 +160,9 @@ public:
 	virtual void onObjectCreated();
 	virtual Bool isSelfTasking() const { return FALSE; };
 
+	virtual void informMySlaverSelfInfo();
+	virtual void informMySlaverSelfTasking(Bool set) { }
+
 
 	void doScoutLogic( const Coord3D *mastersDestination );
 	void doAttackLogic( const Object *target );
@@ -165,7 +175,13 @@ public:
 
 	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
 
-private:
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+
+	UpdateSleepTime calcSleepTime() const;
+
+protected:
 	void startSlavedEffects( const Object *slaver );	///< We have been marked as Slaved, so we can't be selected or move too far or other stuff
 	void stopSlavedEffects();		///< We are no longer slaved.
 
@@ -174,4 +190,5 @@ private:
 	Int m_framesToWait;
 	RepairStates m_repairState;
 	Bool m_repairing;
+	Bool m_noAggregateHealth;
 };

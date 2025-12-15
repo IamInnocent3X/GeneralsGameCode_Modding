@@ -123,7 +123,8 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				}
 
 				// Groovy
-				TheMouse->setCursor(cur);
+				//TheMouse->setCursor(cur);
+				TheInGameUI->friend_setMouseCursor(cur, "Dummy", 2);
 
 			}
 
@@ -178,10 +179,15 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					Int index = TheMouse->getCursorIndex( command->getCursorName() );
 
+					//if( index != Mouse::INVALID_MOUSE_CURSOR )
+					//	TheMouse->setCursor( (Mouse::MouseCursor)index );
+					//else
+					//	TheMouse->setCursor( Mouse::CROSS );
+
 					if( index != Mouse::INVALID_MOUSE_CURSOR )
-						TheMouse->setCursor( (Mouse::MouseCursor)index );
+						TheInGameUI->friend_setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 2 );
 					else
-						TheMouse->setCursor( Mouse::CROSS );
+						TheInGameUI->friend_setMouseCursor( Mouse::CROSS, "Dummy", 2 );
 
 				}
 				else
@@ -205,7 +211,8 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					}
 
 					// Groovy
-					TheMouse->setCursor(cur);
+					//TheMouse->setCursor(cur);
+					TheInGameUI->friend_setMouseCursor(cur, "Dummy", 2);
 				}
 
 			}
@@ -283,7 +290,17 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					// Attack move has changed from a modifier to a command, so it moves up here.
 
-					GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_ATTACKMOVETO );
+					OrderNearbyData orderData;
+					if(command->getOrderNearbyRadius())
+					{
+						orderData.Radius = command->getOrderNearbyRadius();
+						orderData.RequiredMask = command->getOrderKindofMask();
+						orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+						orderData.MinDelay = command->getOrderNearbyMinDelay();
+						orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+						orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+					}
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_ATTACKMOVETO, orderData );
 					msg->appendLocationArgument( world );
 
 					// Play the unit voice response

@@ -119,6 +119,8 @@ DeliverPayloadAIUpdate::DeliverPayloadAIUpdate( Thing *thing, const ModuleData* 
 	m_freeToExit = FALSE;
 	m_acceptingCommands = TRUE;
 	m_diveState = DIVESTATE_PREDIVE;
+
+	m_wakeUpTime = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -158,9 +160,10 @@ Bool DeliverPayloadAIUpdate::isAllowedToRespondToAiCommands(const AICommandParms
 UpdateSleepTime DeliverPayloadAIUpdate::update( void )
 {
 	m_deliveryDecal.update();
+	StateReturnType stRet;
 
 	if(!(isAiInDeadState()) && m_deliverPayloadStateMachine)
-		m_deliverPayloadStateMachine->updateStateMachine();
+		stRet = m_deliverPayloadStateMachine->updateStateMachine();
 
 	//Handling diving logic (regardless of state)
 	if( m_diveState != DIVESTATE_POSTDIVE )
@@ -170,8 +173,24 @@ UpdateSleepTime DeliverPayloadAIUpdate::update( void )
 			//Check to see if we are close enough to start diving.
 			Real startDiveDistanceSquared = sqr( getData()->m_diveStartDistance );
 			Real currentDistanceSquared  = ThePartitionManager->getDistanceSquared( getObject(), getTargetPos(), FROM_CENTER_2D );
+
+			if(m_reSleepFrame && m_reSleepFrame > TheGameLogic->getFrame())
+			{
+				m_wakeUpTime = 0;
+			}
+			else
+			{
+				PhysicsBehavior* p = getObject()->getPhysics();
+				Real additionalFactor = 0.0f;
+				if(p && m_reSleepFrame)
+					additionalFactor = p->getVelocityMagnitude();
+
+				m_wakeUpTime = REAL_TO_INT_FLOOR(sqrt(currentDistanceSquared - startDiveDistanceSquared) / ( additionalFactor + getObject()->getAIUpdateInterface()->getCurLocomotor()->getMaxSpeedForCondition(getObject()->getBodyModule()->getDamageState()) ));
+				m_reSleepFrame = 0;
+			}
 			if( currentDistanceSquared <= startDiveDistanceSquared )
 			{
+				m_wakeUpTime = 0;
 				m_diveState = DIVESTATE_DIVING;
 				getObject()->getAIUpdateInterface()->getCurLocomotor()->setUsePreciseZPos( true );
 
@@ -185,6 +204,8 @@ UpdateSleepTime DeliverPayloadAIUpdate::update( void )
 		}
 		else
 		{
+			m_wakeUpTime = 0;
+
 			//Check to see when we shall end diving
 			Real endDiveDistanceSquared = sqr( getData()->m_diveEndDistance );
 			Real currentDistanceSquared  = ThePartitionManager->getDistanceSquared( getObject(), getTargetPos(), FROM_CENTER_3D );
@@ -230,9 +251,30 @@ UpdateSleepTime DeliverPayloadAIUpdate::update( void )
 		}
 	}
 
-	AIUpdateInterface::update();
+	UpdateSleepTime ret = AIUpdateInterface::update();
+	if( m_reSleepFrame || ( m_diveState == DIVESTATE_DIVING && m_data.m_strafingWeaponSlot != -1 ))
+	{
+		return UPDATE_SLEEP_NONE;	// ignore our parent, and never sleep
+	}
+	else
+	{
+		UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+		mine = m_wakeUpTime && m_wakeUpTime < GET_STATE_SLEEP_FRAMES(mine) ? UPDATE_SLEEP(m_wakeUpTime) : mine;
+		return (mine < ret) ? mine : ret;
+	}
+		//return UPDATE_SLEEP_NONE;	// ignore our parent, and never sleep
 
-	return UPDATE_SLEEP_NONE;	// ignore our parent, and never sleep
+	// IamInnocent 11/10/2025 - Made SleepyUpdate
+}
+
+void DeliverPayloadAIUpdate::onDamage( DamageInfo *damageInfo )
+{ 
+	if(m_diveState == DIVESTATE_PREDIVE && (damageInfo->in.m_shockWaveAmount || damageInfo->in.m_magnetAmount))
+	{
+		Int second = REAL_TO_INT_CEIL(damageInfo->in.m_shockWaveAmount + damageInfo->in.m_magnetAmount);
+		m_reSleepFrame = TheGameLogic->getFrame() + max((Int)(LOGICFRAMES_PER_SECOND),second);
+		wakeUpNow();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -420,6 +462,7 @@ void DeliverPayloadAIUpdate::xfer( Xfer *xfer )
 	xfer->xferCoord3D(&m_moveToPos);
 	xfer->xferInt(&m_visibleItemsDelivered);
 	xfer->xferUser(&m_diveState, sizeof(m_diveState));
+	xfer->xferUnsignedInt(&m_wakeUpTime);
 
 	DeliverPayloadData data = m_data;
 

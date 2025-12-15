@@ -65,6 +65,8 @@ public:
 
 	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
 
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
 protected:
 
 

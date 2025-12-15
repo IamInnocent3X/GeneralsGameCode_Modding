@@ -294,6 +294,8 @@ set(GAMEENGINE_SRC
 #    Include/GameLogic/Module/ConvertToHijackedVehicleCrateCollide.h
 #    Include/GameLogic/Module/CostModifierUpgrade.h
 #    Include/GameLogic/Module/CountermeasuresBehavior.h
+#    Include/GameLogic/Module/BattlePlanBonusBehavior.h
+#    Include/GameLogic/Module/EnergyShieldBehavior.h
 #    Include/GameLogic/Module/CrateCollide.h
 #    Include/GameLogic/Module/CreateCrateDie.h
 #    Include/GameLogic/Module/CreateModule.h
@@ -319,11 +321,13 @@ set(GAMEENGINE_SRC
 #    Include/GameLogic/Module/EjectPilotDie.h
 #    Include/GameLogic/Module/EMPUpdate.h
 #    Include/GameLogic/Module/EnemyNearUpdate.h
+#    Include/GameLogic/Module/EquipCrateCollide.h
 #    Include/GameLogic/Module/ExperienceScalarUpgrade.h
 #    Include/GameLogic/Module/FireOCLAfterWeaponCooldownUpdate.h
 #    Include/GameLogic/Module/FireSpreadUpdate.h
 #    Include/GameLogic/Module/FirestormDynamicGeometryInfoUpdate.h
 #    Include/GameLogic/Module/FireWeaponCollide.h
+#    Include/GameLogic/Module/AdvancedCollide.h
 #    Include/GameLogic/Module/FireWeaponPower.h
 #    Include/GameLogic/Module/FireWeaponUpdate.h
 #    Include/GameLogic/Module/FireWeaponWhenDamagedBehavior.h
@@ -343,9 +347,11 @@ set(GAMEENGINE_SRC
 #    Include/GameLogic/Module/HeightDieUpdate.h
 #    Include/GameLogic/Module/HelicopterSlowDeathUpdate.h
 #    Include/GameLogic/Module/HelixContain.h
+#    Include/GameLogic/Module/MultiAddOnContain.h
 #    Include/GameLogic/Module/HighlanderBody.h
 #    Include/GameLogic/Module/HijackerUpdate.h
 #    Include/GameLogic/Module/HiveStructureBody.h
+#    Include/GameLogic/Module/ShieldBody.h
 #    Include/GameLogic/Module/HordeUpdate.h
 #    Include/GameLogic/Module/ImmortalBody.h
 #    Include/GameLogic/Module/InactiveBody.h
@@ -371,6 +377,9 @@ set(GAMEENGINE_SRC
 #    Include/GameLogic/Module/NeutronMissileUpdate.h
 #    Include/GameLogic/Module/ObjectCreationUpgrade.h
 #    Include/GameLogic/Module/ObjectDefectionHelper.h
+#    Include/GameLogic/Module/ObjectDelayedOrderHelper.h
+#    Include/GameLogic/Module/ObjectDisabledHelper.h
+#    Include/GameLogic/Module/ObjectLevitationHelper.h
 #    Include/GameLogic/Module/ObjectHelper.h
 #    Include/GameLogic/Module/ObjectRepulsorHelper.h
 #    Include/GameLogic/Module/ObjectSMCHelper.h
@@ -860,6 +869,8 @@ set(GAMEENGINE_SRC
 #    Source/GameLogic/Object/Behavior/BridgeTowerBehavior.cpp
 #    Source/GameLogic/Object/Behavior/BunkerBusterBehavior.cpp
 #    Source/GameLogic/Object/Behavior/CountermeasuresBehavior.cpp
+#    Source/GameLogic/Object/Behavior/BattlePlanBonusBehavior.cpp
+#    Source/GameLogic/Object/Behavior/EnergyShieldBehavior.cpp
 #    Source/GameLogic/Object/Behavior/DumbProjectileBehavior.cpp
 #    Source/GameLogic/Object/Behavior/FireWeaponWhenDamagedBehavior.cpp
 #    Source/GameLogic/Object/Behavior/FireWeaponWhenDeadBehavior.cpp
@@ -886,6 +897,7 @@ set(GAMEENGINE_SRC
 #    Source/GameLogic/Object/Body/BodyModule.cpp
 #    Source/GameLogic/Object/Body/HighlanderBody.cpp
 #    Source/GameLogic/Object/Body/HiveStructureBody.cpp
+#    Source/GameLogic/Object/Body/ShieldBody.cpp
 #    Source/GameLogic/Object/Body/ImmortalBody.cpp
 #    Source/GameLogic/Object/Body/InactiveBody.cpp
 #    Source/GameLogic/Object/Body/StructureBody.cpp
@@ -894,6 +906,7 @@ set(GAMEENGINE_SRC
 #    Source/GameLogic/Object/Collide/CrateCollide/ConvertToCarBombCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/CrateCollide/ConvertToHijackedVehicleCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/CrateCollide/CrateCollide.cpp
+#    Source/GameLogic/Object/Collide/CrateCollide/EquipCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/CrateCollide/HealCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/CrateCollide/MoneyCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/CrateCollide/SabotageCommandCenterCrateCollide.cpp
@@ -909,11 +922,13 @@ set(GAMEENGINE_SRC
 #    Source/GameLogic/Object/Collide/CrateCollide/UnitCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/CrateCollide/VeterancyCrateCollide.cpp
 #    Source/GameLogic/Object/Collide/FireWeaponCollide.cpp
+#    Source/GameLogic/Object/Collide/AdvancedCollide.cpp
 #    Source/GameLogic/Object/Collide/SquishCollide.cpp
 #    Source/GameLogic/Object/Contain/CaveContain.cpp
 #    Source/GameLogic/Object/Contain/GarrisonContain.cpp
 #    Source/GameLogic/Object/Contain/HealContain.cpp
 #    Source/GameLogic/Object/Contain/HelixContain.cpp
+#    Source/GameLogic/Object/Contain/MultiAddOnContain.cpp
 #    Source/GameLogic/Object/Contain/InternetHackContain.cpp
 #    Source/GameLogic/Object/Contain/MobNexusContain.cpp
 #    Source/GameLogic/Object/Contain/OpenContain.cpp
@@ -951,10 +966,13 @@ set(GAMEENGINE_SRC
 #    Source/GameLogic/Object/FiringTracker.cpp
 #    Source/GameLogic/Object/GhostObject.cpp
 #    Source/GameLogic/Object/Helper/ObjectDefectionHelper.cpp
+#    Source/GameLogic/Object/Helper/ObjectDisabledHelper.cpp
+#    Source/GameLogic/Object/Helper/ObjectDelayedOrderHelper.cpp
 #    Source/GameLogic/Object/Helper/ObjectHelper.cpp
 #    Source/GameLogic/Object/Helper/ObjectRepulsorHelper.cpp
 #    Source/GameLogic/Object/Helper/ObjectSMCHelper.cpp
 #    Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp
+#    Source/GameLogic/Object/Helper/ObjectLevitationHelper.cpp
 #    Source/GameLogic/Object/Helper/StatusDamageHelper.cpp
 #    Source/GameLogic/Object/Helper/SubdualDamageHelper.cpp
 #    Source/GameLogic/Object/Helper/TempWeaponBonusHelper.cpp

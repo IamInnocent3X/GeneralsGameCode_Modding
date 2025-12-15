@@ -34,6 +34,10 @@
 #include "Common/GameCommon.h"
 
 #include "GameLogic/Damage.h"
+#include "Common/DisabledTypes.h"
+#include "Common/STLTypedefs.h"
+#include "GameClient/TintStatus.h"
+#include "GameLogic/ObjectCreationList.h"
 
 #include "WWMath/matrix3d.h"
 
@@ -206,6 +210,7 @@ enum WeaponBonusConditionType CPP_11(: Int)
 	WEAPONBONUSCONDITION_FRENZY_ONE,
 	WEAPONBONUSCONDITION_FRENZY_TWO,
 	WEAPONBONUSCONDITION_FRENZY_THREE,
+	WEAPONBONUSCONDITION_CONTAINED,
 
 	WEAPONBONUSCONDITION_COUNT
 };
@@ -244,11 +249,22 @@ static const char *const TheWeaponBonusNames[] =
 	"FRENZY_ONE",
 	"FRENZY_TWO",
 	"FRENZY_THREE",
+	"CONTAINED",
 
 	NULL
 };
 static_assert(ARRAY_SIZE(TheWeaponBonusNames) == WEAPONBONUSCONDITION_COUNT + 1, "Incorrect array size");
 #endif
+
+
+typedef std::vector<WeaponBonusConditionType> WeaponBonusConditionTypeVec;
+
+//typedef std::pair<AsciiString, Real> AsciiStringReal;
+//typedef std::vector<AsciiStringReal> CustomWeaponBonus;
+// Converted to Hash_map;
+typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomWeaponBonus;
+typedef std::hash_map<NameKeyType, WeaponTemplate*, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > WeaponTemplateMap;
+
 
 // For WeaponBonusConditionFlags
 // part of detangling
@@ -267,6 +283,7 @@ public:
 		RANGE,
 		RATE_OF_FIRE,
 		PRE_ATTACK,
+		ARMOR,
 
 		FIELD_COUNT
 	};
@@ -279,16 +296,47 @@ public:
 	void clear()
 	{
 		for (int i = 0; i < FIELD_COUNT; ++i)
+		{
 			m_field[i] = 1.0f;
+			m_field2[i].clear();
+		}
 	}
 
 	Real getField(Field f) const { return m_field[f]; }
 	void setField(Field f, Real v) { m_field[f] = v; }
+	
+	void setFieldCustom(const AsciiString& customStatus, Field f, Real v) { 
+		/*for (CustomWeaponBonus::iterator it = m_field2[f].begin(); it != m_field2[f].end(); ++it)
+		{
+			if (customStatus == (it->first))
+			{	
+				it->second = v; 
+				return;
+			}
+		}
+		AsciiStringReal c_bonus;
+		c_bonus.first = customStatus; 
+		c_bonus.second = v;
+		m_field2[f].push_back(c_bonus);*/
+
+		CustomWeaponBonus::iterator it = m_field2[f].find(customStatus);
+
+		if(it != m_field2[f].end())
+		{
+			it->second = v;
+		}
+		else 
+		{
+			m_field2[f][customStatus] = v;
+		}
+	}
 
 	void appendBonuses(WeaponBonus& bonus) const;
+	void appendBonusesCustom(const AsciiString& customStatus, WeaponBonus& bonus) const;
 
 private:
 	Real m_field[FIELD_COUNT];
+	CustomWeaponBonus m_field2[FIELD_COUNT];
 
 };
 
@@ -300,6 +348,7 @@ static const char *const TheWeaponBonusFieldNames[] =
 	"RANGE",
 	"RATE_OF_FIRE",
 	"PRE_ATTACK",
+	"ARMOR",
 	NULL
 };
 static_assert(ARRAY_SIZE(TheWeaponBonusFieldNames) == WeaponBonus::FIELD_COUNT + 1, "Incorrect array size");
@@ -314,11 +363,16 @@ private:
 	WeaponBonus m_bonus[WEAPONBONUSCONDITION_COUNT];
 
 public:
-	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const;
+	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, ObjectCustomStatusType customFlags) const;
+	//void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const;
 
 	void parseWeaponBonusSet(INI* ini);
 	static void parseWeaponBonusSet(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
 	static void parseWeaponBonusSetPtr(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
+
+	void parseCustomWeaponBonusSet(INI* ini);
+	static void parseCustomWeaponBonusSet(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
+	static void parseCustomWeaponBonusSetPtr(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
 };
 EMPTY_DTOR(WeaponBonusSet)
 
@@ -379,7 +433,9 @@ public:
 		Bool ignoreRanges,
 		Weapon *firingWeapon,
 		ObjectID* projectileID,
-		Bool inflictDamage
+		Bool inflictDamage,
+		const Coord3D* launchPos = NULL,
+		ObjectID shrapnelLaunchID = INVALID_ID
 	) const;
 
 	/**
@@ -405,6 +461,7 @@ public:
 	Real getSecondaryDamage(const WeaponBonus& bonus) const;
 	Real getSecondaryDamageRadius(const WeaponBonus& bonus) const;
 	Int getPreAttackDelay(const WeaponBonus& bonus) const;
+	Real getArmorBonus(const WeaponBonus& bonus) const;
 	Bool isContactWeapon() const;
 
 	Real getShockWaveAmount() const { return m_shockWaveAmount; }
@@ -451,9 +508,16 @@ public:
 	const ObjectCreationList* getFireOCL(VeterancyLevel v) const { return m_fireOCLs[v]; }
 	const ObjectCreationList* getProjectileDetonationOCL(VeterancyLevel v) const { return m_projectileDetonationOCLs[v]; }
 	const ParticleSystemTemplate* getProjectileExhaust(VeterancyLevel v) const { return m_projectileExhausts[v]; }
+	const FXList* getPreAttackFX(VeterancyLevel v) const { return m_preAttackFXs[v]; }
+	UnsignedInt getPreAttackFXDelay() const { return m_preAttackFXDelay; }
 
 	const AudioEventRTS& getFireSound() const { return m_fireSound; }
 	UnsignedInt getFireSoundLoopTime() const { return m_fireSoundLoopTime; }
+	UnsignedInt getContinuousLaserLoopTime() const { return m_continuousLaserLoopTime; }
+	Real getLaserGroundUnitTargetHeight() const { return m_laserGroundUnitTargetHeight; }
+	Real getLaserGroundTargetHeight() const { return m_laserGroundTargetHeight; }
+	UnsignedInt getScatterTargetResetTime() const { return m_scatterTargetResetTime; }
+	Bool isScatterTargetResetRecenter() const { return m_scatterTargetResetRecenter; }
 	const std::vector<Coord2D>& getScatterTargetsVector() const { return m_scatterTargets; }
 	const WeaponBonusSet* getExtraBonus() const { return m_extraBonus; }
 	Int getShotsPerBarrel() const { return m_shotsPerBarrel; }
@@ -464,13 +528,127 @@ public:
 	Bool isPlayFXWhenStealthed() const { return m_playFXWhenStealthed; }
 	Bool getDieOnDetonate() const { return m_dieOnDetonate; }
 
+	Bool isScatterTargetAligned() const { return m_scatterTargetAligned; }
+	Bool isScatterTargetRandom() const { return m_scatterTargetRandom; }
+	Bool isScatterTargetRandomAngle() const { return m_scatterTargetRandomAngle; }
+	Real getScatterTargetMinScalar () const { return m_scatterTargetMinScalar; }
+	Bool isScatterTargetCenteredAtShooter() const { return m_scatterTargetCenteredAtShooter; }
+
+	const AsciiString& getCustomDamageType() const { return m_customDamageType; }
+	const AsciiString& getCustomDamageStatusType() const { return m_customDamageStatusType; }
+	const AsciiString& getCustomDeathType() const { return m_customDeathType; }
+
+	Bool getIsFlame() const { return m_isFlame; }
+	Bool getProjectileCollidesWithBurn() const { return m_projectileCollidesWithBurn; }
+	Bool getIsPoison() const { return m_isPoison; }
+	Bool getPoisonMuzzleFlashesGarrison() const { return m_poisonMuzzleFlashesGarrison; }
+	Bool getIsDisarm() const { return m_isDisarm; }
+	Bool getKillsGarrison() const { return m_killsGarrison; }
+	Int getKillsGarrisonAmount() const { return m_killsGarrisonAmount; }
+	const AsciiString& PlaySpecificVoice() const { return m_playSpecificVoice; }
+	DamageType getDamageFXOverride() const { return m_damageFXOverride; }
+
+	Real getStatusDuration() const { return m_statusDuration; }
+	Bool getDoStatusDamage(VeterancyLevel v) const { return m_doStatusDamage[v]; }
+	Bool getStatusDurationTypeCorrelate() const { return m_statusDurationTypeCorrelate; }
+	TintStatus getTintStatusType(VeterancyLevel v) const { return m_tintStatus[v]; }
+	const AsciiString& getCustomTintStatusType(VeterancyLevel v) const { return m_customTintStatus[v]; }
+
+	Bool getIsSubdual(VeterancyLevel v) const { return m_isSubdual[v]; }
+	Bool getSubdualDealsNormalDamage(VeterancyLevel v) const { return m_subdualDealsNormalDamage[v]; }
+	Real getSubdualDamageMultiplier(VeterancyLevel v) const { return m_subdualDamageMultiplier[v]; }
+	KindOfMaskType getSubdualForbiddenKindOf() const { return m_subdualForbiddenKindOf; }
+
+	std::vector<ObjectStatusTypes> getFiringTrackerStatusTypes() const { return m_firingTrackerStatusTrigger; }
+	WeaponBonusConditionType getFiringTrackerBonusCondition() const { return m_firingTrackerBonusConditionGive; }
+	const std::vector<AsciiString>& getFiringTrackerCustomStatusTypes() const { return m_firingTrackerCustomStatusTrigger; }
+	const AsciiString& getFiringTrackerCustomBonusCondition() const { return m_firingTrackerCustomBonusConditionGive; }
+
+	Bool getIsNotAbsoluteKill() const { return m_notAbsoluteKill; }
+
+	Bool getClearsParasite() const { return m_clearsParasite; }
+	const std::vector<AsciiString>& getClearsParasiteKeys() const { return m_clearsParasiteKeys; }
+
+	Bool getIsMissileAttractor() const { return m_isMissileAttractor; }
+	Bool getSubdueProjectileNoDamage() const { return m_subduedProjectileNoDamage; }
+
+	Bool getDamagesSelfOnly() const { return m_damagesSelfOnly; }
+
+	const std::vector<AsciiString>& getRejectKeys() const { return m_rejectKeys; }
+
+	const AsciiString& getSubdualCustomType() const { return m_subdualCustomType; }
+	const AsciiString& getCustomSubdualCustomTint(VeterancyLevel v) const { return m_customSubdualCustomTint[v]; }
+	TintStatus getCustomSubdualTint(VeterancyLevel v) const { return m_customSubdualTint[v]; }
+	Bool getCustomSubdualHasDisable(VeterancyLevel v) const { return m_customSubdualHasDisable[v]; }
+	Bool getCustomSubdualHasDisableProjectiles(VeterancyLevel v) const { return m_customSubdualHasDisableProjectiles[v]; }
+	Bool getCustomSubdualClearOnTrigger(VeterancyLevel v) const { return m_customSubdualClearOnTrigger[v]; }
+	Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_customSubdualDoStatus[v]; }
+	const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_customSubdualOCLs[v]; }
+	DisabledType getCustomSubdualDisableType() const { return m_customSubdualDisableType; }
+	Bool getCustomSubdualRemoveSubdualTintOnDisable() const { return m_customSubdualRemoveSubdualTintOnDisable; }
+	TintStatus getCustomSubdualDisableTint() const { return m_customSubdualDisableTint; }
+	const AsciiString& getCustomSubdualDisableCustomTint() const { return m_customSubdualDisableCustomTint; }
+	const AsciiString& getCustomSubdualDisableSound() const { return m_customSubdualDisableSound; }
+	const AsciiString& getCustomSubdualDisableRemoveSound() const { return m_customSubdualDisableRemoveSound; }
+
+	ProtectionTypeFlags getProtectionTypes() const { return m_protectionTypes; }
+
+	Bool getIsShielderImmune() const { return m_isShielderImmune; }
+
+	Real getMagnetAmount() const { return m_magnetAmount; }
+
+	Real getMinDamageHeight() const { return m_minDamageHeight; }
+	Real getMaxDamageHeight() const { return m_maxDamageHeight; }
+	Real getMinTargetHeight() const { return m_minTargetHeight; }
+	Real getMaxTargetHeight() const { return m_maxTargetHeight; }
+	Real getAttackRangePriority() const { return m_attackRangePriority; }
+	Real getOutsideAttackRangePriority() const { return m_outsideAttackRangePriority; }
+	
+	const std::vector<AsciiString>& getActivationUpgradeNames() const { return m_activationUpgradeNames; }
+	const std::vector<AsciiString>& getConflictingUpgradeNames() const { return m_conflictingUpgradeNames; }
+	ObjectStatusMaskType getRequiredStatus() const { return m_requiredStatus; }
+	ObjectStatusMaskType getForbiddenStatus() const { return m_forbiddenStatus; }
+	const std::vector<AsciiString>& getCustomStatusRequired() const { return m_requiredCustomStatus; }
+	const std::vector<AsciiString>& getCustomStatusForbidden() const { return m_forbiddenCustomStatus; }
+	Bool getRequiresAllTriggers() const { return m_requiresAllTriggers; }
+
+	const AsciiString& getCursorName() const { return m_cursorName; }
+	const AsciiString& getForceAttackObjectCursorName() const { return m_forceAttackObjectCursorName; }
+	const AsciiString& getForceAttackGroundCursorName() const { return m_forceAttackGroundCursorName; }
+	const AsciiString& getInvalidCursorName() const { return m_invalidCursorName; }
+
+	Real getROFMovingPenalty() const { return m_rofMovingPenalty; }
+	Real getROFMovingMaxSpeedCount() const { return m_rofMovingMaxSpeedCount; }
+	Bool getROFMovingScales() const { return m_rofMovingScales; }
+
+	UnsignedInt getInvulnerabilityDuration() const { return m_invulnerabilityDuration; }
+
+	Bool passRequirements (const Object *source) const;
+	Int calcROFForMoving(const Object *source, Int Delay) const;
+
+	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
+
+	void privateDoShrapnel(ObjectID sourceID, ObjectID victimID, const Coord3D *pos) const;
+
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
 		const Object* projectile,
 		const Object* thingWeCollidedWith,
-		ObjectID intendedVictimID	// could be INVALID_ID for a position-shot
+		ObjectID intendedVictimID,	// could be INVALID_ID for a position-shot
+		ObjectID shrapnelLaunchID
 	) const;
 
+	void createPreAttackFX
+	(
+		const Object* sourceObj,
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		const Object* victimObj,
+		const Coord3D* victimPos
+		//const WeaponBonus& bonus,
+		//Weapon *firingWeapon,
+	) const;
+	
 	void postProcessLoad();
 
 protected:
@@ -487,6 +665,7 @@ private:
 	WeaponTemplate *m_nextTemplate;
 
 	static void parseWeaponBonusSet( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
+	static void parseCustomWeaponBonusSet( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseScatterTarget( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseShotDelay( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 
@@ -551,6 +730,11 @@ private:
 	Real m_historicBonusRadius;							///< see above
 	Int m_historicBonusCount;								///< see above
 	const WeaponTemplate* m_historicBonusWeapon;	///< see above
+	Int m_shrapnelBonusCount;								///< weapon fires shrapnel mechanics as seen in other franchises
+	const WeaponTemplate* m_shrapnelBonusWeapon;			///< see above
+	Int m_shrapnelAffectsMask;								///< see above
+	Bool m_shrapnelDoesNotRequireVictim;					///< see above	
+	Bool m_shrapnelIgnoresStealthStatus;					///< see above	
 	Bool m_leechRangeWeapon;								///< once the weapon has fired once at the proper range, the weapon gains unlimited range for the remainder of the attack cycle
 	Bool m_capableOfFollowingWaypoint;			///< determines if the weapon is capable of following a waypoint path.
 	Bool m_isShowsAmmoPips;									///< shows ammo pips
@@ -562,6 +746,137 @@ private:
 	ObjectStatusTypes m_damageStatusType;		///< If our damage is Status damage, the status we apply
 	UnsignedInt m_suspendFXDelay;						///< The fx can be suspended for any delay, in frames, then they will execute as normal
 	Bool m_dieOnDetonate;
+	const FXList* m_preAttackFXs[LEVEL_COUNT];			///< FX played when preattack starts
+	UnsignedInt m_preAttackFXDelay;						///< Delay after starting a preattackFX before we can play it again (default = 200 ms)
+
+	UnsignedInt m_continuousLaserLoopTime;  ///< time between shots the continuos laser object is kept alive instead of creating a new one
+
+	Real m_laserGroundTargetHeight;     ///< when targeting the ground with a laser weapon, aim this much above
+	Real m_laserGroundUnitTargetHeight;   ///< when targeting ground units with a laser weapon, aim this much above
+
+	Bool m_scatterTargetAligned;		///< if the scatter target pattern is aligned to the shooter
+	Bool m_scatterTargetRandom;		///< if the scatter target pattern is fired in a random order
+	Bool m_scatterTargetRandomAngle;  ///< if the scatter target pattern is randomly aligned
+	Real m_scatterTargetMinScalar;  ///< scale the scatterTarget pattern depending on range
+	Bool m_scatterTargetCenteredAtShooter;  ///< if the scatter target pattern is centered at the shooter
+
+	UnsignedInt m_scatterTargetResetTime;  ///< if this much time between shots has passed, we reset the scatter targets
+	Bool m_scatterTargetResetRecenter;  ///< when resetting scatter targets, use indices in the "middle" of the list, to keep the target centered for Line based attacks 
+
+	AsciiString m_customDamageType;
+	AsciiString m_customDamageStatusType;
+	AsciiString m_customDeathType;
+
+	Bool m_isFlame;
+	Bool m_projectileCollidesWithBurn;
+	Bool m_isPoison;
+	Bool m_poisonMuzzleFlashesGarrison;
+	Bool m_isDisarm;
+	Bool m_killsGarrison;
+	Int m_killsGarrisonAmount;
+	AsciiString m_playSpecificVoice;
+	DamageType m_damageFXOverride;
+	Real m_statusDuration;
+	Bool m_doStatusDamage[LEVEL_COUNT];
+	Bool m_statusDurationTypeCorrelate;
+	TintStatus m_tintStatus[LEVEL_COUNT];
+	AsciiString m_customTintStatus[LEVEL_COUNT];
+
+	Bool m_isSubdual[LEVEL_COUNT];
+	Bool m_subdualDealsNormalDamage[LEVEL_COUNT];
+	Real m_subdualDamageMultiplier[LEVEL_COUNT];
+	KindOfMaskType m_subdualForbiddenKindOf;
+
+	std::vector<ObjectStatusTypes> m_firingTrackerStatusTrigger;
+	std::vector<AsciiString> m_firingTrackerCustomStatusTrigger;
+	WeaponBonusConditionType m_firingTrackerBonusConditionGive;
+	AsciiString m_firingTrackerCustomBonusConditionGive;
+
+	Bool m_notAbsoluteKill;
+
+	Bool m_clearsParasite;
+	std::vector<AsciiString> m_clearsParasiteKeys;
+
+	Bool m_isMissileAttractor;
+	Bool m_subduedProjectileNoDamage;
+
+	Bool m_damagesSelfOnly;
+
+	AsciiString m_subdualCustomType;
+	AsciiString m_customSubdualCustomTint[LEVEL_COUNT];
+	TintStatus m_customSubdualTint[LEVEL_COUNT];
+	Bool m_customSubdualHasDisable[LEVEL_COUNT];
+	Bool m_customSubdualHasDisableProjectiles[LEVEL_COUNT];
+	Bool m_customSubdualClearOnTrigger[LEVEL_COUNT];
+	Bool m_customSubdualDoStatus[LEVEL_COUNT];
+	AsciiString m_customSubdualOCLNames[LEVEL_COUNT];
+	const ObjectCreationList* m_customSubdualOCLs[LEVEL_COUNT];
+	DisabledType m_customSubdualDisableType;
+	Bool m_customSubdualRemoveSubdualTintOnDisable;
+	TintStatus m_customSubdualDisableTint;
+	AsciiString m_customSubdualDisableCustomTint;
+	AsciiString m_customSubdualDisableSound;
+	AsciiString m_customSubdualDisableRemoveSound;
+
+	ProtectionTypeFlags m_protectionTypes;
+
+	Bool m_isShielderImmune;
+
+	Bool m_shockWaveUseCenter;
+	Bool m_shockWaveRespectsCenter;
+	Bool m_shockWaveAffectsAirborne;
+	Bool m_shockWavePullsAirborne;
+
+	Real m_magnetAmount;
+	Real m_magnetInfantryAmount;
+	Real m_magnetTaperOffDistance;
+	Real m_magnetTaperOffRatio;
+	Real m_magnetTaperOnDistance;
+	Real m_magnetTaperOnRatio;
+	Real m_magnetLiftHeight;
+	Real m_magnetLiftHeightSecond;
+	Real m_magnetLiftForce;
+	Real m_magnetLiftForceToHeight;
+	Real m_magnetLiftForceToHeightSecond;
+	Real m_magnetMaxLiftHeight;
+	Real m_magnetAirborneZForce;
+	Real m_magnetLevitationHeight;
+	Real m_magnetMinDistance;
+	Real m_magnetMaxDistance;
+	Bool m_magnetLinearDistanceCalc;
+	Bool m_magnetNoAirborne;
+	Bool m_magnetAirboneAffectedByYaw;
+	Bool m_magnetUseCenter;
+	Bool m_magnetRespectsCenter;
+	MagnetType m_magnetFormula;
+
+	Real m_minDamageHeight;
+	Real m_maxDamageHeight;
+	Real m_minTargetHeight;
+	Real m_maxTargetHeight;
+	Int m_attackRangePriority;
+	Int m_outsideAttackRangePriority;
+
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
+	std::vector<AsciiString> m_activationUpgradeNames;
+	std::vector<AsciiString> m_conflictingUpgradeNames;
+	Bool m_requiresAllTriggers;
+
+	AsciiString m_cursorName;
+	AsciiString m_forceAttackObjectCursorName;
+	AsciiString m_forceAttackGroundCursorName;
+	AsciiString m_invalidCursorName;
+
+	std::vector<AsciiString> m_rejectKeys;
+
+	Real m_rofMovingPenalty;
+	Real m_rofMovingMaxSpeedCount;
+	Bool m_rofMovingScales;
+
+	UnsignedInt m_invulnerabilityDuration;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
 	mutable UnsignedInt m_historicDamageTriggerId;
@@ -599,11 +914,19 @@ public:
 	// return true if we auto-reloaded our clip after firing.
 	Bool fireWeapon(const Object *source, const Coord3D* pos, ObjectID* projectileID = NULL);
 
-	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, Bool inflictDamage = TRUE );
+	// return true if we auto-reloaded our clip after firing.
+	Bool fireWeaponOnSpot(const Object *source, Object *target, ObjectID* projectileID = NULL, const Coord3D* sourcePos = NULL, ObjectID shrapnelLaunchID = INVALID_ID);
 
-	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, Bool inflictDamage = TRUE );
+	// return true if we auto-reloaded our clip after firing.
+	Bool fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID* projectileID = NULL, const Coord3D* sourcePos = NULL, ObjectID shrapnelLaunchID = INVALID_ID);
+
+	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
+
+	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
 	void preFireWeapon( const Object *source, const Object *victim );
+
+	void preFireWeapon(const Object* source, const Coord3D* pos);
 
 	//Currently, this function was added to allow a script to force fire a weapon,
 	//and immediately gain control of the weapon that was fired to give it special orders...
@@ -667,13 +990,18 @@ public:
 	UnsignedInt getLastReloadStartedFrame() const { return m_whenLastReloadStarted; }
 	Real getPercentReadyToFire() const;
 
+	UnsignedInt getNextPreAttackFXFrame() const { return m_nextPreAttackFXFrame; }
+
 	// do not ever use this unless you are weaponset.cpp
 	void setPossibleNextShotFrame( UnsignedInt frameNum ) { m_whenWeCanFireAgain = frameNum; }
 	void setPreAttackFinishedFrame( UnsignedInt frameNum ) { m_whenPreAttackFinished = frameNum; }
 	void setLastReloadStartedFrame( UnsignedInt frameNum ) { m_whenLastReloadStarted = frameNum; }
+	void setNextPreAttackFXFrame(UnsignedInt frameNum) { m_nextPreAttackFXFrame = frameNum; }
 
 	//Transfer the reload times and status from the passed in weapon.
 	void transferNextShotStatsFrom( const Weapon &weapon );
+
+	void transferReloadStateFrom( const Weapon &weapon, Real clipPercentage = 0.0);
 
 	// we must pass the source object for these (and for ANY FUTURE ADDITIONS)
 	// so that we can take the source's weapon bonuses, if any, into account.
@@ -684,10 +1012,12 @@ public:
 	// Returns the max distance between the centerpoints of source & victim	for victim to be in range.
 	Real getAttackDistance(const Object *source, const Object *victim, const Coord3D* victimPos) const;
 
-	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos );///<I just made this projectile and may need to keep track of it
+	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos, const Coord3D *launchPos = NULL );///<I just made this projectile and may need to keep track of it
 
 	Bool isLaser() const { return m_template->getLaserName().isNotEmpty(); }
-	void createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos );
+	// void createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos );
+	ObjectID createLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = NULL); //now returns the object ID
+	void handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = NULL); 
 
 	const WeaponTemplate* getTemplate() const { return m_template; }
 	WeaponSlotType getWeaponSlot() const { return m_wslot; }
@@ -708,6 +1038,7 @@ public:
  	UnsignedInt getAutoReloadWhenIdleFrames() const { return m_template->getAutoReloadWhenIdleFrames(); }
 	const AudioEventRTS& getFireSound() const { return m_template->getFireSound(); }
 	UnsignedInt getFireSoundLoopTime() const { return m_template->getFireSoundLoopTime(); }
+	UnsignedInt getContinuousLaserLoopTime() const { return m_template->getContinuousLaserLoopTime(); }
 	DamageType getDamageType() const { return m_template->getDamageType(); }
 	DeathType getDeathType() const { return m_template->getDeathType(); }
 	Real getContinueAttackRange() const { return m_template->getContinueAttackRange(); }
@@ -716,16 +1047,96 @@ public:
 	// Contact weapons (like car bombs) need to basically collide with their target.
 	Bool isContactWeapon() const { return m_template->isContactWeapon(); }
 
+	const AsciiString& getCustomDamageType() const { return m_template->getCustomDamageType(); }
+	const AsciiString& getCustomDamageStatusType() const { return m_template->getCustomDamageStatusType(); }
+	const AsciiString& getCustomDeathType() const { return m_template->getCustomDeathType(); }
+
+	Bool getIsFlame() const { return m_template->getIsFlame(); }
+	Bool getProjectileCollidesWithBurn() const { return m_template->getProjectileCollidesWithBurn(); }
+	Bool getIsPoison() const { return m_template->getIsPoison(); }
+	Bool getPoisonMuzzleFlashesGarrison() const { return m_template->getPoisonMuzzleFlashesGarrison(); }
+	Bool getIsDisarm() const { return m_template->getIsDisarm(); }
+	Bool getKillsGarrison() const { return m_template->getKillsGarrison(); }
+	Int getKillsGarrisonAmount() const { return m_template->getKillsGarrisonAmount(); }
+	const AsciiString& PlaySpecificVoice() const { return m_template->PlaySpecificVoice(); }
+	DamageType getDamageFXOverride() const { return m_template->getDamageFXOverride(); }
+
+	Real getStatusDuration() const { return m_template->getStatusDuration(); }
+	Bool getDoStatusDamage(VeterancyLevel v) const { return m_template->getDoStatusDamage(v); }
+	Bool getStatusDurationTypeCorrelate() const { return m_template->getStatusDurationTypeCorrelate(); }
+	TintStatus getTintStatusType(VeterancyLevel v) const { return m_template->getTintStatusType(v); }
+	const AsciiString& getCustomTintStatusType(VeterancyLevel v) const { return m_template->getCustomTintStatusType(v); }
+
+	Bool getIsSubdual(VeterancyLevel v) const { return m_template->getIsSubdual(v); }
+	Bool getSubdualDealsNormalDamage(VeterancyLevel v) const { return m_template->getSubdualDealsNormalDamage(v); }
+	Real getSubdualDamageMultiplier(VeterancyLevel v) const { return m_template->getSubdualDamageMultiplier(v); }
+	KindOfMaskType getSubdualForbiddenKindOf() const { return m_template->getSubdualForbiddenKindOf(); }
+
+	std::vector<ObjectStatusTypes> getFiringTrackerStatusTypes() const { return m_template->getFiringTrackerStatusTypes(); }
+	WeaponBonusConditionType getFiringTrackerBonusCondition() const { return m_template->getFiringTrackerBonusCondition(); }
+	const std::vector<AsciiString>& getFiringTrackerCustomStatusTypes() const { return m_template->getFiringTrackerCustomStatusTypes(); }
+	const AsciiString& getFiringTrackerCustomBonusCondition() const { return m_template->getFiringTrackerCustomBonusCondition(); }
+
+	Bool getIsNotAbsoluteKill() const { return m_template->getIsNotAbsoluteKill(); }
+
+	Bool getClearsParasite() const { return m_template->getClearsParasite(); }
+	const std::vector<AsciiString>& getClearsParasiteKeys() const { return m_template->getClearsParasiteKeys(); }
+
+	Bool getIsMissileAttractor() const { return m_template->getIsMissileAttractor(); }
+	Bool getSubdueProjectileNoDamage() const { return m_template->getSubdueProjectileNoDamage(); }
+
+	const AsciiString& getSubdualCustomType() const { return m_template->getSubdualCustomType(); }
+	const AsciiString& getCustomSubdualCustomTint(VeterancyLevel v) const { return m_template->getCustomSubdualCustomTint(v); }
+	TintStatus getCustomSubdualTint(VeterancyLevel v) const { return m_template->getCustomSubdualTint(v); }
+	Bool getCustomSubdualHasDisable(VeterancyLevel v) const { return m_template->getCustomSubdualHasDisable(v); }
+	Bool getCustomSubdualHasDisableProjectiles(VeterancyLevel v) const { return m_template->getCustomSubdualHasDisableProjectiles(v); }
+	Bool getCustomSubdualClearOnTrigger(VeterancyLevel v) const { return m_template->getCustomSubdualClearOnTrigger(v); }
+	Bool getCustomSubdualDoStatus(VeterancyLevel v) const { return m_template->getCustomSubdualDoStatus(v); }
+	const ObjectCreationList* getCustomSubdualOCL(VeterancyLevel v) const { return m_template->getCustomSubdualOCL(v); }
+	DisabledType getCustomSubdualDisableType() const { return m_template->getCustomSubdualDisableType(); }
+	Bool getCustomSubdualRemoveSubdualTintOnDisable() const { return m_template->getCustomSubdualRemoveSubdualTintOnDisable(); }
+	const AsciiString& getCustomSubdualDisableSound() const { return m_template->getCustomSubdualDisableSound(); }
+	const AsciiString& getCustomSubdualDisableRemoveSound() const { return m_template->getCustomSubdualDisableRemoveSound(); }
+	TintStatus getCustomSubdualDisableTint() const { return m_template->getCustomSubdualDisableTint(); }
+	const AsciiString& getCustomSubdualDisableCustomTint() const { return m_template->getCustomSubdualDisableCustomTint(); }
+
+	ProtectionTypeFlags getProtectionTypes() const { return m_template->getProtectionTypes(); }
+
+	Real getMinDamageHeight() const { return m_template->getMinDamageHeight(); }
+	Real getMaxDamageHeight() const { return m_template->getMaxDamageHeight(); }
+	Real getMinTargetHeight() const { return m_template->getMinTargetHeight(); }
+	Real getMaxTargetHeight() const { return m_template->getMaxTargetHeight(); }
+	Real getAttackRangePriority() const { return m_template->getAttackRangePriority(); }
+	Real getOutsideAttackRangePriority() const { return m_template->getOutsideAttackRangePriority(); }
+	
+	const AsciiString& getCursorName() const { return m_template->getCursorName(); }
+	const AsciiString& getForceAttackObjectCursorName() const { return m_template->getForceAttackObjectCursorName(); }
+	const AsciiString& getForceAttackGroundCursorName() const { return m_template->getForceAttackGroundCursorName(); }
+	const AsciiString& getInvalidCursorName() const { return m_template->getInvalidCursorName(); }
+
+	Real getROFMovingPenalty() const { return m_template->getROFMovingPenalty(); }
+	Real getROFMovingMaxSpeedCount() const { return m_template->getROFMovingMaxSpeedCount(); }
+	Bool getROFMovingScales() const { return m_template->getROFMovingScales(); }
+
+	UnsignedInt getInvulnerabilityDuration() const { return m_template->getInvulnerabilityDuration(); }
+
+	Int getWeaponPriority(const Object *source, const Object *target) const;
+	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;
+
 	Int getClipReloadTime(const Object *source) const;
 
 	Real getPrimaryDamageRadius(const Object *source) const;
 
 	Int getPreAttackDelay( const Object *source, const Object *victim ) const;
 
+	Real getArmorBonus(const Object *source) const;
+
 	Bool isDamageWeapon() const;
 
 	Bool isPitchLimited() const { return m_pitchLimited; }
 	Bool isWithinTargetPitch(const Object *source, const Object *victim) const;
+
+	Bool isWithinTargetHeight(const Object *victim) const;
 
 	//Leech range functionality simply means this weapon has unlimited range temporarily. How it works is if the
 	//weapon template has the LeechRangeWeapon set, it means that once the unit has closed to standard weapon range
@@ -743,6 +1154,9 @@ public:
 	Bool isClearGoalFiringLineOfSightTerrain(const Object* source, const Coord3D& goalPos, const Object* victim) const;
 	Bool isClearGoalFiringLineOfSightTerrain(const Object* source, const Coord3D& goalPos, const Coord3D& victimPos) const;
 
+	ObjectID setBonusRefObjID(void) { return m_bonusRefObjID; }
+	void setBonusRefObjID(ObjectID id) { m_bonusRefObjID = id; }
+
 	static void calcProjectileLaunchPosition(
 		const Object* launcher,
 		WeaponSlotType wslot,
@@ -755,7 +1169,8 @@ public:
 		Object* projectile,
 		const Object *launcher,
 		WeaponSlotType wslot,
-		Int specificBarrelToUse
+		Int specificBarrelToUse,
+		const Coord3D* launchPos = NULL
 	);
 
 	/**
@@ -765,6 +1180,10 @@ public:
 	*/
 	void setClipPercentFull(Real percent, Bool allowReduction);
 	UnsignedInt getSuspendFXFrame( void ) const { return m_suspendFXFrame; }
+
+	void computeFiringTrackerBonus(Object *me, const Object *victim);
+	void computeFiringTrackerBonusClear(Object *me);
+	//Real computeBuffedBonus(const Object *me, const Object *victim, Int f) const;
 
 protected:
 
@@ -779,7 +1198,10 @@ protected:
 		Bool ignoreRanges,
 		WeaponBonusConditionFlags extraBonusFlags,
 		ObjectID* projectileID,
-		Bool inflictDamage
+		Bool inflictDamage,
+		ObjectCustomStatusType extraBonusCustomFlags,
+		const Coord3D* sourcePos = NULL,
+		ObjectID shrapnelLaunchID = INVALID_ID
 	);
 	Real estimateWeaponDamage(const Object *sourceObj, const Object *victimObj, const Coord3D* victimPos);
 	void reloadWithBonus(const Object *source, const WeaponBonus& bonus, Bool loadInstantly);
@@ -788,9 +1210,9 @@ protected:
 
 	void getFiringLineOfSightOrigin(const Object* source, Coord3D& origin) const;
 
-	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus) const;
+	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
 
-	void rebuildScatterTargets();
+	void rebuildScatterTargets(Bool recenter = false);
 
 
 private:
@@ -810,6 +1232,10 @@ private:
 	std::vector<Int>					m_scatterTargetsUnused;			///< A running memory of which targets I've used, so I can shoot them all at random
 	Bool											m_pitchLimited;
 	Bool											m_leechWeaponRangeActive;		///< This weapon has unlimited range until attack state is aborted!
+	Real											m_scatterTargetsAngle;		 ///< Random angle chosen for scatterTarget pattern
+	UnsignedInt										m_nextPreAttackFXFrame;			///< the frame when we are next allowed to play a preAttackFX
+	ObjectID									m_continuousLaserID;				///< the object that is tracking our continuous laser if we have one.
+	ObjectID									m_bonusRefObjID;					///< for weapons fired from projectiles, we compute the bonus from the original source object instead.
 
 	// setter function for status that should not be used outside this class
 	void setStatus( WeaponStatus status) { m_status = status; }
@@ -852,7 +1278,10 @@ public:
 	void createAndFireTempWeapon(const WeaponTemplate* w, const Object *source, const Coord3D* pos);
 	void createAndFireTempWeapon(const WeaponTemplate* w, const Object *source, Object *target);
 
-	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, Bool inflictDamage = TRUE );
+	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, const Coord3D* pos, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
+	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, Object *target, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
+
+	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
 	static void parseWeaponTemplateDefinition(INI* ini);
 
@@ -884,9 +1313,11 @@ private:
 		ObjectID m_delaySourceID;										///< who dealt the damage (by ID since it might be dead due to delay)
 		ObjectID m_delayIntendedVictimID;						///< who the damage was intended for (or zero if no specific target)
 		WeaponBonus m_bonus;												///< the weapon bonus to use
+		CustomWeaponBonus m_customBonus;
 	};
 
 	std::vector<WeaponTemplate*> m_weaponTemplateVector;
+	WeaponTemplateMap m_weaponTemplateHashMap;
 	std::list<WeaponDelayedDamageInfo> m_weaponDDI;
 };
 

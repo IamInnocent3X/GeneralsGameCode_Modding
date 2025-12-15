@@ -402,3 +402,8 @@ struct RGBAColorInt
 	UnsignedInt red, green, blue, alpha;  // range between 0 and 255
 
 };
+
+// Modulo function working with negative values, required for angles
+inline Real nmod(Real x, Real y) {
+    return fmod(fmod(x, y) + y, y);
+}

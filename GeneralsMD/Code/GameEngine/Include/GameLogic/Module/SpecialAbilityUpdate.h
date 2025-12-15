@@ -33,12 +33,14 @@
 #include "Common/AudioEventRTS.h"
 #include "Common/INI.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
+#include "GameLogic/Weapon.h"
 #include "GameClient/ParticleSys.h"
 
 class DamageInfo;
 class SpecialPowerTemplate;
 class SpecialPowerModule;
 class FXList;
+class ObjectCreationList;
 enum SpecialPowerType CPP_11(: Int);
 
 #define SPECIAL_ABILITY_HUGE_DISTANCE 10000000.0f
@@ -76,12 +78,23 @@ public:
 	Bool									m_approachRequiresLOS;
   Bool                  m_needToFaceTarget;
   Bool                  m_persistenceRequiresRecharge;
+  Bool					m_destroyOnExecute;
+  const FXList 			*m_fxOnExecute;
+  const ObjectCreationList *m_oclOnExecute;
 
 	const ParticleSystemTemplate *m_disableFXParticleSystem;
 	AudioEventRTS					m_packSound;
 	AudioEventRTS					m_unpackSound;
 	AudioEventRTS					m_prepSoundLoop;
 	AudioEventRTS					m_triggerSound;
+
+	Int							m_targetsMask;
+	KindOfMaskType 				m_kindOf;
+	KindOfMaskType 				m_forbiddenKindOf;
+
+	AsciiString					m_weaponSlotName;
+	AsciiString					m_cursorName;
+	AsciiString					m_invalidCursorName;
 
 	SpecialAbilityUpdateModuleData()
 	{
@@ -113,6 +126,15 @@ public:
 		m_preTriggerUnstealthFrames = 0;
     m_needToFaceTarget = TRUE;
     m_persistenceRequiresRecharge = FALSE;
+	m_targetsMask = 0;
+	m_kindOf = KINDOFMASK_NONE;
+	m_forbiddenKindOf.clear();
+	m_weaponSlotName.format("SECONDARY");
+	m_cursorName = NULL;
+	m_invalidCursorName = NULL;
+	m_destroyOnExecute = FALSE;
+	m_fxOnExecute = NULL;
+	m_oclOnExecute = NULL;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -159,6 +181,15 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										NULL, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+	  		{ "WeaponSlot",						INI::parseQuotedAsciiString,		NULL, offsetof( SpecialAbilityUpdateModuleData, m_weaponSlotName ) },
+	  		{ "CursorName",						INI::parseAsciiString,			 	NULL, offsetof( SpecialAbilityUpdateModuleData, m_cursorName ) },
+			{ "InvalidCursorName",				INI::parseAsciiString,       		NULL, offsetof( SpecialAbilityUpdateModuleData, m_invalidCursorName ) },
+			{ "AffectsTargets", 				INI::parseBitString32, 	TheWeaponAffectsMaskNames, offsetof( SpecialAbilityUpdateModuleData, m_targetsMask) },
+	  		{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_kindOf ) },
+			{ "ForbiddenKindOf",			KindOfMaskType::parseFromINI,											NULL, offsetof( SpecialAbilityUpdateModuleData, m_forbiddenKindOf ) },
+	  		{ "DeleteUserOnExecute",					INI::parseBool,							NULL, offsetof( SpecialAbilityUpdateModuleData, m_destroyOnExecute ) },
+			{ "FXOnExecute",							INI::parseFXList,					NULL, offsetof( SpecialAbilityUpdateModuleData, m_fxOnExecute ) },
+			{ "OCLOnExecute", 							INI::parseObjectCreationList, 		NULL, offsetof( SpecialAbilityUpdateModuleData, m_oclOnExecute ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -178,7 +209,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return true; }
 	virtual Bool isSpecialPower() const { return false; }
 	virtual Bool isActive() const { return m_active; }
@@ -186,6 +217,9 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+	virtual const AsciiString& getCursorName() const { return getSpecialAbilityUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return getSpecialAbilityUpdateModuleData()->m_invalidCursorName; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 //	virtual Bool isBusy() const { return m_isBusy; }
 
@@ -199,6 +233,10 @@ public:
 	UnsignedInt getSpecialObjectMax() const;
 	Object* findSpecialObjectWithProducerID( const Object *target );
 	SpecialPowerType getSpecialPowerType( void ) const;
+
+	Int getTargetsMask() const { return getSpecialAbilityUpdateModuleData()->m_targetsMask; }
+	const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }
+	const KindOfMaskType& getForbiddenKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_forbiddenKindOf; }
 
 protected:
 	void onExit( Bool cleanup );
@@ -269,6 +307,7 @@ private:
 	UnsignedInt										m_prepFrames;
 	UnsignedInt										m_animFrames;	//Used for packing/unpacking unit before or after using ability.
 	ObjectID											m_targetID;
+	DrawableID											m_targetDrawID;
 	Coord3D												m_targetPos;
 	Int														m_locationCount;
 	std::list<ObjectID>						m_specialObjectIDList; //The list of special objects

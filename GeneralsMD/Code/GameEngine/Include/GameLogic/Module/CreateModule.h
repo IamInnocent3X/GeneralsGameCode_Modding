@@ -74,7 +74,8 @@ public:
 	virtual CreateModuleInterface* getCreate() { return this; }
 
 	virtual void onCreate() = 0;				///< This is called when you become a code Object
-	virtual void onBuildComplete(){ m_needToRunOnBuildComplete = FALSE; }	///< This is called when you are a finished game object
+	//virtual void onBuildComplete(){ m_needToRunOnBuildComplete = FALSE; }	///< This is called when you are a finished game object
+	virtual void onBuildComplete();
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
 private:

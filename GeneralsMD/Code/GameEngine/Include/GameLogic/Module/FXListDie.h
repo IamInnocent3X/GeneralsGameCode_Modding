@@ -110,6 +110,12 @@ protected:
 		getFXListDieModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getFXListDieModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval()
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
@@ -124,6 +130,7 @@ protected:
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 
 };

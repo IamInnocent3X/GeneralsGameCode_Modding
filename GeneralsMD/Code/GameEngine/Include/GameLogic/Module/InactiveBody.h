@@ -61,7 +61,14 @@ public:
 	virtual void clearArmorSetFlag(ArmorSetType ast) { /* nothing */ }
 	virtual Bool testArmorSetFlag(ArmorSetType ast){ return FALSE; }
 
-	virtual void internalChangeHealth( Real delta );
+	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE);
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) {}
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) {}
+
+	virtual Bool isNearSubduedRange( Real low, Real high ) const { return FALSE; }
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const { return FALSE; }
+
+	virtual Bool cantBeKilled( void ) const { return TRUE; }
 
 private:
 	Bool m_dieCalled;

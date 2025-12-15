@@ -46,7 +46,9 @@ public:
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 
-	Real m_addXPScalar;
+	Bool m_initiallyActive;   // Apply upgrade immediately
+	Real m_addXPScalar;   ///< Additive bonus to scalar for XP this unit gains
+	Real m_addXPValueScalar;  ///< Additive bonus to scalar for XP this unit gives when killed
 
 };
 
@@ -67,5 +69,8 @@ protected:
 
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+	Bool m_hasExecuted;
 };

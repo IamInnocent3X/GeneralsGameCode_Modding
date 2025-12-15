@@ -2120,6 +2120,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 				//Various enter type hunts.
 				break;
 
@@ -2134,6 +2135,12 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -2143,6 +2150,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUI_COMMAND_SELL:
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
@@ -2202,6 +2210,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 			{
 					static NameKeyType key_CommandButtonHuntUpdate = NAMEKEY("CommandButtonHuntUpdate");
 
@@ -3728,8 +3737,9 @@ void ScriptActions::doNamedSetBoobytrapped( const AsciiString& thingTemplateName
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				//StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				StickyBombUpdateInterface *update = boobytrap->getStickyBombUpdateInterface();
 				if( update )
 				{
 					//The charge gets positioned randomly on the outside of the perimeter of the victim.
@@ -3767,8 +3777,9 @@ void ScriptActions::doTeamSetBoobytrapped( const AsciiString& thingTemplateName,
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				//StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				StickyBombUpdateInterface *update = boobytrap->getStickyBombUpdateInterface();
 				if( update )
 				{
 					//The charge gets positioned randomly on the outside of the perimeter of the victim.

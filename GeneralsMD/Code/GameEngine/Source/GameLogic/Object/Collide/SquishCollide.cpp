@@ -73,8 +73,10 @@ void SquishCollide::onCollide( Object *other, const Coord3D *loc, const Coord3D 
 		//special circumstances:
 
 		//Hijacking!
-		static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-		HijackerUpdate *hijackUpdate = (HijackerUpdate*)self->findUpdateModule( key_HijackerUpdate );
+		//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+		//HijackerUpdate *hijackUpdate = (HijackerUpdate*)self->findUpdateModule( key_HijackerUpdate );
+		//if( hijackUpdate )
+		HijackerUpdateInterface *hijackUpdate = self->getHijackerUpdateInterface();
 		if( hijackUpdate )
 		{
 			return;
@@ -91,6 +93,10 @@ void SquishCollide::onCollide( Object *other, const Coord3D *loc, const Coord3D 
 	// order matters: we want to know if IT considers ME to be an ally (a reversal of the usual situation)
 	if( other->getCrusherLevel() > 0 && other->getRelationship(getObject()) != ALLIES)
 	{
+		//Just exited from Hijacking, don't do damage.
+		if(!other->checkToSquishHijack(getObject()))
+			return;
+
 		PhysicsBehavior *otherPhysics = other->getPhysics();
 		if (otherPhysics == NULL)
 			return;

@@ -43,7 +43,7 @@ public:
 
 
 	GameMessage::Type evaluateForceAttack( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
-	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
+	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type, Bool AdditionalCheck = FALSE );
 
 private:
 
@@ -55,17 +55,30 @@ private:
 	ICoord2D m_mouseRightDragLift;			// the location of a possible mouse drag end
 	UnsignedInt m_mouseRightDown;	// when the mouse down happened
 	UnsignedInt m_mouseRightUp;		// when the mouse up happened
+	Bool m_mouseRightClickEvaluate;
+
+	ICoord2D m_mouseLeftDragAnchor;		// the location of a possible mouse drag start
+	ICoord2D m_mouseLeftDragLift;			// the location of a possible mouse drag end
+	UnsignedInt m_mouseLeftDown;	// when the mouse down happened
+	UnsignedInt m_mouseLeftUp;		// when the mouse up happened
+	Bool m_mouseLeftClickEvaluate;
+
+	Drawable *m_mouseOverDrawable;
 
 	GameMessage::Type createMoveToLocationMessage( Drawable *draw, const Coord3D *dest, CommandEvaluateType commandType );
 	GameMessage::Type createAttackMessage( Drawable *draw, Drawable *other, CommandEvaluateType commandType );
 	GameMessage::Type createEnterMessage( Drawable *enter, CommandEvaluateType commandType );
+	GameMessage::Type createEnterMessageWithOrderRadius( Drawable *enter, CommandEvaluateType commandType, const CommandButton *command );
 	GameMessage::Type issueMoveToLocationCommand( const Coord3D *pos, Drawable *drawableInWay, CommandEvaluateType commandType );
 	GameMessage::Type issueAttackCommand( Drawable *target, CommandEvaluateType commandType, GUICommandType command = (GUICommandType)0 );
+	GameMessage::Type issueAttackCommandWithOrderRadius( Drawable *target, CommandEvaluateType commandType, const CommandButton *command );
 	GameMessage::Type issueSpecialPowerCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos, Object* ignoreSelObj );
 	GameMessage::Type issueFireWeaponCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos );
 	GameMessage::Type issueCombatDropCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos );
 
 	virtual GameMessageDisposition translateGameMessage(const GameMessage *msg);
+
+	void checkOtherMembersForParasiteActive( const Object* selectedObj, const Object* obj, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
 };
 
 

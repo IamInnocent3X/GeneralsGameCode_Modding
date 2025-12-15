@@ -56,6 +56,9 @@
 #include "Common/Snapshot.h"
 #include "Common/Geometry.h"
 #include "GameClient/Display.h"	// for ShroudLevel
+#include "GameClient/Drawable.h"
+
+class Drawable;
 
 //-----------------------------------------------------------------------------
 //           defines
@@ -782,6 +785,24 @@ public:
 
 //=====================================
 /**
+	Only objects that Can Possibly be equppped by the given object
+*/
+class PartitionFilterPossibleToEquip : public PartitionFilter
+{
+private:
+	const Object *m_obj;
+	CommandSourceType m_commandSource;
+
+public:
+	PartitionFilterPossibleToEquip(const Object *obj, CommandSourceType commandSource);
+	virtual Bool allow(Object *objOther);
+#if defined(RTS_DEBUG)
+	virtual const char* debugGetName() { return "PartitionFilterPossibleToEquip"; }
+#endif
+};
+
+//=====================================
+/**
  * Accept only the last object who attacked me. Very fast.
  */
 class PartitionFilterLastAttackedBy : public PartitionFilter
@@ -809,6 +830,22 @@ public:
 	virtual Bool allow(Object *objOther);
 #if defined(RTS_DEBUG)
 	virtual const char* debugGetName() { return "PartitionFilterAcceptByObjectStatus"; }
+#endif
+};
+
+//=====================================
+/**
+	Only objects that match the given masks are accepted.
+*/
+class PartitionFilterAcceptByObjectCustomStatus : public PartitionFilter
+{
+private:
+	std::vector<AsciiString> m_mustBeSet, m_mustBeClear;
+public:
+	PartitionFilterAcceptByObjectCustomStatus( std::vector<AsciiString> mustBeSet, std::vector<AsciiString> mustBeClear) : m_mustBeSet(mustBeSet), m_mustBeClear(mustBeClear) { }
+	virtual Bool allow(Object *objOther);
+#if defined(RTS_DEBUG)
+	virtual const char* debugGetName() { return "PartitionFilterAcceptByObjectCustomStatus"; }
 #endif
 };
 
@@ -1528,6 +1565,10 @@ public:
 	// If saveToFog is false, then we are writing STORE_PERMENANT_REVEAL
 	void storeFoggedCells(ShroudStatusStoreRestore &outPartitionStore, Bool storeToFog) const;
 	void restoreFoggedCells(const ShroudStatusStoreRestore &inPartitionStore, Bool restoreToFog);
+
+	std::list<Drawable*> getDrawablesInRegion( IRegion2D *region2D );
+	std::list<Drawable*> getDrawablesInRegionEfficient();
+	Bool hasNoOffset() const { return m_radiusVec.empty(); }
 };
 
 // -----------------------------------------------------------------------------

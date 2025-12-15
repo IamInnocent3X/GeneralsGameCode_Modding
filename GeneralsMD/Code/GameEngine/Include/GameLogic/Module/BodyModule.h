@@ -34,6 +34,28 @@
 #include "GameLogic/ArmorSet.h"
 #include "GameLogic/Module/BehaviorModule.h"
 
+struct SubdualCustomData
+{
+	Real damage;
+	TintStatus tintStatus;
+	AsciiString customTintStatus;
+	DisabledType disableType;
+	Bool isSubdued;
+};
+
+struct SubdualCustomHealData
+{
+	UnsignedInt healFrame;
+	TintStatus tintStatus;
+	AsciiString customTintStatus;
+	DisabledType disableType;
+};
+
+typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualDamageMap;
+typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualHealRateMap;
+typedef std::hash_map<AsciiString, SubdualCustomData, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualCurrentDamageMap;
+typedef std::hash_map<AsciiString, SubdualCustomHealData, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomSubdualCurrentHealMap;
+
 //-------------------------------------------------------------------------------------------------
 /** OBJECT BODY MODULE base class */
 //-------------------------------------------------------------------------------------------------
@@ -75,6 +97,8 @@ enum MaxHealthChangeType CPP_11(: Int)
 	SAME_CURRENTHEALTH,
 	PRESERVE_RATIO,
 	ADD_CURRENT_HEALTH_TOO,
+	ADD_CURRENT_DAMAGE,
+	ADD_CURRENT_DAMAGE_NON_LETHAL,
 	FULLY_HEAL,
 
 	MAX_HEALTH_CHANGE_COUNT
@@ -86,6 +110,8 @@ static const char* const TheMaxHealthChangeTypeNames[] =
 	"SAME_CURRENTHEALTH",
 	"PRESERVE_RATIO",
 	"ADD_CURRENT_HEALTH_TOO",
+	"ADD_CURRENT_DAMAGE",
+	"ADD_CURRENT_DAMAGE_NON_LETHAL",
 	"FULLY_HEAL",
 	NULL
 };
@@ -152,10 +178,25 @@ public:
 
 	virtual Real getPreviousHealth() const = 0;
 
+	virtual Real getSubdualDamageCap() const = 0;
+	
 	virtual UnsignedInt getSubdualDamageHealRate() const = 0;
 	virtual Real getSubdualDamageHealAmount() const = 0;
 	virtual Bool hasAnySubdualDamage() const = 0;
 	virtual Real getCurrentSubdualDamageAmount() const = 0;
+
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const = 0;
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const = 0;
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const = 0;
+	virtual Bool hasAnySubdualDamageCustom() const = 0;
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const = 0;
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const = 0;
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) = 0;
+
+	virtual UnsignedInt getChronoDamageHealRate() const = 0;
+	virtual Real getChronoDamageHealAmount() const = 0;
+	virtual Bool hasAnyChronoDamage() const = 0;
+	virtual Real getCurrentChronoDamageAmount() const = 0;
 
 	virtual BodyDamageType getDamageState() const = 0;
 	virtual void setDamageState( BodyDamageType newState ) = 0;	///< control damage state directly.  Will adjust hitpoints.
@@ -177,12 +218,16 @@ public:
 
 	virtual void setInitialHealth(Int initialPercent)  = 0;
 	virtual void setMaxHealth( Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH )  = 0;
+	virtual void setSubdualCap( Real subdualCap ) = 0;
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate ) = 0;
+	virtual void setSubdualHealAmount( Real subdualHealAmount ) = 0;
 
 	virtual void setFrontCrushed(Bool v) = 0;
 	virtual void setBackCrushed(Bool v) = 0;
 
 	virtual void applyDamageScalar( Real scalar ) = 0;
 	virtual Real getDamageScalar() const = 0;
+	virtual void overrideDamageFX(DamageFX* damageFX) = 0;
 
 	/**
 		Change the module's health by the given delta. Note that
@@ -191,13 +236,21 @@ public:
 		call this directly (especially when when decreasing health, since
 		you probably want "attemptDamage" or "attemptHealing")
 	*/
-	virtual void internalChangeHealth( Real delta ) = 0;
+	virtual void internalChangeHealth(Real delta, Bool changeModelCondition = TRUE ) = 0;
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) = 0;
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) = 0;
+
+	virtual Bool isNearSubduedRange( Real low, Real high ) const = 0; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void setIndestructible( Bool indestructible ) = 0;
 	virtual Bool isIndestructible( void ) const = 0;
+	virtual Bool canBeSubdued( void ) const = 0;
 
 	virtual void evaluateVisualCondition() = 0;
 	virtual void updateBodyParticleSystems() = 0; // made public for topple and building collapse updates -ML
+
+	virtual Bool cantBeKilled() const = 0;
 
 };
 
@@ -244,10 +297,24 @@ public:
 	virtual Real getMaxHealth() const {return 0.0f;}  ///< return max health
 	virtual Real getPreviousHealth() const { return 0.0f; } ///< return previous health
 
+	virtual Real getSubdualDamageCap() const {return 0.0f;}
 	virtual UnsignedInt getSubdualDamageHealRate() const {return 0;}
 	virtual Real getSubdualDamageHealAmount() const {return 0.0f;}
 	virtual Bool hasAnySubdualDamage() const{return FALSE;}
 	virtual Real getCurrentSubdualDamageAmount() const { return 0.0f; }
+
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const {return 0.0f;}
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const {return 0;}
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const {return 0.0f;}
+	virtual Bool hasAnySubdualDamageCustom() const{return FALSE;}
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const { std::vector<AsciiString> dummy; return dummy; }
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const { CustomSubdualCurrentDamageMap dummy; return dummy; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) { }
+
+	virtual UnsignedInt getChronoDamageHealRate() const { return 0; }
+	virtual Real getChronoDamageHealAmount() const { return 0.0f; }
+	virtual Bool hasAnyChronoDamage() const { return FALSE; }
+	virtual Real getCurrentChronoDamageAmount() const { return 0.0f; }
 
 	virtual Real getInitialHealth() const {return 0.0f;}  // return initial health
 
@@ -271,6 +338,9 @@ public:
 
 	virtual void setInitialHealth(Int initialPercent)  {  } ///< Sets the inital load health %.
 	virtual void setMaxHealth(Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH )  {  } ///< Sets the max health.
+	virtual void setSubdualCap( Real subdualCap )  {  } 
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate )  {  } 
+	virtual void setSubdualHealAmount( Real subdualHealAmount )  {  } 
 
 	virtual void setFrontCrushed(Bool v) { DEBUG_CRASH(("you should never call this for generic Bodys")); }
 	virtual void setBackCrushed(Bool v) { DEBUG_CRASH(("you should never call this for generic Bodys")); }
@@ -278,10 +348,12 @@ public:
 
 	virtual void setIndestructible( Bool indestructible ) { }
 	virtual Bool isIndestructible( void ) const { return TRUE; }
+	virtual Bool canBeSubdued( void ) const { return TRUE; }
 
 	//Allows outside systems to apply defensive bonuses or penalties (they all stack as a multiplier!)
 	virtual void applyDamageScalar( Real scalar ) { m_damageScalar *= scalar; }
 	virtual Real getDamageScalar() const { return m_damageScalar; }
+	virtual void overrideDamageFX(DamageFX* damageFX) { }
 
 	/**
 		Change the module's health by the given delta. Note that
@@ -290,7 +362,12 @@ public:
 		call this directly (especially when when decreasing health, since
 		you probably want "attemptDamage" or "attemptHealing")
 	*/
-	virtual void internalChangeHealth( Real delta ) = 0;
+	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE) = 0;
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE ) = 0;
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE ) = 0;
+
+	virtual Bool isNearSubduedRange( Real low, Real high ) const = 0; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void evaluateVisualCondition() { }
 	virtual void updateBodyParticleSystems() { };// made public for topple anf building collapse updates -ML

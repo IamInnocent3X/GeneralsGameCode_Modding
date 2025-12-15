@@ -58,6 +58,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
@@ -115,7 +116,33 @@ static const char *const TheDrawableIconNames[] =
 static_assert(ARRAY_SIZE(TheDrawableIconNames) == MAX_ICONS + 1, "Incorrect array size");
 
 
-/**
+// -----
+const char* TintStatusFlags::s_bitNameList[] =
+{
+	"NONE",
+	"DISABLED",
+	"IRRADIATED",
+	"POISONED",
+	"GAINING_SUBDUAL_DAMAGE",
+	"FRENZY",
+	"SHIELDED",
+	"DEMORALIZED",
+	"BOOST",
+	"TELEPORT_RECOVER",
+	"DISABLED_CHRONO",
+	"GAINING_CHRONO_DAMAGE",
+	"EXTRA1",
+	"EXTRA2",
+	"EXTRA3",
+	"EXTRA4",
+	"EXTRA5",
+	"EXTRA6",
+	"EXTRA7",
+	"EXTRA8",
+	NULL
+};
+
+/** 
  * Returns a special DynamicAudioEventInfo which can be used to mark a sound as "no sound".
  * E.g. if m_customSoundAmbientInfo equals the value returned from this function, we
  * know it really means don't allow an ambient sound to be attached.
@@ -134,8 +161,6 @@ static DynamicAudioEventInfo  * getNoSoundMarker()
 
   return marker;
 }
-
-
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -246,12 +271,17 @@ static DrawableIconType drawableIconNameToIndex( const char *iconName )
 const UnsignedInt HEALING_ICON_DISPLAY_TIME	= LOGICFRAMES_PER_SECOND * 3;
 const UnsignedInt DEFAULT_HEAL_ICON_WIDTH		= 32;
 const UnsignedInt DEFAULT_HEAL_ICON_HEIGHT	= 32;
-const RGBColor SICKLY_GREEN_POISONED_COLOR	= {-1.0f,  1.0f, -1.0f};
-const RGBColor DARK_GRAY_DISABLED_COLOR			= {-0.5f, -0.5f, -0.5f};
-const RGBColor RED_IRRADIATED_COLOR					= { 1.0f, -1.0f, -1.0f};
-const RGBColor SUBDUAL_DAMAGE_COLOR					= {-0.2f, -0.2f,  0.8f};
-const RGBColor FRENZY_COLOR									= { 0.2f, -0.2f, -0.2f};
-const RGBColor FRENZY_COLOR_INFANTRY				= { 0.0f, -0.7f, -0.7f};
+
+//Note: These constants are now obsolete and are only here for reference.
+//const RGBColor SICKLY_GREEN_POISONED_COLOR	= {-1.0f,  1.0f, -1.0f};
+//const RGBColor DARK_GRAY_DISABLED_COLOR			= {-0.5f, -0.5f, -0.5f};
+//const RGBColor RED_IRRADIATED_COLOR					= { 1.0f, -1.0f, -1.0f};
+//const RGBColor SUBDUAL_DAMAGE_COLOR					= {-0.2f, -0.2f,  0.8f};
+//const RGBColor FRENZY_COLOR									= { 0.2f, -0.2f, -0.2f};
+//const RGBColor FRENZY_COLOR_INFANTRY				= { 0.0f, -0.7f, -0.7f};
+//const RGBColor SHIELDED_COLOR = { -0.1f, -0.2f, -0.2f};
+// ---
+
 const Int MAX_ENABLED_MODULES								= 16;
 
 // ------------------------------------------------------------------------------------------------
@@ -261,6 +291,10 @@ const Int MAX_ENABLED_MODULES								= 16;
 /*static*/ const Image*			Drawable::s_veterancyImage[LEVEL_COUNT]	= { NULL };
 /*static*/ const Image*			Drawable::s_fullAmmo = NULL;
 /*static*/ const Image*			Drawable::s_emptyAmmo = NULL;
+
+/*static*/ const Image*         Drawable::s_fullAmmoThin = NULL;
+/*static*/ const Image*         Drawable::s_emptyAmmoThin = NULL;
+
 /*static*/ const Image*			Drawable::s_fullContainer = NULL;
 /*static*/ const Image*			Drawable::s_emptyContainer = NULL;
 /*static*/ Anim2DTemplate**	Drawable::s_animationTemplates = NULL;
@@ -281,6 +315,10 @@ const Int MAX_ENABLED_MODULES								= 16;
 
 	s_fullAmmo	= TheMappedImageCollection->findImageByName("SCPAmmoFull");
 	s_emptyAmmo	= TheMappedImageCollection->findImageByName("SCPAmmoEmpty");
+
+	s_fullAmmoThin = TheMappedImageCollection->findImageByName("SCPAmmoThinFull");
+	s_emptyAmmoThin = TheMappedImageCollection->findImageByName("SCPAmmoThinEmpty");
+
 	s_fullContainer	= TheMappedImageCollection->findImageByName("SCPPipFull");
 	s_emptyContainer	= TheMappedImageCollection->findImageByName("SCPPipEmpty");
 
@@ -423,8 +461,8 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 	m_object = NULL;
 
 	// tintStatusTracking
-	m_tintStatus = 0;
-	m_prevTintStatus = 0;
+	// m_tintStatus = 0;
+	// m_prevTintStatus = 0;
 
 #ifdef DIRTY_CONDITION_FLAGS
 	m_isModelDirty = true;
@@ -495,6 +533,14 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 		(*dm)->setShadowsEnabled(shadowsEnabled);
 	}
 
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		//TheGameClient->clearEfficientDrawablesList();
+
+		TheGameClient->informClientNewDrawable(this);
+	}
+
 	m_groupNumber = NULL;
 	m_captionDisplayString = NULL;
 	m_drawableInfo.m_drawable = this;
@@ -503,6 +549,19 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 	m_iconInfo = NULL;								// lazily allocate!
 	m_selectionFlashEnvelope = NULL;	// lazily allocate!
 	m_colorTintEnvelope = NULL;				// lazily allocate!
+
+	m_tintCustomStatus.clear();
+	m_prevTintCustomStatus.clear();
+
+	m_eraseTint = TINT_STATUS_INVALID;
+	m_eraseCustomTint = NULL;
+	m_countFrames = 0;
+	m_dontAssignFrames = 0;
+	
+	m_tintStatusTypeQuick = TINT_STATUS_INVALID;
+	m_customTintStatusTypeQuick = NULL;
+
+	m_changedCustomStatus = FALSE;
 
 	initStaticImages();
 
@@ -601,6 +660,13 @@ void Drawable::onDestroy( void )
 
 	}
 
+	if (TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		//TheGameClient->clearEfficientDrawablesList();
+		TheGameClient->informClientNewDrawable(this);
+	}
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -632,10 +698,12 @@ Bool Drawable::getShouldAnimate( Bool considerPower ) const
          ! obj->isKindOf( KINDOF_PRODUCED_AT_HELIPAD )  &&
         // mal sez: helicopters just look goofy if they stop animating, so keep animating them, anyway
 
-        (  obj->isDisabledByType( DISABLED_HACKED )
-				|| obj->isDisabledByType( DISABLED_PARALYZED )
-				|| obj->isDisabledByType( DISABLED_EMP )
-				|| obj->isDisabledByType( DISABLED_SUBDUED )
+        (  obj->isDisabledByType( DISABLED_HACKED ) 
+				|| obj->isDisabledByType( DISABLED_PARALYZED ) 
+				|| obj->isDisabledByType( DISABLED_STUNNED )
+				|| obj->isDisabledByType( DISABLED_EMP ) 
+				|| obj->isDisabledByType( DISABLED_SUBDUED ) 
+				|| obj->isDisabledByType( DISABLED_FROZEN )
 				// srj sez: unmanned things also should not animate. (eg, gattling tanks,
 				// which have a slight barrel animation even when at rest). if this causes
 				// a problem, we will need to fix gattling tanks in another way.
@@ -687,7 +755,7 @@ void Drawable::setAnimationLoopDuration(UnsignedInt numFrames)
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di)
+		if (di && !di->isIgnoreAnimLoopDuration())
 			di->setAnimationLoopDuration(numFrames);
 	}
 }
@@ -735,6 +803,38 @@ void Drawable::showSubObject( const AsciiString& name, Bool show )
 		if (di)
 		{
 			di->showSubObject( name, show );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+const AsciiString& Drawable::getModelName() const
+{
+	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		const ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		const TreeDrawInterface* ti = (*dm)->getTreeDrawInterface();
+		if (di && !di->getModelName().isEmpty())
+		{
+			return di->getModelName();
+		}
+		if(ti && !ti->getModelName().isEmpty())
+		{
+			return ti->getModelName();
+		}
+	}
+	return NULL;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::setModelName(const AsciiString& modelName)
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di)
+		{
+			di->setModelName(modelName);
 		}
 	}
 }
@@ -834,6 +934,7 @@ Bool Drawable::getCurrentWorldspaceClientBonePositions(const char* boneName, Mat
 //-------------------------------------------------------------------------------------------------
 void Drawable::setTerrainDecal(TerrainDecalType type)
 {
+	DEBUG_LOG(("Drawable::setTerrainDecal - type = %d\n", type));
 	if (m_terrainDecalType == type)
 		return;
 
@@ -934,6 +1035,20 @@ void Drawable::friend_setSelected( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Same as above, but able to configure whether to show. */
+//-------------------------------------------------------------------------------------------------
+void Drawable::friend_setSelectedSetShowFlash( Bool showFlash )
+{
+	if(isSelected() == false)
+	{
+		m_selected = TRUE;
+		if(showFlash)
+			onSelected();
+	}
+
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Clear drawable's "selected" status, if not already clear.  Also update running
  * total count of selected drawables. */
 //-------------------------------------------------------------------------------------------------
@@ -998,6 +1113,8 @@ void Drawable::onSelected()
 	Object* obj = getObject();
 	if ( obj )
 	{
+		obj->doSlaveBehaviorUpdate(FALSE);
+
 		ContainModuleInterface* contain = obj->getContain();
 		if ( contain )
 		{
@@ -1071,12 +1188,86 @@ void Drawable::fadeIn( UnsignedInt frames )		///< decloak object
 	m_timeElapsedFade = 0;
 }
 
-
 //-------------------------------------------------------------------------------------------------
 Real Drawable::getScale (void) const
 {
 	return m_instanceScale;
 //	return getTemplate()->getAssetScale();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::setCustomTintStatus( const AsciiString& customStatusType)
+{ 
+	// Don't assign while Subdual is On
+	if(m_countFrames || m_dontAssignFrames)
+		return;
+
+	// Don't assign if already have it
+	for (std::vector<AsciiString>::const_iterator it2 = m_tintCustomStatus.begin(); it2 != m_tintCustomStatus.end(); ++it2)
+	{
+		if(customStatusType == (*it2))
+		{
+			return;
+		}
+	}
+
+	CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+	for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+	{
+		if (customStatusType == (*it).first)
+		{
+			m_changedCustomStatus = TRUE;
+			m_tintCustomStatus.push_back(customStatusType);
+			break;
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::clearCustomTintStatus( const AsciiString& customStatusType, bool clearLater )
+{ 
+	if(clearLater)
+	{
+		m_eraseCustomTint = customStatusType;
+		return;
+	}
+
+	std::vector<AsciiString>::iterator it;
+	for (it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end();)
+	{
+		if (customStatusType == (*it))
+		{
+			m_changedCustomStatus = TRUE;
+			it = m_tintCustomStatus.erase(it);
+			break;
+		}
+		++it;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Drawable::testCustomTintStatus( const AsciiString& customStatusType) const
+{ 
+	for (std::vector<AsciiString>::const_iterator it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end(); ++it)
+	{
+		if (customStatusType == (*it))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+void Drawable::setAndClearTintFast(TintStatus statusType)
+{  
+	m_tintStatus.set(statusType);
+	m_tintStatusTypeQuick = statusType;
+}
+
+void Drawable::setAndClearCustomTintFast(const AsciiString& customStatusType)
+{ 
+	setCustomTintStatus(customStatusType);
+	m_customTintStatusTypeQuick = customStatusType;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1232,52 +1423,137 @@ void Drawable::updateDrawable( void )
 		}
 	}
 
+	bool hasStatus = false;
+	bool releaseTint = false;
+
+	if( m_changedCustomStatus )
+	{
+		m_changedCustomStatus = FALSE;
+
+		CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+
+		// New: Check the global custom list
+
+		for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+		{
+			for(std::vector<AsciiString>::const_iterator it2 = m_tintCustomStatus.begin(); it2 != m_tintCustomStatus.end(); ++it2)
+			{
+				if ((*it).first == (*it2)) 
+				{
+					if (m_colorTintEnvelope == NULL)
+						m_colorTintEnvelope = newInstance(TintEnvelope);
+
+					DrawableColorTint tintColor = it->second;
+
+					m_colorTintEnvelope->play(
+						isKindOf(KINDOF_INFANTRY) ? &tintColor.colorInfantry : &tintColor.color,
+						tintColor.attackFrames, tintColor.decayFrames, SUSTAIN_INDEFINITELY);
+
+					hasStatus = true;
+
+					break;
+				}
+			}
+			if (hasStatus)
+				break;
+		}
+		if (!hasStatus)
+			releaseTint = true;
+	}
+
 	//Lets figure out whether we should be changing colors right about now
 	// we'll use an ifelseif ladder since we are scanning bits
-	if( m_prevTintStatus != m_tintStatus )// edge test
+	if( !hasStatus && m_prevTintStatus != m_tintStatus )// edge test 
 	{
-		if ( testTintStatus( TINT_STATUS_DISABLED ) )
-		{
-			if (m_colorTintEnvelope == NULL)
-				m_colorTintEnvelope = newInstance(TintEnvelope);
-			m_colorTintEnvelope->play( &DARK_GRAY_DISABLED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
-		}
-		else if( testTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE) )
-		{
-			// Disabled has precendence, so it goes first
-			if (m_colorTintEnvelope == NULL)
-				m_colorTintEnvelope = newInstance(TintEnvelope);
-			m_colorTintEnvelope->play( &SUBDUAL_DAMAGE_COLOR, 150, 150, SUSTAIN_INDEFINITELY);
-		}
-		else if( testTintStatus(TINT_STATUS_FRENZY) )
-		{
-			// Disabled has precendence, so it goes first
-			if (m_colorTintEnvelope == NULL)
-				m_colorTintEnvelope = newInstance(TintEnvelope);
 
-      m_colorTintEnvelope->play( isKindOf( KINDOF_INFANTRY) ? &FRENZY_COLOR_INFANTRY:&FRENZY_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
+		//bool hasStatus = false;
 
-    }
-//		else if ( testTintStatus( TINT_STATUS_POISONED) )
-//		{
-//			if (m_colorTintEnvelope == NULL)
-//				m_colorTintEnvelope = newInstance(TintEnvelope);
-//			m_colorTintEnvelope->play( &SICKLY_GREEN_POISONED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
-//		}
-//		else if ( testTintStatus( TINT_STATUS_IRRADIATED) )
-//		{
-//			if (m_colorTintEnvelope == NULL)
-//				m_colorTintEnvelope = newInstance(TintEnvelope);
-//			m_colorTintEnvelope->play( &RED_IRRADIATED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
-//		}
-		else
-		{
+		releaseTint = false;
+
+		// New: Check the global list
+		for (int i = 0; i < TINT_STATUS_COUNT; i++) {
+
+			TintStatus tintStatus = (TintStatus)i;
+
+			if (testTintStatus(tintStatus)) {
+				if (m_colorTintEnvelope == NULL)
+					m_colorTintEnvelope = newInstance(TintEnvelope);
+
+					
+				DrawableColorTint tintColor = TheGlobalData->m_colorTintTypes[i];
+
+				m_colorTintEnvelope->play(
+					isKindOf(KINDOF_INFANTRY) ? &tintColor.colorInfantry : &tintColor.color,
+					tintColor.attackFrames, tintColor.decayFrames, SUSTAIN_INDEFINITELY);
+
+				hasStatus = true;
+				break;
+			}
+		}
+
+		if (!hasStatus) {
 			// NO TINTING SHOULD BE PRESENT
 			if (m_colorTintEnvelope == NULL)
 				m_colorTintEnvelope = newInstance(TintEnvelope);
 			m_colorTintEnvelope->release(); // head on back to normal, now
 		}
 
+//		if ( testTintStatus( TINT_STATUS_DISABLED ) )
+//		{
+//			if (m_colorTintEnvelope == NULL)
+//				m_colorTintEnvelope = newInstance(TintEnvelope);
+//			m_colorTintEnvelope->play( &DARK_GRAY_DISABLED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
+//		}
+//		else if( testTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE) )
+//		{
+//			// Disabled has precendence, so it goes first
+//			if (m_colorTintEnvelope == NULL)
+//				m_colorTintEnvelope = newInstance(TintEnvelope);
+//			m_colorTintEnvelope->play( &SUBDUAL_DAMAGE_COLOR, 150, 150, SUSTAIN_INDEFINITELY);
+//		}
+//		else if (testTintStatus(TINT_STATUS_FRENZY))
+//		{
+//			// Disabled has precendence, so it goes first
+//			if (m_colorTintEnvelope == NULL)
+//				m_colorTintEnvelope = newInstance(TintEnvelope);
+//
+//			m_colorTintEnvelope->play(isKindOf(KINDOF_INFANTRY) ? &FRENZY_COLOR_INFANTRY : &FRENZY_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
+//		}
+//		else if (testTintStatus(TINT_STATUS_SHIELDED))
+//		{
+//			// Disabled has precendence, so it goes first
+//			if (m_colorTintEnvelope == NULL)
+//				m_colorTintEnvelope = newInstance(TintEnvelope);
+//
+//			m_colorTintEnvelope->play( &SHIELDED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
+//		}
+////		else if ( testTintStatus( TINT_STATUS_POISONED) )
+////		{
+////			if (m_colorTintEnvelope == NULL)
+////				m_colorTintEnvelope = newInstance(TintEnvelope);
+////			m_colorTintEnvelope->play( &SICKLY_GREEN_POISONED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
+////		}
+////		else if ( testTintStatus( TINT_STATUS_IRRADIATED) )
+////		{
+////			if (m_colorTintEnvelope == NULL)
+////				m_colorTintEnvelope = newInstance(TintEnvelope);
+////			m_colorTintEnvelope->play( &RED_IRRADIATED_COLOR, 30, 30, SUSTAIN_INDEFINITELY);
+////		}
+//		else 
+//		{ 
+//			// NO TINTING SHOULD BE PRESENT
+//			if (m_colorTintEnvelope == NULL)
+//				m_colorTintEnvelope = newInstance(TintEnvelope);
+//			m_colorTintEnvelope->release(); // head on back to normal, now
+//		}
+
+	}
+
+	if (releaseTint) {
+		// NO TINTING SHOULD BE PRESENT
+		if (m_colorTintEnvelope == NULL)
+			m_colorTintEnvelope = newInstance(TintEnvelope);
+		m_colorTintEnvelope->release(); // head on back to normal, now
 	}
 
 	m_prevTintStatus = m_tintStatus;//for next frame
@@ -1293,6 +1569,96 @@ void Drawable::updateDrawable( void )
 
 	if (m_selectionFlashEnvelope)
 		m_selectionFlashEnvelope->update(); // selection flashing
+	
+	// Subdual Color Correction Fix
+	if(m_eraseTint != TINT_STATUS_INVALID && !m_dontAssignFrames)
+	{
+		if(!m_countFrames)
+		{
+			UnsignedInt frames = max(15, (Int)(TheGlobalData->m_colorTintTypes[m_eraseTint].decayFrames - 10));
+			m_countFrames = now + frames;
+		}
+		if(now>m_countFrames)
+		{
+			clearTintStatus(m_eraseTint);
+			m_eraseTint = TINT_STATUS_INVALID;
+			m_countFrames = 0;
+			m_dontAssignFrames = now + 60;
+		}
+	}
+	
+	if(!m_eraseCustomTint.isEmpty() && !m_dontAssignFrames)
+	{
+		if(!m_countFrames)
+		{
+			CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+			for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+			{
+				if((*it).first == m_eraseCustomTint)
+				{
+					UnsignedInt frames = max(15, (Int)((*it).second.decayFrames - 10));
+					m_countFrames = now + frames;
+					break;
+				}
+			}
+		}
+		if(now>m_countFrames)
+		{
+			clearCustomTintStatus(m_eraseCustomTint);
+			m_eraseCustomTint = NULL;
+			m_countFrames = 0;
+			m_dontAssignFrames = now + 60;
+		}
+	}
+
+	if(m_tintStatusTypeQuick != TINT_STATUS_INVALID && !m_dontAssignFrames)
+	{
+		if(!m_countFrames)
+		{
+			UnsignedInt frames = max(60, (Int)(TheGlobalData->m_colorTintTypes[m_tintStatusTypeQuick].attackFrames + TheGlobalData->m_colorTintTypes[m_tintStatusTypeQuick].decayFrames));
+			m_countFrames = now + frames;
+		}
+		if(now>m_countFrames)
+		{
+			clearTintStatus(m_tintStatusTypeQuick);
+			if(!testTintStatus(m_tintStatusTypeQuick))
+			{
+				m_tintStatusTypeQuick = TINT_STATUS_INVALID;
+				m_countFrames = 0;
+				m_dontAssignFrames = now + 15;
+			}
+		}
+	}
+	
+	if(!m_customTintStatusTypeQuick.isEmpty() && !m_dontAssignFrames)
+	{
+		if(!m_countFrames)
+		{
+			CustomTintStatusVec tintColorCustom = TheGlobalData->m_colorTintCustomTypes;
+			for (CustomTintStatusVec::const_iterator it = tintColorCustom.begin(); it != tintColorCustom.end(); ++it)
+			{
+				if((*it).first == m_customTintStatusTypeQuick)
+				{
+					UnsignedInt frames = max(60, (Int)((*it).second.attackFrames + (*it).second.decayFrames));
+					m_countFrames = now + frames;
+					break;
+				}
+			}
+		}
+		if(now>m_countFrames)
+		{
+			clearCustomTintStatus(m_customTintStatusTypeQuick);
+			if(!testCustomTintStatus(m_customTintStatusTypeQuick))
+			{
+				m_customTintStatusTypeQuick = NULL;
+				m_countFrames = 0;
+				m_dontAssignFrames = now + 15;
+			}
+		}
+	}
+
+	if(now>m_dontAssignFrames)
+		m_dontAssignFrames = 0;
 
 	//If we have an ambient sound, and we aren't currently playing it, attempt to play it now.
   // However, if the attached sound is a one-shot (non-looping) sound, don't restart it -- only
@@ -2646,10 +3012,12 @@ void Drawable::draw()
 		applyPhysicsXform(&transformMtx);
 	}
 
-	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	for (DrawModule** dm = getDrawModules(); checkDrawModuleNullptr(dm) && *dm; ++dm)
 	{
 		(*dm)->doDrawModule(&transformMtx);
 	}
+	//(!TheGlobalData->m_useEfficientDrawableScheme || dm != nullptr)
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2721,7 +3089,7 @@ Bool Drawable::drawsAnyUIText( void )
 	else
 		m_groupNumber = NULL;
 
-	if ( obj->getFormationID() != NO_FORMATION_ID )
+	if ( obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap() )
 		return TRUE;
 
 	return FALSE;
@@ -2779,6 +3147,8 @@ void Drawable::drawIconUI( void )
 
 		//Moved this to last so that it shows up over contained and ammo icons.
 		drawVeterancy( healthBarRegion );
+
+		drawProgress( healthBarRegion );
 
 #ifdef KRIS_BRUTAL_HACK_FOR_AIRCRAFT_CARRIER_DEBUGGING
 		drawUIText();
@@ -2858,7 +3228,10 @@ void Drawable::drawEmoticon( const IRegion2D *healthBarRegion )
 // ------------------------------------------------------------------------------------------------
 void Drawable::drawAmmo( const IRegion2D *healthBarRegion )
 {
-	const Object *obj = getObject();
+	if (!healthBarRegion)
+		return;
+
+	const Object* obj = getObject();
 
 	if (!(
 				TheGlobalData->m_showObjectHealth &&
@@ -2867,45 +3240,195 @@ void Drawable::drawAmmo( const IRegion2D *healthBarRegion )
 			))
 		return;
 
-	Int numTotal;
-	Int numFull;
+	Int numTotal;  	 // getClipSize();
+	Int numFull;	// getRemainingAmmo();
 	if (!obj->getAmmoPipShowingInfo(numTotal, numFull))
 		return;
 
-	if (!s_fullAmmo || !s_emptyAmmo)
-		return;
+	AmmoPipsStyle pipsStyle = obj->getTemplate()->getAmmoPipsStyle();
+	switch (pipsStyle)
+	{
+	case AMMO_PIPS_DEFAULT:
+	case AMMO_PIPS_SINGLE:
+	{
 
+		if (!s_fullAmmo || !s_emptyAmmo)
+			return;
 
 
 #ifdef SCALE_ICONS_WITH_ZOOM_ML
-	Real scale = TheGlobalData->m_ammoPipScaleFactor / CLAMP_ICON_ZOOM_FACTOR( TheTacticalView->getZoom() );
+		Real scale = TheGlobalData->m_ammoPipScaleFactor / CLAMP_ICON_ZOOM_FACTOR(TheTacticalView->getZoom());
 #else
-	Real scale = 1.0f;
+		Real scale = 1.0f;
 #endif
+		Int boxWidth = REAL_TO_INT(s_emptyAmmo->getImageWidth() * scale);
+		Int boxHeight = REAL_TO_INT(s_emptyAmmo->getImageHeight() * scale);
+		const Int SPACING = 1;
+		//Int totalWidth = (boxWidth+SPACING)*numTotal;
 
-	Int boxWidth  = REAL_TO_INT(s_emptyAmmo->getImageWidth() * scale);
-	Int boxHeight = REAL_TO_INT(s_emptyAmmo->getImageHeight() * scale);
-	const Int SPACING = 1;
-	//Int totalWidth = (boxWidth+SPACING)*numTotal;
+		ICoord2D screenCenter;
+		Coord3D pos = *obj->getPosition();
+		pos.x += TheGlobalData->m_ammoPipWorldOffset.x;
+		pos.y += TheGlobalData->m_ammoPipWorldOffset.y;
+		pos.z += TheGlobalData->m_ammoPipWorldOffset.z + obj->getGeometryInfo().getMaxHeightAbovePosition();
+		if (!TheTacticalView->worldToScreen(&pos, &screenCenter))
+			return;
 
-	ICoord2D screenCenter;
-	Coord3D pos = *obj->getPosition();
-	pos.x += TheGlobalData->m_ammoPipWorldOffset.x;
-	pos.y += TheGlobalData->m_ammoPipWorldOffset.y;
-	pos.z += TheGlobalData->m_ammoPipWorldOffset.z + obj->getGeometryInfo().getMaxHeightAbovePosition();
-	if( !TheTacticalView->worldToScreen( &pos, &screenCenter ) )
+		Real bounding = obj->getGeometryInfo().getBoundingSphereRadius() * scale;
+		//Int posx = screenCenter.x + REAL_TO_INT(TheGlobalData->m_ammoPipScreenOffset.x*bounding) - totalWidth;
+		//**CHANGING CODE: Left justify with health bar min
+		Int posx = healthBarRegion->lo.x;
+		Int posy = screenCenter.y + REAL_TO_INT(TheGlobalData->m_ammoPipScreenOffset.y * bounding);
+
+		// Draw only one pip, either full or empty
+		if (pipsStyle == AMMO_PIPS_SINGLE) {
+			if (numTotal <= 0) return;
+
+			Real ammoRatio = (Real)numFull / (Real)numTotal;
+
+			if (numFull == numTotal) { // Full
+				TheDisplay->drawImage(s_fullAmmo, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight);
+			}
+			else if (numFull == 0) { // Empty
+				TheDisplay->drawImage(s_emptyAmmo, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight);
+			}
+			else { // partial
+				// Color color = GameMakeColor(255 * ammoRatio, 255 * ammoRatio, 255 * ammoRatio, 255);
+				Color color = GameMakeColor(255, 255, 255, 255 * ammoRatio);
+				TheDisplay->drawImage(s_emptyAmmo, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight);
+				TheDisplay->drawImage(s_fullAmmo, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight, color);
+			}
+		}
+		else {  // Default style
+			for (Int i = 0; i < numTotal; ++i)
+			{
+				TheDisplay->drawImage(i < numFull ? s_fullAmmo : s_emptyAmmo, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight);
+				posx += boxWidth + SPACING;
+			}
+		}
+
+		
 		return;
 
-	Real bounding = obj->getGeometryInfo().getBoundingSphereRadius() * scale;
-	//Int posx = screenCenter.x + REAL_TO_INT(TheGlobalData->m_ammoPipScreenOffset.x*bounding) - totalWidth;
-	//**CHANGING CODE: Left justify with health bar min
-	Int posx = healthBarRegion->lo.x;
-	Int posy = screenCenter.y + REAL_TO_INT(TheGlobalData->m_ammoPipScreenOffset.y*bounding);
-	for (Int i = 0; i < numTotal; ++i)
-	{
-		TheDisplay->drawImage(i < numFull ? s_fullAmmo : s_emptyAmmo, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight);
-		posx += boxWidth + SPACING;
 	}
+	case AMMO_PIPS_THIN:
+	{
+		if (!s_fullAmmoThin || !s_emptyAmmoThin)
+			return;
+
+		Real scale = 1.0f;
+		Int boxWidth = REAL_TO_INT(s_emptyAmmoThin->getImageWidth() * scale);
+		Int boxHeight = REAL_TO_INT(s_emptyAmmoThin->getImageHeight() * scale);
+		const Int SPACING = 0; // 1;
+		ICoord2D screenCenter;
+		Coord3D pos = *obj->getPosition();
+		pos.x += TheGlobalData->m_ammoPipWorldOffset.x;
+		pos.y += TheGlobalData->m_ammoPipWorldOffset.y;
+		pos.z += TheGlobalData->m_ammoPipWorldOffset.z + obj->getGeometryInfo().getMaxHeightAbovePosition();
+		if (!TheTacticalView->worldToScreen(&pos, &screenCenter))
+			return;
+
+		Real bounding = obj->getGeometryInfo().getBoundingSphereRadius() * scale;
+		Int posx = healthBarRegion->lo.x;
+		Int posy = screenCenter.y + REAL_TO_INT(TheGlobalData->m_ammoPipScreenOffset.y * bounding);
+
+		for (Int i = 0; i < numTotal; ++i)
+		{
+			TheDisplay->drawImage(i < numFull ? s_fullAmmoThin : s_emptyAmmoThin, posx, posy + 1, posx + boxWidth, posy + 1 + boxHeight);
+			posx += boxWidth + SPACING;
+		}
+		return;
+	}
+	case AMMO_PIPS_BAR:
+	{
+		if (numTotal <= 0) return;
+
+		Color color, outlineColor;
+
+		color = GameMakeColor(255, 255, 0, 255);  // yellow bar
+		outlineColor = GameMakeColor(0, 0, 0, 255);  // black outline
+
+		Real ammoRatio = (Real)numFull / (Real)numTotal;
+
+		Real healthBoxWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
+
+		Real healthBoxHeight = max(3, healthBarRegion->hi.y - healthBarRegion->lo.y) * 1.5f;
+		Real healthBoxOutlineSize = 1.0f;
+
+		Real yOffset = 5;
+
+		// draw the health (actually ammo) box outline
+		TheDisplay->drawOpenRect(healthBarRegion->lo.x, healthBarRegion->lo.y + yOffset, healthBoxWidth, healthBoxHeight,
+			healthBoxOutlineSize, outlineColor);
+
+		if (numFull > 0) {
+
+			// draw a filled bar for the ammo count
+			TheDisplay->drawFillRect(healthBarRegion->lo.x + 1, healthBarRegion->lo.y + yOffset + 1,
+				(healthBoxWidth - 2) * ammoRatio, healthBoxHeight - 2,
+				color);
+		}
+
+
+		return;
+	}
+	}
+
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Drawable::drawProgress( const IRegion2D *healthBarRegion )
+{
+	if (!healthBarRegion)
+		return;
+
+	const Object* obj = getObject();
+
+	//if (!(
+	//			TheGlobalData->m_showObjectHealth &&
+	//			(isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID())))
+	//				//&& obj->getControllingPlayer() == ThePlayerList->getLocalPlayer()   // Shields are visible for all
+	//		))
+	//	return;
+	if (!TheGlobalData->m_showObjectHealth)
+		return;
+
+	Bool selected = isSelected() || (TheInGameUI && (TheInGameUI->getMousedOverDrawableID() == getID()));
+
+	Real progress;
+	Int type;  //not used yet
+
+	RGBAColorInt barColor;
+	RGBAColorInt barColorBG;
+
+	if (!obj->getProgressBarShowingInfo(selected, progress, type, barColor, barColorBG))
+		return;
+
+	Color color, outlineColor;
+
+	color = GameMakeColor(barColor.red, barColor.green, barColor.blue, barColor.alpha);
+	outlineColor = GameMakeColor(barColorBG.red, barColorBG.green, barColorBG.blue, barColorBG.alpha);
+
+
+	Real healthBoxWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
+
+	Real healthBoxHeight = max(3, healthBarRegion->hi.y - healthBarRegion->lo.y) * 1.5f;
+	Real healthBoxOutlineSize = 1.0f;
+
+	Real yOffset = -6 + TheGlobalData->m_progressBarYOffset;
+
+	// draw the health box outline
+	TheDisplay->drawOpenRect(healthBarRegion->lo.x, healthBarRegion->lo.y + yOffset, healthBoxWidth, healthBoxHeight,
+		healthBoxOutlineSize, outlineColor);
+
+	if (progress > 0) {
+
+		// draw a filled bar for the ammo count
+		TheDisplay->drawFillRect(healthBarRegion->lo.x + 1, healthBarRegion->lo.y + yOffset + 1,
+			(healthBoxWidth - 2) * progress, healthBoxHeight - 2,
+			color);
+	}
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -3135,7 +3658,7 @@ void Drawable::drawUIText()
 	}
 
 
-	if ( obj->getFormationID() != NO_FORMATION_ID )
+	if ( obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap() )
 	{
 		//draw an F, here
 		Coord3D p;
@@ -3481,10 +4004,12 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 	//
 	// Bombed?
 	//
-	static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-	StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
+	//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+	//StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
+	StickyBombUpdateInterface *update = obj->getStickyBombUpdateInterface();
 	if( update )
 	{
+
 		//This case is tricky. The object that is bombed doesn't know it... but the bomb itself does.
 		//So what we do is get it's target, then determine if the target has the icon or not.
 		Object *target = update->getTargetObject();
@@ -3492,13 +4017,29 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 		{
 			if( update->isTimedBomb() )
 			{
-				//Timed bomb
-				if( !getIconInfo()->m_icon[ ICON_BOMB_TIMED ] )
+				//Timed bomb - Base layer
+				if (!getIconInfo()->m_icon[ICON_BOMB_REMOTE] && update->showAnimBaseTemplate())
 				{
-					getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] = newInstance(Anim2D)( s_animationTemplates[ ICON_BOMB_REMOTE ], TheAnim2DCollection );
-					getIconInfo()->m_icon[ ICON_BOMB_TIMED ] = newInstance(Anim2D)( s_animationTemplates[ ICON_BOMB_TIMED ], TheAnim2DCollection );
+					Anim2DTemplate* templ = update->getAnimBaseTemplate();
 
-					//Because this is a counter icon that ranges from 0-60 seconds, we need to calculate which frame to
+					if (templ == NULL)  // Default icon
+						templ = s_animationTemplates[ICON_BOMB_REMOTE];
+
+					getIconInfo()->m_icon[ICON_BOMB_REMOTE] = newInstance(Anim2D)(templ, TheAnim2DCollection);
+
+				}
+				//Timed bomb - Timer
+				if( !getIconInfo()->m_icon[ ICON_BOMB_TIMED ] && update->showAnimTimedTemplate())
+				{
+					Anim2DTemplate* templ = update->getAnimTimedTemplate();
+
+					if (templ == NULL)  // Default icon
+						templ = s_animationTemplates[ICON_BOMB_TIMED];
+
+					getIconInfo()->m_icon[ICON_BOMB_TIMED] = newInstance(Anim2D)(templ, TheAnim2DCollection);
+
+
+					//Because this is a counter icon that ranges from 0-60 seconds, we need to calculate which frame to 
 					//start the animation from. Because timers are second based -- 1000 ms equal 1 frame. So we simply
 					//calculate the time via detonation frame.
 					//
@@ -3521,7 +4062,9 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 					getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->setMinFrame(numFrames - seconds - 1);
 					getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->reset();
 				}
-				if( getIconInfo()->m_icon[ ICON_BOMB_TIMED ] )
+				Bool showTimedAnim = (getIconInfo()->m_icon[ICON_BOMB_TIMED]) != NULL;
+				Bool showBaseAnim = (getIconInfo()->m_icon[ICON_BOMB_REMOTE]) != NULL;
+				if( showTimedAnim || showBaseAnim)
 				{
 					//
 					// we are going to draw the healing icon relative to the size of the health bar region
@@ -3532,8 +4075,15 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 						Int barWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
 						Int barHeight = healthBarRegion->hi.y - healthBarRegion->lo.y;
 
-						Int frameWidth = getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->getCurrentFrameWidth();
-						Int frameHeight = getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->getCurrentFrameHeight();
+						Int frameWidth, frameHeight;
+						if (showTimedAnim) {
+							frameWidth = getIconInfo()->m_icon[ICON_BOMB_TIMED]->getCurrentFrameWidth();
+							frameHeight = getIconInfo()->m_icon[ICON_BOMB_TIMED]->getCurrentFrameHeight();
+						}
+						else {
+							frameWidth = getIconInfo()->m_icon[ICON_BOMB_REMOTE]->getCurrentFrameWidth();
+							frameHeight = getIconInfo()->m_icon[ICON_BOMB_REMOTE]->getCurrentFrameHeight();
+						}
 
 						// adjust the width to be a % of the health bar region size
 						Int size = REAL_TO_INT( barWidth * 0.65f );
@@ -3545,20 +4095,29 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 						screen.x = REAL_TO_INT( healthBarRegion->lo.x + (barWidth * 0.5f) - (frameWidth * 0.5f) );
 						screen.y = REAL_TO_INT( healthBarRegion->lo.y + barHeight * 0.5f ) + BOMB_ICON_EXTRA_OFFSET;
 
-						getIconInfo()->m_icon[ ICON_BOMB_REMOTE ]->draw( screen.x, screen.y, frameWidth, frameHeight );
-						getIconInfo()->m_keepTillFrame[ ICON_BOMB_REMOTE ] = now + 1;
-						getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->draw( screen.x, screen.y, frameWidth, frameHeight );
-						getIconInfo()->m_keepTillFrame[ ICON_BOMB_TIMED ] = now + 1;
+						if (showBaseAnim) {
+							getIconInfo()->m_icon[ICON_BOMB_REMOTE]->draw(screen.x, screen.y, frameWidth, frameHeight);
+							getIconInfo()->m_keepTillFrame[ICON_BOMB_REMOTE] = now + 1;
+						}
+						if (showTimedAnim) {
+							getIconInfo()->m_icon[ICON_BOMB_TIMED]->draw(screen.x, screen.y, frameWidth, frameHeight);
+							getIconInfo()->m_keepTillFrame[ICON_BOMB_TIMED] = now + 1;
+						}
 					}
 				}
 			}
 			else
 			{
 				//Remote charge
-				//Timed bomb
-				if( !getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] )
+				if( !getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] && update->showAnimBaseTemplate())
 				{
-					getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] = newInstance(Anim2D)( s_animationTemplates[ ICON_BOMB_REMOTE ], TheAnim2DCollection );
+					Anim2DTemplate* templ = update->getAnimBaseTemplate();
+
+					if (templ == NULL)  // Default icon
+						templ = s_animationTemplates[ICON_BOMB_REMOTE];
+
+					getIconInfo()->m_icon[ICON_BOMB_REMOTE] = newInstance(Anim2D)(templ, TheAnim2DCollection);
+
 				}
 				if( getIconInfo()->m_icon[ ICON_BOMB_REMOTE ] )
 				{
@@ -4011,6 +4570,20 @@ DrawModule const** Drawable::getDrawModules() const
 	return dm;
 }
 
+Bool Drawable::checkDrawModuleNullptr(DrawModule** dm)
+{
+	if(!TheGlobalData->m_useEfficientDrawableScheme)
+		return TRUE;
+
+	if(dm == nullptr)
+	{
+		//TheGameClient->removeDrawableFromEfficientList(this);
+		//TheGameClient->clearEfficientDrawablesList();
+		return FALSE;
+	}
+	return TRUE;
+}
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void Drawable::clearAndSetModelConditionFlags(const ModelConditionFlags& clr, const ModelConditionFlags& setf)
@@ -4070,7 +4643,7 @@ void Drawable::replaceModelConditionStateInDrawable()
 	const TerrainDecalType terrainDecalType = getTerrainDecalType();
 	setTerrainDecal(TERRAIN_DECAL_NONE);
 
-	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	for (DrawModule** dm = getDrawModules(); checkDrawModuleNullptr(dm) && *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
 		if (di)
@@ -4244,6 +4817,32 @@ Bool Drawable::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse,
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
 		if (di && di->handleWeaponFireFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius))
+			return true;
+	}
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Drawable::handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, Real recoilAmount, Real recoilAngle, const Coord3D* victimPos, Real damageRadius)
+{
+	if (recoilAmount != 0.0f)
+	{
+		// adjust recoil from absolute to relative.
+		if (getObject())
+			recoilAngle -= getObject()->getOrientation();
+		// flip direction 180 degrees.
+		recoilAngle += PI;
+		if (m_locoInfo)
+		{
+			m_locoInfo->m_accelerationPitchRate += recoilAmount * Cos(recoilAngle);
+			m_locoInfo->m_accelerationRollRate += recoilAmount * Sin(recoilAngle);
+		}
+	}
+
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di && di->handleWeaponPreAttackFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius))
 			return true;
 	}
 	return false;
@@ -4643,7 +5242,15 @@ void Drawable::updateHiddenStatus()
 	if( hidden )
 		TheInGameUI->deselectDrawable( this );
 
-	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	if (TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		//TheGameClient->clearEfficientDrawablesList();
+		TheGameClient->informClientNewDrawable(this);
+	}
+
+	// IamInnocent - dm is able to give nullptr if there is auto disguise involved
+	for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
 		if (di)
@@ -5008,6 +5615,9 @@ void Drawable::xfer( Xfer *xfer )
 	// effective stealth opacity
 	xfer->xferReal( &m_effectiveStealthOpacity );
 
+	// Emissiv Opacity Scaling
+	xfer->xferBool(&m_isEmissiveOpacityScaling);
+
 	// decalOpacityFadeTarget
 	xfer->xferReal( &m_decalOpacityFadeTarget );
 
@@ -5070,10 +5680,68 @@ void Drawable::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_status );
 
 	// tint status
-	xfer->xferUnsignedInt( &m_tintStatus );
+	//xfer->xferUnsignedInt( &m_tintStatus );
+	m_tintStatus.xfer(xfer);
 
 	// prev tint status
-	xfer->xferUnsignedInt( &m_prevTintStatus );
+	//xfer->xferUnsignedInt( &m_prevTintStatus );
+	m_prevTintStatus.xfer(xfer);
+
+	xfer->xferUnsignedInt( &m_countFrames );
+	xfer->xferUnsignedInt( &m_dontAssignFrames );
+	xfer->xferUser( &m_eraseTint, sizeof(TintStatus) );
+	xfer->xferUser( &m_tintStatusTypeQuick, sizeof(TintStatus) );
+	xfer->xferAsciiString( &m_eraseCustomTint );
+	xfer->xferAsciiString( &m_customTintStatusTypeQuick );
+
+	// Modified from Team.cpp
+	UnsignedShort statusSize = m_tintCustomStatus.size();
+	UnsignedShort prevStatusSize = m_prevTintCustomStatus.size();
+	xfer->xferUnsignedShort( &statusSize );
+	xfer->xferUnsignedShort( &prevStatusSize );
+
+	AsciiString customStatusName;
+	AsciiString prevCustomStatusName;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		for( std::vector<AsciiString>::iterator it = m_tintCustomStatus.begin(); it != m_tintCustomStatus.end(); ++it )
+		{
+
+			customStatusName = (*it);
+			xfer->xferAsciiString( &customStatusName );
+
+		}  // end for
+
+		for( std::vector<AsciiString>::iterator it2 = m_prevTintCustomStatus.begin(); it2 != m_prevTintCustomStatus.end(); ++it2 )
+		{
+
+			prevCustomStatusName = (*it2);
+			xfer->xferAsciiString( &prevCustomStatusName );
+
+		}  // end for
+
+	}  // end if, save
+	else
+	{
+
+		for( UnsignedShort i = 0; i < statusSize; ++i )
+		{
+
+			xfer->xferAsciiString( &customStatusName );
+			m_tintCustomStatus.push_back(customStatusName);
+			
+		}  // end for, i
+
+		for( UnsignedShort i_2 = 0; i_2 < prevStatusSize; ++i_2 )
+		{
+
+			xfer->xferAsciiString( &prevCustomStatusName );
+			m_prevTintCustomStatus.push_back(prevCustomStatusName);
+			
+		}  // end for, i
+
+	}  // end else load
 
 	// fading mode
 	xfer->xferUser( &m_fadeMode, sizeof( FadingMode ) );

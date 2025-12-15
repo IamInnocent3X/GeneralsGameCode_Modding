@@ -40,6 +40,7 @@
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Object;
 class Player;
+class Drawable;
 class SpecialPowerTemplate;
 enum SpecialPowerType CPP_11(: Int);
 enum WeaponSlotType CPP_11(: Int);
@@ -74,7 +75,7 @@ public:
 	Bool canGetHealedAt( const Object *obj, const Object *healDest, CommandSourceType commandSource );
 	Bool canRepairObject( const Object *obj, const Object *objectToRepair, CommandSourceType commandSource );
 	Bool canResumeConstructionOf( const Object *obj, const Object *objectBeingConstructed, CommandSourceType commandSource );
-	Bool canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode );
+	Bool canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck = TRUE, Bool ShowCursorOnParasiteCollide = TRUE );
 	CanAttackResult getCanAttackObject( const Object *obj, const Object *objectToAttack, CommandSourceType commandSource, AbleToAttackType attackType );
 	Bool canConvertObjectToCarBomb( const Object *obj, const Object *objectToConvert, CommandSourceType commandSource );
 	Bool canHijackVehicle( const Object *obj, const Object *ObjectToHijack, CommandSourceType commandSource ); // LORENZEN
@@ -91,6 +92,7 @@ public:
 	Bool canDisableBuildingViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource );
 	Bool canDoSpecialPowerAtLocation( const Object *obj, const Coord3D *loc, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, const Object *objectInWay, UnsignedInt commandOptions, Bool checkSourceRequirements = true );
 	Bool canDoSpecialPowerAtObject( const Object *obj, const Object *target, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, UnsignedInt commandOptions, Bool checkSourceRequirements = true);
+	Bool canDoSpecialPowerAtDrawable( const Object *obj, const Drawable *target, CommandSourceType commandSource, const SpecialPowerTemplate *spTemplate, UnsignedInt commandOptions, Bool checkSourceRequirements = true);
   Bool canDoSpecialPower( const Object *obj, const SpecialPowerTemplate *spTemplate, CommandSourceType commandSource, UnsignedInt commandOptions, Bool checkSourceRequirements = true );
 	Bool canMakeObjectDefector( const Object *obj, const Object *objectToMakeDefector, CommandSourceType commandSource );
 	Bool canFireWeaponAtLocation( const Object *obj, const Coord3D *loc, CommandSourceType commandSource, const WeaponSlotType slot, const Object *objectInWay );
@@ -102,8 +104,11 @@ public:
 	//Player to unit check
 	Bool canPlayerGarrison( const Player *player, const Object *target, CommandSourceType commandSource );
 
-protected:
+	Bool canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource, Bool ParasiteHideCursor = FALSE );
 
+protected:
+	//used to assign behaviour types for new special power enums
+	SpecialPowerType getFallbackBehaviorType(SpecialPowerType type);
 };
 
 // EXTERNALS //////////////////////////////////////////////////////////////////////////////////////

@@ -62,7 +62,10 @@ public:
 	KindOfMaskType	m_garrisonHitKillKindofNot;		///< the kind(s) of units that CANNOT be collided with
 	const FXList*		m_garrisonHitKillFX;
 	Real m_flightPathAdjustDistPerFrame;
-
+	Bool m_applyLauncherBonus;
+	Bool m_allowSubdual;
+	Bool m_allowAttract;
+	Real m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
 	DumbProjectileBehaviorModuleData();
 
@@ -87,13 +90,17 @@ public:
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
 
 	// ProjectileUpdateInterface
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride);
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL );
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return true; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) {}
-	virtual void projectileNowJammed() {}
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
+	virtual void projectileNowJammed(Bool noDamage = FALSE);
+	virtual void projectileNowDrawn(ObjectID attractorID);
+	virtual Object* getTargetObject();
+	virtual const Coord3D* getTargetPosition();
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
 
 protected:
 
@@ -113,8 +120,20 @@ private:
 	Int										m_flightPathSegments;			///< number of segments in the flightpath (in case we must regen it)
 	Int										m_currentFlightPathStep;	///< Our current index in the flight path vector.  Quicker than popping off.
 	WeaponBonusConditionFlags		m_extraBonusFlags;
+	ObjectCustomStatusType 			m_extraBonusCustomFlags;
+	Bool                  			m_noDamage;
+	UnsignedInt						m_framesTillDecoyed;
+	UnsignedInt						m_detonateDistance;
+	ObjectID						m_decoyID;
+	ObjectID						m_attractedID;
+	Coord3D							m_flightPathEndBackup;
+	ObjectID						m_shrapnelLaunchID;
 
-  Bool                  m_hasDetonated;           ///<
+	UnsignedInt						m_dontDetonateGroundFrames;
+  
+  Bool                  m_hasDetonated;           ///< 
+  Bool                  m_isJammed;
+  Bool                  m_assignedBackup;
 
 	Bool calcFlightPath(Bool recalcNumSegments);
 #if defined(RTS_DEBUG)

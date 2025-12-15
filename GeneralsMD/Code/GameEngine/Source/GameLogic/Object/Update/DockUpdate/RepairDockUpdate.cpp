@@ -41,6 +41,8 @@ RepairDockUpdateModuleData::RepairDockUpdateModuleData( void )
 {
 
 	m_framesForFullHeal = 1.0f;  // 1 frame, instant heal by default (keeps away from divide by 0's)
+	m_repairClearsParasite = TRUE;
+	m_repairClearsParasiteKeys.clear();
 
 }
 
@@ -54,6 +56,8 @@ RepairDockUpdateModuleData::RepairDockUpdateModuleData( void )
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( RepairDockUpdateModuleData, m_framesForFullHeal ) },
+		{ "RepairClearsParasite", INI::parseBool, NULL, offsetof( RepairDockUpdateModuleData, m_repairClearsParasite ) },
+		{ "RepairClearsParasiteKeys", INI::parseAsciiStringVector, NULL, offsetof( RepairDockUpdateModuleData, m_repairClearsParasiteKeys ) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -140,6 +144,8 @@ Bool RepairDockUpdate::action( Object *docker, Object *drone )
 	healingInfo.in.m_sourceID = getObject()->getID();
 	healingInfo.in.m_damageType = DAMAGE_HEALING;
 	healingInfo.in.m_deathType = DEATH_NONE;
+	healingInfo.in.m_clearsParasite = modData->m_repairClearsParasite;
+	healingInfo.in.m_clearsParasiteKeys = modData->m_repairClearsParasiteKeys;
 	body->attemptHealing( &healingInfo );
 	if( drone )
 	{

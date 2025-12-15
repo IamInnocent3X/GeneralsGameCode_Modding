@@ -38,6 +38,7 @@
 #include "Common/Thing.h"
 #include "Common/ObjectStatusTypes.h"
 #include "Common/Upgrade.h"
+#include "Common/MessageStream.h"
 
 #include "GameClient/Color.h"
 
@@ -46,6 +47,7 @@
 #include "GameLogic/WeaponSet.h"
 #include "GameLogic/WeaponSetFlags.h"
 #include "GameLogic/Module/StealthUpdate.h"
+#include "GameLogic/Module/BodyModule.h" // Subdual Helper Data
 
 //-----------------------------------------------------------------------------
 //           Forward References
@@ -76,6 +78,7 @@ class ExitInterface;
 class ExperienceTracker;
 class FiringTracker;
 class Module;
+class HijackerUpdateInterface;
 class PartitionData;
 class PhysicsBehavior;
 class PhysicsUpdate;
@@ -97,6 +100,9 @@ class UpdateModuleInterface;
 class UpgradeModule;
 class UpgradeModuleInterface;
 class UpgradeTemplate;
+class RadarUpgradeInterface;
+class StickyBombUpdateInterface;
+class CounterUpdateInterface;
 
 class ObjectHeldHelper;
 class ObjectDisabledHelper;
@@ -104,9 +110,13 @@ class ObjectSMCHelper;
 class ObjectRepulsorHelper;
 class StatusDamageHelper;
 class SubdualDamageHelper;
+class ChronoDamageHelper;
 class TempWeaponBonusHelper;
 class ObjectWeaponStatusHelper;
+class ObjectCounterHelper;
 class ObjectDefectionHelper;
+class ObjectDelayedOrderHelper;
+class ObjectLevitationHelper;
 
 enum CommandSourceType CPP_11(: Int);
 enum HackerAttackMode CPP_11(: Int);
@@ -120,9 +130,16 @@ enum ArmorSetType CPP_11(: Int);
 enum WeaponStatus CPP_11(: Int);
 enum RadarPriorityType CPP_11(: Int);
 enum CanAttackResult CPP_11(: Int);
+// enum TintStatus CPP_11(: Int);
 
 // For ObjectScriptStatusBit
 #include "GameLogic/ObjectScriptStatusBits.h"
+
+// For TintStatus
+#include "GameClient/TintStatus.h"
+
+// For Transfer Helper Types
+#include "GameLogic/Module/ObjectHelper.h"
 
 //-----------------------------------------------------------------------------
 //           Type Defines
@@ -138,6 +155,20 @@ struct TTriggerInfo
 
 	TTriggerInfo() : entered(false), exited(false), isInside(false), padding(false), pTrigger(NULL) { }
 
+};
+
+struct SubdualCustomNotifyData
+{
+	Real damage;
+	TintStatus tintStatus;
+	AsciiString customTintStatus;
+	DisabledType disableType;
+	Bool hasDisable;
+	Bool removeTintOnDisable;
+	Bool isSubdued;
+	Bool clearOnTrigger;
+	TintStatus disableTint;
+	AsciiString disableCustomTint;
 };
 
 //----------------------------------------------------
@@ -192,6 +223,7 @@ public:
 
 	// physical properties
 	Bool isMobile() const;																	///< returns true if object is currently able to move
+	Bool isMobileNonStatusNotAttacking(Bool checkDisable = TRUE) const;	
 	Bool isAbleToAttack() const;														///< returns true if object currently has some kind of attack capability
 
 	void maskObject( Bool mask );				///< mask/unmask object
@@ -216,16 +248,42 @@ public:
 
 	// health and damage
 	void attemptDamage( DamageInfo *damageInfo );			///< damage object as specified by the info
-	void attemptHealing(Real amount, const Object* source);		///< heal object as specified by the info
-	Bool attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration );///< for the non-stacking healers like ambulance and propaganda
+	void attemptHealing(Real amount, const Object* source );		///< heal object as specified by the info
+	void attemptHealingWithParasiteClear(Real amount, const Object* source, Bool clearsParasite, const std::vector<AsciiString>& clearsParasiteKeys );		///< heal object as specified by the info
+	Bool attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration, Bool clearsParasite, const std::vector<AsciiString>& clearsParasiteKeys );///< for the non-stacking healers like ambulance and propaganda
 	ObjectID getSoleHealingBenefactor( void ) const;
 
 	Real estimateDamage( DamageInfoInput& damageInfo ) const;
 	void kill( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL );	///< kill the object with an optional type of damage and death.
+	void killCustom( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL, AsciiString customDeathType = NULL );	///< kill the object with an optional type of damage and death.
 	void healCompletely();														///< Restore max health to this Object
 	void notifySubdualDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
+	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
+	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
+	void notifyChronoDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
 	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
-	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration );///< At this level, we just pass this on to our helper
+	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
+
+	void refreshSubdualHelper();
+	void refreshStatusHelper();
+	void refreshTempWeaponBonusHelper();
+
+	void setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes );
+	void setShieldingTargetID( ObjectID targetID, ProtectionTypeFlags protectionTypes );
+	void setShielding( ObjectID targetID, ProtectionTypeFlags protectionTypes );
+	ObjectID getShieldByTargetID() const { return m_shielderID; };
+	ObjectID getShieldingTargetID() const { return m_shieldingID; };
+	ProtectionTypeFlags getShieldByTargetType() const { return m_shielderType; };
+
+	void notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, const AsciiString& customStatus );///< At this level, we just pass this on to our helper and do a special tint
+	void transferSubdualHelperData( CustomSubdualCurrentHealMap data );
+	CustomSubdualCurrentHealMap getSubdualHelperData() const;
+
+	void transferStatusHelperData( HelperTransferData data );
+	HelperTransferData getStatusHelperData() const;
+
+	void transferTempWeaponBonusHelperData( HelperTransferData data );
+	HelperTransferData getTempWeaponBonusHelperData() const;
 
 	void scoreTheKill( const Object *victim );						///< I just killed this object.
 	void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback = TRUE );	///< I just achieved this level right this moment
@@ -288,6 +346,7 @@ public:
 	SpawnBehaviorInterface* getSpawnBehaviorInterface() const;
 	ProjectileUpdateInterface* getProjectileUpdateInterface() const;
 
+	inline void clearInvSqrtMass() { m_invsqrt_mass = 0; }
 
 	// special case for the AIUpdateInterface, since it will be referred to a great deal
 	inline AIUpdateInterface *getAIUpdateInterface() { return m_ai; }
@@ -300,6 +359,10 @@ public:
 	inline const PhysicsBehavior* getPhysics() const { return m_physics; }
 	void topple( const Coord3D *toppleDirection, Real toppleSpeed, UnsignedInt options );
 
+	HijackerUpdateInterface* getHijackerUpdateInterface() const { return m_hijackerUpdate; }
+	RadarUpgradeInterface* getRadarUpgradeInterface() const { return m_radarUpgrade; }
+	StickyBombUpdateInterface* getStickyBombUpdateInterface() const { return m_stickyBombUpdate; }
+
 	UpdateModule* findUpdateModule(NameKeyType key) const { return (UpdateModule*)findModule(key); }
 	DamageModule* findDamageModule(NameKeyType key) const { return (DamageModule*)findModule(key); }
 
@@ -310,12 +373,14 @@ public:
 	// because we do this in a lot of places in the code and I want a convenient way to get thsi (CBD)
 	//
 	ProductionUpdateInterface* getProductionUpdateInterface( void );
+	const ProductionUpdateInterface* getProductionUpdateInterface( void ) const;
 
 	//
 	// Find us our dock update interface if we have one.  Again, this method exists simple
 	// because we want to do this in a lot of places throughout the code
 	//
 	DockUpdateInterface *getDockUpdateInterface( void );
+	RepairDockUpdateInterface *getRepairDockUpdateInterface( void );
 
 	// Ditto for special powers -- Kris
 	SpecialPowerModuleInterface* findSpecialPowerModuleInterface( SpecialPowerType type ) const;
@@ -332,6 +397,8 @@ public:
 	inline Bool testStatus( ObjectStatusTypes bit ) const { return m_status.test( bit ); }
 	void setStatus( ObjectStatusMaskType objectStatus, Bool set = true );
 	inline void clearStatus( ObjectStatusMaskType objectStatus ) { setStatus( objectStatus, false ); }
+	void setCustomStatus( const AsciiString& objectCustomStatus, Bool set = true );
+	inline void clearCustomStatus( const AsciiString& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
 	void updateUpgradeModules();	///< We need to go through our Upgrade Modules and see which should be activated
 	UpgradeMaskType getObjectCompletedUpgradeMask() const { return m_objectUpgradesCompleted; } ///< Upgrades I complete locally
 
@@ -342,6 +409,8 @@ public:
 	//stored in W3DDrawModule. When we revert back to the original bomb truck, we call this function to
 	//recalculate those upgraded subobjects.
 	void forceRefreshSubObjectUpgradeStatus();
+
+	void forceRefreshUpgradeStatus();
 
 	// Useful for status bits that can be set by the scripting system
 	inline Bool testScriptStatusBit(ObjectScriptStatusBit b) const { return BitIsSet(m_scriptStatus, b); }
@@ -359,9 +428,11 @@ public:
 
 	// User specified formation.
 	void setFormationID(enum FormationID id) {m_formationID = id;}
+	void setFormationIsCommandMap(Bool e) {m_formationIsCommandMap = e;}
 	enum FormationID getFormationID(void) const {return m_formationID;}
 	void setFormationOffset(const Coord2D& offset) {m_formationOffset = offset;}
 	void getFormationOffset(Coord2D* offset) const {*offset = m_formationOffset;}
+	inline Bool getFormationIsCommandMap() const { return m_formationIsCommandMap; }
 
 
 //THIS FUNCTION BELONGS AT THE OBJECT LEVEL BECAUSE THERE IS AT LEAST ONE SPECIAL UNIT
@@ -388,6 +459,7 @@ public:
 	void removeUpgrade( const UpgradeTemplate *upgradeT );	///< remove upgrade from this object
 
 	Bool hasCountermeasures() const;
+	Bool hasCountermeasuresExpanded(const Object* projectile) const;
 	void reportMissileForCountermeasures( Object *missile );
 	ObjectID calculateCountermeasureToDivertTo( const Object& victim );
 
@@ -451,6 +523,7 @@ public:
 	void doSpecialPower( const SpecialPowerTemplate *specialPowerTemplate, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 	void doSpecialPowerAtObject( const SpecialPowerTemplate *specialPowerTemplate, Object *obj, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 	void doSpecialPowerAtLocation( const SpecialPowerTemplate *specialPowerTemplate, const Coord3D *loc, Real angle, UnsignedInt commandOptions, Bool forced = false );	///< execute power
+	void doSpecialPowerAtDrawable( const SpecialPowerTemplate *specialPowerTemplate, Drawable *draw, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 	void doSpecialPowerUsingWaypoints( const SpecialPowerTemplate *specialPowerTemplate, const Waypoint *way, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 
 	void doCommandButton( const CommandButton *commandButton, CommandSourceType cmdSource );
@@ -471,6 +544,7 @@ public:
 	// Weapons & Damage -------------------------------------------------------------------------------------------------
 	void reloadAllAmmo(Bool now);
 	Bool isOutOfAmmo() const;
+	Bool isFullAmmo() const; //added by OFS
 	Bool hasAnyWeapon() const;
 	Bool hasAnyDamageWeapon() const; //Kris: a should be used for real weapons that directly inflict damage... not deploy, hack, etc.
 	Bool hasWeaponToDealDamageType(DamageType typeToDeal) const;
@@ -479,6 +553,7 @@ public:
 
 	Weapon* getWeaponInWeaponSlot(WeaponSlotType wslot) const { return m_weaponSet.getWeaponInWeaponSlot(wslot); }
 	UnsignedInt getWeaponInWeaponSlotCommandSourceMask( WeaponSlotType wSlot ) const { return m_weaponSet.getNthCommandSourceMask( wSlot ); }
+	Bool getWeaponInWeaponSlotSyncedToSlot(WeaponSlotType thisSlot, WeaponSlotType otherSlot) const;
 
 	// see if this current weapon set's weapons has shared reload times
 	Bool isReloadTimeShared() const { return m_weaponSet.isSharedReloadTime(); }
@@ -490,10 +565,17 @@ public:
 	void fireCurrentWeapon(Object *target);
 	void fireCurrentWeapon(const Coord3D* pos);
 	void preFireCurrentWeapon( const Object *victim );
+	void preFireCurrentWeapon(const Coord3D* pos);
 	UnsignedInt getLastShotFiredFrame() const;					///< Get the frame a shot was last fired on
 	ObjectID getLastVictimID() const;						///< Get the last victim we shot at
 	Weapon* findWaypointFollowingCapableWeapon();
 	Bool getAmmoPipShowingInfo(Int& numTotal, Int& numFull) const;
+
+	// Progress bar for various things
+	Bool getProgressBarShowingInfo(bool selected, Real& progress, Int& type, RGBAColorInt& color, RGBAColorInt& colorBG) const;
+
+	WeaponSlotType getCurrentWeaponSlot() const;
+	Bool isWeaponSetRestricted() const;
 
   void notifyFiringTrackerShotFired( const Weapon* weaponFired, ObjectID victimID ) ;
 
@@ -520,6 +602,7 @@ public:
 		Note that this DOES take weapon attack range into account.
 	*/
 	Bool chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteria criteria, CommandSourceType cmdSource);
+	Bool chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly = FALSE);
 
 	// set and/or clear a single modelcondition flag
 	void setModelConditionState( ModelConditionFlagType a );
@@ -542,9 +625,16 @@ public:
 	void clearWeaponSetFlag(WeaponSetType wst);
 	inline Bool testWeaponSetFlag(WeaponSetType wst) const { return m_curWeaponSetFlags.test(wst); }
 	inline const WeaponSetFlags& getWeaponSetFlags() const { return m_curWeaponSetFlags; }
-	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType ){ return m_weaponSet.setWeaponLock( weaponSlot, lockType ); }
+	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType ){ if(lockType == LOCKED_PERMANENTLY) doWeaponSetUpdate(); return m_weaponSet.setWeaponLock( weaponSlot, lockType ); }
 	void releaseWeaponLock(WeaponLockType lockType){ m_weaponSet.releaseWeaponLock(lockType); }
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
+	Bool isCurWeaponLockedPriority() const { return m_weaponSet.isCurWeaponLockedPriority(); }
+
+	inline ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
+	inline void setCustomStatusFlags(ObjectCustomStatusType customStatusMap) { m_customStatus = customStatusMap; } 
+	Bool testCustomStatus(const AsciiString& cst) const;
+	Bool testCustomStatusForAll(const std::vector<AsciiString>& cst) const;
+
 
 	void setArmorSetFlag(ArmorSetType ast);
 	void clearArmorSetFlag(ArmorSetType ast);
@@ -555,12 +645,41 @@ public:
 	Bool hasSpecialPower( SpecialPowerType type ) const;
 	Bool hasAnySpecialPower() const;
 
-	void setWeaponBonusCondition(WeaponBonusConditionType wst);
-	void clearWeaponBonusCondition(WeaponBonusConditionType wst);
+	void setWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear = TRUE);
+	void clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear = TRUE);
 
+	void setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear = TRUE);
+	void clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear = TRUE);
+
+	void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
+	void clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
+
+	void setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
+	void clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
+	
   // note, the !=0 at the end is important, to convert this into a boolean type! (srj)
 	Bool testWeaponBonusCondition(WeaponBonusConditionType wst) const { return (m_weaponBonusCondition & (1 << wst)) != 0; }
 	inline WeaponBonusConditionFlags getWeaponBonusCondition() const { return m_weaponBonusCondition; }
+	inline void setWeaponBonusConditionFlags(WeaponBonusConditionFlags flags) { m_weaponBonusCondition = flags; }
+
+	inline ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
+	// TO-DO: Change to Hash_Map. DONE.
+	inline void setCustomWeaponBonusConditionFlags(ObjectCustomStatusType customFlags) { 
+		m_customWeaponBonusCondition.clear();
+		m_customWeaponBonusCondition = customFlags;
+	}
+	Bool testCustomWeaponBonusCondition(const AsciiString& cst) const;
+
+	inline WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
+	inline ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
+
+	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
+	inline void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
+
+	void doWeaponBonusChange() { m_weaponSet.weaponSetOnWeaponBonusChange(this); }
+
+	// TO-DO: Change to Hash_Map. DONE.
+	//inline ObjectCustomStatusType setCustomWeaponBonusConditions(ObjectCustomStatusType customFlagsInheriter, ObjectCustomStatusType customFlagsGiver) const ;
 
 	Bool getSingleLogicalBonePosition(const char* boneName, Coord3D* position, Matrix3D* transform) const;
 	Bool getSingleLogicalBonePositionOnTurret(WhichTurretType whichTurret, const char* boneName, Coord3D* position, Matrix3D* transform) const;
@@ -579,18 +698,40 @@ public:
 
 	DisabledMaskType getDisabledFlags() const { return m_disabledMask; }
 	Bool isDisabled() const { return m_disabledMask.any(); }
-	Bool clearDisabled( DisabledType type );
+	Bool clearDisabled( DisabledType type, bool clearTintLater = FALSE );
+
+	//void checkDisabledHelper() const;
 
 	void setDisabled( DisabledType type );
-	void setDisabledUntil( DisabledType type, UnsignedInt frame );
+	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL, Bool paintTint = TRUE, Bool playSound = TRUE );
 	Bool isDisabledByType( DisabledType type ) const { return TEST_DISABLEDMASK( m_disabledMask, type ); }
 
 	UnsignedInt getDisabledUntil( DisabledType type = DISABLED_ANY ) const;
+	UnsignedInt getDisabledUntilMask( DisabledMaskType mask ) const;
 
 	void pauseAllSpecialPowers( const Bool disabling ) const;
 
+	void clearDisablePower(Bool isCommand);
+
+	void doDisablePower(Bool isCommand);
+
+	Bool isDisabledPowerByCommand() const { return m_disabledPowerFromCommand; }
+
 	//Checks any timers and clears disabled statii that have expired.
 	void checkDisabledStatus();
+
+	std::vector<UnsignedInt> getDisabledTillFrame() const;
+	void transferDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames);
+
+	inline TintStatus getDisabledTint() const { return m_disabledTintToClear; };
+	inline const AsciiString& getDisabledCustomTint() const { return m_customDisabledTintToClear; }
+	inline void setDisabledTint(TintStatus tintStatus) { m_disabledTintToClear = tintStatus; }
+	inline void setDisabledCustomTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
+
+	//void checkLevitate();
+
+	void setLastActualSpeed(Real speed) { m_lastActualSpeed = speed; }
+	Real getLastActualSpeed() const { return m_lastActualSpeed; }
 
 	//When an AIAttackState is over, it needs to clean up any weapons that might be in leech range mode
 	//or else those weapons will have unlimited range!
@@ -624,11 +765,114 @@ public:
 	inline UnsignedInt getSafeOcclusionFrame(void) { return m_safeOcclusionFrame; }	//< this is an object specific frame at which it's safe to enable building occlusion.
 	inline void	setSafeOcclusionFrame(UnsignedInt frame) { m_safeOcclusionFrame = frame;}
 
+	inline void setParasiteCollideActive(Bool set) { m_parasiteCollideActive = set;}
+	inline const Bool getParasiteCollideActive() const { return m_parasiteCollideActive;}
+
 	// All of our cheating for radars and power go here.
 	// This is the function that we now call in becomingTeamMember to adjust our power.
 	// If incoming is true, we're working on the incoming player, if its false, we're on the outgoing
 	// player. These are friend_s for player.
 	void friend_adjustPowerForPlayer( Bool incoming );
+
+	void doClearTunnelContainTargetID();
+
+	void setEquipObjectID(ObjectID equipObjID);
+	void clearEquipObjectID(ObjectID equipObjID);
+	void clearLastEquipObjectID(ObjectID equipObjID);
+	void setEquipAttackableObjectID(ObjectID equipObjID);
+	void setRejectKey(const std::vector<AsciiString>& keys);
+	void clearRejectKey(const std::vector<AsciiString>& keys);
+	Bool hasRejectKey(const std::vector<AsciiString>& keys) const;
+	void setContainedPosition();
+
+	inline std::vector<ObjectID> getEquipAttackableObjectIDs() const { return m_equipAttackableObjIDs; }
+	inline std::vector<ObjectID> getEquipObjectIDs() const { return m_equipObjIDs; }
+
+	void setHijackerID(ObjectID HijackerID);
+	void setCarBombConverterID(ObjectID ConverterID);
+	void setHijackingID(ObjectID ID);
+	void setEquipToID(ObjectID ID);
+	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID);
+	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite);
+	Bool checkToSquishHijack(const Object *other) const;
+
+	inline ObjectID getEquipToID() const { return m_equipToID; }
+
+	Bool hasParasiteCollide() const { return m_hasParasiteCrateCollide; }
+
+	void doObjectUpgradeChecks();
+	void doObjectStatusChecks();
+
+	void registerAssaultTransportID(ObjectID transportID);
+	void removeMeFromAssaultTransport(ObjectID replaceID = INVALID_ID);
+	void doAssaultTransportHealthUpdate();
+
+	inline ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
+
+	void doSlaveBehaviorUpdate( Bool doSlaver );
+	void doSlavedUpdate( Bool doSlaver );
+	void doMobMemberSlavedUpdate();
+	void doWeaponSetUpdate();
+	void doMovingUpdate();
+	void doObjectLocomotorUpdate();
+	void doSlowDeathLayerUpdate(Bool hitTree);
+	void doSlowDeathRefreshUpdate();
+
+	inline void setIsMobMember(Bool set) { m_isMobMember = set; }
+	inline void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }
+	inline Bool getMobUpdateRefreshed() const { return m_mobJustUpdated; }
+	inline void setNoSlowDeathLayerUpdate() { m_noSlowDeathLayerUpdate = TRUE; }
+
+	Bool isDozerDoingAnyTasks() const;
+
+	inline void setLastExitedFrame(UnsignedInt frames) { m_lastExitedFrame = frames; }
+	inline UnsignedInt getLastExitedFrame() const { return m_lastExitedFrame; }
+
+	inline void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
+	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
+
+	void doStealthUpdate() { if(getStealth()) getStealth()->refreshUpdate(); }
+
+	void appendDelayedCommand(GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments, UnsignedInt delay);
+	void clearDelayedCommand();
+
+	Bool isDisguised() const;
+	Bool hasDetectedDisguise() const;
+	Bool hasDisguiseAndIsNotDetected() const;
+
+	Bool showCashText() const;
+
+	void setSelectablesBoundTo(const std::vector<ObjectID>& IDs);
+	inline void setDontDoGroupSelecting(Bool e) { m_dontDoGroupSelecting = e; }
+	inline const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
+	inline const Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
+
+	const AsciiString& getGenericInvalidCursorName() const;
+	const AsciiString& getSelectingCursorName() const;
+	const AsciiString& getMoveToCursorName() const;
+	const AsciiString& getAttackMoveToCursorName() const;
+	const AsciiString& getWaypointCursorName() const;
+	const AsciiString& getAttackObjectCursorName() const;
+	const AsciiString& getForceAttackObjectCursorName() const;
+	const AsciiString& getForceAttackGroundCursorName() const;
+	const AsciiString& getOutrangeCursorName() const;
+	const AsciiString& getGetRepairAtCursorName() const;
+	const AsciiString& getDockCursorName() const;
+	const AsciiString& getGetHealedCursorName() const;
+	const AsciiString& getDoRepairCursorName() const;
+	const AsciiString& getResumeConstructionCursorName() const;
+	const AsciiString& getEnterCursorName() const;
+	const AsciiString& getEnterAggressiveCursorName() const;
+	const AsciiString& getSetRallyPointCursorName() const;
+	const AsciiString& getBuildCursorName() const;
+	const AsciiString& getInvalidBuildCursorName() const;
+	const AsciiString& getSalvageCursorName() const;
+	
+	Bool useMyGetRepairAtCursor() const;
+	Bool useMyDockCursor() const;
+	Bool useMyGetHealedCursor() const;
+	Bool useMyEnterCursor() const;
+	Bool useMySalvageCursor() const;
 
 protected:
 
@@ -699,6 +943,12 @@ private:
 	Object *			m_next;
 	Object *			m_prev;
 	ObjectStatusMaskType		m_status;									///< status bits (see ObjectStatusMaskType)
+	ObjectCustomStatusType		m_customStatus;	
+
+	ObjectID			m_shielderID;
+	ObjectID			m_shieldingID;
+	ProtectionTypeFlags	m_shielderType;
+
 
 	GeometryInfo	m_geometryInfo;
 
@@ -725,17 +975,26 @@ private:
 	DisabledMaskType	m_disabledMask;
 	UnsignedInt				m_disabledTillFrame[ DISABLED_COUNT ];
 
+	TintStatus				m_disabledTintToClear;
+	AsciiString				m_customDisabledTintToClear;
+
 	UnsignedInt		m_smcUntil;
 
-	enum { NUM_SLEEP_HELPERS = 8 };
+	enum { NUM_SLEEP_HELPERS = 12 };
 	ObjectRepulsorHelper*					m_repulsorHelper;
 	ObjectSMCHelper*							m_smcHelper;
 	ObjectWeaponStatusHelper*			m_wsHelper;
 	ObjectDefectionHelper*				m_defectionHelper;
 	StatusDamageHelper*						m_statusDamageHelper;
 	SubdualDamageHelper*					m_subdualDamageHelper;
+	ChronoDamageHelper*					m_chronoDamageHelper;
 	TempWeaponBonusHelper*				m_tempWeaponBonusHelper;
 	FiringTracker*								m_firingTracker;	///< Tracker is really a "helper" and is included NUM_SLEEP_HELPERS
+
+	ObjectDisabledHelper*				m_disabledHelper;
+	ObjectLevitationHelper*				m_levitationHelper;
+
+	ObjectDelayedOrderHelper*			m_delayedOrderHelper;
 
 	// modules
 	BehaviorModule**							m_behaviors;	// BehaviorModule, not BehaviorModuleInterface
@@ -747,6 +1006,12 @@ private:
 
 	AIUpdateInterface*						m_ai;	///< ai interface (if any), cached for handy access. (duplicate of entry in the module array!)
 	PhysicsBehavior*							m_physics;	///< physics interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
+	HijackerUpdateInterface*					m_hijackerUpdate;	///< hijacker update interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
+	RadarUpgradeInterface*						m_radarUpgrade;		///< radar upgrade interface (if any), cached for handy access. (duplicate of entry in the module array!)
+
+	StickyBombUpdateInterface* 					m_stickyBombUpdate; ///< sticky bomb update interface (if any), cached for handy access. (duplicate of entry in the module array!)
 
 	PartitionData*								m_partitionData;	///< our PartitionData
 	RadarObject*									m_radarData;				///< radar data
@@ -773,6 +1038,20 @@ private:
 	WeaponSet											m_weaponSet;
 	WeaponSetFlags								m_curWeaponSetFlags;
 	WeaponBonusConditionFlags			m_weaponBonusCondition;
+	ObjectCustomStatusType				m_customWeaponBonusCondition;
+
+	//Ignore Bonus Types to clear if it is bonus granted outside of new Firing Tracker system.
+	WeaponBonusConditionFlags			m_weaponBonusConditionIC;
+	ObjectCustomStatusType				m_customWeaponBonusConditionIC;
+
+	Real								m_invsqrt_mass;
+	//Real								m_magnetLevitateHeight;
+	//UnsignedInt							m_levitateCheckFrame;
+	//UnsignedInt							m_levitateCheckCount;
+	//Bool								m_dontLevitate;
+
+	Real								m_lastActualSpeed;
+
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 
 	SpecialPowerMaskType					m_specialPowerBits; ///< bits determining what kind of special abilities this object has access to.
@@ -795,6 +1074,8 @@ private:
 	FormationID										m_formationID;
 	Coord2D												m_formationOffset;
 
+	Bool											m_formationIsCommandMap;
+
 	AsciiString										m_commandSetStringOverride;///< To allow specific object to switch command sets
 
 	UnsignedInt										m_safeOcclusionFrame;	///<flag used by occlusion renderer so it knows when objects have exited their production building.
@@ -810,6 +1091,42 @@ private:
 	Byte													m_numTriggerAreasActive;
 	Bool													m_singleUseCommandUsed;
 	Bool													m_isReceivingDifficultyBonus;
+	Bool													m_parasiteCollideActive;
+
+	std::vector<AsciiString>						m_rejectKeys;
+	std::vector<ObjectID> 							m_equipObjIDs;
+	std::vector<ObjectID> 							m_equipAttackableObjIDs;
+	std::vector<ObjectID> 							m_lastEquipObjIDs;
+	ObjectID										m_carbombConverterID;
+	ObjectID 										m_hijackerID;
+	ObjectID										m_hijackingID;
+	ObjectID										m_equipToID;
+	mutable ObjectID 										m_assaultTransportID;
+
+	std::vector<ObjectID>							m_selectionBoundsTo;
+
+	Bool											m_dontDoGroupSelecting;
+
+	Bool											m_hasParasiteCrateCollide;
+
+	Bool											m_disabledPowerFromCommand;
+
+	// --------- PERFORMANCE OPTIMIZATION VARIABLES
+	Bool											m_isMobMember;
+	Bool											m_mobJustUpdated;
+
+	Bool											m_noDemoTrapUpdate;
+	Bool											m_noFloatUpdate;
+	Bool											m_noSlavedBehavior;
+	Bool											m_noSlaverBehavior;
+	Bool											m_noSlowDeathBehavior;
+	Bool											m_noSlowDeathLayerUpdate;
+	Bool											m_hasSlowDeathLayerUpdate;
+	Bool											m_checkSlowDeathBehavior;
+	Bool											m_hasBattleBusSlowDeathBehavior;
+
+	UnsignedInt										m_lastExitedFrame;
+	UnsignedInt										m_noAcceptOrdersFrame;
 
 };
 

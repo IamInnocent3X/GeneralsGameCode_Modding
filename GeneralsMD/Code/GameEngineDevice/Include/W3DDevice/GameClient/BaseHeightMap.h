@@ -177,6 +177,8 @@ public:
 		Real angle
 	);
 
+	const AsciiString& findTreeNameInPos(const Coord3D* loc) const;
+
 	/// Add a bib at location.
 	void addTerrainBib(Vector3 corners[4], ObjectID id, Bool highlight);
 	void addTerrainBibDrawable(Vector3 corners[4], DrawableID id, Bool highlight);

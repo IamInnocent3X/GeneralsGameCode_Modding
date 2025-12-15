@@ -46,6 +46,8 @@
 
 #define DEFINE_SCIENCE_AVAILABILITY_NAMES
 
+#define NO_DEBUG_CRC
+
 #include "Common/ActionManager.h"
 #include "Common/BuildAssistant.h"
 #include "Common/CRCDebug.h"
@@ -97,6 +99,7 @@
 #include "GameLogic/Module/SupplyTruckAIUpdate.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
 #include "GameLogic/Module/ProductionUpdate.h"
+#include "GameLogic/Module/BattlePlanBonusBehavior.h"
 #include "GameLogic/VictoryConditions.h"
 
 #include "GameNetwork/GameInfo.h"
@@ -333,6 +336,7 @@ Player::Player( Int playerIndex )
 	m_skillPoints = 0;
 	Int i;
 	m_upgradeList = NULL;
+	m_unitsMoveInFormation = FALSE;
 	for(i = 0; i < NUM_HOTKEY_SQUADS; i++)
 	{
 		m_squads[i] = NULL;
@@ -488,7 +492,17 @@ void Player::init(const PlayerTemplate* pt)
 	{
 		KindOfPercentProductionChange *tof = *it;
 		it = m_kindOfPercentProductionChangeList.erase( it );
-		deleteInstance(tof);
+		if(tof)
+			deleteInstance(tof);
+	}
+
+	it = m_kindOfPercentProductionTimeChangeList.begin();
+	while (it != m_kindOfPercentProductionTimeChangeList.end())
+	{
+		KindOfPercentProductionChange* tof = *it;
+		it = m_kindOfPercentProductionTimeChangeList.erase(it);
+		if (tof)
+			deleteInstance(tof);
 	}
 
 	getAcademyStats()->init( this );
@@ -699,6 +713,9 @@ void Player::update()
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
 		//Only check and post the message once every second so we don't spam the message stream to account for lag.
+		// If anyone wants to optimize this to not use Modulo: 
+		// if( now <= m_nextUpdateFrame )
+		// m_nextUpdateFrame = now + LOGICFRAMES_PER_SECOND
 		if( now % LOGICFRAMES_PER_SECOND == 0 )
 		{
 			if( TheGlobalData->m_clientRetaliationModeEnabled != isLogicalRetaliationModeEnabled() )
@@ -1627,10 +1644,26 @@ void Player::onStructureCreated( Object *builder, Object *structure )
 
 }
 
+
+const SpecialPowerTemplate* findSpecialPowerWithEvaDetected(const Object* structure) {
+	for (BehaviorModule** m = structure->getBehaviorModules(); *m; ++m)
+	{
+		SpecialPowerModuleInterface* sp = (*m)->getSpecialPower();
+		if (!sp)
+			continue;
+
+		if (sp->getSpecialPowerTemplate()->getEvaDetectedEnemy() > EVA_FIRST || sp->getSpecialPowerTemplate()->getEvaDetectedAlly() > EVA_FIRST || sp->getSpecialPowerTemplate()->getEvaDetectedOwn() > EVA_FIRST) {
+			//Specialpower has an eva, return
+			return sp->getSpecialPowerTemplate();
+		}
+	}
+	return NULL;
+}
+
 //-------------------------------------------------------------------------------------------------
 /// a structure that was under construction has become completed
 //-------------------------------------------------------------------------------------------------
-void Player::onStructureConstructionComplete( Object *builder, Object *structure, Bool isRebuild )
+void Player::onStructureConstructionComplete(Object* builder, Object* structure, Bool isRebuild)
 {
 	// When a a structure is completed, it becomes "real" as far as scripting is
 	// concerned. jba.
@@ -1650,15 +1683,15 @@ void Player::onStructureConstructionComplete( Object *builder, Object *structure
 	structure->friend_adjustPowerForPlayer(TRUE);
 
 	// ai notification callback
-	if( m_ai )
-		m_ai->onStructureProduced( builder, structure );
+	if (m_ai)
+		m_ai->onStructureProduced(builder, structure);
 
 	// the GUI needs to re-evaluate the information being displayed to the user now
-	if( TheControlBar )
+	if (TheControlBar)
 		TheControlBar->markUIDirty();
 
 	// This object may require us to play some EVA sounds.
-	Player *localPlayer = ThePlayerList->getLocalPlayer();
+	Player* localPlayer = ThePlayerList->getLocalPlayer();
 
 	if( structure->hasSpecialPower( SPECIAL_PARTICLE_UPLINK_CANNON ) ||
 			structure->hasSpecialPower( SUPW_SPECIAL_PARTICLE_UPLINK_CANNON ) ||
@@ -1678,6 +1711,13 @@ void Player::onStructureConstructionComplete( Object *builder, Object *structure
       TheEva->setShouldPlay(EVA_SuperweaponDetected_Enemy_ParticleCannon);
     }
   }
+	//Check if structure has a specialPower with new custom eva sounds
+	const SpecialPowerTemplate* specialPowerTemp = findSpecialPowerWithEvaDetected(structure);
+	if (specialPowerTemp != NULL) {
+		// Check if SpecialPower eva event instead of hardcoded stuff
+		bool isOwn = localPlayer == structure->getControllingPlayer();
+		bool isAlly = localPlayer->getRelationship(structure->getTeam()) != ENEMIES;
+		bool isEnemy = !isOwn && !isAlly;
 
 	if( structure->hasSpecialPower( SPECIAL_NEUTRON_MISSILE ) ||
 			structure->hasSpecialPower( NUKE_SPECIAL_NEUTRON_MISSILE ) ||
@@ -1714,6 +1754,81 @@ void Player::onStructureConstructionComplete( Object *builder, Object *structure
       TheEva->setShouldPlay(EVA_SuperweaponDetected_Enemy_ScudStorm);
     }
   }
+		//Check SpecialPower Eva
+		EvaMessage eva = EVA_Invalid;
+
+		if (isOwn) {
+			eva = specialPowerTemp->getEvaDetectedOwn();
+		}
+		else if (isAlly) {
+			eva = specialPowerTemp->getEvaDetectedAlly();
+		}
+		else if (isEnemy) {
+			eva = specialPowerTemp->getEvaDetectedEnemy();
+		}
+
+		if (eva > EVA_FIRST) {
+			TheEva->setShouldPlay(eva);
+		}
+
+	}
+	else {
+		//Do default hardcoded check 
+		if (structure->hasSpecialPower(SPECIAL_PARTICLE_UPLINK_CANNON) ||
+			structure->hasSpecialPower(SUPW_SPECIAL_PARTICLE_UPLINK_CANNON) ||
+			structure->hasSpecialPower(LAZR_SPECIAL_PARTICLE_UPLINK_CANNON))
+		{
+			if (localPlayer == structure->getControllingPlayer())
+			{
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Own_ParticleCannon);
+			}
+			else if (localPlayer->getRelationship(structure->getTeam()) != ENEMIES)
+			{
+				// Note: treating NEUTRAL as ally. Is this correct?
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Ally_ParticleCannon);
+			}
+			else
+			{
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Enemy_ParticleCannon);
+			}
+		}
+
+		if (structure->hasSpecialPower(SPECIAL_NEUTRON_MISSILE) ||
+			structure->hasSpecialPower(NUKE_SPECIAL_NEUTRON_MISSILE) ||
+			structure->hasSpecialPower(SUPW_SPECIAL_NEUTRON_MISSILE))
+		{
+			if (localPlayer == structure->getControllingPlayer())
+			{
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Own_Nuke);
+			}
+			else if (localPlayer->getRelationship(structure->getTeam()) != ENEMIES)
+			{
+				// Note: treating NEUTRAL as ally. Is this correct?
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Ally_Nuke);
+			}
+			else
+			{
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Enemy_Nuke);
+			}
+		}
+
+		if (structure->hasSpecialPower(SPECIAL_SCUD_STORM))
+		{
+			if (localPlayer == structure->getControllingPlayer())
+			{
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Own_ScudStorm);
+			}
+			else if (localPlayer->getRelationship(structure->getTeam()) != ENEMIES)
+			{
+				// Note: treating NEUTRAL as ally. Is this correct?
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Ally_ScudStorm);
+			}
+			else
+			{
+				TheEva->setShouldPlay(EVA_SuperweaponDetected_Enemy_ScudStorm);
+			}
+		}
+	}
 }
 
 //=============================================================================
@@ -1952,7 +2067,37 @@ Real Player::getProductionTimeChangePercent( AsciiString buildTemplateName ) con
 }
 
 //=============================================================================
-VeterancyLevel Player::getProductionVeterancyLevel( AsciiString buildTemplateName ) const
+void Player::addProductionCostChangePercent(AsciiString buildTemplateName, Real percent)
+{
+	// First check if the entry exists
+	ProductionChangeMap::iterator it = m_productionCostChanges.find(NAMEKEY(buildTemplateName));
+	if (it != m_productionCostChanges.end())
+	{
+		(*it).second += percent;  // Additive stacking
+		return;
+	}
+	// If we haven't found it, add it
+	m_productionCostChanges[NAMEKEY(buildTemplateName)] = percent;
+	//TODO: remove the entry if we end up at 0?
+}
+
+//=============================================================================
+void Player::addProductionTimeChangePercent(AsciiString buildTemplateName, Real percent)
+{
+	// First check if the entry exists
+	ProductionChangeMap::iterator it = m_productionTimeChanges.find(NAMEKEY(buildTemplateName));
+	if (it != m_productionTimeChanges.end())
+	{
+		(*it).second += percent;  // Additive stacking
+		return;
+	}
+	// If we haven't found it, add it
+	m_productionTimeChanges[NAMEKEY(buildTemplateName)] = percent;
+	//TODO: remove the entry if we end up at 0?
+}
+
+//=============================================================================
+VeterancyLevel Player::getProductionVeterancyLevel( AsciiString buildTemplateName ) const 
 {
 	NameKeyType templateNameKey = NAMEKEY(buildTemplateName);
   ProductionVeterancyMap::const_iterator it = m_productionVeterancyLevels.find(templateNameKey);
@@ -2173,6 +2318,7 @@ void Player::garrisonAllUnits(CommandSourceType source)
 /// @todo srj -- we should really use iterateAllObjects() here instead, but I have no time to
 // test such a change... make someday
 	ObjectIterator *iterBuilding = ThePartitionManager->iterateObjectsInRange(&pos, 1e9f, FROM_CENTER_3D, filters, ITER_SORTED_NEAR_TO_FAR);
+	//ObjectIterator *iterBuilding = ThePartitionManager->iterateAllObjects(filters);
 	MemoryPoolObjectHolder hold(iterBuilding);
 
 	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin();
@@ -2442,7 +2588,8 @@ void Player::doBountyForKill(const Object* killer, const Object* victim)
 		pos.zero();
 		pos.add( killer->getPosition() );
 		pos.z += 10.0f; //add a little z to make it show up above the unit.
-		TheInGameUI->addFloatingText( moneyString, &pos, GameMakeColor( 255, 255, 0, 255 ) );
+		if(killer->showCashText())
+			TheInGameUI->addFloatingText( moneyString, &pos, GameMakeColor( 255, 255, 0, 255 ) );
 	}
 }
 
@@ -2489,8 +2636,16 @@ Bool Player::addSkillPointsForKill(const Object* killer, const Object* victim)
 		return false;
 
 	Int victimLevel = victim->getVeterancyLevel();
+
 	Int skillValue = victim->getTemplate()->getSkillPointValue(victimLevel);
 
+	//New: We can now upgrade XP value, so we check the XP tracker for a scalar
+	const ExperienceTracker* xpTracker = victim->getExperienceTracker();
+	if (xpTracker)
+	{
+		skillValue *= xpTracker->getExperienceValueScalar();
+	}
+	
 	return addSkillPoints(skillValue);
 }
 
@@ -2520,7 +2675,7 @@ void Player::resetSciences()
 
 //=============================================================================
 /// returns TRUE if sciences were gained/lost.
-Bool Player::addScience(ScienceType science)
+Bool Player::addScience(ScienceType science, Bool playerAction/* = FALSE*/)
 {
 	if (hasScience(science))
 		return false;
@@ -2528,6 +2683,57 @@ Bool Player::addScience(ScienceType science)
 	//DEBUG_LOG(("Adding Science %s",TheScienceStore->getInternalNameForScience(science).str()));
 
 	m_sciences.push_back(science);
+
+	// Grant Upgrades
+	std::vector<AsciiString> upgrades;
+	TheScienceStore->getGrantedUpgradeNames(science, upgrades);
+	for (AsciiString upgradeName : upgrades) {
+		const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade(upgradeName);
+		if (!upgradeTemplate)
+		{
+			DEBUG_LOG(("Player::addScience - can't find upgrade template %s.", upgradeName.str()));
+			continue;
+		}
+
+		if (upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER)
+		{
+			DEBUG_LOG(("Player::addScience - Granting upgrade %s.", upgradeName.str()));
+			addUpgrade(upgradeTemplate, UPGRADE_STATUS_COMPLETE);
+
+			// Only show audio and visuals if this was a manual player command
+			if (playerAction && !upgradeTemplate->getDisplayNameLabel().isEmpty() && !upgradeTemplate->isSilentCompletion()) {
+				getAcademyStats()->recordUpgrade(upgradeTemplate, FALSE);
+				// print a message to the local player
+				if (isLocalPlayer())
+				{
+					UnicodeString msg;
+					UnicodeString format = TheGameText->fetch("UPGRADE:UpgradeComplete");
+					UnicodeString upgradeName = TheGameText->fetch(upgradeTemplate->getDisplayNameLabel().str());
+
+					msg.format(format.str(), upgradeName.str());
+					TheInGameUI->message(msg);
+
+					//Play the sound for the upgrade, because we just built it!
+					AudioEventRTS sound = *upgradeTemplate->getResearchCompleteSound();
+					if (TheAudio->isValidAudioEvent(&sound))
+					{
+						//We have a custom upgrade complete sound.
+						sound.setPlayerIndex(getPlayerIndex());
+						TheAudio->addAudioEvent(&sound);
+					}
+					else
+					{
+						//Use a generic EVA event.
+						TheEva->setShouldPlay(EVA_UpgradeComplete);
+					}
+				}
+			}
+		}
+		else
+		{
+			DEBUG_LOG(("Player::addScience - Cannot grant OBJECT type upgrade %s.", upgradeName.str()));
+		}
+	}
 
 	// 'wake up' any special powers controlled by, well, stuff
 	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin();
@@ -2586,7 +2792,7 @@ void Player::addSciencePurchasePoints(Int delta)
 }
 
 //=============================================================================
-Bool Player::attemptToPurchaseScience(ScienceType science)
+Bool Player::attemptToPurchaseScience(ScienceType science, Bool playerAction/* = FALSE*/)
 {
 	if (!isCapableOfPurchasingScience(science))
 	{
@@ -2596,7 +2802,7 @@ Bool Player::attemptToPurchaseScience(ScienceType science)
 
 	Int cost = TheScienceStore->getSciencePurchaseCost(science);
 	addSciencePurchasePoints(-cost);
-	addScience(science);
+	addScience(science, playerAction);
 
 	getAcademyStats()->recordGeneralsPointsSpent( cost );
 
@@ -2836,6 +3042,7 @@ namespace
     const ThingTemplate *type;
     NameKeyType linkKey;
     Bool        checkProductionInterface;
+	std::vector<AsciiString> linkedObjects;
   };
 }
 
@@ -2857,6 +3064,26 @@ static void countExisting( Object *obj, void *userData )
     typeCountData->count++;
   }
 
+  // Consider Max Simultaneous Link Objects to Count
+  if (!typeCountData->linkedObjects.empty())
+  {
+	  const ThingTemplate* tmpls;
+	  Int cnt = typeCountData->linkedObjects.size();
+	  for (int i = 0; i < cnt; i++) {
+		  tmpls = TheThingFactory->findTemplate( typeCountData->linkedObjects[i] );
+			
+		  if( !tmpls->isEquivalentTo( obj->getTemplate() ) )
+		  {
+		  	  continue;
+		  }
+
+		  //if( obj->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		  //	continue;
+			
+		  typeCountData->count++;
+	  }
+  }
+
   // Also consider objects that have a production update interface
   if ( typeCountData->checkProductionInterface )
   {
@@ -2864,7 +3091,19 @@ static void countExisting( Object *obj, void *userData )
     if( pui )
     {
       // add the count of this type that are in the queue
-      typeCountData->count += pui->countUnitTypeInQueue( typeCountData->type );
+      typeCountData->count += pui->countUnitTypeInQueue( typeCountData->type ); 
+
+	  // Consider Max Simultaneous Link Objects to Count that are currently in production.
+	  if (!typeCountData->linkedObjects.empty())
+	  {
+		  const ThingTemplate* tmpls;
+		  Int cnt = typeCountData->linkedObjects.size();
+		  for (int i = 0; i < cnt; i++) {
+			  tmpls = TheThingFactory->findTemplate( typeCountData->linkedObjects[i] );
+
+			  typeCountData->count += pui->countUnitTypeInQueue( tmpls ); 
+		  }
+	  }
     }
   }
 }
@@ -2875,6 +3114,32 @@ Bool Player::canBuildMoreOfType( const ThingTemplate *whatToBuild ) const
 {
   // make sure we're not maxed out for this type of unit.
   UnsignedInt maxSimultaneousOfType = whatToBuild->getMaxSimultaneousOfType();
+  MaxSimultaneousOfTypeDifficulty maxSimultaneousOfTypeDifficulty = whatToBuild->getMaxSimultaneousOfTypeDifficulty();
+  MaxSimultaneousOfTypeDifficulty maxSimultaneousOfTypeDifficultyAI = whatToBuild->getMaxSimultaneousOfTypeDifficultyAI();
+  if(!maxSimultaneousOfTypeDifficulty.empty())
+  {
+	GameDifficulty difficulty = getPlayerDifficulty();
+	if (!maxSimultaneousOfTypeDifficultyAI.empty() && getPlayerType() == PLAYER_COMPUTER) {
+		for( MaxSimultaneousOfTypeDifficulty::const_iterator it  = maxSimultaneousOfTypeDifficultyAI.begin(); it != maxSimultaneousOfTypeDifficultyAI.end(); it++)
+		{
+			if((it->first) == difficulty)
+				maxSimultaneousOfType = it->second;
+		}
+		/*MaxSimultaneousOfTypeDifficulty::const_iterator it = maxSimultaneousOfTypeDifficultyAI.find(difficulty);
+		if( it != maxSimultaneousOfTypeDifficultyAI.end())
+		{
+			maxSimultaneousOfType = it->second;
+		}*/
+	}
+	else
+	{
+		for( MaxSimultaneousOfTypeDifficulty::const_iterator it  = maxSimultaneousOfTypeDifficulty.begin(); it != maxSimultaneousOfTypeDifficulty.end(); it++)
+		{
+			if((it->first) == difficulty)
+				maxSimultaneousOfType = it->second;
+		}
+	}
+  }
   if (maxSimultaneousOfType != 0)
   {
 
@@ -2882,7 +3147,8 @@ Bool Player::canBuildMoreOfType( const ThingTemplate *whatToBuild ) const
     typeCountData.count = 0;
     typeCountData.type = whatToBuild;
     typeCountData.linkKey = whatToBuild->getMaxSimultaneousLinkKey();
-    // Assumption: Things with a KINDOF_STRUCTURE flag can never be built from
+	typeCountData.linkedObjects = whatToBuild->getMaxSimultaneousLinkObjects();
+    // Assumption: Things with a KINDOF_STRUCTURE flag can never be built from 
     // a factory (ProductionUpdateInterface), because the building can't move
     // out of the factory. When we do our Starcraft port and have flying Terran
     // buildings, we'll have to change this ;-)
@@ -2923,6 +3189,12 @@ Bool Player::canBuild(const ThingTemplate *tmplate) const
 		{
 			const ProductionPrerequisite *pre = tmplate->getNthPrereq(i);
 			if (pre->isSatisfied(this) == false )
+				prereqsOK = false;
+		}
+		for (Int i_n = 0; i_n < tmplate->getNegPrereqCount(); i_n++)
+		{
+			const ProductionPrerequisite *pre = tmplate->getNthNegPrereq(i_n);
+			if (pre->isSatisfied(this) == false)
 				prereqsOK = false;
 		}
 
@@ -3101,6 +3373,40 @@ void Player::onUpgradeCompleted( const UpgradeTemplate *upgradeTemplate )
 }
 
 //=================================================================================================
+/**
+	An upgrade has just been removed, tell everyone to recheck UpgradeModules
+*/
+void Player::onUpgradeRemoved()
+{
+	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin();
+			 it != m_playerTeamPrototypes.end(); ++it)
+	{
+		for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance())
+		{
+			Team *team = iter.cur();
+			if( team == NULL )
+			{
+				continue;
+			}
+			for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance())
+			{
+				Object *obj = iterObj.cur();
+				if( obj == NULL )
+				{
+					continue;
+				}
+				// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
+
+				obj->forceRefreshUpgradeStatus();
+				obj->doObjectUpgradeChecks();
+
+				// end MEAT
+			}
+		}
+	}
+}
+
+//=================================================================================================
 /** Remove upgrade from a player */
 //=================================================================================================
 void Player::removeUpgrade( const UpgradeTemplate *upgradeTemplate )
@@ -3133,6 +3439,49 @@ void Player::removeUpgrade( const UpgradeTemplate *upgradeTemplate )
 
 }
 
+//=================================================================================================
+/** 
+	Find existing upgrades queue among a player that are currently in production and cancel them.
+*/  
+void Player::findUpgradeInQueuesAndCancelThem( const UpgradeTemplate *upgradeTemplate )
+{
+	if( hasUpgradeInProduction( upgradeTemplate ) == FALSE )
+		return;
+
+	for (PlayerTeamList::iterator it = m_playerTeamPrototypes.begin(); 
+			 it != m_playerTeamPrototypes.end(); ++it) 
+	{
+		for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance()) 
+		{
+			Team *team = iter.cur();
+			if( team == NULL ) 
+			{
+				continue;
+			}
+			for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance()) 
+			{
+				Object *obj = iterObj.cur();
+				if( obj == NULL ) 
+				{
+					continue;
+				}
+				// Dear copy-paste monkeys, the meat of this iterate-all-player-objects loop goes twixt the MEAT comments
+
+				// Don't care about dead objects
+				if ( obj->isEffectivelyDead() )
+					continue;
+
+				ProductionUpdateInterface *pui = obj->getProductionUpdateInterface();
+				if( pui )
+				{
+					pui->cancelUpgrade( upgradeTemplate );
+				}
+
+				// end MEAT
+			}
+		}
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 Bool Player::okToPlayRadarEdgeSound( void )
@@ -3241,9 +3590,9 @@ static void doPowerDisable( Object *obj, void *userData )
 	if( obj && obj->isKindOf(KINDOF_POWERED) )
 	{
 		if( disabling )
-			obj->setDisabled( DISABLED_UNDERPOWERED ); //set disabled has a pauseAllSpecialPowers that prevents double pausing
+			obj->doDisablePower(FALSE); //setDisabled( DISABLED_UNDERPOWERED ); //set disabled has a pauseAllSpecialPowers that prevents double pausing
 		else
-			obj->clearDisabled( DISABLED_UNDERPOWERED );
+			obj->clearDisablePower(FALSE); //clearDisabled( DISABLED_UNDERPOWERED );
 	}
 }
 
@@ -3509,30 +3858,51 @@ static void localApplyBattlePlanBonusesToObject( Object *obj, void *userData )
 	Object *objectToValidate = obj;
 	Object *objectToModify = obj;
 
-	DEBUG_LOG(("localApplyBattlePlanBonusesToObject() - looking at object %d (%s)",
+	/*DEBUG_LOG(("localApplyBattlePlanBonusesToObject() - looking at object %d (%s)",
 		(objectToValidate)?objectToValidate->getID():INVALID_ID,
-		(objectToValidate)?objectToValidate->getTemplate()->getName().str():"<No Object>"));
+		(objectToValidate)?objectToValidate->getTemplate()->getName().str():"<No Object>"));*/
 
 	//First check if the obj is a projectile -- if so split the
 	//object so that the producer is validated, not the projectile.
 	Bool isProjectile = obj->isKindOf( KINDOF_PROJECTILE );
-	if( isProjectile )
-	{
-		objectToValidate = TheGameLogic->findObjectByID( obj->getProducerID() );
-		DEBUG_LOG(("Object is a projectile - looking at object %d (%s) instead",
-			(objectToValidate)?objectToValidate->getID():INVALID_ID,
-			(objectToValidate)?objectToValidate->getTemplate()->getName().str():"<No Object>"));
-	}
+
+	// Note AW: Shouldn't projectiles just gain the launcher's weapon bonus anyways?
+	// This doesn't really fit with the whole BattlePlanBonusBehavior idea. And I don't think it is needed.
+
+	//if( isProjectile )
+	//{
+	//	objectToValidate = TheGameLogic->findObjectByID( obj->getProducerID() );
+	//	/*DEBUG_LOG(("Object is a projectile - looking at object %d (%s) instead",
+	//		(objectToValidate)?objectToValidate->getID():INVALID_ID,
+	//		(objectToValidate)?objectToValidate->getTemplate()->getName().str():"<No Object>"));*/
+	//}
 	if( objectToValidate && objectToValidate->isAnyKindOf( bonus->m_validKindOf ) )
 	{
-		DEBUG_LOG(("Is valid kindof"));
+		//DEBUG_LOG(("Is valid kindof"));
 		if( !objectToValidate->isAnyKindOf( bonus->m_invalidKindOf ) )
 		{
-			DEBUG_LOG(("Is not invalid kindof"));
+			//DEBUG_LOG(("Is not invalid kindof"));
 			//Quite the trek eh? Now we can apply the bonuses!
-			if( !isProjectile )
+
+			if (!isProjectile)
 			{
-				DEBUG_LOG(("Is not projectile.  Armor scalar is %g", bonus->m_armorScalar));
+				// ------------------------
+				// Check Modules
+				for (BehaviorModule** b = objectToModify->getBehaviorModules(); *b; ++b)
+				{
+					BattlePlanBonusBehaviorInterface* bpbi = (*b)->getBattlePlanBonusBehaviorInterface();
+					if (bpbi) {
+						bpbi->applyBonus(bonus);
+						if (bpbi->isOverrideGlobalBonus()) {
+							DEBUG_LOG(("### PLAYER localApplyBattlePlanBonusesToObject  - OVERRIDE!"));
+							return;
+						}
+					}
+				}
+
+				// ------------------------
+
+				//DEBUG_LOG(("Is not projectile.  Armor scalar is %g", bonus->m_armorScalar));
 				//Really important to not apply certain bonuses like health augmentation to projectiles!
 				if( bonus->m_armorScalar != 1.0f )
 				{
@@ -3542,7 +3912,7 @@ static void localApplyBattlePlanBonusesToObject( Object *obj, void *userData )
 						bonus->m_armorScalar, AS_INT(bonus->m_armorScalar), objectToModify->getID(),
 						objectToModify->getTemplate()->getDisplayName().str(),
 						objectToModify->getControllingPlayer()->getPlayerIndex()));
-					DEBUG_LOG(("After apply, armor scalar is %g", body->getDamageScalar()));
+					//DEBUG_LOG(("After apply, armor scalar is %g", body->getDamageScalar()));
 				}
 				if( bonus->m_sightRangeScalar != 1.0f )
 				{
@@ -3597,9 +3967,18 @@ void Player::removeBattlePlanBonusesForObject( Object *obj ) const
 	*bonus = *m_battlePlanBonuses;
 	bonus->m_armorScalar					= 1.0f / __max( bonus->m_armorScalar, 0.01f );
 	bonus->m_sightRangeScalar			= 1.0f / __max( bonus->m_sightRangeScalar, 0.01f );
-	bonus->m_bombardment					= -ALL_PLANS; //Safe to remove as it clears the weapon bonus flag
-	bonus->m_searchAndDestroy			= -ALL_PLANS; //Safe to remove as it clears the weapon bonus flag
-	bonus->m_holdTheLine					= -ALL_PLANS; //Safe to remove as it clears the weapon bonus flag
+
+	//bonus->m_bombardment					= -ALL_PLANS; //Safe to remove as it clears the weapon bonus flag
+	//bonus->m_searchAndDestroy			= -ALL_PLANS; //Safe to remove as it clears the weapon bonus flag
+	//bonus->m_holdTheLine					= -ALL_PLANS; //Safe to remove as it clears the weapon bonus flag
+
+  // Update AW: We need use these variables now to track which plan should be added/removed
+	if (bonus->m_bombardment > 0)
+		bonus->m_bombardment = -1;
+	if (bonus->m_searchAndDestroy > 0)
+		bonus->m_searchAndDestroy = -1;
+	if (bonus->m_holdTheLine > 0)
+		bonus->m_holdTheLine = -1;
 
 	DUMPBATTLEPLANBONUSES(bonus, this, obj);
 	localApplyBattlePlanBonusesToObject( obj, bonus );
@@ -3809,25 +4188,40 @@ void Player::addAIGroupToCurrentSelection(AIGroup *group) {
 //-------------------------------------------------------------------------------------------------
 /** addTypeOfProductionCostChange adds a production change to the typeof list */
 //-------------------------------------------------------------------------------------------------
-void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent )
+void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent,
+	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
+	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
 {
-	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionChangeList.begin();
-	while(it != m_kindOfPercentProductionChangeList.end())
-	{
+	// Possible cases:
+	// 1. Default behavior: No stacking of bonus with SAME perecentage
+	// 2. Stack with bonus from OTHER templates but SAME percentage
+	//   - Keep separate entries for each templateID
+	// 3. Stack with bonus from SAME template and SAME percentage
+	//   - Keep separate entry for each Object (need to track ObjectID)
+	//   - Don't track Object, just track that we can stack, then just remove first matching entry that can stack
 
-		KindOfPercentProductionChange *tof = *it;
-		if( tof->m_percent == percent && tof->m_kindOf == kindOf)
+	if (!stackWithAny) { // We always stack, no need to check
+
+		KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionChangeList.begin();
+		while (it != m_kindOfPercentProductionChangeList.end())
 		{
-			tof->m_ref++;
-			return;
+			KindOfPercentProductionChange* tof = *it;
+			if (tof->m_percent == percent && tof->m_kindOf == kindOf &&
+				(!stackUniqueType || (tof->m_templateID == sourceTemplateID && tof->m_templateID != INVALID_ID)))
+			{
+				tof->m_ref++;
+				return;
+			}
+			++it;
 		}
-		++it;
-	}
+	}	
 
 	KindOfPercentProductionChange *newTof = newInstance( KindOfPercentProductionChange );
 	newTof->m_kindOf = kindOf;
 	newTof->m_percent = percent;
 	newTof->m_ref = 1;
+	newTof->m_stackWithAny = stackWithAny;
+	newTof->m_templateID = sourceTemplateID;
 	m_kindOfPercentProductionChangeList.push_back(newTof);
 
 }
@@ -3835,20 +4229,28 @@ void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent 
 //-------------------------------------------------------------------------------------------------
 /** addTypeOfProductionCostChange adds a production change to the typeof list */
 //-------------------------------------------------------------------------------------------------
-void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent )
+void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent,
+	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
+	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
 {
 	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionChangeList.begin();
 	while(it != m_kindOfPercentProductionChangeList.end())
 	{
 
 		KindOfPercentProductionChange* tof = *it;
-		if( tof->m_percent == percent && tof->m_kindOf == kindOf)
+		if( tof->m_percent == percent && tof->m_kindOf == kindOf &&
+			(!stackWithAny || tof->m_stackWithAny) &&
+			(!stackUniqueType || tof->m_templateID == sourceTemplateID)
+			)
 		{
 			tof->m_ref--;
 			if(tof->m_ref == 0)
 			{
 				m_kindOfPercentProductionChangeList.erase( it );
 				deleteInstance(tof);
+			}
+			else if (stackWithAny) {
+				DEBUG_CRASH(("KindOfProductionCost: StackWithAny should never have count > 1.\n"));
 			}
 			return;
 		}
@@ -3869,6 +4271,93 @@ Real Player::getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const
 
 		KindOfPercentProductionChange *tof = *it;
 		if(TEST_KINDOFMASK_MULTI(kindOf, tof->m_kindOf, KINDOFMASK_NONE))
+		{
+			start *= (1 + tof->m_percent);
+		}
+		++it;
+	}
+	return (start);
+}
+
+//-------------------------------------------------------------------------------------------------
+/** addKindOfProductionTimeChange adds a production change to the typeof list */
+//-------------------------------------------------------------------------------------------------
+void Player::addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
+	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
+	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
+{
+	if (!stackWithAny) { // We always stack, no need to check
+
+		KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionTimeChangeList.begin();
+		while (it != m_kindOfPercentProductionTimeChangeList.end())
+		{
+			KindOfPercentProductionChange* tof = *it;
+			if (tof->m_percent == percent && tof->m_kindOf == kindOf &&
+				(!stackUniqueType || (tof->m_templateID == sourceTemplateID && tof->m_templateID != INVALID_ID)))
+			{
+				tof->m_ref++;
+				return;
+			}
+			++it;
+		}
+	}
+
+	KindOfPercentProductionChange* newTof = newInstance(KindOfPercentProductionChange);
+	newTof->m_kindOf = kindOf;
+	newTof->m_percent = percent;
+	newTof->m_ref = 1;
+	newTof->m_stackWithAny = stackWithAny;
+	newTof->m_templateID = sourceTemplateID;
+	m_kindOfPercentProductionTimeChangeList.push_back(newTof);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+/** removeKindOfProductionTimeChange adds a production change to the typeof list */
+//-------------------------------------------------------------------------------------------------
+void Player::removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
+	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
+	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
+{
+	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionTimeChangeList.begin();
+	while (it != m_kindOfPercentProductionTimeChangeList.end())
+	{
+
+		KindOfPercentProductionChange* tof = *it;
+		if (tof->m_percent == percent && tof->m_kindOf == kindOf &&
+			(!stackWithAny || tof->m_stackWithAny) &&
+			(!stackUniqueType || tof->m_templateID == sourceTemplateID)
+			)
+		{
+			tof->m_ref--;
+			if (tof->m_ref == 0)
+			{
+				m_kindOfPercentProductionTimeChangeList.erase(it);
+				if (tof)
+					deleteInstance(tof);
+			}
+			else if (stackWithAny) {
+				DEBUG_CRASH(("KindOfProductionTime: StackWithAny should never have count > 1.\n"));
+			}
+			return;
+		}
+		++it;
+	}
+	DEBUG_ASSERTCRASH(FALSE, ("removeKindOfProductionTimeChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.", kindOf, percent));
+}
+
+//-------------------------------------------------------------------------------------------------
+/** getProductionTimeChangeBasedOnKindOf gets the time percentage change based off of Kindof Mask */
+//-------------------------------------------------------------------------------------------------
+Real Player::getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const
+{
+	Real start = 1.0f;
+	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionTimeChangeList.begin();
+	while (it != m_kindOfPercentProductionTimeChangeList.end())
+	{
+
+		KindOfPercentProductionChange* tof = *it;
+		if (TEST_KINDOFMASK_MULTI(kindOf, tof->m_kindOf, KINDOFMASK_NONE))
 		{
 			start *= (1 + tof->m_percent);
 		}
@@ -4343,7 +4832,7 @@ void Player::xfer( Xfer *xfer )
 	// score keeper
 	xfer->xferSnapshot( &m_scoreKeeper );
 
-	// size of and data for kindof percent production change list
+	// size of and data for kindof percent production COST change list
 	UnsignedShort percentProductionChangeCount = m_kindOfPercentProductionChangeList.size();
 	xfer->xferUnsignedShort( &percentProductionChangeCount );
 	KindOfPercentProductionChange *entry;
@@ -4402,6 +4891,66 @@ void Player::xfer( Xfer *xfer )
 		}
 
 	}
+
+	// size of and data for kindof percent production TIME change list
+	UnsignedShort percentProductionTimeChangeCount = m_kindOfPercentProductionTimeChangeList.size();
+	xfer->xferUnsignedShort(&percentProductionTimeChangeCount);
+	entry = NULL;
+	if (xfer->getXferMode() == XFER_SAVE)
+	{
+		KindOfPercentProductionChangeListIt it;
+
+		// save each item
+		for (it = m_kindOfPercentProductionTimeChangeList.begin();
+			it != m_kindOfPercentProductionTimeChangeList.end();
+			++it)
+		{
+
+			// get entry data
+			entry = *it;
+
+			// kind of mask type
+			entry->m_kindOf.xfer(xfer);
+
+			// percent
+			xfer->xferReal(&entry->m_percent);
+
+			// ref
+			xfer->xferUnsignedInt(&entry->m_ref);
+
+		}  // end for
+
+	}  // end if, save
+	else
+	{
+
+		// sanity, list must be empty right now
+		if (m_kindOfPercentProductionTimeChangeList.size() != 0)
+		{
+
+			DEBUG_CRASH(("Player::xfer - m_kindOfPercentProductionTimeChangeList should be empty but is not\n"));
+			throw SC_INVALID_DATA;
+
+		}  // end if
+
+		// read each entry
+		for (UnsignedInt i = 0; i < percentProductionTimeChangeCount; ++i)
+		{
+
+			// allocate new entry
+			entry = newInstance(KindOfPercentProductionChange);
+
+			// read data
+			entry->m_kindOf.xfer(xfer);
+			xfer->xferReal(&entry->m_percent);
+			xfer->xferUnsignedInt(&entry->m_ref);
+
+			// put at end of list
+			m_kindOfPercentProductionTimeChangeList.push_back(entry);
+
+		}  // end for i
+
+	}  // end else, load
 
 
 
@@ -4528,6 +5077,79 @@ void Player::xfer( Xfer *xfer )
 	}
 	else
 		m_unitsShouldHunt = FALSE;
+
+	xfer->xferBool( &m_unitsMoveInFormation );
+
+	// -------------------------
+	// Xfer ProductionCostChangeMap
+	// -------------------------
+	{
+		UnsignedShort entriesCount = m_productionCostChanges.size();
+		xfer->xferUnsignedShort(&entriesCount);
+		ProductionChangeMap::iterator it;
+		if (xfer->getXferMode() == XFER_SAVE)
+		{
+			// iterate each prototype and xfer if it needs to be in the save file
+			for (it = m_productionCostChanges.begin(); it != m_productionCostChanges.end(); ++it)
+			{
+				AsciiString templateName = KEYNAME((*it).first);
+				xfer->xferAsciiString(&templateName);
+				xfer->xferReal(&((*it).second));
+			}  //end for, it
+
+		}  // end if, saving
+		else
+		{
+			for (UnsignedShort i = 0; i < entriesCount; ++i)
+			{
+				AsciiString templateName;
+				Real bonusPercent;
+
+				xfer->xferAsciiString(&templateName);
+				xfer->xferReal(&bonusPercent);
+
+				m_productionCostChanges[NAMEKEY(templateName)] = bonusPercent;
+
+			}  // end for, i
+
+		}  // end else, loading
+	}
+	//------------------------
+	// Xfer ProductionTimeChangeMap
+	// -------------------------
+	{
+		UnsignedShort entriesCount = m_productionTimeChanges.size();
+		xfer->xferUnsignedShort(&entriesCount);
+		ProductionChangeMap::iterator it;
+		if (xfer->getXferMode() == XFER_SAVE)
+		{
+			// iterate each prototype and xfer if it needs to be in the save file
+			for (it = m_productionTimeChanges.begin(); it != m_productionTimeChanges.end(); ++it)
+			{
+				AsciiString templateName = KEYNAME((*it).first);
+				xfer->xferAsciiString(&templateName);
+				xfer->xferReal(&((*it).second));
+			}  //end for, it
+
+		}  // end if, saving
+		else
+		{
+			for (UnsignedShort i = 0; i < entriesCount; ++i)
+			{
+				AsciiString templateName;
+				Real bonusPercent;
+
+				xfer->xferAsciiString(&templateName);
+				xfer->xferReal(&bonusPercent);
+
+				m_productionTimeChanges[NAMEKEY(templateName)] = bonusPercent;
+
+			}  // end for, i
+
+		}  // end else, loading
+	}
+	//------------------------
+
 
 }
 

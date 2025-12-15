@@ -713,7 +713,7 @@ StateReturnType DozerActionDoActionState::update( void )
 												LOGICFRAMES_PER_SECOND;
 
 					// try to give it a little bit-o-health
-					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2) )//this frame and the next
+					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2, dozerAI->getRepairClearsParasite(), dozerAI->getRepairClearsParasiteKeys() ) )//this frame and the next
 					{
 						// goalObject->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
 						// This bit used to be set way back in DozerAIUpdate::privateRepair(), but it has been outmoded
@@ -1411,6 +1411,8 @@ DozerAIUpdateModuleData::DozerAIUpdateModuleData( void )
 {
 
 	m_repairHealthPercentPerSecond = 0.0f;
+	m_repairClearsParasite = TRUE;
+	m_repairClearsParasiteKeys.clear();
 	m_boredTime = 0.0f;
 	m_boredRange = 0.0f;
 
@@ -1424,6 +1426,8 @@ void DozerAIUpdateModuleData::buildFieldParse( MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	NULL, offsetof( DozerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+		{ "RepairClearsParasite",			INI::parseBool,	NULL, offsetof( DozerAIUpdateModuleData, m_repairClearsParasite ) },
+		{ "RepairClearsParasiteKeys", 		INI::parseAsciiStringVector, NULL, offsetof( DozerAIUpdateModuleData, m_repairClearsParasiteKeys ) },
 		{ "BoredTime",										INI::parseDurationReal,		NULL, offsetof( DozerAIUpdateModuleData, m_boredTime ) },
 		{ "BoredRange",										INI::parseReal,						NULL, offsetof( DozerAIUpdateModuleData, m_boredRange ) },
 		{ 0, 0, 0, 0 }
@@ -1560,6 +1564,7 @@ void DozerAIUpdate::removeBridgeScaffolding( Object *bridgeTower )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime DozerAIUpdate::update( void )
 {
+	/// IamInnocent - Made Sleepy
 
 	//
 	// NOTE: Any changes to DozerAIUpdate::* you probably want to reflect and copy into
@@ -1586,7 +1591,8 @@ UpdateSleepTime DozerAIUpdate::update( void )
 	// do nothing if we're dead
 	///@todo shouldn't this be at a higher level?
 	if( getObject()->isEffectivelyDead() )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// get and validate our current task
 	DozerTask currentTask = getCurrentTask();
@@ -1612,9 +1618,12 @@ UpdateSleepTime DozerAIUpdate::update( void )
 		getObject()->setWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL);//maybe go clear some mines, if I feel like it
 
 	// run our own state machine
-	m_dozerMachine->updateStateMachine();
+	StateReturnType stRet = m_dozerMachine->updateStateMachine();
 
-	return UPDATE_SLEEP_NONE;
+	UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	return (mine < result) ? mine : result;
+	//return UPDATE_SLEEP_NONE;
 
 }
 
@@ -2311,6 +2320,16 @@ const Coord3D* DozerAIUpdate::getDockPoint( DozerTask task, DozerDockPoint point
 Real DozerAIUpdate::getRepairHealthPerSecond( void ) const
 {
 	return getDozerAIUpdateModuleData()->m_repairHealthPercentPerSecond;
+}
+// ------------------------------------------------------------------------------------------------
+Bool DozerAIUpdate::getRepairClearsParasite( void ) const
+{
+	return getDozerAIUpdateModuleData()->m_repairClearsParasite;
+}
+// ------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& DozerAIUpdate::getRepairClearsParasiteKeys( void ) const
+{
+	return getDozerAIUpdateModuleData()->m_repairClearsParasiteKeys;
 }
 // ------------------------------------------------------------------------------------------------
 Real DozerAIUpdate::getBoredTime( void ) const

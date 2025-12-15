@@ -70,6 +70,22 @@ BattleBusSlowDeathBehaviorModuleData::BattleBusSlowDeathBehaviorModuleData( void
 	m_percentDamageToPassengers = 0.0f;
 	m_emptyHulkDestructionDelay = 0;
 
+	m_percentDamageToPassengersScale = FALSE;
+	m_percentDamageToPassengersScaleRatio = 1.0f;;
+
+	m_sleepsafteramountofdeaths = 0;
+	m_modelswitchafteramountofdeaths = 0;
+	m_triggerfxafteramountofdeaths = 0;
+	m_triggeroclafteramountofdeaths = 0;
+	m_throwForceafteramountofdeaths = 0;
+	m_damageToPassengerafteramountofdeaths = 0;
+	m_noPassengersAmountOfDeathTrigger = 2;
+
+	m_multipleLivesfxStartUndeathList.clear();
+	m_multipleLivesoclStartUndeathList.clear();
+	m_multipleLivesfxHitGroundList.clear();
+	m_multipleLivesoclHitGroundList.clear();
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -91,6 +107,26 @@ BattleBusSlowDeathBehaviorModuleData::BattleBusSlowDeathBehaviorModuleData( void
 		{ "PercentDamageToPassengers", INI::parsePercentToReal, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengers ) },
 		{ "EmptyHulkDestructionDelay", INI::parseDurationUnsignedInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_emptyHulkDestructionDelay ) },
 
+		{ "PercentDamageToPassengersScales", INI::parseBool, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengersScale ) },
+		{ "PercentDamageToPassengersScaleRatio", INI::parsePercentToReal, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengersScaleRatio ) },
+
+		{ "SleepsAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_sleepsafteramountofdeaths ) },
+		{ "ModelConditionSwitchAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_modelswitchafteramountofdeaths ) },
+		{ "TriggerFXAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_triggerfxafteramountofdeaths ) },
+		{ "TriggerOCLAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_triggeroclafteramountofdeaths ) },
+		{ "ThrowForceAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_throwForceafteramountofdeaths ) },
+		{ "PercentDamageToPassengersAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_damageToPassengerafteramountofdeaths ) },
+
+//		Unlike UndeadBody Module, the Trigger FX/OCL considers the FX/OCL closest to the Death Amount instead of required to re-declare it everytime.
+//		Example if the Trigger Amount is: 9 3 6 7 1. If your Death Amount is 5. You would Trigger the Condition at '3', as it is less than 5 while being closest to 5.
+		{ "FXStartUndeathAmountDeathsOverride", parseFXIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesfxStartUndeathList) }, 
+		{ "OCLStartUndeathAmountDeathsOverride", parseOCLIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesoclStartUndeathList) }, 
+		
+		{ "FXHitGroundAmountDeathsOverride", parseFXIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesfxHitGroundList) }, 
+		{ "OCLHitGroundAmountDeathsOverride", parseOCLIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesoclHitGroundList) }, 
+
+		{ "DeathOnNoPassengersAmountOfDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_noPassengersAmountOfDeathTrigger ) },
+		
 		{ 0, 0, 0, 0 }
 
 	};
@@ -98,6 +134,28 @@ BattleBusSlowDeathBehaviorModuleData::BattleBusSlowDeathBehaviorModuleData( void
   p.add( dataFieldParse );
 
 }
+
+void BattleBusSlowDeathBehaviorModuleData::parseOCLIntPair( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	IntOCL up;
+
+	INI::parseInt(ini, NULL, &up.m_deathTrigger, NULL);
+	INI::parseObjectCreationList(ini, NULL, &up.m_deathocl, NULL);
+
+	std::vector<IntOCL>* s = (std::vector<IntOCL>*)store;
+	s->push_back(up);
+} 
+
+void BattleBusSlowDeathBehaviorModuleData::parseFXIntPair( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	IntFX up;
+
+	INI::parseInt(ini, NULL, &up.m_deathTrigger, NULL);
+	INI::parseFXList(ini, NULL, &up.m_deathfx, NULL);
+
+	std::vector<IntFX>* s = (std::vector<IntFX>*)store;
+	s->push_back(up);
+} 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,8 +169,10 @@ BattleBusSlowDeathBehavior::BattleBusSlowDeathBehavior( Thing *thing, const Modu
 
 	m_isRealDeath = FALSE;
 	m_isInFirstDeath = FALSE;
+	m_checkNoDestructionHulk = FALSE;
 	m_groundCheckFrame = 0;
 	m_penaltyDeathFrame = 0;
+	m_amountofDeaths = 0;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -128,6 +188,7 @@ void BattleBusSlowDeathBehavior::onDie( const DamageInfo *damageInfo )
 {
 	m_isRealDeath = TRUE;// Set beforehand because onDie could result in picking us to beginSlowDeath
 	m_isInFirstDeath = FALSE; // and clear this incase we died while in the alternate death
+	m_checkNoDestructionHulk = FALSE;
 
 	SlowDeathBehavior::onDie(damageInfo);
 }
@@ -144,17 +205,21 @@ void BattleBusSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 		m_isInFirstDeath = TRUE;
 		m_groundCheckFrame = TheGameLogic->getFrame() + GROUND_CHECK_DELAY;
 
-		// First do the special effects
-		FXList::doFXObj(data->m_fxStartUndeath, me );
-		ObjectCreationList::create(data->m_oclStartUndeath, me, NULL );
+		// Check for the amount of deaths this unit encounters. Considered the time it dies during Second Life as the first Death, and every Trigger Condition 
+		// does not account for death amount to trigger, (0). Setting any condition to Trigger at Multiple Lives requires the Death Amount to be at least 2 lives.
+		m_amountofDeaths++;
 
-		if( me->getAI() )
+		// First do the special effects
+		if(data->m_triggerfxafteramountofdeaths<=m_amountofDeaths) FXList::doFXObj(findFX(1, m_amountofDeaths), me );
+		if(data->m_triggeroclafteramountofdeaths<=m_amountofDeaths) ObjectCreationList::create(findOCL(1, m_amountofDeaths), me, NULL );
+
+		if( me->getAI() && data->m_sleepsafteramountofdeaths <= m_amountofDeaths)
 		{
 			// Then stop what we were doing
 			me->getAI()->aiIdle(CMD_FROM_AI);
 		}
 
-		if( me->getPhysics() )
+		if( me->getPhysics() && data->m_throwForceafteramountofdeaths <= m_amountofDeaths)
 		{
 			// Then stop physically
 			me->getPhysics()->clearAcceleration();
@@ -170,9 +235,16 @@ void BattleBusSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 		}
 
 		// And finally hit those inside for some damage
-		if( me->getContain() )
-			me->getContain()->processDamageToContained(data->m_percentDamageToPassengers);
-
+		if( me->getContain() && data->m_damageToPassengerafteramountofdeaths <= m_amountofDeaths) {
+			Real damageratio = data->m_percentDamageToPassengersScaleRatio;
+			if(data->m_percentDamageToPassengersScale) {
+				damageratio = pow(damageratio, m_amountofDeaths);
+			} else {
+				damageratio = 1.0f;
+			}
+			me->getContain()->processDamageToContained(data->m_percentDamageToPassengers*damageratio);
+		}
+		
 		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 	}
 	else
@@ -181,69 +253,89 @@ void BattleBusSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 		SlowDeathBehavior::beginSlowDeath( damageInfo );
 	}
 
+	// Since PhysicsBehavior is now used to check for hitting ground, need to stop module from updating after its multiple lives to prevent it from killing itself
+	m_checkNoDestructionHulk = FALSE;
+
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 {
+	if(m_checkNoDestructionHulk)
+		return UPDATE_SLEEP_FOREVER;
+	
 	Object *me = getObject();
 	const BattleBusSlowDeathBehaviorModuleData * data = getBattleBusSlowDeathBehaviorModuleData();
-	if( m_isInFirstDeath )
+	const ContainModuleInterface *contain = me->getContain();
+
+	Bool notContained = FALSE;
+	if( data->m_noPassengersAmountOfDeathTrigger <= m_amountofDeaths && ( contain == NULL || contain->getContainCount() == 0 ) )
+	{
+		notContained = TRUE;
+	}
+
+	if( m_isInFirstDeath && !notContained )
 	{
 		// First death means we are doing our throw up in the air conversion
 
 		if( (m_groundCheckFrame< TheGameLogic->getFrame() )  &&  !me->isAboveTerrain() )
 		{
+			// Do the special FX
+			if(data->m_triggerfxafteramountofdeaths<=m_amountofDeaths)FXList::doFXObj(findFX(2, m_amountofDeaths), me );
+			if(data->m_triggeroclafteramountofdeaths<=m_amountofDeaths)ObjectCreationList::create(findOCL(2, m_amountofDeaths), me, NULL );
+			if(data->m_modelswitchafteramountofdeaths <= m_amountofDeaths)me->setModelConditionState(MODELCONDITION_SECOND_LIFE);
+
 			// We're done since we hit the ground
 			m_isInFirstDeath = FALSE;
-
-			// Do the special FX
-			FXList::doFXObj(data->m_fxHitGround, me );
-			ObjectCreationList::create(data->m_oclHitGround, me, NULL );
-			me->setModelConditionState(MODELCONDITION_SECOND_LIFE);
-
-			// And stop us forever
-			if( me->getAI() )
+			
+			if(data->m_sleepsafteramountofdeaths <= m_amountofDeaths)
 			{
-				// Stop doing anything again (could try to move while in air)
-				me->getAI()->aiIdle(CMD_FROM_AI);
-			}
-			if( me->getPhysics() )
-			{
-				// And stop physically again
-				me->getPhysics()->clearAcceleration();
-				me->getPhysics()->scrubVelocity2D(0);
-			}
-			me->setDisabled(DISABLED_HELD);
+				// And stop us forever
+				if( me->getAI() )
+				{
+					// Stop doing anything again (could try to move while in air)
+					me->getAI()->aiIdle(CMD_FROM_AI);
+				}
+				if( me->getPhysics() )
+				{
+					// And stop physically again
+					me->getPhysics()->clearAcceleration();
+					me->getPhysics()->scrubVelocity2D(0);
+				}
+				me->setDisabled(DISABLED_HELD);
 
-			// We can only sleep if we don't have to watch out for being empty.
-			if( data->m_emptyHulkDestructionDelay == 0 )
-				return UPDATE_SLEEP_FOREVER;
-			else
-				return UPDATE_SLEEP_NONE; // None, so we check for empty as soon as possible
+				// We can only sleep if we don't have to watch out for being empty.
+				//if( data->m_emptyHulkDestructionDelay == 0 )
+				//	return UPDATE_SLEEP_FOREVER;
+				//else
+				//	return UPDATE_SLEEP_NONE; // None, so we check for empty as soon as possible
+
+				// Since PhysicsBehavior is now used to check for hitting ground, need to stop module from updating after its multiple lives to prevent it from killing itself
+				if( data->m_emptyHulkDestructionDelay == 0 )
+					m_checkNoDestructionHulk = TRUE;
+			}
 		}
-		return UPDATE_SLEEP_NONE;// None, since we are waiting to be able to check for ground collision
+		return UPDATE_SLEEP_FOREVER; // Physics now check for Slow Death Update everytime when it hits the ground
+		//return UPDATE_SLEEP_NONE;// None, since we are waiting to be able to check for ground collision
 	}
 	else if( m_isRealDeath )
 	{
 		// If a real death, we aren't allowed to do anything
-
 		return SlowDeathBehavior::update();
 	}
 	else
 	{
 		// If neither death is active, we must be awake to check for emptiness
-
-		const ContainModuleInterface *contain = me->getContain();
+		
 		// Safety, no need to be awake if no special case to wait for
-		if( contain == NULL )
+		if( contain == NULL && notContained )
 			return UPDATE_SLEEP_FOREVER;
 
 		if( m_penaltyDeathFrame != 0 )
 		{
 			// We have been timed for death, see if we have re-filled first
-			if( contain->getContainCount() > 0 )
+			if( contain->getContainCount() > 0 || !notContained )
 			{
 				m_penaltyDeathFrame = 0;
 				return UPDATE_SLEEP(EMPTY_HULK_CHECK_DELAY);
@@ -263,7 +355,7 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 		else
 		{
 			// We are not marked for death, so see if we should be
-			if( contain->getContainCount() == 0 )
+			if( contain->getContainCount() == 0 && notContained )
 			{
 				m_penaltyDeathFrame = TheGameLogic->getFrame() + data->m_emptyHulkDestructionDelay;
 			}
@@ -307,6 +399,10 @@ void BattleBusSlowDeathBehavior::xfer( Xfer *xfer )
 
 	xfer->xferUnsignedInt( &m_penaltyDeathFrame );
 
+	xfer->xferInt( &m_amountofDeaths );
+
+	xfer->xferBool( &m_checkNoDestructionHulk );
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -318,4 +414,146 @@ void BattleBusSlowDeathBehavior::loadPostProcess( void )
 	// extend base class
 	SlowDeathBehavior::loadPostProcess();
 
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+const FXList* BattleBusSlowDeathBehavior::findFX(int type, int amountofDeaths) const
+{
+	const BattleBusSlowDeathBehaviorModuleData * data = getBattleBusSlowDeathBehaviorModuleData();
+
+	// The magic code that makes the triggering condition considers the OCL closests to the amount of deaths instead of requiring to redeclare everytime.
+	int 							triggeringInt = 0;
+	const FXList*					triggeringfx;
+	// If we want to get fxStartUndeath
+	if(type == 1)
+	{
+		if(amountofDeaths>0 && !data->m_multipleLivesfxStartUndeathList.empty())
+		{
+			for (std::vector<BattleBusSlowDeathBehaviorModuleData::IntFX>::const_iterator it = data->m_multipleLivesfxStartUndeathList.begin(); 
+						it != data->m_multipleLivesfxStartUndeathList.end();
+						++it)
+			{
+				if ((it->m_deathTrigger) > amountofDeaths)
+				{
+					continue;
+				}
+				else if ((it->m_deathTrigger) == amountofDeaths)
+				{
+					return it->m_deathfx;
+				}
+				else if(triggeringInt < (it->m_deathTrigger) && (it->m_deathTrigger) < amountofDeaths)
+				{
+					triggeringInt = it->m_deathTrigger;
+					triggeringfx  = it->m_deathfx;
+				}
+			}
+			if(triggeringInt > 0)
+				return triggeringfx;
+		}
+		return data->m_fxStartUndeath;
+	} 
+	// If we want to get fxHitGround
+	else if (type == 2)
+	{
+		if(amountofDeaths>0 && !data->m_multipleLivesfxHitGroundList.empty())
+		{
+			for (std::vector<BattleBusSlowDeathBehaviorModuleData::IntFX>::const_iterator it = data->m_multipleLivesfxHitGroundList.begin(); 
+						it != data->m_multipleLivesfxHitGroundList.end();
+						++it)
+			{
+				if ((it->m_deathTrigger) > amountofDeaths)
+				{
+					continue;
+				}
+				else if ((it->m_deathTrigger) == amountofDeaths)
+				{
+					return it->m_deathfx;
+				}
+				else if(triggeringInt < (it->m_deathTrigger) && (it->m_deathTrigger) < amountofDeaths)
+				{
+					triggeringInt = it->m_deathTrigger;
+					triggeringfx  = it->m_deathfx;
+				}
+			}
+			if(triggeringInt > 0)
+				return triggeringfx;
+		}
+		return data->m_fxHitGround;
+	}
+	else
+	{
+		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findFX. Object: %s, FXType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName(), type, amountofDeaths));
+	}
+	return NULL;
+}
+
+const ObjectCreationList* BattleBusSlowDeathBehavior::findOCL(int type, int amountofDeaths) const
+{
+	const BattleBusSlowDeathBehaviorModuleData * data = getBattleBusSlowDeathBehaviorModuleData();
+
+	// The magic code that makes the triggering condition considers the OCL closests to the amount of deaths instead of requiring to redeclare everytime.
+	int 							triggeringInt = 0;
+	const ObjectCreationList*		triggeringocl;
+	// If we want to get oclStartUndeath
+	if(type == 1)
+	{
+		if(amountofDeaths>0 && !data->m_multipleLivesoclStartUndeathList.empty())
+		{
+			for (std::vector<BattleBusSlowDeathBehaviorModuleData::IntOCL>::const_iterator it = data->m_multipleLivesoclStartUndeathList.begin(); 
+						it != data->m_multipleLivesoclStartUndeathList.end();
+						++it)
+			{
+				if ((it->m_deathTrigger) > amountofDeaths)
+				{
+					continue;
+				}
+				else if ((it->m_deathTrigger) == amountofDeaths)
+				{
+					return it->m_deathocl;
+				}
+				else if(triggeringInt < (it->m_deathTrigger) && (it->m_deathTrigger) < amountofDeaths)
+				{
+					triggeringInt = it->m_deathTrigger;
+					triggeringocl  = it->m_deathocl;
+				}
+			}
+			if(triggeringInt > 0)
+				return triggeringocl;
+		}
+		return data->m_oclStartUndeath;
+	} 
+	// If we want to get oclHitGround
+	else if (type == 2)
+	{
+		if(amountofDeaths>0 && !data->m_multipleLivesoclHitGroundList.empty())
+		{
+			for (std::vector<BattleBusSlowDeathBehaviorModuleData::IntOCL>::const_iterator it = data->m_multipleLivesoclHitGroundList.begin(); 
+						it != data->m_multipleLivesoclHitGroundList.end();
+						++it)
+			{
+				if ((it->m_deathTrigger) > amountofDeaths)
+				{
+					continue;
+				}
+				else if ((it->m_deathTrigger) == amountofDeaths)
+				{
+					return it->m_deathocl;
+				}
+				else if(triggeringInt < (it->m_deathTrigger) && (it->m_deathTrigger) < amountofDeaths)
+				{
+					triggeringInt = it->m_deathTrigger;
+					triggeringocl  = it->m_deathocl;
+				}
+			}
+			if(triggeringInt > 0)
+				return triggeringocl;
+		}
+		return data->m_oclHitGround;
+	}
+	else
+	{
+		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findOCL. Object: %s, OCLType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName(), type, amountofDeaths));
+	}
+	return NULL;
 }

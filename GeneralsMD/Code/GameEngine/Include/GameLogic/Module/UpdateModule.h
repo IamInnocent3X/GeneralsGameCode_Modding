@@ -45,6 +45,7 @@ class ProjectileUpdateInterface;
 class AIUpdateInterface;		///< @todo Clean up this nasty hack (MSB)
 class ExitInterface;
 class DockUpdateInterface;
+class RepairDockUpdateInterface;
 class RailedTransportDockUpdateInterface;
 class SpecialPowerUpdateInterface;
 class SlavedUpdateInterface;
@@ -97,6 +98,9 @@ public:
 	virtual UpdateSleepTime update() = 0;
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const = 0;
+
+	virtual void doRemovedFrom() = 0;
+	virtual void refreshUpdate() = 0;
 
 #ifdef DIRECT_UPDATEMODULE_ACCESS
 	// these aren't in the interface; they are in the implementation,
@@ -171,6 +175,9 @@ public:
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update() = 0;
+	
+	virtual void doRemovedFrom() { }
+	virtual void refreshUpdate() { }
 
 	DisabledMaskType getDisabledTypesToProcess() const
 	{
@@ -252,6 +259,9 @@ public:
 	virtual void onSlaverDie( const DamageInfo *info ) = 0;
 	virtual void onSlaverDamage( const DamageInfo *info ) = 0;
 	virtual	Bool isSelfTasking() const = 0;
+	virtual void informMySlaverSelfInfo() = 0;
+	virtual void informMySlaverSelfTasking(Bool set) = 0;
+	virtual void friend_refreshUpdate() = 0;
 
 };
 
@@ -259,13 +269,18 @@ public:
 class ProjectileUpdateInterface
 {
 public:
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride) = 0;						///< launch the projectile at the given victim
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL ) = 0;						///< launch the projectile at the given victim
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) = 0;
 	virtual Bool projectileIsArmed() const = 0;													///< return true if the projectile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const = 0;								///< All projectiles need to keep track of their firer
 	virtual Bool projectileHandleCollision(Object *other) = 0;
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) = 0; ///< Number of frames till missile diverts to countermeasures.
-	virtual void projectileNowJammed() = 0;
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) = 0; ///< Number of frames till missile diverts to countermeasures.
+	virtual void projectileNowJammed(Bool noDamage = FALSE) = 0;
+	virtual void projectileNowDrawn(ObjectID attractorID) = 0;
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) = 0;
+
+	virtual Object* getTargetObject() = 0;
+	virtual const Coord3D* getTargetPosition() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

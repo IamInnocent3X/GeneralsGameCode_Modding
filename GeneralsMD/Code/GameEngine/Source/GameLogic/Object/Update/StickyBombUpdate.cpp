@@ -52,11 +52,31 @@
 // PUBLIC /////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void StickyBombUpdateModuleData::parseAnimBaseName(INI* ini, void* instance, void* store, const void* /*userData*/)
+{
+	StickyBombUpdateModuleData* self = (StickyBombUpdateModuleData*)instance;
+	self->m_animBaseTemplate = ini->getNextAsciiString();
+	if (stricmp(self->m_animBaseTemplate.str(), "NONE") == 0) {
+		self->m_hideAnimBase = TRUE;
+	}
+}
+//-------------------------------------------------------------------------------------------------
+void StickyBombUpdateModuleData::parseAnimTimedName(INI* ini, void* instance, void* store, const void* /*userData*/)
+{
+	StickyBombUpdateModuleData* self = (StickyBombUpdateModuleData*)instance;
+	self->m_animTimedTemplate = ini->getNextAsciiString();
+	if (stricmp(self->m_animTimedTemplate.str(), "NONE") == 0) {
+		self->m_hideAnimTimed = TRUE;
+	}
+}
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 StickyBombUpdate::StickyBombUpdate( Thing *thing, const ModuleData *moduleData ) : UpdateModule( thing, moduleData )
 {
 	m_targetID		= INVALID_ID;
 	m_dieFrame		= 0;
 	m_nextPingFrame = 0;
+	m_veterancyLevel = LEVEL_REGULAR;
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
 
@@ -77,6 +97,7 @@ void StickyBombUpdate::onObjectCreated()
 	Object* shooter = TheGameLogic->findObjectByID( shooterID );
 	if( shooter )
 	{
+		m_veterancyLevel = shooter->getVeterancyLevel();
 		//Find the shooters target!
 		AIUpdateInterface *ai = shooter->getAIUpdateInterface();
 		if( ai )
@@ -259,6 +280,44 @@ void StickyBombUpdate::detonate()
 			damageInfo.in.m_sourcePlayerMask = getObject()->getControllingPlayer()->getPlayerMask();
 			damageInfo.in.m_damageStatusType = data->m_geometryBasedDamageWeaponTemplate->getDamageStatusType();
 
+			damageInfo.in.m_isFlame = data->m_geometryBasedDamageWeaponTemplate->getIsFlame();
+			damageInfo.in.m_projectileCollidesWithBurn = data->m_geometryBasedDamageWeaponTemplate->getProjectileCollidesWithBurn();
+			damageInfo.in.m_isPoison = data->m_geometryBasedDamageWeaponTemplate->getIsPoison();
+			damageInfo.in.m_poisonMuzzleFlashesGarrison = data->m_geometryBasedDamageWeaponTemplate->getPoisonMuzzleFlashesGarrison();
+			damageInfo.in.m_isDisarm = data->m_geometryBasedDamageWeaponTemplate->getIsDisarm();
+			damageInfo.in.m_killsGarrison = data->m_geometryBasedDamageWeaponTemplate->getKillsGarrison();
+			damageInfo.in.m_killsGarrisonAmount = data->m_geometryBasedDamageWeaponTemplate->getKillsGarrisonAmount();
+			damageInfo.in.m_playSpecificVoice = data->m_geometryBasedDamageWeaponTemplate->PlaySpecificVoice();
+			damageInfo.in.m_statusDuration = data->m_geometryBasedDamageWeaponTemplate->getStatusDuration();
+			damageInfo.in.m_doStatusDamage = data->m_geometryBasedDamageWeaponTemplate->getDoStatusDamage(m_veterancyLevel);
+			damageInfo.in.m_statusDurationTypeCorrelate = data->m_geometryBasedDamageWeaponTemplate->getStatusDurationTypeCorrelate();
+			damageInfo.in.m_tintStatus = data->m_geometryBasedDamageWeaponTemplate->getTintStatusType(m_veterancyLevel);
+			damageInfo.in.m_customTintStatus = data->m_geometryBasedDamageWeaponTemplate->getCustomTintStatusType(m_veterancyLevel);
+
+			damageInfo.in.m_isSubdual = data->m_geometryBasedDamageWeaponTemplate->getIsSubdual(m_veterancyLevel);
+			damageInfo.in.m_subdualDealsNormalDamage = data->m_geometryBasedDamageWeaponTemplate->getSubdualDealsNormalDamage(m_veterancyLevel);
+			damageInfo.in.m_subdualDamageMultiplier = data->m_geometryBasedDamageWeaponTemplate->getSubdualDamageMultiplier(m_veterancyLevel);
+			damageInfo.in.m_subdualForbiddenKindOf = data->m_geometryBasedDamageWeaponTemplate->getSubdualForbiddenKindOf();
+			
+			damageInfo.in.m_notAbsoluteKill = data->m_geometryBasedDamageWeaponTemplate->getIsNotAbsoluteKill();
+			damageInfo.in.m_isMissileAttractor = data->m_geometryBasedDamageWeaponTemplate->getIsMissileAttractor();
+			damageInfo.in.m_subduedProjectileNoDamage = data->m_geometryBasedDamageWeaponTemplate->getSubdueProjectileNoDamage();
+			damageInfo.in.m_protectionTypes = data->m_geometryBasedDamageWeaponTemplate->getProtectionTypes();
+
+			damageInfo.in.m_subdualCustomType = data->m_geometryBasedDamageWeaponTemplate->getSubdualCustomType();
+			damageInfo.in.m_customSubdualCustomTint = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualCustomTint(m_veterancyLevel);
+			damageInfo.in.m_customSubdualTint = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualTint(m_veterancyLevel);
+			damageInfo.in.m_customSubdualHasDisable = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualHasDisable(m_veterancyLevel);
+			damageInfo.in.m_customSubdualHasDisableProjectiles = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualHasDisableProjectiles(m_veterancyLevel);
+			damageInfo.in.m_customSubdualClearOnTrigger = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualClearOnTrigger(m_veterancyLevel);
+			damageInfo.in.m_customSubdualDoStatus = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualDoStatus(m_veterancyLevel);
+			damageInfo.in.m_customSubdualOCL = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualOCL(m_veterancyLevel);
+			damageInfo.in.m_customSubdualDisableType = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualDisableType();
+
+			damageInfo.in.m_customDamageType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageType();
+			damageInfo.in.m_customDeathType = data->m_geometryBasedDamageWeaponTemplate->getCustomDeathType();
+			damageInfo.in.m_customDamageStatusType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageStatusType();
+			
 			for (; curVictim != NULL; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
 			{
 				damageInfo.in.m_amount = (curVictimDistSqr <= primaryDamageRangeSqr) ? primaryDamage : secondaryDamage;
@@ -281,6 +340,46 @@ void StickyBombUpdate::detonate()
 
 	getObject()->kill();// Most things just fire weapons in their death modules
 }
+
+
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Anim2DTemplate* StickyBombUpdate::getAnimBaseTemplate() {
+
+	if (getStickyBombUpdateModuleData()->m_animBaseTemplate.isNotEmpty()) {
+		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNotEmpty"));
+		if (m_animBaseTemplate == NULL) {
+			m_animBaseTemplate = TheAnim2DCollection->findTemplate(getStickyBombUpdateModuleData()->m_animBaseTemplate);
+		}
+		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNull = %d", m_animBaseTemplate == NULL));
+		return m_animBaseTemplate;
+	}
+
+	//DEBUG_LOG(("SBU::getAnimBaseTemplate - is Empty ?!"));
+
+	return NULL;
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+
+Anim2DTemplate* StickyBombUpdate::getAnimTimedTemplate() {
+	if (getStickyBombUpdateModuleData()->m_animTimedTemplate.isNotEmpty()) {
+		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNotEmpty"));
+		if (m_animTimedTemplate == NULL) {
+			m_animTimedTemplate = TheAnim2DCollection->findTemplate(getStickyBombUpdateModuleData()->m_animTimedTemplate);
+		}
+		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNull = %d", m_animTimedTemplate == NULL));
+		return m_animTimedTemplate;
+	}
+
+	//DEBUG_LOG(("SBU::getAnimTimedTemplate - is Empty ?!"));
+
+	return NULL;
+
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -317,6 +416,8 @@ void StickyBombUpdate::xfer( Xfer *xfer )
 
 	//Next frame that a ping sound will play.
 	xfer->xferUnsignedInt( &m_nextPingFrame );
+
+	xfer->xferUser( &m_veterancyLevel, sizeof( VeterancyLevel ) );
 
 }
 

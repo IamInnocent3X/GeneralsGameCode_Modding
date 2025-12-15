@@ -41,6 +41,7 @@ class INI;
 // has all condition flags set to zero.
 enum ArmorSetType CPP_11(: Int)
 {
+	ARMORSET_NONE = -1,
 	// The access and use of this enum has the bit shifting built in, so this is a 0,1,2,3,4,5 enum
 	ARMORSET_VETERAN		= 0,
 	ARMORSET_ELITE			= 1,
@@ -50,6 +51,9 @@ enum ArmorSetType CPP_11(: Int)
 	ARMORSET_SECOND_LIFE = 5,	///< Body Module has marked us as on our second life
 	ARMORSET_CRATE_UPGRADE_ONE, ///< Just like weaponset type from salvage.
 	ARMORSET_CRATE_UPGRADE_TWO,
+	ARMORSET_PLAYER_UPGRADE2,
+	ARMORSET_PLAYER_UPGRADE3,
+	ARMORSET_PLAYER_UPGRADE4,
 
 	ARMORSET_COUNT
 };

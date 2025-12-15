@@ -54,6 +54,7 @@
 #include "GameLogic/Weapon.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
+#include "GameLogic/Module/SpectreGunshipUpdate.h"
 #include "GameLogic/Module/SpectreGunshipDeploymentUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/LaserUpdate.h"
@@ -72,6 +73,14 @@ SpectreGunshipDeploymentUpdateModuleData::SpectreGunshipDeploymentUpdateModuleDa
 	m_extraRequiredScience				 = SCIENCE_INVALID;
 /******BOTH*******//*BOTH*//******BOTH*******//******BOTH*******/  m_attackAreaRadius             = 200.0f;
 	m_createLoc = CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_TARGET;
+	m_gunshipTemplateNames.clear();
+	m_gunshipSpawnDelay.clear();
+  	m_createLocMinAreaVariation = 0.0f;
+  	m_createLocMaxAreaVariation = 0.0f;
+  	m_attackMinAreaVariation = 0.0f;
+  	m_attackMaxAreaVariation = 0.0f;
+	m_createNewGunshipsOnExisting = TRUE;
+	m_gunshipsHaveIndividualAttackRadius = FALSE;
 
 }
 
@@ -95,11 +104,19 @@ static Real zero = 0.0f;
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "GunshipTemplateName",	    INI::parseAsciiString,				    NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateName ) },
+		//{ "GunshipTemplateName",	    INI::parseAsciiString,				    NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateName ) },
+		{ "GunshipTemplateName",	    INI::parseAsciiStringVectorAppend,				    NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateNames ) },
 		{ "RequiredScience",					INI::parseScience,								NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_extraRequiredScience ) },
 /******BOTH*******/   { "SpecialPowerTemplate",     INI::parseSpecialPowerTemplate,   NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_specialPowerTemplate ) },
 /*******BOTH******/		{ "AttackAreaRadius",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackAreaRadius ) },
+		{ "AttackAreaMinVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackMinAreaVariation ) },
+		{ "AttackAreaMaxVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackMaxAreaVariation ) },
 		{ "CreateLocation", INI::parseIndexList, TheGunshipCreateLocTypeNames, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLoc ) },
+		{ "CreateLocationMinAreaVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLocMinAreaVariation ) },
+		{ "CreateLocationMaxAreaVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLocMaxAreaVariation ) },
+		{ "CreateNewGunshipsOnExisting", INI::parseBool, NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createNewGunshipsOnExisting ) },
+		{ "GunshipSpawnDelay",	        INI::parseDurationUnsignedIntVector,				NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipSpawnDelay ) },
+		{ "GunshipsHaveIndividualAttackRadius",	        INI::parseBool,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipsHaveIndividualAttackRadius ) },
 
     { 0, 0, 0, 0 }
 	};
@@ -111,6 +128,8 @@ SpectreGunshipDeploymentUpdate::SpectreGunshipDeploymentUpdate( Thing *thing, co
 {
 	m_specialPowerModule = NULL;
   m_gunshipID  = INVALID_ID;
+  m_attackCoords.clear();
+  m_creationCoords.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -136,120 +155,233 @@ void SpectreGunshipDeploymentUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Drawable *targetDraw, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
 {
-	const SpectreGunshipDeploymentUpdateModuleData *data = getSpectreGunshipDeploymentUpdateModuleData();
+	const SpectreGunshipDeploymentUpdateModuleData* data = getSpectreGunshipDeploymentUpdateModuleData();
 
-	if( m_specialPowerModule->getSpecialPowerTemplate() != specialPowerTemplate )
+	if (m_specialPowerModule->getSpecialPowerTemplate() != specialPowerTemplate)
 	{
 		//Check to make sure our modules are connected.
 		return FALSE;
 	}
 
-//	getObject()->getControllingPlayer()->getAcademyStats()->recordSpecialPowerUsed( specialPowerTemplate );
-
-	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) )
+	if(!data->m_createNewGunshipsOnExisting)
 	{
-/******CHANGE*******/		m_initialTargetPosition.set( targetPos );
+		for(std::vector<ObjectID>::const_iterator iter = m_gunshipIDs.begin() ; iter != m_gunshipIDs.end(); ++iter )
+		{
+			Object* currGunship = TheGameLogic->findObjectByID((*iter));
+			if (currGunship && !currGunship->isDestroyed() && !currGunship->isEffectivelyDead() )
+			{
+				return FALSE;
+			}
+		}
+	}
+
+	m_gunshipIDs.clear();
+	m_attackCoords.clear();
+  	m_creationCoords.clear();
+
+	//	getObject()->getControllingPlayer()->getAcademyStats()->recordSpecialPowerUsed( specialPowerTemplate );
+
+	if (!BitIsSet(commandOptions, COMMAND_FIRED_BY_SCRIPT))
+	{
+		/******CHANGE*******/		m_initialTargetPosition.set(targetPos);
 	}
 	else
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
-		m_specialPowerModule->setReadyFrame( now );
-/******CHANGE*******/   	m_initialTargetPosition.set( targetPos );
-//		setLogicalStatus( GUNSHIPDEPLOY_STATUS_INSERTING );
+		m_specialPowerModule->setReadyFrame(now);
+		/******CHANGE*******/   	m_initialTargetPosition.set(targetPos);
+		//		setLogicalStatus( GUNSHIPDEPLOY_STATUS_INSERTING );
 	}
 
-   Object *newGunship = TheGameLogic->findObjectByID( m_gunshipID );
-	const ThingTemplate *gunshipTemplate = TheThingFactory->findTemplate( data->m_gunshipTemplateName );
-	if( newGunship != NULL )
-  {
-//    disengageAndDepartAO( newGunship );
-    m_gunshipID = INVALID_ID;
-    newGunship = NULL;
-  }
+	Bool first = TRUE;
+	UnsignedInt now = TheGameLogic->getFrame();
 
-
-  // Lets make a gunship, since we have none.
+	//for(std::vector<AsciiString>::const_iterator it = data->m_gunshipTemplateNames.begin(); it != data->m_gunshipTemplateNames.end(); ++it )
+	for(int i = 0; i < data->m_gunshipTemplateNames.size(); i++ )
 	{
-		newGunship = TheThingFactory->newObject( gunshipTemplate, getObject()->getTeam() );
-  }
+		/*Object* newGunship = TheGameLogic->findObjectByID(m_gunshipID);
+		const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateName);
+		if (newGunship != NULL)
+		{
+			//    disengageAndDepartAO( newGunship );
+			m_gunshipID = INVALID_ID;
+			newGunship = NULL;
+		}*/
 
-  DEBUG_ASSERTCRASH( newGunship, ("SpecterGunshipUpdate failed to find or create a gunship object"));
-  if ( newGunship )
-  {
-    //PRODUCER
-    newGunship->setProducer( getObject() );
+		const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateNames[i]);
+		Object* newGunship = TheThingFactory->newObject(gunshipTemplate, getObject()->getTeam());
 
-    //POSITION
-    Coord3D creationCoord;
-	  switch (data->m_createLoc)
-	  {
-		  case CREATE_GUNSHIP_AT_EDGE_NEAR_SOURCE:
-			  creationCoord = TheTerrainLogic->findClosestEdgePoint( getObject()->getPosition() );
-			  break;
-		  case CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_SOURCE:
-			  creationCoord = TheTerrainLogic->findFarthestEdgePoint( getObject()->getPosition() );
-			  break;
-		  case CREATE_GUNSHIP_AT_EDGE_NEAR_TARGET:
-			  creationCoord = TheTerrainLogic->findClosestEdgePoint(targetPos);
-			  break;
-		  case CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_TARGET:
-      default:
-			  creationCoord = TheTerrainLogic->findFarthestEdgePoint(targetPos);
-			  break;
-	  }
+		// Lets make a gunship, since we have none.
+		//{
+		//	newGunship = TheThingFactory->newObject(gunshipTemplate, getObject()->getTeam());
+		//}
 
+		DEBUG_ASSERTCRASH(newGunship, ("SpecterGunshipUpdate failed to find or create a gunship object"));
+		if (newGunship)
+		{
+			//PRODUCER
+			newGunship->setProducer(getObject());
 
+			Coord3D creationPos;
+			switch (data->m_createLoc)
+			{
+			case CREATE_GUNSHIP_AT_EDGE_NEAR_SOURCE:
+				creationPos = *getObject()->getPosition();
+				break;
+			case CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_SOURCE:
+				creationPos = *getObject()->getPosition();
+				break;
+			case CREATE_GUNSHIP_AT_EDGE_NEAR_TARGET:
+				creationPos = *targetPos;
+				break;
+			case CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_TARGET:
+			default:
+				creationPos = *targetPos;
+				break;
+			}
 
+			if(!first && (data->m_createLocMaxAreaVariation || data->m_createLocMinAreaVariation) )
+			{
+				Real maxValue = data->m_createLocMaxAreaVariation > data->m_createLocMinAreaVariation ? data->m_createLocMaxAreaVariation : data->m_createLocMinAreaVariation;
+				Int direction = GameLogicRandomValue(0,1);
 
-      // HERE WE NEED TO CREATE THE POINT FURTHER OFF THE MAP SO WE CANT SEE THE LAME HOVER AND ACCELLERATE BEHAVIOR
-    Coord3D deltaToCreationPoint = m_initialTargetPosition;
-    deltaToCreationPoint.sub( &creationCoord );
-    Real distanceFromTarget = deltaToCreationPoint.length();
-    deltaToCreationPoint.normalize();
-    deltaToCreationPoint.x *= ( distanceFromTarget + data->m_gunshipOrbitRadius );
-    deltaToCreationPoint.y *= ( distanceFromTarget + data->m_gunshipOrbitRadius );
-    creationCoord.x = m_initialTargetPosition.x - deltaToCreationPoint.x;
-    creationCoord.y = m_initialTargetPosition.y - deltaToCreationPoint.y;
+				if(direction == 1)
+					creationPos.x += GameLogicRandomValue(data->m_createLocMinAreaVariation, maxValue);
+				else
+					creationPos.x += GameLogicRandomValue(-maxValue, -data->m_createLocMinAreaVariation);
+				
+				// Do it again for the y-axis
+				direction = GameLogicRandomValue(0,1);
+				if(direction == 1)
+					creationPos.y += GameLogicRandomValue(data->m_createLocMinAreaVariation, maxValue);
+				else
+					creationPos.y += GameLogicRandomValue(-maxValue, -data->m_createLocMinAreaVariation);
 
-    Real preferredElevation = newGunship->getAI()->getCurLocomotor()->getPreferredHeight();
-    creationCoord.z = preferredElevation;
-    newGunship->setPosition( &creationCoord );
+				m_creationCoords.push_back(creationPos);
+			}
 
-    //ORIENTATION
-		Real orient = atan2( m_initialTargetPosition.y - creationCoord.y, m_initialTargetPosition.x - creationCoord.x);
-    newGunship->setOrientation( orient );
+			//POSITION
+			Coord3D creationCoord;
+			switch (data->m_createLoc)
+			{
+			case CREATE_GUNSHIP_AT_EDGE_NEAR_SOURCE:
+				creationCoord = TheTerrainLogic->findClosestEdgePoint(&creationPos);
+				break;
+			case CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_SOURCE:
+				creationCoord = TheTerrainLogic->findFarthestEdgePoint(&creationPos);
+				break;
+			case CREATE_GUNSHIP_AT_EDGE_NEAR_TARGET:
+				creationCoord = TheTerrainLogic->findClosestEdgePoint(&creationPos);
+				break;
+			case CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_TARGET:
+			default:
+				creationCoord = TheTerrainLogic->findFarthestEdgePoint(&creationPos);
+				break;
+			}
 
-    // ID
-    m_gunshipID = newGunship->getID();
+			// HERE WE NEED TO CREATE THE POINT FURTHER OFF THE MAP SO WE CANT SEE THE LAME HOVER AND ACCELLERATE BEHAVIOR
+			Coord3D deltaToCreationPoint = m_initialTargetPosition;
+			deltaToCreationPoint.sub(&creationCoord);
+			Real distanceFromTarget = deltaToCreationPoint.length();
+			deltaToCreationPoint.normalize();
+			deltaToCreationPoint.x *= (distanceFromTarget + data->m_gunshipOrbitRadius);
+			deltaToCreationPoint.y *= (distanceFromTarget + data->m_gunshipOrbitRadius);
+			creationCoord.x = m_initialTargetPosition.x - deltaToCreationPoint.x;
+			creationCoord.y = m_initialTargetPosition.y - deltaToCreationPoint.y;
 
-    // FIRE THE SPECIAL POWER OF THE GUNSHIP
-	  SpecialPowerModuleInterface *shipSPMInterface = newGunship->getSpecialPowerModule( specialPowerTemplate );
-	  if( shipSPMInterface )
-	  {
-		  SpecialPowerModule *spModule = (SpecialPowerModule*)shipSPMInterface;
-		  spModule->markSpecialPowerTriggered( &m_initialTargetPosition );
-      spModule->doSpecialPowerAtLocation( &m_initialTargetPosition, INVALID_ANGLE, commandOptions );
+			Real preferredElevation = newGunship->getAI()->getCurLocomotor()->getPreferredHeight();
+			creationCoord.z = preferredElevation;
+			newGunship->setPosition(&creationCoord);
 
-	  }
+			//ORIENTATION
+			Real orient = atan2(m_initialTargetPosition.y - creationCoord.y, m_initialTargetPosition.x - creationCoord.x);
+			newGunship->setOrientation(orient);
 
-    // MAKE THE GUNSHIP SELECTED
+			// ID
+			//m_gunshipID = newGunship->getID();
+			m_gunshipIDs.push_back(newGunship->getID());
+			Coord3D currentPos = m_initialTargetPosition;
 
-    TheGameLogic->selectObject( newGunship, TRUE, getObject()->getControllingPlayer()->getPlayerMask(), TRUE );
+			if(!first && (data->m_attackMaxAreaVariation || data->m_attackMinAreaVariation) )
+			{
+				Real maxValue = data->m_attackMaxAreaVariation > data->m_attackMinAreaVariation ? data->m_attackMaxAreaVariation : data->m_attackMinAreaVariation;
+				Int direction = GameLogicRandomValue(0,1);
 
+				if(direction == 1)
+					currentPos.x += GameLogicRandomValue(data->m_attackMinAreaVariation, maxValue);
+				else
+					currentPos.x += GameLogicRandomValue(-maxValue, -data->m_attackMinAreaVariation);
+				
+				// Do it again for the y-axis
+				direction = GameLogicRandomValue(0,1);
+				if(direction == 1)
+					currentPos.y += GameLogicRandomValue(data->m_attackMinAreaVariation, maxValue);
+				else
+					currentPos.y += GameLogicRandomValue(-maxValue, -data->m_attackMinAreaVariation);
 
-  }
+				m_attackCoords.push_back(currentPos);
+			}
 
+			Coord3D attackPos = data->m_gunshipsHaveIndividualAttackRadius ? currentPos : m_initialTargetPosition;
 
-	SpecialPowerModuleInterface *spmInterface = getObject()->getSpecialPowerModule( specialPowerTemplate );
-	if( spmInterface )
-	{
-		SpecialPowerModule *spModule = (SpecialPowerModule*)spmInterface;
-		spModule->markSpecialPowerTriggered( &m_initialTargetPosition );
+			// FIRE THE SPECIAL POWER OF THE GUNSHIP
+			/*SpecialPowerModuleInterface* shipSPMInterface = newGunship->getSpecialPowerModule(specialPowerTemplate);
+			if (shipSPMInterface)
+			{
+				SpecialPowerModule* spModule = (SpecialPowerModule*)shipSPMInterface;
+				spModule->markSpecialPowerTriggered(&attackPos);
+				spModule->doSpecialPowerAtLocation(&attackPos, INVALID_ANGLE, commandOptions);
+			}*/
+			SpecialPowerModuleInterface* shipSPMInterface = NULL;
+			SpecialPowerUpdateInterface *shipSPUInterface = NULL;
+			for( BehaviorModule** m = newGunship->getBehaviorModules(); *m; ++m )
+			{
+				shipSPMInterface = (*m)->getSpecialPower();
+				if(shipSPMInterface && shipSPMInterface->isModuleForPower( specialPowerTemplate ))
+				{
+					SpecialPowerModule* spModule = (SpecialPowerModule*)shipSPMInterface;
+					spModule->markSpecialPowerTriggered(&attackPos);
+					spModule->doSpecialPowerAtLocation(&attackPos, INVALID_ANGLE, commandOptions);
+				}
+
+				if(data->m_gunshipSpawnDelay.size() <= i ||
+					data->m_gunshipSpawnDelay[i] <= 0)
+					continue;
+
+				shipSPUInterface = (*m)->getSpecialPowerUpdateInterface();
+				if( shipSPUInterface && shipSPUInterface->doesSpecialPowerHaveOverridableDestination() )
+				{
+					shipSPUInterface->setDelay(now + data->m_gunshipSpawnDelay[i]);
+					if(!data->m_gunshipsHaveIndividualAttackRadius && !first && (data->m_attackMaxAreaVariation || data->m_attackMinAreaVariation))
+						shipSPUInterface->setSpecialPowerOverridableDestination(&currentPos);
+				}
+			}
+
+			// MAKE THE GUNSHIP SELECTED (Update: Now only for the local player)
+
+			// TheGameLogic->selectObject(newGunship, TRUE, getObject()->getControllingPlayer()->getPlayerMask(), TRUE);
+			if(first)
+				TheGameLogic->selectObject(newGunship, TRUE, getObject()->getControllingPlayer()->getPlayerMask(), getObject()->isLocallyControlled());
+
+			//else
+			//	continue;
+		}
+
+		first = FALSE;
+
 	}
 
-  return TRUE;
+
+	SpecialPowerModuleInterface* spmInterface = getObject()->getSpecialPowerModule(specialPowerTemplate);
+	if (spmInterface)
+	{
+		SpecialPowerModule* spModule = (SpecialPowerModule*)spmInterface;
+		spModule->markSpecialPowerTriggered(&m_initialTargetPosition);
+	}
+
+	return TRUE;
 }
 
 

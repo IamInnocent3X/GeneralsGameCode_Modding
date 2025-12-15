@@ -56,8 +56,12 @@ DemoTrapUpdateModuleData::DemoTrapUpdateModuleData()
 	m_proximityModeWeaponSlot				= PRIMARY_WEAPON;
 	m_triggerDetonationRange				= 0.0f;
 	m_scanFrames										= 0;
+	m_initialDelayFrames								= 0;
+	m_detonationProducerDelay                           = 0;
 	m_detonationWeaponTemplate			= NULL;
 	m_detonateWhenKilled						= false;
+	m_detonateDontKill							= false;
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -75,25 +79,46 @@ DemoTrapUpdateModuleData::DemoTrapUpdateModuleData()
     { "IgnoreTargetTypes",         KindOfMaskType::parseFromINI,							NULL, offsetof( DemoTrapUpdateModuleData, m_ignoreKindOf ) },
 		{ "ScanRate",									 INI::parseDurationUnsignedInt,	NULL, offsetof( DemoTrapUpdateModuleData, m_scanFrames ) },
 		{ "AutoDetonationWithFriendsInvolved", INI::parseBool,				NULL, offsetof( DemoTrapUpdateModuleData, m_friendlyDetonation ) },
+		{ "AutoDetonateDelayWhenProducerIsNearby", 	INI::parseDurationUnsignedInt,				NULL, offsetof( DemoTrapUpdateModuleData, m_detonationProducerDelay ) },
 		{ "DetonationWeapon",					 INI::parseWeaponTemplate,			NULL, offsetof( DemoTrapUpdateModuleData, m_detonationWeaponTemplate ) },
 		{ "DetonateWhenKilled",				 INI::parseBool,								NULL, offsetof( DemoTrapUpdateModuleData, m_detonateWhenKilled ) },
+		{ "DetonateDontKill",				 INI::parseBool,			NULL, offsetof( DemoTrapUpdateModuleData, m_detonateDontKill ) },
+		{ "InitialDelay",					INI::parseDurationUnsignedInt,	NULL, offsetof( DemoTrapUpdateModuleData, m_initialDelayFrames ) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
 }
 
 //-------------------------------------------------------------------------------------------------
-DemoTrapUpdate::DemoTrapUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
+DemoTrapUpdate::DemoTrapUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData ),
+	m_weapon(NULL)
 {
 	m_nextScanFrames = 0;
+	m_detonationProducerFrames = 0;
 	m_detonated = false;
+	m_weaponTemplateName = NULL;
+
+	const DemoTrapUpdateModuleData *data = getDemoTrapUpdateModuleData();
+	const WeaponTemplate *tmpl = data->m_detonationWeaponTemplate;
+	if (tmpl)
+	{
+		m_weapon = TheWeaponStore->allocateNewWeapon(tmpl, data->m_detonationWeaponSlot);
+		m_weapon->loadAmmoNow( getObject() );
+		m_weaponTemplateName = tmpl->getName();
+	}
+
+	m_weaponTemplateNameXferCheckOnly = m_weaponTemplateName;
+	m_lastDetonationWeaponSlot = data->m_detonationWeaponSlot;
+
+	m_initialDelayFrame = TheGameLogic->getFrame() + data->m_initialDelayFrames;
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 DemoTrapUpdate::~DemoTrapUpdate( void )
 {
-
+	if (m_weapon)
+		deleteInstance(m_weapon);
 }
 
 
@@ -131,6 +156,7 @@ void DemoTrapUpdate::onObjectCreated()
 UpdateSleepTime DemoTrapUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	const DemoTrapUpdateModuleData *data = getDemoTrapUpdateModuleData();
 
 	if( m_detonated )
@@ -142,7 +168,8 @@ UpdateSleepTime DemoTrapUpdate::update()
 
 	if( me->testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || me->testStatus(OBJECT_STATUS_SOLD) )
 	{
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 	}
 
 	if( me->isEffectivelyDead() )
@@ -154,8 +181,25 @@ UpdateSleepTime DemoTrapUpdate::update()
 		return UPDATE_SLEEP_NONE;
 	}
 
+	// IamInnocent - weird. It defaults on detonate even when triggered with OnObjectCreated.
+	if(!m_nextScanFrames)
+	{
+		if( data->m_defaultsToProximityMode )
+		{
+			// lock it just till the weapon is empty or the attack is "done"
+			getObject()->setWeaponLock( data->m_proximityModeWeaponSlot, LOCKED_TEMPORARILY );
+		}
+		else
+		{
+			// lock it just till the weapon is empty or the attack is "done"
+			getObject()->setWeaponLock( data->m_manualModeWeaponSlot, LOCKED_TEMPORARILY );
+		}
+	}
+
 	//Get the current weapon slot -- this determines what mode we're in.
-	WeaponSlotType weaponSlot = getObject()->getCurrentWeapon()->getWeaponSlot();
+	//WeaponSlotType weaponSlot = getObject()->getCurrentWeapon()->getWeaponSlot();
+
+	WeaponSlotType weaponSlot = me->getCurrentWeaponSlot();
 
 	if( weaponSlot == data->m_detonationWeaponSlot )
 	{
@@ -165,22 +209,30 @@ UpdateSleepTime DemoTrapUpdate::update()
 	}
 
 	//Don't scan every frame for performance reasons.
-	if( m_nextScanFrames > 0 )
-	{
-		m_nextScanFrames--;
-		return UPDATE_SLEEP_NONE;
-	}
+	//if( m_nextScanFrames > 0 )
+	//{
+	//	m_nextScanFrames--;
+	//	return UPDATE_SLEEP_NONE;
+	//}
+	UnsignedInt now = TheGameLogic->getFrame();
+
+	if( m_initialDelayFrame > now )
+		return UPDATE_SLEEP(m_initialDelayFrame - now);
+
+	if(m_nextScanFrames > now)
+		return UPDATE_SLEEP(m_nextScanFrames - now);
 
 
 	if( weaponSlot == data->m_manualModeWeaponSlot )
 	{
 		//Don't scan!
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 	}
 
 	//Reset timer here -- because if we are in manual mode, and switch, we want instant
 	//gratification (if possible).
-	m_nextScanFrames = data->m_scanFrames;
+	m_nextScanFrames = now + data->m_scanFrames;
 
 	//Scan for a valid enemy in proximity range.
 
@@ -206,7 +258,7 @@ UpdateSleepTime DemoTrapUpdate::update()
 		{
 			//If we're dealing with a dozer... check if it's trying to disarm me. If so, don't blow up!
 			Weapon *weapon = other->getCurrentWeapon();
-			if( weapon && weapon->getDamageType() == DAMAGE_DISARM )
+			if( weapon && ( weapon->getDamageType() == DAMAGE_DISARM || weapon->getIsDisarm() == TRUE) )
 			{
 				//Also check if it's attacking, because it seems to stay in disarm mode.
 				if( other->testStatus( OBJECT_STATUS_IS_ATTACKING ) )
@@ -219,10 +271,10 @@ UpdateSleepTime DemoTrapUpdate::update()
 			// order matters: we want to know if I consider it to be an enemy, not vice versa
 		if( getObject()->getRelationship( other ) != ENEMIES )
 		{
-			if( !data->m_friendlyDetonation )
+			if( !data->m_friendlyDetonation || ( other->getID() == me->getProducerID() && m_detonationProducerFrames > now ) )
 			{
 				//Not allowed to proximity detonate with friends nearby
-				return UPDATE_SLEEP_NONE;
+				return UPDATE_SLEEP( m_nextScanFrames > now ? m_nextScanFrames - now : UPDATE_SLEEP_NONE );
 			}
 			//Don't shoot our friends!
 			continue;
@@ -256,7 +308,7 @@ UpdateSleepTime DemoTrapUpdate::update()
 		//and kill them!!! Muwahahaha!
 		detonate();
 	}
-	return UPDATE_SLEEP_NONE;
+	return UPDATE_SLEEP( m_nextScanFrames > now ? m_nextScanFrames - now : UPDATE_SLEEP_NONE );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -268,10 +320,44 @@ void DemoTrapUpdate::detonate()
 
 	// Only shoot the weapon if not being built or sold.
 	if( !me->testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) && !me->testStatus(OBJECT_STATUS_SOLD) )
-		TheWeaponStore->createAndFireTempWeapon( data->m_detonationWeaponTemplate, me, me->getPosition() );
+	{
+		if(data->m_detonateDontKill && m_weapon)
+		{
+			if(m_weapon->getTemplate()->passRequirements(me))
+			{
+				me->setContainedPosition();
+				m_weapon->forceFireWeapon( me, me->getPosition() );
+			}
+		}
+		else
+			TheWeaponStore->createAndFireTempWeapon( data->m_detonationWeaponTemplate, me, me->getPosition() );
+	}
+
+	if(data->m_detonateDontKill)
+		return;
 
 	me->kill();
 	m_detonated = true;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void DemoTrapUpdate::onBuildComplete()
+{
+	/*const DemoTrapUpdateModuleData *data = getDemoTrapUpdateModuleData();
+	m_detonationProducerFrames = TheGameLogic->getFrame() + data->m_detonationProducerDelay;
+	if( data->m_defaultsToProximityMode )
+	{
+		// lock it just till the weapon is empty or the attack is "done"
+		getObject()->setWeaponLock( data->m_proximityModeWeaponSlot, LOCKED_TEMPORARILY );
+	}
+	else
+	{
+		// lock it just till the weapon is empty or the attack is "done"
+		getObject()->setWeaponLock( data->m_manualModeWeaponSlot, LOCKED_TEMPORARILY );
+	}*/
+
+	refreshUpdate();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -294,7 +380,7 @@ void DemoTrapUpdate::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -306,6 +392,32 @@ void DemoTrapUpdate::xfer( Xfer *xfer )
 
 	// detonated
 	xfer->xferBool( &m_detonated );
+
+	// detonate producer frames
+	xfer->xferUnsignedInt( &m_detonationProducerFrames );
+
+	// inital delay
+	xfer->xferUnsignedInt( &m_initialDelayFrame );
+
+	// weapon
+	if (version >= 2) {
+		xfer->xferAsciiString( &m_weaponTemplateName );
+		xfer->xferUser( &m_lastDetonationWeaponSlot, sizeof( WeaponSlotType ) );
+		if(!m_weaponTemplateName.isEmpty())
+		{
+			// An very bad hack to ensure xfering while changing game data doesn't crash if you remove DetonationWeapon while loading an Object with DetonationWeapon.
+			if(m_weaponTemplateNameXferCheckOnly.isEmpty())
+			{
+				const WeaponTemplate *weaponTemplate = TheWeaponStore->findWeaponTemplate(m_weaponTemplateName);
+				if (weaponTemplate != NULL)
+				{
+					m_weapon = TheWeaponStore->allocateNewWeapon(weaponTemplate, m_lastDetonationWeaponSlot);
+					m_weapon->loadAmmoNow( getObject() );
+				}
+			}
+			xfer->xferSnapshot( m_weapon );
+		}
+	}
 
 }
 

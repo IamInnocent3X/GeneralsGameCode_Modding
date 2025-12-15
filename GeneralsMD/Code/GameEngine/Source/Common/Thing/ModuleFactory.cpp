@@ -50,8 +50,12 @@
 #include "GameLogic/Module/BridgeScaffoldBehavior.h"
 #include "GameLogic/Module/BridgeTowerBehavior.h"
 #include "GameLogic/Module/CountermeasuresBehavior.h"
+#include "GameLogic/Module/BattlePlanBonusBehavior.h"
+#include "GameLogic/Module/EnergyShieldBehavior.h"
 #include "GameLogic/Module/DumbProjectileBehavior.h"
+#include "GameLogic/Module/FreeFallProjectileBehavior.h"
 #include "GameLogic/Module/InstantDeathBehavior.h"
+#include "GameLogic/Module/ChronoDeathBehavior.h"
 #include "GameLogic/Module/SlowDeathBehavior.h"
 #include "GameLogic/Module/HelicopterSlowDeathUpdate.h"
 #include "GameLogic/Module/NeutronMissileSlowDeathUpdate.h"
@@ -68,6 +72,7 @@
 #include "GameLogic/Module/TunnelContain.h"
 #include "GameLogic/Module/OverlordContain.h"
 #include "GameLogic/Module/HelixContain.h"
+#include "GameLogic/Module/MultiAddOnContain.h"
 #include "GameLogic/Module/ParachuteContain.h"
 #ifdef ALLOW_SURRENDER
 #include "GameLogic/Module/POWTruckBehavior.h"
@@ -78,6 +83,7 @@
 #include "GameLogic/Module/BunkerBusterBehavior.h"
 #include "GameLogic/Module/FireWeaponWhenDamagedBehavior.h"
 #include "GameLogic/Module/FireWeaponWhenDeadBehavior.h"
+#include "GameLogic/Module/DelayedUpgradeBehavior.h"
 #include "GameLogic/Module/GenerateMinefieldBehavior.h"
 #include "GameLogic/Module/ParkingPlaceBehavior.h"
 #include "GameLogic/Module/FlightDeckBehavior.h"
@@ -120,6 +126,7 @@
 #include "GameLogic/Module/FireSpreadUpdate.h"
 #include "GameLogic/Module/FirestormDynamicGeometryInfoUpdate.h"
 #include "GameLogic/Module/FireWeaponUpdate.h"
+#include "GameLogic/Module/FireWeaponAdvancedUpdate.h"
 #include "GameLogic/Module/FlammableUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/TensileFormationUpdate.h"
@@ -128,6 +135,7 @@
 #include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/HeightDieUpdate.h"
 #include "GameLogic/Module/HordeUpdate.h"
+#include "GameLogic/Module/ScatterShotUpdate.h"
 #include "GameLogic/Module/JetAIUpdate.h"
 #include "GameLogic/Module/LaserUpdate.h"
 #include "GameLogic/Module/PointDefenseLaserUpdate.h"
@@ -139,10 +147,13 @@
 #include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
 #include "GameLogic/Module/SpectreGunshipUpdate.h"
 #include "GameLogic/Module/SpectreGunshipDeploymentUpdate.h"
+#include "GameLogic/Module/KodiakUpdate.h"
+#include "GameLogic/Module/KodiakDeploymentUpdate.h"
 #include "GameLogic/Module/BaikonurLaunchPower.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/Module/RadiusDecalUpdate.h"
+#include "GameLogic/Module/RadiusDecalBehavior.h"
 #include "GameLogic/Module/AutoDepositUpdate.h"
 #include "GameLogic/Module/MissileAIUpdate.h"
 #include "GameLogic/Module/NeutronMissileUpdate.h"
@@ -184,12 +195,19 @@
 #include "GameLogic/Module/ToppleUpdate.h"
 #include "GameLogic/Module/TransportAIUpdate.h"
 #include "GameLogic/Module/WanderAIUpdate.h"
+#include "GameLogic/Module/TeleporterAIUpdate.h"
 #include "GameLogic/Module/WaveGuideUpdate.h"
 #include "GameLogic/Module/WeaponBonusUpdate.h"
+#include "GameLogic/Module/ArmorDamageScalarUpdate.h"
 #include "GameLogic/Module/WorkerAIUpdate.h"
 #include "GameLogic/Module/PowerPlantUpdate.h"
 #include "GameLogic/Module/CheckpointUpdate.h"
 #include "GameLogic/Module/EMPUpdate.h"
+#include "GameLogic/Module/ResetSpecialPowerTimerWhileAliveUpdate.h"
+#include "GameLogic/Module/DroneCarrierAIUpdate.h"
+#include "GameLogic/Module/DroneCarrierSlavedUpdate.h"
+#include "GameLogic/Module/DroneCarrierContain.h"
+#include "GameLogic/Module/CarrierDroneAIUpdate.h"
 
 // upgrade includes
 #include "GameLogic/Module/ActiveShroudUpgrade.h"
@@ -210,6 +228,8 @@
 #include "GameLogic/Module/WeaponBonusUpgrade.h"
 #include "GameLogic/Module/WeaponSetUpgrade.h"
 #include "GameLogic/Module/CostModifierUpgrade.h"
+#include "GameLogic/Module/ProductionTimeModifierUpgrade.h"
+#include "GameLogic/Module/UnitProductionBonusUpgrade.h"
 #include "GameLogic/Module/ExperienceScalarUpgrade.h"
 #include "GameLogic/Module/MaxHealthUpgrade.h"
 
@@ -228,10 +248,12 @@
 
 // collide includes
 #include "GameLogic/Module/FireWeaponCollide.h"
+#include "GameLogic/Module/AdvancedCollide.h"
 #include "GameLogic/Module/SquishCollide.h"
 
 #include "GameLogic/Module/ConvertToCarBombCrateCollide.h"
 #include "GameLogic/Module/ConvertToHijackedVehicleCrateCollide.h"
+#include "GameLogic/Module/EquipCrateCollide.h"
 #include "GameLogic/Module/HealCrateCollide.h"
 #include "GameLogic/Module/MoneyCrateCollide.h"
 #include "GameLogic/Module/SabotageCommandCenterCrateCollide.h"
@@ -243,6 +265,7 @@
 #include "GameLogic/Module/SabotageSupplyCenterCrateCollide.h"
 #include "GameLogic/Module/SabotageSupplyDropzoneCrateCollide.h"
 #include "GameLogic/Module/SalvageCrateCollide.h"
+#include "GameLogic/Module/StickyBombCrateCollide.h"
 #include "GameLogic/Module/ShroudCrateCollide.h"
 #include "GameLogic/Module/UnitCrateCollide.h"
 #include "GameLogic/Module/VeterancyCrateCollide.h"
@@ -254,6 +277,7 @@
 #include "GameLogic/Module/ImmortalBody.h"
 #include "GameLogic/Module/StructureBody.h"
 #include "GameLogic/Module/HiveStructureBody.h"
+#include "GameLogic/Module/ShieldBody.h"
 #include "GameLogic/Module/UndeadBody.h"
 
 // contain includes
@@ -268,6 +292,7 @@
 #include "GameLogic/Module/OCLSpecialPower.h"
 #include "GameLogic/Module/SpecialAbility.h"
 #include "GameLogic/Module/SpyVisionSpecialPower.h"
+#include "GameLogic/Module/UpgradeSpecialPower.h"
 #include "GameLogic/Module/CashBountyPower.h"
 #include "GameLogic/Module/CleanupAreaPower.h"
 #include "GameLogic/Module/FireWeaponPower.h"
@@ -278,6 +303,7 @@
 // client update includes
 #include "GameClient/Module/AnimatedParticleSysBoneClientUpdate.h"
 #include "GameClient/Module/SwayClientUpdate.h"
+#include "GameClient/Module/DynamicGeometryClientUpdate.h"
 #include "GameClient/Module/BeaconClientUpdate.h"
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
@@ -326,9 +352,13 @@ void ModuleFactory::init( void )
 	addModule( BridgeScaffoldBehavior );
 	addModule( BridgeTowerBehavior );
 	addModule( CountermeasuresBehavior );
+	addModule( BattlePlanBonusBehavior );
+	addModule( EnergyShieldBehavior );
 	addModule( DumbProjectileBehavior );
+	addModule( FreeFallProjectileBehavior );
 	addModule( PhysicsBehavior );
 	addModule( InstantDeathBehavior );
+	addModule( ChronoDeathBehavior );
 	addModule( SlowDeathBehavior );
 	addModule( HelicopterSlowDeathBehavior );
 	addModule( NeutronMissileSlowDeathBehavior );
@@ -345,6 +375,7 @@ void ModuleFactory::init( void )
 	addModule( TunnelContain );
 	addModule( OverlordContain );
 	addModule( HelixContain );
+	addModule( MultiAddOnContain );
 	addModule( ParachuteContain );
 #ifdef ALLOW_SURRENDER
 	addModule( POWTruckBehavior );
@@ -355,6 +386,7 @@ void ModuleFactory::init( void )
 	addModule( BunkerBusterBehavior );
 	addModule( FireWeaponWhenDamagedBehavior );
 	addModule( FireWeaponWhenDeadBehavior );
+	addModule( DelayedUpgradeBehavior );
 	addModule( GenerateMinefieldBehavior );
 	addModule( ParkingPlaceBehavior );
 	addModule( FlightDeckBehavior );
@@ -367,6 +399,7 @@ void ModuleFactory::init( void )
 	addModule( JetSlowDeathBehavior );
 	addModule( RailroadBehavior );
 	addModule( SpawnBehavior );
+	addModule( DroneCarrierContain );
 
 	// die modules
 	addModule( DestroyDie );
@@ -397,18 +430,22 @@ void ModuleFactory::init( void )
 	addModule( EnemyNearUpdate );
 	addModule( LifetimeUpdate );
 	addModule( RadiusDecalUpdate );
+	addModule( RadiusDecalBehavior );
 	addModule( EMPUpdate );
   addModule( LeafletDropBehavior );
 	addModule( AutoDepositUpdate );
 	addModule( WeaponBonusUpdate );
+	addModule( ArmorDamageScalarUpdate );
 	addModule( MissileAIUpdate );
 	addModule( NeutronMissileUpdate );
 	addModule( FireSpreadUpdate );
 	addModule( FireWeaponUpdate );
+	addModule( FireWeaponAdvancedUpdate );
 	addModule( FlammableUpdate );
 	addModule( FloatUpdate );
 	addModule( TensileFormationUpdate );
 	addModule( HeightDieUpdate );
+	addModule( ScatterShotUpdate );
 	addModule( ChinookAIUpdate );
 	addModule( JetAIUpdate );
 	addModule( AIUpdateInterface );
@@ -426,6 +463,8 @@ void ModuleFactory::init( void )
 	addModule( ParticleUplinkCannonUpdate );
 	addModule( SpectreGunshipUpdate );
 	addModule( SpectreGunshipDeploymentUpdate );
+	addModule( KodiakUpdate );
+	addModule( KodiakDeploymentUpdate );
 	addModule( BaikonurLaunchPower );
 	addModule( BattlePlanUpdate );
 	addModule( ProjectileStreamUpdate );
@@ -463,13 +502,20 @@ void ModuleFactory::init( void )
 	addModule( AnimationSteeringUpdate );
 	addModule( TransportAIUpdate );
 	addModule( WanderAIUpdate );
+	addModule( TeleporterAIUpdate );
 	addModule( WaveGuideUpdate );
 	addModule( WorkerAIUpdate );
 	addModule( PowerPlantUpdate );
 	addModule( CheckpointUpdate );
+	addModule( ResetSpecialPowerTimerWhileAliveUpdate );
+	addModule( DroneCarrierAIUpdate );
+	addModule( DroneCarrierSlavedUpdate );
+	addModule( CarrierDroneAIUpdate );
 
 	// upgrade modules
 	addModule( CostModifierUpgrade );
+	addModule( ProductionTimeModifierUpgrade );
+	addModule( UnitProductionBonusUpgrade );
 	addModule( ActiveShroudUpgrade );
 	addModule( ArmorUpgrade );
 	addModule( CommandSetUpgrade );
@@ -506,6 +552,7 @@ void ModuleFactory::init( void )
 
 	// collide modules
 	addModule( FireWeaponCollide );
+	addModule( AdvancedCollide );
 	addModule( SquishCollide );
 
 	addModule( HealCrateCollide );
@@ -515,6 +562,7 @@ void ModuleFactory::init( void )
 	addModule( VeterancyCrateCollide );
 	addModule( ConvertToCarBombCrateCollide );
 	addModule( ConvertToHijackedVehicleCrateCollide );
+	addModule( EquipCrateCollide );
 	addModule( SabotageCommandCenterCrateCollide );
 	addModule( SabotageFakeBuildingCrateCollide );
 	addModule( SabotageInternetCenterCrateCollide );
@@ -524,6 +572,7 @@ void ModuleFactory::init( void )
 	addModule( SabotageSupplyCenterCrateCollide );
 	addModule( SabotageSupplyDropzoneCrateCollide );
 	addModule( SalvageCrateCollide );
+	addModule( StickyBombCrateCollide );
 
 	// body modules
 	addModule( InactiveBody );
@@ -532,6 +581,7 @@ void ModuleFactory::init( void )
 	addModule( ImmortalBody );
 	addModule( StructureBody );
 	addModule( HiveStructureBody );
+	addModule( ShieldBody );
 	addModule( UndeadBody );
 
 	// contain modules
@@ -547,6 +597,7 @@ void ModuleFactory::init( void )
 	addModule( FireWeaponPower );
 	addModule( SpecialAbility );
 	addModule( SpyVisionSpecialPower );
+	addModule( UpgradeSpecialPower );
 	addModule( CashBountyPower );
 	addModule( CleanupAreaPower );
 
@@ -556,6 +607,7 @@ void ModuleFactory::init( void )
 	// client update modules
 	addModule( AnimatedParticleSysBoneClientUpdate );
 	addModule( SwayClientUpdate );
+	addModule( DynamicGeometryClientUpdate );
 	addModule( BeaconClientUpdate );
 
 }

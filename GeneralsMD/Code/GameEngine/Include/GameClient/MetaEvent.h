@@ -357,6 +357,7 @@ private:
 
 	Int						m_lastKeyDown;	// really a MappableKeyType
 	Int						m_lastModState;	// really a MappableKeyModState
+	Int						m_lastKeyDownTime; // last key down time in real time
 
 	enum { NUM_MOUSE_BUTTONS = 3 };
 	ICoord2D m_mouseDownPosition[NUM_MOUSE_BUTTONS];
@@ -375,10 +376,12 @@ class MetaMap : public SubsystemInterface
 
 private:
 	MetaMapRec *m_metaMaps;
+	std::vector<MappableKeyType> m_doubleDownKeysVec;
 
 protected:
 	GameMessage::Type findGameMessageMetaType(const char* name);
 	MetaMapRec *getMetaMapRec(GameMessage::Type t);
+	void pushDoubleDownKeyList(MappableKeyType m);
 
 public:
 
@@ -396,6 +399,7 @@ public:
 	static void generateMetaMap();
 
 	const MetaMapRec *getFirstMetaMapRec() const { return m_metaMaps; }
+	Bool hasDoubleDownKey(MappableKeyType m) const;
 };
 
 extern MetaMap *TheMetaMap;

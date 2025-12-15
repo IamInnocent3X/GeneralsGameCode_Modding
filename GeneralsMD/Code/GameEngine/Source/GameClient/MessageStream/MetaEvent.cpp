@@ -144,6 +144,7 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STOP",																			GameMessage::MSG_META_STOP },
 	{ "DEPLOY",																		GameMessage::MSG_META_DEPLOY },
 	{ "CREATE_FORMATION",													GameMessage::MSG_META_CREATE_FORMATION },
+	{ "MOVE_IN_FORMATION",													GameMessage::MSG_META_MOVE_IN_FORMATION },
 	{ "FOLLOW",																		GameMessage::MSG_META_FOLLOW },
 	{ "CHAT_PLAYERS",															GameMessage::MSG_META_CHAT_PLAYERS },
 	{ "CHAT_ALLIES",															GameMessage::MSG_META_CHAT_ALLIES },
@@ -379,7 +380,8 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 //-------------------------------------------------------------------------------------------------
 MetaEventTranslator::MetaEventTranslator() :
 	m_lastKeyDown(MK_NONE),
-	m_lastModState(0)
+	m_lastModState(0),
+	m_lastKeyDownTime(0)
 {
 	for (Int i = 0; i < NUM_MOUSE_BUTTONS; ++i) {
 		m_nextUpShouldCreateDoubleClick[i] = FALSE;
@@ -437,6 +439,8 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 	GameMessageDisposition disp = KEEP_MESSAGE;
 	GameMessage::Type t = msg->getType();
 
+	Int timenow = timeGetTime();
+
 	if (t == GameMessage::MSG_RAW_KEY_DOWN || t == GameMessage::MSG_RAW_KEY_UP)
 	{
 		MappableKeyType key = (MappableKeyType)msg->getArgument(0)->integer;
@@ -486,17 +490,31 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 				break;
 			}
 
+			Bool isDoingDoubleDown = FALSE;
+			if( (keyState & KEY_STATE_DOWN) &&
+				m_lastKeyDown == key &&
+				m_lastKeyDownTime > timenow &&
+				TheMetaMap->hasDoubleDownKey(map->m_key)
+			  )
+			{
+				isDoingDoubleDown = TRUE;
+			}
+
 			// ok, now check for "normal" key transitions.
 			if (
 						map->m_key == key &&
 						map->m_modState == newModState &&
 						(
+							// IamInnocent 04/12/25 - Reworked & Restored Double Down function
 							(map->m_transition == UP && (keyState & KEY_STATE_UP)) ||
-							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN)) //||
-							//(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && m_lastKeyDown == key)
+							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN) && !isDoingDoubleDown) ||
+							(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && isDoingDoubleDown)
 						)
 					)
 			{
+				// Clear the KeyDownTime for DOUBLEDOWN
+				if(map->m_transition == DOUBLEDOWN)
+					m_lastKeyDownTime = 0;
 
 				if( keyState & KEY_STATE_AUTOREPEAT )
 				{
@@ -543,6 +561,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 		if (t == GameMessage::MSG_RAW_KEY_DOWN)
     {
 			m_lastKeyDown = key;
+			m_lastKeyDownTime = timenow + 500;
 
 
 #ifdef DUMP_ALL_KEYS_TO_LOG
@@ -656,6 +675,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 MetaMap::MetaMap() :
 	m_metaMaps(NULL)
 {
+	m_doubleDownKeysVec.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -667,6 +687,7 @@ MetaMap::~MetaMap()
 		deleteInstance(m_metaMaps);
 		m_metaMaps = next;
 	}
+	m_doubleDownKeysVec.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -720,6 +741,9 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 		throw INI_INVALID_DATA;
 
 	ini->initFromINI(map, TheMetaMapFieldParseTable);
+
+	if(map->m_transition == DOUBLEDOWN)
+		TheMetaMap->pushDoubleDownKeyList(map->m_key);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -902,3 +926,24 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 	MetaMap::parseMetaMap(ini);
 }
 
+//-------------------------------------------------------------------------------------------------
+void MetaMap::pushDoubleDownKeyList(MappableKeyType m)
+{
+	for(std::vector<MappableKeyType>::const_iterator it = m_doubleDownKeysVec.begin(); it != m_doubleDownKeysVec.end(); ++it)
+	{
+		if ((*it) == m)
+			return;
+	}
+	m_doubleDownKeysVec.push_back(m);
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool MetaMap::hasDoubleDownKey(MappableKeyType m) const
+{
+	for(std::vector<MappableKeyType>::const_iterator it = m_doubleDownKeysVec.begin(); it != m_doubleDownKeysVec.end(); ++it)
+	{
+		if ((*it) == m)
+			return TRUE;
+	}
+	return FALSE;
+}

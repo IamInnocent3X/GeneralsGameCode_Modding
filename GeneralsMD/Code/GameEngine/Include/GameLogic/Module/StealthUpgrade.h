@@ -35,14 +35,27 @@
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Thing;
 
-//-------------------------------------------------------------------------------------------------
-/** The default	die module */
+//-----------------------------------------------------------------------------
+class StealthUpgradeModuleData : public UpgradeModuleData
+{
+public:
+	UnsignedInt m_stealthLevel;   ///< override stealthLevel of the stealthUpdate module (=StealthForbiddenConditions)
+	Bool m_enableStealth;   ///< Enable or Disable stealth
+
+	StealthUpgradeModuleData()
+	{
+		m_enableStealth = TRUE;
+		m_stealthLevel = 0;
+	}
+
+	static void buildFieldParse(MultiIniFieldParse& p);
+};
 //-------------------------------------------------------------------------------------------------
 class StealthUpgrade : public UpgradeModule
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( StealthUpgrade, "StealthUpgrade" )
-	MAKE_STANDARD_MODULE_MACRO( StealthUpgrade );
+	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( StealthUpgrade, StealthUpgradeModuleData);
 
 public:
 
@@ -52,5 +65,9 @@ public:
 protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+	UnsignedInt m_prevStealthLevel;
+	Bool m_hasExecuted;
 };

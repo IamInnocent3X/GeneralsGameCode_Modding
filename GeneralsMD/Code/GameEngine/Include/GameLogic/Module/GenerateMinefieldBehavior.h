@@ -95,6 +95,7 @@ protected:
 
 	virtual void upgradeImplementation();
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
 	{
@@ -103,6 +104,11 @@ protected:
 	virtual void performUpgradeFX()
 	{
 		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 	virtual void processUpgradeRemoval()
 	{

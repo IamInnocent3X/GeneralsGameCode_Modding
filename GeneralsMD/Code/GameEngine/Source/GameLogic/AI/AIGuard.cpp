@@ -234,6 +234,8 @@ Bool AIGuardMachine::lookForInnerTarget(void)
 	PartitionFilterRelationship					f5(owner, PartitionFilterRelationship::ALLOW_NEUTRAL);
 	PartitionFilterPossibleToEnter			f6(owner, CMD_FROM_AI);
 	PartitionFilterPossibleToHijack			f7(owner, CMD_FROM_AI);
+	PartitionFilterPossibleToEquip			f8(owner, CMD_FROM_AI);
+	PartitionFilterRelationship				f9(owner, PartitionFilterRelationship::ALLOW_ALLIES);
 
 	PartitionFilter *filters[16];
 	Int count = 0;
@@ -248,6 +250,15 @@ Bool AIGuardMachine::lookForInnerTarget(void)
 		{
 			filters[count++] = &f1;
 			filters[count++] = &f7;
+		}
+		else if (owner->getTemplate()->isEquipGuard() || owner->getTemplate()->isParasiteGuard())
+		{
+			if(owner->getTemplate()->isParasiteGuard())
+				filters[count++] = &f1;
+			else
+				filters[count++] = &f9;
+
+			filters[count++] = &f8;
 		}
 		else
 		{
@@ -276,7 +287,7 @@ Bool AIGuardMachine::lookForInnerTarget(void)
 		area->getCenterPoint(&pos);
 	}
 
-	if (getGuardMode() == GUARDMODE_GUARD_FLYING_UNITS_ONLY)
+	if (getGuardMode() == GUARDMODE_GUARD_FLYING_UNITS_ONLY || getGuardMode() == GUARDMODE_FAR_FLYING_UNITS_ONLY || getGuardMode() == GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY)
 	{
 		// only consider flying targets
 		filters[count++] = &f4;
@@ -517,7 +528,8 @@ AIGuardOuterState::~AIGuardOuterState(void)
 //--------------------------------------------------------------------------------------
 StateReturnType AIGuardOuterState::onEnter( void )
 {
-	if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT)
+	GuardMode guardMode = getGuardMachine()->getGuardMode();
+	if (guardMode == GUARDMODE_GUARD_WITHOUT_PURSUIT || guardMode == GUARDMODE_FAR_WITHOUT_PURSUIT || guardMode == GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT )
 	{
 		// "patrol" mode does not follow targets outside the guard area.
 		return STATE_SUCCESS;
@@ -650,9 +662,52 @@ StateReturnType AIGuardReturnState::onEnter( void )
 		area->getCenterPoint(&m_goalPosition);
 	}
 	AIUpdateInterface *ai = getMachineOwner()->getAIUpdateInterface();
-	if (ai && ai->isDoingGroundMovement())
+	if (ai)
 	{
-		TheAI->pathfinder()->adjustDestination(getMachineOwner(), ai->getLocomotorSet(), &m_goalPosition);
+		GuardMode guardMode = getGuardMachine()->getGuardMode();
+		Bool isFarGuard = guardMode == GUARDMODE_FAR || guardMode == GUARDMODE_FAR_WITHOUT_PURSUIT || guardMode == GUARDMODE_FAR_FLYING_UNITS_ONLY ? TRUE : FALSE;
+		if(isFarGuard)
+		{
+			Object *me = getMachineOwner();
+			if(me)
+			{
+				me->chooseBestWeaponForPosition(&m_goalPosition, PREFER_MOST_DAMAGE, ai->getLastCommandSource(), guardMode == GUARDMODE_FAR_FLYING_UNITS_ONLY);
+				Weapon* weap = me->getCurrentWeapon();
+				if (weap)
+				{
+					Real range = weap->getAttackRange(me);
+					Real radius = AIGuardMachine::getStdGuardRange(me);
+					Real maxRange = max(range, radius);
+
+					// Set the new goal position to move to
+					Coord3D Direction;
+					Direction.set( me->getPosition() );
+					Direction.sub( &m_goalPosition );
+
+					if(Direction.lengthSqr() > maxRange*maxRange)
+					{
+						Real angle = atan2(Direction.y, Direction.x);
+						m_goalPosition.x += maxRange * (Real)cosf(angle);
+						m_goalPosition.y += maxRange * (Real)sinf(angle);
+					}
+					else
+					{
+						m_goalPosition.set( me->getPosition() );
+					}
+
+				}
+			}
+		}
+
+		if(ai->isDoingGroundMovement())
+		{
+			if(isFarGuard)
+			{
+				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(&m_goalPosition);
+				m_goalPosition.z = TheTerrainLogic->getLayerHeight( m_goalPosition.x, m_goalPosition.y, layer );
+			}
+			TheAI->pathfinder()->adjustDestination(getMachineOwner(), ai->getLocomotorSet(), &m_goalPosition);
+		}
 	}
 	setAdjustsDestination(true);
 	return AIInternalMoveToState::onEnter();

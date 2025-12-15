@@ -31,6 +31,7 @@
 #pragma once
 
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameClient/Anim2D.h"
 
 class WeaponTemplate;
 class FXList;
@@ -44,12 +45,25 @@ public:
 	WeaponTemplate*	m_geometryBasedDamageWeaponTemplate;
 	FXList*					m_geometryBasedDamageFX;
 
+	AsciiString m_animBaseTemplate;
+	AsciiString m_animTimedTemplate;
+	Bool m_showTimer;     ///< if this is disabled, only use animBase for timed bombs
+
+	Bool m_hideAnimBase;      ///< will be set automatically if String is Null
+	Bool m_hideAnimTimed;      ///< will be set automatically if String is Null
+
 	StickyBombUpdateModuleData()
 	{
 		m_offsetZ = 10.0f;
 		m_geometryBasedDamageWeaponTemplate = NULL;
 		m_geometryBasedDamageFX = NULL;
+		m_animBaseTemplate = AsciiString::TheEmptyString;
+		m_animTimedTemplate = AsciiString::TheEmptyString;
+		m_showTimer = TRUE;
 	}
+
+	static void parseAnimBaseName(INI* ini, void* instance, void* store, const void* userData);
+	static void parseAnimTimedName(INI* ini, void* instance, void* store, const void* userData);
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
@@ -60,14 +74,39 @@ public:
 			{ "OffsetZ",									INI::parseReal,						NULL, offsetof( StickyBombUpdateModuleData, m_offsetZ ) },
 			{ "GeometryBasedDamageWeapon",INI::parseWeaponTemplate, NULL, offsetof( StickyBombUpdateModuleData, m_geometryBasedDamageWeaponTemplate ) },
 			{ "GeometryBasedDamageFX",		INI::parseFXList,					NULL, offsetof( StickyBombUpdateModuleData, m_geometryBasedDamageFX ) },
+			{ "Animation2DBase",		parseAnimBaseName,					NULL, 0 },
+			{ "Animation2DTimed",		parseAnimTimedName,					NULL, 0 },
+			{ "ShowTimer",		INI::parseBool,					NULL, offsetof( StickyBombUpdateModuleData, m_showTimer) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
 	}
 };
 
+
+// ------------------------------------------------------------------------------------------------
+class StickyBombUpdateInterface
+{
+public:
+	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL ) = 0;
+	virtual void detonate() = 0;
+	virtual Bool isTimedBomb() const = 0;
+	virtual UnsignedInt getDetonationFrame() const = 0;
+	virtual Object* getTargetObject() const = 0;
+	virtual void setTargetObject( Object *obj ) = 0;
+
+	//AsciiString getAnimBaseTemplate() { return getStickyBombUpdateModuleData()->m_animBaseTemplate; }
+	//AsciiString getAnimTimedTemplate() { return getStickyBombUpdateModuleData()->m_animTimedTemplate; }
+
+	virtual Anim2DTemplate* getAnimBaseTemplate() = 0;
+	virtual Anim2DTemplate* getAnimTimedTemplate() = 0;
+
+	virtual Bool showAnimBaseTemplate() = 0;
+	virtual Bool showAnimTimedTemplate() = 0;
+};
+
 //-------------------------------------------------------------------------------------------------
-class StickyBombUpdate : public UpdateModule
+class StickyBombUpdate : public UpdateModule, public StickyBombUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( StickyBombUpdate, "StickyBombUpdate" )
@@ -82,16 +121,35 @@ public:
 
 	virtual UpdateSleepTime update();							///< called once per frame
 
-	void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL );
-	void detonate();
-	Bool isTimedBomb() const { return m_dieFrame > 0; }
-	UnsignedInt getDetonationFrame() const { return m_dieFrame; }
-	Object* getTargetObject() const;
-	void setTargetObject( Object *obj );
+	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return this; }
+
+	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL );
+	virtual void detonate();
+	virtual Bool isTimedBomb() const { return (m_dieFrame > 0) && getStickyBombUpdateModuleData()->m_showTimer; }
+	virtual UnsignedInt getDetonationFrame() const { return m_dieFrame; }
+	virtual Object* getTargetObject() const;
+	virtual void setTargetObject( Object *obj );
+
+	//AsciiString getAnimBaseTemplate() { return getStickyBombUpdateModuleData()->m_animBaseTemplate; }
+	//AsciiString getAnimTimedTemplate() { return getStickyBombUpdateModuleData()->m_animTimedTemplate; }
+
+	virtual Anim2DTemplate* getAnimBaseTemplate();
+	virtual Anim2DTemplate* getAnimTimedTemplate();
+
+	//inline Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
+	//inline Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
+
+	virtual Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
+	virtual Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
 
 private:
 
 	ObjectID			m_targetID;
 	UnsignedInt		m_dieFrame;
 	UnsignedInt   m_nextPingFrame;
+	VeterancyLevel m_veterancyLevel;
+
+	Anim2DTemplate* m_animBaseTemplate;
+	Anim2DTemplate* m_animTimedTemplate;
+
 };

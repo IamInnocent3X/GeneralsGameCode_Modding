@@ -656,7 +656,8 @@ void RTS3DScene::renderOneObject(RenderInfoClass &rinfo, RenderObjClass *robj, I
 			}
 		}
 
-		if (draw->isKindOf(KINDOF_INFANTRY))
+		if ((draw->isKindOf(KINDOF_INFANTRY) && !draw->isKindOf(KINDOF_DISABLE_INFANTRY_LIGHTING)) ||
+			  draw->isKindOf(KINDOF_ENABLE_INFANTRY_LIGHTING))
 		{
 			//ambient = m_infantryAmbient;  //has no effect - see comment on m_infantryAmbient
 			sceneLights = m_infantryLight;
@@ -1651,6 +1652,7 @@ void RTS3DScene::flushTranslucentObjects(RenderInfoClass & rinfo)
 			draw = ((DrawableInfo *)robj->Get_User_Data())->m_drawable;
 
 			rinfo.alphaOverride = draw->getEffectiveOpacity();
+			rinfo.emissiveOverride = draw->getEmissiveOpacity();
 
 			renderOneObject(rinfo, robj, localPlayerIndex);//WW3D::Render(*robj,rinfo);
 		}
@@ -1659,6 +1661,7 @@ void RTS3DScene::flushTranslucentObjects(RenderInfoClass & rinfo)
 		TheDX8MeshRenderer.Flush();
 		WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);	//draws things like water
 		rinfo.alphaOverride = 1.0f;	//disable forced alpha
+		rinfo.emissiveOverride = 1.0f;	//disable forced alpha
 		m_translucentObjectsCount = 0;
 	}
 

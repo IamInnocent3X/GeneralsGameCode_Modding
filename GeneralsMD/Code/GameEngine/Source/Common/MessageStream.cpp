@@ -32,6 +32,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/Recorder.h"
+#include "Common/KindOf.h"
 
 #include "GameClient/InGameUI.h"
 #include "GameLogic/GameLogic.h"
@@ -60,6 +61,14 @@ GameMessage::GameMessage( GameMessage::Type type )
 	m_argTail = NULL;
 	m_argCount = 0;
 	m_list = 0;
+	m_orderData.Radius = 0.0f;
+	m_orderData.RequiredMask = KINDOFMASK_NONE;
+	m_orderData.ForbiddenMask = KINDOFMASK_NONE;
+	m_orderData.MinDelay = 0;
+	m_orderData.MaxDelay = 0;
+	m_orderData.IntervalDelay = 0;
+	m_doSingleID = INVALID_ID;
+	m_doSingleAddStat = FALSE;
 }
 
 
@@ -335,6 +344,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_META_STOP)
 	CASE_LABEL(MSG_META_DEPLOY)
 	CASE_LABEL(MSG_META_CREATE_FORMATION)
+	CASE_LABEL(MSG_META_MOVE_IN_FORMATION)
 	CASE_LABEL(MSG_META_FOLLOW)
 	CASE_LABEL(MSG_META_CHAT_PLAYERS)
 	CASE_LABEL(MSG_META_CHAT_ALLIES)
@@ -557,6 +567,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_SABOTAGE_HINT)
 	CASE_LABEL(MSG_FIREBOMB_HINT)
 	CASE_LABEL(MSG_CONVERT_TO_CARBOMB_HINT)
+	CASE_LABEL(MSG_EQUIP_HINT)
 	CASE_LABEL(MSG_CAPTUREBUILDING_HINT)
 	CASE_LABEL(MSG_HACK_HINT)
 
@@ -612,6 +623,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_DO_SPECIAL_POWER)
 	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_LOCATION)
 	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_OBJECT)
+	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_DRAWABLE)
 	CASE_LABEL(MSG_SET_RALLY_POINT)
 	CASE_LABEL(MSG_PURCHASE_SCIENCE)
 	CASE_LABEL(MSG_QUEUE_UPGRADE)
@@ -624,6 +636,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_SELL)
 	CASE_LABEL(MSG_EXIT)
 	CASE_LABEL(MSG_EVACUATE)
+	CASE_LABEL(MSG_ENTER_ME)
 	CASE_LABEL(MSG_EXECUTE_RAILED_TRANSPORT)
 	CASE_LABEL(MSG_COMBATDROP_AT_LOCATION)
 	CASE_LABEL(MSG_COMBATDROP_AT_OBJECT)
@@ -636,6 +649,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_DO_REPAIR)
 	CASE_LABEL(MSG_RESUME_CONSTRUCTION)
 	CASE_LABEL(MSG_ENTER)
+	CASE_LABEL(MSG_EQUIP)
 	CASE_LABEL(MSG_DOCK)
 	CASE_LABEL(MSG_DO_MOVETO)
 	CASE_LABEL(MSG_DO_ATTACKMOVETO)
@@ -653,6 +667,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 #endif
 
 	CASE_LABEL(MSG_TOGGLE_OVERCHARGE)
+	CASE_LABEL(MSG_DISABLE_POWER)
 
 #ifdef ALLOW_SURRENDER
 	CASE_LABEL(MSG_RETURN_TO_PRISON)
@@ -678,6 +693,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_SET_REPLAY_CAMERA)
 	CASE_LABEL(MSG_SELF_DESTRUCT)
 	CASE_LABEL(MSG_CREATE_FORMATION)
+	CASE_LABEL(MSG_MOVE_IN_FORMATION)
 	CASE_LABEL(MSG_LOGIC_CRC)
 
 #if defined(RTS_DEBUG)
@@ -737,6 +753,32 @@ GameMessageList::~GameMessageList()
 void GameMessageList::appendMessage( GameMessage *msg )
 {
 	msg->friend_setNext(NULL);
+
+	if (m_lastMessage)
+	{
+		m_lastMessage->friend_setNext(msg);
+		msg->friend_setPrev(m_lastMessage);
+		m_lastMessage = msg;
+	}
+	else
+	{
+		// first message
+		m_firstMessage = msg;
+		m_lastMessage = msg;
+		msg->friend_setPrev(NULL);
+	}
+
+	// note containment within message itself
+	msg->friend_setList(this);
+}
+
+/**
+ * Append message to end of message list with order radius properties
+ */
+void GameMessageList::appendMessageWithOrderNearby( GameMessage *msg, OrderNearbyData orderData )
+{
+	msg->friend_setNext(NULL);
+	msg->friend_setOrderData(orderData);
 
 	if (m_lastMessage)
 	{
@@ -884,6 +926,21 @@ GameMessage *MessageStream::appendMessage( GameMessage::Type type )
 
 	// add message to list
 	GameMessageList::appendMessage( msg );
+
+	return msg;
+}
+
+/**
+ * Create a new message of the given message type and append it
+ * to this message stream.  Return the message such that any data
+ * associated with this message can be attached to it.
+ */
+GameMessage *MessageStream::appendMessageWithOrderNearby( GameMessage::Type type, OrderNearbyData orderData )
+{
+	GameMessage *msg = newInstance(GameMessage)( type );
+
+	// add message to list
+	GameMessageList::appendMessageWithOrderNearby( msg, orderData );
 
 	return msg;
 }

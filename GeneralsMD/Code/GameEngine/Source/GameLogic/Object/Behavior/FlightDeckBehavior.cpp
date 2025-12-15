@@ -63,6 +63,8 @@ FlightDeckBehaviorModuleData::FlightDeckBehaviorModuleData()
 	m_landingDeckHeightOffset = 0.0f;
 	m_dockAnimationFrames = 0;
 	m_catapultFireFrames = 0;
+	m_healingClearsParasite = TRUE;
+	m_healingClearsParasiteKeys.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -118,6 +120,9 @@ void FlightDeckBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "LaunchRampDelay",				INI::parseDurationUnsignedInt,		NULL, offsetof( FlightDeckBehaviorModuleData, m_launchRampFrames ) },
 		{ "LowerRampDelay",					INI::parseDurationUnsignedInt,		NULL, offsetof( FlightDeckBehaviorModuleData, m_lowerRampFrames ) },
 		{ "CatapultFireDelay",			INI::parseDurationUnsignedInt,		NULL, offsetof( FlightDeckBehaviorModuleData, m_catapultFireFrames ) },
+
+		{ "HealingClearsParasite",			INI::parseBool,	NULL, offsetof( FlightDeckBehaviorModuleData, m_healingClearsParasite ) },
+		{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, NULL, offsetof( FlightDeckBehaviorModuleData, m_healingClearsParasiteKeys ) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -1028,9 +1033,17 @@ void FlightDeckBehavior::defectAllParkedUnits(Team* newTeam, UnsignedInt detecti
 				continue;
 
 			// srj sez: evil. fix better someday.
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
-			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
-			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+			/// IamInnocent - Done
+			//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			//JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
+			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+
+			Bool takeoffOrLanding = false;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			if( jetAI )
+			{
+				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
+			}
 
 			if (obj->isAboveTerrain() && !takeoffOrLanding)
 			{
@@ -1069,9 +1082,17 @@ void FlightDeckBehavior::killAllParkedUnits()
 				continue;
 
 			// srj sez: evil. fix better someday.
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
-			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
-			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+			/// IamInnocent - Done
+			//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			//JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
+			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+
+			Bool takeoffOrLanding = false;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			if( jetAI )
+			{
+				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
+			}
 
 			if (obj->isAboveTerrain() && !takeoffOrLanding)
 				continue;
@@ -1120,6 +1141,8 @@ UpdateSleepTime FlightDeckBehavior::update()
 					healInfo.in.m_deathType = DEATH_NONE;
 					healInfo.in.m_sourceID = getObject()->getID();
 					healInfo.in.m_amount = HEAL_RATE_FRAMES * data->m_healAmount * SECONDS_PER_LOGICFRAME_REAL;
+					healInfo.in.m_clearsParasite = data->m_healingClearsParasite;
+					healInfo.in.m_clearsParasiteKeys = data->m_healingClearsParasiteKeys;
 					BodyModuleInterface *body = objToHeal->getBodyModule();
 					body->attemptHealing( &healInfo );
 					++it;
@@ -1342,9 +1365,16 @@ void FlightDeckBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitDoo
 	//validateAssignments();
 
 	/// @todo srj -- this is evil. fix.
-	static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
-	JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
-	Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
+	//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
+	//JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
+	//Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
+
+	Real parkingOffset = 0.0f;
+	JetAIUpdate *jetAI = newObj->getAI() ? (JetAIUpdate*)newObj->getAI()->getJetAIUpdate() : NULL;
+	if( jetAI )
+	{
+		parkingOffset = jetAI->friend_getParkingOffset();
+	}
 
 	PPInfo ppinfo;
 	Matrix3D mtx;

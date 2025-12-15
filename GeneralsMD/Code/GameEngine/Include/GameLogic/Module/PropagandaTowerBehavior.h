@@ -32,6 +32,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/PropagandaTowerBehavior.h"
+#include "GameLogic/Module/CreateModule.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 
@@ -59,12 +60,15 @@ public:
 	Real m_upgradedAutoHealPercentPerSecond;		///< Different percent to use for healing if upgraded too
 	const FXList *m_upgradedPulseFX;						///< FXList to play for pulse when upgraded
 	Bool m_affectsSelf;													///< Allow effect to affect ourselves
+	Bool m_autoHealClearsParasite;										///< Destroys Parasites on Healing
+	std::vector<AsciiString> m_autoHealClearsParasiteKeys;				///< Parasite Keys able to Clear
 
 };
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 class PropagandaTowerBehavior : public UpdateModule,
+																public CreateModuleInterface,
 																public DieModuleInterface
 {
 
@@ -81,6 +85,11 @@ public:
 	virtual void onDelete( void );
 	void onObjectCreated( void );
 
+	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+
 	// update module methods
 	virtual UpdateSleepTime update( void );
 
@@ -93,6 +102,8 @@ public:
 	// of our effect on people.  We don't say "Be affected for n frames", we toggle people.  We need to process
 	// so we can toggle everyone off.
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+
+	virtual void doRemovedFrom();
 
 	// our own public module methods
 

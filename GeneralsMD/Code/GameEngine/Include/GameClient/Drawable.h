@@ -37,6 +37,7 @@
 #include "GameClient/Color.h"
 #include "WWMath/matrix3d.h"
 #include "GameClient/DrawableInfo.h"
+#include "GameClient/TintStatus.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class PositionalSound;
@@ -311,9 +312,23 @@ public:
 	void friend_bindToObject( Object *obj ); ///< bind this drawable to an object ID. for use ONLY by GameLogic!
 	void setIndicatorColor(Color color);
 
-	void setTintStatus( TintStatus statusBits ) { BitSet( m_tintStatus, statusBits ); };
-	void clearTintStatus( TintStatus statusBits ) { BitClear( m_tintStatus, statusBits ); };
-	Bool testTintStatus( TintStatus statusBits ) const { return BitIsSet( m_tintStatus, statusBits ); };
+	//void setTintStatus( TintStatus statusBits ) { BitSet( m_tintStatus, statusBits ); };
+	//void clearTintStatus( TintStatus statusBits ) { BitClear( m_tintStatus, statusBits ); };
+	//Bool testTintStatus( TintStatus statusBits ) const { return BitIsSet( m_tintStatus, statusBits ); };
+
+	void setTintStatus(TintStatus statusType) { if(m_countFrames || m_dontAssignFrames) return; m_tintStatus.set(statusType); };
+	void setAndClearTintFast(TintStatus statusType);
+	void clearTintStatus(TintStatus statusType, bool clearLater = FALSE) { if(clearLater) m_eraseTint = statusType; else m_tintStatus.set(statusType, 0); }
+	Bool testTintStatus(TintStatus statusType) const { return m_tintStatus.test(statusType); };
+	// TO-DO: Change AsciiString to NameKeyType
+	// TO-DO: REVERTED. Game will not register.
+	void setCustomTintStatus(const AsciiString& customStatusType);
+	void setAndClearCustomTintFast(const AsciiString& customStatusType);
+	void clearCustomTintStatus(const AsciiString& customStatusType, bool clearLater = FALSE);
+	Bool hasCustomTintStatus() const { return m_tintCustomStatus.size() > 0; };
+	Bool testCustomTintStatus(const AsciiString& customStatusType) const;
+	
+	
 	TintEnvelope *getColorTintEnvelope( void ) { return m_colorTintEnvelope; }
 	void setColorTintEnvelope( TintEnvelope &source ) { if (m_colorTintEnvelope) *m_colorTintEnvelope = source; }
 
@@ -456,6 +471,16 @@ public:
 							const Coord3D* victimPos,
 							Real damageRadius
 							);
+	Bool handleWeaponPreAttackFX(
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		const FXList* fxl,
+		Real weaponSpeed,
+		Real recoilAmount,
+		Real recoilAngle,
+		const Coord3D* victimPos,
+		Real damageRadius
+	);
 
 	Int getBarrelCount(WeaponSlotType wslot) const;
 
@@ -512,6 +537,8 @@ public:
 
 	void updateSubObjects();
 	void showSubObject( const AsciiString& name, Bool show );
+	const AsciiString& getModelName() const;
+	void setModelName(const AsciiString& modelName);
 
 #ifdef ALLOW_ANIM_INQUIRIES
 // srj sez: not sure if this is a good idea, for net sync reasons...
@@ -527,6 +554,8 @@ public:
 	void friend_setSelected( void );							///< mark drawable as "selected"
 	void friend_clearSelected( void );						///< clear drawable's "selected"
 
+	void friend_setSelectedSetShowFlash( Bool showFlash );		///< mark drawable as "selected"
+
 	Vector3 * getAmbientLight( void );					///< get color value to add to ambient light when drawing
 	void setAmbientLight( Vector3 *ambient );		///< set color value to add to ambient light when drawing
 
@@ -540,6 +569,11 @@ public:
 	// note that this is not the 'get' inverse of setDrawableOpacity, since stealthing can also affect the effective opacity!
 	Real getEffectiveOpacity() const { return m_explicitOpacity * m_effectiveStealthOpacity; }		///< get alpha/opacity value used to override defaults when drawing.
 	void setEffectiveOpacity( Real pulseFactor, Real explicitOpacity = -1.0f );
+
+	// AW: new params for additive transparency scaling (=emissive)
+	inline void setEmissiveOpacityScaling(bool value) { m_isEmissiveOpacityScaling = value; }
+	inline bool getEmissiveOpacityScaling() const { return m_isEmissiveOpacityScaling; }
+	inline Real getEmissiveOpacity() const { if (m_isEmissiveOpacityScaling) return getEffectiveOpacity(); else return 1.0; }
 
 	// this is for the add'l pass fx which operates completely independently of the stealth opacity effects. Draw() does the fading every frame.
 	Real getSecondMaterialPassOpacity() const { return m_secondMaterialPassOpacity; }		///< get alpha/opacity value used to render add'l  rendering pass.
@@ -646,6 +680,7 @@ protected:
 
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
 	void updateHiddenStatus();
+	Bool checkDrawModuleNullptr(DrawModule** dm);
 
 	void replaceModelConditionStateInDrawable();
 
@@ -668,6 +703,8 @@ private:
 	Real m_stealthOpacity;			///< <<minimum>> opacity due to stealth. pulse is between opaque and this
 	Real m_effectiveStealthOpacity;			///< opacity actually used to render with, after the pulse and stuff.
 
+	Bool m_isEmissiveOpacityScaling;   ///< should emissive color be scaled with opacity (needed for fading out additive objects)
+
 	Real m_decalOpacityFadeTarget;
 	Real m_decalOpacityFadeRate;
 	Real m_decalOpacity;
@@ -683,7 +720,16 @@ private:
 	DrawableStatusBits m_status;		///< status bits (see DrawableStatus enum)
 	UnsignedInt m_tintStatus;				///< tint color status bits (see TintStatus enum)
 	UnsignedInt m_prevTintStatus;///< for edge testing with m_tintStatus
-
+	std::vector<AsciiString> m_tintCustomStatus;
+	std::vector<AsciiString> m_prevTintCustomStatus;
+	UnsignedInt m_eraseTint;
+	UnsignedInt m_tintStatusTypeQuick;
+	AsciiString m_eraseCustomTint;
+	AsciiString m_customTintStatusTypeQuick;
+	UnsignedInt m_countFrames;
+	UnsignedInt m_dontAssignFrames;
+	Bool m_changedCustomStatus;
+	
 	enum FadingMode
 	{
 		FADING_NONE,
@@ -762,6 +808,9 @@ private:
 	void drawContained( const IRegion2D *healthBarRegion );					///< draw icons
 	void drawVeterancy( const IRegion2D *healthBarRegion );					///< draw veterency information
 
+	//new:
+	void drawProgress(const IRegion2D* healthBarRegion);							///< draw progress bar (shield, deploy, teleport, etc.)
+
 	void drawEmoticon( const IRegion2D* healthBarRegion );
 	void drawHealthBar( const IRegion2D* healthBarRegion );					///< draw heath bar
 	void drawHealing( const IRegion2D* healthBarRegion );						///< draw icons
@@ -777,8 +826,12 @@ private:
 
 	static Bool							s_staticImagesInited;
 	static const Image*			s_veterancyImage[LEVEL_COUNT];
+
 	static const Image*			s_fullAmmo;
 	static const Image*			s_emptyAmmo;
+	static const Image*         s_fullAmmoThin;
+	static const Image*         s_emptyAmmoThin;
+
 	static const Image*			s_fullContainer;
 	static const Image*			s_emptyContainer;
 	static Anim2DTemplate**	s_animationTemplates;

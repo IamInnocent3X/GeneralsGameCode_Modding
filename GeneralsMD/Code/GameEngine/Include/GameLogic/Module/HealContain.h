@@ -44,6 +44,8 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 
 	UnsignedInt m_framesForFullHeal;			///< time (in frames) something becomes fully healed
+	Bool		m_healingClearsParasite;		///< does healing clears parasite?
+	std::vector<AsciiString>	m_healingClearsParasiteKeys;	///< Parasite keys healing is able to clear
 
 };
 

@@ -30,11 +30,14 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#define DEFINE_DEATH_NAMES
+
 #include "Common/Thing.h"
 #include "Common/ThingTemplate.h"
 #include "Common/INI.h"
 #include "Common/RandomValue.h"
 #include "Common/Player.h"
+#include "GameLogic/Damage.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/EMPUpdate.h"
 #include "GameLogic/ObjectIter.h"
@@ -46,6 +49,7 @@
 #include "GameClient/Drawable.h"
 #include "Common/KindOf.h"
 #include "GameClient/ParticleSys.h"
+#include "GameClient/TintStatus.h"
 
 
 
@@ -115,6 +119,12 @@ EMPUpdate::EMPUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModul
 	m_tintEnvPlayFrame  = 0;
 	//m_spinRate = 0;
 	m_targetScale = 1;
+	m_affectsKindOf = data->m_affectsKindOf;
+	m_rejectMask = data->m_rejectMask;
+	m_radius = data->m_effectRadius;
+	DeathType dt = (DeathType)INI::scanIndexList(data->m_empProjectileDeathType.str(), TheDeathNames);
+	if(dt != DEATH_NONE)
+		m_projectileDeathType = dt;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -129,6 +139,7 @@ EMPUpdate::~EMPUpdate( void )
 UpdateSleepTime EMPUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - done. Needs testing
 
 	Object *obj = getObject();
 
@@ -161,7 +172,14 @@ UpdateSleepTime EMPUpdate::update( void )
 	if( now >= m_dieFrame )
 		obj->kill();
 
-	return UPDATE_SLEEP_NONE;
+	if(m_targetScale != m_currentScale)
+		return UPDATE_SLEEP_NONE;
+	else if(now < m_tintEnvPlayFrame)
+		return UPDATE_SLEEP(m_tintEnvPlayFrame - now);
+	else if(now >= m_dieFrame)
+		return UPDATE_SLEEP_FOREVER;
+	else
+		return now >= m_tintEnvPlayFrame && m_dieFrame > now ? UPDATE_SLEEP(m_dieFrame - now) : UPDATE_SLEEP_NONE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -173,7 +191,7 @@ void EMPUpdate::doDisableAttack( void )
 	if( !object || !data )
 		return; //sanity
 
-	Real radius = data->m_effectRadius;
+	//Real radius = data->m_effectRadius;
 	Real curVictimDistSqr;
 	const Coord3D *pos = object->getPosition();
 
@@ -196,19 +214,27 @@ void EMPUpdate::doDisableAttack( void )
 	SimpleObjectIterator *iter = NULL;
 	Object *curVictim = NULL;
 
-	if (radius > 0.0f)
+	if (m_radius > 0.0f)
 	{
 		iter = ThePartitionManager->iterateObjectsInRange(pos,
-			radius, FROM_BOUNDINGSPHERE_3D);
+			m_radius, FROM_BOUNDINGSPHERE_3D);
 
 		curVictim = iter->firstWithNumeric(&curVictimDistSqr);
 	}
 
 	MemoryPoolObjectHolder hold(iter);
 
+	if ( m_affectsKindOf == KINDOFMASK_NONE )
+	{
+		m_affectsKindOf.set(KINDOF_VEHICLE);
+		m_affectsKindOf.set(KINDOF_STRUCTURE);
+		m_affectsKindOf.set(KINDOF_SPAWNS_ARE_THE_WEAPONS);
+		m_affectsKindOf.set(KINDOF_AIRCRAFT);
+	}
+
 	for ( ; curVictim != NULL; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
 	{
-		if ( curVictim != object)
+		if ( curVictim != object )
 		{
 
 			//Kris -- October 28, 2003 -- Patch 1.01
@@ -242,12 +268,12 @@ void EMPUpdate::doDisableAttack( void )
 
 
 
-      if ( !curVictim->isKindOf( KINDOF_VEHICLE ) && !curVictim->isKindOf(KINDOF_STRUCTURE) && !curVictim->isKindOf(KINDOF_SPAWNS_ARE_THE_WEAPONS) )
-			{
+      //if ( m_affectsKindOf == KINDOFMASK_NONE && !curVictim->isKindOf( KINDOF_VEHICLE ) && !curVictim->isKindOf(KINDOF_STRUCTURE) && !curVictim->isKindOf(KINDOF_SPAWNS_ARE_THE_WEAPONS) && curVictim != object )
+			//{
 				//DONT DISABLE PEOPLE, EXCEPT FOR STINGER SOLDIERS
-				continue;
-			}
-			else if ( curVictim->isKindOf( KINDOF_AIRCRAFT ) && curVictim->isAirborneTarget() )// is in the sky
+				//continue;
+			//}
+			if ( TEST_KINDOFMASK(m_affectsKindOf, KINDOF_AIRCRAFT) && curVictim->isKindOf( KINDOF_AIRCRAFT ) && curVictim->isAirborneTarget() )// is in the sky
       {
         // WITHIN THE SET OF ALL FLYING THINGS, WE WANT TO EXEMPT SUPERWEAPON TRANSPORTS
 //        if ( curVictim->isKindOf( KINDOF_TRANSPORT ) )                  // is transport kindof
@@ -263,7 +289,11 @@ void EMPUpdate::doDisableAttack( void )
 				Drawable *drw = curVictim->getDrawable();
 				if ( drw )
 				{
-					drw->setTintStatus( TINT_STATUS_DISABLED );// paint it black
+					//drw->setTintStatus( TINT_STATUS_DISABLED );// paint it black
+					if(!data->m_customTintStatus.isEmpty())
+						drw->setCustomTintStatus( data->m_customTintStatus );
+					else if (data->m_tintStatus != TINT_STATUS_INVALID )
+						drw->setTintStatus( data->m_tintStatus );
 				}
 				continue;
 			}
@@ -273,13 +303,39 @@ void EMPUpdate::doDisableAttack( void )
 					continue;
 			}
 			// handle cases where we do not want allies to be hit by it's own EMP weapons
-			else if ( (data->m_rejectMask & WEAPON_AFFECTS_ALLIES) && curVictim->getRelationship( object ) == ALLIES)
+			if ( (m_rejectMask & WEAPON_AFFECTS_ALLIES) && curVictim->getRelationship( object ) == ALLIES) 
+			{
+				continue;
+			}
+			else if ( (m_rejectMask & WEAPON_AFFECTS_ENEMIES) && curVictim->getRelationship( object ) == ENEMIES) 
+			{
+				continue;
+			}
+			else if ( (m_rejectMask & WEAPON_AFFECTS_NEUTRALS) && curVictim->getRelationship( object ) == NEUTRAL) 
+			{
+				continue;
+			}
+			
+			if ( !curVictim->isAnyKindOf( m_affectsKindOf ) )
 			{
 				continue;
 			}
 
 			//Disable the target for a specified amount of time.
-			curVictim->setDisabledUntil( DISABLED_EMP, TheGameLogic->getFrame() + data->m_disabledDuration );
+			//curVictim->setDisabledUntil( DISABLED_EMP, TheGameLogic->getFrame() + data->m_disabledDuration );
+
+			ProjectileUpdateInterface *pui = curVictim->getProjectileUpdateInterface();
+			if( pui )
+			{
+				if(data->m_empProjectileSubdual)
+					pui->projectileNowJammed(TRUE);
+				else
+					curVictim->killCustom(DAMAGE_UNRESISTABLE, m_projectileDeathType, data->m_empProjectileCustomDeathType);
+			}
+			else
+			{
+				curVictim->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_disabledDuration, data->m_tintStatus, data->m_customTintStatus );
+			}
 
 			//Kris -- October 28, 2003 -- Patch 1.01
 			if( intendedVictim == curVictim )
@@ -292,6 +348,11 @@ void EMPUpdate::doDisableAttack( void )
 			Drawable *drw = curVictim->getDrawable();
 			if ( drw )
 			{
+
+				//if(!data->m_customTintStatus.isEmpty())
+				//	drw->setCustomTintStatus( data->m_customTintStatus );
+				//else if (data->m_tintStatus != TINT_STATUS_INVALID )
+				//	drw->setTintStatus( data->m_tintStatus );
 
 				const ParticleSystemTemplate *tmp = data->m_disableFXParticleSystem;
 				if (tmp)
@@ -339,7 +400,8 @@ void EMPUpdate::doDisableAttack( void )
 
 	//Kris -- October 28, 2003 -- Patch 1.01
 	//Handle edge case when the EMP explodes, but "misses" the intended target.
-	if( intendedVictim && !intendedVictimProcessed && intendedVictim->isKindOf( KINDOF_AIRCRAFT ) )
+	//if( intendedVictim && !intendedVictimProcessed && intendedVictim->isKindOf( KINDOF_AIRCRAFT ) )
+	if( intendedVictim && !intendedVictimProcessed )
 	{
     if( !intendedVictim->isKindOf( KINDOF_EMP_HARDENED ) )
 		{
@@ -350,10 +412,22 @@ void EMPUpdate::doDisableAttack( void )
 			coord.sub( pos );
 
 			Real lengthSqr = coord.lengthSqr();
-			if( lengthSqr <= radius * 2.0f || lengthSqr <= 40.0f * 40.0f )
+			if( lengthSqr <= m_radius * 2.0f || lengthSqr <= 40.0f * 40.0f )
 			{
 				//Disable the target for a specified amount of time.
-				intendedVictim->setDisabledUntil( DISABLED_EMP, TheGameLogic->getFrame() + data->m_disabledDuration );
+				//intendedVictim->setDisabledUntil( DISABLED_EMP, TheGameLogic->getFrame() + data->m_disabledDuration );
+				ProjectileUpdateInterface *pui = intendedVictim->getProjectileUpdateInterface();
+				if( pui )
+				{
+					if(data->m_empProjectileSubdual)
+						pui->projectileNowJammed(TRUE);
+					else
+						intendedVictim->killCustom(DAMAGE_UNRESISTABLE, m_projectileDeathType, data->m_empProjectileCustomDeathType);
+				}
+				else
+				{
+					intendedVictim->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_disabledDuration, data->m_tintStatus, data->m_customTintStatus );
+				}
 			}
 		}
 	}
@@ -410,7 +484,7 @@ void EMPUpdate::loadPostProcess( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-LeafletDropBehavior::LeafletDropBehavior( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
+LeafletDropBehavior::LeafletDropBehavior( Thing *thing, const ModuleData* moduleData ) : EMPUpdate( thing, moduleData )
 {
 
   m_fxFired = FALSE;
@@ -466,6 +540,20 @@ UpdateSleepTime LeafletDropBehavior::update( void )
     return UPDATE_SLEEP_FOREVER;
   }
 
+  // Properties migrated to EMPUpdate
+  if(m_affectsKindOf == KINDOFMASK_NONE)
+  {
+	m_affectsKindOf.set(KINDOF_INFANTRY);
+	m_affectsKindOf.set(KINDOF_VEHICLE);
+  }
+
+  if(m_rejectMask == 0)
+  {
+	m_rejectMask = (WEAPON_AFFECTS_ALLIES | WEAPON_AFFECTS_NEUTRALS);
+  }
+
+  m_radius = getLeafletDropBehaviorModuleData()->m_radius;
+
   doDisableAttack();
 
   return UPDATE_SLEEP_NONE;
@@ -477,10 +565,25 @@ void LeafletDropBehavior::onDie( const DamageInfo *damageInfo )
 {
   // the dieModule callback
 
+ // Properties migrated to EMPUpdate 
+  if(m_affectsKindOf == KINDOFMASK_NONE)
+  {
+	m_affectsKindOf.set(KINDOF_INFANTRY);
+	m_affectsKindOf.set(KINDOF_VEHICLE);
+  }
+
+  if(m_rejectMask == 0)
+  {
+	m_rejectMask = (WEAPON_AFFECTS_ALLIES | WEAPON_AFFECTS_NEUTRALS);
+  }
+
+  m_radius = getLeafletDropBehaviorModuleData()->m_radius;
+
   doDisableAttack();
 
 }
 
+/*
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void LeafletDropBehavior::doDisableAttack( void )
@@ -524,6 +627,7 @@ void LeafletDropBehavior::doDisableAttack( void )
 	}
 
 }
+*/
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

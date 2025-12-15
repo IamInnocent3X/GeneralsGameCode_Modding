@@ -43,6 +43,7 @@ ExperienceTracker::ExperienceTracker(Object *parent) :
 	m_currentLevel(LEVEL_REGULAR),
 	m_experienceSink(INVALID_ID),
 	m_experienceScalar( 1.0f ),
+	m_experienceValueScalar(1.0f ),
 	m_currentExperience(0)
 {
 }
@@ -59,7 +60,7 @@ Int ExperienceTracker::getExperienceValue( const Object* killer ) const
 	if( killer->getRelationship( m_parent ) == ALLIES )
 		return 0;
 
-	return m_parent->getTemplate()->getExperienceValue(m_currentLevel);
+	return m_parent->getTemplate()->getExperienceValue(m_currentLevel) * m_experienceValueScalar;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -230,7 +231,36 @@ void ExperienceTracker::setExperienceAndLevel( Int experienceIn, Bool provideFee
 	}
 
 }
+//-------------------------------------------------------------------------------------------------
+void ExperienceTracker::setHighestExpOrLevel( Int experienceGain, VeterancyLevel newLevel, Bool provideFeedback )
+{
+	if( !isTrainable() )
+		return; //safety
 
+	VeterancyLevel oldLevel = m_currentLevel;
+
+	Int newExp = m_currentExperience + experienceGain;
+	Int experienceForNewLevel = m_parent->getTemplate()->getExperienceRequired(newLevel);
+
+	m_currentExperience = experienceForNewLevel > newExp ? experienceForNewLevel : newExp;
+
+	Int levelIndex = 0;
+	while( ( (levelIndex + 1) < LEVEL_COUNT)
+		&&  m_currentExperience >= m_parent->getTemplate()->getExperienceRequired(levelIndex + 1)
+		)
+	{
+		// If there is a level to qualify for, and I qualify for it, advance the index
+		levelIndex++;
+	}
+
+	m_currentLevel = (VeterancyLevel)levelIndex;
+
+	if( oldLevel != m_currentLevel )
+	{
+		// Edge trigger special level gain effects.
+		m_parent->onVeterancyLevelChanged( oldLevel, m_currentLevel, provideFeedback ); //<<== paradox! this may be a level lost!
+	}
+}
 //-----------------------------------------------------------------------------
 void ExperienceTracker::crc( Xfer *xfer )
 {
@@ -266,6 +296,9 @@ void ExperienceTracker::xfer( Xfer *xfer )
 
 	// experience scalar
 	xfer->xferReal( &m_experienceScalar );
+
+	// experience value scalar
+	xfer->xferReal(&m_experienceValueScalar);
 
 }
 

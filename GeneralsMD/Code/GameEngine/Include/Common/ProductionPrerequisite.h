@@ -65,10 +65,10 @@ public:
 	/// init to safe default values.
 	void init();
 
-	void resetSciences( void ) { m_prereqSciences.clear(); }
+	void resetSciences( void ) { m_prereqSciences.clear(); m_prenegreqSciences.clear(); }
 	void addSciencePrereq( ScienceType science ) { m_prereqSciences.push_back(science); }
 
-	void resetUnits( void ) { m_prereqUnits.clear(); }
+	void resetUnits( void ) { m_prereqUnits.clear();  m_prenegreqUnits.clear(); }
 	void addUnitPrereq( AsciiString units, Bool orUnitWithPrevious );
 	void addUnitPrereq( const std::vector<AsciiString>& units );
 
@@ -96,6 +96,12 @@ public:
 
 	Int getAllPossibleBuildFacilityTemplates(const ThingTemplate* tmpls[], Int maxtmpls) const;
 
+	UnicodeString getNegativeRequiresList(const Player *player) const;
+	UnicodeString getNegativeRequiresListScience(const Player *player) const;
+	void addScienceNegPrereq( ScienceType science ) { m_prenegreqSciences.push_back(science); }
+	void addUnitNegPrereq( AsciiString units, Bool orUnitWithPrevious );
+	void addUnitNegPrereq( const std::vector<AsciiString>& units );
+
 private:
 
 	enum
@@ -112,9 +118,13 @@ private:
 
 	enum { MAX_PREREQ = 32 };
 	Int calcNumPrereqUnitsOwned(const Player *player, Int counts[MAX_PREREQ]) const;
+	Int calcNumNegPrereqUnitsOwned(const Player *player, Int counts[MAX_PREREQ]) const;
 
 	std::vector<PrereqUnitRec>	m_prereqUnits;
 	ScienceVec									m_prereqSciences;
+
+	std::vector<PrereqUnitRec>	m_prenegreqUnits;
+	ScienceVec									m_prenegreqSciences;
 };
 
 //-----------------------------------------------------------------------------

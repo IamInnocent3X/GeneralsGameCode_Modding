@@ -166,6 +166,7 @@ UpdateSleepTime CommandButtonHuntUpdate::update()
 		case GUICOMMANDMODE_HIJACK_VEHICLE:
 		case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 		case GUICOMMANDMODE_SABOTAGE_BUILDING:
+		case GUICOMMANDMODE_EQUIP_OBJECT:
 			return huntEnter( ai );
 		default:
 			return UPDATE_SLEEP_FOREVER;
@@ -260,6 +261,7 @@ Object* CommandButtonHuntUpdate::scanClosestTarget(void)
 			break;
 		case GUICOMMANDMODE_HIJACK_VEHICLE:
 		case GUICOMMANDMODE_SABOTAGE_BUILDING:
+		case GUICOMMANDMODE_EQUIP_OBJECT:
 			isEnter = TRUE;
 			break;
 	}
@@ -378,6 +380,9 @@ Object* CommandButtonHuntUpdate::scanClosestTarget(void)
 					break;
 				case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 					valid = TheActionManager->canConvertObjectToCarBomb( me, other, CMD_FROM_AI );
+					break;
+				case GUICOMMANDMODE_EQUIP_OBJECT:
+					valid = TheActionManager->canEquipObject( me, other, CMD_FROM_AI );
 					break;
 			}
 			if( valid )

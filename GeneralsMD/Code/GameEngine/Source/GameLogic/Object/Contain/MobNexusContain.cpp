@@ -105,10 +105,20 @@ void MobNexusContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int MobNexusContain::getContainMax( void ) const
+Int MobNexusContain::getRawContainMax( void ) const
 {
 	if (getMobNexusContainModuleData())
 		return getMobNexusContainModuleData()->m_slotCapacity;
+
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Int MobNexusContain::getContainMax( void ) const
+{
+	if (getMobNexusContainModuleData())
+		return getMobNexusContainModuleData()->m_slotCapacity + m_containExtra;
 
 	return 0;
 }

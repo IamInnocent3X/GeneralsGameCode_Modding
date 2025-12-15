@@ -66,6 +66,11 @@ public:
   Real                  m_strafingIncrement;
   Real                  m_orbitInsertionSlope;
   Real                  m_randomOffsetForHowitzer;
+  Bool                  m_useMyProducerForSpecialPower;
+  Bool                  m_useLocomotorToUpdateOrbit;
+  Bool                  m_gunshipDontUpdateOrbit;
+  Bool                  m_playSoundOnCreationWithSpawnDelay;
+  AsciiString				    m_cursorName;
 
 	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystem;
 
@@ -82,6 +87,7 @@ enum GunshipStatus CPP_11(: Int)
    GUNSHIP_STATUS_ORBITING,
    GUNSHIP_STATUS_DEPARTING,
    GUNSHIP_STATUS_IDLE,
+   GUNSHIP_STATUS_CHECK,
 };
 
 
@@ -99,13 +105,18 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const {return m_status < GUNSHIP_STATUS_DEPARTING;}
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return this; }
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+
+  virtual const AsciiString& getCursorName() const { return getSpectreGunshipUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+
+  virtual void setDelay(UnsignedInt delayFrame) { m_delayFrame = delayFrame; }
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();
@@ -119,15 +130,16 @@ public:
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc );
 
 	// Disabled conditions to process (termination conditions!)
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK4( DISABLED_SUBDUED, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK5( DISABLED_SUBDUED, DISABLED_FROZEN, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
 
 protected:
 
-  void setLogicalStatus( GunshipStatus newStatus ) { m_status = newStatus; }
+  void setLogicalStatus( GunshipStatus newStatus ) { m_status = newStatus; m_lastStatus = GUNSHIP_STATUS_CHECK; }
   void disengageAndDepartAO( Object *gunship );
 
   Bool isPointOffMap( const Coord3D& testPos ) const;
   Bool isFairDistanceFromShip( Object *target );
+  Bool sameLastLogicalStatus() { return m_status == m_lastStatus; }
 
 	SpecialPowerModuleInterface* m_specialPowerModule;
 
@@ -144,9 +156,15 @@ protected:
 
 
 	GunshipStatus		m_status;
+  GunshipStatus		m_lastStatus;
 
   UnsignedInt     m_okToFireHowitzerCounter;
   UnsignedInt     m_orbitEscapeFrame;
+  UnsignedInt     m_howitzerFiringCountdown;
+  UnsignedInt     m_delayFrame;
+
+  Bool            m_checkHowitzerCountdownFirst;
+  Bool            m_first;
 
 
 //  ObjectID        m_howitzerID;

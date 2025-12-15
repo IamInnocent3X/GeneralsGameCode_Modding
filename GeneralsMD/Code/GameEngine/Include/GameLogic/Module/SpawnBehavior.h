@@ -122,6 +122,11 @@ public:
 	virtual Bool areAllSlavesStealthed() const = 0;
 	virtual void revealSlaves() = 0;
 	virtual Bool doSlavesHaveFreedom() const = 0;
+	virtual void friend_refreshUpdate() = 0;
+	virtual void updateMobMembers() = 0;
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) = 0;
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) = 0;
+	
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -147,6 +152,8 @@ public:
 	virtual DieModuleInterface *getDie() { return this; }
 	virtual DamageModuleInterface *getDamage() { return this; }
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return this; }
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual void updateMobMembers();
 
 	// update methods
 	virtual UpdateSleepTime update();
@@ -177,6 +184,10 @@ public:
 	virtual Bool areAllSlavesStealthed() const;
 	virtual void revealSlaves();
 	virtual Bool doSlavesHaveFreedom() const { return getSpawnBehaviorModuleData()->m_slavesHaveFreeWill; }
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth);
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking);
+
+	virtual void refreshUpdate();
 
 	// **********************************************************************************************
 	// our own methods
@@ -184,6 +195,7 @@ public:
 	void startSpawning();	///< Whoever owns this module may want to turn it on
 
 	void computeAggregateStates(void);
+	void computeAggregateMembers(void);
 //	void notifySelfTasking( Bool isSelfTasking );
 
 private:
@@ -217,6 +229,21 @@ private:
 	UnsignedInt m_selfTaskingSpawnCount;		///< How many of my spawn have I authorized to do their own thing?
 
 	UnsignedInt m_initialBurstCountdown;
+	UnsignedInt m_nextWakeUpTime;
+
+	Bool m_computedAggregation;
+
+	struct SpawnInfo
+	{
+		Real health;
+		Real maxHealth;
+		Bool isSelfTasking;
+	};
+
+	typedef std::hash_map<ObjectID, SpawnInfo, rts::hash<ObjectID>, rts::equal_to<ObjectID> > spawnInfoMap;
+	typedef spawnInfoMap::iterator spawnInfoMapIterator;
+
+	spawnInfoMap m_spawnIDsInfo;				///< My darling little spawns.  I need to keep track of them explicitly for the Slave type stuff
 
 	std::vector<AsciiString>::const_iterator m_templateNameIterator;
 

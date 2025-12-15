@@ -80,6 +80,7 @@ GameMessageDisposition HintSpyTranslator::translateGameMessage(const GameMessage
 		case GameMessage::MSG_HIJACK_HINT:
 		case GameMessage::MSG_SABOTAGE_HINT:
 		case GameMessage::MSG_CONVERT_TO_CARBOMB_HINT:
+		case GameMessage::MSG_EQUIP_HINT:
 #ifdef ALLOW_SURRENDER
 		case GameMessage::MSG_PICK_UP_PRISONER_HINT:
 #endif

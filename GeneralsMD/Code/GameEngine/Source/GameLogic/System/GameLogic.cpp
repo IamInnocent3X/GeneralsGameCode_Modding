@@ -51,6 +51,7 @@
 #include "Common/Radar.h"
 #include "Common/RandomValue.h"
 #include "Common/Recorder.h"
+#include "Common/SkirmishPreferences.h"
 #include "Common/StatsCollector.h"
 #include "Common/ThingFactory.h"
 #include "Common/Team.h"
@@ -806,6 +807,11 @@ static void populateRandomSideAndColor( GameInfo *game )
 			{
 				DEBUG_LOG(("Setting playerTemplateIdx %d to %d", i, playerTemplateIdx));
 				slot->setPlayerTemplate(playerTemplateIdx);
+			}
+
+			if(slot->isAI() && !pt->isRandomableForAI())
+			{
+				playerTemplateIdx = -1; // only pick randomable factions
 			}
 		}
 
@@ -2413,6 +2419,54 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		TheInGameUI->messageNoFormat( TheGameText->FETCH_OR_SUBSTITUTE( "GUI:FastForwardInstructions", L"Press F to toggle Fast Forward" ) );
   }
 
+  SkirmishPreferences prefs;
+  Int skirmishFPS = prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit);
+
+  if(skirmishFPS > 0 && ( TheGlobalData->m_skirmishloadfps == TRUE || !loadingSaveGame ) && m_gameMode == GAME_SKIRMISH)
+  {
+		if(skirmishFPS>TheGlobalData->m_framesPerSecondLimit)
+			skirmishFPS = 1000;
+		TheGameEngine->setFramesPerSecondLimit(skirmishFPS);
+  }
+  else if( (loadingSaveGame || ( isInSinglePlayerGame() ) ) && TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+  {
+		TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
+  }
+
+  // Loading Save Games doesn't change the Seed. So need to declare it here.
+  // Note: Recorder might not playback correctly if the seed is changed.
+  if( loadingSaveGame && !isInMultiplayerGame() && TheRecorder && !TheRecorder->isPlaybackMode() )
+  {
+	  Real newSeed;
+	  if(TheGlobalData->m_initRandomType == "MORE_RANDOM")
+	  {
+		  newSeed = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
+		  newSeed*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-newSeed, newSeed)))));
+	  }
+	  else if(TheGlobalData->m_initRandomType == "EXHAUSTIVE")
+	  {
+		  // 
+		  UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
+		  Int verysilly = silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3));
+		  silly = GameLogicRandomValue(0, verysilly);
+		  for (UnsignedInt poo = 0; poo < silly; ++poo)
+		  {
+			  GameLogicRandomValue(0, 1);	// ignore result
+		  }
+		  silly *= silly;
+		  Int fullsilly = max(Int(silly+1), Int(1e10));
+		  newSeed = GameLogicRandomValue(silly, fullsilly);
+	  }
+	  else if(TheGlobalData->m_initRandomType == "TIME")
+	  {
+		  newSeed = time(NULL);
+	  }
+	  InitRandom(Int(newSeed));
+
+	  //DEBUG_LOG(("Game Loaded. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), UnsignedInt(newSeed)));
+  }
+
+
 
 }
 
@@ -2737,6 +2791,39 @@ void GameLogic::selectObject(Object *obj, Bool createNewSelection, PlayerMaskTyp
 			}
 		}
 	}
+
+	if(!obj->getDontDoGroupSelecting())
+	{
+		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
+		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
+		{
+			Object *boundObj = TheGameLogic->findObjectByID(*it);
+			// Sanity, must have drawable to be selected
+			if(!boundObj || !boundObj->getDrawable())
+				continue;
+
+			// Don't select if object is not applicable for selection
+			if(boundObj->isEffectivelyDead() || boundObj->isDestroyed())
+				continue;
+
+			// Don't select if defected
+			if(boundObj->getTeam() != obj->getTeam())
+				continue;
+
+			// Don't select if already selected
+			if(boundObj->getDrawable()->isSelected())
+				continue;
+
+			// Don't select if unselectable
+			ObjectStatusMaskType status = boundObj->getStatusBits();
+			if(status.test(OBJECT_STATUS_UNSELECTABLE) || status.test(OBJECT_STATUS_MASKED))
+				continue;
+
+			boundObj->setDontDoGroupSelecting(TRUE);
+			selectObject(boundObj, FALSE, obj->getControllingPlayer()->getPlayerMask(), obj->isLocallyControlled());
+			boundObj->setDontDoGroupSelecting(FALSE);
+		}
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2786,6 +2873,43 @@ void GameLogic::deselectObject(Object *obj, PlayerMaskType playerMask, Bool affe
 					TheInGameUI->deselectDrawable(draw);
 				}
 			}
+		}
+	}
+	
+	// Don't do group deselect if we are not deselecting volunteeringly
+	ObjectStatusMaskType objStatus = obj->getStatusBits();
+	if(!obj->getDontDoGroupSelecting() &&
+	   !obj->isEffectivelyDead() &&
+	   !obj->isDestroyed() &&
+	   !objStatus.test(OBJECT_STATUS_UNSELECTABLE) &&
+	   !objStatus.test(OBJECT_STATUS_MASKED) &&
+	   !objStatus.test(OBJECT_STATUS_SOLD) &&
+	   !obj->isDisabledByType(DISABLED_UNMANNED)
+	  )
+	{
+		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
+		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
+		{
+			Object *boundObj = TheGameLogic->findObjectByID(*it);
+			// Sanity, must have drawable to be selected
+			if(!boundObj || !boundObj->getDrawable())
+				continue;
+
+			// Don't deselect if object is not applicable for selection
+			if(boundObj->isEffectivelyDead() || boundObj->isDestroyed())
+				continue;
+
+			// Don't deselect if defected
+			if(boundObj->getTeam() != obj->getTeam())
+				continue;
+
+			// Don't deselect if not selected
+			if(!boundObj->getDrawable()->isSelected())
+				continue;
+
+			boundObj->setDontDoGroupSelecting(TRUE);
+			deselectObject(boundObj, obj->getControllingPlayer()->getPlayerMask(), obj->isLocallyControlled());
+			boundObj->setDontDoGroupSelecting(FALSE);
 		}
 	}
 }
@@ -3853,7 +3977,8 @@ void GameLogic::update( void )
 	TheLocomotorStore->UPDATE();
 	TheVictoryConditions->UPDATE();
 
-	{
+	// IamInnocent - Implemented Helpers for the features below
+	/*{
 		//Handle disabled statii (and re-enable objects once frame matches)
 		for( Object *obj = m_objList; obj; obj = obj->getNextObject() )
 		{
@@ -3861,8 +3986,9 @@ void GameLogic::update( void )
 			{
 				obj->checkDisabledStatus();
 			}
+			obj->checkLevitate();
 		}
-	}
+	}*/
 
 
 
@@ -4234,6 +4360,13 @@ void GameLogic::bindObjectAndDrawable(Object* obj, Drawable* draw)
 {
 	draw->friend_bindToObject( obj );
 	obj->friend_bindToDrawable( draw );
+
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		//TheGameClient->clearEfficientDrawablesList();
+		TheGameClient->informClientNewDrawable(draw);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -4402,7 +4535,8 @@ void GameLogic::pauseGameInput(Bool paused)
 
 		// Make sure the mouse is visible and the cursor is an arrow
 		TheMouse->setVisibility(TRUE);
-		TheMouse->setCursor( Mouse::ARROW );
+		//TheMouse->setCursor( Mouse::ARROW );
+		TheInGameUI->friend_setMouseCursor(Mouse::ARROW, "Dummy", 2);
 
 		// if Input is enabled, disable it
 		if(m_inputEnabledMemory)

@@ -301,6 +301,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/EjectPilotDie.h
     Include/GameLogic/Module/EMPUpdate.h
     Include/GameLogic/Module/EnemyNearUpdate.h
+#    Include/GameLogic/Module/EquipCrateCollide.h
     Include/GameLogic/Module/ExperienceScalarUpgrade.h
     Include/GameLogic/Module/FireOCLAfterWeaponCooldownUpdate.h
     Include/GameLogic/Module/FireSpreadUpdate.h
@@ -828,6 +829,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Collide/CrateCollide/ConvertToCarBombCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/ConvertToHijackedVehicleCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/CrateCollide.cpp
+#    Source/GameLogic/Object/Collide/CrateCollide/EquipCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/HealCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/MoneyCrateCollide.cpp
     Source/GameLogic/Object/Collide/CrateCollide/SalvageCrateCollide.cpp

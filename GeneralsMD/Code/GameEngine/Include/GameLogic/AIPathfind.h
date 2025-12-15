@@ -280,6 +280,10 @@ public:
 	PathfindCell(void);
 	~PathfindCell(void);
 
+#if !RETAIL_COMPATIBLE_PATHFINDING
+	PathfindCellInfo* getCellInfo();
+#endif
+
 	Bool setTypeAsObstacle( Object *obstacle, Bool isFence, const ICoord2D &pos );				///< flag this cell as an obstacle, from the given one
 	Bool removeObstacle( Object *obstacle );				///< unflag this cell as an obstacle, from the given one
 	void setType( CellType type );	///< set the cell type
@@ -318,18 +322,19 @@ public:
 	/// remove all cells from closed list.
 	static Int releaseOpenList( PathfindCell *list );
 
-	inline PathfindCell *getNextOpen(void) {return m_info->m_nextOpen?m_info->m_nextOpen->m_cell:NULL;}
+	// IamInnocent - Added sanity checks
+	inline PathfindCell *getNextOpen(void) {return m_info && m_info->m_nextOpen?m_info->m_nextOpen->m_cell:NULL;}
 
-	inline UnsignedShort getXIndex(void) const {return m_info->m_pos.x;}
-	inline UnsignedShort getYIndex(void) const {return m_info->m_pos.y;}
+	inline UnsignedShort getXIndex(void) const {return m_info ? m_info->m_pos.x : 0;}
+	inline UnsignedShort getYIndex(void) const {return m_info ? m_info->m_pos.y : 0;}
 
-	inline Bool isBlockedByAlly(void) const {return m_info->m_blockedByAlly;}
-	inline void setBlockedByAlly(Bool blocked)  {m_info->m_blockedByAlly = (blocked!=0);}
+	inline Bool isBlockedByAlly(void) const {return m_info ? m_info->m_blockedByAlly:FALSE;}
+	inline void setBlockedByAlly(Bool blocked)  { if( m_info ) m_info->m_blockedByAlly = (blocked!=0);}
 
-	inline Bool getOpen(void) const {return m_info->m_open;}
-	inline Bool getClosed(void) const {return m_info->m_closed;}
-	inline UnsignedInt getCostSoFar(void) const {return m_info->m_costSoFar;}
-	inline UnsignedInt getTotalCost(void) const {return m_info->m_totalCost;}
+	inline Bool getOpen(void) const {return m_info ? m_info->m_open:FALSE;}
+	inline Bool getClosed(void) const {return m_info ? m_info->m_closed:FALSE;}
+	inline UnsignedInt getCostSoFar(void) const {return m_info ? m_info->m_costSoFar : 0;}
+	inline UnsignedInt getTotalCost(void) const {return m_info ? m_info->m_totalCost : 0;}
 
 	inline void setCostSoFar(UnsignedInt cost) { if( m_info ) m_info->m_costSoFar = cost;}
 	inline void setTotalCost(UnsignedInt cost) { if( m_info ) m_info->m_totalCost = cost;}
@@ -364,6 +369,9 @@ public:
 	PathfindLayerEnum getConnectLayer( void ) const { return (PathfindLayerEnum)m_connectsToLayer; }				///< get the cell layer connect id
 
 private:
+#if !RETAIL_COMPATIBLE_PATHFINDING
+	PathfindCellInfo m_pathfindCellInfo;
+#endif
 	PathfindCellInfo *m_info;
 	zoneStorageType m_zone:14;			///< Zone. Each zone is a set of adjacent terrain type.  If from & to in the same zone, you can successfully pathfind.  If not,
 														// you still may be able to if you can cross multiple terrain types.

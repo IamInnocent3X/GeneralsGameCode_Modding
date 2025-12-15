@@ -72,6 +72,7 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/Eva.h"
+#include "GameClient/GameClient.h"
 #include "GameClient/GameText.h"
 #include "GameClient/GameWindowTransitions.h"
 #include "GameClient/GameWindowManager.h"
@@ -122,7 +123,7 @@ static void doMoveTo( Object *obj, const Coord3D *pos )
 		{
 			ai->clearWaypointQueue();
 			obj->leaveGroup();
-			obj->releaseWeaponLock(LOCKED_TEMPORARILY);	// release any temporary locks.
+			obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 			ai->aiMoveToPosition( pos, CMD_FROM_PLAYER );
 		}
 	}
@@ -338,6 +339,13 @@ void GameLogic::prepareNewGame( GameMode gameMode, GameDifficulty diff, Int rank
 
 }
 
+
+void clearGroupMovingFormation( Object *obj, void *userData )
+{
+	if(!obj->getFormationIsCommandMap())
+		obj->setFormationID(NO_FORMATION_ID);
+}
+
 //-------------------------------------------------------------------------------------------------
 /** This message handles dispatches object command messages to the
   * appropriate objects.
@@ -355,6 +363,8 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 	AIGroupPtr currentlySelectedGroup = NULL;
 
+	OrderNearbyData msgOrderData = msg->getOrderNearbyData();
+
 	if (isInGame())
 	{
 		if (msg->getType() >= GameMessage::MSG_BEGIN_NETWORK_MESSAGES && msg->getType() <= GameMessage::MSG_END_NETWORK_MESSAGES)
@@ -363,6 +373,16 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				currentlySelectedGroup = TheAI->createGroup(); // can't do this outside a game - it'll cause sync errors galore.
 				CRCGEN_LOG(( "Creating AIGroup %d in GameLogic::logicMessageDispatcher()", currentlySelectedGroup?currentlySelectedGroup->getID():0 ));
+
+			  if(msg->getDoSingleID() != INVALID_ID)
+			  {
+				  currentlySelectedGroup->add( TheGameLogic->findObjectByID( msg->getDoSingleID() ) );
+
+				  if(TheStatsCollector && msg->getDoSingleAddStat())
+					TheStatsCollector->collectMsgStats(msg);
+			  }
+			  else
+			  {
 #if RETAIL_COMPATIBLE_AIGROUP
 				thisPlayer->getCurrentSelectionAsAIGroup(currentlySelectedGroup);
 #else
@@ -387,6 +407,28 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 				if(TheStatsCollector)
 					TheStatsCollector->collectMsgStats(msg);
+			 }
+
+				if(msgOrderData.Radius > 0.0f && currentlySelectedGroup && msg->getType() != GameMessage::MSG_ENTER_ME)
+				{
+					if(msgOrderData.MinDelay > 0 || msgOrderData.MaxDelay > 0 || msgOrderData.IntervalDelay > 0)
+					{
+						std::vector<GameMessageArgumentStruct> msgArguments;
+						GameMessageArgumentStruct curArgument;
+
+						Int numArgs = msg->getArgumentCount();
+						for (Int i = 0; i < numArgs; ++i) {
+							curArgument.type = msg->getArgumentDataType(i);
+							curArgument.data = *(msg->getArgument(i));
+							msgArguments.push_back(curArgument);
+						}
+						currentlySelectedGroup->doDelayedNearbyMembers(msgOrderData, msg->getType(), msgArguments);
+					}
+					else
+					{
+						currentlySelectedGroup->doAddNearbyMembers(msgOrderData);
+					}
+				}
 			}
 		}
 	}
@@ -433,6 +475,8 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				Int maxFPS = msg->getArgument( 3 )->integer;
 				if (maxFPS < 1 || maxFPS > 1000)
 					maxFPS = TheGlobalData->m_framesPerSecondLimit;
+				if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+					maxFPS = TheGlobalData->m_newfpsLimit;
 				DEBUG_LOG(("Setting max FPS limit to %d FPS", maxFPS));
 				TheFramePacer->setFramesPerSecondLimit(maxFPS);
 				TheWritableGlobalData->m_useFpsLimit = true;
@@ -678,7 +722,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// check for possible specific source, ignoring selection.
 			ObjectID sourceID = msg->getArgument(2)->objectID;
 			Object* source = TheGameLogic->findObjectByID(sourceID);
-			if (source != NULL)
+			if (source != NULL && msg->getDoSingleID() == INVALID_ID)
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
@@ -723,7 +767,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// check for possible specific source, ignoring selection.
 			ObjectID sourceID = msg->getArgument(5)->objectID;
 			Object* source = TheGameLogic->findObjectByID(sourceID);
-			if (source != NULL)
+			if (source != NULL && msg->getDoSingleID() == INVALID_ID)
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
@@ -747,6 +791,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		}
 
 		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE:
 		case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
 		{
 			// first argument is the special power ID
@@ -755,7 +800,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// argument 2 is target object
 			ObjectID targetID = msg->getArgument(1)->objectID;
 			Object *target = TheGameLogic->findObjectByID( targetID );
-			if( !target )
+			DrawableID drawableID = msg->getArgument(4)->drawableID;
+			Drawable *drawable = TheGameClient->findDrawableByID(drawableID);
+			if( !target && !drawable )
 			{
 				break;
 			}
@@ -766,11 +813,14 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// check for possible specific source, ignoring selection.
 			ObjectID sourceID = msg->getArgument(3)->objectID;
 			Object* source = TheGameLogic->findObjectByID(sourceID);
-			if (source != NULL)
+			if (source != NULL && msg->getDoSingleID() == INVALID_ID)
 			{
 				AIGroupPtr theGroup = TheAI->createGroup();
 				theGroup->add(source);
-				theGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
+				if(drawable)
+					theGroup->groupDoSpecialPowerAtDrawable( specialPowerID, drawable, options );
+				else
+					theGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
 #if RETAIL_COMPATIBLE_AIGROUP
 				TheAI->destroyGroup(theGroup);
 #else
@@ -781,7 +831,10 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				if( currentlySelectedGroup )
 				{
-					currentlySelectedGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
+					if(drawable)
+						currentlySelectedGroup->groupDoSpecialPowerAtDrawable( specialPowerID, drawable, options );
+					else
+						currentlySelectedGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
 				}
 			}
 			break;
@@ -795,7 +848,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if (currentlySelectedGroup)
 			{
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupAttackMoveToPosition( &dest, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 			}
 
@@ -809,7 +862,10 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if (currentlySelectedGroup)
 			{
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				if( thisPlayer->getUnitsMoveInFormation() )
+					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
+
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
 			}
 
@@ -825,8 +881,11 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if( currentlySelectedGroup )
 			{
+				if( thisPlayer->getUnitsMoveInFormation() )
+					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
+
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
 			}
 
@@ -841,7 +900,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			if( currentlySelectedGroup )
 			{
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, true, CMD_FROM_PLAYER );
 			}
 
@@ -904,8 +963,18 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		{
 			if (currentlySelectedGroup)
 			{
-				currentlySelectedGroup->groupCreateFormation(CMD_FROM_PLAYER);
+				currentlySelectedGroup->groupCreateFormation(CMD_FROM_PLAYER, TRUE);
 			}
+
+			break;
+		}
+
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_MOVE_IN_FORMATION:
+		{
+			thisPlayer->setUnitsMoveInFormation();
+			if( !thisPlayer->getUnitsMoveInFormation() )
+				thisPlayer->iterateObjects( clearGroupMovingFormation, NULL );
 
 			break;
 		}
@@ -1008,7 +1077,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if( currentlySelectedGroup )
 			{
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupEnter( enter, CMD_FROM_PLAYER );
 			}
 
@@ -1037,7 +1106,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			if( objectWantingToExit->getControllingPlayer() != thisPlayer )
 				break;
 
-			objectWantingToExit->releaseWeaponLock(LOCKED_TEMPORARILY);	// release any temporary locks.
+			objectWantingToExit->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 
 			// exit whatever objectWantingToExit is INSIDE of
 			AIUpdateInterface *ai = objectWantingToExit->getAIUpdateInterface();
@@ -1065,7 +1134,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				//if (hasArgs)
 				//	pos = msg->getArgument(0)->location;
 
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 
 				// evacuate message is for the selected group
 				//if (hasArgs)
@@ -1081,6 +1150,20 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			break;
 
 		}
+
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_ENTER_ME:
+		{
+			// issue command for either single object or for selected group
+			if( currentlySelectedGroup )
+			{
+				currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msgOrderData );
+
+			}  // end if, command for group
+
+			break;
+
+		}  // end GameMessage::MSG_EVACUATE
 
 		// --------------------------------------------------------------------------------------------
 		case GameMessage::MSG_EXECUTE_RAILED_TRANSPORT:
@@ -1100,7 +1183,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 //			ObjectID sourceID = msg->getArgument( 0 )->objectID;
 			if( currentlySelectedGroup )
 			{
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupHackInternet( CMD_FROM_PLAYER );
 			}
 			break;
@@ -1243,7 +1326,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				if (currentlySelectedGroup)
 				{
 
-					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 					currentlySelectedGroup->groupAttackObject( enemy, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 
 				}
@@ -1264,7 +1347,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				if (currentlySelectedGroup)
 				{
-					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 					currentlySelectedGroup->groupForceAttackObject( enemy, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 				}
 
@@ -1297,12 +1380,12 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				{
 					currentlySelectedGroup->setWeaponLockForGroup( PRIMARY_WEAPON, LOCKED_TEMPORARILY );
 					currentlySelectedGroup->groupAttackPosition( pos, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
-					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);
+					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);
 				}
 				else
 				///////////////////////////////////////////////////////////////////
 				{
-					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);
+					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);
 					currentlySelectedGroup->groupAttackPosition( pos, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 				}
 
@@ -1415,7 +1498,11 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// get the unit production interface
 			ProductionUpdateInterface *pu = producer->getProductionUpdateInterface();
 			if( pu == NULL )
+			{
+				if(msgOrderData.Radius > 0.0f && currentlySelectedGroup && msgOrderData.MinDelay == 0 && msgOrderData.MaxDelay == 0 && msgOrderData.IntervalDelay == 0)
+					currentlySelectedGroup->clearExtraMembers();
 				return;
+			}
 
 			// cancel the production
 			pu->cancelUnitCreate( productionID );
@@ -1542,6 +1629,19 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			break;
 
 		}
+
+		
+		// --------------------------------------------------------------------------------------------
+		case GameMessage::MSG_DISABLE_POWER:
+		{
+
+			// use the selected group
+			if( currentlySelectedGroup )
+				currentlySelectedGroup->groupDisablePower( CMD_FROM_PLAYER );
+
+			break;
+
+		}  // end disable power
 
 #ifdef ALLOW_SURRENDER
 		// --------------------------------------------------------------------------------------------
@@ -2044,7 +2144,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			if( science == SCIENCE_INVALID || thisPlayer == NULL )
 				break;
 
-			thisPlayer->attemptToPurchaseScience(science);
+			thisPlayer->attemptToPurchaseScience(science, TRUE);
 
 			break;
 
@@ -2080,6 +2180,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 	if( currentlySelectedGroup != NULL )
 	{
+		if(msgOrderData.Radius > 0.0f && currentlySelectedGroup && msgOrderData.MinDelay == 0 && msgOrderData.MaxDelay == 0 && msgOrderData.IntervalDelay == 0)
+			currentlySelectedGroup->clearExtraMembers();
+
 #if RETAIL_COMPATIBLE_AIGROUP
 		TheAI->destroyGroup(currentlySelectedGroup);
 #else

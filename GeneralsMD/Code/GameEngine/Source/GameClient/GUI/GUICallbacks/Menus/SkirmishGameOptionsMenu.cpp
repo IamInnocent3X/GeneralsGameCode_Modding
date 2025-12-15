@@ -406,7 +406,8 @@ void setFPSTextBox( Int sliderPos )
 		return;
 	UnicodeString text;
 	staticTextGameSpeed->winEnable(TRUE);
-	if(sliderPos > GREATER_NO_FPS_LIMIT)
+	if( ( sliderPos > GREATER_NO_FPS_LIMIT && TheGlobalData->m_newskirmishfpsSystem == FALSE ) || 
+			( TheGlobalData->m_newskirmishfpsSystem == TRUE && sliderPos > TheGlobalData->m_framesPerSecondLimit && TheGlobalData->m_framesPerSecondLimit >= GREATER_NO_FPS_LIMIT ) )
 	{
 		// set static text to --
 		text.set(L"--");
@@ -431,7 +432,8 @@ void reallyDoStart( void )
 	GameWindow *sliderGameSpeed = TheWindowManager->winGetWindowFromId( parentSkirmishGameOptions, sliderGameSpeedID );
 	Int maxFPS = GadgetSliderGetPosition( sliderGameSpeed );
 	DEBUG_LOG(("GameSpeedSlider was at %d", maxFPS));
-	if (maxFPS > GREATER_NO_FPS_LIMIT)
+	if ( ( maxFPS > GREATER_NO_FPS_LIMIT && TheGlobalData->m_newskirmishfpsSystem == FALSE ) ||
+			( TheGlobalData->m_newskirmishfpsSystem == TRUE && maxFPS > TheGlobalData->m_framesPerSecondLimit && TheGlobalData->m_framesPerSecondLimit >= GREATER_NO_FPS_LIMIT ) )
 		maxFPS = 1000;
 	if (maxFPS < 15)
 		maxFPS = 15;
@@ -1355,7 +1357,39 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 	TheSkirmishGameInfo->setSlot(1, gSlot);
 
 	ParseAsciiStringToGameInfo(TheSkirmishGameInfo, prefs.getSlotList());
-	TheSkirmishGameInfo->setSeed(GetTickCount());
+	//TheSkirmishGameInfo->setSeed(GetTickCount());
+
+	Real seed;
+	if(TheGlobalData->m_initRandomType == "MORE_RANDOM")
+	{
+		seed = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
+		seed*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-seed, seed)))));
+	}
+	else if(TheGlobalData->m_initRandomType == "EXHAUSTIVE")
+	{
+		// 
+		UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
+		Int verysilly = silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3));
+		silly = GameLogicRandomValue(0, verysilly);
+		for (UnsignedInt poo = 0; poo < silly; ++poo)
+		{
+			GameLogicRandomValue(0, 1);	// ignore result
+		}
+		silly *= silly;
+		Int fullsilly = max(Int(silly+1), Int(1e10));
+		seed = GameLogicRandomValue(silly, fullsilly);
+	}
+	else if(TheGlobalData->m_initRandomType == "TIME")
+	{
+		seed = time(NULL);
+	}
+	else
+	{
+		seed = GetTickCount();
+	}
+	TheSkirmishGameInfo->setSeed(Int(seed));
+
+	//DEBUG_LOG(("Skirmish Initiated. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), UnsignedInt(seed)));
 
 	UnsignedInt isPreorder = 0;
 	GetUnsignedIntFromRegistry("", "Preorder", isPreorder);
@@ -1396,6 +1430,8 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 //	NameKeyType sliderGameSpeedID = TheNameKeyGenerator->nameToKey( "SkirmishGameOptionsMenu.wnd:SliderGameSpeed" );
 	GameWindow *sliderGameSpeed = TheWindowManager->winGetWindowFromId( parentSkirmishGameOptions, sliderGameSpeedID );
 	Int sliderPos = max(15,min(61,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit)));
+	if(TheGlobalData->m_newskirmishfpsSystem == TRUE && TheGlobalData->m_framesPerSecondLimit > 61)
+  		sliderPos = max(15,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit));
 	GadgetSliderSetPosition( sliderGameSpeed, sliderPos );
 	setFPSTextBox(sliderPos);
 	buttonStart->winSetText(TheGameText->fetch("GUI:Start"));

@@ -32,6 +32,8 @@
 #include "Common/CRCDebug.h"
 #include "Common/Xfer.h"
 #include "Common/ThingTemplate.h"
+#include "Common/Player.h"
+#include "Common/KindOf.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
@@ -295,6 +297,10 @@ Bool ParkingPlaceBehavior::hasAvailableSpaceFor(const ThingTemplate* thing) cons
 	if (thing->isKindOf(KINDOF_PRODUCED_AT_HELIPAD))
 		return true;
 
+	const ParkingPlaceBehaviorModuleData* d = getParkingPlaceBehaviorModuleData();
+	if (d && !thing->isKindOfMulti(d->m_kindof, d->m_kindofnot))
+		return FALSE;
+
 	for (std::vector<ParkingPlaceInfo>::const_iterator it = m_spaces.begin(); it != m_spaces.end(); ++it)
 	{
 		ObjectID id = it->m_objectInSpace;
@@ -325,6 +331,11 @@ Bool ParkingPlaceBehavior::reserveSpace(ObjectID id, Real parkingOffset, Parking
 	purgeDead();
 
 	const ParkingPlaceBehaviorModuleData* d = getParkingPlaceBehaviorModuleData();
+
+	// Check Valid Kindof
+	Object* obj = TheGameLogic->findObjectByID(id);
+	if (d && !obj->getTemplate()->isKindOfMulti(d->m_kindof, d->m_kindofnot))
+		return FALSE;
 
 	ParkingPlaceInfo* ppi = findPPI(id);
 	if (ppi == NULL)
@@ -605,6 +616,70 @@ void ParkingPlaceBehavior::resetWakeFrame()
 }
 
 //-------------------------------------------------------------------------------------------------
+void ParkingPlaceBehavior::applyDamageScalar(Object* obj, Real scalarNew, Real scalarOld)
+{
+	BodyModuleInterface* body = obj->getBodyModule();
+
+	//If we have a scalar already, remove it
+	if (scalarOld != 1.0) {
+		body->applyDamageScalar(1.0f / __max(scalarOld, 0.01f));
+	}
+
+	// DEBUG_LOG((">>>ParkingPlaceBehavior: removeOldScalar '%f' from obj '%s' - new scalar = '%f' \n",
+	//	scalarOld, obj->getTemplate()->getName().str(), body->getDamageScalar()));
+
+	//apply new scalar
+	body->applyDamageScalar(__max(scalarNew, 0.01f));
+
+	// DEBUG_LOG((">>>ParkingPlaceBehavior: applyDamageScalar '%f' to obj '%s' - new scalar = '%f' \n",
+	//	scalarNew, obj->getTemplate()->getName().str(), body->getDamageScalar()));
+}
+
+//-------------------------------------------------------------------------------------------------
+void ParkingPlaceBehavior::removeDamageScalar(Object* obj, Real scalar)
+{
+	BodyModuleInterface* body = obj->getBodyModule();
+	body->applyDamageScalar(1.0f / __max(scalar, 0.01f));
+
+	// DEBUG_LOG((">>>ParkingPlaceBehavior: removeDamageScalar '%f' from obj '%s' - new scalar = '%f' \n",
+	//	scalar, obj->getTemplate()->getName().str(), body->getDamageScalar()));
+}
+
+//-------------------------------------------------------------------------------------------------
+Real ParkingPlaceBehavior::getDamageScalar()
+{
+	const ParkingPlaceBehaviorModuleData * d = getParkingPlaceBehaviorModuleData();
+	if (m_damageScalarUpgradeApplied) {
+		return d->m_damageScalarUpgraded;
+	}
+	else {
+		return d->m_damageScalar;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void ParkingPlaceBehavior::updateDamageScalars() {
+	const ParkingPlaceBehaviorModuleData * d = getParkingPlaceBehaviorModuleData();
+
+	Real scalarNew = d->m_damageScalarUpgraded;
+	Real scalarOld = d->m_damageScalar;
+
+	for (std::list<HealingInfo>::iterator it = m_healing.begin(); it != m_healing.end(); ++it)
+	{
+		if (it->m_gettingHealedID != INVALID_ID)
+		{
+			Object* objToHeal = TheGameLogic->findObjectByID(it->m_gettingHealedID);
+			if (objToHeal != NULL && !objToHeal->isEffectivelyDead())
+			{
+				applyDamageScalar(objToHeal, scalarNew, scalarOld);
+			}
+		}
+	}
+}
+
+
+
+//-------------------------------------------------------------------------------------------------
 void ParkingPlaceBehavior::setHealee(Object* healee, Bool add)
 {
 	if (add)
@@ -614,10 +689,17 @@ void ParkingPlaceBehavior::setHealee(Object* healee, Bool add)
 			if (it->m_gettingHealedID == healee->getID())
 				return;
 		}
+
 		HealingInfo info;
 		info.m_gettingHealedID = healee->getID();
 		info.m_healStartFrame = TheGameLogic->getFrame();
 		m_healing.push_back(info);
+
+		Real damageScalar = getDamageScalar();
+		if (damageScalar != 1.0) {
+			applyDamageScalar(healee, damageScalar);
+		}
+
 		resetWakeFrame();
 	}
 	else
@@ -627,6 +709,11 @@ void ParkingPlaceBehavior::setHealee(Object* healee, Bool add)
 			if (it->m_gettingHealedID == healee->getID())
 			{
 				it = m_healing.erase(it);
+
+				Real damageScalar =  getDamageScalar();
+				if (damageScalar != 1.0) {
+					removeDamageScalar(healee, damageScalar);
+				}
 				resetWakeFrame();
 			}
 			else
@@ -652,9 +739,17 @@ void ParkingPlaceBehavior::defectAllParkedUnits(Team* newTeam, UnsignedInt detec
 				continue;
 
 			// srj sez: evil. fix better someday.
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
-			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
-			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+			/// IamInnocent - Done
+			//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			//JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
+			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+
+			Bool takeoffOrLanding = false;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			if( jetAI )
+			{
+				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
+			}
 
 			if (obj->isAboveTerrain() && !takeoffOrLanding)
 			{
@@ -691,9 +786,17 @@ void ParkingPlaceBehavior::killAllParkedUnits()
 				continue;
 
 			// srj sez: evil. fix better someday.
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
-			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
-			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+			/// IamInnocent - Done
+			//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			//JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
+			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
+
+			Bool takeoffOrLanding = false;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			if( jetAI )
+			{
+				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
+			}
 
 			if (obj->isAboveTerrain() && !takeoffOrLanding)
 				continue;
@@ -721,11 +824,32 @@ UpdateSleepTime ParkingPlaceBehavior::update()
 	buildInfo();
 	purgeDead();
 
+	const ParkingPlaceBehaviorModuleData* d = getParkingPlaceBehaviorModuleData();
+
+	// Check if Damage Scalar is upgraded:
+
+	if (!m_damageScalarUpgradeApplied && d->m_damageScalarUpgradeTrigger.isNotEmpty()) {
+		Player* player = getObject()->getControllingPlayer();
+		const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade(d->m_damageScalarUpgradeTrigger);
+
+		if (upgradeTemplate && player)
+		{
+			UpgradeMaskType upgradeMask = upgradeTemplate->getUpgradeMask();
+			UpgradeMaskType objMask = getObject()->getObjectCompletedUpgradeMask();
+			if (objMask.testForAny(upgradeMask) || player->hasUpgradeComplete(upgradeTemplate))
+			{
+				DEBUG_LOG(("ParkingPlaceBehavior::update() - Apply Damage Scalar Upgrade!\n"));
+				m_damageScalarUpgradeApplied = TRUE;
+				updateDamageScalars();
+			}
+		}
+	}
+
+
 	UnsignedInt now = TheGameLogic->getFrame();
 	if (now >= m_nextHealFrame)
 	{
 		m_nextHealFrame = now + HEAL_RATE_FRAMES;
-		const ParkingPlaceBehaviorModuleData* d = getParkingPlaceBehaviorModuleData();
 		for (std::list<HealingInfo>::iterator it = m_healing.begin(); it != m_healing.end(); /*++it*/)
 		{
 			if (it->m_gettingHealedID != INVALID_ID)
@@ -741,6 +865,8 @@ UpdateSleepTime ParkingPlaceBehavior::update()
 					healInfo.in.m_damageType = DAMAGE_HEALING;
 					healInfo.in.m_deathType = DEATH_NONE;
 					healInfo.in.m_sourceID = getObject()->getID();
+					healInfo.in.m_clearsParasite = d->m_healingClearsParasite;
+					healInfo.in.m_clearsParasiteKeys = d->m_healingClearsParasiteKeys;
   				healInfo.in.m_amount = HEAL_RATE_FRAMES * d->m_healAmount * SECONDS_PER_LOGICFRAME_REAL;
 
 //          if ( objToHeal->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )
@@ -807,9 +933,18 @@ void ParkingPlaceBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitD
 	}
 
 	/// @todo srj -- this is evil. fix.
-	static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
-	JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
-	Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
+	/// IamInnocent - Done
+	//static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
+	//JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
+	//Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
+	
+	Real parkingOffset = 0.0f;
+	JetAIUpdate *jetAI = newObj->getAI() ? (JetAIUpdate*)newObj->getAI()->getJetAIUpdate() : NULL;
+	if( jetAI )
+	{
+		parkingOffset = jetAI->friend_getParkingOffset();
+	}
+
 	Bool producedAtHelipad = newObj->isKindOf(KINDOF_PRODUCED_AT_HELIPAD);
 
 	PPInfo ppinfo;
@@ -1124,6 +1259,8 @@ void ParkingPlaceBehavior::xfer( Xfer *xfer )
 			m_nextHealFrame = 0;
 		}
 	}
+
+	xfer->xferBool(&m_damageScalarUpgradeApplied);
 
 }
 

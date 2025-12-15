@@ -190,6 +190,8 @@ Bool SabotageSupplyDropzoneCrateCollide::executeCrateBehavior( Object *other )
 		}
 	}
 
+	CrateCollide::executeCrateBehavior(other);
+
 
 	return TRUE;
 }

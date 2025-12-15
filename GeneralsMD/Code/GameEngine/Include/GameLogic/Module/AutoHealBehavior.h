@@ -51,12 +51,15 @@ public:
 	UpgradeMuxData				m_upgradeMuxData;
 	Bool									m_initiallyActive;
 	Bool									m_singleBurst;
-	Int										m_healingAmount;
+	Real										m_healingAmount;
 	UnsignedInt						m_healingDelay;
 	UnsignedInt						m_startHealingDelay;	///< how long since our last damage till autoheal starts.
 	Real									m_radius; //If non-zero, then it becomes a area effect.
 	Bool									m_affectsWholePlayer; ///< I have more than a range, I try to affect everything the player owns
 	Bool									m_skipSelfForHealing; ///< Don't heal myself.
+	Bool									m_clearsParasite; ///< Healing clears parasite
+	Bool									m_disableWhenUnmanned; ///< Disabled When Unmannered from Neutron Blast or Kill Pilot
+	std::vector<AsciiString> 				m_clearsParasiteKeys; ///< Parasite keys to clear
 	KindOfMaskType				m_kindOf;	//Only these types can heal -- defaults to everything.
 	KindOfMaskType				m_forbiddenKindOf;	//Only these types can heal -- defaults to everything.
 	const ParticleSystemTemplate*				m_radiusParticleSystemTmpl;					//Optional particle system meant to apply to entire effect for entire duration.
@@ -66,7 +69,7 @@ public:
 	{
 		m_initiallyActive = false;
 		m_singleBurst = FALSE;
-		m_healingAmount = 0;
+		m_healingAmount = 0.0f;
 		m_healingDelay = UINT_MAX;
 		m_startHealingDelay = 0;
 		m_radius = 0.0f;
@@ -74,6 +77,9 @@ public:
 		m_unitHealPulseParticleSystemTmpl = NULL;
 		m_affectsWholePlayer = FALSE;
 		m_skipSelfForHealing = FALSE;
+		m_clearsParasite = FALSE;
+		m_disableWhenUnmanned = TRUE;
+		m_clearsParasiteKeys.clear();
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 		m_forbiddenKindOf.clear();
 	}
@@ -84,7 +90,7 @@ public:
 		{
 			{ "StartsActive",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
 			{ "SingleBurst",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_singleBurst ) },
-			{ "HealingAmount",		INI::parseInt,												NULL, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
+			{ "HealingAmount",		INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
 			{ "HealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_healingDelay ) },
 			{ "Radius",						INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_radius ) },
 			{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( AutoHealBehaviorModuleData, m_kindOf ) },
@@ -94,6 +100,9 @@ public:
 			{ "StartHealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_startHealingDelay ) },
 			{ "AffectsWholePlayer",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_affectsWholePlayer ) },
 			{ "SkipSelfForHealing",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_skipSelfForHealing ) },
+			{ "ClearsParasite",				INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
+			{ "ClearsParasiteKeys",			INI::parseAsciiStringVector,								NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasiteKeys) },
+			{ "DisableWhenUnmanned",		INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_disableWhenUnmanned) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -138,6 +147,8 @@ public:
 	void stopHealing();
 	void undoUpgrade(); ///<pretend like we have not been activated yet, so we can be reactivated later
 
+	Bool disableWhenUnmanned() const { return getAutoHealBehaviorModuleData()->m_disableWhenUnmanned; }
+
 protected:
 
 	virtual void upgradeImplementation()
@@ -155,6 +166,12 @@ protected:
 		getAutoHealBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getAutoHealBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval()
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
@@ -169,6 +186,7 @@ protected:
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 
 private:

@@ -353,12 +353,21 @@ Bool addDrawableToList( Drawable *draw, void *userData )
 		return FALSE;
 #endif
 
-	if (!draw->getTemplate()->isAnyKindOf(pds->kindofsToMatch))
+	const Object *obj = draw->getObject();
+	Bool checkDisguised = FALSE;
+
+	// IamInnocent - Allows you to select Objects disguised as Mines or Shrubberies
+	if (obj &&
+		((obj->isDisguised() && ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) == ALLIES) || obj->hasDetectedDisguise()) &&
+		(draw->getTemplate()->isKindOf(KINDOF_MINE) || draw->getTemplate()->isKindOf(KINDOF_SHRUBBERY)))
+		checkDisguised = TRUE;
+
+	if (!draw->getTemplate()->isAnyKindOf(pds->kindofsToMatch) && !checkDisguised)
 		return FALSE;
 
 	if (!draw->isSelectable())
   {
-    const Object *obj = draw->getObject();
+    //const Object *obj = draw->getObject();
     if ( obj && obj->getContainedBy() )//hmm, interesting... he is not selectable but he is contained
     {// What we are after here is to propagate the selection the selection ti the container
       // if the container is non-enclosing... see also SelectionXlat, in the left_click case
@@ -380,7 +389,7 @@ Bool addDrawableToList( Drawable *draw, void *userData )
 	// feature and an advanced skill to pull off, so we must leave the exploit.
 	if (!pds->isPointSelection)
 	{
-		const Object *obj = draw->getObject();
+		//const Object *obj = draw->getObject();
 		if (obj)
 			if (obj->getControllingPlayer() != ThePlayerList->getLocalPlayer())
 				if (obj->getContain() && draw->getObject()->getContain()->getContainCount() > 0)

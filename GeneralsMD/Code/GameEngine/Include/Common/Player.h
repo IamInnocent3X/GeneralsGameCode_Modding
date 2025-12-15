@@ -116,14 +116,20 @@ enum { NO_HOTKEY_SQUAD = -1 };
 typedef Int PlayerIndex;
 #define PLAYER_INDEX_INVALID -1
 
+typedef std::pair<GameDifficulty, UnsignedInt> MaxSimultaneousOfTypeDifficultyPair;
+typedef std::vector<MaxSimultaneousOfTypeDifficultyPair> MaxSimultaneousOfTypeDifficulty;
+
 // ------------------------------------------------------------------------------------------------
 class KindOfPercentProductionChange : public MemoryPoolObject
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(KindOfPercentProductionChange, "KindOfPercentProductionChange")
 public:
 	KindOfMaskType		m_kindOf;
-	Real							m_percent;
-	UnsignedInt				m_ref;
+	Real				m_percent;
+	UnsignedInt			m_ref;  // Counter
+	Bool				m_stackWithAny; // this entry can stack with any of same values
+	UnsignedInt         m_templateID;  // Bonus Source thingtemplate
+
 };
 EMPTY_DTOR(KindOfPercentProductionChange)
 
@@ -323,7 +329,8 @@ public:
 	Upgrade *findUpgrade( const UpgradeTemplate *upgradeTemplate );
 
 	void onUpgradeCompleted( const UpgradeTemplate *upgradeTemplate );				///< An upgrade just finished, do things like tell all objects to recheck UpgradeModules
-	void onUpgradeRemoved(){}					///< An upgrade just got removed, this doesn't do anything now.
+	void findUpgradeInQueuesAndCancelThem( const UpgradeTemplate *upgradeTemplate );	///< Find existing upgrades queue among a player that are currently in production and cancel them.
+	void onUpgradeRemoved();					///< An upgrade just got removed, this doesn't do anything now.
 
 #if defined(RTS_DEBUG)
 	/// Prereq disabling cheat key
@@ -381,11 +388,27 @@ public:
 	void friend_applyDifficultyBonusesForObject(Object* obj, Bool apply) const;
 
 	/// Decrement the ref counter on the typeof production list node
-	void removeKindOfProductionCostChange(KindOfMaskType kindOf, Real percent);
+	void removeKindOfProductionCostChange(KindOfMaskType kindOf, Real percent,
+										  UnsignedInt sourceTemplateID = INVALID_ID,
+										  Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
 	/// add type of production cost change (Used for upgrades)
-	void addKindOfProductionCostChange( KindOfMaskType kindOf, Real percent);
+	void addKindOfProductionCostChange( KindOfMaskType kindOf, Real percent,
+										UnsignedInt sourceTemplateID = INVALID_ID,
+										Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
 	/// Returns production cost change based on typeof (Used for upgrades)
 	Real getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const;
+
+	/// Decrement the ref counter on the typeof production list node
+	void removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
+		UnsignedInt sourceTemplateID = INVALID_ID,
+		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
+	/// add type of production cost change (Used for upgrades)
+	void addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
+		UnsignedInt sourceTemplateID = INVALID_ID,
+		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
+	/// Returns production cost change based on typeof (Used for upgrades)
+	Real getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const;
+
 
 	/** Return bonus or penalty for construction of this thing.
 	*/
@@ -398,6 +421,12 @@ public:
 	/** Return starting veterancy level of a newly built thing of this type
 	*/
 	VeterancyLevel getProductionVeterancyLevel( AsciiString buildTemplateName ) const;
+
+
+	// These values can now be set via module
+	void addProductionCostChangePercent(AsciiString buildTemplateName, Real percent);
+	void addProductionTimeChangePercent(AsciiString buildTemplateName, Real percent);
+
 
 	// Friend function for the script engine's usage.
 	void friend_setSkillset(Int skillSet);
@@ -679,7 +708,7 @@ private:
 	 this call externally, you probably don't... you should probably be
 	 using grantScience() instead.
 	*/
-	Bool addScience(ScienceType science);
+	Bool addScience(ScienceType science, Bool playerAction = FALSE);
 
 public:
 	Int getSkillPoints() const						{ return m_skillPoints; }
@@ -713,7 +742,7 @@ public:
 		attempt to purchase the science, but use prereqs, and charge points.
 		return true if successful.
 	*/
-	Bool attemptToPurchaseScience(ScienceType science);
+	Bool attemptToPurchaseScience(ScienceType science, Bool playerAction = FALSE);
 
 	/**
 		grant the science, ignore prereqs & charge no points,
@@ -725,6 +754,11 @@ public:
 
 	/** return true attemptToPurchaseScience() would succeed for this science. */
 	Bool isCapableOfPurchasingScience(ScienceType science) const;
+
+	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
+
+	inline void setUnitsMoveInFormation(void) { m_unitsMoveInFormation = !m_unitsMoveInFormation; }
+	inline Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; } 
 
 protected:
 
@@ -814,9 +848,12 @@ private:
 
 	ScoreKeeper						m_scoreKeeper;					///< The local scorekeeper for this player
 
+	// Production Cost modifier
 	typedef std::list<KindOfPercentProductionChange*> KindOfPercentProductionChangeList;
 	typedef KindOfPercentProductionChangeList::iterator KindOfPercentProductionChangeListIt;
 	mutable KindOfPercentProductionChangeList m_kindOfPercentProductionChangeList;
+	// Production Time modifier (we can re-use the same types)
+	mutable KindOfPercentProductionChangeList m_kindOfPercentProductionTimeChangeList;
 
 
 	typedef std::list<SpecialPowerReadyTimerType> SpecialPowerReadyTimerList;
@@ -828,4 +865,6 @@ private:
 
 	Bool									m_isPlayerDead;
 	Bool									m_logicalRetaliationModeEnabled;
+
+	Bool									m_unitsMoveInFormation;
 };

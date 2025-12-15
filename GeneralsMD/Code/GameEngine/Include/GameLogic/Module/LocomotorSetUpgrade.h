@@ -34,15 +34,29 @@
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Thing;
+enum LocomotorSetType CPP_11(: Int);
 
-//-------------------------------------------------------------------------------------------------
-/** The default	die module */
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+class LocomotorSetUpgradeModuleData : public UpgradeModuleData
+{
+public:
+
+	LocomotorSetUpgradeModuleData(void);
+
+	static void buildFieldParse(MultiIniFieldParse& p);
+	static void parseLocomotorType(INI* ini, void* instance, void* store, const void* /*userData*/);
+
+	Bool m_setUpgraded;   ///< Enable or Disable upgraded locomotor
+	Bool m_useLocomotorType;  ///< Use explicit locomotor type
+	LocomotorSetType m_LocomotorType;  ///< explicit lomotor type
+	//Bool m_needsParkedAircraft;   ///< Aircraft attempting this upgrade needs to be stationary in hangar
+};
 //-------------------------------------------------------------------------------------------------
 class LocomotorSetUpgrade : public UpgradeModule
 {
-
-	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( LocomotorSetUpgrade, "LocomotorSetUpgrade" )
-	MAKE_STANDARD_MODULE_MACRO( LocomotorSetUpgrade );
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(LocomotorSetUpgrade, "LocomotorSetUpgrade")
+	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( LocomotorSetUpgrade, LocomotorSetUpgradeModuleData);
 
 public:
 
@@ -52,5 +66,9 @@ public:
 protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
+private:
+	Bool m_hasExecuted;
+	LocomotorSetType m_prevLocomotorType;
 };

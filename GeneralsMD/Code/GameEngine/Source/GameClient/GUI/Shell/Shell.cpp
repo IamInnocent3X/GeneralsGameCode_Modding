@@ -30,6 +30,9 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#include "Common/AudioEventRTS.h"
+#include "Common/AudioHandleSpecialValues.h"
+#include "Common/GameEngine.h"
 #include "Common/RandomValue.h"
 #include "GameClient/Shell.h"
 #include "GameClient/WindowLayout.h"
@@ -206,7 +209,14 @@ void Shell::update( void )
 			m_background = NULL;
 
 		}
-
+		if(TheGameEngine && m_isShellActive)
+		{
+			if(TheGlobalData->m_shellMapOn && m_shellMapOn && TheGlobalData->m_menufps > 0 && TheGlobalData->m_menufps <= TheGlobalData->m_framesPerSecondLimit)
+				TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_menufps);
+			else if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+				TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
+		}
+		
 		// Update the animate window manager
 		m_animateWindowManager->update();
 
@@ -566,6 +576,18 @@ void Shell::showShellMap(Bool useShellMap )
 			top()->bringForward();
 		m_shellMapOn = FALSE;
 		m_clearBackground = FALSE;
+
+		// MUSIC
+		// TODO
+		//AsciiString musicName = "Shell";
+		//if (!musicName.isEmpty())
+		//{
+		//	TheAudio->removeAudioEvent(AHSV_StopTheMusicFade);
+		//	AudioEventRTS event(musicName);
+		//	event.setShouldFade(TRUE);
+		//	TheAudio->addAudioEvent(&event);
+		//	TheAudio->update();//Since GameEngine::update() is suspended until after I am gone... 
+		//}
 	}
 }
 

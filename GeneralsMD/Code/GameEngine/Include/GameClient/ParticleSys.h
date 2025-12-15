@@ -303,7 +303,8 @@ public:
 
 	typedef Int Color;
 
-	void tintAllColors( Color tintColor );
+	void tintAllColors( Color tintColor);
+	void tintColorsAllFrames( Color tintColor);
 
 	GameClientRandomVariable m_colorScale;								///< color coefficient
 
@@ -632,6 +633,13 @@ public:
 	// Access to dynamically changing part of a particle system.
 	void setEmissionVolumeSphereRadius( Real newRadius ) { if (m_emissionVolumeType == SPHERE) m_emissionVolume.sphere.radius = newRadius; }
 	void setEmissionVolumeCylinderRadius( Real newRadius ) { if (m_emissionVolumeType == CYLINDER) m_emissionVolume.cylinder.radius = newRadius; }
+	void setEmissionBoxHalfSize(Real newX, Real newY, Real newZ) {
+		if (m_emissionVolumeType == BOX) {
+			m_emissionVolume.box.halfSize.x = newX;
+			m_emissionVolume.box.halfSize.y = newY;
+			m_emissionVolume.box.halfSize.z = newZ;
+		}
+	}
 	EmissionVolumeType getEmisionVolumeType() const { return m_emissionVolumeType; }
 	ParticlePriorityType getPriority() const { return m_priority; }
 
@@ -686,6 +694,8 @@ protected:
 
 	Coord3D						m_pos;													///< this is the position to emit at.
 	Coord3D						m_lastPos;											///< this is the previous position we emitted at.
+
+	Coord3D						m_posOffset;                                        ///< local (to parent transform) offset for created particles
 
 	ParticleSystem *	m_slaveSystem;									///< if non-NULL, another system this one has control of
 	ParticleSystemID	m_slaveSystemID;								///< id of slave system (if present)

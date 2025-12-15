@@ -99,7 +99,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	//SpecialPowerUpdateInterface pure virtual implementations
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const { return m_doorState != m_timeoutState; }
@@ -113,6 +113,9 @@ public:
 
 	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
 
 private:
 	enum DoorStateType

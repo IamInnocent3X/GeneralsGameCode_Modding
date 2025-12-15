@@ -37,6 +37,8 @@
 #define DEFINE_EDITOR_SORTING_NAMES				// for EditorSortingNames[]
 #define DEFINE_RADAR_PRIORITY_NAMES				// for RadarPriorityNames[]
 #define DEFINE_BUILDABLE_STATUS_NAMES			// for BuildableStatusNames[]
+#define DEFINE_AMMO_PIPS_STYLE_NAMES			// for AmmoPipsStyleNames[]
+#define DEFINE_DIFFICULTY_NAMES					// for DifficultyNames[]
 
 #include "Common/DamageFX.h"
 #include "Common/GameAudio.h"
@@ -56,6 +58,8 @@
 #include "Common/ThingFactory.h"
 #include "Common/ThingSort.h"
 #include "Common/BitFlagsIO.h"
+#include "Common/DisabledTypes.h"
+#include "Common/ObjectStatusTypes.h"
 
 #include "GameClient/Drawable.h"
 #include "GameClient/FXList.h"
@@ -131,6 +135,8 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "IsTrainable",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_isTrainable ) },
 	{ "EnterGuard",						INI::parseBool,												NULL,									offsetof( ThingTemplate, m_enterGuard ) },
 	{ "HijackGuard",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_hijackGuard ) },
+	{ "EquipGuard",						INI::parseBool,												NULL,									offsetof( ThingTemplate, m_equipGuard ) },
+	{ "ParasiteGuard",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_parasiteGuard ) },
 
 	{ "Side",									INI::parseAsciiString,								NULL,	offsetof( ThingTemplate, m_defaultOwningSide ) },
 
@@ -172,6 +178,10 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "UpgradeCameo3",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 2 ] ) },
 	{ "UpgradeCameo4",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 3 ] ) },
 	{ "UpgradeCameo5",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 4 ] ) },
+	{ "UpgradeCameo6",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 5 ] ) },
+	{ "UpgradeCameo7",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 6 ] ) },
+	{ "UpgradeCameo8",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 7 ] ) },
+	{ "UpgradeCameo9",		INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 8 ] ) },
 
 // NOTE NOTE NOTE -- s_objectFieldParseTable and s_objectReskinFieldParseTable must be updated in tandem -- see comment above
 
@@ -244,6 +254,60 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
   { "MaxSimultaneousLinkKey",	NameKeyGenerator::parseStringAsNameKeyType,		NULL, offsetof(ThingTemplate, m_maxSimultaneousLinkKey ) },
 	{ "CrusherLevel",					INI::parseUnsignedByte,			NULL, offsetof( ThingTemplate, m_crusherLevel ) },
 	{ "CrushableLevel",				INI::parseUnsignedByte,			NULL, offsetof( ThingTemplate, m_crushableLevel ) },
+	{ "AmmoPipsStyle",  INI::parseByteSizedIndexList, AmmoPipsStyleNames, offsetof(ThingTemplate, m_ammoPipsStyle) },
+
+	// Extra Features Starts Here
+
+	// Prerequisite to Deny the Unit from Building
+	{ "NegativePrerequisites",				ThingTemplate::parseNegativePrerequisites,	0, 0 },
+	{ "HideNegativePrerequisites",			INI::parseBool,		NULL, offsetof( ThingTemplate, m_negprereqHideInfo ) },
+	
+  	// Expansion Towards MaxSimultaneous
+  	{ "MaxSimultaneousLinkObjects",			INI::parseAsciiStringVector,				NULL,		offsetof( ThingTemplate, m_maxSimultaneousLinkObjects ) },
+  	{ "MaxSimultaneousOfTypeDifficulty",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficulty ) },
+	{ "MaxSimultaneousOfTypeDifficultyAIOverride",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			NULL,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficultyAI ) },
+	{ "MaxSimultaneousOfTypeCustomMessage",			INI::parseAndTranslateLabel,				NULL,		offsetof( ThingTemplate, m_maxSimultaneousCustomMessage ) },
+
+	// Set Underpowered Properties
+	{ "DisabledWhenUnderpowered",			INI::parseBool,		NULL, offsetof( ThingTemplate, m_setDisabledWhenUnderpowered ) },
+	{ "DisabledTypeWhenUnderpowered",		DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( ThingTemplate, m_disabledTypeUnderPowered ) },
+	{ "StatusUnderPowered",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( ThingTemplate, m_statusUnderPowered ) },
+	{ "CustomStatusUnderPowered",	INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customStatusUnderPowered ) },
+	{ "WeaponBonusUnderPowered",	INI::parseWeaponBonusVector, NULL, offsetof( ThingTemplate, m_bonusUnderPowered ) },
+	{ "CustomWeaponBonusUnderPowered",			INI::parseAsciiStringVector, NULL, offsetof( ThingTemplate, m_customBonusUnderPowered ) },
+	{ "TintStatusUnderPowered",			TintStatusFlags::parseSingleBitFromINI,		NULL, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
+	{ "CustomTintStatusUnderPowered",	INI::parseAsciiString, 	NULL, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
+	{ "ModelConditionUnderPowered", ModelConditionFlags::parseFromINI, NULL, offsetof( ThingTemplate, m_modelConditionUnderPowered ) },
+
+	// Customize Action Cursors
+	{ "SelectingCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_selectingCursorName ) },
+	{ "MoveCursorName",						INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_moveToCursorName ) },
+	{ "AttackMoveCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_attackMoveToCursorName ) },
+	{ "WaypointCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_waypointCursorName ) },
+	{ "GenericInvalidCursorName",			INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_genericInvalidCursorName ) },
+	{ "EnterCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_enterCursorName ) },
+	{ "EnterAggressiveCursorName",			INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_enterAggressiveCursorName ) },
+	{ "AttackCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_attackObjectCursorName ) },
+	{ "ForceAttackCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_forceAttackObjectCursorName ) },
+	{ "ForceAttackGroundCursorName",		INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_forceAttackGroundCursorName ) },
+	{ "OutrangeCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_outrangeCursorName ) },
+	{ "GetRepairAtCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_getRepairAtCursorName ) },
+	{ "DockCursorName",						INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_dockCursorName ) },
+	{ "GetHealedCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_getHealedCursorName ) },
+	{ "DoRepairCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_doRepairCursorName ) },
+	{ "ResumeConstructionCursorName",		INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_resumeConstructionCursorName ) },
+	{ "SetRallyPointCursorName",			INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_setRallyPointCursorName ) },
+	{ "SalvageCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_salvageCursorName ) },
+	{ "BuildCursorName",					INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_buildCursorName ) },
+	{ "InvalidBuildCursorName",				INI::parseAsciiString,													NULL, offsetof( ThingTemplate, m_invalidBuildCursorName ) },
+
+	// Enables the Target Object to use their Cursor instead of the Selected Object's Cursor
+	{ "UseMyDockCursor",					INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyDockCursor ) },
+	{ "UseMyGetHealedCursor",				INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyGetHealedCursor ) },
+	{ "UseMyGetRepairAtCursor",				INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyGetRepairAtCursor ) },
+	{ "UseMyEnterCursor",					INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMyEnterCursor ) },
+	{ "UseMySalvageCursor",					INI::parseBool,													NULL, offsetof( ThingTemplate, m_useMySalvageCursor ) },
+
 
 	{ 0, 0, 0, 0 }
 
@@ -670,6 +734,53 @@ void ThingTemplate::parsePrerequisites( INI* ini, void *instance, void *store, c
 	ini->initFromINI(&self->m_prereqInfo, myFieldParse);
 }
 
+//-------------------------------------------------------------------------------------------------
+static void parseNegativePrerequisiteUnit( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
+{
+	std::vector<ProductionPrerequisite>* v = (std::vector<ProductionPrerequisite>*)instance;
+
+	ProductionPrerequisite prereq;
+	Bool orUnitWithPrevious = FALSE;
+	for (const char *token = ini->getNextToken(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		prereq.addUnitNegPrereq( AsciiString( token ), orUnitWithPrevious );
+		orUnitWithPrevious = TRUE;
+	}
+
+	v->push_back(prereq);
+}
+
+//-------------------------------------------------------------------------------------------------
+static void parseNegativePrerequisiteScience( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
+{
+	std::vector<ProductionPrerequisite>* v = (std::vector<ProductionPrerequisite>*)instance;
+
+	ProductionPrerequisite prereq;
+	prereq.addScienceNegPrereq(INI::scanScience(ini->getNextToken()));
+
+	v->push_back(prereq);
+}
+
+//-------------------------------------------------------------------------------------------------
+void ThingTemplate::parseNegativePrerequisites( INI* ini, void *instance, void *store, const void* userData )
+{
+	ThingTemplate* self = (ThingTemplate*)instance;
+
+	static const FieldParse myFieldParse[] = 
+	{
+		{ "Object", parseNegativePrerequisiteUnit, 0, 0 },
+		{ "Science", parseNegativePrerequisiteScience,	0, 0 },
+		{ 0, 0, 0, 0 }
+	};
+
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	{
+		self->m_negprereqInfo.clear();
+	}
+
+	ini->initFromINI(&self->m_negprereqInfo, myFieldParse);
+}
+
 //-------------------------------------------------------------------------------------------Static
 static void parseArbitraryFXIntoMap( INI* ini, void *instance, void* /* store */, const void* userData )
 {
@@ -978,6 +1089,36 @@ void ThingTemplate::parseMaxSimultaneous(INI *ini, void *instance, void *store, 
   }
 }
 
+void ThingTemplate::parseMaxSimultaneousOfTypeDifficulty( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	MaxSimultaneousOfTypeDifficultyPair up;
+	Bool ParseNext;
+	Int count;
+
+	MaxSimultaneousOfTypeDifficulty* s = (MaxSimultaneousOfTypeDifficulty*)store;
+	s->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		count++;
+		if(count > DIFFICULTY_COUNT * 2)
+		{
+			DEBUG_CRASH(("Invalid configuration of Difficulty to Amount of MaxSimultaneousOfType"));
+			throw INI_INVALID_DATA;
+		}
+		if(!ParseNext)
+		{
+			up.first = (GameDifficulty)INI::scanIndexList(token, TheDifficultyNames);
+			ParseNext = TRUE;
+		}
+		else 
+		{
+			INI::parseUnsignedInt(ini, NULL, &up.second, NULL);
+			s->push_back(up);
+			ParseNext = FALSE;
+		}
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -1013,6 +1154,8 @@ ThingTemplate::ThingTemplate() :
 	m_isTrainable = FALSE;
 	m_enterGuard = FALSE;
 	m_hijackGuard = FALSE;
+	m_equipGuard = FALSE;
+	m_parasiteGuard = FALSE;
 
 	m_templateID = 0;
 	m_kindof = KINDOFMASK_NONE;
@@ -1042,6 +1185,43 @@ ThingTemplate::ThingTemplate() :
 	m_crusherLevel = 0;			//Unspecified, this object is unable to crush anything!
 	m_crushableLevel = 255; //Unspecified, this object is unable to be crushed by anything!
 
+	m_ammoPipsStyle = AMMO_PIPS_DEFAULT;
+	m_maxSimultaneousLinkObjects.clear();
+	m_maxSimultaneousOfTypeDifficulty.clear();
+	m_maxSimultaneousOfTypeDifficultyAI.clear();
+	m_maxSimultaneousCustomMessage = UnicodeString::TheEmptyString;
+
+	m_setDisabledWhenUnderpowered = TRUE;
+	m_disabledTypeUnderPowered = DISABLED_UNDERPOWERED;
+	m_tintStatusUnderPowered = TINT_STATUS_INVALID;
+	m_customTintStatusUnderPowered = NULL;
+
+	m_genericInvalidCursorName = NULL;
+	m_selectingCursorName = NULL;
+	m_moveToCursorName = NULL;
+	m_attackMoveToCursorName = NULL;
+	m_waypointCursorName = NULL;
+	m_attackObjectCursorName = NULL;
+	m_forceAttackObjectCursorName = NULL;
+	m_forceAttackGroundCursorName = NULL;
+	m_outrangeCursorName = NULL;
+	m_getRepairAtCursorName = NULL;
+	m_dockCursorName = NULL;
+	m_getHealedCursorName = NULL;
+	m_doRepairCursorName = NULL;
+	m_resumeConstructionCursorName = NULL;
+	m_enterCursorName = NULL;
+	m_enterAggressiveCursorName = NULL;
+	m_setRallyPointCursorName = NULL;
+	m_salvageCursorName = NULL;
+	m_buildCursorName = NULL;
+	m_invalidBuildCursorName = NULL;
+
+	m_useMyGetRepairAtCursor = FALSE;
+	m_useMyDockCursor = FALSE;
+	m_useMyGetHealedCursor = FALSE;
+	m_useMyEnterCursor = FALSE;
+	m_useMySalvageCursor = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1238,6 +1418,18 @@ void ThingTemplate::setCopiedFromDefault()
 }
 
 //-------------------------------------------------------------------------------------------------
+void ThingTemplate::setCopiedFromDefaultExtended()
+{
+	//only set weapons and armors as copied, so they get cleared when defining new ones as they
+	// cannot be removed with RemoveModule
+	m_armorCopiedFromDefault = true;
+	m_weaponsCopiedFromDefault = true;
+	//m_behaviorModuleInfo.setCopiedFromDefault(true);
+	//m_drawModuleInfo.setCopiedFromDefault(true);
+	//m_clientUpdateModuleInfo.setCopiedFromDefault(true);
+}
+
+//-------------------------------------------------------------------------------------------------
 ThingTemplate::~ThingTemplate()
 {
 	// note, we don't need to take any special action for Armor/WeaponSets...
@@ -1289,6 +1481,28 @@ void ThingTemplate::resolveNames()
 		// Command centers are considered factories. jba.
 		m_isBuildFacility = true;
 	}
+
+	for (i = 0; i < m_negprereqInfo.size(); i++)
+	{
+		m_negprereqInfo[i].resolveNames();
+	}
+	
+	/*
+		
+	for (i = 0; i < m_negprereqInfo.size(); i++)
+	{
+		Int count = m_negprereqInfo[i].getAllPossibleNegativeBuildFacilityTemplates(tmpls, MAX_BF);
+		for (j = 0; j < count; j++)
+		{
+			// casting const away is a little evil, but justified in this case:
+			// PropductionPrerequisite should only be allowed 'const' access,
+			// but ThingTemplate can muck with stuff with gleeful abandon. (srj)
+			if( tmpls[ j ] )
+				const_cast<ThingTemplate*>(tmpls[j])->m_isBuildFacility = true;
+			// DEBUG_LOG(("BF: %s is a buildfacility for %s",tmpls[j]->m_nameString.str(),this->m_nameString.str()));
+		}
+	}
+	*/
 
 	// keep a pointer to portrait and button image if present for speed later
 	if( TheMappedImageCollection )
@@ -1547,6 +1761,7 @@ Int ThingTemplate::calcTimeToBuild( const Player* player) const
 	buildTime *= player->getHandicap()->getHandicap(Handicap::BUILDTIME, this);
 
 	Real factionModifier = 1 + player->getProductionTimeChangePercent( getName() );
+	factionModifier *= player->getProductionTimeChangeBasedOnKindOf(m_kindof);
 	buildTime *= factionModifier;
 
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)

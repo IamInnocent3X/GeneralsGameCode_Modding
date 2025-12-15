@@ -131,6 +131,16 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		DEBUG_CRASH( ("ControlBar::processCommandUI() -- Button activated has no data. Ignoring...") );
 		return CBC_COMMAND_NOT_USED;
 	}
+	OrderNearbyData orderData;
+	if(commandButton->getOrderNearbyRadius())
+	{
+		orderData.Radius = commandButton->getOrderNearbyRadius();
+		orderData.RequiredMask = commandButton->getOrderKindofMask();
+		orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
+		orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
+		orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
+	}
 
 	// sanity, we won't process messages if we have no source object,
 	// unless we're CB_CONTEXT_PURCHASE_SCIENCE or GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
@@ -212,7 +222,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 	{
 		if (commandButton->getOptions() & USES_MINE_CLEARING_WEAPONSET)
 		{
-			TheMessageStream->appendMessage( GameMessage::MSG_SET_MINE_CLEARING_DETAIL );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SET_MINE_CLEARING_DETAIL, orderData );
 		}
 
 		//June 06, 2002 -- Major change
@@ -574,7 +584,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_QUEUE_UPGRADE );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_QUEUE_UPGRADE, orderData );
 			msg->appendObjectIDArgument( objID );
 			msg->appendIntegerArgument( upgradeT->getUpgradeNameKey() );
 
@@ -625,14 +635,14 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_ATTACK_MOVE:
-			TheMessageStream->appendMessage(GameMessage::MSG_META_TOGGLE_ATTACKMOVE);
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_META_TOGGLE_ATTACKMOVE, orderData );
 			break;
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_STOP:
 		{
 			// This message always works on the currently selected team
-			TheMessageStream->appendMessage(GameMessage::MSG_DO_STOP);
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_STOP, orderData );
 			break;
 		}
 
@@ -731,7 +741,21 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
 				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_EVACUATE );
-				TheMessageStream->appendMessage( GameMessage::MSG_EVACUATE );
+				TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EVACUATE, orderData );
+			}
+
+			break;
+		}  // end evacuate
+
+		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_ENTER_ME:
+		{
+			// Cancel GUI command mode.
+			TheInGameUI->setGUICommand( NULL );
+
+			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
+				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER_ME );
+				TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_ENTER_ME, orderData );
 			}
 
 			break;
@@ -740,7 +764,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		// --------------------------------------------------------------------------------------------
 		case GUI_COMMAND_EXECUTE_RAILED_TRANSPORT:
 		{
-			TheMessageStream->appendMessage( GameMessage::MSG_EXECUTE_RAILED_TRANSPORT );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EXECUTE_RAILED_TRANSPORT, orderData );
 			break;
 		}
 
@@ -748,7 +772,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_HACK_INTERNET:
 		{
 			pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_INTERNET_HACK );
-			TheMessageStream->appendMessage( GameMessage::MSG_INTERNET_HACK );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_INTERNET_HACK, orderData );
 			break;
 		}
 
@@ -764,7 +788,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		{
 
 			// command needs no additional data, send the message
-			TheMessageStream->appendMessage( GameMessage::MSG_SELL );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SELL, orderData );
 			break;
 
 		}
@@ -773,7 +797,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_TOGGLE_OVERCHARGE:
 		{
 
-			TheMessageStream->appendMessage( GameMessage::MSG_TOGGLE_OVERCHARGE );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_TOGGLE_OVERCHARGE, orderData );
 			break;
 
 		}
@@ -783,7 +807,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_POW_RETURN_TO_PRISON:
 		{
 
-			TheMessageStream->appendMessage( GameMessage::MSG_RETURN_TO_PRISON );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_RETURN_TO_PRISON, orderData );
 			break;
 
 		}
@@ -801,17 +825,49 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_GUARD:
 		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 		case GUI_COMMAND_COMBATDROP:
 		{
 			DEBUG_CRASH(("hmm, should never occur"));
 		}
 		break;
 
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		{
+			// Cancel GUI command mode.
+			TheInGameUI->setGUICommand( NULL );
+
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_POSITION, orderData );
+			GuardMode guardMode;
+			switch( commandButton->getCommandType() )
+			{
+				case GUI_COMMAND_GUARD_CURRENT_POS:
+					guardMode = GUARDMODE_CURRENT_POS;
+					break;
+				case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+					guardMode = GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT;
+					break;
+				case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+					guardMode = GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY;
+					break;
+			}
+			Coord3D noPos;
+			noPos.zero();
+			msg->appendLocationArgument(noPos);
+			msg->appendIntegerArgument(guardMode);
+
+			break;
+		}  // end evacuate
+
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_SWITCH_WEAPON:
 		{
 				// command needs no additional data, send the message
-				GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_SWITCH_WEAPONS );
+				GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SWITCH_WEAPONS, orderData );
 
 				//Play mode change acknowledgement
 				PickAndPlayInfo info;
@@ -827,7 +883,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_FIRE_WEAPON:
 		{
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_WEAPON );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON, orderData );
 			msg->appendIntegerArgument( commandButton->getWeaponSlot() );
 			msg->appendIntegerArgument( commandButton->getMaxShotsToFire() );
 
@@ -846,7 +902,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_SPECIAL_POWER );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_SPECIAL_POWER, orderData );
 			msg->appendIntegerArgument( spTemplate->getID() );
 			msg->appendIntegerArgument( commandButton->getOptions() );
 			msg->appendObjectIDArgument( obj->getID() );
@@ -857,7 +913,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_SPECIAL_POWER:
 		{
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_SPECIAL_POWER );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_SPECIAL_POWER, orderData );
 			msg->appendIntegerArgument( commandButton->getSpecialPowerTemplate()->getID() );
 			msg->appendIntegerArgument( commandButton->getOptions() );
 			msg->appendObjectIDArgument( INVALID_ID );	// no specific source
@@ -889,7 +945,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			}
 
 
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_PURCHASE_SCIENCE );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_PURCHASE_SCIENCE, orderData );
 			msg->appendIntegerArgument( st );
 
 			markUIDirty();
@@ -897,6 +953,17 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			break;
 
 		}
+
+		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_DISABLE_POWER:
+		{
+
+			// command needs no additional data, send the message
+
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DISABLE_POWER, orderData );
+			break;
+
+		}  // end sell
 
 		//---------------------------------------------------------------------------------------------
 		default:

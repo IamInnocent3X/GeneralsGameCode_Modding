@@ -57,12 +57,14 @@ class BridgeScaffoldBehaviorInterface;
 class OverchargeBehaviorInterface;
 class TransportPassengerInterface;
 class CaveInterface;
+class TunnelInterface;
 class LandMineInterface;
 
 class ProjectileUpdateInterface;
 class AIUpdateInterface;
 class ExitInterface;
 class DockUpdateInterface;
+class RepairDockUpdateInterface;
 class RailedTransportDockUpdateInterface;
 class SpecialPowerUpdateInterface;
 class SlavedUpdateInterface;
@@ -78,7 +80,13 @@ class DamageInfo;
 class ParticleSystemTemplate;
 class StealthUpdate;
 class SpyVisionUpdate;
-
+// -----------------
+class BattlePlanBonusBehaviorInterface;
+class EnergyShieldBehaviorInterface;
+// -----------------
+class HijackerUpdateInterface;
+class RadarUpgradeInterface;
+class StickyBombUpdateInterface;
 
 //-------------------------------------------------------------------------------------------------
 class BehaviorModuleData : public ModuleData
@@ -119,6 +127,7 @@ public:
 	virtual OverchargeBehaviorInterface* getOverchargeBehaviorInterface() = 0;
 	virtual TransportPassengerInterface* getTransportPassengerInterface() = 0;
 	virtual CaveInterface* getCaveInterface() = 0;
+	virtual TunnelInterface* getTunnelInterface() = 0;
 	virtual LandMineInterface* getLandMineInterface() = 0;
 	virtual DieModuleInterface* getEjectPilotDieInterface() = 0;
 	// move from UpdateModuleInterface (srj)
@@ -126,6 +135,7 @@ public:
 	virtual AIUpdateInterface* getAIUpdateInterface() = 0;
 	virtual ExitInterface* getUpdateExitInterface() = 0;
 	virtual DockUpdateInterface* getDockUpdateInterface() = 0;
+	virtual RepairDockUpdateInterface *getRepairDockUpdateInterface() = 0;
 	virtual RailedTransportDockUpdateInterface *getRailedTransportDockUpdateInterface( void ) = 0;
 	virtual SlowDeathBehaviorInterface* getSlowDeathBehaviorInterface() = 0;
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() = 0;
@@ -136,6 +146,13 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() = 0;
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() = 0;
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const = 0;
+
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() = 0;
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() = 0;
+
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() = 0;
+	virtual RadarUpgradeInterface* getRadarUpgradeInterface() = 0;
+	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() = 0;
 
 };
 
@@ -174,6 +191,7 @@ public:
 	virtual OverchargeBehaviorInterface* getOverchargeBehaviorInterface() { return NULL; }
 	virtual TransportPassengerInterface* getTransportPassengerInterface() { return NULL; }
 	virtual CaveInterface* getCaveInterface() { return NULL; }
+	virtual TunnelInterface* getTunnelInterface() { return NULL; }
 	virtual LandMineInterface* getLandMineInterface() { return NULL; }
 	virtual DieModuleInterface* getEjectPilotDieInterface() { return NULL; }
 	// interface acquisition (moved from UpdateModule)
@@ -181,6 +199,7 @@ public:
 	virtual AIUpdateInterface* getAIUpdateInterface() { return NULL; }
 	virtual ExitInterface* getUpdateExitInterface() { return NULL; }
 	virtual DockUpdateInterface* getDockUpdateInterface() { return NULL; }
+	virtual RepairDockUpdateInterface *getRepairDockUpdateInterface() { return NULL; }
 	virtual RailedTransportDockUpdateInterface *getRailedTransportDockUpdateInterface( void ) { return NULL; }
 	virtual SlowDeathBehaviorInterface* getSlowDeathBehaviorInterface() { return NULL; }
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return NULL; }
@@ -191,6 +210,11 @@ public:
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return NULL; }
 	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return NULL; }
 	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return NULL; }
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return NULL; }
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() { return NULL; }
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() { return NULL; }
+	virtual RadarUpgradeInterface* getRadarUpgradeInterface() { return NULL; }
+	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return NULL; }
 
 protected:
 
@@ -271,6 +295,16 @@ class CaveInterface
 public:
 	virtual void tryToSetCaveIndex( Int newIndex ) = 0;	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam ) = 0;	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
+	virtual Bool getHasPermanentOwner() const = 0;
+	virtual Team* getOldTeam() const = 0;
+};
+
+//-------------------------------------------------------------------------------------------------
+class TunnelInterface
+{
+public:
+	virtual void removeBunker() = 0;
+	virtual void removeGuard() = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

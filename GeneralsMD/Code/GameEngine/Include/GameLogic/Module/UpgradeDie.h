@@ -42,6 +42,8 @@ class UpgradeDieModuleData : public DieModuleData
 {
 public:
 	AsciiString m_upgradeName;
+	std::vector<AsciiString>	m_upgradeNames;
+	std::vector<AsciiString>	m_upgradeNamesGrant;
 
 	UpgradeDieModuleData(){}
 
@@ -53,6 +55,8 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "UpgradeToRemove",					INI::parseAsciiString,		NULL, offsetof( UpgradeDieModuleData, m_upgradeName ) },
+			{ "UpgradesToRemove",					INI::parseAsciiStringVector,NULL, offsetof( UpgradeDieModuleData, m_upgradeNames ) },
+			{ "UpgradesToGrant",					INI::parseAsciiStringVector,NULL, offsetof( UpgradeDieModuleData, m_upgradeNamesGrant ) },
 			{ 0, 0, 0, 0 }
 		};
 

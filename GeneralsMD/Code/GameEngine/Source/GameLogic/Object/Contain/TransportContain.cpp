@@ -39,12 +39,14 @@
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/TransportContain.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/WeaponSetType.h"
 
 
 // ------------------------------------------------------------------------------------------------
@@ -71,6 +73,8 @@ TransportContainModuleData::TransportContainModuleData()
 	// overwritten by any data provided from the INI entry tho
 	//
 	m_allowInsideKindOf = MAKE_KINDOF_MASK( KINDOF_INFANTRY );
+
+	m_passengerWeaponBonusVec.push_back(WEAPONBONUSCONDITION_CONTAINED);
 
 }
 
@@ -121,10 +125,20 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int TransportContain::getContainMax( void ) const
+Int TransportContain::getRawContainMax( void ) const
 {
 	if (getTransportContainModuleData())
 		return getTransportContainModuleData()->m_slotCapacity;
+
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Int TransportContain::getContainMax( void ) const
+{
+	if (getTransportContainModuleData())
+		return getTransportContainModuleData()->m_slotCapacity + m_containExtra;
 
 	return 0;
 }
@@ -201,6 +215,21 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 	{
     Int containMax = getContainMax();
     Int containCount = getContainCount();
+
+	const AIUpdateInterface *ai = getObject()->getAI();
+	if( ai )
+	{
+		const AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			// Count the current Assaulting members of the deployment
+			containCount += atInterface->getCurrentAssaultingMembers();
+
+			// we are originally from this transport, so we can come in if its not occupied.
+			if (atInterface->getCurrentAssaultingMembers() >= transportSlotCount && rider->getAssaultTransportObjectID() != INVALID_ID && rider->getAssaultTransportObjectID() == getObject()->getID())
+				containCount -= transportSlotCount;
+		}
+	}
 
 		return (m_extraSlotsInUse + containCount + transportSlotCount <= containMax);
 
@@ -301,6 +330,12 @@ void TransportContain::onContaining( Object *rider, Bool wasSelected )
 
 	}
 
+
+	// give the object a contained version of its weapon
+	// rider->setWeaponBonusCondition(WEAPONBONUSCONDITION_CONTAINED);
+	rider->setWeaponSetFlag(WEAPONSET_CONTAINED);
+
+
   if ( getTransportContainModuleData()->m_armedRidersUpgradeWeaponSet )
     letRidersUpgradeWeaponSet();
 
@@ -330,6 +365,10 @@ void TransportContain::onRemoving( Object *rider )
 	rider->clearDisabled( DISABLED_HELD );
 
 	const TransportContainModuleData* d = getTransportContainModuleData();
+
+	// give the object back a regular weapon
+	rider->clearWeaponBonusCondition(WEAPONBONUSCONDITION_CONTAINED);
+	rider->clearWeaponSetFlag(WEAPONSET_CONTAINED);
 
 	if (!d->m_exitBone.isEmpty())
 	{
@@ -647,6 +686,14 @@ void TransportContain::onCapture( Player *oldOwner, Player *newOwner )
 			orderAllPassengersToExit( CMD_FROM_AI, FALSE );
 		}
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void TransportContain::doUpgradeChecks()
+{
+	// extend base class
+	OpenContain::doUpgradeChecks();
 }
 
 // ------------------------------------------------------------------------------------------------

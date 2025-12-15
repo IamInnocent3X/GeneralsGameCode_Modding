@@ -55,9 +55,11 @@
 
 
 #define STRAY_MULTIPLIER 2.0f // Multiplier from stating diestance from tunnel, to max distance from
+#define MOB_SLEEPY
 
 const Real CLOSE_ENOUGH = 15;				// Our moveTo commands and pathfinding can't handle people in the way, so quit trying to hump someone on your spot
 const Real CLOSE_ENOUGH_SQR = (CLOSE_ENOUGH * CLOSE_ENOUGH);
+const Int FRAME_THRESHOLD = 16;
 
 //-------------------------------------------------------------------------------------------------
 MobMemberSlavedUpdate::MobMemberSlavedUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
@@ -80,6 +82,9 @@ MobMemberSlavedUpdate::MobMemberSlavedUpdate( Thing *thing, const ModuleData* mo
 	m_squirrellinessRatio = 0;
 	m_isSelfTasking = FALSE;
 	m_catchUpCrisisTimer = 0;
+
+	m_masterlastCoord.zero();
+	m_noAggregateHealth = FALSE;
 
 	// MDC: moving to GameLogicRandomValue.  This does not need to be synced, but having it so makes searches *so* much nicer.
 	//getObject()->getDrawable()->setInstanceScale(GameLogicRandomValueReal( 5.0f, 1.5f ));
@@ -126,12 +131,13 @@ void MobMemberSlavedUpdate::onSlaverDamage( const DamageInfo *info )
 UpdateSleepTime MobMemberSlavedUpdate::update( void )
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 
 	const MobMemberSlavedUpdateModuleData* data = getMobMemberSlavedUpdateModuleData();
 	Object *me = getObject();
 	if( !me )
 	{
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
 	}
 
 	Object *master = TheGameLogic->findObjectByID( m_slaver );
@@ -141,21 +147,21 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 
 		//TheGameLogic->destroyObject( me );
 		me->kill();
-		return UPDATE_SLEEP_NONE;	// you cannot return SLEEP_FOREVER unless you make yourself sleepy...
+		return calcSleepTime();	// you cannot return SLEEP_FOREVER unless you make yourself sleepy...
 	}
 
 	AIUpdateInterface *myAI = me->getAIUpdateInterface();
 	AIUpdateInterface *masterAI = master->getAIUpdateInterface();
 	if( ! myAI || ! masterAI)
 	{
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
 	}
 
 	Drawable *myDraw = me->getDrawable();
 	Drawable *masterDraw = master->getDrawable();
 	if ( ! myDraw || ! masterDraw)
 	{
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
 	}
 
 //	myDraw->colorTint( &m_personalColor );
@@ -174,19 +180,44 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 		myDraw->clearModelConditionFlags( clearFlags );
 	}
 
+	// Update my Info to my Slaver so he doesn't need to aggregate through everything
+	// Do it at the Slaver's Module instead.
+	//informMySlaverSelfInfo();
 
+	UnsignedInt now = TheGameLogic->getFrame();
+	if( m_framesToWait > now )
+		return UPDATE_SLEEP(m_framesToWait - now);
+	//if ( ++m_framesToWait < FRAME_THRESHOLD)
+	//	return UPDATE_SLEEP_NONE;
 
-	if ( ++m_framesToWait < 16)
-		return UPDATE_SLEEP_NONE;
+	// Just refreshed my update. No need to update again.
+	if(m_framesToWait && !myAI->isMoving())
+		me->setMobUpdateRefreshed(FALSE);
 
-	m_framesToWait = 0;
+	//m_framesToWait = 0;
+	m_framesToWait = now + FRAME_THRESHOLD;
 
 
 	Locomotor *locomotor = myAI->getCurLocomotor();
 	if( !locomotor )
 	{
-		return UPDATE_SLEEP_NONE;
+		return calcSleepTime();
 	}
+
+	// IamInnocent - If I am not moving, and my slaver is not moving, then we sleep until someone moves.
+	const Coord3D *masterCoord = master->getPosition();
+
+	if( !masterAI->isMoving() && 
+		  !myAI->isMoving() &&
+		  masterCoord->x == m_masterlastCoord.x &&
+		  masterCoord->y == m_masterlastCoord.y &&
+		  masterCoord->z == m_masterlastCoord.z )
+	{
+		m_framesToWait = 0;
+		return calcSleepTime();
+	}
+
+	m_masterlastCoord.set( masterCoord );
 
 	Object *victim = getObject()->getAIUpdateInterface()->getCurrentVictim();
 	Object *masterVictim = master->getAIUpdateInterface()->getCurrentVictim();
@@ -251,7 +282,7 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 			if ( m_catchUpCrisisTimer > data->m_catchUpCrisisBailTime)
 			{
 				me->kill();
-				return UPDATE_SLEEP_NONE;
+				return calcSleepTime();
 
 				// Here is the rethink:
 				// If the nexus has outrun me to the target by so much, //
@@ -306,7 +337,8 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 				myAI->aiIdle(CMD_FROM_AI);
 				primaryVictim = NULL;
 				m_primaryVictimID = INVALID_ID;
-				return UPDATE_SLEEP_NONE;
+				m_framesToWait = 0;
+				return calcSleepTime();
 			}
 
 			if ( spawnerBehavior->maySpawnSelfTaskAI( m_squirrellinessRatio ) ) // if mommy says it is okay
@@ -318,7 +350,8 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 					{
 						victim = newTarget;
 						myAI->aiAttackObject( newTarget, 999, CMD_FROM_AI ); // go ahead and do it
-						m_isSelfTasking = TRUE;
+						//m_isSelfTasking = TRUE;
+						informMySlaverSelfTasking(TRUE);
 					}
 				}
 
@@ -334,7 +367,8 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 				{
 			///		myAI->aiIdle( CMD_FROM_AI );// auto acquire mode
 				}
-				m_isSelfTasking = FALSE;
+				//m_isSelfTasking = FALSE;
+				informMySlaverSelfTasking(FALSE);
 			}
 		}
 		else
@@ -343,7 +377,17 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 		}
 	}
 
+	return m_framesToWait > now ? UPDATE_SLEEP(m_framesToWait - now) : calcSleepTime();
+}
+
+//-------------------------------------------------------------------------------------------------
+UpdateSleepTime MobMemberSlavedUpdate::calcSleepTime()  const
+{
+#ifdef MOB_SLEEPY
+	return UPDATE_SLEEP_FOREVER;
+#else
 	return UPDATE_SLEEP_NONE;
+#endif
 }
 
 
@@ -372,6 +416,61 @@ void MobMemberSlavedUpdate::doCatchUpLogic( Coord3D *pos )
 
 }
 
+//-------------------------------------------------------------------------------------------------
+void MobMemberSlavedUpdate::informMySlaverSelfInfo()
+{
+	/*if( m_noAggregateHealth )
+		return;
+
+	Object *master = TheGameLogic->findObjectByID( m_slaver );
+	if( master == NULL )
+		return;
+	
+	SpawnBehaviorInterface *spawnerBehavior = master->getSpawnBehaviorInterface();
+
+	if ( spawnerBehavior ) // if I have a mommy
+	{
+		Object *obj = getObject();
+		BodyModuleInterface *body = obj->getBodyModule();
+		m_noAggregateHealth = body ? !spawnerBehavior->informSlaveInfo(obj->getID(), body->getHealth(), body->getMaxHealth() ) : TRUE;
+		if(!m_noAggregateHealth && !obj->getMobUpdateRefreshed())
+			spawnerBehavior->friend_refreshUpdate();
+	}
+	else
+	{
+		m_noAggregateHealth = TRUE;
+	}*/
+}
+
+//-------------------------------------------------------------------------------------------------
+void MobMemberSlavedUpdate::informMySlaverSelfTasking(Bool set)
+{
+	if( m_noAggregateHealth )
+		return;
+
+	Bool isLastSelfTasking = m_isSelfTasking;
+	m_isSelfTasking = set;
+
+	// Same info, don't update. Updating is expensive.
+	if(isLastSelfTasking == m_isSelfTasking)
+		return;
+
+	Object *master = TheGameLogic->findObjectByID( m_slaver );
+	if( master == NULL )
+		return;
+	
+	SpawnBehaviorInterface *spawnerBehavior = master->getSpawnBehaviorInterface();
+
+	if ( spawnerBehavior ) // if I have a mommy
+	{
+		m_noAggregateHealth = !spawnerBehavior->informSelfTasking(getObject()->getID(), m_isSelfTasking);
+	}
+	else
+	{
+		m_noAggregateHealth = TRUE;
+	}
+}
+
 
 
 
@@ -382,6 +481,7 @@ void MobMemberSlavedUpdate::startSlavedEffects( const Object *slaver )
 		return;
 
 	m_slaver = slaver->getID();
+	getObject()->setIsMobMember(TRUE);
 
 	// mark selves as not selectable
 	//getObject()->setStatus( OBJECT_STATUS_UNSELECTABLE );
@@ -392,6 +492,7 @@ void MobMemberSlavedUpdate::startSlavedEffects( const Object *slaver )
 void MobMemberSlavedUpdate::stopSlavedEffects()
 {
 	m_slaver = INVALID_ID;
+	getObject()->setIsMobMember(FALSE);
 
 	/// @todo Just a thought.  Our Status bits on objects really need to be reference counts so you don't clear someone else's flag
 	getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_UNSELECTABLE ) );
@@ -448,6 +549,9 @@ void MobMemberSlavedUpdate::xfer( Xfer *xfer )
 
 	// catch up crisis timer
   xfer->xferUnsignedInt( &m_catchUpCrisisTimer );
+
+	// master last coordinates
+	xfer->xferCoord3D( &m_masterlastCoord );
 
 }
 

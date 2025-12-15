@@ -30,6 +30,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+//this block is needed to get the IsDebuggerPresent() method through windows.h
+#if _DEBUG
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x500  // Use 0x0500 for Windows 2000
+#endif
+#endif
+
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 #define WIN32_LEAN_AND_MEAN  // only bare bones windows stuff wanted
 #include <windows.h>
@@ -766,6 +773,26 @@ static Bool initializeAppWindows( HINSTANCE hInstance, Int nCmdShow, Bool runWin
 
 }
 
+// Function to wait for debugger attachment
+// Relies only on <windows.h> and MSVC compiler intrinsic __debugbreak
+void WaitForDebugger()
+{
+#ifdef _DEBUG // Only include this code in debug builds
+	// Loop until a debugger is attached.
+	// This loop will consume minimal CPU due to the Sleep call.
+	while (!IsDebuggerPresent()) // IsDebuggerPresent() is in <windows.h> (via WinBase.h usually)
+	{
+		Sleep(100); // Sleep() is in <windows.h> (via SynchAPI.h or WinBase.h)
+	}
+
+	// Once the debugger is attached, IsDebuggerPresent() returns true,
+	// the loop exits, and we break into the debugger.
+	//__debugbreak(); // MSVC Compiler Intrinsic to cause a breakpoint.
+	// This is often more robust than DebugBreak() as it doesn't
+	// rely on a specific SDK header for DebugBreak() itself.
+#endif // _DEBUG
+}
+
 // Necessary to allow memory managers and such to have useful critical sections
 static CriticalSection critSec1, critSec2, critSec3, critSec4, critSec5;
 
@@ -795,6 +822,9 @@ Int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
                       LPSTR lpCmdLine, Int nCmdShow )
 {
 	Int exitcode = 1;
+#ifdef _DEBUG
+	//WaitForDebugger(); //in debug build, wait for debugger attachment
+#endif
 
 #ifdef RTS_PROFILE
   Profile::StartRange("init");

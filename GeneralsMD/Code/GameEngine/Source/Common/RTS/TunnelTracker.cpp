@@ -56,6 +56,11 @@ TunnelTracker::TunnelTracker()
 	m_nemesisTimestamp = 0;
 	m_framesForFullHeal = 0;
 	m_needsFullHealTimeUpdate = false;
+	m_checkOpenFireFrames = 0;
+	m_dontLoadSoundFrames = 0;
+	m_otherTunnelGuardDisabled = FALSE;
+	m_isContaining = FALSE;
+	m_isCapturingLinkedCaves = FALSE;
 }
 
 // ------------------------------------------------------------------------
@@ -347,6 +352,48 @@ void TunnelTracker::updateFullHealTime()
 	m_framesForFullHeal = minFrames;
 }
 
+void TunnelTracker::setDontLoadSound(UnsignedInt count)
+{
+	if(m_dontLoadSoundFrames)
+		return;
+	
+	m_dontLoadSoundFrames = count;
+
+	for( std::list<ObjectID>::const_iterator iter = m_tunnelIDs.begin(); iter != m_tunnelIDs.end(); iter++ )
+	{
+		Object *currTunnel = TheGameLogic->findObjectByID( *iter );
+		if(currTunnel)
+		{
+			ContainModuleInterface *currContain = currTunnel->getContain();
+			if (currContain)
+			{
+				currContain->enableLoadSounds(FALSE);
+			}
+		}
+	}
+}
+
+void TunnelTracker::removeDontLoadSound(UnsignedInt count)
+{
+	if(!m_dontLoadSoundFrames || m_dontLoadSoundFrames > count)
+		return;
+
+	m_dontLoadSoundFrames = 0;
+
+	for( std::list<ObjectID>::const_iterator iter = m_tunnelIDs.begin(); iter != m_tunnelIDs.end(); iter++ )
+	{
+		Object *currTunnel = TheGameLogic->findObjectByID( *iter );
+		if(currTunnel)
+		{
+			ContainModuleInterface *currContain = currTunnel->getContain();
+			if (currContain)
+			{
+				currContain->enableLoadSounds(TRUE);
+			}
+		}
+	}
+}
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -405,6 +452,8 @@ void TunnelTracker::xfer( Xfer *xfer )
 
 	// tunnel count
 	xfer->xferUnsignedInt( &m_tunnelCount );
+
+	xfer->xferBool( &m_otherTunnelGuardDisabled );
 
 }
 

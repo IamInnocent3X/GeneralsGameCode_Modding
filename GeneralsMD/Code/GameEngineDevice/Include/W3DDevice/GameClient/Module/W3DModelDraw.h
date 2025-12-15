@@ -310,6 +310,13 @@ public:
 
   Bool                              m_receivesDynamicLights; ///< just like it sounds... it sets a property of Drawable, actually
 
+  Bool                              m_ignoreAnimScaling; ///< ignore external scaling of animation speed, e.g. for PreAttack.
+
+	Bool															m_ignoreRotation;  ///< ignore all rotations for this draw module 
+
+	Bool															m_showForOwnerOnly;  ///< show this model only to the owning player 
+
+	Bool															m_autoSelectObject;  ///< show this model only to the owning player 
 
 	W3DModelDrawModuleData();
 	~W3DModelDrawModuleData();
@@ -384,6 +391,7 @@ public:
 	virtual void replaceModelConditionState(const ModelConditionFlags& c);
 	virtual void replaceIndicatorColor(Color color);
 	virtual Bool handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius);
+	virtual Bool handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius);
 	virtual Int getBarrelCount(WeaponSlotType wslot) const;
 	virtual void setSelectable(Bool selectable); // Change the selectability of the model.
 
@@ -394,6 +402,7 @@ public:
 		Note that you must call this AFTER setting the condition codes.
 	*/
 	virtual void setAnimationLoopDuration(UnsignedInt numFrames);
+	virtual bool isIgnoreAnimLoopDuration() const { return getW3DModelDrawModuleData()->m_ignoreAnimScaling; }
 
 	/**
 		similar to the above, but assumes that the current state is a "ONCE",
@@ -428,6 +437,9 @@ public:
 	virtual void onDrawableBoundToObject();
 	virtual void setTerrainDecalSize(Real x, Real y);
 	virtual void setTerrainDecalOpacity(Real o);
+
+	virtual void setModelName(const AsciiString& name);
+	virtual const AsciiString& getModelName() const;
 
 protected:
 
@@ -507,6 +519,8 @@ private:
 	Bool													m_hideHeadlights;
 	Bool													m_pauseAnimation;
 	Int														m_animationMode;
+	Bool													m_isFirstDrawModule;
+	AsciiString												m_modelName;
 
 	void adjustAnimation(const ModelConditionInfo* prevState, Real prevAnimFraction);
 	Real getCurrentAnimFraction() const;

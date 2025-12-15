@@ -42,11 +42,39 @@ class Team;
 class CaveContainModuleData : public OpenContainModuleData
 {
 public:
+	struct InitialPayload
+	{
+		AsciiString name;
+		Int count;
+	};
+
 	Int m_caveIndexData;
+	Bool m_caveHasOwner;
+	Bool m_caveUsesTeams;
+	Bool m_caveCaptureLinkCaves;
+	InitialPayload m_initialPayload;
 
 	CaveContainModuleData()
 	{
 		m_caveIndexData = 0;// By default, all Caves will be grouped together as number 0
+		m_caveHasOwner = FALSE;
+		m_caveUsesTeams = FALSE;
+		m_caveCaptureLinkCaves = FALSE;
+		m_initialPayload.count = 0;
+		m_initialPayload.name = NULL;
+		
+		m_allowEnemiesInside = FALSE;
+	}
+
+	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
+	{
+		CaveContainModuleData* self = (CaveContainModuleData*)instance;
+		const char* name = ini->getNextToken();
+		const char* countStr = ini->getNextTokenOrNull();
+		Int count = countStr ? INI::scanInt(countStr) : 1;
+
+		self->m_initialPayload.name.set(name);
+		self->m_initialPayload.count = count;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -56,6 +84,10 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "CaveIndex", INI::parseInt, NULL, offsetof( CaveContainModuleData, m_caveIndexData ) },
+			{ "CaveHasOwner", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveHasOwner ) },
+			{ "CaveUsesTeams", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveUsesTeams ) },
+			{ "CaveCaptureLinkCaves", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveCaptureLinkCaves ) },
+			{ "InitialPayload", parseInitialPayload, NULL, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -85,11 +117,19 @@ public:
 
 	virtual void onContaining( Object *obj, Bool wasSelected );		///< object now contains 'obj'
 	virtual void onRemoving( Object *obj );			///< object no longer contains 'obj'
+	virtual void onSelling();///< Container is being sold.  Tunnel responds by kicking people out if this is the last tunnel.
+	virtual void onCapture( Player *oldOwner, Player *newOwner ); // Need to change who we are registered with.
 
 	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const;
 	virtual void addToContainList( Object *obj );		///< The part of AddToContain that inheritors can override (Can't do whole thing because of all the private stuff involved)
 	virtual void removeFromContain( Object *obj, Bool exposeStealthUnits = FALSE );	///< remove 'obj' from contain list
 	virtual void removeAllContained( Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
+
+	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
+
+	// Bunker Buster Properties
+	virtual void harmAndForceExitAllContained( DamageInfo *info );
+  virtual void killAllContained( void );				///< kill all objects on contain list
 
 	/**
 		return the player that *appears* to control this unit. if null, use getObject()->getControllingPlayer() instead.
@@ -99,28 +139,51 @@ public:
 	// contain list access
 	virtual void iterateContained( ContainIterateFunc func, void *userData, Bool reverse );
 	virtual UnsignedInt getContainCount() const;
+	virtual Int getRawContainMax( void ) const;
 	virtual Int getContainMax( void ) const;
 	virtual const ContainedItemsList* getContainedItemsList() const;
+	virtual Bool isDisplayedOnControlBar() const { return TRUE; } ///< Does this container display its contents on the ControlBar?
 	virtual Bool isKickOutOnCapture(){ return FALSE; }///< Caves and Tunnels don't kick out on capture.
 
 	// override the onDie we inherit from OpenContain
 	virtual void onDie( const DamageInfo *damageInfo );  ///< the die callback
 
+	virtual void onDelete( void );
 	virtual void onCreate( void );
 	virtual void onBuildComplete();	///< This is called when you are a finished game object
+	virtual void onObjectCreated();
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
 	// Unique to Cave Contain
 	virtual void tryToSetCaveIndex( Int newIndex );	///< Called by script as an alternative to instancing separate objects.  'Try', because can fail.
 	virtual void setOriginalTeam( Team *oldTeam );	///< This is a distributed Garrison in terms of capturing, so when one node triggers the change, he needs to tell everyone, so anyone can do the un-change.
+	virtual Bool getHasPermanentOwner() const;
+	virtual Team* getOldTeam() const;
+
+	virtual UpdateSleepTime update();												///< called once per frame
 
 protected:
 
 	void changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginalTeams );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
+	void changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool setOriginalTeams, Team *newTeam );	///< When one gets captured, all connected ones get captured.  DistributedGarrison.
+	void registerNewCave();
+	void switchCaveOwners( Team *oldTeam, Team *newTeam );
+	void doCapture( Team *oldTeam, Team *newTeam );
+	void removeAllNonOwnContained( Team *myTeam, Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
 
 	Bool m_needToRunOnBuildComplete;
 	Int m_caveIndex;
 
 	Team *m_originalTeam;												///< our original team before we were garrisoned
 
+private:
+
+	Bool m_loaded;
+	Bool m_switchingOwners;
+	Bool m_payloadCreated;
+	Bool m_isCaptured;
+	UnsignedInt m_containingFrames;
+	Team *m_capturedTeam;
+	Team *m_oldTeam;
+	Team *m_newTeam;
 };

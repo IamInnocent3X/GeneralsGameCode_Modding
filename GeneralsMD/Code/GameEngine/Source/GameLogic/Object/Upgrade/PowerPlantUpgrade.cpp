@@ -44,7 +44,7 @@
 PowerPlantUpgrade::PowerPlantUpgrade( Thing *thing, const ModuleData* moduleData ) :
 							UpgradeModule( thing, moduleData )
 {
-
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -109,12 +109,43 @@ void PowerPlantUpgrade::onCapture( Player *oldOwner, Player *newOwner )
 //-------------------------------------------------------------------------------------------------
 void PowerPlantUpgrade::upgradeImplementation( void )
 {
+	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+	else if( UpgradeStatus == 1 )
+	{
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
 
 	Player *player = getObject()->getControllingPlayer();
 
 	// add the new power production to the object
 	if( player )
-		player->addPowerBonus(getObject());
+	{
+		if(m_hasExecuted)
+			player->addPowerBonus(getObject());
+		else
+			player->removePowerBonus( getObject() );
+	}
 
 
 	PowerPlantUpdateInterface *ppui;
@@ -122,7 +153,7 @@ void PowerPlantUpgrade::upgradeImplementation( void )
 	{
 		ppui = (*umi)->getPowerPlantUpdateInterface();
 		if( ppui )
-			ppui->extendRods(TRUE);
+			ppui->extendRods(m_hasExecuted);
 	}
 
 }
@@ -153,6 +184,8 @@ void PowerPlantUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool( &m_hasExecuted );
 
 }
 

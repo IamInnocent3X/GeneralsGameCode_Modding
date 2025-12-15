@@ -31,8 +31,10 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
+#include "GameClient/TintStatus.h"
 
 enum WeaponBonusConditionType CPP_11(: Int);
+// enum TintStatus CPP_11(: Int);
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -55,12 +57,43 @@ public:
 	// virtual destructor prototype provided by memory pool object
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 	virtual UpdateSleepTime update();
 
-	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration );
+	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
+
+	HelperTransferData getHelperData() const
+	{
+		HelperTransferData transferData;
+		transferData.frameEnd = m_frameToRemove;
+		transferData.earliestDurationAsInt = m_earliestDurationAsInt;
+		transferData.statusMap = m_bonusMap;
+		transferData.customStatusMap = m_customBonusMap;
+		transferData.currentTint = m_currentTint;
+		transferData.customTintStatus = m_customTintStatus;
+
+		return transferData;
+	}
+	void transferData(HelperTransferData transferData)
+	{
+		m_frameToRemove = transferData.frameEnd;
+		m_earliestDurationAsInt = transferData.earliestDurationAsInt;
+		m_bonusMap = transferData.statusMap;
+		m_customBonusMap = transferData.customStatusMap;
+		m_currentTint = transferData.currentTint;
+		m_customTintStatus = transferData.customTintStatus;
+	}
 
 protected:
-	WeaponBonusConditionType m_currentBonus;
+	//WeaponBonusConditionType m_currentBonus;
+	//AsciiString m_currentCustomBonus;
+	//AsciiString m_currentCustomTint;
+	//TintStatus m_currentTint;
+	StatusTypeMap m_bonusMap;
+	CustomStatusTypeMap m_customBonusMap;
+	CustomTintStatusDurationVec m_customTintStatus;
+	TintStatusDurationVec m_currentTint;
 	UnsignedInt m_frameToRemove;
+	UnsignedInt m_earliestDurationAsInt;
 	void clearTempWeaponBonus();
 };

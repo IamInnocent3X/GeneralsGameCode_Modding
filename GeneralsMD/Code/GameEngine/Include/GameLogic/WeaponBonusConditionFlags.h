@@ -29,3 +29,4 @@
 #pragma once
 
 typedef UnsignedInt WeaponBonusConditionFlags;
+typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ObjectCustomStatusType;

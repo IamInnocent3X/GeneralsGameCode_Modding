@@ -31,6 +31,7 @@
 #include "GameLogic/Module/ModelConditionUpgrade.h"
 
 #include "Common/ModelState.h"
+#include "Common/Player.h"
 #include "GameLogic/Object.h"
 
 // ------------------------------------------------------------------------------------------------
@@ -58,6 +59,7 @@ void ModelConditionUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 ModelConditionUpgrade::ModelConditionUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -74,8 +76,28 @@ void ModelConditionUpgrade::upgradeImplementation( )
 
 	Object *me = getObject();
 
-	if( data->m_conditionFlag != MODELCONDITION_INVALID )
+	if( data->m_conditionFlag == MODELCONDITION_INVALID )
+		return;
+
+	UpgradeMaskType objectMask = me->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	if( UpgradeStatus == 1 )
+	{
+		m_hasExecuted = TRUE;
 		me->setModelConditionState(data->m_conditionFlag);
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		me->clearModelConditionState(data->m_conditionFlag);
+		setUpgradeExecuted(FALSE);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -104,6 +126,8 @@ void ModelConditionUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }
 

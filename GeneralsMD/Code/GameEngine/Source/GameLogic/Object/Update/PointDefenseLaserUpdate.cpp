@@ -123,6 +123,7 @@ void PointDefenseLaserUpdate::onObjectCreated()
 UpdateSleepTime PointDefenseLaserUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	//*** HERE'S THE UPDATE PHILOSOPHY ***
 	//The point defense laser typically has short range, high rate of fire, and shoots at incoming projectiles
 	//that move fast. This amounts to a potentially very expensive system. Instead of frantically scanning for
@@ -134,16 +135,17 @@ UpdateSleepTime PointDefenseLaserUpdate::update()
 	if( me->isEffectivelyDead() )
 		return UPDATE_SLEEP_FOREVER;//No more laser fo you.
 
+	UnsignedInt now = TheGameLogic->getFrame();
 	const PointDefenseLaserUpdateModuleData *data = getPointDefenseLaserUpdateModuleData();
 
 	//Optimized firing at acquired target
-	if( m_nextScanFrames > 0 )
+	if( m_nextScanFrames > 0  && m_nextScanFrames <= 3)
 	{
 		m_nextScanFrames--;
 		fireWhenReady(); //Only happens if something is tracked.
 		return UPDATE_SLEEP_NONE;
 	}
-	m_nextScanFrames = data->m_scanFrames;
+	m_nextScanFrames = now + data->m_scanFrames;
 
 	//Periodic scanning (expensive)
 	if( scanClosestTarget() )
@@ -151,14 +153,17 @@ UpdateSleepTime PointDefenseLaserUpdate::update()
 		//1 frame can make a big difference so fire ASAP!
 		fireWhenReady();
 	}
-	return UPDATE_SLEEP_NONE;
+	//return UPDATE_SLEEP_NONE;
+	//UnsignedInt nextWakeUpTime = m_nextShotAvailableInFrames > now ? m_nextShotAvailableInFrames : m_nextScanFrames;
+	UnsignedInt nextWakeUpTime = m_nextScanFrames;
+	return UPDATE_SLEEP( nextWakeUpTime > now ? nextWakeUpTime - now : UPDATE_SLEEP_NONE );
 }
 
 //-------------------------------------------------------------------------------------------------
 void PointDefenseLaserUpdate::fireWhenReady()
 {
 	const PointDefenseLaserUpdateModuleData *data = getPointDefenseLaserUpdateModuleData();
-
+	UnsignedInt now = TheGameLogic->getFrame();
 	//Track our target
 	Object *target = TheGameLogic->findObjectByID( m_bestTargetID );
 	if( target )
@@ -184,7 +189,7 @@ void PointDefenseLaserUpdate::fireWhenReady()
 				if( !m_nextScanFrames )
 				{
 					scanClosestTarget();
-					m_nextScanFrames = data->m_scanFrames;
+					m_nextScanFrames = now + data->m_scanFrames;
 					target = NULL; //Set target to NULL so we don't shoot at it (might be out of range)
 				}
 			}
@@ -196,10 +201,10 @@ void PointDefenseLaserUpdate::fireWhenReady()
 		}
 	}
 
-	if( m_nextShotAvailableInFrames > 0 )
+	if( m_nextShotAvailableInFrames > 0 && now < m_nextShotAvailableInFrames )
 	{
 		//We can't fire this frame.
-		m_nextShotAvailableInFrames--;
+		//m_nextShotAvailableInFrames--;
 		return;
 	}
 
@@ -215,11 +220,12 @@ void PointDefenseLaserUpdate::fireWhenReady()
 			{
 				Weapon* w = TheWeaponStore->allocateNewWeapon( wt, TERTIARY_WEAPON );
 				w->loadAmmoNow( getObject() );
+				w->computeFiringTrackerBonus( getObject(), target );
 				w->fireWeapon( getObject(), target );
 				deleteInstance(w);
 
 				// And now that we have shot, set our internal reload timer.
-				m_nextShotAvailableInFrames = wt->getDelayBetweenShots( bonus );
+				m_nextShotAvailableInFrames = now + wt->getDelayBetweenShots( bonus );
 			}
 
 			if( target->isEffectivelyDead() )
@@ -229,7 +235,7 @@ void PointDefenseLaserUpdate::fireWhenReady()
 				if( !m_nextScanFrames )
 				{
 					scanClosestTarget();
-					m_nextScanFrames = data->m_scanFrames;
+					m_nextScanFrames = TheGameLogic->getFrame() + data->m_scanFrames;
 				}
 			}
 		}

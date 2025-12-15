@@ -46,6 +46,7 @@ public:
 	virtual void onDie( const DamageInfo *damageInfo ) = 0;
 };
 
+
 //-------------------------------------------------------------------------------------------------
 class DieMuxData	// does NOT inherit from ModuleData.
 {
@@ -54,7 +55,11 @@ public:
 	VeterancyLevelFlags		m_veterancyLevels;
 	ObjectStatusMaskType	m_exemptStatus;						///< die module is ignored if any of these status bits are set
 	ObjectStatusMaskType	m_requiredStatus;					///< die module is ignored if any of these status bits are clear
+	std::vector<AsciiString>			m_requiredCustomStatus;	
+	std::vector<AsciiString>			m_customStatusTypes;
+	CustomFlags			m_customDeathTypes;
 
+	DeathFlagsCustom m_deathTypesCustom;
 	DieMuxData();
 	static const FieldParse* getFieldParse();
 
@@ -75,6 +80,7 @@ public:
 		BehaviorModuleData::buildFieldParse(p);
 		p.add(DieMuxData::getFieldParse(), offsetof( DieModuleData, m_dieMuxData ));
 	}
+	//static void parseCustomDeathTypeFlags(INI* ini, void* instance, void* /*store*/, const void* userData);
 
 	Bool isDieApplicable(const Object* obj, const DamageInfo *damageInfo) const { return m_dieMuxData.isDieApplicable(obj, damageInfo); }
 };

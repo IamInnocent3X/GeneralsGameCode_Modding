@@ -56,6 +56,9 @@ public:
 	const FXList*	m_ignitionFX;			///< FXList to do when missile 'ignites'
 	RadiusDecalTemplate	m_deliveryDecalTemplate;
 	Real					m_deliveryDecalRadius;
+	Bool					m_allowSubdual;
+	Bool					m_allowAttract;
+	Real					m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
 	NeutronMissileUpdateModuleData();
 
@@ -95,14 +98,18 @@ public:
 		DEAD
 	};
 
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride);
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL );
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }											///< return true if the missile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual const Coord3D *getVelocity() const { return &m_vel; }		///< get current velocity
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) {}
-	virtual void projectileNowJammed() {}
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
+	virtual void projectileNowJammed(Bool noDamage = FALSE);
+	virtual void projectileNowDrawn(ObjectID attractorID);
+	virtual Object* getTargetObject() { return NULL; }
+	virtual const Coord3D* getTargetPosition();
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) {}
 
 	virtual UpdateSleepTime update();
 	virtual void onDelete( void );
@@ -128,6 +135,15 @@ private:
 	UnsignedInt m_frameAtLaunch;
 	Real m_heightAtLaunch;
 	RadiusDecal	m_deliveryDecal;
+
+	UnsignedInt	m_framesTillDecoyed;
+	UnsignedInt	m_detonateDistance;
+	ObjectID m_decoyID;
+	ObjectID m_attractedID;
+	Coord3D m_intermedPosBackup;
+
+	Bool m_isJammed;
+	Bool m_assignedBackup;
 
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 

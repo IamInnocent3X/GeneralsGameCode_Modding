@@ -37,6 +37,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/Upgrade.h"
 #include "Common/Xfer.h"
+#include "Common/Player.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -46,6 +47,7 @@
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/ProductionUpdate.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,8 +259,60 @@ void UpgradeMuxData::muxDataProcessUpgradeRemoval(Object* obj) const
 				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
 				throw INI_INVALID_DATA;
 			}
+			if( theTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				Player *player = obj->getControllingPlayer();
+				player->removeUpgrade( theTemplate );
+			}
+			else
+			{
+				obj->removeUpgrade(theTemplate);
+			}
+		}
+	}
+}
 
-			obj->removeUpgrade(theTemplate);
+void UpgradeMuxData::muxDataProcessUpgradeGrant(Object* obj) const
+{
+	if( !m_grantUpgradeNames.empty() )
+	{
+		std::vector<AsciiString>::const_iterator it;
+		for( it = m_grantUpgradeNames.begin();
+					it != m_grantUpgradeNames.end();
+					it++)
+		{
+			const UpgradeTemplate* theTemplate = TheUpgradeCenter->findUpgrade( *it );
+			if( !theTemplate )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+			if( !theTemplate )
+			{
+				DEBUG_ASSERTCRASH( 0, ("ProcessUpgradeGrant for %s can't find upgrade template %s.", obj->getName(), it->str() ) );
+				return;
+			}
+
+			Player *player = obj->getControllingPlayer();
+			if( theTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				// find and cancel any existing upgrades in the player's queue
+				player->findUpgradeInQueuesAndCancelThem( theTemplate );
+				// get the player
+				player->addUpgrade( theTemplate, UPGRADE_STATUS_COMPLETE );
+			}
+			else
+			{
+				// Fail safe if in any other condition, for example: Undead Body, or new Future Implementations such as UpgradeDie to Give Upgrades.
+				ProductionUpdateInterface *pui = obj->getProductionUpdateInterface();
+				if( pui )
+				{
+					pui->cancelUpgrade( theTemplate );
+				}
+				obj->giveUpgrade( theTemplate );
+			}
+			
+			player->getAcademyStats()->recordUpgrade( theTemplate, TRUE );
 		}
 	}
 }

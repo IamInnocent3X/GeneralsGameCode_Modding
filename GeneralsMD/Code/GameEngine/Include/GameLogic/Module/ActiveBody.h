@@ -31,6 +31,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/DamageFX.h"
+#include "Common/MiscAudio.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Damage.h"
 #include "GameLogic/Armor.h"
@@ -54,6 +55,10 @@ public:
 	Real m_subdualDamageCap;								///< Subdual damage will never accumulate past this
 	UnsignedInt m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
 	Real m_subdualDamageHealAmount;					///< by this much.
+
+	std::vector<AsciiString> m_subdualDamageCapCustom;
+	std::vector<AsciiString> m_subdualDamageHealRateCustom;
+	std::vector<AsciiString> m_subdualDamageHealAmountCustom;
 
 	ActiveBodyModuleData();
 
@@ -80,11 +85,25 @@ public:
 	virtual Real getHealth() const;													///< get current health
 	virtual BodyDamageType getDamageState() const;
 	virtual void setDamageState( BodyDamageType newState );	///< control damage state directly.  Will adjust hitpoints.
-	virtual void setAflame( Bool setting );///< This is a major change like a damage state.
+	virtual void setAflame( Bool setting );///< This is a major change like a damage state.  
+	virtual Real getSubdualDamageCap() const;
 	virtual UnsignedInt getSubdualDamageHealRate() const;
 	virtual Real getSubdualDamageHealAmount() const;
 	virtual Bool hasAnySubdualDamage() const;
 	virtual Real getCurrentSubdualDamageAmount() const { return m_currentSubdualDamage; }
+
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const;
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const;
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const;
+	virtual Bool hasAnySubdualDamageCustom() const;
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const;
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const { return m_currentSubdualDamageCustom; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) { m_currentSubdualDamageCustom = currentSubdualCustom; }
+
+	virtual UnsignedInt getChronoDamageHealRate() const;
+	virtual Real getChronoDamageHealAmount() const;
+	virtual Bool hasAnyChronoDamage() const;
+	virtual Real getCurrentChronoDamageAmount() const { return m_currentChronoDamage; }
 
 	virtual const DamageInfo *getLastDamageInfo() const { return &m_lastDamageInfo; }	///< return info on last damage dealt to this object
 	virtual UnsignedInt getLastDamageTimestamp() const { return m_lastDamageTimestamp; }	///< return frame of last damage dealt
@@ -100,6 +119,9 @@ public:
 
 	virtual void setInitialHealth(Int initialPercent); ///< Sets the inital load health %.
 	virtual void setMaxHealth( Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH ); ///< Sets the inital max health
+	virtual void setSubdualCap( Real subdualCap );
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate );
+	virtual void setSubdualHealAmount( Real subdualHealAmount );
 
 	virtual Bool getFrontCrushed() const { return m_frontCrushed; }
 	virtual Bool getBackCrushed() const { return m_backCrushed; }
@@ -115,20 +137,48 @@ public:
 	virtual void setIndestructible( Bool indestructible );
 	virtual Bool isIndestructible( void ) const { return m_indestructible; }
 
-	virtual void internalChangeHealth( Real delta );								///< change health
+	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE);								///< change health
+	virtual void internalAddSubdualDamage( Real delta, Bool isHealing = FALSE );
+	virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing = FALSE );
+
+	virtual Bool isNearSubduedRange( Real low, Real high ) const; 
+	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const; 
+
+	virtual Bool cantBeKilled( void ) const { return FALSE; }
 
 	virtual void evaluateVisualCondition();
 	virtual void updateBodyParticleSystems( void );// made public for topple anf building collapse updates -ML
 
 	// Subdual Damage
-	virtual Bool isSubdued() const;
-	virtual Bool canBeSubdued() const;
-	virtual void onSubdualChange( Bool isNowSubdued );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual Bool isSubdued() const; 
+	virtual Bool canBeSubdued() const; 
+	virtual void onSubdualChange( Bool isNowSubdued, Bool subduedProjectileNoDamage, Bool clearTintLater = FALSE );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualChangeAttractor( Bool isNowSubdued, ObjectID attractorID );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+
+	// Custom Subdual Damage
+	virtual Bool isSubduedCustom(const AsciiString &customStatus) const; 
+	virtual Bool canBeSubduedCustom(const AsciiString &customStatus) const; 
+	virtual void onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *damageInfo, Bool dontPaintTint );///< Override this if you want a totally different effect than DISABLED_SUBDUED
+	virtual void onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater = FALSE);
+
+	// Chrono
+	virtual Bool isSubduedChrono() const;
+	virtual void onSubdualChronoChange(Bool isNowSubdued); ///< Override this if you want a totally different effect than DISABLED_SUBDUED
+
+
+	virtual void overrideDamageFX(DamageFX* damageFX);
 
 protected:
 
+	UnsignedInt						m_nextDamageFXTime;
+	DamageType						m_lastDamageFXDone;
+	DamageInfo						m_lastDamageInfo;				///< store the last DamageInfo object that we received
+	UnsignedInt						m_lastDamageTimestamp; 	///< frame of last damage dealt
+	UnsignedInt						m_lastHealingTimestamp; ///< frame of last healing dealt
+	Bool									m_lastDamageCleared;
+
 	void validateArmorAndDamageFX() const;
-	void doDamageFX( const DamageInfo *damageInfo );
+	virtual void doDamageFX( const DamageInfo *damageInfo );
 
 	void createParticleSystems( const AsciiString &boneBaseName,
 															const ParticleSystemTemplate *systemTemplate,
@@ -139,7 +189,15 @@ protected:
 	Bool shouldRetaliate(Object *obj);
 	Bool shouldRetaliateAgainstAggressor(Object *obj, Object *damager);
 
-	virtual void internalAddSubdualDamage( Real delta );								///< change health
+	//virtual void internalAddSubdualDamage( Real delta );								///< change health
+	//virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus );	///< change health
+	virtual void internalAddChronoDamage( Real delta );								///< change health
+
+	virtual void applyChronoParticleSystems(void);
+
+	inline const Armor getCurrentArmor() const { return m_curArmor; }
+
+	void doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, Bool *allowModifier, Real damageAmount, Real realFramesToStatusFor);
 
 private:
 
@@ -149,18 +207,33 @@ private:
   Real									m_initialHealth;				///< starting health for this object
 	Real									m_currentSubdualDamage;	///< Starts at zero and goes up.  Inherited modules will do something when "subdued".
 
+	Real 									m_subdualDamageCap;								///< Subdual damage will never accumulate past this
+	UnsignedInt 						m_subdualDamageHealRate;		///< Every this often, we drop subdual damage...
+	Real 								m_subdualDamageHealAmount;					///< by this much.
+	Real									m_currentChronoDamage;	///< Same as Subdual, but for CHRONO_GUN
+
+	CustomSubdualCurrentDamageMap 		m_currentSubdualDamageCustom;
+	CustomSubdualDamageMap 				m_subdualDamageCapCustom;
+	CustomSubdualHealRateMap 			m_subdualDamageHealRateCustom;
+	CustomSubdualDamageMap 				m_subdualDamageHealAmountCustom;
+
 	BodyDamageType				m_curDamageState;				///< last known damage state
-	UnsignedInt						m_nextDamageFXTime;
-	DamageType						m_lastDamageFXDone;
-	DamageInfo						m_lastDamageInfo;				///< store the last DamageInfo object that we received
-	UnsignedInt						m_lastDamageTimestamp; 	///< frame of last damage dealt
-	UnsignedInt						m_lastHealingTimestamp; ///< frame of last healing dealt
+	
 	Bool									m_frontCrushed;
 	Bool									m_backCrushed;
-	Bool									m_lastDamageCleared;
 	Bool									m_indestructible;				///< is this object indestructible?
+	Bool									m_damageFXOverride;
+	Bool									m_hasBeenSubdued;
+	Bool									m_clearedSubdued;
+	Bool									m_clearedSubduedCustom;
+
+	AsciiString								m_customSubdualDisabledSound;
+	AsciiString								m_customSubdualDisableRemovalSound;
+
 
 	BodyParticleSystem *m_particleSystems;				///< particle systems created and attached to this object
+	
+	AudioEventRTS m_chronoDisabledSoundLoop;
 
 	/*
 		Note, you MUST call validateArmorAndDamageFX() before accessing these fields.

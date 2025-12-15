@@ -341,7 +341,8 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 //-------------------------------------------------------------------------------------------------
 MetaEventTranslator::MetaEventTranslator() :
 	m_lastKeyDown(MK_NONE),
-	m_lastModState(0)
+	m_lastModState(0),
+	m_lastKeyDownTime(0)
 {
 	for (Int i = 0; i < NUM_MOUSE_BUTTONS; ++i) {
 		m_nextUpShouldCreateDoubleClick[i] = FALSE;
@@ -399,6 +400,8 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 	GameMessageDisposition disp = KEEP_MESSAGE;
 	GameMessage::Type t = msg->getType();
 
+	Int timenow = timeGetTime();
+
 	if (t == GameMessage::MSG_RAW_KEY_DOWN || t == GameMessage::MSG_RAW_KEY_UP)
 	{
 		MappableKeyType key = (MappableKeyType)msg->getArgument(0)->integer;
@@ -452,12 +455,16 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 						map->m_key == key &&
 						map->m_modState == newModState &&
 						(
+							// IamInnocent 04/12/25 - Reworked & Restored Double Down function
 							(map->m_transition == UP && (keyState & KEY_STATE_UP)) ||
-							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN)) //||
-							//(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && m_lastKeyDown == key)
+							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN)) ||
+							(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && m_lastKeyDown == key && m_lastKeyDownTime > timenow)
 						)
 					)
 			{
+				// Clear the KeyDownTime for DOUBLEDOWN
+				if(map->m_transition == DOUBLEDOWN)
+					m_lastKeyDownTime = 0;
 
 				if( keyState & KEY_STATE_AUTOREPEAT )
 				{
@@ -500,7 +507,10 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 		}
 
 		if (t == GameMessage::MSG_RAW_KEY_DOWN)
+		{
+			m_lastKeyDownTime = timenow + 500;
 			m_lastKeyDown = key;
+		}
 		m_lastModState = newModState;
 	}
 

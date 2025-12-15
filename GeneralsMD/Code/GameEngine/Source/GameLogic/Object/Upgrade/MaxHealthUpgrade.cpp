@@ -31,18 +31,27 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #define DEFINE_MAXHEALTHCHANGETYPE_NAMES
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/Module/MaxHealthUpgrade.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/ContainModule.h"
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 MaxHealthUpgradeModuleData::MaxHealthUpgradeModuleData( void )
 {
 	m_addMaxHealth = 0.0f;
+	m_multiplyMaxHealth = 1.0f;
 	m_maxHealthChangeType = SAME_CURRENTHEALTH;
+	m_addSubdualCap = 0.0f;
+	m_multiplySubdualCap = 0.0f;
+	m_addSubdualHealRate = 0;
+	m_multiplySubdualHealRate = 0.0f;
+	m_addSubdualHealAmount = 0.0f;
+	m_multiplySubdualHealAmount = 0.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -55,6 +64,13 @@ void MaxHealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "AddMaxHealth",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addMaxHealth ) },
+		{ "MultiplyMaxHealth",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplyMaxHealth ) },
+		{ "AddSubdualCap",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualCap ) },
+		{ "MultiplySubdualCap",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualCap ) },
+		{ "AddSubdualHealRate",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealRate ) },
+		{ "MultiplySubdualHealRate",		INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealRate ) },
+		{ "AddSubdualHealAmount",			INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealAmount ) },
+		{ "MultiplySubdualHealAmount",		INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealAmount ) },
 		{ "ChangeType",						INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( MaxHealthUpgradeModuleData, m_maxHealthChangeType ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -67,6 +83,7 @@ void MaxHealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 MaxHealthUpgrade::MaxHealthUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -79,15 +96,110 @@ MaxHealthUpgrade::~MaxHealthUpgrade( void )
 //-------------------------------------------------------------------------------------------------
 void MaxHealthUpgrade::upgradeImplementation( )
 {
-	const MaxHealthUpgradeModuleData *data = getMaxHealthUpgradeModuleData();
-
 	//Simply add the xp scalar to the xp tracker!
 	Object *obj = getObject();
 
-	BodyModuleInterface *body = obj->getBodyModule();
-	if( body )
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
 	{
-		body->setMaxHealth( body->getMaxHealth() + data->m_addMaxHealth, data->m_maxHealthChangeType );
+		return;
+	}
+	else if( UpgradeStatus == 1 )
+	{
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+
+	doMaxHealthUpgrade(m_hasExecuted);
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void MaxHealthUpgrade::doMaxHealthUpgrade( Bool isAdd )
+{
+	const MaxHealthUpgradeModuleData *data = getMaxHealthUpgradeModuleData();
+	BodyModuleInterface *body = getObject()->getBodyModule();
+
+	if(!body)
+		return;
+
+	if(data->m_addMaxHealth > 0 || data->m_multiplyMaxHealth != 1.0f)
+	{
+		Real newVal;
+		if(isAdd)
+		{
+			newVal = (body->getMaxHealth() * data->m_multiplyMaxHealth) + data->m_addMaxHealth;
+		}
+		else
+		{
+			newVal = (body->getMaxHealth() - data->m_addMaxHealth ) / data->m_multiplyMaxHealth; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	body->getMaxHealth(), data->m_multiplyMaxHealth, data->m_addMaxHealth, newVal));
+		body->setMaxHealth( newVal, data->m_maxHealthChangeType );
+	}
+
+	if(body->canBeSubdued() && (data->m_addSubdualCap > 0 || data->m_multiplySubdualCap != 1.0f))
+	{
+		Real newVal;
+		if(isAdd)
+		{
+			newVal = (body->getSubdualDamageCap() * data->m_multiplySubdualCap) + data->m_addSubdualCap;
+		}
+		else
+		{
+			newVal = (body->getSubdualDamageCap() - data->m_addSubdualCap) / data->m_multiplySubdualCap; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	body->getSubdualCap(), data->m_multiplySubdualCap, data->m_addSubdualCap, newVal));
+		body->setSubdualCap( newVal );
+	}
+
+	if(data->m_addSubdualHealRate > 0 || data->m_multiplySubdualHealRate != 1.0f)
+	{
+		Real realVal = INT_TO_REAL((int)(body->getSubdualDamageHealRate()));
+		Real newVal = realVal;
+		if(isAdd)
+		{
+			newVal = ( realVal * data->m_multiplySubdualHealRate) + data->m_addSubdualHealRate;
+		}
+		else
+		{
+			newVal = ( realVal - data->m_addSubdualHealRate ) / data->m_multiplySubdualHealRate; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	realVal, data->m_multiplySubdualHealRate, data->m_addSubdualHealRate, newVal));
+		body->setSubdualHealRate( (UnsignedInt)(REAL_TO_INT(newVal)) );
+	}
+
+	if(data->m_addSubdualHealAmount > 0 || data->m_multiplySubdualHealAmount != 1.0f)
+	{
+		Real newVal;
+		if(isAdd)
+		{
+			newVal = (body->getSubdualDamageHealAmount() * data->m_multiplySubdualHealAmount) + data->m_addSubdualHealAmount;
+		}
+		else
+		{
+			newVal = (body->getSubdualDamageHealAmount() - data->m_addSubdualHealAmount ) / data->m_multiplySubdualHealAmount; // You do the subtraction first before the division, thats the order
+		}
+		// DEBUG_LOG(("MaxHealthUpgrade::upgradeImplementation - newVal: (%f * %f) + %f = %f.\n",
+		//  	body->getSubdualHealAmount(), data->m_multiplySubdualHealAmount, data->m_addSubdualHealAmount, newVal));
+		body->setSubdualHealAmount( newVal );
 	}
 }
 
@@ -117,6 +229,8 @@ void MaxHealthUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }
 

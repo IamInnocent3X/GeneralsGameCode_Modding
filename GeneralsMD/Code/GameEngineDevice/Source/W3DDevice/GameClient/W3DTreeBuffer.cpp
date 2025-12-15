@@ -1212,6 +1212,67 @@ void W3DTreeBuffer::unitMoved(Object *unit)
 }
 
 //=============================================================================
+// W3DTreeBuffer::findTreeNameInPos
+//=============================================================================
+/** Check to see if there are any tree/grass/bush under the given position. */
+//=============================================================================
+const AsciiString& W3DTreeBuffer::findTreeNameInPos(const Coord3D* loc) const
+{
+	// Value to assume for the tree radius.
+#define TREE_RADIUS_APPROX 7.0f
+	Real radius = TREE_RADIUS_APPROX;
+
+	Coord3D pos = *loc;
+	Real x = pos.x-radius;
+	Real y = pos.y-radius;
+	if (x<m_bounds.lo.x) x = m_bounds.lo.x;
+	if (y<m_bounds.lo.y) y = m_bounds.lo.y;
+	if (x>m_bounds.hi.x) x = m_bounds.hi.x;
+	if (y>m_bounds.hi.y) y = m_bounds.hi.y;
+	Int xIndex = REAL_TO_INT_FLOOR ( (x/(m_bounds.hi.x-m_bounds.lo.x)) * (PARTITION_WIDTH_HEIGHT-0.1f) );
+	Int yIndex = REAL_TO_INT_FLOOR ( (y/(m_bounds.hi.y-m_bounds.lo.y)) * (PARTITION_WIDTH_HEIGHT-0.1f) );
+	DEBUG_ASSERTCRASH(xIndex>=0 && yIndex>=0 && xIndex<PARTITION_WIDTH_HEIGHT && yIndex<PARTITION_WIDTH_HEIGHT, ("Invalid range."));
+
+	x = pos.x+radius;
+	y = pos.y+radius;
+	if (x<m_bounds.lo.x) x = m_bounds.lo.x;
+	if (y<m_bounds.lo.y) y = m_bounds.lo.y;
+	if (x>m_bounds.hi.x) x = m_bounds.hi.x;
+	if (y>m_bounds.hi.y) y = m_bounds.hi.y;
+	Int xMax = REAL_TO_INT_CEIL ( (x/(m_bounds.hi.x-m_bounds.lo.x)) * (PARTITION_WIDTH_HEIGHT-0.1f) );
+	Int yMax = REAL_TO_INT_CEIL ( (y/(m_bounds.hi.y-m_bounds.lo.y)) * (PARTITION_WIDTH_HEIGHT-0.1f) );
+	DEBUG_ASSERTCRASH(xMax>=0 && yMax>=0 && xMax<=PARTITION_WIDTH_HEIGHT && yMax<=PARTITION_WIDTH_HEIGHT, ("Invalid range."));
+	Int i, j;
+	for (i=xIndex; i<xMax; i++) {
+		for (j=yIndex; j<yMax; j++) {
+			Int treeNdx = m_areaPartition[i + PARTITION_WIDTH_HEIGHT*j];
+			while (treeNdx != END_OF_PARTITION) {
+				// paranoia [7/7/2003]
+				if (treeNdx<0 || treeNdx>=m_numTrees) {
+					DEBUG_CRASH(("Invalid index."));
+					break;
+				}
+				if (m_trees[treeNdx].treeType<0) {
+					treeNdx = m_trees[treeNdx].nextInPartition;
+					continue;	//  Tree is deleted. [7/11/2003]
+				}
+				Coord3D delta;
+				delta.set(m_trees[treeNdx].location.X, m_trees[treeNdx].location.Y, m_trees[treeNdx].location.Z );
+				delta.sub(&pos);
+				if (radius*radius>delta.lengthSqr()) {
+					return m_treeTypes[m_trees[treeNdx].treeType].m_data->m_modelName;
+				}
+				treeNdx = m_trees[treeNdx].nextInPartition;
+			}
+		}
+	}
+
+	return NULL;
+
+
+}
+
+//=============================================================================
 // W3DTreeBuffer::allocateTreeBuffers
 //=============================================================================
 /** Allocates the index and vertex buffers. */

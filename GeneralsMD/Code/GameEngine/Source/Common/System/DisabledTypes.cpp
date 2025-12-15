@@ -49,6 +49,12 @@ const char* const DisabledMaskType::s_bitNameList[] =
 	"DISABLED_SCRIPT_DISABLED",
 	"DISABLED_SCRIPT_UNDERPOWERED",
 
+	"DISABLED_TELEPORT",
+	"DISABLED_CHRONO",
+
+	"DISABLED_STUNNED",
+	"DISABLED_FROZEN",
+	
 	NULL
 };
 static_assert(ARRAY_SIZE(DisabledMaskType::s_bitNameList) == DisabledMaskType::NumBits + 1, "Incorrect array size");

@@ -46,7 +46,40 @@ struct RiderInfo
 	ObjectStatusType m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
+	AsciiString m_objectCustomStatusType;
 };
+
+struct RiderData
+{
+	AsciiString templateName;
+	UnsignedInt timeFrame;
+	ObjectStatusType statusType;
+	AsciiString customStatusType;
+};
+
+enum ScuttleType CPP_11(: Int)
+{
+	SCUTTLE_INVALID = 0,
+	SCUTTLE_ON_EXIT = 1,
+	SCUTTLE_ON_NO_PASSENGERS = 2,
+	SCUTTLE_NEVER = 3,
+
+	SCUTTLE_COUNT
+
+};
+
+#ifdef DEFINE_SCUTTLE_NAMES
+static const char *TheScuttleNames[] = 
+{
+	"INVALID",
+	"ON_EXIT",
+	"ON_NO_PASSENGERS",
+	"NEVER",
+
+	NULL
+};
+#endif
+
 
 //-------------------------------------------------------------------------------------------------
 class RiderChangeContainModuleData : public TransportContainModuleData
@@ -54,13 +87,22 @@ class RiderChangeContainModuleData : public TransportContainModuleData
 public:
 
 	RiderInfo m_riders[ MAX_RIDERS ];
+	std::vector<RiderInfo> m_ridersCustom;
 	UnsignedInt m_scuttleFrames;
 	ModelConditionFlagType m_scuttleState;
+	Bool m_riderNotRequired;
+	Bool m_useUpgradeNames;
+	Bool m_dontDestroyPassengersOnKill;
+	Bool m_dontEvacuateOnEnter;
+	Bool m_canContainNonRiders;
+	Bool m_moreThanOneRiders;
+	ScuttleType m_scuttleType;
 
 	RiderChangeContainModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseRiderInfo( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	static void parseRiderInfoCustom( INI* ini, void *instance, void *store, const void* /*userData*/ );
 
 };
 
@@ -86,6 +128,7 @@ public:
 	virtual Bool isRiderChangeContain() const { return TRUE; }
 	virtual const Object *friend_getRider() const;
 
+	virtual Int getRawContainMax( void ) const;
 	virtual Int getContainMax( void ) const;
 
 	virtual Int getExtraSlotsInUse( void ) { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
@@ -96,6 +139,31 @@ public:
 	virtual Bool isDisplayedOnControlBar() const {return TRUE;}///< Does this container display its contents on the ControlBar?
 
 	virtual Bool getContainerPipsToShow( Int& numTotal, Int& numFull );
+
+	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
+
+	virtual void doUpgradeChecks( void );
+	virtual void doStatusChecks( void );
+
+	void changeRiderTemplateOnStatusUpdate();
+	Bool riderTemplateIsValidChange(ObjectStatusMaskType newStatus);
+	Bool riderTemplateIsValidChange(const AsciiString& newCustomStatus);
+	Bool riderTemplateIsValidRemoval(ObjectStatusMaskType newStatus);
+	Bool riderTemplateIsValidRemoval(const AsciiString& newCustomStatus);
+	void riderGiveTemplate(RiderData riderData);
+	//void riderRemoveAll(); // The more expensive option. Execute once for loaded units to fix object states.
+
+	void loadPreviousState(); // Loads the previous Rider Template of the existing unit if StatusCheck or UpgradeCheck is enabled
+	void doRegisterUpgradeNames();
+	void registerNewRiderDataOnContain(RiderData riderData);
+	void removeRiderTemplate(const AsciiString& rider, Bool clearStatus); // Remove the template
+	void removeRiderDataRecord(const AsciiString& rider); // Use in line with Remove Template, also clears it from the Rider Change Records
+	void clearAllTimeFramedDataRecords();
+	
+	Bool checkHasRiderTemplate( const Object *rider ) const;
+	Bool compareRiderStatus(const AsciiString& rider, Int checkIndex) const;
+	Bool riderChangeContainingCheck( Object *rider, const RiderInfo& riderInfo );
+	Bool riderChangeRemoveCheck( Object *rider, const RiderInfo& riderInfo, Bool checkRecordOnly);
 
 protected:
 
@@ -111,5 +179,28 @@ private:
 	UnsignedInt m_scuttledOnFrame;
 
 	Bool m_containing; //doesn't require xfer.
+	Bool m_loaded; //same
+	Bool m_dontCompare; //me too
+	Bool m_registeredUpgradeNames; // me three
+
+	ObjectStatusMaskType m_prevStatus;
+	ObjectCustomStatusType m_prevCustomStatusTypes;
+
+	ObjectStatusType m_riderDataStatusRegister;
+	AsciiString m_riderDataCustomStatusRegister;
+
+	struct RiderUpgrade
+	{
+		AsciiString									templateName;
+		Int											templateRider;
+
+		RiderUpgrade() : templateName(NULL), templateRider(-1)
+		{
+		}
+	};
+
+	std::vector<RiderUpgrade>			m_upgradeTemplates;
+	UpgradeMaskType						m_prevMaskToCheck;
+	std::vector<RiderData>				m_theRiderDataRecord;
 
 };

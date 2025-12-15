@@ -43,12 +43,16 @@ public:
 	const WeaponTemplate* m_collideWeaponTemplate;
 	ObjectStatusMaskType m_requiredStatus;
 	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
 	Bool m_fireOnce;
 
 	FireWeaponCollideModuleData()
 	{
 		m_collideWeaponTemplate = NULL;
 		m_fireOnce = FALSE;
+		m_requiredCustomStatus.clear();
+		m_forbiddenCustomStatus.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);

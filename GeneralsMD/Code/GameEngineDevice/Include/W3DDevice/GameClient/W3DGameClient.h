@@ -91,6 +91,7 @@ public:
 	virtual void setTeamColor( Int red, Int green, Int blue );  ///< @todo superhack for demo, remove!!!
 	virtual void setTextureLOD( Int level );
 	virtual void notifyTerrainObjectMoved(Object *obj);
+	virtual const AsciiString& findTreeNameInPos(const Coord3D* loc) const;
 
 protected:
 

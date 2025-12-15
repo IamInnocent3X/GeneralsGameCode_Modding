@@ -56,7 +56,9 @@
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/LaserUpdate.h"
 #include "GameLogic/Module/ActiveBody.h"
+
 
 
 
@@ -88,6 +90,9 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
   m_doubleClickToFastDriveDelay		= 500;
 	m_swathOfDeathAmplitude					= 0.0f;
 	m_swathOfDeathDistance					=	0.0f;
+	m_customDamageType = NULL;
+	m_customDeathType = NULL;
+	m_cursorName = NULL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -149,6 +154,14 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
     { "ManualFastDrivingSpeed",								INI::parseReal,									NULL, offsetof( ParticleUplinkCannonUpdateModuleData, m_manualFastDrivingSpeed ) },
     { "DoubleClickToFastDriveDelay",					INI::parseDurationUnsignedInt,	NULL, offsetof( ParticleUplinkCannonUpdateModuleData, m_doubleClickToFastDriveDelay ) },
 
+	// New Features
+	// Custom DamageTypes
+	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDamageType) },
+	{ "CustomDeathType",						INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDeathType) },
+
+	// Custom Cursor
+	{ "CursorName",								INI::parseAsciiString,	NULL,							offsetof( ParticleUplinkCannonUpdateModuleData, m_cursorName) },
+	
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -262,7 +275,7 @@ void ParticleUplinkCannonUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	const ParticleUplinkCannonUpdateModuleData *data = getParticleUplinkCannonUpdateModuleData();
 
@@ -433,7 +446,8 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 			if( me->isDisabledByType( DISABLED_UNDERPOWERED ) ||
 					me->isDisabledByType( DISABLED_EMP ) ||
 					me->isDisabledByType( DISABLED_SUBDUED ) ||
-					me->isDisabledByType( DISABLED_HACKED ) )
+					me->isDisabledByType( DISABLED_HACKED ) ||
+					me->isDisabledByType( DISABLED_FROZEN ) )
 			{
 				//We must end the special power early! ABORT! ABORT!
 				m_startDecayFrame = now;
@@ -455,6 +469,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_nextScorchMarkFrame = now;
 					m_damagePulsesMade = 0;
 					m_nextDamagePulseFrame = now;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			case LASERSTATUS_BORN:
@@ -474,6 +494,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					}
 					m_orbitToTargetLaserRadius.setDecayFrames( data->m_widthGrowFrames );
 					m_laserStatus = LASERSTATUS_DECAYING;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			}
@@ -496,6 +522,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_laserStatus = LASERSTATUS_DEAD;
 					m_startAttackFrame = 0;
 					setLogicalStatus( STATUS_IDLE );
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			}
@@ -696,6 +728,9 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 				damageInfo.in.m_sourceID = me->getID();
 				damageInfo.in.m_damageType = data->m_damageType;
 				damageInfo.in.m_deathType = data->m_deathType;
+
+				damageInfo.in.m_customDamageType = data->m_customDamageType;
+				damageInfo.in.m_customDeathType = data->m_customDeathType;
 
 				PartitionFilterAlive filterAlive;
 				PartitionFilter *filters[] = { &filterAlive, NULL };

@@ -94,6 +94,10 @@ public:
 	virtual Bool isTaxiingToParking() const; //only applies to jets interacting with runways.
 	virtual Bool isReloading() const;
 
+	virtual void doIdleUpdate() { m_doStateChange = TRUE; wakeUpNow(); }
+	virtual void doStateChange() { m_doStateChange = TRUE; }
+	virtual void doStatusUpdate();
+
 	virtual Bool isAllowedToMoveAwayFromUnit() const;
 	virtual Bool getSneakyTargetingOffset(Coord3D* offset) const;
 	virtual void addTargeter(ObjectID id, Bool add);
@@ -118,14 +122,24 @@ public:
 	void friend_setAllowCircling(Bool v) { setFlag(ALLOW_CIRCLING, v); }
 	const Coord3D& friend_getLandingPosForHelipadStuff() const { return m_landingPosForHelipadStuff; }
 	void friend_enableAfterburners(Bool v);
+	void friend_enableTakeOffEffects(Bool v);  // For VTOL and Helicopters
+	void friend_enableLandingEffects(Bool v);  // For VTOL and Helicopters
 	void friend_setAllowAirLoco(Bool a);
 	Bool friend_isTakeoffOrLandingInProgress() const
 	{
 		return (getFlag(TAKEOFF_IN_PROGRESS) || getFlag(LANDING_IN_PROGRESS));
 	}
+	Bool friend_hasPendingCommand() const { return getFlag(HAS_PENDING_COMMAND); }
 	void friend_addWaypointToGoalPath( const Coord3D &pos );
 	AICommandType friend_getPendingCommandType() const;
 	void friend_purgePendingCommand();
+	Bool isParkedInHangar() const;
+	void checkStateChange();
+
+	inline void setMyPP(ParkingPlaceBehaviorInterface* pp) { m_pp = pp; }
+	inline void setAirfieldID(ObjectID airfieldID) { m_airfieldID = airfieldID; }
+	inline ParkingPlaceBehaviorInterface* getMyPP() { return m_pp; }
+	inline ObjectID getAirfieldID() const { return m_airfieldID; }
 
 protected:
 
@@ -160,6 +174,8 @@ private:
 	Coord3D									m_producerLocation;		///< remember this, so that if our producer dies, we have a place to circle aimlessly
 	AICommandParmsStorage		m_mostRecentCommand;
 	AudioEventRTS						m_afterburnerSound;		///< Sound when afterburners on
+	AudioEventRTS						m_takeOffSound;		///< Sound when VTOL or Heli takes off
+	AudioEventRTS						m_landingSound;		///< Sound when VTOL or Heli lands
 	UnsignedInt							m_attackLocoExpireFrame;
 	UnsignedInt							m_attackersMissExpireFrame;
 	UnsignedInt							m_returnToBaseFrame;	///< if nonzero, return to base at this frame when we are idle, even if not out of ammo
@@ -169,6 +185,11 @@ private:
 	Int											m_flags;
 	Coord3D									m_landingPosForHelipadStuff;
 	Bool										m_enginesOn;					///<
+	ObjectID									m_airfieldID;
+	ParkingPlaceBehaviorInterface* 				m_pp;
+	Bool										m_updateHeightTransition;
+	Bool										m_doStateChange;
+	UnsignedInt									m_nextWakeUpTime;
 
 	void getProducerLocation();
 	void buildLockonDrawableIfNecessary();

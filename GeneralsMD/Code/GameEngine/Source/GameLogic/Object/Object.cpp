@@ -33,6 +33,7 @@
 #include "Common/BitFlagsIO.h"
 #include "Common/BuildAssistant.h"
 #include "Common/Dict.h"
+#include "Common/GameCommon.h"
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
 #include "Common/GameUtility.h"
@@ -49,6 +50,7 @@
 #include "Common/Xfer.h"
 #include "Common/XferCRC.h"
 #include "Common/PerfTimer.h"
+#include "Common/MessageStream.h"
 
 #include "GameClient/Anim2D.h"
 #include "GameClient/ControlBar.h"
@@ -65,6 +67,7 @@
 #include "GameLogic/Locomotor.h"
 
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/AutoHealBehavior.h"
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -74,10 +77,20 @@
 #include "GameLogic/Module/CreateModule.h"
 #include "GameLogic/Module/DamageModule.h"
 #include "GameLogic/Module/DeletionUpdate.h"
+#include "GameLogic/Module/DemoTrapUpdate.h"
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/FloatUpdate.h"
+#include "GameLogic/Module/LifeTimeUpdate.h"
+//#include "GameLogic/Module/EquipCrateCollide.h"
+#include "GameLogic/Module/HijackerUpdate.h"
+//#include "GameLogic/Module/MobMemberSlavedUpdate.h"
+#include "GameLogic/Module/ObjectHelper.h"
 #include "GameLogic/Module/ObjectDefectionHelper.h"
+#include "GameLogic/Module/ObjectDelayedOrderHelper.h"
+#include "GameLogic/Module/ObjectDisabledHelper.h"
+#include "GameLogic/Module/ObjectLevitationHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
 #include "GameLogic/Module/ObjectSMCHelper.h"
 #include "GameLogic/Module/ObjectWeaponStatusHelper.h"
@@ -87,16 +100,19 @@
 #include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/RadarUpgrade.h"
 #include "GameLogic/Module/RebuildHoleBehavior.h"
+#include "GameLogic/Module/SlowDeathBehavior.h"
 #include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/SpecialAbilityUpdate.h"
 #include "GameLogic/Module/StatusDamageHelper.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/SubdualDamageHelper.h"
+#include "GameLogic/Module/ChronoDamageHelper.h"
 #include "GameLogic/Module/TempWeaponBonusHelper.h"
 #include "GameLogic/Module/ToppleUpdate.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/EnergyShieldBehavior.h"
 
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -140,6 +156,41 @@ static const ModelConditionFlags s_allWeaponFireFlags[WEAPONSLOT_COUNT] =
 		MODELCONDITION_RELOADING_C,
 		MODELCONDITION_PREATTACK_C,
 		MODELCONDITION_USING_WEAPON_C
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_D,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_D,
+		MODELCONDITION_RELOADING_D,
+		MODELCONDITION_PREATTACK_D,
+		MODELCONDITION_USING_WEAPON_D
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_E,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_E,
+		MODELCONDITION_RELOADING_E,
+		MODELCONDITION_PREATTACK_E,
+		MODELCONDITION_USING_WEAPON_E
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_F,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_F,
+		MODELCONDITION_RELOADING_F,
+		MODELCONDITION_PREATTACK_F,
+		MODELCONDITION_USING_WEAPON_F
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_G,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_G,
+		MODELCONDITION_RELOADING_G,
+		MODELCONDITION_PREATTACK_G,
+		MODELCONDITION_USING_WEAPON_G
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_H,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_H,
+		MODELCONDITION_RELOADING_H,
+		MODELCONDITION_PREATTACK_H,
+		MODELCONDITION_USING_WEAPON_H
 	)
 };
 
@@ -180,6 +231,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_indicatorColor(0),
 	m_ai(NULL),
 	m_physics(NULL),
+	m_hijackerUpdate(NULL),
 	m_geometryInfo(tt->getTemplateGeometryInfo()),
 	m_containedBy(NULL),
 	m_xferContainedByID(INVALID_ID),
@@ -200,9 +252,13 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_statusDamageHelper(NULL),
 	m_tempWeaponBonusHelper(NULL),
 	m_subdualDamageHelper(NULL),
+	m_chronoDamageHelper(NULL),
 	m_smcHelper(NULL),
 	m_wsHelper(NULL),
 	m_defectionHelper(NULL),
+	m_delayedOrderHelper(NULL),
+	m_disabledHelper(NULL),
+	m_levitationHelper(NULL),
 	m_partitionLastLook(NULL),
 	m_partitionRevealAllLastLook(NULL),
 	m_partitionLastShroud(NULL),
@@ -211,6 +267,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_smcUntil(NEVER),
 	m_privateStatus(0),
 	m_formationID(NO_FORMATION_ID),
+	m_formationIsCommandMap(FALSE),
 	m_isReceivingDifficultyBonus(FALSE),
 	m_singleUseCommandUsed(FALSE),
 	m_scriptStatus(0),
@@ -275,8 +332,27 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_producerID = INVALID_ID;
 	m_builderID = INVALID_ID;
 
+	m_shielderID = INVALID_ID;
+	m_shieldingID = INVALID_ID;
+	m_shielderType = DEATH_TYPE_FLAGS_ALL;
+
 	m_status = objectStatusMask;
+	m_customStatus.clear();
 	m_layer = LAYER_GROUND;
+
+	m_weaponBonusConditionIC = 0;
+	m_customWeaponBonusConditionIC.clear();
+
+	m_invsqrt_mass = 0.0f;
+	//m_magnetLevitateHeight = 0.0f;
+	//m_levitateCheckFrame = 0;
+	//m_levitateCheckCount = 0;
+	//m_dontLevitate = FALSE;
+
+	m_lastActualSpeed = 0.0f;
+
+	m_lastExitedFrame = 0;
+	m_noAcceptOrdersFrame = 0;
 
 	m_group = NULL;
 
@@ -347,6 +423,12 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		subdualModuleData.setModuleTagNameKey( subdualHelperModuleDataTagNameKey );
 		m_subdualDamageHelper = newInstance(SubdualDamageHelper)(this, &subdualModuleData);
 		*curB++ = m_subdualDamageHelper;
+
+		static const NameKeyType chronoHelperModuleDataTagNameKey = NAMEKEY("ModuleTag_ChronoDamageHelper");
+		static ChronoDamageHelperModuleData chronoModuleData;
+		chronoModuleData.setModuleTagNameKey(chronoHelperModuleDataTagNameKey);
+		m_chronoDamageHelper = newInstance(ChronoDamageHelper)(this, &chronoModuleData);
+		*curB++ = m_chronoDamageHelper;
 	}
 
 	if (TheAI != NULL
@@ -398,6 +480,30 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		*curB++ = m_tempWeaponBonusHelper;
 	}
 
+	static const NameKeyType disabledHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_DisabledHelper" );
+	static ObjectDisabledHelperModuleData disabledModuleData;
+	disabledModuleData.setModuleTagNameKey( disabledHelperModuleDataTagNameKey );
+	m_disabledHelper = newInstance(ObjectDisabledHelper)(this, &disabledModuleData);
+	*curB++ = m_disabledHelper;
+
+	if( !tt->isKindOf(KINDOF_STRUCTURE) && !tt->isKindOf(KINDOF_IMMOBILE) )
+	{
+		static const NameKeyType levitationHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_LevitationHelper" );
+		static ObjectLevitationHelperModuleData levitationModuleData;
+		levitationModuleData.setModuleTagNameKey( levitationHelperModuleDataTagNameKey );
+		m_levitationHelper = newInstance(ObjectLevitationHelper)(this, &levitationModuleData);
+		*curB++ = m_levitationHelper;
+	}
+
+	if( tt->isKindOf(KINDOF_SELECTABLE) )
+	{
+		static const NameKeyType delayedOrderHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_DelayedOrderHelper" );
+		static ObjectDelayedOrderHelperModuleData delayedModuleData;
+		delayedModuleData.setModuleTagNameKey( delayedOrderHelperModuleDataTagNameKey );
+		m_delayedOrderHelper = newInstance(ObjectDelayedOrderHelper)(this, &delayedModuleData);
+		*curB++ = m_delayedOrderHelper;
+	}
+
 	// behaviors are always done first, so they get into the publicModule arrays
 	// before anything else.
 	for (modIdx = 0; modIdx < mi.getCount(); ++modIdx)
@@ -447,6 +553,30 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			DEBUG_ASSERTCRASH(m_physics == NULL, ("You should never have more than one Physics module (%s)",getTemplate()->getName().str()));
 			m_physics = (PhysicsBehavior*)newMod;
 		}
+
+		HijackerUpdateInterface* hijackUpdate = newMod->getHijackerUpdateInterface();
+		if (hijackUpdate)
+		{
+			DEBUG_ASSERTCRASH(hijackUpdate == NULL, ("Duplicate hijack updates"));
+			m_hijackerUpdate = hijackUpdate;
+		}
+
+		RadarUpgradeInterface* radarUpgrade = newMod->getRadarUpgradeInterface();
+		if (radarUpgrade)
+		{
+			DEBUG_ASSERTCRASH(m_radarUpgrade == NULL, ("You should never have more than one RadarUpgrade module (%s)",getTemplate()->getName().str()));
+			m_radarUpgrade = radarUpgrade;
+		}
+
+		StickyBombUpdateInterface* stickyBomb = newMod->getStickyBombUpdateInterface();
+		if (stickyBomb)
+		{
+			DEBUG_ASSERTCRASH(m_stickyBombUpdate == NULL, ("You should never have more than one StickyBombUpdate module (%s)",getTemplate()->getName().str()));
+			m_stickyBombUpdate = stickyBomb;
+		}
+
+		if (newMod->getCollide() && newMod->getCollide()->isParasiteEquipCrateCollide())
+			m_hasParasiteCrateCollide = TRUE;
 	}
 
 	*curB = NULL;
@@ -496,6 +626,40 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_soleHealingBenefactorID = INVALID_ID; ///< who is the only other object that can give me this non-stacking heal benefit?
 	m_soleHealingBenefactorExpirationFrame = 0; ///< on what frame can I accept healing (thus to switch) from a new benefactor
+
+	// HijackerUpdate, Crate Collide Variables
+	m_equipObjIDs.clear();
+	m_lastEquipObjIDs.clear();
+	m_equipAttackableObjIDs.clear();
+	m_rejectKeys.clear();
+
+	m_carbombConverterID = INVALID_ID;
+	m_hijackerID = INVALID_ID;
+	m_hijackingID = INVALID_ID;
+	m_equipToID = INVALID_ID;
+
+	m_assaultTransportID = INVALID_ID;
+
+	m_hasParasiteCrateCollide = FALSE;
+	m_parasiteCollideActive = FALSE;
+
+	// Sleepy Updates Revamp Variables
+	m_mobJustUpdated = FALSE;
+	m_isMobMember = FALSE;
+
+	m_noSlavedBehavior = FALSE;
+	m_noSlaverBehavior = FALSE;
+	m_noSlowDeathBehavior = FALSE;
+	m_noSlowDeathLayerUpdate = FALSE;
+	m_hasSlowDeathLayerUpdate = FALSE;
+	m_hasBattleBusSlowDeathBehavior = FALSE; // True for checking over once
+	m_checkSlowDeathBehavior = TRUE; // True for checking over once
+	m_noFloatUpdate = FALSE;
+	m_noDemoTrapUpdate = FALSE;
+
+	m_selectionBoundsTo.clear();
+
+	m_dontDoGroupSelecting = FALSE;
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -644,6 +808,11 @@ Object::~Object()
 	// note, do NOT free these, there are just a shadow copy!
 	m_ai = NULL;
 	m_physics = NULL;
+	m_hijackerUpdate = NULL;
+	m_radarUpgrade = NULL;
+	m_stickyBombUpdate = NULL;
+
+	m_hasParasiteCrateCollide = FALSE;
 
 	// delete any modules present
 	for (BehaviorModule** b = m_behaviors; *b; ++b)
@@ -665,9 +834,14 @@ Object::~Object()
 	m_statusDamageHelper = NULL;
 	m_tempWeaponBonusHelper = NULL;
 	m_subdualDamageHelper = NULL;
+	m_chronoDamageHelper = NULL;
 	m_smcHelper = NULL;
 	m_wsHelper = NULL;
 	m_defectionHelper = NULL;
+
+	m_delayedOrderHelper = NULL;
+	m_disabledHelper = NULL;
+	m_levitationHelper = NULL;
 
 	// reset id to zero so we never mistaken grab "dead" objects
 	m_id = INVALID_ID;
@@ -703,6 +877,20 @@ void Object::onRemovedFrom( Object *removedFrom )
 	clearStatus( MAKE_OBJECT_STATUS_MASK2( OBJECT_STATUS_MASKED, OBJECT_STATUS_UNSELECTABLE ) );
 	m_containedBy = NULL;
 	m_containedByFrame = 0;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)
+	{
+		UpdateModuleInterface* update = (*m)->getUpdate();
+		if( update )
+			update->doRemovedFrom();
+
+		CollideModuleInterface* collide = (*m)->getCollide();
+		if (!collide)
+			continue;
+
+		if( collide->isEquipCrateCollide() && m_equipToID != INVALID_ID && collide->revertCollideBehavior(removedFrom) )
+			break;
+	}
 
   handlePartitionCellMaintenance(); // get a clean look, now that I am outdoors, again
 
@@ -968,8 +1156,9 @@ Bool Object::checkAndDetonateBoobyTrap(const Object *victim)
 
 	if( ourBoobyTrap )
 	{
-		static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-		StickyBombUpdate *update = (StickyBombUpdate*)ourBoobyTrap->findUpdateModule( key_StickyBombUpdate );
+		//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+		//StickyBombUpdate *update = (StickyBombUpdate*)ourBoobyTrap->findUpdateModule( key_StickyBombUpdate );
+		StickyBombUpdateInterface *update = ourBoobyTrap->getStickyBombUpdateInterface();
 		if( update )
 		{
 			if( victim && ourBoobyTrap->getControllingPlayer()->getRelationship(victim->getTeam()) == ALLIES )
@@ -1044,8 +1233,101 @@ void Object::setStatus( ObjectStatusMaskType objectStatus, Bool set )
 				m_partitionData->makeDirty(true);
 		}
 
+		doObjectStatusChecks();
+
 	}
 
+}
+
+void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
+{
+	// Does nothing if there's no status to Set.
+	if(customStatus.isEmpty())
+		return;
+
+	//ObjectCustomStatusType oldStatus = m_customStatus;
+	// A faster way of determining whether to trigger status change.
+	Bool isDifferent;
+
+	// TO-DO: Change to Hash_Map. DONE.
+	ObjectCustomStatusType::iterator it = m_customStatus.find(customStatus);
+
+	if (it != m_customStatus.end()) 
+	{
+		Int currentInt;
+		currentInt = it->second;
+
+		if (set)
+			it->second = 1;
+		else
+			it->second = 0;
+
+		if(currentInt != it->second)
+			isDifferent = TRUE;
+	}
+	else 
+	{
+		if (set)
+			m_customStatus[customStatus] = 1;
+		else 
+			m_customStatus[customStatus] = 0;
+
+		isDifferent = TRUE;
+	}
+	
+	if (isDifferent == TRUE)
+	{
+		ObjectStatusMaskType currentStatus = m_status;
+		if( set && currentStatus.test( OBJECT_STATUS_REPULSOR ) && m_repulsorHelper != NULL )
+		{
+			// Damaged repulsable civilians scare (repulse) other civs, but only
+			// for a short amount of time... use the repulsor helper to turn off repulsion shortly.
+			m_repulsorHelper->sleepUntil(TheGameLogic->getFrame() + 2*LOGICFRAMES_PER_SECOND);
+		}
+
+		if( currentStatus.test( OBJECT_STATUS_STEALTHED ) || currentStatus.test( OBJECT_STATUS_DETECTED ) || currentStatus.test( OBJECT_STATUS_DISGUISED ) )
+		{
+			//Kris: Aug 20, 2003
+			//When any of the three key status bits for stealth go on or off, then handle partition updates for vision.
+			if( getTemplate()->getShroudRevealToAllRange() > 0.0f )
+			{
+				handlePartitionCellMaintenance();
+			}
+		}
+
+		doObjectStatusChecks();
+
+	}
+
+}
+
+Bool Object::testCustomStatus(const AsciiString& cst) const
+{
+	ObjectCustomStatusType::const_iterator it = m_customStatus.find(cst);
+
+	if (it != m_customStatus.end() && it->second == 1) 
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+Bool Object::testCustomStatusForAll(const std::vector<AsciiString>& cst) const
+{
+	for(std::vector<AsciiString>::const_iterator it = cst.begin(); it != cst.end(); ++it)
+	{
+		ObjectCustomStatusType::const_iterator it2 = m_customStatus.find(*it);
+		if (it2 != m_customStatus.end()) 
+		{
+			if(it2->second == 0)
+				return FALSE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
 }
 
 //=============================================================================
@@ -1136,6 +1418,12 @@ Bool Object::canCrushOrSquish(Object *otherObj, CrushSquishTestType testType ) c
 	if( !crusherLevel )
 	{
 		//Can't crush anything!
+		return false;
+	}
+
+	if( !checkToSquishHijack( otherObj ) )
+	{
+		//don't crush the hijacker after it has been removed!
 		return false;
 	}
 
@@ -1247,6 +1535,12 @@ Bool Object::isOutOfAmmo() const
 }
 
 //=============================================================================
+Bool Object::isFullAmmo() const
+{
+	return m_weaponSet.isFullAmmo();
+}
+
+//=============================================================================
 Bool Object::hasAnyWeapon() const
 {
 	return m_weaponSet.hasAnyWeapon();
@@ -1267,6 +1561,33 @@ Bool Object::hasAnyDamageWeapon() const
 UnsignedInt Object::getMostPercentReadyToFireAnyWeapon() const
 {
 	return m_weaponSet.getMostPercentReadyToFireAnyWeapon();
+}
+
+//=============================================================================
+Bool Object::getWeaponInWeaponSlotSyncedToSlot(WeaponSlotType thisSlot, WeaponSlotType otherSlot) const
+{
+	CommandSourceMask mask = getWeaponInWeaponSlotCommandSourceMask(thisSlot);
+
+	//Bool value0a = mask & (1 << CMD_SYNC_TO_PRIMARY);
+	//Bool value0b = (otherSlot == PRIMARY_WEAPON);
+	//Bool value1a = mask & (1 << CMD_SYNC_TO_SECONDARY);
+	//Bool value1b = (otherSlot == SECONDARY_WEAPON);
+	//Bool value2a = mask & (1 << CMD_SYNC_TO_TERTIARY);
+	//Bool value2b = (otherSlot == TERTIARY_WEAPON);
+
+	//DEBUG_LOG(("- getWeaponInWeaponSlotSyncedToSlot (thisSlot=%d, otherSlot=%d): mask = %d --> value0 = %d/%d, value1 = %d/%d, value2 = %d/%d.\n",
+	//	thisSlot, otherSlot, static_cast<int>(mask), value0a, value0b, value1a, value1b, value2a, value2b));
+
+	return ((Int)mask >= 0) &&
+		((mask & (1 << CMD_SYNC_TO_PRIMARY) && otherSlot == PRIMARY_WEAPON) ||
+		(mask & (1 << CMD_SYNC_TO_SECONDARY) && otherSlot == SECONDARY_WEAPON) ||
+		(mask & (1 << CMD_SYNC_TO_TERTIARY) && otherSlot == TERTIARY_WEAPON) ||
+		(mask & (1 << CMD_SYNC_TO_FOUR) && otherSlot == WEAPON_FOUR) ||
+		(mask & (1 << CMD_SYNC_TO_FIVE) && otherSlot == WEAPON_FIVE) ||
+		(mask & (1 << CMD_SYNC_TO_SIX) && otherSlot == WEAPON_SIX) ||
+		(mask & (1 << CMD_SYNC_TO_SEVEN) && otherSlot == WEAPON_SEVEN) ||
+		(mask & (1 << CMD_SYNC_TO_EIGHT) && otherSlot == WEAPON_EIGHT));
+
 }
 
 //=============================================================================
@@ -1346,6 +1667,12 @@ void Object::setModelConditionFlags( const ModelConditionFlags& set )
 	if (m_drawable)
 	{
 		m_drawable->setModelConditionFlags(set);
+		
+		const ModelConditionFlags flags = m_drawable->getModelConditionFlags();
+		if (flags.anyIntersectionWith(MAKE_MODELCONDITION_MASK(MODELCONDITION_WEAPONSET_PLAYER_UPGRADE)))
+		{
+			doMobMemberSlavedUpdate();
+		}
 	}
 }
 
@@ -1355,6 +1682,12 @@ void Object::clearAndSetModelConditionFlags( const ModelConditionFlags& clr, con
 	if (m_drawable)
 	{
 		m_drawable->clearAndSetModelConditionFlags(clr, set);
+
+		const ModelConditionFlags flags = m_drawable->getModelConditionFlags();
+		if (flags.anyIntersectionWith(MAKE_MODELCONDITION_MASK(MODELCONDITION_WEAPONSET_PLAYER_UPGRADE)))
+		{
+			doMobMemberSlavedUpdate();
+		}
 	}
 }
 
@@ -1425,6 +1758,15 @@ const Weapon* Object::getCurrentWeapon(WeaponSlotType* wslot) const
 }
 
 //=============================================================================
+WeaponSlotType Object::getCurrentWeaponSlot() const
+{
+	if (!m_weaponSet.hasAnyWeapon())
+		return PRIMARY_WEAPON;
+
+	return m_weaponSet.getCurWeaponSlot();
+}
+
+//=============================================================================
 Weapon* Object::findWaypointFollowingCapableWeapon()
 {
 	return m_weaponSet.findWaypointFollowingCapableWeapon();
@@ -1445,6 +1787,49 @@ Bool Object::getAmmoPipShowingInfo(Int& numTotal, Int& numFull) const
 	{
 		return false;
 	}
+}
+
+//=============================================================================
+Bool Object::getProgressBarShowingInfo(bool selected, Real& progress, Int& type, RGBAColorInt& color, RGBAColorInt& colorBG) const
+{
+	if (!isKindOf(KINDOF_SHOW_PROGRESS_BAR))
+		return FALSE;
+
+	// We put every case of Progress bars here.
+	// Maybe we should require a KindOf for performance?
+
+	type = 0;  // TODO
+	color = { 255, 255, 255, 255 };  // Default = white
+	colorBG = { 0, 0, 0, 255 };  // Default = black
+
+	// Energy Shields
+	// TODO: This is kinda bad, there should be a better way to do this, if we have multiple shield sources.
+	// This should come from the Body?
+	EnergyShieldBehaviorInterface* esbi = NULL;
+
+	for (BehaviorModule** u = m_behaviors; *u; ++u)
+	{
+		if ((esbi = (*u)->getEnergyShieldBehaviorInterface()) != NULL) {
+			if (esbi->shouldShowHealthBar(selected)) {
+				progress = esbi->getShieldPercent();
+				color = esbi->getHealthBarColor();
+				colorBG = esbi->getHealthBarBackgroundColor();
+				return true;
+			}
+		}
+		else if ((*u)->getModuleNameKey() == NAMEKEY("LifetimeUpdate")) {
+			LifetimeUpdate* ltu = (LifetimeUpdate*)(*u);
+			if (ltu->showProgressBar()) {
+				// always show healthbar or when selected?
+				progress = 1.0 - ltu->getProgress();
+				return true;
+			}
+		}
+		
+	}
+
+	return false;
+	
 }
 
 //=============================================================================
@@ -1479,6 +1864,12 @@ Bool Object::chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteri
 	return m_weaponSet.chooseBestWeaponForTarget(this, target, criteria, cmdSource );
 }
 
+//=============================================================================
+Bool Object::chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly )
+{
+	return m_weaponSet.chooseBestWeaponForPosition(this, pos, criteria, cmdSource, checkFlyingOnly );
+}
+
 //DECLARE_PERF_TIMER(fireCurrentWeapon)
 //=============================================================================
 void Object::fireCurrentWeapon(Object *target)
@@ -1492,6 +1883,7 @@ void Object::fireCurrentWeapon(Object *target)
 	Weapon* weapon = m_weaponSet.getCurWeapon();
 	if (weapon && (weapon->getStatus() == READY_TO_FIRE))
 	{
+		weapon->computeFiringTrackerBonus(this, target);
 		Bool reloaded = weapon->fireWeapon(this, target);
 		DEBUG_ASSERTCRASH(m_firingTracker, ("hey, we are firing but have no firing tracker. this is wrong."));
 		if (m_firingTracker)
@@ -1514,6 +1906,7 @@ void Object::fireCurrentWeapon(const Coord3D* pos)
 	Weapon* weapon = m_weaponSet.getCurWeapon();
 	if (weapon && (weapon->getStatus() == READY_TO_FIRE))
 	{
+		weapon->computeFiringTrackerBonusClear(this);
 		Bool reloaded = weapon->fireWeapon(this, pos);
 		DEBUG_ASSERTCRASH(m_firingTracker, ("hey, we are firing but have no firing tracker. this is wrong."));
 		if (m_firingTracker)
@@ -1545,6 +1938,21 @@ void Object::preFireCurrentWeapon( const Object *victim )
 	{
 		weapon->preFireWeapon( this, victim );
 		friend_setUndetectedDefector( FALSE );// My secret is out
+	}
+}
+
+//=============================================================================
+void Object::preFireCurrentWeapon(const Coord3D* pos)
+{
+	Weapon* weapon = m_weaponSet.getCurWeapon();
+
+	//If we are going to be capable of firing our weapon NEXT frame, set the pre-attack
+	//up now. This gets called by AIAttackFireWeaponState::onEnter().. but the update happens
+	//next frame.
+	if (weapon && TheGameLogic->getFrame() + 1 >= weapon->getPossibleNextShotFrame())
+	{
+		weapon->preFireWeapon(this, pos);
+		friend_setUndetectedDefector(FALSE);// My secret is out
 	}
 }
 
@@ -1846,7 +2254,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 	  //immuneToShockwaveKindofs.set(KINDOF_PRODUCED_AT_HELIPAD);//helicopters go all wonky when they get shockwaved  //NEW RESTRICTIONS ADDED
 
 		PhysicsBehavior *behavior = getPhysics();
-		if ( behavior && (isAirborneTarget() == FALSE) && (! isKindOf(KINDOF_PROJECTILE) ) )
+		if ( behavior && (isAirborneTarget() == FALSE || damageInfo->in.m_shockWaveAffectsAirborne) && (! isKindOf(KINDOF_PROJECTILE) ) && behavior->getShockResistance() < 1.0f )
 //		if (behavior && isAnyKindOf( immuneToShockwaveKindofs ) == FALSE )//NEW RESTRICTIONS ADDED
 		{
 			// Calculate the shockwave taperoff amount due to distance from ground zero
@@ -1862,6 +2270,9 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 			shockWaveForce.scale( damageInfo->in.m_shockWaveAmount * shockTaperMult );
 			shockWaveForce.z = shockWaveForce.length(); // Apply up force equal to the lateral force for dramatic effect
 
+			if(isAirborneTarget() && damageInfo->in.m_shockWavePullsAirborne)
+				shockWaveForce.z *= -1;
+
 			// Apply the shock to the object
 			behavior->applyShock(&shockWaveForce);
 
@@ -1873,6 +2284,132 @@ void Object::attemptDamage( DamageInfo *damageInfo )
       behavior->setStunned(true);
 
       setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
+		}
+	}
+
+	// Process any magnet forces that might affect this object due to the incurred damage
+	if (damageInfo->in.m_magnetAmount != 0.0f)
+	{
+
+		PhysicsBehavior *behavior = getPhysics();
+		if ( behavior && (! isKindOf(KINDOF_PROJECTILE) ) && behavior->getMagnetResistance() < 1.0f )
+		{
+			Real mass = behavior->getMass();
+			Real mult = 0.335;
+			Real magnetScale = 1.0f;
+
+			if(mass)
+			{
+				// It's ZA INVESE SQUARE ROOT!!!
+				if(!m_invsqrt_mass)
+					m_invsqrt_mass = 1/sqrt(mass);
+				magnetScale = max(0.15f, m_invsqrt_mass);
+			}
+			
+			// Scale the magnet Force according to its declared formula
+			if(damageInfo->in.m_magnetFormula == MAGNET_STATIC || damageInfo->in.m_magnetFormula == MAGNET_DYNAMIC)
+				behavior->scrubVelocity2D(0);
+
+			if(damageInfo->in.m_magnetFormula == MAGNET_DYNAMIC || damageInfo->in.m_magnetFormula == MAGNET_HYPERDYNAMIC)
+				mult = magnetScale;
+
+			// Set up the magnet force to use apply on object
+			Coord3D magnetForce;
+			magnetForce.set( &damageInfo->in.m_magnetVector );
+
+			// Process Magnet Force differently for Ground and Airborne targets
+			if (!isAirborneTarget())
+			{
+				Real posZ = calculateHeightAboveTerrain();
+
+				// Scale the Magnet Force applied to the Unit
+				magnetForce.normalize();
+				magnetForce.scale( damageInfo->in.m_magnetAmount * mult * (1.0f - behavior->getMagnetResistance()) );
+				magnetScale = max(0.15f, magnetScale);
+
+				// Calculate the Magnet Lift Height
+				if( damageInfo->in.m_magnetLiftForce || ( damageInfo->in.m_magnetLiftHeight && damageInfo->in.m_magnetLiftForceToHeight ) || ( damageInfo->in.m_magnetLiftHeightSecond && damageInfo->in.m_magnetLiftForceToHeightSecond ) )
+				{
+					if(!mass)
+						mult = 1.0f;
+					else
+						mult = max(1.0f, mass * magnetScale);
+					
+					if(posZ < damageInfo->in.m_magnetLiftHeight)
+						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeight * mult;
+					else if(posZ < damageInfo->in.m_magnetLiftHeightSecond)
+						magnetForce.z = damageInfo->in.m_magnetLiftForceToHeightSecond * mult;
+					else if(damageInfo->in.m_magnetLiftForce)
+						magnetForce.z = damageInfo->in.m_magnetLiftForce * mult;
+				}
+
+				// Reduce the Magnet Lift ZForce if it reaches the Max Lift Height Threshold
+				if(damageInfo->in.m_magnetMaxLiftHeight && damageInfo->in.m_magnetMaxLiftHeight < posZ && magnetForce.z > 0)
+				{
+					magnetForce.z *= magnetScale;
+					if(magnetForce.z > 1.0f)
+						magnetForce.z = 0;
+				}
+
+				// Check the Magnet Force for any Levitation
+				if( damageInfo->in.m_magnetLevitationHeight && m_levitationHelper && ( m_levitationHelper->getLevitateHeight() == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= posZ ) )
+				{
+					//m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
+					m_levitationHelper->doLevitation(damageInfo->in.m_magnetLevitationHeight);
+					//m_levitateCheckCount = 0;
+					//m_levitateCheckFrame = 0;
+				}
+
+				// Apply the Magnet Force
+				behavior->applyForce( &magnetForce );
+			}
+			else if(getAIUpdateInterface())
+			{
+				Real airborneMult = 1.0f;
+				
+				// Reset the physics variables so that the gravity doesn't accumulate for the object to fall through
+				behavior->resetDynamicPhysics();
+
+				// Get whether we want the Yaw of the Airborne Units to affect the Magnet Force
+				if(damageInfo->in.m_magnetAirboneAffectedByYaw)
+					airborneMult = mult;
+				else
+					magnetForce.normalize();
+
+				// Scale the Multiplier since Airborne Units operate differently from Ground Physics
+				if(damageInfo->in.m_magnetFormula == MAGNET_ROTATORY || damageInfo->in.m_magnetFormula == MAGNET_HYPERDYNAMIC)
+					airborneMult *= 16.5;
+
+				// Scale the Magnet Force
+				if(isAboveTerrain() || getAIUpdateInterface()->isMoving() )
+					magnetForce.scale( damageInfo->in.m_magnetAmount * 0.01 * airborneMult * (1.0f - behavior->getMagnetResistance()) );
+
+				// Apply the Magnet ZForce if declared
+				if(damageInfo->in.m_magnetAirborneZForce)
+					magnetForce.z = damageInfo->in.m_magnetAirborneZForce * 1.5 * mult * 0.01 ;
+
+				// Apply the Magnet Force according to the variables
+				if(damageInfo->in.m_magnetAirboneAffectedByYaw)
+					behavior->applyForce(&magnetForce);
+				else
+					behavior->addVelocityTo(&magnetForce);
+			}
+
+			// Set stunned state due to the shock for the object
+			//behavior->applyForce( &magnetForce );
+      //behavior->setStunned(true);
+	  //setDisabled(DISABLED_STUNNED);
+
+      //setModelConditionState(MODELCONDITION_STUNNED_FLAILING);
+		}
+	}
+	else if(m_levitationHelper && m_levitationHelper->getDontLevitate() && m_levitationHelper->getLevitateHeight() == damageInfo->in.m_magnetLevitationHeight )
+	{
+		// If we stop levitating, tell the levitator to stop using its weapon on us
+		Object* attacker = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
+		if ( attacker && attacker->getAIUpdateInterface())
+		{
+			attacker->getAIUpdateInterface()->aiIdle(CMD_FROM_AI);
 		}
 	}
 
@@ -1897,7 +2434,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::attemptHealing(Real amount, const Object* source)
+void Object::attemptHealing(Real amount, const Object* source )
 {
 	BodyModuleInterface* body = getBodyModule();
 	if (body)
@@ -1907,6 +2444,23 @@ void Object::attemptHealing(Real amount, const Object* source)
 		damageInfo.in.m_deathType = DEATH_NONE;
 		damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
 		damageInfo.in.m_amount = amount;
+		body->attemptHealing( &damageInfo );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::attemptHealingWithParasiteClear(Real amount, const Object* source, Bool clearsParasite, const std::vector<AsciiString>& clearsParasiteKeys )
+{
+	BodyModuleInterface* body = getBodyModule();
+	if (body)
+	{
+		DamageInfo damageInfo;
+		damageInfo.in.m_damageType = DAMAGE_HEALING;
+		damageInfo.in.m_deathType = DEATH_NONE;
+		damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
+		damageInfo.in.m_amount = amount;
+		damageInfo.in.m_clearsParasite = clearsParasite;
+		damageInfo.in.m_clearsParasiteKeys = clearsParasiteKeys;
 		body->attemptHealing( &damageInfo );
 	}
 }
@@ -1921,7 +2475,7 @@ ObjectID Object::getSoleHealingBenefactor( void ) const
 
 }
 
-Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration )
+Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* source, UnsignedInt duration, Bool clearsParasite, const std::vector<AsciiString>& clearsParasiteKeys )
 {///< for the non-stacking healers like ambulance and propaganda
 
 	if( ! source ) // sanity
@@ -1944,6 +2498,8 @@ Bool Object::attemptHealingFromSoleBenefactor ( Real amount, const Object* sourc
 			damageInfo.in.m_deathType = DEATH_NONE;
 			damageInfo.in.m_sourceID = source ? source->getID() : INVALID_ID;
 			damageInfo.in.m_amount = amount;
+			damageInfo.in.m_clearsParasite = clearsParasite;
+			damageInfo.in.m_clearsParasiteKeys = clearsParasiteKeys;
 			body->attemptHealing( &damageInfo );
 		}
 
@@ -1981,6 +2537,21 @@ void Object::kill( DamageType damageType, DeathType deathType )
 	attemptDamage( &damageInfo );
 
 	DEBUG_ASSERTCRASH(!damageInfo.out.m_noEffect, ("Attempting to kill an unKillable object (InactiveBody?)"));
+
+}
+
+void Object::killCustom( DamageType damageType, DeathType deathType, AsciiString customDeathType )
+{
+	DamageInfo damageInfo;
+
+	// Do unmodifiable damage equal to their max health to kill.
+	damageInfo.in.m_damageType = damageType;
+	damageInfo.in.m_deathType = deathType;
+	damageInfo.in.m_customDeathType = customDeathType;
+	damageInfo.in.m_sourceID = INVALID_ID;
+	damageInfo.in.m_amount = getBodyModule()->getMaxHealth();
+	damageInfo.in.m_kill = TRUE; // Triggers object to die no matter what.
+	attemptDamage( &damageInfo );
 
 }
 
@@ -2088,7 +2659,7 @@ void Object::setDisabled( DisabledType type )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
+void Object::setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus tintStatus, AsciiString customTintStatus, Bool paintTint, Bool playSound )
 {
 	Bool edgeCase = !isDisabled();
 
@@ -2099,6 +2670,8 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 	}
 
 	//Handle audio events!
+  if(playSound)
+  {
  	AudioEventRTS sound;
 	if( type == DISABLED_UNMANNED && !isKindOf( KINDOF_DRONE ) )
 	{
@@ -2130,6 +2703,7 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 			}
 		}
 	}
+  }
 
 	if( m_disabledTillFrame[ type ] != frame )
 	{
@@ -2141,7 +2715,10 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 		m_disabledTillFrame[ type ] = frame;
 		m_disabledMask.set( type, frame > TheGameLogic->getFrame() );
 
-		if( m_drawable )
+		if(frame < FOREVER)
+			m_disabledHelper->setNextDisableUpdateFrame(frame);
+
+		if( m_drawable && paintTint )
 		{
 			if( isDisabled() )
 			{
@@ -2150,9 +2727,43 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 				// Doh. Also shouldn't be tinting when disabled by scripting.
 				// Doh^2. Also shouldn't be CLEARING tinting if we're disabling by held or script disabledness
 				// Doh^3. Unmanned is no tint too
-				if( type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED )
+				if(!customTintStatus.isEmpty())
 				{
-					m_drawable->setTintStatus( TINT_STATUS_DISABLED );
+					if(m_customDisabledTintToClear != customTintStatus && !m_customDisabledTintToClear.isEmpty())
+					{
+						m_drawable->clearCustomTintStatus(m_customDisabledTintToClear);
+					}
+					if(m_disabledTintToClear != TINT_STATUS_INVALID)
+					{
+						m_drawable->clearTintStatus( m_disabledTintToClear );
+						m_disabledTintToClear = TINT_STATUS_INVALID;
+					}
+
+					m_drawable->setCustomTintStatus( customTintStatus );
+					m_customDisabledTintToClear = customTintStatus;
+				}
+				else
+				{
+					TintStatus disableTint = tintStatus;
+					if( disableTint == TINT_STATUS_INVALID && type != DISABLED_HELD && type != DISABLED_SCRIPT_DISABLED && type != DISABLED_UNMANNED && type != DISABLED_TELEPORT && type != DISABLED_CHRONO && type != DISABLED_FROZEN && type != DISABLED_STUNNED)
+					{
+						disableTint = TINT_STATUS_DISABLED;
+					}
+					if(disableTint != TINT_STATUS_INVALID)
+					{
+						if(m_disabledTintToClear != disableTint && m_disabledTintToClear != TINT_STATUS_INVALID)
+						{
+							m_drawable->clearTintStatus( m_disabledTintToClear );
+						}
+						if(!m_customDisabledTintToClear.isEmpty())
+						{
+							m_drawable->clearCustomTintStatus(m_customDisabledTintToClear);
+							m_customDisabledTintToClear = NULL;
+						}
+
+						m_drawable->setTintStatus( disableTint );
+						m_disabledTintToClear = disableTint;
+					}
 				}
 			}
 		}
@@ -2165,7 +2776,15 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 			{
 				rider->setDisabledUntil(type, frame);
 			}
+
+			const std::list<Object*>* addOnList = contain->getAddOnList();
+			if (addOnList) {
+				for (Object* addOn : *addOnList) {
+					addOn->setDisabledUntil(type, frame);
+				}
+			}
 		}
+
 
 		if ( isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ) )
 		{
@@ -2212,9 +2831,18 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 			//Not only that, but it also loses any healing bonuses it may have earned in its prior life
 			{
 				static const NameKeyType key_AutoHealBehavior = NAMEKEY("AutoHealBehavior");
-				AutoHealBehavior* autoHeal = (AutoHealBehavior*)(findUpdateModule( key_AutoHealBehavior ));
-				if (autoHeal)
-					autoHeal->undoUpgrade();
+				//AutoHealBehavior* autoHeal = (AutoHealBehavior*)(findUpdateModule( key_AutoHealBehavior ));
+				//if (autoHeal)
+				//	autoHeal->undoUpgrade();
+				for (BehaviorModule** b = m_behaviors; *b; ++b)
+				{
+					if ((*b)->getModuleNameKey() == key_AutoHealBehavior)
+					{
+						AutoHealBehavior* autoHeal = (AutoHealBehavior*) *b;
+						if (autoHeal && autoHeal->disableWhenUnmanned())
+							autoHeal->undoUpgrade();
+					}
+				}
 
 
 			}
@@ -2254,7 +2882,22 @@ UnsignedInt Object::getDisabledUntil( DisabledType type ) const
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool Object::clearDisabled( DisabledType type )
+UnsignedInt Object::getDisabledUntilMask( DisabledMaskType mask ) const
+{
+	UnsignedInt highestFrame = 0;
+	//Iterate through each disabled type and return the one with the highest frame.
+	for( Int i = 0; i < DISABLED_COUNT; i++ )
+	{
+		if( mask.test( i ) && m_disabledMask.test( i ) && m_disabledTillFrame[ i ] > highestFrame )
+		{
+			highestFrame = m_disabledTillFrame[ i ];
+		}
+	}
+	return highestFrame;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::clearDisabled( DisabledType type, Bool clearTintLater )
 {
 	if( type < 0 || type >= DISABLED_COUNT )
 	{
@@ -2305,6 +2948,13 @@ Bool Object::clearDisabled( DisabledType type )
 		{
 			rider->clearDisabled(type);
 		}
+
+		const std::list<Object*>* addOnList = contain->getAddOnList();
+		if (addOnList) {
+			for (Object* addOn : *addOnList) {
+				addOn->clearDisabled(type);
+			}
+		}
 	}
 
 	if ( isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ) )
@@ -2326,6 +2976,8 @@ Bool Object::clearDisabled( DisabledType type )
 	exceptions.set(DISABLED_HELD);
 	exceptions.set(DISABLED_SCRIPT_DISABLED);
 	exceptions.set(DISABLED_UNMANNED);
+	exceptions.set(DISABLED_TELEPORT);
+	exceptions.set(DISABLED_CHRONO);
 
 	DisabledMaskType myFlagsMinusExceptions = getDisabledFlags();
 	myFlagsMinusExceptions.clearAndSet(exceptions, DISABLEDMASK_NONE);
@@ -2339,7 +2991,20 @@ Bool Object::clearDisabled( DisabledType type )
 	{
 		// I have no disabled flag that is not one of the exceptions above.
 		if (m_drawable)
-			m_drawable->clearTintStatus( TINT_STATUS_DISABLED );
+		{
+			if(!m_customDisabledTintToClear.isEmpty())
+			{
+				m_drawable->clearCustomTintStatus(m_customDisabledTintToClear, clearTintLater );
+				m_customDisabledTintToClear = NULL;
+			}
+			if(m_disabledTintToClear != TINT_STATUS_INVALID)
+			{
+				m_drawable->clearTintStatus( m_disabledTintToClear, clearTintLater );
+				m_disabledTintToClear = TINT_STATUS_INVALID;
+			}
+	
+			//m_drawable->clearTintStatus( TINT_STATUS_DISABLED );
+		}
 	}
 
 	checkDisabledStatus();// in case we just edged
@@ -2358,6 +3023,7 @@ Bool Object::clearDisabled( DisabledType type )
 void Object::checkDisabledStatus()
 {
 	UnsignedInt now = TheGameLogic->getFrame();
+	UnsignedInt nextWakeUpTime = 1e8; // Lower than FOREVER
 	for( int i = 0; i < DISABLED_COUNT; i++ )
 	{
 		DisabledType type = (DisabledType)i;
@@ -2368,9 +3034,265 @@ void Object::checkDisabledStatus()
 				clearDisabled( type ); // This will also DECREMENT m_pauseCount in all specialpowers
 				m_disabledMask.set( type, 0 );
 			}
+			else if( m_disabledTillFrame[ i ] < FOREVER ) // We don't check for duration that passes un-operable ranges
+			{
+				UnsignedInt WakeUpTime = m_disabledTillFrame[ i ] - now;
+				if( WakeUpTime < nextWakeUpTime )
+				{
+					nextWakeUpTime = WakeUpTime;
+				}
+			}
 		}
 	}
+	if(nextWakeUpTime < 1e8)
+	{
+		m_disabledHelper->setNextDisableUpdateFrame(now + nextWakeUpTime);
+	}
 }
+
+/*void Object::checkDisabledHelper() const
+{
+	if(m_disabledHelper)
+		m_disabledHelper->checkDisableUpdateStatus();
+}*/
+
+//-------------------------------------------------------------------------------------------------
+//Get Disabled Till Frame
+//-------------------------------------------------------------------------------------------------
+std::vector<UnsignedInt> Object::getDisabledTillFrame() const
+{
+	std::vector<UnsignedInt> disabledTillFrames;
+	for( int i = 0; i < DISABLED_COUNT; i++ )
+	{
+		disabledTillFrames.push_back(m_disabledTillFrame[ i ]);
+	}
+	return disabledTillFrames;
+}
+
+//-------------------------------------------------------------------------------------------------
+//Set Disabled Till Frame + Disabled Tint
+//-------------------------------------------------------------------------------------------------
+void Object::transferDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames)
+{
+	// Don't do anything if the till frame sizes are different
+	if(disabledTillFrames.size() != DISABLED_COUNT )
+		return;
+
+	UnsignedInt now = TheGameLogic->getFrame();
+	for( int i = 0; i < DISABLED_COUNT; i++ )
+	{
+		m_disabledTillFrame[ i ] = disabledTillFrames[ i ];
+		if(m_disabledTillFrame[i] > now)
+			setDisabledUntil( DisabledType(i), m_disabledTillFrame[i], TINT_STATUS_INVALID, NULL, FALSE, FALSE );
+	}
+
+	// Set disabled tint, transfer the Tint before applying this function first
+	if(!m_drawable)
+		return;
+
+	if(!m_customDisabledTintToClear.isEmpty())
+	{
+		if(m_disabledTintToClear != TINT_STATUS_INVALID)
+		{
+			m_drawable->clearTintStatus( m_disabledTintToClear );
+			m_disabledTintToClear = TINT_STATUS_INVALID;
+		}
+
+		m_drawable->setCustomTintStatus( m_customDisabledTintToClear );
+	}
+	else if(m_disabledTintToClear != TINT_STATUS_INVALID)
+	{
+		m_drawable->setTintStatus( m_disabledTintToClear );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//Checks for Status Application after Disabled
+//-------------------------------------------------------------------------------------------------
+void Object::doDisablePower(Bool isCommand)
+{
+	// Set the indication from command
+	if(isCommand)
+	{
+		m_disabledPowerFromCommand = TRUE;
+
+		// Do things later while we are under Construction
+		if( getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		{
+			return;
+		}  // end if
+
+		// adjust the power it takes, don't adjust the power it gives. It is already handled by DisabledEdge
+		if(getTemplate()->getEnergyProduction() < 0 && getControllingPlayer())
+		{
+			getControllingPlayer()->getEnergy()->adjustPower(getTemplate()->getEnergyProduction(), FALSE);
+		}
+
+	}
+	
+	// Set Disabled Type
+	if(getTemplate()->setDisabledUnderPowered())
+		setDisabledUntil( getTemplate()->getDisabledTypeUnderPowered(), FOREVER, getTemplate()->getTintStatusUnderPowered(), getTemplate()->getCustomTintStatusUnderPowered() );
+	else if( m_drawable )
+	{
+		if(!getTemplate()->getCustomTintStatusUnderPowered().isEmpty())
+			m_drawable->setCustomTintStatus( getTemplate()->getCustomTintStatusUnderPowered() );
+		else if(getTemplate()->getTintStatusUnderPowered() != TINT_STATUS_INVALID)
+			m_drawable->setTintStatus( getTemplate()->getTintStatusUnderPowered() );
+	}
+
+	// Weapon Bonuses to Set
+	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusUnderPowered();
+	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusUnderPowered();
+
+	for (Int i = 0; i < weaponBonuses.size(); i++) {
+		setWeaponBonusCondition(weaponBonuses[i]);
+	}
+	for(std::vector<AsciiString>::const_iterator it = customWeaponBonuses.begin(); it != customWeaponBonuses.end(); ++it)
+	{
+		setCustomWeaponBonusCondition( *it );
+	}
+
+	// Status to Set
+	setStatus(getTemplate()->getStatusUnderPowered());
+	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusUnderPowered();
+	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
+	{
+		setCustomStatus( *it );
+	}
+
+	// Model Condition to Set
+	if (m_drawable)
+	{
+		m_drawable->setModelConditionFlags(getTemplate()->getModelConditionUnderPowered());
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//Checks for Status to Clear after Disabled
+//-------------------------------------------------------------------------------------------------
+void Object::clearDisablePower(Bool isCommand)
+{
+	// Don't clear us from Disabled Power if we are disabled from Command
+	if(!isCommand && m_disabledPowerFromCommand)
+		return;
+
+	// Clear the indication from command
+	if(isCommand)
+	{
+		m_disabledPowerFromCommand = FALSE;
+
+		// Do things later while we are under Construction
+		if( getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
+		{
+			return;
+		}  // end if
+
+		// adjust the power it takes, don't adjust the power it gives. It is already handled by DisabledEdge
+		if(getTemplate()->getEnergyProduction() < 0 && getControllingPlayer())
+		{
+			Player *player = getControllingPlayer();
+			player->getEnergy()->adjustPower(getTemplate()->getEnergyProduction(), TRUE);
+
+			// don't clear us from Disabled if we don't have sufficient Power
+			if(!player->getEnergy()->hasSufficientPower())
+				return;
+		}
+	}
+	
+	// Clear Disabled Type
+	if(getTemplate()->setDisabledUnderPowered())
+		clearDisabled( getTemplate()->getDisabledTypeUnderPowered(), FALSE );
+	else if( m_drawable )
+	{
+		if(!getTemplate()->getCustomTintStatusUnderPowered().isEmpty())
+			m_drawable->clearCustomTintStatus( getTemplate()->getCustomTintStatusUnderPowered() );
+		else if(getTemplate()->getTintStatusUnderPowered() != TINT_STATUS_INVALID)
+			m_drawable->clearTintStatus( getTemplate()->getTintStatusUnderPowered() );
+	}
+
+	// Weapon Bonuses to Set
+	WeaponBonusConditionTypeVec weaponBonuses = getTemplate()->getWeaponBonusUnderPowered();
+	std::vector<AsciiString> customWeaponBonuses = getTemplate()->getCustomWeaponBonusUnderPowered();
+
+	for (Int i = 0; i < weaponBonuses.size(); i++) {
+		clearWeaponBonusCondition(weaponBonuses[i]);
+	}
+	for(std::vector<AsciiString>::const_iterator it = customWeaponBonuses.begin(); it != customWeaponBonuses.end(); ++it)
+	{
+		clearCustomWeaponBonusCondition( *it );
+	}
+
+	// Status to Set
+	clearStatus(getTemplate()->getStatusUnderPowered());
+	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusUnderPowered();
+	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
+	{
+		clearCustomStatus( *it );
+	}
+
+	// Model Condition to Set
+	if (m_drawable)
+	{
+		m_drawable->clearModelConditionFlags(getTemplate()->getModelConditionUnderPowered());
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+/*void Object::checkLevitate()
+{
+	if(m_magnetLevitateHeight)
+	{
+		if(m_levitateCheckCount<11)
+		{
+			Coord3D newPos = *getPosition();
+			Real terrainZ = TheTerrainLogic->getGroundHeight( newPos.x, newPos.y );
+			Bool doLevitate;
+			if(newPos.z - terrainZ < m_magnetLevitateHeight)
+			{
+				doLevitate = TRUE;
+
+				newPos.z = m_magnetLevitateHeight + terrainZ + 0.5f;
+				setPosition( &newPos );
+
+				newPos.zero();
+				newPos.z = 12.5;
+				getPhysics()->applyForce( &newPos );
+			}
+
+			m_levitateCheckCount++;
+			
+			if(m_levitateCheckCount>10)
+			{
+				if(doLevitate)
+				{
+					getPhysics()->resetDynamicPhysics();
+					m_dontLevitate = TRUE;
+				}
+				//getPhysics()->scrubVelocity2D(0);
+			}
+		}
+	}
+	if(m_dontLevitate)
+	{
+		UnsignedInt now = TheGameLogic->getFrame();
+
+		// Descending effect
+		Coord3D magnetForce;
+		magnetForce.zero();
+		magnetForce.z = 0.35;
+		getPhysics()->applyForce( &magnetForce );
+
+		if(!m_levitateCheckFrame)
+			m_levitateCheckFrame = now + LOGICFRAMES_PER_SECOND;
+		if(now > m_levitateCheckFrame)
+		{
+			m_dontLevitate = FALSE;
+			m_levitateCheckFrame = 0;
+			m_magnetLevitateHeight = 0;
+		}
+	}
+}*/
 
 //-------------------------------------------------------------------------------------------------
 void Object::pauseAllSpecialPowers( const Bool disabling ) const
@@ -2477,6 +3399,8 @@ void Object::updateUpgradeModules()
 			upgrade->attemptUpgrade( maskToCheck );
 		}
 	}
+
+	doObjectUpgradeChecks();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2498,6 +3422,25 @@ void Object::forceRefreshSubObjectUpgradeStatus()
 		if( upgrade->isSubObjectsUpgrade() )
 		{
 			upgrade->forceRefreshUpgrade();
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Added a function to enable upgrade refresh EXCEPT for the intended SubObjectUpgrade. */
+//-------------------------------------------------------------------------------------------------
+void Object::forceRefreshUpgradeStatus()
+{
+	for (BehaviorModule** module = m_behaviors; *module; ++module)
+	{
+		UpgradeModuleInterface* upgrade = (*module)->getUpgrade();
+		if (!upgrade)
+			continue;
+
+		if( upgrade->hasUpgradeRefresh() )
+		{
+			upgrade->forceRefreshMyUpgrade();
+			continue;
 		}
 	}
 }
@@ -2618,7 +3561,7 @@ void Object::setTriggerAreaFlagsForChangeInPosition()
 		return; // didn't move enough to change integer position.
 	}
 
-	if (!isKindOf(KINDOF_IMMOBILE)) {
+	if (!isKindOf(KINDOF_IMMOBILE) && !testStatus(OBJECT_STATUS_IMMOBILE)) {
 		if (isKindOf(KINDOF_INFANTRY) || isKindOf(KINDOF_VEHICLE) ) {
 			TheGameClient->notifyTerrainObjectMoved(this);
 		}
@@ -2918,10 +3861,47 @@ Module* Object::findModule(NameKeyType key) const
  */
 Bool Object::isMobile() const
 {
+	if (isKindOf(KINDOF_IMMOBILE) || testStatus(OBJECT_STATUS_IMMOBILE))
+		return false;
+
+	// AW: This excemption is needed, because teleporters still need to listen to AI commands when disabled
+	if( isDisabled() && !isDisabledByType(DISABLED_TELEPORT) )
+		return false;
+
+	return true;
+}
+
+Bool Object::isMobileNonStatusNotAttacking(Bool checkDisable) const
+{
 	if (isKindOf(KINDOF_IMMOBILE))
 		return false;
 
-	if( isDisabled() )
+	if( testStatus(OBJECT_STATUS_IMMOBILE) )
+	{
+		const AIUpdateInterface *ai = getAI();
+		const Weapon *weapon = getCurrentWeapon();
+		if( ai && ai->isAttacking() && weapon )
+		{
+			Object *victim = ai->getCurrentVictim();
+			if( victim )
+			{
+				if(weapon->isWithinAttackRange( this, victim ))
+					return false;
+			}
+			else
+			{
+				const Coord3D *pos = ai->getCurrentVictimPos();
+				if( pos )
+				{
+					if(weapon->isWithinAttackRange( this, pos ))
+						return false;
+				}
+			}
+		}
+	}
+
+	// AW: This excemption is needed, because teleporters still need to listen to AI commands when disabled
+	if( checkDisable && isDisabled() && !isDisabledByType(DISABLED_TELEPORT) )
 		return false;
 
 	return true;
@@ -3072,6 +4052,7 @@ void Object::setWeaponSetFlag(WeaponSetType wst)
 {
 	m_curWeaponSetFlags.set(wst);
 	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
 	if (m_drawable)
 	{
 		m_drawable->setModelConditionState(TheWeaponSetTypeToModelConditionTypeMap[wst]);
@@ -3083,6 +4064,7 @@ void Object::clearWeaponSetFlag(WeaponSetType wst)
 {
 	m_curWeaponSetFlags.set(wst, 0);
 	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
 	if (m_drawable)
 	{
 		m_drawable->clearModelConditionState(TheWeaponSetTypeToModelConditionTypeMap[wst]);
@@ -3179,6 +4161,7 @@ void Object::onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel ne
 		TheAudio->addAudioEvent( &soundToPlay );
 	}
 
+	doSlaveBehaviorUpdate(TRUE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3211,7 +4194,7 @@ Bool Object::isAbleToAttack() const
 	if( testStatus(OBJECT_STATUS_SOLD) )
 		return false;
 
-  if ( isDisabledByType( DISABLED_SUBDUED ) )
+  if ( isDisabledByType( DISABLED_SUBDUED ) || isDisabledByType( DISABLED_FROZEN ) )
     return FALSE; // A Microwave Tank is cooking me
 
 	//We can't fire if we, as a portable structure, are aptly disabled
@@ -3231,7 +4214,7 @@ Bool Object::isAbleToAttack() const
           if ( slaverID != INVALID_ID )
           {
             Object *slaver = TheGameLogic->findObjectByID( slaverID );
-            if ( slaver && slaver->isDisabledByType( DISABLED_SUBDUED ))
+            if ( slaver && ( slaver->isDisabledByType( DISABLED_SUBDUED ) || slaver->isDisabledByType( DISABLED_FROZEN ) ) )
               return FALSE;// if my stinger site is subdued, so am I
           }
 
@@ -3807,6 +4790,12 @@ void Object::friend_adjustPowerForPlayer( Bool incoming )
 		return;
 	}
 
+	if(isDisabledPowerByCommand() && isEffectivelyDead() && getTemplate()->getEnergyProduction() < 0)
+	{
+		// Dont add power if we are already disabled by command after we have died
+		return;
+	}
+
 	if (incoming) {
 		getControllingPlayer()->getEnergy()->objectEnteringInfluence(this);
 	} else {
@@ -3839,11 +4828,24 @@ void Object::onDisabledEdge(Bool becomingDisabled)
 	{
 		//@todo jkmcd - Colin suggested we rewrite this to use the interface stuff. I agree, but need
 		// to get some more bugs fixed today.
-		static NameKeyType radar = NAMEKEY("RadarUpgrade");
+		/*static NameKeyType radar = NAMEKEY("RadarUpgrade");
 		Module *mod = mod = findModule(radar);
 		if (mod) {
 			RadarUpgrade *radarMod = (RadarUpgrade*) mod;
 			if (radarMod->isAlreadyUpgraded()) {
+				// Need to decrement the count here, because we own a radar upgrade
+				if (becomingDisabled) {
+					controller->removeRadar(radarMod->getIsDisableProof());
+				} else {
+					controller->addRadar(radarMod->getIsDisableProof());
+				}
+			}
+		}*/
+		// IamInnocent - Done the Above
+		if (getRadarUpgradeInterface())
+		{
+			RadarUpgradeInterface *radarMod = getRadarUpgradeInterface();
+			if (radarMod->isUpgraded()) {
 				// Need to decrement the count here, because we own a radar upgrade
 				if (becomingDisabled) {
 					controller->removeRadar(radarMod->getIsDisableProof());
@@ -3870,21 +4872,39 @@ void Object::onDisabledEdge(Bool becomingDisabled)
 		static NameKeyType powerPlant = NAMEKEY("PowerPlantUpgrade");
 		static NameKeyType overCharge = NAMEKEY("OverchargeBehavior");
 
-		Module* mod = findModule(powerPlant);
-		if (mod) {
-			PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) mod;
-			if (powerPlantMod->isAlreadyUpgraded()) {
-				powerToAdjust += getTemplate()->getEnergyBonus();
+		for (BehaviorModule** b = m_behaviors; *b; ++b)
+		{
+			if ((*b)->getModuleNameKey() == powerPlant)
+			{
+				PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) *b;
+				if (powerPlantMod->isAlreadyUpgraded()) {
+					powerToAdjust += getTemplate()->getEnergyBonus();
+				}
+			}
+			if ((*b)->getModuleNameKey() == overCharge)
+			{
+				OverchargeBehavior *overChargeMod = (OverchargeBehavior*) *b;
+				if (overChargeMod->isOverchargeActive()) {
+					powerToAdjust += getTemplate()->getEnergyBonus();
+				}
 			}
 		}
 
-		mod = findModule(overCharge);
-		if (mod) {
-			OverchargeBehavior *overChargeMod = (OverchargeBehavior*) mod;
-			if (overChargeMod->isOverchargeActive()) {
-				powerToAdjust += getTemplate()->getEnergyBonus();
-			}
-		}
+		//Module* mod = findModule(powerPlant);
+		//if (mod) {
+		//	PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) mod;
+		//	if (powerPlantMod->isAlreadyUpgraded()) {
+		//		powerToAdjust += getTemplate()->getEnergyBonus();
+		//	}
+		//}
+
+		//mod = findModule(overCharge);
+		//if (mod) {
+		//	OverchargeBehavior *overChargeMod = (OverchargeBehavior*) mod;
+		//	if (overChargeMod->isOverchargeActive()) {
+		//		powerToAdjust += getTemplate()->getEnergyBonus();
+		//	}
+		//}
 
 		// Now, adjust the power for the player.
 		if (controller)
@@ -3977,6 +4997,7 @@ void Object::crc( Xfer *xfer )
 #endif // DEBUG_CRC
 
 	xfer->xferUnsignedInt(&m_weaponBonusCondition);
+	xfer->xferUnsignedInt(&m_weaponBonusConditionIC);
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -4069,6 +5090,12 @@ void Object::xfer( Xfer *xfer )
 	// builder id
 	xfer->xferObjectID( &m_builderID );
 
+	xfer->xferObjectID( &m_shielderID );
+
+	xfer->xferObjectID( &m_shieldingID );
+
+	xfer->xferUser( &m_shielderType, sizeof( ProtectionType ) );
+
 	// drawable id
 	Drawable *draw = getDrawable();
 	DrawableID drawableID = draw ? draw->getID() : INVALID_DRAWABLE_ID;
@@ -4083,6 +5110,10 @@ void Object::xfer( Xfer *xfer )
 
 	// internal name
 	xfer->xferAsciiString( &m_name );
+
+	xfer->xferAsciiString( &m_customDisabledTintToClear );
+
+	xfer->xferUser( &m_disabledTintToClear, sizeof(TintStatus) );
 
 	// status
 	if( version >= 8 )
@@ -4105,6 +5136,108 @@ void Object::xfer( Xfer *xfer )
 			{
 				ObjectStatusTypes status = (ObjectStatusTypes)(i+1);
 				m_status.set( MAKE_OBJECT_STATUS_MASK( status ) );
+			}
+		}
+	}
+
+	// Xfer Source Code from GameLogic.cpp
+	// Xfer-Hash_Map
+	// Might need checking.
+	if (version >= 7) 
+	{
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (ObjectCustomStatusType::const_iterator it = m_customWeaponBonusCondition.begin(); it != m_customWeaponBonusCondition.end(); ++it )
+			{
+				AsciiString bonusName = it->first;
+				Int flag = it->second;
+				xfer->xferAsciiString(&bonusName);
+				xfer->xferInt(&flag);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customWeaponBonusCondition.empty() == false)
+			{
+				DEBUG_CRASH(( "GameLogic::xfer - m_customWeaponBonusCondition should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				Int flag;
+				xfer->xferInt(&flag);
+				m_customWeaponBonusCondition[bonusName] = flag;
+			}
+		}
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (ObjectCustomStatusType::const_iterator it = m_customWeaponBonusConditionIC.begin(); it != m_customWeaponBonusConditionIC.end(); ++it )
+			{
+				AsciiString bonusNameIC = it->first;
+				Int flagIC = it->second;
+				xfer->xferAsciiString(&bonusNameIC);
+				xfer->xferInt(&flagIC);
+			}
+			AsciiString emptyIC;
+			xfer->xferAsciiString(&emptyIC);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customWeaponBonusConditionIC.empty() == false)
+			{
+				DEBUG_CRASH(( "GameLogic::xfer - mm_customWeaponBonusConditionIC should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusNameIC;
+				xfer->xferAsciiString(&bonusNameIC);
+				if (bonusNameIC.isEmpty())
+					break;
+				Int flagIC;
+				xfer->xferInt(&flagIC);
+				m_customWeaponBonusConditionIC[bonusNameIC] = flagIC;
+			}
+		}
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (ObjectCustomStatusType::const_iterator it = m_customStatus.begin(); it != m_customStatus.end(); ++it )
+			{
+				AsciiString statusName = it->first;
+				Int statusFlag = it->second;
+				xfer->xferAsciiString(&statusName);
+				xfer->xferInt(&statusFlag);
+			}
+			AsciiString empty2;
+			xfer->xferAsciiString(&empty2);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customStatus.empty() == false)
+			{
+				DEBUG_CRASH(( "GameLogic::xfer - m_customStatus should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString statusName;
+				xfer->xferAsciiString(&statusName);
+				if (statusName.isEmpty())
+					break;
+				Int statusFlag;
+				xfer->xferInt(&statusFlag);
+				m_customStatus[statusName] = statusFlag;
 			}
 		}
 	}
@@ -4232,6 +5365,20 @@ void Object::xfer( Xfer *xfer )
 	// health box offset
 	xfer->xferCoord3D( &m_healthBoxOffset );
 
+	xfer->xferReal( &m_invsqrt_mass );
+
+	//xfer->xferReal( &m_magnetLevitateHeight );
+
+	//xfer->xferUnsignedInt( &m_levitateCheckFrame );
+
+	//xfer->xferUnsignedInt( &m_levitateCheckCount );
+
+	//xfer->xferBool ( &m_dontLevitate );
+
+	xfer->xferBool ( &m_disabledPowerFromCommand );
+
+	xfer->xferUnsignedInt( &m_lastExitedFrame );
+
 	// Entered & exited housekeeping.
 	Int i;
 	xfer->xferByte(&m_numTriggerAreasActive);
@@ -4277,6 +5424,7 @@ void Object::xfer( Xfer *xfer )
 	if (m_formationID!=NO_FORMATION_ID) {
 		xfer->xferCoord2D(&m_formationOffset);
 	}
+	xfer->xferBool(&m_formationIsCommandMap);
 
 	// module count
 	UnsignedShort moduleCount = 0;
@@ -4373,6 +5521,101 @@ void Object::xfer( Xfer *xfer )
 
 	}
 
+	UnsignedShort equipIDCount = m_equipObjIDs.size();
+	UnsignedShort equipAttackableIDCount = m_equipAttackableObjIDs.size();
+	UnsignedShort lastEquipIDCount = m_lastEquipObjIDs.size();
+	UnsignedShort rejectKeysCount = m_rejectKeys.size();
+	xfer->xferUnsignedShort( &equipIDCount );
+	xfer->xferUnsignedShort( &equipAttackableIDCount );
+	xfer->xferUnsignedShort( &lastEquipIDCount );
+	xfer->xferUnsignedShort( &rejectKeysCount );
+	ObjectID equipObjID = INVALID_ID;
+	ObjectID equipAttackableObjID = INVALID_ID;
+	ObjectID lastEquipObjID = INVALID_ID;
+	AsciiString rejectKey = NULL;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		// go through all IDs
+		for (int i = 0; i < equipIDCount; i++)
+		{
+			equipObjID = m_equipObjIDs[i];
+			xfer->xferObjectID( &equipObjID );
+		}
+
+		for (int i_2 = 0; i_2 < equipAttackableIDCount; i_2++)
+		{
+			equipAttackableObjID = m_equipAttackableObjIDs[i_2];
+			xfer->xferObjectID( &equipAttackableObjID );
+		}
+
+		for (int i_3 = 0; i_3 < lastEquipIDCount; i_3++)
+		{
+			lastEquipObjID = m_lastEquipObjIDs[i_3];
+			xfer->xferObjectID( &lastEquipObjID );
+		}
+
+
+		for (int i_4 = 0; i_4 < rejectKeysCount; i_4++)
+		{
+			rejectKey = m_rejectKeys[i_4];
+			xfer->xferAsciiString( &rejectKey );
+		}
+
+	}
+	else
+	{
+		// this list should be empty on loading
+		if( m_equipObjIDs.size() != 0 || m_equipAttackableObjIDs.size() != 0 || m_lastEquipObjIDs.size() != 0 || m_rejectKeys.size() != 0 )
+		{
+
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_equipObjIDs, m_equipAttackableObjIDs, m_lastEquipObjIDs and m_rejectKeys should be empty but is not" ));
+			throw SC_INVALID_DATA;
+
+		}
+
+		// read all IDs
+		for( UnsignedShort i = 0; i < equipIDCount; ++i )
+		{
+			// read and register ID
+			xfer->xferObjectID( &equipObjID );
+			m_equipObjIDs.push_back(equipObjID);
+
+		}
+
+		for( UnsignedShort i_2 = 0; i_2 < equipAttackableIDCount; ++i_2 )
+		{
+			// read and register ID
+			xfer->xferObjectID( &equipAttackableObjID );
+			m_equipAttackableObjIDs.push_back(equipAttackableObjID);
+
+		}
+
+		for (int i_3 = 0; i_3 < lastEquipIDCount; i_3++)
+		{
+			// read and register ID
+			xfer->xferObjectID( &lastEquipObjID );
+			m_lastEquipObjIDs.push_back(lastEquipObjID);
+
+		}
+
+		for ( UnsignedShort i_4 = 0; i_4 < rejectKeysCount; ++i_4)
+		{
+			xfer->xferAsciiString( &rejectKey );
+			m_rejectKeys.push_back(rejectKey);
+		}
+
+
+	}
+
+	xfer->xferObjectID( &m_carbombConverterID );
+	xfer->xferObjectID( &m_hijackerID );
+	xfer->xferObjectID( &m_hijackingID );
+	xfer->xferObjectID( &m_equipToID );
+
+	xfer->xferObjectID( &m_assaultTransportID );
+
+	xfer->xferBool( &m_isMobMember );
 
 	if ( version >= 3 )
 	{
@@ -4383,6 +5626,42 @@ void Object::xfer( Xfer *xfer )
 	{
 		m_soleHealingBenefactorID = INVALID_ID;
 		m_soleHealingBenefactorExpirationFrame = 0;
+	}
+
+	UnsignedShort selectionBoundsToCount = m_selectionBoundsTo.size();
+	xfer->xferUnsignedShort( &selectionBoundsToCount );
+	ObjectID boundID = INVALID_ID;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+
+		// go through all IDs
+		for (int i_a = 0; i_a < selectionBoundsToCount; i_a++)
+		{
+			boundID = m_selectionBoundsTo[i_a];
+			xfer->xferObjectID( &boundID );
+		}
+
+	}
+	else
+	{
+		// this list should be empty on loading
+		if( m_selectionBoundsTo.size() != 0 )
+		{
+
+			DEBUG_CRASH(( "ScriptEngine::xfer - m_selectionBoundsTo should be empty but is not" ));
+			throw SC_INVALID_DATA;
+
+		}
+
+		// read all IDs
+		for( UnsignedShort i_a = 0; i_a < selectionBoundsToCount; ++i_a )
+		{
+			// read and register ID
+			xfer->xferObjectID( &boundID );
+			m_selectionBoundsTo.push_back(boundID);
+
+		}
+
 	}
 
 	// Doesn't need to be saved.  These are created as needed.  jba.
@@ -4517,7 +5796,79 @@ void Object::removeUpgrade( const UpgradeTemplate *upgradeT )
 		// Whoa, please note that while the function is called Object::RemoveUpgrade, it is not removing anything
 		// in the sense of undoing the effects.  It is just resetting the upgrade so it may be run again.
 		upgrade->resetUpgrade( upgradeT->getUpgradeMask() );
+
+		// Due to how the nature of how Object upgrade works, Upgrade Refresh needs to be redefined on a separate bool
+		if( upgrade->hasUpgradeRefresh() )
+		{
+			upgrade->forceRefreshMyUpgrade();
+			continue;
+		}
 	}
+
+	if(upgradeT)
+	{
+		//forceRefreshUpgradeStatus();
+		doObjectUpgradeChecks();
+	}
+}
+
+void Object::doObjectUpgradeChecks()
+{
+	if( testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || testStatus( OBJECT_STATUS_DESTROYED ) || getControllingPlayer() == NULL )
+		return; // The same as UpdateUpgradeModules.
+
+	// Upgrade Weapon Sets
+	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
+
+	// Update Contain Upgrades
+	ContainModuleInterface *cmod = getContain();
+	if( cmod )
+	{
+		cmod->doUpgradeChecks();
+	}
+
+	//Applicable currently for DeployStyleAIUpdate
+	if( getAIUpdateInterface() )
+	{
+		getAIUpdateInterface()->doUpgradeUpdate();
+	}
+
+	// refresh stealth to indicate whether they are allowed to stealth
+	if( getStealth() )
+	{
+		getStealth()->refreshUpdate();
+	}
+}
+
+void Object::doObjectStatusChecks()
+{
+	if( testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || testStatus( OBJECT_STATUS_DESTROYED ) )
+		return;
+
+	// Check Weapon Sets
+	m_weaponSet.updateWeaponSet(this);
+	doWeaponSetUpdate();
+
+	// Applicable to RiderChangeContain
+	ContainModuleInterface *cmod = getContain();
+	if( cmod )
+	{
+		cmod->doStatusChecks();
+	}
+
+	//AI Sleepy Updates
+	if( getAIUpdateInterface() )
+	{
+		getAIUpdateInterface()->doStatusUpdate();
+	}
+
+	// refresh stealth to indicate whether they are allowed to stealth
+	if( getStealth() )
+	{
+		getStealth()->refreshUpdate();
+	}
+	
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4556,6 +5907,12 @@ void Object::onCapture( Player *oldOwner, Player *newOwner )
 		if (isFactionStructure()) {
 			TheBuildAssistant->sellObject( this );
 		}
+	}
+
+	// refresh stealth to indicate whether they are allowed to stealth
+	if( getStealth() )
+	{
+		getStealth()->refreshUpdate();
 	}
 
 }
@@ -4661,13 +6018,23 @@ void Object::onDie( DamageInfo *damageInfo )
 		}
 	}
 
+	// Assault Transport Matters
+	removeMeFromAssaultTransport();
+	if( getAI() && getAI()->getAssaultTransportAIInterface() )
+	{
+		getAI()->update();
+	}
+
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setWeaponBonusCondition(WeaponBonusConditionType wst)
+void Object::setWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
 	m_weaponBonusCondition |= (1 << wst);
+
+	if(setIgnoreClear)
+		setWeaponBonusConditionIgnoreClear(wst);
 
 	if( oldCondition != m_weaponBonusCondition )
 	{
@@ -4677,15 +6044,128 @@ void Object::setWeaponBonusCondition(WeaponBonusConditionType wst)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst)
+void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
 	m_weaponBonusCondition &= ~(1 << wst);
+
+	if(setIgnoreClear)
+		clearWeaponBonusConditionIgnoreClear(wst);
 
 	if( oldCondition != m_weaponBonusCondition )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
+{
+	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+	// TO-DO: Change to Hash_Map. DONE.
+	ObjectCustomStatusType::iterator it = m_customWeaponBonusCondition.find(cst);
+
+	if (it != m_customWeaponBonusCondition.end()) 
+	{
+		it->second = 1;
+	}
+	else 
+	{
+		m_customWeaponBonusCondition[cst] = 1;
+	}
+
+	if(setIgnoreClear)
+		setCustomWeaponBonusConditionIgnoreClear(cst);
+
+	if( oldCondition.empty() || oldCondition != m_customWeaponBonusCondition )
+	{
+		// Our weapon bonus just changed, so we need to immediately update our weapons
+		m_weaponSet.weaponSetOnWeaponBonusChange(this);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
+{
+	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+	// TO-DO: Change to Hash_Map. DONE.
+	ObjectCustomStatusType::iterator it = m_customWeaponBonusCondition.find(cst);
+
+	if (it != m_customWeaponBonusCondition.end()) 
+	{
+		it->second = 0;
+	}
+	else 
+	{
+		m_customWeaponBonusCondition[cst] = 0;
+	}
+
+	if(setIgnoreClear)
+		clearCustomWeaponBonusConditionIgnoreClear(cst);
+
+	if( !oldCondition.empty() && oldCondition != m_customWeaponBonusCondition )
+	{
+		// Our weapon bonus just changed, so we need to immediately update our weapons
+		m_weaponSet.weaponSetOnWeaponBonusChange(this);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
+{
+	m_weaponBonusConditionIC |= (1 << wst); 
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
+{
+	m_weaponBonusConditionIC &= ~(1 << wst);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
+{
+	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionIC.find(cst);
+
+	if (it != m_customWeaponBonusConditionIC.end()) 
+	{
+		it->second = 1;
+	}
+	else 
+	{
+		m_customWeaponBonusConditionIC[cst] = 1;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
+{
+	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionIC.find(cst);
+
+	if (it != m_customWeaponBonusConditionIC.end()) 
+	{
+		it->second = 0;
+	}
+	else 
+	{
+
+		m_customWeaponBonusConditionIC[cst] = 0;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::testCustomWeaponBonusCondition(const AsciiString& cst) const
+{
+	ObjectCustomStatusType::const_iterator it = m_customWeaponBonusCondition.find(cst);
+
+	if (it != m_customWeaponBonusCondition.end() && it->second == 1) 
+	{
+		return TRUE;
+	}
+	else 
+	{
+		return FALSE;
 	}
 }
 
@@ -4799,6 +6279,15 @@ void Object::handlePartitionCellMaintenance()
 	handleShroud();
 	handleValueMap();
 	handleThreatMap();
+
+	// A lot of removable and destruction functions run this process, so its fair to use it to remove efficient drawables list
+	if(TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		// Redraw everything
+		//TheGameClient->clearEfficientDrawablesList();
+		if(getDrawable())
+			TheGameClient->informClientNewDrawable(getDrawable());
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5280,17 +6769,104 @@ void Object::setVisionSpied(Bool setting, Int byWhom)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doStatusDamage( ObjectStatusTypes status, Real duration )
+void Object::doStatusDamage( ObjectStatusTypes status, Real duration, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	if(m_statusDamageHelper)
-		m_statusDamageHelper->doStatusDamage(status, duration);
+		m_statusDamageHelper->doStatusDamage(status, duration, customStatus, customTintStatus, tintStatus);
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration )
+void Object::refreshStatusHelper()
+{ 
+	if(m_statusDamageHelper)
+		m_statusDamageHelper->refreshUpdate();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::transferStatusHelperData( HelperTransferData data )
+{
+	if(m_statusDamageHelper)
+		m_statusDamageHelper->transferData(data);
+}
+
+//-------------------------------------------------------------------------------------------------
+HelperTransferData Object::getStatusHelperData() const
+{
+	if(m_statusDamageHelper)
+		return m_statusDamageHelper->getHelperData();
+
+	HelperTransferData nullData;
+	return nullData;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	if(m_tempWeaponBonusHelper)
-		m_tempWeaponBonusHelper->doTempWeaponBonus(status, duration);
+		m_tempWeaponBonusHelper->doTempWeaponBonus(status, customStatus, duration, customTintStatus, tintStatus);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::refreshTempWeaponBonusHelper()
+{ 
+	if(m_tempWeaponBonusHelper)
+		m_tempWeaponBonusHelper->refreshUpdate();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::transferTempWeaponBonusHelperData( HelperTransferData data )
+{
+	if(m_tempWeaponBonusHelper)
+		m_tempWeaponBonusHelper->transferData(data);
+}
+
+//-------------------------------------------------------------------------------------------------
+HelperTransferData Object::getTempWeaponBonusHelperData() const
+{
+	if(m_tempWeaponBonusHelper)
+		return m_tempWeaponBonusHelper->getHelperData();
+
+	HelperTransferData nullData;
+	return nullData;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::appendDelayedCommand(GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments, UnsignedInt delay)
+{
+	if(m_delayedOrderHelper)
+		m_delayedOrderHelper->appendCommand(type, arguments, delay);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearDelayedCommand()
+{
+	if(m_delayedOrderHelper)
+		m_delayedOrderHelper->clearCommand();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setShieldByTargetID( ObjectID retargetID, ProtectionTypeFlags protectionTypes )
+{
+	m_shielderID = retargetID;
+	m_shielderType = protectionTypes;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setShieldingTargetID( ObjectID targetID, ProtectionTypeFlags protectionTypes )
+{
+	m_shieldingID = targetID;
+	m_shielderType = protectionTypes;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setShielding( ObjectID targetID, ProtectionTypeFlags protectionTypes )
+{
+	Object *target = TheGameLogic->findObjectByID( targetID );
+	if( target )
+	{
+		target->setShieldByTargetID(getID(), protectionTypes);
+		setShieldingTargetID(targetID, protectionTypes);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5302,10 +6878,179 @@ void Object::notifySubdualDamage( Real amount )
 	// If we are gaining subdual damage, we are slowly tinting
 	if( getDrawable() )
 	{
-		if( amount > 0 )
+		
+		// Attempt to Fix Subdual Tint Color Correction Issues
+		if( amount > 0 && getBodyModule()->isNearSubduedRange( -amount+1 , -amount*2+1 ) )
 			getDrawable()->setTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
 		else
 			getDrawable()->clearTintStatus(TINT_STATUS_GAINING_SUBDUAL_DAMAGE);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::notifySubdualDamageCustom( SubdualCustomNotifyData subdualData, const AsciiString& customStatus )
+{
+	if(m_subdualDamageHelper)
+	{
+		SubdualCustomData subdualNotifyData;
+		subdualNotifyData.damage = subdualData.damage;
+		subdualNotifyData.tintStatus = subdualData.tintStatus;
+		subdualNotifyData.customTintStatus = subdualData.customTintStatus;
+		subdualNotifyData.disableType = subdualData.disableType;
+
+		m_subdualDamageHelper->notifySubdualDamageCustom( subdualNotifyData, customStatus );
+	}
+	// If we are gaining subdual damage, we are slowly tinting
+	if( getDrawable() )
+	{
+		// Attempt to Fix Subdual Tint Color Correction Issues
+		if(subdualData.clearOnTrigger && subdualData.isSubdued && subdualData.hasDisable)
+		{
+			if(!subdualData.disableCustomTint.isEmpty() && getDrawable()->testCustomTintStatus( subdualData.disableCustomTint ) )
+				return;
+			else if( subdualData.disableCustomTint.isEmpty() && subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT && getDrawable()->testTintStatus(subdualData.disableTint) )
+				return;
+				
+			if(!subdualData.customTintStatus.isEmpty())
+			{
+				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
+			}
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(subdualData.tintStatus);
+			}
+
+			if(!subdualData.disableCustomTint.isEmpty())
+				getDrawable()->setAndClearCustomTintFast(subdualData.disableCustomTint);
+			else if (subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT)
+				getDrawable()->setAndClearTintFast(subdualData.disableTint);
+
+			return;
+		}
+		// Yeah...
+		else if( subdualData.clearOnTrigger && subdualData.hasDisable &&
+			( ( !subdualData.disableCustomTint.isEmpty() && getDrawable()->testCustomTintStatus( subdualData.disableCustomTint ) ) ||
+			( subdualData.disableCustomTint.isEmpty() && subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT && getDrawable()->testTintStatus(subdualData.disableTint) ) )
+		)
+		{
+			if(!subdualData.customTintStatus.isEmpty())
+			{
+				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
+			}
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(subdualData.tintStatus);
+			}
+
+			return;
+		}
+		// Two for trigger functions, two for non-trigger
+		else if( subdualData.damage > 0 && ( !subdualData.hasDisable || 
+				(( !subdualData.removeTintOnDisable || !isDisabledByType(subdualData.disableType) ) &&
+				( getBodyModule()->isNearSubduedRangeCustom( -subdualData.damage+1, -subdualData.damage*2+1, customStatus ) )) )
+		)
+		{
+			if(!subdualData.customTintStatus.isEmpty())
+			{
+				getDrawable()->setCustomTintStatus(subdualData.customTintStatus);
+			}
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->setTintStatus(subdualData.tintStatus);
+			}
+
+			if(subdualData.hasDisable && !isDisabledByType(subdualData.disableType))
+			{
+				if(!subdualData.disableCustomTint.isEmpty())
+					getDrawable()->clearCustomTintStatus(subdualData.disableCustomTint);
+				else if (subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT)
+					getDrawable()->clearTintStatus(subdualData.disableTint);
+			}
+		}
+		else
+		{
+			if(subdualData.hasDisable && isDisabledByType(subdualData.disableType))
+			{
+				if(!subdualData.disableCustomTint.isEmpty())
+					getDrawable()->setCustomTintStatus(subdualData.disableCustomTint);
+				else if (subdualData.disableTint > TINT_STATUS_INVALID && subdualData.disableTint < TINT_STATUS_COUNT)
+					getDrawable()->setTintStatus(subdualData.disableTint);
+			}
+
+			if(!subdualData.customTintStatus.isEmpty())
+			{
+				getDrawable()->clearCustomTintStatus(subdualData.customTintStatus);
+			}
+			else if (subdualData.tintStatus > TINT_STATUS_INVALID && subdualData.tintStatus < TINT_STATUS_COUNT) {
+				getDrawable()->clearTintStatus(subdualData.tintStatus);
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::transferSubdualHelperData(CustomSubdualCurrentHealMap data)
+{
+	if(m_subdualDamageHelper)
+		m_subdualDamageHelper->replaceSubdualDamageCustom(data);
+}
+
+//-------------------------------------------------------------------------------------------------
+CustomSubdualCurrentHealMap Object::getSubdualHelperData() const
+{
+	if(m_subdualDamageHelper)
+		return m_subdualDamageHelper->getSubdualHelperData();
+
+	CustomSubdualCurrentHealMap nullData;
+	return nullData;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::refreshSubdualHelper()
+{ 
+	if(m_subdualDamageHelper)
+		m_subdualDamageHelper->refreshUpdate();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::notifyChronoDamage(Real amount)
+{
+	if (m_chronoDamageHelper)
+		m_chronoDamageHelper->notifyChronoDamage(amount);
+
+	//Real progress = INT_TO_REAL(now - m_dieFrame) / INT_TO_REAL(m_destructionFrame - m_dieFrame);
+
+	BodyModuleInterface* body = getBodyModule();
+	Drawable* draw = getDrawable();
+	if (body != NULL && draw != NULL) {
+
+		Real chronoTh = TheGlobalData->m_chronoDamageDisableThreshold * body->getMaxHealth();
+		Real chronoDmg = body->getCurrentChronoDamageAmount();
+		if (chronoDmg > chronoTh) {
+			Real progress = (chronoDmg - chronoTh) / (body->getMaxHealth() - chronoTh);
+			progress = min(1.0f, max(0.0f, progress));
+
+			Real alpha0 = TheGlobalData->m_chronoDisableAlphaStart;
+			Real alpha1 = TheGlobalData->m_chronoDisableAlphaEnd;
+			Real opacity = (1.0 - progress) * alpha0 + progress * alpha1;
+
+			// DEBUG_LOG(("Object::notifyChronoDamage - progress = %f, alpha = %f\n", progress, opacity));
+
+			draw->setDrawableOpacity(opacity);
+			//draw->setEffectiveOpacity(opacity);
+			//draw->setSecondMaterialPassOpacity(opacity);
+
+		}
+		else if (amount < 0) {
+			draw->setDrawableOpacity(1.0);
+			// DEBUG_LOG(("Object::notifyChronoDamage - reset opacity\n"));
+		}
+	}	
+
+	//If we are gaining chrono damage, we are slowly tinting
+	if (getDrawable())
+	{
+		if (amount > 0)
+			getDrawable()->setTintStatus(TINT_STATUS_GAINING_CHRONO_DAMAGE);
+		else
+			getDrawable()->clearTintStatus(TINT_STATUS_GAINING_CHRONO_DAMAGE);
 	}
 }
 
@@ -5398,6 +7143,25 @@ void Object::doSpecialPowerAtLocation( const SpecialPowerTemplate *specialPowerT
 //-------------------------------------------------------------------------------------------------
 /** Execute special power */
 //-------------------------------------------------------------------------------------------------
+void Object::doSpecialPowerAtDrawable( const SpecialPowerTemplate *specialPowerTemplate, Drawable *drawable, UnsignedInt commandOptions, Bool forced )
+{
+
+	if (isDisabled())
+		return;
+
+	// sanity
+	if( !forced && TheSpecialPowerStore->canUseSpecialPower( this, specialPowerTemplate ) == FALSE )
+		return;
+
+	// get the module and execute
+	SpecialPowerModuleInterface *mod = getSpecialPowerModule( specialPowerTemplate );
+	if( mod )
+		mod->doSpecialPowerAtDrawable( drawable, commandOptions );
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Execute special power */
+//-------------------------------------------------------------------------------------------------
 void Object::doSpecialPowerUsingWaypoints( const SpecialPowerTemplate *specialPowerTemplate, const Waypoint *way, UnsignedInt commandOptions, Bool forced )
 {
 
@@ -5446,6 +7210,11 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 
 			case GUI_COMMAND_SWITCH_WEAPON:
 				{
+					// Clear Firing Tracker Bonuses First
+					Weapon* weapon = m_weaponSet.getCurWeapon();
+					if(weapon)
+						weapon->computeFiringTrackerBonusClear(this);
+					
 					WeaponSlotType weaponSlot = commandButton->getWeaponSlot();
 					// GUI_COMMAND_SWITCH_WEAPON switches until un-switched, or switched to something else.
 					setWeaponLock( weaponSlot, LOCKED_PERMANENTLY );
@@ -5457,7 +7226,14 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 				{
 					if( !BitIsSet( commandButton->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) && !BitIsSet( commandButton->getOptions(), NEED_TARGET_POS ) )
 					{
-						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
+						// Clear the Firing Tracker Bonuses First and Choose the most Prioritized Weapon
+						Weapon* weapon = m_weaponSet.getCurWeapon();
+
+						if(weapon)
+							weapon->computeFiringTrackerBonusClear(this);
+
+						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
+						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
 						//LOCATION BASED FIRE WEAPON
 						// TheSuperHackers @bugfix Caball009 09/08/2025 Position should be irrelevant, but aiAttackPosition requires a valid position pointer to avoid a crash.
 						ai->aiAttackPosition( getPosition(), commandButton->getMaxShotsToFire(), cmdSource );
@@ -5523,6 +7299,12 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -5530,11 +7312,13 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_BEACON_DELETE:
 			case GUI_COMMAND_SET_RALLY_POINT:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
 #endif
@@ -5607,7 +7391,13 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 							break;
 						}
 
-						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
+						// Clear Firing Tracker Bonuses First
+						Weapon* weapon = m_weaponSet.getCurWeapon();
+						if(weapon)
+							weapon->computeFiringTrackerBonus(this, obj);
+
+						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
+						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
 
 						if( BitIsSet( commandButton->getOptions(), ATTACK_OBJECTS_POSITION ) )
 						{
@@ -5630,6 +7420,7 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 				if( ai )
 				{
 					ai->aiEnter( obj, cmdSource );
@@ -5648,6 +7439,12 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -5658,6 +7455,7 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
 			case GUI_COMMAND_SWITCH_WEAPON:
+			case GUI_COMMAND_DISABLE_POWER:
 
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
@@ -5722,7 +7520,15 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 						{
 							break;
 						}
-						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_TEMPORARILY );
+
+						// Clear the Firing Tracker Bonuses First and Choose the most Prioritized Weapon
+						Weapon* weapon = m_weaponSet.getCurWeapon();
+
+						if(weapon)
+							weapon->computeFiringTrackerBonusClear(this);
+
+						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
+						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
 						ai->aiAttackPosition( pos, commandButton->getMaxShotsToFire(), cmdSource );
 					}
 					else
@@ -5742,6 +7548,12 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -5751,6 +7563,7 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_SELL:
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
@@ -5758,6 +7571,7 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_SWITCH_WEAPON:
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
 #endif
@@ -5808,6 +7622,12 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -5818,6 +7638,7 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_FIRE_WEAPON:
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
@@ -5825,6 +7646,7 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_SWITCH_WEAPON:
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
 #endif
@@ -5846,6 +7668,27 @@ void Object::clearLeechRangeModeForAllWeapons()
 /** Search our update modules for a production update interface and return it if one is found */
 // ------------------------------------------------------------------------------------------------
 ProductionUpdateInterface* Object::getProductionUpdateInterface( void )
+{
+	ProductionUpdateInterface *pui;
+
+	// tell our update modules that we intend to do this special power.
+	for( BehaviorModule** u = m_behaviors; *u; ++u )
+	{
+
+		pui = (*u)->getProductionUpdateInterface();
+		if( pui )
+			return pui;
+
+	}
+
+	return NULL;
+
+}
+
+// ------------------------------------------------------------------------------------------------
+/** Search our update modules for a production update interface and return it if one is found */
+// ------------------------------------------------------------------------------------------------
+const ProductionUpdateInterface* Object::getProductionUpdateInterface( void ) const
 {
 	ProductionUpdateInterface *pui;
 
@@ -6411,6 +8254,24 @@ Bool Object::hasCountermeasures() const
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool Object::hasCountermeasuresExpanded(const Object* projectile) const
+{
+	const CountermeasuresBehaviorInterface* cbi = getCountermeasuresBehaviorInterface();
+	if( cbi && cbi->isActive() )
+	{
+		if( ( isAirborneTarget() && cbi->getCountermeasuresNoAirborne() == TRUE ) || 
+				( !isAirborneTarget() && cbi->getCountermeasuresConsiderGround() == FALSE ) )
+			return FALSE;
+
+		KindOfMaskType CountermeasuresKindOfs = cbi->getCountermeasuresKindOfs();
+		if(CountermeasuresKindOfs == KINDOFMASK_NONE && projectile->isKindOf( KINDOF_SMALL_MISSILE ) ||
+				projectile->isAnyKindOf(CountermeasuresKindOfs))
+			return TRUE;
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::reportMissileForCountermeasures( Object *missile )
 {
 	for( BehaviorModule** i = getBehaviorModules(); *i; ++i )
@@ -6441,3 +8302,762 @@ ObjectID Object::calculateCountermeasureToDivertTo( const Object& victim )
 	}
 	return INVALID_ID;
 }
+
+//-------------------------------------------------------------------------------------------------
+void Object::doClearTunnelContainTargetID()
+{
+	// Reset targetID each time ordering an attack
+	if( getContain() && getContain()->isTunnelContain() )
+		getContain()->clearTargetID();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setEquipObjectID(ObjectID equipObjID)
+{
+	if(equipObjID == INVALID_ID)
+		return;
+
+	m_equipObjIDs.push_back(equipObjID);
+	m_lastEquipObjIDs.push_back(equipObjID);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setEquipAttackableObjectID(ObjectID equipObjID)
+{
+	if(equipObjID == INVALID_ID)
+		return;
+
+	m_equipAttackableObjIDs.push_back(equipObjID);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearEquipObjectID(ObjectID equipObjID)
+{ 
+	if(equipObjID == INVALID_ID)
+		return;
+
+	// Remove the ID from the Equip list
+	std::vector<ObjectID>::iterator it;
+	for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end();)
+	{
+		if (equipObjID == (*it))
+		{
+			it = m_equipObjIDs.erase(it);
+			break;
+		}
+		++it;
+	}
+
+	// Also from the Equip Attackable list, if any
+	std::vector<ObjectID>::iterator it_2;
+	for (it_2 = m_equipAttackableObjIDs.begin(); it_2 != m_equipAttackableObjIDs.end();)
+	{
+		if (equipObjID == (*it_2))
+		{
+			it_2 = m_equipAttackableObjIDs.erase(it_2);
+			break;
+		}
+		++it_2;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearLastEquipObjectID(ObjectID equipObjID)
+{ 
+	if(equipObjID == INVALID_ID)
+		return;
+
+	// Remove the ID from the Equip list
+	std::vector<ObjectID>::iterator it;
+	for (it = m_lastEquipObjIDs.begin(); it != m_lastEquipObjIDs.end();)
+	{
+		if (equipObjID == (*it))
+		{
+			it = m_lastEquipObjIDs.erase(it);
+			break;
+		}
+		++it;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setRejectKey(const std::vector<AsciiString>& keys)
+{ 
+	if(keys.empty())
+		return;
+
+	// Objects with the same Reject keys cannot Equip and set new reject keys with the same name
+	// No need to check if the Reject Key is already present
+	for(std::vector<AsciiString>::const_iterator it = keys.begin(); it != keys.end(); ++it)
+	{
+		m_rejectKeys.push_back(*it);
+	}
+}
+
+void Object::clearRejectKey(const std::vector<AsciiString>& keys)
+{ 
+	if(keys.empty())
+		return;
+
+	// Remove the ID from the Equip list
+	for(std::vector<AsciiString>::const_iterator it2 = keys.begin(); it2 != keys.end(); ++it2)
+	{
+		std::vector<AsciiString>::iterator it;
+		for (it = m_rejectKeys.begin(); it != m_rejectKeys.end();)
+		{
+			if ((*it) == (*it2))
+			{
+				it = m_rejectKeys.erase(it);
+				break;
+			}
+			++it;
+		}
+	}
+}
+
+Bool Object::hasRejectKey(const std::vector<AsciiString>& keys) const
+{
+	if(keys.empty())
+		return FALSE;
+	
+	for(std::vector<AsciiString>::const_iterator it = m_rejectKeys.begin(); it != m_rejectKeys.end(); ++it)
+	{
+		for(std::vector<AsciiString>::const_iterator it2 = keys.begin(); it2 != keys.end(); ++it2)
+		{
+			if((*it) == (*it2))
+				return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setContainedPosition()
+{
+	if(m_equipToID != INVALID_ID)
+	{
+		Object* equipObject = TheGameLogic->findObjectByID( m_equipToID );
+		if ( equipObject )
+		{
+			setPosition( equipObject->getPosition() );
+		}
+	}
+	else if(getContainedBy())
+	{
+		setPosition( getContainedBy()->getPosition() );
+	}
+	else if(m_hijackingID != INVALID_ID)
+	{
+		Object* hijackedObject = TheGameLogic->findObjectByID( m_hijackingID );
+		if ( hijackedObject )
+		{
+			setPosition( hijackedObject->getPosition() );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setHijackerID(ObjectID HijackerID)
+{
+	m_hijackerID = HijackerID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setCarBombConverterID(ObjectID ConverterID)
+{
+	m_carbombConverterID = ConverterID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setEquipToID(ObjectID ID)
+{
+	m_equipToID = ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setHijackingID(ObjectID ID)
+{
+	m_hijackingID = ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID)
+{
+	if( testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
+	{
+		Object *converter = TheGameLogic->findObjectByID( m_carbombConverterID );
+
+		if(converter)
+		{
+			HijackerUpdateInterface *hijackerUpdate = converter->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setUpdate( TRUE );
+				// If I am self healing or the damager is me dont deal damage to me 
+				if(damagerID == m_carbombConverterID || checkHealed)
+					hijackerUpdate->setNoSelfDamage( TRUE );
+				
+				hijackerUpdate->setClear( checkClear );
+					
+				if(checkDie)
+					hijackerUpdate->setEject( TRUE );
+				else if(checkHealed)
+					hijackerUpdate->setHealed( TRUE );
+			}
+		}
+	}
+	
+	if( testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
+	{
+		Object *hijacker = TheGameLogic->findObjectByID( m_hijackerID );
+
+		if(hijacker)
+		{
+			HijackerUpdateInterface *hijackerUpdate = hijacker->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setUpdate( TRUE );
+				// If I am self healing or the damager is me dont deal damage to me 
+				if(damagerID == m_hijackerID || checkHealed)
+					hijackerUpdate->setNoSelfDamage( TRUE );
+				
+				hijackerUpdate->setClear( checkClear );
+					
+				if(checkDie)
+					hijackerUpdate->setEject( TRUE );
+				else if(checkHealed)
+					hijackerUpdate->setHealed( TRUE );
+			}
+		}
+	}
+
+	if( !m_equipObjIDs.empty() )
+	{
+		Bool isEquippedInMe = FALSE;
+		Object *damager = TheGameLogic->findObjectByID( damagerID );
+
+		// Find if the damager is equipped in me. If so, does things differently
+		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		{
+			if((*it) == damagerID)
+			{
+				isEquippedInMe = TRUE;
+				break;
+			}
+		}
+		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		{
+			Object *equipObj = TheGameLogic->findObjectByID( (*it) );
+
+			if(equipObj)
+			{
+				HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
+				if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+				{
+					hijackerUpdate->setUpdate( TRUE );
+
+					// If I am self healing or the damager is my ally and is from the equipped object, dont deal damage to me
+					if((damager && equipObj->getRelationship( damager ) == ALLIES && isEquippedInMe ) || checkHealed)
+						hijackerUpdate->setNoSelfDamage( TRUE );
+
+					hijackerUpdate->setClear( checkClear );
+					hijackerUpdate->setParasiteCheckKeys( clearKeys );
+
+					if(checkDie)
+						hijackerUpdate->setEject( TRUE );
+					else if(checkHealed)
+						hijackerUpdate->setHealed( TRUE );
+				}
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite)
+{
+	if( transferHijacker && testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
+	{
+		Object *converter = TheGameLogic->findObjectByID( m_carbombConverterID );
+
+		if(converter)
+		{
+			HijackerUpdateInterface *hijackerUpdate = converter->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setRetargetObject(transferToID);
+			}
+		}
+	}
+	
+	if( transferHijacker && testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
+	{
+		Object *hijacker = TheGameLogic->findObjectByID( m_hijackerID );
+
+		if(hijacker)
+		{
+			HijackerUpdateInterface *hijackerUpdate = hijacker->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+			{
+				hijackerUpdate->setRetargetObject(transferToID);
+			}
+		}
+	}
+
+	if( !m_equipObjIDs.empty() && (transferEquipper || transferParasite) )
+	{
+		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		{
+			Object *equipObj = TheGameLogic->findObjectByID( (*it) );
+
+			if(equipObj)
+			{
+				HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
+				if( hijackerUpdate && hijackerUpdate->getTargetObject() )
+				{
+					if ( (hijackerUpdate->getHijackType() == HIJACK_PARASITE && transferParasite) ||
+						 (hijackerUpdate->getHijackType() == HIJACK_EQUIP && transferEquipper) )
+					{
+						hijackerUpdate->setRetargetObject(transferToID);
+					}
+					
+				}
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::checkToSquishHijack(const Object *other) const
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+
+	if( !m_lastEquipObjIDs.empty() )
+	{
+		for (std::vector<ObjectID>::const_iterator it = m_lastEquipObjIDs.begin(); it != m_lastEquipObjIDs.end(); ++it)
+		{
+			//don't crush the equipper after it has been removed!
+			if(other->getID() == (*it) && other->getLastExitedFrame() > now)
+				return false;
+		}
+	}
+	
+	if( m_carbombConverterID != INVALID_ID && other->getID() == m_carbombConverterID && other->getLastExitedFrame() > now)
+	{
+		//don't crush the converter after it has been removed!
+		return false;
+	}
+	
+	if( m_hijackerID != INVALID_ID && other->getID() == m_hijackerID && other->getLastExitedFrame() > now)
+	{
+		//don't crush the hijacker after it has been removed!
+		return false;
+	}
+
+	return true;
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::registerAssaultTransportID(ObjectID transportID)
+{
+	m_assaultTransportID = transportID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::removeMeFromAssaultTransport(ObjectID replaceID)
+{
+	if(m_assaultTransportID == INVALID_ID)
+		return;
+
+	Object *transport = TheGameLogic->findObjectByID( m_assaultTransportID );
+	// Don't count dead assault transports, they give final orders
+	AIUpdateInterface *ai = transport && !transport->isEffectivelyDead() ? transport->getAI() : NULL;
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			atInterface->removeMember( getID() );
+			if(replaceID != INVALID_ID)
+				atInterface->addMember( replaceID );
+		}
+	}
+	m_assaultTransportID = INVALID_ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doAssaultTransportHealthUpdate()
+{
+	if(m_assaultTransportID == INVALID_ID)
+		return;
+
+	Object *transport = TheGameLogic->findObjectByID( m_assaultTransportID );
+	// Don't count dead assault transports, they give final orders
+	AIUpdateInterface *ai = transport && !transport->isEffectivelyDead() ? transport->getAI() : NULL;
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			atInterface->checkPassengerHealth( getID() );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlaveBehaviorUpdate( Bool doSlaver )
+{
+	// If I do not have a slaver module, don't update me
+	if(m_noSlavedBehavior && m_noSlaverBehavior)
+		return;
+
+	m_noSlavedBehavior = TRUE;
+	m_noSlaverBehavior = TRUE;
+	Bool doneSlaver = FALSE;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		// SpawnBehavior Sleepy Updates
+		if(doSlaver && !doneSlaver)
+		{
+			SpawnBehaviorInterface *spawnInterface = (*m)->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				spawnInterface->friend_refreshUpdate();
+				m_noSlaverBehavior = FALSE;
+				doneSlaver = TRUE;
+				continue;
+			}
+		}
+		
+		SlavedUpdateInterface* sdu = (*m)->getSlavedUpdateInterface();
+		if ( !sdu )
+			continue;
+
+		ObjectID slaverID = sdu->getSlaverID();
+		if ( slaverID != INVALID_ID )
+		{
+			Object *slaver = TheGameLogic->findObjectByID( slaverID );
+			if ( slaver )
+			{
+				SpawnBehaviorInterface *slaverInterface = slaver->getSpawnBehaviorInterface();
+				if( slaverInterface )
+				{
+					slaverInterface->friend_refreshUpdate();
+					m_noSlavedBehavior = FALSE;
+				}
+			}
+		}
+
+		break;//only expect one slavedupdate, so stop searching
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doWeaponSetUpdate()
+{
+	// IamInnocent - This triggers everytime Statuses Changed, which is very common.
+	// No demo trap update, we stop here
+	if(m_noDemoTrapUpdate)
+		return;
+	
+	// Demo Trap Update
+	m_noDemoTrapUpdate = TRUE;
+
+	static NameKeyType key_DemoTrapUpdate = NAMEKEY("DemoTrapUpdate");
+	DemoTrapUpdate *dtu = (DemoTrapUpdate*)findUpdateModule(key_DemoTrapUpdate);
+	if( dtu )
+	{
+		dtu->refreshUpdate();
+		m_noDemoTrapUpdate = FALSE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doObjectLocomotorUpdate()
+{
+	doSlavedUpdate(FALSE);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doMovingUpdate()
+{
+	doSlavedUpdate(TRUE);
+
+	// No float update, we stop here
+	if(m_noFloatUpdate)
+		return;
+	
+	// Float Update
+	m_noFloatUpdate = TRUE;
+	
+	static NameKeyType key_float = NAMEKEY( "FloatUpdate" );
+	FloatUpdate *floatUpdate = (FloatUpdate *)findUpdateModule( key_float );
+
+	if( floatUpdate )
+	{
+		floatUpdate->refreshUpdate();
+		m_noFloatUpdate = FALSE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doMobMemberSlavedUpdate()
+{
+	doSlavedUpdate(FALSE);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlavedUpdate( Bool doSlaver )
+{
+	// I had just updated, don't iterate through my behaviors.
+	if(m_isMobMember && m_mobJustUpdated)
+		return;
+
+	// If I do not have a slaved module, don't update me
+	if(m_noSlavedBehavior && !doSlaver)
+		return;
+
+	// If I do not have a slaver module, don't update me
+	if(m_noSlaverBehavior && m_noSlavedBehavior)
+		return;
+
+	m_noSlavedBehavior = TRUE;
+	m_noSlaverBehavior = TRUE;
+
+	//static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		if(doSlaver)
+		{
+			// if we are the slaver, get the interface and update all the mobs
+			SpawnBehaviorInterface *spawnInterface = (*m)->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				m_noSlaverBehavior = FALSE;
+				spawnInterface->updateMobMembers();
+				// If this module is a slaver, and is not a slave, we stop here
+				if(!(*m)->getSlavedUpdateInterface())
+					return;
+			}
+		}
+
+		// if we are one among all, get the interface and update all the mobs
+		SlavedUpdateInterface* sdu = (*m)->getSlavedUpdateInterface();
+		if ( !sdu )
+			continue;
+
+		m_noSlavedBehavior = FALSE;
+
+		//if((*m)->getModuleNameKey() == key_MobMemberSlavedUpdate)
+		if(m_isMobMember)
+		{
+			ObjectID slaverID = sdu->getSlaverID();
+			if ( slaverID != INVALID_ID )
+			{
+				Object *slaver = TheGameLogic->findObjectByID( slaverID );
+				if ( slaver )
+				{
+					SpawnBehaviorInterface *slaverInterface = slaver->getSpawnBehaviorInterface();
+					if( slaverInterface )
+					{
+						slaverInterface->updateMobMembers();
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			sdu->friend_refreshUpdate();
+		}
+	}
+	
+	/*static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
+	MobMemberSlavedUpdate *MMSUpdate = (MobMemberSlavedUpdate*)findUpdateModule( key_MobMemberSlavedUpdate );
+	if( MMSUpdate )
+	{
+		Object *slaver = TheGameLogic->findObjectByID(MMSUpdate->getSlaverID());
+		if ( slaver )
+		{
+			SpawnBehaviorInterface *spawnInterface = slaver->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				spawnInterface->updateMobMembers();
+			}
+		}
+	}*/
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlowDeathRefreshUpdate()
+{
+	// I'm not dead yet, don't update me
+	if(!isEffectivelyDead() && !m_hasBattleBusSlowDeathBehavior && !m_checkSlowDeathBehavior)
+		return;
+
+	// If I do not have a slow death behavior module, don't update me
+	if(m_noSlowDeathBehavior)
+		return;
+
+	// Controversial, if I have a Slow Death Layer Update, don't update me, update Layer Update instead
+	if(m_hasSlowDeathLayerUpdate && !m_hasBattleBusSlowDeathBehavior && !m_checkSlowDeathBehavior)
+		return;
+
+	m_noSlowDeathBehavior = TRUE;
+
+	static NameKeyType key_BattleBusSlowDeathBehavior = NAMEKEY("BattleBusSlowDeathBehavior");
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		if (m_checkSlowDeathBehavior)
+		{
+			if(!m_hasBattleBusSlowDeathBehavior && (*m)->getModuleNameKey() == key_BattleBusSlowDeathBehavior)
+				m_hasBattleBusSlowDeathBehavior = TRUE;
+
+			if(m_hasSlowDeathLayerUpdate && !m_hasBattleBusSlowDeathBehavior)
+				continue;
+		}
+		
+		SlowDeathBehaviorInterface* sdu = (*m)->getSlowDeathBehaviorInterface();
+
+		if (!sdu)
+			continue;
+		
+		if(sdu->friend_isSlowDeathActivated())
+			sdu->friend_refreshUpdate();
+		m_noSlowDeathBehavior = FALSE;
+	}
+
+	m_checkSlowDeathBehavior = FALSE;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlowDeathLayerUpdate(Bool hitTree)
+{
+	// I'm not dead yet, don't update me
+	if(!isEffectivelyDead())
+		return;
+
+	// If I do not have a slow death behavior module, don't update me
+	if(m_noSlowDeathBehavior || m_noSlowDeathLayerUpdate)
+		return;
+
+	m_noSlowDeathLayerUpdate = TRUE;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		SlowDeathBehaviorInterface* sdu = (*m)->getSlowDeathBehaviorInterface();
+		if (!sdu)
+			continue;
+		
+		m_noSlowDeathLayerUpdate = sdu->layerUpdate(hitTree);
+		if(!m_noSlowDeathLayerUpdate)
+			m_hasSlowDeathLayerUpdate = TRUE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::isDozerDoingAnyTasks() const
+{
+	const DozerAIInterface *dozerAI = getAI() ? getAI()->getDozerAIInterface() : NULL;
+	if( dozerAI && dozerAI->getCurrentTask() != DOZER_TASK_INVALID )
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::isWeaponSetRestricted() const
+{
+	return m_weaponSet.isRestricted();
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::isDisguised() const
+{
+	return getStealth() && getStealth()->isDisguised();
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::hasDetectedDisguise() const
+{
+	return getStealth() && !testStatus( OBJECT_STATUS_DISGUISED ) && getStealth()->hasLastDisguiseTemplate();
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::hasDisguiseAndIsNotDetected() const
+{
+	return getStealth() && testStatus( OBJECT_STATUS_DISGUISED ) && getStealth()->hasLastDisguiseTemplate();
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::showCashText() const
+{
+	// If I am not an enemy, always show cash text
+	if(ThePlayerList->getLocalPlayer()->getRelationship(getTeam()) != ENEMIES)
+		return TRUE;
+
+	// If the configuration is on, don't show if I am invisible
+	if(TheGlobalData->m_hideCashTextFromEnemiesInvisibleUnitsOnly)
+	{
+		if( getStealth() && !testStatus( OBJECT_STATUS_DETECTED ) && (hasDisguiseAndIsNotDetected() || testStatus(OBJECT_STATUS_STEALTHED)) )
+			return FALSE;
+		else
+			return TRUE;
+	}
+
+	// Don't show to enemies
+	if(TheGlobalData->m_hideCashTextFromEnemies)
+		return FALSE;
+	else
+		return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setSelectablesBoundTo(const std::vector<ObjectID>& IDs)
+{
+	for(std::vector<ObjectID>::const_iterator it = IDs.begin(); it != IDs.end(); ++it)
+	{
+		if((*it) != getID())
+		{
+			m_selectionBoundsTo.push_back(*it);
+		}
+	}
+}
+
+//=============================================================================
+//== Custom Cursor List
+//=============================================================================
+const AsciiString& Object::getGenericInvalidCursorName() const {return getTemplate()->friend_getGenericInvalidCursorName();	}
+const AsciiString& Object::getSelectingCursorName() const {return getTemplate()->friend_getSelectingCursorName();	}
+const AsciiString& Object::getMoveToCursorName() const {return getTemplate()->friend_getMoveToCursorName();	}
+const AsciiString& Object::getAttackMoveToCursorName() const {return getTemplate()->friend_getAttackMoveToCursorName();	}
+const AsciiString& Object::getWaypointCursorName() const {return getTemplate()->friend_getWaypointCursorName();	}
+const AsciiString& Object::getAttackObjectCursorName() const {return getTemplate()->friend_getAttackObjectCursorName();	}
+const AsciiString& Object::getForceAttackObjectCursorName() const {return getTemplate()->friend_getForceAttackObjectCursorName();	}
+const AsciiString& Object::getForceAttackGroundCursorName() const {return getTemplate()->friend_getForceAttackGroundCursorName();	}
+const AsciiString& Object::getOutrangeCursorName() const {return getTemplate()->friend_getOutrangeCursorName();	}
+const AsciiString& Object::getGetRepairAtCursorName() const {return getTemplate()->friend_getGetRepairAtCursorName();	}
+const AsciiString& Object::getDockCursorName() const {return getTemplate()->friend_getDockCursorName();	}
+const AsciiString& Object::getGetHealedCursorName() const {return getTemplate()->friend_getGetHealedCursorName();	}
+const AsciiString& Object::getDoRepairCursorName() const {return getTemplate()->friend_getDoRepairCursorName();	}
+const AsciiString& Object::getResumeConstructionCursorName() const {return getTemplate()->friend_getResumeConstructionCursorName();	}
+const AsciiString& Object::getEnterCursorName() const {return getTemplate()->friend_getEnterCursorName();	}
+const AsciiString& Object::getEnterAggressiveCursorName() const {return getTemplate()->friend_getEnterAggressiveCursorName();	}
+const AsciiString& Object::getSetRallyPointCursorName() const {return getTemplate()->friend_getSetRallyPointCursorName();	}
+const AsciiString& Object::getBuildCursorName() const {return getTemplate()->friend_getBuildCursorName();	}
+const AsciiString& Object::getInvalidBuildCursorName() const {return getTemplate()->friend_getInvalidBuildCursorName();	}
+const AsciiString& Object::getSalvageCursorName() const {return getTemplate()->friend_getSalvageCursorName();	}
+
+Bool Object::useMyGetRepairAtCursor() const {return getTemplate()->friend_getUseMyGetRepairAtCursor();	}
+Bool Object::useMyDockCursor() const {return getTemplate()->friend_getUseMyDockCursor();	}
+Bool Object::useMyGetHealedCursor() const {return getTemplate()->friend_getUseMyGetHealedCursor();	}
+Bool Object::useMyEnterCursor() const {return getTemplate()->friend_getUseMyEnterCursor();	}
+Bool Object::useMySalvageCursor() const {return getTemplate()->friend_getUseMySalvageCursor();	}

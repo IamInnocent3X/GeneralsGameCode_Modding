@@ -38,6 +38,7 @@ class LifetimeUpdateModuleData : public UpdateModuleData
 public:
 	UnsignedInt m_minFrames;
 	UnsignedInt m_maxFrames;
+	Bool m_showProgressBar;
 
 	LifetimeUpdateModuleData()
 	{
@@ -52,6 +53,7 @@ public:
 		{
 			{ "MinLifetime",					INI::parseDurationUnsignedInt,		NULL, offsetof( LifetimeUpdateModuleData, m_minFrames ) },
 			{ "MaxLifetime",					INI::parseDurationUnsignedInt,		NULL, offsetof( LifetimeUpdateModuleData, m_maxFrames ) },
+			{ "ShowProgressBar",					INI::parseBool,		NULL, offsetof( LifetimeUpdateModuleData, m_showProgressBar ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -72,13 +74,18 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	void setLifetimeRange( UnsignedInt minFrames, UnsignedInt maxFrames );
+	void resetLifetime(void);
 	UnsignedInt getDieFrame() const { return m_dieFrame; }
 
 	virtual UpdateSleepTime update( void );
+
+	Real getProgress();
+	inline Bool showProgressBar(void) const { return getLifetimeUpdateModuleData()->m_showProgressBar; }
 
 private:
 
 	UnsignedInt calcSleepDelay(UnsignedInt minFrames, UnsignedInt maxFrames);
 
 	UnsignedInt m_dieFrame;
+	UnsignedInt m_startDieFrame;  ///< for progress bar; When the countdown starts
 };

@@ -73,7 +73,8 @@ public:
 	enum TextureMapMode {
 		UNIFORM_WIDTH_TEXTURE_MAP =	0x00000000,	// Entire line uses one row of texture (constant V)
 		UNIFORM_LENGTH_TEXTURE_MAP =	0x00000001, // Entire line uses one row of texture stretched length-wise
-		TILED_TEXTURE_MAP =				0x00000002	// Tiled continuously over line
+		TILED_TEXTURE_MAP =				0x00000002,	// Tiled continuously over line
+		GRID_TILED_TEXTURE_MAP = 0x00000004  // Like TILED, but with dynamic U coordinates
 	};
 
 	void					Init(const W3dEmitterLinePropertiesStruct & props);
@@ -91,6 +92,7 @@ public:
 	TextureMapMode		Get_Texture_Mapping_Mode(void) const;
 	float					Get_Texture_Tile_Factor(void) const					{ return TextureTileFactor; }
 	Vector2				Get_UV_Offset_Rate(void) const;
+	Vector2				Get_Current_UV_Offset(void) const { return CurrentUVOffset; }
 	int					Is_Merge_Intersections(void) const					{ return Bits & MERGE_INTERSECTIONS; }
 	int					Is_Freeze_Random(void) const							{ return Bits & FREEZE_RANDOM; }
 	int					Is_Sorting_Disabled(void) const						{ return Bits & DISABLE_SORTING; }
@@ -108,6 +110,7 @@ public:
 	void					Set_Texture_Mapping_Mode(TextureMapMode mode);
 	void					Set_Texture_Tile_Factor(float factor);	// Might be clamped if too high
 	void					Set_Current_UV_Offset(const Vector2 & offset);
+	void					Set_U_Scale(float scale);
 	void					Set_UV_Offset_Rate(const Vector2 &rate);
 	void					Set_Merge_Intersections(int onoff)					{ if (onoff) { Bits |= MERGE_INTERSECTIONS; } else { Bits &= ~MERGE_INTERSECTIONS; }; }
 	void					Set_Freeze_Random(int onoff)							{ if (onoff) { Bits |= FREEZE_RANDOM; } else { Bits &= ~FREEZE_RANDOM; }; }
@@ -158,6 +161,8 @@ private:
 	unsigned int					LastUsedSyncTime;		// Last sync time used
 	Vector2							CurrentUVOffset;		// Current UV offset
 	Vector2							UVOffsetDeltaPerMS;	// Amount to increase offset each millisec
+	float							UScale;				//U coordinate scale for grid animation
+	
 
 	// Various flags
 	enum BitShiftOffsets {

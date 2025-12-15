@@ -80,7 +80,23 @@ const char* const DamageTypeFlags::s_bitNameList[] =
 	"MICROWAVE",
 	"KILL_GARRISONED",
 	"STATUS",
-
+	// Generic additional damage types (no special logic)
+	"SONIC",
+	"ACID",
+	"JET_BOMB",
+	"ANTI_TANK_GUN",
+	"ANTI_TANK_MISSILE",
+	"ANTI_AIR_GUN",
+	"ANTI_AIR_MISSILE",
+	"ARTILLERY",
+	"SEISMIC",
+	"RAD_BEAM",
+	"TESLA",
+	// Specific damage types with special logic attached
+	"CHRONO_GUN",
+	"CHRONO_UNRESISTABLE",
+	//"ZOMBIE_VIRUS",  // TODO
+	//"MIND_CONTROL",  // TODO
 	NULL
 };
 static_assert(ARRAY_SIZE(DamageTypeFlags::s_bitNameList) == DamageTypeFlags::NumBits + 1, "Incorrect array size");
@@ -160,6 +176,21 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	xfer->xferReal( &m_shockWaveAmount );
 	xfer->xferReal( &m_shockWaveRadius );
 	xfer->xferReal( &m_shockWaveTaperOff );
+	xfer->xferBool( &m_shockWaveAffectsAirborne );
+	xfer->xferBool( &m_shockWavePullsAirborne );
+
+	xfer->xferCoord3D(&m_magnetVector);
+	xfer->xferReal( &m_magnetAmount );
+	xfer->xferReal( &m_magnetLiftHeight );
+	xfer->xferReal( &m_magnetLiftHeightSecond );
+	xfer->xferReal( &m_magnetLiftForce );
+	xfer->xferReal( &m_magnetLiftForceToHeight );
+	xfer->xferReal( &m_magnetLiftForceToHeightSecond );
+	xfer->xferReal( &m_magnetMaxLiftHeight );
+	xfer->xferReal( &m_magnetLevitationHeight );
+	xfer->xferReal( &m_magnetAirborneZForce );
+	xfer->xferBool( &m_magnetAirboneAffectedByYaw );
+	xfer->xferUser( &m_magnetFormula, sizeof( MagnetType ) );
 
 	if( version >= 3 )
 	{

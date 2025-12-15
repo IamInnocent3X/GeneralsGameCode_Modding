@@ -58,6 +58,18 @@ public:
 	UnsignedInt						m_missileDecoyFrames;
 	UnsignedInt						m_countermeasureReactionFrames;
 	Bool									m_mustReloadAtAirfield;
+	Bool									m_mustReloadNearDock;
+	Bool									m_mustReloadAtBarracks;
+	KindOfMaskType 					m_reactingKindofs;
+	Bool							m_noAirborne;
+	Bool							m_considerGround;
+	Bool							m_initiallyActive;
+	Bool							m_continuousVolleyInAir;
+	std::vector<AsciiString>		m_reloadNearObjects;
+	Real							m_dockDistance;
+	Int								m_volleyLimit;
+	UnsignedInt						m_detonateDistance;
+
 
 	CountermeasuresBehaviorModuleData()
 	{
@@ -66,10 +78,21 @@ public:
     m_framesBetweenVolleys  = 0;
 		m_numberOfVolleys       = 0;
     m_reloadFrames          = 0;
+	m_volleyLimit			= 0;
     m_evasionRate           = 0.0f;
 		m_mustReloadAtAirfield	= FALSE;
+		m_mustReloadNearDock	= FALSE;
+		m_mustReloadAtBarracks	= FALSE;
 		m_missileDecoyFrames		= 0;
 		m_volleyVelocityFactor  = 1.0f;
+		m_reactingKindofs = KINDOFMASK_NONE;
+		m_reloadNearObjects.clear();
+		m_continuousVolleyInAir = TRUE;
+		m_noAirborne = FALSE;
+		m_considerGround = FALSE;
+		m_initiallyActive = FALSE;
+		m_dockDistance = 100.0f;
+		m_detonateDistance = 0;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -88,6 +111,18 @@ public:
 			{ "MustReloadAtAirfield",		INI::parseBool,									NULL, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadAtAirfield ) },
 			{ "MissileDecoyDelay",			INI::parseDurationUnsignedInt,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_missileDecoyFrames ) },
 			{ "ReactionLaunchLatency",	INI::parseDurationUnsignedInt,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_countermeasureReactionFrames ) },
+			
+			{ "StartsActive",	INI::parseBool, 				NULL, offsetof( CountermeasuresBehaviorModuleData, m_initiallyActive ) },
+			{ "VolleyLimitPerMissile",	INI::parseInt,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_volleyLimit ) },
+			{ "ContinuousVolleyInAir",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_continuousVolleyInAir ) },
+			{ "ReactingToKindOfs",	KindOfMaskType::parseFromINI,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_reactingKindofs ) },
+			{ "NoAirboneCountermeasures",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_noAirborne ) },
+			{ "GroundCountermeasures",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_considerGround ) },
+			{ "NonTrackingDetonateDistance", INI::parseUnsignedInt,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_detonateDistance ) },
+			{ "MustReloadAtBarracks",		INI::parseBool,									NULL, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadAtBarracks ) },
+			{ "MustReloadNearRepairDocks",		INI::parseBool,								NULL, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadNearDock ) },
+			{ "MustReloadObjectDistance",	INI::parseReal,							NULL,		offsetof( CountermeasuresBehaviorModuleData, m_dockDistance ) },
+			{ "MustReloadNearObjects",	INI::parseAsciiStringVector,				NULL,		offsetof( CountermeasuresBehaviorModuleData, m_reloadNearObjects ) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -107,7 +142,14 @@ public:
 	virtual void reportMissileForCountermeasures( Object *missile ) = 0;
 	virtual ObjectID calculateCountermeasureToDivertTo( const Object& victim ) = 0;
 	virtual void reloadCountermeasures() = 0;
+	virtual void setCountermeasuresParked() = 0;
 	virtual Bool isActive() const = 0;
+	virtual Bool getCountermeasuresMustReloadAtAirfield() const = 0;
+	virtual Bool getCountermeasuresMustReloadAtDocks() const = 0;
+	virtual Bool getCountermeasuresMustReloadAtBarracks() const = 0;
+	virtual Bool getCountermeasuresNoAirborne() const = 0;
+	virtual Bool getCountermeasuresConsiderGround() const = 0;
+	virtual KindOfMaskType getCountermeasuresKindOfs() const = 0;
 };
 
 
@@ -142,15 +184,18 @@ public:
 	virtual void reportMissileForCountermeasures( Object *missile );
 	virtual ObjectID calculateCountermeasureToDivertTo( const Object& victim );
 	virtual void reloadCountermeasures();
+	virtual void setCountermeasuresParked();
 	virtual Bool isActive() const;
-
+	virtual Bool getCountermeasuresMustReloadAtAirfield() const;
+	virtual Bool getCountermeasuresMustReloadAtDocks() const;
+	virtual Bool getCountermeasuresMustReloadAtBarracks() const;
+	virtual Bool getCountermeasuresNoAirborne() const;
+	virtual Bool getCountermeasuresConsiderGround() const;
+	virtual KindOfMaskType getCountermeasuresKindOfs() const;
 
 protected:
 
-	virtual void upgradeImplementation()
-	{
-		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
-	}
+	virtual void upgradeImplementation();
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
 	{
@@ -160,6 +205,12 @@ protected:
 	virtual void performUpgradeFX()
 	{
 		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
 	virtual void processUpgradeRemoval()
@@ -176,6 +227,7 @@ protected:
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 	void launchVolley();
 
@@ -188,4 +240,9 @@ private:
 	UnsignedInt m_reactionFrame;						//The frame countermeasures will be launched after initial hostile act.
 	UnsignedInt m_nextVolleyFrame;					//Frame the next volley is fired.
 	UnsignedInt m_reloadFrame;							//The frame countermeasures will be ready to use again.
+	UnsignedInt m_currentVolley;
+	UnsignedInt m_checkDelay;
+	Bool m_parked;
+	Bool m_hasExecuted;
+	ObjectID m_dockObjectID;
 };

@@ -110,6 +110,8 @@ OCLUpdate::OCLUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModul
 	m_timerStartedFrame = 0;
 	m_isFactionNeutral = TRUE;
 	m_currentPlayerColor = 0;
+	m_nextCreationDelay = 0;
+	m_timerStartedDelay = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -120,24 +122,129 @@ OCLUpdate::~OCLUpdate( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void OCLUpdate::onDisabledEdge( Bool nowDisabled )
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+#if RETAIL_COMPATIBLE_CRC
+	if( nowDisabled )
+	{
+		m_nextCreationDelay = now;
+		setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+	}
+#else
+	// TheSuperHackers @bugfix dizzyj/Caball009/Mauller 14/07/2025 prevent triggering supply drop when subdued while under construction
+	// When the construction is finished, we allow the timer to be initialized and then start shifting the timer while subdued
+	if ( m_timerStartedFrame > 0 && nowDisabled )
+	{
+		m_nextCreationDelay = now;
+		m_timerStartedDelay = now;
+		setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+	}
+#endif
+	if(!nowDisabled)
+	{
+		if(m_nextCreationDelay)
+		{
+			m_nextCreationFrame += now - m_nextCreationDelay;
+			m_nextCreationDelay = 0;
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+		}
+		if(m_timerStartedDelay)
+		{
+			m_timerStartedFrame += now - m_timerStartedDelay;
+			m_timerStartedDelay = 0;
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void OCLUpdate::onCapture( Player *oldOwner, Player *newOwner )
+{
+	if (getOCLUpdateModuleData()->m_isFactionTriggered)
+	{
+		Player *player = getObject()->getControllingPlayer();
+
+		// Test for when a player captures the building
+		if (m_isFactionNeutral)
+		{
+			if( player && player->isPlayableSide() )
+			{
+				m_currentPlayerColor = player->getPlayerColor();
+				m_isFactionNeutral = FALSE;
+				setNextCreationFrame();
+			}
+		}
+		// Test for when the building has been made neutral or when it changes faction
+		else
+		{
+			// If this is no longer under player control, then we set the faction to neutral
+			if( !player || !player->isPlayableSide() )
+			{
+				m_isFactionNeutral = TRUE;
+			}
+			// If another player has taken control, reset the timer
+			else if( player && player->getPlayerColor() != m_currentPlayerColor)
+			{
+				m_currentPlayerColor = player->getPlayerColor();
+				setNextCreationFrame();
+			}
+		}
+
+		// If the building is neutal, skip futher update
+		if (m_isFactionNeutral)
+			setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+		else
+			setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void OCLUpdate::onBuildComplete()
+{
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 UpdateSleepTime OCLUpdate::update( void )
 {
+	UnsignedInt now = TheGameLogic->getFrame();
 #if RETAIL_COMPATIBLE_CRC
 	if( getObject()->isDisabled() )
 	{
-		m_nextCreationFrame++;
-		return UPDATE_SLEEP_NONE;
+		//m_nextCreationFrame++;
+		m_nextCreationDelay = now;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 	}
 #else
 	// TheSuperHackers @bugfix dizzyj/Caball009/Mauller 14/07/2025 prevent triggering supply drop when subdued while under construction
 	// When the construction is finished, we allow the timer to be initialized and then start shifting the timer while subdued
 	if ( m_timerStartedFrame > 0 && getObject()->isDisabled() )
 	{
-		m_nextCreationFrame++;
-		m_timerStartedFrame++;
-		return UPDATE_SLEEP_NONE;
+		//m_nextCreationFrame++;
+		//m_timerStartedFrame++;
+		m_nextCreationDelay = now;
+		m_timerStartedDelay = now;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 	}
 #endif
+
+	if(m_nextCreationDelay)
+	{
+		m_nextCreationFrame += now - m_nextCreationDelay;
+		m_nextCreationDelay = 0;
+	}
+	if(m_timerStartedDelay)
+	{
+		m_timerStartedFrame += now - m_timerStartedDelay;
+		m_timerStartedDelay = 0;
+	}
+
 
 	const OCLUpdateModuleData *data = getOCLUpdateModuleData();
 
@@ -174,17 +281,18 @@ UpdateSleepTime OCLUpdate::update( void )
 
 		// If the building is neutal, skip futher update
 		if (m_isFactionNeutral)
-			return UPDATE_SLEEP_NONE;
+			return UPDATE_SLEEP_FOREVER;
 	}
 
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	if( shouldCreate() )
 	{
 		if( m_nextCreationFrame == 0 )
 		{
 			// You don't get to actually spread the first try, you start on a timer, then go
 			setNextCreationFrame();
-			return UPDATE_SLEEP_NONE;
+			return calcSleepTime();
 		}
 
 		setNextCreationFrame();
@@ -201,10 +309,10 @@ UpdateSleepTime OCLUpdate::update( void )
 			std::string playerFactionName;
 
 			Player *player = getObject()->getControllingPlayer();
-			if (!player) return UPDATE_SLEEP_NONE;
+			if (!player) return UPDATE_SLEEP_FOREVER;
 
 			const PlayerTemplate *playerT = player->getPlayerTemplate();
-			if (!playerT) return UPDATE_SLEEP_NONE;
+			if (!playerT) return UPDATE_SLEEP_FOREVER;
 
 			// Get and store the faction side to compare with the faction ocl list
 			if (playerT->getSide().str()) playerFactionName = playerT->getSide().str();
@@ -226,7 +334,15 @@ UpdateSleepTime OCLUpdate::update( void )
 			ObjectCreationList::create( data->m_ocl, getObject(), &creationCoord, getObject()->getPosition(), getObject()->getOrientation() );
 		}
 	}
-	return UPDATE_SLEEP_NONE;
+	return calcSleepTime();
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+UpdateSleepTime OCLUpdate::calcSleepTime( void ) const
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	return UPDATE_SLEEP( m_nextCreationFrame > now ? m_nextCreationFrame - now : UPDATE_SLEEP_FOREVER );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -263,9 +379,10 @@ void OCLUpdate::setNextCreationFrame()
 // ------------------------------------------------------------------------------------------------
 Real OCLUpdate::getCountdownPercent() const
 {
-	UnsignedInt now = TheGameLogic->getFrame();
+	//UnsignedInt now = TheGameLogic->getFrame();
 
-	return 1.0f - (( m_nextCreationFrame - now ) / (float)( m_nextCreationFrame - m_timerStartedFrame ));
+	//return 1.0f - (( m_nextCreationFrame - now ) / (float)( m_nextCreationFrame - m_timerStartedFrame ));
+	return 1.0f - (( getRemainingFrames() ) / (float)( m_nextCreationFrame - m_timerStartedFrame ));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -273,6 +390,8 @@ Real OCLUpdate::getCountdownPercent() const
 UnsignedInt OCLUpdate::getRemainingFrames() const
 {
 	UnsignedInt now = TheGameLogic->getFrame();
+	if(getObject()->isDisabled() && m_nextCreationDelay)
+		now = m_nextCreationDelay;
 
 	return ( m_nextCreationFrame - now );
 }
@@ -315,6 +434,12 @@ void OCLUpdate::xfer( Xfer *xfer )
 
 	// current owning player color
 	xfer->xferInt( &m_currentPlayerColor );
+
+	// next creation delay
+	xfer->xferUnsignedInt( &m_nextCreationDelay );
+
+	// timer stated delay
+	xfer->xferUnsignedInt( &m_timerStartedDelay );
 
 }
 

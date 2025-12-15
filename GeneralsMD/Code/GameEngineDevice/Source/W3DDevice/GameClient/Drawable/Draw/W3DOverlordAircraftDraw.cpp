@@ -61,6 +61,7 @@ void W3DOverlordAircraftDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
+		{"HasMultiAddOns", INI::parseBool, NULL, offsetof(W3DOverlordAircraftDrawModuleData, m_hasMultiAddOns)},
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -86,19 +87,32 @@ void W3DOverlordAircraftDraw::doDrawModule(const Matrix3D* transformMtx)
 
 	// Our big thing is that we get our specific passenger (the turret thing) and then wake it up and make it draw
 	// It depends on us because our renderObject is only made correct in the act of drawing.
-	Object *me = getDrawable()->getObject();
-	if( me
-		&& me->getContain()
-		&& me->getContain()->friend_getRider()
-		&& me->getContain()->friend_getRider()->getDrawable()
-		)
-	{
-		Drawable *riderDraw = me->getContain()->friend_getRider()->getDrawable();
-    if ( riderDraw )
-    {
-      TintEnvelope *env = getDrawable()->getColorTintEnvelope();
-      if ( env )
-        riderDraw->setColorTintEnvelope( *env );
+	Object* me = getDrawable()->getObject();
+	if (me && me->getContain()) {
+		if (getW3DOverlordAircraftDrawModuleData()->m_hasMultiAddOns) {
+			const ContainedItemsList* addOns = me->getContain()->getAddOnList();
+			for (ContainedItemsList::const_iterator it = addOns->begin(); it != addOns->end(); it++) {
+				Drawable* riderDraw = (*it)->getDrawable();
+				if (riderDraw)
+				{
+					TintEnvelope* env = getDrawable()->getColorTintEnvelope();
+					if (env)
+						riderDraw->setColorTintEnvelope(*env);
+
+					riderDraw->notifyDrawableDependencyCleared();
+					riderDraw->draw(NULL);// What the hell?  This param isn't used for anything
+				}
+			}
+		}
+		else if (me->getContain()->friend_getRider()
+			&& me->getContain()->friend_getRider()->getDrawable())
+		{
+			Drawable* riderDraw = me->getContain()->friend_getRider()->getDrawable();
+			if (riderDraw)
+			{
+				TintEnvelope* env = getDrawable()->getColorTintEnvelope();
+				if (env)
+					riderDraw->setColorTintEnvelope(*env);
 
       riderDraw->notifyDrawableDependencyCleared();
       riderDraw->draw();
@@ -114,14 +128,19 @@ void W3DOverlordAircraftDraw::setHidden(Bool h)
 	W3DModelDraw::setHidden(h);
 
 	// We need to hide our rider, since he won't realize he's being contained in a contained container
-	Object *me = getDrawable()->getObject();
-	if( me
-		&& me->getContain()
-		&& me->getContain()->friend_getRider()
-		&& me->getContain()->friend_getRider()->getDrawable()
-		)
-	{
-		me->getContain()->friend_getRider()->getDrawable()->setDrawableHidden(h);
+	Object* me = getDrawable()->getObject();
+	if (me && me->getContain()) {
+		if (getW3DOverlordAircraftDrawModuleData()->m_hasMultiAddOns) {
+			const ContainedItemsList* addOns = me->getContain()->getAddOnList();
+			for (ContainedItemsList::const_iterator it = addOns->begin(); it != addOns->end(); it++) {
+				(*it)->getDrawable()->setDrawableHidden(h);
+			}
+		}
+		else if (me->getContain()->friend_getRider()
+			&& me->getContain()->friend_getRider()->getDrawable())
+		{
+			me->getContain()->friend_getRider()->getDrawable()->setDrawableHidden(h);
+		}
 	}
 }
 

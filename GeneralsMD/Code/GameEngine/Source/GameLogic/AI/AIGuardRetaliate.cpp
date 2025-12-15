@@ -242,6 +242,8 @@ Bool AIGuardRetaliateMachine::lookForInnerTarget(void)
 	PartitionFilterPossibleToEnter			f6(owner, CMD_FROM_AI);
 	PartitionFilterPossibleToHijack			f7(owner, CMD_FROM_AI);
 	PartitionFilterRejectBuildings			f8( owner );
+	PartitionFilterPossibleToEquip			f9(owner, CMD_FROM_AI);
+	PartitionFilterRelationship				f10(owner, PartitionFilterRelationship::ALLOW_ALLIES);
 
 	PartitionFilter *filters[16];
 	Int count = 0;
@@ -256,6 +258,15 @@ Bool AIGuardRetaliateMachine::lookForInnerTarget(void)
 		{
 			filters[count++] = &f1;
 			filters[count++] = &f7;
+		}
+		else if (owner->getTemplate()->isEquipGuard() || owner->getTemplate()->isParasiteGuard())
+		{
+			if(owner->getTemplate()->isParasiteGuard())
+				filters[count++] = &f1;
+			else
+				filters[count++] = &f10;
+
+			filters[count++] = &f9;
 		}
 		else
 		{
@@ -491,7 +502,7 @@ AIGuardRetaliateOuterState::~AIGuardRetaliateOuterState(void)
 //--------------------------------------------------------------------------------------
 StateReturnType AIGuardRetaliateOuterState::onEnter( void )
 {
-	//if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT)
+	//if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT || getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_FAR_WITHOUT_PURSUIT )
 	//{
 	//	// "patrol" mode does not follow targets outside the guard area.
 	//	return STATE_SUCCESS;

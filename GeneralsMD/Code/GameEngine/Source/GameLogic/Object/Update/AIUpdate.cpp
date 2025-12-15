@@ -63,6 +63,7 @@
 #include "GameLogic/Module/DeliverPayloadAIUpdate.h"
 #include "GameLogic/Module/HackInternetAIUpdate.h"
 #include "GameLogic/Module/HordeUpdate.h"
+#include "GameLogic/Module/SupplyTruckAIUpdate.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/PolygonTrigger.h"
@@ -86,8 +87,11 @@ AIUpdateModuleData::AIUpdateModuleData()
 	m_surrenderDuration = LOGICFRAMES_PER_SECOND * 120;
 #endif
 
-  m_forbidPlayerCommands = FALSE;
+    m_forbidPlayerCommands = FALSE;
 	m_turretsLinked = FALSE;
+	m_attackAngle = 0.0f;
+	m_useAttackAngle = FALSE;
+	m_attackAngleMirrored = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -129,17 +133,53 @@ const LocomotorTemplateVector* AIUpdateModuleData::findLocomotorTemplateVector(L
 	{
 		{ "Turret",											AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[0]) },
 		{ "AltTurret",									AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[1]) },
+		{	"Turret1",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[0]) },
+		{	"Turret2",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[1]) },
+		{	"Turret3",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[2]) },
+		{	"Turret4",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[3]) },
+		{	"Turret5",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[4]) },
+		{	"Turret6",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[5]) },
+		{	"Turret7",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[6]) },
+		{	"Turret8",										AIUpdateModuleData::parseTurret,	NULL, offsetof(AIUpdateModuleData, m_turretData[7]) },
 		{ "AutoAcquireEnemiesWhenIdle", INI::parseBitString32, TheAutoAcquireEnemiesNames, offsetof(AIUpdateModuleData, m_autoAcquireEnemiesWhenIdle) },
 		{ "MoodAttackCheckRate",				INI::parseDurationUnsignedInt,		NULL, offsetof(AIUpdateModuleData, m_moodAttackCheckRate) },
 #ifdef ALLOW_SURRENDER
 		{ "SurrenderDuration",					INI::parseDurationUnsignedInt,		NULL, offsetof(AIUpdateModuleData, m_surrenderDuration) },
 #endif
-    { "ForbidPlayerCommands",				INI::parseBool,										NULL, offsetof(AIUpdateModuleData, m_forbidPlayerCommands) },
-    { "TurretsLinked",							INI::parseBool,										NULL, offsetof( AIUpdateModuleData, m_turretsLinked ) },
+		{ "ForbidPlayerCommands",				INI::parseBool,										NULL, offsetof(AIUpdateModuleData, m_forbidPlayerCommands) },
+		{ "TurretsLinked",							INI::parseBool,										NULL, offsetof(AIUpdateModuleData, m_turretsLinked) },
+		{ "PreferredAttackAngle",				AIUpdateModuleData::parseAttackAngle,					NULL, offsetof(AIUpdateModuleData, m_attackAngle) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
 }
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void AIUpdateModuleData::parseAttackAngle(INI* ini, void* instance, void* store, const void* /*userData*/)
+{
+	AIUpdateModuleData* self = (AIUpdateModuleData*)instance;
+
+	const char* token = ini->getNextToken();
+
+	// Disable if None (not really needed actually)
+	if (stricmp(token, "None") == 0) {
+		// self->m_useAttackAngle = FALSE;
+		return;
+	}
+
+	// Parse Angle and store in m_attackAngle
+	const Real RADS_PER_DEGREE = PI / 180.0f;
+	*(Real*)store = INI::scanReal(token) * RADS_PER_DEGREE;
+
+	self->m_useAttackAngle = TRUE;
+
+	// Check for Mirrored keyword
+	token = ini->getNextTokenOrNull();
+	if (token != NULL && stricmp(token, "MIRRORED") == 0) {
+		self->m_attackAngleMirrored = TRUE;
+	}
+}
+
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ void AIUpdateModuleData::parseTurret(INI* ini, void *instance, void * store, const void* /*userData*/)
@@ -249,11 +289,14 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_curLocomotorSet = LOCOMOTORSET_INVALID;
 	m_locomotorGoalType = NONE;
 	m_locomotorGoalData.zero();
+	m_lastPos.zero();
+	m_lastRequestedDestination.zero();
 	for (i = 0; i < MAX_TURRETS; i++)
 		m_turretAI[i] = NULL;
 	m_turretSyncFlag = TURRET_INVALID;
 	m_attitude = ATTITUDE_NORMAL;
 	m_nextMoodCheckTime = 0;
+	m_locoClumpScanFrame = 0;
 #ifdef ALLOW_DEMORALIZE
 	m_demoralizedFramesLeft = 0;
 #endif
@@ -282,6 +325,12 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_retryPath = FALSE;
 	m_isInUpdate = FALSE;
 	m_fixLocoInPostProcess = FALSE;
+	m_continueToUpdateFixLocoClump = FALSE;
+	//m_locomotorIsLocked = FALSE;
+
+	//m_orbitingRadius = 0.0f;
+	//m_orbitInsertionSlope = 0.0f;
+	//m_orbitingPos.zero();
 
 	// ---------------------------------------------
 
@@ -325,6 +374,7 @@ void AIUpdateInterface::setSurrendered( const Object *objWeSurrenderedTo, Bool s
 			// meaning we won't respong to aiDoCommand! so go straight to the metal here:
 			getStateMachine()->clear();
 			getStateMachine()->setState( AI_IDLE );
+			doIdleUpdate();
 			setLastCommandSource(CMD_FROM_AI);
 
 			// Play our sound surrendered
@@ -432,6 +482,7 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 		}
 		return;
 	}
+	Bool hasUpdatedPath = FALSE;
 	if (m_isAttackPath) {
 		Object *victim = NULL;
 		if (m_requestedVictimID != INVALID_ID) {
@@ -452,9 +503,29 @@ void AIUpdateInterface::doPathfind( PathfindServicesInterface *pathfinder )
 			m_requestedDestination = *victim->getPosition();
 			/* find a pathable destination near the victim.*/
 			TheAI->pathfinder()->adjustToPossibleDestination(getObject(), getLocomotorSet(), &m_requestedDestination);
+			hasUpdatedPath = TRUE;
 			ignoreObstacle(victim);
 		}
 	}
+	/*if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 &&
+		 !isAttacking() && !m_isAttackPath && !hasUpdatedPath &&
+		 !getObject()->isAboveTerrain() && getObject()->getLayer() == LAYER_GROUND)
+	{
+		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
+		const Coord3D *currPos = getObject()->getPosition();
+		if(fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < 0.0625f &&
+			fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < 0.0625f)
+		{
+			//DEBUG_LOG(("Pathfind: Approach Path m_lastPos is near to currentPos. x:%f y:%f z:%f", m_lastPos.x, m_lastPos.y, m_lastPos.z));
+			//DEBUG_LOG(("Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+			setIgnoreCollisionTime(2*LOGICFRAMES_PER_SECOND);
+			m_blockedFrames = 0;
+			m_isBlocked = FALSE;
+			m_isBlockedAndStuck = FALSE;
+			TheAI->pathfinder()->adjustToPossibleDestination(getObject(), getLocomotorSet(), &m_requestedDestination);
+		}
+		m_lastPos = *currPos;
+	}*/
 	computePath(pathfinder, &m_requestedDestination);
 	if (m_isFinalGoal && isDoingGroundMovement() && getPath()) {
 		TheAI->pathfinder()->updateGoal(getObject(), getPath()->getLastNode()->getPosition(),
@@ -760,6 +831,28 @@ Real AIUpdateInterface::getTurretTurnRate(WhichTurretType tur) const
 }
 
 //=============================================================================
+Bool AIUpdateInterface::hasLimitedTurretAngle(WhichTurretType tur) const
+{
+	return (tur != TURRET_INVALID && m_turretAI[tur] != NULL) && m_turretAI[tur]->hasLimitedTurretAngle();
+}
+
+//=============================================================================
+Real AIUpdateInterface::getMinTurretAngle(WhichTurretType tur) const
+{
+	return (tur != TURRET_INVALID && m_turretAI[tur] != NULL) ?
+		m_turretAI[tur]->getMinTurretAngle() :
+		0.0f;
+}
+
+//=============================================================================
+Real AIUpdateInterface::getMaxTurretAngle(WhichTurretType tur) const
+{
+	return (tur != TURRET_INVALID && m_turretAI[tur] != NULL) ?
+		m_turretAI[tur]->getMaxTurretAngle() :
+		0.0f;
+}
+
+//=============================================================================
 WhichTurretType AIUpdateInterface::getWhichTurretForCurWeapon() const
 {
 	for (int i = 0; i < MAX_TURRETS; ++i)
@@ -793,7 +886,7 @@ Real AIUpdateInterface::getCurLocomotorSpeed() const
 	if (m_curLocomotor != NULL)
 		return m_curLocomotor->getMaxSpeedForCondition(getObject()->getBodyModule()->getDamageState());
 
-	DEBUG_LOG(("no current locomotor!"));
+	// DEBUG_LOG(("no current locomotor!"));
 	return 0.0f;
 }
 
@@ -886,6 +979,9 @@ void AIUpdateInterface::chooseGoodLocomotorFromCurrentSet( void )
 		m_curLocomotor->setNoSlowDownAsApproachingDest(FALSE);
 		// ditto for ultra-accuracy.
 		m_curLocomotor->setUltraAccurate(FALSE);
+
+		// do update for any relevant modules for the Object
+		getObject()->doObjectLocomotorUpdate();
 	}
 }
 
@@ -991,7 +1087,12 @@ void AIUpdateInterface::wakeUpNow()
 //-------------------------------------------------------------------------------------------------
 void AIUpdateInterface::friend_notifyStateMachineChanged()
 {
+	doStateChange();
 	wakeUpNow();
+
+	// Refresh Stealth Update
+	if ( getObject() )
+		getObject()->doStealthUpdate();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1081,10 +1182,12 @@ UpdateSleepTime AIUpdateInterface::update( void )
 
 	if (! obj->isEffectivelyDead() &&
 			! obj->isDisabledByType( DISABLED_PARALYZED ) &&
+			! obj->isDisabledByType( DISABLED_STUNNED ) &&
 			! obj->isDisabledByType( DISABLED_UNMANNED ) &&
 			! obj->isDisabledByType( DISABLED_EMP ) &&
 			! obj->isDisabledByType( DISABLED_SUBDUED ) &&
-			! obj->isDisabledByType( DISABLED_HACKED ) )
+			! obj->isDisabledByType( DISABLED_HACKED ) &&
+			! obj->isDisabledByType( DISABLED_FROZEN ) )
 	{
 		// If we are dead, don't let the turrets do anything anymore, or else they will keep attacking
 		for (int i = 0; i < MAX_TURRETS; ++i)
@@ -1277,8 +1380,10 @@ Real AIUpdateInterface::calculateMaxBlockedSpeed(Object *other) const
 		return m_curMaxBlockedSpeed;
 	}
 	Real maxSpeed = awaySpeed / dotProduct;
-	if (other->getFormationID()!=NO_FORMATION_ID && getObject()->getFormationID()==other->getFormationID()) {
-		maxSpeed *= 0.55f; // don't let formations crowd each other.
+	if (other->getFormationID()!=NO_FORMATION_ID && getObject()->getFormationID()==other->getFormationID() && getObject()->getFormationIsCommandMap()) {
+		Bool isAirborne = getObject()->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (getObject()->isKindOf( KINDOF_AIRCRAFT ) && isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
+		if(!isAirborne)
+			maxSpeed *= 0.55f; // don't let formations crowd each other.
 	}
 	if (maxSpeed>m_curMaxBlockedSpeed) return m_curMaxBlockedSpeed;
 	return maxSpeed;
@@ -1827,6 +1932,7 @@ Bool AIUpdateInterface::computeAttackPath( PathfindServicesInterface *pathServic
 	// if so, just return TRUE with no path.
 	if (victim != NULL)
 	{
+		weapon->computeFiringTrackerBonus(source, victim);
 		if (weapon->isWithinAttackRange(source, victim))
 		{
 			Bool viewBlocked = FALSE;
@@ -1845,6 +1951,7 @@ Bool AIUpdateInterface::computeAttackPath( PathfindServicesInterface *pathServic
 	}
 	else if (victimPos != NULL)
 	{
+		weapon->computeFiringTrackerBonusClear(source);
 		if (weapon->isWithinAttackRange(source, victimPos))
 		{
 			Bool viewBlocked = FALSE;
@@ -2033,6 +2140,10 @@ void AIUpdateInterface::destroyPath( void )
  */
 void AIUpdateInterface::friend_startingMove(void)
 {
+	// If I started move, do an Update
+	if(m_isMoving == FALSE)
+		getObject()->doMovingUpdate();
+	
 	m_movementComplete = FALSE; // we aren't finished moving.
 	m_isMoving = TRUE;
 	m_blockedFrames = 0;
@@ -2115,6 +2226,13 @@ Bool AIUpdateInterface::isValidLocomotorPosition(const Coord3D* pos) const
 	return TheAI->pathfinder()->validMovementPosition( getObject()->getCrusherLevel()>0, getObject()->getLayer(), m_locomotorSet, pos );
 }
 
+// Spectre Gunship Orbiting factors
+/*#define ORBIT_INSERTION_SLOPE_MAX (0.8f)
+#define ORBIT_INSERTION_SLOPE_MIN (0.5f)
+#define ONE (1.0f)
+#define ZERO (0.0f)
+*/
+
 //-------------------------------------------------------------------------------------------------
 DECLARE_PERF_TIMER(doLocomotor)
 /**
@@ -2124,7 +2242,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 {
 	USE_PERF_TIMER(doLocomotor)
 
-	if (getObject()->isKindOf(KINDOF_IMMOBILE))
+	if (!getObject()->testCustomStatus("CAN_STILL_MOVE_WHEN_IMMOBILE") && (getObject()->isKindOf(KINDOF_IMMOBILE) || getObject()->testStatus( OBJECT_STATUS_IMMOBILE)))
 		return UPDATE_SLEEP_FOREVER;
 
 	chooseGoodLocomotorFromCurrentSet();
@@ -2142,6 +2260,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 	Bool blocked = m_blockedFrames > 0;
 	Bool requiresConstantCalling = TRUE;	// assume the worst.
+	UnsignedInt now = TheGameLogic->getFrame();
 
 	if (m_curLocomotor)
 	{
@@ -2260,6 +2379,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 							if (dSqr < DARN_CLOSE)
 							{
 								m_doFinalPosition = FALSE;
+								//m_continueToUpdateFixLocoClump = FALSE;
 								if (onGround)
 									m_finalPosition.z = TheTerrainLogic->getGroundHeight( m_finalPosition.x, m_finalPosition.y );
 								else
@@ -2276,6 +2396,8 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 									pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
 								getObject()->setPosition(&pos);
 							}
+
+							getObject()->setLastActualSpeed(0.0f);
 						}
 						requiresConstantCalling = m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject());
 					}
@@ -2295,7 +2417,217 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			getObject()->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_AIRBORNE_TARGET ) );
 
 		m_curMaxBlockedSpeed = FAST_AS_POSSIBLE;
+
+		// IamInnocent - Added an unoptimized fix for stucked units due to overclumping units in maps
+		// NOTE: This is NOT to be treated as the main solution, but for as a temporary fix for a much bigger problem
+		// Investigation Notes: The problem most likely occur due to the physics update
+		/*if(TheGlobalData->m_fixLocoClump && ThePlayerList->getPlayerCount() > 5 && getObject()->isKindOf(KINDOF_SELECTABLE) && getObject()->getPhysics())
+		{
+			const Coord3D *currPos = getObject()->getPosition();
+			const Real DARN_CLOSE = 0.0625f;
+			Object *source = getObject();
+			PhysicsBehavior* physics = source->getPhysics();
+
+			Bool currentlyAttacking = isAttacking() || source->testStatus( OBJECT_STATUS_IS_ATTACKING ) || 
+						source->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) ||
+						source->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) ||
+						source->testStatus( OBJECT_STATUS_IGNORING_STEALTH );
+
+			Bool isAboveGround = source->isAboveTerrain() || source->getLayer() != LAYER_GROUND;
+
+			Bool invalidConditions = isBusy() || getJetAIUpdate() || 
+						(getSupplyTruckAIInterface() && getSupplyTruckAIInterface()->isCurrentlyFerryingSupplies()) ||
+						source->testStatus( OBJECT_STATUS_IS_USING_ABILITY ) ||
+						source->isDozerDoingAnyTasks();
+
+			if(!m_continueToUpdateFixLocoClump && !currentlyAttacking && !invalidConditions && !isAboveGround &&
+				//(m_isFinalGoal || m_doFinalPosition) &&
+				!physics->isMotive() &&
+				(isMoving() || getPath()) &&
+				(!isAiInDeadState() || m_curLocomotor->getLocomotorWorksWhenDead()) &&
+				fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
+				fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE
+			)
+			{
+				m_continueToUpdateFixLocoClump = TRUE;
+				m_lastRequestedDestination = m_requestedDestination;
+
+				BodyDamageType bdt = source->getBodyModule()->getDamageState();
+				physics->setConstantMotionToLoc(&m_requestedDestination, m_curLocomotor->getMaxSpeedForCondition(bdt), m_curLocomotor->getMaxAcceleration(bdt));
+				//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+				//	DEBUG_LOG(("Human Object is Clumped. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				//else
+				//	DEBUG_LOG(("Computer Object is Clumped. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+			}
+
+			if(m_continueToUpdateFixLocoClump && now >= m_locoClumpScanFrame )
+			{
+				//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+				//	DEBUG_LOG(("Human Object attempt to Solve Clump. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				//else
+				//	DEBUG_LOG(("Computer Object attempt to Solve Clump. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				
+				Real dx = m_lastRequestedDestination.x - currPos->x;
+				Real dy = m_lastRequestedDestination.y - currPos->y;
+				Real dSqr = dx*dx+dy*dy;
+
+				Bool isNotCloseToDestination = dSqr > 6*6*PATHFIND_CELL_SIZE*PATHFIND_CELL_SIZE;
+				
+				Bool isDarnClose = fabs(fabs(m_lastPos.x) - fabs(currPos->x)) < DARN_CLOSE &&
+							   	   fabs(fabs(m_lastPos.y) - fabs(currPos->y)) < DARN_CLOSE;
+
+				//const Coord3D *dest = getGoalPosition();
+				if(currentlyAttacking)
+				{
+					//if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
+					//	destroyPath();
+
+					m_continueToUpdateFixLocoClump = FALSE;
+
+					if(getLastCommandSource() != CMD_FROM_AI)
+					{
+						Weapon* weapon = source ? source->getCurrentWeapon() : NULL;
+						if(weapon)
+						{
+							Object *victim = getGoalObject(); //m_requestedVictimID != INVALID_ID ? TheGameLogic->findObjectByID(m_requestedVictimID) : NULL;
+							if (victim)
+							{
+								source->chooseBestWeaponForTarget(victim, PREFER_MOST_DAMAGE, getLastCommandSource());
+								weapon = source->getCurrentWeapon();
+								if(weapon->isWithinAttackRange( source, victim ))
+								{
+									destroyPath();
+									//aiForceAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
+									privateAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
+								}
+							}
+							else if(weapon->isWithinAttackRange( source, &m_requestedDestination ))
+							{
+								privateAttackPosition( &m_requestedDestination, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
+							}
+						}
+					}
+				}
+				else if(invalidConditions)
+				{
+					//if(dest->x == m_lastRequestedDestination.x && dest->y == m_lastRequestedDestination.y && dest->z == m_lastRequestedDestination.z)
+					//	destroyPath();
+
+					m_continueToUpdateFixLocoClump = FALSE;
+				}
+
+				if(m_locoClumpScanFrame && source->getControllingPlayer()->getPlayerType() != PLAYER_HUMAN && isDarnClose && isNotCloseToDestination)
+				{
+					//DEBUG_LOG(("Object Template is: %s. Object ID: %d. Destroy Path and Dont let me do things.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+					//destroyPath();
+					m_continueToUpdateFixLocoClump = FALSE;
+					physics->removeConstantMotionToLoc();
+					source->setNoAcceptOrdersFrame(now + LOGICFRAMES_PER_SECOND * 3);
+					m_locoClumpScanFrame = 0;
+					return UPDATE_SLEEP_FOREVER;
+				}
+				
+				if(getLastCommandSource() != CMD_FROM_AI)
+				{
+					m_lastRequestedDestination = m_requestedDestination;
+					BodyDamageType bdt = source->getBodyModule()->getDamageState();
+					physics->setConstantMotionToLoc(&m_requestedDestination, m_curLocomotor->getMaxSpeedForCondition(bdt), m_curLocomotor->getMaxAcceleration(bdt));
+				}
+				if( m_continueToUpdateFixLocoClump && (isDarnClose || isNotCloseToDestination))
+				{
+					//Real dx = m_lastRequestedDestination.x - currPos->x;
+					//Real dy = m_lastRequestedDestination.y - currPos->y;
+					//Real dSqr = dx*dx+dy*dy;
+					if (dSqr > (DARN_CLOSE * 4) && (m_locomotorGoalType != NONE || isNotCloseToDestination))
+					{
+						//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+						//	DEBUG_LOG(("Human Object Clumped, Tell Me To Move. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+						//else
+						//	DEBUG_LOG(("Computer Object Clumped, Tell Me To Move. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+						setIgnoreCollisionTime(LOGICFRAMES_PER_SECOND);
+						m_blockedFrames = 0;
+						m_isBlocked = FALSE;
+						m_isBlockedAndStuck = FALSE;
+						aiMoveToPosition( &m_lastRequestedDestination, CMD_FROM_AI );
+					}
+					else
+					{
+						m_continueToUpdateFixLocoClump = FALSE;
+						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
+					}
+				}
+				else if(m_continueToUpdateFixLocoClump)
+				{
+					m_continueToUpdateFixLocoClump = FALSE;
+
+					if(getLastCommandSource() != CMD_FROM_AI && currentlyAttacking)
+						destroyPath();
+					else
+						aiMoveToPosition( &m_requestedDestination, CMD_FROM_AI );
+				}
+
+				if(!m_continueToUpdateFixLocoClump)
+				{
+					physics->removeConstantMotionToLoc();
+					//if(source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+					//	DEBUG_LOG(("Human Object Clumped Solved. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+					//else
+					//	DEBUG_LOG(("Computer Object Clumped Solved. Object Template is: %s. Object ID: %d.", getObject()->getTemplate()->getName().str(), getObject()->getID()));
+				}
+
+				m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 3;
+				m_lastPos = *currPos;
+			}
+			//if(now >= m_locoClumpScanFrame)
+			//{
+			//	m_locoClumpScanFrame = source->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN ? now + REAL_TO_INT_FLOOR(LOGICFRAMES_PER_SECOND * 0.5) : now + LOGICFRAMES_PER_SECOND * 3;
+			//	m_lastPos = *currPos;
+			//}
+			//m_lastPos = *currPos;
+		}*/
 	}
+
+	/*if(m_locomotorIsLocked)
+	{
+		m_locomotorGoalType = POSITION_EXPLICIT;
+		// From privateMoveToPosition
+		m_blockedFrames = 0;
+		m_isBlocked = FALSE;
+		m_isBlockedAndStuck = FALSE;
+		if (m_orbitingRadius > 0)
+		{
+			Coord3D perigee = *getObject()->getPosition();
+			//Coord3D goalPos = perigee;
+			perigee.sub( &m_orbitingPos );
+			perigee.z = ZERO;
+			perigee.normalize();
+
+			//apogee is the anteclockwise point fathest from the perigee line
+			Coord3D apogee;
+			apogee.z = ZERO;
+			apogee.x = -perigee.y;
+			apogee.y =  perigee.x;
+
+			// declination intersects line [p][a], given an attack slope of n1/n2
+			Coord3D declination;
+			Real n1 = min( ORBIT_INSERTION_SLOPE_MAX, max(ORBIT_INSERTION_SLOPE_MIN, m_orbitInsertionSlope) );
+			Real n2 = ONE - n1;
+			declination.z = ZERO;
+			declination.x = ( perigee.x * n1 ) + ( apogee.x * n2 );
+			declination.y = ( perigee.y * n1 ) + ( apogee.y * n2 );
+
+			//scale out to the orbital radius
+			declination.x *= m_orbitingRadius;
+			declination.y *= m_orbitingRadius;
+
+			m_locomotorGoalData.x = m_orbitingPos.x + declination.x;
+			m_locomotorGoalData.y = m_orbitingPos.y + declination.y;
+
+			requiresConstantCalling = TRUE;
+
+			//aiMoveToPosition( &goalPos, CMD_FROM_AI );
+		}
+	}*/
 
 	if (m_curLocomotor != NULL
 			&& m_locomotorGoalType == NONE
@@ -2303,7 +2635,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			&& m_isBlocked == FALSE
 			&& requiresConstantCalling == FALSE)
 	{
-		return UPDATE_SLEEP_FOREVER;
+		return m_continueToUpdateFixLocoClump && m_locoClumpScanFrame > now ? UPDATE_SLEEP(m_locoClumpScanFrame - now) : UPDATE_SLEEP_FOREVER;
 	}
 	else
 	{
@@ -2317,6 +2649,8 @@ void AIUpdateInterface::setLocomotorGoalPositionOnPath()
 {
 	m_locomotorGoalType = POSITION_ON_PATH;
 	m_locomotorGoalData.zero();
+
+	getObject()->doMovingUpdate();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2324,6 +2658,8 @@ void AIUpdateInterface::setLocomotorGoalPositionExplicit(const Coord3D& newPos)
 {
 	m_locomotorGoalType = POSITION_EXPLICIT;
 	m_locomotorGoalData = newPos;
+
+	getObject()->doMovingUpdate();
 #ifdef RTS_DEBUG
 if (_isnan(m_locomotorGoalData.x) || _isnan(m_locomotorGoalData.y) || _isnan(m_locomotorGoalData.z))
 {
@@ -2337,6 +2673,8 @@ void AIUpdateInterface::setLocomotorGoalOrientation(Real angle)
 {
 	m_locomotorGoalType = ANGLE;
 	m_locomotorGoalData.x = angle;
+
+	getObject()->doMovingUpdate();
 #ifdef RTS_DEBUG
 if (_isnan(m_locomotorGoalData.x) || _isnan(m_locomotorGoalData.y) || _isnan(m_locomotorGoalData.z))
 {
@@ -2591,6 +2929,9 @@ Bool AIUpdateInterface::isAllowedToRespondToAiCommands(const AICommandParms* par
 	// (unless they are seeking to feed on the brains of the living)
 	// [urrr, need brains]
 	if (getObject()->isEffectivelyDead())
+		return FALSE;
+
+	if ( parms->m_cmdSource == CMD_FROM_PLAYER && getObject()->getNoAcceptOrdersFrame() > TheGameLogic->getFrame() )
 		return FALSE;
 
 	// We're catching the sleep mood here. AI Units that are asleep actually ignore all commands.
@@ -2866,6 +3207,13 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 			DEBUG_CRASH(("unhandled AI command!"));
 			break;
 	}
+
+	if(parms->m_cmdSource != CMD_FROM_AI)
+	{
+		getObject()->removeMeFromAssaultTransport();
+		getObject()->clearDelayedCommand();
+		getObject()->doStealthUpdate();
+	}
 }
 
 
@@ -2878,7 +3226,7 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
  */
 void AIUpdateInterface::privateMoveToPosition( const Coord3D *pos, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -2920,7 +3268,7 @@ void AIUpdateInterface::privateMoveToObject( Object *obj, CommandSourceType cmdS
 	if (m_isAiDead)
 		return;
 
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3020,7 +3368,7 @@ void AIUpdateInterface::privateRappelInto( Object *target, const Coord3D& pos, C
  */
 void AIUpdateInterface::privateMoveToAndEvacuate( const Coord3D *pos, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3046,7 +3394,7 @@ void AIUpdateInterface::privateMoveToAndEvacuate( const Coord3D *pos, CommandSou
  */
 void AIUpdateInterface::privateMoveToAndEvacuateAndExit( const Coord3D *pos, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3086,6 +3434,7 @@ void AIUpdateInterface::privateIdle(CommandSourceType cmdSource)
 
 	getStateMachine()->clear();
 	getStateMachine()->setState( AI_IDLE );
+	doIdleUpdate();
 	setLastCommandSource( cmdSource );
 
 	ContainModuleInterface *contain = getObject()->getContain();
@@ -3097,6 +3446,15 @@ void AIUpdateInterface::privateIdle(CommandSourceType cmdSource)
 			for (ContainedItemsList::const_iterator it = items->begin(); it != items->end(); ++it)
 			{
 				Object* obj = *it;
+				AIUpdateInterface* ai = obj ? obj->getAI() : NULL;
+				if (ai)
+					ai->aiIdle(cmdSource);
+			}
+		}
+
+		const std::list<Object*>* addOnList = contain->getAddOnList();
+		if (addOnList) {
+			for (Object* obj : *addOnList) {
 				AIUpdateInterface* ai = obj ? obj->getAI() : NULL;
 				if (ai)
 					ai->aiIdle(cmdSource);
@@ -3266,7 +3624,7 @@ void AIUpdateInterface::privateMoveAwayFromUnit( Object *unit, CommandSourceType
  */
 void AIUpdateInterface::privateFollowWaypointPath( const Waypoint *way, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3287,7 +3645,7 @@ void AIUpdateInterface::privateFollowWaypointPath( const Waypoint *way, CommandS
  */
 void AIUpdateInterface::privateFollowWaypointPathExact( const Waypoint *way, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3379,7 +3737,7 @@ void AIUpdateInterface::privateFollowPathAppend( const Coord3D *pos, CommandSour
  */
 void AIUpdateInterface::privateFollowPath( const std::vector<Coord3D>* path, Object *ignoreObject, CommandSourceType cmdSource, Bool exitProduction )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3504,6 +3862,9 @@ void AIUpdateInterface::privateAttackTeam( const Team *team, Int maxShotsToFire,
  */
 void AIUpdateInterface::privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource )
 {
+	//DEBUG_LOG(("AIUpdateInterface::privateAttackPosition: Order %s to fire at pos, type = %d\n",
+	//	getObject()->getTemplate()->getName().str(), cmdSource));
+
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
 	//to the responsibility of the script to reset the locomotor before moving. This is needed because
 	//other systems (like the battle drone) change the locomotor based on what it's trying to do, and
@@ -3764,7 +4125,7 @@ void AIUpdateInterface::privateGetRepaired( Object *repairDepot, CommandSourceTy
 void AIUpdateInterface::privateEnter( Object *obj, CommandSourceType cmdSource )
 {
 	Object *me = getObject();
-	if( me->isMobile() == FALSE )
+	if( me->isMobileNonStatusNotAttacking() == FALSE )
 		return;
 
 	//Resetting the locomotor here was initially added for scripting purposes. It has been moved
@@ -3788,7 +4149,7 @@ void AIUpdateInterface::privateEnter( Object *obj, CommandSourceType cmdSource )
  */
 void AIUpdateInterface::privateDock( Object *obj, CommandSourceType cmdSource )
 {
-	if (getObject()->isMobile() == FALSE)
+	if (getObject()->isMobileNonStatusNotAttacking() == FALSE)
 		return;
 
 	getStateMachine()->clear();
@@ -3822,7 +4183,7 @@ void AIUpdateInterface::privateExit( Object *objectToExit, CommandSourceType cmd
 	if (!objectToExit)
 		return;
 
-  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) || objectToExit->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 
@@ -3851,7 +4212,7 @@ void AIUpdateInterface::privateExitInstantly( Object *objectToExit, CommandSourc
 	if (!objectToExit)
 		return;
 
-  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) || objectToExit->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 	// we must go thru this state (rather than calling exitObjectViaDoor directly!),
@@ -3891,7 +4252,7 @@ void AIUpdateInterface::doQuickExit( const std::vector<Coord3D>* path )
 void AIUpdateInterface::privateEvacuate( Int exposeStealthUnits, CommandSourceType cmdSource )
 {
 
-  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) || getObject()->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 
@@ -3913,7 +4274,7 @@ void AIUpdateInterface::privateEvacuate( Int exposeStealthUnits, CommandSourceTy
 void AIUpdateInterface::privateEvacuateInstantly( Int exposeStealthUnits, CommandSourceType cmdSource )
 {
 
-  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) )
+  if ( getObject()->isDisabledByType( DISABLED_SUBDUED ) || getObject()->isDisabledByType( DISABLED_FROZEN ) )
     return;
 
 
@@ -4147,18 +4508,24 @@ void AIUpdateInterface::privateHackInternet( CommandSourceType cmdSource )
 //	if (getObject()->isMobile() == FALSE)
 //		return;
 
-	getStateMachine()->clear();
-	setLastCommandSource( cmdSource );
-
-	static NameKeyType key_HackInternetAIUpdate = NAMEKEY("HackInternetAIUpdate");
-	HackInternetAIUpdate *ai = (HackInternetAIUpdate*)getObject()->findUpdateModule( key_HackInternetAIUpdate );
-	if( ai )
+	//static NameKeyType key_HackInternetAIUpdate = NAMEKEY("HackInternetAIUpdate");
+	//HackInternetAIUpdate *ai = (HackInternetAIUpdate*)getObject()->findUpdateModule( key_HackInternetAIUpdate );
+	AIUpdateInterface *ai = getObject()->getAI();
+	if( ai && ai->getHackInternetAIInterface() )
 	{
-		ai->hackInternet();
+		getStateMachine()->clear();
+		setLastCommandSource( cmdSource );
+
+		ai->getHackInternetAIInterface()->hackInternet();
+	//if( ai )
+	//{
+	//	ai->hackInternet();
+	//}
 	}
 	else
 	{
-		DEBUG_CRASH(("Unit %s is expecting a 'Update = HackInternetAIUpdate' entry in FactionUnit.ini", getObject()->getTemplate()->getName().str() ) );
+		// IamInnocent - you can now order groups to hack internet together, stop those without hack internet ai update
+		//DEBUG_CRASH(("Unit %s is expecting a 'Update = HackInternetAIUpdate' entry in FactionUnit.ini", getObject()->getTemplate()->getName().str() ) );
 	}
 }
 
@@ -5078,6 +5445,14 @@ void AIUpdateInterface::xfer( Xfer *xfer )
 
 	xfer->xferObjectID(&m_objectToGuard);
 
+	//xfer->xferBool(&m_locomotorIsLocked);
+
+	//xfer->xferReal(&m_orbitingRadius);
+	
+	//xfer->xferReal(&m_orbitInsertionSlope);
+
+	//xfer->xferCoord3D(&m_orbitingPos);
+
 	AsciiString triggerName;
 	if (m_areaToGuard) triggerName = m_areaToGuard->getTriggerName();
 	xfer->xferAsciiString(&triggerName);
@@ -5335,6 +5710,29 @@ Bool AIUpdateInterface::hasLocomotorForSurface(LocomotorSurfaceType surfaceType)
 		return TRUE;
 	else
 		return FALSE;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void AIUpdateInterface::lockMyLocomotorToOrbit( const Coord3D *pos, Real radius, Real slope )
+{
+	/*m_locomotorIsLocked = TRUE;
+	//m_curLocomotor->setOrbit(pos, radius, slope);
+	m_orbitingPos.set(pos);
+	m_orbitingRadius = radius;
+	m_orbitInsertionSlope = slope;
+	getStateMachine()->setTemporaryState(AI_MOVE_TO, LOGICFRAMES_PER_SECOND * 20);
+	//m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject());*/
+}
+
+// ------------------------------------------------------------------------------------------------
+void AIUpdateInterface::releaseLocomotorLock()
+{
+	/*m_locomotorIsLocked = FALSE;
+	//m_curLocomotor->setOrbit(getObject()->getPosition(), 0.0f, 0.0f);
+	m_orbitingPos.zero();
+	m_orbitingRadius = 0.0f;
+	m_orbitInsertionSlope = 0.0f;*/
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -53,6 +53,12 @@ public:
 	KindOfMaskType									m_extraDetectKindofNot;		///< units must NOT match any kindof bits set here, in order to be detected
 	Bool														m_canDetectWhileGarrisoned;
 	Bool														m_canDetectWhileTransported;
+	ObjectStatusMaskType										m_extraRequiredStatus;
+	ObjectStatusMaskType										m_extraForbiddenStatus;
+	std::vector<AsciiString>										m_extraRequiredCustomStatus;
+  	std::vector<AsciiString>										m_extraForbiddenCustomStatus;
+	std::vector<AsciiString>										m_activationUpgradeNames;
+	std::vector<AsciiString>										m_conflictingUpgradeNames;
 
 	StealthDetectorUpdateModuleData()
 	{
@@ -65,6 +71,10 @@ public:
 		m_IRGridParticleSysTmpl = NULL;
 		m_extraDetectKindof.clear();
 		m_extraDetectKindofNot.clear();
+		m_activationUpgradeNames.clear();
+		m_conflictingUpgradeNames.clear();
+		m_extraRequiredCustomStatus.clear();
+		m_extraForbiddenCustomStatus.clear();
 		m_canDetectWhileGarrisoned = false;
 		m_canDetectWhileTransported = false;
 	}
@@ -89,6 +99,9 @@ public:
 	void setSDEnabled( Bool enabled );
 	virtual UpdateSleepTime update();
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+
+protected:
+	Bool testUpgrade();
 
 private:
 	Bool m_enabled;
