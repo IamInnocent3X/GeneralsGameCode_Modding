@@ -33,9 +33,6 @@
 
 #pragma once
 
-#ifndef __EnergyShieldBehavior_H_
-#define __EnergyShieldBehavior_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameClient/ParticleSys.h"
 #include "GameLogic/Module/BehaviorModule.h"
@@ -191,5 +188,4 @@ private:
 	Bool alwaysShowShield() const;
 };
 
-#endif // __EnergyShieldBehavior_H_
 

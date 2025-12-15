@@ -156,7 +156,7 @@ void DroneCarrierSlavedUpdate::crc(Xfer* xfer)
 	// extend base class
 	SlavedUpdate::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -174,7 +174,7 @@ void DroneCarrierSlavedUpdate::xfer(Xfer* xfer)
 	// extend base class
 	SlavedUpdate::xfer(xfer);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -185,4 +185,4 @@ void DroneCarrierSlavedUpdate::loadPostProcess(void)
 	// extend base class
 	SlavedUpdate::loadPostProcess();
 
-}  // end loadPostProcess
+}

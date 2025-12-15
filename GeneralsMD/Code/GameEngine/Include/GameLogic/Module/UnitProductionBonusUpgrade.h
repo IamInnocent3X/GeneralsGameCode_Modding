@@ -45,9 +45,6 @@
 
 #pragma once
 
-#ifndef __UNIT_PRODUCTION_BONUS_UPGRADE_H_
-#define __UNIT_PRODUCTION_BONUS_UPGRADE_H_
-
 //-----------------------------------------------------------------------------
 #include "GameLogic/Module/UpgradeModule.h"
 
@@ -98,4 +95,3 @@ protected:
 
 };
 
-#endif // __UNIT_PRODUCTION_BONUS_UPGRADE_H_

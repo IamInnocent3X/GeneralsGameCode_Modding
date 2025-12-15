@@ -416,7 +416,7 @@ void ShieldBody::crc( Xfer *xfer )
 	// extend base class
 	ActiveBody::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -444,7 +444,7 @@ void ShieldBody::xfer( Xfer *xfer )
 	// constructor object id
 	//xfer->xferObjectID( &m_constructorObjectID );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -455,4 +455,4 @@ void ShieldBody::loadPostProcess( void )
 	// extend base class
 	ActiveBody::loadPostProcess();
 
-}  // end loadPostProcess
+}

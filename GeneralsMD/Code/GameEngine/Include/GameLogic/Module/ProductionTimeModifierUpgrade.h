@@ -45,9 +45,6 @@
 
 #pragma once
 
-#ifndef __PRODUCTION_TIME_MODIFIER_UPGRADE_H_
-#define __PRODUCTION_TIME_MODIFIER_UPGRADE_H_
-
 //-----------------------------------------------------------------------------
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
@@ -123,5 +120,3 @@ protected:
 private:
 	Bool m_hasExecuted;
 };
-
-#endif // __PRODUCTION_TIME_MODIFIER_UPGRADE_H_

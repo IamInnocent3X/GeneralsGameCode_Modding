@@ -8,9 +8,6 @@
 
 #pragma once
 
-#ifndef __RESET_SPECIAL_POWER_TIMER_WHILE_ALIVE_UPDATE_H_
-#define __RESET_SPECIAL_POWER_TIMER_WHILE_ALIVE_UPDATE_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/KindOf.h"
 #include "GameLogic/Module/UpdateModule.h"
@@ -54,6 +51,3 @@ public:
 protected:
 	// no members needed
 };
-
-
-#endif

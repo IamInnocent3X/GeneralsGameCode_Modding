@@ -346,7 +346,7 @@ public:
 	SpawnBehaviorInterface* getSpawnBehaviorInterface() const;
 	ProjectileUpdateInterface* getProjectileUpdateInterface() const;
 
-	inline void clearInvSqrtMass() { m_invsqrt_mass = 0; }
+	void clearInvSqrtMass() { m_invsqrt_mass = 0; }
 
 	// special case for the AIUpdateInterface, since it will be referred to a great deal
 	inline AIUpdateInterface *getAIUpdateInterface() { return m_ai; }
@@ -432,7 +432,7 @@ public:
 	enum FormationID getFormationID(void) const {return m_formationID;}
 	void setFormationOffset(const Coord2D& offset) {m_formationOffset = offset;}
 	void getFormationOffset(Coord2D* offset) const {*offset = m_formationOffset;}
-	inline Bool getFormationIsCommandMap() const { return m_formationIsCommandMap; }
+	Bool getFormationIsCommandMap() const { return m_formationIsCommandMap; }
 
 
 //THIS FUNCTION BELONGS AT THE OBJECT LEVEL BECAUSE THERE IS AT LEAST ONE SPECIAL UNIT
@@ -630,8 +630,8 @@ public:
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 	Bool isCurWeaponLockedPriority() const { return m_weaponSet.isCurWeaponLockedPriority(); }
 
-	inline ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
-	inline void setCustomStatusFlags(ObjectCustomStatusType customStatusMap) { m_customStatus = customStatusMap; } 
+	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
+	void setCustomStatusFlags(ObjectCustomStatusType customStatusMap) { m_customStatus = customStatusMap; } 
 	Bool testCustomStatus(const AsciiString& cst) const;
 	Bool testCustomStatusForAll(const std::vector<AsciiString>& cst) const;
 
@@ -670,8 +670,8 @@ public:
 	}
 	Bool testCustomWeaponBonusCondition(const AsciiString& cst) const;
 
-	inline WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
-	inline ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
+	WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
+	ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
 
 	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
 	inline void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
@@ -723,10 +723,10 @@ public:
 	std::vector<UnsignedInt> getDisabledTillFrame() const;
 	void transferDisabledTillFrame(const std::vector<UnsignedInt>& disabledTillFrames);
 
-	inline TintStatus getDisabledTint() const { return m_disabledTintToClear; };
-	inline const AsciiString& getDisabledCustomTint() const { return m_customDisabledTintToClear; }
-	inline void setDisabledTint(TintStatus tintStatus) { m_disabledTintToClear = tintStatus; }
-	inline void setDisabledCustomTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
+	TintStatus getDisabledTint() const { return m_disabledTintToClear; };
+	const AsciiString& getDisabledCustomTint() const { return m_customDisabledTintToClear; }
+	void setDisabledTint(TintStatus tintStatus) { m_disabledTintToClear = tintStatus; }
+	void setDisabledCustomTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
 
 	//void checkLevitate();
 
@@ -765,8 +765,8 @@ public:
 	inline UnsignedInt getSafeOcclusionFrame(void) { return m_safeOcclusionFrame; }	//< this is an object specific frame at which it's safe to enable building occlusion.
 	inline void	setSafeOcclusionFrame(UnsignedInt frame) { m_safeOcclusionFrame = frame;}
 
-	inline void setParasiteCollideActive(Bool set) { m_parasiteCollideActive = set;}
-	inline const Bool getParasiteCollideActive() const { return m_parasiteCollideActive;}
+	void setParasiteCollideActive(Bool set) { m_parasiteCollideActive = set;}
+	const Bool getParasiteCollideActive() const { return m_parasiteCollideActive;}
 
 	// All of our cheating for radars and power go here.
 	// This is the function that we now call in becomingTeamMember to adjust our power.
@@ -785,8 +785,8 @@ public:
 	Bool hasRejectKey(const std::vector<AsciiString>& keys) const;
 	void setContainedPosition();
 
-	inline std::vector<ObjectID> getEquipAttackableObjectIDs() const { return m_equipAttackableObjIDs; }
-	inline std::vector<ObjectID> getEquipObjectIDs() const { return m_equipObjIDs; }
+	std::vector<ObjectID> getEquipAttackableObjectIDs() const { return m_equipAttackableObjIDs; }
+	std::vector<ObjectID> getEquipObjectIDs() const { return m_equipObjIDs; }
 
 	void setHijackerID(ObjectID HijackerID);
 	void setCarBombConverterID(ObjectID ConverterID);
@@ -796,7 +796,7 @@ public:
 	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite);
 	Bool checkToSquishHijack(const Object *other) const;
 
-	inline ObjectID getEquipToID() const { return m_equipToID; }
+	ObjectID getEquipToID() const { return m_equipToID; }
 
 	Bool hasParasiteCollide() const { return m_hasParasiteCrateCollide; }
 
@@ -807,7 +807,7 @@ public:
 	void removeMeFromAssaultTransport(ObjectID replaceID = INVALID_ID);
 	void doAssaultTransportHealthUpdate();
 
-	inline ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
+	ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
 
 	void doSlaveBehaviorUpdate( Bool doSlaver );
 	void doSlavedUpdate( Bool doSlaver );
@@ -818,18 +818,18 @@ public:
 	void doSlowDeathLayerUpdate(Bool hitTree);
 	void doSlowDeathRefreshUpdate();
 
-	inline void setIsMobMember(Bool set) { m_isMobMember = set; }
-	inline void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }
-	inline Bool getMobUpdateRefreshed() const { return m_mobJustUpdated; }
-	inline void setNoSlowDeathLayerUpdate() { m_noSlowDeathLayerUpdate = TRUE; }
+	void setIsMobMember(Bool set) { m_isMobMember = set; }
+	void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }
+	Bool getMobUpdateRefreshed() const { return m_mobJustUpdated; }
+	void setNoSlowDeathLayerUpdate() { m_noSlowDeathLayerUpdate = TRUE; }
 
 	Bool isDozerDoingAnyTasks() const;
 
-	inline void setLastExitedFrame(UnsignedInt frames) { m_lastExitedFrame = frames; }
-	inline UnsignedInt getLastExitedFrame() const { return m_lastExitedFrame; }
+	void setLastExitedFrame(UnsignedInt frames) { m_lastExitedFrame = frames; }
+	UnsignedInt getLastExitedFrame() const { return m_lastExitedFrame; }
 
-	inline void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
-	inline UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
+	void setNoAcceptOrdersFrame(UnsignedInt frames) { m_noAcceptOrdersFrame = frames; }
+	UnsignedInt getNoAcceptOrdersFrame() const { return m_noAcceptOrdersFrame; }
 
 	void doStealthUpdate() { if(getStealth()) getStealth()->refreshUpdate(); }
 
@@ -843,9 +843,9 @@ public:
 	Bool showCashText() const;
 
 	void setSelectablesBoundTo(const std::vector<ObjectID>& IDs);
-	inline void setDontDoGroupSelecting(Bool e) { m_dontDoGroupSelecting = e; }
-	inline const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
-	inline const Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
+	void setDontDoGroupSelecting(Bool e) { m_dontDoGroupSelecting = e; }
+	const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
+	const Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;

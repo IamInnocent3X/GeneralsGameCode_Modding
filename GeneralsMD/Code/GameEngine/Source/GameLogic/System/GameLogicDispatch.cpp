@@ -1159,11 +1159,11 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			{
 				currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msgOrderData );
 
-			}  // end if, command for group
+			}
 
 			break;
 
-		}  // end GameMessage::MSG_EVACUATE
+		}
 
 		// --------------------------------------------------------------------------------------------
 		case GameMessage::MSG_EXECUTE_RAILED_TRANSPORT:

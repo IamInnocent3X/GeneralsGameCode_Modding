@@ -206,7 +206,7 @@ void DroneCarrierContain::onRemoving(Object* rider)
 		if (draw)
 			draw->clearModelConditionState(MODELCONDITION_LOADED);
 
-	}  // end if
+	}
 
 	if (getObject()->isAboveTerrain())
 	{
@@ -326,7 +326,7 @@ void DroneCarrierContain::crc(Xfer* xfer)
 	// extend base class
 	TransportContain::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -356,9 +356,9 @@ void DroneCarrierContain::xfer(Xfer* xfer)
 			xfer->xferObjectID(&std::get<0>(entry));
 			xfer->xferUnsignedInt(&std::get<1>(entry));
 
-		}  // end for
+		}
 
-	}  // end if, save
+	}
 	else if (xfer->getXferMode() == XFER_LOAD)
 	{
 		m_contained_units.clear();
@@ -371,7 +371,7 @@ void DroneCarrierContain::xfer(Xfer* xfer)
 			DEBUG_CRASH(("DroneCarrierContain::xfer - object vector should be empty before loading"));
 			throw XFER_LIST_NOT_EMPTY;
 
-		}  // end if
+		}
 
 		// read all ids
 		for (UnsignedShort i = 0; i < listCount; ++i)
@@ -381,18 +381,18 @@ void DroneCarrierContain::xfer(Xfer* xfer)
 			xfer->xferUnsignedInt(&std::get<1>(entry));
 			m_contained_units.push_back(entry);
 
-		}  // end for, i
+		}
 
-	}  // end else if
+	} 
 	else
 	{
 
 		DEBUG_CRASH(("DroneCarrierContain::xfer - Unknown xfer mode '%d'", xfer->getXferMode()));
 		throw XFER_MODE_UNKNOWN;
 
-	}  // end else
+	}
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -403,4 +403,4 @@ void DroneCarrierContain::loadPostProcess(void)
 	// extend base class
 	TransportContain::loadPostProcess();
 
-}  // end loadPostProcess
+}

@@ -320,7 +320,7 @@ void EnergyShieldBehavior::crc( Xfer *xfer )
 	// extend base class
 	UpgradeMux::upgradeMuxCRC( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -348,7 +348,7 @@ void EnergyShieldBehavior::xfer( Xfer *xfer )
 	//hit frames
 	xfer->xferUnsignedInt(&m_shieldHitCountdown);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -362,4 +362,4 @@ void EnergyShieldBehavior::loadPostProcess( void )
 	// extend base class
 	UpgradeMux::upgradeMuxLoadPostProcess();
 
-}  // end loadPostProcess
+}

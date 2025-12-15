@@ -1138,9 +1138,9 @@ void CaveContain::xfer( Xfer *xfer )
 				DEBUG_CRASH(( "CaveContain::xfer - Unable to find captured team by id" ));
 				throw SC_INVALID_DATA;
 
-			}  // end if
+			}
 
-		}  // end if
+		}
 		else
 			m_capturedTeam = NULL;
 

@@ -634,7 +634,7 @@ void MultiAddOnContain::crc(Xfer* xfer)
   // extend base class
   TransportContain::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -670,7 +670,7 @@ void MultiAddOnContain::xfer(Xfer* xfer)
   TransportContain::xfer(xfer);
 
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -681,4 +681,4 @@ void MultiAddOnContain::loadPostProcess(void)
   // extend base class
   TransportContain::loadPostProcess();
 
-}  // end loadPostProcess
+}

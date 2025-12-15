@@ -1039,7 +1039,7 @@ void GameClient::destroyDrawablePreserveGUI( Drawable *draw )
 		DEBUG_ASSERTCRASH( obj->getDrawable() == draw, ("Object/Drawable pointer mismatch!") );
 		obj->friend_bindToDrawable( NULL );
 
-	}  // end if
+	}
 
 	// remove the drawable from our hash of drawables
 	removeDrawableFromLookupTable( draw );

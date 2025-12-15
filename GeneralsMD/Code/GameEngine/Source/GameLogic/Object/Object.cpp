@@ -3120,7 +3120,7 @@ void Object::doDisablePower(Bool isCommand)
 		if( getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
 		{
 			return;
-		}  // end if
+		}
 
 		// adjust the power it takes, don't adjust the power it gives. It is already handled by DisabledEdge
 		if(getTemplate()->getEnergyProduction() < 0 && getControllingPlayer())
@@ -3186,7 +3186,7 @@ void Object::clearDisablePower(Bool isCommand)
 		if( getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) )
 		{
 			return;
-		}  // end if
+		}
 
 		// adjust the power it takes, don't adjust the power it gives. It is already handled by DisabledEdge
 		if(getTemplate()->getEnergyProduction() < 0 && getControllingPlayer())

@@ -2426,11 +2426,11 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
   {
 		if(skirmishFPS>TheGlobalData->m_framesPerSecondLimit)
 			skirmishFPS = 1000;
-		TheGameEngine->setFramesPerSecondLimit(skirmishFPS);
+		TheFramePacer->setFramesPerSecondLimit(skirmishFPS);
   }
   else if( (loadingSaveGame || ( isInSinglePlayerGame() ) ) && TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
   {
-		TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
+		TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
   }
 
   // Loading Save Games doesn't change the Seed. So need to declare it here.

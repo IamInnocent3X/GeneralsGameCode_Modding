@@ -138,7 +138,7 @@ void ObjectDelayedOrderHelper::crc( Xfer *xfer )
 	// object helper crc
 	ObjectHelper::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -211,9 +211,9 @@ void ObjectDelayedOrderHelper::xfer( Xfer *xfer )
 				//	xfer->xferWideChar(&((*it).data).wChar);
 				//	break;
 				}
-			}  //end for, it
+			}
 
-		}  // end if, saving
+		}
 		else
 		{
 			for (UnsignedShort i = 0; i < argumentCount; ++i)
@@ -260,12 +260,12 @@ void ObjectDelayedOrderHelper::xfer( Xfer *xfer )
 
 				m_msgArguments.push_back(argument);
 
-			}  // end for, i
+			}
 
-		}  // end else, loading
+		}
 	}
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -276,5 +276,4 @@ void ObjectDelayedOrderHelper::loadPostProcess( void )
 	// object helper base class
 	ObjectHelper::loadPostProcess();
 
-}  // end loadPostProcess
-
+}

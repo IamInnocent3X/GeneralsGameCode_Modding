@@ -250,7 +250,7 @@ void ChronoDeathBehavior::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -277,7 +277,7 @@ void ChronoDeathBehavior::xfer( Xfer *xfer )
 	// die frame
 	xfer->xferUnsignedInt(&m_dieFrame);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -288,4 +288,4 @@ void ChronoDeathBehavior::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

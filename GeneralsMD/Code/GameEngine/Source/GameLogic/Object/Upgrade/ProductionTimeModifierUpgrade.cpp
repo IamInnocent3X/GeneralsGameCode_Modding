@@ -155,14 +155,14 @@ void ProductionTimeModifierUpgrade::onCapture( Player *oldOwner, Player *newOwne
 		oldOwner->removeKindOfProductionTimeChange(getProductionTimeModifierUpgradeModuleData()->m_kindOf, getProductionTimeModifierUpgradeModuleData()->m_percentage );
 		setUpgradeExecuted(FALSE);
 
-	}  // end if
+	}
 	if( newOwner )
 	{
 
 		newOwner->addKindOfProductionTimeChange(getProductionTimeModifierUpgradeModuleData()->m_kindOf, getProductionTimeModifierUpgradeModuleData()->m_percentage );
 		setUpgradeExecuted(TRUE);
 
-	}  // end if
+	}
 
 }  // end onCapture
 
@@ -239,7 +239,7 @@ void ProductionTimeModifierUpgrade::crc( Xfer *xfer )
 	// extend base class
 	UpgradeModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -259,7 +259,7 @@ void ProductionTimeModifierUpgrade::xfer( Xfer *xfer )
 
 	xfer->xferBool(&m_hasExecuted);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -270,4 +270,4 @@ void ProductionTimeModifierUpgrade::loadPostProcess( void )
 	// extend base class
 	UpgradeModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

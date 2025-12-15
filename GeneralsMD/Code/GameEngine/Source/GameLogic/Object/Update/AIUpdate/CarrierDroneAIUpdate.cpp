@@ -203,7 +203,7 @@ void CarrierDroneAIUpdate::crc(Xfer* xfer)
 {
 	// extend base class
 	AIUpdateInterface::crc(xfer);
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -228,7 +228,7 @@ void CarrierDroneAIUpdate::xfer(Xfer* xfer)
 	xfer->xferBool(&m_isContained);
 	xfer->xferUnsignedInt(&m_launchFrame);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -237,4 +237,4 @@ void CarrierDroneAIUpdate::loadPostProcess(void)
 {
 	// extend base class
 	AIUpdateInterface::loadPostProcess();
-}  // end loadPostProcess
+}

@@ -3621,7 +3621,7 @@ void AIGroup::groupDisablePower( CommandSourceType cmdSource )
 		else
 			obj->clearDisablePower(TRUE);
 
-	}  // end for, i
+	}
 
 }
 

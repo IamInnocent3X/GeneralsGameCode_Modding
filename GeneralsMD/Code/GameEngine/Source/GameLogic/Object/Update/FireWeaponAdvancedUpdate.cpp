@@ -449,7 +449,7 @@ void FireWeaponAdvancedUpdate::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -478,7 +478,7 @@ void FireWeaponAdvancedUpdate::xfer( Xfer *xfer )
 		m_deliveryDecal.xferRadiusDecal(xfer);
 		xfer->xferUnsignedInt(&m_radiusDecalRemoveFrame);
 	}
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -489,4 +489,4 @@ void FireWeaponAdvancedUpdate::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

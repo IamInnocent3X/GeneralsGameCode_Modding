@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __ChronoDamageHelper_H_
-#define __ChronoDamageHelper_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
 
@@ -64,5 +61,3 @@ protected:
 	UnsignedInt m_healingStepCountdown;
 };
 
-
-#endif  // end __ChronoDamageHelper_H_

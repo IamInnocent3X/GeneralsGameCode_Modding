@@ -538,7 +538,7 @@ void FreeFallProjectileBehavior::crc(Xfer* xfer)
 	// extend base class
 	UpdateModule::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -593,11 +593,11 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 					weaponTemplateName.str()));
 				throw SC_INVALID_DATA;
 
-			}  // end if
+			}
 
-		}  // end else
+		}
 
-	}  // end if
+	}
 
 	// lifespan frame
 	// xfer->xferUnsignedInt(&m_lifespanFrame);
@@ -613,7 +613,7 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 
 	xfer->xferObjectID(&m_shrapnelLaunchID);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -624,4 +624,4 @@ void FreeFallProjectileBehavior::loadPostProcess(void)
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

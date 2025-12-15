@@ -401,7 +401,7 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 			currentTintInfo.second = (*it).second;
 			xfer->xferUnsignedInt( &currentTintInfo.second );
 
-		}  // end for, it
+		}
 
 		CustomTintStatusDurationVec::const_iterator it2;
 		for( it2 = m_customTintStatus.begin(); it2 != m_customTintStatus.end(); ++it2 )
@@ -413,9 +413,9 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 			customTintStatusInfo.second = (*it2).second;
 			xfer->xferUnsignedInt( &customTintStatusInfo.second );
 
-		}  // end for, it2
+		}
 
-	}  // end if, save
+	}
 	else
 	{
 
@@ -434,7 +434,7 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 			// stuff in vector
 			m_currentTint.push_back( currentTintInfo );
 
-		}  // end for, i
+		}
 
 		for( UnsignedShort i_2 = 0; i_2 < customTintStatusSize; ++i_2 )
 		{
@@ -446,11 +446,10 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 			// stuff in vector
 			m_customTintStatus.push_back( customTintStatusInfo );
 
-		}  // end for, i
+		}
 
-	}  // end else, load
+	}
 
-	// Modified from Team.cpp
 	StatusTypeMap::iterator bonusIt;
 	CustomStatusTypeMap::iterator customBonusIt;
 
@@ -475,7 +474,7 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 			bonusTime = (*bonusIt).second;
 			xfer->xferUnsignedInt( &bonusTime );
 
-		}  // end for
+		}
 
 		for( customBonusIt = m_customBonusMap.begin(); customBonusIt != m_customBonusMap.end(); ++customBonusIt )
 		{
@@ -486,9 +485,9 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 			customBonusTime = (*customBonusIt).second;
 			xfer->xferUnsignedInt( &customBonusTime );
 
-		}  // end for
+		}
 
-	}  // end if, save
+	}
 	else
 	{
 
@@ -501,7 +500,7 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 
 			m_bonusMap[bonusName] = bonusTime;
 			
-		}  // end for, i
+		}
 
 		for( UnsignedShort i_2 = 0; i_2 < customBonusCount; ++i_2 )
 		{
@@ -512,9 +511,9 @@ void TempWeaponBonusHelper::xfer( Xfer *xfer )
 
 			m_customBonusMap[customBonusName] = customBonusTime;
 			
-		}  // end for, i
+		}
 
-	}  // end else load
+	}
 
 }
 

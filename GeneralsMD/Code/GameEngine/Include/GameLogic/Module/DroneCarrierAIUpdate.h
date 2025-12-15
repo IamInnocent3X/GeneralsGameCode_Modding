@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef __DRONE_CARRIER_AI_UPDATE_H
-#define __DRONE_CARRIER_AI_UPDATE_H
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/DieModule.h"
@@ -113,6 +110,4 @@ private:
 
 template bool DroneCarrierAIUpdate::targetInRange<Object>(const Object* target);
 template bool DroneCarrierAIUpdate::targetInRange<Coord3D>(const Coord3D* target);
-
-#endif // __DRONE_CARRIER_AI_UPDATE_H
 

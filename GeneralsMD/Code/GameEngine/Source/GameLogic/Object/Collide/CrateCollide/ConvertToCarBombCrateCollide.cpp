@@ -315,9 +315,9 @@ void ConvertToCarBombCrateCollide::xfer( Xfer *xfer )
 
 				DEBUG_CRASH(( "ConvertToCarBombCrateCollide::xfer - Unable to find original team by id" ));
 
-			}  // end if
+			}
 
-		}  // end if
+		}
 		else
 			m_originalTeam = NULL;
 	}

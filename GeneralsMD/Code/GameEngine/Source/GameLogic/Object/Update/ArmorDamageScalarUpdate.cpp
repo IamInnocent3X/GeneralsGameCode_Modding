@@ -331,7 +331,7 @@ void ArmorDamageScalarUpdate::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -365,7 +365,7 @@ void ArmorDamageScalarUpdate::xfer( Xfer *xfer )
 	xfer->xferBool(&m_effectApplied);
 
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -376,4 +376,4 @@ void ArmorDamageScalarUpdate::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

@@ -237,7 +237,7 @@ void DynamicGeometryClientUpdate::crc( Xfer *xfer )
 	// extend base class
 	ClientUpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -264,7 +264,7 @@ void DynamicGeometryClientUpdate::xfer( Xfer *xfer )
 	// override alpha value
 	xfer->xferReal(&m_overrideAlpha);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -276,4 +276,4 @@ void DynamicGeometryClientUpdate::loadPostProcess( void )
 	ClientUpdateModule::loadPostProcess();
 
 
-}  // end loadPostProcess
+}

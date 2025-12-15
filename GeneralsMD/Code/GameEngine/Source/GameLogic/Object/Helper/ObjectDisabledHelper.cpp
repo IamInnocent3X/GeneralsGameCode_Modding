@@ -85,7 +85,7 @@ void ObjectDisabledHelper::crc( Xfer *xfer )
 	// object helper crc
 	ObjectHelper::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -106,7 +106,7 @@ void ObjectDisabledHelper::xfer( Xfer *xfer )
 	// Sleep Until Time
 	xfer->xferUnsignedInt( &m_sleepUntil );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -117,5 +117,5 @@ void ObjectDisabledHelper::loadPostProcess( void )
 	// object helper base class
 	ObjectHelper::loadPostProcess();
 
-}  // end loadPostProcess
+}
 

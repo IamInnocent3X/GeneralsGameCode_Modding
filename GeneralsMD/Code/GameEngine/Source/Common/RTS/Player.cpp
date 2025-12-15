@@ -4918,9 +4918,9 @@ void Player::xfer( Xfer *xfer )
 			// ref
 			xfer->xferUnsignedInt(&entry->m_ref);
 
-		}  // end for
+		}
 
-	}  // end if, save
+	}
 	else
 	{
 
@@ -4931,7 +4931,7 @@ void Player::xfer( Xfer *xfer )
 			DEBUG_CRASH(("Player::xfer - m_kindOfPercentProductionTimeChangeList should be empty but is not\n"));
 			throw SC_INVALID_DATA;
 
-		}  // end if
+		}
 
 		// read each entry
 		for (UnsignedInt i = 0; i < percentProductionTimeChangeCount; ++i)
@@ -4948,9 +4948,9 @@ void Player::xfer( Xfer *xfer )
 			// put at end of list
 			m_kindOfPercentProductionTimeChangeList.push_back(entry);
 
-		}  // end for i
+		}
 
-	}  // end else, load
+	}
 
 
 
@@ -5097,7 +5097,7 @@ void Player::xfer( Xfer *xfer )
 				xfer->xferReal(&((*it).second));
 			}  //end for, it
 
-		}  // end if, saving
+		}
 		else
 		{
 			for (UnsignedShort i = 0; i < entriesCount; ++i)
@@ -5110,9 +5110,9 @@ void Player::xfer( Xfer *xfer )
 
 				m_productionCostChanges[NAMEKEY(templateName)] = bonusPercent;
 
-			}  // end for, i
+			}
 
-		}  // end else, loading
+		}
 	}
 	//------------------------
 	// Xfer ProductionTimeChangeMap
@@ -5131,7 +5131,7 @@ void Player::xfer( Xfer *xfer )
 				xfer->xferReal(&((*it).second));
 			}  //end for, it
 
-		}  // end if, saving
+		}
 		else
 		{
 			for (UnsignedShort i = 0; i < entriesCount; ++i)
@@ -5144,9 +5144,9 @@ void Player::xfer( Xfer *xfer )
 
 				m_productionTimeChanges[NAMEKEY(templateName)] = bonusPercent;
 
-			}  // end for, i
+			}
 
-		}  // end else, loading
+		}
 	}
 	//------------------------
 

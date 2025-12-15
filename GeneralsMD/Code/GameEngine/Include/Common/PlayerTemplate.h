@@ -134,53 +134,53 @@ public:
 	AsciiString getLoadScreenMusic( void ) const {return m_loadScreenMusic;	}
 	AsciiString getScoreScreenMusic() const { return m_scoreScreenMusic; }
 
-	inline const AsciiString& getArrowCursorName() const {return m_arrowCursorName;	}
-	inline const AsciiString& getScrollCursorName() const {return m_scrollCursorName;	}
-	inline const AsciiString& getTargetCursorName() const {return m_targetCursorName;	}
-	inline const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
-	inline const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
-	inline const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
-	inline const AsciiString& getMoveInFormationToCursorName() const {return m_moveInFormationToCursorName;	}
-	inline const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
-	inline const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
-	inline const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
-	inline const AsciiString& getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
-	inline const AsciiString& getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
-	inline const AsciiString& getOutrangeCursorName() const {return m_outrangeCursorName;	}
-	inline const AsciiString& getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
-	inline const AsciiString& getDockCursorName() const {return m_dockCursorName;	}
-	inline const AsciiString& getGetHealedCursorName() const {return m_getHealedCursorName;	}
-	inline const AsciiString& getDoRepairCursorName() const {return m_doRepairCursorName;	}
-	inline const AsciiString& getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
-	inline const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
-	inline const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
-	inline const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
-	inline const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
-	inline const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
+	const AsciiString& getArrowCursorName() const {return m_arrowCursorName;	}
+	const AsciiString& getScrollCursorName() const {return m_scrollCursorName;	}
+	const AsciiString& getTargetCursorName() const {return m_targetCursorName;	}
+	const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
+	const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
+	const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
+	const AsciiString& getMoveInFormationToCursorName() const {return m_moveInFormationToCursorName;	}
+	const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
+	const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
+	const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
+	const AsciiString& getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
+	const AsciiString& getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
+	const AsciiString& getOutrangeCursorName() const {return m_outrangeCursorName;	}
+	const AsciiString& getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
+	const AsciiString& getDockCursorName() const {return m_dockCursorName;	}
+	const AsciiString& getGetHealedCursorName() const {return m_getHealedCursorName;	}
+	const AsciiString& getDoRepairCursorName() const {return m_doRepairCursorName;	}
+	const AsciiString& getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
+	const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
+	const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
+	const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
+	const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 
-	inline const AsciiString& getArrowCursorName() const {return m_arrowCursorName;	}
-	inline const AsciiString& getScrollCursorName() const {return m_scrollCursorName;	}
-	inline const AsciiString& getTargetCursorName() const {return m_targetCursorName;	}
-	inline const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
-	inline const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
-	inline const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
-	inline const AsciiString& getMoveInFormationToCursorName() const {return m_moveInFormationToCursorName;	}
-	inline const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
-	inline const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
-	inline const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
-	inline const AsciiString& getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
-	inline const AsciiString& getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
-	inline const AsciiString& getOutrangeCursorName() const {return m_outrangeCursorName;	}
-	inline const AsciiString& getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
-	inline const AsciiString& getDockCursorName() const {return m_dockCursorName;	}
-	inline const AsciiString& getGetHealedCursorName() const {return m_getHealedCursorName;	}
-	inline const AsciiString& getDoRepairCursorName() const {return m_doRepairCursorName;	}
-	inline const AsciiString& getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
-	inline const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
-	inline const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
-	inline const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
-	inline const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
-	inline const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
+	const AsciiString& getArrowCursorName() const {return m_arrowCursorName;	}
+	const AsciiString& getScrollCursorName() const {return m_scrollCursorName;	}
+	const AsciiString& getTargetCursorName() const {return m_targetCursorName;	}
+	const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
+	const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
+	const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
+	const AsciiString& getMoveInFormationToCursorName() const {return m_moveInFormationToCursorName;	}
+	const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
+	const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
+	const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
+	const AsciiString& getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
+	const AsciiString& getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
+	const AsciiString& getOutrangeCursorName() const {return m_outrangeCursorName;	}
+	const AsciiString& getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
+	const AsciiString& getDockCursorName() const {return m_dockCursorName;	}
+	const AsciiString& getGetHealedCursorName() const {return m_getHealedCursorName;	}
+	const AsciiString& getDoRepairCursorName() const {return m_doRepairCursorName;	}
+	const AsciiString& getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
+	const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
+	const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
+	const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
+	const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 
   Bool isOldFaction( void ) const { return m_oldFaction; }
 

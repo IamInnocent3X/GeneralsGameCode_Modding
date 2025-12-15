@@ -619,7 +619,7 @@ void ScatterShotUpdate::crc(Xfer* xfer)
 	// extend base class
 	UpdateModule::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -680,7 +680,7 @@ void ScatterShotUpdate::xfer(Xfer* xfer)
 	//	m_prevGoalObj = TheGameLogic->findObjectByID(prevTargetID);
 	//}
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -691,4 +691,4 @@ void ScatterShotUpdate::loadPostProcess(void)
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

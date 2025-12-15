@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __UPGRADE_SPECIAL_POWER_H_
-#define __UPGRADE_SPECIAL_POWER_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/SpecialPowerModule.h"
 
@@ -76,5 +73,3 @@ protected:
 
 	void grantUpgrade(Object* object);
 };
-
-#endif

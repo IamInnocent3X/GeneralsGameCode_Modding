@@ -30,9 +30,6 @@
 
 #pragma once
 
-#ifndef __OBJECT_LEVITATION_HELPER_H_
-#define __OBJECT_LEVITATION_HELPER_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
 
@@ -70,6 +67,3 @@ private:
 	UnsignedInt							m_levitateFlutterFrame;
 	Bool								m_dontLevitate;
 };
-
-
-#endif  // end __OBJECT_LEVITATION_HELPER_H_

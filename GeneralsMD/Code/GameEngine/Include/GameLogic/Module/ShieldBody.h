@@ -30,9 +30,6 @@
 
 #pragma once
 
-#ifndef __ShieldBody_H_
-#define __ShieldBody_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ActiveBody.h"
 #include "GameLogic/Module/UpdateModule.h"
@@ -119,5 +116,4 @@ private:
 	void findShieldBehaviorModule();
 };
 
-#endif // __ShieldBody_H_
 

@@ -162,7 +162,7 @@ void RadiusDecalBehavior::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -184,7 +184,7 @@ void RadiusDecalBehavior::xfer( Xfer *xfer )
 	m_radiusDecal.xferRadiusDecal(xfer);
 
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -195,4 +195,4 @@ void RadiusDecalBehavior::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

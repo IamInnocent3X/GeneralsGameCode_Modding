@@ -185,7 +185,7 @@ typedef std::vector<AsciiStringIntPair>	CustomFlags;
 
 typedef std::pair<DamageTypeFlags, AsciiString>		DamageFlagsCustom;	
 
-inline Bool getCustomTypeFlag( const AsciiString& set , const CustomFlags& CustomTypes , const AsciiString& CustomType )
+Bool getCustomTypeFlag( const AsciiString& set , const CustomFlags& CustomTypes , const AsciiString& CustomType )
 {
 	Bool returnTrue = TRUE;
 	

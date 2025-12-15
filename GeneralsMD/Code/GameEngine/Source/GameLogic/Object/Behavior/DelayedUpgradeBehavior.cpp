@@ -228,7 +228,7 @@ void DelayedUpgradeBehavior::crc(Xfer* xfer)
 	// extend upgrade mux
 	UpgradeMux::upgradeMuxCRC(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -255,7 +255,7 @@ void DelayedUpgradeBehavior::xfer(Xfer* xfer)
 	// trigger completed
 	xfer->xferBool(&m_triggerCompleted);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -269,4 +269,4 @@ void DelayedUpgradeBehavior::loadPostProcess(void)
 	// extend upgrade mux
 	UpgradeMux::upgradeMuxLoadPostProcess();
 
-}  // end loadPostProcess
+}

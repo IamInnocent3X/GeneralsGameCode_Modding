@@ -102,7 +102,7 @@ void ResetSpecialPowerTimerWhileAliveUpdate::crc( Xfer *xfer )
 {
 	// extend base class
 	UpdateModule::crc( xfer );
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -119,7 +119,7 @@ void ResetSpecialPowerTimerWhileAliveUpdate::xfer( Xfer *xfer )
 	// extend base class
 	UpdateModule::xfer( xfer );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -129,4 +129,4 @@ void ResetSpecialPowerTimerWhileAliveUpdate::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

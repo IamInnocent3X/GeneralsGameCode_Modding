@@ -30,9 +30,6 @@
 
 #pragma once
 
-#ifndef __OBJECT_DELAYEDORDER_HELPER_H_
-#define __OBJECT_DELAYEDORDER_HELPER_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
 #include "Common/MessageStream.h"
@@ -68,6 +65,3 @@ private:
 	std::vector<GameMessageArgumentStruct>			m_msgArguments;
 	UnsignedInt										m_delayFrame;
 };
-
-
-#endif  // end __OBJECT_DELAYEDORDER_HELPER_H_

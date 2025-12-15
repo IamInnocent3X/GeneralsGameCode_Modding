@@ -163,12 +163,12 @@ public:
 	CustomDamageType m_customDamageTypeParse;
 	AsciiString m_customDamageTypeParseNext;
 
-	inline const CustomDamageTypesMap& getCustomDamageTypes() const
+	const CustomDamageTypesMap& getCustomDamageTypes() const
 	{
 		return m_customDamageTypes;
 	}
 
-	inline Int getCustomDamageTypesSize() const
+	Int getCustomDamageTypesSize() const
 	{
 		return m_customDamageTypes.size();
 	}

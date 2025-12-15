@@ -98,7 +98,7 @@ void ChronoDamageHelper::crc( Xfer *xfer )
 	// object helper crc
 	ObjectHelper::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -118,7 +118,7 @@ void ChronoDamageHelper::xfer( Xfer *xfer )
 
 	xfer->xferUnsignedInt( &m_healingStepCountdown );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -129,5 +129,5 @@ void ChronoDamageHelper::loadPostProcess( void )
 	// object helper base class
 	ObjectHelper::loadPostProcess();
 
-}  // end loadPostProcess
+}
 

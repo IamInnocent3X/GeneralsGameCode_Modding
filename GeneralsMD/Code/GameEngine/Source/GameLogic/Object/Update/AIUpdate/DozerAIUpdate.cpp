@@ -1836,7 +1836,7 @@ void DozerAIUpdate::privateRepair( Object *obj, CommandSourceType cmdSource )
 	//	if( BitIsSet( bridge->getStatusBits(), OBJECT_STATUS_UNDERGOING_REPAIR ) == TRUE )
 	//		return;
   //
-	//}  // end if
+	//}
 
 
 	// for bridges, set the status for the bridge object
@@ -1849,7 +1849,7 @@ void DozerAIUpdate::privateRepair( Object *obj, CommandSourceType cmdSource )
 	//	DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
 	//	bridge->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
   //
-	//}  // end if
+	//}
 
 	// start the new task
 	newTask( DOZER_TASK_REPAIR, obj );
@@ -2208,9 +2208,9 @@ void DozerAIUpdate::internalTaskCompleteOrCancelled( DozerTask task )
 			//		DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
 			//		bridge->clearStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
 			//
-			//	}  // end if
+			//	}
       //
-			//}  // end if
+			//}
 
 			break;
 

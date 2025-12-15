@@ -517,7 +517,7 @@ void BattlePlanBonusBehavior::crc(Xfer* xfer)
 	// extend upgrade mux
 	UpgradeMux::upgradeMuxCRC(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -551,7 +551,7 @@ void BattlePlanBonusBehavior::xfer(Xfer* xfer)
 		}
 	//}
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -565,4 +565,4 @@ void BattlePlanBonusBehavior::loadPostProcess(void)
 	// extend upgrade mux
 	UpgradeMux::upgradeMuxLoadPostProcess();
 
-}  // end loadPostProcess
+}

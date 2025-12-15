@@ -1,7 +1,5 @@
 
 #pragma once
-#ifndef __TINTSTATUS_H__
-#define __TINTSTATUS_H__
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
@@ -55,4 +53,3 @@ typedef std::vector<CustomTintStatusType> CustomTintStatusVec;
 //typedef std::hash_map< NameKeyType, DrawableColorTint, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > CustomTintStatusMap;
 
 // --------
-#endif /* __TINTSTATUS_H__ */

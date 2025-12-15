@@ -28,9 +28,6 @@
 
 #pragma once
 
-#ifndef __ChronoDeathBehavior_H_
-#define __ChronoDeathBehavior_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/DieModule.h"
 
@@ -114,5 +111,4 @@ private:
 
 };
 
-#endif // __ChronoDeathBehavior_H_
 

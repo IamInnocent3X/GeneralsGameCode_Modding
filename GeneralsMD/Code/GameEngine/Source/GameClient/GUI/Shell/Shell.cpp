@@ -209,12 +209,12 @@ void Shell::update( void )
 			m_background = NULL;
 
 		}
-		if(TheGameEngine && m_isShellActive)
+		if(TheFramePacer && m_isShellActive)
 		{
 			if(TheGlobalData->m_shellMapOn && m_shellMapOn && TheGlobalData->m_menufps > 0 && TheGlobalData->m_menufps <= TheGlobalData->m_framesPerSecondLimit)
-				TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_menufps);
+				TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_menufps);
 			else if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
-				TheGameEngine->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
+				TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
 		}
 		
 		// Update the animate window manager

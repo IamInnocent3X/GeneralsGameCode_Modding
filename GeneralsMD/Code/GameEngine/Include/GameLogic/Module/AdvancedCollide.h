@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __AdvancedCollide_H_
-#define __AdvancedCollide_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/Weapon.h"
@@ -113,7 +110,3 @@ private:
 	Real m_roll;
 
 };
-
-
-#endif
-

@@ -269,7 +269,7 @@ void KodiakDeploymentUpdate::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -289,7 +289,7 @@ void KodiakDeploymentUpdate::xfer( Xfer *xfer )
 	UpdateModule::xfer( xfer );
   xfer->xferObjectID( &m_gunshipID );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -299,4 +299,4 @@ void KodiakDeploymentUpdate::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

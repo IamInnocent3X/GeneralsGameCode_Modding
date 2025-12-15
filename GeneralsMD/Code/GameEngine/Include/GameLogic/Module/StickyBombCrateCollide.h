@@ -32,9 +32,6 @@
 
 #pragma once
 
-#ifndef STICKY_BOMB_CRATE_COLLIDE_H_
-#define STICKY_BOMB_CRATE_COLLIDE_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
 #include "GameLogic/Module/CrateCollide.h"
@@ -108,4 +105,3 @@ private:
 
 };
 
-#endif

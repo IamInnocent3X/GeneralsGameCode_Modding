@@ -1372,7 +1372,7 @@ GameMessage::Type CommandTranslator::issueAttackCommandWithOrderRadius( Drawable
 			// if we have a stats collector, inrement the stats
 			if(TheStatsCollector)
 				TheStatsCollector->incrementAttackCount();
-		}  // end if
+		}
 	}
 	else
 	{
@@ -1397,7 +1397,7 @@ GameMessage::Type CommandTranslator::issueAttackCommandWithOrderRadius( Drawable
 		info.m_air = targetObj->isUsingAirborneLocomotor();
 		info.m_drawTarget = target;
 		pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), msgType, &info );
-	}  // end if
+	}
 
 	// return the actual message type created
 	return msgType;
@@ -2463,7 +2463,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 				msgType = GameMessage::MSG_SABOTAGE_HINT;
 				hintMessage = TheMessageStream->appendMessage( msgType );
 				hintMessage->appendObjectIDArgument( draw->getObject()->getID() );
-			}  // end else
+			}
 
 		}
 		// ********************************************************************************************
@@ -2478,7 +2478,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 
         msgType = createEnterMessage( draw, type );
 
-			}  // end if
+			}
 			else
 			{
 				msgType = GameMessage::MSG_EQUIP_HINT;

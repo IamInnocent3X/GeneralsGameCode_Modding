@@ -911,7 +911,7 @@ void KodiakUpdate::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -963,7 +963,7 @@ void KodiakUpdate::xfer( Xfer *xfer )
 		xfer->xferCoord3D( &m_positionToShootAt );
 	}
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -974,4 +974,4 @@ void KodiakUpdate::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

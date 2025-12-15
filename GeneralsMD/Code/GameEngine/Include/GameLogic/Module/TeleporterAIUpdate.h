@@ -28,9 +28,6 @@
  
 #pragma once
 
-#ifndef _TELEPORTER_AI_UPDATE_H_
-#define _TELEPORTER_AI_UPDATE_H_
-
 #include "GameLogic/Module/AIUpdate.h"
 
 class FXList;
@@ -122,6 +119,4 @@ private:
 	UnsignedInt m_disabledStart;  ///< frame we have started recovering
 	bool m_isDisabled;      ///< current recovering status
 };
-
-#endif
 

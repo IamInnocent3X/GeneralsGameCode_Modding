@@ -4,8 +4,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#ifndef _DRONE_CARRIER_SLAVED_UPDATE_H_
-#define _DRONE_CARRIER_SLAVED_UPDATE_H_
 #include "Common/INI.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/SlavedUpdate.h"
@@ -37,4 +35,3 @@ public:
 
 };
 
-#endif

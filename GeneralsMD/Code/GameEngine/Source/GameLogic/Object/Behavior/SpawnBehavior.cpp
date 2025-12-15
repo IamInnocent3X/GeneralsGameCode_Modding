@@ -1404,7 +1404,7 @@ void SpawnBehavior::xfer( Xfer *xfer )
 			DEBUG_CRASH(( "m_spawnIDsInfo - should be empty before loading" ));
 			throw XFER_LIST_NOT_EMPTY;
 
-		}  // end if
+		}
 
 		// read all ids
 		for( UnsignedShort i = 0; i < spawnIDsInfoCount; ++i )

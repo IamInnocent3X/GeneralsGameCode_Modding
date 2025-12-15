@@ -401,7 +401,7 @@ void EquipCrateCollide::crc( Xfer *xfer )
 	// extend base class
 	CrateCollide::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -421,7 +421,7 @@ void EquipCrateCollide::xfer( Xfer *xfer )
 
 	xfer->xferObjectID(&m_equipToID);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -432,4 +432,4 @@ void EquipCrateCollide::loadPostProcess( void )
 	// extend base class
 	CrateCollide::loadPostProcess();
 
-}  // end loadPostProcess
+}

@@ -28,9 +28,6 @@
 
 #pragma once
 
-#ifndef _FreeFallProjectileBehavior_H_
-#define _FreeFallProjectileBehavior_H_
-
 #include "Common/GameType.h"
 #include "Common/GlobalData.h"
 #include "Common/STLTypedefs.h"
@@ -135,6 +132,4 @@ private:
 	Bool                  m_assignedBackup;
 
 };
-
-#endif // _FreeFallProjectileBehavior_H_
 

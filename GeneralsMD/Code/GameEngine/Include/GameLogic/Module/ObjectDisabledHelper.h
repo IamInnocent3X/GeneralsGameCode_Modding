@@ -30,9 +30,6 @@
 
 #pragma once
 
-#ifndef __OBJECT_DISABLED_HELPER_H_
-#define __OBJECT_DISABLED_HELPER_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/ObjectHelper.h"
 
@@ -67,5 +64,3 @@ private:
 
 };
 
-
-#endif  // end __OBJECT_DISABLED_HELPER_H_

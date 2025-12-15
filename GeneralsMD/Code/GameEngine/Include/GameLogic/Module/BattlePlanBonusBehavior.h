@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __BATTLEPLANBONUSBEHAVIOR_H_
-#define __BATTLEPLANBONUSBEHAVIOR_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 
 #include "GameLogic/Module/BehaviorModule.h"
@@ -188,6 +185,4 @@ private:
 
 	Bool m_effectApplied[BATTLE_PLAN_COUNT];
 };
-
-#endif // __BattlePlanBonusBehavior_H_
 

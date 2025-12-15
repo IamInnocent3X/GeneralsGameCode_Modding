@@ -5711,7 +5711,7 @@ void Drawable::xfer( Xfer *xfer )
 			customStatusName = (*it);
 			xfer->xferAsciiString( &customStatusName );
 
-		}  // end for
+		}
 
 		for( std::vector<AsciiString>::iterator it2 = m_prevTintCustomStatus.begin(); it2 != m_prevTintCustomStatus.end(); ++it2 )
 		{
@@ -5719,9 +5719,9 @@ void Drawable::xfer( Xfer *xfer )
 			prevCustomStatusName = (*it2);
 			xfer->xferAsciiString( &prevCustomStatusName );
 
-		}  // end for
+		}
 
-	}  // end if, save
+	}
 	else
 	{
 
@@ -5731,7 +5731,7 @@ void Drawable::xfer( Xfer *xfer )
 			xfer->xferAsciiString( &customStatusName );
 			m_tintCustomStatus.push_back(customStatusName);
 			
-		}  // end for, i
+		}
 
 		for( UnsignedShort i_2 = 0; i_2 < prevStatusSize; ++i_2 )
 		{
@@ -5739,9 +5739,9 @@ void Drawable::xfer( Xfer *xfer )
 			xfer->xferAsciiString( &prevCustomStatusName );
 			m_prevTintCustomStatus.push_back(prevCustomStatusName);
 			
-		}  // end for, i
+		}
 
-	}  // end else load
+	} 
 
 	// fading mode
 	xfer->xferUser( &m_fadeMode, sizeof( FadingMode ) );

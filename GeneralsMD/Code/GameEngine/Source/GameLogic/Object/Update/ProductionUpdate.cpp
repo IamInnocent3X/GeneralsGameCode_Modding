@@ -1504,7 +1504,7 @@ void ProductionUpdate::xfer( Xfer *xfer )
 			{
 				boundID = production->m_bindsSelectionOnGroupsData[i_a];
 				xfer->xferObjectID( &boundID );
-			}  // end for, i_a
+			}
 
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );
@@ -1614,7 +1614,7 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				DEBUG_CRASH(( "ProductionUpdate::xfer - production->m_productionExtraData should be empty but is not" ));
 				throw SC_INVALID_DATA;
 
-			}  // end if
+			}
 
 			QuantityModifier qm;
 			// read each entry
@@ -1632,7 +1632,7 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				// put at end of list
 				production->m_productionExtraData.push_back( qm );
 
-			}  // end for i
+			}
 
 			// bind selection on groups produced
 			xfer->xferBool(&production->m_bindsSelectionOnGroupsProduced);
@@ -1647,7 +1647,7 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				DEBUG_CRASH(( "ScriptEngine::xfer - m_bindsSelectionOnGroupsData should be empty but is not" ));
 				throw SC_INVALID_DATA;
 
-			}  // end if
+			}
 
 			// read all IDs
 			for( UnsignedShort i_a = 0; i_a < SelectionOnGroupsDataCount; ++i_a )
@@ -1656,7 +1656,7 @@ void ProductionUpdate::xfer( Xfer *xfer )
 				xfer->xferObjectID( &boundID );
 				production->m_bindsSelectionOnGroupsData.push_back(boundID);
 
-			}  // end for
+			}
 
 			// exit door
 			xfer->xferInt( (Int*)&production->m_exitDoor );

@@ -648,7 +648,7 @@ void TeleporterAIUpdate::crc( Xfer *xfer )
 {
 	// extend base class
 	AIUpdateInterface::crc(xfer);
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -669,7 +669,7 @@ void TeleporterAIUpdate::xfer( Xfer *xfer )
    xfer->xferUnsignedInt(&m_disabledUntil);
    xfer->xferUnsignedInt(&m_disabledStart);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -678,4 +678,4 @@ void TeleporterAIUpdate::loadPostProcess( void )
 {
  // extend base class
 	AIUpdateInterface::loadPostProcess();
-}  // end loadPostProcess
+}

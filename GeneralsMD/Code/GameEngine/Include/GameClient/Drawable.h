@@ -239,16 +239,6 @@ enum DrawableStatus CPP_11(: DrawableStatusBits)
 	DRAWABLE_STATUS_DEFAULT = DRAWABLE_STATUS_SHADOWS,
 };
 
-enum TintStatus CPP_11(: Int)
-{
-	TINT_STATUS_DISABLED		= 0x00000001,///< drawable tint color is deathly dark grey
-	TINT_STATUS_IRRADIATED	= 0x00000002,///< drawable tint color is sickly green
-	TINT_STATUS_POISONED		= 0x00000004,///< drawable tint color is open-sore red
-	TINT_STATUS_GAINING_SUBDUAL_DAMAGE		= 0x00000008,///< When gaining subdual damage, we tint SUBDUAL_DAMAGE_COLOR
-	TINT_STATUS_FRENZY			= 0x00000010,///< When frenzied, we tint FRENZY_COLOR
-
-};
-
 //-----------------------------------------------------------------------------
 //Keep this enum in sync with the TerrainDecalTextureName array in drawable.cpp
 //
@@ -571,9 +561,9 @@ public:
 	void setEffectiveOpacity( Real pulseFactor, Real explicitOpacity = -1.0f );
 
 	// AW: new params for additive transparency scaling (=emissive)
-	inline void setEmissiveOpacityScaling(bool value) { m_isEmissiveOpacityScaling = value; }
-	inline bool getEmissiveOpacityScaling() const { return m_isEmissiveOpacityScaling; }
-	inline Real getEmissiveOpacity() const { if (m_isEmissiveOpacityScaling) return getEffectiveOpacity(); else return 1.0; }
+	void setEmissiveOpacityScaling(bool value) { m_isEmissiveOpacityScaling = value; }
+	bool getEmissiveOpacityScaling() const { return m_isEmissiveOpacityScaling; }
+	Real getEmissiveOpacity() const { if (m_isEmissiveOpacityScaling) return getEffectiveOpacity(); else return 1.0; }
 
 	// this is for the add'l pass fx which operates completely independently of the stealth opacity effects. Draw() does the fading every frame.
 	Real getSecondMaterialPassOpacity() const { return m_secondMaterialPassOpacity; }		///< get alpha/opacity value used to render add'l  rendering pass.
@@ -718,12 +708,12 @@ private:
   DynamicAudioEventInfo *m_customSoundAmbientInfo; ///< If not NULL, info about the ambient sound to attach to this object
 
 	DrawableStatusBits m_status;		///< status bits (see DrawableStatus enum)
-	UnsignedInt m_tintStatus;				///< tint color status bits (see TintStatus enum)
-	UnsignedInt m_prevTintStatus;///< for edge testing with m_tintStatus
+	TintStatus m_tintStatus;				///< tint color status bits (see TintStatus enum)
+	TintStatus m_prevTintStatus;///< for edge testing with m_tintStatus
 	std::vector<AsciiString> m_tintCustomStatus;
 	std::vector<AsciiString> m_prevTintCustomStatus;
-	UnsignedInt m_eraseTint;
-	UnsignedInt m_tintStatusTypeQuick;
+	TintStatus m_eraseTint;
+	TintStatus m_tintStatusTypeQuick;
 	AsciiString m_eraseCustomTint;
 	AsciiString m_customTintStatusTypeQuick;
 	UnsignedInt m_countFrames;

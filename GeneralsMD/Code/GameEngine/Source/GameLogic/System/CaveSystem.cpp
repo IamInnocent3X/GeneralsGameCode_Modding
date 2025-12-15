@@ -354,7 +354,7 @@ void CaveSystem::xfer( Xfer *xfer )
 			DEBUG_CRASH(( "CaveSystem::xfer - m_tunnelTrackerTeamMap should be empty but is not" ));
 			throw SC_INVALID_DATA;
 
-		}  // end if
+		}
 
 		// read each item
 		for( UnsignedShort i = 0; i < mapCount; ++i )

@@ -164,7 +164,7 @@ void StickyBombCrateCollide::crc( Xfer *xfer )
 	// extend base class
 	CrateCollide::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -184,7 +184,7 @@ void StickyBombCrateCollide::xfer( Xfer *xfer )
 
 	xfer->xferBool(&m_hasCollided);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -195,4 +195,4 @@ void StickyBombCrateCollide::loadPostProcess( void )
 	// extend base class
 	CrateCollide::loadPostProcess();
 
-}  // end loadPostProcess
+}

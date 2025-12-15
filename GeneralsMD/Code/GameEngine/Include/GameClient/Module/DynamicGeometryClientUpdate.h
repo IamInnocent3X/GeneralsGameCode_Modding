@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __DynamicGeometryClientUpdate_H_
-#define __DynamicGeometryClientUpdate_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/ClientUpdateModule.h"
 
@@ -86,6 +83,4 @@ protected:
 
 	Real m_prevScale;
 };
-
-#endif // __DynamicGeometryClientUpdate_H_
 

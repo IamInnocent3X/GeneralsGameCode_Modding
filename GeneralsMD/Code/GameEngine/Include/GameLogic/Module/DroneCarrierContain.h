@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef __DRONE_CARRIER_CONTAIN_H_
-#define __DRONE_CARRIER_CONTAIN_H_
-
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/OpenContain.h"
 #include "GameLogic/Module/TransportContain.h"
@@ -60,5 +57,3 @@ protected:
 	// Saves slot assignement and frame when entered
 	std::vector<std::tuple<ObjectID, UnsignedInt>> m_contained_units;
 };
-
-#endif // __TransportContain_H_

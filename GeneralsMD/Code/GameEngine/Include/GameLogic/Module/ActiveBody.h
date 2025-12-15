@@ -195,7 +195,7 @@ protected:
 
 	virtual void applyChronoParticleSystems(void);
 
-	inline const Armor getCurrentArmor() const { return m_curArmor; }
+	const Armor getCurrentArmor() const { return m_curArmor; }
 
 	void doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, Bool *allowModifier, Real damageAmount, Real realFramesToStatusFor);
 

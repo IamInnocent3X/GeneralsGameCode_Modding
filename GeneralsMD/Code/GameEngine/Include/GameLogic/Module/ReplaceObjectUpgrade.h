@@ -91,8 +91,8 @@ public:
 		m_transferToAssaultTransport = FALSE;
 		m_transferShieldedTargets = FALSE;
 		m_transferShieldingTargets = FALSE;
-		m_transferSelection = FALSE;
-		m_transferSelectionDontClearGroup = TRUE;
+		m_transferSelection = TRUE;
+		m_transferSelectionDontClearGroup = FALSE;
 		m_transferObjectName = FALSE;
 		m_transferHealthChangeType = SAME_CURRENTHEALTH;
 		

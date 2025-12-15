@@ -757,8 +757,8 @@ public:
 
 	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
 
-	inline void setUnitsMoveInFormation(void) { m_unitsMoveInFormation = !m_unitsMoveInFormation; }
-	inline Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; } 
+	void setUnitsMoveInFormation(void) { m_unitsMoveInFormation = !m_unitsMoveInFormation; }
+	Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; } 
 
 protected:
 

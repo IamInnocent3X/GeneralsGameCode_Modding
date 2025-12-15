@@ -135,7 +135,7 @@ void W3DDependencyCarrierDraw::crc(Xfer* xfer)
 	// extend base class
 	W3DDependencyModelDraw::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -153,7 +153,7 @@ void W3DDependencyCarrierDraw::xfer(Xfer* xfer)
 	// extend base class
 	W3DDependencyModelDraw::xfer(xfer);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -164,4 +164,4 @@ void W3DDependencyCarrierDraw::loadPostProcess(void)
 	// extend base class
 	W3DDependencyModelDraw::loadPostProcess();
 
-}  // end loadPostProcess
+}

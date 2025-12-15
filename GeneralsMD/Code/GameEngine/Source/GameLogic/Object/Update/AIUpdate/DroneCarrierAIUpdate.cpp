@@ -703,7 +703,7 @@ void DroneCarrierAIUpdate::crc(Xfer* xfer)
 	// extend base class
 	AIUpdateInterface::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -737,9 +737,9 @@ void DroneCarrierAIUpdate::xfer(Xfer* xfer)
 				DEBUG_CRASH(("SpawnBehavior::xfer - Unable to find template '%s'", name.str()));
 				throw SC_INVALID_DATA;
 
-			}  // end if
-		}  // end if
-	}  // end if
+			}
+		}
+	}
 
 		// spawn ids
 	xfer->xferSTLObjectIDVector(&m_spawnIDs);
@@ -762,7 +762,7 @@ void DroneCarrierAIUpdate::xfer(Xfer* xfer)
 
 	xfer->xferCoord3D(&m_designatedPosition);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -773,4 +773,4 @@ void DroneCarrierAIUpdate::loadPostProcess(void)
 	// extend base class
 	AIUpdateInterface::loadPostProcess();
 
-}  // end loadPostProcess
+}

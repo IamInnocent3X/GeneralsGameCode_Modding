@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __MULTIADDON_CONTAIN_H_
-#define __MULTIADDON_CONTAIN_H_
-
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/TransportContain.h"
 #include "GameLogic/GameLogic.h"
@@ -162,6 +159,4 @@ private:
 	void updateSubObjForSlot(short slot, bool isNowOccupied);
 
 };
-
-#endif
 

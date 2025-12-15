@@ -29,9 +29,6 @@
 
 #pragma once
 
-#ifndef __DelayedUpgradeBehavior_H_
-#define __DelayedUpgradeBehavior_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 
 #include "GameLogic/Module/BehaviorModule.h"
@@ -153,6 +150,4 @@ protected:
 	virtual Bool hasUpgradeRefresh() { return false; }
 
 };
-
-#endif // __DelayedUpgradeBehavior_H_
 

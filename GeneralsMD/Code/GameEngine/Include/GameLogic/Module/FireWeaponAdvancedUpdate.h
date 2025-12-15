@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef __FIRE_WEAPON_ADVANCED_UPDATE_H_
-#define __FIRE_WEAPON_ADVANCED_UPDATE_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Weapon.h"
@@ -71,5 +68,4 @@ protected:
 	UnsignedInt m_radiusDecalRemoveFrame;
 };
 
-#endif
 

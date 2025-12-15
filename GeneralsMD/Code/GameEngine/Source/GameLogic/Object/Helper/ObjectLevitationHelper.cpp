@@ -132,7 +132,7 @@ void ObjectLevitationHelper::crc( Xfer *xfer )
 	// object helper crc
 	ObjectHelper::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -158,7 +158,7 @@ void ObjectLevitationHelper::xfer( Xfer *xfer )
 
 	xfer->xferBool ( &m_dontLevitate );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -169,5 +169,5 @@ void ObjectLevitationHelper::loadPostProcess( void )
 	// object helper base class
 	ObjectHelper::loadPostProcess();
 
-}  // end loadPostProcess
+}
 

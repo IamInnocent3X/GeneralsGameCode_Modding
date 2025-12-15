@@ -34,9 +34,6 @@
 
 #pragma once
 
-#ifndef EQUIP_CRATE_COLLIDE_H_
-#define EQUIP_CRATE_COLLIDE_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
 #include "GameLogic/Object.h"
@@ -121,4 +118,3 @@ private:
 	ObjectID m_equipToID;
 };
 
-#endif

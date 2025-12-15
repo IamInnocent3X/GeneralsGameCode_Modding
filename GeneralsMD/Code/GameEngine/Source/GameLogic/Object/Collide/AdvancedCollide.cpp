@@ -202,7 +202,7 @@ void AdvancedCollide::crc( Xfer *xfer )
 	// extend base class
 	CollideModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -230,14 +230,14 @@ void AdvancedCollide::xfer( Xfer *xfer )
 											 ("AdvancedCollide::xfer - m_collideWeapon present mismatch") );
 		xfer->xferSnapshot( m_collideWeapon );
 
-	}  // end else
+	}
 	else
 	{
 
 		DEBUG_ASSERTCRASH( m_collideWeapon == NULL,
 											 ("AdvancedCollide::Xfer - m_collideWeapon missing mismatch" ));
 
-	}  // end else
+	}
 
 	// ever fired
 	xfer->xferBool( &m_everFired );
@@ -245,7 +245,7 @@ void AdvancedCollide::xfer( Xfer *xfer )
 	// trigger chance roll
 	xfer->xferReal(&m_roll);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -256,4 +256,4 @@ void AdvancedCollide::loadPostProcess( void )
 	// extend base class
 	CollideModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

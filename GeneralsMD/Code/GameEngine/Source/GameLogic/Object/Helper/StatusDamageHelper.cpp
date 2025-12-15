@@ -342,7 +342,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			currentTintInfo.second = (*it).second;
 			xfer->xferUnsignedInt( &currentTintInfo.second );
 
-		}  // end for, it
+		}
 
 		CustomTintStatusDurationVec::const_iterator it2;
 		for( it2 = m_customTintStatus.begin(); it2 != m_customTintStatus.end(); ++it2 )
@@ -354,9 +354,9 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			customTintStatusInfo.second = (*it2).second;
 			xfer->xferUnsignedInt( &customTintStatusInfo.second );
 
-		}  // end for, it2
+		}
 
-	}  // end if, save
+	}
 	else
 	{
 
@@ -375,7 +375,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			// stuff in vector
 			m_currentTint.push_back( currentTintInfo );
 
-		}  // end for, i
+		}
 
 		for( UnsignedShort i_2 = 0; i_2 < customTintStatusSize; ++i_2 )
 		{
@@ -387,9 +387,9 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			// stuff in vector
 			m_customTintStatus.push_back( customTintStatusInfo );
 
-		}  // end for, i
+		}
 
-	}  // end else, load
+	}
 
 	// Modified from Team.cpp
 	StatusTypeMap::iterator statusIt;
@@ -418,7 +418,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			statusTime = (*statusIt).second;
 			xfer->xferUnsignedInt( &statusTime );
 
-		}  // end for
+		}
 
 		for( customStatusIt = m_customStatusToHeal.begin(); customStatusIt != m_customStatusToHeal.end(); ++customStatusIt )
 		{
@@ -429,9 +429,9 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 			customStatusTime = (*customStatusIt).second;
 			xfer->xferUnsignedInt( &customStatusTime );
 
-		}  // end for
+		}
 
-	}  // end if, save
+	}
 	else
 	{
 
@@ -445,7 +445,7 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 
 			m_statusToHeal[statusName] = statusTime;
 			
-		}  // end for, i
+		}
 
 		for( UnsignedShort i_2 = 0; i_2 < customStatusCount; ++i_2 )
 		{
@@ -456,9 +456,9 @@ void StatusDamageHelper::xfer( Xfer *xfer )
 
 			m_customStatusToHeal[customStatusName] = customStatusTime;
 			
-		}  // end for, i
+		}
 
-	}  // end else load
+	} 
 
 }
 

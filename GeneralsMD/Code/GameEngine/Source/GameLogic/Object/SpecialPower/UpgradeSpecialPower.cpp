@@ -244,7 +244,7 @@ void UpgradeSpecialPower::crc(Xfer* xfer)
 	// extend base class
 	SpecialPowerModule::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -262,7 +262,7 @@ void UpgradeSpecialPower::xfer(Xfer* xfer)
 	// extend base class
 	SpecialPowerModule::xfer(xfer);
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -273,4 +273,4 @@ void UpgradeSpecialPower::loadPostProcess(void)
 	// extend base class
 	SpecialPowerModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

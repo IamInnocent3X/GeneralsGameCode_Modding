@@ -27,9 +27,6 @@
 
 #pragma once
 
-#ifndef __RadiusDecalBehavior_H_
-#define __RadiusDecalBehavior_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
@@ -129,5 +126,4 @@ private:
 	void clearDecal( void );
 };
 
-#endif // __RadiusDecalBehavior_H_
 

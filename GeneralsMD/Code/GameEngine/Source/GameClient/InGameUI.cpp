@@ -3943,7 +3943,7 @@ void InGameUI::selectDrawablePreserveGUI( Drawable *draw, Bool showFlash )
 		// the control needs to update its context sensitive display now
 		//TheControlBar->onDrawableSelected( draw );
 
-	}  // end if
+	}
 
 }
 
@@ -4227,7 +4227,7 @@ void InGameUI::disregardDrawablePreserveGUI( Drawable *draw )
 		// the control needs to update its context sensitive display now
 		//TheControlBar->onDrawableDeselected( draw );
 
-	}  // end if
+	}
 
 }
 

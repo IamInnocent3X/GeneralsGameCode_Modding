@@ -4,9 +4,6 @@
 
 #pragma once
 
-#ifndef __KODIAK_UPDATE_H_
-#define __KODIAK_UPDATE_H_
-
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/KindOf.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
@@ -146,6 +143,4 @@ protected:
 
 };
 
-
-#endif // __KODIAK_UPDATE_H_
 
