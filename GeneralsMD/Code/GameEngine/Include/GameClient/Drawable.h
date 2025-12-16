@@ -308,7 +308,7 @@ public:
 
 	void setTintStatus(TintStatus statusType) { if(m_countFrames || m_dontAssignFrames) return; m_tintStatus.set(statusType); };
 	void setAndClearTintFast(TintStatus statusType);
-	void clearTintStatus(TintStatus statusType, bool clearLater = FALSE) { if(clearLater) m_eraseTint = statusType; else m_tintStatus.set(statusType, 0); }
+	void clearTintStatus(TintStatus statusType, bool clearLater = FALSE);
 	Bool testTintStatus(TintStatus statusType) const { return m_tintStatus.test(statusType); };
 	// TO-DO: Change AsciiString to NameKeyType
 	// TO-DO: REVERTED. Game will not register.
