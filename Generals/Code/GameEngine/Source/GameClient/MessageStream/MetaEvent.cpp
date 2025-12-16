@@ -450,6 +450,16 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 				break;
 			}
 
+			Bool isDoingDoubleDown = FALSE;
+			if( (keyState & KEY_STATE_DOWN) &&
+				m_lastKeyDown == key &&
+				m_lastKeyDownTime > timenow &&
+				TheMetaMap->hasDoubleDownKey(map->m_key)
+			  )
+			{
+				isDoingDoubleDown = TRUE;
+			}
+
 			// ok, now check for "normal" key transitions.
 			if (
 						map->m_key == key &&
@@ -457,8 +467,8 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 						(
 							// IamInnocent 04/12/25 - Reworked & Restored Double Down function
 							(map->m_transition == UP && (keyState & KEY_STATE_UP)) ||
-							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN)) ||
-							(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && m_lastKeyDown == key && m_lastKeyDownTime > timenow)
+							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN) && !isDoingDoubleDown) ||
+							(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && isDoingDoubleDown)
 						)
 					)
 			{

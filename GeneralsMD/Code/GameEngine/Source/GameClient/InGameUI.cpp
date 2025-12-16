@@ -2673,7 +2673,8 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 	{
 		TheMouse->setCursorTooltip(UnicodeString::TheEmptyString );
 		m_mousedOverDrawableID = INVALID_DRAWABLE_ID;
-		const Drawable *draw = TheGameClient->findDrawableByID(msg->getArgument(0)->drawableID);
+		Drawable *draw_nonconst = TheGameClient->findDrawableByID(msg->getArgument(0)->drawableID);
+		const Drawable *draw = draw_nonconst;
 		const Object *obj = draw ? draw->getObject() : NULL;
 		if( obj )
 		{
@@ -2686,13 +2687,17 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
  				MobMemberSlavedUpdate *MMSUpdate = (MobMemberSlavedUpdate*)obj->findUpdateModule( key_MobMemberSlavedUpdate );
  				if( MMSUpdate )
  				{
- 					Object *slaver = TheGameLogic->findObjectByID(MMSUpdate->getSlaverID());
+					Object *slaver = TheGameLogic->findObjectByID(MMSUpdate->getSlaverID());
  					if ( slaver )
  					{
- 						Drawable *slaverDraw = slaver->getDrawable();
+						Drawable *slaverDraw = slaver->getDrawable();
  						if ( slaverDraw )
+						{
  							m_mousedOverDrawableID = slaverDraw->getID();
  							// if this fails, not to worry... it has already defaulted to INVALID_DRAWABLE_ID, above
+							if(oldID != m_mousedOverDrawableID)
+								draw_nonconst->getObject()->doSlaveBehaviorUpdate(FALSE, TRUE);
+						}
  					}
  				}
  			}

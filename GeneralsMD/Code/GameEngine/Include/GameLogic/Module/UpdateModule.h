@@ -261,7 +261,7 @@ public:
 	virtual	Bool isSelfTasking() const = 0;
 	virtual void informMySlaverSelfInfo() = 0;
 	virtual void informMySlaverSelfTasking(Bool set) = 0;
-	virtual void friend_refreshUpdate() = 0;
+	virtual void friend_refreshUpdate(Bool isInstant) = 0;
 
 };
 

@@ -809,7 +809,7 @@ public:
 
 	ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
 
-	void doSlaveBehaviorUpdate( Bool doSlaver );
+	void doSlaveBehaviorUpdate( Bool doSlaver, Bool isInstant );
 	void doSlavedUpdate( Bool doSlaver );
 	void doMobMemberSlavedUpdate();
 	void doWeaponSetUpdate();
