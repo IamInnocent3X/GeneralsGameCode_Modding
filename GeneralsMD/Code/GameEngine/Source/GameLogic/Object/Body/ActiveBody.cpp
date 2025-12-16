@@ -1917,6 +1917,7 @@ Bool ActiveBody::isNearSubduedRangeCustom( Real low, Real high, const AsciiStrin
 //-------------------------------------------------------------------------------------------------
 void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing )
 {
+	Bool isSubdued = FALSE;
 	CustomSubdualCurrentDamageMap::iterator it = m_currentSubdualDamageCustom.find(customStatus);
 	if(it != m_currentSubdualDamageCustom.end())
 	{
