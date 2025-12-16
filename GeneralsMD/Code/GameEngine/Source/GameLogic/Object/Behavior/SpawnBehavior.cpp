@@ -48,7 +48,7 @@
 
 
 #define NONE_SPAWNED_YET (0xffffffff)
-#define COUNT_SPAWN_RATE
+//#define COUNT_SPAWN_RATE
 
 
 
@@ -207,16 +207,10 @@ UpdateSleepTime SpawnBehavior::update( void )
 	Bool aggregateIsMoving = FALSE;
 	if ( m_aggregateHealth )
 	{
+		// Always set status MASKED for Nexus
+		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MASKED ) );
 		computeAggregateStates();
-
-		AIUpdateInterface *ai = getObject()->getAI();
-		if ( ai && ( !m_computedAggregation || ai->isMoving() || ai->getPath() ) )
-		{
-			computeAggregateMembers();
-
-			if(ai->isMoving() || ai->getPath())
-				aggregateIsMoving = TRUE;
-		}
+		aggregateIsMoving = computeAggregateMembers();
 
 		m_computedAggregation = TRUE;
 	}
@@ -265,7 +259,7 @@ UpdateSleepTime SpawnBehavior::update( void )
 		return UPDATE_SLEEP( aggregateIsMoving ? UPDATE_SLEEP_NONE : m_nextWakeUpTime - now );
 	}
 
-	m_nextWakeUpTime = now + SPAWN_UPDATE_RATE;
+	m_nextWakeUpTime = !m_active || m_replacementTimes.empty() ? now + SPAWN_UPDATE_RATE : 0;
 
 	Bool hasPassedItsSpawnTime = FALSE;
 
@@ -884,6 +878,17 @@ void SpawnBehavior::refreshUpdate()
 }
 
 //-------------------------------------------------------------------------------------------------
+void SpawnBehavior::friend_refreshUpdate(Bool isInstant)
+{
+	m_computedAggregation = FALSE;
+
+	if(isInstant)
+		update();
+	else
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
+//-------------------------------------------------------------------------------------------------
 /** When I become damaged */
 // ------------------------------------------------------------------------------------------------
 void SpawnBehavior::onDamage( DamageInfo *info )
@@ -1107,17 +1112,25 @@ void SpawnBehavior::computeAggregateStates(void)
 
 	// HOUSEKEEPING *************************************
 	//make sure no enemies are shooting at the nexus, since it doesn't 'exist'
-	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MASKED ) );
+	//obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MASKED ) );
 
 }
 
-void SpawnBehavior::computeAggregateMembers()
+Bool SpawnBehavior::computeAggregateMembers()
 {
 	if ( ! m_aggregateHealth ) // sanity
-		return;
+		return FALSE;
 
 	Object* obj = getObject();
 	const SpawnBehaviorModuleData* md = getSpawnBehaviorModuleData();
+
+	// Do nothing for no drawable
+	if( !obj->getDrawable() )
+		return FALSE;
+
+	// Do nothing if not mouseovered or selected
+	if( !obj->getDrawable()->isSelected() && TheInGameUI->getMousedOverDrawableID() != obj->getDrawable()->getID() )
+		return FALSE;
 
 	Object* currentSpawn = NULL;
 
@@ -1133,6 +1146,9 @@ void SpawnBehavior::computeAggregateMembers()
 
 	spawnCount = m_spawnIDsInfo.size();
 
+	AIUpdateInterface *ai;
+	Bool isMoving = FALSE;
+
 	for( spawnInfoMapIterator iter = m_spawnIDsInfo.begin(); iter != m_spawnIDsInfo.end(); iter++)
 	{
 		m_selfTaskingSpawnCount += iter->second.isSelfTasking;
@@ -1142,6 +1158,16 @@ void SpawnBehavior::computeAggregateMembers()
 		if( currentSpawn )
 		{
 			avgSpawnPos.add(currentSpawn->getPosition());
+
+			isMoving = isMoving || currentSpawn->getLastActualSpeed() > 0;
+
+			if( !isMoving )
+			{
+				ai = currentSpawn->getAI();
+
+				if(ai && (ai->isMoving() || ai->getPath() || ai->isWaitingForPath()) )
+					isMoving = TRUE;
+			}
 		}
 
 		acrHealth    += iter->second.health;
@@ -1172,6 +1198,8 @@ void SpawnBehavior::computeAggregateMembers()
 	{
 		obj->getBodyModule()->setInitialHealth(0);// I been sick <
 	}
+
+	return isMoving;
 }
 //-------------------------------------------------------------------------------------------------
 Bool SpawnBehavior::areAllSlavesStealthed() const

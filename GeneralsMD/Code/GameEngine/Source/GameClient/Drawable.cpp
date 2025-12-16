@@ -1126,7 +1126,7 @@ void Drawable::onSelected()
 	Object* obj = getObject();
 	if ( obj )
 	{
-		obj->doSlaveBehaviorUpdate(FALSE);
+		obj->doSlaveBehaviorUpdate(FALSE, TRUE);
 
 		ContainModuleInterface* contain = obj->getContain();
 		if ( contain )

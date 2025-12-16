@@ -4144,7 +4144,7 @@ void Object::onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel ne
 		TheAudio->addAudioEvent( &soundToPlay );
 	}
 
-	doSlaveBehaviorUpdate(TRUE);
+	doSlaveBehaviorUpdate(TRUE, FALSE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -8682,55 +8682,6 @@ void Object::doAssaultTransportHealthUpdate()
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doSlaveBehaviorUpdate( Bool doSlaver )
-{
-	// If I do not have a slaver module, don't update me
-	if(m_noSlavedBehavior && m_noSlaverBehavior)
-		return;
-
-	m_noSlavedBehavior = TRUE;
-	m_noSlaverBehavior = TRUE;
-	Bool doneSlaver = FALSE;
-
-	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
-	{
-		// SpawnBehavior Sleepy Updates
-		if(doSlaver && !doneSlaver)
-		{
-			SpawnBehaviorInterface *spawnInterface = (*m)->getSpawnBehaviorInterface();
-			if( spawnInterface )
-			{
-				spawnInterface->friend_refreshUpdate();
-				m_noSlaverBehavior = FALSE;
-				doneSlaver = TRUE;
-				continue;
-			}
-		}
-		
-		SlavedUpdateInterface* sdu = (*m)->getSlavedUpdateInterface();
-		if ( !sdu )
-			continue;
-
-		ObjectID slaverID = sdu->getSlaverID();
-		if ( slaverID != INVALID_ID )
-		{
-			Object *slaver = TheGameLogic->findObjectByID( slaverID );
-			if ( slaver )
-			{
-				SpawnBehaviorInterface *slaverInterface = slaver->getSpawnBehaviorInterface();
-				if( slaverInterface )
-				{
-					slaverInterface->friend_refreshUpdate();
-					m_noSlavedBehavior = FALSE;
-				}
-			}
-		}
-
-		break;//only expect one slavedupdate, so stop searching
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
 void Object::doWeaponSetUpdate()
 {
 	// IamInnocent - This triggers everytime Statuses Changed, which is very common.
@@ -8747,6 +8698,67 @@ void Object::doWeaponSetUpdate()
 	{
 		dtu->refreshUpdate();
 		m_noDemoTrapUpdate = FALSE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doSlaveBehaviorUpdate( Bool doSlaver, Bool isInstant )
+{
+	// If I do not have a slaver module, don't update me
+	if(m_noSlavedBehavior && m_noSlaverBehavior)
+		return;
+
+	m_noSlavedBehavior = TRUE;
+	m_noSlaverBehavior = TRUE;
+	Bool doneSlaver = FALSE;
+	Bool doneSlaved = FALSE;
+
+	for (BehaviorModule** m = getBehaviorModules(); *m; ++m)//expensive search, limited only to stinger soldiers
+	{
+		// SpawnBehavior Sleepy Updates
+		if(doSlaver && !doneSlaver)
+		{
+			SpawnBehaviorInterface *spawnInterface = (*m)->getSpawnBehaviorInterface();
+			if( spawnInterface )
+			{
+				spawnInterface->friend_refreshUpdate(isInstant);
+				m_noSlaverBehavior = FALSE;
+				doneSlaver = TRUE;
+				continue;
+			}
+		}
+
+		if(doneSlaved)
+		{
+			//only expect one slavedupdate, so stop when done
+			if(doneSlaver)
+				break;
+			else
+				continue;
+		}
+
+		SlavedUpdateInterface* sdu = (*m)->getSlavedUpdateInterface();
+		if ( !sdu )
+			continue;
+
+		ObjectID slaverID = sdu->getSlaverID();
+		if ( slaverID != INVALID_ID )
+		{
+			Object *slaver = TheGameLogic->findObjectByID( slaverID );
+			if ( slaver )
+			{
+				SpawnBehaviorInterface *slaverInterface = slaver->getSpawnBehaviorInterface();
+				if( slaverInterface )
+				{
+					slaverInterface->friend_refreshUpdate(isInstant);
+					m_noSlavedBehavior = FALSE;
+					doneSlaved = TRUE;
+				}
+			}
+		}
+
+		if(!doSlaver || doneSlaver)
+			break;//only expect one slavedupdate, so stop searching
 	}
 }
 
@@ -8846,7 +8858,7 @@ void Object::doSlavedUpdate( Bool doSlaver )
 		}
 		else
 		{
-			sdu->friend_refreshUpdate();
+			sdu->friend_refreshUpdate(FALSE);
 		}
 	}
 	

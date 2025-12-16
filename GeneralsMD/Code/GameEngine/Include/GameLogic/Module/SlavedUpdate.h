@@ -179,7 +179,7 @@ public:
 
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
-	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual void friend_refreshUpdate(Bool isInstant) { if(isInstant) update(); else refreshUpdate(); }
 
 	UpdateSleepTime calcSleepTime() const;
 
