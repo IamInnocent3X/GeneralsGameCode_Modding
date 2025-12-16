@@ -747,7 +747,7 @@ UpdateSleepTime KodiakUpdate::update()
 
           }
 
-        }// end else
+        }
 
 
       }//not orbiting

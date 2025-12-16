@@ -186,7 +186,7 @@ public:
 	void applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping );
 	void doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed );
 
-	inline void applyAerialSlowDeathBehaviorCheck( SlowDeathType type ) { m_aerialSlowDeathBehaviorCheck = type; }
+	void applyAerialSlowDeathBehaviorCheck( SlowDeathType type ) { m_aerialSlowDeathBehaviorCheck = type; }
 
 	void setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel);
 	void removeConstantMotionToLoc();

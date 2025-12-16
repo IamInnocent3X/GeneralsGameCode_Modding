@@ -85,12 +85,12 @@ public:
 	//void setConstructorObject( Object *obj );
 	//ObjectID getConstructorObjectID( void ) { return m_constructorObjectID; }
 
-	inline Real getShieldMaxHealth() const { return getShieldBodyModuleData()->m_shieldMaxHealth; }
-	inline Real getShieldCurrentHealth() const { return m_currentShieldHealth; }
+	Real getShieldMaxHealth() const { return getShieldBodyModuleData()->m_shieldMaxHealth; }
+	Real getShieldCurrentHealth() const { return m_currentShieldHealth; }
 	Bool rechargeShieldHealth(Real amount);  ///< returns True if on full health;
 
-	inline Bool isActive() const { return m_active; }
-	inline void setActive(Bool value) { m_active = value; }
+	Bool isActive() const { return m_active; }
+	void setActive(Bool value) { m_active = value; }
 
 	Real getShieldPercent();
 

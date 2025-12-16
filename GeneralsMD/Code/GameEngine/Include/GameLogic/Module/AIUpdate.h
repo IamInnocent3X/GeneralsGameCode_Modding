@@ -699,9 +699,9 @@ public:
 	virtual void friend_notifyStateMachineChanged();
 
 	//TEMP
-	inline int getLocomotorGoalType(void) { return m_locomotorGoalType; }
+	int getLocomotorGoalType(void) { return m_locomotorGoalType; }
 
-	inline Bool friend_isInGuardIdleState() const { return getStateMachine()->isInGuardIdleState(); }
+	Bool friend_isInGuardIdleState() const { return getStateMachine()->isInGuardIdleState(); }
 
 private:
 	// this should only be called by load/save, or by chooseLocomotorSet.
