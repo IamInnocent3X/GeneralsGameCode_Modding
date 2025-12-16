@@ -40,7 +40,11 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/OverchargeBehavior.h"
 #include "GameLogic/Module/PowerPlantUpdate.h"
+#include "GameClient/Drawable.h"
 #include "GameClient/InGameUI.h"
+#include "GameClient/TintStatus.h"
+#include "GameLogic/Weapon.h"
+#include "GameLogic/Damage.h"
 
 
 
@@ -51,6 +55,22 @@ OverchargeBehaviorModuleData::OverchargeBehaviorModuleData( void )
 
 	m_healthPercentToDrainPerSecond = 0.0f;
 	m_notAllowedWhenHealthBelowPercent = 0.0f;
+
+	m_damageTypeFX = DAMAGE_PENALTY;
+	m_bonusToSet.clear();
+	m_statusToSet.clear();
+	m_modelConditionToSet.clear();
+	m_customBonusToSet.clear();
+	m_customStatusToSet.clear();
+	m_tintStatusToSet = TINT_STATUS_INVALID;
+	m_customTintStatusToSet = NULL;
+
+	m_showDescriptionLabel = TRUE;
+	m_overchargeOnLabel.format("TOOLTIP:TooltipNukeReactorOverChargeIsOn");
+	m_overchargeOffLabel.format("TOOLTIP:TooltipNukeReactorOverChargeIsOff");
+
+	m_showOverchargeExhausted = TRUE;
+	m_overchargeExhaustedMessage.format("GUI:OverchargeExhausted");
 
 }
 
@@ -65,6 +85,23 @@ OverchargeBehaviorModuleData::OverchargeBehaviorModuleData( void )
 	{
 		{ "HealthPercentToDrainPerSecond", INI::parsePercentToReal,	NULL, offsetof( OverchargeBehaviorModuleData, m_healthPercentToDrainPerSecond ) },
 		{ "NotAllowedWhenHealthBelowPercent", INI::parsePercentToReal, NULL, offsetof( OverchargeBehaviorModuleData, m_notAllowedWhenHealthBelowPercent ) },
+
+		// New Properties
+		{ "OverchargeDamageTypeFX",		DamageTypeFlags::parseSingleBitFromINI,	NULL, offsetof(OverchargeBehaviorModuleData, m_damageTypeFX) },
+		{ "StatusToSet",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( OverchargeBehaviorModuleData, m_statusToSet ) },
+		{ "CustomStatusToSet",	INI::parseAsciiStringVector, NULL, offsetof( OverchargeBehaviorModuleData, m_customStatusToSet ) },
+		{ "WeaponBonusToSet",	INI::parseWeaponBonusVector, NULL, offsetof( OverchargeBehaviorModuleData, m_bonusToSet ) },
+		{ "CustomWeaponBonusToSet",			INI::parseAsciiStringVector, NULL, offsetof( OverchargeBehaviorModuleData, m_customBonusToSet ) },
+		{ "TintStatusToSet",			TintStatusFlags::parseSingleBitFromINI,		NULL, offsetof( OverchargeBehaviorModuleData, m_tintStatusToSet ) },
+		{ "CustomTintStatusToSet",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_customTintStatusToSet ) },
+		{ "ModelConditionToSet", ModelConditionFlags::parseFromINI, NULL, offsetof( OverchargeBehaviorModuleData, m_modelConditionToSet ) },
+
+		{ "ShowDescriptionLabel",	INI::parseBool, 	NULL, offsetof( OverchargeBehaviorModuleData, m_showDescriptionLabel ) },
+		{ "OverchargeOnDescriptionLabel",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_overchargeOnLabel ) },
+		{ "OverchargeOffDescriptionLabel",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_overchargeOffLabel ) },
+
+		{ "ShowOverchargeExhausted",	INI::parseBool, 	NULL, offsetof( OverchargeBehaviorModuleData, m_showOverchargeExhausted ) },
+		{ "OverchargeExhaustedMessage",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_overchargeExhaustedMessage ) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -110,13 +147,18 @@ UpdateSleepTime OverchargeBehavior::update( void )
 		const OverchargeBehaviorModuleData *modData = getOverchargeBehaviorModuleData();
 
 		// do some damage
+		/// IamInnocent - Adjusted Overcharge to be able to not deal damage
 		BodyModuleInterface *body = us->getBodyModule();
-		DamageInfo damageInfo;
-		damageInfo.in.m_amount = (body->getMaxHealth() * modData->m_healthPercentToDrainPerSecond) / LOGICFRAMES_PER_SECOND;
-		damageInfo.in.m_sourceID = us->getID();
-		damageInfo.in.m_damageType = DAMAGE_PENALTY;
-		damageInfo.in.m_deathType = DEATH_NORMAL;
-		us->attemptDamage( &damageInfo );
+		if(modData->m_healthPercentToDrainPerSecond > 0)
+		{
+			DamageInfo damageInfo;
+			damageInfo.in.m_amount = (body->getMaxHealth() * modData->m_healthPercentToDrainPerSecond) / LOGICFRAMES_PER_SECOND;
+			damageInfo.in.m_sourceID = us->getID();
+			damageInfo.in.m_damageType = DAMAGE_PENALTY;
+			damageInfo.in.m_deathType = DEATH_NORMAL;
+			damageInfo.in.m_damageFXOverride = modData->m_damageTypeFX;
+			us->attemptDamage( &damageInfo );
+		}
 
 		// see if our health is below the allowable threshold
 		if( body->getHealth() < body->getMaxHealth() * modData->m_notAllowedWhenHealthBelowPercent )
@@ -126,11 +168,11 @@ UpdateSleepTime OverchargeBehavior::update( void )
 			enable( FALSE );
 
 			// do some UI info for the local user if this is theirs
-			if( ThePlayerList->getLocalPlayer() == us->getControllingPlayer() )
+			if( ThePlayerList->getLocalPlayer() == us->getControllingPlayer() && modData->m_showOverchargeExhausted )
 			{
 
 				// print msg
-				TheInGameUI->message( "GUI:OverchargeExhausted" );
+				TheInGameUI->message( modData->m_overchargeExhaustedMessage.str() );//( "GUI:OverchargeExhausted" );
 
 				// do radar event
 				TheRadar->createEvent( us->getPosition(), RADAR_EVENT_INFORMATION );
@@ -173,6 +215,9 @@ void OverchargeBehavior::enable( Bool enable )
 {
 	Object *us = getObject();
 
+	// get mod data
+	const OverchargeBehaviorModuleData *modData = getOverchargeBehaviorModuleData();
+
 	if( enable == FALSE )
 	{
 
@@ -192,6 +237,35 @@ void OverchargeBehavior::enable( Bool enable )
 			Player *player = us->getControllingPlayer();
 			if ( player )
 				player->removePowerBonus(us);
+
+			// Weapon Bonus to Clear
+			for (Int i = 0; i < modData->m_bonusToSet.size(); i++) {
+				us->clearWeaponBonusCondition(modData->m_bonusToSet[i]);
+			}
+			for(std::vector<AsciiString>::const_iterator it = modData->m_customBonusToSet.begin(); it != modData->m_customBonusToSet.end(); ++it)
+			{
+				us->clearCustomWeaponBonusCondition( *it );
+			}
+
+			// Status to Clear
+			us->clearStatus(modData->m_statusToSet);
+			for(std::vector<AsciiString>::const_iterator it = modData->m_customStatusToSet.begin(); it != modData->m_customStatusToSet.end(); ++it)
+			{
+				us->clearCustomStatus( *it );
+			}
+
+			Drawable *draw = us->getDrawable();
+			if (draw)
+			{
+				// Tint Status to Clear
+				if(!modData->m_customTintStatusToSet.isEmpty())
+					draw->clearCustomTintStatus( modData->m_customTintStatusToSet );
+				else if(modData->m_tintStatusToSet != TINT_STATUS_INVALID)
+					draw->clearTintStatus( modData->m_tintStatusToSet );
+
+				// Model Condition to Clear
+				draw->clearModelConditionFlags(modData->m_modelConditionToSet);
+			}
 
 			// we are no longer active
 			m_overchargeActive = FALSE;
@@ -222,6 +296,35 @@ void OverchargeBehavior::enable( Bool enable )
 			Player *player = us->getControllingPlayer();
 			if ( player )
 				player->addPowerBonus(us);
+
+			// Weapon Bonus to Clear
+			for (Int i = 0; i < modData->m_bonusToSet.size(); i++) {
+				us->setWeaponBonusCondition(modData->m_bonusToSet[i]);
+			}
+			for(std::vector<AsciiString>::const_iterator it = modData->m_customBonusToSet.begin(); it != modData->m_customBonusToSet.end(); ++it)
+			{
+				us->setCustomWeaponBonusCondition( *it );
+			}
+
+			// Status to Set
+			us->setStatus(modData->m_statusToSet);
+			for(std::vector<AsciiString>::const_iterator it = modData->m_customStatusToSet.begin(); it != modData->m_customStatusToSet.end(); ++it)
+			{
+				us->setCustomStatus( *it );
+			}
+
+			Drawable *draw = us->getDrawable();
+			if (draw)
+			{
+				// Tint Status to Set
+				if(!modData->m_customTintStatusToSet.isEmpty())
+					draw->setCustomTintStatus( modData->m_customTintStatusToSet );
+				else if(modData->m_tintStatusToSet != TINT_STATUS_INVALID)
+					draw->setTintStatus( modData->m_tintStatusToSet );
+
+				// Model Condition to Set
+				draw->setModelConditionFlags(modData->m_modelConditionToSet);
+			}
 
 			// we are now active
 			m_overchargeActive = TRUE;

@@ -154,6 +154,8 @@ ThingTemplate *ThingFactory::newTemplate( const AsciiString& name )
 	// add to list
 	addTemplate( newTemplate );
 
+	//DEBUG_LOG(("Adding New Template: '%s'", name.str()));
+
 	// return the newly created template
 	return newTemplate;
 

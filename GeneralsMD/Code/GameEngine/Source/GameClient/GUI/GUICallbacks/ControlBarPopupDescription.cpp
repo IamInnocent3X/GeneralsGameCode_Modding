@@ -324,13 +324,13 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 						for( BehaviorModule **bmi = selectedObject->getBehaviorModules(); *bmi; ++bmi )
 						{
 							obi = (*bmi)->getOverchargeBehaviorInterface();
-							if( obi )
+							if( obi && obi->showDescriptionLabel() )
 							{
 								descrip.concat( L"\n" );
 								if( obi->isOverchargeActive() )
-									descrip.concat( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOn" ) );
+									descrip.concat( TheGameText->fetch( obi->getOverchargeOnLabel().str() ) );// ( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOn" ) );
 								else
-									descrip.concat( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOff" ) );
+									descrip.concat( TheGameText->fetch( obi->getOverchargeOffLabel().str() ) );// ( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOff" ) );
 							}
 						}
 					}

@@ -1497,6 +1497,8 @@ void GlobalData::parseGameDataDefinition( INI* ini )
 
 	TheWritableGlobalData->m_xResolution = xres;
 	TheWritableGlobalData->m_yResolution = yres;
+
+	//DEBUG_LOG(("Finished Parsing Global Data"));
 }
 
 void GlobalData::parseCustomDefinition()

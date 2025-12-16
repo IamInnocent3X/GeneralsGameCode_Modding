@@ -505,7 +505,7 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 		}
 		case GameMessage::MSG_DISABLE_POWER:
 		{
-			if(!obj->isKindOf(KINDOF_POWERED))
+			if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0)
 				canDoAction = FALSE;
 
 			break;
@@ -3606,7 +3606,7 @@ void AIGroup::groupDisablePower( CommandSourceType cmdSource )
 		obj = *i;
 
 		// We can't disable you
-		if(!obj->isKindOf(KINDOF_POWERED))
+		if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0)
 			continue;
 
 		if(!checked && obj->isDisabledPowerByCommand())
