@@ -182,6 +182,9 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	m_disguiseModelName = NULL;
 
+	m_updatePulse = false;
+	m_updatePulseOnly = false;
+
 	m_nextWakeUpFrame = 1;
 
 	if( data->m_innateStealth )
@@ -759,6 +762,14 @@ Object* StealthUpdate::calcStealthOwner()
 	return getObject();
 }
 
+void StealthUpdate::refreshUpdate()
+{
+	m_updatePulse = false;
+	m_updatePulseOnly = false;
+	m_nextWakeUpFrame = 1;
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime StealthUpdate::calcSleepTime() const
@@ -829,10 +840,15 @@ UpdateSleepTime StealthUpdate::calcSleepTime() const
 	if(m_nextWakeUpFrame > 1)
 	{
 		//DEBUG_LOG(("ObjectName: %s. ID: %d. Set nextWakeUpFrame to 1. Frame: %d. NextWakeUpFrame: %d", getObject()->getTemplate()->getName().str(), getObject()->getID(), now, m_nextWakeUpFrame));
+		m_updatePulseOnly = false;
 		m_nextWakeUpFrame = 1;
 	}
 
-	return UPDATE_SLEEP( UpdateTime ); //UPDATE_SLEEP_NONE : UPDATE_SLEEP_FOREVER;
+	// Always update for pulsePhase
+	if(m_updatePulse)
+		return UPDATE_SLEEP_NONE;
+	else
+		return UPDATE_SLEEP( UpdateTime ); //UPDATE_SLEEP_NONE : UPDATE_SLEEP_FOREVER;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -979,14 +995,18 @@ UpdateSleepTime StealthUpdate::update( void )
 			// Always update for disguise
 			m_nextWakeUpFrame = 1;
 		}
-		else if(!isDisguised() && !data->m_canStealthWhileDisguised)
+		else if(!isDisguised() || data->m_canStealthWhileDisguised)
 		{
+			// Always update for pulsePhase
+			m_updatePulse = true;
+
 			draw->setEffectiveOpacity( 0.5f + ( Sin( m_pulsePhase ) * 0.5f ) );
 			// between one half and full opacity
 			m_pulsePhase += m_pulsePhaseRate;
 
-			// Always update for pulsePhase
-			m_nextWakeUpFrame = 1;
+			// We stop here if we only update Pulse Phase
+			if(m_updatePulseOnly)
+				return calcSleepTime();
 		}
 	}
 
@@ -1220,6 +1240,9 @@ UpdateSleepTime StealthUpdate::update( void )
 		draw->setStealthLook( stealthLook );
 	}
 
+	if(!m_nextWakeUpFrame)
+		m_updatePulseOnly = true;
+
 	return calcSleepTime();
 }
 
@@ -1343,7 +1366,8 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 		}
 	}
 
-	setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
+	refreshUpdate();
+	//setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1379,7 +1403,8 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 		m_isNotAutoDisguise = true;
 
 		//Wake up so I can process!
-		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
+		refreshUpdate();
+		//setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 
 	}
 	else if(drawTemplate)
@@ -1407,8 +1432,9 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 
 		m_isNotAutoDisguise = true;
 
-			//Wake up so I can process!
-			setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
+		//Wake up so I can process!
+		refreshUpdate();
+		//setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 	}
 	else if( doLast )
 	{
@@ -1423,7 +1449,8 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 		m_preserveLastGUI = true;
 
 		//Wake up so I can process!
-		setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
+		refreshUpdate();
+		//setWakeFrame( getObject(), UPDATE_SLEEP_NONE );
 	}
 	else if( m_disguised )
 	{
