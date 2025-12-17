@@ -101,6 +101,8 @@ public:
 
 	virtual UpdateSleepTime update( void );				 ///< the update call
 
+	virtual void beginSlowDeath( const DamageInfo *damageInfo );
+
 protected:
 
 	void doBlast( const BlastInfo *blastInfo );				 ///< do blast

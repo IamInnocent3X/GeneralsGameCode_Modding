@@ -212,6 +212,18 @@ NeutronMissileSlowDeathBehavior::~NeutronMissileSlowDeathBehavior( void )
 
 }  // end ~NeutronMissileSlowDeathBehavior
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void NeutronMissileSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
+{
+
+	// extending functionality
+	SlowDeathBehavior::beginSlowDeath( damageInfo );
+
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
+}
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime NeutronMissileSlowDeathBehavior::update( void )
@@ -275,7 +287,7 @@ UpdateSleepTime NeutronMissileSlowDeathBehavior::update( void )
 			else
 			{
 				// get its time to blast so we can set the wake up frame
-				UnsignedInt delay = modData->m_blastInfo[ i ].delay - currFrame + m_activationFrame + 1;
+				UnsignedInt delay = modData->m_blastInfo[ i ].delay + m_activationFrame + 1 - currFrame;
 				if( !nextWakeUpTime || nextWakeUpTime > delay )
 					nextWakeUpTime = delay;
 			}
@@ -298,14 +310,23 @@ UpdateSleepTime NeutronMissileSlowDeathBehavior::update( void )
 			else
 			{
 				// get its time to blast so we can set the wake up frame
-				UnsignedInt delay = modData->m_blastInfo[ i ].scorchDelay - currFrame + m_activationFrame + 1;
+				UnsignedInt delay = modData->m_blastInfo[ i ].scorchDelay  + m_activationFrame + 1 - currFrame;
 				if( !nextWakeUpTime || nextWakeUpTime > delay )
 					nextWakeUpTime = delay;
 			}
 		}
 	}  // end for i
 
-	//return UPDATE_SLEEP_NONE;
+	if(getDestructionFrame())
+	{
+		UnsignedInt dieFrame = getDestructionFrame();
+		if(currFrame >= dieFrame)
+			return UPDATE_SLEEP_NONE;
+
+		else if(nextWakeUpTime > dieFrame - currFrame)
+			nextWakeUpTime = dieFrame - currFrame;
+	}
+
 	UpdateSleepTime mine = UPDATE_SLEEP( nextWakeUpTime ? nextWakeUpTime : UPDATE_SLEEP_FOREVER );
 	return ( mine < ret ) ? mine : ret;
 
