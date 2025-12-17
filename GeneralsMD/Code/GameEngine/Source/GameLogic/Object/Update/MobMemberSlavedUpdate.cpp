@@ -437,7 +437,7 @@ void MobMemberSlavedUpdate::informMySlaverSelfInfo()
 		BodyModuleInterface *body = obj->getBodyModule();
 		m_noAggregateHealth = body ? !spawnerBehavior->informSlaveInfo(obj->getID(), body->getHealth(), body->getMaxHealth() ) : TRUE;
 		if(!m_noAggregateHealth && !obj->getMobUpdateRefreshed())
-			spawnerBehavior->friend_refreshUpdate();
+			spawnerBehavior->friend_refreshUpdate(FALSE);
 	}
 	else
 	{

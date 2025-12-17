@@ -41,6 +41,7 @@ const Int SPAWN_UPDATE_RATE = LOGICFRAMES_PER_SECOND/2; ///< This is a low prior
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DamageModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 //-------------------------------------------------------------------------------------------------
 class ThingTemplate;
@@ -128,7 +129,7 @@ public:
 	virtual Bool areAllSlavesStealthed() const = 0;
 	virtual void revealSlaves() = 0;
 	virtual Bool doSlavesHaveFreedom() const = 0;
-	virtual void friend_refreshUpdate() = 0;
+	virtual void friend_refreshUpdate(Bool isInstant) = 0;
 	virtual void updateMobMembers() = 0;
 	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) = 0;
 	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) = 0;
@@ -139,6 +140,7 @@ public:
 //-------------------------------------------------------------------------------------------------
 class SpawnBehavior : public UpdateModule,
 											public SpawnBehaviorInterface,
+											public CreateModuleInterface,
 											public DieModuleInterface,
 											public DamageModuleInterface
 {
@@ -158,7 +160,8 @@ public:
 	virtual DieModuleInterface *getDie() { return this; }
 	virtual DamageModuleInterface *getDamage() { return this; }
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return this; }
-	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual void friend_refreshUpdate(Bool isInstant);
 	virtual void updateMobMembers();
 
 	// update methods
@@ -173,6 +176,11 @@ public:
 	virtual void onBodyDamageStateChange( const DamageInfo* damageInfo,
 																				BodyDamageType oldState,
 																				BodyDamageType newState) { }
+		
+	// create methods
+	virtual void onBuildComplete() { refreshUpdate(); }
+	virtual void onCreate( void ) { }
+	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 
 	// SpawnBehaviorInterface methods
 	virtual Bool maySpawnSelfTaskAI( Real maxSelfTaskersRatio );
@@ -201,7 +209,7 @@ public:
 	void startSpawning();	///< Whoever owns this module may want to turn it on
 
 	void computeAggregateStates(void);
-	void computeAggregateMembers(void);
+	Bool computeAggregateMembers(void);
 //	void notifySelfTasking( Bool isSelfTasking );
 
 private:

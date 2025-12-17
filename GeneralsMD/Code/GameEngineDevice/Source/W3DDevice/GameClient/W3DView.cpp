@@ -2104,6 +2104,28 @@ void W3DView::screenToWorld( const ICoord2D *s, Coord3D *w )
 
 }  // end screenToWorld
 
+//-----------------------------------------------------------------------------
+static Bool checkIsNotSelectable(Drawable* drawable)
+{
+	// Sanity
+	if(!drawable)
+		return FALSE;
+
+	Object *obj = drawable ? drawable->getObject() : NULL;
+	if(obj)
+	{
+		if(obj->isKindOf(KINDOF_MINE) || obj->isKindOf(KINDOF_SHRUBBERY))
+			return TRUE;
+
+		if( obj->hasDisguiseAndIsNotDetected() &&
+			(drawable->getTemplate()->isKindOf(KINDOF_MINE) || drawable->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) &&
+			ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES )
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
 //-------------------------------------------------------------------------------------------------
 /** all the drawables in the view, that fall within the 2D screen region
 	* will call the callback function.  The number of drawables that passed
@@ -2156,12 +2178,7 @@ Int W3DView::iterateDrawablesInRegion( IRegion2D *screenRegion,
 		//onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) getPickTypesForContext(TheInGameUI->isInForceAttackMode()));
 		// IamInnocent - Hack to select Objects disguised as non-selectable drawables (trees, etc. )
 		onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) 0xffffffff);
-		Object *drawableObj = onlyDrawableToTest ? onlyDrawableToTest->getObject() : NULL;
-		if(drawableObj &&
-			( drawableObj->isKindOf(KINDOF_MINE) ||
-			  drawableObj->isKindOf(KINDOF_SHRUBBERY) ||
-			  ( drawableObj->hasDisguiseAndIsNotDetected() && (onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_MINE) || onlyDrawableToTest->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) && ThePlayerList->getLocalPlayer()->getRelationship(drawableObj->getTeam()) != ALLIES ) )
-		  )
+		if( checkIsNotSelectable(onlyDrawableToTest) )
 		{
 			onlyDrawableToTest = pickDrawable(&screenRegion->lo, TRUE, (PickType) getPickTypesForContext(TheInGameUI->isInForceAttackMode()));
 		}

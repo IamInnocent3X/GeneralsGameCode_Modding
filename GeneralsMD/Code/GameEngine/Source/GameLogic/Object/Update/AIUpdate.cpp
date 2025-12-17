@@ -1094,7 +1094,10 @@ void AIUpdateInterface::friend_notifyStateMachineChanged()
 
 	// Refresh Stealth Update
 	if ( getObject() )
+	{
 		getObject()->doStealthUpdate();
+		getObject()->doSlaveBehaviorUpdate( FALSE, FALSE );
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3220,6 +3223,7 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 		getObject()->removeMeFromAssaultTransport();
 		getObject()->clearDelayedCommand();
 		getObject()->doStealthUpdate();
+		getObject()->doSlavedUpdate(TRUE);
 	}
 }
 

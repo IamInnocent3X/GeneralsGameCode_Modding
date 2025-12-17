@@ -2995,6 +2995,8 @@ void WeaponStore::postProcessLoad()
 	if (weapon->m_projectileName.isNone())
 		weapon->m_projectileName.clear();
 
+	//DEBUG_LOG(("Finished Parsing Weapon: '%s'", name.str()));
+
 #if defined(RTS_DEBUG)
 	if (!weapon->getFireSound().getEventName().isEmpty() && weapon->getFireSound().getEventName().compareNoCase("NoSound") != 0)
 	{

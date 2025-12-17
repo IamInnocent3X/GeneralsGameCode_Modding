@@ -1498,6 +1498,7 @@ void ActiveBody::internalChangeHealth( Real delta, Bool changeModelCondition)
 void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, Bool *allowModifier, Real damageAmount, Real realFramesToStatusFor)
 {
 	Object* obj = getObject();
+	Object *damager = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
 
 	// Custom Subdual Type
 	if( !damageInfo->in.m_subdualCustomType.isEmpty() )
@@ -1531,18 +1532,22 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 			CustomSubdualCurrentDamageMap::iterator it = m_currentSubdualDamageCustom.find(damageInfo->in.m_subdualCustomType);
 			if(it != m_currentSubdualDamageCustom.end())
 			{
-				wasSubdued = m_maxHealth <= it->second.damage ? TRUE : FALSE; //isSubduedCustom(damageInfo->in.m_subdualCustomType);
+				wasSubdued = it->second.isSubdued || m_maxHealth <= it->second.damage ? TRUE : FALSE;
 
 				internalAddSubdualDamageCustom(subdualData,damageInfo->in.m_subdualCustomType);
 
 				nowSubdued = m_maxHealth <= it->second.damage ? TRUE : FALSE; //isSubduedCustom(damageInfo->in.m_subdualCustomType);
 
+				it->second.isSubdued = nowSubdued;
+
 				if(damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued)
 				{
 					it->second.damage = 0.1f;
+					it->second.isSubdued = FALSE;
 				}
 
-				if( it->second.disableType != subdualData.disableType && getObject()->isDisabledByType(it->second.disableType) )
+				// Clear the disable subdual status that was given by a different disable type but uses the same 
+				if( damageInfo->in.m_customSubdualHasDisable && it->second.disableType != subdualData.disableType && getObject()->isDisabledByType(it->second.disableType) )
 				{
 					wasSubdued = FALSE;
 
@@ -1564,12 +1569,17 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 			{
 				nowSubdued = m_maxHealth <= Subdualamount ? TRUE : FALSE;
 
+				internalAddSubdualDamageCustom(subdualData,damageInfo->in.m_subdualCustomType);
+				
 				if(damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued)
 				{
-					it->second.damage = 0.1f;
+					CustomSubdualCurrentDamageMap::iterator it_2 = m_currentSubdualDamageCustom.find(damageInfo->in.m_subdualCustomType);
+					if(it_2 != m_currentSubdualDamageCustom.end())
+					{
+						it_2->second.damage = 0.1f;
+						it_2->second.isSubdued = FALSE;
+					}
 				}
-				
-				internalAddSubdualDamageCustom(subdualData,damageInfo->in.m_subdualCustomType);
 			}
 
 			if(damageInfo->in.m_subdualDealsNormalDamage == FALSE)
@@ -1578,7 +1588,7 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 				*allowModifier = FALSE;
 			}
 
-			if(damageInfo->in.m_customSubdualClearOnTrigger && obj->isDisabledByType(damageInfo->in.m_customSubdualDisableType) && damageInfo->in.m_customSubdualHasDisable && !obj->isKindOf(KINDOF_PROJECTILE))
+			if(damageInfo->in.m_customSubdualClearOnTrigger && nowSubdued && damageInfo->in.m_customSubdualHasDisable && !obj->isKindOf(KINDOF_PROJECTILE))
 				onSubdualRemovalCustom(subdualData.disableType, TRUE);
 
 			if( wasSubdued != nowSubdued )
@@ -1589,7 +1599,19 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 			if( nowSubdued )
 			{
 				if(damageInfo->in.m_customSubdualOCL != NULL)
-					ObjectCreationList::create(damageInfo->in.m_customSubdualOCL, getObject(), NULL );
+				{
+					Coord3D v;
+					Real angle;
+					if(damager)
+					{
+						const Coord3D *victimPos = obj->getPosition();
+						const Coord3D *sourcePos = damager->getPosition();
+						v.x = victimPos->x - sourcePos->x;
+						v.y = victimPos->y - sourcePos->y;
+					}
+					angle = damager ? atan2(v.y, v.x) : INVALID_ANGLE;
+					ObjectCreationList::create(damageInfo->in.m_customSubdualOCL, damager ? damager : obj, obj->getPosition(), NULL, angle );
+				}
 
 				if(damageInfo->in.m_customSubdualDoStatus)
 				{
@@ -1599,7 +1621,6 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 					if(damageInfo->in.m_customDamageStatusType == "SHIELDED_TARGET")
 					{
 						getObject()->setShieldByTargetID(damageInfo->in.m_sourceID, damageInfo->in.m_protectionTypes);
-						Object *damager = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
 						if( damager )
 							damager->setShieldingTargetID(getObject()->getID(), damageInfo->in.m_protectionTypes);
 					}
@@ -1640,9 +1661,11 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 				Subdualamount *= m_damageScalar;
 			}
 			
+			// TheSuperHackers @bugfix Stubbjax 20/09/2025 The isSubdued() function now directly checks status instead
+			// of health to prevent indefinite subdue status when internally shifting health across the threshold.
 			Bool wasSubdued = isSubdued();
 			internalAddSubdualDamage(Subdualamount);
-			Bool nowSubdued = isSubdued();
+			Bool nowSubdued = m_maxHealth <= m_currentSubdualDamage;
 
 			if(damageInfo->in.m_subdualDealsNormalDamage == FALSE)
 			{
@@ -1669,13 +1692,16 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 {
 	//const ActiveBodyModuleData *data = getActiveBodyModuleData();
+	Bool nowSubdued = m_maxHealth <= m_currentSubdualDamage;
 	if(isHealing)
 	{
 		m_currentSubdualDamage -= delta;
 		m_currentSubdualDamage = max(0.0f, m_currentSubdualDamage);
 
+		nowSubdued = m_maxHealth <= m_currentSubdualDamage;
+
 		// The function of this feature is to Fix Tint Color Correction Bug, which is why it is assigned after the calculation.
-		if(isSubdued())
+		if(nowSubdued)
 			m_hasBeenSubdued = TRUE;
 		
 		Bool clearLater;
@@ -1689,7 +1715,7 @@ void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 
 		if( !getObject()->isKindOf(KINDOF_PROJECTILE) && !m_clearedSubdued)
 		{
-			onSubdualChange(isSubdued(), FALSE, clearLater);
+			onSubdualChange(nowSubdued, FALSE, clearLater);
 		}
 
 		//DEBUG_LOG(( "Subdual Healed, Current Subdual Damage: %f", m_currentSubdualDamage ));
@@ -1699,7 +1725,7 @@ void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 		m_currentSubdualDamage += delta;
 		m_currentSubdualDamage = min(m_currentSubdualDamage, m_subdualDamageCap);
 
-		if(!isSubdued())
+		if(!nowSubdued)
 			m_hasBeenSubdued = FALSE;
 	}
 }
@@ -1891,6 +1917,7 @@ Bool ActiveBody::isNearSubduedRangeCustom( Real low, Real high, const AsciiStrin
 //-------------------------------------------------------------------------------------------------
 void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus, Bool isHealing )
 {
+	Bool isSubdued = FALSE;
 	CustomSubdualCurrentDamageMap::iterator it = m_currentSubdualDamageCustom.find(customStatus);
 	if(it != m_currentSubdualDamageCustom.end())
 	{
@@ -1899,7 +1926,7 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 			it->second.damage -= delta.damage;
 			it->second.damage = max(0.0f, it->second.damage);
 
-			// The function of this feature is to Fix Tint Color Correction Bug, which is why it is assigned after the calculation.
+			// NOTE: isSubdued within CustomSubdualCurrentDamageMap is used to Fix Tint Color Correction Bug, which is why it is assigned after the calculation.
 			//if(isSubduedCustom(customStatus))
 			if(m_maxHealth <= it->second.damage) // Yes.
 			{
@@ -1924,9 +1951,15 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 				}
 			}
 			
-			if( !getObject()->isKindOf(KINDOF_PROJECTILE) && !m_clearedSubduedCustom && m_maxHealth > it->second.damage )
+			if( !getObject()->isKindOf(KINDOF_PROJECTILE) )
 			{
-				onSubdualRemovalCustom(it->second.disableType, clearLater);
+				if( m_maxHealth > it->second.damage )
+				{
+					if( !m_clearedSubduedCustom )
+						onSubdualRemovalCustom(it->second.disableType, clearLater);
+
+					it->second.isSubdued = FALSE;
+				}
 			}
 		}
 		else
@@ -1936,25 +1969,31 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 			it->second.customTintStatus = delta.customTintStatus;
 			it->second.disableType = delta.disableType;
 		}
+
+		isSubdued = m_maxHealth <= it->second.damage || it->second.isSubdued ? TRUE : FALSE;
 	}
 	else
 	{
 		m_currentSubdualDamageCustom[customStatus] = delta;
+
+		isSubdued = m_maxHealth <= delta.damage ? TRUE : FALSE;
+
+		it = m_currentSubdualDamageCustom.find(customStatus);
 	}
 
-	if(!isHealing)
+	if(!isHealing && it != m_currentSubdualDamageCustom.end())
 	{
 		CustomSubdualDamageMap::iterator it2 = m_subdualDamageCapCustom.find(customStatus);
 		if(it2 != m_subdualDamageCapCustom.end())
 		{
-			m_currentSubdualDamageCustom[customStatus].damage = min(m_currentSubdualDamageCustom[customStatus].damage, it2->second);
+			it->second.damage = min(it->second.damage, it2->second);
 		}
 		else
 		{
-			m_currentSubdualDamageCustom[customStatus].damage = min(m_currentSubdualDamageCustom[customStatus].damage, m_subdualDamageCap);
+			it->second.damage = min(it->second.damage, m_subdualDamageCap);
 		}
-		if(!isSubduedCustom(customStatus))
-			m_currentSubdualDamageCustom[customStatus].isSubdued = FALSE;
+		if(!isSubdued)
+			it->second.isSubdued = FALSE;
 	}
 }
 
@@ -2058,6 +2097,10 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 //-------------------------------------------------------------------------------------------------
 void ActiveBody::onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool clearTintLater)
 {
+	// Not disabled by current disable type, do nothing
+	if(!getObject()->isDisabledByType(SubdualDisableType))
+		return;
+
 	// Check if there's other existing custom subdual types that uses the same DISABLED_TYPE
 	for(CustomSubdualCurrentDamageMap::const_iterator it = m_currentSubdualDamageCustom.begin(); it != m_currentSubdualDamageCustom.end(); ++it)
 	{
@@ -2228,7 +2271,16 @@ Bool ActiveBody::isSubduedChrono() const
 //-------------------------------------------------------------------------------------------------
 Bool ActiveBody::isSubdued() const
 {
+#if RETAIL_COMPATIBLE_CRC
 	return m_maxHealth <= m_currentSubdualDamage;
+#else
+  // TheSuperHackers @info Projectiles don't receive the DISABLED_SUBDUED flag (or any flag for
+	// that matter) when jammed, so we have to check their subdual damage directly.
+	if (getObject()->isKindOf(KINDOF_PROJECTILE))
+		return m_maxHealth <= m_currentSubdualDamage;
+
+	return getObject()->isDisabledByType(DISABLED_SUBDUED);
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------

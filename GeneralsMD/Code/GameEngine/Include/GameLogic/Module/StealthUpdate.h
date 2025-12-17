@@ -170,7 +170,7 @@ public:
 
 	inline void setStealthLevelOverride(UnsignedInt stealthLevel) { m_stealthLevelOverride = stealthLevel; }
 
-	void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	void refreshUpdate();
 
 protected:
 
@@ -227,6 +227,9 @@ private:
 	Bool							m_isNotAutoDisguise;				//Fix Disguises auto Disguise back when Detected
 
 	AsciiString						m_disguiseModelName;				//Disguise Model for overwriting the current template
+
+	Bool							m_updatePulse;						//Saves update for going extra checks by indicating that it only checks for pulse phase
+	mutable Bool					m_updatePulseOnly;					//See above
 };
 
 
