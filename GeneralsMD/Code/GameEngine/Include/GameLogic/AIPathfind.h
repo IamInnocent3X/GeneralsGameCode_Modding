@@ -208,9 +208,9 @@ class PathfindCellInfo
 {
 	friend class PathfindCell;
 public:
-#if RETAIL_COMPATIBLE_PATHFINDING
+//#if RETAIL_COMPATIBLE_PATHFINDING
 	static void forceCleanPathFindCellInfos(void);
-#endif
+//#endif
 	static void allocateCellInfos(void);
 	static void releaseCellInfos(void);
 
@@ -283,9 +283,9 @@ public:
 	PathfindCell(void);
 	~PathfindCell(void);
 
-#if !RETAIL_COMPATIBLE_PATHFINDING
+//#if !RETAIL_COMPATIBLE_PATHFINDING
 	PathfindCellInfo* getCellInfo();
-#endif
+//#endif
 
 	Bool setTypeAsObstacle( Object *obstacle, Bool isFence, const ICoord2D &pos );				///< flag this cell as an obstacle, from the given one
 	Bool removeObstacle( Object *obstacle );				///< unflag this cell as an obstacle, from the given one
@@ -372,9 +372,9 @@ public:
 	PathfindLayerEnum getConnectLayer( void ) const { return (PathfindLayerEnum)m_connectsToLayer; }				///< get the cell layer connect id
 
 private:
-#if !RETAIL_COMPATIBLE_PATHFINDING
+//#if !RETAIL_COMPATIBLE_PATHFINDING
 	PathfindCellInfo m_pathfindCellInfo;
-#endif
+//#endif
 	PathfindCellInfo *m_info;
 	zoneStorageType m_zone:14;			///< Zone. Each zone is a set of adjacent terrain type.  If from & to in the same zone, you can successfully pathfind.  If not,
 														// you still may be able to if you can cross multiple terrain types.
@@ -710,9 +710,9 @@ public:
 	Path *getDebugPath( void );
 	void setDebugPath( Path *debugpath );
 
-#if RETAIL_COMPATIBLE_PATHFINDING
+//#if RETAIL_COMPATIBLE_PATHFINDING
 	void forceCleanCells(void);
-#endif
+//#endif
 	void cleanOpenAndClosedLists(void);
 
 	// Adjusts the destination to a spot near dest that is not occupied by other units.
