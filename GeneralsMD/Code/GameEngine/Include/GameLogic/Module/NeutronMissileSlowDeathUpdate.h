@@ -101,6 +101,10 @@ public:
 
 	virtual UpdateSleepTime update( void );				 ///< the update call
 
+	virtual void beginSlowDeath( const DamageInfo *damageInfo );
+
+	virtual Bool canOptimizeHulkBehavior() const { return false; }
+
 protected:
 
 	void doBlast( const BlastInfo *blastInfo );				 ///< do blast
