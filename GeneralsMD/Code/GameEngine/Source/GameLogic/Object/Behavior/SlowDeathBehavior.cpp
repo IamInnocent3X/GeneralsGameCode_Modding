@@ -472,7 +472,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 
 	Bool AboveTerrain = obj->isAboveTerrain();
 
-	if(TheGlobalData->m_fixHulksFreezingAboveTerrain && AboveTerrain && !m_hasSunk)
+	if(TheGlobalData->m_fixHulksFreezingAboveTerrain && AboveTerrain && !m_hasSunk && canOptimizeHulkBehavior())
 	{
 		if(!m_isOnAirFrame)
 			m_isOnAirFrame = now;

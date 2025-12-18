@@ -161,6 +161,8 @@ public:
 	virtual Bool friend_isSlowDeathActivated() const { return isSlowDeathActivated(); }
 	virtual Bool layerUpdate(Bool hitTree);
 
+	virtual Bool canOptimizeHulkBehavior() const { return true; }
+
 protected:
 
 	void doPhaseStuff(SlowDeathPhaseType sdphase);
