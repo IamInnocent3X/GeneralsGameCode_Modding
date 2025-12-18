@@ -317,16 +317,6 @@ UpdateSleepTime NeutronMissileSlowDeathBehavior::update( void )
 		}
 	}  // end for i
 
-	if(getDestructionFrame())
-	{
-		UnsignedInt dieFrame = getDestructionFrame();
-		if(currFrame >= dieFrame)
-			return UPDATE_SLEEP_NONE;
-
-		else if(nextWakeUpTime > dieFrame - currFrame)
-			nextWakeUpTime = dieFrame - currFrame;
-	}
-
 	UpdateSleepTime mine = UPDATE_SLEEP( nextWakeUpTime ? nextWakeUpTime : UPDATE_SLEEP_FOREVER );
 	return ( mine < ret ) ? mine : ret;
 
