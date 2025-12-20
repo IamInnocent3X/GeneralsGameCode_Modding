@@ -636,11 +636,16 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 			}
 		}
 
-		//Transfer experience from the rider to the bike.
-		ExperienceTracker* riderTracker = rider->getExperienceTracker();
-		ExperienceTracker* bikeTracker = obj->getExperienceTracker();
-		bikeTracker->setVeterancyLevel( riderTracker->getVeterancyLevel(), FALSE );
-		riderTracker->setExperienceAndLevel( 0, FALSE );
+			//Transfer experience from the rider to the bike.
+			ExperienceTracker *riderTracker = rider->getExperienceTracker();
+			ExperienceTracker *bikeTracker = obj->getExperienceTracker();
+#if !RETAIL_COMPATIBLE_CRC
+			// TheSuperHackers @bugfix Stubbjax 15/12/2025 Copy trainable flag from the rider to prevent
+			// Workers and other untrainable riders from ranking up via the bike's experience tracker.
+			bikeTracker->setTrainable(riderTracker->isTrainable());
+#endif
+			bikeTracker->setVeterancyLevel( riderTracker->getVeterancyLevel(), FALSE );
+			riderTracker->setExperienceAndLevel( 0, FALSE );
 
 		return TRUE;
 	}
@@ -882,6 +887,7 @@ Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& 
 			//Transfer experience from the bike to the rider.
 			ExperienceTracker* riderTracker = rider->getExperienceTracker();
 			ExperienceTracker* bikeTracker = bike->getExperienceTracker();
+			bikeTracker->resetTrainable();
 			riderTracker->setVeterancyLevel( bikeTracker->getVeterancyLevel(), FALSE );
 			bikeTracker->setExperienceAndLevel( 0, FALSE );
 		}

@@ -129,22 +129,7 @@ Bool SupplyCenterDockUpdate::action( Object* docker, Object *drone )
 		}
 	}
 
-	Bool displayMoney = FALSE;
-	Drawable* outerDrawable = getObject()->getOuterObject()->getDrawable();
-	if (value > 0 && outerDrawable && outerDrawable->isVisible())
-	{
-		displayMoney = TRUE;
-		if( getObject()->testStatus(OBJECT_STATUS_STEALTHED) )
-		{
-			// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
-			if( !getObject()->isLocallyControlled() && !getObject()->testStatus(OBJECT_STATUS_DETECTED) )
-			{
-				displayMoney = FALSE;
-			}
-		}
-	}
-
-	if( displayMoney && getObject()->showCashText() )
+	if (value > 0 && getObject()->isLogicallyVisible() && getObject()->showCashText() )
 	{
 		// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
 		// Setup info for adding a floating text
