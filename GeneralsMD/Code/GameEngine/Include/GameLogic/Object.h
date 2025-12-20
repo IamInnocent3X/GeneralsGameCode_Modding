@@ -102,6 +102,7 @@ class UpdateModuleInterface;
 class UpgradeModule;
 class UpgradeModuleInterface;
 class UpgradeTemplate;
+class BuffTemplate;
 class RadarUpgradeInterface;
 class StickyBombUpdateInterface;
 class CounterUpdateInterface;
@@ -114,6 +115,7 @@ class StatusDamageHelper;
 class SubdualDamageHelper;
 class ChronoDamageHelper;
 class TempWeaponBonusHelper;
+class BuffEffectHelper;
 class ObjectWeaponStatusHelper;
 class ObjectCounterHelper;
 class ObjectDefectionHelper;
@@ -268,6 +270,7 @@ public:
 	void notifyChronoDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
 	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
+	void applyBuff(const BuffTemplate* buffTemp, UnsignedInt duration, Object* sourceObj);
 
 	void refreshSubdualHelper();
 	void refreshStatusHelper();
@@ -663,6 +666,17 @@ public:
 	inline WeaponBonusConditionFlags getWeaponBonusCondition() const { return m_weaponBonusCondition; }
 	inline void setWeaponBonusConditionFlags(WeaponBonusConditionFlags flags) { m_weaponBonusCondition = flags; }
 
+	void applyWeaponBonusConditionFlags(WeaponBonusConditionFlags flags);
+	void removeWeaponBonusConditionFlags(WeaponBonusConditionFlags flags);
+
+	// Weapon Bonus Against,  i.e. like Target Designator logic
+	inline void setWeaponBonusConditionAgainst(WeaponBonusConditionType wst) { m_weaponBonusConditionAgainst |= (1 << wst); };
+	inline void clearWeaponBonusConditionAgainst(WeaponBonusConditionType wst) { m_weaponBonusConditionAgainst &= ~(1 << wst); };
+	Bool testWeaponBonusConditionAgainst(WeaponBonusConditionType wst) const { return (m_weaponBonusConditionAgainst & (1 << wst)) != 0; }
+	inline WeaponBonusConditionFlags getWeaponBonusConditionAgainst() const { return m_weaponBonusConditionAgainst; }
+	inline void setWeaponBonusConditionFlagsAgainst(WeaponBonusConditionFlags flags) { m_weaponBonusConditionAgainst = flags; }
+
+
 	inline ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
 	// TO-DO: Change to Hash_Map. DONE.
 	inline void setCustomWeaponBonusConditionFlags(ObjectCustomStatusType customFlags) { 
@@ -981,7 +995,7 @@ private:
 
 	UnsignedInt		m_smcUntil;
 
-	enum { NUM_SLEEP_HELPERS = 12 };
+	enum { NUM_SLEEP_HELPERS = 13 };
 	ObjectRepulsorHelper*					m_repulsorHelper;
 	ObjectSMCHelper*							m_smcHelper;
 	ObjectWeaponStatusHelper*			m_wsHelper;
@@ -990,6 +1004,7 @@ private:
 	SubdualDamageHelper*					m_subdualDamageHelper;
 	ChronoDamageHelper*					m_chronoDamageHelper;
 	TempWeaponBonusHelper*				m_tempWeaponBonusHelper;
+	BuffEffectHelper*				m_buffEffectHelper;
 	FiringTracker*								m_firingTracker;	///< Tracker is really a "helper" and is included NUM_SLEEP_HELPERS
 
 	ObjectDisabledHelper*				m_disabledHelper;
@@ -1054,6 +1069,8 @@ private:
 	Real								m_lastActualSpeed;
 
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
+
+	WeaponBonusConditionFlags			m_weaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
 
 	SpecialPowerMaskType					m_specialPowerBits; ///< bits determining what kind of special abilities this object has access to.
 

@@ -108,6 +108,7 @@
 #include "GameLogic/Module/SubdualDamageHelper.h"
 #include "GameLogic/Module/ChronoDamageHelper.h"
 #include "GameLogic/Module/TempWeaponBonusHelper.h"
+#include "GameLogic/Module/BuffEffectHelper.h"
 #include "GameLogic/Module/ToppleUpdate.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
@@ -250,6 +251,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_repulsorHelper(NULL),
 	m_statusDamageHelper(NULL),
 	m_tempWeaponBonusHelper(NULL),
+	m_buffEffectHelper(NULL),
 	m_subdualDamageHelper(NULL),
 	m_chronoDamageHelper(NULL),
 	m_smcHelper(NULL),
@@ -304,6 +306,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	}
 
 	m_weaponBonusCondition = 0;
+	m_weaponBonusConditionAgainst = 0;
 	m_curWeaponSetFlags.clear();
 
 	// sanity
@@ -482,6 +485,15 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		*curB++ = m_tempWeaponBonusHelper;
 	}
 
+	// TODO: Are there any kinds of objects that cannot get buffs at all?
+	{
+		static const NameKeyType buffEffectHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_BuffEffectHelper" );
+		static BuffEffectHelperModuleData tempBuffEffectHelperModuleData;
+		tempBuffEffectHelperModuleData.setModuleTagNameKey( buffEffectHelperModuleDataTagNameKey );
+		m_buffEffectHelper = newInstance(BuffEffectHelper)(this, &tempBuffEffectHelperModuleData);
+		*curB++ = m_buffEffectHelper;
+	}
+
 	static const NameKeyType disabledHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_DisabledHelper" );
 	static ObjectDisabledHelperModuleData disabledModuleData;
 	disabledModuleData.setModuleTagNameKey( disabledHelperModuleDataTagNameKey );
@@ -505,6 +517,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		m_delayedOrderHelper = newInstance(ObjectDelayedOrderHelper)(this, &delayedModuleData);
 		*curB++ = m_delayedOrderHelper;
 	}
+
 
 	// behaviors are always done first, so they get into the publicModule arrays
 	// before anything else.
@@ -840,6 +853,7 @@ Object::~Object()
 	m_tempWeaponBonusHelper = NULL;
 	m_subdualDamageHelper = NULL;
 	m_chronoDamageHelper = NULL;
+	m_buffEffectHelper = NULL;
 	m_smcHelper = NULL;
 	m_wsHelper = NULL;
 	m_defectionHelper = NULL;
@@ -4992,6 +5006,15 @@ void Object::crc( Xfer *xfer )
 	}
 #endif // DEBUG_CRC
 
+	xfer->xferUnsignedInt(&m_weaponBonusConditionAgainst);
+#ifdef DEBUG_CRC
+	if (doLogging)
+	{
+		tmp.format("m_weaponBonusConditionAgainst: %8.8X, ", m_weaponBonusConditionAgainst);
+		logString.concat(tmp);
+	}
+#endif // DEBUG_CRC
+
 	Real scalar = getBodyModule()->getDamageScalar();
 	xfer->xferUser(&scalar,														sizeof(scalar));
 #ifdef DEBUG_CRC
@@ -5694,6 +5717,8 @@ void Object::xfer( Xfer *xfer )
 	else
 		m_isReceivingDifficultyBonus = FALSE;
 
+	xfer->xferUnsignedInt(&m_weaponBonusConditionAgainst);
+
 }  // end xfer
 
 //-------------------------------------------------------------------------------------------------
@@ -6044,6 +6069,34 @@ void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgn
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+// Apply/Remove multiple flags at once
+//-------------------------------------------------------------------------------------------------
+void Object::applyWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
+{
+	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
+	m_weaponBonusCondition |= flags;
+
+	if (oldCondition != m_weaponBonusCondition)
+	{
+		// Our weapon bonus just changed, so we need to immediately update our weapons
+		m_weaponSet.weaponSetOnWeaponBonusChange(this);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::removeWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
+	{
+		WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
+		m_weaponBonusCondition &= ~flags;
+
+		if (oldCondition != m_weaponBonusCondition)
+		{
+			// Our weapon bonus just changed, so we need to immediately update our weapons
+			m_weaponSet.weaponSetOnWeaponBonusChange(this);
+		}
+	}
 
 //-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
@@ -7031,6 +7084,14 @@ void Object::notifyChronoDamage(Real amount)
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void Object::applyBuff(const BuffTemplate* buffTemp, UnsignedInt duration, Object* sourceObj)
+{
+	DEBUG_LOG(("Object::applyBuff '%s' to obj '%s'", buffTemp->getName().str(), getTemplate()->getName().str()));
+	if (m_buffEffectHelper)
+		m_buffEffectHelper->applyBuff(buffTemp, sourceObj, duration);
+}
 //-------------------------------------------------------------------------------------------------
 /** Given a special power template, find the module in the object that can implement it.
 	* There can be at most one */
