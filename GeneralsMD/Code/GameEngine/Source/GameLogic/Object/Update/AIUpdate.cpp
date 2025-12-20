@@ -326,6 +326,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_retryPath = FALSE;
 	m_isInUpdate = FALSE;
 	m_fixLocoInPostProcess = FALSE;
+	m_speedMultiplier = 1.0;
 	m_continueToUpdateFixLocoClump = FALSE;
 	//m_locomotorIsLocked = FALSE;
 
@@ -981,6 +982,10 @@ void AIUpdateInterface::chooseGoodLocomotorFromCurrentSet( void )
 		m_curLocomotor->setNoSlowDownAsApproachingDest(FALSE);
 		// ditto for ultra-accuracy.
 		m_curLocomotor->setUltraAccurate(FALSE);
+
+		// Add speed multiplier to loco
+		if (m_speedMultiplier != 1.0)
+			m_curLocomotor->applySpeedMultiplier(m_speedMultiplier);
 
 		// do update for any relevant modules for the Object
 		getObject()->doObjectLocomotorUpdate();
@@ -4867,6 +4872,14 @@ Bool AIUpdateInterface::canAutoAcquireWhileStealthed() const
 
 
 //----------------------------------------------------------------------------------------------
+void AIUpdateInterface::applySpeedMultiplier(Real scalar) {
+	m_speedMultiplier *= scalar;
+	if (m_curLocomotor)
+		m_curLocomotor->applySpeedMultiplier(scalar); // Use Set instead of Apply?
+}
+
+
+//----------------------------------------------------------------------------------------------
 /**
  * Return the next object that our mood suggests we should attack.
  */
@@ -5621,6 +5634,7 @@ void AIUpdateInterface::xfer( Xfer *xfer )
 		xfer->xferInt(&repulsorCountdown);
 	}
 
+	xfer->xferReal(&m_speedMultiplier);
 
 }  // end xfer
 

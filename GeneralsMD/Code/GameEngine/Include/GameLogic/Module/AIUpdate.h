@@ -611,6 +611,8 @@ public:
 
 	Bool canAutoAcquireWhileStealthed() const;
 
+	void applySpeedMultiplier(Real scalar);
+	inline Real getSpeedMultiplier(void) const { return m_speedMultiplier; }
 
 protected:
 
@@ -832,6 +834,8 @@ private:
 	Bool				m_fixLocoInPostProcess;
 	Bool				m_continueToUpdateFixLocoClump;
 	//Bool				m_locomotorIsLocked;
+
+	Real        m_speedMultiplier;          ///< global multiplier to move speed (kept in AIUpdate rather than Locomotor because it's persistent)
 };
 
 //------------------------------------------------------------------------------------------------------------
