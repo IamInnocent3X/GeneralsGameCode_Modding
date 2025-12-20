@@ -138,7 +138,7 @@ void RadarUpgrade::upgradeImplementation( void )
 	m_hasExecuted = UpgradeStatus == 1 ? TRUE : FALSE;
 
 	doRadarUpgrade(m_hasExecuted);
-}  // end upgradeImplementation
+}
 
 
 //-------------------------------------------------------------------------------------------------

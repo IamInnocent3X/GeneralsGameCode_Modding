@@ -368,7 +368,7 @@ void MultiAddOnContain::onContaining(Object* obj, Bool wasSelected)
   // This should be the only place where we do this! No turret should ever enter the actual container
   createAddOnForRider(obj);
 
-}  // end onContaining
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -380,7 +380,7 @@ void MultiAddOnContain::onRemoving(Object* obj)
   // Remove the corresponding turret
   removeAddOnForRider(obj);
 
-} // end onRemoving
+}
 
 
 //-------------------------------------------------------------------------------------------------

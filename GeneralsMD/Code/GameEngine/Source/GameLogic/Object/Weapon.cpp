@@ -460,7 +460,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "BreaksMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
 	{ "BreaksMindControlKey",				INI::parseAsciiStringVector,					NULL,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },*/
 
-	{ NULL,												NULL,																		NULL,							0 }  // keep this last
+	{ NULL,												NULL,																		NULL,							0 }
 
 };
 

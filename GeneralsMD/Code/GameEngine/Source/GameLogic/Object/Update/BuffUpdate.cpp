@@ -201,7 +201,7 @@ void BuffUpdate::crc( Xfer *xfer )
 	// extend base class
 	UpdateModule::crc( xfer );
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -219,7 +219,7 @@ void BuffUpdate::xfer( Xfer *xfer )
 	// extend base class
 	UpdateModule::xfer( xfer );
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -230,4 +230,4 @@ void BuffUpdate::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-}  // end loadPostProcess
+}

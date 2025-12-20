@@ -63,7 +63,7 @@ void WeaponSetUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	p.add(dataFieldParse);
 
-}  // end buildFieldParse
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

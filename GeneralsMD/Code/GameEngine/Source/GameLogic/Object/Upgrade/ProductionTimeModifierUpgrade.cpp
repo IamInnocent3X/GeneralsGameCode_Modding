@@ -82,7 +82,7 @@ ProductionTimeModifierUpgradeModuleData::ProductionTimeModifierUpgradeModuleData
 	m_isOneShot = FALSE;
 	m_stackingType = NO_STACKING;
 
-}  // end ProductionTimeModifierUpgradeModuleData
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -100,7 +100,7 @@ ProductionTimeModifierUpgradeModuleData::ProductionTimeModifierUpgradeModuleData
 	};
 	p.add(dataFieldParse);
 
-}  // end buildFieldParse
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,14 +112,14 @@ ProductionTimeModifierUpgrade::ProductionTimeModifierUpgrade( Thing *thing, cons
 							UpgradeModule( thing, moduleData )
 {
 	m_hasExecuted = FALSE;
-}  // end ProductionTimeModifierUpgrade
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 ProductionTimeModifierUpgrade::~ProductionTimeModifierUpgrade( void )
 {
 
-}  // end ~ProductionTimeModifierUpgrade
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -137,7 +137,7 @@ void ProductionTimeModifierUpgrade::onDelete( void )
 
 	doProductionModifierRemoval();
 
-}  // end onDelete
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ void ProductionTimeModifierUpgrade::onCapture( Player *oldOwner, Player *newOwne
 
 	}
 
-}  // end onCapture
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ void ProductionTimeModifierUpgrade::upgradeImplementation( void )
 		doProductionModifierRemoval();
 	}
 
-}  // end upgradeImplementation
+}
 
 void ProductionTimeModifierUpgrade::doProductionModifierRemoval()
 {

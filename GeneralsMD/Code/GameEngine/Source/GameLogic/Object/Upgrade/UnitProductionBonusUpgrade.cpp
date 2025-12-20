@@ -101,7 +101,7 @@ UnitProductionBonusUpgradeModuleData::UnitProductionBonusUpgradeModuleData( void
 	m_timePercentage = 0.0f;
 	// m_isOneShot = FALSE;
 
-}  // end UnitProductionBonusUpgradeModuleData
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ UnitProductionBonusUpgradeModuleData::UnitProductionBonusUpgradeModuleData( void
 	};
 	p.add(dataFieldParse);
 
-}  // end buildFieldParse
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -132,14 +132,14 @@ UnitProductionBonusUpgrade::UnitProductionBonusUpgrade( Thing *thing, const Modu
 							UpgradeModule( thing, moduleData )
 {
 
-}  // end UnitProductionBonusUpgrade
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 UnitProductionBonusUpgrade::~UnitProductionBonusUpgrade( void )
 {
 
-}  // end ~UnitProductionBonusUpgrade
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ UnitProductionBonusUpgrade::~UnitProductionBonusUpgrade( void )
 //	// this upgrade module is now "not upgraded"
 //	setUpgradeExecuted(FALSE);
 //
-//}  // end onDelete
+//}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ UnitProductionBonusUpgrade::~UnitProductionBonusUpgrade( void )
 //{
 //	
 //
-//}  // end onCapture
+//}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -179,7 +179,7 @@ void UnitProductionBonusUpgrade::upgradeImplementation( void )
 		}
 	}
 
-}  // end upgradeImplementation
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

@@ -272,7 +272,7 @@ void ProductionPrerequisite::addUnitNegPrereq( AsciiString unit, Bool orUnitWith
 	info.unit = NULL;
 	m_prenegreqUnits.push_back(info);
 
-}  // end addUnitNegPrereq
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Add a unit prerequisite, if 'orWithPrevious' is set then this unit is said
@@ -300,7 +300,7 @@ void ProductionPrerequisite::addUnitNegPrereq( const std::vector<AsciiString>& u
 		orWithPrevious = true;
 	}
 
-}  // end addUnitNegPrereq
+}
 
 //-------------------------------------------------------------------------------------------------
 // returns an asciistring which is a list of all the prerequisites

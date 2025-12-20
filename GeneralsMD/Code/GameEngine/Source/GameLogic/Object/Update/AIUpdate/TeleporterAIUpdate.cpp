@@ -153,7 +153,7 @@ UpdateSleepTime TeleporterAIUpdate::update(void)
 
 	return AIUpdateInterface::update();
 
-}  // end update
+}
 
 
 // ------------------------------------------------------------------------------------------------

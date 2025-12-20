@@ -248,7 +248,7 @@ enum DeathType CPP_11(: Int)
 	//New Death Types
 	DEATH_CHRONO,
 	
-	DEATH_NUM_TYPES			// keep this last
+	DEATH_NUM_TYPES
 };
 
 #ifdef DEFINE_DEATH_NAMES

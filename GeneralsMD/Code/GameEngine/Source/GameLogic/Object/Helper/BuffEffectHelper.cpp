@@ -332,7 +332,7 @@ void BuffEffectHelper::crc(Xfer* xfer)
 	// object helper crc
 	ObjectHelper::crc(xfer);
 
-}  // end crc
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -434,7 +434,7 @@ void BuffEffectHelper::xfer(Xfer* xfer)
 	}
 
 
-}  // end xfer
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
@@ -445,5 +445,5 @@ void BuffEffectHelper::loadPostProcess(void)
 	// object helper base class
 	ObjectHelper::loadPostProcess();
 
-}  // end loadPostProcess
+}
 

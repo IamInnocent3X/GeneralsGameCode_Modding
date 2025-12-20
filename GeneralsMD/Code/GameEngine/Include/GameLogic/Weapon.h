@@ -558,16 +558,11 @@ public:
 	const ObjectCreationList* getFireOCL(VeterancyLevel v) const { return m_fireOCLs[v]; }
 	const ObjectCreationList* getProjectileDetonationOCL(VeterancyLevel v) const { return m_projectileDetonationOCLs[v]; }
 	const ParticleSystemTemplate* getProjectileExhaust(VeterancyLevel v) const { return m_projectileExhausts[v]; }
-	inline const FXList* getPreAttackFX(VeterancyLevel v) const { return m_preAttackFXs[v]; }
-	inline UnsignedInt getPreAttackFXDelay() const { return m_preAttackFXDelay; }
+	const FXList* getPreAttackFX(VeterancyLevel v) const { return m_preAttackFXs[v]; }
+	UnsignedInt getPreAttackFXDelay() const { return m_preAttackFXDelay; }
 
 	const AudioEventRTS& getFireSound() const { return m_fireSound; }
 	UnsignedInt getFireSoundLoopTime() const { return m_fireSoundLoopTime; }
-	UnsignedInt getContinuousLaserLoopTime() const { return m_continuousLaserLoopTime; }
-	Real getLaserGroundUnitTargetHeight() const { return m_laserGroundUnitTargetHeight; }
-	Real getLaserGroundTargetHeight() const { return m_laserGroundTargetHeight; }
-	UnsignedInt getScatterTargetResetTime() const { return m_scatterTargetResetTime; }
-	Bool isScatterTargetResetRecenter() const { return m_scatterTargetResetRecenter; }
 	const std::vector<Coord2D>& getScatterTargetsVector() const { return m_scatterTargets; }
 	const WeaponBonusSet* getExtraBonus() const { return m_extraBonus; }
 	Int getShotsPerBarrel() const { return m_shotsPerBarrel; }
@@ -1093,7 +1088,6 @@ public:
  	UnsignedInt getAutoReloadWhenIdleFrames() const { return m_template->getAutoReloadWhenIdleFrames(); }
 	const AudioEventRTS& getFireSound() const { return m_template->getFireSound(); }
 	UnsignedInt getFireSoundLoopTime() const { return m_template->getFireSoundLoopTime(); }
-	UnsignedInt getContinuousLaserLoopTime() const { return m_template->getContinuousLaserLoopTime(); }
 	DamageType getDamageType() const { return m_template->getDamageType(); }
 	DeathType getDeathType() const { return m_template->getDeathType(); }
 	Real getContinueAttackRange() const { return m_template->getContinueAttackRange(); }

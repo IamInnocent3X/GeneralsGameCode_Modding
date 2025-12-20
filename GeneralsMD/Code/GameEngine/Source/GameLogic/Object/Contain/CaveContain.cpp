@@ -201,9 +201,9 @@ void CaveContain::harmAndForceExitAllContained( DamageInfo *info )
 		removeFromContain( obj, true );
     obj->attemptDamage( info );
 		it = (*fullList).begin();
-	}  // end while
+	}
 
-}  // end removeAllContained
+}
 
 
 //-------------------------------------------------------------------------------------------------

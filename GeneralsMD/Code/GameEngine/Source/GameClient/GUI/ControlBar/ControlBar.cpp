@@ -867,7 +867,7 @@ const FieldParse CommandSet::m_commandSetFieldParseTable[] =
 	{ "30",			CommandSet::parseCommandButton, (void *)29,		offsetof( CommandSet, m_command ) },
 	{ "31",			CommandSet::parseCommandButton, (void *)30,		offsetof( CommandSet, m_command ) },
 	{ "32",			CommandSet::parseCommandButton, (void *)31,		offsetof( CommandSet, m_command ) },
-	{ NULL,			NULL,														 NULL,				0	}  // keep this last
+	{ NULL,			NULL,														 NULL,				0	}
 
 };
 

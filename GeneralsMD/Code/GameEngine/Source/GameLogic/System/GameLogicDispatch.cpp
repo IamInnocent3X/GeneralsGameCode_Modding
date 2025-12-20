@@ -1641,7 +1641,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			break;
 
-		}  // end disable power
+		}
 
 #ifdef ALLOW_SURRENDER
 		// --------------------------------------------------------------------------------------------

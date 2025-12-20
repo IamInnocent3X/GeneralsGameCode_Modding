@@ -75,7 +75,7 @@ void LocomotorSetUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	p.add(dataFieldParse);
 
-}  // end buildFieldParse
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

@@ -534,7 +534,7 @@ void OpenContain::harmAndForceExitAllContained( DamageInfo *info )
 
   DEBUG_ASSERTCRASH( m_containListSize == 0, ("harmAndForceExitAllContained just made a booboo, list size != zero.") );
 
-}  // end harmAndForceExitAllContained
+}
 
 
 // ------------------------------------------------------------------------

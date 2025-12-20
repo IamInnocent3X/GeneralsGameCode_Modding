@@ -417,7 +417,7 @@ const FieldParse BuffTemplate::TheBuffTemplateFieldParse[] =
 	{ "MaxStacksSize",		INI::parseUnsignedInt, NULL,  offsetof(BuffTemplate, m_maxStackSize)},
 	{ "HasPriorityOver",		INI::parseAsciiStringVectorAppend, NULL,  offsetof(BuffTemplate, m_priorityTemplates)},
 	
-	{ NULL, NULL, 0, 0 }  // keep this last
+	{ NULL, NULL, 0, 0 }
 };
 
 

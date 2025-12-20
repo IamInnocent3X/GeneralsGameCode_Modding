@@ -166,7 +166,7 @@ void SalvageCrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 	};
     p.add(dataFieldParse);
 
-}  // end buildFieldParse
+}
 
 
 //-------------------------------------------------------------------------------------------------
