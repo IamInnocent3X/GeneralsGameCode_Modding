@@ -2076,7 +2076,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	if (primaryVictim)
 	{
 		pos = primaryVictim->getPosition();
-		shrapnelVictimID = victimID;
 	}
 
 	VeterancyLevel v = LEVEL_REGULAR;
@@ -2133,7 +2132,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	Bool DamagesSelfOnly = getDamagesSelfOnly();
 	UnsignedInt InvulnerabilityDuration = getInvulnerabilityDuration();
 
-	const Real CLOSE_ENOUGH = 0.67f;
+	const Real CLOSE_ENOUGH = 1.0f;
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
@@ -2367,20 +2366,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				if( Vector3::Dot_Product(sourceVector, damageVector) < Cos(allowedAngle) )
 					continue;// Too far to the side, can't hurt them.
 			}
-	
-			// Check whether we do Shrapnel
-			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
-			if( !doShrapnel && 
-				curVictimDistSqr < CLOSE_ENOUGH &&
-				!curVictim->isKindOf( KINDOF_UNATTACKABLE ) &&
-				( (curVictim->isKindOf(KINDOF_VEHICLE) || curVictim->isKindOf(KINDOF_AIRCRAFT) || curVictim->isKindOf(KINDOF_STRUCTURE) || curVictim->isKindOf(KINDOF_INFANTRY) || curVictim->isKindOf(KINDOF_MINE) || curVictim->isKindOf(KINDOF_SHRUBBERY) || curVictim->isKindOf(KINDOF_PARACHUTE)) ||
-				( (curVictim->isKindOf(KINDOF_SMALL_MISSILE) || curVictim->isKindOf(KINDOF_BALLISTIC_MISSILE) || curVictim->isKindOf(KINDOF_PROJECTILE)) && (getAntiMask() & targetAntiMask) != 0 && (curVictim == primaryVictim || source->getRelationship(curVictim) != ALLIES) ) )
-			  )
-			{
-				doShrapnel = TRUE;
-				if(shrapnelVictimID == INVALID_ID)
-					shrapnelVictimID = curVictim->getID();
-			}
 
 			// Invulnerable mechanic from OCL.
 			// Doesn't actually make you invulnerable, but makes your relationship considered ALLIES for targeting instead
@@ -2596,6 +2581,22 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				}
 			}
 
+			// Check whether we do Shrapnel
+			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
+			if( !doShrapnel &&
+				m_shrapnelBonusWeapon &&
+				m_shrapnelBonusCount > 0 &&
+				curVictimDistSqr < CLOSE_ENOUGH &&
+				!curVictim->isKindOf( KINDOF_UNATTACKABLE ) &&
+				( (curVictim->isKindOf(KINDOF_VEHICLE) || curVictim->isKindOf(KINDOF_AIRCRAFT) || curVictim->isKindOf(KINDOF_STRUCTURE) || curVictim->isKindOf(KINDOF_INFANTRY) || curVictim->isKindOf(KINDOF_MINE) || curVictim->isKindOf(KINDOF_SHRUBBERY) || curVictim->isKindOf(KINDOF_PARACHUTE)) ||
+				( (curVictim->isKindOf(KINDOF_SMALL_MISSILE) || curVictim->isKindOf(KINDOF_BALLISTIC_MISSILE) || curVictim->isKindOf(KINDOF_PROJECTILE)) && (getAntiMask() & targetAntiMask) != 0 && (curVictim->getID() == primaryVictim->getID() || source->getRelationship(curVictim) != ALLIES) ) )
+			  )
+			{
+				doShrapnel = TRUE;
+				if(shrapnelVictimID == INVALID_ID)
+					shrapnelVictimID = curVictim->getID();
+			}
+
 			curVictim->attemptDamage(&damageInfo);
 			//DEBUG_ASSERTLOG(damageInfo.out.m_noEffect, ("WeaponTemplate::dealDamageInternal: dealt to %s %08lx: attempted %f, actual %f (%f)",
 			//	curVictim->getTemplate()->getName().str(),curVictim,
@@ -2614,7 +2615,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 //-------------------------------------------------------------------------------------------------
 void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, const Coord3D *pos) const
 {
-	// Don't do shrapnel
+	// Sanity, don't do Shrapnel
 	if(!m_shrapnelBonusWeapon || m_shrapnelBonusCount <= 0)
 		return;
 
@@ -2629,7 +2630,7 @@ void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, con
 		return;
 
 	// if there's a specific victim, use it's pos (overriding the value passed in)
-	Object *primaryVictim = victimID ? TheGameLogic->findObjectByID(victimID) : NULL;	// might be null...
+	//Object *primaryVictim = victimID ? TheGameLogic->findObjectByID(victimID) : NULL;	// might be null...
 
 	// Shrapnel Bonus Weapon
 	WeaponBonus bonus;
@@ -2664,13 +2665,13 @@ void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, con
 	for( Object *curVictim = iter->first(); curVictim != NULL; curVictim = iter->next() )
 	{
 		// Don't check for the primary victim as target
-		if (curVictim == primaryVictim)
+		if (victimID != INVALID_ID && curVictim->getID() == victimID)
 			continue;
 
 		// Special, only deal damage to self
 		if(m_shrapnelBonusWeapon->getDamagesSelfOnly())
 		{
-			if(source != curVictim)
+			if(source->getID() != curVictim->getID())
 				continue;
 		}
 		

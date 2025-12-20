@@ -630,6 +630,7 @@ public:
 	Bool m_fixHulksFreezingAboveTerrain;
 
 	Bool m_fixAIPathfindClumpForManyPlayers; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfind;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
