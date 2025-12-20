@@ -176,11 +176,11 @@ public:
 
 	// Load INI files from a directory (and its subdirectories).
 	// Throws if one INI file is not read correctly.
-	UnsignedInt loadDirectory( AsciiString dirName, INILoadType loadType, Xfer *pXfer, Bool subdirs = TRUE, Bool optional=FALSE );
+	UnsignedInt loadDirectory( AsciiString dirName, INILoadType loadType, Xfer *pXfer, Bool subdirs = TRUE );
 
 	// Load one specific INI file by name.
 	// Throws if the INI file is not found or is not read correctly.
-	UnsignedInt load( AsciiString filename, INILoadType loadType, Xfer *pXfer );
+	UnsignedInt load( AsciiString filename, INILoadType loadType, Xfer *pXfer, Bool optional=FALSE );
 
 	static Bool isDeclarationOfType( AsciiString blockType, AsciiString blockName, char *bufferToCheck );
 	static Bool isEndOfBlock( char *bufferToCheck );

@@ -561,7 +561,7 @@ void GameEngine::init()
 		initSubsystem(TheDamageFXStore,"TheDamageFXStore", MSGNEW("GameEngineSubsystem") DamageFXStore(), &xferCRC, NULL, "Data\\INI\\DamageFX");
 		initSubsystem(TheArmorStore,"TheArmorStore", MSGNEW("GameEngineSubsystem") ArmorStore(), &xferCRC, NULL, "Data\\INI\\Armor");
 		initSubsystem(TheBuildAssistant,"TheBuildAssistant", MSGNEW("GameEngineSubsystem") BuildAssistant, NULL);
-		initSubsystem(TheBuffTemplateStore, "TheBuffTemplateStore", MSGNEW("GameEngineSubsystem") BuffTemplateStore(), &xferCRC, NULL, "Data\\INI\\BuffTemplate.ini", NULL, TRUE);
+		initSubsystem(TheBuffTemplateStore, "TheBuffTemplateStore", MSGNEW("GameEngineSubsystem") BuffTemplateStore(), &xferCRC, NULL, "Data\\INI\\BuffTemplate", TRUE);
 
 	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
 	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////

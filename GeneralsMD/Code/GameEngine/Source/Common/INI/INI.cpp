@@ -405,7 +405,7 @@ UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, 
 
 	if (optional && m_file == NULL) {
 		// unPrepFile();
-		return;
+		return 0;
 	}
 
 	try
