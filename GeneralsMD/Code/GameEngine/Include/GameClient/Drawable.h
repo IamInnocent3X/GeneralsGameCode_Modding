@@ -719,7 +719,7 @@ private:
 	UnsignedInt m_countFrames;
 	UnsignedInt m_dontAssignFrames;
 	Bool m_changedCustomStatus;
-	
+
 	enum FadingMode
 	{
 		FADING_NONE,

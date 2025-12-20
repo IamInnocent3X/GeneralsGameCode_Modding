@@ -699,7 +699,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{"DefaultExcludedDeathTypes", INI::parseDeathTypeFlagsList, NULL, offsetof(GlobalData, m_defaultExcludedDeathTypes) },
 	
-	{ NULL,					NULL,						NULL,						0 }
+	{ NULL,					NULL,						NULL,						0 }  // keep this last
 
 };
 
@@ -1319,7 +1319,7 @@ GlobalData::GlobalData()
 	m_chronoDisableParticleSystemSmall.clear();
 	// m_chronoTintStatusType = TINT_STATUS_INVALID;
 
-}
+}  // end GlobalData
 
 
 //-------------------------------------------------------------------------------------------------

@@ -523,8 +523,8 @@ public:
 	const Waypoint* getCompletedWaypoint(void) const { return m_completedWaypoint; }
 	void setCompletedWaypoint(const Waypoint* pWay) { m_completedWaypoint = pWay; }
 
-	const LocomotorSet& getLocomotorSet(void) const {return m_locomotorSet;}
-	void setPathExtraDistance(Real dist) {m_pathExtraDistance = dist;}
+	const LocomotorSet& getLocomotorSet(void) const { return m_locomotorSet; }
+	void setPathExtraDistance(Real dist) { m_pathExtraDistance = dist; }
 	Real getPathExtraDistance() const { return m_pathExtraDistance; }
 
 	virtual Bool chooseLocomotorSet(LocomotorSetType wst);

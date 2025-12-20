@@ -44,6 +44,7 @@ LifetimeUpdate::LifetimeUpdate( Thing *thing, const ModuleData* moduleData ) : U
 	const LifetimeUpdateModuleData* d = getLifetimeUpdateModuleData();
 	m_dieFrame = 0;
 	m_startDieFrame = 0;
+	//
 	UnsignedInt delay;
 	if( getObject()->isKindOf( KINDOF_HULK ) && TheGameLogic->getHulkMaxLifetimeOverride() != -1 )
 	{

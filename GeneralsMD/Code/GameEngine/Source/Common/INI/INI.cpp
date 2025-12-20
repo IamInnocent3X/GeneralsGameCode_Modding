@@ -214,7 +214,7 @@ INI::~INI( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-UnsignedInt INI::loadFileDirectory( AsciiString fileDirName, INILoadType loadType, Xfer *pXfer, Bool subdirs )
+UnsignedInt INI::loadFileDirectory( AsciiString fileDirName, INILoadType loadType, Xfer *pXfer, Bool subdirs, Bool optional/* = FALSE*/)
 {
 	UnsignedInt filesRead = 0;
 
@@ -235,14 +235,14 @@ UnsignedInt INI::loadFileDirectory( AsciiString fileDirName, INILoadType loadTyp
 
 	if (TheFileSystem->doesFileExist(iniFile.str()))
 	{
-		filesRead += load(iniFile, loadType, pXfer);
+		filesRead += load(iniFile, loadType, pXfer, optional);
 	}
 
 	// Load any additional ini files from a "filename" directory and its subdirectories.
-	filesRead += loadDirectory(iniDir, loadType, pXfer, subdirs);
+	filesRead += loadDirectory(iniDir, loadType, pXfer, subdirs, optional);
 
 	// Expect to open and load at least one file.
-	if (filesRead == 0)
+	if (filesRead == 0 && !optional)
 	{
 		throw INI_CANT_OPEN_FILE;
 	}
@@ -255,13 +255,13 @@ UnsignedInt INI::loadFileDirectory( AsciiString fileDirName, INILoadType loadTyp
 	* If we are to load subdirectories, we will load them *after* we load all the
 	* files in the current directory */
 //-------------------------------------------------------------------------------------------------
-UnsignedInt INI::loadDirectory( AsciiString dirName, INILoadType loadType, Xfer *pXfer, Bool subdirs )
+UnsignedInt INI::loadDirectory( AsciiString dirName, INILoadType loadType, Xfer *pXfer, Bool subdirs, Bool optional/* = FALSE*/)
 {
 	UnsignedInt filesRead = 0;
 
 	// sanity
-	if( dirName.isEmpty() )
-		throw INI_INVALID_DIRECTORY;
+	if (dirName.isEmpty())
+			throw INI_INVALID_DIRECTORY;
 
 	try
 	{
@@ -396,6 +396,7 @@ static INIFieldParseProc findFieldParse(const FieldParse* parseTable, const char
 //-------------------------------------------------------------------------------------------------
 /** Load and parse an INI file */
 //-------------------------------------------------------------------------------------------------
+
 UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, Bool optional /*=FALSE*/)
 {
 	setFPMode(); // so we have consistent Real values for GameLogic -MDC

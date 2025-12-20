@@ -30,8 +30,8 @@ set(GAMEENGINEDEVICE_SRC
 #    Include/W3DDevice/GameClient/Module/W3DTreeDraw.h
     Include/W3DDevice/GameClient/Module/W3DTruckDraw.h
     Include/W3DDevice/GameClient/Module/W3DDependencyCarrierDraw.h
-#    Include/W3DDevice/GameClient/TerrainTex.h
-#    Include/W3DDevice/GameClient/TileData.h
+    # Include/W3DDevice/GameClient/TerrainTex.h
+    # Include/W3DDevice/GameClient/TileData.h
     Include/W3DDevice/GameClient/W3DAssetManager.h
     Include/W3DDevice/GameClient/W3DAssetManagerExposed.h
     Include/W3DDevice/GameClient/W3DBibBuffer.h

@@ -460,7 +460,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "BreaksMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
 	{ "BreaksMindControlKey",				INI::parseAsciiStringVector,					NULL,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },*/
 
-	{ NULL,												NULL,																		NULL,							0 }
+	{ NULL,												NULL,																		NULL,							0 }  // keep this last
 
 };
 
@@ -567,8 +567,6 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_damageStatusType							= OBJECT_STATUS_NONE;
 	m_suspendFXDelay								= 0;
 	m_dieOnDetonate						= FALSE;
-
-	m_historicDamageTriggerId = 0;
 	m_scatterTargetAligned = FALSE;
 	m_scatterTargetRandom = TRUE;
 	m_scatterTargetRandomAngle = FALSE;
@@ -577,6 +575,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_scatterTargetResetTime = 0;
 	m_preAttackFXDelay = 6; // Non-Zero default! 6 frames = 200ms. This should be a good base value to avoid spamming
 	m_laserGroundUnitTargetHeight = 10; // Default Height offset
+
+	m_historicDamageTriggerId = 0;
 	m_customDamageType						= NULL;
 	m_customDamageStatusType				= NULL;
 	m_customDeathType						= NULL;

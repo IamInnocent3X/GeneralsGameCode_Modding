@@ -558,8 +558,8 @@ public:
 	const ObjectCreationList* getFireOCL(VeterancyLevel v) const { return m_fireOCLs[v]; }
 	const ObjectCreationList* getProjectileDetonationOCL(VeterancyLevel v) const { return m_projectileDetonationOCLs[v]; }
 	const ParticleSystemTemplate* getProjectileExhaust(VeterancyLevel v) const { return m_projectileExhausts[v]; }
-	const FXList* getPreAttackFX(VeterancyLevel v) const { return m_preAttackFXs[v]; }
-	UnsignedInt getPreAttackFXDelay() const { return m_preAttackFXDelay; }
+	inline const FXList* getPreAttackFX(VeterancyLevel v) const { return m_preAttackFXs[v]; }
+	inline UnsignedInt getPreAttackFXDelay() const { return m_preAttackFXDelay; }
 
 	const AudioEventRTS& getFireSound() const { return m_fireSound; }
 	UnsignedInt getFireSoundLoopTime() const { return m_fireSoundLoopTime; }
@@ -578,6 +578,11 @@ public:
 	Bool isPlayFXWhenStealthed() const { return m_playFXWhenStealthed; }
 	Bool getDieOnDetonate() const { return m_dieOnDetonate; }
 
+	UnsignedInt getContinuousLaserLoopTime() const { return m_continuousLaserLoopTime; }
+	Real getLaserGroundUnitTargetHeight() const { return m_laserGroundUnitTargetHeight; }
+	Real getLaserGroundTargetHeight() const { return m_laserGroundTargetHeight; }
+	UnsignedInt getScatterTargetResetTime() const { return m_scatterTargetResetTime; }
+	Bool isScatterTargetResetRecenter() const { return m_scatterTargetResetRecenter; }
 	Bool isScatterTargetAligned() const { return m_scatterTargetAligned; }
 	Bool isScatterTargetRandom() const { return m_scatterTargetRandom; }
 	Bool isScatterTargetRandomAngle() const { return m_scatterTargetRandomAngle; }
@@ -1094,6 +1099,7 @@ public:
 	Real getContinueAttackRange() const { return m_template->getContinueAttackRange(); }
 	Bool isShowsAmmoPips() const { return m_template->isShowsAmmoPips(); }
 	Int getClipSize() const { return m_template->getClipSize(); }
+	UnsignedInt getContinuousLaserLoopTime() const { return m_template->getContinuousLaserLoopTime(); }
 	// Contact weapons (like car bombs) need to basically collide with their target.
 	Bool isContactWeapon() const { return m_template->isContactWeapon(); }
 

@@ -64,6 +64,7 @@
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+/// IamInnocent - Updated with TheSuperHackers bitNameList method
 template<>
 const char* const WeaponSetFlags::s_bitNameList[] =
 {
@@ -430,11 +431,9 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 				}
 			}
 			else { // Regular old behaviour
-				if (m_weapons[i] != NULL)
-				{
-					deleteInstance(m_weapons[i]);
-					m_weapons[i] = NULL;
-				}
+				deleteInstance(m_weapons[i]);
+				m_weapons[i] = NULL;
+
 
 				if (set->getNth((WeaponSlotType)i))
 				{

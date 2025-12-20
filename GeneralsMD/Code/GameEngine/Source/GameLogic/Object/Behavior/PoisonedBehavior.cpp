@@ -144,8 +144,8 @@ PoisonedBehavior::~PoisonedBehavior( void )
 void PoisonedBehavior::onDamage( DamageInfo *damageInfo )
 {
 	// @bugfix hanfield 01/08/2025 Check m_sourceID to see if we are causing damage. If we are - ignore.
-	//if(damageInfo->in.m_sourceID == INVALID_ID) 
-	//	return;
+	if(damageInfo->in.m_sourceID == INVALID_ID) 
+		return;
 
 	// Universal Poison Trigger
 	if(damageInfo->in.m_isPoison == TRUE)
@@ -243,8 +243,8 @@ UpdateSleepTime PoisonedBehavior::update()
 		DamageInfo damage;
 		damage.in.m_amount = m_poisonDamageAmount;
 		damage.in.m_sourceID = m_poisonSource;
-		damage.in.m_damageType = d->m_damageType;  // Not poison, as that will infect us again
-		damage.in.m_damageFXOverride = d->m_damageTypeFX; // but this will ensure that the right effect is played
+		damage.in.m_damageType = d->m_damageType;  // @bugfix hanfield 01/08/2025 Since we now check for sourceID, this damage will not cause an infinite poison loop
+		damage.in.m_damageFXOverride = d->m_damageTypeFX; // Not necessary anymore, but can help to make sure proper FX are used, if template is wonky
 		damage.in.m_deathType = m_deathType;
 
 		damage.in.m_damageStatusType = d->m_damageStatusType;

@@ -98,7 +98,7 @@ void W3DOverlordTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 			riderDraw->notifyDrawableDependencyCleared();
 			riderDraw->draw();
 		}
-    }
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

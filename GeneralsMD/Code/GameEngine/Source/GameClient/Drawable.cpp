@@ -117,6 +117,7 @@ static_assert(ARRAY_SIZE(TheDrawableIconNames) == MAX_ICONS + 1, "Incorrect arra
 
 
 // -----
+/// IamInnocent - Updated with TheSuperHackers way of bitNameList sorting
 template<>
 const char* const TintStatusFlags::s_bitNameList[] =
 {

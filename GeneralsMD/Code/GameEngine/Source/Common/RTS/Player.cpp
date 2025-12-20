@@ -1829,7 +1829,7 @@ void Player::onStructureConstructionComplete(Object* builder, Object* structure,
 			}
 		}
 	}
-}
+}  // end onStructureConstructionComplete
 
 //=============================================================================
 void Player::onStructureUndone(Object *structure)
@@ -5151,7 +5151,7 @@ void Player::xfer( Xfer *xfer )
 	//------------------------
 
 
-}
+}  // end xfer
 
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
