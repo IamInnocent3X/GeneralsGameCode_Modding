@@ -166,7 +166,9 @@ public:
   Bool isGrantedBySpecialPower( void ) { return getStealthUpdateModuleData()->m_grantedBySpecialPower; }
 	Bool isTemporaryGrant() { return m_framesGranted > 0; }
 
-	inline void setStealthLevelOverride(UnsignedInt stealthLevel) { m_stealthLevelOverride = stealthLevel; }
+	Bool canStealthWhileDisguised() const { return getStealthUpdateModuleData()->m_canStealthWhileDisguised; }
+
+	void setStealthLevelOverride(UnsignedInt stealthLevel) { m_stealthLevelOverride = stealthLevel; }
 
 	void refreshUpdate();
 

@@ -2110,11 +2110,12 @@ Color Object::getNightIndicatorColor() const
 Bool Object::isLogicallyVisible() const
 {
 	const Object* obj = getOuterObject();
+	Bool hasDisguisedStealth = getStealth() && getStealth()->canStealthWhileDisguised();
 
 	// Disguisers are always visible to all players, irrespective of any stealth
 	// status. We thus need to check the type rather than the status as the
 	// disguise status is absent during the disguise transition phase.
-	if (obj->isKindOf(KINDOF_DISGUISER))
+	if (obj->isKindOf(KINDOF_DISGUISER) && !hasDisguisedStealth)
 		return true;
 
 	if (obj->testStatus(OBJECT_STATUS_STEALTHED) && !obj->testStatus(OBJECT_STATUS_DETECTED))
