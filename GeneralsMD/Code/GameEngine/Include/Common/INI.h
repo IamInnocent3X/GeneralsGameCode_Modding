@@ -176,7 +176,7 @@ public:
 
 	// Load INI files from a directory (and its subdirectories).
 	// Throws if one INI file is not read correctly.
-	UnsignedInt loadDirectory( AsciiString dirName, INILoadType loadType, Xfer *pXfer, Bool subdirs = TRUE );
+	UnsignedInt loadDirectory( AsciiString dirName, INILoadType loadType, Xfer *pXfer, Bool subdirs = TRUE, Bool optional=FALSE );
 
 	// Load one specific INI file by name.
 	// Throws if the INI file is not found or is not read correctly.
@@ -218,6 +218,7 @@ public:
 	static void parseTerrainBridgeDefinition( INI *ini );
 	static void parseMetaMapDefinition( INI *ini );
 	static void parseFXListDefinition( INI *ini );
+	static void parseBuffTemplateDefinition( INI* ini );
 	static void parseObjectCreationListDefinition( INI* ini );
 	static void parseMultiplayerSettingsDefinition( INI* ini );
 	static void parseMultiplayerColorDefinition( INI* ini );
@@ -417,7 +418,7 @@ protected:
 
 	static Bool isValidINIFilename( const char *filename ); ///< is this a valid .ini filename
 
-	void prepFile( AsciiString filename, INILoadType loadType );
+	void prepFile( AsciiString filename, INILoadType loadType, Bool optional=FALSE );
 	void unPrepFile();
 
 	void readLine( void );

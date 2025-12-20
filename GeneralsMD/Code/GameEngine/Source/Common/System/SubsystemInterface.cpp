@@ -151,16 +151,16 @@ void SubsystemInterfaceList::removeSubsystem(SubsystemInterface* sys)
 #endif
 }
 //-----------------------------------------------------------------------------
-void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, Xfer *pXfer, AsciiString name)
+void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, Xfer *pXfer, AsciiString name, Bool optional /*=FALSE*/)
 {
 	sys->setName(name);
 	sys->init();
 
 	INI ini;
 	if (path1)
-		ini.loadFileDirectory(path1, INI_LOAD_OVERWRITE, pXfer );
+		ini.loadFileDirectory(path1, INI_LOAD_OVERWRITE, pXfer, optional );
 	if (path2)
-		ini.loadFileDirectory(path2, INI_LOAD_OVERWRITE, pXfer );
+		ini.loadFileDirectory(path2, INI_LOAD_OVERWRITE, pXfer, optional );
 
 	m_subsystems.push_back(sys);
 }

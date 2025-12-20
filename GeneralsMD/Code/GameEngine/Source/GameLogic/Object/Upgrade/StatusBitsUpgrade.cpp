@@ -114,14 +114,8 @@ void StatusBitsUpgrade::upgradeImplementation( )
 
 	obj->setStatus( d->m_statusToSet );
 	obj->clearStatus( d->m_statusToClear );
-	for(std::vector<AsciiString>::const_iterator it = d->m_customStatusToSet.begin(); it != d->m_customStatusToSet.end(); ++it)
-	{
-		obj->setCustomStatus( *it );
-	}
-	for(std::vector<AsciiString>::const_iterator it = d->m_customStatusToClear.begin(); it != d->m_customStatusToClear.end(); ++it)
-	{
-		obj->clearCustomStatus( *it );
-	}
+	obj->setCustomStatus( d->m_customStatusToSet );
+	obj->clearCustomStatus( d->m_customStatusToSet );
 	for (Int i = 0; i < d->m_bonusToSet.size(); i++) {
 		obj->setWeaponBonusCondition(d->m_bonusToSet[i]);
 	}

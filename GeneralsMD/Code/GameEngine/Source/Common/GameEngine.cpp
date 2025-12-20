@@ -85,6 +85,7 @@
 #include "GameLogic/RankInfo.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
+#include "GameLogic/BuffSystem.h"
 
 #include "GameClient/ClientInstance.h"
 #include "GameClient/FXList.h"
@@ -162,10 +163,11 @@ void initSubsystem(
 	SUBSYSTEM* sys,
 	Xfer *pXfer,
 	const char* path1 = NULL,
-	const char* path2 = NULL)
+	const char* path2 = NULL,
+	bool optional = FALSE)
 {
 	sysref = sys;
-	TheSubsystemList->initSubsystem(sys, path1, path2, pXfer, name);
+	TheSubsystemList->initSubsystem(sys, path1, path2, pXfer, name, optional);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -559,7 +561,7 @@ void GameEngine::init()
 		initSubsystem(TheDamageFXStore,"TheDamageFXStore", MSGNEW("GameEngineSubsystem") DamageFXStore(), &xferCRC, NULL, "Data\\INI\\DamageFX");
 		initSubsystem(TheArmorStore,"TheArmorStore", MSGNEW("GameEngineSubsystem") ArmorStore(), &xferCRC, NULL, "Data\\INI\\Armor");
 		initSubsystem(TheBuildAssistant,"TheBuildAssistant", MSGNEW("GameEngineSubsystem") BuildAssistant, NULL);
-
+		initSubsystem(TheBuffTemplateStore, "TheBuffTemplateStore", MSGNEW("GameEngineSubsystem") BuffTemplateStore(), &xferCRC, NULL, "Data\\INI\\BuffTemplate.ini", NULL, TRUE);
 
 	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
 	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
