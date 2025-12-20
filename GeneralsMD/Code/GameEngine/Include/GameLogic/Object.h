@@ -406,6 +406,8 @@ public:
 	inline void clearStatus( ObjectStatusMaskType objectStatus ) { setStatus( objectStatus, false ); }
 	void setCustomStatus( const AsciiString& objectCustomStatus, Bool set = true );
 	inline void clearCustomStatus( const AsciiString& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
+	void setCustomStatus( const std::vector<AsciiString>& objectCustomStatus, Bool set = true );
+	inline void clearCustomStatus( const std::vector<AsciiString>& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
 	void updateUpgradeModules();	///< We need to go through our Upgrade Modules and see which should be activated
 	UpgradeMaskType getObjectCompletedUpgradeMask() const { return m_objectUpgradesCompleted; } ///< Upgrades I complete locally
 
@@ -675,6 +677,15 @@ public:
 	Bool testWeaponBonusConditionAgainst(WeaponBonusConditionType wst) const { return (m_weaponBonusConditionAgainst & (1 << wst)) != 0; }
 	inline WeaponBonusConditionFlags getWeaponBonusConditionAgainst() const { return m_weaponBonusConditionAgainst; }
 	inline void setWeaponBonusConditionFlagsAgainst(WeaponBonusConditionFlags flags) { m_weaponBonusConditionAgainst = flags; }
+
+	void applyCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags);
+	void removeCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags);
+
+	void setCustomWeaponBonusConditionAgainst(const AsciiString& cst);
+	void clearCustomWeaponBonusConditionAgainst(const AsciiString& cst);
+	Bool testCustomWeaponBonusConditionAgainst(const AsciiString& cst) const;
+	inline const ObjectCustomStatusType getCustomWeaponBonusConditionAgainst() const { return m_customWeaponBonusConditionAgainst; }
+	inline void setCustomWeaponBonusConditionFlagsAgainst(ObjectCustomStatusType flags) { m_customWeaponBonusConditionAgainst = flags; }
 
 
 	inline ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
@@ -1071,6 +1082,7 @@ private:
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 
 	WeaponBonusConditionFlags			m_weaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
+	ObjectCustomStatusType				m_customWeaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
 
 	SpecialPowerMaskType					m_specialPowerBits; ///< bits determining what kind of special abilities this object has access to.
 

@@ -432,6 +432,9 @@ void BuffTemplate::parseFlagModifier(INI* ini, void* instance, void* /*store*/, 
 			{ "WeaponSetFlag", INI::parseIndexList, WeaponSetFlags::getBitNames(), offsetof(BuffTemplate, m_weaponSetFlag) },
 			{ "ArmorSetFlag", INI::parseIndexList,	ArmorSetFlags::getBitNames(), offsetof(BuffTemplate, m_armorSetFlag) },
 			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	NULL, offsetof(BuffTemplate, m_statusToSet) },
+			{ "CustomWeaponBonus", INI::parseAsciiString,	NULL, offsetof(BuffTemplate, m_customBonusType) },
+			{ "CustomWeaponBonusAgainst", INI::parseAsciiString,	NULL, offsetof(BuffTemplate, m_customBonusTypeAgainst) },
+			{ "CustomStatusToSet", INI::parseAsciiStringVector,	NULL, offsetof(BuffTemplate, m_customStatusToSet) },
 			// { "StatusToClear", ObjectStatusMaskType::parseFromINI,	NULL, offsetof(BuffTemplate, m_statusToClear) },
 			{ 0, 0, 0, 0 }
 		};
@@ -457,7 +460,11 @@ BuffTemplate::BuffTemplate()
 
 	m_statusToSet.clear();
 	// m_statusToClear.clear();
-	
+
+	m_customBonusType = NULL;
+	m_customBonusTypeAgainst = NULL;
+	m_customStatusToSet.clear();
+
 	 m_nuggets.clear();
 }
 
@@ -471,6 +478,10 @@ void BuffTemplate::clear()
 
 	m_statusToSet.clear();
 	// m_statusToClear.clear();
+
+	m_customBonusType = NULL;
+	m_customBonusTypeAgainst = NULL;
+	m_customStatusToSet.clear();
 
 	// do NOT delete the nuggets -- they're owned by the Store.
 	 m_nuggets.clear();
@@ -510,6 +521,18 @@ void BuffTemplate::applyEffects(Object* targetObj, Object* sourceObj, BuffEffect
 		targetObj->setArmorSetFlag(m_armorSetFlag);
 	}
 
+	if(!m_customBonusType.isEmpty()) {
+		targetObj->setCustomWeaponBonusCondition(m_customBonusType);
+	}
+
+	if(!m_customBonusTypeAgainst.isEmpty()) {
+		targetObj->setCustomWeaponBonusConditionAgainst(m_customBonusTypeAgainst);
+	}
+
+	if(!m_customStatusToSet.empty()) {
+		targetObj->setCustomStatus(m_customStatusToSet);
+	}
+
 	// setStatus checks for changes
 	targetObj->setStatus(m_statusToSet);
 }
@@ -544,6 +567,18 @@ void BuffTemplate::removeEffects(Object* targetObj, BuffEffectTracker* buffTrack
 			targetObj->clearArmorSetFlag(m_armorSetFlag);
 		}
 
+		if(!m_customBonusType.isEmpty()) {
+			targetObj->clearCustomWeaponBonusCondition(m_customBonusType);
+		}
+
+		if(!m_customBonusTypeAgainst.isEmpty()) {
+			targetObj->clearCustomWeaponBonusConditionAgainst(m_customBonusTypeAgainst);
+		}
+
+		if(!m_customStatusToSet.empty()) {
+			targetObj->clearCustomStatus(m_customStatusToSet);
+		}
+
 		// setStatus checks for changes
 		targetObj->clearStatus(m_statusToSet);
 
@@ -571,9 +606,37 @@ void BuffTemplate::reApplyFlags(Object* targetObj, const BuffTemplate* other) co
 		targetObj->setArmorSetFlag(m_armorSetFlag);
 	}
 
+	if(!other->m_customBonusType.isEmpty() && other->m_customBonusType == m_customBonusType ) {
+		targetObj->setCustomWeaponBonusCondition(m_customBonusType);
+	}
+
+	if(!other->m_customBonusTypeAgainst.isEmpty() && other->m_customBonusTypeAgainst == m_customBonusTypeAgainst ) {
+		targetObj->setCustomWeaponBonusConditionAgainst(m_customBonusTypeAgainst);
+	}
+
 	if (other->m_statusToSet != OBJECT_STATUS_MASK_NONE
 		&& TEST_OBJECT_STATUS_MASK_ANY(other->m_statusToSet, m_statusToSet)) {
 		targetObj->setStatus(m_statusToSet);
+	}
+
+	if(!other->m_customStatusToSet.empty()) {
+		Bool found = false;
+		for(std::vector<AsciiString>::const_iterator it = other->m_customStatusToSet.begin(); it != other->m_customStatusToSet.end(); ++it)
+		{
+			for(std::vector<AsciiString>::const_iterator it_2 = m_customStatusToSet.begin(); it_2 != m_customStatusToSet.end(); ++it_2)
+			{
+				if((*it) == (*it_2))
+				{
+					found = true;
+					break;
+				}
+			}
+			if(found)
+				break;
+		}
+
+		if(found)
+			targetObj->setCustomStatus(m_customStatusToSet);
 	}
 
 }

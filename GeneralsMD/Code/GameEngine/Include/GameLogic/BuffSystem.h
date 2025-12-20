@@ -119,6 +119,9 @@ protected:
 	WeaponSetType m_weaponSetFlag;                 ///< the weaponset flag to set
 	ArmorSetType m_armorSetFlag;                   ///< the armorset flag to set
 	ObjectStatusMaskType m_statusToSet;           ///< the status to set (allows multiple)
+	AsciiString	m_customBonusType;         		///< custom weapon bonus granted to the object
+	AsciiString	m_customBonusTypeAgainst;  		///< custom weapon bonus granted when attacking the object
+	std::vector<AsciiString> m_customStatusToSet;           ///< the custom status to set (allows multiple)
 
 	// --
 	static const FieldParse TheBuffTemplateFieldParse[];

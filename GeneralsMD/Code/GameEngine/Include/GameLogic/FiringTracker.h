@@ -93,6 +93,7 @@ private:
 	AudioHandle			m_audioHandle;
 
 	WeaponBonusConditionFlags m_prevTargetWeaponBonus;  ///< weaponBonus against previous target
+	ObjectCustomStatusType	m_prevTargetCustomWeaponBonus;  ///< custom weaponBonus against previous target
 };
 
 #endif

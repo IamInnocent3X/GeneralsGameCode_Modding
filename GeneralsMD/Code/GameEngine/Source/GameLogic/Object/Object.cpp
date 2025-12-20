@@ -348,6 +348,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_weaponBonusConditionIC = 0;
 	m_customWeaponBonusConditionIC.clear();
 
+	m_customWeaponBonusConditionAgainst.clear();
+
 	m_invsqrt_mass = 0.0f;
 	//m_magnetLevitateHeight = 0.0f;
 	//m_levitateCheckFrame = 0;
@@ -1246,7 +1248,7 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 
 	//ObjectCustomStatusType oldStatus = m_customStatus;
 	// A faster way of determining whether to trigger status change.
-	Bool isDifferent;
+	Bool isDifferent = false;
 
 	// TO-DO: Change to Hash_Map. DONE.
 	ObjectCustomStatusType::iterator it = m_customStatus.find(customStatus);
@@ -1309,6 +1311,69 @@ Bool Object::testCustomStatus(const AsciiString& cst) const
 		return TRUE;
 	}
 	return FALSE;
+}
+
+void Object::setCustomStatus( const std::vector<AsciiString>& customStatus, Bool set )
+{
+	// Does nothing if there's no status to Set.
+	if(customStatus.empty())
+		return;
+
+	// A faster way of determining whether to trigger status change.
+	Bool isDifferent = false;
+
+	for(std::vector<AsciiString>::const_iterator str_it = customStatus.begin(); str_it != customStatus.end(); str_it++)
+	{
+		ObjectCustomStatusType::iterator it = m_customStatus.find(*str_it);
+
+		if (it != m_customStatus.end()) 
+		{
+			Int currentInt;
+			currentInt = it->second;
+
+			if (set)
+				it->second = 1;
+			else
+				it->second = 0;
+
+			if(currentInt != it->second)
+				isDifferent = TRUE;
+		}
+		else 
+		{
+			if (set)
+				m_customStatus[(*str_it)] = 1;
+			else 
+				m_customStatus[(*str_it)] = 0;
+
+			isDifferent = TRUE;
+		}
+	}
+	
+	if (isDifferent == TRUE)
+	{
+		ObjectStatusMaskType currentStatus = m_status;
+		if( set && currentStatus.test( OBJECT_STATUS_REPULSOR ) && m_repulsorHelper != NULL )
+		{
+			// Damaged repulsable civilians scare (repulse) other civs, but only
+			// for a short amount of time... use the repulsor helper to turn off repulsion shortly.
+			m_repulsorHelper->sleepUntil(TheGameLogic->getFrame() + 2*LOGICFRAMES_PER_SECOND);
+		}
+
+		if( currentStatus.test( OBJECT_STATUS_STEALTHED ) || currentStatus.test( OBJECT_STATUS_DETECTED ) || currentStatus.test( OBJECT_STATUS_DISGUISED ) )
+		{
+			//Kris: Aug 20, 2003
+			//When any of the three key status bits for stealth go on or off, then handle partition updates for vision.
+			if( getTemplate()->getShroudRevealToAllRange() > 0.0f )
+			{
+				handlePartitionCellMaintenance();
+			}
+		}
+
+		doObjectStatusChecks();
+
+	}
+
 }
 
 Bool Object::testCustomStatusForAll(const std::vector<AsciiString>& cst) const
@@ -5202,7 +5267,7 @@ void Object::xfer( Xfer *xfer )
 		{
 			if (m_customWeaponBonusConditionIC.empty() == false)
 			{
-				DEBUG_CRASH(( "GameLogic::xfer - mm_customWeaponBonusConditionIC should be empty, but is not"));
+				DEBUG_CRASH(( "GameLogic::xfer - m_customWeaponBonusConditionIC should be empty, but is not"));
 				//throw SC_INVALID_DATA;
 			}
 			
@@ -5215,6 +5280,38 @@ void Object::xfer( Xfer *xfer )
 				Int flagIC;
 				xfer->xferInt(&flagIC);
 				m_customWeaponBonusConditionIC[bonusNameIC] = flagIC;
+			}
+		}
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (ObjectCustomStatusType::const_iterator it = m_customWeaponBonusConditionAgainst.begin(); it != m_customWeaponBonusConditionAgainst.end(); ++it )
+			{
+				AsciiString bonusNameAgainst = it->first;
+				Int flagAgainst = it->second;
+				xfer->xferAsciiString(&bonusNameAgainst);
+				xfer->xferInt(&flagAgainst);
+			}
+			AsciiString emptyAgainst;
+			xfer->xferAsciiString(&emptyAgainst);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customWeaponBonusConditionAgainst.empty() == false)
+			{
+				DEBUG_CRASH(( "GameLogic::xfer - m_customWeaponBonusConditionAgainst should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusNameAgainst;
+				xfer->xferAsciiString(&bonusNameAgainst);
+				if (bonusNameAgainst.isEmpty())
+					break;
+				Int flagAgainst;
+				xfer->xferInt(&flagAgainst);
+				m_customWeaponBonusConditionAgainst[bonusNameAgainst] = flagAgainst;
 			}
 		}
 
@@ -6099,6 +6196,62 @@ void Object::removeWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
 	}
 
 //-------------------------------------------------------------------------------------------------
+void Object::applyCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags)
+{
+	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+
+	for(ObjectCustomStatusType::const_iterator it = flags.begin(); it != flags.end(); ++it)
+	{
+		if(it->second == 0);
+			continue;
+
+		ObjectCustomStatusType::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
+		if (it_2 != m_customWeaponBonusCondition.end()) 
+		{
+			it_2->second = 1;
+		}
+		else 
+		{
+			m_customWeaponBonusCondition[(*it).first] = 1;
+		}
+	}
+
+	if (oldCondition != m_customWeaponBonusCondition)
+	{
+		// Our weapon bonus just changed, so we need to immediately update our weapons
+		m_weaponSet.weaponSetOnWeaponBonusChange(this);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::removeCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags)
+	{
+		ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+
+		for(ObjectCustomStatusType::const_iterator it = flags.begin(); it != flags.end(); ++it)
+		{
+			if(it->second == 0);
+				continue;
+
+			ObjectCustomStatusType::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
+			if (it_2 != m_customWeaponBonusCondition.end()) 
+			{
+				it_2->second = 0;
+			}
+			else 
+			{
+				m_customWeaponBonusCondition[(*it).first] = 0;
+			}
+		}
+
+		if (oldCondition != m_customWeaponBonusCondition)
+		{
+			// Our weapon bonus just changed, so we need to immediately update our weapons
+			m_weaponSet.weaponSetOnWeaponBonusChange(this);
+		}
+	}
+
+//-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
 {
 	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
@@ -6199,6 +6352,52 @@ Bool Object::testCustomWeaponBonusCondition(const AsciiString& cst) const
 	ObjectCustomStatusType::const_iterator it = m_customWeaponBonusCondition.find(cst);
 
 	if (it != m_customWeaponBonusCondition.end() && it->second == 1) 
+	{
+		return TRUE;
+	}
+	else 
+	{
+		return FALSE;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setCustomWeaponBonusConditionAgainst(const AsciiString& cst) 
+{
+	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionAgainst.find(cst);
+
+	if (it != m_customWeaponBonusConditionAgainst.end()) 
+	{
+		it->second = 1;
+	}
+	else 
+	{
+		m_customWeaponBonusConditionAgainst[cst] = 1;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::clearCustomWeaponBonusConditionAgainst(const AsciiString& cst) 
+{
+	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionAgainst.find(cst);
+
+	if (it != m_customWeaponBonusConditionAgainst.end()) 
+	{
+		it->second = 0;
+	}
+	else 
+	{
+
+		m_customWeaponBonusConditionAgainst[cst] = 0;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::testCustomWeaponBonusConditionAgainst(const AsciiString& cst) const
+{
+	ObjectCustomStatusType::const_iterator it = m_customWeaponBonusConditionAgainst.find(cst);
+
+	if (it != m_customWeaponBonusConditionAgainst.end() && it->second == 1) 
 	{
 		return TRUE;
 	}

@@ -103,12 +103,17 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 	// New Buff based 'WeaponBonusAgainst' Logic
 	{
 		WeaponBonusConditionFlags targetBonusFlags = 0;  // if we attack the ground, this stays empty
+		ObjectCustomStatusType targetBonusCustomFlags;
 		if (victim)
+		{
 			targetBonusFlags = victim->getWeaponBonusConditionAgainst();
+			targetBonusCustomFlags = victim->getCustomWeaponBonusConditionAgainst();
+		}
 
 		// If new bonus is different from previous, remove it.
-		if (targetBonusFlags != m_prevTargetWeaponBonus) {
+		if (targetBonusFlags != m_prevTargetWeaponBonus || targetBonusCustomFlags != m_prevTargetCustomWeaponBonus) {
 			me->removeWeaponBonusConditionFlags(m_prevTargetWeaponBonus);
+			me->removeCustomWeaponBonusConditionFlags(m_prevTargetCustomWeaponBonus);
 		}
 
 		// If we have a new bonus, apply it
@@ -116,7 +121,12 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 			me->applyWeaponBonusConditionFlags(targetBonusFlags);
 		}
 
+		if (!targetBonusCustomFlags.empty()) {
+			me->applyCustomWeaponBonusConditionFlags(targetBonusCustomFlags);
+		}
+
 		m_prevTargetWeaponBonus = targetBonusFlags;
+		m_prevTargetCustomWeaponBonus = targetBonusCustomFlags;
 
 	}
 
@@ -399,6 +409,39 @@ void FiringTracker::xfer( Xfer *xfer )
 
 	// currenly applied weaponBonus against the prev target
 	xfer->xferUnsignedInt(&m_prevTargetWeaponBonus);
+
+	// currenly applied custom weaponBonus against the prev target
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for (ObjectCustomStatusType::const_iterator it = m_prevTargetCustomWeaponBonus.begin(); it != m_prevTargetCustomWeaponBonus.end(); ++it )
+		{
+			AsciiString bonusName = it->first;
+			Int flag = it->second;
+			xfer->xferAsciiString(&bonusName);
+			xfer->xferInt(&flag);
+		}
+		AsciiString empty;
+		xfer->xferAsciiString(&empty);
+	}
+	else if (xfer->getXferMode() == XFER_LOAD)
+	{
+		if (m_prevTargetCustomWeaponBonus.empty() == false)
+		{
+			DEBUG_CRASH(( "GameLogic::xfer - m_prevTargetCustomWeaponBonus should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+		
+		for (;;) 
+		{
+			AsciiString bonusName;
+			xfer->xferAsciiString(&bonusName);
+			if (bonusName.isEmpty())
+				break;
+			Int flag;
+			xfer->xferInt(&flag);
+			m_prevTargetCustomWeaponBonus[bonusName] = flag;
+		}
+	}
 
 }  // end xfer
 
