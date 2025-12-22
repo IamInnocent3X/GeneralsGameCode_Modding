@@ -9470,6 +9470,9 @@ Bool Pathfinder::isAttackViewBlockedByObstacle(const Object* attacker, const Coo
 	}
 	if (w)
 	{
+		if(w->getWeaponIgnoresObstacles())
+			return false;
+
 		Bool viewBlocked;
 		if (victim)
 			viewBlocked = !w->isClearGoalFiringLineOfSightTerrain(attacker, attackerPos, victim);

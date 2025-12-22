@@ -457,6 +457,9 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "RailgunDeathType",						INI::parseIndexList,										TheDeathNames,		offsetof(WeaponTemplate, m_railgunDeathType) },
 	{ "RailgunOverrideDamageTypeFX",			DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_railgunDamageFXOverride) },
 
+	{ "BypassLineOfSight",						INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
+	{ "IgnoresObstacles",						INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
+
 	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
 	{ "MindControlRadius",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlRadius) },
 	{ "MindControlCount",				INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_mindControlCount) },
@@ -697,6 +700,9 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_railgunDamageType = DAMAGE_NUM_TYPES;
 	m_railgunDeathType = DEATH_NONE;
 	m_railgunDamageFXOverride = DAMAGE_UNRESISTABLE;
+
+	m_weaponBypassLineOfSight = FALSE;
+	m_weaponIgnoresObstacles = FALSE;
 
 	m_invulnerabilityDuration = 0;
 }
@@ -5786,6 +5792,9 @@ void Weapon::getFiringLineOfSightOrigin(const Object* source, Coord3D& origin) c
 //-------------------------------------------------------------------------------------------------
 Bool Weapon::isClearFiringLineOfSightTerrain(const Object* source, const Object* victim) const
 {
+	if(!source->hasDefaultLineOfSightEnabled() || getWeaponIgnoresObstacles() || getWeaponBypassLineOfSight())
+		return true;
+
 	Coord3D origin;
 	origin = *source->getPosition();
 	//CRCDEBUG_LOG(("Weapon::isClearFiringLineOfSightTerrain(Object) for %s", DescribeObject(source).str()));
@@ -5803,6 +5812,9 @@ Bool Weapon::isClearFiringLineOfSightTerrain(const Object* source, const Object*
 //-------------------------------------------------------------------------------------------------
 Bool Weapon::isClearFiringLineOfSightTerrain(const Object* source, const Coord3D& victimPos) const
 {
+	if(!source->hasDefaultLineOfSightEnabled() || getWeaponIgnoresObstacles() || getWeaponBypassLineOfSight())
+		return true;
+
 	Coord3D origin;
 	origin = *source->getPosition();
 	//CRCDEBUG_LOG(("Weapon::isClearFiringLineOfSightTerrain(Coord3D) for %s", DescribeObject(source).str()));
@@ -5816,6 +5828,9 @@ Bool Weapon::isClearFiringLineOfSightTerrain(const Object* source, const Coord3D
 /** Determine whether if source was at goalPos whether it would have clear line of sight. */
 Bool Weapon::isClearGoalFiringLineOfSightTerrain(const Object* source, const Coord3D& goalPos, const Object* victim) const
 {
+	if(!source->hasDefaultLineOfSightEnabled() || getWeaponIgnoresObstacles() || getWeaponBypassLineOfSight())
+		return true;
+
 	Coord3D origin=goalPos;
 	//CRCDEBUG_LOG(("Weapon::isClearGoalFiringLineOfSightTerrain(Object) for %s", DescribeObject(source).str()));
 	//DUMPCOORD3D(&origin);
@@ -5830,6 +5845,9 @@ Bool Weapon::isClearGoalFiringLineOfSightTerrain(const Object* source, const Coo
 /** Determine whether if source was at goalPos whether it would have clear line of sight. */
 Bool Weapon::isClearGoalFiringLineOfSightTerrain(const Object* source, const Coord3D& goalPos, const Coord3D& victimPos) const
 {
+	if(!source->hasDefaultLineOfSightEnabled() || getWeaponIgnoresObstacles() || getWeaponBypassLineOfSight())
+		return true;
+
 	Coord3D origin=goalPos;
 	//CRCDEBUG_LOG(("Weapon::isClearGoalFiringLineOfSightTerrain(Coord3D) for %s", DescribeObject(source).str()));
 	//DUMPCOORD3D(&origin);

@@ -671,6 +671,9 @@ public:
 	Real getROFMovingMaxSpeedCount() const { return m_rofMovingMaxSpeedCount; }
 	Bool getROFMovingScales() const { return m_rofMovingScales; }
 
+	Bool getWeaponBypassLineOfSight() const { return m_weaponBypassLineOfSight; }
+	Bool getWeaponIgnoresObstacles() const { return m_weaponIgnoresObstacles; }
+
 	Bool getIsRailgun() const { return m_isRailgun; }
 	Bool getRailgunIsLinear() const { return m_railgunIsLinear; }
 	Bool getRailgunUsesSecondaryDamage() const { return m_railgunUsesSecondaryDamage; }
@@ -948,6 +951,9 @@ private:
 	DeathType m_railgunDeathType;
 	DamageType m_railgunDamageFXOverride;
 
+	Bool m_weaponBypassLineOfSight;
+	Bool m_weaponIgnoresObstacles;
+
 	UnsignedInt m_invulnerabilityDuration;
 
 	mutable HistoricWeaponDamageList m_historicDamage;
@@ -1189,6 +1195,9 @@ public:
 	Real getROFMovingPenalty() const { return m_template->getROFMovingPenalty(); }
 	Real getROFMovingMaxSpeedCount() const { return m_template->getROFMovingMaxSpeedCount(); }
 	Bool getROFMovingScales() const { return m_template->getROFMovingScales(); }
+
+	Bool getWeaponBypassLineOfSight() const { return m_template->getWeaponBypassLineOfSight(); }
+	Bool getWeaponIgnoresObstacles() const { return m_template->getWeaponIgnoresObstacles(); }
 
 	UnsignedInt getInvulnerabilityDuration() const { return m_template->getInvulnerabilityDuration(); }
 

@@ -76,6 +76,7 @@
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/Squad.h"
 #include "GameLogic/GhostObject.h"
+#include "GameLogic/Weapon.h"
 
 #include "GameClient/Line2D.h"
 #include "GameClient/ControlBar.h"
@@ -5342,6 +5343,18 @@ Bool PartitionManager::isClearLineOfSightTerrain(const Object* obj, const Coord3
 		// IamInnocent - Enable Objects to bypass Line of Sight Checking
 		if(!obj->hasDefaultLineOfSightEnabled())
 			return TRUE;
+
+		const Weapon* w = obj->getCurrentWeapon();
+		if (obj->isKindOf(KINDOF_IMMOBILE)) {
+			// Don't take terrain blockage into account, since we can't move around it. jba.
+			w = NULL;
+		}
+		if (w)
+		{
+			if(w->getWeaponBypassLineOfSight())
+				return TRUE;
+		}
+
 		
 		pos = *obj->getPosition();
 		// note that we want to measure from the top of the collision
