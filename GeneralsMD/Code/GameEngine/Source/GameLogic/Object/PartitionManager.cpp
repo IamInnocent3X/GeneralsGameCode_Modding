@@ -4309,7 +4309,9 @@ Int PartitionManager::checkObjectsAlongLine(
 						dx2 = startingPos.x - objPos.x;
 						dy2 = startingPos.y - objPos.y;
 
-						Real fakeLogFactor = min(40.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1)));
+						Real fakeLogFactor = 16.0f;
+						if(radius >= 1.0)
+							fakeLogFactor = min(40.0f, max(16.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1))));
 						Real checkDistSqr = max(10.0f, closestDistSqr);
 						checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
 
@@ -4409,7 +4411,9 @@ Int PartitionManager::checkObjectsAlongLine(
 					dx2 = startingPos.x - objPos.x;
 					dy2 = startingPos.y - objPos.y;
 
-					Real fakeLogFactor = min(40.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1)));
+					Real fakeLogFactor = 16.0f;
+					if(radius >= 1.0)
+						fakeLogFactor = min(40.0f, max(16.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1))));
 					Real checkDistSqr = max(10.0f, closestDistSqr);
 					checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
 
