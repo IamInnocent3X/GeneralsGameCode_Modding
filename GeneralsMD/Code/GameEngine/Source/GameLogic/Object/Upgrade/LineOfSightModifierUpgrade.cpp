@@ -103,7 +103,7 @@ void LineOfSightModifierUpgrade::upgradeImplementation()
 	}
 
 	me->setLineOfSightRequirementStatus(!isDisableLOS);
-	me->setIgnoresObstacleForViewBlock(hasIgnoreObstacleViewBlock)
+	me->setIgnoresObstacleForViewBlock(hasIgnoreObstacleViewBlock);
 }
 
 // ------------------------------------------------------------------------------------------------
