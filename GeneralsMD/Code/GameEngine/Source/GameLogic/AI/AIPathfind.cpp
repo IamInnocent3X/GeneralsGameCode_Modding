@@ -1109,6 +1109,7 @@ PathfindCellInfo *PathfindCellInfo::s_firstFree = NULL;
 // The pathfinding will then switch over to the corrected pathfinding code for SH clients
 Bool s_useFixedPathfinding = false;
 Bool s_forceCleanCells = false;
+Bool s_useNonRetailPathfind = false;
 
 void PathfindCellInfo::forceCleanPathFindCellInfos()
 {
@@ -1186,7 +1187,7 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
 #else*/
 	Bool applyMaullersSolution = TRUE;
 	PathfindCellInfo *info;
-	if( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) )
+	if( !s_useNonRetailPathfind )
 	{
 		applyMaullersSolution = FALSE;
 		info = s_firstFree;
@@ -1237,7 +1238,7 @@ void PathfindCellInfo::releaseACellInfo(PathfindCellInfo *theInfo)
 	s_firstFree = theInfo;
 	s_firstFree->m_isFree = true;
 #else*/
-if( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) )
+if( !s_useNonRetailPathfind )
 {
 	DEBUG_ASSERTCRASH(!theInfo->m_isFree, ("Shouldn't be free."));
 	//@ todo -fix this assert on usa04.  jba.
@@ -1323,7 +1324,7 @@ Bool PathfindCell::startPathfind( PathfindCell *goalCell  )
 	}
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) &&
+	if( !s_useNonRetailPathfind &&
 		  !s_useFixedPathfinding ) {
 		m_info->m_open = TRUE;
 	} else
@@ -1390,7 +1391,7 @@ void PathfindCell::releaseInfo(void)
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (s_useFixedPathfinding)
 //#endif
-	if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) ||
+	if( s_useNonRetailPathfind ||
 		  s_useFixedPathfinding )
 	{
 		if (m_info) {
@@ -1639,7 +1640,7 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 
 			lastCell = c;
 		}*/
-		if( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) )
+		if( !s_useNonRetailPathfind )
 		{
 			// TheSuperHackers @bugfix In the retail compatible pathfinding, on rare ocassions, we get stuck in an infinite loop
 			// External code should pickup on the bad behaviour and cleanup properly, but we need to explicitly break out here
@@ -1732,7 +1733,7 @@ Int PathfindCell::releaseOpenList( PathfindCell *list )
 		// One crash mode is where a cell has no PathfindCellInfo, resulting in a nullptr access and a crash.
 		// Therefore we signal that we need to clean the maps cells and the PathfindCellInfos
 		//if(!curInfo && !s_useFixedPathfinding) {
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) &&
+		if( !s_useNonRetailPathfind &&
 			!curInfo && !s_useFixedPathfinding ) {
 			s_useFixedPathfinding = true;
 			s_forceCleanCells = true;
@@ -1777,7 +1778,7 @@ Int PathfindCell::releaseClosedList( PathfindCell *list )
 		// One crash mode is where a cell has no PathfindCellInfo, resulting in a nullptr access and a crash.
 		// Therefore we signal that we need to clean the maps cells and the PathfindCellInfos
 		//if(!curInfo && !s_useFixedPathfinding) {
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) &&
+		if( !s_useNonRetailPathfind &&
 			!curInfo && !s_useFixedPathfinding ) {
 			s_useFixedPathfinding = true;
 			s_forceCleanCells = true;
@@ -1923,7 +1924,7 @@ UnsignedInt PathfindCell::costSoFar( PathfindCell *parent )
 		// TheSuperHackers @info this is a possible crash point in the retail pathfinding, we just prevent the crash at this point
 		// External code should catch the issue in another block and cleanup the pathfinding before switching to the fixed pathfinding.
 		//if (!prevCell->hasInfo())
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) &&
+		if( !s_useNonRetailPathfind &&
 			  !prevCell->hasInfo() )
 		{
 			return cost;
@@ -3841,6 +3842,11 @@ void Pathfinder::reset( void )
 	}
 	m_zoneManager.reset();
 
+	if(TheGlobalData && ThePlayerList)
+	{
+		s_useNonRetailPathfind = TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 );
+	}
+
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	s_useFixedPathfinding = false;
 	s_forceCleanCells = false;
@@ -4388,6 +4394,8 @@ void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
  */
 void Pathfinder::newMap( void )
 {
+	s_useNonRetailPathfind = TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 );
+
 	m_wallHeight = TheAI->getAiData()->m_wallHeight; // may be updated by map.ini.
 	Region3D terrainExtent;
 	TheTerrainLogic->getMaximumPathfindExtent( &terrainExtent );
@@ -4659,7 +4667,7 @@ void Pathfinder::cleanOpenAndClosedLists(void) {
 	// TheSuperHackers @info this is here as the map cells are contained within the pathfinder and cannot be cleaned externally.
 	// If the crash mode within PathfindCell::releaseOpenList is hit, it will set s_forceCleanCells to allow the system to cleanly recover.
 	//if (s_forceCleanCells) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) &&
+	if( !s_useNonRetailPathfind &&
 		  s_forceCleanCells ) {
 		forceCleanCells();
 		// TheSuperHackers @info cells on the closed list are forcefully cleaned up by this point
@@ -4676,7 +4684,7 @@ void Pathfinder::cleanOpenAndClosedLists(void) {
 	// TheSuperHackers @info this is here and performs the same function as the above block, but for when the crash occurs within the closed list.
 	// If the crash mode within PathfindCell::releaseClosedList is hit, it will set s_forceCleanCells to allow the system to cleanly recover.
 	//if (s_forceCleanCells) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) &&
+	if( !s_useNonRetailPathfind &&
 		  s_forceCleanCells ) {
 		forceCleanCells();
 		s_forceCleanCells = false;
@@ -6271,7 +6279,7 @@ Path *Pathfinder::internalFindPath( Object *obj, const LocomotorSet& locomotorSe
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (s_useFixedPathfinding)
 //#endif
-		if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+		if( s_useNonRetailPathfind || 
 			  s_useFixedPathfinding )
 		{
 			goalCell->releaseInfo();
@@ -6358,7 +6366,7 @@ Path *Pathfinder::internalFindPath( Object *obj, const LocomotorSet& locomotorSe
 			Path *path =  buildActualPath( obj, locomotorSet.getValidSurfaces(), from, goalCell, centerInCell, false );
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding)
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding )
 			{
 				parentCell->releaseInfo();
@@ -6447,7 +6455,7 @@ Path *Pathfinder::internalFindPath( Object *obj, const LocomotorSet& locomotorSe
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding)
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding )
 	{
 		goalCell->releaseInfo();
@@ -6838,7 +6846,7 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (s_useFixedPathfinding)
 //#endif
-		if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+		if( s_useNonRetailPathfind || 
 		  	  s_useFixedPathfinding )
 		{
 			goalCell->releaseInfo();
@@ -6907,7 +6915,7 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 			Path *path =  buildGroundPath(crusher, from, goalCell, centerInCell, pathDiameter );
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding)
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 		  	  	  !s_useFixedPathfinding )
 			{
 				parentCell->releaseInfo();
@@ -6961,7 +6969,7 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 		//UnsignedInt newCostSoFar = 0;
 //#endif
 		/// IamInnocent - Integrate variable settings into GlobalData
-		if( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) )
+		if( s_useNonRetailPathfind )
 			newCostSoFar = 0;
 
 		for( int i=0; i<numNeighbors; i++ )
@@ -7026,7 +7034,7 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 
 //#if RETAIL_COMPATIBLE_CRC
 				// TheSuperHackers @fix helmutbuhler 11/06/2025 The indentation was wrong on retail here.
-			  if( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) )
+			  if( !s_useNonRetailPathfind )
 			  {
 				newCostSoFar = newCell->costSoFar( parentCell );
 				if (clearDiameter<pathDiameter) {
@@ -7038,7 +7046,7 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 			}
 //#else
 			//}
-		  if( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) )
+		  if( s_useNonRetailPathfind )
 		  {
 			newCostSoFar = newCell->costSoFar( parentCell );
 			if (clearDiameter<pathDiameter) {
@@ -7124,7 +7132,7 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding)
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding )
 	{
 		goalCell->releaseInfo();
@@ -7202,7 +7210,7 @@ void Pathfinder::processHierarchicalCell( const ICoord2D &scanCell, const ICoord
 		newCell->allocateInfo(scanCell);
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (!s_useFixedPathfinding)
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+		if( !s_useNonRetailPathfind && 
 		  	  !s_useFixedPathfinding )
 		{
 			if (!newCell->getClosed() && !newCell->getOpen()) {
@@ -7377,7 +7385,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 				// Retail clients will crash beyond this point, but we attempt to recover by performing a full cleanup then enabling the fixed pathfinding codepath
 //#if RETAIL_COMPATIBLE_PATHFINDING
 				//if (!s_useFixedPathfinding) {
-				if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+				if( !s_useNonRetailPathfind && 
 		  	  	  	  !s_useFixedPathfinding ) {
 					s_useFixedPathfinding = true;
 					forceCleanCells();
@@ -7406,7 +7414,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 				// Retail clients will crash beyond this point, but we attempt to recover by performing a full cleanup then enabling the fixed pathfinding codepath
 //#if RETAIL_COMPATIBLE_PATHFINDING
 				//if (!s_useFixedPathfinding) {
-				if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+				if( !s_useNonRetailPathfind && 
 					  !s_useFixedPathfinding ) {
 					s_useFixedPathfinding = true;
 					forceCleanCells();
@@ -7511,7 +7519,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 							// Retail clients will crash beyond this point, but we attempt to recover by performing a full cleanup then enabling the fixed pathfinding codepath
 //#if RETAIL_COMPATIBLE_PATHFINDING
 							//if (!s_useFixedPathfinding) {
-							if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+							if( !s_useNonRetailPathfind && 
 								  !s_useFixedPathfinding ) {
 								s_useFixedPathfinding = true;
 								forceCleanCells();
@@ -7534,7 +7542,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 						// Retail clients will crash beyond this point, but we attempt to recover by performing a full cleanup then enabling the fixed pathfinding codepath
 //#if RETAIL_COMPATIBLE_PATHFINDING
 						//if (!s_useFixedPathfinding) {
-						if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+						if( !s_useNonRetailPathfind && 
 							  !s_useFixedPathfinding ) {
 							s_useFixedPathfinding = true;
 							forceCleanCells();
@@ -7582,7 +7590,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 #endif
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding)
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding )
 			{
 				if (goalCell->hasInfo() && !goalCell->getClosed() && !goalCell->getOpen()) {
@@ -7767,7 +7775,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (!s_useFixedPathfinding)
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+		if( !s_useNonRetailPathfind && 
 			  !s_useFixedPathfinding )
 		{
 			if (goalCell->hasInfo() && !goalCell->getClosed() && !goalCell->getOpen()) {
@@ -7829,7 +7837,7 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding)
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding )
 	{
 		goalCell->releaseInfo();
@@ -8107,7 +8115,7 @@ Bool Pathfinder::pathDestination( 	Object *obj, const LocomotorSet& locomotorSet
 		if (!parentCell->allocateInfo(startCellNdx)) {
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding ) {
 				desiredCell->releaseInfo();
 			}
@@ -8228,7 +8236,7 @@ Bool Pathfinder::pathDestination( 	Object *obj, const LocomotorSet& locomotorSet
 //#if RETAIL_COMPATIBLE_PATHFINDING
 				//if (s_useFixedPathfinding)
 //#endif
-				if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+				if( s_useNonRetailPathfind || 
 			  	 	 s_useFixedPathfinding )
 				{
 					cleanOpenAndClosedLists();
@@ -8288,7 +8296,7 @@ Bool Pathfinder::pathDestination( 	Object *obj, const LocomotorSet& locomotorSet
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		cleanOpenAndClosedLists();
 		goalCell->releaseInfo();
@@ -8428,7 +8436,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 		// put parent cell onto closed list - its evaluation is finished - Retail compatible behaviour
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (!s_useFixedPathfinding) {
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+		if( !s_useNonRetailPathfind && 
 			  !s_useFixedPathfinding ) {
 			m_closedList = parentCell->putOnClosedList( m_closedList );
 		}
@@ -8441,7 +8449,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (s_useFixedPathfinding)
 //#endif
-			if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+			if( s_useNonRetailPathfind || 
 			  	  s_useFixedPathfinding )
 			{
 				parentCell->releaseInfo();
@@ -8453,7 +8461,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (s_useFixedPathfinding)
 //#endif
-		if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+		if( s_useNonRetailPathfind || 
 			  s_useFixedPathfinding )
 		{
 			m_closedList = parentCell->putOnClosedList( m_closedList );
@@ -8522,7 +8530,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 //#if RETAIL_COMPATIBLE_PATHFINDING
 				//if (s_useFixedPathfinding)
 //#endif
-				if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+				if( s_useNonRetailPathfind || 
 			  		  s_useFixedPathfinding )
 				{
 					cleanOpenAndClosedLists();
@@ -8571,7 +8579,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 			// TheSuperHacker @info This is here to catch a retail pathfinding crash point and to recover from it
 			// A cell has gotten onto the open list without pathfinding info due to a danling m_open pointer on the previous listed cell so we need to force a cleanup
 			//if (!s_useFixedPathfinding && m_openList && !m_openList->hasInfo()) {
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding && m_openList && !m_openList->hasInfo() ) {
 				s_useFixedPathfinding = true;
 				forceCleanCells();
@@ -8587,7 +8595,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		if (goalCell->hasInfo() && !goalCell->getClosed() && !goalCell->getOpen()) {
 			goalCell->releaseInfo();
@@ -8738,7 +8746,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (s_useFixedPathfinding)
 //#endif
-			if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+			if( s_useNonRetailPathfind || 
 			  	  s_useFixedPathfinding )
 			{
 				goalCell->releaseInfo();
@@ -8810,7 +8818,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 			Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), from, goalCell, centerInCell, blocked);
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding ) {
 				parentCell->releaseInfo();
 				goalCell->releaseInfo();
@@ -8904,7 +8912,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 		Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), from, closesetCell, centerInCell, blocked );
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (!s_useFixedPathfinding) {
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+		if( !s_useNonRetailPathfind && 
 			  !s_useFixedPathfinding ) {
 			goalCell->releaseInfo();
 			cleanOpenAndClosedLists();
@@ -8937,7 +8945,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		goalCell->releaseInfo();
 		cleanOpenAndClosedLists();
@@ -9074,7 +9082,7 @@ void Pathfinder::prependCells( Path *path, const Coord3D *fromPos,
 	// Beyond this point a retail client will crash due to a null pointer access within cell->getXIndex()
 	// To recover from this we set the cell to the previous cell, which should be the actual starting cell then set to use the fixed pathing and perform a forced cleanup
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		if (!cell->hasInfo()) {
 			cell = prevCell;
@@ -9379,6 +9387,26 @@ struct ViewAttackBlockedStruct
 	return 0;	// keep going
 }
 
+/*static*/ Int Pathfinder::pathBlockedByObstacleCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData)
+{
+	ViewAttackBlockedStruct* d = (ViewAttackBlockedStruct*)userData;
+
+	if (to != NULL)
+	{
+		// victim is within obstacle
+		if (d->victim) {
+			// nor does the object we're trying to attack!
+			if (to->isObstaclePresent(d->victim->getID()))
+				return 1;
+			// if the obstacle is the item to which objOther is slaved, ignore it as an obstacle.
+			if (to->isObstaclePresent(getSlaverID(d->victim)))
+				return 1;
+		}
+	}
+
+	return 0;	// keep going
+}
+
 //-----------------------------------------------------------------------------
 Bool Pathfinder::isViewBlockedByObstacle(const Object* obj, const Object* objOther)
 {
@@ -9422,6 +9450,13 @@ Bool Pathfinder::isAttackViewBlockedByObstacle(const Object* attacker, const Coo
 	if (!attacker->isKindOf(KINDOF_ATTACK_NEEDS_LINE_OF_SIGHT))
 	{
 		//CRCDEBUG_LOG(("Pathfinder::isAttackViewBlockedByObstacle() 2"));
+		return false;
+	}
+
+	// IamInnocent - Added Ignore Obstacle for ViewBlock
+	if (attacker->ignoresObstacleForViewBlock())
+	{
+		//CRCDEBUG_LOG(("Pathfinder::isAttackViewBlockedByObstacle() 3"));
 		return false;
 	}
 
@@ -9471,6 +9506,18 @@ Bool Pathfinder::isAttackViewBlockedByObstacle(const Object* attacker, const Coo
 	}
 
 	Int ret = iterateCellsAlongLine(attackerPos, victimPos, layer, attackBlockedByObstacleCallback, &info);
+	//CRCDEBUG_LOG(("Pathfinder::isAttackViewBlockedByObstacle() 4"));
+	return ret != 0;
+}
+
+//-----------------------------------------------------------------------------
+Bool Pathfinder::isPathBlockedByObstacle(const Object* attacker, const Coord3D& attackerPos, const Object* victim, const Coord3D& targetPos)
+{
+	ViewAttackBlockedStruct info;
+	info.obj = attacker;
+	info.victim = victim;
+
+	Int ret = iterateCellsAlongLine(attackerPos, targetPos, attacker->getLayer(), pathBlockedByObstacleCallback, &info);
 	//CRCDEBUG_LOG(("Pathfinder::isAttackViewBlockedByObstacle() 4"));
 	return ret != 0;
 }
@@ -10366,7 +10413,7 @@ Path *Pathfinder::getMoveAwayFromPath(Object* obj, Object *otherObj,
 			Path *newPath = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false);
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding ) {
 				parentCell->releaseInfo();
 				cleanOpenAndClosedLists();
@@ -10399,7 +10446,7 @@ Path *Pathfinder::getMoveAwayFromPath(Object* obj, Object *otherObj,
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		cleanOpenAndClosedLists();
 	}
@@ -10525,7 +10572,7 @@ Path *Pathfinder::patchPath( const Object *obj, const LocomotorSet& locomotorSet
 	if (startNode == originalPath->getLastNode()) {
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (!s_useFixedPathfinding) {
-		if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+		if( !s_useNonRetailPathfind && 
 			  !s_useFixedPathfinding ) {
 			cleanOpenAndClosedLists();
 		}
@@ -10544,7 +10591,7 @@ Path *Pathfinder::patchPath( const Object *obj, const LocomotorSet& locomotorSet
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (s_useFixedPathfinding)
 //#endif
-		if( ( TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 ) ) || 
+		if( s_useNonRetailPathfind || 
 			  s_useFixedPathfinding )
 		{
 			parentCell->releaseInfo();
@@ -10585,7 +10632,7 @@ Path *Pathfinder::patchPath( const Object *obj, const LocomotorSet& locomotorSet
 			path->optimize(obj, locomotorSet.getValidSurfaces(), blocked);
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding ) {
 				parentCell->releaseInfo();
 				cleanOpenAndClosedLists();
@@ -10622,7 +10669,7 @@ Path *Pathfinder::patchPath( const Object *obj, const LocomotorSet& locomotorSet
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		if (!candidateGoal->getOpen() && !candidateGoal->getClosed())
 		{
@@ -10902,7 +10949,7 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 				Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false);
 //#if RETAIL_COMPATIBLE_PATHFINDING
 				//if (!s_useFixedPathfinding) {
-				if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+				if( !s_useNonRetailPathfind && 
 					  !s_useFixedPathfinding ) {
 					if (goalCell->hasInfo() && !goalCell->getClosed() && !goalCell->getOpen()) {
 						goalCell->releaseInfo();
@@ -10972,7 +11019,7 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		if (goalCell->hasInfo() && !goalCell->getClosed() && !goalCell->getOpen()) {
 			goalCell->releaseInfo();
@@ -11109,7 +11156,7 @@ Path *Pathfinder::findSafePath( const Object *obj, const LocomotorSet& locomotor
 			Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false);
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
-			if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+			if( !s_useNonRetailPathfind && 
 				  !s_useFixedPathfinding ) {
 				parentCell->releaseInfo();
 				cleanOpenAndClosedLists();
@@ -11155,7 +11202,7 @@ Path *Pathfinder::findSafePath( const Object *obj, const LocomotorSet& locomotor
 	m_isTunneling = false;
 //#if RETAIL_COMPATIBLE_PATHFINDING
 	//if (!s_useFixedPathfinding) {
-	if( ( !TheGlobalData->m_useNonRetailAIPathfind && ( !TheGlobalData->m_fixAIPathfindClumpForManyPlayers || ThePlayerList->getPlayerCount() <= 5 ) ) && 
+	if( !s_useNonRetailPathfind && 
 		  !s_useFixedPathfinding ) {
 		cleanOpenAndClosedLists();
 	}

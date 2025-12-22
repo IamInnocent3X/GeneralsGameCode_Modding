@@ -102,6 +102,8 @@ extern void addIcon(const Coord3D *pos, Real width, Int numFramesDuration, RGBCo
 
 const Real HUGE_DIST_SQR = (HUGE_DIST*HUGE_DIST);
 
+const Real RAD_TO_DEGREE_FACTOR = 180.0f / PI;
+
 #define DISABLE_INVALID_PREVENTION	//Steven, I had to turn this off because it was causing problem with map border resizing (USA04). -MW
 
 //------------------------------------------------------------------------------ Performance Timers
@@ -3472,6 +3474,7 @@ Object *PartitionManager::getClosestObjects(
 	return closestObj;	// might be null...
 }
 
+//-----------------------------------------------------------------------------
 std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D )
 {
 	//IamInnocent - Attempted to use PartitionManager code to use WorldCell for Finding Drawables - 6/10/2025
@@ -4041,6 +4044,455 @@ SimpleObjectIterator* PartitionManager::iteratePotentialCollisions(
 
 	getClosestObjects(NULL, pos, maxDist, use2D ? FROM_BOUNDINGSPHERE_2D : FROM_BOUNDINGSPHERE_3D, filters, iter, NULL, NULL);
 
+	iterHolder.release();
+	return iter;
+}
+
+/*struct IterData
+{
+	Real radius;
+	Coord3D startingPos;
+	DistanceCalculationType dc;
+	PartitionFilter **filters;
+	SimpleObjectIterator *iterArg;
+};*/
+
+
+//-----------------------------------------------------------------------------
+// Uses Bresenham line algorithm from www.gamedev.net.
+Int PartitionManager::getObjectsAlongLine(
+	const Object* source,
+	const Coord3D& pos,
+	const Coord3D& posOther,
+	Real radius,
+	DistanceCalculationType dc,
+	PartitionFilter **filters,
+	SimpleObjectIterator *iterArg,
+	Bool checkBehind,
+	Real *closestDistArg,
+	Coord3D *closestVecArg
+)
+{
+	ICoord2D start, end, delta;
+	Int x, y;
+	Int xinc1, xinc2;
+	Int yinc1, yinc2;
+	Int den, num, numadd;
+	Int numpixels;
+
+	worldToCell(pos.x, pos.y, &start.x, &start.y);
+	worldToCell(posOther.x, posOther.y, &end.x, &end.y);
+
+	delta.x = abs(end.x - start.x);			// The difference between the x's
+	delta.y = abs(end.y - start.y);			// The difference between the y's
+	x = start.x;												// Start x off at the first pixel
+	y = start.y;												// Start y off at the first pixel
+
+	if (end.x >= start.x)								// The x-values are increasing
+	{
+		xinc1 = 1;
+		xinc2 = 1;
+	}
+	else																// The x-values are decreasing
+	{
+		xinc1 = -1;
+		xinc2 = -1;
+	}
+
+	if (end.y >= start.y)               // The y-values are increasing
+	{
+		yinc1 = 1;
+		yinc2 = 1;
+	}
+	else																// The y-values are decreasing
+	{
+		yinc1 = -1;
+		yinc2 = -1;
+	}
+	Bool checkY = true;
+	if (delta.x >= delta.y)							// There is at least one x-value for every y-value
+	{
+		xinc1 = 0;												// Don't change the x when numerator >= denominator
+		yinc2 = 0;												// Don't change the y for every iteration
+		den = delta.x;
+		num = delta.x / 2;
+		numadd = delta.y;
+		numpixels = delta.x;							// There are more x-values than y-values
+	}
+	else																// There is at least one y-value for every x-value
+	{
+		checkY = false;
+		xinc2 = 0;												// Don't change the x for every iteration
+		yinc1 = 0;												// Don't change the y when numerator >= denominator
+		den = delta.y;
+		num = delta.y / 2;
+		numadd = delta.x;
+		numpixels = delta.y;							// There are more y-values than x-values
+	}
+
+	for (Int curpixel = 0; curpixel <= numpixels; curpixel++)
+	{
+		PartitionCell* cell = ThePartitionManager->getCellAt(x, y);	// might be null if off the edge
+		DEBUG_ASSERTCRASH(cell != NULL, ("off the map"));
+		if (cell)
+			checkObjectsAlongLine(cell, source, pos, posOther, radius, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+
+		num += numadd;										// Increase the numerator by the top of the fraction
+		if (num >= den)										// Check if numerator >= denominator
+		{
+			num -= den;											// Calculate the new numerator value
+			x += xinc1;											// Change the x as appropriate
+			y += yinc1;											// Change the y as appropriate
+		}
+		x += xinc2;												// Change the x as appropriate
+		y += yinc2;												// Change the y as appropriate
+	}
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+Int PartitionManager::checkObjectsAlongLine(
+	PartitionCell* cell,
+	const Object* source,
+	const Coord3D& startingPos,
+	const Coord3D& endPos,
+	Real radius,
+	DistanceCalculationType dc,
+	PartitionFilter **filters,
+	SimpleObjectIterator *iterArg,
+	Bool checkBehind,
+	Real *closestDistArg,
+	Coord3D *closestVecArg
+)
+{
+	//IterData* data = (IterData*)userData;
+	Real dirX, dirY;
+	Int cellCenterX = cell->getCellX();
+	Int cellCenterY = cell->getCellY();
+	cell->getCellCenterPos(dirX, dirY);
+
+	Coord3D currentPos;
+	currentPos = startingPos;
+	currentPos.x = dirX;
+	currentPos.y = dirY;
+		//USE_PERF_TIMER(getClosestObjects)
+
+#ifdef DUMP_PERF_STATS
+	if (TheGameLogic->getFrame() != s_gcoPerfFrame)
+	{
+		s_gcoPerfFrame = TheGameLogic->getFrame();
+		s_countInClosestObjectsThisFrame = 0;
+		s_timeInClosestObjectsThisFrame = 0;
+	}
+	++s_countInClosestObjects;
+	++s_countInClosestObjectsThisFrame;
+
+	Int64 startTime64;
+	GetPrecisionTimer(&startTime64);
+#endif
+
+#ifdef RTS_DEBUG
+	static Int theEntrancyCount = 0;
+	DEBUG_ASSERTCRASH(theEntrancyCount == 0, ("sorry, this routine is not reentrant"));
+	++theEntrancyCount;
+#endif
+
+	Real closestDistSqr = radius * radius;	// if it's not closer than this, we shouldn't consider it anyway...
+	Real checkRadius = max(radius, 20.0f);
+	Coord3D closestVec;
+#if !RETAIL_COMPATIBLE_CRC // TheSuperHackers @info This should be safe to initialize because it is unused, but let us be extra safe for now.
+	closestVec.x = radius;
+	closestVec.y = radius;
+	closestVec.z = radius;
+#endif
+
+#ifdef FASTER_GCO
+
+	Int maxRadius = m_maxGcoRadius;
+	Int allocatedRadius;
+	if (radius < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		allocatedRadius = minInt(m_maxGcoRadius, worldToCellDist(radius));
+		maxRadius = maxInt(allocatedRadius, worldToCellDist(checkRadius));
+	}
+#if defined(INTENSE_DEBUG)
+	/*
+		Note, if you ever enable this code, be forewarned that it can give
+		you "false positives" for objects that are located just off the map... (srj)
+	*/
+	Int maxRadiusLimit = maxRadius + 3;
+	if (maxRadiusLimit > m_maxGcoRadius) maxRadiusLimit = m_maxGcoRadius;
+	Int allocatedRadius = maxRadiusLimit;
+#else
+	Int maxRadiusLimit = maxRadius;
+#endif
+
+	DistCalcProc distProc = theDistCalcProcs[dc];
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	/*
+		m_radiusVec[curRadius] contains a list of the cells (foo) that could
+		contain objects that are <= (curRadius * cellSize) distance away from cell (0,0).
+	*/
+  for (Int curRadius = 0; curRadius <= maxRadiusLimit; ++curRadius)
+  {
+	const OffsetVec& offsets = m_radiusVec[curRadius];
+		if (offsets.empty())
+			continue;
+    for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
+		{
+			PartitionCell* thisCell = getCellAt(cellCenterX + it->x, cellCenterY + it->y);
+			if (thisCell == NULL)
+				continue;
+
+			for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
+			{
+				PartitionData *thisMod = thisCoi->getModule();
+				Object *thisObj = thisMod->getObject();
+
+				// never compare against ourself.
+				if (thisObj == source || thisObj == NULL)
+					continue;
+
+				// since an object can exist in multiple COIs, we use this to avoid processing
+				// the same one more than once.
+				if (thisMod->friend_getDoneFlag() == theIterFlag)
+					continue;
+				thisMod->friend_setDoneFlag(theIterFlag);
+
+				// Have a different set of rules for checking infantry
+				if (!thisObj->isKindOf(KINDOF_INFANTRY) && curRadius > allocatedRadius)
+					continue;
+
+				if(!checkBehind || curRadius > allocatedRadius)
+				{
+					// Skip object if different direction vector
+					Coord3D objPos = *thisObj->getPosition();
+					if(endPos.x >= startingPos.x && endPos.x <= objPos.x ||
+					   endPos.x <= startingPos.x && endPos.x >= objPos.x ||
+					   endPos.y >= startingPos.y && endPos.y <= objPos.y ||
+					   endPos.y <= startingPos.y && endPos.y >= objPos.y
+					)
+						continue;
+				}
+
+				Bool setContinue = FALSE;
+				Real thisDistSqr;
+				Coord3D distVec;
+				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
+					setContinue = true;
+
+				if( setContinue )
+				{
+					if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+						continue;
+
+					// Have a different set of rules for checking infantry
+					//if ((*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+					{
+						//Coord3D checkPos = currentPos;
+						//Coord3D currDir = *thisObj->getPosition();
+						//checkPos.z = source->getPosition()->z;
+						//currDir.sub( &checkPos );
+
+						Coord3D objPos = *thisObj->getPosition();
+						Real dx, dy;
+						dx = currentPos.x - objPos.x;
+						dy = currentPos.y - objPos.y;
+
+						Real dx2, dy2;
+						dx2 = startingPos.x - objPos.x;
+						dy2 = startingPos.y - objPos.y;
+
+						Real fakeLogFactor = min(40.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1)));
+						Real checkDistSqr = max(10.0f, closestDistSqr);
+						checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
+
+						Real firAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+						Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+						Real angleThreshold = max(radius * 0.5f, 0.25f);
+
+						if((dx*dx + dy*dy) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx2*dx2 + dy2*dy2) > 5000.0f))
+						{
+							continue;
+						}
+					}
+				}
+
+				distVec.set(thisObj->getPosition());
+				distVec.sub(&startingPos);
+				thisDistSqr = distVec.lengthSqr();
+
+				if (!filtersAllow(filters, thisObj))
+					continue;
+
+				// ok, this is within the range, and the filters allow it.
+				// add it to the iter, if we have one....
+				if (iterArg)
+				{
+					iterArg->insert(thisObj, thisDistSqr);
+				}
+				else
+				{
+					DEBUG_CRASH(("Iterate Cells Along Line needs iter!"));
+				}
+
+			}
+		}
+  }
+
+#else // not FASTER_GCO
+
+// IamInnocent - Infantru has different checks for line. This is implemented in FASTER_GCO, but not implemented here.
+// This is due to the constraints that the not FASTER_CGO don't use for loops to check for values.
+	CellOutwardIterator iter(this, cellCenterX, cellCenterY);
+	if (radius < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		Int max = worldToCellDist(radius) + 1;
+		// default value for "max" is largest possible, based on map size, so we should
+		// never make it any larger than that
+		if (max < iter.getMaxRadius())
+			iter.setMaxRadius(max);
+	}
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	PartitionCell *thisCell;
+	while ((thisCell = iter.nextNonEmpty()) != NULL)
+	{
+		CellAndObjectIntersection *nextCoi;
+		for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
+		{
+			nextCoi = thisCoi->getNextCoi();
+
+			PartitionData *thisMod = thisCoi->getModule();
+
+			Object *thisObj = thisMod->getObject();
+
+			// never compare against ourself.
+			if (thisObj == source || thisObj == NULL)
+				continue;
+
+			if (thisMod->friend_getDoneFlag() == theIterFlag)
+				continue;
+
+			thisMod->friend_setDoneFlag(theIterFlag);
+
+			// hmm, ok, calc the distance.
+			Bool setContinue = FALSE;
+			Real thisDistSqr;
+			Coord3D distVec;
+			if (!(*distProc)(&startingPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
+				setContinue = true;
+
+			if( setContinue )
+			{
+				if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+					continue;
+
+				// Have a different set of rules for checking infantry
+				//if ((*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+				{
+					Coord3D objPos = *thisObj->getPosition();
+					Real dx, dy;
+					dx = currentPos.x - objPos.x;
+					dy = currentPos.y - objPos.y;
+
+					Real dx2, dy2;
+					dx2 = startingPos.x - objPos.x;
+					dy2 = startingPos.y - objPos.y;
+
+					Real fakeLogFactor = min(40.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1)));
+					Real checkDistSqr = max(10.0f, closestDistSqr);
+					checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
+
+					Real firAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+					Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+					Real angleThreshold = max(radius * 0.5f, 0.25f);
+
+					if((dx*dx + dy*dy) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx2*dx2 + dy2*dy2) > 5000.0f))
+					{
+						continue;
+					}
+				}
+			}
+
+			// check the filters now
+			if (!filtersAllow(filters, thisObj))
+				continue;
+
+			// ok, guess this is a winner!
+			if (iterArg)
+			{
+				iterArg->insert(thisObj, thisDistSqr);
+			}
+			else
+			{
+				DEBUG_CRASH(("Iterate Cells Along Line needs iter!"));
+			}
+		}
+	}
+
+#endif  // not FASTER_GCO
+
+	if (closestVecArg)
+	{
+		*closestVecArg = closestVec;
+	}
+	if (closestDistArg)
+	{
+		*closestDistArg = (Real)sqrtf(closestDistSqr);
+	}
+
+#ifdef RTS_DEBUG
+	--theEntrancyCount;
+#endif
+#ifdef DUMP_PERF_STATS
+	Int64 endTime64;
+	GetPrecisionTimer(&endTime64);
+	Int64 delta = (endTime64 - startTime64);
+	s_timeInClosestObjects += delta;
+	s_timeInClosestObjectsThisFrame += delta;
+#endif
+
+
+	return 0;	// zero to continue
+}
+
+//-----------------------------------------------------------------------------
+SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
+	const Object* source,
+	const Coord3D *pos,
+	const Coord3D *posOther,
+	Real radius,
+	DistanceCalculationType dc,
+	Bool checkBehind,
+	PartitionFilter **filters,
+	IterOrderType order
+)
+{
+	MemoryPoolObjectHolder iterHolder;
+	SimpleObjectIterator *iter = newInstance(SimpleObjectIterator);
+	iterHolder.hold(iter);
+
+	/*IterData data;
+	data.radius = radius;
+	data.startingPos = *pos;
+	data.dc = dc;
+	data.filters = filters;
+	data.iterArg = iter;*/
+
+	getObjectsAlongLine(source, *pos, *posOther, radius, dc, filters, iter, checkBehind, NULL, NULL);
+
+	//iterateCellsAlongLine(*pos, *posOther, (*CellAlongLineProc)checkObjectsAlongLine, &data);
+
+	iter->sort(order);
 	iterHolder.release();
 	return iter;
 }
@@ -4887,6 +5339,10 @@ Bool PartitionManager::isClearLineOfSightTerrain(const Object* obj, const Coord3
 
 	if (obj)
 	{
+		// IamInnocent - Enable Objects to bypass Line of Sight Checking
+		if(!obj->hasDefaultLineOfSightEnabled())
+			return TRUE;
+		
 		pos = *obj->getPosition();
 		// note that we want to measure from the top of the collision
 		// shape, not the bottom! (most objects have eyes a lot closer

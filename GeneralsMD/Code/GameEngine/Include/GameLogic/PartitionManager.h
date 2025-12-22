@@ -1307,6 +1307,33 @@ protected:
 		Coord3D *closestVecArg
 	);
 
+	Int getObjectsAlongLine(
+		const Object* source,
+		const Coord3D& pos,
+		const Coord3D& posOther,
+		Real radius,
+		DistanceCalculationType dc,
+		PartitionFilter **filters,
+		SimpleObjectIterator *iter,
+		Bool checkBehind,
+		Real *closestDistArg,
+		Coord3D *closestVecArg
+	);
+
+	Int checkObjectsAlongLine(
+		PartitionCell* cell,
+		const Object* source,
+		const Coord3D& startingPos,
+		const Coord3D& endPos,
+		Real radius,
+		DistanceCalculationType dc,
+		PartitionFilter **filters,
+		SimpleObjectIterator *iter,
+		Bool checkBehind,
+		Real *closestDistArg,
+		Coord3D *closestDistVec
+	);
+
 	void shutdown( void );
 
 	/// used to validate the positions for findPositionAround family of methods
@@ -1469,6 +1496,17 @@ public:
 		const GeometryInfo& geom,
 		Real angle,
 		Bool use2D = false
+	);
+
+	SimpleObjectIterator *iterateObjectsAlongLine(
+		const Object* source,
+		const Coord3D *pos,
+		const Coord3D *posOther,
+		Real radius,
+		DistanceCalculationType dc,
+		Bool checkBehind = FALSE,
+		PartitionFilter **filters = NULL,
+		IterOrderType order = ITER_FASTEST
 	);
 
 	Bool isColliding( const Object *a, const Object *b ) const;

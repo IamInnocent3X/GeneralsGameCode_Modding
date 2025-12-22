@@ -203,6 +203,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "BattlePlanUpdate", 32, 32 },
 	{ "LifetimeUpdate", 32, 32 },
 	{ "LocomotorSetUpgrade", 512, 128 },
+	{ "LineOfSightModifierUpgrade", 256, 32 },
 	{ "LockWeaponCreate", 64, 128 },
 	{ "AutoDepositUpdate", 256, 32 },
 	{ "NeutronMissileUpdate", 512, 32 },

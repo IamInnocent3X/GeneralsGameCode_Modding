@@ -869,6 +869,11 @@ public:
 
 	Bool showCashText() const;
 
+	Bool hasDefaultLineOfSightEnabled() const { return m_hasDefaultLineOfSightEnabled; }
+	Bool ignoresObstacleForViewBlock() const { return m_ignoresObstacleForViewBlock; }
+	void setLineOfSightRequirementStatus(Bool e) { m_hasDefaultLineOfSightEnabled = e; }
+	void setIgnoresObstacleForViewBlock(Bool e) { m_ignoresObstacleForViewBlock = e; }
+
 	void setSelectablesBoundTo(const std::vector<ObjectID>& IDs);
 	void setDontDoGroupSelecting(Bool e) { m_dontDoGroupSelecting = e; }
 	const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
@@ -1137,10 +1142,10 @@ private:
 	std::vector<ObjectID>							m_selectionBoundsTo;
 
 	Bool											m_dontDoGroupSelecting;
-
 	Bool											m_hasParasiteCrateCollide;
-
 	Bool											m_disabledPowerFromCommand;
+	Bool											m_hasDefaultLineOfSightEnabled;
+	Bool											m_ignoresObstacleForViewBlock;
 
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;

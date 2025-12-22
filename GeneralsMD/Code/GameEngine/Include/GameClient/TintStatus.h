@@ -33,7 +33,7 @@ enum TintStatus CPP_11(: Int)
 	TINT_STATUS_EXTRA7,
 	TINT_STATUS_EXTRA8,
 
-	TINT_STATUS_COUNT    // Keep this last
+	TINT_STATUS_COUNT
 };
 
 //-------------------

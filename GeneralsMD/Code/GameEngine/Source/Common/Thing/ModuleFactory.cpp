@@ -217,6 +217,7 @@
 #include "GameLogic/Module/GrantScienceUpgrade.h"
 #include "GameLogic/Module/PassengersFireUpgrade.h"
 #include "GameLogic/Module/LocomotorSetUpgrade.h"
+#include "GameLogic/Module/LineOfSightModifierUpgrade.h"
 #include "GameLogic/Module/ObjectCreationUpgrade.h"
 #include "GameLogic/Module/RadarUpgrade.h"
 #include "GameLogic/Module/PowerPlantUpgrade.h"
@@ -529,6 +530,7 @@ void ModuleFactory::init( void )
 	addModule( RadarUpgrade );
 	addModule( PowerPlantUpgrade );
 	addModule( LocomotorSetUpgrade );
+	addModule( LineOfSightModifierUpgrade );
 	addModule( ObjectCreationUpgrade );
 	addModule( ReplaceObjectUpgrade );
 	addModule( ModelConditionUpgrade );

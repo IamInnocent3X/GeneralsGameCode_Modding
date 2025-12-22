@@ -675,6 +675,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_selectionBoundsTo.clear();
 
 	m_dontDoGroupSelecting = FALSE;
+	m_disabledPowerFromCommand = FALSE;
+	m_hasDefaultLineOfSightEnabled = TRUE;
+	m_ignoresObstacleForViewBlock = FALSE;
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -5510,17 +5513,13 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferReal( &m_invsqrt_mass );
 
-	//xfer->xferReal( &m_magnetLevitateHeight );
-
-	//xfer->xferUnsignedInt( &m_levitateCheckFrame );
-
-	//xfer->xferUnsignedInt( &m_levitateCheckCount );
-
-	//xfer->xferBool ( &m_dontLevitate );
-
 	xfer->xferBool ( &m_disabledPowerFromCommand );
 
 	xfer->xferUnsignedInt( &m_lastExitedFrame );
+
+	xfer->xferBool ( &m_hasDefaultLineOfSightEnabled );
+
+	xfer->xferBool ( &m_ignoresObstacleForViewBlock );
 
 	// Entered & exited housekeeping.
 	Int i;

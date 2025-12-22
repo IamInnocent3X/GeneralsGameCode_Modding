@@ -366,6 +366,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/KeepObjectDie.h
     Include/GameLogic/Module/LaserUpdate.h
     Include/GameLogic/Module/LifetimeUpdate.h
+    Include/GameLogic/Module/LineOfSightModifierUpgrade.h
     Include/GameLogic/Module/LockWeaponCreate.h
     Include/GameLogic/Module/LocomotorSetUpgrade.h
     Include/GameLogic/Module/MaxHealthUpgrade.h
@@ -1125,6 +1126,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Upgrade/ExperienceScalarUpgrade.cpp
     Source/GameLogic/Object/Upgrade/GrantScienceUpgrade.cpp
     Source/GameLogic/Object/Upgrade/LocomotorSetUpgrade.cpp
+    Source/GameLogic/Object/Upgrade/LineOfSightModifierUpgrade.cpp
     Source/GameLogic/Object/Upgrade/MaxHealthUpgrade.cpp
     Source/GameLogic/Object/Upgrade/ModelConditionUpgrade.cpp
     Source/GameLogic/Object/Upgrade/ObjectCreationUpgrade.cpp

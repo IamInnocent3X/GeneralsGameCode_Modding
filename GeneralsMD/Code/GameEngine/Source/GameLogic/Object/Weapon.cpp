@@ -446,6 +446,17 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "ShrapnelCanTargetStealth",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
 	{ "ShrapnelTargetMask",			INI::parseBitString32,	TheWeaponAffectsMaskNames,				offsetof(WeaponTemplate, m_shrapnelAffectsMask) },
 
+	{ "IsRailgun",								INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_isRailgun) },
+	{ "RailgunIsLinear",						INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunIsLinear) },
+	{ "RailgunUsesSecondaryDamage",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunUsesSecondaryDamage) },
+	{ "RailgunPiercesBehind",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunPiercesBehind) },
+	{ "RailgunPierceAmount",					INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_railgunPierceAmount) },
+	{ "RailgunRadius",							INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadius) },
+	{ "RailgunExtraDistance",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunExtraDistance) },
+	{ "RailgunDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(WeaponTemplate, m_railgunDamageType) },
+	{ "RailgunDeathType",						INI::parseIndexList,										TheDeathNames,		offsetof(WeaponTemplate, m_railgunDeathType) },
+	{ "RailgunOverrideDamageTypeFX",			DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_railgunDamageFXOverride) },
+
 	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
 	{ "MindControlRadius",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlRadius) },
 	{ "MindControlCount",				INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_mindControlCount) },
@@ -675,6 +686,17 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_rofMovingPenalty = 1.0f;
 	m_rofMovingScales = FALSE;
 	m_rofMovingMaxSpeedCount = 0.0f;
+
+	m_isRailgun = FALSE;
+	m_railgunUsesSecondaryDamage = FALSE;
+	m_railgunIsLinear = TRUE;
+	m_railgunPiercesBehind = FALSE;
+	m_railgunPierceAmount = -1;
+	m_railgunRadius = 0.0f;
+	m_railgunExtraDistance = 0.0f;
+	m_railgunDamageType = DAMAGE_NUM_TYPES;
+	m_railgunDeathType = DEATH_NONE;
+	m_railgunDamageFXOverride = DAMAGE_UNRESISTABLE;
 
 	m_invulnerabilityDuration = 0;
 }
@@ -1740,7 +1762,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 				projectile->setPosition(&tmp);
 				
-				projectile->setOrientation(atan2(projectileDestination.x, projectileDestination.y));
+				projectile->setOrientation(atan2(projectileDestination.y, projectileDestination.x));
 
 				if(shrapnelLaunchID != INVALID_ID)
 					pui->setShrapnelLaunchID(shrapnelLaunchID);
@@ -2053,6 +2075,53 @@ void WeaponTemplate::processHistoricDamage(const Object* source, const Coord3D* 
 }
 #endif
 
+static Bool testValidForShrapnel(const Object* victim, Int antiMask, ObjectID primaryID, Relationship r)
+{
+	// Sanity
+	if( !victim )
+		return FALSE;
+	
+	// Victim is not attackable, don't do anything
+	if( victim->isKindOf( KINDOF_UNATTACKABLE ) )
+		return FALSE;
+
+	// Victim is okay for shrapnel
+	if( victim->isKindOf(KINDOF_VEHICLE) ||
+		victim->isKindOf(KINDOF_AIRCRAFT) ||
+		victim->isKindOf(KINDOF_STRUCTURE) ||
+		victim->isKindOf(KINDOF_INFANTRY) ||
+		victim->isKindOf(KINDOF_MINE) ||
+		victim->isKindOf(KINDOF_SHRUBBERY) ||
+		victim->isKindOf(KINDOF_PARACHUTE)
+	  )
+	  return TRUE;
+	
+	// Victim is Projectile
+	Int targetAntiMask = 0;
+	if (victim->isKindOf(KINDOF_SMALL_MISSILE))
+	{
+		//All missiles are also projectiles!
+		targetAntiMask = WEAPON_ANTI_SMALL_MISSILE;
+	}
+	else if (victim->isKindOf(KINDOF_BALLISTIC_MISSILE))
+	{
+		targetAntiMask = WEAPON_ANTI_BALLISTIC_MISSILE;
+	}
+	else if (victim->isKindOf(KINDOF_PROJECTILE))
+	{
+		targetAntiMask = WEAPON_ANTI_PROJECTILE;
+	}
+
+	if( targetAntiMask > 0 )
+	{
+		// If the projectile is our main target or the projectile is not an ally, do Shrapnel
+		if( (antiMask & targetAntiMask) != 0 && (victim->getID() == primaryID || r != ALLIES) )
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
 //-------------------------------------------------------------------------------------------------
 void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation) const
 {
@@ -2136,6 +2205,15 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
+		// Railgun Variables
+		Bool isRailgun = getIsRailgun();
+		Int railgunAmount = getRailgunPierceAmount();
+		Bool checkForRailgunOnly = false;
+		DamageType railgunDamageType = getRailgunDamageType() == DAMAGE_NUM_TYPES ? damageType : getRailgunDamageType();
+		DeathType railgunDeathType = getRailgunDeathType() == DEATH_NONE ? deathType : getRailgunDeathType();
+		DamageType railgunDamageFXOverride = getRailgunDamageFXOverride() == DAMAGE_UNRESISTABLE ? DamageFXOverride : getRailgunDamageFXOverride();
+		Coord3D sourcePos, posOther;
+
 		SimpleObjectIterator *iter;
 		Object *curVictim;
 		Real curVictimDistSqr;
@@ -2195,8 +2273,109 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		}
 		MemoryPoolObjectHolder hold(iter);
 
-		for (; curVictim != NULL; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
+		for (;; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
 		{
+			// IamInnocent - Check for Railgun targets within LOS
+			if(curVictim == NULL)
+			{
+				// Do nothing if we only damage ourselves
+				if(DamagesSelfOnly || affects == WEAPON_AFFECTS_SELF)
+					break;
+				
+				// Refresh the checklist for Railgun
+				if(isRailgun)
+				{
+					Bool isRailgunLinear = getRailgunIsLinear();
+					Bool RailgunPiercesBehind = getRailgunPiercesBehind();
+					Real RailgunExtraDistance = getRailgunExtraDistance();
+					
+					if (source)
+					{
+						// If I am a disguised, don't use my Drawable
+						if( isRailgunLinear || source->getStealth() && source->getStealth()->isDisguised() )
+						{
+							sourcePos = *source->getPosition();
+							// note that we want to measure from the top of the collision
+							// shape, not the bottom! (most objects have eyes a lot closer
+							// to their head than their feet. if we have really odd critters
+							// with eye-feet, we'll need to change this assumption.)
+							sourcePos.z += source->getGeometryInfo().getMaxHeightAbovePosition();
+						}
+						else
+						{
+							sourcePos = *source->getDrawable()->getPosition();
+							sourcePos.z += source->getGeometryInfo().getMaxHeightAbovePosition();
+						}
+					}
+					else
+					{
+						// If there is no source, we do nothing and break;
+						break;
+					}
+
+					if ( primaryVictim )
+					{
+						posOther = *primaryVictim->getPosition();
+						// note that we want to measure from the top of the collision
+						// shape, not the bottom! (most objects have eyes a lot closer
+						// to their head than their feet. if we have really odd critters
+						// with eye-feet, we'll need to change this assumption.)
+						posOther.z += primaryVictim->getGeometryInfo().getMaxHeightAbovePosition();
+					}
+					else
+					{
+						posOther = *pos;
+						if(isRailgunLinear)
+							posOther.z += source->getGeometryInfo().getMaxHeightAbovePosition();
+					}
+
+					if(RailgunExtraDistance != 0)
+					{
+						Coord3D railgunDirection;
+						railgunDirection.zero();
+						railgunDirection.set( &posOther );
+						railgunDirection.sub( &sourcePos );
+
+						Real railgunAngle = atan2(railgunDirection.y, railgunDirection.x);
+						posOther.x += Cos(railgunAngle) * RailgunExtraDistance;
+						posOther.y += Sin(railgunAngle) * RailgunExtraDistance;
+					}
+
+					isRailgun = FALSE; // Only do this once
+					checkForRailgunOnly = TRUE;
+
+					/*if( !isRailgunLinear )
+					{
+						Matrix3D mtx;
+						Vector3 srcPos(sourcePos.x, sourcePos.y, sourcePos.z);
+						Vector3 dir(railgunDirection.x, railgunDirection.y, railgunDirection.z);
+						dir.Normalize(); //This is fantastically crucial for calling buildTransformMatrix!!!!!
+						mtx.buildTransformMatrix(srcPos, dir);
+
+						sourcePos.x = srcPos.X;
+						sourcePos.y = srcPos.Y;
+						sourcePos.z = srcPos.Z;
+					}*/
+
+					iter = ThePartitionManager->iterateObjectsAlongLine(source, &sourcePos, &posOther, getRailgunRadius(), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind);
+					curVictim = iter->firstWithNumeric(&curVictimDistSqr);
+
+					// If nothing to check, do nothing and return
+					if(curVictim == NULL)
+						break;
+				}
+				else
+					break;
+			}
+
+			// Check for Railgun Only
+			if( checkForRailgunOnly )
+			{
+				// Don't deal damage against itself and the primary victim
+				if( primaryVictim && primaryVictim->getID() == curVictim->getID() )
+					continue;
+			}
+			
 			Bool killSelf = false;
 			if (source != NULL)
 			{
@@ -2210,7 +2389,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				// of the weapon), we ignore all the "affects" flags.
 				if (curVictim != primaryVictim)
 				{
-
 					if( (affects & WEAPON_KILLS_SELF) && source == curVictim )
 					{
 						killSelf = true;
@@ -2281,10 +2459,13 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				}
 			}
 
+			// Minus the Railgun Amount
+			if(checkForRailgunOnly && curVictim && !curVictim->isEffectivelyDead() && railgunAmount-- == 0)
+				break;
 
 			DamageInfo damageInfo;
-			damageInfo.in.m_damageType = damageType;
-			damageInfo.in.m_deathType = deathType;
+			damageInfo.in.m_damageType = checkForRailgunOnly ? railgunDamageType : damageType;
+			damageInfo.in.m_deathType = checkForRailgunOnly ? railgunDeathType : deathType;
 			damageInfo.in.m_sourceID = sourceID;
 			damageInfo.in.m_sourcePlayerMask = 0;
 			damageInfo.in.m_damageStatusType = damageStatusType;
@@ -2301,7 +2482,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_killsGarrison = KillsGarrison;
 			damageInfo.in.m_killsGarrisonAmount = KillsGarrisonAmount;
 			damageInfo.in.m_playSpecificVoice = SpecificVoice;
-			damageInfo.in.m_damageFXOverride = DamageFXOverride;
+			damageInfo.in.m_damageFXOverride = checkForRailgunOnly ? railgunDamageFXOverride : DamageFXOverride;
 
 			damageInfo.in.m_statusDuration = StatusDuration;
 			damageInfo.in.m_doStatusDamage = DoStatusDamage;
@@ -2549,7 +2730,10 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			}
 			// note, don't bother with damage multipliers here...
 			// that's handled internally by the attemptDamage() method.
-			damageInfo.in.m_amount = (curVictimDistSqr <= primaryRadiusSqr) ? primaryDamage : secondaryDamage;
+			if(checkForRailgunOnly)
+				damageInfo.in.m_amount = getRailgunUsesSecondaryDamage() ? secondaryDamage : primaryDamage;
+			else
+				damageInfo.in.m_amount = (curVictimDistSqr <= primaryRadiusSqr) ? primaryDamage : secondaryDamage;
 
 			if( killSelf )
 			{
@@ -2582,14 +2766,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			}
 
 			// Check whether we do Shrapnel
-			WeaponAntiMaskType targetAntiMask = (WeaponAntiMaskType)getVictimAntiMask( curVictim );
 			if( !doShrapnel &&
 				m_shrapnelBonusWeapon &&
 				m_shrapnelBonusCount > 0 &&
 				curVictimDistSqr < CLOSE_ENOUGH &&
-				!curVictim->isKindOf( KINDOF_UNATTACKABLE ) &&
-				( (curVictim->isKindOf(KINDOF_VEHICLE) || curVictim->isKindOf(KINDOF_AIRCRAFT) || curVictim->isKindOf(KINDOF_STRUCTURE) || curVictim->isKindOf(KINDOF_INFANTRY) || curVictim->isKindOf(KINDOF_MINE) || curVictim->isKindOf(KINDOF_SHRUBBERY) || curVictim->isKindOf(KINDOF_PARACHUTE)) ||
-				( (curVictim->isKindOf(KINDOF_SMALL_MISSILE) || curVictim->isKindOf(KINDOF_BALLISTIC_MISSILE) || curVictim->isKindOf(KINDOF_PROJECTILE)) && (getAntiMask() & targetAntiMask) != 0 && (curVictim->getID() == primaryVictim->getID() || source->getRelationship(curVictim) != ALLIES) ) )
+				testValidForShrapnel(curVictim, getAntiMask(), primaryVictim ? primaryVictim->getID() : INVALID_ID, source->getRelationship(curVictim))
 			  )
 			{
 				doShrapnel = TRUE;

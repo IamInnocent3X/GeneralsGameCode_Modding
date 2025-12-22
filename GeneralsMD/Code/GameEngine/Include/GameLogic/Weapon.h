@@ -671,6 +671,17 @@ public:
 	Real getROFMovingMaxSpeedCount() const { return m_rofMovingMaxSpeedCount; }
 	Bool getROFMovingScales() const { return m_rofMovingScales; }
 
+	Bool getIsRailgun() const { return m_isRailgun; }
+	Bool getRailgunIsLinear() const { return m_railgunIsLinear; }
+	Bool getRailgunUsesSecondaryDamage() const { return m_railgunUsesSecondaryDamage; }
+	Bool getRailgunPiercesBehind() const { return m_railgunPiercesBehind; }
+	Int getRailgunPierceAmount() const { return m_railgunPierceAmount; }
+	Real getRailgunRadius() const { return m_railgunRadius; }
+	Real getRailgunExtraDistance() const { return m_railgunExtraDistance; }
+	DamageType getRailgunDamageType() const { return m_railgunDamageType; }
+	DeathType getRailgunDeathType() const { return m_railgunDeathType; }
+	DamageType getRailgunDamageFXOverride() const { return m_railgunDamageFXOverride; }
+
 	UnsignedInt getInvulnerabilityDuration() const { return m_invulnerabilityDuration; }
 
 	Bool passRequirements (const Object *source) const;
@@ -925,6 +936,17 @@ private:
 	Real m_rofMovingPenalty;
 	Real m_rofMovingMaxSpeedCount;
 	Bool m_rofMovingScales;
+
+	Bool m_isRailgun;
+	Bool m_railgunIsLinear;
+	Bool m_railgunUsesSecondaryDamage;
+	Bool m_railgunPiercesBehind;
+	Int m_railgunPierceAmount;
+	Real m_railgunRadius;
+	Real m_railgunExtraDistance;
+	DamageType m_railgunDamageType;
+	DeathType m_railgunDeathType;
+	DamageType m_railgunDamageFXOverride;
 
 	UnsignedInt m_invulnerabilityDuration;
 

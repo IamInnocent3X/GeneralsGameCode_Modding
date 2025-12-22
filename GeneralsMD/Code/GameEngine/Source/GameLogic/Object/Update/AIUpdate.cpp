@@ -4992,7 +4992,7 @@ Object* AIUpdateInterface::getNextMoodTarget( Bool calledByAI, Bool calledDuring
 	}
 	UnsignedInt flags = AI::CAN_ATTACK;
 	if (TheAI->getAiData()->m_attackUsesLineOfSight) {
-		if (obj->isKindOf(KINDOF_ATTACK_NEEDS_LINE_OF_SIGHT)) {
+		if (obj->isKindOf(KINDOF_ATTACK_NEEDS_LINE_OF_SIGHT) && obj->hasDefaultLineOfSightEnabled()) {
 			flags |= AI::CAN_SEE;
 		}
 	}
