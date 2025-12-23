@@ -4399,9 +4399,50 @@ Int PartitionManager::checkObjectsAlongLine(
 					}
 				}*/
 
-				distVec.set(thisObj->getPosition());
-				distVec.sub(&startingPos);
-				thisDistSqr = distVec.lengthSqr();
+				// IamInnocent - Don't use distProc function because it involves more calculations than necessary
+				switch (dc)
+				{
+					case FROM_CENTER_2D:
+					case FROM_CENTER_3D:
+						(*distProc)(&startingPos, NULL, &objPos, thisObj, thisDistSqr, distVec, checkDistSqr);
+						break;
+					case FROM_BOUNDINGSPHERE_2D:
+					case FROM_BOUNDINGSPHERE_3D:
+					{
+						Coord3D diff;
+						diff.x = objPos.x - startingPos.x;
+						diff.y = objPos.y - startingPos.y;
+						diff.z = 0.0f;
+
+						Real actualDistSqr = sqr(diff.x) + sqr(diff.y);
+						if(dc == FROM_BOUNDINGSPHERE_3D)
+						{
+							diff.z = objPos.z + thisObj->getGeometryInfo().getZDeltaToCenterPosition() - startingPos.z;
+							actualDistSqr += sqr(diff.z);
+						}
+
+						Real shrunkenDistSqr = actualDistSqr;
+						Real totalRad = thisObj->getGeometryInfo().getBoundingCircleRadius();
+						// We deviate and use hackaround for skipping larger numbers calculations here, since Railgun doesn't check distance when calculating Damage
+						if (totalRad > 0.0f && totalRad * totalRad >= actualDistSqr)
+						{
+							Real actualDist = sqrtf(actualDistSqr);
+							Real shrunkenDist = actualDist - totalRad;
+							if (shrunkenDist <= 0.0f)
+							{
+								shrunkenDistSqr = 0.0f;	// sorry, distances can't be negative
+							}
+							else
+							{
+								shrunkenDistSqr = sqr(shrunkenDist);
+							}
+						}
+
+						thisDistSqr = shrunkenDistSqr;
+
+						break;
+					}
+				}
 
 				if (!filtersAllow(filters, thisObj))
 					continue;
@@ -4534,6 +4575,51 @@ Int PartitionManager::checkObjectsAlongLine(
 					}
 				}
 			}*/
+
+			// IamInnocent - Don't use distProc function because it involves more calculations than necessary
+			switch (dc)
+			{
+				case FROM_CENTER_2D:
+				case FROM_CENTER_3D:
+					(*distProc)(&startingPos, NULL, &objPos, thisObj, &thisDistSqr, &distVec, checkDistSqr);
+					break;
+				case FROM_BOUNDINGSPHERE_2D:
+				case FROM_BOUNDINGSPHERE_3D:
+				{
+					Coord3D diff;
+					diff.x = objPos.x - startingPos.x;
+					diff.y = objPos.y - startingPos.y;
+					diff.z = 0.0f;
+
+					Real actualDistSqr = sqr(diff.x) + sqr(diff.y);
+					if(dc == FROM_BOUNDINGSPHERE_3D)
+					{
+						diff.z = objPos.z + thisObj->getGeometryInfo().getZDeltaToCenterPosition() - startingPos.z;
+						actualDistSqr += sqr(diff.z);
+					}
+
+					Real shrunkenDistSqr = actualDistSqr;
+					Real totalRad = thisObj->getGeometryInfo().getBoundingCircleRadius();
+					// We deviate and use hackaround for skipping larger numbers calculations here, since Railgun doesn't check distance when calculating Damage
+					if (totalRad > 0.0f && totalRad * totalRad >= actualDistSqr)
+					{
+						Real actualDist = sqrtf(actualDistSqr);
+						Real shrunkenDist = actualDist - totalRad;
+						if (shrunkenDist <= 0.0f)
+						{
+							shrunkenDistSqr = 0.0f;	// sorry, distances can't be negative
+						}
+						else
+						{
+							shrunkenDistSqr = sqr(shrunkenDist);
+						}
+					}
+
+					thisDistSqr = shrunkenDistSqr;
+
+					break;
+				}
+			}
 
 			// check the filters now
 			if (!filtersAllow(filters, thisObj))

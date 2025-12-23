@@ -2406,7 +2406,9 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					isRailgun = FALSE; // Only do this once
 					checkForRailgunOnly = TRUE;
 
-					iter = ThePartitionManager->iterateObjectsAlongLine(source, &sourcePos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind);
+					IterOrderType order = railgunAmount > 0 ? ITER_SORTED_NEAR_TO_FAR : ITER_FASTEST;
+
+					iter = ThePartitionManager->iterateObjectsAlongLine(source, &sourcePos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind, NULL, order);
 					curVictim = iter->firstWithNumeric(&curVictimDistSqr);
 
 					// If nothing to check, do nothing and return
