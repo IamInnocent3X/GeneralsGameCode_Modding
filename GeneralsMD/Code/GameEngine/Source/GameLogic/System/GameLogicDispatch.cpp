@@ -376,7 +376,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			  if(msg->getDoSingleID() != INVALID_ID)
 			  {
-				  currentlySelectedGroup->add( TheGameLogic->findObjectByID( msg->getDoSingleID() ) );
+				  currentlySelectedGroup->add( findObjectByID( msg->getDoSingleID() ) );
 
 				  if(TheStatsCollector && msg->getDoSingleAddStat())
 					TheStatsCollector->collectMsgStats(msg);

@@ -2797,7 +2797,7 @@ void GameLogic::selectObject(Object *obj, Bool createNewSelection, PlayerMaskTyp
 		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
 		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
 		{
-			Object *boundObj = TheGameLogic->findObjectByID(*it);
+			Object *boundObj = findObjectByID(*it);
 			// Sanity, must have drawable to be selected
 			if(!boundObj || !boundObj->getDrawable())
 				continue;
@@ -2890,7 +2890,7 @@ void GameLogic::deselectObject(Object *obj, PlayerMaskType playerMask, Bool affe
 		std::vector<ObjectID> selectionBounds = obj->getSelectablesBoundTo();
 		for(std::vector<ObjectID>::iterator it = selectionBounds.begin(); it != selectionBounds.end(); ++it)
 		{
-			Object *boundObj = TheGameLogic->findObjectByID(*it);
+			Object *boundObj = findObjectByID(*it);
 			// Sanity, must have drawable to be selected
 			if(!boundObj || !boundObj->getDrawable())
 				continue;
