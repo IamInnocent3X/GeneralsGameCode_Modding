@@ -69,7 +69,8 @@
 #include "Common/PerfMetrics.h"
 
 //-------------------------------------------------------------------------------------------------
-
+#include <queue>
+#include <vector>
 
 static inline Bool IS_IMPASSABLE(PathfindCell::CellType type) {
 	// Return true if cell is impassable to ground units. jba. [8/18/2003]
@@ -472,7 +473,7 @@ void Path::updateLastNode( const Coord3D *pos )
 /**
  * Optimize the path by checking line of sight
  */
-void Path::optimize( const Object *obj, LocomotorSurfaceTypeMask acceptableSurfaces, Bool blocked )
+void Path::optimize( const Object *obj, LocomotorSurfaceTypeMask acceptableSurfaces, Bool blocked, Int requiredWaterLevel)
 {
 	PathNode *node, *anchor;
 
@@ -524,7 +525,7 @@ void Path::optimize( const Object *obj, LocomotorSurfaceTypeMask acceptableSurfa
 			Bool isPassable = false;
 			//CRCDEBUG_LOG(("Path::optimize() calling isLinePassable()"));
 			if (TheAI->pathfinder()->isLinePassable( obj, acceptableSurfaces, layer, *anchor->getPosition(),
-				*node->getPosition(), blocked, false))
+				*node->getPosition(), blocked, false, requiredWaterLevel))
 			{
 				isPassable = true;
 			}
@@ -932,8 +933,9 @@ void Path::computePointOnPath(
 
 		Bool gotPos = false;
 		CRCDEBUG_LOG(("Path::computePointOnPath() calling isLinePassable() 1"));
+
 		if (TheAI->pathfinder()->isLinePassable( obj, locomotorSet.getValidSurfaces(), out.layer, pos, *nextNodePos,
-			false, true ))
+			false, true, locomotorSet.getRequiredWaterLevel() ))
 		{
 			out.posOnPath = *nextNodePos;
 			gotPos = true;
@@ -966,7 +968,7 @@ void Path::computePointOnPath(
 					tryPos.y = (nextNodePos->y + next->getPosition()->y) * 0.5;
 					tryPos.z = nextNodePos->z;
 					CRCDEBUG_LOG(("Path::computePointOnPath() calling isLinePassable() 2"));
-					if (veryClose || TheAI->pathfinder()->isLinePassable( obj, locomotorSet.getValidSurfaces(), closeNext->getLayer(), pos, tryPos, false, true ))
+					if (veryClose || TheAI->pathfinder()->isLinePassable( obj, locomotorSet.getValidSurfaces(), closeNext->getLayer(), pos, tryPos, false, true, locomotorSet.getRequiredWaterLevel()))
 					{
 						gotPos = true;
 						out.posOnPath = tryPos;
@@ -984,7 +986,7 @@ void Path::computePointOnPath(
 			out.posOnPath.z = closeNodePos->z;
 
 			CRCDEBUG_LOG(("Path::computePointOnPath() calling isLinePassable() 3"));
-			if (TheAI->pathfinder()->isLinePassable( obj, locomotorSet.getValidSurfaces(), out.layer, pos, out.posOnPath, false, true ))
+			if (TheAI->pathfinder()->isLinePassable( obj, locomotorSet.getValidSurfaces(), out.layer, pos, out.posOnPath, false, true, locomotorSet.getRequiredWaterLevel()))
 			{
 				k = 0.5f;
 				gotPos = true;
@@ -1305,7 +1307,7 @@ void PathfindCell::reset( )
 	}
 	m_connectsToLayer = LAYER_INVALID;
 	m_layer = LAYER_GROUND;
-
+	m_waterLevel = 0;
 }
 
 /**
@@ -4357,7 +4359,6 @@ void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
 {
 	Coord3D topLeftCorner, bottomRightCorner;
 
-
 	Bool hasObstacle =  (cell->getType() == PathfindCell::CELL_OBSTACLE) ;
 
 	topLeftCorner.y = (Real)j * PATHFIND_CELL_SIZE_F;
@@ -4367,6 +4368,7 @@ void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
 	bottomRightCorner.x = topLeftCorner.x + PATHFIND_CELL_SIZE_F;
 
 	cell->setPinched(false);
+	cell->setWaterLevel(0);
 
 	PathfindCell::CellType type = PathfindCell::CELL_CLEAR;
 	if (TheTerrainLogic->isCliffCell(topLeftCorner.x, topLeftCorner.y))
@@ -4387,6 +4389,84 @@ void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
 	}
 	cell->setType( type );
 	cell->releaseInfo();
+}
+
+struct Point {
+	int x, y;
+};
+
+static void calculateWaterLevels(IRegion2D bounds, PathfindCell** map)
+{
+	std::queue<Point> q;
+	constexpr int MAX_LEVEL = 15;
+
+	// Directions: Up, Down, Left, Right
+	const int dirs[4][2] = { {0, 1}, {0, -1}, {1, 0}, {-1, 0} };
+
+	// 1. Initialization Pass
+	// Iterate only within the defined region
+	for (int i = bounds.lo.x; i < bounds.hi.x; ++i) {
+		for (int j = bounds.lo.y; j < bounds.hi.y; ++j) {
+			auto& cell = map[i][j];
+
+			if (cell.getType() != PathfindCell::CELL_WATER) {
+				// Found LAND/OBSTACLE inside the region
+				cell.setWaterLevel(0);
+				q.push({ i, j });
+			}
+			else {
+				// Mark as unvisited
+				cell.setWaterLevel(-1);
+			}
+		}
+	}
+
+	// 2. BFS Propagation
+	while (!q.empty()) {
+		Point curr = q.front();
+		q.pop();
+
+		int currentDist = map[curr.x][curr.y].getWaterLevel();
+
+		// Optimization: Stop expanding if we hit the max clamp limit
+		if (currentDist >= MAX_LEVEL) {
+			continue;
+		}
+
+		// Check neighbors
+		for (const auto& dir : dirs) {
+			int nx = curr.x + dir[0];
+			int ny = curr.y + dir[1];
+
+			// Bounds Check: Ensure neighbor is strictly within IRegion2D
+			if (nx >= bounds.lo.x && nx < bounds.hi.x &&
+				ny >= bounds.lo.y && ny < bounds.hi.y) {
+
+				auto& neighbor = map[nx][ny];
+
+				// Only propagate into unvisited (-1) WATER cells
+				if (neighbor.getWaterLevel() == -1 &&
+					neighbor.getType() == PathfindCell::CELL_WATER) {
+
+					int newDist = currentDist + 1;
+					neighbor.setWaterLevel(newDist);
+					q.push({ nx, ny });
+				}
+			}
+		}
+	}
+
+	// 3. Final Cleanup
+	// Handle "Deep Ocean" or isolated water cells that BFS didn't reach 
+	// (either because they are > 15 away, or isolated by bounds/obstacles)
+	for (int i = bounds.lo.x; i < bounds.hi.x; ++i) {
+		for (int j = bounds.lo.y; j < bounds.hi.y; ++j) {
+			if (map[i][j].getWaterLevel() == -1) {
+				map[i][j].setWaterLevel(MAX_LEVEL);
+			}
+			//DEBUG_LOG(("Cell %d, %d has waterlevel: %d", i, j, map[i][j].getWaterLevel()));
+		}
+	}
 }
 
 /**
@@ -4515,6 +4595,10 @@ void Pathfinder::classifyMap(void)
 		}
 	}
 #endif
+	DEBUG_LOG(("WATER LEVEL: Checking map"));
+	// set water depth values for ship navigation
+	calculateWaterLevels(m_extent, m_map);
+
 	for (i=0; i<LAYER_LAST; i++) {
 		if (!m_layers[i].isUnused()) {
 			m_layers[i].classifyCells();
@@ -4650,6 +4734,12 @@ Bool Pathfinder::validMovementTerrain( PathfindLayerEnum layer, const Locomotor*
 	LocomotorSurfaceTypeMask acceptableSurfaces = validLocomotorSurfacesForCellType(toCell->getType());
 	if ((locomotor->getLegalSurfaces() & acceptableSurfaces) == 0)
 		return false;
+
+	if ((locomotor->getAppearance() == LOCO_SHIP)) {
+		if (toCell->getWaterLevel() < locomotor->getRequireWaterLevel()) {
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -4698,8 +4788,8 @@ void Pathfinder::cleanOpenAndClosedLists(void) {
 //
 // Return true if we can move onto this position
 //
-Bool Pathfinder::validMovementPosition( Bool isCrusher, LocomotorSurfaceTypeMask acceptableSurfaces,
-																			 PathfindCell *toCell, PathfindCell *fromCell )
+Bool Pathfinder::validMovementPosition( Bool isCrusher, LocomotorSurfaceTypeMask acceptableSurfaces, Int requiredWaterLevel,
+																			 PathfindCell *toCell, PathfindCell *fromCell)
 {
 	if (toCell == NULL)
 		return false;
@@ -4717,6 +4807,14 @@ Bool Pathfinder::validMovementPosition( Bool isCrusher, LocomotorSurfaceTypeMask
 	LocomotorSurfaceTypeMask cellSurfaces = validLocomotorSurfacesForCellType(toCell->getType());
 	if ((cellSurfaces & acceptableSurfaces) == 0)
 		return false;
+
+	// Check for water depth validity of ships
+	if (requiredWaterLevel >0 && toCell->getType() == PathfindCell::CELL_WATER) {
+		if (toCell->getWaterLevel() < requiredWaterLevel) {
+			return false;
+		}
+	}
+
 
 	return true;
 }
@@ -5830,7 +5928,7 @@ struct ExamineCellsStruct
 	Bool isCrusher = d->obj ? d->obj->getCrusherLevel() > 0 : false;
 	if (d->thePathfinder->m_isTunneling) return 1; // abort.
 	if (from && to) {
-			if (!d->thePathfinder->validMovementPosition( isCrusher, d->theLoco->getValidSurfaces(), to, from )) {
+			if (!d->thePathfinder->validMovementPosition( isCrusher, d->theLoco->getValidSurfaces(), d->theLoco->getRequiredWaterLevel(), to, from )) {
 				return 1;
 			}
 			if ( (to->getLayer() == LAYER_GROUND) && !d->thePathfinder->m_zoneManager.isPassable(to_x, to_y) ) {
@@ -6009,7 +6107,7 @@ Int Pathfinder::examineNeighboringCells(PathfindCell *parentCell, PathfindCell *
 					continue;
 			}
 
-			Bool movementValid = validMovementPosition(isCrusher, locomotorSet.getValidSurfaces(), newCell, parentCell);
+			Bool movementValid = validMovementPosition(isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), newCell, parentCell);
 			Bool dozerHack = false;
 			if (!movementValid && obj->isKindOf(KINDOF_DOZER) && newCell->getType() == PathfindCell::CELL_OBSTACLE) {
 				Object* obstacle = TheGameLogic->findObjectByID(newCell->getObstacleID());
@@ -6120,7 +6218,7 @@ Int Pathfinder::examineNeighboringCells(PathfindCell *parentCell, PathfindCell *
 			}
 
 			if (m_isTunneling) {
-				if (!validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), newCell, parentCell )) {
+				if (!validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), newCell, parentCell )) {
 					newCostSoFar += 10*COST_ORTHOGONAL;
 				}
 			}
@@ -6363,7 +6461,7 @@ Path *Pathfinder::internalFindPath( Object *obj, const LocomotorSet& locomotorSe
 
 			m_isTunneling = false;
 			// construct and return path
-			Path *path =  buildActualPath( obj, locomotorSet.getValidSurfaces(), from, goalCell, centerInCell, false );
+			Path *path =  buildActualPath( obj, locomotorSet.getValidSurfaces(), from, goalCell, centerInCell, false, locomotorSet.getRequiredWaterLevel() );
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding)
 			if( !s_useNonRetailPathfind && 
@@ -8129,7 +8227,7 @@ Bool Pathfinder::pathDestination( 	Object *obj, const LocomotorSet& locomotorSet
 	Real closestDistanceSqr = FLT_MAX;
 	Coord3D closestPos;
 
-	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), parentCell ) == false) {
+	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), parentCell ) == false) {
 		parentCell->releaseInfo();
 		goalCell->releaseInfo();
 		return FALSE;
@@ -8225,7 +8323,7 @@ Bool Pathfinder::pathDestination( 	Object *obj, const LocomotorSet& locomotorSet
 				}
 			}
 
-			if (!validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), newCell, parentCell )) {
+			if (!validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), newCell, parentCell )) {
 				continue;
 			}
 
@@ -8409,7 +8507,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 		}
 	}
 
-	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), parentCell ) == false) {
+	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), parentCell ) == false) {
 		parentCell->releaseInfo();
 		goalCell->releaseInfo();
 		return MAX_COST;
@@ -8519,7 +8617,7 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 				}
 			}
 
-			if (!validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), newCell, parentCell )) {
+			if (!validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), newCell, parentCell )) {
 				continue;
 			}
 
@@ -8706,7 +8804,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 	if (parentCell == NULL)
 		return NULL;
 
-	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), parentCell ) == false) {
+	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), parentCell ) == false) {
 		m_isTunneling = true; // We can't move from our current location.  So relax the constraints.
 	}
 	TCheckMovementInfo info;
@@ -8815,7 +8913,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 				debugShowSearch(true);
 			m_isTunneling = false;
 			// construct and return path
-			Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), from, goalCell, centerInCell, blocked);
+			Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), from, goalCell, centerInCell, blocked, locomotorSet.getRequiredWaterLevel());
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
 			if( !s_useNonRetailPathfind && 
@@ -8837,7 +8935,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 		// put parent cell onto closed list - its evaluation is finished
 		m_closedList = parentCell->putOnClosedList( m_closedList );
 		if (!m_isTunneling && checkDestination(obj, parentCell->getXIndex(), parentCell->getYIndex(), parentCell->getLayer(), radius, centerInCell)) {
-			if (!startedStuck || validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), parentCell )) {
+			if (!startedStuck || validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), parentCell )) {
 				dx = IABS(goalCell->getXIndex()-parentCell->getXIndex());
 				dy = IABS(goalCell->getYIndex()-parentCell->getYIndex());
 				distSqr = dx*dx+dy*dy;
@@ -8909,7 +9007,7 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 		rawTo->x = closesetCell->getXIndex()*PATHFIND_CELL_SIZE_F + PATHFIND_CELL_SIZE_F/2.0f;
 		rawTo->y = closesetCell->getYIndex()*PATHFIND_CELL_SIZE_F + PATHFIND_CELL_SIZE_F/2.0f;
 		// construct and return path
-		Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), from, closesetCell, centerInCell, blocked );
+		Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), from, closesetCell, centerInCell, blocked, locomotorSet.getRequiredWaterLevel());
 //#if RETAIL_COMPATIBLE_PATHFINDING
 		//if (!s_useFixedPathfinding) {
 		if( !s_useNonRetailPathfind && 
@@ -8978,7 +9076,7 @@ void Pathfinder::adjustCoordToCell(Int cellX, Int cellY, Bool centerInCell, Coor
  * Work backwards from goal cell to construct final path.
  */
 Path *Pathfinder::buildActualPath( const Object *obj, LocomotorSurfaceTypeMask acceptableSurfaces, const Coord3D *fromPos,
-																	PathfindCell *goalCell, Bool center, Bool blocked )
+																	PathfindCell *goalCell, Bool center, Bool blocked, Int requiredWaterLevel)
 {
 	DEBUG_ASSERTCRASH( goalCell, ("Pathfinder::buildActualPath: goalCell == NULL") );
 
@@ -8991,7 +9089,7 @@ Path *Pathfinder::buildActualPath( const Object *obj, LocomotorSurfaceTypeMask a
 	prependCells(path, fromPos, goalCell, center);
 
 	// cleanup the path by checking line of sight
-	path->optimize(obj, acceptableSurfaces, blocked);
+	path->optimize(obj, acceptableSurfaces, blocked, requiredWaterLevel);
 
 #if defined(RTS_DEBUG)
 	if (TheGlobalData->m_debugAI==AI_DEBUG_PATHS)
@@ -9644,6 +9742,7 @@ struct LinePassableStruct
 	Bool centerInCell;
 	Bool blocked;
 	Bool allowPinched;
+	Int requiredWaterDepth; //Added for ships to not be able to get too close to coast
 };
 
 /*static*/ Int Pathfinder::linePassableCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData)
@@ -9679,9 +9778,13 @@ struct LinePassableStruct
 		}
 	}
 
-	if (pathfinder->validMovementPosition( isCrusher, d->acceptableSurfaces, to, from ) == false)
+	if (pathfinder->validMovementPosition( isCrusher, d->acceptableSurfaces, d->requiredWaterDepth, to, from ) == false)
 	{
 		return 1;	// bail out
+	}
+
+	if (to->getType() == PathfindCell::CELL_WATER && d->requiredWaterDepth > 0 && to->getWaterLevel() < d->requiredWaterDepth) {
+		return 1; // bail out, ship needs deeper water
 	}
 
 	return 0;	// keep going
@@ -9717,7 +9820,7 @@ struct GroundPathPassableStruct
 Bool Pathfinder::isLinePassable( const Object *obj, LocomotorSurfaceTypeMask acceptableSurfaces,
 																PathfindLayerEnum layer, const Coord3D& startWorld,
 																const Coord3D& endWorld, Bool blocked,
-																Bool allowPinched)
+																Bool allowPinched, Int requiredWaterDepth)
 {
 	LinePassableStruct info;
 	//CRCDEBUG_LOG(("Pathfinder::isLinePassable(): %d %d %d ", m_ignoreObstacleID, m_isMapReady, m_isTunneling));
@@ -9727,6 +9830,7 @@ Bool Pathfinder::isLinePassable( const Object *obj, LocomotorSurfaceTypeMask acc
 	getRadiusAndCenter(obj, info.radius, info.centerInCell);
 	info.blocked = blocked;
 	info.allowPinched = allowPinched;
+	info.requiredWaterDepth = requiredWaterDepth;
 
 	Int ret = iterateCellsAlongLine(startWorld, endWorld, layer, linePassableCallback, (void*)&info);
 	return ret == 0;
@@ -10322,7 +10426,7 @@ Path *Pathfinder::getMoveAwayFromPath(Object* obj, Object *otherObj,
 	const LocomotorSet& locomotorSet = obj->getAIUpdateInterface()->getLocomotorSet();
 
 	m_isTunneling = false;
-	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), parentCell ) == false) {
+	if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), parentCell ) == false) {
 		m_isTunneling = true; // We can't move from our current location.  So relax the constraints.
 	}
 
@@ -10413,7 +10517,7 @@ Path *Pathfinder::getMoveAwayFromPath(Object* obj, Object *otherObj,
 				debugShowSearch(true);
 			m_isTunneling = false;
 			// construct and return path
-			Path *newPath = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false);
+			Path *newPath = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false, locomotorSet.getRequiredWaterLevel());
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
 			if( !s_useNonRetailPathfind && 
@@ -10632,7 +10736,7 @@ Path *Pathfinder::patchPath( const Object *obj, const LocomotorSet& locomotorSet
 			prependCells(path, obj->getPosition(), parentCell, centerInCell);
 
 			// cleanup the path by checking line of sight
-			path->optimize(obj, locomotorSet.getValidSurfaces(), blocked);
+			path->optimize(obj, locomotorSet.getValidSurfaces(), blocked, locomotorSet.getRequiredWaterLevel());
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
 			if( !s_useNonRetailPathfind && 
@@ -10722,10 +10826,9 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 			ICoord2D cellNdx;
 			worldToCell(&testPos, &cellNdx);
 			PathfindCell *aCell = getCell(obj->getLayer(), cellNdx.x, cellNdx.y);
-			if (!aCell)
-				break;
+			if (!aCell) break;
 
-			if (!validMovementPosition(isCrusher, locomotorSet.getValidSurfaces(), aCell))
+			if (!validMovementPosition(isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), aCell))
 				break;
 
 			if (!checkDestination(obj, cellNdx.x, cellNdx.y, obj->getLayer(), radius, centerInCell))
@@ -10949,7 +11052,7 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 						}
 					}
 				}
-				Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false);
+				Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false, locomotorSet.getRequiredWaterLevel());
 //#if RETAIL_COMPATIBLE_PATHFINDING
 				//if (!s_useFixedPathfinding) {
 				if( !s_useNonRetailPathfind && 
@@ -10970,7 +11073,7 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 			}
 		}
 		if (checkDestination(obj, parentCell->getXIndex(), parentCell->getYIndex(), parentCell->getLayer(), radius, centerInCell)) {
-			if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), parentCell )) {
+			if (validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), parentCell )) {
 				Real dx = IABS(victimCellNdx.x-parentCell->getXIndex());
 				Real dy = IABS(victimCellNdx.y-parentCell->getYIndex());
 				Real distSqr = dx*dx+dy*dy;
@@ -11156,7 +11259,7 @@ Path *Pathfinder::findSafePath( const Object *obj, const LocomotorSet& locomotor
 			//DEBUG_LOG(("Attack path took %d cells, %f sec", cellCount, (::GetTickCount()-startTimeMS)/1000.0f));
 #endif
 			// construct and return path
-			Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false);
+			Path *path = buildActualPath( obj, locomotorSet.getValidSurfaces(), obj->getPosition(), parentCell, centerInCell, false, locomotorSet.getRequiredWaterLevel());
 //#if RETAIL_COMPATIBLE_PATHFINDING
 			//if (!s_useFixedPathfinding) {
 			if( !s_useNonRetailPathfind && 

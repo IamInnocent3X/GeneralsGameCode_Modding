@@ -278,6 +278,7 @@ public:
 	virtual void projectileNowJammed(Bool noDamage = FALSE) = 0;
 	virtual void projectileNowDrawn(ObjectID attractorID) = 0;
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) = 0;
+	virtual Bool projectileShouldCollideWithWater() const { return false; };
 
 	virtual Object* getTargetObject() = 0;
 	virtual const Coord3D* getTargetPosition() = 0;

@@ -366,6 +366,7 @@ const char* const KindOfMaskType::s_bitNameList[] =
 	"DECOR",
 
 	"TELEPORTER",
+	"SHIPYARD",
 
 	"EXTRA1",
 	"EXTRA2",

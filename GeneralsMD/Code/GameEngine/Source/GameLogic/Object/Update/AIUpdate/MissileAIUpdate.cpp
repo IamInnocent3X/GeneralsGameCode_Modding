@@ -1326,6 +1326,14 @@ Object* MissileAIUpdate::getTargetObject()
 	return getGoalObject();
 }
 
+bool MissileAIUpdate::projectileShouldCollideWithWater() const
+{
+	if (m_detonationWeaponTmpl != nullptr) {
+		return m_detonationWeaponTmpl->getProjectileCollideMask() & WeaponCollideMaskType::WEAPON_COLLIDE_WATER;
+	}
+	return false;
+}
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------

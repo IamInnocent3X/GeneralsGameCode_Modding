@@ -351,6 +351,7 @@ public:
 	Real m_MinDistFromEdgeOfMapForBuild;
 	Real m_SupplyBuildBorder;
 	Real m_allowedHeightVariationForBuilding;  ///< how "flat" is still flat enough to build on
+	Real m_allowedHeightVariationForBuildingShipyard;  ///< how "flat" is still flat enough to build on
 	Real m_MinLowEnergyProductionSpeed;
 	Real m_MaxLowEnergyProductionSpeed;
 	Real m_LowEnergyPenaltyModifier;
@@ -605,7 +606,7 @@ public:
 	//AudioEventRTS m_chronoDisableSoundLoop;
 
 	DeathTypeFlags m_defaultExcludedDeathTypes;
-
+	Bool m_heightAboveTerrainIncludesWater;
 	Bool m_countermeasuresDetonateNonTracking;
 
 	Bool m_newskirmishfpsSystem;
