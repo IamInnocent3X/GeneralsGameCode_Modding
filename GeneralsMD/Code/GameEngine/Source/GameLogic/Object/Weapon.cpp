@@ -459,6 +459,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "RailgunDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(WeaponTemplate, m_railgunDamageType) },
 	{ "RailgunDeathType",						INI::parseIndexList,										TheDeathNames,		offsetof(WeaponTemplate, m_railgunDeathType) },
 	{ "RailgunOverrideDamageTypeFX",			DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_railgunDamageFXOverride) },
+	{ "RailgunCustomDamageType",				INI::parseAsciiString,			NULL,							offsetof(WeaponTemplate, m_railgunCustomDamageType) },
+	{ "RailgunCustomDeathType",					INI::parseAsciiString,			NULL,							offsetof(WeaponTemplate, m_railgunCustomDeathType) },
 	{ "RailgunFX",								parseAllVetLevelsFXList,		NULL,							offsetof(WeaponTemplate, m_railgunFXs) },
 	{ "RailgunOCL",								parseAllVetLevelsAsciiString,	NULL,							offsetof(WeaponTemplate, m_railgunOCLNames) },
 	{ "RailgunVeterancyFX",						parsePerVetLevelFXList,			NULL,							offsetof(WeaponTemplate, m_railgunFXs) },
@@ -713,6 +715,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_railgunDamageType = DAMAGE_NUM_TYPES;
 	m_railgunDeathType = DEATH_NONE;
 	m_railgunDamageFXOverride = DAMAGE_UNRESISTABLE;
+	m_railgunCustomDamageType = NULL;
+	m_railgunCustomDeathType = NULL;
 
 	m_weaponBypassLineOfSight = FALSE;
 	m_weaponIgnoresObstacles = FALSE;
@@ -2255,6 +2259,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		DamageType railgunDamageType = getRailgunDamageType() == DAMAGE_NUM_TYPES ? damageType : getRailgunDamageType();
 		DeathType railgunDeathType = getRailgunDeathType() == DEATH_NONE ? deathType : getRailgunDeathType();
 		DamageType railgunDamageFXOverride = getRailgunDamageFXOverride() == DAMAGE_UNRESISTABLE ? DamageFXOverride : getRailgunDamageFXOverride();
+		AsciiString railgunCustomDamageType = getRailgunCustomDamageType().isEmpty() ? customDamageType : getRailgunCustomDamageType();
+		AsciiString railgunCustomDeathType = getRailgunCustomDeathType().isEmpty() ? customDeathType : getRailgunCustomDeathType();
 		Coord3D sourcePos, posOther;
 
 		SimpleObjectIterator *iter;
@@ -2513,9 +2519,9 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageInfo.in.m_sourcePlayerMask = 0;
 			damageInfo.in.m_damageStatusType = damageStatusType;
 
-			damageInfo.in.m_customDamageType = customDamageType;
+			damageInfo.in.m_customDamageType = checkForRailgunOnly ? railgunCustomDamageType : customDamageType;
 			damageInfo.in.m_customDamageStatusType = customDamageStatusType;
-			damageInfo.in.m_customDeathType = customDeathType;
+			damageInfo.in.m_customDeathType = checkForRailgunOnly ? railgunCustomDeathType : customDeathType;
 
 			damageInfo.in.m_isFlame = IsFlame;
 			damageInfo.in.m_projectileCollidesWithBurn = ProjectileCollidesWithBurn;

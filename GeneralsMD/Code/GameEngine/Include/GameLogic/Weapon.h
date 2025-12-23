@@ -689,6 +689,8 @@ public:
 	DamageType getRailgunDamageType() const { return m_railgunDamageType; }
 	DeathType getRailgunDeathType() const { return m_railgunDeathType; }
 	DamageType getRailgunDamageFXOverride() const { return m_railgunDamageFXOverride; }
+	const AsciiString& getRailgunCustomDamageType() const { return m_railgunCustomDamageType; }
+	const AsciiString& getRailgunCustomDeathType() const { return m_railgunCustomDeathType; }
 	const FXList* getRailgunFX(VeterancyLevel v) const { return m_railgunFXs[v]; }
 	const ObjectCreationList* getRailgunOCL(VeterancyLevel v) const { return m_railgunOCLs[v]; }
 
@@ -962,6 +964,8 @@ private:
 	DeathType m_railgunDeathType;
 	DamageType m_railgunDamageFXOverride;
 	AsciiString m_railgunOCLNames[LEVEL_COUNT];
+	AsciiString m_railgunCustomDamageType;
+	AsciiString m_railgunCustomDeathType;
 	const FXList* m_railgunFXs[LEVEL_COUNT];
 	const ObjectCreationList* m_railgunOCLs[LEVEL_COUNT];
 
