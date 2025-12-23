@@ -95,6 +95,8 @@ class Team;
 class ThingTemplate;
 class GhostObject;
 class CommandButton;
+class FXList;
+class ObjectCreationList;
 
 enum CommandSourceType CPP_11(: Int);
 
@@ -1312,6 +1314,9 @@ protected:
 		const Coord3D& pos,
 		const Coord3D& posOther,
 		Real radius,
+		Real infantryRadius,
+		const FXList* railgunfx,
+		const ObjectCreationList *railgunocl,
 		DistanceCalculationType dc,
 		PartitionFilter **filters,
 		SimpleObjectIterator *iter,
@@ -1321,11 +1326,14 @@ protected:
 	);
 
 	Int checkObjectsAlongLine(
-		PartitionCell* cell,
+		Int cellX,
+		Int cellY,
 		const Object* source,
 		const Coord3D& startingPos,
+		const Coord3D& currentPos,
 		const Coord3D& endPos,
 		Real radius,
+		Real infantryRadius,
 		DistanceCalculationType dc,
 		PartitionFilter **filters,
 		SimpleObjectIterator *iter,
@@ -1503,6 +1511,9 @@ public:
 		const Coord3D *pos,
 		const Coord3D *posOther,
 		Real radius,
+		Real infantryRadius,
+		const FXList* railgunfx,
+		const ObjectCreationList *railgunocl,
 		DistanceCalculationType dc,
 		Bool checkBehind = FALSE,
 		PartitionFilter **filters = NULL,

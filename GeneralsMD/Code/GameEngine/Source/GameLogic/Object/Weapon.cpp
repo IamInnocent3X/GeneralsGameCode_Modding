@@ -452,13 +452,19 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "RailgunPiercesBehind",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunPiercesBehind) },
 	{ "RailgunPierceAmount",					INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_railgunPierceAmount) },
 	{ "RailgunRadius",							INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadius) },
+	{ "RailgunInfantryRadius",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunInfantryRadius) },
 	{ "RailgunExtraDistance",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunExtraDistance) },
+	{ "RailgunMaxDistance",						INI::parsePositiveNonZeroReal,	NULL,							offsetof(WeaponTemplate, m_railgunMaxDistance) },
 	{ "RailgunDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(WeaponTemplate, m_railgunDamageType) },
 	{ "RailgunDeathType",						INI::parseIndexList,										TheDeathNames,		offsetof(WeaponTemplate, m_railgunDeathType) },
 	{ "RailgunOverrideDamageTypeFX",			DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_railgunDamageFXOverride) },
+	{ "RailgunFX",								parseAllVetLevelsFXList,		NULL,							offsetof(WeaponTemplate, m_railgunFXs) },
+	{ "RailgunOCL",								parseAllVetLevelsAsciiString,	NULL,							offsetof(WeaponTemplate, m_railgunOCLNames) },
+	{ "RailgunVeterancyFX",						parsePerVetLevelFXList,			NULL,							offsetof(WeaponTemplate, m_railgunFXs) },
+	{ "RailgunVeterancyOCL",					parsePerVetLevelAsciiString,	NULL,							offsetof(WeaponTemplate, m_railgunOCLNames) },
 
-	{ "BypassLineOfSight",						INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
-	{ "IgnoresObstacles",						INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
+	{ "UserBypassLineOfSight",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
+	{ "UserIgnoresObstacles",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
 
 	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
 	{ "MindControlRadius",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlRadius) },
@@ -538,6 +544,10 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 		m_customSubdualDoStatus[i] = FALSE;
 		m_customSubdualOCLNames[i].clear();
 		m_customSubdualOCLs[i] = NULL;
+
+		m_railgunOCLNames[i].clear();
+		m_railgunOCLs[i] = NULL;
+		m_railgunFXs[i] = NULL;
 	}
 	m_damageDealtAtSelfPosition			= false;
 	m_affectsMask										= (WEAPON_AFFECTS_ALLIES | WEAPON_AFFECTS_ENEMIES | WEAPON_AFFECTS_NEUTRALS);
@@ -696,7 +706,9 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_railgunPiercesBehind = FALSE;
 	m_railgunPierceAmount = -1;
 	m_railgunRadius = 0.0f;
+	m_railgunInfantryRadius = 0.0f;
 	m_railgunExtraDistance = 0.0f;
+	m_railgunMaxDistance = 0.0f;
 	m_railgunDamageType = DAMAGE_NUM_TYPES;
 	m_railgunDeathType = DEATH_NONE;
 	m_railgunDamageFXOverride = DAMAGE_UNRESISTABLE;
@@ -850,6 +862,17 @@ void WeaponTemplate::postProcessLoad()
 			DEBUG_ASSERTCRASH(m_customSubdualOCLs[i], ("OCL %s not found in a weapon!",m_customSubdualOCLNames[i].str()));
 		}
 		m_customSubdualOCLNames[i].clear();
+
+		if (m_railgunOCLNames[i].isEmpty())
+		{
+			m_railgunOCLs[i] = NULL;
+		}
+		else
+		{
+			m_railgunOCLs[i] = TheObjectCreationListStore->findObjectCreationList(m_railgunOCLNames[i].str() );
+			DEBUG_ASSERTCRASH(m_railgunOCLs[i], ("OCL %s not found in a weapon!",m_railgunOCLNames[i].str()));
+		}
+		m_railgunOCLNames[i].clear();
 	}
 
 }
@@ -1639,7 +1662,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			if( inflictDamage )
 			{
-				dealDamageInternal( sourceID, damageID, &projectileDestination, bonus, isProjectileDetonation );
+				dealDamageInternal( sourceID, damageID, &projectileDestination, bonus, isProjectileDetonation, wslot, specificBarrelToUse );
 			}
 			return TheGameLogic->getFrame();
 		}
@@ -1652,9 +1675,9 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if( inflictDamage )
 			{
 				if(retarget && !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS))
-					dealDamageInternal(sourceID, ShielderID, retarget->getPosition(), bonus, isProjectileDetonation);
+					dealDamageInternal(sourceID, ShielderID, retarget->getPosition(), bonus, isProjectileDetonation, wslot, specificBarrelToUse );
 				else
-					dealDamageInternal(sourceID, damageID, damagePos, bonus, isProjectileDetonation);
+					dealDamageInternal(sourceID, damageID, damagePos, bonus, isProjectileDetonation, wslot, specificBarrelToUse );
 			}
 
 			//-extraLogging
@@ -2081,17 +2104,21 @@ void WeaponTemplate::processHistoricDamage(const Object* source, const Coord3D* 
 }
 #endif
 
-static Bool testValidForShrapnel(const Object* victim, Int antiMask, ObjectID primaryID, Relationship r)
+static Bool testValidForAttack(const Object* victim, Int antiMask, ObjectID primaryID, Relationship r)
 {
 	// Sanity
 	if( !victim )
+		return FALSE;
+
+	// Don't check for dead or removed targets
+	if( victim->isDestroyed() || victim->isEffectivelyDead() )
 		return FALSE;
 	
 	// Victim is not attackable, don't do anything
 	if( victim->isKindOf( KINDOF_UNATTACKABLE ) )
 		return FALSE;
 
-	// Victim is okay for shrapnel
+	// Victim is valid for attacking
 	if( victim->isKindOf(KINDOF_VEHICLE) ||
 		victim->isKindOf(KINDOF_AIRCRAFT) ||
 		victim->isKindOf(KINDOF_STRUCTURE) ||
@@ -2129,7 +2156,7 @@ static Bool testValidForShrapnel(const Object* victim, Int antiMask, ObjectID pr
 }
 
 //-------------------------------------------------------------------------------------------------
-void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation) const
+void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation, WeaponSlotType wslot, Int specificBarrelToUse) const
 {
 	if (sourceID == 0)	// must have a source
 		return;
@@ -2292,24 +2319,20 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				if(isRailgun)
 				{
 					Bool isRailgunLinear = getRailgunIsLinear();
+					Bool canDoRailgunLinear = isRailgunLinear && !(source->getStealth() && source->getStealth()->isDisguised());
 					Bool RailgunPiercesBehind = getRailgunPiercesBehind();
 					Real RailgunExtraDistance = getRailgunExtraDistance();
+					Real RailgunMaxDistance = getRailgunMaxDistance();
 					
 					if (source)
 					{
-						// If I am a disguised, don't use my Drawable
-						if( isRailgunLinear || source->getStealth() && source->getStealth()->isDisguised() )
+						sourcePos = *source->getPosition();
+						if( canDoRailgunLinear )
 						{
-							sourcePos = *source->getPosition();
-							// note that we want to measure from the top of the collision
-							// shape, not the bottom! (most objects have eyes a lot closer
-							// to their head than their feet. if we have really odd critters
-							// with eye-feet, we'll need to change this assumption.)
-							sourcePos.z += source->getGeometryInfo().getMaxHeightAbovePosition();
+							source->getDrawable()->getWeaponFireOffset(wslot, specificBarrelToUse, &sourcePos);
 						}
-						else
+						else if(isRailgunLinear)
 						{
-							sourcePos = *source->getDrawable()->getPosition();
 							sourcePos.z += source->getGeometryInfo().getMaxHeightAbovePosition();
 						}
 					}
@@ -2322,23 +2345,19 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					if ( primaryVictim )
 					{
 						posOther = *primaryVictim->getPosition();
-						// note that we want to measure from the top of the collision
-						// shape, not the bottom! (most objects have eyes a lot closer
-						// to their head than their feet. if we have really odd critters
-						// with eye-feet, we'll need to change this assumption.)
-						posOther.z += primaryVictim->getGeometryInfo().getMaxHeightAbovePosition();
 					}
 					else
 					{
 						posOther = *pos;
-						if(isRailgunLinear)
-							posOther.z += source->getGeometryInfo().getMaxHeightAbovePosition();
 					}
+
+					if(isRailgunLinear)
+						posOther.z = sourcePos.z;
+
+					Coord3D railgunDirection;
 
 					if(RailgunExtraDistance != 0)
 					{
-						Coord3D railgunDirection;
-						railgunDirection.zero();
 						railgunDirection.set( &posOther );
 						railgunDirection.sub( &sourcePos );
 
@@ -2346,24 +2365,25 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						posOther.x += Cos(railgunAngle) * RailgunExtraDistance;
 						posOther.y += Sin(railgunAngle) * RailgunExtraDistance;
 					}
+					
+					if(RailgunMaxDistance)
+					{
+						railgunDirection.set( &posOther );
+						railgunDirection.sub( &sourcePos );
+						Real railgunDist = railgunDirection.length();
+						if(railgunDist > RailgunMaxDistance)
+						{
+							Real ReductionRatio = (railgunDist - RailgunMaxDistance) / railgunDist;
+							posOther.x -= (posOther.x - sourcePos.x) * ReductionRatio;
+							posOther.y -= (posOther.y - sourcePos.y) * ReductionRatio;
+							posOther.z -= (posOther.z - sourcePos.z) * ReductionRatio;
+						}
+					}
 
 					isRailgun = FALSE; // Only do this once
 					checkForRailgunOnly = TRUE;
 
-					/*if( !isRailgunLinear )
-					{
-						Matrix3D mtx;
-						Vector3 srcPos(sourcePos.x, sourcePos.y, sourcePos.z);
-						Vector3 dir(railgunDirection.x, railgunDirection.y, railgunDirection.z);
-						dir.Normalize(); //This is fantastically crucial for calling buildTransformMatrix!!!!!
-						mtx.buildTransformMatrix(srcPos, dir);
-
-						sourcePos.x = srcPos.X;
-						sourcePos.y = srcPos.Y;
-						sourcePos.z = srcPos.Z;
-					}*/
-
-					iter = ThePartitionManager->iterateObjectsAlongLine(source, &sourcePos, &posOther, getRailgunRadius(), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind);
+					iter = ThePartitionManager->iterateObjectsAlongLine(source, &sourcePos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind);
 					curVictim = iter->firstWithNumeric(&curVictimDistSqr);
 
 					// If nothing to check, do nothing and return
@@ -2466,7 +2486,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			}
 
 			// Minus the Railgun Amount
-			if(checkForRailgunOnly && curVictim && !curVictim->isEffectivelyDead() && railgunAmount-- == 0)
+			if(checkForRailgunOnly && testValidForAttack(curVictim, getAntiMask(), INVALID_ID, source->getRelationship(curVictim)) && railgunAmount-- == 0)
 				break;
 
 			DamageInfo damageInfo;
@@ -2776,7 +2796,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				m_shrapnelBonusWeapon &&
 				m_shrapnelBonusCount > 0 &&
 				curVictimDistSqr < CLOSE_ENOUGH &&
-				testValidForShrapnel(curVictim, getAntiMask(), primaryVictim ? primaryVictim->getID() : INVALID_ID, source->getRelationship(curVictim))
+				testValidForAttack(curVictim, getAntiMask(), primaryVictim ? primaryVictim->getID() : INVALID_ID, source->getRelationship(curVictim))
 			  )
 			{
 				doShrapnel = TRUE;

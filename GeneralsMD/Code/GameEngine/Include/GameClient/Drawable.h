@@ -507,6 +507,7 @@ public:
 	Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const;
 
 	Bool getProjectileLaunchOffset(WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos = NULL) const;
+	Bool getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
 
 	/**
 		This call says, "I want the current animation (if any) to take n frames to complete a single cycle".

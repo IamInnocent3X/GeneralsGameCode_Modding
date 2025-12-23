@@ -680,10 +680,14 @@ public:
 	Bool getRailgunPiercesBehind() const { return m_railgunPiercesBehind; }
 	Int getRailgunPierceAmount() const { return m_railgunPierceAmount; }
 	Real getRailgunRadius() const { return m_railgunRadius; }
+	Real getRailgunInfantryRadius() const { return m_railgunInfantryRadius; }
 	Real getRailgunExtraDistance() const { return m_railgunExtraDistance; }
+	Real getRailgunMaxDistance() const { return m_railgunMaxDistance; }
 	DamageType getRailgunDamageType() const { return m_railgunDamageType; }
 	DeathType getRailgunDeathType() const { return m_railgunDeathType; }
 	DamageType getRailgunDamageFXOverride() const { return m_railgunDamageFXOverride; }
+	const FXList* getRailgunFX(VeterancyLevel v) const { return m_railgunFXs[v]; }
+	const ObjectCreationList* getRailgunOCL(VeterancyLevel v) const { return m_railgunOCLs[v]; }
 
 	UnsignedInt getInvulnerabilityDuration() const { return m_invulnerabilityDuration; }
 
@@ -718,7 +722,7 @@ public:
 protected:
 
 	// actually deal out the damage.
-	void dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation) const;
+	void dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation, WeaponSlotType wslot = PRIMARY_WEAPON, Int specificBarrelToUse = 0) const;
 	void trimOldHistoricDamage() const;
 	void trimTriggeredHistoricDamage() const;
 	void processHistoricDamage(const Object* source, const Coord3D* pos) const;
@@ -946,10 +950,15 @@ private:
 	Bool m_railgunPiercesBehind;
 	Int m_railgunPierceAmount;
 	Real m_railgunRadius;
+	Real m_railgunInfantryRadius;
 	Real m_railgunExtraDistance;
+	Real m_railgunMaxDistance;
 	DamageType m_railgunDamageType;
 	DeathType m_railgunDeathType;
 	DamageType m_railgunDamageFXOverride;
+	AsciiString m_railgunOCLNames[LEVEL_COUNT];
+	const FXList* m_railgunFXs[LEVEL_COUNT];
+	const ObjectCreationList* m_railgunOCLs[LEVEL_COUNT];
 
 	Bool m_weaponBypassLineOfSight;
 	Bool m_weaponIgnoresObstacles;

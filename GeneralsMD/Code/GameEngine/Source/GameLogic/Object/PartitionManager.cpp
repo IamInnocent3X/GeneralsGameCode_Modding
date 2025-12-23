@@ -77,10 +77,12 @@
 #include "GameLogic/Squad.h"
 #include "GameLogic/GhostObject.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/ObjectCreationList.h"
 
 #include "GameClient/Line2D.h"
 #include "GameClient/ControlBar.h"
 #include "GameClient/InGameUI.h"
+#include "GameClient/FXList.h"
 
 #ifdef RTS_DEBUG
 //#include "GameClient/InGameUI.h"	// for debugHints
@@ -4059,6 +4061,35 @@ SimpleObjectIterator* PartitionManager::iteratePotentialCollisions(
 };*/
 
 
+static Bool testValidForRailgunCheck(const Object* obj)
+{
+	// Sanity
+	if( !obj )
+		return FALSE;
+
+	// Object is not attackable, don't do anything
+	if( obj->isKindOf( KINDOF_UNATTACKABLE ) )
+		return FALSE;
+
+	// Object is okay for railgun target
+	if( obj->isKindOf(KINDOF_VEHICLE) ||
+		obj->isKindOf(KINDOF_AIRCRAFT) ||
+		obj->isKindOf(KINDOF_STRUCTURE) ||
+		obj->isKindOf(KINDOF_INFANTRY) ||
+		obj->isKindOf(KINDOF_MINE) ||
+		obj->isKindOf(KINDOF_SHRUBBERY) ||
+		obj->isKindOf(KINDOF_PARACHUTE) ||
+		obj->isKindOf(KINDOF_SMALL_MISSILE) ||
+		obj->isKindOf(KINDOF_BALLISTIC_MISSILE) ||
+		obj->isKindOf(KINDOF_PROJECTILE) ||
+		obj->isKindOf(KINDOF_CLEANUP_HAZARD)
+	  )
+	  return TRUE;
+
+	return FALSE;
+}
+
+
 //-----------------------------------------------------------------------------
 // Uses Bresenham line algorithm from www.gamedev.net.
 Int PartitionManager::getObjectsAlongLine(
@@ -4066,6 +4097,9 @@ Int PartitionManager::getObjectsAlongLine(
 	const Coord3D& pos,
 	const Coord3D& posOther,
 	Real radius,
+	Real infantryRadius,
+	const FXList* railgunfx,
+	const ObjectCreationList *railgunocl,
 	DistanceCalculationType dc,
 	PartitionFilter **filters,
 	SimpleObjectIterator *iterArg,
@@ -4136,7 +4170,32 @@ Int PartitionManager::getObjectsAlongLine(
 		PartitionCell* cell = ThePartitionManager->getCellAt(x, y);	// might be null if off the edge
 		DEBUG_ASSERTCRASH(cell != NULL, ("off the map"));
 		if (cell)
-			checkObjectsAlongLine(cell, source, pos, posOther, radius, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+		{
+			Real posX, posY;
+			cell->getCellCenterPos(posX, posY);
+
+			Real dx, dy;
+			dx = posX - pos.x;
+			dy = posY - pos.y;
+			Real distance = sqrt(dx*dx + dy*dy);
+
+			Real angle = source->getOrientation();
+			Coord3D currentPos;
+			currentPos.x = pos.x + Cos(angle) * distance;
+			currentPos.y = pos.y + Sin(angle) * distance;
+			currentPos.z = pos.z;
+			
+			checkObjectsAlongLine(x, y, source, pos, currentPos, posOther, radius, infantryRadius, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+
+			if( railgunfx )
+				FXList::doFXPos(railgunfx, &currentPos);
+			if( railgunocl )
+			{
+				Object *obj = ObjectCreationList::create( railgunocl, source, &currentPos, NULL, angle);
+				if(obj && !testValidForRailgunCheck(obj))
+					obj->setIgnoreRailgunCheck();
+			}
+		}
 
 		num += numadd;										// Increase the numerator by the top of the fraction
 		if (num >= den)										// Check if numerator >= denominator
@@ -4154,11 +4213,14 @@ Int PartitionManager::getObjectsAlongLine(
 
 //-----------------------------------------------------------------------------
 Int PartitionManager::checkObjectsAlongLine(
-	PartitionCell* cell,
+	Int cellX,
+	Int cellY,
 	const Object* source,
 	const Coord3D& startingPos,
+	const Coord3D& currentPos,
 	const Coord3D& endPos,
 	Real radius,
+	Real infantryRadius,
 	DistanceCalculationType dc,
 	PartitionFilter **filters,
 	SimpleObjectIterator *iterArg,
@@ -4168,15 +4230,12 @@ Int PartitionManager::checkObjectsAlongLine(
 )
 {
 	//IterData* data = (IterData*)userData;
-	Real dirX, dirY;
-	Int cellCenterX = cell->getCellX();
-	Int cellCenterY = cell->getCellY();
-	cell->getCellCenterPos(dirX, dirY);
+	Int cellCenterX = cellX;
+	Int cellCenterY = cellY;
 
-	Coord3D currentPos;
-	currentPos = startingPos;
-	currentPos.x = dirX;
-	currentPos.y = dirY;
+	Real angle = source->getOrientation();
+	//const Coord3D* faceDir = source->getUnitDirectionVector2D();
+
 		//USE_PERF_TIMER(getClosestObjects)
 
 #ifdef DUMP_PERF_STATS
@@ -4200,7 +4259,7 @@ Int PartitionManager::checkObjectsAlongLine(
 #endif
 
 	Real closestDistSqr = radius * radius;	// if it's not closer than this, we shouldn't consider it anyway...
-	Real checkRadius = max(radius, 20.0f);
+	//Real checkRadius = max(radius, 20.0f);
 	Coord3D closestVec;
 #if !RETAIL_COMPATIBLE_CRC // TheSuperHackers @info This should be safe to initialize because it is unused, but let us be extra safe for now.
 	closestVec.x = radius;
@@ -4211,12 +4270,10 @@ Int PartitionManager::checkObjectsAlongLine(
 #ifdef FASTER_GCO
 
 	Int maxRadius = m_maxGcoRadius;
-	Int allocatedRadius;
 	if (radius < HUGE_DIST)
 	{
 		// don't go outwards any farther than necessary.
-		allocatedRadius = minInt(m_maxGcoRadius, worldToCellDist(radius));
-		maxRadius = maxInt(allocatedRadius, worldToCellDist(checkRadius));
+		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(radius));
 	}
 #if defined(INTENSE_DEBUG)
 	/*
@@ -4225,7 +4282,6 @@ Int PartitionManager::checkObjectsAlongLine(
 	*/
 	Int maxRadiusLimit = maxRadius + 3;
 	if (maxRadiusLimit > m_maxGcoRadius) maxRadiusLimit = m_maxGcoRadius;
-	Int allocatedRadius = maxRadiusLimit;
 #else
 	Int maxRadiusLimit = maxRadius;
 #endif
@@ -4265,32 +4321,48 @@ Int PartitionManager::checkObjectsAlongLine(
 					continue;
 				thisMod->friend_setDoneFlag(theIterFlag);
 
-				// Have a different set of rules for checking infantry
-				if (!thisObj->isKindOf(KINDOF_INFANTRY) && curRadius > allocatedRadius)
+				// Skip object if not valid for railgun target while spawned by ocls
+				if(thisObj->getIgnoreRailgunCheck())
 					continue;
 
-				if(!checkBehind || curRadius > allocatedRadius)
+				// Skip object if it is behind the starting point direction vector
+				Coord3D objPos = *thisObj->getPosition();
+				//Real relAngle = getRelativeAngle2D(source, thisObj) * RAD_TO_DEGREE_FACTOR;
+	
+				// Modified from Locomotor::rotateObjAroundLocoPivot
+				Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
+				Real relAngle = stdAngleDiff(desiredAngle, angle);
+
+				// We don't hit objects that are behind us;
+				if(fabs(relAngle) > 1.0f)
+					continue;
+
+				if(!checkBehind)
 				{
-					// Skip object if different direction vector
-					Coord3D objPos = *thisObj->getPosition();
-					if(endPos.x >= startingPos.x && endPos.x <= objPos.x ||
-					   endPos.x <= startingPos.x && endPos.x >= objPos.x ||
-					   endPos.y >= startingPos.y && endPos.y <= objPos.y ||
-					   endPos.y <= startingPos.y && endPos.y >= objPos.y
-					)
+					Real destAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x);
+					Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
+					Real checkAngle = stdAngleDiff(currAngle, destAngle);
+					// Skip object if hit directional threshold
+					if(fabs(checkAngle) > 1.0f)
 						continue;
 				}
 
-				Bool setContinue = FALSE;
+				Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : checkDistSqr;
 				Real thisDistSqr;
 				Coord3D distVec;
-				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
-					setContinue = true;
+				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+					continue;
 
-				if( setContinue )
-				{
-					if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+				//if( setContinue )
+				/*{
+					//if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+					{
+						DEBUG_LOG(("Skipped from Partition Distance Check. Object: %s. ObjectID: %d.", thisObj->getTemplate()->getName().str(), thisObj->getID()));
+						DEBUG_LOG(("Distance Sqr: %f", thisDistSqr));
+						DEBUG_LOG(("Source Pos: X: %f Y: %f Z: %f", currentPos.x, currentPos.y, currentPos.z));
+						DEBUG_LOG(("Object Pos: X: %f Y: %f Z: %f", objPos.x, objPos.y, objPos.z));
 						continue;
+					}
 
 					// Have a different set of rules for checking infantry
 					//if ((*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
@@ -4300,17 +4372,18 @@ Int PartitionManager::checkObjectsAlongLine(
 						//checkPos.z = source->getPosition()->z;
 						//currDir.sub( &checkPos );
 
-						Coord3D objPos = *thisObj->getPosition();
-						Real dx, dy;
-						dx = currentPos.x - objPos.x;
-						dy = currentPos.y - objPos.y;
-
 						Real dx2, dy2;
-						dx2 = startingPos.x - objPos.x;
-						dy2 = startingPos.y - objPos.y;
+						dx2 = currentPos.x - objPos.x;
+						dy2 = currentPos.y - objPos.y;
+
+						Real dx3, dy3;
+						dx3 = startingPos.x - objPos.x;
+						dy3 = startingPos.y - objPos.y;
 
 						Real fakeLogFactor = 16.0f;
-						if(radius >= 1.0)
+						if(radius >= 3.35)
+							fakeLogFactor = 40.0f;
+						else if(radius > 1.0)
 							fakeLogFactor = min(40.0f, max(16.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1))));
 						Real checkDistSqr = max(10.0f, closestDistSqr);
 						checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
@@ -4319,12 +4392,12 @@ Int PartitionManager::checkObjectsAlongLine(
 						Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
 						Real angleThreshold = max(radius * 0.5f, 0.25f);
 
-						if((dx*dx + dy*dy) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx2*dx2 + dy2*dy2) > 5000.0f))
+						if((dx2*dx2 + dy2*dy2) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx3*dx3 + dy3*dy3) > 5000.0f))
 						{
 							continue;
 						}
 					}
-				}
+				}*/
 
 				distVec.set(thisObj->getPosition());
 				distVec.sub(&startingPos);
@@ -4387,32 +4460,66 @@ Int PartitionManager::checkObjectsAlongLine(
 
 			thisMod->friend_setDoneFlag(theIterFlag);
 
+			// Skip object if it is behind the starting point direction vector
+			Coord3D objPos = *thisObj->getPosition();
+			//Real relAngle = getRelativeAngle2D(source, thisObj) * RAD_TO_DEGREE_FACTOR;
+
+			// Modified from Locomotor::rotateObjAroundLocoPivot
+			Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
+			Real relAngle = stdAngleDiff(desiredAngle, angle);
+
+			// We don't hit objects that are behind us;
+			if(fabs(relAngle) > 1.0f)
+				continue;
+
+			if(!checkBehind)
+			{
+				Real destAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x);
+				Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
+				Real checkAngle = stdAngleDiff(currAngle, destAngle);
+				// Skip object if hit directional threshold
+				if(fabs(checkAngle) > 1.0f)
+					continue;
+			}
+
 			// hmm, ok, calc the distance.
-			Bool setContinue = FALSE;
+			Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : checkDistSqr;
 			Real thisDistSqr;
 			Coord3D distVec;
-			if (!(*distProc)(&startingPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
-				setContinue = true;
+			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
+				continue;
 
-			if( setContinue )
-			{
-				if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+			//if( setContinue )
+			/*{
+				//if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+				{
+					DEBUG_LOG(("Skipped from Partition Distance Check. Object: %s. ObjectID: %d.", thisObj->getTemplate()->getName().str(), thisObj->getID()));
+					DEBUG_LOG(("Distance Sqr: %f", thisDistSqr));
+					DEBUG_LOG(("Source Pos: X: %f Y: %f Z: %f", currentPos.x, currentPos.y, currentPos.z));
+					DEBUG_LOG(("Object Pos: X: %f Y: %f Z: %f", objPos.x, objPos.y, objPos.z));
 					continue;
+				}
 
 				// Have a different set of rules for checking infantry
 				//if ((*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 				{
-					Coord3D objPos = *thisObj->getPosition();
-					Real dx, dy;
-					dx = currentPos.x - objPos.x;
-					dy = currentPos.y - objPos.y;
+					//Coord3D checkPos = currentPos;
+					//Coord3D currDir = *thisObj->getPosition();
+					//checkPos.z = source->getPosition()->z;
+					//currDir.sub( &checkPos );
 
 					Real dx2, dy2;
-					dx2 = startingPos.x - objPos.x;
-					dy2 = startingPos.y - objPos.y;
+					dx2 = currentPos.x - objPos.x;
+					dy2 = currentPos.y - objPos.y;
+
+					Real dx3, dy3;
+					dx3 = startingPos.x - objPos.x;
+					dy3 = startingPos.y - objPos.y;
 
 					Real fakeLogFactor = 16.0f;
-					if(radius >= 1.0)
+					if(radius >= 3.35)
+						fakeLogFactor = 40.0f;
+					else if(radius > 1.0)
 						fakeLogFactor = min(40.0f, max(16.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1))));
 					Real checkDistSqr = max(10.0f, closestDistSqr);
 					checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
@@ -4421,12 +4528,12 @@ Int PartitionManager::checkObjectsAlongLine(
 					Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
 					Real angleThreshold = max(radius * 0.5f, 0.25f);
 
-					if((dx*dx + dy*dy) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx2*dx2 + dy2*dy2) > 5000.0f))
+					if((dx2*dx2 + dy2*dy2) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx3*dx3 + dy3*dy3) > 5000.0f))
 					{
 						continue;
 					}
 				}
-			}
+			}*/
 
 			// check the filters now
 			if (!filtersAllow(filters, thisObj))
@@ -4476,6 +4583,9 @@ SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
 	const Coord3D *pos,
 	const Coord3D *posOther,
 	Real radius,
+	Real infantryRadius,
+	const FXList* railgunfx,
+	const ObjectCreationList *railgunocl,
 	DistanceCalculationType dc,
 	Bool checkBehind,
 	PartitionFilter **filters,
@@ -4493,7 +4603,7 @@ SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
 	data.filters = filters;
 	data.iterArg = iter;*/
 
-	getObjectsAlongLine(source, *pos, *posOther, radius, dc, filters, iter, checkBehind, NULL, NULL);
+	getObjectsAlongLine(source, *pos, *posOther, radius, infantryRadius, railgunfx, railgunocl, dc, filters, iter, checkBehind, NULL, NULL);
 
 	//iterateCellsAlongLine(*pos, *posOther, (*CellAlongLineProc)checkObjectsAlongLine, &data);
 

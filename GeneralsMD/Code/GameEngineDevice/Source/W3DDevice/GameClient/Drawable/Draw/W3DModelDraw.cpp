@@ -3478,6 +3478,59 @@ Bool W3DModelDraw::getProjectileLaunchOffset(
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool W3DModelDraw::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
+{
+	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse should now always be explicit"));
+
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::BARRELS_VALID))
+		return false;
+
+	const ModelConditionInfo::WeaponBarrelInfoVec& wbvec = m_curState->m_weaponBarrelInfoVec[wslot];
+	if (wbvec.empty())
+	{
+		// don't do this... some other module of our drawable may have handled it.
+		// just return false and let the caller sort it out.
+		return false;
+	}
+
+	if (specificBarrelToUse < 0 || specificBarrelToUse > wbvec.size())
+		specificBarrelToUse = 0;
+
+	const ModelConditionInfo::WeaponBarrelInfo& info = wbvec[specificBarrelToUse];
+
+	if (info.m_fxBone && m_renderObject)
+	{
+		const Object *logicObject = getDrawable()->getObject();// This is slow, so store it
+		if( ! m_renderObject->Is_Hidden() || (logicObject == NULL) )
+		{
+			// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
+			Matrix3D mtx = m_renderObject->Get_Bone_Transform(info.m_fxBone);
+			pos->x = mtx.Get_X_Translation();
+			pos->y = mtx.Get_Y_Translation();
+			pos->z = mtx.Get_Z_Translation();
+		}
+		else
+		{
+			// Else, I should just use my logic position for the effect placement.
+			// Things in transports regularly fire from inside (hidden), so this is not weird.
+			Coord3D logicPos = *(logicObject->getPosition());
+			pos->x = logicPos.x;
+			pos->y = logicPos.y;
+			pos->z = logicPos.z;
+			/** @todo Once Firepoint bones are actually implemented, this matrix will become correct.
+			// Unless of course they decide to not have the tracers come out of the windows, but rather go towards the target.
+			// In that case, tracers will have to be rewritten to be "point towards secondary" instead of
+			// "point straight ahead" which assumes we are facing the target.
+			*/
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
 Int W3DModelDraw::getPristineBonePositionsForConditionState(
 	const ModelConditionFlags& condition,
 	const char* boneNamePrefix,

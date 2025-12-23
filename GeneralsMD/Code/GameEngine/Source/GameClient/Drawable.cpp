@@ -753,6 +753,18 @@ Bool Drawable::getProjectileLaunchOffset(WeaponSlotType wslot, Int specificBarre
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool Drawable::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
+{
+	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		const ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di && di->getWeaponFireOffset(wslot, specificBarrelToUse, pos))
+			return true;
+	}
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
 void Drawable::setAnimationLoopDuration(UnsignedInt numFrames)
 {
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)

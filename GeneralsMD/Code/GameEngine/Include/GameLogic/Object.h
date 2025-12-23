@@ -879,6 +879,9 @@ public:
 	const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
 	const Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
 
+	Bool getIgnoreRailgunCheck() const { return m_ignoreRailgunCheck; }
+	void setIgnoreRailgunCheck() { m_ignoreRailgunCheck = TRUE; }
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;
@@ -1146,6 +1149,7 @@ private:
 	Bool											m_disabledPowerFromCommand;
 	Bool											m_hasDefaultLineOfSightEnabled;
 	Bool											m_ignoresObstacleForViewBlock;
+	Bool											m_ignoreRailgunCheck;
 
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;
