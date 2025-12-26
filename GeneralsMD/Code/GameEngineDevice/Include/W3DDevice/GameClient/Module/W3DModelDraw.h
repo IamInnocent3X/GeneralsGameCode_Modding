@@ -384,6 +384,9 @@ public:
 	virtual Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const;
 	virtual Bool getProjectileLaunchOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos = NULL) const;
 	virtual Bool getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	virtual Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch);
+	virtual void setNeedUpdateTurretPositioning(Bool set);
+	virtual void setCanDoFXWhileHidden(Bool set);
 	virtual void updateProjectileClipStatus( UnsignedInt shotsRemaining, UnsignedInt maxShots, WeaponSlotType slot ); ///< This will do the show/hide work if ProjectileBoneFeedbackEnabled is set.
 	virtual void updateDrawModuleSupplyStatus( Int maxSupply, Int currentSupply ); ///< This will do visual feedback on Supplies carried
 	virtual void notifyDrawModuleDependencyCleared( ){}///< if you were waiting for something before you drew, it's ready now
@@ -393,6 +396,7 @@ public:
 	virtual void replaceIndicatorColor(Color color);
 	virtual Bool handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius);
 	virtual Bool handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius);
+	virtual Bool handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarrelToUse, Bool checkHandled);
 	virtual Int getBarrelCount(WeaponSlotType wslot) const;
 	virtual void setSelectable(Bool selectable); // Change the selectability of the model.
 
@@ -522,6 +526,11 @@ private:
 	Int														m_animationMode;
 	Bool													m_isFirstDrawModule;
 	AsciiString												m_modelName;
+
+	Bool													m_canDoFXWhileHidden;
+	Bool													m_needUpdateTurretPosition;
+	Bool													m_doHandleRecoil;
+	Bool													m_lastDoHandleRecoil;
 
 	void adjustAnimation(const ModelConditionInfo* prevState, Real prevAnimFraction);
 	Real getCurrentAnimFraction() const;

@@ -78,6 +78,14 @@ static const char *const TheStealthLevelNames[] =
 	NULL
 };
 #endif
+typedef std::pair<Int, Coord3D> BarrelCoordType;
+typedef std::vector<BarrelCoordType> BarrelCoordVec;
+struct FiringPosStruct
+{
+	Int weaponSlot;
+	Int barrelCount;
+	BarrelCoordVec posVec;
+};
 
 #define INVALID_OPACITY -1.0f
 
@@ -115,6 +123,8 @@ public:
 	Bool					m_disguiseRetainAfterDetected;
 	Bool					m_preservePendingCommandWhenDetected;
 	Bool					m_dontFlashWhenFlickering;
+	Bool					m_disguiseUseOriginalFiringOffset;
+	Bool					m_isSimpleDisguise;
   std::vector<AsciiString> m_requiredCustomStatus;
   std::vector<AsciiString> m_forbiddenCustomStatus;
 
@@ -158,6 +168,7 @@ public:
   EvaMessage getEnemyDetectionEvaEvent() const { return getStealthUpdateModuleData()->m_enemyDetectionEvaEvent; }
   EvaMessage getOwnDetectionEvaEvent() const { return getStealthUpdateModuleData()->m_ownDetectionEvaEvent; }
 	Bool getOrderIdleEnemiesToAttackMeUponReveal() const { return getStealthUpdateModuleData()->m_orderIdleEnemiesToAttackMeUponReveal; }
+	Bool isSimpleDisguise() const { return isDisguised() && getStealthUpdateModuleData()->m_isSimpleDisguise; }
 	Object* calcStealthOwner(); //Is it me that can stealth or is it my rider?
 	Bool allowedToStealth( Object *stealthOwner ) const;
   void receiveGrant( Bool active = TRUE, UnsignedInt frames = 0 );
@@ -171,6 +182,12 @@ public:
 
 	void refreshUpdate();
 
+	Bool isDisguisedAndCheckIfNeedOffset() const;
+	Bool getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	Int getBarrelCountWhileDisguised(WeaponSlotType wslot) const;
+
+	Drawable *getDrawableTemplateWhileDisguised() const;
+
 protected:
 
 	StealthLookType calcStealthedStatusForPlayer(const Object* obj, const Player* player);
@@ -180,6 +197,7 @@ protected:
 
 	void changeVisualDisguise();
 	void changeVisualDisguiseFlicker(Bool doFlick);
+	void SetFiringOffsets(Bool setDisguised);
 
 	UpdateSleepTime calcSleepTime() const;
 
@@ -229,4 +247,9 @@ private:
 
 	Bool							m_updatePulse;						//Saves update for going extra checks by indicating that it only checks for pulse phase
 	mutable Bool					m_updatePulseOnly;					//See above
+
+	std::vector<FiringPosStruct>	m_originalDrawableFiringOffsets;	//For storing firing positions for disguised Objects
+	std::vector<FiringPosStruct>	m_disguisedDrawableFiringOffsets;	//See above
+	Drawable						*m_disguisedDrawableTemplate;		//See above
+	Drawable						*m_originalDrawableTemplate;		//See above
 };

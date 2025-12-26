@@ -3222,13 +3222,32 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 			break;
 	}
 
+	Object *obj = getObject();
 	if(parms->m_cmdSource != CMD_FROM_AI)
 	{
-		getObject()->removeMeFromAssaultTransport();
-		getObject()->clearDelayedCommand();
-		getObject()->doStealthUpdate();
-		getObject()->doSlavedUpdate(TRUE);
+		obj->removeMeFromAssaultTransport();
+		obj->clearDelayedCommand();
+		obj->doStealthUpdate();
+		obj->doSlavedUpdate(TRUE);
+		if(TheGlobalData->m_dynamicTargeting)
+		{
+			Bool resetTargetCoords = TRUE;
+			if(parms->m_cmd == AI_ATTACK_OBJECT || parms->m_cmd == AICMD_FORCE_ATTACK_OBJECT)
+			{
+				if(parms->m_obj && obj->getLastVictimID() == parms->m_obj->getID())
+				{
+					resetTargetCoords = FALSE;
+				}
+			}
+			if(resetTargetCoords)
+			{
+				Coord3D zeroCoord;
+				zeroCoord.zero();
+				obj->setCurrentTargetCoord(&zeroCoord);
+			}
+		}
 	}
+	obj->setNeedUpdateTurretPositioning(TRUE);
 }
 
 

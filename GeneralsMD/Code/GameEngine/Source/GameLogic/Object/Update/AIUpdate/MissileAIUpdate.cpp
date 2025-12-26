@@ -488,7 +488,7 @@ void MissileAIUpdate::detonate()
 	if (m_detonationWeaponTmpl)
 	{
 
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, !m_noDamage);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, &m_extraBonusCustomFlags, !m_noDamage);
 
 		if( m_detonationWeaponTmpl->getDieOnDetonate() )
 		{
@@ -1184,8 +1184,7 @@ void MissileAIUpdate::airborneTargetGone()
 		}
 
 		WeaponBonus bonus;
-		ObjectCustomStatusType dummy;
-		m_detonationWeaponTmpl->private_computeBonus(obj, 0, bonus, dummy);
+		m_detonationWeaponTmpl->private_computeBonus(obj, 0, bonus);
 
 		PartitionFilterRelationship relationship( source, PartitionFilterRelationship::ALLOW_ENEMIES);
 		PartitionFilterSameMapStatus filterMapStatus(obj);

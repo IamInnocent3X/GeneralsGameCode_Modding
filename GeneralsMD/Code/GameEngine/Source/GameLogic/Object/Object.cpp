@@ -671,6 +671,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_checkSlowDeathBehavior = TRUE; // True for checking over once
 	m_noFloatUpdate = FALSE;
 	m_noDemoTrapUpdate = FALSE;
+	m_turretNeedPositioning = FALSE;
 
 	m_selectionBoundsTo.clear();
 
@@ -679,6 +680,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_hasDefaultLineOfSightEnabled = TRUE;
 	m_ignoresObstacleForViewBlock = FALSE;
 	m_ignoreRailgunCheck = FALSE;
+
+	m_currentTargetCoords.zero();
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -1847,6 +1850,15 @@ WeaponSlotType Object::getCurrentWeaponSlot() const
 		return PRIMARY_WEAPON;
 
 	return m_weaponSet.getCurWeaponSlot();
+}
+
+//=============================================================================
+Int Object::getCurrentSpecificBarrel() const
+{
+	if (!m_weaponSet.hasAnyWeapon())
+		return 0;
+
+	return m_weaponSet.getCurWeapon()->getCurrentBarrel();
 }
 
 //=============================================================================
@@ -5523,6 +5535,10 @@ void Object::xfer( Xfer *xfer )
 	xfer->xferBool ( &m_ignoresObstacleForViewBlock );
 
 	xfer->xferBool ( &m_ignoreRailgunCheck );
+
+	xfer->xferCoord3D ( &m_currentTargetCoords );
+
+	xfer->xferBool( &m_turretNeedPositioning );
 
 	// Entered & exited housekeeping.
 	Int i;
@@ -9326,6 +9342,16 @@ void Object::setSelectablesBoundTo(const std::vector<ObjectID>& IDs)
 		{
 			m_selectionBoundsTo.push_back(*it);
 		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setNeedUpdateTurretPositioning(Bool set)
+{
+	if(TheGlobalData->m_useEfficientDrawableScheme && m_turretNeedPositioning != set && getDrawable())
+	{
+		m_turretNeedPositioning = set;
+		getDrawable()->setNeedUpdateTurretPositioning(set);
 	}
 }
 

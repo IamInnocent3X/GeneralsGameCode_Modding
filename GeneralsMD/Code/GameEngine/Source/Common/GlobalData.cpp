@@ -688,6 +688,8 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "HideCashFromShowingToEnemiesInvisibleUnitsOnly",	INI::parseBool, NULL, offsetof(GlobalData, m_hideCashTextFromEnemiesInvisibleUnitsOnly) },
 	{ "FixHulksFreezingAboveTerrain",	INI::parseBool, NULL, offsetof(GlobalData, m_fixHulksFreezingAboveTerrain) },
 
+	{ "UseDynamicTargetingForWeapons",	INI::parseBool, NULL, offsetof(GlobalData, m_dynamicTargeting) },
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1272,6 +1274,7 @@ GlobalData::GlobalData()
 	m_hideCashTextFromEnemies = FALSE;
 	m_hideCashTextFromEnemiesInvisibleUnitsOnly = FALSE;
 	m_fixHulksFreezingAboveTerrain = FALSE;
+	m_dynamicTargeting = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

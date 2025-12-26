@@ -45,6 +45,7 @@
 #include "GameLogic/Module/LaserUpdate.h"
 #include "GameLogic/Module/LifetimeUpdate.h"  // for beam lifetime
 #include "GameLogic/PartitionManager.h"
+#include "GameLogic/Weapon.h"
 #include "WWMath/vector3.h"
 
 #ifdef RTS_INTERNAL
@@ -118,6 +119,8 @@ LaserUpdate::LaserUpdate( Thing *thing, const ModuleData* moduleData ) : ClientU
 
 	m_hexColor = 0;
 
+	m_parentObjID = INVALID_ID;
+
 	// m_isMultiDraw = FALSE;
 } 
 
@@ -144,6 +147,27 @@ void LaserUpdate::updateStartPos()
 	const Drawable *parentDrawable = TheGameClient->findDrawableByID(m_parentID);
 	if( parentDrawable == NULL )
 		return;// Can't update if no one to ask
+
+	if( m_parentObjID != INVALID_ID )
+	{
+		Object *parent = TheGameLogic->findObjectByID(m_parentObjID);
+		if(parent)
+		{
+			//StealthUpdate *stealth = parent->getStealth();
+			//Bool isDisguisedAndCheckIfNeedOffset = stealth && stealth->isDisguisedAndCheckIfNeedOffset();
+			//if(isDisguisedAndCheckIfNeedOffset && parentDrawable)
+			//{
+				// Un-const it
+				Drawable *parentDraw = TheGameClient->findDrawableByID(m_parentID);
+				Weapon::setFirePositionForDrawable(parent, parentDraw, parent->getCurrentWeaponSlot(), parent->getCurrentSpecificBarrel());
+				parentDraw->setPosition( parent->getPosition() );
+				parentDraw->setOrientation( parent->getOrientation() );
+				parentDraw->updateDrawable();
+				if(TheGlobalData->m_useEfficientDrawableScheme)
+					TheGameClient->informClientNewDrawable(parentDraw);
+			//}
+		}
+	}
 
 	// Avoid teleporting units having their laser dragged with them
 	if (parentDrawable->isKindOf(KINDOF_TELEPORTER) && !(oldStartPos.x == 0 && oldStartPos.y == 0 && oldStartPos.z == 0)) {
@@ -390,9 +414,17 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 	//Record IDs if we have them, then figure out starting points
 	if( parent )
 	{
+		StealthUpdate *stealth = parent->getStealth();
+		Bool isDisguisedAndCheckIfNeedOffset = stealth && stealth->isDisguisedAndCheckIfNeedOffset();
+		Drawable *parentDraw = isDisguisedAndCheckIfNeedOffset ? stealth->getDrawableTemplateWhileDisguised() : parent->getDrawable();
+		if(isDisguisedAndCheckIfNeedOffset && parentDraw)
+		{
+			m_parentObjID = parent->getID(); // Only for such specific cases we get the parent ID
+		}
+		
 		// If a source object, use it
-		if( parent->getDrawable() )
-			m_parentID = parent->getDrawable()->getID();
+		if( parentDraw )
+			m_parentID = parentDraw->getID();
 
 		updateStartPos();
 	}
@@ -759,6 +791,7 @@ void LaserUpdate::xfer( Xfer *xfer )
 
 	xfer->xferDrawableID(&m_parentID);
 	xfer->xferDrawableID(&m_targetID);
+	xfer->xferObjectID(&m_parentObjID);
 
 	xfer->xferAsciiString(&m_parentBoneName);
 

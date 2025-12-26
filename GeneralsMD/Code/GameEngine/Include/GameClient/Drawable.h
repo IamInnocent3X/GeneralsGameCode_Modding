@@ -471,6 +471,14 @@ public:
 		const Coord3D* victimPos,
 		Real damageRadius
 	);
+	Bool handleWeaponFireRecoil(
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		Real recoilAmount,
+		Real recoilAngle,
+		Bool checkHandled,
+		Bool isPreAttack
+	);
 
 	Int getBarrelCount(WeaponSlotType wslot) const;
 
@@ -508,6 +516,9 @@ public:
 
 	Bool getProjectileLaunchOffset(WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos = NULL) const;
 	Bool getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch);
+	void setNeedUpdateTurretPositioning(Bool set);
+	void setCanDoFXWhileHidden(Bool set);
 
 	/**
 		This call says, "I want the current animation (if any) to take n frames to complete a single cycle".

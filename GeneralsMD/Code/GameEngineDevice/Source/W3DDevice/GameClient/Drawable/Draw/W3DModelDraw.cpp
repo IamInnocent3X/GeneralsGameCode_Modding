@@ -1779,6 +1779,10 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_modelName = NULL;
 	m_whichAnimInCurState = -1;
 	m_nextState = NULL;
+	m_needUpdateTurretPosition = TRUE;
+	m_canDoFXWhileHidden = FALSE;
+	m_doHandleRecoil = FALSE;
+	m_lastDoHandleRecoil = FALSE;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
 	for (i = 0; i < WEAPONSLOT_COUNT; ++i)
 	{
@@ -2486,7 +2490,7 @@ void W3DModelDraw::stopClientParticleSystems()
 void W3DModelDraw::handleClientTurretPositioning()
 {
 
-	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID) || !m_needUpdateTurretPosition)
 		return;
 
 	for (int tslot = 0; tslot < MAX_TURRETS; ++tslot)
@@ -2559,6 +2563,7 @@ void W3DModelDraw::handleClientTurretPositioning()
 	but...
 
 	@todo fix me someday (srj)
+	// IamInnocent = Done for the two functions above
 */
 void W3DModelDraw::handleClientRecoil()
 {
@@ -2568,6 +2573,10 @@ void W3DModelDraw::handleClientRecoil()
 		return;
 	}
 
+	if(!m_doHandleRecoil && TheGlobalData->m_useEfficientDrawableScheme)
+		return;
+
+	m_doHandleRecoil = FALSE;
 	// do recoil, if any
 	for (int wslot = 0; wslot < WEAPONSLOT_COUNT; ++wslot)
 	{
@@ -2611,6 +2620,7 @@ void W3DModelDraw::handleClientRecoil()
 						{
 							recoils[i].m_state = WeaponRecoilInfo::SETTLE;
 						}
+						m_doHandleRecoil = TRUE; // There's more recoil, need to update
 						break;
 
 					case WeaponRecoilInfo::SETTLE:
@@ -3501,6 +3511,7 @@ Bool W3DModelDraw::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelT
 	if (info.m_fxBone && m_renderObject)
 	{
 		const Object *logicObject = getDrawable()->getObject();// This is slow, so store it
+		DEBUG_LOG(("Object Name: %s Template Name: %s", logicObject->getTemplate()->getName().str(), getDrawable()->getTemplate()->getName().str()));
 		if( ! m_renderObject->Is_Hidden() || (logicObject == NULL) )
 		{
 			// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
@@ -3528,6 +3539,85 @@ Bool W3DModelDraw::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelT
 	}
 
 	return false;
+}
+
+// IamInnocent - The function below is modified from handleClientTurretPositioning(), which is used by DoDrawModules() every frame.
+// If it affects GameLogic in anyway, this is screwed, though the position is used "after" current configuration
+// Which should be fully synchronized for every user.
+//-------------------------------------------------------------------------------------------------
+Bool W3DModelDraw::doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch)
+{
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
+		return false;
+
+	Drawable *draw = getDrawable();
+const ModelConditionInfo* stateToUse = findBestInfo(draw->getModelConditionFlags());
+	const W3DModelDrawModuleData* d = getW3DModelDrawModuleData();
+	//CRCDEBUG_LOG(("validateStuffs() from within W3DModelDraw::doTurretPositioning()"));
+	//DUMPREAL(getDrawable()->getScale());
+	//BONEPOS_LOG(("validateStuffs() from within W3DModelDraw::doTurretPositioning()"));
+	//BONEPOS_DUMPREAL(getDrawable()->getScale());
+	stateToUse->validateStuff(NULL, getDrawable()->getScale(), d->m_extraPublicBones);
+
+	DEBUG_ASSERTCRASH(stateToUse->m_transitionSig == NO_TRANSITION,
+		("It is never legal to doTurretPositioning from a Transition state (they vary on a per-client basis)... however, we can fix this (see srj)\n"));
+
+	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse should now always be explicit"));
+
+	const ModelConditionInfo::TurretInfo& tur = m_curState->m_turrets[tslot];
+	if (tur.m_turretAngleBone || tur.m_turretPitchBone)
+	{
+		/*const Object *obj = getDrawable()->getObject();
+		if (obj)
+		{
+			const AIUpdateInterface* ai = obj->getAIUpdateInterface();
+			if (ai)
+				ai->getTurretRotAndPitch((WhichTurretType)tslot, &turretAngle, &turretPitch);
+		}*/
+
+		// do turret, if any
+		if (tur.m_turretAngleBone != 0)
+		{
+			if (m_curState)
+				turretAngle += tur.m_turretArtAngle;
+			Matrix3D turretXfrm(1);
+			turretXfrm.Rotate_Z(turretAngle);
+			if (m_renderObject)
+			{
+				m_renderObject->Capture_Bone( tur.m_turretAngleBone );
+				m_renderObject->Control_Bone( tur.m_turretAngleBone, turretXfrm );
+				m_needUpdateTurretPosition = FALSE;
+			}
+		}
+
+		// do turret pitch, if any
+		if (tur.m_turretPitchBone != 0)
+		{
+			if (m_curState)
+				turretPitch += tur.m_turretArtPitch;
+			Matrix3D turretPitchXfrm(1);
+			turretPitchXfrm.Rotate_Y(-turretPitch);
+			if (m_renderObject)
+			{
+				m_renderObject->Capture_Bone( tur.m_turretPitchBone );
+				m_renderObject->Control_Bone( tur.m_turretPitchBone, turretPitchXfrm );
+				m_needUpdateTurretPosition = FALSE;
+			}
+		}
+	}
+	return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+void W3DModelDraw::setNeedUpdateTurretPositioning(Bool set)
+{
+	m_needUpdateTurretPosition = set; // A simple function with the dangers of an atomic bomb, misuse and it'll cause desync
+}
+
+//-------------------------------------------------------------------------------------------------
+void W3DModelDraw::setCanDoFXWhileHidden(Bool set)
+{
+	m_canDoFXWhileHidden = set; // A simple function with the dangers of an atomic bomb, misuse and it'll cause desync
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3691,7 +3781,10 @@ Bool W3DModelDraw::getCurrentWorldspaceClientBonePositions(const char* boneName,
 
 	Int boneIndex = m_renderObject->Get_Bone_Index(boneName);
 	if (boneIndex == 0)
+	{
+		DEBUG_LOG(("LASER NO BONE %s", boneName));
 		return false;
+	}
 
 	transform = m_renderObject->Get_Bone_Transform(boneIndex);
 	return true;
@@ -3854,7 +3947,7 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 		if (info.m_fxBone && m_renderObject)
 		{
 			const Object *logicObject = getDrawable()->getObject();// This is slow, so store it
-			if( ! m_renderObject->Is_Hidden() || (logicObject == NULL) )
+			if( m_canDoFXWhileHidden || ! m_renderObject->Is_Hidden() || (logicObject == NULL) )
 			{
 				// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
 				Matrix3D mtx = m_renderObject->Get_Bone_Transform(info.m_fxBone);
@@ -3879,7 +3972,8 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 				*/
 				FXList::doFXPos(fxl, &pos, mtx, weaponSpeed, victimPos, damageRadius);
 			}
-
+			if(logicObject != NULL)
+				DEBUG_LOG(("Success Firing from Object: %s wslot: %d barrel: %d", logicObject->getTemplate()->getName().str(), wslot, specificBarrelToUse));
 			handled = true;
 		}
 		else
@@ -3888,8 +3982,9 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 		}
 	}
 
-	if (info.m_recoilBone || info.m_muzzleFlashBone)
+	if (!m_canDoFXWhileHidden && (info.m_recoilBone || info.m_muzzleFlashBone))
 	{
+		m_doHandleRecoil = TRUE;
 		//DEBUG_LOG(("START muzzleflash %08lx for Draw %08lx state %s at frame %d",info.m_muzzleFlashBone,this,m_curState->m_description.str(),TheGameLogic->getFrame()));
 		WeaponRecoilInfo& recoil = m_weaponRecoilInfoVec[wslot][specificBarrelToUse];
 		recoil.m_state = WeaponRecoilInfo::RECOIL_START;
@@ -3901,6 +3996,42 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 	return handled;
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool W3DModelDraw::handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarrelToUse, Bool checkHandled)
+{
+	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse should now always be explicit"));
+
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::BARRELS_VALID))
+		return false;
+
+	const ModelConditionInfo::WeaponBarrelInfoVec& wbvec = m_curState->m_weaponBarrelInfoVec[wslot];
+	if (wbvec.empty())
+	{
+		return false;
+	}
+
+	Bool handled = false;
+
+	if (specificBarrelToUse < 0 || specificBarrelToUse > wbvec.size())
+		specificBarrelToUse = 0;
+
+	const ModelConditionInfo::WeaponBarrelInfo& info = wbvec[specificBarrelToUse];
+
+	if( checkHandled && info.m_fxBone && m_renderObject )
+		handled = true;
+
+	if (info.m_recoilBone || info.m_muzzleFlashBone)
+	{
+		m_doHandleRecoil = TRUE;
+		//DEBUG_LOG(("START muzzleflash %08lx for Draw %08lx state %s at frame %d",info.m_muzzleFlashBone,this,m_curState->m_description.str(),TheGameLogic->getFrame()));
+		WeaponRecoilInfo& recoil = m_weaponRecoilInfoVec[wslot][specificBarrelToUse];
+		recoil.m_state = WeaponRecoilInfo::RECOIL_START;
+		recoil.m_recoilRate = getW3DModelDrawModuleData()->m_initialRecoil;
+		if (info.m_muzzleFlashBone != 0)
+			info.setMuzzleFlashHidden(m_renderObject, false);
+	}
+	return handled;
+}
 
 //-------------------------------------------------------------------------------------------------
 Bool W3DModelDraw::handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius)
@@ -3935,7 +4066,7 @@ Bool W3DModelDraw::handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBar
 			const Object* logicObject = getDrawable()->getObject();
 			/*DEBUG_LOG((">>> handleWeaponPreAttackFX - 1.5 - m_renderObject= '%s' \n",
 				m_renderObject ? "Not Null" : "Null"));*/
-			if (!m_renderObject->Is_Hidden() || (logicObject == NULL))
+			if (m_canDoFXWhileHidden || !m_renderObject->Is_Hidden() || (logicObject == NULL))
 			{
 				// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
 				Matrix3D mtx = m_renderObject->Get_Bone_Transform(info.m_fxBone);
@@ -4098,6 +4229,7 @@ void W3DModelDraw::rebuildWeaponRecoilInfo(const ModelConditionInfo* state)
 			}
 		}
 	}
+	m_doHandleRecoil = TRUE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4663,6 +4795,12 @@ void W3DModelDraw::xfer( Xfer *xfer )
 	xfer->xferBool( &m_isFirstDrawModule );
 
 	xfer->xferAsciiString( &m_modelName );
+
+	xfer->xferBool( &m_needUpdateTurretPosition );
+
+	xfer->xferBool( &m_doHandleRecoil );
+
+	xfer->xferBool( &m_canDoFXWhileHidden );
 
 }
 

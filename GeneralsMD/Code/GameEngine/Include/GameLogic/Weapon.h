@@ -699,7 +699,7 @@ public:
 	Bool passRequirements (const Object *source) const;
 	Int calcROFForMoving(const Object *source, Int Delay) const;
 
-	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
+	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const ObjectCustomStatusType *extraBonusCustomFlags = NULL) const;
 
 	void privateDoShrapnel(ObjectID sourceID, ObjectID victimID, const Coord3D *pos) const;
 
@@ -1016,9 +1016,9 @@ public:
 	// return true if we auto-reloaded our clip after firing.
 	Bool fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID* projectileID = NULL, const Coord3D* sourcePos = NULL, ObjectID shrapnelLaunchID = INVALID_ID);
 
-	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
+	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags = NULL, Bool inflictDamage = TRUE);
 
-	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
+	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags = NULL, Bool inflictDamage = TRUE);
 
 	void preFireWeapon( const Object *source, const Object *victim );
 
@@ -1272,6 +1272,15 @@ public:
 		const Coord3D* launchPos = NULL
 	);
 
+	static void setFirePositionForDrawable(
+		const Object* launcher,
+		Drawable* draw,
+		WeaponSlotType wslot,
+		Int specificBarrelToUse
+	);
+
+	Int getCurrentBarrel() const { return m_curBarrel; }
+
 	/**
 		special purpose call for jets in airfields: directly set the ammoinclip to a certain
 		percentage full (note that percent=1.0 is full, NOT percent=100.0!). this will end up
@@ -1298,7 +1307,7 @@ protected:
 		WeaponBonusConditionFlags extraBonusFlags,
 		ObjectID* projectileID,
 		Bool inflictDamage,
-		ObjectCustomStatusType extraBonusCustomFlags,
+		const ObjectCustomStatusType *extraBonusCustomFlags = NULL,
 		const Coord3D* sourcePos = NULL,
 		ObjectID shrapnelLaunchID = INVALID_ID
 	);
@@ -1309,7 +1318,7 @@ protected:
 
 	void getFiringLineOfSightOrigin(const Object* source, Coord3D& origin) const;
 
-	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, ObjectCustomStatusType extraBonusCustomFlags) const;
+	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const ObjectCustomStatusType *extraBonusCustomFlags = NULL) const;
 
 	void rebuildScatterTargets(Bool recenter = false);
 
@@ -1380,7 +1389,7 @@ public:
 	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, const Coord3D* pos, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
 	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, Object *target, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
 
-	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, ObjectCustomStatusType extraBonusCustomFlags, Bool inflictDamage = TRUE);
+	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags = NULL, Bool inflictDamage = TRUE);
 
 	static void parseWeaponTemplateDefinition(INI* ini);
 
