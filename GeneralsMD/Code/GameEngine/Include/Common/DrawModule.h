@@ -181,6 +181,9 @@ public:
 	virtual Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const = 0;
 	virtual Bool getProjectileLaunchOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos) const = 0;
 	virtual Bool getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const = 0;
+	virtual Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch) = 0;
+	virtual void setNeedUpdateTurretPositioning(Bool set) = 0;
+	virtual void setCanDoFXWhileHidden(Bool set) = 0;
 	virtual void updateProjectileClipStatus( UnsignedInt shotsRemaining, UnsignedInt maxShots, WeaponSlotType slot ) = 0; ///< This will do the show/hide work if ProjectileBoneFeedbackEnabled is set.
 	virtual void updateDrawModuleSupplyStatus( Int maxSupply, Int currentSupply ) = 0; ///< This will do visual feedback on Supplies carried
 	virtual void notifyDrawModuleDependencyCleared( ) = 0; ///< if you were waiting for something before you drew, it's ready now
@@ -190,6 +193,7 @@ public:
 	virtual void replaceIndicatorColor(Color color) = 0;
 	virtual Bool handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) = 0;
 	virtual Bool handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) = 0;
+	virtual Bool handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarrelToUse, Bool checkHandled) = 0;
 	virtual Int getBarrelCount(WeaponSlotType wslot) const = 0;
 
 	virtual void setSelectable(Bool selectable) = 0;

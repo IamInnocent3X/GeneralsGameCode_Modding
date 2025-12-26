@@ -582,6 +582,7 @@ public:
 	Bool getProgressBarShowingInfo(bool selected, Real& progress, Int& type, RGBAColorInt& color, RGBAColorInt& colorBG) const;
 
 	WeaponSlotType getCurrentWeaponSlot() const;
+	Int getCurrentSpecificBarrel() const;
 	Bool isWeaponSetRestricted() const;
 
   void notifyFiringTrackerShotFired( const Weapon* weaponFired, ObjectID victimID ) ;
@@ -685,13 +686,13 @@ public:
 	void setCustomWeaponBonusConditionAgainst(const AsciiString& cst);
 	void clearCustomWeaponBonusConditionAgainst(const AsciiString& cst);
 	Bool testCustomWeaponBonusConditionAgainst(const AsciiString& cst) const;
-	inline const ObjectCustomStatusType getCustomWeaponBonusConditionAgainst() const { return m_customWeaponBonusConditionAgainst; }
-	inline void setCustomWeaponBonusConditionFlagsAgainst(ObjectCustomStatusType flags) { m_customWeaponBonusConditionAgainst = flags; }
+	const ObjectCustomStatusType getCustomWeaponBonusConditionAgainst() const { return m_customWeaponBonusConditionAgainst; }
+	void setCustomWeaponBonusConditionFlagsAgainst(ObjectCustomStatusType flags) { m_customWeaponBonusConditionAgainst = flags; }
 
 
-	inline ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
+	ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
 	// TO-DO: Change to Hash_Map. DONE.
-	inline void setCustomWeaponBonusConditionFlags(ObjectCustomStatusType customFlags) { 
+	void setCustomWeaponBonusConditionFlags(ObjectCustomStatusType customFlags) { 
 		m_customWeaponBonusCondition.clear();
 		m_customWeaponBonusCondition = customFlags;
 	}
@@ -701,7 +702,7 @@ public:
 	ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
 
 	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
-	inline void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
+	void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
 
 	void doWeaponBonusChange() { m_weaponSet.weaponSetOnWeaponBonusChange(this); }
 
@@ -881,6 +882,11 @@ public:
 
 	Bool getIgnoreRailgunCheck() const { return m_ignoreRailgunCheck; }
 	void setIgnoreRailgunCheck() { m_ignoreRailgunCheck = TRUE; }
+
+	const Coord3D* getCurrentTargetCoord() const { return &m_currentTargetCoords; }
+	void setCurrentTargetCoord(const Coord3D *pos) { m_currentTargetCoords.set(pos); }
+
+	void setNeedUpdateTurretPositioning(Bool set);
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
@@ -1151,6 +1157,8 @@ private:
 	Bool											m_ignoresObstacleForViewBlock;
 	Bool											m_ignoreRailgunCheck;
 
+	Coord3D											m_currentTargetCoords;		///< weapon's current target position. Need xfer in case if continuous laser
+
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;
 	Bool											m_mobJustUpdated;
@@ -1164,6 +1172,7 @@ private:
 	Bool											m_hasSlowDeathLayerUpdate;
 	Bool											m_checkSlowDeathBehavior;
 	Bool											m_hasBattleBusSlowDeathBehavior;
+	Bool											m_turretNeedPositioning;
 
 	UnsignedInt										m_lastExitedFrame;
 	UnsignedInt										m_noAcceptOrdersFrame;

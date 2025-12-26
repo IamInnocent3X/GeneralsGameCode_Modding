@@ -637,7 +637,7 @@ void DumbProjectileBehavior::detonate()
 	Object* obj = getObject();
 	if (m_detonationWeaponTmpl)
 	{
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, !m_noDamage);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, &m_extraBonusCustomFlags, !m_noDamage);
 
 		if ( getDumbProjectileBehaviorModuleData()->m_detonateCallsKill )
 		{

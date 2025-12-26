@@ -94,6 +94,8 @@ StealthUpdateModuleData::StealthUpdateModuleData()
 	m_disguiseRetainAfterDetected = false;
 	m_preservePendingCommandWhenDetected = false;
 	m_dontFlashWhenFlickering = false;
+	m_disguiseUseOriginalFiringOffset = false;
+	m_isSimpleDisguise = false;
 }
 
 
@@ -130,6 +132,8 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "DisguiseRetainAfterDetected",				INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_disguiseRetainAfterDetected ) },
 		{ "PreservePendingCommandWhenDetected",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_preservePendingCommandWhenDetected ) },
 		{ "DontFlashWhenFlickering",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_dontFlashWhenFlickering ) },
+		{ "UseOriginalFiringOffsetWhileDisguised",		INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_disguiseUseOriginalFiringOffset ) },
+		{ "IsSimpleDisguiseForWeapons",		INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_isSimpleDisguise ) },
     { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
     { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
 		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
@@ -184,6 +188,11 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	m_updatePulse = false;
 	m_updatePulseOnly = false;
+
+	m_originalDrawableTemplate = NULL;
+	m_disguisedDrawableTemplate = NULL;
+	m_originalDrawableFiringOffsets.clear();
+	m_disguisedDrawableFiringOffsets.clear();
 
 	m_nextWakeUpFrame = 1;
 
@@ -1485,6 +1494,10 @@ void StealthUpdate::changeVisualDisguise()
 
 	if( m_disguiseAsTemplate )
 	{
+		// Set the firing offsets for compatibility with railguns
+		if(m_originalDrawableFiringOffsets.empty())
+			SetFiringOffsets(FALSE);
+
 		Player *player = ThePlayerList->getNthPlayer( m_disguiseAsPlayerIndex );
 
 		ModelConditionFlags flags = draw->getModelConditionFlags();
@@ -1532,6 +1545,8 @@ void StealthUpdate::changeVisualDisguise()
 				else
 					draw->setIndicatorColor( self->getIndicatorColor() );
 			}
+
+			SetFiringOffsets(TRUE);
 		}
 
 		//Play a disguise sound!
@@ -1591,12 +1606,7 @@ void StealthUpdate::changeVisualDisguise()
 			//recalculate those upgraded subobjects.
 			self->forceRefreshSubObjectUpgradeStatus();
 
-			// Also refresh the Efficient Drawable List
-			if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
-			{
-				// Redraw everything as Stealth Detection bugs out how existing Drawables work
-				TheGameClient->clearEfficientDrawablesList();
-			}
+			SetFiringOffsets(FALSE);
 		}
 
 		Bool successfulReveal = false;
@@ -1627,6 +1637,13 @@ void StealthUpdate::changeVisualDisguise()
 		m_disguised = false;
 		self->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_DISGUISED ) );
 		self->clearModelConditionState( MODELCONDITION_DISGUISED );
+	}
+
+	// Also refresh the Efficient Drawable List
+	if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
+	{
+		// Redraw everything as Stealth Detection bugs out how existing Drawables work
+		TheGameClient->clearEfficientDrawablesList();
 	}
 
 	//Reset the radar (determines color on add)
@@ -1691,7 +1708,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 			draw->setOrientation( self->getOrientation() );
 			draw->setModelConditionFlags( flags );
 			draw->updateDrawable();
-			self->getPhysics()->resetDynamicPhysics();
+			//self->getPhysics()->resetDynamicPhysics();
 			if( selected )
 			{
 				TheInGameUI->selectDrawablePreserveGUI( draw, !getStealthUpdateModuleData()->m_dontFlashWhenFlickering );
@@ -1746,6 +1763,149 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool StealthUpdate::isDisguisedAndCheckIfNeedOffset() const
+{
+	if(isDisguised() || m_disguiseTransitionFrames)
+	{
+		// Don't need to get offset if the disguised template is the same as the object template
+		if(m_originalDrawableTemplate && m_disguisedDrawableTemplate && m_originalDrawableTemplate->getTemplate() == m_disguisedDrawableTemplate->getTemplate())
+			return FALSE;
+
+		const StealthUpdateModuleData *data = getStealthUpdateModuleData();
+		// only check whether to use Original or is Flicking
+		return data->m_disguiseUseOriginalFiringOffset || data->m_disguiseFriendlyFlickerDelay > 0;
+	}
+	else
+		return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+void StealthUpdate::SetFiringOffsets(Bool setDisguised)
+{
+	Drawable *draw = getObject()->getDrawable();
+	// Sanity
+	if(!draw)
+		return;
+
+	ModelConditionFlags flags = draw->getModelConditionFlags();
+
+	if(setDisguised)
+	{
+		if(m_disguisedDrawableTemplate)
+			TheGameClient->destroyDrawable(m_disguisedDrawableTemplate);
+
+		m_disguisedDrawableTemplate = TheThingFactory->newDrawable( draw->getTemplate() );
+		if(m_disguisedDrawableTemplate)
+		{
+			m_disguisedDrawableTemplate->setModelConditionFlags( flags );
+			m_disguisedDrawableTemplate->setDrawableHidden(TRUE);
+			m_disguisedDrawableTemplate->setCanDoFXWhileHidden(TRUE);
+		}
+
+		m_disguisedDrawableFiringOffsets.clear();
+	}
+	else
+	{
+		if(m_originalDrawableTemplate)
+			TheGameClient->destroyDrawable(m_originalDrawableTemplate);
+
+		m_originalDrawableTemplate = TheThingFactory->newDrawable( getObject()->getTemplate() );
+		if(m_originalDrawableTemplate)
+		{
+			m_originalDrawableTemplate->setModelConditionFlags( flags );
+			m_originalDrawableTemplate->setDrawableHidden(TRUE);
+			m_originalDrawableTemplate->setCanDoFXWhileHidden(TRUE);
+		}
+
+		m_originalDrawableFiringOffsets.clear();
+	}
+
+	Coord3D objPos = *getObject()->getPosition();
+	FiringPosStruct data;
+	Coord3D checkPos;
+	for(int i = 0; i < WEAPONSLOT_COUNT; i++)
+	{
+		data.weaponSlot = i;
+		data.barrelCount = draw->getBarrelCount((WeaponSlotType)i);
+		data.posVec.clear();
+		Bool slotEmpty = true;
+
+		for(int j = 0; j < data.barrelCount; j++)
+		{
+			if(draw->getWeaponFireOffset((WeaponSlotType)i, j, &checkPos))
+			{
+				checkPos.x -= objPos.x;
+				checkPos.y -= objPos.y;
+				checkPos.z -= objPos.z;
+				
+				BarrelCoordType dataPos;
+				dataPos.first = j;
+				dataPos.second = checkPos;
+				data.posVec.push_back(dataPos);
+				slotEmpty = false;
+			}
+		}
+
+		if(!slotEmpty)
+		{
+			if(setDisguised)
+				m_disguisedDrawableFiringOffsets.push_back(data);
+			else
+				m_originalDrawableFiringOffsets.push_back(data);
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool StealthUpdate::getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
+{
+	Bool doOriginal = getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset;
+	std::vector<FiringPosStruct> checkData = doOriginal ? m_originalDrawableFiringOffsets : m_disguisedDrawableFiringOffsets;
+	for(int i = 0; i < checkData.size(); i++)
+	{
+		if(wslot != checkData[i].weaponSlot)
+			continue;
+
+		for(int j = 0; j < checkData[i].posVec.size(); j++)
+		{
+			if(checkData[i].posVec[j].first == specificBarrelToUse)
+			{
+				Coord3D offset = checkData[i].posVec[j].second;
+				pos->x = offset.x;
+				pos->y = offset.y;
+				pos->z = offset.z;
+				// We stop here we managed to get an offset
+				return true;
+			}
+		}
+	}
+	return !doOriginal;
+}
+
+//-------------------------------------------------------------------------------------------------
+Int StealthUpdate::getBarrelCountWhileDisguised(WeaponSlotType wslot) const
+{
+	std::vector<FiringPosStruct> checkData = getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset ? m_originalDrawableFiringOffsets : m_disguisedDrawableFiringOffsets;
+	for(int i = 0; i < checkData.size(); i++)
+	{
+		if(wslot != checkData[i].weaponSlot)
+			continue;
+
+		// IamInnocent - Prevent crashes if the current object has more barrels than the current disguise template
+		Int BarrelCount = m_disguiseAsTemplate && m_disguisedDrawableTemplate ? m_disguisedDrawableTemplate->getBarrelCount(wslot) : 999;
+		BarrelCount = min(BarrelCount, checkData[i].barrelCount);
+		return BarrelCount;
+	}
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+Drawable *StealthUpdate::getDrawableTemplateWhileDisguised() const
+{
+	return getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset ? m_originalDrawableTemplate : m_disguisedDrawableTemplate;
+}
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -1796,13 +1956,20 @@ void StealthUpdate::xfer( Xfer *xfer )
 	// disguise as template
 	AsciiString name = m_disguiseAsTemplate ? m_disguiseAsTemplate->getName() : AsciiString::TheEmptyString;
 	AsciiString name2 = m_lastDisguiseAsTemplate ? m_lastDisguiseAsTemplate->getName() : AsciiString::TheEmptyString;
+	//AsciiString name3 = m_originalDrawableTemplate ? m_originalDrawableTemplate->getTemplate()->getName() : AsciiString::TheEmptyString;
+	//AsciiString name4 = m_disguisedDrawableTemplate ? m_disguisedDrawableTemplate->getTemplate()->getName() : AsciiString::TheEmptyString;
 	xfer->xferAsciiString( &name );
 	xfer->xferAsciiString( &name2 );
+	//xfer->xferAsciiString( &name3 );
+	//xfer->xferAsciiString( &name4 );
+	//const ThingTemplate *drawTempl = NULL;
 	if( xfer->getXferMode() == XFER_LOAD )
 	{
 
 		m_disguiseAsTemplate = NULL;
 		m_lastDisguiseAsTemplate = NULL;
+		//m_originalDrawableTemplate = NULL;
+		//m_disguisedDrawableTemplate = NULL;
 		if( name.isEmpty() == FALSE )
 		{
 
@@ -1831,6 +1998,62 @@ void StealthUpdate::xfer( Xfer *xfer )
 
 		}
 
+		/*if( name3.isEmpty() == FALSE )
+		{
+
+			drawTempl = TheThingFactory->findTemplate( name3 );
+			if( drawTempl == NULL )
+			{
+
+				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name3.str() ));
+				throw SC_INVALID_DATA;
+
+			}
+			else
+			{
+				m_originalDrawableTemplate = TheThingFactory->newDrawable( drawTempl );
+			}
+
+		}
+
+		if( name4.isEmpty() == FALSE )
+		{
+
+			drawTempl = TheThingFactory->findTemplate( name4 );
+			if( drawTempl == NULL )
+			{
+
+				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name4.str() ));
+				throw SC_INVALID_DATA;
+
+			}
+			else
+			{
+				m_disguisedDrawableTemplate = TheThingFactory->newDrawable( drawTempl );
+			}
+
+		}*/
+	}
+
+	DrawableID drawableID = m_originalDrawableTemplate ? m_originalDrawableTemplate->getID() : INVALID_DRAWABLE_ID;
+	DrawableID drawableID2 = m_disguisedDrawableTemplate ? m_disguisedDrawableTemplate->getID() : INVALID_DRAWABLE_ID;
+	xfer->xferDrawableID( &drawableID );
+	xfer->xferDrawableID( &drawableID2 );
+	if( xfer->getXferMode() == XFER_LOAD )
+	{
+		// reconnect the drawable pointer
+		m_originalDrawableTemplate = TheGameClient->findDrawableByID( drawableID );
+		m_disguisedDrawableTemplate = TheGameClient->findDrawableByID( drawableID2 );
+
+		// sanity
+		if( drawableID != INVALID_DRAWABLE_ID && m_originalDrawableTemplate == NULL )
+		{
+			DEBUG_CRASH(( "StealthUpdate::xfer - Unable to find drawable for m_originalDrawableTemplate" ));
+		}
+		if( drawableID2 != INVALID_DRAWABLE_ID && m_disguisedDrawableTemplate == NULL )
+		{
+			DEBUG_CRASH(( "StealthUpdate::xfer - Unable to find drawable for m_disguisedDrawableTemplate" ));
+		}
 	}
 
 	// disguise transition frames
@@ -1867,6 +2090,127 @@ void StealthUpdate::xfer( Xfer *xfer )
 	xfer->xferBool( &m_isNotAutoDisguise );
 
 	xfer->xferAsciiString( &m_disguiseModelName );
+
+	UnsignedShort OriginalFiringOffsetsSize = m_originalDrawableFiringOffsets.size();
+	UnsignedShort DisguisedFiringOffsetsSize = m_disguisedDrawableFiringOffsets.size();
+	xfer->xferUnsignedShort( &OriginalFiringOffsetsSize );
+	xfer->xferUnsignedShort( &DisguisedFiringOffsetsSize );
+
+	Int weaponSlot;
+	Int weaponSlot_2;
+	Int barrelCount;
+	Int barrelCount_2;
+	Int barrelSlot;
+	Int barrelSlot_2;
+	Coord3D barrelOffset;
+	Coord3D barrelOffset_2;
+	BarrelCoordType barrelPair;
+	BarrelCoordVec barrelVec;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for(std::vector<FiringPosStruct>::iterator it = m_originalDrawableFiringOffsets.begin(); it != m_originalDrawableFiringOffsets.end(); ++it)
+		{
+			weaponSlot = it->weaponSlot;
+			xfer->xferInt( &weaponSlot );
+
+			barrelCount = it->barrelCount;
+			xfer->xferInt( &barrelCount );
+
+			barrelVec = it->posVec;
+			for(BarrelCoordVec::iterator it_2 = barrelVec.begin(); it_2 != barrelVec.end(); ++it_2 )
+			{
+				barrelSlot = it_2->first;
+				xfer->xferInt( &barrelSlot );
+
+				barrelOffset = it_2->second;
+				xfer->xferCoord3D( &barrelOffset );
+			}
+		}
+
+		for(std::vector<FiringPosStruct>::iterator it2 = m_disguisedDrawableFiringOffsets.begin(); it2 != m_disguisedDrawableFiringOffsets.end(); ++it2)
+		{
+			weaponSlot_2 = it2->weaponSlot;
+			xfer->xferInt( &weaponSlot_2 );
+
+			barrelCount_2 = it2->barrelCount;
+			xfer->xferInt( &barrelCount_2 );
+
+			barrelVec = it2->posVec;
+			for(BarrelCoordVec::iterator it2_2 = barrelVec.begin(); it2_2 != barrelVec.end(); ++it2_2 )
+			{
+				barrelSlot_2 = it2_2->first;
+				xfer->xferInt( &barrelSlot_2 );
+
+				barrelOffset_2 = it2_2->second;
+				xfer->xferCoord3D( &barrelOffset_2 );
+			}
+		}
+	}
+	else if( xfer->getXferMode() == XFER_LOAD )
+	{
+		if (m_originalDrawableFiringOffsets.empty() == false)
+		{
+			DEBUG_CRASH(( "GameLogic::xfer - m_originalDrawableFiringOffsets should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+
+		if (m_disguisedDrawableFiringOffsets.empty() == false)
+		{
+			DEBUG_CRASH(( "GameLogic::xfer - m_disguisedDrawableFiringOffsets should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+
+		for(UnsignedShort i = 0; i < OriginalFiringOffsetsSize; ++i)
+		{
+			xfer->xferInt( &weaponSlot );
+
+			xfer->xferInt( &barrelCount );
+
+			FiringPosStruct data;
+			data.weaponSlot = weaponSlot;
+			data.barrelCount = barrelCount;
+
+			for(UnsignedShort i_2 = 0; i_2 < barrelCount; ++i_2)
+			{
+				xfer->xferInt( &barrelSlot );
+
+				xfer->xferCoord3D( &barrelOffset );
+
+				barrelPair.first = barrelSlot;
+				barrelPair.second = barrelOffset;
+				data.posVec.push_back(barrelPair);
+			}
+
+			m_originalDrawableFiringOffsets.push_back(data);
+			data.posVec.clear();
+		}
+
+		for(UnsignedShort i2 = 0; i2 < DisguisedFiringOffsetsSize; ++i2)
+		{
+			xfer->xferInt( &weaponSlot_2 );
+
+			xfer->xferInt( &barrelCount_2 );
+
+			FiringPosStruct data;
+			data.weaponSlot = weaponSlot_2;
+			data.barrelCount = barrelCount_2;
+
+			for(UnsignedShort i2_2 = 0; i2_2 < barrelCount_2; ++i2_2)
+			{
+				xfer->xferInt( &barrelSlot_2 );
+
+				xfer->xferCoord3D( &barrelOffset_2 );
+
+				barrelPair.first = barrelSlot_2;
+				barrelPair.second = barrelOffset_2;
+				data.posVec.push_back(barrelPair);
+			}
+
+			m_disguisedDrawableFiringOffsets.push_back(data);
+			data.posVec.clear();
+		}
+	}
+	
 
 }
 

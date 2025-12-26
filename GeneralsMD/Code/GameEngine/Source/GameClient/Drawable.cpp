@@ -765,6 +765,40 @@ Bool Drawable::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool Drawable::doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch)
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di && di->doTurretPositioning(tslot, turretAngle, turretPitch))
+			return true;
+	}
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::setNeedUpdateTurretPositioning(Bool set)
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di)
+			di->setNeedUpdateTurretPositioning(set);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::setCanDoFXWhileHidden(Bool set)
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di)
+			di->setCanDoFXWhileHidden(set);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 void Drawable::setAnimationLoopDuration(UnsignedInt numFrames)
 {
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
@@ -4875,6 +4909,35 @@ Bool Drawable::handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelT
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
 		if (di && di->handleWeaponPreAttackFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius))
+			return true;
+	}
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Drawable::handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarrelToUse, Real recoilAmount, Real recoilAngle, Bool checkHandled, Bool isPreAttack)
+{
+	if (recoilAmount != 0.0f)
+	{
+		// adjust recoil from absolute to relative.
+		if (getObject())
+			recoilAngle -= getObject()->getOrientation();
+		// flip direction 180 degrees.
+		recoilAngle += PI;
+		if (m_locoInfo)
+		{
+			m_locoInfo->m_accelerationPitchRate += recoilAmount * Cos(recoilAngle);
+			m_locoInfo->m_accelerationRollRate += recoilAmount * Sin(recoilAngle);
+		}
+	}
+
+	if(isPreAttack)
+		return true;
+
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di && di->handleWeaponFireRecoil(wslot, specificBarrelToUse, checkHandled))
 			return true;
 	}
 	return false;

@@ -4165,6 +4165,9 @@ Int PartitionManager::getObjectsAlongLine(
 		numpixels = delta.y;							// There are more y-values than x-values
 	}
 
+	Real angle = atan2(posOther.y - pos.y, posOther.x - pos.x);
+	ObjectID sourceID = source->getID();
+
 	for (Int curpixel = 0; curpixel <= numpixels; curpixel++)
 	{
 		PartitionCell* cell = ThePartitionManager->getCellAt(x, y);	// might be null if off the edge
@@ -4179,13 +4182,12 @@ Int PartitionManager::getObjectsAlongLine(
 			dy = posY - pos.y;
 			Real distance = sqrt(dx*dx + dy*dy);
 
-			Real angle = source->getOrientation();
 			Coord3D currentPos;
 			currentPos.x = pos.x + Cos(angle) * distance;
 			currentPos.y = pos.y + Sin(angle) * distance;
 			currentPos.z = pos.z;
 			
-			checkObjectsAlongLine(x, y, source, pos, currentPos, posOther, radius, infantryRadius, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+			checkObjectsAlongLine(x, y, sourceID, pos, currentPos, posOther, radius, infantryRadius, angle, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
 
 			if( railgunfx )
 				FXList::doFXPos(railgunfx, &currentPos);
@@ -4215,12 +4217,13 @@ Int PartitionManager::getObjectsAlongLine(
 Int PartitionManager::checkObjectsAlongLine(
 	Int cellX,
 	Int cellY,
-	const Object* source,
+	ObjectID sourceID,
 	const Coord3D& startingPos,
 	const Coord3D& currentPos,
 	const Coord3D& endPos,
 	Real radius,
 	Real infantryRadius,
+	Real dirAngle,
 	DistanceCalculationType dc,
 	PartitionFilter **filters,
 	SimpleObjectIterator *iterArg,
@@ -4233,7 +4236,6 @@ Int PartitionManager::checkObjectsAlongLine(
 	Int cellCenterX = cellX;
 	Int cellCenterY = cellY;
 
-	Real angle = source->getOrientation();
 	//const Coord3D* faceDir = source->getUnitDirectionVector2D();
 
 		//USE_PERF_TIMER(getClosestObjects)
@@ -4312,7 +4314,7 @@ Int PartitionManager::checkObjectsAlongLine(
 				Object *thisObj = thisMod->getObject();
 
 				// never compare against ourself.
-				if (thisObj == source || thisObj == NULL)
+				if (thisObj == NULL || thisObj->getID() == sourceID)
 					continue;
 
 				// since an object can exist in multiple COIs, we use this to avoid processing
@@ -4331,7 +4333,7 @@ Int PartitionManager::checkObjectsAlongLine(
 	
 				// Modified from Locomotor::rotateObjAroundLocoPivot
 				Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
-				Real relAngle = stdAngleDiff(desiredAngle, angle);
+				Real relAngle = stdAngleDiff(desiredAngle, dirAngle);
 
 				// We don't hit objects that are behind us;
 				if(fabs(relAngle) > 1.0f)
@@ -4339,9 +4341,8 @@ Int PartitionManager::checkObjectsAlongLine(
 
 				if(!checkBehind)
 				{
-					Real destAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x);
 					Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
-					Real checkAngle = stdAngleDiff(currAngle, destAngle);
+					Real checkAngle = stdAngleDiff(currAngle, dirAngle);
 					// Skip object if hit directional threshold
 					if(fabs(checkAngle) > 1.0f)
 						continue;
@@ -4493,7 +4494,7 @@ Int PartitionManager::checkObjectsAlongLine(
 			Object *thisObj = thisMod->getObject();
 
 			// never compare against ourself.
-			if (thisObj == source || thisObj == NULL)
+			if (thisObj == NULL || thisObj->getID() == sourceID)
 				continue;
 
 			if (thisMod->friend_getDoneFlag() == theIterFlag)
@@ -4507,7 +4508,7 @@ Int PartitionManager::checkObjectsAlongLine(
 
 			// Modified from Locomotor::rotateObjAroundLocoPivot
 			Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
-			Real relAngle = stdAngleDiff(desiredAngle, angle);
+			Real relAngle = stdAngleDiff(desiredAngle, dirAngle);
 
 			// We don't hit objects that are behind us;
 			if(fabs(relAngle) > 1.0f)
@@ -4515,9 +4516,8 @@ Int PartitionManager::checkObjectsAlongLine(
 
 			if(!checkBehind)
 			{
-				Real destAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x);
 				Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
-				Real checkAngle = stdAngleDiff(currAngle, destAngle);
+				Real checkAngle = stdAngleDiff(currAngle, dirAngle);
 				// Skip object if hit directional threshold
 				if(fabs(checkAngle) > 1.0f)
 					continue;

@@ -140,6 +140,7 @@ protected:
 	Coord3D m_startPos;
 	Coord3D m_endPos;
 
+	ObjectID m_parentObjID;
 	DrawableID m_parentID;
 	DrawableID m_targetID;
 
