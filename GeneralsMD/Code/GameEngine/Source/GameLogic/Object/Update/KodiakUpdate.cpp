@@ -208,14 +208,28 @@ Bool KodiakUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *sp
     AIUpdateInterface *shipAI = gunShip->getAIUpdateInterface();
     if ( shipAI)
     {
-     shipAI->chooseLocomotorSet( LOCOMOTORSET_PANIC );
+      // shipAI->chooseLocomotorSet( LOCOMOTORSET_PANIC );  // Use normal for transit
 	    shipAI->getCurLocomotor()->setAllowInvalidPosition(TRUE);
 	    shipAI->getCurLocomotor()->setUltraAccurate(TRUE);	// set ultra-accurate just so AI won't try to adjust our dest
     }
 
-    Drawable *draw = gunShip->getDrawable();
-    if ( draw )
-      draw->clearAndSetModelConditionState( MODELCONDITION_DOOR_1_OPENING, MODELCONDITION_DOOR_1_CLOSING );
+    //Drawable *draw = gunShip->getDrawable();
+    //if ( draw )
+    //  draw->clearAndSetModelConditionState( MODELCONDITION_DOOR_1_OPENING, MODELCONDITION_DOOR_1_CLOSING );
+
+    //ContainModuleInterface* cmi = getObject()->getContain();
+    //if (cmi) {
+    //  ContainedItemsList* addOns = cmi->getAddOnList();
+    //  if (addOns) {
+    //    for (ContainedItemsList::iterator it = addOns->begin(); it != addOns->end(); it++) {
+    //      draw = (*it)->getDrawable();
+    //      if (draw) {
+    //        draw->clearAndSetModelConditionState(MODELCONDITION_DOOR_1_OPENING, MODELCONDITION_DOOR_1_CLOSING);
+    //      }
+    //    }
+    //  }
+    //}
+
     friend_enableAfterburners(TRUE);
 
     setLogicalStatus( GUNSHIP_STATUS_INSERTING ); // The gunship is en route to the tharget area, from map-edge
@@ -459,7 +473,7 @@ UpdateSleepTime KodiakUpdate::update()
           AIUpdateInterface *shipAI = gunship->getAIUpdateInterface();
           if ( shipAI)
           {
-            shipAI->chooseLocomotorSet( LOCOMOTORSET_NORMAL );
+            shipAI->chooseLocomotorSet( LOCOMOTORSET_PANIC );  // Transit locomotor should be default
 	          shipAI->getCurLocomotor()->setAllowInvalidPosition(TRUE);
 	          shipAI->getCurLocomotor()->setUltraAccurate(TRUE);	// set ultra-accurate just so AI won't try to adjust our dest
           }
@@ -467,7 +481,23 @@ UpdateSleepTime KodiakUpdate::update()
           Drawable *draw = gunship->getDrawable();
           if ( draw )
             draw->clearAndSetModelConditionState( MODELCONDITION_DOOR_1_CLOSING, MODELCONDITION_DOOR_1_OPENING );
+
+          for (Object* turret : turrets) {
+            draw = turret->getDrawable();
+            if (draw) {
+              draw->clearAndSetModelConditionState(MODELCONDITION_DOOR_1_CLOSING, MODELCONDITION_DOOR_1_OPENING);
+            }
+          }
+
           friend_enableAfterburners(FALSE);
+
+          AudioEventRTS soundEventDescend = *(gunship->getTemplate()->getPerUnitSound("Descend"));
+          soundEventDescend.setObjectID(gunship->getID());
+
+          if (!soundEventDescend.getEventName().isEmpty())
+          {
+            TheAudio->addAudioEvent(&soundEventDescend);
+          }
 
         }
 
@@ -875,7 +905,7 @@ void KodiakUpdate::disengageAndDepartAO( Object *gunship )
 
     if ( shipAI)
     {
-      shipAI->chooseLocomotorSet( LOCOMOTORSET_PANIC );
+      shipAI->chooseLocomotorSet( LOCOMOTORSET_NORMAL );
 	    shipAI->getCurLocomotor()->setAllowInvalidPosition(TRUE);
 	    shipAI->getCurLocomotor()->setUltraAccurate(TRUE);	// set ultra-accurate just so AI won't try to adjust our dest
     }
@@ -883,8 +913,29 @@ void KodiakUpdate::disengageAndDepartAO( Object *gunship )
     Drawable *draw = gunship->getDrawable();
     if ( draw )
       draw->clearAndSetModelConditionState( MODELCONDITION_DOOR_1_OPENING, MODELCONDITION_DOOR_1_CLOSING );
-          friend_enableAfterburners(TRUE);
 
+    ContainModuleInterface* cmi = getObject()->getContain();
+    if (cmi) {
+      ContainedItemsList* addOns = cmi->getAddOnList();
+      if (addOns) {
+        for (ContainedItemsList::iterator it = addOns->begin(); it != addOns->end(); it++) {
+          draw = (*it)->getDrawable();
+          if (draw) {
+            draw->clearAndSetModelConditionState(MODELCONDITION_DOOR_1_OPENING, MODELCONDITION_DOOR_1_CLOSING);
+          }
+        }
+      }
+    }
+
+    friend_enableAfterburners(TRUE);
+
+    AudioEventRTS soundEventAscend = *(getObject()->getTemplate()->getPerUnitSound("Ascend"));
+    soundEventAscend.setObjectID(getObject()->getID());
+
+    if (!soundEventAscend.getEventName().isEmpty())
+    {
+      TheAudio->addAudioEvent(&soundEventAscend);
+    }
 
   cleanUp();
 
