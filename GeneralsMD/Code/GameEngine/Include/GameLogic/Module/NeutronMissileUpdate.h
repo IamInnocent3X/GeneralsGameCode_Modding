@@ -109,6 +109,7 @@ public:
 	virtual void projectileNowDrawn(ObjectID attractorID);
 	virtual Object* getTargetObject() { return NULL; }
 	virtual const Coord3D* getTargetPosition();
+	virtual Bool projectileShouldDetonateOnGround() const { return TRUE; } // Yes, we should detonate on ground if we are aiming at a moving object
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) {}
 
 	virtual UpdateSleepTime update();

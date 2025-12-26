@@ -300,7 +300,13 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 
 	Vector3 dir;
 
-	if (d->m_zDirFactor > 0) {
+	if(m_doVictimPosForLaunch) {
+		Real facingAngle = atan2(victimPos->x,victimPos->y);
+		dir.X = Cos(facingAngle);
+		dir.Y = Sin(facingAngle);
+		dir.Z = 0;
+	}
+	else if (d->m_zDirFactor > 0) {
 		Real deltaZ = victimPos->z - obj->getPosition()->z;
 		Real dx = victimPos->x - obj->getPosition()->x;
 		Real dy = victimPos->y - obj->getPosition()->y;
@@ -322,14 +328,6 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 
 	//DEBUG_LOG((">>> MissileAI FIREPROJ - dir = (%f/%f/%f)\n", dir.X, dir.Y, dir.Z));
 
-	if(m_doVictimPosForLaunch)
-	{
-		Real facingAngle = atan2(victimPos->x,victimPos->y);
-		dir.X = Cos(facingAngle);
-		dir.Y = Sin(facingAngle);
-		dir.Z = 0;
-	}
-	
 	PhysicsBehavior* physics = getObject()->getPhysics();
 	if (physics && initialVelToUse > 0)
 	{
@@ -355,7 +353,7 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 	m_isTrackingTarget = false;
 	// Missiles do their thing by colliding with something and exploding.  So they Move to the target
 	// instead of Attacking the target.
-	if (victim && d->m_tryToFollowTarget)
+	if (victim && d->m_tryToFollowTarget && (!TheGlobalData->m_dynamicTargeting || !victim->isKindOf(KINDOF_STRUCTURE)))
 	{
 		getStateMachine()->setGoalPosition(victim->getPosition());
 		// ick. const-cast is evil. fix. (srj)

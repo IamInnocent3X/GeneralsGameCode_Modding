@@ -1470,7 +1470,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	{
 		Bool hasProtection = false;
 		if(getProjectileTemplate())
-			hasProtection = getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES);
+			hasProtection = !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES);
 		else
 			hasProtection = firingWeapon->isLaser() ? getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) : getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS);
 
@@ -1490,7 +1490,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	Coord3D targetedPos = *victimPos;
 	Bool hasBodyForTargetAiming = FALSE;
 
-	if(TheGlobalData->m_dynamicTargeting && curTarget)
+	if( TheGlobalData->m_dynamicTargeting && curTarget )
 	{
 		Coord3D targetCoord = *sourceObj->getCurrentTargetCoord();
 		hasBodyForTargetAiming = TRUE;
@@ -1547,9 +1547,33 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			targetHeight *= isStructure ? 0.7f : 0.8f;
 			Real targetRatio = isStructure ? ((targetHeight + dz + dz * 0.5f) / (targetHeight + targetHeight + targetHeight * 0.5f)) : (dz / targetHeight);
-			targetRatio = 1.0f - targetRatio;
-			targetRatio = min(0.6f, targetRatio);
-			targetRadius *= curTarget->isKindOf(KINDOF_INFANTRY) ? 0.0f : targetRatio;
+			targetRatio = min(0.6f, 1.0f - targetRatio);
+			if(firingWeapon->hasProjectileStream())
+			{
+				if(isStructure)
+					targetRadius *= targetRatio;
+				else
+					targetRadius *= curTarget->isKindOf(KINDOF_INFANTRY) ? min(0.1f, targetRatio) : min(0.33f, targetRatio);
+
+				dz = 0.0f;
+			}
+			else if(getProjectileTemplate() != NULL)
+			{
+				if(isStructure && m_scatterRadius == 0.0f)
+				{
+					targetRatio *= 1.0f + min(0.8f, (1.0f / ( 2 * targetRadius * PI / (targetRadius*targetRadius))) * 0.06f);
+				}
+				else if(curTarget->isKindOf(KINDOF_INFANTRY))
+				{
+					targetRatio = min(0.1f, targetRatio);
+					dz = 0.0f; // Don't aim for headshots or body shots
+				}
+				targetRadius *= targetRatio;
+			}
+			else
+			{
+				targetRadius *= curTarget->isKindOf(KINDOF_INFANTRY) ? min(0.1f, targetRatio) : targetRatio;
+			}
 
 			Real dx = Cos(targetAngle) * targetRadius;
 			Real dy = Sin(targetAngle) * targetRadius;
@@ -1692,7 +1716,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		{
 			if( victimObj->isKindOf( KINDOF_STRUCTURE ) )
 			{
-				victimObj->getGeometryInfo().getCenterPosition(*victimObj->getPosition(), projectileDestination);
+				if(TheGlobalData->m_dynamicTargeting)
+					projectileDestination = targetedPos;
+				else
+					victimObj->getGeometryInfo().getCenterPosition(*victimObj->getPosition(), projectileDestination);
 			}
 			if( m_infantryInaccuracyDist > 0.0f && victimObj->isKindOf( KINDOF_INFANTRY ) )
 			{
@@ -1930,6 +1957,16 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 				if(shrapnelLaunchID != INVALID_ID)
 					pui->setShrapnelLaunchID(shrapnelLaunchID);
+			}
+
+			if(pui->projectileShouldDetonateOnGround())
+			{
+				Coord3D TargetCoord = *sourceObj->getCurrentTargetCoord();
+				if(TargetCoord.z != 0.0f)
+				{
+					TargetCoord.z = 0.0f;
+					TheGameLogic->findObjectByID(sourceID)->setCurrentTargetCoord(&TargetCoord);
+				}
 			}
 
 			VeterancyLevel v = sourceObj->getVeterancyLevel();

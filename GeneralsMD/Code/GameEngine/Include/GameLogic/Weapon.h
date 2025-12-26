@@ -1280,6 +1280,7 @@ public:
 	);
 
 	Int getCurrentBarrel() const { return m_curBarrel; }
+	Bool hasProjectileStream() const { return m_projectileStreamID != INVALID_ID; }
 
 	/**
 		special purpose call for jets in airfields: directly set the ammoinclip to a certain

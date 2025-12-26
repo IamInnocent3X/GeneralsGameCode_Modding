@@ -101,6 +101,7 @@ public:
 	virtual Object* getTargetObject();
 	virtual const Coord3D* getTargetPosition();
 	virtual Bool projectileShouldCollideWithWater() const override;
+	virtual Bool projectileShouldDetonateOnGround() const { return false; }
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
 
 protected:

@@ -3511,7 +3511,6 @@ Bool W3DModelDraw::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelT
 	if (info.m_fxBone && m_renderObject)
 	{
 		const Object *logicObject = getDrawable()->getObject();// This is slow, so store it
-		DEBUG_LOG(("Object Name: %s Template Name: %s", logicObject->getTemplate()->getName().str(), getDrawable()->getTemplate()->getName().str()));
 		if( ! m_renderObject->Is_Hidden() || (logicObject == NULL) )
 		{
 			// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
@@ -3781,10 +3780,7 @@ Bool W3DModelDraw::getCurrentWorldspaceClientBonePositions(const char* boneName,
 
 	Int boneIndex = m_renderObject->Get_Bone_Index(boneName);
 	if (boneIndex == 0)
-	{
-		DEBUG_LOG(("LASER NO BONE %s", boneName));
 		return false;
-	}
 
 	transform = m_renderObject->Get_Bone_Transform(boneIndex);
 	return true;
@@ -3972,8 +3968,6 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 				*/
 				FXList::doFXPos(fxl, &pos, mtx, weaponSpeed, victimPos, damageRadius);
 			}
-			if(logicObject != NULL)
-				DEBUG_LOG(("Success Firing from Object: %s wslot: %d barrel: %d", logicObject->getTemplate()->getName().str(), wslot, specificBarrelToUse));
 			handled = true;
 		}
 		else

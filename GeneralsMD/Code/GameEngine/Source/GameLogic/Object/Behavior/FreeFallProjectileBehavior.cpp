@@ -251,7 +251,7 @@ void FreeFallProjectileBehavior::projectileFireAtObjectOrPosition(const Object* 
 
 	// if an object, aim at the center, not the ground part
 	Coord3D victimPosToUse;
-	if (victim)
+	if (victim && !TheGlobalData->m_dynamicTargeting)
 		victim->getGeometryInfo().getCenterPosition(*victim->getPosition(), victimPosToUse);
 	else
 		victimPosToUse = *victimPos;
