@@ -234,7 +234,7 @@ void NeutronMissileUpdate::projectileFireAtObjectOrPosition( const Object *victi
 	m_state = LAUNCH;
 	m_stateTimestamp = TheGameLogic->getFrame();
 
-	if( victim )
+	if( victim && !TheGlobalData->m_dynamicTargeting)
 	{
 		// CalcTarget will add half the target's height.  But in this case, we are aiming at the ground
 		// and need to stay aiming at the ground.

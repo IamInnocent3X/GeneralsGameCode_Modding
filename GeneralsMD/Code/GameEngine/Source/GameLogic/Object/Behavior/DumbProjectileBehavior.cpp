@@ -459,7 +459,7 @@ void DumbProjectileBehavior::projectileFireAtObjectOrPosition( const Object *vic
 
 	// if an object, aim at the center, not the ground part
 	Coord3D victimPosToUse;
-	if (victim)
+	if (victim && !TheGlobalData->m_dynamicTargeting)
 		victim->getGeometryInfo().getCenterPosition(*victim->getPosition(), victimPosToUse);
 	else
 		victimPosToUse = *victimPos;
@@ -724,9 +724,9 @@ UpdateSleepTime DumbProjectileBehavior::update()
 		{
 			Coord3D curVictimPos;
 			victim->getGeometryInfo().getCenterPosition(*victim->getPosition(), curVictimPos);
-			Real victimDistance = sqrt(ThePartitionManager->getDistanceSquared( getObject(), &curVictimPos, FROM_CENTER_2D ) );
+			Real victimDistanceSqr = ThePartitionManager->getDistanceSquared( getObject(), &curVictimPos, FROM_CENTER_2D );
 			// If the distance is close enough, blow it up 
-			if(victimDistance && m_detonateDistance >= victimDistance)
+			if(victimDistanceSqr && m_detonateDistance * m_detonateDistance >= victimDistanceSqr)
 			{
 				m_framesTillDecoyed = 0;
 				m_noDamage = TRUE;
