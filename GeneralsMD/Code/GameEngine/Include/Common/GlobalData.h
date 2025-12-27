@@ -633,6 +633,7 @@ public:
 	Bool m_fixAIPathfindClumpForManyPlayers; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfind;
 	Bool m_dynamicTargeting;
+	Bool m_useAccurateSphereToRectCollision;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

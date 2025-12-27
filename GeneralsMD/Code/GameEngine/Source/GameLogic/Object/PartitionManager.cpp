@@ -360,6 +360,18 @@ static void testRotatedPointsAgainstRect(
 	Coord2D *avg,
 	Int *avgTot
 );
+static void testRotatedPointsAgainstSphere(
+	const Coord2D *pts,				// an array of 4
+	const CollideInfo *a,
+	Coord2D *avg,
+	Int *avgTot
+);
+static void testSphereAgainstRect(
+	const CollideInfo *b,
+	const CollideInfo *a,
+	Coord2D *avg,
+	Int *avgTot
+);
 
 static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
 static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
@@ -438,6 +450,191 @@ static void testRotatedPointsAgainstRect(
 }
 
 //-----------------------------------------------------------------------------
+static void testRotatedPointsAgainstSphere(
+	const Coord2D *pts,				// an array of 4
+	const CollideInfo *a,
+	Coord2D *avg,
+	Int *avgTot
+)
+{
+	Real radius = a->geom.getMajorRadius();
+
+	Real circ_l = a->position.x - radius;
+	Real circ_r = a->position.x + radius;
+	Real circ_t = a->position.y - radius;
+	Real circ_b = a->position.y + radius;
+
+	for (Int i = 0; i < 4; ++i, ++pts)
+	{
+		// convert to a delta relative to rect ctr
+		#ifdef INTENSE_DEBUG
+		Real ptx = pts->x - a->position.x;
+		Real pty = pts->y - a->position.y;
+		#endif
+		Real ptx_new;
+		Real pty_new;
+		switch(i)
+		{
+			// tl
+			case 0:
+				ptx_new = pts->x - circ_l;
+				pty_new = pts->y - circ_t;
+				break;
+			// tr
+			case 1:
+				ptx_new = pts->x - circ_r;
+				pty_new = pts->y - circ_t;
+				break;
+			// bl
+			case 2:
+				ptx_new = pts->x - circ_l;
+				pty_new = pts->y - circ_b;
+				break;
+			// br
+			case 3:
+				ptx_new = pts->x - circ_r;
+				pty_new = pts->y - circ_b;
+				break;
+		}
+
+		// inverse-rotate it to the right coord system
+		ptx_new = fabs(ptx_new);
+		pty_new = fabs(pty_new);
+
+		#ifdef INTENSE_DEBUG
+		Real mag_a = sqr(ptx)+sqr(pty);
+		Real mag_b = sqr(ptx_new)+sqr(pty_new);
+		DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
+		#endif
+
+#ifdef INTENSE_DEBUG
+		Bool pass = FALSE;
+		switch(i)
+		{
+			// tl
+			case 0:
+				pass = circ_r >= pts->x && circ_b >= pts->y;
+				break;
+			// tr
+			case 1:
+				pass = circ_l <= pts->x && circ_b >= pts->y;
+				break;
+			// bl
+			case 2:
+				pass = circ_r >= pts->x && circ_t <= pts->y;
+				break;
+			// br
+			case 3:
+				pass = circ_l <= pts->x && circ_t <= pts->y;
+				break;
+		}
+#endif
+
+		if (ptx_new <= radius && pty_new <= radius)
+		{
+#ifdef INTENSE_DEBUG
+			const Int MAXR = 32;
+			char dir[MAXR];
+			switch(i)
+			{
+				case 0:
+					sprintf( dir, "Top Left" );
+					break;
+				case 1:
+					sprintf( dir, "Top Right" );
+					break;
+				case 2:
+					sprintf( dir, "Bottom Left" );
+					break;
+				case 3:
+					sprintf( dir, "Bottom Right" );
+					break;
+			}
+			DEBUG_LOG(("Check passed Rectangle points to Sphere. Direction: %s. X: %f. Y: %f", dir, ptx, pty));
+			if(pass)
+				DEBUG_LOG(("Case: %s satisfies boundary checks.", dir));
+			else
+				DEBUG_LOG(("Case: %s Does NOT satisfy boundary checks!", dir));
+#endif
+			avg->x += pts->x;
+			avg->y += pts->y;
+			*avgTot += 1;
+			//DEBUG_LOG(("avgx: %f avgy: %f, avgTot: %d", avg->x, avg->y, *avgTot));
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+static void testSphereAgainstRect(
+	const CollideInfo *b,
+	const CollideInfo *a,
+	Coord2D *avg,
+	Int *avgTot
+)
+{
+	Real radius = b->geom.getMajorRadius();
+
+	Real circ_l = b->position.x - radius;
+	Real circ_r = b->position.x + radius;
+	Real circ_t = b->position.y - radius;
+	Real circ_b = b->position.y + radius;
+
+	Real major = a->geom.getMajorRadius();
+	Real minor = a->geom.getMinorRadius();
+
+	Real c = (Real)Cos(-a->angle);
+	Real s = (Real)Sin(-a->angle);
+
+	for (Int i = 0; i < 4; ++i)
+	{
+		// convert to a delta relative to rect ctr
+		Coord2D pts;
+		switch(i)
+		{
+			// tl
+			case 0:
+				pts.x = circ_l;
+				pts.y = circ_t;
+				break;
+			// tr
+			case 1:
+				pts.x = circ_r;
+				pts.y = circ_t;
+				break;
+			// bl
+			case 2:
+				pts.x = circ_l;
+				pts.y = circ_b;
+				break;
+			// br
+			case 3:
+				pts.x = circ_r;
+				pts.y = circ_b;
+				break;
+		}
+		Real ptx = pts.x - a->position.x;
+		Real pty = pts.y - a->position.y;
+
+		// inverse-rotate it to the right coord system
+		Real ptx_new = (Real)fabs(ptx*c - pty*s);
+		Real pty_new = (Real)fabs(ptx*s + pty*c);
+
+		#ifdef INTENSE_DEBUG
+		Real mag_a = sqr(ptx)+sqr(pty);
+		Real mag_b = sqr(ptx_new)+sqr(pty_new);
+		DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
+		#endif
+
+		if (ptx_new <= major && pty_new <= minor)
+		{
+			avg->x += pts.x;
+			avg->y += pts.y;
+			*avgTot += 1;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
 static void rectToFourPoints(
 	const CollideInfo *a,		// z is ignored
 	Coord2D pts[]
@@ -486,20 +683,33 @@ static Bool xy_collideTest_Circle_Rect(const CollideInfo *a, const CollideInfo *
 */
 static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo)
 {
-#if 1
+//#if 1
 	/// @todo srj -- this is better than the other one, since it actually handles rotated rects,
 	// but still not as accurate as is could be. (srj)
-	CollideInfo btmp = *b;
-	btmp.geom.setMinorRadius(btmp.geom.getMajorRadius());
-	return xy_collideTest_Rect_Rect(a, &btmp, cinfo);
-#else
+	/// IamInnocent - edited... 20 years later in the future
+	if(!TheGlobalData->m_useAccurateSphereToRectCollision)
+	{
+		CollideInfo btmp = *b;
+		btmp.geom.setMinorRadius(btmp.geom.getMajorRadius());
+		return xy_collideTest_Rect_Rect(a, &btmp, cinfo);
+	}
+//#else
 	// note, this actually tests the intersection of the the rect with the circle's
 	// bounding box. in practice, this is usually good enough, since most of
 	// our sphere/cyl shapes are small relative to boxes. (in fact, the WWMath
 	// library takes a similar shortcut when colliding spheres with boxes in 3d.
 	// so I figured it was probably good enough for us too.)
 
-	Real circ_l = b->position.x - b->geom.getMajorRadius();
+	// IamInnocent - Added react to rectangle rotation
+	Coord2D pts[4];
+	Coord2D avg; avg.x = avg.y = 0.0f;
+	Int avgTot = 0;
+
+	rectToFourPoints(a, pts);
+	testRotatedPointsAgainstSphere(pts, b, &avg, &avgTot);
+	testSphereAgainstRect(b, a, &avg, &avgTot);
+
+	/*Real circ_l = b->position.x - b->geom.getMajorRadius();
 	Real circ_r = b->position.x + b->geom.getMajorRadius();
 	Real circ_t = b->position.y - b->geom.getMajorRadius();
 	Real circ_b = b->position.y + b->geom.getMajorRadius();
@@ -510,19 +720,23 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 
 	if (circ_r >= rect_l &&	circ_l <= rect_r &&
 		circ_b >= rect_t &&	circ_t <= rect_b)
+	*/
+	if (avgTot > 0)
 	{
 		if (cinfo)
 		{
 			vecDiff_2D(&b->position, &a->position, &cinfo->normal);
 			cinfo->normal.normalize();
-			cinfo->loc.x = (maxReal(circ_l, rect_l) + minReal(circ_r, rect_r)) * 0.5f;
-			cinfo->loc.y = (maxReal(circ_t, rect_t) + minReal(circ_b, rect_b)) * 0.5f;
+			//cinfo->loc.x = (maxReal(circ_l, rect_l) + minReal(circ_r, rect_r)) * 0.5f;
+			//cinfo->loc.y = (maxReal(circ_t, rect_t) + minReal(circ_b, rect_b)) * 0.5f;
+			cinfo->loc.x = avg.x / avgTot;
+			cinfo->loc.y = avg.y / avgTot;
 			cinfo->loc.z = (a->position.z + b->position.z) * 0.5f;
 		}
 		return true;
 	}
 	return false;
-#endif
+//#endif
 }
 
 //-----------------------------------------------------------------------------

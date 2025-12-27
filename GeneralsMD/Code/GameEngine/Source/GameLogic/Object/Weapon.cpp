@@ -1559,9 +1559,11 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			}
 			else if(getProjectileTemplate() != NULL)
 			{
-				if(isStructure && m_scatterRadius == 0.0f)
+				if(isStructure)
 				{
-					targetRatio *= 1.0f + min(0.8f, (1.0f / ( 2 * targetRadius * PI / (targetRadius*targetRadius))) * 0.06f);
+					dz *= targetRatio; // Structures doesn't check for Z axis when applying collisions(?), so best to lower it to relatable values.
+					if(m_scatterRadius == 0.0f)
+						targetRatio *= 1.0f + min(0.8f, (1.0f / ( 2 * targetRadius * PI / (targetRadius*targetRadius))) * 0.06f);
 				}
 				else if(curTarget->isKindOf(KINDOF_INFANTRY))
 				{
