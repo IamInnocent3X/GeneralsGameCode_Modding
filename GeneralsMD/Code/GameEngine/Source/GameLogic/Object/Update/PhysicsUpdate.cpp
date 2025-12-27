@@ -725,6 +725,7 @@ void PhysicsBehavior::removeConstantMotionToLoc()
 {
 	m_doConstantMotion = FALSE;
 }
+
 //-------------------------------------------------------------------------------------------------
 /**
  * Basic rigid body physics using an Euler integrator.
@@ -1084,6 +1085,7 @@ UpdateSleepTime PhysicsBehavior::update()
 	return calcSleepTime();
 }
 
+//-------------------------------------------------------------------------------------------------
 void PhysicsBehavior::checkSlowDeathBehaviors()
 {
 	Object*	obj = getObject();
