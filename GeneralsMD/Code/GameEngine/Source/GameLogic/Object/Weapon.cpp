@@ -1494,12 +1494,12 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	{
 		Coord3D targetCoord = *sourceObj->getCurrentTargetCoord();
 		hasBodyForTargetAiming = TRUE;
-
-		if (sourceObj->getLastVictimID() != curTarget->getID() ||
+		if( (TheGameLogic->getFrame() >= firingWeapon->getLastShotFrame() + 3*LOGICFRAMES_PER_SECOND) ||
+		 	(sourceObj->getLastVictimID() != curTarget->getID()) ||
 			(fabs(targetCoord.x) < WWMATH_EPSILON &&
 			fabs(targetCoord.y) < WWMATH_EPSILON &&
 			fabs(targetCoord.z) < WWMATH_EPSILON )
-		   )
+		  )
 		{
 			// if we're airborne and too close, just head for the opposite side.
 			Coord3D dir;
@@ -1563,7 +1563,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				{
 					dz *= targetRatio; // Structures doesn't check for Z axis when applying collisions(?), so best to lower it to relatable values.
 					if(m_scatterRadius == 0.0f)
-						targetRatio *= 1.0f + min(0.8f, (1.0f / ( 2 * PI / targetRadius)) * 0.06f); // Formula is Circumference (2 * PI * r) / Distance^2 (r * r), so that'll do
+						targetRatio *= 1.0f + min(0.8f, 0.03f * targetRadius / PI); // Formula is ( 1 / (Circumference (2 * PI * r) / radius^2 (r * r)) ) * 0.06f, so that's the simplified formula
 				}
 				else if(curTarget->isKindOf(KINDOF_INFANTRY))
 				{
@@ -1594,6 +1594,29 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 		else
 		{
+			Real targetHeight = curTarget->getGeometryInfo().getMaxHeightAbovePosition();
+			if(getProjectileTemplate() == NULL && !firingWeapon->isLaser() && !sourceObj->isKindOf(KINDOF_INFANTRY) && distSqr > 0)
+			{
+				Real adjustedHeight = targetHeight;
+				if(!sourceObj->isAboveTerrain() && distSqr < 4 * targetHeight * targetHeight)
+				{
+					Real distance = sqrt(distSqr);
+					Real shrukenDistance = distance * 0.5f;
+					adjustedHeight = min(shrukenDistance, targetHeight);
+				}
+				Real dz = 0.25f*adjustedHeight;
+				if(targetCoord.z > dz)
+				{
+					Real max_dz = min(dz, 0.5f*adjustedHeight - targetCoord.z);
+					dz = GameLogicRandomValueReal(-dz, max_dz);
+				}
+				else
+				{
+					Real min_dz = max(-dz, targetCoord.z - 0.25f*adjustedHeight);
+					dz = GameLogicRandomValueReal(min_dz, dz);
+				}
+				targetCoord.z += dz;
+			}
 			targetedPos.x += targetCoord.x;
 			targetedPos.y += targetCoord.y;
 			targetedPos.z += targetCoord.z;
