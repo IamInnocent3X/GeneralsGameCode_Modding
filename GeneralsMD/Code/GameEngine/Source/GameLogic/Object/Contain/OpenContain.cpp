@@ -1761,6 +1761,7 @@ void OpenContain::doUpgradeChecks( void )
 				if(gotUpgrade)
 				{
 					AvailableCapacities.push_back(currContain);
+					gotUpgrade = FALSE;
 				}
 				
 				if (sscanf( getChars, "%d", &currContain ) != 1)
@@ -1815,19 +1816,18 @@ void OpenContain::doUpgradeChecks( void )
 								Conflict = TRUE;
 							}
 						}
-						
+
 						if(Conflict)
-						{
-							gotUpgrade = FALSE;
 							break;
-						}
 					}
 				}
 
 			}
 			else if(currContain != containMax && Conflict == FALSE)
 			{
-				gotUpgrade = FALSE;
+				// Skip an instance if we already have an Upgrade present
+				if(!RequiresAllTriggers && gotUpgrade)
+					continue;
 
 				const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
 				if( !ut )
@@ -1840,15 +1840,23 @@ void OpenContain::doUpgradeChecks( void )
 					if(source->getControllingPlayer()->hasUpgradeComplete(ut))
 					{
 						gotUpgrade = TRUE;
-						if(!RequiresAllTriggers)
-							break;
+					}
+					else if(RequiresAllTriggers)
+					{
+						// RequiredAllTriggers requires All Upgrades to satisfy the list, if one is not satisfied, then it is considered no Upgrade
+						Conflict = TRUE;
+						gotUpgrade = FALSE;
 					}
 				}
 				else if( source->hasUpgrade(ut) )
 				{
 					gotUpgrade = TRUE;
-					if(!RequiresAllTriggers)
-						break;
+				}
+				else if(RequiresAllTriggers)
+				{
+					// RequiredAllTriggers requires All Upgrades to satisfy the list, if one is not satisfied, then it is considered no Upgrade
+					Conflict = TRUE;
+					gotUpgrade = FALSE;
 				}
 			}
 		}

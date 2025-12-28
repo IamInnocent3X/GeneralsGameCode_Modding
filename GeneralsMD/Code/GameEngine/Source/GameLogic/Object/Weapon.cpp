@@ -1563,7 +1563,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				{
 					dz *= targetRatio; // Structures doesn't check for Z axis when applying collisions(?), so best to lower it to relatable values.
 					if(m_scatterRadius == 0.0f)
-						targetRatio *= 1.0f + min(0.8f, (1.0f / ( 2 * targetRadius * PI / (targetRadius*targetRadius))) * 0.06f);
+						targetRatio *= 1.0f + min(0.8f, (1.0f / ( 2 * PI / targetRadius)) * 0.06f); // Formula is Circumference (2 * PI * r) / Distance^2 (r * r), so that'll do
 				}
 				else if(curTarget->isKindOf(KINDOF_INFANTRY))
 				{

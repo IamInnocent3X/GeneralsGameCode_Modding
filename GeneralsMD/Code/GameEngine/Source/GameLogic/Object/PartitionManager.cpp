@@ -467,10 +467,10 @@ static void testRotatedPointsAgainstSphere(
 	for (Int i = 0; i < 4; ++i, ++pts)
 	{
 		// convert to a delta relative to rect ctr
-		#ifdef INTENSE_DEBUG
-		Real ptx = pts->x - a->position.x;
-		Real pty = pts->y - a->position.y;
-		#endif
+		//#ifdef INTENSE_DEBUG
+		//Real ptx = pts->x - a->position.x;
+		//Real pty = pts->y - a->position.y;
+		//#endif
 		Real ptx_new;
 		Real pty_new;
 		switch(i)
@@ -505,52 +505,52 @@ static void testRotatedPointsAgainstSphere(
 		Real mag_a = sqr(ptx)+sqr(pty);
 		Real mag_b = sqr(ptx_new)+sqr(pty_new);
 		DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
-		#endif
 
-#ifdef INTENSE_DEBUG
 		Bool pass = FALSE;
+		const Int MAXR = 32;
+		char dir[MAXR];
+
 		switch(i)
 		{
 			// tl
 			case 0:
 				pass = circ_r >= pts->x && circ_b >= pts->y;
+				sprintf( dir, "Top Left" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_l, circ_t));
+				DEBUG_LOG(("Coordinates - Circle, Bottom Right. X: %f. Y: %f", circ_r, circ_b));
 				break;
 			// tr
 			case 1:
 				pass = circ_l <= pts->x && circ_b >= pts->y;
+				sprintf( dir, "Top Right" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_r, circ_t));
+				DEBUG_LOG(("Coordinates - Circle, Bottom Left. X: %f. Y: %f", circ_l, circ_b));
 				break;
 			// bl
 			case 2:
 				pass = circ_r >= pts->x && circ_t <= pts->y;
+				sprintf( dir, "Bottom Left" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_l, circ_b));
+				DEBUG_LOG(("Coordinates - Circle, Top Right. X: %f. Y: %f", circ_r, circ_t));
 				break;
 			// br
 			case 3:
 				pass = circ_l <= pts->x && circ_t <= pts->y;
+				sprintf( dir, "Bottom Right" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_r, circ_b));
+				DEBUG_LOG(("Coordinates - Circle, Top Left. X: %f. Y: %f", circ_t, circ_t));
 				break;
 		}
-#endif
+		#endif
 
 		if (ptx_new <= radius && pty_new <= radius)
 		{
 #ifdef INTENSE_DEBUG
-			const Int MAXR = 32;
-			char dir[MAXR];
-			switch(i)
-			{
-				case 0:
-					sprintf( dir, "Top Left" );
-					break;
-				case 1:
-					sprintf( dir, "Top Right" );
-					break;
-				case 2:
-					sprintf( dir, "Bottom Left" );
-					break;
-				case 3:
-					sprintf( dir, "Bottom Right" );
-					break;
-			}
-			DEBUG_LOG(("Check passed Rectangle points to Sphere. Direction: %s. X: %f. Y: %f", dir, ptx, pty));
+			DEBUG_LOG(("Check passed Rectangle points to Sphere. Direction: %s. Radius %f. X: %f. Y: %f", dir, radius, ptx_new, pty_new));
 			if(pass)
 				DEBUG_LOG(("Case: %s satisfies boundary checks.", dir));
 			else
@@ -559,8 +559,16 @@ static void testRotatedPointsAgainstSphere(
 			avg->x += pts->x;
 			avg->y += pts->y;
 			*avgTot += 1;
-			//DEBUG_LOG(("avgx: %f avgy: %f, avgTot: %d", avg->x, avg->y, *avgTot));
+#ifdef INTENSE_DEBUG
+			DEBUG_LOG(("avgx: %f avgy: %f, avgTot: %d", avg->x, avg->y, *avgTot));
 		}
+		else if(pass)
+		{
+			DEBUG_LOG(("Check Coordinates passed but does Not meet Sphere Radius. Direction: %s. Radius %f. X: %f. Y: %f", dir, radius, ptx_new, pty_new));
+		}
+#else
+		}
+#endif
 	}
 }
 
