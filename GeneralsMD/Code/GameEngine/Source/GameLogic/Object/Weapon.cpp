@@ -1658,9 +1658,6 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if(currentDraw)
 			{
 				Weapon::setFirePositionForDrawable(sourceObj, currentDraw, wslot, specificBarrelToUse);
-				currentDraw->setPosition( sourceObj->getPosition() );
-				currentDraw->setOrientation( sourceObj->getOrientation() );
-				currentDraw->updateDrawable();
 				if(TheGlobalData->m_useEfficientDrawableScheme)
 					TheGameClient->informClientNewDrawable(currentDraw);
 			}
@@ -1691,8 +1688,28 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 				// IamInnocent - WARNING: The function below is Very nuclear and will cause Crashes (point being do proceed with caution if use)
 				// Note: The Barrels for the Drawable MUST Match the current Drawable or else it will cause crashes... (Ofcourse)
+				/// Update - Updated regarding Usage, even with Failsaves implemented, should inspect for errors as this function is VERY Volatile. Drawables should all be on Client side and have no affect on Game Logic
 				if(handled)
-					sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, specificBarrelToUse, reAngle, reDir, fx != NULL, FALSE);
+				{
+					// IamInnocent - technical fix for Disguised Drawables using original offsets for handling Recoil and Muzzles
+					/// Maximum barrel allow for drawables using different templates while using its Original Drawable amount of barrels is the Drawable's Barrel Count - 1
+					Int barrelCount = specificBarrelToUse;
+					if(sourceObj->getTemplate() != sourceObj->getDrawable()->getTemplate() && currentDraw->getTemplate() == sourceObj->getTemplate())
+					{
+						Int maxBarrelCount = stealth->getBarrelCountDisguisedTemplate(wslot);
+						// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+						while(barrelCount > maxBarrelCount)
+						{
+							if(maxBarrelCount <= 0)
+								barrelCount = 0;
+							else
+								barrelCount -= maxBarrelCount;
+						}
+						maxBarrelCount = max(0, maxBarrelCount-1);
+						barrelCount = min(barrelCount, maxBarrelCount);
+					}
+					sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, barrelCount, reAngle, reDir, fx != NULL, FALSE);
+				}
 			}
 			else
 			{
@@ -2080,9 +2097,6 @@ void WeaponTemplate::createPreAttackFX
 				return; // Sanity
 
 			Weapon::setFirePositionForDrawable(sourceObj, currentDraw, wslot, specificBarrelToUse);
-			currentDraw->setPosition( sourceObj->getPosition() );
-			currentDraw->setOrientation( sourceObj->getOrientation() );
-			currentDraw->updateDrawable();
 			if(TheGlobalData->m_useEfficientDrawableScheme)
 				TheGameClient->informClientNewDrawable(currentDraw);
 
@@ -2098,7 +2112,26 @@ void WeaponTemplate::createPreAttackFX
 
 			// IamInnocent - HOPEFULLY there are no desyncs with this feature
 			if(fx && handled)
+			{
+				// IamInnocent - technical fix for Disguised Drawables using original offsets for handling Recoil and Muzzles
+				/// Maximum barrel allow for drawables using different templates while using its Original Drawable amount of barrels is the Drawable's Barrel Count - 1
+				Int barrelCount = specificBarrelToUse;
+				if(sourceObj->getTemplate() != sourceObj->getDrawable()->getTemplate() && currentDraw->getTemplate() == sourceObj->getTemplate())
+				{
+					Int maxBarrelCount = stealth->getBarrelCountDisguisedTemplate(wslot);
+					// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+					while(barrelCount > maxBarrelCount)
+					{
+						if(maxBarrelCount <= 0)
+							barrelCount = 0;
+						else
+							barrelCount -= maxBarrelCount;
+					}
+					maxBarrelCount = max(0, maxBarrelCount-1);
+					barrelCount = min(barrelCount, maxBarrelCount);
+				}
 				sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, specificBarrelToUse, 0.0f, 0.0f, FALSE, TRUE);
+			}
 		}
 		else
 		{
@@ -2552,23 +2585,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 							extraHeight = srcPos.z;
 
 							if(stealth && stealth->isDisguisedAndCheckIfNeedOffset())
-							{
-								//If we are disguised and we need to check our firing offset, get the offset stored in stealthupdate
-								Coord3D offset;
-								offset.zero();
-								stealth->getFiringOffsetWhileDisguised(wslot, specificBarrelToUse, &offset);
-								if (fabs(offset.x) > WWMATH_EPSILON ||
-									fabs(offset.y) > WWMATH_EPSILON ||
-									fabs(offset.z) > WWMATH_EPSILON)
-								{
-									Coord3D dir = primaryVictim ? *primaryVictim->getPosition() : *pos;
-									dir.sub( &srcPos );
-									Real angle = atan2(dir.y, dir.x);
-									srcPos.x += Cos(angle) * offset.x;
-									srcPos.y += Sin(angle) *offset.y;
-									srcPos.z += offset.z;
-								}
-							}
+								stealth->getDrawableTemplateWhileDisguised()->getWeaponFireOffset(wslot, specificBarrelToUse, &srcPos);
 							else
 								source->getDrawable()->getWeaponFireOffset(wslot, specificBarrelToUse, &srcPos);
 
@@ -5982,6 +5999,139 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 }
 
 //-------------------------------------------------------------------------------------------------
+/*static*/ /*Bool Weapon::calcWeaponFirePosition(
+	const Object* obj,
+	const Drawable* draw,
+	WeaponSlotType wslot,
+	Int specificBarrelToUse,
+	Matrix3D& worldTransform,
+	Coord3D& worldPos
+)
+{
+	Real turretAngle = 0.0f;
+	Real turretPitch = 0.0f;
+	const AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	WhichTurretType tur = ai ? ai->getWhichTurretForWeaponSlot(wslot, &turretAngle, &turretPitch) : TURRET_INVALID;
+
+	Matrix3D attachTransform(true);
+	Coord3D turretRotPos = {0.0f, 0.0f, 0.0f};
+	Coord3D turretPitchPos = {0.0f, 0.0f, 0.0f};
+	//CRCDEBUG_LOG(("Do we have a drawable? %d", (draw != NULL)));
+	if (!draw || !draw->getWeaponFireOffset(wslot, specificBarrelToUse, &attachTransform, tur, &turretRotPos, &turretPitchPos))
+	{
+		//CRCDEBUG_LOG(("WeaponFirePos %d %d not found!",wslot, specificBarrelToUse));
+		//DEBUG_CRASH(("WeaponFirePos %d %d not found!",wslot, specificBarrelToUse));
+		//attachTransform.Make_Identity();
+		//turretRotPos.zero();
+		//turretPitchPos.zero();
+		return FALSE;
+	}
+	if (tur != TURRET_INVALID)
+	{
+		// The attach transform is the pristine front and center position of the fire point
+		// We can't read from the client, so we need to reproduce the actual point that
+		// takes turn and pitch into account.
+		Matrix3D turnAdjustment(1);
+		Matrix3D pitchAdjustment(1);
+
+		// To rotate about a point, move that point to 0,0, rotate, then move it back.
+		// Pre rotate will keep the first twist from screwing the angle of the second pitch
+		pitchAdjustment.Translate( turretPitchPos.x, turretPitchPos.y, turretPitchPos.z );
+		pitchAdjustment.In_Place_Pre_Rotate_Y(-turretPitch);
+		pitchAdjustment.Translate( -turretPitchPos.x, -turretPitchPos.y, -turretPitchPos.z );
+
+		turnAdjustment.Translate( turretRotPos.x, turretRotPos.y, turretRotPos.z );
+		turnAdjustment.In_Place_Pre_Rotate_Z(turretAngle);
+		turnAdjustment.Translate( -turretRotPos.x, -turretRotPos.y, -turretRotPos.z );
+
+#ifdef ALLOW_TEMPORARIES
+		attachTransform = turnAdjustment * pitchAdjustment * attachTransform;
+#else
+		Matrix3D tmp = attachTransform;
+		attachTransform.mul(turnAdjustment, pitchAdjustment);
+		attachTransform.postMul(tmp);
+#endif
+	}
+
+//#if defined(RTS_DEBUG)
+//  Real muzzleHeight = attachTransform.Get_Z_Translation();
+//  DEBUG_ASSERTCRASH( muzzleHeight > 0.001f, ("YOUR TURRET HAS A VERY LOW PROJECTILE LAUNCH POSITION, BUT FOUND A VALID BONE. DID YOU PICK THE WRONG ONE? %s", obj->getTemplate()->getName().str()));
+//#endif
+
+  //obj->convertBonePosToWorldPos(NULL, &attachTransform, NULL, &worldTransform);
+
+  worldTransform = attachTransform;
+	Vector3 tmp = worldTransform.Get_Translation();
+	worldPos.x = tmp.X;
+	worldPos.y = tmp.Y;
+	worldPos.z = tmp.Z;
+
+	return TRUE;
+}
+*/
+
+// ------------------------------------------------------------------------------------------------
+static const ModelConditionFlags s_allWeaponFireFlags[WEAPONSLOT_COUNT] =
+{
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_A,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_A,
+		MODELCONDITION_RELOADING_A,
+		MODELCONDITION_PREATTACK_A,
+		MODELCONDITION_USING_WEAPON_A
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_B,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_B,
+		MODELCONDITION_RELOADING_B,
+		MODELCONDITION_PREATTACK_B,
+		MODELCONDITION_USING_WEAPON_B
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_C,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_C,
+		MODELCONDITION_RELOADING_C,
+		MODELCONDITION_PREATTACK_C,
+		MODELCONDITION_USING_WEAPON_C
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_D,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_D,
+		MODELCONDITION_RELOADING_D,
+		MODELCONDITION_PREATTACK_D,
+		MODELCONDITION_USING_WEAPON_D
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_E,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_E,
+		MODELCONDITION_RELOADING_E,
+		MODELCONDITION_PREATTACK_E,
+		MODELCONDITION_USING_WEAPON_E
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_F,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_F,
+		MODELCONDITION_RELOADING_F,
+		MODELCONDITION_PREATTACK_F,
+		MODELCONDITION_USING_WEAPON_F
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_G,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_G,
+		MODELCONDITION_RELOADING_G,
+		MODELCONDITION_PREATTACK_G,
+		MODELCONDITION_USING_WEAPON_G
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_H,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_H,
+		MODELCONDITION_RELOADING_H,
+		MODELCONDITION_PREATTACK_H,
+		MODELCONDITION_USING_WEAPON_H
+	)
+};
+
+//-------------------------------------------------------------------------------------------------
 /*static*/ void Weapon::setFirePositionForDrawable(
 	const Object* launcher,
 	Drawable* draw,
@@ -5989,6 +6139,10 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	Int specificBarrelToUse
 )
 {
+	draw->setModelConditionState(MODELCONDITION_ATTACKING);
+	ModelConditionFlags c = launcher->getModelConditionForWeaponSlot(wslot, WSF_FIRING);
+	draw->clearAndSetModelConditionFlags(s_allWeaponFireFlags[wslot], c);
+
 	Real turretAngle = 0.0f;
 	Real turretPitch = 0.0f;
 	const AIUpdateInterface* ai = launcher->getAIUpdateInterface();
@@ -5999,6 +6153,10 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	{
 		draw->doTurretPositioning(tur, turretAngle, turretPitch);
 	}
+
+	draw->setPosition( launcher->getPosition() );
+	draw->setOrientation( launcher->getOrientation() );
+	draw->updateDrawable();
 }
 
 //-------------------------------------------------------------------------------------------------

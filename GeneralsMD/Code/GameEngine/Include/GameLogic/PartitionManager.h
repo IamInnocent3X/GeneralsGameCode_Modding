@@ -1326,8 +1326,6 @@ protected:
 	);
 
 	Int checkObjectsAlongLine(
-		Int cellX,
-		Int cellY,
 		ObjectID sourceID,
 		const Coord3D& startingPos,
 		const Coord3D& currentPos,

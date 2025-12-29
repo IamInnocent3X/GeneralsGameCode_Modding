@@ -4409,7 +4409,7 @@ Int PartitionManager::getObjectsAlongLine(
 			currentPos.y = pos.y + Sin(angle) * distance;
 			currentPos.z = pos.z;
 			
-			checkObjectsAlongLine(x, y, sourceID, pos, currentPos, posOther, radius, infantryRadius, angle, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+			checkObjectsAlongLine(sourceID, pos, currentPos, posOther, radius, infantryRadius, angle, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
 
 			if( railgunfx )
 				FXList::doFXPos(railgunfx, &currentPos);
@@ -4437,8 +4437,6 @@ Int PartitionManager::getObjectsAlongLine(
 
 //-----------------------------------------------------------------------------
 Int PartitionManager::checkObjectsAlongLine(
-	Int cellX,
-	Int cellY,
 	ObjectID sourceID,
 	const Coord3D& startingPos,
 	const Coord3D& currentPos,
@@ -4455,8 +4453,11 @@ Int PartitionManager::checkObjectsAlongLine(
 )
 {
 	//IterData* data = (IterData*)userData;
-	Int cellCenterX = cellX;
-	Int cellCenterY = cellY;
+	Int cellCenterX, cellCenterY;
+	worldToCell(currentPos.x, currentPos.y, &cellCenterX, &cellCenterY);
+	// IamInnocent - not accurate according to the Position
+	//Int cellCenterX = cellX;
+	//Int cellCenterY = cellY;
 
 	//const Coord3D* faceDir = source->getUnitDirectionVector2D();
 
@@ -4496,8 +4497,10 @@ Int PartitionManager::checkObjectsAlongLine(
 	Int maxRadius = m_maxGcoRadius;
 	if (radius < HUGE_DIST)
 	{
+		Real infantryCheckRadius = min(infantryRadius, 40.0f);
+		Real checkRadius = max(infantryCheckRadius, radius);
 		// don't go outwards any farther than necessary.
-		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(radius));
+		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(checkRadius));
 	}
 #if defined(INTENSE_DEBUG)
 	/*

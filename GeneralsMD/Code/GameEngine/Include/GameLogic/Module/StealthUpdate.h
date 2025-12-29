@@ -157,6 +157,7 @@ public:
 	// ??? ugh
 	Bool isDisguised() const { return m_disguiseAsTemplate != NULL; }
 	Bool hasLastDisguiseTemplate() const { return m_lastDisguiseAsTemplate != NULL; }
+	Bool isDisguiseTransitioning() const { return m_disguiseTransitionFrames > 0; }
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
 	const AsciiString& getDisguisedModelName() const { return m_disguiseModelName; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
@@ -183,8 +184,9 @@ public:
 	void refreshUpdate();
 
 	Bool isDisguisedAndCheckIfNeedOffset() const;
-	Bool getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	//Bool getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
 	Int getBarrelCountWhileDisguised(WeaponSlotType wslot) const;
+	Int getBarrelCountDisguisedTemplate(WeaponSlotType wslot) const;
 
 	Drawable *getDrawableTemplateWhileDisguised() const;
 
@@ -248,8 +250,8 @@ private:
 	Bool							m_updatePulse;						//Saves update for going extra checks by indicating that it only checks for pulse phase
 	mutable Bool					m_updatePulseOnly;					//See above
 
-	std::vector<FiringPosStruct>	m_originalDrawableFiringOffsets;	//For storing firing positions for disguised Objects
-	std::vector<FiringPosStruct>	m_disguisedDrawableFiringOffsets;	//See above
+	//std::vector<FiringPosStruct>	m_originalDrawableFiringOffsets;	//For storing firing positions for disguised Objects
+	//std::vector<FiringPosStruct>	m_disguisedDrawableFiringOffsets;	//See above
 	Drawable						*m_disguisedDrawableTemplate;		//See above
 	Drawable						*m_originalDrawableTemplate;		//See above
 };

@@ -1272,6 +1272,15 @@ public:
 		const Coord3D* launchPos = NULL
 	);
 
+	/*static Bool calcWeaponFirePosition(
+		const Object* obj,
+		const Drawable* draw,
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		Matrix3D& worldTransform,
+		Coord3D& worldPos
+	);*/
+
 	static void setFirePositionForDrawable(
 		const Object* launcher,
 		Drawable* draw,

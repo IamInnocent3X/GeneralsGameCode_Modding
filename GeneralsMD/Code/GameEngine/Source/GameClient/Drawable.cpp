@@ -755,10 +755,13 @@ Bool Drawable::getProjectileLaunchOffset(WeaponSlotType wslot, Int specificBarre
 //-------------------------------------------------------------------------------------------------
 Bool Drawable::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
 {
+	// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+	Int barrelCount = min(specificBarrelToUse, getBarrelCount(wslot));
+
 	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		const ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di && di->getWeaponFireOffset(wslot, specificBarrelToUse, pos))
+		if (di && di->getWeaponFireOffset(m_conditionState, wslot, barrelCount, pos))
 			return true;
 	}
 	return false;
@@ -4879,10 +4882,13 @@ Bool Drawable::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse,
 		}
 	}
 
+	// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+	Int barrelCount = min(specificBarrelToUse, getBarrelCount(wslot));
+
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di && di->handleWeaponFireFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius))
+		if (di && di->handleWeaponFireFX(wslot, barrelCount, fxl, weaponSpeed, victimPos, damageRadius))
 			return true;
 	}
 	return false;
@@ -4905,10 +4911,13 @@ Bool Drawable::handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelT
 		}
 	}
 
+	// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+	Int barrelCount = min(specificBarrelToUse, getBarrelCount(wslot));
+
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di && di->handleWeaponPreAttackFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius))
+		if (di && di->handleWeaponPreAttackFX(wslot, barrelCount, fxl, weaponSpeed, victimPos, damageRadius))
 			return true;
 	}
 	return false;
