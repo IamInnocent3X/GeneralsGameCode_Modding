@@ -496,7 +496,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 
 	if(d->m_sinkRate > 0.0f)
 	{
-		if ( now >= m_sinkFrame && (!TheGlobalData->m_corpsesHaveAirDrag || !AboveTerrain))
+		if ( now >= m_sinkFrame && (!TheGlobalData->m_corpsesHaveAirDrag || !AboveTerrain || !canOptimizeHulkBehavior()))
 		{
 			m_hasSunk = TRUE;
 			// disable Physics (if any) so that we can control the sink...
@@ -508,7 +508,7 @@ UpdateSleepTime SlowDeathBehavior::update()
 		}
 		else
 		{
-			if(TheGlobalData->m_corpsesHaveAirDrag && AboveTerrain && obj->isDisabledByType( DISABLED_HELD ))
+			if(TheGlobalData->m_corpsesHaveAirDrag && AboveTerrain && obj->isDisabledByType( DISABLED_HELD ) && canOptimizeHulkBehavior())
 				obj->clearDisabled( DISABLED_HELD );
 
 			if(!m_hasSunk && m_sinkFrame && m_sinkFrame > now)

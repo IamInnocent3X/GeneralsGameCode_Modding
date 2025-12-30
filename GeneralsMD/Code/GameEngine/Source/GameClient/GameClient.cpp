@@ -934,6 +934,14 @@ void GameClient::informClientNewDrawable(Drawable *draw)
 	if(m_drawablesList.empty())
 		return;
 
+	Coord3D currPos = *draw->getPosition();
+	Region3D *region = getEfficientDrawableRegion();
+	if( currPos.x <= region->lo.x || currPos.x >= region->hi.x ||
+		currPos.y <= region->lo.y || currPos.y >= region->hi.y ||
+			currPos.z <= region->lo.z || currPos.z >= region->hi.z )
+		return;
+		
+
 	addDrawableToEfficientList(draw);
 }
 
