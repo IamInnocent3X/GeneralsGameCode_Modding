@@ -565,10 +565,8 @@ static void testRotatedPointsAgainstSphere(
 		else if(pass)
 		{
 			DEBUG_LOG(("Check Coordinates passed but does Not meet Sphere Radius. Direction: %s. Radius %f. X: %f. Y: %f", dir, radius, ptx_new, pty_new));
-		}
-#else
-		}
 #endif
+		}
 	}
 }
 
@@ -4320,6 +4318,7 @@ Int PartitionManager::getObjectsAlongLine(
 	const Coord3D& posOther,
 	Real radius,
 	Real infantryRadius,
+	Real checkPerDistance,
 	const FXList* railgunfx,
 	const ObjectCreationList *railgunocl,
 	DistanceCalculationType dc,
@@ -4330,106 +4329,157 @@ Int PartitionManager::getObjectsAlongLine(
 	Coord3D *closestVecArg
 )
 {
-	ICoord2D start, end, delta;
-	Int x, y;
-	Int xinc1, xinc2;
-	Int yinc1, yinc2;
-	Int den, num, numadd;
-	Int numpixels;
+	// IamInnocent - Reworked the checking Distance, now only need to count distance between one cell to check
+	Real RailgunCheckDistance = checkPerDistance;
+	if(RailgunCheckDistance == 0.0f)
+	{
+		// This lengthy function only checks for the distance between a Single cell.
+		ICoord2D start, end, delta;
+		Int x, y;
+		Int xinc1, xinc2;
+		Int yinc1, yinc2;
+		Int den, num, numadd;
+		Int numpixels;
 
-	worldToCell(pos.x, pos.y, &start.x, &start.y);
-	worldToCell(posOther.x, posOther.y, &end.x, &end.y);
+		worldToCell(pos.x, pos.y, &start.x, &start.y);
+		worldToCell(posOther.x, posOther.y, &end.x, &end.y);
 
-	delta.x = abs(end.x - start.x);			// The difference between the x's
-	delta.y = abs(end.y - start.y);			// The difference between the y's
-	x = start.x;												// Start x off at the first pixel
-	y = start.y;												// Start y off at the first pixel
+		delta.x = abs(end.x - start.x);			// The difference between the x's
+		delta.y = abs(end.y - start.y);			// The difference between the y's
+		x = start.x;												// Start x off at the first pixel
+		y = start.y;												// Start y off at the first pixel
 
-	if (end.x >= start.x)								// The x-values are increasing
-	{
-		xinc1 = 1;
-		xinc2 = 1;
-	}
-	else																// The x-values are decreasing
-	{
-		xinc1 = -1;
-		xinc2 = -1;
+		if (end.x >= start.x)								// The x-values are increasing
+		{
+			xinc1 = 1;
+			xinc2 = 1;
+		}
+		else																// The x-values are decreasing
+		{
+			xinc1 = -1;
+			xinc2 = -1;
+		}
+
+		if (end.y >= start.y)               // The y-values are increasing
+		{
+			yinc1 = 1;
+			yinc2 = 1;
+		}
+		else																// The y-values are decreasing
+		{
+			yinc1 = -1;
+			yinc2 = -1;
+		}
+		Bool checkY = true;
+		if (delta.x >= delta.y)							// There is at least one x-value for every y-value
+		{
+			xinc1 = 0;												// Don't change the x when numerator >= denominator
+			yinc2 = 0;												// Don't change the y for every iteration
+			den = delta.x;
+			num = delta.x / 2;
+			numadd = delta.y;
+			numpixels = delta.x;							// There are more x-values than y-values
+		}
+		else																// There is at least one y-value for every x-value
+		{
+			checkY = false;
+			xinc2 = 0;												// Don't change the x for every iteration
+			yinc1 = 0;												// Don't change the y when numerator >= denominator
+			den = delta.y;
+			num = delta.y / 2;
+			numadd = delta.x;
+			numpixels = delta.y;							// There are more y-values than x-values
+		}
+
+		PartitionCell* cell = NULL;
+		PartitionCell* cell2 = NULL;
+		Coord2D startCellPos, nextCellPos;
+		Int curpixel = 0;
+		DEBUG_LOG(("NumPixels: %d", numpixels));
+
+		while(RailgunCheckDistance == 0.0f && curpixel <= numpixels)
+		{
+			if(cell == NULL)
+			{
+				cell = ThePartitionManager->getCellAt(x, y);	// might be null if off the edge
+				DEBUG_ASSERTCRASH(cell != NULL, ("off the map"));
+			}
+			else
+			{
+				cell2 = ThePartitionManager->getCellAt(x, y);	// might be null if off the edge
+				DEBUG_ASSERTCRASH(cell2 != NULL, ("off the map"));
+				if(!cell2)
+					cell = NULL;
+			}
+			if (cell)
+			{
+				if(cell2)
+				{
+					cell2->getCellCenterPos(nextCellPos.x, nextCellPos.y);
+					if(nextCellPos.x != startCellPos.x || nextCellPos.y != startCellPos.y)
+					{
+						Coord2D cellVec = nextCellPos;
+						cellVec.x -= startCellPos.x;
+						cellVec.y -= startCellPos.y;
+						RailgunCheckDistance = cellVec.length();
+						//DEBUG_LOG(("RailgunCheckDistances: %f Start X: %f Start Y: %f End X: %f End Y: %f", RailgunCheckDistance, startCellPos.x, startCellPos.y, nextCellPos.x, nextCellPos.y));
+					}
+				}
+				else
+				{
+					cell->getCellCenterPos(startCellPos.x, startCellPos.y);
+				}
+			}
+
+			num += numadd;										// Increase the numerator by the top of the fraction
+			if (num >= den)										// Check if numerator >= denominator
+			{
+				num -= den;											// Calculate the new numerator value
+				x += xinc1;											// Change the x as appropriate
+				y += yinc1;											// Change the y as appropriate
+			}
+			x += xinc2;												// Change the x as appropriate
+			y += yinc2;												// Change the y as appropriate
+			curpixel++;
+		}
 	}
 
-	if (end.y >= start.y)               // The y-values are increasing
-	{
-		yinc1 = 1;
-		yinc2 = 1;
-	}
-	else																// The y-values are decreasing
-	{
-		yinc1 = -1;
-		yinc2 = -1;
-	}
-	Bool checkY = true;
-	if (delta.x >= delta.y)							// There is at least one x-value for every y-value
-	{
-		xinc1 = 0;												// Don't change the x when numerator >= denominator
-		yinc2 = 0;												// Don't change the y for every iteration
-		den = delta.x;
-		num = delta.x / 2;
-		numadd = delta.y;
-		numpixels = delta.x;							// There are more x-values than y-values
-	}
-	else																// There is at least one y-value for every x-value
-	{
-		checkY = false;
-		xinc2 = 0;												// Don't change the x for every iteration
-		yinc1 = 0;												// Don't change the y when numerator >= denominator
-		den = delta.y;
-		num = delta.y / 2;
-		numadd = delta.x;
-		numpixels = delta.y;							// There are more y-values than x-values
-	}
+	if(RailgunCheckDistance <= 0)
+		return 0; // Don't do railgun if there is no Checking Distance
+
+	Coord3D dirVec = posOther;
+	dirVec.sub(&pos);
+
+	Real distance = dirVec.length();
+	Int checkTimes = REAL_TO_INT_CEIL(distance/RailgunCheckDistance);
+
+	Real heightDiff = posOther.z - pos.z;
+	Real heightCheckPerTime = 0.0f;
+	if(heightDiff > WWMATH_EPSILON || heightDiff < WWMATH_EPSILON)
+		heightCheckPerTime = heightDiff/checkTimes;
 
 	Real angle = atan2(posOther.y - pos.y, posOther.x - pos.x);
 	ObjectID sourceID = source->getID();
 
-	for (Int curpixel = 0; curpixel <= numpixels; curpixel++)
+	for(int i = 1; i < checkTimes; i++)
 	{
-		PartitionCell* cell = ThePartitionManager->getCellAt(x, y);	// might be null if off the edge
-		DEBUG_ASSERTCRASH(cell != NULL, ("off the map"));
-		if (cell)
+		Coord3D currentPos;
+		currentPos.x = pos.x + Cos(angle) * i * RailgunCheckDistance;
+		currentPos.y = pos.y + Sin(angle) * i * RailgunCheckDistance;
+
+		Real groundHeight = TheTerrainLogic->getGroundHeight( currentPos.x, currentPos.y );
+		currentPos.z = max(groundHeight, pos.z + i * heightCheckPerTime);
+
+		checkObjectsAlongLine(sourceID, pos, currentPos, posOther, radius, infantryRadius, angle, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+
+		if( railgunfx )
+			FXList::doFXPos(railgunfx, &currentPos);
+		if( railgunocl )
 		{
-			Real posX, posY;
-			cell->getCellCenterPos(posX, posY);
-
-			Real dx, dy;
-			dx = posX - pos.x;
-			dy = posY - pos.y;
-			Real distance = sqrt(dx*dx + dy*dy);
-
-			Coord3D currentPos;
-			currentPos.x = pos.x + Cos(angle) * distance;
-			currentPos.y = pos.y + Sin(angle) * distance;
-			currentPos.z = pos.z;
-			
-			checkObjectsAlongLine(sourceID, pos, currentPos, posOther, radius, infantryRadius, angle, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
-
-			if( railgunfx )
-				FXList::doFXPos(railgunfx, &currentPos);
-			if( railgunocl )
-			{
-				Object *obj = ObjectCreationList::create( railgunocl, source, &currentPos, NULL, angle);
-				if(obj && !testValidForRailgunCheck(obj))
-					obj->setIgnoreRailgunCheck();
-			}
+			Object *obj = ObjectCreationList::create( railgunocl, source, &currentPos, NULL, angle);
+			if(obj && !testValidForRailgunCheck(obj))
+				obj->setIgnoreRailgunCheck();
 		}
-
-		num += numadd;										// Increase the numerator by the top of the fraction
-		if (num >= den)										// Check if numerator >= denominator
-		{
-			num -= den;											// Calculate the new numerator value
-			x += xinc1;											// Change the x as appropriate
-			y += yinc1;											// Change the y as appropriate
-		}
-		x += xinc2;												// Change the x as appropriate
-		y += yinc2;												// Change the y as appropriate
 	}
 
 	return 0;
@@ -4484,7 +4534,6 @@ Int PartitionManager::checkObjectsAlongLine(
 #endif
 
 	Real closestDistSqr = radius * radius;	// if it's not closer than this, we shouldn't consider it anyway...
-	//Real checkRadius = max(radius, 20.0f);
 	Coord3D closestVec;
 #if !RETAIL_COMPATIBLE_CRC // TheSuperHackers @info This should be safe to initialize because it is unused, but let us be extra safe for now.
 	closestVec.x = radius;
@@ -4495,12 +4544,12 @@ Int PartitionManager::checkObjectsAlongLine(
 #ifdef FASTER_GCO
 
 	Int maxRadius = m_maxGcoRadius;
+	Int allocRadius = maxRadius;
 	if (radius < HUGE_DIST)
 	{
-		Real infantryCheckRadius = min(infantryRadius, 40.0f);
-		Real checkRadius = max(infantryCheckRadius, radius);
+		allocRadius = minInt(m_maxGcoRadius, worldToCellDist(radius));
 		// don't go outwards any farther than necessary.
-		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(checkRadius));
+		maxRadius = maxInt(allocRadius, worldToCellDist(infantryRadius));
 	}
 #if defined(INTENSE_DEBUG)
 	/*
@@ -4548,6 +4597,10 @@ Int PartitionManager::checkObjectsAlongLine(
 					continue;
 				thisMod->friend_setDoneFlag(theIterFlag);
 
+				// If we are only checking for Infantry, ignore if not Infantry
+				if(!thisObj->isKindOf(KINDOF_INFANTRY) && curRadius > allocRadius)
+					continue;
+
 				// Skip object if not valid for railgun target while spawned by ocls
 				if(thisObj->getIgnoreRailgunCheck())
 					continue;
@@ -4573,7 +4626,7 @@ Int PartitionManager::checkObjectsAlongLine(
 						continue;
 				}
 
-				Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : checkDistSqr;
+				Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
 				Real thisDistSqr;
 				Coord3D distVec;
 				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
@@ -4749,10 +4802,10 @@ Int PartitionManager::checkObjectsAlongLine(
 			}
 
 			// hmm, ok, calc the distance.
-			Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : checkDistSqr;
+			Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
 			Real thisDistSqr;
 			Coord3D distVec;
-			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
+			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
 				continue;
 
 			//if( setContinue )
@@ -4895,6 +4948,7 @@ SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
 	const Coord3D *posOther,
 	Real radius,
 	Real infantryRadius,
+	Real checkPerDistance,
 	const FXList* railgunfx,
 	const ObjectCreationList *railgunocl,
 	DistanceCalculationType dc,
@@ -4914,7 +4968,7 @@ SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
 	data.filters = filters;
 	data.iterArg = iter;*/
 
-	getObjectsAlongLine(source, *pos, *posOther, radius, infantryRadius, railgunfx, railgunocl, dc, filters, iter, checkBehind, NULL, NULL);
+	getObjectsAlongLine(source, *pos, *posOther, radius, infantryRadius, checkPerDistance, railgunfx, railgunocl, dc, filters, iter, checkBehind, NULL, NULL);
 
 	//iterateCellsAlongLine(*pos, *posOther, (*CellAlongLineProc)checkObjectsAlongLine, &data);
 

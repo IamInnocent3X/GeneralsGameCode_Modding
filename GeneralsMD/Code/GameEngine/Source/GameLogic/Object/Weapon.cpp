@@ -454,6 +454,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "RailgunPiercesBehind",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunPiercesBehind) },
 	{ "RailgunPierceAmount",					INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_railgunPierceAmount) },
 	{ "RailgunRadius",							INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadius) },
+	{ "RailgunRadiusCheckPerDistance",			INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadiusCheckPerDistance) },
 	{ "RailgunInfantryRadius",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunInfantryRadius) },
 	{ "RailgunExtraDistance",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunExtraDistance) },
 	{ "RailgunMaxDistance",						INI::parsePositiveNonZeroReal,	NULL,							offsetof(WeaponTemplate, m_railgunMaxDistance) },
@@ -700,7 +701,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 
 	m_rejectKeys.clear();
 
-	m_rofMovingPenalty = 1.0f;
+	m_rofMovingPenalty = 0.0f;
 	m_rofMovingScales = FALSE;
 	m_rofMovingMaxSpeedCount = 0.0f;
 
@@ -710,6 +711,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_railgunPiercesBehind = FALSE;
 	m_railgunPierceAmount = -1;
 	m_railgunRadius = 0.0f;
+	m_railgunRadiusCheckPerDistance = 0.0f;
 	m_railgunInfantryRadius = 0.0f;
 	m_railgunExtraDistance = 0.0f;
 	m_railgunMaxDistance = 0.0f;
@@ -1464,10 +1466,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	// New feature, similar to Black Hole Armor.
 	Object* retarget = NULL;
 	ObjectID ShielderID = INVALID_ID;
-	ProtectionTypeFlags ShieldedType;
 
 	if(!getIsShielderImmune() && !isProjectileDetonation && !isLeechRangeWeapon() && victimObj && victimObj->testCustomStatus("SHIELDED_TARGET"))
 	{
+		ProtectionTypeFlags ShieldedType = victimObj->getShieldByTargetType();
 		Bool hasProtection = false;
 		if(getProjectileTemplate())
 			hasProtection = !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES);
@@ -1479,7 +1481,6 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			ShielderID = victimObj->getShieldByTargetID();
 			if(ShielderID != INVALID_ID)
 			{
-				ShieldedType = victimObj->getShieldByTargetType();
 				retarget = TheGameLogic->findObjectByID(ShielderID);
 				if(retarget && (retarget->isEffectivelyDead() || retarget->isDestroyed()) )
 					retarget = NULL;
@@ -1826,7 +1827,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				//adjust the laser's position to prevent it from hitting the ground.
 				if( curTarget )
 				{
-					//projectileDestination.set( curTarget->getPosition() );
+					if(TheGlobalData->m_dynamicTargeting)
+						projectileDestination = targetedPos;
+					else
+						projectileDestination.set( curTarget->getPosition() );
 				}
 				if (firingWeapon->getContinuousLaserLoopTime() > 0)
 					firingWeapon->handleContinuousLaser(sourceObj, curTarget, &projectileDestination);
@@ -2642,7 +2646,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					IterOrderType order = railgunAmount > 0 ? ITER_SORTED_NEAR_TO_FAR : ITER_FASTEST;
 
-					iter = ThePartitionManager->iterateObjectsAlongLine(source, &srcPos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind, NULL, order);
+					iter = ThePartitionManager->iterateObjectsAlongLine(source, &srcPos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunRadiusCheckPerDistance(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind, NULL, order);
 					curVictim = iter->firstWithNumeric(&curVictimDistSqr);
 
 					// If nothing to check, do nothing and return
@@ -4422,7 +4426,7 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 	m_status = RELOADING_CLIP;
 	Real reloadTime = loadInstantly ? 0 : m_template->getClipReloadTime(bonus);
 
-	if(m_template->getROFMovingPenalty() != 1.0f)
+	if(getROFMovingPenalty() != 0.0f)
 		reloadTime = m_template->calcROFForMoving(sourceObj, reloadTime);
 
 	m_whenLastReloadStarted = TheGameLogic->getFrame();
@@ -4473,7 +4477,7 @@ void Weapon::onWeaponBonusChange(const Object *source)
 		needUpdate = TRUE;
 	}
 
-	if(m_template->getROFMovingPenalty() != 1.0f)
+	if(getROFMovingPenalty() != 0.0f)
 	{
 		newDelay = m_template->calcROFForMoving(source, newDelay);
 	}
@@ -4718,33 +4722,27 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 //-------------------------------------------------------------------------------------------------
 Int WeaponTemplate::calcROFForMoving(const Object *source, Int Delay) const
 {
-	if(source == NULL || source->getPhysics() == NULL)
+	if(source == NULL || source->getPhysics() == NULL || !source->getPhysics()->isMotive())
 		return Delay;
 
-	if(source->getPhysics()->isMotive())
+	Real value = getROFMovingPenalty();
+
+	if(getROFMovingScales() && source->getAI())
 	{
-		Real value = getROFMovingPenalty();
+		Real speed = source->getAI()->getCurLocomotorSpeed();
 
-		if(getROFMovingScales() && source->getAI())
+		Real curSpeed = min(source->getLastActualSpeed(), speed);
+		Real maxSpeed = getROFMovingMaxSpeedCount() > 0 ? getROFMovingMaxSpeedCount() : speed;
+
+		if(curSpeed < maxSpeed)
 		{
-			Real speed = source->getAI()->getCurLocomotorSpeed();
-
-			Real curSpeed = min(source->getLastActualSpeed(), speed);
-			Real maxSpeed = getROFMovingMaxSpeedCount() > 0 ? getROFMovingMaxSpeedCount() : speed;
-
-			DEBUG_LOG(("CurrSpeed: %f", curSpeed));
-			if(curSpeed < maxSpeed)
-			{
-				Real scalingRatio = min(1.0f, Real(curSpeed / maxSpeed));
-				value *= scalingRatio;
-			}
+			Real scalingRatio = min(1.0f, Real(curSpeed / maxSpeed));
+			value *= scalingRatio;
 		}
-
-		Int newDelay = Delay * (1.0f + value);
-		return newDelay;
 	}
-	
-	return Delay;
+
+	Int newDelay = Delay * (1.0f + value);
+	return newDelay;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5495,7 +5493,7 @@ Bool Weapon::privateFireWeapon(
 			//CRCDEBUG_LOG(("Weapon::privateFireWeapon() just set m_status to BETWEEN_FIRING_SHOTS"));
 			Int delay = m_template->getDelayBetweenShots(bonus);
 
-			if(m_template->getROFMovingPenalty() != 1.0f)
+			if(getROFMovingPenalty() != 0.0f)
 				delay = m_template->calcROFForMoving(sourceObj, delay);
 
 			m_whenLastReloadStarted = now;
