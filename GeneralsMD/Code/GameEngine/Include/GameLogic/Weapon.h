@@ -684,6 +684,7 @@ public:
 	Int getRailgunPierceAmount() const { return m_railgunPierceAmount; }
 	Real getRailgunRadius() const { return m_railgunRadius; }
 	Real getRailgunInfantryRadius() const { return m_railgunInfantryRadius; }
+	Real getRailgunRadiusCheckPerDistance() const { return m_railgunRadiusCheckPerDistance; }
 	Real getRailgunExtraDistance() const { return m_railgunExtraDistance; }
 	Real getRailgunMaxDistance() const { return m_railgunMaxDistance; }
 	DamageType getRailgunDamageType() const { return m_railgunDamageType; }
@@ -957,6 +958,7 @@ private:
 	Bool m_railgunPiercesBehind;
 	Int m_railgunPierceAmount;
 	Real m_railgunRadius;
+	Real m_railgunRadiusCheckPerDistance;
 	Real m_railgunInfantryRadius;
 	Real m_railgunExtraDistance;
 	Real m_railgunMaxDistance;
@@ -1272,6 +1274,15 @@ public:
 		const Coord3D* launchPos = NULL
 	);
 
+	/*static Bool calcWeaponFirePosition(
+		const Object* obj,
+		const Drawable* draw,
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		Matrix3D& worldTransform,
+		Coord3D& worldPos
+	);*/
+
 	static void setFirePositionForDrawable(
 		const Object* launcher,
 		Drawable* draw,
@@ -1280,6 +1291,7 @@ public:
 	);
 
 	Int getCurrentBarrel() const { return m_curBarrel; }
+	Bool hasProjectileStream() const { return m_projectileStreamID != INVALID_ID; }
 
 	/**
 		special purpose call for jets in airfields: directly set the ammoinclip to a certain

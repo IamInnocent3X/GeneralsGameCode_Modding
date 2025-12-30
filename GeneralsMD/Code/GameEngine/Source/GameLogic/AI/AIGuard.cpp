@@ -677,18 +677,22 @@ StateReturnType AIGuardReturnState::onEnter( void )
 				{
 					Real range = weap->getAttackRange(me);
 					Real radius = AIGuardMachine::getStdGuardRange(me);
-					Real maxRange = max(range, radius);
+					Real maxRange = radius;
 
 					// Set the new goal position to move to
 					Coord3D Direction;
 					Direction.set( me->getPosition() );
 					Direction.sub( &m_goalPosition );
 
+					Real adjustedRange = range - 2 * radius;
+					if(adjustedRange > 0)
+						maxRange = radius + adjustedRange;
+
 					if(Direction.lengthSqr() > maxRange*maxRange)
 					{
 						Real angle = atan2(Direction.y, Direction.x);
-						m_goalPosition.x += maxRange * (Real)cosf(angle);
-						m_goalPosition.y += maxRange * (Real)sinf(angle);
+						m_goalPosition.x += maxRange * Cos(angle);
+						m_goalPosition.y += maxRange * Sin(angle);
 					}
 					else
 					{

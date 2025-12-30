@@ -71,8 +71,8 @@ public:
 
 	Bool m_stayOnSameLayerAsMaster;
 
-	Bool m_healingClearsParasite;
-	std::vector<AsciiString> m_healingClearsParasiteKeys;
+	Bool m_repairClearsParasite;
+	std::vector<AsciiString> m_repairClearsParasiteKeys;
 
 	SlavedUpdateModuleData()
 	{
@@ -92,8 +92,8 @@ public:
 		m_minReadyFrames = 0;
 		m_maxReadyFrames = 0;
 		m_stayOnSameLayerAsMaster = false;
-		m_healingClearsParasite = true;
-		m_healingClearsParasiteKeys.clear();
+		m_repairClearsParasite = true;
+		m_repairClearsParasiteKeys.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -120,8 +120,8 @@ public:
 			{ "RepairWeldingSys",		INI::parseAsciiString,	NULL, offsetof( SlavedUpdateModuleData, m_weldingSysName ) },
 			{ "RepairWeldingFXBone", INI::parseAsciiString, NULL, offsetof( SlavedUpdateModuleData, m_weldingFXBone ) },
 			{ "StayOnSameLayerAsMaster", INI::parseBool, NULL, offsetof( SlavedUpdateModuleData, m_stayOnSameLayerAsMaster ) },
-			{ "HealingClearsParasite",	INI::parseBool,	NULL, offsetof( SlavedUpdateModuleData, m_healingClearsParasite ) },
-			{ "HealingClearsParasiteKeys",	INI::parseAsciiStringVector, NULL, offsetof( SlavedUpdateModuleData, m_healingClearsParasiteKeys ) },
+			{ "RepairClearsParasite",	INI::parseBool,	NULL, offsetof( SlavedUpdateModuleData, m_repairClearsParasite ) },
+			{ "RepairClearsParasiteKeys",	INI::parseAsciiStringVector, NULL, offsetof( SlavedUpdateModuleData, m_repairClearsParasiteKeys ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

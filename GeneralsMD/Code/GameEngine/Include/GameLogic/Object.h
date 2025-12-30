@@ -569,6 +569,7 @@ public:
 	const Weapon* getCurrentWeapon(WeaponSlotType* wslot = NULL) const;
 	void setFiringConditionForCurrentWeapon() const;
 	void adjustModelConditionForWeaponStatus();	///< Check to see if I should change my model condition.
+	const ModelConditionFlags& getModelConditionForWeaponSlot(WeaponSlotType wslot, WeaponSetConditionType a) const { return m_weaponSet.getModelConditionForWeaponSlot(wslot, a); }
 	void fireCurrentWeapon(Object *target);
 	void fireCurrentWeapon(const Coord3D* pos);
 	void preFireCurrentWeapon( const Object *victim );

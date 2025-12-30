@@ -383,7 +383,7 @@ public:
 	virtual Int getCurrentBonePositions(const char* boneNamePrefix, Int startIndex, Coord3D* positions, Matrix3D* transforms, Int maxBones) const;
 	virtual Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const;
 	virtual Bool getProjectileLaunchOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos = NULL) const;
-	virtual Bool getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	virtual Bool getWeaponFireOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
 	virtual Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch);
 	virtual void setNeedUpdateTurretPositioning(Bool set);
 	virtual void setCanDoFXWhileHidden(Bool set);

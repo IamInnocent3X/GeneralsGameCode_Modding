@@ -1315,6 +1315,7 @@ protected:
 		const Coord3D& posOther,
 		Real radius,
 		Real infantryRadius,
+		Real checkPerDistance,
 		const FXList* railgunfx,
 		const ObjectCreationList *railgunocl,
 		DistanceCalculationType dc,
@@ -1326,8 +1327,6 @@ protected:
 	);
 
 	Int checkObjectsAlongLine(
-		Int cellX,
-		Int cellY,
 		ObjectID sourceID,
 		const Coord3D& startingPos,
 		const Coord3D& currentPos,
@@ -1513,6 +1512,7 @@ public:
 		const Coord3D *posOther,
 		Real radius,
 		Real infantryRadius,
+		Real checkPerDistance,
 		const FXList* railgunfx,
 		const ObjectCreationList *railgunocl,
 		DistanceCalculationType dc,

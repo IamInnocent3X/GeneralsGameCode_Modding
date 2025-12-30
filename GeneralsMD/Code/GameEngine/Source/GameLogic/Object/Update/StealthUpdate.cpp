@@ -191,8 +191,8 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	m_originalDrawableTemplate = NULL;
 	m_disguisedDrawableTemplate = NULL;
-	m_originalDrawableFiringOffsets.clear();
-	m_disguisedDrawableFiringOffsets.clear();
+	//m_originalDrawableFiringOffsets.clear();
+	//m_disguisedDrawableFiringOffsets.clear();
 
 	m_nextWakeUpFrame = 1;
 
@@ -1495,7 +1495,7 @@ void StealthUpdate::changeVisualDisguise()
 	if( m_disguiseAsTemplate )
 	{
 		// Set the firing offsets for compatibility with railguns
-		if(m_originalDrawableFiringOffsets.empty())
+		if(!m_originalDrawableTemplate)
 			SetFiringOffsets(FALSE);
 
 		Player *player = ThePlayerList->getNthPlayer( m_disguiseAsPlayerIndex );
@@ -1803,7 +1803,7 @@ void StealthUpdate::SetFiringOffsets(Bool setDisguised)
 			m_disguisedDrawableTemplate->setCanDoFXWhileHidden(TRUE);
 		}
 
-		m_disguisedDrawableFiringOffsets.clear();
+		//m_disguisedDrawableFiringOffsets.clear();
 	}
 	else
 	{
@@ -1818,10 +1818,10 @@ void StealthUpdate::SetFiringOffsets(Bool setDisguised)
 			m_originalDrawableTemplate->setCanDoFXWhileHidden(TRUE);
 		}
 
-		m_originalDrawableFiringOffsets.clear();
+		//m_originalDrawableFiringOffsets.clear();
 	}
 
-	Coord3D objPos = *getObject()->getPosition();
+	/*Coord3D objPos = *getObject()->getPosition();
 	FiringPosStruct data;
 	Coord3D checkPos;
 	for(int i = 0; i < WEAPONSLOT_COUNT; i++)
@@ -1833,8 +1833,12 @@ void StealthUpdate::SetFiringOffsets(Bool setDisguised)
 
 		for(int j = 0; j < data.barrelCount; j++)
 		{
+			//Matrix3D worldTransform(true);
+			//Coord3D worldPos;
+			//if(Weapon::calcWeaponFirePosition(getObject(), setDisguised ? m_disguisedDrawableTemplate : m_originalDrawableTemplate, (WeaponSlotType)i, j, worldTransform, checkPos))
 			if(draw->getWeaponFireOffset((WeaponSlotType)i, j, &checkPos))
 			{
+				//checkPos = worldPos;
 				checkPos.x -= objPos.x;
 				checkPos.y -= objPos.y;
 				checkPos.z -= objPos.z;
@@ -1854,11 +1858,12 @@ void StealthUpdate::SetFiringOffsets(Bool setDisguised)
 			else
 				m_originalDrawableFiringOffsets.push_back(data);
 		}
-	}
+	}*/
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool StealthUpdate::getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
+// Obselete: Use getWeaponFireOffset from Drawable
+/*Bool StealthUpdate::getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
 {
 	Bool doOriginal = getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset;
 	std::vector<FiringPosStruct> checkData = doOriginal ? m_originalDrawableFiringOffsets : m_disguisedDrawableFiringOffsets;
@@ -1881,23 +1886,41 @@ Bool StealthUpdate::getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int spec
 		}
 	}
 	return !doOriginal;
-}
+}*/
 
 //-------------------------------------------------------------------------------------------------
 Int StealthUpdate::getBarrelCountWhileDisguised(WeaponSlotType wslot) const
 {
-	std::vector<FiringPosStruct> checkData = getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset ? m_originalDrawableFiringOffsets : m_disguisedDrawableFiringOffsets;
-	for(int i = 0; i < checkData.size(); i++)
-	{
-		if(wslot != checkData[i].weaponSlot)
-			continue;
+	//std::vector<FiringPosStruct> checkData = getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset ? m_originalDrawableFiringOffsets : m_disguisedDrawableFiringOffsets;
+	//for(int i = 0; i < checkData.size(); i++)
+	//{
+		//if(wslot != checkData[i].weaponSlot)
+		//	continue;
 
 		// IamInnocent - Prevent crashes if the current object has more barrels than the current disguise template
-		Int BarrelCount = m_disguiseAsTemplate && m_disguisedDrawableTemplate ? m_disguisedDrawableTemplate->getBarrelCount(wslot) : 999;
-		BarrelCount = min(BarrelCount, checkData[i].barrelCount);
-		return BarrelCount;
-	}
-	return 0;
+		//Int BarrelCount = m_disguiseAsTemplate && m_disguisedDrawableTemplate ? m_disguisedDrawableTemplate->getBarrelCount(wslot) : 999;
+		//BarrelCount = min(BarrelCount, checkData[i].barrelCount);
+		//return BarrelCount;
+
+	//}
+	//return 0;
+	/// Update - Verified issues, moved to Drawable for verification
+	if(!m_disguiseAsTemplate || !m_disguisedDrawableTemplate)
+		return 0;
+
+	Int BarrelCount = 0;
+	if(getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset)
+		BarrelCount = m_originalDrawableTemplate->getBarrelCount(wslot);
+	else
+		BarrelCount = min(m_originalDrawableTemplate->getBarrelCount(wslot), m_disguisedDrawableTemplate->getBarrelCount(wslot));
+
+	return BarrelCount;
+}
+
+//-------------------------------------------------------------------------------------------------
+Int StealthUpdate::getBarrelCountDisguisedTemplate(WeaponSlotType wslot) const
+{
+	return m_disguisedDrawableTemplate ? m_disguisedDrawableTemplate->getBarrelCount(wslot) : 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2091,7 +2114,7 @@ void StealthUpdate::xfer( Xfer *xfer )
 
 	xfer->xferAsciiString( &m_disguiseModelName );
 
-	UnsignedShort OriginalFiringOffsetsSize = m_originalDrawableFiringOffsets.size();
+	/*UnsignedShort OriginalFiringOffsetsSize = m_originalDrawableFiringOffsets.size();
 	UnsignedShort DisguisedFiringOffsetsSize = m_disguisedDrawableFiringOffsets.size();
 	xfer->xferUnsignedShort( &OriginalFiringOffsetsSize );
 	xfer->xferUnsignedShort( &DisguisedFiringOffsetsSize );
@@ -2209,7 +2232,7 @@ void StealthUpdate::xfer( Xfer *xfer )
 			m_disguisedDrawableFiringOffsets.push_back(data);
 			data.posVec.clear();
 		}
-	}
+	}*/
 	
 
 }

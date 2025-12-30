@@ -758,7 +758,7 @@ Bool Drawable::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse
 	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		const ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di && di->getWeaponFireOffset(wslot, specificBarrelToUse, pos))
+		if (di && di->getWeaponFireOffset(m_conditionState, wslot, specificBarrelToUse, pos))
 			return true;
 	}
 	return false;

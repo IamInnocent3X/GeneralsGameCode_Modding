@@ -104,6 +104,13 @@ EMPUpdate::EMPUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModul
 		//	m_spinRate *= -1.0f;
 		//}
 
+		m_affectsKindOf = data->m_affectsKindOf;
+		m_rejectMask = data->m_rejectMask;
+		m_radius = data->m_effectRadius;
+		DeathType dt = (DeathType)INI::scanIndexList(data->m_empProjectileDeathType.str(), TheDeathNames);
+		if(dt != DEATH_NONE)
+			m_projectileDeathType = dt;
+
 		getObject()->setOrientation(GameLogicRandomValueReal(-PI,PI));
 
 		DEBUG_ASSERTCRASH( m_tintEnvPlayFrame < m_dieFrame, ("EMPUpdate::EMPUpdate - you cant play fade after death" ) );
@@ -119,12 +126,10 @@ EMPUpdate::EMPUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModul
 	m_tintEnvPlayFrame  = 0;
 	//m_spinRate = 0;
 	m_targetScale = 1;
-	m_affectsKindOf = data->m_affectsKindOf;
-	m_rejectMask = data->m_rejectMask;
-	m_radius = data->m_effectRadius;
-	DeathType dt = (DeathType)INI::scanIndexList(data->m_empProjectileDeathType.str(), TheDeathNames);
-	if(dt != DEATH_NONE)
-		m_projectileDeathType = dt;
+	m_affectsKindOf = KINDOFMASK_NONE;
+	m_rejectMask = 0;
+	m_radius = 0.0f;
+	m_projectileDeathType = DEATH_NORMAL;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -303,7 +308,11 @@ void EMPUpdate::doDisableAttack( void )
 					continue;
 			}
 			// handle cases where we do not want allies to be hit by it's own EMP weapons
-			if ( (m_rejectMask & WEAPON_AFFECTS_ALLIES) && curVictim->getRelationship( object ) == ALLIES) 
+			if( (m_rejectMask & WEAPON_AFFECTS_SELF) && curVictim == producer )
+			{
+				continue;
+			}
+			else if ( (m_rejectMask & WEAPON_AFFECTS_ALLIES) && curVictim->getRelationship( object ) == ALLIES) 
 			{
 				continue;
 			}
@@ -403,7 +412,7 @@ void EMPUpdate::doDisableAttack( void )
 	//if( intendedVictim && !intendedVictimProcessed && intendedVictim->isKindOf( KINDOF_AIRCRAFT ) )
 	if( intendedVictim && !intendedVictimProcessed )
 	{
-    if( !intendedVictim->isKindOf( KINDOF_EMP_HARDENED ) )
+    if( !intendedVictim->isKindOf( KINDOF_EMP_HARDENED ) && intendedVictim->isAnyKindOf( m_affectsKindOf ) )
 		{
 			//Victim position
 			Coord3D coord;

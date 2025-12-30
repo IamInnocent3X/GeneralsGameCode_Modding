@@ -1781,7 +1781,7 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_nextState = NULL;
 	m_needUpdateTurretPosition = TRUE;
 	m_canDoFXWhileHidden = FALSE;
-	m_doHandleRecoil = FALSE;
+	m_doHandleRecoil = TRUE;
 	m_lastDoHandleRecoil = FALSE;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
 	for (i = 0; i < WEAPONSLOT_COUNT; ++i)
@@ -2576,7 +2576,7 @@ void W3DModelDraw::handleClientRecoil()
 	if(!m_doHandleRecoil && TheGlobalData->m_useEfficientDrawableScheme)
 		return;
 
-	m_doHandleRecoil = FALSE;
+	m_doHandleRecoil = TRUE;
 	// do recoil, if any
 	for (int wslot = 0; wslot < WEAPONSLOT_COUNT; ++wslot)
 	{
@@ -2596,6 +2596,9 @@ void W3DModelDraw::handleClientRecoil()
 				Bool hidden = recoils[i].m_state != WeaponRecoilInfo::RECOIL_START;
 				//DEBUG_LOG(("adjust muzzleflash %08lx for Draw %08lx state %s to %d at frame %d",subObjToHide,this,m_curState->m_description.str(),hidden?1:0,TheGameLogic->getFrame()));
 				barrels[i].setMuzzleFlashHidden(m_renderObject, hidden);
+				if(!hidden)
+					m_doHandleRecoil = TRUE; // There's more recoil, need to update
+
 			}
 
 			const Real TINY_RECOIL = 0.01f;
@@ -2630,6 +2633,7 @@ void W3DModelDraw::handleClientRecoil()
 							recoils[i].m_shift = 0.0f;
 							recoils[i].m_state = WeaponRecoilInfo::IDLE;
 						}
+						m_doHandleRecoil = TRUE; // There's more recoil, need to update
 						break;
 				}
 
@@ -3488,14 +3492,203 @@ Bool W3DModelDraw::getProjectileLaunchOffset(
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool W3DModelDraw::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
+/*Bool W3DModelDraw::getWeaponFireOffset(
+	const ModelConditionFlags& condition,
+	WeaponSlotType wslot,
+	Int specificBarrelToUse,
+	Matrix3D* launchPos,
+	WhichTurretType tur,
+	Coord3D* turretRotPos,
+	Coord3D* turretPitchPos
+) const
 {
+	//
+	//	Note, this recalcs the state every time, rather than using m_curState,
+	//	because m_curState could be a transition state, and we really need
+	//	to get the pristine bone(s) for the state that logic believes to be current,
+	//	not the one the client might currently be using...
+	//
+	const ModelConditionInfo* stateToUse = findBestInfo(condition);
+	if (!stateToUse)
+	{
+		CRCDEBUG_LOG(("can't find best info"));
+		//BONEPOS_LOG(("can't find best info"));
+		return false;
+	}
+#if defined(RTS_DEBUG)
+	CRCDEBUG_LOG(("W3DModelDraw::getProjectileLaunchOffset() for %s",
+		stateToUse->getDescription().str()));
+#endif
+
+#ifdef INTENSE_DEBUG
+	AsciiString flags;
+	for (Int i=0; i<condition.size(); ++i)
+	{
+		if (condition.test(i))
+		{
+			if (flags.isNotEmpty())
+				flags.concat(',');
+			flags.concat(condition.getNameFromSingleBit(i));
+		}
+	}
+#endif // INTENSE_DEBUG
+
+	const W3DModelDrawModuleData* d = getW3DModelDrawModuleData();
+	//CRCDEBUG_LOG(("validateStuffs() from within W3DModelDraw::getProjectileLaunchOffset()"));
+	//DUMPREAL(getDrawable()->getScale());
+	//BONEPOS_LOG(("validateStuffs() from within W3DModelDraw::getProjectileLaunchOffset()"));
+	//BONEPOS_DUMPREAL(getDrawable()->getScale());
+	stateToUse->validateStuff(NULL, getDrawable()->getScale(), d->m_extraPublicBones);
+
+	DEBUG_ASSERTCRASH(stateToUse->m_transitionSig == NO_TRANSITION,
+		("It is never legal to getProjectileLaunchOffset from a Transition state (they vary on a per-client basis)... however, we can fix this (see srj)\n"));
+
 	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse should now always be explicit"));
 
-	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::BARRELS_VALID))
+#ifdef CACHE_ATTACH_BONE
+#else
+	Coord3D techOffset;
+	techOffset.zero();
+	// must use pristine bone here since the result is used by logic
+	Matrix3D pivot;
+	if (d->m_attachToDrawableBone.isNotEmpty() &&
+			getDrawable()->getPristineBonePositions( d->m_attachToDrawableBone.str(), 0, NULL, &pivot, 1 ) == 1)
+	{
+		pivot.Pre_Rotate_Z(getDrawable()->getOrientation());
+		techOffset.x = pivot.Get_X_Translation();
+		techOffset.y = pivot.Get_Y_Translation();
+		techOffset.z = pivot.Get_Z_Translation();
+	}
+#endif
+
+	CRCDEBUG_LOG(("wslot = %d", wslot));
+	const ModelConditionInfo::WeaponBarrelInfoVec& wbvec = stateToUse->m_weaponBarrelInfoVec[wslot];
+	if( wbvec.empty() )
+	{
+		// Can't find the launch pos, but they might still want the other info they asked for
+		CRCDEBUG_LOG(("empty wbvec"));
+		//BONEPOS_LOG(("empty wbvec"));
+		launchPos = NULL;
+	}
+	else
+	{
+		if (specificBarrelToUse < 0 || specificBarrelToUse >= wbvec.size())
+			specificBarrelToUse = 0;
+
+		const ModelConditionInfo::WeaponBarrelInfo& info = wbvec[specificBarrelToUse];
+
+		if (launchPos && info.m_fxBone && m_renderObject)
+		{
+			CRCDEBUG_LOG(("specificBarrelToUse = %d", specificBarrelToUse));
+			*launchPos = m_renderObject->Get_Bone_Transform(info.m_fxBone);
+
+			if (tur != TURRET_INVALID)
+			{
+				DEBUG_LOG(("Template: %s, Turret Valid: %d", getDrawable()->getTemplate()->getName().str(), tur));
+				launchPos->Pre_Rotate_Z(stateToUse->m_turrets[tur].m_turretArtAngle);
+				launchPos->Pre_Rotate_Y(-stateToUse->m_turrets[tur].m_turretArtPitch);
+			}
+		}
+	}
+
+	if (turretRotPos)
+		turretRotPos->zero();
+	if (turretPitchPos)
+		turretPitchPos->zero();
+
+	if (tur != TURRET_INVALID)
+	{
+#ifdef CACHE_ATTACH_BONE
+		const Vector3* offset = d->getAttachToDrawableBoneOffset(getDrawable());
+#endif
+		const ModelConditionInfo::TurretInfo& turInfo = stateToUse->m_turrets[tur];
+		if (turretRotPos)
+		{
+			if (turInfo.m_turretAngleNameKey != NAMEKEY_INVALID &&
+					!stateToUse->findPristineBonePos(turInfo.m_turretAngleNameKey, *turretRotPos))
+			{
+				DEBUG_CRASH(("*** ASSET ERROR: TurretBone %s not found!",KEYNAME(turInfo.m_turretAngleNameKey).str()));
+			}
+#ifdef CACHE_ATTACH_BONE
+			if (offset)
+			{
+				turretRotPos->x += offset->X;
+				turretRotPos->y += offset->Y;
+				turretRotPos->z += offset->Z;
+			}
+#endif
+		}
+		if (turretPitchPos)
+		{
+			if (turInfo.m_turretPitchNameKey != NAMEKEY_INVALID &&
+					!stateToUse->findPristineBonePos(turInfo.m_turretPitchNameKey, *turretPitchPos))
+			{
+				DEBUG_CRASH(("*** ASSET ERROR: TurretBone %s not found!",KEYNAME(turInfo.m_turretPitchNameKey).str()));
+			}
+#ifdef CACHE_ATTACH_BONE
+			if (offset)
+			{
+				turretPitchPos->x += offset->X;
+				turretPitchPos->y += offset->Y;
+				turretPitchPos->z += offset->Z;
+			}
+#endif
+		}
+	}
+	return launchPos != NULL;// return if LaunchPos is valid or not
+}
+*/
+
+//-------------------------------------------------------------------------------------------------
+Bool W3DModelDraw::getWeaponFireOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const
+{
+	//
+	//	Note, this recalcs the state every time, rather than using m_curState,
+	//	because m_curState could be a transition state, and we really need
+	//	to get the pristine bone(s) for the state that logic believes to be current,
+	//	not the one the client might currently be using...
+	//
+	const ModelConditionInfo* stateToUse = findBestInfo(condition);
+	if (!stateToUse)
+	{
+		CRCDEBUG_LOG(("can't find best info"));
+		//BONEPOS_LOG(("can't find best info"));
+		return false;
+	}
+#if defined(RTS_DEBUG)
+	CRCDEBUG_LOG(("W3DModelDraw::getProjectileLaunchOffset() for %s",
+		stateToUse->getDescription().str()));
+#endif
+
+#ifdef INTENSE_DEBUG
+	AsciiString flags;
+	for (Int i=0; i<condition.size(); ++i)
+	{
+		if (condition.test(i))
+		{
+			if (flags.isNotEmpty())
+				flags.concat(',');
+			flags.concat(condition.getNameFromSingleBit(i));
+		}
+	}
+#endif // INTENSE_DEBUG
+
+	const W3DModelDrawModuleData* d = getW3DModelDrawModuleData();
+	//CRCDEBUG_LOG(("validateStuffs() from within W3DModelDraw::getProjectileLaunchOffset()"));
+	//DUMPREAL(getDrawable()->getScale());
+	//BONEPOS_LOG(("validateStuffs() from within W3DModelDraw::getProjectileLaunchOffset()"));
+	//BONEPOS_DUMPREAL(getDrawable()->getScale());
+	stateToUse->validateStuff(NULL, getDrawable()->getScale(), d->m_extraPublicBones);
+
+	DEBUG_ASSERTCRASH(stateToUse->m_transitionSig == NO_TRANSITION,
+		("It is never legal to getProjectileLaunchOffset from a Transition state (they vary on a per-client basis)... however, we can fix this (see srj)\n"));
+
+	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse should now always be explicit"));
+
+	if (!stateToUse || !(stateToUse->m_validStuff & ModelConditionInfo::BARRELS_VALID))
 		return false;
 
-	const ModelConditionInfo::WeaponBarrelInfoVec& wbvec = m_curState->m_weaponBarrelInfoVec[wslot];
+	const ModelConditionInfo::WeaponBarrelInfoVec& wbvec = stateToUse->m_weaponBarrelInfoVec[wslot];
 	if (wbvec.empty())
 	{
 		// don't do this... some other module of our drawable may have handled it.
@@ -3511,7 +3704,6 @@ Bool W3DModelDraw::getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelT
 	if (info.m_fxBone && m_renderObject)
 	{
 		const Object *logicObject = getDrawable()->getObject();// This is slow, so store it
-		DEBUG_LOG(("Object Name: %s Template Name: %s", logicObject->getTemplate()->getName().str(), getDrawable()->getTemplate()->getName().str()));
 		if( ! m_renderObject->Is_Hidden() || (logicObject == NULL) )
 		{
 			// I can ask the drawable's bone position if I am not hidden (if I have no object I have no choice)
@@ -3604,6 +3796,10 @@ const ModelConditionInfo* stateToUse = findBestInfo(draw->getModelConditionFlags
 				m_needUpdateTurretPosition = FALSE;
 			}
 		}
+	}
+	else
+	{
+		return false;
 	}
 	return true;
 }
@@ -3781,10 +3977,7 @@ Bool W3DModelDraw::getCurrentWorldspaceClientBonePositions(const char* boneName,
 
 	Int boneIndex = m_renderObject->Get_Bone_Index(boneName);
 	if (boneIndex == 0)
-	{
-		DEBUG_LOG(("LASER NO BONE %s", boneName));
 		return false;
-	}
 
 	transform = m_renderObject->Get_Bone_Transform(boneIndex);
 	return true;
@@ -3972,8 +4165,6 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 				*/
 				FXList::doFXPos(fxl, &pos, mtx, weaponSpeed, victimPos, damageRadius);
 			}
-			if(logicObject != NULL)
-				DEBUG_LOG(("Success Firing from Object: %s wslot: %d barrel: %d", logicObject->getTemplate()->getName().str(), wslot, specificBarrelToUse));
 			handled = true;
 		}
 		else

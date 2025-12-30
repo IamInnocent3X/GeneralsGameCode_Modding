@@ -454,6 +454,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "RailgunPiercesBehind",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunPiercesBehind) },
 	{ "RailgunPierceAmount",					INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_railgunPierceAmount) },
 	{ "RailgunRadius",							INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadius) },
+	{ "RailgunRadiusCheckPerDistance",			INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadiusCheckPerDistance) },
 	{ "RailgunInfantryRadius",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunInfantryRadius) },
 	{ "RailgunExtraDistance",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunExtraDistance) },
 	{ "RailgunMaxDistance",						INI::parsePositiveNonZeroReal,	NULL,							offsetof(WeaponTemplate, m_railgunMaxDistance) },
@@ -700,7 +701,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 
 	m_rejectKeys.clear();
 
-	m_rofMovingPenalty = 1.0f;
+	m_rofMovingPenalty = 0.0f;
 	m_rofMovingScales = FALSE;
 	m_rofMovingMaxSpeedCount = 0.0f;
 
@@ -710,6 +711,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_railgunPiercesBehind = FALSE;
 	m_railgunPierceAmount = -1;
 	m_railgunRadius = 0.0f;
+	m_railgunRadiusCheckPerDistance = 0.0f;
 	m_railgunInfantryRadius = 0.0f;
 	m_railgunExtraDistance = 0.0f;
 	m_railgunMaxDistance = 0.0f;
@@ -1464,13 +1466,13 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	// New feature, similar to Black Hole Armor.
 	Object* retarget = NULL;
 	ObjectID ShielderID = INVALID_ID;
-	ProtectionTypeFlags ShieldedType;
 
 	if(!getIsShielderImmune() && !isProjectileDetonation && !isLeechRangeWeapon() && victimObj && victimObj->testCustomStatus("SHIELDED_TARGET"))
 	{
+		ProtectionTypeFlags ShieldedType = victimObj->getShieldByTargetType();
 		Bool hasProtection = false;
 		if(getProjectileTemplate())
-			hasProtection = getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES);
+			hasProtection = !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES);
 		else
 			hasProtection = firingWeapon->isLaser() ? getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) : getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS);
 
@@ -1479,7 +1481,6 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			ShielderID = victimObj->getShieldByTargetID();
 			if(ShielderID != INVALID_ID)
 			{
-				ShieldedType = victimObj->getShieldByTargetType();
 				retarget = TheGameLogic->findObjectByID(ShielderID);
 				if(retarget && (retarget->isEffectivelyDead() || retarget->isDestroyed()) )
 					retarget = NULL;
@@ -1490,16 +1491,16 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	Coord3D targetedPos = *victimPos;
 	Bool hasBodyForTargetAiming = FALSE;
 
-	if(TheGlobalData->m_dynamicTargeting && curTarget)
+	if( TheGlobalData->m_dynamicTargeting && curTarget )
 	{
 		Coord3D targetCoord = *sourceObj->getCurrentTargetCoord();
 		hasBodyForTargetAiming = TRUE;
-
-		if (sourceObj->getLastVictimID() != curTarget->getID() ||
+		if( (TheGameLogic->getFrame() >= firingWeapon->getLastShotFrame() + 3*LOGICFRAMES_PER_SECOND) ||
+		 	(sourceObj->getLastVictimID() != curTarget->getID()) ||
 			(fabs(targetCoord.x) < WWMATH_EPSILON &&
 			fabs(targetCoord.y) < WWMATH_EPSILON &&
 			fabs(targetCoord.z) < WWMATH_EPSILON )
-		   )
+		  )
 		{
 			// if we're airborne and too close, just head for the opposite side.
 			Coord3D dir;
@@ -1547,9 +1548,35 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			targetHeight *= isStructure ? 0.7f : 0.8f;
 			Real targetRatio = isStructure ? ((targetHeight + dz + dz * 0.5f) / (targetHeight + targetHeight + targetHeight * 0.5f)) : (dz / targetHeight);
-			targetRatio = 1.0f - targetRatio;
-			targetRatio = min(0.6f, targetRatio);
-			targetRadius *= curTarget->isKindOf(KINDOF_INFANTRY) ? 0.0f : targetRatio;
+			targetRatio = min(0.6f, 1.0f - targetRatio);
+			if(firingWeapon->hasProjectileStream())
+			{
+				if(isStructure)
+					targetRadius *= targetRatio;
+				else
+					targetRadius *= curTarget->isKindOf(KINDOF_INFANTRY) ? min(0.1f, targetRatio) : min(0.33f, targetRatio);
+
+				dz = 0.0f;
+			}
+			else if(getProjectileTemplate() != NULL)
+			{
+				if(isStructure)
+				{
+					dz *= targetRatio; // Structures doesn't check for Z axis when applying collisions(?), so best to lower it to relatable values.
+					if(m_scatterRadius == 0.0f)
+						targetRatio *= 1.0f + min(0.8f, 0.03f * targetRadius / PI); // Formula is ( 1 / (Circumference (2 * PI * r) / radius^2 (r * r)) ) * 0.06f, so that's the simplified formula
+				}
+				else if(curTarget->isKindOf(KINDOF_INFANTRY))
+				{
+					targetRatio = min(0.1f, targetRatio);
+					dz = 0.0f; // Don't aim for headshots or body shots
+				}
+				targetRadius *= targetRatio;
+			}
+			else
+			{
+				targetRadius *= curTarget->isKindOf(KINDOF_INFANTRY) ? min(0.1f, targetRatio) : targetRatio;
+			}
 
 			Real dx = Cos(targetAngle) * targetRadius;
 			Real dy = Sin(targetAngle) * targetRadius;
@@ -1568,6 +1595,29 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 		else
 		{
+			Real targetHeight = curTarget->getGeometryInfo().getMaxHeightAbovePosition();
+			if(getProjectileTemplate() == NULL && !firingWeapon->isLaser() && !sourceObj->isKindOf(KINDOF_INFANTRY) && distSqr > 0)
+			{
+				Real adjustedHeight = targetHeight;
+				if(!sourceObj->isAboveTerrain() && distSqr < 4 * targetHeight * targetHeight)
+				{
+					Real distance = sqrt(distSqr);
+					Real shrukenDistance = distance * 0.5f;
+					adjustedHeight = min(shrukenDistance, targetHeight);
+				}
+				Real dz = 0.25f*adjustedHeight;
+				if(targetCoord.z > dz)
+				{
+					Real max_dz = min(dz, 0.5f*adjustedHeight - targetCoord.z);
+					dz = GameLogicRandomValueReal(-dz, max_dz);
+				}
+				else
+				{
+					Real min_dz = max(-dz, targetCoord.z - 0.25f*adjustedHeight);
+					dz = GameLogicRandomValueReal(min_dz, dz);
+				}
+				targetCoord.z += dz;
+			}
 			targetedPos.x += targetCoord.x;
 			targetedPos.y += targetCoord.y;
 			targetedPos.z += targetCoord.z;
@@ -1609,9 +1659,6 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if(currentDraw)
 			{
 				Weapon::setFirePositionForDrawable(sourceObj, currentDraw, wslot, specificBarrelToUse);
-				currentDraw->setPosition( sourceObj->getPosition() );
-				currentDraw->setOrientation( sourceObj->getOrientation() );
-				currentDraw->updateDrawable();
 				if(TheGlobalData->m_useEfficientDrawableScheme)
 					TheGameClient->informClientNewDrawable(currentDraw);
 			}
@@ -1642,8 +1689,28 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 				// IamInnocent - WARNING: The function below is Very nuclear and will cause Crashes (point being do proceed with caution if use)
 				// Note: The Barrels for the Drawable MUST Match the current Drawable or else it will cause crashes... (Ofcourse)
+				/// Update - Updated regarding Usage, even with Failsaves implemented, should inspect for errors as this function is VERY Volatile. Drawables should all be on Client side and have no affect on Game Logic
 				if(handled)
-					sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, specificBarrelToUse, reAngle, reDir, fx != NULL, FALSE);
+				{
+					// IamInnocent - technical fix for Disguised Drawables using original offsets for handling Recoil and Muzzles
+					/// Maximum barrel allow for drawables using different templates while using its Original Drawable amount of barrels is the Drawable's Barrel Count - 1
+					Int barrelCount = specificBarrelToUse;
+					if(sourceObj->getTemplate() != sourceObj->getDrawable()->getTemplate() && currentDraw->getTemplate() == sourceObj->getTemplate())
+					{
+						Int maxBarrelCount = stealth->getBarrelCountDisguisedTemplate(wslot);
+						// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+						while(barrelCount > maxBarrelCount)
+						{
+							if(maxBarrelCount <= 0)
+								barrelCount = 0;
+							else
+								barrelCount -= maxBarrelCount;
+						}
+						maxBarrelCount = max(0, maxBarrelCount-1);
+						barrelCount = min(barrelCount, maxBarrelCount);
+					}
+					sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, barrelCount, reAngle, reDir, fx != NULL, FALSE);
+				}
 			}
 			else
 			{
@@ -1692,7 +1759,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		{
 			if( victimObj->isKindOf( KINDOF_STRUCTURE ) )
 			{
-				victimObj->getGeometryInfo().getCenterPosition(*victimObj->getPosition(), projectileDestination);
+				if(TheGlobalData->m_dynamicTargeting)
+					projectileDestination = targetedPos;
+				else
+					victimObj->getGeometryInfo().getCenterPosition(*victimObj->getPosition(), projectileDestination);
 			}
 			if( m_infantryInaccuracyDist > 0.0f && victimObj->isKindOf( KINDOF_INFANTRY ) )
 			{
@@ -1757,7 +1827,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				//adjust the laser's position to prevent it from hitting the ground.
 				if( curTarget )
 				{
-					//projectileDestination.set( curTarget->getPosition() );
+					if(TheGlobalData->m_dynamicTargeting)
+						projectileDestination = targetedPos;
+					else
+						projectileDestination.set( curTarget->getPosition() );
 				}
 				if (firingWeapon->getContinuousLaserLoopTime() > 0)
 					firingWeapon->handleContinuousLaser(sourceObj, curTarget, &projectileDestination);
@@ -1932,6 +2005,16 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 					pui->setShrapnelLaunchID(shrapnelLaunchID);
 			}
 
+			if(pui->projectileShouldDetonateOnGround())
+			{
+				Coord3D TargetCoord = *sourceObj->getCurrentTargetCoord();
+				if(TargetCoord.z != 0.0f)
+				{
+					TargetCoord.z = 0.0f;
+					TheGameLogic->findObjectByID(sourceID)->setCurrentTargetCoord(&TargetCoord);
+				}
+			}
+
 			VeterancyLevel v = sourceObj->getVeterancyLevel();
 			if( scatterRadius > 0.0f )
 			{
@@ -2018,9 +2101,6 @@ void WeaponTemplate::createPreAttackFX
 				return; // Sanity
 
 			Weapon::setFirePositionForDrawable(sourceObj, currentDraw, wslot, specificBarrelToUse);
-			currentDraw->setPosition( sourceObj->getPosition() );
-			currentDraw->setOrientation( sourceObj->getOrientation() );
-			currentDraw->updateDrawable();
 			if(TheGlobalData->m_useEfficientDrawableScheme)
 				TheGameClient->informClientNewDrawable(currentDraw);
 
@@ -2036,7 +2116,26 @@ void WeaponTemplate::createPreAttackFX
 
 			// IamInnocent - HOPEFULLY there are no desyncs with this feature
 			if(fx && handled)
+			{
+				// IamInnocent - technical fix for Disguised Drawables using original offsets for handling Recoil and Muzzles
+				/// Maximum barrel allow for drawables using different templates while using its Original Drawable amount of barrels is the Drawable's Barrel Count - 1
+				Int barrelCount = specificBarrelToUse;
+				if(sourceObj->getTemplate() != sourceObj->getDrawable()->getTemplate() && currentDraw->getTemplate() == sourceObj->getTemplate())
+				{
+					Int maxBarrelCount = stealth->getBarrelCountDisguisedTemplate(wslot);
+					// IamInnocent - added to check to prevent crashes if the barrelCount has more barrels than the current drawable
+					while(barrelCount > maxBarrelCount)
+					{
+						if(maxBarrelCount <= 0)
+							barrelCount = 0;
+						else
+							barrelCount -= maxBarrelCount;
+					}
+					maxBarrelCount = max(0, maxBarrelCount-1);
+					barrelCount = min(barrelCount, maxBarrelCount);
+				}
 				sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, specificBarrelToUse, 0.0f, 0.0f, FALSE, TRUE);
+			}
 		}
 		else
 		{
@@ -2490,23 +2589,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 							extraHeight = srcPos.z;
 
 							if(stealth && stealth->isDisguisedAndCheckIfNeedOffset())
-							{
-								//If we are disguised and we need to check our firing offset, get the offset stored in stealthupdate
-								Coord3D offset;
-								offset.zero();
-								stealth->getFiringOffsetWhileDisguised(wslot, specificBarrelToUse, &offset);
-								if (fabs(offset.x) > WWMATH_EPSILON ||
-									fabs(offset.y) > WWMATH_EPSILON ||
-									fabs(offset.z) > WWMATH_EPSILON)
-								{
-									Coord3D dir = primaryVictim ? *primaryVictim->getPosition() : *pos;
-									dir.sub( &srcPos );
-									Real angle = atan2(dir.y, dir.x);
-									srcPos.x += Cos(angle) * offset.x;
-									srcPos.y += Sin(angle) *offset.y;
-									srcPos.z += offset.z;
-								}
-							}
+								stealth->getDrawableTemplateWhileDisguised()->getWeaponFireOffset(wslot, specificBarrelToUse, &srcPos);
 							else
 								source->getDrawable()->getWeaponFireOffset(wslot, specificBarrelToUse, &srcPos);
 
@@ -2563,7 +2646,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 
 					IterOrderType order = railgunAmount > 0 ? ITER_SORTED_NEAR_TO_FAR : ITER_FASTEST;
 
-					iter = ThePartitionManager->iterateObjectsAlongLine(source, &srcPos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind, NULL, order);
+					iter = ThePartitionManager->iterateObjectsAlongLine(source, &srcPos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunRadiusCheckPerDistance(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind, NULL, order);
 					curVictim = iter->firstWithNumeric(&curVictimDistSqr);
 
 					// If nothing to check, do nothing and return
@@ -4343,7 +4426,7 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 	m_status = RELOADING_CLIP;
 	Real reloadTime = loadInstantly ? 0 : m_template->getClipReloadTime(bonus);
 
-	if(m_template->getROFMovingPenalty() != 1.0f)
+	if(getROFMovingPenalty() != 0.0f)
 		reloadTime = m_template->calcROFForMoving(sourceObj, reloadTime);
 
 	m_whenLastReloadStarted = TheGameLogic->getFrame();
@@ -4394,7 +4477,7 @@ void Weapon::onWeaponBonusChange(const Object *source)
 		needUpdate = TRUE;
 	}
 
-	if(m_template->getROFMovingPenalty() != 1.0f)
+	if(getROFMovingPenalty() != 0.0f)
 	{
 		newDelay = m_template->calcROFForMoving(source, newDelay);
 	}
@@ -4639,33 +4722,27 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 //-------------------------------------------------------------------------------------------------
 Int WeaponTemplate::calcROFForMoving(const Object *source, Int Delay) const
 {
-	if(source == NULL || source->getPhysics() == NULL)
+	if(source == NULL || source->getPhysics() == NULL || !source->getPhysics()->isMotive())
 		return Delay;
 
-	if(source->getPhysics()->isMotive())
+	Real value = getROFMovingPenalty();
+
+	if(getROFMovingScales() && source->getAI())
 	{
-		Real value = getROFMovingPenalty();
+		Real speed = source->getAI()->getCurLocomotorSpeed();
 
-		if(getROFMovingScales() && source->getAI())
+		Real curSpeed = min(source->getLastActualSpeed(), speed);
+		Real maxSpeed = getROFMovingMaxSpeedCount() > 0 ? getROFMovingMaxSpeedCount() : speed;
+
+		if(curSpeed < maxSpeed)
 		{
-			Real speed = source->getAI()->getCurLocomotorSpeed();
-
-			Real curSpeed = min(source->getLastActualSpeed(), speed);
-			Real maxSpeed = getROFMovingMaxSpeedCount() > 0 ? getROFMovingMaxSpeedCount() : speed;
-
-			DEBUG_LOG(("CurrSpeed: %f", curSpeed));
-			if(curSpeed < maxSpeed)
-			{
-				Real scalingRatio = min(1.0f, Real(curSpeed / maxSpeed));
-				value *= scalingRatio;
-			}
+			Real scalingRatio = min(1.0f, Real(curSpeed / maxSpeed));
+			value *= scalingRatio;
 		}
-
-		Int newDelay = Delay * (1.0f + value);
-		return newDelay;
 	}
-	
-	return Delay;
+
+	Int newDelay = Delay * (1.0f + value);
+	return newDelay;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5416,7 +5493,7 @@ Bool Weapon::privateFireWeapon(
 			//CRCDEBUG_LOG(("Weapon::privateFireWeapon() just set m_status to BETWEEN_FIRING_SHOTS"));
 			Int delay = m_template->getDelayBetweenShots(bonus);
 
-			if(m_template->getROFMovingPenalty() != 1.0f)
+			if(getROFMovingPenalty() != 0.0f)
 				delay = m_template->calcROFForMoving(sourceObj, delay);
 
 			m_whenLastReloadStarted = now;
@@ -5920,6 +5997,139 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 }
 
 //-------------------------------------------------------------------------------------------------
+/*static*/ /*Bool Weapon::calcWeaponFirePosition(
+	const Object* obj,
+	const Drawable* draw,
+	WeaponSlotType wslot,
+	Int specificBarrelToUse,
+	Matrix3D& worldTransform,
+	Coord3D& worldPos
+)
+{
+	Real turretAngle = 0.0f;
+	Real turretPitch = 0.0f;
+	const AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	WhichTurretType tur = ai ? ai->getWhichTurretForWeaponSlot(wslot, &turretAngle, &turretPitch) : TURRET_INVALID;
+
+	Matrix3D attachTransform(true);
+	Coord3D turretRotPos = {0.0f, 0.0f, 0.0f};
+	Coord3D turretPitchPos = {0.0f, 0.0f, 0.0f};
+	//CRCDEBUG_LOG(("Do we have a drawable? %d", (draw != NULL)));
+	if (!draw || !draw->getWeaponFireOffset(wslot, specificBarrelToUse, &attachTransform, tur, &turretRotPos, &turretPitchPos))
+	{
+		//CRCDEBUG_LOG(("WeaponFirePos %d %d not found!",wslot, specificBarrelToUse));
+		//DEBUG_CRASH(("WeaponFirePos %d %d not found!",wslot, specificBarrelToUse));
+		//attachTransform.Make_Identity();
+		//turretRotPos.zero();
+		//turretPitchPos.zero();
+		return FALSE;
+	}
+	if (tur != TURRET_INVALID)
+	{
+		// The attach transform is the pristine front and center position of the fire point
+		// We can't read from the client, so we need to reproduce the actual point that
+		// takes turn and pitch into account.
+		Matrix3D turnAdjustment(1);
+		Matrix3D pitchAdjustment(1);
+
+		// To rotate about a point, move that point to 0,0, rotate, then move it back.
+		// Pre rotate will keep the first twist from screwing the angle of the second pitch
+		pitchAdjustment.Translate( turretPitchPos.x, turretPitchPos.y, turretPitchPos.z );
+		pitchAdjustment.In_Place_Pre_Rotate_Y(-turretPitch);
+		pitchAdjustment.Translate( -turretPitchPos.x, -turretPitchPos.y, -turretPitchPos.z );
+
+		turnAdjustment.Translate( turretRotPos.x, turretRotPos.y, turretRotPos.z );
+		turnAdjustment.In_Place_Pre_Rotate_Z(turretAngle);
+		turnAdjustment.Translate( -turretRotPos.x, -turretRotPos.y, -turretRotPos.z );
+
+#ifdef ALLOW_TEMPORARIES
+		attachTransform = turnAdjustment * pitchAdjustment * attachTransform;
+#else
+		Matrix3D tmp = attachTransform;
+		attachTransform.mul(turnAdjustment, pitchAdjustment);
+		attachTransform.postMul(tmp);
+#endif
+	}
+
+//#if defined(RTS_DEBUG)
+//  Real muzzleHeight = attachTransform.Get_Z_Translation();
+//  DEBUG_ASSERTCRASH( muzzleHeight > 0.001f, ("YOUR TURRET HAS A VERY LOW PROJECTILE LAUNCH POSITION, BUT FOUND A VALID BONE. DID YOU PICK THE WRONG ONE? %s", obj->getTemplate()->getName().str()));
+//#endif
+
+  //obj->convertBonePosToWorldPos(NULL, &attachTransform, NULL, &worldTransform);
+
+  worldTransform = attachTransform;
+	Vector3 tmp = worldTransform.Get_Translation();
+	worldPos.x = tmp.X;
+	worldPos.y = tmp.Y;
+	worldPos.z = tmp.Z;
+
+	return TRUE;
+}
+*/
+
+// ------------------------------------------------------------------------------------------------
+static const ModelConditionFlags s_allWeaponFireFlags[WEAPONSLOT_COUNT] =
+{
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_A,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_A,
+		MODELCONDITION_RELOADING_A,
+		MODELCONDITION_PREATTACK_A,
+		MODELCONDITION_USING_WEAPON_A
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_B,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_B,
+		MODELCONDITION_RELOADING_B,
+		MODELCONDITION_PREATTACK_B,
+		MODELCONDITION_USING_WEAPON_B
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_C,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_C,
+		MODELCONDITION_RELOADING_C,
+		MODELCONDITION_PREATTACK_C,
+		MODELCONDITION_USING_WEAPON_C
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_D,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_D,
+		MODELCONDITION_RELOADING_D,
+		MODELCONDITION_PREATTACK_D,
+		MODELCONDITION_USING_WEAPON_D
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_E,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_E,
+		MODELCONDITION_RELOADING_E,
+		MODELCONDITION_PREATTACK_E,
+		MODELCONDITION_USING_WEAPON_E
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_F,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_F,
+		MODELCONDITION_RELOADING_F,
+		MODELCONDITION_PREATTACK_F,
+		MODELCONDITION_USING_WEAPON_F
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_G,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_G,
+		MODELCONDITION_RELOADING_G,
+		MODELCONDITION_PREATTACK_G,
+		MODELCONDITION_USING_WEAPON_G
+	),
+	MAKE_MODELCONDITION_MASK5(
+		MODELCONDITION_FIRING_H,
+		MODELCONDITION_BETWEEN_FIRING_SHOTS_H,
+		MODELCONDITION_RELOADING_H,
+		MODELCONDITION_PREATTACK_H,
+		MODELCONDITION_USING_WEAPON_H
+	)
+};
+
+//-------------------------------------------------------------------------------------------------
 /*static*/ void Weapon::setFirePositionForDrawable(
 	const Object* launcher,
 	Drawable* draw,
@@ -5927,6 +6137,10 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	Int specificBarrelToUse
 )
 {
+	draw->setModelConditionState(MODELCONDITION_ATTACKING);
+	ModelConditionFlags c = launcher->getModelConditionForWeaponSlot(wslot, WSF_FIRING);
+	draw->clearAndSetModelConditionFlags(s_allWeaponFireFlags[wslot], c);
+
 	Real turretAngle = 0.0f;
 	Real turretPitch = 0.0f;
 	const AIUpdateInterface* ai = launcher->getAIUpdateInterface();
@@ -5937,6 +6151,10 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	{
 		draw->doTurretPositioning(tur, turretAngle, turretPitch);
 	}
+
+	draw->setPosition( launcher->getPosition() );
+	draw->setOrientation( launcher->getOrientation() );
+	draw->updateDrawable();
 }
 
 //-------------------------------------------------------------------------------------------------
