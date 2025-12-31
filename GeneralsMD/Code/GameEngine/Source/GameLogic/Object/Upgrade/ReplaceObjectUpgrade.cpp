@@ -458,13 +458,6 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		me->removeMeFromAssaultTransport(replacementObject->getID());
 	}
 
-	// Shielded Objects
-	if(data->m_transferShieldedTargets)
-		replacementObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
-
-	if(data->m_transferShieldingTargets)
-		replacementObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
-
 	// Transfer Statuses
 	if( data->m_transferStatus )
 	{
@@ -497,6 +490,17 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		replacementObject->setDisabledCustomTint(me->getDisabledCustomTint());
 		replacementObject->transferDisabledTillFrame(me->getDisabledTillFrame());
 	}
+
+	// Shielded Objects
+	if(data->m_transferShieldedTargets && me->testCustomStatus("SHIELDED_TARGET"))
+	{
+		me->clearCustomStatus("SHIELDED_TARGET");
+		replacementObject->setCustomStatus("SHIELDED_TARGET");
+		replacementObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
+	}
+
+	if(data->m_transferShieldingTargets)
+		replacementObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
 
 	// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
 	me->doTransferHijacker(replacementObject->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites);
