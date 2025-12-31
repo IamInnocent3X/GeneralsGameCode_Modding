@@ -2234,14 +2234,16 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		Real angle1,
 		const Coord3D* pos2,
 		const GeometryInfo& geom2,
-		Real angle2) const
+		Real angle2,
+		Bool passHeightCheck) const
 {
 	CollideInfo thisInfo(pos1, geom1, angle1);
 	CollideInfo thatInfo(pos2, geom2, angle2);
 
 	// invariant for all geometries: first do z collision check.
-	if (thisInfo.position.z + thisInfo.geom.getMaxHeightAbovePosition() >= thatInfo.position.z &&
-			thisInfo.position.z <= thatInfo.position.z + thatInfo.geom.getMaxHeightAbovePosition())
+	if ( (thisInfo.position.z + thisInfo.geom.getMaxHeightAbovePosition() >= thatInfo.position.z &&
+			thisInfo.position.z <= thatInfo.position.z + thatInfo.geom.getMaxHeightAbovePosition()) ||
+			passHeightCheck )
 	{
 		GeometryType thisGeom = geom1.getGeomType();
 		GeometryType thatGeom = geom2.getGeomType();
@@ -3571,6 +3573,22 @@ Object *PartitionManager::getClosestObjects(
 				if (!filtersAllow(filters, thisObj))
 					continue;
 
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				{
+					const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
+					if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+					{
+						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
+						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
+						{
+							//DEBUG_LOG(("Geometry Boundary Box Check Failed. TargetedObj: %s.", thisObj->getTemplate()->getName().str()));
+							//if(objToUse)
+							//	DEBUG_LOG(("Source: %s.", objToUse->getTemplate()->getName().str()));
+							continue;
+						}
+					}
+				}
+
 				// ok, this is within the range, and the filters allow it.
 				// add it to the iter, if we have one....
 				if (iterArg)
@@ -3646,6 +3664,23 @@ Object *PartitionManager::getClosestObjects(
 			// check the filters now
 			if (!filtersAllow(filters, thisObj))
 				continue;
+
+			// IamInnocent - Check Bounding Box
+			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			{
+				const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
+				if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+				{
+					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
+					if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
+					{
+						//DEBUG_LOG(("Geometry Boundary Box Check Failed. TargetedObj: %s.", thisObj->getTemplate()->getName().str()));
+						//if(objToUse)
+						//	DEBUG_LOG(("Source: %s.", objToUse->getTemplate()->getName().str()));
+						continue;
+					}
+				}
+			}
 
 			// ok, guess this is a winner!
 			if (iterArg)
@@ -4522,6 +4557,21 @@ Int PartitionManager::checkObjectsAlongLine(
 				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 					continue;
 
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				{
+					const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
+					if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+					{
+						Real checkRadius = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius : radius;
+						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, checkRadius, checkRadius, checkRadius );
+						if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
+						{
+							//DEBUG_LOG(("Geometry Boundary Box Check Failed. Object: %s", thisObj->getTemplate()->getName().str()));
+							continue;
+						}
+					}
+				}
+
 				//if( setContinue )
 				/*{
 					//if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
@@ -4695,8 +4745,23 @@ Int PartitionManager::checkObjectsAlongLine(
 			Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
 			Real thisDistSqr;
 			Coord3D distVec;
-			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
+			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
 				continue;
+
+			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			{
+				const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
+				if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+				{
+					Real checkRadius = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius : radius;
+					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, checkRadius, checkRadius, checkRadius );
+					if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
+					{
+						//DEBUG_LOG(("Geometry Boundary Box Check Failed. Object: %s", thisObj->getTemplate()->getName().str()));
+						continue;
+					}
+				}
+			}
 
 			//if( setContinue )
 			/*{
