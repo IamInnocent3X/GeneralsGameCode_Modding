@@ -178,6 +178,7 @@ public:
 	virtual Real getContainedItemsMass() const = 0;
 	virtual void setContainedItemsMass(Real mass) = 0;
 	virtual UnsignedInt getStealthUnitsContained() const = 0;
+	virtual UnsignedInt getHeroUnitsContained() const = 0;
 
 	virtual void swapContainedItemsList(ContainedItemsList& newList) = 0;
 

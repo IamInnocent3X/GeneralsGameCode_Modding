@@ -188,6 +188,7 @@ public:
 	virtual Real getContainedItemsMass() const;
 	virtual void setContainedItemsMass(Real mass) { m_containMass = mass; }
 	virtual UnsignedInt getStealthUnitsContained() const { return m_stealthUnitsContained; }
+	virtual UnsignedInt getHeroUnitsContained() const { return m_heroUnitsContained; }
 
 	virtual void swapContainedItemsList(ContainedItemsList& newList);
 
@@ -289,6 +290,8 @@ private:
 
 	ObjectEnterExitMap	m_objectEnterExitInfo;
 	UnsignedInt					m_stealthUnitsContained;				///< number of stealth units that can't be seen by enemy players.
+	UnsignedInt					m_heroUnitsContained;						///< cached hero count
+	XferVersion					m_xferVersion;									///< version of loaded save file for loadPostProcess
 	Int									m_whichExitPath; ///< Cycles from 1 to n and is used only in modules whose data has numberOfExitPaths > 1.
 	UnsignedInt					m_doorCloseCountdown;						///< When should I shut my door.
 
