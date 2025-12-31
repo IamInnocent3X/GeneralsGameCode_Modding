@@ -59,6 +59,8 @@ TeleporterAIUpdateModuleData::TeleporterAIUpdateModuleData( void )
 	m_tintStatus = TINT_STATUS_INVALID;
 	m_opacityStart = 1.0;
 	m_opacityEnd = 1.0;
+	m_teleportClearsParasite = TRUE;
+	m_teleportClearsParasiteKeys.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -78,6 +80,8 @@ TeleporterAIUpdateModuleData::TeleporterAIUpdateModuleData( void )
 		{ "TeleportRecoverTint", TintStatusFlags::parseSingleBitFromINI, NULL, offsetof(TeleporterAIUpdateModuleData, m_tintStatus) },
 		{ "TeleportRecoverOpacityStart", INI::parsePercentToReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_opacityStart) },
 		{ "TeleportRecoverOpacityEnd", INI::parsePercentToReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_opacityEnd) },
+		{ "TeleportClearsParasite", INI::parseBool, NULL, offsetof(TeleporterAIUpdateModuleData, m_teleportClearsParasite) },
+		{ "TeleportClearsParasiteKey", INI::parseAsciiStringVector, NULL, offsetof(TeleporterAIUpdateModuleData, m_teleportClearsParasiteKeys) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -229,6 +233,8 @@ UpdateSleepTime TeleporterAIUpdate::doTeleport(Coord3D targetPos, Real angle, Re
 {
 	const TeleporterAIUpdateModuleData* d = getTeleporterAIUpdateModuleData();
 	Object* obj = getObject();
+
+	obj->doHijackerUpdate(FALSE, FALSE, d->m_teleportClearsParasite, d->m_teleportClearsParasiteKeys, obj->getID(), obj->getPosition() );
 
 	FXList::doFXObj(d->m_sourceFX, getObject());
 

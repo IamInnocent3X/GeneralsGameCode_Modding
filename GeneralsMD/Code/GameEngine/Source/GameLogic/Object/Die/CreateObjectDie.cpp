@@ -449,13 +449,6 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 		me->removeMeFromAssaultTransport(newObject->getID());
 	}
 
-	// Shielded Objects
-	if(data->m_transferShieldedTargets)
-		newObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
-
-	if(data->m_transferShieldingTargets)
-		newObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
-
 	// Transfer Statuses
 	if( data->m_transferStatus )
 	{
@@ -490,6 +483,17 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 		newObject->setDisabledCustomTint(me->getDisabledCustomTint());
 		newObject->transferDisabledTillFrame(me->getDisabledTillFrame());
 	}
+
+	// Shielded Objects
+	if(data->m_transferShieldedTargets && me->testCustomStatus("SHIELDED_TARGET"))
+	{
+		me->clearCustomStatus("SHIELDED_TARGET");
+		newObject->setCustomStatus("SHIELDED_TARGET");
+		newObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
+	}
+
+	if(data->m_transferShieldingTargets)
+		newObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
 
 	// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
 	me->doTransferHijacker(newObject->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites);

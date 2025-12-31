@@ -1355,8 +1355,12 @@ protected:
 		}
 
 		// Shielded Objects
-		if(m_transferShieldedTargets)
+		if(m_transferShieldedTargets && sourceObj->testCustomStatus("SHIELDED_TARGET"))
+		{
+			source->clearCustomStatus("SHIELDED_TARGET");
+			obj->setCustomStatus("SHIELDED_TARGET");
 			obj->setShieldByTargetID(sourceObj->getShieldByTargetID(), sourceObj->getShieldByTargetType());
+		}
 
 		if(m_transferShieldingTargets)
 			obj->setShielding(sourceObj->getShieldingTargetID(), sourceObj->getShieldByTargetType());

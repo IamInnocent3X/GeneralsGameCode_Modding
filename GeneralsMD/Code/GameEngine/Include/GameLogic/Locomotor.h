@@ -326,6 +326,8 @@ public:
 
 	void setPreferredHeight( Real height ) { m_preferredHeight = height; }
 
+	void setMaintainPos(const Coord3D *pos) { m_maintainPos.set(pos); }
+
 	//Returns 0 for non SHIP locomotors
 	inline Int getRequireWaterLevel() const { return m_template->m_appearance == LOCO_SHIP ? m_template->m_requiredWaterLevel : 0; };
 

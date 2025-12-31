@@ -172,10 +172,14 @@ void Thing::setPositionZ( Real z )
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
 	if(AsObject(this))
 	{
-		if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme && AsObject(this)->getDrawable())
-			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
-
 		AsObject(this)->doMovingUpdate();
+	}
+	if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		if(AsObject(this) && AsObject(this)->getDrawable())
+			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
+		else if(AsDrawable(this))
+			TheGameClient->informClientNewDrawable(AsDrawable(this));
 	}
 }
 
@@ -208,10 +212,14 @@ void Thing::setPosition( const Coord3D *pos )
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
 	if(AsObject(this))
 	{
-		if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme && AsObject(this) && AsObject(this)->getDrawable())
-			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
-
 		AsObject(this)->doMovingUpdate();
+	}
+	if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		if(AsObject(this) && AsObject(this)->getDrawable())
+			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
+		else if(AsDrawable(this))
+			TheGameClient->informClientNewDrawable(AsDrawable(this));
 	}
 }
 

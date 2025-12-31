@@ -821,7 +821,7 @@ public:
 	void setCarBombConverterID(ObjectID ConverterID);
 	void setHijackingID(ObjectID ID);
 	void setEquipToID(ObjectID ID);
-	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID);
+	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID, const Coord3D *ejectPos = NULL);
 	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite);
 	Bool checkToSquishHijack(const Object *other) const;
 

@@ -495,10 +495,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 
         if ( shipAI)
         {
-           if(data->m_gunshipDontUpdateOrbit)
-            shipAI->aiMoveToPosition( &m_initialTargetPosition, CMD_FROM_AI );
-           else
-            shipAI->aiMoveToPosition( &m_satellitePosition, CMD_FROM_AI );
+          shipAI->aiMoveToPosition( &m_satellitePosition, CMD_FROM_AI );
         }
       }
         m_first = TRUE;
@@ -528,7 +525,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 #endif
 
 
-        Real distanceToClose = data->m_gunshipDontUpdateOrbit ? (!shipAI || !shipAI->isMoving() || !shipAI->getPath() ? 1e9 : PATHFIND_CELL_SIZE_F) : data->m_gunshipOrbitRadius;
+        Real distanceToClose = data->m_gunshipOrbitRadius;
         /*if(data->m_gunshipDontUpdateOrbit && shipAI)
         {
           Real maxSpeed = shipAI->getCurLocomotor()->getMaxSpeedForCondition(gunship->getBodyModule()->getDamageState());
@@ -592,6 +589,10 @@ UpdateSleepTime SpectreGunshipUpdate::update()
           {
             m_howitzerFiringCountdown = now % data->m_howitzerFiringRate;
             m_checkHowitzerCountdownFirst = TRUE;
+            if(data->m_gunshipDontUpdateOrbit && shipAI && shipAI->getCurLocomotor())
+            {
+              shipAI->getCurLocomotor()->setMaintainPos( &m_initialTargetPosition );
+            }
           }
           else
           {
