@@ -3573,7 +3573,7 @@ Object *PartitionManager::getClosestObjects(
 				if (!filtersAllow(filters, thisObj))
 					continue;
 
-				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 				{
 					const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
 					if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
@@ -3666,7 +3666,7 @@ Object *PartitionManager::getClosestObjects(
 				continue;
 
 			// IamInnocent - Check Bounding Box
-			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 			{
 				const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
 				if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
@@ -4557,7 +4557,7 @@ Int PartitionManager::checkObjectsAlongLine(
 				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 					continue;
 
-				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 				{
 					const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
 					if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
@@ -4748,7 +4748,7 @@ Int PartitionManager::checkObjectsAlongLine(
 			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
 				continue;
 
-			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 			{
 				const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
 				if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
