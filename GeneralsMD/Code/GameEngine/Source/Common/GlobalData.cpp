@@ -690,6 +690,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	{ "UseDynamicTargetingForWeapons",	INI::parseBool, NULL, offsetof(GlobalData, m_dynamicTargeting) },
 	{ "UseAccurateSphereToRectCollision",	INI::parseBool, NULL, offsetof(GlobalData, m_useAccurateSphereToRectCollision) },
+	{ "CheckBoxBoundariesForDistCalc",	INI::parseBool, NULL, offsetof(GlobalData, m_checkBoxBoundariesForDistCalc) },
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1277,6 +1278,7 @@ GlobalData::GlobalData()
 	m_fixHulksFreezingAboveTerrain = FALSE;
 	m_dynamicTargeting = FALSE;
 	m_useAccurateSphereToRectCollision = FALSE;
+	m_checkBoxBoundariesForDistCalc = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:
