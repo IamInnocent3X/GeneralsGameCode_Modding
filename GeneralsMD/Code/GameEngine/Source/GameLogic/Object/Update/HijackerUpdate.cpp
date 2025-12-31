@@ -232,9 +232,10 @@ UpdateSleepTime HijackerUpdate::update( void )
 				}
 
 				// Update the Position for ejection
-				obj->setPosition( target->getPosition() );
+				if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
+					m_ejectPos = *target->getPosition();
 				m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
-				m_ejectPos = *target->getPosition();
+				obj->setPosition( &m_ejectPos );
 
 				// Make the target NULL for reverting the behavior
 				setTargetObject( NULL );
@@ -253,9 +254,10 @@ UpdateSleepTime HijackerUpdate::update( void )
 		if( target && !target->isEffectivelyDead() && !target->isDestroyed() && !revertedCollide)
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
-			obj->setPosition( target->getPosition() );
+			if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
+				m_ejectPos = *target->getPosition();
 			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
-			m_ejectPos = *target->getPosition();
+			obj->setPosition( &m_ejectPos );
 
 			// If I do not leech Exp, then I do not receive any EXP that should be given to the attached Object
 			if(m_noLeechExp)

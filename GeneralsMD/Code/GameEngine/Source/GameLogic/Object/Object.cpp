@@ -8782,7 +8782,7 @@ void Object::setHijackingID(ObjectID ID)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID)
+void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID, const Coord3D *ejectPos)
 {
 	if( testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
 	{
@@ -8799,6 +8799,9 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 					hijackerUpdate->setNoSelfDamage( TRUE );
 				
 				hijackerUpdate->setClear( checkClear );
+
+				if(checkClear && ejectPos)
+					hijackerUpdate->setEjectPos( ejectPos );
 					
 				if(checkDie)
 					hijackerUpdate->setEject( TRUE );
@@ -8823,6 +8826,9 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 					hijackerUpdate->setNoSelfDamage( TRUE );
 				
 				hijackerUpdate->setClear( checkClear );
+
+				if(checkClear && ejectPos)
+					hijackerUpdate->setEjectPos( ejectPos );
 					
 				if(checkDie)
 					hijackerUpdate->setEject( TRUE );
@@ -8838,7 +8844,8 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 		Object *damager = TheGameLogic->findObjectByID( damagerID );
 
 		// Find if the damager is equipped in me. If so, does things differently
-		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		std::vector<ObjectID>::const_iterator it;
+		for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
 		{
 			if((*it) == damagerID)
 			{
@@ -8846,7 +8853,7 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 				break;
 			}
 		}
-		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+		for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
 		{
 			Object *equipObj = TheGameLogic->findObjectByID( (*it) );
 
@@ -8863,6 +8870,9 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 
 					hijackerUpdate->setClear( checkClear );
 					hijackerUpdate->setParasiteCheckKeys( clearKeys );
+
+					if(checkClear && ejectPos)
+						hijackerUpdate->setEjectPos( ejectPos );
 
 					if(checkDie)
 						hijackerUpdate->setEject( TRUE );

@@ -96,6 +96,7 @@ public:
 	virtual void setNoSelfDamage(Bool u ) = 0; // This is to prevent Parasite from dealing damage to their allies
 	virtual void setParasiteKey(const AsciiString& ParasiteKey ) = 0;
 	virtual void setParasiteCheckKeys(const std::vector<AsciiString>& ParasiteKeys ) = 0;
+	virtual void setEjectPos(const Coord3D *pos) = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -137,6 +138,7 @@ public:
 	virtual void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
 	virtual void setParasiteKey(const AsciiString& ParasiteKey ) {m_parasiteKey = ParasiteKey; }
 	virtual void setParasiteCheckKeys(const std::vector<AsciiString>& ParasiteKeys ) { if(m_isParasite) m_recentParasiteKeys = ParasiteKeys; }
+	virtual void setEjectPos(const Coord3D *pos) { m_ejectPos.set(pos); }
 
 private:
 
