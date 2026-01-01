@@ -761,6 +761,19 @@ Real Drawable::getAnimationScrubScalar( void ) const // lorenzen
 }
 #endif
 
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+//-------------------------------------------------------------------------------------------------
+void Drawable::setNeedUpdateTurretPositioning(Bool set)
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
+		if (di)
+			di->setNeedUpdateTurretPositioning(set);
+	}
+}
+#endif
+
 //-------------------------------------------------------------------------------------------------
 Int Drawable::getPristineBonePositions(const char* boneNamePrefix, Int startIndex, Coord3D* positions, Matrix3D* transforms, Int maxBones) const
 {
@@ -2646,7 +2659,12 @@ void Drawable::draw()
 		applyPhysicsXform(&transformMtx);
 	}
 
+	// IamInnocent - 1/1/26 Added Efffective Drawable Update Modules
+#if RETAIL_COMPATIBLE_DRAWUPDATE
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+#else
+	for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
+#endif
 	{
 		(*dm)->doDrawModule(&transformMtx);
 	}
@@ -4070,7 +4088,12 @@ void Drawable::replaceModelConditionStateInDrawable()
 	const TerrainDecalType terrainDecalType = getTerrainDecalType();
 	setTerrainDecal(TERRAIN_DECAL_NONE);
 
+	// IamInnocent - 1/1/26 Added Efffective Drawable Update Modules
+#if RETAIL_COMPATIBLE_DRAWUPDATE
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+#else
+	for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
+#endif
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
 		if (di)
@@ -4650,6 +4673,9 @@ void Drawable::updateHiddenStatus()
 			di->setHidden(hidden != 0);
 	}
 
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	TheGameClient->informClientNewDrawable(this);
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------

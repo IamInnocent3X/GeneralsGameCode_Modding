@@ -1742,6 +1742,10 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	}
 	m_needRecalcBoneParticleSystems = false;
 	m_fullyObscuredByShroud = false;
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	m_needUpdateTurretPosition = true;
+	m_doHandleRecoil = true;
+#endif
 
 	// only validate the current time-of-day and weather conditions by default.
 	getW3DModelDrawModuleData()->validateStuffForTimeAndWeather(getDrawable(),
@@ -2420,6 +2424,11 @@ void W3DModelDraw::handleClientTurretPositioning()
 	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
 		return;
 
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	if (!m_needUpdateTurretPosition)
+		return;
+#endif
+
 	for (int tslot = 0; tslot < MAX_TURRETS; ++tslot)
 	{
 		const ModelConditionInfo::TurretInfo& tur = m_curState->m_turrets[tslot];
@@ -2499,6 +2508,13 @@ void W3DModelDraw::handleClientRecoil()
 		return;
 	}
 
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	if (!m_doHandleRecoil)
+		return;
+	// Set the Requirement of Recoil Update to False first, if there is any recoil while checking, it is set to True.
+	m_doHandleRecoil = FALSE;
+#endif
+
 	// do recoil, if any
 	for (int wslot = 0; wslot < WEAPONSLOT_COUNT; ++wslot)
 	{
@@ -2518,6 +2534,10 @@ void W3DModelDraw::handleClientRecoil()
 				Bool hidden = recoils[i].m_state != WeaponRecoilInfo::RECOIL_START;
 				//DEBUG_LOG(("adjust muzzleflash %08lx for Draw %08lx state %s to %d at frame %d",subObjToHide,this,m_curState->m_description.str(),hidden?1:0,TheGameLogic->getFrame()));
 				barrels[i].setMuzzleFlashHidden(m_renderObject, hidden);
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+				if(!hidden)
+					m_doHandleRecoil = TRUE; // There's more recoil, need to update
+#endif
 			}
 
 			const Real TINY_RECOIL = 0.01f;
@@ -2542,6 +2562,9 @@ void W3DModelDraw::handleClientRecoil()
 						{
 							recoils[i].m_state = WeaponRecoilInfo::SETTLE;
 						}
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+							m_doHandleRecoil = TRUE; // There's more recoil, need to update
+#endif
 						break;
 
 					case WeaponRecoilInfo::SETTLE:
@@ -2551,6 +2574,9 @@ void W3DModelDraw::handleClientRecoil()
 							recoils[i].m_shift = 0.0f;
 							recoils[i].m_state = WeaponRecoilInfo::IDLE;
 						}
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+							m_doHandleRecoil = TRUE; // There's more recoil, need to update
+#endif
 						break;
 				}
 
@@ -3764,6 +3790,9 @@ Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelTo
 
 	if (info.m_recoilBone || info.m_muzzleFlashBone)
 	{
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+		m_doHandleRecoil = TRUE;
+#endif
 		//DEBUG_LOG(("START muzzleflash %08lx for Draw %08lx state %s at frame %d",info.m_muzzleFlashBone,this,m_curState->m_description.str(),TheGameLogic->getFrame()));
 		WeaponRecoilInfo& recoil = m_weaponRecoilInfoVec[wslot][specificBarrelToUse];
 		recoil.m_state = WeaponRecoilInfo::RECOIL_START;
@@ -3906,6 +3935,9 @@ void W3DModelDraw::rebuildWeaponRecoilInfo(const ModelConditionInfo* state)
 			}
 		}
 	}
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	m_doHandleRecoil = TRUE;
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4015,6 +4047,14 @@ void W3DModelDraw::updateSubObjects()
 		}
 	}
 }
+
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+//-------------------------------------------------------------------------------------------------
+void W3DModelDraw::setNeedUpdateTurretPositioning(Bool set)
+{
+	m_needUpdateTurretPosition = set; // A simple function with the dangers of an atomic bomb, misuse and it'll cause desync
+}
+#endif
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -4263,6 +4303,14 @@ void W3DModelDraw::xfer( Xfer *xfer )
 	// when loading, update the sub objects if we have any
 	if( xfer->getXferMode() == XFER_LOAD && m_subObjectVec.empty() == FALSE )
 		updateSubObjects();
+
+#if !RETAIL_COMPATIBLE_DRAWUPDATE && !RETAIL_COMPATIBLE_CRC
+	// Draw Updates
+	xfer->xferBool( &m_needUpdateTurretPosition );
+
+	// Draw Updates
+	xfer->xferBool( &m_doHandleRecoil );
+#endif
 
 }
 

@@ -632,6 +632,10 @@ public:
 	// player. These are friend_s for player.
 	void friend_adjustPowerForPlayer( Bool incoming );
 
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	void setNeedUpdateTurretPositioning(Bool set);
+#endif
+
 protected:
 
 	void setOrRestoreTeam( Team* team, Bool restoring );
@@ -812,6 +816,10 @@ private:
 	Byte													m_numTriggerAreasActive;
 	Bool													m_singleUseCommandUsed;
 	Bool													m_isReceivingDifficultyBonus;
+
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	Bool											m_turretNeedPositioning;
+#endif
 
 };
 

@@ -188,6 +188,10 @@ public:
 
 	virtual void setSelectable(Bool selectable) = 0;
 
+#if !RETAIL_COMPATIBLE_DRAWUPDATE
+	virtual void setNeedUpdateTurretPositioning(Bool set) = 0;
+#endif
+
 	/**
 		This call says, "I want the current animation (if any) to take n frames to complete a single cycle".
 		If it's a looping anim, each loop will take n frames. someday, we may want to add the option to insert
