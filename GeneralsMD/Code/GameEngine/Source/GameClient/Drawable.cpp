@@ -536,14 +536,6 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 		(*dm)->setShadowsEnabled(shadowsEnabled);
 	}
 
-	if(TheGlobalData->m_useEfficientDrawableScheme)
-	{
-		// Redraw everything
-		//TheGameClient->clearEfficientDrawablesList();
-
-		TheGameClient->informClientNewDrawable(this);
-	}
-
 	m_groupNumber = NULL;
 	m_captionDisplayString = NULL;
 	m_drawableInfo.m_drawable = this;
@@ -661,13 +653,6 @@ void Drawable::onDestroy( void )
 		for( Module** m = m_modules[ i ]; m && *m; ++m )
 			(*m)->onDelete();
 
-	}
-
-	if (TheGlobalData->m_useEfficientDrawableScheme)
-	{
-		// Redraw everything
-		//TheGameClient->clearEfficientDrawablesList();
-		TheGameClient->informClientNewDrawable(this);
 	}
 
 }
@@ -5337,13 +5322,6 @@ void Drawable::updateHiddenStatus()
 	if( hidden )
 		TheInGameUI->deselectDrawable( this );
 
-	if (TheGlobalData->m_useEfficientDrawableScheme)
-	{
-		// Redraw everything
-		//TheGameClient->clearEfficientDrawablesList();
-		TheGameClient->informClientNewDrawable(this);
-	}
-
 	// IamInnocent - dm is able to give nullptr if there is auto disguise involved
 	for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
 	{
@@ -5352,6 +5330,11 @@ void Drawable::updateHiddenStatus()
 			di->setHidden(hidden != 0);
 	}
 
+	if (TheGlobalData->m_useEfficientDrawableScheme && !hidden)
+	{
+		// Redraw everything
+		TheGameClient->informClientNewDrawable(this);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

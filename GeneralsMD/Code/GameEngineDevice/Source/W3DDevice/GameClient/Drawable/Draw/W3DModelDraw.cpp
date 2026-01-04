@@ -2576,7 +2576,7 @@ void W3DModelDraw::handleClientRecoil()
 	if(!m_doHandleRecoil && TheGlobalData->m_useEfficientDrawableScheme)
 		return;
 
-	m_doHandleRecoil = TRUE;
+	m_doHandleRecoil = FALSE;
 	// do recoil, if any
 	for (int wslot = 0; wslot < WEAPONSLOT_COUNT; ++wslot)
 	{

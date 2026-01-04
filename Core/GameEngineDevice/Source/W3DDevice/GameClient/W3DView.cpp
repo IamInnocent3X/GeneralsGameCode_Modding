@@ -631,6 +631,7 @@ void W3DView::setCameraTransform( void )
 	{
 		// Redraw everything
 		TheGameClient->clearEfficientDrawablesList();
+		m_updateEfficient = TRUE;
 	}
 }
 
@@ -1046,12 +1047,6 @@ Bool W3DView::updateCameraMovements()
 {
 	Bool didUpdate = false;
 
-	if(TheGlobalData->m_useEfficientDrawableScheme && 
-		(m_doingZoomCamera || m_doingPitchCamera || m_doingRotateCamera || m_doingMoveCameraOnWaypointPath || m_doingScriptedCameraLock || m_previousLookAtPosition != *getPosition()))
-	{
-		m_updateEfficient = TRUE;
-	}
-
 	if (m_doingZoomCamera)
 	{
 		zoomCameraOneFrame();
@@ -1283,13 +1278,8 @@ void W3DView::update(void)
 						curpos.y += dy*followFactor;
 					}
 				}
-				if (!(TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript()) && !TheGameLogic->isGamePaused()) {
-					if(TheGlobalData->m_useEfficientDrawableScheme && m_previousLookAtPosition != *getPosition())
-					{
-						m_updateEfficient = TRUE;
-					}
+				if (!(TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript()) && !TheGameLogic->isGamePaused())
 					m_previousLookAtPosition = *getPosition();
-				}
 				setPosition(&curpos);
 
 				if (m_lockType == LOCK_FOLLOW)
@@ -1419,19 +1409,20 @@ void W3DView::update(void)
   TheTerrainVisual->updateSeismicSimulations();
 #endif
 
-	Region3D axisAlignedRegion;
-	getAxisAlignedViewRegion(axisAlignedRegion);
-
-	if(TheGlobalData->m_useEfficientDrawableScheme)
-		TheGameClient->setEfficientDrawableRegion(&axisAlignedRegion);
-
 	// render all of the visible Drawables
 	/// @todo this needs to use a real region partition or something
 	//// IamInnocent - Attempted usage to register regions and drawables
 	if (!TheGlobalData->m_useEfficientDrawableScheme || WW3D::Get_Sync_Frame_Time() || m_updateEfficient)	//make sure some time actually elapsed
-		TheGameClient->iterateDrawablesInRegion( &axisAlignedRegion, drawDrawable, this );
+	{
+		Region3D axisAlignedRegion;
+		getAxisAlignedViewRegion(axisAlignedRegion);
 
-	m_updateEfficient = FALSE;
+		if(TheGlobalData->m_useEfficientDrawableScheme)
+			TheGameClient->setEfficientDrawableRegion(&axisAlignedRegion);
+
+		TheGameClient->iterateDrawablesInRegion( &axisAlignedRegion, drawDrawable, this );
+		m_updateEfficient = FALSE;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

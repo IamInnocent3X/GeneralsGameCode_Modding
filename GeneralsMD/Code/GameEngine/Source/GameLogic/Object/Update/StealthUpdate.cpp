@@ -1640,7 +1640,7 @@ void StealthUpdate::changeVisualDisguise()
 	}
 
 	// Also refresh the Efficient Drawable List
-	if(TheGlobalData->m_useEfficientDrawableScheme && draw && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
+	if(TheGlobalData->m_useEfficientDrawableScheme && ThePlayerList->getLocalPlayer()->getRelationship(self->getTeam()) == ENEMIES)
 	{
 		// Redraw everything as Stealth Detection bugs out how existing Drawables work
 		TheGameClient->clearEfficientDrawablesList();

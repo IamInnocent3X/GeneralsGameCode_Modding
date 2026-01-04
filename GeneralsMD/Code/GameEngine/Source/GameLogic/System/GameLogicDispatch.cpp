@@ -339,7 +339,7 @@ void GameLogic::prepareNewGame( GameMode gameMode, GameDifficulty diff, Int rank
 
 }
 
-
+// ------------------------------------------------------------------------------------------------
 void clearGroupMovingFormation( Object *obj, void *userData )
 {
 	if(!obj->getFormationIsCommandMap())
