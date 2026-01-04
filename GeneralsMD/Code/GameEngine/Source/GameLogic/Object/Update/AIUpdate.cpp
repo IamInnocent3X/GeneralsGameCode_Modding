@@ -730,6 +730,7 @@ void AIUpdateInterface::setTurretTargetObject(WhichTurretType tur, Object* o, Bo
 {
 	if (m_turretAI[tur])
 	{
+		getObject()->setNeedUpdateTurretPositioning(TRUE);
 		m_turretAI[tur]->setTurretTargetObject(o, forceAttacking);
 	}
 }
@@ -754,6 +755,7 @@ void AIUpdateInterface::setTurretTargetPosition(WhichTurretType tur, const Coord
 {
 	if (m_turretAI[tur])
 	{
+		getObject()->setNeedUpdateTurretPositioning(TRUE);
 		m_turretAI[tur]->setTurretTargetPosition(pos);
 	}
 }
@@ -763,6 +765,7 @@ void AIUpdateInterface::setTurretEnabled(WhichTurretType tur, Bool enabled)
 {
 	if (m_turretAI[tur])
 	{
+		getObject()->setNeedUpdateTurretPositioning(TRUE);
 		m_turretAI[tur]->setTurretEnabled( enabled );
 	}
 }
@@ -772,6 +775,7 @@ void AIUpdateInterface::recenterTurret(WhichTurretType tur)
 {
 	if (m_turretAI[tur])
 	{
+		getObject()->setNeedUpdateTurretPositioning(TRUE);
 		m_turretAI[tur]->recenterTurret();
 	}
 }
@@ -984,6 +988,14 @@ void AIUpdateInterface::chooseGoodLocomotorFromCurrentSet( void )
 		// Add speed multiplier to loco
 		if (m_speedMultiplier != 1.0)
 			m_curLocomotor->applySpeedMultiplier(m_speedMultiplier);
+
+		// Reset drawable transforms
+		if (prevLoco != NULL && prevLoco->getAppearance() != m_curLocomotor->getAppearance()) {
+			Drawable* draw = getObject()->getDrawable();
+			if (draw) {
+				draw->resetPhysicsXform();
+			}
+		}
 
 		// do update for any relevant modules for the Object
 		getObject()->doObjectLocomotorUpdate();
@@ -2768,10 +2780,6 @@ Bool AIUpdateInterface::isAircraftThatAdjustsDestination(void) const
 	{
 		return FALSE; // thrust doesn't adjust.
 	}
-	if (m_curLocomotor->getAppearance() == LOCO_SHIP)
-	{
-		return TRUE;	// behave like hover
-	}
 
 	return FALSE;
 }
@@ -3247,7 +3255,6 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 			}
 		}
 	}
-	obj->setNeedUpdateTurretPositioning(TRUE);
 }
 
 

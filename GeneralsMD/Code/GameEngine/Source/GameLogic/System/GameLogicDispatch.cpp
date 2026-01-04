@@ -148,7 +148,14 @@ static void doSetRallyPoint( Object *obj, const Coord3D& pos )
 	// for now, just use the basic human locomotor ... and enable the above code when Steven
 	// tells me how to get the locomotor sets based on a thing template (CBD)
 	//
-	NameKeyType key = NAMEKEY( "BasicHumanLocomotor" );
+	NameKeyType key;
+	if (obj->isKindOf(KINDOF_SHIPYARD)) {
+		key = NAMEKEY("BasicBoatLocomotor");
+	}
+	else {
+		key = NAMEKEY("BasicHumanLocomotor");
+	}
+
 	LocomotorSet locomotorSet;
 	locomotorSet.addLocomotor( TheLocomotorStore->findLocomotorTemplate( key ) );
 	if( TheAI->pathfinder()->clientSafeQuickDoesPathExist( locomotorSet, obj->getPosition(), &pos ) == FALSE )
@@ -339,7 +346,7 @@ void GameLogic::prepareNewGame( GameMode gameMode, GameDifficulty diff, Int rank
 
 }
 
-
+// ------------------------------------------------------------------------------------------------
 void clearGroupMovingFormation( Object *obj, void *userData )
 {
 	if(!obj->getFormationIsCommandMap())

@@ -702,6 +702,8 @@ public:
 
 	const WeaponTemplateSetVector& getWeaponTemplateSets(void) const {return m_weaponTemplateSets;}
 
+	Int getMaxPathFindingCellRadius(void) const { return static_cast<Int>(m_maxPathfindingCellRadius); };
+
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }
 
@@ -937,7 +939,7 @@ private:
 	UnsignedByte	m_crusherLevel;							///< crusher > crushable level to actually crush
 	UnsignedByte	m_crushableLevel;						///< Specifies the level of crushability (must be hit by a crusher greater than this to crush me).
 	Byte					m_ammoPipsStyle;                ///< How ammo pips are displayed for this thing
-
+	UnsignedByte  m_maxPathfindingCellRadius;  ///< Limit cells radius for pathfinding, defaults to 2, can be increased for large units
 	// ---- Other
 	DisabledType							m_disabledTypeUnderPowered;
 	WeaponBonusConditionTypeVec 			m_bonusUnderPowered;

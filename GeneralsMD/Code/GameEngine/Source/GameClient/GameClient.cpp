@@ -111,8 +111,8 @@ GameClient::GameClient()
 	m_nextDrawableID = (DrawableID)1;
 	TheDrawGroupInfo = new DrawGroupInfo;
 
-	m_drawablesList.clear();
-	m_drawablesListMarkedForClear = FALSE;
+	m_drawablesIterateList.clear();
+	m_drawablesIterateListMarkedForClear = FALSE;
 
 	m_axisAlignedRegion.lo.x = 0.0f;
 	m_axisAlignedRegion.lo.y = 0.0f;
@@ -139,9 +139,9 @@ GameClient::~GameClient()
 	// clear any drawable TOC we might have
 	m_drawableTOC.clear();
 
-	m_drawablesList.clear();
+	m_drawablesIterateList.clear();
 
-	m_drawablesListMarkedForClear = FALSE;
+	m_drawablesIterateListMarkedForClear = FALSE;
 
 	m_axisAlignedRegion.lo.x = 0.0f;
 	m_axisAlignedRegion.lo.y = 0.0f;
@@ -494,9 +494,9 @@ void GameClient::reset( void )
 	// clear any drawable TOC we might have
 	m_drawableTOC.clear();
 
-	m_drawablesList.clear();
+	m_drawablesIterateList.clear();
 
-	m_drawablesListMarkedForClear = FALSE;
+	m_drawablesIterateListMarkedForClear = FALSE;
 
 	m_axisAlignedRegion.lo.x = 0.0f;
 	m_axisAlignedRegion.lo.y = 0.0f;
@@ -830,16 +830,16 @@ void GameClient::updateHeadless()
  */
 void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr userFunc, void *userData )
 {
-	if(m_drawablesListMarkedForClear)
+	if(m_drawablesIterateListMarkedForClear)
 	{
-		m_drawablesList.clear();
-		m_drawablesListMarkedForClear = FALSE;
+		m_drawablesIterateList.clear();
+		m_drawablesIterateListMarkedForClear = FALSE;
 	}
 	
-	if(region != NULL && TheGlobalData->m_useEfficientDrawableScheme && !m_drawablesList.empty())
+	if(region != NULL && TheGlobalData->m_useEfficientDrawableScheme && !m_drawablesIterateList.empty())
 	{
 		//IamInnocent - Attempted to use an Efficient Implementation of PartitionManager code to use WorldCell for Finding Drawables - 7/10/2025
-		for( std::list< Drawable* >::iterator it = m_drawablesList.begin(); it != m_drawablesList.end();)
+		for( std::list< Drawable* >::iterator it = m_drawablesIterateList.begin(); it != m_drawablesIterateList.end();)
 		{
 			Coord3D pos = *(*it)->getPosition();
 			if( pos.x >= region->lo.x && pos.x <= region->hi.x &&
@@ -850,30 +850,12 @@ void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr u
 			}
 			else
 			{
-				it = m_drawablesList.erase(it);
+				it = m_drawablesIterateList.erase(it);
 				continue;
 			}
 			++it;
 		}
 
-		// IamInnocent - Removed the usage of PartitionManager. Now uses PhysicsUpdate to add drawables into the list
-		/// 			 PartitionManager will cause bugs when iterating from edges or borders. (Reason: Unknown.)
-		/*std::list< Drawable* > newDrawables = ThePartitionManager->getDrawablesInRegionEfficient();
-
-		if(!newDrawables.empty())
-		{
-			for( std::list< Drawable* >::const_iterator it_new = newDrawables.begin(); it_new != newDrawables.end(); ++it_new )
-			{
-				Coord3D pos_new = *(*it_new)->getPosition();
-				if( pos_new.x >= region->lo.x && pos_new.x <= region->hi.x &&
-					pos_new.y >= region->lo.y && pos_new.y <= region->hi.y &&
-						pos_new.z >= region->lo.z && pos_new.z <= region->hi.z )
-				{
-					addDrawableToEfficientList(*it_new);
-					(*userFunc)( (*it_new), userData );
-				}
-			}
-		}*/
 	}
 	else if(region == NULL || ThePartitionManager->hasNoOffset() || 
 	    ( !TheGlobalData->m_usePartitionManagerToIterateDrawables || TheGlobalData->m_usePartitionManagerToIterateDrawablesOnlySelect ) )
@@ -931,7 +913,7 @@ void GameClient::informClientNewDrawable(Drawable *draw)
 	//	return;
 
 	// Only inform New Drawable if the drawables are checked at least once.
-	if(m_drawablesList.empty())
+	if(m_drawablesIterateList.empty())
 		return;
 
 	Coord3D currPos = *draw->getPosition();
@@ -940,7 +922,6 @@ void GameClient::informClientNewDrawable(Drawable *draw)
 		currPos.y <= region->lo.y || currPos.y >= region->hi.y ||
 			currPos.z <= region->lo.z || currPos.z >= region->hi.z )
 		return;
-		
 
 	addDrawableToEfficientList(draw);
 }
@@ -950,10 +931,11 @@ void GameClient::informClientNewDrawable(Drawable *draw)
  */
 void GameClient::addDrawableToEfficientList(Drawable *draw)
 {
-	std::list< Drawable* >::iterator it = std::find(m_drawablesList.begin(), m_drawablesList.end(), draw);
-	if (it == m_drawablesList.end())
+	std::list< Drawable* >::iterator it = std::find(m_drawablesIterateList.begin(), m_drawablesIterateList.end(), draw);
+	if (it == m_drawablesIterateList.end())
 	{
-		m_drawablesList.push_back( draw );
+		m_drawablesIterateList.push_back( draw );
+		TheTacticalView->setUpdateEfficient();
 	}
 }
 
@@ -962,10 +944,10 @@ void GameClient::addDrawableToEfficientList(Drawable *draw)
  */
 void GameClient::removeDrawableFromEfficientList(Drawable *draw)
 {
-	std::list< Drawable* >::iterator it = std::find(m_drawablesList.begin(), m_drawablesList.end(), draw);
-	if (it != m_drawablesList.end())
+	std::list< Drawable* >::iterator it = std::find(m_drawablesIterateList.begin(), m_drawablesIterateList.end(), draw);
+	if (it != m_drawablesIterateList.end())
 	{
-		m_drawablesList.erase(it);
+		m_drawablesIterateList.erase(it);
 	}
 }
 

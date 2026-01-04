@@ -160,7 +160,7 @@ public:
 	void informClientNewDrawable(Drawable *draw);
 	void addDrawableToEfficientList(Drawable *draw);
 	void removeDrawableFromEfficientList(Drawable *draw);
-	void clearEfficientDrawablesList() { m_drawablesListMarkedForClear = TRUE; }
+	void clearEfficientDrawablesList() { m_drawablesIterateListMarkedForClear = TRUE; }
 	void setEfficientDrawableRegion(Region3D *region) { m_axisAlignedRegion.lo = region->lo; m_axisAlignedRegion.hi = region->hi; }
 	Region3D *getEfficientDrawableRegion() { return &m_axisAlignedRegion; }
 	//void setEfficientDrawableRegion(const Coord3D *loWorld, const Coord3D *hiWorld) { m_loWorld.set(loWorld); m_hiWorld.set(hiWorld); }
@@ -226,8 +226,8 @@ private:
 	typedef TextBearingDrawableList::iterator TextBearingDrawableListIterator;
 	TextBearingDrawableList m_textBearingDrawableList;	///< the drawables that have registered here during drawablepostdraw
 
-	std::list< Drawable* > m_drawablesList;
-	Bool m_drawablesListMarkedForClear;
+	std::list< Drawable* > m_drawablesIterateList;
+	Bool m_drawablesIterateListMarkedForClear;
 
 	Region3D m_axisAlignedRegion;
 	//Coord3D m_loWorld;

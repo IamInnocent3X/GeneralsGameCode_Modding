@@ -230,6 +230,8 @@ public:
 
 	virtual void setGuardBandBias( const Coord2D *gb ) { m_guardBandBias.x = gb->x; m_guardBandBias.y = gb->y; }
 
+	virtual void setUpdateEfficient(void) { m_updateEfficient = TRUE; }
+
 
 private:
 

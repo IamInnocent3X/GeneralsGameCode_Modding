@@ -117,7 +117,6 @@ static_assert(ARRAY_SIZE(TheDrawableIconNames) == MAX_ICONS + 1, "Incorrect arra
 
 
 // -----
-/// IamInnocent - Updated with TheSuperHackers way of bitNameList sorting
 template<>
 const char* const TintStatusFlags::s_bitNameList[] =
 {
@@ -133,6 +132,8 @@ const char* const TintStatusFlags::s_bitNameList[] =
 	"TELEPORT_RECOVER",
 	"DISABLED_CHRONO",
 	"GAINING_CHRONO_DAMAGE",
+	"FORCE_FIELD",
+	"IRON_CURTAIN",
 	"EXTRA1",
 	"EXTRA2",
 	"EXTRA3",
@@ -141,9 +142,12 @@ const char* const TintStatusFlags::s_bitNameList[] =
 	"EXTRA6",
 	"EXTRA7",
 	"EXTRA8",
+	"EXTRA9",
+	"EXTRA10",
 	NULL
 };
 static_assert(ARRAY_SIZE(TintStatusFlags::s_bitNameList) == TintStatusFlags::NumBits + 1, "Incorrect array size");
+
 
 /** 
  * Returns a special DynamicAudioEventInfo which can be used to mark a sound as "no sound".
@@ -241,6 +245,13 @@ DrawableLocoInfo::DrawableLocoInfo()
 DrawableLocoInfo::~DrawableLocoInfo()
 {
 }
+
+// ------------------------------------------------------------------------------------------------
+void DrawableLocoInfo::reset()
+{
+	*this = DrawableLocoInfo();
+}
+
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -536,14 +547,6 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 		(*dm)->setShadowsEnabled(shadowsEnabled);
 	}
 
-	if(TheGlobalData->m_useEfficientDrawableScheme)
-	{
-		// Redraw everything
-		//TheGameClient->clearEfficientDrawablesList();
-
-		TheGameClient->informClientNewDrawable(this);
-	}
-
 	m_groupNumber = NULL;
 	m_captionDisplayString = NULL;
 	m_drawableInfo.m_drawable = this;
@@ -661,13 +664,6 @@ void Drawable::onDestroy( void )
 		for( Module** m = m_modules[ i ]; m && *m; ++m )
 			(*m)->onDelete();
 
-	}
-
-	if (TheGlobalData->m_useEfficientDrawableScheme)
-	{
-		// Redraw everything
-		//TheGameClient->clearEfficientDrawablesList();
-		TheGameClient->informClientNewDrawable(this);
 	}
 
 }
@@ -1814,6 +1810,22 @@ void Drawable::applyPhysicsXform(Matrix3D* mtx)
 		mtx->Rotate_Y( m_physicsXform->m_totalPitch );
 		mtx->Rotate_X( -m_physicsXform->m_totalRoll );
 		mtx->Rotate_Z( m_physicsXform->m_totalYaw );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::resetPhysicsXform()
+{
+	if (m_physicsXform != NULL)
+	{
+		m_physicsXform->m_totalPitch = 0.0;
+		m_physicsXform->m_totalRoll = 0.0;
+		m_physicsXform->m_totalYaw = 0.0;
+		m_physicsXform->m_totalZ = 0.0;
+
+		if (m_locoInfo) {
+			m_locoInfo->reset();
+		}
 	}
 }
 
@@ -5337,13 +5349,6 @@ void Drawable::updateHiddenStatus()
 	if( hidden )
 		TheInGameUI->deselectDrawable( this );
 
-	if (TheGlobalData->m_useEfficientDrawableScheme)
-	{
-		// Redraw everything
-		//TheGameClient->clearEfficientDrawablesList();
-		TheGameClient->informClientNewDrawable(this);
-	}
-
 	// IamInnocent - dm is able to give nullptr if there is auto disguise involved
 	for (DrawModule** dm = getDrawModules(); dm != nullptr && *dm; ++dm)
 	{
@@ -5352,6 +5357,11 @@ void Drawable::updateHiddenStatus()
 			di->setHidden(hidden != 0);
 	}
 
+	if (TheGlobalData->m_useEfficientDrawableScheme && !hidden)
+	{
+		// Redraw everything
+		TheGameClient->informClientNewDrawable(this);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

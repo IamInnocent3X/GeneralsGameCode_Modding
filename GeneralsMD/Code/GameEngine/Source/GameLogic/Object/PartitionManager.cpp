@@ -3836,15 +3836,6 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 				if (!thisObj->getDrawable())
 					continue;
 
-				/*Coord3D objPos = *thisObj->getDrawable()->getPosition();
-
-				if( objPos.x < loRegion.x || objPos.x > hiRegion.x ||
-					 objPos.y < loRegion.y || objPos.y > hiRegion.y )
-					continue;
-
-				if(region3D != NULL && (objPos.z < region3D->lo.z || objPos.z > region3D->hi.z))
-					continue;*/
-
 				drawables.push_back( thisObj->getDrawable() );
 
 			} // next coi
@@ -3889,16 +3880,6 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 
 			if (!thisObj->getDrawable())
 				continue;
-
-			// hmm, ok, calc the distance.
-			/*Coord3D objPos = *thisObj->getPosition();
-
-			if( objPos.x < loRegion.x || objPos.x > hiRegion.x ||
-				 objPos.y < loRegion.y || objPos.y > hiRegion.y )
-				continue;
-
-			if(region3D != NULL && (objPos.z < region3D->lo.z || objPos.z > region3D->hi.z))
-				continue;*/
 
 			drawables.push_back( thisObj->getDrawable() );
 		}
