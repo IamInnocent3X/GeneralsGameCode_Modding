@@ -5823,8 +5823,6 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferCoord3D ( &m_currentTargetCoords );
 
-	xfer->xferBool( &m_turretNeedPositioning );
-
 	// Entered & exited housekeeping.
 	Int i;
 	xfer->xferByte(&m_numTriggerAreasActive);
@@ -6342,6 +6340,7 @@ void Object::loadPostProcess()
 	else
 		m_containedBy = nullptr;
 
+	setNeedUpdateTurretPositioning(TRUE);
 }
 
 //-------------------------------------------------------------------------------------------------

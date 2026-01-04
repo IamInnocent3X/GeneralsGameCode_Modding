@@ -1783,10 +1783,6 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_modelName.clear();
 	m_whichAnimInCurState = -1;
 	m_nextState = nullptr;
-	m_needUpdateTurretPosition = TRUE;
-	m_lastNeedUpdateTurretPosition = TRUE;
-	m_canDoFXWhileHidden = FALSE;
-	m_doHandleRecoil = TRUE;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
 	for (i = 0; i < WEAPONSLOT_COUNT; ++i)
 	{
@@ -1796,6 +1792,7 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_fullyObscuredByShroud = false;
 	m_needUpdateTurretPosition = true;
 	m_doHandleRecoil = true;
+	m_canDoFXWhileHidden = false;
 
 	// only validate the current time-of-day and weather conditions by default.
 	getW3DModelDrawModuleData()->validateStuffForTimeAndWeather(getDrawable(),
@@ -4998,7 +4995,9 @@ void W3DModelDraw::loadPostProcess( void )
 	// extend base class
 	DrawModule::loadPostProcess();
 
+	m_needUpdateTurretPosition = TRUE;
 	m_doHandleRecoil = TRUE;
+
 }
 
 // ------------------------------------------------------------------------------------------------
