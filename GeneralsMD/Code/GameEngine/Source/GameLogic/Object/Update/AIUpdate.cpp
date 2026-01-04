@@ -989,6 +989,14 @@ void AIUpdateInterface::chooseGoodLocomotorFromCurrentSet( void )
 		if (m_speedMultiplier != 1.0)
 			m_curLocomotor->applySpeedMultiplier(m_speedMultiplier);
 
+		// Reset drawable transforms
+		if (prevLoco != NULL && prevLoco->getAppearance() != m_curLocomotor->getAppearance()) {
+			Drawable* draw = getObject()->getDrawable();
+			if (draw) {
+				draw->resetPhysicsXform();
+			}
+		}
+
 		// do update for any relevant modules for the Object
 		getObject()->doObjectLocomotorUpdate();
 	}
@@ -2771,10 +2779,6 @@ Bool AIUpdateInterface::isAircraftThatAdjustsDestination(void) const
 	if (m_curLocomotor->getAppearance() == LOCO_THRUST)
 	{
 		return FALSE; // thrust doesn't adjust.
-	}
-	if (m_curLocomotor->getAppearance() == LOCO_SHIP)
-	{
-		return TRUE;	// behave like hover
 	}
 
 	return FALSE;

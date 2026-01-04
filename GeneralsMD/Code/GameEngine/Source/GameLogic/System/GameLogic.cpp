@@ -63,6 +63,7 @@
 #include "Common/XferCRC.h"
 #include "Common/XferDeepCRC.h"
 #include "Common/GameSpyMiscPreferences.h"
+#include "Common/MapData.h"
 
 #include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
@@ -2505,6 +2506,7 @@ static void findAndSelectCommandCenter(Object *obj, void* alreadyFound)
 // ------------------------------------------------------------------------------------------------
 void GameLogic::loadMapINI( AsciiString mapName )
 {
+	TheWriteableMapData->reset();
 
 	if (!TheMapCache) {
 		// Need the map cache to get the map and user map directories.
