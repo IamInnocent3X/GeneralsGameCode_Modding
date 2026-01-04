@@ -265,36 +265,6 @@ GameLogic::GameLogic( void )
 	m_clearingGameData = FALSE;
 }
 
-// ------------------------------------------------------------------------------------------------
-/** Utility function to set class variables to default values. */
-// ------------------------------------------------------------------------------------------------
-void GameLogic::setDefaults( Bool loadingSaveGame )
-{
-	m_frame = 0;
-	m_hasUpdated = FALSE;
-	m_width = DEFAULT_WORLD_WIDTH;
-	m_height = DEFAULT_WORLD_HEIGHT;
-	m_objList = NULL;
-#ifdef ALLOW_NONSLEEPY_UPDATES
-	m_normalUpdates.clear();
-#endif
-	for (std::vector<UpdateModulePtr>::iterator it = m_sleepyUpdates.begin(); it != m_sleepyUpdates.end(); ++it)
-	{
-		(*it)->friend_setIndexInLogic(-1);
-	}
-	m_sleepyUpdates.clear();
-	m_curUpdateModule = NULL;
-
-	//
-	// only reset the next object ID allocater counter when we're not loading a save game.
-	// for save games, we read this value out of the save game file and it is important
-	// that we preserve it as we load and execute the game
-	//
-	if( loadingSaveGame == FALSE )
-		m_nextObjID = (ObjectID)1;
-
-}
-
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 Bool GameLogic::isInSinglePlayerGame( void )
@@ -386,9 +356,6 @@ void GameLogic::init( void )
 
 	setFPMode();
 
-	/// @todo Clear object and destroy lists
-	setDefaults( FALSE );
-
 	// create the partition manager
 	ThePartitionManager = NEW PartitionManager;
 	ThePartitionManager->init();
@@ -415,33 +382,8 @@ void GameLogic::init( void )
 	// create a team for the player
 	//DEBUG_ASSERTCRASH(ThePlayerList, ("null ThePlayerList"));
 	//ThePlayerList->setLocalPlayer(0);
-
-	m_CRC = 0;
-	m_pauseFrame = 0;
-	m_gamePaused = FALSE;
-	m_pauseSound = FALSE;
-	m_pauseMusic = FALSE;
-	m_pauseInput = FALSE;
-	m_inputEnabledMemory = TRUE;
-	m_mouseVisibleMemory = TRUE;
-	m_logicTimeScaleEnabledMemory = FALSE;
-
-	for(Int i = 0; i < MAX_SLOTS; ++i)
-	{
-		m_progressComplete[i] = FALSE;
-		m_progressCompleteTimeout[i] = 0;
-	}
-	m_forceGameStartByTimeOut = FALSE;
-
-	m_isScoringEnabled = TRUE;
-	m_showBehindBuildingMarkers = TRUE;
-	m_drawIconUI = TRUE;
-	m_showDynamicLOD = TRUE;
-	m_scriptHulkMaxLifetimeOverride = -1;
-
+	reset();
 	m_isInUpdate = FALSE;
-
-	m_rankPointsToAddAtGameStart = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -496,7 +438,20 @@ void GameLogic::reset( void )
 	// clear any table of contents we have
 	m_objectTOC.clear();
 
-	setDefaults( FALSE );
+	m_frame = 0;
+	m_hasUpdated = FALSE;
+	m_width = DEFAULT_WORLD_WIDTH;
+	m_height = DEFAULT_WORLD_HEIGHT;
+	m_objList = NULL;
+#ifdef ALLOW_NONSLEEPY_UPDATES
+	m_normalUpdates.clear();
+#endif
+	for (std::vector<UpdateModulePtr>::iterator it = m_sleepyUpdates.begin(); it != m_sleepyUpdates.end(); ++it)
+	{
+		(*it)->friend_setIndexInLogic(-1);
+	}
+	m_sleepyUpdates.clear();
+	m_curUpdateModule = NULL;
 
 	m_isScoringEnabled = TRUE;
 	m_showBehindBuildingMarkers = TRUE;
@@ -1221,20 +1176,22 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	}
 
 	m_rankLevelLimit = 1000;	// this is reset every game.
-	setDefaults( loadingSaveGame );
+
+	//
+	// only reset the next object ID allocater counter when we're not loading a save game.
+	// for save games, we read this value out of the save game file and it is important
+	// that we preserve it as we load and execute the game
+	//
+	if( loadingSaveGame == FALSE )
+		m_nextObjID = (ObjectID)1;
+
 	TheWritableGlobalData->m_loadScreenRender = TRUE;	///< mark it so only a few select things are rendered during load
 	TheWritableGlobalData->m_TiVOFastMode = FALSE;	//always disable the TIVO fast-forward mode at the start of a new game.
-
-	m_showBehindBuildingMarkers = TRUE;
-	m_drawIconUI = TRUE;
-	m_showDynamicLOD = TRUE;
-	m_scriptHulkMaxLifetimeOverride = -1;
 
 	Campaign* currentCampaign = TheCampaignManager->getCurrentCampaign();
 	Bool isChallengeCampaign = m_gameMode == GAME_SINGLE_PLAYER && currentCampaign && currentCampaign->m_isChallengeCampaign;
 
 	// Fill in the game color and Factions before we do the Load Screen
-	GameInfo *game = NULL;
 	TheGameInfo = NULL;
 	Int localSlot = 0;
 	if (TheNetwork)
@@ -1242,27 +1199,27 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		if (TheLAN)
 		{
 			DEBUG_LOG(("Starting network game"));
-			TheGameInfo = game = TheLAN->GetMyGame();
+			TheGameInfo = TheLAN->GetMyGame();
 		}
 		else
 		{
 			DEBUG_LOG(("Starting gamespy game"));
-			TheGameInfo = game = TheGameSpyGame;	/// @todo: MDC add back in after demo
+			TheGameInfo = TheGameSpyGame;	/// @todo: MDC add back in after demo
 		}
 	}
 	else
 	{
 		if (TheRecorder && TheRecorder->isPlaybackMode())
 		{
-			TheGameInfo = game = TheRecorder->getGameInfo();
+			TheGameInfo = TheRecorder->getGameInfo();
 		}
 		else if(m_gameMode == GAME_SKIRMISH)
 		{
-		  TheGameInfo = game = TheSkirmishGameInfo;
+		  TheGameInfo = TheSkirmishGameInfo;
 		}
 		else if(isChallengeCampaign)
 		{
-			TheGameInfo = game = TheChallengeGameInfo;
+			TheGameInfo = TheChallengeGameInfo;
 		}
 	}
 
@@ -1282,21 +1239,20 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
     }
   }
 
-	checkForDuplicateColors( game );
+	checkForDuplicateColors( TheGameInfo );
 
 	Bool isSkirmishOrSkirmishReplay = FALSE;
-	if (game)
+	if (TheGameInfo)
 	{
 		for (Int i=0; i<MAX_SLOTS; ++i)
 		{
-			GameSlot *slot = game->getSlot(i);
+			GameSlot *slot = TheGameInfo->getSlot(i);
 			if (!loadingSaveGame) {
 				slot->saveOffOriginalInfo();
 			}
 			if (slot->isAI())
 			{
 				isSkirmishOrSkirmishReplay = TRUE;
-				continue;
 			}
 		}
 	} else {
@@ -1306,8 +1262,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		}
 	}
 
-	populateRandomSideAndColor( game );
-	populateRandomStartPosition( game );
+	populateRandomSideAndColor( TheGameInfo );
+	populateRandomStartPosition( TheGameInfo );
 
 	//****************************//
 	// Start the LoadScreen Now!	//
@@ -1320,7 +1276,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		if(m_loadScreen)
 		{
 			TheMouse->setVisibility(FALSE);
-			m_loadScreen->init(game);
+			m_loadScreen->init(TheGameInfo);
 
 			updateLoadProgress( LOAD_PROGRESS_START );
 		}
@@ -1362,7 +1318,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	#endif
 
 	Int progressCount = LOAD_PROGRESS_SIDE_POPULATION;
-	if (game)
+	if (TheGameInfo)
 	{
 
 		if (TheGameEngine->isMultiplayerSession() || isSkirmishOrSkirmishReplay)
@@ -1376,7 +1332,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		for (int i=0; i<MAX_SLOTS; ++i)
 		{
 			// Add a Side to TheSidesList
-			GameSlot *slot = game->getSlot(i);
+			GameSlot *slot = TheGameInfo->getSlot(i);
 
 			if (!slot || !slot->isHuman())
 			{
@@ -1403,7 +1359,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 				d.setAsciiString(TheKey_playerFaction, KEYNAME(pt->getNameKey()));
 			}
 
-			if (game->isPlayerPreorder(i))
+			if (TheGameInfo->isPlayerPreorder(i))
 			{
 				d.setBool(TheKey_playerIsPreorder, TRUE);
 			}
@@ -1413,7 +1369,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			DEBUG_LOG(("Looking for allies of player %d, team %d", i, team));
 			for(int j=0; j < MAX_SLOTS; ++j)
 			{
-				GameSlot *teamSlot = game->getSlot(j);
+				GameSlot *teamSlot = TheGameInfo->getSlot(j);
 				// for check to see if we're trying to add ourselves
 				if(i == j || !teamSlot->isOccupied())
 					continue;
@@ -1467,7 +1423,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			d.setInt(TheKey_multiplayerStartIndex, slot->getStartPos());
 //			d.setBool(TheKey_multiplayerIsLocal, slot->isLocalPlayer());
 //			d.setBool(TheKey_multiplayerIsLocal, slot->getIP() == game->getLocalIP());
-			d.setBool(TheKey_multiplayerIsLocal, slot->isHuman() && (slot->getName().compare(game->getSlot(game->getLocalSlotNum())->getName().str()) == 0));
+			d.setBool(TheKey_multiplayerIsLocal, slot->isHuman() && (slot->getName().compare(TheGameInfo->getSlot(TheGameInfo->getLocalSlotNum())->getName().str()) == 0));
 
 /*
 			if (slot->getIP() == game->getLocalIP())
@@ -1490,7 +1446,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 			AsciiString slotNameAscii;
 			slotNameAscii.translate(slot->getName());
-			if (slot->isHuman() && game->getSlotNum(slotNameAscii) == game->getLocalSlotNum()) {
+			if (slot->isHuman() && TheGameInfo->getSlotNum(slotNameAscii) == TheGameInfo->getLocalSlotNum()) {
 				localSlot = i;
 			}
 			TheSidesList->addSide(&d);
@@ -1560,11 +1516,11 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		// if there are no other teams (happens for debugging) don't end the game immediately
 		Int numTeams = 0; // this can be higher than expected, but is accurate for determining 0, 1, 2+
 		Int lastTeam = -1;
-		if (game)
+		if (TheGameInfo)
 		{
 			for (int i=0; i<MAX_SLOTS; ++i)
 			{
-				const GameSlot *slot = game->getConstSlot(i);
+				const GameSlot *slot = TheGameInfo->getConstSlot(i);
 				if (slot->isOccupied() && slot->getPlayerTemplate() != PLAYERTEMPLATE_OBSERVER)
 				{
 					if (slot->getTeamNumber() == -1 || slot->getTeamNumber() != lastTeam)
@@ -1793,11 +1749,11 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	ThePartitionManager->revealMapForPlayerPermanently( observerPlayer->getPlayerIndex() );
 	DEBUG_LOG(("Reveal shroud for %ls whose index is %d", observerPlayer->getPlayerDisplayName().str(), observerPlayer->getPlayerIndex()));
 
-	if (game)
+	if (TheGameInfo)
 	{
 		for (int i=0; i<MAX_SLOTS; ++i)
 		{
-			GameSlot *slot = game->getSlot(i);
+			GameSlot *slot = TheGameInfo->getSlot(i);
 
 			if (!slot || !slot->isOccupied())
 				continue;
@@ -1983,11 +1939,11 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	progressCount = LOAD_PROGRESS_LOOP_INITIAL_NETWORK_BUILDINGS;
 	// place initial network buildings/units
-	if (game && !loadingSaveGame)
+	if (TheGameInfo && !loadingSaveGame)
 	{
 		for (int i=0; i<MAX_SLOTS; ++i)
 		{
-			GameSlot *slot = game->getSlot(i);
+			GameSlot *slot = TheGameInfo->getSlot(i);
 
 			if (!slot || !slot->isOccupied())
 				continue;
@@ -2038,7 +1994,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
         // Trouble was that skirmish games would get no command centers upon start, if this was set true in a GameSpyMenu
         if ( isInInternetGame() )
         {
-				  if ( game->oldFactionsOnly() && !pt->isOldFaction() )
+				  if ( TheGameInfo->oldFactionsOnly() && !pt->isOldFaction() )
 				    continue;
         }
 
@@ -2089,9 +2045,9 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	// Note - We construct the multiplayer start spot name manually here, so change this if you
 	//        change TheKey_Player_1_Start etc.  mdc
 	AsciiString startingCamName = TheNameKeyGenerator->keyToName(TheKey_InitialCameraPosition);
-	if (game)
+	if (TheGameInfo)
 	{
-		GameSlot *slot = game->getSlot(localSlot);
+		GameSlot *slot = TheGameInfo->getSlot(localSlot);
 		DEBUG_ASSERTCRASH(slot, ("Starting a LAN game without ourselves!"));
 
 		if (slot->isHuman())

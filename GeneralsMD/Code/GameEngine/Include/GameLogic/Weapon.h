@@ -315,7 +315,6 @@ typedef std::vector<WeaponBonusConditionType> WeaponBonusConditionTypeVec;
 //typedef std::vector<AsciiStringReal> CustomWeaponBonus;
 // Converted to Hash_map;
 typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomWeaponBonus;
-typedef std::hash_map<NameKeyType, WeaponTemplate*, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > WeaponTemplateMap;
 
 
 // For WeaponBonusConditionFlags
@@ -1437,7 +1436,11 @@ private:
 	};
 
 	std::vector<WeaponTemplate*> m_weaponTemplateVector;
+
+	// TheSuperHackers @performance IamInnocent 01/01/2026 - Now additionally stores the same weapon templates in a hash map to optimize lookups by name key
+	typedef std::hash_map<NameKeyType, WeaponTemplate*, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > WeaponTemplateMap;
 	WeaponTemplateMap m_weaponTemplateHashMap;
+
 	std::list<WeaponDelayedDamageInfo> m_weaponDDI;
 };
 

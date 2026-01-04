@@ -3279,12 +3279,6 @@ WeaponStore::~WeaponStore()
 		deleteInstance(wt);
 	}
 	m_weaponTemplateVector.clear();
-	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
-	{
-		WeaponTemplate* wt = it->second;
-		if (wt)
-			deleteInstance(wt);
-	}
 	m_weaponTemplateHashMap.clear();
 }
 
@@ -3367,9 +3361,6 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const char* name ) const
 WeaponTemplate *WeaponStore::findWeaponTemplatePrivate( NameKeyType key ) const
 {
 	// search weapon list for name
-	/*for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
-		if( m_weaponTemplateVector[ i ]->getNameKey() == key )
-			return m_weaponTemplateVector[i];*/
 	WeaponTemplateMap::const_iterator it = m_weaponTemplateHashMap.find(key);
 	if(it != m_weaponTemplateHashMap.end())
 		return it->second;
@@ -3390,7 +3381,7 @@ WeaponTemplate *WeaponStore::newWeaponTemplate(AsciiString name)
 	WeaponTemplate *wt = newInstance(WeaponTemplate);
 	wt->m_name = name;
 	wt->m_nameKey = TheNameKeyGenerator->nameToKey( name );
-	//m_weaponTemplateVector.push_back(wt);
+	m_weaponTemplateVector.push_back(wt);
 	m_weaponTemplateHashMap[wt->m_nameKey] = wt;
 
 	return wt;
@@ -3445,11 +3436,6 @@ void WeaponStore::resetWeaponTemplates( void )
 		WeaponTemplate* wt = m_weaponTemplateVector[i];
 		wt->reset();
 	}
-	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
-	{
-		WeaponTemplate* wt = it->second;
-		wt->reset();
-	}
 
 }
 
@@ -3460,16 +3446,6 @@ void WeaponStore::reset()
 	for (size_t i = 0; i < m_weaponTemplateVector.size(); ++i)
 	{
 		WeaponTemplate *wt = m_weaponTemplateVector[i];
-		if (wt->isOverride())
-		{
-			WeaponTemplate *override = wt;
-			wt = wt->friend_clearNextTemplate();
-			deleteInstance(override);
-		}
-	}
-	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
-	{
-		WeaponTemplate* wt = it->second;
 		if (wt->isOverride())
 		{
 			WeaponTemplate *override = wt;
@@ -3507,12 +3483,6 @@ void WeaponStore::postProcessLoad()
 	for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
 	{
 		WeaponTemplate* wt = m_weaponTemplateVector[i];
-		if (wt)
-			wt->postProcessLoad();
-	}
-	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
-	{
-		WeaponTemplate* wt = it->second;
 		if (wt)
 			wt->postProcessLoad();
 	}
