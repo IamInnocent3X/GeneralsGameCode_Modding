@@ -250,22 +250,22 @@ protected:
 	virtual void privateMoveToAndEvacuate(const Coord3D* pos, CommandSourceType cmdSource);			///< move to given position(s)
 	virtual void privateMoveToAndEvacuateAndExit(const Coord3D* pos, CommandSourceType cmdSource);			///< move to given position & unload transport.
 	virtual void privateIdle(CommandSourceType cmdSource);						///< Enter idle state.
-	virtual void privateTightenToPosition(const Coord3D* pos, CommandSourceType cmdSource);			///< move to given position(s) tightening the formation.
-	virtual void privateFollowWaypointPath(const Waypoint* way, CommandSourceType cmdSource);///< start following the path from the given point
-	virtual void privateFollowWaypointPathAsTeam(const Waypoint* way, CommandSourceType cmdSource);///< start following the path from the given point
-	virtual void privateFollowWaypointPathExact(const Waypoint* way, CommandSourceType cmdSource);///< start following the path from the given point
-	virtual void privateFollowWaypointPathAsTeamExact(const Waypoint* way, CommandSourceType cmdSource);///< start following the path from the given point
-	virtual void privateFollowPath(const std::vector<Coord3D>* path, Object* ignoreObject, CommandSourceType cmdSource, Bool exitProduction);///< follow the path defined by the given array of points
-	virtual void privateFollowPathAppend(const Coord3D* pos, CommandSourceType cmdSource);
-	virtual void privateAttackObject(Object* victim, Int maxShotsToFire, CommandSourceType cmdSource);					///< attack given object
-	virtual void privateForceAttackObject(Object* victim, Int maxShotsToFire, CommandSourceType cmdSource);					///< attack given object
-	virtual void privateGuardRetaliate(Object* victim, const Coord3D* pos, Int maxShotsToFire, CommandSourceType cmdSource);				///< retaliate and attack attacker -- but with guard restrictions
-	virtual void privateAttackTeam(const Team* team, Int maxShotsToFire, CommandSourceType cmdSource);							///< attack the given team
-	virtual void privateAttackPosition(const Coord3D* pos, Int maxShotsToFire, CommandSourceType cmdSource);						///< attack given spot
-	virtual void privateAttackMoveToPosition(const Coord3D* pos, Int maxShotsToFire, CommandSourceType cmdSource);			///< attack move to the given location
-	virtual void privateAttackFollowWaypointPath(const Waypoint* way, Int maxShotsToFire, Bool asTeam, CommandSourceType cmdSource);			///< attack move along the following waypoint path, potentially as a team
-	virtual void privateHunt(CommandSourceType cmdSource);														///< begin "seek and destroy"
-	virtual void privateRepair(Object* obj, CommandSourceType cmdSource);						///< repair the given object
+	virtual void privateTightenToPosition( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position(s) tightening the formation.
+	virtual void privateFollowWaypointPath( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
+	virtual void privateFollowWaypointPathAsTeam( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
+	virtual void privateFollowWaypointPathExact( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
+	virtual void privateFollowWaypointPathAsTeamExact( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
+	virtual void privateFollowPath( std::vector<Coord3D>* path, Object *ignoreObject, CommandSourceType cmdSource, Bool exitProduction );///< follow the path defined by the given array of points
+	virtual void privateFollowPathAppend( const Coord3D *pos, CommandSourceType cmdSource );
+	virtual void privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );					///< attack given object
+	virtual void privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );					///< attack given object
+	virtual void privateGuardRetaliate( Object *victim, const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource );				///< retaliate and attack attacker -- but with guard restrictions
+	virtual void privateAttackTeam( const Team *team, Int maxShotsToFire, CommandSourceType cmdSource );							///< attack the given team
+	virtual void privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource );						///< attack given spot
+	virtual void privateAttackMoveToPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource );			///< attack move to the given location
+	virtual void privateAttackFollowWaypointPath( const Waypoint *way, Int maxShotsToFire, Bool asTeam, CommandSourceType cmdSource );			///< attack move along the following waypoint path, potentially as a team
+	virtual void privateHunt( CommandSourceType cmdSource );														///< begin "seek and destroy"
+	virtual void privateRepair( Object *obj, CommandSourceType cmdSource );						///< repair the given object
 #ifdef ALLOW_SURRENDER
 	virtual void privatePickUpPrisoner(Object* prisoner, CommandSourceType cmdSource);			///< pick up prisoner
 	virtual void privateReturnPrisoners(Object* prison, CommandSourceType cmdSource);			///< return picked up prisoners to the 'prison'
@@ -366,7 +366,7 @@ public:
 	virtual Bool isBusy() const;
 
 	virtual void onObjectCreated();
-	virtual void doQuickExit( const std::vector<Coord3D>* path );			///< get out of this Object
+	virtual void doQuickExit( std::vector<Coord3D>* path );			///< get out of this Object
 
 	virtual void aiDoCommand(const AICommandParms* parms);
 
