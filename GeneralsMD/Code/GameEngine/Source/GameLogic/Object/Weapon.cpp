@@ -1462,6 +1462,8 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			return 0;
 		}
 	}
+
+	const ThingTemplate *projectileTemplate = getProjectileTemplate();
 	
 	// New feature, similar to Black Hole Armor.
 	Object* retarget = NULL;
@@ -1471,7 +1473,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	{
 		ProtectionTypeFlags ShieldedType = victimObj->getShieldByTargetType();
 		Bool hasProtection = false;
-		if(getProjectileTemplate())
+		if(projectileTemplate)
 			hasProtection = !isProjectileDetonation && getProtectionTypeFlag(ShieldedType, PROTECTION_PROJECTILES);
 		else
 			hasProtection = firingWeapon->isLaser() ? getProtectionTypeFlag(ShieldedType, PROTECTION_LASER) : getProtectionTypeFlag(ShieldedType, PROTECTION_BULLETS);
@@ -1558,7 +1560,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 				dz = 0.0f;
 			}
-			else if(getProjectileTemplate() != NULL)
+			else if(projectileTemplate != NULL)
 			{
 				if(isStructure)
 				{
@@ -1596,7 +1598,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		else
 		{
 			Real targetHeight = curTarget->getGeometryInfo().getMaxHeightAbovePosition();
-			if(getProjectileTemplate() == NULL && !firingWeapon->isLaser() && !sourceObj->isKindOf(KINDOF_INFANTRY) && distSqr > 0)
+			if(projectileTemplate == NULL && !firingWeapon->isLaser() && !sourceObj->isKindOf(KINDOF_INFANTRY) && distSqr > 0)
 			{
 				Real adjustedHeight = targetHeight;
 				if(!sourceObj->isAboveTerrain() && distSqr < 4 * targetHeight * targetHeight)
@@ -1803,7 +1805,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 	}
 
-	if (getProjectileTemplate() == NULL || isProjectileDetonation)
+	if (projectileTemplate == NULL || isProjectileDetonation)
 	{
 		// see if we need to be called back at a later point to deal the damage.
 		Coord3D v;
@@ -1933,7 +1935,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	else	// must be a projectile
 	{
 		Player *owningPlayer = sourceObj->getControllingPlayer(); //Need to know so missiles don't collide with firer
-		Object *projectile = TheThingFactory->newObject( getProjectileTemplate(), owningPlayer->getDefaultTeam() );
+		Object *projectile = TheThingFactory->newObject( projectileTemplate, owningPlayer->getDefaultTeam() );
 		projectile->setProducer(sourceObj);
 
 		//If the player has battle plans (America Strategy Center), then apply those bonuses
