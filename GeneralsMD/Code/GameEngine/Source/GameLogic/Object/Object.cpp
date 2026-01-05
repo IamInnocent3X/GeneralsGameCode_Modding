@@ -349,10 +349,6 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_customWeaponBonusConditionAgainst.clear();
 
 	m_invsqrt_mass = 0.0f;
-	//m_magnetLevitateHeight = 0.0f;
-	//m_levitateCheckFrame = 0;
-	//m_levitateCheckCount = 0;
-	//m_dontLevitate = FALSE;
 
 	m_lastActualSpeed = 0.0f;
 
@@ -2475,10 +2471,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 				// Check the Magnet Force for any Levitation
 				if( damageInfo->in.m_magnetLevitationHeight && m_levitationHelper && ( m_levitationHelper->getLevitateHeight() == damageInfo->in.m_magnetLevitationHeight || damageInfo->in.m_magnetLevitationHeight <= posZ ) )
 				{
-					//m_magnetLevitateHeight = damageInfo->in.m_magnetLevitationHeight;
 					m_levitationHelper->doLevitation(damageInfo->in.m_magnetLevitationHeight);
-					//m_levitateCheckCount = 0;
-					//m_levitateCheckFrame = 0;
 				}
 
 				// Apply the Magnet Force
@@ -3347,62 +3340,6 @@ void Object::clearDisablePower(Bool isCommand)
 		m_drawable->clearModelConditionFlags(getTemplate()->getModelConditionUnderPowered());
 	}
 }
-
-//-------------------------------------------------------------------------------------------------
-/*void Object::checkLevitate()
-{
-	if(m_magnetLevitateHeight)
-	{
-		if(m_levitateCheckCount<11)
-		{
-			Coord3D newPos = *getPosition();
-			Real terrainZ = TheTerrainLogic->getGroundHeight( newPos.x, newPos.y );
-			Bool doLevitate;
-			if(newPos.z - terrainZ < m_magnetLevitateHeight)
-			{
-				doLevitate = TRUE;
-
-				newPos.z = m_magnetLevitateHeight + terrainZ + 0.5f;
-				setPosition( &newPos );
-
-				newPos.zero();
-				newPos.z = 12.5;
-				getPhysics()->applyForce( &newPos );
-			}
-
-			m_levitateCheckCount++;
-			
-			if(m_levitateCheckCount>10)
-			{
-				if(doLevitate)
-				{
-					getPhysics()->resetDynamicPhysics();
-					m_dontLevitate = TRUE;
-				}
-				//getPhysics()->scrubVelocity2D(0);
-			}
-		}
-	}
-	if(m_dontLevitate)
-	{
-		UnsignedInt now = TheGameLogic->getFrame();
-
-		// Descending effect
-		Coord3D magnetForce;
-		magnetForce.zero();
-		magnetForce.z = 0.35;
-		getPhysics()->applyForce( &magnetForce );
-
-		if(!m_levitateCheckFrame)
-			m_levitateCheckFrame = now + LOGICFRAMES_PER_SECOND;
-		if(now > m_levitateCheckFrame)
-		{
-			m_dontLevitate = FALSE;
-			m_levitateCheckFrame = 0;
-			m_magnetLevitateHeight = 0;
-		}
-	}
-}*/
 
 //-------------------------------------------------------------------------------------------------
 void Object::pauseAllSpecialPowers( const Bool disabling ) const
@@ -9201,21 +9138,6 @@ void Object::doSlavedUpdate( Bool doSlaver )
 			sdu->friend_refreshUpdate(FALSE);
 		}
 	}
-	
-	/*static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
-	MobMemberSlavedUpdate *MMSUpdate = (MobMemberSlavedUpdate*)findUpdateModule( key_MobMemberSlavedUpdate );
-	if( MMSUpdate )
-	{
-		Object *slaver = TheGameLogic->findObjectByID(MMSUpdate->getSlaverID());
-		if ( slaver )
-		{
-			SpawnBehaviorInterface *spawnInterface = slaver->getSpawnBehaviorInterface();
-			if( spawnInterface )
-			{
-				spawnInterface->updateMobMembers();
-			}
-		}
-	}*/
 }
 
 //-------------------------------------------------------------------------------------------------

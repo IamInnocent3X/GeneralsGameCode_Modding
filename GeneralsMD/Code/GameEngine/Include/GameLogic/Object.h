@@ -263,8 +263,6 @@ public:
 	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 	void notifyChronoDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
-	void doStatusDamage( ObjectStatusTypes status, Real duration );///< At this level, we just pass this on to our helper
-	void doTempWeaponBonus( WeaponBonusConditionType status, UnsignedInt duration, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
 	void applyBuff(const BuffTemplate* buffTemp, UnsignedInt duration, Object* sourceObj);
 
 	void refreshSubdualHelper();

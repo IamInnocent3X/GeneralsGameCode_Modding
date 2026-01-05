@@ -531,9 +531,26 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *pStrm, Bool logicalDataOnly):
 			}
 		}
 	}
-	if (TheGlobalData && TheGlobalData->m_drawEntireTerrain) {
-		m_drawWidthX=m_width;
-		m_drawHeightY=m_height;
+	if (TheGlobalData) {
+		if( TheGlobalData->m_drawEntireTerrain ){
+			m_drawWidthX=m_width;
+			m_drawHeightY=m_height;
+		} else {
+			if(TheGlobalData->m_drawWidthFactor != 1.0f)
+			{
+				if(m_drawWidthX*TheGlobalData->m_drawWidthFactor >= m_width)
+					m_drawWidthX=m_width;
+				else
+					m_drawWidthX=REAL_TO_INT_FLOOR(m_drawWidthX*TheGlobalData->m_drawWidthFactor);
+			}
+			if(TheGlobalData->m_drawHeightFactor != 1.0f)
+			{
+				if(m_drawHeightY*TheGlobalData->m_drawHeightFactor >= m_height)
+					m_drawHeightY=m_height;
+				else
+					m_drawHeightY=REAL_TO_INT_FLOOR(m_drawHeightY*TheGlobalData->m_drawHeightFactor);
+			}
+		}
 	}
 	if (m_drawWidthX > m_width) {
 		m_drawWidthX = m_width;
@@ -2243,9 +2260,26 @@ Bool WorldHeightMap::setDrawOrg(Int xOrg, Int yOrg)
 		newWidth=STRETCH_DRAW_WIDTH;
 		newHeight=STRETCH_DRAW_HEIGHT;
 	}
-	if (TheGlobalData && TheGlobalData->m_drawEntireTerrain) {
-		newWidth=m_width;
-		newHeight=m_height;
+	if (TheGlobalData) {
+		if( TheGlobalData->m_drawEntireTerrain ){
+			newWidth=m_width;
+			newHeight=m_height;
+		} else {
+			if(TheGlobalData->m_drawWidthFactor != 1.0f)
+			{
+				if(newWidth*TheGlobalData->m_drawWidthFactor >= m_width)
+					newWidth=m_width;
+				else
+					newWidth=REAL_TO_INT_FLOOR(newWidth*TheGlobalData->m_drawWidthFactor);
+			}
+			if(TheGlobalData->m_drawHeightFactor != 1.0f)
+			{
+				if(newHeight*TheGlobalData->m_drawHeightFactor >= m_height)
+					newHeight=m_height;
+				else
+					newHeight=REAL_TO_INT_FLOOR(newHeight*TheGlobalData->m_drawHeightFactor);
+			}
+		}
 	}
 	if (newWidth > m_width) newWidth = m_width;
 	if (newHeight > m_height) newHeight = m_height;
@@ -2560,26 +2594,4 @@ Bool  WorldHeightMap::getRawTileData(Short tileNdx, Int width,
 		return(true);
 	}
 	return(false);
-}
-
-Int WorldHeightMap::getDrawWidth(void)
-{
-	if(TheGlobalData->m_drawEntireTerrain)
-		return m_drawWidthX;
-
-	if(m_drawWidthX*TheGlobalData->m_drawWidthFactor >= m_width || m_drawWidthX  >= m_width )
-		return m_width;
-	else 
-		return REAL_TO_INT(m_drawWidthX*TheGlobalData->m_drawWidthFactor);
-}
-
-Int WorldHeightMap::getDrawHeight(void)
-{
-	if(TheGlobalData->m_drawEntireTerrain)
-		return m_drawHeightY;
-
-	if(m_drawHeightY*TheGlobalData->m_drawHeightFactor >= m_height || m_drawHeightY >= m_height )
-		return m_height;
-	else 
-		return REAL_TO_INT(m_drawHeightY*TheGlobalData->m_drawHeightFactor);
 }
