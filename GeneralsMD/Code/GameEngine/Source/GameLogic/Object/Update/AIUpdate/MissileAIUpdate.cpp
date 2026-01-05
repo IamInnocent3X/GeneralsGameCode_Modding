@@ -99,6 +99,8 @@ MissileAIUpdateModuleData::MissileAIUpdateModuleData()
 	m_applyLauncherBonus = FALSE;
 	m_allowSubdual = TRUE;
 	m_allowAttract = TRUE;
+	m_allowRetargeting = FALSE;
+	m_allowRetargetingThroughFog = FALSE;
 }
 
 //-----------------------------------------------------------------------------
@@ -327,7 +329,6 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 	}
 
 	//DEBUG_LOG((">>> MissileAI FIREPROJ - dir = (%f/%f/%f)\n", dir.X, dir.Y, dir.Z));
-
 	PhysicsBehavior* physics = getObject()->getPhysics();
 	if (physics && initialVelToUse > 0)
 	{
@@ -1382,44 +1383,6 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 		m_detonationWeaponTmpl = TheWeaponStore->findWeaponTemplate(weaponName);
 	}
 
-	// Xfer Source Code from GameLogic.cpp
-	// Xfer-Hash_Map
-	// Might need checking.
-	if (version >= 7) 
-	{
-		if( xfer->getXferMode() == XFER_SAVE )
-		{
-			for (ObjectCustomStatusType::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
-			{
-				AsciiString bonusName = it->first;
-				Int flag = it->second;
-				xfer->xferAsciiString(&bonusName);
-				xfer->xferInt(&flag);
-			}
-			AsciiString empty;
-			xfer->xferAsciiString(&empty);
-		}
-		else if (xfer->getXferMode() == XFER_LOAD)
-		{
-			if (m_extraBonusCustomFlags.empty() == false)
-			{
-				DEBUG_CRASH(( "GameLogic::xfer - m_extraBonusCustomFlags should be empty, but is not"));
-				//throw SC_INVALID_DATA;
-			}
-			
-			for (;;) 
-			{
-				AsciiString bonusName;
-				xfer->xferAsciiString(&bonusName);
-				if (bonusName.isEmpty())
-					break;
-				Int flag;
-				xfer->xferInt(&flag);
-				m_extraBonusCustomFlags[bonusName] = flag;
-			}
-		}
-	}
-
 	AsciiString exhaustName;
 	if (m_exhaustSysTmpl)
 	{
@@ -1462,6 +1425,38 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 	if( version >= 7 )
 	{
 		xfer->xferReal( &m_randomPathDistLeft);
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (ObjectCustomStatusType::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
+			{
+				AsciiString bonusName = it->first;
+				Int flag = it->second;
+				xfer->xferAsciiString(&bonusName);
+				xfer->xferInt(&flag);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_extraBonusCustomFlags.empty() == false)
+			{
+				DEBUG_CRASH(( "GameLogic::xfer - m_extraBonusCustomFlags should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				Int flag;
+				xfer->xferInt(&flag);
+				m_extraBonusCustomFlags[bonusName] = flag;
+			}
+		}
 	}
 }
 
