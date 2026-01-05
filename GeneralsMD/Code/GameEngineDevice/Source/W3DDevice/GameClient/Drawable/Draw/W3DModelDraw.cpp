@@ -4090,7 +4090,7 @@ void W3DModelDraw::reactToTransformChange( const Matrix3D* oldMtx,
 		}
 		else
 		{
-			if (obj->isSignificantlyAboveTerrain() || (obj->isKindOf(KINDOF_NO_MOVE_EFFECTS_ON_WATER) && obj->isOverWater()))
+			if (obj && (obj->isSignificantlyAboveTerrain() || (obj->isKindOf(KINDOF_NO_MOVE_EFFECTS_ON_WATER) && obj->isOverWater())))
 			{
 				m_trackRenderObject->setAirborne();
 			}
