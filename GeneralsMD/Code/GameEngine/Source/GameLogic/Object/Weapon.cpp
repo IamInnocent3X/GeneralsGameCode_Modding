@@ -3106,7 +3106,8 @@ void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, con
 
 	// Shrapnel Bonus Weapon
 	WeaponBonus bonus;
-	m_shrapnelBonusWeapon->private_computeBonus(source, 0, bonus);
+	std::vector<AsciiString> dummy;
+	m_shrapnelBonusWeapon->private_computeBonus(source, 0, bonus, dummy);
 	Real range = m_shrapnelBonusWeapon->getAttackRange(bonus);
 
 	Int affects = m_shrapnelAffectsMask;
@@ -3285,7 +3286,7 @@ WeaponStore::~WeaponStore()
 }
 
 //-------------------------------------------------------------------------------------------------
-void WeaponStore::handleProjectileDetonation(const WeaponTemplate* wt, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags, Bool inflictDamage)
+void WeaponStore::handleProjectileDetonation(const WeaponTemplate* wt, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage)
 {
 	Weapon* w = allocateNewWeapon(wt, PRIMARY_WEAPON);
 	w->loadAmmoNow(source);
@@ -3640,7 +3641,7 @@ static void debug_printWeaponBonus(WeaponBonus* bonus, AsciiString name) {
 }
 
 //-------------------------------------------------------------------------------------------------
-void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const ObjectCustomStatusType *extraBonusCustomFlags) const
+void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const std::vector<AsciiString>& extraBonusCustomFlags) const
 {
 	// TODO: Do we need this eventually?
 	const Object* bonusRefObj = NULL;
@@ -3653,29 +3654,24 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 
 	bonus.clear();
 	WeaponBonusConditionFlags flags = bonusRefObj->getWeaponBonusCondition();
-	ObjectCustomStatusType customFlags = bonusRefObj->getCustomWeaponBonusCondition();
+	std::vector<AsciiString> customFlags = bonusRefObj->getCustomWeaponBonusCondition();
 	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
 	flags |= extraBonusFlags;
 
-	if(extraBonusCustomFlags)
+	for( std::vector<AsciiString>::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
 	{
-		for( ObjectCustomStatusType::const_iterator it = extraBonusCustomFlags->begin(); it != extraBonusCustomFlags->end(); ++it )
+		Bool hasSet = FALSE;
+		std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
+		for(it_2; it_2 != customFlags.end(); ++it_2)
 		{
-			ObjectCustomStatusType::iterator it2 = customFlags.find(it->first);
-
-			if (it2 != customFlags.end()) 
+			if((*it_2) == (*it))
 			{
-				if (it->second == 1)
-					it2->second = 1;
-			}
-			else 
-			{
-				if (it->second == 1)
-					customFlags[it->first] = 1;
-				else 
-					customFlags[it->first] = 0;
+				hasSet = TRUE;
+				break;
 			}
 		}
+		if(!hasSet)
+			customFlags.push_back(*it);
 	}
 	
 	if (bonusRefObj->getContainedBy())
@@ -3687,28 +3683,25 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 			flags |= theirContain->getWeaponBonusPassedToPassengers();
 
 			// CustomFlags
-			ObjectCustomStatusType unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
+			std::vector<AsciiString> unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
 
 			if(!unitCustomFlags.empty())
 			{
-				for( ObjectCustomStatusType::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
+				for( std::vector<AsciiString>::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
 				{
-					ObjectCustomStatusType::iterator it2 = customFlags.find(it->first);
-
-					if (it2 != customFlags.end()) 
+					Bool hasSet = FALSE;
+					std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
+					for(it_2; it_2 != customFlags.end(); ++it_2)
 					{
-						if (it->second == 1)
-							it2->second = 1;
+						if((*it_2) == (*it))
+						{
+							hasSet = TRUE;
+							break;
+						}
 					}
-					else 
-					{
-						if (it->second == 1)
-							customFlags[it->first] = 1;
-						else 
-							customFlags[it->first] = 0;
-					}
+					if(!hasSet)
+						customFlags.push_back(*it);
 				}
-				//return getObject()->setCustomWeaponBonusConditions(customFlags, unitCustomFlags);
 			}
 		}
 	}
@@ -3721,7 +3714,7 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 }
 
 //-------------------------------------------------------------------------------------------------
-void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const ObjectCustomStatusType *extraBonusCustomFlags) const
+void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const std::vector<AsciiString>& extraBonusCustomFlags) const
 {
 	// Sanity
 	if(source == NULL)
@@ -3729,29 +3722,24 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 
 	bonus.clear();
 	WeaponBonusConditionFlags flags = source->getWeaponBonusCondition();
-	ObjectCustomStatusType customFlags = source->getCustomWeaponBonusCondition();
+	std::vector<AsciiString> customFlags = source->getCustomWeaponBonusCondition();
 	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
 	flags |= extraBonusFlags;
 
-	if(extraBonusCustomFlags)
+	for( std::vector<AsciiString>::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
 	{
-		for( ObjectCustomStatusType::const_iterator it = extraBonusCustomFlags->begin(); it != extraBonusCustomFlags->end(); ++it )
+		Bool hasSet = FALSE;
+		std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
+		for(it_2; it_2 != customFlags.end(); ++it_2)
 		{
-			ObjectCustomStatusType::iterator it2 = customFlags.find(it->first);
-
-			if (it2 != customFlags.end()) 
+			if((*it_2) == (*it))
 			{
-				if (it->second == 1)
-					it2->second = 1;
-			}
-			else 
-			{
-				if (it->second == 1)
-					customFlags[it->first] = 1;
-				else 
-					customFlags[it->first] = 0;
+				hasSet = TRUE;
+				break;
 			}
 		}
+		if(!hasSet)
+			customFlags.push_back(*it);
 	}
 	
 	if (source->getContainedBy())
@@ -3763,26 +3751,24 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 			flags |= theirContain->getWeaponBonusPassedToPassengers();
 
 			// CustomFlags
-			ObjectCustomStatusType unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
+			std::vector<AsciiString> unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
 
 			if(!unitCustomFlags.empty())
 			{
-				for( ObjectCustomStatusType::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
+				for( std::vector<AsciiString>::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
 				{
-					ObjectCustomStatusType::iterator it2 = customFlags.find(it->first);
-
-					if (it2 != customFlags.end()) 
+					Bool hasSet = FALSE;
+					std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
+					for(it_2; it_2 != customFlags.end(); ++it_2)
 					{
-						if (it->second == 1)
-							it2->second = 1;
+						if((*it_2) == (*it))
+						{
+							hasSet = TRUE;
+							break;
+						}
 					}
-					else 
-					{
-						if (it->second == 1)
-							customFlags[it->first] = 1;
-						else 
-							customFlags[it->first] = 0;
-					}
+					if(!hasSet)
+						customFlags.push_back(*it);
 				}
 			}
 		}
@@ -3796,523 +3782,11 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 }
 
 //-------------------------------------------------------------------------------------------------
-void Weapon::computeFiringTrackerBonus(Object *me, const Object *victim)
-{
-	if(!me || !victim)
-		return;
-	
-	std::vector<ObjectStatusTypes> weaponStatusTypes = getFiringTrackerStatusTypes();
-	WeaponBonusConditionType weaponBonusType = getFiringTrackerBonusCondition();
-	std::vector<AsciiString> customWeaponStatusTypes = getFiringTrackerCustomStatusTypes();
-	AsciiString customWeaponBonusType = getFiringTrackerCustomBonusCondition();
-
-	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
-	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
-
-	// Get bonuses granted outside of FiringTrackerBonus
-	WeaponBonusConditionFlags weaponBonusTypeNoClear = me->getWeaponBonusConditionIgnoreClear();
-	ObjectCustomStatusType customWeaponBonusTypeNoClear = me->getCustomWeaponBonusConditionIgnoreClear();
-
-	if(victim)
-	{
-		
-		Bool DoStatusBuff = FALSE;
-		// Get the victim's custom status
-		ObjectCustomStatusType victimCustomStatus = victim->getCustomStatus();
-
-		// Test for Bonuses Provided by the weapon template.
-		if(!customWeaponBonusType.isEmpty() && !victimCustomStatus.empty())
-		{
-			for (std::vector<AsciiString>::const_iterator it = customWeaponStatusTypes.begin(); it != customWeaponStatusTypes.end(); ++it )
-			{
-				ObjectCustomStatusType::const_iterator it2 = victimCustomStatus.find(*it);
-				if(it2 != victimCustomStatus.end() && it2->second == 1)
-				{
-					DoStatusBuff = TRUE;
-					break;
-				}
-			}
-		}
-		if(!DoStatusBuff && !weaponStatusTypes.empty())
-		{
-			for (std::vector<ObjectStatusTypes>::const_iterator it = weaponStatusTypes.begin(); it != weaponStatusTypes.end(); ++it)
-			{
-				if( victim->testStatus(*it) )
-				{
-					DoStatusBuff = TRUE;
-					break;
-				}
-			}
-		}
-		if( DoStatusBuff == TRUE )
-		{
-			if(!customWeaponBonusType.isEmpty())
-			{
-				me->setCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
-			}
-			if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
-			{
-				if( !me->testWeaponBonusCondition(weaponBonusType) )
-				{
-					// We shoot faster at guys marked thusly
-					me->setWeaponBonusCondition(weaponBonusType, FALSE);
-				}
-			}
-		}
-		else
-		{
-			// A ground shot or the lack of the status on the target will clear this
-			if(!customWeaponBonusType.isEmpty())
-			{
-				// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-				ObjectCustomStatusType::const_iterator it = customWeaponBonusTypeNoClear.find(customWeaponBonusType);
-
-				if(it != customWeaponBonusTypeNoClear.end())
-				{
-					// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
-					if(it->second == 0) 
-						me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
-				}
-				else
-				{
-					me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
-				}
-			}
-			if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
-			{
-				if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
-				{
-					me->clearWeaponBonusCondition(weaponBonusType, FALSE);
-				}
-			}
-		}
-
-		// The bonus provided by the Global Data
-
-		// Test for each of the Custom Bonuses within the Global Data
-		if(!globalTrackerCustomCT.empty())
-		{
-			
-			for (std::vector<GlobalData::TrackerCustomBonusCT>::const_iterator it = globalTrackerCustomCT.begin(); it != globalTrackerCustomCT.end(); ++it )
-			{
-				
-				Bool DoBuffGlobal = FALSE;
-				// Test for the Custom Statuses first
-				if(!victimCustomStatus.empty())
-				{
-					for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
-					{
-						ObjectCustomStatusType::const_iterator it3 = victimCustomStatus.find(*it2);
-						if(it3 != victimCustomStatus.end() && it3->second == 1)
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-				// If don't have the required status, Test for all the ObjectStatuses
-				if(!DoBuffGlobal && !it->status.empty())
-				{
-					for (std::vector<ObjectStatusTypes>::const_iterator it4 = it->status.begin(); it4 != it->status.end(); ++it4)
-					{
-						if( victim->testStatus(*it4) )
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-
-				// Provide the Custom Weapon Bonus to the Attacker
-				if(!it->bonus.isEmpty())
-				{
-					if( DoBuffGlobal == TRUE )
-					{
-						me->setCustomWeaponBonusCondition(it->bonus, FALSE);
-					}
-					// Remove the Custom Weapon Bonus from the Attacker
-					else
-					{
-						// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-						ObjectCustomStatusType::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
-
-						if(it2 != customWeaponBonusTypeNoClear.end())
-						{
-							// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
-							if(it2->second == 0) 
-								me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
-						}
-						else
-						{
-							me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
-						}
-					}
-				}
-
-			}
-
-		}
-
-		// Test for each of the Weapon Bonuses within the Global Data
-		if(!globalTrackerCT.empty())
-		{
-			
-			for (std::vector<GlobalData::TrackerBonusCT>::const_iterator it = globalTrackerCT.begin(); it != globalTrackerCT.end(); ++it )
-			{
-				
-				Bool DoBuffGlobal = FALSE;
-				// Test for the custom statuses first
-				if(!victimCustomStatus.empty())
-				{
-					for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
-					{
-						ObjectCustomStatusType::const_iterator it3 = victimCustomStatus.find(*it2);
-						if(it3 != victimCustomStatus.end() && it3->second == 1)
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-				// If don't have the required status, Test for all the ObjectStatuses
-				if(!DoBuffGlobal && !it->status.empty())
-				{
-					for (std::vector<ObjectStatusTypes>::const_iterator it4 = it->status.begin(); it4 != it->status.end(); ++it4)
-					{
-						if( victim->testStatus(*it4) )
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-
-				// Provide the Weapon Bonus to the Attacker
-				if(it->bonus != WEAPONBONUSCONDITION_INVALID)
-				{
-					if( DoBuffGlobal == TRUE )
-					{
-						if( !me->testWeaponBonusCondition(it->bonus) )
-						{
-							me->setWeaponBonusCondition(it->bonus, FALSE);
-						}
-					}
-					// Remove the Weapon Bonus from the Attacker
-					else
-					{
-						// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-						if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
-						{
-							me->clearWeaponBonusCondition(it->bonus, FALSE);
-						}
-					}
-				}
-
-			}
-
-		}
-
-	}
-}
-
-void Weapon::computeFiringTrackerBonusClear(Object *me)
-{
-	if(!me)
-		return;
-
-	WeaponBonusConditionType weaponBonusType = getFiringTrackerBonusCondition();
-	AsciiString customWeaponBonusType = getFiringTrackerCustomBonusCondition();
-
-	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
-	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
-
-	// Get bonuses granted outside of FiringTrackerBonus
-	WeaponBonusConditionFlags weaponBonusTypeNoClear = me->getWeaponBonusConditionIgnoreClear();
-	ObjectCustomStatusType customWeaponBonusTypeNoClear = me->getCustomWeaponBonusConditionIgnoreClear();
-
-	if(!customWeaponBonusType.isEmpty())
-	{
-		// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-		ObjectCustomStatusType::const_iterator it = customWeaponBonusTypeNoClear.find(customWeaponBonusType);
-
-		if(it != customWeaponBonusTypeNoClear.end())
-		{
-			// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
-			if(it->second == 0) 
-				me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
-		}
-		else
-		{
-			me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
-		}
-	}
-	if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
-	{
-		// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-		if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
-		{
-			me->clearWeaponBonusCondition(weaponBonusType, FALSE);
-		}
-	}
-
-	// The bonus provided by the Global Data
-
-	// Clear for each of the Custom Bonuses within the Global Data
-	if(!globalTrackerCustomCT.empty())
-	{
-		for (std::vector<GlobalData::TrackerCustomBonusCT>::const_iterator it = globalTrackerCustomCT.begin(); it != globalTrackerCustomCT.end(); ++it )
-		{
-			if(!it->bonus.isEmpty())
-			{
-				// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-				ObjectCustomStatusType::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
-
-				if(it2 != customWeaponBonusTypeNoClear.end())
-				{
-					// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
-					if(it2->second == 0) 
-						me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
-				}
-				else
-				{
-					me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
-				}
-			}
-		}
-	}
-
-	// Clear for each of the Weapon Bonuses within the Global Data
-	if(!globalTrackerCT.empty())
-	{
-		for (std::vector<GlobalData::TrackerBonusCT>::const_iterator it = globalTrackerCT.begin(); it != globalTrackerCT.end(); ++it )
-		{
-			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
-			{
-				// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-				if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
-				{
-					me->clearWeaponBonusCondition(it->bonus, FALSE);
-				}
-			}
-		}
-	}
-
-}
-
-// Stare Into the Abyss
-// -----------------------------------------------------------------------------------------------------------------------------
-// Okay this (the function below) doesn't work as intended, but I'm just gonna leave this in in case of anyone wants to use it.
-// What this does is to get the FiringTracker feature bonuses without modifying the Object's statuses. 
-// It gets the bonus for a Weapon Bonus Field. Eg, Damage, Range.
-// You could modify this use to get your existing weapon bonuses.
-// Note: Do not use this for IsWithinAttackRange, it screws up the algorithm.
-// I use the functions above on AIUpdate.cpp to use to scan firing range. For some reason, it works. Thankfully.
-// Compute Firing Tracker bonuses are used before fireWeapon().
-// If used on PreFiring, it creates a bug where the units will pause its attack when switching targets.
-// -----------------------------------------------------------------------------------------------------------------------------
-/*
-Real Weapon::computeBuffedBonus(const Object *me, const Object *victim, Int f) const
-{
-	if(!me || !victim)
-		return 1.0f;
-
-	std::vector<ObjectStatusTypes> weaponStatusTypes = getFiringTrackerStatusTypes();
-	WeaponBonusConditionType weaponBonusType = getFiringTrackerBonusCondition();
-	std::vector<AsciiString> customWeaponStatusTypes = getFiringTrackerCustomStatusTypes();
-	AsciiString customWeaponBonusType = getFiringTrackerCustomBonusCondition();
-
-	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
-	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
-
-	//WeaponBonusConditionFlags myWeaponBonusTypes = me->getWeaponBonusCondition();
-	ObjectCustomStatusType myCustomWeaponBonusTypes = me->getCustomWeaponBonusCondition();
-
-	WeaponBonusConditionFlags bonusFlags;
-	ObjectCustomStatusType customBonusFlags;
-
-	if(victim)
-	{
-		
-		Bool DoStatusBuff = FALSE;
-		// Get the victim's custom status
-		ObjectCustomStatusType victimCustomStatus = victim->getCustomStatus();
-
-		// Test for Bonuses Provided by the weapon template.
-		if(!customWeaponBonusType.isEmpty() && !victimCustomStatus.empty())
-		{
-			for (std::vector<AsciiString>::const_iterator it = customWeaponStatusTypes.begin(); it != customWeaponStatusTypes.end(); ++it )
-			{
-				ObjectCustomStatusType::const_iterator it2 = victimCustomStatus.find(*it);
-				if(it2 != victimCustomStatus.end() && it2->second == 1)
-				{
-					DoStatusBuff = TRUE;
-					break;
-				}
-			}
-		}
-		if(!DoStatusBuff && !weaponStatusTypes.empty())
-		{
-			for (std::vector<ObjectStatusTypes>::const_iterator it = weaponStatusTypes.begin(); it != weaponStatusTypes.end(); ++it)
-			{
-				if( victim->testStatus(*it) )
-				{
-					DoStatusBuff = TRUE;
-					break;
-				}
-			}
-		}
-		// Compute the weapon bonuses of the weapon
-		if( DoStatusBuff == TRUE )
-		{
-			if(!customWeaponBonusType.isEmpty())
-			{
-				ObjectCustomStatusType::const_iterator it = myCustomWeaponBonusTypes.find(customWeaponBonusType);
-
-				if(it != myCustomWeaponBonusTypes.end())
-				{
-					if(it->second == 0) 
-						customBonusFlags[customWeaponBonusType] = 1;
-				}
-				else
-				{
-					customBonusFlags[customWeaponBonusType] = 1;
-				}
-			}
-			if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
-			{
-				if( !me->testWeaponBonusCondition(weaponBonusType) )
-				{
-					bonusFlags |= (1 << weaponBonusType); 
-				}
-			}
-		}
-
-		// The bonus provided by the Global Data
-
-		// Test for each of the Custom Bonuses within the Global Data
-		if(!globalTrackerCustomCT.empty())
-		{
-			for (std::vector<GlobalData::TrackerCustomBonusCT>::const_iterator it = globalTrackerCustomCT.begin(); it != globalTrackerCustomCT.end(); ++it )
-			{
-				Bool DoBuffGlobal = FALSE;
-				// Test for the Custom Statuses first
-				if(!victimCustomStatus.empty())
-				{
-					for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
-					{
-						ObjectCustomStatusType::const_iterator it3 = victimCustomStatus.find(*it2);
-						if(it3 != victimCustomStatus.end() && it3->second == 1)
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-				// If don't have the required status, Test for all the ObjectStatuses
-				if(!DoBuffGlobal && !it->status.empty())
-				{
-					for (std::vector<ObjectStatusTypes>::const_iterator it4 = it->status.begin(); it4 != it->status.end(); ++it4)
-					{
-						if( victim->testStatus(*it4) )
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-				// Provide the Custom Weapon Bonus to the Attacker
-				if( DoBuffGlobal == TRUE )
-				{
-					if(!it->bonus.isEmpty())
-					{
-						ObjectCustomStatusType::const_iterator it2 = myCustomWeaponBonusTypes.find(it->bonus);
-
-						if(it2 != myCustomWeaponBonusTypes.end())
-						{
-							if(it2->second == 0) 
-								customBonusFlags[it->bonus] = 1;
-						}
-						else
-						{
-							customBonusFlags[it->bonus] = 1;
-						}
-					}
-				}
-			}
-		}
-
-		// Test for each of the Weapon Bonuses within the Global Data
-		if(!globalTrackerCT.empty())
-		{
-			for (std::vector<GlobalData::TrackerBonusCT>::const_iterator it = globalTrackerCT.begin(); it != globalTrackerCT.end(); ++it )
-			{
-				Bool DoBuffGlobal = FALSE;
-				// Test for the custom statuses first
-				if(!victimCustomStatus.empty())
-				{
-					for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
-					{
-						ObjectCustomStatusType::const_iterator it3 = victimCustomStatus.find(*it2);
-						if(it3 != victimCustomStatus.end() && it3->second == 1)
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-				// If don't have the required status, Test for all the ObjectStatuses
-				if(!DoBuffGlobal && !it->status.empty())
-				{
-					for (std::vector<ObjectStatusTypes>::const_iterator it4 = it->status.begin(); it4 != it->status.end(); ++it4)
-					{
-						if( victim->testStatus(*it4) )
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
-				}
-				// Provide the Weapon Bonus to the Attacker
-				if( DoBuffGlobal == TRUE )
-				{
-					if(it->bonus != WEAPONBONUSCONDITION_INVALID)
-					{
-						if( !me->testWeaponBonusCondition(it->bonus) )
-						{
-							if( !me->testWeaponBonusCondition(it->bonus) )
-							{
-								bonusFlags |= (1 << it->bonus); 
-							}
-						}
-					}
-				}
-			}
-		}
-
-	}
-
-	WeaponBonus bonus;
-
-	if (TheGlobalData->m_weaponBonusSet)
-		//TheGlobalData->m_weaponBonusSet->appendBonuses(flags, bonus);	
-		TheGlobalData->m_weaponBonusSet->appendBonuses(bonusFlags, bonus, customBonusFlags);
-	const WeaponBonusSet* extra = m_template->getExtraBonus();
-	if (extra)
-		//extra->appendBonuses(flags, bonus);
-		extra->appendBonuses(bonusFlags, bonus, customBonusFlags);
-
-	//WeaponBonus::Field wf = (WeaponBonus::Field)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusFieldNames);
-	WeaponBonus::Field wf = (WeaponBonus::Field)f;
-
-	return bonus.getField(wf);
-}
-*/
-
-//-------------------------------------------------------------------------------------------------
 void Weapon::loadAmmoNow(const Object *sourceObj)
 {
 	WeaponBonus bonus;
-	computeBonus(sourceObj, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(sourceObj, 0, bonus, dummy);
 	reloadWithBonus(sourceObj, bonus, true);
 }
 
@@ -4321,7 +3795,8 @@ void Weapon::reloadAmmo(const Object *sourceObj)
 {
 
 	WeaponBonus bonus;
-	computeBonus(sourceObj, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(sourceObj, 0, bonus, dummy);
 	reloadWithBonus(sourceObj, bonus, false);
 }
 
@@ -4329,7 +3804,8 @@ void Weapon::reloadAmmo(const Object *sourceObj)
 Int Weapon::getClipReloadTime(const Object *source) const
 {
 	WeaponBonus bonus;
-	computeBonus(source, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(source, 0, bonus, dummy);
 	return m_template->getClipReloadTime(bonus);
 }
 
@@ -4433,7 +3909,8 @@ void Weapon::onWeaponBonusChange(const Object *source)
 	// We are concerned with our reload times being off if our ROF just changed.
 
 	WeaponBonus bonus;
-	computeBonus(source, 0, bonus); // The middle arg is for projectiles to inherit damage bonus from launcher
+	std::vector<AsciiString> dummy;
+	computeBonus(source, 0, bonus, dummy); // The middle arg is for projectiles to inherit damage bonus from launcher
 
 	Int newDelay;
 	Bool needUpdate = FALSE;
@@ -4989,7 +4466,8 @@ Real Weapon::getPercentReadyToFire() const
 Real Weapon::getAttackRange(const Object *source) const
 {
 	WeaponBonus bonus;
-	computeBonus(source, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(source, 0, bonus, dummy);
 	return m_template->getAttackRange(bonus);
 
 	//Contained objects have longer ranges.
@@ -5035,7 +4513,8 @@ Real Weapon::estimateWeaponDamage(const Object *sourceObj, const Object *victimO
 		return 0.0f;
 
 	WeaponBonus bonus;
-	computeBonus(sourceObj, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(sourceObj, 0, bonus, dummy);
 
 	return m_template->estimateWeaponTemplateDamage(sourceObj, victimObj, victimPos, bonus);
 }
@@ -5173,7 +4652,7 @@ Bool Weapon::privateFireWeapon(
 	WeaponBonusConditionFlags extraBonusFlags,
 	ObjectID* projectileID,
 	Bool inflictDamage,
-	const ObjectCustomStatusType *extraBonusCustomFlags,
+	const std::vector<AsciiString>& extraBonusCustomFlags,
 	const Coord3D* sourcePos,
 	ObjectID shrapnelLaunchID
 )
@@ -5589,8 +5068,9 @@ Bool Weapon::fireWeapon(const Object *source, Object *target, ObjectID* projecti
 			*projectileID = INVALID_ID;
 		return false;
 	}
+	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s at %s", DescribeObject(source).str(), DescribeObject(target).str()));
-	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE );
+	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE, dummy );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5603,8 +5083,9 @@ Bool Weapon::fireWeapon(const Object *source, const Coord3D* pos, ObjectID* proj
 			*projectileID = INVALID_ID;
 		return false;
 	}
+	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
-	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE );
+	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, dummy );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5616,8 +5097,9 @@ Bool Weapon::fireWeaponOnSpot(const Object *source, Object *target, ObjectID* pr
 			*projectileID = INVALID_ID;
 		return false;
 	}
+	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s at %s", DescribeObject(source).str(), DescribeObject(target).str()));
-	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE, NULL, sourcePos, shrapnelLaunchID );
+	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE, dummy, sourcePos, shrapnelLaunchID );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5630,24 +5112,20 @@ Bool Weapon::fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID
 			*projectileID = INVALID_ID;
 		return false;
 	}
+	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
-	ObjectCustomStatusType customBonus;
-	if(source)
-		customBonus = source->getCustomWeaponBonusCondition();
-	else
-		customBonus.clear();
-	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, &customBonus, sourcePos, shrapnelLaunchID );
+	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, dummy, sourcePos, shrapnelLaunchID );
 }
 
 //-------------------------------------------------------------------------------------------------
-void Weapon::fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags, Bool inflictDamage)
+void Weapon::fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage)
 {
 	//CRCDEBUG_LOG(("Weapon::fireProjectileDetonationWeapon() for %sat %s", DescribeObject(source).str(), DescribeObject(target).str()));
 	privateFireWeapon( source, target, NULL, true, false, extraBonusFlags, NULL, inflictDamage, extraBonusCustomFlags);
 }
 
 //-------------------------------------------------------------------------------------------------
-void Weapon::fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags, Bool inflictDamage)
+void Weapon::fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage)
 {
 	//CRCDEBUG_LOG(("Weapon::fireProjectileDetonationWeapon() for %s", DescribeObject(source).str()));
 	privateFireWeapon( source, NULL, pos, true, false, extraBonusFlags, NULL, inflictDamage, extraBonusCustomFlags);
@@ -5664,7 +5142,8 @@ Object* Weapon::forceFireWeapon( const Object *source, const Coord3D *pos)
 	//Fire the weapon at the position. Internally, it'll store the weapon projectile ID if so created.
 	ObjectID projectileID = INVALID_ID;
 	const Bool ignoreRange = true;
-	privateFireWeapon(source, NULL, pos, false, ignoreRange, NULL, &projectileID, TRUE );
+	std::vector<AsciiString> dummy;
+	privateFireWeapon(source, NULL, pos, false, ignoreRange, NULL, &projectileID, TRUE, dummy );
 	return TheGameLogic->findObjectByID( projectileID );
 }
 
@@ -5740,7 +5219,8 @@ Bool Weapon::isWithinTargetHeight(const Object *victim) const
 Real Weapon::getPrimaryDamageRadius(const Object *source) const
 {
 	WeaponBonus bonus;
-	computeBonus(source, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(source, 0, bonus, dummy);
 	return m_template->getPrimaryDamageRadius(bonus);
 }
 
@@ -5793,7 +5273,8 @@ Int Weapon::getPreAttackDelay( const Object *source, const Object *victim ) cons
 	//else it is per shot, so it always applies
 
 	WeaponBonus bonus;
-	computeBonus(source, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(source, 0, bonus, dummy);
 	return m_template->getPreAttackDelay( bonus );
 }
 
@@ -5801,7 +5282,8 @@ Int Weapon::getPreAttackDelay( const Object *source, const Object *victim ) cons
 Real Weapon::getArmorBonus(const Object *source) const
 {
 	WeaponBonus bonus;
-	computeBonus(source, 0, bonus);
+	std::vector<AsciiString> dummy;
+	computeBonus(source, 0, bonus, dummy);
 	return m_template->getArmorBonus(bonus);
 }
 
@@ -6707,7 +6189,8 @@ void WeaponBonus::appendBonuses(WeaponBonus& bonus) const
 	}
 }
 
-void WeaponBonus::appendBonusesCustom(const AsciiString& customStatus, WeaponBonus& bonus) const
+//-------------------------------------------------------------------------------------------------
+/*void WeaponBonus::appendBonusesCustom(const AsciiString& customStatus, WeaponBonus& bonus) const
 {
 	for (int f = 0; f < WeaponBonus::FIELD_COUNT; ++f)
 	{
@@ -6719,7 +6202,7 @@ void WeaponBonus::appendBonusesCustom(const AsciiString& customStatus, WeaponBon
 			bonus.m_field[f] += it->second - 1.0f;
 		}
 	}
-}
+}*/
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ void WeaponBonusSet::parseWeaponBonusSet(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
@@ -6765,23 +6248,22 @@ void WeaponBonusSet::parseCustomWeaponBonusSet(INI* ini)
 	AsciiString customStatus = ini->getNextQuotedAsciiString();
 	WeaponBonus::Field wf = (WeaponBonus::Field)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusFieldNames);
 	// So now we have a 3D array. One for checking DamageTypes, and one for checking CustomDamageTypes.
-	m_bonus[0].setFieldCustom(customStatus, wf, INI::scanPercentToReal(ini->getNextToken()));
+	NameKeyType namekey = TheNameKeyGenerator->nameToKey( customStatus );
+	this->m_customBonus[namekey].setField(wf, INI::scanPercentToReal(ini->getNextToken()));
 }
 
 //-------------------------------------------------------------------------------------------------
-void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, ObjectCustomStatusType customFlags) const
+void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, const std::vector<AsciiString>& customFlags) const
 //void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const
 {
 	// TO-DO: Change to Hash_Map. DONE.
-	if(!customFlags.empty())
+	/// Reverted to vector
+	for (std::vector<AsciiString>::const_iterator it = customFlags.begin(); it != customFlags.end(); ++it)
 	{
-		for (ObjectCustomStatusType::const_iterator it = customFlags.begin(); it != customFlags.end(); ++it)
-		{
-			if (it->second == 1) 
-			{
-				this->m_bonus[0].appendBonusesCustom(it->first, bonus);
-			}
-		}
+		NameKeyType namekey = TheNameKeyGenerator->nameToKey( *it );
+		CustomWeaponBonusMap::const_iterator it_bonus = this->m_customBonus.find(namekey);
+		if( it_bonus != this->m_customBonus.end() )
+			it_bonus->second.appendBonuses(bonus);
 	}
 
 	if (flags == 0)

@@ -587,6 +587,9 @@ public:
 
   void notifyFiringTrackerShotFired( const Weapon* weaponFired, ObjectID victimID ) ;
 
+  void computeFiringTrackerBonus(const Weapon *weaponToFire, const Object *victim);
+  void computeFiringTrackerBonusClear(const Weapon *weaponToFire);
+
   /**
 		Determines if the unit has any weapon that could conceivably
 		harm the victim. this does not take range, ammo, etc. into
@@ -638,8 +641,9 @@ public:
 	Bool isCurWeaponLocked() const { return m_weaponSet.isCurWeaponLocked(); }
 	Bool isCurWeaponLockedPriority() const { return m_weaponSet.isCurWeaponLockedPriority(); }
 
-	ObjectCustomStatusType getCustomStatus() const { return m_customStatus; }
-	void setCustomStatusFlags(ObjectCustomStatusType customStatusMap) { m_customStatus = customStatusMap; } 
+	//const ObjectCustomStatusType *getCustomStatus() const { return &m_customStatus; }
+	std::vector<AsciiString> getCustomStatus() const { return m_customStatusSet; }
+	void setCustomStatusFlags( const std::vector<AsciiString>& customStatusSetVec ) { m_customStatusSet = customStatusSetVec; } 
 	Bool testCustomStatus(const AsciiString& cst) const;
 	Bool testCustomStatusForAll(const std::vector<AsciiString>& cst) const;
 
@@ -680,29 +684,31 @@ public:
 	inline WeaponBonusConditionFlags getWeaponBonusConditionAgainst() const { return m_weaponBonusConditionAgainst; }
 	inline void setWeaponBonusConditionFlagsAgainst(WeaponBonusConditionFlags flags) { m_weaponBonusConditionAgainst = flags; }
 
-	void applyCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags);
-	void removeCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags);
+	void applyCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& flags);
+	void removeCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& flags);
 
 	void setCustomWeaponBonusConditionAgainst(const AsciiString& cst);
 	void clearCustomWeaponBonusConditionAgainst(const AsciiString& cst);
 	Bool testCustomWeaponBonusConditionAgainst(const AsciiString& cst) const;
-	const ObjectCustomStatusType getCustomWeaponBonusConditionAgainst() const { return m_customWeaponBonusConditionAgainst; }
-	void setCustomWeaponBonusConditionFlagsAgainst(ObjectCustomStatusType flags) { m_customWeaponBonusConditionAgainst = flags; }
+	//const ObjectCustomStatusType *getCustomWeaponBonusConditionAgainst() const { return &m_customWeaponBonusConditionAgainst; }
+	std::vector<AsciiString> getCustomWeaponBonusConditionAgainst() const { return m_customWeaponBonusConditionAgainst; }
+	void setCustomWeaponBonusConditionFlagsAgainst(const std::vector<AsciiString>& flags) { m_customWeaponBonusConditionAgainst = flags; }
 
 
-	ObjectCustomStatusType getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
+	//const ObjectCustomStatusType *getCustomWeaponBonusCondition() const { return &m_customWeaponBonusCondition; }
+	std::vector<AsciiString> getCustomWeaponBonusCondition() const { return m_customWeaponBonusCondition; }
 	// TO-DO: Change to Hash_Map. DONE.
-	void setCustomWeaponBonusConditionFlags(ObjectCustomStatusType customFlags) { 
-		m_customWeaponBonusCondition.clear();
-		m_customWeaponBonusCondition = customFlags;
-	}
+	/// Reverted to use Vector.
+	void setCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& customFlags) { m_customWeaponBonusCondition = customFlags; }
 	Bool testCustomWeaponBonusCondition(const AsciiString& cst) const;
 
 	WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
-	ObjectCustomStatusType getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
+	//const ObjectCustomStatusType *getCustomWeaponBonusConditionIgnoreClear() const { return &m_customWeaponBonusConditionIC; }
+	std::vector<AsciiString> getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
 
 	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
-	void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
+	//void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
+	void setCustomWeaponBonusConditionIgnoreClear(const std::vector<AsciiString>& vec) { m_customWeaponBonusConditionIC = vec; }
 
 	void doWeaponBonusChange() { m_weaponSet.weaponSetOnWeaponBonusChange(this); }
 
@@ -984,7 +990,8 @@ private:
 	Object *			m_next;
 	Object *			m_prev;
 	ObjectStatusMaskType		m_status;									///< status bits (see ObjectStatusMaskType)
-	ObjectCustomStatusType		m_customStatus;	
+	//ObjectCustomStatusType		m_customStatus;	
+	std::vector<AsciiString>	m_customStatusSet;
 
 	ObjectID			m_shielderID;
 	ObjectID			m_shieldingID;
@@ -1080,11 +1087,12 @@ private:
 	WeaponSet											m_weaponSet;
 	WeaponSetFlags								m_curWeaponSetFlags;
 	WeaponBonusConditionFlags			m_weaponBonusCondition;
-	ObjectCustomStatusType				m_customWeaponBonusCondition;
+	//ObjectCustomStatusType				m_customWeaponBonusCondition;
+	std::vector<AsciiString>				m_customWeaponBonusCondition;
 
 	//Ignore Bonus Types to clear if it is bonus granted outside of new Firing Tracker system.
 	WeaponBonusConditionFlags			m_weaponBonusConditionIC;
-	ObjectCustomStatusType				m_customWeaponBonusConditionIC;
+	std::vector<AsciiString>			m_customWeaponBonusConditionIC;
 
 	Real								m_invsqrt_mass;
 	//Real								m_magnetLevitateHeight;
@@ -1097,7 +1105,8 @@ private:
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 
 	WeaponBonusConditionFlags			m_weaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
-	ObjectCustomStatusType				m_customWeaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
+	//ObjectCustomStatusType				m_customWeaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
+	std::vector<AsciiString>				m_customWeaponBonusConditionAgainst;  ///< Weapon bonus granted when attacking this target;
 
 	SpecialPowerMaskType					m_specialPowerBits; ///< bits determining what kind of special abilities this object has access to.
 

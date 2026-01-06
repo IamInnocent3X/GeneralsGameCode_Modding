@@ -122,7 +122,7 @@ private:
 	Int										m_flightPathSegments;			///< number of segments in the flightpath (in case we must regen it)
 	Int										m_currentFlightPathStep;	///< Our current index in the flight path vector.  Quicker than popping off.
 	WeaponBonusConditionFlags		m_extraBonusFlags;
-	ObjectCustomStatusType 			m_extraBonusCustomFlags;
+	std::vector<AsciiString> 			m_extraBonusCustomFlags;
 	Bool                  			m_noDamage;
 	UnsignedInt						m_framesTillDecoyed;
 	UnsignedInt						m_detonateDistance;

@@ -1630,7 +1630,7 @@ void RiderChangeContain::doStatusChecks()
 	Object* obj = getObject();
 
 	ObjectStatusMaskType NewStatus = obj->getStatusBits();
-	ObjectCustomStatusType NewCustomStatusTypes = obj->getCustomStatus();
+	std::vector<AsciiString> NewCustomStatusTypes = obj->getCustomStatus();
 	AsciiString NewCustomStatus;
 
 	Bool checkChange = FALSE;
@@ -1661,33 +1661,60 @@ void RiderChangeContain::doStatusChecks()
 	if(!checkChange && NewCustomStatusTypes != m_prevCustomStatusTypes)
 	{
 		//DEBUG_LOG(("Rider Template: Checking Custom Status. Frame: %d", TheGameLogic->getFrame()));
-		for (ObjectCustomStatusType::const_iterator it = NewCustomStatusTypes.begin(); it != NewCustomStatusTypes.end(); ++it)
+		for (std::vector<AsciiString>::const_iterator it = NewCustomStatusTypes.begin(); it != NewCustomStatusTypes.end(); ++it)
 		{
-			if((*it).second == 1)
+			// If the status is not present in the Previous Status, yet present Recently, check if it is a Valid Status to change a Rider
+			//std::vector<AsciiString>::const_iterator it2 = m_prevCustomStatusTypes.find((*it).first);
+			Bool hasPrevious = false;
+			for (std::vector<AsciiString>::const_iterator it2 = m_prevCustomStatusTypes.begin(); it2 != m_prevCustomStatusTypes.end(); ++it2)
 			{
-				// If the status is not present in the Previous Status, yet present Recently, check if it is a Valid Status to change a Rider
-				ObjectCustomStatusType::const_iterator it2 = m_prevCustomStatusTypes.find((*it).first);
-				if(m_prevCustomStatusTypes.empty() || it2 == m_prevCustomStatusTypes.end() || ( it2 != m_prevCustomStatusTypes.end() && (*it2).second == 0) )
+				if((*it2) == (*it))
 				{
-					if(riderTemplateIsValidChange( (*it).first ) )
-					{
-						break;
-					}
-				} 
-			}
-			else
-			{
-				// If the status is present in the Previous Status, yet not present Recently, check if it is a Valid Template Removal
-				ObjectCustomStatusType::const_iterator it2 = m_prevCustomStatusTypes.find((*it).first);
-				if(it2 != m_prevCustomStatusTypes.end() && (*it2).second == 1)
-				{
-					if(riderTemplateIsValidRemoval( (*it).first ) )
-					{
-						break;
-					}
+					hasPrevious = true;
+					break;
 				}
 			}
+			if(!hasPrevious)
+			{
+				if(riderTemplateIsValidChange( *it ) )
+					break;
+			}
 		}
+		for (std::vector<AsciiString>::const_iterator it = m_prevCustomStatusTypes.begin(); it != m_prevCustomStatusTypes.end(); ++it)
+		{
+			// If the status is present in the Previous Status, yet not present Recently, check if it is a Valid Template Removal
+			Bool hasNow = false;
+			for (std::vector<AsciiString>::const_iterator it2 = NewCustomStatusTypes.begin(); it2 != NewCustomStatusTypes.end(); ++it2)
+			{
+				if((*it2) == (*it))
+				{
+					hasNow = true;
+					break;
+				}
+			}
+			if(!hasNow)
+			{
+				if(riderTemplateIsValidRemoval( *it ) )
+					break;
+			}
+		}
+			//if(m_prevCustomStatusTypes.empty() || it2 == m_prevCustomStatusTypes.end() || ( it2 != m_prevCustomStatusTypes.end() && (*it2).second == 0) )
+			//{
+			//	if(riderTemplateIsValidChange( (*it).first ) )
+			//	{
+			//		break;
+			//	}
+			//}
+
+			// If the status is present in the Previous Status, yet not present Recently, check if it is a Valid Template Removal
+			//std::vector<AsciiString>::const_iterator it2 = m_prevCustomStatusTypes.find((*it).first);
+			//if(it2 != m_prevCustomStatusTypes.end() && (*it2).second == 1)
+			//{
+			//	if(riderTemplateIsValidRemoval( (*it).first ) )
+			//	{
+			//		break;
+			//	}
+			//}
 	}
 
 	//for(int i = 0; i < m_theRiderDataRecord.size(); i++)

@@ -340,7 +340,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_shielderType = DEATH_TYPE_FLAGS_ALL;
 
 	m_status = objectStatusMask;
-	m_customStatus.clear();
+	//m_customStatus.clear();
+	m_customStatusSet.clear();
 	m_layer = LAYER_GROUND;
 
 	m_weaponBonusConditionIC = 0;
@@ -1258,6 +1259,7 @@ void Object::setStatus( ObjectStatusMaskType objectStatus, Bool set )
 
 }
 
+//=============================================================================
 void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 {
 	// Does nothing if there's no status to Set.
@@ -1269,7 +1271,7 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 	Bool isDifferent = false;
 
 	// TO-DO: Change to Hash_Map. DONE.
-	ObjectCustomStatusType::iterator it = m_customStatus.find(customStatus);
+	/*ObjectCustomStatusType::iterator it = m_customStatus.find(customStatus);
 
 	if (it != m_customStatus.end()) 
 	{
@@ -1292,6 +1294,38 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 			m_customStatus[customStatus] = 0;
 
 		isDifferent = TRUE;
+	}*/
+
+	std::vector<AsciiString>::iterator it = m_customStatusSet.begin();
+	if(set)
+	{
+		Bool hasSet = FALSE;
+		for(it; it != m_customStatusSet.end(); ++it)
+		{
+			if((*it) == customStatus)
+			{
+				hasSet = TRUE;
+				break;
+			}
+		}
+		if(!hasSet)
+		{
+			isDifferent = TRUE;
+			m_customStatusSet.push_back(customStatus);
+		}
+	}
+	else
+	{
+		for(it; it != m_customStatusSet.end();)
+		{
+			if((*it) == customStatus)
+			{
+				it = m_customStatusSet.erase( it );
+				isDifferent = TRUE;
+				break;
+			}
+			++it;
+		}
 	}
 	
 	if (isDifferent == TRUE)
@@ -1320,17 +1354,18 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 
 }
 
+//=============================================================================
 Bool Object::testCustomStatus(const AsciiString& cst) const
 {
-	ObjectCustomStatusType::const_iterator it = m_customStatus.find(cst);
-
-	if (it != m_customStatus.end() && it->second == 1) 
+	for(int i = 0; i < m_customStatusSet.size(); i++)
 	{
-		return TRUE;
+		if(m_customStatusSet[i] == cst)
+			return TRUE;
 	}
 	return FALSE;
 }
 
+//=============================================================================
 void Object::setCustomStatus( const std::vector<AsciiString>& customStatus, Bool set )
 {
 	// Does nothing if there's no status to Set.
@@ -1340,9 +1375,41 @@ void Object::setCustomStatus( const std::vector<AsciiString>& customStatus, Bool
 	// A faster way of determining whether to trigger status change.
 	Bool isDifferent = false;
 
-	for(std::vector<AsciiString>::const_iterator str_it = customStatus.begin(); str_it != customStatus.end(); str_it++)
+	std::vector<AsciiString>::const_iterator str_it;
+	for(str_it = customStatus.begin(); str_it != customStatus.end(); ++str_it)
 	{
-		ObjectCustomStatusType::iterator it = m_customStatus.find(*str_it);
+		std::vector<AsciiString>::iterator it = m_customStatusSet.begin();
+		if(set)
+		{
+			Bool hasSet = FALSE;
+			for(it; it != m_customStatusSet.end(); ++it)
+			{
+				if((*it) == (*str_it))
+				{
+					hasSet = TRUE;
+					break;
+				}
+			}
+			if(!hasSet)
+			{
+				isDifferent = TRUE;
+				m_customStatusSet.push_back(*str_it);
+			}
+		}
+		else
+		{
+			for(it; it != m_customStatusSet.end();)
+			{
+				if((*it) == (*str_it))
+				{
+					it = m_customStatusSet.erase( it );
+					isDifferent = TRUE;
+					break;
+				}
+				++it;
+			}
+		}
+		/*ObjectCustomStatusType::iterator it = m_customStatus.find(*str_it);
 
 		if (it != m_customStatus.end()) 
 		{
@@ -1365,7 +1432,7 @@ void Object::setCustomStatus( const std::vector<AsciiString>& customStatus, Bool
 				m_customStatus[(*str_it)] = 0;
 
 			isDifferent = TRUE;
-		}
+		}*/
 	}
 	
 	if (isDifferent == TRUE)
@@ -1394,11 +1461,23 @@ void Object::setCustomStatus( const std::vector<AsciiString>& customStatus, Bool
 
 }
 
+//=============================================================================
 Bool Object::testCustomStatusForAll(const std::vector<AsciiString>& cst) const
 {
 	for(std::vector<AsciiString>::const_iterator it = cst.begin(); it != cst.end(); ++it)
 	{
-		ObjectCustomStatusType::const_iterator it2 = m_customStatus.find(*it);
+		Bool hasSet = FALSE;
+		for(std::vector<AsciiString>::const_iterator it2 = m_customStatusSet.begin(); it2 != m_customStatusSet.end(); ++it2)
+		{
+			if((*it) == (*it2))
+			{
+				hasSet = TRUE;
+				break;
+			}
+		}
+		if(!hasSet)
+			return FALSE;
+		/*ObjectCustomStatusType::const_iterator it2 = m_customStatus.find(*it);
 		if (it2 != m_customStatus.end()) 
 		{
 			if(it2->second == 0)
@@ -1407,7 +1486,7 @@ Bool Object::testCustomStatusForAll(const std::vector<AsciiString>& cst) const
 		else
 		{
 			return FALSE;
-		}
+		}*/
 	}
 	return TRUE;
 }
@@ -1974,7 +2053,7 @@ void Object::fireCurrentWeapon(Object *target)
 	Weapon* weapon = m_weaponSet.getCurWeapon();
 	if (weapon && (weapon->getStatus() == READY_TO_FIRE))
 	{
-		weapon->computeFiringTrackerBonus(this, target);
+		computeFiringTrackerBonus(weapon, target);
 		Bool reloaded = weapon->fireWeapon(this, target);
 		DEBUG_ASSERTCRASH(m_firingTracker, ("hey, we are firing but have no firing tracker. this is wrong."));
 		if (m_firingTracker)
@@ -1997,7 +2076,7 @@ void Object::fireCurrentWeapon(const Coord3D* pos)
 	Weapon* weapon = m_weaponSet.getCurWeapon();
 	if (weapon && (weapon->getStatus() == READY_TO_FIRE))
 	{
-		weapon->computeFiringTrackerBonusClear(this);
+		computeFiringTrackerBonusClear(weapon);
 		Bool reloaded = weapon->fireWeapon(this, pos);
 		DEBUG_ASSERTCRASH(m_firingTracker, ("hey, we are firing but have no firing tracker. this is wrong."));
 		if (m_firingTracker)
@@ -2016,6 +2095,19 @@ void Object::notifyFiringTrackerShotFired( const Weapon* weaponFired, ObjectID v
     m_firingTracker->shotFired( weaponFired, victimID );
 }
 
+//==============================================================================
+void Object::computeFiringTrackerBonus( const Weapon* weaponToFire, const Object* victim )
+{
+  if ( m_firingTracker )
+    m_firingTracker->computeFiringTrackerBonus(weaponToFire, victim);
+}
+
+//==============================================================================
+void Object::computeFiringTrackerBonusClear( const Weapon* weaponToFire )
+{
+  if ( m_firingTracker )
+    m_firingTracker->computeFiringTrackerBonusClear(weaponToFire);
+}
 
 //=============================================================================
 void Object::preFireCurrentWeapon( const Object *victim )
@@ -5209,12 +5301,120 @@ void Object::xfer( Xfer *xfer )
 		}
 	}
 
-	// Xfer Source Code from GameLogic.cpp
-	// Xfer-Hash_Map
-	// Might need checking.
 	if (version >= 7) 
 	{
 		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (std::vector<AsciiString>::const_iterator it = m_customWeaponBonusCondition.begin(); it != m_customWeaponBonusCondition.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customWeaponBonusCondition.empty() == false)
+			{
+				DEBUG_CRASH(( "Object::xfer - m_customWeaponBonusCondition should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_customWeaponBonusCondition.push_back(bonusName);
+			}
+		}
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionIC.begin(); it != m_customWeaponBonusConditionIC.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customWeaponBonusConditionIC.empty() == false)
+			{
+				DEBUG_CRASH(( "Object::xfer - m_customWeaponBonusConditionIC should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_customWeaponBonusConditionIC.push_back(bonusName);
+			}
+		}
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionAgainst.begin(); it != m_customWeaponBonusConditionAgainst.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customWeaponBonusConditionAgainst.empty() == false)
+			{
+				DEBUG_CRASH(( "Object::xfer - m_customWeaponBonusConditionAgainst should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_customWeaponBonusConditionAgainst.push_back(bonusName);
+			}
+		}
+
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for (std::vector<AsciiString>::const_iterator it = m_customStatusSet.begin(); it != m_customStatusSet.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_customStatusSet.empty() == false)
+			{
+				DEBUG_CRASH(( "Object::xfer - m_customStatusSet should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_customStatusSet.push_back(bonusName);
+			}
+		}
+		/*if( xfer->getXferMode() == XFER_SAVE )
 		{
 			for (ObjectCustomStatusType::const_iterator it = m_customWeaponBonusCondition.begin(); it != m_customWeaponBonusCondition.end(); ++it )
 			{
@@ -5340,7 +5540,7 @@ void Object::xfer( Xfer *xfer )
 				xfer->xferInt(&statusFlag);
 				m_customStatus[statusName] = statusFlag;
 			}
-		}
+		}*/
 	}
 
 	// script status
@@ -6193,16 +6393,29 @@ void Object::removeWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
 	}
 
 //-------------------------------------------------------------------------------------------------
-void Object::applyCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags)
+void Object::applyCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& flags)
 {
-	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+	Bool isDifferent = false;
+	Int curSize = m_customWeaponBonusCondition.size();
 
-	for(ObjectCustomStatusType::const_iterator it = flags.begin(); it != flags.end(); ++it)
+	for(std::vector<AsciiString>::const_iterator it = flags.begin(); it != flags.end(); ++it)
 	{
-		if(it->second == 0);
-			continue;
+		Bool hasSet = FALSE;
 
-		ObjectCustomStatusType::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
+		for(int i = 0; i < curSize; i++)
+		{
+			if((*it) == m_customWeaponBonusCondition[i])
+			{
+				hasSet = TRUE;
+				break;
+			}
+		}
+		if(!hasSet)
+		{
+			isDifferent = TRUE;
+			m_customWeaponBonusCondition.push_back(*it);
+		}
+		/*std::vector<AsciiString>::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
 		if (it_2 != m_customWeaponBonusCondition.end()) 
 		{
 			it_2->second = 1;
@@ -6210,10 +6423,10 @@ void Object::applyCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags)
 		else 
 		{
 			m_customWeaponBonusCondition[(*it).first] = 1;
-		}
+		}*/
 	}
 
-	if (oldCondition != m_customWeaponBonusCondition)
+	if (isDifferent)
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
@@ -6221,53 +6434,79 @@ void Object::applyCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::removeCustomWeaponBonusConditionFlags(ObjectCustomStatusType flags)
+void Object::removeCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& flags)
+{
+	Bool isDifferent = false;
+
+	for(std::vector<AsciiString>::const_iterator it = flags.begin(); it != flags.end(); ++it)
 	{
-		ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
-
-		for(ObjectCustomStatusType::const_iterator it = flags.begin(); it != flags.end(); ++it)
+		std::vector<AsciiString>::iterator it_2 = m_customWeaponBonusCondition.begin();
+		for(it_2; it_2 != m_customWeaponBonusCondition.end();)
 		{
-			if(it->second == 0);
-				continue;
-
-			ObjectCustomStatusType::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
-			if (it_2 != m_customWeaponBonusCondition.end()) 
+			if((*it) == (*it_2))
 			{
-				it_2->second = 0;
+				it_2 = m_customWeaponBonusCondition.erase( it_2 );
+				isDifferent = true;
+				break;
 			}
-			else 
-			{
-				m_customWeaponBonusCondition[(*it).first] = 0;
-			}
+			++it_2;
 		}
-
-		if (oldCondition != m_customWeaponBonusCondition)
+		/*std::vector<AsciiString>::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
+		if (it_2 != m_customWeaponBonusCondition.end()) 
 		{
-			// Our weapon bonus just changed, so we need to immediately update our weapons
-			m_weaponSet.weaponSetOnWeaponBonusChange(this);
+			it_2->second = 0;
 		}
+		else 
+		{
+			m_customWeaponBonusCondition[(*it).first] = 0;
+		}*/
 	}
+
+	if (isDifferent)
+	{
+		// Our weapon bonus just changed, so we need to immediately update our weapons
+		m_weaponSet.weaponSetOnWeaponBonusChange(this);
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
 {
-	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+	Bool isDifferent = false;
 	// TO-DO: Change to Hash_Map. DONE.
-	ObjectCustomStatusType::iterator it = m_customWeaponBonusCondition.find(cst);
+	/// Changed to Vector for performance issues, setting or removing bonuses happen much less frequent, while hash_map has a large size and overhead
+	/*std::vector<AsciiString>::iterator it = m_customWeaponBonusCondition.begin();
 
-	if (it != m_customWeaponBonusCondition.end()) 
+	for(it; it != m_customWeaponBonusCondition.end()) 
 	{
 		it->second = 1;
 	}
 	else 
 	{
 		m_customWeaponBonusCondition[cst] = 1;
+	}*/
+
+	Bool hasSet = FALSE;
+	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusCondition.begin();
+	for(it; it != m_customWeaponBonusCondition.end(); ++it)
+	{
+		if((*it) == cst)
+		{
+			hasSet = TRUE;
+			break;
+		}
+	}
+
+	if(!hasSet)
+	{
+		isDifferent = TRUE;
+		m_customWeaponBonusCondition.push_back(cst);
 	}
 
 	if(setIgnoreClear)
 		setCustomWeaponBonusConditionIgnoreClear(cst);
 
-	if( oldCondition.empty() || oldCondition != m_customWeaponBonusCondition )
+	if( isDifferent )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
@@ -6277,23 +6516,24 @@ void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnor
 //-------------------------------------------------------------------------------------------------
 void Object::clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
 {
-	ObjectCustomStatusType oldCondition = m_customWeaponBonusCondition;
+	Bool isDifferent = false;
 	// TO-DO: Change to Hash_Map. DONE.
-	ObjectCustomStatusType::iterator it = m_customWeaponBonusCondition.find(cst);
-
-	if (it != m_customWeaponBonusCondition.end()) 
+	std::vector<AsciiString>::iterator it = m_customWeaponBonusCondition.begin();
+	for(it; it != m_customWeaponBonusCondition.end();)
 	{
-		it->second = 0;
-	}
-	else 
-	{
-		m_customWeaponBonusCondition[cst] = 0;
+		if((*it) == cst)
+		{
+			it = m_customWeaponBonusCondition.erase( it );
+			isDifferent = true;
+			break;
+		}
+		++it;
 	}
 
 	if(setIgnoreClear)
 		clearCustomWeaponBonusConditionIgnoreClear(cst);
 
-	if( !oldCondition.empty() && oldCondition != m_customWeaponBonusCondition )
+	if( isDifferent )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
@@ -6315,93 +6555,95 @@ void Object::clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst)
 //-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
 {
-	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionIC.find(cst);
+	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionIC.begin();
 
-	if (it != m_customWeaponBonusConditionIC.end()) 
+	Bool hasSet = FALSE;
+	for(it; it != m_customWeaponBonusConditionIC.end(); ++it)
 	{
-		it->second = 1;
+		if((*it) == cst)
+		{
+			hasSet = TRUE;
+			break;
+		}
 	}
-	else 
-	{
-		m_customWeaponBonusConditionIC[cst] = 1;
-	}
+
+	if(!hasSet)
+		m_customWeaponBonusConditionIC.push_back(cst);
 }
 
 //-------------------------------------------------------------------------------------------------
 void Object::clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
 {
-	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionIC.find(cst);
-
-	if (it != m_customWeaponBonusConditionIC.end()) 
+	std::vector<AsciiString>::iterator it = m_customWeaponBonusConditionIC.begin();
+	for(it; it != m_customWeaponBonusConditionIC.end();)
 	{
-		it->second = 0;
-	}
-	else 
-	{
-
-		m_customWeaponBonusConditionIC[cst] = 0;
+		if((*it) == cst)
+		{
+			it = m_customWeaponBonusConditionIC.erase( it );
+			break;
+		}
+		++it;
 	}
 }
 
 //-------------------------------------------------------------------------------------------------
 Bool Object::testCustomWeaponBonusCondition(const AsciiString& cst) const
 {
-	ObjectCustomStatusType::const_iterator it = m_customWeaponBonusCondition.find(cst);
+	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusCondition.begin();
 
-	if (it != m_customWeaponBonusCondition.end() && it->second == 1) 
+	for(it; it != m_customWeaponBonusCondition.end(); ++it)
 	{
-		return TRUE;
+		if((*it) == cst)
+			return TRUE;
 	}
-	else 
-	{
-		return FALSE;
-	}
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusConditionAgainst(const AsciiString& cst) 
 {
-	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionAgainst.find(cst);
+	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionAgainst.begin();
 
-	if (it != m_customWeaponBonusConditionAgainst.end()) 
+	Bool hasSet = FALSE;
+	for(it; it != m_customWeaponBonusConditionAgainst.end(); ++it)
 	{
-		it->second = 1;
+		if((*it) == cst)
+		{
+			hasSet = TRUE;
+			break;
+		}
 	}
-	else 
-	{
-		m_customWeaponBonusConditionAgainst[cst] = 1;
-	}
+
+	if(!hasSet)
+		m_customWeaponBonusConditionAgainst.push_back(cst);
 }
 
 //-------------------------------------------------------------------------------------------------
 void Object::clearCustomWeaponBonusConditionAgainst(const AsciiString& cst) 
 {
-	ObjectCustomStatusType::iterator it = m_customWeaponBonusConditionAgainst.find(cst);
-
-	if (it != m_customWeaponBonusConditionAgainst.end()) 
+	std::vector<AsciiString>::iterator it = m_customWeaponBonusConditionAgainst.begin();
+	for(it; it != m_customWeaponBonusConditionAgainst.end();)
 	{
-		it->second = 0;
-	}
-	else 
-	{
-
-		m_customWeaponBonusConditionAgainst[cst] = 0;
+		if((*it) == cst)
+		{
+			it = m_customWeaponBonusConditionAgainst.erase( it );
+			break;
+		}
+		++it;
 	}
 }
 
 //-------------------------------------------------------------------------------------------------
 Bool Object::testCustomWeaponBonusConditionAgainst(const AsciiString& cst) const
 {
-	ObjectCustomStatusType::const_iterator it = m_customWeaponBonusConditionAgainst.find(cst);
+	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionAgainst.begin();
 
-	if (it != m_customWeaponBonusConditionAgainst.end() && it->second == 1) 
+	for(it; it != m_customWeaponBonusConditionAgainst.end(); ++it)
 	{
-		return TRUE;
+		if((*it) == cst)
+			return TRUE;
 	}
-	else 
-	{
-		return FALSE;
-	}
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -7454,9 +7696,7 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_SWITCH_WEAPON:
 				{
 					// Clear Firing Tracker Bonuses First
-					Weapon* weapon = m_weaponSet.getCurWeapon();
-					if(weapon)
-						weapon->computeFiringTrackerBonusClear(this);
+					computeFiringTrackerBonusClear(m_weaponSet.getCurWeapon());
 					
 					WeaponSlotType weaponSlot = commandButton->getWeaponSlot();
 					// GUI_COMMAND_SWITCH_WEAPON switches until un-switched, or switched to something else.
@@ -7470,10 +7710,7 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 					if( !BitIsSet( commandButton->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) && !BitIsSet( commandButton->getOptions(), NEED_TARGET_POS ) )
 					{
 						// Clear the Firing Tracker Bonuses First and Choose the most Prioritized Weapon
-						Weapon* weapon = m_weaponSet.getCurWeapon();
-
-						if(weapon)
-							weapon->computeFiringTrackerBonusClear(this);
+						computeFiringTrackerBonusClear(m_weaponSet.getCurWeapon());
 
 						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
 						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
@@ -7634,10 +7871,8 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 							break;
 						}
 
-						// Clear Firing Tracker Bonuses First
-						Weapon* weapon = m_weaponSet.getCurWeapon();
-						if(weapon)
-							weapon->computeFiringTrackerBonus(this, obj);
+						// Grant Firing Tracker Bonuses First
+						computeFiringTrackerBonus(m_weaponSet.getCurWeapon(), obj);
 
 						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
 						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);
@@ -7765,10 +8000,7 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 						}
 
 						// Clear the Firing Tracker Bonuses First and Choose the most Prioritized Weapon
-						Weapon* weapon = m_weaponSet.getCurWeapon();
-
-						if(weapon)
-							weapon->computeFiringTrackerBonusClear(this);
+						computeFiringTrackerBonusClear(m_weaponSet.getCurWeapon());
 
 						// IamInnocent - Level Up'ed to LOCKED_PRIORITY due to unable to override for Weapon Ranged Based Priority
 						setWeaponLock( commandButton->getWeaponSlot(), LOCKED_PRIORITY);

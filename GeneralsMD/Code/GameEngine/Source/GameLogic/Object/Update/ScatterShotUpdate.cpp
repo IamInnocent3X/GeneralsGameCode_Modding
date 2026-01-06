@@ -182,12 +182,12 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 				if (launcher) {
 					// Copy weapon bonus flags from the launcher to this projectile
 					WeaponBonusConditionFlags bonusFlags = launcher->getWeaponBonusCondition();
-					ObjectCustomStatusType customBonusFlags = launcher->getCustomWeaponBonusCondition();
+					std::vector<AsciiString> customBonusFlags = launcher->getCustomWeaponBonusCondition();
 					getObject()->setWeaponBonusConditionFlags(bonusFlags);
 					getObject()->setCustomWeaponBonusConditionFlags(customBonusFlags);
 
 					WeaponBonusConditionFlags bonusFlagsIC = launcher->getWeaponBonusConditionIgnoreClear();
-					ObjectCustomStatusType customBonusFlagsIC = launcher->getCustomWeaponBonusConditionIgnoreClear();
+					std::vector<AsciiString> customBonusFlagsIC = launcher->getCustomWeaponBonusConditionIgnoreClear();
 					getObject()->setWeaponBonusConditionIgnoreClear(bonusFlagsIC);
 					getObject()->setCustomWeaponBonusConditionIgnoreClear(customBonusFlagsIC);
 
@@ -329,7 +329,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 		if (shotsLeftPerTarget > 0 && shotsLeft > 0 && data->m_targetMinRadius <= 0) {
 			if ((m_goalObj) && isValidTarget(m_goalObj)) {
 				// DEBUG_LOG((">>> SSU - fireWeapon at target Obj\n"));
-				m_weapon->computeFiringTrackerBonus(getObject(), m_goalObj);
+				getObject()->computeFiringTrackerBonus(m_weapon, m_goalObj);
 				m_weapon->fireWeapon(getObject(), m_goalObj);
 				// Bool status = m_weapon->fireWeapon(getObject(), m_goalObj);
 				// DEBUG_LOG((">>> SSU - fireWeapon success = %s\n", status ? "true" : "false"));
@@ -390,7 +390,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 
 				if (isValidTarget(obj)) {
 					// DEBUG_LOG((">>> SSU - fireWeapon at target Obj\n"));
-					m_weapon->computeFiringTrackerBonus(getObject(), obj);
+					getObject()->computeFiringTrackerBonus(m_weapon, obj);
 					m_weapon->fireWeapon(getObject(), obj);
 					// Bool status = m_weapon->fireWeapon(getObject(), obj);
 					// DEBUG_LOG((">>> SSU - fireWeapon success = %s\n", status ? "true" : "false"));
@@ -436,7 +436,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 		const Coord3D* constTargetPos = &targetPos;
 
 		//DEBUG_LOG((">>> SSU - fireWeapon at position\n"));
-		m_weapon->computeFiringTrackerBonusClear(getObject());
+		getObject()->computeFiringTrackerBonusClear(m_weapon);
 		m_weapon->fireWeapon(getObject(), constTargetPos);
 		//Bool status = m_weapon->fireWeapon(getObject(), constTargetPos);
 		//DEBUG_LOG((">>> SSU - fireWeapon success = %s\n", status ? "true" : "false"));

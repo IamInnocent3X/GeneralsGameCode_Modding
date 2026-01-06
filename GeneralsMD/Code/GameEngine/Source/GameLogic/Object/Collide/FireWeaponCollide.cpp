@@ -88,7 +88,7 @@ void FireWeaponCollide::onCollide( Object *other, const Coord3D *loc, const Coor
 	if( shouldFireWeapon() )
 	{
 		m_collideWeapon->loadAmmoNow( me );
-		m_collideWeapon->computeFiringTrackerBonus( me, other );
+		me->computeFiringTrackerBonus(m_collideWeapon, other);
 		m_collideWeapon->fireWeapon( me, other );
 	}
 }

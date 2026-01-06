@@ -102,17 +102,20 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	if( m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( m_requiredStatus ) )
 		return false;
 
-	for(std::vector<AsciiString>::const_iterator it = m_requiredCustomStatus.begin(); it != m_requiredCustomStatus.end(); ++it)
+	if(!m_requiredCustomStatus.empty())
 	{
-		ObjectCustomStatusType::const_iterator it2 = obj->getCustomStatus().find(*it);
-		if (it2 != obj->getCustomStatus().end()) 
+		std::vector<AsciiString> customStatus = obj->getCustomStatus();
+		std::vector<AsciiString>::const_iterator it2;
+		for(std::vector<AsciiString>::const_iterator it = m_requiredCustomStatus.begin(); it != m_requiredCustomStatus.end(); ++it)
 		{
-			if(it2->second == 0)
-				return FALSE;
-		}
-		else
-		{
-			return FALSE;
+			Bool hasRequired = true;
+			for(it2 = customStatus.begin(); it2 != obj->getCustomStatus().end(); ++it2) 
+			{
+				if((*it2) == (*it))
+					hasRequired = true;
+			}
+			if(!hasRequired)
+				return false;
 		}
 	}
 

@@ -1952,7 +1952,7 @@ Bool AIUpdateInterface::computeAttackPath( PathfindServicesInterface *pathServic
 	// if so, just return TRUE with no path.
 	if (victim != NULL)
 	{
-		weapon->computeFiringTrackerBonus(source, victim);
+		source->computeFiringTrackerBonus(weapon, victim);
 		if (weapon->isWithinAttackRange(source, victim))
 		{
 			Bool viewBlocked = FALSE;
@@ -1971,7 +1971,7 @@ Bool AIUpdateInterface::computeAttackPath( PathfindServicesInterface *pathServic
 	}
 	else if (victimPos != NULL)
 	{
-		weapon->computeFiringTrackerBonusClear(source);
+		source->computeFiringTrackerBonusClear(weapon);
 		if (weapon->isWithinAttackRange(source, victimPos))
 		{
 			Bool viewBlocked = FALSE;

@@ -198,7 +198,7 @@ public:
 
 	virtual Bool isWeaponBonusPassedToPassengers() const = 0;
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const = 0;
-	virtual ObjectCustomStatusType getCustomWeaponBonusPassedToPassengers() const = 0;
+	virtual const std::vector<AsciiString>& getCustomWeaponBonusPassedToPassengers() const = 0;
 
 	virtual void doUpgradeChecks( void ) = 0;
   	virtual void doStatusChecks( void ) = 0;

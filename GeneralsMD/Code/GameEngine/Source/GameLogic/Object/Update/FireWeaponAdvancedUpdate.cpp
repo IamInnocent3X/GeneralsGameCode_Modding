@@ -397,17 +397,17 @@ UpdateSleepTime FireWeaponAdvancedUpdate::update( void )
 
 			adjustFireHeight(targetLock, &targetPos);
 			if (targetLock != nullptr) {
-				m_weapon->computeFiringTrackerBonus(getObject(), targetLock);
+				getObject()->computeFiringTrackerBonus(m_weapon, targetLock);
 				m_weapon->fireWeapon(getObject(), targetLock);
 			}
 			else {
-				m_weapon->computeFiringTrackerBonusClear(getObject());
+				getObject()->computeFiringTrackerBonusClear(m_weapon);
 				m_weapon->fireWeapon(getObject(), &targetPos);
 			}
 		}
 		else {
 			adjustFireHeight(nullptr, &targetPos);
-			m_weapon->computeFiringTrackerBonusClear(getObject());
+			getObject()->computeFiringTrackerBonusClear(m_weapon);
 			m_weapon->forceFireWeapon(getObject(), &targetPos);
 		}
 	}

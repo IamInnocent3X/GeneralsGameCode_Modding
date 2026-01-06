@@ -247,13 +247,7 @@ void MissileAIUpdate::projectileLaunchAtObjectOrPosition(
 	m_detonationWeaponTmpl = detWeap;
 	m_extraBonusFlags = launcher ? launcher->getWeaponBonusCondition() : 0;
 	if(launcher)
-	{
 		m_extraBonusCustomFlags = launcher->getCustomWeaponBonusCondition();
-	}
-	else 
-	{
-		m_extraBonusCustomFlags.clear();
-	}
 
 	if (getMissileAIUpdateModuleData()->m_applyLauncherBonus) {
 		if(m_extraBonusFlags != 0)
@@ -487,7 +481,7 @@ void MissileAIUpdate::detonate()
 	if (m_detonationWeaponTmpl)
 	{
 
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, &m_extraBonusCustomFlags, !m_noDamage);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, !m_noDamage);
 
 		if( m_detonationWeaponTmpl->getDieOnDetonate() )
 		{
@@ -1183,7 +1177,8 @@ void MissileAIUpdate::airborneTargetGone()
 		}
 
 		WeaponBonus bonus;
-		m_detonationWeaponTmpl->private_computeBonus(obj, 0, bonus);
+		std::vector<AsciiString> dummy;
+		m_detonationWeaponTmpl->private_computeBonus(obj, 0, bonus, dummy);
 
 		PartitionFilterRelationship relationship( source, PartitionFilterRelationship::ALLOW_ENEMIES);
 		PartitionFilterSameMapStatus filterMapStatus(obj);
@@ -1428,12 +1423,10 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 
 		if( xfer->getXferMode() == XFER_SAVE )
 		{
-			for (ObjectCustomStatusType::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
+			for (std::vector<AsciiString>::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
 			{
-				AsciiString bonusName = it->first;
-				Int flag = it->second;
+				AsciiString bonusName = (*it);
 				xfer->xferAsciiString(&bonusName);
-				xfer->xferInt(&flag);
 			}
 			AsciiString empty;
 			xfer->xferAsciiString(&empty);
@@ -1452,9 +1445,7 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 				xfer->xferAsciiString(&bonusName);
 				if (bonusName.isEmpty())
 					break;
-				Int flag;
-				xfer->xferInt(&flag);
-				m_extraBonusCustomFlags[bonusName] = flag;
+				m_extraBonusCustomFlags.push_back(bonusName);
 			}
 		}
 	}
