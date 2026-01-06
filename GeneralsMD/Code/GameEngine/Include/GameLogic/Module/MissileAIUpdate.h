@@ -144,7 +144,7 @@ private:
 	Coord3D								m_originalTargetPos;			///< When firing uphill, we aim high to clear the brow of the hill.  jba.
 	Coord3D								m_prevPos;
 	WeaponBonusConditionFlags		m_extraBonusFlags;
-	ObjectCustomStatusType 			m_extraBonusCustomFlags;
+	std::vector<AsciiString> 			m_extraBonusCustomFlags;
 	const WeaponTemplate*	m_detonationWeaponTmpl;		///< weapon to fire at end (or null)
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 	ParticleSystemID			m_exhaustID;								///< our exhaust particle system (if any)

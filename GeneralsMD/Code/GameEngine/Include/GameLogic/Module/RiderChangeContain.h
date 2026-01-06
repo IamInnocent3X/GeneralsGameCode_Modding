@@ -184,7 +184,7 @@ private:
 	Bool m_registeredUpgradeNames; // me three
 
 	ObjectStatusMaskType m_prevStatus;
-	ObjectCustomStatusType m_prevCustomStatusTypes;
+	std::vector<AsciiString> m_prevCustomStatusTypes;
 
 	ObjectStatusType m_riderDataStatusRegister;
 	AsciiString m_riderDataCustomStatusRegister;

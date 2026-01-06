@@ -38,8 +38,12 @@
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class ArmorStore;
-typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomDamageTypeMap;
-typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > StringListCheckMap;
+typedef std::pair<NameKeyType, Real> NameKeyTypeReal;
+typedef std::vector<NameKeyTypeReal> CustomDamageTypeVec;
+typedef std::pair<AsciiString, Real> AsciiStringReal;
+typedef std::vector<AsciiStringReal> CustomDamageStrTypeVec;
+//typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomDamageTypeMap;
+//typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > StringListCheckMap;
 
 //-------------------------------------------------------------------------------------------------
 /**
@@ -62,7 +66,7 @@ public:
 		and return the amount that should be dealt. 
 	*/	
 	Real adjustDamage(DamageType t, Real damage, const AsciiString& ct) const;
-	Real scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, ObjectCustomStatusType customStatusType, ObjectCustomStatusType customBonusType) const;
+	Real scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, const std::vector<AsciiString>& customStatusType, const std::vector<AsciiString>& customBonusType) const;
 
 	static void parseArmorCoefficients( INI* ini, void *instance, void* /* store */, const void* userData );
 	static void parseArmorMultiplier( INI* ini, void *instance, void* /* store */, const void* userData );
@@ -80,9 +84,9 @@ private:
 	Real						m_weaponBonusCoefficient[WEAPONBONUSCONDITION_COUNT];	///< modifiers to damage
 	std::vector<ObjectStatusTypes>	m_statusFlags;
 	WeaponBonusConditionTypeVec		m_weaponBonusFlags;
-	CustomDamageTypeMap			m_customCoefficients;
-	CustomDamageTypeMap			m_customStatusArmorBonus;
-	CustomDamageTypeMap			m_customMultCoefficients;
+	CustomDamageTypeVec			m_customCoefficients;
+	CustomDamageStrTypeVec		m_customStatusArmorBonus;
+	CustomDamageTypeVec			m_customMultCoefficients;
 };  
 
 //-------------------------------------------------------------------------------------------------
@@ -94,7 +98,7 @@ public:
 	{
 	}
 
-	inline Real scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, ObjectCustomStatusType customStatusType, ObjectCustomStatusType customBonusType) const
+	inline Real scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonusConditionFlags weaponBonusType, const std::vector<AsciiString>& customStatusType, const std::vector<AsciiString>& customBonusType) const
 	{
 		return m_template ? m_template->scaleArmorBonus(statusType, weaponBonusType, customStatusType, customBonusType) : 1.0f;
 	}
@@ -148,7 +152,7 @@ public:
 		DamageType		m_linkDamageType;
 		Bool			m_declaredLinkDamageType;
 		Bool			m_declaredCoefficient;
-		std::vector<AsciiString> m_customDamageTypeLink;
+		std::vector<NameKeyType> m_customDamageTypeLink;
 
 		CustomDamageType() : m_coefficient(1.0f), m_declaredLinkDamageType(FALSE), m_declaredCoefficient(FALSE)
 		{
@@ -157,26 +161,18 @@ public:
 		}
 	};
 
-	typedef std::hash_map< AsciiString, CustomDamageType, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomDamageTypesMap;
+	//typedef std::hash_map< AsciiString, CustomDamageType, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomDamageTypesMap;
+	typedef std::hash_map< NameKeyType, CustomDamageType, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > CustomDamageTypesMap;
 	CustomDamageTypesMap m_customDamageTypes;
 
 	CustomDamageType m_customDamageTypeParse;
 	AsciiString m_customDamageTypeParseNext;
 
-	const CustomDamageTypesMap& getCustomDamageTypes() const
-	{
-		return m_customDamageTypes;
-	}
-
-	Int getCustomDamageTypesSize() const
-	{
-		return m_customDamageTypes.size();
-	}
-
-	Bool isNameInTypesList(const AsciiString& ct) const;
-	std::vector<AsciiString> GetLinkInTypesList(const AsciiString& ct);
-	DamageType GetDeclaredLinkDamageType(const AsciiString& ct);
-	Real GetDeclaredCoefficient(const AsciiString& ct);
+	Bool findNameInTypesList(NameKeyType nameKey, Real damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType);
+	Bool isNameInTypesList(NameKeyType nameKey) const;
+	std::vector<NameKeyType> GetLinkInTypesList(NameKeyType nameKey);
+	DamageType GetDeclaredLinkDamageType(NameKeyType nameKey);
+	Real GetDeclaredCoefficient(NameKeyType nameKey);
 
 	static void parseArmorDefinition(INI* ini);
 	static void parseArmorExtendDefinition(INI* ini);

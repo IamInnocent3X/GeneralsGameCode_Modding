@@ -314,7 +314,7 @@ typedef std::vector<WeaponBonusConditionType> WeaponBonusConditionTypeVec;
 //typedef std::pair<AsciiString, Real> AsciiStringReal;
 //typedef std::vector<AsciiStringReal> CustomWeaponBonus;
 // Converted to Hash_map;
-typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomWeaponBonus;
+//typedef std::hash_map<AsciiString, Real, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomWeaponBonus;
 typedef std::hash_map<NameKeyType, WeaponTemplate*, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > WeaponTemplateMap;
 
 
@@ -350,26 +350,25 @@ public:
 		for (int i = 0; i < FIELD_COUNT; ++i)
 		{
 			m_field[i] = 1.0f;
-			m_field2[i].clear();
 		}
 	}
 
 	Real getField(Field f) const { return m_field[f]; }
 	void setField(Field f, Real v) { m_field[f] = v; }
 	
-	void setFieldCustom(const AsciiString& customStatus, Field f, Real v) { 
-		/*for (CustomWeaponBonus::iterator it = m_field2[f].begin(); it != m_field2[f].end(); ++it)
+	/*void setFieldCustom(const AsciiString& customStatus, Field f, Real v) { 
+		for (CustomWeaponBonus::iterator it = m_field2[f].begin(); it != m_field2[f].end(); ++it)
 		{
 			if (customStatus == (it->first))
-			{	
-				it->second = v; 
+			{
+				it->second = v;
 				return;
 			}
 		}
 		AsciiStringReal c_bonus;
 		c_bonus.first = customStatus; 
 		c_bonus.second = v;
-		m_field2[f].push_back(c_bonus);*/
+		m_field2[f].push_back(c_bonus);
 
 		CustomWeaponBonus::iterator it = m_field2[f].find(customStatus);
 
@@ -381,14 +380,13 @@ public:
 		{
 			m_field2[f][customStatus] = v;
 		}
-	}
+	}*/
 
 	void appendBonuses(WeaponBonus& bonus) const;
-	void appendBonusesCustom(const AsciiString& customStatus, WeaponBonus& bonus) const;
+	//void appendBonusesCustom(const AsciiString& customStatus, WeaponBonus& bonus) const;
 
 private:
 	Real m_field[FIELD_COUNT];
-	CustomWeaponBonus m_field2[FIELD_COUNT];
 
 };
 
@@ -406,6 +404,8 @@ static const char *const TheWeaponBonusFieldNames[] =
 static_assert(ARRAY_SIZE(TheWeaponBonusFieldNames) == WeaponBonus::FIELD_COUNT + 1, "Incorrect array size");
 #endif
 
+//typedef const WeaponBonus* ConstWeaponBonusPtr;
+typedef std::hash_map< NameKeyType, WeaponBonus, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > CustomWeaponBonusMap;
 
 //-------------------------------------------------------------------------------------------------
 class WeaponBonusSet : public MemoryPoolObject
@@ -413,9 +413,10 @@ class WeaponBonusSet : public MemoryPoolObject
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( WeaponBonusSet, "WeaponBonusSet" )
 private:
 	WeaponBonus m_bonus[WEAPONBONUSCONDITION_COUNT];
+	CustomWeaponBonusMap m_customBonus;
 
 public:
-	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, ObjectCustomStatusType customFlags) const;
+	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, const std::vector<AsciiString>& customFlags) const;
 	//void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const;
 
 	void parseWeaponBonusSet(INI* ini);
@@ -700,7 +701,7 @@ public:
 	Bool passRequirements (const Object *source) const;
 	Int calcROFForMoving(const Object *source, Int Delay) const;
 
-	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const ObjectCustomStatusType *extraBonusCustomFlags = NULL) const;
+	void private_computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const std::vector<AsciiString>& extraBonusCustomFlags) const;
 
 	void privateDoShrapnel(ObjectID sourceID, ObjectID victimID, const Coord3D *pos) const;
 
@@ -1018,9 +1019,9 @@ public:
 	// return true if we auto-reloaded our clip after firing.
 	Bool fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID* projectileID = NULL, const Coord3D* sourcePos = NULL, ObjectID shrapnelLaunchID = INVALID_ID);
 
-	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags = NULL, Bool inflictDamage = TRUE);
+	void fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
-	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags = NULL, Bool inflictDamage = TRUE);
+	void fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
 	void preFireWeapon( const Object *source, const Object *victim );
 
@@ -1301,8 +1302,6 @@ public:
 	void setClipPercentFull(Real percent, Bool allowReduction);
 	UnsignedInt getSuspendFXFrame( void ) const { return m_suspendFXFrame; }
 
-	void computeFiringTrackerBonus(Object *me, const Object *victim);
-	void computeFiringTrackerBonusClear(Object *me);
 	//Real computeBuffedBonus(const Object *me, const Object *victim, Int f) const;
 
 protected:
@@ -1319,7 +1318,7 @@ protected:
 		WeaponBonusConditionFlags extraBonusFlags,
 		ObjectID* projectileID,
 		Bool inflictDamage,
-		const ObjectCustomStatusType *extraBonusCustomFlags = NULL,
+		const std::vector<AsciiString>& extraBonusCustomFlags,
 		const Coord3D* sourcePos = NULL,
 		ObjectID shrapnelLaunchID = INVALID_ID
 	);
@@ -1330,7 +1329,7 @@ protected:
 
 	void getFiringLineOfSightOrigin(const Object* source, Coord3D& origin) const;
 
-	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const ObjectCustomStatusType *extraBonusCustomFlags = NULL) const;
+	void computeBonus(const Object *source, WeaponBonusConditionFlags extraBonusFlags, WeaponBonus& bonus, const std::vector<AsciiString>& extraBonusCustomFlags) const;
 
 	void rebuildScatterTargets(Bool recenter = false);
 
@@ -1401,7 +1400,7 @@ public:
 	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, const Coord3D* pos, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
 	void createAndFireTempWeaponOnSpot(const WeaponTemplate* w, const Object *source, Object *target, const Coord3D* sourcePos, ObjectID shrapnelLaunchID);
 
-	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const ObjectCustomStatusType *extraBonusCustomFlags = NULL, Bool inflictDamage = TRUE);
+	void handleProjectileDetonation( const WeaponTemplate* w, const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage = TRUE);
 
 	static void parseWeaponTemplateDefinition(INI* ini);
 
@@ -1433,7 +1432,6 @@ private:
 		ObjectID m_delaySourceID;										///< who dealt the damage (by ID since it might be dead due to delay)
 		ObjectID m_delayIntendedVictimID;						///< who the damage was intended for (or zero if no specific target)
 		WeaponBonus m_bonus;												///< the weapon bonus to use
-		CustomWeaponBonus m_customBonus;
 	};
 
 	std::vector<WeaponTemplate*> m_weaponTemplateVector;

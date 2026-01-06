@@ -243,7 +243,7 @@ public:
 
 	virtual Bool isWeaponBonusPassedToPassengers() const;
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const;
-	virtual ObjectCustomStatusType getCustomWeaponBonusPassedToPassengers() const;
+	virtual const std::vector<AsciiString>& getCustomWeaponBonusPassedToPassengers() const;
 
 	virtual void enableLoadSounds( Bool enable ) { m_loadSoundsEnabled = enable; }
 

@@ -215,13 +215,7 @@ void FreeFallProjectileBehavior::projectileLaunchAtObjectOrPosition(
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
 	m_extraBonusFlags = launcher ? launcher->getWeaponBonusCondition() : 0;
 	if(launcher)
-	{
 		m_extraBonusCustomFlags = launcher->getCustomWeaponBonusCondition();
-	}
-	else 
-	{
-		m_extraBonusCustomFlags.clear();
-	}
 
 	if (d->m_applyLauncherBonus) {
 		if(m_extraBonusFlags != 0)
@@ -391,7 +385,7 @@ void FreeFallProjectileBehavior::detonate()
 	Object* obj = getObject();
 	if (m_detonationWeaponTmpl)
 	{
-		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, &m_extraBonusCustomFlags, !m_noDamage);
+		TheWeaponStore->handleProjectileDetonation(m_detonationWeaponTmpl, obj, obj->getPosition(), m_extraBonusFlags, m_extraBonusCustomFlags, !m_noDamage);
 
 		if (getFreeFallProjectileBehaviorModuleData()->m_detonateCallsKill)
 		{
@@ -621,6 +615,36 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 	xfer->xferBool( &m_isJammed );
 
 	xfer->xferObjectID(&m_shrapnelLaunchID);
+
+	xfer->xferUnsignedInt(&m_extraBonusFlags);
+
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for (std::vector<AsciiString>::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
+		{
+			AsciiString bonusName = (*it);
+			xfer->xferAsciiString(&bonusName);
+		}
+		AsciiString empty;
+		xfer->xferAsciiString(&empty);
+	}
+	else if (xfer->getXferMode() == XFER_LOAD)
+	{
+		if (m_extraBonusCustomFlags.empty() == false)
+		{
+			DEBUG_CRASH(( "GameLogic::xfer - m_extraBonusCustomFlags should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+		
+		for (;;) 
+		{
+			AsciiString bonusName;
+			xfer->xferAsciiString(&bonusName);
+			if (bonusName.isEmpty())
+				break;
+			m_extraBonusCustomFlags.push_back(bonusName);
+		}
+	}
 
 }
 

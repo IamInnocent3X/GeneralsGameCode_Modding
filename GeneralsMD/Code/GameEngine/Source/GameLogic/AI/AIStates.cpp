@@ -5976,7 +5976,7 @@ void AIAttackState::onExit( StateExitType status )
 	Weapon *curWeapon = obj->getCurrentWeapon();
 	if (curWeapon)
 	{
-		curWeapon->computeFiringTrackerBonusClear(obj);
+		obj->computeFiringTrackerBonusClear(curWeapon);
 
 		// Release My Weapon Lock if I am currently Locked in Priority
 		if(obj->isCurWeaponLockedPriority())

@@ -120,7 +120,7 @@ private:
 	const WeaponTemplate*	m_detonationWeaponTmpl;		///< weapon to fire at end (or null)
 	UnsignedInt						m_lifespanFrame;					///< if we haven't collided by this frame, blow up anyway
 	WeaponBonusConditionFlags		m_extraBonusFlags;
-	ObjectCustomStatusType 			m_extraBonusCustomFlags;
+	std::vector<AsciiString> 			m_extraBonusCustomFlags;
 	Bool                  	m_noDamage;
 	UnsignedInt				m_framesTillDecoyed;
 	UnsignedInt				m_detonateDistance;

@@ -300,8 +300,8 @@ void ShieldBody::attemptDamage(DamageInfo* damageInfo)
 
 	ObjectStatusMaskType objStatus = obj->getStatusBits();
 	WeaponBonusConditionFlags objFlags = obj->getWeaponBonusCondition();
-	ObjectCustomStatusType objCustomStatus = obj->getCustomStatus();
-	ObjectCustomStatusType objCustomFlags = obj->getCustomWeaponBonusCondition();
+	std::vector<AsciiString> objCustomStatus = obj->getCustomStatus();
+	std::vector<AsciiString> objCustomFlags = obj->getCustomWeaponBonusCondition();
 	armorBonus *= getCurrentArmor().scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
 
 	damageInfo->in.m_amount *= armorBonus;

@@ -386,8 +386,8 @@ Real ActiveBody::estimateDamage( DamageInfoInput& damageInfo ) const
 	// Compute Armor Bonuses based on Status Types, Weapon Bonus Conditions and Custom Weapon Bonus Conditions
 	ObjectStatusMaskType objStatus = getObject()->getStatusBits();
 	WeaponBonusConditionFlags objFlags = getObject()->getWeaponBonusCondition();
-	ObjectCustomStatusType objCustomStatus = getObject()->getCustomStatus();
-	ObjectCustomStatusType objCustomFlags = getObject()->getCustomWeaponBonusCondition();
+	std::vector<AsciiString> objCustomStatus = getObject()->getCustomStatus();
+	std::vector<AsciiString> objCustomFlags = getObject()->getCustomWeaponBonusCondition();
 	amount *= m_curArmor.scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
 	
 	// Compute damage according to Armor Coefficient.
@@ -487,8 +487,8 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 
 	ObjectStatusMaskType objStatus = obj->getStatusBits();
 	WeaponBonusConditionFlags objFlags = obj->getWeaponBonusCondition();
-	ObjectCustomStatusType objCustomStatus = obj->getCustomStatus();
-	ObjectCustomStatusType objCustomFlags = obj->getCustomWeaponBonusCondition();
+	std::vector<AsciiString> objCustomStatus = obj->getCustomStatus();
+	std::vector<AsciiString> objCustomFlags = obj->getCustomWeaponBonusCondition();
 	armorBonus *= m_curArmor.scaleArmorBonus(objStatus, objFlags, objCustomStatus, objCustomFlags);
 
 	amount *= armorBonus;

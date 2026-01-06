@@ -62,6 +62,9 @@ public:
 
 	virtual UpdateSleepTime update();	///< See if spin down is needed because we haven't shot in a while
 
+	void computeFiringTrackerBonus(const Weapon *weaponToFire, const Object *victim);
+	void computeFiringTrackerBonusClear(const Weapon *weaponToFire);
+
 protected:
 
 	/*
@@ -90,5 +93,9 @@ private:
 	AudioHandle			m_audioHandle;
 
 	WeaponBonusConditionFlags m_prevTargetWeaponBonus;  ///< weaponBonus against previous target
-	ObjectCustomStatusType	m_prevTargetCustomWeaponBonus;  ///< custom weaponBonus against previous target
+	std::vector<AsciiString>	m_prevTargetCustomWeaponBonus;  ///< custom weaponBonus against previous target
+
+	Bool 				m_firingTrackerBonusCleared; ///< have I cleared my Tracker Bonus
+	ObjectStatusMaskType		m_prevTargetStatus;  ///< previous Target's Status
+	std::vector<AsciiString>	m_prevTargetCustomStatus;  ///< previous Target's Custom Status
 };
