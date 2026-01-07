@@ -168,11 +168,11 @@ public:
 	CustomDamageType m_customDamageTypeParse;
 	AsciiString m_customDamageTypeParseNext;
 
-	Bool findNameInTypesList(NameKeyType nameKey, Real damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType);
-	Bool isNameInTypesList(NameKeyType nameKey) const;
+	Bool findNameInTypesList(NameKeyType nameKey, Real &damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType);
+	//Bool isNameInTypesList(NameKeyType nameKey) const;
 	std::vector<NameKeyType> GetLinkInTypesList(NameKeyType nameKey);
-	DamageType GetDeclaredLinkDamageType(NameKeyType nameKey);
-	Real GetDeclaredCoefficient(NameKeyType nameKey);
+	//DamageType GetDeclaredLinkDamageType(NameKeyType nameKey);
+	//Real GetDeclaredCoefficient(NameKeyType nameKey);
 
 	static void parseArmorDefinition(INI* ini);
 	static void parseArmorExtendDefinition(INI* ini);

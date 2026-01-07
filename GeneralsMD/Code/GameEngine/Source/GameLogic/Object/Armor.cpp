@@ -190,15 +190,12 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 		for(CustomDamageTypeVec::const_iterator it = m_customCoefficients.begin(); it != m_customCoefficients.begin(); ++it )
 		{
 			if (nameKey == it->first)
-			{
-				damage *= it->second;
-				return damage;
-			}
+				return damage *= it->second;
 		}
 
 		// returns true if found multiplier
 		DamageType declaredLinkedDamage = DAMAGE_NUM_TYPES;
-		if(TheArmorStore->findNameInTypesList(nameKey, damage, m_customMultCoefficients, declaredLinkedDamage))
+		if(TheArmorStore->findNameInTypesList(nameKey, damage, m_customCoefficients, declaredLinkedDamage))
 		{
 			if(declaredLinkedDamage != DAMAGE_NUM_TYPES)
 				damage *= m_damageCoefficient[declaredLinkedDamage];
@@ -331,10 +328,9 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 	{
 		// Compatible with ArmorExtend
 		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( damageNameStr );
-		CustomDamageTypeVec::iterator it = self->m_customCoefficients.begin();
 
 		Bool hasSet = false;
-		for(it; it != self->m_customCoefficients.end(); ++it)
+		for(CustomDamageTypeVec::iterator it = self->m_customCoefficients.begin(); it != self->m_customCoefficients.end(); ++it)
 		{
 			if(it->first == nameKey)
 			{
@@ -381,10 +377,9 @@ void ArmorTemplate::parseArmorMultiplier(INI* ini, void* instance, void* /* stor
 	else
 	{
 		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( damageNameStr );
-		CustomDamageTypeVec::iterator it = self->m_customMultCoefficients.begin();
 
 		Bool hasSet = false;
-		for(it; it != self->m_customMultCoefficients.end(); ++it)
+		for(CustomDamageTypeVec::iterator it = self->m_customMultCoefficients.begin(); it != self->m_customMultCoefficients.end(); ++it)
 		{
 			if(it->first == nameKey)
 			{
@@ -694,15 +689,14 @@ void ArmorStore::parseCustomDamageTypesDefinition(INI* ini)
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType)
+Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real &damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType)
 {
 	CustomDamageTypesMap::const_iterator it = m_customDamageTypes.find(nameKey);
 	if(it != m_customDamageTypes.end())
 	{
 		// Find if any of CustomDamageType is assigned with any of the CustomArmor.
 		// Ignore if the unit does not haven any CustomArmor Coefficient assigned or the Linked Custom Armor List is empty.
-		std::vector<NameKeyType> nameKeyListParent;
-		nameKeyListParent = GetLinkInTypesList(nameKey);
+		std::vector<NameKeyType> nameKeyListParent = it->second.m_customDamageTypeLink;
 		if (!coefficients.empty() && !nameKeyListParent.empty())
 		{
 			//std::vector<NameKeyType> nameKeyListParent;
@@ -716,9 +710,7 @@ Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real damage, const Cus
 			{
 				// Check if there's a String List that exists for the Child.
 				// If we do, clear the parents DNA that has been searched and find relative Childs DNA.
-				//nameKeyListParent.clear();
 				nameKeyListParent = nameKeyListChild;
-				nameKeyListChild.clear();
 
 				// Begin finding the LinkedCustomDamageTypes and see if they are exactly the same as configured Custom Armor List.
 				for (std::vector<NameKeyType>::const_iterator it2 = nameKeyListParent.begin();
@@ -729,11 +721,11 @@ Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real damage, const Cus
 					// This is to prevent infinite loop.
 					//if(nameKeyListChecked[*it2] == 1)
 					Bool checked = FALSE;
-					for (std::vector<NameKeyType>::const_iterator str_it = nameKeyListChecked.begin();
-						str_it != nameKeyListChecked.end();
-						++str_it)
+					for (std::vector<NameKeyType>::const_iterator key_it = nameKeyListChecked.begin();
+						key_it != nameKeyListChecked.end();
+						++key_it)
 					{
-						if((*str_it) == (*it2))
+						if((*key_it) == (*it2))
 						{
 							checked = TRUE;
 							break;
@@ -786,27 +778,24 @@ Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real damage, const Cus
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool ArmorStore::isNameInTypesList(NameKeyType nameKey) const
+/*Bool ArmorStore::isNameInTypesList(NameKeyType nameKey) const
 {
 	CustomDamageTypesMap::const_iterator it = m_customDamageTypes.find(nameKey);
 
 	// The found the CustomDamageType at the declared CustomDamageTypes data.
 	if (it != m_customDamageTypes.end())
-	{
 		return TRUE;
-	}
-	return FALSE;
-}
+	else
+		return FALSE;
+}*/
 
 //-------------------------------------------------------------------------------------------------
 std::vector<NameKeyType> ArmorStore::GetLinkInTypesList(NameKeyType nameKey)
 {
 	CustomDamageTypesMap::const_iterator it = m_customDamageTypes.find(nameKey);
-	for(it; it != m_customDamageTypes.end(); ++it)
-	{
-		if(it->first == nameKey)
-			return it->second.m_customDamageTypeLink;
-	}
+	if(it != m_customDamageTypes.end())
+		return it->second.m_customDamageTypeLink;
+
 	std::vector<NameKeyType> dummyList;
 	return dummyList;
 
@@ -819,7 +808,7 @@ std::vector<NameKeyType> ArmorStore::GetLinkInTypesList(NameKeyType nameKey)
 }
 
 //-------------------------------------------------------------------------------------------------
-DamageType ArmorStore::GetDeclaredLinkDamageType(NameKeyType nameKey)
+/*DamageType ArmorStore::GetDeclaredLinkDamageType(NameKeyType nameKey)
 {
 	CustomDamageTypesMap::const_iterator it = m_customDamageTypes.find(nameKey);
 
@@ -847,3 +836,4 @@ Real ArmorStore::GetDeclaredCoefficient(NameKeyType nameKey)
 	}
 	return -1.0f;
 }
+*/

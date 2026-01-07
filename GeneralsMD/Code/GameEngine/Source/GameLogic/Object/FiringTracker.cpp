@@ -246,18 +246,12 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 	m_prevTargetCustomStatus = victimCustomStatus;
 
 	// Test for Bonuses Provided by the weapon template.
+	/// The bonuses are granted when any of the statuses are found on the target
 	if(!customWeaponBonusType.isEmpty() && !victimCustomStatus.empty())
 	{
 		for (std::vector<AsciiString>::const_iterator it = customWeaponStatusTypes.begin(); it != customWeaponStatusTypes.end(); ++it )
 		{
-			for (std::vector<AsciiString>::const_iterator it2 = victimCustomStatus.begin(); it2 != victimCustomStatus.end(); ++it2 )
-			{
-				if((*it) == (*it2))
-				{
-					DoStatusBuff = TRUE;
-					break;
-				}
-			}
+			DoStatusBuff = checkWithinStringVec((*it), victimCustomStatus);
 			if(DoStatusBuff)
 				break;
 			/*std::vector<AsciiString>::const_iterator it2 = victimCustomStatus.find(*it);
@@ -272,11 +266,9 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 	{
 		for (std::vector<ObjectStatusTypes>::const_iterator it = weaponStatusTypes.begin(); it != weaponStatusTypes.end(); ++it)
 		{
-			if( victim->testStatus(*it) )
-			{
-				DoStatusBuff = TRUE;
+			DoStatusBuff = victim->testStatus(*it);
+			if(DoStatusBuff)
 				break;
-			}
 		}
 	}
 	if( DoStatusBuff == TRUE )
@@ -300,16 +292,7 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 		if(!customWeaponBonusType.isEmpty())
 		{
 			// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-			Bool doClearBonus = TRUE;
-			for (std::vector<AsciiString>::const_iterator it = customWeaponBonusTypeNoClear.begin(); it != customWeaponBonusTypeNoClear.end(); ++it )
-			{
-				if((*it) == customWeaponBonusType)
-				{
-					doClearBonus = FALSE;
-					break;
-				}
-			}
-			if(doClearBonus)
+			if(!checkWithinStringVec(customWeaponBonusType, customWeaponBonusTypeNoClear))
 				me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
 
 			//if(it != customWeaponBonusTypeNoClear.end())
@@ -337,10 +320,10 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 	// Test for each of the Custom Bonuses within the Global Data
 	if(!globalTrackerCustomCT.empty())
 	{
-		
+
 		for (std::vector<GlobalData::TrackerCustomBonusCT>::const_iterator it = globalTrackerCustomCT.begin(); it != globalTrackerCustomCT.end(); ++it )
 		{
-			
+
 			Bool DoBuffGlobal = FALSE;
 			// Test for the Custom Statuses first
 			/*if(!victimCustomStatus.empty())
@@ -359,14 +342,7 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 			{
 				for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
 				{
-					for (std::vector<AsciiString>::const_iterator it3 = victimCustomStatus.begin(); it3 != victimCustomStatus.end(); ++it3 )
-					{
-						if((*it2) == (*it3))
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
+					DoBuffGlobal = checkWithinStringVec((*it2), victimCustomStatus);
 					if(DoBuffGlobal)
 						break;
 				}
@@ -374,13 +350,11 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 			// If don't have the required status, Test for all the ObjectStatuses
 			if(!DoBuffGlobal && !it->status.empty())
 			{
-				for (std::vector<ObjectStatusTypes>::const_iterator it4 = it->status.begin(); it4 != it->status.end(); ++it4)
+				for (std::vector<ObjectStatusTypes>::const_iterator it3 = it->status.begin(); it3 != it->status.end(); ++it3)
 				{
-					if( victim->testStatus(*it4) )
-					{
-						DoBuffGlobal = TRUE;
+					DoBuffGlobal = victim->testStatus(*it3);
+					if(DoBuffGlobal)
 						break;
-					}
 				}
 			}
 
@@ -395,16 +369,7 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 				else
 				{
 					// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-					Bool doClearBonus = TRUE;
-					for (std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear.begin(); it2 != customWeaponBonusTypeNoClear.end(); ++it2 )
-					{
-						if((*it2) == it->bonus)
-						{
-							doClearBonus = FALSE;
-							break;
-						}
-					}
-					if(doClearBonus)
+					if(!checkWithinStringVec(it->bonus, customWeaponBonusTypeNoClear))
 						me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
 					//std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
 
@@ -428,24 +393,17 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 	// Test for each of the Weapon Bonuses within the Global Data
 	if(!globalTrackerCT.empty())
 	{
-		
+
 		for (std::vector<GlobalData::TrackerBonusCT>::const_iterator it = globalTrackerCT.begin(); it != globalTrackerCT.end(); ++it )
 		{
-			
+
 			Bool DoBuffGlobal = FALSE;
 			// Test for the custom statuses first
 			if(!victimCustomStatus.empty())
 			{
 				for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
 				{
-					for (std::vector<AsciiString>::const_iterator it3 = victimCustomStatus.begin(); it3 != victimCustomStatus.end(); ++it3 )
-					{
-						if((*it2) == (*it3))
-						{
-							DoBuffGlobal = TRUE;
-							break;
-						}
-					}
+					DoBuffGlobal = checkWithinStringVec((*it2), victimCustomStatus);
 					if(DoBuffGlobal)
 						break;
 				}
@@ -465,13 +423,11 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 			// If don't have the required status, Test for all the ObjectStatuses
 			if(!DoBuffGlobal && !it->status.empty())
 			{
-				for (std::vector<ObjectStatusTypes>::const_iterator it4 = it->status.begin(); it4 != it->status.end(); ++it4)
+				for (std::vector<ObjectStatusTypes>::const_iterator it3 = it->status.begin(); it3 != it->status.end(); ++it3)
 				{
-					if( victim->testStatus(*it4) )
-					{
-						DoBuffGlobal = TRUE;
+					DoBuffGlobal = victim->testStatus(*it3);
+					if(DoBuffGlobal)
 						break;
-					}
 				}
 			}
 
@@ -567,16 +523,7 @@ void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
 			if(!it->bonus.isEmpty())
 			{
 				// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
-				Bool doClearBonus = TRUE;
-				for (std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear.begin(); it2 != customWeaponBonusTypeNoClear.end(); ++it2 )
-				{
-					if((*it2) == it->bonus)
-					{
-						doClearBonus = FALSE;
-						break;
-					}
-				}
-				if(doClearBonus)
+				if(!checkWithinStringVec(it->bonus, customWeaponBonusTypeNoClear))
 					me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
 				//std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear->find(it->bonus);
 
@@ -603,9 +550,7 @@ void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
 			{
 				// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
 				if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
-				{
 					me->clearWeaponBonusCondition(it->bonus, FALSE);
-				}
 			}
 		}
 	}

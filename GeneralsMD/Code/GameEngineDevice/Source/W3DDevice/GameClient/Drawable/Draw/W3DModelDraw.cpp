@@ -4990,8 +4990,6 @@ void W3DModelDraw::xfer( Xfer *xfer )
 
 	xfer->xferBool( &m_needUpdateTurretPosition );
 
-	xfer->xferBool( &m_doHandleRecoil );
-
 	xfer->xferBool( &m_canDoFXWhileHidden );
 
 }
@@ -5005,6 +5003,7 @@ void W3DModelDraw::loadPostProcess( void )
 	// extend base class
 	DrawModule::loadPostProcess();
 
+	m_doHandleRecoil = TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------

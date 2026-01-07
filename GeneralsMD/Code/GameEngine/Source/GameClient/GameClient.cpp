@@ -951,6 +951,15 @@ void GameClient::removeDrawableFromEfficientList(Drawable *draw)
 	}
 }
 
+/** -----------------------------------------------------------------------------------------------
+ * Clear Efficient Drawable List, Mark for Later
+ */
+void GameClient::clearEfficientDrawablesList()
+{
+	m_drawablesIterateListMarkedForClear = TRUE;
+	TheTacticalView->setUpdateEfficient();
+}
+
 /**Helper function to update fake GLA structures to become visible to certain players.
 We should only call this during critical moments, such as changing teams, changing to
 observer, etc.*/

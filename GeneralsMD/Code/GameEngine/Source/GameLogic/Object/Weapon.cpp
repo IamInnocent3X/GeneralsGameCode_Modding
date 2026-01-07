@@ -1019,64 +1019,10 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 		return damageAmount;
 	}
 
-	VeterancyLevel v = sourceObj->getVeterancyLevel();
-
 	DamageType damageType = getDamageType();
 	DeathType deathType = getDeathType();
 
 	AsciiString customDamageType = getCustomDamageType();
-	AsciiString customDeathType = getCustomDeathType();
-
-	Bool IsFlame = getIsFlame();
-	Bool ProjectileCollidesWithBurn = getProjectileCollidesWithBurn();
-	Bool IsPoison = getIsPoison();
-	Bool PoisonMuzzleFlashesGarrison = getPoisonMuzzleFlashesGarrison();
-	Bool IsDisarm = getIsDisarm();
-	Bool KillsGarrison = getKillsGarrison();
-	Int KillsGarrisonAmount = getKillsGarrisonAmount();
-	AsciiString SpecificVoice = PlaySpecificVoice();
-	DamageType DamageFXOverride = getDamageFXOverride();
-	
-	Real StatusDuration = getStatusDuration();
-	Bool DoStatusDamage = getDoStatusDamage(v);
-	Bool StatusDurationTypeCorrelate = getStatusDurationTypeCorrelate();
-	TintStatus TintStatusType = getTintStatusType(v);
-	AsciiString CustomTintStatusType = getCustomTintStatusType(v);
-
-	Bool IsSubdual = getIsSubdual(v);
-	Bool subdualDealsNormalDamage = getSubdualDealsNormalDamage(v);
-	Real subdualDamageMultiplier = getSubdualDamageMultiplier(v);
-	KindOfMaskType subdualForbiddenKindOf = getSubdualForbiddenKindOf();
-
-	Bool IsNotAbsoluteKill = getIsNotAbsoluteKill();
-
-	Bool ClearsParasite = getClearsParasite();
-	std::vector<AsciiString> ClearsParasiteKeys = getClearsParasiteKeys();
-
-	Bool IsMissileAttractor = getIsMissileAttractor();
-	Bool SubdueProjectileNoDamage = getSubdueProjectileNoDamage();
-
-	AsciiString SubdualCustomType = getSubdualCustomType();
-
-	AsciiString CustomSubdualCustomTint = getCustomSubdualCustomTint(v);
-	TintStatus CustomSubdualTint = getCustomSubdualTint(v);
-	Bool CustomSubdualHasDisable = getCustomSubdualHasDisable(v);
-	Bool CustomSubdualHasDisableProjectiles = getCustomSubdualHasDisableProjectiles(v);
-	Bool CustomSubdualClearOnTrigger = getCustomSubdualClearOnTrigger(v);
-	Bool CustomSubdualDoStatus = getCustomSubdualDoStatus(v);
-	const ObjectCreationList *CustomSubdualOCL = getCustomSubdualOCL(v);
-
-	DisabledType CustomSubdualDisableType = getCustomSubdualDisableType();
-	Bool CustomSubdualRemoveSubdualTintOnDisable =  getCustomSubdualRemoveSubdualTintOnDisable();
-	TintStatus CustomSubdualDisableTint = getCustomSubdualDisableTint();
-	AsciiString CustomSubdualDisableCustomTint = getCustomSubdualDisableCustomTint();
-	AsciiString CustomSubdualDisableSound =  getCustomSubdualDisableSound();
-	AsciiString CustomSubdualDisableRemoveSound =  getCustomSubdualDisableRemoveSound();
-
-	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
-
-	Real MinDamageHeight = getMinDamageHeight();
-	Real MaxDamageHeight = getMaxDamageHeight();
 
 	if ( victimObj->isKindOf(KINDOF_SHRUBBERY) )
 	{
@@ -1141,46 +1087,7 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	damageInfo.m_deathType = deathType;
 	damageInfo.m_sourceID = sourceObj->getID();
 	damageInfo.m_amount = damageAmount;
-	damageInfo.m_isFlame = IsFlame;
-	damageInfo.m_projectileCollidesWithBurn = ProjectileCollidesWithBurn;
-	damageInfo.m_isPoison = IsPoison;
-	damageInfo.m_poisonMuzzleFlashesGarrison = PoisonMuzzleFlashesGarrison;
-	damageInfo.m_isDisarm = IsDisarm;
-	damageInfo.m_killsGarrison = KillsGarrison;
-	damageInfo.m_killsGarrisonAmount = KillsGarrisonAmount;
-	damageInfo.m_playSpecificVoice = SpecificVoice;
-	damageInfo.m_damageFXOverride = DamageFXOverride;
-	damageInfo.m_statusDuration = StatusDuration;
-	damageInfo.m_doStatusDamage = DoStatusDamage;
-	damageInfo.m_statusDurationTypeCorrelate = StatusDurationTypeCorrelate;
-	damageInfo.m_tintStatus = TintStatusType;
-	damageInfo.m_customTintStatus = CustomTintStatusType;
-	damageInfo.m_isSubdual = IsSubdual;
-	damageInfo.m_subdualDealsNormalDamage = subdualDealsNormalDamage;
-	damageInfo.m_subdualDamageMultiplier = subdualDamageMultiplier;
-	damageInfo.m_subdualForbiddenKindOf = subdualForbiddenKindOf;
-	damageInfo.m_notAbsoluteKill = IsNotAbsoluteKill;
-	damageInfo.m_clearsParasite = ClearsParasite;
-	damageInfo.m_clearsParasiteKeys = ClearsParasiteKeys;
-	damageInfo.m_isMissileAttractor = IsMissileAttractor;
-	damageInfo.m_subduedProjectileNoDamage = SubdueProjectileNoDamage;
-	damageInfo.m_subdualCustomType = SubdualCustomType;
-	damageInfo.m_customSubdualCustomTint = CustomSubdualCustomTint;
-	damageInfo.m_customSubdualTint = CustomSubdualTint;
-	damageInfo.m_customSubdualHasDisable = CustomSubdualHasDisable;
-	damageInfo.m_customSubdualHasDisableProjectiles = CustomSubdualHasDisableProjectiles;
-	damageInfo.m_customSubdualClearOnTrigger = CustomSubdualClearOnTrigger;
-	damageInfo.m_customSubdualDoStatus = CustomSubdualDoStatus;
-	damageInfo.m_customSubdualOCL = CustomSubdualOCL;
-	damageInfo.m_customSubdualDisableType = CustomSubdualDisableType;
-	damageInfo.m_customSubdualDisableTint = CustomSubdualDisableTint;
-	damageInfo.m_customSubdualDisableCustomTint = CustomSubdualDisableCustomTint;
-	damageInfo.m_customSubdualRemoveSubdualTintOnDisable = CustomSubdualRemoveSubdualTintOnDisable;
-	damageInfo.m_customSubdualDisableSound = CustomSubdualDisableSound;
-	damageInfo.m_customSubdualDisableRemoveSound = CustomSubdualDisableRemoveSound;
-	damageInfo.m_protectionTypes = ProtectionTypes;
-	damageInfo.m_minDamageHeight = MinDamageHeight;
-	damageInfo.m_maxDamageHeight = MaxDamageHeight;
+	damageInfo.m_customDamageType = customDamageType;
 	return victimObj->estimateDamage(damageInfo);
 }
 
@@ -3688,19 +3595,10 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
 	flags |= extraBonusFlags;
 
+	Int flagSize = customFlags.size();
 	for( std::vector<AsciiString>::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
 	{
-		Bool hasSet = FALSE;
-		std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
-		for(it_2; it_2 != customFlags.end(); ++it_2)
-		{
-			if((*it_2) == (*it))
-			{
-				hasSet = TRUE;
-				break;
-			}
-		}
-		if(!hasSet)
+		if(!checkWithinStringVecSize((*it), customFlags, flagSize))
 			customFlags.push_back(*it);
 	}
 	
@@ -3717,20 +3615,11 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 
 			if(!unitCustomFlags.empty())
 			{
-				for( std::vector<AsciiString>::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
+				flagSize = customFlags.size();
+				for( std::vector<AsciiString>::const_iterator it2 = unitCustomFlags.begin(); it2 != unitCustomFlags.end(); ++it2 )
 				{
-					Bool hasSet = FALSE;
-					std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
-					for(it_2; it_2 != customFlags.end(); ++it_2)
-					{
-						if((*it_2) == (*it))
-						{
-							hasSet = TRUE;
-							break;
-						}
-					}
-					if(!hasSet)
-						customFlags.push_back(*it);
+					if(!checkWithinStringVecSize((*it2), unitCustomFlags, flagSize))
+						customFlags.push_back(*it2);
 				}
 			}
 		}
@@ -3756,22 +3645,13 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
 	flags |= extraBonusFlags;
 
+	Int flagSize = customFlags.size();
 	for( std::vector<AsciiString>::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
 	{
-		Bool hasSet = FALSE;
-		std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
-		for(it_2; it_2 != customFlags.end(); ++it_2)
-		{
-			if((*it_2) == (*it))
-			{
-				hasSet = TRUE;
-				break;
-			}
-		}
-		if(!hasSet)
+		if(!checkWithinStringVecSize((*it), customFlags, flagSize))
 			customFlags.push_back(*it);
 	}
-	
+
 	if (source->getContainedBy())
 	{
 		// We may be able to add in our container's flags
@@ -3785,20 +3665,11 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 
 			if(!unitCustomFlags.empty())
 			{
-				for( std::vector<AsciiString>::const_iterator it = unitCustomFlags.begin(); it != unitCustomFlags.end(); ++it )
+				flagSize = customFlags.size();
+				for( std::vector<AsciiString>::const_iterator it2 = unitCustomFlags.begin(); it2 != unitCustomFlags.end(); ++it2 )
 				{
-					Bool hasSet = FALSE;
-					std::vector<AsciiString>::const_iterator it_2 = customFlags.begin();
-					for(it_2; it_2 != customFlags.end(); ++it_2)
-					{
-						if((*it_2) == (*it))
-						{
-							hasSet = TRUE;
-							break;
-						}
-					}
-					if(!hasSet)
-						customFlags.push_back(*it);
+					if(!checkWithinStringVecSize((*it2), unitCustomFlags, flagSize))
+						customFlags.push_back(*it2);
 				}
 			}
 		}
