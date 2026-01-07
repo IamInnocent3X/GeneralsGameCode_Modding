@@ -682,6 +682,18 @@ void GameInfo::setSeed( Int seed )
 	m_seed = seed;
 }
 
+/*void GameInfo::setNewSeedInFrame( UnsignedInt frame, Int seed )
+{
+	if(frame == 0)
+		m_seedsInFrames.clear();
+	
+	std::pair<UnsignedInt, Int> seedInFrame;
+	seedInFrame.first = frame;
+	seedInFrame.second = seed;
+
+	m_seedsInFrames.push_back(seedInFrame);
+}*/
+
 void GameInfo::setSlotPointer( Int index, GameSlot *slot )
 {
 	if (index < 0 || index >= MAX_SLOTS)
@@ -1613,6 +1625,44 @@ void SkirmishGameInfo::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt(&m_mapSize);
 	xfer->xferInt(&m_mapMask);
 	xfer->xferInt(&m_seed);
+
+	/*UnsignedShort seedFrameSize = m_seedsInFrames.size();
+	xfer->xferUnsignedShort(seedFrameSize);
+
+	UnsignedInt frame;
+	Int seed;
+	if(xfer->getXferMode() == XFER_SAVE)
+	{
+		for(int i = 0; i < seedFrameSize; i++)
+		{
+			frame = m_seedsInFrames.first;
+			xfer->xferUnsignedInt(&frame);
+
+			seed = m_seedsInFrames.second;
+			xfer->xferInt(&seed);
+		}
+	}
+	else
+	{
+		if (m_seedsInFrames.empty() == false)
+		{
+			DEBUG_CRASH(( "GameInfo::xfer - m_seedsInFrames should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+
+		for(int i = 0; i < seedFrameSize; i++)
+		{
+			xfer->xferUnsignedInt(&frame);
+			xfer->xferInt(&seed);
+
+			std::pair<UnsignedInt, Int> seedInFrame;
+			seedInFrame.first = frame;
+			seedInFrame.second = seed;
+
+			m_seedsInFrames.push_back(seedInFrame);
+		}
+	}
+	*/
 
   if ( version >= 3 )
   {

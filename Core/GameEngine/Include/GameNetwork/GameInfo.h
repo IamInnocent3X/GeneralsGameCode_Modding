@@ -247,6 +247,7 @@ protected:
 	UnsignedInt m_mapSize;
 	Int m_mapMask;
 	Int m_seed;
+	//std::vector<std::pair<UnsignedInt, Int>> m_seedsInFrames;
 	Int m_useStats;
   Money         m_startingCash;
   UnsignedShort m_superweaponRestriction;

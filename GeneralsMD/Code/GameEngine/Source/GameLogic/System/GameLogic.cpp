@@ -2436,33 +2436,13 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
   // Loading Save Games doesn't change the Seed. So need to declare it here.
   // Note: Recorder might not playback correctly if the seed is changed.
-  if( loadingSaveGame && !isInMultiplayerGame() && TheRecorder && !TheRecorder->isPlaybackMode() )
+  if( !TheGlobalData->m_initRandomType.isEmpty() && ( loadingSaveGame || m_gameMode == GAME_SKIRMISH ) && !isInMultiplayerGame() && TheRecorder && !TheRecorder->isPlaybackMode() )
   {
-	  Real newSeed;
-	  if(TheGlobalData->m_initRandomType == "MORE_RANDOM")
-	  {
-		  newSeed = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
-		  newSeed*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-newSeed, newSeed)))));
-	  }
-	  else if(TheGlobalData->m_initRandomType == "EXHAUSTIVE")
-	  {
-		  // 
-		  UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
-		  Int verysilly = silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3));
-		  silly = GameLogicRandomValue(0, verysilly);
-		  for (UnsignedInt poo = 0; poo < silly; ++poo)
-		  {
-			  GameLogicRandomValue(0, 1);	// ignore result
-		  }
-		  silly *= silly;
-		  Int fullsilly = max(Int(silly+1), Int(1e10));
-		  newSeed = GameLogicRandomValue(silly, fullsilly);
-	  }
-	  else if(TheGlobalData->m_initRandomType == "TIME")
-	  {
-		  newSeed = time(NULL);
-	  }
-	  InitRandom(Int(newSeed));
+	  InitRandomType(TheGlobalData->m_initRandomType, TheSkirmishGameInfo ? TheSkirmishGameInfo->getSeed() : 0, TRUE );
+	  //InitRandomType(TheGlobalData->m_initRandomType, GetTickCount(), TRUE);
+	  //if(TheSkirmishGameInfo)
+	  //	TheSkirmishGameInfo->setSeed(GetGameLogicRandomSeed());
+	  //TheGameInfo->setNewSeedInFrame(getFrame(), GetGameLogicRandomSeed());
 
 	  //DEBUG_LOG(("Game Loaded. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), UnsignedInt(newSeed)));
   }

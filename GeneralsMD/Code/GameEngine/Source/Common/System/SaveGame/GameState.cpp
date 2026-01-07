@@ -739,35 +739,7 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 	if( getSaveGameInfo()->saveFileType == SAVE_FILE_TYPE_MISSION )
 	{
 
-		if(TheGlobalData->m_initRandomType == "MORE_RANDOM")
-		{
-			Real value = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
-			value*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-value, value)))));
-			InitRandom(Int(value));
-		}
-		else if(TheGlobalData->m_initRandomType == "EXHAUSTIVE")
-		{
-			// 
-			UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
-			Int verysilly = silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3));
-			silly = GameLogicRandomValue(0, verysilly);
-			for (UnsignedInt poo = 0; poo < silly; ++poo)
-			{
-				GameLogicRandomValue(0, 1);	// ignore result
-			}
-			silly *= silly;
-			Int fullsilly = max(Int(silly+1), Int(1e10));
-			Int value = GameLogicRandomValue(silly, fullsilly);
-			InitRandom(value);
-		}
-		else if(TheGlobalData->m_initRandomType == "TIME")
-		{
-			InitRandom();
-		}
-		else
-		{
-			InitRandom(0);
-		}
+		InitRandomType(TheGlobalData->m_initRandomType);
 		//DEBUG_LOG(("Saving Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 
 		TheWritableGlobalData->m_pendingFile = getSaveGameInfo()->missionMapName;
