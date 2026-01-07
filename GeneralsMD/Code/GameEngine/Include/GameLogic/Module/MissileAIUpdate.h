@@ -71,6 +71,8 @@ public:
 
 	Bool m_applyLauncherBonus;     ///< Apply the launcher's weapon bonus flags (for any non-detonate triggered weapon)
 
+	Bool m_isTorpedo; ///< die outside of water, strike objects from below.
+
 	Bool						m_allowSubdual;
 	Bool						m_allowAttract;
 
