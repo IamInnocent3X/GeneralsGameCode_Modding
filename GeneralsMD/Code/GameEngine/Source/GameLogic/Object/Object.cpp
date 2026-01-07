@@ -1270,7 +1270,21 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 	// A faster way of determining whether to trigger status change.
 	Bool isDifferent = false;
 
+	if(set)
+	{
+		if(!checkWithinStringVec(customStatus, m_customStatusSet))
+		{
+			isDifferent = TRUE;
+			m_customStatusSet.push_back(customStatus);
+		}
+	}
+	else
+	{
+		isDifferent = removeWithinStringVec(customStatus, m_customStatusSet);
+	}
+
 	// TO-DO: Change to Hash_Map. DONE.
+	/// Reverted from Hash_Maps due to overhead it gives from copying.
 	/*ObjectCustomStatusType::iterator it = m_customStatus.find(customStatus);
 
 	if (it != m_customStatus.end()) 
@@ -1295,38 +1309,6 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 
 		isDifferent = TRUE;
 	}*/
-
-	std::vector<AsciiString>::iterator it = m_customStatusSet.begin();
-	if(set)
-	{
-		Bool hasSet = FALSE;
-		for(it; it != m_customStatusSet.end(); ++it)
-		{
-			if((*it) == customStatus)
-			{
-				hasSet = TRUE;
-				break;
-			}
-		}
-		if(!hasSet)
-		{
-			isDifferent = TRUE;
-			m_customStatusSet.push_back(customStatus);
-		}
-	}
-	else
-	{
-		for(it; it != m_customStatusSet.end();)
-		{
-			if((*it) == customStatus)
-			{
-				it = m_customStatusSet.erase( it );
-				isDifferent = TRUE;
-				break;
-			}
-			++it;
-		}
-	}
 	
 	if (isDifferent == TRUE)
 	{
@@ -1357,12 +1339,7 @@ void Object::setCustomStatus( const AsciiString& customStatus, Bool set )
 //=============================================================================
 Bool Object::testCustomStatus(const AsciiString& cst) const
 {
-	for(int i = 0; i < m_customStatusSet.size(); i++)
-	{
-		if(m_customStatusSet[i] == cst)
-			return TRUE;
-	}
-	return FALSE;
+	return checkWithinStringVec(cst, m_customStatusSet);
 }
 
 //=============================================================================
@@ -1375,39 +1352,20 @@ void Object::setCustomStatus( const std::vector<AsciiString>& customStatus, Bool
 	// A faster way of determining whether to trigger status change.
 	Bool isDifferent = false;
 
-	std::vector<AsciiString>::const_iterator str_it;
-	for(str_it = customStatus.begin(); str_it != customStatus.end(); ++str_it)
+	for(std::vector<AsciiString>::const_iterator it = customStatus.begin(); it != customStatus.end(); ++it)
 	{
-		std::vector<AsciiString>::iterator it = m_customStatusSet.begin();
 		if(set)
 		{
-			Bool hasSet = FALSE;
-			for(it; it != m_customStatusSet.end(); ++it)
-			{
-				if((*it) == (*str_it))
-				{
-					hasSet = TRUE;
-					break;
-				}
-			}
-			if(!hasSet)
+			if(!checkWithinStringVec((*it), m_customStatusSet))
 			{
 				isDifferent = TRUE;
-				m_customStatusSet.push_back(*str_it);
+				m_customStatusSet.push_back(*it);
 			}
 		}
 		else
 		{
-			for(it; it != m_customStatusSet.end();)
-			{
-				if((*it) == (*str_it))
-				{
-					it = m_customStatusSet.erase( it );
-					isDifferent = TRUE;
-					break;
-				}
-				++it;
-			}
+			if(removeWithinStringVec((*it), m_customStatusSet))
+				isDifferent = TRUE;
 		}
 		/*ObjectCustomStatusType::iterator it = m_customStatus.find(*str_it);
 
@@ -1466,16 +1424,7 @@ Bool Object::testCustomStatusForAll(const std::vector<AsciiString>& cst) const
 {
 	for(std::vector<AsciiString>::const_iterator it = cst.begin(); it != cst.end(); ++it)
 	{
-		Bool hasSet = FALSE;
-		for(std::vector<AsciiString>::const_iterator it2 = m_customStatusSet.begin(); it2 != m_customStatusSet.end(); ++it2)
-		{
-			if((*it) == (*it2))
-			{
-				hasSet = TRUE;
-				break;
-			}
-		}
-		if(!hasSet)
+		if(!checkWithinStringVec((*it), m_customStatusSet))
 			return FALSE;
 		/*ObjectCustomStatusType::const_iterator it2 = m_customStatus.find(*it);
 		if (it2 != m_customStatus.end()) 
@@ -3343,18 +3292,12 @@ void Object::doDisablePower(Bool isCommand)
 	for (Int i = 0; i < weaponBonuses.size(); i++) {
 		setWeaponBonusCondition(weaponBonuses[i]);
 	}
-	for(std::vector<AsciiString>::const_iterator it = customWeaponBonuses.begin(); it != customWeaponBonuses.end(); ++it)
-	{
-		setCustomWeaponBonusCondition( *it );
-	}
+
+	applyCustomWeaponBonusConditionFlags(customWeaponBonuses);
 
 	// Status to Set
 	setStatus(getTemplate()->getStatusUnderPowered());
-	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusUnderPowered();
-	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
-	{
-		setCustomStatus( *it );
-	}
+	setCustomStatus(getTemplate()->getCustomStatusUnderPowered());
 
 	// Model Condition to Set
 	if (m_drawable)
@@ -3413,18 +3356,12 @@ void Object::clearDisablePower(Bool isCommand)
 	for (Int i = 0; i < weaponBonuses.size(); i++) {
 		clearWeaponBonusCondition(weaponBonuses[i]);
 	}
-	for(std::vector<AsciiString>::const_iterator it = customWeaponBonuses.begin(); it != customWeaponBonuses.end(); ++it)
-	{
-		clearCustomWeaponBonusCondition( *it );
-	}
+
+	removeCustomWeaponBonusConditionFlags(customWeaponBonuses);
 
 	// Status to Set
 	clearStatus(getTemplate()->getStatusUnderPowered());
-	std::vector<AsciiString> customStatuses = getTemplate()->getCustomStatusUnderPowered();
-	for(std::vector<AsciiString>::const_iterator it = customStatuses.begin(); it != customStatuses.end(); ++it)
-	{
-		clearCustomStatus( *it );
-	}
+	clearCustomStatus(getTemplate()->getCustomStatusUnderPowered());
 
 	// Model Condition to Set
 	if (m_drawable)
@@ -6400,17 +6337,7 @@ void Object::applyCustomWeaponBonusConditionFlags(const std::vector<AsciiString>
 
 	for(std::vector<AsciiString>::const_iterator it = flags.begin(); it != flags.end(); ++it)
 	{
-		Bool hasSet = FALSE;
-
-		for(int i = 0; i < curSize; i++)
-		{
-			if((*it) == m_customWeaponBonusCondition[i])
-			{
-				hasSet = TRUE;
-				break;
-			}
-		}
-		if(!hasSet)
+		if(!checkWithinStringVecSize((*it), m_customWeaponBonusCondition, curSize))
 		{
 			isDifferent = TRUE;
 			m_customWeaponBonusCondition.push_back(*it);
@@ -6440,17 +6367,8 @@ void Object::removeCustomWeaponBonusConditionFlags(const std::vector<AsciiString
 
 	for(std::vector<AsciiString>::const_iterator it = flags.begin(); it != flags.end(); ++it)
 	{
-		std::vector<AsciiString>::iterator it_2 = m_customWeaponBonusCondition.begin();
-		for(it_2; it_2 != m_customWeaponBonusCondition.end();)
-		{
-			if((*it) == (*it_2))
-			{
-				it_2 = m_customWeaponBonusCondition.erase( it_2 );
-				isDifferent = true;
-				break;
-			}
-			++it_2;
-		}
+		if(removeWithinStringVec((*it), m_customWeaponBonusCondition))
+			isDifferent = true;
 		/*std::vector<AsciiString>::iterator it_2 = m_customWeaponBonusCondition.find((*it).first);
 		if (it_2 != m_customWeaponBonusCondition.end()) 
 		{
@@ -6486,18 +6404,7 @@ void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnor
 		m_customWeaponBonusCondition[cst] = 1;
 	}*/
 
-	Bool hasSet = FALSE;
-	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusCondition.begin();
-	for(it; it != m_customWeaponBonusCondition.end(); ++it)
-	{
-		if((*it) == cst)
-		{
-			hasSet = TRUE;
-			break;
-		}
-	}
-
-	if(!hasSet)
+	if(!checkWithinStringVec(cst, m_customWeaponBonusCondition))
 	{
 		isDifferent = TRUE;
 		m_customWeaponBonusCondition.push_back(cst);
@@ -6516,24 +6423,12 @@ void Object::setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnor
 //-------------------------------------------------------------------------------------------------
 void Object::clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear)
 {
-	Bool isDifferent = false;
-	// TO-DO: Change to Hash_Map. DONE.
-	std::vector<AsciiString>::iterator it = m_customWeaponBonusCondition.begin();
-	for(it; it != m_customWeaponBonusCondition.end();)
-	{
-		if((*it) == cst)
-		{
-			it = m_customWeaponBonusCondition.erase( it );
-			isDifferent = true;
-			break;
-		}
-		++it;
-	}
+	//Bool isDifferent = false;
 
 	if(setIgnoreClear)
 		clearCustomWeaponBonusConditionIgnoreClear(cst);
 
-	if( isDifferent )
+	if( removeWithinStringVec(cst, m_customWeaponBonusCondition) )
 	{
 		// Our weapon bonus just changed, so we need to immediately update our weapons
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
@@ -6555,95 +6450,39 @@ void Object::clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst)
 //-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
 {
-	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionIC.begin();
-
-	Bool hasSet = FALSE;
-	for(it; it != m_customWeaponBonusConditionIC.end(); ++it)
-	{
-		if((*it) == cst)
-		{
-			hasSet = TRUE;
-			break;
-		}
-	}
-
-	if(!hasSet)
+	if(!checkWithinStringVec(cst, m_customWeaponBonusConditionIC))
 		m_customWeaponBonusConditionIC.push_back(cst);
 }
 
 //-------------------------------------------------------------------------------------------------
 void Object::clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
 {
-	std::vector<AsciiString>::iterator it = m_customWeaponBonusConditionIC.begin();
-	for(it; it != m_customWeaponBonusConditionIC.end();)
-	{
-		if((*it) == cst)
-		{
-			it = m_customWeaponBonusConditionIC.erase( it );
-			break;
-		}
-		++it;
-	}
+	removeWithinStringVec(cst, m_customWeaponBonusConditionIC);
 }
 
 //-------------------------------------------------------------------------------------------------
 Bool Object::testCustomWeaponBonusCondition(const AsciiString& cst) const
 {
-	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusCondition.begin();
-
-	for(it; it != m_customWeaponBonusCondition.end(); ++it)
-	{
-		if((*it) == cst)
-			return TRUE;
-	}
-	return FALSE;
+	return checkWithinStringVec(cst, m_customWeaponBonusCondition);
 }
 
 //-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusConditionAgainst(const AsciiString& cst) 
 {
-	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionAgainst.begin();
-
-	Bool hasSet = FALSE;
-	for(it; it != m_customWeaponBonusConditionAgainst.end(); ++it)
-	{
-		if((*it) == cst)
-		{
-			hasSet = TRUE;
-			break;
-		}
-	}
-
-	if(!hasSet)
+	if(!checkWithinStringVec(cst, m_customWeaponBonusConditionAgainst))
 		m_customWeaponBonusConditionAgainst.push_back(cst);
 }
 
 //-------------------------------------------------------------------------------------------------
 void Object::clearCustomWeaponBonusConditionAgainst(const AsciiString& cst) 
 {
-	std::vector<AsciiString>::iterator it = m_customWeaponBonusConditionAgainst.begin();
-	for(it; it != m_customWeaponBonusConditionAgainst.end();)
-	{
-		if((*it) == cst)
-		{
-			it = m_customWeaponBonusConditionAgainst.erase( it );
-			break;
-		}
-		++it;
-	}
+	removeWithinStringVec(cst, m_customWeaponBonusConditionAgainst);
 }
 
 //-------------------------------------------------------------------------------------------------
 Bool Object::testCustomWeaponBonusConditionAgainst(const AsciiString& cst) const
 {
-	std::vector<AsciiString>::const_iterator it = m_customWeaponBonusConditionAgainst.begin();
-
-	for(it; it != m_customWeaponBonusConditionAgainst.end(); ++it)
-	{
-		if((*it) == cst)
-			return TRUE;
-	}
-	return FALSE;
+	return checkWithinStringVec(cst, m_customWeaponBonusConditionAgainst);
 }
 
 //-------------------------------------------------------------------------------------------------

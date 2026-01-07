@@ -29,4 +29,42 @@
 #pragma once
 
 typedef UnsignedInt WeaponBonusConditionFlags;
-typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ObjectCustomStatusType;
+//typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ObjectCustomStatusType;
+
+//-------------------------------------------------------------------------------------------------
+inline Bool checkWithinStringVec(const AsciiString& str, const std::vector<AsciiString>& vec)
+{
+	for(std::vector<AsciiString>::const_iterator it = vec.begin(); it != vec.end(); ++it)
+	{
+		if((*it) == str)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+inline Bool checkWithinStringVecSize(const AsciiString& str, const std::vector<AsciiString>& vec, Int size)
+{
+	for(int i = 0; i < size; i++)
+	{
+		if(str == vec[i])
+			return TRUE;
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+inline Bool removeWithinStringVec(const AsciiString& str, std::vector<AsciiString> &vec)
+{
+	std::vector<AsciiString>::iterator it = vec.begin();
+	for(it; it != vec.end();)
+	{
+		if((*it) == str)
+		{
+			it = vec.erase( it );
+			return TRUE;
+		}
+		++it;
+	}
+	return FALSE;
+}

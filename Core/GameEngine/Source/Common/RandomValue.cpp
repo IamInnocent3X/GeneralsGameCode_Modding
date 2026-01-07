@@ -192,6 +192,42 @@ DEBUG_LOG(( "InitRandom Logic %08lx",seed));
 #endif
 }
 
+void InitRandomType( const AsciiString& type, UnsignedInt tickCount, Bool gameLogicOnly )
+{
+	Int value = tickCount;
+	if(type == "MORE_RANDOM")
+	{
+		Real val = GameLogicRandomValueReal(-PI,PI)*GameLogicRandomValue(0,100);
+		val*= GameLogicRandomValueReal(0.0f,max(Real(GameLogicRandomValue(10,1e8)), Real(fabs(GetGameLogicRandomSeed()*GameLogicRandomValueReal(-value, value)))));
+		value = REAL_TO_INT(val);
+	}
+	else if(type == "EXHAUSTIVE")
+	{
+		UnsignedInt silly = UnsignedInt((GetGameLogicRandomSeed()*GameLogicRandomValueReal(-2.0f,2.0f))) % 7;
+		Int verysilly = fabs(silly * GameLogicRandomValueReal(0.0f, Real(GetGameLogicRandomSeed() % 3)));
+		silly = GameLogicRandomValue(0, verysilly);
+		for (UnsignedInt poo = 0; poo < silly; ++poo)
+		{
+			GameLogicRandomValue(0, 1);	// ignore result
+		}
+		silly *= silly;
+		Int fullsilly = max(Int(silly+1), Int(1e10));
+		value = GameLogicRandomValue(silly, fullsilly);
+	}
+	else if(type == "TIME" || type == "DETERMINISTIC")
+	{
+		time_t seconds = time( NULL );
+		value = seconds;
+	}
+
+	//DEBUG_LOG(("Seed value: %d", value));
+
+	if(gameLogicOnly)
+		InitGameLogicRandom(value);
+	else
+		InitRandom(value);
+}
+
 //
 // Integer random value
 //

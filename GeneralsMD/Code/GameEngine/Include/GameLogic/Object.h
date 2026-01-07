@@ -402,9 +402,9 @@ public:
 	void setStatus( ObjectStatusMaskType objectStatus, Bool set = true );
 	inline void clearStatus( ObjectStatusMaskType objectStatus ) { setStatus( objectStatus, false ); }
 	void setCustomStatus( const AsciiString& objectCustomStatus, Bool set = true );
-	inline void clearCustomStatus( const AsciiString& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
+	void clearCustomStatus( const AsciiString& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
 	void setCustomStatus( const std::vector<AsciiString>& objectCustomStatus, Bool set = true );
-	inline void clearCustomStatus( const std::vector<AsciiString>& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
+	void clearCustomStatus( const std::vector<AsciiString>& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
 	void updateUpgradeModules();	///< We need to go through our Upgrade Modules and see which should be activated
 	UpgradeMaskType getObjectCompletedUpgradeMask() const { return m_objectUpgradesCompleted; } ///< Upgrades I complete locally
 

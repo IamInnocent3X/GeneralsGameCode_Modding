@@ -102,22 +102,9 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	if( m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( m_requiredStatus ) )
 		return false;
 
-	if(!m_requiredCustomStatus.empty())
-	{
-		std::vector<AsciiString> customStatus = obj->getCustomStatus();
-		std::vector<AsciiString>::const_iterator it2;
-		for(std::vector<AsciiString>::const_iterator it = m_requiredCustomStatus.begin(); it != m_requiredCustomStatus.end(); ++it)
-		{
-			Bool hasRequired = true;
-			for(it2 = customStatus.begin(); it2 != obj->getCustomStatus().end(); ++it2) 
-			{
-				if((*it2) == (*it))
-					hasRequired = true;
-			}
-			if(!hasRequired)
-				return false;
-		}
-	}
+	// all 'required' custom statuses must be set for us to run
+	if(!obj->testCustomStatusForAll(m_requiredCustomStatus))
+		return false;
 
 	return true;
 }
