@@ -160,6 +160,16 @@ enum DistanceCalculationType CPP_11(: Int)
 };
 
 //=====================================
+/** */
+//=====================================
+enum HeightBoundaryCheckType CPP_11(: Int)
+{
+	DEFAULT_HEIGHT_CHECK				= 0,
+	SKIP_HEIGHT_CHECK					= 1,
+	BOUNDARY_HEIGHT_CHECK	= 2
+};
+
+//=====================================
 /**
 	a Plain Old Data structure that is used to get optional results from collidesWith().
 */
@@ -167,6 +177,7 @@ struct CollideLocAndNormal
 {
 	Coord3D loc;
 	Coord3D normal;
+	Real distSqr;
 };
 
 //=====================================
@@ -1530,7 +1541,8 @@ public:
 							const Coord3D* pos2,
 							const GeometryInfo& geom2,
 							Real angle2,
-							Bool passHeightCheck = FALSE
+							HeightBoundaryCheckType heightCheckType = DEFAULT_HEIGHT_CHECK,
+							Real *abDistSqr = NULL
   ) const;
 
 	/// finding legal positions in the world
