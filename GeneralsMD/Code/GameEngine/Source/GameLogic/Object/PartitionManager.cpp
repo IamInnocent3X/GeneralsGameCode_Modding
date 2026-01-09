@@ -358,19 +358,21 @@ static void testRotatedPointsAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
-	Int *avgTot
+	Int *avgTot,
+	Real *minDistSqr
 );
-static void testRotatedPointsAgainstSphere(
+/*static void testRotatedPointsAgainstSphere(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
-	Int *avgTot
-);
+	Int *avgTot,
+	Real *minDistSqr
+);*/
 static void testSphereAgainstRect(
-	const CollideInfo *b,
+	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
-	Coord2D *avg,
-	Int *avgTot
+	Real angle,
+	Real &distance
 );
 
 static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
@@ -414,7 +416,8 @@ static void testRotatedPointsAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
-	Int *avgTot
+	Int *avgTot,
+	Real *minDistSqr
 )
 {
 	//DEBUG_ASSERTCRASH(a->geom.getGeomType() == GEOMETRY_BOX, ("only boxes are ok here"));
@@ -445,66 +448,50 @@ static void testRotatedPointsAgainstRect(
 			avg->x += pts->x;
 			avg->y += pts->y;
 			*avgTot += 1;
+
+			Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
+			if(*minDistSqr > distanceSqr)
+				*minDistSqr = distanceSqr;
 		}
 	}
 }
 
 //-----------------------------------------------------------------------------
-static void testRotatedPointsAgainstSphere(
+/*static void testRotatedPointsAgainstSphere(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
-	Int *avgTot
+	Int *avgTot,
+	Real *minDistSqr
 )
 {
 	Real radius = a->geom.getMajorRadius();
 
+#ifdef INTENSE_DEBUG
 	Real circ_l = a->position.x - radius;
 	Real circ_r = a->position.x + radius;
 	Real circ_t = a->position.y - radius;
 	Real circ_b = a->position.y + radius;
+#endif
+
+	// Spheres have no angles
+	Real c = (Real)Cos(0);
+	Real s = (Real)Sin(0);
 
 	for (Int i = 0; i < 4; ++i, ++pts)
 	{
 		// convert to a delta relative to rect ctr
-		//#ifdef INTENSE_DEBUG
-		//Real ptx = pts->x - a->position.x;
-		//Real pty = pts->y - a->position.y;
-		//#endif
-		Real ptx_new;
-		Real pty_new;
-		switch(i)
-		{
-			// tl
-			case 0:
-				ptx_new = pts->x - circ_l;
-				pty_new = pts->y - circ_t;
-				break;
-			// tr
-			case 1:
-				ptx_new = pts->x - circ_r;
-				pty_new = pts->y - circ_t;
-				break;
-			// bl
-			case 2:
-				ptx_new = pts->x - circ_l;
-				pty_new = pts->y - circ_b;
-				break;
-			// br
-			case 3:
-				ptx_new = pts->x - circ_r;
-				pty_new = pts->y - circ_b;
-				break;
-		}
+		Real ptx = pts->x - a->position.x;
+		Real pty = pts->y - a->position.y;
 
 		// inverse-rotate it to the right coord system
-		ptx_new = fabs(ptx_new);
-		pty_new = fabs(pty_new);
+		Real ptx_new = (Real)fabs(ptx*c - pty*s);
+		Real pty_new = (Real)fabs(ptx*s + pty*c);
 
-		#ifdef INTENSE_DEBUG
-		Real mag_a = sqr(ptx)+sqr(pty);
-		Real mag_b = sqr(ptx_new)+sqr(pty_new);
-		DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
+#ifdef INTENSE_DEBUG
+		//Real mag_a = sqr(ptx)+sqr(pty);
+		//Real mag_b = sqr(ptx_new)+sqr(pty_new);
+		//DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
 
 		Bool pass = FALSE;
 		const Int MAXR = 32;
@@ -542,10 +529,10 @@ static void testRotatedPointsAgainstSphere(
 				sprintf( dir, "Bottom Right" );
 				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
 				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_r, circ_b));
-				DEBUG_LOG(("Coordinates - Circle, Top Left. X: %f. Y: %f", circ_t, circ_t));
+				DEBUG_LOG(("Coordinates - Circle, Top Left. X: %f. Y: %f", circ_l, circ_t));
 				break;
 		}
-		#endif
+#endif
 
 		if (ptx_new <= radius && pty_new <= radius)
 		{
@@ -559,6 +546,10 @@ static void testRotatedPointsAgainstSphere(
 			avg->x += pts->x;
 			avg->y += pts->y;
 			*avgTot += 1;
+
+			Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
+			if(*minDistSqr > distanceSqr)
+				*minDistSqr = distanceSqr;
 #ifdef INTENSE_DEBUG
 			DEBUG_LOG(("avgx: %f avgy: %f, avgTot: %d", avg->x, avg->y, *avgTot));
 		}
@@ -568,76 +559,126 @@ static void testRotatedPointsAgainstSphere(
 #endif
 		}
 	}
-}
+}*/
 
 //-----------------------------------------------------------------------------
 static void testSphereAgainstRect(
-	const CollideInfo *b,
+	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
-	Coord2D *avg,
-	Int *avgTot
+	Real angle,
+	Real &distance
 )
 {
-	Real radius = b->geom.getMajorRadius();
+	// Get two points that are closest to the facing direction
+	//DEBUG_LOG(("Source Points: x: %f y: %f", a->position.x, a->position.y));
+	Real x1, x2, y1, y2;
+	x1 = x2 = y1 = y2 = 0.0f;
 
-	Real circ_l = b->position.x - radius;
-	Real circ_r = b->position.x + radius;
-	Real circ_t = b->position.y - radius;
-	Real circ_b = b->position.y + radius;
-
-	Real major = a->geom.getMajorRadius();
-	Real minor = a->geom.getMinorRadius();
-
-	Real c = (Real)Cos(-a->angle);
-	Real s = (Real)Sin(-a->angle);
-
-	for (Int i = 0; i < 4; ++i)
+	Real dist[4];
+	Coord2D points[4];
+	for (Int i = 0; i < 4; ++i, ++pts)
 	{
-		// convert to a delta relative to rect ctr
-		Coord2D pts;
-		switch(i)
+		/*if(x1 != 0.0f && x2 != 0.0f)
+			break;
+		Real dir = atan2(pts->y - a->position.y, pts->x - a->position.x);
+		Real relAngle = stdAngleDiff(dir, angle);
+		DEBUG_LOG(( "Angle: %f", angle ));
+		DEBUG_LOG(( "Dir: %f", dir ));
+		DEBUG_LOG(( "Rel Angle: %f", relAngle ));
+		if(fabs(relAngle) <= PI/2)
 		{
-			// tl
-			case 0:
-				pts.x = circ_l;
-				pts.y = circ_t;
-				break;
-			// tr
-			case 1:
-				pts.x = circ_r;
-				pts.y = circ_t;
-				break;
-			// bl
-			case 2:
-				pts.x = circ_l;
-				pts.y = circ_b;
-				break;
-			// br
-			case 3:
-				pts.x = circ_r;
-				pts.y = circ_b;
-				break;
-		}
-		Real ptx = pts.x - a->position.x;
-		Real pty = pts.y - a->position.y;
+			switch(i)
+			{
+				// tl
+				case 0:
+					DEBUG_LOG(( "Top Left" ));
+					break;
+				// tr
+				case 1:
+					DEBUG_LOG(( "Top Right" ));
+					break;
+				// bl
+				case 2:
+					DEBUG_LOG(( "Bottom Left" ));
+					break;
+				// br
+				case 3:
+					DEBUG_LOG(( "Bottom Right" ));
+					break;
+			}
+			if(x1 == 0.0f && y1 == 0.0f)
+			{
+				x1 = pts->x;
+				y1 = pts->y;
+				DEBUG_LOG(("Point 1: x: %f y: %f", x1, y1));
+			}
+			else
+			{
+				x2 = pts->x;
+				y2 = pts->y;
+				DEBUG_LOG(("Point 2: x: %f y: %f", x2, y2));
+			}
+		}*/
+		points[i].x = pts->x;
+		points[i].y = pts->y;
+		dist[i] = sqr(pts->x - a->position.x) + sqr(pts->y - a->position.y);
+	}
 
-		// inverse-rotate it to the right coord system
-		Real ptx_new = (Real)fabs(ptx*c - pty*s);
-		Real pty_new = (Real)fabs(ptx*s + pty*c);
-
-		#ifdef INTENSE_DEBUG
-		Real mag_a = sqr(ptx)+sqr(pty);
-		Real mag_b = sqr(ptx_new)+sqr(pty_new);
-		DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
-		#endif
-
-		if (ptx_new <= major && pty_new <= minor)
+	Real minDist = HUGE_DIST_SQR;
+	Int minIdx, lastMinIdx;
+	for (Int i = 0; i < 4; i++)
+	{
+		if(minDist > dist[i])
 		{
-			avg->x += pts.x;
-			avg->y += pts.y;
-			*avgTot += 1;
+			minDist = dist[i];
+			minIdx = i;
 		}
 	}
+	x1 = points[minIdx].x;
+	y1 = points[minIdx].y;
+
+	lastMinIdx = minIdx;
+	minIdx = 4;
+	minDist = HUGE_DIST_SQR;
+	for (Int i = 0; i < 4; i++)
+	{
+		if(minDist > dist[i] && i != lastMinIdx)
+		{
+			minDist = dist[i];
+			minIdx = i;
+		}
+	}
+	x2 = points[minIdx].x;
+	y2 = points[minIdx].y;
+
+	DEBUG_ASSERTCRASH(minIdx <= 3, ("Hmm, this should not be possible."));
+
+	// Get the Triangle length of all 3 points
+	Real boundary_h_Sqr = sqr(x1 - x2) + sqr(y1 - y2);
+	Real boundary_1_Sqr = sqr(x1 - a->position.x) + sqr(y1 - a->position.y);
+	Real boundary_2_Sqr = sqr(x2 - a->position.x) + sqr(y2 - a->position.y);
+
+	Real boundary_h = sqrtf(boundary_h_Sqr);
+	Real boundary_1 = sqrtf(boundary_1_Sqr);
+	Real boundary_2 = sqrtf(boundary_2_Sqr);
+
+	// Heron's formula
+	Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
+	Real Area = sqrtf(semiPeri * (semiPeri - boundary_h) * (semiPeri - boundary_1) * (semiPeri - boundary_2));
+	distance = Area * 2 / boundary_h;
+
+	// Fast Hypothenus formula h = ((sqrt(2) - 1) * a) + b 1.41421356237
+	//sqr(boundary_1) = sqr(boundary_2) + sqr(boundary_h) - (2 * boundary_2 * boundary_h * cos(angle_1)); // b^2 = a^2 + c^2 - 2ac cos B 
+	//boundary_1 * sin(angle_2) = boundary_2 * sin(angle_1)
+
+	/*Real cosAngle_1 = (boundary_2_Sqr + boundary_h_Sqr - boundary_1_Sqr) * 0.5  / (boundary_2 * boundary_h);
+	Real angle_1 = (Real)Acos(cosAngle_1);
+	//Real sinAngle_2 = boundary_2 / boundary_1 * (Real)Sin(angle_1);
+	//Real angle_2 = (Real)Asin(sinAngle_2);
+
+	// After we got an angle we can calculate the radius required.
+	use boundary_2
+	Real angle_h = PI/2 - angle_1;*/
 }
 
 //-----------------------------------------------------------------------------
@@ -706,14 +747,22 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 	// library takes a similar shortcut when colliding spheres with boxes in 3d.
 	// so I figured it was probably good enough for us too.)
 
-	// IamInnocent - Added react to rectangle rotation
-	Coord2D pts[4];
-	Coord2D avg; avg.x = avg.y = 0.0f;
-	Int avgTot = 0;
+	// IamInnocent - Added trigonemtry checks for radius to bounds (expensive)
+	Coord3D diff;
+	vecDiff_3D(&b->position, &a->position, &diff);
+	Real distSqr = calcSqrDist_3D(&diff);
+	Real touchingDistSqr = sqr(a->geom.getBoundingSphereRadius() + b->geom.getMajorRadius());
+	if(distSqr > touchingDistSqr)
+		return false;
 
+	Coord2D pts[4];
 	rectToFourPoints(a, pts);
-	testRotatedPointsAgainstSphere(pts, b, &avg, &avgTot);
-	testSphereAgainstRect(b, a, &avg, &avgTot);
+
+	Real dir = atan2(diff.y, diff.x);
+	Real distance = 0.0f;
+	testSphereAgainstRect(pts, b, dir, distance);
+
+	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distance));
 
 	/*Real circ_l = b->position.x - b->geom.getMajorRadius();
 	Real circ_r = b->position.x + b->geom.getMajorRadius();
@@ -727,20 +776,41 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 	if (circ_r >= rect_l &&	circ_l <= rect_r &&
 		circ_b >= rect_t &&	circ_t <= rect_b)
 	*/
-	if (avgTot > 0)
+	if(distance <= b->geom.getMajorRadius())
 	{
 		if (cinfo)
 		{
-			vecDiff_2D(&b->position, &a->position, &cinfo->normal);
+			cinfo->normal = diff;
 			cinfo->normal.normalize();
+			cinfo->loc = b->position;
+			projectCoord3D(&cinfo->loc, &cinfo->normal, b->geom.getMajorRadius());
+
+			//vecDiff_2D(&b->position, &a->position, &cinfo->normal);
+			//cinfo->normal.normalize();
 			//cinfo->loc.x = (maxReal(circ_l, rect_l) + minReal(circ_r, rect_r)) * 0.5f;
 			//cinfo->loc.y = (maxReal(circ_t, rect_t) + minReal(circ_b, rect_b)) * 0.5f;
-			cinfo->loc.x = avg.x / avgTot;
-			cinfo->loc.y = avg.y / avgTot;
-			cinfo->loc.z = (a->position.z + b->position.z) * 0.5f;
+
+			//cinfo->loc.x = avg.x / avgTot;
+			//cinfo->loc.y = avg.y / avgTot;
+			//cinfo->loc.z = (a->position.z + b->position.z) * 0.5f;
+
+			// Get the distance for damage calculation
+			//if(minDistSqr < HUGE_DIST_SQR)
+			//{
+				//Real minDist = sqrtf(minDistSqr);
+				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
+				//minDist = minDist - boundingDistance;
+				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
+				//cinfo->distSqr = minDistSqr;
+			//}
+			cinfo->distSqr = sqr(distance);
 		}
 		return true;
 	}
+	//else
+	//{
+	//	DEBUG_LOG(("Rect_Circle XY check Failed"));
+	//}
 	return false;
 //#endif
 }
@@ -764,6 +834,9 @@ static Bool xy_collideTest_Circle_Circle(const CollideInfo *a, const CollideInfo
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
+			//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+			Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
+			cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 		}
 
 		return true;
@@ -780,12 +853,13 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 	Coord2D pts[4];
 	Coord2D avg; avg.x = avg.y = 0.0f;
 	Int avgTot = 0;
+	Real minDistSqr = HUGE_DIST_SQR;
 
 	rectToFourPoints(a, pts);
-	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot);
+	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, &minDistSqr);
 
 	rectToFourPoints(b, pts);
-	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot);
+	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, &minDistSqr);
 
 	if (avgTot > 0)
 	{
@@ -811,6 +885,16 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 			// I'm not sure we can do a whole lot better... (srj)
 			vecDiff_2D(&b->position, &a->position, &cinfo->normal);
 			cinfo->normal.normalize();
+
+			// Get the distance for damage calculation
+			if(minDistSqr < HUGE_DIST_SQR)
+			{
+				//Real minDist = sqrtf(minDistSqr);
+				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
+				//minDist = minDist - boundingDistance;
+				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
+				cinfo->distSqr = minDistSqr;
+			}
 		}
 		return true;
 	}
@@ -908,6 +992,8 @@ inline Bool z_collideTest_Nonsphere_Nonsphere(CollideTestProc xyproc, const Coll
 		// just need to adjust the z-coord of collideLoc
 		if (cinfo)
 		{
+			if(closeEnough)
+				cinfo->distSqr = 0.0f; // a is within b, it will have negative distance
 			if (b->position.z > a->position.z)
 				cinfo->loc.z = (b->position.z + a->position.z + a->geom.getMaxHeightAbovePosition()) * 0.5f;
 			else
@@ -934,6 +1020,9 @@ static Bool collideTest_Sphere_Sphere(const CollideInfo *a, const CollideInfo *b
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
+			//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+			Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
+			cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 		}
 
 		return true;
@@ -2235,18 +2324,53 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		const Coord3D* pos2,
 		const GeometryInfo& geom2,
 		Real angle2,
-		Bool passHeightCheck) const
+		HeightBoundaryCheckType heightCheckType,
+		Real *abDistSqr) const
 {
-	CollideInfo thisInfo(pos1, geom1, angle1);
-	CollideInfo thatInfo(pos2, geom2, angle2);
+	Real a_LowHeightBoundary;
+	Real a_HiHeightBoundary;
+	Real b_LowHeightBoundary;
+	Real b_HiHeightBoundary;
+
+	switch(heightCheckType)
+	{
+		case SKIP_HEIGHT_CHECK:
+			a_LowHeightBoundary = 0.0f;
+			a_HiHeightBoundary = HUGE_DIST;
+			b_LowHeightBoundary = b_HiHeightBoundary = pos2->z;
+			break;
+		case BOUNDARY_HEIGHT_CHECK:
+			a_LowHeightBoundary = pos1->z - geom1.getMaxHeightAbovePosition();
+			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
+			b_LowHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() - geom2.getBoundingSphereRadius();
+			b_HiHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() + geom2.getBoundingSphereRadius();
+			break;
+		default:
+			a_LowHeightBoundary = pos1->z;
+			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
+			b_LowHeightBoundary = pos2->z;
+			b_HiHeightBoundary = pos2->z + geom2.getMaxHeightAbovePosition();
+			break;
+	}
 
 	// invariant for all geometries: first do z collision check.
-	if ( (thisInfo.position.z + thisInfo.geom.getMaxHeightAbovePosition() >= thatInfo.position.z &&
-			thisInfo.position.z <= thatInfo.position.z + thatInfo.geom.getMaxHeightAbovePosition()) ||
-			passHeightCheck )
+	if ( a_HiHeightBoundary >= b_LowHeightBoundary &&
+			a_LowHeightBoundary <= b_HiHeightBoundary )
 	{
+		CollideInfo thisInfo(pos1, geom1, angle1);
+		CollideInfo thatInfo(pos2, geom2, angle2);
+
 		GeometryType thisGeom = geom1.getGeomType();
 		GeometryType thatGeom = geom2.getGeomType();
+
+#ifdef INTENSE_DEBUG
+		if(heightCheckType == BOUNDARY_HEIGHT_CHECK && thatGeom == GEOMETRY_BOX)
+		{
+			DEBUG_LOG(("A_geoType: %d, B_geoType: %d.", thisInfo.geom.getGeomType(), thatInfo.geom.getGeomType()));
+			DEBUG_LOG(("A_bot: %f, A_top: %f", a_LowHeightBoundary, a_HiHeightBoundary));
+			DEBUG_LOG(("B_bot default: %f, B_top default: %f.", b_LowHeightBoundary, b_HiHeightBoundary));
+		}
+#endif
 
 		//
 		// NOTE: This assumes geometry enumerations that start at GEOMETRY_FIRST AND depends on the
@@ -2254,7 +2378,11 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		//
 		CollideTestProc collideProc = theCollideTestProcs[ (thisGeom - GEOMETRY_FIRST) * GEOMETRY_NUM_TYPES + (thatGeom - GEOMETRY_FIRST) ];
 		CollideLocAndNormal cloc;
-		return (*collideProc)(&thisInfo, &thatInfo, &cloc);
+		Bool passCollide = (*collideProc)(&thisInfo, &thatInfo, &cloc);
+
+		if(abDistSqr)
+			*abDistSqr = cloc.distSqr;
+		return passCollide;
 	}
 	else
 	{
@@ -3565,30 +3693,35 @@ Object *PartitionManager::getClosestObjects(
 					continue;
 				thisMod->friend_setDoneFlag(theIterFlag);
 
-				Real thisDistSqr;
-				Coord3D distVec;
-				if (!(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
-					continue;
-
 				if (!filtersAllow(filters, thisObj))
 					continue;
 
+				Real thisDistSqr;
+				Coord3D distVec;
+				Bool useNewStructureCheck = FALSE;
 				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 				{
-					const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
-					if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+					if(geomInfo.getGeomType() == GEOMETRY_BOX)
 					{
+						useNewStructureCheck = TRUE;
 						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
-						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
-						{
-							//DEBUG_LOG(("Geometry Boundary Box Check Failed. TargetedObj: %s.", thisObj->getTemplate()->getName().str()));
-							//if(objToUse)
-							//	DEBUG_LOG(("Source: %s.", objToUse->getTemplate()->getName().str()));
-							continue;
-						}
+						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
+							continue;	
+							//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+
+						//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 					}
 				}
+				if (!useNewStructureCheck && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
+					continue;
 
+				//if(thisObj->isKindOf(KINDOF_STRUCTURE))
+				//{
+				//	DEBUG_LOG(("Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+				//	DEBUG_LOG(("Source Pos: X: %f Y: %f Z: %f", objPos->x, objPos->y, objPos->z));
+				//	DEBUG_LOG(("Object Pos: X: %f Y: %f Z: %f", thisObj->getPosition()->x, thisObj->getPosition()->y, thisObj->getPosition()->z));
+				//}
 				// ok, this is within the range, and the filters allow it.
 				// add it to the iter, if we have one....
 				if (iterArg)
@@ -3655,32 +3788,27 @@ Object *PartitionManager::getClosestObjects(
 
 			thisMod->friend_setDoneFlag(theIterFlag);
 
-			// hmm, ok, calc the distance.
-			Real thisDistSqr;
-			Coord3D distVec;
-			if (!(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
-				continue;
-
-			// check the filters now
+			// check the filters
 			if (!filtersAllow(filters, thisObj))
 				continue;
 
-			// IamInnocent - Check Bounding Box
+			// hmm, ok, calc the distance.
+			Real thisDistSqr;
+			Coord3D distVec;
+			Bool useNewStructureCheck = FALSE;
 			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 			{
-				const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
-				if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+				const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+				if(geomInfo.getGeomType() == GEOMETRY_BOX)
 				{
+					useNewStructureCheck = TRUE;
 					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
-					if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
-					{
-						//DEBUG_LOG(("Geometry Boundary Box Check Failed. TargetedObj: %s.", thisObj->getTemplate()->getName().str()));
-						//if(objToUse)
-						//	DEBUG_LOG(("Source: %s.", objToUse->getTemplate()->getName().str()));
+					if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 						continue;
-					}
 				}
 			}
+			if (!useNewStructureCheck && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
+				continue;
 
 			// ok, guess this is a winner!
 			if (iterArg)
@@ -4535,23 +4663,20 @@ Int PartitionManager::checkObjectsAlongLine(
 				Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
 				Real thisDistSqr;
 				Coord3D distVec;
-				if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
-					continue;
-
+				Bool useNewStructureCheck = FALSE;
 				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 				{
-					const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
-					if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+					if(geomInfo.getGeomType() == GEOMETRY_BOX)
 					{
-						Real checkRadius = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius : radius;
-						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, checkRadius, checkRadius, checkRadius );
-						if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
-						{
-							//DEBUG_LOG(("Geometry Boundary Box Check Failed. Object: %s", thisObj->getTemplate()->getName().str()));
+						useNewStructureCheck = TRUE;
+						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
+						if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 							continue;
-						}
 					}
 				}
+				if (!useNewStructureCheck && !(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+					continue;
 
 				//if( setContinue )
 				/*{
@@ -4726,23 +4851,21 @@ Int PartitionManager::checkObjectsAlongLine(
 			Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
 			Real thisDistSqr;
 			Coord3D distVec;
-			if (!(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
-				continue;
 
+			Bool useNewStructureCheck = FALSE;
 			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
 			{
-				const GeometryInfo* geomInfo = &thisObj->getGeometryInfo();
-				if(geomInfo && geomInfo->getGeomType() == GEOMETRY_BOX)
+				const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+				if(geomInfo.getGeomType() == GEOMETRY_BOX)
 				{
-					Real checkRadius = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius : radius;
-					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, checkRadius, checkRadius, checkRadius );
-					if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), *geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? TRUE : FALSE))
-					{
-						//DEBUG_LOG(("Geometry Boundary Box Check Failed. Object: %s", thisObj->getTemplate()->getName().str()));
+					useNewStructureCheck = TRUE;
+					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
+					if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 						continue;
-					}
 				}
 			}
+			if (!useNewStructureCheck && !(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
+				continue;
 
 			//if( setContinue )
 			/*{
