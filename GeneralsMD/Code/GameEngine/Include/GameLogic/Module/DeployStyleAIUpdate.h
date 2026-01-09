@@ -52,6 +52,7 @@ public:
 	Bool						m_turretsFunctionOnlyWhenDeployed;
 	Bool						m_turretsMustCenterBeforePacking;
 	Bool						m_manualDeployAnimations;
+	Bool						m_turnBeforeUnpacking;
 	Bool						m_removeStatusAfterTrigger;
 	Bool						m_deployNoRelocate;
 	Bool						m_moveAfterDeploy;
@@ -72,6 +73,7 @@ public:
 		m_turretsFunctionOnlyWhenDeployed = false;
 		m_turretsMustCenterBeforePacking = FALSE;
 		m_manualDeployAnimations = FALSE;
+		m_turnBeforeUnpacking = FALSE;
 		m_removeStatusAfterTrigger = FALSE;
 		m_deployInitiallyDisabled = FALSE;
 		m_deployNoRelocate = FALSE;
@@ -95,6 +97,7 @@ public:
 			{ "TurretsFunctionOnlyWhenDeployed", INI::parseBool,		NULL, offsetof( DeployStyleAIUpdateModuleData, m_turretsFunctionOnlyWhenDeployed ) },
 			{ "TurretsMustCenterBeforePacking", INI::parseBool,			NULL, offsetof( DeployStyleAIUpdateModuleData, m_turretsMustCenterBeforePacking ) },
 			{ "ManualDeployAnimations",	INI::parseBool,							NULL, offsetof( DeployStyleAIUpdateModuleData, m_manualDeployAnimations ) },
+			{ "TurnBeforeUnpacking",	INI::parseBool,							NULL, offsetof( DeployStyleAIUpdateModuleData, m_turnBeforeUnpacking ) },
 			{ "StatusToDeploy",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( DeployStyleAIUpdateModuleData, m_statusToDeploy ) },
 			{ "StatusToUndeploy",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( DeployStyleAIUpdateModuleData, m_statusToUndeploy ) },
 			{ "CustomStatusToDeploy",	INI::parseAsciiStringVector, NULL, 	offsetof( DeployStyleAIUpdateModuleData, m_customStatusToDeploy ) },
@@ -146,6 +149,8 @@ protected:
 
 	DeployStateTypes				m_state;
 	UnsignedInt							m_frameToWaitForDeploy;
+
+	Bool isWithinAttackAngle() const;
 	Bool							m_isInRange;
 	Bool							m_doDeploy;
 	Bool							m_doUndeploy;
