@@ -354,6 +354,7 @@ static void rectToFourPoints(
 	const CollideInfo *a,		// z is ignored
 	Coord2D pts[]
 );
+
 static void testRotatedPointsAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
@@ -368,10 +369,16 @@ static void testRotatedPointsAgainstRect(
 	Int *avgTot,
 	Real *minDistSqr
 );*/
+static Real fast_getBoundaryLength(
+	Real x1,
+	Real x2,
+	Real y1,
+	Real y2
+);
 static void testSphereAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
-	Real angle,
+	//Real angle,
 	Real &distance
 );
 
@@ -562,10 +569,34 @@ static void testRotatedPointsAgainstRect(
 }*/
 
 //-----------------------------------------------------------------------------
+static Real fast_getBoundaryLength(Real x1, Real x2, Real y1, Real y2)
+{
+	// Fast approximation of Boundary length, generally if one line has the length of only 10% or less of the other line, we take the longest line as the boundary.
+	// Has an error rate of approx 0.5%.
+	// Example: A line of dx = 5, and dy = 0.5, would give h = 5.025, we take dx directly
+	Real dx = fabs(x1 - x2);
+	Real dy = fabs(y1 - y2);
+
+	// Longest line and shortest between x and y
+	Real dmax = max(dx, dy);
+	Real dmin = min(dx, dy);
+	Real maxTolerance = 0.1f * dmax;
+	Real distTolerance = max(20.0f, 0.5f * maxTolerance);
+
+	// Two conditions:
+	// - the difference must be less than a maximum of 20 units, or 5% of the maximum length (to be not more than 1 whole unit)
+	// - the min length must be 10% or less than the max length
+	if(dmin < distTolerance && dmin <= maxTolerance)
+		return dmax;
+	else
+		return sqrtf(dx*dx + dy*dy);
+}
+
+//-----------------------------------------------------------------------------
 static void testSphereAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
-	Real angle,
+	//Real angle,
 	Real &distance
 )
 {
@@ -624,43 +655,49 @@ static void testSphereAgainstRect(
 		dist[i] = sqr(pts->x - a->position.x) + sqr(pts->y - a->position.y);
 	}
 
-	Real minDist = HUGE_DIST_SQR;
-	Int minIdx, lastMinIdx;
-	for (Int i = 0; i < 4; i++)
+	Real minDist;
+	Int minIdx;
+	Int lastMinIdx = -1;
+	while( TRUE )
 	{
-		if(minDist > dist[i])
+		minDist = HUGE_DIST_SQR;
+		minIdx = 4;
+		for (Int idx = 0; idx < 4; idx++)
 		{
-			minDist = dist[i];
-			minIdx = i;
+			if(minDist > dist[idx] && idx != lastMinIdx)
+			{
+				minDist = dist[idx];
+				minIdx = idx;
+			}
+		}
+		if(x1 == 0.0f && y1 == 0.0f)
+		{
+			x1 = points[minIdx].x;
+			y1 = points[minIdx].y;
+			lastMinIdx = minIdx;
+		}
+		else
+		{
+			x2 = points[minIdx].x;
+			y2 = points[minIdx].y;
+			break;
 		}
 	}
-	x1 = points[minIdx].x;
-	y1 = points[minIdx].y;
-
-	lastMinIdx = minIdx;
-	minIdx = 4;
-	minDist = HUGE_DIST_SQR;
-	for (Int i = 0; i < 4; i++)
-	{
-		if(minDist > dist[i] && i != lastMinIdx)
-		{
-			minDist = dist[i];
-			minIdx = i;
-		}
-	}
-	x2 = points[minIdx].x;
-	y2 = points[minIdx].y;
 
 	DEBUG_ASSERTCRASH(minIdx <= 3, ("Hmm, this should not be possible."));
 
 	// Get the Triangle length of all 3 points
-	Real boundary_h_Sqr = sqr(x1 - x2) + sqr(y1 - y2);
-	Real boundary_1_Sqr = sqr(x1 - a->position.x) + sqr(y1 - a->position.y);
-	Real boundary_2_Sqr = sqr(x2 - a->position.x) + sqr(y2 - a->position.y);
+	//Real boundary_h = fast_getBoundaryLength(x1, x2, y1, y2);
+	//Real boundary_1 = fast_getBoundaryLength(x1, a->position.x, y1, a->position.y);
+	//Real boundary_2 = fast_getBoundaryLength(x2, a->position.x, y2, a->position.y);
 
-	Real boundary_h = sqrtf(boundary_h_Sqr);
-	Real boundary_1 = sqrtf(boundary_1_Sqr);
-	Real boundary_2 = sqrtf(boundary_2_Sqr);
+	//Real boundary_h = sqrtf(sqr(x1 - x2) + sqr(y1 - y2));
+	//Real boundary_1 = sqrtf(sqr(x1 - a->position.x) + sqr(y1 - a->position.y));
+	//Real boundary_2 = sqrtf(sqr(x2 - a->position.x) + sqr(y2 - a->position.y));
+
+	Real boundary_h = Hypot(fabs(x1-x2), fabs(y1-y2));
+	Real boundary_1 = Hypot(fabs(x1 - a->position.x), fabs(y1 - a->position.y));
+	Real boundary_2 = Hypot(fabs(x2 - a->position.x), fabs(y2 - a->position.y));
 
 	// Heron's formula
 	Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
@@ -758,9 +795,8 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 	Coord2D pts[4];
 	rectToFourPoints(a, pts);
 
-	Real dir = atan2(diff.y, diff.x);
 	Real distance = 0.0f;
-	testSphereAgainstRect(pts, b, dir, distance);
+	testSphereAgainstRect(pts, b, distance);
 
 	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distance));
 
@@ -3707,7 +3743,7 @@ Object *PartitionManager::getClosestObjects(
 						useNewStructureCheck = TRUE;
 						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
 						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
-							continue;	
+							continue;
 							//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 
 						//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
@@ -6897,9 +6933,8 @@ Bool PartitionFilterAcceptByObjectCustomStatus::allow(Object *objOther)
 	{
 		for (std::vector<AsciiString>::const_iterator it = m_mustBeClear.begin(); it != m_mustBeClear.end(); ++it)
 		{
-			allow = objOther->testCustomStatus( *it );
-			if(!allow)
-				break;
+			if(objOther->testCustomStatus( *it ))
+				return FALSE;
 		}
 	}
 	return allow;

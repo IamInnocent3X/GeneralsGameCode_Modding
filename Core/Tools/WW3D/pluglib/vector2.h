@@ -344,7 +344,8 @@ inline Vector2 Normalize(const Vector2 & vec)
  *========================================================================*/
 inline float Vector2::Length() const
 {
-	return (float)WWMath::Sqrt(Length2());
+	return (float)WWMath::Hypot(X, Y);
+	//return (float)WWMath::Sqrt(Length2());
 }
 
 /**************************************************************************

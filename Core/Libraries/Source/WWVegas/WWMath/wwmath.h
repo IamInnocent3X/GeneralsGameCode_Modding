@@ -132,6 +132,10 @@ static WWINLINE float Acos(float val);
 static WWINLINE float Fast_Asin(float val);
 static WWINLINE float Asin(float val);
 
+static WWINLINE float Hypot(float x, float y);
+static WWINLINE float Hypot(float x, float y, float z);
+static WWINLINE float Hypot(float x, float y, float z, float w);
+
 
 static WWINLINE float		Atan(float x) { return static_cast<float>(atan(x)); }
 static WWINLINE float		Atan2(float y,float x) { return static_cast<float>(atan2(y,x)); }
@@ -538,6 +542,15 @@ WWINLINE float WWMath::Fast_Asin(float val)
 WWINLINE float WWMath::Asin(float val)
 {
 	return (float)asin(val);
+}
+
+// ----------------------------------------------------------------------------
+// Hypothenus
+// ----------------------------------------------------------------------------
+
+WWINLINE float WWMath::Hypot(float x, float y)
+{
+	return (float)hypot(x, y);
 }
 
 // ----------------------------------------------------------------------------

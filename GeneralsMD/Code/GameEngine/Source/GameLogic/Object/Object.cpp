@@ -105,6 +105,7 @@
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/SpecialAbilityUpdate.h"
 #include "GameLogic/Module/StatusDamageHelper.h"
+#include "GameLogic/Module/StealthDetectorUpdate.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/SubdualDamageHelper.h"
 #include "GameLogic/Module/ChronoDamageHelper.h"
@@ -6049,6 +6050,7 @@ void Object::removeUpgrade( const UpgradeTemplate *upgradeT )
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
 void Object::doObjectUpgradeChecks()
 {
 	if( testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || testStatus( OBJECT_STATUS_DESTROYED ) || getControllingPlayer() == NULL )
@@ -6076,8 +6078,16 @@ void Object::doObjectUpgradeChecks()
 	{
 		getStealth()->refreshUpdate();
 	}
+
+	static NameKeyType key_StealthDetectorUpdate = NAMEKEY( "StealthDetectorUpdate" );
+	StealthDetectorUpdate *SDupdate = (StealthDetectorUpdate*)findUpdateModule( key_StealthDetectorUpdate );
+	if( SDupdate )
+	{
+		SDupdate->doUpgrade();
+	}
 }
 
+//-------------------------------------------------------------------------------------------------
 void Object::doObjectStatusChecks()
 {
 	if( testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) || testStatus( OBJECT_STATUS_DESTROYED ) )
