@@ -369,7 +369,7 @@ static void testRotatedPointsAgainstRect(
 	Int *avgTot,
 	Real *minDistSqr
 );*/
-static Real fast_getBoundaryLength(
+static Real fast_hypot(
 	Real x1,
 	Real x2,
 	Real y1,
@@ -456,9 +456,12 @@ static void testRotatedPointsAgainstRect(
 			avg->y += pts->y;
 			*avgTot += 1;
 
-			Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
-			if(*minDistSqr > distanceSqr)
-				*minDistSqr = distanceSqr;
+			if(minDistSqr)
+			{
+				Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
+				if(*minDistSqr > distanceSqr)
+					*minDistSqr = distanceSqr;
+			}
 		}
 	}
 }
@@ -819,6 +822,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 		if (cinfo)
 		{
 			cinfo->normal = diff;
+			flipCoord3D(&cinfo->normal);
 			cinfo->normal.normalize();
 			cinfo->loc = b->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, b->geom.getMajorRadius());
@@ -841,7 +845,8 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
 				//cinfo->distSqr = minDistSqr;
 			//}
-			cinfo->distSqr = sqr(distance);
+			if(cinfo->getDistance)
+				cinfo->distSqr = sqr(distance);
 		}
 		return true;
 	}
@@ -872,9 +877,12 @@ static Bool xy_collideTest_Circle_Circle(const CollideInfo *a, const CollideInfo
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
-			//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
-			Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
-			cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			if(cinfo->getDistance)
+			{
+				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+				Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
+				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			}
 		}
 
 		return true;
@@ -894,10 +902,10 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 	Real minDistSqr = HUGE_DIST_SQR;
 
 	rectToFourPoints(a, pts);
-	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, &minDistSqr);
+	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : NULL);
 
 	rectToFourPoints(b, pts);
-	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, &minDistSqr);
+	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : NULL);
 
 	if (avgTot > 0)
 	{
@@ -925,7 +933,7 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 			cinfo->normal.normalize();
 
 			// Get the distance for damage calculation
-			if(minDistSqr < HUGE_DIST_SQR)
+			if(cinfo->getDistance && minDistSqr < HUGE_DIST_SQR)
 			{
 				//Real minDist = sqrtf(minDistSqr);
 				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
@@ -1058,9 +1066,12 @@ static Bool collideTest_Sphere_Sphere(const CollideInfo *a, const CollideInfo *b
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
-			//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
-			Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
-			cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			if(cinfo->getDistance)
+			{
+				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+				Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
+				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			}
 		}
 
 		return true;
@@ -2378,11 +2389,21 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 			b_LowHeightBoundary = b_HiHeightBoundary = pos2->z;
 			break;
 		case BOUNDARY_HEIGHT_CHECK:
+		{
 			a_LowHeightBoundary = pos1->z - geom1.getMaxHeightAbovePosition();
 			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
-			b_LowHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() - geom2.getBoundingSphereRadius();
-			b_HiHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() + geom2.getBoundingSphereRadius();
+			if(TheGlobalData->m_useAccurateSphereToRectCollision)
+			{
+				b_LowHeightBoundary = pos2->z;
+				b_HiHeightBoundary = pos2->z + geom2.getMaxHeightAbovePosition();
+			}
+			else
+			{
+				b_LowHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() - geom2.getBoundingSphereRadius();
+				b_HiHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() + geom2.getBoundingSphereRadius();
+			}
 			break;
+		}
 		default:
 			a_LowHeightBoundary = pos1->z;
 			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
@@ -2416,11 +2437,12 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		//
 		CollideTestProc collideProc = theCollideTestProcs[ (thisGeom - GEOMETRY_FIRST) * GEOMETRY_NUM_TYPES + (thatGeom - GEOMETRY_FIRST) ];
 		CollideLocAndNormal cloc;
-		Bool passCollide = (*collideProc)(&thisInfo, &thatInfo, &cloc);
+		cloc.getDistance = heightCheckType == BOUNDARY_HEIGHT_CHECK;
+		Bool doesCollide = (*collideProc)(&thisInfo, &thatInfo, &cloc);
 
-		if(abDistSqr)
+		if(cloc.getDistance && abDistSqr)
 			*abDistSqr = cloc.distSqr;
-		return passCollide;
+		return doesCollide;
 	}
 	else
 	{
