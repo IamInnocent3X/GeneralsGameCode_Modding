@@ -71,11 +71,6 @@ Real ASin(Real x)
 	return asinf(x);
 }
 
-Real Hypot(Real x, Real y)
-{
-	return hypot(x, y);
-}
-
 #ifdef REGENERATE_TRIG_TABLES
 void initTrig( void )
 {

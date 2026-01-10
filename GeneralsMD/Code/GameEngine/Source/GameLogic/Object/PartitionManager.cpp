@@ -569,7 +569,7 @@ static void testRotatedPointsAgainstRect(
 }*/
 
 //-----------------------------------------------------------------------------
-static Real fast_getBoundaryLength(Real x1, Real x2, Real y1, Real y2)
+static Real fast_hypot(Real x1, Real x2, Real y1, Real y2)
 {
 	// Fast approximation of Boundary length, generally if one line has the length of only 10% or less of the other line, we take the longest line as the boundary.
 	// Has an error rate of approx 0.5%.
@@ -578,18 +578,20 @@ static Real fast_getBoundaryLength(Real x1, Real x2, Real y1, Real y2)
 	Real dy = fabs(y1 - y2);
 
 	// Longest line and shortest between x and y
-	Real dmax = max(dx, dy);
-	Real dmin = min(dx, dy);
-	Real maxTolerance = 0.1f * dmax;
-	Real distTolerance = max(20.0f, 0.5f * maxTolerance);
+	Real a = max(dx, dy);
+	Real b = min(dx, dy);
+	//Real maxTolerance = 0.1f * dmax;
+	//Real distTolerance = max(20.0f, 0.5f * maxTolerance);
 
 	// Two conditions:
 	// - the difference must be less than a maximum of 20 units, or 5% of the maximum length (to be not more than 1 whole unit)
 	// - the min length must be 10% or less than the max length
-	if(dmin < distTolerance && dmin <= maxTolerance)
-		return dmax;
-	else
-		return sqrtf(dx*dx + dy*dy);
+	//if(dmin < distTolerance && dmin <= maxTolerance)
+	//	return dmax;
+	//else
+
+	// max error ≈ 1.04 %
+	return a * ( 1 + 0.428 * pow(b/a, 2) );
 }
 
 //-----------------------------------------------------------------------------
@@ -687,17 +689,17 @@ static void testSphereAgainstRect(
 	DEBUG_ASSERTCRASH(minIdx <= 3, ("Hmm, this should not be possible."));
 
 	// Get the Triangle length of all 3 points
-	//Real boundary_h = fast_getBoundaryLength(x1, x2, y1, y2);
-	//Real boundary_1 = fast_getBoundaryLength(x1, a->position.x, y1, a->position.y);
-	//Real boundary_2 = fast_getBoundaryLength(x2, a->position.x, y2, a->position.y);
+	Real boundary_h = fast_hypot(x1, x2, y1, y2);
+	Real boundary_1 = fast_hypot(x1, a->position.x, y1, a->position.y);
+	Real boundary_2 = fast_hypot(x2, a->position.x, y2, a->position.y);
 
 	//Real boundary_h = sqrtf(sqr(x1 - x2) + sqr(y1 - y2));
 	//Real boundary_1 = sqrtf(sqr(x1 - a->position.x) + sqr(y1 - a->position.y));
 	//Real boundary_2 = sqrtf(sqr(x2 - a->position.x) + sqr(y2 - a->position.y));
 
-	Real boundary_h = Hypot(fabs(x1-x2), fabs(y1-y2));
-	Real boundary_1 = Hypot(fabs(x1 - a->position.x), fabs(y1 - a->position.y));
-	Real boundary_2 = Hypot(fabs(x2 - a->position.x), fabs(y2 - a->position.y));
+	//Real boundary_h = Hypot(fabs(x1-x2), fabs(y1-y2));
+	//Real boundary_1 = Hypot(fabs(x1 - a->position.x), fabs(y1 - a->position.y));
+	//Real boundary_2 = Hypot(fabs(x2 - a->position.x), fabs(y2 - a->position.y));
 
 	// Heron's formula
 	Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;

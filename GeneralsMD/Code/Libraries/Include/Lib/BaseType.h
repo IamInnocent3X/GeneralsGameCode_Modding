@@ -183,8 +183,7 @@ struct Coord2D
 {
 	Real x, y;
 
-	//Real length( void ) const { return (Real)sqrt( x*x + y*y ); }
-	Real length( void ) const { return (Real)hypot( x, y ); }
+	Real length( void ) const { return (Real)sqrt( x*x + y*y ); }
 
 	void normalize( void )
 	{
@@ -233,8 +232,7 @@ struct ICoord2D
 {
 	Int x, y;
 
-	//Int length( void ) const { return (Int)sqrt( (double)(x*x + y*y) ); }
-	Int length( void ) const { return (Int)hypot( (double)x, (double)y ); }
+	Int length( void ) const { return (Int)sqrt( (double)(x*x + y*y) ); }
 };
 
 struct Region2D

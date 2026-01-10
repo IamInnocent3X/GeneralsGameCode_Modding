@@ -28,4 +28,3 @@ Real Cos(Real);
 Real Tan(Real);
 Real ACos(Real);
 Real ASin(Real x);
-Real Hypot(Real x, Real y);
