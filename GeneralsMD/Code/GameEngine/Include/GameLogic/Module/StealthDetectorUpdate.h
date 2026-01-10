@@ -53,6 +53,7 @@ public:
 	KindOfMaskType									m_extraDetectKindofNot;		///< units must NOT match any kindof bits set here, in order to be detected
 	Bool														m_canDetectWhileGarrisoned;
 	Bool														m_canDetectWhileTransported;
+	Bool														m_requiresAllTriggers;
 	ObjectStatusMaskType										m_extraRequiredStatus;
 	ObjectStatusMaskType										m_extraForbiddenStatus;
 	std::vector<AsciiString>										m_extraRequiredCustomStatus;
@@ -77,6 +78,7 @@ public:
 		m_extraForbiddenCustomStatus.clear();
 		m_canDetectWhileGarrisoned = false;
 		m_canDetectWhileTransported = false;
+		m_requiresAllTriggers = false;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -97,6 +99,7 @@ public:
 
 	Bool isSDEnabled() const { return m_enabled; }
 	void setSDEnabled( Bool enabled );
+	void doUpgrade();
 	virtual UpdateSleepTime update();
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 

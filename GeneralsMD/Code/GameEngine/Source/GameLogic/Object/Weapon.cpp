@@ -4055,18 +4055,16 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 			{
 				if(source->getControllingPlayer()->hasUpgradeComplete(ut))
-				{
 					gotUpgrade = TRUE;
-					if(!RequiresAllTriggers)
-						break;
-				}
 			}
 			else if( source->hasUpgrade(ut) )
 			{
 				gotUpgrade = TRUE;
-				if(!RequiresAllTriggers)
-					break;
 			}
+			if(!RequiresAllTriggers && gotUpgrade)
+				break;
+			else if(RequiresAllTriggers && !gotUpgrade)
+				return FALSE;
 		}
 		if(!gotUpgrade)
 			return FALSE;

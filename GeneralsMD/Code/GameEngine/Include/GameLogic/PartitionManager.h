@@ -164,8 +164,8 @@ enum DistanceCalculationType CPP_11(: Int)
 //=====================================
 enum HeightBoundaryCheckType CPP_11(: Int)
 {
-	DEFAULT_HEIGHT_CHECK				= 0,
-	SKIP_HEIGHT_CHECK					= 1,
+	DEFAULT_HEIGHT_CHECK	= 0,
+	SKIP_HEIGHT_CHECK	= 1,
 	BOUNDARY_HEIGHT_CHECK	= 2
 };
 
@@ -178,6 +178,7 @@ struct CollideLocAndNormal
 	Coord3D loc;
 	Coord3D normal;
 	Real distSqr;
+	Bool getDistance;
 };
 
 //=====================================
