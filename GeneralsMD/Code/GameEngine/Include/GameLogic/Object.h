@@ -850,6 +850,8 @@ public:
 	void doObjectLocomotorUpdate();
 	void doSlowDeathLayerUpdate(Bool hitTree);
 	void doSlowDeathRefreshUpdate();
+	void doOverWaterUpdate_unConst() const;
+	void doOverWaterUpdate();
 
 	void setIsMobMember(Bool set) { m_isMobMember = set; }
 	void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }

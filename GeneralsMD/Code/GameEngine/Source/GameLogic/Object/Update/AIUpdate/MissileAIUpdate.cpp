@@ -1076,7 +1076,7 @@ UpdateSleepTime MissileAIUpdate::update()
 	}
 
 	// If torpedo, update target location
-	if (d->m_isTorpedo && m_isTrackingTarget) {
+	if (d->m_isTorpedo && m_isTrackingTarget && !m_isJammed) {
 		Object * targetUnit = TheGameLogic->findObjectByID(m_victimID);
 		if (targetUnit != nullptr && !targetUnit->isEffectivelyDead()) {
 			Coord3D targetPos = *targetUnit->getPosition();
@@ -1278,7 +1278,8 @@ void MissileAIUpdate::airborneTargetGone()
 	// by the Weapon that fired me.  The safest thing for me to do in this state is to just run out of gas.
 
 	// IamInnocent - Added Missile retargeting if current target is gone
-	if(getMissileAIUpdateModuleData()->m_allowRetargeting)
+	const MissileAIUpdateModuleData* d = getMissileAIUpdateModuleData();
+	if(d->m_allowRetargeting)
 	{
 		Object *obj = getObject();
 		const Object *source = obj;
@@ -1303,7 +1304,7 @@ void MissileAIUpdate::airborneTargetGone()
 		filters[numFilters++] = &filterMapStatus;
 		filters[numFilters++] = &filterAlive;
 		filters[numFilters++] = &filterStealth;
-		if(!getMissileAIUpdateModuleData()->m_allowRetargetingThroughFog)
+		if(!d->m_allowRetargetingThroughFog)
 			filters[numFilters++] = &filterFogged;
 		filters[numFilters] = NULL;
 
@@ -1324,12 +1325,27 @@ void MissileAIUpdate::airborneTargetGone()
 			{
 				continue;
 			}
-			
-			getStateMachine()->setGoalPosition(curVictim->getPosition());
+
+			Coord3D targetPos = *curVictim->getPosition();
+			if (d->m_isTorpedo) {
+				Locomotor* curLoco = getCurLocomotor();
+				if (curLoco)
+				{
+					targetPos.z = getTorpedoTargetHeight(targetPos, curLoco);
+				}
+			}
+
+			getStateMachine()->setGoalPosition(&targetPos);
 			getStateMachine()->setGoalObject(curVictim);
-			aiMoveToObject(curVictim, CMD_FROM_AI );
-			m_originalTargetPos = *curVictim->getPosition();
-			m_isTrackingTarget = TRUE;
+			if (!d->m_isTorpedo) {
+				aiMoveToObject(curVictim, CMD_FROM_AI);
+			}
+			else {
+				aiMoveToPosition(&targetPos, CMD_FROM_AI);
+			}
+			m_originalTargetPos = targetPos;
+			m_isTrackingTarget = TRUE;// Remember that I was originally shot at a moving object, so if the 
+			// target dies I can do something cool.
 			m_victimID = curVictim->getID();
 
 			return;

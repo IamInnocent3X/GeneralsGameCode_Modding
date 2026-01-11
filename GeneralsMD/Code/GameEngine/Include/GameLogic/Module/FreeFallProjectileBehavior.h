@@ -106,6 +106,9 @@ public:
 	virtual bool projectileShouldCollideWithWater() const override;
 	virtual Bool projectileShouldDetonateOnGround() const { return getFreeFallProjectileBehaviorModuleData()->m_detonateOnGround; }
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 protected:
 

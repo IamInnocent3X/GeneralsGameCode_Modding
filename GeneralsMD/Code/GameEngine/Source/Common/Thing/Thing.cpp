@@ -343,11 +343,15 @@ Real Thing::getHeightAboveTerrainOrWater() const
 		Real waterZ;
 		if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterZ))
 		{
+			//if(!m_cachedIsOverWater && AsObject(this))
+			//	AsObject(this)->doOverWaterUpdate_unConst();
 			m_cachedAltitudeAboveTerrainOrWater = pos->z - waterZ;
 			m_cachedIsOverWater = TRUE;
 		}
 		else
 		{
+			if(m_cachedIsOverWater && AsObject(this))
+				AsObject(this)->doOverWaterUpdate_unConst();
 			m_cachedAltitudeAboveTerrainOrWater = getHeightAboveTerrain();
 			m_cachedIsOverWater = FALSE;
 		}

@@ -9292,6 +9292,30 @@ void Object::doSlowDeathLayerUpdate(Bool hitTree)
 	}
 }
 
+
+//-------------------------------------------------------------------------------------------------
+void Object::doOverWaterUpdate_unConst() const
+{
+	TheGameLogic->findObjectByID(getID())->doOverWaterUpdate();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doOverWaterUpdate()
+{
+	// Currently only torpedos needs update checks
+	if(!isKindOf(KINDOF_PROJECTILE))
+		return;
+
+	for (BehaviorModule** m = m_behaviors; *m; ++m)
+	{
+		ProjectileUpdateInterface *pui = (*m)->getProjectileUpdateInterface();
+		if( pui )
+		{
+			pui->friend_refreshUpdate();
+		}
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 Bool Object::isDozerDoingAnyTasks() const
 {

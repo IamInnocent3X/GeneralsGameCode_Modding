@@ -280,6 +280,7 @@ public:
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) = 0;
 	virtual Bool projectileShouldDetonateOnGround() const = 0;
 	virtual Bool projectileShouldCollideWithWater() const { return false; };
+	virtual void friend_refreshUpdate() = 0;
 
 	virtual Object* getTargetObject() = 0;
 	virtual const Coord3D* getTargetPosition() = 0;
