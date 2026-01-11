@@ -370,16 +370,14 @@ static void testRotatedPointsAgainstRect(
 	Real *minDistSqr
 );*/
 static Real fast_hypot(
-	Real x1,
-	Real x2,
-	Real y1,
-	Real y2
+	Real x,
+	Real y
 );
 static void testSphereAgainstRect(
-	const Coord2D *pts,				// an array of 4
+	const Coord2D pts[],				// an array of 4
 	const CollideInfo *a,
 	//Real angle,
-	Real &distance
+	Real &distSqr
 );
 
 static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
@@ -572,17 +570,36 @@ static void testRotatedPointsAgainstRect(
 }*/
 
 //-----------------------------------------------------------------------------
-static Real fast_hypot(Real x1, Real x2, Real y1, Real y2)
+static Real fast_hypot(Real x, Real y)
 {
 	// Fast approximation of Boundary length, generally if one line has the length of only 10% or less of the other line, we take the longest line as the boundary.
 	// Has an error rate of approx 0.5%.
 	// Example: A line of dx = 5, and dy = 0.5, would give h = 5.025, we take dx directly
-	Real dx = fabs(x1 - x2);
-	Real dy = fabs(y1 - y2);
+	/*Real dSqr = x*x + y*y;
+	Real curGuess = 1.0f;
+	Real tolerance = 0.1f;
+	while(fabs( (curGuess * curGuess) / dSqr - 1.0) > tolerance)
+		curGuess = ((dSqr/curGuess) + curGuess) * 0.5;
+	return curGuess;*/
+
+	Real dx = fabs(x);
+	Real dy = fabs(y);
 
 	// Longest line and shortest between x and y
-	Real a = max(dx, dy);
-	Real b = min(dx, dy);
+	Real a, b;
+	if(dx > dy)
+	{
+		a = dx;
+		b = dy;
+	}
+	else
+	{
+		a = dy;
+		b = dx;
+	}
+
+	Real ratio = b / a;
+	ratio *= ratio;
 	//Real maxTolerance = 0.1f * dmax;
 	//Real distTolerance = max(20.0f, 0.5f * maxTolerance);
 
@@ -594,107 +611,78 @@ static Real fast_hypot(Real x1, Real x2, Real y1, Real y2)
 	//else
 
 	// max error ≈ 1.04 %
-	return a * ( 1 + 0.428 * pow(b/a, 2) );
+	return a * ( 1 + 0.428 * ratio );
 }
 
 //-----------------------------------------------------------------------------
 static void testSphereAgainstRect(
-	const Coord2D *pts,				// an array of 4
+	const Coord2D pts[],				// an array of 4
 	const CollideInfo *a,
 	//Real angle,
-	Real &distance
+	Real &distSqr
 )
 {
 	// Get two points that are closest to the facing direction
 	//DEBUG_LOG(("Source Points: x: %f y: %f", a->position.x, a->position.y));
-	Real x1, x2, y1, y2;
-	x1 = x2 = y1 = y2 = 0.0f;
+	Real dx1, dx2, dy1, dy2;
+	//x1 = x2 = y1 = y2 = 0.0f;
+	Real minDist = HUGE_DIST_SQR;
+	Real secondMinDist = 0.0f;
+	Int minIdx = -1;
+	Int secondMinIdx = -1;
 
-	Real dist[4];
-	Coord2D points[4];
-	for (Int i = 0; i < 4; ++i, ++pts)
+	Real derivative[4][2];
+	for (Int i = 0; i < 4; ++i)
 	{
-		/*if(x1 != 0.0f && x2 != 0.0f)
-			break;
-		Real dir = atan2(pts->y - a->position.y, pts->x - a->position.x);
-		Real relAngle = stdAngleDiff(dir, angle);
-		DEBUG_LOG(( "Angle: %f", angle ));
-		DEBUG_LOG(( "Dir: %f", dir ));
-		DEBUG_LOG(( "Rel Angle: %f", relAngle ));
-		if(fabs(relAngle) <= PI/2)
-		{
-			switch(i)
-			{
-				// tl
-				case 0:
-					DEBUG_LOG(( "Top Left" ));
-					break;
-				// tr
-				case 1:
-					DEBUG_LOG(( "Top Right" ));
-					break;
-				// bl
-				case 2:
-					DEBUG_LOG(( "Bottom Left" ));
-					break;
-				// br
-				case 3:
-					DEBUG_LOG(( "Bottom Right" ));
-					break;
-			}
-			if(x1 == 0.0f && y1 == 0.0f)
-			{
-				x1 = pts->x;
-				y1 = pts->y;
-				DEBUG_LOG(("Point 1: x: %f y: %f", x1, y1));
-			}
-			else
-			{
-				x2 = pts->x;
-				y2 = pts->y;
-				DEBUG_LOG(("Point 2: x: %f y: %f", x2, y2));
-			}
-		}*/
-		points[i].x = pts->x;
-		points[i].y = pts->y;
-		dist[i] = sqr(pts->x - a->position.x) + sqr(pts->y - a->position.y);
-	}
+		derivative[i][0] = pts[i].x - a->position.x;
+		derivative[i][1] = pts[i].y - a->position.y;
 
-	Real minDist;
-	Int minIdx;
-	Int lastMinIdx = -1;
-	while( TRUE )
-	{
-		minDist = HUGE_DIST_SQR;
-		minIdx = 4;
-		for (Int idx = 0; idx < 4; idx++)
+		Real curDistSqr = sqr(derivative[i][0]) + sqr(derivative[i][1]);
+		if(minDist > curDistSqr)
 		{
-			if(minDist > dist[idx] && idx != lastMinIdx)
+			minDist = curDistSqr;
+			minIdx = i;
+		}
+		if( minDist >= secondMinDist ||
+			(secondMinDist > curDistSqr && curDistSqr > minDist) )
+		{
+			secondMinDist = curDistSqr;
+			secondMinIdx = i;
+		}
+		// Get the second last min idx if the last min idx is not yet registered.
+		
+
+		if(i == 3)
+		{
+			dx1 = derivative[minIdx][0];
+			dy1 = derivative[minIdx][1];
+			dx2 = derivative[secondMinIdx][0];
+			dy2 = derivative[secondMinIdx][1];
+
+			Bool polarity_x1 = dx1 >= 0;
+			Bool polarity_x2 = dx2 >= 0;
+			Bool polarity_y1 = dy1 >= 0;
+			Bool polarity_y2 = dy2 >= 0;
+
+			if( polarity_x1 == polarity_x2 && polarity_y1 == polarity_y2 )
 			{
-				minDist = dist[idx];
-				minIdx = idx;
+				distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+				return;
 			}
-		}
-		if(x1 == 0.0f && y1 == 0.0f)
-		{
-			x1 = points[minIdx].x;
-			y1 = points[minIdx].y;
-			lastMinIdx = minIdx;
-		}
-		else
-		{
-			x2 = points[minIdx].x;
-			y2 = points[minIdx].y;
-			break;
 		}
 	}
 
-	DEBUG_ASSERTCRASH(minIdx <= 3, ("Hmm, this should not be possible."));
-
+	DEBUG_ASSERTCRASH(secondMinIdx >= 0 && secondMinIdx <= 3, ("Hmm, this should not be possible."));
+	
 	// Get the Triangle length of all 3 points
-	Real boundary_h = fast_hypot(x1, x2, y1, y2);
-	Real boundary_1 = fast_hypot(x1, a->position.x, y1, a->position.y);
-	Real boundary_2 = fast_hypot(x2, a->position.x, y2, a->position.y);
+	Real boundary_h = fast_hypot(pts[minIdx].x - pts[secondMinIdx].x, pts[minIdx].y - pts[secondMinIdx].y);
+	//Real boundary_1 = fast_hypot(dx1, dy1);
+	//Real boundary_2 = fast_hypot(dx2, dy2);
+	//Real sqr_boundary_h = sqr(boundary_h);
+	//Real sqr_boundary_1 = sqr(boundary_1);
+	//Real sqr_boundary_h = sqr((*pts)[minIdx].x - (*pts)[lastMinIdx].x) + sqr((*pts)[minIdx].y - (*pts)[lastMinIdx].y);
+	Real sqr_boundary_1 = sqr(dx1) + sqr(dy1);
+	Real sqr_boundary_2 = sqr(dx2) + sqr(dy2);
 
 	//Real boundary_h = sqrtf(sqr(x1 - x2) + sqr(y1 - y2));
 	//Real boundary_1 = sqrtf(sqr(x1 - a->position.x) + sqr(y1 - a->position.y));
@@ -704,23 +692,21 @@ static void testSphereAgainstRect(
 	//Real boundary_1 = Hypot(fabs(x1 - a->position.x), fabs(y1 - a->position.y));
 	//Real boundary_2 = Hypot(fabs(x2 - a->position.x), fabs(y2 - a->position.y));
 
-	// Heron's formula
-	Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
-	Real Area = sqrtf(semiPeri * (semiPeri - boundary_h) * (semiPeri - boundary_1) * (semiPeri - boundary_2));
-	distance = Area * 2 / boundary_h;
+	// Heron's formula (Not reliable for accounting the edges)
+	//Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
+	//Real Area = sqrtf(semiPeri * (semiPeri - boundary_h) * (semiPeri - boundary_1) * (semiPeri - boundary_2));
+	//distSqr = sqr(Area * 2 / boundary_h);
 
-	// Fast Hypothenus formula h = ((sqrt(2) - 1) * a) + b 1.41421356237
+	// Law of Cosines (Demonstration)
 	//sqr(boundary_1) = sqr(boundary_2) + sqr(boundary_h) - (2 * boundary_2 * boundary_h * cos(angle_1)); // b^2 = a^2 + c^2 - 2ac cos B 
-	//boundary_1 * sin(angle_2) = boundary_2 * sin(angle_1)
 
-	/*Real cosAngle_1 = (boundary_2_Sqr + boundary_h_Sqr - boundary_1_Sqr) * 0.5  / (boundary_2 * boundary_h);
-	Real angle_1 = (Real)Acos(cosAngle_1);
-	//Real sinAngle_2 = boundary_2 / boundary_1 * (Real)Sin(angle_1);
-	//Real angle_2 = (Real)Asin(sinAngle_2);
+	// Converting formula to count for Radius
+	//Real cosAngle_1 = (sqr(boundary_2) + sqr(boundary_h) - sqr(boundary_1)) * 0.5  / (boundary_2 * boundary_h));
+	//Real boundary_h1 = cosAngle_1 * boundary_2;
 
-	// After we got an angle we can calculate the radius required.
-	use boundary_2
-	Real angle_h = PI/2 - angle_1;*/
+	// Formula Summarization
+	Real boundary_h1 = (sqr_boundary_2 + sqr(boundary_h) - sqr_boundary_1) * 0.5 / boundary_h;
+	distSqr = sqr_boundary_2 - sqr(boundary_h1);
 }
 
 //-----------------------------------------------------------------------------
@@ -799,11 +785,9 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 
 	Coord2D pts[4];
 	rectToFourPoints(a, pts);
+	testSphereAgainstRect(pts, b, distSqr);
 
-	Real distance = 0.0f;
-	testSphereAgainstRect(pts, b, distance);
-
-	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distance));
+	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distSqr));
 
 	/*Real circ_l = b->position.x - b->geom.getMajorRadius();
 	Real circ_r = b->position.x + b->geom.getMajorRadius();
@@ -817,7 +801,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 	if (circ_r >= rect_l &&	circ_l <= rect_r &&
 		circ_b >= rect_t &&	circ_t <= rect_b)
 	*/
-	if(distance <= b->geom.getMajorRadius())
+	if(distSqr <= sqr(b->geom.getMajorRadius()))
 	{
 		if (cinfo)
 		{
@@ -846,7 +830,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 				//cinfo->distSqr = minDistSqr;
 			//}
 			if(cinfo->getDistance)
-				cinfo->distSqr = sqr(distance);
+				cinfo->distSqr = distSqr;
 		}
 		return true;
 	}
