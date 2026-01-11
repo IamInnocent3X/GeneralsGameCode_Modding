@@ -121,6 +121,9 @@ public:
 	virtual bool projectileShouldCollideWithWater() const override;
 	virtual Bool projectileShouldDetonateOnGround() const { return false; }
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	virtual Bool processCollision(PhysicsBehavior *physics, Object *other); ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
 

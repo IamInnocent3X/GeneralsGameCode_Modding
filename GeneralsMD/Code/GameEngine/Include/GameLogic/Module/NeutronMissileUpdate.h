@@ -111,6 +111,9 @@ public:
 	virtual const Coord3D* getTargetPosition();
 	virtual Bool projectileShouldDetonateOnGround() const { return TRUE; } // Yes, we should detonate on ground if we are aiming at a moving object
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) {}
+	virtual void friend_refreshUpdate() { refreshUpdate(); }
+
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	virtual UpdateSleepTime update();
 	virtual void onDelete( void );
