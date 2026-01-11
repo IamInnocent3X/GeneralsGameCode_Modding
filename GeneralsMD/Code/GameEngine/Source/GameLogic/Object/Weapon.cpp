@@ -3210,6 +3210,9 @@ WeaponStore::~WeaponStore()
 			deleteInstance(wt);
 	}
 	m_weaponTemplateHashMap.clear();
+#if DEBUG_PRINT_WEAPON_USAGE
+	m_weaponUseCounter.clear();
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3291,12 +3294,14 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const char* name ) const
 WeaponTemplate *WeaponStore::findWeaponTemplatePrivate( NameKeyType key ) const
 {
 	// search weapon list for name
-	/*for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
-		if( m_weaponTemplateVector[ i ]->getNameKey() == key )
-			return m_weaponTemplateVector[i];*/
 	WeaponTemplateMap::const_iterator it = m_weaponTemplateHashMap.find(key);
 	if(it != m_weaponTemplateHashMap.end())
+	{
+#if DEBUG_PRINT_WEAPON_USAGE
+		m_weaponUseCounter[key]++;
+#endif
 		return it->second;
+	}
 
 	return NULL;
 
@@ -3368,6 +3373,9 @@ void WeaponStore::resetWeaponTemplates( void )
 	{
 		WeaponTemplate* wt = m_weaponTemplateVector[i];
 		wt->reset();
+#if DEBUG_PRINT_WEAPON_USAGE
+		m_weaponUseCounter.clear();
+#endif
 	}
 	for (WeaponTemplateMap::iterator it = m_weaponTemplateHashMap.begin(); it != m_weaponTemplateHashMap.end(); ++it)
 	{
@@ -3440,6 +3448,17 @@ void WeaponStore::postProcessLoad()
 		if (wt)
 			wt->postProcessLoad();
 	}
+
+#if DEBUG_PRINT_WEAPON_USAGE
+	// look for unused weapons
+	for (size_t i = 0; i < m_weaponTemplateVector.size(); i++)
+	{
+		WeaponTemplate* wt = m_weaponTemplateVector[i];
+		if (m_weaponUseCounter[wt->getNameKey()] <= 0) {
+			DEBUG_LOG(("Unused WeaponTemplate: '%s'", wt->getName().str()));
+		}
+	}
+#endif
 
 }
 
