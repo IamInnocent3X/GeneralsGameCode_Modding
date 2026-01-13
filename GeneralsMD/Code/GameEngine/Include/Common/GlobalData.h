@@ -607,6 +607,8 @@ public:
 
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 	Bool m_heightAboveTerrainIncludesWater;
+	Bool m_hideScorchmarksAboveGround;
+
 	Bool m_countermeasuresDetonateNonTracking;
 
 	Bool m_newskirmishfpsSystem;
