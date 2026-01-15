@@ -115,7 +115,7 @@ public:
 	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
 	virtual Bool isEquipCrateCollide() const { return FALSE; }
 	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
-	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update();

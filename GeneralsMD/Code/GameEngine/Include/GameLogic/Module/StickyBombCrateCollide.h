@@ -55,7 +55,7 @@ public:
 		m_needsTarget = FALSE;
 		m_allowMultiCollide = FALSE;
 		m_showInfiltrationEvent = FALSE;
-		m_stickyBombObjectName = AsciiString::TheEmptyString;
+		m_stickyBombObjectName.clear();
 		m_triggerChance = 1.0;
 	}
 
@@ -65,11 +65,11 @@ public:
 
 		static const FieldParse dataFieldParse[] = 
 		{
-			{ "NeedsTarget", INI::parseBool, NULL, offsetof(StickyBombCrateCollideModuleData, m_needsTarget) },
-			{ "AllowMultiCollide", INI::parseBool, NULL, offsetof(StickyBombCrateCollideModuleData, m_allowMultiCollide) },
-			{ "ShowInfiltrationEvent", INI::parseBool, NULL, offsetof(StickyBombCrateCollideModuleData, m_showInfiltrationEvent) },
-			{ "StickyBombObject", INI::parseAsciiString, NULL, offsetof(StickyBombCrateCollideModuleData, m_stickyBombObjectName) },
-			{ "ChanceToTriggerPercent", INI::parsePercentToReal, NULL, offsetof(StickyBombCrateCollideModuleData, m_triggerChance) },
+			{ "NeedsTarget", INI::parseBool, nullptr, offsetof(StickyBombCrateCollideModuleData, m_needsTarget) },
+			{ "AllowMultiCollide", INI::parseBool, nullptr, offsetof(StickyBombCrateCollideModuleData, m_allowMultiCollide) },
+			{ "ShowInfiltrationEvent", INI::parseBool, nullptr, offsetof(StickyBombCrateCollideModuleData, m_showInfiltrationEvent) },
+			{ "StickyBombObject", INI::parseAsciiString, nullptr, offsetof(StickyBombCrateCollideModuleData, m_stickyBombObjectName) },
+			{ "ChanceToTriggerPercent", INI::parsePercentToReal, nullptr, offsetof(StickyBombCrateCollideModuleData, m_triggerChance) },
 			{ 0, 0, 0, 0 }
 		};
 		p.add( dataFieldParse );

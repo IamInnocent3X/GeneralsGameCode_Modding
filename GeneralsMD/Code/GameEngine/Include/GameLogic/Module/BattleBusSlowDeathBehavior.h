@@ -73,7 +73,7 @@ public:
 		Int								m_deathTrigger;
 		const FXList*					m_deathfx;
 
-		IntFX() : m_deathTrigger(0), m_deathfx(NULL)
+		IntFX() : m_deathTrigger(0), m_deathfx(nullptr)
 		{
 		}
 	};
@@ -83,7 +83,7 @@ public:
 		Int								m_deathTrigger;
 		const ObjectCreationList*		m_deathocl;
 
-		IntOCL() : m_deathTrigger(0), m_deathocl(NULL)
+		IntOCL() : m_deathTrigger(0), m_deathocl(nullptr)
 		{
 		}
 	};

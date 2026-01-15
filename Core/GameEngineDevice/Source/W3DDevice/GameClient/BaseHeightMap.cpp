@@ -2175,7 +2175,7 @@ const AsciiString& BaseHeightMapRenderObjClass::findTreeNameInPos(const Coord3D*
 	if (m_treeBuffer) {
 		return m_treeBuffer->findTreeNameInPos(loc);
 	}
-	return NULL;
+	return AsciiString::TheEmptyString;
 }
 //=============================================================================
 // BaseHeightMapRenderObjClass::removeTreesAndPropsForConstruction

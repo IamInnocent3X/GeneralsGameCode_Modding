@@ -257,7 +257,7 @@ public:
 
 	Real estimateDamage( DamageInfoInput& damageInfo ) const;
 	void kill( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL );	///< kill the object with an optional type of damage and death.
-	void killCustom( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL, AsciiString customDeathType = NULL );	///< kill the object with an optional type of damage and death.
+	void killCustom( DamageType damageType = DAMAGE_UNRESISTABLE, DeathType deathType = DEATH_NORMAL, AsciiString customDeathType = AsciiString::TheEmptyString );	///< kill the object with an optional type of damage and death.
 	void healCompletely();														///< Restore max health to this Object
 	void notifySubdualDamage( Real amount );///< At this level, we just pass this on to our helper and do a special tint
 	void doStatusDamage( ObjectStatusTypes status, Real duration , const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );///< At this level, we just pass this on to our helper
@@ -737,7 +737,7 @@ public:
 	//void checkDisabledHelper() const;
 
 	void setDisabled( DisabledType type );
-	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = NULL, Bool paintTint = TRUE, Bool playSound = TRUE );
+	void setDisabledUntil( DisabledType type, UnsignedInt frame, TintStatus = TINT_STATUS_INVALID, AsciiString customTintStatus = AsciiString::TheEmptyString, Bool paintTint = TRUE, Bool playSound = TRUE );
 	Bool isDisabledByType( DisabledType type ) const { return TEST_DISABLEDMASK( m_disabledMask, type ); }
 
 	UnsignedInt getDisabledUntil( DisabledType type = DISABLED_ANY ) const;
@@ -826,7 +826,7 @@ public:
 	void setCarBombConverterID(ObjectID ConverterID);
 	void setHijackingID(ObjectID ID);
 	void setEquipToID(ObjectID ID);
-	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID, const Coord3D *ejectPos = NULL);
+	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID, const Coord3D *ejectPos = nullptr);
 	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite);
 	Bool checkToSquishHijack(const Object *other) const;
 

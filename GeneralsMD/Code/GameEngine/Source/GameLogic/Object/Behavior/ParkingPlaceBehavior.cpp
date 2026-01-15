@@ -669,7 +669,7 @@ void ParkingPlaceBehavior::updateDamageScalars() {
 		if (it->m_gettingHealedID != INVALID_ID)
 		{
 			Object* objToHeal = TheGameLogic->findObjectByID(it->m_gettingHealedID);
-			if (objToHeal != NULL && !objToHeal->isEffectivelyDead())
+			if (objToHeal != nullptr && !objToHeal->isEffectivelyDead())
 			{
 				applyDamageScalar(objToHeal, scalarNew, scalarOld);
 			}
@@ -745,7 +745,7 @@ void ParkingPlaceBehavior::defectAllParkedUnits(Team* newTeam, UnsignedInt detec
 			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
 
 			Bool takeoffOrLanding = false;
-			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : nullptr;
 			if( jetAI )
 			{
 				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
@@ -792,7 +792,7 @@ void ParkingPlaceBehavior::killAllParkedUnits()
 			//Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
 
 			Bool takeoffOrLanding = false;
-			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : NULL;
+			JetAIUpdate *jetAI = obj->getAI() ? (JetAIUpdate*)obj->getAI()->getJetAIUpdate() : nullptr;
 			if( jetAI )
 			{
 				takeoffOrLanding = jetAI->friend_isTakeoffOrLandingInProgress();
@@ -939,7 +939,7 @@ void ParkingPlaceBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitD
 	//Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
 	
 	Real parkingOffset = 0.0f;
-	JetAIUpdate *jetAI = newObj->getAI() ? (JetAIUpdate*)newObj->getAI()->getJetAIUpdate() : NULL;
+	JetAIUpdate *jetAI = newObj->getAI() ? (JetAIUpdate*)newObj->getAI()->getJetAIUpdate() : nullptr;
 	if( jetAI )
 	{
 		parkingOffset = jetAI->friend_getParkingOffset();

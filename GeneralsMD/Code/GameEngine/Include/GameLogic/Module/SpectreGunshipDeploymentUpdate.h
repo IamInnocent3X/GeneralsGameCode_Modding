@@ -129,8 +129,8 @@ public:
   virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const { return FALSE; };
 	virtual ScienceType getExtraRequiredScience() const { return getSpectreGunshipDeploymentUpdateModuleData()->m_extraRequiredScience; } //Does this object have more than one special power module with the same spTemplate?
 
-	virtual const AsciiString& getCursorName() const { return NULL; }
-	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
 	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	virtual void onObjectCreated();

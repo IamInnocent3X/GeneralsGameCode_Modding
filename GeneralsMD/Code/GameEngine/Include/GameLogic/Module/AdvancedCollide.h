@@ -69,9 +69,9 @@ public:
 
 	AdvancedCollideModuleData()
 	{
-		m_collideWeaponTemplate = NULL;
-		m_fxlist = NULL;
-		m_ocl = NULL;
+		m_collideWeaponTemplate = nullptr;
+		m_fxlist = nullptr;
+		m_ocl = nullptr;
 		m_fireOnce = FALSE;
 		m_collideWithGround = FALSE;
 		m_collideWithObjects = TRUE;

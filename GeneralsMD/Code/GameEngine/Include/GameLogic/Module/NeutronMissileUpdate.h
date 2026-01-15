@@ -98,7 +98,7 @@ public:
 		DEAD
 	};
 
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL );
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr );
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }											///< return true if the missile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
@@ -107,7 +107,7 @@ public:
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
 	virtual void projectileNowJammed(Bool noDamage = FALSE);
 	virtual void projectileNowDrawn(ObjectID attractorID);
-	virtual Object* getTargetObject() { return NULL; }
+	virtual Object* getTargetObject() { return nullptr; }
 	virtual const Coord3D* getTargetPosition();
 	virtual Bool projectileShouldDetonateOnGround() const { return TRUE; } // Yes, we should detonate on ground if we are aiming at a moving object
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) {}

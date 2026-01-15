@@ -139,9 +139,9 @@ public:
 	{
 		static const FieldParse myFieldParse[] =
 		{
-			{ "MovementSpeedScalar", parseMultiplier, NULL, offsetof(ValueModifierBuffEffectNugget, m_moveSpeedScalar) },
-			{ "ArmorDamageScalar", parseMultiplier, NULL, offsetof(ValueModifierBuffEffectNugget, m_armorDamageScalar) },
-			{ "SightRangeScalar", parseMultiplier, NULL, offsetof(ValueModifierBuffEffectNugget, m_sightRangeScalar) },
+			{ "MovementSpeedScalar", parseMultiplier, nullptr, offsetof(ValueModifierBuffEffectNugget, m_moveSpeedScalar) },
+			{ "ArmorDamageScalar", parseMultiplier, nullptr, offsetof(ValueModifierBuffEffectNugget, m_armorDamageScalar) },
+			{ "SightRangeScalar", parseMultiplier, nullptr, offsetof(ValueModifierBuffEffectNugget, m_sightRangeScalar) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -245,8 +245,8 @@ EMPTY_DTOR(ValueModifierBuffEffectNugget)
 //			{ "WeaponBonusAgainst", INI::parseIndexList,	TheWeaponBonusNames, offsetof(FlagModifierBuffEffectNugget, m_bonusTypeAgainst) },
 //			{ "WeaponSetFlag", INI::parseIndexList, WeaponSetFlags::getBitNames(), offsetof(FlagModifierBuffEffectNugget, m_weaponSetFlag) },
 //			{ "ArmorSetFlag", INI::parseIndexList,	ArmorSetFlags::getBitNames(), offsetof(FlagModifierBuffEffectNugget, m_armorSetFlag) },
-//			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	NULL, offsetof(FlagModifierBuffEffectNugget, m_statusToSet) },
-//			{ "StatusToClear", ObjectStatusMaskType::parseFromINI,	NULL, offsetof(FlagModifierBuffEffectNugget, m_statusToClear) },
+//			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(FlagModifierBuffEffectNugget, m_statusToSet) },
+//			{ "StatusToClear", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(FlagModifierBuffEffectNugget, m_statusToClear) },
 //			{ 0, 0, 0, 0 }
 //		};
 //
@@ -320,7 +320,7 @@ public:
 	{
 		static const FieldParse myFieldParse[] =
 		{
-			{ "TintStatusType", TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof(ColorTintBuffEffectNugget, m_tintStatus) },
+			{ "TintStatusType", TintStatusFlags::parseSingleBitFromINI,	nullptr, offsetof(ColorTintBuffEffectNugget, m_tintStatus) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -349,7 +349,7 @@ public:
 
 	ParticleSystemBuffEffectNugget()
 	{
-		m_particleSysTemplate = NULL;
+		m_particleSysTemplate = nullptr;
 	}
 
 	virtual void apply(Object* targetObj, const Object* sourceObj, BuffEffectTracker* buffTracker) const
@@ -378,7 +378,7 @@ public:
 	{
 		static const FieldParse myFieldParse[] =
 		{
-			{ "ParticleSystem", INI::parseParticleSystemTemplate,	NULL, offsetof(ParticleSystemBuffEffectNugget, m_particleSysTemplate) },
+			{ "ParticleSystem", INI::parseParticleSystemTemplate,	nullptr, offsetof(ParticleSystemBuffEffectNugget, m_particleSysTemplate) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -414,10 +414,10 @@ const FieldParse BuffTemplate::TheBuffTemplateFieldParse[] =
 	{ "ColorTintEffect",		ColorTintBuffEffectNugget::parse, 0, 0},
 	{ "ParticleSystemEffect",		ParticleSystemBuffEffectNugget::parse, 0, 0},
 	// Generic params:
-	{ "MaxStacksSize",		INI::parseUnsignedInt, NULL,  offsetof(BuffTemplate, m_maxStackSize)},
-	{ "HasPriorityOver",		INI::parseAsciiStringVectorAppend, NULL,  offsetof(BuffTemplate, m_priorityTemplates)},
+	{ "MaxStacksSize",		INI::parseUnsignedInt, nullptr,  offsetof(BuffTemplate, m_maxStackSize)},
+	{ "HasPriorityOver",		INI::parseAsciiStringVectorAppend, nullptr,  offsetof(BuffTemplate, m_priorityTemplates)},
 	
-	{ NULL, NULL, 0, 0 }
+	{ nullptr, nullptr, 0, 0 }
 };
 
 
@@ -431,11 +431,11 @@ void BuffTemplate::parseFlagModifier(INI* ini, void* instance, void* /*store*/, 
 			{ "WeaponBonusAgainst", INI::parseIndexList,	TheWeaponBonusNames, offsetof(BuffTemplate, m_bonusTypeAgainst) },
 			{ "WeaponSetFlag", INI::parseIndexList, WeaponSetFlags::getBitNames(), offsetof(BuffTemplate, m_weaponSetFlag) },
 			{ "ArmorSetFlag", INI::parseIndexList,	ArmorSetFlags::getBitNames(), offsetof(BuffTemplate, m_armorSetFlag) },
-			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	NULL, offsetof(BuffTemplate, m_statusToSet) },
-			{ "CustomWeaponBonus", INI::parseAsciiString,	NULL, offsetof(BuffTemplate, m_customBonusType) },
-			{ "CustomWeaponBonusAgainst", INI::parseAsciiString,	NULL, offsetof(BuffTemplate, m_customBonusTypeAgainst) },
-			{ "CustomStatusToSet", INI::parseAsciiStringVector,	NULL, offsetof(BuffTemplate, m_customStatusToSet) },
-			// { "StatusToClear", ObjectStatusMaskType::parseFromINI,	NULL, offsetof(BuffTemplate, m_statusToClear) },
+			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(BuffTemplate, m_statusToSet) },
+			{ "CustomWeaponBonus", INI::parseAsciiString,	nullptr, offsetof(BuffTemplate, m_customBonusType) },
+			{ "CustomWeaponBonusAgainst", INI::parseAsciiString,	nullptr, offsetof(BuffTemplate, m_customBonusTypeAgainst) },
+			{ "CustomStatusToSet", INI::parseAsciiStringVector,	nullptr, offsetof(BuffTemplate, m_customStatusToSet) },
+			// { "StatusToClear", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(BuffTemplate, m_statusToClear) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -461,8 +461,8 @@ BuffTemplate::BuffTemplate()
 	m_statusToSet.clear();
 	// m_statusToClear.clear();
 
-	m_customBonusType = NULL;
-	m_customBonusTypeAgainst = NULL;
+	m_customBonusType.clear();
+	m_customBonusTypeAgainst.clear();
 	m_customStatusToSet.clear();
 
 	 m_nuggets.clear();
@@ -479,8 +479,8 @@ void BuffTemplate::clear()
 	m_statusToSet.clear();
 	// m_statusToClear.clear();
 
-	m_customBonusType = NULL;
-	m_customBonusTypeAgainst = NULL;
+	m_customBonusType.clear();
+	m_customBonusTypeAgainst.clear();
 	m_customStatusToSet.clear();
 
 	// do NOT delete the nuggets -- they're owned by the Store.
@@ -661,7 +661,7 @@ Bool BuffTemplate::hasPriorityOver(AsciiString templateName) const
 //-------------------------------------------------------------------------------------------------
 
 
-BuffTemplateStore* TheBuffTemplateStore = NULL;					///< the TheBuffTemplate store definition
+BuffTemplateStore* TheBuffTemplateStore = nullptr;					///< the TheBuffTemplate store definition
 //-------------------------------------------------------------------------------------------------
 BuffTemplateStore::BuffTemplateStore()
 {
@@ -692,12 +692,12 @@ BuffTemplateStore::~BuffTemplateStore()
 const BuffTemplate* BuffTemplateStore::findBuffTemplate(const char* name) const
 {
 	if (stricmp(name, "None") == 0)
-		return NULL;
+		return nullptr;
 
 	BuffTemplateMap::const_iterator it = m_buffTemplates.find(NAMEKEY(name));
 	if (it == m_buffTemplates.end())
 	{
-		return NULL;
+		return nullptr;
 	}
 	else
 	{
@@ -709,12 +709,12 @@ const BuffTemplate* BuffTemplateStore::findBuffTemplate(const char* name) const
 BuffTemplate* BuffTemplateStore::findBuffTemplate(const char* name)
 {
 	if (stricmp(name, "None") == 0)
-		return NULL;
+		return nullptr;
 
 	BuffTemplateMap::iterator it = m_buffTemplates.find(NAMEKEY(name));
 	if (it == m_buffTemplates.end())
 	{
-		return NULL;
+		return nullptr;
 	}
 	else
 	{
@@ -733,12 +733,12 @@ void BuffTemplateStore::addBuffEffectNugget(BuffEffectNugget* nugget)
 //BuffTemplate* BuffTemplateStore::newBuffTemplate(AsciiString& name)
 //{
 //	BuffTemplate* buffTemplate = const_cast<BuffTemplate*>(TheBuffTemplateStore->findBuffTemplate(name));
-//	if (buffTemplate == NULL) {
+//	if (buffTemplate == nullptr) {
 //		buffTemplate = newInstance(BuffTemplate)(name);
 //
 //		if (!m_templateMap.insert(std::make_pair(name, sysTemplate)).second) {
 //			deleteInstance(sysTemplate);
-//			sysTemplate = NULL;
+//			sysTemplate = nullptr;
 //		}
 //	}
 //

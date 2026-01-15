@@ -65,7 +65,7 @@ FreeFallProjectileBehaviorModuleData::FreeFallProjectileBehaviorModuleData() :
 	// m_inheritTransportVelocity(FALSE),
 	m_useWeaponSpeed(FALSE),
 	m_garrisonHitKillCount(0),
-	m_garrisonHitKillFX(NULL),
+	m_garrisonHitKillFX(nullptr),
 	m_detonateOnGround(TRUE),
 	m_detonateOnCollide(TRUE),
 	m_allowSubdual(TRUE),
@@ -81,26 +81,26 @@ void FreeFallProjectileBehaviorModuleData::buildFieldParse(MultiIniFieldParse& p
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "MaxLifespan", INI::parseDurationUnsignedInt, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_maxLifespan) },
-		{ "TumbleRandomly", INI::parseBool, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_tumbleRandomly) },
-		{ "DetonateCallsKill", INI::parseBool, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_detonateCallsKill) },
-		{ "CourseCorrectionScalar",	INI::parseReal,		NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_courseCorrectionScalar) },
-		{ "ExitPitchRate",	INI::parseAngularVelocityReal,		NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_exitPitchRate) },
-		{ "UseWeaponSpeed", INI::parseBool,  NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_useWeaponSpeed) },
-		//{ "InheritShooterVelocity", INI::parseBool,  NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_inheritTransportVelocity) },
-		{ "ApplyLauncherBonus", INI::parseBool,  NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_applyLauncherBonus) },
+		{ "MaxLifespan", INI::parseDurationUnsignedInt, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_maxLifespan) },
+		{ "TumbleRandomly", INI::parseBool, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_tumbleRandomly) },
+		{ "DetonateCallsKill", INI::parseBool, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_detonateCallsKill) },
+		{ "CourseCorrectionScalar",	INI::parseReal,		nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_courseCorrectionScalar) },
+		{ "ExitPitchRate",	INI::parseAngularVelocityReal,		nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_exitPitchRate) },
+		{ "UseWeaponSpeed", INI::parseBool,  nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_useWeaponSpeed) },
+		//{ "InheritShooterVelocity", INI::parseBool,  nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_inheritTransportVelocity) },
+		{ "ApplyLauncherBonus", INI::parseBool,  nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_applyLauncherBonus) },
 		
-		{ "DetonateOnGround", INI::parseBool,  NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_detonateOnGround) },
-		{ "DetonateOnCollide", INI::parseBool,  NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_detonateOnCollide) },
+		{ "DetonateOnGround", INI::parseBool,  nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_detonateOnGround) },
+		{ "DetonateOnCollide", INI::parseBool,  nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_detonateOnCollide) },
 
-		{ "GarrisonHitKillRequiredKindOf", KindOfMaskType::parseFromINI, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillKindof) },
-		{ "GarrisonHitKillForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillKindofNot) },
-		{ "GarrisonHitKillCount", INI::parseUnsignedInt, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillCount) },
-		{ "GarrisonHitKillFX", INI::parseFXList, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillFX) },
+		{ "GarrisonHitKillRequiredKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillKindof) },
+		{ "GarrisonHitKillForbiddenKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillKindofNot) },
+		{ "GarrisonHitKillCount", INI::parseUnsignedInt, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillCount) },
+		{ "GarrisonHitKillFX", INI::parseFXList, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_garrisonHitKillFX) },
 
-		{ "AllowSubdual", INI::parseBool, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_allowSubdual) },
-		{ "AllowAttract", INI::parseBool, NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_allowAttract) },
-		{ "DistanceScatterWhenJammed",INI::parseReal,		NULL, offsetof(FreeFallProjectileBehaviorModuleData, m_distanceScatterWhenJammed) },
+		{ "AllowSubdual", INI::parseBool, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_allowSubdual) },
+		{ "AllowAttract", INI::parseBool, nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_allowAttract) },
+		{ "DistanceScatterWhenJammed",INI::parseReal,		nullptr, offsetof(FreeFallProjectileBehaviorModuleData, m_distanceScatterWhenJammed) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -121,7 +121,7 @@ FreeFallProjectileBehavior::FreeFallProjectileBehavior(Thing* thing, const Modul
 	m_targetPos.zero();
 	m_targetPosBackup.zero();
 	m_assignedBackup = FALSE;
-	m_detonationWeaponTmpl = NULL;
+	m_detonationWeaponTmpl = nullptr;
 	m_lifespanFrame = 0;
 	m_extraBonusFlags = 0;
 	m_extraBonusCustomFlags.clear();
@@ -309,7 +309,7 @@ Bool FreeFallProjectileBehavior::projectileHandleCollision(Object* other)
 {
 	const FreeFallProjectileBehaviorModuleData* d = getFreeFallProjectileBehaviorModuleData();
 
-	if (other != NULL)
+	if (other != nullptr)
 	{
 		Object* projectileLauncher = TheGameLogic->findObjectByID(projectileGetLauncherID());
 
@@ -348,7 +348,7 @@ Bool FreeFallProjectileBehavior::projectileHandleCollision(Object* other)
 				if (numKilled > 0)
 				{
 					// note, fx is played at center of building, not at grenade's location
-					FXList::doFXObj(d->m_garrisonHitKillFX, other, NULL);
+					FXList::doFXObj(d->m_garrisonHitKillFX, other, nullptr);
 
 					// don't do the normal explosion; just destroy ourselves & return
 					TheGameLogic->destroyObject(getObject());
@@ -450,7 +450,7 @@ UpdateSleepTime FreeFallProjectileBehavior::update()
 			return UPDATE_SLEEP_NONE;
 		}
 		// Calculate if the Projectile is near to the victim.
-		Object *victim = NULL;
+		Object *victim = nullptr;
 		if(m_victimID != INVALID_ID)
 		{
 			victim = TheGameLogic->findObjectByID( m_victimID );
@@ -573,15 +573,17 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 	xfer->xferBool( &m_assignedBackup );
 
 	// weapon template
-	AsciiString weaponTemplateName = AsciiString::TheEmptyString;
+	AsciiString weaponTemplateName;
 	if (m_detonationWeaponTmpl)
 		weaponTemplateName = m_detonationWeaponTmpl->getName();
+	else
+		weaponTemplateName.clear();
 	xfer->xferAsciiString(&weaponTemplateName);
 	if (xfer->getXferMode() == XFER_LOAD)
 	{
 
 		if (weaponTemplateName == AsciiString::TheEmptyString)
-			m_detonationWeaponTmpl = NULL;
+			m_detonationWeaponTmpl = nullptr;
 		else
 		{
 
@@ -589,7 +591,7 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 			m_detonationWeaponTmpl = TheWeaponStore->findWeaponTemplate(weaponTemplateName);
 
 			// sanity
-			if (m_detonationWeaponTmpl == NULL)
+			if (m_detonationWeaponTmpl == nullptr)
 			{
 
 				DEBUG_CRASH(("FreeFallProjectileBehavior::xfer - Unknown weapon template '%s'",

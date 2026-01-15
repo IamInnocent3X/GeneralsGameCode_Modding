@@ -751,7 +751,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_ENTER_ME:
 		{
 			// Cancel GUI command mode.
-			TheInGameUI->setGUICommand( NULL );
+			TheInGameUI->setGUICommand( nullptr );
 
 			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
 				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER_ME );
@@ -839,7 +839,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
 		{
 			// Cancel GUI command mode.
-			TheInGameUI->setGUICommand( NULL );
+			TheInGameUI->setGUICommand( nullptr );
 
 			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_POSITION, orderData );
 			GuardMode guardMode;

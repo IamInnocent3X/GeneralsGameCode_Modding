@@ -1251,7 +1251,7 @@ if( !s_useNonRetailPathfind )
 }
 else
 {
-	theInfo->m_pathParent = NULL;
+	theInfo->m_pathParent = nullptr;
 	theInfo->m_isFree = true;
 }
 //#endif
@@ -1284,7 +1284,7 @@ PathfindCell::~PathfindCell( void )
 //#if !RETAIL_COMPATIBLE_PATHFINDING
 PathfindCellInfo* PathfindCell::getCellInfo()
 {
-	m_pathfindCellInfo.m_pathParent = NULL;
+	m_pathfindCellInfo.m_pathParent = nullptr;
 	m_pathfindCellInfo.m_isFree = true;
 	return &m_pathfindCellInfo;
 }
@@ -9496,7 +9496,7 @@ struct ViewAttackBlockedStruct
 {
 	ViewAttackBlockedStruct* d = (ViewAttackBlockedStruct*)userData;
 
-	if (to != NULL)
+	if (to != nullptr)
 	{
 		// victim is within obstacle
 		if (d->victim) {

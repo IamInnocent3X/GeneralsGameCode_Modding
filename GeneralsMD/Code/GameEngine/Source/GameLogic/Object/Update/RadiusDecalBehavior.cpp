@@ -50,9 +50,9 @@ RadiusDecalBehaviorModuleData::RadiusDecalBehaviorModuleData()
 	UpdateModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, NULL, offsetof(RadiusDecalBehaviorModuleData, m_initiallyActive) },
-		{ "RadiusDecal",						RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( RadiusDecalBehaviorModuleData, m_decalTemplate) },
-		{ "Radius",			INI::parseReal,									NULL,	offsetof( RadiusDecalBehaviorModuleData, m_decalRadius) },
+		{ "StartsActive",	INI::parseBool, nullptr, offsetof(RadiusDecalBehaviorModuleData, m_initiallyActive) },
+		{ "RadiusDecal",						RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( RadiusDecalBehaviorModuleData, m_decalTemplate) },
+		{ "Radius",			INI::parseReal,									nullptr,	offsetof( RadiusDecalBehaviorModuleData, m_decalRadius) },
 		{ 0, 0, 0, 0 }
 	};
 

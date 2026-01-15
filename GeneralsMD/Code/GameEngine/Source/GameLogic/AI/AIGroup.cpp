@@ -350,7 +350,7 @@ Bool AIGroup::doAddNearbyMembers( OrderNearbyData orderData )
 		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
 		PartitionFilterSameMapStatus filterMapStatus(obj);
 		PartitionFilterAlive filterAlive;
-		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, nullptr };
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
@@ -380,7 +380,7 @@ Bool AIGroup::doAddNearbyMembers( OrderNearbyData orderData )
 			//with AIUpdateInterfaces also issue similar commands, but those
 			//commands don't need AI updates... they are instant commands like
 			//evacuate or triggering certain special powers...
-			if( ai == NULL && !currentObj->isAnyKindOf( validNonAIKindofs ) )
+			if( ai == nullptr && !currentObj->isAnyKindOf( validNonAIKindofs ) )
 			{
 				continue;
 			}
@@ -413,11 +413,11 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 		{
 			CanAttackResult result; 
 			if(type == GameMessage::MSG_DO_WEAPON_AT_LOCATION)
-				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, &arguments[1].data.location, CMD_FROM_PLAYER ) ;
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, &arguments[1].data.location, CMD_FROM_PLAYER ) ;
 			else if(type == GameMessage::MSG_DO_WEAPON_AT_OBJECT)
-				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, TheGameLogic->findObjectByID( arguments[1].data.objectID ), NULL, CMD_FROM_PLAYER ) ;
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, TheGameLogic->findObjectByID( arguments[1].data.objectID ), nullptr, CMD_FROM_PLAYER ) ;
 			else if(type == GameMessage::MSG_DO_WEAPON)
-				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, obj->getPosition(), CMD_FROM_PLAYER ) ;	
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, obj->getPosition(), CMD_FROM_PLAYER ) ;	
 
 			if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 			{
@@ -490,7 +490,7 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 
 			// producer must have a production update
 			ProductionUpdateInterface *pu = obj->getProductionUpdateInterface();
-			if( pu == NULL )
+			if( pu == nullptr )
 			{
 				canDoAction = FALSE;
 				break;
@@ -598,7 +598,7 @@ Bool AIGroup::doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Ty
 		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
 		PartitionFilterSameMapStatus filterMapStatus(obj);
 		PartitionFilterAlive filterAlive;
-		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, nullptr };
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
@@ -643,7 +643,7 @@ Bool AIGroup::doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Ty
 			//with AIUpdateInterfaces also issue similar commands, but those
 			//commands don't need AI updates... they are instant commands like
 			//evacuate or triggering certain special powers...
-			if( ai == NULL && !currentObj->isAnyKindOf( validNonAIKindofs ) )
+			if( ai == nullptr && !currentObj->isAnyKindOf( validNonAIKindofs ) )
 			{
 				continue;
 			}
@@ -2838,7 +2838,7 @@ void AIGroup::groupAttackPosition( const Coord3D *pos, Int maxShotsToFire, Comma
 				Object* equipMember = TheGameLogic->findObjectByID(*it);
 				if(equipMember)
 				{
-					CanAttackResult result = equipMember->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, NULL, &attackPos, cmdSource ) ;
+					CanAttackResult result = equipMember->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, &attackPos, cmdSource ) ;
 					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
 						AIUpdateInterface *equipAI = equipMember->getAI();
@@ -3064,7 +3064,7 @@ void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, OrderNearbyData
 		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
 		PartitionFilterSameMapStatus filterMapStatus(obj);
 		PartitionFilterAlive filterAlive;
-		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, NULL };
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, nullptr };
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 

@@ -287,7 +287,7 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 
 	if(!m_availableCountermeasures && m_dockObjectID != INVALID_ID)
 	{
-		Object *dockObj = NULL;
+		Object *dockObj = nullptr;
 		dockObj = TheGameLogic->findObjectByID(m_dockObjectID);
 		if(dockObj)
 		{
@@ -322,7 +322,7 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 		// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
 		// So these checks are on an individual basis, not in the Partition query
 		//	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
-		PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, NULL };
+		PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, nullptr };
 
 		// scan objects in our region
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
@@ -331,7 +331,7 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 																		filters, ITER_FASTEST );
 		MemoryPoolObjectHolder hold( iter );
 		
-		for( Object *currentObj = iter->first(); currentObj != NULL; currentObj = iter->next() )
+		for( Object *currentObj = iter->first(); currentObj != nullptr; currentObj = iter->next() )
 		{
 			if(!data->m_reloadNearObjects.empty())
 			{
@@ -357,10 +357,9 @@ UpdateSleepTime CountermeasuresBehavior::update( void )
 			if( data->m_mustReloadNearDock == TRUE )
 			{
 				// look for a dock interface
-				RepairDockUpdateInterface *di = NULL;
 				for (BehaviorModule **u = currentObj->getBehaviorModules(); *u; ++u)
 				{
-					if ((di = (*u)->getRepairDockUpdateInterface()) != NULL)
+					if ((*u)->getRepairDockUpdateInterface() != nullptr)
 					{
 						m_dockObjectID = currentObj->getID();
 						setCountermeasuresParked();

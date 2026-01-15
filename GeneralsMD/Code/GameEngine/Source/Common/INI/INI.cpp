@@ -406,7 +406,7 @@ UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, 
 	s_xfer = pXfer;
 	prepFile(filename, loadType, optional);
 
-	if (optional && m_file == NULL) {
+	if (optional && m_file == nullptr) {
 		// unPrepFile();
 		return 0;
 	}
@@ -607,7 +607,7 @@ void INI::parseIntVector( INI* ini, void * /*instance*/, void *store, const void
 	std::vector<int>* asv = (std::vector<int>*)store;
 	asv->clear();
 
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(scanInt(token));
 	}
@@ -619,7 +619,7 @@ void INI::parseIntVectorAppend( INI* ini, void * /*instance*/, void *store, cons
 	std::vector<int>* asv = (std::vector<int>*)store;
 	// nope, don't clear. duh.
 	// asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(scanInt(token));
 	}
@@ -640,7 +640,7 @@ void INI::parseUnsignedIntVector( INI* ini, void * /*instance*/, void *store, co
 	std::vector<UnsignedInt>* asv = (std::vector<UnsignedInt>*)store;
 	asv->clear();
 
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(scanUnsignedInt(token));
 	}
@@ -661,7 +661,7 @@ void INI::parseRealVector( INI* ini, void * /*instance*/, void *store, const voi
 	std::vector<Real>* asv = (std::vector<Real>*)store;
 	asv->clear();
 
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(scanReal(token));
 	}
@@ -804,7 +804,7 @@ void INI::parseAsciiStringWithColonVector( INI* ini, void * /*instance*/, void *
 {
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != nullptr; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
 	}
@@ -815,7 +815,7 @@ void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, 
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	// nope, don't clear. duh.
 	// asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
+	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != nullptr; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
 	}
@@ -829,7 +829,7 @@ void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void 
 	//asv->clear();
 	
 	Int parsing = 1;
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		if(parsing == 3)
 		{
@@ -889,7 +889,7 @@ void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void 
 {
 	WeaponBonusConditionTypeVec* asv = (WeaponBonusConditionTypeVec*)store;
 	asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		if (stricmp(token, "None") == 0)
 		{
@@ -906,7 +906,7 @@ void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void 
 {
 	WeaponBonusConditionTypeVec* asv = (WeaponBonusConditionTypeVec*)store;
 	// asv->clear();
-	for (const char* token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char* token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		if (stricmp(token, "None") == 0)
 		{
@@ -1567,7 +1567,7 @@ void INI::parseObjectCreationListVector( INI* ini, void * /*instance*/, void *st
 	typedef const ObjectCreationList *ConstObjectCreationListPtr;
 	std::vector<ConstObjectCreationListPtr>* v = (std::vector<ConstObjectCreationListPtr>*)store;
 	v->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		const ObjectCreationList *ocl = TheObjectCreationListStore->findObjectCreationList(token);	// could be null!
 		DEBUG_ASSERTCRASH(ocl || stricmp(token, "None") == 0, ("ObjectCreationList %s not found!",token));
@@ -1656,7 +1656,7 @@ void INI::parseIndexListVector( INI* ini, void * /*instance*/, void *store, cons
 	std::vector<int>* asv = (std::vector<int>*)store;
 	asv->clear();
 	ConstCharPtrArray nameList = (ConstCharPtrArray)userData;
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(scanIndexList(token, nameList));
 	}
@@ -2017,7 +2017,7 @@ void INI::parseDurationUnsignedIntVector( INI* ini, void * /*instance*/, void *s
 	std::vector<UnsignedInt>* asv = (std::vector<UnsignedInt>*)store;
 	asv->clear();
 
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		UnsignedInt val = scanUnsignedInt(token);
 		asv->push_back((UnsignedInt)ceilf(ConvertDurationFromMsecsToFrames((Real)val)));
@@ -2157,7 +2157,7 @@ void INI::parseDeathTypeFlags(INI* ini, void* /*instance*/, void* store, const v
 				// DEBUG_LOG(("INI::parseDeathTypeFlags - flags = %X\n", flags));
 			}
 			else {
-				DEBUG_LOG(("INI::parseDeathTypeFlags - TheGlobalData is NULL\n"));
+				DEBUG_LOG(("INI::parseDeathTypeFlags - TheGlobalData is null\n"));
 			}
 
 			continue;
@@ -2225,7 +2225,6 @@ void INI::parseDamageTypeFlagsCustom(INI* ini, void* /*instance*/, void* store, 
 			flags = DAMAGE_TYPE_FLAGS_NONE;
 			flags.flip();
 
-			customFront = NULL;
 			customFront.format("ALL");
 			continue;
 		}
@@ -2233,7 +2232,6 @@ void INI::parseDamageTypeFlagsCustom(INI* ini, void* /*instance*/, void* store, 
 		{
 			flags = DAMAGE_TYPE_FLAGS_NONE;
 
-			customFront = NULL;
 			customFront.format("NONE");
 			continue;
 		}
@@ -2275,10 +2273,9 @@ void INI::parseDeathTypeFlagsCustom(INI* ini, void* /*instance*/, void* store, c
 				DEBUG_LOG(("INI::parseDeathTypeFlags - flags = %X\n", flags));
 			}
 			else {
-				DEBUG_LOG(("INI::parseDeathTypeFlags - TheGlobalData is NULL\n"));
+				DEBUG_LOG(("INI::parseDeathTypeFlags - TheGlobalData is null\n"));
 			}
 
-			customFront = NULL;
 			customFront.format("ALL");
 			continue;
 		}
@@ -2286,7 +2283,6 @@ void INI::parseDeathTypeFlagsCustom(INI* ini, void* /*instance*/, void* store, c
 		{
 			flags = DEATH_TYPE_FLAGS_NONE;
 
-			customFront = NULL;
 			customFront.format("NONE");
 			continue;
 		}
@@ -2316,9 +2312,8 @@ void INI::parseCustomTypes(INI* ini, void* /*instance*/, void* store, const void
 	AsciiStringIntPair type;
 	CustomFlags* s = (CustomFlags*)store;
 	
-	for (const char *token = ini->getNextToken(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextToken(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
-		type.first = NULL;
 		if (token[0] == '+')
 		{
 			type.first.format(token+1);

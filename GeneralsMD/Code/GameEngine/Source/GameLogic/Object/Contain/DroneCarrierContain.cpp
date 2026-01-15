@@ -40,7 +40,7 @@ void DroneCarrierContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "ContainedUnitsDeathType", INI::parseIndexList, TheDeathNames, offsetof(DroneCarrierContainModuleData, m_deathTypeToContained) },
-		{ "LaunchVelocityBoost", INI::parseReal, NULL, offsetof(DroneCarrierContainModuleData, m_launchVelocityBoost) },
+		{ "LaunchVelocityBoost", INI::parseReal, nullptr, offsetof(DroneCarrierContainModuleData, m_launchVelocityBoost) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -292,7 +292,7 @@ void DroneCarrierContain::onDie(const DamageInfo* damageInfo)
 	{
 		Object* object = *it;
 
-		DEBUG_ASSERTCRASH(object, ("Contain list must not contain NULL element"));
+		DEBUG_ASSERTCRASH(object, ("Contain list must not contain null element"));
 
 		if (!object->isEffectivelyDead())
 			object->kill(DAMAGE_UNRESISTABLE, data->m_deathTypeToContained);
@@ -360,7 +360,7 @@ void DroneCarrierContain::updateContainedReloadingStatus()
 				for (Int i = 0; i < WEAPONSLOT_COUNT; ++i)
 				{
 					Weapon* w = drone->getWeaponInWeaponSlot((WeaponSlotType)i);
-					if (w == NULL)
+					if (w == nullptr)
 						continue;
 
 					Int reloadTime = w->getClipReloadTime(drone);

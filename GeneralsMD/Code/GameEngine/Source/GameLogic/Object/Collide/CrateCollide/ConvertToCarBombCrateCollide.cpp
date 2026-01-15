@@ -48,8 +48,8 @@
 //-------------------------------------------------------------------------------------------------
 ConvertToCarBombCrateCollide::ConvertToCarBombCrateCollide( Thing *thing, const ModuleData* moduleData ) : CrateCollide( thing, moduleData )
 {
-	m_originalName = NULL;
-	m_originalTeam = NULL;
+	m_originalName.clear();
+	m_originalTeam = nullptr;
 	m_originalVisionRange = 0.0f;
 	m_originalShroudClearingRange = 0.0f;
 }
@@ -310,7 +310,7 @@ void ConvertToCarBombCrateCollide::xfer( Xfer *xfer )
 		{
 
 			m_originalTeam = TheTeamFactory->findTeamByID( teamID );
-			if( m_originalTeam == NULL )
+			if( m_originalTeam == nullptr )
 			{
 
 				DEBUG_CRASH(( "ConvertToCarBombCrateCollide::xfer - Unable to find original team by id" ));
@@ -319,7 +319,7 @@ void ConvertToCarBombCrateCollide::xfer( Xfer *xfer )
 
 		}
 		else
-			m_originalTeam = NULL;
+			m_originalTeam = nullptr;
 	}
 
 }

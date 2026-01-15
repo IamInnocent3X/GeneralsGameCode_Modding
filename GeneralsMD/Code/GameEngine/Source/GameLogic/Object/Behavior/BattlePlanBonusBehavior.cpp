@@ -60,9 +60,9 @@ BattlePlanBonusBehaviorModuleData::BattlePlanBonusBehaviorModuleData()
 		//m_movementSpeedScalarEntries[i] = 1.0;
 		m_statusToSetEntries[i] = OBJECT_STATUS_NONE;
 		m_statusToClearEntries[i] = OBJECT_STATUS_NONE;
-		m_customWeaponBonusEntries[i] = NULL;
-		m_customStatusToSetEntries[i] = NULL;
-		m_customStatusToClearEntries[i] = NULL;
+		m_customWeaponBonusEntries[i].clear();
+		m_customStatusToSetEntries[i].clear();
+		m_customStatusToClearEntries[i].clear();
 	}
 }
 //-------------------------------------------------------------------------------------------------
@@ -183,22 +183,22 @@ void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToClear(INI* ini, voi
 {
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, NULL, offsetof(BattlePlanBonusBehaviorModuleData, m_initiallyActive) },
-		{ "OverrideGlobalBonus",	INI::parseBool, NULL, offsetof(BattlePlanBonusBehaviorModuleData, m_overrideGlobal) },
-		{ "ShouldParalyzeOnPlanChange",	INI::parseBool, NULL, offsetof(BattlePlanBonusBehaviorModuleData, m_shouldParalyze) },
+		{ "StartsActive",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_initiallyActive) },
+		{ "OverrideGlobalBonus",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_overrideGlobal) },
+		{ "ShouldParalyzeOnPlanChange",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_shouldParalyze) },
 
-		{ "WeaponBonus",	parseBPWeaponBonus, NULL, 0 },
-		{ "WeaponSet",	parseBPWeaponSetFlag, NULL, 0 },
-		{ "ArmorSet",	parseBPArmorSetFlag, NULL, 0 },
-		{ "ArmorDamageScalar",	parseBPArmorDamageScalar, NULL, 0 },
-		{ "SightRangeScalar",	parseBPSightRangeScalar, NULL, 0 },
-		//{ "MovementSpeedScalar",	parseBPMovementSpeedScalar, NULL, 0 },
-		{ "StatusToSet",	parseBPStatusToSet, NULL, 0 },
-		{ "StatusToClear",	parseBPStatusToClear, NULL, 0 },
+		{ "WeaponBonus",	parseBPWeaponBonus, nullptr, 0 },
+		{ "WeaponSet",	parseBPWeaponSetFlag, nullptr, 0 },
+		{ "ArmorSet",	parseBPArmorSetFlag, nullptr, 0 },
+		{ "ArmorDamageScalar",	parseBPArmorDamageScalar, nullptr, 0 },
+		{ "SightRangeScalar",	parseBPSightRangeScalar, nullptr, 0 },
+		//{ "MovementSpeedScalar",	parseBPMovementSpeedScalar, nullptr, 0 },
+		{ "StatusToSet",	parseBPStatusToSet, nullptr, 0 },
+		{ "StatusToClear",	parseBPStatusToClear, nullptr, 0 },
 
-		{ "CustomWeaponBonus",	parseBPCustomWeaponBonus, NULL, 0 },
-		{ "CustomStatusToSet",	parseBPCustomStatusToSet, NULL, 0 },
-		{ "CustomStatusToClear",	parseBPCustomStatusToClear, NULL, 0 },
+		{ "CustomWeaponBonus",	parseBPCustomWeaponBonus, nullptr, 0 },
+		{ "CustomStatusToSet",	parseBPCustomStatusToSet, nullptr, 0 },
+		{ "CustomStatusToClear",	parseBPCustomStatusToClear, nullptr, 0 },
 		
 		{ 0, 0, 0, 0 }
 	};

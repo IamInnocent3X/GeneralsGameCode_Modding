@@ -886,10 +886,10 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 	Real minDistSqr = HUGE_DIST_SQR;
 
 	rectToFourPoints(a, pts);
-	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : NULL);
+	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : nullptr);
 
 	rectToFourPoints(b, pts);
-	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : NULL);
+	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : nullptr);
 
 	if (avgTot > 0)
 	{
@@ -3913,7 +3913,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 	ICoord2D loRegion, hiRegion;
 	Coord3D loWorld, hiWorld;
 
-	if(region2D != NULL)
+	if(region2D != nullptr)
 	{
 		loRegion.x = region2D->lo.x;
 		loRegion.y = region2D->lo.y;
@@ -3988,7 +3988,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
     for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
 		{
 			PartitionCell* thisCell = getCellAt(cellCenterX + it->x, cellCenterY + it->y);
-			if (thisCell == NULL)
+			if (thisCell == nullptr)
 				continue;
 
 			for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
@@ -3996,7 +3996,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 				PartitionData *thisMod = thisCoi->getModule();
 				Object *thisObj = thisMod->getObject();
 
-				if (thisObj == NULL)
+				if (thisObj == nullptr)
 					continue;
 
 				// since an object can exist in multiple COIs, we use this to avoid processing
@@ -4031,7 +4031,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 	++theIterFlag;
 
 	PartitionCell *thisCell;
-	while ((thisCell = iter.nextNonEmpty()) != NULL)
+	while ((thisCell = iter.nextNonEmpty()) != nullptr)
 	{
 		CellAndObjectIntersection *nextCoi;
 		for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
@@ -4042,7 +4042,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D
 
 			Object *thisObj = thisMod->getObject();
 
-			if (thisObj == NULL)
+			if (thisObj == nullptr)
 				continue;
 
 			if (thisMod->friend_getDoneFlag() == theIterFlag)
@@ -4173,7 +4173,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 					for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
 						{
 							PartitionCell* thisCell = getCellAt(useX + it->x, useY + it->y);
-							if (thisCell == NULL)
+							if (thisCell == nullptr)
 								continue;
 
 							for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
@@ -4181,7 +4181,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 								PartitionData *thisMod = thisCoi->getModule();
 								Object *thisObj = thisMod->getObject();
 
-								if (thisObj == NULL)
+								if (thisObj == nullptr)
 									continue;
 
 								// since an object can exist in multiple COIs, we use this to avoid processing
@@ -4214,7 +4214,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 				++theIterFlag;
 
 				PartitionCell *thisCell;
-				while ((thisCell = iter.nextNonEmpty()) != NULL)
+				while ((thisCell = iter.nextNonEmpty()) != nullptr)
 				{
 					CellAndObjectIntersection *nextCoi;
 					for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
@@ -4225,7 +4225,7 @@ std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
 
 						Object *thisObj = thisMod->getObject();
 
-						if (thisObj == NULL)
+						if (thisObj == nullptr)
 							continue;
 
 						if (thisMod->friend_getDoneFlag() == theIterFlag)
@@ -4554,7 +4554,7 @@ Int PartitionManager::getObjectsAlongLine(
 			FXList::doFXPos(railgunfx, &currentPos);
 		if( railgunocl )
 		{
-			Object *obj = ObjectCreationList::create( railgunocl, source, &currentPos, NULL, angle);
+			Object *obj = ObjectCreationList::create( railgunocl, source, &currentPos, nullptr, angle);
 			if(obj && !testValidForRailgunCheck(obj))
 				obj->setIgnoreRailgunCheck();
 		}
@@ -4657,7 +4657,7 @@ Int PartitionManager::checkObjectsAlongLine(
     for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
 		{
 			PartitionCell* thisCell = getCellAt(cellCenterX + it->x, cellCenterY + it->y);
-			if (thisCell == NULL)
+			if (thisCell == nullptr)
 				continue;
 
 			for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
@@ -4666,7 +4666,7 @@ Int PartitionManager::checkObjectsAlongLine(
 				Object *thisObj = thisMod->getObject();
 
 				// never compare against ourself.
-				if (thisObj == NULL || thisObj->getID() == sourceID)
+				if (thisObj == nullptr || thisObj->getID() == sourceID)
 					continue;
 
 				// since an object can exist in multiple COIs, we use this to avoid processing
@@ -4719,7 +4719,7 @@ Int PartitionManager::checkObjectsAlongLine(
 							continue;
 					}
 				}
-				if (!useNewStructureCheck && !(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+				if (!useNewStructureCheck && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 					continue;
 
 				//if( setContinue )
@@ -4734,7 +4734,7 @@ Int PartitionManager::checkObjectsAlongLine(
 					}
 
 					// Have a different set of rules for checking infantry
-					//if ((*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+					//if ((*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 					{
 						//Coord3D checkPos = currentPos;
 						//Coord3D currDir = *thisObj->getPosition();
@@ -4773,7 +4773,7 @@ Int PartitionManager::checkObjectsAlongLine(
 				{
 					case FROM_CENTER_2D:
 					case FROM_CENTER_3D:
-						(*distProc)(&startingPos, NULL, &objPos, thisObj, thisDistSqr, distVec, checkDistSqr);
+						(*distProc)(&startingPos, nullptr, &objPos, thisObj, thisDistSqr, distVec, checkDistSqr);
 						break;
 					case FROM_BOUNDINGSPHERE_2D:
 					case FROM_BOUNDINGSPHERE_3D:
@@ -4850,7 +4850,7 @@ Int PartitionManager::checkObjectsAlongLine(
 	++theIterFlag;
 
 	PartitionCell *thisCell;
-	while ((thisCell = iter.nextNonEmpty()) != NULL)
+	while ((thisCell = iter.nextNonEmpty()) != nullptr)
 	{
 		CellAndObjectIntersection *nextCoi;
 		for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
@@ -4862,7 +4862,7 @@ Int PartitionManager::checkObjectsAlongLine(
 			Object *thisObj = thisMod->getObject();
 
 			// never compare against ourself.
-			if (thisObj == NULL || thisObj->getID() == sourceID)
+			if (thisObj == nullptr || thisObj->getID() == sourceID)
 				continue;
 
 			if (thisMod->friend_getDoneFlag() == theIterFlag)
@@ -4908,7 +4908,7 @@ Int PartitionManager::checkObjectsAlongLine(
 						continue;
 				}
 			}
-			if (!useNewStructureCheck && !(*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
+			if (!useNewStructureCheck && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
 				continue;
 
 			//if( setContinue )
@@ -4923,7 +4923,7 @@ Int PartitionManager::checkObjectsAlongLine(
 				}
 
 				// Have a different set of rules for checking infantry
-				//if ((*distProc)(&currentPos, NULL, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+				//if ((*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 				{
 					//Coord3D checkPos = currentPos;
 					//Coord3D currDir = *thisObj->getPosition();
@@ -4962,7 +4962,7 @@ Int PartitionManager::checkObjectsAlongLine(
 			{
 				case FROM_CENTER_2D:
 				case FROM_CENTER_3D:
-					(*distProc)(&startingPos, NULL, &objPos, thisObj, &thisDistSqr, &distVec, checkDistSqr);
+					(*distProc)(&startingPos, nullptr, &objPos, thisObj, &thisDistSqr, &distVec, checkDistSqr);
 					break;
 				case FROM_BOUNDINGSPHERE_2D:
 				case FROM_BOUNDINGSPHERE_3D:
@@ -5071,7 +5071,7 @@ SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
 	data.filters = filters;
 	data.iterArg = iter;*/
 
-	getObjectsAlongLine(source, *pos, *posOther, radius, infantryRadius, checkPerDistance, railgunfx, railgunocl, dc, filters, iter, checkBehind, NULL, NULL);
+	getObjectsAlongLine(source, *pos, *posOther, radius, infantryRadius, checkPerDistance, railgunfx, railgunocl, dc, filters, iter, checkBehind, nullptr, nullptr);
 
 	//iterateCellsAlongLine(*pos, *posOther, (*CellAlongLineProc)checkObjectsAlongLine, &data);
 
@@ -5929,7 +5929,7 @@ Bool PartitionManager::isClearLineOfSightTerrain(const Object* obj, const Coord3
 		const Weapon* w = obj->getCurrentWeapon();
 		if (obj->isKindOf(KINDOF_IMMOBILE)) {
 			// Don't take terrain blockage into account, since we can't move around it. jba.
-			w = NULL;
+			w = nullptr;
 		}
 		if (w)
 		{
@@ -7020,7 +7020,7 @@ Bool PartitionFilterStealthedAndUndetected::allow( Object *objOther )
 	{
 		//This handles neutral containers that hold stealth units. This specifically fixes a bug where hunt scripts would ignore
 		//this case -- units would acquire the building Jarmen Kell occupied even though it was not stealth detected.
-		///IamInnocent 16/10/2025 - HotFix: Could return NULL from CaveContain.
+		///IamInnocent 16/10/2025 - HotFix: Could return null from CaveContain.
 		const ContainModuleInterface* contain = objOther->getContain();
 		if( contain && contain->getContainedItemsList() && !contain->getContainedItemsList()->empty() )
 		{

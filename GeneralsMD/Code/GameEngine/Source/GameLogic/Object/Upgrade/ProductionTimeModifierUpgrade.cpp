@@ -92,9 +92,9 @@ ProductionTimeModifierUpgradeModuleData::ProductionTimeModifierUpgradeModuleData
 
 	static const FieldParse dataFieldParse[] = 
 	{
-		{ "EffectKindOf",		KindOfMaskType::parseFromINI, NULL, offsetof(ProductionTimeModifierUpgradeModuleData, m_kindOf ) },
-		{ "Percentage",			INI::parsePercentToReal, NULL, offsetof(ProductionTimeModifierUpgradeModuleData, m_percentage ) },
-		{ "IsOneShotUpgrade",		INI::parseBool, NULL, offsetof(ProductionTimeModifierUpgradeModuleData, m_isOneShot) },
+		{ "EffectKindOf",		KindOfMaskType::parseFromINI, nullptr, offsetof(ProductionTimeModifierUpgradeModuleData, m_kindOf ) },
+		{ "Percentage",			INI::parsePercentToReal, nullptr, offsetof(ProductionTimeModifierUpgradeModuleData, m_percentage ) },
+		{ "IsOneShotUpgrade",		INI::parseBool, nullptr, offsetof(ProductionTimeModifierUpgradeModuleData, m_isOneShot) },
 		{ "BonusStacksWith",		INI::parseIndexList, TheBonusStackingTypeNames, offsetof(ProductionTimeModifierUpgradeModuleData, m_stackingType) },
 		{ 0, 0, 0, 0 } 
 	};

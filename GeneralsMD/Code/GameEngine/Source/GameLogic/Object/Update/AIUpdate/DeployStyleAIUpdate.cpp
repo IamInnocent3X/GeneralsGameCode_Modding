@@ -886,7 +886,7 @@ Bool DeployStyleAIUpdate::isWithinAttackAngle(void) const
 	else
 		pos = ai->getCurrentVictimPos();
 
-	if (pos == NULL || weapon == NULL)
+	if (pos == nullptr || weapon == nullptr)
 		return false;
 
 	Real aimDelta = weapon->getTemplate()->getAimDelta();

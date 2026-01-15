@@ -51,9 +51,9 @@
 //-------------------------------------------------------------------------------------------------
 ChronoDeathBehaviorModuleData::ChronoDeathBehaviorModuleData()
 {
-	m_ocl = NULL;
-	m_startFX = NULL;
-	m_endFX = NULL;
+	m_ocl = nullptr;
+	m_startFX = nullptr;
+	m_endFX = nullptr;
 	m_startScale = 1.0;
 	m_endScale = 1.0;
 	m_startAlpha = 1.0;
@@ -69,21 +69,21 @@ ChronoDeathBehaviorModuleData::ChronoDeathBehaviorModuleData()
 
 	static const FieldParse dataFieldParse[] = 
 	{
-		{ "StartFX",			INI::parseFXList,			    NULL, offsetof(ChronoDeathBehaviorModuleData, m_startFX) },
-		{ "EndFX",				INI::parseFXList,			    NULL, offsetof(ChronoDeathBehaviorModuleData, m_endFX) },
-		{ "StartFXInfantry",			INI::parseFXList,		NULL, offsetof(ChronoDeathBehaviorModuleData, m_startFXInfantry) },
-		{ "StartFXVehicle",			INI::parseFXList,			NULL, offsetof(ChronoDeathBehaviorModuleData, m_startFXVehicle) },
-		{ "StartFXStructure",			INI::parseFXList,	    NULL, offsetof(ChronoDeathBehaviorModuleData, m_startFXStructure) },
-		{ "EndFXInfantry",				INI::parseFXList,		NULL, offsetof(ChronoDeathBehaviorModuleData, m_endFXInfantry) },
-		{ "EndFXVehicle",				INI::parseFXList,		NULL, offsetof(ChronoDeathBehaviorModuleData, m_endFXVehicle) },
-		{ "EndFXStructure",				INI::parseFXList,		NULL, offsetof(ChronoDeathBehaviorModuleData, m_endFXStructure) },
-		{ "OCL",				INI::parseObjectCreationList,	NULL, offsetof(ChronoDeathBehaviorModuleData, m_ocl) },
-		{ "OCLDynamicGeometryScaleFactor",  INI::parseReal,	    NULL, offsetof(ChronoDeathBehaviorModuleData, m_oclScaleFactor) },
-		{ "StartScale",			INI::parseReal,			        NULL, offsetof(ChronoDeathBehaviorModuleData, m_startScale) },
-		{ "EndScale",			INI::parseReal,		            NULL, offsetof(ChronoDeathBehaviorModuleData, m_endScale) },
-		{ "StartOpacity",		INI::parsePercentToReal,		NULL, offsetof(ChronoDeathBehaviorModuleData, m_startAlpha) },
-		{ "EndOpacity",			INI::parsePercentToReal,		NULL, offsetof(ChronoDeathBehaviorModuleData, m_endAlpha) },
-		{ "DestructionDelay",	INI::parseDurationUnsignedInt,	NULL, offsetof(ChronoDeathBehaviorModuleData, m_destructionDelay) },
+		{ "StartFX",			INI::parseFXList,			    nullptr, offsetof(ChronoDeathBehaviorModuleData, m_startFX) },
+		{ "EndFX",				INI::parseFXList,			    nullptr, offsetof(ChronoDeathBehaviorModuleData, m_endFX) },
+		{ "StartFXInfantry",			INI::parseFXList,		nullptr, offsetof(ChronoDeathBehaviorModuleData, m_startFXInfantry) },
+		{ "StartFXVehicle",			INI::parseFXList,			nullptr, offsetof(ChronoDeathBehaviorModuleData, m_startFXVehicle) },
+		{ "StartFXStructure",			INI::parseFXList,	    nullptr, offsetof(ChronoDeathBehaviorModuleData, m_startFXStructure) },
+		{ "EndFXInfantry",				INI::parseFXList,		nullptr, offsetof(ChronoDeathBehaviorModuleData, m_endFXInfantry) },
+		{ "EndFXVehicle",				INI::parseFXList,		nullptr, offsetof(ChronoDeathBehaviorModuleData, m_endFXVehicle) },
+		{ "EndFXStructure",				INI::parseFXList,		nullptr, offsetof(ChronoDeathBehaviorModuleData, m_endFXStructure) },
+		{ "OCL",				INI::parseObjectCreationList,	nullptr, offsetof(ChronoDeathBehaviorModuleData, m_ocl) },
+		{ "OCLDynamicGeometryScaleFactor",  INI::parseReal,	    nullptr, offsetof(ChronoDeathBehaviorModuleData, m_oclScaleFactor) },
+		{ "StartScale",			INI::parseReal,			        nullptr, offsetof(ChronoDeathBehaviorModuleData, m_startScale) },
+		{ "EndScale",			INI::parseReal,		            nullptr, offsetof(ChronoDeathBehaviorModuleData, m_endScale) },
+		{ "StartOpacity",		INI::parsePercentToReal,		nullptr, offsetof(ChronoDeathBehaviorModuleData, m_startAlpha) },
+		{ "EndOpacity",			INI::parsePercentToReal,		nullptr, offsetof(ChronoDeathBehaviorModuleData, m_endAlpha) },
+		{ "DestructionDelay",	INI::parseDurationUnsignedInt,	nullptr, offsetof(ChronoDeathBehaviorModuleData, m_destructionDelay) },
 		{ 0, 0, 0, 0 }
 	};
     p.add(dataFieldParse);
@@ -135,19 +135,19 @@ UpdateSleepTime ChronoDeathBehavior::update()
 		Real objRadius = obj->getGeometryInfo().getBoundingCircleRadius();
 		if (d->m_endFX)
 		{
-			FXList::doFXPos(d->m_endFX, obj->getPosition(), NULL, 0, NULL, objRadius);
+			FXList::doFXPos(d->m_endFX, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 		}
 		if (d->m_endFXInfantry && obj->isKindOf(KINDOF_INFANTRY))
 		{
-			FXList::doFXPos(d->m_endFXInfantry, obj->getPosition(), NULL, 0, NULL, objRadius);
+			FXList::doFXPos(d->m_endFXInfantry, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 		}
 		if (d->m_endFXVehicle && obj->isKindOf(KINDOF_VEHICLE))
 		{
-			FXList::doFXPos(d->m_endFXVehicle, obj->getPosition(), NULL, 0, NULL, objRadius);
+			FXList::doFXPos(d->m_endFXVehicle, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 		}
 		if (d->m_endFXStructure && obj->isKindOf(KINDOF_STRUCTURE))
 		{
-			FXList::doFXPos(d->m_endFXStructure, obj->getPosition(), NULL, 0, NULL, objRadius);
+			FXList::doFXPos(d->m_endFXStructure, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 		}
 
 		TheGameLogic->destroyObject(obj);
@@ -179,28 +179,28 @@ void ChronoDeathBehavior::beginChronoDeath(const DamageInfo* damageInfo)
 	Real objRadius = obj->getGeometryInfo().getBoundingCircleRadius();
 	if (d->m_startFX)
 	{	
-		FXList::doFXPos(d->m_startFX, obj->getPosition(), NULL, 0, NULL, objRadius);
+		FXList::doFXPos(d->m_startFX, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 	}
 	if (d->m_startFXInfantry && obj->isKindOf(KINDOF_INFANTRY))
 	{
-		FXList::doFXPos(d->m_startFXInfantry, obj->getPosition(), NULL, 0, NULL, objRadius);
+		FXList::doFXPos(d->m_startFXInfantry, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 	}
 	if (d->m_startFXVehicle && obj->isKindOf(KINDOF_VEHICLE))
 	{
-		FXList::doFXPos(d->m_startFXVehicle, obj->getPosition(), NULL, 0, NULL, objRadius);
+		FXList::doFXPos(d->m_startFXVehicle, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 	}
 	if (d->m_startFXStructure && obj->isKindOf(KINDOF_STRUCTURE))
 	{
-		FXList::doFXPos(d->m_startFXStructure, obj->getPosition(), NULL, 0, NULL, objRadius);
+		FXList::doFXPos(d->m_startFXStructure, obj->getPosition(), nullptr, 0, nullptr, objRadius);
 	}
 
 	if (d->m_ocl)
 	{
 		// pass geometry size of parent object;
-		Object* newObject = ObjectCreationList::create(d->m_ocl, obj, NULL);
-		if (newObject != NULL && d->m_oclScaleFactor != 0.0) {
+		Object* newObject = ObjectCreationList::create(d->m_ocl, obj, nullptr);
+		if (newObject != nullptr && d->m_oclScaleFactor != 0.0) {
 			Drawable* oclDraw = newObject->getDrawable();
-			if (oclDraw != NULL) {
+			if (oclDraw != nullptr) {
 				static NameKeyType key_dynamicGeometryUpdate = NAMEKEY("DynamicGeometryClientUpdate");
 				DynamicGeometryClientUpdate* update = (DynamicGeometryClientUpdate*)oclDraw->findClientUpdateModule(key_dynamicGeometryUpdate);
 				if (update) {

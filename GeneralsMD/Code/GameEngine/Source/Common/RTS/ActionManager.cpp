@@ -1004,7 +1004,7 @@ Bool ActionManager::canSabotageBuilding( const Object *obj, const Object *object
 Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEquip, CommandSourceType commandSource, Bool ParasiteHideCursor )
 {
 	// sanity
-	if( obj == NULL || objectToEquip == NULL )
+	if( obj == nullptr || objectToEquip == nullptr )
 	{
 		return FALSE;
 	}

@@ -9,16 +9,16 @@
 #include "Common/MapData.h"
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
-MapData* TheWriteableMapData = NULL;				///< The current map data singleton
+MapData* TheWriteableMapData = nullptr;				///< The current map data singleton
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*static*/ const FieldParse MapData::s_MapDataFieldParseTable[] =
 {
-	{ "HeightMapScale",									INI::parseReal,				NULL,			offsetof( MapData, m_HeightmapScale) },
-	{ "EnableShips",									  INI::parseBool,       NULL,     offsetof( MapData, m_enableShips) },
-	{ NULL,					NULL,						NULL,						0 }  // keep this last
+	{ "HeightMapScale",									INI::parseReal,				nullptr,			offsetof( MapData, m_HeightmapScale) },
+	{ "EnableShips",									  INI::parseBool,       nullptr,     offsetof( MapData, m_enableShips) },
+	{ nullptr,					nullptr,						nullptr,						0 }  // keep this last
 
 };
 

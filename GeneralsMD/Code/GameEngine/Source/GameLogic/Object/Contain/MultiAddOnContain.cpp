@@ -68,12 +68,12 @@ void MultiAddOnContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
   static const FieldParse dataFieldParse[] =
   {
-    { "PayloadTemplateName",  INI::parseAsciiStringVectorAppend, NULL, offsetof(MultiAddOnContainModuleData, m_payloadTemplateNameData) },
-    { "ShouldDrawPips",  INI::parseBool, NULL, offsetof(MultiAddOnContainModuleData, m_drawPips) },
-    { "AddOnBoneName",  INI::parseAsciiString, NULL, offsetof(MultiAddOnContainModuleData, m_addOnBoneName) },
-    { "EmptySlotSubObjectName",  INI::parseAsciiString, NULL, offsetof(MultiAddOnContainModuleData, m_emptySlotSubObjName) },
-    { "OccupiedSlotSubObjectName",  INI::parseAsciiString, NULL, offsetof(MultiAddOnContainModuleData, m_occupiedSlotSubObjName) },
-    { "AddOnEntry", parseAddOnEntry, NULL, 0 },
+    { "PayloadTemplateName",  INI::parseAsciiStringVectorAppend, nullptr, offsetof(MultiAddOnContainModuleData, m_payloadTemplateNameData) },
+    { "ShouldDrawPips",  INI::parseBool, nullptr, offsetof(MultiAddOnContainModuleData, m_drawPips) },
+    { "AddOnBoneName",  INI::parseAsciiString, nullptr, offsetof(MultiAddOnContainModuleData, m_addOnBoneName) },
+    { "EmptySlotSubObjectName",  INI::parseAsciiString, nullptr, offsetof(MultiAddOnContainModuleData, m_emptySlotSubObjName) },
+    { "OccupiedSlotSubObjectName",  INI::parseAsciiString, nullptr, offsetof(MultiAddOnContainModuleData, m_occupiedSlotSubObjName) },
+    { "AddOnEntry", parseAddOnEntry, nullptr, 0 },
     { 0, 0, 0, 0 }
   };
   p.add(dataFieldParse);
@@ -111,7 +111,7 @@ MultiAddOnContain::MultiAddOnContain(Thing* thing, const ModuleData* moduleData)
     addOn.slot = i;
     m_addOnSlots.push_back(addOn);
 
-    // Draw is NULL at this point, so lets leave it to the art code to hide the objects initially
+    // Draw is null at this point, so lets leave it to the art code to hide the objects initially
     //updateSubObjForSlot(i, FALSE);
   }
 }
@@ -420,7 +420,7 @@ bool MultiAddOnContain::createAddOnForRider(Object* obj)
   }
 
   // create the actual object
-  Object* addOnObj = NULL;
+  Object* addOnObj = nullptr;
   AddOnEntryMap::const_iterator it = d->m_addOnEntries.find(NAMEKEY(obj->getTemplate()->getName()));
   if (it != d->m_addOnEntries.end())
   {
@@ -434,7 +434,7 @@ bool MultiAddOnContain::createAddOnForRider(Object* obj)
     }
   }
 
-  if (addOnObj == NULL) {
+  if (addOnObj == nullptr) {
     DEBUG_LOG(("MultiAddOnContain::createAddOnForRider - WARNING: - failed to create AddOn object!"));
     return false;
   }
@@ -541,11 +541,11 @@ void MultiAddOnContain::putObjAtSlot(Object* obj, short slot)
   boneName.format("%s%02d", d->m_addOnBoneName.str(), slot + 1);
   if (d->m_passengersInTurret)
   {
-    found = getObject()->getSingleLogicalBonePositionOnTurret(TURRET_MAIN, boneName.str(), NULL, &matrix);
+    found = getObject()->getSingleLogicalBonePositionOnTurret(TURRET_MAIN, boneName.str(), nullptr, &matrix);
   }
   else
   {
-    found = getObject()->getSingleLogicalBonePosition(boneName.str(), NULL, &matrix);
+    found = getObject()->getSingleLogicalBonePosition(boneName.str(), nullptr, &matrix);
   }
 
   if (!found) {

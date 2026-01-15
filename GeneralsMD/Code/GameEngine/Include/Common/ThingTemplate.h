@@ -258,7 +258,7 @@ static const char* AmmoPipsStyleNames[] =
 	"SINGLE",
 	"THIN",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(AmmoPipsStyleNames) == AMMO_PIPS_NUM_TYPES + 1, "Incorrect array size");
 #endif  // end DEFINE_AMMO_PIPS_STYLE_NAMES
@@ -270,7 +270,7 @@ static const char *TheDifficultyNames[] =
 	"NORMAL",			
 	"HARD",					
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheDifficultyNames) == DIFFICULTY_COUNT + 1, "Incorrect array size");
 #endif // end DEFINE_DIFFICULTY_NAMES
@@ -293,7 +293,7 @@ static_assert(ARRAY_SIZE(TheDifficultyNames) == DIFFICULTY_COUNT + 1, "Incorrect
 //	"SINGLE",
 //	"THIN",
 //
-//	NULL
+//	nullptr
 //};
 //static_assert(ARRAY_SIZE(AmmoPipsStyleNames) == AMMO_PIPS_NUM_TYPES + 1, "Incorrect array size");
 //#endif  // end DEFINE_PROGRESS_BAR_STYLE_NAMES

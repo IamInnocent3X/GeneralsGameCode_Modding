@@ -118,50 +118,50 @@ void SalvageCrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "RequiredKindOfWeaponSalvager", KindOfMaskType::parseFromINI, NULL, offsetof( SalvageCrateCollideModuleData, m_kindofWeaponSalvager ) },
-		{ "ForbiddenKindOfWeaponSalvager", KindOfMaskType::parseFromINI, NULL, offsetof( SalvageCrateCollideModuleData, m_kindofnotWeaponSalvager ) },
-		{ "RequiredKindOfArmorSalvager", KindOfMaskType::parseFromINI, NULL, offsetof( SalvageCrateCollideModuleData, m_kindofArmorSalvager ) },
-		{ "ForbiddenKindOfArmorSalvager", KindOfMaskType::parseFromINI, NULL, offsetof( SalvageCrateCollideModuleData, m_kindofnotArmorSalvager ) },
+		{ "RequiredKindOfWeaponSalvager", KindOfMaskType::parseFromINI, nullptr, offsetof( SalvageCrateCollideModuleData, m_kindofWeaponSalvager ) },
+		{ "ForbiddenKindOfWeaponSalvager", KindOfMaskType::parseFromINI, nullptr, offsetof( SalvageCrateCollideModuleData, m_kindofnotWeaponSalvager ) },
+		{ "RequiredKindOfArmorSalvager", KindOfMaskType::parseFromINI, nullptr, offsetof( SalvageCrateCollideModuleData, m_kindofArmorSalvager ) },
+		{ "ForbiddenKindOfArmorSalvager", KindOfMaskType::parseFromINI, nullptr, offsetof( SalvageCrateCollideModuleData, m_kindofnotArmorSalvager ) },
 
 		{ "WeaponSetFlags", INI::parseIndexListVector, WeaponSetFlags::getBitNames(),offsetof( SalvageCrateCollideModuleData, m_weaponSetFlags) },
 		{ "WeaponModelConditionFlags",	INI::parseIndexListVector,	ModelConditionFlags::getBitNames(),	offsetof( SalvageCrateCollideModuleData, m_weaponModelConditionFlags ) },
 		{ "ArmorSetFlags", INI::parseIndexListVector,	ArmorSetFlags::getBitNames(),offsetof( SalvageCrateCollideModuleData, m_armorSetFlags) },
 		{ "ArmorModelConditionFlags",	INI::parseIndexListVector,	ModelConditionFlags::getBitNames(),	offsetof( SalvageCrateCollideModuleData, m_armorModelConditionFlags ) },
-		{ "GrantsMultipleBonusesOnPickup", 	INI::parseBool, 	NULL, offsetof( SalvageCrateCollideModuleData, m_crateGivesMultiBonus) },
+		{ "GrantsMultipleBonusesOnPickup", 	INI::parseBool, 	nullptr, offsetof( SalvageCrateCollideModuleData, m_crateGivesMultiBonus) },
 
 		{ "PickupOrder", 	INI::parseIndexListVector, 	TheSalvagePickupNames, offsetof( SalvageCrateCollideModuleData, m_pickupOrder) },
 		{ "MultiPickupFlags", 	INI::parseBitString32, 	TheSalvagePickupNames, offsetof( SalvageCrateCollideModuleData, m_multiPickupFlags) },
-		{ "MultiPickupAmountModifierAfterCompletion", 	parseAmountModifier, 	NULL, offsetof( SalvageCrateCollideModuleData, m_multiFlagCompletionInfos) },
-		{ "MultiPickupChanceModifierAfterCompletion", 	parseChanceModifier, 	NULL, offsetof( SalvageCrateCollideModuleData, m_multiFlagCompletionInfos) },
+		{ "MultiPickupAmountModifierAfterCompletion", 	parseAmountModifier, 	nullptr, offsetof( SalvageCrateCollideModuleData, m_multiFlagCompletionInfos) },
+		{ "MultiPickupChanceModifierAfterCompletion", 	parseChanceModifier, 	nullptr, offsetof( SalvageCrateCollideModuleData, m_multiFlagCompletionInfos) },
 
-		{ "GrantWeaponBonus",		parseWeaponBonus, NULL, offsetof( SalvageCrateCollideModuleData, m_weaponBonus ) },
-		{ "GrantStatus",			parseStatus, NULL, offsetof( SalvageCrateCollideModuleData, m_status ) },
-		{ "GrantUpgrades",		INI::parseAsciiStringVector, NULL, offsetof( SalvageCrateCollideModuleData, m_grantUpgradeNames ) },
-		{ "SciencesGranted", INI::parseScienceVector, NULL, offsetof( SalvageCrateCollideModuleData, m_sciencesGranted ) },
-		{ "OCLs",	            INI::parseObjectCreationListVector,	NULL,	offsetof( SalvageCrateCollideModuleData, m_ocls) },
+		{ "GrantWeaponBonus",		parseWeaponBonus, nullptr, offsetof( SalvageCrateCollideModuleData, m_weaponBonus ) },
+		{ "GrantStatus",			parseStatus, nullptr, offsetof( SalvageCrateCollideModuleData, m_status ) },
+		{ "GrantUpgrades",		INI::parseAsciiStringVector, nullptr, offsetof( SalvageCrateCollideModuleData, m_grantUpgradeNames ) },
+		{ "SciencesGranted", INI::parseScienceVector, nullptr, offsetof( SalvageCrateCollideModuleData, m_sciencesGranted ) },
+		{ "OCLs",	            INI::parseObjectCreationListVector,	nullptr,	offsetof( SalvageCrateCollideModuleData, m_ocls) },
 
-		{ "RemovePreviousWeaponBonus",	INI::parseBool,	NULL, offsetof( SalvageCrateCollideModuleData, m_removePreviousWeaponBonus ) },
-		{ "RemovePreviousStatus",		INI::parseBool,	NULL, offsetof( SalvageCrateCollideModuleData, m_removePreviousStatus ) },
-		{ "RemovePreviousUpgrade",		INI::parseBool,	NULL, offsetof( SalvageCrateCollideModuleData, m_removePreviousUpgrades ) },
+		{ "RemovePreviousWeaponBonus",	INI::parseBool,	nullptr, offsetof( SalvageCrateCollideModuleData, m_removePreviousWeaponBonus ) },
+		{ "RemovePreviousStatus",		INI::parseBool,	nullptr, offsetof( SalvageCrateCollideModuleData, m_removePreviousStatus ) },
+		{ "RemovePreviousUpgrade",		INI::parseBool,	nullptr, offsetof( SalvageCrateCollideModuleData, m_removePreviousUpgrades ) },
 
-		{ "MinimumSciencePurchasePointsGranted", INI::parseInt, NULL, offsetof( SalvageCrateCollideModuleData, m_minimumSciencePurchasePoints ) },
-		{ "MaximumSciencePurchasePointsGranted", INI::parseInt, NULL, offsetof( SalvageCrateCollideModuleData, m_maximumSciencePurchasePoints ) },
-		{ "MinimumSkillPointsGranted", INI::parseInt, NULL, offsetof( SalvageCrateCollideModuleData, m_minimumSkillPoints ) },
-		{ "MaximumSkillPointsGranted", INI::parseInt, NULL, offsetof( SalvageCrateCollideModuleData, m_maximumSkillPoints ) },
+		{ "MinimumSciencePurchasePointsGranted", INI::parseInt, nullptr, offsetof( SalvageCrateCollideModuleData, m_minimumSciencePurchasePoints ) },
+		{ "MaximumSciencePurchasePointsGranted", INI::parseInt, nullptr, offsetof( SalvageCrateCollideModuleData, m_maximumSciencePurchasePoints ) },
+		{ "MinimumSkillPointsGranted", INI::parseInt, nullptr, offsetof( SalvageCrateCollideModuleData, m_minimumSkillPoints ) },
+		{ "MaximumSkillPointsGranted", INI::parseInt, nullptr, offsetof( SalvageCrateCollideModuleData, m_maximumSkillPoints ) },
 
-		{ "WeaponBonusChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_weaponBonusChance ) },
-		{ "StatusChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_statusChance ) },
-		{ "UpgradeChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_upgradeChance ) },
-		{ "ScienceChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_scienceChance ) },
-		{ "SciencePurchasePointsChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_sciencePurchasePointsChance ) },
-		{ "SkillPointsChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_skillPointsChance ) },
-		{ "OCLChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_oclChance ) },
+		{ "WeaponBonusChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_weaponBonusChance ) },
+		{ "StatusChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_statusChance ) },
+		{ "UpgradeChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_upgradeChance ) },
+		{ "ScienceChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_scienceChance ) },
+		{ "SciencePurchasePointsChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_sciencePurchasePointsChance ) },
+		{ "SkillPointsChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_skillPointsChance ) },
+		{ "OCLChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_oclChance ) },
 
-		{ "WeaponChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_weaponChance ) },
-		{ "LevelChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_levelChance ) },
-		{ "MoneyChance",	INI::parsePercentToReal,	NULL, offsetof( SalvageCrateCollideModuleData, m_moneyChance ) },
-		{ "MinMoney",			INI::parseInt,						NULL, offsetof( SalvageCrateCollideModuleData, m_minimumMoney ) },
-		{ "MaxMoney",			INI::parseInt,						NULL, offsetof( SalvageCrateCollideModuleData, m_maximumMoney ) },
+		{ "WeaponChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_weaponChance ) },
+		{ "LevelChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_levelChance ) },
+		{ "MoneyChance",	INI::parsePercentToReal,	nullptr, offsetof( SalvageCrateCollideModuleData, m_moneyChance ) },
+		{ "MinMoney",			INI::parseInt,						nullptr, offsetof( SalvageCrateCollideModuleData, m_minimumMoney ) },
+		{ "MaxMoney",			INI::parseInt,						nullptr, offsetof( SalvageCrateCollideModuleData, m_maximumMoney ) },
 		{ 0, 0, 0, 0 }
 	};
     p.add(dataFieldParse);
@@ -176,7 +176,7 @@ void SalvageCrateCollideModuleData::parseAmountModifier( INI* ini, void *instanc
 	std::vector<CompletionInfo> *v = (std::vector<CompletionInfo>*)store;
 	//v->clear();
 	ConstCharPtrArray flagList = (ConstCharPtrArray)TheSalvagePickupNames;
-		if( flagList == NULL || flagList[ 0 ] == NULL)
+		if( flagList == nullptr || flagList[ 0 ] == nullptr)
 	{
 		DEBUG_ASSERTCRASH( flagList, ("INTERNAL ERROR! parseBitString32: No flag list provided!") );
 		throw INI_INVALID_NAME_LIST;
@@ -198,7 +198,7 @@ void SalvageCrateCollideModuleData::parseAmountModifier( INI* ini, void *instanc
 	//DEBUG_LOG(("Parse Amount Modifier"));
 
 	// loop through all tokens
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		if (stricmp(token, "MIN") == 0)
 		{
@@ -418,7 +418,7 @@ void SalvageCrateCollideModuleData::parseChanceModifier( INI* ini, void *instanc
 	std::vector<CompletionInfo> *v = (std::vector<CompletionInfo>*)store;
 	//v->clear();
 	ConstCharPtrArray flagList = (ConstCharPtrArray)TheSalvagePickupNames;
-		if( flagList == NULL || flagList[ 0 ] == NULL)
+		if( flagList == nullptr || flagList[ 0 ] == nullptr)
 	{
 		DEBUG_ASSERTCRASH( flagList, ("INTERNAL ERROR! parseBitString32: No flag list provided!") );
 		throw INI_INVALID_NAME_LIST;
@@ -435,7 +435,7 @@ void SalvageCrateCollideModuleData::parseChanceModifier( INI* ini, void *instanc
 	//DEBUG_LOG(("Parse Chance Modifier"));
 
 	// loop through all tokens
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		if(token[0] == '+')
 		{
@@ -575,7 +575,7 @@ void SalvageCrateCollideModuleData::parseChanceModifier( INI* ini, void *instanc
 void SalvageCrateCollideModuleData::parseWeaponBonus( INI* ini, void *instance, void *store, const void* /*userData*/ )
 {
 	std::vector<WeaponBonusTypes> *v = (std::vector<WeaponBonusTypes>*)store;
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		WeaponBonusTypes bonus;
 
@@ -601,7 +601,7 @@ void SalvageCrateCollideModuleData::parseWeaponBonus( INI* ini, void *instance, 
 void SalvageCrateCollideModuleData::parseStatus( INI* ini, void *instance, void *store, const void* /*userData*/ )
 {
 	std::vector<StatusTypes> *v = (std::vector<StatusTypes>*)store;
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		StatusTypes status;
 
@@ -1018,7 +1018,7 @@ Bool SalvageCrateCollide::eligibleForUpgrades( Object *other )
 Bool SalvageCrateCollide::testUpgrade( Object *other, Bool testMax ) const
 {
 	// Sanity
-	if( other == NULL )
+	if( other == nullptr )
 		return FALSE;
 
 	const SalvageCrateCollideModuleData *md = getSalvageCrateCollideModuleData();
@@ -1071,7 +1071,7 @@ Bool SalvageCrateCollide::testUpgrade( Object *other, Bool testMax ) const
 // ------------------------------------------------------------------------------------------------
 Bool SalvageCrateCollide::eligibleForScience( Object *other )
 {
-	if( other == NULL || other->getControllingPlayer() == NULL )
+	if( other == nullptr || other->getControllingPlayer() == nullptr )
 		return FALSE;
 
 	// Sorry, you can't inherit sciences
@@ -1100,11 +1100,11 @@ Bool SalvageCrateCollide::eligibleForSciencePurchasePoints( Object *other )
 Bool SalvageCrateCollide::testSciencePurchasePoints( Object *other, Bool testMax ) const
 {
 	// Sanity
-	if( other == NULL )
+	if( other == nullptr )
 		return FALSE;
 
 	// Sorry, you can't inherit sciences
-	if( other->getControllingPlayer() == NULL )
+	if( other->getControllingPlayer() == nullptr )
 		return FALSE;
 
 	if( other->isNeutralControlled() )
@@ -1150,7 +1150,7 @@ Bool SalvageCrateCollide::testSciencePurchasePoints( Object *other, Bool testMax
 // ------------------------------------------------------------------------------------------------
 Bool SalvageCrateCollide::eligibleForSkillPoints( Object *other )
 {
-	if( other == NULL || !testSkillPoints(other, false) )
+	if( other == nullptr || !testSkillPoints(other, false) )
 		return FALSE;
 
 	return TRUE;
@@ -1160,7 +1160,7 @@ Bool SalvageCrateCollide::eligibleForSkillPoints( Object *other )
 Bool SalvageCrateCollide::testSkillPoints( Object *other, Bool testMax ) const
 {
 	// Sorry, you can't inherit sciences
-	if( other->getControllingPlayer() == NULL )
+	if( other->getControllingPlayer() == nullptr )
 		return FALSE;
 
 	if( other->isNeutralControlled() )
@@ -1184,7 +1184,7 @@ Bool SalvageCrateCollide::testSkillPoints( Object *other, Bool testMax ) const
 // ------------------------------------------------------------------------------------------------
 Bool SalvageCrateCollide::eligibleForWeaponBonus( Object *other )
 {
-	if( other == NULL )
+	if( other == nullptr )
 		return FALSE;
 
 	const SalvageCrateCollideModuleData *md = getSalvageCrateCollideModuleData();
@@ -1216,7 +1216,7 @@ Bool SalvageCrateCollide::testWeaponBonus( Object *other, WeaponBonusTypes bonus
 // ------------------------------------------------------------------------------------------------
 Bool SalvageCrateCollide::eligibleForStatus( Object *other )
 {
-	if( other == NULL )
+	if( other == nullptr )
 		return FALSE;
 
 	const SalvageCrateCollideModuleData *md = getSalvageCrateCollideModuleData();
@@ -1249,7 +1249,7 @@ Bool SalvageCrateCollide::testStatus( Object *other, StatusTypes status ) const
 Bool SalvageCrateCollide::multiFlagEligibleConditions( Object *other, Int completed, SalvagePickupType exceptions ) const
 {
 	// Sanity
-	if(other == NULL)
+	if(other == nullptr)
 		return FALSE;
 
 	// We don't count bonus towards ourselves for completion
@@ -2454,7 +2454,7 @@ Bool SalvageCrateCollide::doOCL( Object *other )
 		if(level >= md->m_ocls.size())
 			level = md->m_ocls.size() - 1;
 
-		ObjectCreationList::create(md->m_ocls[level], other, NULL );
+		ObjectCreationList::create(md->m_ocls[level], other, nullptr );
 
 		return true;
 	}

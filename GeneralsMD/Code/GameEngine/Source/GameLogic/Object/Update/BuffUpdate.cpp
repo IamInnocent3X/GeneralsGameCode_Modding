@@ -78,15 +78,15 @@ void BuffUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
   UpdateModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "RequiredAffectKindOf",		KindOfMaskType::parseFromINI,		NULL, offsetof( BuffUpdateModuleData, m_requiredAffectKindOf ) },
-		{ "RequiresAllKindOfs", INI::parseBool, NULL, offsetof(BuffUpdateModuleData, m_requiresAllKindOfs) },
-		{ "ForbiddenAffectKindOf",	KindOfMaskType::parseFromINI,		NULL, offsetof( BuffUpdateModuleData, m_forbiddenAffectKindOf ) },
+		{ "RequiredAffectKindOf",		KindOfMaskType::parseFromINI,		nullptr, offsetof( BuffUpdateModuleData, m_requiredAffectKindOf ) },
+		{ "RequiresAllKindOfs", INI::parseBool, nullptr, offsetof(BuffUpdateModuleData, m_requiresAllKindOfs) },
+		{ "ForbiddenAffectKindOf",	KindOfMaskType::parseFromINI,		nullptr, offsetof( BuffUpdateModuleData, m_forbiddenAffectKindOf ) },
 		{ "AffectsTargets", INI::parseBitString32,	TheWeaponAffectsMaskNames, offsetof(BuffUpdateModuleData, m_targetsMask) },
-		{ "AffectAirborne", INI::parseBool, NULL, offsetof(BuffUpdateModuleData, m_isAffectAirborne) },
-		{ "BuffDuration",					INI::parseDurationUnsignedInt,	NULL, offsetof( BuffUpdateModuleData, m_buffDuration) },
-		{ "BuffDelay",							INI::parseDurationUnsignedInt,	NULL, offsetof( BuffUpdateModuleData, m_buffDelay) },
-		{ "BuffRange",							INI::parseReal,									NULL, offsetof( BuffUpdateModuleData, m_buffRange) },
-		{ "BuffTemplateName",			INI::parseAsciiString,	NULL, offsetof( BuffUpdateModuleData, m_buffTemplateName) },
+		{ "AffectAirborne", INI::parseBool, nullptr, offsetof(BuffUpdateModuleData, m_isAffectAirborne) },
+		{ "BuffDuration",					INI::parseDurationUnsignedInt,	nullptr, offsetof( BuffUpdateModuleData, m_buffDuration) },
+		{ "BuffDelay",							INI::parseDurationUnsignedInt,	nullptr, offsetof( BuffUpdateModuleData, m_buffDelay) },
+		{ "BuffRange",							INI::parseReal,									nullptr, offsetof( BuffUpdateModuleData, m_buffRange) },
+		{ "BuffTemplateName",			INI::parseAsciiString,	nullptr, offsetof( BuffUpdateModuleData, m_buffTemplateName) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -163,7 +163,7 @@ UpdateSleepTime BuffUpdate::update( void )
 	// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
 	// So these checks are on an individual basis, not in the Partition query
 //	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
-	PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, NULL };
+	PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, nullptr };
 
 	// scan objects in our region
 	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( me->getPosition(),
@@ -183,7 +183,7 @@ UpdateSleepTime BuffUpdate::update( void )
 	buffData.m_sourceObj = me; // TODO: Support for projectiles
 
 	
-	for( Object *currentObj = iter->first(); currentObj != NULL; currentObj = iter->next() )
+	for( Object *currentObj = iter->first(); currentObj != nullptr; currentObj = iter->next() )
 	{
 		bool match = FALSE;
 		if (!data->m_requiresAllKindOfs)

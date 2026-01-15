@@ -60,7 +60,7 @@ public:
 		m_startRadius = 0.0f;
     m_radiusGrowRate = 10.0f;
 		m_radiusParticleSystemTmpl = nullptr;
-		m_upgradeName = AsciiString::TheEmptyString;
+		m_upgradeName.clear();
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 	}
 

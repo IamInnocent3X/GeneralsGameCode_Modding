@@ -43,8 +43,8 @@ void LineOfSightModifierUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "DisableNeedToCheckLineOfSight", INI::parseBool, NULL, offsetof(LineOfSightModifierUpgradeModuleData, m_disableLOS) },
-		{ "SetIgnoreObstacleViewBlock", INI::parseBool, NULL, offsetof(LineOfSightModifierUpgradeModuleData, m_ignoreObstacleViewBlock) },
+		{ "DisableNeedToCheckLineOfSight", INI::parseBool, nullptr, offsetof(LineOfSightModifierUpgradeModuleData, m_disableLOS) },
+		{ "SetIgnoreObstacleViewBlock", INI::parseBool, nullptr, offsetof(LineOfSightModifierUpgradeModuleData, m_ignoreObstacleViewBlock) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);

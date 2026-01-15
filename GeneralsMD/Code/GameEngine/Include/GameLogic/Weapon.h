@@ -488,7 +488,7 @@ public:
 		Weapon* firingWeapon,
 		ObjectID* projectileID,
 		Bool inflictDamage,
-		const Coord3D* launchPos = NULL,
+		const Coord3D *launchPos = nullptr,
 		ObjectID shrapnelLaunchID = INVALID_ID
 	) const;
 
@@ -1112,12 +1112,12 @@ public:
 	// Returns the max distance between the centerpoints of source & victim	for victim to be in range.
 	Real getAttackDistance(const Object *source, const Object *victim, const Coord3D* victimPos) const;
 
-	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos, const Coord3D *launchPos = NULL );///<I just made this projectile and may need to keep track of it
+	void newProjectileFired( const Object *sourceObj, const Object *projectile, const Object *victimObj, const Coord3D *victimPos, const Coord3D *launchPos = nullptr );///<I just made this projectile and may need to keep track of it
 
 	Bool isLaser() const { return m_template->getLaserName().isNotEmpty(); }
 	// void createLaser( const Object *sourceObj, const Object *victimObj, const Coord3D *victimPos );
-	ObjectID createLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = NULL); //now returns the object ID
-	void handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = NULL); 
+	ObjectID createLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = nullptr); //now returns the object ID
+	void handleContinuousLaser(const Object* sourceObj, const Object* victimObj, const Coord3D* victimPos, const Coord3D *launchPos = nullptr); 
 
 	const WeaponTemplate* getTemplate() const { return m_template; }
 	WeaponSlotType getWeaponSlot() const { return m_wslot; }
@@ -1273,7 +1273,7 @@ public:
 		const Object *launcher,
 		WeaponSlotType wslot,
 		Int specificBarrelToUse,
-		const Coord3D* launchPos = NULL
+		const Coord3D *launchPos = nullptr
 	);
 
 	/*static Bool calcWeaponFirePosition(
@@ -1320,7 +1320,7 @@ protected:
 		ObjectID* projectileID,
 		Bool inflictDamage,
 		const std::vector<AsciiString>& extraBonusCustomFlags,
-		const Coord3D* sourcePos = NULL,
+		const Coord3D* sourcePos = nullptr,
 		ObjectID shrapnelLaunchID = INVALID_ID
 	);
 	Real estimateWeaponDamage(const Object *sourceObj, const Object *victimObj, const Coord3D* victimPos);

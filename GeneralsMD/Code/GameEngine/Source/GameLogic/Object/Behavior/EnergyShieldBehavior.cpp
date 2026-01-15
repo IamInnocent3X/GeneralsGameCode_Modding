@@ -71,29 +71,29 @@ EnergyShieldBehaviorModuleData::EnergyShieldBehaviorModuleData()
 {
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, NULL, offsetof(EnergyShieldBehaviorModuleData, m_initiallyActive) },
+		{ "StartsActive",	INI::parseBool, nullptr, offsetof(EnergyShieldBehaviorModuleData, m_initiallyActive) },
 
-		{ "ShieldRechargeDelay",		INI::parseDurationUnsignedInt,	NULL,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeDelay) },
-		{ "ShieldRechargeRate",		INI::parseDurationUnsignedInt,	NULL,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeRate) },
-		{ "ShieldRechargeAmount",	INI::parseReal,									NULL,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeAmount) },
-		{ "ShieldRechargeAmountPercent",	INI::parsePercentToReal,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeAmountPercent) },
+		{ "ShieldRechargeDelay",		INI::parseDurationUnsignedInt,	nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeDelay) },
+		{ "ShieldRechargeRate",		INI::parseDurationUnsignedInt,	nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeRate) },
+		{ "ShieldRechargeAmount",	INI::parseReal,									nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeAmount) },
+		{ "ShieldRechargeAmountPercent",	INI::parsePercentToReal,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeAmountPercent) },
 
-		{ "ShieldHealthBarColor",	INI::parseRGBAColorInt,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_barColor) },
-		{ "ShieldHealthBarBackgroundColor",	INI::parseRGBAColorInt,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_barBGColor) },
-		{ "ShowHealthBarBackgroundWhenEmpty",	INI::parseBool,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_showBarWhenEmpty) },
-		{ "ShowHealthBarWhenUnselected",	INI::parseBool,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_showBarWhenUnselected) },
+		{ "ShieldHealthBarColor",	INI::parseRGBAColorInt,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_barColor) },
+		{ "ShieldHealthBarBackgroundColor",	INI::parseRGBAColorInt,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_barBGColor) },
+		{ "ShowHealthBarBackgroundWhenEmpty",	INI::parseBool,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_showBarWhenEmpty) },
+		{ "ShowHealthBarWhenUnselected",	INI::parseBool,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_showBarWhenUnselected) },
 
-		 { "ShieldSubObjectName",	INI::parseAsciiString,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_shieldSubObjName) },
-		 { "ShieldHitSubObjectName",	INI::parseAsciiString,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_shieldHitSubObjName) },
+		 { "ShieldSubObjectName",	INI::parseAsciiString,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldSubObjName) },
+		 { "ShieldHitSubObjectName",	INI::parseAsciiString,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldHitSubObjName) },
 
 		 { "ShieldModelCondition",	INI::parseIndexList,		ModelConditionFlags::getBitNames(),		offsetof(EnergyShieldBehaviorModuleData, m_shieldConditionFlag) },
 		 { "ShieldHitModelCondition",	INI::parseIndexList,		ModelConditionFlags::getBitNames(),		offsetof(EnergyShieldBehaviorModuleData, m_shieldHitConditionFlag) },
-		 { "ShieldHitConditionDuration",	INI::parseDurationUnsignedInt,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_showShieldWhenHitDuration) },
+		 { "ShieldHitConditionDuration",	INI::parseDurationUnsignedInt,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_showShieldWhenHitDuration) },
 
-		{ "ShieldUpFX",	INI::parseFXList,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_fxShieldUp) },
-		{ "ShieldDownFX",	INI::parseFXList,	 NULL,		offsetof(EnergyShieldBehaviorModuleData, m_fxShieldDown) },
+		{ "ShieldUpFX",	INI::parseFXList,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_fxShieldUp) },
+		{ "ShieldDownFX",	INI::parseFXList,	 nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_fxShieldDown) },
 
-		//{ "DamageTypesToPassThroughShield",   INI::parseDamageTypeFlags, NULL, offsetof(EnergyShieldBehaviorModuleData, m_damageTypesToPassThrough) },
+		//{ "DamageTypesToPassThroughShield",   INI::parseDamageTypeFlags, nullptr, offsetof(EnergyShieldBehaviorModuleData, m_damageTypesToPassThrough) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -211,7 +211,7 @@ void EnergyShieldBehavior::showShield(bool show, bool isHit)
 //-------------------------------------------------------------------------------------------------
 Real EnergyShieldBehavior::getShieldPercent() const
 {
-	if (isActive() && m_body != NULL)
+	if (isActive() && m_body != nullptr)
 	{
 		return m_body->getShieldPercent();
 	}
@@ -221,7 +221,7 @@ Real EnergyShieldBehavior::getShieldPercent() const
 //-------------------------------------------------------------------------------------------------
 bool EnergyShieldBehavior::shouldShowHealthBar(bool selected) const
 {
-	if (!isActive() || m_body == NULL)
+	if (!isActive() || m_body == nullptr)
 		return FALSE;
 
 	const EnergyShieldBehaviorModuleData* data = getEnergyShieldBehaviorModuleData();

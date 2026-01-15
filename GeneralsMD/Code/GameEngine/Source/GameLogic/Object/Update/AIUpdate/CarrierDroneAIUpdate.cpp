@@ -42,10 +42,10 @@ CarrierDroneAIUpdateModuleData::CarrierDroneAIUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "DockingDistance",							INI::parseReal, NULL, offsetof(CarrierDroneAIUpdateModuleData, m_dockingDistance) },
+		{ "DockingDistance",							INI::parseReal, nullptr, offsetof(CarrierDroneAIUpdateModuleData, m_dockingDistance) },
 		{ "DockingLocomotorType",					INI::parseIndexList, TheLocomotorSetNames, offsetof(CarrierDroneAIUpdateModuleData, m_dockingLoco) },
 		//{ "DockingStartSound",					INI::parseIndexList, TheLocomotorSetNames, offsetof(CarrierDroneAIUpdateModuleData, m_dockingLoco) },
-		{ "LaunchTime",							INI::parseDurationUnsignedInt, NULL, offsetof(CarrierDroneAIUpdateModuleData, m_launchTime) },
+		{ "LaunchTime",							INI::parseDurationUnsignedInt, nullptr, offsetof(CarrierDroneAIUpdateModuleData, m_launchTime) },
 		{ "LaunchingLocomotorType",					INI::parseIndexList, TheLocomotorSetNames, offsetof(CarrierDroneAIUpdateModuleData, m_launchingLoco) },
 		{ 0, 0, 0, 0 }
 	};
@@ -146,7 +146,7 @@ UpdateSleepTime CarrierDroneAIUpdate::update()
 	Bool isDocking = false;
 	Real distanceToTargetSquared = 0;
 	Real dockingDistSquared = data->m_dockingDistance * data->m_dockingDistance;
-	if (getStateMachine()->getCurrentStateID() == AI_ENTER && getGoalObject() != NULL) {
+	if (getStateMachine()->getCurrentStateID() == AI_ENTER && getGoalObject() != nullptr) {
 		distanceToTargetSquared = ThePartitionManager->getDistanceSquared(obj, getGoalObject(), FROM_CENTER_2D);
 		//DEBUG_LOG(("CarrierDroneAIUpdate::update() - distance = %f", sqrt(distanceToTargetSquared)));
 		if (distanceToTargetSquared < dockingDistSquared) {

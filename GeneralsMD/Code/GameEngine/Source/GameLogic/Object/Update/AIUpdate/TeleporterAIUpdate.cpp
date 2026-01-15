@@ -53,9 +53,9 @@
 //-------------------------------------------------------------------------------------------------
 TeleporterAIUpdateModuleData::TeleporterAIUpdateModuleData( void )
 {
-	m_sourceFX = NULL;
-	m_targetFX = NULL;
-	m_recoverEndFX = NULL;
+	m_sourceFX = nullptr;
+	m_targetFX = nullptr;
+	m_recoverEndFX = nullptr;
 	m_tintStatus = TINT_STATUS_INVALID;
 	m_opacityStart = 1.0;
 	m_opacityEnd = 1.0;
@@ -70,18 +70,18 @@ TeleporterAIUpdateModuleData::TeleporterAIUpdateModuleData( void )
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "MinDistanceForTeleport", INI::parseReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_minDistance) },
-		{ "MinDisabledDuration", INI::parseDurationReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_minDisabledDuration) },
-		{ "DisabledDurationPerDistance", INI::parseDurationReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_disabledDuration) },
-		{ "TeleportStartFX", INI::parseFXList, NULL, offsetof(TeleporterAIUpdateModuleData, m_sourceFX) },
-		{ "TeleportTargetFX", INI::parseFXList, NULL, offsetof(TeleporterAIUpdateModuleData, m_targetFX) },
-		{ "TeleportRecoverEndFX", INI::parseFXList, NULL, offsetof(TeleporterAIUpdateModuleData, m_recoverEndFX) },
-		{ "TeleportRecoverSoundAmbient", INI::parseAudioEventRTS, NULL, offsetof(TeleporterAIUpdateModuleData, m_recoverSoundLoop) },
-		{ "TeleportRecoverTint", TintStatusFlags::parseSingleBitFromINI, NULL, offsetof(TeleporterAIUpdateModuleData, m_tintStatus) },
-		{ "TeleportRecoverOpacityStart", INI::parsePercentToReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_opacityStart) },
-		{ "TeleportRecoverOpacityEnd", INI::parsePercentToReal, NULL, offsetof(TeleporterAIUpdateModuleData, m_opacityEnd) },
-		{ "TeleportClearsParasite", INI::parseBool, NULL, offsetof(TeleporterAIUpdateModuleData, m_teleportClearsParasite) },
-		{ "TeleportClearsParasiteKey", INI::parseAsciiStringVector, NULL, offsetof(TeleporterAIUpdateModuleData, m_teleportClearsParasiteKeys) },
+		{ "MinDistanceForTeleport", INI::parseReal, nullptr, offsetof(TeleporterAIUpdateModuleData, m_minDistance) },
+		{ "MinDisabledDuration", INI::parseDurationReal, nullptr, offsetof(TeleporterAIUpdateModuleData, m_minDisabledDuration) },
+		{ "DisabledDurationPerDistance", INI::parseDurationReal, nullptr, offsetof(TeleporterAIUpdateModuleData, m_disabledDuration) },
+		{ "TeleportStartFX", INI::parseFXList, nullptr, offsetof(TeleporterAIUpdateModuleData, m_sourceFX) },
+		{ "TeleportTargetFX", INI::parseFXList, nullptr, offsetof(TeleporterAIUpdateModuleData, m_targetFX) },
+		{ "TeleportRecoverEndFX", INI::parseFXList, nullptr, offsetof(TeleporterAIUpdateModuleData, m_recoverEndFX) },
+		{ "TeleportRecoverSoundAmbient", INI::parseAudioEventRTS, nullptr, offsetof(TeleporterAIUpdateModuleData, m_recoverSoundLoop) },
+		{ "TeleportRecoverTint", TintStatusFlags::parseSingleBitFromINI, nullptr, offsetof(TeleporterAIUpdateModuleData, m_tintStatus) },
+		{ "TeleportRecoverOpacityStart", INI::parsePercentToReal, nullptr, offsetof(TeleporterAIUpdateModuleData, m_opacityStart) },
+		{ "TeleportRecoverOpacityEnd", INI::parsePercentToReal, nullptr, offsetof(TeleporterAIUpdateModuleData, m_opacityEnd) },
+		{ "TeleportClearsParasite", INI::parseBool, nullptr, offsetof(TeleporterAIUpdateModuleData, m_teleportClearsParasite) },
+		{ "TeleportClearsParasiteKey", INI::parseAsciiStringVector, nullptr, offsetof(TeleporterAIUpdateModuleData, m_teleportClearsParasiteKeys) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -425,7 +425,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 
 	bool useWeaponRange = false;  // We need this for retaliate state, where isAttacking is false
 
-	if (goalObj != NULL) {
+	if (goalObj != nullptr) {
 		targetPos = *goalObj->getPosition();
 		//goalPos = targetPos;  //This should be the same anyways
 		//DEBUG_LOG((">>> TPAI - doLoc: goalOBJPos (0) = %f, %f, %f\n", targetPos.x, targetPos.y, targetPos.z));
@@ -434,7 +434,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 		//else
 		//	distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
 	}
-	else if (goalPos != NULL && !(goalPos->x == 0 && goalPos->y == 0 && goalPos->z == 0)) {
+	else if (goalPos != nullptr && !(goalPos->x == 0 && goalPos->y == 0 && goalPos->z == 0)) {
 		targetPos = *goalPos;
 		//DEBUG_LOG((">>> TPAI - doLoc: goalPOS (0) = %f, %f, %f\n", targetPos.x, targetPos.y, targetPos.z));
 		distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
@@ -442,11 +442,11 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 	else if (getStateMachine()->getCurrentStateID() == AI_GUARD) {
 		if (isAttacking()) {
 			AIGuardMachine* guardMachine = getStateMachine()->getGuardMachine();
-			if (guardMachine != NULL) {
+			if (guardMachine != nullptr) {
 				ObjectID nemID = guardMachine->getNemesisID();
 				if (nemID != INVALID_ID) {
 					Object* nemesis = TheGameLogic->findObjectByID(nemID);
-					if (nemesis != NULL) {
+					if (nemesis != nullptr) {
 						goalObj = nemesis;
 						goalPos = goalObj->getPosition();
 						targetPos = *goalPos;
@@ -458,7 +458,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 				}
 			}
 		}
-		else if (getGuardLocation() != NULL && !(getGuardLocation()->x == 0 && getGuardLocation()->y == 0 && getGuardLocation()->z == 0)) {  // getStateMachine()->isInGuardIdleState()
+		else if (getGuardLocation() != nullptr && !(getGuardLocation()->x == 0 && getGuardLocation()->y == 0 && getGuardLocation()->z == 0)) {  // getStateMachine()->isInGuardIdleState()
 			targetPos = *getGuardLocation();
 			//TheAI->pathfinder()->adjustDestination(obj, getLocomotorSet(), &targetPos);
 			distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
@@ -485,7 +485,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 	//	// Get the dock's approach position.
 	//	// If we are at least X distance away, teleport, otherwise, do normal movement
 	//	DockUpdateInterface* dock = goalObj->getDockUpdateInterface();
-	//	if (dock != NULL) {
+	//	if (dock != nullptr) {
 	//		int dockIndex;  // we don't really need this
 	//		Bool reserved = dock->reserveApproachPosition(obj, &targetPos, &dockIndex);
 	//		if (reserved) {
@@ -509,11 +509,11 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 			distSq, targetPos.x, targetPos.y, targetPos.z, isAttacking(), getStateMachine()->isInGuardIdleState()));*/
 		
 		AIGuardRetaliateMachine* guardRetaliateMachine = getStateMachine()->getGuardRetaliateMachine();
-		if (guardRetaliateMachine != NULL) {
+		if (guardRetaliateMachine != nullptr) {
 			ObjectID nemID = guardRetaliateMachine->getNemesisID();
 			if (nemID != INVALID_ID) {
 				Object* nemesis = TheGameLogic->findObjectByID(nemID);
-				if (nemesis != NULL) {
+				if (nemesis != nullptr) {
 					goalObj = nemesis;
 					goalPos = goalObj->getPosition();
 					targetPos = *goalPos;
@@ -588,7 +588,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 	//	//same as with attacks, try to get into range
 	//}
 	// else if (getStateMachine()->getCurrentStateID() == AI_ENTER || getStateMachine()->getCurrentStateID() == AI_ENTER) {
-	else if (goalObj != NULL) {
+	else if (goalObj != nullptr) {
 		// We need to correct the position to the outer bounding box of the structure
 		// TODO: Respect actual geometry, not just radius
 		requiredRange = goalObj->getGeometryInfo().getBoundingCircleRadius();

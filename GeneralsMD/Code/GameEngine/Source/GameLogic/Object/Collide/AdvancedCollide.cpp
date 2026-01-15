@@ -45,28 +45,28 @@ void AdvancedCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "CollideWeapon",		INI::parseWeaponTemplate,				NULL, offsetof( AdvancedCollideModuleData, m_collideWeaponTemplate ) },
-		{ "OCL",	            INI::parseObjectCreationList,		NULL,	offsetof(AdvancedCollideModuleData, m_ocl) },
-		{ "FX",							  INI::parseFXList,		            NULL, offsetof(AdvancedCollideModuleData, m_fxlist) },
+		{ "CollideWeapon",		INI::parseWeaponTemplate,				nullptr, offsetof( AdvancedCollideModuleData, m_collideWeaponTemplate ) },
+		{ "OCL",	            INI::parseObjectCreationList,		nullptr,	offsetof(AdvancedCollideModuleData, m_ocl) },
+		{ "FX",							  INI::parseFXList,		            nullptr, offsetof(AdvancedCollideModuleData, m_fxlist) },
 
-		{ "FireOnce",					INI::parseBool,											NULL, offsetof( AdvancedCollideModuleData, m_fireOnce ) },
-		{ "CollideWithGround",					INI::parseBool,											NULL, offsetof( AdvancedCollideModuleData, m_collideWithGround) },
-		{ "CollideWithObjects",					INI::parseBool,											NULL, offsetof( AdvancedCollideModuleData, m_collideWithObjects) },
+		{ "FireOnce",					INI::parseBool,											nullptr, offsetof( AdvancedCollideModuleData, m_fireOnce ) },
+		{ "CollideWithGround",					INI::parseBool,											nullptr, offsetof( AdvancedCollideModuleData, m_collideWithGround) },
+		{ "CollideWithObjects",					INI::parseBool,											nullptr, offsetof( AdvancedCollideModuleData, m_collideWithObjects) },
 
-		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( AdvancedCollideModuleData, m_requiredStatus ) },
-		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( AdvancedCollideModuleData, m_forbiddenStatus ) },
-		{ "TargetRequiredStatus",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof(AdvancedCollideModuleData, m_targetRequiredStatus) },
-		{ "TargetForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof(AdvancedCollideModuleData, m_targetForbiddenStatus) },
-		{ "RequiredKindOf",   KindOfMaskType::parseFromINI, NULL, offsetof(AdvancedCollideModuleData, m_kindof) },
-		{ "ForbiddenKindOf",  KindOfMaskType::parseFromINI, NULL, offsetof(AdvancedCollideModuleData, m_kindofnot) },
+		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( AdvancedCollideModuleData, m_requiredStatus ) },
+		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( AdvancedCollideModuleData, m_forbiddenStatus ) },
+		{ "TargetRequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(AdvancedCollideModuleData, m_targetRequiredStatus) },
+		{ "TargetForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(AdvancedCollideModuleData, m_targetForbiddenStatus) },
+		{ "RequiredKindOf",   KindOfMaskType::parseFromINI, nullptr, offsetof(AdvancedCollideModuleData, m_kindof) },
+		{ "ForbiddenKindOf",  KindOfMaskType::parseFromINI, nullptr, offsetof(AdvancedCollideModuleData, m_kindofnot) },
 
-		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_requiredCustomStatus ) },
-		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_forbiddenCustomStatus ) },
-		{ "TargetRequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_targetRequiredCustomStatus ) },
-		{ "TargetForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( AdvancedCollideModuleData, m_targetForbiddenCustomStatus ) },
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( AdvancedCollideModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( AdvancedCollideModuleData, m_forbiddenCustomStatus ) },
+		{ "TargetRequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( AdvancedCollideModuleData, m_targetRequiredCustomStatus ) },
+		{ "TargetForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( AdvancedCollideModuleData, m_targetForbiddenCustomStatus ) },
 
-		{ "ChanceToTriggerPercent",  INI::parsePercentToReal, NULL, offsetof(AdvancedCollideModuleData, m_triggerChance) },
-		{ "RollOnceForTrigger",  INI::parseBool, NULL, offsetof(AdvancedCollideModuleData, m_rollOnce) },
+		{ "ChanceToTriggerPercent",  INI::parsePercentToReal, nullptr, offsetof(AdvancedCollideModuleData, m_triggerChance) },
+		{ "RollOnceForTrigger",  INI::parseBool, nullptr, offsetof(AdvancedCollideModuleData, m_rollOnce) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -77,10 +77,10 @@ void AdvancedCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 AdvancedCollide::AdvancedCollide( Thing *thing, const ModuleData* moduleData ) :
 	CollideModule( thing, moduleData ),
-	m_collideWeapon(NULL)
+	m_collideWeapon(nullptr)
 {
 	const AdvancedCollideModuleData* d = getAdvancedCollideModuleData();
-	if (d->m_collideWeaponTemplate != NULL) {
+	if (d->m_collideWeaponTemplate != nullptr) {
 		m_collideWeapon = TheWeaponStore->allocateNewWeapon(getAdvancedCollideModuleData()->m_collideWeaponTemplate, PRIMARY_WEAPON);
 	}
 	m_everFired = FALSE;
@@ -102,9 +102,9 @@ void AdvancedCollide::onCollide( Object *other, const Coord3D *loc, const Coord3
 {
 	const AdvancedCollideModuleData* d = getAdvancedCollideModuleData();
 
-	if( other == NULL && !d->m_collideWithGround)
+	if( other == nullptr && !d->m_collideWithGround)
 		return;
-	if (other != NULL && !d->m_collideWithObjects)
+	if (other != nullptr && !d->m_collideWithObjects)
 		return;
 
 	if(shouldTrigger(other))
@@ -226,7 +226,7 @@ void AdvancedCollide::xfer( Xfer *xfer )
 	if( collideWeaponPresent )
 	{
 
-		DEBUG_ASSERTCRASH( m_collideWeapon != NULL,
+		DEBUG_ASSERTCRASH( m_collideWeapon != nullptr,
 											 ("AdvancedCollide::xfer - m_collideWeapon present mismatch") );
 		xfer->xferSnapshot( m_collideWeapon );
 
@@ -234,7 +234,7 @@ void AdvancedCollide::xfer( Xfer *xfer )
 	else
 	{
 
-		DEBUG_ASSERTCRASH( m_collideWeapon == NULL,
+		DEBUG_ASSERTCRASH( m_collideWeapon == nullptr,
 											 ("AdvancedCollide::Xfer - m_collideWeapon missing mismatch" ));
 
 	}

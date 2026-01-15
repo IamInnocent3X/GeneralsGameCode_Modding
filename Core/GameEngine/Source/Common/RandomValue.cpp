@@ -216,7 +216,7 @@ void InitRandomType( const AsciiString& type, UnsignedInt tickCount, Bool gameLo
 	}
 	else if(type == "TIME" || type == "DETERMINISTIC")
 	{
-		time_t seconds = time( NULL );
+		time_t seconds = time( nullptr );
 		value = seconds;
 	}
 

@@ -66,7 +66,7 @@ struct ProductionModifier
 	Int						 m_quantity;
 	std::vector<QuantityModifier>	m_otherTemplateNames;
 
-	ProductionModifier() : m_templateName(NULL), m_quantity(1)
+	ProductionModifier() : m_templateName(nullptr), m_quantity(1)
 	{
 		m_otherTemplateNames.clear();
 	}

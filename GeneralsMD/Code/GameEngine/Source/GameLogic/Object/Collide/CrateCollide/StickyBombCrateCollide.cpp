@@ -68,7 +68,7 @@ StickyBombCrateCollide::~StickyBombCrateCollide( void )
 //{
 //	if( !CrateCollide::isValidToExecute(other) )
 //	{
-//		if (other != NULL)
+//		if (other != nullptr)
 //			DEBUG_LOG(("StickyBombCrateCollide::isValidToExecute >>> target '%s' Not Valid.", other->getTemplate()->getName().str()));
 //		else
 //			DEBUG_LOG(("StickyBombCrateCollide::isValidToExecute >>> collide with ground!"));

@@ -72,7 +72,7 @@ static const char *TheSalvagePickupNames[] =
 	"STATUS",
 	"WEAPON_BONUS",
 	"OCL",
-	NULL
+	nullptr
 };
 #endif
 
@@ -99,7 +99,7 @@ struct WeaponBonusTypes
 	AsciiString customType;
 	WeaponBonusConditionType bonusType;
 
-	WeaponBonusTypes() : bonusType((WeaponBonusConditionType)(-1)), customType(NULL)
+	WeaponBonusTypes() : bonusType((WeaponBonusConditionType)(-1)), customType(AsciiString::TheEmptyString)
 	{
 	}
 };
@@ -108,7 +108,7 @@ struct StatusTypes
 	AsciiString customType;
 	ObjectStatusType statusType;
 
-	StatusTypes() : statusType((ObjectStatusType)(-1)), customType(NULL)
+	StatusTypes() : statusType((ObjectStatusType)(-1)), customType(AsciiString::TheEmptyString)
 	{
 	}
 };
@@ -271,7 +271,7 @@ private:
 
 	void doWeaponBonus( Object *other );
 	void doStatus( Object *other );
-	void doUpgrade( Object *other, const AsciiString& grantUpgradeName, const AsciiString& removeUpgradeName = NULL );
+	void doUpgrade( Object *other, const AsciiString& grantUpgradeName, const AsciiString& removeUpgradeName = AsciiString::TheEmptyString );
 	Bool doOCL( Object *other );
 
 };

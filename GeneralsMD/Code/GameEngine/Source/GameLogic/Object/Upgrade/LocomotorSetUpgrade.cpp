@@ -67,9 +67,9 @@ void LocomotorSetUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "EnableUpgrade", INI::parseBool, NULL, offsetof(LocomotorSetUpgradeModuleData, m_setUpgraded) },
-		{ "ExplicitLocomotorType", LocomotorSetUpgradeModuleData::parseLocomotorType, NULL, offsetof(LocomotorSetUpgradeModuleData, m_LocomotorType)},
-		//{ "NeedsParkedAircraft", INI::parseBool, NULL, offsetof(WeaponSetUpgradeModuleData, m_needsParkedAircraft) },
+		{ "EnableUpgrade", INI::parseBool, nullptr, offsetof(LocomotorSetUpgradeModuleData, m_setUpgraded) },
+		{ "ExplicitLocomotorType", LocomotorSetUpgradeModuleData::parseLocomotorType, nullptr, offsetof(LocomotorSetUpgradeModuleData, m_LocomotorType)},
+		//{ "NeedsParkedAircraft", INI::parseBool, nullptr, offsetof(WeaponSetUpgradeModuleData, m_needsParkedAircraft) },
 		{ 0, 0, 0, 0 }
 	};
 

@@ -109,8 +109,8 @@ public:
 	virtual LaserDrawInterface* getLaserDrawInterface() { return nullptr; }
 	virtual const LaserDrawInterface* getLaserDrawInterface() const { return nullptr; }
 
-	virtual TreeDrawInterface* getTreeDrawInterface() { return NULL; }
-	virtual const TreeDrawInterface* getTreeDrawInterface() const { return NULL; }
+	virtual TreeDrawInterface* getTreeDrawInterface() { return nullptr; }
+	virtual const TreeDrawInterface* getTreeDrawInterface() const { return nullptr; }
 
 };
 inline DrawModule::DrawModule( Thing *thing, const ModuleData* moduleData ) : DrawableModule( thing, moduleData ) { }

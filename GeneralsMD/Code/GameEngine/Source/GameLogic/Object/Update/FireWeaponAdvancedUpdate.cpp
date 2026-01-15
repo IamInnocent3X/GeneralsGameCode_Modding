@@ -16,7 +16,7 @@
 //-------------------------------------------------------------------------------------------------
 FireWeaponAdvancedUpdateModuleData::FireWeaponAdvancedUpdateModuleData()
 {
-	m_weaponTemplate = NULL;
+	m_weaponTemplate = nullptr;
   m_initialDelayFrames = 0;
 	m_exclusiveWeaponDelay = 0;
 	m_scatterTargets = std::vector<Coord2D>();
@@ -39,22 +39,22 @@ FireWeaponAdvancedUpdateModuleData::FireWeaponAdvancedUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "Weapon",								INI::parseWeaponTemplate,	      NULL, offsetof( FireWeaponAdvancedUpdateModuleData, m_weaponTemplate ) },
-		{ "InitialDelay",					INI::parseDurationUnsignedInt,	NULL, offsetof( FireWeaponAdvancedUpdateModuleData, m_initialDelayFrames ) },
-		{ "ExclusiveWeaponDelay",	INI::parseDurationUnsignedInt,	NULL, offsetof( FireWeaponAdvancedUpdateModuleData, m_exclusiveWeaponDelay ) },
-		{ "ScatterTarget",				FireWeaponAdvancedUpdateModuleData::parseScatterTarget,			NULL,							0 },
-		{ "ScatterTargetScalar",	INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_scatterTargetScalar)  },
-		{ "FireHeight",	          INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireHeight)  },
-		{ "LockOnRadius",	          INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_lockOnRadius)  },
-		{ "ScatterOnLockedStructuresMajorRadius", INI::parseBool, NULL,	offsetof(FireWeaponAdvancedUpdateModuleData, m_scatterOnLockedStructuresMajorRadius)  },
-		{ "FireOffsetXMin",	          INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetXMin)  },
-		{ "FireOffsetXMax",	          INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetXMax)  },
-		{ "FireOffsetYMin",	          INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetYMin)  },
-		{ "FireOffsetYMax",	          INI::parseReal,			NULL,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetYMax)  },
-		{ "Decal",									RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof(FireWeaponAdvancedUpdateModuleData, m_decalTemplate) },
-		{ "DecalRadius",						INI::parseReal, NULL, offsetof(FireWeaponAdvancedUpdateModuleData, m_decalRadius) },
-		{ "DecalDuration",					INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponAdvancedUpdateModuleData, m_decalDuration) },
-		{ "ScatterRadius",					INI::parseReal, NULL, offsetof(FireWeaponAdvancedUpdateModuleData, m_scatterRadius) },
+		{ "Weapon",								INI::parseWeaponTemplate,	      nullptr, offsetof( FireWeaponAdvancedUpdateModuleData, m_weaponTemplate ) },
+		{ "InitialDelay",					INI::parseDurationUnsignedInt,	nullptr, offsetof( FireWeaponAdvancedUpdateModuleData, m_initialDelayFrames ) },
+		{ "ExclusiveWeaponDelay",	INI::parseDurationUnsignedInt,	nullptr, offsetof( FireWeaponAdvancedUpdateModuleData, m_exclusiveWeaponDelay ) },
+		{ "ScatterTarget",				FireWeaponAdvancedUpdateModuleData::parseScatterTarget,			nullptr,							0 },
+		{ "ScatterTargetScalar",	INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_scatterTargetScalar)  },
+		{ "FireHeight",	          INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireHeight)  },
+		{ "LockOnRadius",	          INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_lockOnRadius)  },
+		{ "ScatterOnLockedStructuresMajorRadius", INI::parseBool, nullptr,	offsetof(FireWeaponAdvancedUpdateModuleData, m_scatterOnLockedStructuresMajorRadius)  },
+		{ "FireOffsetXMin",	          INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetXMin)  },
+		{ "FireOffsetXMax",	          INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetXMax)  },
+		{ "FireOffsetYMin",	          INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetYMin)  },
+		{ "FireOffsetYMax",	          INI::parseReal,			nullptr,							 offsetof(FireWeaponAdvancedUpdateModuleData, m_fireOffsetYMax)  },
+		{ "Decal",									RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof(FireWeaponAdvancedUpdateModuleData, m_decalTemplate) },
+		{ "DecalRadius",						INI::parseReal, nullptr, offsetof(FireWeaponAdvancedUpdateModuleData, m_decalRadius) },
+		{ "DecalDuration",					INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponAdvancedUpdateModuleData, m_decalDuration) },
+		{ "ScatterRadius",					INI::parseReal, nullptr, offsetof(FireWeaponAdvancedUpdateModuleData, m_scatterRadius) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -68,7 +68,7 @@ FireWeaponAdvancedUpdateModuleData::FireWeaponAdvancedUpdateModuleData()
 	Coord2D target;
 	target.x = 0;
 	target.y = 0;
-	INI::parseCoord2D(ini, NULL, &target, NULL);
+	INI::parseCoord2D(ini, nullptr, &target, nullptr);
 
 	self->m_scatterTargets.push_back(target);
 }
@@ -77,7 +77,7 @@ FireWeaponAdvancedUpdateModuleData::FireWeaponAdvancedUpdateModuleData()
 //-------------------------------------------------------------------------------------------------
 FireWeaponAdvancedUpdate::FireWeaponAdvancedUpdate( Thing *thing, const ModuleData* moduleData ) :
 	UpdateModule( thing, moduleData ),
-	m_weapon(NULL)
+	m_weapon(nullptr)
 {
 	const WeaponTemplate *tmpl = getFireWeaponAdvancedUpdateModuleData()->m_weaponTemplate;
 	if (tmpl)
@@ -363,7 +363,7 @@ UpdateSleepTime FireWeaponAdvancedUpdate::update( void )
 			filters[numFilters++] = &filterStealth;
 			//filters[numFilters++] = &filterAttack;
 			filters[numFilters++] = &filterFogged;
-			filters[numFilters] = NULL;
+			filters[numFilters] = nullptr;
 
 			Object* targetLock = nullptr;
 			// THIS WILL FIND A VALID TARGET WITHIN THE TARGETING RETICLE
@@ -421,7 +421,7 @@ Bool FireWeaponAdvancedUpdate::isOkayToFire()
 	const Object *me = getObject();
 	const FireWeaponAdvancedUpdateModuleData *data = getFireWeaponAdvancedUpdateModuleData();
 
-	if( m_weapon == NULL )
+	if( m_weapon == nullptr )
 		return FALSE;
 
 	// Weapon is reloading

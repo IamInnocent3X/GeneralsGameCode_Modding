@@ -1651,14 +1651,14 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
     }
   }
 
-  if( data->m_oclOnExecute != NULL )
+  if( data->m_oclOnExecute != nullptr )
 	{
-		ObjectCreationList::create(data->m_oclOnExecute, object, NULL);
+		ObjectCreationList::create(data->m_oclOnExecute, object, nullptr);
 	}
 
-	if( data->m_fxOnExecute != NULL )
+	if( data->m_fxOnExecute != nullptr )
 	{
-		FXList::doFXObj(data->m_fxOnExecute, object, NULL);
+		FXList::doFXObj(data->m_fxOnExecute, object, nullptr);
 	}
 
   if( data->m_destroyOnExecute )

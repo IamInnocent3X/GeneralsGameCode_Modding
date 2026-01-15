@@ -1529,7 +1529,7 @@ public:
 		const ObjectCreationList *railgunocl,
 		DistanceCalculationType dc,
 		Bool checkBehind = FALSE,
-		PartitionFilter **filters = NULL,
+		PartitionFilter **filters = nullptr,
 		IterOrderType order = ITER_FASTEST
 	);
 
@@ -1543,7 +1543,7 @@ public:
 							const GeometryInfo& geom2,
 							Real angle2,
 							HeightBoundaryCheckType heightCheckType = DEFAULT_HEIGHT_CHECK,
-							Real *abDistSqr = NULL
+							Real *abDistSqr = nullptr
   ) const;
 
 	/// finding legal positions in the world

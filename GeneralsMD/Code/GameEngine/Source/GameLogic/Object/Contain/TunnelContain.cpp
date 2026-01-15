@@ -314,10 +314,10 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
 		return FALSE;// Just no, no matter what.
 	
 	Player *owningPlayer = getObject()->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return FALSE;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return FALSE;
 
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
@@ -355,7 +355,7 @@ Bool TunnelContain::isPassengerAllowedToFire( ObjectID id ) const
 
 	Object *passenger = TheGameLogic->findObjectByID(id);
 
-	if( passenger != NULL )
+	if( passenger != nullptr )
 	{
 		// if we have any kind of masks set then we must make that check
 		if (passenger->isAnyKindOf( modData->m_allowInsideKindOf ) == FALSE ||
@@ -387,10 +387,10 @@ static TunnelInterface* findTunnel(Object* obj)
 	for (BehaviorModule** i = obj->getBehaviorModules(); *i; ++i)
 	{
 		TunnelInterface* t = (*i)->getTunnelInterface();
-		if (t != NULL)
+		if (t != nullptr)
 			return t;
 	}
-	return NULL;
+	return nullptr;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -403,10 +403,10 @@ void TunnelContain::doUpgradeChecks( void )
 	OpenContain::doUpgradeChecks();
 
 	Player *owningPlayer = getObject()->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	//const TunnelContainModuleData *modData = getTunnelContainModuleData();
@@ -460,14 +460,14 @@ void TunnelContain::doUpgradeChecks( void )
 				// If we want to assign only 1 fireable tunnel, remove other upgrades
 				else if( modData->m_removeOtherUpgrades )
 				{
-					Object *other = NULL;
+					Object *other = nullptr;
 					other = TheGameLogic->findObjectByID( (*iter) );
 					if( other )
 					{
 						if(other->hasUpgrade(ut))
 							other->removeUpgrade(ut);
 						TunnelInterface *tunnelModule = findTunnel(other);
-						if( tunnelModule == NULL )
+						if( tunnelModule == nullptr )
 							continue;
 						tunnelModule->removeBunker();
 					}
@@ -506,10 +506,10 @@ void TunnelContain::doUpgradeChecks( void )
 void TunnelContain::doRemoveOtherPassengersAllowToFire()
 {
 	Player *owningPlayer = getObject()->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	static const NameKeyType key_PassengersFireUpgrade = NAMEKEY("PassengersFireUpgrade");
@@ -518,7 +518,7 @@ void TunnelContain::doRemoveOtherPassengersAllowToFire()
 	{
 		if( !(*iter == getObject()->getID()) )
 		{
-			Object *other = NULL;
+			Object *other = nullptr;
 			other = TheGameLogic->findObjectByID( (*iter) );
 			if( other )
 			{
@@ -526,7 +526,7 @@ void TunnelContain::doRemoveOtherPassengersAllowToFire()
 				if(other->getContain())
 					other->getContain()->setPassengerAllowedToFire( FALSE );
 				TunnelInterface *tunnelModule = findTunnel(other);
-				if( tunnelModule == NULL )
+				if( tunnelModule == nullptr )
 					continue;
 				tunnelModule->removeBunker();
 
@@ -570,10 +570,10 @@ void TunnelContain::doRemoveOtherPassengersAllowToFire()
 	if ( !getObject() )
     	return;
 	Player *owningPlayer = getObject()->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
@@ -999,7 +999,7 @@ struct NemesisHolder
 
 static void attackAtMyTarget( Object *obj, void *nemesisHolder )
 {
-	if (!obj || ((NemesisHolder*)nemesisHolder)->Nemesis == NULL)
+	if (!obj || ((NemesisHolder*)nemesisHolder)->Nemesis == nullptr)
 	{
 		return;
 	}
@@ -1019,10 +1019,10 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	Object *me = getObject();
 	Player *owningPlayer = me->getControllingPlayer();
 
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	UnsignedInt now = TheGameLogic->getFrame();
@@ -1058,7 +1058,7 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	}
 
 	// Get the Object that is is attacking and redirects all Units within the Tunnel Network onto it.
-	Object *nemesis = NULL;
+	Object *nemesis = nullptr;
 	AIUpdateInterface *ai = me->getAI();
 	if(ai && isAttacking)
 	{
@@ -1095,7 +1095,7 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	while ( it != list.end() )
 	{
 		Object *obj = *it++;
-		DEBUG_ASSERTCRASH( obj, ("Contain list must not contain NULL element"));
+		DEBUG_ASSERTCRASH( obj, ("Contain list must not contain null element"));
 
 		removeFromContain( obj, false );
 
@@ -1132,10 +1132,10 @@ void TunnelContain::removeBunker()
 	Object *me = getObject();
 	Player *owningPlayer = me->getControllingPlayer();
 
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	// Disable the main function
@@ -1170,10 +1170,10 @@ void TunnelContain::checkRemoveOwnGuard()
 
 	// Sanity Checks
 	Player *owningPlayer = obj->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 	
 	// If the whole Tunnel System is affected by UpgradesDisableOtherTunnelGuard, do not reset Tunnel Guard if turned off
@@ -1220,10 +1220,10 @@ void TunnelContain::checkRemoveOtherGuard()
 
 	// Sanity Checks
 	Player *owningPlayer = obj->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	// Remove the limitation that disables other Tunnels from turning back on their Tunnel Guard
@@ -1261,7 +1261,7 @@ void TunnelContain::checkRemoveOtherGuard()
 					else
 					{
 						// Now to turn off other Tunnels' Tunnel Guard
-						Object *other = NULL;
+						Object *other = nullptr;
 						other = TheGameLogic->findObjectByID( (*iter) );
 						if( other )
 						{
@@ -1271,7 +1271,7 @@ void TunnelContain::checkRemoveOtherGuard()
 
 							// Turn off the Tunnel Guard
 							TunnelInterface *tunnelModule = findTunnel(other);
-							if( tunnelModule == NULL )
+							if( tunnelModule == nullptr )
 								continue;
 							tunnelModule->removeGuard();
 						}
@@ -1292,10 +1292,10 @@ void TunnelContain::createPayload()
 
 	// A TunnelContain tells everyone to leave if this is the last tunnel
 	Player *owningPlayer = getObject()->getControllingPlayer();
-	if( owningPlayer == NULL )
+	if( owningPlayer == nullptr )
 		return;
 	TunnelTracker *tunnelTracker = owningPlayer->getTunnelSystem();
-	if( tunnelTracker == NULL )
+	if( tunnelTracker == nullptr )
 		return;
 
 	ContainModuleInterface *contain = getObject()->getContain();

@@ -704,7 +704,7 @@ protected:
 	void createControlBar( void );			///< create the control bar user interface
 	void createReplayControl( void );		///< create the replay control window
 
-	void setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorName = NULL, Int checkString = 1);
+	void setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorName = AsciiString::TheEmptyString, Int checkString = 1);
 
 
 	void addMessageText( const UnicodeString& formattedMessage, const RGBColor *rgbColor = nullptr );  ///< internal workhorse for adding plain text for messages

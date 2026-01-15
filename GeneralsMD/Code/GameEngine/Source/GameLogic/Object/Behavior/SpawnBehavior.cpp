@@ -1129,7 +1129,7 @@ Bool SpawnBehavior::computeAggregateMembers()
 	if( !obj->getDrawable()->isSelected() && TheInGameUI->getMousedOverDrawableID() != obj->getDrawable()->getID() )
 		return FALSE;
 
-	Object* currentSpawn = NULL;
+	Object* currentSpawn = nullptr;
 
 	Int spawnCount = 0;
 	Int spawnCountMax = md->m_spawnNumberData;

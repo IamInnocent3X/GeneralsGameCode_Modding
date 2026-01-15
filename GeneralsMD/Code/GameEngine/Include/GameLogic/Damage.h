@@ -332,7 +332,7 @@ static const char *TheProtectionNames[] =
 	"LASER",
 	"PROJECTILES",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheProtectionNames) == PROTECTION_COUNT + 1, "Incorrect array size");
 #endif
@@ -372,7 +372,7 @@ static const char *TheMagnetFormulaNames[] =
 	"DYNAMIC",
 	"ROTATORY",
 	"HYPERDYNAMIC",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheMagnetFormulaNames) == MAGNET_COUNT + 1, "Incorrect array size");
 #endif
@@ -397,9 +397,9 @@ public:
 		m_amount = 0;
 		m_kill = FALSE;
 
-		m_customDamageType = NULL;
-		m_customDamageStatusType = NULL;
-		m_customDeathType = NULL;
+		m_customDamageType.clear();
+		m_customDamageStatusType.clear();
+		m_customDeathType.clear();
     
     m_shockWaveVector.zero();	
     m_shockWaveAmount   = 0.0f;	
@@ -413,12 +413,12 @@ public:
 	m_isDisarm = FALSE;
 	m_killsGarrison = FALSE;
 	m_killsGarrisonAmount = 0;
-	m_playSpecificVoice = NULL;
+	m_playSpecificVoice.clear();
 	m_statusDuration = 0.0f;
 	m_doStatusDamage = FALSE;
 	m_statusDurationTypeCorrelate = FALSE;
 	m_tintStatus = TINT_STATUS_INVALID;
-	m_customTintStatus = NULL;
+	m_customTintStatus.clear();
 	m_isSubdual = FALSE;
 	m_subdualDealsNormalDamage = FALSE;
 	m_subdualDamageMultiplier = 1.0f;	
@@ -428,20 +428,20 @@ public:
 	m_clearsParasiteKeys.clear();
 	m_isMissileAttractor = FALSE;
 	m_subduedProjectileNoDamage = FALSE;
-	m_subdualCustomType = NULL;
-	m_customSubdualCustomTint = NULL;
+	m_subdualCustomType.clear();
+	m_customSubdualCustomTint.clear();
 	m_customSubdualTint = TINT_STATUS_GAINING_SUBDUAL_DAMAGE;
 	m_customSubdualHasDisable = TRUE;
 	m_customSubdualHasDisableProjectiles = TRUE;
 	m_customSubdualClearOnTrigger = FALSE;
 	m_customSubdualDoStatus = FALSE;
-	m_customSubdualOCL = NULL;
+	m_customSubdualOCL = nullptr;
 	m_customSubdualDisableType = DISABLED_SUBDUED;
 	m_customSubdualDisableTint = TINT_STATUS_INVALID;
-	m_customSubdualDisableCustomTint = NULL;
+	m_customSubdualDisableCustomTint.clear();
 	m_customSubdualRemoveSubdualTintOnDisable = FALSE;
-	m_customSubdualDisableSound = NULL;
-	m_customSubdualDisableRemoveSound = NULL;
+	m_customSubdualDisableSound.clear();
+	m_customSubdualDisableRemoveSound.clear();
 	m_protectionTypes = DEATH_TYPE_FLAGS_ALL;
 	m_shockWaveAffectsAirborne = FALSE;
 	m_shockWavePullsAirborne = FALSE;

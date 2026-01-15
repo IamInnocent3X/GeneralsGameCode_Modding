@@ -122,7 +122,7 @@ public:
 	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
 	virtual Bool isEquipCrateCollide() const { return FALSE; }
 	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
-	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
 
 	// UpdateModule
 	virtual UpdateSleepTime update();				///< called once per frame
@@ -275,8 +275,8 @@ protected:
 
 	virtual short getRiderSlot(ObjectID riderID) const { return -1; }
 	virtual short getPortableSlot(ObjectID portableID) const { return -1; }
-	virtual const ContainedItemsList* getAddOnList() const { return NULL; }
-	virtual ContainedItemsList* getAddOnList() { return NULL; }
+	virtual const ContainedItemsList* getAddOnList() const { return nullptr; }
+	virtual ContainedItemsList* getAddOnList() { return nullptr; }
 
 	void pruneDeadWanters();
 

@@ -76,7 +76,7 @@ static const char *TheScuttleNames[] =
 	"ON_NO_PASSENGERS",
 	"NEVER",
 
-	NULL
+	nullptr
 };
 #endif
 
@@ -194,7 +194,7 @@ private:
 		AsciiString									templateName;
 		Int											templateRider;
 
-		RiderUpgrade() : templateName(NULL), templateRider(-1)
+		RiderUpgrade() : templateName(AsciiString::TheEmptyString), templateRider(-1)
 		{
 		}
 	};

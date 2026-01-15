@@ -63,8 +63,8 @@ HealContainModuleData::HealContainModuleData( void )
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "TimeForFullHeal", INI::parseDurationUnsignedInt, nullptr, offsetof( HealContainModuleData, m_framesForFullHeal ) },
-		{ "HealingClearsParasite",			INI::parseBool,	, offsetof( HealContainModuleData, m_healingClearsParasite ) },
-		{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, , offsetof( HealContainModuleData, m_healingClearsParasiteKeys ) },
+		{ "HealingClearsParasite",			INI::parseBool,	nullptr, offsetof( HealContainModuleData, m_healingClearsParasite ) },
+		{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, nullptr, offsetof( HealContainModuleData, m_healingClearsParasiteKeys ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 

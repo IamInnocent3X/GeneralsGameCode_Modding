@@ -469,7 +469,7 @@ void ArmorTemplate::parseDefaultDamage(INI* ini, void*/*instance*/, void* /* sto
 		throw INI_INVALID_DATA;
 	}
 
-	INI::parsePercentToReal(ini, NULL, &customType->m_coefficient, NULL);
+	INI::parsePercentToReal(ini, nullptr, &customType->m_coefficient, nullptr);
 	customType->m_declaredCoefficient = TRUE;
 }
 
@@ -482,7 +482,7 @@ void ArmorTemplate::parseCustomDamageType(INI* ini, void*/*instance*/, void* /* 
 	if(customDamagePtr->isEmpty())
 	{
 		// Whatever works works, do not question the order of physics or why I decide to not put an '&'.
-		INI::parseQuotedAsciiString(ini, NULL, customDamagePtr, NULL);
+		INI::parseQuotedAsciiString(ini, nullptr, customDamagePtr, nullptr);
 	}
 	else
 	{
@@ -524,7 +524,7 @@ void ArmorTemplate::parseLinkDamageType(INI* ini, void*/*instance*/, void* /* st
 		throw INI_INVALID_DATA;
 	}
 
-	DamageTypeFlags::parseSingleBitFromINI(ini, NULL, &customType->m_linkDamageType, NULL);
+	DamageTypeFlags::parseSingleBitFromINI(ini, nullptr, &customType->m_linkDamageType, nullptr);
 	customType->m_declaredLinkDamageType = TRUE;
 }
 
@@ -532,9 +532,9 @@ void ArmorTemplate::parseLinkCustomDamageTypes(INI* ini, void*/*instance*/, void
 {
 	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
 
-	//INI::parseAsciiStringVectorAppend(ini, NULL, &customType->m_customDamageTypeLink, NULL);
+	//INI::parseAsciiStringVectorAppend(ini, nullptr, &customType->m_customDamageTypeLink, nullptr);
 	std::vector<AsciiString> customDamageTypeLink;
-	INI::parseAsciiStringVector(ini, NULL, &customDamageTypeLink, NULL);
+	INI::parseAsciiStringVector(ini, nullptr, &customDamageTypeLink, nullptr);
 
 	for(std::vector<AsciiString>::const_iterator it = customDamageTypeLink.begin(); it != customDamageTypeLink.end(); ++it)
 	{
@@ -551,7 +551,7 @@ ArmorStore::ArmorStore()
 {
 	m_armorTemplates.clear();
 	m_customDamageTypes.clear();
-	m_customDamageTypeParseNext = NULL;
+	m_customDamageTypeParseNext.clear();
 
 	m_customDamageTypeParse.m_coefficient = 1.0f;
 	m_customDamageTypeParse.m_declaredLinkDamageType = FALSE;
@@ -565,7 +565,7 @@ ArmorStore::~ArmorStore()
 {
 	m_armorTemplates.clear();
 	m_customDamageTypes.clear();
-	m_customDamageTypeParseNext = NULL;
+	m_customDamageTypeParseNext.clear();
 
 	m_customDamageTypeParse.m_coefficient = 1.0f;
 	m_customDamageTypeParse.m_declaredLinkDamageType = FALSE;
@@ -608,7 +608,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(const char* name) const
 		{ "Armor", ArmorTemplate::parseArmorCoefficients, nullptr, 0 },
 		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, nullptr, 0 },
 		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, nullptr, 0 },
-		{ nullptr, nullptr, nullptr, nullptr }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
 	const char *c = ini->getNextToken();
@@ -626,7 +626,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(const char* name) const
 		{ "Armor", ArmorTemplate::parseArmorCoefficients, nullptr, 0 },
 		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, nullptr, 0 },
 		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, nullptr, 0 },
-		{ nullptr, nullptr, nullptr, nullptr }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
 	const char* new_armor_name = ini->getNextToken();
@@ -673,7 +673,7 @@ void ArmorStore::parseCustomDamageTypesDefinition(INI* ini)
 		{ "Damage", ArmorTemplate::parseDefaultDamage, nullptr, 0 },
 		{ "LinkDamageType", ArmorTemplate::parseLinkDamageType, nullptr, 0 },
 		{ "LinkCustomDamageType", ArmorTemplate::parseLinkCustomDamageTypes, nullptr, 0 },
-		{ nullptr, nullptr, nullptr, nullptr }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
 	ArmorStore::CustomDamageTypesMap& customDamageTypesMapInfo = TheArmorStore->m_customDamageTypes;

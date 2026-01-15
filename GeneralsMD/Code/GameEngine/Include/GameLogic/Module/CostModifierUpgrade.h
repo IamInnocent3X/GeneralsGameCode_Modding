@@ -85,7 +85,7 @@ static const char* TheBonusStackingTypeNames[] =
 	"DIFFERENT_VALUE",
 	"OTHER_TYPE",
 	"SAME_TYPE",
-	NULL
+	nullptr
 };
 
 //-------------------------------------------------------------------------------------------------

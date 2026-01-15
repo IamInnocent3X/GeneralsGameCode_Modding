@@ -44,7 +44,7 @@
 //-------------------------------------------------------------------------------------------------
 KodiakDeploymentUpdateModuleData::KodiakDeploymentUpdateModuleData()
 {
-	m_specialPowerTemplate			   = NULL;
+	m_specialPowerTemplate			   = nullptr;
 	m_extraRequiredScience				 = SCIENCE_INVALID;
 /******BOTH*******//*BOTH*//******BOTH*******//******BOTH*******/  m_attackAreaRadius             = 200.0f;
 	m_createLoc = CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_TARGET;
@@ -58,7 +58,7 @@ static const char* TheGunshipCreateLocTypeNames[] =
   "CREATE_AT_EDGE_FARTHEST_FROM_SOURCE",
 	"CREATE_AT_EDGE_NEAR_TARGET",
 	"CREATE_AT_EDGE_FARTHEST_FROM_TARGET",
-	NULL
+	nullptr
 };
 
 
@@ -71,10 +71,10 @@ static Real zero = 0.0f;
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "GunshipTemplateName",	    INI::parseAsciiString,				    NULL, offsetof( KodiakDeploymentUpdateModuleData, m_gunshipTemplateName ) },
-		{ "RequiredScience",					INI::parseScience,								NULL, offsetof( KodiakDeploymentUpdateModuleData, m_extraRequiredScience ) },
-/******BOTH*******/   { "SpecialPowerTemplate",     INI::parseSpecialPowerTemplate,   NULL, offsetof( KodiakDeploymentUpdateModuleData, m_specialPowerTemplate ) },
-/*******BOTH******/		{ "AttackAreaRadius",	        INI::parseReal,				            NULL, offsetof( KodiakDeploymentUpdateModuleData, m_attackAreaRadius ) },
+		{ "GunshipTemplateName",	    INI::parseAsciiString,				    nullptr, offsetof( KodiakDeploymentUpdateModuleData, m_gunshipTemplateName ) },
+		{ "RequiredScience",					INI::parseScience,								nullptr, offsetof( KodiakDeploymentUpdateModuleData, m_extraRequiredScience ) },
+/******BOTH*******/   { "SpecialPowerTemplate",     INI::parseSpecialPowerTemplate,   nullptr, offsetof( KodiakDeploymentUpdateModuleData, m_specialPowerTemplate ) },
+/*******BOTH******/		{ "AttackAreaRadius",	        INI::parseReal,				            nullptr, offsetof( KodiakDeploymentUpdateModuleData, m_attackAreaRadius ) },
 		{ "CreateLocation", INI::parseIndexList, TheGunshipCreateLocTypeNames, offsetof( KodiakDeploymentUpdateModuleData, m_createLoc ) },
 
     { 0, 0, 0, 0 }
@@ -85,7 +85,7 @@ static Real zero = 0.0f;
 //-------------------------------------------------------------------------------------------------
 KodiakDeploymentUpdate::KodiakDeploymentUpdate( Thing *thing, const ModuleData* moduleData ) : SpecialPowerUpdateModule( thing, moduleData )
 {
-	m_specialPowerModule = NULL;
+	m_specialPowerModule = nullptr;
   m_gunshipID  = INVALID_ID;
 }
 
@@ -138,11 +138,11 @@ Bool KodiakDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTe
 
 	Object* newGunship = TheGameLogic->findObjectByID(m_gunshipID);
 	const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateName);
-	if (newGunship != NULL)
+	if (newGunship != nullptr)
 	{
 		//    disengageAndDepartAO( newGunship );
 		m_gunshipID = INVALID_ID;
-		newGunship = NULL;
+		newGunship = nullptr;
 	}
 
 

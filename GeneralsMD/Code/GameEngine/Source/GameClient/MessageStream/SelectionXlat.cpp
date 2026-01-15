@@ -282,8 +282,8 @@ SelectionTranslator::SelectionTranslator()
 	m_deselectDownCameraPosition.zero();
 	m_displayedMaxWarning = FALSE;
 	m_selectCountMap.clear();
-	m_lastTreeDraw = NULL;
-	m_lastTreeName = NULL;
+	m_lastTreeDraw = nullptr;
+	m_lastTreeName = AsciiString::TheEmptyString;
 	m_isMouseOverATree = FALSE;
 
 	TheSelectionTranslator = this;
@@ -377,7 +377,7 @@ static Bool checkIsNotSelectable(Drawable* drawable)
 	if(!drawable || !drawable->getTemplate())
 		return FALSE;
 
-	Object *obj = drawable ? drawable->getObject() : NULL;
+	Object *obj = drawable ? drawable->getObject() : nullptr;
 	if(obj)
 	{
 		if(obj->isKindOf(KINDOF_MINE) || obj->isKindOf(KINDOF_SHRUBBERY))

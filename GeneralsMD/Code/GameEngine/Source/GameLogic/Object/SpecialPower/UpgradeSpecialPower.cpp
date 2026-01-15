@@ -54,9 +54,9 @@ void UpgradeSpecialPowerModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "UpgradeToGrant", INI::parseAsciiString,	NULL,   offsetof(UpgradeSpecialPowerModuleData, m_upgradeName) },
-		{ "UpgradesToGrant", INI::parseAsciiStringVector,	NULL,   offsetof(UpgradeSpecialPowerModuleData, m_upgradeNames) },
-		{ "UpgradesToRemove", INI::parseAsciiStringVector,	NULL,   offsetof(UpgradeSpecialPowerModuleData, m_upgradeNamesRemove) },
+		{ "UpgradeToGrant", INI::parseAsciiString,	nullptr,   offsetof(UpgradeSpecialPowerModuleData, m_upgradeName) },
+		{ "UpgradesToGrant", INI::parseAsciiStringVector,	nullptr,   offsetof(UpgradeSpecialPowerModuleData, m_upgradeNames) },
+		{ "UpgradesToRemove", INI::parseAsciiStringVector,	nullptr,   offsetof(UpgradeSpecialPowerModuleData, m_upgradeNamesRemove) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);

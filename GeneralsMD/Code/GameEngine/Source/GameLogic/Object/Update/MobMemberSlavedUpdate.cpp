@@ -423,7 +423,7 @@ void MobMemberSlavedUpdate::informMySlaverSelfInfo()
 		return;
 
 	Object *master = TheGameLogic->findObjectByID( m_slaver );
-	if( master == NULL )
+	if( master == nullptr )
 		return;
 	
 	SpawnBehaviorInterface *spawnerBehavior = master->getSpawnBehaviorInterface();
@@ -456,7 +456,7 @@ void MobMemberSlavedUpdate::informMySlaverSelfTasking(Bool set)
 		return;
 
 	Object *master = TheGameLogic->findObjectByID( m_slaver );
-	if( master == NULL )
+	if( master == nullptr )
 		return;
 	
 	SpawnBehaviorInterface *spawnerBehavior = master->getSpawnBehaviorInterface();

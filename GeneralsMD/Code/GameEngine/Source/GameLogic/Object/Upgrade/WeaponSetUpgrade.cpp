@@ -56,8 +56,8 @@ void WeaponSetUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "WeaponSetFlag", INI::parseIndexListOrNone, WeaponSetFlags::getBitNames(),offsetof(WeaponSetUpgradeModuleData, m_weaponSetFlag) },
-		{ "WeaponSetFlagsToClear", WeaponSetFlags::parseFromINI, NULL, offsetof(WeaponSetUpgradeModuleData, m_weaponSetFlagsToClear) },
-		{ "NeedsParkedAircraft", INI::parseBool, NULL, offsetof(WeaponSetUpgradeModuleData, m_needsParkedAircraft) },
+		{ "WeaponSetFlagsToClear", WeaponSetFlags::parseFromINI, nullptr, offsetof(WeaponSetUpgradeModuleData, m_weaponSetFlagsToClear) },
+		{ "NeedsParkedAircraft", INI::parseBool, nullptr, offsetof(WeaponSetUpgradeModuleData, m_needsParkedAircraft) },
 		{ 0, 0, 0, 0 }
 	};
 

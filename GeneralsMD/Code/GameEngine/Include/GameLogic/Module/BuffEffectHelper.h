@@ -52,7 +52,7 @@ struct BuffEffectTracker
 	std::vector<ParticleSystemID> m_particleSystemIDs;
 
 	BuffEffectTracker() {
-		m_template = NULL;
+		m_template = nullptr;
 		m_frameCreated = 0;
 		m_frameToRemove = 0;
 		m_numStacks = 0;

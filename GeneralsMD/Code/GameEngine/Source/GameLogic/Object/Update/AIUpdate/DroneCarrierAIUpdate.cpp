@@ -43,9 +43,9 @@ void DroneCarrierAIUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "RespawnTime",			INI::parseDurationUnsignedInt,		NULL, offsetof(DroneCarrierAIUpdateModuleData, m_respawn_time) },
-		{ "DroneTemplateName",INI::parseAsciiStringVectorAppend,NULL, offsetof(DroneCarrierAIUpdateModuleData, m_spawnTemplateNameData) },
-		{ "Slots",						INI::parseInt,										NULL, offsetof(DroneCarrierAIUpdateModuleData, m_slots) },
+		{ "RespawnTime",			INI::parseDurationUnsignedInt,		nullptr, offsetof(DroneCarrierAIUpdateModuleData, m_respawn_time) },
+		{ "DroneTemplateName",INI::parseAsciiStringVectorAppend,nullptr, offsetof(DroneCarrierAIUpdateModuleData, m_spawnTemplateNameData) },
+		{ "Slots",						INI::parseInt,										nullptr, offsetof(DroneCarrierAIUpdateModuleData, m_slots) },
 
 		{ 0, 0, 0, 0 }
 	};
@@ -87,7 +87,7 @@ Bool DroneCarrierAIUpdate::createSpawn()
 		return false;
 	}
 
-	Object* newSpawn = NULL;
+	Object* newSpawn = nullptr;
 
 	m_spawnTemplate = TheThingFactory->findTemplate(*m_templateNameIterator);
 
@@ -108,7 +108,7 @@ Bool DroneCarrierAIUpdate::createSpawn()
 	for (BehaviorModule** update = newSpawn->getBehaviorModules(); *update; ++update)
 	{
 		SlavedUpdateInterface* sdu = (*update)->getSlavedUpdateInterface();
-		if (sdu != NULL)
+		if (sdu != nullptr)
 		{
 			sdu->onEnslave(parent);
 			break;
@@ -127,7 +127,7 @@ Bool DroneCarrierAIUpdate::is_full() {
 
 Object* DroneCarrierAIUpdate::getClosestSlave(const Coord3D* pos)
 {
-	Object* closest = NULL;
+	Object* closest = nullptr;
 	Real closestDistance;
 
 	for (const ObjectID & spawn_id : m_spawnIDs) {
@@ -403,7 +403,7 @@ void DroneCarrierAIUpdate::onDie(const DamageInfo* damageInfo)
 	for (const auto& slave_id : m_spawnIDs)
 	{
 		Object* obj = TheGameLogic->findObjectByID(slave_id);
-		if (obj == NULL || obj->isEffectivelyDead())
+		if (obj == nullptr || obj->isEffectivelyDead())
 			continue;
 
 		//TODO config option for disabled effect?
@@ -457,7 +457,7 @@ void DroneCarrierAIUpdate::deployDrones()
 	{
 		Object* carrier = getObject();
 		Object* obj = TheGameLogic->findObjectByID(slave_id);
-		if (obj == NULL || obj->isEffectivelyDead())
+		if (obj == nullptr || obj->isEffectivelyDead())
 			continue;
 
 		if (obj->isContained() && isDroneCombatReady(obj)) {
@@ -475,7 +475,7 @@ void DroneCarrierAIUpdate::retrieveDrones()
 	for (const auto& slave_id : m_spawnIDs)
 	{
 		Object* member = TheGameLogic->findObjectByID(slave_id);
-		AIUpdateInterface* ai = member ? member->getAI() : NULL;
+		AIUpdateInterface* ai = member ? member->getAI() : nullptr;
 		if (member && ai)
 		{
 			Bool contained = member->isContained();
@@ -728,11 +728,11 @@ void DroneCarrierAIUpdate::xfer(Xfer* xfer)
 	xfer->xferAsciiString(&name);
 	if (xfer->getXferMode() == XFER_LOAD)
 	{
-		m_spawnTemplate = NULL;
+		m_spawnTemplate = nullptr;
 		if (name.isEmpty() == FALSE)
 		{
 			m_spawnTemplate = TheThingFactory->findTemplate(name);
-			if (m_spawnTemplate == NULL)
+			if (m_spawnTemplate == nullptr)
 			{
 				DEBUG_CRASH(("SpawnBehavior::xfer - Unable to find template '%s'", name.str()));
 				throw SC_INVALID_DATA;

@@ -64,11 +64,11 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, NULL, offsetof(DelayedUpgradeBehaviorModuleData, m_initiallyActive) },
-			{ "UpgradesToTrigger", INI::parseAsciiStringVector,	NULL, offsetof(DelayedUpgradeBehaviorModuleData, m_upgradesToTrigger) },
-			{ "UpgradesToRemove", INI::parseAsciiStringVector,	NULL, offsetof(DelayedUpgradeBehaviorModuleData, m_upgradesToRemove) },
-			{ "TriggerAfterTime",	INI::parseDurationUnsignedInt, NULL, offsetof(DelayedUpgradeBehaviorModuleData, m_triggerDelay) },
-			//{ "TriggerAfterShotsFired",	INI::parseUnsignedInt, NULL, offsetof(DelayedUpgradeBehaviorModuleData, m_triggerNumShots) },
+			{ "StartsActive",	INI::parseBool, nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_initiallyActive) },
+			{ "UpgradesToTrigger", INI::parseAsciiStringVector,	nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_upgradesToTrigger) },
+			{ "UpgradesToRemove", INI::parseAsciiStringVector,	nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_upgradesToRemove) },
+			{ "TriggerAfterTime",	INI::parseDurationUnsignedInt, nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_triggerDelay) },
+			//{ "TriggerAfterShotsFired",	INI::parseUnsignedInt, nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_triggerNumShots) },
 			{ 0, 0, 0, 0 }
 		};
 

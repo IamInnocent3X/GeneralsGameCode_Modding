@@ -1268,7 +1268,7 @@ const AsciiString& W3DTreeBuffer::findTreeNameInPos(const Coord3D* loc) const
 		}
 	}
 
-	return NULL;
+	return AsciiString::TheEmptyString;
 
 
 }

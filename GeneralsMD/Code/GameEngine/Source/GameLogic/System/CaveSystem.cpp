@@ -61,7 +61,7 @@ void CaveSystem::reset()
 		for( TunnelTrackerPtrVec::iterator iter_3 = (*iter_2).second.begin(); iter_3 != (*iter_2).second.end(); iter_3++ )
 		{
 			TunnelTracker *currentTracker_team = *iter_3;
-			if( currentTracker_team )// could be NULL, since we don't slide back to fill deleted entries so offsets don't shift
+			if( currentTracker_team )// could be null, since we don't slide back to fill deleted entries so offsets don't shift
 			{
 				deleteInstance(currentTracker_team);
 			}
@@ -101,8 +101,8 @@ Bool CaveSystem::canSwitchIndexToIndex( Int oldIndex, Int newIndex )
 Bool CaveSystem::canSwitchIndexToIndexTeam( Int oldIndex, const Team *oldTeam, Int newIndex, const Team *newTeam )
 {
 	// When I grant permission, you need to do it.  ie call Unregister and then re-register with the new number
-	TunnelTracker *oldTracker = NULL;
-	TunnelTracker *newTracker = NULL;
+	TunnelTracker *oldTracker = nullptr;
+	TunnelTracker *newTracker = nullptr;
 
 	if(m_tunnelTrackerTeamMap.empty())
 		return FALSE;
@@ -167,14 +167,14 @@ void CaveSystem::registerNewCaveTeam( Int theIndex, const Team *theTeam )
 		{
 			// You are new and off the edge, so I will fill NULLs up to you and then make a newTracker at that spot
 			while( theIndex >= (*it).second.size() )
-				(*it).second.push_back( NULL );
+				(*it).second.push_back( nullptr );
 
 			(*it).second[theIndex] = newInstance(TunnelTracker);
 		}
 		else
 		{
 			// else you either exist or have existed, so I will either let things be or re-create that slot
-			if( (*it).second[theIndex] == NULL )
+			if( (*it).second[theIndex] == nullptr )
 				(*it).second[theIndex] = newInstance(TunnelTracker);
 		}
 	}
@@ -183,10 +183,10 @@ void CaveSystem::registerNewCaveTeam( Int theIndex, const Team *theTeam )
 		needToCreate = TRUE;
 	}
 
-	if( needToCreate )// if true, we new theIndex is the index of a NULL to be filled
+	if( needToCreate )// if true, we new theIndex is the index of a nullptr to be filled
 	{
 		while( theIndex >= m_tunnelTrackerTeamMap[theTeam->getID()].size() )
-			m_tunnelTrackerTeamMap[theTeam->getID()].push_back( NULL );
+			m_tunnelTrackerTeamMap[theTeam->getID()].push_back( nullptr );
 			
 		m_tunnelTrackerTeamMap[theTeam->getID()][theIndex] = newInstance(TunnelTracker);
 	}
@@ -215,9 +215,9 @@ TunnelTracker *CaveSystem::getTunnelTrackerForCaveIndex( Int theIndex )
 TunnelTracker *CaveSystem::getTunnelTrackerForCaveIndexTeam( Int theIndex, const Team *theTeam )
 {
 	if(m_tunnelTrackerTeamMap.empty())
-		return NULL;
+		return nullptr;
 
-	TunnelTracker *theTracker = NULL;
+	TunnelTracker *theTracker = nullptr;
 	TeamTunnelTrackerMapType::const_iterator it = m_tunnelTrackerTeamMap.find(theTeam->getID());
 	if (it != m_tunnelTrackerTeamMap.end())
 	{
@@ -227,7 +227,7 @@ TunnelTracker *CaveSystem::getTunnelTrackerForCaveIndexTeam( Int theIndex, const
 		}
 	}
 
-	DEBUG_ASSERTCRASH( theTracker != NULL, ("No one should be interested in a sub-cave that doesn't exist.") );
+	DEBUG_ASSERTCRASH( theTracker != nullptr, ("No one should be interested in a sub-cave that doesn't exist.") );
 
 	return theTracker;
 }

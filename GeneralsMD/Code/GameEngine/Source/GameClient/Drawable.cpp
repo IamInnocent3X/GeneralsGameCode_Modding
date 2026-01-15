@@ -144,7 +144,7 @@ const char* const TintStatusFlags::s_bitNameList[] =
 	"EXTRA8",
 	"EXTRA9",
 	"EXTRA10",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TintStatusFlags::s_bitNameList) == TintStatusFlags::NumBits + 1, "Incorrect array size");
 
@@ -4142,8 +4142,8 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 					getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->setMinFrame(numFrames - seconds - 1);
 					getIconInfo()->m_icon[ ICON_BOMB_TIMED ]->reset();
 				}
-				Bool showTimedAnim = (getIconInfo()->m_icon[ICON_BOMB_TIMED]) != AsciiString::TheEmptyString;
-				Bool showBaseAnim = (getIconInfo()->m_icon[ICON_BOMB_REMOTE]) != AsciiString::TheEmptyString;
+				Bool showTimedAnim = (getIconInfo()->m_icon[ICON_BOMB_TIMED]) != nullptr;
+				Bool showBaseAnim = (getIconInfo()->m_icon[ICON_BOMB_REMOTE]) != nullptr;
 				if( showTimedAnim || showBaseAnim)
 				{
 					//

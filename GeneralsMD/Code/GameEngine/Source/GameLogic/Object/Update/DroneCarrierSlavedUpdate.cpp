@@ -36,7 +36,7 @@ void DroneCarrierSlavedUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 	SlavedUpdateModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "LeashRange",			INI::parseReal,	NULL, offsetof(DroneCarrierSlavedUpdateModuleData, m_leashRange) },
+		{ "LeashRange",			INI::parseReal,	nullptr, offsetof(DroneCarrierSlavedUpdateModuleData, m_leashRange) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -115,7 +115,7 @@ UpdateSleepTime DroneCarrierSlavedUpdate::update(void)
 		me->setLayer(master->getLayer());
 
 	
-	Object* target = NULL;
+	Object* target = nullptr;
 	AIUpdateInterface* masterAI = master->getAIUpdateInterface();
 	if (masterAI && DroneCarrierAIUpdate::isDroneCombatReady(me))
 	{

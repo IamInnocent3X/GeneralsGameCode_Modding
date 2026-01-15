@@ -108,7 +108,7 @@ Int ProximityCaptureUpdate::checkDominantPlayer( void )
   //PartitionFilterRejectByKindOf filterRejectKindof(data->m_forbiddenKindOf);
 	//Note: we don't filter for accepted KindOfs her because we want to differentiate between ALL and ANY match cases
 
-	PartitionFilter* filters[] = { &filterAlive, &filterMapStatus, NULL };
+	PartitionFilter* filters[] = { &filterAlive, &filterMapStatus, nullptr };
 
 	// scan objects in our region
 	ObjectIterator* iter = ThePartitionManager->iterateObjectsInRange(me->getPosition(),
@@ -123,7 +123,7 @@ Int ProximityCaptureUpdate::checkDominantPlayer( void )
 	std::array<Real, MAX_PLAYER_COUNT> playerTotals{};
 	playerTotals.fill(0.0f);
 
-	for (Object* currentObj = iter->first(); currentObj != NULL; currentObj = iter->next())
+	for (Object* currentObj = iter->first(); currentObj != nullptr; currentObj = iter->next())
 	{
 		bool match = FALSE;
 		if (!data->m_requiresAllKindOfs)

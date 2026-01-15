@@ -62,7 +62,7 @@ public:
 		m_isUnique = FALSE;
 		m_equipCanPassiveAcquire = FALSE;
 		m_destroyOnClear = FALSE;
-		m_parasiteKey = NULL;
+		m_parasiteKey.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -70,12 +70,12 @@ public:
     CrateCollideModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "IsContain",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isContain ) },
-			{ "IsParasite",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isParasite ) },
-			{ "IsUnique",				INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_isUnique ) },
-			{ "ParasiteKey",			INI::parseAsciiString,		NULL, offsetof( EquipCrateCollideModuleData, m_parasiteKey ) },
-			{ "CanPassiveAcquire",		INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_equipCanPassiveAcquire ) },
-			{ "DestroyOnClear",			INI::parseBool,		NULL, offsetof( EquipCrateCollideModuleData, m_destroyOnClear ) },
+			{ "IsContain",				INI::parseBool,		nullptr, offsetof( EquipCrateCollideModuleData, m_isContain ) },
+			{ "IsParasite",				INI::parseBool,		nullptr, offsetof( EquipCrateCollideModuleData, m_isParasite ) },
+			{ "IsUnique",				INI::parseBool,		nullptr, offsetof( EquipCrateCollideModuleData, m_isUnique ) },
+			{ "ParasiteKey",			INI::parseAsciiString,		nullptr, offsetof( EquipCrateCollideModuleData, m_parasiteKey ) },
+			{ "CanPassiveAcquire",		INI::parseBool,		nullptr, offsetof( EquipCrateCollideModuleData, m_equipCanPassiveAcquire ) },
+			{ "DestroyOnClear",			INI::parseBool,		nullptr, offsetof( EquipCrateCollideModuleData, m_destroyOnClear ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

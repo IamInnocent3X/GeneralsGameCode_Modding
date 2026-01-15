@@ -48,10 +48,10 @@
 //-------------------------------------------------------------------------------------------------
 KodiakUpdateModuleData::KodiakUpdateModuleData()
 {
-	m_specialPowerTemplate			   = NULL;
+	m_specialPowerTemplate			   = nullptr;
 /******BOTH*******//*BOTH*//******BOTH*******//******BOTH*******/  m_attackAreaRadius             = 200.0f;
-/*************/  //m_gattlingStrafeFXParticleSystem = NULL;
-/*************/  //m_howitzerWeaponTemplate = NULL;
+/*************/  //m_gattlingStrafeFXParticleSystem = nullptr;
+/*************/  //m_howitzerWeaponTemplate = nullptr;
 /*************/  m_orbitFrames                  = 0;
 /*************/  m_targetingReticleRadius       = 25.0f;
 /*************/  m_gunshipOrbitRadius           = 250.0f;
@@ -72,7 +72,7 @@ KodiakUpdateModuleData::KodiakUpdateModuleData()
   m_turretRecenterFramesBeforeExit = 0;
   m_initialAttackDelayFrames = 0;
 
-  m_cursorName = NULL;
+  m_cursorName.clear();
 }
 
 static Real zero = 0.0f;
@@ -83,27 +83,27 @@ static Real zero = 0.0f;
 
 	static const FieldParse dataFieldParse[] =
 	{
-    { "SpecialPowerTemplate",           INI::parseSpecialPowerTemplate,   NULL, offsetof( KodiakUpdateModuleData, m_specialPowerTemplate ) },
-		{ "MainTargetingRate",	            INI::parseDurationUnsignedInt,    NULL, offsetof( KodiakUpdateModuleData, m_mainTargetingRate ) },
-		{ "SideTargetingRate",	            INI::parseDurationUnsignedInt,    NULL, offsetof( KodiakUpdateModuleData, m_sideTargetingRate ) },
-		{ "AATargetingRate",	            INI::parseDurationUnsignedInt,    NULL, offsetof( KodiakUpdateModuleData, m_aaTargetingRate ) },
-		{ "OrbitTime",	                    INI::parseDurationUnsignedInt,		NULL, offsetof( KodiakUpdateModuleData, m_orbitFrames ) },
-    { "AttackAreaRadius",	              INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_attackAreaRadius ) },
-    { "SideAttackAreaRadius",	              INI::parseReal,				            NULL, offsetof(KodiakUpdateModuleData, m_sideAttackAreaRadius) },
-    { "AAAttackAreaRadius",	              INI::parseReal,				            NULL, offsetof(KodiakUpdateModuleData, m_aaAttackAreaRadius) },
-		{ "TargetingReticleRadius",	        INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_targetingReticleRadius ) },
-		{ "GunshipOrbitRadius",	            INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_gunshipOrbitRadius ) },
-    { "MissileLockRadius",	            INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_missileLockRadius) },
-		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( KodiakUpdateModuleData, m_attackAreaDecalTemplate ) },
-		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( KodiakUpdateModuleData, m_targetingReticleDecalTemplate ) },
-    { "ScatterTarget",						KodiakUpdateModuleData::parseScatterTarget,			NULL,							0 },
-    { "MainTurrets",	                    INI::parseUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_numMainTurrets) },
-    { "SideTurrets",	                    INI::parseUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_numSideTurrets) },
-    { "AATurrets",	                    INI::parseUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_numAATurrets) },
-    { "MissileScatterRadius",	        INI::parseReal,		NULL, offsetof(KodiakUpdateModuleData, m_missileScatterRadius) },
-    { "TurretRecenterTimeBeforeExit", INI::parseDurationUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_turretRecenterFramesBeforeExit) },
-    { "InitialAttackDelay",           INI::parseDurationUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_initialAttackDelayFrames) },
-    { "CursorName",		                  INI::parseAsciiString,	        NULL,	offsetof(KodiakUpdateModuleData, m_cursorName) },
+    { "SpecialPowerTemplate",           INI::parseSpecialPowerTemplate,   nullptr, offsetof( KodiakUpdateModuleData, m_specialPowerTemplate ) },
+		{ "MainTargetingRate",	            INI::parseDurationUnsignedInt,    nullptr, offsetof( KodiakUpdateModuleData, m_mainTargetingRate ) },
+		{ "SideTargetingRate",	            INI::parseDurationUnsignedInt,    nullptr, offsetof( KodiakUpdateModuleData, m_sideTargetingRate ) },
+		{ "AATargetingRate",	            INI::parseDurationUnsignedInt,    nullptr, offsetof( KodiakUpdateModuleData, m_aaTargetingRate ) },
+		{ "OrbitTime",	                    INI::parseDurationUnsignedInt,		nullptr, offsetof( KodiakUpdateModuleData, m_orbitFrames ) },
+    { "AttackAreaRadius",	              INI::parseReal,				            nullptr, offsetof( KodiakUpdateModuleData, m_attackAreaRadius ) },
+    { "SideAttackAreaRadius",	              INI::parseReal,				            nullptr, offsetof(KodiakUpdateModuleData, m_sideAttackAreaRadius) },
+    { "AAAttackAreaRadius",	              INI::parseReal,				            nullptr, offsetof(KodiakUpdateModuleData, m_aaAttackAreaRadius) },
+		{ "TargetingReticleRadius",	        INI::parseReal,				            nullptr, offsetof( KodiakUpdateModuleData, m_targetingReticleRadius ) },
+		{ "GunshipOrbitRadius",	            INI::parseReal,				            nullptr, offsetof( KodiakUpdateModuleData, m_gunshipOrbitRadius ) },
+    { "MissileLockRadius",	            INI::parseReal,				            nullptr, offsetof( KodiakUpdateModuleData, m_missileLockRadius) },
+		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( KodiakUpdateModuleData, m_attackAreaDecalTemplate ) },
+		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( KodiakUpdateModuleData, m_targetingReticleDecalTemplate ) },
+    { "ScatterTarget",						KodiakUpdateModuleData::parseScatterTarget,			nullptr,							0 },
+    { "MainTurrets",	                    INI::parseUnsignedInt,		nullptr, offsetof(KodiakUpdateModuleData, m_numMainTurrets) },
+    { "SideTurrets",	                    INI::parseUnsignedInt,		nullptr, offsetof(KodiakUpdateModuleData, m_numSideTurrets) },
+    { "AATurrets",	                    INI::parseUnsignedInt,		nullptr, offsetof(KodiakUpdateModuleData, m_numAATurrets) },
+    { "MissileScatterRadius",	        INI::parseReal,		nullptr, offsetof(KodiakUpdateModuleData, m_missileScatterRadius) },
+    { "TurretRecenterTimeBeforeExit", INI::parseDurationUnsignedInt,		nullptr, offsetof(KodiakUpdateModuleData, m_turretRecenterFramesBeforeExit) },
+    { "InitialAttackDelay",           INI::parseDurationUnsignedInt,		nullptr, offsetof(KodiakUpdateModuleData, m_initialAttackDelayFrames) },
+    { "CursorName",		                  INI::parseAsciiString,	        nullptr,	offsetof(KodiakUpdateModuleData, m_cursorName) },
 
 
     { 0, 0, 0, 0 }
@@ -119,7 +119,7 @@ static Real zero = 0.0f;
   Coord2D target;
   target.x = 0;
   target.y = 0;
-  INI::parseCoord2D(ini, NULL, &target, NULL);
+  INI::parseCoord2D(ini, nullptr, &target, nullptr);
 
   self->m_scatterTargets.push_back(target);
 }
@@ -127,7 +127,7 @@ static Real zero = 0.0f;
 //-------------------------------------------------------------------------------------------------
 KodiakUpdate::KodiakUpdate( Thing *thing, const ModuleData* moduleData ) : SpecialPowerUpdateModule( thing, moduleData )
 {
-	m_specialPowerModule = NULL;
+	m_specialPowerModule = nullptr;
 	m_status = GUNSHIP_STATUS_IDLE;
 	m_initialTargetPosition.zero();
 	m_overrideTargetDestination.zero();
@@ -506,7 +506,7 @@ UpdateSleepTime KodiakUpdate::update()
 
       if ( m_status == GUNSHIP_STATUS_ORBITING && TheGameLogic->getFrame() >= (m_orbitEscapeFrame - data->m_orbitFrames + data->m_initialAttackDelayFrames) ) // delay until attack
       {
-        Object *validTargetObject = NULL;
+        Object *validTargetObject = nullptr;
 
 
         if ( TheGameLogic->getFrame() >= m_orbitEscapeFrame )
@@ -548,7 +548,7 @@ UpdateSleepTime KodiakUpdate::update()
 	          filters[numFilters++] = &filterStealth;
 	          filters[numFilters++] = &filterAttack;
 	          filters[numFilters++] = &filterFogged;
-	          filters[numFilters] = NULL;
+	          filters[numFilters] = nullptr;
 
 
             // THIS WILL FIND A VALID TARGET WITHIN THE TARGETING RETICLE
@@ -620,7 +620,7 @@ UpdateSleepTime KodiakUpdate::update()
             filters[numFilters++] = &filterStealth;
             filters[numFilters++] = &filterAttack;
             filters[numFilters++] = &filterFogged;
-            filters[numFilters] = NULL;
+            filters[numFilters] = nullptr;
 
             std::vector<Object*> targets;
             targets.reserve(data->m_numSideTurrets);
@@ -665,7 +665,7 @@ UpdateSleepTime KodiakUpdate::update()
             filters[numFilters++] = &filterStealth;
             filters[numFilters++] = &filterAttack;
             filters[numFilters++] = &filterFogged;
-            filters[numFilters] = NULL;
+            filters[numFilters] = nullptr;
 
             std::vector<Object*> targets;
             targets.reserve(data->m_numAATurrets);
@@ -742,7 +742,7 @@ UpdateSleepTime KodiakUpdate::update()
                 filters[numFilters++] = &filterStealth;
                 filters[numFilters++] = &filterAttack;
                 filters[numFilters++] = &filterFogged;
-                filters[numFilters] = NULL;
+                filters[numFilters] = nullptr;
 
                 Object* targetLock = nullptr;
                 // THIS WILL FIND A VALID TARGET WITHIN THE TARGETING RETICLE
@@ -883,7 +883,7 @@ void KodiakUpdate::cleanUp()
 void KodiakUpdate::disengageAndDepartAO( Object *gunship )
 {
 
-  if ( gunship == NULL )
+  if ( gunship == nullptr )
     return;
 
   AIUpdateInterface *shipAI = gunship->getAIUpdateInterface();

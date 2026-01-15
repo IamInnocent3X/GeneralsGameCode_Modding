@@ -329,8 +329,6 @@ void StickyBombUpdate::detonate()
 				// And we make FX based on that size too.
 				FXList::doFXPos(data->m_geometryBasedDamageFX, boobyTrappedObject->getPosition(), nullptr, 0, nullptr, secondaryDamageRange);
 			}
-
-			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(damageInfo.in.m_sourceID, m_targetID, boobyTrappedObject->getPosition());
 		}
 	}
 

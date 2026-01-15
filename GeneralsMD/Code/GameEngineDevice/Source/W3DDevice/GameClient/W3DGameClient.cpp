@@ -226,7 +226,7 @@ const AsciiString& W3DGameClient::findTreeNameInPos(const Coord3D* loc) const
 	if (TheTerrainRenderObject) {
 		return TheTerrainRenderObject->findTreeNameInPos(loc);
 	}
-	return NULL;
+	return AsciiString::TheEmptyString;
 
 }
 

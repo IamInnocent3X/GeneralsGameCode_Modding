@@ -77,8 +77,8 @@ void ArmorUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "ArmorSetFlag", INI::parseIndexList,	ArmorSetFlags::getBitNames(),offsetof(ArmorUpgradeModuleData, m_armorSetFlag) },
-		{ "ArmorSetFlagsToClear", ArmorSetFlags::parseFromINI, NULL, offsetof(ArmorUpgradeModuleData, m_armorSetFlagsToClear) },
-		//{ "NeedsParkedAircraft", INI::parseBool, NULL, offsetof(ArmorUpgradeModuleData, m_needsParkedAircraft) },
+		{ "ArmorSetFlagsToClear", ArmorSetFlags::parseFromINI, nullptr, offsetof(ArmorUpgradeModuleData, m_armorSetFlagsToClear) },
+		//{ "NeedsParkedAircraft", INI::parseBool, nullptr, offsetof(ArmorUpgradeModuleData, m_needsParkedAircraft) },
 		{ 0, 0, 0, 0 }
 	};
 

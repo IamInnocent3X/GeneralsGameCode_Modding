@@ -101,7 +101,7 @@ public:
 	virtual Bool isSalvageCrateCollide() const { return false; }
 	virtual Bool isEquipCrateCollide() const { return false; }
 	virtual Bool isParasiteEquipCrateCollide() const { return false; }
-	virtual const AsciiString& getCursorName() const { return NULL; }
+	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
 
 };
 inline CollideModule::CollideModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData ) { }

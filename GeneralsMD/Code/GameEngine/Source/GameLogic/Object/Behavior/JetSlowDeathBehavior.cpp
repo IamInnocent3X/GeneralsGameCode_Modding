@@ -407,7 +407,7 @@ Bool JetSlowDeathBehavior::layerUpdate(Bool hitTree)
 
 		// do some effects
 		FXList::doFXObj( modData->m_fxHitGround, us );
-		ObjectCreationList::create( modData->m_oclHitGround, us, NULL );
+		ObjectCreationList::create( modData->m_oclHitGround, us, nullptr );
 
 		// we are now on the ground
 		m_timerOnGroundFrame = TheGameLogic->getFrame();

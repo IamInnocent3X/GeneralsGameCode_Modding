@@ -70,15 +70,15 @@ void ShieldBodyModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",						INI::parseBool,						NULL,		offsetof(ShieldBodyModuleData, m_startsActive) },
+		{ "StartsActive",						INI::parseBool,						nullptr,		offsetof(ShieldBodyModuleData, m_startsActive) },
 
-		{ "ShieldMaxHealth",						INI::parseReal,						NULL,		offsetof(ShieldBodyModuleData, m_shieldMaxHealth) },
-		{ "ShieldMaxHealthPercent",				parseShieldHealthPercent,						NULL,	  0}, //	offsetof(ShieldBodyModuleData, m_shieldMaxHealthPercent) },
+		{ "ShieldMaxHealth",						INI::parseReal,						nullptr,		offsetof(ShieldBodyModuleData, m_shieldMaxHealth) },
+		{ "ShieldMaxHealthPercent",				parseShieldHealthPercent,						nullptr,	  0}, //	offsetof(ShieldBodyModuleData, m_shieldMaxHealthPercent) },
 
 		{ "ShieldArmorSetFlag",				INI::parseIndexList,	ArmorSetFlags::getBitNames(),	  offsetof(ShieldBodyModuleData, m_shieldArmorSetFlag) },
 
-		{ "ShieldPassThroughDamageTypes",   INI::parseDamageTypeFlags, NULL, offsetof(ShieldBodyModuleData, m_damageTypesToPassThrough) },
-		{ "DefaultShieldPassThroughDamageTypes",   INI::parseDamageTypeFlags, NULL, offsetof(ShieldBodyModuleData, m_defaultDamageTypesToPassThrough) },
+		{ "ShieldPassThroughDamageTypes",   INI::parseDamageTypeFlags, nullptr, offsetof(ShieldBodyModuleData, m_damageTypesToPassThrough) },
+		{ "DefaultShieldPassThroughDamageTypes",   INI::parseDamageTypeFlags, nullptr, offsetof(ShieldBodyModuleData, m_defaultDamageTypesToPassThrough) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -145,11 +145,11 @@ Bool ShieldBody::rechargeShieldHealth(Real amount)
 //-------------------------------------------------------------------------------------------------
 void ShieldBody::findShieldBehaviorModule() {
 
-	EnergyShieldBehaviorInterface* esbi = NULL;
+	EnergyShieldBehaviorInterface* esbi = nullptr;
 
 	for (BehaviorModule** u = getObject()->getBehaviorModules(); *u; ++u)
 	{
-		if ((esbi = (*u)->getEnergyShieldBehaviorInterface()) != NULL) {
+		if ((esbi = (*u)->getEnergyShieldBehaviorInterface()) != nullptr) {
 			m_shieldBehaviorModule = esbi;
 			return;
 		}
@@ -200,7 +200,7 @@ void ShieldBody::onDisabledEdge(Bool nowDisabled)
 		m_currentShieldHealth = 0;
 		disableShieldEffects();
 
-		if (m_shieldBehaviorModule == NULL) {
+		if (m_shieldBehaviorModule == nullptr) {
 			findShieldBehaviorModule();
 		}
 
@@ -227,7 +227,7 @@ void ShieldBody::attemptDamage(DamageInfo* damageInfo)
 	// For anything that should prevent even hitting the shield
 
 	// sanity
-	if (damageInfo == NULL)
+	if (damageInfo == nullptr)
 		return;
 
 	if (isIndestructible())
@@ -274,7 +274,7 @@ void ShieldBody::attemptDamage(DamageInfo* damageInfo)
 
 	// Calculate Shield damage:
 	// TODO: If we have other ways to use the shield, we could add some conditions
-	if (m_shieldBehaviorModule == NULL) {
+	if (m_shieldBehaviorModule == nullptr) {
 		findShieldBehaviorModule();
 	}
 
@@ -294,7 +294,7 @@ void ShieldBody::attemptDamage(DamageInfo* damageInfo)
 	Real rawDamage = damageInfo->in.m_amount;
 
 	// Armor bonuses for damage reduction
-	const Weapon* w = NULL;
+	const Weapon* w = nullptr;
 	w = obj->getCurrentWeapon();
 	Real armorBonus = w ? w->getArmorBonus(obj) : 1.0f;
 

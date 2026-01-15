@@ -130,11 +130,11 @@ public:
 	m_kindOf = KINDOFMASK_NONE;
 	m_forbiddenKindOf.clear();
 	m_weaponSlotName.format("SECONDARY");
-	m_cursorName = NULL;
-	m_invalidCursorName = NULL;
+	m_cursorName.clear();
+	m_invalidCursorName.clear();
 	m_destroyOnExecute = FALSE;
-	m_fxOnExecute = NULL;
-	m_oclOnExecute = NULL;
+	m_fxOnExecute = nullptr;
+	m_oclOnExecute = nullptr;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)

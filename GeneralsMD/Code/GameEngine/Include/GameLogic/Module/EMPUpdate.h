@@ -84,10 +84,10 @@ public:
 		m_doesNotAffectMyOwnBuildings = FALSE;
 		m_disabledType = DISABLED_EMP;
 		m_tintStatus = TINT_STATUS_DISABLED;
-		m_customTintStatus = AsciiString::TheEmptyString;
+		m_customTintStatus.clear();
 		m_empProjectileSubdual = FALSE;
 		m_empProjectileDeathType.format("LASERED");
-		m_empProjectileCustomDeathType = AsciiString::TheEmptyString;
+		m_empProjectileCustomDeathType.clear();
 
     m_affectsKindOf = KINDOFMASK_NONE;
 	m_victimKindOf.clear();

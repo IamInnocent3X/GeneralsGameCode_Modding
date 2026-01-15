@@ -45,7 +45,7 @@ void W3DDependencyCarrierDraw::doDrawModule(const Matrix3D* transformMtx)
 			W3DModelDraw::doDrawModule(transformMtx);
 			m_dependencyCleared = FALSE;
 
-			Drawable* theirDrawable = NULL;
+			Drawable* theirDrawable = nullptr;
 
 			if (me->getContainedBy()) // no enclosing container check here, as carrier wants to draw units anyway
 				theirDrawable = me->getContainedBy()->getDrawable();

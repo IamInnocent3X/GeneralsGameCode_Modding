@@ -50,7 +50,7 @@
 //-------------------------------------------------------------------------------------------------
 ScatterShotUpdateModuleData::ScatterShotUpdateModuleData()
 {
-	m_weaponTemplate = NULL;
+	m_weaponTemplate = nullptr;
 	m_numShots = 0;
 	m_targetSearchRadius = 0;
 	m_targetMinRadius = 0;
@@ -69,7 +69,7 @@ ScatterShotUpdateModuleData::ScatterShotUpdateModuleData()
 	m_stayAliveAfterTrigger = false;
 
 	m_triggerDeathType = DEATH_NORMAL;
-	m_scatterFX = NULL;
+	m_scatterFX = nullptr;
 }
 
 
@@ -80,35 +80,35 @@ ScatterShotUpdateModuleData::ScatterShotUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "Weapon",	INI::parseWeaponTemplate, NULL, offsetof(ScatterShotUpdateModuleData, m_weaponTemplate) },
-		{ "NumShots", INI::parseUnsignedInt, NULL, offsetof(ScatterShotUpdateModuleData, m_numShots) },
-		{ "TargetSearchRadius", INI::parseReal, NULL, offsetof(ScatterShotUpdateModuleData, m_targetSearchRadius) },
-		{ "TargetMinRadius", INI::parseReal, NULL, offsetof(ScatterShotUpdateModuleData, m_targetMinRadius) },
-		{ "MaxShotsPerTarget", INI::parseUnsignedInt, NULL, offsetof(ScatterShotUpdateModuleData, m_maxShotsPerTarget) },
-		{ "PreferSimilarTargets", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_preferSimilarTargets) },
-		{ "PreferNearestTargets", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_preferNearestTargets) },
-		{ "NoTargetsScatterRadius", INI::parseReal, NULL, offsetof(ScatterShotUpdateModuleData, m_noTargetsScatterRadius) },
-		{ "NoTargetsScatterMinRadius", INI::parseReal, NULL, offsetof(ScatterShotUpdateModuleData, m_noTargetsScatterMinRadius) },
-		{ "NoTargetsScatterMaxAngle", INI::parseAngleReal, NULL, offsetof(ScatterShotUpdateModuleData, m_noTargetsScatterMaxAngle) },
-		{ "AttackGroundWhenNoTargets", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_attackGroundWhenNoTargets) },
+		{ "Weapon",	INI::parseWeaponTemplate, nullptr, offsetof(ScatterShotUpdateModuleData, m_weaponTemplate) },
+		{ "NumShots", INI::parseUnsignedInt, nullptr, offsetof(ScatterShotUpdateModuleData, m_numShots) },
+		{ "TargetSearchRadius", INI::parseReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_targetSearchRadius) },
+		{ "TargetMinRadius", INI::parseReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_targetMinRadius) },
+		{ "MaxShotsPerTarget", INI::parseUnsignedInt, nullptr, offsetof(ScatterShotUpdateModuleData, m_maxShotsPerTarget) },
+		{ "PreferSimilarTargets", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_preferSimilarTargets) },
+		{ "PreferNearestTargets", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_preferNearestTargets) },
+		{ "NoTargetsScatterRadius", INI::parseReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_noTargetsScatterRadius) },
+		{ "NoTargetsScatterMinRadius", INI::parseReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_noTargetsScatterMinRadius) },
+		{ "NoTargetsScatterMaxAngle", INI::parseAngleReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_noTargetsScatterMaxAngle) },
+		{ "AttackGroundWhenNoTargets", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_attackGroundWhenNoTargets) },
 
-		{ "TriggerDistanceToTarget", INI::parseReal, NULL, offsetof(ScatterShotUpdateModuleData, m_triggerDistanceToTarget) },
-		//{ "TriggerDistanceFromSource", INI::parseReal, NULL, offsetof(ScatterShotUpdateModuleData, m_triggerDistanceFromSource) },
-		{ "TriggerDistancePercent", INI::parsePercentToReal, NULL, offsetof(ScatterShotUpdateModuleData, m_triggerDistancePercent) },
-		{ "TriggerLifetime", INI::parseDurationUnsignedInt, NULL, offsetof(ScatterShotUpdateModuleData, m_triggerLifetime) },
-		{ "TriggerOnImpact", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_triggerOnImpact) },
-		{ "TriggerInstantly", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_triggerInstantly) },
+		{ "TriggerDistanceToTarget", INI::parseReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_triggerDistanceToTarget) },
+		//{ "TriggerDistanceFromSource", INI::parseReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_triggerDistanceFromSource) },
+		{ "TriggerDistancePercent", INI::parsePercentToReal, nullptr, offsetof(ScatterShotUpdateModuleData, m_triggerDistancePercent) },
+		{ "TriggerLifetime", INI::parseDurationUnsignedInt, nullptr, offsetof(ScatterShotUpdateModuleData, m_triggerLifetime) },
+		{ "TriggerOnImpact", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_triggerOnImpact) },
+		{ "TriggerInstantly", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_triggerInstantly) },
 
-		{ "StayAliveAfterTrigger", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_stayAliveAfterTrigger) },
+		{ "StayAliveAfterTrigger", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_stayAliveAfterTrigger) },
 
-		{ "AvoidOriginalTargetObject", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_avoidOriginalTarget) },
-		{ "AvoidPreviousTargetWhenChain", INI::parseBool, NULL, offsetof(ScatterShotUpdateModuleData, m_avoidPrevTarget) },
+		{ "AvoidOriginalTargetObject", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_avoidOriginalTarget) },
+		{ "AvoidPreviousTargetWhenChain", INI::parseBool, nullptr, offsetof(ScatterShotUpdateModuleData, m_avoidPrevTarget) },
 
 		{ "TriggeredDeathType", INI::parseIndexList, TheDeathNames, offsetof(ScatterShotUpdateModuleData, m_triggerDeathType) },
-		{ "ScatterFX", INI::parseFXList, NULL, offsetof(ScatterShotUpdateModuleData, m_scatterFX) },
+		{ "ScatterFX", INI::parseFXList, nullptr, offsetof(ScatterShotUpdateModuleData, m_scatterFX) },
 
-		//{ "InitialDelay", INI::parseDurationUnsignedInt, NULL, offsetof(ScatterShotUpdateModuleData, m_initialDelayFrames) },
-		//{ "ExclusiveWeaponDelay", INI::parseDurationUnsignedInt, NULL, offsetof(ScatterShotUpdateModuleData, m_exclusiveWeaponDelay) },
+		//{ "InitialDelay", INI::parseDurationUnsignedInt, nullptr, offsetof(ScatterShotUpdateModuleData, m_initialDelayFrames) },
+		//{ "ExclusiveWeaponDelay", INI::parseDurationUnsignedInt, nullptr, offsetof(ScatterShotUpdateModuleData, m_exclusiveWeaponDelay) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);
@@ -118,7 +118,7 @@ ScatterShotUpdateModuleData::ScatterShotUpdateModuleData()
 //-------------------------------------------------------------------------------------------------
 ScatterShotUpdate::ScatterShotUpdate(Thing* thing, const ModuleData* moduleData) :
 	UpdateModule(thing, moduleData),
-	m_weapon(NULL)
+	m_weapon(nullptr)
 {
 	const ScatterShotUpdateModuleData* data = getScatterShotUpdateModuleData();
 
@@ -129,7 +129,7 @@ ScatterShotUpdate::ScatterShotUpdate(Thing* thing, const ModuleData* moduleData)
 		m_weapon->loadAmmoNow(getObject());
 	}
 
-	m_goalObj = NULL;
+	m_goalObj = nullptr;
 	//m_goalPos.clear();
 
 	m_totalTargetDistance = 0;
@@ -145,7 +145,7 @@ ScatterShotUpdate::~ScatterShotUpdate(void)
 {
 	if (m_weapon)
 		deleteInstance(m_weapon);
-	m_goalObj = NULL;
+	m_goalObj = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -156,10 +156,10 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 	const ScatterShotUpdateModuleData* data = getScatterShotUpdateModuleData();
 
 	if (!m_isInitialized) {
-		ProjectileUpdateInterface* pui = NULL;
+		ProjectileUpdateInterface* pui = nullptr;
 		for (BehaviorModule** u = getObject()->getBehaviorModules(); *u; ++u)
 		{
-			if ((pui = (*u)->getProjectileUpdateInterface()) != NULL)
+			if ((pui = (*u)->getProjectileUpdateInterface()) != nullptr)
 				break;
 		}
 		if (pui) {
@@ -174,7 +174,7 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 				//m_weapon->setBonusRefObjID(pui->projectileGetLauncherID());
 
 				// We propagate the Weapon bonus from the launcher to the projectile
-				Object* launcher = NULL;
+				Object* launcher = nullptr;
 				ObjectID launcherID = pui->projectileGetLauncherID();
 				if (launcherID != INVALID_ID) {
 					launcher = TheGameLogic->findObjectByID(launcherID);
@@ -198,7 +198,7 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 						Module* mod = mod = launcher->findUpdateModule(ssu_key);
 						if (mod) {
 							ScatterShotUpdate* ssu = (ScatterShotUpdate*)mod;
-							if (ssu->m_goalObj != NULL) {
+							if (ssu->m_goalObj != nullptr) {
 								m_prevTargetID = ssu->m_goalObj->getID();
 								DEBUG_LOG((">>> SSU CHAIN GET PREV TARGET = %d", m_prevTargetID));
 							}
@@ -291,7 +291,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 	const ScatterShotUpdateModuleData* data = getScatterShotUpdateModuleData();
 
 	const Coord3D* pos;
-	if (m_goalObj != NULL) {
+	if (m_goalObj != nullptr) {
 		pos = m_goalObj->getPosition();
 	}
 	else {
@@ -359,7 +359,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 		filters[numFilters++] = &filterAlive;
 		filters[numFilters++] = &filterMapStatus;
 		// if preferSimilar is set, we either get ONLY AIR, or ONLY GROUND targets
-		if (data->m_preferSimilarTargets && m_goalObj != NULL) {
+		if (data->m_preferSimilarTargets && m_goalObj != nullptr) {
 			if (m_goalObj->isAirborneTarget()) {
 				PartitionFilterAcceptByObjectStatus	filterStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_AIRBORNE_TARGET), OBJECT_STATUS_MASK_NONE);
 				filters[numFilters++] = &filterStatus;
@@ -369,7 +369,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 				filters[numFilters++] = &filterStatus;
 			}
 		}
-		filters[numFilters] = NULL;
+		filters[numFilters] = nullptr;
 
 		ObjectIterator* iter = ThePartitionManager->iterateObjectsInRange(
 			pos, data->m_targetSearchRadius,
@@ -454,7 +454,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 
 	//if (m_weapon) {
 	//	m_weapon->deleteInstance();
-	//	m_weapon = NULL;
+	//	m_weapon = nullptr;
 	//}
 
 
@@ -469,7 +469,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 Real ScatterShotUpdate::getTargetDistance(void) const {
 	Coord3D goal;
 	Coord3D pos = *getObject()->getPosition();
-	if (m_goalObj != NULL) {
+	if (m_goalObj != nullptr) {
 		goal = *m_goalObj->getPosition();
 	}
 	else {
@@ -599,7 +599,7 @@ Bool ScatterShotUpdate::isValidTarget(const Object* victim) const
 
 	// if the victim is contained within an enclosing container, it cannot be attacked directly
 	const Object* victimsContainer = victim->getContainedBy();
-	if (victimsContainer != NULL && victimsContainer->getContain()->isEnclosingContainerFor(victim) == TRUE)
+	if (victimsContainer != nullptr && victimsContainer->getContain()->isEnclosingContainerFor(victim) == TRUE)
 	{
 		return FALSE;
 	}

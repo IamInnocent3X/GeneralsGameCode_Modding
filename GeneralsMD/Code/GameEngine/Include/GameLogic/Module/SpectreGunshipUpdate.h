@@ -114,7 +114,7 @@ public:
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const;
 
   virtual const AsciiString& getCursorName() const { return getSpectreGunshipUpdateModuleData()->m_cursorName; }
-	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
 
   virtual void setDelay(UnsignedInt delayFrame) { m_delayFrame = delayFrame; }
 

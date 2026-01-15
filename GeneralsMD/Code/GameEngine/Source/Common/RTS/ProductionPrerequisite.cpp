@@ -269,7 +269,7 @@ void ProductionPrerequisite::addUnitNegPrereq( AsciiString unit, Bool orUnitWith
 	PrereqUnitRec info;
 	info.name = unit;
 	info.flags = orUnitWithPrevious ? UNIT_OR_WITH_PREV : 0;
-	info.unit = NULL;
+	info.unit = nullptr;
 	m_prenegreqUnits.push_back(info);
 
 }

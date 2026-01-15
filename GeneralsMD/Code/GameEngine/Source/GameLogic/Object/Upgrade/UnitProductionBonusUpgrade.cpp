@@ -111,10 +111,10 @@ UnitProductionBonusUpgradeModuleData::UnitProductionBonusUpgradeModuleData( void
 
 	static const FieldParse dataFieldParse[] = 
 	{
-		{ "CostModifierPercentage",			INI::parsePercentToReal, NULL, offsetof( UnitProductionBonusUpgradeModuleData, m_costPercentage ) },
-		{ "BuildTimeModifierPercentage",			INI::parsePercentToReal, NULL, offsetof( UnitProductionBonusUpgradeModuleData, m_timePercentage ) },
-		// { "IsOneShotUpgrade",		INI::parseBool, NULL, offsetof( UnitProductionBonusUpgradeModuleData, m_isOneShot) },
-		{ "UnitTemplateName", INI::parseAsciiStringVectorAppend, NULL, offsetof(UnitProductionBonusUpgradeModuleData, m_templateNames) },
+		{ "CostModifierPercentage",			INI::parsePercentToReal, nullptr, offsetof( UnitProductionBonusUpgradeModuleData, m_costPercentage ) },
+		{ "BuildTimeModifierPercentage",			INI::parsePercentToReal, nullptr, offsetof( UnitProductionBonusUpgradeModuleData, m_timePercentage ) },
+		// { "IsOneShotUpgrade",		INI::parseBool, nullptr, offsetof( UnitProductionBonusUpgradeModuleData, m_isOneShot) },
+		{ "UnitTemplateName", INI::parseAsciiStringVectorAppend, nullptr, offsetof(UnitProductionBonusUpgradeModuleData, m_templateNames) },
 
 		{ 0, 0, 0, 0 } 
 	};

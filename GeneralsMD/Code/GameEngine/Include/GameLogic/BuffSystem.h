@@ -156,7 +156,7 @@ public:
 
 	/**
 		return the BuffTemplate with the given namekey.
-		return NULL if no such BuffTemplate exists.
+		return null if no such BuffTemplate exists.
 	*/
 	const BuffTemplate* findBuffTemplate(const char* name) const;
 	const BuffTemplate* findBuffTemplate(const AsciiString& name) const { return findBuffTemplate(name.str()); }

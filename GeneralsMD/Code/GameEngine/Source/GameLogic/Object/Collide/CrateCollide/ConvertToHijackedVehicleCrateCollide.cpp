@@ -61,7 +61,7 @@
 //-------------------------------------------------------------------------------------------------
 ConvertToHijackedVehicleCrateCollide::ConvertToHijackedVehicleCrateCollide( Thing *thing, const ModuleData* moduleData ) : CrateCollide( thing, moduleData )
 {
-	m_originalName = NULL;
+	m_originalName.clear();
 }
 
 //-------------------------------------------------------------------------------------------------

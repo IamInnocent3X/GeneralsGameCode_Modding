@@ -45,7 +45,7 @@ TempWeaponBonusHelper::TempWeaponBonusHelper( Thing *thing, const ModuleData *mo
 	//m_currentBonus = WEAPONBONUSCONDITION_INVALID;
 	//m_currentTint = TINT_STATUS_INVALID;
 	m_frameToRemove = 0;
-	//m_currentCustomBonus = NULL;
+	//m_currentCustomBonus.clear();
 
 	m_earliestDurationAsInt = 0;
 	m_bonusMap.clear();
@@ -171,7 +171,7 @@ void TempWeaponBonusHelper::clearTempWeaponBonus()
 		if(!m_currentCustomBonus.isEmpty()){
 			getObject()->clearCustomWeaponBonusCondition(m_currentCustomBonus);
 		}
-		m_currentCustomBonus = NULL;
+		m_currentCustomBonus.clear();
 		m_frameToRemove = 0;
 
 		if (getObject()->getDrawable())
@@ -179,7 +179,7 @@ void TempWeaponBonusHelper::clearTempWeaponBonus()
 			if(!m_currentCustomTint.isEmpty())
 			{
 				getObject()->getDrawable()->clearCustomTintStatus(m_currentCustomTint);
-				m_currentCustomTint = NULL;
+				m_currentCustomTint.clear();
 			}
 			if (m_currentTint > TINT_STATUS_INVALID && m_currentTint < TINT_STATUS_COUNT) {
 				getObject()->getDrawable()->clearTintStatus(m_currentTint);

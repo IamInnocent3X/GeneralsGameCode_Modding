@@ -269,7 +269,7 @@ public:
 class ProjectileUpdateInterface
 {
 public:
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = NULL ) = 0;						///< launch the projectile at the given victim
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) = 0;						///< launch the projectile at the given victim
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) = 0;
 	virtual Bool projectileIsArmed() const = 0;													///< return true if the projectile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const = 0;								///< All projectiles need to keep track of their firer

@@ -75,7 +75,7 @@ protected:
 private:
 	std::vector<TunnelTracker*> m_tunnelTrackerVector;// A vector of pointers where the indexes are known by
 	TeamTunnelTrackerMapType m_tunnelTrackerTeamMap;
-	// others, so it can have NULLs in it to keep position.  I've been advised against a map, so don't be a jerk
+	// others, so it can have nulls in it to keep position.  I've been advised against a map, so don't be a jerk
 	// and use spot 20 first.
 
 };

@@ -186,7 +186,7 @@ void AssaultTransportAIUpdate::beginAssault( const Object *designatedTarget ) co
 		for( int i = 0; i < m_currentMembers; i++ )
 		{
 			Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
-			AIUpdateInterface *ai = member ? member->getAI() : NULL;
+			AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 			if( !member || member->isEffectivelyDead() || ai->getLastCommandSource() != CMD_FROM_AI )
 			{
 				//Member is toast -- so remove him from our list!
@@ -230,7 +230,7 @@ void AssaultTransportAIUpdate::removeMember( ObjectID passengerID )
 				continue;
 			
 			Object *member = TheGameLogic->findObjectByID( passengerID );
-			AIUpdateInterface *ai = member ? member->getAI() : NULL;
+			AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 
 			// If we have not already removed it from Assaulting Member number count, remove it.
 			//if(getAssaultTransportAIUpdateModuleData()->m_retreatWoundedMembersOnAssault && member && !m_memberHealing[ i ])
@@ -439,7 +439,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 			// If we are not valid, just tell us to exit the transport
 			if(!contain->isValidContainerFor(replacer, TRUE))
 			{
-				AIUpdateInterface *ai = replacer ? replacer->getAI() : NULL;
+				AIUpdateInterface *ai = replacer ? replacer->getAI() : nullptr;
 				ai->aiExit( transport, CMD_FROM_AI );
 				return;
 			}
@@ -455,7 +455,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 			Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
 			if( designatedTarget && !designatedTarget->isEffectivelyDead() && !replacer->isContained() && !isMemberWounded( replacer ) )
 			{
-				AIUpdateInterface *ai = replacer ? replacer->getAI() : NULL;
+				AIUpdateInterface *ai = replacer ? replacer->getAI() : nullptr;
 				if( ai && !ai->isMoving() )
 				{
 					if( ai->getGoalObject() != designatedTarget || !ai->isAttacking() )
@@ -507,7 +507,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 		Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
 		if( designatedTarget && !designatedTarget->isEffectivelyDead() )
 		{
-			AIUpdateInterface *ai = replacer ? replacer->getAI() : NULL;
+			AIUpdateInterface *ai = replacer ? replacer->getAI() : nullptr;
 
 			if( replacer && ai )
 			{
@@ -576,7 +576,7 @@ void AssaultTransportAIUpdate::onAttack()
 	Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
 	//if( designatedTarget && designatedTarget->isEffectivelyDead() )
 	//{
-	//	designatedTarget = NULL;
+	//	designatedTarget = nullptr;
 	//}
 
 	if( designatedTarget && !designatedTarget->isEffectivelyDead() )
@@ -592,7 +592,7 @@ void AssaultTransportAIUpdate::onAttack()
 		for( int i = 0; i < m_currentMembers; i++ )
 		{
 			Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
-			AIUpdateInterface *ai = member ? member->getAI() : NULL;
+			AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 
 			if( member && ai )
 			{
@@ -1111,7 +1111,7 @@ void AssaultTransportAIUpdate::giveFinalOrders()
 void AssaultTransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
 {
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	if( contain != nullptr  &&  contain->isPassengerAllowedToFire() )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)
@@ -1158,7 +1158,7 @@ void AssaultTransportAIUpdate::privateAttackObject( Object *victim, Int maxShots
 void AssaultTransportAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
 {
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	if( contain != nullptr  &&  contain->isPassengerAllowedToFire() )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)
@@ -1205,7 +1205,7 @@ void AssaultTransportAIUpdate::privateForceAttackObject( Object *victim, Int max
 void AssaultTransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource )
 {
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL  &&  contain->isPassengerAllowedToFire() )
+	if( contain != nullptr  &&  contain->isPassengerAllowedToFire() )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)

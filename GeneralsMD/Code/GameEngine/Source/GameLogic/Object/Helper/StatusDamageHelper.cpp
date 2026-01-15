@@ -44,7 +44,7 @@ StatusDamageHelper::StatusDamageHelper( Thing *thing, const ModuleData *modData 
 	//m_statusToHeal = OBJECT_STATUS_NONE;
 	m_frameToHeal = 0;
 	//m_currentTint = TINT_STATUS_INVALID;
-	//m_customStatusToHeal = NULL;
+	//m_customStatusToHeal.clear();
 
 	m_earliestDurationAsInt = 0;
 	m_statusToHeal.clear();

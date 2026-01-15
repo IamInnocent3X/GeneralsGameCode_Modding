@@ -85,11 +85,11 @@ public:
 		m_unitValueCountFactor = 1.0;
 		//m_unitValueBuildCostFactor = 0.0;
 
-		m_startCaptureFX = NULL;
-		m_startUncapFX = NULL;
-		m_finishCaptureFX = NULL;
-		m_capturePingFX = NULL;
-		m_capturePingContestedFX = NULL;
+		m_startCaptureFX = nullptr;
+		m_startUncapFX = nullptr;
+		m_finishCaptureFX = nullptr;
+		m_capturePingFX = nullptr;
+		m_capturePingContestedFX = nullptr;
 		m_showCapturePingFlash = true;
 		m_playDefectorPingSound = true;
 	}
@@ -99,30 +99,30 @@ public:
     UpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "CaptureTickDelay",		INI::parseDurationUnsignedInt,		NULL, offsetof( ProximityCaptureUpdateModuleData, m_captureTickDelay) },
-			{ "CaptureRadius",		INI::parseReal,		NULL, offsetof( ProximityCaptureUpdateModuleData, m_captureRadius) },
-			{ "CaptureProgressPerTick",		INI::parsePercentToReal,		NULL, offsetof( ProximityCaptureUpdateModuleData, m_captureRate) },
-			{ "CaptureProgressRemovePerTick",		INI::parsePercentToReal,		NULL, offsetof( ProximityCaptureUpdateModuleData, m_uncapRate) },
-			{ "CaptureProgressRemovePerTickFromNeutral",		INI::parsePercentToReal,		NULL, offsetof( ProximityCaptureUpdateModuleData, m_uncapRateNeutral) },
-			{ "CaptureProgressRecoverPerTick",		INI::parsePercentToReal,		NULL, offsetof( ProximityCaptureUpdateModuleData, m_recoverRate) },
-			{ "RequiredKindOf",		KindOfMaskType::parseFromINI,		NULL, offsetof(ProximityCaptureUpdateModuleData, m_requiredKindOf) },
-		  { "RequiresAllKindOfs", INI::parseBool, NULL, offsetof(ProximityCaptureUpdateModuleData, m_requiresAllKindOfs) },
-		  { "ForbiddenKindOf",	KindOfMaskType::parseFromINI,		NULL, offsetof(ProximityCaptureUpdateModuleData, m_forbiddenKindOf) },
-			{ "AllowAirborne", INI::parseBool, NULL, offsetof(ProximityCaptureUpdateModuleData, m_isCountAirborne) },
-			{ "UnitValueContentionDelta",		INI::parseReal,		NULL, offsetof(ProximityCaptureUpdateModuleData, m_unitValueContentionDelta) },
-			{ "UnitValueCountFactor",		INI::parseReal,		NULL, offsetof(ProximityCaptureUpdateModuleData, m_unitValueCountFactor) },
-			//{ "UnitValueBuildCostFactor",		INI::parseReal,		NULL, offsetof(ProximityCaptureUpdateModuleData, m_unitValueBuildCostFactor) },
-			{ "ShowProgressBar", INI::parseBool, NULL, offsetof(ProximityCaptureUpdateModuleData, m_showProgressBar) },
-			{ "CapturePingInterval", INI::parseUnsignedShort, NULL, offsetof(ProximityCaptureUpdateModuleData, m_capturePingInterval) },
-			{ "ShowCaptureFlash", INI::parseBool, NULL, offsetof(ProximityCaptureUpdateModuleData, m_showCapturePingFlash) },
-			{ "PlayDefectorPingSound", INI::parseBool, NULL, offsetof(ProximityCaptureUpdateModuleData, m_playDefectorPingSound) },
-			//{ "CapturePingSound", INI::parseAudioEventRTS, NULL, offsetof(ProximityCaptureUpdateModuleData, m_capturePingSound) },
-			{ "StartCaptureFX", INI::parseFXList, NULL, offsetof(ProximityCaptureUpdateModuleData, m_startCaptureFX) },
-			{ "StartRemoveFX", INI::parseFXList, NULL, offsetof(ProximityCaptureUpdateModuleData, m_startUncapFX) },
-			{ "FinishCaptureFX", INI::parseFXList, NULL, offsetof(ProximityCaptureUpdateModuleData, m_finishCaptureFX) },
-			{ "CapturePingFX", INI::parseFXList, NULL, offsetof(ProximityCaptureUpdateModuleData, m_capturePingFX) },
-			{ "CapturePingContestedFX", INI::parseFXList, NULL, offsetof(ProximityCaptureUpdateModuleData, m_capturePingContestedFX) },
-			{ "SkillPointsForCapture", INI::parseInt, NULL, offsetof(ProximityCaptureUpdateModuleData, m_skillPointsForCapture) },
+			{ "CaptureTickDelay",		INI::parseDurationUnsignedInt,		nullptr, offsetof( ProximityCaptureUpdateModuleData, m_captureTickDelay) },
+			{ "CaptureRadius",		INI::parseReal,		nullptr, offsetof( ProximityCaptureUpdateModuleData, m_captureRadius) },
+			{ "CaptureProgressPerTick",		INI::parsePercentToReal,		nullptr, offsetof( ProximityCaptureUpdateModuleData, m_captureRate) },
+			{ "CaptureProgressRemovePerTick",		INI::parsePercentToReal,		nullptr, offsetof( ProximityCaptureUpdateModuleData, m_uncapRate) },
+			{ "CaptureProgressRemovePerTickFromNeutral",		INI::parsePercentToReal,		nullptr, offsetof( ProximityCaptureUpdateModuleData, m_uncapRateNeutral) },
+			{ "CaptureProgressRecoverPerTick",		INI::parsePercentToReal,		nullptr, offsetof( ProximityCaptureUpdateModuleData, m_recoverRate) },
+			{ "RequiredKindOf",		KindOfMaskType::parseFromINI,		nullptr, offsetof(ProximityCaptureUpdateModuleData, m_requiredKindOf) },
+		  { "RequiresAllKindOfs", INI::parseBool, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_requiresAllKindOfs) },
+		  { "ForbiddenKindOf",	KindOfMaskType::parseFromINI,		nullptr, offsetof(ProximityCaptureUpdateModuleData, m_forbiddenKindOf) },
+			{ "AllowAirborne", INI::parseBool, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_isCountAirborne) },
+			{ "UnitValueContentionDelta",		INI::parseReal,		nullptr, offsetof(ProximityCaptureUpdateModuleData, m_unitValueContentionDelta) },
+			{ "UnitValueCountFactor",		INI::parseReal,		nullptr, offsetof(ProximityCaptureUpdateModuleData, m_unitValueCountFactor) },
+			//{ "UnitValueBuildCostFactor",		INI::parseReal,		nullptr, offsetof(ProximityCaptureUpdateModuleData, m_unitValueBuildCostFactor) },
+			{ "ShowProgressBar", INI::parseBool, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_showProgressBar) },
+			{ "CapturePingInterval", INI::parseUnsignedShort, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_capturePingInterval) },
+			{ "ShowCaptureFlash", INI::parseBool, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_showCapturePingFlash) },
+			{ "PlayDefectorPingSound", INI::parseBool, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_playDefectorPingSound) },
+			//{ "CapturePingSound", INI::parseAudioEventRTS, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_capturePingSound) },
+			{ "StartCaptureFX", INI::parseFXList, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_startCaptureFX) },
+			{ "StartRemoveFX", INI::parseFXList, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_startUncapFX) },
+			{ "FinishCaptureFX", INI::parseFXList, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_finishCaptureFX) },
+			{ "CapturePingFX", INI::parseFXList, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_capturePingFX) },
+			{ "CapturePingContestedFX", INI::parseFXList, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_capturePingContestedFX) },
+			{ "SkillPointsForCapture", INI::parseInt, nullptr, offsetof(ProximityCaptureUpdateModuleData, m_skillPointsForCapture) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

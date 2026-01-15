@@ -698,7 +698,7 @@ CommandButton::CommandButton( void )
 	//m_prev = nullptr;
 	m_next = nullptr;
 	m_radiusCursor = RADIUSCURSOR_NONE;
-	m_customRadiusCursor = NULL;
+	m_customRadiusCursor.clear();
 
 	m_orderNearbyRadius = 0.0f;
 	m_orderKindof = KINDOFMASK_NONE;

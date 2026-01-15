@@ -404,7 +404,7 @@ void BuffEffectHelper::xfer(Xfer* xfer)
 			xfer->xferAsciiString(&templateName);
 
 			BuffTemplate* bt = TheBuffTemplateStore->findBuffTemplate(templateName);
-			if (bt == NULL)
+			if (bt == nullptr)
 			{
 				DEBUG_CRASH(("BuffEffectHelper::xfer - template %s not found", templateName.str()));
 				throw XFER_UNKNOWN_STRING;

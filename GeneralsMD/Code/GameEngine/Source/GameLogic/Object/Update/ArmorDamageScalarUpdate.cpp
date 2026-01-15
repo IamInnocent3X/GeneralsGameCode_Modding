@@ -79,11 +79,11 @@ ArmorDamageScalarUpdateModuleData::ArmorDamageScalarUpdateModuleData()
 	m_initialDelay = 0;
 	m_bonusRange = 0;
 	m_armorDamageScalar = 1.0f;
-	m_damageFx = NULL;
-	m_effectParticleSystem = NULL;
+	m_damageFx = nullptr;
+	m_effectParticleSystem = nullptr;
 	m_scaleParticleCount = false;
 	m_tintStatus = TINT_STATUS_INVALID;
-	m_customTintStatus = NULL;
+	m_customTintStatus.clear();
 	//m_applyTint = false;
 	// m_sparksPerCubicFoot = 0.001f;
 }
@@ -94,21 +94,21 @@ void ArmorDamageScalarUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
   UpdateModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] = 
 	{
-		{ "AllowedAffectKindOf",		KindOfMaskType::parseFromINI,		NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_allowAffectKindOf) },
-		{ "ForbiddenAffectKindOf",	KindOfMaskType::parseFromINI,		NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_forbiddenAffectKindOf ) },
+		{ "AllowedAffectKindOf",		KindOfMaskType::parseFromINI,		nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_allowAffectKindOf) },
+		{ "ForbiddenAffectKindOf",	KindOfMaskType::parseFromINI,		nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_forbiddenAffectKindOf ) },
 		{ "AffectsTargets", INI::parseBitString32,	TheWeaponAffectsMaskNames, offsetof(ArmorDamageScalarUpdateModuleData, m_targetsMask) },
-		{ "AffectAirborne", INI::parseBool, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_isAffectAirborne) },
-		{ "BonusDuration",					INI::parseDurationUnsignedInt,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_bonusDuration ) },
-		{ "BonusRange",							INI::parseReal,									NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_bonusRange ) },
-		{ "InitialDelay",				INI::parseDurationUnsignedInt,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_initialDelay) },
-		{ "ArmorDamageScalar",			INI::parseReal,  NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_armorDamageScalar) },
-		{ "OverrideDamageFX",			INI::parseDamageFX,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_damageFx) },
-		{ "EffectParticleSystem",		INI::parseParticleSystemTemplate, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_effectParticleSystem) },
-		{ "ScaleParticleSystem",			INI::parseBool, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_scaleParticleCount) },
-		{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_tintStatus) },
-		{ "CustomTintStatusType",			INI::parseQuotedAsciiString,	NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_customTintStatus) },
-		//{ "ApplyColorTint",					INI::parseBool, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_applyTint)},
-		//{ "ParticlesPerCubicFoot",		INI::parseReal, NULL, offsetof(ArmorDamageScalarUpdateModuleData, m_sparksPerCubicFoot) },
+		{ "AffectAirborne", INI::parseBool, nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_isAffectAirborne) },
+		{ "BonusDuration",					INI::parseDurationUnsignedInt,	nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_bonusDuration ) },
+		{ "BonusRange",							INI::parseReal,									nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_bonusRange ) },
+		{ "InitialDelay",				INI::parseDurationUnsignedInt,	nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_initialDelay) },
+		{ "ArmorDamageScalar",			INI::parseReal,  nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_armorDamageScalar) },
+		{ "OverrideDamageFX",			INI::parseDamageFX,	nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_damageFx) },
+		{ "EffectParticleSystem",		INI::parseParticleSystemTemplate, nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_effectParticleSystem) },
+		{ "ScaleParticleSystem",			INI::parseBool, nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_scaleParticleCount) },
+		{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_tintStatus) },
+		{ "CustomTintStatusType",			INI::parseQuotedAsciiString,	nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_customTintStatus) },
+		//{ "ApplyColorTint",					INI::parseBool, nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_applyTint)},
+		//{ "ParticlesPerCubicFoot",		INI::parseReal, nullptr, offsetof(ArmorDamageScalarUpdateModuleData, m_sparksPerCubicFoot) },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -182,7 +182,7 @@ void ArmorDamageScalarUpdate::applyEffect(void) {
 	// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
 	// So these checks are on an individual basis, not in the Partition query
     //	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
-	PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, NULL };
+	PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, nullptr };
 
 	// scan objects in our region
 	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( me->getPosition(), 
@@ -191,7 +191,7 @@ void ArmorDamageScalarUpdate::applyEffect(void) {
 																	   filters );
 	MemoryPoolObjectHolder hold( iter );
 	
-	for( Object *currentObj = iter->first(); currentObj != NULL; currentObj = iter->next() )
+	for( Object *currentObj = iter->first(); currentObj != nullptr; currentObj = iter->next() )
 	{
 		if (data->m_isAffectAirborne || !currentObj->isAirborneTarget()) {
 
@@ -306,7 +306,7 @@ void ArmorDamageScalarUpdate::removeEffectFromObject(Object* obj) {
 	//	scalar, obj->getTemplate()->getName().str(), body->getDamageScalar()));
 
 	if (data->m_damageFx) {
-		body->overrideDamageFX(NULL);
+		body->overrideDamageFX(nullptr);
 	}
 
 	Drawable* drw = obj->getDrawable();

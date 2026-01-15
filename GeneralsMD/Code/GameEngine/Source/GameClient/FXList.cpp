@@ -572,7 +572,7 @@ static const char* const AllowedSurfaceNames[] =
   "ALL",
 	"LAND",
 	"WATER",
-	NULL
+	nullptr
 };
 
 enum AllowedSurfaceType CPP_11(: Int) {
@@ -662,8 +662,8 @@ public:
 			{ "RotateY",							INI::parseAngleReal,				nullptr, offsetof( ParticleSystemFXNugget, m_rotateY ) },
 			{ "RotateZ",							INI::parseAngleReal,				nullptr, offsetof( ParticleSystemFXNugget, m_rotateZ ) },
 			{ "OrientToObject",				INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_orientToObject ) },
-			{ "OrientOffset",				  INI::parseBool,							NULL, offsetof( ParticleSystemFXNugget, m_orientOffset ) },
-			{ "OrientXY",				      INI::parseBool,							NULL, offsetof( ParticleSystemFXNugget, m_orientXY ) },
+			{ "OrientOffset",				  INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_orientOffset ) },
+			{ "OrientXY",				      INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_orientXY ) },
 			{ "Ricochet",				      INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_ricochet ) },
 			{ "AttachToObject",				INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_attachToObject ) },
 			{ "CreateAtGroundHeight",	INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_createAtGroundHeight ) },
@@ -703,7 +703,7 @@ protected:
 			Real groundHeight = 0; // we might need it later
 
 			// Evaluate Height and allowed surfaces first.
-			if ((TheTerrainLogic != NULL) && (m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY || m_allowedSurfaceType != SURFACE_ALL || m_createAtGroundHeight)) {
+			if ((TheTerrainLogic != nullptr) && (m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY || m_allowedSurfaceType != SURFACE_ALL || m_createAtGroundHeight)) {
 				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(primary);
 
 				if (layer != LAYER_GROUND) {  // Bridge

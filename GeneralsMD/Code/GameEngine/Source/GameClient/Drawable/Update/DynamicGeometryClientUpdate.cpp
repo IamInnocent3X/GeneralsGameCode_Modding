@@ -72,7 +72,7 @@ static const char* TheDynamicGeometryPhaseNames[] =
 	"INITIAL",
 	"MIDPOINT",
 	"FINAL",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheDynamicGeometryPhaseNames) == DGPHASE_COUNT + 1, "Array size");
 // -----------------------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ static const char* TheInterpolationTypeNames[] =
 {
 	"LINEAR",
 	"SMOOTH",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheInterpolationTypeNames) == DGINTERP_COUNT + 1, "Incorrect array size");
 
@@ -134,11 +134,11 @@ void DynamicGeometryClientUpdateModuleData::buildFieldParse(MultiIniFieldParse& 
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "Opacity", parseAlpha, NULL, NULL},
-		{ "Scale", parseScale, NULL, NULL},
+		{ "Opacity", parseAlpha, nullptr, 0},
+		{ "Scale", parseScale, nullptr, 0},
 		{ "Interpolation", INI::parseIndexList, TheInterpolationTypeNames,  offsetof(DynamicGeometryClientUpdateModuleData, m_interpolationType)},
-		{ "TotalDuration",	INI::parseDurationUnsignedInt, NULL, offsetof(DynamicGeometryClientUpdateModuleData, m_totalFrames) },
-		{ "MidpointDuration",	INI::parseDurationUnsignedInt, NULL, offsetof(DynamicGeometryClientUpdateModuleData, m_midpointFrames) },
+		{ "TotalDuration",	INI::parseDurationUnsignedInt, nullptr, offsetof(DynamicGeometryClientUpdateModuleData, m_totalFrames) },
+		{ "MidpointDuration",	INI::parseDurationUnsignedInt, nullptr, offsetof(DynamicGeometryClientUpdateModuleData, m_midpointFrames) },
 		{ 0, 0, 0, 0 }
 	};
 	p.add(dataFieldParse);

@@ -469,7 +469,7 @@ Bool OverlordContain::getContainerPipsToShow(Int& numTotal, Int& numFull)
 Int OverlordContain::getRawContainMax( ) const
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == NULL )
+	if( getRedirectedContain() == nullptr )
 		return TransportContain::getRawContainMax( );
 
 	return getRedirectedContain()->getRawContainMax();
