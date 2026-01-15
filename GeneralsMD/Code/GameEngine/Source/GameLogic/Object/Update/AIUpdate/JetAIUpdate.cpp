@@ -113,7 +113,7 @@ Bool JetAIUpdate::isOutOfSpecialReloadAmmo() const
 	for( Int i = 0; i < WEAPONSLOT_COUNT;	i++ )
 	{
 		const Weapon* weapon = jet->getWeaponInWeaponSlot((WeaponSlotType)i);
-		if (weapon == NULL || weapon->getReloadType() != RETURN_TO_BASE_TO_RELOAD)
+		if (weapon == nullptr || weapon->getReloadType() != RETURN_TO_BASE_TO_RELOAD)
 			continue;
 		++specials;
 		if (weapon->getStatus() == OUT_OF_AMMO)
@@ -123,38 +123,38 @@ Bool JetAIUpdate::isOutOfSpecialReloadAmmo() const
 }
 
 //-------------------------------------------------------------------------------------------------
-static ParkingPlaceBehaviorInterface* getPP(ObjectID id, Object** airfieldPP = NULL, ObjectID myID = INVALID_ID)
+static ParkingPlaceBehaviorInterface* getPP(ObjectID id, Object** airfieldPP = nullptr, ObjectID myID = INVALID_ID)
 {
 	if (airfieldPP)
-		*airfieldPP = NULL;
+		*airfieldPP = nullptr;
 
 	Object* airfield = TheGameLogic->findObjectByID( id );
-	if (airfield == NULL || airfield->isEffectivelyDead() || !airfield->isKindOf(KINDOF_FS_AIRFIELD) || airfield->testStatus(OBJECT_STATUS_SOLD))
-		return NULL;
+	if (airfield == nullptr || airfield->isEffectivelyDead() || !airfield->isKindOf(KINDOF_FS_AIRFIELD) || airfield->testStatus(OBJECT_STATUS_SOLD))
+		return nullptr;
 
 	if (airfieldPP)
 		*airfieldPP = airfield;
 
-	Object *me = myID != INVALID_ID ? TheGameLogic->findObjectByID( myID ) : NULL;
-	JetAIUpdate* jetAI = me ? (JetAIUpdate*)me->getAIUpdateInterface() : NULL;
+	Object *me = myID != INVALID_ID ? TheGameLogic->findObjectByID( myID ) : nullptr;
+	JetAIUpdate* jetAI = me ? (JetAIUpdate*)me->getAIUpdateInterface() : nullptr;
 	if( jetAI )
 	{
 
 		if(id != jetAI->getAirfieldID())
 		{
-			jetAI->setMyPP(NULL);
+			jetAI->setMyPP(nullptr);
 			jetAI->setAirfieldID(id);
 		}
 
-		if(jetAI->getMyPP() != NULL)
+		if(jetAI->getMyPP() != nullptr)
 			return jetAI->getMyPP();
 
 	}
 	
-	ParkingPlaceBehaviorInterface* pp = NULL;
+	ParkingPlaceBehaviorInterface* pp = nullptr;
 	for (BehaviorModule** i = airfield->getBehaviorModules(); *i; ++i)
 	{
-		if ((pp = (*i)->getParkingPlaceBehaviorInterface()) != NULL)
+		if ((pp = (*i)->getParkingPlaceBehaviorInterface()) != nullptr)
 			break;
 	}
 	if(jetAI)
@@ -176,8 +176,8 @@ protected:
 #endif
 	virtual Bool allow(Object *objOther)
 	{
-		ParkingPlaceBehaviorInterface* pp = getPP(objOther->getID(), NULL, m_id);
-		if (pp != NULL && pp->reserveSpace(m_id, 0.0f, NULL))
+		ParkingPlaceBehaviorInterface* pp = getPP(objOther->getID(), nullptr, m_id);
+		if (pp != nullptr && pp->reserveSpace(m_id, 0.0f, nullptr))
 			return true;
 		return false;
 	}
@@ -203,7 +203,7 @@ static Object* findSuitableAirfield(Object* jet)
 	filters[numFilters++] = &filterAlive;
 	filters[numFilters++] = &filterPP;
 	filters[numFilters++] = &filterMapStatus;
-	filters[numFilters] = NULL;
+	filters[numFilters] = nullptr;
 
 	return ThePartitionManager->getClosestObject( jet, HUGE_DIST, FROM_CENTER_2D, filters );
 }
@@ -254,15 +254,15 @@ public:
 		if( !jetAI )
 			return STATE_FAILURE;
 
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
-		if (pp == NULL)
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
+		if (pp == nullptr)
 		{
 			// no producer? just skip this step.
 			return STATE_SUCCESS;
 		}
 
 		// gotta reserve a space in order to reserve a runway
-		if (!pp->reserveSpace(jet->getID(), jetAI->friend_getParkingOffset(), NULL))
+		if (!pp->reserveSpace(jet->getID(), jetAI->friend_getParkingOffset(), nullptr))
 		{
 			DEBUG_ASSERTCRASH(m_landing, ("hmm, this should never happen for taking-off things"));
 			return STATE_FAILURE;
@@ -530,7 +530,7 @@ public:
 
 		Object* airfield;
 		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), &airfield);
-		if (pp == NULL)
+		if (pp == nullptr)
 			return STATE_SUCCESS;	// no airfield? just skip this step.
 
 		ParkingPlaceBehaviorInterface::PPInfo ppinfo;
@@ -679,11 +679,11 @@ public:
 		{
 			//Keep checking to see if there is a better spot as it moves forward. If we find a better spot, then
 			//append the position to our move.
-			ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+			ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 			Coord3D bestPos;
 			Int oldIndex, newIndex;
 			// Check pp for null, as it is possible for your airfield to get destroyed while taxiing.jba [8/27/2003]
-			if( pp!=NULL && pp->calcBestParkingAssignment( jet->getID(), &bestPos, &oldIndex, &newIndex ) )
+			if( pp!=nullptr && pp->calcBestParkingAssignment( jet->getID(), &bestPos, &oldIndex, &newIndex ) )
 			{
 				Path *path = jetAI->friend_getPath();
 				if( path )
@@ -770,8 +770,8 @@ public:
 		loco->setUltraAccurate(true);
 		jetAI->ignoreObstacleID(jet->getProducerID());
 
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
-		if (pp == NULL)
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
+		if (pp == nullptr)
 			return STATE_SUCCESS;	// no airfield? just skip this step
 
 		ParkingPlaceBehaviorInterface::PPInfo ppinfo;
@@ -861,7 +861,7 @@ public:
 
 			if( !m_landingSoundPlayed )
 			{
-				ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+				ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 				Real zPos = jet->getPosition()->z;
 				Real zSlop = 0.25f;
 				PathfindLayerEnum layer = TheTerrainLogic->getHighestLayerForDestination( jet->getPosition() );
@@ -882,7 +882,7 @@ public:
 		}
 		else
 		{
-			ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+			ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 			if (pp)
 				pp->transferRunwayReservationToNextInLineForTakeoff(jet->getID());
 
@@ -937,7 +937,7 @@ public:
 #endif
 		}
 		jetAI->ignoreObstacleID(INVALID_ID);
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 		if (!m_landing)
 		{
 			if (pp && !jetAI->friend_keepsParkingSpaceWhenAirborne())
@@ -1022,7 +1022,7 @@ public:
 
 		Object* airfield;
 		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), &airfield, jet->getID());
-		if (pp == NULL)
+		if (pp == nullptr)
 			return STATE_SUCCESS;	// no airfield? just skip this step
 
 		Coord3D landingApproach;
@@ -1156,7 +1156,7 @@ public:
 		}
 
 		jetAI->ignoreObstacleID(INVALID_ID);
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 		if (m_landing)
 		{
 			jetAI->friend_setAllowAirLoco(false);
@@ -1217,8 +1217,8 @@ public:
 			return STATE_FAILURE;
 		}
 
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
-		if (pp == NULL)
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
+		if (pp == nullptr)
 			return STATE_FAILURE;
 
 		ParkingPlaceBehaviorInterface::PPInfo ppinfo;
@@ -1368,7 +1368,7 @@ public:
 
 		Object* airfield;
 		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), &airfield, jet->getID());
-		if (pp == NULL)
+		if (pp == nullptr)
 			return STATE_SUCCESS;	// no airfield? just skip this step
 
 		Coord3D landingApproach;
@@ -1517,7 +1517,7 @@ public:
 		}
 
 		jetAI->ignoreObstacleID(INVALID_ID);
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 		if (m_landing)
 		{
 			jetAI->friend_enableLandingEffects(false);
@@ -1592,8 +1592,8 @@ public:
 			return STATE_FAILURE;
 		}
 
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
-		if (pp == NULL)
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
+		if (pp == nullptr)
 			return STATE_FAILURE;
 
 		ParkingPlaceBehaviorInterface::PPInfo ppinfo;
@@ -1697,18 +1697,18 @@ private:
 	Bool findWaiter()
 	{
 		Object* jet = getMachineOwner();
-		ParkingPlaceBehaviorInterface* pp = getPP(getMachineOwner()->getProducerID(), NULL, jet->getID());
+		ParkingPlaceBehaviorInterface* pp = getPP(getMachineOwner()->getProducerID(), nullptr, jet->getID());
 		if (pp)
 		{
 			Int count = pp->getRunwayCount();
 			for (Int i = 0; i < count; ++i)
 			{
 				Object* otherJet = TheGameLogic->findObjectByID( pp->getRunwayReservation( i, RESERVATION_TAKEOFF ) );
-				if (otherJet == NULL || otherJet == jet)
+				if (otherJet == nullptr || otherJet == jet)
 					continue;
 
 				AIUpdateInterface* ai = otherJet->getAIUpdateInterface();
-				if (ai == NULL)
+				if (ai == nullptr)
 					continue;
 
 				if (ai->getCurrentStateID() == TAXI_TO_TAKEOFF)
@@ -1729,7 +1729,7 @@ private:
 		const Object* thisJet = getMachineOwner();
 		ParkingPlaceBehaviorInterface* pp = getPP(getMachineOwner()->getProducerID());
 
-		if (pp != NULL)
+		if (pp != nullptr)
 		{
 			const Int thisJetRunway = pp->getRunwayIndex(thisJet->getID());
 			const Int runwayCount = pp->getRunwayCount();
@@ -1740,11 +1740,11 @@ private:
 					continue;
 
 				Object* otherJet = TheGameLogic->findObjectByID(pp->getRunwayReservation(runway, RESERVATION_TAKEOFF));
-				if (otherJet == NULL)
+				if (otherJet == nullptr)
 					continue;
 
 				AIUpdateInterface* ai = otherJet->getAIUpdateInterface();
-				if (ai == NULL)
+				if (ai == nullptr)
 					continue;
 
 				if (ai->getCurrentStateID() != TAXI_TO_TAKEOFF)
@@ -1753,7 +1753,7 @@ private:
 				return otherJet;
 			}
 		}
-		return NULL;
+		return nullptr;
 	}
 #endif
 
@@ -1789,8 +1789,8 @@ public:
 		m_afterburners = false;
 #endif
 
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
-		if (pp == NULL)
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
+		if (pp == nullptr)
 			return STATE_SUCCESS;	// no airfield? just skip this step.
 
 		ParkingPlaceBehaviorInterface::PPInfo ppinfo;
@@ -1843,7 +1843,7 @@ public:
 		DEBUG_ASSERTCRASH(m_whenTransfer != 0, ("hmm"));
 
 			// once we start the final wait, release the runways for guys behind us, so they can start taxiing
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 		if (pp && now >= m_whenTransfer)
 		{
 			pp->transferRunwayReservationToNextInLineForTakeoff(jet->getID());
@@ -1990,7 +1990,7 @@ public:
 
 		// AW: Workaround for VTOL aircraft rotating towards 0 degrees on reloading.
 		if (!jetAI->friend_needsRunway()) {
-			ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+			ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 			ParkingPlaceBehaviorInterface::PPInfo ppinfo;
 			if ((pp) && pp->reserveSpace(jet->getID(), jetAI->friend_getParkingOffset(), &ppinfo)) {
 				// DEBUG_LOG((">> JetOrHeliReloadAmmoState - onEnter - parkingOrientation = %f.\n", ppinfo.parkingOrientation));
@@ -2002,7 +2002,7 @@ public:
 		for (Int i = 0; i < WEAPONSLOT_COUNT;	++i)
 		{
 			const Weapon* w = jet->getWeaponInWeaponSlot((WeaponSlotType)i);
-			if (w == NULL)
+			if (w == nullptr)
 				continue;
 
 			Int remaining = w->getRemainingAmmo();
@@ -2033,7 +2033,7 @@ public:
 		for (Int i = 0; i < WEAPONSLOT_COUNT;	++i)
 		{
 			Weapon* w = jet->getWeaponInWeaponSlot((WeaponSlotType)i);
-			if (w == NULL)
+			if (w == nullptr)
 				continue;
 
 			if (now >= m_reloadDoneFrame)
@@ -2085,14 +2085,14 @@ public:
 		Object* jet = getMachineOwner();
 		JetAIUpdate* jetAI = (JetAIUpdate*)jet->getAIUpdateInterface();
 
-		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
-		if (pp == NULL)
+		ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
+		if (pp == nullptr)
 		{
 			// nuke the producer id, since it's dead
-			jet->setProducer(NULL);
+			jet->setProducer(nullptr);
 
 			Object* airfield = findSuitableAirfield( jet );
-			pp = airfield ? getPP(airfield->getID()) : NULL;
+			pp = airfield ? getPP(airfield->getID()) : nullptr;
 			if (airfield && pp)
 			{
 				jet->setProducer(airfield);
@@ -2261,26 +2261,26 @@ JetAIUpdateModuleData::JetAIUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "OutOfAmmoDamagePerSecond",			INI::parsePercentToReal, NULL, offsetof( JetAIUpdateModuleData, m_outOfAmmoDamagePerSecond ) },
-		{ "NeedsRunway",									INI::parseBool, NULL, offsetof( JetAIUpdateModuleData, m_needsRunway ) },
-		{ "KeepsParkingSpaceWhenAirborne",INI::parseBool, NULL, offsetof( JetAIUpdateModuleData, m_keepsParkingSpaceWhenAirborne ) },
-		{ "TakeoffDistForMaxLift",				INI::parsePercentToReal, NULL, offsetof( JetAIUpdateModuleData, m_takeoffDistForMaxLift ) },
-		{ "TakeoffPause",									INI::parseDurationUnsignedInt, NULL, offsetof( JetAIUpdateModuleData, m_takeoffPause ) },
-		{ "MinHeight",										INI::parseReal, NULL, offsetof( JetAIUpdateModuleData, m_minHeight ) },
-		{ "ParkingOffset",								INI::parseReal, NULL, offsetof( JetAIUpdateModuleData, m_parkingOffset ) },
-		{ "SneakyOffsetWhenAttacking",		INI::parseReal, NULL, offsetof( JetAIUpdateModuleData, m_sneakyOffsetWhenAttacking ) },
+		{ "OutOfAmmoDamagePerSecond",			INI::parsePercentToReal, nullptr, offsetof( JetAIUpdateModuleData, m_outOfAmmoDamagePerSecond ) },
+		{ "NeedsRunway",									INI::parseBool, nullptr, offsetof( JetAIUpdateModuleData, m_needsRunway ) },
+		{ "KeepsParkingSpaceWhenAirborne",INI::parseBool, nullptr, offsetof( JetAIUpdateModuleData, m_keepsParkingSpaceWhenAirborne ) },
+		{ "TakeoffDistForMaxLift",				INI::parsePercentToReal, nullptr, offsetof( JetAIUpdateModuleData, m_takeoffDistForMaxLift ) },
+		{ "TakeoffPause",									INI::parseDurationUnsignedInt, nullptr, offsetof( JetAIUpdateModuleData, m_takeoffPause ) },
+		{ "MinHeight",										INI::parseReal, nullptr, offsetof( JetAIUpdateModuleData, m_minHeight ) },
+		{ "ParkingOffset",								INI::parseReal, nullptr, offsetof( JetAIUpdateModuleData, m_parkingOffset ) },
+		{ "SneakyOffsetWhenAttacking",		INI::parseReal, nullptr, offsetof( JetAIUpdateModuleData, m_sneakyOffsetWhenAttacking ) },
 		{ "AttackLocomotorType",					INI::parseIndexList, TheLocomotorSetNames, offsetof( JetAIUpdateModuleData, m_attackingLoco ) },
-		{ "AttackLocomotorPersistTime",		INI::parseDurationUnsignedInt, NULL, offsetof( JetAIUpdateModuleData, m_attackLocoPersistTime ) },
-		{ "AttackersMissPersistTime",			INI::parseDurationUnsignedInt, NULL, offsetof( JetAIUpdateModuleData, m_attackersMissPersistTime ) },
+		{ "AttackLocomotorPersistTime",		INI::parseDurationUnsignedInt, nullptr, offsetof( JetAIUpdateModuleData, m_attackLocoPersistTime ) },
+		{ "AttackersMissPersistTime",			INI::parseDurationUnsignedInt, nullptr, offsetof( JetAIUpdateModuleData, m_attackersMissPersistTime ) },
 		{ "ReturnForAmmoLocomotorType",		INI::parseIndexList, TheLocomotorSetNames, offsetof( JetAIUpdateModuleData, m_returningLoco ) },
-		{ "LockonTime",										INI::parseDurationUnsignedInt, NULL, offsetof( JetAIUpdateModuleData, m_lockonTime ) },
-		{ "LockonCursor",									INI::parseAsciiString, NULL, offsetof( JetAIUpdateModuleData, m_lockonCursor ) },
-		{ "LockonInitialDist",						INI::parseReal, NULL, offsetof( JetAIUpdateModuleData, m_lockonInitialDist ) },
-		{ "LockonFreq",										INI::parseReal, NULL, offsetof( JetAIUpdateModuleData, m_lockonFreq ) },
-		{ "LockonAngleSpin",							INI::parseAngleReal, NULL, offsetof( JetAIUpdateModuleData, m_lockonAngleSpin ) },
-		{ "LockonBlinky",									INI::parseBool, NULL, offsetof( JetAIUpdateModuleData, m_lockonBlinky ) },
-		{ "ReturnToBaseIdleTime",					INI::parseDurationUnsignedInt, NULL, offsetof( JetAIUpdateModuleData, m_returnToBaseIdleTime ) },
-		{ 0, 0, 0, 0 }
+		{ "LockonTime",										INI::parseDurationUnsignedInt, nullptr, offsetof( JetAIUpdateModuleData, m_lockonTime ) },
+		{ "LockonCursor",									INI::parseAsciiString, nullptr, offsetof( JetAIUpdateModuleData, m_lockonCursor ) },
+		{ "LockonInitialDist",						INI::parseReal, nullptr, offsetof( JetAIUpdateModuleData, m_lockonInitialDist ) },
+		{ "LockonFreq",										INI::parseReal, nullptr, offsetof( JetAIUpdateModuleData, m_lockonFreq ) },
+		{ "LockonAngleSpin",							INI::parseAngleReal, nullptr, offsetof( JetAIUpdateModuleData, m_lockonAngleSpin ) },
+		{ "LockonBlinky",									INI::parseBool, nullptr, offsetof( JetAIUpdateModuleData, m_lockonBlinky ) },
+		{ "ReturnToBaseIdleTime",					INI::parseDurationUnsignedInt, nullptr, offsetof( JetAIUpdateModuleData, m_returnToBaseIdleTime ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -2334,14 +2334,14 @@ JetAIUpdate::JetAIUpdate( Thing *thing, const ModuleData* moduleData ) : AIUpdat
 	m_attackersMissExpireFrame = 0;
 	m_untargetableExpireFrame = 0;
 	m_returnToBaseFrame = 0;
-	m_lockonDrawable = NULL;
+	m_lockonDrawable = nullptr;
 	m_landingPosForHelipadStuff.zero();
 
 	m_producerLocation.zero();
 	m_enginesOn = TRUE;
 
 	m_airfieldID = INVALID_ID;
-	m_pp = NULL;
+	m_pp = nullptr;
 
 	m_doStateChange = TRUE;
 	m_updateHeightTransition = FALSE;
@@ -2354,7 +2354,7 @@ JetAIUpdate::~JetAIUpdate()
 	if (m_lockonDrawable)
 	{
 		TheGameClient->destroyDrawable(m_lockonDrawable);
-		m_lockonDrawable = NULL;
+		m_lockonDrawable = nullptr;
 	}
 }
 
@@ -2411,7 +2411,7 @@ void JetAIUpdate::onObjectCreated()
 void JetAIUpdate::onDelete()
 {
 	AIUpdateInterface::onDelete();
-	ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), NULL, getObject()->getID());
+	ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), nullptr, getObject()->getID());
 	if (pp)
 		pp->releaseSpace(getObject()->getID());
 }
@@ -2424,7 +2424,7 @@ void JetAIUpdate::getProducerLocation()
 
 	Object* jet = getObject();
 	Object* airfield = TheGameLogic->findObjectByID( jet->getProducerID() );
-	if (airfield == NULL)
+	if (airfield == nullptr)
 		m_producerLocation = *jet->getPosition();
 	else
 		m_producerLocation = *airfield->getPosition();
@@ -2435,7 +2435,7 @@ void JetAIUpdate::getProducerLocation()
 		because we were directly spawned via script (or directly placed on the map).
 		So, check to see if we have no parking place, and if not, quietly enable flight.
 	*/
-	ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), NULL, jet->getID());
+	ParkingPlaceBehaviorInterface* pp = getPP(jet->getProducerID(), nullptr, jet->getID());
 	if (!pp || !pp->hasReservedSpace(jet->getID()))
 	{
 		friend_setAllowAirLoco(true);
@@ -2460,7 +2460,7 @@ UpdateSleepTime JetAIUpdate::update()
 
 	Object* jet = getObject();
 
-	ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), NULL, getObject()->getID());
+	ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), nullptr, getObject()->getID());
 
 	// If idle & out of ammo, return
 	// have to call our parent's isIdle, because we override it to never return true
@@ -2473,7 +2473,7 @@ UpdateSleepTime JetAIUpdate::update()
 	/*
 	if (AIUpdateInterface::isIdle() || getStateMachine()->getCurrentStateID() == RELOAD_AMMO)
 	{
-		if (pp != NULL)
+		if (pp != nullptr)
 		{
 			if (!getFlag(ALLOW_AIR_LOCO) &&
 					!getFlag(HAS_PENDING_COMMAND) &&
@@ -2532,7 +2532,7 @@ UpdateSleepTime JetAIUpdate::update()
 	}
 	else
 	{
-		if (pp != NULL)
+		if (pp != nullptr)
 		{
 			pp->setHealee(getObject(), false);
 		}
@@ -2594,12 +2594,12 @@ UpdateSleepTime JetAIUpdate::update()
 		}
 		else
 		{
-			draw->setInstanceMatrix(NULL);
+			draw->setInstanceMatrix(nullptr);
 		}
 	}
 
 	/*Drawable* draw = jet->getDrawable();
-	if (draw != NULL && m_updateHeightTransition)
+	if (draw != nullptr && m_updateHeightTransition)
 	{
 		StateID id = getStateMachine()->getCurrentStateID();
 		Bool needToCheckMinHeight = (id >= JETAISTATETYPE_FIRST && id <= JETAISTATETYPE_LAST) ||
@@ -2623,13 +2623,13 @@ UpdateSleepTime JetAIUpdate::update()
 			}
 			else
 			{
-				draw->setInstanceMatrix(NULL);
+				draw->setInstanceMatrix(nullptr);
 				m_updateHeightTransition = FALSE;
 			}
 		}
 		else
 		{
-			draw->setInstanceMatrix(NULL);
+			draw->setInstanceMatrix(nullptr);
 			m_updateHeightTransition = FALSE;
 		}
 	}
@@ -2775,7 +2775,7 @@ void JetAIUpdate::checkStateChange()
 
 	Object* jet = getObject();
 
-	ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), NULL, getObject()->getID());
+	ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), nullptr, getObject()->getID());
 
 	// If idle & out of ammo, return
 	// have to call our parent's isIdle, because we override it to never return true
@@ -2787,7 +2787,7 @@ void JetAIUpdate::checkStateChange()
 	// that jets (and ESPECIALLY comanches) are still getting healed at airfields.
 	if (AIUpdateInterface::isIdle() || getStateMachine()->getCurrentStateID() == RELOAD_AMMO)
 	{
-		if (pp != NULL)
+		if (pp != nullptr)
 		{
 			if (!getFlag(ALLOW_AIR_LOCO) &&
 					!getFlag(HAS_PENDING_COMMAND) &&
@@ -2846,7 +2846,7 @@ void JetAIUpdate::checkStateChange()
 	}
 	else
 	{
-		if (pp != NULL)
+		if (pp != nullptr)
 		{
 			pp->setHealee(getObject(), false);
 		}
@@ -2874,7 +2874,7 @@ void JetAIUpdate::checkStateChange()
 		}
 		else
 		{
-			jet->getDrawable()->setInstanceMatrix(NULL);
+			jet->getDrawable()->setInstanceMatrix(nullptr);
 			m_updateHeightTransition = FALSE;
 		}
 	}
@@ -2935,7 +2935,7 @@ void JetAIUpdate::doStatusUpdate()
 		}
 		else
 		{
-			jet->getDrawable()->setInstanceMatrix(NULL);
+			jet->getDrawable()->setInstanceMatrix(nullptr);
 			m_updateHeightTransition = FALSE;
 		}
 	}
@@ -3019,7 +3019,7 @@ void JetAIUpdate::pruneDeadTargeters()
 	{
 		for (std::list<ObjectID>::iterator it = m_targetedBy.begin(); it != m_targetedBy.end(); /* empty */ )
 		{
-			if (TheGameLogic->findObjectByID(*it) == NULL)
+			if (TheGameLogic->findObjectByID(*it) == nullptr)
 			{
 				it = m_targetedBy.erase(it);
 			}
@@ -3040,7 +3040,7 @@ void JetAIUpdate::positionLockon()
 	if (m_untargetableExpireFrame == 0)
 	{
 		TheGameClient->destroyDrawable(m_lockonDrawable);
-		m_lockonDrawable = NULL;
+		m_lockonDrawable = nullptr;
 		return;
 	}
 
@@ -3098,7 +3098,7 @@ void JetAIUpdate::buildLockonDrawableIfNecessary()
 		return;
 
 	const JetAIUpdateModuleData* d = getJetAIUpdateModuleData();
-	if (d->m_lockonCursor.isNotEmpty() && m_lockonDrawable == NULL)
+	if (d->m_lockonCursor.isNotEmpty() && m_lockonDrawable == nullptr)
 	{
 		const ThingTemplate* tt = TheThingFactory->findTemplate(d->m_lockonCursor);
 		if (tt)
@@ -3241,15 +3241,15 @@ void JetAIUpdate::doLandingCommand(Object *airfield, CommandSourceType cmdSource
 	for (BehaviorModule** i = airfield->getBehaviorModules(); *i; ++i)
 	{
 		ParkingPlaceBehaviorInterface* pp = (*i)->getParkingPlaceBehaviorInterface();
-		if (pp == NULL)
+		if (pp == nullptr)
 			continue;
 
 		if (getObject()->isKindOf(KINDOF_PRODUCED_AT_HELIPAD) ||
-				pp->reserveSpace(getObject()->getID(), friend_getParkingOffset(), NULL))
+				pp->reserveSpace(getObject()->getID(), friend_getParkingOffset(), nullptr))
 		{
 			// if we had a space at another airfield, release it
-			ParkingPlaceBehaviorInterface* oldPP = getPP(getObject()->getProducerID(), NULL, getObject()->getID());
-			if (oldPP != NULL && oldPP != pp)
+			ParkingPlaceBehaviorInterface* oldPP = getPP(getObject()->getProducerID(), nullptr, getObject()->getID());
+			if (oldPP != nullptr && oldPP != pp)
 			{
 				oldPP->releaseSpace(getObject()->getID());
 			}
@@ -3312,11 +3312,11 @@ Bool JetAIUpdate::isParkedAt(const Object* obj) const
 {
 	if (!getFlag(ALLOW_AIR_LOCO) &&
 			!getObject()->isKindOf(KINDOF_PRODUCED_AT_HELIPAD) &&
-			obj != NULL)
+			obj != nullptr)
 	{
 		Object* airfield;
 		ParkingPlaceBehaviorInterface* pp = getPP(getObject()->getProducerID(), &airfield, getObject()->getID());
-		if (pp != NULL && airfield != NULL && airfield == obj)
+		if (pp != nullptr && airfield != nullptr && airfield == obj)
 		{
 			return true;
 		}
@@ -3558,7 +3558,7 @@ void JetAIUpdate::xfer( Xfer *xfer )
 		drawName = m_lockonDrawable->getTemplate()->getName();
 	}
 	xfer->xferAsciiString(&drawName);
-	if (drawName.isNotEmpty() && m_lockonDrawable==NULL)
+	if (drawName.isNotEmpty() && m_lockonDrawable==nullptr)
 	{
 		const ThingTemplate* tt = TheThingFactory->findTemplate(drawName);
 		if (tt)

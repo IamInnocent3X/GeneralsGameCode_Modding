@@ -73,14 +73,14 @@ public:
 	FireWeaponWhenDamagedBehaviorModuleData()
 	{
 		m_initiallyActive = false;
-		m_reactionWeaponPristine = NULL;
-		m_reactionWeaponDamaged = NULL;
-		m_reactionWeaponReallyDamaged = NULL;
-		m_reactionWeaponRubble = NULL;
-		m_continuousWeaponPristine = NULL;
-		m_continuousWeaponDamaged = NULL;
-		m_continuousWeaponReallyDamaged = NULL;
-		m_continuousWeaponRubble = NULL;
+		m_reactionWeaponPristine = nullptr;
+		m_reactionWeaponDamaged = nullptr;
+		m_reactionWeaponReallyDamaged = nullptr;
+		m_reactionWeaponRubble = nullptr;
+		m_continuousWeaponPristine = nullptr;
+		m_continuousWeaponDamaged = nullptr;
+		m_continuousWeaponReallyDamaged = nullptr;
+		m_continuousWeaponRubble = nullptr;
 		m_damageTypes = DAMAGE_TYPE_FLAGS_ALL;
 		m_damageAmount = 0;
 
@@ -107,33 +107,33 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_initiallyActive ) },
-			{ "ReactionWeaponPristine", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponPristine) },
-			{ "ReactionWeaponDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponDamaged) },
-			{ "ReactionWeaponReallyDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,	m_reactionWeaponReallyDamaged) },
-			{ "ReactionWeaponRubble", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,					m_reactionWeaponRubble) },
-			{ "ContinuousWeaponPristine", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousWeaponPristine) },
-			{ "ContinuousWeaponDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousWeaponDamaged) },
-			{ "ContinuousWeaponReallyDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousWeaponReallyDamaged) },
-			{ "ContinuousWeaponRubble", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousWeaponRubble) },
-			{ "DamageTypes", INI::parseDamageTypeFlagsCustom, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageTypesCustom ) },
-			{ "DamageAmount", INI::parseReal, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageAmount ) },
+			{ "StartsActive",	INI::parseBool, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_initiallyActive ) },
+			{ "ReactionWeaponPristine", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponPristine) },
+			{ "ReactionWeaponDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponDamaged) },
+			{ "ReactionWeaponReallyDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,	m_reactionWeaponReallyDamaged) },
+			{ "ReactionWeaponRubble", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,					m_reactionWeaponRubble) },
+			{ "ContinuousWeaponPristine", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousWeaponPristine) },
+			{ "ContinuousWeaponDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousWeaponDamaged) },
+			{ "ContinuousWeaponReallyDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousWeaponReallyDamaged) },
+			{ "ContinuousWeaponRubble", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousWeaponRubble) },
+			{ "DamageTypes", INI::parseDamageTypeFlagsCustom, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageTypesCustom ) },
+			{ "DamageAmount", INI::parseReal, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageAmount ) },
 			
-			{ "CustomDamageTypes", INI::parseCustomTypes, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_customDamageTypes ) },
-			{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredStatus ) },
-			{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenStatus ) },
-			{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredCustomStatus ) },
-			{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenCustomStatus ) },
-			{ "WeaponSlot",		INI::parseQuotedAsciiString,	NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_weaponSlotName ) },
+			{ "CustomDamageTypes", INI::parseCustomTypes, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_customDamageTypes ) },
+			{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredStatus ) },
+			{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenStatus ) },
+			{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredCustomStatus ) },
+			{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenCustomStatus ) },
+			{ "WeaponSlot",		INI::parseQuotedAsciiString,	nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_weaponSlotName ) },
 
-			{ "ContinuousDurationPristine", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationPristine) },
-			{ "ContinuousDurationDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationDamaged) },
-			{ "ContinuousDurationReallyDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousDurationReallyDamaged) },
-			{ "ContinuousDurationRubble", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousDurationRubble) },
-			{ "ContinuousIntervalPristine", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalPristine) },
-			{ "ContinuousIntervalDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalDamaged) },
-			{ "ContinuousIntervalReallyDamaged", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousIntervalReallyDamaged) },
-			{ "ContinuousIntervalRubble", INI::parseDurationUnsignedInt, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousIntervalRubble) },
+			{ "ContinuousDurationPristine", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationPristine) },
+			{ "ContinuousDurationDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationDamaged) },
+			{ "ContinuousDurationReallyDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousDurationReallyDamaged) },
+			{ "ContinuousDurationRubble", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousDurationRubble) },
+			{ "ContinuousIntervalPristine", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalPristine) },
+			{ "ContinuousIntervalDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalDamaged) },
+			{ "ContinuousIntervalReallyDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousIntervalReallyDamaged) },
+			{ "ContinuousIntervalRubble", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousIntervalRubble) },
 
 			{ 0, 0, 0, 0 }
 		};

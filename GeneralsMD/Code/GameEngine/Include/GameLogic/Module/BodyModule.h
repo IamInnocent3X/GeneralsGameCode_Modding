@@ -87,7 +87,7 @@ static const char* const TheBodyDamageTypeNames[] =
 	"REALLYDAMAGED",
 	"RUBBLE",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheBodyDamageTypeNames) == BODYDAMAGETYPE_COUNT + 1, "Incorrect array size");
 #endif
@@ -113,7 +113,7 @@ static const char* const TheMaxHealthChangeTypeNames[] =
 	"ADD_CURRENT_DAMAGE",
 	"ADD_CURRENT_DAMAGE_NON_LETHAL",
 	"FULLY_HEAL",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheMaxHealthChangeTypeNames) == MAX_HEALTH_CHANGE_COUNT + 1, "Incorrect array size");
 #endif
@@ -328,7 +328,7 @@ public:
 	virtual void clearArmorSetFlag(ArmorSetType ast) = 0;
 	virtual Bool testArmorSetFlag(ArmorSetType ast) = 0;
 
-	virtual const DamageInfo *getLastDamageInfo() const { return NULL; }	///< return info on last damage dealt to this object
+	virtual const DamageInfo *getLastDamageInfo() const { return nullptr; }	///< return info on last damage dealt to this object
 	virtual UnsignedInt getLastDamageTimestamp() const { return 0; }	///< return frame of last damage dealt
 	virtual UnsignedInt getLastHealingTimestamp() const { return 0; }	///< return frame of last healing dealt
 	virtual ObjectID getClearableLastAttacker() const { return INVALID_ID; }

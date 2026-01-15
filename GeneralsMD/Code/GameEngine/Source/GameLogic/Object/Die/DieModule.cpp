@@ -62,14 +62,14 @@ const FieldParse* DieMuxData::getFieldParse()
 {
 	static const FieldParse dataFieldParse[] =
 	{
-		//{ "DeathTypes",				INI::parseDeathTypeFlags,						NULL, offsetof( DieMuxData, m_deathTypes ) },
-		{ "DeathTypes",			INI::parseDeathTypeFlagsCustom,				NULL, offsetof(DieMuxData, m_deathTypesCustom) },
-		{ "VeterancyLevels",	INI::parseVeterancyLevelFlags,			NULL, offsetof( DieMuxData, m_veterancyLevels ) },
-		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	NULL,	offsetof( DieMuxData, m_exemptStatus ) },
-		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, NULL,	offsetof( DieMuxData, m_requiredStatus ) },
-		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL,	offsetof( DieMuxData, m_requiredCustomStatus ) },
-		{ "CustomDeathTypes",		INI::parseCustomTypes,			NULL, offsetof( DieMuxData, m_customDeathTypes ) },
-		{ 0, 0, 0, 0 }
+		//{ "DeathTypes",				INI::parseDeathTypeFlags,						nullptr, offsetof( DieMuxData, m_deathTypes ) },
+		{ "DeathTypes",			INI::parseDeathTypeFlagsCustom,				nullptr, offsetof(DieMuxData, m_deathTypesCustom) },
+		{ "VeterancyLevels",	INI::parseVeterancyLevelFlags,			nullptr, offsetof( DieMuxData, m_veterancyLevels ) },
+		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	nullptr,	offsetof( DieMuxData, m_exemptStatus ) },
+		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, nullptr,	offsetof( DieMuxData, m_requiredStatus ) },
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr,	offsetof( DieMuxData, m_requiredCustomStatus ) },
+		{ "CustomDeathTypes",		INI::parseCustomTypes,			nullptr, offsetof( DieMuxData, m_customDeathTypes ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   return dataFieldParse;
 }

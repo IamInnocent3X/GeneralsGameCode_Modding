@@ -75,7 +75,7 @@ static const char *const TheStealthLevelNames[] =
 	"FIRING_WEAPON_SIX",
 	"FIRING_WEAPON_SEVEN",
 	"FIRING_WEAPON_EIGHT",
-	NULL
+	nullptr
 };
 #endif
 typedef std::pair<Int, Coord3D> BarrelCoordType;
@@ -155,14 +155,14 @@ public:
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 
 	// ??? ugh
-	Bool isDisguised() const { return m_disguiseAsTemplate != NULL; }
-	Bool hasLastDisguiseTemplate() const { return m_lastDisguiseAsTemplate != NULL; }
+	Bool isDisguised() const { return m_disguiseAsTemplate != nullptr; }
+	Bool hasLastDisguiseTemplate() const { return m_lastDisguiseAsTemplate != nullptr; }
 	Bool isDisguiseTransitioning() const { return m_disguiseTransitionFrames > 0; }
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
 	const AsciiString& getDisguisedModelName() const { return m_disguiseModelName; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
 	void markAsDetected( UnsignedInt numFrames = 0 );
-	void disguiseAsObject( const Object *target, const Drawable *drawTemplate = NULL, Bool doLast = FALSE ); //wrapper function for ease.
+	void disguiseAsObject( const Object *target, const Drawable *drawTemplate = nullptr, Bool doLast = FALSE ); //wrapper function for ease.
 	Real getFriendlyOpacity() const;
 	UnsignedInt getStealthDelay() const { return getStealthUpdateModuleData()->m_stealthDelay; }
 	UnsignedInt getStealthLevel() const { return getStealthUpdateModuleData()->m_stealthLevel; }

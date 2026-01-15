@@ -73,8 +73,8 @@ public:
 		m_healingDelay = UINT_MAX;
 		m_startHealingDelay = 0;
 		m_radius = 0.0f;
-		m_radiusParticleSystemTmpl = NULL;
-		m_unitHealPulseParticleSystemTmpl = NULL;
+		m_radiusParticleSystemTmpl = nullptr;
+		m_unitHealPulseParticleSystemTmpl = nullptr;
 		m_affectsWholePlayer = FALSE;
 		m_skipSelfForHealing = FALSE;
 		m_clearsParasite = FALSE;
@@ -88,21 +88,21 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
-			{ "SingleBurst",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_singleBurst ) },
-			{ "HealingAmount",		INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
-			{ "HealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_healingDelay ) },
-			{ "Radius",						INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_radius ) },
-			{ "KindOf",						KindOfMaskType::parseFromINI,											NULL, offsetof( AutoHealBehaviorModuleData, m_kindOf ) },
-			{ "ForbiddenKindOf",	KindOfMaskType::parseFromINI,											NULL, offsetof( AutoHealBehaviorModuleData, m_forbiddenKindOf ) },
-			{ "RadiusParticleSystemName",					INI::parseParticleSystemTemplate,	NULL, offsetof( AutoHealBehaviorModuleData, m_radiusParticleSystemTmpl ) },
-			{ "UnitHealPulseParticleSystemName",	INI::parseParticleSystemTemplate,	NULL, offsetof( AutoHealBehaviorModuleData, m_unitHealPulseParticleSystemTmpl ) },
-			{ "StartHealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_startHealingDelay ) },
-			{ "AffectsWholePlayer",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_affectsWholePlayer ) },
-			{ "SkipSelfForHealing",			INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_skipSelfForHealing ) },
-			{ "ClearsParasite",				INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
-			{ "ClearsParasiteKeys",			INI::parseAsciiStringVector,								NULL, offsetof( AutoHealBehaviorModuleData, m_clearsParasiteKeys) },
-			{ "DisableWhenUnmanned",		INI::parseBool,												NULL, offsetof( AutoHealBehaviorModuleData, m_disableWhenUnmanned) },
+			{ "StartsActive",	INI::parseBool, nullptr, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
+			{ "SingleBurst",	INI::parseBool, nullptr, offsetof( AutoHealBehaviorModuleData, m_singleBurst ) },
+			{ "HealingAmount",		INI::parseReal,												nullptr, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
+			{ "HealingDelay",			INI::parseDurationUnsignedInt,				nullptr, offsetof( AutoHealBehaviorModuleData, m_healingDelay ) },
+			{ "Radius",						INI::parseReal,												nullptr, offsetof( AutoHealBehaviorModuleData, m_radius ) },
+			{ "KindOf",						KindOfMaskType::parseFromINI,											nullptr, offsetof( AutoHealBehaviorModuleData, m_kindOf ) },
+			{ "ForbiddenKindOf",	KindOfMaskType::parseFromINI,											nullptr, offsetof( AutoHealBehaviorModuleData, m_forbiddenKindOf ) },
+			{ "RadiusParticleSystemName",					INI::parseParticleSystemTemplate,	nullptr, offsetof( AutoHealBehaviorModuleData, m_radiusParticleSystemTmpl ) },
+			{ "UnitHealPulseParticleSystemName",	INI::parseParticleSystemTemplate,	nullptr, offsetof( AutoHealBehaviorModuleData, m_unitHealPulseParticleSystemTmpl ) },
+			{ "StartHealingDelay",			INI::parseDurationUnsignedInt,				nullptr, offsetof( AutoHealBehaviorModuleData, m_startHealingDelay ) },
+			{ "AffectsWholePlayer",			INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_affectsWholePlayer ) },
+			{ "SkipSelfForHealing",			INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_skipSelfForHealing ) },
+			{ "ClearsParasite",				INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
+			{ "ClearsParasiteKeys",			INI::parseAsciiStringVector,								nullptr, offsetof( AutoHealBehaviorModuleData, m_clearsParasiteKeys) },
+			{ "DisableWhenUnmanned",		INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_disableWhenUnmanned) },
 			{ 0, 0, 0, 0 }
 		};
 

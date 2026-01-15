@@ -69,7 +69,7 @@
 //-------------------------------------------------------------------------------------------------
 SpectreGunshipDeploymentUpdateModuleData::SpectreGunshipDeploymentUpdateModuleData()
 {
-	m_specialPowerTemplate			   = NULL;
+	m_specialPowerTemplate			   = nullptr;
 	m_extraRequiredScience				 = SCIENCE_INVALID;
 /******BOTH*******//*BOTH*//******BOTH*******//******BOTH*******/  m_attackAreaRadius             = 200.0f;
 	m_createLoc = CREATE_GUNSHIP_AT_EDGE_FARTHEST_FROM_TARGET;
@@ -91,7 +91,7 @@ static const char* const TheGunshipCreateLocTypeNames[] =
   "CREATE_AT_EDGE_FARTHEST_FROM_SOURCE",
 	"CREATE_AT_EDGE_NEAR_TARGET",
 	"CREATE_AT_EDGE_FARTHEST_FROM_TARGET",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheGunshipCreateLocTypeNames) == GUNSHIP_CREATE_LOC_COUNT + 1, "Wrong array size");
 
@@ -104,21 +104,21 @@ static Real zero = 0.0f;
 
 	static const FieldParse dataFieldParse[] =
 	{
-		//{ "GunshipTemplateName",	    INI::parseAsciiString,				    NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateName ) },
-		{ "GunshipTemplateName",	    INI::parseAsciiStringVectorAppend,				    NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateNames ) },
-		{ "RequiredScience",					INI::parseScience,								NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_extraRequiredScience ) },
-/******BOTH*******/   { "SpecialPowerTemplate",     INI::parseSpecialPowerTemplate,   NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_specialPowerTemplate ) },
-/*******BOTH******/		{ "AttackAreaRadius",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackAreaRadius ) },
-		{ "AttackAreaMinVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackMinAreaVariation ) },
-		{ "AttackAreaMaxVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackMaxAreaVariation ) },
+		//{ "GunshipTemplateName",	    INI::parseAsciiString,				    nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateName ) },
+		{ "GunshipTemplateName",	    INI::parseAsciiStringVectorAppend,				    nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipTemplateNames ) },
+		{ "RequiredScience",					INI::parseScience,								nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_extraRequiredScience ) },
+/******BOTH*******/   { "SpecialPowerTemplate",     INI::parseSpecialPowerTemplate,   nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_specialPowerTemplate ) },
+/*******BOTH******/		{ "AttackAreaRadius",	        INI::parseReal,				            nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackAreaRadius ) },
+		{ "AttackAreaMinVariation",	        INI::parseReal,				            nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackMinAreaVariation ) },
+		{ "AttackAreaMaxVariation",	        INI::parseReal,				            nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_attackMaxAreaVariation ) },
 		{ "CreateLocation", INI::parseIndexList, TheGunshipCreateLocTypeNames, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLoc ) },
-		{ "CreateLocationMinAreaVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLocMinAreaVariation ) },
-		{ "CreateLocationMaxAreaVariation",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLocMaxAreaVariation ) },
-		{ "CreateNewGunshipsOnExisting", INI::parseBool, NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createNewGunshipsOnExisting ) },
-		{ "GunshipSpawnDelay",	        INI::parseDurationUnsignedIntVector,				NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipSpawnDelay ) },
-		{ "GunshipsHaveIndividualAttackRadius",	        INI::parseBool,				            NULL, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipsHaveIndividualAttackRadius ) },
+		{ "CreateLocationMinAreaVariation",	        INI::parseReal,				            nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLocMinAreaVariation ) },
+		{ "CreateLocationMaxAreaVariation",	        INI::parseReal,				            nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createLocMaxAreaVariation ) },
+		{ "CreateNewGunshipsOnExisting", INI::parseBool, nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_createNewGunshipsOnExisting ) },
+		{ "GunshipSpawnDelay",	        INI::parseDurationUnsignedIntVector,				nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipSpawnDelay ) },
+		{ "GunshipsHaveIndividualAttackRadius",	        INI::parseBool,				            nullptr, offsetof( SpectreGunshipDeploymentUpdateModuleData, m_gunshipsHaveIndividualAttackRadius ) },
 
-    { 0, 0, 0, 0 }
+    { nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 }
@@ -126,7 +126,7 @@ static Real zero = 0.0f;
 //-------------------------------------------------------------------------------------------------
 SpectreGunshipDeploymentUpdate::SpectreGunshipDeploymentUpdate( Thing *thing, const ModuleData* moduleData ) : SpecialPowerUpdateModule( thing, moduleData )
 {
-	m_specialPowerModule = NULL;
+	m_specialPowerModule = nullptr;
   m_gunshipID  = INVALID_ID;
   m_attackCoords.clear();
   m_creationCoords.clear();
@@ -203,11 +203,11 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 	{
 		/*Object* newGunship = TheGameLogic->findObjectByID(m_gunshipID);
 		const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateName);
-		if (newGunship != NULL)
+		if (newGunship != nullptr)
 		{
 			//    disengageAndDepartAO( newGunship );
 			m_gunshipID = INVALID_ID;
-			newGunship = NULL;
+			newGunship = nullptr;
 		}*/
 
 		const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateNames[i]);
@@ -334,8 +334,8 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 				spModule->markSpecialPowerTriggered(&attackPos);
 				spModule->doSpecialPowerAtLocation(&attackPos, INVALID_ANGLE, commandOptions);
 			}*/
-			SpecialPowerModuleInterface* shipSPMInterface = NULL;
-			SpecialPowerUpdateInterface *shipSPUInterface = NULL;
+			SpecialPowerModuleInterface* shipSPMInterface = nullptr;
+			SpecialPowerUpdateInterface *shipSPUInterface = nullptr;
 			for( BehaviorModule** m = newGunship->getBehaviorModules(); *m; ++m )
 			{
 				shipSPMInterface = (*m)->getSpecialPower();

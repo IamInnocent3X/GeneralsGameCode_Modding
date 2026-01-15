@@ -117,8 +117,8 @@ static void parsePerVetLevelFXList( INI* ini, void* /*instance*/, void * store, 
 	typedef const FXList* ConstFXListPtr;
 	ConstFXListPtr* s = (ConstFXListPtr*)store;
 	VeterancyLevel v = (VeterancyLevel)INI::scanIndexList(ini->getNextToken(), TheVeterancyNames);
-	const FXList* fx = NULL;
-	INI::parseFXList(ini, NULL, &fx, NULL);
+	const FXList* fx = nullptr;
+	INI::parseFXList(ini, nullptr, &fx, nullptr);
 	s[v] = fx;
 }
 
@@ -127,8 +127,8 @@ static void parseAllVetLevelsFXList( INI* ini, void* /*instance*/, void * store,
 {
 	typedef const FXList* ConstFXListPtr;
 	ConstFXListPtr* s = (ConstFXListPtr*)store;
-	const FXList* fx = NULL;
-	INI::parseFXList(ini, NULL, &fx, NULL);
+	const FXList* fx = nullptr;
+	INI::parseFXList(ini, nullptr, &fx, nullptr);
 	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
 		s[i] = fx;
 }
@@ -139,8 +139,8 @@ static void parsePerVetLevelPSys( INI* ini, void* /*instance*/, void * store, co
 	typedef const ParticleSystemTemplate* ConstParticleSystemTemplatePtr;
 	ConstParticleSystemTemplatePtr* s = (ConstParticleSystemTemplatePtr*)store;
 	VeterancyLevel v = (VeterancyLevel)INI::scanIndexList(ini->getNextToken(), TheVeterancyNames);
-	ConstParticleSystemTemplatePtr pst = NULL;
-	INI::parseParticleSystemTemplate(ini, NULL, &pst, NULL);
+	ConstParticleSystemTemplatePtr pst = nullptr;
+	INI::parseParticleSystemTemplate(ini, nullptr, &pst, nullptr);
 	s[v] = pst;
 }
 
@@ -149,8 +149,8 @@ static void parseAllVetLevelsPSys( INI* ini, void* /*instance*/, void * store, c
 {
 	typedef const ParticleSystemTemplate* ConstParticleSystemTemplatePtr;
 	ConstParticleSystemTemplatePtr* s = (ConstParticleSystemTemplatePtr*)store;
-	ConstParticleSystemTemplatePtr pst = NULL;
-	INI::parseParticleSystemTemplate(ini, NULL, &pst, NULL);
+	ConstParticleSystemTemplatePtr pst = nullptr;
+	INI::parseParticleSystemTemplate(ini, nullptr, &pst, nullptr);
 	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
 		s[i] = pst;
 }
@@ -195,7 +195,7 @@ static void parsePerVetLevelTintStatus( INI* ini, void* /*instance*/, void * sto
 	TintStatus* s = (TintStatus*)store;
 	VeterancyLevel v = (VeterancyLevel)INI::scanIndexList(ini->getNextToken(), TheVeterancyNames);
 	TintStatus t = TINT_STATUS_INVALID;
-	TintStatusFlags::parseSingleBitFromINI(ini, NULL, &t, NULL);
+	TintStatusFlags::parseSingleBitFromINI(ini, nullptr, &t, nullptr);
 	s[v] = t;
 }
 
@@ -204,7 +204,7 @@ static void parseAllVetLevelsTintStatus( INI* ini, void* /*instance*/, void * st
 {
 	TintStatus* s = (TintStatus*)store;
 	TintStatus t = TINT_STATUS_INVALID;
-	TintStatusFlags::parseSingleBitFromINI(ini, NULL, &t, NULL);
+	TintStatusFlags::parseSingleBitFromINI(ini, nullptr, &t, nullptr);
 	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
 		s[i] = t;
 }
@@ -212,7 +212,7 @@ static void parseAllVetLevelsTintStatus( INI* ini, void* /*instance*/, void * st
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-WeaponStore *TheWeaponStore = NULL;					///< the weapon store definition
+WeaponStore *TheWeaponStore = nullptr;					///< the weapon store definition
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -221,52 +221,52 @@ WeaponStore *TheWeaponStore = NULL;					///< the weapon store definition
 const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 {
 
-	{ "PrimaryDamage",						INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_primaryDamage) },
-	{ "PrimaryDamageRadius",			INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_primaryDamageRadius) },
-	{ "SecondaryDamage",					INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_secondaryDamage) },
-	{ "SecondaryDamageRadius",		INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_secondaryDamageRadius) },
-	{ "ShockWaveAmount",					INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_shockWaveAmount) },
-	{ "ShockWaveRadius",					INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_shockWaveRadius) },
-	{ "ShockWaveTaperOff",				INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_shockWaveTaperOff) },
-	{ "AttackRange",							INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_attackRange) },
-	{ "MinimumAttackRange",				INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_minimumAttackRange) },
-	{ "RequestAssistRange",				INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_requestAssistRange) },
-	{ "AcceptableAimDelta",				INI::parseAngleReal,										NULL,							offsetof(WeaponTemplate, m_aimDelta) },
-	{ "ScatterRadius",						INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_scatterRadius) },
-	{ "ScatterTargetScalar",			INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_scatterTargetScalar) },
-	{ "ScatterRadiusVsInfantry",	INI::parseReal,													NULL,							offsetof( WeaponTemplate, m_infantryInaccuracyDist ) },
-	{ "DamageType",								DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(WeaponTemplate, m_damageType) },
-	{ "DamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	NULL,				offsetof(WeaponTemplate, m_damageStatusType) },
+	{ "PrimaryDamage",						INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_primaryDamage) },
+	{ "PrimaryDamageRadius",			INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_primaryDamageRadius) },
+	{ "SecondaryDamage",					INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_secondaryDamage) },
+	{ "SecondaryDamageRadius",		INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_secondaryDamageRadius) },
+	{ "ShockWaveAmount",					INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_shockWaveAmount) },
+	{ "ShockWaveRadius",					INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_shockWaveRadius) },
+	{ "ShockWaveTaperOff",				INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_shockWaveTaperOff) },
+	{ "AttackRange",							INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_attackRange) },
+	{ "MinimumAttackRange",				INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_minimumAttackRange) },
+	{ "RequestAssistRange",				INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_requestAssistRange) },
+	{ "AcceptableAimDelta",				INI::parseAngleReal,										nullptr,							offsetof(WeaponTemplate, m_aimDelta) },
+	{ "ScatterRadius",						INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_scatterRadius) },
+	{ "ScatterTargetScalar",			INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_scatterTargetScalar) },
+	{ "ScatterRadiusVsInfantry",	INI::parseReal,													nullptr,							offsetof( WeaponTemplate, m_infantryInaccuracyDist ) },
+	{ "DamageType",								DamageTypeFlags::parseSingleBitFromINI,	nullptr,							offsetof(WeaponTemplate, m_damageType) },
+	{ "DamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	nullptr,				offsetof(WeaponTemplate, m_damageStatusType) },
 	{ "DeathType",								INI::parseIndexList,										TheDeathNames,		offsetof(WeaponTemplate, m_deathType) },
-	{ "WeaponSpeed",							INI::parseVelocityReal,									NULL,							offsetof(WeaponTemplate, m_weaponSpeed) },
-	{ "MinWeaponSpeed",						INI::parseVelocityReal,									NULL,							offsetof(WeaponTemplate, m_minWeaponSpeed) },
-	{ "ScaleWeaponSpeed",					INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isScaleWeaponSpeed) },
-	{ "WeaponRecoil",							INI::parseAngleReal,										NULL,							offsetof(WeaponTemplate, m_weaponRecoil) },
-	{ "MinTargetPitch",						INI::parseAngleReal,										NULL,							offsetof(WeaponTemplate, m_minTargetPitch) },
-	{ "MaxTargetPitch",						INI::parseAngleReal,										NULL,							offsetof(WeaponTemplate, m_maxTargetPitch) },
-	{ "RadiusDamageAngle",				INI::parseAngleReal,										NULL,							offsetof(WeaponTemplate, m_radiusDamageAngle) },
-	{ "ProjectileObject",					INI::parseAsciiString,									NULL,							offsetof(WeaponTemplate, m_projectileName) },
-	{ "FireSound",								INI::parseAudioEventRTS,								NULL,							offsetof(WeaponTemplate, m_fireSound) },
-	{ "FireSoundLoopTime",				INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_fireSoundLoopTime) },
-	{ "FireFX",											parseAllVetLevelsFXList,							NULL,							offsetof(WeaponTemplate, m_fireFXs) },
-	{ "ProjectileDetonationFX",			parseAllVetLevelsFXList,							NULL,							offsetof(WeaponTemplate, m_projectileDetonateFXs) },
-	{ "FireOCL",										parseAllVetLevelsAsciiString,					NULL,							offsetof(WeaponTemplate, m_fireOCLNames) },
-	{ "ProjectileDetonationOCL",		parseAllVetLevelsAsciiString,					NULL,							offsetof(WeaponTemplate, m_projectileDetonationOCLNames) },
-	{ "ProjectileExhaust",					parseAllVetLevelsPSys,								NULL,							offsetof(WeaponTemplate, m_projectileExhausts) },
-	{ "VeterancyFireFX",										parsePerVetLevelFXList,				NULL,							offsetof(WeaponTemplate, m_fireFXs) },
-	{ "VeterancyProjectileDetonationFX",		parsePerVetLevelFXList,				NULL,							offsetof(WeaponTemplate, m_projectileDetonateFXs) },
-	{ "VeterancyFireOCL",										parsePerVetLevelAsciiString,	NULL,							offsetof(WeaponTemplate, m_fireOCLNames) },
-	{ "VeterancyProjectileDetonationOCL",		parsePerVetLevelAsciiString,	NULL,							offsetof(WeaponTemplate, m_projectileDetonationOCLNames) },
-	{ "VeterancyProjectileExhaust",					parsePerVetLevelPSys,					NULL,							offsetof(WeaponTemplate, m_projectileExhausts) },
-	{ "ClipSize",									INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_clipSize) },
-	{ "ContinuousFireOne",				INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_continuousFireOneShotsNeeded) },
-	{ "ContinuousFireTwo",				INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_continuousFireTwoShotsNeeded) },
-	{ "ContinuousFireCoast",			INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_continuousFireCoastFrames) },
- 	{ "AutoReloadWhenIdle",				INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_autoReloadWhenIdleFrames) },
-	{ "ClipReloadTime",						INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_clipReloadTime) },
-	{ "DelayBetweenShots",				WeaponTemplate::parseShotDelay,					NULL,							0 },
-	{ "ShotsPerBarrel",						INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_shotsPerBarrel) },
-	{ "DamageDealtAtSelfPosition",INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_damageDealtAtSelfPosition) },
+	{ "WeaponSpeed",							INI::parseVelocityReal,									nullptr,							offsetof(WeaponTemplate, m_weaponSpeed) },
+	{ "MinWeaponSpeed",						INI::parseVelocityReal,									nullptr,							offsetof(WeaponTemplate, m_minWeaponSpeed) },
+	{ "ScaleWeaponSpeed",					INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_isScaleWeaponSpeed) },
+	{ "WeaponRecoil",							INI::parseAngleReal,										nullptr,							offsetof(WeaponTemplate, m_weaponRecoil) },
+	{ "MinTargetPitch",						INI::parseAngleReal,										nullptr,							offsetof(WeaponTemplate, m_minTargetPitch) },
+	{ "MaxTargetPitch",						INI::parseAngleReal,										nullptr,							offsetof(WeaponTemplate, m_maxTargetPitch) },
+	{ "RadiusDamageAngle",				INI::parseAngleReal,										nullptr,							offsetof(WeaponTemplate, m_radiusDamageAngle) },
+	{ "ProjectileObject",					INI::parseAsciiString,									nullptr,							offsetof(WeaponTemplate, m_projectileName) },
+	{ "FireSound",								INI::parseAudioEventRTS,								nullptr,							offsetof(WeaponTemplate, m_fireSound) },
+	{ "FireSoundLoopTime",				INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_fireSoundLoopTime) },
+	{ "FireFX",											parseAllVetLevelsFXList,							nullptr,							offsetof(WeaponTemplate, m_fireFXs) },
+	{ "ProjectileDetonationFX",			parseAllVetLevelsFXList,							nullptr,							offsetof(WeaponTemplate, m_projectileDetonateFXs) },
+	{ "FireOCL",										parseAllVetLevelsAsciiString,					nullptr,							offsetof(WeaponTemplate, m_fireOCLNames) },
+	{ "ProjectileDetonationOCL",		parseAllVetLevelsAsciiString,					nullptr,							offsetof(WeaponTemplate, m_projectileDetonationOCLNames) },
+	{ "ProjectileExhaust",					parseAllVetLevelsPSys,								nullptr,							offsetof(WeaponTemplate, m_projectileExhausts) },
+	{ "VeterancyFireFX",										parsePerVetLevelFXList,				nullptr,							offsetof(WeaponTemplate, m_fireFXs) },
+	{ "VeterancyProjectileDetonationFX",		parsePerVetLevelFXList,				nullptr,							offsetof(WeaponTemplate, m_projectileDetonateFXs) },
+	{ "VeterancyFireOCL",										parsePerVetLevelAsciiString,	nullptr,							offsetof(WeaponTemplate, m_fireOCLNames) },
+	{ "VeterancyProjectileDetonationOCL",		parsePerVetLevelAsciiString,	nullptr,							offsetof(WeaponTemplate, m_projectileDetonationOCLNames) },
+	{ "VeterancyProjectileExhaust",					parsePerVetLevelPSys,					nullptr,							offsetof(WeaponTemplate, m_projectileExhausts) },
+	{ "ClipSize",									INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_clipSize) },
+	{ "ContinuousFireOne",				INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_continuousFireOneShotsNeeded) },
+	{ "ContinuousFireTwo",				INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_continuousFireTwoShotsNeeded) },
+	{ "ContinuousFireCoast",			INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_continuousFireCoastFrames) },
+ 	{ "AutoReloadWhenIdle",				INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_autoReloadWhenIdleFrames) },
+	{ "ClipReloadTime",						INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_clipReloadTime) },
+	{ "DelayBetweenShots",				WeaponTemplate::parseShotDelay,					nullptr,							0 },
+	{ "ShotsPerBarrel",						INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_shotsPerBarrel) },
+	{ "DamageDealtAtSelfPosition",INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_damageDealtAtSelfPosition) },
 	{ "RadiusDamageAffects",			INI::parseBitString32,	TheWeaponAffectsMaskNames,				offsetof(WeaponTemplate, m_affectsMask) },
 	{ "ProjectileCollidesWith",		INI::parseBitString32,	TheWeaponCollideMaskNames,				offsetof(WeaponTemplate, m_collideMask) },
 	{ "AntiAirborneVehicle",			INI::parseBitInInt32,										(void*)WEAPON_ANTI_AIRBORNE_VEHICLE,	offsetof(WeaponTemplate, m_antiMask) },
@@ -278,214 +278,214 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "AntiAirborneInfantry",			INI::parseBitInInt32,										(void*)WEAPON_ANTI_AIRBORNE_INFANTRY, offsetof(WeaponTemplate, m_antiMask) },
 	{ "AntiBallisticMissile",			INI::parseBitInInt32,										(void*)WEAPON_ANTI_BALLISTIC_MISSILE, offsetof(WeaponTemplate, m_antiMask) },
 	{ "AutoReloadsClip",					INI::parseIndexList,										TheWeaponReloadNames,							offsetof(WeaponTemplate, m_reloadType) },
-	{ "ProjectileStreamName",			INI::parseAsciiString,									NULL,							offsetof(WeaponTemplate, m_projectileStreamName) },
-	{ "LaserName",								INI::parseAsciiString,									NULL,							offsetof(WeaponTemplate, m_laserName) },
-	{ "LaserBoneName",						INI::parseAsciiString,									NULL,							offsetof(WeaponTemplate, m_laserBoneName) },
-	{ "WeaponBonus",							WeaponTemplate::parseWeaponBonusSet,		NULL,							0 },
-	{ "CustomWeaponBonus",						WeaponTemplate::parseCustomWeaponBonusSet,		NULL,							0 },
-	{ "HistoricBonusTime",				INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_historicBonusTime) },
-	{ "HistoricBonusRadius",			INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_historicBonusRadius) },
-	{ "HistoricBonusCount",				INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_historicBonusCount) },
-	{ "HistoricBonusWeapon",			INI::parseWeaponTemplate,								NULL,							offsetof(WeaponTemplate, m_historicBonusWeapon) },
-	{ "LeechRangeWeapon",					INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_leechRangeWeapon) },
-	{ "ScatterTarget",						WeaponTemplate::parseScatterTarget,			NULL,							0 },
-	{ "CapableOfFollowingWaypoints", INI::parseBool,											NULL,							offsetof(WeaponTemplate, m_capableOfFollowingWaypoint) },
-	{ "ShowsAmmoPips",						INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isShowsAmmoPips) },
-	{ "AllowAttackGarrisonedBldgs", INI::parseBool,												NULL,							offsetof(WeaponTemplate, m_allowAttackGarrisonedBldgs) },
-	{ "PlayFXWhenStealthed",			INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_playFXWhenStealthed) },
-	{ "PreAttackDelay",						INI::parseDurationUnsignedInt,					NULL,							offsetof( WeaponTemplate, m_preAttackDelay ) },
+	{ "ProjectileStreamName",			INI::parseAsciiString,									nullptr,							offsetof(WeaponTemplate, m_projectileStreamName) },
+	{ "LaserName",								INI::parseAsciiString,									nullptr,							offsetof(WeaponTemplate, m_laserName) },
+	{ "LaserBoneName",						INI::parseAsciiString,									nullptr,							offsetof(WeaponTemplate, m_laserBoneName) },
+	{ "WeaponBonus",							WeaponTemplate::parseWeaponBonusSet,		nullptr,							0 },
+	{ "CustomWeaponBonus",						WeaponTemplate::parseCustomWeaponBonusSet,		nullptr,							0 },
+	{ "HistoricBonusTime",				INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_historicBonusTime) },
+	{ "HistoricBonusRadius",			INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_historicBonusRadius) },
+	{ "HistoricBonusCount",				INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_historicBonusCount) },
+	{ "HistoricBonusWeapon",			INI::parseWeaponTemplate,								nullptr,							offsetof(WeaponTemplate, m_historicBonusWeapon) },
+	{ "LeechRangeWeapon",					INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_leechRangeWeapon) },
+	{ "ScatterTarget",						WeaponTemplate::parseScatterTarget,			nullptr,							0 },
+	{ "CapableOfFollowingWaypoints", INI::parseBool,											nullptr,							offsetof(WeaponTemplate, m_capableOfFollowingWaypoint) },
+	{ "ShowsAmmoPips",						INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_isShowsAmmoPips) },
+	{ "AllowAttackGarrisonedBldgs", INI::parseBool,												nullptr,							offsetof(WeaponTemplate, m_allowAttackGarrisonedBldgs) },
+	{ "PlayFXWhenStealthed",			INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_playFXWhenStealthed) },
+	{ "PreAttackDelay",						INI::parseDurationUnsignedInt,					nullptr,							offsetof( WeaponTemplate, m_preAttackDelay ) },
 	{ "PreAttackType",						INI::parseIndexList,										TheWeaponPrefireNames, offsetof(WeaponTemplate, m_prefireType) },
-	{ "ContinueAttackRange",			INI::parseReal,													NULL,							offsetof(WeaponTemplate, m_continueAttackRange) },
-	{ "SuspendFXDelay",						INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_suspendFXDelay) },
-	{ "MissileCallsOnDie",			INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_dieOnDetonate) },
-	{ "ScatterTargetAligned", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterTargetAligned) },
-	{ "ScatterTargetRandomOrder", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterTargetRandom) },
-	{ "ScatterTargetRandomAngle", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterTargetRandomAngle) },
-	{ "ScatterTargetMinScalar", INI::parseReal, NULL, offsetof(WeaponTemplate, m_scatterTargetMinScalar) },
-	{ "ScatterTargetCenteredAtShooter", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterTargetCenteredAtShooter) },
-	{ "ScatterTargetResetTime", INI::parseDurationUnsignedInt, NULL, offsetof(WeaponTemplate, m_scatterTargetResetTime) },
-	{ "ScatterTargetResetRecenter", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterTargetResetRecenter) },
-	{ "PreAttackFX", parseAllVetLevelsFXList, NULL,	offsetof(WeaponTemplate, m_preAttackFXs) },
-	{ "VeterancyPreAttackFX", parsePerVetLevelFXList, NULL, offsetof(WeaponTemplate, m_preAttackFXs) },
-	{ "PreAttackFXDelay",						INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_preAttackFXDelay) },
-	{ "ContinuousLaserLoopTime",				INI::parseDurationUnsignedInt,					NULL,							offsetof(WeaponTemplate, m_continuousLaserLoopTime) },
-	{ "LaserGroundTargetHeight",				INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_laserGroundTargetHeight) },
-	{ "LaserGroundUnitTargetHeight",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_laserGroundUnitTargetHeight) },
-	{ "ScatterOnWaterSurface", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterOnWaterSurface) },
+	{ "ContinueAttackRange",			INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_continueAttackRange) },
+	{ "SuspendFXDelay",						INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_suspendFXDelay) },
+	{ "MissileCallsOnDie",			INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_dieOnDetonate) },
+	{ "ScatterTargetAligned", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterTargetAligned) },
+	{ "ScatterTargetRandomOrder", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterTargetRandom) },
+	{ "ScatterTargetRandomAngle", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterTargetRandomAngle) },
+	{ "ScatterTargetMinScalar", INI::parseReal, nullptr, offsetof(WeaponTemplate, m_scatterTargetMinScalar) },
+	{ "ScatterTargetCenteredAtShooter", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterTargetCenteredAtShooter) },
+	{ "ScatterTargetResetTime", INI::parseDurationUnsignedInt, nullptr, offsetof(WeaponTemplate, m_scatterTargetResetTime) },
+	{ "ScatterTargetResetRecenter", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterTargetResetRecenter) },
+	{ "PreAttackFX", parseAllVetLevelsFXList, nullptr,	offsetof(WeaponTemplate, m_preAttackFXs) },
+	{ "VeterancyPreAttackFX", parsePerVetLevelFXList, nullptr, offsetof(WeaponTemplate, m_preAttackFXs) },
+	{ "PreAttackFXDelay",						INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_preAttackFXDelay) },
+	{ "ContinuousLaserLoopTime",				INI::parseDurationUnsignedInt,					nullptr,							offsetof(WeaponTemplate, m_continuousLaserLoopTime) },
+	{ "LaserGroundTargetHeight",				INI::parseReal,					nullptr,							offsetof(WeaponTemplate, m_laserGroundTargetHeight) },
+	{ "LaserGroundUnitTargetHeight",				INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_laserGroundUnitTargetHeight) },
+	{ "ScatterOnWaterSurface", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterOnWaterSurface) },
 	
 	// New Features
-	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageType) },
-	{ "CustomDamageStatusType",					INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageStatusType) },
-	{ "CustomDeathType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDeathType) },
+	{ "CustomDamageType",						INI::parseAsciiString,	nullptr,							offsetof(WeaponTemplate, m_customDamageType) },
+	{ "CustomDamageStatusType",					INI::parseAsciiString,	nullptr,							offsetof(WeaponTemplate, m_customDamageStatusType) },
+	{ "CustomDeathType",						INI::parseAsciiString,	nullptr,							offsetof(WeaponTemplate, m_customDeathType) },
 
-	{ "WeaponIsFlame",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isFlame) },
-	{ "WeaponFlameCollidesWithBurning",			INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_projectileCollidesWithBurn) },
-	{ "WeaponIsPoison",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isPoison) },
-	{ "WeaponPoisonMuzzleFlashesGarrison",		INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_poisonMuzzleFlashesGarrison) },
-	{ "WeaponIsDisarm",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isDisarm) },
-	{ "WeaponKillsGarrison",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_killsGarrison) },
-	{ "WeaponKillsGarrisonAmount",				INI::parseInt,			NULL,							offsetof(WeaponTemplate, m_killsGarrisonAmount) },
+	{ "WeaponIsFlame",							INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_isFlame) },
+	{ "WeaponFlameCollidesWithBurning",			INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_projectileCollidesWithBurn) },
+	{ "WeaponIsPoison",							INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_isPoison) },
+	{ "WeaponPoisonMuzzleFlashesGarrison",		INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_poisonMuzzleFlashesGarrison) },
+	{ "WeaponIsDisarm",							INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_isDisarm) },
+	{ "WeaponKillsGarrison",					INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_killsGarrison) },
+	{ "WeaponKillsGarrisonAmount",				INI::parseInt,			nullptr,							offsetof(WeaponTemplate, m_killsGarrisonAmount) },
 
-	{ "WeaponUseSpecificVoice",					INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_playSpecificVoice) },
-	{ "OverrideDamageTypeFX",					DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_damageFXOverride) },
+	{ "WeaponUseSpecificVoice",					INI::parseAsciiString,	nullptr,							offsetof(WeaponTemplate, m_playSpecificVoice) },
+	{ "OverrideDamageTypeFX",					DamageTypeFlags::parseSingleBitFromINI,	nullptr,			offsetof(WeaponTemplate, m_damageFXOverride) },
 
-	{ "WeaponDoStatusDamageType",				parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_doStatusDamage) },
-	{ "VeterancyWeaponDoStatusDamageType",		parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_doStatusDamage) },
-	{ "WeaponStatusDuration",					INI::parseReal,			NULL, 							offsetof(WeaponTemplate, m_statusDuration) },
-	{ "WeaponStatusDurationDamageCorrelation",	INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_statusDurationTypeCorrelate) },
-	{ "WeaponStatusTintStatus",					parseAllVetLevelsTintStatus,				NULL,		offsetof(WeaponTemplate, m_tintStatus) },
-	{ "VeterancyWeaponStatusTintStatus",		parsePerVetLevelTintStatus,					NULL,		offsetof(WeaponTemplate, m_tintStatus) },
-	{ "WeaponStatusCustomTintStatus",			parseAllVetLevelsAsciiString,				NULL, 		offsetof(WeaponTemplate, m_customTintStatus) },
-	{ "VeterancyWeaponStatusCustomTintStatus",	parsePerVetLevelAsciiString,				NULL, 		offsetof(WeaponTemplate, m_customTintStatus) },
+	{ "WeaponDoStatusDamageType",				parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_doStatusDamage) },
+	{ "VeterancyWeaponDoStatusDamageType",		parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_doStatusDamage) },
+	{ "WeaponStatusDuration",					INI::parseReal,			nullptr, 							offsetof(WeaponTemplate, m_statusDuration) },
+	{ "WeaponStatusDurationDamageCorrelation",	INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_statusDurationTypeCorrelate) },
+	{ "WeaponStatusTintStatus",					parseAllVetLevelsTintStatus,				nullptr,		offsetof(WeaponTemplate, m_tintStatus) },
+	{ "VeterancyWeaponStatusTintStatus",		parsePerVetLevelTintStatus,					nullptr,		offsetof(WeaponTemplate, m_tintStatus) },
+	{ "WeaponStatusCustomTintStatus",			parseAllVetLevelsAsciiString,				nullptr, 		offsetof(WeaponTemplate, m_customTintStatus) },
+	{ "VeterancyWeaponStatusCustomTintStatus",	parsePerVetLevelAsciiString,				nullptr, 		offsetof(WeaponTemplate, m_customTintStatus) },
 
-	{ "WeaponIsSubdual",						parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_isSubdual) },
-	{ "VeterancyWeaponIsSubdual",				parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_isSubdual) },
-	{ "SubdualDealsNormalDamage",				parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_subdualDealsNormalDamage) },
-	{ "VeterancySubdualDealsNormalDamage",		parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_subdualDealsNormalDamage) },
-	{ "SubdualDamageMultiplier",				parseAllVetLevelsReal,			NULL,					offsetof(WeaponTemplate, m_subdualDamageMultiplier) },
-	{ "VeterancySubdualDamageMultiplier",		parsePerVetLevelReal,			NULL,					offsetof(WeaponTemplate, m_subdualDamageMultiplier) },
-	{ "SubdualForbiddenKindOf",					KindOfMaskType::parseFromINI,	NULL, 					offsetof( WeaponTemplate, m_subdualForbiddenKindOf ) },
+	{ "WeaponIsSubdual",						parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_isSubdual) },
+	{ "VeterancyWeaponIsSubdual",				parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_isSubdual) },
+	{ "SubdualDealsNormalDamage",				parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_subdualDealsNormalDamage) },
+	{ "VeterancySubdualDealsNormalDamage",		parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_subdualDealsNormalDamage) },
+	{ "SubdualDamageMultiplier",				parseAllVetLevelsReal,			nullptr,					offsetof(WeaponTemplate, m_subdualDamageMultiplier) },
+	{ "VeterancySubdualDamageMultiplier",		parsePerVetLevelReal,			nullptr,					offsetof(WeaponTemplate, m_subdualDamageMultiplier) },
+	{ "SubdualForbiddenKindOf",					KindOfMaskType::parseFromINI,	nullptr, 					offsetof( WeaponTemplate, m_subdualForbiddenKindOf ) },
 
-	{ "FiringTrackerStatusTrigger",				ObjectStatusMaskType::parseSingleBitFromINIVector,	NULL,		offsetof(WeaponTemplate, m_firingTrackerStatusTrigger) },	
+	{ "FiringTrackerStatusTrigger",				ObjectStatusMaskType::parseSingleBitFromINIVector,	nullptr,		offsetof(WeaponTemplate, m_firingTrackerStatusTrigger) },	
 	{ "FiringTrackerBonusConditionType",		INI::parseIndexList,	TheWeaponBonusNames, 				offsetof(WeaponTemplate, m_firingTrackerBonusConditionGive ) },
-	{ "FiringTrackerCustomStatusTrigger",				INI::parseAsciiStringVector,	NULL,			offsetof(WeaponTemplate, m_firingTrackerCustomStatusTrigger) },
-	{ "FiringTrackerCustomBonusConditionType",			INI::parseQuotedAsciiString,	NULL,			offsetof(WeaponTemplate, m_firingTrackerCustomBonusConditionGive ) },
+	{ "FiringTrackerCustomStatusTrigger",				INI::parseAsciiStringVector,	nullptr,			offsetof(WeaponTemplate, m_firingTrackerCustomStatusTrigger) },
+	{ "FiringTrackerCustomBonusConditionType",			INI::parseQuotedAsciiString,	nullptr,			offsetof(WeaponTemplate, m_firingTrackerCustomBonusConditionGive ) },
 
-	{ "WeaponNotAbsoluteKill",						INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_notAbsoluteKill) },
+	{ "WeaponNotAbsoluteKill",						INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_notAbsoluteKill) },
 	
-	{ "SubduedProjectileNoDamage",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_subduedProjectileNoDamage) },
-	{ "SubdualMissileAttractor",					INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isMissileAttractor) },
-	{ "ShielderProtectionType",						INI::parseProtectionTypeFlags,	NULL, 					offsetof(WeaponTemplate, m_protectionTypes) },
-	{ "IgnoresShielder",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_isShielderImmune) },
+	{ "SubduedProjectileNoDamage",					INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_subduedProjectileNoDamage) },
+	{ "SubdualMissileAttractor",					INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_isMissileAttractor) },
+	{ "ShielderProtectionType",						INI::parseProtectionTypeFlags,	nullptr, 					offsetof(WeaponTemplate, m_protectionTypes) },
+	{ "IgnoresShielder",							INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_isShielderImmune) },
 
-	{ "SubdualCustomType",							INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_subdualCustomType) },
-	{ "CustomSubdualTintStatus",					parseAllVetLevelsTintStatus,		NULL,				offsetof(WeaponTemplate, m_customSubdualTint) },
-	{ "CustomSubdualCustomTintStatus",				parseAllVetLevelsAsciiString,		NULL, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },
-	{ "CustomSubdualHasDisable",					parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisable) },
-	{ "CustomSubdualHasDisableProjectile",			parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisableProjectiles) },
-	{ "CustomSubdualClearOnTrigger",				parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualClearOnTrigger) },
-	{ "CustomSubdualDoStatus",						parseAllVetLevelsBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualDoStatus) },
-	{ "CustomSubdualOCL",							parseAllVetLevelsAsciiString,	NULL,					offsetof(WeaponTemplate, m_customSubdualOCLNames) },
-	{ "CustomSubdualDisableType",					DisabledMaskType::parseSingleBitFromINI, NULL,			offsetof(WeaponTemplate, m_customSubdualDisableType ) },
-	{ "CustomSubdualDisableTint",					TintStatusFlags::parseSingleBitFromINI,		NULL,		offsetof(WeaponTemplate, m_customSubdualDisableTint) },
-	{ "CustomSubdualDisableCustomTint",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableCustomTint) },
-	{ "CustomSubdualRemoveSubdualTintOnDisable",	INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_customSubdualRemoveSubdualTintOnDisable) },
-	{ "CustomSubdualDisableSound",					INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableSound) },
-	{ "CustomSubdualDisableRemoveSound",			INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_customSubdualDisableRemoveSound) },
+	{ "SubdualCustomType",							INI::parseAsciiString,	nullptr,							offsetof(WeaponTemplate, m_subdualCustomType) },
+	{ "CustomSubdualTintStatus",					parseAllVetLevelsTintStatus,		nullptr,				offsetof(WeaponTemplate, m_customSubdualTint) },
+	{ "CustomSubdualCustomTintStatus",				parseAllVetLevelsAsciiString,		nullptr, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },
+	{ "CustomSubdualHasDisable",					parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualHasDisable) },
+	{ "CustomSubdualHasDisableProjectile",			parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualHasDisableProjectiles) },
+	{ "CustomSubdualClearOnTrigger",				parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualClearOnTrigger) },
+	{ "CustomSubdualDoStatus",						parseAllVetLevelsBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualDoStatus) },
+	{ "CustomSubdualOCL",							parseAllVetLevelsAsciiString,	nullptr,					offsetof(WeaponTemplate, m_customSubdualOCLNames) },
+	{ "CustomSubdualDisableType",					DisabledMaskType::parseSingleBitFromINI, nullptr,			offsetof(WeaponTemplate, m_customSubdualDisableType ) },
+	{ "CustomSubdualDisableTint",					TintStatusFlags::parseSingleBitFromINI,		nullptr,		offsetof(WeaponTemplate, m_customSubdualDisableTint) },
+	{ "CustomSubdualDisableCustomTint",				INI::parseAsciiString,			nullptr, 					offsetof(WeaponTemplate, m_customSubdualDisableCustomTint) },
+	{ "CustomSubdualRemoveSubdualTintOnDisable",	INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_customSubdualRemoveSubdualTintOnDisable) },
+	{ "CustomSubdualDisableSound",					INI::parseAsciiString,			nullptr, 					offsetof(WeaponTemplate, m_customSubdualDisableSound) },
+	{ "CustomSubdualDisableRemoveSound",			INI::parseAsciiString,			nullptr, 					offsetof(WeaponTemplate, m_customSubdualDisableRemoveSound) },
 	
-	{ "VeterancyCustomSubdualTintStatus",			parsePerVetLevelTintStatus,			NULL,				offsetof(WeaponTemplate, m_customSubdualTint) },
-	{ "VeterancyCustomSubdualCustomTintStatus",		parsePerVetLevelAsciiString,		NULL, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },
-	{ "VeterancyCustomSubdualHasDisable",			parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisable) },
-	{ "VeterancyCustomSubdualHasDisableProjectile",	parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualHasDisableProjectiles) },
-	{ "VeterancyCustomSubdualClearOnTrigger",		parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualClearOnTrigger) },
-	{ "VeterancyCustomSubdualDoStatus",				parsePerVetLevelBool,			NULL,					offsetof(WeaponTemplate, m_customSubdualDoStatus) },
-	{ "VeterancyCustomSubdualOCL",					parsePerVetLevelAsciiString,	NULL,					offsetof(WeaponTemplate, m_customSubdualOCLNames) },
+	{ "VeterancyCustomSubdualTintStatus",			parsePerVetLevelTintStatus,			nullptr,				offsetof(WeaponTemplate, m_customSubdualTint) },
+	{ "VeterancyCustomSubdualCustomTintStatus",		parsePerVetLevelAsciiString,		nullptr, 				offsetof(WeaponTemplate, m_customSubdualCustomTint) },
+	{ "VeterancyCustomSubdualHasDisable",			parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualHasDisable) },
+	{ "VeterancyCustomSubdualHasDisableProjectile",	parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualHasDisableProjectiles) },
+	{ "VeterancyCustomSubdualClearOnTrigger",		parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualClearOnTrigger) },
+	{ "VeterancyCustomSubdualDoStatus",				parsePerVetLevelBool,			nullptr,					offsetof(WeaponTemplate, m_customSubdualDoStatus) },
+	{ "VeterancyCustomSubdualOCL",					parsePerVetLevelAsciiString,	nullptr,					offsetof(WeaponTemplate, m_customSubdualOCLNames) },
 
-	{ "ShockWaveUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveUseCenter) },
-	{ "ShockWaveRespectsCenter",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveRespectsCenter) },
-	{ "ShockWaveAffectsAirborne",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWaveAffectsAirborne) },
-	{ "ShockWavePullsAirborne",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_shockWavePullsAirborne) },
+	{ "ShockWaveUseCenter",							INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_shockWaveUseCenter) },
+	{ "ShockWaveRespectsCenter",					INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_shockWaveRespectsCenter) },
+	{ "ShockWaveAffectsAirborne",					INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_shockWaveAffectsAirborne) },
+	{ "ShockWavePullsAirborne",						INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_shockWavePullsAirborne) },
 	
-	{ "MagnetAmount",								INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAmount) },
-	{ "MagnetInfantryAmount",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetInfantryAmount) },
-	{ "MagnetTaperOffDistance",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOffDistance) },
-	{ "MagnetTaperOffRatio",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOffRatio) },
-	{ "MagnetTaperOnDistance",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOnDistance) },
-	{ "MagnetTaperOnRatio",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetTaperOnRatio) },
-	{ "MagnetLiftHeight",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftHeight) },
-	{ "MagnetLiftHeightSecond",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftHeightSecond) },
-	{ "MagnetLiftForce",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForce) },
-	{ "MagnetLiftForceToHeight",					INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
-	{ "MagnetLiftForceToHeightSecond",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLiftForceToHeightSecond) },
-	{ "MagnetMaxLiftHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxLiftHeight) },
-	{ "MagnetLevitationHeight",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetLevitationHeight) },
-	{ "MagnetMinDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMinDistance) },
-	{ "MagnetMaxDistance",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetMaxDistance) },
-	{ "MagnetLinearDistanceCalc",					INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetLinearDistanceCalc) },
-	{ "MagnetNoAirborne",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetNoAirborne) },
-	{ "MagnetAirborneZForce",						INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
-	{ "MagnetAirborneAffectedByYaw",				INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetAirboneAffectedByYaw) },
-	{ "MagnetUseCenter",							INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetUseCenter) },
-	{ "MagnetRespectsCenter",						INI::parseBool,					NULL,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
+	{ "MagnetAmount",								INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetAmount) },
+	{ "MagnetInfantryAmount",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetInfantryAmount) },
+	{ "MagnetTaperOffDistance",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetTaperOffDistance) },
+	{ "MagnetTaperOffRatio",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetTaperOffRatio) },
+	{ "MagnetTaperOnDistance",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetTaperOnDistance) },
+	{ "MagnetTaperOnRatio",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetTaperOnRatio) },
+	{ "MagnetLiftHeight",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetLiftHeight) },
+	{ "MagnetLiftHeightSecond",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetLiftHeightSecond) },
+	{ "MagnetLiftForce",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetLiftForce) },
+	{ "MagnetLiftForceToHeight",					INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetLiftForceToHeight) },
+	{ "MagnetLiftForceToHeightSecond",				INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetLiftForceToHeightSecond) },
+	{ "MagnetMaxLiftHeight",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetMaxLiftHeight) },
+	{ "MagnetLevitationHeight",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetLevitationHeight) },
+	{ "MagnetMinDistance",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetMinDistance) },
+	{ "MagnetMaxDistance",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetMaxDistance) },
+	{ "MagnetLinearDistanceCalc",					INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_magnetLinearDistanceCalc) },
+	{ "MagnetNoAirborne",							INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_magnetNoAirborne) },
+	{ "MagnetAirborneZForce",						INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_magnetAirborneZForce) },
+	{ "MagnetAirborneAffectedByYaw",				INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_magnetAirboneAffectedByYaw) },
+	{ "MagnetUseCenter",							INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_magnetUseCenter) },
+	{ "MagnetRespectsCenter",						INI::parseBool,					nullptr,					offsetof(WeaponTemplate, m_magnetRespectsCenter) },
 	{ "MagnetFormula",								INI::parseIndexList,			TheMagnetFormulaNames,	offsetof(WeaponTemplate, m_magnetFormula) },
 
-	{ "MinDamageAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_minDamageHeight) },
-	{ "MaxDamageAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_maxDamageHeight) },
-	{ "MinTargetAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_minTargetHeight) },
-	{ "MaxTargetAltitude",							INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_maxTargetHeight) },
-	{ "PriorityWithinAttackRange",					INI::parseInt,					NULL,					offsetof(WeaponTemplate, m_attackRangePriority) },
-	{ "PriorityOutsideAttackRange",					INI::parseInt,					NULL,					offsetof(WeaponTemplate, m_outsideAttackRangePriority) },
+	{ "MinDamageAltitude",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_minDamageHeight) },
+	{ "MaxDamageAltitude",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_maxDamageHeight) },
+	{ "MinTargetAltitude",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_minTargetHeight) },
+	{ "MaxTargetAltitude",							INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_maxTargetHeight) },
+	{ "PriorityWithinAttackRange",					INI::parseInt,					nullptr,					offsetof(WeaponTemplate, m_attackRangePriority) },
+	{ "PriorityOutsideAttackRange",					INI::parseInt,					nullptr,					offsetof(WeaponTemplate, m_outsideAttackRangePriority) },
 
-	{ "TriggeredBy",								INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_activationUpgradeNames ) },
-	{ "ConflictsWith",								INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_conflictingUpgradeNames ) },
-	{ "RequiresAllTriggers", 						INI::parseBool, 				NULL, 					offsetof(WeaponTemplate, m_requiresAllTriggers ) },
-	{ "RequiredStatus",								ObjectStatusMaskType::parseFromINI,	NULL, 				offsetof(WeaponTemplate, m_requiredStatus ) },
-	{ "ForbiddenStatus",							ObjectStatusMaskType::parseFromINI,	NULL, 				offsetof(WeaponTemplate, m_forbiddenStatus ) },
-	{ "RequiredCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_requiredCustomStatus ) },
-	{ "ForbiddenCustomStatus",						INI::parseAsciiStringVector, 	NULL, 					offsetof(WeaponTemplate, m_forbiddenCustomStatus ) },
+	{ "TriggeredBy",								INI::parseAsciiStringVector, 	nullptr, 					offsetof(WeaponTemplate, m_activationUpgradeNames ) },
+	{ "ConflictsWith",								INI::parseAsciiStringVector, 	nullptr, 					offsetof(WeaponTemplate, m_conflictingUpgradeNames ) },
+	{ "RequiresAllTriggers", 						INI::parseBool, 				nullptr, 					offsetof(WeaponTemplate, m_requiresAllTriggers ) },
+	{ "RequiredStatus",								ObjectStatusMaskType::parseFromINI,	nullptr, 				offsetof(WeaponTemplate, m_requiredStatus ) },
+	{ "ForbiddenStatus",							ObjectStatusMaskType::parseFromINI,	nullptr, 				offsetof(WeaponTemplate, m_forbiddenStatus ) },
+	{ "RequiredCustomStatus",						INI::parseAsciiStringVector, 	nullptr, 					offsetof(WeaponTemplate, m_requiredCustomStatus ) },
+	{ "ForbiddenCustomStatus",						INI::parseAsciiStringVector, 	nullptr, 					offsetof(WeaponTemplate, m_forbiddenCustomStatus ) },
 
-	{ "AttackCursorName",							INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_cursorName ) },
-	{ "ForceAttackObjectCursorName",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_forceAttackObjectCursorName ) },
-	{ "ForceAttackGroundCursorName",				INI::parseAsciiString,			NULL, 					offsetof(WeaponTemplate, m_forceAttackGroundCursorName ) },
-	{ "InvalidCursorName",							INI::parseAsciiString,       	NULL, 					offsetof(WeaponTemplate, m_invalidCursorName ) },
+	{ "AttackCursorName",							INI::parseAsciiString,			nullptr, 					offsetof(WeaponTemplate, m_cursorName ) },
+	{ "ForceAttackObjectCursorName",				INI::parseAsciiString,			nullptr, 					offsetof(WeaponTemplate, m_forceAttackObjectCursorName ) },
+	{ "ForceAttackGroundCursorName",				INI::parseAsciiString,			nullptr, 					offsetof(WeaponTemplate, m_forceAttackGroundCursorName ) },
+	{ "InvalidCursorName",							INI::parseAsciiString,       	nullptr, 					offsetof(WeaponTemplate, m_invalidCursorName ) },
 
-	{ "DamagesSelfOnly",							INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_damagesSelfOnly) },
+	{ "DamagesSelfOnly",							INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_damagesSelfOnly) },
 
-	{ "RejectKeys",									INI::parseAsciiStringVector,			NULL,			offsetof(WeaponTemplate, m_rejectKeys) },
+	{ "RejectKeys",									INI::parseAsciiStringVector,			nullptr,			offsetof(WeaponTemplate, m_rejectKeys) },
 
-	{ "ClearsParasite",								INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_clearsParasite) },
-	{ "ClearsParasiteKeys",							INI::parseAsciiStringVector,			NULL,			offsetof(WeaponTemplate, m_clearsParasiteKeys) },
+	{ "ClearsParasite",								INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_clearsParasite) },
+	{ "ClearsParasiteKeys",							INI::parseAsciiStringVector,			nullptr,			offsetof(WeaponTemplate, m_clearsParasiteKeys) },
 
-	{ "ROFPenaltyWhenMoving",						INI::parsePercentToReal,			NULL,				offsetof(WeaponTemplate, m_rofMovingPenalty) },
-	{ "ROFMovingScalesWithMovingSpeed",				INI::parseBool,			NULL,							offsetof(WeaponTemplate, m_rofMovingScales) },
-	{ "ROFMovingScalingSpeedMax",					INI::parseVelocityReal,		NULL,						offsetof(WeaponTemplate, m_rofMovingMaxSpeedCount) },
+	{ "ROFPenaltyWhenMoving",						INI::parsePercentToReal,			nullptr,				offsetof(WeaponTemplate, m_rofMovingPenalty) },
+	{ "ROFMovingScalesWithMovingSpeed",				INI::parseBool,			nullptr,							offsetof(WeaponTemplate, m_rofMovingScales) },
+	{ "ROFMovingScalingSpeedMax",					INI::parseVelocityReal,		nullptr,						offsetof(WeaponTemplate, m_rofMovingMaxSpeedCount) },
 
-	{ "InvulnerabilityDuration",					INI::parseDurationUnsignedInt,			NULL,			offsetof(WeaponTemplate, m_invulnerabilityDuration) },
+	{ "InvulnerabilityDuration",					INI::parseDurationUnsignedInt,			nullptr,			offsetof(WeaponTemplate, m_invulnerabilityDuration) },
 
-	{ "ShrapnelCount",				INI::parseInt,													NULL,							offsetof(WeaponTemplate, m_shrapnelBonusCount) },
-	{ "ShrapnelWeapon",			INI::parseWeaponTemplate,								NULL,							offsetof(WeaponTemplate, m_shrapnelBonusWeapon) },
-	{ "ShrapnelDoesNotRequireVictim",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelDoesNotRequireVictim) },
-	{ "ShrapnelCanTargetStealth",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
+	{ "ShrapnelCount",				INI::parseInt,													nullptr,							offsetof(WeaponTemplate, m_shrapnelBonusCount) },
+	{ "ShrapnelWeapon",			INI::parseWeaponTemplate,								nullptr,							offsetof(WeaponTemplate, m_shrapnelBonusWeapon) },
+	{ "ShrapnelDoesNotRequireVictim",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_shrapnelDoesNotRequireVictim) },
+	{ "ShrapnelCanTargetStealth",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_shrapnelIgnoresStealthStatus) },
 	{ "ShrapnelTargetMask",			INI::parseBitString32,	TheWeaponAffectsMaskNames,				offsetof(WeaponTemplate, m_shrapnelAffectsMask) },
 
-	{ "IsRailgun",								INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_isRailgun) },
-	{ "RailgunIsLinear",						INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunIsLinear) },
-	{ "RailgunUsesSecondaryDamage",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunUsesSecondaryDamage) },
-	{ "RailgunPiercesBehind",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_railgunPiercesBehind) },
-	{ "RailgunPierceAmount",					INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_railgunPierceAmount) },
-	{ "RailgunRadius",							INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadius) },
-	{ "RailgunRadiusCheckPerDistance",			INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunRadiusCheckPerDistance) },
-	{ "RailgunInfantryRadius",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunInfantryRadius) },
-	{ "RailgunExtraDistance",					INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_railgunExtraDistance) },
-	{ "RailgunMaxDistance",						INI::parsePositiveNonZeroReal,	NULL,							offsetof(WeaponTemplate, m_railgunMaxDistance) },
-	{ "RailgunDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(WeaponTemplate, m_railgunDamageType) },
+	{ "IsRailgun",								INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_isRailgun) },
+	{ "RailgunIsLinear",						INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_railgunIsLinear) },
+	{ "RailgunUsesSecondaryDamage",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_railgunUsesSecondaryDamage) },
+	{ "RailgunPiercesBehind",					INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_railgunPiercesBehind) },
+	{ "RailgunPierceAmount",					INI::parseInt,					nullptr,							offsetof(WeaponTemplate, m_railgunPierceAmount) },
+	{ "RailgunRadius",							INI::parseReal,					nullptr,							offsetof(WeaponTemplate, m_railgunRadius) },
+	{ "RailgunRadiusCheckPerDistance",			INI::parseReal,					nullptr,							offsetof(WeaponTemplate, m_railgunRadiusCheckPerDistance) },
+	{ "RailgunInfantryRadius",					INI::parseReal,					nullptr,							offsetof(WeaponTemplate, m_railgunInfantryRadius) },
+	{ "RailgunExtraDistance",					INI::parseReal,					nullptr,							offsetof(WeaponTemplate, m_railgunExtraDistance) },
+	{ "RailgunMaxDistance",						INI::parsePositiveNonZeroReal,	nullptr,							offsetof(WeaponTemplate, m_railgunMaxDistance) },
+	{ "RailgunDamageType",						DamageTypeFlags::parseSingleBitFromINI,	nullptr,							offsetof(WeaponTemplate, m_railgunDamageType) },
 	{ "RailgunDeathType",						INI::parseIndexList,										TheDeathNames,		offsetof(WeaponTemplate, m_railgunDeathType) },
-	{ "RailgunOverrideDamageTypeFX",			DamageTypeFlags::parseSingleBitFromINI,	NULL,			offsetof(WeaponTemplate, m_railgunDamageFXOverride) },
-	{ "RailgunCustomDamageType",				INI::parseAsciiString,			NULL,							offsetof(WeaponTemplate, m_railgunCustomDamageType) },
-	{ "RailgunCustomDeathType",					INI::parseAsciiString,			NULL,							offsetof(WeaponTemplate, m_railgunCustomDeathType) },
-	{ "RailgunFX",								parseAllVetLevelsFXList,		NULL,							offsetof(WeaponTemplate, m_railgunFXs) },
-	{ "RailgunOCL",								parseAllVetLevelsAsciiString,	NULL,							offsetof(WeaponTemplate, m_railgunOCLNames) },
-	{ "RailgunVeterancyFX",						parsePerVetLevelFXList,			NULL,							offsetof(WeaponTemplate, m_railgunFXs) },
-	{ "RailgunVeterancyOCL",					parsePerVetLevelAsciiString,	NULL,							offsetof(WeaponTemplate, m_railgunOCLNames) },
+	{ "RailgunOverrideDamageTypeFX",			DamageTypeFlags::parseSingleBitFromINI,	nullptr,			offsetof(WeaponTemplate, m_railgunDamageFXOverride) },
+	{ "RailgunCustomDamageType",				INI::parseAsciiString,			nullptr,							offsetof(WeaponTemplate, m_railgunCustomDamageType) },
+	{ "RailgunCustomDeathType",					INI::parseAsciiString,			nullptr,							offsetof(WeaponTemplate, m_railgunCustomDeathType) },
+	{ "RailgunFX",								parseAllVetLevelsFXList,		nullptr,							offsetof(WeaponTemplate, m_railgunFXs) },
+	{ "RailgunOCL",								parseAllVetLevelsAsciiString,	nullptr,							offsetof(WeaponTemplate, m_railgunOCLNames) },
+	{ "RailgunVeterancyFX",						parsePerVetLevelFXList,			nullptr,							offsetof(WeaponTemplate, m_railgunFXs) },
+	{ "RailgunVeterancyOCL",					parsePerVetLevelAsciiString,	nullptr,							offsetof(WeaponTemplate, m_railgunOCLNames) },
 
-	{ "UserBypassLineOfSight",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
-	{ "UserIgnoresObstacles",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
+	{ "UserBypassLineOfSight",					INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
+	{ "UserIgnoresObstacles",					INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
 
-	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
-	{ "MindControlRadius",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlRadius) },
-	{ "MindControlCount",				INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_mindControlCount) },
-	{ "MindControlTurnsNeutral",			INI::parseBool,								NULL,							offsetof(WeaponTemplate, m_mindControlTurnsNeutral) },
-	{ "MindControlIsPermanent",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlIsPermanent) },
-	{ "MindControlDefectDuration",			INI::parseDurationUnsignedInt,						NULL,							offsetof(WeaponTemplate, m_mindControlDefectDuration) },
-	{ "MindControlKey",				INI::parseAsciiString,					NULL,				offsetof(WeaponTemplate, m_mindControlKey) },
-	{ "MindControlAnimTemplate",				INI::parseAsciiString,					NULL,				offsetof(WeaponTemplate, m_mindControlAnimTemplate) },
+	/*{ "IsMindControl",				INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_isMindControl) },
+	{ "MindControlRadius",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_mindControlRadius) },
+	{ "MindControlCount",				INI::parseInt,					nullptr,							offsetof(WeaponTemplate, m_mindControlCount) },
+	{ "MindControlTurnsNeutral",			INI::parseBool,								nullptr,							offsetof(WeaponTemplate, m_mindControlTurnsNeutral) },
+	{ "MindControlIsPermanent",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_mindControlIsPermanent) },
+	{ "MindControlDefectDuration",			INI::parseDurationUnsignedInt,						nullptr,							offsetof(WeaponTemplate, m_mindControlDefectDuration) },
+	{ "MindControlKey",				INI::parseAsciiString,					nullptr,				offsetof(WeaponTemplate, m_mindControlKey) },
+	{ "MindControlAnimTemplate",				INI::parseAsciiString,					nullptr,				offsetof(WeaponTemplate, m_mindControlAnimTemplate) },
 
-	{ "CustomSubdualDoMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
+	{ "CustomSubdualDoMindControl",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
 
-	{ "BreaksMindControl",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
-	{ "BreaksMindControlKey",				INI::parseAsciiStringVector,					NULL,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },*/
+	{ "BreaksMindControl",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_customSubdualDoMindControl) },
+	{ "BreaksMindControlKey",				INI::parseAsciiStringVector,					nullptr,				offsetof(WeaponTemplate, m_customSubdualDoMindControl) },*/
 
-	{ NULL,												NULL,																		NULL,							0 }
+	{ nullptr,												nullptr,																		nullptr,							0 }
 
 };
 
@@ -494,7 +494,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
+WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 {
 
 	m_name													= "NoNameWeapon";
@@ -522,20 +522,20 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_maxTargetPitch								= PI;
 	m_radiusDamageAngle							= PI;	// PI each way, so full circle
 	m_projectileName.clear();					// no projectile
-	m_projectileTmpl								= NULL;
+	m_projectileTmpl								= nullptr;
 	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
 	{
 		m_fireOCLNames[i].clear();
 		m_projectileDetonationOCLNames[i].clear();
-		m_projectileExhausts[i]					= NULL;
-		m_fireOCLs[i]										= NULL;
-		m_projectileDetonationOCLs[i]		= NULL;
-		m_fireFXs[i]										= NULL;
-		m_projectileDetonateFXs[i]			= NULL;
+		m_projectileExhausts[i]					= nullptr;
+		m_fireOCLs[i]										= nullptr;
+		m_projectileDetonationOCLs[i]		= nullptr;
+		m_fireFXs[i]										= nullptr;
+		m_projectileDetonateFXs[i]			= nullptr;
 
 		m_doStatusDamage[i] = FALSE;
 		m_tintStatus[i] = TINT_STATUS_INVALID;
-		m_customTintStatus[i] = NULL;
+		m_customTintStatus[i].clear();
 
 		m_isSubdual[i] = FALSE;
 		m_subdualDealsNormalDamage[i] = FALSE;
@@ -570,7 +570,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_maxDelayBetweenShots					= 0;
 	m_fireSoundLoopTime							= 0;
 	m_continuousLaserLoopTime = 0;
-	m_extraBonus										= NULL;
+	m_extraBonus										= nullptr;
 	m_shotsPerBarrel								= 1;
 	m_antiMask											= WEAPON_ANTI_GROUND;	// but not air or projectile.
 	m_projectileStreamName.clear();
@@ -579,7 +579,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_historicBonusTime							= 0;
 	m_historicBonusCount						= 0;
 	m_historicBonusRadius						= 0;
-	m_historicBonusWeapon						= NULL;
+	m_historicBonusWeapon						= nullptr;
 	m_shrapnelBonusCount						= 0;
 	m_shrapnelBonusWeapon						= NULL;
 	m_shrapnelDoesNotRequireVictim				= FALSE;
@@ -787,7 +787,7 @@ void WeaponTemplate::copy_from(const WeaponTemplate& other) {
 	Coord2D target;
 	target.x = 0;
 	target.y = 0;
-	INI::parseCoord2D( ini, NULL, &target, NULL );
+	INI::parseCoord2D( ini, nullptr, &target, nullptr );
 
 	self->m_scatterTargets.push_back(target);
 }
@@ -840,7 +840,7 @@ void WeaponTemplate::postProcessLoad()
 
 	if (m_projectileName.isEmpty())
 	{
-		m_projectileTmpl = NULL;
+		m_projectileTmpl = nullptr;
 	}
 	else
 	{
@@ -853,7 +853,7 @@ void WeaponTemplate::postProcessLoad()
 		// And the OCL if there is one
 		if (m_fireOCLNames[i].isEmpty())
 		{
-			m_fireOCLs[i] = NULL;
+			m_fireOCLs[i] = nullptr;
 		}
 		else
 		{
@@ -865,7 +865,7 @@ void WeaponTemplate::postProcessLoad()
 		// And the other OCL if there is one
 		if (m_projectileDetonationOCLNames[i].isEmpty() )
 		{
-			m_projectileDetonationOCLs[i] = NULL;
+			m_projectileDetonationOCLs[i] = nullptr;
 		}
 		else
 		{
@@ -1021,14 +1021,14 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
 	const WeaponBonus& bonus
 ) const
 {
-	if (sourceObj == NULL || (victimObj == NULL && victimPos == NULL))
+	if (sourceObj == nullptr || (victimObj == nullptr && victimPos == nullptr))
 	{
 		DEBUG_CRASH(("bad args to estimate"));
 		return 0.0f;
 	}
 
 	const Real damageAmount = getPrimaryDamage(bonus);
-	if ( victimObj == NULL )
+	if ( victimObj == nullptr )
 	{
 		return damageAmount;
 	}
@@ -1127,7 +1127,7 @@ Bool WeaponTemplate::shouldProjectileCollideWith(
 		return false;
 	}
 
- 	if (projectileLauncher != NULL)
+ 	if (projectileLauncher != nullptr)
  	{
 
  		// Don't hit your own launcher, ever.
@@ -1171,7 +1171,7 @@ Bool WeaponTemplate::shouldProjectileCollideWith(
 		for (BehaviorModule** i = thingWeCollidedWith->getBehaviorModules(); *i; ++i)
 		{
 			ParkingPlaceBehaviorInterface* pp = (*i)->getParkingPlaceBehaviorInterface();
-			if (pp != NULL && pp->hasReservedSpace(intendedVictimID))
+			if (pp != nullptr && pp->hasReservedSpace(intendedVictimID))
 				return false;
 		}
 	}
@@ -1179,7 +1179,7 @@ Bool WeaponTemplate::shouldProjectileCollideWith(
 	// if something has a Sneaky Target offset, it is momentarily immune to being hit...
 	// normally this shouldn't happen, but occasionally can by accident. so avoid it. (srj)
 	const AIUpdateInterface* ai = thingWeCollidedWith->getAI();
-	if (ai != NULL && ai->getSneakyTargetingOffset(NULL))
+	if (ai != nullptr && ai->getSneakyTargetingOffset(nullptr))
 	{
 		return false;
 	}
@@ -1270,19 +1270,19 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	//CRCDEBUG_LOG(("WeaponTemplate::fireWeaponTemplate() from %s", DescribeObject(sourceObj).str()));
 	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse should no longer be -1"));
 
-	if (sourceObj == NULL || (victimObj == NULL && victimPos == NULL))
+	if (sourceObj == nullptr || (victimObj == nullptr && victimPos == nullptr))
 	{
 		//-extraLogging
 		#if defined(RTS_DEBUG)
 			if( TheGlobalData->m_extraLogging )
-				DEBUG_LOG( ("FAIL 1 (sourceObj %d == NULL || (victimObj %d == NULL && victimPos %d == NULL)", sourceObj != 0, victimObj != 0, victimPos != 0) );
+				DEBUG_LOG( ("FAIL 1 (sourceObj %d == nullptr || (victimObj %d == nullptr && victimPos %d == nullptr)", sourceObj != 0, victimObj != 0, victimPos != 0) );
 		#endif
 		//end -extraLogging
 
 		return 0;
 	}
 
-	DEBUG_ASSERTCRASH((m_primaryDamage > 0)  ||  (victimObj == NULL), ("You can't really shoot a zero damage weapon at an Object.") );
+	DEBUG_ASSERTCRASH((m_primaryDamage > 0)  ||  (victimObj == nullptr), ("You can't really shoot a zero damage weapon at an Object.") );
 
 	ObjectID sourceID = sourceObj->getID();
 	const Coord3D* sourcePos = launchPos ? launchPos : sourceObj->getPosition();
@@ -1299,7 +1299,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 		Coord3D sneakyOffset;
 		const AIUpdateInterface* ai = victimObj->getAI();
-		if (ai != NULL && ai->getSneakyTargetingOffset(&sneakyOffset))
+		if (ai != nullptr && ai->getSneakyTargetingOffset(&sneakyOffset))
 		{
 			victimPosStorage = *victimPos;
 			victimPosStorage.x += sneakyOffset.x;
@@ -1308,7 +1308,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			victimPos = &victimPosStorage;
 			// for a sneaky offset, we always target a position rather than an object
-			victimObj = NULL;
+			victimObj = nullptr;
 			victimID = INVALID_ID;
 			distSqr = ThePartitionManager->getDistanceSquared(sourceObj, victimPos, ATTACK_RANGE_CALC_TYPE);
 		}
@@ -1341,7 +1341,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 	}
 
 //	DEBUG_LOG(("WeaponTemplate::fireWeaponTemplate: firing weapon %s (source=%s, victim=%s)",
-//		m_name.str(),sourceObj->getTemplate()->getName().str(),victimObj?victimObj->getTemplate()->getName().str():"NULL"));
+//		m_name.str(),sourceObj->getTemplate()->getName().str(),victimObj?victimObj->getTemplate()->getName().str():"null"));
 
 	//Only perform this check if the weapon isn't a leech range weapon (which can have unlimited range!)
 	if( !ignoreRanges && !isLeechRangeWeapon() )
@@ -1570,7 +1570,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		const FXList* fx = isProjectileDetonation ? getProjectileDetonateFX(v) : getFireFX(v);
 
 		if ( TheGameLogic->getFrame() < firingWeapon->getSuspendFXFrame() )
-			fx = NULL;
+			fx = nullptr;
 
 		StealthUpdate *stealth = sourceObj->getStealth();
 
@@ -1649,7 +1649,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			}
 		}
 
-		if (handled == false && fx != NULL)
+		if (handled == false && fx != nullptr)
 		{
 			// bah. just play it at the drawable's pos.
 			//DEBUG_LOG(("*** WeaponFireFX not fully handled by the client"));
@@ -1664,7 +1664,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		VeterancyLevel v = sourceObj->getVeterancyLevel();
 		const ObjectCreationList *oclToUse = isProjectileDetonation ? getProjectileDetonationOCL(v) : getFireOCL(v);
 		if( oclToUse )
-			ObjectCreationList::create( oclToUse, sourceObj, NULL );
+			ObjectCreationList::create( oclToUse, sourceObj, nullptr );
 	}
 
 	Coord3D projectileDestination = targetedPos; //Need to copy this, as we have a pointer to their actual position
@@ -1696,7 +1696,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			targetLayer = victimObj->getLayer();
 		}
 
-		//victimObj = NULL; // his position is already in victimPos, if he existed
+		//victimObj = nullptr; // his position is already in victimPos, if he existed
 
 		//Randomize the scatter radius (sometimes it can be more accurate than others)
 		scatterRadius = GameLogicRandomValueReal( 0, scatterRadius );
@@ -1726,7 +1726,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 	}
 
-	if (projectileTemplate == NULL || isProjectileDetonation)
+	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
 		// see if we need to be called back at a later point to deal the damage.
 		Coord3D v;
@@ -1764,10 +1764,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			{
 				//We are missing our intended target, so now we want to aim at the ground at the projectile offset.
 				damageID = INVALID_ID;
-				if (firingWeapon->getContinuousLaserLoopTime() > 0)
-					firingWeapon->handleContinuousLaser(sourceObj, NULL, &projectileDestination, launchPos);
-				else
-					firingWeapon->createLaser(sourceObj, NULL, &projectileDestination, launchPos);
+				firingWeapon->createLaser( sourceObj, NULL, &projectileDestination );
 			}
 
 			// Handle Detonation OCL
@@ -1895,10 +1892,10 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		//firingWeapon->newProjectileFired( sourceObj, projectile, victimObj, victimPos, launchPos );//The actual logic weapon needs to know this was created.
 		firingWeapon->newProjectileFired( sourceObj, projectile, curTarget, &targetedPos, launchPos );//The actual logic weapon needs to know this was created.
 
-		ProjectileUpdateInterface* pui = NULL;
+		ProjectileUpdateInterface* pui = nullptr;
 		for (BehaviorModule** u = projectile->getBehaviorModules(); *u; ++u)
 		{
-			if ((pui = (*u)->getProjectileUpdateInterface()) != NULL)
+			if ((pui = (*u)->getProjectileUpdateInterface()) != nullptr)
 				break;
 		}
 		if (pui)
@@ -1942,7 +1939,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if( scatterRadius > 0.0f )
 			{
 				//With a scatter radius, don't follow the victim (overriding the intent).
-				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos );
+				pui->projectileLaunchAtObjectOrPosition( NULL, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v] );
 			}
 			else
 			{
@@ -2337,7 +2334,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	if (sourceID == 0)	// must have a source
 		return;
 
-	if (victimID == 0 && pos == NULL)	// must have some sort of destination
+	if (victimID == 0 && pos == nullptr)	// must have some sort of destination
 		return;
 
 	Object *source = TheGameLogic->findObjectByID(sourceID);	// might be null...
@@ -2350,7 +2347,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	ObjectID shrapnelVictimID = INVALID_ID;
 
 	// if there's a specific victim, use it's pos (overriding the value passed in)
-	Object *primaryVictim = victimID ? TheGameLogic->findObjectByID(victimID) : NULL;	// might be null...
+	Object *primaryVictim = victimID ? TheGameLogic->findObjectByID(victimID) : nullptr;	// might be null...
 	if (primaryVictim)
 	{
 		pos = primaryVictim->getPosition();
@@ -2364,54 +2361,6 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 	DamageType damageType = getDamageType();
 	DeathType deathType = getDeathType();
 	ObjectStatusTypes damageStatusType = getDamageStatusType();
-	AsciiString customDamageType = getCustomDamageType();
-	AsciiString customDamageStatusType = getCustomDamageStatusType();
-	AsciiString customDeathType = getCustomDeathType();
-	Bool IsFlame = getIsFlame();
-	Bool ProjectileCollidesWithBurn = getProjectileCollidesWithBurn();
-	Bool IsPoison = getIsPoison();
-	Bool PoisonMuzzleFlashesGarrison = getPoisonMuzzleFlashesGarrison();
-	Bool IsDisarm = getIsDisarm();
-	Bool KillsGarrison = getKillsGarrison();
-	Int KillsGarrisonAmount = getKillsGarrisonAmount();
-	AsciiString SpecificVoice = PlaySpecificVoice();
-	DamageType DamageFXOverride = getDamageFXOverride();
-	Real StatusDuration = getStatusDuration();
-	Bool DoStatusDamage = getDoStatusDamage(v);
-	Bool StatusDurationTypeCorrelate = getStatusDurationTypeCorrelate();
-	TintStatus TintStatusType = getTintStatusType(v);
-	AsciiString CustomTintStatusType = getCustomTintStatusType(v);
-	Bool IsSubdual = getIsSubdual(v);
-	Bool subdualDealsNormalDamage = getSubdualDealsNormalDamage(v);
-	Real subdualDamageMultiplier = getSubdualDamageMultiplier(v);
-	KindOfMaskType subdualForbiddenKindOf = getSubdualForbiddenKindOf();
-	Bool IsNotAbsoluteKill = getIsNotAbsoluteKill();
-	Bool ClearsParasite = getClearsParasite();
-	std::vector<AsciiString> ClearsParasiteKeys = getClearsParasiteKeys();
-	Bool IsMissileAttractor = getIsMissileAttractor();
-	Bool SubdueProjectileNoDamage = getSubdueProjectileNoDamage();
-	AsciiString SubdualCustomType = getSubdualCustomType();
-	AsciiString CustomSubdualCustomTint = getCustomSubdualCustomTint(v);
-	TintStatus CustomSubdualTint = getCustomSubdualTint(v);
-	Bool CustomSubdualHasDisable = getCustomSubdualHasDisable(v);
-	Bool CustomSubdualHasDisableProjectiles = getCustomSubdualHasDisableProjectiles(v);
-	Bool CustomSubdualClearOnTrigger = getCustomSubdualClearOnTrigger(v);
-	Bool CustomSubdualDoStatus = getCustomSubdualDoStatus(v);
-	const ObjectCreationList *CustomSubdualOCL = getCustomSubdualOCL(v);
-	DisabledType CustomSubdualDisableType = getCustomSubdualDisableType();
-	Bool CustomSubdualRemoveSubdualTintOnDisable =  getCustomSubdualRemoveSubdualTintOnDisable();
-	TintStatus CustomSubdualDisableTint = getCustomSubdualDisableTint();
-	AsciiString CustomSubdualDisableCustomTint = getCustomSubdualDisableCustomTint();
-	AsciiString CustomSubdualDisableSound =  getCustomSubdualDisableSound();
-	AsciiString CustomSubdualDisableRemoveSound =  getCustomSubdualDisableRemoveSound();
-	ProtectionTypeFlags ProtectionTypes = getProtectionTypes();
-	Real MinDamageHeight = getMinDamageHeight();
-	Real MaxDamageHeight = getMaxDamageHeight();
-	Bool DamagesSelfOnly = getDamagesSelfOnly();
-	UnsignedInt InvulnerabilityDuration = getInvulnerabilityDuration();
-
-	const Real CLOSE_ENOUGH = 1.0f;
-	
 	if (getProjectileTemplate() == NULL || isProjectileDetonation)
 	{
 		// Railgun Variables
@@ -2445,11 +2394,11 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		}
 		else
 		{
-			//DEBUG_ASSERTCRASH(primaryVictim != NULL, ("weapons without radii should always pass in specific victims"));
+			//DEBUG_ASSERTCRASH(primaryVictim != nullptr, ("weapons without radii should always pass in specific victims"));
 			// check against victimID rather than primaryVictim, since we may have targeted a legitimate victim
 			// that got killed before the damage was dealt... (srj)
 			//DEBUG_ASSERTCRASH(victimID != 0, ("weapons without radii should always pass in specific victims"));
-			iter = NULL;
+			iter = nullptr;
 			curVictim = primaryVictim;
 			curVictimDistSqr = 0.0f;
 
@@ -2483,113 +2432,10 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		}
 		MemoryPoolObjectHolder hold(iter);
 
-		for (;; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
+		for (; curVictim != NULL; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
 		{
-			// IamInnocent - Check for Railgun targets within LOS
-			if(curVictim == NULL)
-			{
-				// Do nothing if we only damage ourselves
-				if(DamagesSelfOnly || affects == WEAPON_AFFECTS_SELF)
-					break;
-				
-				// Refresh the checklist for Railgun
-				if(isRailgun)
-				{
-					Coord3D railgunDirection;
-					Bool isRailgunLinear = getRailgunIsLinear();
-					Bool RailgunPiercesBehind = getRailgunPiercesBehind();
-					Real RailgunExtraDistance = getRailgunExtraDistance();
-					Real RailgunMaxDistance = getRailgunMaxDistance();
-					Real extraHeight = 0.0f;
-					Coord3D srcPos, posOther;
-					
-					if (source)
-					{
-						srcPos = *source->getPosition();
-						if(isRailgunLinear)
-						{
-							StealthUpdate *stealth = source->getStealth();
-							extraHeight = srcPos.z;
-
-							if(stealth && stealth->isDisguisedAndCheckIfNeedOffset())
-								stealth->getDrawableTemplateWhileDisguised()->getWeaponFireOffset(wslot, specificBarrelToUse, &srcPos);
-							else
-								source->getDrawable()->getWeaponFireOffset(wslot, specificBarrelToUse, &srcPos);
-
-							extraHeight = srcPos.z - extraHeight;
-						}
-					}
-					else
-					{
-						// If there is no source, we do nothing and break;
-						break;
-					}
-
-					// Set the railgun targeting position
-					if ( primaryVictim )
-					{
-						posOther = *primaryVictim->getPosition();
-						if(isRailgunLinear)
-							posOther.z += extraHeight;
-					}
-					else
-					{
-						posOther = *pos;
-					}
-
-					if(RailgunExtraDistance != 0)
-					{
-						// Extend (or Reduce) the targeting distance based on the configuration
-						railgunDirection = posOther;
-						railgunDirection.sub( &srcPos );
-
-						Real railgunAngle = atan2(railgunDirection.y, railgunDirection.x);
-						posOther.x += Cos(railgunAngle) * RailgunExtraDistance;
-						posOther.y += Sin(railgunAngle) * RailgunExtraDistance;
-					}
-					
-					if(RailgunMaxDistance)
-					{
-						// If there is any Max Distance configured, then calculate whether it has reached the Max Distance
-						railgunDirection = posOther;
-						railgunDirection.sub( &srcPos );
-						Real railgunDist = railgunDirection.length();
-						if(railgunDist > RailgunMaxDistance)
-						{
-							// Set the new position based on the direction of the Vector
-							Real ReductionRatio = (railgunDist - RailgunMaxDistance) / railgunDist;
-							posOther.x -= (posOther.x - srcPos.x) * ReductionRatio;
-							posOther.y -= (posOther.y - srcPos.y) * ReductionRatio;
-							posOther.z -= (posOther.z - srcPos.z) * ReductionRatio;
-						}
-					}
-
-					isRailgun = FALSE; // Only do this once
-					checkForRailgunOnly = TRUE;
-
-					IterOrderType order = railgunAmount > 0 ? ITER_SORTED_NEAR_TO_FAR : ITER_FASTEST;
-
-					iter = ThePartitionManager->iterateObjectsAlongLine(source, &srcPos, &posOther, getRailgunRadius(), getRailgunInfantryRadius(), getRailgunRadiusCheckPerDistance(), getRailgunFX(v), getRailgunOCL(v), DAMAGE_RANGE_CALC_TYPE, RailgunPiercesBehind, NULL, order);
-					curVictim = iter->firstWithNumeric(&curVictimDistSqr);
-
-					// If nothing to check, do nothing and return
-					if(curVictim == NULL)
-						break;
-				}
-				else
-					break;
-			}
-
-			// Check for Railgun Only
-			if( checkForRailgunOnly )
-			{
-				// Don't deal damage against the primary victim
-				if( primaryVictim && primaryVictim->getID() == curVictim->getID() )
-					continue;
-			}
-			
 			Bool killSelf = false;
-			if (source != NULL)
+			if (source != nullptr)
 			{
 				// Special, only deal damage to self
 				if(DamagesSelfOnly && source != curVictim)
@@ -2745,7 +2591,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			Real allowedAngle = getRadiusDamageAngle();
 			if( allowedAngle < PI )
 			{
-				if( curVictim == NULL  ||  source == NULL )
+				if( curVictim == nullptr  ||  source == nullptr )
 					continue; // We are directional damage, but can't figure out our direction.  Just bail.
 
 				// People can only be hit in a cone oriented as the firer is oriented
@@ -2969,7 +2815,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				for (BehaviorModule** u = source->getBehaviorModules(); *u; ++u)
 				{
 					ProjectileUpdateInterface* pui = (*u)->getProjectileUpdateInterface();
-					if (pui != NULL)
+					if (pui != nullptr)
 					{
 						damageInfo.in.m_sourceID = pui->projectileGetLauncherID();
 						break;
@@ -3221,7 +3067,7 @@ void WeaponStore::handleProjectileDetonation(const WeaponTemplate* wt, const Obj
 //-------------------------------------------------------------------------------------------------
 void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object *source, const Coord3D* pos)
 {
-	if (wt == NULL)
+	if (wt == nullptr)
 		return;
 	Weapon* w = allocateNewWeapon(wt, PRIMARY_WEAPON);
 	w->loadAmmoNow(source);
@@ -3233,7 +3079,7 @@ void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object
 void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object *source, Object *target)
 {
 	//CRCDEBUG_LOG(("WeaponStore::createAndFireTempWeapon() for %s", DescribeObject(source)));
-	if (wt == NULL)
+	if (wt == nullptr)
 		return;
 	Weapon* w = allocateNewWeapon(wt, PRIMARY_WEAPON);
 	w->loadAmmoNow(source);
@@ -3268,9 +3114,9 @@ void WeaponStore::createAndFireTempWeaponOnSpot(const WeaponTemplate* wt, const 
 const WeaponTemplate *WeaponStore::findWeaponTemplate( const AsciiString& name ) const
 {
 	if (name.compareNoCase("None") == 0)
-		return NULL;
+		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
-	DEBUG_ASSERTCRASH(wt != NULL, ("Weapon %s not found!",name));
+	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!",name));
 	return wt;
 }
 
@@ -3278,9 +3124,9 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const AsciiString& name )
 const WeaponTemplate *WeaponStore::findWeaponTemplate( const char* name ) const
 {
 	if (stricmp(name, "None") == 0)
-		return NULL;
+		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
-	DEBUG_ASSERTCRASH(wt != NULL, ("Weapon %s not found!",name));
+	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!",name));
 	return wt;
 }
 
@@ -3297,7 +3143,7 @@ WeaponTemplate *WeaponStore::findWeaponTemplatePrivate( NameKeyType key ) const
 		return it->second;
 	}
 
-	return NULL;
+	return nullptr;
 
 }
 
@@ -3307,7 +3153,7 @@ WeaponTemplate *WeaponStore::newWeaponTemplate(AsciiString name)
 
 	// sanity
 	if(name.isEmpty())
-		return NULL;
+		return nullptr;
 
 	// allocate a new weapon
 	WeaponTemplate *wt = newInstance(WeaponTemplate);
@@ -3323,7 +3169,7 @@ WeaponTemplate *WeaponStore::newWeaponTemplate(AsciiString name)
 WeaponTemplate *WeaponStore::newOverride(WeaponTemplate *weaponTemplate)
 {
 	if (!weaponTemplate)
-		return NULL;
+		return nullptr;
 
 	// allocate a new weapon
 	WeaponTemplate *wt = newInstance(WeaponTemplate);
@@ -4345,7 +4191,7 @@ Bool Weapon::isGoalPosWithinAttackRange(const Object *source, const Coord3D* goa
 	// otherwise if it teters on the edge, attacks can fail.  jba.
 	Real attackRangeSqr = sqr(getAttackRange(source)-(PATHFIND_CELL_SIZE_F*0.25f));
 
-	if (target != NULL)
+	if (target != nullptr)
 	{
 		if (target->isKindOf(KINDOF_BRIDGE))
 		{
@@ -4452,7 +4298,7 @@ Real Weapon::getAttackDistance(const Object *source, const Object *victimObj, co
 {
 	Real range = getAttackRange(source);
 
-	if (victimObj != NULL)
+	if (victimObj != nullptr)
 	{
 	#ifdef ATTACK_RANGE_IS_2D
 		range += source->getGeometryInfo().getBoundingCircleRadius();
@@ -4495,12 +4341,12 @@ void Weapon::newProjectileFired(const Object *sourceObj, const Object *projectil
 		return; // nope, no streak logic to do
 
 	Object* projectileStream = TheGameLogic->findObjectByID(m_projectileStreamID);
-	if( projectileStream == NULL )
+	if( projectileStream == nullptr )
 	{
 		m_projectileStreamID = INVALID_ID;	// reset, since it might have been "valid" but deleted out from under us
 		const ThingTemplate* pst = TheThingFactory->findTemplate(m_template->getProjectileStreamName());
 		projectileStream = TheThingFactory->newObject( pst, sourceObj->getControllingPlayer()->getDefaultTeam() );
-		if( projectileStream == NULL )
+		if( projectileStream == nullptr )
 			return;
 		m_projectileStreamID = projectileStream->getID();
 	}
@@ -4529,7 +4375,7 @@ ObjectID Weapon::createLaser( const Object *sourceObj, const Object *victimObj, 
 	}
 	Object* laser = TheThingFactory->newObject( pst, sourceObj->getControllingPlayer()->getDefaultTeam() );
 	if( laser == NULL )
-		return INVALID_ID;
+		return;
 
 	// Give it a good basis in reality to ensure it can draw when on screen.
 	laser->setPosition(launchPos ? launchPos : sourceObj->getPosition());
@@ -4801,7 +4647,7 @@ Bool Weapon::privateFireWeapon(
 			if( victimObj )
 			{
 				victimPos = victimObj->getPosition();
-				victimObj = NULL;
+				victimObj = nullptr;
 			}
 			Coord3D  targetPos = *victimPos; // need to copy, as this pointer is actually inside somebody potentially
 
@@ -5038,7 +4884,7 @@ Bool Weapon::fireWeapon(const Object *source, Object *target, ObjectID* projecti
 	}
 	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s at %s", DescribeObject(source).str(), DescribeObject(target).str()));
-	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE, dummy );
+	return privateFireWeapon( source, target, NULL, false, false, 0, projectileID, TRUE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5053,7 +4899,7 @@ Bool Weapon::fireWeapon(const Object *source, const Coord3D* pos, ObjectID* proj
 	}
 	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
-	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE, dummy );
+	return privateFireWeapon( source, NULL, pos, false, false, 0, projectileID, TRUE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5089,14 +4935,14 @@ Bool Weapon::fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID
 void Weapon::fireProjectileDetonationWeapon(const Object *source, Object *target, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage)
 {
 	//CRCDEBUG_LOG(("Weapon::fireProjectileDetonationWeapon() for %sat %s", DescribeObject(source).str(), DescribeObject(target).str()));
-	privateFireWeapon( source, target, NULL, true, false, extraBonusFlags, NULL, inflictDamage, extraBonusCustomFlags);
+	privateFireWeapon( source, target, NULL, true, false, extraBonusFlags, NULL, inflictDamage );
 }
 
 //-------------------------------------------------------------------------------------------------
 void Weapon::fireProjectileDetonationWeapon(const Object *source, const Coord3D* pos, WeaponBonusConditionFlags extraBonusFlags, const std::vector<AsciiString>& extraBonusCustomFlags, Bool inflictDamage)
 {
 	//CRCDEBUG_LOG(("Weapon::fireProjectileDetonationWeapon() for %s", DescribeObject(source).str()));
-	privateFireWeapon( source, NULL, pos, true, false, extraBonusFlags, NULL, inflictDamage, extraBonusCustomFlags);
+	privateFireWeapon( source, NULL, pos, true, false, extraBonusFlags, NULL, inflictDamage );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5110,8 +4956,7 @@ Object* Weapon::forceFireWeapon( const Object *source, const Coord3D *pos)
 	//Fire the weapon at the position. Internally, it'll store the weapon projectile ID if so created.
 	ObjectID projectileID = INVALID_ID;
 	const Bool ignoreRange = true;
-	std::vector<AsciiString> dummy;
-	privateFireWeapon(source, NULL, pos, false, ignoreRange, NULL, &projectileID, TRUE, dummy );
+	privateFireWeapon(source, NULL, pos, false, ignoreRange, NULL, &projectileID, TRUE );
 	return TheGameLogic->findObjectByID( projectileID );
 }
 
@@ -5273,8 +5118,8 @@ public:
 //-------------------------------------------------------------------------------------------------
 AssistanceRequestData::AssistanceRequestData()
 {
-	m_requestingObject = NULL;
-	m_victimObject = NULL;
+	m_requestingObject = nullptr;
+	m_victimObject = nullptr;
 	m_requestDistanceSquared = 0.0f;
 }
 
@@ -5299,7 +5144,7 @@ static void makeAssistanceRequest( Object *requestOf, void *userData )
 	// and respond to requests
 	static const NameKeyType key_assistUpdate = NAMEKEY("AssistedTargetingUpdate");
 	AssistedTargetingUpdate *assistModule = (AssistedTargetingUpdate*)requestOf->findUpdateModule(key_assistUpdate);
-	if( assistModule == NULL )
+	if( assistModule == nullptr )
 		return;
 
 	// and say yes
@@ -5368,7 +5213,7 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 	Matrix3D attachTransform(true);
 	Coord3D turretRotPos = {0.0f, 0.0f, 0.0f};
 	Coord3D turretPitchPos = {0.0f, 0.0f, 0.0f};
-	const Drawable* draw = isDisguisedAndCheckIfNeedOffset ? stealth->getDrawableTemplateWhileDisguised() : launcher->getDrawable();
+	const Drawable* draw = launcher->getDrawable();
 	//CRCDEBUG_LOG(("Do we have a drawable? %d", (draw != NULL)));
 	if (!draw || !draw->getProjectileLaunchOffset(wslot, specificBarrelToUse, &attachTransform, tur, &turretRotPos, &turretPitchPos))
 	{
@@ -5410,7 +5255,7 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 //  DEBUG_ASSERTCRASH( muzzleHeight > 0.001f, ("YOUR TURRET HAS A VERY LOW PROJECTILE LAUNCH POSITION, BUT FOUND A VALID BONE. DID YOU PICK THE WRONG ONE? %s", launcher->getTemplate()->getName().str()));
 //#endif
 
-  launcher->convertBonePosToWorldPos(NULL, &attachTransform, NULL, &worldTransform);
+  launcher->convertBonePosToWorldPos(nullptr, &attachTransform, nullptr, &worldTransform);
 
 	Vector3 tmp = worldTransform.Get_Translation();
 	worldPos.x = tmp.X;
@@ -5592,7 +5437,7 @@ static const ModelConditionFlags s_allWeaponFireFlags[WEAPONSLOT_COUNT] =
 		//DescribeObject(projectile).str(), DescribeObject(launcher).str()));
 
 	// if our launch vehicle is gone, destroy ourselves
-	if (launcher == NULL)
+	if (launcher == nullptr)
 	{
 		TheGameLogic->destroyObject( projectile );
 		return;
@@ -5634,7 +5479,7 @@ void Weapon::getFiringLineOfSightOrigin(const Object* source, Coord3D& origin) c
 	origin.z += source->getGeometryInfo().getMaxHeightAbovePosition();
 
 /*
-	if (m_template->getProjectileTemplate() == NULL)
+	if (m_template->getProjectileTemplate() == nullptr)
 	{
 		// note that we want to measure from the top of the collision
 		// shape, not the bottom! (most objects have eyes a lot closer
@@ -5671,7 +5516,7 @@ Bool Weapon::isClearFiringLineOfSightTerrain(const Object* source, const Object*
 	//CRCDEBUG_LOG(("Weapon::isClearFiringLineOfSightTerrain() - victimPos is (%g,%g,%g) (%X,%X,%X)",
 	//	victimPos.x, victimPos.y, victimPos.z,
 	//	AS_INT(victimPos.x),AS_INT(victimPos.y),AS_INT(victimPos.z)));
-	return ThePartitionManager->isClearLineOfSightTerrain(NULL, origin, NULL, victimPos);
+	return ThePartitionManager->isClearLineOfSightTerrain(nullptr, origin, nullptr, victimPos);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5686,7 +5531,7 @@ Bool Weapon::isClearFiringLineOfSightTerrain(const Object* source, const Coord3D
 	//CRCDEBUG_LOG(("Weapon::isClearFiringLineOfSightTerrain(Coord3D) for %s", DescribeObject(source).str()));
 	//DUMPCOORD3D(&origin);
 	getFiringLineOfSightOrigin(source, origin);
-	return ThePartitionManager->isClearLineOfSightTerrain(NULL, origin, NULL, victimPos);
+	return ThePartitionManager->isClearLineOfSightTerrain(nullptr, origin, nullptr, victimPos);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5703,7 +5548,7 @@ Bool Weapon::isClearGoalFiringLineOfSightTerrain(const Object* source, const Coo
 	getFiringLineOfSightOrigin(source, origin);
 	Coord3D victimPos;
 	victim->getGeometryInfo().getCenterPosition( *victim->getPosition(), victimPos );
-	return ThePartitionManager->isClearLineOfSightTerrain(NULL, origin, NULL, victimPos);
+	return ThePartitionManager->isClearLineOfSightTerrain(nullptr, origin, nullptr, victimPos);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5721,7 +5566,7 @@ Bool Weapon::isClearGoalFiringLineOfSightTerrain(const Object* source, const Coo
 	//CRCDEBUG_LOG(("Weapon::isClearFiringLineOfSightTerrain() - victimPos is (%g,%g,%g) (%X,%X,%X)",
 	//	victimPos.x, victimPos.y, victimPos.z,
 	//	AS_INT(victimPos.x),AS_INT(victimPos.y),AS_INT(victimPos.z)));
-	return ThePartitionManager->isClearLineOfSightTerrain(NULL, origin, NULL, victimPos);
+	return ThePartitionManager->isClearLineOfSightTerrain(nullptr, origin, nullptr, victimPos);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -6022,7 +5867,7 @@ void Weapon::xfer( Xfer *xfer )
 		if (xfer->getXferMode() == XFER_LOAD)
 		{
 			m_template = TheWeaponStore->findWeaponTemplate(tmplName);
-			if (m_template == NULL)
+			if (m_template == nullptr)
 				throw INI_INVALID_DATA;
 		}
 	}
@@ -6129,7 +5974,7 @@ void Weapon::loadPostProcess( void )
 	if( m_projectileStreamID != INVALID_ID )
 	{
 		Object* projectileStream = TheGameLogic->findObjectByID( m_projectileStreamID );
-		if( projectileStream == NULL )
+		if( projectileStream == nullptr )
 		{
 			m_projectileStreamID = INVALID_ID;
 		}

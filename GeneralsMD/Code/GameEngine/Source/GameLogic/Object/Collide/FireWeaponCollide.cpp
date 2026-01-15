@@ -43,13 +43,13 @@ void FireWeaponCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "CollideWeapon",		INI::parseWeaponTemplate,						NULL, offsetof( FireWeaponCollideModuleData, m_collideWeaponTemplate ) },
-		{ "FireOnce",					INI::parseBool,											NULL, offsetof( FireWeaponCollideModuleData, m_fireOnce ) },
-		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponCollideModuleData, m_requiredStatus ) },
-		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( FireWeaponCollideModuleData, m_forbiddenStatus ) },
-		{ "RequiredCustomStatus",		INI::parseAsciiStringVector,	NULL, offsetof( FireWeaponCollideModuleData, m_requiredCustomStatus ) },
-		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector,	NULL, offsetof( FireWeaponCollideModuleData, m_forbiddenCustomStatus ) },
-		{ 0, 0, 0, 0 }
+		{ "CollideWeapon",		INI::parseWeaponTemplate,						nullptr, offsetof( FireWeaponCollideModuleData, m_collideWeaponTemplate ) },
+		{ "FireOnce",					INI::parseBool,											nullptr, offsetof( FireWeaponCollideModuleData, m_fireOnce ) },
+		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponCollideModuleData, m_requiredStatus ) },
+		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponCollideModuleData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus",		INI::parseAsciiStringVector,	nullptr, offsetof( FireWeaponCollideModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector,	nullptr, offsetof( FireWeaponCollideModuleData, m_forbiddenCustomStatus ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -58,7 +58,7 @@ void FireWeaponCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 FireWeaponCollide::FireWeaponCollide( Thing *thing, const ModuleData* moduleData ) :
 	CollideModule( thing, moduleData ),
-	m_collideWeapon(NULL)
+	m_collideWeapon(nullptr)
 {
 	m_collideWeapon = TheWeaponStore->allocateNewWeapon(getFireWeaponCollideModuleData()->m_collideWeaponTemplate, PRIMARY_WEAPON);
 	m_everFired = FALSE;
@@ -76,7 +76,7 @@ FireWeaponCollide::~FireWeaponCollide( void )
 //-------------------------------------------------------------------------------------------------
 void FireWeaponCollide::onCollide( Object *other, const Coord3D *loc, const Coord3D *normal )
 {
-	if( other == NULL )
+	if( other == nullptr )
 		return; //Don't shoot the ground
 
 	Object *me = getObject();
@@ -101,7 +101,7 @@ Bool FireWeaponCollide::shouldFireWeapon()
 	ObjectStatusMaskType status = getObject()->getStatusBits();
 
 	// Sanity
-	if( m_collideWeapon == NULL )
+	if( m_collideWeapon == nullptr )
 		return FALSE;
 	
 	//We need all required status or else we fail
@@ -164,7 +164,7 @@ void FireWeaponCollide::xfer( Xfer *xfer )
 	if( collideWeaponPresent )
 	{
 
-		DEBUG_ASSERTCRASH( m_collideWeapon != NULL,
+		DEBUG_ASSERTCRASH( m_collideWeapon != nullptr,
 											 ("FireWeaponCollide::xfer - m_collideWeapon present mismatch") );
 		xfer->xferSnapshot( m_collideWeapon );
 
@@ -172,7 +172,7 @@ void FireWeaponCollide::xfer( Xfer *xfer )
 	else
 	{
 
-		DEBUG_ASSERTCRASH( m_collideWeapon == NULL,
+		DEBUG_ASSERTCRASH( m_collideWeapon == nullptr,
 											 ("FireWeaponCollide::Xfer - m_collideWeapon missing mismatch" ));
 
 	}

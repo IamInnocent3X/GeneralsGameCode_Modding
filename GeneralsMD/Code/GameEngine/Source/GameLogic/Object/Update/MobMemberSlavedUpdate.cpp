@@ -141,7 +141,7 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 	}
 
 	Object *master = TheGameLogic->findObjectByID( m_slaver );
-	if( master == NULL )
+	if( master == nullptr )
 	{
 		stopSlavedEffects();
 
@@ -335,7 +335,7 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 			if ( masterAI->isIdle() ) // if controlling player has pressed stop, we stop! That's it!
 			{
 				myAI->aiIdle(CMD_FROM_AI);
-				primaryVictim = NULL;
+				primaryVictim = nullptr;
 				m_primaryVictimID = INVALID_ID;
 				m_framesToWait = 0;
 				return calcSleepTime();
@@ -373,7 +373,7 @@ UpdateSleepTime MobMemberSlavedUpdate::update( void )
 		}
 		else
 		{
-			DEBUG_ASSERTCRASH(( spawnerBehavior != NULL ),("Hey!, why for this mob member got no spawner? MLorenzen"));
+			DEBUG_ASSERTCRASH(( spawnerBehavior != nullptr ),("Hey!, why for this mob member got no spawner? MLorenzen"));
 		}
 	}
 
@@ -477,7 +477,7 @@ void MobMemberSlavedUpdate::informMySlaverSelfTasking(Bool set)
 //-------------------------------------------------------------------------------------------------
 void MobMemberSlavedUpdate::startSlavedEffects( const Object *slaver )
 {
-	if( slaver == NULL )
+	if( slaver == nullptr )
 		return;
 
 	m_slaver = slaver->getID();

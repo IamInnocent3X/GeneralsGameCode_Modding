@@ -152,7 +152,7 @@ public:
 	AudioArray()
 	{
 		for (Int i = 0; i < TTAUDIO_COUNT; ++i)
-			m_audio[i] = NULL;
+			m_audio[i] = nullptr;
 	}
 
 	~AudioArray()
@@ -168,7 +168,7 @@ public:
 			if (that.m_audio[i])
 				m_audio[i] = newInstance(DynamicAudioEventRTS)(*that.m_audio[i]);
 			else
-				m_audio[i] = NULL;
+				m_audio[i] = nullptr;
 		}
 	}
 
@@ -187,7 +187,7 @@ public:
 				}
 				else
 				{
-					m_audio[i] = NULL;
+					m_audio[i] = nullptr;
 				}
 			}
 		}
@@ -213,7 +213,7 @@ static const char *const BuildCompletionNames[] =
 	"APPEARS_AT_RALLY_POINT",
 	"PLACED_BY_PLAYER",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(BuildCompletionNames) == BC_NUM_TYPES + 1, "Incorrect array size");
 #endif  // end DEFINE_BUILD_COMPLETION_NAMES
@@ -236,7 +236,7 @@ static const char *const BuildableStatusNames[] =
 	"Ignore_Prerequisites",
 	"No",
 	"Only_By_AI",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(BuildableStatusNames) == BSTATUS_NUM_TYPES + 1, "Incorrect array size");
 #endif	// end DEFINE_BUILDABLE_STATUS_NAMES
@@ -352,7 +352,7 @@ public:
 	Bool containsPartialName(const char* n) const
 	{
 		for (size_t i = 0; i < m_info.size(); i++)
-			if (strstr(m_info[i].first.str(), n) != NULL)
+			if (strstr(m_info[i].first.str(), n) != nullptr)
 				return true;
 		return false;
 	}
@@ -382,7 +382,7 @@ public:
 		{
 			return m_info[i].second;
 		}
-		return NULL;
+		return nullptr;
 	}
 
 	// for use only by ThingTemplate::friend_getAIModuleInfo
@@ -682,7 +682,7 @@ public:
 	// Only set non removable modules as copied when using ObjectExtend
 	void setCopiedFromDefaultExtended();
 
-	void setReskinnedFrom(const ThingTemplate* tt) { DEBUG_ASSERTCRASH(m_reskinnedFrom == NULL, ("should be null")); m_reskinnedFrom = tt; }
+	void setReskinnedFrom(const ThingTemplate* tt) { DEBUG_ASSERTCRASH(m_reskinnedFrom == nullptr, ("should be null")); m_reskinnedFrom = tt; }
 
 	Bool isPrerequisite() const { return m_isPrerequisite; }
 
@@ -755,7 +755,7 @@ protected:
 	const PerUnitSoundMap* getAllPerUnitSounds( void ) const { return &m_perUnitSounds; }
 	void validateAudio();
 	const AudioEventRTS* getAudio(ThingTemplateAudioType t) const { return m_audioarray.m_audio[t] ? &m_audioarray.m_audio[t]->m_event : &s_audioEventNoSound; }
-  Bool hasAudio(ThingTemplateAudioType t) const { return m_audioarray.m_audio[t] != NULL; }
+  Bool hasAudio(ThingTemplateAudioType t) const { return m_audioarray.m_audio[t] != nullptr; }
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/** Table for parsing the object fields */
@@ -872,7 +872,7 @@ private:
 
 	// ---- Pointer-sized things
 	ThingTemplate*				m_nextThingTemplate;
-	const ThingTemplate*	m_reskinnedFrom;									///< non NULL if we were generated via a reskin
+	const ThingTemplate*	m_reskinnedFrom;									///< non nullptr if we were generated via a reskin
 	const Image *					m_selectedPortraitImage;		/// portrait image when selected (to display in GUI)
 	const Image	*					m_buttonImage;
 

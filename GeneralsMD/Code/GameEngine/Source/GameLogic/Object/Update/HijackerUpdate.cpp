@@ -69,7 +69,7 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	setHealed( FALSE );
 	setNoSelfDamage( FALSE );
 	setPercentDamage( 0.0f );
-	setParasiteKey( NULL );
+	setParasiteKey( AsciiString::TheEmptyString );
 	m_statusToRemove.clear();
 	m_statusToDestroy.clear();
 	m_customStatusToRemove.clear();
@@ -78,7 +78,7 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	m_wasTargetAirborne = false;
 	m_ejectPos.zero();
 	m_hijackType = HIJACK_NONE;
-//	m_ejectPilotDMI = NULL;
+//	m_ejectPilotDMI = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -237,8 +237,8 @@ UpdateSleepTime HijackerUpdate::update( void )
 				m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 				obj->setPosition( &m_ejectPos );
 
-				// Make the target NULL for reverting the behavior
-				setTargetObject( NULL );
+				// Make the target null for reverting the behavior
+				setTargetObject( nullptr );
 				setHijackType( HIJACK_NONE );
 
 				// Inform the module we have reverted
@@ -336,7 +336,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 				}
 			}
 
-			setTargetObject( NULL );
+			setTargetObject( nullptr );
 			setHijackType( HIJACK_NONE );
 			setIsInVehicle( FALSE );
 			//setUpdate( FALSE );
@@ -346,7 +346,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 			setDestroyOnClear( FALSE );
 			setDestroyOnTargetDie( FALSE );
 			setPercentDamage( 0.0f );
-			setParasiteKey( NULL );
+			setParasiteKey( AsciiString::TheEmptyString );
 			m_targetObjHealth = 0.0f;
 			m_statusToRemove.clear();
 			m_statusToDestroy.clear();
@@ -386,9 +386,9 @@ void HijackerUpdate::setTargetObject( const Object *object )
 
 		// here we also test the target to see whether it ejects pilots
 		// when it dies... if so, stores a pointer to that diemoduleinterface
-		// NULL if not...
+		// nullptr if not...
 
-//		BehaviorModule **dmi = NULL;
+//		BehaviorModule **dmi = nullptr;
 //		for( dmi = object->getBehaviorModules(); *dmi; ++dmi )
 //		{
 //			m_ejectPilotDMI = (*dmi)->getEjectPilotDieInterface();
@@ -399,7 +399,7 @@ void HijackerUpdate::setTargetObject( const Object *object )
 	else
 	{
 		m_targetID = INVALID_ID;
-//		m_ejectPilotDMI = NULL;
+//		m_ejectPilotDMI = nullptr;
 	}
 
 }
@@ -478,7 +478,7 @@ Object* HijackerUpdate::getTargetObject() const
   {
     return TheGameLogic->findObjectByID( m_targetID );
   }
-  return NULL;
+  return nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -563,8 +563,8 @@ void HijackerUpdate::xfer( Xfer *xfer )
 	UnsignedShort customStatusToDestroyCount = m_customStatusToDestroy.size();
 	xfer->xferUnsignedShort( &customStatusToRemoveCount );
 	xfer->xferUnsignedShort( &customStatusToDestroyCount );
-	AsciiString customStatusToRemove = NULL;
-	AsciiString customStatusToDestroy = NULL;
+	AsciiString customStatusToRemove;
+	AsciiString customStatusToDestroy;
 	if( xfer->getXferMode() == XFER_SAVE )
 	{
 

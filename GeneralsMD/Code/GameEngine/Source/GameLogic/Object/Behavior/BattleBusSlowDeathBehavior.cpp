@@ -60,11 +60,11 @@ enum
 BattleBusSlowDeathBehaviorModuleData::BattleBusSlowDeathBehaviorModuleData( void )
 {
 
-	m_fxStartUndeath = NULL;
-	m_oclStartUndeath = NULL;
+	m_fxStartUndeath = nullptr;
+	m_oclStartUndeath = nullptr;
 
-	m_fxHitGround = NULL;
-	m_oclHitGround = NULL;
+	m_fxHitGround = nullptr;
+	m_oclHitGround = nullptr;
 
 	m_throwForce = 1.0f;
 	m_percentDamageToPassengers = 0.0f;
@@ -97,37 +97,37 @@ BattleBusSlowDeathBehaviorModuleData::BattleBusSlowDeathBehaviorModuleData( void
 	static const FieldParse dataFieldParse[] =
 	{
 
-		{ "FXStartUndeath",	INI::parseFXList,	NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_fxStartUndeath ) },
-		{ "OCLStartUndeath", INI::parseObjectCreationList, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_oclStartUndeath ) },
+		{ "FXStartUndeath",	INI::parseFXList,	nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_fxStartUndeath ) },
+		{ "OCLStartUndeath", INI::parseObjectCreationList, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_oclStartUndeath ) },
 
-		{ "FXHitGround",	INI::parseFXList,	NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_fxHitGround ) },
-		{ "OCLHitGround", INI::parseObjectCreationList, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_oclHitGround ) },
+		{ "FXHitGround",	INI::parseFXList,	nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_fxHitGround ) },
+		{ "OCLHitGround", INI::parseObjectCreationList, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_oclHitGround ) },
 
-		{ "ThrowForce", INI::parseReal, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_throwForce ) },
-		{ "PercentDamageToPassengers", INI::parsePercentToReal, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengers ) },
-		{ "EmptyHulkDestructionDelay", INI::parseDurationUnsignedInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_emptyHulkDestructionDelay ) },
+		{ "ThrowForce", INI::parseReal, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_throwForce ) },
+		{ "PercentDamageToPassengers", INI::parsePercentToReal, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengers ) },
+		{ "EmptyHulkDestructionDelay", INI::parseDurationUnsignedInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_emptyHulkDestructionDelay ) },
 
-		{ "PercentDamageToPassengersScales", INI::parseBool, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengersScale ) },
-		{ "PercentDamageToPassengersScaleRatio", INI::parsePercentToReal, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengersScaleRatio ) },
+		{ "PercentDamageToPassengersScales", INI::parseBool, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengersScale ) },
+		{ "PercentDamageToPassengersScaleRatio", INI::parsePercentToReal, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_percentDamageToPassengersScaleRatio ) },
 
-		{ "SleepsAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_sleepsafteramountofdeaths ) },
-		{ "ModelConditionSwitchAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_modelswitchafteramountofdeaths ) },
-		{ "TriggerFXAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_triggerfxafteramountofdeaths ) },
-		{ "TriggerOCLAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_triggeroclafteramountofdeaths ) },
-		{ "ThrowForceAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_throwForceafteramountofdeaths ) },
-		{ "PercentDamageToPassengersAfterAmountofDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_damageToPassengerafteramountofdeaths ) },
+		{ "SleepsAfterAmountofDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_sleepsafteramountofdeaths ) },
+		{ "ModelConditionSwitchAfterAmountofDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_modelswitchafteramountofdeaths ) },
+		{ "TriggerFXAfterAmountofDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_triggerfxafteramountofdeaths ) },
+		{ "TriggerOCLAfterAmountofDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_triggeroclafteramountofdeaths ) },
+		{ "ThrowForceAfterAmountofDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_throwForceafteramountofdeaths ) },
+		{ "PercentDamageToPassengersAfterAmountofDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_damageToPassengerafteramountofdeaths ) },
 
 //		Unlike UndeadBody Module, the Trigger FX/OCL considers the FX/OCL closest to the Death Amount instead of required to re-declare it everytime.
 //		Example if the Trigger Amount is: 9 3 6 7 1. If your Death Amount is 5. You would Trigger the Condition at '3', as it is less than 5 while being closest to 5.
-		{ "FXStartUndeathAmountDeathsOverride", parseFXIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesfxStartUndeathList) }, 
-		{ "OCLStartUndeathAmountDeathsOverride", parseOCLIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesoclStartUndeathList) }, 
+		{ "FXStartUndeathAmountDeathsOverride", parseFXIntPair, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesfxStartUndeathList) }, 
+		{ "OCLStartUndeathAmountDeathsOverride", parseOCLIntPair, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesoclStartUndeathList) }, 
 		
-		{ "FXHitGroundAmountDeathsOverride", parseFXIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesfxHitGroundList) }, 
-		{ "OCLHitGroundAmountDeathsOverride", parseOCLIntPair, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesoclHitGroundList) }, 
+		{ "FXHitGroundAmountDeathsOverride", parseFXIntPair, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesfxHitGroundList) }, 
+		{ "OCLHitGroundAmountDeathsOverride", parseOCLIntPair, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_multipleLivesoclHitGroundList) }, 
 
-		{ "DeathOnNoPassengersAmountOfDeaths", INI::parseInt, NULL, offsetof( BattleBusSlowDeathBehaviorModuleData, m_noPassengersAmountOfDeathTrigger ) },
+		{ "DeathOnNoPassengersAmountOfDeaths", INI::parseInt, nullptr, offsetof( BattleBusSlowDeathBehaviorModuleData, m_noPassengersAmountOfDeathTrigger ) },
 		
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 
 	};
 
@@ -139,8 +139,8 @@ void BattleBusSlowDeathBehaviorModuleData::parseOCLIntPair( INI* ini, void * /*i
 {
 	IntOCL up;
 
-	INI::parseInt(ini, NULL, &up.m_deathTrigger, NULL);
-	INI::parseObjectCreationList(ini, NULL, &up.m_deathocl, NULL);
+	INI::parseInt(ini, nullptr, &up.m_deathTrigger, nullptr);
+	INI::parseObjectCreationList(ini, nullptr, &up.m_deathocl, nullptr);
 
 	std::vector<IntOCL>* s = (std::vector<IntOCL>*)store;
 	s->push_back(up);
@@ -150,8 +150,8 @@ void BattleBusSlowDeathBehaviorModuleData::parseFXIntPair( INI* ini, void * /*in
 {
 	IntFX up;
 
-	INI::parseInt(ini, NULL, &up.m_deathTrigger, NULL);
-	INI::parseFXList(ini, NULL, &up.m_deathfx, NULL);
+	INI::parseInt(ini, nullptr, &up.m_deathTrigger, nullptr);
+	INI::parseFXList(ini, nullptr, &up.m_deathfx, nullptr);
 
 	std::vector<IntFX>* s = (std::vector<IntFX>*)store;
 	s->push_back(up);
@@ -211,7 +211,7 @@ void BattleBusSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 
 		// First do the special effects
 		if(data->m_triggerfxafteramountofdeaths<=m_amountofDeaths) FXList::doFXObj(findFX(1, m_amountofDeaths), me );
-		if(data->m_triggeroclafteramountofdeaths<=m_amountofDeaths) ObjectCreationList::create(findOCL(1, m_amountofDeaths), me, NULL );
+		if(data->m_triggeroclafteramountofdeaths<=m_amountofDeaths) ObjectCreationList::create(findOCL(1, m_amountofDeaths), me, nullptr );
 
 		if( me->getAI() && data->m_sleepsafteramountofdeaths <= m_amountofDeaths)
 		{
@@ -270,7 +270,7 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 	const ContainModuleInterface *contain = me->getContain();
 
 	Bool notContained = FALSE;
-	if( data->m_noPassengersAmountOfDeathTrigger <= m_amountofDeaths && ( contain == NULL || contain->getContainCount() == 0 ) )
+	if( data->m_noPassengersAmountOfDeathTrigger <= m_amountofDeaths && ( contain == nullptr || contain->getContainCount() == 0 ) )
 	{
 		notContained = TRUE;
 	}
@@ -283,7 +283,7 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 		{
 			// Do the special FX
 			if(data->m_triggerfxafteramountofdeaths<=m_amountofDeaths)FXList::doFXObj(findFX(2, m_amountofDeaths), me );
-			if(data->m_triggeroclafteramountofdeaths<=m_amountofDeaths)ObjectCreationList::create(findOCL(2, m_amountofDeaths), me, NULL );
+			if(data->m_triggeroclafteramountofdeaths<=m_amountofDeaths)ObjectCreationList::create(findOCL(2, m_amountofDeaths), me, nullptr );
 			if(data->m_modelswitchafteramountofdeaths <= m_amountofDeaths)me->setModelConditionState(MODELCONDITION_SECOND_LIFE);
 
 			// We're done since we hit the ground
@@ -329,7 +329,7 @@ UpdateSleepTime BattleBusSlowDeathBehavior::update( void )
 		// If neither death is active, we must be awake to check for emptiness
 		
 		// Safety, no need to be awake if no special case to wait for
-		if( contain == NULL && notContained )
+		if( contain == nullptr && notContained )
 			return UPDATE_SLEEP_FOREVER;
 
 		if( m_penaltyDeathFrame != 0 )
@@ -485,7 +485,7 @@ const FXList* BattleBusSlowDeathBehavior::findFX(int type, int amountofDeaths) c
 	{
 		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findFX. Object: %s, FXType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName(), type, amountofDeaths));
 	}
-	return NULL;
+	return nullptr;
 }
 
 const ObjectCreationList* BattleBusSlowDeathBehavior::findOCL(int type, int amountofDeaths) const
@@ -555,5 +555,5 @@ const ObjectCreationList* BattleBusSlowDeathBehavior::findOCL(int type, int amou
 	{
 		DEBUG_ASSERTCRASH(0, ("Invalid Type Error for BattleBusSlowDeathBehavior findOCL. Object: %s, OCLType: %d, Amount Of Deaths Triggered: %d.", getObject()->getName(), type, amountofDeaths));
 	}
-	return NULL;
+	return nullptr;
 }

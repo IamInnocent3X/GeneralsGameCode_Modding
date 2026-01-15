@@ -145,17 +145,17 @@ void ActiveBodyModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "MaxHealth",						INI::parseReal,						NULL,		offsetof( ActiveBodyModuleData, m_maxHealth ) },
-		{ "InitialHealth",				INI::parseReal,						NULL,		offsetof( ActiveBodyModuleData, m_initialHealth ) },
+		{ "MaxHealth",						INI::parseReal,						nullptr,		offsetof( ActiveBodyModuleData, m_maxHealth ) },
+		{ "InitialHealth",				INI::parseReal,						nullptr,		offsetof( ActiveBodyModuleData, m_initialHealth ) },
 
-		{ "SubdualDamageCap",					INI::parseReal,									NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageCap ) },
-		{ "SubdualDamageHealRate",		INI::parseDurationUnsignedInt,	NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealRate ) },
-		{ "SubdualDamageHealAmount",	INI::parseReal,									NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealAmount ) },
+		{ "SubdualDamageCap",					INI::parseReal,									nullptr,		offsetof( ActiveBodyModuleData, m_subdualDamageCap ) },
+		{ "SubdualDamageHealRate",		INI::parseDurationUnsignedInt,	nullptr,		offsetof( ActiveBodyModuleData, m_subdualDamageHealRate ) },
+		{ "SubdualDamageHealAmount",	INI::parseReal,									nullptr,		offsetof( ActiveBodyModuleData, m_subdualDamageHealAmount ) },
 
-		{ "CustomSubdualDamageCap", 		INI::parseAsciiStringWithColonVectorAppend, NULL, offsetof( ActiveBodyModuleData, m_subdualDamageCapCustom ) },
-		{ "CustomSubdualDamageHealRate",	INI::parseAsciiStringWithColonVectorAppend,	NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealRateCustom ) },
-		{ "CustomSubdualDamageHealAmount",	INI::parseAsciiStringWithColonVectorAppend,	NULL,		offsetof( ActiveBodyModuleData, m_subdualDamageHealAmountCustom ) },
-		{ 0, 0, 0, 0 }
+		{ "CustomSubdualDamageCap", 		INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( ActiveBodyModuleData, m_subdualDamageCapCustom ) },
+		{ "CustomSubdualDamageHealRate",	INI::parseAsciiStringWithColonVectorAppend,	nullptr,		offsetof( ActiveBodyModuleData, m_subdualDamageHealRateCustom ) },
+		{ "CustomSubdualDamageHealAmount",	INI::parseAsciiStringWithColonVectorAppend,	nullptr,		offsetof( ActiveBodyModuleData, m_subdualDamageHealAmountCustom ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -164,8 +164,8 @@ void ActiveBodyModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	BodyModule(thing, moduleData),
-	m_curDamageFX(NULL),
-	m_curArmorSet(NULL),
+	m_curDamageFX(nullptr),
+	m_curArmorSet(nullptr),
 	m_frontCrushed(false),
 	m_backCrushed(false),
 	m_lastDamageTimestamp(0xffffffff),// So we don't think we just got damaged on the first frame
@@ -174,13 +174,13 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_nextDamageFXTime(0),
 	m_lastDamageFXDone((DamageType)-1),
 	m_lastDamageCleared(false),
-	m_particleSystems(NULL),
+	m_particleSystems(nullptr),
 	m_currentSubdualDamage(0),
 	m_indestructible(false),
 	m_damageFXOverride(false),
 	m_hasBeenSubdued(false),
-	m_customSubdualDisabledSound(NULL),
-	m_customSubdualDisableRemovalSound(NULL),
+	m_customSubdualDisabledSound(AsciiString::TheEmptyString),
+	m_customSubdualDisableRemovalSound(AsciiString::TheEmptyString),
 	m_clearedSubdued(FALSE),
 	m_clearedSubduedCustom(FALSE)
 {
@@ -200,7 +200,7 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	m_subdualDamageHealAmountCustom.clear();
 
 	Bool parseName = TRUE;
-	AsciiString customStatus = NULL;
+	AsciiString customStatus;
 	for(std::vector<AsciiString>::const_iterator it = data->m_subdualDamageCapCustom.begin(); it != data->m_subdualDamageCapCustom.end(); ++it)
 	{
 		if(parseName)
@@ -216,7 +216,6 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	}
 
 	parseName = TRUE;
-	customStatus = NULL;
 	for(std::vector<AsciiString>::const_iterator it2 = data->m_subdualDamageHealRateCustom.begin(); it2 != data->m_subdualDamageHealRateCustom.end(); ++it2)
 	{
 		if(parseName)
@@ -232,7 +231,6 @@ ActiveBody::ActiveBody( Thing *thing, const ModuleData* moduleData ) :
 	}
 
 	parseName = TRUE;
-	customStatus = NULL;
 	for(std::vector<AsciiString>::const_iterator it3 = data->m_subdualDamageHealAmountCustom.begin(); it3 != data->m_subdualDamageHealAmountCustom.end(); ++it3)
 	{
 		if(parseName)
@@ -379,7 +377,7 @@ Real ActiveBody::estimateDamage( DamageInfoInput& damageInfo ) const
 	}
 	// Compute Armor Bonuses (from weapons) first
 	Real amount = 1.0f;
-	const Weapon* w = NULL;
+	const Weapon* w = nullptr;
 	w = getObject()->getCurrentWeapon();
 	amount = w ? w->getArmorBonus(getObject()) : 1.0f;
 
@@ -428,7 +426,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	validateArmorAndDamageFX();
 
 	// sanity
-	if( damageInfo == NULL )
+	if( damageInfo == nullptr )
 		return;
 
 	if ( m_indestructible )
@@ -481,7 +479,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 	Bool isKilled = FALSE;
 	Real amount = m_curArmor.adjustDamage(damageInfo->in.m_damageType, damageInfo->in.m_amount, damageInfo->in.m_customDamageType);
 	Real realFramesToStatusFor = 0.0f;
-	const Weapon* w = NULL;
+	const Weapon* w = nullptr;
 	w = obj->getCurrentWeapon();
 	Real armorBonus = w ? w->getArmorBonus(obj) : 1.0f;
 
@@ -931,7 +929,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		{
 			PartitionFilterPlayerAffiliation f1( controllingPlayer, ALLOW_ALLIES, true );
 			PartitionFilterOnMap filterMapStatus;
-			PartitionFilter *filters[] = { &f1, &filterMapStatus, 0 };
+			PartitionFilter *filters[] = { &f1, &filterMapStatus, nullptr };
 
 
 			Real distance = TheAI->getAiData()->m_retaliateFriendsRadius + obj->getGeometryInfo().getBoundingCircleRadius();
@@ -943,7 +941,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					continue;
 				}
 				AIUpdateInterface *ai = them->getAI();
-				if (ai==NULL) {
+				if (ai==nullptr) {
 					continue;
 				}
 				//If we have AI and we're mobile, then assist!
@@ -968,7 +966,7 @@ Bool ActiveBody::shouldRetaliateAgainstAggressor(Object *obj, Object *damager)
 	/* This considers whether obj should invoke his friends to retaliate against damager.
 		 Note that obj could be a structure, so we don't actually check whether obj will
 		 retaliate, as in many cases he wouldn't. */
-	if (damager==NULL) {
+	if (damager==nullptr) {
 		return false;
 	}
 	if (damager->isAirborneTarget()) {
@@ -1034,7 +1032,7 @@ void ActiveBody::attemptHealing( DamageInfo *damageInfo )
 	validateArmorAndDamageFX();
 
 	// sanity
-	if( damageInfo == NULL )
+	if( damageInfo == nullptr )
 		return;
 
 	if( damageInfo->in.m_damageType != DAMAGE_HEALING )
@@ -1222,7 +1220,7 @@ void ActiveBody::createParticleSystems( const AsciiString &boneBaseName,
 	Object *us = getObject();
 
 	// sanity
-	if( systemTemplate == NULL )
+	if( systemTemplate == nullptr )
 		return;
 
 	// get the bones
@@ -1231,7 +1229,7 @@ void ActiveBody::createParticleSystems( const AsciiString &boneBaseName,
 	Int numBones = us->getMultiLogicalBonePosition( boneBaseName.str(),
 																									MAX_BONES,
 																									bonePositions,
-																									NULL,
+																									nullptr,
 																									FALSE );
 
 	// if no bones found nothing else to do
@@ -1605,7 +1603,7 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 
 			if( nowSubdued )
 			{
-				if(damageInfo->in.m_customSubdualOCL != NULL)
+				if(damageInfo->in.m_customSubdualOCL != nullptr)
 				{
 					Coord3D v;
 					Real angle;
@@ -1617,7 +1615,7 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 						v.y = victimPos->y - sourcePos->y;
 					}
 					angle = damager ? atan2(v.y, v.x) : INVALID_ANGLE;
-					ObjectCreationList::create(damageInfo->in.m_customSubdualOCL, damager ? damager : obj, obj->getPosition(), NULL, angle );
+					ObjectCreationList::create(damageInfo->in.m_customSubdualOCL, damager ? damager : obj, obj->getPosition(), nullptr, angle );
 				}
 
 				if(damageInfo->in.m_customSubdualDoStatus)
@@ -2033,7 +2031,7 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 				}
 				if(dontPaintTint)
 				{
-					me->setDisabledUntil( damageInfo->in.m_customSubdualDisableType, FOREVER, TINT_STATUS_INVALID, NULL, FALSE );
+					me->setDisabledUntil( damageInfo->in.m_customSubdualDisableType, FOREVER, TINT_STATUS_INVALID, AsciiString::TheEmptyString, FALSE );
 				}
 				else
 				{
@@ -2056,7 +2054,7 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 					removeSound.setPosition( me->getPosition() );
 					TheAudio->addAudioEvent( &removeSound );
 
-					m_customSubdualDisableRemovalSound = NULL;
+					m_customSubdualDisableRemovalSound.clear();
 
 					if(!damageInfo->in.m_customSubdualDisableSound.isEmpty())
 					{
@@ -2064,7 +2062,7 @@ void ActiveBody::onSubdualChangeCustom( Bool isNowSubdued, const DamageInfo *dam
 						disableSound.setEventName( damageInfo->in.m_customSubdualDisableSound );
 						TheAudio->removeAudioEvent(disableSound.getPlayingHandle());
 
-						m_customSubdualDisabledSound = NULL;
+						m_customSubdualDisabledSound.clear();
 					}
 				}
 				
@@ -2126,7 +2124,7 @@ void ActiveBody::onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool cl
 		removeSound.setPosition( me->getPosition() );
 		TheAudio->addAudioEvent( &removeSound );
 
-		m_customSubdualDisableRemovalSound = NULL;
+		m_customSubdualDisableRemovalSound.clear();
 		
 		if(!m_customSubdualDisabledSound.isEmpty())
 		{
@@ -2134,7 +2132,7 @@ void ActiveBody::onSubdualRemovalCustom(DisabledType SubdualDisableType, Bool cl
 			disableSound.setEventName( m_customSubdualDisabledSound );
 			TheAudio->removeAudioEvent(disableSound.getPlayingHandle());
 
-			m_customSubdualDisabledSound = NULL;
+			m_customSubdualDisabledSound.clear();
 		}
 	}
 
@@ -2587,12 +2585,12 @@ void ActiveBody::setAflame( Bool )
 // ------------------------------------------------------------------------------------------------
 void ActiveBody::overrideDamageFX(DamageFX* damageFX)
 {
-	if (damageFX != NULL) {
+	if (damageFX != nullptr) {
 		m_curDamageFX = damageFX;
 		m_damageFXOverride = true;
 	}
 	else {
-		m_curDamageFX = NULL;
+		m_curDamageFX = nullptr;
 		m_damageFXOverride = false;
 
 		// Restore DamageFX from current armorset
@@ -2713,7 +2711,7 @@ void ActiveBody::xfer( Xfer *xfer )
 		ParticleSystemID particleSystemID;
 
 		// the list should be empty at this time
-		if( m_particleSystems != NULL )
+		if( m_particleSystems != nullptr )
 		{
 
 			DEBUG_CRASH(( "ActiveBody::xfer - m_particleSystems should be empty, but is not" ));

@@ -100,7 +100,7 @@ const char* const DamageTypeFlags::s_bitNameList[] =
 	"CHRONO_UNRESISTABLE",
 	//"ZOMBIE_VIRUS",  // TODO
 	//"MIND_CONTROL",  // TODO
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(DamageTypeFlags::s_bitNameList) == DamageTypeFlags::NumBits + 1, "Incorrect array size");
 

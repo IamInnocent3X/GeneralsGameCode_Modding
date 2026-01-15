@@ -50,7 +50,7 @@ public:
 	{
 		m_rangeOfEffect = 0;
 		m_destroyOnTargetDie = TRUE;
-		m_fxList = NULL;
+		m_fxList = nullptr;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -59,7 +59,7 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "FXList",		INI::parseFXList,		NULL, offsetof( ConvertToCarBombCrateCollideModuleData, m_fxList ) },
+			{ "FXList",		INI::parseFXList,		nullptr, offsetof( ConvertToCarBombCrateCollideModuleData, m_fxList ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

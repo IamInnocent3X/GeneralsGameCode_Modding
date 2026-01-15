@@ -85,7 +85,7 @@ static const char *const TheLocomotorAppearanceNames[] =
 	"OTHER",
 	"MOTORCYCLE",
 	"SHIP",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheLocomotorAppearanceNames) == LOCOMOTOR_APPEARANCE_COUNT + 1, "Array size");
 #endif
@@ -119,7 +119,7 @@ static const char *const TheLocomotorBehaviorZNames[] =
 	"RELATIVE_TO_HIGHEST_LAYER",
 	"SEA_SURFACE_RELATIVE_HEIGHT",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheLocomotorBehaviorZNames) == LOCOMOTOR_BEHAVIOR_Z_COUNT + 1, "Array size");
 #endif
@@ -403,14 +403,14 @@ protected:
 	void maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physics);
 	void maintainCurrentPositionWings(Object* obj, PhysicsBehavior *physics);
 
-	PhysicsTurningType rotateTowardsPosition(Object* obj, const Coord3D& goalPos, Real *relAngle=NULL);
+	PhysicsTurningType rotateTowardsPosition(Object* obj, const Coord3D& goalPos, Real *relAngle=nullptr);
 
 	/*
 		return true if we can maintain the position without being called every frame (eg, we are
 		resting on the ground), false if not (eg, we are hovering or circling)
 	*/
 	Bool handleBehaviorZ(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos);
-	PhysicsTurningType rotateObjAroundLocoPivot(Object* obj, const Coord3D& goalPos, Real maxTurnRate, Real *relAngle = NULL);
+	PhysicsTurningType rotateObjAroundLocoPivot(Object* obj, const Coord3D& goalPos, Real maxTurnRate, Real *relAngle = nullptr);
 
 	Real calcLiftToUseAtPt(Object* obj, PhysicsBehavior *physics, Real curZ, Real surfaceAtPt, Real preferredHeight);
 

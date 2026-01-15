@@ -61,7 +61,7 @@ public:
 		m_caveUsesTeams = FALSE;
 		m_caveCaptureLinkCaves = FALSE;
 		m_initialPayload.count = 0;
-		m_initialPayload.name = NULL;
+		m_initialPayload.name.clear();
 		
 		m_allowEnemiesInside = FALSE;
 	}
@@ -83,11 +83,11 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "CaveIndex", INI::parseInt, NULL, offsetof( CaveContainModuleData, m_caveIndexData ) },
-			{ "CaveHasOwner", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveHasOwner ) },
-			{ "CaveUsesTeams", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveUsesTeams ) },
-			{ "CaveCaptureLinkCaves", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveCaptureLinkCaves ) },
-			{ "InitialPayload", parseInitialPayload, NULL, 0 },
+			{ "CaveIndex", INI::parseInt, nullptr, offsetof( CaveContainModuleData, m_caveIndexData ) },
+			{ "CaveHasOwner", INI::parseBool, nullptr, offsetof( CaveContainModuleData, m_caveHasOwner ) },
+			{ "CaveUsesTeams", INI::parseBool, nullptr, offsetof( CaveContainModuleData, m_caveUsesTeams ) },
+			{ "CaveCaptureLinkCaves", INI::parseBool, nullptr, offsetof( CaveContainModuleData, m_caveCaptureLinkCaves ) },
+			{ "InitialPayload", parseInitialPayload, nullptr, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

@@ -45,24 +45,24 @@ void UndeadBodyModuleData::buildFieldParse(MultiIniFieldParse& p)
   ActiveBodyModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "SecondLifeMaxHealth",			INI::parseReal,	NULL,		offsetof( UndeadBodyModuleData, m_secondLifeMaxHealth ) },
-		{ "SecondLifeUpgradesToGrant",		INI::parseAsciiStringVector,							NULL, offsetof( UndeadBodyModuleData, m_secondLifeUpgradeNames ) },
-		{ "SecondLifeUpgradesToRemove",		INI::parseAsciiStringVector,							NULL, offsetof( UndeadBodyModuleData, m_secondLifeUpgradeRemoveNames ) },
-		{ "SecondLifeSubdualCap",			INI::parseReal,	NULL,		offsetof( UndeadBodyModuleData, m_secondLifeSubdualCap ) },
-		{ "SecondLifeSubdualHealRate",			INI::parseUnsignedInt,	NULL,		offsetof( UndeadBodyModuleData, m_secondLifeSubdualHealRate ) },
-		{ "SecondLifeSubdualHealAmount",			INI::parseReal,	NULL,		offsetof( UndeadBodyModuleData, m_secondLifeSubdualHealAmount ) },
-		{ "SecondLifeArmorSetSwitchAfterLivesAmount",	INI::parseInt,	NULL,		offsetof( UndeadBodyModuleData, m_secondLifeArmorSetSwitch ) },
-		{ "MultipleLives",					INI::parseInt,	NULL,		offsetof( UndeadBodyModuleData, m_multipleLives ) },
-		{ "MultipleLivesMaxHealthRatio",	INI::parsePercentToReal,	NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesMaxHealthRatio ) },
-		{ "MultipleLivesMaxHealthRatioScale",	INI::parseBool,	NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesMaxHealthRatioScale ) },
-		{ "MultipleLivesOverrideTrigger",			INI::parseIntVector,				NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesOverrideTrigger ) },
-		{ "MultipleLivesMaxHealthVariationOverride",		INI::parseRealVector,				NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesMaxHealthOverride ) },
-		{ "MultipleLivesSubdualCapVariationOverride",		INI::parseRealVector,				NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesSubdualCapOverride ) },
-		{ "MultipleLivesSubdualHealRateVariationOverride",		INI::parseUnsignedIntVector,		NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesSubdualHealRate ) },
-		{ "MultipleLivesSubdualHealAmountVariationOverride",		INI::parseRealVector,				NULL,		offsetof( UndeadBodyModuleData, m_multipleLivesSubdualHealAmount ) },
-		{ "MultipleLivesUpgradesToGrant", 		INI::parseAsciiStringWithColonVectorAppend, NULL, offsetof( UndeadBodyModuleData, m_multipleLivesUpgradeList) }, 
-		{ "MultipleLivesUpgradesToRemove", 		INI::parseAsciiStringWithColonVectorAppend, NULL, offsetof( UndeadBodyModuleData, m_multipleLivesUpgradeRemoveList) }, 
-		{ 0, 0, 0, 0 }
+		{ "SecondLifeMaxHealth",			INI::parseReal,	nullptr,		offsetof( UndeadBodyModuleData, m_secondLifeMaxHealth ) },
+		{ "SecondLifeUpgradesToGrant",		INI::parseAsciiStringVector,							nullptr, offsetof( UndeadBodyModuleData, m_secondLifeUpgradeNames ) },
+		{ "SecondLifeUpgradesToRemove",		INI::parseAsciiStringVector,							nullptr, offsetof( UndeadBodyModuleData, m_secondLifeUpgradeRemoveNames ) },
+		{ "SecondLifeSubdualCap",			INI::parseReal,	nullptr,		offsetof( UndeadBodyModuleData, m_secondLifeSubdualCap ) },
+		{ "SecondLifeSubdualHealRate",			INI::parseUnsignedInt,	nullptr,		offsetof( UndeadBodyModuleData, m_secondLifeSubdualHealRate ) },
+		{ "SecondLifeSubdualHealAmount",			INI::parseReal,	nullptr,		offsetof( UndeadBodyModuleData, m_secondLifeSubdualHealAmount ) },
+		{ "SecondLifeArmorSetSwitchAfterLivesAmount",	INI::parseInt,	nullptr,		offsetof( UndeadBodyModuleData, m_secondLifeArmorSetSwitch ) },
+		{ "MultipleLives",					INI::parseInt,	nullptr,		offsetof( UndeadBodyModuleData, m_multipleLives ) },
+		{ "MultipleLivesMaxHealthRatio",	INI::parsePercentToReal,	nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesMaxHealthRatio ) },
+		{ "MultipleLivesMaxHealthRatioScale",	INI::parseBool,	nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesMaxHealthRatioScale ) },
+		{ "MultipleLivesOverrideTrigger",			INI::parseIntVector,				nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesOverrideTrigger ) },
+		{ "MultipleLivesMaxHealthVariationOverride",		INI::parseRealVector,				nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesMaxHealthOverride ) },
+		{ "MultipleLivesSubdualCapVariationOverride",		INI::parseRealVector,				nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesSubdualCapOverride ) },
+		{ "MultipleLivesSubdualHealRateVariationOverride",		INI::parseUnsignedIntVector,		nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesSubdualHealRate ) },
+		{ "MultipleLivesSubdualHealAmountVariationOverride",		INI::parseRealVector,				nullptr,		offsetof( UndeadBodyModuleData, m_multipleLivesSubdualHealAmount ) },
+		{ "MultipleLivesUpgradesToGrant", 		INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( UndeadBodyModuleData, m_multipleLivesUpgradeList) }, 
+		{ "MultipleLivesUpgradesToRemove", 		INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( UndeadBodyModuleData, m_multipleLivesUpgradeRemoveList) }, 
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -245,47 +245,45 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 		}
 		
 		// Determine we want to override the heal value for the current amount of lives use for reviving.
-		Bool healOverride;
-		Int arrayNum;
+		Int healArray = -1;
 
 		if( !data->m_multipleLivesOverrideTrigger.empty() )
 		{
 			for(int x = 0; x < data->m_multipleLivesOverrideTrigger.size(); x++)
 			{
-				if(!data->m_multipleLivesOverrideTrigger[x] || data->m_multipleLivesOverrideTrigger[x] < 0) 
+				if(data->m_multipleLivesOverrideTrigger[x] <= 0) 
 				{
 					DEBUG_CRASH(("Invalid MultipleLivesOverrideTrigger value: %d at array %d.", data->m_multipleLivesMaxHealthOverride[x], x));
 					throw INI_INVALID_DATA;
 				}
 				if(data->m_multipleLivesOverrideTrigger[x] == data->m_multipleLives - m_currentMultipleLives)
 				{
-					healOverride = TRUE;
-					arrayNum = x;
+					healArray = x;
 					break;
 				}
 			}
 		}
-		if(healOverride == TRUE)
+		if(healArray >= 0)
 		{
 			/*if(data->m_multipleLivesMaxHealthOverride.empty())
 			{
-				DEBUG_ASSERTCRASH( 0, ("MultipleLivesMaxHealthVariationOverride is empty while MultipleLivesOverrideTrigger is at Life: %d.", arrayNum) );
+				DEBUG_ASSERTCRASH( 0, ("MultipleLivesMaxHealthVariationOverride is empty while MultipleLivesOverrideTrigger is at Life: %d.", healArray) );
 			}*/
-			if(!data->m_multipleLivesMaxHealthOverride.empty() && data->m_multipleLivesMaxHealthOverride[arrayNum] != NULL && data->m_multipleLivesMaxHealthOverride[arrayNum]>0)
+			if(!data->m_multipleLivesMaxHealthOverride.empty() && data->m_multipleLivesMaxHealthOverride.size() > healArray && data->m_multipleLivesMaxHealthOverride[healArray]>0)
 			{
-				setMaxHealth(data->m_multipleLivesMaxHealthOverride[arrayNum], FULLY_HEAL);
+				setMaxHealth(data->m_multipleLivesMaxHealthOverride[healArray], FULLY_HEAL);
 			}
-			if(!data->m_multipleLivesSubdualCapOverride.empty() && data->m_multipleLivesSubdualCapOverride[arrayNum] != NULL && data->m_multipleLivesSubdualCapOverride[arrayNum]>=0)
+			if(!data->m_multipleLivesSubdualCapOverride.empty() && data->m_multipleLivesSubdualCapOverride.size() > healArray && data->m_multipleLivesSubdualCapOverride[healArray]>=0)
 			{
-				setSubdualCap(data->m_multipleLivesSubdualCapOverride[arrayNum]);
+				setSubdualCap(data->m_multipleLivesSubdualCapOverride[healArray]);
 			}
-			if(!data->m_multipleLivesSubdualHealRate.empty() && data->m_multipleLivesSubdualHealRate[arrayNum] != NULL && data->m_multipleLivesSubdualHealRate[arrayNum]>0)
+			if(!data->m_multipleLivesSubdualHealRate.empty() && data->m_multipleLivesSubdualHealRate.size() > healArray && data->m_multipleLivesSubdualHealRate[healArray]>0)
 			{
-				setSubdualHealRate(data->m_multipleLivesSubdualHealRate[arrayNum]);
+				setSubdualHealRate(data->m_multipleLivesSubdualHealRate[healArray]);
 			}
-			if(!data->m_multipleLivesSubdualCapOverride.empty() && data->m_multipleLivesSubdualHealAmount[arrayNum] != NULL && data->m_multipleLivesSubdualHealAmount[arrayNum]>0)
+			if(!data->m_multipleLivesSubdualCapOverride.empty() && data->m_multipleLivesSubdualHealAmount.size() > healArray && data->m_multipleLivesSubdualHealAmount[healArray]>0)
 			{
-				setSubdualHealAmount(data->m_multipleLivesSubdualHealAmount[arrayNum]);
+				setSubdualHealAmount(data->m_multipleLivesSubdualHealAmount[healArray]);
 			}
 		}
 		if( !data->m_multipleLivesUpgradeList.empty() )
@@ -411,7 +409,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 	for( ; *update; ++update )
 	{
 		SlowDeathBehaviorInterface* sdu = (*update)->getSlowDeathBehaviorInterface();
-		if (sdu != NULL  && sdu->isDieApplicable(damageInfo) )
+		if (sdu != nullptr  && sdu->isDieApplicable(damageInfo) )
 		{
 			total += sdu->getProbabilityModifier( damageInfo );
 		}
@@ -425,7 +423,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 	for( update = getObject()->getBehaviorModules(); *update; ++update)
 	{
 		SlowDeathBehaviorInterface* sdu = (*update)->getSlowDeathBehaviorInterface();
-		if (sdu != NULL && sdu->isDieApplicable(damageInfo))
+		if (sdu != nullptr && sdu->isDieApplicable(damageInfo))
 		{
 			roll -= sdu->getProbabilityModifier( damageInfo );
 			if (roll <= 0)

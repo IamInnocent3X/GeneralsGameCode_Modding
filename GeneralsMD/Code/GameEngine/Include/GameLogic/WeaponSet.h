@@ -62,7 +62,7 @@ static const char *const TheWeaponSlotTypeNames[] =
 	"WEAPON_SEVEN",
 	"WEAPON_EIGHT",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheWeaponSlotTypeNames) == WEAPONSLOT_COUNT + 1, "Incorrect array size");
 
@@ -77,7 +77,7 @@ static const LookupListRec TheWeaponSlotTypeNamesLookupList[] =
 	{ "WEAPON_SEVEN",	WEAPON_SEVEN },
 	{ "WEAPON_EIGHT",	WEAPON_EIGHT },
 	
-	{ NULL, 0	}
+	{ nullptr, 0	}
 };
 static_assert(ARRAY_SIZE(TheWeaponSlotTypeNamesLookupList) == WEAPONSLOT_COUNT + 1, "Incorrect array size");
 
@@ -150,7 +150,7 @@ static const char *TheWeaponChoiceCriteriaNames[] =
 	"DAMAGE",
 	"RANGE",
 
-	NULL
+	nullptr
 };
 #endif
 
@@ -269,7 +269,7 @@ public:
 	const Weapon* findAmmoPipShowingWeapon() const;
 	void weaponSetOnWeaponBonusChange(const Object *source);
 	UnsignedInt getMostPercentReadyToFireAnyWeapon() const;
-	inline UnsignedInt getNthCommandSourceMask( WeaponSlotType n ) const { return m_curWeaponTemplateSet ? m_curWeaponTemplateSet->getNthCommandSourceMask( n ) : NULL; }
+	inline UnsignedInt getNthCommandSourceMask( WeaponSlotType n ) const { return m_curWeaponTemplateSet ? m_curWeaponTemplateSet->getNthCommandSourceMask( n ) : 0; }
 
 	Bool setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockType );
 	void releaseWeaponLock(WeaponLockType lockType);

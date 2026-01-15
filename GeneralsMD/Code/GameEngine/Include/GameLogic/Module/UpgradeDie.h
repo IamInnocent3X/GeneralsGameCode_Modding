@@ -54,9 +54,9 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "UpgradeToRemove",					INI::parseAsciiString,		NULL, offsetof( UpgradeDieModuleData, m_upgradeName ) },
-			{ "UpgradesToRemove",					INI::parseAsciiStringVector,NULL, offsetof( UpgradeDieModuleData, m_upgradeNames ) },
-			{ "UpgradesToGrant",					INI::parseAsciiStringVector,NULL, offsetof( UpgradeDieModuleData, m_upgradeNamesGrant ) },
+			{ "UpgradeToRemove",					INI::parseAsciiString,		nullptr, offsetof( UpgradeDieModuleData, m_upgradeName ) },
+			{ "UpgradesToRemove",					INI::parseAsciiStringVector,nullptr, offsetof( UpgradeDieModuleData, m_upgradeNames ) },
+			{ "UpgradesToGrant",					INI::parseAsciiStringVector,nullptr, offsetof( UpgradeDieModuleData, m_upgradeNamesGrant ) },
 			{ 0, 0, 0, 0 }
 		};
 

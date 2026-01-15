@@ -93,12 +93,12 @@ public:
     UpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "DepositTiming",					INI::parseDurationUnsignedInt,		NULL, offsetof( AutoDepositUpdateModuleData, m_depositFrame ) },
-			{ "DepositAmount",					INI::parseInt,		NULL, offsetof( AutoDepositUpdateModuleData, m_depositAmount ) },
-			{ "InitialCaptureBonus",		INI::parseInt,		NULL, offsetof( AutoDepositUpdateModuleData, m_initialCaptureBonus ) },
-			{ "ActualMoney",						INI::parseBool,		NULL, offsetof( AutoDepositUpdateModuleData, m_isActualMoney ) },
-			{ "UpgradedBoost",					parseUpgradePair,		NULL, offsetof( AutoDepositUpdateModuleData, m_upgradeBoost ) },
-			{ "TextHeightOffset",	      INI::parseReal,		NULL, offsetof( AutoDepositUpdateModuleData, m_textZOffset ) },
+			{ "DepositTiming",					INI::parseDurationUnsignedInt,		nullptr, offsetof( AutoDepositUpdateModuleData, m_depositFrame ) },
+			{ "DepositAmount",					INI::parseInt,		nullptr, offsetof( AutoDepositUpdateModuleData, m_depositAmount ) },
+			{ "InitialCaptureBonus",		INI::parseInt,		nullptr, offsetof( AutoDepositUpdateModuleData, m_initialCaptureBonus ) },
+			{ "ActualMoney",						INI::parseBool,		nullptr, offsetof( AutoDepositUpdateModuleData, m_isActualMoney ) },
+			{ "UpgradedBoost",					parseUpgradePair,		nullptr, offsetof( AutoDepositUpdateModuleData, m_upgradeBoost ) },
+			{ "TextHeightOffset",	      INI::parseReal,		nullptr, offsetof( AutoDepositUpdateModuleData, m_textZOffset ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

@@ -113,7 +113,7 @@ static const char* TheBattlePlanStatusNames[] =
 	"HOLD_THE_LINE",
 	"SEARCH_AND_DESTROY",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheBattlePlanStatusNames) == PLANSTATUS_COUNT + 1, "Array size");
 #endif
@@ -157,9 +157,9 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestinationActive() const { return false; } //Is it active now?
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}
-	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
-	virtual const AsciiString& getCursorName() const { return NULL; }
-	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
+	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const;
+	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
 	virtual void setDelay(UnsignedInt delayFrame) { }
 
 	//Returns the currently active battle plan -- unpacked and ready... returns PLANSTATUS_NONE if in transition!

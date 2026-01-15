@@ -59,8 +59,8 @@ public:
 		m_finalRadius = 200.0f;
 		m_startRadius = 0.0f;
     m_radiusGrowRate = 10.0f;
-		m_radiusParticleSystemTmpl = NULL;
-		m_upgradeName = NULL;
+		m_radiusParticleSystemTmpl = nullptr;
+		m_upgradeName = AsciiString::TheEmptyString;
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 	}
 
@@ -70,12 +70,12 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartRadius",						         INI::parseReal,									 NULL, offsetof( GrantStealthBehaviorModuleData, m_startRadius ) },
-			{ "FinalRadius",						         INI::parseReal,									 NULL, offsetof( GrantStealthBehaviorModuleData, m_finalRadius ) },
-			{ "RadiusGrowRate",						       INI::parseReal,									 NULL, offsetof( GrantStealthBehaviorModuleData, m_radiusGrowRate ) },
-			{ "KindOf",						    KindOfMaskType::parseFromINI,					       NULL, offsetof( GrantStealthBehaviorModuleData, m_kindOf ) },
-			{ "RadiusParticleSystemName",				 INI::parseParticleSystemTemplate, NULL, offsetof( GrantStealthBehaviorModuleData, m_radiusParticleSystemTmpl ) },
-			{ "UpgradeToGrant",							INI::parseAsciiString,							NULL, offsetof( GrantStealthBehaviorModuleData, m_upgradeName ) },
+			{ "StartRadius",						         INI::parseReal,									 nullptr, offsetof( GrantStealthBehaviorModuleData, m_startRadius ) },
+			{ "FinalRadius",						         INI::parseReal,									 nullptr, offsetof( GrantStealthBehaviorModuleData, m_finalRadius ) },
+			{ "RadiusGrowRate",						       INI::parseReal,									 nullptr, offsetof( GrantStealthBehaviorModuleData, m_radiusGrowRate ) },
+			{ "KindOf",						    KindOfMaskType::parseFromINI,					       nullptr, offsetof( GrantStealthBehaviorModuleData, m_kindOf ) },
+			{ "RadiusParticleSystemName",				 INI::parseParticleSystemTemplate, nullptr, offsetof( GrantStealthBehaviorModuleData, m_radiusParticleSystemTmpl ) },
+			{ "UpgradeToGrant",							INI::parseAsciiString,							nullptr, offsetof( GrantStealthBehaviorModuleData, m_upgradeName ) },
 			{ 0, 0, 0, 0 }
 		};
 

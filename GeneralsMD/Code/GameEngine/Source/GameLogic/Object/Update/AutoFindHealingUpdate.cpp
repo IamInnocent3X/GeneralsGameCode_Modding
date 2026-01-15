@@ -67,11 +67,11 @@ AutoFindHealingUpdateModuleData::AutoFindHealingUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "ScanRate",							INI::parseDurationUnsignedInt,	NULL, offsetof( AutoFindHealingUpdateModuleData, m_scanFrames ) },
-		{ "ScanRange",						INI::parseReal,									NULL, offsetof( AutoFindHealingUpdateModuleData, m_scanRange ) },
-		{ "NeverHeal",						INI::parseReal,									NULL, offsetof( AutoFindHealingUpdateModuleData, m_neverHeal ) },
-		{ "AlwaysHeal",						INI::parseReal,									NULL, offsetof( AutoFindHealingUpdateModuleData, m_alwaysHeal ) },
-		{ 0, 0, 0, 0 }
+		{ "ScanRate",							INI::parseDurationUnsignedInt,	nullptr, offsetof( AutoFindHealingUpdateModuleData, m_scanFrames ) },
+		{ "ScanRange",						INI::parseReal,									nullptr, offsetof( AutoFindHealingUpdateModuleData, m_scanRange ) },
+		{ "NeverHeal",						INI::parseReal,									nullptr, offsetof( AutoFindHealingUpdateModuleData, m_neverHeal ) },
+		{ "AlwaysHeal",						INI::parseReal,									nullptr, offsetof( AutoFindHealingUpdateModuleData, m_alwaysHeal ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 }
@@ -121,7 +121,7 @@ UpdateSleepTime AutoFindHealingUpdate::update()
 
 	// IamInnocent - No ai =  no heal, dont wake up;
 	AIUpdateInterface *ai = obj->getAI();
-	if (ai==NULL) return UPDATE_SLEEP_FOREVER;
+	if (ai==nullptr) return UPDATE_SLEEP_FOREVER;
 
 	// Check health.
 	BodyModuleInterface *body = obj->getBodyModule();
@@ -171,7 +171,7 @@ Object* AutoFindHealingUpdate::scanClosestTarget()
 {
 	const AutoFindHealingUpdateModuleData *data = getAutoFindHealingUpdateModuleData();
 	Object *me = getObject();
-	Object *bestTarget = NULL;
+	Object *bestTarget = nullptr;
 	Real closestDistSqr=0;
 
 	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( me->getPosition(), data->m_scanRange, FROM_CENTER_2D );
@@ -186,7 +186,7 @@ Object* AutoFindHealingUpdate::scanClosestTarget()
 		}
 
 		Real fDistSqr =  ThePartitionManager->getDistanceSquared( me, other, FROM_CENTER_2D ) ;
-		if (bestTarget==NULL) {
+		if (bestTarget==nullptr) {
 			bestTarget = other;
 			closestDistSqr = fDistSqr;
 			continue;

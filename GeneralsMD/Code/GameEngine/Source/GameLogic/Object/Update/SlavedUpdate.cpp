@@ -181,9 +181,9 @@ UpdateSleepTime SlavedUpdate::update(void)
 	// to satisfy the conditions to set it again for the next update.
 	master->clearWeaponBonusCondition(WEAPONBONUSCONDITION_DRONE_SPOTTING);
 
-	// Get my master's AI. If he is attacking something, grant him a range bonus,
-	// and I'll fly over the target.
-	Object *target = NULL;
+	//Get my master's AI. If he is attacking something, grant him a range bonus,
+	//and I'll fly over the target.
+	Object *target = nullptr;
 	AIUpdateInterface *masterAI = master->getAIUpdateInterface();
 	if (masterAI)
 	{
@@ -596,72 +596,72 @@ void SlavedUpdate::setRepairState(RepairStates repairState)
 
 	switch (repairState)
 	{
-	case REPAIRSTATE_UNPACKING:
-		setRepairModelConditionStates(MODELCONDITION_UNPACKING);
-		m_framesToWait = now + 15;
-		break;
-	case REPAIRSTATE_PACKING:
-		setRepairModelConditionStates(MODELCONDITION_PACKING);
-		m_framesToWait = now + 15;
-		break;
-	case REPAIRSTATE_READY:
-	{
-		switch (m_repairState)
-		{
-		case REPAIRSTATE_NONE:
-			// We're not in a repair state -- so assume we need to unpack
-			setRepairModelConditionStates(MODELCONDITION_UNPACKING);
-			m_repairState = REPAIRSTATE_UNPACKING;
+		case REPAIRSTATE_UNPACKING:
+			setRepairModelConditionStates( MODELCONDITION_UNPACKING );
 			m_framesToWait = now + 15;
 			break;
-		case REPAIRSTATE_WELDING:
-			// We are welding so retract before going into ready state.
-			m_repairState = REPAIRSTATE_RETRACTING;
-			m_framesToWait = now + 5;
-			setRepairModelConditionStates(MODELCONDITION_FIRING_C);
-			moveToNewRepairSpot();
+		case REPAIRSTATE_PACKING:
+			setRepairModelConditionStates( MODELCONDITION_PACKING );
+			m_framesToWait = now + 15;
 			break;
-		default:
-			m_repairState = REPAIRSTATE_READY;
-			m_framesToWait = GameLogicRandomValue(data->m_minReadyFrames, data->m_maxReadyFrames);
-			break;
-		}
-		break;
-	}
-	case REPAIRSTATE_WELDING:
-	{
-		if (m_repairState == REPAIRSTATE_READY)
+		case REPAIRSTATE_READY:
 		{
-			m_repairState = REPAIRSTATE_EXTENDING;
-			m_framesToWait = now + 5;
-			setRepairModelConditionStates(MODELCONDITION_FIRING_B);
-			break;
-		}
-		else
-		{
-			m_repairState = REPAIRSTATE_WELDING;
-			Int weldFrames = GameLogicRandomValue(data->m_minWeldFrames, data->m_maxWeldFrames);
-			m_framesToWait = now + weldFrames;
-
-			// Make sparks!
-			if (!data->m_weldingSysName.isEmpty())
+			switch( m_repairState )
 			{
-				const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate(data->m_weldingSysName);
-				if (tmp)
+				case REPAIRSTATE_NONE:
+					//We're not in a repair state -- so assume we need to unpack
+					setRepairModelConditionStates( MODELCONDITION_UNPACKING );
+					m_repairState = REPAIRSTATE_UNPACKING;
+					m_framesToWait = now + 15;
+					break;
+				case REPAIRSTATE_WELDING:
+					//We are welding so retract before going into ready state.
+					m_repairState = REPAIRSTATE_RETRACTING;
+					m_framesToWait = now + 5;
+					setRepairModelConditionStates( MODELCONDITION_FIRING_C );
+					moveToNewRepairSpot();
+					break;
+				default:
+					m_repairState = REPAIRSTATE_READY;
+					m_framesToWait = GameLogicRandomValue( data->m_minReadyFrames, data->m_maxReadyFrames );
+					break;
+			}
+			break;
+		}
+		case REPAIRSTATE_WELDING:
+		{
+			if( m_repairState == REPAIRSTATE_READY )
+			{
+				m_repairState = REPAIRSTATE_EXTENDING;
+				m_framesToWait = now + 5;
+				setRepairModelConditionStates( MODELCONDITION_FIRING_B );
+				break;
+			}
+			else
+			{
+				m_repairState = REPAIRSTATE_WELDING;
+				Int weldFrames = GameLogicRandomValue(data->m_minWeldFrames, data->m_maxWeldFrames);
+				m_framesToWait = now + weldFrames;
+
+				//Make sparks!
+				if( !data->m_weldingSysName.isEmpty() )
 				{
-					ParticleSystem *weldingSys = TheParticleSystemManager->createParticleSystem(tmp);
-					if (weldingSys)
+					const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate( data->m_weldingSysName );
+					if( tmp )
 					{
-						Coord3D pos;
-						// Get the bone position
-						if (draw->getPristineBonePositions(data->m_weldingFXBone.str(), 0, &pos, NULL, 1))
+						ParticleSystem *weldingSys = TheParticleSystemManager->createParticleSystem(tmp);
+						if( weldingSys )
 						{
-							pos.add(obj->getPosition());
-						}
-						else
-						{
-							pos.set(obj->getPosition());
-						}
+							Coord3D pos;
+							//Get the bone position
+							if( draw->getPristineBonePositions( data->m_weldingFXBone.str(), 0, &pos, nullptr, 1 ) )
+							{
+								pos.add( obj->getPosition() );
+							}
+							else
+							{
+								pos.set( obj->getPosition() );
+							}
 
 						weldingSys->setPosition(&pos);
 						Real time = (Real)(weldFrames * LOGICFRAMES_PER_SECOND);
@@ -730,7 +730,7 @@ void SlavedUpdate::moveToNewRepairSpot()
 //-------------------------------------------------------------------------------------------------
 void SlavedUpdate::startSlavedEffects(const Object *slaver)
 {
-	if (slaver == NULL)
+	if( slaver == nullptr )
 		return;
 
 	m_slaver = slaver->getID();
@@ -775,7 +775,7 @@ void SlavedUpdate::informMySlaverSelfInfo()
 		return;
 
 	Object *master = TheGameLogic->findObjectByID( m_slaver );
-	if( master == NULL )
+	if( master == nullptr )
 		return;
 
 	SpawnBehaviorInterface *spawnerBehavior = master->getSpawnBehaviorInterface();

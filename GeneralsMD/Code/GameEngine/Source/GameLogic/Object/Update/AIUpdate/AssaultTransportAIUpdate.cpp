@@ -741,7 +741,7 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 		for( int i = 0; i < m_currentMembers; i++ )
 		{
 			Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
-			AIUpdateInterface *ai = member ? member->getAI() : NULL;
+			AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 			if( !member || member->isEffectivelyDead() || ai->getLastCommandSource() != CMD_FROM_AI )
 			{
 				//Member is toast -- so remove him from our list!
@@ -857,7 +857,7 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 	Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
 	if( designatedTarget && designatedTarget->isEffectivelyDead() )
 	{
-		designatedTarget = NULL;
+		designatedTarget = nullptr;
 	}
 	if( designatedTarget )
 	{
@@ -865,7 +865,7 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 		for( int i = 0; i < m_currentMembers; i++ )
 		{
 			Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
-			AIUpdateInterface *ai = member ? member->getAI() : NULL;
+			AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 
 			if( member && ai )
 			{
@@ -1062,7 +1062,7 @@ void AssaultTransportAIUpdate::retrieveMembers()
 		m_countedSlotMember[ i ] = FALSE;
 		m_countedAssaultingMember[ i ] = FALSE;
 		Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
-		AIUpdateInterface *ai = member ? member->getAI() : NULL;
+		AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 		if( member && ai )
 		{
 			Bool contained = member->isContained();
@@ -1084,7 +1084,7 @@ void AssaultTransportAIUpdate::giveFinalOrders()
 	for( int i = 0; i < m_currentMembers; i++ )
 	{
 		Object *member = TheGameLogic->findObjectByID( m_memberIDs[ i ] );
-		AIUpdateInterface *ai = member ? member->getAI() : NULL;
+		AIUpdateInterface *ai = member ? member->getAI() : nullptr;
 		if( member && ai )
 		{
 			Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );

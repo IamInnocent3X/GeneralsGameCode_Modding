@@ -56,15 +56,15 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 	m_damageTypeFX = DAMAGE_POISON;
 	m_deathType = DEATH_NONE;
 	m_damageStatusType = OBJECT_STATUS_NONE;
-	m_customDamageType = NULL;
-	m_customDamageStatusType = NULL;
-	m_customDeathType = NULL;
+	m_customDamageType.clear();
+	m_customDamageStatusType.clear();
+	m_customDeathType.clear();
 	m_statusDuration = 0.0f;
 	m_doStatusDamage = FALSE;
 	m_statusDurationTypeCorrelate = FALSE;
 	m_poisonUnpurgable = FALSE;
 	m_tintStatus = TINT_STATUS_POISONED;
-	m_customTintStatus = NULL;
+	m_customTintStatus.clear();
 	m_damageTypesReaction.first = setDamageTypeFlag(DAMAGE_TYPE_FLAGS_NONE, DAMAGE_POISON);
 	m_damageTypesReaction.second.format("NONE");
 	m_damageTypesCure.first = DAMAGE_TYPE_FLAGS_NONE;
@@ -82,38 +82,38 @@ PoisonedBehaviorModuleData::PoisonedBehaviorModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "PoisonDamageInterval", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDamageIntervalData) },
-		{ "PoisonDuration", INI::parseDurationUnsignedInt, NULL, offsetof(PoisonedBehaviorModuleData, m_poisonDurationData) },
+		{ "PoisonDamageInterval", INI::parseDurationUnsignedInt, nullptr, offsetof(PoisonedBehaviorModuleData, m_poisonDamageIntervalData) },
+		{ "PoisonDuration", INI::parseDurationUnsignedInt, nullptr, offsetof(PoisonedBehaviorModuleData, m_poisonDurationData) },
 		
-		{ "PoisonDamage", 							INI::parseReal, 						NULL, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamage) },
-		{ "PoisonDamageMultiplier", 				INI::parseReal, 						NULL, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamageMultiplier) },
-		{ "PoisonDamageType",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageType) },
-		{ "PoisonDamageTypeFX",						DamageTypeFlags::parseSingleBitFromINI,	NULL,							offsetof(PoisonedBehaviorModuleData, m_damageTypeFX) },
+		{ "PoisonDamage", 							INI::parseReal, 						nullptr, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamage) },
+		{ "PoisonDamageMultiplier", 				INI::parseReal, 						nullptr, 							offsetof(PoisonedBehaviorModuleData, m_poisonDamageMultiplier) },
+		{ "PoisonDamageType",						DamageTypeFlags::parseSingleBitFromINI,	nullptr,							offsetof(PoisonedBehaviorModuleData, m_damageType) },
+		{ "PoisonDamageTypeFX",						DamageTypeFlags::parseSingleBitFromINI,	nullptr,							offsetof(PoisonedBehaviorModuleData, m_damageTypeFX) },
 		{ "PoisonDeathType",						INI::parseIndexList,								TheDeathNames,		offsetof(PoisonedBehaviorModuleData, m_deathType) },
 		
-		{ "PoisonCustomDamageType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageType) },
-		{ "PoisonCustomDamageStatusType",			INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDamageStatusType) },
-		{ "PoisonCustomDeathType",					INI::parseAsciiString,							NULL,					offsetof(PoisonedBehaviorModuleData, m_customDeathType) },
+		{ "PoisonCustomDamageType",					INI::parseAsciiString,							nullptr,					offsetof(PoisonedBehaviorModuleData, m_customDamageType) },
+		{ "PoisonCustomDamageStatusType",			INI::parseAsciiString,							nullptr,					offsetof(PoisonedBehaviorModuleData, m_customDamageStatusType) },
+		{ "PoisonCustomDeathType",					INI::parseAsciiString,							nullptr,					offsetof(PoisonedBehaviorModuleData, m_customDeathType) },
 		
-		{ "PoisonDamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	NULL,					offsetof(PoisonedBehaviorModuleData, m_damageStatusType) },
-		{ "PoisonDoStatusDamageType",				INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_doStatusDamage) },
-		{ "PoisonStatusDuration",					INI::parseReal,								NULL, 						offsetof(PoisonedBehaviorModuleData, m_statusDuration) },
-		{ "PoisonStatusDurationDamageCorrelation",	INI::parseBool,								NULL,						offsetof(PoisonedBehaviorModuleData, m_statusDurationTypeCorrelate) },
-		{ "PoisonStatusTintStatus",					TintStatusFlags::parseSingleBitFromINI,		NULL,						offsetof(PoisonedBehaviorModuleData, m_tintStatus) },
-		{ "PoisonStatusCustomTintStatus",			INI::parseQuotedAsciiString,				NULL, 						offsetof(PoisonedBehaviorModuleData, m_customTintStatus) },
+		{ "PoisonDamageStatusType",					ObjectStatusMaskType::parseSingleBitFromINI,	nullptr,					offsetof(PoisonedBehaviorModuleData, m_damageStatusType) },
+		{ "PoisonDoStatusDamageType",				INI::parseBool,								nullptr,						offsetof(PoisonedBehaviorModuleData, m_doStatusDamage) },
+		{ "PoisonStatusDuration",					INI::parseReal,								nullptr, 						offsetof(PoisonedBehaviorModuleData, m_statusDuration) },
+		{ "PoisonStatusDurationDamageCorrelation",	INI::parseBool,								nullptr,						offsetof(PoisonedBehaviorModuleData, m_statusDurationTypeCorrelate) },
+		{ "PoisonStatusTintStatus",					TintStatusFlags::parseSingleBitFromINI,		nullptr,						offsetof(PoisonedBehaviorModuleData, m_tintStatus) },
+		{ "PoisonStatusCustomTintStatus",			INI::parseQuotedAsciiString,				nullptr, 						offsetof(PoisonedBehaviorModuleData, m_customTintStatus) },
 
-		{ "DamageTypesReaction", 					INI::parseDamageTypeFlagsCustom, 		NULL, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesReaction) },
-		{ "CustomDamageTypesReaction", 				INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesReaction) },
-		{ "DontCurePoisonOnHeal",					INI::parseBool,							NULL,							offsetof(PoisonedBehaviorModuleData, m_poisonUnpurgable) },
-		{ "DamageTypesCurePoison", 					INI::parseDamageTypeFlagsCustom, 		NULL, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesCure) },
-		{ "CustomDamageTypesCurePoison", 			INI::parseCustomTypes, 					NULL, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesCure) },
+		{ "DamageTypesReaction", 					INI::parseDamageTypeFlagsCustom, 		nullptr, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesReaction) },
+		{ "CustomDamageTypesReaction", 				INI::parseCustomTypes, 					nullptr, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesReaction) },
+		{ "DontCurePoisonOnHeal",					INI::parseBool,							nullptr,							offsetof(PoisonedBehaviorModuleData, m_poisonUnpurgable) },
+		{ "DamageTypesCurePoison", 					INI::parseDamageTypeFlagsCustom, 		nullptr, 							offsetof(PoisonedBehaviorModuleData, m_damageTypesCure) },
+		{ "CustomDamageTypesCurePoison", 			INI::parseCustomTypes, 					nullptr, 							offsetof(PoisonedBehaviorModuleData, m_customDamageTypesCure) },
 
-		{ "RequiredStatus",							ObjectStatusMaskType::parseFromINI,		NULL, 							offsetof(PoisonedBehaviorModuleData, m_requiredStatus ) },
-		{ "ForbiddenStatus",						ObjectStatusMaskType::parseFromINI,		NULL, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenStatus ) },
-		{ "RequiredCustomStatus",					INI::parseAsciiStringVector,			NULL, 							offsetof(PoisonedBehaviorModuleData, m_requiredCustomStatus ) },
-		{ "ForbiddenCustomStatus",					INI::parseAsciiStringVector,			NULL, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenCustomStatus ) },
+		{ "RequiredStatus",							ObjectStatusMaskType::parseFromINI,		nullptr, 							offsetof(PoisonedBehaviorModuleData, m_requiredStatus ) },
+		{ "ForbiddenStatus",						ObjectStatusMaskType::parseFromINI,		nullptr, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus",					INI::parseAsciiStringVector,			nullptr, 							offsetof(PoisonedBehaviorModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",					INI::parseAsciiStringVector,			nullptr, 							offsetof(PoisonedBehaviorModuleData, m_forbiddenCustomStatus ) },
 
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   UpdateModuleData::buildFieldParse(p);

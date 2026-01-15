@@ -57,14 +57,14 @@ CaveContain::CaveContain( Thing *thing, const ModuleData* moduleData ) : OpenCon
 	m_needToRunOnBuildComplete = true;
 	m_loaded = false;
 	m_caveIndex = 0;
-	m_originalTeam = NULL;
+	m_originalTeam = nullptr;
 	m_payloadCreated = FALSE;
 	m_switchingOwners = FALSE;
 	m_containingFrames = 0;
 	m_isCaptured = FALSE;
-	m_capturedTeam = NULL;
-	m_oldTeam = NULL;
-	m_newTeam = NULL;
+	m_capturedTeam = nullptr;
+	m_oldTeam = nullptr;
+	m_newTeam = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ void CaveContain::removeFromContain( Object *obj, Bool exposeStealthUnits )
 {
 
 	// sanity
-	if( obj == NULL )
+	if( obj == nullptr )
 		return;
 
 	//
@@ -256,7 +256,7 @@ UpdateSleepTime CaveContain::update( void )
 	if( (!m_needToRunOnBuildComplete || !getObject()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION )) && !m_loaded)
 	{
 		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
-		if( myTracker == NULL )
+		if( myTracker == nullptr )
 		{
 			registerNewCave();
 		}
@@ -278,7 +278,7 @@ UpdateSleepTime CaveContain::update( void )
 			newTracker->onTunnelCreated( getObject() );
 
 		// Register a substitude value into captured Team so that we can register the original team later in case if this is neutral.
-		if(m_capturedTeam == NULL && m_originalTeam != NULL)
+		if(m_capturedTeam == nullptr && m_originalTeam != nullptr)
 		{
 			m_capturedTeam = m_originalTeam;
 		}
@@ -349,7 +349,7 @@ UpdateSleepTime CaveContain::update( void )
 		}
 	}
 
-	if(m_oldTeam != NULL && m_newTeam != NULL)
+	if(m_oldTeam != nullptr && m_newTeam != nullptr)
 	{		
 		if(getCaveContainModuleData()->m_caveUsesTeams)
 		{
@@ -359,8 +359,8 @@ UpdateSleepTime CaveContain::update( void )
 		if(curTracker)
 		{
 			doCapture(m_oldTeam, m_newTeam);
-			m_oldTeam = NULL;
-			m_newTeam = NULL;
+			m_oldTeam = nullptr;
+			m_newTeam = nullptr;
 		}
 	}
 
@@ -434,11 +434,12 @@ void CaveContain::onRemoving( Object *obj )
 		// (hokey exception: if our team is null, don't bother -- this
 		// usually means we are being called during game-teardown and
 		// the teams are no longer valid...)
-		if (getObject()->getTeam() != NULL )
+		if (getObject()->getTeam() != nullptr)
 		{
 			changeTeamOnAllConnectedCaves( m_originalTeam, FALSE );
+			m_originalTeam = nullptr;
 			if(!getHasPermanentOwner())
-				m_originalTeam = NULL;
+				m_originalTeam = nullptr;
 		}
 
 		// change the state back from garrisoned
@@ -456,7 +457,7 @@ void CaveContain::onSelling()
 {
 	// A TunnelContain tells everyone to leave if this is the last tunnel
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
-	if( myTracker == NULL )
+	if( myTracker == nullptr )
 		return;
 
 	// We are the last tunnel, so kick everyone out.  This makes tunnels act like Palace and Bunker
@@ -513,7 +514,7 @@ const ContainedItemsList* CaveContain::getContainedItemsList() const
 {
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 	if(!myTracker)
-		return NULL;
+		return nullptr;
 	return myTracker->getContainedItemsList();
 }
 
@@ -689,7 +690,7 @@ void CaveContain::tryToSetCaveIndex( Int newIndex )
 void CaveContain::recalcApparentControllingPlayer( void )
 {
 	//Record original team first time through.
-	if( m_originalTeam == NULL )
+	if( m_originalTeam == nullptr )
 	{
 		m_originalTeam = getObject()->getTeam();
 	}
@@ -697,8 +698,8 @@ void CaveContain::recalcApparentControllingPlayer( void )
 	// (hokey trick: if our team is null, nuke originalTeam -- this
 	// usually means we are being called during game-teardown and
 	// the teams are no longer valid...)
-	if (getObject()->getTeam() == NULL)
-		m_originalTeam = NULL;
+	if (getObject()->getTeam() == nullptr)
+		m_originalTeam = nullptr;
 
 	// This is called from onContaining, so a one is the edge trigger to do capture stuff
 	if( getContainCount() == 1 )
@@ -748,10 +749,10 @@ static CaveInterface* findCave(Object* obj)
 	for (BehaviorModule** i = obj->getBehaviorModules(); *i; ++i)
 	{
 		CaveInterface* c = (*i)->getCaveInterface();
-		if (c != NULL)
+		if (c != nullptr)
 			return c;
 	}
-	return NULL;
+	return nullptr;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -779,7 +780,7 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 			// This is a distributed Garrison in terms of capturing, so when one node
 			// triggers the change, he needs to tell everyone, so anyone can do the un-change.
 			CaveInterface *caveModule = findCave(currentCave);
-			if( caveModule == NULL )
+			if( caveModule == nullptr )
 				continue;
 			
 			Team *teamToSet;
@@ -790,7 +791,7 @@ void CaveContain::changeTeamOnAllConnectedCaves( Team *newTeam, Bool setOriginal
 			}
 			else
 			{
-				caveModule->setOriginalTeam( NULL );
+				caveModule->setOriginalTeam( nullptr );
 				teamToSet = caveModule->getOldTeam();
 			}
 
@@ -863,12 +864,12 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 			// News, functions are carried out through onCapture. No need to do anything here.
 
 			//CaveInterface *caveModule = findCave(currentCave);
-			//if( caveModule == NULL )
+			//if( caveModule == nullptr )
 			//	continue;
 			//if( setOriginalTeams )
 			//	caveModule->setOriginalTeam( currentCave->getTeam() );
 			//else
-			//	caveModule->setOriginalTeam( NULL );
+			//	caveModule->setOriginalTeam( nullptr );
 
 			// Now do the actual switch for this one.
 
@@ -882,10 +883,10 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 	}
 
 	// Fixes regarding exiting the Tunnel from a Captured cave onto a non-captured cave that results in the newTeam being a null
-	TunnelTracker *newTracker = NULL;
+	TunnelTracker *newTracker = nullptr;
 
-	// newTeam could be NULL, and this will give nullptr and crashes the game
-	if(setOriginalTeams && newTeam != NULL)
+	// newTeam could be null, and this will give nullptr and crashes the game
+	if(setOriginalTeams && newTeam != nullptr)
 	{
 		TheCaveSystem->registerNewCaveTeam( m_caveIndex, newTeam );
 
@@ -893,7 +894,7 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 	}
 	
 	// Wasn't so hard now was it?
-	// Fixes bugs relating to exiting from Caves with newTeam that does not have any reference or NULL.
+	// Fixes bugs relating to exiting from Caves with newTeam that does not have any reference or null.
 	if(newTracker || !setOriginalTeams)
 	{
 		for(int i = 0; i < vecCaveIDs.size(); i++)
@@ -904,7 +905,7 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 				//currTracker->onTunnelDestroyed( cave );
 				CaveInterface *caveModule = findCave(cave);
 
-				if(caveModule == NULL)
+				if(caveModule == nullptr)
 					continue;
 
 				Team *teamToSet;
@@ -915,11 +916,11 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 				}
 				else
 				{
-					caveModule->setOriginalTeam( NULL );
+					caveModule->setOriginalTeam( nullptr );
 					teamToSet = caveModule->getOldTeam();
 				}
 
-				if(!caveModule->getHasPermanentOwner() || ( newTracker && newTracker->getIsCapturingLinkedCaves()) )
+				if(!caveModule->getHasPermanentOwner() || ( newTracker && newTracker->getIsCapturingLinkedCaves() ))
 					cave->defect( teamToSet, 0 );
 				//newTracker->onTunnelCreated( cave );
 			}
@@ -1116,7 +1117,7 @@ void CaveContain::xfer( Xfer *xfer )
 		{
 
 			m_originalTeam = TheTeamFactory->findTeamByID( teamID );
-			if( m_originalTeam == NULL )
+			if( m_originalTeam == nullptr )
 			{
 
 				DEBUG_CRASH(( "CaveContain::xfer - Unable to find original team by id" ));
@@ -1126,13 +1127,13 @@ void CaveContain::xfer( Xfer *xfer )
 
 		}
 		else
-			m_originalTeam = NULL;
+			m_originalTeam = nullptr;
 
 		if( capturedID != TEAM_ID_INVALID )
 		{
 
 			m_capturedTeam = TheTeamFactory->findTeamByID( capturedID );
-			if( m_capturedTeam == NULL )
+			if( m_capturedTeam == nullptr )
 			{
 
 				DEBUG_CRASH(( "CaveContain::xfer - Unable to find captured team by id" ));
@@ -1142,7 +1143,7 @@ void CaveContain::xfer( Xfer *xfer )
 
 		}
 		else
-			m_capturedTeam = NULL;
+			m_capturedTeam = nullptr;
 
 	}
 

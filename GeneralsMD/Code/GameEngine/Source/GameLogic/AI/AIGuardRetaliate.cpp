@@ -58,7 +58,7 @@ const Real CLOSE_ENOUGH = (25.0f);
 static Bool hasAttackedMeAndICanReturnFire( State *thisState, void* /*userData*/ )
 {
 	Object *obj = thisState->getMachineOwner();
-	BodyModuleInterface *bmi = obj ? obj->getBodyModule() : NULL;
+	BodyModuleInterface *bmi = obj ? obj->getBodyModule() : nullptr;
 
 	if (!(obj && bmi)) {
 		return FALSE;
@@ -176,8 +176,8 @@ AIGuardRetaliateMachine::AIGuardRetaliateMachine( Object *owner ) :
 
 	static const StateConditionInfo attackAggressors[] =
 	{
-		StateConditionInfo(hasAttackedMeAndICanReturnFire, AI_GUARD_RETALIATE_ATTACK_AGGRESSOR, NULL),
-		StateConditionInfo(NULL, NULL, NULL)
+		StateConditionInfo(hasAttackedMeAndICanReturnFire, AI_GUARD_RETALIATE_ATTACK_AGGRESSOR, nullptr),
+		StateConditionInfo(nullptr, INVALID_STATE_ID, nullptr)
 	};
 
 	// order matters: first state is the default state.
@@ -224,7 +224,7 @@ Bool AIGuardRetaliateMachine::lookForInnerTarget(void)
 	}
 
 	// Check if team auto targets same victim.
-	Object *teamVictim = NULL;
+	Object *teamVictim = nullptr;
 	if (owner->getTeam()->getPrototype()->getTemplateInfo()->m_attackCommonTarget)
 	{
 		teamVictim = owner->getTeam()->getTeamTargetObject();
@@ -285,7 +285,7 @@ Bool AIGuardRetaliateMachine::lookForInnerTarget(void)
 
 	Real visionRange = AIGuardRetaliateMachine::getStdGuardRange(owner);
 
-	filters[count++] = NULL;
+	filters[count++] = nullptr;
 
 //	SimpleObjectIterator* iter = ThePartitionManager->iterateObjectsInRange(
 //					&pos, visionRange, FROM_CENTER_2D, filters, ITER_SORTED_NEAR_TO_FAR);
@@ -384,9 +384,9 @@ StateReturnType AIGuardRetaliateInnerState::onEnter( void )
 	if (getMachineOwner()->getTemplate()->isEnterGuard())
 	{
 		Object* nemesis = TheGameLogic->findObjectByID(getGuardMachine()->getNemesisID()) ;
-		if (nemesis == NULL)
+		if (nemesis == nullptr)
 		{
-			DEBUG_LOG(("Unexpected NULL nemesis in AIGuardRetaliateInnerState."));
+			DEBUG_LOG(("Unexpected null nemesis in AIGuardRetaliateInnerState."));
 			return STATE_SUCCESS;
 		}
 		m_enterState = newInstance(AIEnterState)(getMachine());
@@ -403,9 +403,9 @@ StateReturnType AIGuardRetaliateInnerState::onEnter( void )
 	{
 		Coord3D pos = *getGuardMachine()->getPositionToGuard();
 		Object* nemesis = TheGameLogic->findObjectByID(getGuardMachine()->getNemesisID()) ;
-		if (nemesis == NULL)
+		if (nemesis == nullptr)
 		{
-			DEBUG_LOG(("Unexpected NULL nemesis in AIGuardRetaliateInnerState."));
+			DEBUG_LOG(("Unexpected null nemesis in AIGuardRetaliateInnerState."));
 			return STATE_SUCCESS;
 		}
 		m_exitConditions.m_center = pos;
@@ -450,18 +450,18 @@ void AIGuardRetaliateInnerState::onExit( StateExitType status )
 	{
 		m_attackState->onExit(status);
 		deleteInstance(m_attackState);
-		m_attackState = NULL;
+		m_attackState = nullptr;
 	}
 	else if (m_enterState)
 	{
 		m_enterState->onExit(status);
 		deleteInstance(m_enterState);
-		m_enterState = NULL;
+		m_enterState = nullptr;
 	}
 
 	if (obj->getTeam())
 	{
-		obj->getTeam()->setTeamTargetObject(NULL); // clear the target.
+		obj->getTeam()->setTeamTargetObject(nullptr); // clear the target.
 	}
 }
 
@@ -511,9 +511,9 @@ StateReturnType AIGuardRetaliateOuterState::onEnter( void )
 	Coord3D pos = *getGuardMachine()->getPositionToGuard();
 
 	Object* nemesis = TheGameLogic->findObjectByID(getGuardMachine()->getNemesisID()) ;
-	if (nemesis == NULL)
+	if (nemesis == nullptr)
 	{
-		DEBUG_LOG(("Unexpected NULL nemesis in AIGuardRetaliateOuterState."));
+		DEBUG_LOG(("Unexpected null nemesis in AIGuardRetaliateOuterState."));
 		return STATE_SUCCESS;
 	}
 	Object *obj = getMachineOwner();
@@ -542,7 +542,7 @@ StateReturnType AIGuardRetaliateOuterState::onEnter( void )
 //--------------------------------------------------------------------------------------
 StateReturnType AIGuardRetaliateOuterState::update( void )
 {
-	if (m_attackState==NULL) return STATE_SUCCESS;
+	if (m_attackState==nullptr) return STATE_SUCCESS;
 
 	Object* goalObj = m_attackState->getMachineGoalObject();
 	if (goalObj)
@@ -569,7 +569,7 @@ void AIGuardRetaliateOuterState::onExit( StateExitType status )
 	{
 		m_attackState->onExit(status);
 		deleteInstance(m_attackState);
-		m_attackState = NULL;
+		m_attackState = nullptr;
 	}
 }
 
@@ -766,7 +766,7 @@ void AIGuardRetaliatePickUpCrateState::onExit( StateExitType status )
 AIGuardRetaliateAttackAggressorState::AIGuardRetaliateAttackAggressorState( StateMachine *machine ) :
 	State( machine, "AIGuardRetaliateAttackAggressorState" )
 {
-	m_attackState = NULL;
+	m_attackState = nullptr;
 }
 #ifdef STATE_MACHINE_DEBUG
 //----------------------------------------------------------------------------------------------------------
@@ -775,7 +775,7 @@ AsciiString AIGuardRetaliateAttackAggressorState::getName(  ) const
 	AsciiString name = m_name;
 	name.concat("/ ");
 	if (m_attackState) name.concat(m_attackState->getName());
-	else name.concat("*NULL m_attackState");
+	else name.concat("*null m_attackState");
 	return name;
 }
 #endif
@@ -809,7 +809,7 @@ StateReturnType AIGuardRetaliateAttackAggressorState::onEnter( void )
 
 	if( !nemesis )
 	{
-		DEBUG_LOG(("Unexpected NULL nemesis in AIGuardRetaliateAttackAggressorState."));
+		DEBUG_LOG(("Unexpected null nemesis in AIGuardRetaliateAttackAggressorState."));
 		return STATE_SUCCESS;
 	}
 
@@ -839,7 +839,7 @@ StateReturnType AIGuardRetaliateAttackAggressorState::onEnter( void )
 //-------------------------------------------------------------------------------------------------
 StateReturnType AIGuardRetaliateAttackAggressorState::update( void )
 {
-	if (m_attackState==NULL) return STATE_SUCCESS;
+	if (m_attackState==nullptr) return STATE_SUCCESS;
 
 	return m_attackState->update();
 }
@@ -852,12 +852,12 @@ void AIGuardRetaliateAttackAggressorState::onExit( StateExitType status )
 	{
 		m_attackState->onExit(status);
 		deleteInstance(m_attackState);
-		m_attackState = NULL;
+		m_attackState = nullptr;
 	}
 
 	if (obj->getTeam())
 	{
-		obj->getTeam()->setTeamTargetObject(NULL); // clear the target.
+		obj->getTeam()->setTeamTargetObject(nullptr); // clear the target.
 	}
 }
 

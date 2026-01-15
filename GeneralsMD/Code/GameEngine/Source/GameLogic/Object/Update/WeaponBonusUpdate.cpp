@@ -75,8 +75,8 @@ WeaponBonusUpdateModuleData::WeaponBonusUpdateModuleData()
 	m_bonusRange = 0;
 	m_bonusConditionType = WEAPONBONUSCONDITION_INVALID;
 	m_tintStatus = TINT_STATUS_FRENZY;
-	m_bonusCustomConditionType = NULL;
-	m_customTintStatus = NULL;
+	m_bonusCustomConditionType.clear();
+	m_customTintStatus.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -85,18 +85,18 @@ void WeaponBonusUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
   UpdateModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "RequiredAffectKindOf",		KindOfMaskType::parseFromINI,		NULL, offsetof( WeaponBonusUpdateModuleData, m_requiredAffectKindOf ) },
-		{ "ForbiddenAffectKindOf",	KindOfMaskType::parseFromINI,		NULL, offsetof( WeaponBonusUpdateModuleData, m_forbiddenAffectKindOf ) },
+		{ "RequiredAffectKindOf",		KindOfMaskType::parseFromINI,		nullptr, offsetof( WeaponBonusUpdateModuleData, m_requiredAffectKindOf ) },
+		{ "ForbiddenAffectKindOf",	KindOfMaskType::parseFromINI,		nullptr, offsetof( WeaponBonusUpdateModuleData, m_forbiddenAffectKindOf ) },
 		{ "AffectsTargets", INI::parseBitString32,	TheWeaponAffectsMaskNames, offsetof(WeaponBonusUpdateModuleData, m_targetsMask) },
-		{ "AffectAirborne", INI::parseBool, NULL, offsetof(WeaponBonusUpdateModuleData, m_isAffectAirborne) },
-		{ "BonusDuration",					INI::parseDurationUnsignedInt,	NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusDuration ) },
-		{ "BonusDelay",							INI::parseDurationUnsignedInt,	NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusDelay ) },
-		{ "BonusRange",							INI::parseReal,									NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusRange ) },
+		{ "AffectAirborne", INI::parseBool, nullptr, offsetof(WeaponBonusUpdateModuleData, m_isAffectAirborne) },
+		{ "BonusDuration",					INI::parseDurationUnsignedInt,	nullptr, offsetof( WeaponBonusUpdateModuleData, m_bonusDuration ) },
+		{ "BonusDelay",							INI::parseDurationUnsignedInt,	nullptr, offsetof( WeaponBonusUpdateModuleData, m_bonusDelay ) },
+		{ "BonusRange",							INI::parseReal,									nullptr, offsetof( WeaponBonusUpdateModuleData, m_bonusRange ) },
 		{ "BonusConditionType",			INI::parseIndexList,	TheWeaponBonusNames, offsetof( WeaponBonusUpdateModuleData, m_bonusConditionType ) },
-		{ "CustomBonusConditionType",		INI::parseAsciiString,	NULL, offsetof( WeaponBonusUpdateModuleData, m_bonusCustomConditionType ) },
-		{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( WeaponBonusUpdateModuleData, m_tintStatus ) },
-		{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( WeaponBonusUpdateModuleData, m_customTintStatus ) },
-		{ 0, 0, 0, 0 }
+		{ "CustomBonusConditionType",		INI::parseAsciiString,	nullptr, offsetof( WeaponBonusUpdateModuleData, m_bonusCustomConditionType ) },
+		{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	nullptr, offsetof( WeaponBonusUpdateModuleData, m_tintStatus ) },
+		{ "CustomTintStatusType",		INI::parseAsciiString,	nullptr, offsetof( WeaponBonusUpdateModuleData, m_customTintStatus ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -158,7 +158,7 @@ UpdateSleepTime WeaponBonusUpdate::update( void )
 	// Leaving this here commented out to show that I need to reach valid contents of invalid transports.
 	// So these checks are on an individual basis, not in the Partition query
 //	PartitionFilterAcceptByKindOf filterKindof(data->m_requiredAffectKindOf,data->m_forbiddenAffectKindOf);
-	PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, NULL };
+	PartitionFilter *filters[] = { &relationship, &filterAlive, &filterMapStatus, nullptr };
 
 	// scan objects in our region
 	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( me->getPosition(),
@@ -176,8 +176,7 @@ UpdateSleepTime WeaponBonusUpdate::update( void )
 	weaponBonusData.m_customType = data->m_bonusCustomConditionType;
 	weaponBonusData.m_customTintStatus = data->m_customTintStatus;
 
-	
-	for( Object *currentObj = iter->first(); currentObj != NULL; currentObj = iter->next() )
+	for( Object *currentObj = iter->first(); currentObj != nullptr; currentObj = iter->next() )
 	{
 		if( currentObj->isKindOfMulti(data->m_requiredAffectKindOf, data->m_forbiddenAffectKindOf) )
 		{

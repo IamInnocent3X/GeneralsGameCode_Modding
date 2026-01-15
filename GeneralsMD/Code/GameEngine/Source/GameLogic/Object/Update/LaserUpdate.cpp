@@ -74,16 +74,16 @@ LaserUpdateModuleData::LaserUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "MuzzleParticleSystem",		INI::parseAsciiString,	NULL, offsetof( LaserUpdateModuleData, m_particleSystemName ) },
-		{ "TargetParticleSystem",		INI::parseAsciiString,  NULL, offsetof( LaserUpdateModuleData, m_targetParticleSystemName ) },
-		{ "PunchThroughScalar",			INI::parseReal,					NULL, offsetof( LaserUpdateModuleData, m_punchThroughScalar ) },
-		{ "BeamFadeInDuration",				INI::parseDurationUnsignedInt,		NULL, offsetof(LaserUpdateModuleData, m_fadeInDurationFrames) },
-		{ "BeamFadeOutDuration",			INI::parseDurationUnsignedInt,		NULL, offsetof(LaserUpdateModuleData, m_fadeOutDurationFrames) },
-		{ "BeamGrowDuration",				INI::parseDurationUnsignedInt,		NULL, offsetof(LaserUpdateModuleData, m_widenDurationFrames) },
-		{ "BeamShrinkDuration",				INI::parseDurationUnsignedInt,		NULL, offsetof(LaserUpdateModuleData, m_decayDurationFrames) },
-		{ "UseMultiLaserDraw",			INI::parseBool,		NULL, offsetof(LaserUpdateModuleData, m_hasMultiDraw) },
-		{ "UseHouseColoredParticles",			INI::parseBool,		NULL, offsetof(LaserUpdateModuleData, m_useHouseColor) },
-		{ 0, 0, 0, 0 }
+		{ "MuzzleParticleSystem",		INI::parseAsciiString,	nullptr, offsetof( LaserUpdateModuleData, m_particleSystemName ) },
+		{ "TargetParticleSystem",		INI::parseAsciiString,  nullptr, offsetof( LaserUpdateModuleData, m_targetParticleSystemName ) },
+		{ "PunchThroughScalar",			INI::parseReal,					nullptr, offsetof( LaserUpdateModuleData, m_punchThroughScalar ) },
+		{ "BeamFadeInDuration",				INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_fadeInDurationFrames) },
+		{ "BeamFadeOutDuration",			INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_fadeOutDurationFrames) },
+		{ "BeamGrowDuration",				INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_widenDurationFrames) },
+		{ "BeamShrinkDuration",				INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_decayDurationFrames) },
+		{ "UseMultiLaserDraw",			INI::parseBool,		nullptr, offsetof(LaserUpdateModuleData, m_hasMultiDraw) },
+		{ "UseHouseColoredParticles",			INI::parseBool,		nullptr, offsetof(LaserUpdateModuleData, m_useHouseColor) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 }
@@ -145,7 +145,7 @@ void LaserUpdate::updateStartPos()
 		return;// Can't update if not told to update
 
 	const Drawable *parentDrawable = TheGameClient->findDrawableByID(m_parentID);
-	if( parentDrawable == NULL )
+	if( parentDrawable == nullptr )
 		return;// Can't update if no one to ask
 
 	if( m_parentObjID != INVALID_ID )
@@ -237,7 +237,7 @@ void LaserUpdate::updateEndPos()
 	Bool targetDead = (targetDrawable && targetDrawable->getObject())
 										? targetDrawable->getObject()->isEffectivelyDead()
 										: FALSE;
-	if( targetDrawable == NULL || targetDead )
+	if( targetDrawable == nullptr || targetDead )
 	{
 		// If here, we used to track something, but now it is gone.  So make our end point pierce through
 		// the old spot, and then stop trying to find a target Drawable
@@ -461,7 +461,7 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 	}
 
 	// Create special particle systems
-	//PLEASE NOTE You cannot check an ID for NULL.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	//PLEASE NOTE You cannot check an ID for nullptr.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
 	if( !m_particleSystemID )
 	{
 		const Player *localPlayer = rts::getObservedOrLocalPlayer();
@@ -507,7 +507,7 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 	}
 
 	//Adjust the position of any existing particle system.
-	//PLEASE NOTE You cannot check an ID for NULL.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	//PLEASE NOTE You cannot check an ID for nullptr.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
 	if( m_particleSystemID )
 	{
 		system = TheParticleSystemManager->findParticleSystem( m_particleSystemID );
@@ -517,7 +517,7 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 		}
 	}
 
-	//PLEASE NOTE You cannot check an ID for NULL.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	//PLEASE NOTE You cannot check an ID for nullptr.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
 	if( m_targetParticleSystemID )
 	{
 		system = TheParticleSystemManager->findParticleSystem( m_targetParticleSystemID );
@@ -531,7 +531,7 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 	//it probably won't get rendered!!!
 	// And as a client update, we cannot set the logic position.
 	Coord3D posToUse;
-	if( parent == NULL )
+	if( parent == nullptr )
 	{
 		posToUse.set( startPos );
 		posToUse.add( endPos );
@@ -548,7 +548,7 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 		// When initializing the laser, keep track if it has multiple draw modules.
 		// Update: This is a very special case, makes more sense to set it in INI, rather than check it every time
 		/* int numDraws = 0;
-		LaserDrawInterface* ldi = NULL;
+		LaserDrawInterface* ldi = nullptr;
 		for (DrawModule** d = draw->getDrawModules(); *d; ++d)
 		{
 			ldi = (*d)->getLaserDrawInterface();
@@ -619,7 +619,7 @@ void LaserUpdate::updateContinuousLaser(const Object* parent, const Object* targ
 	}
 
 	//Adjust the position of any existing particle system.
-	//PLEASE NOTE You cannot check an ID for NULL.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	//PLEASE NOTE You cannot check an ID for null.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
 	if (m_particleSystemID)
 	{
 		system = TheParticleSystemManager->findParticleSystem(m_particleSystemID);
@@ -629,7 +629,7 @@ void LaserUpdate::updateContinuousLaser(const Object* parent, const Object* targ
 		}
 	}
 
-	//PLEASE NOTE You cannot check an ID for NULL.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	//PLEASE NOTE You cannot check an ID for null.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
 	if (m_targetParticleSystemID)
 	{
 		system = TheParticleSystemManager->findParticleSystem(m_targetParticleSystemID);
@@ -643,7 +643,7 @@ void LaserUpdate::updateContinuousLaser(const Object* parent, const Object* targ
 	//it probably won't get rendered!!!
 	// And as a client update, we cannot set the logic position.
 	Coord3D posToUse;
-	if (parent == NULL)
+	if (parent == nullptr)
 	{
 		posToUse.set(startPos);
 		posToUse.add(endPos);
@@ -676,9 +676,9 @@ Real LaserUpdate::getLifeTimeProgress() const
 //-------------------------------------------------------------------------------------------------
 Real LaserUpdate::getTemplateLaserRadius() const
 {
-	const Drawable* draw = getDrawable();
-	const LaserDrawInterface* ldi = NULL;
-	for (const DrawModule** d = draw->getDrawModules(); *d; ++d)
+	const Drawable *draw = getDrawable();
+	const LaserDrawInterface* ldi = nullptr;
+	for( const DrawModule** d = draw->getDrawModules(); *d; ++d )
 	{
 		ldi = (*d)->getLaserDrawInterface();
 		if (ldi)

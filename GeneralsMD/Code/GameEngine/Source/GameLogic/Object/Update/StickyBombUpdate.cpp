@@ -105,7 +105,7 @@ void StickyBombUpdate::onObjectCreated()
 			Object *target = ai->getGoalObject();
 			if( target )
 			{
-				initStickyBomb( target, NULL);
+				initStickyBomb( target, nullptr);
 			}
 		}
 	}
@@ -318,7 +318,7 @@ void StickyBombUpdate::detonate()
 			damageInfo.in.m_customDeathType = data->m_geometryBasedDamageWeaponTemplate->getCustomDeathType();
 			damageInfo.in.m_customDamageStatusType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageStatusType();
 			
-			for (; curVictim != NULL; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : NULL)
+			for (; curVictim != nullptr; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : nullptr)
 			{
 				damageInfo.in.m_amount = (curVictimDistSqr <= primaryDamageRangeSqr) ? primaryDamage : secondaryDamage;
 				curVictim->attemptDamage(&damageInfo);
@@ -327,8 +327,10 @@ void StickyBombUpdate::detonate()
 			if( data->m_geometryBasedDamageFX )
 			{
 				// And we make FX based on that size too.
-				FXList::doFXPos(data->m_geometryBasedDamageFX, boobyTrappedObject->getPosition(), NULL, 0, NULL, secondaryDamageRange);
+				FXList::doFXPos(data->m_geometryBasedDamageFX, boobyTrappedObject->getPosition(), nullptr, 0, nullptr, secondaryDamageRange);
 			}
+
+			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(damageInfo.in.m_sourceID, m_targetID, boobyTrappedObject->getPosition());
 		}
 	}
 
@@ -349,16 +351,16 @@ Anim2DTemplate* StickyBombUpdate::getAnimBaseTemplate() {
 
 	if (getStickyBombUpdateModuleData()->m_animBaseTemplate.isNotEmpty()) {
 		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNotEmpty"));
-		if (m_animBaseTemplate == NULL) {
+		if (m_animBaseTemplate == nullptr) {
 			m_animBaseTemplate = TheAnim2DCollection->findTemplate(getStickyBombUpdateModuleData()->m_animBaseTemplate);
 		}
-		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNull = %d", m_animBaseTemplate == NULL));
+		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNull = %d", m_animBaseTemplate == nullptr));
 		return m_animBaseTemplate;
 	}
 
 	//DEBUG_LOG(("SBU::getAnimBaseTemplate - is Empty ?!"));
 
-	return NULL;
+	return nullptr;
 }
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -366,16 +368,16 @@ Anim2DTemplate* StickyBombUpdate::getAnimBaseTemplate() {
 Anim2DTemplate* StickyBombUpdate::getAnimTimedTemplate() {
 	if (getStickyBombUpdateModuleData()->m_animTimedTemplate.isNotEmpty()) {
 		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNotEmpty"));
-		if (m_animTimedTemplate == NULL) {
+		if (m_animTimedTemplate == nullptr) {
 			m_animTimedTemplate = TheAnim2DCollection->findTemplate(getStickyBombUpdateModuleData()->m_animTimedTemplate);
 		}
-		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNull = %d", m_animTimedTemplate == NULL));
+		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNull = %d", m_animTimedTemplate == nullptr));
 		return m_animTimedTemplate;
 	}
 
 	//DEBUG_LOG(("SBU::getAnimTimedTemplate - is Empty ?!"));
 
-	return NULL;
+	return nullptr;
 
 }
 // ------------------------------------------------------------------------------------------------

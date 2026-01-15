@@ -58,7 +58,7 @@ DemoTrapUpdateModuleData::DemoTrapUpdateModuleData()
 	m_scanFrames										= 0;
 	m_initialDelayFrames								= 0;
 	m_detonationProducerDelay                           = 0;
-	m_detonationWeaponTemplate			= NULL;
+	m_detonationWeaponTemplate			= nullptr;
 	m_detonateWhenKilled						= false;
 	m_detonateDontKill							= false;
 
@@ -71,32 +71,32 @@ DemoTrapUpdateModuleData::DemoTrapUpdateModuleData()
 
 	static const FieldParse dataFieldParse[] =
 	{
-    { "DefaultProximityMode",      INI::parseBool,								NULL, offsetof( DemoTrapUpdateModuleData, m_defaultsToProximityMode ) },
+    { "DefaultProximityMode",      INI::parseBool,								nullptr, offsetof( DemoTrapUpdateModuleData, m_defaultsToProximityMode ) },
     { "DetonationWeaponSlot",      INI::parseLookupList,					TheWeaponSlotTypeNamesLookupList, offsetof( DemoTrapUpdateModuleData, m_detonationWeaponSlot ) },
     { "ProximityModeWeaponSlot",   INI::parseLookupList,					TheWeaponSlotTypeNamesLookupList, offsetof( DemoTrapUpdateModuleData, m_proximityModeWeaponSlot ) },
     { "ManualModeWeaponSlot",      INI::parseLookupList,					TheWeaponSlotTypeNamesLookupList, offsetof( DemoTrapUpdateModuleData, m_manualModeWeaponSlot ) },
-    { "TriggerDetonationRange",    INI::parseReal,								NULL, offsetof( DemoTrapUpdateModuleData, m_triggerDetonationRange ) },
-    { "IgnoreTargetTypes",         KindOfMaskType::parseFromINI,							NULL, offsetof( DemoTrapUpdateModuleData, m_ignoreKindOf ) },
-		{ "ScanRate",									 INI::parseDurationUnsignedInt,	NULL, offsetof( DemoTrapUpdateModuleData, m_scanFrames ) },
-		{ "AutoDetonationWithFriendsInvolved", INI::parseBool,				NULL, offsetof( DemoTrapUpdateModuleData, m_friendlyDetonation ) },
-		{ "AutoDetonateDelayWhenProducerIsNearby", 	INI::parseDurationUnsignedInt,				NULL, offsetof( DemoTrapUpdateModuleData, m_detonationProducerDelay ) },
-		{ "DetonationWeapon",					 INI::parseWeaponTemplate,			NULL, offsetof( DemoTrapUpdateModuleData, m_detonationWeaponTemplate ) },
-		{ "DetonateWhenKilled",				 INI::parseBool,								NULL, offsetof( DemoTrapUpdateModuleData, m_detonateWhenKilled ) },
-		{ "DetonateDontKill",				 INI::parseBool,			NULL, offsetof( DemoTrapUpdateModuleData, m_detonateDontKill ) },
-		{ "InitialDelay",					INI::parseDurationUnsignedInt,	NULL, offsetof( DemoTrapUpdateModuleData, m_initialDelayFrames ) },
-		{ 0, 0, 0, 0 }
+    { "TriggerDetonationRange",    INI::parseReal,								nullptr, offsetof( DemoTrapUpdateModuleData, m_triggerDetonationRange ) },
+    { "IgnoreTargetTypes",         KindOfMaskType::parseFromINI,							nullptr, offsetof( DemoTrapUpdateModuleData, m_ignoreKindOf ) },
+		{ "ScanRate",									 INI::parseDurationUnsignedInt,	nullptr, offsetof( DemoTrapUpdateModuleData, m_scanFrames ) },
+		{ "AutoDetonationWithFriendsInvolved", INI::parseBool,				nullptr, offsetof( DemoTrapUpdateModuleData, m_friendlyDetonation ) },
+		{ "AutoDetonateDelayWhenProducerIsNearby", 	INI::parseDurationUnsignedInt,				nullptr, offsetof( DemoTrapUpdateModuleData, m_detonationProducerDelay ) },
+		{ "DetonationWeapon",					 INI::parseWeaponTemplate,			nullptr, offsetof( DemoTrapUpdateModuleData, m_detonationWeaponTemplate ) },
+		{ "DetonateWhenKilled",				 INI::parseBool,								nullptr, offsetof( DemoTrapUpdateModuleData, m_detonateWhenKilled ) },
+		{ "DetonateDontKill",				 INI::parseBool,			nullptr, offsetof( DemoTrapUpdateModuleData, m_detonateDontKill ) },
+		{ "InitialDelay",					INI::parseDurationUnsignedInt,	nullptr, offsetof( DemoTrapUpdateModuleData, m_initialDelayFrames ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 }
 
 //-------------------------------------------------------------------------------------------------
 DemoTrapUpdate::DemoTrapUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData ),
-	m_weapon(NULL)
+	m_weapon(nullptr)
 {
 	m_nextScanFrames = 0;
 	m_detonationProducerFrames = 0;
 	m_detonated = false;
-	m_weaponTemplateName = NULL;
+	m_weaponTemplateName.clear();
 
 	const DemoTrapUpdateModuleData *data = getDemoTrapUpdateModuleData();
 	const WeaponTemplate *tmpl = data->m_detonationWeaponTemplate;
@@ -409,7 +409,7 @@ void DemoTrapUpdate::xfer( Xfer *xfer )
 			if(m_weaponTemplateNameXferCheckOnly.isEmpty())
 			{
 				const WeaponTemplate *weaponTemplate = TheWeaponStore->findWeaponTemplate(m_weaponTemplateName);
-				if (weaponTemplate != NULL)
+				if (weaponTemplate != nullptr)
 				{
 					m_weapon = TheWeaponStore->allocateNewWeapon(weaponTemplate, m_lastDetonationWeaponSlot);
 					m_weapon->loadAmmoNow( getObject() );

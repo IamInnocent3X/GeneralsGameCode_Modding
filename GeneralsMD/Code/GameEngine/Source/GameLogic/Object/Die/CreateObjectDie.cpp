@@ -64,7 +64,7 @@
 CreateObjectDieModuleData::CreateObjectDieModuleData()
 {
 
-	m_ocl = NULL;
+	m_ocl = nullptr;
 	m_transferPreviousHealth = FALSE;
 	m_transferSelection = FALSE;
 	m_transferExperience = FALSE;
@@ -120,46 +120,46 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "CreationList",	INI::parseObjectCreationList,		NULL,											offsetof( CreateObjectDieModuleData, m_ocl ) },
-		{ "TransferPreviousHealth", INI::parseBool, NULL	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealth ) },
-		{ "TransferSelection", INI::parseBool, NULL, offsetof( CreateObjectDieModuleData, m_transferSelection ) },
+		{ "CreationList",	INI::parseObjectCreationList,		nullptr,											offsetof( CreateObjectDieModuleData, m_ocl ) },
+		{ "TransferPreviousHealth", INI::parseBool, nullptr	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealth ) },
+		{ "TransferSelection", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_transferSelection ) },
 
-		{ "TransferAIStates",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferAIStates ) },
-		{ "TransferExperience",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferExperience ) },
-		{ "TransferAttackers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferAttackers ) },
-		{ "TransferPreviousHealthDontTransferAttackers", INI::parseBool, NULL	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealthDontTransferAttackers ) },
-		{ "TransferStatuses",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferStatus ) },
-		{ "TransferWeaponBonuses",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferWeaponBonus ) },
-		{ "TransferDisabledType",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferDisabledType ) },
-		{ "TransferBombs",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferBombs ) },
-		{ "TransferHijackers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferHijackers ) },
-		{ "TransferEquippers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferEquippers ) },
-		{ "TransferParasites",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferParasites ) },
-		{ "TransferPassengers",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferPassengers ) },
-		{ "TransferToAssaultTransport",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferToAssaultTransport ) },
-		{ "TransferShieldedTargets",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferShieldedTargets ) },
-		{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferShieldingTargets ) },
-		{ "TransferSelectionDontClearGroup",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferSelectionDontClearGroup ) },
-		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( CreateObjectDieModuleData, m_transferObjectName ) },
+		{ "TransferAIStates",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferAIStates ) },
+		{ "TransferExperience",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferExperience ) },
+		{ "TransferAttackers",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferAttackers ) },
+		{ "TransferPreviousHealthDontTransferAttackers", INI::parseBool, nullptr	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealthDontTransferAttackers ) },
+		{ "TransferStatuses",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferStatus ) },
+		{ "TransferWeaponBonuses",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferWeaponBonus ) },
+		{ "TransferDisabledType",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferDisabledType ) },
+		{ "TransferBombs",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferBombs ) },
+		{ "TransferHijackers",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferHijackers ) },
+		{ "TransferEquippers",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferEquippers ) },
+		{ "TransferParasites",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferParasites ) },
+		{ "TransferPassengers",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferPassengers ) },
+		{ "TransferToAssaultTransport",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferToAssaultTransport ) },
+		{ "TransferShieldedTargets",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferShieldedTargets ) },
+		{ "TransferShieldingTargets",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferShieldingTargets ) },
+		{ "TransferSelectionDontClearGroup",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferSelectionDontClearGroup ) },
+		{ "TransferObjectName",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_previousHealthChangeType ) },
 
-		{ "OrientInForceDirection", INI::parseBool, NULL, offsetof(CreateObjectDieModuleData, m_orientInForceDirection) },
-		{ "ExtraBounciness",				INI::parseReal,						NULL, offsetof( CreateObjectDieModuleData, m_extraBounciness ) },
-		{ "ExtraFriction",				parseFrictionPerSec,						NULL, offsetof( CreateObjectDieModuleData, m_extraFriction ) },
-		{ "Offset",						INI::parseCoord3D,				NULL, offsetof( CreateObjectDieModuleData, m_offset ) },
+		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(CreateObjectDieModuleData, m_orientInForceDirection) },
+		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( CreateObjectDieModuleData, m_extraBounciness ) },
+		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( CreateObjectDieModuleData, m_extraFriction ) },
+		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( CreateObjectDieModuleData, m_offset ) },
 		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( CreateObjectDieModuleData, m_disposition ) },
-		{ "DispositionIntensity",	INI::parseReal,						NULL,	offsetof( CreateObjectDieModuleData, m_dispositionIntensity ) },
-		{ "SpinRate",					INI::parseAngularVelocityReal,	NULL, offsetof(CreateObjectDieModuleData, m_spinRate) },
-		{ "YawRate",					INI::parseAngularVelocityReal,	NULL, offsetof(CreateObjectDieModuleData, m_yawRate) },
-		{ "RollRate",					INI::parseAngularVelocityReal,	NULL, offsetof(CreateObjectDieModuleData, m_rollRate) },
-		{ "PitchRate",				INI::parseAngularVelocityReal,	NULL, offsetof(CreateObjectDieModuleData, m_pitchRate) },
-		{ "MinForceMagnitude",	INI::parseReal,	NULL, offsetof(CreateObjectDieModuleData, m_minMag) },
-		{ "MaxForceMagnitude",	INI::parseReal,	NULL, offsetof(CreateObjectDieModuleData, m_maxMag) },
-		{ "MinForcePitch",	INI::parseAngleReal,	NULL, offsetof(CreateObjectDieModuleData, m_minPitch) },
-		{ "MaxForcePitch",	INI::parseAngleReal,	NULL, offsetof(CreateObjectDieModuleData, m_maxPitch) },
-		{ "DiesOnBadLand",	INI::parseBool, NULL, offsetof(CreateObjectDieModuleData, m_diesOnBadLand) },
+		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( CreateObjectDieModuleData, m_dispositionIntensity ) },
+		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_spinRate) },
+		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_yawRate) },
+		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_rollRate) },
+		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_pitchRate) },
+		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(CreateObjectDieModuleData, m_minMag) },
+		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(CreateObjectDieModuleData, m_maxMag) },
+		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(CreateObjectDieModuleData, m_minPitch) },
+		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(CreateObjectDieModuleData, m_maxPitch) },
+		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(CreateObjectDieModuleData, m_diesOnBadLand) },
 
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 
@@ -269,7 +269,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 			// Transfer my Attack State
 			if( isTryingToAttack )
 			{
-				if(ai->getGoalObject() != NULL)
+				if(ai->getGoalObject() != nullptr)
 				{
 					if(ai->getAIStateType() == AI_FORCE_ATTACK_OBJECT)
 						new_ai->aiForceAttackObject( ai->getGoalObject(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
@@ -392,7 +392,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 		while ( it != list.end() )
 		{
 			Object *obj = *it++;
-			DEBUG_ASSERTCRASH( obj, ("Contain list must not contain NULL element"));
+			DEBUG_ASSERTCRASH( obj, ("Contain list must not contain null element"));
 
 			// Remove Passenger from current contain
 			contain->removeFromContain( obj, false );
@@ -712,7 +712,7 @@ static void adjustVector(Coord3D *vec, const Matrix3D* mtx)
 void CreateObjectDie::doDisposition(Object *sourceObj, Object* obj)
 {
 	// Sanity
-	if( obj == NULL )
+	if( obj == nullptr )
 		return;
 
 	const CreateObjectDieModuleData *data = getCreateObjectDieModuleData();

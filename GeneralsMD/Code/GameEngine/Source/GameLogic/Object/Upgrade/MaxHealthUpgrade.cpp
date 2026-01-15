@@ -63,16 +63,16 @@ void MaxHealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "AddMaxHealth",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addMaxHealth ) },
-		{ "MultiplyMaxHealth",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplyMaxHealth ) },
-		{ "AddSubdualCap",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualCap ) },
-		{ "MultiplySubdualCap",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualCap ) },
-		{ "AddSubdualHealRate",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealRate ) },
-		{ "MultiplySubdualHealRate",		INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealRate ) },
-		{ "AddSubdualHealAmount",			INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealAmount ) },
-		{ "MultiplySubdualHealAmount",		INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealAmount ) },
+		{ "AddMaxHealth",					INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_addMaxHealth ) },
+		{ "MultiplyMaxHealth",				INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_multiplyMaxHealth ) },
+		{ "AddSubdualCap",					INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualCap ) },
+		{ "MultiplySubdualCap",				INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualCap ) },
+		{ "AddSubdualHealRate",				INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealRate ) },
+		{ "MultiplySubdualHealRate",		INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealRate ) },
+		{ "AddSubdualHealAmount",			INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_addSubdualHealAmount ) },
+		{ "MultiplySubdualHealAmount",		INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_multiplySubdualHealAmount ) },
 		{ "ChangeType",						INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( MaxHealthUpgradeModuleData, m_maxHealthChangeType ) },
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   p.add(dataFieldParse);

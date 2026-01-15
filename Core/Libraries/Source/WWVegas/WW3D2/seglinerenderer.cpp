@@ -69,7 +69,7 @@
 
 
 SegLineRendererClass::SegLineRendererClass(void) :
-		Texture(NULL),
+		Texture(nullptr),
 		Shader(ShaderClass::_PresetAdditiveSpriteShader),
 		Width(0.0f),
 		Color(Vector3(1,1,1)),
@@ -84,13 +84,13 @@ SegLineRendererClass::SegLineRendererClass(void) :
 		UVOffsetDeltaPerMS(0.0f, 0.0f),
 		Bits(DEFAULT_BITS),
 		m_vertexBufferSize(0),
-		m_vertexBuffer(NULL)
+		m_vertexBuffer(nullptr)
 {
 	// EMPTY
 }
 
 SegLineRendererClass::SegLineRendererClass(const SegLineRendererClass & that) :
-		Texture(NULL),
+		Texture(nullptr),
 		Shader(ShaderClass::_PresetAdditiveSpriteShader),
 		Width(0.0f),
 		Color(Vector3(1,1,1)),
@@ -105,7 +105,7 @@ SegLineRendererClass::SegLineRendererClass(const SegLineRendererClass & that) :
 		UVOffsetDeltaPerMS(0.0f, 0.0f),
 		Bits(DEFAULT_BITS),
 		m_vertexBufferSize(0),
-		m_vertexBuffer(NULL)
+		m_vertexBuffer(nullptr)
 {
 	*this = that;
 }
@@ -176,7 +176,7 @@ void SegLineRendererClass::Set_Texture(TextureClass *texture)
 
 TextureClass * SegLineRendererClass::Get_Texture(void) const
 {
-	if (Texture != NULL) {
+	if (Texture != nullptr) {
 		Texture->Add_Ref();
 	}
 	return Texture;
@@ -354,7 +354,7 @@ void SegLineRendererClass::Render
 		Vector4 subdiv_rgbas[MAX_SEGLINE_POINT_BUFFER_SIZE];
 		unsigned int sub_point_cnt;
 
-		Vector4 *rgbasPointer = rgbas ? &rgbas[ chidx ] : NULL;
+		Vector4 *rgbasPointer = rgbas ? &rgbas[ chidx ] : nullptr;
 
 		subdivision_util(point_cnt, xformed_pts, base_tex_v, &sub_point_cnt, xformed_subdiv_pts, subdiv_tex_v, rgbasPointer, subdiv_rgbas);
 
@@ -1137,7 +1137,7 @@ void SegLineRendererClass::Render
 			mat=VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_NODIFFUSE);
 		}
 
-		// If Texture is non-NULL enable texturing in shader - otherwise disable.
+		// If Texture is non-null enable texturing in shader - otherwise disable.
 		if (Texture) {
 			shader.Set_Texturing(ShaderClass::TEXTURING_ENABLE);
 		} else {

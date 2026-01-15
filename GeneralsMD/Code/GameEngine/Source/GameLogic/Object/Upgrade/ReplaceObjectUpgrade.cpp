@@ -77,45 +77,45 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "ReplaceObject",	INI::parseAsciiString,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_replaceObjectName ) },
+		{ "ReplaceObject",	INI::parseAsciiString,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_replaceObjectName ) },
 
-		{ "TransferHealth",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealth ) },
-		{ "TransferAIStates",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferAIStates ) },
-		{ "TransferExperience",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferExperience ) },
-		{ "TransferAttackers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferAttack ) },
-		{ "TransferStatuses",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferStatus ) },
-		{ "TransferWeaponBonuses",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferWeaponBonus ) },
-		{ "TransferDisabledType",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferDisabledType ) },
-		{ "TransferBombs",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferBombs ) },
-		{ "TransferHijackers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferHijackers ) },
-		{ "TransferEquippers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferEquippers ) },
-		{ "TransferParasites",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferParasites ) },
-		{ "TransferPassengers",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferPassengers ) },
-		{ "TransferToAssaultTransport",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferToAssaultTransport ) },
-		{ "TransferShieldedTargets",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldedTargets ) },
-		{ "TransferShieldingTargets",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldingTargets ) },
-		{ "TransferSelection",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelection ) },
-		{ "TransferSelectionDontClearGroup",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelectionDontClearGroup ) },
-		{ "TransferObjectName",	INI::parseBool,	NULL, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
+		{ "TransferHealth",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealth ) },
+		{ "TransferAIStates",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferAIStates ) },
+		{ "TransferExperience",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferExperience ) },
+		{ "TransferAttackers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferAttack ) },
+		{ "TransferStatuses",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferStatus ) },
+		{ "TransferWeaponBonuses",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferWeaponBonus ) },
+		{ "TransferDisabledType",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferDisabledType ) },
+		{ "TransferBombs",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferBombs ) },
+		{ "TransferHijackers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferHijackers ) },
+		{ "TransferEquippers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferEquippers ) },
+		{ "TransferParasites",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferParasites ) },
+		{ "TransferPassengers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferPassengers ) },
+		{ "TransferToAssaultTransport",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferToAssaultTransport ) },
+		{ "TransferShieldedTargets",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldedTargets ) },
+		{ "TransferShieldingTargets",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldingTargets ) },
+		{ "TransferSelection",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelection ) },
+		{ "TransferSelectionDontClearGroup",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelectionDontClearGroup ) },
+		{ "TransferObjectName",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealthChangeType ) },
 
-		{ "OrientInForceDirection", INI::parseBool, NULL, offsetof(ReplaceObjectUpgradeModuleData, m_orientInForceDirection) },
-		{ "ExtraBounciness",				INI::parseReal,						NULL, offsetof( ReplaceObjectUpgradeModuleData, m_extraBounciness ) },
-		{ "ExtraFriction",				parseFrictionPerSec,						NULL, offsetof( ReplaceObjectUpgradeModuleData, m_extraFriction ) },
-		{ "Offset",						INI::parseCoord3D,				NULL, offsetof( ReplaceObjectUpgradeModuleData, m_offset ) },
+		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_orientInForceDirection) },
+		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_extraBounciness ) },
+		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_extraFriction ) },
+		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_offset ) },
 		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( ReplaceObjectUpgradeModuleData, m_disposition ) },
-		{ "DispositionIntensity",	INI::parseReal,						NULL,	offsetof( ReplaceObjectUpgradeModuleData, m_dispositionIntensity ) },
-		{ "SpinRate",					INI::parseAngularVelocityReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_spinRate) },
-		{ "YawRate",					INI::parseAngularVelocityReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_yawRate) },
-		{ "RollRate",					INI::parseAngularVelocityReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_rollRate) },
-		{ "PitchRate",				INI::parseAngularVelocityReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_pitchRate) },
-		{ "MinForceMagnitude",	INI::parseReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_minMag) },
-		{ "MaxForceMagnitude",	INI::parseReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_maxMag) },
-		{ "MinForcePitch",	INI::parseAngleReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_minPitch) },
-		{ "MaxForcePitch",	INI::parseAngleReal,	NULL, offsetof(ReplaceObjectUpgradeModuleData, m_maxPitch) },
-		{ "DiesOnBadLand",	INI::parseBool, NULL, offsetof(ReplaceObjectUpgradeModuleData, m_diesOnBadLand) },
+		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( ReplaceObjectUpgradeModuleData, m_dispositionIntensity ) },
+		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_spinRate) },
+		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_yawRate) },
+		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_rollRate) },
+		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_pitchRate) },
+		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_minMag) },
+		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_maxMag) },
+		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_minPitch) },
+		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_maxPitch) },
+		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_diesOnBadLand) },
 
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -171,9 +171,9 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		myMatrix = *me->getTransformMatrix();
 		myTeam = me->getTeam();// Team implies player.  It is a subset.
 
-		if (replacementTemplate == NULL)
+		if (replacementTemplate == nullptr)
 		{
-			DEBUG_ASSERTCRASH(replacementTemplate != NULL, ("No such object '%s' in ReplaceObjectUpgrade.", data->m_replaceObjectName.str()));
+			DEBUG_ASSERTCRASH(replacementTemplate != nullptr, ("No such object '%s' in ReplaceObjectUpgrade.", data->m_replaceObjectName.str()));
 			return;
 		}
 
@@ -278,7 +278,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 			// Transfer my Attack State
 			if( isTryingToAttack )
 			{
-				if(ai->getGoalObject() != NULL)
+				if(ai->getGoalObject() != nullptr)
 				{
 					if(ai->getAIStateType() == AI_FORCE_ATTACK_OBJECT)
 						new_ai->aiForceAttackObject( ai->getGoalObject(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
@@ -401,7 +401,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		while ( it != list.end() )
 		{
 			Object *obj = *it++;
-			DEBUG_ASSERTCRASH( obj, ("Contain list must not contain NULL element"));
+			DEBUG_ASSERTCRASH( obj, ("Contain list must not contain null element"));
 
 			// Remove Passenger from current contain
 			contain->removeFromContain( obj, false );
@@ -645,7 +645,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 
 	if( replacementObject->getControllingPlayer() )
 	{
-		replacementObject->getControllingPlayer()->onStructureConstructionComplete(NULL, replacementObject, FALSE);
+		replacementObject->getControllingPlayer()->onStructureConstructionComplete(nullptr, replacementObject, FALSE);
 
 		// TheSuperHackers @bugfix Stubbjax 26/05/2025 If the old object was selected, select the new one.
 		// IamInnocent 02/12/2025 - Integrated with Transfer Selection Feature added Below
@@ -721,7 +721,7 @@ static void calcRandomForce(Real minMag, Real maxMag, Real minPitch, Real maxPit
 void ReplaceObjectUpgrade::doDisposition(Object *sourceObj, Object* obj)
 {
 	// Sanity
-	if( obj == NULL )
+	if( obj == nullptr )
 		return;
 
 	const ReplaceObjectUpgradeModuleData *data = getReplaceObjectUpgradeModuleData();

@@ -82,10 +82,10 @@
 //-------------------------------------------------------------------------------------------------
 SpectreGunshipUpdateModuleData::SpectreGunshipUpdateModuleData()
 {
-	m_specialPowerTemplate			   = NULL;
+	m_specialPowerTemplate			   = nullptr;
 /******BOTH*******//*BOTH*//******BOTH*******//******BOTH*******/  m_attackAreaRadius             = 200.0f;
-/*************/  m_gattlingStrafeFXParticleSystem = NULL;
-/*************/  m_howitzerWeaponTemplate = NULL;
+/*************/  m_gattlingStrafeFXParticleSystem = nullptr;
+/*************/  m_howitzerWeaponTemplate = nullptr;
 /*************/  m_orbitFrames                  = 0;
 /*************/  m_targetingReticleRadius       = 25.0f;
 /*************/  m_gunshipOrbitRadius           = 250.0f;
@@ -98,7 +98,7 @@ SpectreGunshipUpdateModuleData::SpectreGunshipUpdateModuleData()
   m_useLocomotorToUpdateOrbit = FALSE;
   m_gunshipDontUpdateOrbit = FALSE;
   m_playSoundOnCreationWithSpawnDelay = FALSE;
-  m_cursorName = NULL;
+  m_cursorName.clear();
 }
 
 static Real zero = 0.0f;
@@ -109,31 +109,31 @@ static Real zero = 0.0f;
 
 	static const FieldParse dataFieldParse[] =
 	{
-    { "SpecialPowerTemplate",           INI::parseSpecialPowerTemplate,   NULL, offsetof( SpectreGunshipUpdateModuleData, m_specialPowerTemplate ) },
-    { "GattlingTemplateName",           INI::parseAsciiString,				    NULL, offsetof( SpectreGunshipUpdateModuleData, m_gattlingTemplateName ) },
-		{ "HowitzerFiringRate",	            INI::parseDurationUnsignedInt,    NULL, offsetof( SpectreGunshipUpdateModuleData, m_howitzerFiringRate ) },
-		{ "OrbitTime",	                    INI::parseDurationUnsignedInt,		NULL, offsetof( SpectreGunshipUpdateModuleData, m_orbitFrames ) },
-		{ "HowitzerFollowLag",	            INI::parseDurationUnsignedInt,		NULL, offsetof( SpectreGunshipUpdateModuleData, m_howitzerFollowLag ) },
-    { "AttackAreaRadius",	              INI::parseReal,				            NULL, offsetof( SpectreGunshipUpdateModuleData, m_attackAreaRadius ) },
-		{ "StrafingIncrement",	            INI::parseReal,				            NULL, offsetof( SpectreGunshipUpdateModuleData, m_strafingIncrement ) },
-		{ "OrbitInsertionSlope",	          INI::parseReal,	  			          NULL, offsetof( SpectreGunshipUpdateModuleData, m_orbitInsertionSlope ) },
-		{ "RandomOffsetForHowitzer",        INI::parseReal,	                  NULL, offsetof( SpectreGunshipUpdateModuleData, m_randomOffsetForHowitzer ) },
-		{ "TargetingReticleRadius",	        INI::parseReal,				            NULL, offsetof( SpectreGunshipUpdateModuleData, m_targetingReticleRadius ) },
-		{ "GunshipOrbitRadius",	            INI::parseReal,				            NULL, offsetof( SpectreGunshipUpdateModuleData, m_gunshipOrbitRadius ) },
-		{ "HowitzerWeaponTemplate",				  INI::parseWeaponTemplate,				  NULL, offsetof( SpectreGunshipUpdateModuleData, m_howitzerWeaponTemplate ) },
-		{ "GattlingStrafeFXParticleSystem",	INI::parseParticleSystemTemplate, NULL, offsetof( SpectreGunshipUpdateModuleData, m_gattlingStrafeFXParticleSystem ) },
-		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( SpectreGunshipUpdateModuleData, m_attackAreaDecalTemplate ) },
-		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( SpectreGunshipUpdateModuleData, m_targetingReticleDecalTemplate ) },
-    { "UseMyProducerToInitiateSpecialPower", INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_useMyProducerForSpecialPower ) },
-    //{ "UseLocomotorToUpdateOrbit",           INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_useLocomotorToUpdateOrbit ) },
-    { "UseMyLocomotorToOrbit",               INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_gunshipDontUpdateOrbit ) },
-    { "PlaySoundOnCreationWithSpawnDelay",   INI::parseBool,              NULL, offsetof( SpectreGunshipUpdateModuleData, m_playSoundOnCreationWithSpawnDelay ) },
-    { "CursorName",		                  INI::parseAsciiString,	                        NULL,	offsetof( SpectreGunshipUpdateModuleData, m_cursorName) },
+    { "SpecialPowerTemplate",           INI::parseSpecialPowerTemplate,   nullptr, offsetof( SpectreGunshipUpdateModuleData, m_specialPowerTemplate ) },
+    { "GattlingTemplateName",           INI::parseAsciiString,				    nullptr, offsetof( SpectreGunshipUpdateModuleData, m_gattlingTemplateName ) },
+		{ "HowitzerFiringRate",	            INI::parseDurationUnsignedInt,    nullptr, offsetof( SpectreGunshipUpdateModuleData, m_howitzerFiringRate ) },
+		{ "OrbitTime",	                    INI::parseDurationUnsignedInt,		nullptr, offsetof( SpectreGunshipUpdateModuleData, m_orbitFrames ) },
+		{ "HowitzerFollowLag",	            INI::parseDurationUnsignedInt,		nullptr, offsetof( SpectreGunshipUpdateModuleData, m_howitzerFollowLag ) },
+    { "AttackAreaRadius",	              INI::parseReal,				            nullptr, offsetof( SpectreGunshipUpdateModuleData, m_attackAreaRadius ) },
+		{ "StrafingIncrement",	            INI::parseReal,				            nullptr, offsetof( SpectreGunshipUpdateModuleData, m_strafingIncrement ) },
+		{ "OrbitInsertionSlope",	          INI::parseReal,	  			          nullptr, offsetof( SpectreGunshipUpdateModuleData, m_orbitInsertionSlope ) },
+		{ "RandomOffsetForHowitzer",        INI::parseReal,	                  nullptr, offsetof( SpectreGunshipUpdateModuleData, m_randomOffsetForHowitzer ) },
+		{ "TargetingReticleRadius",	        INI::parseReal,				            nullptr, offsetof( SpectreGunshipUpdateModuleData, m_targetingReticleRadius ) },
+		{ "GunshipOrbitRadius",	            INI::parseReal,				            nullptr, offsetof( SpectreGunshipUpdateModuleData, m_gunshipOrbitRadius ) },
+		{ "HowitzerWeaponTemplate",				  INI::parseWeaponTemplate,				  nullptr, offsetof( SpectreGunshipUpdateModuleData, m_howitzerWeaponTemplate ) },
+		{ "GattlingStrafeFXParticleSystem",	INI::parseParticleSystemTemplate, nullptr, offsetof( SpectreGunshipUpdateModuleData, m_gattlingStrafeFXParticleSystem ) },
+		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( SpectreGunshipUpdateModuleData, m_attackAreaDecalTemplate ) },
+		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( SpectreGunshipUpdateModuleData, m_targetingReticleDecalTemplate ) },
+    { "UseMyProducerToInitiateSpecialPower", INI::parseBool,              nullptr, offsetof( SpectreGunshipUpdateModuleData, m_useMyProducerForSpecialPower ) },
+    //{ "UseLocomotorToUpdateOrbit",           INI::parseBool,              nullptr, offsetof( SpectreGunshipUpdateModuleData, m_useLocomotorToUpdateOrbit ) },
+    { "UseMyLocomotorToOrbit",               INI::parseBool,              nullptr, offsetof( SpectreGunshipUpdateModuleData, m_gunshipDontUpdateOrbit ) },
+    { "PlaySoundOnCreationWithSpawnDelay",   INI::parseBool,              nullptr, offsetof( SpectreGunshipUpdateModuleData, m_playSoundOnCreationWithSpawnDelay ) },
+    { "CursorName",		                  INI::parseAsciiString,	                        nullptr,	offsetof( SpectreGunshipUpdateModuleData, m_cursorName) },
 
 
 
 
-    { 0, 0, 0, 0 }
+    { nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 }
@@ -141,7 +141,7 @@ static Real zero = 0.0f;
 //-------------------------------------------------------------------------------------------------
 SpectreGunshipUpdate::SpectreGunshipUpdate( Thing *thing, const ModuleData* moduleData ) : SpecialPowerUpdateModule( thing, moduleData )
 {
-	m_specialPowerModule = NULL;
+	m_specialPowerModule = nullptr;
   m_gattlingID = INVALID_ID;
 	m_status = GUNSHIP_STATUS_IDLE;
   m_lastStatus = GUNSHIP_STATUS_CHECK;
@@ -211,7 +211,7 @@ Bool SpectreGunshipUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemp
   if(data->m_useMyProducerForSpecialPower)
 	{
 		Object *producer = TheGameLogic->findObjectByID(getObject()->getProducerID());
-		if(producer && TheActionManager->canDoSpecialPowerAtLocation( producer, targetPos, CMD_FROM_PLAYER, specialPowerTemplate, NULL, commandOptions, true ))
+		if(producer && TheActionManager->canDoSpecialPowerAtLocation( producer, targetPos, CMD_FROM_PLAYER, specialPowerTemplate, nullptr, commandOptions, true ))
 		{
 			for( BehaviorModule** u = producer->getBehaviorModules(); *u; ++u )
       {
@@ -269,10 +269,10 @@ Bool SpectreGunshipUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemp
 
       Object *newGattling = TheGameLogic->findObjectByID( m_gattlingID );
 	    const ThingTemplate *gattlingTemplate = TheThingFactory->findTemplate( data->m_gattlingTemplateName );
-	    if( newGattling != NULL )
+	    if( newGattling != nullptr )
       {
         m_gattlingID = INVALID_ID;
-        newGattling = NULL;
+        newGattling = nullptr;
       }
       if ( gattlingTemplate )
       {
@@ -431,7 +431,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 #endif
 
       AIUpdateInterface *shipAI = gunship->getAIUpdateInterface();
-      AIUpdateInterface *gattlingAI = NULL;
+      AIUpdateInterface *gattlingAI = nullptr;
 
       Object *gattling = TheGameLogic->findObjectByID( m_gattlingID );
       if ( gattling )
@@ -567,7 +567,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 
       if ( m_status == GUNSHIP_STATUS_ORBITING )
       {
-        //Object *validTargetObject = NULL;
+        //Object *validTargetObject = nullptr;
 
 
         //if ( TheGameLogic->getFrame() >= m_orbitEscapeFrame )
@@ -583,7 +583,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
         }
         else
         {
-          Object *validTargetObject = NULL;
+          Object *validTargetObject = nullptr;
           
           if(!m_checkHowitzerCountdownFirst)
           {
@@ -616,7 +616,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 	          filters[numFilters++] = &filterStealth;
 	          filters[numFilters++] = &filterAttack;
 	          filters[numFilters++] = &filterFogged;
-	          filters[numFilters] = NULL;
+	          filters[numFilters] = nullptr;
 
 
 
@@ -875,7 +875,7 @@ void SpectreGunshipUpdate::cleanUp()
 void SpectreGunshipUpdate::disengageAndDepartAO( Object *gunship )
 {
 
-  if ( gunship == NULL )
+  if ( gunship == nullptr )
     return;
 
   AIUpdateInterface *shipAI = gunship->getAIUpdateInterface();

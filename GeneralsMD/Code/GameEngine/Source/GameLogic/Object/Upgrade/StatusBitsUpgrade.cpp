@@ -80,15 +80,15 @@ void StatusBitsUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToSet ) },
-		{ "StatusToClear",	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StatusBitsUpgradeModuleData, m_statusToClear ) },
-		{ "CustomStatusToSet",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToSet ) },
-		{ "CustomStatusToClear",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customStatusToClear ) },
-		{ "BonusToSet",       INI::parseWeaponBonusVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_bonusToSet ) },
-		{ "BonusToClear",       INI::parseWeaponBonusVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_bonusToClear ) },
-		{ "CustomBonusToSet",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customBonusToSet ) },
-		{ "CustomBonusToClear",	INI::parseAsciiStringVector, NULL, offsetof( StatusBitsUpgradeModuleData, m_customBonusToClear ) },
-		{ 0, 0, 0, 0 }
+		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StatusBitsUpgradeModuleData, m_statusToSet ) },
+		{ "StatusToClear",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StatusBitsUpgradeModuleData, m_statusToClear ) },
+		{ "CustomStatusToSet",	INI::parseAsciiStringVector, nullptr, offsetof( StatusBitsUpgradeModuleData, m_customStatusToSet ) },
+		{ "CustomStatusToClear",	INI::parseAsciiStringVector, nullptr, offsetof( StatusBitsUpgradeModuleData, m_customStatusToClear ) },
+		{ "BonusToSet",       INI::parseWeaponBonusVector, nullptr, offsetof( StatusBitsUpgradeModuleData, m_bonusToSet ) },
+		{ "BonusToClear",       INI::parseWeaponBonusVector, nullptr, offsetof( StatusBitsUpgradeModuleData, m_bonusToClear ) },
+		{ "CustomBonusToSet",	INI::parseAsciiStringVector, nullptr, offsetof( StatusBitsUpgradeModuleData, m_customBonusToSet ) },
+		{ "CustomBonusToClear",	INI::parseAsciiStringVector, nullptr, offsetof( StatusBitsUpgradeModuleData, m_customBonusToClear ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }

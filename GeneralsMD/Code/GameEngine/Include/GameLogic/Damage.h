@@ -281,7 +281,7 @@ static const char *const TheDeathNames[] =
 	//New:
 	"CHRONO",	
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheDeathNames) == DEATH_NUM_TYPES + 1, "Incorrect array size");
 #endif // end DEFINE_DEATH_NAMES
@@ -388,7 +388,7 @@ public:
 	DamageInfoInput( void )
 	{
 		m_sourceID = INVALID_ID;
-		m_sourceTemplate = NULL;
+		m_sourceTemplate = nullptr;
 		m_sourcePlayerMask = 0;
 		m_damageType = DAMAGE_EXPLOSION;
 		m_damageStatusType = OBJECT_STATUS_NONE;

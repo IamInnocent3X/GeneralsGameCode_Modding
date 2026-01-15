@@ -68,8 +68,8 @@
 
 StealthUpdateModuleData::StealthUpdateModuleData()
 {
-		m_disguiseFX = NULL;
-    m_disguiseRevealFX = NULL;
+		m_disguiseFX = nullptr;
+    m_disguiseRevealFX = nullptr;
     m_stealthDelay		= UINT_MAX;
     m_stealthLevel		= 0;
     m_stealthSpeed		= 0.0f;
@@ -106,42 +106,42 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StealthDelay",									INI::parseDurationUnsignedInt,	NULL, offsetof( StealthUpdateModuleData, m_stealthDelay ) },
-		{ "MoveThresholdSpeed",						INI::parseVelocityReal,					NULL, offsetof( StealthUpdateModuleData, m_stealthSpeed ) },
+		{ "StealthDelay",									INI::parseDurationUnsignedInt,	nullptr, offsetof( StealthUpdateModuleData, m_stealthDelay ) },
+		{ "MoveThresholdSpeed",						INI::parseVelocityReal,					nullptr, offsetof( StealthUpdateModuleData, m_stealthSpeed ) },
 		{ "StealthForbiddenConditions",		INI::parseBitString32,					TheStealthLevelNames, offsetof( StealthUpdateModuleData, m_stealthLevel) },
-		{ "HintDetectableConditions",	  	ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StealthUpdateModuleData, m_hintDetectableStates) },
-		{ "RequiredStatus",								ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StealthUpdateModuleData, m_requiredStatus ) },
-		{ "ForbiddenStatus",							ObjectStatusMaskType::parseFromINI,	NULL, offsetof( StealthUpdateModuleData, m_forbiddenStatus ) },
-		{ "FriendlyOpacityMin",						INI::parsePercentToReal,				NULL, offsetof( StealthUpdateModuleData, m_friendlyOpacityMin ) },
-		{ "FriendlyOpacityMax",						INI::parsePercentToReal,				NULL, offsetof( StealthUpdateModuleData, m_friendlyOpacityMax ) },
-		{ "PulseFrequency",								INI::parseDurationUnsignedInt,	NULL, offsetof( StealthUpdateModuleData, m_pulseFrames ) },
-		{ "DisguisesAsTeam",							INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_teamDisguised ) },
-		{ "RevealDistanceFromTarget",			INI::parseReal,									NULL, offsetof( StealthUpdateModuleData, m_revealDistanceFromTarget ) },
-		{ "OrderIdleEnemiesToAttackMeUponReveal", INI::parseBool,					NULL, offsetof( StealthUpdateModuleData, m_orderIdleEnemiesToAttackMeUponReveal ) },
-		{ "DisguiseFX",										INI::parseFXList,								NULL, offsetof( StealthUpdateModuleData, m_disguiseFX ) },
-		{ "DisguiseRevealFX",							INI::parseFXList,								NULL, offsetof( StealthUpdateModuleData, m_disguiseRevealFX ) },
-		{ "DisguiseTransitionTime",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseTransitionFrames ) },
-		{ "DisguiseRevealTransitionTime",	INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseRevealTransitionFrames ) },
-		{ "DisguiseFlickerTransitionTime",	INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_disguiseFlickerTransitionTime ) },
-		{ "DisguiseFriendlyFlickerDelay",	INI::parseDurationUnsignedInt,	NULL, offsetof( StealthUpdateModuleData, m_disguiseFriendlyFlickerDelay ) },
-		{ "InnateStealth",								INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_innateStealth ) },
-		{ "UseRiderStealth",							INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_useRiderStealth ) },
-		{ "InnateDisguise",								INI::parseBool,									NULL, offsetof( StealthUpdateModuleData, m_innateDisguise ) },
-		{ "AutoDisguiseWhenAvailable",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_autoDisguiseWhenAvailable ) },
-		{ "CanStealthWhileDisguised",					INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_canStealthWhileDisguised ) },
-		{ "DisguiseRetainAfterDetected",				INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_disguiseRetainAfterDetected ) },
-		{ "PreservePendingCommandWhenDetected",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_preservePendingCommandWhenDetected ) },
-		{ "DontFlashWhenFlickering",			INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_dontFlashWhenFlickering ) },
-		{ "UseOriginalFiringOffsetWhileDisguised",		INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_disguiseUseOriginalFiringOffset ) },
-		{ "IsSimpleDisguiseForWeapons",		INI::parseBool,	NULL, offsetof( StealthUpdateModuleData, m_isSimpleDisguise ) },
-    { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
-    { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	NULL, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
-		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  NULL, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
-    { "GrantedBySpecialPower",        INI::parseBool,                 NULL, offsetof( StealthUpdateModuleData, m_grantedBySpecialPower ) },
-	{ "RequiredCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( StealthUpdateModuleData, m_requiredCustomStatus ) },
-	{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, NULL, 	offsetof( StealthUpdateModuleData, m_forbiddenCustomStatus ) },
+		{ "HintDetectableConditions",	  	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthUpdateModuleData, m_hintDetectableStates) },
+		{ "RequiredStatus",								ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthUpdateModuleData, m_requiredStatus ) },
+		{ "ForbiddenStatus",							ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthUpdateModuleData, m_forbiddenStatus ) },
+		{ "FriendlyOpacityMin",						INI::parsePercentToReal,				nullptr, offsetof( StealthUpdateModuleData, m_friendlyOpacityMin ) },
+		{ "FriendlyOpacityMax",						INI::parsePercentToReal,				nullptr, offsetof( StealthUpdateModuleData, m_friendlyOpacityMax ) },
+		{ "PulseFrequency",								INI::parseDurationUnsignedInt,	nullptr, offsetof( StealthUpdateModuleData, m_pulseFrames ) },
+		{ "DisguisesAsTeam",							INI::parseBool,									nullptr, offsetof( StealthUpdateModuleData, m_teamDisguised ) },
+		{ "RevealDistanceFromTarget",			INI::parseReal,									nullptr, offsetof( StealthUpdateModuleData, m_revealDistanceFromTarget ) },
+		{ "OrderIdleEnemiesToAttackMeUponReveal", INI::parseBool,					nullptr, offsetof( StealthUpdateModuleData, m_orderIdleEnemiesToAttackMeUponReveal ) },
+		{ "DisguiseFX",										INI::parseFXList,								nullptr, offsetof( StealthUpdateModuleData, m_disguiseFX ) },
+		{ "DisguiseRevealFX",							INI::parseFXList,								nullptr, offsetof( StealthUpdateModuleData, m_disguiseRevealFX ) },
+		{ "DisguiseTransitionTime",				INI::parseDurationUnsignedInt,  nullptr, offsetof( StealthUpdateModuleData, m_disguiseTransitionFrames ) },
+		{ "DisguiseRevealTransitionTime",	INI::parseDurationUnsignedInt,  nullptr, offsetof( StealthUpdateModuleData, m_disguiseRevealTransitionFrames ) },
+		{ "DisguiseFlickerTransitionTime",	INI::parseDurationUnsignedInt,  nullptr, offsetof( StealthUpdateModuleData, m_disguiseFlickerTransitionTime ) },
+		{ "DisguiseFriendlyFlickerDelay",	INI::parseDurationUnsignedInt,	nullptr, offsetof( StealthUpdateModuleData, m_disguiseFriendlyFlickerDelay ) },
+		{ "InnateStealth",								INI::parseBool,									nullptr, offsetof( StealthUpdateModuleData, m_innateStealth ) },
+		{ "UseRiderStealth",							INI::parseBool,									nullptr, offsetof( StealthUpdateModuleData, m_useRiderStealth ) },
+		{ "InnateDisguise",								INI::parseBool,									nullptr, offsetof( StealthUpdateModuleData, m_innateDisguise ) },
+		{ "AutoDisguiseWhenAvailable",					INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_autoDisguiseWhenAvailable ) },
+		{ "CanStealthWhileDisguised",					INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_canStealthWhileDisguised ) },
+		{ "DisguiseRetainAfterDetected",				INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_disguiseRetainAfterDetected ) },
+		{ "PreservePendingCommandWhenDetected",			INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_preservePendingCommandWhenDetected ) },
+		{ "DontFlashWhenFlickering",			INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_dontFlashWhenFlickering ) },
+		{ "UseOriginalFiringOffsetWhileDisguised",		INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_disguiseUseOriginalFiringOffset ) },
+		{ "IsSimpleDisguiseForWeapons",		INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_isSimpleDisguise ) },
+    { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	nullptr, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
+    { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	nullptr, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
+		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  nullptr, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
+    { "GrantedBySpecialPower",        INI::parseBool,                 nullptr, offsetof( StealthUpdateModuleData, m_grantedBySpecialPower ) },
+	{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( StealthUpdateModuleData, m_requiredCustomStatus ) },
+	{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( StealthUpdateModuleData, m_forbiddenCustomStatus ) },
 
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -161,7 +161,7 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 	m_pulsePhase				= GameClientRandomValueReal(0, PI);
 
 	m_disguiseAsPlayerIndex			= -1;
-	m_disguiseAsTemplate			  = NULL;
+	m_disguiseAsTemplate			  = nullptr;
 	m_transitioningToDisguise		= false;
 	m_disguised									= false;
 	m_disguiseTransitionFrames	= 0;
@@ -171,7 +171,7 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 
 	m_stealthLevelOverride = 0;
 
-	m_lastDisguiseAsTemplate = NULL;
+	m_lastDisguiseAsTemplate = nullptr;
 	m_lastDisguiseAsPlayerIndex			= -1;
 
 	m_flicked = false;
@@ -184,13 +184,13 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 	m_markForClearStealthLater = false;
 	m_isNotAutoDisguise = false;
 
-	m_disguiseModelName = NULL;
+	m_disguiseModelName.clear();
 
 	m_updatePulse = false;
 	m_updatePulseOnly = false;
 
-	m_originalDrawableTemplate = NULL;
-	m_disguisedDrawableTemplate = NULL;
+	m_originalDrawableTemplate = nullptr;
+	m_disguisedDrawableTemplate = nullptr;
 	//m_originalDrawableFiringOffsets.clear();
 	//m_disguisedDrawableFiringOffsets.clear();
 
@@ -254,7 +254,7 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 				{
 					// get thing template based from map object name
 					thingTemplate = pMapObj->getThingTemplate();
-					if( thingTemplate == NULL )
+					if( thingTemplate == nullptr )
 						continue;
 
 					if( thingTemplate->isAnyKindOf(forbiddenMask) )
@@ -276,7 +276,7 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 								{
 									AsciiString modelName = currDraw->getModelName();
 									TheGameClient->destroyDrawable( currDraw );
-									disguiseAsObject( NULL, newDraw );
+									disguiseAsObject( nullptr, newDraw );
 									m_disguiseModelName = modelName;
 									break;
 								}
@@ -334,7 +334,7 @@ void isBlackMarket( Object *obj, void *userData )
 void StealthUpdate::receiveGrant( Bool active, UnsignedInt frames )
 {
   Object *obj = getObject();
-  if ( obj == NULL )
+  if ( obj == nullptr )
     return;
 
   if (this->canDisguise())
@@ -603,7 +603,7 @@ Bool StealthUpdate::allowedToStealth( Object *stealthOwner ) const
 
 
 	const PhysicsBehavior *physics = self->getPhysics();
-	if ((flags & STEALTH_NOT_WHILE_MOVING) && physics != NULL &&
+	if ((flags & STEALTH_NOT_WHILE_MOVING) && physics != nullptr &&
 					physics->getVelocityMagnitude() > getStealthUpdateModuleData()->m_stealthSpeed)
 		return FALSE;
 
@@ -1116,7 +1116,7 @@ UpdateSleepTime StealthUpdate::update( void )
 			}
 			else if(canDisguise() && !isDisguised() && m_lastDisguiseAsTemplate)
 			{
-				disguiseAsObject( NULL, NULL, TRUE );
+				disguiseAsObject( nullptr, nullptr, TRUE );
 			}
 		}
 
@@ -1143,7 +1143,7 @@ UpdateSleepTime StealthUpdate::update( void )
 		//If we are disguised, remove the disguise permanently!
 		if( isDisguised() )
 		{
-			disguiseAsObject( NULL );
+			disguiseAsObject( nullptr );
 
 			// Also the last GUI to be preserved because selection overrides the current GUI
 			m_preserveLastGUI = true;
@@ -1187,7 +1187,7 @@ UpdateSleepTime StealthUpdate::update( void )
 			}
 			else
 			{
-				disguiseAsObject( NULL );
+				disguiseAsObject( nullptr );
 
 				// Also the last GUI to be preserved because selection overrides the current GUI
 				// IamInnocent - This is a switch up improvisation, because when Bomb Truck is exposed,
@@ -1325,7 +1325,7 @@ void StealthUpdate::markAsDetected(UnsignedInt numFrames)
 		}
 		else
 		{
-			disguiseAsObject( NULL );
+			disguiseAsObject( nullptr );
 
 			// Also the last GUI to be preserved because selection overrides the current GUI
 			// IamInnocent - This is a switch up improvisation, because when Bomb Truck is exposed,
@@ -1387,7 +1387,7 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 	if( target && target->getControllingPlayer() )
 	{
     StealthUpdate* stealth = target->getStealth();
-		m_disguiseModelName	= NULL;
+		m_disguiseModelName.clear();
 
 		if( stealth && stealth->getDisguisedTemplate() )
 		{
@@ -1421,7 +1421,7 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 		m_lastDisguiseAsTemplate				= drawTemplate->getTemplate();
 		m_disguiseAsPlayerIndex			= ThePlayerList->getNeutralPlayer()->getPlayerIndex();
 
-		m_disguiseModelName	= NULL;
+		m_disguiseModelName.clear();
 
 		if(m_lastDisguiseAsTemplate->isKindOf(KINDOF_SHRUBBERY))
 		{
@@ -1463,7 +1463,7 @@ void StealthUpdate::disguiseAsObject( const Object *target, const Drawable *draw
 	}
 	else if( m_disguised )
 	{
-		m_disguiseAsTemplate				= NULL;
+		m_disguiseAsTemplate				= nullptr;
 		m_disguiseAsPlayerIndex			= 0;
 		m_disguiseTransitionFrames	= data->m_disguiseRevealTransitionFrames;
 		m_transitioningToDisguise		= false; //Means we are losing the disguise over time.
@@ -1684,7 +1684,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 		Player *clientPlayer = ThePlayerList->getLocalPlayer();
 
 		//Get the drawable to show
-		const ThingTemplate  *drawTempl = NULL;
+		const ThingTemplate  *drawTempl = nullptr;
 		if( doFlick && self->getControllingPlayer()->getRelationship( clientPlayer->getDefaultTeam() ) == ALLIES && clientPlayer->isPlayerActive() )
 		{
 			drawTempl = self->getTemplate();
@@ -1985,19 +1985,19 @@ void StealthUpdate::xfer( Xfer *xfer )
 	xfer->xferAsciiString( &name2 );
 	//xfer->xferAsciiString( &name3 );
 	//xfer->xferAsciiString( &name4 );
-	//const ThingTemplate *drawTempl = NULL;
+	//const ThingTemplate *drawTempl = nullptr;
 	if( xfer->getXferMode() == XFER_LOAD )
 	{
 
-		m_disguiseAsTemplate = NULL;
-		m_lastDisguiseAsTemplate = NULL;
-		//m_originalDrawableTemplate = NULL;
-		//m_disguisedDrawableTemplate = NULL;
+		m_disguiseAsTemplate = nullptr;
+		m_lastDisguiseAsTemplate = nullptr;
+		//m_originalDrawableTemplate = nullptr;
+		//m_disguisedDrawableTemplate = nullptr;
 		if( name.isEmpty() == FALSE )
 		{
 
 			m_disguiseAsTemplate = TheThingFactory->findTemplate( name );
-			if( m_disguiseAsTemplate == NULL )
+			if( m_disguiseAsTemplate == nullptr )
 			{
 
 				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name.str() ));
@@ -2011,7 +2011,7 @@ void StealthUpdate::xfer( Xfer *xfer )
 		{
 
 			m_lastDisguiseAsTemplate = TheThingFactory->findTemplate( name2 );
-			if( m_lastDisguiseAsTemplate == NULL )
+			if( m_lastDisguiseAsTemplate == nullptr )
 			{
 
 				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name2.str() ));
@@ -2025,7 +2025,7 @@ void StealthUpdate::xfer( Xfer *xfer )
 		{
 
 			drawTempl = TheThingFactory->findTemplate( name3 );
-			if( drawTempl == NULL )
+			if( drawTempl == nullptr )
 			{
 
 				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name3.str() ));
@@ -2043,7 +2043,7 @@ void StealthUpdate::xfer( Xfer *xfer )
 		{
 
 			drawTempl = TheThingFactory->findTemplate( name4 );
-			if( drawTempl == NULL )
+			if( drawTempl == nullptr )
 			{
 
 				DEBUG_CRASH(( "StealthUpdate::xfer - Unknown template '%s'", name4.str() ));
@@ -2069,11 +2069,11 @@ void StealthUpdate::xfer( Xfer *xfer )
 		m_disguisedDrawableTemplate = TheGameClient->findDrawableByID( drawableID2 );
 
 		// sanity
-		if( drawableID != INVALID_DRAWABLE_ID && m_originalDrawableTemplate == NULL )
+		if( drawableID != INVALID_DRAWABLE_ID && m_originalDrawableTemplate == nullptr )
 		{
 			DEBUG_CRASH(( "StealthUpdate::xfer - Unable to find drawable for m_originalDrawableTemplate" ));
 		}
-		if( drawableID2 != INVALID_DRAWABLE_ID && m_disguisedDrawableTemplate == NULL )
+		if( drawableID2 != INVALID_DRAWABLE_ID && m_disguisedDrawableTemplate == nullptr )
 		{
 			DEBUG_CRASH(( "StealthUpdate::xfer - Unable to find drawable for m_disguisedDrawableTemplate" ));
 		}

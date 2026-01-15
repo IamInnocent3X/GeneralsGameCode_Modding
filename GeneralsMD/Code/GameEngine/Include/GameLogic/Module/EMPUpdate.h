@@ -77,17 +77,17 @@ public:
 		m_endColor.setFromInt  (0x00000000);
 		//m_spinRateMax = 0.0f;
 		m_disabledDuration = 0;
-		m_disableFXParticleSystem = NULL;
+		m_disableFXParticleSystem = nullptr;
 		m_sparksPerCubicFoot = 0.001f;
 		m_effectRadius = 200;
 		m_rejectMask = 0;
 		m_doesNotAffectMyOwnBuildings = FALSE;
 		m_disabledType = DISABLED_EMP;
 		m_tintStatus = TINT_STATUS_DISABLED;
-		m_customTintStatus = NULL;
+		m_customTintStatus = AsciiString::TheEmptyString;
 		m_empProjectileSubdual = FALSE;
 		m_empProjectileDeathType.format("LASERED");
-		m_empProjectileCustomDeathType = NULL;
+		m_empProjectileCustomDeathType = AsciiString::TheEmptyString;
 
     m_affectsKindOf = KINDOFMASK_NONE;
 	m_victimKindOf.clear();
@@ -99,31 +99,31 @@ public:
     UpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "Lifetime",	INI::parseDurationUnsignedInt,		NULL, offsetof( EMPUpdateModuleData, m_lifeFrames ) },
-			{ "StartFadeTime",	INI::parseDurationUnsignedInt,		NULL, offsetof( EMPUpdateModuleData, m_startFadeFrame ) },
-			{ "StartScale",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_startScale ) },
-			{ "DisabledDuration",	INI::parseDurationUnsignedInt,	NULL, offsetof( EMPUpdateModuleData, m_disabledDuration ) },
-			//{ "SpinRateMax",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_spinRateMax ) },
-			{ "TargetScaleMax",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_targetScaleMax ) },
-			{ "TargetScaleMin",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_targetScaleMin ) },
-			{ "StartColor",	INI::parseRGBColor,			NULL, offsetof( EMPUpdateModuleData, m_startColor ) },
-			{ "EndColor",	INI::parseRGBColor,				NULL, offsetof( EMPUpdateModuleData, m_endColor ) },
-			{ "DisableFXParticleSystem",		INI::parseParticleSystemTemplate, NULL, offsetof( EMPUpdateModuleData, m_disableFXParticleSystem ) },
-			{ "SparksPerCubicFoot",		INI::parseReal, NULL, offsetof( EMPUpdateModuleData, m_sparksPerCubicFoot ) },
-			{ "EffectRadius",	INI::parseReal,										NULL, offsetof( EMPUpdateModuleData, m_effectRadius ) },
+			{ "Lifetime",	INI::parseDurationUnsignedInt,		nullptr, offsetof( EMPUpdateModuleData, m_lifeFrames ) },
+			{ "StartFadeTime",	INI::parseDurationUnsignedInt,		nullptr, offsetof( EMPUpdateModuleData, m_startFadeFrame ) },
+			{ "StartScale",	INI::parseReal,										nullptr, offsetof( EMPUpdateModuleData, m_startScale ) },
+			{ "DisabledDuration",	INI::parseDurationUnsignedInt,	nullptr, offsetof( EMPUpdateModuleData, m_disabledDuration ) },
+			//{ "SpinRateMax",	INI::parseReal,										nullptr, offsetof( EMPUpdateModuleData, m_spinRateMax ) },
+			{ "TargetScaleMax",	INI::parseReal,										nullptr, offsetof( EMPUpdateModuleData, m_targetScaleMax ) },
+			{ "TargetScaleMin",	INI::parseReal,										nullptr, offsetof( EMPUpdateModuleData, m_targetScaleMin ) },
+			{ "StartColor",	INI::parseRGBColor,			nullptr, offsetof( EMPUpdateModuleData, m_startColor ) },
+			{ "EndColor",	INI::parseRGBColor,				nullptr, offsetof( EMPUpdateModuleData, m_endColor ) },
+			{ "DisableFXParticleSystem",		INI::parseParticleSystemTemplate, nullptr, offsetof( EMPUpdateModuleData, m_disableFXParticleSystem ) },
+			{ "SparksPerCubicFoot",		INI::parseReal, nullptr, offsetof( EMPUpdateModuleData, m_sparksPerCubicFoot ) },
+			{ "EffectRadius",	INI::parseReal,										nullptr, offsetof( EMPUpdateModuleData, m_effectRadius ) },
 			{ "DoesNotAffect", INI::parseBitString32,	TheWeaponAffectsMaskNames, offsetof(EMPUpdateModuleData, m_rejectMask) },
-			{ "DoesNotAffectMyOwnBuildings", INI::parseBool, NULL, offsetof( EMPUpdateModuleData, m_doesNotAffectMyOwnBuildings ) },
-			{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( EMPUpdateModuleData, m_disabledType ) },
-			{ "AffectsKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_affectsKindOf ) },
-			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( EMPUpdateModuleData, m_tintStatus ) },
-			{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( EMPUpdateModuleData, m_customTintStatus ) },
+			{ "DoesNotAffectMyOwnBuildings", INI::parseBool, nullptr, offsetof( EMPUpdateModuleData, m_doesNotAffectMyOwnBuildings ) },
+			{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( EMPUpdateModuleData, m_disabledType ) },
+			{ "AffectsKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( EMPUpdateModuleData, m_affectsKindOf ) },
+			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	nullptr, offsetof( EMPUpdateModuleData, m_tintStatus ) },
+			{ "CustomTintStatusType",		INI::parseAsciiString,	nullptr, offsetof( EMPUpdateModuleData, m_customTintStatus ) },
 
-			{ "EMPProjectileJammed",	INI::parseBool,	NULL, offsetof( EMPUpdateModuleData, m_empProjectileSubdual) },	
-			{ "EMPProjectileDeathType", INI::parseAsciiString, NULL, offsetof( EMPUpdateModuleData, m_empProjectileDeathType) },	
-			{ "EMPProjectileCustomDeathType", INI::parseQuotedAsciiString, NULL, offsetof( EMPUpdateModuleData, m_empProjectileCustomDeathType) },	
+			{ "EMPProjectileJammed",	INI::parseBool,	nullptr, offsetof( EMPUpdateModuleData, m_empProjectileSubdual) },	
+			{ "EMPProjectileDeathType", INI::parseAsciiString, nullptr, offsetof( EMPUpdateModuleData, m_empProjectileDeathType) },	
+			{ "EMPProjectileCustomDeathType", INI::parseQuotedAsciiString, nullptr, offsetof( EMPUpdateModuleData, m_empProjectileCustomDeathType) },	
 
-      { "VictimRequiredKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_victimKindOf ) },
-		  { "VictimForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_victimKindOfNot ) },
+      { "VictimRequiredKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( EMPUpdateModuleData, m_victimKindOf ) },
+		  { "VictimForbiddenKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( EMPUpdateModuleData, m_victimKindOfNot ) },
 
 			{ 0, 0, 0, 0 }
 		};
@@ -194,7 +194,7 @@ public:
 		m_delayFrames = 1;
 		//m_disabledDuration = 0;
     m_radius = 60.0f;
-    m_leafletFXParticleSystem = NULL;
+    m_leafletFXParticleSystem = nullptr;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -202,10 +202,10 @@ public:
     EMPUpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] = 
 		{
-			{ "Delay",	        INI::parseDurationUnsignedInt,	NULL, offsetof( LeafletDropBehaviorModuleData, m_delayFrames ) },
-			//{ "DisabledDuration",	INI::parseDurationUnsignedInt,	NULL, offsetof( LeafletDropBehaviorModuleData, m_disabledDuration ) },
-      { "AffectRadius",     INI::parseReal,                 NULL, offsetof( LeafletDropBehaviorModuleData, m_radius ) },
-      { "LeafletFXParticleSystem", INI::parseParticleSystemTemplate,  NULL, offsetof( LeafletDropBehaviorModuleData, m_leafletFXParticleSystem ) },
+			{ "Delay",	        INI::parseDurationUnsignedInt,	nullptr, offsetof( LeafletDropBehaviorModuleData, m_delayFrames ) },
+			//{ "DisabledDuration",	INI::parseDurationUnsignedInt,	nullptr, offsetof( LeafletDropBehaviorModuleData, m_disabledDuration ) },
+      { "AffectRadius",     INI::parseReal,                 nullptr, offsetof( LeafletDropBehaviorModuleData, m_radius ) },
+      { "LeafletFXParticleSystem", INI::parseParticleSystemTemplate,  nullptr, offsetof( LeafletDropBehaviorModuleData, m_leafletFXParticleSystem ) },
 
 
 

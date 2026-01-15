@@ -38,8 +38,8 @@
 #include "GameLogic/GameLogic.h"
 
 /// The singleton message stream for messages going to TheGameLogic
-MessageStream *TheMessageStream = NULL;
-CommandList *TheCommandList = NULL;
+MessageStream *TheMessageStream = nullptr;
+CommandList *TheCommandList = nullptr;
 
 
 
@@ -57,10 +57,10 @@ GameMessage::GameMessage( GameMessage::Type type )
 {
 	m_playerIndex = ThePlayerList->getLocalPlayer()->getPlayerIndex();
 	m_type = type;
-	m_argList = NULL;
-	m_argTail = NULL;
+	m_argList = nullptr;
+	m_argTail = nullptr;
 	m_argCount = 0;
-	m_list = 0;
+	m_list = nullptr;
 	m_orderData.Radius = 0.0f;
 	m_orderData.RequiredMask = KINDOFMASK_NONE;
 	m_orderData.ForbiddenMask = KINDOFMASK_NONE;
@@ -120,7 +120,7 @@ GameMessageArgumentDataType GameMessage::getArgumentDataType( Int argIndex )
 	GameMessageArgument *a = m_argList;
 	for (; a && (i < argIndex); a=a->m_next, ++i );
 
-	if (a != NULL)
+	if (a != nullptr)
 	{
 		return a->m_type;
 	}
@@ -144,7 +144,7 @@ GameMessageArgument *GameMessage::allocArg( void )
 		m_argTail = arg;
 	}
 
-	arg->m_next = NULL;
+	arg->m_next = nullptr;
 	m_argTail = arg;
 
 	m_argCount++;
@@ -726,8 +726,8 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
  */
 GameMessageList::GameMessageList( void )
 {
-	m_firstMessage = 0;
-	m_lastMessage = 0;
+	m_firstMessage = nullptr;
+	m_lastMessage = nullptr;
 }
 
 /**
@@ -742,7 +742,7 @@ GameMessageList::~GameMessageList()
 		nextMsg = msg->next();
 		// set list ptr to null to avoid it trying to remove itself from the list
 		// that we are in the process of nuking...
-		msg->friend_setList(NULL);
+		msg->friend_setList(nullptr);
 		deleteInstance(msg);
 	}
 }
@@ -752,7 +752,7 @@ GameMessageList::~GameMessageList()
  */
 void GameMessageList::appendMessage( GameMessage *msg )
 {
-	msg->friend_setNext(NULL);
+	msg->friend_setNext(nullptr);
 
 	if (m_lastMessage)
 	{
@@ -765,7 +765,7 @@ void GameMessageList::appendMessage( GameMessage *msg )
 		// first message
 		m_firstMessage = msg;
 		m_lastMessage = msg;
-		msg->friend_setPrev(NULL);
+		msg->friend_setPrev(nullptr);
 	}
 
 	// note containment within message itself
@@ -777,7 +777,7 @@ void GameMessageList::appendMessage( GameMessage *msg )
  */
 void GameMessageList::appendMessageWithOrderNearby( GameMessage *msg, OrderNearbyData orderData )
 {
-	msg->friend_setNext(NULL);
+	msg->friend_setNext(nullptr);
 	msg->friend_setOrderData(orderData);
 
 	if (m_lastMessage)
@@ -791,7 +791,7 @@ void GameMessageList::appendMessageWithOrderNearby( GameMessage *msg, OrderNearb
 		// first message
 		m_firstMessage = msg;
 		m_lastMessage = msg;
-		msg->friend_setPrev(NULL);
+		msg->friend_setPrev(nullptr);
 	}
 
 	// note containment within message itself
@@ -837,7 +837,7 @@ void GameMessageList::removeMessage( GameMessage *msg )
 	else
 		m_firstMessage = msg->next();
 
-	msg->friend_setList(NULL);
+	msg->friend_setList(nullptr);
 }
 
 /**
@@ -865,7 +865,7 @@ Bool GameMessageList::containsMessageOfType( GameMessage::Type type )
  */
 MessageStream::MessageStream( void )
 {
-	m_firstTranslator = 0;
+	m_firstTranslator = nullptr;
 	m_nextTranslatorID = 1;
 }
 
@@ -947,7 +947,7 @@ GameMessage *MessageStream::appendMessageWithOrderNearby( GameMessage::Type type
 
 /**
  * Create a new message of the given message type and insert it
- * in the stream after messageToInsertAfter, which must not be NULL.
+ * in the stream after messageToInsertAfter, which must not be nullptr.
  */
 GameMessage *MessageStream::insertMessage( GameMessage::Type type, GameMessage *messageToInsertAfter )
 {
@@ -975,11 +975,11 @@ TranslatorID MessageStream::attachTranslator( GameMessageTranslator *translator,
 	newSS->m_priority = priority;
 	newSS->m_id = m_nextTranslatorID++;
 
-	if (m_firstTranslator == NULL)
+	if (m_firstTranslator == nullptr)
 	{
 		// first Translator to be attached
-		newSS->m_prev = NULL;
-		newSS->m_next = NULL;
+		newSS->m_prev = nullptr;
+		newSS->m_next = nullptr;
 		m_firstTranslator = newSS;
 		m_lastTranslator = newSS;
 		return newSS->m_id;
@@ -1004,7 +1004,7 @@ TranslatorID MessageStream::attachTranslator( GameMessageTranslator *translator,
 		else
 		{
 			// insert at head of list
-			newSS->m_prev = NULL;
+			newSS->m_prev = nullptr;
 			newSS->m_next = m_firstTranslator;
 			m_firstTranslator->m_prev = newSS;
 			m_firstTranslator = newSS;
@@ -1015,7 +1015,7 @@ TranslatorID MessageStream::attachTranslator( GameMessageTranslator *translator,
 		// append Translator to end of list
 		m_lastTranslator->m_next = newSS;
 		newSS->m_prev = m_lastTranslator;
-		newSS->m_next = NULL;
+		newSS->m_next = nullptr;
 		m_lastTranslator = newSS;
 	}
 
@@ -1037,7 +1037,7 @@ GameMessageTranslator* MessageStream::findTranslator( TranslatorID id )
 
 	}
 
-	return NULL;
+	return nullptr;
 
 }
 
@@ -1186,8 +1186,8 @@ void MessageStream::propagateMessages( void )
 	TheCommandList->appendMessageList( m_firstMessage );
 
 	// clear the stream
-	m_firstMessage = NULL;
-	m_lastMessage = NULL;
+	m_firstMessage = nullptr;
+	m_lastMessage = nullptr;
 
 }
 
@@ -1261,8 +1261,8 @@ void CommandList::destroyAllMessages( void )
 		deleteInstance(msg);
 	}
 
-	m_firstMessage = NULL;
-	m_lastMessage = NULL;
+	m_firstMessage = nullptr;
+	m_lastMessage = nullptr;
 
 }
 

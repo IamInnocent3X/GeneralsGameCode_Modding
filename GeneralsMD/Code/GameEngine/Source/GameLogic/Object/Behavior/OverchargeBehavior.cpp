@@ -63,7 +63,7 @@ OverchargeBehaviorModuleData::OverchargeBehaviorModuleData( void )
 	m_customBonusToSet.clear();
 	m_customStatusToSet.clear();
 	m_tintStatusToSet = TINT_STATUS_INVALID;
-	m_customTintStatusToSet = NULL;
+	m_customTintStatusToSet.clear();
 
 	m_showDescriptionLabel = TRUE;
 	m_overchargeOnLabel.format("TOOLTIP:TooltipNukeReactorOverChargeIsOn");
@@ -83,26 +83,26 @@ OverchargeBehaviorModuleData::OverchargeBehaviorModuleData( void )
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "HealthPercentToDrainPerSecond", INI::parsePercentToReal,	NULL, offsetof( OverchargeBehaviorModuleData, m_healthPercentToDrainPerSecond ) },
-		{ "NotAllowedWhenHealthBelowPercent", INI::parsePercentToReal, NULL, offsetof( OverchargeBehaviorModuleData, m_notAllowedWhenHealthBelowPercent ) },
+		{ "HealthPercentToDrainPerSecond", INI::parsePercentToReal,	nullptr, offsetof( OverchargeBehaviorModuleData, m_healthPercentToDrainPerSecond ) },
+		{ "NotAllowedWhenHealthBelowPercent", INI::parsePercentToReal, nullptr, offsetof( OverchargeBehaviorModuleData, m_notAllowedWhenHealthBelowPercent ) },
 
 		// New Properties
-		{ "OverchargeDamageTypeFX",		DamageTypeFlags::parseSingleBitFromINI,	NULL, offsetof(OverchargeBehaviorModuleData, m_damageTypeFX) },
-		{ "StatusToSet",			ObjectStatusMaskType::parseFromINI,	NULL, offsetof( OverchargeBehaviorModuleData, m_statusToSet ) },
-		{ "CustomStatusToSet",	INI::parseAsciiStringVector, NULL, offsetof( OverchargeBehaviorModuleData, m_customStatusToSet ) },
-		{ "WeaponBonusToSet",	INI::parseWeaponBonusVector, NULL, offsetof( OverchargeBehaviorModuleData, m_bonusToSet ) },
-		{ "CustomWeaponBonusToSet",			INI::parseAsciiStringVector, NULL, offsetof( OverchargeBehaviorModuleData, m_customBonusToSet ) },
-		{ "TintStatusToSet",			TintStatusFlags::parseSingleBitFromINI,		NULL, offsetof( OverchargeBehaviorModuleData, m_tintStatusToSet ) },
-		{ "CustomTintStatusToSet",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_customTintStatusToSet ) },
-		{ "ModelConditionToSet", ModelConditionFlags::parseFromINI, NULL, offsetof( OverchargeBehaviorModuleData, m_modelConditionToSet ) },
+		{ "OverchargeDamageTypeFX",		DamageTypeFlags::parseSingleBitFromINI,	nullptr, offsetof(OverchargeBehaviorModuleData, m_damageTypeFX) },
+		{ "StatusToSet",			ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( OverchargeBehaviorModuleData, m_statusToSet ) },
+		{ "CustomStatusToSet",	INI::parseAsciiStringVector, nullptr, offsetof( OverchargeBehaviorModuleData, m_customStatusToSet ) },
+		{ "WeaponBonusToSet",	INI::parseWeaponBonusVector, nullptr, offsetof( OverchargeBehaviorModuleData, m_bonusToSet ) },
+		{ "CustomWeaponBonusToSet",			INI::parseAsciiStringVector, nullptr, offsetof( OverchargeBehaviorModuleData, m_customBonusToSet ) },
+		{ "TintStatusToSet",			TintStatusFlags::parseSingleBitFromINI,		nullptr, offsetof( OverchargeBehaviorModuleData, m_tintStatusToSet ) },
+		{ "CustomTintStatusToSet",	INI::parseAsciiString, 	nullptr, offsetof( OverchargeBehaviorModuleData, m_customTintStatusToSet ) },
+		{ "ModelConditionToSet", ModelConditionFlags::parseFromINI, nullptr, offsetof( OverchargeBehaviorModuleData, m_modelConditionToSet ) },
 
-		{ "ShowDescriptionLabel",	INI::parseBool, 	NULL, offsetof( OverchargeBehaviorModuleData, m_showDescriptionLabel ) },
-		{ "OverchargeOnDescriptionLabel",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_overchargeOnLabel ) },
-		{ "OverchargeOffDescriptionLabel",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_overchargeOffLabel ) },
+		{ "ShowDescriptionLabel",	INI::parseBool, 	nullptr, offsetof( OverchargeBehaviorModuleData, m_showDescriptionLabel ) },
+		{ "OverchargeOnDescriptionLabel",	INI::parseAsciiString, 	nullptr, offsetof( OverchargeBehaviorModuleData, m_overchargeOnLabel ) },
+		{ "OverchargeOffDescriptionLabel",	INI::parseAsciiString, 	nullptr, offsetof( OverchargeBehaviorModuleData, m_overchargeOffLabel ) },
 
-		{ "ShowOverchargeExhausted",	INI::parseBool, 	NULL, offsetof( OverchargeBehaviorModuleData, m_showOverchargeExhausted ) },
-		{ "OverchargeExhaustedMessage",	INI::parseAsciiString, 	NULL, offsetof( OverchargeBehaviorModuleData, m_overchargeExhaustedMessage ) },
-		{ 0, 0, 0, 0 }
+		{ "ShowOverchargeExhausted",	INI::parseBool, 	nullptr, offsetof( OverchargeBehaviorModuleData, m_showOverchargeExhausted ) },
+		{ "OverchargeExhaustedMessage",	INI::parseAsciiString, 	nullptr, offsetof( OverchargeBehaviorModuleData, m_overchargeExhaustedMessage ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   p.add( dataFieldParse );

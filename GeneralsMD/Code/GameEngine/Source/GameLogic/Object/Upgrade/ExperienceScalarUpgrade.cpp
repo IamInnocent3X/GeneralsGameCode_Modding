@@ -54,10 +54,10 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, NULL, offsetof(ExperienceScalarUpgradeModuleData, m_initiallyActive) },
-		{ "AddXPScalar",	INI::parseReal,		NULL, offsetof( ExperienceScalarUpgradeModuleData, m_addXPScalar ) },
-		{ "AddXPValueScalar",	INI::parseReal,		NULL, offsetof( ExperienceScalarUpgradeModuleData, m_addXPValueScalar ) },
-		{ 0, 0, 0, 0 }
+		{ "StartsActive",	INI::parseBool, nullptr, offsetof(ExperienceScalarUpgradeModuleData, m_initiallyActive) },
+		{ "AddXPScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPScalar ) },
+		{ "AddXPValueScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPValueScalar ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   p.add(dataFieldParse);

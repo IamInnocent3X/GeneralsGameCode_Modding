@@ -29,6 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
@@ -52,8 +53,8 @@ void W3DOverlordTankDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{"HasMultiAddOns", INI::parseBool, NULL, offsetof(W3DOverlordTankDrawModuleData, m_hasMultiAddOns)},
-		{ 0, 0, 0, 0 }
+		{"HasMultiAddOns", INI::parseBool, nullptr, offsetof(W3DOverlordTankDrawModuleData, m_hasMultiAddOns)},
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }

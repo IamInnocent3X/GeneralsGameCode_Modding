@@ -94,7 +94,7 @@ class Armor
 {
 public:
 
-	inline Armor(const ArmorTemplate* tmpl = NULL) : m_template(tmpl)
+	inline Armor(const ArmorTemplate* tmpl = nullptr) : m_template(tmpl)
 	{
 	}
 
@@ -110,7 +110,7 @@ public:
 
 	inline void clear()
 	{
-		m_template = NULL;
+		m_template = nullptr;
 	}
 
 private:

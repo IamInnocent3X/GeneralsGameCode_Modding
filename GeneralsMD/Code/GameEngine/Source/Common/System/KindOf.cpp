@@ -386,7 +386,7 @@ const char* const KindOfMaskType::s_bitNameList[] =
 	"EXTRA15",
 	"EXTRA16",
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(KindOfMaskType::s_bitNameList) == KindOfMaskType::NumBits + 1, "Incorrect array size");
 

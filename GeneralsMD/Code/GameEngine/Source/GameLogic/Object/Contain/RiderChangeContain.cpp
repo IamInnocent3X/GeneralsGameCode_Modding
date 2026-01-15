@@ -107,7 +107,7 @@ void RiderChangeContainModuleData::parseRiderInfo( INI* ini, void *instance, voi
 	if(bitindex>=0)
 	{
 		rider->m_objectStatusType = (ObjectStatusType)bitindex;
-		rider->m_objectCustomStatusType = NULL;
+		rider->m_objectCustomStatusType.clear();
 	}
 	else
 	{
@@ -152,7 +152,7 @@ void RiderChangeContainModuleData::parseRiderInfoCustom(INI* ini, void* instance
 	if (bitindex >= 0)
 	{
 		rider.m_objectStatusType = (ObjectStatusType)bitindex;
-		rider.m_objectCustomStatusType = NULL;
+		rider.m_objectCustomStatusType.clear();
 	}
 	else
 	{
@@ -179,25 +179,25 @@ void RiderChangeContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "Rider1",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[0] ) },
-		{ "Rider2",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[1] ) },
-		{ "Rider3",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[2] ) },
-		{ "Rider4",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[3] ) },
-		{ "Rider5",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[4] ) },
-		{ "Rider6",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[5] ) },
-		{ "Rider7",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[6] ) },
-		{ "Rider8",					parseRiderInfo,					NULL, offsetof( RiderChangeContainModuleData, m_riders[7] ) },
-		{ "RiderCustom",			parseRiderInfoCustom,			NULL, offsetof(RiderChangeContainModuleData, m_ridersCustom) },
-		{ "RiderChangeOnStatusTypes",	INI::parseBool,					NULL, offsetof(RiderChangeContainModuleData, m_riderNotRequired) },
-		{ "RiderUseUpgradeNames",		INI::parseBool,					NULL, offsetof(RiderChangeContainModuleData, m_useUpgradeNames) },
-    { "ScuttleDelay",   INI::parseDurationUnsignedInt,	NULL, offsetof( RiderChangeContainModuleData, m_scuttleFrames ) },
+		{ "Rider1",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[0] ) },
+		{ "Rider2",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[1] ) },
+		{ "Rider3",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[2] ) },
+		{ "Rider4",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[3] ) },
+		{ "Rider5",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[4] ) },
+		{ "Rider6",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[5] ) },
+		{ "Rider7",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[6] ) },
+		{ "Rider8",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[7] ) },
+		{ "RiderCustom",			parseRiderInfoCustom,			nullptr, offsetof(RiderChangeContainModuleData, m_ridersCustom) },
+		{ "RiderChangeOnStatusTypes",	INI::parseBool,					nullptr, offsetof(RiderChangeContainModuleData, m_riderNotRequired) },
+		{ "RiderUseUpgradeNames",		INI::parseBool,					nullptr, offsetof(RiderChangeContainModuleData, m_useUpgradeNames) },
+    { "ScuttleDelay",   INI::parseDurationUnsignedInt,	nullptr, offsetof( RiderChangeContainModuleData, m_scuttleFrames ) },
     { "ScuttleStatus",  INI::parseIndexList,		ModelConditionFlags::getBitNames(), offsetof( RiderChangeContainModuleData, m_scuttleState ) },
-	{ "DontDestroyPassengersOnKill",	INI::parseBool,				NULL, offsetof( RiderChangeContainModuleData, m_dontDestroyPassengersOnKill ) },
+	{ "DontDestroyPassengersOnKill",	INI::parseBool,				nullptr, offsetof( RiderChangeContainModuleData, m_dontDestroyPassengersOnKill ) },
 	{ "ScuttleRequirements",		INI::parseIndexList,			TheScuttleNames, offsetof( RiderChangeContainModuleData, m_scuttleType ) },
-	{ "DontEvacuateOnEnter",		INI::parseBool,					NULL, offsetof( RiderChangeContainModuleData, m_dontEvacuateOnEnter ) },
-	{ "CanContainNonRiders",		INI::parseBool,					NULL, offsetof( RiderChangeContainModuleData, m_canContainNonRiders ) },
-	{ "MoreThanOneRiders",		INI::parseBool,					NULL, offsetof( RiderChangeContainModuleData, m_moreThanOneRiders ) },
-		{ 0, 0, 0, 0 }
+	{ "DontEvacuateOnEnter",		INI::parseBool,					nullptr, offsetof( RiderChangeContainModuleData, m_dontEvacuateOnEnter ) },
+	{ "CanContainNonRiders",		INI::parseBool,					nullptr, offsetof( RiderChangeContainModuleData, m_canContainNonRiders ) },
+	{ "MoreThanOneRiders",		INI::parseBool,					nullptr, offsetof( RiderChangeContainModuleData, m_moreThanOneRiders ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -241,7 +241,7 @@ RiderChangeContain::RiderChangeContain( Thing *thing, const ModuleData *moduleDa
 	m_theRiderDataRecord.clear(); // A better non-sleepy update version of Status and Upgrade Checking
 	m_registeredUpgradeNames = FALSE;
 	m_riderDataStatusRegister = (ObjectStatusType)0;
-	m_riderDataCustomStatusRegister = NULL;
+	m_riderDataCustomStatusRegister.clear();
 	m_prevStatus.clear();
 	m_prevCustomStatusTypes.clear();
 	m_prevMaskToCheck.clear();
@@ -300,7 +300,7 @@ Bool RiderChangeContain::checkHasRiderTemplate(const Object* rider) const
 		return FALSE;
 	}
 
-	if(rider == NULL)
+	if(rider == nullptr)
 		return FALSE;
 
 	AsciiString riderName = rider->getTemplate()->getName();
@@ -421,7 +421,7 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 	// For registering RiderData, clear all the previous statuses first
 	RiderData riderData;
 	m_riderDataStatusRegister = (ObjectStatusType)0;
-	m_riderDataCustomStatusRegister = NULL;
+	m_riderDataCustomStatusRegister.clear();
 	
 	//Find the rider in the list and set the appropriate model condition
 	Bool found;
@@ -560,7 +560,7 @@ void RiderChangeContain::registerNewRiderDataOnContain(RiderData riderData)
 		firstTemplate.templateName = charName;
 		firstTemplate.timeFrame = 1;
 		firstTemplate.statusType = (ObjectStatusType)0;
-		firstTemplate.customStatusType = NULL;
+		firstTemplate.customStatusType.clear();
 
 		m_theRiderDataRecord.push_back(firstTemplate);
 	}
@@ -695,7 +695,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 	//Find the rider in the list and clear various data.
 	Bool found = FALSE;
-	AsciiString removeTemplate = NULL;
+	AsciiString removeTemplate;
 
 	for( int i = 0; i < MAX_RIDERS; i++ )
 	{
@@ -721,7 +721,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 		}
 	}
 
-	if(!removeTemplate.isEmpty() && !hasScuttle)
+	if(found && !hasScuttle)
 	{
 		Bool switchTemplate = FALSE;
 		Int CheckIndex = -1;
@@ -805,7 +805,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 			riderData.templateName = m_theRiderDataRecord[GrantIndex].templateName;
 			riderData.timeFrame = 0;
 			riderData.statusType = (ObjectStatusType)0;
-			riderData.customStatusType = NULL;
+			riderData.customStatusType.clear();
 
 			// Grant the Rider the last Template before the Removed Rider
 			riderGiveTemplate(riderData);
@@ -879,7 +879,7 @@ Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& 
 			bike->clearCustomStatus( riderInfo.m_objectCustomStatusType );
 		}
 		
-		if ( rider->getControllingPlayer() != NULL )
+		if ( rider->getControllingPlayer() != nullptr )
 		{
 			//Wow, completely unforseeable game teardown order crash.  SetVeterancyLevel results in a call to player
 			//about upgrade masks.  So if we have a null player, it is game teardown, so don't worry about transfering exp.
@@ -1036,7 +1036,7 @@ UpdateSleepTime RiderChangeContain::update()
 		riderData.templateName = charName;
 		riderData.timeFrame = 1; // For indicating it as a Containing Template, in case of usage
 		riderData.statusType = (ObjectStatusType)0;
-		riderData.customStatusType = NULL;
+		riderData.customStatusType.clear();
 
 		m_theRiderDataRecord.push_back(riderData);
 
@@ -1160,7 +1160,7 @@ Bool RiderChangeContain::riderTemplateIsValidChange(ObjectStatusMaskType newStat
 			riderData.templateName = charName;
 			riderData.timeFrame = TheGameLogic->getFrame();
 			riderData.statusType = data->m_riders[ i ].m_objectStatusType;
-			riderData.customStatusType = NULL;
+			riderData.customStatusType.clear();
 
 			// Give the new template
 			riderGiveTemplate(riderData);
@@ -1185,7 +1185,7 @@ Bool RiderChangeContain::riderTemplateIsValidChange(ObjectStatusMaskType newStat
 				riderData.templateName = (*it).m_templateName;
 				riderData.timeFrame = TheGameLogic->getFrame();
 				riderData.statusType = (ObjectStatusType)(*it).m_objectStatusType;
-				riderData.customStatusType = NULL;
+				riderData.customStatusType.clear();
 				
 				// Give the new template
 				riderGiveTemplate(riderData);
@@ -1202,7 +1202,7 @@ Bool RiderChangeContain::riderTemplateIsValidRemoval(ObjectStatusMaskType oldSta
 {
 	UnsignedInt LongestFrame = 0;
 	UnsignedInt StatusTimeFrame = 0;
-	AsciiString TemplateName = NULL;
+	AsciiString TemplateName = AsciiString::TheEmptyString;
 
 	//DEBUG_LOG(("Checking riderTemplateIsValidRemoval. Frame: %d.", TheGameLogic->getFrame()));
 
@@ -1236,7 +1236,7 @@ Bool RiderChangeContain::riderTemplateIsValidRemoval(ObjectStatusMaskType oldSta
 		riderData.templateName = m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName;
 		riderData.timeFrame = 0;
 		riderData.statusType = (ObjectStatusType)0;
-		riderData.customStatusType = NULL;
+		riderData.customStatusType.clear();
 
 		//DEBUG_LOG(("Template to give: %s. Not assigning", riderData.templateName.str()));
 
@@ -1251,7 +1251,7 @@ Bool RiderChangeContain::riderTemplateIsValidRemoval(const AsciiString& oldCusto
 {
 	UnsignedInt LongestFrame = 0;
 	UnsignedInt StatusTimeFrame = 0;
-	AsciiString TemplateName = NULL;
+	AsciiString TemplateName = AsciiString::TheEmptyString;
 	for (std::vector<RiderData>::iterator it = m_theRiderDataRecord.begin(); it != m_theRiderDataRecord.end(); ++it)
 	{
 		if(!LongestFrame || (*it).timeFrame > LongestFrame)
@@ -1288,7 +1288,7 @@ Bool RiderChangeContain::riderTemplateIsValidRemoval(const AsciiString& oldCusto
 		riderData.templateName = m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName;
 		riderData.timeFrame = 0;
 		riderData.statusType = (ObjectStatusType)0;
-		riderData.customStatusType = NULL;
+		riderData.customStatusType.clear();
 
 		//DEBUG_LOG(("Template to give: %s. Not assigning", riderData.templateName.str()));
 
@@ -1601,7 +1601,7 @@ void RiderChangeContain::loadPreviousState()
 	riderData.templateName = m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName;
 	riderData.timeFrame = 0;
 	riderData.statusType = (ObjectStatusType)0;
-	riderData.customStatusType = NULL;
+	riderData.customStatusType.clear();
 
 	// Grant the Rider the last Template
 	riderGiveTemplate(riderData);
@@ -1785,7 +1785,7 @@ void RiderChangeContain::doUpgradeChecks()
 			RiderData riderData;
 			riderData.timeFrame = TheGameLogic->getFrame();
 			riderData.statusType = (ObjectStatusType)0;
-			riderData.customStatusType = NULL;
+			riderData.customStatusType.clear();
 			
 			// Then we add the new Rider Template.
 			if((*it).templateRider >= 0)
@@ -1811,7 +1811,7 @@ void RiderChangeContain::doUpgradeChecks()
 			// If an Upgrade is removed, indicate its Template
 			UnsignedInt LongestFrame = 0;
 			UnsignedInt UpgradeTimeFrame = 0;
-			AsciiString TemplateName = NULL;
+			AsciiString TemplateName;
 
 			if((*it).templateRider >= 0)
 			{
@@ -1855,7 +1855,7 @@ void RiderChangeContain::doUpgradeChecks()
 					riderData.templateName = m_theRiderDataRecord[m_theRiderDataRecord.size()-1].templateName;
 					riderData.timeFrame = 0;
 					riderData.statusType = (ObjectStatusType)0;
-					riderData.customStatusType = NULL;
+					riderData.customStatusType.clear();
 
 					// Grant the Rider the last Template
 					riderGiveTemplate(riderData);
@@ -1932,7 +1932,7 @@ const Object *RiderChangeContain::friend_getRider() const
  	if( m_containListSize > 0 ) // Yes, this does assume that infantry never ride double on the bike
  		return m_containList.front();
 
-	return NULL;
+	return nullptr;
 }
 
 

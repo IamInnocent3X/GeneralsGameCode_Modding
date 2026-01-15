@@ -49,7 +49,7 @@ public:
 
 	FireWeaponCollideModuleData()
 	{
-		m_collideWeaponTemplate = NULL;
+		m_collideWeaponTemplate = nullptr;
 		m_fireOnce = FALSE;
 		m_requiredCustomStatus.clear();
 		m_forbiddenCustomStatus.clear();

@@ -55,8 +55,8 @@ public:
 	StickyBombUpdateModuleData()
 	{
 		m_offsetZ = 10.0f;
-		m_geometryBasedDamageWeaponTemplate = NULL;
-		m_geometryBasedDamageFX = NULL;
+		m_geometryBasedDamageWeaponTemplate = nullptr;
+		m_geometryBasedDamageFX = nullptr;
 		m_animBaseTemplate = AsciiString::TheEmptyString;
 		m_animTimedTemplate = AsciiString::TheEmptyString;
 		m_showTimer = TRUE;
@@ -70,13 +70,13 @@ public:
     UpdateModuleData::buildFieldParse(p);
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "AttachToTargetBone",				INI::parseAsciiString,		NULL, offsetof( StickyBombUpdateModuleData, m_attachToBone ) },
-			{ "OffsetZ",									INI::parseReal,						NULL, offsetof( StickyBombUpdateModuleData, m_offsetZ ) },
-			{ "GeometryBasedDamageWeapon",INI::parseWeaponTemplate, NULL, offsetof( StickyBombUpdateModuleData, m_geometryBasedDamageWeaponTemplate ) },
-			{ "GeometryBasedDamageFX",		INI::parseFXList,					NULL, offsetof( StickyBombUpdateModuleData, m_geometryBasedDamageFX ) },
-			{ "Animation2DBase",		parseAnimBaseName,					NULL, 0 },
-			{ "Animation2DTimed",		parseAnimTimedName,					NULL, 0 },
-			{ "ShowTimer",		INI::parseBool,					NULL, offsetof( StickyBombUpdateModuleData, m_showTimer) },
+			{ "AttachToTargetBone",				INI::parseAsciiString,		nullptr, offsetof( StickyBombUpdateModuleData, m_attachToBone ) },
+			{ "OffsetZ",									INI::parseReal,						nullptr, offsetof( StickyBombUpdateModuleData, m_offsetZ ) },
+			{ "GeometryBasedDamageWeapon",INI::parseWeaponTemplate, nullptr, offsetof( StickyBombUpdateModuleData, m_geometryBasedDamageWeaponTemplate ) },
+			{ "GeometryBasedDamageFX",		INI::parseFXList,					nullptr, offsetof( StickyBombUpdateModuleData, m_geometryBasedDamageFX ) },
+			{ "Animation2DBase",		parseAnimBaseName,					nullptr, 0 },
+			{ "Animation2DTimed",		parseAnimTimedName,					nullptr, 0 },
+			{ "ShowTimer",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_showTimer) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -88,7 +88,7 @@ public:
 class StickyBombUpdateInterface
 {
 public:
-	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL ) = 0;
+	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = nullptr ) = 0;
 	virtual void detonate() = 0;
 	virtual Bool isTimedBomb() const = 0;
 	virtual UnsignedInt getDetonationFrame() const = 0;
@@ -123,7 +123,7 @@ public:
 
 	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return this; }
 
-	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = NULL );
+	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = nullptr );
 	virtual void detonate();
 	virtual Bool isTimedBomb() const { return (m_dieFrame > 0) && getStickyBombUpdateModuleData()->m_showTimer; }
 	virtual UnsignedInt getDetonationFrame() const { return m_dieFrame; }

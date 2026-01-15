@@ -63,7 +63,7 @@ void TransportAIUpdate::privateAttackObject( Object *victim, Int maxShotsToFire,
 {
 	DEBUG_LOG((">>> TransportAIUpdate::privateAttackObject 0"));
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL)
+	if( contain )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)
@@ -205,7 +205,7 @@ void TransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsT
 {
 	DEBUG_LOG((">>> TransportAIUpdate::privateAttackPosition 0"));
 	ContainModuleInterface* contain = getObject()->getContain();
-	if( contain != NULL)
+	if( contain )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
 		// too, but only if this is a direct command.  (As opposed to a passive aquire)

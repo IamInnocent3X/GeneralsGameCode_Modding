@@ -55,10 +55,10 @@ RepairDockUpdateModuleData::RepairDockUpdateModuleData( void )
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( RepairDockUpdateModuleData, m_framesForFullHeal ) },
-		{ "RepairClearsParasite", INI::parseBool, NULL, offsetof( RepairDockUpdateModuleData, m_repairClearsParasite ) },
-		{ "RepairClearsParasiteKeys", INI::parseAsciiStringVector, NULL, offsetof( RepairDockUpdateModuleData, m_repairClearsParasiteKeys ) },
-		{ 0, 0, 0, 0 }
+		{ "TimeForFullHeal", INI::parseDurationReal, nullptr, offsetof( RepairDockUpdateModuleData, m_framesForFullHeal ) },
+		{ "RepairClearsParasite", INI::parseBool, nullptr, offsetof( RepairDockUpdateModuleData, m_repairClearsParasite ) },
+		{ "RepairClearsParasiteKeys", INI::parseAsciiStringVector, nullptr, offsetof( RepairDockUpdateModuleData, m_repairClearsParasiteKeys ) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   p.add(dataFieldParse);
@@ -96,7 +96,7 @@ Bool RepairDockUpdate::action( Object *docker, Object *drone )
 {
 
 	// sanity
-	if( docker == NULL )
+	if( docker == nullptr )
 		return FALSE;
 
 	// get our module data

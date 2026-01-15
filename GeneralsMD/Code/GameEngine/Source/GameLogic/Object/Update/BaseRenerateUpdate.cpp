@@ -57,9 +57,9 @@ void BaseRegenerateUpdateModuleData::buildFieldParse( MultiIniFieldParse &p )
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "BaseRegenClearsParasite", INI::parseBool, NULL,	offsetof( BaseRegenerateUpdateModuleData, m_baseRegenClearsParasite ) },
-		{ "BaseRegenClearsParasiteKeys", INI::parseAsciiStringVector, NULL, offsetof( BaseRegenerateUpdateModuleData, m_baseRegenClearsParasiteKeys) },
-		{ 0, 0, 0, 0 }
+		{ "BaseRegenClearsParasite", INI::parseBool, nullptr,	offsetof( BaseRegenerateUpdateModuleData, m_baseRegenClearsParasite ) },
+		{ "BaseRegenClearsParasiteKeys", INI::parseAsciiStringVector, nullptr, offsetof( BaseRegenerateUpdateModuleData, m_baseRegenClearsParasiteKeys) },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   p.add( dataFieldParse );

@@ -66,7 +66,7 @@ public:
 		m_upgradeDisableOtherNames.clear();
 		m_upgradeDisableOwnNames.clear();
 		m_initialPayload.count = 0;
-		m_initialPayload.name = NULL;
+		m_initialPayload.name.clear();
 
 		//
 		// by default we say that transports can have infantry inside them, this will be totally
@@ -94,11 +94,11 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "TimeForFullHeal", INI::parseDurationReal, NULL, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
-			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, NULL, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
-			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
-			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, NULL, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
-			{ "InitialPayload", parseInitialPayload, NULL, 0 },
+			{ "TimeForFullHeal", INI::parseDurationReal, nullptr, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
+			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, nullptr, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
+			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, nullptr, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
+			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, nullptr, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
+			{ "InitialPayload", parseInitialPayload, nullptr, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

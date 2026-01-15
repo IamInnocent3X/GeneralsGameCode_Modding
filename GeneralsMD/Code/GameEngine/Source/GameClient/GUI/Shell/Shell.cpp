@@ -44,7 +44,7 @@
 #include "GameNetwork/GameSpy/PeerDefsImplementation.h"
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
-Shell *TheShell = NULL;  ///< the shell singleton definition
+Shell *TheShell = nullptr;  ///< the shell singleton definition
 
 
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
@@ -71,20 +71,20 @@ void Shell::construct( void )
 
 	m_screenCount = 0;
 	for( i = 0; i < MAX_SHELL_STACK; i++ )
-		m_screenStack[ i ] = NULL;
+		m_screenStack[ i ] = nullptr;
 
 	m_pendingPush = FALSE;
 	m_pendingPop = FALSE;
 	m_pendingPushName.set( "" );
 	m_isShellActive = TRUE;
 	m_shellMapOn = FALSE;
-	m_background = NULL;
+	m_background = nullptr;
 	m_clearBackground = FALSE;
 	m_animateWindowManager = NEW AnimateWindowManager;
 	m_schemeManager = NEW ShellMenuSchemeManager;
-	m_saveLoadMenuLayout = NULL;
-	m_popupReplayLayout = NULL;
-	m_optionsLayout = NULL;
+	m_saveLoadMenuLayout = nullptr;
+	m_popupReplayLayout = nullptr;
+	m_optionsLayout = nullptr;
 	m_screenCount = 0;
 }
 
@@ -102,14 +102,14 @@ void Shell::deconstruct( void )
 	{
 		m_background->destroyWindows();
 		deleteInstance(m_background);
-		m_background = NULL;
+		m_background = nullptr;
 	}
 
 	delete m_animateWindowManager;
-	m_animateWindowManager = NULL;
+	m_animateWindowManager = nullptr;
 
 	delete m_schemeManager;
-	m_schemeManager = NULL;
+	m_schemeManager = nullptr;
 
 	// delete the save/load menu if present
 	if( m_saveLoadMenuLayout )
@@ -117,7 +117,7 @@ void Shell::deconstruct( void )
 
 		m_saveLoadMenuLayout->destroyWindows();
 		deleteInstance(m_saveLoadMenuLayout);
-		m_saveLoadMenuLayout = NULL;
+		m_saveLoadMenuLayout = nullptr;
 
 	}
 
@@ -127,15 +127,15 @@ void Shell::deconstruct( void )
 
 		m_popupReplayLayout->destroyWindows();
 		deleteInstance(m_popupReplayLayout);
-		m_popupReplayLayout = NULL;
+		m_popupReplayLayout = nullptr;
 
 	}
 
 	// delete the options menu if present.
-	if (m_optionsLayout != NULL) {
+	if (m_optionsLayout != nullptr) {
 		m_optionsLayout->destroyWindows();
 		deleteInstance(m_optionsLayout);
-		m_optionsLayout = NULL;
+		m_optionsLayout = nullptr;
 	}
 }
 
@@ -146,8 +146,8 @@ void Shell::init( void )
 {
 	INI ini;
 	// Read from INI all the ShellMenuScheme
-	ini.loadFileDirectory( "Data\\INI\\Default\\ShellMenuScheme", INI_LOAD_OVERWRITE, NULL );
-	ini.loadFileDirectory( "Data\\INI\\ShellMenuScheme", INI_LOAD_OVERWRITE, NULL );
+	ini.loadFileDirectory( "Data\\INI\\Default\\ShellMenuScheme", INI_LOAD_OVERWRITE, nullptr );
+	ini.loadFileDirectory( "Data\\INI\\ShellMenuScheme", INI_LOAD_OVERWRITE, nullptr );
 
 	if( m_schemeManager )
 		m_schemeManager->init();
@@ -193,8 +193,8 @@ void Shell::update( void )
 		for( Int i = m_screenCount - 1; i >= 0; i-- )
 		{
 
-			DEBUG_ASSERTCRASH( m_screenStack[ i ], ("Top of shell stack is NULL!") );
-			m_screenStack[ i ]->runUpdate( NULL );
+			DEBUG_ASSERTCRASH( m_screenStack[ i ], ("Top of shell stack is null!") );
+			m_screenStack[ i ]->runUpdate( nullptr );
 
 		}
 		if(TheGlobalData->m_shellMapOn && m_shellMapOn &&m_background)
@@ -202,7 +202,7 @@ void Shell::update( void )
 
 			m_background->destroyWindows();
 			deleteInstance(m_background);
-			m_background = NULL;
+			m_background = nullptr;
 
 		}
 		if(TheFramePacer && m_isShellActive)
@@ -279,7 +279,7 @@ WindowLayout *Shell::findScreenByFilename( AsciiString filename )
 {
 
 	if (filename.isEmpty())
-		return NULL;
+		return nullptr;
 
 	// search screen list
 	WindowLayout *screen;
@@ -293,7 +293,7 @@ WindowLayout *Shell::findScreenByFilename( AsciiString filename )
 
 	}
 
-	return NULL;
+	return nullptr;
 
 }
 
@@ -303,7 +303,7 @@ WindowLayout *Shell::getScreenLayout( Int index ) const
 	if (index >= 0 && index < m_screenCount)
 		return m_screenStack[index];
 
-	return NULL;
+	return nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -377,7 +377,7 @@ void Shell::push( AsciiString filename, Bool shutdownImmediate )
 	{
 
 		// just call shutdownComplete() which will immediately cause the push to happen
-		shutdownComplete( NULL );
+		shutdownComplete( nullptr );
 
 	}
 
@@ -399,7 +399,7 @@ void Shell::pop( void )
 
 
 	// sanity
-	if( screen == NULL )
+	if( screen == nullptr )
 		return;
 
 #ifdef DEBUG_LOGGING
@@ -438,7 +438,7 @@ void Shell::popImmediate( void )
 	WindowLayout *screen = top();
 
 	// sanity
-	if( screen == NULL )
+	if( screen == nullptr )
 		return;
 
 #ifdef DEBUG_LOGGING
@@ -486,7 +486,7 @@ void Shell::showShell( Bool runInit )
 
 		if( layout )
 		{
-			layout->runInit( NULL );
+			layout->runInit( nullptr );
 		//	layout->bringForward();
 		}
 	}
@@ -626,7 +626,7 @@ WindowLayout *Shell::top( void )
 
 	// emtpy stack
 	if( m_screenCount == 0 )
-		return NULL;
+		return nullptr;
 
 	// top layout is at count index
 	return m_screenStack[ m_screenCount - 1 ];
@@ -641,7 +641,7 @@ void Shell::linkScreen( WindowLayout *screen )
 {
 
 	// sanity
-	if( screen == NULL )
+	if( screen == nullptr )
 		return;
 
 	// check to see if at top already
@@ -665,7 +665,7 @@ void Shell::unlinkScreen( WindowLayout *screen )
 {
 
 	// sanity
-	if( screen == NULL )
+	if( screen == nullptr )
 		return;
 
 	DEBUG_ASSERTCRASH( m_screenStack[ m_screenCount - 1 ] == screen,
@@ -673,7 +673,7 @@ void Shell::unlinkScreen( WindowLayout *screen )
 
 	// remove reference to screen and decrease count
 	if( m_screenStack[ m_screenCount - 1 ] == screen )
-		m_screenStack[ --m_screenCount ] = NULL;
+		m_screenStack[ --m_screenCount ] = nullptr;
 
 }
 
@@ -688,7 +688,7 @@ void Shell::doPush( AsciiString layoutFile )
 
 	// create new layout and load from window manager
 	newScreen = TheWindowManager->winCreateLayout( layoutFile );
-	DEBUG_ASSERTCRASH( newScreen != NULL, ("Shell unable to load pending push layout") );
+	DEBUG_ASSERTCRASH( newScreen != nullptr, ("Shell unable to load pending push layout") );
 
 	// link screen to the top
 	linkScreen( newScreen );
@@ -697,7 +697,7 @@ void Shell::doPush( AsciiString layoutFile )
 		TheIMEManager->detatch();
 
 	// run the init function automatically
-	newScreen->runInit( NULL );
+	newScreen->runInit( nullptr );
 	newScreen->bringForward();
 
 
@@ -729,7 +729,7 @@ void Shell::doPop( Bool impendingPush )
 	WindowLayout *newTop = top();
 	if( newTop && !impendingPush )
 	{
-		newTop->runInit( NULL );
+		newTop->runInit( nullptr );
 		//newTop->bringForward();
 	}
 
@@ -744,7 +744,7 @@ void Shell::doPop( Bool impendingPush )
 	* popping the current screen off the top of the stack.  It is here that we
 	* can look for any pending push or pop operations and actually do them
 	*
-	* NOTE: It is possible for the screen parameter to be NULL when we are
+	* NOTE: It is possible for the screen parameter to be nullptr when we are
 	*       short circuiting the shutdown logic because there is no layout
 	*				to actually shutdown (ie, the stack is empty and we push) */
 //-------------------------------------------------------------------------------------------------
@@ -787,7 +787,7 @@ void Shell::shutdownComplete( WindowLayout *screen, Bool impendingPush )
 		{
 			m_background->destroyWindows();
 			deleteInstance(m_background);
-			m_background = NULL;
+			m_background = nullptr;
 			m_clearBackground = FALSE;
 		}
 
@@ -863,7 +863,7 @@ WindowLayout *Shell::getSaveLoadMenuLayout( void )
 {
 
 	// if layout has not been created, create it now
-	if( m_saveLoadMenuLayout == NULL )
+	if( m_saveLoadMenuLayout == nullptr )
    m_saveLoadMenuLayout = TheWindowManager->winCreateLayout( "Menus/PopupSaveLoad.wnd" );
 
 	// sanity
@@ -880,7 +880,7 @@ WindowLayout *Shell::getPopupReplayLayout( void )
 {
 
 	// if layout has not been created, create it now
-	if( m_popupReplayLayout == NULL )
+	if( m_popupReplayLayout == nullptr )
    m_popupReplayLayout = TheWindowManager->winCreateLayout( "Menus/PopupReplay.wnd" );
 
 	// sanity
@@ -896,7 +896,7 @@ WindowLayout *Shell::getPopupReplayLayout( void )
 WindowLayout *Shell::getOptionsLayout( Bool create )
 {
 	// if layout has not been created, create it now
-	if ((m_optionsLayout == NULL) && (create == TRUE))
+	if ((m_optionsLayout == nullptr) && (create == TRUE))
 	{
 		m_optionsLayout = TheWindowManager->winCreateLayout( "Menus/OptionsMenu.wnd" );
 
@@ -911,9 +911,9 @@ WindowLayout *Shell::getOptionsLayout( Bool create )
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 void Shell::destroyOptionsLayout() {
-	if (m_optionsLayout != NULL) {
+	if (m_optionsLayout != nullptr) {
 		m_optionsLayout->destroyWindows();
 		deleteInstance(m_optionsLayout);
-		m_optionsLayout = NULL;
+		m_optionsLayout = nullptr;
 	}
 }

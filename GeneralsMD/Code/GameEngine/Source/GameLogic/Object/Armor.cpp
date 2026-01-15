@@ -42,7 +42,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-ArmorStore* TheArmorStore = NULL;					///< the ArmorTemplate store definition
+ArmorStore* TheArmorStore = nullptr;					///< the ArmorTemplate store definition
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -580,7 +580,7 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(NameKeyType namekey) const
 	ArmorTemplateMap::const_iterator it = m_armorTemplates.find(namekey);
 	if (it == m_armorTemplates.end())
 	{
-		return NULL;
+		return nullptr;
 	}
 	else
 	{
@@ -605,10 +605,10 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(const char* name) const
 {
 	static const FieldParse myFieldParse[] =
 	{
-		{ "Armor", ArmorTemplate::parseArmorCoefficients, NULL, 0 },
-		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, NULL, 0 },
-		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, NULL, 0 },
-		{ NULL, NULL, NULL, NULL }
+		{ "Armor", ArmorTemplate::parseArmorCoefficients, nullptr, 0 },
+		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, nullptr, 0 },
+		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, nullptr, 0 },
+		{ nullptr, nullptr, nullptr, nullptr }
 	};
 
 	const char *c = ini->getNextToken();
@@ -623,17 +623,17 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(const char* name) const
 {
 	static const FieldParse myFieldParse[] =
 	{
-		{ "Armor", ArmorTemplate::parseArmorCoefficients, NULL, 0 },
-		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, NULL, 0 },
-		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, NULL, 0 },
-		{ NULL, NULL, NULL, NULL }
+		{ "Armor", ArmorTemplate::parseArmorCoefficients, nullptr, 0 },
+		{ "ArmorMult", ArmorTemplate::parseArmorMultiplier, nullptr, 0 },
+		{ "ArmorBonus", ArmorTemplate::parseArmorBonus, nullptr, 0 },
+		{ nullptr, nullptr, nullptr, nullptr }
 	};
 
 	const char* new_armor_name = ini->getNextToken();
 
 	const char* parent = ini->getNextToken();
 	const ArmorTemplate* parentTemplate = TheArmorStore->findArmorTemplate(parent);
-	if (parentTemplate == NULL) {
+	if (parentTemplate == nullptr) {
 		DEBUG_CRASH(("ArmorExtend must extend a previously defined Armor (%s).\n", parent));
 		throw INI_INVALID_DATA;
 	}
@@ -669,11 +669,11 @@ void ArmorStore::parseCustomDamageTypesDefinition(INI* ini)
 
 	static const FieldParse myFieldParse[] =
 	{
-		{ "CustomDamageType", ArmorTemplate::parseCustomDamageType, NULL, 0 },
-		{ "Damage", ArmorTemplate::parseDefaultDamage, NULL, 0 },
-		{ "LinkDamageType", ArmorTemplate::parseLinkDamageType, NULL, 0 },
-		{ "LinkCustomDamageType", ArmorTemplate::parseLinkCustomDamageTypes, NULL, 0 },
-		{ NULL, NULL, NULL, NULL }
+		{ "CustomDamageType", ArmorTemplate::parseCustomDamageType, nullptr, 0 },
+		{ "Damage", ArmorTemplate::parseDefaultDamage, nullptr, 0 },
+		{ "LinkDamageType", ArmorTemplate::parseLinkDamageType, nullptr, 0 },
+		{ "LinkCustomDamageType", ArmorTemplate::parseLinkCustomDamageTypes, nullptr, 0 },
+		{ nullptr, nullptr, nullptr, nullptr }
 	};
 
 	ArmorStore::CustomDamageTypesMap& customDamageTypesMapInfo = TheArmorStore->m_customDamageTypes;

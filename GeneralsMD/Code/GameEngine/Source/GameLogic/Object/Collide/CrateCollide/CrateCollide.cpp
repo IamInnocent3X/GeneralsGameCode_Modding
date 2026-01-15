@@ -57,13 +57,13 @@ CrateCollideModuleData::CrateCollideModuleData()
 	m_isBuildingPickup = FALSE;
 	m_isHumanOnlyPickup = FALSE;
 	m_isAllowPickAboveTerrain = FALSE;
-	m_executeFX = NULL;
+	m_executeFX = nullptr;
 	m_pickupScience = SCIENCE_INVALID;
 	m_targetsMask = 0;
 	m_destroyOnCollide = FALSE;
-	m_fxOnCollide = NULL;
-	m_oclOnCollide = NULL;
-	m_cursorName = NULL;
+	m_fxOnCollide = nullptr;
+	m_oclOnCollide = nullptr;
+	m_cursorName.clear();
 	m_rejectKeys.clear();
 	m_activationUpgradeNames.clear();
 	m_conflictingUpgradeNames.clear();
@@ -93,54 +93,54 @@ void CrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "RequiredKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( CrateCollideModuleData, m_kindof ) },
-		{ "ForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( CrateCollideModuleData, m_kindofnot ) },
-		{ "ForbidOwnerPlayer", INI::parseBool,	NULL,	offsetof( CrateCollideModuleData, m_isForbidOwnerPlayer ) },
-		{ "AllowNeutralPlayer", INI::parseBool,	NULL,	offsetof( CrateCollideModuleData, m_isAllowNeutralPlayer ) },
-		{ "BuildingPickup", INI::parseBool,	NULL,	offsetof( CrateCollideModuleData, m_isBuildingPickup ) },
-		{ "HumanOnly", INI::parseBool,	NULL,	offsetof( CrateCollideModuleData, m_isHumanOnlyPickup ) },
-		{ "AllowPickAboveTerrain", INI::parseBool,	NULL,	offsetof( CrateCollideModuleData, m_isAllowPickAboveTerrain ) },
-		{ "PickupScience", INI::parseScience,	NULL,	offsetof( CrateCollideModuleData, m_pickupScience ) },
-		{ "ExecuteFX", INI::parseFXList, NULL, offsetof( CrateCollideModuleData, m_executeFX ) },
-		{ "ExecuteAnimation", INI::parseAsciiString, NULL, offsetof( CrateCollideModuleData, m_executionAnimationTemplate ) },
-		{ "ExecuteAnimationTime", INI::parseReal, NULL, offsetof( CrateCollideModuleData, m_executeAnimationDisplayTimeInSeconds ) },
-		{ "ExecuteAnimationZRise", INI::parseReal, NULL, offsetof( CrateCollideModuleData, m_executeAnimationZRisePerSecond ) },
-		{ "ExecuteAnimationFades", INI::parseBool, NULL, offsetof( CrateCollideModuleData, m_executeAnimationFades ) },
+		{ "RequiredKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( CrateCollideModuleData, m_kindof ) },
+		{ "ForbiddenKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( CrateCollideModuleData, m_kindofnot ) },
+		{ "ForbidOwnerPlayer", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isForbidOwnerPlayer ) },
+		{ "AllowNeutralPlayer", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isAllowNeutralPlayer ) },
+		{ "BuildingPickup", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isBuildingPickup ) },
+		{ "HumanOnly", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isHumanOnlyPickup ) },
+		{ "AllowPickAboveTerrain", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isAllowPickAboveTerrain ) },
+		{ "PickupScience", INI::parseScience,	nullptr,	offsetof( CrateCollideModuleData, m_pickupScience ) },
+		{ "ExecuteFX", INI::parseFXList, nullptr, offsetof( CrateCollideModuleData, m_executeFX ) },
+		{ "ExecuteAnimation", INI::parseAsciiString, nullptr, offsetof( CrateCollideModuleData, m_executionAnimationTemplate ) },
+		{ "ExecuteAnimationTime", INI::parseReal, nullptr, offsetof( CrateCollideModuleData, m_executeAnimationDisplayTimeInSeconds ) },
+		{ "ExecuteAnimationZRise", INI::parseReal, nullptr, offsetof( CrateCollideModuleData, m_executeAnimationZRisePerSecond ) },
+		{ "ExecuteAnimationFades", INI::parseBool, nullptr, offsetof( CrateCollideModuleData, m_executeAnimationFades ) },
 
 		{ "AffectsTargets", INI::parseBitString32, TheWeaponAffectsMaskNames, offsetof( CrateCollideModuleData, m_targetsMask) },
-		{ "TriggeredBy", INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_activationUpgradeNames ) },
-		{ "ConflictsWith", INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_conflictingUpgradeNames ) },
-		{ "RequiresAllTriggers", INI::parseBool, NULL, offsetof( CrateCollideModuleData, m_requiresAllTriggers ) },
-		{ "RequiredStatus", ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_requiredStatus ) },
-		{ "ForbiddenStatus", ObjectStatusMaskType::parseFromINI, NULL, offsetof( CrateCollideModuleData, m_forbiddenStatus ) },
-		{ "RequiredCustomStatus", INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_requiredCustomStatus ) },
-		{ "ForbiddenCustomStatus", INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_forbiddenCustomStatus ) },
+		{ "TriggeredBy", INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_activationUpgradeNames ) },
+		{ "ConflictsWith", INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_conflictingUpgradeNames ) },
+		{ "RequiresAllTriggers", INI::parseBool, nullptr, offsetof( CrateCollideModuleData, m_requiresAllTriggers ) },
+		{ "RequiredStatus", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( CrateCollideModuleData, m_requiredStatus ) },
+		{ "ForbiddenStatus", ObjectStatusMaskType::parseFromINI, nullptr, offsetof( CrateCollideModuleData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus", INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus", INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_forbiddenCustomStatus ) },
 
-		{ "DeleteUserOnCollide", INI::parseBool, NULL, offsetof( CrateCollideModuleData, m_destroyOnCollide ) },
-		{ "FXOnCollide", INI::parseFXList, NULL, offsetof( CrateCollideModuleData, m_fxOnCollide ) },
-		{ "OCLOnCollide", INI::parseObjectCreationList, NULL, offsetof( CrateCollideModuleData, m_oclOnCollide ) },
+		{ "DeleteUserOnCollide", INI::parseBool, nullptr, offsetof( CrateCollideModuleData, m_destroyOnCollide ) },
+		{ "FXOnCollide", INI::parseFXList, nullptr, offsetof( CrateCollideModuleData, m_fxOnCollide ) },
+		{ "OCLOnCollide", INI::parseObjectCreationList, nullptr, offsetof( CrateCollideModuleData, m_oclOnCollide ) },
 
-		{ "RejectKeys",				INI::parseAsciiStringVector,		NULL, offsetof( CrateCollideModuleData, m_rejectKeys ) },
-		{ "StatusToRemove",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_statusToRemove ) },
-		{ "CustomStatusToRemove",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customStatusToRemove ) },
-		{ "StatusToDestroy",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_statusToDestroy ) },
-		{ "CustomStatusToDestroy",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customStatusToDestroy ) },
-		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_statusToSet ) },
-		{ "CustomStatusToSet",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customStatusToSet ) },
-		{ "StatusToGive",		ObjectStatusMaskType::parseFromINI,	NULL, offsetof( CrateCollideModuleData, m_statusToGive ) },
-		{ "CustomStatusToGive",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customStatusToGive ) },
-		{ "WeaponBonusToGive",		INI::parseWeaponBonusVector, NULL, offsetof( CrateCollideModuleData, m_bonusToGive ) },
-		{ "CustomWeaponBonusToGive",	INI::parseAsciiStringVector, NULL, offsetof( CrateCollideModuleData, m_customBonusToGive ) },
+		{ "RejectKeys",				INI::parseAsciiStringVector,		nullptr, offsetof( CrateCollideModuleData, m_rejectKeys ) },
+		{ "StatusToRemove",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( CrateCollideModuleData, m_statusToRemove ) },
+		{ "CustomStatusToRemove",	INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_customStatusToRemove ) },
+		{ "StatusToDestroy",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( CrateCollideModuleData, m_statusToDestroy ) },
+		{ "CustomStatusToDestroy",	INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_customStatusToDestroy ) },
+		{ "StatusToSet",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( CrateCollideModuleData, m_statusToSet ) },
+		{ "CustomStatusToSet",	INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_customStatusToSet ) },
+		{ "StatusToGive",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( CrateCollideModuleData, m_statusToGive ) },
+		{ "CustomStatusToGive",	INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_customStatusToGive ) },
+		{ "WeaponBonusToGive",		INI::parseWeaponBonusVector, nullptr, offsetof( CrateCollideModuleData, m_bonusToGive ) },
+		{ "CustomWeaponBonusToGive",	INI::parseAsciiStringVector, nullptr, offsetof( CrateCollideModuleData, m_customBonusToGive ) },
 
-		{ "LeechExpFromObject",		INI::parseBool,		NULL, offsetof( CrateCollideModuleData, m_leechExpFromObject ) },
-		{ "DamagePercentToUnit",	INI::parsePercentToReal,		NULL, offsetof( CrateCollideModuleData, m_damagePercentageToUnit ) },
-		{ "DestroyOnTargetDie",		INI::parseBool,		NULL, offsetof( CrateCollideModuleData, m_destroyOnTargetDie ) },
-		{ "DestroyOnHeal",			INI::parseBool,		NULL, offsetof( CrateCollideModuleData, m_destroyOnHeal ) },
-		{ "RemoveOnHeal",			INI::parseBool,		NULL, offsetof( CrateCollideModuleData, m_removeOnHeal ) },
+		{ "LeechExpFromObject",		INI::parseBool,		nullptr, offsetof( CrateCollideModuleData, m_leechExpFromObject ) },
+		{ "DamagePercentToUnit",	INI::parsePercentToReal,		nullptr, offsetof( CrateCollideModuleData, m_damagePercentageToUnit ) },
+		{ "DestroyOnTargetDie",		INI::parseBool,		nullptr, offsetof( CrateCollideModuleData, m_destroyOnTargetDie ) },
+		{ "DestroyOnHeal",			INI::parseBool,		nullptr, offsetof( CrateCollideModuleData, m_destroyOnHeal ) },
+		{ "RemoveOnHeal",			INI::parseBool,		nullptr, offsetof( CrateCollideModuleData, m_removeOnHeal ) },
 
-		{ "CursorName", INI::parseAsciiString, NULL, offsetof( CrateCollideModuleData, m_cursorName ) },
+		{ "CursorName", INI::parseAsciiString, nullptr, offsetof( CrateCollideModuleData, m_cursorName ) },
 
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 }
@@ -161,7 +161,7 @@ CrateCollide::~CrateCollide( void )
 
 //-------------------------------------------------------------------------------------------------
 /** The collide event.
-	* Note that when other is NULL it means "collide with ground" */
+	* Note that when other is nullptr it means "collide with ground" */
 //-------------------------------------------------------------------------------------------------
 void CrateCollide::onCollide( Object *other, const Coord3D *, const Coord3D * )
 {
@@ -169,18 +169,18 @@ void CrateCollide::onCollide( Object *other, const Coord3D *, const Coord3D * )
 	// If the crate can be picked up, perform the game logic and destroy the crate.
 	if( isValidToExecute( other ) )
 	{
-		if( modData->m_fxOnCollide != NULL )
+		if( modData->m_fxOnCollide != nullptr )
 		{
 			FXList::doFXObj( modData->m_fxOnCollide, getObject() );
 		}
-		if( modData->m_oclOnCollide != NULL )
+		if( modData->m_oclOnCollide != nullptr )
 		{
-			ObjectCreationList::create( modData->m_oclOnCollide, getObject(), NULL );
+			ObjectCreationList::create( modData->m_oclOnCollide, getObject(), nullptr );
 		}
 
 		if( executeCrateBehavior( other ) )
 		{
-			if( modData->m_executeFX != NULL )
+			if( modData->m_executeFX != nullptr )
 			{
 				// Note: We pass in other here, because the crate is owned by the neutral player, and
 				// we want to do things that only the other person can see.
@@ -286,7 +286,7 @@ Bool CrateCollide::revertCollideBehavior( Object *other )
 Bool CrateCollide::isValidToExecute( const Object *other ) const
 {
 	//The ground never picks up a crate
-	if( other == NULL )
+	if( other == nullptr )
 		return FALSE;
 
 	const CrateCollideModuleData* md = getCrateCollideModuleData();
@@ -299,7 +299,7 @@ Bool CrateCollide::isValidToExecute( const Object *other ) const
 			md->m_targetsMask == 0)
 	   )
 		return FALSE;
-		
+
 
 	//Nothing Neutral can pick up any type of crate
 	if(other->isNeutralControlled() && !md->m_isAllowNeutralPlayer)
@@ -308,7 +308,7 @@ Bool CrateCollide::isValidToExecute( const Object *other ) const
 	Bool validBuildingAttempt = md->m_isBuildingPickup && other->isKindOf( KINDOF_STRUCTURE );
 
 	// Must be a "Unit" type thing.  Real Game Object, not just Object
-	if( other->getAIUpdateInterface() == NULL  &&  !validBuildingAttempt )// Building exception flag for Drop Zone
+	if( other->getAIUpdateInterface() == nullptr  &&  !validBuildingAttempt )// Building exception flag for Drop Zone
 		return FALSE;
 
 	// must match our kindof flags (if any)

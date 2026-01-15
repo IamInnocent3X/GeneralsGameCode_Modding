@@ -166,7 +166,7 @@ public:
 	virtual Bool isActive() const {return m_status != STATUS_IDLE;}
 	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return this; }
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
-	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = NULL ) const;
+	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const;
 	virtual ScienceType getExtraRequiredScience() const { return SCIENCE_INVALID; } //Does this object have more than one special power module with the same spTemplate?
 	virtual const AsciiString& getCursorName() const { return getParticleUplinkCannonUpdateModuleData()->m_cursorName; }
 	virtual const AsciiString& getInvalidCursorName() const { return NULL; }
