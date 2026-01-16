@@ -368,15 +368,15 @@ static void testRotatedPointsAgainstRect(
 	Coord2D *avg,
 	Int *avgTot,
 	Real *minDistSqr
-);*/
+);
 static Real fast_hypot(
 	Real x,
 	Real y
-);
+);*/
 static void testSphereAgainstRect(
 	const Coord2D pts[],				// an array of 4
-	const CollideInfo *a,
-	//Real angle,
+	const Coord3D *a_pos,
+	const Coord3D *b_pos,
 	Real &distSqr
 );
 
@@ -567,7 +567,7 @@ static void testRotatedPointsAgainstRect(
 #endif
 		}
 	}
-}*/
+}
 
 //-----------------------------------------------------------------------------
 static Real fast_hypot(Real x, Real y)
@@ -575,12 +575,12 @@ static Real fast_hypot(Real x, Real y)
 	// Fast approximation of Boundary length, generally if one line has the length of only 10% or less of the other line, we take the longest line as the boundary.
 	// Has an error rate of approx 0.5%.
 	// Example: A line of dx = 5, and dy = 0.5, would give h = 5.025, we take dx directly
-	/*Real dSqr = x*x + y*y;
-	Real curGuess = 1.0f;
-	Real tolerance = 0.1f;
-	while(fabs( (curGuess * curGuess) / dSqr - 1.0) > tolerance)
-		curGuess = ((dSqr/curGuess) + curGuess) * 0.5;
-	return curGuess;*/
+	//Real dSqr = x*x + y*y;
+	//Real curGuess = 1.0f;
+	//Real tolerance = 0.1f;
+	//while(fabs( (curGuess * curGuess) / dSqr - 1.0) > tolerance)
+	//	curGuess = ((dSqr/curGuess) + curGuess) * 0.5;
+	//return curGuess;
 
 	Real dx = fabs(x);
 	Real dy = fabs(y);
@@ -613,84 +613,124 @@ static Real fast_hypot(Real x, Real y)
 	// max error ≈ 1.04 %
 	return a * ( 1 + 0.428 * ratio );
 }
+*/
 
 //-----------------------------------------------------------------------------
 static void testSphereAgainstRect(
 	const Coord2D pts[],				// an array of 4
-	const CollideInfo *a,
-	//Real angle,
+	const Coord3D *a_pos,
+	const Coord3D *b_pos,
 	Real &distSqr
 )
 {
 	// Get two points that are closest to the facing direction
-	//DEBUG_LOG(("Source Points: x: %f y: %f", a->position.x, a->position.y));
-	Real dx1, dx2, dy1, dy2;
+	//DEBUG_LOG(("Source Points: x: %f y: %f", a_pos->x, a_pos->y));
+	//Real dx1, dx2, dy1, dy2;
 	//x1 = x2 = y1 = y2 = 0.0f;
 	Real minDist = HUGE_DIST_SQR;
 	Real secondMinDist = 0.0f;
-	Int minIdx = -1;
-	Int secondMinIdx = -1;
+	Int minIdx, secondMinIdx;
+	minIdx = secondMinIdx = -1;
 
 	Real derivative[4][2];
+	Real dDistSqr[4];
 	for (Int i = 0; i < 4; ++i)
 	{
-		derivative[i][0] = pts[i].x - a->position.x;
-		derivative[i][1] = pts[i].y - a->position.y;
+		derivative[i][0] = pts[i].x - a_pos->x;
+		derivative[i][1] = pts[i].y - a_pos->y;
 
-		Real curDistSqr = sqr(derivative[i][0]) + sqr(derivative[i][1]);
-		if(minDist > curDistSqr)
+		dDistSqr[i] = sqr(derivative[i][0]) + sqr(derivative[i][1]);
+		//DEBUG_LOG(("Distance for point - %d: %f.", i, dDistSqr[i]));
+
+		if(minDist > dDistSqr[i])
 		{
-			minDist = curDistSqr;
+			secondMinIdx = minIdx;
+			secondMinDist = minDist;
+			minDist = dDistSqr[i];
 			minIdx = i;
+
+			continue;
 		}
-		if( minDist >= secondMinDist ||
-			(secondMinDist > curDistSqr && curDistSqr > minDist) )
+		if( secondMinDist > dDistSqr[i] && dDistSqr[i] > minDist )
 		{
-			secondMinDist = curDistSqr;
+			secondMinDist = dDistSqr[i];
 			secondMinIdx = i;
-		}
-		// Get the second last min idx if the last min idx is not yet registered.
-		
-
-		if(i == 3)
-		{
-			dx1 = derivative[minIdx][0];
-			dy1 = derivative[minIdx][1];
-			dx2 = derivative[secondMinIdx][0];
-			dy2 = derivative[secondMinIdx][1];
-
-			Bool polarity_x1 = dx1 >= 0;
-			Bool polarity_x2 = dx2 >= 0;
-			Bool polarity_y1 = dy1 >= 0;
-			Bool polarity_y2 = dy2 >= 0;
-
-			if( polarity_x1 == polarity_x2 && polarity_y1 == polarity_y2 )
-			{
-				distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
-				return;
-			}
 		}
 	}
 
 	DEBUG_ASSERTCRASH(secondMinIdx >= 0 && secondMinIdx <= 3, ("Hmm, this should not be possible."));
-	
+
+	Bool polarity_dx = derivative[minIdx][0] >= 0.0f;
+	Bool polarity_dy = derivative[minIdx][1] >= 0.0f;
+	Bool polarity_dx2 = derivative[secondMinIdx][0] >= 0.0f;
+	Bool polarity_dy2 = derivative[secondMinIdx][1] >= 0.0f;
+
+	if( polarity_dx == polarity_dx2 && polarity_dy == polarity_dy2 )
+	{
+		// Same directional vector, so get one that has a different point
+		Bool found = false;
+		secondMinDist = HUGE_DIST_SQR;
+		for (Int i = 0; i < 4; ++i)
+		{
+			if( secondMinDist <= dDistSqr[i] || dDistSqr[i] == minDist )
+				continue;
+
+			polarity_dx2 = derivative[i][0] >= 0.0f;
+			polarity_dy2 = derivative[i][1] >= 0.0f;
+
+			if( polarity_dx == polarity_dx2 && polarity_dy == polarity_dy2 )
+				continue;
+
+			secondMinDist = dDistSqr[i];
+			secondMinIdx = i;
+		}
+
+		// Same directional vector, so get the closest distance from a point.
+		if(!found)
+		{
+			distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+			return;
+		}
+
+		//DEBUG_LOG(("Distance for second Min point chosen - %d: %f.", secondMinIdx, secondMinDist));
+	}
+
+	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
+	//DEBUG_LOG(("Min Dist: %f Second Min Dist: %f", minDist, secondMinDist));
+
+	// Get the "reflected" points of pos B, if the points have higher distance than the current points, that means the current points are within boundary
+	Real other_x1 = pts[minIdx].x - b_pos->x;
+	Real other_y1 = pts[minIdx].y - b_pos->y;
+	Real new_bpos_x = pts[secondMinIdx].x + other_x1;
+	Real new_bpos_y = pts[secondMinIdx].y + other_y1;
+	//Real new_bpos_x = pts[minIdx].x <= pts[secondMinIdx].x ? pts[secondMinIdx].x + other_y1 : pts[secondMinIdx].x - other_y1;
+	//Real new_bpos_y = pts[minIdx].y <= pts[secondMinIdx].y ? pts[secondMinIdx].y + other_x1 : pts[secondMinIdx].y - other_x1;
+	//Real other_distSqr = sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y);
+
+	if(curDistSqr < sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y) )
+	{
+		// The points are within the boundary, set the distance to 0
+		distSqr = 0.0f;
+		return;
+	}
+
+	//DEBUG_LOG(("Pos B - X: %f Y: %f", b_pos->x, b_pos->y));
+	//DEBUG_LOG(("MinIdx - X: %f Y: %f. Second MinIdx - X: %f Y: %f", pts[minIdx].x, pts[minIdx].y, pts[secondMinIdx].x, pts[secondMinIdx].y));
+	//DEBUG_LOG(("Pos A - X: %f Y: %f.", a_pos->x, a_pos->y));
+	//DEBUG_LOG(("New Pos B - X: %f Y: %f", new_bpos_x, new_bpos_y));
+	//DEBUG_LOG(("curDistSqr: %f. other distSqr: %f.", curDistSqr, other_distSqr));
+
 	// Get the Triangle length of all 3 points
-	Real boundary_h = fast_hypot(pts[minIdx].x - pts[secondMinIdx].x, pts[minIdx].y - pts[secondMinIdx].y);
+	Real sqr_boundary_h = sqr(pts[minIdx].x - pts[secondMinIdx].x) + sqr(pts[minIdx].y - pts[secondMinIdx].y);
+	Real sqr_boundary_1 = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+	Real sqr_boundary_2 = sqr(derivative[secondMinIdx][0]) + sqr(derivative[secondMinIdx][1]);
+
+	//Real boundary_h = fast_hypot(pts[minIdx].x - pts[secondMinIdx].x, pts[minIdx].y - pts[secondMinIdx].y);
 	//Real boundary_1 = fast_hypot(dx1, dy1);
 	//Real boundary_2 = fast_hypot(dx2, dy2);
 	//Real sqr_boundary_h = sqr(boundary_h);
 	//Real sqr_boundary_1 = sqr(boundary_1);
 	//Real sqr_boundary_h = sqr((*pts)[minIdx].x - (*pts)[lastMinIdx].x) + sqr((*pts)[minIdx].y - (*pts)[lastMinIdx].y);
-	Real sqr_boundary_1 = sqr(dx1) + sqr(dy1);
-	Real sqr_boundary_2 = sqr(dx2) + sqr(dy2);
-
-	//Real boundary_h = sqrtf(sqr(x1 - x2) + sqr(y1 - y2));
-	//Real boundary_1 = sqrtf(sqr(x1 - a->position.x) + sqr(y1 - a->position.y));
-	//Real boundary_2 = sqrtf(sqr(x2 - a->position.x) + sqr(y2 - a->position.y));
-
-	//Real boundary_h = Hypot(fabs(x1-x2), fabs(y1-y2));
-	//Real boundary_1 = Hypot(fabs(x1 - a->position.x), fabs(y1 - a->position.y));
-	//Real boundary_2 = Hypot(fabs(x2 - a->position.x), fabs(y2 - a->position.y));
 
 	// Heron's formula (Not reliable for accounting the edges)
 	//Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
@@ -705,8 +745,12 @@ static void testSphereAgainstRect(
 	//Real boundary_h1 = cosAngle_1 * boundary_2;
 
 	// Formula Summarization
-	Real boundary_h1 = (sqr_boundary_2 + sqr(boundary_h) - sqr_boundary_1) * 0.5 / boundary_h;
-	distSqr = sqr_boundary_2 - sqr(boundary_h1);
+	Real boundary_h1 = (sqr_boundary_2 + sqr_boundary_h - sqr_boundary_1) * 0.5 / sqrtf(sqr_boundary_h);
+	Real distBoundarySqr = sqr_boundary_2 - sqr(boundary_h1);
+	//DEBUG_LOG(("sqr_boundary_1: %f. sqr_boundary_2: %f.", sqr_boundary_1, sqr_boundary_2));
+	//DEBUG_LOG(("sqr_boundary_h: %f. boundary_h1: %f.", sqr_boundary_h, boundary_h1));
+	//DEBUG_LOG(("distSqr: %f. distBoundarySqr: %f.", distSqr, distBoundarySqr));
+	distSqr = distBoundarySqr;
 }
 
 //-----------------------------------------------------------------------------
@@ -785,7 +829,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 
 	Coord2D pts[4];
 	rectToFourPoints(a, pts);
-	testSphereAgainstRect(pts, b, distSqr);
+	testSphereAgainstRect(pts, &b->position, &a->position, distSqr);
 
 	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distSqr));
 
