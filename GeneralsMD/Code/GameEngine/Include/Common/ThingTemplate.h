@@ -490,6 +490,7 @@ public:
 	Real getShadowSizeY() const { return m_shadowSizeY; }
 	Real getShadowOffsetX() const { return m_shadowOffsetX; }
 	Real getShadowOffsetY() const { return m_shadowOffsetY; }
+	Bool hasDynamicShadowLength() const { return m_shadowHasDynamicLength; }
 
 	const AsciiString& getShadowTextureName( void ) const { return m_shadowTextureName; }
 	UnsignedInt getOcclusionDelay(void) const { return m_occlusionDelay;}
@@ -786,6 +787,7 @@ private:
 	Real					m_shadowSizeY;				///< world-space extent of decal shadow texture
 	Real					m_shadowOffsetX;			///< world-space offset of decal shadow texture
 	Real					m_shadowOffsetY;			///< world-space offset of decal shadow texture
+	Bool					m_shadowHasDynamicLength;  ///< dynamic shadow angle scaling based on object height
 
 	// ---- Int-sized things
 	Int						m_energyProduction;						///< how much Energy this takes (negative values produce Energy, rather than consuming it)

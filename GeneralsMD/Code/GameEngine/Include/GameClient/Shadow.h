@@ -81,6 +81,7 @@ public:
 				Real	m_sizeY;			//world size of decal projection
 				Real	m_offsetX;			//world shift along x axis
 				Real	m_offsetY;			//world shift along y axis
+				Bool  m_hasDynamicLength;   ///< determines shadow angle based on object height
 		};
 
 		Shadow(void) : m_diffuse(0xffffffff), m_color(0xffffffff), m_opacity (0x000000ff), m_localAngle(0.0f) {}
@@ -95,6 +96,8 @@ public:
 		void setColor(Color value);///<adjust ARGB color of decal/shadow
 		void setAngle(Real angle);		///<adjust orientation around z-axis
 		void setPosition(Real x, Real y, Real z);
+
+		inline void setDynamicLength(Bool enabled) { m_hasDynamicLength = enabled; }
 
 		void setSize(Real sizeX, Real sizeY)
 		{
@@ -131,6 +134,7 @@ protected:
 		Real	m_decalSizeX;		/// 1/(world space extent of texture in x direction)
 		Real	m_decalSizeY;		/// 1/(world space extent of texture in y direction)
 		Real	m_localAngle;		/// yaw or rotation around z-axis of shadow image when not bound to robj/drawable.
+		Bool  m_hasDynamicLength;  ///< determines shadow angle based on object height
 };
 
 

@@ -233,6 +233,8 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "ShadowOffsetX",				INI::parseReal,						NULL,	offsetof( ThingTemplate, m_shadowOffsetX ) },
 	{ "ShadowOffsetY",				INI::parseReal,						NULL,	offsetof( ThingTemplate, m_shadowOffsetY ) },
 	{ "ShadowTexture",				INI::parseAsciiString,		NULL,	offsetof( ThingTemplate, m_shadowTextureName ) },
+	{ "ShadowDynamicLengthWhenAirborne",	INI::parseBool,		NULL,	offsetof( ThingTemplate, m_shadowHasDynamicLength) },
+
 	{ "OcclusionDelay",					INI::parseDurationUnsignedInt,		NULL, offsetof( ThingTemplate, m_occlusionDelay ) },
 	{ "AddModule",						ThingTemplate::parseAddModule,			NULL, 0 },
 	{ "RemoveModule",					ThingTemplate::parseRemoveModule,		NULL, 0 },
@@ -1037,6 +1039,7 @@ ThingTemplate::ThingTemplate() :
 	m_shadowSizeY = 0.0f;
 	m_shadowOffsetX = 0.0f;
 	m_shadowOffsetY = 0.0f;
+	m_shadowHasDynamicLength = false;
 	m_occlusionDelay = TheGlobalData->m_defaultOcclusionDelay;
 
 	m_structureRubbleHeight = 0;
