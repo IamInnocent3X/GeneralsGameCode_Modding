@@ -162,7 +162,7 @@ void Shell::reset( void )
 {
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 	// pop all screens
 	while( m_screenCount )
@@ -318,7 +318,7 @@ void Shell::hide( Bool hide )
 			m_screenStack[ i ]->hide( hide );
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 }
 
@@ -382,7 +382,7 @@ void Shell::push( AsciiString filename, Bool shutdownImmediate )
 	}
 
 //	if (TheIMEManager)
-//		TheIMEManager->detatch();
+//		TheIMEManager->detach();
 
 }
 
@@ -422,7 +422,7 @@ void Shell::pop( void )
 	screen->runShutdown( &immediatePop );
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 }
 
@@ -460,7 +460,7 @@ void Shell::popImmediate( void )
 	doPop( FALSE );
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 }
 
@@ -611,7 +611,7 @@ void Shell::hideShell( void )
 	}
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 	// Mark that the shell is no longer up.
 	m_isShellActive = FALSE;
@@ -694,7 +694,7 @@ void Shell::doPush( AsciiString layoutFile )
 	linkScreen( newScreen );
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 	// run the init function automatically
 	newScreen->runInit( nullptr );
@@ -734,7 +734,7 @@ void Shell::doPop( Bool impendingPush )
 	}
 
 	if (TheIMEManager)
-		TheIMEManager->detatch();
+		TheIMEManager->detach();
 
 }
 
