@@ -178,7 +178,13 @@ struct CollideLocAndNormal
 	Coord3D loc;
 	Coord3D normal;
 	Real distSqr;
-	Bool getDistance;
+	HeightBoundaryCheckType heightCheck;
+
+	CollideLocAndNormal() : distSqr(0.0f), heightCheck(DEFAULT_HEIGHT_CHECK)
+	{
+		loc.zero();
+		normal.zero();
+	}
 };
 
 //=====================================

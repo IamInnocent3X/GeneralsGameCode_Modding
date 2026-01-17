@@ -105,7 +105,7 @@ extern void addIcon(const Coord3D *pos, Real width, Int numFramesDuration, RGBCo
 
 const Real HUGE_DIST_SQR = (HUGE_DIST*HUGE_DIST);
 
-const Real RAD_TO_DEGREE_FACTOR = 180.0f / PI;
+//const Real RAD_TO_DEGREE_FACTOR = 180.0f / PI;
 
 #define DISABLE_INVALID_PREVENTION	//Steven, I had to turn this off because it was causing problem with map border resizing (USA04). -MW
 
@@ -359,8 +359,7 @@ static void testRotatedPointsAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
-	Int *avgTot,
-	Real *minDistSqr
+	Int *avgTot
 );
 /*static void testRotatedPointsAgainstSphere(
 	const Coord2D *pts,				// an array of 4
@@ -377,7 +376,8 @@ static void testSphereAgainstRect(
 	const Coord2D pts[],				// an array of 4
 	const Coord3D *a_pos,
 	const Coord3D *b_pos,
-	Real &distSqr
+	Real &distSqr,
+	HeightBoundaryCheckType heightCheckType
 );
 
 static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
@@ -421,8 +421,7 @@ static void testRotatedPointsAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
-	Int *avgTot,
-	Real *minDistSqr
+	Int *avgTot
 )
 {
 	//DEBUG_ASSERTCRASH(a->geom.getGeomType() == GEOMETRY_BOX, ("only boxes are ok here"));
@@ -454,12 +453,12 @@ static void testRotatedPointsAgainstRect(
 			avg->y += pts->y;
 			*avgTot += 1;
 
-			if(minDistSqr)
+			/*if(minDistSqr)
 			{
 				Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
 				if(*minDistSqr > distanceSqr)
 					*minDistSqr = distanceSqr;
-			}
+			}*/
 		}
 	}
 }
@@ -615,26 +614,88 @@ static Real fast_hypot(Real x, Real y)
 }
 */
 
+// fast atan2: https://github.com/ducha-aiki/fast_atan2
+/*atan(x) ~ x*(pi/4+0.273-0.273*x) */
+#define M_PI_4_P_0273	1.05839816339744830962 //M_PI/4 + 0.273
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static Real atan2approx(Real y, Real x)
+{
+  Real absx, absy;
+  absy = fabs(y);
+  absx = fabs(x);
+  short octant = ((x<0) << 2) + ((y<0) << 1 ) + (absx <= absy);
+  switch (octant) {
+    case 0: {
+        if (x == 0 && y == 0)
+          return 0;
+        Real val = absy/absx;
+        return (M_PI_4_P_0273 - 0.273*val)*val; //1st octant
+        break;
+      }
+    case 1:{
+        if (x == 0 && y == 0)
+          return 0.0;
+        Real val = absx/absy;
+        return M_PI_2 - (M_PI_4_P_0273 - 0.273*val)*val; //2nd octant
+        break;
+      }
+    case 2: {
+        Real val =absy/absx;
+        return -(M_PI_4_P_0273 - 0.273*val)*val; //8th octant
+        break;
+      }
+    case 3: {
+        Real val =absx/absy;
+        return -M_PI_2 + (M_PI_4_P_0273 - 0.273*val)*val;//7th octant
+        break;
+      }
+    case 4: {
+        Real val =absy/absx;
+        return  M_PI - (M_PI_4_P_0273 - 0.273*val)*val;  //4th octant
+      }
+    case 5: {
+        Real val =absx/absy;
+        return  M_PI_2 + (M_PI_4_P_0273 - 0.273*val)*val;//3rd octant
+        break;
+      }
+    case 6: {
+        Real val =absy/absx;
+        return -M_PI + (M_PI_4_P_0273 - 0.273*val)*val; //5th octant
+        break;
+      }
+    case 7: {
+        Real val =absx/absy;
+        return -M_PI_2 - (M_PI_4_P_0273 - 0.273*val)*val; //6th octant
+        break;
+      }
+    default:
+      return 0.0f;
+    }
+}
+
 //-----------------------------------------------------------------------------
 static void testSphereAgainstRect(
 	const Coord2D pts[],				// an array of 4
 	const Coord3D *a_pos,
 	const Coord3D *b_pos,
-	Real &distSqr
+	Real &distSqr,
+	HeightBoundaryCheckType heightCheckType
 )
 {
 	// Get two points that are closest to the facing direction
 	//DEBUG_LOG(("Source Points: x: %f y: %f", a_pos->x, a_pos->y));
 	//Real dx1, dx2, dy1, dy2;
 	//x1 = x2 = y1 = y2 = 0.0f;
-	Real minDist = HUGE_DIST_SQR;
-	Real secondMinDist = 0.0f;
-	Int minIdx, secondMinIdx;
-	minIdx = secondMinIdx = -1;
+	Real minDist, secondMinDist, thirdMinDist;
+	Int minIdx, secondMinIdx, thirdMinIdx;
+	minDist = secondMinDist = thirdMinDist = HUGE_DIST_SQR;
+	minIdx = secondMinIdx = thirdMinIdx = -1;
 
 	Real derivative[4][2];
 	Real dDistSqr[4];
-	for (Int i = 0; i < 4; ++i)
+	Int i;
+	for (i = 0; i < 4; ++i)
 	{
 		derivative[i][0] = pts[i].x - a_pos->x;
 		derivative[i][1] = pts[i].y - a_pos->y;
@@ -658,41 +719,52 @@ static void testSphereAgainstRect(
 		}
 	}
 
-	DEBUG_ASSERTCRASH(secondMinIdx >= 0 && secondMinIdx <= 3, ("Hmm, this should not be possible."));
+	// To get accurate readings for the boundaries, the third min Index must be obtained
+	for (i = 0; i < 4; ++i)
+	{
+		if( i == minIdx || i == secondMinIdx || secondMinDist >= dDistSqr[i] )
+			continue;
+
+		if( thirdMinDist > dDistSqr[i] )
+		{
+			thirdMinDist = dDistSqr[i];
+			thirdMinIdx = i;
+		}
+	}
+
+	DEBUG_ASSERTCRASH(thirdMinIdx >= 0 && thirdMinIdx <= 3, ("Hmm, this should not be possible."));
 
 	Bool polarity_dx = derivative[minIdx][0] >= 0.0f;
 	Bool polarity_dy = derivative[minIdx][1] >= 0.0f;
 	Bool polarity_dx2 = derivative[secondMinIdx][0] >= 0.0f;
 	Bool polarity_dy2 = derivative[secondMinIdx][1] >= 0.0f;
+	Bool polarity_dx3 = derivative[thirdMinIdx][0] >= 0.0f;
+	Bool polarity_dy3 = derivative[thirdMinIdx][1] >= 0.0f;
 
-	if( polarity_dx == polarity_dx2 && polarity_dy == polarity_dy2 )
+	if( polarity_dx == polarity_dx2 && polarity_dx == polarity_dx3 &&
+		polarity_dy == polarity_dy2 && polarity_dy == polarity_dy3 )
 	{
-		// Same directional vector, so get one that has a different point
-		Bool found = false;
-		secondMinDist = HUGE_DIST_SQR;
-		for (Int i = 0; i < 4; ++i)
-		{
-			if( secondMinDist <= dDistSqr[i] || dDistSqr[i] == minDist )
-				continue;
-
-			polarity_dx2 = derivative[i][0] >= 0.0f;
-			polarity_dy2 = derivative[i][1] >= 0.0f;
-
-			if( polarity_dx == polarity_dx2 && polarity_dy == polarity_dy2 )
-				continue;
-
-			secondMinDist = dDistSqr[i];
-			secondMinIdx = i;
-		}
-
 		// Same directional vector, so get the closest distance from a point.
-		if(!found)
-		{
-			distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
-			return;
-		}
+		distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+		return;
+	}
 
-		//DEBUG_LOG(("Distance for second Min point chosen - %d: %f.", secondMinIdx, secondMinDist));
+	// If the third Min Angle is higher than the Second Min Angle, that means the Second Min Point is actually not the right point for Boundary Checking
+	Real angle1 = atan2approx(derivative[minIdx][1], derivative[minIdx][0]);
+	Real angle2 = atan2approx(derivative[secondMinIdx][1], derivative[secondMinIdx][0]);
+	Real angle3 = atan2approx(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0]);
+	//DEBUG_LOG(("Atan2 approx first - %f second - %f third - %f.", angle1, angle2, angle3));
+	//DEBUG_LOG(("Atan2 first - %f second - %f third - %f.", atan2(derivative[minIdx][1], derivative[minIdx][0]), atan2(derivative[secondMinIdx][1], derivative[secondMinIdx][0]), atan2(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0])));
+
+	Real relAngle_21 = stdAngleDiff(angle2, angle1);
+	//Real relAngle_32 = stdAngleDiff(angle3, angle2);
+	Real relAngle_31 = stdAngleDiff(angle3, angle1);
+	//DEBUG_LOG(("RelAngle 21 - %f 32 - %f 31 - %f.", relAngle_21, relAngle_32, relAngle_31));
+	if( fabs(relAngle_21) < fabs(relAngle_31) )
+	{
+		//DEBUG_LOG(("Third Min Index - %d replaced Second Min Index - %d.", thirdMinIdx, secondMinIdx));
+		//secondMinDist = thirdMinDist;
+		secondMinIdx = thirdMinIdx;
 	}
 
 	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
@@ -705,20 +777,20 @@ static void testSphereAgainstRect(
 	Real new_bpos_y = pts[secondMinIdx].y + other_y1;
 	//Real new_bpos_x = pts[minIdx].x <= pts[secondMinIdx].x ? pts[secondMinIdx].x + other_y1 : pts[secondMinIdx].x - other_y1;
 	//Real new_bpos_y = pts[minIdx].y <= pts[secondMinIdx].y ? pts[secondMinIdx].y + other_x1 : pts[secondMinIdx].y - other_x1;
-	//Real other_distSqr = sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y);
-
-	if(curDistSqr < sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y) )
-	{
-		// The points are within the boundary, set the distance to 0
-		distSqr = 0.0f;
-		return;
-	}
+	Real other_distSqr = sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y);
 
 	//DEBUG_LOG(("Pos B - X: %f Y: %f", b_pos->x, b_pos->y));
 	//DEBUG_LOG(("MinIdx - X: %f Y: %f. Second MinIdx - X: %f Y: %f", pts[minIdx].x, pts[minIdx].y, pts[secondMinIdx].x, pts[secondMinIdx].y));
 	//DEBUG_LOG(("Pos A - X: %f Y: %f.", a_pos->x, a_pos->y));
 	//DEBUG_LOG(("New Pos B - X: %f Y: %f", new_bpos_x, new_bpos_y));
 	//DEBUG_LOG(("curDistSqr: %f. other distSqr: %f.", curDistSqr, other_distSqr));
+
+	if( curDistSqr < other_distSqr ) //sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y) )
+	{
+		// The points are within the boundary, set the distance to 0
+		distSqr = 0.0f;
+		return;
+	}
 
 	// Get the Triangle length of all 3 points
 	Real sqr_boundary_h = sqr(pts[minIdx].x - pts[secondMinIdx].x) + sqr(pts[minIdx].y - pts[secondMinIdx].y);
@@ -746,11 +818,12 @@ static void testSphereAgainstRect(
 
 	// Formula Summarization
 	Real boundary_h1 = (sqr_boundary_2 + sqr_boundary_h - sqr_boundary_1) * 0.5 / sqrtf(sqr_boundary_h);
-	Real distBoundarySqr = sqr_boundary_2 - sqr(boundary_h1);
+	distSqr = sqr_boundary_2 - sqr(boundary_h1);
+	if(heightCheckType == BOUNDARY_HEIGHT_CHECK)
+		distSqr += sqr(b_pos->z - a_pos->z);
 	//DEBUG_LOG(("sqr_boundary_1: %f. sqr_boundary_2: %f.", sqr_boundary_1, sqr_boundary_2));
 	//DEBUG_LOG(("sqr_boundary_h: %f. boundary_h1: %f.", sqr_boundary_h, boundary_h1));
 	//DEBUG_LOG(("distSqr: %f. distBoundarySqr: %f.", distSqr, distBoundarySqr));
-	distSqr = distBoundarySqr;
 }
 
 //-----------------------------------------------------------------------------
@@ -790,6 +863,12 @@ static void rectToFourPoints(
 */
 static Bool xy_collideTest_Circle_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo)
 {
+	if(!TheGlobalData->m_useAccurateSphereToRectCollision)
+	{
+		CollideInfo atmp = *a;
+		atmp.geom.setMinorRadius(atmp.geom.getMajorRadius());
+		return xy_collideTest_Rect_Rect(&atmp, b, cinfo);
+	}
 	Bool result = xy_collideTest_Rect_Circle(b, a, cinfo);
 	if (cinfo)
 		flipCoord3D(&cinfo->normal);
@@ -829,7 +908,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 
 	Coord2D pts[4];
 	rectToFourPoints(a, pts);
-	testSphereAgainstRect(pts, &b->position, &a->position, distSqr);
+	testSphereAgainstRect(pts, &b->position, &a->position, distSqr, cinfo->heightCheck);
 
 	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distSqr));
 
@@ -873,7 +952,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
 				//cinfo->distSqr = minDistSqr;
 			//}
-			if(cinfo->getDistance)
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 				cinfo->distSqr = distSqr;
 		}
 		return true;
@@ -905,10 +984,11 @@ static Bool xy_collideTest_Circle_Circle(const CollideInfo *a, const CollideInfo
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
-			if(cinfo->getDistance)
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 			{
 				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
-				Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
+				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(b->position.x - a->position.x) + sqr(b->position.y - a->position.y) : distSqr;
+				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
 				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
 		}
@@ -927,13 +1007,15 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 	Coord2D pts[4];
 	Coord2D avg; avg.x = avg.y = 0.0f;
 	Int avgTot = 0;
-	Real minDistSqr = HUGE_DIST_SQR;
+	//Real minDistSqr = HUGE_DIST_SQR;
 
 	rectToFourPoints(a, pts);
-	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : NULL);
+	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot);
+	//testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, cinfo->heightCheck != DEFAULT_HEIGHT_CHECK ? &minDistSqr : nullptr);
 
 	rectToFourPoints(b, pts);
-	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, cinfo->getDistance ? &minDistSqr : NULL);
+	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot);
+	//testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, cinfo->heightCheck != DEFAULT_HEIGHT_CHECK ? &minDistSqr : nullptr);
 
 	if (avgTot > 0)
 	{
@@ -958,17 +1040,20 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 			// or (b) come up with a better definition of a useful normal in this case,
 			// I'm not sure we can do a whole lot better... (srj)
 			vecDiff_2D(&b->position, &a->position, &cinfo->normal);
-			cinfo->normal.normalize();
 
 			// Get the distance for damage calculation
-			if(cinfo->getDistance && minDistSqr < HUGE_DIST_SQR)
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 			{
 				//Real minDist = sqrtf(minDistSqr);
 				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
 				//minDist = minDist - boundingDistance;
 				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
-				cinfo->distSqr = minDistSqr;
+				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(cinfo->normal.x) + sqr(cinfo->normal.y) : sqr(cinfo->normal.x) + sqr(cinfo->normal.y) + sqr(b->position.z - a->position.z);
+				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
+
+			cinfo->normal.normalize();
 		}
 		return true;
 	}
@@ -1094,10 +1179,11 @@ static Bool collideTest_Sphere_Sphere(const CollideInfo *a, const CollideInfo *b
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
-			if(cinfo->getDistance)
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 			{
 				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
-				Real distance = sqrtf(distSqr) - b->geom.getBoundingSphereRadius();
+				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(b->position.x - a->position.x) + sqr(b->position.y - a->position.y) : distSqr;
+				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
 				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
 		}
@@ -2465,10 +2551,11 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		//
 		CollideTestProc collideProc = theCollideTestProcs[ (thisGeom - GEOMETRY_FIRST) * GEOMETRY_NUM_TYPES + (thatGeom - GEOMETRY_FIRST) ];
 		CollideLocAndNormal cloc;
-		cloc.getDistance = heightCheckType == BOUNDARY_HEIGHT_CHECK;
+		cloc.distSqr = 0.0f;
+		cloc.heightCheck = heightCheckType;
 		Bool doesCollide = (*collideProc)(&thisInfo, &thatInfo, &cloc);
 
-		if(cloc.getDistance && abDistSqr)
+		if(cloc.heightCheck != DEFAULT_HEIGHT_CHECK && abDistSqr)
 			*abDistSqr = cloc.distSqr;
 		return doesCollide;
 	}
