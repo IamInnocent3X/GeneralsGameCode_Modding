@@ -699,6 +699,8 @@ public:
 
 	UnsignedInt getInvulnerabilityDuration() const { return m_invulnerabilityDuration; }
 
+	Bool getShrapnelDoesNotRequireVictim() const { return m_shrapnelDoesNotRequireVictim; }
+
 	Bool passRequirements (const Object *source) const;
 	Int calcROFForMoving(const Object *source, Int Delay) const;
 
