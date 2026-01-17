@@ -376,8 +376,7 @@ static void testSphereAgainstRect(
 	const Coord2D pts[],				// an array of 4
 	const Coord3D *a_pos,
 	const Coord3D *b_pos,
-	Real &distSqr,
-	HeightBoundaryCheckType heightCheckType
+	Real &distSqr
 );
 
 static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
@@ -679,8 +678,7 @@ static void testSphereAgainstRect(
 	const Coord2D pts[],				// an array of 4
 	const Coord3D *a_pos,
 	const Coord3D *b_pos,
-	Real &distSqr,
-	HeightBoundaryCheckType heightCheckType
+	Real &distSqr
 )
 {
 	// Get two points that are closest to the facing direction
@@ -819,8 +817,6 @@ static void testSphereAgainstRect(
 	// Formula Summarization
 	Real boundary_h1 = (sqr_boundary_2 + sqr_boundary_h - sqr_boundary_1) * 0.5 / sqrtf(sqr_boundary_h);
 	distSqr = sqr_boundary_2 - sqr(boundary_h1);
-	if(heightCheckType == BOUNDARY_HEIGHT_CHECK)
-		distSqr += sqr(b_pos->z - a_pos->z);
 	//DEBUG_LOG(("sqr_boundary_1: %f. sqr_boundary_2: %f.", sqr_boundary_1, sqr_boundary_2));
 	//DEBUG_LOG(("sqr_boundary_h: %f. boundary_h1: %f.", sqr_boundary_h, boundary_h1));
 	//DEBUG_LOG(("distSqr: %f. distBoundarySqr: %f.", distSqr, distBoundarySqr));
@@ -908,7 +904,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 
 	Coord2D pts[4];
 	rectToFourPoints(a, pts);
-	testSphereAgainstRect(pts, &b->position, &a->position, distSqr, cinfo->heightCheck);
+	testSphereAgainstRect(pts, &b->position, &a->position, distSqr);
 
 	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distSqr));
 
