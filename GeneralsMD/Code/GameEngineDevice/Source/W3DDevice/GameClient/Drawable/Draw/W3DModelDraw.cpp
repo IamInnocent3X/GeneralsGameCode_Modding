@@ -1927,6 +1927,8 @@ void W3DModelDraw::allocateShadows(void)
 		shadowInfo.m_sizeY					= tmplate->getShadowSizeY();
 		shadowInfo.m_offsetX				= tmplate->getShadowOffsetX();
 		shadowInfo.m_offsetY				= tmplate->getShadowOffsetY();
+		shadowInfo.m_hasDynamicLength = tmplate->hasDynamicShadowLength();
+		//DEBUG_LOG((">>> W3DModelDraw::allocateShadows, shadowInfo.m_hasDynamicLength = %d", shadowInfo.m_hasDynamicLength));
   		m_shadow = TheW3DShadowManager->addShadow(m_renderObject, &shadowInfo);
 		if (m_shadow)
 		{	m_shadow->enableShadowInvisible(m_fullyObscuredByShroud);
@@ -3168,6 +3170,8 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 			shadowInfo.m_sizeY					= tmplate->getShadowSizeY();
 			shadowInfo.m_offsetX				= tmplate->getShadowOffsetX();
 			shadowInfo.m_offsetY				= tmplate->getShadowOffsetY();
+			shadowInfo.m_hasDynamicLength = tmplate->hasDynamicShadowLength();
+			//DEBUG_LOG((">>> W3DModelDraw::allocateShadows, shadowInfo.m_hasDynamicLength = %d", shadowInfo.m_hasDynamicLength));
 
 			DEBUG_ASSERTCRASH(m_shadow == NULL, ("m_shadow is not NULL"));
  			m_shadow = TheW3DShadowManager->addShadow(m_renderObject, &shadowInfo, draw);
