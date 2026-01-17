@@ -67,6 +67,9 @@ public:
 	Bool m_allowAttract;
 	Real m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
+	Real m_dynamicHeightMinScale;
+	Real m_dynamicHeightMinRange;
+
 	DumbProjectileBehaviorModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);

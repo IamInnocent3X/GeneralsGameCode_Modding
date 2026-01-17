@@ -86,6 +86,10 @@ const Real cosAngleToCare = cos ((0.2 * PI) / 180.0);	//1.5 degree difference
 #define SHADOW_SAMPLING_INTERVAL (MAP_XY_FACTOR * 2.0f)				//stepsize along ray used to find lowest point on terrain within shadow's reach.
 #define OVERHANGING_OBJECT_CLAMP_ANGLE	(80.0f/180.0f*PI)				//for objects that are right on a cliff edge, clamp light angle to cast a nearly vertical shadow.
 
+#define AIRBORNE_ELEVATION_MIN_HEIGHT 5.0 //count as partially airborne if above this height
+#define AIRBORNE_ELEVATION_MAX_HEIGHT 20.0 //count as fully airborne if above this height
+#define AIRBORNE_ELEVATION_TAN tan(89.0f/180.0f * PI)
+
 //#define SV_DEBUG
 //#define SV_DEBUG_BOUNDS
 
@@ -2011,8 +2015,24 @@ void W3DVolumetricShadow::updateMeshVolume(Int meshIndex, Int lightIndex, const 
 	// get the object
 	meshXform->Get_Translation(&objectCenter);	//current mesh position
 
+
+	// Dynamic scale for units that transition between Air/Land/Sea
+	if (m_hasDynamicLength && (m_decalSizeX)) {
+		Vector3 pos = m_robj->Get_Position();
+		Real groundHeight;
+		if (TheTerrainLogic)
+			groundHeight = TheTerrainLogic->getGroundHeight(pos.X, pos.Y);	//logic knows about bridges so use if available.
+		else
+			groundHeight = TheTerrainRenderObject->getHeightMapHeight(pos.X, pos.Y, NULL);
+		Real objHeight = MIN(AIRBORNE_ELEVATION_MAX_HEIGHT, MAX(AIRBORNE_ELEVATION_MIN_HEIGHT, fabs(pos.Z - groundHeight)));
+		Real factor = (objHeight - AIRBORNE_ELEVATION_MIN_HEIGHT) / (AIRBORNE_ELEVATION_MAX_HEIGHT - AIRBORNE_ELEVATION_MIN_HEIGHT);
+		Real sunElevationAngleTan = tan(m_decalSizeX / 180.0f * PI) * (1.0f-factor) + AIRBORNE_ELEVATION_TAN * factor;
+		//DEBUG_LOG((">>> UPDATE shadow length: objHeight = %f, factor = %f, sunElevationAngleTan = %f", objHeight, factor, sunElevationAngleTan));
+		setShadowLengthScale(sunElevationAngleTan);
+	}
+	
 	// check if object has a limit/clamp on shadow length and adjust light
-	// position of necessary.
+  // position of necessary.
 	if (m_shadowLengthScale)
 	{	//Find light's distance from origin in xy plane
 		Real lightXYDistance = sqrt(lightPosWorld.X*lightPosWorld.X + lightPosWorld.Y * lightPosWorld.Y);
@@ -3842,6 +3862,9 @@ W3DVolumetricShadow* W3DVolumetricShadowManager::addShadow(RenderObjClass *robj,
 	if (shadowInfo->m_sizeX)
 	{	//need to adjust sun elevation for this model in order to limit shadow length
 		sunElevationAngleTan=tan(shadowInfo->m_sizeX/180.0f*PI);
+		shadow->m_decalSizeX = shadowInfo->m_sizeX;  // We abuse this field for shadow size
+		shadow->m_hasDynamicLength = shadowInfo->m_hasDynamicLength;
+		//DEBUG_LOG((">>> ADD_SHADOW m_hasDynamicLength = %d", shadow->m_hasDynamicLength));
 	}
 	shadow->setShadowLengthScale(sunElevationAngleTan);
 
