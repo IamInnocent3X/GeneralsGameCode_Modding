@@ -620,21 +620,20 @@ static Real fast_hypot(Real x, Real y)
 //-----------------------------------------------------------------------------
 static Real atan2approx(Real y, Real x)
 {
+  if (x == 0 && y == 0)
+	return 0.0f;
+
   Real absx, absy;
   absy = fabs(y);
   absx = fabs(x);
   short octant = ((x<0) << 2) + ((y<0) << 1 ) + (absx <= absy);
   switch (octant) {
     case 0: {
-        if (x == 0 && y == 0)
-          return 0;
         Real val = absy/absx;
         return (M_PI_4_P_0273 - 0.273*val)*val; //1st octant
         break;
       }
     case 1:{
-        if (x == 0 && y == 0)
-          return 0.0;
         Real val = absx/absy;
         return M_PI_2 - (M_PI_4_P_0273 - 0.273*val)*val; //2nd octant
         break;
@@ -794,6 +793,13 @@ static void testSphereAgainstRect(
 	Real sqr_boundary_h = sqr(pts[minIdx].x - pts[secondMinIdx].x) + sqr(pts[minIdx].y - pts[secondMinIdx].y);
 	Real sqr_boundary_1 = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
 	Real sqr_boundary_2 = sqr(derivative[secondMinIdx][0]) + sqr(derivative[secondMinIdx][1]);
+
+	// Safety checks for potential division by zero from sqr_boundary_h, which makes the value infinite. From Greptile SuperHackers
+	if(fabs(sqr_boundary_h) < WWMATH_EPSILON * WWMATH_EPSILON)
+	{
+		distSqr = HUGE_DIST_SQR;
+		return;
+	}
 
 	//Real boundary_h = fast_hypot(pts[minIdx].x - pts[secondMinIdx].x, pts[minIdx].y - pts[secondMinIdx].y);
 	//Real boundary_1 = fast_hypot(dx1, dy1);
