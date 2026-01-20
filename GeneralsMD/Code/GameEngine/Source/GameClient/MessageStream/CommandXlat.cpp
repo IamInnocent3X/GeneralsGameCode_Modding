@@ -2496,7 +2496,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 				for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 				{
 					// get command button
-					const CommandButton *command = set->getCommandButton(i);
+					const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
+					if(command == nullptr) 
+						command =  set->getCommandButton(i);
+
 					if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 					{
 						SpecialPowerType spType = command->getSpecialPowerTemplate()->getSpecialPowerType();
@@ -2543,7 +2546,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 					{
 						// get command button
-						const CommandButton *command = set->getCommandButton(i);
+						const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
+						if(command == nullptr) 
+							command =  set->getCommandButton(i);
+
 						if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 						{
 							SpecialPowerType spType = command->getSpecialPowerTemplate()->getSpecialPowerType();
@@ -2579,7 +2585,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 					{
 						// get command button
-						const CommandButton *command = set->getCommandButton(i);
+						const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
+						if(command == nullptr) 
+							command =  set->getCommandButton(i);
+
 						if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 						{
 							SpecialPowerType spType = command->getSpecialPowerTemplate()->getSpecialPowerType();
@@ -2615,7 +2624,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 					{
 						// get command button
-						const CommandButton *command = set->getCommandButton(i);
+						const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
+						if(command == nullptr) 
+							command =  set->getCommandButton(i);
+
 						if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 						{
 							SpecialPowerType spType = command->getSpecialPowerTemplate()->getSpecialPowerType();

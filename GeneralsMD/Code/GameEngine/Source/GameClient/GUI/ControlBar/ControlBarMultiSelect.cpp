@@ -120,7 +120,9 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 			if (! m_commandWindows[ i ]) continue;
 
 			// get command
-			command = commandSet->getCommandButton(i);
+			command = obj->getCommandModifierOverrideForSlot(i); 
+			if(command == nullptr) 
+				command =  commandSet->getCommandButton(i);
 
 			// add if present and can be used in a multi select
 			if( command && BitIsSet( command->getOptions(), OK_FOR_MULTI_SELECT ) == TRUE )
@@ -152,7 +154,9 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 			if (! m_commandWindows[ i ]) continue;
 
 			// get the command
-			command = commandSet->getCommandButton(i);
+			command = obj->getCommandModifierOverrideForSlot(i); 
+			if(command == nullptr) 
+				command =  commandSet->getCommandButton(i);
 
 			Bool attackMove = (command && command->getCommandType() == GUI_COMMAND_ATTACK_MOVE) ||
 												(m_commonCommands[ i ] && m_commonCommands[ i ]->getCommandType() == GUI_COMMAND_ATTACK_MOVE);

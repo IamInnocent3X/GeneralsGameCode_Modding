@@ -347,6 +347,20 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 
 }
 
+
+static Bool buttonTriggersOnMouseDown(GameWindow *window)
+{
+	// Buttons with the on down status set trigger on mouse down. jba. [8/6/2003]
+	Bool onDown = BitIsSet( window->winGetStatus(), WIN_STATUS_ON_MOUSE_DOWN);
+
+	// Checkboxes always trigger on mouse down. jba [8/6/2003]
+	if (BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE )) {
+		onDown = true;
+	}
+	return onDown;
+}
+
+
 //-------------------------------------------------------------------------------------------------
 /** Input procedure for the control bar */
 //-------------------------------------------------------------------------------------------------
@@ -493,6 +507,69 @@ WindowMsgHandledType ControlBarSystem( GameWindow *window, UnsignedInt msg,
 			break;
 		}
 
+		//---------------------------------------------------------------------------------------------
+		case GBM_CLICKED_LEFT:
+		case GBM_CLICKED_RIGHT:
+		case GBM_CLICKED_MIDDLE:
+		case GBM_DOUBLE_CLICKED_LEFT:
+		case GBM_DOUBLE_CLICKED_RIGHT:
+		case GBM_DOUBLE_CLICKED_MIDDLE:
+		{
+			CBCommandStatus statusResult = CBC_COMMAND_NOT_USED;
+			GameWindow *control = (GameWindow *)mData1;
+			statusResult = TheControlBar->processCommandSetModifierButtonClick( control, (GadgetGameMessage)msg );
+
+			if(statusResult == CBC_COMMAND_USED)
+			{
+				WinInstanceData *instData = window->winGetInstanceData();
+				if (buttonTriggersOnMouseDown(window)) {
+					if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
+					{
+
+						if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
+							BitClear( instData->m_state, WIN_STATE_SELECTED );
+						else
+							BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+
+					}
+					else
+					{
+
+						// just select as normal
+						BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+					}
+				}
+				else
+				{
+					if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+						BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+					{
+
+						BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+					}
+				}
+				
+				PushButtonData *pData = (PushButtonData *)window->winGetUserData();
+				AudioEventRTS buttonClick;
+				if(pData && pData->altSound.isNotEmpty())
+					buttonClick.setEventName(pData->altSound);
+				else
+					buttonClick.setEventName("GUIClick");
+
+				if( TheAudio )
+				{
+					TheAudio->addAudioEvent( &buttonClick );
+				}
+
+			}
+
+			break;
+
+		}
+	
 		//---------------------------------------------------------------------------------------------
 		default:
 			return MSG_IGNORED;

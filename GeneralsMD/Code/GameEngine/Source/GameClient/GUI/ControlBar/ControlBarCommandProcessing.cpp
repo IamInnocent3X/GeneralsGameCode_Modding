@@ -51,6 +51,7 @@
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/AnimateWindowManager.h"
+#include "GameClient/MetaEvent.h"
 
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
@@ -118,6 +119,83 @@ CBCommandStatus ControlBar::processCommandTransitionUI( GameWindow *control, Gad
 }
 
 //-------------------------------------------------------------------------------------------------
+CBCommandStatus ControlBar::processCommandSetModifierButtonClick( GameWindow *control,
+																							GadgetGameMessage gadgetMessage )
+{
+	// get the command pointer from the control user data we put in the button
+	const CommandButton *commandButton = (const CommandButton *)GadgetButtonGetData(control);
+	if( !commandButton )
+	{
+		DEBUG_CRASH( ("ControlBar::processCommandSetModifierButtonClick() -- Button activated has no data. Ignoring...") );
+		return CBC_COMMAND_NOT_USED;
+	}
+
+	// sanity, we won't process messages if we have no source object,
+	// unless we're CB_CONTEXT_PURCHASE_SCIENCE or GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
+	if( m_currContext != CB_CONTEXT_MULTI_SELECT &&
+			commandButton->getCommandType() != GUI_COMMAND_PURCHASE_SCIENCE &&
+			commandButton->getCommandType() != GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT &&
+			commandButton->getCommandType() != GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT &&
+			commandButton->getCommandType() != GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE &&
+			(m_currentSelectedDrawable == nullptr || m_currentSelectedDrawable->getObject() == nullptr) )
+	{
+
+		if( m_currContext != CB_CONTEXT_NONE )
+			switchToContext( CB_CONTEXT_NONE, nullptr );
+		return CBC_COMMAND_NOT_USED;
+
+	}
+
+	// sanity
+	if( control == nullptr )
+		return CBC_COMMAND_NOT_USED;
+
+	// the context sensitive gui only is only made of buttons ... sanity
+	if( control->winGetInputFunc() != GadgetPushButtonInput )
+		return CBC_COMMAND_NOT_USED;
+
+
+	if( commandButton == nullptr )
+		return CBC_COMMAND_NOT_USED;
+
+
+	ClickState clickType;
+	switch(gadgetMessage)
+	{
+		case GBM_CLICKED_LEFT:
+			clickType = LEFT_CLICK;
+			break;
+		case GBM_CLICKED_RIGHT:
+			clickType = RIGHT_CLICK;
+			break;
+		case GBM_CLICKED_MIDDLE:
+			clickType = MIDDLE_CLICK;
+			break;
+		case GBM_DOUBLE_CLICKED_LEFT:
+			clickType = LEFT_DOUBLE_CLICK;
+			break;
+		case GBM_DOUBLE_CLICKED_RIGHT:
+			clickType = RIGHT_DOUBLE_CLICK;
+			break;
+		case GBM_DOUBLE_CLICKED_MIDDLE:
+			clickType = MIDDLE_DOUBLE_CLICK;
+			break;
+		default:
+			return CBC_COMMAND_NOT_USED; // do nothing
+			break;
+	}
+
+	std::vector<AsciiString> clickCommandModifiers = TheMetaMap->getClickCommandModifiersMeta( clickType );
+	if(clickCommandModifiers.empty())
+		return CBC_COMMAND_NOT_USED;
+
+	if(checkForCommandSetModifierOverride(TRUE, clickCommandModifiers, commandButton))
+		return CBC_COMMAND_USED;
+	else
+		return CBC_COMMAND_NOT_USED;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Process a button selected message from the window system that should be for one of
 	* our GUI commands */
 //-------------------------------------------------------------------------------------------------
@@ -130,16 +208,6 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 	{
 		DEBUG_CRASH( ("ControlBar::processCommandUI() -- Button activated has no data. Ignoring...") );
 		return CBC_COMMAND_NOT_USED;
-	}
-	OrderNearbyData orderData;
-	if(commandButton->getOrderNearbyRadius())
-	{
-		orderData.Radius = commandButton->getOrderNearbyRadius();
-		orderData.RequiredMask = commandButton->getOrderKindofMask();
-		orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
-		orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
-		orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
-		orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
 	}
 
 	// sanity, we won't process messages if we have no source object,
@@ -216,6 +284,17 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		AudioEventRTS sound = *commandButton->getUnitSpecificSound();
 		sound.setPlayerIndex( player->getPlayerIndex() );
 		TheAudio->addAudioEvent( &sound );
+	}
+
+	OrderNearbyData orderData;
+	if(commandButton->getOrderNearbyRadius())
+	{
+		orderData.Radius = commandButton->getOrderNearbyRadius();
+		orderData.RequiredMask = commandButton->getOrderKindofMask();
+		orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
+		orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
+		orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
 	}
 
 	if( BitIsSet( commandButton->getOptions(), COMMAND_OPTION_NEED_TARGET ) )

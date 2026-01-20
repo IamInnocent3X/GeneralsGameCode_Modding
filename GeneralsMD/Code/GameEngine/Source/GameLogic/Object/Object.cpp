@@ -681,6 +681,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_ignoreRailgunCheck = FALSE;
 
 	m_currentTargetCoords.zero();
+	m_controlBarModifiersApplied.clear();
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -5944,6 +5945,78 @@ void Object::xfer( Xfer *xfer )
 		xfer->xferBool(&m_modulesReady);
 	}
 
+	if ( version < 4 )
+	{
+		 m_controlBarModifiersApplied.clear();
+	}
+	else
+	{
+		UnsignedShort controlBarModifiersSize = m_controlBarModifiersApplied.size();
+		xfer->xferUnsignedShort( &controlBarModifiersSize );// HANDY LITTLE SHORT TO SIZE MY LIST
+		if( xfer->getXferMode() == XFER_SAVE )
+		{
+			for( CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.begin(); it != m_controlBarModifiersApplied.end(); ++it )
+			{
+				AsciiString setName = it->first;
+				xfer->xferAsciiString( &setName );
+
+				UnsignedShort ModifiersAppliedSize = it->second.size();
+				xfer->xferUnsignedShort( &ModifiersAppliedSize );
+
+				Int buttonSlot;
+				AsciiString commandName;
+				for( CommandModifiersVec::const_iterator it_2 = it->second.begin(); it_2 != it->second.end(); ++it_2 )
+				{
+					buttonSlot = it_2->first;
+					xfer->xferInt( &buttonSlot );
+					
+					commandName = it_2->second;
+					xfer->xferAsciiString( &commandName );
+				}
+			}
+		}
+		else
+		{
+			if( !m_controlBarModifiersApplied.empty() ) // sanity, list must be empty right now
+			{
+				DEBUG_CRASH(( "Object::xfer - m_controlBarModifiersApplied should be empty but is not" ));
+				throw SC_INVALID_DATA;
+			}
+
+			// read each entry
+			for( UnsignedInt i = 0; i < controlBarModifiersSize; ++i )
+			{
+				AsciiString setName;
+				UnsignedShort ModifiersAppliedSize;
+				CommandModifiersVec appliedVec;
+
+				// read data
+				xfer->xferAsciiString( &setName );
+				xfer->xferUnsignedShort( &ModifiersAppliedSize );
+
+				std::pair<Int, AsciiString> appliedData;
+				Int buttonSlot;
+				AsciiString commandName;
+				for( UnsignedInt i_2 = 0; i_2 < ModifiersAppliedSize; ++i_2 )
+				{
+					// read data
+					xfer->xferInt( &buttonSlot );
+					xfer->xferAsciiString( &commandName );
+
+					appliedData.first = buttonSlot;
+					appliedData.second = commandName;
+
+					appliedVec.push_back(appliedData);
+				}
+
+				// assign it in the data
+				if(!appliedVec.empty())
+					m_controlBarModifiersApplied[setName] = appliedVec;
+
+			}
+		}
+	}
+
 	if (version >= 5)
 	{
 		xfer->xferBool(&m_isReceivingDifficultyBonus);
@@ -6152,6 +6225,9 @@ void Object::onCapture( Player *oldOwner, Player *newOwner )
 	// and the AI tries to capture back but needs to not sell.  In that case, a Cinematic Unsellable version
 	// of the building needs to be made.  This fix has been okayed as the most non-lethal in November.
 	clearScriptStatus(OBJECT_STATUS_SCRIPT_UNSELLABLE);
+
+	// clear the command modifiers applied
+	m_controlBarModifiersApplied.clear();
 
 	// mark the command bar to redraw
 	TheControlBar->markUIDirty();
@@ -8306,7 +8382,10 @@ Bool Object::canProduceUpgrade( const UpgradeTemplate *upgrade )
 
 	for( Int buttonIndex = 0; buttonIndex < MAX_COMMANDS_PER_SET; buttonIndex++ )
 	{
-		const CommandButton *button = set->getCommandButton(buttonIndex);
+		const CommandButton *button = getCommandModifierOverrideForSlot(buttonIndex); 
+		if ( button == nullptr )
+			button = set->getCommandButton(buttonIndex);
+
 		if( button  &&  button->getUpgradeTemplate()  &&  (button->getUpgradeTemplate() == upgrade) )
 			return TRUE; // getUpgradeTemplate only returns something if it is actually an upgrade
 	}
@@ -9398,6 +9477,139 @@ void Object::setNeedUpdateTurretPositioning(Bool set)
 		getDrawable()->setNeedUpdateTurretPositioning(set);
 	}
 }
+
+// ------------------------------------------------------------------------------------------------
+const CommandButton *Object::getCommandModifierOverrideForSlot( Int slotNum, AsciiString commandSetName ) const
+{
+	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
+	if(commandSetString.isEmpty() || m_controlBarModifiersApplied.empty() )
+		return nullptr;
+
+	CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.find(commandSetString);
+	if(it != m_controlBarModifiersApplied.end())
+	{
+		for(CommandModifiersVec::const_iterator it_2 = it->second.begin(); it_2 != it->second.end(); ++it_2)
+		{
+			if(it_2->first == slotNum)
+				return TheControlBar->findCommandButton( it_2->second );
+		}
+	}
+
+	return nullptr;
+}
+
+// ------------------------------------------------------------------------------------------------
+// returns true if there are any changes within the current Command Set
+// ------------------------------------------------------------------------------------------------
+Bool Object::registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, Bool doRemove, AsciiString commandSetName )
+{
+	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
+
+	// Sanity
+	if(commandSetString.isEmpty())
+		return false;
+
+	// Grt whether the slot is already registered
+	CommandSetModifiersMap::iterator it = m_controlBarModifiersApplied.find(commandSetString);
+	if(it != m_controlBarModifiersApplied.end())
+	{
+		for(CommandModifiersVec::iterator it_2 = it->second.begin(); it_2 != it->second.end();)
+		{
+			if(it_2->first == slotNum)
+			{
+				// If we got the same name, remove the override, only if it can be removed
+				if(it_2->second == commandButtonName)
+				{
+					if(doRemove)
+					{
+						it_2 = it->second.erase( it_2 );
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else if(!doRemove)
+				{
+					it_2->second = commandButtonName;
+					return true;
+				}
+			}
+			++it_2;
+		}
+
+		// We don't want to register a new override while removing
+		if(doRemove)
+			return false;
+
+		std::pair<Int, AsciiString> data;
+		data.first = slotNum;
+		data.second = commandButtonName;
+		it->second.push_back(data);
+	}
+	else
+	{
+		// We don't want to register a new override while removing
+		if(doRemove)
+			return false;
+
+		CommandModifiersVec vec;
+		std::pair<Int, AsciiString> data;
+		data.first = slotNum;
+		data.second = commandButtonName;
+
+		vec.push_back(data);
+		m_controlBarModifiersApplied[commandSetString] = vec;
+	}
+	return true;
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool Object::getDoRemoveCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName ) const
+{
+	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
+
+	// Sanity
+	if(commandSetString.isEmpty())
+		return true;
+
+	CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.find(commandSetString);
+	if(it != m_controlBarModifiersApplied.end())
+	{
+		for(CommandModifiersVec::const_iterator it_2 = it->second.begin(); it_2 != it->second.end(); ++it_2)
+		{
+			if(it_2->first == slotNum)
+			{
+				// If we got the same name, we can remove the button, otherwise dont
+				if(it_2->second == commandButtonName)
+					return true;
+				else
+					return false;
+			}
+		}
+
+	}
+	return false;
+}
+
+// ------------------------------------------------------------------------------------------------
+/*void Object::removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandSetName)
+{
+	CommandSetModifiersMap::iterator it = m_controlBarModifiersApplied.find(commandSetName.isEmpty() ? getCommandSetString() : commandSetName);
+	if(it != m_controlBarModifiersApplied.end())
+	{
+		for(CommandModifiersVec::iterator it_2 = it->second.begin(); it_2 != it->second.end();)
+		{
+			if(it_2->first == slotNum)
+			{
+				it_2 = it->second.erase( it_2 );
+				return;
+			}
+			++it_2;
+		}
+	}
+}*/
 
 //=============================================================================
 //== Custom Cursor List

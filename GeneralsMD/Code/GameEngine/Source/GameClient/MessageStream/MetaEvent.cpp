@@ -191,6 +191,8 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STEP_FRAME_ALT",														GameMessage::MSG_META_STEP_FRAME_ALT },
 	{ "DEMO_INSTANT_QUIT",												GameMessage::MSG_META_DEMO_INSTANT_QUIT },
 
+	{ "COMMAND_SET_MODIFIER",												GameMessage::MSG_META_COMMAND_SET_MODIFIER },
+
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)//may be defined in GameCommon.h
 	{ "CHEAT_RUNSCRIPT1",								        	GameMessage::MSG_CHEAT_RUNSCRIPT1 },
 	{ "CHEAT_RUNSCRIPT2",								        	GameMessage::MSG_CHEAT_RUNSCRIPT2 },
@@ -366,8 +368,10 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 	{ "Modifiers",					INI::parseLookupList,						ModifierNames, offsetof( MetaMapRec, m_modState ) },
 	{ "UseableIn",					INI::parseBitString32,					TheCommandUsableInNames, offsetof( MetaMapRec, m_usableIn ) },
 	{ "Category",						INI::parseLookupList,						CategoryListName, offsetof( MetaMapRec, m_category ) },
-	{ "Description",				INI::parseAndTranslateLabel,		0, offsetof( MetaMapRec, m_description ) },
-	{ "DisplayName",				INI::parseAndTranslateLabel,		0, offsetof( MetaMapRec, m_displayName ) },
+	{ "CommandModifierKey",				INI::parseAsciiString,						nullptr, offsetof( MetaMapRec, m_commandModifierKey ) },
+	{ "CommandModifierClickToTrigger",	INI::parseLookupList,					ClickNames, offsetof( MetaMapRec, m_commandModifierClickToTrigger ) },
+	{ "Description",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_description ) },
+	{ "DisplayName",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_displayName ) },
 
 	{ NULL,									NULL,														0, 0 }
 
@@ -479,6 +483,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 			// check for the special case of mods-only-changed.
 			if (
 						map->m_key == MK_NONE &&
+						(map->m_meta != GameMessage::MSG_META_COMMAND_SET_MODIFIER || map->m_commandModifierClickToTrigger == CLICK_NONE) &&
 						newModState != m_lastModState &&
 						(
 							(map->m_transition == UP && map->m_modState == m_lastModState) ||
@@ -487,7 +492,16 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 					)
 			{
 				//DEBUG_LOG(("Frame %d: MetaEventTranslator::translateGameMessage() Mods-only change: %s", TheGameLogic->getFrame(), findGameMessageNameByType(map->m_meta)));
+				if(map->m_meta == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+				{
+					GameMessage *metaMsg = TheMessageStream->appendMessage(map->m_meta);
+					Int nameKeyInt = (Int)TheNameKeyGenerator->nameToKey(map->m_commandModifierKey);
+					metaMsg->appendIntegerArgument( nameKeyInt );
+				}
+				else
+				{
 				/*GameMessage *metaMsg =*/ TheMessageStream->appendMessage(map->m_meta);
+				}
 				disp = DESTROY_MESSAGE;
 				break;
 			}
@@ -550,8 +564,13 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 		      }
 
 
-					/*GameMessage *metaMsg =*/ TheMessageStream->appendMessage(map->m_meta);
+					GameMessage *metaMsg = TheMessageStream->appendMessage(map->m_meta);
 					//DEBUG_LOG(("Frame %d: MetaEventTranslator::translateGameMessage() normal: %s", TheGameLogic->getFrame(), findGameMessageNameByType(map->m_meta)));
+					if(map->m_meta == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+					{
+						Int nameKeyInt = (Int)TheNameKeyGenerator->nameToKey(map->m_commandModifierKey);
+						metaMsg->appendIntegerArgument( nameKeyInt );
+					}
 				}
 				disp = DESTROY_MESSAGE;
 				break;
@@ -690,6 +709,12 @@ MetaMap::~MetaMap()
 		m_metaMaps = next;
 	}
 	m_doubleDownKeysVec.clear();
+	m_leftClickCommandModifiersMeta.clear();
+	m_rightClickCommandModifiersMeta.clear();
+	m_middleClickCommandModifiersMeta.clear();
+	m_leftDoubleClickCommandModifiersMeta.clear();
+	m_rightDoubleClickCommandModifiersMeta.clear();
+	m_middleDoubleClickCommandModifiersMeta.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -706,10 +731,13 @@ GameMessage::Type MetaMap::findGameMessageMetaType(const char* name)
 //-------------------------------------------------------------------------------------------------
 MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 {
-	for (MetaMapRec *map = m_metaMaps; map; map = map->m_next)
+	if(t != GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 	{
-		if (map->m_meta == t)
-			return map;
+		for (MetaMapRec *map = m_metaMaps; map; map = map->m_next)
+		{
+			if (map->m_meta == t)
+				return map;
+		}
 	}
 
 	// not found.. create a new one.
@@ -722,6 +750,8 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 	m->m_category = CATEGORY_MISC;
 	m->m_description.clear();
 	m->m_displayName.clear();
+	m->m_commandModifierKey.clear();
+	m->m_commandModifierClickToTrigger = CLICK_NONE;
 	m->m_next = m_metaMaps;
 	m_metaMaps = m;
 
@@ -743,6 +773,15 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 		throw INI_INVALID_DATA;
 
 	ini->initFromINI(map, TheMetaMapFieldParseTable);
+
+	if(t == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+	{
+		if(map->m_commandModifierKey.isEmpty())
+			throw INI_INVALID_DATA;
+
+		if(map->m_commandModifierClickToTrigger != CLICK_NONE)
+			TheMetaMap->setClickCommandModifiersMeta(map->m_commandModifierClickToTrigger, map->m_commandModifierKey);
+	}
 
 	if(map->m_transition == DOUBLEDOWN)
 		TheMetaMap->pushDoubleDownKeyList(map->m_key);
@@ -948,4 +987,63 @@ Bool MetaMap::hasDoubleDownKey(MappableKeyType m) const
 			return TRUE;
 	}
 	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::setClickCommandModifiersMeta( ClickState clickType, const AsciiString& key )
+{
+	switch(clickType)
+	{
+		case LEFT_CLICK:
+			m_leftClickCommandModifiersMeta.push_back(key);
+			break;
+		case RIGHT_CLICK:
+			m_rightClickCommandModifiersMeta.push_back(key);
+			break;
+		case MIDDLE_CLICK:
+			m_middleClickCommandModifiersMeta.push_back(key);
+			break;
+		case LEFT_DOUBLE_CLICK:
+			m_leftDoubleClickCommandModifiersMeta.push_back(key);
+			break;
+		case RIGHT_DOUBLE_CLICK:
+			m_rightDoubleClickCommandModifiersMeta.push_back(key);
+			break;
+		case MIDDLE_DOUBLE_CLICK:
+			m_middleDoubleClickCommandModifiersMeta.push_back(key);
+			break;
+		default:
+			break;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& MetaMap::getClickCommandModifiersMeta( ClickState clickType ) const
+{
+	switch(clickType)
+	{
+		case LEFT_CLICK:
+			return m_leftClickCommandModifiersMeta;
+			break;
+		case RIGHT_CLICK:
+			return m_rightClickCommandModifiersMeta;
+			break;
+		case MIDDLE_CLICK:
+			return m_middleClickCommandModifiersMeta;
+			break;
+		case LEFT_DOUBLE_CLICK:
+			return m_leftDoubleClickCommandModifiersMeta;
+			break;
+		case RIGHT_DOUBLE_CLICK:
+			return m_rightDoubleClickCommandModifiersMeta;
+			break;
+		case MIDDLE_DOUBLE_CLICK:
+			return m_middleDoubleClickCommandModifiersMeta;
+			break;
+		default:
+			break;
+	}
+
+	std::vector<AsciiString> dummy;
+	return dummy;
 }

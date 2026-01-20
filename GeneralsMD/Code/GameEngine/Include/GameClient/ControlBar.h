@@ -34,6 +34,7 @@
 #include "Common/GameType.h"
 #include "Common/Overridable.h"
 #include "Common/Science.h"
+#include "Common/MessageStream.h"		// for GameMessageTranslator
 #include "GameClient/Color.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -457,6 +458,7 @@ public:
 
 	const AsciiString& getName() const { return m_name; }
 	const CommandButton* getCommandButton(Int i) const;
+	const AsciiString& getModifierForCommandButtonOverrideName(Int i, const AsciiString& key) const;
 
 	// only for the control bar.
 	CommandSet* friend_getNext() { return m_next; }
@@ -470,6 +472,10 @@ private:
 
 	AsciiString m_name;															  ///< name of this command set
 	const CommandButton *m_command[ MAX_COMMANDS_PER_SET ]; ///< the set of command buttons that make this set
+
+	typedef std::vector<std::pair<AsciiString, AsciiString>> ModifierCommandType;
+	typedef std::hash_map< Int, ModifierCommandType, std::hash<Int>, std::equal_to<Int> > ModifierCommandMap;
+	ModifierCommandMap						m_modifierCommandMap;								///< By applying Modifers, we can alter the one command shown in a command set
 
 	CommandSet *m_next;
 
@@ -816,6 +822,9 @@ public:
 
 	//Int getRemainingSciencePointsAvailableToPurchase( Player* player ) const;
 
+	Bool checkForCommandSetModifierOverride(Bool checkPointedWindow, const std::vector<AsciiString>& keys, const CommandButton *commandButton = nullptr);
+	CBCommandStatus processCommandSetModifierButtonClick( GameWindow *control, GadgetGameMessage gadgetMessage );
+
 protected:
 	void updateRadarAttackGlow ( void );
 
@@ -1074,6 +1083,18 @@ private:
 #endif
 //	ControlBarResizer *m_controlBarResizer;
 
+};
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+class CommandSetTranslator : public GameMessageTranslator
+{
+public:
+
+	CommandSetTranslator( void );
+	~CommandSetTranslator( void );
+
+	virtual GameMessageDisposition translateGameMessage( const GameMessage *msg );
 };
 
 // EXTERNALS //////////////////////////////////////////////////////////////////////////////////////

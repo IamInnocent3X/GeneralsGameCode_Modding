@@ -2053,7 +2053,7 @@ void SalvageCrateCollide::grantUpgrades( Object *other )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void SalvageCrateCollide::doUpgrade( Object *other, const AsciiString& grantUpgradeName, const AsciiString& removeUpgradeName )
+void SalvageCrateCollide::doUpgrade( Object *other, const AsciiString& grantUpgradeName, AsciiString removeUpgradeName )
 {
 	const UpgradeTemplate* theTemplate;
 	if(!removeUpgradeName.isEmpty() && getSalvageCrateCollideModuleData()->m_removePreviousUpgrades)

@@ -1821,8 +1821,9 @@ void AIPlayer::buildUpgrade(const AsciiString &upgrade)
 			for( Int j = 0; j < MAX_COMMANDS_PER_SET; j++ )
 			{
 				//Get the command button.
-				const CommandButton *commandButton = commandSet->getCommandButton(j);
-				if (commandButton==NULL) continue;
+				const CommandButton *commandButton = factory->getCommandModifierOverrideForSlot(j); 
+				if (commandButton==nullptr) commandButton = commandSet->getCommandButton(j);
+				if (commandButton==nullptr) continue;
 				if (commandButton->getName().isEmpty() )	continue;
 				if (commandButton->getUpgradeTemplate() == NULL )	continue;
  				if (commandButton->getUpgradeTemplate()->getUpgradeName() == curUpgrade->getUpgradeName()) {

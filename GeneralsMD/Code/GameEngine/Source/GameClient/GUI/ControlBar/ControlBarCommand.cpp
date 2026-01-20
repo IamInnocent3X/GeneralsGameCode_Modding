@@ -181,7 +181,9 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = commandSet->getCommandButton(i);
+		commandButton = transport->getCommandModifierOverrideForSlot(i); 
+		if(commandButton == nullptr) 
+			commandButton =  commandSet->getCommandButton(i);
 
 		// is this an inventory exit command
 		if( commandButton && commandButton->getCommandType() == GUI_COMMAND_EXIT_CONTAINER )
@@ -304,7 +306,9 @@ void ControlBar::populateCommand( Object *obj )
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = commandSet->getCommandButton(i);
+		commandButton = obj->getCommandModifierOverrideForSlot(i); 
+		if(commandButton == nullptr) 
+			commandButton =  commandSet->getCommandButton(i);
 
 		// if button is not present, just hide the window
 		if( commandButton == NULL )
@@ -1575,3 +1579,146 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::checkForCommandSetModifierOverride(Bool checkPointedWindow, const std::vector<AsciiString>& keys, const CommandButton *commandButton)
+{
+	// no keys, do nothing
+	if(keys.empty())
+		return false;
+
+	// get the selected object
+	Object *obj = m_currentSelectedDrawable ? m_currentSelectedDrawable->getObject() : nullptr;
+	if(!obj)
+		return false;
+
+	// get the dozer ai update interface
+	DozerAIInterface* dozerAI = obj->getAIUpdateInterface() ? obj->getAIUpdateInterface()->getDozerAIInterface() : nullptr;
+
+	// Don't change the command set while currently busy
+	if( dozerAI && dozerAI->isTaskPending( DOZER_TASK_BUILD ) == TRUE )
+		return false;
+
+	// for mouse related features, the command button must be pointed by the mouse to apply the override
+	/// This is already checked before calling the function, but sanity.
+	if(checkPointedWindow && commandButton == nullptr)
+		return false;
+
+	// get command set
+	const CommandSet *commandSet = findCommandSet( obj->getCommandSetString() );
+	if( !commandSet )
+		return false;
+
+	Bool set = false;
+	Bool doRemove = true;
+	Bool checkDoRemove = false;
+
+	for( Int i = 0; i < MAX_COMMANDS_PER_SET; ++i )
+	{
+		GameWindow *button = m_commandWindows[ i ];
+		if( button != nullptr )
+		{
+			if(checkPointedWindow)
+			{
+				// If we change commands with mouse, we only get the command the mouse is pointed at
+				const CommandButton *command = (const CommandButton *)GadgetButtonGetData(button);
+				if( !command || command != commandButton )
+					continue;
+			}
+			else if(!checkDoRemove)
+			{
+				AsciiString key = keys[0];
+
+				// Get the Command Button Name to override, if any
+				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, key);
+				if(!commandButtonOverrideName.isEmpty())
+					doRemove = obj->getDoRemoveCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+				// If we have reached the end, or we can't remove, proceed
+				if(i == MAX_COMMANDS_PER_SET - 1 || doRemove == false)
+				{
+					checkDoRemove = true;
+					// reset the values
+					i = 0;
+					button = m_commandWindows[ 0 ];
+					if(button == nullptr)
+						continue;
+				}
+				else
+					continue;
+			}
+
+
+			for(std::vector<AsciiString>::const_iterator it = keys.begin(); it != keys.end(); ++it)
+			{
+				// Get the Command Button Name to override, if any
+				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+
+				// If we are pointed, get the instance of whether we need to do remove for current slot
+				if(checkPointedWindow)
+					doRemove = obj->getDoRemoveCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+				if(!commandButtonOverrideName.isEmpty() && obj->registerModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName, doRemove))
+				{
+					markUIDirty();
+					// cancel any pending GUI commands
+					TheInGameUI->setGUICommand( nullptr );
+					set = true;
+				}
+				if(checkPointedWindow && set)
+					return true;
+			}
+		}
+		else if(!checkPointedWindow && !checkDoRemove && i == MAX_COMMANDS_PER_SET - 1)
+		{
+			// reset the values after checking whether the command set can be replaced
+			checkDoRemove = true;
+			i = -1;
+		}
+	}
+	if(set && !checkPointedWindow)
+	{
+		AudioEventRTS buttonClick;
+		buttonClick.setEventName("GUIClick");
+
+		if( TheAudio )
+		{
+			TheAudio->addAudioEvent( &buttonClick );
+		}
+	}
+	return set;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+CommandSetTranslator::CommandSetTranslator()
+{
+
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+CommandSetTranslator::~CommandSetTranslator()
+{
+
+}
+
+//-------------------------------------------------------------------------------------------------
+GameMessageDisposition CommandSetTranslator::translateGameMessage(const GameMessage *msg)
+{
+	GameMessageDisposition disp = KEEP_MESSAGE;
+	GameMessage::Type t = msg->getType();
+
+	// We only do Command Set Modifiers
+	if(t != GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+		return disp;
+
+	std::vector<AsciiString> keys;
+	AsciiString key = TheNameKeyGenerator->keyToName( (NameKeyType)msg->getArgument(0)->integer );
+	keys.push_back(key);
+
+	if(TheControlBar->checkForCommandSetModifierOverride(FALSE, keys))
+		return DESTROY_MESSAGE;
+	else
+		return disp;
+}

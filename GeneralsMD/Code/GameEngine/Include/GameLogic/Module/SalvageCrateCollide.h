@@ -271,7 +271,7 @@ private:
 
 	void doWeaponBonus( Object *other );
 	void doStatus( Object *other );
-	void doUpgrade( Object *other, const AsciiString& grantUpgradeName, const AsciiString& removeUpgradeName = NULL );
+	void doUpgrade( Object *other, const AsciiString& grantUpgradeName, AsciiString removeUpgradeName = AsciiString::TheEmptyString );
 	Bool doOCL( Object *other );
 
 };

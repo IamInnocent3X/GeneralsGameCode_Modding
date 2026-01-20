@@ -80,17 +80,25 @@ AcademyStats::AcademyStats()
 {
 }
 
+struct DozerCommandSetFindInfo
+{
+	Object* obj;
+	const CommandSet *dozerCommandSet;
+};
+
 //------------------------------------------------------------------------------------------------
 void findDozerCommandSet( Object *object, void *userData )
 {
-	const CommandSet *dozerCommandSet = (const CommandSet*)userData;
-	if( dozerCommandSet )
+	//const CommandSet *dozerCommandSet = (const CommandSet*)userData;
+	DozerCommandSetFindInfo* info = (DozerCommandSetFindInfo*)userData;
+	if( info->dozerCommandSet )
 	{
 		return;
 	}
 	if( object && object->isKindOf( KINDOF_DOZER ) )
 	{
-		dozerCommandSet = TheControlBar->findCommandSet( object->getCommandSetString() );
+		info->dozerCommandSet = TheControlBar->findCommandSet( object->getCommandSetString() );
+		info->obj = object;
 	}
 }
 
@@ -123,7 +131,13 @@ void AcademyStats::init( const Player *player )
 	//Find the command set for our dozer... so we can extract information about things
 	//we can build.
 	m_dozerCommandSet = NULL;
-	player->iterateObjects( findDozerCommandSet, (void*)m_dozerCommandSet );
+
+	DozerCommandSetFindInfo info;
+	info.obj = nullptr;
+	info.dozerCommandSet = nullptr;
+	player->iterateObjects( findDozerCommandSet, &info );
+
+	m_dozerCommandSet = info.dozerCommandSet;
 
 	m_commandCenterTemplate = NULL;
 	m_supplyCenterTemplate = NULL;
@@ -132,7 +146,10 @@ void AcademyStats::init( const Player *player )
 	{
 		for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
-			const CommandButton *button = m_dozerCommandSet->getCommandButton( i );
+			const CommandButton *button = info.obj->getCommandModifierOverrideForSlot( i ); 
+			if(button == nullptr) 
+				button =  m_dozerCommandSet->getCommandButton( i );
+
 			if( button )
 			{
 				const ThingTemplate *thing = button->getThingTemplate();

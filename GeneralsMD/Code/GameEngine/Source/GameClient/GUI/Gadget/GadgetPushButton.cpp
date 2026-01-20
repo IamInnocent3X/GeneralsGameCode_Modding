@@ -165,37 +165,75 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 			else
 				buttonClick.setEventName("GUIClick");
 
-			if( TheAudio )
+			//if( TheAudio )
+			//{
+			//	TheAudio->addAudioEvent( &buttonClick );
+			//}
+
+			if( BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) )
 			{
-				TheAudio->addAudioEvent( &buttonClick );
-			}
+				//
+				// for 'check-like' buttons we have "dual state", we flip the selected status
+				// in that case instead of just turning it on like normal ... also note
+				// that selected messages are sent immediately
+				//
+				if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
+				{
 
-			//
-			// for 'check-like' buttons we have "dual state", we flip the selected status
-			// in that case instead of just turning it on like normal ... also note
-			// that selected messages are sent immediately
-			//
-			if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
-			{
+					//if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
+					//	BitClear( instData->m_state, WIN_STATE_SELECTED );
+					//else
+					//	BitSet( instData->m_state, WIN_STATE_SELECTED );
 
-				if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
-					BitClear( instData->m_state, WIN_STATE_SELECTED );
-				else
-					BitSet( instData->m_state, WIN_STATE_SELECTED );
+					if (buttonTriggersOnMouseDown(window)) {
+						TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_CLICKED_LEFT,
+																								(WindowMsgData)window, mData1 );
+					}
 
+				}
+				//else
+				//{
+
+					// just select as normal
+					//BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+				//}
 
 			}
 			else
 			{
+				if( TheAudio )
+				{
+					TheAudio->addAudioEvent( &buttonClick );
+				}
 
-				// just select as normal
-				BitSet( instData->m_state, WIN_STATE_SELECTED );
+				//
+				// for 'check-like' buttons we have "dual state", we flip the selected status
+				// in that case instead of just turning it on like normal ... also note
+				// that selected messages are sent immediately
+				//
+				if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
+				{
 
-			}
+					if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
+						BitClear( instData->m_state, WIN_STATE_SELECTED );
+					else
+						BitSet( instData->m_state, WIN_STATE_SELECTED );
 
-			if (buttonTriggersOnMouseDown(window)) {
-				TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_SELECTED,
-																						(WindowMsgData)window, mData1 );
+
+				}
+				else
+				{
+
+					// just select as normal
+					BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+				}
+
+				if (buttonTriggersOnMouseDown(window)) {
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_SELECTED,
+																							(WindowMsgData)window, mData1 );
+				}
 			}
 
 			break;
@@ -205,29 +243,58 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 		case GWM_LEFT_UP:
 		{
 
-			//
-			// note check like selected messages aren't sent here ... they are sent
-			// on the down press
-			//
-			if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
-					BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+			if( BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) )
 			{
 
-				if (!buttonTriggersOnMouseDown(window)) {
-					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
-					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_SELECTED,
-																							(WindowMsgData)window, mData1 );
-				}
+				//
+				// note check like selected messages aren't sent here ... they are sent
+				// on the down press
+				//
+				if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+						BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+				{
 
-				BitClear( instData->m_state, WIN_STATE_SELECTED );
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_CLICKED_LEFT,
+																							(WindowMsgData)window, mData1 );
+
+					//BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+				}
+				else
+				{
+
+					// this up click was not meant for this button
+					return MSG_IGNORED;
+
+				}
 
 			}
 			else
 			{
+				//
+				// note check like selected messages aren't sent here ... they are sent
+				// on the down press
+				//
+				if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+						BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+				{
 
-				// this up click was not meant for this button
-				return MSG_IGNORED;
+					if (!buttonTriggersOnMouseDown(window)) {
+						// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+						TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_SELECTED,
+																								(WindowMsgData)window, mData1 );
+					}
 
+					BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+				}
+				else
+				{
+
+					// this up click was not meant for this button
+					return MSG_IGNORED;
+
+				}
 			}
 
 			break;
@@ -282,7 +349,35 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 			else
 			{
 				// Else I don't care about right events
-				return MSG_IGNORED;
+				//return MSG_IGNORED;
+				
+				//
+				// for 'check-like' buttons we have "dual state", we flip the selected status
+				// in that case instead of just turning it on like normal ... also note
+				// that selected messages are sent immediately
+				//
+				/*if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
+				{
+
+					if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
+						BitClear( instData->m_state, WIN_STATE_SELECTED );
+					else
+						BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+
+				}
+				else
+				{
+
+					// just select as normal
+					BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+				}*/
+
+				if (buttonTriggersOnMouseDown(window)) {
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_CLICKED_RIGHT,
+																							(WindowMsgData)window, mData1 );
+				}
 			}
 			break;
 		}
@@ -320,8 +415,220 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 			else
 			{
 				// Else I don't care about right events
-				return MSG_IGNORED;
+				//return MSG_IGNORED;
+				
+				//
+				// note check like selected messages aren't sent here ... they are sent
+				// on the down press
+				//
+				if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+						BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+				{
+
+					if (!buttonTriggersOnMouseDown(window)) {
+						// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+						TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_CLICKED_RIGHT,
+																								(WindowMsgData)window, mData1 );
+					}
+
+					BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+				}
+				else
+				{
+
+					// this up click was not meant for this button
+					return MSG_IGNORED;
+
+				}
+
 			}
+
+			break;
+
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_LEFT_DOUBLE_CLICK:
+		{
+
+			/*PushButtonData *pData = (PushButtonData *)window->winGetUserData();
+			AudioEventRTS buttonClick;
+			if(pData && pData->altSound.isNotEmpty())
+				buttonClick.setEventName(pData->altSound);
+			else
+				buttonClick.setEventName("GUIClick");
+
+			if( TheAudio )
+			{
+				TheAudio->addAudioEvent( &buttonClick );
+			}*/
+			//
+			// note check like selected messages aren't sent here ... they are sent
+			// on the down press
+			//
+			//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+			//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+			//{
+				//if (!buttonTriggersOnMouseDown(window)) {
+					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_LEFT,
+																							(WindowMsgData)window, mData1 );
+				//}
+
+				BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+			//}
+			//else
+			//{
+
+				// this up click was not meant for this button
+				//return MSG_IGNORED;
+
+			//}
+
+			break;
+
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_RIGHT_DOUBLE_CLICK:
+		{
+
+			/*PushButtonData *pData = (PushButtonData *)window->winGetUserData();
+			AudioEventRTS buttonClick;
+			if(pData && pData->altSound.isNotEmpty())
+				buttonClick.setEventName(pData->altSound);
+			else
+				buttonClick.setEventName("GUIClick");
+
+			if( TheAudio )
+			{
+				TheAudio->addAudioEvent( &buttonClick );
+			}*/
+			//
+			// note check like selected messages aren't sent here ... they are sent
+			// on the down press
+			//
+			//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+			//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+			//{
+				//if (!buttonTriggersOnMouseDown(window)) {
+					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_RIGHT,
+																							(WindowMsgData)window, mData1 );
+				//}
+
+				BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+			//}
+			//else
+			//{
+
+				// this up click was not meant for this button
+				//return MSG_IGNORED;
+
+			//}
+
+			break;
+
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_MIDDLE_DOWN:
+		{
+
+			//
+			// for 'check-like' buttons we have "dual state", we flip the selected status
+			// in that case instead of just turning it on like normal ... also note
+			// that selected messages are sent immediately
+			//
+			/*if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
+			{
+
+				if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
+					BitClear( instData->m_state, WIN_STATE_SELECTED );
+				else
+					BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+
+			}
+			else
+			{
+
+				// just select as normal
+				BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+			}*/
+
+			if (buttonTriggersOnMouseDown(window)) {
+				TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_CLICKED_MIDDLE,
+																						(WindowMsgData)window, mData1 );
+			}
+
+			break;
+		}
+
+		//-------------------------------------------------------------------------
+		case GWM_MIDDLE_UP:
+		{
+
+			//
+			// note check like selected messages aren't sent here ... they are sent
+			// on the down press
+			//
+			if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+					BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+			{
+
+				if (!buttonTriggersOnMouseDown(window)) {
+					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_CLICKED_MIDDLE,
+																							(WindowMsgData)window, mData1 );
+				}
+
+				BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+			}
+			else
+			{
+
+				// this up click was not meant for this button
+				return MSG_IGNORED;
+
+			}
+
+			break;
+
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_MIDDLE_DOUBLE_CLICK:
+		{
+
+			//
+			// note check like selected messages aren't sent here ... they are sent
+			// on the down press
+			//
+			//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+			//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+			//{
+				//if (!buttonTriggersOnMouseDown(window)) {
+					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_MIDDLE,
+																							(WindowMsgData)window, mData1 );
+				//}
+
+				BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+			//}
+			//else
+			//{
+
+				// this up click was not meant for this button
+				//return MSG_IGNORED;
+
+			//}
 
 			break;
 

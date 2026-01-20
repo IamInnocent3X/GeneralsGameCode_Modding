@@ -4024,7 +4024,10 @@ Object *AIGroup::getCommandButtonSourceObject( GUICommandType type )
 		const CommandButton *commandButton;
 		for(Int i = 0; i < MAX_COMMANDS_PER_SET; ++i)
 		{
-			commandButton = commandSet->getCommandButton(i);
+			commandButton = object->getCommandModifierOverrideForSlot(i); 
+			if(commandButton == nullptr) 
+				commandButton =  commandSet->getCommandButton(i);
+
 			if(commandButton && (commandButton->getCommandType() == type)) {
 				return object;
 			}
