@@ -896,6 +896,11 @@ public:
 
 	void setNeedUpdateTurretPositioning(Bool set);
 
+	const CommandButton *getCommandModifierOverrideForSlot( Int slotNum, AsciiString commandSetName = AsciiString::TheEmptyString ) const;
+	Bool registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, Bool doRemove, AsciiString commandSetName = AsciiString::TheEmptyString );
+	Bool getDoRemoveCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName = AsciiString::TheEmptyString ) const;
+	//void removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandSetName = AsciiString::TheEmptyString );
+
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
 	const AsciiString& getMoveToCursorName() const;
@@ -1169,6 +1174,10 @@ private:
 	Bool											m_ignoreRailgunCheck;
 
 	Coord3D											m_currentTargetCoords;		///< weapon's current target position. Need xfer in case if continuous laser
+
+	typedef std::vector<std::pair<Int, AsciiString>> CommandModifiersVec;
+	typedef std::hash_map< AsciiString, CommandModifiersVec, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CommandSetModifiersMap;
+	CommandSetModifiersMap						m_controlBarModifiersApplied;						///< By applying Modifers, we can alter the one command shown in a command set
 
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;

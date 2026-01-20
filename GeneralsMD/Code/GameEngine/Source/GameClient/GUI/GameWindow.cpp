@@ -1517,6 +1517,54 @@ GameWindow *GameWindow::winPointInAnyChild( Int x, Int y, Bool ignoreHidden, Boo
 
 }
 
+// GameWindow::winPointInChild ================================================
+/** Given a window and the mouse coordinates, return the child
+	* window which contains the mouse pointer.  Child windows are
+	* relative to their parents */
+//=============================================================================
+GameWindow *GameWindow::winPointInUnenabledChild( Int x, Int y )
+{
+	GameWindow *parent;
+	GameWindow *child;
+	ICoord2D origin;
+
+	for( child = m_child; child; child = child->m_next )
+	{
+
+		origin = child->m_region.lo;
+		parent = child->winGetParent();
+
+		while( parent )
+		{
+
+			origin.x += parent->m_region.lo.x;
+			origin.y += parent->m_region.lo.y;
+			parent = parent->m_parent;
+
+		}
+
+		if( x >= origin.x && x <= origin.x + child->m_size.x &&
+				y >= origin.y && y <= origin.y + child->m_size.y )
+		{
+			Bool enabled = BitIsSet( child->m_status, WIN_STATUS_ENABLED );
+			Bool hidden = BitIsSet( child->m_status, WIN_STATUS_HIDDEN );
+			if( !hidden && !enabled )
+			{
+				return child;
+			}
+			else
+			{
+				return child->winPointInUnenabledChild( x, y );
+			}
+		}
+
+	}
+
+	// not in any children, must be in parent
+	return this;
+
+}
+
 //
 // In release builds the default input and system functions are optimized
 // to the same address since they take the same input and have the same

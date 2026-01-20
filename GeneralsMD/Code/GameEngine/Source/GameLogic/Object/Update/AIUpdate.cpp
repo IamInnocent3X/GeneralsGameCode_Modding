@@ -5300,7 +5300,10 @@ void AIUpdateInterface::privateCommandButton( const CommandButton *commandButton
 			{
 				for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 				{
-					const CommandButton *aCommandButton = commandSet->getCommandButton(i);
+					const CommandButton *aCommandButton = owner->getCommandModifierOverrideForSlot(i); 
+					if(aCommandButton == nullptr) 
+						aCommandButton =  commandSet->getCommandButton(i);
+
 					if( commandButton == aCommandButton )
 					{
 						//We found the matching command button so now order the unit to do what the button wants.
@@ -5355,7 +5358,10 @@ void AIUpdateInterface::privateCommandButtonPosition( const CommandButton *comma
 			{
 				for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 				{
-					const CommandButton *aCommandButton = commandSet->getCommandButton(i);
+					const CommandButton *aCommandButton = owner->getCommandModifierOverrideForSlot(i); 
+					if(aCommandButton == nullptr) 
+						aCommandButton =  commandSet->getCommandButton(i);
+
 					if( commandButton == aCommandButton )
 					{
 						//We found the matching command button so now order the unit to do what the button wants.
@@ -5405,7 +5411,10 @@ void AIUpdateInterface::privateCommandButtonObject( const CommandButton *command
 		{
 			for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 			{
-				const CommandButton *aCommandButton = commandSet->getCommandButton(i);
+				const CommandButton *aCommandButton = owner->getCommandModifierOverrideForSlot(i); 
+				if(aCommandButton == nullptr) 
+					aCommandButton =  commandSet->getCommandButton(i);
+
 				if( commandButton == aCommandButton )
 				{
 					//We found the matching command button so now order the unit to do what the button wants.

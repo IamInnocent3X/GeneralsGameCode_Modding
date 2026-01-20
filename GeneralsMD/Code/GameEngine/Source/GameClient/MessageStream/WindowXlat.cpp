@@ -93,6 +93,8 @@ static GameWindowMessage rawMouseToWindowMessage( const GameMessage *msg )
 		// Strange, but true. The window stuff really doesn't care about double clicks, so just
 		// treat it as a down click.. Kinda like a second click.
 		case GameMessage::MSG_RAW_MOUSE_LEFT_DOUBLE_CLICK:
+			gwm = GWM_LEFT_DOUBLE_CLICK;
+			break;
 		case GameMessage::MSG_RAW_MOUSE_LEFT_BUTTON_DOWN:
 			gwm = GWM_LEFT_DOWN;
 			break;
@@ -107,6 +109,8 @@ static GameWindowMessage rawMouseToWindowMessage( const GameMessage *msg )
 
 		// ------------------------------------------------------------------------
 		case GameMessage::MSG_RAW_MOUSE_MIDDLE_DOUBLE_CLICK:
+			gwm = GWM_MIDDLE_DOUBLE_CLICK;
+			break;
 		case GameMessage::MSG_RAW_MOUSE_MIDDLE_BUTTON_DOWN:
 			gwm = GWM_MIDDLE_DOWN;
 			break;
@@ -121,6 +125,8 @@ static GameWindowMessage rawMouseToWindowMessage( const GameMessage *msg )
 
 		// ------------------------------------------------------------------------
 		case GameMessage::MSG_RAW_MOUSE_RIGHT_DOUBLE_CLICK:
+			gwm = GWM_RIGHT_DOUBLE_CLICK;
+			break;
 		case GameMessage::MSG_RAW_MOUSE_RIGHT_BUTTON_DOWN:
 			gwm = GWM_RIGHT_DOWN;
 			break;

@@ -332,6 +332,31 @@ static const char* const TheCommandUsableInNames[] =
 };
 
 // -------------------------------------------------------------------------------
+// ClickState sets for Command Set Override.
+enum ClickState CPP_11(: Int)
+{
+	CLICK_NONE						= 0,
+	LEFT_CLICK,
+	RIGHT_CLICK,
+	MIDDLE_CLICK,
+	LEFT_DOUBLE_CLICK,
+	RIGHT_DOUBLE_CLICK,
+	MIDDLE_DOUBLE_CLICK
+};
+
+static const LookupListRec ClickNames[] =
+{
+	{ "NONE",							CLICK_NONE },
+	{ "LEFT_CLICK",						LEFT_CLICK },
+	{ "RIGHT_CLICK",					RIGHT_CLICK },
+	{ "MIDDLE_CLICK",					MIDDLE_CLICK },
+	{ "LEFT_DOUBLE_CLICK",				LEFT_DOUBLE_CLICK },
+	{ "RIGHT_DOUBLE_CLICK",				RIGHT_DOUBLE_CLICK },
+	{ "MIDDLE_DOUBLE_CLICK",			MIDDLE_DOUBLE_CLICK },
+	{ nullptr, 0	}
+};
+
+// -------------------------------------------------------------------------------
 class MetaMapRec : public MemoryPoolObject
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(MetaMapRec, "MetaMapRec")
@@ -343,6 +368,8 @@ public:
 	MappableKeyModState			m_modState;				///< the required state of the ctrl-alt-shift keys
 	CommandUsableInType			m_usableIn;				///< the allowed place the command can be used in
 	// Next fields are added for Key mapping Dialog
+	AsciiString					m_commandModifierKey;
+	ClickState					m_commandModifierClickToTrigger;
 	MappableKeyCategories		m_category;				///< This is the catagory the key falls under
 	UnicodeString						m_description;		///< The description string for the keys
 	UnicodeString						m_displayName;		///< The display name of our command
@@ -377,11 +404,18 @@ class MetaMap : public SubsystemInterface
 private:
 	MetaMapRec *m_metaMaps;
 	std::vector<MappableKeyType> m_doubleDownKeysVec;
+	std::vector<AsciiString> m_leftClickCommandModifiersMeta;
+	std::vector<AsciiString> m_rightClickCommandModifiersMeta;
+	std::vector<AsciiString> m_middleClickCommandModifiersMeta;
+	std::vector<AsciiString> m_leftDoubleClickCommandModifiersMeta;
+	std::vector<AsciiString> m_rightDoubleClickCommandModifiersMeta;
+	std::vector<AsciiString> m_middleDoubleClickCommandModifiersMeta;
 
 protected:
 	GameMessage::Type findGameMessageMetaType(const char* name);
 	MetaMapRec *getMetaMapRec(GameMessage::Type t);
 	void pushDoubleDownKeyList(MappableKeyType m);
+	void setClickCommandModifiersMeta( ClickState clickType, const AsciiString& key );
 
 public:
 
@@ -399,6 +433,7 @@ public:
 	static void generateMetaMap();
 
 	const MetaMapRec *getFirstMetaMapRec() const { return m_metaMaps; }
+	const std::vector<AsciiString>& getClickCommandModifiersMeta( ClickState clickType ) const;
 	Bool hasDoubleDownKey(MappableKeyType m) const;
 };
 

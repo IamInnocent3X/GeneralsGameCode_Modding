@@ -139,7 +139,7 @@ WindowMsgHandledType PassSelectedButtonsToParentSystem( GameWindow *window, Unsi
 	if( window == nullptr )
 		return MSG_IGNORED;
 
-	if( (msg == GBM_SELECTED)  ||  (msg == GBM_SELECTED_RIGHT) || (msg == GBM_MOUSE_ENTERING) || (msg == GBM_MOUSE_LEAVING) || (msg == GEM_EDIT_DONE))
+	if( (msg == GBM_SELECTED)  ||  (msg == GBM_SELECTED_RIGHT) || (msg == GBM_MOUSE_ENTERING) || (msg == GBM_MOUSE_LEAVING) || (msg == GEM_EDIT_DONE)  ||  (msg == GBM_CLICKED_LEFT)  ||  (msg == GBM_CLICKED_RIGHT)  ||  (msg == GBM_CLICKED_MIDDLE)  ||  (msg == GBM_DOUBLE_CLICKED_LEFT)  ||  (msg == GBM_DOUBLE_CLICKED_RIGHT)  ||  (msg == GBM_DOUBLE_CLICKED_MIDDLE) )
 	{
 		GameWindow *parent = window->winGetParent();
 
@@ -1136,6 +1136,55 @@ WinInputReturnCode GameWindowManager::winProcessMouseEvent( GameWindowMessage ms
 
 				}
 
+			}
+
+			if( toolTipWindow && BitIsSet( toolTipWindow->winGetStyle(), GWS_PUSH_BUTTON ) )
+			{
+				switch( msg )
+				{
+					// --------------------------------------------------------------------
+					case GWM_LEFT_UP:
+					case GWM_LEFT_DOWN:
+					case GWM_RIGHT_UP:
+					case GWM_RIGHT_DOWN:
+					{
+						WinInstanceData *instData = toolTipWindow->winGetInstanceData();
+						if(BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ))
+						{
+							if( msg == GWM_RIGHT_UP || msg == GWM_RIGHT_DOWN )
+								break;
+						}
+						else
+						{
+							if( msg == GWM_LEFT_UP || msg == GWM_LEFT_DOWN )
+								break;
+						}
+						FALLTHROUGH;
+					}
+					case GWM_MIDDLE_UP:
+					case GWM_MIDDLE_DOWN:
+					case GWM_MIDDLE_DOUBLE_CLICK:
+					case GWM_LEFT_DOUBLE_CLICK:
+					case GWM_RIGHT_DOUBLE_CLICK:
+					{
+						GameWindow *curWindow = toolTipWindow;
+						GameWindow *lastNewWindow = nullptr;
+						while(curWindow != lastNewWindow){
+							lastNewWindow = curWindow;
+							curWindow = curWindow->winPointInUnenabledChild(mousePos->x, mousePos->y);
+							if(!lastNewWindow->winGetEnabled())
+							{
+								WindowMsgHandledType msgtypecall = winSendInputMsg( lastNewWindow, msg, packedMouseCoords, 0 );
+								if(msgtypecall != MSG_IGNORED)
+									break;
+							}
+						}
+						break;
+
+					}
+					default:
+						break;
+				}
 			}
 
 		}

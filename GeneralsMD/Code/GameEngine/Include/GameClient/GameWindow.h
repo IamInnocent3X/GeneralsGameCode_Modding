@@ -367,6 +367,8 @@ public:
 	the enabled status of the child */
 	GameWindow *winPointInAnyChild( Int x, Int y, Bool ignoreHidden, Bool ignoreEnableCheck = FALSE );
 
+	GameWindow *winPointInUnenabledChild( Int x, Int y );
+
   // get the callbacks for a window -------------------------------------------
 	GameWinInputFunc		winGetInputFunc( void );
 	GameWinSystemFunc		winGetSystemFunc( void );

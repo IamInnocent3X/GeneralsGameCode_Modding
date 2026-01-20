@@ -302,6 +302,8 @@ public:
 		MSG_META_STEP_FRAME_ALT,										///< TheSuperHackers @feature Step one frame (alternative mapping)
 		MSG_META_DEMO_INSTANT_QUIT,									///< bail out of game immediately
 
+		MSG_META_COMMAND_SET_MODIFIER,									///< Do Command Set Modifier (Repeatable)
+
 
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)//may be defined in GameCommon.h
     MSG_CHEAT_RUNSCRIPT1,										///< run script named "KEY_F1"

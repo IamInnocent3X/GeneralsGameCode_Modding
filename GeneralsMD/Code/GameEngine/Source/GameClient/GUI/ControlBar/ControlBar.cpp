@@ -939,29 +939,70 @@ void CommandButton::copyButtonTextFrom( const CommandButton *button, Bool shortc
 //-------------------------------------------------------------------------------------------------
 void CommandSet::parseCommandButton( INI* ini, void *instance, void *store, const void *userData )
 {
-	const char *token = ini->getNextToken();
-
-	// get find the command button from this name
-	const CommandButton *commandButton = TheControlBar->findCommandButton( AsciiString( token ) );
-	if( commandButton == nullptr )
+	CommandSet* self = (CommandSet*)instance;
+	AsciiString ModifierKey;
+	std::pair<AsciiString, AsciiString> KeyToCommandButton;
+	//const char *token = ini->getNextToken();
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 
-		DEBUG_CRASH(( "[LINE: %d - FILE: '%s'] Unknown command '%s' found in command set",
-								  ini->getLineNum(), ini->getFilename().str(), token ));
-		throw INI_INVALID_DATA;
+		// get find the command button from this name
+		const CommandButton *commandButton = TheControlBar->findCommandButton( AsciiString( token ) );
+		if( commandButton == nullptr )
+		{
+
+			if(ModifierKey.isEmpty())
+			{
+				ModifierKey.format(token);
+				continue;
+			}
+
+			DEBUG_CRASH(( "[LINE: %d - FILE: '%s'] Unknown command '%s' found in command set",
+									ini->getLineNum(), ini->getFilename().str(), token ));
+			throw INI_INVALID_DATA;
+
+		}
+
+		// register to the modifiers vector
+		if(!ModifierKey.isEmpty())
+		{
+			Int idx = (Int)userData;
+
+			// sanity
+			DEBUG_ASSERTCRASH( idx < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range",
+												idx) );
+
+			KeyToCommandButton.first = ModifierKey;
+			KeyToCommandButton.second = AsciiString( token );
+			ModifierCommandMap::iterator it = self->m_modifierCommandMap.find(idx);
+			if(it != self->m_modifierCommandMap.end())
+			{
+				it->second.push_back(KeyToCommandButton);
+			}
+			else
+			{
+				ModifierCommandType ModifierCommandVec;
+				ModifierCommandVec.push_back(KeyToCommandButton);
+				self->m_modifierCommandMap[idx] = ModifierCommandVec;
+			}
+
+			ModifierKey.clear();
+
+			continue;
+		}
+
+		// get the index to store the command at, and the command array itself
+		const CommandButton **buttonArray = (const CommandButton **)store;
+		Int buttonIndex = (Int)userData;
+
+		// sanity
+		DEBUG_ASSERTCRASH( buttonIndex < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range",
+											buttonIndex) );
+
+		// save it
+		buttonArray[ buttonIndex ] = commandButton;
 
 	}
-
-	// get the index to store the command at, and the command array itself
-	const CommandButton **buttonArray = (const CommandButton **)store;
-	Int buttonIndex = (Int)userData;
-
-	// sanity
-	DEBUG_ASSERTCRASH( buttonIndex < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range",
-										 buttonIndex) );
-
-	// save it
-	buttonArray[ buttonIndex ] = commandButton;
 
 }
 
@@ -973,6 +1014,8 @@ CommandSet::CommandSet(const AsciiString& name) :
 {
 	for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		m_command[ i ] = nullptr;
+
+	m_modifierCommandMap.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -985,6 +1028,26 @@ const CommandButton* CommandSet::getCommandButton(Int i) const
 		return button;
 
 	return m_command[i];
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+const AsciiString& CommandSet::getModifierForCommandButtonOverrideName(Int i, const AsciiString& key) const
+{
+	// Sanity
+	if(key.isEmpty())
+		return AsciiString::TheEmptyString;
+
+	ModifierCommandMap::const_iterator it = m_modifierCommandMap.find(i);
+	if(it != m_modifierCommandMap.end())
+	{
+		for(ModifierCommandType::const_iterator it_2 = it->second.begin(); it_2 != it->second.end(); ++it_2)
+		{
+			if(it_2->first == key)
+				return it_2->second;
+		}
+	}
+	return AsciiString::TheEmptyString;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3792,7 +3855,10 @@ void ControlBar::updateSpecialPowerShortcut( void )
 					{
 						for( Int commandIndex = 0; commandIndex < MAX_COMMANDS_PER_SET; commandIndex++ )
 						{
-							const CommandButton *evalButton = commandSet->getCommandButton( commandIndex );
+							const CommandButton *evalButton = obj->getCommandModifierOverrideForSlot( commandIndex ); 
+							if(evalButton == nullptr) 
+								evalButton =  commandSet->getCommandButton( commandIndex );
+
 							GameWindow *evalButtonWin = m_commandWindows[ commandIndex ];
 							if( evalButton && evalButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 							{
