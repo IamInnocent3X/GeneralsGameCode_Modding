@@ -99,6 +99,7 @@ public:
 
 	// UpdateModule
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void friend_giveSelfUpgrade() { }
 
 	void setMinefieldTarget(const Coord3D* pos);
 

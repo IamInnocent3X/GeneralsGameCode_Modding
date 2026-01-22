@@ -30,23 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"
 #include "Common/Xfer.h"
-#include "GameLogic/Object.h"
 #include "GameLogic/Module/UpgradeModule.h"
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-UpgradeModule::UpgradeModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData )
-{
-	if (checkStartsActive())
-		getObject()->giveFreeUpgrade(((BehaviorModule*)this)->getModuleTagNameKey());
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-UpgradeModule::~UpgradeModule()
-{
-
-}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -128,7 +112,8 @@ Bool UpgradeMux::attemptUpgrade( UpgradeMaskType keyMask )
 	if (wouldUpgrade(keyMask))
 	{
 		// If I have an activation condition, and I haven't activated, and this key matches my condition.
-		giveSelfUpgrade();
+		if(!isAlreadyUpgraded())
+			giveSelfUpgrade();
 		m_freeUpgrade = FALSE; 
 		return true;
 	}

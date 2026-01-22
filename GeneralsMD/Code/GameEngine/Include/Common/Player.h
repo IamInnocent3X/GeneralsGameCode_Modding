@@ -602,7 +602,7 @@ public:
 	Bool getUnitsShouldHunt() const { return m_unitsShouldHunt; }
 
 	/// All of our units are new spied upon; they sight for the given enemy
-	void setUnitsVisionSpied( Bool setting, KindOfMaskType whichUnits, PlayerIndex byWhom );
+	void setUnitsVisionSpied( Bool setting, KindOfMaskType whichUnits, KindOfMaskType forbiddenUnits, PlayerIndex byWhom, Bool requiresAllTypes );
 
 	/// Destroy all of the teams for this player, causing him to DIE.
 	void killPlayer(void);

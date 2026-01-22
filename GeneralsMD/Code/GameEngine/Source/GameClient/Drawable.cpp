@@ -990,7 +990,7 @@ void Drawable::setTerrainDecal(TerrainDecalType type)
 	//Only the first draw module gets a decal to prevent stacking.
 	//Should be okay as long as we keep the primary object in the
 	//first module.
-	if (*dm)
+	if (dm && *dm)
 		(*dm)->setTerrainDecal(type);
 
 }
@@ -1000,7 +1000,7 @@ void Drawable::setTerrainDecalSize(Real x, Real y)
 {
 	DrawModule** dm = getDrawModules();
 
-	if (*dm)
+	if (dm && *dm)
 		(*dm)->setTerrainDecalSize(x,y);
 }
 

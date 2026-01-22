@@ -149,7 +149,8 @@ UpdateSleepTime SpyVisionUpdate::update( void )
 
 	if (m_giveSelfUpgrade)
 	{
-		giveSelfUpgrade();
+		if(!isAlreadyUpgraded())
+			giveSelfUpgrade();
 		m_giveSelfUpgrade = FALSE;
 	}
 
@@ -218,7 +219,7 @@ void SpyVisionUpdate::doActivationWork( Player *playerToSetFor, Bool setting )
 		Player *player = ThePlayerList->getNthPlayer(i);
 		if( playerToSetFor->getRelationship(player->getDefaultTeam()) == ENEMIES )
 		{
-			player->setUnitsVisionSpied( setting, data->m_spyOnKindof, playerToSetFor->getPlayerIndex() );
+			player->setUnitsVisionSpied( setting, data->m_spyOnKindof, data->m_spyOnForbiddenKindof, playerToSetFor->getPlayerIndex(), data->m_spyOnRequiresAllTypes );
 		}
 	}
 
@@ -239,7 +240,7 @@ void SpyVisionUpdate::onDelete( void )
 void SpyVisionUpdate::upgradeImplementation()
 {
 	const SpyVisionUpdateModuleData *data = getSpyVisionUpdateModuleData();
-	if( data->m_needsUpgrade && !isAlreadyUpgraded() )
+	if( (data->m_needsUpgrade || checkStartsActive()) && !isAlreadyUpgraded() )
 	{
 		activateSpyVision(data->m_selfPoweredDuration);// If zero, will turn on permanently.  And it does the wake up setting
 	}

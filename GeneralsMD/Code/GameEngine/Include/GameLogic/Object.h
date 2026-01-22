@@ -418,8 +418,6 @@ public:
 
 	void forceRefreshUpgradeStatus();
 
-	void giveFreeUpgrade(NameKeyType nameKeyTag) { m_giveFreeUpgradesVector.push_back(nameKeyTag); }
-
 	// Useful for status bits that can be set by the scripting system
 	inline Bool testScriptStatusBit(ObjectScriptStatusBit b) const { return BitIsSet(m_scriptStatus, b); }
 	void setScriptStatus( ObjectScriptStatusBit bit, Bool set = true );
@@ -1183,8 +1181,6 @@ private:
 	typedef std::vector<std::pair<Int, AsciiString>> CommandModifiersVec;
 	typedef std::hash_map< AsciiString, CommandModifiersVec, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CommandSetModifiersMap;
 	CommandSetModifiersMap						m_controlBarModifiersApplied;						///< By applying Modifers, we can alter the one command shown in a command set
-
-	std::vector<NameKeyType>					m_giveFreeUpgradesVector;							///< Module Tags of Upgrades that is granted Initially
 
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;

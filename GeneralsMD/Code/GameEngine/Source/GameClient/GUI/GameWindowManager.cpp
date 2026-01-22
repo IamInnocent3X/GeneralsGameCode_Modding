@@ -53,6 +53,7 @@
 #include "GameClient/GlobalLanguage.h"
 #include "GameClient/GameWindowTransitions.h"
 #include "Common/NameKeyGenerator.h"
+#include "GameLogic/GameLogic.h" // Note: Do Not Ever use Anything the Corresponds with GameLogic HERE. It will cause Mismatches!
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 GameWindowManager *TheWindowManager = nullptr;
@@ -1138,7 +1139,7 @@ WinInputReturnCode GameWindowManager::winProcessMouseEvent( GameWindowMessage ms
 
 			}
 
-			if( toolTipWindow && BitIsSet( toolTipWindow->winGetStyle(), GWS_PUSH_BUTTON ) )
+			if( TheGameLogic->isInInteractiveGame() && toolTipWindow && BitIsSet( toolTipWindow->winGetStyle(), GWS_PUSH_BUTTON ) )
 			{
 				switch( msg )
 				{

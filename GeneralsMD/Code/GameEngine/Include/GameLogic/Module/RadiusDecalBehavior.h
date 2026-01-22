@@ -74,6 +74,7 @@ public:
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update();
+	virtual void friend_giveSelfUpgrade() { }
 
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK(DISABLED_HELD); }
 

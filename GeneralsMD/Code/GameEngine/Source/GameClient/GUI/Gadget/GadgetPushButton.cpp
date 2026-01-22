@@ -53,6 +53,7 @@
 #include "GameClient/Gadget.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
+#include "GameLogic/GameLogic.h" // Note: Do Not Ever use Anything the Corresponds with GameLogic HERE. It will cause Mismatches!
 
 // DEFINES ////////////////////////////////////////////////////////////////////
 
@@ -170,7 +171,7 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 			//	TheAudio->addAudioEvent( &buttonClick );
 			//}
 
-			if( BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) )
+			if( TheGameLogic->isInInteractiveGame() && BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) )
 			{
 				//
 				// for 'check-like' buttons we have "dual state", we flip the selected status
@@ -243,7 +244,7 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 		case GWM_LEFT_UP:
 		{
 
-			if( BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) )
+			if( TheGameLogic->isInInteractiveGame() && BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) )
 			{
 
 				//

@@ -60,6 +60,7 @@ public:
 	virtual void forceRefreshUpgrade() = 0;
 	virtual void forceRefreshMyUpgrade() = 0;
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const = 0;
+	virtual Bool startsActive() const = 0;
 	virtual void friend_giveSelfUpgrade() = 0;
 
 };
@@ -122,6 +123,7 @@ public:
 	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted ) const;
 	virtual Bool resetUpgrade( UpgradeMaskType keyMask );
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const;
+	virtual Bool startsActive() const { return checkStartsActive(); }
 	virtual void friend_giveSelfUpgrade() { giveSelfUpgrade(); }
 
 protected:
@@ -228,5 +230,5 @@ protected:
 	}
 
 };
-//inline UpgradeModule::UpgradeModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData ) { }
-//inline UpgradeModule::~UpgradeModule() { }
+inline UpgradeModule::UpgradeModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData ) { }
+inline UpgradeModule::~UpgradeModule() { }
