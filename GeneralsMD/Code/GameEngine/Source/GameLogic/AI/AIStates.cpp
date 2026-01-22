@@ -5102,7 +5102,6 @@ StateReturnType AIAttackAimAtTargetState::onEnter()
 /**
  * Orient the machine's owner to face towards the given target
  */
-
 StateReturnType AIAttackAimAtTargetState::update()
 {
 
@@ -5134,53 +5133,80 @@ StateReturnType AIAttackAimAtTargetState::update()
 		{
 			sourceAI->setTurretTargetPosition(tur, getMachineGoalPosition());
 		}
-		// If we have limited Turret Angle, we need to turn until we are in range
-		if (sourceAI->hasLimitedTurretAngle(tur)) {
-			Real relAngle = m_isAttackingObject ?
-				ThePartitionManager->getRelativeAngle2D(source, victim) :
-				ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
-			Real maxAngle = sourceAI->getMaxTurretAngle(tur);
-			Real minAngle = sourceAI->getMinTurretAngle(tur);
-			if (maxAngle < minAngle) { // This might be a backwards facing configuration
-				maxAngle = nmod(maxAngle, 2.0 * PI);
-				relAngle = nmod(relAngle, 2.0 * PI);
+	}
+	// 1st step: Check if the current angle is valid to attack.
+	if (sourceAI->useAttackAngle()) {
+		Real relAngle = m_isAttackingObject ?
+			ThePartitionManager->getRelativeAngle2D(source, victim) :
+			ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+		if (sourceAI->friend_isAttackAngleValid(relAngle)) {
+			//DEBUG_LOG((">>> friend_isAttackAngleValid(%f) = True", relAngle * 180.0 / PI));
+
+			// Workaround for ships TODO: Make this work for everything
+			Locomotor* curLoco = sourceAI->getCurLocomotor();
+			if (curLoco && curLoco->getAppearance() == LOCO_SHIP) {
+				sourceAI->setLocomotorGoalNone();
 			}
 
-			// DEBUG_LOG((">>> (hasLimited) relAngle = %f, minAngle = %f, maxAngle = %f.\n", relAngle * 180 / PI, minAngle * 180 / PI, maxAngle * 180 / PI));
-
-			if ((relAngle < maxAngle) && (relAngle > minAngle)) {
-				// If the target is inside our maximum turret angle, we can continue
-				return STATE_CONTINUE;
-			}
-			else {
-				Locomotor* curLoco = sourceAI->getCurLocomotor();
-				if (!curLoco)
-					return STATE_FAILURE;
-			}
-
-		}
-		// if we have a turret, but it is incapable of turning, turn ourself.
-		// (gotta do this for units like the Comanche, which have fake "turrets"
-		// solely to allow for attacking-on-the-move...)
-		else if (sourceAI->getTurretTurnRate(tur) != 0.0f)	
-		{
-			// The Body can never return Success if the weapon is on the turret, or else we end
-			// up shooting the current weapon (which is on the turret) in the wrong direction.
-			// We always say Continue, so the Turret can do its own Aiming state.
-//			if (m_isAttackingObject && source->canCrushOrSquish(victim)) {
-//				return STATE_SUCCESS;
-//			}
 			return STATE_CONTINUE;
 		}
+		else {
+			//DEBUG_LOG((">>> friend_isAttackAngleValid(%f) = False", relAngle * 180.0 / PI));
 
-		// else fall thru!
+			Locomotor* curLoco = sourceAI->getCurLocomotor();
+			if (!curLoco)
+				return STATE_FAILURE;
+		}
+	}
+	else {
+		// We check the turret if we have the right angle.
+
+			// If we have limited Turret Angle, we need to turn until we are in range
+			if (sourceAI->hasLimitedTurretAngle(tur)) {
+				Real relAngle = m_isAttackingObject ?
+					ThePartitionManager->getRelativeAngle2D(source, victim) :
+					ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+				Real maxAngle = sourceAI->getMaxTurretAngle(tur);
+				Real minAngle = sourceAI->getMinTurretAngle(tur);
+				if (maxAngle < minAngle) { // This might be a backwards facing configuration
+					maxAngle = nmod(maxAngle, 2.0 * PI);
+					relAngle = nmod(relAngle, 2.0 * PI);
+				}
+
+				// DEBUG_LOG((">>> (hasLimited) relAngle = %f, minAngle = %f, maxAngle = %f.\n", relAngle * 180 / PI, minAngle * 180 / PI, maxAngle * 180 / PI));
+
+				if ((relAngle < maxAngle) && (relAngle > minAngle)) {
+					// If the target is inside our maximum turret angle, we can continue
+					return STATE_CONTINUE;
+				}
+				else {
+					Locomotor* curLoco = sourceAI->getCurLocomotor();
+					if (!curLoco)
+						return STATE_FAILURE;
+				}
+
+			}
+			// if we have a turret, but it is incapable of turning, turn ourself.
+			// (gotta do this for units like the Comanche, which have fake "turrets"
+			// solely to allow for attacking-on-the-move...)
+			else if (sourceAI->getTurretTurnRate(tur) != 0.0f)
+			{
+				// The Body can never return Success if the weapon is on the turret, or else we end
+				// up shooting the current weapon (which is on the turret) in the wrong direction.
+				// We always say Continue, so the Turret can do its own Aiming state.
+	//			if (m_isAttackingObject && source->canCrushOrSquish(victim)) {
+	//				return STATE_SUCCESS;
+	//			}
+				return STATE_CONTINUE;
+			}
 	}
 
-	// no else here!
+
+	// 2nd step: We need to move to aim
 	{
 		Real relAngle = m_isAttackingObject ?
-											ThePartitionManager->getRelativeAngle2D( source, victim ) :
-											ThePartitionManager->getRelativeAngle2D( source, getMachineGoalPosition() );
+			ThePartitionManager->getRelativeAngle2D(source, victim) :
+			ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
 
 		const Real REL_THRESH = 0.035f;	// about 2 degrees. (getRelativeAngle2D is current only accurate to about 1.25 degrees)
 
@@ -5192,7 +5218,33 @@ StateReturnType AIAttackAimAtTargetState::update()
 			aimDelta = REL_THRESH;
 		}
 
-		if (sourceAI->hasLimitedTurretAngle(tur) && !sourceAI->useAttackAngle()) {
+		Real desiredAngle = 0;
+		Bool hasPreferredAngle = false;
+		if (sourceAI->useAttackAngle())
+		{ // Check our preferred angle on how to move.
+
+			//We ignore AimDelta here.
+			aimDelta = REL_THRESH;
+
+			Real relAttackAngle = sourceAI->friend_getClosestAttackAngle(relAngle);
+
+			if (m_canTurnInPlace)
+			{
+				desiredAngle = WWMath::Normalize_Angle(source->getOrientation() + relAngle - relAttackAngle);
+				// DEBUG_LOG((">>> ObjAngle = %f, DesiredAngle = %f", source->getOrientation() * 180.0 / PI, desiredAngle * 180.0 / PI));
+				sourceAI->setLocomotorGoalOrientation(desiredAngle);
+				m_setLocomotor = true;
+				hasPreferredAngle = true;
+			}
+			else
+			{ // TODO
+				sourceAI->setLocomotorGoalPositionExplicit(m_isAttackingObject ? *victim->getPosition() : *getMachineGoalPosition());
+			}
+
+		}
+		else if (sourceAI->hasLimitedTurretAngle(tur))
+		{ // Check limited turret angles how to move
+
 			Real maxAngle = sourceAI->getMaxTurretAngle(tur) + aimDelta;
 			Real minAngle = sourceAI->getMinTurretAngle(tur) - aimDelta;
 			if (maxAngle < minAngle) { // This might be a backwards facing configuration
@@ -5202,13 +5254,14 @@ StateReturnType AIAttackAimAtTargetState::update()
 			
 			if (m_canTurnInPlace)
 			{
+				hasPreferredAngle = true;
 				// if out of turret turn range:
 				if (relAngle > maxAngle || relAngle < minAngle) {
 
 					// if (fabs(relAngle - maxAngle) < fabs(relAngle - minAngle))
 					if (fabs(stdAngleDiffMod(relAngle, maxAngle)) < fabs(stdAngleDiffMod(relAngle, minAngle)))
 					{
-						Real desiredAngle = source->getOrientation() + relAngle - maxAngle + REL_THRESH * 2;
+						desiredAngle = source->getOrientation() + relAngle - maxAngle + REL_THRESH * 2;
 						desiredAngle = normalizeAngle(desiredAngle);
 						//DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, minAngle = %f, maxAngle = %f, desiredAngle = %f.\n",
 						//	relAngle / PI * 180.0, aimDelta / PI * 180.0, minAngle / PI * 180.0, maxAngle / PI * 180.0, desiredAngle / PI * 180.0));
@@ -5217,10 +5270,10 @@ StateReturnType AIAttackAimAtTargetState::update()
 						m_setLocomotor = true;
 					}
 					else {
-						Real desiredAngle = source->getOrientation() + relAngle - minAngle - REL_THRESH * 2;
+						desiredAngle = source->getOrientation() + relAngle - minAngle - REL_THRESH * 2;
 						desiredAngle = normalizeAngle(desiredAngle);
-						DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, minAngle = %f, maxAngle = %f, desiredAngle = %f.\n",
-							relAngle / PI * 180.0, aimDelta / PI * 180.0, minAngle / PI * 180.0, maxAngle / PI * 180.0, desiredAngle / PI * 180.0));
+	/*					DEBUG_LOG((">>> AIStates: relAngle = %f, aimDelta = %f, minAngle = %f, maxAngle = %f, desiredAngle = %f.\n",
+							relAngle / PI * 180.0, aimDelta / PI * 180.0, minAngle / PI * 180.0, maxAngle / PI * 180.0, desiredAngle / PI * 180.0));*/
 
 
 						sourceAI->setLocomotorGoalOrientation(desiredAngle);
@@ -5253,33 +5306,12 @@ StateReturnType AIAttackAimAtTargetState::update()
 				}
 			}*/
 			else
-			{
+			{ //If we cannot turn in place we try to face the target head on (at the moment, this means we fail if angle limites face backwards!)
 				sourceAI->setLocomotorGoalPositionExplicit(m_isAttackingObject ? *victim->getPosition() : *getMachineGoalPosition());
 			}
 		}
 		else {
-
-			// DEBUG_LOG((">>> (2) attackAngle = %f, useAttackAngle = %d, mirrored = %d, canTurnInPlace = %d\n", sourceAI->getAttackAngle() * 180 / PI, sourceAI->useAttackAngle(), sourceAI->isAttackAngleMirrored(), m_canTurnInPlace));
-
-
-			// Check preferredAttackAngle
-			if (sourceAI->useAttackAngle()) {
-				Real attackAngle = sourceAI->getAttackAngle();
-
-				if (sourceAI->isAttackAngleMirrored()) {
-
-					// check which side is closer
-					if (fabs(stdAngleDiffMod(relAngle, attackAngle)) > fabs(stdAngleDiffMod(relAngle, attackAngle + PI))) {
-						attackAngle = attackAngle + PI;
-					}
-				}
-
-				relAngle -= attackAngle;
-				relAngle = normalizeAngle(relAngle);
-			}
-
-
-			//DEBUG_LOG(("AIM: desired %f, actual %f, delta %f, aimDelta %f, goalpos %f %f\n",rad2deg(obj->getOrientation() + relAngle),rad2deg(obj->getOrientation()),rad2deg(relAngle),rad2deg(aimDelta),victim->getPosition()->x,victim->getPosition()->y));
+			// Default case for units with no turret (or turrets with zero turn rate).
 			if (m_canTurnInPlace)
 			{
 				if (fabs(relAngle) > aimDelta)
@@ -5295,7 +5327,8 @@ StateReturnType AIAttackAimAtTargetState::update()
 			}
 		}
 
-		if (fabs(relAngle) < aimDelta /*&& !m_preAttackFrames*/ )
+		//if (fabs(stdAngleDiff(desiredAngle,relAngle)) < aimDelta /*&& !m_preAttackFrames*/ )
+		if (fabs(relAngle) < aimDelta && !hasPreferredAngle /*&& !m_preAttackFrames*/)
 		{
 			AIUpdateInterface* victimAI = victim ? victim->getAI() : nullptr;
 			// add ourself as a targeter BEFORE calling isTemporarilyPreventingAimSuccess().

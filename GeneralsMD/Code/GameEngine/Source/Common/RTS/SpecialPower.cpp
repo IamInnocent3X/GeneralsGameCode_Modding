@@ -306,6 +306,7 @@ void SpecialPowerStore::parseSpecialPowerDefinition( INI *ini )
 	{ "EvaReadyOwn",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_own) },
 	{ "EvaReadyAlly",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_ally) },
 	{ "EvaReadyEnemy",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_enemy) },
+	{ "Cost",											INI::parseInt,									nullptr, offsetof(SpecialPowerTemplate, m_cost) },
 	{ "DeleteUserOnExecute",					INI::parseBool,					nullptr,	offsetof( SpecialPowerTemplate, m_destroyOnExecute ) },
 	{ "FXOnExecute",							INI::parseFXList,					nullptr, offsetof( SpecialPowerTemplate, m_fxOnExecute ) },
 	{ "OCLOnExecute", 							INI::parseObjectCreationList, 		nullptr, offsetof( SpecialPowerTemplate, m_oclOnExecute ) },
@@ -339,6 +340,7 @@ SpecialPowerTemplate::SpecialPowerTemplate()
 	m_eva_ready_own = EVA_Invalid;
 	m_eva_ready_ally = EVA_Invalid;
 	m_eva_ready_enemy = EVA_Invalid;
+	m_cost = 0;
 	m_destroyOnExecute = FALSE;
 	m_fxOnExecute = nullptr;
 	m_oclOnExecute = nullptr;

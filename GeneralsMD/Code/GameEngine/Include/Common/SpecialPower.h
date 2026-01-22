@@ -136,10 +136,10 @@ public:
 	EvaMessage getEvaReadyOwn(void) const { return getFO()->m_eva_ready_own; }
 	EvaMessage getEvaReadyAlly(void) const { return getFO()->m_eva_ready_ally; }
 	EvaMessage getEvaReadyEnemy(void) const { return getFO()->m_eva_ready_enemy; }
+	Int getCost(void) const { return getFO()->m_cost; };
 	Bool getDestroyOnExecute( void ) const { return getFO()->m_destroyOnExecute; }
 	const ObjectCreationList* getOCLOnExecute( void ) const { return getFO()->m_oclOnExecute; }
 	const FXList* getFXOnExecute( void ) const { return getFO()->m_fxOnExecute; }
- 
 private:
 
 	const SpecialPowerTemplate* getFO() const { return (const SpecialPowerTemplate*)friend_getFinalOverride(); }
@@ -170,6 +170,7 @@ private:
 	EvaMessage m_eva_ready_own; //< eva event when own ready
 	EvaMessage m_eva_ready_ally; //< eva event when ally ready
 	EvaMessage m_eva_ready_enemy; //< eva event when enemy ready
+	Int							  m_cost; ///< money cost to use special power
 
 	Bool m_destroyOnExecute; //< Destroy the Object after finish executing the ability
 	const FXList 			*m_fxOnExecute; //< FX Spawned on the Object after finish executing the ability
