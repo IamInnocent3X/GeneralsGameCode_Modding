@@ -4143,7 +4143,7 @@ void Object::crc( Xfer *xfer )
 		logString.concat(tmp);
 	}
 #endif // DEBUG_CRC
-	xfer->xferUser(&m_objectUpgradesCompleted,				sizeof(Int64));
+	xfer->xferUser(&m_objectUpgradesCompleted,				sizeof(UpgradeMaskType));
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
