@@ -111,7 +111,7 @@ AutoHealBehavior::AutoHealBehavior( Thing *thing, const ModuleData* moduleData )
 		}
 	}
 
-	if (d->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 		// start these guys with random phasings so that we don't

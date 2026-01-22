@@ -62,14 +62,16 @@ public:
 	FireOCLAfterWeaponCooldownUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	// BehaviorModule
+	virtual UpgradeModuleInterface* getUpgrade() { return this; }
+
 	// update methods
 	virtual UpdateSleepTime update();							///< called once per frame
+	void refreshUpdateMod(Bool weaponFired);
+	Bool isActive() const { return m_hasExecuted; }
 
 protected:
-	virtual void upgradeImplementation()
-	{
-		// nothing!
-	}
+	virtual void upgradeImplementation();
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
 	{
@@ -98,8 +100,13 @@ protected:
 		return getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const
+	{
+		return getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 	void resetStats();
 	void fireOCL();
@@ -107,7 +114,11 @@ protected:
 private:
 
 	Bool				m_valid;
+	Bool				m_weaponFired;
+	Bool				m_hasExecuted;
+	Bool				m_giveSelfUpgrade;
 	UnsignedInt m_consecutiveShots;
 	UnsignedInt m_startFrame;
+	UnsignedInt m_checkFrame;
 
 };

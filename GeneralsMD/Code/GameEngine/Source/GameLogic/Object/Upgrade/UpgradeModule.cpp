@@ -30,8 +30,23 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"
 #include "Common/Xfer.h"
+#include "GameLogic/Object.h"
 #include "GameLogic/Module/UpgradeModule.h"
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+UpgradeModule::UpgradeModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData )
+{
+	if (checkStartsActive())
+		getObject()->giveFreeUpgrade(((BehaviorModule*)this)->getModuleTagNameKey());
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+UpgradeModule::~UpgradeModule()
+{
+
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -82,7 +97,7 @@ void UpgradeModule::loadPostProcess( void )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-UpgradeMux::UpgradeMux() : m_upgradeExecuted(false)
+UpgradeMux::UpgradeMux() : m_upgradeExecuted(false), m_freeUpgrade(false)
 {
 
 }
@@ -114,6 +129,7 @@ Bool UpgradeMux::attemptUpgrade( UpgradeMaskType keyMask )
 	{
 		// If I have an activation condition, and I haven't activated, and this key matches my condition.
 		giveSelfUpgrade();
+		m_freeUpgrade = FALSE; 
 		return true;
 	}
 	return false;
@@ -168,33 +184,48 @@ Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted )
 		//If we have conflicting upgrades, return the Value
 		if( keyMask.testForAny( conflicting))
 		{
+			// Remove the free upgrade so that it would not grant upgrades
+			m_freeUpgrade = FALSE;
+
 			if(hasExecuted)
 				return 2; // Remove the Upgrade
 			else
 				return 0; // No Removal needed
 		}
 
+		// If we have already given self Upgrade, grant the Upgrade
+		if(m_freeUpgrade)
+		{
+			if(!hasExecuted)
+				return 1; // Grant the Upgrade
+			else
+				return 0; // Do nothing
+		}
+
 		//Finally check to see if our upgrade conditions match.
+		Bool hasUpgrade;
 		if( requiresAllActivationUpgrades() )
 		{
+			hasUpgrade = keyMask.testForAll( activation );
 			//Make sure ALL triggers requirements are upgraded
-			if( keyMask.testForAll( activation ) && !hasExecuted)
+			if( hasUpgrade && !hasExecuted)
 			{
 				return 1; // Grant the Upgrade
 			}
-			else if(!keyMask.testForAll( activation ) && hasExecuted)
+			else if(!hasUpgrade && hasExecuted)
 			{
 				return 2; // Remove the Upgrade
 			}
 		}
 		else
 		{
+			hasUpgrade = keyMask.testForAny( activation );
 			//Check if ANY trigger requirements are met.
-			if( keyMask.testForAny( activation ) && !hasExecuted)
+			if( hasUpgrade && !hasExecuted)
 			{
 				return 1; // Grant the Upgrade
 			}
-			else if( !keyMask.testForAny( activation ) && hasExecuted)
+			else if( !hasUpgrade && hasExecuted)
 			{
 				return 2; // Remove the Upgrade
 			}
@@ -202,8 +233,16 @@ Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted )
 	}
 	else if( hasExecuted )
 	{
+		// If we have granted ourselves the upgrade, do nothing
+		if(m_freeUpgrade)
+			return 0;
+
 		return 2; // remove the Upgrade if no upgrades are present
 	}
+
+	// If we have freeUpgrade, yet we have not upgrade, grant us the upgrade
+	if(m_freeUpgrade && !hasExecuted)
+		return 1;
 
 	//We can't upgrade!
 	return 0;
@@ -212,6 +251,7 @@ Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted )
 void UpgradeMux::giveSelfUpgrade()
 {
 	// If I have an activation condition, and I haven't activated, and this key matches my condition.
+	m_freeUpgrade = TRUE; // Could be initiated by StartsActive, clear after attempted Upgrade
 	performUpgradeFX();
 	processUpgradeRemoval();// Need to execute removals first, to prevent both being on for a moment.
 	upgradeImplementation();
@@ -266,6 +306,7 @@ Bool UpgradeMux::resetUpgrade( UpgradeMaskType keyMask )
 	getUpgradeActivationMasks(activation, conflicting);
 	if( keyMask.testForAny( activation ) && m_upgradeExecuted )
 	{
+		m_freeUpgrade = false;
 		m_upgradeExecuted = false;
 		return true;
 	}
@@ -296,6 +337,9 @@ void UpgradeMux::upgradeMuxXfer( Xfer *xfer )
 
 	// upgrade executed
 	xfer->xferBool( &m_upgradeExecuted );
+
+	// free upgrade
+	xfer->xferBool( &m_freeUpgrade );
 
 }
 

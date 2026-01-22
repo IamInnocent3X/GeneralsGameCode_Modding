@@ -40,7 +40,7 @@
 //-------------------------------------------------------------------------------------------------
 ExperienceScalarUpgradeModuleData::ExperienceScalarUpgradeModuleData( void )
 {
-	m_initiallyActive = false;
+	//m_initiallyActive = false;
 	m_addXPScalar = 0.0f;
 	m_addXPValueScalar = 0.0f;
 }
@@ -54,7 +54,7 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, nullptr, offsetof(ExperienceScalarUpgradeModuleData, m_initiallyActive) },
+		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(ExperienceScalarUpgradeModuleData, m_initiallyActive) },
 		{ "AddXPScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPScalar ) },
 		{ "AddXPValueScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPValueScalar ) },
 		{ nullptr, nullptr, nullptr, 0 }
@@ -69,7 +69,7 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 ExperienceScalarUpgrade::ExperienceScalarUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
 	m_hasExecuted = FALSE;
-	if (getExperienceScalarUpgradeModuleData()->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}
@@ -97,6 +97,8 @@ void ExperienceScalarUpgrade::upgradeImplementation( )
 
 	//First make sure we have the right combination of upgrades
 	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	DEBUG_LOG(("Doing Experience Scalar Upgrade."));
 
 	Real value, scalar;
 

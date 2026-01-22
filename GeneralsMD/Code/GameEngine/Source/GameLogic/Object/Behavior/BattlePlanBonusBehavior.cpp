@@ -49,7 +49,7 @@
 //-------------------------------------------------------------------------------------------------
 BattlePlanBonusBehaviorModuleData::BattlePlanBonusBehaviorModuleData()
 {
-	m_initiallyActive = false;
+	//m_initiallyActive = false;
 	m_shouldParalyze = true;
 	for (UnsignedInt i = 0; i < BATTLE_PLAN_COUNT; i++) {
 		m_weaponBonusEntries[i] = WEAPONBONUSCONDITION_INVALID;
@@ -183,7 +183,7 @@ void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToClear(INI* ini, voi
 {
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_initiallyActive) },
+		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_initiallyActive) },
 		{ "OverrideGlobalBonus",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_overrideGlobal) },
 		{ "ShouldParalyzeOnPlanChange",	INI::parseBool, nullptr, offsetof(BattlePlanBonusBehaviorModuleData, m_shouldParalyze) },
 
@@ -212,7 +212,7 @@ void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToClear(INI* ini, voi
 //-------------------------------------------------------------------------------------------------
 BattlePlanBonusBehavior::BattlePlanBonusBehavior(Thing* thing, const ModuleData* moduleData) : BehaviorModule(thing, moduleData)
 {
-	if (getBattlePlanBonusBehaviorModuleData()->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

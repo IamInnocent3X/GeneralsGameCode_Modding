@@ -1592,6 +1592,10 @@ Bool ControlBar::checkForCommandSetModifierOverride(Bool checkPointedWindow, con
 	if(!obj)
 		return false;
 
+	// only modify units that are your own
+	if(!obj->isLocallyControlled())
+		return false;
+
 	// get the dozer ai update interface
 	DozerAIInterface* dozerAI = obj->getAIUpdateInterface() ? obj->getAIUpdateInterface()->getDozerAIInterface() : nullptr;
 

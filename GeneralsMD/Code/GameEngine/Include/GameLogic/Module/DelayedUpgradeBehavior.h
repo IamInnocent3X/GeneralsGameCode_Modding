@@ -42,8 +42,6 @@ class DelayedUpgradeBehaviorModuleData : public UpdateModuleData
 public:
 	UpgradeMuxData				m_upgradeMuxData;
 
-	Bool						m_initiallyActive;
-
 	// AsciiString				    m_upgradeToTrigger;
 	std::vector<AsciiString>	m_upgradesToTrigger;
 	std::vector<AsciiString>	m_upgradesToRemove;
@@ -55,7 +53,6 @@ public:
 	{
 		m_upgradesToTrigger.clear();
 		m_upgradesToRemove.clear();
-		m_initiallyActive = false;
 		m_triggerDelay = 0;
 		//m_triggerNumShots = 0;
 	}
@@ -64,7 +61,6 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_initiallyActive) },
 			{ "UpgradesToTrigger", INI::parseAsciiStringVector,	nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_upgradesToTrigger) },
 			{ "UpgradesToRemove", INI::parseAsciiStringVector,	nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_upgradesToRemove) },
 			{ "TriggerAfterTime",	INI::parseDurationUnsignedInt, nullptr, offsetof(DelayedUpgradeBehaviorModuleData, m_triggerDelay) },
@@ -144,7 +140,12 @@ protected:
 		return getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	inline Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
+	virtual Bool checkStartsActive() const
+	{
+		return getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
+	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return false; }

@@ -50,7 +50,7 @@ class EnergyShieldBehaviorModuleData : public UpdateModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
+	//Bool									m_initiallyActive;
 	//Real m_shieldMaxHealth;  ///< MaxHealth of the shield
 	//Real m_shieldMaxHealthPercent;  ///< MaxHealth as percentage of activeBody MaxHealth (takes priority)
 
@@ -170,7 +170,12 @@ protected:
 		return getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	inline Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
+	virtual Bool checkStartsActive() const
+	{
+		return getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
+	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
 

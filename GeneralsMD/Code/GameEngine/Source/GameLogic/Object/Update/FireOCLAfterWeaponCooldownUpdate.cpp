@@ -84,7 +84,47 @@ void FireOCLAfterWeaponCooldownUpdateModuleData::buildFieldParse(MultiIniFieldPa
 FireOCLAfterWeaponCooldownUpdate::FireOCLAfterWeaponCooldownUpdate( Thing *thing, const ModuleData *moduleData ) : UpdateModule( thing, moduleData )
 {
 	m_valid = false;
+	m_weaponFired = false;
+	m_hasExecuted = false;
 	resetStats();
+
+	UpgradeMaskType objectMask = getObject()->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = getObject()->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	UpgradeMaskType activation, conflicting;
+	getUpgradeActivationMasks(activation, conflicting);
+
+	Bool hasUpgrade = false;
+	if(!activation.any())
+	{
+		hasUpgrade = true;
+	}
+
+	if( maskToCheck.any() )
+	{
+		if(maskToCheck.testForAny( conflicting ))
+		{
+			hasUpgrade = false;
+		}
+		else if(activation.any())
+		{
+			if(requiresAllActivationUpgrades())
+				hasUpgrade = maskToCheck.testForAll( activation );
+			else
+				hasUpgrade = maskToCheck.testForAny( activation );
+		}
+	}
+
+	if (hasUpgrade || checkStartsActive())
+	{
+		m_giveSelfUpgrade = true;
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	}
+	else {
+		m_giveSelfUpgrade = false;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -94,11 +134,55 @@ FireOCLAfterWeaponCooldownUpdate::~FireOCLAfterWeaponCooldownUpdate( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation( )
+{
+	// Very simple; just need to flag the Object as having the player upgrade, and the WeaponSet chooser
+	// will do the work of picking the right one from ini.  This comment is as long as the code. Update: not anymore ;)
+
+	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+	else if( UpgradeStatus == 1 )
+	{
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+
+	// We stop here since we only get whether the Upgrade is Active
+}
+
+//-------------------------------------------------------------------------------------------------
 UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 {
+	if(m_giveSelfUpgrade)
+	{
+		giveSelfUpgrade();
+		m_giveSelfUpgrade = FALSE;
+		//return UPDATE_SLEEP_FOREVER;
+	}
+
 	const FireOCLAfterWeaponCooldownUpdateModuleData* data = getFireOCLAfterWeaponCooldownUpdateModuleData();
-	UpgradeMaskType activation, conflicting;
-	getUpgradeActivationMasks( activation, conflicting );
+	//UpgradeMaskType activation, conflicting;
+	//getUpgradeActivationMasks( activation, conflicting );
 	Bool validThisFrame = true;
 	Bool validToFireOCL = true;
 	Object *obj = getObject();
@@ -121,11 +205,12 @@ UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 		validThisFrame = false;
 	}
 
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
-	UpgradeMaskType maskToCheck = playerMask;
-	maskToCheck.set( objectMask );
-	if( validThisFrame && !testUpgradeConditions( maskToCheck ) )
+	//UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	//UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	//UpgradeMaskType maskToCheck = playerMask;
+	//maskToCheck.set( objectMask );
+	// IamInnocent - changed the condition to Upgrade Implementation
+	if( validThisFrame && !m_hasExecuted ) //!testUpgradeConditions( maskToCheck ) )
 	{
 		//Can't use this period if this object doesn't have any of the upgrades
 		validThisFrame = false;
@@ -135,8 +220,10 @@ UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 	UnsignedInt now = TheGameLogic->getFrame();
 	if( validThisFrame )
 	{
-		if( weapon->getLastShotFrame() == now - 1 )
+		//if( weapon->getLastShotFrame() == now - 1 )
+		if( m_weaponFired )
 		{
+			m_checkFrame = weapon->getPossibleNextShotFrame();
 			m_consecutiveShots++;
 			if( m_consecutiveShots == 1 )
 			{
@@ -145,9 +232,10 @@ UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 				m_startFrame = now;
 			}
 		}
-		else if( weapon->getPossibleNextShotFrame() < now )
+		else if( m_checkFrame && m_checkFrame < now ) //weapon->getPossibleNextShotFrame() < now )
 		{
 			//Means we could have shot but didn't!
+			m_checkFrame = 0;
 
 			if( data->m_minShotsRequired <= m_consecutiveShots )
 			{
@@ -174,7 +262,19 @@ UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 		resetStats();
 	}
 
-	return UPDATE_SLEEP_NONE;
+	m_weaponFired = FALSE;
+
+	// IamInnocent - Made Sleepy
+	return m_checkFrame && m_checkFrame > now ? UPDATE_SLEEP(m_checkFrame + 1 - now) : UPDATE_SLEEP_FOREVER;
+	//return UPDATE_SLEEP_NONE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void FireOCLAfterWeaponCooldownUpdate::refreshUpdateMod(Bool weaponFired)
+{
+	if(weaponFired)
+		m_weaponFired = TRUE;
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -182,6 +282,7 @@ void FireOCLAfterWeaponCooldownUpdate::resetStats()
 {
 	m_consecutiveShots = 0;
 	m_startFrame = 0;
+	m_checkFrame = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -243,6 +344,16 @@ void FireOCLAfterWeaponCooldownUpdate::xfer( Xfer *xfer )
 
 	// start frame
 	xfer->xferUnsignedInt( &m_startFrame );
+
+	// check time
+	xfer->xferUnsignedInt( &m_checkFrame );
+
+	// has executed
+	xfer->xferBool( &m_hasExecuted );
+
+	// give self upgrade
+	xfer->xferBool( &m_giveSelfUpgrade );
+
 
 }
 

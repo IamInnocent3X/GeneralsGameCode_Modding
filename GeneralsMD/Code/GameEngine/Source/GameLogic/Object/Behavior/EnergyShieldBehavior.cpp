@@ -71,7 +71,7 @@ EnergyShieldBehaviorModuleData::EnergyShieldBehaviorModuleData()
 {
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, nullptr, offsetof(EnergyShieldBehaviorModuleData, m_initiallyActive) },
+		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(EnergyShieldBehaviorModuleData, m_initiallyActive) },
 
 		{ "ShieldRechargeDelay",		INI::parseDurationUnsignedInt,	nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeDelay) },
 		{ "ShieldRechargeRate",		INI::parseDurationUnsignedInt,	nullptr,		offsetof(EnergyShieldBehaviorModuleData, m_shieldRechargeRate) },
@@ -112,9 +112,9 @@ EnergyShieldBehavior::EnergyShieldBehavior( Thing *thing, const ModuleData* modu
 
 	m_body = body;
 
-	const EnergyShieldBehaviorModuleData *d = getEnergyShieldBehaviorModuleData();
+	//const EnergyShieldBehaviorModuleData *d = getEnergyShieldBehaviorModuleData();
 
-	if (d->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

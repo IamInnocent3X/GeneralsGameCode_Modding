@@ -99,7 +99,7 @@ CountermeasuresBehavior::CountermeasuresBehavior( Thing *thing, const ModuleData
 	m_checkDelay = 0;
 	m_dockObjectID = INVALID_ID;
 
-	if (data->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

@@ -30,6 +30,7 @@
 
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
+#include "Common/Player.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/RadiusDecalBehavior.h"
 #include "GameLogic/Object.h"
@@ -40,7 +41,7 @@
 
 RadiusDecalBehaviorModuleData::RadiusDecalBehaviorModuleData()
 {
-	m_initiallyActive = false;
+	//m_initiallyActive = false;
 	m_decalRadius = 0.0f;
 }
 //-------------------------------------------------------------------------------------------------
@@ -50,7 +51,7 @@ RadiusDecalBehaviorModuleData::RadiusDecalBehaviorModuleData()
 	UpdateModuleData::buildFieldParse(p);
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "StartsActive",	INI::parseBool, nullptr, offsetof(RadiusDecalBehaviorModuleData, m_initiallyActive) },
+		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(RadiusDecalBehaviorModuleData, m_initiallyActive) },
 		{ "RadiusDecal",						RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( RadiusDecalBehaviorModuleData, m_decalTemplate) },
 		{ "Radius",			INI::parseReal,									nullptr,	offsetof( RadiusDecalBehaviorModuleData, m_decalRadius) },
 		{ 0, 0, 0, 0 }
@@ -66,7 +67,7 @@ RadiusDecalBehaviorModuleData::RadiusDecalBehaviorModuleData()
 //-------------------------------------------------------------------------------------------------
 RadiusDecalBehavior::RadiusDecalBehavior( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
 {
-	if (getRadiusDecalBehaviorModuleData()->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

@@ -692,6 +692,8 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "UseAccurateSphereToRectCollision",	INI::parseBool, nullptr, offsetof(GlobalData, m_useAccurateSphereToRectCollision) },
 	{ "CheckBoxBoundariesForDistCalc",	INI::parseBool, nullptr, offsetof(GlobalData, m_checkBoxBoundariesForDistCalc) },
 
+	{ "EnableDoubleClick",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableDoubleClick) },
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, nullptr, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1280,6 +1282,7 @@ GlobalData::GlobalData()
 	m_dynamicTargeting = FALSE;
 	m_useAccurateSphereToRectCollision = FALSE;
 	m_checkBoxBoundariesForDistCalc = FALSE;
+	m_enableDoubleClick = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

@@ -34,6 +34,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 class Player;
 
@@ -79,7 +80,7 @@ public:
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class SpyVisionUpdate : public UpdateModule, public UpgradeMux
+class SpyVisionUpdate : public UpdateModule, public CreateModuleInterface, public UpgradeMux
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( SpyVisionUpdate, "SpyVisionUpdate" )
@@ -100,6 +101,12 @@ public:
 
 	// BehaviorModule
 	virtual UpgradeModuleInterface* getUpgrade() { return this; }
+
+	// CreateModuleInterface
+	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 
 	//Update module
 	virtual UpdateSleepTime update( void );
@@ -136,6 +143,12 @@ protected:
 	{
 		return getSpyVisionUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
+
+	virtual Bool checkStartsActive() const
+	{
+		return getSpyVisionUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return false; }
@@ -148,4 +161,5 @@ private:
 	UnsignedInt m_disabledUntilFrame; //sabotaged, emp'd, etc.
 	Bool m_currentlyActive;
 	Bool m_resetTimersNextUpdate;
+	Bool m_giveSelfUpgrade;
 };

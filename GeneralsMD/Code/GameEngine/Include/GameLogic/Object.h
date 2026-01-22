@@ -418,6 +418,8 @@ public:
 
 	void forceRefreshUpgradeStatus();
 
+	void giveFreeUpgrade(NameKeyType nameKeyTag) { m_giveFreeUpgradesVector.push_back(nameKeyTag); }
+
 	// Useful for status bits that can be set by the scripting system
 	inline Bool testScriptStatusBit(ObjectScriptStatusBit b) const { return BitIsSet(m_scriptStatus, b); }
 	void setScriptStatus( ObjectScriptStatusBit bit, Bool set = true );
@@ -853,6 +855,8 @@ public:
 	void doSlowDeathRefreshUpdate();
 	void doOverWaterUpdate_unConst() const;
 	void doOverWaterUpdate();
+	void doFireWeaponUpdate_unConst(Bool weaponFired) const;
+	void doFireWeaponUpdate(Bool weaponFired);
 
 	void setIsMobMember(Bool set) { m_isMobMember = set; }
 	void setMobUpdateRefreshed(Bool set) { m_mobJustUpdated = set; }
@@ -900,6 +904,7 @@ public:
 	Bool registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, Bool doRemove, AsciiString commandSetName = AsciiString::TheEmptyString );
 	Bool getDoRemoveCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName = AsciiString::TheEmptyString ) const;
 	//void removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandSetName = AsciiString::TheEmptyString );
+	
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
@@ -1179,11 +1184,14 @@ private:
 	typedef std::hash_map< AsciiString, CommandModifiersVec, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CommandSetModifiersMap;
 	CommandSetModifiersMap						m_controlBarModifiersApplied;						///< By applying Modifers, we can alter the one command shown in a command set
 
+	std::vector<NameKeyType>					m_giveFreeUpgradesVector;							///< Module Tags of Upgrades that is granted Initially
+
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;
 	Bool											m_mobJustUpdated;
 
 	Bool											m_noDemoTrapUpdate;
+	Bool											m_noFireWeaponUpdate;
 	Bool											m_noFloatUpdate;
 	Bool											m_noSlavedBehavior;
 	Bool											m_noSlaverBehavior;

@@ -60,7 +60,7 @@ const Real END_MIDPOINT_RATIO = 0.65f;
 FireWeaponWhenDeadBehavior::FireWeaponWhenDeadBehavior( Thing *thing, const ModuleData* moduleData ) :
 	BehaviorModule( thing, moduleData )
 {
-	if (getFireWeaponWhenDeadBehaviorModuleData()->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

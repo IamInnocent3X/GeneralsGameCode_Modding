@@ -38,6 +38,7 @@
 #include "Common/INI.h"
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
+#include "Common/Player.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/FXList.h"
 #include "GameClient/InGameUI.h"
@@ -129,7 +130,7 @@ FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, cons
 		m_continuousWeaponRubble->reloadAmmo( obj );
 	}
 
-	if (d->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

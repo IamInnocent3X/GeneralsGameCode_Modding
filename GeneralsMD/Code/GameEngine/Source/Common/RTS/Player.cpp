@@ -3122,21 +3122,20 @@ Bool Player::canBuildMoreOfType( const ThingTemplate *whatToBuild ) const
 	if (!maxSimultaneousOfTypeDifficultyAI.empty() && getPlayerType() == PLAYER_COMPUTER) {
 		for( MaxSimultaneousOfTypeDifficulty::const_iterator it  = maxSimultaneousOfTypeDifficultyAI.begin(); it != maxSimultaneousOfTypeDifficultyAI.end(); it++)
 		{
-			if((it->first) == difficulty)
+			if((it->first) == difficulty) {
 				maxSimultaneousOfType = it->second;
+				break;
+			}
 		}
-		/*MaxSimultaneousOfTypeDifficulty::const_iterator it = maxSimultaneousOfTypeDifficultyAI.find(difficulty);
-		if( it != maxSimultaneousOfTypeDifficultyAI.end())
-		{
-			maxSimultaneousOfType = it->second;
-		}*/
 	}
 	else
 	{
 		for( MaxSimultaneousOfTypeDifficulty::const_iterator it  = maxSimultaneousOfTypeDifficulty.begin(); it != maxSimultaneousOfTypeDifficulty.end(); it++)
 		{
-			if((it->first) == difficulty)
+			if((it->first) == difficulty) {
 				maxSimultaneousOfType = it->second;
+				break;
+			}
 		}
 	}
   }
