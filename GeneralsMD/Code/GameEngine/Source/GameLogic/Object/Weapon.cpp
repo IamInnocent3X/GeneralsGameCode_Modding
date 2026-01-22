@@ -2821,7 +2821,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						shockWaveVector.z = centerVector.z / damageInfo.in.m_shockWaveAmount;*/
 				}
 
-				// Guard against zero vector. Make vector stright up if that is the case
+				// Guard against zero vector. Make vector straight up if that is the case
 				if (fabs(shockWaveVector.x) < WWMATH_EPSILON &&
 						fabs(shockWaveVector.y) < WWMATH_EPSILON &&
 						fabs(shockWaveVector.z) < WWMATH_EPSILON)
@@ -2829,7 +2829,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					shockWaveVector.z = 1.0f;
 				}
 
-				// Populate the damge information with the shockwave information
+				// Populate the damage information with the shockwave information
 				damageInfo.in.m_shockWaveVector = shockWaveVector;
 				damageInfo.in.m_shockWaveRadius = m_shockWaveRadius;
 				damageInfo.in.m_shockWaveTaperOff = m_shockWaveTaperOff;
@@ -3379,7 +3379,7 @@ void WeaponStore::resetWeaponTemplates( void )
 //-------------------------------------------------------------------------------------------------
 void WeaponStore::reset()
 {
-	// clean up any overriddes.
+	// clean up any overrides.
 	for (size_t i = 0; i < m_weaponTemplateVector.size(); ++i)
 	{
 		WeaponTemplate *wt = m_weaponTemplateVector[i];
@@ -4653,7 +4653,7 @@ Bool Weapon::privateFireWeapon(
 
 	bool usedDisarm = FALSE;
 
-	//Special case damge type overrides requiring special handling.
+	//Special case damage type overrides requiring special handling.
 	switch( m_template->getDamageType() )
 	{
 		case DAMAGE_DEPLOY:
@@ -6052,7 +6052,7 @@ void Weapon::xfer( Xfer *xfer )
 	// when can fire again
 	xfer->xferUnsignedInt( &m_whenWeCanFireAgain );
 
-	// wehn pre attack finished
+	// when pre attack finished
 	xfer->xferUnsignedInt( &m_whenPreAttackFinished );
 
 	// when next preAttack FX

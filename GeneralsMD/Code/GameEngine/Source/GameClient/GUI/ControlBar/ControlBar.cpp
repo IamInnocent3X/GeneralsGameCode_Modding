@@ -1169,7 +1169,7 @@ ControlBar::ControlBar( void )
 	m_generalButtonHighlight = nullptr;
 	m_genArrow = nullptr;
 	m_sideSelectAnimateDown = FALSE;
-	updateCommanBarBorderColors(GAME_COLOR_UNDEFINED,GAME_COLOR_UNDEFINED,GAME_COLOR_UNDEFINED,GAME_COLOR_UNDEFINED);
+	updateCommandBarBorderColors(GAME_COLOR_UNDEFINED,GAME_COLOR_UNDEFINED,GAME_COLOR_UNDEFINED,GAME_COLOR_UNDEFINED);
 
 	m_radarAttackGlowOn = FALSE;
 	m_remainingRadarAttackGlowFrames = 0;
@@ -1258,7 +1258,7 @@ ControlBar::~ControlBar( void )
 void ControlBarPopupDescriptionUpdateFunc( WindowLayout *layout, void *param );
 
 //-------------------------------------------------------------------------------------------------
-/** Initialzie the control bar, this is our interface to the context sinsitive GUI */
+/** Initialize the control bar, this is our interface to the context sinsitive GUI */
 //-------------------------------------------------------------------------------------------------
 void ControlBar::init( void )
 {
@@ -1274,7 +1274,7 @@ void ControlBar::init( void )
 	// post process step after loading the command buttons and command sets
 	postProcessCommands();
 
-	// Init the scheme manager, this will call it's won INI init funciton.
+	// Init the scheme manager, this will call its own INI init function.
 	m_controlBarSchemeManager = NEW ControlBarSchemeManager;
 	m_controlBarSchemeManager->init();
 
@@ -1515,7 +1515,7 @@ void ControlBar::init( void )
 void ControlBar::reset( void )
 {
 	hideSpecialPowerShortcut();
-	// do not destroy the rally drawable, it will get destroyed with everythign else during a reset
+	// do not destroy the rally drawable, it will get destroyed with everything else during a reset
 	m_rallyPointDrawableID = INVALID_DRAWABLE_ID;
 	if(m_radarAttackGlowWindow)
 		m_radarAttackGlowWindow->winEnable(TRUE);
@@ -1863,7 +1863,7 @@ void ControlBar::onDrawableDeselected( Drawable *draw )
 
 	//
 	// always when becoming unselected should we remove any build placement icons because if
-	// we have some and are in the middle of a build process, it must obiously be over now
+	// we have some and are in the middle of a build process, it must obviously be over now
 	// because we are no longer selecting the dozer or worker
 	//
 	TheInGameUI->placeBuildAvailable( nullptr, nullptr );
@@ -3146,7 +3146,7 @@ void ControlBar::updateBuildUpClockColor( Color color)
 
 
 
-void ControlBar::updateCommanBarBorderColors(Color build, Color action, Color upgrade, Color system )
+void ControlBar::updateCommandBarBorderColors(Color build, Color action, Color upgrade, Color system )
 {
 	m_commandButtonBorderBuildColor = build;
 	m_commandButtonBorderActionColor = action;

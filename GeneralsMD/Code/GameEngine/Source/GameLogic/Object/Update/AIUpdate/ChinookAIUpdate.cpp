@@ -1472,8 +1472,8 @@ void ChinookAIUpdate::privateAttackObject(Object* victim, Int maxShotsToFire, Co
 	if( contain != nullptr )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
-		// too, but only if this is a direct command.  (As opposed to a passive aquire)
-		if ((cmdSource == CMD_FROM_PLAYER || cmdSource == CMD_FROM_SCRIPT))
+		// too, but only if this is a direct command.  (As opposed to a passive acquire)
+		if( (cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT) )
 		{
 			//if ( contain->isPassengerAllowedToFire() )//moved to below
 			{
@@ -1586,8 +1586,8 @@ void ChinookAIUpdate::privateForceAttackObject( Object *victim, Int maxShotsToFi
 	if( contain != nullptr )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
-		// too, but only if this is a direct command.  (As opposed to a passive aquire)
-		if ((cmdSource == CMD_FROM_PLAYER || cmdSource == CMD_FROM_SCRIPT))
+		// too, but only if this is a direct command.  (As opposed to a passive acquire)
+		if( (cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT) )
 		{
 			//      if ( contain->isPassengerAllowedToFire() )
 			{
@@ -1687,8 +1687,8 @@ void ChinookAIUpdate::privateAttackPosition( const Coord3D *pos, Int maxShotsToF
 	if( contain != nullptr )
 	{
 		// As an extension of the normal attack, I may want to tell my passengers to attack
-		// too, but only if this is a direct command.  (As opposed to a passive aquire)
-		if ((cmdSource == CMD_FROM_PLAYER || cmdSource == CMD_FROM_SCRIPT))
+		// too, but only if this is a direct command.  (As opposed to a passive acquire)
+		if( (cmdSource == CMD_FROM_PLAYER  ||  cmdSource == CMD_FROM_SCRIPT) )
 		{
 
 			//if ( contain->isPassengerAllowedToFire() )

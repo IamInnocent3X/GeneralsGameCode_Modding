@@ -1637,7 +1637,7 @@ void Player::preTeamDestroy( const Team *team )
 }
 
 //-------------------------------------------------------------------------------------------------
-/// a structuer was just created, but is under construction
+/// a structure was just created, but is under construction
 //-------------------------------------------------------------------------------------------------
 void Player::onStructureCreated( Object *builder, Object *structure )
 {
@@ -3495,7 +3495,7 @@ Bool Player::okToPlayRadarEdgeSound( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-/** The parameter object has just aquired a radar */
+/** The parameter object has just acquired a radar */
 //-------------------------------------------------------------------------------------------------
 void Player::addRadar( Bool disableProof )
 {

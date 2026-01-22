@@ -1860,9 +1860,16 @@ void AIPlayer::buildUpgrade(const AsciiString &upgrade)
 // ------------------------------------------------------------------------------------------------
 void AIPlayer::buildBySupplies(Int minimumCash, const AsciiString& thingName)
 {
-	Object *bestSupplyWarehouse = findSupplyCenter(minimumCash);
 	const ThingTemplate* tTemplate = TheThingFactory->findTemplate(thingName);
-	if (tTemplate && !tTemplate->isKindOf(KINDOF_CASH_GENERATOR)) {
+	if (!tTemplate)
+	{
+		DEBUG_CRASH(("Template %s should exist; check ini and script files.", thingName.str()));
+		return;
+	}
+
+	Object *bestSupplyWarehouse = findSupplyCenter(minimumCash);
+
+	if (!tTemplate->isKindOf(KINDOF_CASH_GENERATOR)) {
 		// Build by the current warehouse.
 		Object *curWarehouse = TheGameLogic->findObjectByID(m_curWarehouseID);
 		if (curWarehouse) {
@@ -1871,7 +1878,7 @@ void AIPlayer::buildBySupplies(Int minimumCash, const AsciiString& thingName)
 	}
 
 
-	if (bestSupplyWarehouse && tTemplate) {
+	if (bestSupplyWarehouse) {
 		Coord3D location;
 		location = *bestSupplyWarehouse->getPosition();
 		// offset back towards the base.
@@ -2291,7 +2298,7 @@ void AIPlayer::repairStructure(ObjectID structure)
 	Object *structureObj = TheGameLogic->findObjectByID(structure);
 	if (structureObj==nullptr) return;
 	if (structureObj->getBodyModule()==nullptr) return;
-	// If the structure is not noticably damaged, don't bother.
+	// If the structure is not noticeably damaged, don't bother.
 	BodyDamageType structureState = structureObj->getBodyModule()->getDamageState();
 	if (structureState==BODY_PRISTINE) {
 		return;

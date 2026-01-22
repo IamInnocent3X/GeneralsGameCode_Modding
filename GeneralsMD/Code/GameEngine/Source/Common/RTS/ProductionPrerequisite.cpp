@@ -248,7 +248,7 @@ Bool ProductionPrerequisite::isSatisfied(const Player *player) const
 //-------------------------------------------------------------------------------------------------
 /** Add a unit prerequisite, if 'orWithPrevious' is set then this unit is said
 	* to be an alternate prereq to the previously added unit, otherwise this becomes
-	* a new 'block' and is required in ADDDITION to other entries.
+	* a new 'block' and is required in ADDITION to other entries.
 	* Return FALSE if no space left to add unit */
 //-------------------------------------------------------------------------------------------------
 void ProductionPrerequisite::addUnitPrereq( AsciiString unit, Bool orUnitWithPrevious )
@@ -277,7 +277,7 @@ void ProductionPrerequisite::addUnitNegPrereq( AsciiString unit, Bool orUnitWith
 //-------------------------------------------------------------------------------------------------
 /** Add a unit prerequisite, if 'orWithPrevious' is set then this unit is said
 	* to be an alternate prereq to the previously added unit, otherwise this becomes
-	* a new 'block' and is required in ADDDITION to other entries.
+	* a new 'block' and is required in ADDITION to other entries.
 	* Return FALSE if no space left to add unit */
 //-------------------------------------------------------------------------------------------------
 void ProductionPrerequisite::addUnitPrereq( const std::vector<AsciiString>& units )

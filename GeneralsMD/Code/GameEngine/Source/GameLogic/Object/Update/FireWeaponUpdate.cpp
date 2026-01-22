@@ -128,7 +128,7 @@ Bool FireWeaponUpdate::isOkayToFire()
 	if(!m_weapon->getTemplate()->passRequirements(me))
 		return FALSE;
 
-	// Firing a real weapon surpresses this module
+	// Firing a real weapon suppresses this module
 	if( data->m_exclusiveWeaponDelay > 0  &&  ( TheGameLogic->getFrame() < (me->getLastShotFiredFrame() + data->m_exclusiveWeaponDelay) ) )
 		return FALSE;
 

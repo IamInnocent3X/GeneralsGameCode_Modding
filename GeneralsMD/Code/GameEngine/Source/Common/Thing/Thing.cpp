@@ -420,7 +420,7 @@ void Thing::convertBonePosToWorldPos(const Coord3D* bonePos, const Matrix3D* bon
 void Thing::transformPoint( const Coord3D *in, Coord3D *out )
 {
 
-	// santiy
+	// sanity
 	if( in == nullptr || out == nullptr )
 		return;
 

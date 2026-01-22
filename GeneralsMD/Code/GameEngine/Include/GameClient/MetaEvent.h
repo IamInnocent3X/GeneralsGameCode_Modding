@@ -370,7 +370,7 @@ public:
 	// Next fields are added for Key mapping Dialog
 	AsciiString					m_commandModifierKey;
 	ClickState					m_commandModifierClickToTrigger;
-	MappableKeyCategories		m_category;				///< This is the catagory the key falls under
+	MappableKeyCategories		m_category;				///< This is the category the key falls under
 	UnicodeString						m_description;		///< The description string for the keys
 	UnicodeString						m_displayName;		///< The display name of our command
 };

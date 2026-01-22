@@ -336,7 +336,7 @@ public:
 	virtual Bool getFrontCrushed() const { return false; }
 	virtual Bool getBackCrushed() const { return false; }
 
-	virtual void setInitialHealth(Int initialPercent)  {  } ///< Sets the inital load health %.
+	virtual void setInitialHealth(Int initialPercent)  {  } ///< Sets the initial load health %.
 	virtual void setMaxHealth(Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH )  {  } ///< Sets the max health.
 	virtual void setSubdualCap( Real subdualCap )  {  } 
 	virtual void setSubdualHealRate( UnsignedInt subdualHealRate )  {  } 
