@@ -34,6 +34,7 @@
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 //-------------------------------------------------------------------------------------------------
 class GenerateMinefieldBehaviorModuleData : public BehaviorModuleData
@@ -66,6 +67,7 @@ private:
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 class GenerateMinefieldBehavior : public UpdateModule,
+																	public CreateModuleInterface,
 																	public DieModuleInterface,
 																	public UpgradeMux
 {
@@ -89,7 +91,18 @@ public:
 	// DamageModuleInterface
 	virtual void onDie( const DamageInfo *damageInfo );
 
+	// CreateModuleInterface
+	virtual CreateModuleInterface* getCreate() { return this; }
+	virtual void onBuildComplete();
+	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+
+	// UpdateModule
+	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
 	void setMinefieldTarget(const Coord3D* pos);
+
+	Bool canUpgrade() const;
 
 protected:
 
@@ -121,12 +134,19 @@ protected:
 		return getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const
+	{
+		return getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
+	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 private:
 	Coord3D							m_target;
 	Bool								m_hasTarget;
 	Bool								m_generated;
 	Bool								m_upgraded;
+	Bool								m_giveSelfUpgrade;
 	std::list<ObjectID> m_mineList;
 
 	const Coord3D* getMinefieldTarget() const;

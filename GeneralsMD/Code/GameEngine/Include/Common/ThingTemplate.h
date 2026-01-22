@@ -263,18 +263,6 @@ static const char* AmmoPipsStyleNames[] =
 static_assert(ARRAY_SIZE(AmmoPipsStyleNames) == AMMO_PIPS_NUM_TYPES + 1, "Incorrect array size");
 #endif  // end DEFINE_AMMO_PIPS_STYLE_NAMES
 
-#ifdef DEFINE_DIFFICULTY_NAMES
-static const char *TheDifficultyNames[] = 
-{
-	"EASY",			
-	"NORMAL",			
-	"HARD",					
-
-	NULL
-};
-static_assert(ARRAY_SIZE(TheDifficultyNames) == DIFFICULTY_COUNT + 1, "Incorrect array size");
-#endif // end DEFINE_DIFFICULTY_NAMES
-
 // ---
 //enum ProgressBarStyle CPP_11(: Int)
 //{

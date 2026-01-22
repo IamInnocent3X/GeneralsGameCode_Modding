@@ -49,7 +49,8 @@ class BattlePlanBonusBehaviorModuleData : public BehaviorModuleData
 public:
 	UpgradeMuxData				m_upgradeMuxData;
 
-	Bool						m_initiallyActive;   // Apply upgrade immediately
+	// IamInnocent 21/01/2026 - Unified StartsActive onto UpgradeMuxData
+	//Bool						m_initiallyActive;   // Apply upgrade immediately
 	Bool						m_overrideGlobal;    // Do not apply effects from global BattlePlan bonus
 	Bool						m_shouldParalyze;    // Paralyze this unit when applying BattlePlans
 
@@ -172,7 +173,12 @@ protected:
 		return getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	inline Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
+	virtual Bool checkStartsActive() const
+	{
+		return getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
+	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
 

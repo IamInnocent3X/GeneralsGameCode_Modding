@@ -49,7 +49,6 @@ class AutoHealBehaviorModuleData : public UpdateModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
 	Bool									m_singleBurst;
 	Real										m_healingAmount;
 	UnsignedInt						m_healingDelay;
@@ -67,7 +66,6 @@ public:
 
 	AutoHealBehaviorModuleData()
 	{
-		m_initiallyActive = false;
 		m_singleBurst = FALSE;
 		m_healingAmount = 0.0f;
 		m_healingDelay = UINT_MAX;
@@ -88,7 +86,7 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
+			//{ "StartsActive",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
 			{ "SingleBurst",	INI::parseBool, NULL, offsetof( AutoHealBehaviorModuleData, m_singleBurst ) },
 			{ "HealingAmount",		INI::parseReal,												NULL, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
 			{ "HealingDelay",			INI::parseDurationUnsignedInt,				NULL, offsetof( AutoHealBehaviorModuleData, m_healingDelay ) },
@@ -181,6 +179,11 @@ protected:
 	virtual Bool requiresAllActivationUpgrades() const
 	{
 		return getAutoHealBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
+	}
+
+	virtual Bool checkStartsActive() const
+	{
+		return getAutoHealBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }

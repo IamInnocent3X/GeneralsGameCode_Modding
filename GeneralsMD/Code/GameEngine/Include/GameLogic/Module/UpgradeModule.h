@@ -39,7 +39,7 @@
 #include "GameLogic/Module/BehaviorModule.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
-class Player;
+//class Player;
 
 //-------------------------------------------------------------------------------------------------
 /** OBJECT DIE MODULE base class */
@@ -60,8 +60,11 @@ public:
 	virtual void forceRefreshUpgrade() = 0;
 	virtual void forceRefreshMyUpgrade() = 0;
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const = 0;
+	virtual void friend_giveSelfUpgrade() = 0;
 
 };
+
+typedef std::vector<std::pair<Int, Bool>> DifficultyBoolVec;
 
 //-------------------------------------------------------------------------------------------------
 class UpgradeMuxData	// does NOT inherit from ModuleData.
@@ -77,41 +80,28 @@ public:
 	mutable UpgradeMaskType						m_activationMask;				///< Activation only supports a single name currently
 	mutable UpgradeMaskType						m_conflictingMask;			///< Conflicts support multiple listings, and they are an OR
 	mutable Bool											m_requiresAllTriggers;
+	mutable Bool											m_initiallyActive;
+	mutable Bool											m_startsActiveForAI;
+	mutable Bool											m_parsedStartsActiveForAI;
+	mutable Bool											m_startsActiveChecksForConflictsWith;
+	mutable DifficultyBoolVec								m_initiallyActiveDifficulty;
+	mutable DifficultyBoolVec								m_startsActiveDifficultyForAI;
+	
 
-	UpgradeMuxData()
-	{
-		m_triggerUpgradeNames.clear();
-		m_activationUpgradeNames.clear();
-		m_conflictingUpgradeNames.clear();
-		m_removalUpgradeNames.clear();
-		m_grantUpgradeNames.clear();
+	UpgradeMuxData();
+	static const FieldParse* getFieldParse();
 
-		m_fxListUpgrade = NULL;
-		m_activationMask.clear();
-		m_conflictingMask.clear();
-		m_requiresAllTriggers = false;
-	}
+	static void parseStartsActiveForAI(INI *ini, void *instance, void *store, const void *userData);
+	static void parseDifficultyBoolVector(INI *ini, void *instance, void *store, const void *userData);
 
-	static const FieldParse* getFieldParse()
-	{
-		static const FieldParse dataFieldParse[] =
-		{
-			{ "TriggeredBy",		INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_activationUpgradeNames ) },
-			{ "ConflictsWith",	INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_conflictingUpgradeNames ) },
-			{ "RemovesUpgrades",INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_removalUpgradeNames ) },
-			{ "GrantUpgrades",		INI::parseAsciiStringVector, NULL, offsetof( UpgradeMuxData, m_grantUpgradeNames ) },
-			{ "FXListUpgrade",	INI::parseFXList, NULL, offsetof( UpgradeMuxData, m_fxListUpgrade ) },
-			{ "RequiresAllTriggers", INI::parseBool, NULL, offsetof( UpgradeMuxData, m_requiresAllTriggers ) },
-			{ 0, 0, 0, 0 }
-		};
-		return dataFieldParse;
-	}
 	Bool requiresAllActivationUpgrades() const;
 	void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const;	///< The first time someone looks at my mask, I'll figure it out.
 	void performUpgradeFX(Object* obj) const;
 	void muxDataProcessUpgradeRemoval(Object* obj) const;
 	void muxDataProcessUpgradeGrant(Object* obj) const;
 	Bool isTriggeredBy(const std::string &upgrade) const;
+
+	Bool muxDataCheckStartsActive(const Object* obj) const;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -132,6 +122,7 @@ public:
 	virtual Int wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted ) const;
 	virtual Bool resetUpgrade( UpgradeMaskType keyMask );
 	virtual Bool testUpgradeConditions( UpgradeMaskType keyMask ) const;
+	virtual void friend_giveSelfUpgrade() { giveSelfUpgrade(); }
 
 protected:
 
@@ -144,6 +135,7 @@ protected:
 	virtual Bool hasUpgradeRefresh() = 0;
 	virtual void processUpgradeRemoval() = 0;
 	virtual void processUpgradeGrant() = 0;
+	virtual Bool checkStartsActive() const = 0;
 	
 	void giveSelfUpgrade();
 
@@ -158,6 +150,7 @@ protected:
 
 private:
 	Bool m_upgradeExecuted;				///< Upgrade only executes once
+	mutable Bool m_freeUpgrade;			///< Upgrade is initially active
 
 };
 
@@ -229,6 +222,11 @@ protected:
 		getUpgradeModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual Bool checkStartsActive() const
+	{
+		return getUpgradeModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 };
-inline UpgradeModule::UpgradeModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData ) { }
-inline UpgradeModule::~UpgradeModule() { }
+//inline UpgradeModule::UpgradeModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData ) { }
+//inline UpgradeModule::~UpgradeModule() { }

@@ -38,7 +38,6 @@ class RadiusDecalBehaviorModuleData : public UpdateModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool						m_initiallyActive;
 
 	RadiusDecalTemplate	        m_decalTemplate;
 	Real					    m_decalRadius;
@@ -114,7 +113,12 @@ protected:
 		return getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	inline Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
+	virtual Bool checkStartsActive() const
+	{
+		return getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
+	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return false; }

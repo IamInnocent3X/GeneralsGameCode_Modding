@@ -41,13 +41,13 @@ class FireWeaponWhenDeadBehaviorModuleData : public BehaviorModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
+	//Bool									m_initiallyActive;
 	DieMuxData						m_dieMuxData;
 	const WeaponTemplate* m_deathWeapon;						///< fire this weapon when we are damaged
 
 	FireWeaponWhenDeadBehaviorModuleData()
 	{
-		m_initiallyActive = false;
+		//m_initiallyActive = false;
 		m_deathWeapon = NULL;
 	}
 
@@ -55,7 +55,7 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, NULL, offsetof( FireWeaponWhenDeadBehaviorModuleData, m_initiallyActive ) },
+			//{ "StartsActive",	INI::parseBool, NULL, offsetof( FireWeaponWhenDeadBehaviorModuleData, m_initiallyActive ) },
 			{ "DeathWeapon", INI::parseWeaponTemplate,	NULL, offsetof( FireWeaponWhenDeadBehaviorModuleData, m_deathWeapon ) },
 			{ 0, 0, 0, 0 }
 		};
@@ -124,6 +124,11 @@ protected:
 	virtual Bool requiresAllActivationUpgrades() const
 	{
 		return getFireWeaponWhenDeadBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
+	}
+
+	virtual Bool checkStartsActive() const
+	{
+		return getFireWeaponWhenDeadBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }

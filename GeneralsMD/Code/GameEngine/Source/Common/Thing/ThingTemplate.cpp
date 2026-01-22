@@ -1092,11 +1092,12 @@ void ThingTemplate::parseMaxSimultaneous(INI *ini, void *instance, void *store, 
   }
 }
 
+//-------------------------------------------------------------------------------------------------
 void ThingTemplate::parseMaxSimultaneousOfTypeDifficulty( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
 {
 	MaxSimultaneousOfTypeDifficultyPair up;
-	Bool ParseNext;
-	Int count;
+	Bool ParseNext = FALSE;
+	Int count = 0;
 
 	MaxSimultaneousOfTypeDifficulty* s = (MaxSimultaneousOfTypeDifficulty*)store;
 	s->clear();
@@ -1114,12 +1115,18 @@ void ThingTemplate::parseMaxSimultaneousOfTypeDifficulty( INI* ini, void * /*ins
 			up.first = (GameDifficulty)INI::scanIndexList(token, TheDifficultyNames);
 			ParseNext = TRUE;
 		}
-		else 
+		else
 		{
 			INI::parseUnsignedInt(ini, NULL, &up.second, NULL);
 			s->push_back(up);
 			ParseNext = FALSE;
 		}
+		count++;
+	}
+	if(ParseNext)
+	{
+		DEBUG_CRASH(("Invalid configuration of Difficulty to Amount of MaxSimultaneousOfType"));
+		throw INI_INVALID_DATA;
 	}
 }
 

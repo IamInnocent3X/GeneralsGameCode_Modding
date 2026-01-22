@@ -49,7 +49,7 @@ DelayedUpgradeBehavior::DelayedUpgradeBehavior(Thing* thing, const ModuleData* m
 	m_triggerFrame = 0;
 	//m_shotsLeft = 0;
 
-	if (getDelayedUpgradeBehaviorModuleData()->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 	}

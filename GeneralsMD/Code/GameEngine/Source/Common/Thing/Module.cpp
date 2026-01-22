@@ -30,6 +30,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#define DEFINE_DIFFICULTY_NAMES					// for DifficultyNames[]
+
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
 #include "Common/Thing.h"
@@ -234,6 +236,94 @@ void DrawableModule::loadPostProcess( void )
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
+// ------------------------------------------------------------------------------------------------
+UpgradeMuxData::UpgradeMuxData(void)
+{
+	m_triggerUpgradeNames.clear();
+	m_activationUpgradeNames.clear();
+	m_conflictingUpgradeNames.clear();
+	m_removalUpgradeNames.clear();
+	m_grantUpgradeNames.clear();
+	m_initiallyActiveDifficulty.clear();
+	m_startsActiveDifficultyForAI.clear();
+
+	m_fxListUpgrade = nullptr;
+	m_activationMask.clear();
+	m_conflictingMask.clear();
+	m_requiresAllTriggers = false;
+	m_initiallyActive = false;
+	m_startsActiveForAI = false;
+	m_parsedStartsActiveForAI = false;
+	m_startsActiveChecksForConflictsWith = false;
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ const FieldParse* UpgradeMuxData::getFieldParse()
+{
+	static const FieldParse dataFieldParse[] =
+	{
+		{ "TriggeredBy",		INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_activationUpgradeNames ) },
+		{ "ConflictsWith",	INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_conflictingUpgradeNames ) },
+		{ "RemovesUpgrades",INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_removalUpgradeNames ) },
+		{ "GrantUpgrades",		INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_grantUpgradeNames ) },
+		{ "FXListUpgrade",	INI::parseFXList, nullptr, offsetof( UpgradeMuxData, m_fxListUpgrade ) },
+		{ "RequiresAllTriggers", INI::parseBool, nullptr, offsetof( UpgradeMuxData, m_requiresAllTriggers ) },
+		{ "StartsActive",	INI::parseBool, nullptr, offsetof( UpgradeMuxData, m_initiallyActive ) },
+		{ "StartsActiveForAI", parseStartsActiveForAI, nullptr, offsetof( UpgradeMuxData, m_startsActiveForAI ) },
+		{ "StartsActiveChecksForConflictsWith", INI::parseBool, nullptr, offsetof( UpgradeMuxData, m_startsActiveChecksForConflictsWith ) },
+		{ "StartsActiveDifficultySettings",	parseDifficultyBoolVector, nullptr, offsetof( UpgradeMuxData, m_initiallyActiveDifficulty ) },
+		{ "StartsActiveDifficultySettingsForAI", parseDifficultyBoolVector, nullptr, offsetof( UpgradeMuxData, m_startsActiveDifficultyForAI ) },
+		{ 0, 0, 0, 0 }
+	};
+	return dataFieldParse;
+}
+
+//-------------------------------------------------------------------------------------------------
+void UpgradeMuxData::parseStartsActiveForAI( INI* ini, void *instance, void *store, const void* /*userData*/ )
+{
+	UpgradeMuxData* self = (UpgradeMuxData*)instance;
+	self->m_parsedStartsActiveForAI = TRUE;
+
+	*(Bool*)store = INI::scanBool(ini->getNextToken());
+}
+
+//-------------------------------------------------------------------------------------------------
+void UpgradeMuxData::parseDifficultyBoolVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::pair<Int, Bool> data;
+	Bool ParseNext = FALSE;
+	Int count = 0;
+
+	DifficultyBoolVec* s = (DifficultyBoolVec*)store;
+	s->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		count++;
+		if(count > DIFFICULTY_COUNT * 2)
+		{
+			DEBUG_CRASH(("Invalid configuration of Difficulty to Amount of DifficultyBoolVector"));
+			throw INI_INVALID_DATA;
+		}
+		if(!ParseNext)
+		{
+			data.first = INI::scanIndexList(token, TheDifficultyNames);
+			ParseNext = TRUE;
+		}
+		else 
+		{
+			data.second = INI::scanBool(token);
+			s->push_back(data);
+			ParseNext = FALSE;
+		}
+	}
+	if(ParseNext)
+	{
+		DEBUG_CRASH(("Invalid configuration of Difficulty to Amount of DifficultyBoolVector"));
+		throw INI_INVALID_DATA;
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 void UpgradeMuxData::performUpgradeFX(Object* obj) const
 {
@@ -381,4 +471,52 @@ void UpgradeMuxData::getUpgradeActivationMasks(UpgradeMaskType& activation, Upgr
 	}
 	activation = m_activationMask;
 	conflicting = m_conflictingMask;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool UpgradeMuxData::muxDataCheckStartsActive(const Object* obj) const
+{
+	//Sanity
+	if(!obj)
+		return FALSE;
+
+	if(m_startsActiveChecksForConflictsWith)
+	{
+		UpgradeMaskType playerMask;
+		playerMask.clear();
+		playerMask = obj->getControllingPlayer() ? obj->getControllingPlayer()->getCompletedUpgradeMask() : playerMask;
+		UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+		UpgradeMaskType maskToCheck = playerMask;
+		maskToCheck.set( objectMask );
+
+		UpgradeMaskType activation, conflicting;
+		getUpgradeActivationMasks(activation, conflicting);
+		if(maskToCheck.testForAny( conflicting ))
+			return FALSE;
+	}
+
+	Bool startsActive = m_initiallyActive;
+	DifficultyBoolVec checkVec = m_initiallyActiveDifficulty;
+	GameDifficulty difficulty;
+
+	if(obj->getControllingPlayer())
+	{
+		if(obj->getControllingPlayer()->getPlayerType() == PLAYER_COMPUTER)
+		{
+			startsActive = m_parsedStartsActiveForAI ? m_startsActiveForAI : startsActive;
+			checkVec = !m_startsActiveDifficultyForAI.empty() ? m_startsActiveDifficultyForAI : checkVec;
+		}
+
+		difficulty = obj->getControllingPlayer()->getPlayerDifficulty();
+		for( DifficultyBoolVec::const_iterator it = checkVec.begin(); it != checkVec.end();	++it)
+		{
+			if (it->first == difficulty)
+			{
+				startsActive = it->second;
+				break;
+			}
+		}
+	}
+
+	return startsActive;
 }

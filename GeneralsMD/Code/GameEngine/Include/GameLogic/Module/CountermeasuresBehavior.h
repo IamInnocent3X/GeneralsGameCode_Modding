@@ -63,7 +63,6 @@ public:
 	KindOfMaskType 					m_reactingKindofs;
 	Bool							m_noAirborne;
 	Bool							m_considerGround;
-	Bool							m_initiallyActive;
 	Bool							m_continuousVolleyInAir;
 	std::vector<AsciiString>		m_reloadNearObjects;
 	Real							m_dockDistance;
@@ -90,7 +89,6 @@ public:
 		m_continuousVolleyInAir = TRUE;
 		m_noAirborne = FALSE;
 		m_considerGround = FALSE;
-		m_initiallyActive = FALSE;
 		m_dockDistance = 100.0f;
 		m_detonateDistance = 0;
 	}
@@ -111,8 +109,7 @@ public:
 			{ "MustReloadAtAirfield",		INI::parseBool,									NULL, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadAtAirfield ) },
 			{ "MissileDecoyDelay",			INI::parseDurationUnsignedInt,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_missileDecoyFrames ) },
 			{ "ReactionLaunchLatency",	INI::parseDurationUnsignedInt,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_countermeasureReactionFrames ) },
-			
-			{ "StartsActive",	INI::parseBool, 				NULL, offsetof( CountermeasuresBehaviorModuleData, m_initiallyActive ) },
+
 			{ "VolleyLimitPerMissile",	INI::parseInt,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_volleyLimit ) },
 			{ "ContinuousVolleyInAir",	INI::parseBool,					NULL, offsetof( CountermeasuresBehaviorModuleData, m_continuousVolleyInAir ) },
 			{ "ReactingToKindOfs",	KindOfMaskType::parseFromINI,	NULL, offsetof( CountermeasuresBehaviorModuleData, m_reactingKindofs ) },
@@ -222,6 +219,11 @@ protected:
 	virtual Bool requiresAllActivationUpgrades() const
 	{
 		return getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
+	}
+
+	virtual Bool checkStartsActive() const
+	{
+		return getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }

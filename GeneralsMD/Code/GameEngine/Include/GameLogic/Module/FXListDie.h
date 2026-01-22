@@ -47,13 +47,13 @@ public:
 	const FXList					*m_defaultDeathFX;								///< default fx to make
 	UpgradeMuxData				m_upgradeMuxData;
 	Bool									m_orientToObject;
-	Bool									m_initiallyActive;
+	//Bool									m_initiallyActive;
 
 	FXListDieModuleData()
 	{
 		m_defaultDeathFX = NULL;
 		m_orientToObject = TRUE;
-		m_initiallyActive = TRUE; //Patch 1.02 -- Craptacular HACK -- should default to FALSE but only ONE case sets it false out of 847!
+		m_upgradeMuxData.m_initiallyActive = TRUE; //Patch 1.02 -- Craptacular HACK -- should default to FALSE but only ONE case sets it false out of 847!
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -62,7 +62,7 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",					INI::parseBool, NULL, offsetof( FXListDieModuleData, m_initiallyActive ) },
+			//{ "StartsActive",					INI::parseBool, NULL, offsetof( FXListDieModuleData, m_initiallyActive ) },
 			{ "DeathFX",							INI::parseFXList,		NULL, offsetof( FXListDieModuleData, m_defaultDeathFX ) },
 			{ "OrientToObject",				INI::parseBool,		NULL, offsetof( FXListDieModuleData, m_orientToObject ) },
 			{ 0, 0, 0, 0 }
@@ -125,6 +125,11 @@ protected:
 	virtual Bool requiresAllActivationUpgrades() const
 	{
 		return getFXListDieModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
+	}
+
+	virtual Bool checkStartsActive() const
+	{
+		return getFXListDieModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }

@@ -48,6 +48,16 @@ SpyVisionUpdate::SpyVisionUpdate( Thing *thing, const ModuleData* moduleData ) :
 	m_currentlyActive = FALSE;
 	m_resetTimersNextUpdate = FALSE;
 	m_disabledUntilFrame = 0;
+
+	if (checkStartsActive())
+	{
+		m_giveSelfUpgrade = true;
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	}
+	else {
+		m_giveSelfUpgrade = false;
+	}
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -132,6 +142,17 @@ void SpyVisionUpdate::onDisabledEdge( Bool nowDisabled )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime SpyVisionUpdate::update( void )
 {
+	// IamInnocent - Added Self Granting Upgrades
+	Object *self = getObject();
+	if( self->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) || self->testStatus(OBJECT_STATUS_SOLD) || self->isEffectivelyDead() )
+		return UPDATE_SLEEP_FOREVER;
+
+	if (m_giveSelfUpgrade)
+	{
+		giveSelfUpgrade();
+		m_giveSelfUpgrade = FALSE;
+	}
+
 	const SpyVisionUpdateModuleData *data = getSpyVisionUpdateModuleData();
 	UnsignedInt now = TheGameLogic->getFrame();
 
@@ -225,6 +246,12 @@ void SpyVisionUpdate::upgradeImplementation()
 }
 
 // ------------------------------------------------------------------------------------------------
+void SpyVisionUpdate::onBuildComplete()
+{
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
+// ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
 void SpyVisionUpdate::crc( Xfer *xfer )
@@ -255,6 +282,8 @@ void SpyVisionUpdate::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_deactivateFrame );
 
 	xfer->xferBool( &m_currentlyActive );
+
+	xfer->xferBool( &m_giveSelfUpgrade );
 
 	if( version >= 2 )
 	{

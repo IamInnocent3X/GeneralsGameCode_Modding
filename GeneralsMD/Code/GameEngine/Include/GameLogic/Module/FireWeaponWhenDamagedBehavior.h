@@ -41,7 +41,6 @@ class FireWeaponWhenDamagedBehaviorModuleData : public UpdateModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
 	DamageTypeFlags				m_damageTypes;
 	Real									m_damageAmount;
 	const WeaponTemplate* m_reactionWeaponPristine;///< fire these weapons only when damage is received
@@ -72,7 +71,6 @@ public:
 
 	FireWeaponWhenDamagedBehaviorModuleData()
 	{
-		m_initiallyActive = false;
 		m_reactionWeaponPristine = NULL;
 		m_reactionWeaponDamaged = NULL;
 		m_reactionWeaponReallyDamaged = NULL;
@@ -107,7 +105,6 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, NULL, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_initiallyActive ) },
 			{ "ReactionWeaponPristine", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponPristine) },
 			{ "ReactionWeaponDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponDamaged) },
 			{ "ReactionWeaponReallyDamaged", INI::parseWeaponTemplate, NULL, offsetof(FireWeaponWhenDamagedBehaviorModuleData,	m_reactionWeaponReallyDamaged) },
@@ -210,6 +207,11 @@ protected:
 	virtual Bool requiresAllActivationUpgrades() const
 	{
 		return getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
+	}
+
+	virtual Bool checkStartsActive() const
+	{
+		return getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }

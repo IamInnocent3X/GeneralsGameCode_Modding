@@ -81,9 +81,11 @@
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/FireOCLAfterWeaponCooldownUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/LifeTimeUpdate.h"
 //#include "GameLogic/Module/EquipCrateCollide.h"
+#include "GameLogic/Module/GenerateMinefieldBehavior.h"
 #include "GameLogic/Module/HijackerUpdate.h"
 //#include "GameLogic/Module/MobMemberSlavedUpdate.h"
 #include "GameLogic/Module/ObjectHelper.h"
@@ -370,6 +372,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_singleUseCommandUsed = false;
 
+	m_giveFreeUpgradesVector.clear();
+
 	// assign unique object id
 	setID( TheGameLogic->allocateObjectID() );
 
@@ -618,6 +622,25 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	for (BehaviorModule** b = m_behaviors; *b; ++b)
 	{
 		(*b)->onObjectCreated();
+
+		// Give Free Upgrade for Upgrade Modules is initiated after they are registered onto the Module
+		if(!m_giveFreeUpgradesVector.empty() && (*b)->getUpgrade())
+		{
+			for(std::vector<NameKeyType>::const_iterator it = m_giveFreeUpgradesVector.begin(); it != m_giveFreeUpgradesVector.end();)
+			{
+				if((*b)->getModuleTagNameKey() == (*it))
+				{
+					UpgradeModuleInterface* upgrade = (*b)->getUpgrade();
+					if( upgrade && !upgrade->isAlreadyUpgraded() )
+					{
+						upgrade->friend_giveSelfUpgrade();
+					}
+					it = m_giveFreeUpgradesVector.erase( it );
+					break;
+				}
+				++it;
+			}
+		}
 	}
 
 	m_numTriggerAreasActive = 0;
@@ -669,6 +692,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_hasBattleBusSlowDeathBehavior = FALSE; // True for checking over once
 	m_checkSlowDeathBehavior = TRUE; // True for checking over once
 	m_noFloatUpdate = FALSE;
+	m_noFireWeaponUpdate = FALSE;
 	m_noDemoTrapUpdate = FALSE;
 	m_turretNeedPositioning = FALSE;
 
@@ -682,6 +706,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_currentTargetCoords.zero();
 	m_controlBarModifiersApplied.clear();
+
+	// Vector should've been fully cleared, but for Sanity's sake.
+	m_giveFreeUpgradesVector.clear();
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -865,6 +892,8 @@ Object::~Object()
 	m_delayedOrderHelper = NULL;
 	m_disabledHelper = NULL;
 	m_levitationHelper = NULL;
+
+	m_giveFreeUpgradesVector.clear();
 
 	// reset id to zero so we never mistaken grab "dead" objects
 	m_id = INVALID_ID;
@@ -6159,12 +6188,27 @@ void Object::doObjectUpgradeChecks()
 		getStealth()->refreshUpdate();
 	}
 
-	static NameKeyType key_StealthDetectorUpdate = NAMEKEY( "StealthDetectorUpdate" );
-	StealthDetectorUpdate *SDupdate = (StealthDetectorUpdate*)findUpdateModule( key_StealthDetectorUpdate );
-	if( SDupdate )
+	static NameKeyType generateMinefield = NAMEKEY( "GenerateMinefieldBehavior" );
+	static NameKeyType stealthDetector = NAMEKEY( "StealthDetectorUpdate" );
+
+	for (BehaviorModule** b = m_behaviors; *b; ++b)
 	{
-		SDupdate->doUpgrade();
+		if ((*b)->getModuleNameKey() == generateMinefield)
+		{
+			GenerateMinefieldBehavior *generateMinefieldMod = (GenerateMinefieldBehavior*) *b;
+			if (generateMinefieldMod && generateMinefieldMod->canUpgrade()) {
+				generateMinefieldMod->refreshUpdate();
+			}
+		}
+		if ((*b)->getModuleNameKey() == stealthDetector)
+		{
+			StealthDetectorUpdate *SDupdate = (StealthDetectorUpdate*) *b;
+			if( SDupdate ) {
+				SDupdate->doUpgrade();
+			}
+		}
 	}
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -9124,6 +9168,8 @@ void Object::doAssaultTransportHealthUpdate()
 void Object::doWeaponSetUpdate()
 {
 	// IamInnocent - This triggers everytime Statuses Changed, which is very common.
+	doFireWeaponUpdate(FALSE);
+
 	// No demo trap update, we stop here
 	if(m_noDemoTrapUpdate)
 		return;
@@ -9391,6 +9437,36 @@ void Object::doOverWaterUpdate()
 		if( pui )
 		{
 			pui->friend_refreshUpdate();
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doFireWeaponUpdate_unConst(Bool weaponFired) const
+{
+	TheGameLogic->findObjectByID(getID())->doFireWeaponUpdate(weaponFired);
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doFireWeaponUpdate(Bool weaponFired)
+{
+	// IamInnocent - This triggers everytime Weapons are Fired, which is very common.
+	if(m_noFireWeaponUpdate)
+		return;
+
+	// Fire Weapon Update
+	m_noFireWeaponUpdate = TRUE;
+
+	static NameKeyType key_FireOCLCooldownUpdate = NAMEKEY("FireOCLAfterWeaponCooldownUpdate");
+	for (BehaviorModule** b = m_behaviors; *b; ++b)
+	{
+		if ((*b)->getModuleNameKey() == key_FireOCLCooldownUpdate)
+		{
+			FireOCLAfterWeaponCooldownUpdate *fireOCLMod = (FireOCLAfterWeaponCooldownUpdate*) *b;
+			if (fireOCLMod->isActive()) {
+				fireOCLMod->refreshUpdateMod(weaponFired);
+			}
+			m_noFireWeaponUpdate = FALSE;
 		}
 	}
 }

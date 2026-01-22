@@ -4966,6 +4966,9 @@ Bool Weapon::privateFireWeapon(
 			}
 
 		}
+
+		sourceObj->doFireWeaponUpdate_unConst(TRUE);
+
 	}
 
 	return reloaded;

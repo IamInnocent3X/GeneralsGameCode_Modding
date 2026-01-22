@@ -108,6 +108,18 @@ static const char *const ScienceAvailabilityNames[] =
 static_assert(ARRAY_SIZE(ScienceAvailabilityNames) == SCIENCE_AVAILABILITY_COUNT + 1, "Incorrect array size");
 #endif	// end DEFINE_SCIENCE_AVAILABILITY_NAMES
 
+#ifdef DEFINE_DIFFICULTY_NAMES
+static const char *TheDifficultyNames[] = 
+{
+	"EASY",			
+	"NORMAL",			
+	"HARD",					
+
+	nullptr
+};
+static_assert(ARRAY_SIZE(TheDifficultyNames) == DIFFICULTY_COUNT + 1, "Incorrect array size");
+#endif // end DEFINE_DIFFICULTY_NAMES
+
 static const Int NUM_HOTKEY_SQUADS = 10;
 
 enum { NO_HOTKEY_SQUAD = -1 };

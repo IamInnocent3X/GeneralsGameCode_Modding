@@ -111,6 +111,17 @@ GenerateMinefieldBehavior::GenerateMinefieldBehavior( Thing *thing, const Module
 	m_hasTarget = false;
 	m_upgraded = false;
 	m_mineList.clear();
+
+	if (checkStartsActive())
+	{
+		m_giveSelfUpgrade = true;
+		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+	}
+	else {
+		m_giveSelfUpgrade = false;
+		setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+	}
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -454,6 +465,17 @@ void GenerateMinefieldBehavior::placeMines()
 
 UpdateSleepTime GenerateMinefieldBehavior::update()
 {
+	// IamInnocent - Added Self Granting Upgrades
+	Object *self = getObject();
+	if( self->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) || self->testStatus(OBJECT_STATUS_SOLD) || self->isEffectivelyDead() )
+		return UPDATE_SLEEP_FOREVER;
+
+	if( m_giveSelfUpgrade )
+	{
+		giveSelfUpgrade();
+		m_giveSelfUpgrade = FALSE;
+	}
+
 	// Test to see if we need to replace the current mines with upgraded ones
 	if (!m_upgraded && getGenerateMinefieldBehaviorModuleData()->m_upgradable)
 	{
@@ -492,10 +514,36 @@ UpdateSleepTime GenerateMinefieldBehavior::update()
 			}
 		}
 
-		return UPDATE_SLEEP_NONE;
+		// IamInnocent - Made Sleepy
+		//return UPDATE_SLEEP_NONE;
 	}
 
 	return UPDATE_SLEEP_FOREVER;
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void GenerateMinefieldBehavior::onBuildComplete()
+{
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+Bool GenerateMinefieldBehavior::canUpgrade() const
+{
+	if(getGenerateMinefieldBehaviorModuleData()->m_upgradable)
+	{
+		if(!m_upgraded)
+			return TRUE;
+		else
+			return FALSE;
+	}
+
+	if(!isUpgradeActive())
+		return TRUE;
+	else
+		return FALSE;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -535,6 +583,7 @@ void GenerateMinefieldBehavior::xfer( Xfer *xfer )
 	xfer->xferBool( &m_generated );
 	xfer->xferBool( &m_hasTarget );
 	xfer->xferBool( &m_upgraded );
+	xfer->xferBool( &m_giveSelfUpgrade );
 
 	xfer->xferCoord3D( &m_target );
 
