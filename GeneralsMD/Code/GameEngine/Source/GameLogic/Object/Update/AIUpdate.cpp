@@ -89,9 +89,10 @@ AIUpdateModuleData::AIUpdateModuleData()
 
     m_forbidPlayerCommands = FALSE;
 	m_turretsLinked = FALSE;
-	m_attackAngle = 0.0f;
+	//m_attackAngle = 0.0f;
 	m_useAttackAngle = FALSE;
-	m_attackAngleMirrored = FALSE;
+	m_attackAngles.clear();
+	//m_attackAngleMirrored = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -125,6 +126,13 @@ const LocomotorTemplateVector* AIUpdateModuleData::findLocomotorTemplateVector(L
 }
 
 //-------------------------------------------------------------------------------------------------
+struct AttackAngleData
+{
+	Real m_minAngle;
+	Real m_maxAngle;
+};
+
+//-------------------------------------------------------------------------------------------------
 /*static*/ void AIUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 {
   ModuleData::buildFieldParse(p);
@@ -148,7 +156,7 @@ const LocomotorTemplateVector* AIUpdateModuleData::findLocomotorTemplateVector(L
 #endif
 		{ "ForbidPlayerCommands",				INI::parseBool,										NULL, offsetof(AIUpdateModuleData, m_forbidPlayerCommands) },
 		{ "TurretsLinked",							INI::parseBool,										NULL, offsetof(AIUpdateModuleData, m_turretsLinked) },
-		{ "PreferredAttackAngle",				AIUpdateModuleData::parseAttackAngle,					NULL, offsetof(AIUpdateModuleData, m_attackAngle) },
+		{ "PreferredAttackAngle",				AIUpdateModuleData::parseAttackAngle,					NULL, NULL },
 		{ 0, 0, 0, 0 }
 	};
   p.add(dataFieldParse);
@@ -159,25 +167,64 @@ const LocomotorTemplateVector* AIUpdateModuleData::findLocomotorTemplateVector(L
 {
 	AIUpdateModuleData* self = (AIUpdateModuleData*)instance;
 
-	const char* token = ini->getNextToken();
+	//const char* token = ini->getNextToken();
 
-	// Disable if None (not really needed actually)
-	if (stricmp(token, "None") == 0) {
-		// self->m_useAttackAngle = FALSE;
-		return;
-	}
+	//// Disable if None (not really needed actually)
+	//if (stricmp(token, "None") == 0) {
+	//	// self->m_useAttackAngle = FALSE;
+	//	return;
+	//}
 
-	// Parse Angle and store in m_attackAngle
+	static const char* MIN_LABEL = "Min";
+	static const char* MAX_LABEL = "Max";
+
 	const Real RADS_PER_DEGREE = PI / 180.0f;
-	*(Real*)store = INI::scanReal(token) * RADS_PER_DEGREE;
 
-	self->m_useAttackAngle = TRUE;
+	const char* token = ini->getNextTokenOrNull(ini->getSepsColon());
 
-	// Check for Mirrored keyword
-	token = ini->getNextTokenOrNull();
-	if (token != NULL && stricmp(token, "MIRRORED") == 0) {
-		self->m_attackAngleMirrored = TRUE;
+	AttackAngleData angles;
+
+	if (stricmp(token, MIN_LABEL) == 0)
+	{
+		// Two entry min/max
+		angles.m_minAngle = normalizeAngle2PI(INI::scanReal(ini->getNextToken(ini->getSepsColon())) * RADS_PER_DEGREE);
+		token = ini->getNextTokenOrNull(ini->getSepsColon());
+		if (stricmp(token, MAX_LABEL) != 0)
+		{
+			// 2nd entry missing
+			angles.m_maxAngle = 2*PI;  // 180
+		}
+		else
+			angles.m_maxAngle = normalizeAngle2PI(INI::scanReal(ini->getNextToken(ini->getSepsColon())) * RADS_PER_DEGREE);
 	}
+	else if (stricmp(token, MAX_LABEL) == 0)  //1st entry missing
+	{
+		angles.m_maxAngle = normalizeAngle2PI(INI::scanReal(ini->getNextToken(ini->getSepsColon())) * RADS_PER_DEGREE);
+		angles.m_minAngle = 0;
+	}
+	
+	self->m_useAttackAngle = TRUE;
+	self->m_attackAngles.push_back(angles);
+
+
+	//// Parse Angle and store in m_attackAngle
+	//const Real RADS_PER_DEGREE = PI / 180.0f;
+	//*(Real*)store = INI::scanReal(token) * RADS_PER_DEGREE;
+
+	//self->m_useAttackAngle = TRUE;
+
+	//// Check for Mirrored keyword
+	//token = ini->getNextTokenOrNull();
+	//if (token != NULL && stricmp(token, "MIRRORED") == 0) {
+	//	self->m_attackAngleMirrored = TRUE;
+	//}
+
+	//DEBUG
+	//DEBUG_LOG((">>> AttackAngles:"));
+	//for (AttackAngleData d : self->m_attackAngles) {
+	//	DEBUG_LOG((">>>   Min: %f,  Max: %f", d.m_minAngle*180.0/PI, d.m_maxAngle*180.0/PI));
+	//}
+	
 }
 
 
@@ -2768,7 +2815,7 @@ Bool AIUpdateInterface::isAircraftThatAdjustsDestination(void) const
 		return FALSE;	// No loco, so we aren't moving.
 	}
 
-	if (m_curLocomotor->getAppearance() == LOCO_HOVER)
+	if (m_curLocomotor->getAppearance() == LOCO_HOVER && getObject()->isUsingAirborneLocomotor())
 	{
 		return TRUE;	// Hover adjusts.
 	}
@@ -5088,6 +5135,72 @@ setTmpValue(now);
 	return newVictim;
 }
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Bool AIUpdateInterface::friend_isAttackAngleValid(Real relAngle) const
+{
+	const AIUpdateModuleData* data = getAIUpdateModuleData();
+	if (data->m_attackAngles.size() <= 0)
+		return false;
+
+	relAngle = normalizeAngle2PI(relAngle);
+
+	for (AttackAngleData angles : data->m_attackAngles) {
+		Real minAngle = angles.m_minAngle;
+		Real maxAngle = angles.m_maxAngle;
+		Real curAngle = relAngle;
+
+		if (minAngle > maxAngle) {
+			maxAngle += TWO_PI;
+			curAngle += TWO_PI;
+		}
+
+		if (minAngle <= curAngle && maxAngle >= curAngle)
+			return true;
+		
+	}
+	return false;
+}
+
+Real AIUpdateInterface::friend_getClosestAttackAngle(Real relAngle) const
+{
+	const AIUpdateModuleData* data = getAIUpdateModuleData();
+	if (data->m_attackAngles.size() <= 0)
+		return relAngle;
+
+	relAngle = normalizeAngle2PI(relAngle);
+	Real bestAttackAngle = relAngle;
+	Real bestDiff = INFINITY;
+
+	for (AttackAngleData angles : data->m_attackAngles) {
+		Real minAngle = angles.m_minAngle;
+		Real maxAngle = angles.m_maxAngle;
+		Real curAngle = relAngle;
+
+		if (minAngle > maxAngle) {
+			maxAngle += TWO_PI;
+			curAngle += TWO_PI;
+		}
+		Real diff = fabs(stdAngleDiffMod(maxAngle, curAngle));
+		//DEBUG_LOG((">>> getClosestAttackAngle relAngle = %f, Angle = %f, diff = %f", curAngle*180/PI, maxAngle * 180.0/PI, diff * 180.0 / PI));
+		if (diff < bestDiff) {
+			bestDiff = diff;
+			bestAttackAngle = maxAngle;
+		}
+		diff = fabs(stdAngleDiffMod(minAngle, curAngle));
+		//DEBUG_LOG((">>> getClosestAttackAngle relAngle = %f, Angle = %f, diff = %f", curAngle * 180 / PI, minAngle * 180.0 / PI, diff * 180.0 / PI));
+		if (diff < bestDiff) {
+			bestDiff = diff;
+			bestAttackAngle = minAngle;
+		}
+	}
+
+	DEBUG_ASSERTLOG(bestDiff <= INFINITY, (">> getClosestAttackAngle: failed to find proper attack angle"));
+
+	//DEBUG_LOG((">>> BestAngle = %f", WWMath::Normalize_Angle(bestAttackAngle) * 180.0 / PI));
+
+	return bestAttackAngle;
+}
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 Bool AIUpdateInterface::hasNationalism() const

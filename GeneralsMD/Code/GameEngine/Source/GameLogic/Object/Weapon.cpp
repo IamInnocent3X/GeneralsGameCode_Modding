@@ -3837,7 +3837,8 @@ void Weapon::rebuildScatterTargets(Bool recenter/* = false*/)
 			// When we reset, we want to keep the next shots around the target, which would be the
 			// indices in the center of the list.
 			UnsignedInt startIndex = REAL_TO_INT_FLOOR((m_template->getClipSize() - m_ammoInClip) / 2);
-			for (Int targetIndex = startIndex + m_ammoInClip - 1; targetIndex >= startIndex; targetIndex--) {
+			for (Int targetIndex = startIndex + m_ammoInClip - 1; targetIndex > startIndex; targetIndex--) {
+
 				m_scatterTargetsUnused.push_back(targetIndex);
 			}
 			// TODO: Crash
@@ -4823,7 +4824,6 @@ Bool Weapon::privateFireWeapon(
 				}
 			}
 
-
 			// If I have a set scatter pattern, I need to offset the target by a random pick from that pattern
 			if( victimObj )
 			{
@@ -4834,7 +4834,12 @@ Bool Weapon::privateFireWeapon(
 
 			Int targetIndex = 0;
 			if (m_template->isScatterTargetRandom()) {
+
 				Int randomPick = GameLogicRandomValue(0, m_scatterTargetsUnused.size() - 1);
+
+				//DEBUG_LOG((">>> SCATTER TARGETS m_scatterTargetsUnused.size() = %d, randomPick = %d, index[randomPick] = %d, numTargets = %d",
+				//	m_scatterTargetsUnused.size(), randomPick, m_scatterTargetsUnused[randomPick], m_template->getScatterTargetsVector().size()));
+
 				targetIndex = m_scatterTargetsUnused[randomPick];
 				// To erase from a vector, put the last on the one you used and pop the back.
 				m_scatterTargetsUnused[randomPick] = m_scatterTargetsUnused.back();
@@ -4843,6 +4848,10 @@ Bool Weapon::privateFireWeapon(
 			else {
 				//We actually pick from the back of the the order of targets
 				targetIndex = m_scatterTargetsUnused[m_scatterTargetsUnused.size() - 1];
+
+				//DEBUG_LOG((">>> SCATTER TARGETS m_scatterTargetsUnused.size() = %d, targetIndex = %d, numTargets = %d",
+				//	m_scatterTargetsUnused.size(), targetIndex, m_template->getScatterTargetsVector().size()));
+
 				m_scatterTargetsUnused.pop_back();
 			}
 

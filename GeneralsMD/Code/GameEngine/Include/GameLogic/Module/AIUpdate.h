@@ -56,6 +56,8 @@ class HackInternetAIInterface;
 class AssaultTransportAIInterface;
 class JetAIUpdate;
 
+struct AttackAngleData;
+
 enum AIStateType CPP_11(: Int);
 enum HordeActionType CPP_11(: Int);
 enum ObjectID CPP_11(: Int);
@@ -189,6 +191,8 @@ enum MoodActionAdjustment CPP_11(: Int)
 typedef std::vector< const LocomotorTemplate* > LocomotorTemplateVector;
 typedef std::map< LocomotorSetType, LocomotorTemplateVector, std::less<LocomotorSetType> > LocomotorTemplateMap;
 
+
+
 //-------------------------------------------------------------------------------------------------
 class AIUpdateModuleData : public UpdateModuleData
 {
@@ -202,9 +206,12 @@ public:
 #ifdef ALLOW_SURRENDER
  	UnsignedInt						m_surrenderDuration;					///< when we surrender, how long we stay surrendered.
 #endif
-	Real m_attackAngle;
+
+
+	//Real m_attackAngle;
 	Bool m_useAttackAngle;
-	Bool m_attackAngleMirrored;
+	//Bool m_attackAngleMirrored;
+	std::vector<AttackAngleData> m_attackAngles;
 
 
   AIUpdateModuleData();
@@ -337,9 +344,9 @@ public:
 
 	Bool areTurretsLinked() const { return getAIUpdateModuleData()->m_turretsLinked; }
 
-	Real getAttackAngle() const { return getAIUpdateModuleData()->m_attackAngle; }
+	//Real getAttackAngle() const { return getAIUpdateModuleData()->m_attackAngle; }
 	Bool useAttackAngle() const { return getAIUpdateModuleData()->m_useAttackAngle; }
-	Bool isAttackAngleMirrored() const { return getAIUpdateModuleData()->m_attackAngleMirrored; }
+	//Bool isAttackAngleMirrored() const { return getAIUpdateModuleData()->m_attackAngleMirrored; }
 
 	// this is present solely for some transports to override, so that they can land before 
 	// allowing people to exit...
@@ -677,6 +684,10 @@ public:
 	inline const Coord3D* friend_getRequestedDestination() const { return &m_requestedDestination; }
 	inline const Coord3D* friend_getRequestedDestination2() const { return &m_requestedDestination2; }
 #endif
+
+	// this is intended for use ONLY by AIAttackAimAtTargetState.
+	Bool friend_isAttackAngleValid(Real relAngle) const;
+	Real friend_getClosestAttackAngle(Real relAngle) const;
 
 	Object* getGoalObject() { return getStateMachine()->getGoalObject(); }	///< return the id of the current state of the machine
 	const Coord3D* getGoalPosition() const { return getStateMachine()->getGoalPosition(); }	///< return the id of the current state of the machine
