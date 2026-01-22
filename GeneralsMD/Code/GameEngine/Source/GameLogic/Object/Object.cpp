@@ -372,8 +372,6 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_singleUseCommandUsed = false;
 
-	m_giveFreeUpgradesVector.clear();
-
 	// assign unique object id
 	setID( TheGameLogic->allocateObjectID() );
 
@@ -623,23 +621,11 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	{
 		(*b)->onObjectCreated();
 
-		// Give Free Upgrade for Upgrade Modules is initiated after they are registered onto the Module
-		if(!m_giveFreeUpgradesVector.empty() && (*b)->getUpgrade())
+		UpgradeModuleInterface* upgrade = (*b)->getUpgrade();
+		if( upgrade && !upgrade->isAlreadyUpgraded() && upgrade->startsActive() )
 		{
-			for(std::vector<NameKeyType>::const_iterator it = m_giveFreeUpgradesVector.begin(); it != m_giveFreeUpgradesVector.end();)
-			{
-				if((*b)->getModuleTagNameKey() == (*it))
-				{
-					UpgradeModuleInterface* upgrade = (*b)->getUpgrade();
-					if( upgrade && !upgrade->isAlreadyUpgraded() )
-					{
-						upgrade->friend_giveSelfUpgrade();
-					}
-					it = m_giveFreeUpgradesVector.erase( it );
-					break;
-				}
-				++it;
-			}
+			// Give Free Upgrade for Upgrade Modules is initiated after they are registered onto the Module
+			upgrade->friend_giveSelfUpgrade();
 		}
 	}
 
@@ -706,9 +692,6 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_currentTargetCoords.zero();
 	m_controlBarModifiersApplied.clear();
-
-	// Vector should've been fully cleared, but for Sanity's sake.
-	m_giveFreeUpgradesVector.clear();
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -892,8 +875,6 @@ Object::~Object()
 	m_delayedOrderHelper = NULL;
 	m_disabledHelper = NULL;
 	m_levitationHelper = NULL;
-
-	m_giveFreeUpgradesVector.clear();
 
 	// reset id to zero so we never mistaken grab "dead" objects
 	m_id = INVALID_ID;

@@ -472,7 +472,8 @@ UpdateSleepTime GenerateMinefieldBehavior::update()
 
 	if( m_giveSelfUpgrade )
 	{
-		giveSelfUpgrade();
+		if(!isAlreadyUpgraded())
+			giveSelfUpgrade();
 		m_giveSelfUpgrade = FALSE;
 	}
 

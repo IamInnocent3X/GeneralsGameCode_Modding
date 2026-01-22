@@ -101,6 +101,7 @@ public:
 
 	// UpdateModule
 	virtual UpdateSleepTime update();
+	virtual void friend_giveSelfUpgrade() { }
 
 	// This should be active while disabled
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }

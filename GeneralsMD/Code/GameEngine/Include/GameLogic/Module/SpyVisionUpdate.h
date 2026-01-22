@@ -46,9 +46,11 @@ public:
 
 	Bool						m_needsUpgrade;
 	Bool						m_selfPowered;
+	Bool						m_spyOnRequiresAllTypes;
 	UnsignedInt			m_selfPoweredDuration;
 	UnsignedInt			m_selfPoweredInterval;
 	KindOfMaskType	m_spyOnKindof;
+	KindOfMaskType	m_spyOnForbiddenKindof;
 
 	SpyVisionUpdateModuleData()
 	{
@@ -58,6 +60,8 @@ public:
 		m_selfPoweredInterval = 0;
 		m_spyOnKindof = KINDOFMASK_NONE;
 		m_spyOnKindof.flip();
+		m_spyOnForbiddenKindof = KINDOFMASK_NONE;
+		m_spyOnRequiresAllTypes = false;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -69,6 +73,8 @@ public:
 			{ "SelfPoweredDuration",	INI::parseDurationUnsignedInt,	NULL, offsetof( SpyVisionUpdateModuleData, m_selfPoweredDuration ) },
 			{ "SelfPoweredInterval",	INI::parseDurationUnsignedInt,	NULL, offsetof( SpyVisionUpdateModuleData, m_selfPoweredInterval ) },
 			{ "SpyOnKindof",					KindOfMaskType::parseFromINI,		NULL, offsetof( SpyVisionUpdateModuleData, m_spyOnKindof ) },
+			{ "SpyOnForbiddenKindof",			KindOfMaskType::parseFromINI,		NULL, offsetof( SpyVisionUpdateModuleData, m_spyOnForbiddenKindof ) },
+			{ "SpyOnRequiresAllTypes",			INI::parseBool,						NULL, offsetof( SpyVisionUpdateModuleData, m_spyOnRequiresAllTypes ) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -110,6 +116,7 @@ public:
 
 	//Update module
 	virtual UpdateSleepTime update( void );
+	virtual void friend_giveSelfUpgrade() { }
 
 	void activateSpyVision( UnsignedInt duration );
 

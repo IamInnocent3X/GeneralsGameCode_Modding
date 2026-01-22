@@ -4390,7 +4390,9 @@ struct VisionSpiedStruct
 {
 	Bool setting;
 	KindOfMaskType whichUnits;
+	KindOfMaskType forbiddenUnits;
 	PlayerIndex byWhom;
+	Bool requiresAllTypes;
 };
 
 static void iterator_setUnitsVisionSpied( Object *obj, void * voidData)
@@ -4399,17 +4401,31 @@ static void iterator_setUnitsVisionSpied( Object *obj, void * voidData)
 
 	// I feel I have to disapprove of the naming of this gathering of cell functions.  It is called by death,
 	// alliance change, containment, spy change, and dynamic view range as well as partition cell change.
-	if( obj && obj->isAnyKindOf(data->whichUnits) )
-		obj->setVisionSpied(data->setting, data->byWhom);
+	if( obj )
+	{
+		Bool canSpy;
+		if(data->requiresAllTypes)
+			canSpy = obj->isKindOfMulti(data->whichUnits, KINDOFMASK_NONE);
+		else
+			canSpy = obj->isAnyKindOf(data->whichUnits);
+
+		if(canSpy && obj->isAnyKindOf(data->forbiddenUnits))
+			canSpy = FALSE;
+
+		if(canSpy)
+			obj->setVisionSpied(data->setting, data->byWhom);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
-void Player::setUnitsVisionSpied( Bool setting, KindOfMaskType whichUnits, PlayerIndex byWhom )
+void Player::setUnitsVisionSpied( Bool setting, KindOfMaskType whichUnits, KindOfMaskType forbiddenUnits, PlayerIndex byWhom, Bool requiresAllTypes )
 {
 	VisionSpiedStruct data;
 	data.setting = setting;
 	data.whichUnits = whichUnits;
+	data.forbiddenUnits = forbiddenUnits;
 	data.byWhom = byWhom;
+	data.requiresAllTypes = requiresAllTypes;
 	// Being spied is now a property of the unit, not us, since we can spy only a portion of the enemy.
 	iterateObjects( iterator_setUnitsVisionSpied, &data );
 }

@@ -85,9 +85,20 @@ FireOCLAfterWeaponCooldownUpdate::FireOCLAfterWeaponCooldownUpdate( Thing *thing
 {
 	m_valid = false;
 	m_weaponFired = false;
-	m_hasExecuted = false;
+	m_isActive = false;
 	resetStats();
+}
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+FireOCLAfterWeaponCooldownUpdate::~FireOCLAfterWeaponCooldownUpdate( void )
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool FireOCLAfterWeaponCooldownUpdate::checkStartsActive() const
+{
 	UpgradeMaskType objectMask = getObject()->getObjectCompletedUpgradeMask();
 	UpgradeMaskType playerMask = getObject()->getControllingPlayer()->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
@@ -96,41 +107,29 @@ FireOCLAfterWeaponCooldownUpdate::FireOCLAfterWeaponCooldownUpdate( Thing *thing
 	UpgradeMaskType activation, conflicting;
 	getUpgradeActivationMasks(activation, conflicting);
 
-	Bool hasUpgrade = false;
+	Bool startsActive = false;
 	if(!activation.any())
 	{
-		hasUpgrade = true;
+		startsActive = true;
 	}
 
 	if( maskToCheck.any() )
 	{
 		if(maskToCheck.testForAny( conflicting ))
 		{
-			hasUpgrade = false;
+			startsActive = false;
 		}
 		else if(activation.any())
 		{
 			if(requiresAllActivationUpgrades())
-				hasUpgrade = maskToCheck.testForAll( activation );
+				startsActive = maskToCheck.testForAll( activation );
 			else
-				hasUpgrade = maskToCheck.testForAny( activation );
+				startsActive = maskToCheck.testForAny( activation );
 		}
 	}
 
-	if (hasUpgrade || checkStartsActive())
-	{
-		m_giveSelfUpgrade = true;
-		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
-	}
-	else {
-		m_giveSelfUpgrade = false;
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-FireOCLAfterWeaponCooldownUpdate::~FireOCLAfterWeaponCooldownUpdate( void )
-{
+	startsActive = startsActive || getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	return startsActive;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -148,7 +147,7 @@ void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation( )
 	maskToCheck.set( objectMask );
 
 	//First make sure we have the right combination of upgrades
-	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_isActive);
 
 	// If there's no Upgrade Status, do Nothing;
 	if( UpgradeStatus == 0 )
@@ -158,11 +157,11 @@ void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation( )
 	else if( UpgradeStatus == 1 )
 	{
 		// Set to apply upgrade
-		m_hasExecuted = TRUE;
+		m_isActive = TRUE;
 	}
 	else if( UpgradeStatus == 2 )
 	{
-		m_hasExecuted = FALSE;
+		m_isActive = FALSE;
 		// Remove the Upgrade Execution Status so it is treated as activation again
 		setUpgradeExecuted(false);
 	}
@@ -173,13 +172,6 @@ void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation( )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 {
-	if(m_giveSelfUpgrade)
-	{
-		giveSelfUpgrade();
-		m_giveSelfUpgrade = FALSE;
-		//return UPDATE_SLEEP_FOREVER;
-	}
-
 	const FireOCLAfterWeaponCooldownUpdateModuleData* data = getFireOCLAfterWeaponCooldownUpdateModuleData();
 	//UpgradeMaskType activation, conflicting;
 	//getUpgradeActivationMasks( activation, conflicting );
@@ -210,7 +202,7 @@ UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
 	//UpgradeMaskType maskToCheck = playerMask;
 	//maskToCheck.set( objectMask );
 	// IamInnocent - changed the condition to Upgrade Implementation
-	if( validThisFrame && !m_hasExecuted ) //!testUpgradeConditions( maskToCheck ) )
+	if( validThisFrame && !m_isActive ) //!testUpgradeConditions( maskToCheck ) )
 	{
 		//Can't use this period if this object doesn't have any of the upgrades
 		validThisFrame = false;
@@ -348,11 +340,8 @@ void FireOCLAfterWeaponCooldownUpdate::xfer( Xfer *xfer )
 	// check time
 	xfer->xferUnsignedInt( &m_checkFrame );
 
-	// has executed
-	xfer->xferBool( &m_hasExecuted );
-
-	// give self upgrade
-	xfer->xferBool( &m_giveSelfUpgrade );
+	// is active
+	xfer->xferBool( &m_isActive );
 
 
 }

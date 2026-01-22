@@ -130,10 +130,10 @@ FireWeaponWhenDamagedBehavior::FireWeaponWhenDamagedBehavior( Thing *thing, cons
 		m_continuousWeaponRubble->reloadAmmo( obj );
 	}
 
-	if (checkStartsActive())
-	{
-		giveSelfUpgrade();
-	}
+	//if (checkStartsActive())
+	//{
+	//	giveSelfUpgrade();
+	//}
 
 	if (d->m_continuousDurationPristine > 0 )
 	{

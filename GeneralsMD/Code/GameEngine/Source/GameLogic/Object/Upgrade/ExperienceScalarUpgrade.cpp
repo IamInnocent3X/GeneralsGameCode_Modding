@@ -69,10 +69,6 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 ExperienceScalarUpgrade::ExperienceScalarUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
 	m_hasExecuted = FALSE;
-	if (checkStartsActive())
-	{
-		giveSelfUpgrade();
-	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -97,8 +93,6 @@ void ExperienceScalarUpgrade::upgradeImplementation( )
 
 	//First make sure we have the right combination of upgrades
 	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
-
-	DEBUG_LOG(("Doing Experience Scalar Upgrade."));
 
 	Real value, scalar;
 

@@ -114,10 +114,10 @@ EnergyShieldBehavior::EnergyShieldBehavior( Thing *thing, const ModuleData* modu
 
 	//const EnergyShieldBehaviorModuleData *d = getEnergyShieldBehaviorModuleData();
 
-	if (checkStartsActive())
-	{
-		giveSelfUpgrade();
-	}
+	//if (checkStartsActive())
+	//{
+	//	giveSelfUpgrade();
+	//}
 
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);  // We wake when we get attacked
 }

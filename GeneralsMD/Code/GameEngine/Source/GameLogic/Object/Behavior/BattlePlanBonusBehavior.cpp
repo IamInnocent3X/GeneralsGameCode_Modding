@@ -212,10 +212,10 @@ void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToClear(INI* ini, voi
 //-------------------------------------------------------------------------------------------------
 BattlePlanBonusBehavior::BattlePlanBonusBehavior(Thing* thing, const ModuleData* moduleData) : BehaviorModule(thing, moduleData)
 {
-	if (checkStartsActive())
-	{
-		giveSelfUpgrade();
-	}
+	//if (checkStartsActive())
+	//{
+	//	giveSelfUpgrade();
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------

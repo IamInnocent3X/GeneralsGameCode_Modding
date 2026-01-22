@@ -68,7 +68,7 @@ public:
 	// update methods
 	virtual UpdateSleepTime update();							///< called once per frame
 	void refreshUpdateMod(Bool weaponFired);
-	Bool isActive() const { return m_hasExecuted; }
+	Bool isActive() const { return m_isActive; }
 
 protected:
 	virtual void upgradeImplementation();
@@ -100,10 +100,7 @@ protected:
 		return getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
-	{
-		return getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
-	}
+	virtual Bool checkStartsActive() const;
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return true; }
@@ -115,8 +112,7 @@ private:
 
 	Bool				m_valid;
 	Bool				m_weaponFired;
-	Bool				m_hasExecuted;
-	Bool				m_giveSelfUpgrade;
+	Bool				m_isActive;
 	UnsignedInt m_consecutiveShots;
 	UnsignedInt m_startFrame;
 	UnsignedInt m_checkFrame;

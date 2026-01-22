@@ -476,12 +476,13 @@ void UpgradeMuxData::getUpgradeActivationMasks(UpgradeMaskType& activation, Upgr
 //-------------------------------------------------------------------------------------------------
 Bool UpgradeMuxData::muxDataCheckStartsActive(const Object* obj) const
 {
-	//Sanity
+	// Sanity
 	if(!obj)
 		return FALSE;
 
 	if(m_startsActiveChecksForConflictsWith)
 	{
+		// Check for any conflicts with
 		UpgradeMaskType playerMask;
 		playerMask.clear();
 		playerMask = obj->getControllingPlayer() ? obj->getControllingPlayer()->getCompletedUpgradeMask() : playerMask;
@@ -495,18 +496,21 @@ Bool UpgradeMuxData::muxDataCheckStartsActive(const Object* obj) const
 			return FALSE;
 	}
 
+	// Initiate the variables based on StartsActive
 	Bool startsActive = m_initiallyActive;
 	DifficultyBoolVec checkVec = m_initiallyActiveDifficulty;
 	GameDifficulty difficulty;
 
 	if(obj->getControllingPlayer())
 	{
+		// Check different values for AI
 		if(obj->getControllingPlayer()->getPlayerType() == PLAYER_COMPUTER)
 		{
 			startsActive = m_parsedStartsActiveForAI ? m_startsActiveForAI : startsActive;
 			checkVec = !m_startsActiveDifficultyForAI.empty() ? m_startsActiveDifficultyForAI : checkVec;
 		}
 
+		// Check whether it applies to different difficulties
 		difficulty = obj->getControllingPlayer()->getPlayerDifficulty();
 		for( DifficultyBoolVec::const_iterator it = checkVec.begin(); it != checkVec.end();	++it)
 		{
