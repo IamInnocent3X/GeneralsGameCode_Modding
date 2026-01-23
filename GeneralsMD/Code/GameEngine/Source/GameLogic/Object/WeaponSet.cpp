@@ -225,12 +225,19 @@ void WeaponSet::crc( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version */
+	* 1: Initial version
+	* 2: TheSuperHackers @tweak Upgrade damage type flags from integer to BitFlags for Generals.
+	*    Zero Hour already had this at version 1.
+	*/
 // ------------------------------------------------------------------------------------------------
 void WeaponSet::xfer( Xfer *xfer )
 {
 	// version
+#if RETAIL_COMPATIBLE_XFER_SAVE
 	const XferVersion currentVersion = 1;
+#else
+	const XferVersion currentVersion = 2;
+#endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -297,12 +304,26 @@ void WeaponSet::xfer( Xfer *xfer )
 	xfer->xferUser(&m_curDefaultWeapon, sizeof(m_curDefaultWeapon));
 	xfer->xferUnsignedInt(&m_filledWeaponSlotMask);
 	xfer->xferInt(&m_totalAntiMask);
+
+#if RTS_GENERALS
+	if (version < 2)
+	{
+		UnsignedInt totalDamageTypeMask = m_totalDamageTypeMask.toUnsignedInt();
+		xfer->xferUnsignedInt(&totalDamageTypeMask);
+		m_totalDamageTypeMask = DamageTypeFlags(totalDamageTypeMask);
+	}
+#endif
+
 	xfer->xferBool(&m_hasDamageWeapon);
 	xfer->xferBool(&m_hasDamageWeapon);
 	xfer->xferBool(&m_restricted);
 
-	m_totalDamageTypeMask.xfer(xfer);// BitSet has built in xfer
-
+#if RTS_GENERALS
+	if (version >= 2)
+#endif
+	{
+		m_totalDamageTypeMask.xfer(xfer);// BitSet has built in xfer
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -721,7 +742,7 @@ CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attac
 		//care about relationships (and fixes broken scripts).
 		if( commandSource == CMD_FROM_PLAYER && (!victim->testScriptStatusBit( OBJECT_STATUS_SCRIPT_TARGETABLE ) || r == ALLIES) )
 		{
-			//Unless the object has a map properly that sets it to be targetable (and not allied), then give up.
+			//Unless the object has a map property that sets it to be targetable (and not allied), then give up.
 			return ATTACKRESULT_NOT_POSSIBLE;
 		}
 	}
