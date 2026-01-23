@@ -679,8 +679,10 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	//{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) }, // OBSELETE
 
-	{ "AllocateMemoryToFixPathfindForManyPlayers",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // Credits to: Mauller
-	{ "UseNonRetailAIPathfind",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - AI Pathfind can be configured to use Non-Retail method, but the above option always configure to use Non-Retail AI Pathfind
+	{ "AllocateMemoryToFixPathfindForManyPlayers",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // This method uses UseNonRetailAIPathfindAllocation after having 6 or more players in a map
+	{ "UseNonRetailAIPathfind",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - AI Pathfind can be configured to use Non-Retail method
+	{ "UseNonRetailAIPathfindAllocation",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindAllocation) },
+	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // Credits to: Mauller
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 
@@ -1274,6 +1276,8 @@ GlobalData::GlobalData()
 	//m_fixLocoClump = FALSE;
 	m_fixAIPathfindClumpForManyPlayers = FALSE; // Credits to: Mauller
 	m_useNonRetailAIPathfind = FALSE;
+	m_useNonRetailAIPathfindAllocation = FALSE;
+	m_useNonRetailAIPathfindDynamicAlloc = FALSE;
 
 	m_corpsesHaveAirDrag = FALSE;
 	m_hideCashTextFromEnemies = FALSE;

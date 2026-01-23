@@ -634,6 +634,8 @@ public:
 
 	Bool m_fixAIPathfindClumpForManyPlayers; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfind;
+	Bool m_useNonRetailAIPathfindAllocation;
+	Bool m_useNonRetailAIPathfindDynamicAlloc;
 	Bool m_dynamicTargeting;
 	Bool m_useAccurateSphereToRectCollision;
 	Bool m_checkBoxBoundariesForDistCalc;
