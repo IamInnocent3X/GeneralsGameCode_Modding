@@ -53,7 +53,7 @@
 #include "GameClient/Gadget.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
-#include "GameLogic/GameLogic.h" // Note: Do Not Ever use Anything the Corresponds with GameLogic HERE. It will cause Mismatches!
+#include "GameLogic/GameLogic.h" // Note: Do Not Ever use Anything that Corresponds with GameLogic HERE. It will cause Mismatches!
 
 // DEFINES ////////////////////////////////////////////////////////////////////
 
