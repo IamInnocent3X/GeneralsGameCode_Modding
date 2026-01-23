@@ -411,18 +411,29 @@ static Real CCWDistance(Real from, Real to)
 // --
 static bool ccwLeavesAllowedArc(Real from, Real to, Real min, Real max)
 {
-	if (min > max) { // simplify
-		max += TWO_PI;
-	}
-	if (from > to) {
-		to += TWO_PI;
-	}
+	//if (min > max) { // simplify
+	//	max += TWO_PI;
+	//}
+	//if (from > to) {
+	//	to += TWO_PI;
+	//}
 
-	Real disallowedCenter = normalizeAngle2PI(((max + min) / 2.0) + PI);
-	//DEBUG_LOG((">>> ccw check: from = %f, to = %f, min = %f, max = %f. disCenter = %f",
-	//	from * 180 / PI, to * 180 / PI, min * 180 / PI, max * 180 / PI, disallowedCenter * 180 / PI));
+	Real disallowedCenter;
 
-	return (from < disallowedCenter && to > disallowedCenter);
+	if (min > max) {
+		disallowedCenter  = normalizeAngle2PI(((max + TWO_PI + min) / 2.0) + PI);
+	}
+	else {
+		disallowedCenter = normalizeAngle2PI(((max + min) / 2.0) + PI);
+	}
+	/*DEBUG_LOG((">>> ccw check: from = %f, to = %f, min = %f, max = %f. disCenter = %f",
+		from * 180 / PI, to * 180 / PI, min * 180 / PI, max * 180 / PI, disallowedCenter * 180 / PI));*/
+
+
+	if (from <= to)
+		return disallowedCenter >= from && disallowedCenter <= to;
+	else
+		return disallowedCenter >= from || disallowedCenter <= to; // wraparound
 }
 // -------
 // return True if CCW, False if CW
@@ -448,8 +459,8 @@ Bool TurretAI::getTurretRotationDir(Real desiredAngle, Real minAngle, Real maxAn
 	//maxAngle = WWMath::Normalize_Angle(maxAngle);
 
 	// Check if preferred direction leaves allowed arc
-	//DEBUG_LOG((">>> curAngle = %f, targetAngle = %f, shortest dir = %d",
-	//	origAngle*180/PI, desiredAngle*180/PI, wantCCW));
+	/*DEBUG_LOG((">>> curAngle = %f, targetAngle = %f, shortest dir = %d",
+		origAngle*180/PI, desiredAngle*180/PI, wantCCW));*/
 
 	if (wantCCW)
 	{
