@@ -679,10 +679,11 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 
 	//{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixLocoClump) }, // OBSELETE
 
-	{ "AllocateMemoryToFixPathfindForManyPlayers",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // Credits to: Mauller
-	{ "UseNonRetailAIPathfind",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - AI Pathfind can be configured to use Non-Retail method, but the above option always configure to use Non-Retail AI Pathfind
+	// Functions below except 'UseNonRetailAIPathfindDynamicAlloc' are automatically enabled if RETAIL_COMPATIBLE_PATHFINDING is disabled.
+	{ "UseNonRetailPathfindToFixPathfindForManyPlayers",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // This method uses UseNonRetailAIPathfindAllocation after having 6 or more players in a map
+	{ "UseNonRetailAIPathfind",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - If use Retail, AI Pathfind can be configured to use Non-Retail method
 	{ "UseNonRetailAIPathfindAllocation",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindAllocation) },
-	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // Credits to: Mauller
+	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // This requires Non-Retail to be configured for pathfinding. Either through Global data, or defining Non-Retail. Credits to: Mauller
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, nullptr, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 

@@ -4077,8 +4077,16 @@ void Pathfinder::reset( void )
 
 	if(TheGlobalData && ThePlayerList)
 	{
+#if RETAIL_COMPATIBLE_PATHFINDING
 		s_useNonRetailPathfind = TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 );
+#else
+		s_useNonRetailPathfind = TRUE;
+#endif
+#if RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
 		s_useNonRetailPathfindAllocation = (s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindAllocation) || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 );
+#else
+		s_useNonRetailPathfindAllocation = TRUE;
+#endif
 		s_useNonRetailPathfindDynamicAlloc = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindDynamicAlloc;
 	}
 
@@ -4707,8 +4715,16 @@ static void calculateWaterLevels(IRegion2D bounds, PathfindCell** map)
  */
 void Pathfinder::newMap( void )
 {
+#if RETAIL_COMPATIBLE_PATHFINDING
 	s_useNonRetailPathfind = TheGlobalData->m_useNonRetailAIPathfind || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 );
+#else
+	s_useNonRetailPathfind = TRUE;
+#endif
+#if RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
 	s_useNonRetailPathfindAllocation = (s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindAllocation) || ( TheGlobalData->m_fixAIPathfindClumpForManyPlayers && ThePlayerList->getPlayerCount() > 5 );
+#else
+	s_useNonRetailPathfindAllocation = TRUE;
+#endif
 	s_useNonRetailPathfindDynamicAlloc = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindDynamicAlloc;
 
 	m_wallHeight = TheAI->getAiData()->m_wallHeight; // may be updated by map.ini.
