@@ -48,9 +48,9 @@ class PathfindCell;
 
 #define INFANTRY_MOVES_THROUGH_INFANTRY
 
-#if !RETAIL_COMPATIBLE_PATHFINDING
-#undef RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
-#endif
+//#if !RETAIL_COMPATIBLE_PATHFINDING
+//#undef RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
+//#endif
 
   typedef UnsignedShort zoneStorageType;
 
@@ -296,11 +296,11 @@ public:
 	Bool isAircraftGoal( void) const {return m_aircraftGoal != 0;}
 
 	Bool isObstaclePresent( ObjectID objID ) const;					///< return true if the given object ID is registered as an obstacle in this cell
-#if RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
+//#if RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
 	// TheSuperHackers @info isObstructionInvalid() and clearObstruction() only used during retail compatible pathfinding failover cleanup
 	Bool isObstructionInvalid() const { return m_obstacleID != INVALID_ID && m_info == nullptr && (m_type == CELL_OBSTACLE || m_type == CELL_IMPASSABLE); }
 	void clearObstruction() { m_type = CELL_CLEAR; m_obstacleID = INVALID_ID; m_obstacleIsFence = false; m_obstacleIsTransparent = false; }
-#endif
+//#endif
 
 	inline Bool isObstacleTransparent() const;
 	inline Bool isObstacleFence(void) const;

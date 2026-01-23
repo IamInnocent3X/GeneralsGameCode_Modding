@@ -624,7 +624,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		UpgradeModuleInterface* upgrade = (*b)->getUpgrade();
 		if( upgrade && !upgrade->isAlreadyUpgraded() && upgrade->startsActive() )
 		{
-			// Give Free Upgrade for Upgrade Modules is initiated after they are registered onto the Module
+			// Give Self Upgrade for Upgrade Modules is initiated after they are registered onto the Module
 			upgrade->friend_giveSelfUpgrade();
 		}
 	}
