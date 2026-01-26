@@ -59,6 +59,7 @@
 #include "GameClient/GameWindow.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/GadgetPushButton.h"
+#include "GameClient/MetaEvent.h"
 
 
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -1583,12 +1584,287 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 }
 
+struct LastCommandModifier
+{
+	Int slot;
+	AsciiString key;
+	AsciiString commandButtonName;
+};
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool ControlBar::checkForCommandSetModifierOverride(Bool checkPointedWindow, const std::vector<AsciiString>& keys, const CommandButton *commandButton)
+Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entry)
 {
 	// no keys, do nothing
-	if(keys.empty())
+	if(entry.Keys.empty())
+		return false;
+
+	// get the selected object
+	Object *obj = m_currentSelectedDrawable ? m_currentSelectedDrawable->getObject() : nullptr;
+	if(!obj)
+		return false;
+
+	// only modify units that are your own
+	if(!obj->isLocallyControlled())
+		return false;
+
+	// get the dozer ai update interface
+	DozerAIInterface* dozerAI = obj->getAIUpdateInterface() ? obj->getAIUpdateInterface()->getDozerAIInterface() : nullptr;
+
+	// Don't change the command set while currently busy
+	if( dozerAI && dozerAI->isTaskPending( DOZER_TASK_BUILD ) == TRUE )
+		return false;
+
+	// get command set
+	const CommandSet *commandSet = findCommandSet( obj->getCommandSetString() );
+	if( !commandSet )
+		return false;
+
+	Bool set = false;
+	Bool doRemove = false;
+	Bool doSingular = entry.IsSingular;
+	Bool doRandom = entry.IsRandom;
+	Bool checkOverridePresent = false;
+	Bool isLastAvailableKey = false;
+	AsciiString overrideButtonPresentName;
+	std::vector<LastCommandModifier> lastPresentCommands;
+
+	// Warning, hell on earth Below.
+
+	for( Int i = 0; i < MAX_COMMANDS_PER_SET; ++i )
+	{
+		GameWindow *button = m_commandWindows[ i ];
+		if( button != nullptr )
+		{
+			AsciiString commandButtonOverrideName;
+			Bool doSkip = FALSE;
+
+			// If the command modifier needs the button Enabled, we only check for buttons that are enabled
+			if(entry.KeyRequireEnabled && !button->winGetEnabled())
+			{
+				doSkip = TRUE;
+			}
+			else if(!entry.CommandButtonsToTrigger.empty())
+			{
+				doSkip = TRUE;
+				AsciiString commandName = commandSet->getOriginalButtonName(i);
+				for(std::vector<AsciiString>::const_iterator it = entry.CommandButtonsToTrigger.begin(); it != entry.CommandButtonsToTrigger.end(); ++it)
+				{
+					if(commandName == (*it))
+					{
+						doSkip = FALSE;
+						break;
+					}
+				}
+			}
+
+			if(doSkip)
+			{
+				// Specific case where this is the last Command in the command set and we haven't finished checking the override is present
+				if( !checkOverridePresent && i == MAX_COMMANDS_PER_SET - 1 )
+				{
+					if(!overrideButtonPresentName.isEmpty() && isLastAvailableKey)
+						doRemove = TRUE;
+
+					checkOverridePresent = true;
+					// reset the values
+					i = -1;
+				}
+				continue;
+			}
+
+
+			// Check for the current button, get rid of the previous data
+			overrideButtonPresentName.clear();
+			isLastAvailableKey = true;	// Assume true because buttons may not contain any modifier keys
+
+			if(!checkOverridePresent)
+			{
+				// Check first if the current Modifier Action reset the command button override to its default status.
+				Bool overrideIsPresent = FALSE;
+
+				// Get the Command Button Name to override, if any
+				for(std::vector<AsciiString>::const_iterator it = entry.Keys.begin(); it != entry.Keys.end(); ++it)
+				{
+					// Get if the Command Set has the modifier key for the current slot
+					commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+					if(commandButtonOverrideName.isEmpty())
+						continue;
+
+					isLastAvailableKey = false; // We got a key
+
+					// Check if we have the override currently in the command bar
+					if(!overrideIsPresent)
+						overrideIsPresent = obj->hasModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+					if(overrideIsPresent)
+					{
+						// Register the name and data if not yet done
+						if(overrideButtonPresentName.isEmpty())
+						{
+							// We get whether we are the last Key in the list
+							overrideButtonPresentName = commandButtonOverrideName;
+
+							// Register the present key data for checking later
+							LastCommandModifier commandData;
+							commandData.slot = i;
+							commandData.key = (*it);
+							commandData.commandButtonName = overrideButtonPresentName;
+							lastPresentCommands.push_back(commandData);
+
+							// Set its the Last Available Key, remove once another key is available
+							isLastAvailableKey = true;
+
+							// We stop checking if we do singular
+							if(doSingular)
+								break;
+						}
+					}
+					else if(!overrideButtonPresentName.isEmpty())
+					{
+						// If we have a new key ahead of the current override, tell the system to register the new override instead
+						//isLastAvailableKey = false;
+						checkOverridePresent = true;
+						break;
+					}
+				}
+				if(i == MAX_COMMANDS_PER_SET - 1 || checkOverridePresent || !isLastAvailableKey)
+				{
+					if(!overrideButtonPresentName.isEmpty() && isLastAvailableKey)
+						doRemove = TRUE;
+
+					checkOverridePresent = true;
+					// reset the values
+					i = -1;
+				}
+				continue;
+			}
+
+
+			// Checking if the current button is being overriden
+			Bool doOverride = FALSE;
+			AsciiString lastPresentKey;
+			std::vector<AsciiString> AvailableButtons;
+			commandButtonOverrideName.clear();
+			lastPresentKey.clear();
+
+			// Get the last present key at current slot
+			for(std::vector<LastCommandModifier>::const_iterator it_command = lastPresentCommands.begin(); it_command != lastPresentCommands.end(); ++it_command)
+			{
+				if(it_command->slot == i)
+				{
+					// If we do Singular, we only get the data and stop here
+					if(doSingular)
+						doSkip = TRUE;
+
+					doOverride = TRUE;
+					lastPresentKey = it_command->key;
+					overrideButtonPresentName = it_command->commandButtonName;
+					//it_command = lastPresentCommands.erase( it_command );
+					break;
+				}
+				//++it_command;
+			}
+
+			if(!doSkip)
+			{
+				// Get the Command Button Name to override, if any
+				for(std::vector<AsciiString>::const_iterator it = entry.Keys.begin(); it != entry.Keys.end(); ++it)
+				{
+					// If we are not doing random, skip until we get the present Key
+					if(!doRandom && !lastPresentKey.isEmpty())
+					{
+						if(lastPresentKey == (*it))
+							lastPresentKey.clear();
+
+						continue;
+					}
+
+					commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+
+					// No override, check next key
+					if(commandButtonOverrideName.isEmpty())
+						continue;
+
+					// Same command button as before, deliberate mistake
+					if(commandButtonOverrideName == overrideButtonPresentName)
+						continue;
+
+					doOverride = true;
+
+					if(doRandom)
+						AvailableButtons.push_back(commandButtonOverrideName);
+					else
+						break;
+				}
+			}
+
+			// if we are doing or done with overriding, process the registration and control bar
+			if(doOverride)
+			{
+				if(!entry.StopsAtEnd && doRemove && !overrideButtonPresentName.isEmpty())
+				{
+					if(obj->removeModiferCommandOverrideWithinCommandSet(i, overrideButtonPresentName))
+						set = true;
+				}
+				else if(doRandom && !AvailableButtons.empty())
+				{
+					// We only do Random for buttons that aren't the last on the list
+					if(overrideButtonPresentName.isEmpty() || AvailableButtons[AvailableButtons.size()-1] != overrideButtonPresentName)
+					{
+						// Get a random index until its one that isn't currently on the override list
+						Int randomIdx = GameLogicRandomValue(0, AvailableButtons.size()-1);
+						while(!overrideButtonPresentName.isEmpty() && AvailableButtons[randomIdx] == overrideButtonPresentName)
+							randomIdx = GameLogicRandomValue(0, AvailableButtons.size()-1);
+
+						if(obj->registerModiferCommandOverrideWithinCommandSet(i, AvailableButtons[randomIdx]))
+							set = true;
+					}
+				}
+				else if(!commandButtonOverrideName.isEmpty())
+				{
+					if(obj->registerModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName))
+						set = true;
+				}
+			}
+
+		}
+		else if( !checkOverridePresent && i == MAX_COMMANDS_PER_SET - 1 )
+		{
+			if(!overrideButtonPresentName.isEmpty() && isLastAvailableKey)
+				doRemove = TRUE;
+
+			// reset the values after checking whether the command set can be replaced
+			checkOverridePresent = true;
+			i = -1;
+		}
+	}
+
+	// Play the Audio
+	if(set)
+	{
+		markUIDirty();
+		// cancel any pending GUI commands
+		TheInGameUI->setGUICommand( nullptr );
+
+		AudioEventRTS buttonClick;
+		buttonClick.setEventName("GUIClick");
+
+		if( TheAudio )
+		{
+			TheAudio->addAudioEvent( &buttonClick );
+		}
+	}
+
+	return set;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList keys, const CommandButton *commandButton)
+{
+	// no keys, do nothing
+	if(keys.Keys.empty())
 		return false;
 
 	// get the selected object
@@ -1609,7 +1885,7 @@ Bool ControlBar::checkForCommandSetModifierOverride(Bool checkPointedWindow, con
 
 	// for mouse related features, the command button must be pointed by the mouse to apply the override
 	/// This is already checked before calling the function, but sanity.
-	if(checkPointedWindow && commandButton == nullptr)
+	if(commandButton == nullptr)
 		return false;
 
 	// get command set
@@ -1618,83 +1894,195 @@ Bool ControlBar::checkForCommandSetModifierOverride(Bool checkPointedWindow, con
 		return false;
 
 	Bool set = false;
-	Bool doRemove = true;
-	Bool checkDoRemove = false;
 
 	for( Int i = 0; i < MAX_COMMANDS_PER_SET; ++i )
 	{
 		GameWindow *button = m_commandWindows[ i ];
 		if( button != nullptr )
 		{
-			if(checkPointedWindow)
-			{
-				// If we change commands with mouse, we only get the command the mouse is pointed at
-				const CommandButton *command = (const CommandButton *)GadgetButtonGetData(button);
-				if( !command || command != commandButton )
-					continue;
-			}
-			else if(!checkDoRemove)
-			{
-				AsciiString key = keys[0];
+			// If we change commands with mouse, we only get the command the mouse is pointed at
+			const CommandButton *command = (const CommandButton *)GadgetButtonGetData(button);
+			if( !command || command != commandButton )
+				continue;
 
-				// Get the Command Button Name to override, if any
-				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, key);
-				if(!commandButtonOverrideName.isEmpty())
-					doRemove = obj->getDoRemoveCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+			if( !isMouseWithinCommandButton( i, &TheMouse->getMouseStatus()->pos ) )
+				continue;
 
-				// If we have reached the end, or we can't remove, proceed
-				if(i == MAX_COMMANDS_PER_SET - 1 || doRemove == false)
-				{
-					checkDoRemove = true;
-					// reset the values
-					i = 0;
-					button = m_commandWindows[ 0 ];
-					if(button == nullptr)
-						continue;
-				}
-				else
-					continue;
-			}
+			Bool overrideIsPresent = FALSE;
+			Bool isLastAvailableKey = TRUE;	// Assume true because buttons may not contain any modifier keys
+			Bool isRandom = FALSE;
+			Bool isSingular = FALSE;
+			Bool stopsAtEnd = FALSE;
+			LastCommandModifier lastPresentCommand;
+			lastPresentCommand.slot = -1;
+			lastPresentCommand.key.clear();
+			lastPresentCommand.commandButtonName.clear();
 
-
-			for(std::vector<AsciiString>::const_iterator it = keys.begin(); it != keys.end(); ++it)
+			for(std::vector<AsciiString>::const_iterator it = keys.Keys.begin(); it != keys.Keys.end(); ++it)
 			{
 				// Get the Command Button Name to override, if any
 				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
 
-				// If we are pointed, get the instance of whether we need to do remove for current slot
-				if(checkPointedWindow)
-					doRemove = obj->getDoRemoveCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+				// No Button Name to Override, get next key
+				if(commandButtonOverrideName.isEmpty())
+					continue;
 
-				if(!commandButtonOverrideName.isEmpty() && obj->registerModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName, doRemove))
+				// Check if the key needs the button to be enabled
+				if(!button->winGetEnabled())
 				{
-					markUIDirty();
-					// cancel any pending GUI commands
-					TheInGameUI->setGUICommand( nullptr );
-					set = true;
+					if(checkWithinStringVec((*it), keys.KeysButtonNeedsEnable))
+						continue;
 				}
-				if(checkPointedWindow && set)
-					return true;
-			}
-		}
-		else if(!checkPointedWindow && !checkDoRemove && i == MAX_COMMANDS_PER_SET - 1)
-		{
-			// reset the values after checking whether the command set can be replaced
-			checkDoRemove = true;
-			i = -1;
-		}
-	}
-	if(set && !checkPointedWindow)
-	{
-		AudioEventRTS buttonClick;
-		buttonClick.setEventName("GUIClick");
 
-		if( TheAudio )
-		{
-			TheAudio->addAudioEvent( &buttonClick );
+				isLastAvailableKey = FALSE; // We got a key
+
+				if(!overrideIsPresent)
+				{
+					overrideIsPresent = obj->hasModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+					if(overrideIsPresent)
+					{
+						lastPresentCommand.slot = i;
+						lastPresentCommand.key = (*it);
+						lastPresentCommand.commandButtonName = commandButtonOverrideName;
+
+						isLastAvailableKey = TRUE;
+
+						isSingular = checkWithinStringVec((*it), keys.KeysSingular);
+						if(isSingular)
+						{
+							stopsAtEnd = checkWithinStringVec((*it), keys.KeysStopsAtEnd);
+							break;
+						}
+					}
+				}
+				else
+				{
+					//isLastAvailableKey = FALSE;
+					break;
+				}
+
+			}
+
+			if(isSingular && lastPresentCommand.slot != -1)
+			{
+				if(stopsAtEnd)
+				{
+					break;
+				}
+				else if(obj->removeModiferCommandOverrideWithinCommandSet(lastPresentCommand.slot))
+				{
+					set = true;
+					break;
+				}
+			}
+
+			for(std::vector<AsciiString>::const_iterator it = keys.Keys.begin(); it != keys.Keys.end(); ++it)
+			{
+				if(!lastPresentCommand.key.isEmpty())
+				{
+					if(lastPresentCommand.key == (*it))
+					{
+						stopsAtEnd = checkWithinStringVec(lastPresentCommand.key, keys.KeysStopsAtEnd);
+						lastPresentCommand.key.clear();
+						if(stopsAtEnd || !isLastAvailableKey)
+							continue;
+					}
+					else
+						continue;
+				}
+
+				// Check if the key needs the button to be enabled
+				if(!button->winGetEnabled())
+				{
+					if(checkWithinStringVec((*it), keys.KeysButtonNeedsEnable))
+						continue;
+				}
+
+				// Get the Command Button Name to override, if any
+				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+
+				// No Button Name to Override, get next key
+				if(commandButtonOverrideName.isEmpty())
+					continue;
+
+				// If we are pointed, get the instance of whether we need to do remove for current slot
+				Bool overrideIsPresent = lastPresentCommand.commandButtonName == commandButtonOverrideName; //obj->hasModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+				// Get the modifier settings
+				if(!isLastAvailableKey)
+				{
+					isRandom = checkWithinStringVec((*it), keys.KeysRandom);
+					isSingular = checkWithinStringVec((*it), keys.KeysSingular);
+					stopsAtEnd = checkWithinStringVec((*it), keys.KeysStopsAtEnd);
+				}
+
+				if(isSingular)
+				{
+					// Process the modifier for Singular Keys
+					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && overrideIsPresent, i, commandButtonOverrideName))
+						set = true;
+
+					break;
+				}
+				else if(isRandom)
+				{
+					// Process the modifier for Random Modifier
+					std::vector<AsciiString> AvailableButtons;
+					for(std::vector<AsciiString>::const_iterator it_r = keys.KeysRandom.begin(); it_r != keys.KeysRandom.end(); ++it_r)
+					{
+						if(!button->winGetEnabled())
+						{
+							if(checkWithinStringVec((*it_r), keys.KeysButtonNeedsEnable))
+								continue;
+						}
+
+						AsciiString currentButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it_r));
+
+						// No override, check next key
+						if(currentButtonOverrideName.isEmpty())
+							continue;
+
+						// If we are doing random, we get all the available keys except the current one
+						if(lastPresentCommand.commandButtonName.isEmpty() || currentButtonOverrideName != lastPresentCommand.commandButtonName)
+							AvailableButtons.push_back(currentButtonOverrideName);
+					}
+					if(!AvailableButtons.empty())
+					{
+						if(obj->processModiferCommandOverrideWithinCommandSet(FALSE, i, AvailableButtons[GameLogicRandomValue(0, AvailableButtons.size()-1)]))
+							set = true;
+					}
+					else
+					{
+						if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && overrideIsPresent, i, commandButtonOverrideName))
+							set = true;
+					}
+					break;
+				}
+				else
+				{
+					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && isLastAvailableKey, i, commandButtonOverrideName))
+					{
+						set = true;
+						break;
+					}
+				}
+			}
+
+			break;
+
 		}
 	}
-	return set;
+
+	if(set)
+	{
+		markUIDirty();
+		// cancel any pending GUI commands
+		TheInGameUI->setGUICommand( nullptr );
+		return true;
+	}
+	else
+		return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1721,11 +2109,26 @@ GameMessageDisposition CommandSetTranslator::translateGameMessage(const GameMess
 	if(t != GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 		return disp;
 
-	std::vector<AsciiString> keys;
-	AsciiString key = TheNameKeyGenerator->keyToName( (NameKeyType)msg->getArgument(0)->integer );
-	keys.push_back(key);
+	CommandSetModifierEntry entry;
+	Int keysSize = 5 + msg->getArgument(4)->integer;
+	//Int commandButtonTriggerSize = keysSize + msg->getArgument(5)->integer;
+	Int i;
+	for(i = 5; i < keysSize; i++)
+	{
+		AsciiString key = TheNameKeyGenerator->keyToName( (NameKeyType)msg->getArgument(i)->integer );
+		entry.Keys.push_back(key);
+	}
+	for(i = keysSize; i < msg->getArgumentCount(); i++)
+	{
+		AsciiString commandButtonName = TheNameKeyGenerator->keyToName( (NameKeyType)msg->getArgument(i)->integer );
+		entry.CommandButtonsToTrigger.push_back(commandButtonName);
+	}
 
-	if(TheControlBar->checkForCommandSetModifierOverride(FALSE, keys))
+	entry.KeyRequireEnabled = msg->getArgument(0)->boolean;
+	entry.IsSingular = msg->getArgument(1)->boolean;
+	entry.IsRandom = msg->getArgument(2)->boolean;
+	entry.StopsAtEnd = msg->getArgument(3)->boolean;
+	if(TheControlBar->checkForCommandSetModifierOverride(entry))
 		return DESTROY_MESSAGE;
 	else
 		return disp;

@@ -332,27 +332,33 @@ static const char* const TheCommandUsableInNames[] =
 };
 
 // -------------------------------------------------------------------------------
-// ClickState sets for Command Set Override.
-enum ClickState CPP_11(: Int)
+// MouseState sets for Command Set Override.
+enum MouseState CPP_11(: Int)
 {
-	CLICK_NONE						= 0,
+	STATE_NONE						= 0,
 	LEFT_CLICK,
 	RIGHT_CLICK,
 	MIDDLE_CLICK,
 	LEFT_DOUBLE_CLICK,
 	RIGHT_DOUBLE_CLICK,
-	MIDDLE_DOUBLE_CLICK
+	MIDDLE_DOUBLE_CLICK,
+	SCROLL_DOWN,
+	SCROLL_UP,
+
+	MOUSE_STATE_COUNT
 };
 
-static const LookupListRec ClickNames[] =
+static const LookupListRec MouseStateNames[] =
 {
-	{ "NONE",							CLICK_NONE },
+	{ "NONE",							STATE_NONE },
 	{ "LEFT_CLICK",						LEFT_CLICK },
 	{ "RIGHT_CLICK",					RIGHT_CLICK },
 	{ "MIDDLE_CLICK",					MIDDLE_CLICK },
 	{ "LEFT_DOUBLE_CLICK",				LEFT_DOUBLE_CLICK },
 	{ "RIGHT_DOUBLE_CLICK",				RIGHT_DOUBLE_CLICK },
 	{ "MIDDLE_DOUBLE_CLICK",			MIDDLE_DOUBLE_CLICK },
+	{ "SCROLL_DOWN",					SCROLL_DOWN },
+	{ "SCROLL_UP",						SCROLL_UP },
 	{ nullptr, 0	}
 };
 
@@ -368,8 +374,12 @@ public:
 	MappableKeyModState			m_modState;				///< the required state of the ctrl-alt-shift keys
 	CommandUsableInType			m_usableIn;				///< the allowed place the command can be used in
 	// Next fields are added for Key mapping Dialog
-	AsciiString					m_commandModifierKey;
-	ClickState					m_commandModifierClickToTrigger;
+	std::vector<AsciiString>	m_commandModifierKeys;
+	std::vector<AsciiString>	m_commandModifierButtonsToTrigger;
+	Bool						m_commandModifierNeedsButtonEnabled;
+	Bool						m_commandModifierIsSingular;
+	Bool						m_commandModifierIsRandom;
+	Bool						m_commandModifierStopsAtEnd;
 	MappableKeyCategories		m_category;				///< This is the category the key falls under
 	UnicodeString						m_description;		///< The description string for the keys
 	UnicodeString						m_displayName;		///< The display name of our command
@@ -396,26 +406,83 @@ public:
 	virtual GameMessageDisposition translateGameMessage(const GameMessage *msg);
 };
 
+struct MouseModifierKeysList
+{
+	std::vector<AsciiString>	Keys;
+	std::vector<AsciiString>	KeysButtonNeedsEnable;
+	std::vector<AsciiString>	KeysSingular;
+	std::vector<AsciiString>	KeysRandom;
+	std::vector<AsciiString>	KeysStopsAtEnd;
+
+	MouseModifierKeysList()
+	{
+		Keys.clear();
+		KeysButtonNeedsEnable.clear();
+		KeysSingular.clear();
+		KeysRandom.clear();
+		KeysStopsAtEnd.clear();
+	}
+};
+
+// ------------------------------------------------------------------------------------------------
+class MouseModifierKeyTemplate
+{
+	friend class MetaMap;
+private:
+	MouseState					m_mouseState;
+	Bool						m_keyRequireEnabled;
+	Bool						m_isSingular;
+	Bool						m_isRandom;
+	Bool						m_stopsAtEnd;
+	std::vector<AsciiString>	m_keys;
+	std::vector<AsciiString>	m_commandButtonsToTrigger;
+
+public:
+	MouseModifierKeyTemplate()
+	{
+		m_mouseState = STATE_NONE;
+		m_keyRequireEnabled = FALSE;
+		m_isSingular = FALSE;
+		m_isRandom = FALSE;
+		m_stopsAtEnd = FALSE;
+		m_keys.clear();
+		m_commandButtonsToTrigger.clear();
+	}
+
+	void reset()
+	{
+		m_mouseState = STATE_NONE;
+		m_keyRequireEnabled = FALSE;
+		m_isSingular = FALSE;
+		m_isRandom = FALSE;
+		m_stopsAtEnd = FALSE;
+		m_keys.clear();
+		m_commandButtonsToTrigger.clear();
+	}
+
+	static void parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
+};
+
 //-----------------------------------------------------------------------------
 class MetaMap : public SubsystemInterface
 {
 	friend class MetaEventTranslator;
 
 private:
+	MouseModifierKeyTemplate mouseModifierKeyParser;
 	MetaMapRec *m_metaMaps;
+
 	std::vector<MappableKeyType> m_doubleDownKeysVec;
-	std::vector<AsciiString> m_leftClickCommandModifiersMeta;
-	std::vector<AsciiString> m_rightClickCommandModifiersMeta;
-	std::vector<AsciiString> m_middleClickCommandModifiersMeta;
-	std::vector<AsciiString> m_leftDoubleClickCommandModifiersMeta;
-	std::vector<AsciiString> m_rightDoubleClickCommandModifiersMeta;
-	std::vector<AsciiString> m_middleDoubleClickCommandModifiersMeta;
+
+	typedef std::hash_map< AsciiString, MouseModifierKeysList, rts::hash<AsciiString>, rts::equal_to<AsciiString> > MouseModifierKeySpecificMap;
+	MouseModifierKeysList m_mouseModifierKeysUniversal[MOUSE_STATE_COUNT];
+	MouseModifierKeySpecificMap m_mouseModifierKeysSpecific[MOUSE_STATE_COUNT];
 
 protected:
 	GameMessage::Type findGameMessageMetaType(const char* name);
 	MetaMapRec *getMetaMapRec(GameMessage::Type t);
 	void pushDoubleDownKeyList(MappableKeyType m);
-	void setClickCommandModifiersMeta( ClickState clickType, const AsciiString& key );
+	void doMouseCommandModifierParsing();
 
 public:
 
@@ -427,13 +494,14 @@ public:
 	void update() { }
 
 	static void parseMetaMap(INI* ini);
+	static void parseMouseCommandModifierDefinition(INI* ini);
 
 	// TheSuperHackers @info Function to generate default key mappings
 	// for actions that were not found in a CommandMap.ini
 	static void generateMetaMap();
 
 	const MetaMapRec *getFirstMetaMapRec() const { return m_metaMaps; }
-	const std::vector<AsciiString>& getClickCommandModifiersMeta( ClickState clickType ) const;
+	MouseModifierKeysList getMouseCommandModifiersMeta( MouseState mouseInput, const AsciiString& commandButtonName ) const;
 	Bool hasDoubleDownKey(MappableKeyType m) const;
 };
 

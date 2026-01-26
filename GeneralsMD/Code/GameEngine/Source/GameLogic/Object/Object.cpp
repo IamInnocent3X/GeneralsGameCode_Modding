@@ -622,7 +622,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		(*b)->onObjectCreated();
 
 		UpgradeModuleInterface* upgrade = (*b)->getUpgrade();
-		if( upgrade && !upgrade->isAlreadyUpgraded() && upgrade->startsActive() )
+		if( upgrade && upgrade->startsActive() && !upgrade->isAlreadyUpgraded() )
 		{
 			// Give Self Upgrade for Upgrade Modules is initiated after they are registered onto the Module
 			upgrade->friend_giveSelfUpgrade();
@@ -9571,47 +9571,34 @@ const CommandButton *Object::getCommandModifierOverrideForSlot( Int slotNum, Asc
 // ------------------------------------------------------------------------------------------------
 // returns true if there are any changes within the current Command Set
 // ------------------------------------------------------------------------------------------------
-Bool Object::registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, Bool doRemove, AsciiString commandSetName )
+Bool Object::registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName )
 {
 	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
 
 	// Sanity
-	if(commandSetString.isEmpty())
+	if(commandSetString.isEmpty() || commandButtonName.isEmpty())
 		return false;
 
-	// Grt whether the slot is already registered
+	// Get whether the slot is already registered
 	CommandSetModifiersMap::iterator it = m_controlBarModifiersApplied.find(commandSetString);
 	if(it != m_controlBarModifiersApplied.end())
 	{
-		for(CommandModifiersVec::iterator it_2 = it->second.begin(); it_2 != it->second.end();)
+		for(CommandModifiersVec::iterator it_2 = it->second.begin(); it_2 != it->second.end(); ++it_2)
 		{
 			if(it_2->first == slotNum)
 			{
 				// If we got the same name, remove the override, only if it can be removed
 				if(it_2->second == commandButtonName)
 				{
-					if(doRemove)
-					{
-						it_2 = it->second.erase( it_2 );
-						return true;
-					}
-					else
-					{
-						return false;
-					}
+					return false;
 				}
-				else if(!doRemove)
+				else
 				{
 					it_2->second = commandButtonName;
 					return true;
 				}
 			}
-			++it_2;
 		}
-
-		// We don't want to register a new override while removing
-		if(doRemove)
-			return false;
 
 		std::pair<Int, AsciiString> data;
 		data.first = slotNum;
@@ -9620,10 +9607,6 @@ Bool Object::registerModiferCommandOverrideWithinCommandSet( Int slotNum, const 
 	}
 	else
 	{
-		// We don't want to register a new override while removing
-		if(doRemove)
-			return false;
-
 		CommandModifiersVec vec;
 		std::pair<Int, AsciiString> data;
 		data.first = slotNum;
@@ -9636,14 +9619,66 @@ Bool Object::registerModiferCommandOverrideWithinCommandSet( Int slotNum, const 
 }
 
 // ------------------------------------------------------------------------------------------------
-Bool Object::getDoRemoveCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName ) const
+// returns true if there are any changes within the current Command Set
+// ------------------------------------------------------------------------------------------------
+Bool Object::removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandButtonName, AsciiString commandSetName )
 {
 	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
 
 	// Sanity
 	if(commandSetString.isEmpty())
-		return true;
+		return false;
 
+	// Get whether the slot is already registered
+	CommandSetModifiersMap::iterator it = m_controlBarModifiersApplied.find(commandSetString);
+	if(it != m_controlBarModifiersApplied.end())
+	{
+		for(CommandModifiersVec::iterator it_2 = it->second.begin(); it_2 != it->second.end();)
+		{
+			if(it_2->first == slotNum)
+			{
+				// If we are told just to erase the slot, erase the slot
+				if(commandButtonName.isEmpty())
+				{
+					it_2 = it->second.erase( it_2 );
+					return true;
+				}
+				// If we got the same name, remove the override, only if it can be removed
+				else if(it_2->second == commandButtonName)
+				{
+					it_2 = it->second.erase( it_2 );
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			++it_2;
+		}
+	}
+	return false;
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool Object::processModiferCommandOverrideWithinCommandSet( Bool doRemove, Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName )
+{
+	if(doRemove)
+		return removeModiferCommandOverrideWithinCommandSet(slotNum, commandButtonName, commandSetName);
+	else
+		return registerModiferCommandOverrideWithinCommandSet(slotNum, commandButtonName, commandSetName);
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool Object::hasModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName ) const
+{
+	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
+
+	// Sanity
+	if(commandSetString.isEmpty())
+		return false;
+
+	// Grt whether the slot is already registered
 	CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.find(commandSetString);
 	if(it != m_controlBarModifiersApplied.end())
 	{
@@ -9658,28 +9693,9 @@ Bool Object::getDoRemoveCommandOverrideWithinCommandSet( Int slotNum, const Asci
 					return false;
 			}
 		}
-
 	}
 	return false;
 }
-
-// ------------------------------------------------------------------------------------------------
-/*void Object::removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandSetName)
-{
-	CommandSetModifiersMap::iterator it = m_controlBarModifiersApplied.find(commandSetName.isEmpty() ? getCommandSetString() : commandSetName);
-	if(it != m_controlBarModifiersApplied.end())
-	{
-		for(CommandModifiersVec::iterator it_2 = it->second.begin(); it_2 != it->second.end();)
-		{
-			if(it_2->first == slotNum)
-			{
-				it_2 = it->second.erase( it_2 );
-				return;
-			}
-			++it_2;
-		}
-	}
-}*/
 
 //=============================================================================
 //== Custom Cursor List

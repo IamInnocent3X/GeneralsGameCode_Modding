@@ -159,40 +159,87 @@ CBCommandStatus ControlBar::processCommandSetModifierButtonClick( GameWindow *co
 		return CBC_COMMAND_NOT_USED;
 
 
-	ClickState clickType;
+	MouseState mouseInput;
 	switch(gadgetMessage)
 	{
 		case GBM_CLICKED_LEFT:
-			clickType = LEFT_CLICK;
+			mouseInput = LEFT_CLICK;
 			break;
 		case GBM_CLICKED_RIGHT:
-			clickType = RIGHT_CLICK;
+			mouseInput = RIGHT_CLICK;
 			break;
 		case GBM_CLICKED_MIDDLE:
-			clickType = MIDDLE_CLICK;
+			mouseInput = MIDDLE_CLICK;
 			break;
 		case GBM_DOUBLE_CLICKED_LEFT:
-			clickType = LEFT_DOUBLE_CLICK;
+			mouseInput = LEFT_DOUBLE_CLICK;
 			break;
 		case GBM_DOUBLE_CLICKED_RIGHT:
-			clickType = RIGHT_DOUBLE_CLICK;
+			mouseInput = RIGHT_DOUBLE_CLICK;
 			break;
 		case GBM_DOUBLE_CLICKED_MIDDLE:
-			clickType = MIDDLE_DOUBLE_CLICK;
+			mouseInput = MIDDLE_DOUBLE_CLICK;
+			break;
+		case GBM_SCROLL_DOWN:
+			mouseInput = SCROLL_DOWN;
+			break;
+		case GBM_SCROLL_UP:
+			mouseInput = SCROLL_UP;
 			break;
 		default:
 			return CBC_COMMAND_NOT_USED; // do nothing
 			break;
 	}
 
-	std::vector<AsciiString> clickCommandModifiers = TheMetaMap->getClickCommandModifiersMeta( clickType );
-	if(clickCommandModifiers.empty())
+	// get the selected object
+	Object *obj = m_currentSelectedDrawable ? m_currentSelectedDrawable->getObject() : nullptr;
+	if(!obj)
 		return CBC_COMMAND_NOT_USED;
 
-	if(checkForCommandSetModifierOverride(TRUE, clickCommandModifiers, commandButton))
+	AsciiString OriginalButtonName;
+	const CommandSet *set = findCommandSet(obj->getCommandSetString());
+
+	for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+	{
+		GameWindow *button = m_commandWindows[ i ];
+		if( button == nullptr || button != control )
+			continue;
+
+		if( !isMouseWithinCommandButton( i, &TheMouse->getMouseStatus()->pos ) )
+			continue;
+
+		OriginalButtonName = set->getOriginalButtonName(i);
+		break;
+	}
+
+	if(OriginalButtonName.isEmpty())
+		return CBC_COMMAND_NOT_USED;
+
+	MouseModifierKeysList mouseCommandModifiers = TheMetaMap->getMouseCommandModifiersMeta( mouseInput, OriginalButtonName );
+	if(mouseCommandModifiers.Keys.empty())
+		return CBC_COMMAND_NOT_USED;
+
+	if(checkForCommandSetModifierOverrideMouse(mouseCommandModifiers, commandButton))
 		return CBC_COMMAND_USED;
 	else
 		return CBC_COMMAND_NOT_USED;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::isMouseWithinCommandButton(Int i, const ICoord2D *mousePos) const
+{
+	// Sanity
+	if(m_commandWindows[ i ] == nullptr)
+		return false;
+
+	ICoord2D commandPos, commandSize;
+	m_commandWindows[ i ]->winGetScreenPosition(&commandPos.x, &commandPos.y);
+	m_commandWindows[ i ]->winGetSize(&commandSize.x, &commandSize.y);
+
+	return mousePos->x >= commandPos.x &&
+	mousePos->x <= commandPos.x + commandSize.x &&
+	mousePos->y >= commandPos.y &&
+	mousePos->y <= commandPos.y + commandSize.y;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -53,7 +53,7 @@
 #include "GameClient/Gadget.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
-#include "GameLogic/GameLogic.h" // Note: Do Not Ever use Anything that Corresponds with GameLogic HERE. It will cause Mismatches!
+#include "GameLogic/GameLogic.h" // Note: Do Not Ever do Anything that Corresponds with GameLogic HERE. This is solely used to identify whether we can do command set modifiers
 
 // DEFINES ////////////////////////////////////////////////////////////////////
 
@@ -633,6 +633,28 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 
 			break;
 
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_WHEEL_DOWN:
+		{
+			TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_SCROLL_DOWN,
+																							(WindowMsgData)window, mData1 );
+
+			BitClear( instData->m_state, WIN_STATE_SELECTED );
+			
+			break;
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_WHEEL_UP:
+		{
+			TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_SCROLL_UP,
+																							(WindowMsgData)window, mData1 );
+
+			BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+			break;
 		}
 
 		// ------------------------------------------------------------------------

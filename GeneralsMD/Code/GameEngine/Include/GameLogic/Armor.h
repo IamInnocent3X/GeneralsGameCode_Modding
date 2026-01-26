@@ -71,10 +71,6 @@ public:
 	static void parseArmorCoefficients( INI* ini, void *instance, void* /* store */, const void* userData );
 	static void parseArmorMultiplier( INI* ini, void *instance, void* /* store */, const void* userData );
 	static void parseArmorBonus(INI* ini, void* instance, void* /* store */, const void* userData);
-	static void parseDefaultDamage(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/);
-	static void parseCustomDamageType(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/);
-	static void parseLinkDamageType(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/);
-	static void parseLinkCustomDamageTypes(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/);
 
 protected:
 
@@ -168,15 +164,19 @@ public:
 	CustomDamageType m_customDamageTypeParse;
 	AsciiString m_customDamageTypeParseNext;
 
-	Bool findNameInTypesList(NameKeyType nameKey, Real &damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType);
+	Bool findNameInTypesList(NameKeyType nameKey, Real &damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType) const;
 	//Bool isNameInTypesList(NameKeyType nameKey) const;
-	std::vector<NameKeyType> GetLinkInTypesList(NameKeyType nameKey);
+	const std::vector<NameKeyType>& GetLinkInTypesList(NameKeyType nameKey) const;
 	//DamageType GetDeclaredLinkDamageType(NameKeyType nameKey);
 	//Real GetDeclaredCoefficient(NameKeyType nameKey);
 
 	static void parseArmorDefinition(INI* ini);
 	static void parseArmorExtendDefinition(INI* ini);
 	static void parseCustomDamageTypesDefinition(INI* ini);
+	static void parseCustomDamageType(INI* ini, void* instance, void* /* store */, const void* /*userData*/);
+	static void parseDefaultDamage(INI* ini, void* instance, void* /* store */, const void* /*userData*/);
+	static void parseLinkDamageType(INI* ini, void* instance, void* /* store */, const void* /*userData*/);
+	static void parseLinkCustomDamageTypes(INI* ini, void* instance, void* /* store */, const void* /*userData*/);
 
 private:
 

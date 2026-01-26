@@ -1517,10 +1517,10 @@ GameWindow *GameWindow::winPointInAnyChild( Int x, Int y, Bool ignoreHidden, Boo
 
 }
 
-// GameWindow::winPointInChild ================================================
+// GameWindow::winPointInUnenabledChild =======================================
 /** Given a window and the mouse coordinates, return the child
-	* window which contains the mouse pointer.  Child windows are
-	* relative to their parents */
+	* window that is not enabled and which contains the mouse pointer.
+	* Child windows are relative to their parents */
 //=============================================================================
 GameWindow *GameWindow::winPointInUnenabledChild( Int x, Int y )
 {

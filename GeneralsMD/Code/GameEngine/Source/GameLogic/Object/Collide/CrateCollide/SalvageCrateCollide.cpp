@@ -2222,7 +2222,7 @@ void SalvageCrateCollide::doWeaponBonus( Object *other )
 			if(level >= md->m_weaponBonus.size())
 				level = md->m_weaponBonus.size() - 1;
 
-			DEBUG_LOG(("SalvageCrateCollide: Granting Weapon Bonus First"));
+			//DEBUG_LOG(("SalvageCrateCollide: Granting Weapon Bonus First"));
 			if(md->m_weaponBonus[level].bonusType == -1)
 				other->setCustomWeaponBonusCondition( md->m_weaponBonus[level].customType );
 			else
@@ -2237,7 +2237,7 @@ void SalvageCrateCollide::doWeaponBonus( Object *other )
 			if(level >= md->m_weaponBonus.size())
 				level = md->m_weaponBonus.size() - 1;
 
-			DEBUG_LOG(("SalvageCrateCollide: Granting Weapon Bonus Other"));
+			//DEBUG_LOG(("SalvageCrateCollide: Granting Weapon Bonus Other"));
 			// If the current level is the same as granted, we don't do anything.
 			if(level == i)
 				break;
