@@ -459,90 +459,6 @@ void ArmorTemplate::parseArmorBonus(INI* ini, void* instance, void* /* store */,
 	}
 }
 
-void ArmorTemplate::parseDefaultDamage(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/)
-{
-	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
-
-	if (customType->m_declaredCoefficient == TRUE)
-	{
-		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", TheArmorStore->m_customDamageTypeParseNext.str()));
-		throw INI_INVALID_DATA;
-	}
-
-	INI::parsePercentToReal(ini, NULL, &customType->m_coefficient, NULL);
-	customType->m_declaredCoefficient = TRUE;
-}
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-void ArmorTemplate::parseCustomDamageType(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/)
-{
-	AsciiString *customDamagePtr = &TheArmorStore->m_customDamageTypeParseNext;
-	
-	if(customDamagePtr->isEmpty())
-	{
-		// Whatever works works, do not question the order of physics or why I decide to not put an '&'.
-		INI::parseQuotedAsciiString(ini, NULL, customDamagePtr, NULL);
-	}
-	else
-	{
-		// Parse the values to the previous name
-		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( *customDamagePtr );
-		ArmorStore::CustomDamageTypesMap::const_iterator it = TheArmorStore->m_customDamageTypes.find(nameKey);
-
-		// The name is not registered in CustomDamageTypes, parse it into the Default DamageType
-		if (it == TheArmorStore->m_customDamageTypes.end())
-		{
-			//m_customDamageTypes.push_back(m_customDamageTypeParse);
-			TheArmorStore->m_customDamageTypes[nameKey] = TheArmorStore->m_customDamageTypeParse;
-
-			//Reset the Parse Values
-			TheArmorStore->m_customDamageTypeParse.m_coefficient = 1.0f;
-			TheArmorStore->m_customDamageTypeParse.m_declaredLinkDamageType = FALSE;
-			TheArmorStore->m_customDamageTypeParse.m_declaredCoefficient = FALSE;
-			TheArmorStore->m_customDamageTypeParse.m_linkDamageType = DAMAGE_EXPLOSION;
-			TheArmorStore->m_customDamageTypeParse.m_customDamageTypeLink.clear();
-
-			//Designate the name of the next Custom Damage Type.
-			*customDamagePtr = ini->getNextQuotedAsciiString();
-		}
-		else
-		{
-			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", TheArmorStore->m_customDamageTypeParseNext.str()));
-			throw INI_INVALID_DATA;
-		}
-	}
-}
-
-void ArmorTemplate::parseLinkDamageType(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/)
-{
-	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
-
-	if (customType->m_declaredLinkDamageType == TRUE)
-	{
-		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", TheArmorStore->m_customDamageTypeParseNext.str()));
-		throw INI_INVALID_DATA;
-	}
-
-	DamageTypeFlags::parseSingleBitFromINI(ini, NULL, &customType->m_linkDamageType, NULL);
-	customType->m_declaredLinkDamageType = TRUE;
-}
-
-void ArmorTemplate::parseLinkCustomDamageTypes(INI* ini, void*/*instance*/, void* /* store */, const void* /*userData*/)
-{
-	ArmorStore::CustomDamageType *customType = &TheArmorStore->m_customDamageTypeParse;
-
-	//INI::parseAsciiStringVectorAppend(ini, NULL, &customType->m_customDamageTypeLink, NULL);
-	std::vector<AsciiString> customDamageTypeLink;
-	INI::parseAsciiStringVector(ini, NULL, &customDamageTypeLink, NULL);
-
-	for(std::vector<AsciiString>::const_iterator it = customDamageTypeLink.begin(); it != customDamageTypeLink.end(); ++it)
-	{
-		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( *it );
-		customType->m_customDamageTypeLink.push_back(nameKey);
-	}
-}
-
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -664,27 +580,122 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(const char* name) const
 	ArmorStore::parseCustomDamageTypesDefinition(ini);
 }
 
+//-------------------------------------------------------------------------------------------------
 void ArmorStore::parseCustomDamageTypesDefinition(INI* ini)
 {
 
 	static const FieldParse myFieldParse[] =
 	{
-		{ "CustomDamageType", ArmorTemplate::parseCustomDamageType, NULL, 0 },
-		{ "Damage", ArmorTemplate::parseDefaultDamage, NULL, 0 },
-		{ "LinkDamageType", ArmorTemplate::parseLinkDamageType, NULL, 0 },
-		{ "LinkCustomDamageType", ArmorTemplate::parseLinkCustomDamageTypes, NULL, 0 },
-		{ NULL, NULL, NULL, NULL }
+		{ "CustomDamageType", parseCustomDamageType, nullptr, 0 },
+		{ "Damage", parseDefaultDamage, nullptr, 0 },
+		{ "LinkDamageType", parseLinkDamageType, nullptr, 0 },
+		{ "LinkCustomDamageType", parseLinkCustomDamageTypes, nullptr, 0 },
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
-	ArmorStore::CustomDamageTypesMap& customDamageTypesMapInfo = TheArmorStore->m_customDamageTypes;
-	customDamageTypesMapInfo.clear();
-
-	ini->initFromINI( &customDamageTypesMapInfo, myFieldParse);
+	TheArmorStore->m_customDamageTypes.clear();
+	ini->initFromINI( TheArmorStore, myFieldParse );
 
 	if(TheArmorStore->m_customDamageTypeParseNext.isNotEmpty())
 	{
 		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( TheArmorStore->m_customDamageTypeParseNext );
 		TheArmorStore->m_customDamageTypes[nameKey] = TheArmorStore->m_customDamageTypeParse;
+	}
+
+	TheArmorStore->m_customDamageTypeParseNext.clear();
+	TheArmorStore->m_customDamageTypeParse.m_declaredLinkDamageType = FALSE;
+	TheArmorStore->m_customDamageTypeParse.m_declaredCoefficient = FALSE;
+	TheArmorStore->m_customDamageTypeParse.m_customDamageTypeLink.clear();
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void ArmorStore::parseCustomDamageType(INI* ini, void* instance, void* /* store */, const void* /*userData*/)
+{
+	ArmorStore* self = (ArmorStore*) instance;
+	AsciiString *customDamagePtr = &self->m_customDamageTypeParseNext;
+	
+	if(customDamagePtr->isEmpty())
+	{
+		// Whatever works works, do not question the order of physics or why I decide to not put an '&'.
+		INI::parseQuotedAsciiString(ini, nullptr, customDamagePtr, nullptr);
+	}
+	else
+	{
+		// Parse the values to the previous name
+		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( *customDamagePtr );
+		ArmorStore::CustomDamageTypesMap::const_iterator it = self->m_customDamageTypes.find(nameKey);
+
+		// The name is not registered in CustomDamageTypes, parse it into the Default DamageType
+		if (it == self->m_customDamageTypes.end())
+		{
+			//m_customDamageTypes.push_back(m_customDamageTypeParse);
+			self->m_customDamageTypes[nameKey] = self->m_customDamageTypeParse;
+
+			//Reset the Parse Values
+			self->m_customDamageTypeParse.m_coefficient = 1.0f;
+			self->m_customDamageTypeParse.m_declaredLinkDamageType = FALSE;
+			self->m_customDamageTypeParse.m_declaredCoefficient = FALSE;
+			self->m_customDamageTypeParse.m_linkDamageType = DAMAGE_EXPLOSION;
+			self->m_customDamageTypeParse.m_customDamageTypeLink.clear();
+
+			//Designate the name of the next Custom Damage Type.
+			*customDamagePtr = ini->getNextQuotedAsciiString();
+		}
+		else
+		{
+			DEBUG_CRASH(("Duplicate CustomDamageType Found (%s).\n", self->m_customDamageTypeParseNext.str()));
+			throw INI_INVALID_DATA;
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void ArmorStore::parseDefaultDamage(INI* ini, void* instance, void* /* store */, const void* /*userData*/)
+{
+	ArmorStore* self = (ArmorStore*) instance;
+	ArmorStore::CustomDamageType *customType = &self->m_customDamageTypeParse;
+
+	if (customType->m_declaredCoefficient == TRUE)
+	{
+		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", self->m_customDamageTypeParseNext.str()));
+		throw INI_INVALID_DATA;
+	}
+
+	INI::parsePercentToReal(ini, nullptr, &customType->m_coefficient, nullptr);
+	customType->m_declaredCoefficient = TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ArmorStore::parseLinkDamageType(INI* ini, void* instance, void* /* store */, const void* /*userData*/)
+{
+	ArmorStore* self = (ArmorStore*) instance;
+	ArmorStore::CustomDamageType *customType = &self->m_customDamageTypeParse;
+
+	if (customType->m_declaredLinkDamageType == TRUE)
+	{
+		DEBUG_CRASH(("%s already has declared Default Coefficient.\n", self->m_customDamageTypeParseNext.str()));
+		throw INI_INVALID_DATA;
+	}
+
+	DamageTypeFlags::parseSingleBitFromINI(ini, nullptr, &customType->m_linkDamageType, nullptr);
+	customType->m_declaredLinkDamageType = TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ArmorStore::parseLinkCustomDamageTypes(INI* ini, void* instance, void* /* store */, const void* /*userData*/)
+{
+	ArmorStore* self = (ArmorStore*) instance;
+	ArmorStore::CustomDamageType *customType = &self->m_customDamageTypeParse;
+
+	//INI::parseAsciiStringVectorAppend(ini, nullptr, &customType->m_customDamageTypeLink, nullptr);
+	std::vector<AsciiString> customDamageTypeLink;
+	INI::parseAsciiStringVector(ini, nullptr, &customDamageTypeLink, nullptr);
+
+	for(std::vector<AsciiString>::const_iterator it = customDamageTypeLink.begin(); it != customDamageTypeLink.end(); ++it)
+	{
+		NameKeyType nameKey = TheNameKeyGenerator->nameToKey( *it );
+		customType->m_customDamageTypeLink.push_back(nameKey);
 	}
 }
 
@@ -790,7 +801,7 @@ Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real &damage, const Cu
 }*/
 
 //-------------------------------------------------------------------------------------------------
-std::vector<NameKeyType> ArmorStore::GetLinkInTypesList(NameKeyType nameKey)
+const std::vector<NameKeyType>& ArmorStore::GetLinkInTypesList(NameKeyType nameKey) const
 {
 	CustomDamageTypesMap::const_iterator it = m_customDamageTypes.find(nameKey);
 	if(it != m_customDamageTypes.end())

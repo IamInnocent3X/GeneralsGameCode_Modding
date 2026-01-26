@@ -255,6 +255,7 @@ public:
 	static void parseChallengeModeDefinition( INI* ini );
 	static void parseCustomDamageTypesDefinition( INI *ini );
 	static void parseCustomRadiusDecalDefinition( INI *ini );
+	static void parseMouseCommandModifierDefinition( INI *ini );
 
 	AsciiString getFilename( void ) const { return m_filename; }
 	INILoadType getLoadType( void ) const { return m_loadType; }

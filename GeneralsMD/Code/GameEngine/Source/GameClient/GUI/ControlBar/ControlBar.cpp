@@ -1008,7 +1008,7 @@ void CommandSet::parseCommandButton( INI* ini, void *instance, void *store, cons
 
 		// save it
 		buttonArray[ buttonIndex ] = commandButton;
-
+		self->m_originalButtonName[ buttonIndex ] = AsciiString( token );
 	}
 
 }
@@ -1020,7 +1020,10 @@ CommandSet::CommandSet(const AsciiString& name) :
 	m_next(NULL)
 {
 	for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+	{
 		m_command[ i ] = nullptr;
+		m_originalButtonName[ i ].clear();
+	}
 
 	m_modifierCommandMap.clear();
 }

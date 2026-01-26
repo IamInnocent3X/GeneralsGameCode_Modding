@@ -59,6 +59,8 @@ class ControlBarResizer;
 class GameWindowTransitionsHandler;
 class DisplayString;
 
+struct MouseModifierKeysList;
+
 enum ProductionID CPP_11(: Int);
 
 enum CommandSourceType CPP_11(: Int);
@@ -309,6 +311,17 @@ static const LookupListRec CommandButtonMappedBorderTypeNames[] =
 	{ NULL, 0	}
 };
 static_assert(ARRAY_SIZE(CommandButtonMappedBorderTypeNames) == COMMAND_BUTTON_BORDER_COUNT + 1, "Incorrect array size");
+
+struct CommandSetModifierEntry
+{
+	std::vector<AsciiString>	Keys;
+	std::vector<AsciiString>	CommandButtonsToTrigger;
+	Bool						KeyRequireEnabled;
+	Bool						IsSingular;
+	Bool						IsRandom;
+	Bool						StopsAtTop;
+};
+
 //-------------------------------------------------------------------------------------------------
 /** Command buttons are used to load the buttons we place on throughout the command bar
 	* interface in different context sensitive windows depending on the situation and
@@ -459,6 +472,7 @@ public:
 	const AsciiString& getName() const { return m_name; }
 	const CommandButton* getCommandButton(Int i) const;
 	const AsciiString& getModifierForCommandButtonOverrideName(Int i, const AsciiString& key) const;
+	const AsciiString& getOriginalButtonName(Int i) const { return m_originalButtonName[ i ]; }
 
 	// only for the control bar.
 	CommandSet* friend_getNext() { return m_next; }
@@ -471,6 +485,7 @@ private:
 	static void parseCommandButton( INI* ini, void *instance, void *store, const void *userData );
 
 	AsciiString m_name;															  ///< name of this command set
+	AsciiString m_originalButtonName[ MAX_COMMANDS_PER_SET ];
 	const CommandButton *m_command[ MAX_COMMANDS_PER_SET ]; ///< the set of command buttons that make this set
 
 	typedef std::vector<std::pair<AsciiString, AsciiString>> ModifierCommandType;
@@ -822,8 +837,12 @@ public:
 
 	//Int getRemainingSciencePointsAvailableToPurchase( Player* player ) const;
 
-	Bool checkForCommandSetModifierOverride(Bool checkPointedWindow, const std::vector<AsciiString>& keys, const CommandButton *commandButton = nullptr);
+	Bool checkForCommandSetModifierOverride(CommandSetModifierEntry entry);
+	Bool checkForCommandSetModifierOverrideMouse(MouseModifierKeysList keys, const CommandButton *commandButton);
+	Bool checkForResetOverride(Bool &checkOverridePresent, Int &i, const AsciiString& presentButtonName, Bool isLastAvailableKey, GameWindow **button);
 	CBCommandStatus processCommandSetModifierButtonClick( GameWindow *control, GadgetGameMessage gadgetMessage );
+
+	Bool isMouseWithinCommandButton(Int i, const ICoord2D *mousePos) const;
 
 protected:
 	void updateRadarAttackGlow ( void );

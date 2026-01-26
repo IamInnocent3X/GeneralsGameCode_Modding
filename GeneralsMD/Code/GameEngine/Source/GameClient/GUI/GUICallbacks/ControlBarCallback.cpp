@@ -514,6 +514,8 @@ WindowMsgHandledType ControlBarSystem( GameWindow *window, UnsignedInt msg,
 		case GBM_DOUBLE_CLICKED_LEFT:
 		case GBM_DOUBLE_CLICKED_RIGHT:
 		case GBM_DOUBLE_CLICKED_MIDDLE:
+		case GBM_SCROLL_UP:
+		case GBM_SCROLL_DOWN:
 		{
 			CBCommandStatus statusResult = CBC_COMMAND_NOT_USED;
 			GameWindow *control = (GameWindow *)mData1;
