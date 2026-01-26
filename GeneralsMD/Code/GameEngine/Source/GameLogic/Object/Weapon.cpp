@@ -1671,7 +1671,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 	Coord3D projectileDestination = targetedPos; //Need to copy this, as we have a pointer to their actual position
 	Real scatterRadius = 0.0f;
-	if( m_scatterRadius > 0.0f || m_infantryInaccuracyDist > 0.0f && victimObj && victimObj->isKindOf( KINDOF_INFANTRY ) && !retarget )
+	if( !retarget && ( m_scatterRadius > 0.0f || (m_infantryInaccuracyDist > 0.0f && victimObj && victimObj->isKindOf( KINDOF_INFANTRY )) ) )
 	{
 		projectileDestination = *victimPos;
 		// This weapon scatters, so clear the victimObj, as we are no longer shooting it directly,
@@ -4691,7 +4691,7 @@ Bool Weapon::privateFireWeapon(
 				}
 
 				// it's a mine, but doesn't have LandMineInterface...
-				if( !found && victimObj->isKindOf( KINDOF_MINE ) || victimObj->isKindOf( KINDOF_BOOBY_TRAP ) || victimObj->isKindOf( KINDOF_DEMOTRAP ) )
+				if( (!found && victimObj->isKindOf( KINDOF_MINE )) || victimObj->isKindOf( KINDOF_BOOBY_TRAP ) || victimObj->isKindOf( KINDOF_DEMOTRAP ) )
 				{
 					VeterancyLevel v = sourceObj->getVeterancyLevel();
 					FXList::doFXPos(m_template->getFireFX(v), victimObj->getPosition(), victimObj->getTransformMatrix(), 0, victimObj->getPosition(), 0);

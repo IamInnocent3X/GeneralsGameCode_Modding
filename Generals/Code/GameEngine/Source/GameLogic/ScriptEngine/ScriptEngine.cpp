@@ -349,6 +349,26 @@ void AttackPriorityInfo::loadPostProcess( void )
 // ScriptEngine class
 
 //-------------------------------------------------------------------------------------------------
+/** Parse script action entry.  The InternalName has to match the action's internal name, and then it
+overrides the ui name and help text.  If no entry is present in the ini file, the default code
+initialized value in ScriptEngine::init() is used. jba*/
+//-------------------------------------------------------------------------------------------------
+void ScriptEngine::parseScriptAction( INI* ini )
+{
+}
+
+
+//-------------------------------------------------------------------------------------------------
+/** Parse script condition entry.  The InternalName has to match the condition's internal name, and then it
+overrides the ui name and help text.  If no entry is present in the ini file, the default code
+initialized value in ScriptEngine::init() is used. jba*/
+//-------------------------------------------------------------------------------------------------
+void ScriptEngine::parseScriptCondition( INI* ini )
+{
+}
+
+
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 ScriptEngine::ScriptEngine():
 m_numCounters(0),
@@ -7214,9 +7234,9 @@ void ScriptEngine::evaluateAndProgressAllSequentialScripts( void )
 #endif
 		}
 
-		if( ai || aigroup ) {
-			if (((ai && (ai->isIdle()) || (aigroup && aigroup->isIdle())) &&
-				seqScript->m_framesToWait < 1) || (seqScript->m_framesToWait == 0)) {
+		if (ai || aigroup) {
+			if (seqScript->m_framesToWait == 0 ||
+				(seqScript->m_framesToWait < 0 && ((ai && ai->isIdle()) || (aigroup && aigroup->isIdle())))) {
 
 				// We want to supress messages if we're repeatedly waiting for an event to occur, cause
 				// it KILLS our debug framerate.

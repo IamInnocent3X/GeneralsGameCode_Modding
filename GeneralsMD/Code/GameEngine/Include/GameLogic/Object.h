@@ -408,7 +408,7 @@ public:
 	void setCustomStatus( const std::vector<AsciiString>& objectCustomStatus, Bool set = true );
 	void clearCustomStatus( const std::vector<AsciiString>& statusName ) { setCustomStatus( statusName, false ); } // This is not being used so far.
 	void updateUpgradeModules();	///< We need to go through our Upgrade Modules and see which should be activated
-	UpgradeMaskType getObjectCompletedUpgradeMask() const { return m_objectUpgradesCompleted; } ///< Upgrades I complete locally
+	const UpgradeMaskType& getObjectCompletedUpgradeMask() const { return m_objectUpgradesCompleted; } ///< Upgrades I complete locally
 
 	//This function sucks.
 	//It was added for objects that can disguise as other objects and contain upgraded subobject overrides.

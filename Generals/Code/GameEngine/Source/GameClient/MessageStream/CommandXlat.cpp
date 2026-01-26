@@ -792,7 +792,7 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 
 		// This seems really hacky, and MarkL admits that it is. However, we do this so that we
 		// can "randomly" pick a different sound the next time, if we have 3 or more sounds. - jkmcd
-		((AudioEventRTS*)soundToPlayPtr)->setPlayingAudioIndex( soundToPlay.getPlayingAudioIndex() );
+		soundToPlayPtr->setPlayingAudioIndex( soundToPlay.getPlayingAudioIndex() );
 
 		if( objectWithSound->testStatus( OBJECT_STATUS_IS_CARBOMB ) )
 		{
@@ -1495,8 +1495,8 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 	//Added: shrubberies are the exception for interactions...
 	//Removed: GS Took out ObjectStatusUnselectable, since that status only prevents selection, not everything
 	if( obj == nullptr ||
-			obj->getStatusBits().test( OBJECT_STATUS_MASKED ) &&
-			!obj->isKindOf(KINDOF_SHRUBBERY) && !obj->isKindOf(KINDOF_FORCEATTACKABLE) )
+			( obj->getStatusBits().test( OBJECT_STATUS_MASKED ) &&
+			!obj->isKindOf(KINDOF_SHRUBBERY) && !obj->isKindOf(KINDOF_FORCEATTACKABLE) ) )
 	{
 		//Nulling out the draw and obj pointer will force the remainder of this code to evaluate
 		//a position interaction.
@@ -3049,7 +3049,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			if (TheGameLogic->isInMultiplayerGame() && !TheGameLogic->isInReplayGame())
 			{
 				Player *localPlayer = ThePlayerList->getLocalPlayer();
-				if (localPlayer && localPlayer->isPlayerActive() || !TheGlobalData->m_netMinPlayers)
+				if ((localPlayer && localPlayer->isPlayerActive()) || !TheGlobalData->m_netMinPlayers)
 				{
 					ToggleInGameChat();
 					SetInGameChatType( INGAME_CHAT_ALLIES );
