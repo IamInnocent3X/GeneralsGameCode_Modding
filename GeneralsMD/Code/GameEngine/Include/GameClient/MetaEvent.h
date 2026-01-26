@@ -379,7 +379,7 @@ public:
 	Bool						m_commandModifierNeedsButtonEnabled;
 	Bool						m_commandModifierIsSingular;
 	Bool						m_commandModifierIsRandom;
-	Bool						m_commandModifierStopsAtTop;
+	Bool						m_commandModifierStopsAtEnd;
 	MappableKeyCategories		m_category;				///< This is the category the key falls under
 	UnicodeString						m_description;		///< The description string for the keys
 	UnicodeString						m_displayName;		///< The display name of our command
@@ -412,7 +412,7 @@ struct MouseModifierKeysList
 	std::vector<AsciiString>	KeysButtonNeedsEnable;
 	std::vector<AsciiString>	KeysSingular;
 	std::vector<AsciiString>	KeysRandom;
-	std::vector<AsciiString>	KeysStopsAtTop;
+	std::vector<AsciiString>	KeysStopsAtEnd;
 
 	MouseModifierKeysList()
 	{
@@ -420,7 +420,7 @@ struct MouseModifierKeysList
 		KeysButtonNeedsEnable.clear();
 		KeysSingular.clear();
 		KeysRandom.clear();
-		KeysStopsAtTop.clear();
+		KeysStopsAtEnd.clear();
 	}
 };
 
@@ -433,7 +433,7 @@ private:
 	Bool						m_keyRequireEnabled;
 	Bool						m_isSingular;
 	Bool						m_isRandom;
-	Bool						m_stopsAtTop;
+	Bool						m_stopsAtEnd;
 	std::vector<AsciiString>	m_keys;
 	std::vector<AsciiString>	m_commandButtonsToTrigger;
 
@@ -444,7 +444,7 @@ public:
 		m_keyRequireEnabled = FALSE;
 		m_isSingular = FALSE;
 		m_isRandom = FALSE;
-		m_stopsAtTop = FALSE;
+		m_stopsAtEnd = FALSE;
 		m_keys.clear();
 		m_commandButtonsToTrigger.clear();
 	}
@@ -455,7 +455,7 @@ public:
 		m_keyRequireEnabled = FALSE;
 		m_isSingular = FALSE;
 		m_isRandom = FALSE;
-		m_stopsAtTop = FALSE;
+		m_stopsAtEnd = FALSE;
 		m_keys.clear();
 		m_commandButtonsToTrigger.clear();
 	}

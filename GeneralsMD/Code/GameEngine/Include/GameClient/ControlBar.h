@@ -319,7 +319,7 @@ struct CommandSetModifierEntry
 	Bool						KeyRequireEnabled;
 	Bool						IsSingular;
 	Bool						IsRandom;
-	Bool						StopsAtTop;
+	Bool						StopsAtEnd;
 };
 
 //-------------------------------------------------------------------------------------------------

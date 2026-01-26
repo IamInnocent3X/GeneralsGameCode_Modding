@@ -1744,7 +1744,7 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 			// Checking if the current button is being overriden
 			Bool doOverride = FALSE;
 			AsciiString lastPresentKey;
-			std::vector<AsciiString> AvailableKeys;
+			std::vector<AsciiString> AvailableButtons;
 			commandButtonOverrideName.clear();
 			lastPresentKey.clear();
 
@@ -1786,34 +1786,40 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 					if(commandButtonOverrideName.isEmpty())
 						continue;
 
+					// Same command button as before, deliberate mistake
+					if(commandButtonOverrideName == overrideButtonPresentName)
+						continue;
+
 					doOverride = true;
 
 					if(doRandom)
-					{
-						// If we are doing random, we get all the available keys except the current one
-						if(overrideButtonPresentName.isEmpty() || commandButtonOverrideName != overrideButtonPresentName)
-							AvailableKeys.push_back(commandButtonOverrideName);
-					}
+						AvailableButtons.push_back(commandButtonOverrideName);
 					else
-					{
 						break;
-					}
 				}
 			}
-
 
 			// if we are doing or done with overriding, process the registration and control bar
 			if(doOverride)
 			{
-				if(!entry.StopsAtTop && doRemove && !overrideButtonPresentName.isEmpty())
+				if(!entry.StopsAtEnd && doRemove && !overrideButtonPresentName.isEmpty())
 				{
 					if(obj->removeModiferCommandOverrideWithinCommandSet(i, overrideButtonPresentName))
 						set = true;
 				}
-				else if(doRandom && !AvailableKeys.empty())
+				else if(doRandom && !AvailableButtons.empty())
 				{
-					if(obj->registerModiferCommandOverrideWithinCommandSet(i, AvailableKeys[GameLogicRandomValue(0, AvailableKeys.size()-1)]))
-						set = true;
+					// We only do Random for buttons that aren't the last on the list
+					if(overrideButtonPresentName.isEmpty() || AvailableButtons[AvailableButtons.size()-1] != overrideButtonPresentName)
+					{
+						// Get a random index until its one that isn't currently on the override list
+						Int randomIdx = GameLogicRandomValue(0, AvailableButtons.size()-1);
+						while(!overrideButtonPresentName.isEmpty() && AvailableButtons[randomIdx] == overrideButtonPresentName)
+							randomIdx = GameLogicRandomValue(0, AvailableButtons.size()-1);
+
+						if(obj->registerModiferCommandOverrideWithinCommandSet(i, AvailableButtons[randomIdx]))
+							set = true;
+					}
 				}
 				else if(!commandButtonOverrideName.isEmpty())
 				{
@@ -1906,7 +1912,7 @@ Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList k
 			Bool isLastAvailableKey = TRUE;	// Assume true because buttons may not contain any modifier keys
 			Bool isRandom = FALSE;
 			Bool isSingular = FALSE;
-			Bool stopsAtTop = FALSE;
+			Bool stopsAtEnd = FALSE;
 			LastCommandModifier lastPresentCommand;
 			lastPresentCommand.slot = -1;
 			lastPresentCommand.key.clear();
@@ -1945,7 +1951,7 @@ Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList k
 						isSingular = checkWithinStringVec((*it), keys.KeysSingular);
 						if(isSingular)
 						{
-							stopsAtTop = checkWithinStringVec((*it), keys.KeysStopsAtTop);
+							stopsAtEnd = checkWithinStringVec((*it), keys.KeysStopsAtEnd);
 							break;
 						}
 					}
@@ -1960,7 +1966,7 @@ Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList k
 
 			if(isSingular && lastPresentCommand.slot != -1)
 			{
-				if(stopsAtTop)
+				if(stopsAtEnd)
 				{
 					break;
 				}
@@ -1977,9 +1983,9 @@ Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList k
 				{
 					if(lastPresentCommand.key == (*it))
 					{
-						stopsAtTop = checkWithinStringVec(lastPresentCommand.key, keys.KeysStopsAtTop);
+						stopsAtEnd = checkWithinStringVec(lastPresentCommand.key, keys.KeysStopsAtEnd);
 						lastPresentCommand.key.clear();
-						if(stopsAtTop || !isLastAvailableKey)
+						if(stopsAtEnd || !isLastAvailableKey)
 							continue;
 					}
 					else
@@ -2008,22 +2014,21 @@ Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList k
 				{
 					isRandom = checkWithinStringVec((*it), keys.KeysRandom);
 					isSingular = checkWithinStringVec((*it), keys.KeysSingular);
-					stopsAtTop = checkWithinStringVec((*it), keys.KeysStopsAtTop);
+					stopsAtEnd = checkWithinStringVec((*it), keys.KeysStopsAtEnd);
 				}
 
 				if(isSingular)
 				{
 					// Process the modifier for Singular Keys
-					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtTop && overrideIsPresent, i, commandButtonOverrideName))
-					{
+					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && overrideIsPresent, i, commandButtonOverrideName))
 						set = true;
-						break;
-					}
+
+					break;
 				}
 				else if(isRandom)
 				{
 					// Process the modifier for Random Modifier
-					std::vector<AsciiString> AvailableKeys;
+					std::vector<AsciiString> AvailableButtons;
 					for(std::vector<AsciiString>::const_iterator it_r = keys.KeysRandom.begin(); it_r != keys.KeysRandom.end(); ++it_r)
 					{
 						if(!button->winGetEnabled())
@@ -2040,23 +2045,23 @@ Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList k
 
 						// If we are doing random, we get all the available keys except the current one
 						if(lastPresentCommand.commandButtonName.isEmpty() || currentButtonOverrideName != lastPresentCommand.commandButtonName)
-							AvailableKeys.push_back(currentButtonOverrideName);
+							AvailableButtons.push_back(currentButtonOverrideName);
 					}
-					if(!AvailableKeys.empty())
+					if(!AvailableButtons.empty())
 					{
-						if(obj->processModiferCommandOverrideWithinCommandSet(FALSE, i, AvailableKeys[GameLogicRandomValue(0, AvailableKeys.size()-1)]))
+						if(obj->processModiferCommandOverrideWithinCommandSet(FALSE, i, AvailableButtons[GameLogicRandomValue(0, AvailableButtons.size()-1)]))
 							set = true;
 					}
 					else
 					{
-						if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtTop && overrideIsPresent, i, commandButtonOverrideName))
+						if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && overrideIsPresent, i, commandButtonOverrideName))
 							set = true;
 					}
 					break;
 				}
 				else
 				{
-					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtTop && isLastAvailableKey, i, commandButtonOverrideName))
+					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && isLastAvailableKey, i, commandButtonOverrideName))
 					{
 						set = true;
 						break;
@@ -2122,7 +2127,7 @@ GameMessageDisposition CommandSetTranslator::translateGameMessage(const GameMess
 	entry.KeyRequireEnabled = msg->getArgument(0)->boolean;
 	entry.IsSingular = msg->getArgument(1)->boolean;
 	entry.IsRandom = msg->getArgument(2)->boolean;
-	entry.StopsAtTop = msg->getArgument(3)->boolean;
+	entry.StopsAtEnd = msg->getArgument(3)->boolean;
 	if(TheControlBar->checkForCommandSetModifierOverride(entry))
 		return DESTROY_MESSAGE;
 	else

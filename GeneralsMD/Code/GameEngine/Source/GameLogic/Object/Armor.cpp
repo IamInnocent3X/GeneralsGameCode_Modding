@@ -700,7 +700,7 @@ void ArmorStore::parseLinkCustomDamageTypes(INI* ini, void* instance, void* /* s
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real &damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType)
+Bool ArmorStore::findNameInTypesList(NameKeyType nameKey, Real &damage, const CustomDamageTypeVec& coefficients, DamageType &linkDamageType) const
 {
 	CustomDamageTypesMap::const_iterator it = m_customDamageTypes.find(nameKey);
 	if(it != m_customDamageTypes.end())

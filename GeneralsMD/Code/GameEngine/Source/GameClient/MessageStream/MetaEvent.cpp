@@ -372,7 +372,7 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 	{ "CommandModifierNeedsButtonEnabled",	INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierNeedsButtonEnabled ) },
 	{ "CommandModifierIsSingular",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierIsSingular ) },
 	{ "CommandModifierIsRandom",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierIsRandom ) },
-	{ "CommandModifierStopsAtTop",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierStopsAtTop ) },
+	{ "CommandModifierStopsAtEnd",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierStopsAtEnd ) },
 	{ "CommandButtonsToTrigger", 	INI::parseAsciiStringVector, nullptr, offsetof( MetaMapRec, m_commandModifierButtonsToTrigger ) },
 	{ "Description",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_description ) },
 	{ "DisplayName",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_displayName ) },
@@ -501,7 +501,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 					metaMsg->appendBooleanArgument( map->m_commandModifierNeedsButtonEnabled );
 					metaMsg->appendBooleanArgument( map->m_commandModifierIsSingular );
 					metaMsg->appendBooleanArgument( map->m_commandModifierIsRandom );
-					metaMsg->appendBooleanArgument( map->m_commandModifierStopsAtTop );
+					metaMsg->appendBooleanArgument( map->m_commandModifierStopsAtEnd );
 					metaMsg->appendIntegerArgument( map->m_commandModifierKeys.size() );
 					//metaMsg->appendIntegerArgument( map->m_commandModifierButtonsToTrigger.size() );
 
@@ -590,7 +590,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 						metaMsg->appendBooleanArgument( map->m_commandModifierNeedsButtonEnabled );
 						metaMsg->appendBooleanArgument( map->m_commandModifierIsSingular );
 						metaMsg->appendBooleanArgument( map->m_commandModifierIsRandom );
-						metaMsg->appendBooleanArgument( map->m_commandModifierStopsAtTop );
+						metaMsg->appendBooleanArgument( map->m_commandModifierStopsAtEnd );
 						metaMsg->appendIntegerArgument( map->m_commandModifierKeys.size() );
 						//metaMsg->appendIntegerArgument( map->m_commandModifierButtonsToTrigger.size() );
 
@@ -800,7 +800,7 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 	m->m_commandModifierNeedsButtonEnabled = FALSE;
 	m->m_commandModifierIsSingular = FALSE;
 	m->m_commandModifierIsRandom = FALSE;
-	m->m_commandModifierStopsAtTop = FALSE;
+	m->m_commandModifierStopsAtEnd = FALSE;
 	m->m_next = m_metaMaps;
 	m_metaMaps = m;
 
@@ -1086,7 +1086,7 @@ void MetaMap::parseMouseCommandModifierDefinition(INI* ini)
 		{ "NeedsButtonEnabled", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_keyRequireEnabled ) },
 		{ "IsSingular", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_isSingular ) },
 		{ "IsRandom", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_isRandom ) },
-		{ "StopsAtTop", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_stopsAtTop ) },
+		{ "StopsAtEnd", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_stopsAtEnd ) },
 		{ "CommandButtonsToTrigger", INI::parseAsciiStringVector, nullptr, offsetof( MouseModifierKeyTemplate, m_commandButtonsToTrigger ) },
 
 		{ nullptr, nullptr, nullptr, 0 }
@@ -1113,7 +1113,7 @@ void MetaMap::doMouseCommandModifierParsing()
 	Bool keyRequireEnable = mouseModifierKeyParser.m_keyRequireEnabled;
 	Bool isSingular = mouseModifierKeyParser.m_isSingular;
 	Bool isRandom = mouseModifierKeyParser.m_isRandom;
-	Bool stopsAtTop = mouseModifierKeyParser.m_stopsAtTop;
+	Bool stopsAtEnd = mouseModifierKeyParser.m_stopsAtEnd;
 
 	MouseState mouseState = mouseModifierKeyParser.m_mouseState;
 	std::vector<AsciiString> keys = mouseModifierKeyParser.m_keys;
@@ -1133,8 +1133,8 @@ void MetaMap::doMouseCommandModifierParsing()
 				m_mouseModifierKeysUniversal[mouseState].KeysSingular.push_back(*it_s);
 			if(isRandom)
 				m_mouseModifierKeysUniversal[mouseState].KeysRandom.push_back(*it_s);
-			if(stopsAtTop)
-				m_mouseModifierKeysUniversal[mouseState].KeysStopsAtTop.push_back(*it_s);
+			if(stopsAtEnd)
+				m_mouseModifierKeysUniversal[mouseState].KeysStopsAtEnd.push_back(*it_s);
 		}
 	}
 	else
@@ -1154,8 +1154,8 @@ void MetaMap::doMouseCommandModifierParsing()
 						it->second.KeysSingular.push_back(*it_s);
 					if(isRandom)
 						it->second.KeysRandom.push_back(*it_s);
-					if(stopsAtTop)
-						it->second.KeysStopsAtTop.push_back(*it_s);
+					if(stopsAtEnd)
+						it->second.KeysStopsAtEnd.push_back(*it_s);
 				}
 			}
 			else
@@ -1168,8 +1168,8 @@ void MetaMap::doMouseCommandModifierParsing()
 					keysList.KeysSingular = keys;
 				if(isRandom)
 					keysList.KeysRandom = keys;
-				if(stopsAtTop)
-					keysList.KeysStopsAtTop = keys;
+				if(stopsAtEnd)
+					keysList.KeysStopsAtEnd = keys;
 
 				m_mouseModifierKeysSpecific[mouseState][(*it_command)] = keysList;
 			}
