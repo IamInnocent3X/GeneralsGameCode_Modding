@@ -68,8 +68,8 @@ void LineOfSightModifierUpgrade::upgradeImplementation()
 	// The logic that does the stealthupdate will notice this and start stealthing
 	Object *me = getObject();
 
-	UpgradeMaskType objectMask = me->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = me->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 

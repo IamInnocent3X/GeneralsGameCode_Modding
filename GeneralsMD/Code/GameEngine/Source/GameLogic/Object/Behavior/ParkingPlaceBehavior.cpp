@@ -834,8 +834,8 @@ UpdateSleepTime ParkingPlaceBehavior::update()
 
 		if (upgradeTemplate && player)
 		{
-			UpgradeMaskType upgradeMask = upgradeTemplate->getUpgradeMask();
-			UpgradeMaskType objMask = getObject()->getObjectCompletedUpgradeMask();
+			const UpgradeMaskType& upgradeMask = upgradeTemplate->getUpgradeMask();
+			const UpgradeMaskType& objMask = getObject()->getObjectCompletedUpgradeMask();
 			if (objMask.testForAny(upgradeMask) || player->hasUpgradeComplete(upgradeTemplate))
 			{
 				DEBUG_LOG(("ParkingPlaceBehavior::update() - Apply Damage Scalar Upgrade!\n"));

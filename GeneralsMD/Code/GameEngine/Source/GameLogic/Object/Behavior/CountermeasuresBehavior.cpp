@@ -503,8 +503,8 @@ void CountermeasuresBehavior::launchVolley()
 
 void CountermeasuresBehavior::upgradeImplementation()
 {
-	UpgradeMaskType objectMask = getObject()->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = getObject()->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = getObject()->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = getObject()->getControllingPlayer()->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 

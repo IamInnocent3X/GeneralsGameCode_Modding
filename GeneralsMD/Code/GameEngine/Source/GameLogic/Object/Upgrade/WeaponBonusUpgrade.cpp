@@ -91,8 +91,8 @@ void WeaponBonusUpgrade::upgradeImplementation( )
 	// will do the work of picking the right one from ini.  This comment is as long as the code.
 	Object *obj = getObject();
 
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 

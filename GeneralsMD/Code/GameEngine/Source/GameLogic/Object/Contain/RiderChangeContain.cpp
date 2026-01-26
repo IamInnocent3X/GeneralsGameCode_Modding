@@ -1049,8 +1049,8 @@ UpdateSleepTime RiderChangeContain::update()
 	{
 		Object* obj = getObject();
 		
-		UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
-		UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+		const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+		const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
 		m_prevMaskToCheck = playerMask;
 		m_prevMaskToCheck.set( objectMask );
 
@@ -1584,8 +1584,8 @@ void RiderChangeContain::loadPreviousState()
 	m_dontCompare = TRUE;
 
 	// Update all the statuses and Upgrade Masks to the current one
-	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
 	m_prevMaskToCheck = playerMask;
 	m_prevMaskToCheck.set( objectMask );
 
@@ -1733,8 +1733,8 @@ void RiderChangeContain::doUpgradeChecks()
 	Object *obj = getObject();	
 
 	// Get the Upgrade Mask
-	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 
@@ -1761,7 +1761,7 @@ void RiderChangeContain::doUpgradeChecks()
 		Int doChange = 0;
 		
 		const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade( (*it).templateName );
-		UpgradeMaskType upgradeMask = upgradeTemplate->getUpgradeMask();
+		const UpgradeMaskType& upgradeMask = upgradeTemplate->getUpgradeMask();
 
 		// See if upgrade is found in the player completed upgrades or within the object completed upgrades
 		if ( newMask.testForAny(upgradeMask) && ( playerMask.testForAny(upgradeMask) || objectMask.testForAny(upgradeMask) ) )

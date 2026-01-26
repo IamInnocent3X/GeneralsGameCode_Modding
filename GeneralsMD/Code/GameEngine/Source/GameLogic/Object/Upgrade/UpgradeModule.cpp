@@ -158,7 +158,7 @@ Bool UpgradeMux::wouldUpgrade( const UpgradeMaskType& keyMask ) const
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Int UpgradeMux::wouldRefreshUpgrade( UpgradeMaskType keyMask, Bool hasExecuted ) const
+Int UpgradeMux::wouldRefreshUpgrade( const UpgradeMaskType& keyMask, Bool hasExecuted ) const
 {
 	UpgradeMaskType activation, conflicting;
 	getUpgradeActivationMasks(activation, conflicting);

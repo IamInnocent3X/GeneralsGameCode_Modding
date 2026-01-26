@@ -483,12 +483,13 @@ Bool UpgradeMuxData::muxDataCheckStartsActive(const Object* obj) const
 	if(m_startsActiveChecksForConflictsWith)
 	{
 		// Check for any conflicts with
-		UpgradeMaskType playerMask;
-		playerMask.clear();
-		playerMask = obj->getControllingPlayer() ? obj->getControllingPlayer()->getCompletedUpgradeMask() : playerMask;
-		UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
-		UpgradeMaskType maskToCheck = playerMask;
-		maskToCheck.set( objectMask );
+		const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+		UpgradeMaskType maskToCheck = objectMask;
+		if(obj->getControllingPlayer())
+		{
+			const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+			maskToCheck.set( playerMask );
+		}
 
 		UpgradeMaskType activation, conflicting;
 		getUpgradeActivationMasks(activation, conflicting);

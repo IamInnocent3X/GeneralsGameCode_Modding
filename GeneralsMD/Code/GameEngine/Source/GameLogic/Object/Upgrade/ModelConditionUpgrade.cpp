@@ -79,8 +79,8 @@ void ModelConditionUpgrade::upgradeImplementation( )
 	if( data->m_conditionFlag == MODELCONDITION_INVALID )
 		return;
 
-	UpgradeMaskType objectMask = me->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = me->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = me->getControllingPlayer()->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 

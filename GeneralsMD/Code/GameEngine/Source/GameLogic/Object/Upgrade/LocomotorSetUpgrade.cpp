@@ -96,8 +96,8 @@ LocomotorSetUpgrade::~LocomotorSetUpgrade( void )
 void LocomotorSetUpgrade::upgradeImplementation( )
 {
 	Object* obj = getObject();
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 

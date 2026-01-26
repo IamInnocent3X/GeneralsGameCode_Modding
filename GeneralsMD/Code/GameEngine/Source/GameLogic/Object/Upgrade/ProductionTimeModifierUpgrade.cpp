@@ -173,8 +173,8 @@ void ProductionTimeModifierUpgrade::upgradeImplementation( void )
 	Object *obj = getObject();
 	Player *player = getObject()->getControllingPlayer();
 
-	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
-	UpgradeMaskType playerMask = player->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = player->getCompletedUpgradeMask();
 	UpgradeMaskType maskToCheck = playerMask;
 	maskToCheck.set( objectMask );
 
