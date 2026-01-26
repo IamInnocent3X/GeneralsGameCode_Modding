@@ -609,6 +609,14 @@ public:
 	Bool m_heightAboveTerrainIncludesWater;
 	Bool m_hideScorchmarksAboveGround;
 
+	// Water depth lighting
+	RGBColor m_terrainHeightAmbientLightColor1;
+	RGBColor m_terrainHeightAmbientLightColor2;
+	Real m_terrainHeightAmbientLightHeightStart;
+	Real m_terrainHeightAmbientLightHeight1;
+	Real m_terrainHeightAmbientLightHeight2;
+	Bool m_terrainHeightAmbientLightAdditive;
+
 	Bool m_countermeasuresDetonateNonTracking;
 
 	Bool m_newskirmishfpsSystem;
