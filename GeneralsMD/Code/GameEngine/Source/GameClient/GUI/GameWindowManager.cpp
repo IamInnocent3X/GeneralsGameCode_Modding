@@ -52,6 +52,7 @@
 #include "GameClient/GadgetCheckBox.h"
 #include "GameClient/GlobalLanguage.h"
 #include "GameClient/GameWindowTransitions.h"
+#include "GameClient/ControlBar.h"
 #include "Common/NameKeyGenerator.h"
 #include "GameLogic/GameLogic.h" // Note: Do Not Ever do Anything that Corresponds with GameLogic HERE. This is solely used to identify whether we can do command set modifiers
 
@@ -1146,18 +1147,20 @@ WinInputReturnCode GameWindowManager::winProcessMouseEvent( GameWindowMessage ms
 					// --------------------------------------------------------------------
 					case GWM_LEFT_UP:
 					case GWM_LEFT_DOWN:
+					case GWM_LEFT_DOUBLE_CLICK:
 					case GWM_RIGHT_UP:
 					case GWM_RIGHT_DOWN:
+					case GWM_RIGHT_DOUBLE_CLICK:
 					{
 						WinInstanceData *instData = toolTipWindow->winGetInstanceData();
 						if(BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ))
 						{
-							if( msg == GWM_RIGHT_UP || msg == GWM_RIGHT_DOWN )
+							if( msg == GWM_RIGHT_UP || msg == GWM_RIGHT_DOWN || (msg == GWM_RIGHT_DOUBLE_CLICK && TheControlBar->isWindowUnitBuildCommand(toolTipWindow)) )
 								break;
 						}
 						else
 						{
-							if( msg == GWM_LEFT_UP || msg == GWM_LEFT_DOWN )
+							if( msg == GWM_LEFT_UP || msg == GWM_LEFT_DOWN || (msg == GWM_LEFT_DOUBLE_CLICK && TheControlBar->isWindowUnitBuildCommand(toolTipWindow)) )
 								break;
 						}
 						FALLTHROUGH;
@@ -1165,8 +1168,6 @@ WinInputReturnCode GameWindowManager::winProcessMouseEvent( GameWindowMessage ms
 					case GWM_MIDDLE_UP:
 					case GWM_MIDDLE_DOWN:
 					case GWM_MIDDLE_DOUBLE_CLICK:
-					case GWM_LEFT_DOUBLE_CLICK:
-					case GWM_RIGHT_DOUBLE_CLICK:
 					case GWM_WHEEL_UP:
 					case GWM_WHEEL_DOWN:
 					{

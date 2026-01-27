@@ -243,6 +243,56 @@ Bool ControlBar::isMouseWithinCommandButton(Int i, const ICoord2D *mousePos) con
 }
 
 //-------------------------------------------------------------------------------------------------
+//Bool ControlBar::isMouseWithinUnitBuildCommandButton(const ICoord2D *mousePos, Bool isRightMouse) const
+//{
+	// Sanity
+//	if(mousePos->x >= m_controlBarButtonsPos.lo.x &&
+//		mousePos->x <= m_controlBarButtonsPos.hi.x &&
+//		mousePos->y >= m_controlBarButtonsPos.lo.y &&
+//		mousePos->y <= m_controlBarButtonsPos.hi.y)
+//	{
+//		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+//		{
+//			GameWindow *button = m_commandWindows[ i ];
+//			if( button == nullptr )
+//				continue;
+//
+//			if( isMouseWithinCommandButton( i, mousePos ) )
+//			{
+//				// Check if the button focuses on Right Click
+//				if(BitIsSet( button->winGetInstanceData()->getStatus(), WIN_STATUS_RIGHT_CLICK ))
+//				{
+//					if(!isRightMouse)
+//						return false;
+//				}
+//				else
+//				{
+//					if(isRightMouse)
+//						return false;
+//				}
+
+//				const CommandButton *commandButton = (const CommandButton *)GadgetButtonGetData(button);
+//				if(commandButton && commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD)
+//					return true;
+//				else
+//					return false;
+//			}
+//		}
+//	}
+//	return false;
+//}
+
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::isWindowUnitBuildCommand( GameWindow *control ) const
+{
+	const CommandButton *commandButton = (const CommandButton *)GadgetButtonGetData(control);
+	if( commandButton && commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD )
+		return true;
+	else
+		return false;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Process a button selected message from the window system that should be for one of
 	* our GUI commands */
 //-------------------------------------------------------------------------------------------------

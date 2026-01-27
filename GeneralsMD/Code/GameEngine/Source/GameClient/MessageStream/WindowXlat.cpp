@@ -141,7 +141,7 @@ static GameWindowMessage rawMouseToWindowMessage( const GameMessage *msg )
 			if(TheGlobalData->m_enableDoubleClick)
 			{
 				gwm = GWM_RIGHT_DOUBLE_CLICK;
-			break;
+				break;
 			}
 			FALLTHROUGH;
 		}

@@ -843,6 +843,8 @@ public:
 	CBCommandStatus processCommandSetModifierButtonClick( GameWindow *control, GadgetGameMessage gadgetMessage );
 
 	Bool isMouseWithinCommandButton(Int i, const ICoord2D *mousePos) const;
+	//Bool isMouseWithinUnitBuildCommandButton(const ICoord2D *mousePos, Bool isRightMouse) const;
+	Bool isWindowUnitBuildCommand( GameWindow *control ) const;
 
 protected:
 	void updateRadarAttackGlow ( void );
@@ -1095,6 +1097,8 @@ private:
 	Bool m_radarAttackGlowOn;
 	Int m_remainingRadarAttackGlowFrames;
 	GameWindow *m_radarAttackGlowWindow;
+
+	//IRegion2D m_controlBarButtonsPos;
 
 #if defined(RTS_DEBUG)
 	UnsignedInt m_lastFrameMarkedDirty;

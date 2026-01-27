@@ -640,10 +640,11 @@ public:
 
 	Bool m_fixHulksFreezingAboveTerrain;
 
-	Bool m_fixAIPathfindClumpForManyPlayers; // Credits to: Mauller
+	Bool m_fixAIPathfindClumpForManyPlayers;
 	Bool m_useNonRetailAIPathfind;
 	Bool m_useNonRetailAIPathfindAllocation;
-	Bool m_useNonRetailAIPathfindDynamicAlloc;
+	Bool m_useNonRetailAIPathfindDynamicAlloc; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindExperimentalTweaks; // Credits to: Mauller
 	Bool m_dynamicTargeting;
 	Bool m_useAccurateSphereToRectCollision;
 	Bool m_checkBoxBoundariesForDistCalc;
