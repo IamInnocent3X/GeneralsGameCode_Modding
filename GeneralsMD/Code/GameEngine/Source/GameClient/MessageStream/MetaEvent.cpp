@@ -1057,6 +1057,9 @@ MouseModifierKeysList MetaMap::getMouseCommandModifiersMeta( MouseState mouseInp
 
 		for(it_s = it->second.KeysRandom.begin(); it_s != it->second.KeysRandom.end(); ++it_s)
 			keys.KeysRandom.push_back(*it_s);
+
+		for(it_s = it->second.KeysStopsAtEnd.begin(); it_s != it->second.KeysStopsAtEnd.end(); ++it_s)
+			keys.KeysStopsAtEnd.push_back(*it_s);
 	}
 
 	return keys;
