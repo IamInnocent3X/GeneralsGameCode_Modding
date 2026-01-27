@@ -1114,12 +1114,15 @@ Bool s_forceCleanCells = false;
 Bool s_useNonRetailPathfind = false;
 Bool s_useNonRetailPathfindAllocation = false;
 Bool s_useNonRetailPathfindDynamicAlloc = false;
+Bool s_useNonRetailPathfindExperimentalTweaks = false;
 
 void PathfindCellInfo::forceCleanPathFindCellInfos()
 {
 	for (Int i = 0; i < CELL_INFOS_TO_ALLOCATE - 1; i++) {
 		s_infoArray[i].m_nextOpen = nullptr;
 		s_infoArray[i].m_prevOpen = nullptr;
+		s_infoArray[i].m_nextSkip = nullptr;
+		s_infoArray[i].m_prevSkip = nullptr;
 		s_infoArray[i].m_open = FALSE;
 		s_infoArray[i].m_closed = FALSE;
 	}
@@ -1201,15 +1204,11 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
 		s_firstFree = s_firstFree->m_pathParent;
 
 #else*/
-	//Bool applyMaullersDynamicAlloc = TRUE;
 	PathfindCellInfo *info;
-	if( !s_useNonRetailPathfindDynamicAlloc )
-	{
-		//applyMaullersDynamicAlloc = FALSE;
-		info = s_firstFree;
-	}
-	else
+	if( s_useNonRetailPathfindDynamicAlloc )
 		info = cell->getCellInfo();
+	else
+		info = s_firstFree;
 
 	if (s_useNonRetailPathfindDynamicAlloc || s_firstFree) {
 		if (!s_useNonRetailPathfindDynamicAlloc)
@@ -1225,6 +1224,8 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
 
 		info->m_nextOpen = nullptr;
 		info->m_prevOpen = nullptr;
+		info->m_nextSkip = nullptr;
+		info->m_prevSkip = nullptr;
 		info->m_pathParent = nullptr;
 		info->m_costSoFar = 0;
 		info->m_totalCost = 0;
@@ -1246,29 +1247,20 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
  */
 void PathfindCellInfo::releaseACellInfo(PathfindCellInfo *theInfo)
 {
-/*#if RETAIL_COMPATIBLE_PATHFINDING
+  if( !s_useNonRetailPathfindDynamicAlloc )
+  {
 	DEBUG_ASSERTCRASH(!theInfo->m_isFree, ("Shouldn't be free."));
 	//@ todo -fix this assert on usa04.  jba.
 	//DEBUG_ASSERTCRASH(theInfo->m_obstacleID==0, ("Shouldn't be obstacle."));
 	theInfo->m_pathParent = s_firstFree;
 	s_firstFree = theInfo;
 	s_firstFree->m_isFree = true;
-#else*/
-if( !s_useNonRetailPathfind )
-{
-	DEBUG_ASSERTCRASH(!theInfo->m_isFree, ("Shouldn't be free."));
-	//@ todo -fix this assert on usa04.  jba.
-	//DEBUG_ASSERTCRASH(theInfo->m_obstacleID==0, ("Shouldn't be obstacle."));
-	theInfo->m_pathParent = s_firstFree;
-	s_firstFree = theInfo;
-	s_firstFree->m_isFree = true;
-}
-else
-{
+  }
+  else
+  {
 	theInfo->m_pathParent = nullptr;
 	theInfo->m_isFree = true;
-}
-//#endif
+  }
 }
 
 //-----------------------------------------------------------------------------------
@@ -1294,7 +1286,6 @@ PathfindCell::~PathfindCell( void )
 		DEBUG_LOG( ("PathfindCell::~PathfindCell m_info Allocated."));
 	}
 }
-
 //#if !RETAIL_COMPATIBLE_PATHFINDING
 PathfindCellInfo* PathfindCell::getCellInfo()
 {
@@ -1337,6 +1328,8 @@ Bool PathfindCell::startPathfind( PathfindCell *goalCell  )
 	DEBUG_ASSERTCRASH(m_info, ("Has to have info."));
 	m_info->m_nextOpen = nullptr;
 	m_info->m_prevOpen = nullptr;
+	m_info->m_nextSkip = nullptr;
+	m_info->m_prevSkip = nullptr;
 	m_info->m_pathParent = nullptr;
 	m_info->m_costSoFar = 0;		// start node, no cost to get here
 	m_info->m_totalCost = 0;
@@ -1472,6 +1465,7 @@ void PathfindCell::releaseInfo(void)
 		return;
 	}
 
+	DEBUG_ASSERTCRASH(m_info->m_prevSkip == nullptr && m_info->m_nextSkip == nullptr, ("Shouldn't have skip links."));
 	DEBUG_ASSERTCRASH(m_info->m_prevOpen==nullptr && m_info->m_nextOpen==nullptr, ("Shouldn't be linked."));
 	DEBUG_ASSERTCRASH(m_info->m_open==0 && m_info->m_closed==0, ("Shouldn't be linked."));
 	DEBUG_ASSERTCRASH(m_info->m_goalUnitID==INVALID_ID && m_info->m_posUnitID==INVALID_ID, ("Shouldn't be occupied."));
@@ -1772,11 +1766,76 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 {
 	DEBUG_ASSERTCRASH(m_info, ("Has to have info."));
 	DEBUG_ASSERTCRASH(m_info->m_closed==FALSE && m_info->m_open==FALSE, ("Serious error - Invalid flags. jba"));
+
+	if(s_useNonRetailPathfindExperimentalTweaks)
+	{
+		// mark newCell as being on open list
+		m_info->m_open = true;
+		m_info->m_closed = false;
+	}
+
 	if (list == nullptr)
 	{
 		list = this;
 		m_info->m_prevOpen = nullptr;
 		m_info->m_nextOpen = nullptr;
+		m_info->m_nextSkip = nullptr;
+		m_info->m_prevSkip = nullptr;
+		if(s_useNonRetailPathfindExperimentalTweaks)
+			return this;
+	}
+	else if(s_useNonRetailPathfindExperimentalTweaks)
+	{
+		// If needs inserting at beginning
+		if (m_info->m_totalCost < list->m_info->m_totalCost) {
+			m_info->m_prevOpen = nullptr;
+			list->m_info->m_prevOpen = this->m_info;
+			m_info->m_nextOpen = list->m_info;
+
+			//Move head of skips to new head
+			m_info->m_nextSkip = list->m_info->m_nextSkip;
+			if (list->m_info->m_nextSkip)
+				list->m_info->m_nextSkip->m_prevSkip = this->m_info;
+			list->m_info->m_nextSkip = nullptr;
+			m_info->m_prevSkip = nullptr;
+
+			return this;
+		}
+
+		// Traverse the skip list to find closest position
+		PathfindCell* skip = list;
+		while (skip->m_info->m_nextSkip && skip->m_info->m_nextSkip->m_totalCost <= m_info->m_totalCost) {
+			skip = skip->getNextSkip();
+		}
+
+		// Traverse the list to find correct position
+		PathfindCell* current = skip;
+		while (current->m_info->m_nextOpen && current->m_info->m_nextOpen->m_totalCost <= m_info->m_totalCost) {
+			current = current->getNextOpen();
+		}
+
+		// Insert the new node in the correct position
+		m_info->m_nextOpen = current->m_info->m_nextOpen;
+		if (current->m_info->m_nextOpen != nullptr) {
+			current->m_info->m_nextOpen->m_prevOpen = this->m_info;
+		}
+		current->m_info->m_nextOpen = this->m_info;
+		m_info->m_prevOpen = current->m_info;
+
+		// Insert new skip level if we are going to add a new skip
+		if ( (m_info->m_totalCost + m_info->m_pos.x + m_info->m_pos.y) % 4 == 0 ) {
+			m_info->m_nextSkip = skip->m_info->m_nextSkip;
+			if(skip->m_info->m_nextSkip != nullptr)
+				skip->m_info->m_nextSkip->m_prevSkip = this->m_info;
+
+			skip->m_info->m_nextSkip = this->m_info;
+			m_info->m_prevSkip = skip->m_info;
+
+			DEBUG_ASSERTCRASH(this->m_info != this->m_info->m_nextSkip, ("Shouldnt be linked to self, nextSkip, insert to skip list."));
+			DEBUG_ASSERTCRASH(this->m_info != this->m_info->m_prevSkip, ("Shouldnt be linked to self, prevSkip, insert to skip list."));
+		}
+
+		DEBUG_ASSERTCRASH(list->m_info != list->m_info->m_nextSkip, ("Shouldnt be linked to self, end of PutOnSortedOpenList."));
 	}
 	else
 	{
@@ -1849,29 +1908,68 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 		}
 	}
 
-	// mark newCell as being on open list
-	m_info->m_open = true;
-	m_info->m_closed = false;
+	if(!s_useNonRetailPathfindExperimentalTweaks)
+	{
+		// mark newCell as being on open list
+		m_info->m_open = true;
+		m_info->m_closed = false;
+	}
 
 	return list;
 }
 
 /// remove self from "open" list
-PathfindCell *PathfindCell::removeFromOpenList( PathfindCell *list )
+PathfindCell* PathfindCell::removeFromOpenList(PathfindCell* list)
 {
 	DEBUG_ASSERTCRASH(m_info, ("Has to have info."));
-	DEBUG_ASSERTCRASH(m_info->m_closed==FALSE && m_info->m_open==TRUE, ("Serious error - Invalid flags. jba"));
+	DEBUG_ASSERTCRASH(m_info->m_closed == FALSE && m_info->m_open == TRUE, ("Serious error - Invalid flags. jba"));
+
 	if (m_info->m_nextOpen)
 		m_info->m_nextOpen->m_prevOpen = m_info->m_prevOpen;
 
 	if (m_info->m_prevOpen)
 		m_info->m_prevOpen->m_nextOpen = m_info->m_nextOpen;
 	else
+	{
+		if(s_useNonRetailPathfindExperimentalTweaks) {
+			if (m_info->m_nextOpen) {
+				// TheSuperHackers @info A list head replacement is a special case with problematic behaviour
+				// Skip links need to be pushed to the next open list cell, but only if they have no skip link
+				// We also have to make sure we are not linking a skip link back onto the same cell
+				if (!m_info->m_nextOpen->m_nextSkip && (m_info->m_nextSkip != m_info->m_nextOpen) ) {
+					m_info->m_nextOpen->m_nextSkip = m_info->m_nextSkip;
+					if (m_info->m_nextSkip)
+						m_info->m_nextSkip->m_prevSkip = m_info->m_nextOpen;
+				}
+
+				// If a subsequent skip node is moved to the head then it's previous skiplink needs clearing.
+				m_info->m_nextOpen->m_prevSkip = nullptr;
+
+				m_info->m_nextSkip = nullptr;
+				m_info->m_prevSkip = nullptr;
+			}
+		}
+
 		list = getNextOpen();
+	}
+
+	if(s_useNonRetailPathfindExperimentalTweaks)
+	{
+		// Functions for inserting between skip nodes
+		if (m_info->m_nextSkip) {
+			m_info->m_nextSkip->m_prevSkip = m_info->m_prevSkip;
+		}
+
+		if (m_info->m_prevSkip) {
+			m_info->m_prevSkip->m_nextSkip = m_info->m_nextSkip;
+		}
+	}
 
 	m_info->m_open = false;
 	m_info->m_nextOpen = nullptr;
 	m_info->m_prevOpen = nullptr;
+	m_info->m_nextSkip = nullptr;
+	m_info->m_prevSkip = nullptr;
 
 	return list;
 }
@@ -1914,6 +2012,8 @@ Int PathfindCell::releaseOpenList( PathfindCell *list )
 		{
 			curInfo->m_nextOpen = nullptr;
 			curInfo->m_prevOpen = nullptr;
+			curInfo->m_nextSkip = nullptr;
+			curInfo->m_prevSkip = nullptr;
 			curInfo->m_open = FALSE;
 		}
 		if(cur)
@@ -1957,6 +2057,8 @@ Int PathfindCell::releaseClosedList( PathfindCell *list )
 		{
 			curInfo->m_nextOpen = nullptr;
 			curInfo->m_prevOpen = nullptr;
+			curInfo->m_nextSkip = nullptr;
+			curInfo->m_prevSkip = nullptr;
 			curInfo->m_closed = FALSE;
 		}
 		if(cur)
@@ -2004,6 +2106,8 @@ PathfindCell *PathfindCell::removeFromClosedList( PathfindCell *list )
 	m_info->m_closed = false;
 	m_info->m_nextOpen = nullptr;
 	m_info->m_prevOpen = nullptr;
+	m_info->m_nextSkip = nullptr;
+	m_info->m_prevSkip = nullptr;
 
 	return list;
 }
@@ -4088,6 +4192,7 @@ void Pathfinder::reset( void )
 		s_useNonRetailPathfindAllocation = TRUE;
 #endif
 		s_useNonRetailPathfindDynamicAlloc = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindDynamicAlloc;
+		s_useNonRetailPathfindExperimentalTweaks = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindExperimentalTweaks;
 	}
 
 //#if RETAIL_COMPATIBLE_PATHFINDING
@@ -4726,6 +4831,8 @@ void Pathfinder::newMap( void )
 	s_useNonRetailPathfindAllocation = TRUE;
 #endif
 	s_useNonRetailPathfindDynamicAlloc = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindDynamicAlloc;
+	s_useNonRetailPathfindExperimentalTweaks = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindExperimentalTweaks;
+	
 
 	m_wallHeight = TheAI->getAiData()->m_wallHeight; // may be updated by map.ini.
 	Region3D terrainExtent;

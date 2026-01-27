@@ -53,6 +53,7 @@
 #include "GameClient/Gadget.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
+#include "GameClient/ControlBar.h"
 #include "GameLogic/GameLogic.h" // Note: Do Not Ever do Anything that Corresponds with GameLogic HERE. This is solely used to identify whether we can do command set modifiers
 
 // DEFINES ////////////////////////////////////////////////////////////////////
@@ -154,6 +155,54 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 																					(WindowMsgData)window, mData1 );
 			break;
 
+		}
+
+		// ------------------------------------------------------------------------
+		case GWM_LEFT_DOUBLE_CLICK:
+		{
+
+			if( BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) || !TheControlBar->isWindowUnitBuildCommand(window) )
+			{
+
+				/*PushButtonData *pData = (PushButtonData *)window->winGetUserData();
+				AudioEventRTS buttonClick;
+				if(pData && pData->altSound.isNotEmpty())
+					buttonClick.setEventName(pData->altSound);
+				else
+					buttonClick.setEventName("GUIClick");
+
+				if( TheAudio )
+				{
+					TheAudio->addAudioEvent( &buttonClick );
+				}*/
+				//
+				// note check like selected messages aren't sent here ... they are sent
+				// on the down press
+				//
+				//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+				//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+				//{
+					//if (!buttonTriggersOnMouseDown(window)) {
+						// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+						TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_LEFT,
+																								(WindowMsgData)window, mData1 );
+					//}
+
+					BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+				//}
+				//else
+				//{
+
+					// this up click was not meant for this button
+					//return MSG_IGNORED;
+
+				//}
+
+				break;
+			}
+			else
+				FALLTHROUGH;
 		}
 
 		// ------------------------------------------------------------------------
@@ -303,6 +352,55 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 		}
 
 		// ------------------------------------------------------------------------
+		case GWM_RIGHT_DOUBLE_CLICK:
+		{
+
+			if( !BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ) || !TheControlBar->isWindowUnitBuildCommand(window) )
+			{
+
+				/*PushButtonData *pData = (PushButtonData *)window->winGetUserData();
+				AudioEventRTS buttonClick;
+				if(pData && pData->altSound.isNotEmpty())
+					buttonClick.setEventName(pData->altSound);
+				else
+					buttonClick.setEventName("GUIClick");
+
+				if( TheAudio )
+				{
+					TheAudio->addAudioEvent( &buttonClick );
+				}*/
+				//
+				// note check like selected messages aren't sent here ... they are sent
+				// on the down press
+				//
+				//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+				//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+				//{
+					//if (!buttonTriggersOnMouseDown(window)) {
+						// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
+						TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_RIGHT,
+																								(WindowMsgData)window, mData1 );
+					//}
+
+					BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+				//}
+				//else
+				//{
+
+					// this up click was not meant for this button
+					//return MSG_IGNORED;
+
+				//}
+
+				break;
+			}
+			else
+				FALLTHROUGH;
+
+		}
+
+		// ------------------------------------------------------------------------
 		case GWM_RIGHT_DOWN:
 		{
 			PushButtonData *pData = (PushButtonData *)window->winGetUserData();
@@ -444,92 +542,6 @@ WindowMsgHandledType GadgetPushButtonInput( GameWindow *window,
 				}
 
 			}
-
-			break;
-
-		}
-
-		// ------------------------------------------------------------------------
-		case GWM_LEFT_DOUBLE_CLICK:
-		{
-
-			/*PushButtonData *pData = (PushButtonData *)window->winGetUserData();
-			AudioEventRTS buttonClick;
-			if(pData && pData->altSound.isNotEmpty())
-				buttonClick.setEventName(pData->altSound);
-			else
-				buttonClick.setEventName("GUIClick");
-
-			if( TheAudio )
-			{
-				TheAudio->addAudioEvent( &buttonClick );
-			}*/
-			//
-			// note check like selected messages aren't sent here ... they are sent
-			// on the down press
-			//
-			//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
-			//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
-			//{
-				//if (!buttonTriggersOnMouseDown(window)) {
-					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
-					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_LEFT,
-																							(WindowMsgData)window, mData1 );
-				//}
-
-				BitClear( instData->m_state, WIN_STATE_SELECTED );
-
-			//}
-			//else
-			//{
-
-				// this up click was not meant for this button
-				//return MSG_IGNORED;
-
-			//}
-
-			break;
-
-		}
-
-		// ------------------------------------------------------------------------
-		case GWM_RIGHT_DOUBLE_CLICK:
-		{
-
-			/*PushButtonData *pData = (PushButtonData *)window->winGetUserData();
-			AudioEventRTS buttonClick;
-			if(pData && pData->altSound.isNotEmpty())
-				buttonClick.setEventName(pData->altSound);
-			else
-				buttonClick.setEventName("GUIClick");
-
-			if( TheAudio )
-			{
-				TheAudio->addAudioEvent( &buttonClick );
-			}*/
-			//
-			// note check like selected messages aren't sent here ... they are sent
-			// on the down press
-			//
-			//if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
-			//		BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
-			//{
-				//if (!buttonTriggersOnMouseDown(window)) {
-					// If it didn't trigger on mouse down, trigger on the mouse up. jba  [8/6/2003]
-					TheWindowManager->winSendSystemMsg( instData->getOwner(), GBM_DOUBLE_CLICKED_RIGHT,
-																							(WindowMsgData)window, mData1 );
-				//}
-
-				BitClear( instData->m_state, WIN_STATE_SELECTED );
-
-			//}
-			//else
-			//{
-
-				// this up click was not meant for this button
-				//return MSG_IGNORED;
-
-			//}
 
 			break;
 

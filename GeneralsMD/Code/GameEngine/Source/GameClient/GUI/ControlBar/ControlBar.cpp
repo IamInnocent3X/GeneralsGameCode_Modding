@@ -1178,6 +1178,8 @@ ControlBar::ControlBar( void )
 	m_remainingRadarAttackGlowFrames = 0;
 	m_radarAttackGlowWindow = NULL;
 
+	//m_controlBarButtonsPos.lo.x = m_controlBarButtonsPos.lo.y = m_controlBarButtonsPos.hi.x = m_controlBarButtonsPos.hi.y = 0;
+
 #if defined(RTS_DEBUG)
 	m_lastFrameMarkedDirty = 0;
 	m_consecutiveDirtyFrames = 0;
@@ -1339,6 +1341,29 @@ void ControlBar::init( void )
 				m_commandWindows[ i ]->winGetPosition(&commandPos.x, &commandPos.y);
 				m_commandWindows[ i ]->winGetSize(&commandSize.x, &commandSize.y);
 				m_commandWindows[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
+
+				//if(i == 0 || m_controlBarButtonsPos.hi.y != 0)
+				//{
+				//	m_commandWindows[ i ]->winGetScreenPosition(&firstPos.x, &firstPos.y);
+				//	if(m_controlBarButtonsPos.lo.x == 0.0f)
+				//		m_controlBarButtonsPos.lo.x = firstPos.x;
+				//	else if(firstPos.x + commandSize.x > m_controlBarButtonsPos.hi.x)
+				//		m_controlBarButtonsPos.hi.x = firstPos.x + commandSize.x;
+
+				//	DEBUG_LOG(("Lo - X: %d Y: %d", m_controlBarButtonsPos.lo.x, m_controlBarButtonsPos.lo.y));
+				//	DEBUG_LOG(("Hi - X: %d Y: %d", m_controlBarButtonsPos.hi.x, m_controlBarButtonsPos.hi.y));
+				//}
+				//else if(firstPos.x != 0)
+				//{
+				//	m_commandWindows[ i ]->winGetScreenPosition(&secondPos.x, &secondPos.y);
+				//	if(secondPos.y != firstPos.y)
+				//	{
+				//		m_controlBarButtonsPos.lo.y = min(secondPos.y, firstPos.y);
+				//		m_controlBarButtonsPos.hi.y = max(secondPos.y, firstPos.y) + commandSize.y;
+
+				//		firstPos.x = 0;
+				//	}
+				//}
 			}
 
 	// removed from multiplayer branch

@@ -679,11 +679,13 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 
 	//{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixLocoClump) }, // OBSELETE
 
-	// Functions below except 'UseNonRetailAIPathfindDynamicAlloc' are automatically enabled if RETAIL_COMPATIBLE_PATHFINDING is disabled.
+	// Functions below except 'UseNonRetailAIPathfindDynamicAlloc', and 'UseNonRetailAIPathfindExperimentalTweaks' are automatically enabled if RETAIL_COMPATIBLE_PATHFINDING is disabled.
+	// 'UseNonRetailAIPathfindAllocation' is enabled when either RETAIL_COMPATIBLE_PATHFINDING or RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION is disabled.
 	{ "UseNonRetailPathfindToFixPathfindForManyPlayers",	 INI::parseBool, NULL, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // This method uses UseNonRetailAIPathfindAllocation after having 6 or more players in a map
 	{ "UseNonRetailAIPathfind",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - If use Retail, AI Pathfind can be configured to use Non-Retail method
 	{ "UseNonRetailAIPathfindAllocation",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindAllocation) },
 	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // This requires Non-Retail to be configured for pathfinding. Either through Global data, or defining Non-Retail. Credits to: Mauller
+	{ "UseNonRetailAIPathfindExperimentalTweaks",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindExperimentalTweaks) }, // For testing purposes, it's Mauller's Open Sorted List fixes WIP. 
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 
@@ -1283,10 +1285,11 @@ GlobalData::GlobalData()
 	m_useEfficientDrawableScheme = FALSE;
 
 	//m_fixLocoClump = FALSE;
-	m_fixAIPathfindClumpForManyPlayers = FALSE; // Credits to: Mauller
+	m_fixAIPathfindClumpForManyPlayers = FALSE;
 	m_useNonRetailAIPathfind = FALSE;
 	m_useNonRetailAIPathfindAllocation = FALSE;
-	m_useNonRetailAIPathfindDynamicAlloc = FALSE;
+	m_useNonRetailAIPathfindDynamicAlloc = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindExperimentalTweaks = FALSE; // Credits to: Mauller
 
 	m_corpsesHaveAirDrag = FALSE;
 	m_hideCashTextFromEnemies = FALSE;
