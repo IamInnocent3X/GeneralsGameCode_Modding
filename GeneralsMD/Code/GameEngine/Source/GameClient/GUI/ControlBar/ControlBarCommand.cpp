@@ -1593,10 +1593,12 @@ struct LastCommandModifier
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entry)
+Bool ControlBar::checkForCommandSetModifierOverride(CommandModifierID keyID)
 {
+	ModifierKeyList keyList = TheMetaMap->findCommandKeyModByID(keyID);
+
 	// no keys, do nothing
-	if(entry.Keys.empty())
+	if(keyList.Keys.empty())
 		return false;
 
 	// get the selected object
@@ -1622,8 +1624,8 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 
 	Bool set = false;
 	Bool doRemove = false;
-	Bool doSingular = entry.IsSingular;
-	Bool doRandom = entry.IsRandom;
+	Bool doSingular = keyList.IsSingular;
+	Bool doRandom = keyList.IsRandom;
 	Bool checkOverridePresent = false;
 	Bool isLastAvailableKey = false;
 	AsciiString overrideButtonPresentName;
@@ -1640,15 +1642,15 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 			Bool doSkip = FALSE;
 
 			// If the command modifier needs the button Enabled, we only check for buttons that are enabled
-			if(entry.KeyRequireEnabled && !button->winGetEnabled())
+			if(keyList.KeyRequireEnabled && !button->winGetEnabled())
 			{
 				doSkip = TRUE;
 			}
-			else if(!entry.CommandButtonsToTrigger.empty())
+			else if(!keyList.CommandButtonsToTrigger.empty())
 			{
 				doSkip = TRUE;
 				AsciiString commandName = commandSet->getOriginalButtonName(i);
-				for(std::vector<AsciiString>::const_iterator it = entry.CommandButtonsToTrigger.begin(); it != entry.CommandButtonsToTrigger.end(); ++it)
+				for(std::vector<AsciiString>::const_iterator it = keyList.CommandButtonsToTrigger.begin(); it != keyList.CommandButtonsToTrigger.end(); ++it)
 				{
 					if(commandName == (*it))
 					{
@@ -1684,7 +1686,7 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 				Bool overrideIsPresent = FALSE;
 
 				// Get the Command Button Name to override, if any
-				for(std::vector<AsciiString>::const_iterator it = entry.Keys.begin(); it != entry.Keys.end(); ++it)
+				for(std::vector<AsciiString>::const_iterator it = keyList.Keys.begin(); it != keyList.Keys.end(); ++it)
 				{
 					// Get if the Command Set has the modifier key for the current slot
 					commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
@@ -1769,7 +1771,7 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 			if(!doSkip)
 			{
 				// Get the Command Button Name to override, if any
-				for(std::vector<AsciiString>::const_iterator it = entry.Keys.begin(); it != entry.Keys.end(); ++it)
+				for(std::vector<AsciiString>::const_iterator it = keyList.Keys.begin(); it != keyList.Keys.end(); ++it)
 				{
 					// If we are not doing random, skip until we get the present Key
 					if(!doRandom && !lastPresentKey.isEmpty())
@@ -1802,7 +1804,7 @@ Bool ControlBar::checkForCommandSetModifierOverride(CommandSetModifierEntry entr
 			// if we are doing or done with overriding, process the registration and control bar
 			if(doOverride)
 			{
-				if(!entry.StopsAtEnd && doRemove && !overrideButtonPresentName.isEmpty())
+				if(!keyList.StopsAtEnd && doRemove && !overrideButtonPresentName.isEmpty())
 				{
 					if(obj->removeModiferCommandOverrideWithinCommandSet(i, overrideButtonPresentName))
 						set = true;
@@ -2109,26 +2111,7 @@ GameMessageDisposition CommandSetTranslator::translateGameMessage(const GameMess
 	if(t != GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 		return disp;
 
-	CommandSetModifierEntry entry;
-	Int keysSize = 5 + msg->getArgument(4)->integer;
-	//Int commandButtonTriggerSize = keysSize + msg->getArgument(5)->integer;
-	Int i;
-	for(i = 5; i < keysSize; i++)
-	{
-		AsciiString key = TheNameKeyGenerator->keyToName( (NameKeyType)msg->getArgument(i)->integer );
-		entry.Keys.push_back(key);
-	}
-	for(i = keysSize; i < msg->getArgumentCount(); i++)
-	{
-		AsciiString commandButtonName = TheNameKeyGenerator->keyToName( (NameKeyType)msg->getArgument(i)->integer );
-		entry.CommandButtonsToTrigger.push_back(commandButtonName);
-	}
-
-	entry.KeyRequireEnabled = msg->getArgument(0)->boolean;
-	entry.IsSingular = msg->getArgument(1)->boolean;
-	entry.IsRandom = msg->getArgument(2)->boolean;
-	entry.StopsAtEnd = msg->getArgument(3)->boolean;
-	if(TheControlBar->checkForCommandSetModifierOverride(entry))
+	if(TheControlBar->checkForCommandSetModifierOverride((CommandModifierID)msg->getArgument(0)->integer))
 		return DESTROY_MESSAGE;
 	else
 		return disp;

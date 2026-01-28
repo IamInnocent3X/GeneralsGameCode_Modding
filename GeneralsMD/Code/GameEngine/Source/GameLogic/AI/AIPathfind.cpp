@@ -1931,23 +1931,21 @@ PathfindCell* PathfindCell::removeFromOpenList(PathfindCell* list)
 		m_info->m_prevOpen->m_nextOpen = m_info->m_nextOpen;
 	else
 	{
-		if(s_useNonRetailPathfindExperimentalTweaks) {
-			if (m_info->m_nextOpen) {
-				// TheSuperHackers @info A list head replacement is a special case with problematic behaviour
-				// Skip links need to be pushed to the next open list cell, but only if they have no skip link
-				// We also have to make sure we are not linking a skip link back onto the same cell
-				if (!m_info->m_nextOpen->m_nextSkip && (m_info->m_nextSkip != m_info->m_nextOpen) ) {
-					m_info->m_nextOpen->m_nextSkip = m_info->m_nextSkip;
-					if (m_info->m_nextSkip)
-						m_info->m_nextSkip->m_prevSkip = m_info->m_nextOpen;
-				}
-
-				// If a subsequent skip node is moved to the head then it's previous skiplink needs clearing.
-				m_info->m_nextOpen->m_prevSkip = nullptr;
-
-				m_info->m_nextSkip = nullptr;
-				m_info->m_prevSkip = nullptr;
+		if(s_useNonRetailPathfindExperimentalTweaks && m_info->m_nextOpen) {
+			// TheSuperHackers @info A list head replacement is a special case with problematic behaviour
+			// Skip links need to be pushed to the next open list cell, but only if they have no skip link
+			// We also have to make sure we are not linking a skip link back onto the same cell
+			if (!m_info->m_nextOpen->m_nextSkip && (m_info->m_nextSkip != m_info->m_nextOpen) ) {
+				m_info->m_nextOpen->m_nextSkip = m_info->m_nextSkip;
+				if (m_info->m_nextSkip)
+					m_info->m_nextSkip->m_prevSkip = m_info->m_nextOpen;
 			}
+
+			// If a subsequent skip node is moved to the head then it's previous skiplink needs clearing.
+			m_info->m_nextOpen->m_prevSkip = nullptr;
+
+			m_info->m_nextSkip = nullptr;
+			m_info->m_prevSkip = nullptr;
 		}
 
 		list = getNextOpen();
