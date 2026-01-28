@@ -356,6 +356,12 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ NULL, 0	}
 };
 
+constexpr const Int ONE = 1;
+constexpr const Int TWO = 2;
+constexpr const Int THREE = 3;
+constexpr const Int FOUR = 4;
+constexpr const Int FIVE = 5;
+constexpr const Int SIX = 6;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -368,18 +374,73 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 	{ "Modifiers",					INI::parseLookupList,						ModifierNames, offsetof( MetaMapRec, m_modState ) },
 	{ "UseableIn",					INI::parseBitString32,					TheCommandUsableInNames, offsetof( MetaMapRec, m_usableIn ) },
 	{ "Category",						INI::parseLookupList,						CategoryListName, offsetof( MetaMapRec, m_category ) },
-	{ "CommandModifierKeys",			INI::parseAsciiStringVector,						nullptr, offsetof( MetaMapRec, m_commandModifierKeys ) },
-	{ "CommandModifierNeedsButtonEnabled",	INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierNeedsButtonEnabled ) },
-	{ "CommandModifierIsSingular",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierIsSingular ) },
-	{ "CommandModifierIsRandom",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierIsRandom ) },
-	{ "CommandModifierStopsAtEnd",		INI::parseBool,						nullptr, offsetof( MetaMapRec, m_commandModifierStopsAtEnd ) },
-	{ "CommandButtonsToTrigger", 	INI::parseAsciiStringVector, nullptr, offsetof( MetaMapRec, m_commandModifierButtonsToTrigger ) },
 	{ "Description",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_description ) },
 	{ "DisplayName",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_displayName ) },
+
+	{ "CommandModifierKeys", MetaMap::parseAsciiStringVectorForCommandKey, &(ONE), 0 },
+	{ "CommandModifierNeedsButtonEnabled", MetaMap::parseBoolForCommandKey, &(TWO), 0 },
+	{ "CommandModifierIsSingular", MetaMap::parseBoolForCommandKey, &(THREE), 0 },
+	{ "CommandModifierIsRandom", MetaMap::parseBoolForCommandKey, &(FOUR), 0 },
+	{ "CommandModifierStopsAtEnd", MetaMap::parseBoolForCommandKey, &(FIVE), 0 },
+	{ "CommandButtonsToTrigger", MetaMap::parseAsciiStringVectorForCommandKey, &(SIX), 0 },
 
 	{ NULL,									NULL,														0, 0 }
 
 };
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::parseBoolForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData )
+{
+	Int offset = *(const Int*)userData;
+	TheMetaMap->registerBoolForCommandKey(INI::scanBool(ini->getNextToken()), offset);
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::registerBoolForCommandKey(Bool data, Int offset)
+{
+	switch(offset)
+	{
+		case 2:
+			modifierKeyParser.m_keyRequireEnabled = data;
+			break;
+		case 3:
+			modifierKeyParser.m_isSingular = data;
+			break;
+		case 4:
+			modifierKeyParser.m_isRandom = data;
+			break;
+		case 5:
+			modifierKeyParser.m_stopsAtEnd = data;
+			break;
+		default:
+			break;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::parseAsciiStringVectorForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData )
+{
+	Int offset = *(const Int*)userData;
+	std::vector<AsciiString> asv;
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+		TheMetaMap->registerAsciiStringForCommandKey(AsciiString(token), offset);
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::registerAsciiStringForCommandKey(const AsciiString& data, Int offset)
+{
+	switch(offset)
+	{
+		case 1:
+			modifierKeyParser.m_keys.push_back(data);
+			break;
+		case 6:
+			modifierKeyParser.m_commandButtonsToTrigger.push_back(data);
+			break;
+		default:
+			break;
+	}
+}
 
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////////////////////////
 
@@ -498,24 +559,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 				if(map->m_meta == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 				{
 					GameMessage *metaMsg = TheMessageStream->appendMessage(map->m_meta);
-					metaMsg->appendBooleanArgument( map->m_commandModifierNeedsButtonEnabled );
-					metaMsg->appendBooleanArgument( map->m_commandModifierIsSingular );
-					metaMsg->appendBooleanArgument( map->m_commandModifierIsRandom );
-					metaMsg->appendBooleanArgument( map->m_commandModifierStopsAtEnd );
-					metaMsg->appendIntegerArgument( map->m_commandModifierKeys.size() );
-					//metaMsg->appendIntegerArgument( map->m_commandModifierButtonsToTrigger.size() );
-
-					std::vector<AsciiString>::const_iterator it;
-					for(it = map->m_commandModifierKeys.begin(); it != map->m_commandModifierKeys.end(); ++it)
-					{
-						Int nameKeyInt = (Int)TheNameKeyGenerator->nameToKey(*it);
-						metaMsg->appendIntegerArgument( nameKeyInt );
-					}
-					for(it = map->m_commandModifierButtonsToTrigger.begin(); it != map->m_commandModifierButtonsToTrigger.end(); ++it)
-					{
-						Int nameKeyInt = (Int)TheNameKeyGenerator->nameToKey(*it);
-						metaMsg->appendIntegerArgument( nameKeyInt );
-					}
+					metaMsg->appendIntegerArgument( (Int)map->m_commandModifierID );
 				}
 				else
 				{
@@ -587,24 +631,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 					//DEBUG_LOG(("Frame %d: MetaEventTranslator::translateGameMessage() normal: %s", TheGameLogic->getFrame(), findGameMessageNameByType(map->m_meta)));
 					if(map->m_meta == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 					{
-						metaMsg->appendBooleanArgument( map->m_commandModifierNeedsButtonEnabled );
-						metaMsg->appendBooleanArgument( map->m_commandModifierIsSingular );
-						metaMsg->appendBooleanArgument( map->m_commandModifierIsRandom );
-						metaMsg->appendBooleanArgument( map->m_commandModifierStopsAtEnd );
-						metaMsg->appendIntegerArgument( map->m_commandModifierKeys.size() );
-						//metaMsg->appendIntegerArgument( map->m_commandModifierButtonsToTrigger.size() );
-
-						std::vector<AsciiString>::const_iterator it;
-						for(it = map->m_commandModifierKeys.begin(); it != map->m_commandModifierKeys.end(); ++it)
-						{
-							Int nameKeyInt = (Int)TheNameKeyGenerator->nameToKey(*it);
-							metaMsg->appendIntegerArgument( nameKeyInt );
-						}
-						for(it = map->m_commandModifierButtonsToTrigger.begin(); it != map->m_commandModifierButtonsToTrigger.end(); ++it)
-						{
-							Int nameKeyInt = (Int)TheNameKeyGenerator->nameToKey(*it);
-							metaMsg->appendIntegerArgument( nameKeyInt );
-						}
+						metaMsg->appendIntegerArgument( (Int)map->m_commandModifierID );
 					}
 				}
 				disp = DESTROY_MESSAGE;
@@ -732,6 +759,8 @@ MetaMap::MetaMap() :
 	m_metaMaps(NULL)
 {
 	m_doubleDownKeysVec.clear();
+	m_cmdModKeyVector.clear();
+	m_nextCmdModKeyID = INVALID_KEY_ID;
 	for(int i = 0; i < MOUSE_STATE_COUNT; i++)
 	{
 		m_mouseModifierKeysUniversal[i].Keys.clear();
@@ -752,6 +781,8 @@ MetaMap::~MetaMap()
 		m_metaMaps = next;
 	}
 	m_doubleDownKeysVec.clear();
+	m_cmdModKeyVector.clear();
+	m_nextCmdModKeyID = INVALID_KEY_ID;
 	for(int i = 0; i < MOUSE_STATE_COUNT; i++)
 	{
 		m_mouseModifierKeysUniversal[i].Keys.clear();
@@ -776,7 +807,11 @@ GameMessage::Type MetaMap::findGameMessageMetaType(const char* name)
 //-------------------------------------------------------------------------------------------------
 MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 {
-	if(t != GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+	if(t == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+	{
+		TheMetaMap->modifierKeyParser.reset();
+	}
+	else
 	{
 		for (MetaMapRec *map = m_metaMaps; map; map = map->m_next)
 		{
@@ -795,12 +830,7 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 	m->m_category = CATEGORY_MISC;
 	m->m_description.clear();
 	m->m_displayName.clear();
-	m->m_commandModifierKeys.clear();
-	m->m_commandModifierButtonsToTrigger.clear();
-	m->m_commandModifierNeedsButtonEnabled = FALSE;
-	m->m_commandModifierIsSingular = FALSE;
-	m->m_commandModifierIsRandom = FALSE;
-	m->m_commandModifierStopsAtEnd = FALSE;
+	m->m_commandModifierID = INVALID_KEY_ID;
 	m->m_next = m_metaMaps;
 	m_metaMaps = m;
 
@@ -825,8 +855,11 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 
 	if(t == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 	{
-		if(map->m_commandModifierKeys.empty())
+		if(TheMetaMap->modifierKeyParser.m_keys.empty())
 			throw INI_INVALID_DATA;
+
+		map->m_commandModifierID = TheMetaMap->allocateCommandModifierKeyID();
+		TheMetaMap->registerModifierKeysList(map->m_commandModifierID);
 	}
 
 	if(map->m_transition == DOUBLEDOWN)
@@ -1036,6 +1069,41 @@ Bool MetaMap::hasDoubleDownKey(MappableKeyType m) const
 }
 
 //-------------------------------------------------------------------------------------------------
+CommandModifierID MetaMap::allocateCommandModifierKeyID( void )
+{
+	/// @todo Find unused value in current command key modifier set
+	m_nextCmdModKeyID = (CommandModifierID)((UnsignedInt)m_nextCmdModKeyID + 1);
+	CommandModifierID ret = m_nextCmdModKeyID;
+	return ret;
+}
+
+// ------------------------------------------------------------------------------------------------
+void MetaMap::registerModifierKeysList( CommandModifierID keyID )
+{
+	// sanity
+	if( keyID == INVALID_KEY_ID )
+		return;
+
+	ModifierKeyList keyList;
+
+	if( m_cmdModKeyVector.empty() )
+		m_cmdModKeyVector.push_back(keyList); // dummy data as first unit;
+
+	keyList.KeyRequireEnabled = modifierKeyParser.m_keyRequireEnabled;
+	keyList.IsSingular = modifierKeyParser.m_isSingular;
+	keyList.IsRandom = modifierKeyParser.m_isRandom;
+	keyList.StopsAtEnd = modifierKeyParser.m_stopsAtEnd;
+	keyList.Keys = modifierKeyParser.m_keys;
+	keyList.CommandButtonsToTrigger = modifierKeyParser.m_commandButtonsToTrigger;
+
+	while( keyID >= m_cmdModKeyVector.size() )
+		m_cmdModKeyVector.push_back(keyList);
+
+	if(m_cmdModKeyVector[keyID].Keys != keyList.Keys)
+		DEBUG_CRASH(("Should never happen."));
+}
+
+//-------------------------------------------------------------------------------------------------
 MouseModifierKeysList MetaMap::getMouseCommandModifiersMeta( MouseState mouseInput, const AsciiString& commandButtonName ) const
 {
 	DEBUG_ASSERTCRASH(mouseInput > STATE_NONE && mouseInput < MOUSE_STATE_COUNT, ("Invalid Mouse Input."));
@@ -1074,23 +1142,23 @@ MouseModifierKeysList MetaMap::getMouseCommandModifiersMeta( MouseState mouseInp
 //-------------------------------------------------------------------------------------------------
 void MetaMap::parseMouseCommandModifierDefinition(INI* ini)
 {
-	TheMetaMap->mouseModifierKeyParser.reset();
-	MouseModifierKeyTemplate::parseMouseModifierKeyTemplate(ini, nullptr, &TheMetaMap->mouseModifierKeyParser, nullptr);
+	TheMetaMap->modifierKeyParser.reset();
+	ModifierKeyTemplate::parseMouseModifierKeyTemplate(ini, nullptr, &TheMetaMap->modifierKeyParser, nullptr);
 	TheMetaMap->doMouseCommandModifierParsing();
 }
 
 // ------------------------------------------------------------------------------------------------
-/*static*/ void MouseModifierKeyTemplate::parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/)
+/*static*/ void ModifierKeyTemplate::parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/)
 {
 	static const FieldParse myFieldParse[] =
 	{
-		{ "MouseState", INI::parseLookupList,	MouseStateNames, offsetof( MouseModifierKeyTemplate, m_mouseState ) },
-		{ "ModifierKeys", INI::parseAsciiStringVectorAppend, nullptr, offsetof( MouseModifierKeyTemplate, m_keys ) },
-		{ "NeedsButtonEnabled", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_keyRequireEnabled ) },
-		{ "IsSingular", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_isSingular ) },
-		{ "IsRandom", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_isRandom ) },
-		{ "StopsAtEnd", INI::parseBool, nullptr, offsetof( MouseModifierKeyTemplate, m_stopsAtEnd ) },
-		{ "CommandButtonsToTrigger", INI::parseAsciiStringVector, nullptr, offsetof( MouseModifierKeyTemplate, m_commandButtonsToTrigger ) },
+		{ "MouseState", INI::parseLookupList,	MouseStateNames, offsetof( ModifierKeyTemplate, m_mouseState ) },
+		{ "ModifierKeys", INI::parseAsciiStringVectorAppend, nullptr, offsetof( ModifierKeyTemplate, m_keys ) },
+		{ "NeedsButtonEnabled", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_keyRequireEnabled ) },
+		{ "IsSingular", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_isSingular ) },
+		{ "IsRandom", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_isRandom ) },
+		{ "StopsAtEnd", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_stopsAtEnd ) },
+		{ "CommandButtonsToTrigger", INI::parseAsciiStringVector, nullptr, offsetof( ModifierKeyTemplate, m_commandButtonsToTrigger ) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -1101,26 +1169,26 @@ void MetaMap::parseMouseCommandModifierDefinition(INI* ini)
 //-------------------------------------------------------------------------------------------------
 void MetaMap::doMouseCommandModifierParsing()
 {
-	if(mouseModifierKeyParser.m_mouseState <= STATE_NONE || mouseModifierKeyParser.m_mouseState >= MOUSE_STATE_COUNT)
+	if(modifierKeyParser.m_mouseState <= STATE_NONE || modifierKeyParser.m_mouseState >= MOUSE_STATE_COUNT)
 	{
 		DEBUG_CRASH(("Mouse Command Modifier does not have a State declared."));
 		throw INI_INVALID_DATA;
 	}
 
-	if(mouseModifierKeyParser.m_keys.empty())
+	if(modifierKeyParser.m_keys.empty())
 	{
 		DEBUG_CRASH(("Mouse Command Modifier does not have key(s) declared."));
 		throw INI_INVALID_DATA;
 	}
 
-	Bool keyRequireEnable = mouseModifierKeyParser.m_keyRequireEnabled;
-	Bool isSingular = mouseModifierKeyParser.m_isSingular;
-	Bool isRandom = mouseModifierKeyParser.m_isRandom;
-	Bool stopsAtEnd = mouseModifierKeyParser.m_stopsAtEnd;
+	Bool keyRequireEnable = modifierKeyParser.m_keyRequireEnabled;
+	Bool isSingular = modifierKeyParser.m_isSingular;
+	Bool isRandom = modifierKeyParser.m_isRandom;
+	Bool stopsAtEnd = modifierKeyParser.m_stopsAtEnd;
 
-	MouseState mouseState = mouseModifierKeyParser.m_mouseState;
-	std::vector<AsciiString> keys = mouseModifierKeyParser.m_keys;
-	std::vector<AsciiString> commandButtonsToTrigger = mouseModifierKeyParser.m_commandButtonsToTrigger;
+	MouseState mouseState = modifierKeyParser.m_mouseState;
+	std::vector<AsciiString> keys = modifierKeyParser.m_keys;
+	std::vector<AsciiString> commandButtonsToTrigger = modifierKeyParser.m_commandButtonsToTrigger;
 	std::vector<AsciiString>::iterator it_s;
 
 	// Register the Keys List onto relevant lists

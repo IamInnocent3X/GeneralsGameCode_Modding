@@ -62,6 +62,7 @@ class DisplayString;
 struct MouseModifierKeysList;
 
 enum ProductionID CPP_11(: Int);
+enum CommandModifierID CPP_11(: Int);
 
 enum CommandSourceType CPP_11(: Int);
 enum ProductionType CPP_11(: Int);
@@ -135,6 +136,8 @@ static const char *const TheCommandOptionNames[] =
 	"USES_MINE_CLEARING_WEAPONSET",
 	"CAN_USE_WAYPOINTS",
 	"MUST_BE_STOPPED",
+	//"SET_RIDER",
+	//"SET_UPGRADE",
 
 	NULL
 };
@@ -311,16 +314,6 @@ static const LookupListRec CommandButtonMappedBorderTypeNames[] =
 	{ NULL, 0	}
 };
 static_assert(ARRAY_SIZE(CommandButtonMappedBorderTypeNames) == COMMAND_BUTTON_BORDER_COUNT + 1, "Incorrect array size");
-
-struct CommandSetModifierEntry
-{
-	std::vector<AsciiString>	Keys;
-	std::vector<AsciiString>	CommandButtonsToTrigger;
-	Bool						KeyRequireEnabled;
-	Bool						IsSingular;
-	Bool						IsRandom;
-	Bool						StopsAtEnd;
-};
 
 //-------------------------------------------------------------------------------------------------
 /** Command buttons are used to load the buttons we place on throughout the command bar
@@ -837,7 +830,7 @@ public:
 
 	//Int getRemainingSciencePointsAvailableToPurchase( Player* player ) const;
 
-	Bool checkForCommandSetModifierOverride(CommandSetModifierEntry entry);
+	Bool checkForCommandSetModifierOverride(CommandModifierID keyID);
 	Bool checkForCommandSetModifierOverrideMouse(MouseModifierKeysList keys, const CommandButton *commandButton);
 	Bool checkForResetOverride(Bool &checkOverridePresent, Int &i, const AsciiString& presentButtonName, Bool isLastAvailableKey, GameWindow **button);
 	CBCommandStatus processCommandSetModifierButtonClick( GameWindow *control, GadgetGameMessage gadgetMessage );

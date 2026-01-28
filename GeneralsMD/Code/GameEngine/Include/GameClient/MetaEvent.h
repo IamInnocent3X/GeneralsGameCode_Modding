@@ -362,6 +362,13 @@ static const LookupListRec MouseStateNames[] =
 	{ nullptr, 0	}
 };
 
+/// A unique, generic "identifier" used to access CommandSetModifiers.
+enum CommandModifierID CPP_11(: Int)
+{
+	INVALID_KEY_ID = 0,
+	FORCE_COMMAND_KEY_TO_LONG_SIZE = 0x7ffffff
+};
+
 // -------------------------------------------------------------------------------
 class MetaMapRec : public MemoryPoolObject
 {
@@ -373,13 +380,7 @@ public:
 	MappableKeyTransition		m_transition;			///< the state of the key
 	MappableKeyModState			m_modState;				///< the required state of the ctrl-alt-shift keys
 	CommandUsableInType			m_usableIn;				///< the allowed place the command can be used in
-	// Next fields are added for Key mapping Dialog
-	std::vector<AsciiString>	m_commandModifierKeys;
-	std::vector<AsciiString>	m_commandModifierButtonsToTrigger;
-	Bool						m_commandModifierNeedsButtonEnabled;
-	Bool						m_commandModifierIsSingular;
-	Bool						m_commandModifierIsRandom;
-	Bool						m_commandModifierStopsAtEnd;
+	CommandModifierID			m_commandModifierID;	///< the command modifier ID for registering command keys
 	MappableKeyCategories		m_category;				///< This is the category the key falls under
 	UnicodeString						m_description;		///< The description string for the keys
 	UnicodeString						m_displayName;		///< The display name of our command
@@ -425,7 +426,24 @@ struct MouseModifierKeysList
 };
 
 // ------------------------------------------------------------------------------------------------
-class MouseModifierKeyTemplate
+struct ModifierKeyList
+{
+	Bool						KeyRequireEnabled;
+	Bool						IsSingular;
+	Bool						IsRandom;
+	Bool						StopsAtEnd;
+	std::vector<AsciiString>	Keys;
+	std::vector<AsciiString>	CommandButtonsToTrigger;
+
+	ModifierKeyList() : KeyRequireEnabled(FALSE), IsSingular(FALSE), IsRandom(FALSE), StopsAtEnd(FALSE)
+	{
+		Keys.clear();
+		CommandButtonsToTrigger.clear();
+	}
+};
+
+// ------------------------------------------------------------------------------------------------
+class ModifierKeyTemplate
 {
 	friend class MetaMap;
 private:
@@ -438,7 +456,7 @@ private:
 	std::vector<AsciiString>	m_commandButtonsToTrigger;
 
 public:
-	MouseModifierKeyTemplate()
+	ModifierKeyTemplate()
 	{
 		m_mouseState = STATE_NONE;
 		m_keyRequireEnabled = FALSE;
@@ -460,6 +478,7 @@ public:
 		m_commandButtonsToTrigger.clear();
 	}
 
+	//static void parseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
 	static void parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
 };
 
@@ -469,7 +488,7 @@ class MetaMap : public SubsystemInterface
 	friend class MetaEventTranslator;
 
 private:
-	MouseModifierKeyTemplate mouseModifierKeyParser;
+	ModifierKeyTemplate modifierKeyParser;
 	MetaMapRec *m_metaMaps;
 
 	std::vector<MappableKeyType> m_doubleDownKeysVec;
@@ -478,11 +497,18 @@ private:
 	MouseModifierKeysList m_mouseModifierKeysUniversal[MOUSE_STATE_COUNT];
 	MouseModifierKeySpecificMap m_mouseModifierKeysSpecific[MOUSE_STATE_COUNT];
 
+	CommandModifierID m_nextCmdModKeyID;
+	std::vector<ModifierKeyList> m_cmdModKeyVector;
+
 protected:
 	GameMessage::Type findGameMessageMetaType(const char* name);
 	MetaMapRec *getMetaMapRec(GameMessage::Type t);
 	void pushDoubleDownKeyList(MappableKeyType m);
 	void doMouseCommandModifierParsing();
+	void registerBoolForCommandKey(Bool data, Int offset);
+	void registerAsciiStringForCommandKey(const AsciiString& data, Int offset);
+	void registerModifierKeysList( CommandModifierID keyID );
+	CommandModifierID allocateCommandModifierKeyID();
 
 public:
 
@@ -495,6 +521,8 @@ public:
 
 	static void parseMetaMap(INI* ini);
 	static void parseMouseCommandModifierDefinition(INI* ini);
+	static void parseBoolForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData );
+	static void parseAsciiStringVectorForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData );
 
 	// TheSuperHackers @info Function to generate default key mappings
 	// for actions that were not found in a CommandMap.ini
@@ -503,6 +531,22 @@ public:
 	const MetaMapRec *getFirstMetaMapRec() const { return m_metaMaps; }
 	MouseModifierKeysList getMouseCommandModifiersMeta( MouseState mouseInput, const AsciiString& commandButtonName ) const;
 	Bool hasDoubleDownKey(MappableKeyType m) const;
+	ModifierKeyList findCommandKeyModByID( CommandModifierID id );
 };
+
+inline ModifierKeyList MetaMap::findCommandKeyModByID( CommandModifierID id )
+{
+	if( id == INVALID_KEY_ID )
+	{
+		ModifierKeyList dummy;
+		return dummy;
+	}
+
+	if( (size_t)id < m_cmdModKeyVector.size() )
+		return m_cmdModKeyVector[(size_t)id];
+
+	ModifierKeyList dummy;
+	return dummy;
+}
 
 extern MetaMap *TheMetaMap;
