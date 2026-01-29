@@ -845,15 +845,18 @@ void OpenContain::onContaining( Object *rider, Bool wasSelected )
 void OpenContain::onRemoving( Object *rider)
 {
 	// Play audio
-	AudioEventRTS exitSound = *getObject()->getTemplate()->getSoundExit();
-	exitSound.setObjectID(getObject()->getID());
-	TheAudio->addAudioEvent(&exitSound);
+	if( m_loadSoundsEnabled )
+	{
+		AudioEventRTS exitSound = *getObject()->getTemplate()->getSoundExit();
+		exitSound.setObjectID(getObject()->getID());
+		TheAudio->addAudioEvent(&exitSound);
 
-	if (rider) {
-		// This is a misnomer, but it makes it clearer for the user.
-		AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
-		fallingSound.setObjectID(rider->getID());
-		TheAudio->addAudioEvent(&fallingSound);
+		if (rider) {
+			// This is a misnomer, but it makes it clearer for the user.
+			AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
+			fallingSound.setObjectID(rider->getID());
+			TheAudio->addAudioEvent(&fallingSound);
+		}
 	}
 }
 

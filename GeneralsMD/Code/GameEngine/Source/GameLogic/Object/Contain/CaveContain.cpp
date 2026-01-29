@@ -847,11 +847,18 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 	if(!currTracker)
 		return;
 
+	ContainModuleInterface *contain = getObject()->getContain();
+	if(!contain)
+		return;
+
 	const ContainedItemsList* items = currTracker->getContainedItemsList();
 	std::vector<ObjectID> vecContainedIDs, vecCaveIDs;
 	
 	// Tell the Module to not do shenenigans with OnContaining and OnRemoving
 	m_switchingOwners = TRUE;
+
+	// Disable Load Sounds
+	contain->enableLoadSounds( FALSE );
 
 	// By destroying the Caves, we first need to remove occupants from the Old Team
 	ContainedItemsList::const_iterator it_test = items->begin();
@@ -874,8 +881,7 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 			currTracker->removeFromContain( obj, TRUE );
 
 			// trigger an onRemoving event for 'm_object' no longer containing 'itemToRemove->m_object'
-			if (getObject()->getContain())
-				getObject()->getContain()->onRemoving( obj );
+			contain->onRemoving( obj );
 
 			// trigger an onRemovedFrom event for 'remove'
 			obj->onRemovedFrom( getObject() );
@@ -955,27 +961,23 @@ void CaveContain::changeTeamOnAllConnectedCavesByTeam( Team *checkTeam, Bool set
 					teamToSet = caveModule->getOldTeam();
 				}
 
-				if(!caveModule->getHasPermanentOwner() || ( newTracker && newTracker->getIsCapturingLinkedCaves()) )
+				if( (!setOriginalTeams || checkTeam->getRelationship(newTeam) != ALLIES) && 
+					(!caveModule->getHasPermanentOwner() || ( newTracker && newTracker->getIsCapturingLinkedCaves() )) )
 					cave->defect( teamToSet, 0 );
 				//newTracker->onTunnelCreated( cave );
 			}
 		}
 
 		// I added this.. for what reason? Oh yeah. We clear all the occupants out and assign them to this new one.
-		ContainModuleInterface *contain = getObject()->getContain();
-
-		if(contain)
+		for(int i_2 = 0; i_2 < vecContainedIDs.size(); i_2++)
 		{
-			for(int i_2 = 0; i_2 < vecContainedIDs.size(); i_2++)
-			{
-				Object *add = TheGameLogic->findObjectByID( vecContainedIDs[i_2] );
-				if(add && add->getTeam() == getObject()->getTeam())
-				{
-					contain->addToContain(add);
-				}
-			}
+			Object *add = TheGameLogic->findObjectByID( vecContainedIDs[i_2] );
+			if(add)
+				contain->addToContain(add);
 		}
 	}
+
+	contain->enableLoadSounds( TRUE );
 	m_switchingOwners = FALSE;
 }
 
