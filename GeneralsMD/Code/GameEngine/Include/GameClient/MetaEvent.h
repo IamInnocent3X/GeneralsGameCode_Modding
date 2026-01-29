@@ -267,6 +267,7 @@ enum MappableKeyTransition CPP_11(: Int)
 	DOWN,
 	UP,
 	DOUBLEDOWN,	// if a key transition is repeated immediately, we generate this.
+	DOUBLEDOWN_NO_REPEAT,	// if a key transition is repeated immediately, we generate this, but don't need to reapply modifiers
 
 	MAPPABLE_KEY_TRANSITION_COUNT
 };
@@ -276,6 +277,7 @@ static const LookupListRec TransitionNames[] =
 	{ "DOWN",				DOWN },
 	{ "UP",					UP },
 	{ "DOUBLEDOWN",	DOUBLEDOWN },
+	{ "DOUBLEDOWN_NO_REPEAT",	DOUBLEDOWN_NO_REPEAT },
 	{ nullptr, 0	}
 };
 static_assert(ARRAY_SIZE(TransitionNames) == MAPPABLE_KEY_TRANSITION_COUNT + 1, "Incorrect array size");
@@ -396,6 +398,8 @@ private:
 	Int						m_lastKeyDown;	// really a MappableKeyType
 	Int						m_lastModState;	// really a MappableKeyModState
 	Int						m_lastKeyDownTime; // last key down time in real time
+	Int						m_lastNonRepeatKeyDown;	// really a MappableKeyType Non-Repeat
+	Int						m_lastNonRepeatKeyDownTime; // last non-repeat key down time in real time
 
 	enum { NUM_MOUSE_BUTTONS = 3 };
 	ICoord2D m_mouseDownPosition[NUM_MOUSE_BUTTONS];
@@ -478,7 +482,6 @@ public:
 		m_commandButtonsToTrigger.clear();
 	}
 
-	//static void parseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
 	static void parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
 };
 

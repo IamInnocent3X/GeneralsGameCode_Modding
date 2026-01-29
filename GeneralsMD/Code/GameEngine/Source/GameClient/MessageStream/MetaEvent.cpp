@@ -356,12 +356,7 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ nullptr, 0	}
 };
 
-constexpr const Int ONE = 1;
-constexpr const Int TWO = 2;
-constexpr const Int THREE = 3;
-constexpr const Int FOUR = 4;
-constexpr const Int FIVE = 5;
-constexpr const Int SIX = 6;
+constexpr const Int OFFSETS[6] = {1, 2, 3, 4, 5, 6};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -377,12 +372,12 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 	{ "Description",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_description ) },
 	{ "DisplayName",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_displayName ) },
 
-	{ "CommandModifierKeys", MetaMap::parseAsciiStringVectorForCommandKey, &(ONE), 0 },
-	{ "CommandModifierNeedsButtonEnabled", MetaMap::parseBoolForCommandKey, &(TWO), 0 },
-	{ "CommandModifierIsSingular", MetaMap::parseBoolForCommandKey, &(THREE), 0 },
-	{ "CommandModifierIsRandom", MetaMap::parseBoolForCommandKey, &(FOUR), 0 },
-	{ "CommandModifierStopsAtEnd", MetaMap::parseBoolForCommandKey, &(FIVE), 0 },
-	{ "CommandButtonsToTrigger", MetaMap::parseAsciiStringVectorForCommandKey, &(SIX), 0 },
+	{ "CommandModifierKeys", MetaMap::parseAsciiStringVectorForCommandKey, &(OFFSETS[0]), 0 },
+	{ "CommandModifierNeedsButtonEnabled", MetaMap::parseBoolForCommandKey, &(OFFSETS[1]), 0 },
+	{ "CommandModifierIsSingular", MetaMap::parseBoolForCommandKey, &(OFFSETS[2]), 0 },
+	{ "CommandModifierIsRandom", MetaMap::parseBoolForCommandKey, &(OFFSETS[3]), 0 },
+	{ "CommandModifierStopsAtEnd", MetaMap::parseBoolForCommandKey, &(OFFSETS[4]), 0 },
+	{ "CommandButtonsToTrigger", MetaMap::parseAsciiStringVectorForCommandKey, &(OFFSETS[5]), 0 },
 
 	{ nullptr,									nullptr,														nullptr, 0 }
 
@@ -450,7 +445,9 @@ void MetaMap::registerAsciiStringForCommandKey(const AsciiString& data, Int offs
 MetaEventTranslator::MetaEventTranslator() :
 	m_lastKeyDown(MK_NONE),
 	m_lastModState(0),
-	m_lastKeyDownTime(0)
+	m_lastKeyDownTime(0),
+	m_lastNonRepeatKeyDown(MK_NONE),
+	m_lastNonRepeatKeyDownTime(0)
 {
 	for (Int i = 0; i < NUM_MOUSE_BUTTONS; ++i) {
 		m_nextUpShouldCreateDoubleClick[i] = FALSE;
@@ -511,6 +508,7 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 	GameMessage::Type t = msg->getType();
 
 	Int timenow = timeGetTime();
+	Bool triggeredDoubleDown = FALSE;
 
 	if (t == GameMessage::MSG_RAW_KEY_DOWN || t == GameMessage::MSG_RAW_KEY_UP)
 	{
@@ -569,14 +567,18 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 				break;
 			}
 
+			Bool TransitionIsDoubleDown = map->m_transition == DOUBLEDOWN || map->m_transition == DOUBLEDOWN_NO_REPEAT;
 			Bool isDoingDoubleDown = FALSE;
-			if( (keyState & KEY_STATE_DOWN) &&
-				m_lastKeyDown == key &&
-				m_lastKeyDownTime > timenow &&
-				TheMetaMap->hasDoubleDownKey(map->m_key)
-			  )
+			switch(map->m_transition)
 			{
-				isDoingDoubleDown = TRUE;
+				case DOUBLEDOWN:
+					isDoingDoubleDown = (keyState & KEY_STATE_DOWN) && m_lastKeyDown == key && m_lastKeyDownTime >= timenow && TheMetaMap->hasDoubleDownKey(map->m_key);
+					break;
+				case DOUBLEDOWN_NO_REPEAT:
+					isDoingDoubleDown = (keyState & KEY_STATE_DOWN) && m_lastNonRepeatKeyDown == key && m_lastNonRepeatKeyDownTime >= timenow && TheMetaMap->hasDoubleDownKey(map->m_key);
+					break;
+				default:
+					break;
 			}
 
 			// ok, now check for "normal" key transitions.
@@ -587,13 +589,13 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 							// IamInnocent 04/12/25 - Reworked & Restored Double Down function
 							(map->m_transition == UP && (keyState & KEY_STATE_UP)) ||
 							(map->m_transition == DOWN && (keyState & KEY_STATE_DOWN) && !isDoingDoubleDown) ||
-							(map->m_transition == DOUBLEDOWN && (keyState & KEY_STATE_DOWN) && isDoingDoubleDown)
+							(TransitionIsDoubleDown && (keyState & KEY_STATE_DOWN) && isDoingDoubleDown)
 						)
 					)
 			{
 				// Clear the KeyDownTime for DOUBLEDOWN
-				if(map->m_transition == DOUBLEDOWN)
-					m_lastKeyDownTime = 0;
+				if(TransitionIsDoubleDown)
+					triggeredDoubleDown = TRUE;
 
 				if( keyState & KEY_STATE_AUTOREPEAT )
 				{
@@ -643,8 +645,21 @@ GameMessageDisposition MetaEventTranslator::translateGameMessage(const GameMessa
 
 		if (t == GameMessage::MSG_RAW_KEY_DOWN)
     {
+		if(triggeredDoubleDown)
+		{
+			m_lastKeyDownTime = 0;
+			m_lastNonRepeatKeyDownTime = 0;
+		}
+		else
+		{
+			if(!(keyState & KEY_STATE_AUTOREPEAT))
+			{
+				m_lastNonRepeatKeyDown = key;
+				m_lastNonRepeatKeyDownTime = timenow + 500;
+			}
 			m_lastKeyDown = key;
 			m_lastKeyDownTime = timenow + 500;
+		}
 
 
 #ifdef DUMP_ALL_KEYS_TO_LOG
@@ -862,7 +877,7 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 		TheMetaMap->registerModifierKeysList(map->m_commandModifierID);
 	}
 
-	if(map->m_transition == DOUBLEDOWN)
+	if(map->m_transition == DOUBLEDOWN || map->m_transition == DOUBLEDOWN_NO_REPEAT)
 		TheMetaMap->pushDoubleDownKeyList(map->m_key);
 }
 
