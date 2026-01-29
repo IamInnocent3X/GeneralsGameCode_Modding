@@ -1,5 +1,5 @@
 /*
-**	Command & Conquer Generals(tm)
+**	Command & Conquer Generals Zero Hour(tm)
 **	Copyright 2025 Electronic Arts Inc.
 **
 **	This program is free software: you can redistribute it and/or modify
@@ -57,6 +57,28 @@ inline int sign(NUM x)
 	else if (x < 0) return -1;
 	else return 0;
 }
+
+// TheSuperHackers @refactor JohnsterID 24/01/2026 Add lowercase min/max templates for GameEngine layer.
+// GameEngine code typically uses BaseType.h, but may include WWVegas headers (which define min/max in always.h).
+// Header guard prevents duplicate definitions. VC6's <algorithm> lacks std::min/std::max.
+#ifndef _MIN_MAX_TEMPLATES_DEFINED_
+#define _MIN_MAX_TEMPLATES_DEFINED_
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
+
+template <typename T>
+inline T min(T a, T b) { return (a < b) ? a : b; }
+
+template <typename T>
+inline T max(T a, T b) { return (a > b) ? a : b; }
+
+#endif // _MIN_MAX_TEMPLATES_DEFINED_
 
 //-----------------------------------------------------------------------------
 inline Real rad2deg(Real rad) { return rad * (180/PI); }
@@ -179,8 +201,8 @@ struct RealRange
 	// both ranges
 	void combine( RealRange &other )
 	{
-		lo = MIN( lo, other.lo );
-		hi = MAX( hi, other.hi );
+		lo = min( lo, other.lo );
+		hi = max( hi, other.hi );
 	}
 };
 
@@ -202,6 +224,7 @@ struct Coord2D
 
 	Real toAngle( void ) const;  ///< turn 2D vector into angle (where angle 0 is down the +x axis)
 
+	void rotateByAngle(Real angle); ///< rotate the vector by the given angle (radians)
 };
 
 inline Real Coord2D::toAngle( void ) const
@@ -262,6 +285,18 @@ inline Real Coord2D::toAngle( void ) const
 
 	return y < 0.0f ? -ACos(c) : ACos(c);
 #endif
+}
+
+inline void Coord2D::rotateByAngle(Real angle)
+{
+	Real cs = Cos(angle);
+	Real sn = Sin(angle);
+
+	Real px = x * cs - y * sn;
+	Real py = x * sn + y * cs;
+
+	x = px;
+	y = py;
 }
 
 struct ICoord2D
@@ -451,3 +486,8 @@ struct RGBAColorInt
 	UnsignedInt red, green, blue, alpha;  // range between 0 and 255
 
 };
+
+// Modulo function working with negative values, required for angles
+inline Real nmod(Real x, Real y) {
+    return fmod(fmod(x, y) + y, y);
+}

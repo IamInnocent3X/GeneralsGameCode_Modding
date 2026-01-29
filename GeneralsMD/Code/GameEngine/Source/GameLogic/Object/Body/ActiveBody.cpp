@@ -1728,7 +1728,13 @@ void ActiveBody::internalAddSubdualDamage( Real delta, Bool isHealing )
 	else
 	{
 		m_currentSubdualDamage += delta;
+#if RETAIL_COMPATIBLE_CRC
 		m_currentSubdualDamage = min(m_currentSubdualDamage, m_subdualDamageCap);
+#else
+		// TheSuperHackers @bugfix Stubbjax 25/01/2026 Subdual damage can no longer go negative, which
+		// stops weak subdual damage + rapid healing from negatively stacking subdual damage over time.
+		m_currentSubdualDamage = clamp(0.0f, m_currentSubdualDamage, m_subdualDamageCap);
+#endif
 
 		if(!nowSubdued)
 			m_hasBeenSubdued = FALSE;
@@ -1991,11 +1997,11 @@ void ActiveBody::internalAddSubdualDamageCustom( SubdualCustomData delta, const 
 		CustomSubdualDamageMap::iterator it2 = m_subdualDamageCapCustom.find(customStatus);
 		if(it2 != m_subdualDamageCapCustom.end())
 		{
-			it->second.damage = min(it->second.damage, it2->second);
+			it->second.damage = clamp(0.0f, it->second.damage, it2->second);
 		}
 		else
 		{
-			it->second.damage = min(it->second.damage, m_subdualDamageCap);
+			it->second.damage = clamp(0.0f, it->second.damage, m_subdualDamageCap);
 		}
 		if(!isSubdued)
 			it->second.isSubdued = FALSE;
