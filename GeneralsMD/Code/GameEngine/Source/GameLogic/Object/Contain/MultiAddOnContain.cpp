@@ -95,7 +95,7 @@ void MultiAddOnContainModuleData::parseAddOnEntry( INI* ini, void *instance, voi
 MultiAddOnContain::MultiAddOnContain(Thing* thing, const ModuleData* moduleData) :
   TransportContain(thing, moduleData)
 {
-  m_payloadCreated = FALSE;
+  setPayloadCreated(FALSE);
 
   m_addOnList.clear();
 
@@ -189,7 +189,7 @@ void MultiAddOnContain::createPayload()
         }
         else
         {
-          DEBUG_CRASH(("MultiAddOnContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str()));
+          DEBUG_CRASH(("MultiAddOnContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), (*iter).str()));
         }
 
       }
@@ -201,7 +201,7 @@ void MultiAddOnContain::createPayload()
 
   } // endif contain
 
-  m_payloadCreated = TRUE;
+  setPayloadCreated(TRUE);
 
 }
 

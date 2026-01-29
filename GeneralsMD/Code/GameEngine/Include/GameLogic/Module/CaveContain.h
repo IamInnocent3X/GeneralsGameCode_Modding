@@ -42,17 +42,10 @@ class Team;
 class CaveContainModuleData : public OpenContainModuleData
 {
 public:
-	struct InitialPayload
-	{
-		AsciiString name;
-		Int count;
-	};
-
 	Int m_caveIndexData;
 	Bool m_caveHasOwner;
 	Bool m_caveUsesTeams;
 	Bool m_caveCaptureLinkCaves;
-	InitialPayload m_initialPayload;
 
 	CaveContainModuleData()
 	{
@@ -60,21 +53,8 @@ public:
 		m_caveHasOwner = FALSE;
 		m_caveUsesTeams = FALSE;
 		m_caveCaptureLinkCaves = FALSE;
-		m_initialPayload.count = 0;
-		m_initialPayload.name = NULL;
-		
+
 		m_allowEnemiesInside = FALSE;
-	}
-
-	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
-	{
-		CaveContainModuleData* self = (CaveContainModuleData*)instance;
-		const char* name = ini->getNextToken();
-		const char* countStr = ini->getNextTokenOrNull();
-		Int count = countStr ? INI::scanInt(countStr) : 1;
-
-		self->m_initialPayload.name.set(name);
-		self->m_initialPayload.count = count;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -87,7 +67,6 @@ public:
 			{ "CaveHasOwner", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveHasOwner ) },
 			{ "CaveUsesTeams", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveUsesTeams ) },
 			{ "CaveCaptureLinkCaves", INI::parseBool, NULL, offsetof( CaveContainModuleData, m_caveCaptureLinkCaves ) },
-			{ "InitialPayload", parseInitialPayload, NULL, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -170,6 +149,9 @@ protected:
 	void switchCaveOwners( Team *oldTeam, Team *newTeam );
 	void doCapture( Team *oldTeam, Team *newTeam );
 	void removeAllNonOwnContained( Team *myTeam, Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
+	void scatterToNearbyPosition(Object *obj);
+
+	virtual void createPayload();
 
 	Bool m_needToRunOnBuildComplete;
 	Int m_caveIndex;
@@ -180,7 +162,7 @@ private:
 
 	Bool m_loaded;
 	Bool m_switchingOwners;
-	Bool m_payloadCreated;
+	//Bool m_payloadCreated;
 	Bool m_isCaptured;
 	UnsignedInt m_containingFrames;
 	Team *m_capturedTeam;

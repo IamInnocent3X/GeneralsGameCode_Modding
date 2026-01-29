@@ -31,7 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 #include "Common/Player.h"
 #include "Common/ThingTemplate.h"
-#include "Common/ThingFactory.h"
+//#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/AI.h"
@@ -54,7 +54,6 @@ MobNexusContainModuleData::MobNexusContainModuleData()
 	m_orientLikeContainerOnExit = false;
 	m_keepContainerVelocityOnExit = false;
 	m_exitPitchRate = 0.0f;
-	m_initialPayload.count = 0;
 	m_healthRegen = 0.0f;
 
 	//
@@ -63,19 +62,6 @@ MobNexusContainModuleData::MobNexusContainModuleData()
 	//
 	m_allowInsideKindOf = MAKE_KINDOF_MASK( KINDOF_INFANTRY );
 
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-void MobNexusContainModuleData::parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
-{
-	MobNexusContainModuleData* self = (MobNexusContainModuleData*)instance;
-	const char* name = ini->getNextToken();
-	const char* countStr = ini->getNextTokenOrNull();
-	Int count = countStr ? INI::scanInt(countStr) : 1;
-
-	self->m_initialPayload.name.set(name);
-	self->m_initialPayload.count = count;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -92,7 +78,6 @@ void MobNexusContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "KeepContainerVelocityOnExit",	INI::parseBool,		NULL, offsetof( MobNexusContainModuleData, m_keepContainerVelocityOnExit ) },
 		{ "ExitBone",	INI::parseAsciiString,		NULL, offsetof( MobNexusContainModuleData, m_exitBone ) },
 		{ "ExitPitchRate",	INI::parseAngularVelocityReal,		NULL, offsetof( MobNexusContainModuleData, m_exitPitchRate ) },
-		{ "InitialPayload", parseInitialPayload, NULL, 0 },
 		{ "HealthRegen%PerSec", INI::parseReal, NULL, offsetof( MobNexusContainModuleData, m_healthRegen ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -317,26 +302,7 @@ void MobNexusContain::onRemoving( Object *rider )
 // ------------------------------------------------------------------------------------------------
 void MobNexusContain::onObjectCreated()
 {
-	MobNexusContainModuleData* self = (MobNexusContainModuleData*)getMobNexusContainModuleData();
-
-	Int count = self->m_initialPayload.count;
-	const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( self->m_initialPayload.name );
-	Object* object = getObject();
-
-	for( int i = 0; i < count; i++ )
-	{
-		//We are creating a MobNexus that comes with a initial payload, so add it now!
-
-		Object* payload = TheThingFactory->newObject( payloadTemplate, object->getControllingPlayer()->getDefaultTeam() );
-		if( object->getContain() && object->getContain()->isValidContainerFor( payload, true ) )
-		{
-			object->getContain()->addToContain( payload );
-		}
-		else
-		{
-			DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
-		}
-	}
+	OpenContain::createPayload();
 }
 
 

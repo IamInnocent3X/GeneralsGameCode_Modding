@@ -895,7 +895,7 @@ UpdateSleepTime TunnelContain::update( void )
 			tunnelSystem->healObjects(modData->m_framesForFullHeal);
 #endif
 			tunnelSystem->removeDontLoadSound(TheGameLogic->getFrame());
-			if(!m_payloadCreated && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+			if(!getPayloadCreated() && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
 				createPayload();
 		}
 
@@ -1014,6 +1014,9 @@ static void attackAtMyTarget( Object *obj, void *nemesisHolder )
 	}
 }
 
+// ------------------------------------------------------------------------------------------------
+// Configure the port to Open Fire
+// ------------------------------------------------------------------------------------------------
 void TunnelContain::doOpenFire(Bool isAttacking)
 {
 	Object *me = getObject();
@@ -1125,7 +1128,9 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	}
 }
 
+// ------------------------------------------------------------------------------------------------
 // Remove my Fire Ports
+// ------------------------------------------------------------------------------------------------
 void TunnelContain::removeBunker()
 { 
 	// Sanity checks
@@ -1157,7 +1162,9 @@ void TunnelContain::removeBunker()
 	}
 }
 
+// -------------------------------------------------------------------------------------------------------
 // Function to remove its own Tunnel Guard to prevent Units to exit from the Tunnel to protect the Tunnel
+// -------------------------------------------------------------------------------------------------------
 void TunnelContain::checkRemoveOwnGuard()
 {
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
@@ -1207,7 +1214,9 @@ void TunnelContain::checkRemoveOwnGuard()
 		
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
 // Function to make this Tunnel the only focus for Tunnel Guard and Disables other Tunnels from performing Tunnel Guard
+// ---------------------------------------------------------------------------------------------------------------------
 void TunnelContain::checkRemoveOtherGuard()
 {
 	const TunnelContainModuleData *modData = getTunnelContainModuleData();
@@ -1284,10 +1293,11 @@ void TunnelContain::checkRemoveOtherGuard()
 	}
 }
 
+// ------------------------------------------------------------------------------------------------
 void TunnelContain::createPayload()
 {
 	// Payload System
-	if(m_payloadCreated)
+	if(getPayloadCreated())
 		return;
 
 	// A TunnelContain tells everyone to leave if this is the last tunnel
@@ -1301,30 +1311,34 @@ void TunnelContain::createPayload()
 	ContainModuleInterface *contain = getObject()->getContain();
 	if(contain && tunnelTracker)
 	{
+		const TunnelContainModuleData* data = getTunnelContainModuleData();
 		contain->enableLoadSounds( FALSE );
 
-		Int count = getTunnelContainModuleData()->m_initialPayload.count;
-
-		for( int i = 0; i < count; i++ )
+		for(std::vector<InitialPayload>::const_iterator it = data->m_initialPayload.begin(); it != data->m_initialPayload.end(); ++it)
 		{
-			//We are creating a transport that comes with a initial payload, so add it now!
-			const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( getTunnelContainModuleData()->m_initialPayload.name );
-			Object* payload = TheThingFactory->newObject( payloadTemplate, getObject()->getTeam() );
-			if( tunnelTracker->isValidContainerFor( payload, true ) )
+			Int count = it->count;
+			const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( it->name );
+
+			for( int i = 0; i < count; i++ )
 			{
-				payload->setPosition( getObject()->getPosition() );
-				contain->addToContain( payload );
-			}
-			else
-			{
-				scatterToNearbyPosition( payload );
+				//We are creating a transport that comes with a initial payload, so add it now!
+				Object* payload = TheThingFactory->newObject( payloadTemplate, getObject()->getTeam() );
+				if( tunnelTracker->isValidContainerFor( payload, true ) )
+				{
+					payload->setPosition( getObject()->getPosition() );
+					contain->addToContain( payload );
+				}
+				else
+				{
+					scatterToNearbyPosition( payload );
+				}
 			}
 		}
 
 		contain->enableLoadSounds( TRUE );
 	}
 	
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 }
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -1363,7 +1377,7 @@ void TunnelContain::xfer( Xfer *xfer )
 
 	xfer->xferBool( &m_rebuildChecked );
 
-	xfer->xferBool( &m_payloadCreated );
+	//xfer->xferBool( &m_payloadCreated );
 
 }
 

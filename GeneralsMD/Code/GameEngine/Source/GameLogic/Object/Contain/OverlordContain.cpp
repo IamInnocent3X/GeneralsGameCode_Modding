@@ -92,7 +92,7 @@ OverlordContain::OverlordContain( Thing *thing, const ModuleData *moduleData ) :
 {
 	m_redirectionActivated = FALSE;
 
-  m_payloadCreated = FALSE;
+  setPayloadCreated(FALSE);
 
 }
 
@@ -138,7 +138,7 @@ void OverlordContain::createPayload()
 			  }
 			  else
 			  {
-				  DEBUG_CRASH( ( "OverlordContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
+				  DEBUG_CRASH( ( "OverlordContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), (*iter).str() ) );
 			  }
 
       }
@@ -150,7 +150,7 @@ void OverlordContain::createPayload()
 
   }
 
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 
 }
 

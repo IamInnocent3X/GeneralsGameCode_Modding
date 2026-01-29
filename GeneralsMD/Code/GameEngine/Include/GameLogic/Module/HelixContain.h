@@ -51,7 +51,7 @@ public:
 
 
 	static void buildFieldParse(MultiIniFieldParse& p);
-	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	//static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ public:
 	virtual void createPayload();
 
 private:
-  void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
+  //void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
   Object *getPortableStructure( void );
   ObjectID  m_portableStructureID;
 

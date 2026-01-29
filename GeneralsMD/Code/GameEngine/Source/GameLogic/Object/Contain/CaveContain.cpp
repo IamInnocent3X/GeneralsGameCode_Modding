@@ -58,7 +58,7 @@ CaveContain::CaveContain( Thing *thing, const ModuleData* moduleData ) : OpenCon
 	m_loaded = false;
 	m_caveIndex = 0;
 	m_originalTeam = NULL;
-	m_payloadCreated = FALSE;
+	setPayloadCreated(FALSE);
 	m_switchingOwners = FALSE;
 	m_containingFrames = 0;
 	m_isCaptured = FALSE;
@@ -252,17 +252,18 @@ void CaveContain::iterateContained( ContainIterateFunc func, void *userData, Boo
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime CaveContain::update( void )
 {
+	const CaveContainModuleData* data = getCaveContainModuleData();
 	// Loading fixes. Cave System does not register properly while the game is loaded.
 	if( (!m_needToRunOnBuildComplete || !getObject()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION )) && !m_loaded)
 	{
-		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( data->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 		if( myTracker == NULL )
 		{
 			registerNewCave();
 		}
 		Bool registerMyTunnel = TRUE;
 		
-		TunnelTracker *newTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+		TunnelTracker *newTracker = TheCaveSystem->getTunnelTracker( data->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 		const std::list<ObjectID> *allCaves = newTracker->getContainerList();
 		for( std::list<ObjectID>::const_iterator iter = allCaves->begin(); iter != allCaves->end(); iter++ )
 		{
@@ -287,75 +288,18 @@ UpdateSleepTime CaveContain::update( void )
 	}
 
 	// Payload System
-	if(!m_payloadCreated && !getObject()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !getObject()->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+	if(!getPayloadCreated() && !getObject()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !getObject()->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
 	{
-		ContainModuleInterface *contain = getObject()->getContain();
-		TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
-		if(contain && myTracker)
-		{
-			contain->enableLoadSounds( FALSE );
-
-			Int count = getCaveContainModuleData()->m_initialPayload.count;
-
-			for( int i = 0; i < count; i++ )
-			{
-				//We are creating a transport that comes with a initial payload, so add it now!
-				const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( getCaveContainModuleData()->m_initialPayload.name );
-				Object* payload = TheThingFactory->newObject( payloadTemplate, m_originalTeam );
-				if( myTracker->isValidContainerFor( payload, true ) )
-				{
-					payload->setPosition( getObject()->getPosition() );
-					contain->addToContain( payload );
-				}
-				else
-				{
-					Object *theContainer = getObject();
-
-					// Scatter to nearby Position from Tunnel Contain
-					Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
-				//	angle = TheTacticalView->getAngle();
-				//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
-
-					Real minRadius = theContainer->getGeometryInfo().getBoundingCircleRadius();
-					Real maxRadius = minRadius + minRadius / 2.0f;
-					const Coord3D *containerPos = theContainer->getPosition();
-					Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
-
-					Coord3D pos;
-					pos.x = dist * Cos( angle ) + containerPos->x;
-					pos.y = dist * Sin( angle ) + containerPos->y;
-					pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
-
-					// set orientation
-					payload->setOrientation( angle );
-
-					AIUpdateInterface *ai = payload->getAIUpdateInterface();
-					if( ai )
-					{
-						// set position of the object at center of building and move them toward pos
-						payload->setPosition( theContainer->getPosition() );
-						ai->ignoreObstacle(theContainer);
-						ai->aiMoveToPosition( &pos, CMD_FROM_AI );
-					}
-					else
-					{
-						payload->setPosition( &pos );
-					}
-				}
-			}
-
-			contain->enableLoadSounds( TRUE );
-			m_payloadCreated = TRUE;
-		}
+		createPayload();
 	}
 
 	if(m_oldTeam != NULL && m_newTeam != NULL)
 	{		
-		if(getCaveContainModuleData()->m_caveUsesTeams)
+		if(data->m_caveUsesTeams)
 		{
 			TheCaveSystem->registerNewCaveTeam( m_caveIndex, m_newTeam );
 		}
-		TunnelTracker *curTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, m_newTeam );
+		TunnelTracker *curTracker = TheCaveSystem->getTunnelTracker( data->m_caveUsesTeams, m_caveIndex, m_newTeam );
 		if(curTracker)
 		{
 			doCapture(m_oldTeam, m_newTeam);
@@ -366,7 +310,7 @@ UpdateSleepTime CaveContain::update( void )
 
 	if(m_containingFrames && TheGameLogic->getFrame() > m_containingFrames)
 	{
-		TunnelTracker *curTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+		TunnelTracker *curTracker = TheCaveSystem->getTunnelTracker( data->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 		if(curTracker)
 		{
 			if(curTracker->getIsContaining())
@@ -379,6 +323,98 @@ UpdateSleepTime CaveContain::update( void )
 
 	OpenContain::update();
 	return UPDATE_SLEEP_NONE;
+}
+
+
+// ------------------------------------------------------------------------------------------------
+void CaveContain::createPayload()
+{
+	// Payload System
+	if(getPayloadCreated())
+		return;
+
+	ContainModuleInterface *contain = getObject()->getContain();
+	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	if(contain && myTracker)
+	{
+		const CaveContainModuleData* data = getCaveContainModuleData();
+		contain->enableLoadSounds( FALSE );
+
+		for(std::vector<InitialPayload>::const_iterator it = data->m_initialPayload.begin(); it != data->m_initialPayload.end(); ++it)
+		{
+			Int count = it->count;
+			const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( it->name );
+			for( int i = 0; i < count; i++ )
+			{
+				//We are creating a transport that comes with a initial payload, so add it now!
+				Object* payload = TheThingFactory->newObject( payloadTemplate, m_originalTeam );
+				if( myTracker->isValidContainerFor( payload, true ) )
+				{
+					payload->setPosition( getObject()->getPosition() );
+					contain->addToContain( payload );
+				}
+				else
+				{
+					scatterToNearbyPosition( payload );
+				}
+			}
+		}
+
+		contain->enableLoadSounds( TRUE );
+	}
+	
+	setPayloadCreated(TRUE);
+}
+
+//-------------------------------------------------------------------------------------------------
+void CaveContain::scatterToNearbyPosition(Object* obj)
+{
+	Object *theContainer = getObject();
+
+	//
+	// for now we will just set the position of the object that is being removed from us
+	// at a random angle away from our center out some distance
+	//
+
+	//
+	// pick an angle that is in the view of the current camera position so that
+	// the thing will come out "toward" the player and they can see it
+	// NOPE, can't do that ... all players screen angles will be different, unless
+	// we maintain the angle of each players screen in the player structure or something
+	//
+	Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
+//	angle = TheTacticalView->getAngle();
+//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
+
+	Real minRadius = theContainer->getGeometryInfo().getBoundingCircleRadius();
+	Real maxRadius = minRadius + minRadius / 2.0f;
+	const Coord3D *containerPos = theContainer->getPosition();
+	Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
+
+	Coord3D pos;
+	pos.x = dist * Cos( angle ) + containerPos->x;
+	pos.y = dist * Sin( angle ) + containerPos->y;
+	pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
+
+	// set orientation
+	obj->setOrientation( angle );
+
+	AIUpdateInterface *ai = obj->getAIUpdateInterface();
+	if( ai )
+	{
+		// set position of the object at center of building and move them toward pos
+		obj->setPosition( theContainer->getPosition() );
+		ai->ignoreObstacle(theContainer);
+ 		ai->aiMoveToPosition( &pos, CMD_FROM_AI );
+
+	}
+	else
+	{
+
+		// no ai, just set position at the target pos
+		obj->setPosition( &pos );
+
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1102,7 +1138,7 @@ void CaveContain::xfer( Xfer *xfer )
 
 	xfer->xferBool( &m_isCaptured );
 
-	xfer->xferBool( &m_payloadCreated );
+	//xfer->xferBool( &m_payloadCreated );
 
 	// original team
 	TeamID teamID = m_originalTeam ? m_originalTeam->getID() : TEAM_ID_INVALID;

@@ -48,6 +48,12 @@
 // ------------------------------------------------------------------------------------------------
 enum { CONTAIN_MAX_UNKNOWN = -1 };  // means we don't care, infinite, unassigned, whatever
 
+struct InitialPayload
+{
+	AsciiString name;
+	Int count;
+};
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 class OpenContainModuleData : public UpdateModuleData
@@ -78,8 +84,11 @@ public:
 	std::vector<AsciiString> m_containMaxUpgradeListConflicts;
 	std::vector<int> m_containMaxUpgradeListRequiresAll;
 
+	std::vector<InitialPayload> m_initialPayload;
+
 	OpenContainModuleData( void );
 	static void buildFieldParse(MultiIniFieldParse& p);
+	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -277,6 +286,10 @@ protected:
 	virtual const ContainedItemsList* getAddOnList() const { return NULL; }
 	virtual ContainedItemsList* getAddOnList() { return NULL; }
 
+	virtual void createPayload();
+	Bool getPayloadCreated() const { return m_payloadCreated; }
+	void setPayloadCreated(Bool e) { m_payloadCreated = e; }
+
 	void pruneDeadWanters();
 
 	ContainedItemsList	m_containList;						///< the list of contained objects
@@ -312,4 +325,5 @@ private:
   Bool                m_passengerAllowedToFire;      ///< Newly promoted from the template data to the module for upgrade overriding access
 
 	Real			  m_containMass;
+	Bool			  m_payloadCreated;
 };

@@ -32,7 +32,7 @@
 
 #include "Common/Player.h"
 #include "Common/ThingTemplate.h"
-#include "Common/ThingFactory.h"
+//#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/AI.h"
@@ -63,7 +63,6 @@ TransportContainModuleData::TransportContainModuleData()
 	m_resetMoodCheckTimeOnExit = true;
 	m_destroyRidersWhoAreNotFreeToExit = false;
 	m_exitPitchRate = 0.0f;
-	m_initialPayload.count = 0;
 	m_healthRegen = 0.0f;
 	m_exitDelay = 0;
 	m_isDelayExitInAir = FALSE;
@@ -76,19 +75,6 @@ TransportContainModuleData::TransportContainModuleData()
 
 	m_passengerWeaponBonusVec.push_back(WEAPONBONUSCONDITION_CONTAINED);
 
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-void TransportContainModuleData::parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
-{
-	TransportContainModuleData* self = (TransportContainModuleData*)instance;
-	const char* name = ini->getNextToken();
-	const char* countStr = ini->getNextTokenOrNull();
-	Int count = countStr ? INI::scanInt(countStr) : 1;
-
-	self->m_initialPayload.name.set(name);
-	self->m_initialPayload.count = count;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -108,7 +94,6 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "DestroyRidersWhoAreNotFreeToExit",	INI::parseBool,		NULL, offsetof( TransportContainModuleData, m_destroyRidersWhoAreNotFreeToExit ) },
 		{ "ExitBone",	INI::parseAsciiString,		NULL, offsetof( TransportContainModuleData, m_exitBone ) },
 		{ "ExitPitchRate",	INI::parseAngularVelocityReal,		NULL, offsetof( TransportContainModuleData, m_exitPitchRate ) },
-		{ "InitialPayload", parseInitialPayload, NULL, 0 },
 		{ "HealthRegen%PerSec", INI::parseReal, NULL, offsetof( TransportContainModuleData, m_healthRegen ) },
 		{ "ExitDelay",	INI::parseDurationUnsignedInt,		NULL, offsetof( TransportContainModuleData, m_exitDelay ) },
 		{ "ArmedRidersUpgradeMyWeaponSet",	INI::parseBool,		NULL, offsetof( TransportContainModuleData, m_armedRidersUpgradeWeaponSet ) },
@@ -472,33 +457,19 @@ void TransportContain::onRemoving( Object *rider )
 // ------------------------------------------------------------------------------------------------
 void TransportContain::createPayload()
 {
-	TransportContainModuleData* self = (TransportContainModuleData*)getTransportContainModuleData();
+	//TransportContainModuleData* self = (TransportContainModuleData*)getTransportContainModuleData();
 
-	Int count = self->m_initialPayload.count;
-	const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( self->m_initialPayload.name );
 	Object* object = getObject();
 	ContainModuleInterface *contain = object->getContain();
 
 	if( contain )
 	{
 		contain->enableLoadSounds( FALSE );
-		for( int i = 0; i < count; i++ )
-		{
-			//We are creating a transport that comes with a initial payload, so add it now!
-			Object* payload = TheThingFactory->newObject( payloadTemplate, object->getControllingPlayer()->getDefaultTeam() );
-			if( contain->isValidContainerFor( payload, true ) )
-			{
-				contain->addToContain( payload );
-			}
-			else
-			{
-				DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
-			}
-		}
+		OpenContain::createPayload();
 		contain->enableLoadSounds( TRUE );
 	}
 
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 
 }
 
@@ -508,7 +479,7 @@ UpdateSleepTime TransportContain::update()
 {
 	const TransportContainModuleData *moduleData = getTransportContainModuleData();
 
-	if( m_payloadCreated == FALSE )
+	if( getPayloadCreated() == FALSE )
 		createPayload();
 
 	if( moduleData && moduleData->m_healthRegen )
@@ -724,7 +695,7 @@ void TransportContain::xfer( Xfer *xfer )
 	OpenContain::xfer( xfer );
 
 	// payload created
-	xfer->xferBool( &m_payloadCreated );
+	//xfer->xferBool( &m_payloadCreated );
 
 	// extra slots in use
 	xfer->xferInt( &m_extraSlotsInUse );
