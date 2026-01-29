@@ -40,6 +40,7 @@
 #include "Common/Player.h"
 #include "Common/RandomValue.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 
 #include "GameClient/Drawable.h"
@@ -81,6 +82,7 @@ OpenContainModuleData::OpenContainModuleData( void )
  	m_allowAlliesInside = TRUE;
  	m_allowEnemiesInside = TRUE;
  	m_allowNeutralInside = TRUE;
+	m_initialPayload.clear();
 	m_containMaxUpgradeList.clear();
 	m_containMaxUpgradeListConflicts.clear();
 	m_containMaxUpgradeListRequiresAll.clear();
@@ -110,6 +112,7 @@ OpenContainModuleData::OpenContainModuleData( void )
  		{ "AllowEnemiesInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowEnemiesInside ) },
  		{ "AllowNeutralInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowNeutralInside ) },
 		{ "PassengerWeaponBonusList",       INI::parseWeaponBonusVectorKeepDefault, nullptr, offsetof(OpenContainModuleData, m_passengerWeaponBonusVec) },
+		{ "InitialPayload", 				parseInitialPayload, nullptr, 0 },
 		{ "ContainMaxTriggeredBy", 			INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeList) },
 		{ "ContainMaxConflictsWith", 		INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeListConflicts) },
 		{ "ContainMaxRequiresAllTriggers", 	INI::parseIntVector, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeListRequiresAll) },
@@ -118,6 +121,37 @@ OpenContainModuleData::OpenContainModuleData( void )
   p.add(dataFieldParse);
 	p.add(DieMuxData::getFieldParse(), offsetof( OpenContainModuleData, m_dieMuxData ));
 
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+/*static*/ void OpenContainModuleData::parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
+{
+	OpenContainModuleData* self = (OpenContainModuleData*)instance;
+
+	Bool parseFirst = TRUE;
+	InitialPayload payload;
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		if(parseFirst)
+		{
+			payload.name.set(token);
+			parseFirst = FALSE;
+		}
+		else
+		{
+			Int count = INI::scanInt(token);
+			payload.count = count;
+			parseFirst = TRUE;
+
+			self->m_initialPayload.push_back(payload);
+		}
+	}
+	if(parseFirst == FALSE)
+	{
+		payload.count = 1;
+		self->m_initialPayload.push_back(payload);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,6 +185,7 @@ OpenContain::OpenContain( Thing *thing, const ModuleData* moduleData ) : UpdateM
 	m_whichExitPath = 1;
 	m_loadSoundsEnabled = TRUE;
 	m_containMass = 0.0f;
+	m_payloadCreated = FALSE;
 
   m_passengerAllowedToFire = getOpenContainModuleData()->m_passengersAllowedToFire;
   m_containExtra = 0;
@@ -822,15 +857,18 @@ void OpenContain::onContaining( Object *rider, Bool wasSelected )
 void OpenContain::onRemoving( Object *rider)
 {
 	// Play audio
-	AudioEventRTS exitSound = *getObject()->getTemplate()->getSoundExit();
-	exitSound.setObjectID(getObject()->getID());
-	TheAudio->addAudioEvent(&exitSound);
+	if( m_loadSoundsEnabled )
+	{
+		AudioEventRTS exitSound = *getObject()->getTemplate()->getSoundExit();
+		exitSound.setObjectID(getObject()->getID());
+		TheAudio->addAudioEvent(&exitSound);
 
-	if (rider) {
-		// This is a misnomer, but it makes it clearer for the user.
-		AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
-		fallingSound.setObjectID(rider->getID());
-		TheAudio->addAudioEvent(&fallingSound);
+		if (rider) {
+			// This is a misnomer, but it makes it clearer for the user.
+			AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
+			fallingSound.setObjectID(rider->getID());
+			TheAudio->addAudioEvent(&fallingSound);
+		}
 	}
 }
 
@@ -1739,6 +1777,38 @@ Bool OpenContain::isAnyRiderAttacking( void ) const
   return wellIsHe;
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void OpenContain::createPayload()
+{
+	const OpenContainModuleData *data = getOpenContainModuleData();
+	Object *object = getObject();
+	ContainModuleInterface *contain = object->getContain();
+
+	// Sanity
+	if(!contain)
+		return;
+
+	for(std::vector<InitialPayload>::const_iterator it = data->m_initialPayload.begin(); it != data->m_initialPayload.end(); ++it)
+	{
+		Int count = it->count;
+		const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( it->name );
+
+		for( int i = 0; i < count; i++ )
+		{
+			//We are creating a transport that comes with a initial payload, so add it now!
+			Object* payload = TheThingFactory->newObject( payloadTemplate, object->getControllingPlayer()->getDefaultTeam() );
+			if( contain->isValidContainerFor( payload, true ) )
+			{
+				contain->addToContain( payload );
+			}
+			else
+			{
+				DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!", object->getName().str(), it->name.str() ) );
+			}
+		}
+	}
+}
 
 
 
@@ -2042,6 +2112,9 @@ void OpenContain::xfer( Xfer *xfer )
 
 	// contain max
 	xfer->xferInt( &m_containExtra );
+
+	// payload created
+	xfer->xferBool( &m_payloadCreated );
 
 	// enter exit map info
 	UnsignedShort enterExitCount = m_objectEnterExitInfo.size();

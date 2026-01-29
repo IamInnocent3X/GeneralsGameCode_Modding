@@ -43,18 +43,11 @@ class PassengersFireUpgrade;
 class TunnelContainModuleData : public OpenContainModuleData
 {
 public:
-	struct InitialPayload
-	{
-		AsciiString name;
-		Int count;
-	};
-	
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully healed
 	Bool m_removeOtherPassengersAllowToFire;
 	//std::vector<AsciiString> m_activationUpgradeNames;
 	std::vector<AsciiString> m_upgradeDisableOtherNames;
 	std::vector<AsciiString> m_upgradeDisableOwnNames;
-	InitialPayload m_initialPayload;
 
 
 	TunnelContainModuleData()
@@ -65,8 +58,6 @@ public:
 		m_removeOtherPassengersAllowToFire = FALSE;
 		m_upgradeDisableOtherNames.clear();
 		m_upgradeDisableOwnNames.clear();
-		m_initialPayload.count = 0;
-		m_initialPayload.name.clear();
 
 		//
 		// by default we say that transports can have infantry inside them, this will be totally
@@ -75,17 +66,6 @@ public:
 		m_allowInsideKindOf = MAKE_KINDOF_MASK(KINDOF_INFANTRY);
 		m_allowInsideKindOf.set(KINDOF_VEHICLE);
 
-	}
-
-	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
-	{
-		TunnelContainModuleData* self = (TunnelContainModuleData*)instance;
-		const char* name = ini->getNextToken();
-		const char* countStr = ini->getNextTokenOrNull();
-		Int count = countStr ? INI::scanInt(countStr) : 1;
-
-		self->m_initialPayload.name.set(name);
-		self->m_initialPayload.count = count;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -98,7 +78,6 @@ public:
 			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, nullptr, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
 			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, nullptr, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
 			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, nullptr, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
-			{ "InitialPayload", parseInitialPayload, nullptr, 0 },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -181,14 +160,14 @@ protected:
 	void checkRemoveOwnGuard();
 	void checkRemoveOtherGuard();
 	//void doHoleRebuildChecks();
-	void createPayload();
+	virtual void createPayload();
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
 private:
 	ObjectID m_lastFiringObjID;
 	Coord3D m_lastFiringPos;
-	Bool m_payloadCreated;
+	//Bool m_payloadCreated;
 	Bool m_hasBunker;
 	Bool m_hasTunnelGuard;
 	Bool m_rebuildChecked;

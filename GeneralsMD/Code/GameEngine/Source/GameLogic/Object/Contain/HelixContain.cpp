@@ -92,7 +92,7 @@ HelixContain::HelixContain( Thing *thing, const ModuleData *moduleData ) :
 								 TransportContain( thing, moduleData )
 {
 
-  m_payloadCreated = FALSE;
+  setPayloadCreated(FALSE);
   m_portableStructureID = INVALID_ID;
 
 }
@@ -173,7 +173,7 @@ void HelixContain::createPayload()
 			  }
 			  else
 			  {
-				  DEBUG_CRASH( ( "HelixContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
+				  DEBUG_CRASH( ( "HelixContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), (*iter).str() ) );
 			  }
 
       }
@@ -185,7 +185,7 @@ void HelixContain::createPayload()
 
   }
 
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 
 }
 

@@ -76,7 +76,7 @@ GarrisonContainModuleData::GarrisonContainModuleData( void )
 	m_immuneToClearBuildingAttacks = false;
   m_isEnclosingContainer = TRUE; ///< a sensible default for a garrison container... few exceptions, firebase is one
 
-	m_initialRoster.count = 0;
+	m_initialRoster.clear();
 
 	m_passengerWeaponBonusVec.push_back(WEAPONBONUSCONDITION_GARRISONED);
 
@@ -1782,22 +1782,26 @@ void GarrisonContain::onObjectCreated()
 {
 	GarrisonContainModuleData* self = (GarrisonContainModuleData*)getGarrisonContainModuleData();
 
-	Int count = self->m_initialRoster.count;
-	const ThingTemplate* rosterTemplate = TheThingFactory->findTemplate( self->m_initialRoster.templateName );
 	Object* object = getObject();
 
-	for( int i = 0; i < count; i++ )
+	for(std::vector<InitialPayload>::const_iterator it = self->m_initialRoster.begin(); it != self->m_initialRoster.end(); ++it)
 	{
-		//We are creating a garrison that comes with an initial roster, so add it now!
-		Object* payload = TheThingFactory->newObject( rosterTemplate, object->getControllingPlayer()->getDefaultTeam() );
-		if( object->getContain() && object->getContain()->isValidContainerFor( payload, true ) )
+		Int count = it->count;
+		const ThingTemplate* rosterTemplate = TheThingFactory->findTemplate( it->name );
+
+		for( int i = 0; i < count; i++ )
 		{
-			object->getContain()->addToContain( payload );
-		}
-		else
-		{
-			DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!",
-				object->getName().str(), self->m_initialRoster.templateName.str() ) );
+			//We are creating a garrison that comes with an initial roster, so add it now!
+			Object* payload = TheThingFactory->newObject( rosterTemplate, object->getControllingPlayer()->getDefaultTeam() );
+			if( object->getContain() && object->getContain()->isValidContainerFor( payload, true ) )
+			{
+				object->getContain()->addToContain( payload );
+			}
+			else
+			{
+				DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!",
+					object->getName().str(), it->name.str() ) );
+			}
 		}
 	}
 }

@@ -343,7 +343,7 @@ void RiderChangeContain::onContaining( Object *rider, Bool wasSelected )
 	Int transportSlotCount = rider->getTransportSlotCount();
 
 	//Remove riders if conditions are met
-	if( ( m_payloadCreated && !data->m_dontEvacuateOnEnter ) ||
+	if( ( getPayloadCreated() && !data->m_dontEvacuateOnEnter ) ||
 		transportSlotCount >= containMax )
 	{
 		obj->getAI()->aiEvacuateInstantly( TRUE, CMD_FROM_AI );
@@ -672,7 +672,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 		return;
 	}
 
-	if( m_payloadCreated )
+	if( getPayloadCreated() )
 	{
 		//Extend base class
 		TransportContain::onRemoving( rider );
@@ -1966,7 +1966,7 @@ void RiderChangeContain::xfer( Xfer *xfer )
 	TransportContain::xfer( xfer );
 
 	// payload created
-	xfer->xferBool( &m_payloadCreated );
+	//xfer->xferBool( &m_payloadCreated );
 
 	// extra slots in use
 	xfer->xferInt( &m_extraSlotsInUse );

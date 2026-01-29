@@ -36,16 +36,9 @@
 class TransportContainModuleData : public OpenContainModuleData
 {
 public:
-	struct InitialPayload
-	{
-		AsciiString name;
-		Int count;
-	};
-
 	Int								m_slotCapacity;								///< max units that can be inside us
 	Real							m_exitPitchRate;
 	AsciiString				m_exitBone;
-	InitialPayload		m_initialPayload;
 	Real							m_healthRegen;
 	UnsignedInt				m_exitDelay;
 	Bool							m_scatterNearbyOnExit;
@@ -60,7 +53,7 @@ public:
 	TransportContainModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
-	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	//static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 
 };
 
@@ -108,7 +101,7 @@ protected:
 	virtual void createPayload();
 	void letRidersUpgradeWeaponSet( void );
 
-	Bool m_payloadCreated;
+	//Bool m_payloadCreated;
 	Int m_extraSlotsInUse;
 
 	UnsignedInt m_frameExitNotBusy;
