@@ -79,8 +79,9 @@ OpenContainModuleData::OpenContainModuleData( void )
 	m_allowInsideKindOf.clear(); m_allowInsideKindOf.flip();		// everything is allowed
 	m_forbidInsideKindOf.clear();	// nothing is forbidden
 	m_weaponBonusPassedToPassengers = FALSE;
- 	m_allowAlliesInside = TRUE;
- 	m_allowEnemiesInside = TRUE;
+	m_allowOwnUnitsInside = TRUE;
+ 	m_allowAlliesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Allies for All Units
+ 	m_allowEnemiesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Stealth Garrison Status
  	m_allowNeutralInside = TRUE;
 	m_initialPayload.clear();
 	m_containMaxUpgradeList.clear();
@@ -108,7 +109,8 @@ OpenContainModuleData::OpenContainModuleData( void )
 		{ "NumberOfExitPaths",				INI::parseInt, NULL, offsetof( OpenContainModuleData, m_numberOfExitPaths ) },
 		{ "DoorOpenTime",							INI::parseDurationUnsignedInt, NULL, offsetof( OpenContainModuleData, m_doorOpenTime ) },
  		{ "WeaponBonusPassedToPassengers", INI::parseBool,	NULL, offsetof( OpenContainModuleData, m_weaponBonusPassedToPassengers ) },
- 		{ "AllowAlliesInside",				INI::parseBool,	NULL, offsetof( OpenContainModuleData, m_allowAlliesInside ) },
+ 		{ "AllowOwnUnitsInside",			INI::parseBool,	NULL, offsetof( OpenContainModuleData, m_allowOwnUnitsInside ) },
+		{ "AllowAlliesInside",				INI::parseBool,	NULL, offsetof( OpenContainModuleData, m_allowAlliesInside ) },
  		{ "AllowEnemiesInside",				INI::parseBool,	NULL, offsetof( OpenContainModuleData, m_allowEnemiesInside ) },
  		{ "AllowNeutralInside",				INI::parseBool,	NULL, offsetof( OpenContainModuleData, m_allowNeutralInside ) },
 		{ "PassengerWeaponBonusList",       INI::parseWeaponBonusVectorKeepDefault, NULL, offsetof(OpenContainModuleData, m_passengerWeaponBonusVec) },
@@ -1012,12 +1014,30 @@ Bool OpenContain::isValidContainerFor(const Object* obj, Bool checkCapacity) con
  	// check relationship, note that this behavior is defined as the relation between
  	// 'obj' and the container 'us', and not the reverse
  	//
+	/// IamInnocent - Separated AllowOwnUnitsInside from AllowAlliesInside
+	if( modData->m_allowOwnUnitsInside == TRUE && us->getControllingPlayer() == obj->getControllingPlayer() )
+		return TRUE;
+	
+	/// IamInnocent - Added support for Stealth Garrison
+	Relationship r;
+	ContainModuleInterface *contain = us->getContain();
+	if(contain && contain->isHidingGarrisonFromNonAllies() && !obj->getIsUndetectedDefector() && !us->getIsUndetectedDefector())
+	{
+		const Player *otherPlayer = contain->getApparentControllingPlayer(obj->getControllingPlayer());
+		if (!otherPlayer)
+			otherPlayer = obj->getControllingPlayer();
+		r = otherPlayer->getRelationship( us->getTeam() );
+	}
+	else
+	{
+		r = obj->getRelationship( us );
+	}
  	Bool relationshipRestricted = FALSE;
- 	Relationship r = obj->getRelationship( us );
+ 	//Relationship r = obj->getRelationship( us );
  	switch( r )
  	{
  		case ALLIES:
- 			if( modData->m_allowAlliesInside == FALSE )
+ 			if( modData->m_allowAlliesInside == FALSE || (modData->m_allowOwnUnitsInside == FALSE && us->getControllingPlayer() == obj->getControllingPlayer()) )
  				relationshipRestricted = TRUE;
  			break;
 

@@ -73,6 +73,7 @@ public:
 	KindOfMaskType m_allowInsideKindOf;			///< objects must have at least one of these kind of bits set to be contained by us
 	KindOfMaskType m_forbidInsideKindOf;		///< objects must have NONE of these kind of bits set to be contained by us
 	Bool m_weaponBonusPassedToPassengers;		///< Do our passengers get to use our weapon bonuses?
+	Bool m_allowOwnUnitsInside;				///< allow own units inside us
  	Bool m_allowAlliesInside;				///< allow allies inside us
  	Bool m_allowEnemiesInside;			///< allow enemies inside us
  	Bool m_allowNeutralInside;			///< allow neutral inside us
@@ -260,6 +261,8 @@ public:
   virtual Object* getClosestRider ( const Coord3D *pos );
 
   virtual void setEvacDisposition( EvacDisposition disp ) {};
+
+  virtual Bool isHidingGarrisonFromNonAllies() const { return false; }
 protected:
 
 	virtual void monitorConditionChanges( void );				///< check to see if we need to update our occupant postions from a model change or anything else

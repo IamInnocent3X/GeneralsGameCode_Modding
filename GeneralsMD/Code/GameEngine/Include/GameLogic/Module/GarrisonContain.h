@@ -166,6 +166,8 @@ public:
 
   virtual void setEvacDisposition( EvacDisposition disp ) { m_evacDisposition = disp; };
 
+  virtual Bool isHidingGarrisonFromNonAllies() const { return m_hideGarrisonedStateFromNonallies; }
+
 protected:
 
 	virtual void redeployOccupants( void );				///< redeploy the occupants of us at all available garrison points

@@ -195,6 +195,8 @@ public:
 
   virtual void setEvacDisposition( EvacDisposition disp ) = 0;
 
+	virtual Bool isHidingGarrisonFromNonAllies() const = 0;
+
 	virtual Bool isWeaponBonusPassedToPassengers() const = 0;
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const = 0;
 	virtual const std::vector<AsciiString>& getCustomWeaponBonusPassedToPassengers() const = 0;
