@@ -53,8 +53,6 @@ public:
 		m_caveHasOwner = FALSE;
 		m_caveUsesTeams = FALSE;
 		m_caveCaptureLinkCaves = FALSE;
-
-		m_allowEnemiesInside = FALSE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)

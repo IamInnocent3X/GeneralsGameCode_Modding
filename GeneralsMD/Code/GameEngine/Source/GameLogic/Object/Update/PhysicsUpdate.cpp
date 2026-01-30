@@ -46,6 +46,7 @@
 #include "GameLogic/Weapon.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/LogicRandomValue.h"
+#include "GameClient/FXList.h"
 #include "GameClient/GameCLient.h"
 
 const Real DEFAULT_MASS = 1.0f;
@@ -140,6 +141,8 @@ PhysicsBehaviorModuleData::PhysicsBehaviorModuleData()
 	m_vehicleCrashAllowAirborne = FALSE;
 	m_bounceFactor = 1.0f;
 	m_magnetResistance = 0.0f;
+
+	m_waterImpactFX = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -193,6 +196,10 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "VehicleCrashesIntoNonBuildingWeaponTemplate", INI::parseWeaponTemplate, nullptr, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashesIntoNonBuildingWeaponTemplate) },
 		{ "VehicleCrashWeaponAllowAirborne", INI::parseBool, nullptr, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashAllowAirborne) },
 
+		{ "DoWaterPhysics", INI::parseBool, nullptr, offsetof(PhysicsBehaviorModuleData, m_doWaterPhysics) },
+		{ "WaterExtraFriction", INI::parseReal, nullptr, offsetof(PhysicsBehaviorModuleData, m_waterExtraFriction) },
+		{ "WaterImpactFX", INI::parseFXList, nullptr, offsetof(PhysicsBehaviorModuleData, m_waterImpactFX) },
+
 		{ "MagnetResistance",		INI::parsePositiveNonZeroReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
 
 		{ "ShockResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_shockResistance ) },
@@ -237,6 +244,9 @@ PhysicsBehavior::PhysicsBehavior( Thing *thing, const ModuleData* moduleData ) :
 
 	m_pui = nullptr;
 	m_bounceSound = nullptr;
+	m_waterImpactSound = nullptr;
+
+	m_waterImpactFX = getPhysicsBehaviorModuleData()->m_waterImpactFX;
 
 	m_rollRateStatic = 0.0f;
 	m_rollStaticFactor = 1.0f;
@@ -302,9 +312,18 @@ Bool PhysicsBehavior::isIgnoringCollisionsWith(ObjectID id) const
 }
 
 //-------------------------------------------------------------------------------------------------
+Real PhysicsBehavior::getExtraFriction() const
+{
+	if (getPhysicsBehaviorModuleData()->m_doWaterPhysics && getObject()->isBelowWater())
+		return m_extraFriction + getPhysicsBehaviorModuleData()->m_waterExtraFriction;
+
+	return m_extraFriction;
+}
+//-------------------------------------------------------------------------------------------------
+
 Real PhysicsBehavior::getAerodynamicFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_aerodynamicFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_aerodynamicFriction + getExtraFriction();
 	if (f < MIN_AERO_FRICTION) f = MIN_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -313,7 +332,7 @@ Real PhysicsBehavior::getAerodynamicFriction() const
 //-------------------------------------------------------------------------------------------------
 Real PhysicsBehavior::getForwardFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_forwardFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_forwardFriction + getExtraFriction();
 	if (f < MIN_NON_AERO_FRICTION) f = MIN_NON_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -322,7 +341,7 @@ Real PhysicsBehavior::getForwardFriction() const
 //-------------------------------------------------------------------------------------------------
 Real PhysicsBehavior::getLateralFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_lateralFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_lateralFriction + getExtraFriction();
 	if (f < MIN_NON_AERO_FRICTION) f = MIN_NON_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -331,7 +350,7 @@ Real PhysicsBehavior::getLateralFriction() const
 //-------------------------------------------------------------------------------------------------
 Real PhysicsBehavior::getZFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_ZFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_ZFriction + getExtraFriction();
 	if (f < MIN_NON_AERO_FRICTION) f = MIN_NON_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -641,6 +660,29 @@ void PhysicsBehavior::setBounceSound(const AudioEventRTS* bounceSound)
 		deleteInstance(m_bounceSound);
 		m_bounceSound = nullptr;
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setWaterImpactSound(const AudioEventRTS* waterImpactSound)
+{
+	if (waterImpactSound)
+	{
+		if (m_waterImpactSound == nullptr)
+			m_waterImpactSound = newInstance(DynamicAudioEventRTS);
+
+		m_waterImpactSound->m_event = *waterImpactSound;
+	}
+	else
+	{
+		deleteInstance(m_waterImpactSound);
+		m_waterImpactSound = nullptr;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setWaterImpactFX(const FXList* waterImpactFX)
+{
+	m_waterImpactFX = waterImpactFX;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -974,18 +1016,21 @@ UpdateSleepTime PhysicsBehavior::update()
 		applyForce(&bounceForce);
 	}
 
-	Bool isWaterCollision{ false };
+	// Check our height state:
+
+	Bool isUnderWater{ false };
 	Bool airborneAtEnd{ false };
 	if (m_pui != nullptr && m_pui->projectileShouldCollideWithWater()) {
+		// For projectiles that collide with water, we consider water as not airborne
 		airborneAtEnd = obj->isAboveTerrainOrWater();
-
-		if (!airborneAtEnd) {
-			const Coord3D* pos = obj->getPosition();
-			isWaterCollision = TheTerrainLogic->isUnderwater(pos->x, pos->y);
-		}
+		isUnderWater = obj->isBelowWater();
 	}
 	else {
 		airborneAtEnd = obj->isAboveTerrain();
+		if (d->m_doWaterPhysics) {
+			isUnderWater = obj->isBelowWater();
+			DEBUG_LOG((">>> WATER CHECK: %d", isUnderWater));
+		}
 	}
 
 	// it's not good enough to check for airborne being different between
@@ -1068,6 +1113,19 @@ UpdateSleepTime PhysicsBehavior::update()
 		}
 	}
 
+	if (d->m_doWaterPhysics && getFlag(WAS_ABOVE_WATER_LAST_FRAME) && isUnderWater)
+	{
+		DEBUG_LOG((">>> WATER IMPACT NOW!"));
+		// do water splash sound
+		if (m_waterImpactSound) {
+			AudioEventRTS collisionSound = m_waterImpactSound->m_event;
+			collisionSound.setObjectID(getObject()->getID());
+			TheAudio->addAudioEvent(&collisionSound);
+		}
+
+		FXList::doFXObj(m_waterImpactFX, getObject());
+	}
+
 	if(TheGlobalData->m_useEfficientDrawableScheme && obj->getDrawable())
 	{
 		//Coord3D currPos = *obj->getPosition();
@@ -1081,6 +1139,7 @@ UpdateSleepTime PhysicsBehavior::update()
 
 	setFlag(UPDATE_EVER_RUN, true);
 	setFlag(WAS_AIRBORNE_LAST_FRAME, airborneAtEnd);
+	setFlag(WAS_ABOVE_WATER_LAST_FRAME, !isUnderWater);
 
 	setFlag(IS_IN_UPDATE, false);
 	return calcSleepTime();

@@ -718,19 +718,24 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 	else
 	{
 		Bool checkCapacity = (mode == CHECK_CAPACITY);
-		Int containCount = contain->getContainCount();
-		Int stealthContainCount = contain->getStealthUnitsContained();
-		Int nonStealthContainCount = containCount - stealthContainCount;
 
 		// not ours... must do special checks.
 		if (objectToEnter->getControllingPlayer() != obj->getControllingPlayer())
 		{
-			// not empty... can't do it.
-			if (nonStealthContainCount > 0)
-				return FALSE;
-
 			// faction structure... can't do it.
 			if (objectToEnter->isFactionStructure())
+				return FALSE;
+		}
+
+		/// IamInnocent - Edited Stealth Garrison for checking non-Allies instead
+		if (contain->isHidingGarrisonFromNonAllies() && objectToEnter->getRelationship(obj) != ALLIES)
+		{
+			Int containCount = contain->getContainCount();
+			Int stealthContainCount = contain->getStealthUnitsContained();
+			Int nonStealthContainCount = containCount - stealthContainCount;
+
+			// not empty... can't do it.
+			if (nonStealthContainCount > 0)
 				return FALSE;
 
 			// it's stealth-garrisoned... ignore check-cap and fall thru to
@@ -1196,8 +1201,9 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 
 	// if it's garrisoned already, we cannot capture it.
 	// (unless it's just stealth-garrisoned.)
+	/// IamInnocent - Added Stealth Garrison Checks
 	ContainModuleInterface *contain = objectToCapture->getContain();
-	if (contain != nullptr && contain->isGarrisonable())
+	if (contain != nullptr && contain->isHidingGarrisonFromNonAllies())
 	{
 		Int containCount = contain->getContainCount();
 		Int stealthContainCount = contain->getStealthUnitsContained();
