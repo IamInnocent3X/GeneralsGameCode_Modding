@@ -644,7 +644,7 @@ public:
 	Bool m_useNonRetailAIPathfind;
 	Bool m_useNonRetailAIPathfindAllocation;
 	Bool m_useNonRetailAIPathfindDynamicAlloc; // Credits to: Mauller
-	Bool m_useNonRetailAIPathfindExperimentalTweaks; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindOpenSortedList; // Credits to: Mauller
 	Bool m_dynamicTargeting;
 	Bool m_useAccurateSphereToRectCollision;
 	Bool m_checkBoxBoundariesForDistCalc;

@@ -1114,7 +1114,7 @@ Bool s_forceCleanCells = false;
 Bool s_useNonRetailPathfind = false;
 Bool s_useNonRetailPathfindAllocation = false;
 Bool s_useNonRetailPathfindDynamicAlloc = false;
-Bool s_useNonRetailPathfindExperimentalTweaks = false;
+Bool s_useNonRetailPathfindOpenSortedList = false;
 
 void PathfindCellInfo::forceCleanPathFindCellInfos()
 {
@@ -1762,12 +1762,12 @@ Bool PathfindCell::removeObstacle( Object *obstacle )
 }
 
 /// put self on "open" list in ascending cost order, return new list
-PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
+PathfindCell* PathfindCell::putOnSortedOpenList(PathfindCell* list)
 {
 	DEBUG_ASSERTCRASH(m_info, ("Has to have info."));
-	DEBUG_ASSERTCRASH(m_info->m_closed==FALSE && m_info->m_open==FALSE, ("Serious error - Invalid flags. jba"));
+	DEBUG_ASSERTCRASH(m_info->m_closed == FALSE && m_info->m_open == FALSE, ("Serious error - Invalid flags. jba"));
 
-	if(s_useNonRetailPathfindExperimentalTweaks)
+	if(s_useNonRetailPathfindOpenSortedList)
 	{
 		// mark newCell as being on open list
 		m_info->m_open = true;
@@ -1781,51 +1781,77 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 		m_info->m_nextOpen = nullptr;
 		m_info->m_nextSkip = nullptr;
 		m_info->m_prevSkip = nullptr;
-		if(s_useNonRetailPathfindExperimentalTweaks)
+		if(s_useNonRetailPathfindOpenSortedList)
 			return this;
 	}
-	else if(s_useNonRetailPathfindExperimentalTweaks)
+	else if(s_useNonRetailPathfindOpenSortedList)
 	{
 		// If needs inserting at beginning
-		if (m_info->m_totalCost < list->m_info->m_totalCost) {
-			m_info->m_prevOpen = nullptr;
-			list->m_info->m_prevOpen = this->m_info;
-			m_info->m_nextOpen = list->m_info;
+		//if (m_info->m_totalCost < list->m_info->m_totalCost) {
+		//	m_info->m_prevOpen = nullptr;
+		//	list->m_info->m_prevOpen = this->m_info;
+		//	m_info->m_nextOpen = list->m_info;
 
-			//Move head of skips to new head
-			m_info->m_nextSkip = list->m_info->m_nextSkip;
-			if (list->m_info->m_nextSkip)
-				list->m_info->m_nextSkip->m_prevSkip = this->m_info;
-			list->m_info->m_nextSkip = nullptr;
-			m_info->m_prevSkip = nullptr;
+		//	//Move head of skips to new head
+		//	m_info->m_nextSkip = list->m_info->m_nextSkip;
+		//	if (list->m_info->m_nextSkip)
+		//		list->m_info->m_nextSkip->m_prevSkip = this->m_info;
+		//	list->m_info->m_nextSkip = nullptr;
+		//	m_info->m_prevSkip = nullptr;
 
-			return this;
-		}
+		//	return this;
+		//}
 
 		// Traverse the skip list to find closest position
 		PathfindCell* skip = list;
+		PathfindCell* current, * previous = nullptr;
 		while (skip->m_info->m_nextSkip && skip->m_info->m_nextSkip->m_totalCost <= m_info->m_totalCost) {
 			skip = skip->getNextSkip();
 		}
 
-		// Traverse the list to find correct position
-		PathfindCell* current = skip;
-		while (current->m_info->m_nextOpen && current->m_info->m_nextOpen->m_totalCost <= m_info->m_totalCost) {
-			current = current->getNextOpen();
+		for (current = skip; current; current = current->getNextOpen())
+		{
+			if (current->m_info->m_totalCost > m_info->m_totalCost)
+				break;
+
+			previous = current;
 		}
 
-		// Insert the new node in the correct position
-		m_info->m_nextOpen = current->m_info->m_nextOpen;
-		if (current->m_info->m_nextOpen != nullptr) {
-			current->m_info->m_nextOpen->m_prevOpen = this->m_info;
+		if (current)
+		{
+			// insert just before "c"
+			if (current->m_info->m_prevOpen)
+				current->m_info->m_prevOpen->m_nextOpen = this->m_info;
+			else {
+				//Move head of skips to new head
+				m_info->m_nextSkip = list->m_info->m_nextSkip;
+				if (list->m_info->m_nextSkip)
+					list->m_info->m_nextSkip->m_prevSkip = this->m_info;
+				list->m_info->m_nextSkip = nullptr;
+				m_info->m_prevSkip = nullptr;
+
+				list = this;
+			}
+
+			m_info->m_prevOpen = current->m_info->m_prevOpen;
+			current->m_info->m_prevOpen = this->m_info;
+
+			m_info->m_nextOpen = current->m_info;
+
+			return list;
 		}
-		current->m_info->m_nextOpen = this->m_info;
-		m_info->m_prevOpen = current->m_info;
+		else
+		{
+			// append after "lastCell" - end of list
+			previous->m_info->m_nextOpen = this->m_info;
+			m_info->m_prevOpen = previous->m_info;
+			m_info->m_nextOpen = nullptr;
+		}
 
 		// Insert new skip level if we are going to add a new skip
-		if ( (m_info->m_totalCost + m_info->m_pos.x + m_info->m_pos.y) % 4 == 0 ) {
+		if ((m_info->m_totalCost + m_info->m_pos.x + m_info->m_pos.y) % 4 == 0) {
 			m_info->m_nextSkip = skip->m_info->m_nextSkip;
-			if(skip->m_info->m_nextSkip != nullptr)
+			if (skip->m_info->m_nextSkip != nullptr)
 				skip->m_info->m_nextSkip->m_prevSkip = this->m_info;
 
 			skip->m_info->m_nextSkip = this->m_info;
@@ -1908,7 +1934,7 @@ PathfindCell *PathfindCell::putOnSortedOpenList( PathfindCell *list )
 		}
 	}
 
-	if(!s_useNonRetailPathfindExperimentalTweaks)
+	if(!s_useNonRetailPathfindOpenSortedList)
 	{
 		// mark newCell as being on open list
 		m_info->m_open = true;
@@ -1931,7 +1957,7 @@ PathfindCell* PathfindCell::removeFromOpenList(PathfindCell* list)
 		m_info->m_prevOpen->m_nextOpen = m_info->m_nextOpen;
 	else
 	{
-		if(s_useNonRetailPathfindExperimentalTweaks && m_info->m_nextOpen) {
+		if(s_useNonRetailPathfindOpenSortedList && m_info->m_nextOpen) {
 			// TheSuperHackers @info A list head replacement is a special case with problematic behaviour
 			// Skip links need to be pushed to the next open list cell, but only if they have no skip link
 			// We also have to make sure we are not linking a skip link back onto the same cell
@@ -1951,7 +1977,7 @@ PathfindCell* PathfindCell::removeFromOpenList(PathfindCell* list)
 		list = getNextOpen();
 	}
 
-	if(s_useNonRetailPathfindExperimentalTweaks)
+	if(s_useNonRetailPathfindOpenSortedList)
 	{
 		// Functions for inserting between skip nodes
 		if (m_info->m_nextSkip) {
@@ -4190,7 +4216,7 @@ void Pathfinder::reset( void )
 		s_useNonRetailPathfindAllocation = TRUE;
 #endif
 		s_useNonRetailPathfindDynamicAlloc = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindDynamicAlloc;
-		s_useNonRetailPathfindExperimentalTweaks = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindExperimentalTweaks;
+		s_useNonRetailPathfindOpenSortedList = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindOpenSortedList;
 	}
 
 //#if RETAIL_COMPATIBLE_PATHFINDING
@@ -4653,7 +4679,9 @@ void Pathfinder::internal_classifyObjectFootprint( Object *obj, Bool insert )
 		}
 	}
 
-#if RETAIL_COMPATIBLE_PATHFINDING
+//#if RETAIL_COMPATIBLE_PATHFINDING
+  if( !s_useNonRetailPathfind )
+  {
 	for( j=cellBounds.lo.y; j<=cellBounds.hi.y; j++ )
 	{
 		for( i=cellBounds.lo.x; i<=cellBounds.hi.x; i++ )
@@ -4664,7 +4692,8 @@ void Pathfinder::internal_classifyObjectFootprint( Object *obj, Bool insert )
 			}
 		}
 	}
-#endif
+  }
+//#endif
 
 	// Expand building bounds 1 cell.
 	for( j=cellBounds.lo.y; j<=cellBounds.hi.y; j++ )
@@ -4831,7 +4860,7 @@ void Pathfinder::newMap( void )
 	s_useNonRetailPathfindAllocation = TRUE;
 #endif
 	s_useNonRetailPathfindDynamicAlloc = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindDynamicAlloc;
-	s_useNonRetailPathfindExperimentalTweaks = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindExperimentalTweaks;
+	s_useNonRetailPathfindOpenSortedList = s_useNonRetailPathfind && TheGlobalData->m_useNonRetailAIPathfindOpenSortedList;
 	
 
 	m_wallHeight = TheAI->getAiData()->m_wallHeight; // may be updated by map.ini.
