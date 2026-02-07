@@ -879,6 +879,31 @@ WhichTurretType AIUpdateInterface::getWhichTurretForCurWeapon() const
 }
 
 //=============================================================================
+Bool AIUpdateInterface::isTurretUsingOffset(WhichTurretType tur) const
+{
+	return (tur != TURRET_INVALID && m_turretAI[tur] != NULL) ?
+		m_turretAI[tur]->isUseTurretOffset() : false;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------
+Vector2 AIUpdateInterface::getTurretOffset2D(WhichTurretType tur, WeaponSlotType wslot) const
+{
+	Matrix3D attachTransform(true);
+	Coord3D turretRotPos = { 0.0f, 0.0f, 0.0f };
+	Coord3D turretPitchPos = { 0.0f, 0.0f, 0.0f };
+	const Drawable* draw = getObject()->getDrawable();
+
+	if (!draw || !draw->getProjectileLaunchOffset(wslot, 0, &attachTransform, tur, &turretRotPos, &turretPitchPos))
+	{
+		return Vector2(0, 0);
+	}
+	Vector2 offset = { turretRotPos.x, turretRotPos.y };
+	return offset;
+
+}
+
+//=============================================================================
 WhichTurretType AIUpdateInterface::getWhichTurretForWeaponSlot(WeaponSlotType wslot, Real* turretAngle, Real* turretPitch) const
 {
 	for (int i = 0; i < MAX_TURRETS; ++i)

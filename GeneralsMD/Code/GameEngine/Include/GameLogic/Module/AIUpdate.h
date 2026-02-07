@@ -466,6 +466,9 @@ public:
 	Bool isTurretEnabled(WhichTurretType tur) const;
 	Bool isTurretInNaturalPosition(WhichTurretType tur) const;
 
+	Bool isTurretUsingOffset(WhichTurretType tur) const;
+	Vector2 getTurretOffset2D(WhichTurretType tur, WeaponSlotType wslot) const;
+
 	// "Planning Mode" -----------------------------------------------------------------------------------
 	Bool queueWaypoint(const Coord3D* pos);				///< add waypoint to end of move list. return true if success, false if queue was full and those the waypoint not added
 	void clearWaypointQueue(void);								///< reset the waypoint queue to empty

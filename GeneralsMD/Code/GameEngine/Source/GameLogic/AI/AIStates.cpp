@@ -5117,9 +5117,24 @@ StateReturnType AIAttackAimAtTargetState::update()
 
 			// If we have limited Turret Angle, we need to turn until we are in range
 			if (sourceAI->hasLimitedTurretAngle(tur)) {
-				Real relAngle = m_isAttackingObject ?
-					ThePartitionManager->getRelativeAngle2D(source, victim) :
-					ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+
+				Real relAngle;
+				if (sourceAI->isTurretUsingOffset(tur)) {
+					WeaponSlotType wslot;
+					source->getCurrentWeapon(&wslot);
+
+					Vector2 offset = sourceAI->getTurretOffset2D(tur, wslot);
+					// DEBUG_LOG((">>> TURRET OFFSET = %f, %f", offset.X, offset.Y));
+					relAngle = m_isAttackingObject ?
+						ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, victim->getPosition()) :
+						ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, getMachineGoalPosition());
+				}
+				else {
+					relAngle = m_isAttackingObject ?
+						ThePartitionManager->getRelativeAngle2D(source, victim) :
+						ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+				}
+
 				Real maxAngle = sourceAI->getMaxTurretAngle(tur);
 				Real minAngle = sourceAI->getMinTurretAngle(tur);
 				if (maxAngle < minAngle) { // This might be a backwards facing configuration
@@ -5158,9 +5173,22 @@ StateReturnType AIAttackAimAtTargetState::update()
 
 	// 2nd step: We need to move to aim
 	{
-		Real relAngle = m_isAttackingObject ?
-			ThePartitionManager->getRelativeAngle2D(source, victim) :
-			ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+		Real relAngle;
+		if (sourceAI->isTurretUsingOffset(tur)) {
+			WeaponSlotType wslot;
+			source->getCurrentWeapon(&wslot);
+
+			Vector2 offset = sourceAI->getTurretOffset2D(tur, wslot);
+			relAngle = m_isAttackingObject ?
+				ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, victim->getPosition()) :
+				ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, getMachineGoalPosition());
+		}
+		else {
+			relAngle = m_isAttackingObject ?
+				ThePartitionManager->getRelativeAngle2D(source, victim) :
+				ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+		}
+
 
 		const Real REL_THRESH = 0.035f;	// about 2 degrees. (getRelativeAngle2D is current only accurate to about 1.25 degrees)
 
