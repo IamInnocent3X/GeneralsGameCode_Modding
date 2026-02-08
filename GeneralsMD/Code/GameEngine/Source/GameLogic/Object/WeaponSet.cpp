@@ -112,6 +112,7 @@ void WeaponTemplateSet::clear()
 	m_isReloadTimeShared = false;
 	m_isWeaponLockSharedAcrossSets = FALSE;
 	m_isWeaponReloadSharedAcrossSets = FALSE;
+	m_isClipShared = false;
 	m_types.clear();
 	for (int i = 0; i < WEAPONSLOT_COUNT; ++i)
 	{

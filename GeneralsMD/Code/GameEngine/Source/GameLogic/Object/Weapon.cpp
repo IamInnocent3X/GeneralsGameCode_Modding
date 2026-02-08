@@ -349,6 +349,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_laserGroundUnitTargetHeight = 10; // Default Height offset
 	m_scatterOnWaterSurface = false;
 	m_historicDamageTriggerId = 0;
+	m_resetFireBonesOnReload = false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2229,8 +2230,6 @@ void Weapon::rebuildScatterTargets(Bool recenter/* = false*/)
 
 				m_scatterTargetsUnused.push_back(targetIndex);
 			}
-			// TODO: Crash
-			// Is there any need to fill up the rest of the targets?
 		}
 		else {
 			// When I reload, I need to rebuild the list of ScatterTargets to shoot at.
