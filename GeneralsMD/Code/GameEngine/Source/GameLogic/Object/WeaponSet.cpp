@@ -168,6 +168,7 @@ void WeaponTemplateSet::parseWeaponTemplateSet( INI* ini, const ThingTemplate* t
 		{ "ShareWeaponReloadTime", INI::parseBool, NULL, offsetof( WeaponTemplateSet, m_isReloadTimeShared ) },
 		{ "WeaponLockSharedAcrossSets", INI::parseBool, NULL, offsetof( WeaponTemplateSet, m_isWeaponLockSharedAcrossSets ) },
 		{ "WeaponReloadSharedAcrossSets", INI::parseBool, NULL, offsetof(WeaponTemplateSet, m_isWeaponReloadSharedAcrossSets) },
+		{ "ShareWeaponClip", INI::parseBool, NULL, offsetof(WeaponTemplateSet, m_isClipShared) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -1288,6 +1289,14 @@ Bool WeaponSet::isSharedReloadTime() const
 {
 	if (m_curWeaponTemplateSet)
 		return m_curWeaponTemplateSet->isSharedReloadTime();
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool WeaponSet::isSharedClip() const
+{
+	if (m_curWeaponTemplateSet)
+		return m_curWeaponTemplateSet->isSharedClip();
 	return false;
 }
 

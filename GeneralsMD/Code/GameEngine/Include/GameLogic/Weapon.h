@@ -537,6 +537,7 @@ public:
 	Real getScatterTargetMinScalar() const { return m_scatterTargetMinScalar; }
 	Bool isScatterTargetCenteredAtShooter() const { return m_scatterTargetCenteredAtShooter; }
 	Bool isScatterOnWaterSurface() const { return m_scatterOnWaterSurface; }
+	Bool isResetFireBonesOnReload() const { return m_resetFireBonesOnReload; }
 
 	Bool shouldProjectileCollideWith(
 		const Object* projectileLauncher,
@@ -666,6 +667,8 @@ private:
 
 	Bool m_scatterOnWaterSurface; ///< Scatter radius and targets include the water surface instead of just the terrain height
 
+	Bool m_resetFireBonesOnReload; ///< When reloading, set the next firebone/barrel to 0
+
 	mutable HistoricWeaponDamageList m_historicDamage;
 	mutable UnsignedInt m_historicDamageTriggerId;
 };
@@ -779,6 +782,9 @@ public:
 	void setPreAttackFinishedFrame( UnsignedInt frameNum ) { m_whenPreAttackFinished = frameNum; }
 	void setLastReloadStartedFrame( UnsignedInt frameNum ) { m_whenLastReloadStarted = frameNum; }
 	void setNextPreAttackFXFrame(UnsignedInt frameNum) { m_nextPreAttackFXFrame = frameNum; }
+
+	void setCurBarrel(Int num) { m_curBarrel = num; }
+	void sharedClipIncrementShot();
 
 	//Transfer the reload times and status from the passed in weapon.
 	void transferNextShotStatsFrom( const Weapon &weapon );
