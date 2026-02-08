@@ -43,6 +43,28 @@ class Object;
 class Matrix3D;
 
 //-------------------------------------------------------------------------------------------------
+// cached layer information to avoid repeated ground height/water checks
+struct FXSurfaceInfo
+{
+	Bool m_isValid;
+	Bool m_isWaterChecked;
+
+	Real m_groundHeight;
+	Real m_waterHeight;
+	Bool m_isWater;
+	Bool m_isBridge;
+
+	FXSurfaceInfo() {
+		m_isValid = false;
+		m_isWaterChecked = false;
+		m_groundHeight = 0.0;
+		m_waterHeight = 0.0;
+		m_isWater = false;
+		m_isBridge = false;
+	}
+};
+
+//-------------------------------------------------------------------------------------------------
 /**
 	An FXNugget encapsulates a particular type of audio/video effect. FXNuggets are virtually
 	never used on their own, but rather, as a component of an FXList (see below).
@@ -79,13 +101,13 @@ public:
 		The main guts of the system: actually perform the sound and/or video effects
 		needed. Note that primary and/or secondary can be null, so you must check for this.
 	*/
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx = NULL, const Real primarySpeed = 0.0f, const Coord3D *secondary = NULL, const Real overrideRadius = 0.0f) const = 0;
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx = NULL, const Real primarySpeed = 0.0f, const Coord3D *secondary = NULL, const Real overrideRadius = 0.0f, FXSurfaceInfo* surfaceInfo = NULL) const = 0;
 
 	/**
 		the object-based version... by default, just call the location-based implementation.
 		Note that primary and/or secondary can be null, so you must check for this.
 	*/
-	virtual void doFXObj(const Object* primary, const Object* secondary = NULL) const;
+	virtual void doFXObj(const Object* primary, const Object* secondary = NULL, FXSurfaceInfo* surfaceInfo = NULL) const;
 
 private:
 

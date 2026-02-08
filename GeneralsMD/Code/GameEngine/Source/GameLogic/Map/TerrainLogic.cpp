@@ -2198,6 +2198,29 @@ Bool TerrainLogic::isUnderwater( Real x, Real y, Real *waterZ, Real *terrainZ )
 
 }
 
+//-------------------------------------------------------------------------------------------------
+/** Only check for water height; return False if not over water */
+//-------------------------------------------------------------------------------------------------
+Real TerrainLogic::getWaterZ(Real x, Real y) {
+	// get the water handle at this location
+	const WaterHandle* waterHandle = getWaterHandle(x, y);
+
+	// if no water here, no height, no nuttin
+	if (waterHandle == NULL)
+	{
+		return -1.0;
+	}
+
+	// if this water handle is a grid water use the grid height function, otherwise look into
+	// the polygon trigger
+	Real wZ = 0.0f;
+	if (waterHandle == &m_gridWaterHandle)
+		TheTerrainVisual->getWaterGridHeight(x, y, &wZ);
+	else
+		wZ = getWaterHeight(waterHandle);
+	return wZ;
+}
+
 // ------------------------------------------------------------------------------------------------
 /** Get the water table with the highest water Z value at the location */
 // ------------------------------------------------------------------------------------------------
