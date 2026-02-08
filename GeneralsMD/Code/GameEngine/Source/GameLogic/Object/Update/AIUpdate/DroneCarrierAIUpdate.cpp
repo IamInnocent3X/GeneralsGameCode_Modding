@@ -655,93 +655,94 @@ void DroneCarrierAIUpdate::aiDoCommand(const AICommandParms* parms)
 
 UpdateSleepTime DroneCarrierAIUpdate::update()
 {
-	const DroneCarrierAIUpdateModuleData* data = getDroneCarrierAIUpdateModuleData();
+	if (!getObject()->isEffectivelyDead()) {
+		const DroneCarrierAIUpdateModuleData* data = getDroneCarrierAIUpdateModuleData();
 
-	// initially fill
-	if (!m_initial_spawns) {
-		for (size_t i = 0; i < data->m_slots; i++) {
-			createSpawn();
-		}
-		m_initial_spawns = true;
-	}
-
-	UnsignedInt now = TheGameLogic->getFrame();
-
-	if (m_rebuild_time != 0 && m_rebuild_time <= now && !is_full())
-	{
-		if (createSpawn()) {
-			if (is_full()) {
-				m_rebuild_time = 0;
+		// initially fill
+		if (!m_initial_spawns) {
+			for (size_t i = 0; i < data->m_slots; i++) {
+				createSpawn();
 			}
-			else {
-				m_rebuild_time = now + data->m_respawn_time;
+			m_initial_spawns = true;
+		}
+
+		UnsignedInt now = TheGameLogic->getFrame();
+
+		if (m_rebuild_time != 0 && m_rebuild_time <= now && !is_full())
+		{
+			if (createSpawn()) {
+				if (is_full()) {
+					m_rebuild_time = 0;
+				}
+				else {
+					m_rebuild_time = now + data->m_respawn_time;
+				}
 			}
 		}
-	}
 
-	if (now % 5 == 0) {
+		if (now % 5 == 0) {
 
-		// check for reloading drones each 5th frame
-		Object* carrier = getObject();
-		if (carrier != nullptr) {
+			// check for reloading drones each 5th frame
+			Object* carrier = getObject();
+			if (carrier != nullptr) {
 
-			ContainModuleInterface* cmi = carrier->getContain();
+				ContainModuleInterface* cmi = carrier->getContain();
 
-			if (cmi != nullptr) {
-				DroneCarrierContain* drone_contain = dynamic_cast<DroneCarrierContain*>(cmi);
-				if (drone_contain != nullptr) {
-					drone_contain->updateContainedReloadingStatus();
+				if (cmi != nullptr) {
+					DroneCarrierContain* drone_contain = dynamic_cast<DroneCarrierContain*>(cmi);
+					if (drone_contain != nullptr) {
+						drone_contain->updateContainedReloadingStatus();
+					}
+				}
+			}
+		}
+
+		Object* my_target = getCurrentVictim();
+		const Coord3D* my_target_pos = getCurrentVictimPos();
+		if (targetInRange(my_target) || targetInRange(my_target_pos)) {
+			// send out contained drones
+			deployDrones();
+
+			//update orders
+			if (now % 5 == 0) { //do every 5th frame
+				switch (m_designatedCommand) {
+				case AICMD_GUARD_POSITION:
+				case AICMD_ATTACK_POSITION:
+				case AICMD_FORCE_ATTACK_OBJECT:
+				case AICMD_ATTACK_OBJECT:
+				case AICMD_ATTACKMOVE_TO_POSITION:
+					propagateOrdersToDrones();
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+		//Check if a drone is approaching and if a door needs to open or close
+		if (data->m_drones_enter_main_door && now % 2 == 0) {
+			// check every 2nd frame
+
+			bool dronesApproaching = areDronesApproaching();
+
+			if (!m_doorOpen && dronesApproaching) {
+				//Open the door
+				m_doorOpen = true;
+				Drawable* draw = getObject()->getDrawable();
+				if (draw) {
+					draw->clearAndSetModelConditionState(MODELCONDITION_CARRIER_DOOR_CLOSING, MODELCONDITION_CARRIER_DOOR_OPENING);
+				}
+			}
+			else if (m_doorOpen && !dronesApproaching) {
+				//Close the door
+				m_doorOpen = false;
+				Drawable* draw = getObject()->getDrawable();
+				if (draw) {
+					draw->clearAndSetModelConditionState(MODELCONDITION_CARRIER_DOOR_OPENING, MODELCONDITION_CARRIER_DOOR_CLOSING);
 				}
 			}
 		}
 	}
-
-	Object* my_target = getCurrentVictim();
-	const Coord3D* my_target_pos = getCurrentVictimPos();
-	if (targetInRange(my_target) || targetInRange(my_target_pos)) {
-		// send out contained drones
-		deployDrones();
-
-		//update orders
-		if (now % 5 == 0) { //do every 5th frame
-			switch (m_designatedCommand) {
-			case AICMD_GUARD_POSITION:
-			case AICMD_ATTACK_POSITION:
-			case AICMD_FORCE_ATTACK_OBJECT:
-			case AICMD_ATTACK_OBJECT:
-			case AICMD_ATTACKMOVE_TO_POSITION:
-				propagateOrdersToDrones();
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	//Check if a drone is approaching and if a door needs to open or close
-	if (data->m_drones_enter_main_door && now % 2 == 0) {
-		// check every 2nd frame
-
-		bool dronesApproaching = areDronesApproaching();
-
-		if (!m_doorOpen && dronesApproaching) {
-			//Open the door
-			m_doorOpen = true;
-			Drawable* draw = getObject()->getDrawable();
-			if (draw) {
-				draw->clearAndSetModelConditionState(MODELCONDITION_CARRIER_DOOR_CLOSING, MODELCONDITION_CARRIER_DOOR_OPENING);
-			}
-		}
-		else if (m_doorOpen && !dronesApproaching) {
-			//Close the door
-			m_doorOpen = false;
-			Drawable* draw = getObject()->getDrawable();
-			if (draw){
-				draw->clearAndSetModelConditionState(MODELCONDITION_CARRIER_DOOR_OPENING, MODELCONDITION_CARRIER_DOOR_CLOSING);
-		  }
-		}
-	}
-
 	return AIUpdateInterface::update();
 }
 
