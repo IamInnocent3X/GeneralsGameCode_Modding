@@ -159,6 +159,7 @@ static bool getSurfaceInfo(const Coord3D* primary, FXSurfaceInfo* surfaceInfo, B
 		}
 		else { // compute missing water info
 			surfaceInfo->m_waterHeight = TheTerrainLogic->getWaterZ(primary->x, primary->y);
+			surfaceInfo->m_isWater = surfaceInfo->m_waterHeight > surfaceInfo->m_groundHeight;
 			surfaceInfo->m_isWaterChecked = true;
 			return true;
 		}

@@ -315,7 +315,10 @@ public:
 	virtual AIUpdateInterface* getAIUpdateInterface() { return this; }
 
 	// Disabled conditions to process (AI will still process held status)
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+	//virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+
+	// We need to process all disabled types to allow Locomotor working while disabled
+	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
 
 	// Some very specific, complex behaviors are used by more than one AIUpdate.  Here are their interfaces.
 	virtual DozerAIInterface* getDozerAIInterface() { return NULL; }

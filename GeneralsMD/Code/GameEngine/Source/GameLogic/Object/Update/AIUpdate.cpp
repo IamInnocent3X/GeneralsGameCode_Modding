@@ -1226,11 +1226,12 @@ UpdateSleepTime AIUpdateInterface::update( void )
 	Object *obj = getObject();
 
 	if (! obj->isEffectivelyDead() &&
-			! obj->isDisabledByType( DISABLED_PARALYZED ) &&
-			! obj->isDisabledByType( DISABLED_UNMANNED ) &&
-			! obj->isDisabledByType( DISABLED_EMP ) &&
-			! obj->isDisabledByType( DISABLED_SUBDUED ) &&
-			! obj->isDisabledByType( DISABLED_HACKED ) )
+			//! obj->isDisabledByType( DISABLED_PARALYZED ) &&
+			//! obj->isDisabledByType( DISABLED_UNMANNED ) &&
+			//! obj->isDisabledByType( DISABLED_EMP ) &&
+			//! obj->isDisabledByType( DISABLED_SUBDUED ) &&
+			//! obj->isDisabledByType( DISABLED_HACKED ) )
+			! (obj->isDisabled() && !obj->isDisabledByType(DISABLED_HELD )))
 	{
 		// If we are dead, don't let the turrets do anything anymore, or else they will keep attacking
 		for (int i = 0; i < MAX_TURRETS; ++i)
@@ -2274,6 +2275,18 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 		return UPDATE_SLEEP_FOREVER;
 
 	chooseGoodLocomotorFromCurrentSet();
+
+	// Disabled check
+	Bool disabled = getObject()->isDisabled() && !getObject()->isDisabledByType(DISABLED_HELD);
+	if (disabled && m_curLocomotor != NULL)
+	{
+		if (!m_curLocomotor->getLocomotorWorksWhenDisabled()) {
+			return UPDATE_SLEEP_FOREVER;
+		}
+		if (m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject()))
+			return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+	}
 
 	if (m_isBlocked)
 	{
