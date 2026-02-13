@@ -40,12 +40,25 @@ public:
 	Real m_blastRadius;
 	Bool m_isAffectAirborne;
 	Bool m_affectAllies;
+	KindOfMaskType m_kindOf;
+	KindOfMaskType m_forbiddenKindOf;
+	KindOfMaskType m_kindOfToKill;
+	KindOfMaskType m_kindOfToKillContained;
 
 	NeutronBlastBehaviorModuleData()
 	{
 		m_blastRadius = 10.0f;
 		m_isAffectAirborne = TRUE;
 		m_affectAllies = TRUE;
+		m_kindOf.clear();
+		m_kindOf.set(KINDOF_VEHICLE);
+		m_kindOfToKill.clear();
+		m_kindOfToKill.set(KINDOF_INFANTRY);
+		m_kindOfToKill.set(KINDOF_CLIFF_JUMPER);
+		m_forbiddenKindOf.clear();
+		m_forbiddenKindOf.set(KINDOF_DRONE);
+		m_kindOfToKillContained = KINDOFMASK_NONE;
+		m_kindOfToKillContained.flip();
 	}
 
 	static void buildFieldParse( MultiIniFieldParse& p )
@@ -57,6 +70,10 @@ public:
 			{ "BlastRadius",		INI::parseReal, NULL, offsetof( NeutronBlastBehaviorModuleData, m_blastRadius ) },
 			{ "AffectAirborne", INI::parseBool, NULL, offsetof( NeutronBlastBehaviorModuleData, m_isAffectAirborne ) },
 			{ "AffectAllies",		INI::parseBool, NULL, offsetof( NeutronBlastBehaviorModuleData, m_affectAllies ) },
+			{ "KindOf", KindOfMaskType::parseFromINI, NULL, offsetof( NeutronBlastBehaviorModuleData, m_kindOf ) },
+			{ "ForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( NeutronBlastBehaviorModuleData, m_forbiddenKindOf ) },
+			{ "KindOfToKill", KindOfMaskType::parseFromINI, NULL, offsetof( NeutronBlastBehaviorModuleData, m_kindOfToKill ) },
+			{ "KindOfToKillContained", KindOfMaskType::parseFromINI, NULL, offsetof( NeutronBlastBehaviorModuleData, m_kindOfToKillContained ) },
 			{ 0, 0, 0, 0 }
 		};
 

@@ -199,6 +199,7 @@ WeaponSet::WeaponSet()
 	m_curWeaponTemplateSet = NULL;
 	m_filledWeaponSlotMask = 0;
 	m_totalAntiMask = 0;
+	m_weaponSlotActivatedByGUI = (WeaponSlotType)-1;
 	m_totalDamageTypeMask.clear();
 	m_hasPitchLimit = false;
 	m_hasDamageWeapon = false;
@@ -295,6 +296,7 @@ void WeaponSet::xfer( Xfer *xfer )
 	xfer->xferUser(&m_curWeapon, sizeof(m_curWeapon));
 	xfer->xferUser(&m_curWeaponLockedStatus, sizeof(m_curWeaponLockedStatus));
 	xfer->xferUser(&m_curDefaultWeapon, sizeof(m_curDefaultWeapon));
+	xfer->xferUser(&m_weaponSlotActivatedByGUI, sizeof(m_weaponSlotActivatedByGUI));
 	xfer->xferUnsignedInt(&m_filledWeaponSlotMask);
 	xfer->xferInt(&m_totalAntiMask);
 	xfer->xferBool(&m_hasDamageWeapon);
@@ -502,6 +504,14 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 				m_curWeapon = PRIMARY_WEAPON;
 			}
 		}
+		if(!m_restricted && m_weaponSlotActivatedByGUI >= 0)
+		{
+			if(m_weapons[m_weaponSlotActivatedByGUI] == NULL)
+				m_weaponSlotActivatedByGUI = (WeaponSlotType)-1;
+			else
+				m_curWeapon = m_weaponSlotActivatedByGUI;
+		}
+		
 	}
 }
 
@@ -605,7 +615,7 @@ Bool WeaponSet::isAnyWithinTargetPitch(const Object* obj, const Object* victim) 
 }
 
 //-------------------------------------------------------------------------------------------------
-CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attackType, const Object* source, const Object* victim, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
+CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attackType, const Object* source, const Object* victim, CommandSourceType commandSource, WeaponSlotType specificSlot, Bool getResultOnly ) const
 {
 
 	// basic sanity checks.
@@ -756,14 +766,14 @@ CanAttackResult WeaponSet::getAbleToAttackSpecificObject( AbleToAttackType attac
 	}
 
 	//Check if the shot itself is valid!
-	return getAbleToUseWeaponAgainstTarget( attackType, source, victim, victim->getPosition(), commandSource, specificSlot );
+	return getAbleToUseWeaponAgainstTarget( attackType, source, victim, victim->getPosition(), commandSource, specificSlot, getResultOnly );
 }
 
 //-------------------------------------------------------------------------------------------------
 //This is formerly the 2nd half of getAbleToAttackSpecificObject
 //This function is responsible for determining if our object is physically capable of attacking the target and it
 //supports both victim or position.
-CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
+CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot, Bool getResultOnly ) const
 {
 	if( source->testCustomStatus("ZERO_DAMAGE") || m_restricted )
 	{
@@ -819,7 +829,7 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 			//	continue;
 			if ((m_totalAntiMask & targetAntiMask) != 0)
 			{
-				Bool handled = FALSE;
+				//Bool handled = FALSE;
 				ContainModuleInterface *contain = containedBy ? containedBy->getContain() : NULL;
 				if( contain && contain->isGarrisonable() && contain->isEnclosingContainerFor( source ))
 				{                                       // non enclosing garrison containers do not use firepoints. Lorenzen, 6/11/03
@@ -830,7 +840,7 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 					if( contain->calcBestGarrisonPosition( &goalPos, &targetPos) )
 					{
 						withinAttackRange = weaponToTestForRange->isSourceObjectWithGoalPositionWithinAttackRange( source, &goalPos, victim, &targetPos );
-						handled = TRUE;
+						//handled = TRUE;
 					}
 				}
 				else if( victim )
@@ -872,15 +882,43 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 			return ATTACKRESULT_INVALID_SHOT;
 
 		Int first, last;
+		Bool doGetResultOnly = getResultOnly;
+		if(doGetResultOnly)
+		{
+			// unconst hack
+			AIUpdateInterface* ai = TheGameLogic->findObjectByID(source->getID())->getAI();
+			doGetResultOnly = ai && ai->getGoalObject() == victim ? FALSE : TRUE;
+		}
 		if( isCurWeaponLocked() )
 		{
-			first = m_curWeapon;
-			last = m_curWeapon;
+			if( m_weaponSlotActivatedByGUI >= PRIMARY_WEAPON && doGetResultOnly )
+			{
+				if( specificSlot != (WeaponSlotType)-1 )
+				{
+					first = specificSlot;
+					last = specificSlot;
+				}
+				else
+				{
+					first = WEAPONSLOT_COUNT - 1;
+					last = PRIMARY_WEAPON;
+				}
+			}
+			else
+			{
+				first = m_curWeapon;
+				last = m_curWeapon;
+			}
 		}
 		else if( specificSlot != (WeaponSlotType)-1 )
 		{
 			first = specificSlot;
 			last = specificSlot;
+		}
+		else if( m_weaponSlotActivatedByGUI >= PRIMARY_WEAPON && !doGetResultOnly )
+		{
+			first = m_weaponSlotActivatedByGUI;
+			last = m_weaponSlotActivatedByGUI;
 		}
 		else
 		{
@@ -896,9 +934,18 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 			{
 				//Kris: Aug 22, 2003
 				//Surgical fix so Jarmen Kell doesn't get a targeting cursor on enemy vehicles unless he is in snipe mode.
-				if( weapon->getDamageType() == DAMAGE_KILLPILOT && source->isKindOf( KINDOF_HERO ) && m_curWeapon == PRIMARY_WEAPON && specificSlot == (WeaponSlotType)-1 )
+				if( weapon->getDamageType() == DAMAGE_KILLPILOT && source->isKindOf( KINDOF_HERO ) && specificSlot == (WeaponSlotType)-1 &&
+					(m_curWeapon == PRIMARY_WEAPON || (m_weaponSlotActivatedByGUI >= 0 && doGetResultOnly && m_curWeapon != i)) )
 				{
-					continue;
+					if( !weapon->getUseOnlyInGUI() )
+						continue;
+				}
+
+				// Added weapons that can only be used during GUI Command
+				if( weapon->getUseOnlyInGUI() )
+				{
+					if((m_curWeapon != i || doGetResultOnly) && specificSlot == (WeaponSlotType)-1)
+						continue;
 				}
 
 				// Torpedoes cannot attack units not above water
@@ -1067,6 +1114,12 @@ Bool WeaponSet::chooseBestWeaponForTarget(const Object* obj, const Object* victi
 
 		// weapon out of ammo.
 		if (weapon->getStatus() == OUT_OF_AMMO && !weapon->getAutoReloadsClip())
+			continue;
+
+		if (m_weaponSlotActivatedByGUI >= 0 && m_weaponSlotActivatedByGUI != i)
+			continue;
+
+		if (weapon->getUseOnlyInGUI() && m_weaponSlotActivatedByGUI == -1)
 			continue;
 
 		// weapon not allowed to target this kind of thing.
@@ -1290,6 +1343,12 @@ Bool WeaponSet::chooseBestWeaponForPosition(const Object* obj, const Coord3D* vi
 
 		// weapon out of ammo.
 		if (weapon->getStatus() == OUT_OF_AMMO && !weapon->getAutoReloadsClip())
+			continue;
+
+		if (m_weaponSlotActivatedByGUI >= 0 && m_weaponSlotActivatedByGUI != i)
+			continue;
+
+		if (weapon->getUseOnlyInGUI() && m_weaponSlotActivatedByGUI == -1)
 			continue;
 
 		Int weaponPriority = weapon->getWeaponPriority(obj, victimPos);
@@ -1591,3 +1650,18 @@ Bool WeaponSet::isSharedReloadTime() const
 	return false;
 }
 
+//-------------------------------------------------------------------------------------------------
+void WeaponSet::setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot )
+{
+	Weapon* weapon;
+	if(set)
+	{
+		weapon = m_weapons[ weaponSlot ];
+		if( weapon && weapon->getUseOnlyInGUI() )
+		{
+			m_weaponSlotActivatedByGUI = weaponSlot;
+			return;
+		}
+	}
+	m_weaponSlotActivatedByGUI = (WeaponSlotType)-1;
+}

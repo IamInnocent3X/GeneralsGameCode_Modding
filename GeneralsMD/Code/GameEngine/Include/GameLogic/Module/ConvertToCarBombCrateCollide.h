@@ -51,6 +51,9 @@ public:
 		m_rangeOfEffect = 0;
 		m_destroyOnTargetDie = TRUE;
 		m_fxList = NULL;
+		m_kindofnot.clear();
+		m_kindofnot.set(KINDOF_AIRCRAFT);
+		m_kindofnot.set(KINDOF_BOAT);
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)

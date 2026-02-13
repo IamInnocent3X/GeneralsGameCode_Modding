@@ -472,6 +472,14 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			return;
 	}
 
+	Object *killer = damager;
+	if(damageInfo->in.m_giveKillExpToID != INVALID_ID)
+	{
+		Object *damagerSource = TheGameLogic->findObjectByID( damageInfo->in.m_giveKillExpToID );
+		if( damagerSource && !damagerSource->isDestroyed() && !damagerSource->isEffectivelyDead() )
+			killer = damagerSource;
+	}
+
 	Bool alreadyHandled = FALSE;
 	Bool allowModifier = TRUE;
 	Bool doDamageModules = TRUE;
@@ -526,40 +534,85 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		{
 			// This type of damage doesn't actually damage the unit, but it does kill it's
 			// pilot, in the case of a vehicle.
-			if( obj->isKindOf( KINDOF_VEHICLE ) )
+			if( obj->isKindOf( KINDOF_VEHICLE ) || (TheGlobalData->m_enableKillPilotForStructures && obj->isKindOf( KINDOF_STRUCTURE )) )
 			{
 				//Handle special case for combat bike. We actually will kill the bike by
 				//forcing the rider to leave the bike. That way the bike will automatically
 				//scuttle and be unusable.
 				ContainModuleInterface *contain = obj->getContain();
-				if( contain && contain->isRiderChangeContain() )
+				if( contain && !contain->killPilotDoesNotKill() )
 				{
 
 					AIUpdateInterface *ai = obj->getAI();
 
-					if( ai->isMoving() )
+					//if( ai && ai->isMoving() )
+					//{
+					//	//Bike is moving, so just blow it up instead.
+					//	if (killer)
+					//		killer->scoreTheKill( obj );
+					//	obj->kill();
+					//}
+					//else
+					//{
+					//	// TheSuperHackers @bugfix Caball009 04/09/2025 Check whether a bike still has a rider.
+					//	// A rider may dismount or be sniped off a bike when it's disabled, resulting in a bike object with an empty contain list.
+					//	if ( !contain->getContainedItemsList()->empty() )
+					//	{
+					//		//Removing the rider will scuttle the bike.
+					//		Object* rider = *(contain->getContainedItemsList()->begin());
+					//		ai->aiEvacuateInstantly(TRUE, CMD_FROM_AI);
+					//
+					//		//Kill the rider.
+					//		if (killer)
+					//			killer->scoreTheKill(rider);
+					//		rider->kill();
+					//	}
+					//}
+
+					// Get the first rider
+					Object* rider = *(contain->getContainedItemsList()->begin());
+
+					// IamInnocent - For Retail, the kill score accounts for the rider. I have adjusted the kill score towards the highest between the rider and the bike
+					if (killer)
 					{
-						//Bike is moving, so just blow it up instead.
-						if (damager)
-							damager->scoreTheKill( obj );
-						obj->kill();
+#if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
+						if(rider)
+							killer->scoreTheKill(rider);
+#else
+						if (contain->getKillScoreCreditObj(killer))
+							killer->scoreTheKill( contain->getKillScoreCreditObj(killer) );
+#endif
 					}
-					else
+
+					if( ai )
 					{
-						// TheSuperHackers @bugfix Caball009 04/09/2025 Check whether a bike still has a rider.
-						// A rider may dismount or be sniped off a bike when it's disabled, resulting in a bike object with an empty contain list.
-						if ( !contain->getContainedItemsList()->empty() )
-						{
-							//Removing the rider will scuttle the bike.
-							Object* rider = *(contain->getContainedItemsList()->begin());
+						//Removing the rider will scuttle the bike.
+						if( !contain->getContainedItemsList()->empty() )
 							ai->aiEvacuateInstantly(TRUE, CMD_FROM_AI);
 
-							//Kill the rider.
-							if (damager)
-								damager->scoreTheKill(rider);
-							rider->kill();
-						}
+						//Bike is moving, blow it up if it is fast enough
+						if( ai->isMoving() && obj->getLastActualSpeed() > 2.0f )
+							obj->kill();
+						else
+							obj->setLastActualSpeed(0.0f);
 					}
+
+					//Force to scuttle the bike
+					if(!obj->isEffectivelyDead())
+						contain->forceScuttle();
+
+					if(rider && !rider->isDestroyed())
+					{
+						//Kill the rider.
+						if(!rider->isEffectivelyDead())
+							rider->kill();
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+						//Destroy the rider after triggering its kill properties
+						TheGameLogic->destroyObject(rider);
+#endif
+					}
+
 				}
 				else
 				{
@@ -609,8 +662,8 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 						Object* thingToKill = *it;
 						if (!thingToKill->isEffectivelyDead() )
 						{
-							if (damager)
-								damager->scoreTheKill( thingToKill );
+							if (killer)
+								killer->scoreTheKill( thingToKill );
 							thingToKill->kill();
 							++numKilled;
 							thingToKill->getControllingPlayer()->getAcademyStats()->recordClearedGarrisonedBuilding();
@@ -706,8 +759,8 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					Object* thingToKill = *it;
 					if (!thingToKill->isEffectivelyDead() )
 					{
-						if (damager)
-							damager->scoreTheKill( thingToKill );
+						if (killer)
+							killer->scoreTheKill( thingToKill );
 						thingToKill->kill();
 						++numKilled;
 						thingToKill->getControllingPlayer()->getAcademyStats()->recordClearedGarrisonedBuilding();
@@ -887,9 +940,9 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 		if( m_currentHealth <= 0 && m_prevHealth > 0 )
 		{
 			// Give our killer credit for killing us, if there is one.
-			if( damager )
+			if( killer )
 			{
-				damager->scoreTheKill( obj );
+				killer->scoreTheKill( obj );
 			}
 
 			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
@@ -950,7 +1003,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 				if( !them->isKindOf( KINDOF_IMMOBILE ) && !them->testStatus( OBJECT_STATUS_IMMOBILE) )
 				{
 					//But only if we can attack it!
-					CanAttackResult result = them->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, damager, CMD_FROM_AI );
+					CanAttackResult result = them->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, damager, CMD_FROM_AI, (WeaponSlotType)-1, TRUE );
 					if( result == ATTACKRESULT_POSSIBLE_AFTER_MOVING || result == ATTACKRESULT_POSSIBLE )
 					{
 						ai->aiGuardRetaliate( damager, them->getPosition(), NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
@@ -2756,7 +2809,7 @@ void ActiveBody::xfer( Xfer *xfer )
 	UnsignedShort customSubdualCount2 = m_subdualDamageCapCustom.size();
 	UnsignedShort customSubdualCount3 = m_subdualDamageHealRateCustom.size();
 	UnsignedShort customSubdualCount4 = m_subdualDamageHealAmountCustom.size();
-	
+
 	xfer->xferUnsignedShort( &customSubdualCount );
 	xfer->xferUnsignedShort( &customSubdualCount2 );
 	xfer->xferUnsignedShort( &customSubdualCount3 );
@@ -2766,7 +2819,7 @@ void ActiveBody::xfer( Xfer *xfer )
 	AsciiString customSubdualName2;
 	AsciiString customSubdualName3;
 	AsciiString customSubdualName4;
-	
+
 	Real customSubdualAmount;
 	UnsignedInt customSubdualTint;
 	AsciiString customSubdualCustomTint;

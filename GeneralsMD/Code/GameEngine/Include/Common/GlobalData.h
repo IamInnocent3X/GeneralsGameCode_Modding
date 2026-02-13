@@ -649,6 +649,8 @@ public:
 	Bool m_useAccurateSphereToRectCollision;
 	Bool m_checkBoxBoundariesForDistCalc;
 	Bool m_enableDoubleClick;
+	Bool m_enableKillPilotForStructures;
+	Bool m_enableNestedStructures;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

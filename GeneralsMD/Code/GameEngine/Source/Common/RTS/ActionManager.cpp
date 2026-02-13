@@ -435,8 +435,28 @@ Bool ActionManager::canRepairObject( const Object *obj, const Object *objectToRe
 		return FALSE;
 
 	// dozers can only repair buildings
-	if( objectToRepair->isKindOf( KINDOF_STRUCTURE ) == FALSE )
-		return FALSE;
+	/// IamInnocent - Dehardcoded
+	//if( objectToRepair->isKindOf( KINDOF_STRUCTURE ) == FALSE )
+	//	return FALSE;
+
+	const AIUpdateInterface *ai = obj->getAI();
+	if( ai )
+	{
+		const DozerAIInterface *dozerAI = ai->getDozerAIInterface();
+		DEBUG_ASSERTCRASH( dozerAI, ("Repair object doest not have a DozerAI interface!") );
+
+		if( dozerAI )
+		{
+
+			if( !objectToRepair->isAnyKindOf(dozerAI->getRepairKindOf()) )
+				return FALSE;
+
+			if( objectToRepair->isAnyKindOf(dozerAI->getRepairForbiddenKindOf()) )
+				return FALSE;
+
+		}
+
+	}
 
 	// get the body module from the object to repair
 	BodyModuleInterface *body = objectToRepair->getBodyModule();
@@ -585,7 +605,8 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
     return FALSE; // a microwave tank has soldered the doors shut
 
 
-	if( obj->isKindOf( KINDOF_STRUCTURE ) || obj->isKindOf( KINDOF_IMMOBILE ) )
+	if( !TheGlobalData->m_enableNestedStructures &&
+		( obj->isKindOf( KINDOF_STRUCTURE ) || obj->isKindOf( KINDOF_IMMOBILE ) ) )
 	{
 		//Structures or immobiles can't garrison
 		return FALSE;
@@ -647,7 +668,7 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 			if( collide->isParasiteEquipCrateCollide() &&
 				  (!obj->getParasiteCollideActive() || !ShowCursorOnParasiteCollide))
 				continue;
-			
+
 			if( collide->wouldLikeToCollideWith( objectToEnter ) )
 			{
 				//I thought this was a little confusing that it would return TRUE here before
@@ -754,7 +775,7 @@ Bool ActionManager::canEnterObject( const Object *obj, const Object *objectToEnt
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-CanAttackResult ActionManager::getCanAttackObject( const Object *obj, const Object *objectToAttack, CommandSourceType commandSource, AbleToAttackType attackType )
+CanAttackResult ActionManager::getCanAttackObject( const Object *obj, const Object *objectToAttack, CommandSourceType commandSource, AbleToAttackType attackType, Bool getResultOnly )
 {
 
 	// We still need to attack with chrono damage
@@ -774,7 +795,7 @@ CanAttackResult ActionManager::getCanAttackObject( const Object *obj, const Obje
 
 	//has any weapons that are capable of inflicting damage. Special damage types are rejected
 	//such as hack weapons... others can be added.
-	CanAttackResult result = obj->getAbleToAttackSpecificObject( attackType, objectToAttack, commandSource );
+	CanAttackResult result = obj->getAbleToAttackSpecificObject( attackType, objectToAttack, commandSource, (WeaponSlotType)-1, getResultOnly );
 	if( result != ATTACKRESULT_NOT_POSSIBLE  )
 	{
 		//Kris: August 5, 2003
@@ -826,7 +847,7 @@ CanAttackResult ActionManager::getCanAttackObject( const Object *obj, const Obje
 
 			if( slave )
 			{
-				result = slave->getAbleToAttackSpecificObject( attackType, objectToAttack, commandSource );
+				result = slave->getAbleToAttackSpecificObject( attackType, objectToAttack, commandSource, (WeaponSlotType)-1, getResultOnly );
 				if( result != ATTACKRESULT_NOT_POSSIBLE )
 				{
 					return result;
@@ -841,7 +862,7 @@ CanAttackResult ActionManager::getCanAttackObject( const Object *obj, const Obje
         Object *rider = contain->getClosestRider( objectToAttack->getPosition() );
         if ( rider )
         {
-          result = rider->getAbleToAttackSpecificObject( attackType, objectToAttack, commandSource );
+          result = rider->getAbleToAttackSpecificObject( attackType, objectToAttack, commandSource, (WeaponSlotType)-1, getResultOnly );
           if( result != ATTACKRESULT_NOT_POSSIBLE )
             return result;
         }
@@ -925,22 +946,23 @@ Bool ActionManager::canHijackVehicle( const Object *obj, const Object *objectToH
 	}
 
 	//Make sure target is a vehicle.
-	if( ! objectToHijack->isKindOf( KINDOF_VEHICLE ) )
-	{
-		return FALSE;
-	}
+	/// IamInnocent - Dehardcoded
+	//if( ! objectToHijack->isKindOf( KINDOF_VEHICLE ) )
+	//{
+	//	return FALSE;
+	//}
 
 	//Kris -- Hijackers can no longer hijack any aircraft.
-	if( objectToHijack->isKindOf( KINDOF_AIRCRAFT ) )
-	{
-		return FALSE;
-	}
+	//if( objectToHijack->isKindOf( KINDOF_AIRCRAFT ) )
+	//{
+	//	return FALSE;
+	//}
 
 	//Can't hijack a drone type.
-	if( objectToHijack->isKindOf( KINDOF_DRONE ) )
-	{
-		return FALSE;
-	}
+	//if( objectToHijack->isKindOf( KINDOF_DRONE ) )
+	//{
+	//	return FALSE;
+	//}
 
 	// last, see if we'd like to collide with 'objectToHijack'
 	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -1046,7 +1068,7 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 				  TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
 			  )
 			  {
-				  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, objectToEquip, CMD_FROM_PLAYER );
+				  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, objectToEquip, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 				  if((result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
 				  	   obj->getRelationship(objectToEquip) == ALLIES ||
 					   (obj->getRelationship(objectToEquip) != ENEMIES && canEnterObject( obj, objectToEquip, commandSource, CHECK_CAPACITY, FALSE )) )
@@ -1144,7 +1166,8 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	if (!spInterface)
 		return false;
 
-	if( spInterface->getPercentReady() < 1.0f )
+	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() == obj->getID();
+	if( !isSabotagingGUICommand && spInterface->getPercentReady() < 1.0f )
 	{
 		// Special not ready or non-existent.
 		return false;
@@ -1157,7 +1180,25 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	}
 
 	// Make sure we are targeting a building!
-	if( !objectToCapture->isKindOf( KINDOF_STRUCTURE ) )
+	// IamInnocent - Dehardcoded
+	//if( !objectToCapture->isKindOf( KINDOF_STRUCTURE ) )
+	//{
+	//	return FALSE;
+	//}
+
+	if( !spInterface->canHackOrCaptureAirborneTargets() && objectToCapture->isAirborneTarget() )
+	{
+		return false;
+	}
+
+	KindOfMaskType kindofMask = spInterface->getKindOfs();
+	KindOfMaskType forbiddenMask = spInterface->getForbiddenKindOfs();
+	if(kindofMask == KINDOFMASK_NONE)
+	{
+		kindofMask.set( KINDOF_STRUCTURE );
+	}
+
+	if( !objectToCapture->isAnyKindOf( kindofMask ) || objectToCapture->isAnyKindOf( forbiddenMask ) )
 	{
 		return FALSE;
 	}
@@ -1206,6 +1247,26 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	if (appearsToContainFriendlies(obj, objectToCapture))
 		return FALSE;
 
+	// New, check if the Action uses Sabotage Behavior for activation
+	if( spInterface->getUsesSabotageBehavior() )
+	{
+		Bool found = FALSE;
+		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+		{
+			CollideModuleInterface* collide = (*m)->getCollide();
+			if (!collide)
+				continue;
+
+			if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToCapture) )
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		if(!found)
+			return FALSE;
+	}
+
   return TRUE;
 }
 
@@ -1253,7 +1314,13 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		return FALSE;
 	}
 
-	if( objectToHack->isKindOf( KINDOF_AIRCRAFT ) || objectToHack->isAirborneTarget() )
+	// IamInnocent - Dehardcoded
+	//if( objectToHack->isKindOf( KINDOF_AIRCRAFT ) || objectToHack->isAirborneTarget() )
+	//{
+	//	return false;
+	//}
+
+	if( !spInterface->canHackOrCaptureAirborneTargets() && objectToHack->isAirborneTarget() )
 	{
 		return false;
 	}
@@ -1269,7 +1336,21 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 	{
 
 		//Make sure we are targeting a building!
-		if( !objectToHack->isKindOf( KINDOF_VEHICLE ) )
+		//if( !objectToHack->isKindOf( KINDOF_VEHICLE ) )
+		//{
+		//	return FALSE;
+		//}
+
+		KindOfMaskType kindofMask = spInterface->getKindOfs();
+		KindOfMaskType forbiddenMask = spInterface->getForbiddenKindOfs();
+		if(kindofMask == KINDOFMASK_NONE)
+		{
+			kindofMask.set( KINDOF_STRUCTURE );
+			forbiddenMask.set( KINDOF_VEHICLE );
+			forbiddenMask.set( KINDOF_AIRCRAFT );
+		}
+
+		if( !objectToHack->isAnyKindOf( kindofMask ) || objectToHack->isAnyKindOf( forbiddenMask ) )
 		{
 			return FALSE;
 		}
@@ -1286,6 +1367,26 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		//the player into thinking it isn't actually an enemy.
 		if (appearsToContainFriendlies(obj, objectToHack))
 			return FALSE;
+
+		// New, check if the Action uses Sabotage Behavior for activation
+		if( spInterface->getUsesSabotageBehavior() )
+		{
+			Bool found = FALSE;
+			for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToHack) )
+				{
+					found = TRUE;
+					break;
+				}
+			}
+			if(!found)
+				return FALSE;
+		}
 
 		return TRUE;
 	}
@@ -1363,7 +1464,8 @@ Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *obj
 
 
 	SpecialPowerModuleInterface *spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
-	if( !spInterface || spInterface->getPercentReady() < 1.0f )
+	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() == obj->getID();
+	if( !spInterface || ( !isSabotagingGUICommand && spInterface->getPercentReady() < 1.0f ) )
 	{
 		//Special not ready or non-existent.
 		return false;
@@ -1443,7 +1545,8 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	}
 
 	SpecialPowerModuleInterface *spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_HACKER_DISABLE_BUILDING );
-	if( !spInterface || spInterface->getPercentReady() < 1.0f )
+	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() == obj->getID();
+	if( !spInterface || ( !isSabotagingGUICommand && spInterface->getPercentReady() < 1.0f ) )
 	{
 		//Special not ready or non-existent.
 		return FALSE;
@@ -1465,7 +1568,25 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 		return FALSE;
 
 	//Make sure we are targeting a building!
-	if( !objectToHack->isKindOf( KINDOF_STRUCTURE ) )
+	// IamInnocent - Dehardcoded
+	//if( !objectToHack->isKindOf( KINDOF_STRUCTURE ) )
+	//{
+	//	return FALSE;
+	//}
+
+	if( !spInterface->canHackOrCaptureAirborneTargets() && objectToHack->isAirborneTarget() )
+	{
+		return false;
+	}
+
+	KindOfMaskType kindofMask = spInterface->getKindOfs();
+	KindOfMaskType forbiddenMask = spInterface->getForbiddenKindOfs();
+	if(kindofMask == KINDOFMASK_NONE)
+	{
+		kindofMask.set( KINDOF_STRUCTURE );
+	}
+
+	if( !objectToHack->isAnyKindOf( kindofMask ) || objectToHack->isAnyKindOf( forbiddenMask ) )
 	{
 		return FALSE;
 	}
@@ -1495,6 +1616,26 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	//the player into thinking it isn't actually an enemy.
 	if (appearsToContainFriendlies(obj, objectToHack))
 		return FALSE;
+
+	// New, check if the Action uses Sabotage Behavior for activation
+	if( spInterface->getUsesSabotageBehavior() )
+	{
+		Bool found = FALSE;
+		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+		{
+			CollideModuleInterface* collide = (*m)->getCollide();
+			if (!collide)
+				continue;
+
+			if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToHack) )
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		if(!found)
+			return FALSE;
+	}
 
 	return TRUE;
 }
@@ -1541,7 +1682,8 @@ Bool ActionManager::canSnipeVehicle( const Object *obj, const Object *objectToSn
 		//Make sure target is a vehicle.
 		if( !objectToSnipe->isKindOf( KINDOF_VEHICLE ) )
 		{
-			return FALSE;
+			if( !TheGlobalData->m_enableKillPilotForStructures || !objectToSnipe->isKindOf( KINDOF_STRUCTURE ) )
+				return FALSE;
 		}
 
 		//Can't be a drone type.
@@ -1563,11 +1705,12 @@ Bool ActionManager::canSnipeVehicle( const Object *obj, const Object *objectToSn
 		}
 
 		// TheSuperHackers @bugfix Caball009 04/09/2025 Disabled bikes may not have a rider to snipe.
-		ContainModuleInterface* contain = objectToSnipe->getContain();
-		if ( contain && contain->isRiderChangeContain() && contain->getContainedItemsList()->empty() )
-		{
-			return FALSE;
-		}
+		// IamInnocent 02/02/2026 - RiderChangeContain has been reworked and dehardcoded.
+		//ContainModuleInterface* contain = objectToSnipe->getContain();
+		//if ( contain && contain->isRiderChangeContain() && contain->getContainedItemsList()->empty() )
+		//{
+		//	return FALSE;
+		//}
 
 		return TRUE;
 	}
@@ -1737,7 +1880,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 	{
 		return FALSE;
 	}
-	
+
 	if (checkSourceRequirements)
 	{
 		//First check, if our object can do this special power.
@@ -1838,6 +1981,15 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 			        	((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
 			        	((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
 					  )
+					{
+						break;
+					}
+
+					/// IamInnocent - Added LASER_GUIDED_MISSILES to check for CanAttackResult.
+					// Assume Forced Attack because the target might be an ally
+					WeaponSlotType wslot = spUpdate->getWeaponSlot();
+					CanAttackResult result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET_FORCED, target, NULL, CMD_FROM_PLAYER, wslot );
+					if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
 						break;
 					}
@@ -2428,21 +2580,21 @@ Bool ActionManager::canFireWeaponAtObject( const Object *obj, const Object *targ
 		return FALSE;
 	}
 
-	Bool sniper = FALSE;
+	//Bool sniper = FALSE;
 	if( weapon->getDamageType() == DAMAGE_KILLPILOT )
 	{
 		if( !canSnipeVehicle( obj, target, commandSource ) )
 		{
 			return FALSE;
 		}
-		sniper = TRUE;
+		//sniper = TRUE;
 	}
 
 	CanAttackResult result;
-	if( sniper )
-		result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, target, commandSource, slot );
-	else
-		result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, target, commandSource );
+	//if( sniper )
+		result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, target, commandSource, slot, TRUE );
+	//else
+	//	result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, target, commandSource );
 
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{

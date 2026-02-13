@@ -70,6 +70,7 @@ enum GadgetGameMessage CPP_11(: Int);
 enum ScienceType CPP_11(: Int);
 enum TimeOfDay CPP_11(: Int);
 enum RadiusCursorType CPP_11(: Int);
+enum NameKeyType CPP_11(: Int);
 
 //-------------------------------------------------------------------------------------------------
 /** Command options */
@@ -103,6 +104,11 @@ enum CommandOption CPP_11(: Int)
 	USES_MINE_CLEARING_WEAPONSET= 0x00200000,	// uses the special mine-clearing weaponset, even if not current
 	CAN_USE_WAYPOINTS						= 0x00400000, // button has option to use a waypoint path
 	MUST_BE_STOPPED							= 0x00800000, // Unit must be stopped in order to be able to use button.
+	//SET_RIDER							= 0x01000000, // command sets the payloads for the transport (if any)
+	//SET_UPGRADE							= 0x02000000, // command sets upgrades for the object (if any)
+	NEED_INSTANCE							= 0x04000000, // command requires specific instances to be enabled
+	HIDE_WHEN_UNAVAILABLE							= 0x08000000, // hide the command on UI if the user doesn't meet its requirements
+	IS_DOING_SABOTAGE							= 0x10000000, // is doing sabotage (unable to be parsed)
 };
 
 #ifdef DEFINE_COMMAND_OPTION_NAMES
@@ -138,6 +144,9 @@ static const char *const TheCommandOptionNames[] =
 	"MUST_BE_STOPPED",
 	//"SET_RIDER",
 	//"SET_UPGRADE",
+	"NEED_INSTANCE",
+	"HIDE_WHEN_UNAVAILABLE",
+	"---DO-NOT-USE---2", //IS_DOING_SABOTAGE
 
 	NULL
 };
@@ -379,6 +388,9 @@ public:
 	UnsignedInt getOrderNearbyMaxDelay() const { return m_orderMaxDelay; }
 	UnsignedInt getOrderNearbyIntervalDelay() const { return m_orderIntervalDelay; }
 
+	std::vector<NameKeyType> getInstancesRequired() const { return m_instancesRequired; }
+	Bool getRequiresAllInstances() const { return m_requiresAllInstances; }
+
 	const CommandButton* getNext() const { return m_next; }
 
 	void setName(const AsciiString& n) { m_name = n; }
@@ -430,6 +442,9 @@ private:
 	UnsignedInt										m_orderMinDelay;
 	UnsignedInt										m_orderMaxDelay;
 	UnsignedInt										m_orderIntervalDelay;
+
+	std::vector<NameKeyType>						m_instancesRequired;
+	Bool											m_requiresAllInstances;
 
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
 	mutable const Image*					m_buttonImage;								///< button image
@@ -839,6 +854,9 @@ public:
 	//Bool isMouseWithinUnitBuildCommandButton(const ICoord2D *mousePos, Bool isRightMouse) const;
 	Bool isWindowUnitBuildCommand( GameWindow *control ) const;
 
+	CommandAvailability friend_getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = NULL, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const
+	{ return getCommandAvailability( command, obj, win, applyToWin, forceDisabledEvaluation, skipResourceCheck ); }
+
 protected:
 	void updateRadarAttackGlow ( void );
 
@@ -903,7 +921,7 @@ protected:
 	static void populateInvDataCallback( Object *obj, void *userData );
 
 	// the following methods are for updating the currently showing context
-	CommandAvailability getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = NULL, Bool forceDisabledEvaluation = FALSE ) const;
+	CommandAvailability getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = NULL, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const;
 	void updateContextMultiSelect( void );
 	void updateContextPurchaseScience( void );
 	void updateContextCommand( void );
@@ -926,7 +944,7 @@ protected:
 
 	// methods to help out with each context
 	void updateConstructionTextDisplay( Object *obj );
-	void updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real percent );
+	void updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real percent, UnsignedInt sabotagedSeconds );
 
 	void setUpDownImages( void );
 		// methods for flashing cameos

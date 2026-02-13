@@ -78,6 +78,7 @@
 #include "GameClient/Eva.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/GameText.h"
+#include "GameClient/DisconnectMenu.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
@@ -505,6 +506,15 @@ void Player::init(const PlayerTemplate* pt)
 			deleteInstance(tof);
 	}
 
+	m_productionCostChangeExpired = FALSE;
+	m_productionTimeChangeExpired = FALSE;
+
+	m_sabotagingObjectGUICommandName.clear();
+	m_sabotagingObjectGUICommandButtonSlot = -1;
+	m_sabotagingObjectGUICommandID = INVALID_ID;
+
+	m_lastSelectedObjIDs.clear();
+
 	getAcademyStats()->init( this );
 
 	//Always off at the beginning of a game! Only GameLogic::update has
@@ -704,6 +714,92 @@ void Player::update()
 		m_energy.setPowerSabotagedTillFrame( 0 ); //Tells us we're no longer sabotaged for above check.
 		onPowerBrownOutChange( !m_energy.hasSufficientPower() );
 	}
+
+	if( m_productionCostChangeExpired )
+		removeKindOfProductionCostChange( KINDOFMASK_NONE, 0.0f );
+
+	if( m_productionTimeChangeExpired )
+		removeKindOfProductionTimeChange( KINDOFMASK_NONE, 0.0f );
+
+	if( m_sabotagingObjectGUICommandButtonSlot >= 0 &&
+		m_sabotagingObjectGUICommandID != INVALID_ID &&
+		!TheGameLogic->isInReplayGame() &&
+		!TheInGameUI->isQuitMenuVisible() &&
+		(!TheDisconnectMenu || !TheDisconnectMenu->isScreenVisible()) )
+	{
+		Bool clear = TRUE;
+		const Object* obj = TheGameLogic->findObjectByID(m_sabotagingObjectGUICommandID);
+		if(obj && !obj->isDestroyed() && !obj->isEffectivelyDead())
+		{
+			if(isSabotagingObjectGUICommand())
+				clear = FALSE;
+			else {
+				const CommandSet *set = TheControlBar->findCommandSet( obj->getCommandSetString() );
+				if( set )
+				{
+					// get command button
+					const CommandButton *command = obj->getCommandModifierOverrideForSlot(m_sabotagingObjectGUICommandButtonSlot); 
+					if(command == nullptr)
+						command = set->getCommandButton(m_sabotagingObjectGUICommandButtonSlot);
+
+					// no command or not a special power command or its from shortcut
+					if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER && command->getSpecialPowerTemplate() && BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_TARGET ) )
+					{
+						setSabotagingObjectGUICommandName(command->getName());
+
+						TheInGameUI->deselectAllDrawables();
+						TheInGameUI->selectDrawable(obj->getDrawable());
+
+						GameMessage *msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+						msg->appendBooleanArgument(TRUE);
+						msg->appendObjectIDArgument(obj->getID());
+
+						OrderNearbyData orderData;
+						if(command->getOrderNearbyRadius())
+						{
+							orderData.Radius = command->getOrderNearbyRadius();
+							orderData.RequiredMask = command->getOrderKindofMask();
+							orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+							orderData.MinDelay = command->getOrderNearbyMinDelay();
+							orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+							orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+						}
+
+						if (command->getOptions() & USES_MINE_CLEARING_WEAPONSET)
+						{
+							TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SET_MINE_CLEARING_DETAIL, orderData );
+						}
+
+						TheInGameUI->setGUICommand( command );
+
+						clear = FALSE;
+					}
+
+					// Command is not available
+					//CommandAvailability availability = TheControlBar->friend_getCommandAvailability( command, other, NULL, NULL, FALSE, TRUE );
+					//if( availability != COMMAND_ACTIVE && availability != COMMAND_AVAILABLE )
+					//	clear = FALSE;
+				}
+			}
+		}
+
+		if(m_isPlayerDead)
+		{
+			clear = TRUE;
+			TheInGameUI->setGUICommand( NULL );
+		}
+
+		if(clear)
+		{
+			setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+			setSabotagingObjectGUICommandID(INVALID_ID);
+			setSabotagingObjectGUICommandButtonSlot(-1);
+			m_lastSelectedObjIDs.clear();
+		}
+	}
+
+	//Update the energy bonus
+	m_energy.calculateCurrentBonusEnergy();
 
 	//Update the academy stats (this only checks applicable things that require a polling method)
 	getAcademyStats()->update();
@@ -4189,7 +4285,7 @@ void Player::addAIGroupToCurrentSelection(AIGroup *group) {
 //-------------------------------------------------------------------------------------------------
 void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent,
 	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
-	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
+	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/, UnsignedInt frame /*= 0*/)
 {
 	// Possible cases:
 	// 1. Default behavior: No stacking of bonus with SAME perecentage
@@ -4208,6 +4304,9 @@ void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent,
 			if (tof->m_percent == percent && tof->m_kindOf == kindOf &&
 				(!stackUniqueType || (tof->m_templateID == sourceTemplateID && tof->m_templateID != INVALID_ID)))
 			{
+				if(frame > 0)
+					tof->m_frame.push_back(TheGameLogic->getFrame() + frame);
+
 				tof->m_ref++;
 				return;
 			}
@@ -4221,6 +4320,10 @@ void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent,
 	newTof->m_ref = 1;
 	newTof->m_stackWithAny = stackWithAny;
 	newTof->m_templateID = sourceTemplateID;
+	newTof->m_frame.clear();
+	if(frame > 0)
+		newTof->m_frame.push_back(TheGameLogic->getFrame() + frame);
+
 	m_kindOfPercentProductionChangeList.push_back(newTof);
 
 }
@@ -4232,17 +4335,36 @@ void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real perce
 	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
 	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
 {
+	// Clear the Cost Change Removal Indication
+	m_productionCostChangeExpired = FALSE;
+	UnsignedInt now = TheGameLogic->getFrame();
+
 	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionChangeList.begin();
 	while(it != m_kindOfPercentProductionChangeList.end())
 	{
 
 		KindOfPercentProductionChange* tof = *it;
-		if( tof->m_percent == percent && tof->m_kindOf == kindOf &&
+		Int expiredCount = 0;
+		for(std::vector<UnsignedInt>::iterator it = tof->m_frame.begin(); it != tof->m_frame.end();)
+		{
+			if(now > (*it))
+			{
+				expiredCount++;
+				it = tof->m_frame.erase( it );
+				continue;
+			}
+			++it;
+		}
+		if (expiredCount > 0 ||
+			(tof->m_percent == percent && tof->m_kindOf == kindOf &&
 			(!stackWithAny || tof->m_stackWithAny) &&
 			(!stackUniqueType || tof->m_templateID == sourceTemplateID)
-			)
+			))
 		{
-			tof->m_ref--;
+			if(expiredCount > 0)
+				tof->m_ref -= expiredCount;
+			else
+				tof->m_ref--;
 			if(tof->m_ref == 0)
 			{
 				m_kindOfPercentProductionChangeList.erase( it );
@@ -4251,7 +4373,8 @@ void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real perce
 			else if (stackWithAny) {
 				DEBUG_CRASH(("KindOfProductionCost: StackWithAny should never have count > 1.\n"));
 			}
-			return;
+			if(expiredCount == 0)
+				return;
 		}
 		++it;
 	}
@@ -4263,13 +4386,32 @@ void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real perce
 //-------------------------------------------------------------------------------------------------
 Real Player::getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const
 {
+	UnsignedInt now = TheGameLogic->getFrame();
 	Real start = 1.0f;
 	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionChangeList.begin();
 	while(it != m_kindOfPercentProductionChangeList.end())
 	{
 
 		KindOfPercentProductionChange *tof = *it;
-		if(TEST_KINDOFMASK_MULTI(kindOf, tof->m_kindOf, KINDOFMASK_NONE))
+		Bool expired = FALSE;
+		Bool doChange = FALSE;
+		for(std::vector<UnsignedInt>::const_iterator it = tof->m_frame.begin(); it != tof->m_frame.end(); ++it)
+		{
+			if(now > (*it))
+			{
+				expired = TRUE;
+				m_productionCostChangeExpired = TRUE;
+				if(doChange)
+					break;
+			}
+			else
+			{
+				doChange = TRUE;
+				if(expired)
+					break;
+			}
+		}
+		if((!expired || doChange) && TEST_KINDOFMASK_MULTI(kindOf, tof->m_kindOf, KINDOFMASK_NONE))
 		{
 			start *= (1 + tof->m_percent);
 		}
@@ -4283,8 +4425,9 @@ Real Player::getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const
 //-------------------------------------------------------------------------------------------------
 void Player::addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
 	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
-	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
+	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/, UnsignedInt frame /*= 0*/)
 {
+	UnsignedInt expireFrame = frame > 0 ? TheGameLogic->getFrame() + frame : 0;
 	if (!stackWithAny) { // We always stack, no need to check
 
 		KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionTimeChangeList.begin();
@@ -4294,6 +4437,9 @@ void Player::addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
 			if (tof->m_percent == percent && tof->m_kindOf == kindOf &&
 				(!stackUniqueType || (tof->m_templateID == sourceTemplateID && tof->m_templateID != INVALID_ID)))
 			{
+				if(expireFrame > 0)
+					tof->m_frame.push_back(expireFrame);
+
 				tof->m_ref++;
 				return;
 			}
@@ -4307,6 +4453,10 @@ void Player::addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
 	newTof->m_ref = 1;
 	newTof->m_stackWithAny = stackWithAny;
 	newTof->m_templateID = sourceTemplateID;
+	newTof->m_frame.clear();
+	if(expireFrame > 0)
+		newTof->m_frame.push_back(expireFrame);
+
 	m_kindOfPercentProductionTimeChangeList.push_back(newTof);
 
 }
@@ -4318,17 +4468,35 @@ void Player::removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percen
 	UnsignedInt sourceTemplateID /*= INVALID_ID*/,
 	Bool stackUniqueType /*= FALSE*/, Bool stackWithAny /*= FALSE*/)
 {
+	// Clear the Time Change Removal Indication
+	m_productionTimeChangeExpired = FALSE;
+	UnsignedInt now = TheGameLogic->getFrame();
 	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionTimeChangeList.begin();
 	while (it != m_kindOfPercentProductionTimeChangeList.end())
 	{
 
 		KindOfPercentProductionChange* tof = *it;
-		if (tof->m_percent == percent && tof->m_kindOf == kindOf &&
+		Int expiredCount = 0;
+		for(std::vector<UnsignedInt>::iterator it = tof->m_frame.begin(); it != tof->m_frame.end();)
+		{
+			if(now > (*it))
+			{
+				expiredCount++;
+				it = tof->m_frame.erase( it );
+				continue;
+			}
+			++it;
+		}
+		if (expiredCount > 0 ||
+			(tof->m_percent == percent && tof->m_kindOf == kindOf &&
 			(!stackWithAny || tof->m_stackWithAny) &&
 			(!stackUniqueType || tof->m_templateID == sourceTemplateID)
-			)
+			))
 		{
-			tof->m_ref--;
+			if(expiredCount > 0)
+				tof->m_ref -= expiredCount;
+			else
+				tof->m_ref--;
 			if (tof->m_ref == 0)
 			{
 				m_kindOfPercentProductionTimeChangeList.erase(it);
@@ -4338,7 +4506,8 @@ void Player::removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percen
 			else if (stackWithAny) {
 				DEBUG_CRASH(("KindOfProductionTime: StackWithAny should never have count > 1.\n"));
 			}
-			return;
+			if(expiredCount == 0)
+				return;
 		}
 		++it;
 	}
@@ -4350,19 +4519,283 @@ void Player::removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percen
 //-------------------------------------------------------------------------------------------------
 Real Player::getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const
 {
+	UnsignedInt now = TheGameLogic->getFrame();
 	Real start = 1.0f;
 	KindOfPercentProductionChangeListIt it = m_kindOfPercentProductionTimeChangeList.begin();
 	while (it != m_kindOfPercentProductionTimeChangeList.end())
 	{
 
 		KindOfPercentProductionChange* tof = *it;
-		if (TEST_KINDOFMASK_MULTI(kindOf, tof->m_kindOf, KINDOFMASK_NONE))
+		Bool expired = FALSE;
+		Bool doChange = FALSE;
+		for(std::vector<UnsignedInt>::const_iterator it = tof->m_frame.begin(); it != tof->m_frame.end(); ++it)
+		{
+			if(now > (*it))
+			{
+				expired = TRUE;
+				m_productionTimeChangeExpired = TRUE;
+				if(doChange)
+					break;
+			}
+			else
+			{
+				doChange = TRUE;
+				if(expired)
+					break;
+			}
+		}
+		if((!expired || doChange) && TEST_KINDOFMASK_MULTI(kindOf, tof->m_kindOf, KINDOFMASK_NONE))
 		{
 			start *= (1 + tof->m_percent);
 		}
 		++it;
 	}
 	return (start);
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Get whether the Player has this Instance */
+//-------------------------------------------------------------------------------------------------
+Bool Player::hasInstance( const std::vector<NameKeyType>& instances, Bool requiresAllInstances ) const
+{
+	// No instances to check, so return false by default
+	if(instances.empty())
+		return FALSE;
+
+	Bool hasKey;
+	for(std::vector<NameKeyType>::const_iterator it = instances.begin(); it != instances.end(); ++it)
+	{
+		hasKey = FALSE;
+		NameKeyType nameKey = ( *it );
+		for(NameKeyIntVec::const_iterator it_i = m_instances.begin(); it_i != m_instances.end(); ++it_i)
+		{
+			if( nameKey == it_i->first )
+			{
+				if(requiresAllInstances)
+				{
+					hasKey = TRUE;
+					break;
+				}
+				else
+				{
+					return TRUE;
+				}
+			}
+		}
+		if(requiresAllInstances && !hasKey)
+			return FALSE;
+	}
+
+	if(requiresAllInstances)
+		return TRUE;
+	else
+		return FALSE;
+
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Grants the Instance for the Player */
+//-------------------------------------------------------------------------------------------------
+void Player::grantInstance( NameKeyType nameKey, Int amount )
+{
+	Bool hasKey = FALSE;
+	for(NameKeyIntVec::iterator it_i = m_instances.begin(); it_i != m_instances.end(); ++it_i)
+	{
+		if( nameKey == it_i->first )
+		{
+			hasKey = TRUE;
+			if(amount == 0 || it_i->second <= 0)
+				it_i->second = 0;	// 0 means infinite uses, since able to reach negative
+			else
+				it_i->second += amount;
+			break;
+		}
+	}
+
+	if(!hasKey)
+	{
+		NameKeyIntPair pair;
+		pair.first = nameKey;
+		pair.second = amount;
+		m_instances.push_back(pair);
+	}
+
+	// Refresh the control bar everytime an instance is changed
+	TheControlBar->markUIDirty();
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Use an Instance for the Player */
+//-------------------------------------------------------------------------------------------------
+void Player::useInstance( const std::vector<NameKeyType>& instances, Bool requiresAllInstances )
+{
+	// No instances to use
+	if(instances.empty())
+		return;
+
+	for(std::vector<NameKeyType>::const_iterator it = instances.begin(); it != instances.end(); ++it)
+	{
+		NameKeyType nameKey = ( *it );
+		for(NameKeyIntVec::iterator it_i = m_instances.begin(); it_i != m_instances.end(); ++it_i)
+		{
+			if( nameKey == it_i->first )
+			{
+				it_i->second--;
+				if(it_i->second == 0)
+				{
+					it_i = m_instances.erase( it_i );
+					TheControlBar->markUIDirty();
+				}
+
+				if(requiresAllInstances)
+					break;
+				else
+					return;
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Use a command button ability via Sabotaging */
+//-------------------------------------------------------------------------------------------------
+Bool Player::forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType spType )
+{
+	// Sanity
+	if(!other)
+		return TRUE; // TRUE is exit loop
+
+	const CommandSet *set = TheControlBar->findCommandSet( other->getCommandSetString() );
+	if( set )
+	{
+		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+		{
+			// get command button
+			const CommandButton *command = other->getCommandModifierOverrideForSlot(i); 
+			if(command == nullptr) 
+				command =  set->getCommandButton(i);
+
+			// no command or not a special power command or its from shortcut
+			if( !command || command->getCommandType() != GUI_COMMAND_SPECIAL_POWER || !command->getSpecialPowerTemplate() )
+				continue;
+
+			// Not the same special power type
+			if( spType != command->getSpecialPowerTemplate()->getSpecialPowerType() )
+				continue;
+
+			// Command is not available
+			CommandAvailability availability = TheControlBar->friend_getCommandAvailability( command, other, NULL, NULL, FALSE, TRUE );
+			if( availability != COMMAND_ACTIVE && availability != COMMAND_AVAILABLE )
+				continue;
+
+			if( BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_TARGET ) )
+			{
+				setSabotagingObjectGUICommandName(command->getName());
+				setSabotagingObjectGUICommandID(other->getID());
+				setSabotagingObjectGUICommandButtonSlot(i);
+				TheInGameUI->getCurrentSelectedObjectIDs( m_lastSelectedObjIDs );
+
+				TheInGameUI->deselectAllDrawables();
+				TheInGameUI->selectDrawable(other->getDrawable());
+
+				GameMessage *msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+				msg->appendBooleanArgument(TRUE);
+				msg->appendObjectIDArgument(other->getID());
+
+				OrderNearbyData orderData;
+				if(command->getOrderNearbyRadius())
+				{
+					orderData.Radius = command->getOrderNearbyRadius();
+					orderData.RequiredMask = command->getOrderKindofMask();
+					orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+					orderData.MinDelay = command->getOrderNearbyMinDelay();
+					orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+					orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+				}
+
+				if (command->getOptions() & USES_MINE_CLEARING_WEAPONSET)
+				{
+					TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SET_MINE_CLEARING_DETAIL, orderData );
+				}
+
+				TheInGameUI->setGUICommand( command );
+			}
+			else
+			{
+				CommandOption commandOptions = (CommandOption)(command->getOptions() | IS_DOING_SABOTAGE);
+				other->doSpecialPower(command->getSpecialPowerTemplate(), commandOptions, TRUE);
+			}
+
+			// We are done
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void Player::selectDrawablesBeforeSabotaging()
+{
+	TheInGameUI->deselectAllDrawables();
+
+	// No IDs to select
+	if (m_lastSelectedObjIDs.empty())
+		return;
+
+	// create selected message
+	GameMessage *teamMsg = TheMessageStream->appendMessage( GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND );
+	// not creating a new team so pass in false
+	teamMsg->appendBooleanArgument( FALSE );
+
+	//Loop through each drawable add append it's objectID to the event.
+	for( std::vector<ObjectID>::const_iterator it = m_lastSelectedObjIDs.begin(); it != m_lastSelectedObjIDs.end(); ++it )
+	{
+		Object* obj = TheGameLogic->findObjectByID((*it));
+		if(!obj)
+			continue;
+
+		Drawable* draw = obj->getDrawable();
+		if(!draw)
+			continue;
+
+		if( obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE))
+		{
+			//Don't select dead/dying units.
+			continue;
+		}
+
+		//Added this to support attacking cargo planes without being able to select them.
+		//I added the KINDOF_FORCEATTACKABLE to them, but unsure if it's possible to select
+		//something without the KINDOF_SELECTABLE -- so doing a LATE code change. My gut
+		//says we should simply have the KINDOF_SELECTABLE check only... but best to be safe.
+		if( !obj->isKindOf( KINDOF_SELECTABLE ) && obj->isKindOf( KINDOF_FORCEATTACKABLE ) )
+		{
+			continue;
+		}
+
+		// You cannot select something that has a logic override of unselectability or masked
+		if( obj->getStatusBits().testForAny( MAKE_OBJECT_STATUS_MASK2( OBJECT_STATUS_UNSELECTABLE, OBJECT_STATUS_MASKED ) ) )
+		{
+			continue;
+		}
+
+		if (!obj->isSelectable())
+		{
+			continue;
+		}
+
+		if( draw->isDrawableEffectivelyHidden() )
+		{
+			continue;  // can't select
+		}
+
+		TheInGameUI->selectDrawable(draw);
+		teamMsg->appendObjectIDArgument( (*it) );
+	}
+
+	m_lastSelectedObjIDs.clear();
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4873,6 +5306,19 @@ void Player::xfer( Xfer *xfer )
 			// ref
 			xfer->xferUnsignedInt( &entry->m_ref );
 
+			// frame count
+			UnsignedShort percentProductionChangeFrameCount = entry->m_frame.size();
+			xfer->xferUnsignedShort( &percentProductionChangeFrameCount );
+			UnsignedInt frame;
+
+			for( std::vector<UnsignedInt>::const_iterator it_ui = entry->m_frame.begin();
+				 it_ui != entry->m_frame.end();
+				 ++it_ui )
+			{
+				frame = *it_ui;
+				xfer->xferUnsignedInt( &frame );
+			}
+
 		}
 
 	}
@@ -4899,6 +5345,16 @@ void Player::xfer( Xfer *xfer )
 			entry->m_kindOf.xfer(xfer);
 			xfer->xferReal( &entry->m_percent );
 			xfer->xferUnsignedInt( &entry->m_ref );
+
+			UnsignedShort percentProductionChangeFrameCount;
+			xfer->xferUnsignedShort( &percentProductionChangeFrameCount );
+			UnsignedInt frame;
+
+			for( UnsignedInt i_ui = 0; i_ui < percentProductionChangeFrameCount; ++i_ui )
+			{
+				xfer->xferUnsignedInt( &frame );
+				entry->m_frame.push_back(frame);
+			}
 
 			// put at end of list
 			m_kindOfPercentProductionChangeList.push_back( entry );
@@ -4933,6 +5389,19 @@ void Player::xfer( Xfer *xfer )
 			// ref
 			xfer->xferUnsignedInt(&entry->m_ref);
 
+			// frame count
+			UnsignedShort percentProductionChangeFrameCount = entry->m_frame.size();
+			xfer->xferUnsignedShort( &percentProductionChangeFrameCount );
+			UnsignedInt frame;
+
+			for( std::vector<UnsignedInt>::const_iterator it_ui = entry->m_frame.begin();
+				 it_ui != entry->m_frame.end();
+				 ++it_ui )
+			{
+				frame = *it_ui;
+				xfer->xferUnsignedInt( &frame );
+			}
+
 		}
 
 	}
@@ -4960,6 +5429,16 @@ void Player::xfer( Xfer *xfer )
 			xfer->xferReal(&entry->m_percent);
 			xfer->xferUnsignedInt(&entry->m_ref);
 
+			UnsignedShort percentProductionChangeFrameCount;
+			xfer->xferUnsignedShort( &percentProductionChangeFrameCount );
+			UnsignedInt frame;
+
+			for( UnsignedInt i_ui = 0; i_ui < percentProductionChangeFrameCount; ++i_ui )
+			{
+				xfer->xferUnsignedInt( &frame );
+				entry->m_frame.push_back(frame);
+			}
+
 			// put at end of list
 			m_kindOfPercentProductionTimeChangeList.push_back(entry);
 
@@ -4967,6 +5446,55 @@ void Player::xfer( Xfer *xfer )
 
 	}
 
+	xfer->xferInt( &m_sabotagingObjectGUICommandButtonSlot );
+	xfer->xferObjectID( &m_sabotagingObjectGUICommandID );
+	// Don't xfer the name, we need it for setting the GUI Command after loading saves.
+
+	UnsignedShort lastSelectedObjIDsCount = m_lastSelectedObjIDs.size();
+	xfer->xferUnsignedShort( &lastSelectedObjIDsCount );
+	ObjectID lastSelectedID;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		std::vector<ObjectID>::const_iterator it;
+
+		// save each item
+		for( it = m_lastSelectedObjIDs.begin();
+				 it != m_lastSelectedObjIDs.end();
+				 ++it )
+		{
+
+			// get entry data
+			lastSelectedID = (*it);
+			xfer->xferObjectID( &lastSelectedID );
+
+		}
+
+	}
+	else
+	{
+
+		// sanity, list must be empty right now
+		if( !m_lastSelectedObjIDs.empty() )
+		{
+
+			DEBUG_CRASH(( "Player::xfer - m_lastSelectedObjIDs should be empty but is not" ));
+			throw SC_INVALID_DATA;
+
+		}
+
+		// read each entry
+		for( UnsignedInt i = 0; i < lastSelectedObjIDsCount; ++i )
+		{
+
+			// read data
+			xfer->xferObjectID( &lastSelectedID );
+
+			// put at end of list
+			m_lastSelectedObjIDs.push_back( lastSelectedID );
+
+		}
+
+	}
 
 
 

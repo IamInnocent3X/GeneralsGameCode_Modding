@@ -811,6 +811,8 @@ void INI::parseAsciiStringWithColonVector( INI* ini, void * /*instance*/, void *
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
 {
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
@@ -819,6 +821,45 @@ void INI::parseAsciiStringWithColonVectorAppend( INI* ini, void * /*instance*/, 
 	for (const char *token = ini->getNextTokenOrNull(ini->getSepsColon()); token != NULL; token = ini->getNextTokenOrNull(ini->getSepsColon()))
 	{
 		asv->push_back(token);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseNameKeyVector( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	if (!TheNameKeyGenerator) {
+		DEBUG_LOG(("name key generator not found"));
+		DEBUG_CRASH(("name key generator not found"));
+		throw INI_INVALID_DATA;
+	}
+
+	std::vector<NameKeyType>* nkv = (std::vector<NameKeyType>*)store;
+	nkv->clear();
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
+		nkv->push_back(nameKey);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseNameKeyVectorAppend( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	if (!TheNameKeyGenerator) {
+		DEBUG_LOG(("name key generator not found"));
+		DEBUG_CRASH(("name key generator not found"));
+		throw INI_INVALID_DATA;
+	}
+
+	std::vector<NameKeyType>* nkv = (std::vector<NameKeyType>*)store;
+	// nope, don't clear. duh.
+	// nkv->clear();
+	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	{
+		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
+		nkv->push_back(nameKey);
 	}
 }
 

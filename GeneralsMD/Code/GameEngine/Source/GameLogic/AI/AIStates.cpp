@@ -1454,6 +1454,7 @@ StateReturnType AIIdleState::update()
 				! obj->isDisabledByType( DISABLED_UNMANNED ) &&
 				! obj->isDisabledByType( DISABLED_EMP ) &&
 				! obj->isDisabledByType( DISABLED_SUBDUED ) &&
+				! obj->isDisabledByType( DISABLED_CONSTRAINED ) &&
 				! obj->isDisabledByType( DISABLED_FROZEN ) &&
 				! obj->isDisabledByType( DISABLED_HACKED ) )
 		{
@@ -2640,6 +2641,11 @@ StateReturnType AIAttackApproachTargetState::onEnter()
 
 	if (getMachine()->isGoalObjectDestroyed())
 	{
+		if(source->isCurWeaponLockedPriority() || source->getWeaponSlotActivatedByGUI() >= 0)
+		{
+			source->setWeaponsActivatedByGUI(FALSE);
+			source->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 		return STATE_SUCCESS; // Already killed victim.
 	}
 
@@ -2736,10 +2742,16 @@ StateReturnType AIAttackApproachTargetState::onEnter()
 //----------------------------------------------------------------------------------------------------------
 StateReturnType AIAttackApproachTargetState::updateInternal()
 {
-	AIUpdateInterface* ai = getMachineOwner()->getAI();
+	Object* source = getMachineOwner();
+	AIUpdateInterface* ai = source->getAI();
 	//CRCDEBUG_LOG(("AIAttackApproachTargetState::updateInternal() - object %d", getMachineOwner()->getID()));
 	if (getMachine()->isGoalObjectDestroyed())
 	{
+		if(source->isCurWeaponLockedPriority() || source->getWeaponSlotActivatedByGUI() >= 0)
+		{
+			source->setWeaponsActivatedByGUI(FALSE);
+			source->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 		ai->notifyVictimIsDead();
 		ai->setCurrentVictim(NULL);
 		return STATE_FAILURE;
@@ -2747,7 +2759,7 @@ StateReturnType AIAttackApproachTargetState::updateInternal()
 	m_stopIfInRange = !ai->isAttackPath();
 
 	StateReturnType code = STATE_FAILURE;
- 	Object* source = getMachineOwner();
+ 	//Object* source = getMachineOwner();
 	Weapon* weapon = source->getCurrentWeapon();
 	Object *victim = getMachineGoalObject();
 	if (victim)
@@ -3029,6 +3041,11 @@ StateReturnType AIAttackPursueTargetState::onEnter()
 
 	if (getMachine()->isGoalObjectDestroyed())
 	{
+		if(source->isCurWeaponLockedPriority() || source->getWeaponSlotActivatedByGUI() >= 0)
+		{
+			source->setWeaponsActivatedByGUI(FALSE);
+			source->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 		//CRCDEBUG_LOG(("AIAttackPursueTargetState::onEnter() - goal object is destroyed for object %d (%s)", getMachineOwner()->getID(), getMachineOwner()->getTemplate()->getName().str()));
 		return STATE_SUCCESS; // Already killed victim.
 	}
@@ -5530,7 +5547,7 @@ StateReturnType AIAttackFireWeaponState::update()
 				CommandSourceType lastCmdSource = ai ? ai->getLastCommandSource() : CMD_FROM_AI;
 				PartitionFilterSamePlayer filterPlayer(victim->getControllingPlayer());
 				PartitionFilterSameMapStatus filterMapStatus(obj);
-				PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, obj, lastCmdSource);
+				PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, obj, lastCmdSource, TRUE);
 				PartitionFilter* filters[] = { &filterAttack, &filterPlayer, &filterMapStatus, NULL };
 				// note that we look around originalVictimPos, *not* the current victim's pos.
 				victim = ThePartitionManager->getClosestObject(originalVictimPos, continueRange, FROM_CENTER_2D, filters);// could be null. this is ok.
@@ -5992,6 +6009,7 @@ void AIAttackState::onExit( StateExitType status )
 	// even though we're leaving this state. turn it off when we
 	// turn it off when we do setCurrentVictim(NULL).
 	//addSelfAsTargeter(false);
+	Bool resetWeaponsActivatedByGUI = !m_attackMachine || !m_attackMachine->getGoalObject();
 
 	// destroy the attack machine
 	deleteInstance(m_attackMachine);
@@ -6010,6 +6028,8 @@ void AIAttackState::onExit( StateExitType status )
 	if (curWeapon)
 	{
 		obj->computeFiringTrackerBonusClear(curWeapon);
+		if(resetWeaponsActivatedByGUI)
+			obj->setWeaponsActivatedByGUI(FALSE);
 
 		// Release My Weapon Lock if I am currently Locked in Priority
 		if(obj->isCurWeaponLockedPriority())
@@ -7431,6 +7451,7 @@ void AIHuntState::onExit( StateExitType status )
 	Object *obj = getMachineOwner();
 	if (obj)
 	{
+		obj->setWeaponsActivatedByGUI(FALSE);
 		obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 	}
 }

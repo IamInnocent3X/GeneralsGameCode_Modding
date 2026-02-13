@@ -1490,6 +1490,8 @@ void InGameUI::setRadiusCursor(RadiusCursorType cursorType, const AsciiString& c
 		return;
 
 	Player* controller = obj->getControllingPlayer();
+	if(ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() == obj->getID())
+		controller = ThePlayerList->getLocalPlayer();
 	if (controller == NULL)
 		return;
 
@@ -3297,17 +3299,45 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 								Drawable* curDraw = *it;
 								if( curDraw && curDraw->getObject() && curDraw->getObject()->isLocallyControlled() )
 								{
-									if( curDraw->getObject()->hasSpecialPower( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK ) && obj && obj->isKindOf( KINDOF_VEHICLE ) )
+									if( obj )
 									{
-										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK );
-									}
-									else if( curDraw->getObject()->hasSpecialPower( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK ) && obj && obj->isKindOf( KINDOF_CASH_GENERATOR ) )
-									{
-										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
-									}
-									else if( curDraw->getObject()->hasSpecialPower( SPECIAL_HACKER_DISABLE_BUILDING ) && obj && obj->isKindOf( KINDOF_STRUCTURE ) )
-									{
-										spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( SPECIAL_HACKER_DISABLE_BUILDING );
+										SpecialPowerType type[3] = { SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK, SPECIAL_BLACKLOTUS_STEAL_CASH_HACK, SPECIAL_HACKER_DISABLE_BUILDING };
+										Int idx = 0;
+										while(!spUpdate && idx < 3)
+										{
+											if( curDraw->getObject()->hasSpecialPower( type[idx] ) )
+											{
+												spUpdate = curDraw->getObject()->findSpecialAbilityUpdate( type[idx] );
+
+												if( obj->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+												{
+													spUpdate = NULL;
+												}
+												else if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+												{
+													if( !obj->isAnyKindOf(spUpdate->getKindOfs()) )
+														spUpdate = NULL;
+												}
+												else
+												{
+													switch(type[idx])
+													{
+														case SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK:
+															spUpdate = obj->isKindOf( KINDOF_VEHICLE ) ? spUpdate : NULL;
+															break;
+														case SPECIAL_BLACKLOTUS_STEAL_CASH_HACK:
+															spUpdate = obj->isKindOf( KINDOF_CASH_GENERATOR ) ? spUpdate : NULL;
+															break;
+														case SPECIAL_HACKER_DISABLE_BUILDING:
+															spUpdate = obj->isKindOf( KINDOF_STRUCTURE ) ? spUpdate : NULL;
+															break;
+														default:
+															break;
+													}
+												}
+											}
+											idx++;
+										}
 									}
 
 									if( spUpdate && !spUpdate->getCursorName().isEmpty() )
@@ -5144,7 +5174,7 @@ CanAttackResult InGameUI::getCanSelectedObjectsAttack( ActionType action, const 
 			{
 				//additionalChecking is TRUE only if force attack mode is on.
 				CanAttackResult result = 	TheActionManager->getCanAttackObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER,
-									additionalChecking ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET );
+									additionalChecking ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, TRUE );
 
 				if( result > bestResult )
 				{
@@ -5360,7 +5390,7 @@ Bool InGameUI::canSelectedObjectsDoAction( ActionType action, const Object *obje
 }
 
 //------------------------------------------------------------------------------
-Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Drawable *drawableToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj ) const
+Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Drawable *drawableToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj, Bool checkSourceRequirements ) const
 {
 	//Get the special power template.
 	const SpecialPowerTemplate *spTemplate = command->getSpecialPowerTemplate();
@@ -5406,7 +5436,7 @@ Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, c
 
 		if( !doAtObject && !doAtPosition )
 		{
-			if( TheActionManager->canDoSpecialPower( other->getObject(), spTemplate, CMD_FROM_PLAYER, commandOptions ) )
+			if( TheActionManager->canDoSpecialPower( other->getObject(), spTemplate, CMD_FROM_PLAYER, commandOptions, checkSourceRequirements ) )
 			{
 				//This is the no target version
 				if( rule == SELECTION_ANY )
@@ -5418,8 +5448,8 @@ Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, c
 		}
 		else if( doAtObject )
 		{
-			if( TheActionManager->canDoSpecialPowerAtObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions ) ||
-				( doShrubbery && TheActionManager->canDoSpecialPowerAtDrawable( other->getObject(), drawableToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions ) ) )
+			if( TheActionManager->canDoSpecialPowerAtObject( other->getObject(), objectToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions, checkSourceRequirements ) ||
+				( doShrubbery && TheActionManager->canDoSpecialPowerAtDrawable( other->getObject(), drawableToInteractWith, CMD_FROM_PLAYER, spTemplate, commandOptions, checkSourceRequirements ) ) )
 			{
 				//This requires a object target
 				if( rule == SELECTION_ANY )
@@ -5431,7 +5461,7 @@ Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, c
 		}
 		else if( doAtPosition )
 		{
-			if( TheActionManager->canDoSpecialPowerAtLocation( other->getObject(), position, CMD_FROM_PLAYER, spTemplate, objectToInteractWith, commandOptions ) )
+			if( TheActionManager->canDoSpecialPowerAtLocation( other->getObject(), position, CMD_FROM_PLAYER, spTemplate, objectToInteractWith, commandOptions, checkSourceRequirements ) )
 			{
 				//This requires a valid location.
 				if( rule == SELECTION_ANY )
@@ -5526,6 +5556,7 @@ Bool InGameUI::canSelectedObjectsEffectivelyUseWeapon( const CommandButton *comm
 
 		if ( other->getObject()->testCustomStatus("ZERO_DAMAGE") || other->getObject()->isWeaponSetRestricted() )
 		{
+			continue;
 		}
 		else if( !doAtObject && !doAtPosition )
 		{
@@ -6866,4 +6897,26 @@ void InGameUI::drawGameTime()
 
 	m_gameTimeString->draw(horizontalTimerOffset, m_gameTimePosition.y, m_gameTimeColor, m_gameTimeDropColor);
 	m_gameTimeFrameString->draw(horizontalFrameOffset, m_gameTimePosition.y, GameMakeColor(180,180,180,255), m_gameTimeDropColor);
+}
+
+void InGameUI::getCurrentSelectedObjectIDs( std::vector<ObjectID> &objectIDs )
+{
+
+	objectIDs.clear();
+	//LoopAllSelectedDrawables
+	for( DrawableListCIt it = m_selectedDrawables.begin(); it != m_selectedDrawables.end(); ++it )
+	{
+
+		Drawable *draw = (*it);
+		const Object *obj = draw->getObject();
+
+
+		if ( ! obj || obj->isKindOf( KINDOF_IGNORED_IN_GUI ) )
+			continue;
+
+		objectIDs.push_back( obj->getID() );
+
+	}
+
+
 }

@@ -133,8 +133,9 @@ Bool StickyBombCrateCollide::executeCrateBehavior( Object *other )
 		Object* stickyBombObject = TheThingFactory->newObject(thingTemplate, getObject()->getTeam());
 		if (stickyBombObject)
 		{
-			static NameKeyType key_StickyBombUpdate = NAMEKEY("StickyBombUpdate");
-			StickyBombUpdate* update = (StickyBombUpdate*)stickyBombObject->findUpdateModule(key_StickyBombUpdate);
+			//static NameKeyType key_StickyBombUpdate = NAMEKEY("StickyBombUpdate");
+			//StickyBombUpdate* update = (StickyBombUpdate*)stickyBombObject->findUpdateModule(key_StickyBombUpdate);
+			StickyBombUpdateInterface* update = stickyBombObject->getStickyBombUpdateInterface();
 			if (!update)
 			{
 				DEBUG_ASSERTCRASH(0,

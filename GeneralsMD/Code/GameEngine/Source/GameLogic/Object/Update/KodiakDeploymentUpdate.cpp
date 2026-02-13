@@ -124,7 +124,7 @@ Bool KodiakDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTe
 
 	//	getObject()->getControllingPlayer()->getAcademyStats()->recordSpecialPowerUsed( specialPowerTemplate );
 
-	if (!BitIsSet(commandOptions, COMMAND_FIRED_BY_SCRIPT))
+	if (!BitIsSet(commandOptions, COMMAND_FIRED_BY_SCRIPT) && !BitIsSet( commandOptions, IS_DOING_SABOTAGE ))
 	{
 		/******CHANGE*******/		m_initialTargetPosition.set(targetPos);
 	}

@@ -295,6 +295,7 @@ ProductionUpdate::ProductionUpdate( Thing *thing, const ModuleData* moduleData )
 	m_flagsDirty = FALSE;
 	m_specialPowerConstructionCommandButton = NULL;
 	m_nextWakeUpTime = 0;
+	m_productionViewedByEnemyFrame = 0;
 
 }
 
@@ -1376,6 +1377,27 @@ void ProductionUpdate::setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt)
 }
 
 // ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void ProductionUpdate::setProductionViewByEnemyFrame(Int frame)
+{
+	// Set to reveal forever
+	if(m_productionViewedByEnemyFrame < 0)
+		return;
+
+	if(frame < 0)
+		m_productionViewedByEnemyFrame = frame;
+	else if(TheGameLogic->getFrame() + frame > m_productionViewedByEnemyFrame)
+		m_productionViewedByEnemyFrame = TheGameLogic->getFrame() + frame;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Bool ProductionUpdate::showProductionViewToEnemy() const
+{
+	return m_productionViewedByEnemyFrame < 0 || m_productionViewedByEnemyFrame > TheGameLogic->getFrame();
+}
+
+// ------------------------------------------------------------------------------------------------
 /** Helper method to retrieve a production update interface from an object if one is present */
 // ------------------------------------------------------------------------------------------------
 /*static*/ ProductionUpdateInterface *ProductionUpdate::getProductionUpdateInterfaceFromObject( Object *obj )
@@ -1688,6 +1710,9 @@ void ProductionUpdate::xfer( Xfer *xfer )
 
 	// next wake up time
 	xfer->xferUnsignedInt( &m_nextWakeUpTime );
+
+	// production viewed by enemy frame
+	xfer->xferInt( &m_productionViewedByEnemyFrame );
 
 }
 

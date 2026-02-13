@@ -102,6 +102,16 @@ public:
 		m_bits.set(idx5);
 	}
 
+	BitFlags(BogusInitType k, Int idx1, Int idx2, Int idx3, Int idx4, Int idx5, Int idx6)
+	{
+		m_bits.set(idx1);
+		m_bits.set(idx2);
+		m_bits.set(idx3);
+		m_bits.set(idx4);
+		m_bits.set(idx5);
+		m_bits.set(idx6);
+	}
+
 	BitFlags(BogusInitType k,
 										Int idx1,
 										Int idx2,

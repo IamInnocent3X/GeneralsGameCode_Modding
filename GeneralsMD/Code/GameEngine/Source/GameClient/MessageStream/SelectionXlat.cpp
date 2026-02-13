@@ -1111,12 +1111,15 @@ GameMessageDisposition SelectionTranslator::translateGameMessage(const GameMessa
 				//when you right click.
 				if( TheInGameUI->getGUICommand() )
 				{
-					//Cancel GUI command mode... don't deselect units.
-					TheInGameUI->setGUICommand( NULL );
+					if(!ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand())
+					{
+						//Cancel GUI command mode... don't deselect units.
+						TheInGameUI->setGUICommand( NULL );
 
-					//With a GUI command cancel, we want no other behavior.
-					disp = DESTROY_MESSAGE;
-					TheInGameUI->setScrolling( FALSE );
+						//With a GUI command cancel, we want no other behavior.
+						disp = DESTROY_MESSAGE;
+						TheInGameUI->setScrolling( FALSE );
+					}
 				}
 				else
 				{

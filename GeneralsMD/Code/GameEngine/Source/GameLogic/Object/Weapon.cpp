@@ -471,6 +471,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "UserBypassLineOfSight",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
 	{ "UserIgnoresObstacles",					INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
 
+	{ "UseOnlyInGUI",							INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_useOnlyInGUI) },
+
 	/*{ "IsMindControl",				INI::parseBool,													NULL,							offsetof(WeaponTemplate, m_isMindControl) },
 	{ "MindControlRadius",				INI::parseBool,					NULL,							offsetof(WeaponTemplate, m_mindControlRadius) },
 	{ "MindControlCount",				INI::parseInt,					NULL,							offsetof(WeaponTemplate, m_mindControlCount) },
@@ -725,6 +727,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_weaponIgnoresObstacles = FALSE;
 
 	m_invulnerabilityDuration = 0;
+
+	m_useOnlyInGUI = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1814,6 +1818,14 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		const Coord3D* damagePos = getDamageDealtAtSelfPosition() ? sourcePos : &targetedPos; //victimPos;
 		if (delayInFrames < 1.0f)
 		{
+			VeterancyLevel vet = sourceObj->getVeterancyLevel();
+			const ObjectCreationList* detOCL = getProjectileDetonationOCL(vet);
+			if (detOCL) {
+				Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+				//TODO: should we consider a proper 3D matrix?
+				ObjectCreationList::create(detOCL, sourceObj, damagePos, NULL, weaponAngle);
+			}
+
 			// go ahead and do it now
 			//DEBUG_LOG(("WeaponTemplate::fireWeaponTemplate: firing weapon immediately!"));
 			if( inflictDamage )
@@ -3349,6 +3361,23 @@ void WeaponStore::update()
 		{
 			// we never do projectile-detonation-damage via this code path.
 			const Bool isProjectileDetonation = false;
+			Object* sourceObj = TheGameLogic->findObjectByID(ddi->m_delaySourceID);
+			if (sourceObj) {
+				VeterancyLevel vet = sourceObj->getVeterancyLevel();
+				const ObjectCreationList* detOCL = ddi->m_delayedWeapon->getProjectileDetonationOCL(vet);
+				// If there's no source obj, use FireOCL. Weapon should not be able to target and fire from a non source Obj
+				if(detOCL)
+				{
+					Coord3D v;
+					const Coord3D *sourcePos = sourceObj->getPosition();
+					v.x = ddi->m_delayDamagePos.x - sourcePos->x;
+					v.y = ddi->m_delayDamagePos.y - sourcePos->y;
+					v.z = ddi->m_delayDamagePos.z - sourcePos->z;
+					Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+					//TODO: should we consider a proper 3D matrix?
+					ObjectCreationList::create(detOCL, sourceObj, &ddi->m_delayDamagePos, NULL, weaponAngle);
+				}
+			}
 			ddi->m_delayedWeapon->dealDamageInternal(ddi->m_delaySourceID, ddi->m_delayIntendedVictimID, &ddi->m_delayDamagePos, ddi->m_bonus, isProjectileDetonation);
 			ddi = m_weaponDDI.erase(ddi);
 		}
@@ -5383,7 +5412,7 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 		isDisguisedAndCheckIfNeedOffset = stealth->isDisguisedAndCheckIfNeedOffset();
 
 	}
-	if( isSimpleDisguise || launcher->getContainedBy() )
+	if( isSimpleDisguise || (launcher->getContainedBy() && launcher->getContainedBy()->getContain()) )
 	{
 		// If we are in an enclosing container, our launch position is our actual position.  Yes, I am putting
 		// a minor case and an oft used function, but the major case is huge and full of math.

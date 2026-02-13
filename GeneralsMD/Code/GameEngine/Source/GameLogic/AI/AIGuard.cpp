@@ -99,7 +99,7 @@ static Bool hasAttackedMeAndICanReturnFire( State *thisState, void* /*userData*/
 		return FALSE;
 	}
 
-	CanAttackResult result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET, target, CMD_FROM_AI);
+	CanAttackResult result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET, target, CMD_FROM_AI, (WeaponSlotType)-1, TRUE);
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{
 		return TRUE;
@@ -227,7 +227,7 @@ Bool AIGuardMachine::lookForInnerTarget(void)
 
 	const PolygonTrigger*								area = getAreaToGuard();
 	PartitionFilterRelationship					f1(owner, PartitionFilterRelationship::ALLOW_ENEMIES);
-	PartitionFilterPossibleToAttack			f2(ATTACK_NEW_TARGET, owner, CMD_FROM_AI);
+	PartitionFilterPossibleToAttack			f2(ATTACK_NEW_TARGET, owner, CMD_FROM_AI, TRUE);
 	PartitionFilterSameMapStatus				filterMapStatus(owner);
 	PartitionFilterPolygonTrigger				f3(area);
 	PartitionFilterIsFlying							f4;

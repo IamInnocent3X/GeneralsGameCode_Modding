@@ -328,6 +328,58 @@ void ControlBar::populateCommand( Object *obj )
 				m_commandWindows[ i ]->winHide( TRUE );
 				continue;
 			}
+
+			if( BitIsSet( commandButton->getOptions(), HIDE_WHEN_UNAVAILABLE ) )
+			{
+				if( BitIsSet( commandButton->getOptions(), NEED_UPGRADE ) )
+				{
+					const UpgradeTemplate *upgrade = commandButton->getUpgradeTemplate();
+					if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+					{
+						if( player->hasUpgradeComplete( upgrade ) == FALSE )
+						{
+							m_commandWindows[ i ]->winHide( TRUE );
+							continue;
+						}
+					}
+					else if( upgrade->getUpgradeType() == UPGRADE_TYPE_OBJECT &&
+									obj->hasUpgrade( upgrade ) == FALSE )
+					{
+						m_commandWindows[ i ]->winHide( TRUE );
+						continue;
+					}
+				}
+
+				if( BitIsSet( commandButton->getOptions(), NEED_INSTANCE ) )
+				{
+					if( !player->hasInstance( commandButton->getInstancesRequired(), commandButton->getRequiresAllInstances() ) )
+					{
+						m_commandWindows[ i ]->winHide( TRUE );
+						continue;
+					}
+				}
+
+				if( BitIsSet( commandButton->getOptions(), NEED_SPECIAL_POWER_SCIENCE ) )
+				{
+					const SpecialPowerTemplate *power = commandButton->getSpecialPowerTemplate();
+
+					if( !power )
+					{
+						//Should have the power.. button is probably missing the SpecialPower = xxx entry.
+						DEBUG_CRASH( ("CommandButton %s needs a SpecialPower entry, but it's either incorrect or missing.", commandButton->getName().str()) );
+						continue;
+					}
+
+					if( power->getRequiredScience() != SCIENCE_INVALID )
+					{
+						if( player->hasScience( power->getRequiredScience() ) == FALSE )
+						{
+							m_commandWindows[ i ]->winHide( TRUE );
+							continue;
+						}
+					}
+				}
+			}
 			//
 			// inventory exit commands were a special case already taken care above ... we needed
 			// to iterage through the containment for transport objects and fill out any available
@@ -808,6 +860,9 @@ void ControlBar::updateContextCommand( void )
 
 	}
 
+	UnsignedInt now = TheGameLogic->getFrame();
+	Bool commandSetDisabled = obj->getCommandSetDisabledUntil() > now;
+
 	// evaluate each command on whether or not it should be enabled
 	for( i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 	{
@@ -848,8 +903,12 @@ void ControlBar::updateContextCommand( void )
 			win->winClearStatus( WIN_STATUS_ALWAYS_COLOR );
 		}
 
+		Bool commandDisabled = commandSetDisabled || obj->isCommandDisabled(now, command->getName());
+
 		// is the command available
 		CommandAvailability availability = getCommandAvailability( command, obj, win );
+		if(commandDisabled && availability != COMMAND_HIDDEN)
+			availability = COMMAND_RESTRICTED;
 
 		// enable/disable the window control
 		switch( availability )
@@ -1017,7 +1076,8 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 																												Object *obj,
 																												GameWindow *win,
 																												GameWindow *applyToWin,
-																												Bool forceDisabledEvaluation ) const
+																												Bool forceDisabledEvaluation,
+																												Bool skipResourceCheck ) const
 {
 	if(	command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
 			|| command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT )
@@ -1130,6 +1190,14 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			{
 				return COMMAND_RESTRICTED;
 			}
+		}
+	}
+
+	if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+	{
+		if( !player->hasInstance( command->getInstancesRequired(), command->getRequiresAllInstances() ) )
+		{
+			return COMMAND_RESTRICTED;
 		}
 	}
 
@@ -1456,14 +1524,14 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				DEBUG_CRASH(( "Object %s does not contain special power module (%s) to execute.  Did you forget to add it to the object INI?",
 											obj->getTemplate()->getName().str(), command->getSpecialPowerTemplate()->getName().str() ));
 			}
-			else if( mod->isReady() == FALSE )
+			else if( !skipResourceCheck && mod->isReady() == FALSE )
 			{
 				Int percent =  mod->getPercentReady() * 100;
 
 				GadgetButtonDrawInverseClock( applyToWin, percent, m_buildUpClockColor );
 				return COMMAND_NOT_READY;
 			}
-			else if (command->getSpecialPowerTemplate()->getCost() > 0 && player->getMoney()->countMoney() < command->getSpecialPowerTemplate()->getCost()) {
+			else if (!skipResourceCheck && command->getSpecialPowerTemplate()->getCost() > 0 && player->getMoney()->countMoney() < command->getSpecialPowerTemplate()->getCost()) {
 				// Cannot afford
 				return COMMAND_CANT_AFFORD;
 			}

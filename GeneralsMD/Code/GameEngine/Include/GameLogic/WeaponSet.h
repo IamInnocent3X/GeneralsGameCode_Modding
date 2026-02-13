@@ -232,6 +232,7 @@ private:
 	WeaponSlotType						m_curWeapon;
 	WeaponLockType						m_curWeaponLockedStatus;
 	WeaponSlotType						m_curDefaultWeapon;
+	WeaponSlotType						m_weaponSlotActivatedByGUI;
 	UnsignedInt								m_filledWeaponSlotMask;
 	Int												m_totalAntiMask;						///< anti mask of all current weapons
 	DamageTypeFlags						m_totalDamageTypeMask;			///< damagetype mask of all current weapons
@@ -281,17 +282,20 @@ public:
 
 	Bool isRestricted() const { return m_restricted; }
 
+	void setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot = (WeaponSlotType)-1 );
+	WeaponSlotType getWeaponSlotActivatedByGUI() const { return m_weaponSlotActivatedByGUI; }
+
 	/**
 		Determines if the unit has any weapon that could conceivably
 		harm the victim. this does not take range, ammo, etc. into
 		account, but immutable weapon properties, such as "can you
 		target airborne victims".
 	*/
-	CanAttackResult getAbleToAttackSpecificObject( AbleToAttackType t, const Object* obj, const Object* victim, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1 ) const;
+	CanAttackResult getAbleToAttackSpecificObject( AbleToAttackType t, const Object* obj, const Object* victim, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1, Bool getResultOnly = FALSE ) const;
 
 	//When calling this function, all conditions must be validated to the point where we have decided that we wish to attack the object (faction checks, etc).
 	//Now, we are determining if the attack itself is able to be performed!
-	CanAttackResult getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1 ) const;
+	CanAttackResult getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *source, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1, Bool getResultOnly = FALSE ) const;
 
 	/**
 		Selects the best weapon for the given target, and sets it as the current weapon.

@@ -76,7 +76,7 @@ public:
 	Bool canRepairObject( const Object *obj, const Object *objectToRepair, CommandSourceType commandSource );
 	Bool canResumeConstructionOf( const Object *obj, const Object *objectBeingConstructed, CommandSourceType commandSource );
 	Bool canEnterObject( const Object *obj, const Object *objectToEnter, CommandSourceType commandSource, CanEnterType mode, Bool CollideCheck = TRUE, Bool ShowCursorOnParasiteCollide = TRUE );
-	CanAttackResult getCanAttackObject( const Object *obj, const Object *objectToAttack, CommandSourceType commandSource, AbleToAttackType attackType );
+	CanAttackResult getCanAttackObject( const Object *obj, const Object *objectToAttack, CommandSourceType commandSource, AbleToAttackType attackType, Bool getResultOnly = FALSE );
 	Bool canConvertObjectToCarBomb( const Object *obj, const Object *objectToConvert, CommandSourceType commandSource );
 	Bool canHijackVehicle( const Object *obj, const Object *ObjectToHijack, CommandSourceType commandSource ); // LORENZEN
 	Bool canSabotageBuilding( const Object *obj, const Object *objectToSabotage, CommandSourceType commandSource );

@@ -389,8 +389,10 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/ObjectDisabledHelper.h
     Include/GameLogic/Module/ObjectLevitationHelper.h
     Include/GameLogic/Module/ObjectHelper.h
+    Include/GameLogic/Module/ObjectPowerOutrageHelper.h
     Include/GameLogic/Module/ObjectRepulsorHelper.h
     Include/GameLogic/Module/ObjectSMCHelper.h
+    Include/GameLogic/Module/ObjectSpecialPowerHelper.h
     Include/GameLogic/Module/ObjectWeaponStatusHelper.h
     Include/GameLogic/Module/OCLSpecialPower.h
     Include/GameLogic/Module/OCLUpdate.h
@@ -432,6 +434,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/ReplaceObjectUpgrade.h
     Include/GameLogic/Module/ResetSpecialPowerTimerWhileAliveUpdate.h
     Include/GameLogic/Module/RiderChangeContain.h
+    Include/GameLogic/Module/SabotageBehavior.h
     Include/GameLogic/Module/SabotageCommandCenterCrateCollide.h
     Include/GameLogic/Module/SabotageFakeBuildingCrateCollide.h
     Include/GameLogic/Module/SabotageInternetCenterCrateCollide.h
@@ -913,6 +916,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Behavior/PropagandaCenterBehavior.cpp
     Source/GameLogic/Object/Behavior/PropagandaTowerBehavior.cpp
     Source/GameLogic/Object/Behavior/RebuildHoleBehavior.cpp
+    Source/GameLogic/Object/Behavior/SabotageBehavior.cpp
     Source/GameLogic/Object/Behavior/SlowDeathBehavior.cpp
     Source/GameLogic/Object/Behavior/SpawnBehavior.cpp
     Source/GameLogic/Object/Behavior/SupplyWarehouseCripplingBehavior.cpp
@@ -995,8 +999,10 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Helper/ObjectDelayedOrderHelper.cpp
     Source/GameLogic/Object/Helper/ObjectDisabledHelper.cpp
     Source/GameLogic/Object/Helper/ObjectHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectPowerOutrageHelper.cpp
     Source/GameLogic/Object/Helper/ObjectRepulsorHelper.cpp
     Source/GameLogic/Object/Helper/ObjectSMCHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectSpecialPowerHelper.cpp
     Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp
     Source/GameLogic/Object/Helper/ObjectLevitationHelper.cpp
     Source/GameLogic/Object/Helper/StatusDamageHelper.cpp

@@ -126,6 +126,8 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "OrderNearbyUnitsMinDelay",		INI::parseDurationUnsignedInt,		NULL, offsetof( CommandButton, m_orderMinDelay ) },
 	{ "OrderNearbyUnitsMaxDelay",		INI::parseDurationUnsignedInt,		NULL, offsetof( CommandButton, m_orderMaxDelay ) },
 	{ "OrderNearbyUnitsIntervalDelay",	INI::parseDurationUnsignedInt,		NULL, offsetof( CommandButton, m_orderIntervalDelay ) },
+	{ "InstancesRequired",			INI::parseNameKeyVectorAppend,			NULL, offsetof( CommandButton, m_instancesRequired ) },
+	{ "RequiresAllInstances",		INI::parseBool,			NULL, offsetof( CommandButton, m_requiresAllInstances ) },
 
 	{ NULL,						NULL,												 NULL, 0 }
 
@@ -706,6 +708,9 @@ CommandButton::CommandButton( void )
 	m_orderMinDelay = 0;
 	m_orderMaxDelay = 0;
 	m_orderIntervalDelay = 0;
+
+	m_instancesRequired.clear();
+	m_requiresAllInstances = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2109,8 +2114,9 @@ void ControlBar::evaluateContextUI( void )
 		if( obj->getStatusBits().test( OBJECT_STATUS_SOLD ) )
 			return;
 
-		static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
-		OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+		//static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
+		//OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+		OCLUpdate *update = obj->getOCLUpdate();
 
 		//
 		// a command center is context sensitive itself, if a side has *NOT* been chosen we display
@@ -3592,6 +3598,16 @@ void ControlBar::populateSpecialPowerShortcut( Player *player)
 			{
 				const UpgradeTemplate *upgrade = commandButton->getUpgradeTemplate();
 				if( upgrade && !ThePlayerList->getLocalPlayer()->hasUpgradeComplete( upgrade->getUpgradeMask() ) )
+				{
+					//Kris: 8/13/03 - Don't show shortcut buttons that require upgrades we don't have. As far as
+					//I know, only the radar van scan has this. The MOAB is handled differently (sciences).
+					continue;
+				}
+			}
+
+			if( BitIsSet( commandButton->getOptions(), NEED_INSTANCE ) )
+			{
+				if( !ThePlayerList->getLocalPlayer()->hasInstance( commandButton->getInstancesRequired(), commandButton->getRequiresAllInstances() ) )
 				{
 					//Kris: 8/13/03 - Don't show shortcut buttons that require upgrades we don't have. As far as
 					//I know, only the radar van scan has this. The MOAB is handled differently (sciences).

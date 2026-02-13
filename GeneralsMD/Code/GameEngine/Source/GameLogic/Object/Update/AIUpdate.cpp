@@ -1254,6 +1254,7 @@ UpdateSleepTime AIUpdateInterface::update( void )
 			! obj->isDisabledByType( DISABLED_EMP ) &&
 			! obj->isDisabledByType( DISABLED_SUBDUED ) &&
 			! obj->isDisabledByType( DISABLED_HACKED ) &&
+			! obj->isDisabledByType( DISABLED_CONSTRAINED ) &&
 			! obj->isDisabledByType( DISABLED_FROZEN ) )
 	{
 		// If we are dead, don't let the turrets do anything anymore, or else they will keep attacking
@@ -4700,6 +4701,19 @@ const Coord3D *AIUpdateInterface::getCurrentVictimPos( void ) const
 	return NULL;
 }
 
+//----------------------------------------------------------------------------------------------------------
+/**
+ * Notify the update the current victim is dead
+ */
+void AIUpdateInterface::notifyVictimIsDead()
+{
+	Object *obj = getObject();
+	if(obj->isCurWeaponLockedPriority() || obj->getWeaponSlotActivatedByGUI() >= 0)
+	{
+		obj->setWeaponsActivatedByGUI(FALSE);
+		obj->releaseWeaponLock(LOCKED_PRIORITY);
+	}
+}
 
 /**
  * Set the behavior modifier for this agent
@@ -5012,7 +5026,7 @@ Object* AIUpdateInterface::getNextMoodTarget( Bool calledByAI, Bool calledDuring
 		if (teamVictim) {
 			// Make sure we can attack the team victim.  Mixed teams can acquire aircraft, and units
 			// like toxin tractors shouldn't acquire aircraft. jba. [8/27/2003]
-			CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, teamVictim, CMD_FROM_AI );
+			CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, teamVictim, CMD_FROM_AI, (WeaponSlotType)-1, TRUE );
 			if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING ) {
 				teamVictim = NULL; // Can't attack him. jba [8/27/2003]
 			}

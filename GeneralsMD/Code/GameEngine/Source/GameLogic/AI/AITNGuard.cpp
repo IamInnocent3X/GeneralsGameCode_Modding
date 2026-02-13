@@ -92,7 +92,7 @@ static Bool hasAttackedMeAndICanReturnFire( State *thisState, void* /*userData*/
 		return FALSE;
 	}
 
-	CanAttackResult result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET, target, CMD_FROM_AI);
+	CanAttackResult result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET, target, CMD_FROM_AI, (WeaponSlotType)-1, TRUE);
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{
 		return TRUE;
@@ -240,7 +240,7 @@ Bool AITNGuardMachine::lookForInnerTarget(void)
 							if (owner->getRelationship(attacker) != ENEMIES) {
 								continue;
 							}
-							CanAttackResult result = getOwner()->getAbleToAttackSpecificObject(ATTACK_TUNNEL_NETWORK_GUARD, attacker, CMD_FROM_AI);
+							CanAttackResult result = getOwner()->getAbleToAttackSpecificObject(ATTACK_TUNNEL_NETWORK_GUARD, attacker, CMD_FROM_AI, (WeaponSlotType)-1, TRUE);
 							if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 							{
 								setNemesisID(attackerID);
@@ -352,7 +352,7 @@ StateReturnType AITNGuardInnerState::onEnter( void )
 static Object *TunnelNetworkScan(Object *owner)
 {
 		PartitionFilterRelationship					f1(owner, PartitionFilterRelationship::ALLOW_ENEMIES);
-		PartitionFilterPossibleToAttack			f2(ATTACK_NEW_TARGET, owner, CMD_FROM_AI);
+		PartitionFilterPossibleToAttack			f2(ATTACK_NEW_TARGET, owner, CMD_FROM_AI, TRUE);
 		PartitionFilterSameMapStatus				filterMapStatus(owner);
 
 		PartitionFilter *filters[16];

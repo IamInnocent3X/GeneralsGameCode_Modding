@@ -58,6 +58,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
@@ -699,9 +700,10 @@ Bool Drawable::getShouldAnimate( Bool considerPower ) const
 
         (  obj->isDisabledByType( DISABLED_HACKED ) 
 				|| obj->isDisabledByType( DISABLED_PARALYZED ) 
-				|| obj->isDisabledByType( DISABLED_STUNNED )
+				|| obj->isDisabledByType( DISABLED_STUNNED ) 
 				|| obj->isDisabledByType( DISABLED_EMP ) 
 				|| obj->isDisabledByType( DISABLED_SUBDUED ) 
+				|| obj->isDisabledByType( DISABLED_CONSTRAINED ) 
 				|| obj->isDisabledByType( DISABLED_FROZEN )
 				// srj sez: unmanned things also should not animate. (eg, gattling tanks,
 				// which have a slight barrel animation even when at rest). if this causes
@@ -3206,6 +3208,7 @@ void Drawable::drawIconUI( void )
 			return;
 		drawHealing( healthBarRegion );//call so dead things can kill their healing icons
 		drawBombed( healthBarRegion );
+		drawProductionRevealed( healthBarRegion );
 
 
 		//Disabled for multiplay!
@@ -4239,6 +4242,41 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 		if(getIconInfo()->m_keepTillFrame[ ICON_BOMB_REMOTE ] <= now )
 		{
 			killIcon(ICON_BOMB_REMOTE);
+		}
+	}
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void Drawable::drawProductionRevealed(const IRegion2D* healthBarRegion)
+{
+
+	const Object *obj = getObject();
+	const ProductionUpdateInterface *puInterface = obj->getProductionUpdateInterface();
+	if( puInterface && puInterface->showProductionViewToEnemy() && rts::getObservedOrLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES )
+	{
+		const ProductionEntry *currentProduction = puInterface->firstProduction();
+		const Image* portrait = currentProduction && currentProduction->getProductionObject() ? currentProduction->getProductionObject()->getSelectedPortraitImage() : NULL;
+		//
+		// we are going to draw the healing icon relative to the size of the health bar region
+		// since that region takes into account hit point size and zoom factor of the camera too
+		//
+		if( portrait && healthBarRegion )
+		{
+			constexpr Real objScale = 0.975f;
+			Real zoomScale = objScale / TheTacticalView->getZoom();
+			Real vetBoxWidth  = portrait->getImageWidth()*zoomScale;
+			Real vetBoxHeight = portrait->getImageHeight()*zoomScale;
+
+			// given our scaled width and height we need to find the top left point to draw the image at
+			ICoord2D screen;
+			Int barWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
+			Int barHeight = healthBarRegion->hi.y - healthBarRegion->lo.y;
+
+			screen.x = REAL_TO_INT( healthBarRegion->lo.x + (barWidth * 0.5f) - (vetBoxWidth * 0.5f) );
+			screen.y = REAL_TO_INT( healthBarRegion->lo.y + barHeight * 0.5f ) + BOMB_ICON_EXTRA_OFFSET;
+
+			// draw the image
+			TheDisplay->drawImage(portrait, screen.x + 1, screen.y + 1, screen.x + 1 + vetBoxWidth, screen.y + 1 + vetBoxHeight);
 		}
 	}
 }

@@ -698,6 +698,8 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "CheckBoxBoundariesForDistCalc",	INI::parseBool, NULL, offsetof(GlobalData, m_checkBoxBoundariesForDistCalc) },
 
 	{ "EnableDoubleClick",	INI::parseBool, NULL, offsetof(GlobalData, m_enableDoubleClick) },
+	{ "EnableKillPilotForStructures",	INI::parseBool, NULL, offsetof(GlobalData, m_enableKillPilotForStructures) },
+	{ "EnableNestedStructures",	INI::parseBool, NULL, offsetof(GlobalData, m_enableNestedStructures) },
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, NULL, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, NULL, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1299,6 +1301,8 @@ GlobalData::GlobalData()
 	m_useAccurateSphereToRectCollision = FALSE;
 	m_checkBoxBoundariesForDistCalc = FALSE;
 	m_enableDoubleClick = FALSE;
+	m_enableKillPilotForStructures = FALSE;
+	m_enableNestedStructures = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

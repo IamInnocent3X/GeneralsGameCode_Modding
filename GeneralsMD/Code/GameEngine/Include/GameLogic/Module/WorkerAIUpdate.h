@@ -77,11 +77,15 @@ public:
 	Int m_upgradedSupplyBoost;
 	Bool m_repairClearsParasite;								///< repairing object clears any parasite within them
 	std::vector<AsciiString> m_repairClearsParasiteKeys;
+	KindOfMaskType m_kindOf;									///< Only these types can repair -- defaults to structures.
+	KindOfMaskType m_forbiddenKindOf;							///< Only these types can repair -- defaults to structures.
 
 	WorkerAIUpdateModuleData()
 	{
 		m_maxBoxesData = 0;
 		m_repairHealthPercentPerSecond = 0.0f;
+		m_kindOf = MAKE_KINDOF_MASK(KINDOF_STRUCTURE);
+		m_forbiddenKindOf.clear();
 		m_boredTime = 0.0f;
 		m_boredRange = 0.0f;
 		m_centerDelay = 0;
@@ -100,6 +104,8 @@ public:
 		{
 			{ "MaxBoxes",					INI::parseInt,		NULL, offsetof( WorkerAIUpdateModuleData, m_maxBoxesData ) },
 			{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	NULL, offsetof( WorkerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+			{ "RepairKindOf",	KindOfMaskType::parseFromINI,	NULL, offsetof( WorkerAIUpdateModuleData, m_kindOf ) },
+			{ "RepairForbiddenKindOf",	KindOfMaskType::parseFromINI,	NULL, offsetof( WorkerAIUpdateModuleData, m_forbiddenKindOf ) },
 			{ "RepairClearsParasite",			INI::parseBool,	NULL, offsetof( WorkerAIUpdateModuleData, m_repairClearsParasite ) },
 			{ "RepairClearsParasiteKeys",		INI::parseAsciiStringVector, NULL, offsetof( WorkerAIUpdateModuleData, m_repairClearsParasiteKeys ) },
 			{ "BoredTime",										INI::parseDurationReal,		NULL, offsetof( WorkerAIUpdateModuleData, m_boredTime ) },
@@ -147,6 +153,10 @@ public:
 	virtual Real getBoredRange( void ) const;							///< when we're bored, we look this far away to do things
 	virtual Bool getRepairClearsParasite( void ) const;					///< whether repairing clears parasite
 	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys( void ) const;					///< keys of parasites able to clear
+	virtual const KindOfMaskType& getRepairKindOf( void ) const;	///< Only these types can repair -- defaults to structures.
+	virtual const KindOfMaskType& getRepairForbiddenKindOf( void ) const;	///< Only these types can repair -- defaults to structures.
+
+	virtual Object* findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task);
 
 	virtual Object *construct( const ThingTemplate *what,
 														 const Coord3D *pos, Real angle,

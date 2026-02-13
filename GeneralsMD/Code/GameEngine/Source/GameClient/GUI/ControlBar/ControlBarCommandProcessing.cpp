@@ -378,6 +378,9 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 	Player *player = ThePlayerList->getLocalPlayer();
 	if( player )
 	{
+		if( player->isSabotagingObjectGUICommand() )
+			return CBC_COMMAND_NOT_USED;
+
 		AudioEventRTS sound = *commandButton->getUnitSpecificSound();
 		sound.setPlayerIndex( player->getPlayerIndex() );
 		TheAudio->addAudioEvent( &sound );

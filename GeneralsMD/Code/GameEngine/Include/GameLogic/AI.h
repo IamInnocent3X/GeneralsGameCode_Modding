@@ -895,7 +895,7 @@ public:
 class AIGroup : public MemoryPoolObject, public Snapshot
 {
 private:
-	void groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShotsToFire, CommandSourceType cmdSource );					///< attack given object
+	void groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShotsToFire, CommandSourceType cmdSource, Bool doResetActivatedInGUI = TRUE, Bool doResetActivatedInGUIForSameUnit = TRUE );					///< attack given object
 
 public:
 
@@ -922,9 +922,9 @@ public:
 	void groupFollowWaypointPathExact( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
 	void groupFollowWaypointPathAsTeamExact( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
 	void groupFollowPath( const std::vector<Coord3D>* path, Object *ignoreObject, CommandSourceType cmdSource );///< follow the path defined by the given array of points
-	void groupAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
+	void groupAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource, Bool doResetActivatedInGUI = TRUE, Bool doResetActivatedInGUIForSameUnit = TRUE )
 	{
-		groupAttackObjectPrivate(false, victim, maxShotsToFire, cmdSource);
+		groupAttackObjectPrivate(false, victim, maxShotsToFire, cmdSource, doResetActivatedInGUI, doResetActivatedInGUIForSameUnit);
 	}
 	void groupForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
 	{
@@ -950,10 +950,10 @@ public:
 	void groupGuardArea( const PolygonTrigger *areaToGuard, GuardMode guardMode, CommandSourceType cmdSource ); ///< guard an area
 	void groupAttackArea( const PolygonTrigger *areaToGuard, CommandSourceType cmdSource ); ///< guard an area
 	void groupHackInternet( CommandSourceType cmdSource );				///< Begin hacking the internet for free cash from the heavens.
-	void groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions );
-	void groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *object, UnsignedInt commandOptions );
-	void groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *drawable, UnsignedInt commandOptions );
-	void groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *object, UnsignedInt commandOptions );
+	void groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions, Bool isSabotage = FALSE );
+	void groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *object, UnsignedInt commandOptions, Bool isSabotage = FALSE );
+	void groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *drawable, UnsignedInt commandOptions, Bool isSabotage = FALSE );
+	void groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *object, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 #ifdef ALLOW_SURRENDER
 	void groupSurrender( const Object *objWeSurrenderedTo, Bool surrender, CommandSourceType cmdSource );
 #endif
@@ -1032,6 +1032,8 @@ public:
 	Bool setWeaponLockForGroup( WeaponSlotType weaponSlot, WeaponLockType lockType ); ///< Set the groups' weapon choice.
 	void releaseWeaponLockForGroup(WeaponLockType lockType);///< Clear each guys weapon choice
 	void setWeaponSetFlag( WeaponSetType wst );
+
+	void setWeaponsActivatedByGUIForGroup(Bool set, WeaponSlotType weaponSlot = (WeaponSlotType)-1);
 
 protected:
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( AIGroup, "AIGroupPool" );		///< @todo Set real numbers for mem alloc

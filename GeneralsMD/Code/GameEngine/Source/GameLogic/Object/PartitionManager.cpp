@@ -6921,10 +6921,11 @@ Bool PartitionFilterLineOfSight::allow(Object *objOther)
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-PartitionFilterPossibleToAttack::PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource) :
+PartitionFilterPossibleToAttack::PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource, Bool getResultOnly ) :
 	m_attackType(t),
 	m_obj(obj),
-	m_commandSource(commandSource)
+	m_commandSource(commandSource),
+	m_getResultOnly(getResultOnly)
 {
 }
 
@@ -6936,7 +6937,7 @@ Bool PartitionFilterPossibleToAttack::allow(Object *objOther)
 	// we should have already filtered out isAbleToAttack!
 	DEBUG_ASSERTCRASH(m_obj->isAbleToAttack(), ("if the object is unable to attack at all, you should filter that out ahead of time!"));
 
-	CanAttackResult result = m_obj->getAbleToAttackSpecificObject( m_attackType, objOther, m_commandSource );
+	CanAttackResult result = m_obj->getAbleToAttackSpecificObject( m_attackType, objOther, m_commandSource, (WeaponSlotType)-1, m_getResultOnly );
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{
 		return TRUE;

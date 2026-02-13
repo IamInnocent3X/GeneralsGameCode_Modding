@@ -759,8 +759,9 @@ private:
 	const Object *m_obj;
 	CommandSourceType m_commandSource;
 	AbleToAttackType m_attackType;
+	Bool m_getResultOnly;
 public:
-	PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource);
+	PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource, Bool getResultOnly = FALSE );
 	virtual Bool allow(Object *objOther);
 #if defined(RTS_DEBUG)
 	virtual const char* debugGetName() { return "PartitionFilterPossibleToAttack"; }

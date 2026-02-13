@@ -397,6 +397,8 @@ public:
 		m_amount = 0;
 		m_kill = FALSE;
 
+		m_giveKillExpToID = INVALID_ID;
+
 		m_customDamageType = NULL;
 		m_customDamageStatusType = NULL;
 		m_customDeathType = NULL;
@@ -470,6 +472,8 @@ public:
 	DeathType			 m_deathType;						///< if this kills us, death type to be used
 	Real					 m_amount;								///< # value of how much damage to inflict
 	Bool						m_kill;									///< will always cause object to die regardless of damage.
+
+	ObjectID		   m_giveKillExpToID;							///< give kill exp to the Object
 
 	// These are used for damage causing shockwave, forcing units affected to be pushed around
 	Coord3D				 m_shockWaveVector;				///< This represents the incoming damage vector

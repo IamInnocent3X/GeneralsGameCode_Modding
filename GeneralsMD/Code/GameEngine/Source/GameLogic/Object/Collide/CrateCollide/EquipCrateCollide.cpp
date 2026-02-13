@@ -124,7 +124,7 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 			  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
 			  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
 		  {
-			  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, other, CMD_FROM_PLAYER );
+			  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, other, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 			  if(( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
 			  	   obj->getRelationship(other) == ALLIES ||
 				   ( obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))

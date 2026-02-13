@@ -123,6 +123,7 @@ static void doMoveTo( Object *obj, const Coord3D *pos )
 		{
 			ai->clearWaypointQueue();
 			obj->leaveGroup();
+			//obj->setWeaponsActivatedByGUI(FALSE);
 			obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 			ai->aiMoveToPosition( pos, CMD_FROM_PLAYER );
 		}
@@ -586,9 +587,12 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			Int maxShotsToFire = msg->getArgument( 1 )->integer;
 
 			// lock it just till the weapon is empty or the attack is "done"
-			if( currentlySelectedGroup && currentlySelectedGroup->setWeaponLockForGroup( weaponSlot, LOCKED_TEMPORARILY ))
+			if( currentlySelectedGroup)
 			{
-				currentlySelectedGroup->groupAttackPosition( NULL, maxShotsToFire, CMD_FROM_PLAYER );
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup( TRUE, weaponSlot );
+					// lock it just till the weapon is empty or the attack is "done"
+				if(currentlySelectedGroup->setWeaponLockForGroup( weaponSlot, LOCKED_TEMPORARILY ))
+					currentlySelectedGroup->groupAttackPosition( NULL, maxShotsToFire, CMD_FROM_PLAYER );
 			}
 
 			break;
@@ -660,9 +664,10 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// issue command for either single object or for selected group
 			if( currentlySelectedGroup )
 			{
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup( TRUE, weaponSlot );
 					// lock it just till the weapon is empty or the attack is "done"
 				if (currentlySelectedGroup->setWeaponLockForGroup( weaponSlot, LOCKED_TEMPORARILY ))
-					currentlySelectedGroup->groupAttackObject( targetObject, maxShotsToFire, CMD_FROM_PLAYER );
+					currentlySelectedGroup->groupAttackObject( targetObject, maxShotsToFire, CMD_FROM_PLAYER, FALSE, FALSE );
 			}
 			break;
 
@@ -713,6 +718,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			// issue command for either single object or for selected group
 			if( currentlySelectedGroup )
 			{
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup( TRUE, weaponSlot );
 					// lock it just till the weapon is empty or the attack is "done"
 				if (currentlySelectedGroup->setWeaponLockForGroup( weaponSlot, LOCKED_TEMPORARILY ))
  					currentlySelectedGroup->groupAttackPosition( &targetLoc, maxShotsToFire, CMD_FROM_PLAYER );
@@ -753,7 +759,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				//Use the selected group!
 				if( currentlySelectedGroup )
 				{
-					currentlySelectedGroup->groupDoSpecialPower( specialPowerID, options );
+					currentlySelectedGroup->groupDoSpecialPower( specialPowerID, options, msg->getArgument(3)->boolean );
 				}
 			}
 			break;
@@ -798,7 +804,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				//Use the selected group!
 				if( currentlySelectedGroup )
 				{
-					currentlySelectedGroup->groupDoSpecialPowerAtLocation( specialPowerID, &targetCoord, angle, objectInWay, options );
+					currentlySelectedGroup->groupDoSpecialPowerAtLocation( specialPowerID, &targetCoord, angle, objectInWay, options, msg->getArgument(6)->boolean );
 				}
 			}
 			break;
@@ -847,9 +853,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				if( currentlySelectedGroup )
 				{
 					if(drawable)
-						currentlySelectedGroup->groupDoSpecialPowerAtDrawable( specialPowerID, drawable, options );
+						currentlySelectedGroup->groupDoSpecialPowerAtDrawable( specialPowerID, drawable, options, msg->getArgument(5)->boolean );
 					else
-						currentlySelectedGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options );
+						currentlySelectedGroup->groupDoSpecialPowerAtObject( specialPowerID, target, options, msg->getArgument(5)->boolean );
 				}
 			}
 			break;
@@ -863,6 +869,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if (currentlySelectedGroup)
 			{
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupAttackMoveToPosition( &dest, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 			}
@@ -880,6 +887,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				if( thisPlayer->getUnitsMoveInFormation() )
 					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
 
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
 			}
@@ -900,6 +908,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
 
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
 			}
@@ -915,6 +924,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			if( currentlySelectedGroup )
 			{
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupMoveToPosition( &dest, true, CMD_FROM_PLAYER );
 			}
@@ -1092,6 +1102,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if( currentlySelectedGroup )
 			{
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupEnter( enter, CMD_FROM_PLAYER );
 			}
@@ -1149,6 +1160,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				//if (hasArgs)
 				//	pos = msg->getArgument(0)->location;
 
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 
 				// evacuate message is for the selected group
@@ -1198,6 +1210,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 //			ObjectID sourceID = msg->getArgument( 0 )->objectID;
 			if( currentlySelectedGroup )
 			{
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupHackInternet( CMD_FROM_PLAYER );
 			}
@@ -1342,7 +1355,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				{
 
 					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
-					currentlySelectedGroup->groupAttackObject( enemy, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
+					currentlySelectedGroup->groupAttackObject( enemy, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER, TRUE, FALSE );
 
 				}
 
@@ -1379,6 +1392,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if (currentlySelectedGroup)
 			{
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 
 				/////////////////////////////////////////////////////////////////////
 				//Lorenzen sez: unclear, yet how to solve this for all cases
@@ -1396,11 +1410,13 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 					currentlySelectedGroup->setWeaponLockForGroup( PRIMARY_WEAPON, LOCKED_TEMPORARILY );
 					currentlySelectedGroup->groupAttackPosition( pos, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);
+					currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				}
 				else
 				///////////////////////////////////////////////////////////////////
 				{
 					currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);
+					currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 					currentlySelectedGroup->groupAttackPosition( pos, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
 				}
 

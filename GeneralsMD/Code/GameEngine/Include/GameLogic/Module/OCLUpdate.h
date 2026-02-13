@@ -89,6 +89,8 @@ public:
 	virtual void onBuildComplete();
 	virtual void onCreate( void ) { onBuildComplete(); }
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	void setDisabledUntilFrame(UnsignedInt frame);
+	UnsignedInt getRemainingSabotagedFrames() const;
 	UpdateSleepTime calcSleepTime() const;
 
 protected:
@@ -97,6 +99,8 @@ protected:
 	UnsignedInt			m_timerStartedFrame;
 	UnsignedInt			m_nextCreationDelay;
 	UnsignedInt			m_timerStartedDelay;
+	UnsignedInt			m_disabledUntilFrame;
+	Real				m_countdownPercentWhileDisabled;
 	Bool						m_isFactionNeutral;
 	Color						m_currentPlayerColor;
 

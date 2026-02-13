@@ -66,6 +66,7 @@
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/Module/ContainModule.h"
 
 
@@ -1040,6 +1041,10 @@ void SpecialAbilityUpdate::startPreparation()
 						return;
 					}
 				}
+        if( !data->m_canHackOrCaptureAirborneTargets && target->isAirborneTarget() )// is in the sky
+        {
+          return;
+        }
       }
 
 
@@ -1071,6 +1076,16 @@ void SpecialAbilityUpdate::startPreparation()
         Relationship r = getObject()->getRelationship(target);
         if( r == ALLIES )
           return;
+
+        if( !data->m_canHackOrCaptureAirborneTargets && target->isAirborneTarget() )// is in the sky
+        {
+          return;
+        }
+
+        if (data->m_useSabotageBehavior && !canDoSabotageSpecialCheck(target, spTemplate->getName()) )
+        {
+          return;
+        }
 
         //Specialized code that specifically creates and looks up a laser update.
         Object *specialObject = createSpecialObject();
@@ -1188,7 +1203,7 @@ Bool SpecialAbilityUpdate::continuePreparation()
       }
 
       Relationship r = getObject()->getRelationship(target);
-      if(data->m_targetsMask == 0)
+      if( data->m_targetsMask == 0 )
       {
         if( r == ALLIES )
         {
@@ -1202,6 +1217,19 @@ Bool SpecialAbilityUpdate::continuePreparation()
             )
       {
         return false;
+      }
+
+      if( spTemplate->getSpecialPowerType() == SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK )
+      {
+        if( !data->m_canHackOrCaptureAirborneTargets && target->isAirborneTarget() )// is in the sky
+        {
+          return false;
+        }
+
+        if( data->m_useSabotageBehavior && !canDoSabotageSpecialCheck(target, spTemplate->getName()) )
+        {
+          return false;
+        }
       }
 
       //Specialized code that specifically creates and looks up a laser update.
@@ -1235,6 +1263,16 @@ Bool SpecialAbilityUpdate::continuePreparation()
       if( r == ALLIES )
       {
         //It's been captured by a colleague, so cancel!
+        return false;
+      }
+
+      if( !data->m_canHackOrCaptureAirborneTargets && target->isAirborneTarget() )// is in the sky
+      {
+        return false;
+      }
+
+      if (data->m_useSabotageBehavior && !canDoSabotageSpecialCheck(target, spTemplate->getName()))
+      {
         return false;
       }
 
@@ -1394,6 +1432,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         //and setup timers, etc.
         update->initStickyBomb( target, object );
 
+        if( data->m_useSabotageBehavior )
+          doSabotage( target, spTemplate->getName() );
 
       }
       break;
@@ -1414,8 +1454,23 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       if ( r == ALLIES)
         return;
 
-      //Disable the target for a specified amount of time.
-      target->setDisabledUntil( DISABLED_HACKED, TheGameLogic->getFrame() + data->m_effectDuration );
+      // see if there's sabotage behavior to override
+      if( data->m_useSabotageBehavior )
+      {
+        doSabotage(target, spTemplate->getName());
+      }
+      else
+      {
+        if( target->isKindOf( KINDOF_AIRCRAFT ) && target->isAirborneTarget() )// is in the sky
+        {
+          target->kill();// @todo this should use some sort of DEADSTICK DIE or something...
+        }
+        else
+        {
+          //Disable the target for a specified amount of time.
+          target->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_effectDuration );
+        }
+      }
 
       UnsignedInt durationInterleaveFactor = 1;
       Real targetFootprintArea = target->getGeometryInfo().getFootprintArea();
@@ -1459,6 +1514,11 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         return;
       }
 
+      if( data->m_useSabotageBehavior )
+          doSabotage( target, spTemplate->getName() );
+      else
+     {
+
       if( target->checkAndDetonateBoobyTrap(getObject()) )
       {
         // Whoops, it was mined.  Cancel if it or us is now dead.
@@ -1490,14 +1550,15 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
 
       target->defect( object->getControllingPlayer()->getDefaultTeam(), 1); // one frame of flash!
 
+      object->getControllingPlayer()->getAcademyStats()->recordBuildingCapture();
+     }
+
       SpecialPowerModuleInterface *spmInterface = getMySPM();
       if (spmInterface && spTemplate->getSpecialPowerType() == SPECIAL_BLACKLOTUS_CAPTURE_BUILDING )
       {
         // only for black lotus, not infantry capture which resets in contunueprep()
         spmInterface->startPowerRecharge();
       }
-
-      object->getControllingPlayer()->getAcademyStats()->recordBuildingCapture();
       break;
     }
     case SPECIAL_BLACKLOTUS_STEAL_CASH_HACK:
@@ -1510,6 +1571,10 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         return;
       }
 
+      if( data->m_useSabotageBehavior )
+          doSabotage( target, spTemplate->getName() );
+      else
+     {
       //Steal cash from the other team!
       Money *targetMoney = target->getControllingPlayer()->getMoney();
       Money *objectMoney = object->getControllingPlayer()->getMoney();
@@ -1553,6 +1618,7 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
           TheInGameUI->addFloatingText( moneyString, &pos, GameMakeColor( 255, 0, 0, 255 ) );
         }
       }
+     }
       break;
     }
 
@@ -1619,6 +1685,9 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
           //Setting the producer ID allows the sticky bomb update module to initialize
           //and setup timers, etc.
           update->initStickyBomb( target, object );
+
+          if( data->m_useSabotageBehavior )
+            doSabotage( target, spTemplate->getName() );
         }
       }
       break;
@@ -1777,6 +1846,48 @@ UnsignedInt SpecialAbilityUpdate::getSpecialObjectMax() const
 {
   const SpecialAbilityUpdateModuleData* data = getSpecialAbilityUpdateModuleData();
   return data->m_maxSpecialObjects;
+}
+
+//-------------------------------------------------------------------------------------------------
+WeaponSlotType SpecialAbilityUpdate::getWeaponSlot() const
+{
+  WeaponSlotType wslot = (WeaponSlotType)INI::scanLookupList(getSpecialAbilityUpdateModuleData()->m_weaponSlotName.str(), TheWeaponSlotTypeNamesLookupList);
+  return wslot;
+}
+
+//-------------------------------------------------------------------------------------------------
+void SpecialAbilityUpdate::doSabotage( Object *other, const AsciiString& specialPowerName )
+{
+  Object *obj = getObject();
+  for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+  {
+    CollideModuleInterface* collide = (*m)->getCollide();
+    if (!collide)
+      continue;
+
+    if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == specialPowerName && collide->canDoSabotageSpecialCheck(other) )
+    {
+      collide->doSabotage(other, obj);
+    }
+  }
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool SpecialAbilityUpdate::canDoSabotageSpecialCheck( const Object *other, const AsciiString& specialPowerName ) const
+{
+  const Object *obj = getObject();
+  for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+  {
+    CollideModuleInterface* collide = (*m)->getCollide();
+    if (!collide)
+      continue;
+
+    if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == specialPowerName && collide->canDoSabotageSpecialCheck(other) )
+    {
+      return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------

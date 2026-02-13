@@ -185,7 +185,7 @@ Bool KodiakUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *sp
 		return FALSE;
 	}
 
-	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) )
+	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) && !BitIsSet( commandOptions, IS_DOING_SABOTAGE ) )
 	{
 		m_initialTargetPosition.set( targetPos );
 		m_overrideTargetDestination.set( targetPos );

@@ -702,6 +702,8 @@ public:
 
 	Bool getShrapnelDoesNotRequireVictim() const { return m_shrapnelDoesNotRequireVictim; }
 
+	Bool getUseOnlyInGUI() const { return m_useOnlyInGUI; }
+
 	Bool passRequirements (const Object *source) const;
 	Int calcROFForMoving(const Object *source, Int Delay) const;
 
@@ -981,6 +983,8 @@ private:
 
 	UnsignedInt m_invulnerabilityDuration;
 
+	Bool m_useOnlyInGUI;
+
 	mutable HistoricWeaponDamageList m_historicDamage;
 	mutable UnsignedInt m_historicDamageTriggerId;
 };
@@ -1225,6 +1229,8 @@ public:
 	Bool getWeaponIgnoresObstacles() const { return m_template->getWeaponIgnoresObstacles(); }
 
 	UnsignedInt getInvulnerabilityDuration() const { return m_template->getInvulnerabilityDuration(); }
+
+	Bool getUseOnlyInGUI() const { return m_template->getUseOnlyInGUI(); }
 
 	Int getWeaponPriority(const Object *source, const Object *target) const;
 	Int getWeaponPriority(const Object *source, const Coord3D *pos) const;

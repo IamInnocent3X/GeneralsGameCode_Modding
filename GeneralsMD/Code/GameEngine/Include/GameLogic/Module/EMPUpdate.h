@@ -62,6 +62,7 @@ public:
 	TintStatus			m_tintStatus;
 	AsciiString			m_customTintStatus;
 	KindOfMaskType 		m_affectsKindOf;
+	Bool				m_affectsContainOnly;
 	Bool				m_empProjectileSubdual;
 	AsciiString			m_empProjectileDeathType;
 	AsciiString			m_empProjectileCustomDeathType;
@@ -90,6 +91,7 @@ public:
 		m_empProjectileCustomDeathType = NULL;
 
     m_affectsKindOf = KINDOFMASK_NONE;
+	m_affectsContainOnly = FALSE;
 	m_victimKindOf.clear();
     m_victimKindOfNot.clear();
 	}
@@ -115,6 +117,7 @@ public:
 			{ "DoesNotAffectMyOwnBuildings", INI::parseBool, NULL, offsetof( EMPUpdateModuleData, m_doesNotAffectMyOwnBuildings ) },
 			{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( EMPUpdateModuleData, m_disabledType ) },
 			{ "AffectsKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( EMPUpdateModuleData, m_affectsKindOf ) },
+			{ "AffectsContainOnly",	INI::parseBool,	NULL, offsetof( EMPUpdateModuleData, m_affectsContainOnly ) },
 			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( EMPUpdateModuleData, m_tintStatus ) },
 			{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( EMPUpdateModuleData, m_customTintStatus ) },
 

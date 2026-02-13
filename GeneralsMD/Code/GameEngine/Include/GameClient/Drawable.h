@@ -826,6 +826,7 @@ private:
 	void drawBombed( const IRegion2D* healthBarRegion );						///< draw icons
 	void drawDisabled( const IRegion2D* healthBarRegion );					///< draw icons
 	void drawBattlePlans( const IRegion2D* healthBarRegion );				///< Icons rendering for active battle plan statii
+	void drawProductionRevealed( const IRegion2D* healthBarRegion );			///< draw production query of the current factory
 
 	Bool drawsAnyUIText( void );
 

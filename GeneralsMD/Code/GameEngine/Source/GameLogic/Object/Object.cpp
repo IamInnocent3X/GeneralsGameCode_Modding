@@ -93,8 +93,10 @@
 #include "GameLogic/Module/ObjectDelayedOrderHelper.h"
 #include "GameLogic/Module/ObjectDisabledHelper.h"
 #include "GameLogic/Module/ObjectLevitationHelper.h"
+#include "GameLogic/Module/ObjectPowerOutrageHelper.h"
 #include "GameLogic/Module/ObjectRepulsorHelper.h"
 #include "GameLogic/Module/ObjectSMCHelper.h"
+#include "GameLogic/Module/ObjectSpecialPowerHelper.h"
 #include "GameLogic/Module/ObjectWeaponStatusHelper.h"
 #include "GameLogic/Module/OverchargeBehavior.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
@@ -236,6 +238,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_indicatorColor(0),
 	m_ai(NULL),
 	m_physics(NULL),
+	m_oclUpdate(NULL),
 	m_hijackerUpdate(NULL),
 	m_geometryInfo(tt->getTemplateGeometryInfo()),
 	m_containedBy(NULL),
@@ -270,7 +273,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_partitionLastShroud(NULL),
 	m_partitionLastThreat(NULL),
 	m_partitionLastValue(NULL),
+	m_powerOutrageHelper(NULL),
 	m_smcUntil(NEVER),
+	m_specialPowerHelper(NULL),
 	m_privateStatus(0),
 	m_formationID(NO_FORMATION_ID),
 	m_formationIsCommandMap(FALSE),
@@ -519,6 +524,16 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		*curB++ = m_delayedOrderHelper;
 	}
 
+	if( tt->isKindOf(KINDOF_POWERED) || tt->isKindOf(KINDOF_POWERED_TANK) || tt->getEnergyProduction() != 0 || tt->getEnergyBonus() != 0 )
+	{
+		static const NameKeyType powerOutrageHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_PowerOutrageHelper" );
+		static ObjectPowerOutrageHelperModuleData powerOutrageModuleData;
+		powerOutrageModuleData.setModuleTagNameKey( powerOutrageHelperModuleDataTagNameKey );
+		m_powerOutrageHelper = newInstance(ObjectPowerOutrageHelper)(this, &powerOutrageModuleData);
+		*curB++ = m_powerOutrageHelper;
+	}
+
+	Bool hasSpecialPowerModule = FALSE;
 
 	// behaviors are always done first, so they get into the publicModule arrays
 	// before anything else.
@@ -570,6 +585,13 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			m_physics = (PhysicsBehavior*)newMod;
 		}
 
+		static NameKeyType key_OCLUpdate = NAMEKEY("OCLUpdate");
+		if (!m_oclUpdate && newMod->getModuleNameKey() == key_OCLUpdate)
+		{
+			//DEBUG_ASSERTCRASH(m_oclUpdate == NULL, ("You should never have more than one OCLUpdate module (%s)",getTemplate()->getName().str()));
+			m_oclUpdate = (OCLUpdate*)newMod;
+		}
+
 		HijackerUpdateInterface* hijackUpdate = newMod->getHijackerUpdateInterface();
 		if (hijackUpdate)
 		{
@@ -593,6 +615,18 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 		if (newMod->getCollide() && newMod->getCollide()->isParasiteEquipCrateCollide())
 			m_hasParasiteCrateCollide = TRUE;
+
+		if (!hasSpecialPowerModule && newMod->getSpecialPower())
+			hasSpecialPowerModule = TRUE;
+	}
+
+	if( hasSpecialPowerModule )
+	{
+		static const NameKeyType specialPowerHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_SpecialPowerHelper" );
+		static ObjectSpecialPowerHelperModuleData specialPowerModuleData;
+		specialPowerModuleData.setModuleTagNameKey( specialPowerHelperModuleDataTagNameKey );
+		m_specialPowerHelper = newInstance(ObjectSpecialPowerHelper)(this, &specialPowerModuleData);
+		*curB++ = m_specialPowerHelper;
 	}
 
 	*curB = NULL;
@@ -690,8 +724,12 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_ignoresObstacleForViewBlock = FALSE;
 	m_ignoreRailgunCheck = FALSE;
 
+	m_commandSetDisableUntil = 0;
+
 	m_currentTargetCoords.zero();
 	m_controlBarModifiersApplied.clear();
+	m_powerLoss.clear();
+	m_commandsDisableUntil.clear();
 
 	// TheSuperHackers @bugfix Mauller/xezon 02/08/2025 sendObjectCreated needs calling before CreateModule's are initialized to prevent drawable related crashes
 	// This predominantly occurs with the veterancy create module when the chemical suits upgrade is unlocked as it tries to set the terrain decal.
@@ -840,6 +878,7 @@ Object::~Object()
 	// note, do NOT free these, there are just a shadow copy!
 	m_ai = NULL;
 	m_physics = NULL;
+	m_oclUpdate = NULL;
 	m_hijackerUpdate = NULL;
 	m_radarUpgrade = NULL;
 	m_stickyBombUpdate = NULL;
@@ -875,6 +914,8 @@ Object::~Object()
 	m_delayedOrderHelper = NULL;
 	m_disabledHelper = NULL;
 	m_levitationHelper = NULL;
+	m_powerOutrageHelper = NULL;
+	m_specialPowerHelper = NULL;
 
 	// reset id to zero so we never mistaken grab "dead" objects
 	m_id = INVALID_ID;
@@ -1977,7 +2018,7 @@ Bool Object::getProgressBarShowingInfo(bool selected, Real& progress, Int& type,
 	where we already know that isAbleToAttack() == true. so you should always
 	call isAbleToAttack prior to calling this! (srj)
 */
-CanAttackResult Object::getAbleToAttackSpecificObject( AbleToAttackType t, const Object* target, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
+CanAttackResult Object::getAbleToAttackSpecificObject( AbleToAttackType t, const Object* target, CommandSourceType commandSource, WeaponSlotType specificSlot, Bool getResultOnly ) const
 {
 	// NO! BAD! WRONG!
 	// If we can't attack at all, then we cannot attack this
@@ -1985,16 +2026,15 @@ CanAttackResult Object::getAbleToAttackSpecificObject( AbleToAttackType t, const
 	//	return FALSE;
 
 	// Otherwise leave it up to our weapons.
-	return m_weaponSet.getAbleToAttackSpecificObject( t, this, target, commandSource, specificSlot );
+	return m_weaponSet.getAbleToAttackSpecificObject( t, this, target, commandSource, specificSlot, getResultOnly );
 }
 
 //=============================================================================
 //Used for base defenses and otherwise stationary units to see if you can attack a position potentially out of range.
-CanAttackResult Object::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot ) const
+CanAttackResult Object::getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot, Bool getResultOnly ) const
 {
-	return m_weaponSet.getAbleToUseWeaponAgainstTarget( attackType, this, victim, pos, commandSource, specificSlot );
+	return m_weaponSet.getAbleToUseWeaponAgainstTarget( attackType, this, victim, pos, commandSource, specificSlot, getResultOnly );
 }
-
 
 //=============================================================================
 Bool Object::chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteria criteria, CommandSourceType cmdSource )
@@ -2006,6 +2046,12 @@ Bool Object::chooseBestWeaponForTarget(const Object* target, WeaponChoiceCriteri
 Bool Object::chooseBestWeaponForPosition(const Coord3D* pos, WeaponChoiceCriteria criteria, CommandSourceType cmdSource, Bool checkFlyingOnly )
 {
 	return m_weaponSet.chooseBestWeaponForPosition(this, pos, criteria, cmdSource, checkFlyingOnly );
+}
+
+//=============================================================================
+WeaponSlotType Object::getWeaponSlotActivatedByGUI() const
+{
+	return m_weaponSet.getWeaponSlotActivatedByGUI();
 }
 
 //DECLARE_PERF_TIMER(fireCurrentWeapon)
@@ -3285,6 +3331,10 @@ void Object::transferDisabledTillFrame(const std::vector<UnsignedInt>& disabledT
 //-------------------------------------------------------------------------------------------------
 void Object::doDisablePower(Bool isCommand)
 {
+	// Do nothing if we are sabotaged
+	if(isPowerSabotaged())
+		return;
+
 	// Set the indication from command
 	if(isCommand)
 	{
@@ -3303,7 +3353,7 @@ void Object::doDisablePower(Bool isCommand)
 		}
 
 	}
-	
+
 	// Set Disabled Type
 	if(getTemplate()->setDisabledUnderPowered())
 		setDisabledUntil( getTemplate()->getDisabledTypeUnderPowered(), FOREVER, getTemplate()->getTintStatusUnderPowered(), getTemplate()->getCustomTintStatusUnderPowered() );
@@ -3341,6 +3391,10 @@ void Object::doDisablePower(Bool isCommand)
 //-------------------------------------------------------------------------------------------------
 void Object::clearDisablePower(Bool isCommand)
 {
+	// Do nothing if we are sabotaged
+	if(isPowerSabotaged())
+		return;
+
 	// Don't clear us from Disabled Power if we are disabled from Command
 	if(!isCommand && m_disabledPowerFromCommand)
 		return;
@@ -3398,6 +3452,122 @@ void Object::clearDisablePower(Bool isCommand)
 	{
 		m_drawable->clearModelConditionFlags(getTemplate()->getModelConditionUnderPowered());
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::doPowerSabotage(UnsignedInt frame, Int amount, Real percent, Int giveEnergyToPlayer)
+{
+	if(giveEnergyToPlayer >= 0)
+	{
+		Int maxEnergy = 0;
+
+		if ( !testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION) )
+		{
+			maxEnergy = getTemplate()->getEnergyProduction();
+			// We can't affect something that consumes, or else we go low power which removes the consumption
+			// which makes us not low power so we add the consumption so we go low power...
+			// This check also guaards the IsDisabled in friend_adjustPower above
+			static NameKeyType powerPlant = NAMEKEY("PowerPlantUpgrade");
+			static NameKeyType overCharge = NAMEKEY("OverchargeBehavior");
+
+			for (BehaviorModule** b = m_behaviors; *b; ++b)
+			{
+				if ((*b)->getModuleNameKey() == powerPlant)
+				{
+					PowerPlantUpgrade *powerPlantMod = (PowerPlantUpgrade*) *b;
+					if (powerPlantMod->isAlreadyUpgraded()) {
+						maxEnergy += getTemplate()->getEnergyBonus();
+					}
+				}
+				if ((*b)->getModuleNameKey() == overCharge)
+				{
+					OverchargeBehavior *overChargeMod = (OverchargeBehavior*) *b;
+					if (overChargeMod->isOverchargeActive()) {
+						maxEnergy += getTemplate()->getEnergyBonus();
+					}
+				}
+			}
+		}
+
+		if(maxEnergy > 0)
+		{
+			Int energyLoss = amount == 0 && percent == 0.0f ? maxEnergy : REAL_TO_INT((Real)amount + percent * maxEnergy);
+
+			Player *currentPlayer = giveEnergyToPlayer >= 0 ? ThePlayerList->getNthPlayer( giveEnergyToPlayer ) : NULL;
+			if(currentPlayer)
+			{
+				getControllingPlayer()->getEnergy()->setEnergyGivenTo( frame, energyLoss, currentPlayer->getPlayerIndex(), getID(), maxEnergy );
+				currentPlayer->getEnergy()->setEnergyReceivedFrom( getControllingPlayer()->getPlayerIndex() );
+			}
+
+			// Already sabotaged with Power Outrage
+			//getControllingPlayer()->getEnergy()->setPowerSabotagedTillFrame( frame, energyLoss, 0.0f, getID(), maxEnergy );
+		}
+	}
+
+	if(m_powerOutrageHelper)
+		m_powerOutrageHelper->setPowerOutrageUntil(frame);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setPauseSpecialPowersUntil(UnsignedInt frame)
+{
+	if(m_specialPowerHelper)
+		m_specialPowerHelper->setCountdownPausedUntil(frame);
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::isPowerSabotaged() const
+{
+	return m_powerOutrageHelper && m_powerOutrageHelper->getPowerOutrageUntil() > TheGameLogic->getFrame();
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setCommandsDisable(UnsignedInt frame, const std::vector<AsciiString>& commandsVec)
+{
+	if(commandsVec.empty())
+	{
+		m_commandSetDisableUntil = frame;
+	}
+	else
+	{
+		FrameCommandButtonPair pair;
+		pair.first = frame;
+		pair.second = commandsVec;
+		m_commandsDisableUntil.push_back(pair);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::isCommandDisabled(UnsignedInt now, const AsciiString& commandName)
+{
+	// No command to check
+	if(commandName.isEmpty())
+		return FALSE;
+
+	// Not disabled
+	if(m_commandsDisableUntil.empty())
+		return FALSE;
+
+	for(FrameCommandButtonVec::iterator it = m_commandsDisableUntil.begin(); it != m_commandsDisableUntil.end();)
+	{
+		if(now >= it->first)
+		{
+			it = m_commandsDisableUntil.erase( it );
+			continue;
+		}
+		else
+		{
+			for(std::vector<AsciiString>::const_iterator it_s = it->second.begin(); it_s != it->second.end(); ++it_s)
+			{
+				if((*it_s) == commandName)
+					return TRUE;
+			}
+		}
+		++it;
+	}
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4303,7 +4473,7 @@ Bool Object::isAbleToAttack() const
 	//We can't fire if we, as a portable structure, are aptly disabled
 	if ( isKindOf( KINDOF_PORTABLE_STRUCTURE ) || isKindOf( KINDOF_SPAWNS_ARE_THE_WEAPONS ))
 	{
-		if( isDisabledByType( DISABLED_HACKED ) || isDisabledByType( DISABLED_EMP ) )
+		if( isDisabledByType( DISABLED_HACKED ) || isDisabledByType( DISABLED_EMP ) || isDisabledByType( DISABLED_CONSTRAINED ) )
 			return false;
 
     if ( isKindOf( KINDOF_INFANTRY ) ) // I must be a stinger soldier or similar
@@ -4893,7 +5063,7 @@ void Object::friend_adjustPowerForPlayer( Bool incoming )
 		return;
 	}
 
-	if(isDisabledPowerByCommand() && isEffectivelyDead() && getTemplate()->getEnergyProduction() < 0)
+	if(isDisabledPowerByCommand() && ( isEffectivelyDead() || isDestroyed() ) && getTemplate()->getEnergyProduction() < 0)
 	{
 		// Dont add power if we are already disabled by command after we have died
 		return;
@@ -6035,6 +6205,102 @@ void Object::xfer( Xfer *xfer )
 		m_isReceivingDifficultyBonus = FALSE;
 
 	xfer->xferUnsignedInt(&m_weaponBonusConditionAgainst);
+
+	UnsignedShort powerLossSize = m_powerLoss.size();
+	xfer->xferUnsignedShort( &powerLossSize );// HANDY LITTLE SHORT TO SIZE MY LIST
+	UnsignedInt frame;
+	Int energyLoss;
+	Int playerIndex;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for( PowerLossVec::const_iterator it = m_powerLoss.begin(); it != m_powerLoss.end(); ++it )
+		{
+			frame = it->Frame;
+			xfer->xferUnsignedInt( &frame );
+
+			energyLoss = it->Amount;
+			xfer->xferInt( &energyLoss );
+
+			playerIndex = it->PlayerIndex;
+			xfer->xferInt( &playerIndex );
+		}
+	}
+	else
+	{
+		if( !m_powerLoss.empty() ) // sanity, list must be empty right now
+		{
+			DEBUG_CRASH(( "Object::xfer - m_powerLoss should be empty but is not" ));
+			throw SC_INVALID_DATA;
+		}
+
+		// read each entry
+		for( UnsignedInt i = 0; i < powerLossSize; ++i )
+		{
+			// read data
+			xfer->xferUnsignedInt( &frame );
+			xfer->xferInt( &energyLoss );
+			xfer->xferInt( &playerIndex );
+
+			PowerLossData loss;
+			loss.Frame = frame;
+			loss.Amount = energyLoss;
+			loss.PlayerIndex = playerIndex;
+			m_powerLoss.push_back(loss);
+		}
+	}
+
+	xfer->xferUnsignedInt(&m_commandSetDisableUntil);
+
+	UnsignedShort commandsDisableSize = m_commandsDisableUntil.size();
+	xfer->xferUnsignedShort( &commandsDisableSize );// HANDY LITTLE SHORT TO SIZE MY LIST
+	UnsignedInt commandFrame;
+	UnsignedShort commandsSize;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for( FrameCommandButtonVec::const_iterator it = m_commandsDisableUntil.begin(); it != m_commandsDisableUntil.end(); ++it )
+		{
+			commandFrame = it->first;
+			xfer->xferUnsignedInt( &commandFrame );
+
+			commandsSize = it->second.size();
+			xfer->xferUnsignedShort( &commandsSize );
+			AsciiString commandButtonName;
+			for( std::vector<AsciiString>::const_iterator it_s = it->second.begin(); it_s != it->second.end(); ++it_s )
+			{
+				commandButtonName = (*it_s);
+				xfer->xferAsciiString( &commandButtonName );
+			}
+		}
+	}
+	else
+	{
+		if( !m_commandsDisableUntil.empty() ) // sanity, list must be empty right now
+		{
+			DEBUG_CRASH(( "Object::xfer - m_commandsDisableUntil should be empty but is not" ));
+			throw SC_INVALID_DATA;
+		}
+
+		// read each entry
+		for( UnsignedInt i = 0; i < commandsDisableSize; ++i )
+		{
+			// read data
+			xfer->xferUnsignedInt( &commandFrame );
+			xfer->xferUnsignedShort( &commandsSize );
+
+			std::vector<AsciiString> commandButtonsVec;
+			AsciiString commandButtonName;
+			for( UnsignedInt i_2 = 0; i_2 < commandsSize; ++i_2 )
+			{
+				xfer->xferAsciiString( &commandButtonName );
+				commandButtonsVec.push_back(commandButtonName);
+			}
+
+			FrameCommandButtonPair pair;
+			pair.first = commandFrame;
+			pair.second = commandButtonsVec;
+			m_commandsDisableUntil.push_back(pair);
+		}
+	}
 
 }
 
@@ -9682,6 +9948,12 @@ Bool Object::hasModiferCommandOverrideWithinCommandSet( Int slotNum, const Ascii
 		}
 	}
 	return false;
+}
+
+// ------------------------------------------------------------------------------------------------
+void Object::setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot )
+{
+	m_weaponSet.setWeaponsActivatedByGUI( set, weaponSlot );
 }
 
 //=============================================================================

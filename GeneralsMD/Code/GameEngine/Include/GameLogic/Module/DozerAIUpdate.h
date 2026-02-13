@@ -118,6 +118,10 @@ public:
 	virtual Real getBoredRange( void ) const = 0;							///< when we're bored, we look this far away to do things
 	virtual Bool getRepairClearsParasite( void ) const = 0;					///< whether repairing clears parasite
 	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys( void ) const = 0;					///< keys of parasites able to clear
+	virtual const KindOfMaskType& getRepairKindOf( void ) const = 0;	///< Only these types can repair -- defaults to structures.
+	virtual const KindOfMaskType& getRepairForbiddenKindOf( void ) const = 0;	///< Only these types can repair -- defaults to structures.
+
+	virtual Object* findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task) = 0;
 
 	// methods to override for the dozer behaviors
 	virtual Object *construct( const ThingTemplate *what,
@@ -184,6 +188,8 @@ public:
 	Real m_boredRange;										///< range the dozers try to auto repair when they're bored
 	Bool m_repairClearsParasite;								///< repairing object clears any parasite within them
 	std::vector<AsciiString> m_repairClearsParasiteKeys;		///< Parasite Keys able to Clear for repair
+	KindOfMaskType m_kindOf;								///< Only these types can repair -- defaults to structures.
+	KindOfMaskType m_forbiddenKindOf;						///< Only these types can repair -- defaults to structures.
 
 	static void buildFieldParse( MultiIniFieldParse &p );
 
@@ -224,6 +230,10 @@ public:
 	virtual Real getBoredRange( void ) const;							///< when we're bored, we look this far away to do things
 	virtual Bool getRepairClearsParasite( void ) const;					///< whether repairing clears parasite
 	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys( void ) const;					///< keys of parasites able to clear
+	virtual const KindOfMaskType& getRepairKindOf( void ) const;	///< Only these types can repair -- defaults to structures.
+	virtual const KindOfMaskType& getRepairForbiddenKindOf( void ) const;	///< Only these types can repair -- defaults to structures.
+
+	virtual Object* findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task);
 
 	// methods to override for the dozer behaviors
 	virtual Object* construct( const ThingTemplate *what,

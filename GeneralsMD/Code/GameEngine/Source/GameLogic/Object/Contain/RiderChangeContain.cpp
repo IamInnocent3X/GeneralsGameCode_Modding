@@ -661,7 +661,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 	
 	Int transportSlotCount = rider->getTransportSlotCount();
 	Bool checkRecord = FALSE;
-	Bool hasScuttle = FALSE;
+	Bool hasScuttle = data->m_scuttleType == SCUTTLE_ON_EXIT || (getContainCount() <= 1 && data->m_scuttleType == SCUTTLE_ON_NO_PASSENGERS) || m_scuttledOnFrame != 0;
 
 	m_extraSlotsInUse -= transportSlotCount - 1;
 
@@ -678,11 +678,6 @@ void RiderChangeContain::onRemoving( Object *rider )
 		TransportContain::onRemoving( rider );
 	}
 
-	if(data->m_scuttleType == SCUTTLE_ON_EXIT || (getContainCount() == 0 && data->m_scuttleType == SCUTTLE_ON_NO_PASSENGERS) )
-	{
-		hasScuttle = TRUE;
-	}
-
 
 	// If we exit a Passenger from an Object that Contains more than one Passengers while we're Entering and we did not eject the First Passenger
 	// While that passenger has the same Template as the Rider, we will remove the Rider Template and leave it with the First Template.
@@ -694,34 +689,37 @@ void RiderChangeContain::onRemoving( Object *rider )
 	}
 
 	//Find the rider in the list and clear various data.
-	Bool found = FALSE;
 	AsciiString removeTemplate = NULL;
 
-	for( int i = 0; i < MAX_RIDERS; i++ )
+	if( !hasScuttle )
 	{
-		found = riderChangeRemoveCheck( rider, data->m_riders[ i ], checkRecord );
-		if (found == TRUE)
+		Bool found = FALSE;
+		for( int i = 0; i < MAX_RIDERS; i++ )
 		{
-			char charName[2];
-			sprintf( charName, "%d", i );
-			removeTemplate = charName;
-			break;
-		}
-	}
-	if (!found && !data->m_ridersCustom.empty())
-	{
-		for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
-		{
-			found = riderChangeRemoveCheck(rider, (*it), checkRecord);
+			found = riderChangeRemoveCheck( rider, data->m_riders[ i ], checkRecord );
 			if (found == TRUE)
 			{
-				removeTemplate = (*it).m_templateName;
+				char charName[2];
+				sprintf( charName, "%d", i );
+				removeTemplate = charName;
 				break;
+			}
+		}
+		if (!found && !data->m_ridersCustom.empty())
+		{
+			for (std::vector<RiderInfo>::const_iterator it = data->m_ridersCustom.begin(); it != data->m_ridersCustom.end(); ++it)
+			{
+				found = riderChangeRemoveCheck(rider, (*it), checkRecord);
+				if (found == TRUE)
+				{
+					removeTemplate = (*it).m_templateName;
+					break;
+				}
 			}
 		}
 	}
 
-	if(!removeTemplate.isEmpty() && !hasScuttle)
+	if(!removeTemplate.isEmpty())
 	{
 		Bool switchTemplate = FALSE;
 		Int CheckIndex = -1;
@@ -816,7 +814,7 @@ void RiderChangeContain::onRemoving( Object *rider )
 
 	//If we're not replacing the rider, then if the cycle is selected, transfer selection
 	//to the rider getting off (because the bike is gonna blow).
-	if( !m_containing && hasScuttle )
+	if( !m_containing && hasScuttle && m_scuttledOnFrame == 0 )
 	{
 		Drawable *containDraw = bike->getDrawable();
 		Drawable *riderDraw = rider->getDrawable();
@@ -1935,8 +1933,82 @@ const Object *RiderChangeContain::friend_getRider() const
 	return NULL;
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool RiderChangeContain::killPilotDoesNotKill( void ) const
+{
+	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
+	return !data->m_scuttleType == SCUTTLE_ON_EXIT && !data->m_scuttleType == SCUTTLE_ON_NO_PASSENGERS;
+}
 
+//-------------------------------------------------------------------------------------------------
+void RiderChangeContain::forceScuttle( void )
+{
+	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
+	Object *bike = getObject();
 
+	// check whether we should already be scuttled
+	if(m_scuttledOnFrame != 0)
+	{
+		//Bike in the process of getting scuttled.
+		UnsignedInt now = TheGameLogic->getFrame();
+		if( !bike->isEffectivelyDead() && m_scuttledOnFrame + data->m_scuttleFrames <= now )
+		{
+			//We have scuttled the bike (at least as far as tipping it over via scuttle animation. Now
+			//kill the bike in a way that will cause it to sink into the ground without any real destruction.
+			bike->kill( DAMAGE_UNRESISTABLE, DEATH_TOPPLED ); //Sneaky, eh? Toppled heheh.
+		}
+		return;
+	}
+
+	Drawable *containDraw = bike->getDrawable();
+	if( containDraw )
+	{
+		//Deselect the bike.
+		if( bike->getControllingPlayer() == ThePlayerList->getLocalPlayer() && containDraw->isSelected() )
+		{
+			TheInGameUI->setDisplayedMaxWarning( FALSE );
+
+			//Create the de-selection message for the container
+			GameMessage *teamMsg = TheMessageStream->appendMessage( GameMessage::MSG_REMOVE_FROM_SELECTED_GROUP );
+			teamMsg->appendObjectIDArgument( bike->getID() );
+			TheInGameUI->deselectDrawable( containDraw );
+		}
+
+		//Finally, scuttle the bike so nobody else can use it! <Design Spec>
+		m_scuttledOnFrame = TheGameLogic->getFrame();
+		bike->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_UNSELECTABLE ) );
+		bike->setModelConditionState( data->m_scuttleState );
+		if( !bike->getAI()->isMoving() )
+		{
+			bike->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IMMOBILE ) );
+		}
+	}
+}
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+//-------------------------------------------------------------------------------------------------
+const Object* getKillScoreCreditObj( const Object* killer ) const
+{
+	const Object* rider = *getContainedItemsList()->begin();
+	const Object* me = getObject();
+
+	// Sanity
+	if(!rider)
+		return me;
+
+	Int objLevel = me->getVeterancyLevel();
+	Int riderLevel = rider->getVeterancyLevel();
+	Int experienceValue = me->getExperienceTracker()->getExperienceValue( killer );
+	Int riderExperienceValue = rider->getExperienceTracker()->getExperienceValue( killer );
+	Int skillValue = me->getTemplate()->getSkillPointValue(objLevel);
+	Int riderSkillValue = rider->getTemplate()->getSkillPointValue(riderLevel);
+
+	if(experienceValue + skillValue > riderExperienceValue + riderSkillValue)
+		return me;
+	else
+		return rider;
+}
+#endif
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

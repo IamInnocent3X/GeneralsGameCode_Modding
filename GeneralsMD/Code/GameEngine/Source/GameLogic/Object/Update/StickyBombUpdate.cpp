@@ -34,6 +34,7 @@
 
 #include "Common/ThingTemplate.h"
 #include "Common/Player.h"
+#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/FXList.h"
@@ -45,6 +46,7 @@
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/GameLogic.h"
 
 // PRIVATE ////////////////////////////////////////////////////////////////////////////////////////
@@ -74,6 +76,7 @@ void StickyBombUpdateModuleData::parseAnimTimedName(INI* ini, void* instance, vo
 StickyBombUpdate::StickyBombUpdate( Thing *thing, const ModuleData *moduleData ) : UpdateModule( thing, moduleData )
 {
 	m_targetID		= INVALID_ID;
+	m_shooterID		= INVALID_ID;
 	m_dieFrame		= 0;
 	m_nextPingFrame = 0;
 	m_veterancyLevel = LEVEL_REGULAR;
@@ -97,6 +100,7 @@ void StickyBombUpdate::onObjectCreated()
 	Object* shooter = TheGameLogic->findObjectByID( shooterID );
 	if( shooter )
 	{
+		m_shooterID = shooterID;
 		m_veterancyLevel = shooter->getVeterancyLevel();
 		//Find the shooters target!
 		AIUpdateInterface *ai = shooter->getAIUpdateInterface();
@@ -280,8 +284,11 @@ void StickyBombUpdate::detonate()
 			damageInfo.in.m_sourcePlayerMask = getObject()->getControllingPlayer()->getPlayerMask();
 			damageInfo.in.m_damageStatusType = data->m_geometryBasedDamageWeaponTemplate->getDamageStatusType();
 
+			if(data->m_bomberGetsExperienceOnKill)
+				damageInfo.in.m_giveKillExpToID = m_shooterID;
+
 			damageInfo.in.m_isFlame = data->m_geometryBasedDamageWeaponTemplate->getIsFlame();
-			damageInfo.in.m_projectileCollidesWithBurn = data->m_geometryBasedDamageWeaponTemplate->getProjectileCollidesWithBurn();
+			//damageInfo.in.m_projectileCollidesWithBurn = data->m_geometryBasedDamageWeaponTemplate->getProjectileCollidesWithBurn();
 			damageInfo.in.m_isPoison = data->m_geometryBasedDamageWeaponTemplate->getIsPoison();
 			damageInfo.in.m_poisonMuzzleFlashesGarrison = data->m_geometryBasedDamageWeaponTemplate->getPoisonMuzzleFlashesGarrison();
 			damageInfo.in.m_isDisarm = data->m_geometryBasedDamageWeaponTemplate->getIsDisarm();
@@ -335,6 +342,25 @@ void StickyBombUpdate::detonate()
 		else if(data->m_geometryBasedDamageWeaponTemplate->getShrapnelDoesNotRequireVictim())
 		{
 			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(getObject()->getID(), INVALID_ID, getObject()->getPosition());
+		}
+	}
+
+	if( data->m_doSabotageOnDetonate && boobyTrappedObject && !boobyTrappedObject->isDestroyed() && !boobyTrappedObject->isEffectivelyDead() )
+	{
+		Object *obj = m_shooterID != INVALID_ID ? TheGameLogic->findObjectByID( m_shooterID ) : getObject();
+		if(obj && (obj->isEffectivelyDead() || obj->isDestroyed()) )
+			obj = getObject();
+
+		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+		{
+			CollideModuleInterface* collide = (*m)->getCollide();
+			if (!collide)
+				continue;
+
+			if( collide->isSabotageBuildingCrateCollide() && collide->canDoSabotageSpecialCheck(boobyTrappedObject) )
+			{
+				collide->doSabotage(boobyTrappedObject, obj);
+			}
 		}
 	}
 
@@ -423,7 +449,11 @@ void StickyBombUpdate::xfer( Xfer *xfer )
 	//Next frame that a ping sound will play.
 	xfer->xferUnsignedInt( &m_nextPingFrame );
 
+	// veterancy level for weapon bonunses
 	xfer->xferUser( &m_veterancyLevel, sizeof( VeterancyLevel ) );
+
+	// shooter ID
+	xfer->xferObjectID( &m_shooterID );
 
 }
 

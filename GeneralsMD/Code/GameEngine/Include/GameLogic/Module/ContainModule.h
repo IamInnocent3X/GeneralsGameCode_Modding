@@ -101,6 +101,13 @@ public:
 	virtual Bool isImmuneToClearBuildingAttacks() const = 0;
   virtual Bool isSpecialOverlordStyleContainer() const = 0;
   virtual Bool isAnyRiderAttacking() const = 0;
+  virtual Bool killPilotDoesNotKill() const = 0;
+
+	virtual void forceScuttle( void ) = 0;
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+	virtual const Object *getKillScoreCreditObj( const Object* killer ) const = 0;
+#endif
 
 	///< if my object gets selected, then my visible passengers should, too
 	///< this gets called from

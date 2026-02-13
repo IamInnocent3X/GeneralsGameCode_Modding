@@ -261,6 +261,7 @@
 #include "GameLogic/Module/HealCrateCollide.h"
 #include "GameLogic/Module/MoneyCrateCollide.h"
 #include "GameLogic/Module/SabotageCommandCenterCrateCollide.h"
+#include "GameLogic/Module/SabotageBehavior.h"
 #include "GameLogic/Module/SabotageFakeBuildingCrateCollide.h"
 #include "GameLogic/Module/SabotageInternetCenterCrateCollide.h"
 #include "GameLogic/Module/SabotageMilitaryFactoryCrateCollide.h"
@@ -571,6 +572,7 @@ void ModuleFactory::init( void )
 	addModule( ConvertToCarBombCrateCollide );
 	addModule( ConvertToHijackedVehicleCrateCollide );
 	addModule( EquipCrateCollide );
+	addModule( SabotageBehavior );
 	addModule( SabotageCommandCenterCrateCollide );
 	addModule( SabotageFakeBuildingCrateCollide );
 	addModule( SabotageInternetCenterCrateCollide );
