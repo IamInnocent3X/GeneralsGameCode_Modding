@@ -3885,6 +3885,9 @@ void ControlBar::updateSpecialPowerShortcut( void )
 		{
 			obj = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
 			availability = getCommandAvailability( command, obj, win );
+
+			if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+				availability = COMMAND_HIDDEN;
 		}
 		else if( command->getCommandType() == GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE )
 		{
@@ -3915,6 +3918,10 @@ void ControlBar::updateSpecialPowerShortcut( void )
 							{
 								//We want to evaluate the special powerbutton... but apply the clock overlay to our button!
 								availability = getCommandAvailability( evalButton, obj, evalButtonWin, win );
+
+								if( BitIsSet( evalButton->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( evalButton, obj ) )
+									availability = COMMAND_HIDDEN;
+
 								break;
 							}
 						}

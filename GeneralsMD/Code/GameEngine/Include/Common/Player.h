@@ -79,7 +79,6 @@ class TunnelTracker;
 class Upgrade;
 class UpgradeTemplate;
 class SpecialPowerModule;
-class CommandButton;
 
 class BattlePlanBonuses;
 

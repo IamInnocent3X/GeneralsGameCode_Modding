@@ -360,6 +360,9 @@ void ControlBar::updateContextMultiSelect( void )
 			// can we do the command
 			CommandAvailability availability = getCommandAvailability( command, obj, win );
 
+			if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+				availability = COMMAND_HIDDEN;
+
 			win->winClearStatus( WIN_STATUS_NOT_READY );
 			win->winClearStatus( WIN_STATUS_ALWAYS_COLOR );
 

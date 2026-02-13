@@ -104,11 +104,11 @@ enum CommandOption CPP_11(: Int)
 	USES_MINE_CLEARING_WEAPONSET= 0x00200000,	// uses the special mine-clearing weaponset, even if not current
 	CAN_USE_WAYPOINTS						= 0x00400000, // button has option to use a waypoint path
 	MUST_BE_STOPPED							= 0x00800000, // Unit must be stopped in order to be able to use button.
-	//SET_RIDER							= 0x01000000, // command sets the payloads for the transport (if any)
-	//SET_UPGRADE							= 0x02000000, // command sets upgrades for the object (if any)
-	NEED_INSTANCE							= 0x04000000, // command requires specific instances to be enabled
-	HIDE_WHEN_UNAVAILABLE							= 0x08000000, // hide the command on UI if the user doesn't meet its requirements
-	IS_DOING_SABOTAGE							= 0x10000000, // is doing sabotage (unable to be parsed)
+	NEED_INSTANCE							= 0x01000000, // command requires specific instances to be enabled
+	HIDE_WHEN_UNAVAILABLE							= 0x02000000, // hide the command on UI if the user doesn't meet its requirements
+	IS_DOING_SABOTAGE							= 0x04000000, // is doing sabotage (unable to be parsed)
+	//SET_RIDER							= 0x08000000, // command sets the payloads for the transport (if any)
+	//SET_UPGRADE							= 0x10000000, // command sets upgrades for the object (if any)
 };
 
 #ifdef DEFINE_COMMAND_OPTION_NAMES
@@ -142,11 +142,11 @@ static const char *const TheCommandOptionNames[] =
 	"USES_MINE_CLEARING_WEAPONSET",
 	"CAN_USE_WAYPOINTS",
 	"MUST_BE_STOPPED",
-	//"SET_RIDER",
-	//"SET_UPGRADE",
 	"NEED_INSTANCE",
 	"HIDE_WHEN_UNAVAILABLE",
 	"---DO-NOT-USE---2", //IS_DOING_SABOTAGE
+	//"SET_RIDER",
+	//"SET_UPGRADE",
 
 	NULL
 };
@@ -922,6 +922,7 @@ protected:
 
 	// the following methods are for updating the currently showing context
 	CommandAvailability getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = NULL, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const;
+	Bool getCommandHideable( const CommandButton *command, Object *obj ) const;
 	void updateContextMultiSelect( void );
 	void updateContextPurchaseScience( void );
 	void updateContextCommand( void );

@@ -328,58 +328,6 @@ void ControlBar::populateCommand( Object *obj )
 				m_commandWindows[ i ]->winHide( TRUE );
 				continue;
 			}
-
-			if( BitIsSet( commandButton->getOptions(), HIDE_WHEN_UNAVAILABLE ) )
-			{
-				if( BitIsSet( commandButton->getOptions(), NEED_UPGRADE ) )
-				{
-					const UpgradeTemplate *upgrade = commandButton->getUpgradeTemplate();
-					if( upgrade->getUpgradeType() == UPGRADE_TYPE_PLAYER )
-					{
-						if( player->hasUpgradeComplete( upgrade ) == FALSE )
-						{
-							m_commandWindows[ i ]->winHide( TRUE );
-							continue;
-						}
-					}
-					else if( upgrade->getUpgradeType() == UPGRADE_TYPE_OBJECT &&
-									obj->hasUpgrade( upgrade ) == FALSE )
-					{
-						m_commandWindows[ i ]->winHide( TRUE );
-						continue;
-					}
-				}
-
-				if( BitIsSet( commandButton->getOptions(), NEED_INSTANCE ) )
-				{
-					if( !player->hasInstance( commandButton->getInstancesRequired(), commandButton->getRequiresAllInstances() ) )
-					{
-						m_commandWindows[ i ]->winHide( TRUE );
-						continue;
-					}
-				}
-
-				if( BitIsSet( commandButton->getOptions(), NEED_SPECIAL_POWER_SCIENCE ) )
-				{
-					const SpecialPowerTemplate *power = commandButton->getSpecialPowerTemplate();
-
-					if( !power )
-					{
-						//Should have the power.. button is probably missing the SpecialPower = xxx entry.
-						DEBUG_CRASH( ("CommandButton %s needs a SpecialPower entry, but it's either incorrect or missing.", commandButton->getName().str()) );
-						continue;
-					}
-
-					if( power->getRequiredScience() != SCIENCE_INVALID )
-					{
-						if( player->hasScience( power->getRequiredScience() ) == FALSE )
-						{
-							m_commandWindows[ i ]->winHide( TRUE );
-							continue;
-						}
-					}
-				}
-			}
 			//
 			// inventory exit commands were a special case already taken care above ... we needed
 			// to iterage through the containment for transport objects and fill out any available
@@ -909,6 +857,9 @@ void ControlBar::updateContextCommand( void )
 		CommandAvailability availability = getCommandAvailability( command, obj, win );
 		if(commandDisabled && availability != COMMAND_HIDDEN)
 			availability = COMMAND_RESTRICTED;
+
+		if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+			availability = COMMAND_HIDDEN;
 
 		// enable/disable the window control
 		switch( availability )
@@ -1649,6 +1600,427 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 	// all is well with the command
 	return COMMAND_AVAILABLE;
+
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::getCommandHideable( const CommandButton *command,
+																												Object *obj ) const
+																												//GameWindow *win,
+																												//GameWindow *applyToWin ) const
+{
+	if(	command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
+			|| command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT )
+	{
+		if (ThePlayerList && ThePlayerList->getLocalPlayer())
+			obj = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
+		else
+			obj = NULL;
+	}
+
+	//If we modify the button (like a gadget clock overlay), then sometimes we may wish to apply it to a specific different button.
+	//But if we don't specify anything (default), then make them the same.
+	//if( !applyToWin )
+	//{
+	//	applyToWin = win;
+	//}
+
+	if (obj == NULL)
+		return TRUE;	// probably better than crashing....
+
+	Player *player = obj->getControllingPlayer();
+
+	//It's possible for command buttons to be a single use only type of a button -- like detonating a nuke from a convoy truck.
+	if( obj->hasSingleUseCommandBeenUsed() )
+	{
+		return TRUE;
+	}
+
+	//Other disabled objects are unable to use buttons -- so gray them out.
+	//Bool disabled = obj->isDisabled();
+
+	// if we are only disabled by being underpowered, and this button doesn't care, well, fix it
+	//if (disabled
+	//		&& BitIsSet(command->getOptions(), IGNORES_UNDERPOWERED)
+	//		&& obj->getDisabledFlags().test(DISABLED_UNDERPOWERED)
+	//		&& obj->getDisabledFlags().count() == 1)
+	//{
+	//	disabled = false;
+	//}
+
+ 	//if (disabled && !forceDisabledEvaluation)
+ 	//{
+
+	//	GUICommandType commandType = command->getCommandType();
+	//	if( commandType != GUI_COMMAND_SELL &&
+	//			commandType != GUI_COMMAND_EVACUATE &&
+	//			commandType != GUI_COMMAND_ENTER_ME &&
+	//			commandType != GUI_COMMAND_EXIT_CONTAINER &&
+	//			commandType != GUI_COMMAND_BEACON_DELETE &&
+	//			commandType != GUI_COMMAND_SET_RALLY_POINT &&
+	//			commandType != GUI_COMMAND_STOP &&
+	//			commandType != GUI_COMMAND_SWITCH_WEAPON )
+	//	{
+	//		if( getCommandAvailability( command, obj, win, applyToWin, TRUE ) == COMMAND_HIDDEN )
+	//		{
+	//			return TRUE;
+	//		}
+ 	//		return TRUE;
+	//	}
+ 	//}
+
+	// if the command requires an upgrade and we don't have it we can't do it
+	if( BitIsSet( command->getOptions(), NEED_UPGRADE ) )
+	{
+		const UpgradeTemplate *upgradeT = command->getUpgradeTemplate();
+		if (upgradeT)
+		{
+			// upgrades come in the form of player upgrades and object upgrades
+			if( upgradeT->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if( player->hasUpgradeComplete( upgradeT ) == FALSE )
+					return TRUE;
+			}
+			else if( upgradeT->getUpgradeType() == UPGRADE_TYPE_OBJECT &&
+							 obj->hasUpgrade( upgradeT ) == FALSE )
+			{
+				return TRUE;
+			}
+		}
+	}
+
+	if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+	{
+		if( !player->hasInstance( command->getInstancesRequired(), command->getRequiresAllInstances() ) )
+		{
+			return TRUE;
+		}
+	}
+
+	//if (obj->testScriptStatusBit(OBJECT_STATUS_SCRIPT_DISABLED) || obj->testScriptStatusBit(OBJECT_STATUS_SCRIPT_UNPOWERED))
+	//{
+		// if the object status is disabled or unpowered, you cannot do anything to it.
+	//	return FALSE;
+	//}
+
+	//if( BitIsSet( command->getOptions(), MUST_BE_STOPPED ) )
+	//{
+		// This button can only be activated when the unit isn't moving!
+		// Jets can be idle while in the air, so we need to do more checks
+	//	AIUpdateInterface *ai = obj->getAI();
+	//	if( ai ) {
+	//		JetAIUpdate* jetAI = ai->getJetAIUpdate();
+	//		if (jetAI) {
+	//			if (!jetAI->isParkedInHangar()) {
+	//				return FALSE;
+	//			}
+	//		}
+	//		else if (ai->isMoving()) {
+	//			return FALSE;
+	//		}
+	//	}
+	//}
+
+	//ProductionUpdateInterface *pu = obj->getProductionUpdateInterface();
+	//if( pu && pu->firstProduction() && BitIsSet( command->getOptions(), NOT_QUEUEABLE ) )
+	//{
+	//	return FALSE;
+	//}
+
+
+	//Bool queueMaxed = pu ? ( pu->getProductionCount() == MAX_BUILD_QUEUE_BUTTONS ) : FALSE;
+
+	switch( command->getCommandType() )
+	{
+		case GUI_COMMAND_DOZER_CONSTRUCT:
+		{
+      const ThingTemplate * whatToBuild = command->getThingTemplate();
+
+			// sanity, non dozer object
+			if( obj->isKindOf( KINDOF_DOZER ) == FALSE )
+			{
+				return TRUE;
+			}
+
+			// get the dozer ai update interface
+			DozerAIInterface* dozerAI = NULL;
+			if( obj->getAIUpdateInterface() == NULL )
+				return TRUE;
+
+			dozerAI = obj->getAIUpdateInterface()->getDozerAIInterface();
+
+			DEBUG_ASSERTCRASH( dozerAI != NULL, ("Something KINDOF_DOZER must have a Dozer-like AIUpdate") );
+			if( dozerAI == NULL )
+				return TRUE;
+
+			// return whether or not the player can build this thing
+			if( player->canBuild( whatToBuild ) == FALSE )
+				return TRUE;
+
+			// if building anything at all right now we can't build another
+			//if( dozerAI->isTaskPending( DOZER_TASK_BUILD ) == TRUE )
+			//{
+			//	return FALSE;
+			//}
+
+			//if( !player->canAffordBuild( whatToBuild ) )
+			//{
+			//	return FALSE;
+			//}
+
+
+			break;
+		}
+
+		case GUI_COMMAND_SELL:
+		{
+    //since the container can be subdued, , M Lorenzen 8/11
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+			break;
+		}
+
+		case GUI_COMMAND_UNIT_BUILD:
+		{
+
+			// return whether or not the player can build this thing
+			//NOTE: Player::canBuild() only checks prerequisites!
+			if( player->canBuild( command->getThingTemplate() ) == FALSE )
+				return TRUE;
+
+			//if( queueMaxed )
+			//{
+			//	return FALSE;
+			//}
+
+			//CanMakeType makeType = TheBuildAssistant->canMakeUnit( obj, command->getThingTemplate() );
+			//if( makeType == CANMAKE_MAXED_OUT_FOR_PLAYER || makeType == CANMAKE_PARKING_PLACES_FULL )
+			//{
+			//	//Disable the button if the player has a max amount of these units in build queue or existance.
+			//	return FALSE;
+			//}
+			//if( makeType == CANMAKE_NO_MONEY )
+			//{
+			//	return FALSE;
+			//}
+
+			break;
+		}
+
+		case GUI_COMMAND_PLAYER_UPGRADE:
+		{
+			for( size_t i = 0; i < command->getScienceVec().size(); i++ )
+			{
+				ScienceType st = command->getScienceVec()[ i ];
+				if( !player->hasScience( st ) )
+				{
+					return TRUE;
+				}
+			}
+			//if( queueMaxed )
+			//{
+			//	return FALSE;
+			//}
+			// if we can build it, we must also NOT already have it or be building it
+			//if( player->hasUpgradeComplete( command->getUpgradeTemplate() ) == TRUE ||
+			//		player->hasUpgradeInProduction( command->getUpgradeTemplate() ) == TRUE )
+			//	return FALSE;
+
+			// if this is an upgrade create we must be able to build it.
+			//if( TheUpgradeCenter->canAffordUpgrade( player, command->getUpgradeTemplate() ) == FALSE )
+			//	return FALSE;
+
+			break;
+		}
+
+		case GUI_COMMAND_OBJECT_UPGRADE:
+		{
+			for( size_t i = 0; i < command->getScienceVec().size(); i++ )
+			{
+				ScienceType st = command->getScienceVec()[ i ];
+				if( !player->hasScience( st ) )
+				{
+					return TRUE;
+				}
+			}
+			//if( queueMaxed )
+			//{
+			//	return FALSE;
+			//}
+			// no production update, can't possibly do this command
+			//if( pu == NULL )
+			//{
+			//	return FALSE;
+			//}
+
+			//
+			// if this object already has this upgrade, or is researching it already in the queue
+			// we will disable the button so you can't build another one
+			//
+			//if( obj->hasUpgrade( command->getUpgradeTemplate() ) == TRUE ||
+			//		pu->isUpgradeInQueue( command->getUpgradeTemplate() ) == TRUE ||
+			//		obj->affectedByUpgrade( command->getUpgradeTemplate() ) == FALSE )
+			//	return FALSE;
+
+			//if( TheUpgradeCenter->canAffordUpgrade( player, command->getUpgradeTemplate() ) == FALSE )
+			//	return FALSE;
+
+			break;
+		}
+
+		case GUI_COMMAND_FIRE_WEAPON:
+		{
+			AIUpdateInterface *ai = obj->getAIUpdateInterface();
+
+			// no ai, can't possibly fire weapon
+			if( ai == NULL )
+				return TRUE;
+
+			// ask the ai if the weapon is ready to fire
+			const Weapon* w = obj->getWeaponInWeaponSlot( command->getWeaponSlot() );
+
+			// changed this to Log rather than Crash, because this can legitimately happen now for
+			// dozers and workers with mine-clearing stuff... (srj)
+			//DEBUG_ASSERTLOG( w, ("Unit %s's CommandButton %s is trying to access weaponslot %d, but doesn't have a weapon there in its FactionUnit ini entry.",
+			//	obj->getTemplate()->getName().str(), command->getName().str(), (Int)command->getWeaponSlot() ) );
+
+			UnsignedInt now = TheGameLogic->getFrame();
+
+			/// @Kris -- We need to show the button as always available for anything with a 0 clip reload time.
+			if( w && w->getClipReloadTime( obj ) == 0 )
+			{
+				return FALSE;
+			}
+
+			if( w == NULL																	// No weapon
+				|| w->getStatus() != READY_TO_FIRE					// Weapon not ready
+				|| w->getPossibleNextShotFrame() == now			// Weapon ready, but could fire this exact frame (handle button flicker since it may be going to fire anyway)
+/// @todo srj -- not sure why this next check is necessary, but the Comanche missile buttons will flicker without it. figure out someday.
+/// @todo ml  -- and note: that the "now-1" below causes zero-clip-reload weapons to never be ready, so I added this
+/// If you make changes to this code, make sure that the DragonTank's firewall weapon can be retargeted while active,
+/// that is, while the tank is squirting out flames all over the floor, you can click the firewall button (or "F"),
+/// and re-target the firewall without having to stop or move in-betwen.. Thanks for reading
+				|| (w->getPossibleNextShotFrame()==now-1)
+				)
+			{
+				if ( w != NULL )
+				{
+					return TRUE;
+				}
+				else
+				{
+					// if this is a mine-clearing button but we don't have the right weaponset,
+					// just declare it available... we'll switch weaponsets when the time comes
+					if (
+						(command->getOptions() & USES_MINE_CLEARING_WEAPONSET) != 0
+						&& !obj->testWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL)
+					)
+					{
+						return TRUE;
+					}
+
+					// no weapon in the slot means "gray me out"
+					//return FALSE;
+				}
+			}
+
+			break;
+		}
+
+		case GUI_COMMAND_GUARD:
+		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+			// always available
+			break;
+
+		case GUI_COMMAND_COMBATDROP:
+		{
+			//if( getRappellerCount(obj) <= 0 )
+			//{
+			//	return FALSE;
+			//}
+			break;
+		}
+
+		case GUI_COMMAND_EXIT_CONTAINER:
+		{
+
+			//
+			// this method is really used as a per frame update to see if we should enable
+			// disable a control ... inventory of objects shows as buttons have that enable
+			// disable logic handled elsewhere, where if the contained count of the entire
+			// container changes the UI is completely repopulated
+			//
+
+    //since the container can be subdued, the above is no longer true, M Lorenzen 8/11
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+			break;
+		}
+
+		case GUI_COMMAND_EVACUATE:
+		{
+
+			// if we have no contained objects we can't evacuate anything
+			//if( !obj->getContain() || obj->getContain()->getContainCount() <= 0 )
+			//	return FALSE;
+
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+
+			break;
+		}
+
+		case GUI_COMMAND_ENTER_ME:
+		{
+
+			// if we have no container or we are full to contain
+			//if( !obj->getContain() || obj->getContain()->getContainMax() <= 0 || obj->getContain()->getContainCount() >= obj->getContain()->getContainMax() )
+			//	return FALSE;
+
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+
+			break;
+		}
+
+		case GUI_COMMAND_SPECIAL_POWER:
+		case GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT:
+		case GUI_COMMAND_SPECIAL_POWER_CONSTRUCT:
+		case GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT:
+		{
+			break;
+		}
+
+		case GUI_COMMAND_HACK_INTERNET:
+		{
+			break;
+		}
+
+		case GUI_COMMAND_STOP:
+		{
+			break;
+		}
+	}
+	return FALSE;
 
 }
 
