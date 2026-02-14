@@ -1987,7 +1987,7 @@ void RiderChangeContain::forceScuttle( void )
 
 #if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
 //-------------------------------------------------------------------------------------------------
-const Object* getKillScoreCreditObj( const Object* killer ) const
+const Object* RiderChangeContain::getKillScoreCreditObj( const Object* killer ) const
 {
 	const Object* rider = *getContainedItemsList()->begin();
 	const Object* me = getObject();
