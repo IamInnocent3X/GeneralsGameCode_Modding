@@ -571,6 +571,7 @@ public:
 
 	// see if this current weapon set's weapons has shared reload times
 	Bool isReloadTimeShared() const { return m_weaponSet.isSharedReloadTime(); }
+	Bool isClipShared() const { return m_weaponSet.isSharedClip(); }
 
 	Weapon* getCurrentWeapon(WeaponSlotType* wslot = NULL);
 	const Weapon* getCurrentWeapon(WeaponSlotType* wslot = NULL) const;
@@ -822,6 +823,9 @@ public:
 	// If incoming is true, we're working on the incoming player, if its false, we're on the outgoing
 	// player. These are friend_s for player.
 	void friend_adjustPowerForPlayer( Bool incoming );
+
+	// Get position where to enter this object
+	Coord3D getEnterPosition(ObjectID enteringObject) const;
 
 	void doClearTunnelContainTargetID();
 

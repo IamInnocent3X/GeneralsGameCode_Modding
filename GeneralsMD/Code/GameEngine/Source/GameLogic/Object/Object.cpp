@@ -9000,6 +9000,25 @@ ObjectID Object::calculateCountermeasureToDivertTo( const Object& victim )
 }
 
 //-------------------------------------------------------------------------------------------------
+Coord3D Object::getEnterPosition(ObjectID enteringObject) const {
+	Coord3D ret (*getPosition());
+
+	if (getContain() != nullptr) {
+		auto* cmi = getContain();
+		Coord3D offset = cmi->getEnterPositionOffset(enteringObject);
+		if (offset.x != 0.0f || offset.y != 0.0f) {
+			//Rotate x/y position
+			Coord2D pos2d(offset.x, offset.y);
+			pos2d.rotateByAngle(getOrientation());
+			ret.x += pos2d.x;
+			ret.y += pos2d.y;
+		}
+		ret.z += offset.z;
+	}
+	return ret;
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::doClearTunnelContainTargetID()
 {
 	// Reset targetID each time ordering an attack

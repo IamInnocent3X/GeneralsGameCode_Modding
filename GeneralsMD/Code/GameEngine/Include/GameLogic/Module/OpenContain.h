@@ -299,6 +299,8 @@ protected:
 	virtual const ContainedItemsList* getAddOnList() const { return NULL; }
 	virtual ContainedItemsList* getAddOnList() { return NULL; }
 
+	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0, 0, 0); };
+
 	virtual void createPayload();
 	Bool getPayloadCreated() const { return m_payloadCreated; }
 	void setPayloadCreated(Bool e) { m_payloadCreated = e; }

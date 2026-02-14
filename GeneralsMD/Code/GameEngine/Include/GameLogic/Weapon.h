@@ -589,6 +589,7 @@ public:
 	Real getScatterTargetMinScalar() const { return m_scatterTargetMinScalar; }
 	Bool isScatterTargetCenteredAtShooter() const { return m_scatterTargetCenteredAtShooter; }
 	Bool isScatterOnWaterSurface() const { return m_scatterOnWaterSurface; }
+	Bool isResetFireBonesOnReload() const { return m_resetFireBonesOnReload; }
 
 	const AsciiString& getCustomDamageType() const { return m_customDamageType; }
 	const AsciiString& getCustomDamageStatusType() const { return m_customDamageStatusType; }
@@ -845,6 +846,8 @@ private:
 	Bool m_scatterTargetResetRecenter;  ///< when resetting scatter targets, use indices in the "middle" of the list, to keep the target centered for Line based attacks 
 
 	Bool m_scatterOnWaterSurface; ///< Scatter radius and targets include the water surface instead of just the terrain height
+
+	Bool m_resetFireBonesOnReload; ///< When reloading, set the next firebone/barrel to 0
 
 	AsciiString m_customDamageType;
 	AsciiString m_customDamageStatusType;
@@ -1104,6 +1107,9 @@ public:
 	void setPreAttackFinishedFrame( UnsignedInt frameNum ) { m_whenPreAttackFinished = frameNum; }
 	void setLastReloadStartedFrame( UnsignedInt frameNum ) { m_whenLastReloadStarted = frameNum; }
 	void setNextPreAttackFXFrame(UnsignedInt frameNum) { m_nextPreAttackFXFrame = frameNum; }
+
+	void setCurBarrel(Int num) { m_curBarrel = num; }
+	void sharedClipIncrementShot();
 
 	//Transfer the reload times and status from the passed in weapon.
 	void transferNextShotStatsFrom( const Weapon &weapon );

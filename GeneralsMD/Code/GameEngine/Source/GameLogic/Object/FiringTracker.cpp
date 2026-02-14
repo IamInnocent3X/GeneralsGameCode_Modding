@@ -205,7 +205,7 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 		AudioEventRTS fireAndForgetSound = weaponFired->getFireSound();
 		fireAndForgetSound.setObjectID(getObject()->getID());
 		TheAudio->addAudioEvent(&fireAndForgetSound);
-		m_frameToStopLoopingSound = 0;
+		// m_frameToStopLoopingSound = 0;
 	}
 
 

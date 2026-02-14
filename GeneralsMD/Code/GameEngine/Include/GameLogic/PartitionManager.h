@@ -1474,6 +1474,8 @@ public:
 	Real getRelativeAngle2D( const Object *obj, const Object *otherObj );
 	Real getRelativeAngle2D( const Object *obj, const Coord3D *pos );
 
+	Real getRelativeAngle2DWithOffset( const Object *obj, Vector2 offset, const Coord3D *pos );
+
 	void getVectorTo(const Object *obj, const Object *otherObj, DistanceCalculationType dc, Coord3D& vec);
 	void getVectorTo(const Object *obj, const Coord3D *pos, DistanceCalculationType dc, Coord3D& vec);
 

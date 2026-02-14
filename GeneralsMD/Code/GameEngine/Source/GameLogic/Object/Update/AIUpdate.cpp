@@ -915,6 +915,31 @@ WhichTurretType AIUpdateInterface::getWhichTurretForCurWeapon() const
 }
 
 //=============================================================================
+Bool AIUpdateInterface::isTurretUsingOffset(WhichTurretType tur) const
+{
+	return (tur != TURRET_INVALID && m_turretAI[tur] != NULL) ?
+		m_turretAI[tur]->isUseTurretOffset() : false;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------
+Vector2 AIUpdateInterface::getTurretOffset2D(WhichTurretType tur, WeaponSlotType wslot) const
+{
+	Matrix3D attachTransform(true);
+	Coord3D turretRotPos = { 0.0f, 0.0f, 0.0f };
+	Coord3D turretPitchPos = { 0.0f, 0.0f, 0.0f };
+	const Drawable* draw = getObject()->getDrawable();
+
+	if (!draw || !draw->getProjectileLaunchOffset(wslot, 0, &attachTransform, tur, &turretRotPos, &turretPitchPos))
+	{
+		return Vector2(0, 0);
+	}
+	Vector2 offset = { turretRotPos.x, turretRotPos.y };
+	return offset;
+
+}
+
+//=============================================================================
 WhichTurretType AIUpdateInterface::getWhichTurretForWeaponSlot(WeaponSlotType wslot, Real* turretAngle, Real* turretPitch) const
 {
 	for (int i = 0; i < MAX_TURRETS; ++i)
@@ -1248,14 +1273,15 @@ UpdateSleepTime AIUpdateInterface::update( void )
 	Object *obj = getObject();
 
 	if (! obj->isEffectivelyDead() &&
-			! obj->isDisabledByType( DISABLED_PARALYZED ) &&
-			! obj->isDisabledByType( DISABLED_STUNNED ) &&
-			! obj->isDisabledByType( DISABLED_UNMANNED ) &&
-			! obj->isDisabledByType( DISABLED_EMP ) &&
-			! obj->isDisabledByType( DISABLED_SUBDUED ) &&
-			! obj->isDisabledByType( DISABLED_HACKED ) &&
-			! obj->isDisabledByType( DISABLED_CONSTRAINED ) &&
-			! obj->isDisabledByType( DISABLED_FROZEN ) )
+			//! obj->isDisabledByType( DISABLED_PARALYZED ) &&
+			//! obj->isDisabledByType( DISABLED_STUNNED ) &&
+			//! obj->isDisabledByType( DISABLED_UNMANNED ) &&
+			//! obj->isDisabledByType( DISABLED_EMP ) &&
+			//! obj->isDisabledByType( DISABLED_SUBDUED ) &&
+			//! obj->isDisabledByType( DISABLED_HACKED ) &&
+			//! obj->isDisabledByType( DISABLED_CONSTRAINED ) &&
+			//! obj->isDisabledByType( DISABLED_FROZEN ) )
+			! (obj->isDisabled() && !obj->isDisabledByType(DISABLED_HELD )))
 	{
 		// If we are dead, don't let the turrets do anything anymore, or else they will keep attacking
 		for (int i = 0; i < MAX_TURRETS; ++i)
@@ -2314,6 +2340,18 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 		return UPDATE_SLEEP_FOREVER;
 
 	chooseGoodLocomotorFromCurrentSet();
+
+	// Disabled check
+	Bool disabled = getObject()->isDisabled() && !getObject()->isDisabledByType(DISABLED_HELD);
+	if (disabled && m_curLocomotor != NULL)
+	{
+		if (!m_curLocomotor->getLocomotorWorksWhenDisabled()) {
+			return UPDATE_SLEEP_FOREVER;
+		}
+		if (m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject()))
+			return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+	}
 
 	if (m_isBlocked)
 	{

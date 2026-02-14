@@ -115,6 +115,7 @@ void WeaponTemplateSet::clear()
 	m_isReloadTimeShared = false;
 	m_isWeaponLockSharedAcrossSets = FALSE;
 	m_isWeaponReloadSharedAcrossSets = FALSE;
+	m_isClipShared = false;
 	m_weaponChoiceCriteria = PREFER_MOST_DAMAGE;
 	m_types.clear();
 	for (int i = 0; i < WEAPONSLOT_COUNT; ++i)
@@ -172,6 +173,7 @@ void WeaponTemplateSet::parseWeaponTemplateSet( INI* ini, const ThingTemplate* t
 		{ "ShareWeaponReloadTime", INI::parseBool, NULL, offsetof( WeaponTemplateSet, m_isReloadTimeShared ) },
 		{ "WeaponLockSharedAcrossSets", INI::parseBool, NULL, offsetof( WeaponTemplateSet, m_isWeaponLockSharedAcrossSets ) },
 		{ "WeaponReloadSharedAcrossSets", INI::parseBool, NULL, offsetof(WeaponTemplateSet, m_isWeaponReloadSharedAcrossSets) },
+		{ "ShareWeaponClip", INI::parseBool, NULL, offsetof(WeaponTemplateSet, m_isClipShared) },
 		{ "WeaponChoiceCriteria", INI::parseIndexList, TheWeaponChoiceCriteriaNames, offsetof( WeaponTemplateSet, m_weaponChoiceCriteria ) },
 		{ 0, 0, 0, 0 }
 	};
@@ -1647,6 +1649,14 @@ Bool WeaponSet::isSharedReloadTime() const
 {
 	if (m_curWeaponTemplateSet)
 		return m_curWeaponTemplateSet->isSharedReloadTime();
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool WeaponSet::isSharedClip() const
+{
+	if (m_curWeaponTemplateSet)
+		return m_curWeaponTemplateSet->isSharedClip();
 	return false;
 }
 

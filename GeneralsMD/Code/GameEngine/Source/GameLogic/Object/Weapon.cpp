@@ -312,6 +312,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "LaserGroundTargetHeight",				INI::parseReal,					NULL,							offsetof(WeaponTemplate, m_laserGroundTargetHeight) },
 	{ "LaserGroundUnitTargetHeight",				INI::parseReal,					NULL,					offsetof(WeaponTemplate, m_laserGroundUnitTargetHeight) },
 	{ "ScatterOnWaterSurface", INI::parseBool, NULL, offsetof(WeaponTemplate, m_scatterOnWaterSurface) },
+	{ "ResetFireBonesOnReload", INI::parseBool, NULL, offsetof(WeaponTemplate, m_resetFireBonesOnReload) },
 	
 	// New Features
 	{ "CustomDamageType",						INI::parseAsciiString,	NULL,							offsetof(WeaponTemplate, m_customDamageType) },
@@ -608,6 +609,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(NULL)
 	m_laserGroundUnitTargetHeight = 10; // Default Height offset
 	m_scatterOnWaterSurface = false;
 	m_historicDamageTriggerId = 0;
+	m_resetFireBonesOnReload = false;
+
 	m_customDamageType						= NULL;
 	m_customDamageStatusType				= NULL;
 	m_customDeathType						= NULL;
@@ -3870,8 +3873,6 @@ void Weapon::rebuildScatterTargets(Bool recenter/* = false*/)
 
 				m_scatterTargetsUnused.push_back(targetIndex);
 			}
-			// TODO: Crash
-			// Is there any need to fill up the rest of the targets?
 		}
 		else {
 			// When I reload, I need to rebuild the list of ScatterTargets to shoot at.
@@ -3906,6 +3907,10 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 
 	m_whenLastReloadStarted = TheGameLogic->getFrame();
 	m_whenWeCanFireAgain = m_whenLastReloadStarted + reloadTime;
+
+	if (m_template->isResetFireBonesOnReload())
+		m_curBarrel = 0;
+
 	//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::reloadWithBonus 1", m_whenWeCanFireAgain));
 
 			// if we are sharing reload times
@@ -3923,6 +3928,9 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 				weapon->setLastReloadStartedFrame(m_whenLastReloadStarted);  // This might actually be right to use here
 				//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::reloadWithBonus 2", m_whenWeCanFireAgain));
 				weapon->setStatus(RELOADING_CLIP);
+
+				if (m_template->isResetFireBonesOnReload())
+					weapon->setCurBarrel(0);
 			}
 		}
 	}
@@ -4989,16 +4997,25 @@ Bool Weapon::privateFireWeapon(
 			// set their m_whenWeCanFireAgain to this guy's delay
 			// set their m_status to this guy's status
 
-			if ( sourceObj->isReloadTimeShared() )
+			Bool isReloadTimeShared = sourceObj->isReloadTimeShared();
+			Bool isClipShared = sourceObj->isClipShared();
+			if (isReloadTimeShared || isClipShared)
 			{
 				for (Int wt = 0; wt<WEAPONSLOT_COUNT; wt++)
 				{
+					if (wt == m_wslot)
+						continue;
 					Weapon *weapon = sourceObj->getWeaponInWeaponSlot((WeaponSlotType)wt);
 					if (weapon)
 					{
-						weapon->setPossibleNextShotFrame(m_whenWeCanFireAgain);
-						//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::privateFireWeapon 3", m_whenWeCanFireAgain));
-						weapon->setStatus(BETWEEN_FIRING_SHOTS);
+						if (isReloadTimeShared) {
+							weapon->setPossibleNextShotFrame(m_whenWeCanFireAgain);
+							//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::privateFireWeapon 3", m_whenWeCanFireAgain));
+							weapon->setStatus(BETWEEN_FIRING_SHOTS);
+						}
+						if (isClipShared) {
+							weapon->sharedClipIncrementShot();
+						}
 					}
 				}
 			}
@@ -5835,6 +5852,19 @@ void Weapon::transferReloadStateFrom(const Weapon& weapon, Real clipPercentage/*
 	DEBUG_LOG(("Weapon::transferReloadStateFrom (now = %d): m_whenWeCanFireAgain = %d, m_whenLastReloadStarted = %d, m_status = %d", TheGameLogic->getFrame(), m_whenWeCanFireAgain, m_whenLastReloadStarted, m_status));
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void Weapon::sharedClipIncrementShot()
+{
+	--m_ammoInClip;
+	--m_maxShotCount;
+	--m_numShotsForCurBarrel;
+	if (m_numShotsForCurBarrel <= 0)
+	{
+		++m_curBarrel;
+		m_numShotsForCurBarrel = m_template->getShotsPerBarrel();
+	}
+}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
