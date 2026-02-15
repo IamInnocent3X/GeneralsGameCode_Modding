@@ -66,18 +66,18 @@ static NameKeyType buttonCopyID = NAMEKEY_INVALID;
 static Bool isShuttingDown = false;
 
 // window pointers --------------------------------------------------------------------------------
-static GameWindow *parentReplayMenu = NULL;
-static GameWindow *buttonLoad = NULL;
-static GameWindow *buttonBack = NULL;
-static GameWindow *listboxReplayFiles = NULL;
-static GameWindow *buttonDelete = NULL;
-static GameWindow *buttonCopy = NULL;
+static GameWindow *parentReplayMenu = nullptr;
+static GameWindow *buttonLoad = nullptr;
+static GameWindow *buttonBack = nullptr;
+static GameWindow *listboxReplayFiles = nullptr;
+static GameWindow *buttonDelete = nullptr;
+static GameWindow *buttonCopy = nullptr;
 static Int	initialGadgetDelay = 2;
 static Bool justEntered = FALSE;
 
 
 #if defined(RTS_DEBUG)
-static GameWindow *buttonAnalyzeReplay = NULL;
+static GameWindow *buttonAnalyzeReplay = nullptr;
 #endif
 
 void deleteReplay( void );
@@ -110,14 +110,14 @@ static Bool readReplayMapInfo(const AsciiString& filename, RecorderClass::Replay
 	header.forPlayback = FALSE;
 	header.filename = filename;
 
-	if (TheRecorder != NULL && TheRecorder->readReplayHeader(header))
+	if (TheRecorder != nullptr && TheRecorder->readReplayHeader(header))
 	{
 		if (ParseAsciiStringToGameInfo(&info, header.gameOptions))
 		{
-			if (TheMapCache != NULL)
+			if (TheMapCache != nullptr)
 				mapData = TheMapCache->findMap(info.getMap());
 			else
-				mapData = NULL;
+				mapData = nullptr;
 
 			return true;
 		}
@@ -193,7 +193,7 @@ static void showReplayTooltip(GameWindow* window, WinInstanceData* instData, Uns
 
 	ReplayTooltipMap::const_iterator it = replayTooltipCache.find(replayFileName);
 	if (it != replayTooltipCache.end())
-		TheMouse->setCursorTooltip(it->second, -1, NULL, 1.5f);
+		TheMouse->setCursorTooltip(it->second, -1, nullptr, 1.5f);
 	else
 		TheMouse->setCursorTooltip(UnicodeString::TheEmptyString);
 }
@@ -241,6 +241,7 @@ void PopulateReplayFileListbox(GameWindow *listbox)
 
 	GadgetListBoxReset(listbox);
 	const Int listboxLength = GadgetListBoxGetListLength(listbox);
+	const Int columns = GadgetListBoxGetNumColumns(listbox);
 
 	// TheSuperHackers @tweak xezon 08/06/2025 Now shows missing maps in red color.
 	enum {
@@ -290,9 +291,9 @@ void PopulateReplayFileListbox(GameWindow *listbox)
 			// name
 			UnicodeString replayNameToShow = createReplayName(asciistr);
 
-			UnicodeString displayTimeBuffer = getUnicodeTimeBuffer(header.timeVal);
-
-			//displayTimeBuffer.format( L"%ls", timeBuffer);
+			// TheSuperHackers @tweak Caball009 07/02/2026 Display both time and date instead of only time.
+			const UnicodeString displayTimeBuffer = getUnicodeTimeBuffer(header.timeVal);
+			const UnicodeString displayDateBuffer = getUnicodeDateBuffer(header.timeVal);
 
 			// version (no-op)
 
@@ -310,7 +311,7 @@ void PopulateReplayFileListbox(GameWindow *listbox)
 			Color color;
 			Color mapColor;
 
-			const Bool hasMap = mapData != NULL;
+			const Bool hasMap = mapData != nullptr;
 
 			const Bool isCrcCompatible = RecorderClass::replayMatchesGameVersion(header);
 
@@ -353,9 +354,29 @@ void PopulateReplayFileListbox(GameWindow *listbox)
 
 			const Int insertionIndex = GadgetListBoxAddEntryText(listbox, replayNameToShow, color, -1, 0);
 			DEBUG_ASSERTCRASH(insertionIndex >= 0, ("Expects valid index"));
-			GadgetListBoxAddEntryText(listbox, displayTimeBuffer, color, insertionIndex, 1);
-			GadgetListBoxAddEntryText(listbox, header.versionString, color, insertionIndex, 2);
-			GadgetListBoxAddEntryText(listbox, mapStr, mapColor, insertionIndex, 3);
+
+			// TheSuperHackers @info Caball009 09/02/2026 Original replay menu has 4 columns; the code now supports a future 5-column layout.
+			// If there aren't two columns for time and date, concatenate them for a single column.
+			if (columns == 4)
+			{
+				UnicodeString displayDateTimeBuffer;
+				displayDateTimeBuffer.format(L"%s %s", displayTimeBuffer.str(), displayDateBuffer.str());
+
+				GadgetListBoxAddEntryText(listbox, displayDateTimeBuffer, color, insertionIndex, 1);
+				GadgetListBoxAddEntryText(listbox, header.versionString, color, insertionIndex, 2);
+				GadgetListBoxAddEntryText(listbox, mapStr, mapColor, insertionIndex, 3);
+			}
+			else if (columns == 5)
+			{
+				GadgetListBoxAddEntryText(listbox, displayTimeBuffer, color, insertionIndex, 1);
+				GadgetListBoxAddEntryText(listbox, displayDateBuffer, color, insertionIndex, 2);
+				GadgetListBoxAddEntryText(listbox, header.versionString, color, insertionIndex, 3);
+				GadgetListBoxAddEntryText(listbox, mapStr, mapColor, insertionIndex, 4);
+			}
+			else
+			{
+				DEBUG_CRASH(("Replay menu uses %d columns; expected either 4 or 5", columns));
+			}
 
 			// TheSuperHackers @performance Now stops processing when the list is full.
 			if (insertionIndex == listboxLength - 1)
@@ -380,13 +401,22 @@ void ReplayMenuInit( WindowLayout *layout, void *userData )
 	buttonDeleteID = TheNameKeyGenerator->nameToKey( "ReplayMenu.wnd:ButtonDeleteReplay" );
 	buttonCopyID = TheNameKeyGenerator->nameToKey( "ReplayMenu.wnd:ButtonCopyReplay" );
 
-	parentReplayMenu = TheWindowManager->winGetWindowFromId( NULL, parentReplayMenuID );
+	parentReplayMenu = TheWindowManager->winGetWindowFromId( nullptr, parentReplayMenuID );
 	buttonLoad = TheWindowManager->winGetWindowFromId( parentReplayMenu, buttonLoadID );
 	buttonBack = TheWindowManager->winGetWindowFromId( parentReplayMenu, buttonBackID );
 	listboxReplayFiles = TheWindowManager->winGetWindowFromId( parentReplayMenu, listboxReplayFilesID );
 	listboxReplayFiles->winSetTooltipFunc(showReplayTooltip);
 	buttonDelete = TheWindowManager->winGetWindowFromId( parentReplayMenu, buttonDeleteID );
 	buttonCopy = TheWindowManager->winGetWindowFromId( parentReplayMenu, buttonCopyID );
+
+#if ENABLE_GUI_HACKS
+	// TheSuperHackers @tweak Caball009 07/02/2026 The version column is wider than the time / date column.
+	// Switch them so that there's enough space to show both time and date without a line break.
+	ListboxData* list = static_cast<ListboxData*>(listboxReplayFiles->winGetUserData());
+
+	if (list->columns == 4 && list->columnWidth[1] < list->columnWidth[2])
+		std::swap(list->columnWidth[1], list->columnWidth[2]);
+#endif
 
 	//Load the listbox shiznit
 	GadgetListBoxReset(listboxReplayFiles);
@@ -402,7 +432,7 @@ void ReplayMenuInit( WindowLayout *layout, void *userData )
 																									 WIN_STATUS_ENABLED | WIN_STATUS_IMAGE,
 																									 4, 4,
 																									 180, 26,
-																									 &instData, NULL, TRUE );
+																									 &instData, nullptr, TRUE );
 #endif
 
 	// show menu
@@ -412,7 +442,7 @@ void ReplayMenuInit( WindowLayout *layout, void *userData )
 	TheWindowManager->winSetFocus( parentReplayMenu );
 	justEntered = TRUE;
 	initialGadgetDelay = 2;
-	GameWindow *win = TheWindowManager->winGetWindowFromId(NULL, TheNameKeyGenerator->nameToKey("ReplayMenu.wnd:GadgetParent"));
+	GameWindow *win = TheWindowManager->winGetWindowFromId(nullptr, TheNameKeyGenerator->nameToKey("ReplayMenu.wnd:GadgetParent"));
 	if(win)
 		win->winHide(TRUE);
 	isShuttingDown = FALSE;
@@ -525,7 +555,7 @@ void reallyLoadReplay(void)
 	GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 	if(selected < 0)
 	{
-		MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), NULL);
+		MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), nullptr);
 		return;
 	}
 
@@ -536,7 +566,7 @@ void reallyLoadReplay(void)
 
 	TheRecorder->playbackFile(asciiFilename);
 
-	if(parentReplayMenu != NULL)
+	if(parentReplayMenu != nullptr)
 	{
 		parentReplayMenu->winHide(TRUE);
 	}
@@ -558,28 +588,28 @@ static void loadReplay(UnicodeString filename)
 		UnicodeString title = TheGameText->FETCH_OR_SUBSTITUTE("GUI:ReplayFileNotFoundTitle", L"REPLAY NOT FOUND");
 		UnicodeString body = TheGameText->FETCH_OR_SUBSTITUTE("GUI:ReplayFileNotFound", L"This replay cannot be loaded because the file no longer exists on this device.");
 
-		MessageBoxOk(title, body, NULL);
+		MessageBoxOk(title, body, nullptr);
 	}
-	else if(mapData == NULL)
+	else if(mapData == nullptr)
 	{
 		// TheSuperHackers @bugfix Prompts a message box when the map used by the replay was not found.
 
 		UnicodeString title = TheGameText->FETCH_OR_SUBSTITUTE("GUI:ReplayMapNotFoundTitle", L"MAP NOT FOUND");
 		UnicodeString body = TheGameText->FETCH_OR_SUBSTITUTE("GUI:ReplayMapNotFound", L"This replay cannot be loaded because the map was not found on this device.");
 
-		MessageBoxOk(title, body, NULL);
+		MessageBoxOk(title, body, nullptr);
 	}
 	else if(!TheRecorder->replayMatchesGameVersion(header))
 	{
 		// Pressing OK loads the replay.
 
-		MessageBoxOkCancel(TheGameText->fetch("GUI:OlderReplayVersionTitle"), TheGameText->fetch("GUI:OlderReplayVersion"), reallyLoadReplay, NULL);
+		MessageBoxOkCancel(TheGameText->fetch("GUI:OlderReplayVersionTitle"), TheGameText->fetch("GUI:OlderReplayVersion"), reallyLoadReplay, nullptr);
 	}
 	else
 	{
 		TheRecorder->playbackFile(asciiFilename);
 
-		if(parentReplayMenu != NULL)
+		if(parentReplayMenu != nullptr)
 		{
 			parentReplayMenu->winHide(TRUE);
 		}
@@ -657,7 +687,7 @@ WindowMsgHandledType ReplayMenuSystem( GameWindow *window, UnsignedInt msg,
 					GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 					if(selected < 0)
 					{
-						MessageBoxOk(L"Blah Blah",L"Please select something munkee boy", NULL);
+						MessageBoxOk(L"Blah Blah",L"Please select something munkee boy", nullptr);
 						break;
 					}
 
@@ -684,7 +714,7 @@ WindowMsgHandledType ReplayMenuSystem( GameWindow *window, UnsignedInt msg,
 					GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 					if(selected < 0)
 					{
-						MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), NULL);
+						MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), nullptr);
 						break;
 					}
 
@@ -705,11 +735,11 @@ WindowMsgHandledType ReplayMenuSystem( GameWindow *window, UnsignedInt msg,
 				GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 				if(selected < 0)
 				{
-					MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), NULL);
+					MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), nullptr);
 					break;
 				}
 				filename = GetReplayFilenameFromListbox(listboxReplayFiles, selected);
-				MessageBoxYesNo(TheGameText->fetch("GUI:DeleteFile"), TheGameText->fetch("GUI:AreYouSureDelete"), deleteReplayFlag, NULL);
+				MessageBoxYesNo(TheGameText->fetch("GUI:DeleteFile"), TheGameText->fetch("GUI:AreYouSureDelete"), deleteReplayFlag, nullptr);
 			}
 			else if( controlID == buttonCopyID )
 			{
@@ -717,11 +747,11 @@ WindowMsgHandledType ReplayMenuSystem( GameWindow *window, UnsignedInt msg,
 				GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 				if(selected < 0)
 				{
-					MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), NULL);
+					MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), nullptr);
 					break;
 				}
 				filename = GetReplayFilenameFromListbox(listboxReplayFiles, selected);
-				MessageBoxYesNo(TheGameText->fetch("GUI:CopyReplay"), TheGameText->fetch("GUI:AreYouSureCopy"), copyReplayFlag, NULL);
+				MessageBoxYesNo(TheGameText->fetch("GUI:CopyReplay"), TheGameText->fetch("GUI:AreYouSureCopy"), copyReplayFlag, nullptr);
 			}
 			break;
 		}
@@ -740,7 +770,7 @@ void deleteReplay( void )
 	GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 	if(selected < 0)
 	{
-		MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), NULL);
+		MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), nullptr);
 		return;
 	}
 	AsciiString filename, translate;
@@ -750,11 +780,11 @@ void deleteReplay( void )
 	if(DeleteFile(filename.str()) == 0)
 	{
 		char buffer[1024];
-		FormatMessage ( FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0, buffer, sizeof(buffer), NULL);
+		FormatMessage ( FORMAT_MESSAGE_FROM_SYSTEM, nullptr, GetLastError(), 0, buffer, sizeof(buffer), nullptr);
 		UnicodeString errorStr;
 		translate.set(buffer);
 		errorStr.translate(translate);
-		MessageBoxOk(TheGameText->fetch("GUI:Error"),errorStr, NULL);
+		MessageBoxOk(TheGameText->fetch("GUI:Error"),errorStr, nullptr);
 	}
 	//Load the listbox shiznit
 	GadgetListBoxReset(listboxReplayFiles);
@@ -769,7 +799,7 @@ void copyReplay( void )
 	GadgetListBoxGetSelected( listboxReplayFiles,  &selected );
 	if(selected < 0)
 	{
-		MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), NULL);
+		MessageBoxOk(TheGameText->fetch("GUI:NoFileSelected"),TheGameText->fetch("GUI:PleaseSelectAFile"), nullptr);
 		return;
 	}
 	AsciiString filename, translate;
@@ -779,7 +809,7 @@ void copyReplay( void )
 
 	char path[1024];
 	LPITEMIDLIST pidl;
-	SHGetSpecialFolderLocation(NULL, CSIDL_DESKTOPDIRECTORY, &pidl);
+	SHGetSpecialFolderLocation(nullptr, CSIDL_DESKTOPDIRECTORY, &pidl);
 	SHGetPathFromIDList(pidl,path);
 	AsciiString newFilename;
 	newFilename.set(path);
@@ -788,11 +818,11 @@ void copyReplay( void )
 	if(CopyFile(filename.str(),newFilename.str(), FALSE) == 0)
 	{
 		wchar_t buffer[1024];
-		FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0, buffer, ARRAY_SIZE(buffer), NULL);
+		FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM, nullptr, GetLastError(), 0, buffer, ARRAY_SIZE(buffer), nullptr);
 		UnicodeString errorStr;
 		errorStr.set(buffer);
 		errorStr.trim();
-		MessageBoxOk(TheGameText->fetch("GUI:Error"),errorStr, NULL);
+		MessageBoxOk(TheGameText->fetch("GUI:Error"),errorStr, nullptr);
 	}
 
 }

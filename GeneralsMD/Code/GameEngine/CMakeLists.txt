@@ -18,7 +18,6 @@ set(GAMEENGINE_SRC
     Include/Common/BitFlagsIO.h
     Include/Common/BorderColors.h
     Include/Common/BuildAssistant.h
-    Include/Common/CDManager.h
     Include/Common/ClientUpdateModule.h
     Include/Common/CommandLine.h
 #    Include/Common/crc.h
@@ -36,12 +35,12 @@ set(GAMEENGINE_SRC
 #    Include/Common/DynamicAudioEventInfo.h
     Include/Common/encrypt.h
     Include/Common/Energy.h
-    Include/Common/Errors.h
+#    Include/Common/Errors.h
 #    Include/Common/file.h
 #    Include/Common/FileSystem.h
     Include/Common/FunctionLexicon.h
 #    Include/Common/GameAudio.h
-    Include/Common/GameCommon.h
+#    Include/Common/GameCommon.h
 #    Include/Common/GameDefines.h
     Include/Common/GameEngine.h
     Include/Common/GameLOD.h
@@ -51,12 +50,12 @@ set(GAMEENGINE_SRC
     Include/Common/GameSpyMiscPreferences.h
     Include/Common/GameState.h
     Include/Common/GameStateMap.h
-    Include/Common/GameType.h
+#    Include/Common/GameType.h
     Include/Common/Geometry.h
     Include/Common/GlobalData.h
     Include/Common/Handicap.h
     Include/Common/IgnorePreferences.h
-    Include/Common/INI.h
+#    Include/Common/INI.h
     Include/Common/INIException.h
     Include/Common/KindOf.h
     Include/Common/LadderPreferences.h
@@ -103,7 +102,7 @@ set(GAMEENGINE_SRC
 #    Include/Common/simpleplayer.h
     Include/Common/SkirmishBattleHonors.h
     Include/Common/SkirmishPreferences.h
-    Include/Common/Snapshot.h
+#    Include/Common/Snapshot.h
     Include/Common/SparseMatchFinder.h
     Include/Common/SpecialPower.h
     Include/Common/SpecialPowerMaskType.h
@@ -111,9 +110,9 @@ set(GAMEENGINE_SRC
     Include/Common/StackDump.h
     Include/Common/StateMachine.h
     Include/Common/StatsCollector.h
-    Include/Common/STLTypedefs.h
+#    Include/Common/STLTypedefs.h
 #    Include/Common/StreamingArchiveFile.h
-    Include/Common/SubsystemInterface.h
+#    Include/Common/SubsystemInterface.h
     Include/Common/SystemInfo.h
     Include/Common/Team.h
     Include/Common/Terrain.h
@@ -127,7 +126,7 @@ set(GAMEENGINE_SRC
     Include/Common/UnitTimings.h
     Include/Common/Upgrade.h
 #    Include/Common/urllaunch.h
-    Include/Common/UserPreferences.h
+#    Include/Common/UserPreferences.h
     Include/Common/version.h
     Include/Common/WellKnownKeys.h
     Include/Common/MapData.h
@@ -140,8 +139,7 @@ set(GAMEENGINE_SRC
     Include/GameClient/Anim2D.h
     Include/GameClient/AnimateWindowManager.h
     Include/GameClient/CampaignManager.h
-    Include/GameClient/CDCheck.h
-    Include/GameClient/ChallengeGenerals.h
+#    Include/GameClient/ChallengeGenerals.h
     Include/GameClient/ClientInstance.h
 #    Include/GameClient/ClientRandomValue.h
     Include/GameClient/Color.h
@@ -209,7 +207,7 @@ set(GAMEENGINE_SRC
     Include/GameClient/Module/DynamicGeometryClientUpdate.h
     Include/GameClient/Mouse.h
 #    Include/GameClient/ParabolicEase.h
-    Include/GameClient/ParticleSys.h
+#    Include/GameClient/ParticleSys.h
     Include/GameClient/PlaceEventTranslator.h
     Include/GameClient/ProcessAnimateWindow.h
     Include/GameClient/RadiusDecal.h
@@ -606,7 +604,7 @@ set(GAMEENGINE_SRC
     Source/Common/GameMain.cpp
     Source/Common/GlobalData.cpp
     Source/Common/MapData.cpp
-    Source/Common/INI/INI.cpp
+#    Source/Common/INI/INI.cpp
     Source/Common/INI/INIAiData.cpp
     Source/Common/INI/INIAnimation.cpp
 #    Source/Common/INI/INIAudioEventInfo.cpp
@@ -667,7 +665,6 @@ set(GAMEENGINE_SRC
 #    Source/Common/System/ArchiveFileSystem.cpp
 #    Source/Common/System/AsciiString.cpp
     Source/Common/System/BuildAssistant.cpp
-    Source/Common/System/CDManager.cpp
     Source/Common/System/CriticalSection.cpp
     Source/Common/System/DataChunk.cpp
 #    Source/Common/System/Debug.cpp
@@ -677,9 +674,9 @@ set(GAMEENGINE_SRC
 #    Source/Common/System/File.cpp
 #    Source/Common/System/FileSystem.cpp
     Source/Common/System/FunctionLexicon.cpp
-    Source/Common/System/GameCommon.cpp
+#    Source/Common/System/GameCommon.cpp
     #Source/Common/System/GameMemory.cpp
-    Source/Common/System/GameType.cpp
+#    Source/Common/System/GameType.cpp
     Source/Common/System/Geometry.cpp
     Source/Common/System/KindOf.cpp
     Source/Common/System/List.cpp
@@ -693,10 +690,10 @@ set(GAMEENGINE_SRC
     Source/Common/System/registry.cpp
     Source/Common/System/SaveGame/GameState.cpp
     Source/Common/System/SaveGame/GameStateMap.cpp
-    Source/Common/System/Snapshot.cpp
+#    Source/Common/System/Snapshot.cpp
     Source/Common/System/StackDump.cpp
 #    Source/Common/System/StreamingArchiveFile.cpp
-    Source/Common/System/SubsystemInterface.cpp
+#    Source/Common/System/SubsystemInterface.cpp
     Source/Common/System/Trig.cpp
 #    Source/Common/System/UnicodeString.cpp
     Source/Common/System/Upgrade.cpp
@@ -711,7 +708,7 @@ set(GAMEENGINE_SRC
     Source/Common/Thing/Thing.cpp
     Source/Common/Thing/ThingFactory.cpp
     Source/Common/Thing/ThingTemplate.cpp
-    Source/Common/UserPreferences.cpp
+#    Source/Common/UserPreferences.cpp
     Source/Common/version.cpp
 #    Source/Common/WorkerProcess.cpp
     Source/GameClient/ClientInstance.cpp
@@ -734,7 +731,7 @@ set(GAMEENGINE_SRC
     Source/GameClient/GlobalLanguage.cpp
     Source/GameClient/GraphDraw.cpp
     Source/GameClient/GUI/AnimateWindowManager.cpp
-    Source/GameClient/GUI/ChallengeGenerals.cpp
+#    Source/GameClient/GUI/ChallengeGenerals.cpp
     Source/GameClient/GUI/ControlBar/ControlBar.cpp
     Source/GameClient/GUI/ControlBar/ControlBarBeacon.cpp
     Source/GameClient/GUI/ControlBar/ControlBarCommand.cpp
@@ -852,7 +849,7 @@ set(GAMEENGINE_SRC
 #    "Source/GameClient/System/Debug Displayers/AudioDebugDisplay.cpp"
     Source/GameClient/System/DebugDisplay.cpp
     Source/GameClient/System/Image.cpp
-    Source/GameClient/System/ParticleSys.cpp
+#    Source/GameClient/System/ParticleSys.cpp
     Source/GameClient/System/RayEffect.cpp
 #    Source/GameClient/System/Smudge.cpp
 #    Source/GameClient/Terrain/TerrainRoads.cpp
@@ -1239,4 +1236,7 @@ target_link_libraries(z_gameengine PUBLIC
     z_wwvegas
 )
 
-target_precompile_headers(z_gameengine PRIVATE Include/Precompiled/PreRTS.h)
+target_precompile_headers(z_gameengine PRIVATE
+    [["Utility/CppMacros.h"]] # Must be first, to be removed when abandoning VC6
+    Include/Precompiled/PreRTS.h
+)

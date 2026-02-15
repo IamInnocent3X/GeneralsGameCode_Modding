@@ -50,7 +50,6 @@
 #include "Common/FileSystem.h"
 
 #include "Common/ArchiveFileSystem.h"
-#include "Common/CDManager.h"
 #include "Common/GameAudio.h"
 #include "Common/LocalFileSystem.h"
 #include "Common/PerfTimer.h"
@@ -101,7 +100,7 @@ DECLARE_PERF_TIMER(FileSystem)
 	*/
 //===============================
 
-FileSystem	*TheFileSystem = NULL;
+FileSystem	*TheFileSystem = nullptr;
 
 //----------------------------------------------------------------------------
 //         Private Prototypes
@@ -174,9 +173,9 @@ void		FileSystem::reset( void )
 File*		FileSystem::openFile( const Char *filename, Int access, size_t bufferSize, FileInstance instance )
 {
 	USE_PERF_TIMER(FileSystem)
-	File *file = NULL;
+	File *file = nullptr;
 
-	if ( TheLocalFileSystem != NULL )
+	if ( TheLocalFileSystem != nullptr )
 	{
 		if (instance != 0)
 		{
@@ -190,7 +189,7 @@ File*		FileSystem::openFile( const Char *filename, Int access, size_t bufferSize
 			file = TheLocalFileSystem->openFile( filename, access, bufferSize );
 
 #if ENABLE_FILESYSTEM_EXISTENCE_CACHE
-			if (file != NULL && (file->getAccess() & File::CREATE))
+			if (file != nullptr && (file->getAccess() & File::CREATE))
 			{
 				FastCriticalSectionClass::LockClass lock(m_fileExistMutex);
 				FileExistMap::iterator it = m_fileExist.find(FileExistMap::key_type::temporary(filename));
@@ -209,7 +208,7 @@ File*		FileSystem::openFile( const Char *filename, Int access, size_t bufferSize
 		}
 	}
 
-	if ( (TheArchiveFileSystem != NULL) && (file == NULL) )
+	if ( (TheArchiveFileSystem != nullptr) && (file == nullptr) )
 	{
 		// TheSuperHackers @todo Pass 'access' here?
 		file = TheArchiveFileSystem->openFile( filename, 0, instance );
@@ -298,7 +297,7 @@ Bool FileSystem::getFileInfo(const AsciiString& filename, FileInfo *fileInfo, Fi
 
 	// TheSuperHackers @todo Add file info cache?
 
-	if (fileInfo == NULL) {
+	if (fileInfo == nullptr) {
 		return FALSE;
 	}
 	memset(fileInfo, 0, sizeof(*fileInfo));
@@ -324,88 +323,10 @@ Bool FileSystem::getFileInfo(const AsciiString& filename, FileInfo *fileInfo, Fi
 Bool FileSystem::createDirectory(AsciiString directory)
 {
 	USE_PERF_TIMER(FileSystem)
-	if (TheLocalFileSystem != NULL) {
+	if (TheLocalFileSystem != nullptr) {
 		return TheLocalFileSystem->createDirectory(directory);
 	}
 	return FALSE;
-}
-
-//============================================================================
-// FileSystem::areMusicFilesOnCD
-//============================================================================
-Bool FileSystem::areMusicFilesOnCD()
-{
-#if 1
-	return TRUE;
-#else
-	if (!TheCDManager) {
-		DEBUG_LOG(("FileSystem::areMusicFilesOnCD() - No CD Manager; returning false"));
-		return FALSE;
-	}
-
-	AsciiString cdRoot;
-	Int dc = TheCDManager->driveCount();
-	for (Int i = 0; i < dc; ++i) {
-		DEBUG_LOG(("FileSystem::areMusicFilesOnCD() - checking drive %d", i));
-		CDDriveInterface *cdi = TheCDManager->getDrive(i);
-		if (!cdi) {
-			continue;
-		}
-
-		cdRoot = cdi->getPath();
-		if (!cdRoot.endsWith("\\"))
-			cdRoot.concat("\\");
-#if RTS_GENERALS
-		cdRoot.concat("gensec.big");
-#elif RTS_ZEROHOUR
-		cdRoot.concat("genseczh.big");
-#endif
-		DEBUG_LOG(("FileSystem::areMusicFilesOnCD() - checking for %s", cdRoot.str()));
-		File *musicBig = TheLocalFileSystem->openFile(cdRoot.str());
-		if (musicBig)
-		{
-			DEBUG_LOG(("FileSystem::areMusicFilesOnCD() - found it!"));
-			musicBig->close();
-			return TRUE;
-		}
-	}
-	return FALSE;
-#endif
-}
-//============================================================================
-// FileSystem::loadMusicFilesFromCD
-//============================================================================
-void FileSystem::loadMusicFilesFromCD()
-{
-	if (!TheCDManager) {
-		return;
-	}
-
-	AsciiString cdRoot;
-	Int dc = TheCDManager->driveCount();
-	for (Int i = 0; i < dc; ++i) {
-		CDDriveInterface *cdi = TheCDManager->getDrive(i);
-		if (!cdi) {
-			continue;
-		}
-
-		cdRoot = cdi->getPath();
-		if (TheArchiveFileSystem->loadBigFilesFromDirectory(cdRoot, MUSIC_BIG)) {
-			break;
-		}
-	}
-}
-
-//============================================================================
-// FileSystem::unloadMusicFilesFromCD
-//============================================================================
-void FileSystem::unloadMusicFilesFromCD()
-{
-	if (!(TheAudio && TheAudio->isMusicPlayingFromCD())) {
-		return;
-	}
-
-	TheArchiveFileSystem->closeArchiveFile( MUSIC_BIG );
 }
 
 //============================================================================

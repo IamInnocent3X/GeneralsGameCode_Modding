@@ -62,7 +62,7 @@ static const char* const TheOCLCreateLocTypeNames[] =
 	"USE_OWNER_OBJECT",
 	"CREATE_ABOVE_LOCATION",
 	"CREATE_AT_EDGE_FARTHEST_FROM_TARGET",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheOCLCreateLocTypeNames) == OCL_CREATE_LOC_COUNT + 1, "Incorrect array size");
 
@@ -70,7 +70,7 @@ static_assert(ARRAY_SIZE(TheOCLCreateLocTypeNames) == OCL_CREATE_LOC_COUNT + 1, 
 //-------------------------------------------------------------------------------------------------
 OCLSpecialPowerModuleData::OCLSpecialPowerModuleData( void )
 {
-	m_defaultOCL = NULL;
+	m_defaultOCL = nullptr;
 	m_upgradeOCL.clear();
 	m_createLoc = CREATE_AT_EDGE_NEAR_SOURCE;
 	m_isOCLAdjustPositionToPassable = FALSE;
@@ -83,8 +83,8 @@ static void parseOCLUpgradePair( INI* ini, void * /*instance*/, void *store, con
 {
 	OCLSpecialPowerModuleData::Upgrades up;
 
-	INI::parseScience(ini, NULL, &up.m_science, NULL);
-	INI::parseObjectCreationList(ini, NULL, &up.m_ocl, NULL);
+	INI::parseScience(ini, nullptr, &up.m_science, nullptr);
+	INI::parseObjectCreationList(ini, nullptr, &up.m_ocl, nullptr);
 
 	std::vector<OCLSpecialPowerModuleData::Upgrades>* s = (std::vector<OCLSpecialPowerModuleData::Upgrades>*)store;
 	s->push_back(up);
@@ -98,14 +98,14 @@ static void parseOCLUpgradePair( INI* ini, void * /*instance*/, void *store, con
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "UpgradeOCL", parseOCLUpgradePair, NULL, offsetof( OCLSpecialPowerModuleData, m_upgradeOCL ) },
-		{ "OCL", INI::parseObjectCreationList, NULL, offsetof( OCLSpecialPowerModuleData, m_defaultOCL ) },
+		{ "UpgradeOCL", parseOCLUpgradePair, nullptr, offsetof( OCLSpecialPowerModuleData, m_upgradeOCL ) },
+		{ "OCL", INI::parseObjectCreationList, nullptr, offsetof( OCLSpecialPowerModuleData, m_defaultOCL ) },
 		{ "CreateLocation", INI::parseIndexList, TheOCLCreateLocTypeNames, offsetof( OCLSpecialPowerModuleData, m_createLoc ) },
-		{ "ReferenceObject", INI::parseAsciiString, NULL, offsetof( OCLSpecialPowerModuleData, m_referenceThingName ) },
-		{ "OCLAdjustPositionToPassable", INI::parseBool, NULL, offsetof( OCLSpecialPowerModuleData, m_isOCLAdjustPositionToPassable ) },
-		{ "SelectCreatedObject", INI::parseBool, NULL, offsetof( OCLSpecialPowerModuleData, m_selectObject ) },
-		{ "MinDistToSimilarRadius", INI::parseReal, NULL, offsetof(OCLSpecialPowerModuleData, m_minDistToSimilarRadius)},
-		{ 0, 0, 0, 0 }
+		{ "ReferenceObject", INI::parseAsciiString, nullptr, offsetof( OCLSpecialPowerModuleData, m_referenceThingName ) },
+		{ "OCLAdjustPositionToPassable", INI::parseBool, nullptr, offsetof( OCLSpecialPowerModuleData, m_isOCLAdjustPositionToPassable ) },
+		{ "SelectCreatedObject", INI::parseBool, nullptr, offsetof( OCLSpecialPowerModuleData, m_selectObject ) },
+		{ "MinDistToSimilarRadius", INI::parseReal, nullptr, offsetof(OCLSpecialPowerModuleData, m_minDistToSimilarRadius)},
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 
@@ -129,7 +129,7 @@ const ObjectCreationList* OCLSpecialPower::findOCL() const
 {
 	const OCLSpecialPowerModuleData* d = getOCLSpecialPowerModuleData();
 	const Player* controller = getObject()->getControllingPlayer();
-	if (controller != NULL)
+	if (controller != nullptr)
 	{
 		for (std::vector<OCLSpecialPowerModuleData::Upgrades>::const_iterator it = d->m_upgradeOCL.begin();
 					it != d->m_upgradeOCL.end();
@@ -158,7 +158,7 @@ void OCLSpecialPower::doSpecialPowerAtLocation( const Coord3D *loc, Real angle, 
 		return;
 
 	// sanity
-	if( loc == NULL )
+	if( loc == nullptr )
 		return;
 
 	// get the module data

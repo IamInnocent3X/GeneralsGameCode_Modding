@@ -131,8 +131,8 @@ ClosestKindOfData::ClosestKindOfData( void )
 {
 	m_setKindOf.clear();
 	m_clearKindOf.clear();
-	m_source = NULL;
-	m_closest = NULL;
+	m_source = nullptr;
+	m_closest = nullptr;
 	m_closestDistSq = FLT_MAX;
 }
 
@@ -309,36 +309,36 @@ Player::Player( Int playerIndex )
 	m_playerRelations = newInstance(PlayerRelationMap);
 	m_teamRelations = newInstance(TeamRelationMap);
 
-	m_upgradeList = NULL;
-	m_pBuildList = NULL;
-	m_ai = NULL;
-	m_resourceGatheringManager = NULL;
-	m_defaultTeam = NULL;
+	m_upgradeList = nullptr;
+	m_pBuildList = nullptr;
+	m_ai = nullptr;
+	m_resourceGatheringManager = nullptr;
+	m_defaultTeam = nullptr;
 	m_radarCount = 0;
 	m_disableProofRadarCount = 0;
 	m_radarDisabled = FALSE;
 	m_bombardBattlePlans = 0;
 	m_holdTheLineBattlePlans = 0;
 	m_searchAndDestroyBattlePlans = 0;
-	m_tunnelSystem = NULL;
-	m_playerTemplate = NULL;
-	m_battlePlanBonuses = NULL;
+	m_tunnelSystem = nullptr;
+	m_playerTemplate = nullptr;
+	m_battlePlanBonuses = nullptr;
 	m_skillPointsModifier = 1.0f;
 	m_canBuildUnits = TRUE;
 	m_canBuildBase  = TRUE;
 	m_cashBountyPercent = 0.0f;
 	m_color = 0;
-	m_currentSelection = NULL;
+	m_currentSelection = nullptr;
 	m_rankLevel = 0;
 	m_sciencePurchasePoints = 0;
-	m_side = 0;
-	m_baseSide = 0;
+	m_side = nullptr;
+	m_baseSide = nullptr;
 	m_skillPoints = 0;
 	Int i;
-	m_upgradeList = NULL;
+	m_upgradeList = nullptr;
 	for(i = 0; i < NUM_HOTKEY_SQUADS; i++)
 	{
-		m_squads[i] = NULL;
+		m_squads[i] = nullptr;
 	}
 	for (i = 0; i < MAX_PLAYER_COUNT; ++i)
 	{
@@ -347,7 +347,7 @@ Player::Player( Int playerIndex )
 	m_attackedFrame = 0;
 
 	m_unitsShouldHunt = FALSE;
-	init( NULL );
+	init( nullptr );
 
 }
 
@@ -371,7 +371,7 @@ void Player::init(const PlayerTemplate* pt)
 	m_searchAndDestroyBattlePlans = 0;
 
 	deleteInstance(m_battlePlanBonuses);
-	m_battlePlanBonuses = NULL;
+	m_battlePlanBonuses = nullptr;
 
 	deleteUpgradeList();
 
@@ -379,15 +379,15 @@ void Player::init(const PlayerTemplate* pt)
 	m_stats.init();
 
 	deleteInstance(m_pBuildList);
-	m_pBuildList = NULL;
+	m_pBuildList = nullptr;
 
-	m_defaultTeam = NULL;
+	m_defaultTeam = nullptr;
 
 	deleteInstance(m_ai);
-	m_ai = NULL;
+	m_ai = nullptr;
 
 	deleteInstance(m_resourceGatheringManager);
-	m_resourceGatheringManager = NULL;
+	m_resourceGatheringManager = nullptr;
 
 	for (Int i = 0; i < NUM_HOTKEY_SQUADS; ++i) {
 		deleteInstance(m_squads[i]);
@@ -398,7 +398,7 @@ void Player::init(const PlayerTemplate* pt)
 	m_currentSelection = newInstance(Squad);
 
 	deleteInstance(m_tunnelSystem);
-	m_tunnelSystem = NULL;
+	m_tunnelSystem = nullptr;
 
 	m_canBuildBase = true;
 	m_canBuildUnits = true;
@@ -513,33 +513,33 @@ void Player::init(const PlayerTemplate* pt)
 //=============================================================================
 Player::~Player()
 {
-	m_defaultTeam = NULL;
-	m_playerTemplate = NULL;
+	m_defaultTeam = nullptr;
+	m_playerTemplate = nullptr;
 
 	for( PlayerTeamList::iterator it = m_playerTeamPrototypes.begin();
 			 it != m_playerTeamPrototypes.end(); ++it)
 	{
-		(*it)->friend_setOwningPlayer(NULL);
+		(*it)->friend_setOwningPlayer(nullptr);
 	}
 	m_playerTeamPrototypes.clear();	// empty, but don't free the contents
 
 	// delete the relation maps (the destructor clears the actual map if any data is present)
 	deleteInstance(m_teamRelations);
-	m_teamRelations = NULL;
+	m_teamRelations = nullptr;
 
 	deleteInstance(m_playerRelations);
-	m_playerRelations = NULL;
+	m_playerRelations = nullptr;
 
 	for (Int i = 0; i < NUM_HOTKEY_SQUADS; ++i) {
 		deleteInstance(m_squads[i]);
-		m_squads[i] = NULL;
+		m_squads[i] = nullptr;
 	}
 
 	deleteInstance(m_currentSelection);
-	m_currentSelection = NULL;
+	m_currentSelection = nullptr;
 
 	deleteInstance(m_battlePlanBonuses);
-	m_battlePlanBonuses = NULL;
+	m_battlePlanBonuses = nullptr;
 }
 
 //=============================================================================
@@ -563,7 +563,7 @@ Relationship Player::getRelationship(const Team *that) const
 		if (!m_playerRelations->m_map.empty())
 		{
 			const Player* thatPlayer = that->getControllingPlayer();
-			if (thatPlayer != NULL)
+			if (thatPlayer != nullptr)
 			{
 				PlayerRelationMapType::const_iterator it = m_playerRelations->m_map.find(thatPlayer->getPlayerIndex());
 				if (it != m_playerRelations->m_map.end())
@@ -579,7 +579,7 @@ Relationship Player::getRelationship(const Team *that) const
 //=============================================================================
 void Player::setPlayerRelationship(const Player *that, Relationship r)
 {
-	if (that != NULL)
+	if (that != nullptr)
 	{
 		// note that this creates the entry if it doesn't exist.
 		m_playerRelations->m_map[that->getPlayerIndex()] = r;
@@ -591,7 +591,7 @@ Bool Player::removePlayerRelationship(const Player *that)
 {
 	if (!m_playerRelations->m_map.empty())
 	{
-		if (that == NULL)
+		if (that == nullptr)
 		{
 			m_playerRelations->m_map.clear();
 			return true;
@@ -612,7 +612,7 @@ Bool Player::removePlayerRelationship(const Player *that)
 //=============================================================================
 void Player::setTeamRelationship(const Team *that, Relationship r)
 {
-	if (that != NULL)
+	if (that != nullptr)
 	{
 		// note that this creates the entry if it doesn't exist.
 		m_teamRelations->m_map[that->getID()] = r;
@@ -624,7 +624,7 @@ Bool Player::removeTeamRelationship(const Team *that)
 {
 	if (!m_teamRelations->m_map.empty())
 	{
-		if (that == NULL)
+		if (that == nullptr)
 		{
 			m_teamRelations->m_map.clear();
 			return true;
@@ -750,7 +750,7 @@ void Player::setPlayerType(PlayerType t, Bool skirmish)
 	m_playerType = t;
 
 	deleteInstance(m_ai);
-	m_ai = NULL;
+	m_ai = nullptr;
 
 	if (t == PLAYER_COMPUTER)
 	{
@@ -783,7 +783,7 @@ void Player::setDefaultTeam(void) {
 void Player::deletePlayerAI()
 {
 	deleteInstance(m_ai);
-	m_ai = NULL;
+	m_ai = nullptr;
 }
 
 //=============================================================================
@@ -793,7 +793,7 @@ void Player::initFromDict(const Dict* d)
 {
 	AsciiString tmplname = d->getAsciiString(TheKey_playerFaction);
 	const PlayerTemplate* pt = ThePlayerTemplateStore->findPlayerTemplate(NAMEKEY(tmplname));
-	DEBUG_ASSERTCRASH(pt != NULL, ("PlayerTemplate %s not found -- this is an obsolete map (please open and resave in WB)",tmplname.str()));
+	DEBUG_ASSERTCRASH(pt != nullptr, ("PlayerTemplate %s not found -- this is an obsolete map (please open and resave in WB)",tmplname.str()));
 
 	init(pt);
 
@@ -862,7 +862,7 @@ void Player::initFromDict(const Dict* d)
 				TheSidesList->getSideInfo(getPlayerIndex())->setScriptList(scripts);
 
 				deleteInstance(TheSidesList->getSkirmishSideInfo(i)->getScriptList());
-				TheSidesList->getSkirmishSideInfo(i)->setScriptList(NULL);
+				TheSidesList->getSkirmishSideInfo(i)->setScriptList(nullptr);
 			}
 
 		}
@@ -1042,7 +1042,7 @@ void Player::becomingTeamMember(Object *obj, Bool yes)
 	{
 		NameKeyType key_AutoDepositUpdate = NAMEKEY("AutoDepositUpdate");
 		AutoDepositUpdate *adu = (AutoDepositUpdate *)obj->findUpdateModule(key_AutoDepositUpdate);
-		if (adu != NULL) {
+		if (adu != nullptr) {
 			adu->awardInitialCaptureBonus( this );
 		}
 	}
@@ -1178,11 +1178,11 @@ Bool Player::computeSuperweaponTarget(const SpecialPowerTemplate *power, Coord3D
 }
 
 //-------------------------------------------------------------------------------------------------
-/** Get this player's current enemy. NOTE - Can be NULL. */
+/** Get this player's current enemy. NOTE - Can be nullptr. */
 //-------------------------------------------------------------------------------------------------
 Player  *Player::getCurrentEnemy( void )
 {
-	return m_ai?m_ai->getAiEnemy():NULL;
+	return m_ai?m_ai->getAiEnemy():nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1219,7 +1219,7 @@ static void doFindCommandCenter(Object* obj, void* userData)
 
 	PlayerObjectFindInfo* info = (PlayerObjectFindInfo*)userData;
 
-	if (info->obj == NULL
+	if (info->obj == nullptr
 			&& obj->isKindOf(KINDOF_COMMANDCENTER)
 			&& obj->getTemplate()->getDefaultOwningSide() == info->player->getSide()
 			&& !obj->testStatus(OBJECT_STATUS_UNDER_CONSTRUCTION)
@@ -1440,7 +1440,7 @@ Object* Player::findNaturalCommandCenter()
 {
 	PlayerObjectFindInfo info;
 	info.player = this;
-	info.obj = NULL;
+	info.obj = nullptr;
 	iterateObjects(doFindCommandCenter, &info);
 	return info.obj;
 }
@@ -1450,7 +1450,7 @@ Object* Player::findMostReadyShortcutSpecialPowerOfType( SpecialPowerType spType
 {
 	PlayerObjectFindInfo info;
 	info.player = this;
-	info.obj = NULL;
+	info.obj = nullptr;
 	info.spType = spType;
 	info.lowestReadyFrame = 0xffffffff;
 	iterateObjects( doFindSpecialPowerSourceObject, &info );
@@ -1462,7 +1462,7 @@ Object* Player::findMostReadyShortcutWeaponForThing( const ThingTemplate *thing,
 {
 	PlayerObjectFindInfo info;
 	info.player = this;
-	info.obj = NULL;
+	info.obj = nullptr;
 	info.thing = thing;
 	info.highestPercentage = 0;
 	iterateObjects( doFindMostReadyWeaponForThing, &info );
@@ -1475,7 +1475,7 @@ Object* Player::findMostReadyShortcutSpecialPowerForThing( const ThingTemplate *
 {
 	PlayerObjectFindInfo info;
 	info.player = this;
-	info.obj = NULL;
+	info.obj = nullptr;
 	info.thing = thing;
 	info.highestPercentage = 0;
 	iterateObjects( doFindMostReadySpecialPowerForThing, &info );
@@ -1488,7 +1488,7 @@ Object* Player::findAnyExistingObjectWithThingTemplate( const ThingTemplate *thi
 {
 	PlayerObjectFindInfo info;
 	info.player = this;
-	info.obj = NULL;
+	info.obj = nullptr;
 	info.thing = thing;
 	iterateObjects( doFindExistingObjectWithThingTemplate, &info );
 	return info.obj;
@@ -1501,7 +1501,7 @@ Bool Player::hasAnyShortcutSpecialPower()
 {
 	PlayerObjectFindInfo info;
 	info.player = this;
-	info.obj = NULL;
+	info.obj = nullptr;
 	info.spType = SPECIAL_INVALID; //Invalid dictates that we don't care about the type.
 	info.lowestReadyFrame = 0xffffffff;
 	iterateObjects( doFindSpecialPowerSourceObject, &info );
@@ -1628,11 +1628,11 @@ void Player::preTeamDestroy( const Team *team )
 
 	// TheSuperHackers @bugfix Mauller/Xezon 03/05/2025 Clear the default team to prevent dangling pointer usage
 	if( m_defaultTeam == team )
-		m_defaultTeam = NULL;
+		m_defaultTeam = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
-/// a structuer was just created, but is under construction
+/// a structure was just created, but is under construction
 //-------------------------------------------------------------------------------------------------
 void Player::onStructureCreated( Object *builder, Object *structure )
 {
@@ -1924,8 +1924,8 @@ Int Player::countObjects(KindOfMaskType setMask, KindOfMaskType clearMask)
 //=============================================================================
 Object *Player::findClosestByKindOf( Object *queryObject, KindOfMaskType setMask, KindOfMaskType clearMask )
 {
-	if( queryObject == NULL )
-		return NULL;
+	if( queryObject == nullptr )
+		return nullptr;
 
 	ClosestKindOfData data;
 	data.m_setKindOf = setMask;
@@ -2284,7 +2284,7 @@ void Player::transferAssetsFromThat(Player *that)
 			for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance())
 			{
 				Object *obj = iterObj.cur();
-				if (!obj || obj->getTemplate()->isEquivalentTo(beaconTemplate))  // don't transfer NULL objs or beacons
+				if (!obj || obj->getTemplate()->isEquivalentTo(beaconTemplate))  // don't transfer nullptr objs or beacons
 				{
 					continue;
 				}
@@ -2307,7 +2307,7 @@ void Player::transferAssetsFromThat(Player *that)
 void Player::garrisonAllUnits(CommandSourceType source)
 {
 	PartitionFilterAcceptByKindOf f1(MAKE_KINDOF_MASK(KINDOF_STRUCTURE), KINDOFMASK_NONE);
-	PartitionFilter *filters[] = { &f1, NULL };
+	PartitionFilter *filters[] = { &f1, nullptr };
 
 	Coord3D pos = {50.0, 50.0, 50.0};
 /// @todo srj -- we should really use iterateAllObjects() here instead, but I have no time to
@@ -2447,7 +2447,7 @@ void sellBuildings( Object *obj, void *userData )
 //=============================================================================
 void Player::sellEverythingUnderTheSun()
 {
-  iterateObjects( sellBuildings, NULL );
+  iterateObjects( sellBuildings, nullptr );
 }
 
 
@@ -2779,7 +2779,7 @@ void Player::addSciencePurchasePoints(Int delta)
 	if (m_sciencePurchasePoints < 0)
 		m_sciencePurchasePoints = 0;
 
-	if (oldSPP != m_sciencePurchasePoints && TheControlBar != NULL)
+	if (oldSPP != m_sciencePurchasePoints && TheControlBar != nullptr)
 		TheControlBar->onPlayerSciencePurchasePointsChanged(this);
 
 }
@@ -2924,7 +2924,7 @@ Bool Player::setRankLevel(Int newLevel)
 	DEBUG_ASSERTCRASH(m_skillPoints >= m_levelDown && m_skillPoints < m_levelUp, ("hmm, wrong"));
 	//DEBUG_LOG(("Rank %d, Skill %d, down %d, up %d",m_rankLevel,m_skillPoints, m_levelDown, m_levelUp));
 
-	if (TheControlBar != NULL)
+	if (TheControlBar != nullptr)
 	{
 		if( m_levelUp )
 		{
@@ -3051,7 +3051,7 @@ static void countExisting( Object *obj, void *userData )
 
   // Compare templates
   if ( ( typeCountData->type && typeCountData->type->isEquivalentTo( obj->getTemplate() ) ) ||
-       ( typeCountData->linkKey != NAMEKEY_INVALID && obj->getTemplate() != NULL && typeCountData->linkKey == obj->getTemplate()->getMaxSimultaneousLinkKey() ) )
+       ( typeCountData->linkKey != NAMEKEY_INVALID && obj->getTemplate() != nullptr && typeCountData->linkKey == obj->getTemplate()->getMaxSimultaneousLinkKey() ) )
   {
     typeCountData->count++;
   }
@@ -3186,7 +3186,7 @@ Upgrade *Player::findUpgrade( const UpgradeTemplate *upgradeTemplate )
 		if( upgrade->getTemplate() == upgradeTemplate )
 			return upgrade;
 
-	return NULL;
+	return nullptr;
 
 }
 
@@ -3195,7 +3195,7 @@ Upgrade *Player::findUpgrade( const UpgradeTemplate *upgradeTemplate )
 //=================================================================================================
 Bool Player::hasUpgradeComplete( const UpgradeTemplate *upgradeTemplate ) const
 {
-	UpgradeMaskType testMask = upgradeTemplate->getUpgradeMask();
+	const UpgradeMaskType& testMask = upgradeTemplate->getUpgradeMask();
 	return hasUpgradeComplete( testMask );
 }
 
@@ -3204,7 +3204,7 @@ Bool Player::hasUpgradeComplete( const UpgradeTemplate *upgradeTemplate ) const
 	Does the player have this completed upgrade.  This form is exposed so Objects can do quick lookups.
 */
 //=================================================================================================
-Bool Player::hasUpgradeComplete( UpgradeMaskType testMask ) const
+Bool Player::hasUpgradeComplete( const UpgradeMaskType& testMask ) const
 {
 	return m_upgradesCompleted.testForAll( testMask );
 }
@@ -3214,7 +3214,7 @@ Bool Player::hasUpgradeComplete( UpgradeMaskType testMask ) const
 //=================================================================================================
 Bool Player::hasUpgradeInProduction( const UpgradeTemplate *upgradeTemplate )
 {
-	UpgradeMaskType testMask = upgradeTemplate->getUpgradeMask();
+	const UpgradeMaskType& testMask = upgradeTemplate->getUpgradeMask();
 	return m_upgradesInProgress.testForAll( testMask );
 }
 
@@ -3226,14 +3226,14 @@ Upgrade *Player::addUpgrade( const UpgradeTemplate *upgradeTemplate, UpgradeStat
 	Upgrade *u = findUpgrade( upgradeTemplate );
 
 	// if no upgrade instance found, make a new one
-	if( u == NULL )
+	if( u == nullptr )
 	{
 
 		// make new one
 		u = newInstance(Upgrade)( upgradeTemplate );
 
 		// tie to list
-		u->friend_setPrev( NULL );
+		u->friend_setPrev( nullptr );
 		u->friend_setNext( m_upgradeList );
 		if( m_upgradeList )
 			m_upgradeList->friend_setPrev( u );
@@ -3245,7 +3245,7 @@ Upgrade *Player::addUpgrade( const UpgradeTemplate *upgradeTemplate, UpgradeStat
 	u->setStatus( status );
 
 	// Update our Bitmasks
-	UpgradeMaskType newMask = upgradeTemplate->getUpgradeMask();
+	const UpgradeMaskType& newMask = upgradeTemplate->getUpgradeMask();
 	if( status == UPGRADE_STATUS_IN_PRODUCTION )
 	{
 		m_upgradesInProgress.set( newMask );
@@ -3278,14 +3278,14 @@ void Player::onUpgradeCompleted( const UpgradeTemplate *upgradeTemplate )
 		for (DLINK_ITERATOR<Team> iter = (*it)->iterate_TeamInstanceList(); !iter.done(); iter.advance())
 		{
 			Team *team = iter.cur();
-			if( team == NULL )
+			if( team == nullptr )
 			{
 				continue;
 			}
 			for (DLINK_ITERATOR<Object> iterObj = team->iterate_TeamMemberList(); !iterObj.done(); iterObj.advance())
 			{
 				Object *obj = iterObj.cur();
-				if( obj == NULL )
+				if( obj == nullptr )
 				{
 					continue;
 				}
@@ -3316,7 +3316,7 @@ void Player::removeUpgrade( const UpgradeTemplate *upgradeTemplate )
 			m_upgradeList = upgrade->friend_getNext();
 
 		// Clear this upgrade's bits from our mind
-		UpgradeMaskType oldMask = upgradeTemplate->getUpgradeMask();
+		const UpgradeMaskType& oldMask = upgradeTemplate->getUpgradeMask();
 		m_upgradesInProgress.clear( oldMask );
 		m_upgradesCompleted.clear( oldMask );
 
@@ -3346,7 +3346,7 @@ Bool Player::okToPlayRadarEdgeSound( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-/** The parameter object has just aquired a radar */
+/** The parameter object has just acquired a radar */
 //-------------------------------------------------------------------------------------------------
 void Player::addRadar( Bool disableProof )
 {
@@ -3609,7 +3609,7 @@ Bool Player::doesObjectQualifyForBattlePlan( Object *obj ) const
 // note, bonus is an in-out parm.
 void Player::changeBattlePlan( BattlePlanStatus plan, Int delta, BattlePlanBonuses *bonus )
 {
-	DUMPBATTLEPLANBONUSES(bonus, this, NULL);
+	DUMPBATTLEPLANBONUSES(bonus, this, nullptr);
 	Bool addBonus = false;
 	Bool removeBonus = false;
 	switch( plan )
@@ -3841,7 +3841,7 @@ void Player::removeBattlePlanBonusesForObject( Object *obj ) const
 //-------------------------------------------------------------------------------------------------
 void Player::applyBattlePlanBonusesForPlayerObjects( const BattlePlanBonuses *bonus )
 {
-	DUMPBATTLEPLANBONUSES(bonus, this, NULL);
+	DUMPBATTLEPLANBONUSES(bonus, this, nullptr);
 
 	//Only allocate the battle plan bonuses if we actually use it!
 	if( !m_battlePlanBonuses )
@@ -3853,7 +3853,7 @@ void Player::applyBattlePlanBonusesForPlayerObjects( const BattlePlanBonuses *bo
 	else
 	{
 		DEBUG_LOG(("Adding bonus into existing m_battlePlanBonuses"));
-		DUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, NULL);
+		DUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, nullptr);
 		//Just apply the differences by multiplying the scalars together (kindofs won't change)
 		//These bonuses are used for new objects that are created or objects that are transferred
 		//to our team.
@@ -3867,7 +3867,7 @@ void Player::applyBattlePlanBonusesForPlayerObjects( const BattlePlanBonuses *bo
 		m_battlePlanBonuses->m_searchAndDestroy			=	 MAX( 0, m_battlePlanBonuses->m_searchAndDestroy );
 	}
 
-	DUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, NULL);
+	DUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, nullptr);
 	iterateObjects( localApplyBattlePlanBonusesToObject, (void*)bonus );
 }
 
@@ -3889,7 +3889,7 @@ void Player::processCreateTeamGameMessage(Int hotkeyNum, const GameMessage *msg)
 	for (UnsignedByte i = 0; i < numArgs; ++i) {
 		ObjectID objID = msg->getArgument(i)->objectID;
 		Object *obj = TheGameLogic->findObjectByID(objID);
-		if (obj != NULL) {
+		if (obj != nullptr) {
 			// first, remove it from any other hotkey squads it is in.
 			removeObjectFromHotkeySquad(obj);
 			m_squads[hotkeyNum]->addObject(obj);
@@ -3906,7 +3906,7 @@ void Player::processSelectTeamGameMessage(Int hotkeyNum, GameMessage *msg) {
 		return;
 	}
 
-	if (m_squads[hotkeyNum] == NULL) {
+	if (m_squads[hotkeyNum] == nullptr) {
 		return;
 	}
 
@@ -3936,11 +3936,11 @@ void Player::processAddTeamGameMessage(Int hotkeyNum, GameMessage *msg) {
 		return;
 	}
 
-	if (m_squads[hotkeyNum] == NULL) {
+	if (m_squads[hotkeyNum] == nullptr) {
 		return;
 	}
 
-	if (m_currentSelection == NULL) {
+	if (m_currentSelection == nullptr) {
 		m_currentSelection = newInstance( Squad );
 	}
 
@@ -3956,7 +3956,7 @@ void Player::processAddTeamGameMessage(Int hotkeyNum, GameMessage *msg) {
 /** Select a hotkey team based on this GameMessage */
 //-------------------------------------------------------------------------------------------------
 void Player::getCurrentSelectionAsAIGroup(AIGroup *group) {
-	if (m_currentSelection != NULL) {
+	if (m_currentSelection != nullptr) {
 		m_currentSelection->aiGroupFromSquad(group);
 	}
 }
@@ -3965,13 +3965,13 @@ void Player::getCurrentSelectionAsAIGroup(AIGroup *group) {
 /** Select a hotkey team based on this GameMessage */
 //-------------------------------------------------------------------------------------------------
 void Player::setCurrentlySelectedAIGroup(AIGroup *group) {
-	if (m_currentSelection == NULL) {
+	if (m_currentSelection == nullptr) {
 		m_currentSelection = newInstance( Squad );
 	}
 
 	m_currentSelection->clearSquad();
 
-	if (group != NULL) {
+	if (group != nullptr) {
 		m_currentSelection->squadFromAIGroup(group, true);
 	}
 }
@@ -3984,7 +3984,7 @@ Squad *Player::getHotkeySquad(Int squadNumber)
 	if ((squadNumber >= 0) && (squadNumber < NUM_HOTKEY_SQUADS)) {
 		return m_squads[squadNumber];
 	}
-	return NULL;
+	return nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4020,11 +4020,11 @@ void Player::removeObjectFromHotkeySquad(Object *objToRemove)
 /** Select a hotkey team based on this GameMessage */
 //-------------------------------------------------------------------------------------------------
 void Player::addAIGroupToCurrentSelection(AIGroup *group) {
-	if (group == NULL) {
+	if (group == nullptr) {
 		return;
 	}
 
-	if (m_currentSelection == NULL) {
+	if (m_currentSelection == nullptr) {
 		m_currentSelection = newInstance( Squad );
 	}
 
@@ -4297,12 +4297,12 @@ Bool Player::isPlayableSide( void ) const
 void Player::crc( Xfer *xfer )
 {
 	// Player battle plan bonuses
-	Bool battlePlanBonus = m_battlePlanBonuses != NULL;
+	Bool battlePlanBonus = m_battlePlanBonuses != nullptr;
 	xfer->xferBool( &battlePlanBonus );
 	CRCDEBUG_LOG(("Player %d[%ls] %s battle plans", m_playerIndex, m_playerDisplayName.str(), (battlePlanBonus)?"has":"doesn't have"));
 	if( m_battlePlanBonuses )
 	{
-		CRCDUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, NULL);
+		CRCDUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, nullptr);
 		xfer->xferReal( &m_battlePlanBonuses->m_armorScalar );
 		xfer->xferReal( &m_battlePlanBonuses->m_sightRangeScalar );
 		xfer->xferInt( &m_battlePlanBonuses->m_bombardment );
@@ -4392,7 +4392,7 @@ void Player::xfer( Xfer *xfer )
 			upgradeTemplate = TheUpgradeCenter->findUpgrade( upgradeName );
 
 			// sanity
-			if( upgradeTemplate == NULL )
+			if( upgradeTemplate == nullptr )
 			{
 
 				DEBUG_CRASH(( "Player::xfer - Unable to find upgrade '%s'", upgradeName.str() ));
@@ -4464,7 +4464,7 @@ void Player::xfer( Xfer *xfer )
 			prototype = TheTeamFactory->findTeamPrototypeByID( prototypeID );
 
 			// sanity
-			if( prototype == NULL )
+			if( prototype == nullptr )
 			{
 
 				DEBUG_CRASH(( "Player::xfer - Unable to find team prototype by id" ));
@@ -4501,7 +4501,7 @@ void Player::xfer( Xfer *xfer )
 		// the head of these structures automatically deletes any links attached
 		//
 		deleteInstance(m_pBuildList);
-		m_pBuildList = NULL;
+		m_pBuildList = nullptr;
 
 		// read each build list info
 		for( UnsignedShort i = 0; i < buildListInfoCount; ++i )
@@ -4509,16 +4509,16 @@ void Player::xfer( Xfer *xfer )
 
 			// allocate new build list
 			buildListInfo = newInstance( BuildListInfo );
-			buildListInfo->setNextBuildList( NULL );
+			buildListInfo->setNextBuildList( nullptr );
 
 			// attach to the *end* of the list in the player
-			if( m_pBuildList == NULL )
+			if( m_pBuildList == nullptr )
 				m_pBuildList = buildListInfo;
 			else
 			{
 				BuildListInfo *last = m_pBuildList;
 
-				while( last->getNext() != NULL )
+				while( last->getNext() != nullptr )
 					last = last->getNext();
 
 				last->setNextBuildList( buildListInfo );
@@ -4535,7 +4535,7 @@ void Player::xfer( Xfer *xfer )
 	// ai player data
 	Bool aiPlayerPresent = m_ai ? TRUE : FALSE;
 	xfer->xferBool( &aiPlayerPresent );
-	if( (aiPlayerPresent == TRUE && m_ai == NULL) || (aiPlayerPresent == FALSE && m_ai != NULL) )
+	if( (aiPlayerPresent == TRUE && m_ai == nullptr) || (aiPlayerPresent == FALSE && m_ai != nullptr) )
 	{
 
 		DEBUG_CRASH(( "Player::xfer - m_ai present/missing mismatch" ));
@@ -4548,8 +4548,8 @@ void Player::xfer( Xfer *xfer )
 	// resource gathering manager
 	Bool resourceGatheringManagerPresent = m_resourceGatheringManager ? TRUE : FALSE;
 	xfer->xferBool( &resourceGatheringManagerPresent );
-	if( (resourceGatheringManagerPresent == TRUE && m_resourceGatheringManager == NULL) ||
-			(resourceGatheringManagerPresent == FALSE && m_resourceGatheringManager != NULL ) )
+	if( (resourceGatheringManagerPresent == TRUE && m_resourceGatheringManager == nullptr) ||
+			(resourceGatheringManagerPresent == FALSE && m_resourceGatheringManager != nullptr ) )
 	{
 
 		DEBUG_CRASH(( "Player::xfer - m_resourceGatheringManager present/missing mismatch" ));
@@ -4562,8 +4562,8 @@ void Player::xfer( Xfer *xfer )
 	// tunnel tracking system
 	Bool tunnelTrackerPresent = m_tunnelSystem ? TRUE : FALSE;
 	xfer->xferBool( &tunnelTrackerPresent );
-	if( (tunnelTrackerPresent == TRUE && m_tunnelSystem == NULL) ||
-			(tunnelTrackerPresent == FALSE && m_tunnelSystem != NULL) )
+	if( (tunnelTrackerPresent == TRUE && m_tunnelSystem == nullptr) ||
+			(tunnelTrackerPresent == FALSE && m_tunnelSystem != nullptr) )
 	{
 
 		DEBUG_CRASH(( "Player::xfer - m_tunnelSystem present/missing mismatch" ));
@@ -4867,10 +4867,10 @@ void Player::xfer( Xfer *xfer )
 	for( UnsignedShort i = 0; i < squadCount; ++i )
 	{
 
-		if( m_squads[ i ] == NULL )
+		if( m_squads[ i ] == nullptr )
 		{
 
-			DEBUG_CRASH(( "Player::xfer - NULL squad at index '%d'", i ));
+			DEBUG_CRASH(( "Player::xfer - null squad at index '%d'", i ));
 			throw SC_INVALID_DATA;
 
 		}
@@ -4886,7 +4886,7 @@ void Player::xfer( Xfer *xfer )
 	{
 
 		// allocate squad if needed
-		if( m_currentSelection == NULL && xfer->getXferMode() == XFER_LOAD )
+		if( m_currentSelection == nullptr && xfer->getXferMode() == XFER_LOAD )
 			m_currentSelection = newInstance( Squad );
 
 		// xfer
@@ -4895,12 +4895,12 @@ void Player::xfer( Xfer *xfer )
 	}
 
 	// Player battle plan bonuses
-	Bool battlePlanBonus = m_battlePlanBonuses != NULL;
+	Bool battlePlanBonus = m_battlePlanBonuses != nullptr;
 	xfer->xferBool( &battlePlanBonus ); //If we're loading, it just replaces the bool
 	if( xfer->getXferMode() == XFER_LOAD )
 	{
 		deleteInstance(m_battlePlanBonuses);
-		m_battlePlanBonuses = NULL;
+		m_battlePlanBonuses = nullptr;
 
 		if ( battlePlanBonus )
 		{

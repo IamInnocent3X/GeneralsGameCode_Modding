@@ -37,6 +37,7 @@
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class TextureClass;
+class SurfaceClass;
 class TerrainLogic;
 
 // PROTOTYPES /////////////////////////////////////////////////////////////////////////////////////
@@ -63,10 +64,14 @@ public:
 	virtual void draw( Int pixelX, Int pixelY, Int width, Int height );		///< draw the radar
 
 	virtual void clearShroud();
-	virtual void setShroudLevel(Int x, Int y, CellShroudStatus setting);
+	virtual void setShroudLevel(Int x, Int y, CellShroudStatus setting); ///< set the shroud level at shroud cell x,y
+	virtual void beginSetShroudLevel(); ///< call this once before multiple calls to setShroudLevel for better performance
+	virtual void endSetShroudLevel(); ///< call this once after beginSetShroudLevel and setShroudLevel
 
 	virtual void refreshTerrain( TerrainLogic *terrain );
 	virtual void refreshObjects();
+
+	virtual void notifyViewChanged(); ///< signals that the camera view has changed
 
 protected:
 
@@ -104,19 +109,21 @@ protected:
 	WW3DFormat m_shroudTextureFormat;							///< format to use for shroud texture
 	Image *m_shroudImage;													///< shroud image abstraction for drawing
 	TextureClass *m_shroudTexture;								///< shroud texture
+	SurfaceClass *m_shroudSurface;								///< surface to shroud texture
+	void *m_shroudSurfaceBits;										///< shroud surface bits
+	int m_shroudSurfacePitch;											///< shroud surface pitch
+	WW3DFormat m_shroudSurfaceFormat;							///< shroud surface format
+	UnsignedInt m_shroudSurfacePixelSize;					///< shroud surface pixel size
 
 	Int m_textureWidth;														///< width for all radar textures
 	Int m_textureHeight;													///< height for all radar textures
 
 	//
-	// we want to keep a flag that tells us when to reconstruct the view box, we want
-	// to reconstruct the box on map change, and when the camera changes height
-	// or orientation.  We want to avoid making the view box every frame because
-	// the 4 points visible on the edge of the screen will "jitter" unevenly as we
-	// translate real world coords to integer radar spots
+	// We want to keep a flag that tells us when to reconstruct the view box.
+	// We want to avoid making the view box every frame because the 4 points
+	// visible on the edge of the screen will "jitter" unevenly as we translate
+	// real world coordinates to integer radar positions.
 	//
 	Bool m_reconstructViewBox;										///< true when we need to reconstruct the box
-	Real m_viewAngle;															///< camera angle used for the view box we have
-	Real m_viewZoom;															///< camera zoom used for the view box we have
 	ICoord2D m_viewBox[ 4 ];											///< radar cell points for the 4 corners of view box
 };
