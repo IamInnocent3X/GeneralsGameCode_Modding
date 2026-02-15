@@ -1226,26 +1226,20 @@ void W3DDisplay::gatherDebugStats( void )
 		Real FXPitch = TheTacticalView->getFXPitch();
 		Real angle = TheTacticalView->getAngle();
 		Real FOV = TheTacticalView->getFieldOfView();
-		//Real desiredHeight = TheTacticalView->getHeightAboveGround();
-		Real terrainHeight = TheTacticalView->getTerrainHeightUnderCamera();
+		Real terrainHeight = TheTacticalView->getTerrainHeightAtPivot();
 		Real actualHeightAboveGround = TheTacticalView->getCurrentHeightAboveGround();
 
-		unibuffer.format( L"Camera zoom: %g, pitch: %g/%g, yaw: %g, pos: %g, %g, %g, FOV: %g\n       Height above ground: %g Terrain height: %g",
-												zoom,
-												pitch,
-												FXPitch,
-												angle,
-												camPos.x, camPos.y, camPos.z,
-												FOV,
-												/*
-												zoom,
-												pitch * 180.0f / PI,
-												FXPitch * 180.0f / PI,
-												angle * 180.0f / PI,
-												camPos.x, camPos.y, camPos.z,
-												FOV * 180.0f / PI,
-												*/
-												actualHeightAboveGround, terrainHeight );
+		unibuffer.format(
+			L"Camera zoom: %.3f, pitch: %.2f, FXpitch: %.2f, yaw: %.2f, pos: (%.2f, %.2f, %.2f), FOV: %.2f\n"
+			L"Height above ground: %.2f, Terrain height at camera pivot: %.2f",
+			zoom,
+			RAD_TO_DEGF(pitch),
+			RAD_TO_DEGF(FXPitch),
+			RAD_TO_DEGF(angle),
+			camPos.x, camPos.y, camPos.z,
+			RAD_TO_DEGF(FOV),
+			actualHeightAboveGround, terrainHeight );
+
 		m_displayStrings[DebugInfo]->setText( unibuffer );
 
 		// display the keyboard modifier and mouse states.
@@ -1482,7 +1476,7 @@ void W3DDisplay::gatherDebugStats( void )
 void W3DDisplay::drawDebugStats( void )
 {
 	Int	x = 3;
-	Int	y = 3;
+	Int	y = 30;
 	Color textColor = GameMakeColor( 255, 255, 255, 255 );
 	Color dropColor = GameMakeColor( 0, 0, 0, 255 );
 
@@ -2803,8 +2797,8 @@ VideoBuffer*	W3DDisplay::createVideoBuffer( void )
 			return nullptr;
 		}
 	}
-	// on low mem machines, render every video in 16bit except for the EA Logo movie
-	if(!TheGlobalData->m_playIntro )//&& TheGameLODManager && (!TheGameLODManager->didMemPass() || W3DShaderManager::getChipset() == DC_GEFORCE2))
+	// on low mem machines, render every video in 16bit
+	if (TheGameLODManager && (!TheGameLODManager->didMemPass() || W3DShaderManager::getChipset() == DC_GEFORCE2))
 		format = VideoBuffer::TYPE_R5G6B5;
 
 	W3DVideoBuffer *buffer = NEW W3DVideoBuffer( format );

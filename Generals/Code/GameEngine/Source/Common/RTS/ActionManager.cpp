@@ -220,7 +220,7 @@ Bool ActionManager::canTransferSuppliesAt( const Object *obj, const Object *tran
 	if( transferDest->testStatus(OBJECT_STATUS_SOLD) )
 		return FALSE;
 
-	// I must be something with a Supply Transfering AI interface
+	// I must be something with a Supply Transferring AI interface
 	const AIUpdateInterface *ai= obj->getAI();
 	if( ai == nullptr )
 		return FALSE;
@@ -454,7 +454,7 @@ Bool ActionManager::canResumeConstructionOf( const Object *obj,
 	if( obj->isKindOf( KINDOF_DOZER ) == FALSE )
 		return FALSE;
 
-	// TheSuperHackers @bugfix Stubbjax 06/01/2025 Ensure only the owner of the construction can resume it.
+	// TheSuperHackers @bugfix Stubbjax 06/01/2026 Ensure only the owner of the construction can resume it.
 #if RETAIL_COMPATIBLE_CRC
 	Relationship r = obj->getRelationship(objectBeingConstructed);
 

@@ -1034,7 +1034,7 @@ void GameLogic::startNewGame( Bool saveGame )
 	m_rankLevelLimit = 1000;	// this is reset every game.
 
 	//
-	// only reset the next object ID allocater counter when we're not loading a save game.
+	// only reset the next object ID allocator counter when we're not loading a save game.
 	// for save games, we read this value out of the save game file and it is important
 	// that we preserve it as we load and execute the game
 	//
@@ -1786,7 +1786,8 @@ void GameLogic::startNewGame( Bool saveGame )
 	// update the loadscreen
 	updateLoadProgress(LOAD_PROGRESS_POST_PRELOAD_ASSETS);
 
-	TheTacticalView->setAngleAndPitchToDefault();
+	TheTacticalView->setAngleToDefault();
+	TheTacticalView->setPitchToDefault();
 	TheTacticalView->setZoomToDefault();
 
 	if( TheRecorder )
@@ -1832,7 +1833,8 @@ void GameLogic::startNewGame( Bool saveGame )
 
 	// Set up the camera height based on the map height & globalData.
 	TheTacticalView->initHeightForMap();
-	TheTacticalView->setAngleAndPitchToDefault();
+	TheTacticalView->setAngleToDefault();
+	TheTacticalView->setPitchToDefault();
 	TheTacticalView->setZoomToDefault();
 
 	// update the loadscreen
@@ -2040,7 +2042,8 @@ void GameLogic::startNewGame( Bool saveGame )
 		req.buddyRequestType = BuddyRequest::BUDDYREQUEST_SETSTATUS;
 		req.arg.status.status = GP_PLAYING;
 		strcpy(req.arg.status.statusString, "Playing");
-		sprintf(req.arg.status.locationString, "%s", WideCharStringToMultiByte(TheGameSpyGame->getGameName().str()).c_str());
+		strlcpy(req.arg.status.locationString, WideCharStringToMultiByte(TheGameSpyGame->getGameName().str()).c_str(),
+			ARRAY_SIZE(req.arg.status.locationString));
 		TheGameSpyBuddyMessageQueue->addRequest(req);
 	}
 
@@ -2122,7 +2125,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 
 
 	char fullFledgeFilename[_MAX_PATH];
-	sprintf(fullFledgeFilename, "%s\\map.ini", filename);
+	snprintf(fullFledgeFilename, ARRAY_SIZE(fullFledgeFilename), "%s\\map.ini", filename);
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		DEBUG_LOG(("Loading map.ini"));
 		INI ini;
@@ -2132,7 +2135,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	// TheSuperHackers @todo Implement ini load directory for map folder.
 	// Requires adjustments in map transfer.
 
-	sprintf(fullFledgeFilename, "%s\\solo.ini", filename);
+	snprintf(fullFledgeFilename, ARRAY_SIZE(fullFledgeFilename), "%s\\solo.ini", filename);
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		DEBUG_LOG(("Loading solo.ini"));
 		INI ini;
@@ -2142,7 +2145,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	// No error here. There could've just *not* been a map.ini file.
 
 	// now look for a string file
-	sprintf(fullFledgeFilename, "%s\\map.str", filename);
+	snprintf(fullFledgeFilename, ARRAY_SIZE(fullFledgeFilename), "%s\\map.str", filename);
 
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		TheGameText->initMapStringFile(fullFledgeFilename);
@@ -2152,7 +2155,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	if (TheDisplay)
 	{
 		const char* ASSET_USAGE_FILE_NAME = "AssetUsage.txt";
-		sprintf(fullFledgeFilename, "%s\\%s", filename, ASSET_USAGE_FILE_NAME);
+		snprintf(fullFledgeFilename, ARRAY_SIZE(fullFledgeFilename), "%s\\%s", filename, ASSET_USAGE_FILE_NAME);
 		// note: call this EVEN IF THE FILE IN QUESTION DOES NOT EXIST.
 		TheDisplay->doSmartAssetPurgeAndPreload(fullFledgeFilename);
 	}
@@ -3443,7 +3446,7 @@ void GameLogic::destroyObject( Object *obj )
 	if (!obj || obj->isDestroyed())
 		return;
 
-	// run the object onDestroy event if provied
+	// run the object onDestroy event if provided
 	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
 	{
 		DestroyModuleInterface* destroy = (*m)->getDestroy();
@@ -4261,7 +4264,7 @@ void GameLogic::xfer( Xfer *xfer )
 	// !!!DON'T DO THIS!!! ----> xfer->xferObjectID( &m_nextObjectID ); <---- !!!DON'T DO THIS!!!
 
 	//
-	// xfer a table of contents that contain thing template and indentifier pairs.  this
+	// xfer a table of contents that contain thing template and identifier pairs.  this
 	// table of contents is good for this save file only as unique numbers are only
 	// generated and stored for the actual things that are on this map
 	//

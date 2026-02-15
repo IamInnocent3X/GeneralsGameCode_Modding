@@ -831,7 +831,7 @@ Bool AIGroup::friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cm
 
 	Object *theUnit;
 	if (useEndVector) {
-		// resort unsing the end vector.
+		// resort using the end vector.
 		startVector = endVector;
 		startVectorNormal =	endVectorNormal;
 		for (theUnit = iter->first(); theUnit; theUnit = iter->next()) iter2->insert(theUnit);
@@ -1299,7 +1299,7 @@ Bool AIGroup::friend_moveVehicleToPos( const Coord3D *pos, CommandSourceType cmd
 
 	Object *theUnit;
 	if (useEndVector) {
-		// resort unsing the end vector.
+		// resort using the end vector.
 		startVector = endVector;
 		startVectorNormal =	endVectorNormal;
 		for (theUnit = iter->first(); theUnit; theUnit = iter->next()) iter2->insert(theUnit);
@@ -2112,10 +2112,14 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )	{
 		Real dx, dy;
 		Coord3D unitPos = *((*i)->getPosition());
+#if RETAIL_COMPATIBLE_CRC
+		// TheSuperHackers @bugfix Stubbjax 03/08/2025 This logic block erroneously prevents the
+		// occupants of DISABLED_HELD units (e.g. undead Battle Buses) from responding to attack commands.
 		if ((*i)->isDisabledByType( DISABLED_HELD ) )
 		{
 			continue; // don't bother telling the occupants to move.
 		}
+#endif
 		dx = unitPos.x - victimPos.x;
 		dy = unitPos.y - victimPos.y;
 		iter->insert((*i), dx*dx+dy*dy);

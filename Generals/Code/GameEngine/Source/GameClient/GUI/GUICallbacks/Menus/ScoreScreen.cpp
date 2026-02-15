@@ -72,7 +72,6 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/VictoryConditions.h"
-#include "GameClient/CDCheck.h"
 #include "GameClient/Display.h"
 #include "GameClient/GUICallbacks.h"
 #include "GameClient/WindowLayout.h"
@@ -124,7 +123,7 @@ static GameWindow *staticTextGameSaved = nullptr;
 
 static Bool overidePlayerDisplayName = FALSE;
 
-//Extrenal declarations
+//External declarations
 NameKeyType listboxChatWindowScoreScreenID = NAMEKEY_INVALID;
 GameWindow *listboxChatWindowScoreScreen = nullptr;
 std::string LastReplayFileName;
@@ -480,7 +479,7 @@ WindowMsgHandledType ScoreScreenSystem( GameWindow *window, UnsignedInt msg,
 						}
 						else
 						{
-							CheckForCDAtGameStart( startNextCampaignGame );
+							startNextCampaignGame();
 						}
 					}
 				}

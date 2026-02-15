@@ -22,9 +22,9 @@
 //																																						//
 ////////////////////////////////////////////////////////////////////////////////
 
-// FILE: W3DTankTruckDraw.h ////////////////////////////////////////////////////////////////////////////
-// Draw a vehicle with treads and wheels.
-// Author: Mark Wilczynski, August 2002
+// FILE: W3DTruckDraw.h ////////////////////////////////////////////////////////////////////////////
+// Draw a tank
+// Author: John Ahlquist, March 2002
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
@@ -39,7 +39,7 @@
 #include "WW3D2/part_emt.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DTankTruckDrawModuleData : public W3DModelDrawModuleData
+class W3DTruckDrawModuleData : public W3DModelDrawModuleData
 {
 public:
 	AsciiString m_dustEffectName;
@@ -55,33 +55,36 @@ public:
 	AsciiString m_midFrontRightTireBoneName;
 	AsciiString m_midRearLeftTireBoneName;
 	AsciiString m_midRearRightTireBoneName;
+	//And some more
+	AsciiString m_midMidLeftTireBoneName;
+	AsciiString m_midMidRightTireBoneName;
+
+	// Cab bone for a segmented truck.
+	AsciiString m_cabBoneName;
+	AsciiString m_trailerBoneName;
+	Real				m_cabRotationFactor;
+	Real				m_trailerRotationFactor;
+	Real				m_rotationDampingFactor;
+
 
 	Real				m_rotationSpeedMultiplier;
 	Real				m_powerslideRotationAddition;
 
-	//Tank data
-	AsciiString m_treadDebrisNameLeft;
-	AsciiString m_treadDebrisNameRight;
-
-	Real m_treadAnimationRate;	///<amount of tread texture to scroll per sec.  1.0 == full width.
-	Real m_treadPivotSpeedFraction;	///<fraction of locomotor speed below which we allow pivoting.
-	Real m_treadDriveSpeedFraction;	///<fraction of locomotor speed below which treads stop animating.
-
-	W3DTankTruckDrawModuleData();
-	~W3DTankTruckDrawModuleData();
+	W3DTruckDrawModuleData();
+	~W3DTruckDrawModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
 
 //-------------------------------------------------------------------------------------------------
-class W3DTankTruckDraw : public W3DModelDraw
+class W3DTruckDraw : public W3DModelDraw
 {
 
- 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( W3DTankTruckDraw, "W3DTankTruckDraw" )
-	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( W3DTankTruckDraw, W3DTankTruckDrawModuleData )
+ 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( W3DTruckDraw, "W3DTruckDraw" )
+	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( W3DTruckDraw, W3DTruckDrawModuleData )
 
 public:
 
-	W3DTankTruckDraw( Thing *thing, const ModuleData* moduleData );
+	W3DTruckDraw( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual void setHidden(Bool h);
@@ -96,10 +99,10 @@ protected:
 	Bool						m_effectsInitialized;
 	Bool						m_wasAirborne;
 	Bool						m_isPowersliding;
+
 	/// debris emitters for when tank is moving
-	ParticleSystem* m_dustEffect;
-	ParticleSystem* m_dirtEffect;
-	ParticleSystem* m_powerslideEffect;
+	enum { DustEffect, DirtEffect, PowerslideEffect };
+	ParticleSystemID m_truckEffectIDs[3];
 
 	Real						m_frontWheelRotation;
 	Real						m_rearWheelRotation;
@@ -115,37 +118,23 @@ protected:
 	Int							m_midFrontRightTireBone;
 	Int							m_midRearLeftTireBone;
 	Int							m_midRearRightTireBone;
+	//And some more
+	Int							m_midMidLeftTireBone;
+	Int							m_midMidRightTireBone;
 
+	Int							m_cabBone;
+	Real						m_curCabRotation;
+	Int							m_trailerBone;
+	Real						m_curTrailerRotation;
+
+	Int							m_prevNumBones;
 	AudioEventRTS		m_powerslideSound;
 	AudioEventRTS		m_landingSound;
 
-	//Tank Data
-	/// debris emitters for when tank is moving
-	ParticleSystem* m_treadDebrisLeft;
-	ParticleSystem* m_treadDebrisRight;
-
-	enum TreadType { TREAD_LEFT, TREAD_RIGHT, TREAD_MIDDLE };	//types of treads for different vehicles
-	enum {MAX_TREADS_PER_TANK=4};
-
-	struct TreadObjectInfo
-	{
-		RenderObjClass	*m_robj;	///<sub-object for tread
-		TreadType	m_type;			///<kind of tread
-		RenderObjClass::Material_Override m_materialSettings;	///<used to set current uv scroll amount.
-	};
-
-	TreadObjectInfo m_treads[MAX_TREADS_PER_TANK];
-	Int m_treadCount;
-
 	RenderObjClass *m_prevRenderObj;
 
-	void createEmitters( void );					///< Create particle effects.
-	void tossEmitters( void );					///< Create particle effects.
-	void enableEmitters( Bool enable );						///< stop creating debris from the tank treads
+	void createWheelEmitters( void ); ///< Create particle effects for wheels.
+	void tossWheelEmitters( void ); ///< Destroy particle effects for wheels.
+	void enableWheelEmitters( Bool enable ); ///< Start or stop creating effects from the wheels.
 	void updateBones( void );
-
-	void startMoveDebris( void );												///< start creating debris from the tank treads
-	void stopMoveDebris( void );												///< stop creating debris from the tank treads
-	void updateTreadObjects(void);												///< update pointers to sub-objects like treads.
-	void updateTreadPositions(Real uvDelta);									///< update uv coordinates on each tread
 };

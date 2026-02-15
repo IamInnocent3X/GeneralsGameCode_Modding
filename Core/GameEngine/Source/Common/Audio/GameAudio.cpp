@@ -139,6 +139,10 @@ static const FieldParse audioSettingsFieldParseTable[] =
 // Singleton TheAudio /////////////////////////////////////////////////////////////////////////////
 AudioManager *TheAudio = nullptr;
 
+const char *const AudioManager::MuteAudioReasonNames[] =
+{
+	"MuteAudioReason_WindowFocus",
+};
 
 // AudioManager Device Independent functions //////////////////////////////////////////////////////
 AudioManager::AudioManager() :
@@ -149,9 +153,10 @@ AudioManager::AudioManager() :
 	m_music(nullptr),
 	m_sound(nullptr),
 	m_surroundSpeakers(FALSE),
-	m_hardwareAccel(FALSE),
-	m_musicPlayingFromCD(FALSE)
+	m_hardwareAccel(FALSE)
 {
+	static_assert(ARRAY_SIZE(AudioManager::MuteAudioReasonNames) == MuteAudioReason_Count, "Incorrect array size");
+
 	m_adjustedVolumes.clear();
 	m_audioRequests.clear();
 	m_listenerPosition.zero();
@@ -171,6 +176,7 @@ AudioManager::AudioManager() :
 	m_miscAudio = NEW MiscAudio;
 	m_silentAudioEvent = NEW AudioEventRTS;
 	m_savedValues = nullptr;
+	m_muteReasonBits = 0;
 	m_disallowSpeech = FALSE;
 }
 
@@ -223,35 +229,6 @@ void AudioManager::init()
 
 	// do the miscellaneous sound files last so that we find the AudioEventRTS associated with the events.
 	ini.loadFileDirectory( "Data\\INI\\MiscAudio", INI_LOAD_OVERWRITE, nullptr);
-
-	// determine if one of the music tracks exists. Since their now BIGd, one implies all.
-	// If they don't exist, then attempt to load them from the CD.
-	if (!TheGlobalData->m_headless && !isMusicAlreadyLoaded())
-	{
-		m_musicPlayingFromCD = TRUE;
-		while (TRUE)
-		{
-			// @todo Unload any files from CD first. - jkmcd
-
-			TheFileSystem->loadMusicFilesFromCD();
-			if (isMusicAlreadyLoaded())
-			{
-				break;
-			}
-			// We loop infinitely on the splash screen if we don't allow breaking out of this loop.
-//#if !defined( RTS_DEBUG )
-			else
-			{
-				// Display the warning.
-
-				if (OSDisplayWarningBox("GUI:InsertCDPrompt", "GUI:InsertCDMessage", OSDBT_OK | OSDBT_CANCEL, OSDOF_SYSTEMMODAL | OSDOF_EXCLAMATIONICON) == OSDBT_CANCEL) {
-					//TheGameEngine->setQuitting(TRUE);  // Can't do this to WorldBuilder
-					break;
-				}
-			}
-//#endif
-		}
-	}
 
 	m_music = NEW MusicManager;
 	m_sound = NEW SoundManager;
@@ -1103,12 +1080,17 @@ void AudioManager::releaseAudioEventRTS( AudioEventRTS *&eventToRelease )
 }
 
 //-------------------------------------------------------------------------------------------------
-void AudioManager::loseFocus( void )
+void AudioManager::muteAudio( MuteAudioReason reason )
 {
-	if (m_savedValues)
+	m_muteReasonBits |= 1u << reason;
+
+	DEBUG_LOG(("AudioManager::muteAudio(%s): m_muteReason=%u muted=%d",
+		MuteAudioReasonNames[reason], m_muteReasonBits, (int)(m_muteReasonBits != 0)));
+
+	if (m_muteReasonBits == 0 || m_savedValues)
 		return;
 
-	// In this case, make all the audio go silent.
+	// Make all the audio go silent.
 	m_savedValues = NEW Real[NUM_VOLUME_TYPES];
 	m_savedValues[VOLUME_TYPE_MUSIC] = m_systemMusicVolume;
 	m_savedValues[VOLUME_TYPE_SOUND] = m_systemSoundVolume;
@@ -1120,12 +1102,17 @@ void AudioManager::loseFocus( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-void AudioManager::regainFocus( void )
+void AudioManager::unmuteAudio( MuteAudioReason reason )
 {
-	if (!m_savedValues)
+	m_muteReasonBits &= ~(1u << reason);
+
+	DEBUG_LOG(("AudioManager::unmuteAudio(%s): m_muteReason=%u muted=%d",
+		MuteAudioReasonNames[reason], m_muteReasonBits, (int)(m_muteReasonBits != 0)));
+
+	if (m_muteReasonBits != 0 || !m_savedValues)
 		return;
 
-	// We got focus back. Restore the previous audio values.
+	// Restore the previous audio values.
 	setVolume(m_savedValues[VOLUME_TYPE_MUSIC], (AudioAffect) (AudioAffect_Music | AudioAffect_SystemSetting));
 	setVolume(m_savedValues[VOLUME_TYPE_SOUND], (AudioAffect) (AudioAffect_Sound | AudioAffect_SystemSetting));
 	setVolume(m_savedValues[VOLUME_TYPE_SOUND3D], (AudioAffect) (AudioAffect_Sound3D | AudioAffect_SystemSetting));

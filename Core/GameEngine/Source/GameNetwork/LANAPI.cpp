@@ -67,8 +67,8 @@ LANGame::LANGame( void )
 
 LANAPI::LANAPI( void ) : m_transport(nullptr)
 {
-	DEBUG_LOG(("LANAPI::LANAPI() - max game option size is %d, sizeof(LANMessage)=%d, MAX_PACKET_SIZE=%d",
-		m_lanMaxOptionsLength, sizeof(LANMessage), MAX_PACKET_SIZE));
+	DEBUG_LOG(("LANAPI::LANAPI() - max game option size is %d, sizeof(LANMessage)=%d, MAX_LANAPI_PACKET_SIZE=%d",
+		m_lanMaxOptionsLength, sizeof(LANMessage), MAX_LANAPI_PACKET_SIZE));
 
 	m_lastResendTime = 0;
 	//
@@ -1110,6 +1110,23 @@ LANGameInfo * LANAPI::LookupGameByListOffset( Int offset )
 	}
 
 	return theGame; // null means we didn't find anything.
+}
+
+LANGameInfo* LANAPI::LookupGameByHost(UnsignedInt hostIP)
+{
+	LANGameInfo* lastGame = nullptr;
+	UnsignedInt lastHeard = 0;
+
+	for (LANGameInfo* game = m_games; game; game = game->getNext())
+	{
+		if (game->getHostIP() == hostIP && game->getLastHeard() >= lastHeard)
+		{
+			lastGame = game;
+			lastHeard = game->getLastHeard();
+		}
+	}
+
+	return lastGame;
 }
 
 void LANAPI::removeGame( LANGameInfo *game )

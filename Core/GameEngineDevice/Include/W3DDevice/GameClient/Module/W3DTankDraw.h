@@ -1,5 +1,5 @@
 /*
-**	Command & Conquer Generals(tm)
+**	Command & Conquer Generals Zero Hour(tm)
 **	Copyright 2025 Electronic Arts Inc.
 **
 **	This program is free software: you can redistribute it and/or modify
@@ -74,9 +74,8 @@ protected:
 
 protected:
 
-	/// debris emitters for when tank is moving
-	ParticleSystem* m_treadDebrisLeft;
-	ParticleSystem* m_treadDebrisRight;
+	/// left and right debris emitters for when tank is moving
+	ParticleSystemID m_treadDebrisIDs[2];
 
 	RenderObjClass *m_prevRenderObj;
 
@@ -94,11 +93,10 @@ protected:
 	Int m_treadCount;
 	Coord3D m_lastDirection;		///< orientation of tank last time it was drawn.
 
-	void createEmitters( void );					///< Create particle effects.
-	void tossEmitters( void );					///< Create particle effects.
+	void createTreadEmitters( void ); ///< Create particle effects for treads.
+	void tossTreadEmitters( void ); ///< Destroy particle effects for treads.
 
-	void startMoveDebris( void );												///< start creating debris from the tank treads
-	void stopMoveDebris( void );												///< stop creating debris from the tank treads
-	void updateTreadObjects(void);												///< update pointers to sub-objects like treads.
-	void updateTreadPositions(Real uvDelta);									///< update uv coordinates on each tread
+	void stopMoveDebris( void ); ///< Stop creating debris from the tank treads.
+	void updateTreadObjects(void); ///< Update pointers to sub-objects like treads.
+	void updateTreadPositions(Real uvDelta); ///< Update uv coordinates on each tread.
 };

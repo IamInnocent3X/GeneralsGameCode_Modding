@@ -51,6 +51,12 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Weapon.h"
+//#if RETAIL_COMPATIBLE_PATHFINDING
+#include "GameClient/InGameUI.h"
+#include "GameClient/GameText.h"
+#include "Common/GameAudio.h"
+#include "Common/MiscAudio.h"
+//#endif
 
 #include "Common/UnitTimings.h" //Contains the DO_UNIT_TIMINGS define jba.
 
@@ -1130,6 +1136,11 @@ void PathfindCellInfo::forceCleanPathFindCellInfos()
 
 void Pathfinder::forceCleanCells()
 {
+	UnicodeString pathfinderFailoverMessage = TheGameText->FETCH_OR_SUBSTITUTE("GUI:PathfindingCrashPrevented", L"A pathfinding crash was prevented, now switching to the crash fixed pathfinding.");
+	TheInGameUI->message(pathfinderFailoverMessage);
+
+	TheAudio->addAudioEvent(&TheAudio->getMiscAudio()->m_allCheerSound);
+
 	PathfindCellInfo::forceCleanPathFindCellInfos();
 	m_openList = nullptr;
 	m_closedList = nullptr;
@@ -2813,7 +2824,7 @@ void PathfindZoneManager::markZonesDirty( Bool insert )  ///< Called when the zo
 
 /**
  * Calculate zones.  A zone is an area of the same terrain - clear, water or cliff.
- * The utility of zones is that if current location and destiontion are in the same zone,
+ * The utility of zones is that if current location and destination are in the same zone,
  * you can successfully pathfind.
  * If you are a multiple terrain vehicle, like amphibious transport, the lookup is a little more
  * complicated.
@@ -4354,8 +4365,14 @@ void Pathfinder::classifyFence( Object *obj, Bool insert )
 	cellBounds.lo.x = REAL_TO_INT_FLOOR((pos->x + 0.5f)/PATHFIND_CELL_SIZE_F);
 	cellBounds.lo.y = REAL_TO_INT_FLOOR((pos->y + 0.5f)/PATHFIND_CELL_SIZE_F);
 	// TheSuperHackers @fix Mauller 16/06/2025 Fixes uninitialized variables.
-	// To keep retail compatibility they need to be uninitialized in VC6 builds.
-#if !(defined(_MSC_VER) && _MSC_VER < 1300)
+#if RETAIL_COMPATIBLE_CRC
+	//CRCDEBUG_LOG(("Pathfinder::classifyFence - (%d,%d)", cellBounds.hi.x, cellBounds.hi.y));
+
+	// In retail, the values in the stack often look like this. We set them
+	// to reduce the likelihood of mismatch.
+	cellBounds.hi.x = 253961804;
+	cellBounds.hi.y = 4202797;
+#else
 	cellBounds.hi.x = REAL_TO_INT_CEIL((pos->x + 0.5f)/PATHFIND_CELL_SIZE_F);
 	cellBounds.hi.y = REAL_TO_INT_CEIL((pos->y + 0.5f)/PATHFIND_CELL_SIZE_F);
 #endif

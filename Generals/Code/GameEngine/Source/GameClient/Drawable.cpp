@@ -400,7 +400,8 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 
 	m_ambientSoundEnabled = TRUE;
 
-	//
+  m_receivesDynamicLights = TRUE; // a good default... overridden by one of my draw modules if at all
+
 	// allocate any modules we need to, we should keep
 	// this at or near the end of the drawable construction so that we have
 	// all the valid data about the thing when we create the module
@@ -1045,6 +1046,11 @@ void Drawable::setEffectiveOpacity( Real pulseFactor, Real explicitOpacity /* = 
 	Real pulseAmount = pulseMargin * pf;
 
 	m_effectiveStealthOpacity = m_stealthOpacity + pulseAmount;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::imitateStealthLook( Drawable& otherDraw )
+{
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3260,7 +3266,7 @@ void Drawable::drawCaption( const IRegion2D *healthBarRegion )
 // ------------------------------------------------------------------------------------------------
 void Drawable::drawVeterancy( const IRegion2D *healthBarRegion )
 {
-	// get object from drawble
+	// get object from drawable
 	Object* obj = getObject();
 
 	if( obj->getExperienceTracker() == nullptr )
@@ -4034,7 +4040,7 @@ void Drawable::notifyDrawableDependencyCleared()
 //-------------------------------------------------------------------------------------------------
 void Drawable::setSelectable( Bool selectable )
 {
-	// unselct drawable if it is no longer selectable.
+	// unselect drawable if it is no longer selectable.
 	if( !selectable )
 		TheInGameUI->deselectDrawable( this );
 

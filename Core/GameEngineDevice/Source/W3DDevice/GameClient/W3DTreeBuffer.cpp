@@ -458,10 +458,10 @@ void W3DTreeBuffer::updateTexture(void)
 	for (i=0; i<m_numTreeTypes; i++) {
 		char texturePath[ _MAX_PATH ];
 		m_treeTypes[i].m_numTiles = 0;
-		sprintf( texturePath, "%s%s", TERRAIN_TGA_DIR_PATH, m_treeTypes[i].m_data->m_textureName.str() );
+		snprintf( texturePath, ARRAY_SIZE(texturePath), "%s%s", TERRAIN_TGA_DIR_PATH, m_treeTypes[i].m_data->m_textureName.str() );
 		theFile = TheFileSystem->openFile( texturePath, File::READ|File::BINARY);
 		if (theFile==nullptr) {
-			sprintf( texturePath, "%s%s", TGA_DIR_PATH, m_treeTypes[i].m_data->m_textureName.str() );
+			snprintf( texturePath, ARRAY_SIZE(texturePath), "%s%s", TGA_DIR_PATH, m_treeTypes[i].m_data->m_textureName.str() );
 			theFile = TheFileSystem->openFile( texturePath, File::READ|File::BINARY);
 		}
 		if (theFile != nullptr) {
@@ -697,14 +697,11 @@ void W3DTreeBuffer::loadTreesInVertexAndIndexBuffers(RefRenderObjListIterator *p
 
 	if (m_shadow == nullptr && TheW3DProjectedShadowManager) {
 		Shadow::ShadowTypeInfo shadowInfo;
-		shadowInfo.m_ShadowName[0] = 0;
 		shadowInfo.allowUpdates=FALSE;	//shadow image will never update
 		shadowInfo.allowWorldAlign=TRUE;	//shadow image will wrap around world objects
 		shadowInfo.m_type = (ShadowType)SHADOW_DECAL;
 		shadowInfo.m_sizeX=20;
 		shadowInfo.m_sizeY=20;
-		shadowInfo.m_offsetX=0;
-		shadowInfo.m_offsetY=0;
 		m_shadow = TheW3DProjectedShadowManager->createDecalShadow(&shadowInfo);
 	}
 

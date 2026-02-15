@@ -767,12 +767,12 @@ void ModelConditionInfo::validateWeaponBarrelInfo() const
 
 				if (!recoilBoneName.isEmpty())
 				{
-					sprintf(buffer, "%s%02d", recoilBoneName.str(), i);
+					snprintf(buffer, ARRAY_SIZE(buffer), "%s%02d", recoilBoneName.str(), i);
 					findPristineBone(NAMEKEY(buffer), &info.m_recoilBone);
 				}
 				if (!mfName.isEmpty())
 				{
-					sprintf(buffer, "%s%02d", mfName.str(), i);
+					snprintf(buffer, ARRAY_SIZE(buffer), "%s%02d", mfName.str(), i);
 					findPristineBone(NAMEKEY(buffer), &info.m_muzzleFlashBone);
 #if defined(RTS_DEBUG) || defined(DEBUG_CRASHING)
 					if (info.m_muzzleFlashBone)
@@ -781,7 +781,7 @@ void ModelConditionInfo::validateWeaponBarrelInfo() const
 				}
 				if (!fxBoneName.isEmpty())
 				{
-					sprintf(buffer, "%s%02d", fxBoneName.str(), i);
+					snprintf(buffer, ARRAY_SIZE(buffer), "%s%02d", fxBoneName.str(), i);
 					findPristineBone(NAMEKEY(buffer), &info.m_fxBone);
 					// special case: if we have multiple muzzleflashes, but only one fxbone, use that fxbone for everything.
 					if (info.m_fxBone == 0 && info.m_muzzleFlashBone != 0)
@@ -791,7 +791,7 @@ void ModelConditionInfo::validateWeaponBarrelInfo() const
 				Int plbBoneIndex = 0;
 				if (!plbName.isEmpty())
 				{
-					sprintf(buffer, "%s%02d", plbName.str(), i);
+					snprintf(buffer, ARRAY_SIZE(buffer), "%s%02d", plbName.str(), i);
 					const Matrix3D* mtx = findPristineBone(NAMEKEY(buffer), &plbBoneIndex);
 					if (mtx != nullptr)
 						info.m_projectileOffsetMtx = *mtx;
@@ -1228,7 +1228,7 @@ void W3DModelDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "IgnoreRotation", INI::parseBool, nullptr, offsetof(W3DModelDrawModuleData, m_ignoreRotation) },
 		{ "OnlyVisibleToOwningPlayer", INI::parseBool, nullptr, offsetof(W3DModelDrawModuleData, m_showForOwnerOnly) },
 		//{ "DisableMovementEffectsOverWater", INI::parseBool, nullptr, offsetof(W3DModelDrawModuleData, m_disableMoveEffectsOverWater) },
-    { nullptr, nullptr, nullptr, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 
@@ -2768,16 +2768,6 @@ Bool W3DModelDraw::updateBonesForClientParticleSystems()
 	const Drawable* drawable = getDrawable();
 	if (drawable != nullptr && m_curState != nullptr && m_renderObject != nullptr )
 	{
-
-//		Matrix3D originalTransform = m_renderObject->Get_Transform();
-//		Matrix3D tmp = originalTransform;
- //   Vector3 zeroTranslation(0,0,0);
-  //  tmp.Set_Translation( zeroTranslation );
-	//	tmp.Scale(drawable->getScale());
-//		m_renderObject->Set_Transform(tmp);
-
-
-
 		for (std::vector<ParticleSysTrackerType>::const_iterator it = m_particleSystemIDs.begin(); it != m_particleSystemIDs.end(); ++it)
 		{
 			ParticleSystem *sys = TheParticleSystemManager->findParticleSystem((*it).id);
@@ -2803,9 +2793,6 @@ Bool W3DModelDraw::updateBonesForClientParticleSystems()
 
 			}
 		}
-
-
-//  	m_renderObject->Set_Transform(originalTransform);
 
 	}
 
@@ -3174,7 +3161,7 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 			//DEBUG_LOG((">>> W3DModelDraw::allocateShadows, shadowInfo.m_hasDynamicLength = %d", shadowInfo.m_hasDynamicLength));
 
 			DEBUG_ASSERTCRASH(m_shadow == nullptr, ("m_shadow is not null"));
- 			m_shadow = TheW3DShadowManager->addShadow(m_renderObject, &shadowInfo, draw);
+			m_shadow = TheW3DShadowManager->addShadow(m_renderObject, &shadowInfo, draw);
 			if (m_shadow)
 			{	m_shadow->enableShadowInvisible(m_fullyObscuredByShroud);
 				m_shadow->enableShadowRender(m_shadowEnabled);
@@ -3876,7 +3863,7 @@ Int W3DModelDraw::getPristineBonePositionsForConditionState(
 		if (i == 0)
 			strlcpy(buffer, boneNamePrefix, ARRAY_SIZE(buffer));
 		else
-			sprintf(buffer, "%s%02d", boneNamePrefix, i);
+			snprintf(buffer, ARRAY_SIZE(buffer), "%s%02d", boneNamePrefix, i);
 
 		for (char *c = buffer; c && *c; ++c)
 		{
@@ -4033,7 +4020,7 @@ Int W3DModelDraw::getCurrentBonePositions(
 		if (i == 0)
 			strlcpy(buffer, boneNamePrefix, ARRAY_SIZE(buffer));
 		else
-			sprintf(buffer, "%s%02d", boneNamePrefix, i);
+			snprintf(buffer, ARRAY_SIZE(buffer), "%s%02d", boneNamePrefix, i);
 
 		Int boneIndex = m_renderObject->Get_Bone_Index(buffer);
 		if (boneIndex == 0)
@@ -4486,7 +4473,7 @@ void W3DModelDraw::doHideShowProjectileObjects( UnsignedInt showCount, UnsignedI
 		for( UnsignedInt projectileIndex = 0; projectileIndex < maxCount; projectileIndex++ )
 		{
 			oneEntry.subObjName.format("%s%02d", m_curState->m_weaponProjectileLaunchBoneName[slot].str(), (projectileIndex + 1));
-			oneEntry.hide = ((projectileIndex + 1) <= hideCount);
+			oneEntry.hide = (projectileIndex < hideCount);
 			showHideVector.push_back( oneEntry );
 		}
 	}
@@ -4852,7 +4839,7 @@ void W3DModelDraw::xfer( Xfer *xfer )
 	else
 	{
 
-		// the vector must be emtpy
+		// the vector must be empty
 		m_subObjectVec.clear();
 
 		// read each data item

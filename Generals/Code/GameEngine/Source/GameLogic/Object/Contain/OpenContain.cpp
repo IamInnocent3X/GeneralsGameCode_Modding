@@ -278,6 +278,12 @@ void OpenContain::addToContain( Object *rider )
 	if( rider == nullptr )
 		return;
 
+	// TheSuperHackers @bugfix Stubbjax 06/02/2026 Ensure the rider is not destroyed to prevent a
+	// likely crash if it enters the container on the same frame. If this occurs with an unpatched
+	// client present in a match, the game has a small chance to mismatch.
+	if (rider->isDestroyed())
+		return;
+
 #if defined(RTS_DEBUG)
 	if( !isValidContainerFor( rider, false ) )
 	{
@@ -1494,7 +1500,7 @@ void OpenContain::xfer( Xfer *xfer )
 	else
 	{
 
-		// the containment list should be emtpy at this time
+		// the containment list should be empty at this time
 		if( m_containList.empty() == FALSE )
 		{
 #if 1
@@ -1603,7 +1609,7 @@ void OpenContain::xfer( Xfer *xfer )
 	else
 	{
 
-		// the map should be emtpy now
+		// the map should be empty now
 		if( m_objectEnterExitInfo.empty() == FALSE )
 		{
 
@@ -1644,7 +1650,7 @@ void OpenContain::loadPostProcess( void )
 	// extend base class
 	UpdateModule::loadPostProcess();
 
-	// the containment list should be emtpy at this time
+	// the containment list should be empty at this time
 	if( m_containList.empty() == FALSE )
 	{
 

@@ -37,6 +37,7 @@
 #include "Common/GameType.h"
 #include "Common/GameUtility.h"
 #include "Common/MessageStream.h"
+#include "Common/NameKeyGenerator.h"
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -85,6 +86,7 @@
 #include "GameLogic/Module/SupplyWarehouseDockUpdate.h"
 #include "GameLogic/Module/MobMemberSlavedUpdate.h"//ML
 
+#include "GameNetwork/GameInfo.h"
 #include "GameNetwork/NetworkInterface.h"
 
 
@@ -902,6 +904,14 @@ const FieldParse InGameUI::s_fieldParseTable[] =
 	{ "GameTimeColor",          INI::parseColorInt,     nullptr, offsetof( InGameUI, m_gameTimeColor ) },
 	{ "GameTimeDropColor",      INI::parseColorInt,     nullptr, offsetof( InGameUI, m_gameTimeDropColor ) },
 
+	{ "PlayerInfoListFont",               INI::parseAsciiString,   nullptr, offsetof( InGameUI, m_playerInfoListFont ) },
+	{ "PlayerInfoListBold",               INI::parseBool,          nullptr, offsetof( InGameUI, m_playerInfoListBold ) },
+	{ "PlayerInfoListPosition",           INI::parseCoord2D,       nullptr, offsetof( InGameUI, m_playerInfoListPosition ) },
+	{ "PlayerInfoListLabelColor",         INI::parseColorInt,      nullptr, offsetof( InGameUI, m_playerInfoListLabelColor ) },
+	{ "PlayerInfoListValueColor",         INI::parseColorInt,      nullptr, offsetof( InGameUI, m_playerInfoListValueColor ) },
+	{ "PlayerInfoListDropColor",          INI::parseColorInt,      nullptr, offsetof( InGameUI, m_playerInfoListDropColor ) },
+	{ "PlayerInfoListBackgroundAlpha",    INI::parseUnsignedInt  , nullptr, offsetof( InGameUI, m_playerInfoListBackgroundAlpha ) },
+
 	{ nullptr,													nullptr,										nullptr,		0 }
 };
 
@@ -925,6 +935,83 @@ namespace
 	constexpr const Int kHudAnchorY = -1;
 	constexpr const Int kHudGapPx = 6;
 	inline Bool isAtHudAnchorPos(const Coord2D &p) { return p.x == kHudAnchorX && p.y == kHudAnchorY; }
+}
+
+//-------------------------------------------------------------------------------------------------
+InGameUI::PlayerInfoList::PlayerInfoList()
+{
+	std::fill(labels, labels + ARRAY_SIZE(labels), static_cast<DisplayString*>(nullptr));
+	for (Int column = 0; column < ARRAY_SIZE(values); ++column)
+	{
+		std::fill(values[column], values[column] + ARRAY_SIZE(values[column]), static_cast<DisplayString*>(nullptr));
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void InGameUI::PlayerInfoList::init(const AsciiString &fontName, Int pointSize, Bool bold)
+{
+	Int i;
+	GameFont *listFont = TheWindowManager->winFindFont(fontName, pointSize, bold);
+
+	for (i = 0; i < ARRAY_SIZE(labels); ++i)
+	{
+		if (!labels[i])
+		{
+			labels[i] = TheDisplayStringManager->newDisplayString();
+		}
+		labels[i]->setFont(listFont);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(values); ++i)
+	{
+		for (Int j = 0; j < MAX_PLAYER_COUNT; ++j)
+		{
+			if (!values[i][j])
+			{
+				values[i][j] = TheDisplayStringManager->newDisplayString();
+			}
+			values[i][j]->setFont(listFont);
+		}
+	}
+
+	lastValues = LastValues();
+
+	labels[LabelType_Team]->setText(TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:PlayerInfoListLabelTeam", L"T"));
+	labels[LabelType_Money]->setText(TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:PlayerInfoListLabelMoney", L"$"));
+	labels[LabelType_Rank]->setText(TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:PlayerInfoListLabelRank", L"*"));
+	labels[LabelType_Xp]->setText(TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:PlayerInfoListLabelXp", L"XP"));
+}
+
+//-------------------------------------------------------------------------------------------------
+void InGameUI::PlayerInfoList::clear()
+{
+	Int i;
+
+	for (i = 0; i < ARRAY_SIZE(labels); ++i)
+	{
+		TheDisplayStringManager->freeDisplayString(labels[i]);
+		labels[i] = nullptr;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(values); ++i)
+	{
+		for (Int j = 0; j < MAX_PLAYER_COUNT; ++j)
+		{
+			TheDisplayStringManager->freeDisplayString(values[i][j]);
+			values[i][j] = nullptr;
+		}
+	}
+
+	lastValues = LastValues();
+}
+
+//-------------------------------------------------------------------------------------------------
+InGameUI::PlayerInfoList::LastValues::LastValues()
+{
+	for (Int column = 0; column < ARRAY_SIZE(values); ++column)
+	{
+		std::fill(values[column], values[column] + ARRAY_SIZE(values[column]), ~0u);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1078,6 +1165,16 @@ InGameUI::InGameUI()
 	m_gameTimePosition.y = kHudAnchorY;
 	m_gameTimeColor = GameMakeColor( 255, 255, 255, 255 );
 	m_gameTimeDropColor = GameMakeColor( 0, 0, 0, 255 );
+
+	m_playerInfoListFont = "Tahoma";
+	m_playerInfoListPointSize = TheGlobalData->m_playerInfoListFontSize;
+	m_playerInfoListBold = TRUE;
+	m_playerInfoListPosition.x = 0.0f;
+	m_playerInfoListPosition.y = 0.5f;
+	m_playerInfoListLabelColor = GameMakeColor(125, 124, 122, 255);
+	m_playerInfoListValueColor = GameMakeColor(253, 251, 251, 255);
+	m_playerInfoListDropColor = GameMakeColor(0, 0, 0, 255);
+	m_playerInfoListBackgroundAlpha = 170;
 
 	m_superweaponPosition.x = 0.7f;
 	m_superweaponPosition.y = 0.7f;
@@ -1521,7 +1618,7 @@ void InGameUI::handleBuildPlacements( void )
 		//
 		// check to see if this is a legal location to build something at and tint or "un-tint"
 		// the cursor icons as appropriate.  This involves a pathfind which could be
-		// expensive so we don't want to do it on every frame (althought that would be ideal)
+		// expensive so we don't want to do it on every frame (although that would be ideal)
 		// If we discover there are cases that this is just too slow we should increase the
 		// delay time between checks or we need to come up with a way of recording what is
 		// valid and what isn't or "fudge" the results to feel "ok"
@@ -2091,7 +2188,7 @@ void InGameUI::freeMessageResources( void )
 	for( i = 0; i < MAX_UI_MESSAGES; i++ )
 	{
 
-		// emtpy text
+		// empty text
 		m_uiMessages[ i ].fullText.clear();
 
 		// free display string
@@ -2120,6 +2217,8 @@ void InGameUI::freeCustomUiResources( void )
 	m_gameTimeString = nullptr;
 	TheDisplayStringManager->freeDisplayString(m_gameTimeFrameString);
 	m_gameTimeFrameString = nullptr;
+
+	m_playerInfoList.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2424,7 +2523,7 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 		if( obj )
 		{
 
- 			//Ahh, here is a wierd exception: if the moused-over drawable is a mob-member
+			//Ahh, here is a weird exception: if the moused-over drawable is a mob-member
 			//(e.g. AngryMob), Lets fool the UI into creating the hint for the NEXUS instead...
  			if (obj->isKindOf( KINDOF_IGNORED_IN_GUI ))
  			{
@@ -3421,7 +3520,7 @@ const DrawableList *InGameUI::getAllSelectedLocalDrawables( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-/** Return poiner to the first selected drawable, if any */
+/** Return pointer to the first selected drawable, if any */
 //-------------------------------------------------------------------------------------------------
 Drawable *InGameUI::getFirstSelectedDrawable( void )
 {
@@ -3586,6 +3685,11 @@ void InGameUI::postWindowDraw( void )
 	{
 		drawGameTime();
 	}
+
+	if (m_playerInfoListPointSize > 0 && TheGameLogic->isInGame() && TheControlBar->isObserverControlBarOn())
+	{
+		drawPlayerInfoList();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3706,7 +3810,7 @@ void InGameUI::postDraw( void )
 						{
 
 							// We don't draw our timers until we are finished with construction.
-							// It is important that let the SpecialPowerUpdate is add its timer in its contructor,,
+							// It is important that let the SpecialPowerUpdate is add its timer in its constructor,
 							// since the science for it could be added before construction is finished,
 							// And thus the timer set to READY before the timer is first drawn, here
 							if ( owningObject->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ))
@@ -3727,7 +3831,7 @@ void InGameUI::postDraw( void )
  									readySecs = (module->getReadyFrame() - TheGameLogic->getFrame()) / LOGICFRAMES_PER_SECOND;
 								// Yes, integer math.  We can't have float imprecision display 4:01 on a disabled superweapon.
 
- 								// Similarly, only checking timers is not truly indicitive of readyness.
+ 								// Similarly, only checking timers is not truly indicative of readiness.
  								Bool changeBolding = (readySecs != info->m_timestamp) || (isReady != info->m_ready) || info->m_forceUpdateText;
  								if (changeBolding)
  								{
@@ -4498,7 +4602,7 @@ Bool InGameUI::canSelectedObjectsDoSpecialPower( const CommandButton *command, c
 	//Get the special power template.
 	const SpecialPowerTemplate *spTemplate = command->getSpecialPowerTemplate();
 
-	//Order of precendence:
+	//Order of precedence:
 	//1) NO TARGET OR POS
 	//2) COMMAND_OPTION_NEED_OBJECT_TARGET
 	//3) NEED_TARGET_POS
@@ -4622,7 +4726,7 @@ Bool InGameUI::canSelectedObjectsEffectivelyUseWeapon( const CommandButton *comm
 	//Get the special power template.
 	WeaponSlotType slot = command->getWeaponSlot();
 
-	//Order of precendence:
+	//Order of precedence:
 	//1) NO TARGET OR POS
 	//2) COMMAND_OPTION_NEED_OBJECT_TARGET
 	//3) NEED_TARGET_POS
@@ -4754,7 +4858,7 @@ Int InGameUI::selectAllUnitsByTypeAcrossRegion( IRegion2D *region, KindOfMaskTyp
 }
 
 // ------------------------------------------------------------------------------------------------
-/** Selects maching units on the screen */
+/** Selects matching units on the screen */
 // ------------------------------------------------------------------------------------------------
 Int InGameUI::selectMatchingAcrossRegion( IRegion2D *region )
 {
@@ -4776,7 +4880,7 @@ Int InGameUI::selectMatchingAcrossRegion( IRegion2D *region )
 		draw = *it;
 		if( draw && draw->getObject() && draw->getObject()->isLocallyControlled() )
 		{
-			// Use the Object's thing template, doing so will prevent wierdness for disguised vehicles.
+			// Use the Object's thing template, doing so will prevent weirdness for disguised vehicles.
 			drawableList.insert( draw->getObject()->getTemplate() );
 			if( draw->getObject()->testStatus( OBJECT_STATUS_IS_CARBOMB ) )
 			{
@@ -4872,7 +4976,7 @@ Int InGameUI::selectAllUnitsByTypeAcrossScreen(KindOfMaskType mustBeSet, KindOfM
 }
 
 // ------------------------------------------------------------------------------------------------
-/** Selects maching units on the screen */
+/** Selects matching units on the screen */
 // ------------------------------------------------------------------------------------------------
 Int InGameUI::selectMatchingAcrossScreen( void )
 {
@@ -5157,7 +5261,7 @@ void InGameUI::updateFloatingText( void )
 			}
 
 		}
-		// increase our itterator
+		// increase our iterator
 		++it;
 
 	}
@@ -5618,7 +5722,7 @@ void InGameUI::selectNextIdleWorker( void )
 
 		selectDrawable( selectThisObject->getDrawable() );
 
-		/*// removed becuase we're already playing a select sound... left in, just in case i"m wrong.
+		/*// removed because we're already playing a select sound... left in, just in case i'm wrong.
 		// play the units sound
 				const AudioEventRTS *soundEvent = selectThisObject->getTemplate()->getVoiceSelect();
 				if (soundEvent)
@@ -5732,6 +5836,7 @@ void InGameUI::refreshCustomUiResources(void)
 	refreshRenderFpsResources();
 	refreshSystemTimeResources();
 	refreshGameTimeResources();
+	refreshPlayerInfoListResources();
 }
 
 void InGameUI::refreshNetworkLatencyResources(void)
@@ -5805,6 +5910,13 @@ void InGameUI::refreshGameTimeResources(void)
 	GameFont* gameTimeFont = TheWindowManager->winFindFont(m_gameTimeFont, adjustedGameTimeFontSize, m_gameTimeBold);
 	m_gameTimeString->setFont(gameTimeFont);
 	m_gameTimeFrameString->setFont(gameTimeFont);
+}
+
+void InGameUI::refreshPlayerInfoListResources(void)
+{
+	m_playerInfoListPointSize = TheGlobalData->m_playerInfoListFontSize;
+	Int adjustedPlayerInfoListPointSize = TheGlobalLanguageData->adjustFontSize(m_playerInfoListPointSize);
+	m_playerInfoList.init(m_playerInfoListFont, adjustedPlayerInfoListPointSize, m_playerInfoListBold);
 }
 
 void InGameUI::disableTooltipsUntil(UnsignedInt frameNum)
@@ -5994,4 +6106,91 @@ void InGameUI::drawGameTime()
 
 	m_gameTimeString->draw(horizontalTimerOffset, m_gameTimePosition.y, m_gameTimeColor, m_gameTimeDropColor);
 	m_gameTimeFrameString->draw(horizontalFrameOffset, m_gameTimePosition.y, GameMakeColor(180,180,180,255), m_gameTimeDropColor);
+}
+
+void InGameUI::drawPlayerInfoList()
+{
+	const Int baseX = (Int)(m_playerInfoListPosition.x * TheDisplay->getWidth());
+	const Int baseY = (Int)(m_playerInfoListPosition.y * TheDisplay->getHeight());
+	const Int lineH = m_playerInfoList.labels[PlayerInfoList::LabelType_Team]->getFont()->height;
+	const Int columnGap = static_cast<Int>(lineH * (6.0f / 12.0f) + 0.5f);
+
+	AsciiString name;
+	UnicodeString playerInfoListValue;
+	Int rowCount = 0;
+	Int maxValueWidths[PlayerInfoList::LabelType_Count] = {0};
+	Color rowColors[MAX_PLAYER_COUNT] = {0};
+	Int nameValueWidth[MAX_PLAYER_COUNT] = {0};
+	Int column;
+
+	for (Int slotIndex = 0; slotIndex < MAX_SLOTS && rowCount < MAX_PLAYER_COUNT; ++slotIndex)
+	{
+		name.format("player%d", slotIndex);
+		const NameKeyType key = TheNameKeyGenerator->nameToKey(name);
+		Player *player = ThePlayerList->findPlayerWithNameKey(key);
+		if (!player || player->isPlayerObserver())
+			continue;
+
+		const GameSlot *slot = TheGameInfo->getConstSlot(slotIndex);
+
+		const Int row = rowCount++;
+		const UnsignedInt teamValue = (slot && slot->getTeamNumber() >= 0) ? static_cast<UnsignedInt>(slot->getTeamNumber() + 1) : 0;
+		const UnsignedInt moneyValue = player->getMoney()->countMoney();
+		const UnsignedInt rankValue = static_cast<UnsignedInt>(player->getRankLevel());
+		const UnsignedInt xpValue = static_cast<UnsignedInt>(player->getSkillPoints());
+		const UnicodeString nameValue = player->getPlayerDisplayName();
+
+		const UnsignedInt currentValues[] = {teamValue, moneyValue, rankValue, xpValue};
+		for (column = 0; column < ARRAY_SIZE(currentValues); ++column)
+		{
+			UnsignedInt &lastValue = m_playerInfoList.lastValues.values[column][row];
+			if (lastValue != currentValues[column])
+			{
+				playerInfoListValue.format(L"%u", currentValues[column]);
+				m_playerInfoList.values[column][row]->setText(playerInfoListValue);
+				lastValue = currentValues[column];
+			}
+		}
+		if (m_playerInfoList.lastValues.name[row].isEmpty())
+		{
+			m_playerInfoList.values[PlayerInfoList::ValueType_Name][row]->setText(nameValue);
+			m_playerInfoList.lastValues.name[row] = nameValue;
+		}
+
+		for (column = 0; column < PlayerInfoList::LabelType_Count; ++column)
+		{
+			const Int valueWidth = m_playerInfoList.values[column][row]->getWidth();
+			if (maxValueWidths[column] < valueWidth)
+				maxValueWidths[column] = valueWidth;
+		}
+
+		rowColors[row] = player->getPlayerColor();
+		nameValueWidth[row] = m_playerInfoList.values[PlayerInfoList::ValueType_Name][row]->getWidth();
+	}
+
+	Int labelWidths[PlayerInfoList::LabelType_Count];
+	Int columnLabelX[PlayerInfoList::LabelType_Count];
+	Int labelX = baseX;
+	for (column = 0; column < PlayerInfoList::LabelType_Count; ++column)
+	{
+		labelWidths[column] = m_playerInfoList.labels[column]->getWidth();
+		columnLabelX[column] = labelX;
+		labelX += labelWidths[column] + maxValueWidths[column] + columnGap;
+	}
+
+	Int drawY = baseY - ((rowCount * lineH) / 2);
+	for (Int row = 0; row < rowCount; ++row)
+	{
+		TheDisplay->drawFillRect(baseX, drawY, labelX - baseX + nameValueWidth[row], lineH, GameMakeColor(0, 0, 0, m_playerInfoListBackgroundAlpha));
+
+		for (column = 0; column < PlayerInfoList::LabelType_Count; ++column)
+		{
+			m_playerInfoList.labels[column]->draw(columnLabelX[column], drawY, m_playerInfoListLabelColor, m_playerInfoListDropColor);
+			m_playerInfoList.values[column][row]->draw(columnLabelX[column] + labelWidths[column], drawY, m_playerInfoListValueColor, m_playerInfoListDropColor);
+		}
+
+		m_playerInfoList.values[PlayerInfoList::ValueType_Name][row]->draw(labelX, drawY, rowColors[row], m_playerInfoListDropColor);
+
+		drawY += lineH;
+	}
 }
