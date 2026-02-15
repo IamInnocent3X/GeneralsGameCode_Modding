@@ -159,7 +159,7 @@ Bool SabotageBehavior::isValidToExecute( const Object *other ) const
 		//return FALSE;
 	//}
 
-	if( other->isEffectivelyDead() )
+	if( !other || other->isEffectivelyDead() )
 	{
 		//Can't sabotage dead structures
 		return FALSE;

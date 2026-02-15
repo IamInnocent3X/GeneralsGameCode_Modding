@@ -685,7 +685,10 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	{ "UseNonRetailAIPathfind",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - If use Retail, AI Pathfind can be configured to use Non-Retail method
 	{ "UseNonRetailAIPathfindAllocation",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindAllocation) },
 	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // This requires Non-Retail to be configured for pathfinding. Either through Global data, or defining Non-Retail. Credits to: Mauller
+	{ "UseNonRetailAIPathfindDoublyLinkedList",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindDoublyLinkedList) }, // Mauller's Doubly Linked Lists for Optimization.
 	{ "UseNonRetailAIPathfindOpenSortedList",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindOpenSortedList) }, // Mauller's Open Sorted Lists for Optimization.
+	{ "UseNonRetailAIPathfindDoublyLinkedList",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindSuperSkip) },  // Mauller's Open Sorted Lists Super Skip for Optimization.
+	{ "UseNonRetailAIPathfindReverseTransverseInsertion",	 INI::parseBool, NULL, offsetof(GlobalData, m_useNonRetailAIPathfindReverseTransverseInsertion) }, // Mauller's Reverse Transverse Insertion for Optimization.
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, NULL, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 
@@ -1291,7 +1294,10 @@ GlobalData::GlobalData()
 	m_useNonRetailAIPathfind = FALSE;
 	m_useNonRetailAIPathfindAllocation = FALSE;
 	m_useNonRetailAIPathfindDynamicAlloc = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindDoublyLinkedList = FALSE; // Credits to: Mauller
 	m_useNonRetailAIPathfindOpenSortedList = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindSuperSkip = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindReverseTransverseInsertion = FALSE; // Credits to: Mauller
 
 	m_corpsesHaveAirDrag = FALSE;
 	m_hideCashTextFromEnemies = FALSE;
