@@ -846,7 +846,7 @@ void INI::parseNameKeyVector( INI* ini, void * /*instance*/, void *store, const 
 
 	std::vector<NameKeyType>* nkv = (std::vector<NameKeyType>*)store;
 	nkv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
 		nkv->push_back(nameKey);
@@ -866,7 +866,7 @@ void INI::parseNameKeyVectorAppend( INI* ini, void * /*instance*/, void *store, 
 	std::vector<NameKeyType>* nkv = (std::vector<NameKeyType>*)store;
 	// nope, don't clear. duh.
 	// nkv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
 		nkv->push_back(nameKey);

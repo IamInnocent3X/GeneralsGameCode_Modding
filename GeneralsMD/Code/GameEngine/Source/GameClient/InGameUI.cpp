@@ -3311,25 +3311,25 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 
 												if( obj->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
 												{
-													spUpdate = NULL;
+													spUpdate = nullptr;
 												}
 												else if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
 												{
 													if( !obj->isAnyKindOf(spUpdate->getKindOfs()) )
-														spUpdate = NULL;
+														spUpdate = nullptr;
 												}
 												else
 												{
 													switch(type[idx])
 													{
 														case SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK:
-															spUpdate = obj->isKindOf( KINDOF_VEHICLE ) ? spUpdate : NULL;
+															spUpdate = obj->isKindOf( KINDOF_VEHICLE ) ? spUpdate : nullptr;
 															break;
 														case SPECIAL_BLACKLOTUS_STEAL_CASH_HACK:
-															spUpdate = obj->isKindOf( KINDOF_CASH_GENERATOR ) ? spUpdate : NULL;
+															spUpdate = obj->isKindOf( KINDOF_CASH_GENERATOR ) ? spUpdate : nullptr;
 															break;
 														case SPECIAL_HACKER_DISABLE_BUILDING:
-															spUpdate = obj->isKindOf( KINDOF_STRUCTURE ) ? spUpdate : NULL;
+															spUpdate = obj->isKindOf( KINDOF_STRUCTURE ) ? spUpdate : nullptr;
 															break;
 														default:
 															break;

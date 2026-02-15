@@ -201,7 +201,7 @@ Object* WorkerAIUpdate::findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Ob
 
 			// have to repair at a tower.
 			Real bestDistSqr = 1e10f;
-			Object* bestTower = NULL;
+			Object* bestTower = nullptr;
 			for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i)
 			{
 				Object* tower = TheGameLogic->findObjectByID(bbi->getTowerID((BridgeTowerType)i));
@@ -242,7 +242,7 @@ Object* WorkerAIUpdate::findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Ob
 			}
 
 			DEBUG_CRASH(("should not happen, no reachable tower found"));
-			return NULL;
+			return nullptr;
 		}
 	}
 

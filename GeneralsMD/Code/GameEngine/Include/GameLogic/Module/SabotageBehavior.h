@@ -59,7 +59,7 @@ static const char *const TheSabotageNames[] =
 	"PRODUCTION",
 	"POWER",
 	"CASH",
-	NULL
+	nullptr
 };
 
 enum SabotageVictimType CPP_11(: Int)
@@ -88,7 +88,7 @@ static const char *const TheSabotageFeedbackNames[] =
 	"SUPERWEAPON",
 	"SUPPLY_CENTER",
 	"DROP_ZONE",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheSabotageFeedbackNames) == SAB_VICTIM_COUNT + 1, "Incorrect array size");
 
@@ -110,7 +110,7 @@ static const char *const TheSabotageGrantNames[] =
 	"LAST_DONT_HAVE",
 	"LIKE_LEVELING_UP",
 	"RANDOM",
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheSabotageGrantNames) == GRANT_COUNT + 1, "Incorrect array size");
 
@@ -275,7 +275,7 @@ public:
 		nkv->clear();
 		NameKeyIntPair parseData;
 		Bool parseKey = TRUE;
-		for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+		for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 		{
 			if(parseKey)
 			{
@@ -304,7 +304,7 @@ public:
 		ScienceVec sciences;
 		AsciiString objName;
 		objName.clear();
-		for (const char *token = ini->getNextTokenOrNull(); token != NULL; token = ini->getNextTokenOrNull())
+		for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 		{
 			if (stricmp(token, "None") == 0)
 			{
@@ -355,84 +355,84 @@ public:
 			// Sabotage Type
 			{ "SabotageType",	INI::parseBitString32, TheSabotageNames, offsetof( SabotageBehaviorModuleData, m_sabotageType ) },
 			{ "SabotageFeedbackType",	INI::parseIndexList, TheSabotageFeedbackNames, offsetof( SabotageBehaviorModuleData, m_feedbackType ) },
-			{ "SabotageFeedbackSound",	INI::parseAsciiString, NULL, offsetof( SabotageBehaviorModuleData, m_feedbackSound ) },
+			{ "SabotageFeedbackSound",	INI::parseAsciiString, nullptr, offsetof( SabotageBehaviorModuleData, m_feedbackSound ) },
 			{ "SabotageIsCollide",	INI::parseBool, TheSabotageNames, offsetof( SabotageBehaviorModuleData, m_sabotageIsCollide ) },
-			{ "SabotageDoAlert",	INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDoAlert ) },
-			{ "SabotageSpecialPowerToTrigger",	INI::parseAsciiString, NULL, offsetof( SabotageBehaviorModuleData, m_specialPowerTemplateToTrigger ) },
+			{ "SabotageDoAlert",	INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDoAlert ) },
+			{ "SabotageSpecialPowerToTrigger",	INI::parseAsciiString, nullptr, offsetof( SabotageBehaviorModuleData, m_specialPowerTemplateToTrigger ) },
 
 			// Damage and Capture
-			{ "SabotageDamage", INI::parseReal, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDamage ) },
-			{ "SabotageMaxHealth%AsDamage", INI::parsePercentToReal, NULL, offsetof( SabotageBehaviorModuleData, m_sabotagePercentDamage ) },
-			{ "SabotageIsCapture", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageIsCapture ) },
-			{ "SabotageCaptureBelowHealth", INI::parseReal, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealth ) },
-			{ "SabotageCaptureBelowHealth%", INI::parseReal, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealthPercent ) },
+			{ "SabotageDamage", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDamage ) },
+			{ "SabotageMaxHealth%AsDamage", INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotagePercentDamage ) },
+			{ "SabotageIsCapture", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageIsCapture ) },
+			{ "SabotageCaptureBelowHealth", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealth ) },
+			{ "SabotageCaptureBelowHealth%", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealthPercent ) },
 
 			// Steal Cash Amount
-			{ "StealCashAmount",	INI::parseUnsignedInt, NULL, offsetof( SabotageBehaviorModuleData, m_stealCashAmount ) },
-			{ "StealCashPercentage",	INI::parsePercentToReal, NULL, offsetof( SabotageBehaviorModuleData, m_stealCashPercentage ) },
+			{ "StealCashAmount",	INI::parseUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_stealCashAmount ) },
+			{ "StealCashPercentage",	INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_stealCashPercentage ) },
 
 			// Sabotage Power
-			{ "SabotagePowerDuration", INI::parseDurationUnsignedInt, NULL, offsetof( SabotageBehaviorModuleData, m_powerSabotageFrames ) },
-			{ "SabotageStealsPower", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_stealsPower ) },
-			{ "SabotagePowerAmount", INI::parseInt, NULL, offsetof( SabotageBehaviorModuleData, m_powerAmount ) },
-			{ "SabotagePowerPercentage", INI::parsePercentToReal, NULL, offsetof( SabotageBehaviorModuleData, m_powerPercentage ) },
-			{ "SabotageSpecificObjects", INI::parseAsciiStringVector, NULL, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificObjects ) },
-			{ "SabotageSpecificKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificKindOf ) },
+			{ "SabotagePowerDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageFrames ) },
+			{ "SabotageStealsPower", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_stealsPower ) },
+			{ "SabotagePowerAmount", INI::parseInt, nullptr, offsetof( SabotageBehaviorModuleData, m_powerAmount ) },
+			{ "SabotagePowerPercentage", INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_powerPercentage ) },
+			{ "SabotageSpecificObjects", INI::parseAsciiStringVector, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificObjects ) },
+			{ "SabotageSpecificKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificKindOf ) },
 
 			// Sabotage General
-			{ "SabotageDuration", INI::parseDurationUnsignedInt, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageFrames ) },
-			{ "SabotageDisable", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisable ) },
-			{ "SabotageDisabledType",	DisabledMaskType::parseSingleBitFromINI, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisabledType ) },
-			{ "SabotageDisableContained", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableContained ) },
-			{ "DisableAllKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllKindOf ) },
-			{ "DisableAllForbiddenKindOf", KindOfMaskType::parseFromINI, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllForbiddenKindOf ) },
-			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	NULL, offsetof( SabotageBehaviorModuleData, m_tintStatus ) },
-			{ "CustomTintStatusType",		INI::parseAsciiString,	NULL, offsetof( SabotageBehaviorModuleData, m_customTintStatus ) },
+			{ "SabotageDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageFrames ) },
+			{ "SabotageDisable", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisable ) },
+			{ "SabotageDisabledType",	DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisabledType ) },
+			{ "SabotageDisableContained", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableContained ) },
+			{ "DisableAllKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllKindOf ) },
+			{ "DisableAllForbiddenKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllForbiddenKindOf ) },
+			{ "TintStatusType",			TintStatusFlags::parseSingleBitFromINI,	nullptr, offsetof( SabotageBehaviorModuleData, m_tintStatus ) },
+			{ "CustomTintStatusType",		INI::parseAsciiString,	nullptr, offsetof( SabotageBehaviorModuleData, m_customTintStatus ) },
 
 			// Sabotage Grants
-			{ "GrantUpgrades",		INI::parseAsciiStringVector, NULL, offsetof( SabotageBehaviorModuleData, m_grantUpgradeNames ) },
-			{ "SciencesGranted", INI::parseScienceVector, NULL, offsetof( SabotageBehaviorModuleData, m_sciencesGranted ) },
-			{ "GrantCommandInstances", INI::parseNameKeyVector, NULL, offsetof( SabotageBehaviorModuleData, m_commandInstancesToGrant ) },
-			{ "GrantCommandInstancesWithAmount", parseNameKeyVectorWithAmount, NULL, offsetof( SabotageBehaviorModuleData, m_commandInstancesToGrantWithAmount ) },
-			{ "GrantUpgradesIfCollidesWith",		INI::parseAsciiStringVectorAppend, NULL, offsetof( SabotageBehaviorModuleData, m_grantUpgradeNamesIfCollidesWith ) },
-			{ "SciencesGrantedIfCollidesWith", parseObjectScienceVec, NULL, offsetof( SabotageBehaviorModuleData, m_sciencesGrantedIfCollidesWith ) },
+			{ "GrantUpgrades",		INI::parseAsciiStringVector, nullptr, offsetof( SabotageBehaviorModuleData, m_grantUpgradeNames ) },
+			{ "SciencesGranted", INI::parseScienceVector, nullptr, offsetof( SabotageBehaviorModuleData, m_sciencesGranted ) },
+			{ "GrantCommandInstances", INI::parseNameKeyVector, nullptr, offsetof( SabotageBehaviorModuleData, m_commandInstancesToGrant ) },
+			{ "GrantCommandInstancesWithAmount", parseNameKeyVectorWithAmount, nullptr, offsetof( SabotageBehaviorModuleData, m_commandInstancesToGrantWithAmount ) },
+			{ "GrantUpgradesIfCollidesWith",		INI::parseAsciiStringVectorAppend, nullptr, offsetof( SabotageBehaviorModuleData, m_grantUpgradeNamesIfCollidesWith ) },
+			{ "SciencesGrantedIfCollidesWith", parseObjectScienceVec, nullptr, offsetof( SabotageBehaviorModuleData, m_sciencesGrantedIfCollidesWith ) },
 			{ "UpgradesGrantType",		INI::parseIndexList, TheSabotageGrantNames, offsetof( SabotageBehaviorModuleData, m_upgradesGrantType ) },
 			{ "SciencesGrantType", INI::parseIndexList, TheSabotageGrantNames, offsetof( SabotageBehaviorModuleData, m_sciencesGrantType ) },
 
 			// Sabotage Production
-			{ "CostModifierDuration", INI::parseDurationUnsignedInt, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierFrames ) },
-			{ "CostModifierKindOf",		KindOfMaskType::parseFromINI, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierKindOf ) },
-			{ "CostModifierPercentage",			INI::parsePercentToReal, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierPercentage ) },
+			{ "CostModifierDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierFrames ) },
+			{ "CostModifierKindOf",		KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierKindOf ) },
+			{ "CostModifierPercentage",			INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierPercentage ) },
 			{ "CostModifierBonusStacksWith",			INI::parseIndexList, TheBonusStackingTypeNames, offsetof( SabotageBehaviorModuleData, m_sabotageCostModifierStackingType) },
-			{ "TimeModifierDuration", INI::parseDurationUnsignedInt, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierFrames ) },
-			{ "TimeModifierKindOf",		KindOfMaskType::parseFromINI, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierKindOf ) },
-			{ "TimeModifierPercentage",			INI::parsePercentToReal, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierPercentage ) },
+			{ "TimeModifierDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierFrames ) },
+			{ "TimeModifierKindOf",		KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierKindOf ) },
+			{ "TimeModifierPercentage",			INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierPercentage ) },
 			{ "TimeModifierBonusStacksWith",			INI::parseIndexList, TheBonusStackingTypeNames, offsetof( SabotageBehaviorModuleData, m_sabotageTimeModifierStackingType) },
-			{ "SabotageProductionRevealDuration", parseDuration, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageProductionViewFrames ) },
+			{ "SabotageProductionRevealDuration", parseDuration, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageProductionViewFrames ) },
 
 			// Sabotage Special Power
-			{ "SabotageResetSpecialPowers", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageResetSpecialPowers ) },
-			{ "SabotagePauseSpecialPowers", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotagePauseSpecialPowers ) },
-			{ "SabotageResetAllSameObjectsSpecialPowers", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageResetAllSameObjectsSpecialPowers ) },
-			{ "SabotagePauseAllSameObjectsSpecialPowers", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotagePauseAllSameObjectsSpecialPowers ) },
-			{ "SabotageDisableCommands", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableCommands ) },
-			{ "SabotageDisableSpecificCommands", INI::parseAsciiStringVectorAppend, NULL, offsetof( SabotageBehaviorModuleData, m_commandsToDisable ) },
-			{ "UseCommandsUponSabotage", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_useCommandsUponSabotage ) },
-			{ "UseCommandsNeedsToBeReady", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_useCommandsNeedsToBeReady ) },
+			{ "SabotageResetSpecialPowers", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageResetSpecialPowers ) },
+			{ "SabotagePauseSpecialPowers", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotagePauseSpecialPowers ) },
+			{ "SabotageResetAllSameObjectsSpecialPowers", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageResetAllSameObjectsSpecialPowers ) },
+			{ "SabotagePauseAllSameObjectsSpecialPowers", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotagePauseAllSameObjectsSpecialPowers ) },
+			{ "SabotageDisableCommands", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableCommands ) },
+			{ "SabotageDisableSpecificCommands", INI::parseAsciiStringVectorAppend, nullptr, offsetof( SabotageBehaviorModuleData, m_commandsToDisable ) },
+			{ "UseCommandsUponSabotage", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_useCommandsUponSabotage ) },
+			{ "UseCommandsNeedsToBeReady", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_useCommandsNeedsToBeReady ) },
 
 			// Spy Vision and OCL Update
-			{ "SabotageResetSpyVision", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageResetSpyVision ) },
-			{ "SabotageDisableSpyVision", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableSpyVision ) },
-			{ "SabotageDisableSpyVisionDoesNotResetTimer", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableSpyVisionDoesNotResetTimer ) },
-			{ "SabotageResetOCLUpdate", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageResetOCLUpdate ) },
-			{ "SabotageDisableOCLUpdate", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableOCLUpdate ) },
-			{ "SabotageResetAllSpyVision", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageResetAllSpyVision ) },
-			{ "SabotageDisableAllSpyVision", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllSpyVision ) },
-			{ "SabotageResetAllOCLUpdate", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageResetAllOCLUpdate ) },
-			{ "SabotageDisableAllOCLUpdate", INI::parseBool, NULL, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllOCLUpdate ) },
+			{ "SabotageResetSpyVision", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageResetSpyVision ) },
+			{ "SabotageDisableSpyVision", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableSpyVision ) },
+			{ "SabotageDisableSpyVisionDoesNotResetTimer", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableSpyVisionDoesNotResetTimer ) },
+			{ "SabotageResetOCLUpdate", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageResetOCLUpdate ) },
+			{ "SabotageDisableOCLUpdate", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableOCLUpdate ) },
+			{ "SabotageResetAllSpyVision", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageResetAllSpyVision ) },
+			{ "SabotageDisableAllSpyVision", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllSpyVision ) },
+			{ "SabotageResetAllOCLUpdate", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageResetAllOCLUpdate ) },
+			{ "SabotageDisableAllOCLUpdate", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableAllOCLUpdate ) },
 
 
-			{ 0, 0, 0, 0 }
+			{ nullptr, nullptr, nullptr, 0 }
 		};
 		p.add( dataFieldParse );
 	}
@@ -451,7 +451,7 @@ public:
 	SabotageBehavior( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-  //void doSabotageFeedbackFX( const Object *other, SabotageVictimType type = SAB_VICTIM_GENERIC, AsciiString name = NULL );
+  //void doSabotageFeedbackFX( const Object *other, SabotageVictimType type = SAB_VICTIM_GENERIC, AsciiString name = AsciiString::TheEmptyString );
 
 	virtual void doSabotage( Object *other, Object *obj );
 

@@ -67,7 +67,7 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "CanHijackOccupiedContain",		INI::parseBool,		NULL, offsetof( ConvertToHijackedVehicleCrateCollideModuleData, m_canHijackOccupiedContain ) },
+			{ "CanHijackOccupiedContain",		INI::parseBool,		nullptr, offsetof( ConvertToHijackedVehicleCrateCollideModuleData, m_canHijackOccupiedContain ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

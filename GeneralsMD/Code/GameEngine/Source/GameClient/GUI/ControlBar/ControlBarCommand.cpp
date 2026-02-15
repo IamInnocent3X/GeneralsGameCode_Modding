@@ -1615,7 +1615,7 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 		if (ThePlayerList && ThePlayerList->getLocalPlayer())
 			obj = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
 		else
-			obj = NULL;
+			obj = nullptr;
 	}
 
 	//If we modify the button (like a gadget clock overlay), then sometimes we may wish to apply it to a specific different button.
@@ -1625,7 +1625,7 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 	//	applyToWin = win;
 	//}
 
-	if (obj == NULL)
+	if (obj == nullptr)
 		return TRUE;	// probably better than crashing....
 
 	Player *player = obj->getControllingPlayer();
@@ -1743,14 +1743,14 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 			}
 
 			// get the dozer ai update interface
-			DozerAIInterface* dozerAI = NULL;
-			if( obj->getAIUpdateInterface() == NULL )
+			DozerAIInterface* dozerAI = nullptr;
+			if( obj->getAIUpdateInterface() == nullptr )
 				return TRUE;
 
 			dozerAI = obj->getAIUpdateInterface()->getDozerAIInterface();
 
-			DEBUG_ASSERTCRASH( dozerAI != NULL, ("Something KINDOF_DOZER must have a Dozer-like AIUpdate") );
-			if( dozerAI == NULL )
+			DEBUG_ASSERTCRASH( dozerAI != nullptr, ("Something KINDOF_DOZER must have a Dozer-like AIUpdate") );
+			if( dozerAI == nullptr )
 				return TRUE;
 
 			// return whether or not the player can build this thing
@@ -1851,7 +1851,7 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 			//	return FALSE;
 			//}
 			// no production update, can't possibly do this command
-			//if( pu == NULL )
+			//if( pu == nullptr )
 			//{
 			//	return FALSE;
 			//}
@@ -1876,7 +1876,7 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 			AIUpdateInterface *ai = obj->getAIUpdateInterface();
 
 			// no ai, can't possibly fire weapon
-			if( ai == NULL )
+			if( ai == nullptr )
 				return TRUE;
 
 			// ask the ai if the weapon is ready to fire
@@ -1895,7 +1895,7 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 				return FALSE;
 			}
 
-			if( w == NULL																	// No weapon
+			if( w == nullptr																	// No weapon
 				|| w->getStatus() != READY_TO_FIRE					// Weapon not ready
 				|| w->getPossibleNextShotFrame() == now			// Weapon ready, but could fire this exact frame (handle button flicker since it may be going to fire anyway)
 /// @todo srj -- not sure why this next check is necessary, but the Comanche missile buttons will flicker without it. figure out someday.
@@ -1906,7 +1906,7 @@ Bool ControlBar::getCommandHideable( const CommandButton *command,
 				|| (w->getPossibleNextShotFrame()==now-1)
 				)
 			{
-				if ( w != NULL )
+				if ( w != nullptr )
 				{
 					return TRUE;
 				}

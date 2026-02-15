@@ -2206,7 +2206,7 @@ Real TerrainLogic::getWaterZ(Real x, Real y) {
 	const WaterHandle* waterHandle = getWaterHandle(x, y);
 
 	// if no water here, no height, no nuttin
-	if (waterHandle == NULL)
+	if (waterHandle == nullptr)
 	{
 		return -1.0;
 	}

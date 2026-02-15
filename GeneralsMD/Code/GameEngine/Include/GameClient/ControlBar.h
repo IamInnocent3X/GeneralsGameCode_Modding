@@ -854,7 +854,7 @@ public:
 	//Bool isMouseWithinUnitBuildCommandButton(const ICoord2D *mousePos, Bool isRightMouse) const;
 	Bool isWindowUnitBuildCommand( GameWindow *control ) const;
 
-	CommandAvailability friend_getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = NULL, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const
+	CommandAvailability friend_getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = nullptr, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const
 	{ return getCommandAvailability( command, obj, win, applyToWin, forceDisabledEvaluation, skipResourceCheck ); }
 
 protected:

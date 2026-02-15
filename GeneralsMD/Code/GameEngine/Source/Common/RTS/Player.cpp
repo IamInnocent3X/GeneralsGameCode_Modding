@@ -776,7 +776,7 @@ void Player::update()
 					}
 
 					// Command is not available
-					//CommandAvailability availability = TheControlBar->friend_getCommandAvailability( command, other, NULL, NULL, FALSE, TRUE );
+					//CommandAvailability availability = TheControlBar->friend_getCommandAvailability( command, other, nullptr, nullptr, FALSE, TRUE );
 					//if( availability != COMMAND_ACTIVE && availability != COMMAND_AVAILABLE )
 					//	clear = FALSE;
 				}
@@ -786,7 +786,7 @@ void Player::update()
 		if(m_isPlayerDead)
 		{
 			clear = TRUE;
-			TheInGameUI->setGUICommand( NULL );
+			TheInGameUI->setGUICommand( nullptr );
 		}
 
 		if(clear)
@@ -4684,7 +4684,7 @@ Bool Player::forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType s
 				continue;
 
 			// Command is not available
-			CommandAvailability availability = TheControlBar->friend_getCommandAvailability( command, other, NULL, NULL, FALSE, TRUE );
+			CommandAvailability availability = TheControlBar->friend_getCommandAvailability( command, other, nullptr, nullptr, FALSE, TRUE );
 			if( availability != COMMAND_ACTIVE && availability != COMMAND_AVAILABLE )
 				continue;
 

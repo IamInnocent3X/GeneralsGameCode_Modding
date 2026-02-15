@@ -907,7 +907,7 @@ private:
 
 	bool isValidSurface(const Coord3D* primary, FXSurfaceInfo* surfaceInfo) const  //@TODO unify code with SoundFXNugget
 	{
-		if (primary == NULL || surfaceInfo == NULL)
+		if (primary == nullptr || surfaceInfo == nullptr)
 			return false;
 
 		Real refHeight;

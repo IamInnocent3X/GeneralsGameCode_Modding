@@ -4257,7 +4257,7 @@ void Drawable::drawProductionRevealed(const IRegion2D* healthBarRegion)
 	if( puInterface && puInterface->showProductionViewToEnemy() && rts::getObservedOrLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES )
 	{
 		const ProductionEntry *currentProduction = puInterface->firstProduction();
-		const Image* portrait = currentProduction && currentProduction->getProductionObject() ? currentProduction->getProductionObject()->getSelectedPortraitImage() : NULL;
+		const Image* portrait = currentProduction && currentProduction->getProductionObject() ? currentProduction->getProductionObject()->getSelectedPortraitImage() : nullptr;
 		//
 		// we are going to draw the healing icon relative to the size of the health bar region
 		// since that region takes into account hit point size and zoom factor of the camera too

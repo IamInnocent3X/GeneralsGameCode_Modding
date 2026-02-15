@@ -1999,7 +1999,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					/// IamInnocent - Added LASER_GUIDED_MISSILES to check for CanAttackResult.
 					// Assume Forced Attack because the target might be an ally
 					WeaponSlotType wslot = spUpdate->getWeaponSlot();
-					CanAttackResult result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET_FORCED, target, NULL, CMD_FROM_PLAYER, wslot );
+					CanAttackResult result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET_FORCED, target, nullptr, CMD_FROM_PLAYER, wslot );
 					if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
 						break;

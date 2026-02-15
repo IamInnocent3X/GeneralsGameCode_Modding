@@ -124,7 +124,7 @@ public:
 	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
 
 	virtual const AsciiString& getCursorName() const { return getCrateCollideModuleData()->m_cursorName; }
-	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return NULL; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
 
 protected:
 

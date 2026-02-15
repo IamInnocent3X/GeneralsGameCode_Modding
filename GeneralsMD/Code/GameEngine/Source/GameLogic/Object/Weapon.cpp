@@ -1828,7 +1828,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if (detOCL) {
 				Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
 				//TODO: should we consider a proper 3D matrix?
-				ObjectCreationList::create(detOCL, sourceObj, damagePos, NULL, weaponAngle);
+				ObjectCreationList::create(detOCL, sourceObj, damagePos, nullptr, weaponAngle);
 			}
 
 			// go ahead and do it now
@@ -3374,7 +3374,7 @@ void WeaponStore::update()
 					v.z = ddi->m_delayDamagePos.z - sourcePos->z;
 					Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
 					//TODO: should we consider a proper 3D matrix?
-					ObjectCreationList::create(detOCL, sourceObj, &ddi->m_delayDamagePos, NULL, weaponAngle);
+					ObjectCreationList::create(detOCL, sourceObj, &ddi->m_delayDamagePos, nullptr, weaponAngle);
 				}
 			}
 			ddi->m_delayedWeapon->dealDamageInternal(ddi->m_delaySourceID, ddi->m_delayIntendedVictimID, &ddi->m_delayDamagePos, ddi->m_bonus, isProjectileDetonation);
