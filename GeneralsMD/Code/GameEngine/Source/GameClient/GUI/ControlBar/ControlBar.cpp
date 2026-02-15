@@ -126,6 +126,8 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "OrderNearbyUnitsMinDelay",		INI::parseDurationUnsignedInt,		nullptr, offsetof( CommandButton, m_orderMinDelay ) },
 	{ "OrderNearbyUnitsMaxDelay",		INI::parseDurationUnsignedInt,		nullptr, offsetof( CommandButton, m_orderMaxDelay ) },
 	{ "OrderNearbyUnitsIntervalDelay",	INI::parseDurationUnsignedInt,		nullptr, offsetof( CommandButton, m_orderIntervalDelay ) },
+	{ "InstancesRequired",			INI::parseNameKeyVectorAppend,			nullptr, offsetof( CommandButton, m_instancesRequired ) },
+	{ "RequiresAllInstances",		INI::parseBool,			nullptr, offsetof( CommandButton, m_requiresAllInstances ) },
 
 	{ nullptr,						nullptr,												 nullptr, 0 }
 
@@ -706,6 +708,9 @@ CommandButton::CommandButton( void )
 	m_orderMinDelay = 0;
 	m_orderMaxDelay = 0;
 	m_orderIntervalDelay = 0;
+
+	m_instancesRequired.clear();
+	m_requiresAllInstances = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2109,8 +2114,9 @@ void ControlBar::evaluateContextUI( void )
 		if( obj->getStatusBits().test( OBJECT_STATUS_SOLD ) )
 			return;
 
-		static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
-		OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+		//static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
+		//OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+		OCLUpdate *update = obj->getOCLUpdate();
 
 		//
 		// a command center is context sensitive itself, if a side has *NOT* been chosen we display
@@ -3599,6 +3605,16 @@ void ControlBar::populateSpecialPowerShortcut( Player *player)
 				}
 			}
 
+			if( BitIsSet( commandButton->getOptions(), NEED_INSTANCE ) )
+			{
+				if( !ThePlayerList->getLocalPlayer()->hasInstance( commandButton->getInstancesRequired(), commandButton->getRequiresAllInstances() ) )
+				{
+					//Kris: 8/13/03 - Don't show shortcut buttons that require upgrades we don't have. As far as
+					//I know, only the radar van scan has this. The MOAB is handled differently (sciences).
+					continue;
+				}
+			}
+
 			//
 			// commands that require sciences we don't have are hidden so they never show up
 			// cause we can never pick "another" general technology throughout the game
@@ -3869,6 +3885,9 @@ void ControlBar::updateSpecialPowerShortcut( void )
 		{
 			obj = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
 			availability = getCommandAvailability( command, obj, win );
+
+			if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+				availability = COMMAND_HIDDEN;
 		}
 		else if( command->getCommandType() == GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE )
 		{
@@ -3899,6 +3918,10 @@ void ControlBar::updateSpecialPowerShortcut( void )
 							{
 								//We want to evaluate the special powerbutton... but apply the clock overlay to our button!
 								availability = getCommandAvailability( evalButton, obj, evalButtonWin, win );
+
+								if( BitIsSet( evalButton->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( evalButton, obj ) )
+									availability = COMMAND_HIDDEN;
+
 								break;
 							}
 						}

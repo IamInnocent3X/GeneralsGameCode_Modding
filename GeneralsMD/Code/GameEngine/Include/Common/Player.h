@@ -141,6 +141,7 @@ public:
 	UnsignedInt			m_ref;  // Counter
 	Bool				m_stackWithAny; // this entry can stack with any of same values
 	UnsignedInt         m_templateID;  // Bonus Source thingtemplate
+	std::vector<UnsignedInt> m_frame;  // Duration
 
 };
 EMPTY_DTOR(KindOfPercentProductionChange)
@@ -344,6 +345,10 @@ public:
 	void findUpgradeInQueuesAndCancelThem( const UpgradeTemplate *upgradeTemplate );	///< Find existing upgrades queue among a player that are currently in production and cancel them.
 	void onUpgradeRemoved();					///< An upgrade just got removed, this doesn't do anything now.
 
+	Bool hasInstance( const std::vector<NameKeyType>& instances, Bool requiresAllInstances ) const;		///< does player have the required instance
+	void grantInstance( NameKeyType nameKey, Int amount = 0 );											///< grants the player instances
+	void useInstance( const std::vector<NameKeyType>& instances, Bool requiresAllInstances );		///< uses an instance
+
 #if defined(RTS_DEBUG)
 	/// Prereq disabling cheat key
 	void toggleIgnorePrereqs(){ m_DEMO_ignorePrereqs = !m_DEMO_ignorePrereqs; }
@@ -406,7 +411,7 @@ public:
 	/// add type of production cost change (Used for upgrades)
 	void addKindOfProductionCostChange( KindOfMaskType kindOf, Real percent,
 										UnsignedInt sourceTemplateID = INVALID_ID,
-										Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
+										Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE, UnsignedInt frame = 0);
 	/// Returns production cost change based on typeof (Used for upgrades)
 	Real getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const;
 
@@ -417,7 +422,7 @@ public:
 	/// add type of production cost change (Used for upgrades)
 	void addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
 		UnsignedInt sourceTemplateID = INVALID_ID,
-		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
+		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE, UnsignedInt frame = 0);
 	/// Returns production cost change based on typeof (Used for upgrades)
 	Real getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const;
 
@@ -770,7 +775,16 @@ public:
 	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
 
 	void setUnitsMoveInFormation(void) { m_unitsMoveInFormation = !m_unitsMoveInFormation; }
-	Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; } 
+	Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; }
+
+	Bool forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType spType );
+	Bool isSabotagingObjectGUICommand(void) const { return !m_sabotagingObjectGUICommandName.isEmpty(); }
+	ObjectID getSabotagingObjectGUICommandID() const { return m_sabotagingObjectGUICommandID; }
+	const AsciiString& getSabotagingObjectGUICommandName() const { return m_sabotagingObjectGUICommandName; }
+	void setSabotagingObjectGUICommandName(const AsciiString& name) { m_sabotagingObjectGUICommandName = name; }
+	void setSabotagingObjectGUICommandID(ObjectID ID) { m_sabotagingObjectGUICommandID = ID; }
+	void setSabotagingObjectGUICommandButtonSlot(Int slot) { m_sabotagingObjectGUICommandButtonSlot = slot; }
+	void selectDrawablesBeforeSabotaging();
 
 protected:
 
@@ -879,4 +893,15 @@ private:
 	Bool									m_logicalRetaliationModeEnabled;
 
 	Bool									m_unitsMoveInFormation;
+
+	AsciiString								m_sabotagingObjectGUICommandName;
+	Int										m_sabotagingObjectGUICommandButtonSlot;
+	ObjectID								m_sabotagingObjectGUICommandID;
+	std::vector<ObjectID>					m_lastSelectedObjIDs;
+
+	mutable Bool							m_productionCostChangeExpired;
+	mutable Bool							m_productionTimeChangeExpired;
+
+	NameKeyIntVec								m_instances;
+
 };

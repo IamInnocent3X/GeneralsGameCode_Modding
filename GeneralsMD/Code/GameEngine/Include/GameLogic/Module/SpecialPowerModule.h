@@ -31,6 +31,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "Common/AudioEventRTS.h"
+#include "Common/KindOf.h"
 #include "Common/Module.h"
 #include "Common/Science.h"
 #include "GameLogic/Module/BehaviorModule.h"
@@ -69,6 +70,10 @@ public:
 	virtual void startPowerRecharge() = 0;
 	virtual const AudioEventRTS& getInitiateSound() const = 0;
 	virtual Bool isScriptOnly() const = 0;
+	virtual Bool getUsesSabotageBehavior() const = 0;
+	virtual Bool canHackOrCaptureAirborneTargets() const = 0;
+	virtual const KindOfMaskType& getKindOfs() const = 0;
+	virtual const KindOfMaskType& getForbiddenKindOfs() const = 0;
 
 	//If the special power launches a construction site, we need to know the final product for placement purposes.
 	virtual const ThingTemplate* getReferenceThingTemplate() const = 0;
@@ -161,6 +166,12 @@ public:
 	virtual const AudioEventRTS& getInitiateSound() const;
 
 	virtual Bool isScriptOnly() const;
+
+	virtual Bool getUsesSabotageBehavior() const { return FALSE; }
+	virtual Bool canHackOrCaptureAirborneTargets() const { return FALSE; }
+
+	virtual const KindOfMaskType& getKindOfs() const { return KINDOFMASK_NONE; }
+	virtual const KindOfMaskType& getForbiddenKindOfs() const { return KINDOFMASK_NONE; }
 
 	//If the special power launches a construction site, we need to know the final product for placement purposes.
 	virtual const ThingTemplate* getReferenceThingTemplate() const { return nullptr; }

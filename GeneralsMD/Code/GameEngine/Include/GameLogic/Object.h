@@ -77,8 +77,9 @@ class DieModuleInterface;
 class ExitInterface;
 class ExperienceTracker;
 class FiringTracker;
-class Module;
 class HijackerUpdateInterface;
+class Module;
+class OCLUpdate;
 class PartitionData;
 class PhysicsBehavior;
 class PhysicsUpdate;
@@ -119,6 +120,8 @@ class ObjectCounterHelper;
 class ObjectDefectionHelper;
 class ObjectDelayedOrderHelper;
 class ObjectLevitationHelper;
+class ObjectPowerOutrageHelper;
+class ObjectSpecialPowerHelper;
 
 enum CommandSourceType CPP_11(: Int);
 enum HackerAttackMode CPP_11(: Int);
@@ -363,6 +366,10 @@ public:
 
 	inline PhysicsBehavior* getPhysics() { return m_physics; }
 	inline const PhysicsBehavior* getPhysics() const { return m_physics; }
+
+	inline OCLUpdate* getOCLUpdate() { return m_oclUpdate; }
+	inline const OCLUpdate* getOCLUpdate() const { return m_oclUpdate; }
+
 	void topple( const Coord3D *toppleDirection, Real toppleSpeed, UnsignedInt options );
 
 	HijackerUpdateInterface* getHijackerUpdateInterface() const { return m_hijackerUpdate; }
@@ -565,6 +572,7 @@ public:
 
 	// see if this current weapon set's weapons has shared reload times
 	Bool isReloadTimeShared() const { return m_weaponSet.isSharedReloadTime(); }
+	Bool isClipShared() const { return m_weaponSet.isSharedClip(); }
 
 	Weapon* getCurrentWeapon(WeaponSlotType* wslot = nullptr);
 	const Weapon* getCurrentWeapon(WeaponSlotType* wslot = nullptr) const;
@@ -604,10 +612,12 @@ public:
 		where we already know that isAbleToAttack() == true. so you should always
 		call isAbleToAttack prior to calling this! (srj)
 	*/
-	CanAttackResult getAbleToAttackSpecificObject( AbleToAttackType t, const Object* target, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1 ) const;
+	CanAttackResult getAbleToAttackSpecificObject( AbleToAttackType t, const Object* target, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1, Bool getResultOnly = FALSE ) const;
 
 	//Used for base defenses and otherwise stationary units to see if you can attack a position potentially out of range.
-	CanAttackResult getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1 ) const;
+	CanAttackResult getAbleToUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *victim, const Coord3D *pos, CommandSourceType commandSource, WeaponSlotType specificSlot = (WeaponSlotType)-1, Bool getResultOnly = FALSE ) const;
+
+	WeaponSlotType getWeaponSlotActivatedByGUI() const;
 
 	/**
 		Selects the best weapon for the given target, and sets it as the current weapon.
@@ -752,6 +762,7 @@ public:
 	void doDisablePower(Bool isCommand);
 
 	Bool isDisabledPowerByCommand() const { return m_disabledPowerFromCommand; }
+	Bool isPowerSabotaged() const;
 
 	//Checks any timers and clears disabled statii that have expired.
 	void checkDisabledStatus();
@@ -764,7 +775,11 @@ public:
 	void setDisabledTint(TintStatus tintStatus) { m_disabledTintToClear = tintStatus; }
 	void setDisabledCustomTint( const AsciiString& customTintStatus ) { m_customDisabledTintToClear = customTintStatus; }
 
-	//void checkLevitate();
+	void doPowerSabotage(UnsignedInt frame, Int amount, Real percent, Int giveEnergyToPlayer);
+	void setPauseSpecialPowersUntil(UnsignedInt frame);
+	void setCommandsDisable(UnsignedInt frame, const std::vector<AsciiString>& commandsVec);
+	UnsignedInt getCommandSetDisabledUntil() const { return m_commandSetDisableUntil; }
+	Bool isCommandDisabled(UnsignedInt now, const AsciiString& commandName);
 
 	void setLastActualSpeed(Real speed) { m_lastActualSpeed = speed; }
 	Real getLastActualSpeed() const { return m_lastActualSpeed; }
@@ -809,6 +824,9 @@ public:
 	// If incoming is true, we're working on the incoming player, if its false, we're on the outgoing
 	// player. These are friend_s for player.
 	void friend_adjustPowerForPlayer( Bool incoming );
+
+	// Get position where to enter this object
+	Coord3D getEnterPosition(ObjectID enteringObject) const;
 
 	void doClearTunnelContainTargetID();
 
@@ -905,7 +923,8 @@ public:
 	Bool registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName = AsciiString::TheEmptyString );
 	Bool removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandButtonName = AsciiString::TheEmptyString, AsciiString commandSetName = AsciiString::TheEmptyString );
 	Bool processModiferCommandOverrideWithinCommandSet( Bool doRemove, Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName = AsciiString::TheEmptyString );
-	
+
+	void setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot = (WeaponSlotType)-1 );
 
 	const AsciiString& getGenericInvalidCursorName() const;
 	const AsciiString& getSelectingCursorName() const;
@@ -1041,7 +1060,7 @@ private:
 
 	UnsignedInt		m_smcUntil;
 
-	enum { NUM_SLEEP_HELPERS = 13 };
+	enum { NUM_SLEEP_HELPERS = 15 };
 	ObjectRepulsorHelper*					m_repulsorHelper;
 	ObjectSMCHelper*							m_smcHelper;
 	ObjectWeaponStatusHelper*			m_wsHelper;
@@ -1055,6 +1074,8 @@ private:
 
 	ObjectDisabledHelper*				m_disabledHelper;
 	ObjectLevitationHelper*				m_levitationHelper;
+	ObjectPowerOutrageHelper*			m_powerOutrageHelper;
+	ObjectSpecialPowerHelper*			m_specialPowerHelper;
 
 	ObjectDelayedOrderHelper*			m_delayedOrderHelper;
 
@@ -1068,6 +1089,7 @@ private:
 
 	AIUpdateInterface*						m_ai;	///< ai interface (if any), cached for handy access. (duplicate of entry in the module array!)
 	PhysicsBehavior*							m_physics;	///< physics interface (if any), cached for handy access. (duplicate of entry in the module array!)
+	OCLUpdate*									m_oclUpdate;	///< ocl update (if any), cached for handy access. (duplicate of entry in the module array!)
 
 	HijackerUpdateInterface*					m_hijackerUpdate;	///< hijacker update interface (if any), cached for handy access. (duplicate of entry in the module array!)
 
@@ -1108,12 +1130,23 @@ private:
 	std::vector<AsciiString>			m_customWeaponBonusConditionIC;
 
 	Real								m_invsqrt_mass;
-	//Real								m_magnetLevitateHeight;
-	//UnsignedInt							m_levitateCheckFrame;
-	//UnsignedInt							m_levitateCheckCount;
-	//Bool								m_dontLevitate;
 
 	Real								m_lastActualSpeed;
+
+	struct PowerLossData
+	{
+		UnsignedInt Frame;
+		Int Amount;
+		Int PlayerIndex;
+	};
+
+	typedef std::vector<PowerLossData> PowerLossVec;
+	PowerLossVec						m_powerLoss;
+
+	typedef std::pair<UnsignedInt, std::vector<AsciiString>> FrameCommandButtonPair;
+	typedef std::vector<FrameCommandButtonPair> FrameCommandButtonVec;
+	UnsignedInt							m_commandSetDisableUntil;
+	FrameCommandButtonVec				m_commandsDisableUntil;						
 
 	Byte													m_lastWeaponCondition[WEAPONSLOT_COUNT];
 

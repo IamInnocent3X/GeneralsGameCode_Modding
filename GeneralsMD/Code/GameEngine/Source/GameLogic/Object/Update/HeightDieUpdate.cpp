@@ -49,8 +49,10 @@ HeightDieUpdateModuleData::HeightDieUpdateModuleData( void )
 {
 
 	m_targetHeightAboveTerrain = 0.0f;
+	m_dieAboveTargetHeight = FALSE;
 	m_targetHeightIncludesStructures = FALSE;
 	m_onlyWhenMovingDown = FALSE;
+	m_onlyWhenMovingUp = FALSE;
 	m_destroyAttachedParticlesAtHeight = -1.0f;
 	m_snapToGroundOnDeath = FALSE;
 	m_initialDelay = 0;
@@ -68,7 +70,9 @@ void HeightDieUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "TargetHeight", INI::parseReal, nullptr, offsetof( HeightDieUpdateModuleData, m_targetHeightAboveTerrain ) },
 		{ "TargetHeightIncludesStructures", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_targetHeightIncludesStructures ) },
+		{ "DieAboveTargetHeight", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_dieAboveTargetHeight) },
 		{ "OnlyWhenMovingDown", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_onlyWhenMovingDown ) },
+		{ "OnlyWhenMovingUp", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_onlyWhenMovingUp ) },
 		{ "DestroyAttachedParticlesAtHeight", INI::parseReal, nullptr, offsetof( HeightDieUpdateModuleData, m_destroyAttachedParticlesAtHeight ) },
 		{ "SnapToGroundOnDeath", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_snapToGroundOnDeath ) },
 		{ "InitialDelay", INI::parseDurationUnsignedInt, nullptr, offsetof( HeightDieUpdateModuleData, m_initialDelay ) },
@@ -148,6 +152,14 @@ UpdateSleepTime HeightDieUpdate::update( void )
 
 		}
 
+		if (modData->m_onlyWhenMovingUp)
+		{
+
+			if (pos->z <= m_lastPosition.z)
+				directionOK = FALSE;
+
+		}
+
 		// get the terrain height
 		Real terrainHeightAtPos = TheTerrainLogic->getGroundHeight( pos->x, pos->y );
 
@@ -215,8 +227,15 @@ UpdateSleepTime HeightDieUpdate::update( void )
 
 		}
 
+		bool doTheKill = false;
+
+		if (modData->m_dieAboveTargetHeight)
+			doTheKill = pos->z > targetHeight && directionOK;
+		else
+			doTheKill = pos->z < targetHeight && directionOK;
+
 		// if we are below the target height ... DIE!
-		if( pos->z < targetHeight && directionOK )
+		if(doTheKill)
 		{
 
 			// if we're supposed to snap us to the ground on death do so

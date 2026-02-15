@@ -45,6 +45,7 @@ class CollideModuleInterface
 {
 public:
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) = 0;
+	virtual void doSabotage( Object *other, Object *obj ) = 0;
 	virtual Bool revertCollideBehavior(Object *other) = 0;
 	virtual Bool wouldLikeToCollideWith(const Object* other) const = 0;
 	virtual Bool isHijackedVehicleCrateCollide() const = 0;
@@ -54,7 +55,9 @@ public:
 	virtual Bool isSalvageCrateCollide() const = 0;
 	virtual Bool isEquipCrateCollide() const = 0;
 	virtual Bool isParasiteEquipCrateCollide() const = 0;
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const = 0;
 	virtual const AsciiString& getCursorName() const = 0;
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const = 0;
 
 };
 
@@ -90,6 +93,7 @@ public:
 	virtual CollideModuleInterface* getCollide() { return this; }
 
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) = 0;
+	virtual void doSabotage( Object *other, Object *obj ) { }
 
 	/// this is used for things like pilots, to determine if they can "enter" something
 	virtual Bool revertCollideBehavior(Object *other) { return false; }
@@ -101,7 +105,9 @@ public:
 	virtual Bool isSalvageCrateCollide() const { return false; }
 	virtual Bool isEquipCrateCollide() const { return false; }
 	virtual Bool isParasiteEquipCrateCollide() const { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const { return false; }
 	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
 
 };
 inline CollideModule::CollideModule( Thing *thing, const ModuleData* moduleData ) : BehaviorModule( thing, moduleData ) { }

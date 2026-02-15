@@ -112,6 +112,8 @@ OCLUpdate::OCLUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModul
 	m_currentPlayerColor = 0;
 	m_nextCreationDelay = 0;
 	m_timerStartedDelay = 0;
+	m_disabledUntilFrame = 0;
+	m_countdownPercentWhileDisabled = 0.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -379,10 +381,13 @@ void OCLUpdate::setNextCreationFrame()
 // ------------------------------------------------------------------------------------------------
 Real OCLUpdate::getCountdownPercent() const
 {
-	//UnsignedInt now = TheGameLogic->getFrame();
+	UnsignedInt now = TheGameLogic->getFrame();
 
 	//return 1.0f - (( m_nextCreationFrame - now ) / (float)( m_nextCreationFrame - m_timerStartedFrame ));
-	return 1.0f - (( getRemainingFrames() ) / (float)( m_nextCreationFrame - m_timerStartedFrame ));
+	if(m_disabledUntilFrame > now)
+		return m_countdownPercentWhileDisabled;
+	else
+		return 1.0f - ((float)( getRemainingFrames() ) / (float)( m_nextCreationFrame - m_timerStartedFrame ));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -394,6 +399,42 @@ UnsignedInt OCLUpdate::getRemainingFrames() const
 		now = m_nextCreationDelay;
 
 	return ( m_nextCreationFrame - now );
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void OCLUpdate::setDisabledUntilFrame( UnsignedInt frame )
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	if( frame > now )
+	{
+		//Mark the current progress
+		m_countdownPercentWhileDisabled = getCountdownPercent();
+
+		//When should we wake up?
+		m_disabledUntilFrame = frame;
+
+		// Set the next creation frame
+		m_nextCreationFrame += frame - now;
+
+		// Set the timer started frame
+		m_timerStartedFrame += frame - now;
+
+		//Now sleep until the disabled has expired. If it's expired again when we come back due to another
+		//sabotage or something else... we'll do the same thing over again.
+		setWakeFrame( getObject(), (UpdateSleepTime)(m_disabledUntilFrame - now) );
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+UnsignedInt OCLUpdate::getRemainingSabotagedFrames() const
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	if(m_disabledUntilFrame > now)
+		return ( m_disabledUntilFrame - now );
+	else
+		return 0;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -440,6 +481,12 @@ void OCLUpdate::xfer( Xfer *xfer )
 
 	// timer stated delay
 	xfer->xferUnsignedInt( &m_timerStartedDelay );
+
+	// disabled until frame
+	xfer->xferUnsignedInt( &m_disabledUntilFrame );
+
+	// countdown percent while disabled
+	xfer->xferReal( &m_countdownPercentWhileDisabled );
 
 }
 

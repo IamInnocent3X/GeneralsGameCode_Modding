@@ -35,6 +35,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
+#include "Common/KindOf.h"
 #include "GameLogic/Module/CrateCollide.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -45,16 +46,31 @@ class ConvertToHijackedVehicleCrateCollideModuleData : public CrateCollideModule
 {
 public:
 	UnsignedInt m_rangeOfEffect;
+	Bool m_canHijackOccupiedContain;
 
 	ConvertToHijackedVehicleCrateCollideModuleData()
 	{
 		m_rangeOfEffect = 0;
 		m_leechExpFromObject = TRUE;
+		m_canHijackOccupiedContain = FALSE;
+		m_kindof.clear();
+		m_kindof.set(KINDOF_VEHICLE);
+		m_kindofnot.clear();
+		m_kindofnot.set(KINDOF_AIRCRAFT);
+		m_kindofnot.set(KINDOF_BOAT);
+		m_kindofnot.set(KINDOF_DRONE);
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
     CrateCollideModuleData::buildFieldParse(p);
+
+		static const FieldParse dataFieldParse[] =
+		{
+			{ "CanHijackOccupiedContain",		INI::parseBool,		NULL, offsetof( ConvertToHijackedVehicleCrateCollideModuleData, m_canHijackOccupiedContain ) },
+			{ 0, 0, 0, 0 }
+		};
+    p.add(dataFieldParse);
 	}
 
 };

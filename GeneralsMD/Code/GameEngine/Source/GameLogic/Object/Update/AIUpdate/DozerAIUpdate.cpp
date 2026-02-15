@@ -181,6 +181,24 @@ StateReturnType DozerActionPickActionPosState::update( void )
 
 	}
 
+	// If the repairing object has moved recently
+	AIUpdateInterface *goalAi = goalObject->getAIUpdateInterface();
+	if( goalAi && goalAi->isMoving() && goalObject->getLastActualSpeed() > 0.01f )
+	{
+		goalObject = dozerAI->findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(dozer, goalObject, m_task);
+		if (goalObject == nullptr)
+		{
+			// to be clean get rid of the goal object we set
+			getMachine()->setGoalObject( nullptr );
+
+			// cancel our task
+			dozerAI->cancelTask( m_task );
+
+			// exit with failure
+			return STATE_FAILURE; // could happen for some bridges
+		}
+	}
+
 	// pick a location to move to
 	Coord3D goalPos;
 	const Coord3D *pos = dozerAI->getDockPoint( m_task, DOZER_DOCK_POINT_START );
@@ -297,6 +315,37 @@ StateReturnType DozerActionMoveToActionPosState::update( void )
 	// sanity
 	if( goalObject == nullptr || dozer == nullptr )
 		return STATE_FAILURE;
+
+	// If the object has moved recently, update the dock points
+	AIUpdateInterface *goalAi = goalObject->getAIUpdateInterface();
+	if( goalAi && goalAi->isMoving() && goalObject->getLastActualSpeed() > 0.01f )
+	{
+		goalObject = nullptr;
+		return STATE_FAILURE;
+		//DozerAIInterface *dozerAI = ai->getDozerAIInterface();
+		//Object *previousGoalObject = goalObject;
+		//goalObject = dozerAI->findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(dozer, goalObject, m_task);
+		//if (goalObject == nullptr)
+		//	return STATE_FAILURE; // could happen for some bridges
+		//else
+		//{
+		//	if(previousGoalObject != goalObject)
+		//	{
+		//		getMachine()->setGoalObject( goalObject );
+		//		ai->ignoreObstacle(goalObject);
+		//	}
+
+		//	Coord3D newPos;
+		//	const Coord3D *pos = dozerAI->getDockPoint( m_task, DOZER_DOCK_POINT_START );
+		//	if( pos )
+		//	{
+		//		newPos = *pos;
+		//		getMachine()->setGoalPosition( &newPos );
+		//		ai->ignoreObstacle(goalObject);
+		//		ai->aiMoveToPosition( &newPos, CMD_FROM_AI );
+		//	}
+		//}
+	}
 
 	AIUpdateInterface *ai = dozer->getAIUpdateInterface();
 	ObjectID currentRepairer = goalObject->getSoleHealingBenefactor();
@@ -483,6 +532,23 @@ StateReturnType DozerActionDoActionState::update( void )
 
 	if ( dozer->isDisabledByType( DISABLED_UNMANNED ) )// Yipes, I've been sniped!
 		return STATE_FAILURE;
+
+	// If the object has moved recently, we need to update the position
+	AIUpdateInterface *goalAi = goalObject->getAIUpdateInterface();
+	if( goalAi && goalAi->isMoving() && goalObject->getLastActualSpeed() > 0.01f )
+	{
+		goalObject = nullptr;
+		return STATE_FAILURE;
+		//Object *previousGoalObject = goalObject;
+		//goalObject = dozerAI->findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(dozer, goalObject, m_task);
+		//if (goalObject == nullptr)
+		//	return STATE_FAILURE; // could happen for some bridges
+		//else if(previousGoalObject != goalObject)
+		//{
+		//	getMachine()->setGoalObject( goalObject );
+		//	ai->ignoreObstacle(goalObject);
+		//}
+	}
 
 	// do the task
 	Bool complete = FALSE;
@@ -871,10 +937,11 @@ static Object *findObjectToRepair( Object *dozer )
 	const DozerAIInterface *dozerAI = dozer->getAIUpdateInterface()->getDozerAIInterface();
 
 	PartitionFilterSamePlayer filter1( dozer->getControllingPlayer() );
-	PartitionFilterAcceptByKindOf filter2( MAKE_KINDOF_MASK( KINDOF_STRUCTURE ),
-																				 KINDOFMASK_NONE );
+	//PartitionFilterAcceptByKindOf filter2( MAKE_KINDOF_MASK( KINDOF_STRUCTURE ),
+	//																			 KINDOFMASK_NONE );
 	PartitionFilterSameMapStatus filterMapStatus(dozer);
-	PartitionFilter *filters[] = { &filter1, &filter2, &filterMapStatus, nullptr };
+	//PartitionFilter *filters[] = { &filter1, &filter2, &filterMapStatus, nullptr };
+	PartitionFilter *filters[] = { &filter1, &filterMapStatus, nullptr };
 	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( dozer->getPosition(),
 																																		 dozerAI->getBoredRange(),
 																																		 FROM_CENTER_2D,
@@ -886,6 +953,12 @@ static Object *findObjectToRepair( Object *dozer )
 	Real closestRepairTargetDistSqr = 0.0f;
 	for( obj = iter->first(); obj; obj = iter->next() )
 	{
+
+		if( !obj->isAnyKindOf(dozerAI->getRepairKindOf()) )
+			continue;
+
+		if( obj->isAnyKindOf(dozerAI->getRepairForbiddenKindOf()) )
+			continue;
 
 		// ignore objects we cant repair
 		if( TheActionManager->canRepairObject( dozer, obj, CMD_FROM_AI ) == FALSE )
@@ -1411,6 +1484,9 @@ DozerAIUpdateModuleData::DozerAIUpdateModuleData( void )
 {
 
 	m_repairHealthPercentPerSecond = 0.0f;
+	m_kindOf.clear();
+	m_kindOf.set(KINDOF_STRUCTURE);
+	m_forbiddenKindOf.clear();
 	m_repairClearsParasite = TRUE;
 	m_repairClearsParasiteKeys.clear();
 	m_boredTime = 0.0f;
@@ -1426,6 +1502,8 @@ void DozerAIUpdateModuleData::buildFieldParse( MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	nullptr, offsetof( DozerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+		{ "RepairKindOf",	KindOfMaskType::parseFromINI,	nullptr, offsetof( DozerAIUpdateModuleData, m_kindOf ) },
+		{ "RepairForbiddenKindOf",	KindOfMaskType::parseFromINI,	nullptr, offsetof( DozerAIUpdateModuleData, m_forbiddenKindOf ) },
 		{ "RepairClearsParasite",			INI::parseBool,	nullptr, offsetof( DozerAIUpdateModuleData, m_repairClearsParasite ) },
 		{ "RepairClearsParasiteKeys", 		INI::parseAsciiStringVector, nullptr, offsetof( DozerAIUpdateModuleData, m_repairClearsParasiteKeys ) },
 		{ "BoredTime",										INI::parseDurationReal,		nullptr, offsetof( DozerAIUpdateModuleData, m_boredTime ) },
@@ -1978,6 +2056,82 @@ void DozerAIUpdate::privateResumeConstruction( Object *obj, CommandSourceType cm
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Object* DozerAIUpdate::findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task)
+{
+	Coord3D position;
+	if (target->isKindOf(KINDOF_BRIDGE))
+	{
+		BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject(target);
+		if (bbi)
+		{
+			AIUpdateInterface* ai = me->getAI();
+
+			// have to repair at a tower.
+			Real bestDistSqr = 1e10f;
+			Object* bestTower = nullptr;
+			for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i)
+			{
+				Object* tower = TheGameLogic->findObjectByID(bbi->getTowerID((BridgeTowerType)i));
+				if( tower )
+				{
+					Coord3D tmp;
+					Bool found = findGoodBuildOrRepairPosition(me, tower, tmp);
+					// do isPathAvail against the result of this, NOT the tower pos,
+					// since towers are often in cliff cells.
+					if (found && ai->isPathAvailable(&tmp))
+					{
+						Real thisDistSqr = sqr(me->getPosition()->x - tmp.x) + sqr(me->getPosition()->y - tmp.y);
+						if (thisDistSqr < bestDistSqr)
+						{
+							position = tmp;
+							bestDistSqr = thisDistSqr;
+							bestTower = tower;
+						}
+					}
+				}
+			}
+			if (bestTower)
+			{
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+				Coord3D offset;
+				offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+				offset.normalize();
+				offset.scale(5*PATHFIND_CELL_SIZE_F);
+				position.add(&offset); // move away from the dock point at the end of build.
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+				m_task[ task ].m_targetObjectID = bestTower->getID();
+
+				return bestTower;
+			}
+
+			DEBUG_CRASH(("should not happen, no reachable tower found"));
+			return nullptr;
+		}
+	}
+
+	findGoodBuildOrRepairPosition(me, target, position);
+
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+	Coord3D offset;
+	offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+	offset.normalize();
+	offset.scale(5*PATHFIND_CELL_SIZE_F);
+	position.add(&offset); // move away from the dock point at the end of build.
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+
+	return target;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Issue and order to the dozer */
 //-------------------------------------------------------------------------------------------------
 void DozerAIUpdate::newTask( DozerTask task, Object *target )
@@ -2373,6 +2527,16 @@ Real DozerAIUpdate::getBoredRange( void ) const
 		return TheAI->getAiData()->m_aiDozerBoredRadiusModifier*getDozerAIUpdateModuleData()->m_boredRange;
 	}
 	return getDozerAIUpdateModuleData()->m_boredRange;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& DozerAIUpdate::getRepairKindOf( void ) const
+{
+	return getDozerAIUpdateModuleData()->m_kindOf;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& DozerAIUpdate::getRepairForbiddenKindOf( void ) const
+{
+	return getDozerAIUpdateModuleData()->m_forbiddenKindOf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

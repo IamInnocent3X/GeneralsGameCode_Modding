@@ -178,6 +178,90 @@ Real WorkerAIUpdate::getBoredRange( void ) const
 {
 	return getWorkerAIUpdateModuleData()->m_boredRange;
 }
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& WorkerAIUpdate::getRepairKindOf( void ) const
+{
+	return getWorkerAIUpdateModuleData()->m_kindOf;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& WorkerAIUpdate::getRepairForbiddenKindOf( void ) const
+{
+	return getWorkerAIUpdateModuleData()->m_forbiddenKindOf;
+}
+// ------------------------------------------------------------------------------------------------
+Object* WorkerAIUpdate::findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task)
+{
+	Coord3D position;
+	if (target->isKindOf(KINDOF_BRIDGE))
+	{
+		BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject(target);
+		if (bbi)
+		{
+			AIUpdateInterface* ai = me->getAI();
+
+			// have to repair at a tower.
+			Real bestDistSqr = 1e10f;
+			Object* bestTower = NULL;
+			for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i)
+			{
+				Object* tower = TheGameLogic->findObjectByID(bbi->getTowerID((BridgeTowerType)i));
+				if( tower )
+				{
+					Coord3D tmp;
+					Bool found = DozerAIUpdate::findGoodBuildOrRepairPosition(me, tower, tmp);
+					// do isPathAvail against the result of this, NOT the tower pos,
+					// since towers are often in cliff cells.
+					if (found && ai->isPathAvailable(&tmp))
+					{
+						Real thisDistSqr = sqr(me->getPosition()->x - tmp.x) + sqr(me->getPosition()->y - tmp.y);
+						if (thisDistSqr < bestDistSqr)
+						{
+							position = tmp;
+							bestDistSqr = thisDistSqr;
+							bestTower = tower;
+						}
+					}
+				}
+			}
+			if (bestTower)
+			{
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+				Coord3D offset;
+				offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+				offset.normalize();
+				offset.scale(5*PATHFIND_CELL_SIZE_F);
+				position.add(&offset); // move away from the dock point at the end of build.
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+				m_task[ task ].m_targetObjectID = bestTower->getID();
+
+				return bestTower;
+			}
+
+			DEBUG_CRASH(("should not happen, no reachable tower found"));
+			return NULL;
+		}
+	}
+
+	DozerAIUpdate::findGoodBuildOrRepairPosition(me, target, position);
+
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+	Coord3D offset;
+	offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+	offset.normalize();
+	offset.scale(5*PATHFIND_CELL_SIZE_F);
+	position.add(&offset); // move away from the dock point at the end of build.
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+
+	return target;
+}
 
 // ------------------------------------------------------------------------------------------------
 void WorkerAIUpdate::createMachines( void )

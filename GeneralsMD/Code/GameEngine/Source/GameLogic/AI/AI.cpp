@@ -625,7 +625,7 @@ Object *AI::findClosestEnemy( const Object *me, Real range, UnsignedInt qualifie
 	PartitionFilterLineOfSight	filterLOS(me);
 
 	// (optional) only stuff we can attack
-	PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, me, CMD_FROM_AI);
+	PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, me, CMD_FROM_AI, TRUE);
 
 	// (optional) only stuff that is significant
 	PartitionFilterInsignificantBuildings filterInsignificant(true, false);

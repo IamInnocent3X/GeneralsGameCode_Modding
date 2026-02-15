@@ -241,6 +241,7 @@ public:
 	virtual PathfindLayerEnum alignOnTerrain( Real angle, const Coord3D& pos, Bool stickToGround, Matrix3D& mtx);
 
 	virtual Bool isUnderwater( Real x, Real y, Real *waterZ = nullptr, Real *terrainZ = nullptr );			///< is point under water
+	virtual Real getWaterZ(Real x, Real y);			///< return water height; -1 = no water
 	virtual Bool isCliffCell( Real x, Real y) const;			///< is point cliff cell
 	virtual const WaterHandle* getWaterHandle( Real x, Real y );					///< get water handle at this location
 	virtual const WaterHandle* getWaterHandleByName( AsciiString name );	///< get water handle by name

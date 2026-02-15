@@ -286,7 +286,7 @@ Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPow
 		return FALSE;
 	}
 
-	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) )
+	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) && !BitIsSet( commandOptions, IS_DOING_SABOTAGE ) )
 	{
 		DEBUG_ASSERTCRASH(targetPos, ("Particle Cannon target data must not be null"));
 
@@ -448,6 +448,7 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					me->isDisabledByType( DISABLED_EMP ) ||
 					me->isDisabledByType( DISABLED_SUBDUED ) ||
 					me->isDisabledByType( DISABLED_HACKED ) ||
+					me->isDisabledByType( DISABLED_CONSTRAINED ) ||
 					me->isDisabledByType( DISABLED_FROZEN ) )
 			{
 				//We must end the special power early! ABORT! ABORT!

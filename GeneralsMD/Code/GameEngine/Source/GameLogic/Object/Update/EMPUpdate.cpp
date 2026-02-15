@@ -187,6 +187,22 @@ UpdateSleepTime EMPUpdate::update( void )
 		return now >= m_tintEnvPlayFrame && m_dieFrame > now ? UPDATE_SLEEP(m_dieFrame - now) : UPDATE_SLEEP_NONE;
 }
 
+struct DisableData
+{
+	DisabledType disabledType;
+	UnsignedInt frame;
+};
+
+//-------------------------------------------------------------------------------
+static void disableContain( Object *obj, void *userData )
+{
+	DisableData* info = (DisableData*)userData;
+	if( obj )
+	{
+		obj->setDisabledUntil( info->disabledType, info->frame );
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void EMPUpdate::doDisableAttack( void )
@@ -259,6 +275,11 @@ void EMPUpdate::doDisableAttack( void )
 				}
 			}
 
+			if( curVictim->isAnyKindOf( data->m_victimKindOfNot ) )
+			{
+				continue;
+			}
+
 
 
 
@@ -289,6 +310,19 @@ void EMPUpdate::doDisableAttack( void )
 
         if ( curVictim->isKindOf( KINDOF_EMP_HARDENED ) ) // self-explanitory
           continue;
+
+		  if( data->m_affectsContainOnly )
+		{
+			if( curVictim->getContain() )
+			{
+				DisableData info;
+				info.disabledType = data->m_disabledType;
+				info.frame = TheGameLogic->getFrame() + data->m_disabledDuration;
+				curVictim->getContain()->iterateContained( disableContain, &info, FALSE );
+				curVictim->doStatusDamage( OBJECT_STATUS_NONE, data->m_disabledDuration, AsciiString::TheEmptyString, data->m_customTintStatus, data->m_tintStatus );
+			}
+			continue;
+		}
 
 				curVictim->kill();// @todo this should use some sort of DEADSTICK DIE or something...
 				Drawable *drw = curVictim->getDrawable();
@@ -343,7 +377,21 @@ void EMPUpdate::doDisableAttack( void )
 			}
 			else
 			{
-				curVictim->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_disabledDuration, data->m_tintStatus, data->m_customTintStatus );
+				if( data->m_affectsContainOnly )
+				{
+					if( curVictim->getContain() )
+					{
+						DisableData info;
+						info.disabledType = data->m_disabledType;
+						info.frame = TheGameLogic->getFrame() + data->m_disabledDuration;
+						curVictim->getContain()->iterateContained( disableContain, &info, FALSE );
+						curVictim->doStatusDamage( OBJECT_STATUS_NONE, data->m_disabledDuration, AsciiString::TheEmptyString, data->m_customTintStatus, data->m_tintStatus );
+					}
+				}
+				else
+				{
+					curVictim->setDisabledUntil( data->m_disabledType, TheGameLogic->getFrame() + data->m_disabledDuration, data->m_tintStatus, data->m_customTintStatus );
+				}
 			}
 
 			//Kris -- October 28, 2003 -- Patch 1.01
@@ -412,7 +460,7 @@ void EMPUpdate::doDisableAttack( void )
 	//if( intendedVictim && !intendedVictimProcessed && intendedVictim->isKindOf( KINDOF_AIRCRAFT ) )
 	if( intendedVictim && !intendedVictimProcessed )
 	{
-    if( !intendedVictim->isKindOf( KINDOF_EMP_HARDENED ) && intendedVictim->isAnyKindOf( m_affectsKindOf ) )
+    if( !intendedVictim->isKindOf( KINDOF_EMP_HARDENED ) && intendedVictim->isAnyKindOf( m_affectsKindOf ) && !intendedVictim->isAnyKindOf( data->m_victimKindOfNot ) )
 		{
 			//Victim position
 			Coord3D coord;

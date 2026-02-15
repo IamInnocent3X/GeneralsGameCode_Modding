@@ -4529,6 +4529,60 @@ Real PartitionManager::getRelativeAngle2D( const Object *obj, const Coord3D *pos
 }
 
 //-----------------------------------------------------------------------------
+Real PartitionManager::getRelativeAngle2DWithOffset(const Object* obj, Vector2 offset, const Coord3D* pos)
+{
+	Coord3D v;
+
+	// compute vector to given position
+	Coord3D objPos = *obj->getPosition();
+
+	offset.Rotate(obj->getOrientation());
+	objPos.x += offset.X;
+	objPos.y += offset.Y;
+
+	v.x = pos->x - objPos.x;
+	v.y = pos->y - objPos.y;
+	v.z = 0.0f;
+
+	Real dist = (Real)sqrtf(sqr(v.x) + sqr(v.y));
+
+	// normalize
+	if (dist == 0.0f)
+		return 0.0f;
+
+
+	const Coord3D *dir = obj->getUnitDirectionVector2D();
+
+	Real distInv = 1.0f / dist;
+	v.x *= distInv;
+	v.y *= distInv;
+	v.z *= distInv;
+
+	// dot of two unit vectors is cos of angle
+	Real c = dir->x*v.x + dir->y*v.y; // + dir->z*v.z;
+
+	// bound it in case of numerical error
+	if (c < -1.0)
+		c = -1.0;
+	else if (c > 1.0)
+		c = 1.0;
+
+	Real value = (Real)ACos( c );
+
+	// Determine sign by checking Z component of dir cross v
+	// Note this is assumes 2D, and is identical to dotting the perpendicular of v with dir
+	Real perpZ = dir->x * v.y - dir->y * v.x;
+	if (perpZ < 0.0f)
+		value = -value;
+
+	// note: to make this 3D, 'dir' and 'v' can be normalized and dotted just as they are
+	// to test sign, compute N = dir X v, then P = N x dir, then S = P . v, where sign of
+	// S is sign of angle - MSB
+
+	return value;
+}
+
+//-----------------------------------------------------------------------------
 SimpleObjectIterator *PartitionManager::iterateObjectsInRange(
 	const Object *obj,
 	Real maxDist,
@@ -6927,10 +6981,11 @@ Bool PartitionFilterLineOfSight::allow(Object *objOther)
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-PartitionFilterPossibleToAttack::PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource) :
+PartitionFilterPossibleToAttack::PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource, Bool getResultOnly ) :
 	m_attackType(t),
 	m_obj(obj),
-	m_commandSource(commandSource)
+	m_commandSource(commandSource),
+	m_getResultOnly(getResultOnly)
 {
 }
 
@@ -6942,7 +6997,7 @@ Bool PartitionFilterPossibleToAttack::allow(Object *objOther)
 	// we should have already filtered out isAbleToAttack!
 	DEBUG_ASSERTCRASH(m_obj->isAbleToAttack(), ("if the object is unable to attack at all, you should filter that out ahead of time!"));
 
-	CanAttackResult result = m_obj->getAbleToAttackSpecificObject( m_attackType, objOther, m_commandSource );
+	CanAttackResult result = m_obj->getAbleToAttackSpecificObject( m_attackType, objOther, m_commandSource, (WeaponSlotType)-1, m_getResultOnly );
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{
 		return TRUE;

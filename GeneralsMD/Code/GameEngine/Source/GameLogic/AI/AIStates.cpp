@@ -1454,6 +1454,7 @@ StateReturnType AIIdleState::update()
 				! obj->isDisabledByType( DISABLED_UNMANNED ) &&
 				! obj->isDisabledByType( DISABLED_EMP ) &&
 				! obj->isDisabledByType( DISABLED_SUBDUED ) &&
+				! obj->isDisabledByType( DISABLED_CONSTRAINED ) &&
 				! obj->isDisabledByType( DISABLED_FROZEN ) &&
 				! obj->isDisabledByType( DISABLED_HACKED ) )
 		{
@@ -2640,6 +2641,11 @@ StateReturnType AIAttackApproachTargetState::onEnter()
 
 	if (getMachine()->isGoalObjectDestroyed())
 	{
+		if(source->isCurWeaponLockedPriority() || source->getWeaponSlotActivatedByGUI() >= 0)
+		{
+			source->setWeaponsActivatedByGUI(FALSE);
+			source->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 		return STATE_SUCCESS; // Already killed victim.
 	}
 
@@ -2736,10 +2742,16 @@ StateReturnType AIAttackApproachTargetState::onEnter()
 //----------------------------------------------------------------------------------------------------------
 StateReturnType AIAttackApproachTargetState::updateInternal()
 {
-	AIUpdateInterface* ai = getMachineOwner()->getAI();
+	Object* source = getMachineOwner();
+	AIUpdateInterface* ai = source->getAI();
 	//CRCDEBUG_LOG(("AIAttackApproachTargetState::updateInternal() - object %d", getMachineOwner()->getID()));
 	if (getMachine()->isGoalObjectDestroyed())
 	{
+		if(source->isCurWeaponLockedPriority() || source->getWeaponSlotActivatedByGUI() >= 0)
+		{
+			source->setWeaponsActivatedByGUI(FALSE);
+			source->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 		ai->notifyVictimIsDead();
 		ai->setCurrentVictim(nullptr);
 		return STATE_FAILURE;
@@ -2747,7 +2759,7 @@ StateReturnType AIAttackApproachTargetState::updateInternal()
 	m_stopIfInRange = !ai->isAttackPath();
 
 	StateReturnType code = STATE_FAILURE;
- 	Object* source = getMachineOwner();
+ 	//Object* source = getMachineOwner();
 	Weapon* weapon = source->getCurrentWeapon();
 	Object *victim = getMachineGoalObject();
 	if (victim)
@@ -3039,6 +3051,11 @@ StateReturnType AIAttackPursueTargetState::onEnter()
 
 	if (getMachine()->isGoalObjectDestroyed())
 	{
+		if(source->isCurWeaponLockedPriority() || source->getWeaponSlotActivatedByGUI() >= 0)
+		{
+			source->setWeaponsActivatedByGUI(FALSE);
+			source->releaseWeaponLock(LOCKED_PRIORITY);
+		}
 		//CRCDEBUG_LOG(("AIAttackPursueTargetState::onEnter() - goal object is destroyed for object %d (%s)", getMachineOwner()->getID(), getMachineOwner()->getTemplate()->getName().str()));
 		return STATE_SUCCESS; // Already killed victim.
 	}
@@ -5163,9 +5180,24 @@ StateReturnType AIAttackAimAtTargetState::update()
 
 			// If we have limited Turret Angle, we need to turn until we are in range
 			if (sourceAI->hasLimitedTurretAngle(tur)) {
-				Real relAngle = m_isAttackingObject ?
-					ThePartitionManager->getRelativeAngle2D(source, victim) :
-					ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+
+				Real relAngle;
+				if (sourceAI->isTurretUsingOffset(tur)) {
+					WeaponSlotType wslot;
+					source->getCurrentWeapon(&wslot);
+
+					Vector2 offset = sourceAI->getTurretOffset2D(tur, wslot);
+					// DEBUG_LOG((">>> TURRET OFFSET = %f, %f", offset.X, offset.Y));
+					relAngle = m_isAttackingObject ?
+						ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, victim->getPosition()) :
+						ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, getMachineGoalPosition());
+				}
+				else {
+					relAngle = m_isAttackingObject ?
+						ThePartitionManager->getRelativeAngle2D(source, victim) :
+						ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+				}
+
 				Real maxAngle = sourceAI->getMaxTurretAngle(tur);
 				Real minAngle = sourceAI->getMinTurretAngle(tur);
 				if (maxAngle < minAngle) { // This might be a backwards facing configuration
@@ -5204,9 +5236,22 @@ StateReturnType AIAttackAimAtTargetState::update()
 
 	// 2nd step: We need to move to aim
 	{
-		Real relAngle = m_isAttackingObject ?
-			ThePartitionManager->getRelativeAngle2D(source, victim) :
-			ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+		Real relAngle;
+		if (sourceAI->isTurretUsingOffset(tur)) {
+			WeaponSlotType wslot;
+			source->getCurrentWeapon(&wslot);
+
+			Vector2 offset = sourceAI->getTurretOffset2D(tur, wslot);
+			relAngle = m_isAttackingObject ?
+				ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, victim->getPosition()) :
+				ThePartitionManager->getRelativeAngle2DWithOffset(source, offset, getMachineGoalPosition());
+		}
+		else {
+			relAngle = m_isAttackingObject ?
+				ThePartitionManager->getRelativeAngle2D(source, victim) :
+				ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
+		}
+
 
 		const Real REL_THRESH = 0.035f;	// about 2 degrees. (getRelativeAngle2D is current only accurate to about 1.25 degrees)
 
@@ -5540,7 +5585,7 @@ StateReturnType AIAttackFireWeaponState::update()
 				CommandSourceType lastCmdSource = ai ? ai->getLastCommandSource() : CMD_FROM_AI;
 				PartitionFilterSamePlayer filterPlayer(victim->getControllingPlayer());
 				PartitionFilterSameMapStatus filterMapStatus(obj);
-				PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, obj, lastCmdSource);
+				PartitionFilterPossibleToAttack filterAttack(ATTACK_NEW_TARGET, obj, lastCmdSource, TRUE);
 				PartitionFilter *filters[] = { &filterAttack, &filterPlayer, &filterMapStatus, nullptr };
 				// note that we look around originalVictimPos, *not* the current victim's pos.
 				victim = ThePartitionManager->getClosestObject(originalVictimPos, continueRange, FROM_CENTER_2D, filters);// could be null. this is ok.
@@ -6002,6 +6047,7 @@ void AIAttackState::onExit( StateExitType status )
 	// even though we're leaving this state. turn it off when we
 	// turn it off when we do setCurrentVictim(nullptr).
 	//addSelfAsTargeter(false);
+	Bool resetWeaponsActivatedByGUI = !m_attackMachine || !m_attackMachine->getGoalObject();
 
 	// destroy the attack machine
 	deleteInstance(m_attackMachine);
@@ -6020,6 +6066,8 @@ void AIAttackState::onExit( StateExitType status )
 	if (curWeapon)
 	{
 		obj->computeFiringTrackerBonusClear(curWeapon);
+		if(resetWeaponsActivatedByGUI)
+			obj->setWeaponsActivatedByGUI(FALSE);
 
 		// Release My Weapon Lock if I am currently Locked in Priority
 		if(obj->isCurWeaponLockedPriority())
@@ -6541,7 +6589,7 @@ StateReturnType AIEnterState::onEnter()
 		if( !TheActionManager->canEnterObject( obj, goal, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY ) )
 			return STATE_FAILURE;
 
-		m_goalPosition = *goal->getPosition();
+		m_goalPosition = goal->getEnterPosition(obj->getID());
 
 		ContainModuleInterface* contain = goal->getContain();
 		if (contain)
@@ -6628,8 +6676,9 @@ StateReturnType AIEnterState::update()
 			return STATE_FAILURE;
 		}
 
-		m_goalPosition = *goal->getPosition();
+		m_goalPosition = goal->getEnterPosition(obj->getID());
 		obj->getAI()->friend_setGoalObject(goal);
+		m_goalPosition = goal->getEnterPosition(obj->getID());// setGoalObject will override the goal position
 		if (!TheActionManager->canEnterObject(obj, goal, obj->getAI()->getLastCommandSource(), CHECK_CAPACITY))
 		{
 			/*
@@ -7456,6 +7505,7 @@ void AIHuntState::onExit( StateExitType status )
 	Object *obj = getMachineOwner();
 	if (obj)
 	{
+		obj->setWeaponsActivatedByGUI(FALSE);
 		obj->releaseWeaponLock(LOCKED_PRIORITY);	// release any temporary locks.
 	}
 }

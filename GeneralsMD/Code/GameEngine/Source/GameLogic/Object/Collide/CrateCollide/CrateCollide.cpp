@@ -82,6 +82,7 @@ CrateCollideModuleData::CrateCollideModuleData()
 	m_customBonusToGive.clear();
 	m_customStatusToRemove.clear();
 	m_customStatusToDestroy.clear();
+	m_kindofany.clear();
 	m_executionAnimationTemplate = AsciiString::TheEmptyString;
 }
 
@@ -95,6 +96,7 @@ void CrateCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "RequiredKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( CrateCollideModuleData, m_kindof ) },
 		{ "ForbiddenKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( CrateCollideModuleData, m_kindofnot ) },
+		{ "KindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( CrateCollideModuleData, m_kindofany ) },
 		{ "ForbidOwnerPlayer", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isForbidOwnerPlayer ) },
 		{ "AllowNeutralPlayer", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isAllowNeutralPlayer ) },
 		{ "BuildingPickup", INI::parseBool,	nullptr,	offsetof( CrateCollideModuleData, m_isBuildingPickup ) },
@@ -312,8 +314,11 @@ Bool CrateCollide::isValidToExecute( const Object *other ) const
 		return FALSE;
 
 	// must match our kindof flags (if any)
-	if ( !other->isKindOfMulti(md->m_kindof, md->m_kindofnot) )
+	if ( !md->m_kindofany.any() && !other->isKindOfMulti(md->m_kindof, md->m_kindofnot) )
 		return FALSE;
+
+	if( md->m_kindofany.any() && (!other->isAnyKindOf(md->m_kindofany) || other->isAnyKindOf(md->m_kindofnot)) )
+	   return FALSE;
 
 	if( other->isEffectivelyDead() )
 		return FALSE;
@@ -434,54 +439,6 @@ Bool CrateCollide::passRequirements() const
 
 	return TRUE;
 }
-
-
-void CrateCollide::doSabotageFeedbackFX( const Object *other, SabotageVictimType type )
-{
-
-  if ( ! getObject() )
-    return;
-  if ( ! other )
-    return;
-
-	AudioEventRTS soundToPlay;
-  switch ( type )
-  {
-    case  CrateCollide::SAB_VICTIM_FAKE_BUILDING:
-    {
-      return; // THIS NEEDS NO ADD'L FEEDBACK
-    }
-    case 	CrateCollide::SAB_VICTIM_COMMAND_CENTER:
-    case 	CrateCollide::SAB_VICTIM_SUPERWEAPON:
-    {
-      soundToPlay = TheAudio->getMiscAudio()->m_sabotageResetTimerBuilding;
-      break;
-    }
-    case 	CrateCollide::SAB_VICTIM_DROP_ZONE:
-    case 	CrateCollide::SAB_VICTIM_SUPPLY_CENTER:
-    {
-      soundToPlay = TheAudio->getMiscAudio()->m_moneyWithdrawSound;
-      break;
-    }
-    case 	CrateCollide::SAB_VICTIM_INTERNET_CENTER:
-    case 	CrateCollide::SAB_VICTIM_MILITARY_FACTORY:
-    case 	CrateCollide::SAB_VICTIM_POWER_PLANT:
-    default:
-    {
-      soundToPlay = TheAudio->getMiscAudio()->m_sabotageShutDownBuilding;
-      break;
-    }
-  }
-
-	soundToPlay.setPosition( other->getPosition() );
-	TheAudio->addAudioEvent( &soundToPlay );
-
-  Drawable *draw = other->getDrawable();
-  if ( draw )
-    draw->flashAsSelected();
-
-}
-
 
 
 // ------------------------------------------------------------------------------------------------

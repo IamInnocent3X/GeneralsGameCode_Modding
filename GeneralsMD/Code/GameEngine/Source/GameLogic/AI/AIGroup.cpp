@@ -444,13 +444,13 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 				}
 
 				// cannot do special power
-				if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( obj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer ))
+				if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( obj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer, !arguments[3].data.boolean ))
 					canDoAction = FALSE;
-				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( obj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( obj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer, !arguments[5].data.boolean ) )
 					canDoAction = FALSE;
-				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE && !TheActionManager->canDoSpecialPowerAtDrawable( obj, TheGameClient->findDrawableByID( arguments[4].data.drawableID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer ) )
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE && !TheActionManager->canDoSpecialPowerAtDrawable( obj, TheGameClient->findDrawableByID( arguments[4].data.drawableID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer, !arguments[5].data.boolean ) )
 					canDoAction = FALSE;
-				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( obj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer ) )
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( obj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer, !arguments[6].data.boolean ) )
 					canDoAction = FALSE;
 			}
 			break;
@@ -505,7 +505,7 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 		}
 		case GameMessage::MSG_DISABLE_POWER:
 		{
-			if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0)
+			if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0 && obj->getTemplate()->getEnergyBonus() == 0)
 				canDoAction = FALSE;
 
 			break;
@@ -2651,7 +2651,7 @@ void AIGroup::groupFollowPath( const std::vector<Coord3D>* path, Object *ignoreO
 /**
  * Attack given object
  */
-void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
+void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShotsToFire, CommandSourceType cmdSource, Bool doResetActivatedInGUI, Bool doResetActivatedInGUIForSameUnit )
 {
 	if (!victim) {
 		// Hard to kill em if they're already dead.  jba
@@ -2695,7 +2695,7 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 
 					if (!contain->isPassengerAllowedToFire(garrisonedMember->getID())) continue;
 
-					CanAttackResult result = garrisonedMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource );
+					CanAttackResult result = garrisonedMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource, (WeaponSlotType)-1, TRUE );
 					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
 						AIUpdateInterface *memberAI = garrisonedMember->getAI();
@@ -2726,7 +2726,7 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 				Object* equipMember = TheGameLogic->findObjectByID(*it);
 				if(equipMember)
 				{
-					CanAttackResult result = equipMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource );
+					CanAttackResult result = equipMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource, (WeaponSlotType)-1, TRUE );
 					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
 						AIUpdateInterface *equipAI = equipMember->getAI();
@@ -2744,6 +2744,16 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 	
 		//Order the specific group object to attack!
 		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
+
+		if( doResetActivatedInGUIForSameUnit || (doResetActivatedInGUI && (!ai || ai->getGoalObject() != victim)) )
+		{
+			theUnit->setWeaponsActivatedByGUI(FALSE);
+		}
+		else if(theUnit->getWeaponSlotActivatedByGUI() >= 0 && doResetActivatedInGUI)
+		{
+			theUnit->setWeaponLock( theUnit->getWeaponSlotActivatedByGUI(), LOCKED_TEMPORARILY );
+		}
+
 		if( ai && theUnit != victim )
 		{
 			if (forced)
@@ -3357,7 +3367,7 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
  * don't use AIUpdateInterfaces!!! No special power uses an AIUpdateInterface immediately, but special
  * abilities, which are derived from special powers do... and are unit triggered. Those do have AI.
  */
-void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions, Bool isSabotage )
 {
 	//This is the no target, no position version.
 	std::list<Object *>::iterator i;
@@ -3379,8 +3389,11 @@ void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt comma
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPower( object, spTemplate, CMD_FROM_PLAYER, commandOptions ) )
+				if( TheActionManager->canDoSpecialPower( object, spTemplate, CMD_FROM_PLAYER, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					mod->doSpecialPower( commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
@@ -3395,7 +3408,7 @@ void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt comma
  * don't use AIUpdateInterfaces!!! No special power uses an AIUpdateInterface immediately, but special
  * abilities, which are derived from special powers do... and are unit triggered. Those do have AI.
  */
-void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *objectInWay, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *objectInWay, UnsignedInt commandOptions, Bool isSabotage )
 {
 
 
@@ -3427,8 +3440,11 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPowerAtLocation( object, location, CMD_FROM_PLAYER, spTemplate, objectInWay, commandOptions ) )
+				if( TheActionManager->canDoSpecialPowerAtLocation( object, location, CMD_FROM_PLAYER, spTemplate, objectInWay, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					mod->doSpecialPowerAtLocation( location, angle, commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
@@ -3444,7 +3460,7 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
  * don't use AIUpdateInterfaces!!! No special power uses an AIUpdateInterface immediately, but special
  * abilities, which are derived from special powers do... and are unit triggered. Those do have AI.
  */
-void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *target, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *target, UnsignedInt commandOptions, Bool isSabotage )
 {
 	//This one requires a target
 	std::list<Object *>::iterator i;
@@ -3467,8 +3483,11 @@ void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *t
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPowerAtObject( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions ) )
+				if( TheActionManager->canDoSpecialPowerAtObject( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					mod->doSpecialPowerAtObject( target, commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
@@ -3478,7 +3497,7 @@ void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *t
 	}
 }
 
-void AIGroup::groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *target, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *target, UnsignedInt commandOptions, Bool isSabotage )
 {
 	//This one requires a target
 	std::list<Object *>::iterator i;
@@ -3501,8 +3520,11 @@ void AIGroup::groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawabl
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPowerAtDrawable( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions ) )
+				if( TheActionManager->canDoSpecialPowerAtDrawable( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					mod->doSpecialPowerAtDrawable( target, commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
@@ -3614,10 +3636,10 @@ void AIGroup::groupDisablePower( CommandSourceType cmdSource )
 		obj = *i;
 
 		// We can't disable you
-		if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0)
+		if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0 && obj->getTemplate()->getEnergyBonus() == 0)
 			continue;
 
-		if(!checked && obj->isDisabledPowerByCommand())
+		if(!checked && obj->isDisabledPowerByCommand() && !obj->isPowerSabotaged())
 		{
 			checked = TRUE;
 			hasDisabledPower = TRUE;
@@ -3835,6 +3857,25 @@ void AIGroup::releaseWeaponLockForGroup(WeaponLockType lockType)
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		(*i)->releaseWeaponLock(lockType);
+	}
+}
+
+void AIGroup::setWeaponsActivatedByGUIForGroup(Bool set, WeaponSlotType weaponSlot)
+{
+	std::list<Object *>::iterator i;
+	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
+	{
+		if(!set)
+		{
+			const AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
+			if (ai && ai->isAttacking()) {
+				(*i)->setWeaponsActivatedByGUI(set);
+			}
+		}
+		else
+		{
+			(*i)->setWeaponsActivatedByGUI(set, weaponSlot);
+		}
 	}
 }
 

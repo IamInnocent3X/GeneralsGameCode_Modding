@@ -99,6 +99,7 @@ const char* const DamageTypeFlags::s_bitNameList[] =
 	"ANTI_SHIP",
 	// Specific damage types with special logic attached
 	"TORPEDO",
+	"ANTI_TORPEDO",
 	"CHRONO_GUN",
 	"CHRONO_UNRESISTABLE",
 	//"ZOMBIE_VIRUS",  // TODO

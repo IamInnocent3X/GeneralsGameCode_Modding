@@ -315,7 +315,10 @@ public:
 	virtual AIUpdateInterface* getAIUpdateInterface() { return this; }
 
 	// Disabled conditions to process (AI will still process held status)
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+	//virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+
+	// We need to process all disabled types to allow Locomotor working while disabled
+	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
 
 	// Some very specific, complex behaviors are used by more than one AIUpdate.  Here are their interfaces.
 	virtual DozerAIInterface* getDozerAIInterface() {return nullptr;}
@@ -474,6 +477,9 @@ public:
 	Bool isTurretEnabled(WhichTurretType tur) const;
 	Bool isTurretInNaturalPosition(WhichTurretType tur) const;
 
+	Bool isTurretUsingOffset(WhichTurretType tur) const;
+	Vector2 getTurretOffset2D(WhichTurretType tur, WeaponSlotType wslot) const;
+
 	// "Planning Mode" -----------------------------------------------------------------------------------
 	Bool queueWaypoint(const Coord3D* pos);				///< add waypoint to end of move list. return true if success, false if queue was full and those the waypoint not added
 	void clearWaypointQueue(void);								///< reset the waypoint queue to empty
@@ -559,7 +565,7 @@ public:
 
 	void setCurrentVictim( const Object *nemesis );			///<  Current victim.
 	Object *getCurrentVictim( void ) const;
-	virtual void notifyVictimIsDead() { }
+	virtual void notifyVictimIsDead(); //{ }
 
 	// if we are attacking a position (and NOT an object), return it. otherwise return null.
 	const Coord3D *getCurrentVictimPos( void ) const;

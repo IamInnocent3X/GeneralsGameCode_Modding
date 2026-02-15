@@ -506,7 +506,7 @@ public:  // ********************************************************************
 	//Wrapper function that checks a specific action.
 	CanAttackResult getCanSelectedObjectsAttack( ActionType action, const Object *objectToInteractWith, SelectionRules rule, Bool additionalChecking = FALSE ) const;
 	Bool canSelectedObjectsDoAction( ActionType action, const Object *objectToInteractWith, SelectionRules rule, Bool additionalChecking = FALSE ) const;
-	Bool canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Drawable *drawableToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj ) const;
+	Bool canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Drawable *drawableToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj, Bool checkSourceRequirements = TRUE ) const;
 	Bool canSelectedObjectsEffectivelyUseWeapon( const CommandButton *command, const Object *objectToInteractWith, const Coord3D *position, SelectionRules rule ) const;
 	Bool canSelectedObjectsOverrideSpecialPowerDestination( const Coord3D *loc, SelectionRules rule, SpecialPowerType spType = SPECIAL_INVALID ) const;
 
@@ -590,6 +590,8 @@ public:  // ********************************************************************
 	static void parseCustomRadiusDecalDefinition(INI *ini);
 
 	void friend_setMouseCursor(Mouse::MouseCursor c, const AsciiString& cn, Int check) { setMouseCursor(c, cn, check); }
+
+	void getCurrentSelectedObjectIDs( std::vector<ObjectID>& objectIDs );
 
 private:
 	virtual Int getIdleWorkerCount( void );

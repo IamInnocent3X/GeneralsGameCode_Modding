@@ -33,30 +33,34 @@
 #pragma once
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
-#include "Common/Module.h"
-#include "GameLogic/Module/CrateCollide.h"
+#include "GameLogic/Module/SabotageBehavior.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Thing;
 
 //-------------------------------------------------------------------------------------------------
-class SabotageSupplyCenterCrateCollideModuleData : public CrateCollideModuleData
+class SabotageSupplyCenterCrateCollideModuleData : public SabotageBehaviorModuleData
 {
 public:
 	UnsignedInt m_stealCashAmount;
 
 	SabotageSupplyCenterCrateCollideModuleData()
 	{
-		m_stealCashAmount = 0;
+		//m_stealCashAmount = 0;
+		m_sabotageIsCollide = TRUE;
+		m_sabotageType = SABOTAGE_CASH;
+		m_feedbackType = SAB_VICTIM_SUPPLY_CENTER;
+		m_kindof.clear();
+		m_kindof.set(KINDOF_FS_SUPPLY_CENTER);
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
-    CrateCollideModuleData::buildFieldParse(p);
+    SabotageBehaviorModuleData::buildFieldParse(p);
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StealCashAmount",	INI::parseUnsignedInt, nullptr, offsetof( SabotageSupplyCenterCrateCollideModuleData, m_stealCashAmount ) },
+			//{ "StealCashAmount",	INI::parseUnsignedInt, nullptr, offsetof( SabotageSupplyCenterCrateCollideModuleData, m_stealCashAmount ) },
 			{ 0, 0, 0, 0 }
 		};
 		p.add( dataFieldParse );
@@ -65,7 +69,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-class SabotageSupplyCenterCrateCollide : public CrateCollide
+class SabotageSupplyCenterCrateCollide : public SabotageBehavior
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( SabotageSupplyCenterCrateCollide, "SabotageSupplyCenterCrateCollide" )
@@ -76,14 +80,14 @@ public:
 	SabotageSupplyCenterCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-protected:
+//protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
-	virtual Bool isValidToExecute( const Object *other ) const;
+	//virtual Bool isValidToExecute( const Object *other ) const;
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other );
+	//virtual Bool executeCrateBehavior( Object *other );
 
-	virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
+	//virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
 
 };

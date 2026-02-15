@@ -3270,6 +3270,13 @@ void JetAIUpdate::notifyVictimIsDead()
 {
 	if (getJetAIUpdateModuleData()->m_needsRunway)
 		m_returnToBaseFrame = TheGameLogic->getFrame();
+
+	Object *obj = getObject();
+	if(obj->isCurWeaponLockedPriority() || obj->getWeaponSlotActivatedByGUI() >= 0)
+	{
+		obj->setWeaponsActivatedByGUI(FALSE);
+		obj->releaseWeaponLock(LOCKED_PRIORITY);
+	}
 }
 
 //----------------------------------------------------------------------------------------

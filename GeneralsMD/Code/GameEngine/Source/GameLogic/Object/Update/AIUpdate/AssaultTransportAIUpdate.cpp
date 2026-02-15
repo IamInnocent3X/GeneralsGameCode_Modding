@@ -1135,6 +1135,7 @@ void AssaultTransportAIUpdate::privateAttackObject( Object *victim, Int maxShots
 						|| passenger->isDisabledByType( DISABLED_SUBDUED )
 						|| passenger->isDisabledByType( DISABLED_PARALYZED)
 						|| passenger->isDisabledByType( DISABLED_STUNNED)
+						|| passenger->isDisabledByType( DISABLED_CONSTRAINED )
 						|| passenger->isDisabledByType( DISABLED_FROZEN) )
 						continue;
 				}
@@ -1182,6 +1183,7 @@ void AssaultTransportAIUpdate::privateForceAttackObject( Object *victim, Int max
 						|| passenger->isDisabledByType( DISABLED_SUBDUED )
 						|| passenger->isDisabledByType( DISABLED_PARALYZED) 
 						|| passenger->isDisabledByType( DISABLED_STUNNED)
+						|| passenger->isDisabledByType( DISABLED_CONSTRAINED )
 						|| passenger->isDisabledByType( DISABLED_FROZEN) )
 						continue;
 				}
@@ -1229,6 +1231,7 @@ void AssaultTransportAIUpdate::privateAttackPosition( const Coord3D *pos, Int ma
 						|| passenger->isDisabledByType( DISABLED_SUBDUED )
 						|| passenger->isDisabledByType( DISABLED_PARALYZED)
 						|| passenger->isDisabledByType( DISABLED_STUNNED)
+						|| passenger->isDisabledByType( DISABLED_CONSTRAINED )
 						|| passenger->isDisabledByType( DISABLED_FROZEN) )
 						continue;
 				}

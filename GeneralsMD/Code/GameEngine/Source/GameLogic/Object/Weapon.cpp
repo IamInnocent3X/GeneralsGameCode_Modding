@@ -312,6 +312,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "LaserGroundTargetHeight",				INI::parseReal,					nullptr,							offsetof(WeaponTemplate, m_laserGroundTargetHeight) },
 	{ "LaserGroundUnitTargetHeight",				INI::parseReal,					nullptr,					offsetof(WeaponTemplate, m_laserGroundUnitTargetHeight) },
 	{ "ScatterOnWaterSurface", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_scatterOnWaterSurface) },
+	{ "ResetFireBonesOnReload", INI::parseBool, nullptr, offsetof(WeaponTemplate, m_resetFireBonesOnReload) },
 	
 	// New Features
 	{ "CustomDamageType",						INI::parseAsciiString,	nullptr,							offsetof(WeaponTemplate, m_customDamageType) },
@@ -471,6 +472,8 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "UserBypassLineOfSight",					INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_weaponBypassLineOfSight) },
 	{ "UserIgnoresObstacles",					INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_weaponIgnoresObstacles) },
 
+	{ "UseOnlyInGUI",							INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_useOnlyInGUI) },
+
 	/*{ "IsMindControl",				INI::parseBool,													nullptr,							offsetof(WeaponTemplate, m_isMindControl) },
 	{ "MindControlRadius",				INI::parseBool,					nullptr,							offsetof(WeaponTemplate, m_mindControlRadius) },
 	{ "MindControlCount",				INI::parseInt,					nullptr,							offsetof(WeaponTemplate, m_mindControlCount) },
@@ -606,6 +609,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 	m_laserGroundUnitTargetHeight = 10; // Default Height offset
 	m_scatterOnWaterSurface = false;
 	m_historicDamageTriggerId = 0;
+	m_resetFireBonesOnReload = false;
+
 	m_customDamageType.clear();
 	m_customDamageStatusType.clear();
 	m_customDeathType.clear();
@@ -725,6 +730,8 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 	m_weaponIgnoresObstacles = FALSE;
 
 	m_invulnerabilityDuration = 0;
+
+	m_useOnlyInGUI = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1816,6 +1823,14 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		const Coord3D* damagePos = getDamageDealtAtSelfPosition() ? sourcePos : &targetedPos; //victimPos;
 		if (delayInFrames < 1.0f)
 		{
+			VeterancyLevel vet = sourceObj->getVeterancyLevel();
+			const ObjectCreationList* detOCL = getProjectileDetonationOCL(vet);
+			if (detOCL) {
+				Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+				//TODO: should we consider a proper 3D matrix?
+				ObjectCreationList::create(detOCL, sourceObj, damagePos, NULL, weaponAngle);
+			}
+
 			// go ahead and do it now
 			//DEBUG_LOG(("WeaponTemplate::fireWeaponTemplate: firing weapon immediately!"));
 			if( inflictDamage )
@@ -3345,6 +3360,23 @@ void WeaponStore::update()
 		{
 			// we never do projectile-detonation-damage via this code path.
 			const Bool isProjectileDetonation = false;
+			Object* sourceObj = TheGameLogic->findObjectByID(ddi->m_delaySourceID);
+			if (sourceObj) {
+				VeterancyLevel vet = sourceObj->getVeterancyLevel();
+				const ObjectCreationList* detOCL = ddi->m_delayedWeapon->getProjectileDetonationOCL(vet);
+				// If there's no source obj, use FireOCL. Weapon should not be able to target and fire from a non source Obj
+				if(detOCL)
+				{
+					Coord3D v;
+					const Coord3D *sourcePos = sourceObj->getPosition();
+					v.x = ddi->m_delayDamagePos.x - sourcePos->x;
+					v.y = ddi->m_delayDamagePos.y - sourcePos->y;
+					v.z = ddi->m_delayDamagePos.z - sourcePos->z;
+					Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+					//TODO: should we consider a proper 3D matrix?
+					ObjectCreationList::create(detOCL, sourceObj, &ddi->m_delayDamagePos, NULL, weaponAngle);
+				}
+			}
 			ddi->m_delayedWeapon->dealDamageInternal(ddi->m_delaySourceID, ddi->m_delayIntendedVictimID, &ddi->m_delayDamagePos, ddi->m_bonus, isProjectileDetonation);
 			ddi = m_weaponDDI.erase(ddi);
 		}
@@ -3816,8 +3848,6 @@ void Weapon::rebuildScatterTargets(Bool recenter/* = false*/)
 
 				m_scatterTargetsUnused.push_back(targetIndex);
 			}
-			// TODO: Crash
-			// Is there any need to fill up the rest of the targets?
 		}
 		else {
 			// When I reload, I need to rebuild the list of ScatterTargets to shoot at.
@@ -3852,6 +3882,10 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 
 	m_whenLastReloadStarted = TheGameLogic->getFrame();
 	m_whenWeCanFireAgain = m_whenLastReloadStarted + reloadTime;
+
+	if (m_template->isResetFireBonesOnReload())
+		m_curBarrel = 0;
+
 	//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::reloadWithBonus 1", m_whenWeCanFireAgain));
 
 			// if we are sharing reload times
@@ -3869,6 +3903,9 @@ void Weapon::reloadWithBonus(const Object *sourceObj, const WeaponBonus& bonus, 
 				weapon->setLastReloadStartedFrame(m_whenLastReloadStarted);  // This might actually be right to use here
 				//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::reloadWithBonus 2", m_whenWeCanFireAgain));
 				weapon->setStatus(RELOADING_CLIP);
+
+				if (m_template->isResetFireBonesOnReload())
+					weapon->setCurBarrel(0);
 			}
 		}
 	}
@@ -4934,16 +4971,25 @@ Bool Weapon::privateFireWeapon(
 			// set their m_whenWeCanFireAgain to this guy's delay
 			// set their m_status to this guy's status
 
-			if ( sourceObj->isReloadTimeShared() )
+			Bool isReloadTimeShared = sourceObj->isReloadTimeShared();
+			Bool isClipShared = sourceObj->isClipShared();
+			if (isReloadTimeShared || isClipShared)
 			{
 				for (Int wt = 0; wt<WEAPONSLOT_COUNT; wt++)
 				{
+					if (wt == m_wslot)
+						continue;
 					Weapon *weapon = sourceObj->getWeaponInWeaponSlot((WeaponSlotType)wt);
 					if (weapon)
 					{
-						weapon->setPossibleNextShotFrame(m_whenWeCanFireAgain);
-						//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::privateFireWeapon 3", m_whenWeCanFireAgain));
-						weapon->setStatus(BETWEEN_FIRING_SHOTS);
+						if (isReloadTimeShared) {
+							weapon->setPossibleNextShotFrame(m_whenWeCanFireAgain);
+							//CRCDEBUG_LOG(("Just set m_whenWeCanFireAgain to %d in Weapon::privateFireWeapon 3", m_whenWeCanFireAgain));
+							weapon->setStatus(BETWEEN_FIRING_SHOTS);
+						}
+						if (isClipShared) {
+							weapon->sharedClipIncrementShot();
+						}
 					}
 				}
 			}
@@ -5357,7 +5403,7 @@ void Weapon::processRequestAssistance( const Object *requestingObject, Object *v
 		isDisguisedAndCheckIfNeedOffset = stealth->isDisguisedAndCheckIfNeedOffset();
 
 	}
-	if( isSimpleDisguise || launcher->getContainedBy() )
+	if( isSimpleDisguise || (launcher->getContainedBy() && launcher->getContainedBy()->getContain()) )
 	{
 		// If we are in an enclosing container, our launch position is our actual position.  Yes, I am putting
 		// a minor case and an oft used function, but the major case is huge and full of math.
@@ -5780,6 +5826,19 @@ void Weapon::transferReloadStateFrom(const Weapon& weapon, Real clipPercentage/*
 	DEBUG_LOG(("Weapon::transferReloadStateFrom (now = %d): m_whenWeCanFireAgain = %d, m_whenLastReloadStarted = %d, m_status = %d", TheGameLogic->getFrame(), m_whenWeCanFireAgain, m_whenLastReloadStarted, m_status));
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void Weapon::sharedClipIncrementShot()
+{
+	--m_ammoInClip;
+	--m_maxShotCount;
+	--m_numShotsForCurBarrel;
+	if (m_numShotsForCurBarrel <= 0)
+	{
+		++m_curBarrel;
+		m_numShotsForCurBarrel = m_template->getShotsPerBarrel();
+	}
+}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------

@@ -33,30 +33,32 @@
 #pragma once
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
-#include "Common/Module.h"
-#include "GameLogic/Module/CrateCollide.h"
+#include "GameLogic/Module/SabotageBehavior.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Thing;
 
 //-------------------------------------------------------------------------------------------------
-class SabotagePowerPlantCrateCollideModuleData : public CrateCollideModuleData
+class SabotagePowerPlantCrateCollideModuleData : public SabotageBehaviorModuleData
 {
 public:
-	UnsignedInt m_powerSabotageFrames;
 
 	SabotagePowerPlantCrateCollideModuleData()
 	{
-		m_powerSabotageFrames = 0;
+		m_sabotageIsCollide = TRUE;
+		m_sabotageType = SABOTAGE_POWER;
+		m_feedbackType = SAB_VICTIM_POWER_PLANT;
+
+		m_kindof.clear();
+		m_kindof.set(KINDOF_FS_POWER);
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
-    CrateCollideModuleData::buildFieldParse(p);
+    SabotageBehaviorModuleData::buildFieldParse(p);
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "SabotagePowerDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotagePowerPlantCrateCollideModuleData, m_powerSabotageFrames ) },
 			{ 0, 0, 0, 0 }
 		};
 		p.add( dataFieldParse );
@@ -65,7 +67,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-class SabotagePowerPlantCrateCollide : public CrateCollide
+class SabotagePowerPlantCrateCollide : public SabotageBehavior
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( SabotagePowerPlantCrateCollide, "SabotagePowerPlantCrateCollide" )
@@ -76,14 +78,14 @@ public:
 	SabotagePowerPlantCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-protected:
+//protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
-	virtual Bool isValidToExecute( const Object *other ) const;
+	//virtual Bool isValidToExecute( const Object *other ) const;
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other );
+	//virtual Bool executeCrateBehavior( Object *other );
 
-	virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
+	//virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
 
 };

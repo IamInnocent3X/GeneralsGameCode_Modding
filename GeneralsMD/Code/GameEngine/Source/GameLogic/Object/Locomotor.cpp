@@ -330,6 +330,7 @@ LocomotorTemplate::LocomotorTemplate()
 	m_downhillOnly = false;
 	m_allowMotiveForceWhileAirborne = false;
 	m_locomotorWorksWhenDead = false;
+	m_locomotorWorksWhenDisabled = false;
 	m_airborneTargetingHeight = INT_MAX;
 	m_stickToGround = false;
 	m_canMoveBackward = false;
@@ -489,6 +490,7 @@ const FieldParse* LocomotorTemplate::getFieldParse() const
 		{ "DownhillOnly", INI::parseBool, nullptr, offsetof(LocomotorTemplate, m_downhillOnly) },
 		{ "AllowAirborneMotiveForce", INI::parseBool, nullptr, offsetof(LocomotorTemplate, m_allowMotiveForceWhileAirborne) },
 		{ "LocomotorWorksWhenDead", INI::parseBool, nullptr, offsetof(LocomotorTemplate, m_locomotorWorksWhenDead) },
+		{ "LocomotorWorksWhenDisabled", INI::parseBool, nullptr, offsetof(LocomotorTemplate, m_locomotorWorksWhenDisabled) },
 		{ "AirborneTargetingHeight", INI::parseInt, nullptr, offsetof( LocomotorTemplate, m_airborneTargetingHeight ) },
 		{ "StickToGround",				INI::parseBool,			nullptr,	offsetof(LocomotorTemplate, m_stickToGround) },
 		{ "CanMoveBackwards",				INI::parseBool,			nullptr,	offsetof(LocomotorTemplate, m_canMoveBackward) },
@@ -1161,7 +1163,8 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 					moveTowardsPositionTreads(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
 					break;
 			case LOCO_SHIP:
-				  moveTowardsPositionTreads(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
+					moveTowardsPositionHover(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
+				  //moveTowardsPositionTreads(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
 				  break;
 			case LOCO_HOVER:
 					moveTowardsPositionHover(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);

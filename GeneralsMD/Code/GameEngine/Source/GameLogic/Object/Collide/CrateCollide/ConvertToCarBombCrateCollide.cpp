@@ -75,11 +75,12 @@ Bool ConvertToCarBombCrateCollide::isValidToExecute( const Object *other ) const
 		return FALSE;
 	}
 
-	if( other->isKindOf( KINDOF_AIRCRAFT ) || other->isKindOf( KINDOF_BOAT ) )
-	{
-		//Can't make carbombs out of planes and boats!
-		return FALSE;
-	}
+	// IamInnocent - Dehardcoded
+	//if( other->isKindOf( KINDOF_AIRCRAFT ) || other->isKindOf( KINDOF_BOAT ) )
+	//{
+	//	//Can't make carbombs out of planes and boats!
+	//	return FALSE;
+	//}
 
 	if( other->getStatusBits().test( OBJECT_STATUS_IS_CARBOMB ) )
 	{

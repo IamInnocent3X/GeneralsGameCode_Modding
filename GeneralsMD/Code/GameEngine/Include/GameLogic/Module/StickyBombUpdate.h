@@ -52,6 +52,9 @@ public:
 	Bool m_hideAnimBase;      ///< will be set automatically if String is Null
 	Bool m_hideAnimTimed;      ///< will be set automatically if String is Null
 
+	Bool m_bomberGetsExperienceOnKill;
+	Bool m_doSabotageOnDetonate;
+
 	StickyBombUpdateModuleData()
 	{
 		m_offsetZ = 10.0f;
@@ -60,6 +63,8 @@ public:
 		m_animBaseTemplate = AsciiString::TheEmptyString;
 		m_animTimedTemplate = AsciiString::TheEmptyString;
 		m_showTimer = TRUE;
+		m_bomberGetsExperienceOnKill = FALSE;
+		m_doSabotageOnDetonate = FALSE;
 	}
 
 	static void parseAnimBaseName(INI* ini, void* instance, void* store, const void* userData);
@@ -77,6 +82,8 @@ public:
 			{ "Animation2DBase",		parseAnimBaseName,					nullptr, 0 },
 			{ "Animation2DTimed",		parseAnimTimedName,					nullptr, 0 },
 			{ "ShowTimer",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_showTimer) },
+			{ "BomberGetsExperienceOnKill",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_bomberGetsExperienceOnKill ) },
+			{ "DoSabotageOnDetonate",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_doSabotageOnDetonate ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -145,6 +152,7 @@ public:
 private:
 
 	ObjectID			m_targetID;
+	ObjectID			m_shooterID;
 	UnsignedInt		m_dieFrame;
 	UnsignedInt   m_nextPingFrame;
 	VeterancyLevel m_veterancyLevel;

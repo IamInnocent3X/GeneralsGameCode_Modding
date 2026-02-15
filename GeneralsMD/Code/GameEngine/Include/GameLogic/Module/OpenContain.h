@@ -123,16 +123,19 @@ public:
 
 	// CollideModuleInterface
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
+	virtual void doSabotage( Object *other, Object *obj ) { }
 	virtual Bool wouldLikeToCollideWith(const Object* other) const { return false; }
-	virtual Bool revertCollideBehavior(Object *other) { return FALSE; }
+	virtual Bool revertCollideBehavior(Object *other) { return false; }
 	virtual Bool isCarBombCrateCollide() const { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const { return false; }
 	virtual Bool isRailroad() const { return false;}
 	virtual Bool isSalvageCrateCollide() const { return false; }
-	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
-	virtual Bool isEquipCrateCollide() const { return FALSE; }
-	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
+	virtual Bool isSabotageBuildingCrateCollide() const { return false; }
+	virtual Bool isEquipCrateCollide() const { return false; }
+	virtual Bool isParasiteEquipCrateCollide() const  { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const { return false; }
 	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
 
 	// UpdateModule
 	virtual UpdateSleepTime update();				///< called once per frame
@@ -233,6 +236,13 @@ public:
 	virtual Bool isImmuneToClearBuildingAttacks() const { return true; }
   virtual Bool isSpecialOverlordStyleContainer() const { return false; }
   virtual Bool isAnyRiderAttacking( void ) const;
+  virtual Bool killPilotDoesNotKill( void ) const { return true; }
+
+	virtual void forceScuttle( void ) { }
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+	virtual const Object* getKillScoreCreditObj( const Object* killer ) const { return nullptr; }
+#endif
 
   	virtual void doUpgradeChecks( void );
   	virtual void doStatusChecks( void ) {}
@@ -289,6 +299,8 @@ protected:
 	virtual short getPortableSlot(ObjectID portableID) const { return -1; }
 	virtual const ContainedItemsList* getAddOnList() const { return nullptr; }
 	virtual ContainedItemsList* getAddOnList() { return nullptr; }
+
+	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0, 0, 0); };
 
 	virtual void createPayload();
 	Bool getPayloadCreated() const { return m_payloadCreated; }

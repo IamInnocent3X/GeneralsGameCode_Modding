@@ -46,6 +46,7 @@ class CrateCollideModuleData : public CollideModuleData
 public:
 	KindOfMaskType	m_kindof;				///< the kind(s) of units that can be collided with
 	KindOfMaskType	m_kindofnot;		///< the kind(s) of units that CANNOT be collided with
+	KindOfMaskType	m_kindofany;		///< the units with any kind(s) that can be collided with (independent from m_kindof)
 	Bool m_isForbidOwnerPlayer;			///< This crate cannot be picked up by the player of the dead thing that made it.
 	Bool m_isAllowNeutralPlayer;		///< This crate can be picked up by the neutral player
 	Bool m_isBuildingPickup;			///< This crate can be picked up by a Building (bypassing AI requirement)
@@ -105,19 +106,6 @@ class CrateCollide : public CollideModule
 
 public:
 
-enum SabotageVictimType CPP_11(: Int)
-{
-	SAB_VICTIM_GENERIC = 0,
-	SAB_VICTIM_COMMAND_CENTER,
-	SAB_VICTIM_FAKE_BUILDING,
-	SAB_VICTIM_INTERNET_CENTER,
-	SAB_VICTIM_MILITARY_FACTORY,
-	SAB_VICTIM_POWER_PLANT,
-	SAB_VICTIM_SUPERWEAPON,
-	SAB_VICTIM_SUPPLY_CENTER,
-	SAB_VICTIM_DROP_ZONE,
-};
-
 	CrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
@@ -136,8 +124,7 @@ enum SabotageVictimType CPP_11(: Int)
 	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
 
 	virtual const AsciiString& getCursorName() const { return getCrateCollideModuleData()->m_cursorName; }
-
-  void doSabotageFeedbackFX( const Object *other, SabotageVictimType type = SAB_VICTIM_GENERIC );
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return NULL; }
 
 protected:
 

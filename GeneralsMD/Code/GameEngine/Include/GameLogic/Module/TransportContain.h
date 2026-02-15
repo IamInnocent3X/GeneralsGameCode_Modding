@@ -78,6 +78,7 @@ public:
 
 	virtual Bool isRiderChangeContain() const { return FALSE; }
   virtual Bool isSpecialOverlordStyleContainer() const {return FALSE;}
+	virtual Bool killPilotDoesNotKill( void ) const { return TRUE; }
 
 	virtual Int getRawContainMax( void ) const;
 	virtual Int getContainMax( void ) const;

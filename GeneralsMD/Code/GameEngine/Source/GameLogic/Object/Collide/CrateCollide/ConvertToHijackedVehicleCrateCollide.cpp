@@ -89,17 +89,18 @@ Bool ConvertToHijackedVehicleCrateCollide::isValidToExecute( const Object *other
 		return FALSE; //Kris: Patch 1.03 -- Prevent hijackers from being able to hijack battle buses.
 	}
 
-	if( other->isKindOf( KINDOF_AIRCRAFT ) || other->isKindOf( KINDOF_BOAT ) )
-	{
-		//Can't hijack planes and boats!
-		return FALSE;
-	}
+	// IamInnocent - Dehardcoded
+	//if( other->isKindOf( KINDOF_AIRCRAFT ) || other->isKindOf( KINDOF_BOAT ) )
+	//{
+	//	//Can't hijack planes and boats!
+	//	return FALSE;
+	//}
 
-	if( other->isKindOf( KINDOF_DRONE ) )
-	{
-		//Can't hijack drones!
-		return FALSE;
-	}
+	//if( other->isKindOf( KINDOF_DRONE ) )
+	//{
+	//	//Can't hijack drones!
+	//	return FALSE;
+	//}
 
 	if( other->getStatusBits().test( OBJECT_STATUS_HIJACKED ) )
 	{
@@ -113,20 +114,20 @@ Bool ConvertToHijackedVehicleCrateCollide::isValidToExecute( const Object *other
 		return FALSE;
 	}
 
-	if( other->isKindOf( KINDOF_TRANSPORT ) )
-	{
+	//if( other->isKindOf( KINDOF_TRANSPORT ) )
+	//{
 		//Kris: Allow empty transports to be hijacked.
-		if( other->getContain() && other->getContain()->getContainCount() > 0 )
+		if( other->getContain() && other->getContain()->getContainCount() > 0 && !getConvertToHijackedVehicleCrateCollideModuleData()->m_canHijackOccupiedContain )
 		{
 			return FALSE;// dustin sez: do not jack vehicles that may carry hostile passengers
 		}
-	}
+	//}
 
 	//Kris: Make sure you can't hijack any aircraft (or hijack-enter).
-	if( other->isKindOf( KINDOF_AIRCRAFT ) )
-	{
-		return FALSE;
-	}
+	//if( other->isKindOf( KINDOF_AIRCRAFT ) )
+	//{
+	//	return FALSE;
+	//}
 
 	//VeterancyLevel veterancyLevel = other->getVeterancyLevel();
 	//if( veterancyLevel >= LEVEL_ELITE )
@@ -166,18 +167,22 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 	other->setHijackerID(obj->getID());
 
 	AIUpdateInterface* targetAI = other->getAIUpdateInterface();
-	targetAI->aiMoveToPosition( other->getPosition(), CMD_FROM_AI );
-	targetAI->aiIdle( CMD_FROM_AI );
-
-
-	//Just in case this target is a dozer, lets make him stop al his dozer tasks, like building and repairing,
-	//So the previous owner does not benefit from these tasks
-	DozerAIInterface * dozerAI = targetAI->getDozerAIInterface();
-	if ( dozerAI )
+	// Enable ConvertToHijack to convert objects without AIInterface
+	if(targetAI)
 	{
-		for (UnsignedInt task = DOZER_TASK_FIRST; task < DOZER_NUM_TASKS; ++task)
+		targetAI->aiMoveToPosition( other->getPosition(), CMD_FROM_AI );
+		targetAI->aiIdle( CMD_FROM_AI );
+
+
+		//Just in case this target is a dozer, lets make him stop al his dozer tasks, like building and repairing,
+		//So the previous owner does not benefit from these tasks
+		DozerAIInterface * dozerAI = targetAI->getDozerAIInterface();
+		if ( dozerAI )
 		{
-			dozerAI->cancelTask( (DozerTask)task );
+			for (UnsignedInt task = DOZER_TASK_FIRST; task < DOZER_NUM_TASKS; ++task)
+			{
+				dozerAI->cancelTask( (DozerTask)task );
+			}
 		}
 	}
 

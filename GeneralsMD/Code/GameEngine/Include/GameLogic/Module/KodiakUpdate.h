@@ -104,7 +104,7 @@ public:
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc );
 
 	// Disabled conditions to process (termination conditions!)
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK5( DISABLED_SUBDUED, DISABLED_FROZEN, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK6( DISABLED_SUBDUED, DISABLED_FROZEN, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED, DISABLED_CONSTRAINED ); }
 	static void parseScatterTarget(INI* ini, void* instance, void* /*store*/, const void* /*userData*/);
 protected:
 

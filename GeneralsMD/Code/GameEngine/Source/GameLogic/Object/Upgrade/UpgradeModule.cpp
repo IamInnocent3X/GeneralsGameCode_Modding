@@ -114,7 +114,6 @@ Bool UpgradeMux::attemptUpgrade( const UpgradeMaskType& keyMask )
 		// If I have an activation condition, and I haven't activated, and this key matches my condition.
 		if(!isAlreadyUpgraded())
 			giveSelfUpgrade();
-		m_freeUpgrade = FALSE; 
 		return true;
 	}
 	return false;
@@ -178,15 +177,6 @@ Int UpgradeMux::wouldRefreshUpgrade( const UpgradeMaskType& keyMask, Bool hasExe
 				return 0; // No Removal needed
 		}
 
-		// If we have already given self Upgrade, grant the Upgrade
-		if(m_freeUpgrade)
-		{
-			if(!hasExecuted)
-				return 1; // Grant the Upgrade
-			else
-				return 0; // Do nothing
-		}
-
 		//Finally check to see if our upgrade conditions match.
 		Bool hasUpgrade;
 		if( requiresAllActivationUpgrades() )
@@ -195,9 +185,10 @@ Int UpgradeMux::wouldRefreshUpgrade( const UpgradeMaskType& keyMask, Bool hasExe
 			//Make sure ALL triggers requirements are upgraded
 			if( hasUpgrade && !hasExecuted)
 			{
+				m_freeUpgrade = FALSE; // Remove the free upgrade because we have the upgrade
 				return 1; // Grant the Upgrade
 			}
-			else if(!hasUpgrade && hasExecuted)
+			else if(!hasUpgrade && hasExecuted && !m_freeUpgrade)
 			{
 				return 2; // Remove the Upgrade
 			}
@@ -208,12 +199,22 @@ Int UpgradeMux::wouldRefreshUpgrade( const UpgradeMaskType& keyMask, Bool hasExe
 			//Check if ANY trigger requirements are met.
 			if( hasUpgrade && !hasExecuted)
 			{
+				m_freeUpgrade = FALSE; // Remove the free upgrade because we have the upgrade
 				return 1; // Grant the Upgrade
 			}
-			else if( !hasUpgrade && hasExecuted)
+			else if( !hasUpgrade && hasExecuted && !m_freeUpgrade)
 			{
 				return 2; // Remove the Upgrade
 			}
+		}
+
+		// If we have already given self Upgrade, grant the Upgrade
+		if(m_freeUpgrade)
+		{
+			if(!hasExecuted)
+				return 1; // Grant the Upgrade
+			else
+				return 0; // Do nothing
 		}
 	}
 	else if( hasExecuted )

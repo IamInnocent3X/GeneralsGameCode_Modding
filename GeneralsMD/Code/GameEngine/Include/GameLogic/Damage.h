@@ -109,6 +109,7 @@ enum DamageType CPP_11(: Int)
 	
 	// Specific damage types with special logic attached
 	DAMAGE_TORPEDO, ///< can only attack units over water
+	DAMAGE_ANTI_TORPEDO, /// destroy torpedoes
 	DAMAGE_CHRONO_GUN,   ///< Disable target and remove them once health threshold is reached
 	DAMAGE_CHRONO_UNRESISTABLE,  ///< Used for recovery from CHRONO_GUN
 	// DAMAGE_ZOMBIE_VIRUS,  // TODO
@@ -400,6 +401,8 @@ public:
 		m_amount = 0;
 		m_kill = FALSE;
 
+		m_giveKillExpToID = INVALID_ID;
+
 		m_customDamageType.clear();
 		m_customDamageStatusType.clear();
 		m_customDeathType.clear();
@@ -473,6 +476,8 @@ public:
 	DeathType			 m_deathType;						///< if this kills us, death type to be used
 	Real					 m_amount;								///< # value of how much damage to inflict
 	Bool						m_kill;									///< will always cause object to die regardless of damage.
+
+	ObjectID		   m_giveKillExpToID;							///< give kill exp to the Object
 
 	// These are used for damage causing shockwave, forcing units affected to be pushed around
 	Coord3D				 m_shockWaveVector;				///< This represents the incoming damage vector

@@ -86,7 +86,7 @@ public:
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class SpyVisionUpdate : public UpdateModule, public CreateModuleInterface, public UpgradeMux
+class SpyVisionUpdate : public UpdateModule, public UpgradeMux
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( SpyVisionUpdate, "SpyVisionUpdate" )
@@ -108,20 +108,16 @@ public:
 	// BehaviorModule
 	virtual UpgradeModuleInterface* getUpgrade() { return this; }
 
-	// CreateModuleInterface
-	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onBuildComplete();
-	virtual void onCreate( void ) { onBuildComplete(); }
-	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
-
 	//Update module
 	virtual UpdateSleepTime update( void );
 	virtual void friend_giveSelfUpgrade() { }
 
 	void activateSpyVision( UnsignedInt duration );
 
-	void setDisabledUntilFrame( UnsignedInt frame );
+	void setDisabledUntilFrame( UnsignedInt frame, Bool doesNotResetTimer = FALSE );
 	UnsignedInt getDisabledUntilFrame() const { return m_disabledUntilFrame; }
+
+	void resetTimer(); ///< added for sabotage purposes.
 
 protected:
 
@@ -158,15 +154,18 @@ protected:
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool hasUpgradeRefresh() { return true; }
 
 private:
 
 	void doActivationWork( Player *playerToSetFor, Bool setting );
 
 	UnsignedInt m_deactivateFrame;
+	UnsignedInt m_lastActivatedFrame; // for sabotaged records
 	UnsignedInt m_disabledUntilFrame; //sabotaged, emp'd, etc.
+	UnsignedInt m_resumeDuration; //resume duration from last disable
 	Bool m_currentlyActive;
 	Bool m_resetTimersNextUpdate;
 	Bool m_giveSelfUpgrade;
+	Bool m_hasExecuted;
 };

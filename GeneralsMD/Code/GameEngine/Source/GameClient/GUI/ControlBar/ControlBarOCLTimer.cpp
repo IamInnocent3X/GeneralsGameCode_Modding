@@ -44,9 +44,13 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void ControlBar::updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real percent )
+void ControlBar::updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real percent, UnsignedInt sabotagedSeconds )
 {
-	UnicodeString text;
+	UnicodeString text, disabledText;
+	Bool disabledExists = FALSE;
+	UnsignedInt currentSeconds = totalSeconds;
+	UnsignedInt disabledSeconds;
+
 	static UnsignedInt descID = TheNameKeyGenerator->nameToKey( "ControlBar.wnd:OCLTimerStaticText" );
 	GameWindow *descWindow = TheWindowManager->winGetWindowFromId( nullptr, descID );
 
@@ -56,8 +60,24 @@ void ControlBar::updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real perce
 	// sanity
 	DEBUG_ASSERTCRASH( descWindow, ("Under construction window not found") );
 
-	Int minutes = totalSeconds / 60;
-	Int seconds = totalSeconds - (minutes * 60);
+	if( sabotagedSeconds > 0 )
+	{
+		currentSeconds -= sabotagedSeconds;
+
+		Int disabledMinutes = sabotagedSeconds / 60;
+		disabledSeconds = sabotagedSeconds - (disabledMinutes * 60);
+
+		disabledExists = TRUE;
+
+		// format the message
+		if( disabledSeconds < 10 )
+			disabledText.format( TheGameText->fetch( "CONTROLBAR:OCLSabotagedTimerDescWithPadding", &disabledExists ), disabledMinutes, disabledSeconds );
+		else
+			disabledText.format( TheGameText->fetch( "CONTROLBAR:OCLSabotagedTimerDesc", &disabledExists ), disabledMinutes, disabledSeconds );
+	}
+
+	Int minutes = currentSeconds / 60;
+	Int seconds = currentSeconds - (minutes * 60);
 
 	// format the message
 	if( seconds < 10 )
@@ -65,11 +85,20 @@ void ControlBar::updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real perce
 	else
 		text.format( TheGameText->fetch( "CONTROLBAR:OCLTimerDesc" ), minutes, seconds );
 
+	if(disabledExists)
+	{
+		text.concat(L" ");
+		text.concat(disabledText);
+	}
+
 	GadgetStaticTextSetText( descWindow, text );
 	GadgetProgressBarSetProgress(barWindow, (percent * 100));
 
 	// record this as the last time displayed
-	m_displayedOCLTimerSeconds = totalSeconds;
+	if(disabledExists)
+		m_displayedOCLTimerSeconds = disabledSeconds;
+	else
+		m_displayedOCLTimerSeconds = currentSeconds;
 
 }
 
@@ -141,16 +170,20 @@ void ControlBar::updateContextOCLTimer( void )
 {
 	Object *obj = m_currentSelectedDrawable->getObject();
 
-	static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
-	OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+	//static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
+	//OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+	OCLUpdate *update = obj->getOCLUpdate();
 
 	UnsignedInt frames = update->getRemainingFrames();
 	UnsignedInt seconds = frames / LOGICFRAMES_PER_SECOND;
 
+	UnsignedInt sabotagedFrames = update->getRemainingSabotagedFrames();
+	UnsignedInt sabotagedSeconds = sabotagedFrames / LOGICFRAMES_PER_SECOND;
+
 	Real percent = update->getCountdownPercent();
 
 	// if the time has changed since what was last shown to the user update the text
-	if( m_displayedOCLTimerSeconds != seconds )
-		updateOCLTimerTextDisplay( seconds, percent );
+	if( (sabotagedFrames || m_displayedOCLTimerSeconds != seconds) && (!sabotagedFrames || m_displayedOCLTimerSeconds != sabotagedSeconds) )
+		updateOCLTimerTextDisplay( seconds, percent, sabotagedSeconds );
 
 }

@@ -33,6 +33,7 @@
 #include "Common/ModelState.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameClient/Anim2D.h"
 
 // FORWARD REFERENCES //////////////////////////////////////////////////////////////////////////////
 class ProductionEntry;
@@ -193,6 +194,10 @@ public:
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt) = 0;
 
+	virtual void setProductionViewByEnemyFrame(Int frame) = 0;
+
+	virtual Bool showProductionViewToEnemy() const = 0;
+
 	//These functions keep track of the special power construction of a new building via a special power instead of standard production interface.
 	//This was added for the sneak attack building functionality.
 	virtual const CommandButton* getSpecialPowerConstructionCommandButton() const = 0;
@@ -250,6 +255,10 @@ public:
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt);
 
+	virtual void setProductionViewByEnemyFrame(Int frame);
+
+	virtual Bool showProductionViewToEnemy() const;
+
 	virtual UpdateSleepTime update( void );					///< the update
 
 	virtual void onCapture( Player *oldOwner, Player *newOwner );		///< when we are captured
@@ -291,5 +300,6 @@ protected:
 	ModelConditionFlags m_setFlags;											///< flags to set in model
 	Bool								m_flagsDirty;										///< clearFlags/setFlags needs to be set into the model
 	UnsignedInt							m_nextWakeUpTime;
+	Int									m_productionViewedByEnemyFrame;
 
 };

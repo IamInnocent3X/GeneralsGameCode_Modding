@@ -33,30 +33,37 @@
 #pragma once
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
-#include "Common/Module.h"
-#include "GameLogic/Module/CrateCollide.h"
+#include "GameLogic/Module/SabotageBehavior.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
-class Thing;
+//class Thing;
 
 //-------------------------------------------------------------------------------------------------
-class SabotageMilitaryFactoryCrateCollideModuleData : public CrateCollideModuleData
+class SabotageMilitaryFactoryCrateCollideModuleData : public SabotageBehaviorModuleData
 {
 public:
-	UnsignedInt m_sabotageFrames;
 
 	SabotageMilitaryFactoryCrateCollideModuleData()
 	{
-		m_sabotageFrames = 0;
+		m_sabotageIsCollide = TRUE;
+		m_sabotageDisable = TRUE;
+		m_sabotageType = SABOTAGE_PRODUCTION;
+		m_feedbackType = SAB_VICTIM_MILITARY_FACTORY;
+
+		m_kindofnot.clear();
+		m_kindofnot.set(KINDOF_AIRCRAFT_CARRIER);
+		m_kindofany.clear();
+		m_kindofany.set(KINDOF_FS_BARRACKS);
+		m_kindofany.set(KINDOF_FS_WARFACTORY);
+		m_kindofany.set(KINDOF_FS_AIRFIELD);
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
-    CrateCollideModuleData::buildFieldParse(p);
+    SabotageBehaviorModuleData::buildFieldParse(p);
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "SabotageDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageMilitaryFactoryCrateCollideModuleData, m_sabotageFrames ) },
 			{ 0, 0, 0, 0 }
 		};
 		p.add( dataFieldParse );
@@ -65,7 +72,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-class SabotageMilitaryFactoryCrateCollide : public CrateCollide
+class SabotageMilitaryFactoryCrateCollide : public SabotageBehavior
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( SabotageMilitaryFactoryCrateCollide, "SabotageMilitaryFactoryCrateCollide" )
@@ -76,14 +83,14 @@ public:
 	SabotageMilitaryFactoryCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-protected:
+//protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
-	virtual Bool isValidToExecute( const Object *other ) const;
+	//virtual Bool isValidToExecute( const Object *other ) const;
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other );
+	//virtual Bool executeCrateBehavior( Object *other );
 
-	virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
+	//virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
 
 };

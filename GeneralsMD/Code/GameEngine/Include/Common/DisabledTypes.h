@@ -60,6 +60,7 @@ enum DisabledType CPP_11(: Int)
 	DISABLED_CHRONO,    // Chrono Gun removal
 
 	DISABLED_STUNNED,   //DISABLED_PARALYZED but without the Powered Off Icon
+	DISABLED_CONSTRAINED,   // DISABLED_HACKED but without the Powered Off Icon
 	DISABLED_FROZEN, // Frozen, DISABLED_SUBDUAL but without the Powered Off Icon
 
 	DISABLED_COUNT,
@@ -74,6 +75,7 @@ typedef BitFlags<DISABLED_COUNT>	DisabledMaskType;
 #define MAKE_DISABLED_MASK3(k,a,b) DisabledMaskType(DisabledMaskType::kInit, (k), (a), (b))
 #define MAKE_DISABLED_MASK4(k,a,b,c) DisabledMaskType(DisabledMaskType::kInit, (k), (a), (b), (c))
 #define MAKE_DISABLED_MASK5(k,a,b,c,d) DisabledMaskType(DisabledMaskType::kInit, (k), (a), (b), (c), (d))
+#define MAKE_DISABLED_MASK6(k,a,b,c,d,e) DisabledMaskType(DisabledMaskType::kInit, (k), (a), (b), (c), (d), (e))
 
 inline Bool TEST_DISABLEDMASK(const DisabledMaskType& m, DisabledType t)
 {

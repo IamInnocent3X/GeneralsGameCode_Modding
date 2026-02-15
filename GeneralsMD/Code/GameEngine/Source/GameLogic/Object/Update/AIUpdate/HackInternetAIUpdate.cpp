@@ -485,7 +485,7 @@ StateReturnType HackInternetState::update()
 		return STATE_FAILURE;
 	}
 
-	if( owner->isDisabledByType( DISABLED_HACKED ) )
+	if( owner->isDisabledByType( DISABLED_HACKED ) || owner->isDisabledByType( DISABLED_CONSTRAINED ) )
 	{
 		//Don't hack while hacked, hehe.
 		return STATE_CONTINUE;

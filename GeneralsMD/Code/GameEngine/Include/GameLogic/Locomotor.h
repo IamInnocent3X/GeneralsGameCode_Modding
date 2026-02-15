@@ -200,6 +200,7 @@ private:
 	Real											m_ultraAccurateSlideIntoPlaceFactor;			///< how much we can fudge turning when ultra-accurate
 
 	Bool											m_locomotorWorksWhenDead;	///< should locomotor continue working even when object is "dead"?
+	Bool											m_locomotorWorksWhenDisabled;	///< should locomotor continue working even when object is disabled?
 	Bool											m_allowMotiveForceWhileAirborne;	///< can we apply motive when airborne?
 	Bool											m_apply2DFrictionWhenAirborne;	// apply "2d friction" even when airborne... useful for realistic-looking movement
 	Bool											m_downhillOnly;	// pinewood derby, moves only by gravity pulling downhill
@@ -290,6 +291,7 @@ public:
 	Bool getAllowMotiveForceWhileAirborne() const { return m_template->m_allowMotiveForceWhileAirborne; }
 	Int getAirborneTargetingHeight() const { return m_template->m_airborneTargetingHeight; }
 	Bool getLocomotorWorksWhenDead() const { return m_template->m_locomotorWorksWhenDead; }
+	Bool getLocomotorWorksWhenDisabled() const { return m_template->m_locomotorWorksWhenDisabled; }
 	Bool getStickToGround() const { return m_template->m_stickToGround; }
 	Real getCloseEnoughDist() const { return m_closeEnoughDist; }
 	Bool isCloseEnoughDist3D() const { return getFlag(IS_CLOSE_ENOUGH_DIST_3D); }

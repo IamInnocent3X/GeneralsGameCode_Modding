@@ -185,6 +185,7 @@ const FieldParse CrateTemplate::TheCrateTemplateFieldParseTable[] =
 	{ "CrateObject",			CrateTemplate::parseCrateCreationEntry,	nullptr, 0 },
 	{ "KillerScience",		INI::parseScience,											nullptr,									offsetof( CrateTemplate, m_killerScience) },
 	{ "OwnedByMaker",			INI::parseBool,													nullptr,									offsetof( CrateTemplate, m_isOwnedByMaker) },
+	{ "AllowWater",		  	INI::parseBool,													nullptr,									offsetof( CrateTemplate, m_allowWater) },
 	{ nullptr,								nullptr,																		nullptr, 0 },
 };
 
@@ -196,6 +197,7 @@ CrateTemplate::CrateTemplate()
 	m_killerScience = SCIENCE_INVALID;
 	m_possibleCrates.clear();
 	m_isOwnedByMaker = FALSE;
+	m_allowWater = false;
 }
 
 CrateTemplate::~CrateTemplate()

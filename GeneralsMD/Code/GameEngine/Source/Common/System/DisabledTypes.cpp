@@ -53,6 +53,7 @@ const char* const DisabledMaskType::s_bitNameList[] =
 	"DISABLED_CHRONO",
 
 	"DISABLED_STUNNED",
+	"DISABLED_CONSTRAINED",
 	"DISABLED_FROZEN",
 	
 	nullptr

@@ -128,6 +128,13 @@ public:
 	virtual Bool isRiderChangeContain() const { return TRUE; }
 	virtual const Object *friend_getRider() const;
 
+	virtual Bool killPilotDoesNotKill( void ) const;
+	virtual void forceScuttle( void );
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+	virtual const Object* getKillScoreCreditObj( const Object* killer ) const;
+#endif
+
 	virtual Int getRawContainMax( void ) const;
 	virtual Int getContainMax( void ) const;
 

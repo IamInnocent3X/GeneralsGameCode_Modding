@@ -47,7 +47,10 @@ SpyVisionUpdate::SpyVisionUpdate( Thing *thing, const ModuleData* moduleData ) :
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 	m_currentlyActive = FALSE;
 	m_resetTimersNextUpdate = FALSE;
+	m_hasExecuted = FALSE;
 	m_disabledUntilFrame = 0;
+	m_lastActivatedFrame = 0;
+	m_resumeDuration = 0;
 
 	if (checkStartsActive())
 	{
@@ -86,7 +89,7 @@ void SpyVisionUpdate::activateSpyVision( UnsignedInt duration )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void SpyVisionUpdate::setDisabledUntilFrame( UnsignedInt frame )
+void SpyVisionUpdate::setDisabledUntilFrame( UnsignedInt frame, Bool doesNotResetTimer )
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 	if( frame > now )
@@ -101,7 +104,40 @@ void SpyVisionUpdate::setDisabledUntilFrame( UnsignedInt frame )
 		m_disabledUntilFrame = frame;
 
 		//Mark it so we can turn it on again on next update.
-		m_resetTimersNextUpdate = TRUE;
+		if(!doesNotResetTimer)
+		{
+			m_resumeDuration = 0;
+			m_resetTimersNextUpdate = TRUE;
+		}
+		else if(m_deactivateFrame)
+		{
+			// It was recently disabled while activated, register the duration for resume
+			const SpyVisionUpdateModuleData *data = getSpyVisionUpdateModuleData();
+
+			// Register the leftover power duration
+			m_resumeDuration = m_lastActivatedFrame + data->m_selfPoweredDuration - now;
+			if(m_resumeDuration <= 0)
+				m_resumeDuration = UINT_MAX;
+
+			if(m_deactivateFrame && m_deactivateFrame < UINT_MAX)
+				m_deactivateFrame += frame - now;
+		}
+		else
+		{
+			// It was recently disabled while deactivated, record the next activation interval
+			const SpyVisionUpdateModuleData *data = getSpyVisionUpdateModuleData();
+
+			//It's an always on self-powered special. So do nothing but turn it down.
+			if( data->m_selfPoweredInterval == 0 )
+				m_resetTimersNextUpdate = TRUE;
+			else
+			{
+				m_resumeDuration = m_lastActivatedFrame + data->m_selfPoweredDuration + data->m_selfPoweredInterval - now;
+
+				if(data->m_selfPoweredDuration == 0 || data->m_selfPoweredInterval == 0 || m_resumeDuration <= 0)
+					m_resumeDuration = UINT_MAX;
+			}
+		}
 
 		//Now sleep until the disabled has expired. If it's expired again when we come back due to another
 		//sabotage or something else... we'll do the same thing over again.
@@ -114,6 +150,24 @@ void SpyVisionUpdate::setDisabledUntilFrame( UnsignedInt frame )
 		m_resetTimersNextUpdate = TRUE;
 		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void SpyVisionUpdate::resetTimer()
+{
+	//Turn off the spy vision now since we are reset
+	if( m_currentlyActive )
+	{
+		doActivationWork( getObject()->getControllingPlayer(), FALSE );
+	}
+
+	//Mark it so we can turn it on again on next update.
+	m_resetTimersNextUpdate = TRUE;
+
+	m_resumeDuration = 0;
+
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -152,9 +206,18 @@ UpdateSleepTime SpyVisionUpdate::update( void )
 		if(!isAlreadyUpgraded())
 			giveSelfUpgrade();
 		m_giveSelfUpgrade = FALSE;
+		m_hasExecuted = TRUE;
 	}
 
 	const SpyVisionUpdateModuleData *data = getSpyVisionUpdateModuleData();
+	if( data->m_needsUpgrade && !m_hasExecuted )
+	{
+		resetTimer();
+		m_resumeDuration = 0;
+
+		return UPDATE_SLEEP_FOREVER;
+	}
+
 	UnsignedInt now = TheGameLogic->getFrame();
 
 	//Once disable has complete and we are waking up from it, then reset the interval so
@@ -180,8 +243,38 @@ UpdateSleepTime SpyVisionUpdate::update( void )
 		}
 	}
 
-	if( m_currentlyActive && (m_deactivateFrame <= TheGameLogic->getFrame()) )
+	if( m_resumeDuration )
 	{
+		UnsignedInt duration = m_resumeDuration;
+		// clear the recorded duration
+		m_resumeDuration = 0;
+
+		if( now >= m_deactivateFrame )
+		{
+			// not active, so we just wake up the next round
+			m_resetTimersNextUpdate = FALSE;
+		}
+		else if( (m_deactivateFrame == UINT_MAX || data->m_selfPowered) && !m_currentlyActive )
+		{
+			doActivationWork( getObject()->getControllingPlayer(), TRUE );
+		}
+
+		if(duration < UINT_MAX)
+		{
+			if(m_currentlyActive && m_deactivateFrame < UINT_MAX)
+				m_deactivateFrame = now + duration;
+			DEBUG_LOG(("Deactivate Frame: %d Now %d Duration %d", m_deactivateFrame, now, duration));
+			DEBUG_LOG(("Powered Duration: %d Powered Interval %d", data->m_selfPoweredDuration, data->m_selfPoweredInterval));
+			return UPDATE_SLEEP(duration);
+		}
+		else
+		{
+			return UPDATE_SLEEP_FOREVER;
+		}
+	}
+	else if( m_currentlyActive && (m_deactivateFrame <= TheGameLogic->getFrame()) )
+	{
+		DEBUG_LOG(("Deactivate Frame: %d Now %d Duration %d", m_deactivateFrame, now, m_resumeDuration));
 		// Turn off SpyVision.
 		doActivationWork( getObject()->getControllingPlayer(), FALSE );
 
@@ -223,6 +316,9 @@ void SpyVisionUpdate::doActivationWork( Player *playerToSetFor, Bool setting )
 		}
 	}
 
+	if(!m_currentlyActive && setting)
+		m_lastActivatedFrame = TheGameLogic->getFrame();
+
 	m_currentlyActive = setting;
 }
 
@@ -240,16 +336,51 @@ void SpyVisionUpdate::onDelete( void )
 void SpyVisionUpdate::upgradeImplementation()
 {
 	const SpyVisionUpdateModuleData *data = getSpyVisionUpdateModuleData();
-	if( (data->m_needsUpgrade || checkStartsActive()) && !isAlreadyUpgraded() )
+	if(!data->m_needsUpgrade)
+		return;	// Do nothing 
+
+	Object *obj = getObject();
+
+	UpgradeMaskType objectMask = obj->getObjectCompletedUpgradeMask();
+	UpgradeMaskType playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	// If there's no Upgrade Status, do Nothing;
+	if( UpgradeStatus == 0 )
+	{
+		return;
+	}
+	else if( UpgradeStatus == 1 )
+	{
+		// Set to apply upgrade
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+
+	//if( !isAlreadyUpgraded() )
+	if( m_hasExecuted )
 	{
 		activateSpyVision(data->m_selfPoweredDuration);// If zero, will turn on permanently.  And it does the wake up setting
 	}
-}
+	else
+	{
+		//Turn off the spy vision now since we are reset
+		if( m_currentlyActive )
+		{
+			doActivationWork( getObject()->getControllingPlayer(), FALSE );
+		}
 
-// ------------------------------------------------------------------------------------------------
-void SpyVisionUpdate::onBuildComplete()
-{
-	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+		setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -282,14 +413,19 @@ void SpyVisionUpdate::xfer( Xfer *xfer )
 	// deactivate frame
 	xfer->xferUnsignedInt( &m_deactivateFrame );
 
+	xfer->xferUnsignedInt( &m_lastActivatedFrame );
+
 	xfer->xferBool( &m_currentlyActive );
 
 	xfer->xferBool( &m_giveSelfUpgrade );
+
+	xfer->xferBool( &m_hasExecuted );
 
 	if( version >= 2 )
 	{
 		xfer->xferBool( &m_resetTimersNextUpdate );
 		xfer->xferUnsignedInt( &m_disabledUntilFrame );
+		xfer->xferUnsignedInt( &m_resumeDuration );
 	}
 
 }

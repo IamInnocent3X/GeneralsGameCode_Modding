@@ -240,6 +240,8 @@ public:
 	Real						m_maxTurretAngle;         ///< Maximum turn angle for turret
 	Bool						m_hasLimitedTurretAngle;   ///< this type of turret has limited angles
 
+	Bool						m_useTurretOffset;			///< use Turret Offset for angle calculations
+
 	TurretAIData();
 	static void buildFieldParse(MultiIniFieldParse& p);
 
@@ -290,7 +292,8 @@ public:
 
 	Real getMinTurretAngle() const { return m_data->m_minTurretAngle; }
 	Real getMaxTurretAngle() const { return m_data->m_maxTurretAngle; }
-	Real hasLimitedTurretAngle() const { return m_data->m_hasLimitedTurretAngle; }
+	Bool hasLimitedTurretAngle() const { return m_data->m_hasLimitedTurretAngle; }
+	Bool isUseTurretOffset() const { return m_data->m_useTurretOffset; }
 
 	const Object* getOwner() const { return m_owner; }
 
@@ -340,6 +343,8 @@ public:
 	UnsignedInt friend_getNextIdleMoodTargetFrame() const;
 	void friend_notifyStateMachineChanged();
 
+	Real getRelativeAngleWithOffset(WeaponSlotType wslot, const Coord3D* pos);
+
 protected:
 	// snapshot interface
 	virtual void crc( Xfer *xfer );
@@ -347,7 +352,6 @@ protected:
 	virtual void loadPostProcess();
 
 private:
-
 
 	void startRotOrPitchSound();					///< start turret rotation sound
 	void stopRotOrPitchSound();						///< stop turret rotation sound

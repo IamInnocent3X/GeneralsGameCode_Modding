@@ -36,6 +36,8 @@
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
 
+#include "GameClient/Drawable.h"
+
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Object.h"
@@ -269,6 +271,7 @@ void TurretAIData::buildFieldParse(MultiIniFieldParse& p)
 		{ "FiresWhileTurning",			INI::parseBool,												nullptr, offsetof( TurretAIData, m_firesWhileTurning ) },
 		{ "MinTurretAngle",             TurretAIData::parseMinMaxAngle,									nullptr, offsetof(TurretAIData, m_minTurretAngle) },
 		{ "MaxTurretAngle",             TurretAIData::parseMinMaxAngle,									nullptr, offsetof(TurretAIData, m_maxTurretAngle) },
+		{ "UseTurretOffsetForAiming",		INI::parseBool,												nullptr, offsetof(TurretAIData, m_useTurretOffset) },
 		// { "TurretAngleLimited",             INI::parseBool,									nullptr, offsetof(TurretAIData, m_hasLimitedTurretAngle) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -446,7 +449,7 @@ Bool TurretAI::getTurretRotationDir(Real desiredAngle, Real minAngle, Real maxAn
 
 	Bool wantCCW = stdAngleDiffMod(desiredAngle, origAngle) > 0;
 
-	// If allowed arc < 180°, shortest path is always safe
+	// If allowed arc < 180ï¿½, shortest path is always safe
 	Real diff = maxAngle - minAngle;
 	if (abs(diff) < PI)
 	//if (stdAngleDiffMod(maxAngle, minAngle) < PI)
@@ -484,8 +487,8 @@ Bool TurretAI::getTurretRotationDir(Real desiredAngle, Real minAngle, Real maxAn
 //----------------------------------------------------------------------------------------------------------
 Bool TurretAI::friend_turnTowardsAngle(Real desiredAngle, Real rateModifier, Real relThresh)
 {
-	// desiredAngle = normalizeAngle(desiredAngle);
-	desiredAngle = WWMath::Normalize_Angle(desiredAngle);
+	desiredAngle = normalizeAngle(desiredAngle);
+	//desiredAngle = WWMath::Normalize_Angle(desiredAngle);
 
 	// rotate turret back to zero angle
 	Real origAngle = getTurretAngle();
@@ -1071,6 +1074,26 @@ void TurretAI::friend_checkForIdleMoodTarget()
 	}
 }
 
+
+// ---------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------
+Real TurretAI::getRelativeAngleWithOffset(WeaponSlotType wslot, const Coord3D* pos)
+{
+	Matrix3D attachTransform(true);
+	Coord3D turretRotPos = { 0.0f, 0.0f, 0.0f };
+	Coord3D turretPitchPos = { 0.0f, 0.0f, 0.0f };
+	const Drawable* draw = getOwner()->getDrawable();
+	if (!draw || !draw->getProjectileLaunchOffset(wslot, 0, &attachTransform, m_whichTurret, &turretRotPos, &turretPitchPos))
+	{
+		return ThePartitionManager->getRelativeAngle2D(getOwner(), pos);
+	}
+	Vector2 offset = { turretRotPos.x, turretRotPos.y };
+	return ThePartitionManager->getRelativeAngle2DWithOffset(getOwner(), offset, pos);
+
+}
+
+
+
 #ifdef INTER_TURRET_DELAY
 //----------------------------------------------------------------------------------------------------------
 UnsignedInt TurretAI::friend_getInterTurretDelay()
@@ -1248,7 +1271,13 @@ StateReturnType TurretAIAimTurretState::update()
 
 	Real turnSpeedModifier = 1.0f;// Just like how recentering turns you half speed, sweeping can change your turn speed
 
-	Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &enemyPosition );
+	Real relAngle;
+	if (turret->isUseTurretOffset()) {
+		relAngle = turret->getRelativeAngleWithOffset(slot, &enemyPosition);
+	}
+	else {
+		relAngle = ThePartitionManager->getRelativeAngle2D(obj, &enemyPosition);
+	}
 
 	Real aimAngle = relAngle;
 	Real sweep = turret->getTurretFireAngleSweepForWeaponSlot( slot );

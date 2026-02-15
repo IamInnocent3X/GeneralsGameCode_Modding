@@ -327,7 +327,7 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
 
 	if (victim)
 	{
-		result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET_FORCED, victim, CMD_FROM_PLAYER );
+		result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET_FORCED, victim, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 
 		//Special case -- objects with spawn weapons have to do different checks. Stinger site with stinger soldiers is
 		//the catalyst example.
@@ -342,7 +342,7 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
 				  Object *slave = spawnInterface->getClosestSlave( victim->getPosition() );
 				  if( slave )
 				  {
-					  result = slave->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, victim, CMD_FROM_PLAYER );
+					  result = slave->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, victim, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 				  }
 			  }
 		  }
@@ -354,7 +354,7 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
           Object *rider = contain->getClosestRider( victim->getPosition() );
           if ( rider )
           {
-            result = rider->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, victim, CMD_FROM_PLAYER );
+            result = rider->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET_FORCED, victim, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
             if( result != ATTACKRESULT_NOT_POSSIBLE )
               return result;
           }
@@ -389,7 +389,7 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
 				}
         else
         {
-    			result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, pos, CMD_FROM_PLAYER );
+    			result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, pos, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
           if( result != ATTACKRESULT_POSSIBLE ) // oh dear me. The weird case of a garrisoncontainer being a KINDOF_SPAWNS_ARE_THE_WEAPONS... the AmericaBuildingFirebase
           {
             ContainModuleInterface *contain = obj->getContain();
@@ -403,7 +403,7 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
         }
 			}
 			//Now evaluate the testObj again to see if it is capable of force attacking the pos.
-			result = testObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, pos, CMD_FROM_PLAYER );
+			result = testObj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, pos, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 			return result;
 		}
 	}
@@ -1327,6 +1327,8 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 
 	Drawable* sourceDraw = ignoreSelObj ? ignoreSelObj->getDrawable() : TheInGameUI->getFirstSelectedDrawable();
 	ObjectID specificSource = ignoreSelObj ? ignoreSelObj->getID() : INVALID_ID;
+	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && command && command->getName() == ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandName();
+	specificSource = isSabotagingGUICommand ? ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() : specificSource;
 
 	OrderNearbyData orderData;
 	if(command->getOrderNearbyRadius())
@@ -1342,7 +1344,7 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 	if( BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_OBJECT_TARGET ) )
 	{
 		Bool isDoingShrubbery = BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) && target && target->getTemplate()->isKindOf(KINDOF_SHRUBBERY);
-		
+
 		// OBJECT BASED SPECIAL
 		if (!isDoingShrubbery && !command->isValidObjectTarget(sourceDraw, target))
 			return msgType;
@@ -1361,9 +1363,10 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 			msg->appendIntegerArgument( command->getOptions() );
 			msg->appendObjectIDArgument( specificSource );
 			msg->appendDrawableIDArgument( msgType == GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE ? target->getID() : INVALID_DRAWABLE_ID );
-			
+			msg->appendBooleanArgument( isSabotagingGUICommand );
+
 			// A hack to determine if it uses special power from shortcut to fire the Special Power
-			if(specificSource != INVALID_ID && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f )
+			if(specificSource != INVALID_ID && (isSabotagingGUICommand || (command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f)) )
 			{
 				msg->friend_setDoSingleID( specificSource );
 				msg->friend_setDoSingleAddStat();
@@ -1393,9 +1396,10 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 			msg->appendObjectIDArgument( targetID );
 			msg->appendIntegerArgument( command->getOptions() );
 			msg->appendObjectIDArgument( specificSource );
+			msg->appendBooleanArgument( isSabotagingGUICommand );
 			
 			// A hack to determine if it uses special power from shortcut to fire the Special Power
-			if(specificSource != INVALID_ID && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f )
+			if(specificSource != INVALID_ID && (isSabotagingGUICommand || (command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f)) )
 			{
 				msg->friend_setDoSingleID( specificSource );
 				msg->friend_setDoSingleAddStat();
@@ -1420,9 +1424,10 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 			msg->appendIntegerArgument( command->getSpecialPowerTemplate()->getID() );
 			msg->appendIntegerArgument( command->getOptions() );
 			msg->appendObjectIDArgument( specificSource );
+			msg->appendBooleanArgument( isSabotagingGUICommand );
 
 			// A hack to determine if it uses special power from shortcut to fire the Special Power
-			if(specificSource != INVALID_ID && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f )
+			if(specificSource != INVALID_ID && (isSabotagingGUICommand || (command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && orderData.Radius > 0.0f)) )
 			{
 				msg->friend_setDoSingleID( specificSource );
 				msg->friend_setDoSingleAddStat();
@@ -1897,6 +1902,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 
 	// Kris: Now that we can select non-controllable units/structures, don't allow any actions to be performed.
 	const CommandButton *command = TheInGameUI->getGUICommand();
+	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && command && command->getName() == ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandName();
 
 	if (command && command->getCommandType() == GUICOMMANDMODE_PLACE_BEACON)
 	{
@@ -1904,6 +1910,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 		TheMessageStream->appendMessage(msgType);
 	}
 	else if( TheInGameUI->areSelectedObjectsControllable()
+			|| isSabotagingGUICommand
 			|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT))
 	{
 		GameMessage *hintMessage;
@@ -2019,7 +2026,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					break;
 				}
 				case GUI_COMMAND_SPECIAL_POWER:
-					currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, drawableInWay, pos, InGameUI::SELECTION_ANY, command->getOptions(), nullptr );
+					currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, drawableInWay, pos, InGameUI::SELECTION_ANY, command->getOptions(), nullptr, !isSabotagingGUICommand );
 					break;
 				case GUI_COMMAND_FIRE_WEAPON:
 					currentlyValid = TheInGameUI->canSelectedObjectsEffectivelyUseWeapon( command, obj, pos, InGameUI::SELECTION_ANY );
@@ -2071,6 +2078,12 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					if( type == DO_COMMAND )
 					{
 						TheInGameUI->setGUICommand( nullptr );
+
+						if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+						{
+							Object *source = TheInGameUI->getFirstSelectedDrawable()->getObject();
+							source->getControllingPlayer()->useInstance( command->getInstancesRequired(), command->getRequiresAllInstances() );
+						}
 					}
 
 				}
@@ -2110,6 +2123,12 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					case GUI_COMMAND_SPECIAL_POWER://lorenzen
 						msgType = issueSpecialPowerCommand( command, type, draw, pos, nullptr );
 						break;
+				}
+
+				if( msgType != GameMessage::MSG_INVALID && BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+				{
+					Object *source = TheInGameUI->getFirstSelectedDrawable()->getObject();
+					source->getControllingPlayer()->useInstance( command->getInstancesRequired(), command->getRequiresAllInstances() );
 				}
 			}
 		}
@@ -2510,6 +2529,15 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 							{
 								//Issue the capture building command
 								msgType = issueSpecialPowerCommand( command, type, draw, pos, nullptr );
+
+								if( type == DO_COMMAND )
+								{
+									if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+									{
+										source->getControllingPlayer()->useInstance( command->getInstancesRequired(), command->getRequiresAllInstances() );
+									}
+								}
+
 								break;
 							}
 						}
@@ -2556,6 +2584,15 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 							if( spType == SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK )
 							{
 								msgType = issueSpecialPowerCommand( command, type, draw, pos, nullptr );
+
+								if( type == DO_COMMAND )
+								{
+									if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+									{
+										source->getControllingPlayer()->useInstance( command->getInstancesRequired(), command->getRequiresAllInstances() );
+									}
+								}
+
 								break;
 							}
 						}
@@ -2595,6 +2632,15 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 							if( spType == SPECIAL_BLACKLOTUS_STEAL_CASH_HACK )
 							{
 								msgType = issueSpecialPowerCommand( command, type, draw, pos, nullptr );
+
+								if( type == DO_COMMAND )
+								{
+									if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+									{
+										source->getControllingPlayer()->useInstance( command->getInstancesRequired(), command->getRequiresAllInstances() );
+									}
+								}
+
 								break;
 							}
 						}
@@ -2634,6 +2680,15 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 							if( spType == SPECIAL_HACKER_DISABLE_BUILDING )
 							{
 								msgType = issueSpecialPowerCommand( command, type, draw, pos, nullptr );
+
+								if( type == DO_COMMAND )
+								{
+									if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+									{
+										source->getControllingPlayer()->useInstance( command->getInstancesRequired(), command->getRequiresAllInstances() );
+									}
+								}
+
 								break;
 							}
 						}
@@ -4436,6 +4491,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 				const CommandButton *command = TheInGameUI->getGUICommand();
 				Bool controllable = TheInGameUI->areSelectedObjectsControllable()
+														|| ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand()
 														|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT);
 				if (isPoint && controllable)
 				{
@@ -4473,6 +4529,15 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						evaluateForceAttack( draw, &pos, DO_COMMAND );
 					} else {
 						evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
+					}
+
+					Player *player = ThePlayerList->getLocalPlayer();
+					if(player->isSabotagingObjectGUICommand())
+					{
+						player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+						player->setSabotagingObjectGUICommandID(INVALID_ID);
+						player->setSabotagingObjectGUICommandButtonSlot(-1);
+						player->selectDrawablesBeforeSabotaging();
 					}
 
 					disp = DESTROY_MESSAGE;
@@ -4534,6 +4599,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				break;
 
 			Bool controllable = TheInGameUI->areSelectedObjectsControllable()
+													|| ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand()
 													|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT);
 			if (isPoint && controllable)
 			{
@@ -4571,6 +4637,15 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					evaluateForceAttack( draw, &pos, DO_COMMAND );
 				} else {
 					evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
+				}
+
+				Player *player = ThePlayerList->getLocalPlayer();
+				if(player->isSabotagingObjectGUICommand())
+				{
+					player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+					player->setSabotagingObjectGUICommandID(INVALID_ID);
+					player->setSabotagingObjectGUICommandButtonSlot(-1);
+					player->selectDrawablesBeforeSabotaging();
 				}
 
 				disp = DESTROY_MESSAGE;

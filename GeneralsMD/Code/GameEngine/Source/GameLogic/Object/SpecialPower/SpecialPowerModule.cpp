@@ -821,7 +821,7 @@ void SpecialPowerModule::aboutToDoSpecialPower( const Coord3D *location )
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPower( UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ( (!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
@@ -843,7 +843,7 @@ void SpecialPowerModule::doSpecialPower( UnsignedInt commandOptions )
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPowerAtObject( Object *obj, UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ((!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
@@ -865,7 +865,7 @@ void SpecialPowerModule::doSpecialPowerAtObject( Object *obj, UnsignedInt comman
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPowerAtDrawable( Drawable *draw, UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ((!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
@@ -887,7 +887,7 @@ void SpecialPowerModule::doSpecialPowerAtDrawable( Drawable *draw, UnsignedInt c
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPowerAtLocation( const Coord3D *loc, Real angle, UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ((!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
