@@ -133,7 +133,7 @@ static bool Use_Non_Blocking_Mode(void)
 	// Fetch the flag
 	bufsiz=sizeof(value);
 	type=REG_DWORD;
-	regRetval=RegQueryValueEx(regKey, "UseNonBlockingFTP", 0, &type, (BYTE*) &value, &bufsiz);
+	regRetval=RegQueryValueEx(regKey, "UseNonBlockingFTP", nullptr, &type, (BYTE*) &value, &bufsiz);
 
 	RegCloseKey(regKey);
 
@@ -198,7 +198,7 @@ Cftp::~Cftp()
 	if (m_pfLocalFile)
 	{
 		fclose(m_pfLocalFile);
-		m_pfLocalFile = NULL;
+		m_pfLocalFile = nullptr;
 	}
 }
 
@@ -235,7 +235,7 @@ void Cftp::ZeroStuff(void)
 	m_iFilePos = 0;
 	m_iStatus = FTPSTAT_INIT;
 	m_sendNewPortStatus = 0;
-	m_pfLocalFile = NULL;
+	m_pfLocalFile = nullptr;
 	m_findStart = 0;
 	memset(&m_CommandSockAddr, 0, sizeof(m_CommandSockAddr));
 	memset(&m_DataSockAddr, 0, sizeof(m_DataSockAddr));
@@ -269,7 +269,7 @@ int Cftp::AsyncGetHostByName(char * szName, struct sockaddr_in &address )
 		gThreadFlag = 0;
       memset(&gThreadAddress,0,sizeof(gThreadAddress));
 
-		if( CreateThread( NULL, 0, gethostbynameA, szName, 0, &threadid ) == NULL )
+		if( CreateThread( nullptr, 0, gethostbynameA, szName, 0, &threadid ) == nullptr )
 		{
 			return( FTP_FAILED );
 		}
@@ -300,7 +300,7 @@ int Cftp::AsyncGetHostByName(char * szName, struct sockaddr_in &address )
 *	HRESULT  Cftp::ConnectToServer(LPCSTR szServerName)
 *
 * $_Description :
-*	Overloaded funciton that makes a connection to a server.  Will probably
+*	Overloaded function that makes a connection to a server.  Will probably
 *	fail on (at least) the first call, as it may take a while for the server
 *	to send it's "ready" reply.
 *
@@ -426,7 +426,7 @@ HRESULT  Cftp::ConnectToServer(LPCSTR szServerName)
 		timeval tv;
 		tv.tv_sec=0;
 		tv.tv_usec=0;
-		int retval=select(m_iCommandSocket+1,0,&wset,&eset,&tv);
+		int retval=select(m_iCommandSocket+1,nullptr,&wset,&eset,&tv);
 		if (retval == 0)	// not ready yet....
 			return(FTP_TRYING);
 		if (FD_ISSET(m_iCommandSocket, &eset)) {
@@ -494,9 +494,9 @@ HRESULT  Cftp::LoginToServer( LPCSTR szUserName, LPCSTR szPassword )
 
 	if( m_iStatus == FTPSTAT_CONNECTED )
 	{
-		sprintf( command, "USER %s\r\n", m_szUserName );
+		snprintf( command, ARRAY_SIZE(command), "USER %s\r\n", m_szUserName );
 
-		if( SendCommand( command, 7 + strlen( m_szUserName ) ) < 0 )
+		if( SendCommand( command, (int)strlen( command ) ) < 0 )
 		{
 			return( FTP_TRYING );
 		}
@@ -517,9 +517,9 @@ HRESULT  Cftp::LoginToServer( LPCSTR szUserName, LPCSTR szPassword )
 
 	if( m_iStatus == FTPSTAT_SENTUSER )
 	{
-		sprintf( command, "PASS %s\r\n", m_szPassword );
+		snprintf( command, ARRAY_SIZE(command), "PASS %s\r\n", m_szPassword );
 
-		if( SendCommand( command, 7 + strlen( m_szPassword ) ) < 0 )
+		if( SendCommand( command, (int)strlen( command ) ) < 0 )
 		{
 			return( FTP_TRYING );
 		}
@@ -665,9 +665,9 @@ HRESULT  Cftp::FindFile( LPCSTR szRemoteFileName, int * piSize )
 	char ext[ 10 ];
 
 	if (m_findStart==0)
-      m_findStart=time(NULL);
+      m_findStart=time(nullptr);
 
-	if((time(NULL)-m_findStart) > 30)  // try for 30 seconds
+	if((time(nullptr)-m_findStart) > 30)  // try for 30 seconds
 	{
         /////////DBGMSG("FindFile: Tried for too long");
         m_findStart=0;
@@ -675,7 +675,7 @@ HRESULT  Cftp::FindFile( LPCSTR szRemoteFileName, int * piSize )
 	}
 
 	//strcpy(m_szRemoteFilePath, "/");  // start at home
-	_splitpath( szRemoteFileName, NULL, m_szRemoteFilePath+strlen(m_szRemoteFilePath),
+	_splitpath( szRemoteFileName, nullptr, m_szRemoteFilePath+strlen(m_szRemoteFilePath),
 		m_szRemoteFileName, ext );
 
 	strlcat(m_szRemoteFileName, ext, ARRAY_SIZE(m_szRemoteFileName));
@@ -694,9 +694,9 @@ HRESULT  Cftp::FindFile( LPCSTR szRemoteFileName, int * piSize )
 
 	if( ( m_iStatus == FTPSTAT_LOGGEDIN ) || ( m_iStatus == FTPSTAT_FILEFOUND ) )
 	{
-		sprintf( command, "CWD %s\r\n", m_szRemoteFilePath );
+		snprintf( command, ARRAY_SIZE(command), "CWD %s\r\n", m_szRemoteFilePath );
 
-		if( SendCommand( command, 6 + strlen( m_szRemoteFilePath ) ) < 0 )
+		if( SendCommand( command, (int)strlen( command ) ) < 0 )
 		{
 			return( FTP_TRYING );
 		}
@@ -747,9 +747,9 @@ HRESULT  Cftp::FindFile( LPCSTR szRemoteFileName, int * piSize )
 
 	if( m_iStatus == FTPSTAT_SENTPORT )
 	{
-		sprintf( command, "LIST %s\r\n", m_szRemoteFileName );
+		snprintf( command, ARRAY_SIZE(command), "LIST %s\r\n", m_szRemoteFileName );
 
-		if( SendCommand( command, 7 + strlen( m_szRemoteFileName ) ) < 0 )
+		if( SendCommand( command, (int)strlen( command ) ) < 0 )
 		{
 			return( FTP_TRYING );
 		}
@@ -830,7 +830,7 @@ HRESULT  Cftp::FindFile( LPCSTR szRemoteFileName, int * piSize )
 
 	if( sscanf( &listline[ 32 ], " %d ", &i ) == 1 )
 	{
-		if( piSize != NULL )
+		if( piSize != nullptr )
 		{
 			*piSize = i;
 			m_iFileSize = i;
@@ -949,7 +949,7 @@ HRESULT  Cftp::RecvReply( LPCSTR pReplyBuffer, int iSize, int * piRetCode )
 		// Verify that this is a complete line, if not we will keep trying til
 		// we have one.
 		char *end=strstr(pc, "\r\n");
-		if (end == 0)
+		if (end == nullptr)
 			return(FTP_TRYING);
 
 		// OK, we've got a line, pull it from the socket...
@@ -1028,7 +1028,7 @@ unsigned long MyIPAddress( int sockfd )
 
 		pHE = gethostbyname( pBuffer );
 
-		if( pHE == NULL )
+		if( pHE == nullptr )
 		{
 			return( FTP_FAILED );
 		}
@@ -1039,7 +1039,7 @@ unsigned long MyIPAddress( int sockfd )
 
 		i = 0;
 
-		while( ( pAddr = pHE->h_addr_list[ i++ ] ) != NULL )
+		while( ( pAddr = pHE->h_addr_list[ i++ ] ) != nullptr )
 		{
 
 			ip = *((unsigned long *)pAddr );
@@ -1227,7 +1227,7 @@ int Cftp::OpenDataConnection()
 		return( FTP_FAILED );
 	}
 
-	if( ( iNewSocket = accept( m_iDataSocket, NULL, 0 ) ) < 0 )
+	if( ( iNewSocket = accept( m_iDataSocket, nullptr, nullptr ) ) < 0 )
 	{
 		if( WSAGetLastError() != (WSAEWOULDBLOCK ) )
 		{
@@ -1391,7 +1391,7 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 	int res, iReply;
 
 	char downloadfilename[256];
-	GetDownloadFilename(szLocalFileName, downloadfilename);
+	GetDownloadFilename(szLocalFileName, downloadfilename, ARRAY_SIZE(downloadfilename));
 
 
 	//char str[ 256 ];
@@ -1404,14 +1404,14 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 	{
 		if( m_iFilePos == 0 )
 		{
-			if( ( m_pfLocalFile = fopen( downloadfilename, "wb" ) ) == NULL )
+			if( ( m_pfLocalFile = fopen( downloadfilename, "wb" ) ) == nullptr )
 			{
 				return( FTP_FAILED );
 			}
 		}
 		else
 		{
-			if( ( m_pfLocalFile = fopen( downloadfilename, "ab" ) ) == NULL )
+			if( ( m_pfLocalFile = fopen( downloadfilename, "ab" ) ) == nullptr )
 			{
 				return( FTP_FAILED );
 			}
@@ -1507,7 +1507,7 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 
 	if( m_iStatus == FTPSTAT_SENTREST )
 	{
-		sprintf( command, "RETR %s\r\n", m_szRemoteFileName );
+		snprintf( command, ARRAY_SIZE(command), "RETR %s\r\n", m_szRemoteFileName );
 
 		if( SendCommand( command, strlen( command ) ) < 0 )
 		{
@@ -1563,7 +1563,7 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 
 		m_iFilePos += totread;   // update read position
 
-		if( piTotalRead != NULL )
+		if( piTotalRead != nullptr )
 			*piTotalRead = m_iFilePos;
 
 
@@ -1599,7 +1599,7 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 	if( m_iStatus == FTPSTAT_FILEDATACLOSED )	{
 		CloseDataConnection();
 		fclose( m_pfLocalFile );
-		m_pfLocalFile = NULL;
+		m_pfLocalFile = nullptr;
 
 		/*
 		 * Move the file from the temporary download location to its
@@ -1607,7 +1607,7 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 		 */
 
 		char downloadfilename[256];
-		GetDownloadFilename(m_szLocalFileName, downloadfilename);
+		GetDownloadFilename(m_szLocalFileName, downloadfilename, ARRAY_SIZE(downloadfilename));
 
 		// Make sure the path exists for the new file
 		char curdir[256];
@@ -1688,10 +1688,10 @@ HRESULT  Cftp::GetNextFileBlock( LPCSTR szLocalFileName, int * piTotalRead )
 HRESULT  Cftp::FileRecoveryPosition( LPCSTR szLocalFileName, LPCSTR szRegistryRoot )
 {
 	char downloadfilename[256];
-	GetDownloadFilename(szLocalFileName, downloadfilename);
+	GetDownloadFilename(szLocalFileName, downloadfilename, ARRAY_SIZE(downloadfilename));
 
 	FILE *testfp = fopen( downloadfilename, "rb" );
-	if( testfp == NULL )
+	if( testfp == nullptr )
 	{
 		m_iFilePos = 0;
 		return 0;
@@ -1711,7 +1711,7 @@ HRESULT  Cftp::FileRecoveryPosition( LPCSTR szLocalFileName, LPCSTR szRegistryRo
 	char regkey[ 512 ];
 	unsigned long t1, t2;
 
-	if( ( szRegistryRoot == NULL ) || ( szLocalFileName == NULL ) )
+	if( ( szRegistryRoot == nullptr ) || ( szLocalFileName == nullptr ) )
 	{
 		// Bail out
 		return( 0 );
@@ -1760,7 +1760,7 @@ HRESULT  Cftp::FileRecoveryPosition( LPCSTR szLocalFileName, LPCSTR szRegistryRo
 		// File previously downloaded
 		testfp = fopen( FTP_TEMPFILENAME, "rb" );
 
-		if( testfp == NULL )
+		if( testfp == nullptr )
 		{
 			m_iFilePos = 0;
 			RegCloseKey(hkey);
@@ -1793,7 +1793,7 @@ HRESULT  Cftp::FileRecoveryPosition( LPCSTR szLocalFileName, LPCSTR szRegistryRo
 //
 // convert a local name to a temp filename to use for downloading
 //
-void Cftp::GetDownloadFilename(const char *localname, char *downloadname)
+void Cftp::GetDownloadFilename(const char *localname, char *downloadname, size_t downloadname_size)
 {
 	char *name = strdup(localname);
 	char *s = name;
@@ -1803,7 +1803,7 @@ void Cftp::GetDownloadFilename(const char *localname, char *downloadname)
 			*s = '_';
 		++s;
 	}
-	sprintf(downloadname,"download\\%s_%d.tmp",name,m_iFileSize);
+	snprintf(downloadname, downloadname_size, "download\\%s_%d.tmp", name, m_iFileSize);
 	free(name);
 	/*
 	Wstring name;
@@ -1831,8 +1831,8 @@ bool Prepare_Directories(const char *rootdir, const char *filename)
 	while(cptr=strchr(cptr,'\\'))
 	{
 		strlcpy(tempstr,filename,cptr-filename + 1);
-		sprintf(newdir,"%s\\%s",rootdir, tempstr);
-		if (!CreateDirectory(newdir, NULL))
+		snprintf(newdir, ARRAY_SIZE(newdir), "%s\\%s", rootdir, tempstr);
+		if (!CreateDirectory(newdir, nullptr))
 			return false;
 		//if ((_mkdir(newdir) == -1) && ((errno == ENOENT || errno==EACCES)))
 			//return(false);

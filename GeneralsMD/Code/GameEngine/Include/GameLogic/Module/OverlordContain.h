@@ -120,7 +120,7 @@ public:
 	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0, 0, 0); };
 
 private:
-	/**< An empty overlord is a conatiner, but a full one redirects calls to its passengers.  If this returns NULL,
+	/**< An empty overlord is a container, but a full one redirects calls to its passengers.  If this returns null,
 	we are either empty or carrying a non container.
 	*/
 	ContainModuleInterface *getRedirectedContain() const; ///< And this gets what are redirecting to.

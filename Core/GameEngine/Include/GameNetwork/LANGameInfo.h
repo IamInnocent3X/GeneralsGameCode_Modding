@@ -42,7 +42,7 @@ class LANGameSlot : public GameSlot
 public:
 	LANGameSlot();
 
-	LANPlayer *getUser( void );																	///< Get the User structure associated with the slot (NULL for non-humans)
+	LANPlayer *getUser( void );																	///< Get the User structure associated with the slot (null for non-humans)
 
 	// Various tests
 	Bool isUser( LANPlayer *user );															///< Does this slot contain the given user?  Based off user->name
@@ -97,7 +97,7 @@ public:
 	void setName( UnicodeString name ) { m_gameName = name; }		///< Set the Name of the Game
 	UnicodeString getName( void ) { return m_gameName; }					///< Get the Name of the Game
 
-	// Convinience functions that interface with the LANPlayer held in the slot list
+	// Convenience functions that interface with the LANPlayer held in the slot list
 	virtual void resetAccepted(void);														///< Reset the accepted flag on all players
 	Bool amIHost( void );																///< Convenience function - is the local player the game host?
 

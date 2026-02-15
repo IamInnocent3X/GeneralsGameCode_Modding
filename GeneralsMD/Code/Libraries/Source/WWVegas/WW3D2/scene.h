@@ -72,7 +72,7 @@ protected:
 ** SceneClass
 ** This is a bunch of render objects that define a 3D scene.
 ** The requirements of a SceneClass are:
-** - The ablility to pass its renderobject's internal surrender representation
+** - The ability to pass its renderobject's internal surrender representation
 **   to surrender when asked in the Render method.
 ** - The ability to add and remove render objects from the scene
 ** - The ability to create an iterator for the user which uses the
@@ -94,7 +94,7 @@ public:
 	// RTTI information.
 	///////////////////////////////////////////////////////////////////////////////////
 	enum {
-		SCENE_ID_UNKOWN = 0xFFFFFFFF,
+		SCENE_ID_UNKNOWN = 0xFFFFFFFF,
 		SCENE_ID_SCENE = 0,
 		SCENE_ID_SIMPLE,
 

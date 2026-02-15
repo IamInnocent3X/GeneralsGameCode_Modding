@@ -55,10 +55,10 @@ void MaxHealthUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "AddMaxHealth",					INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_addMaxHealth ) },
+		{ "AddMaxHealth",					INI::parseReal,					nullptr,										offsetof( MaxHealthUpgradeModuleData, m_addMaxHealth ) },
 		{ "MultiplyMaxHealth",				INI::parseReal,					NULL,										offsetof( MaxHealthUpgradeModuleData, m_multiplyMaxHealth ) },
 		{ "ChangeType",						INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( MaxHealthUpgradeModuleData, m_maxHealthChangeType ) },
-		{ 0, 0, 0, 0 }
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 
   p.add(dataFieldParse);

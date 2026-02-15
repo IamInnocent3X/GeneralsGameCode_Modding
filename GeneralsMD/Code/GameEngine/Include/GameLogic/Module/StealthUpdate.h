@@ -75,7 +75,7 @@ static const char *const TheStealthLevelNames[] =
 	"FIRING_WEAPON_SIX",
 	"FIRING_WEAPON_SEVEN",
 	"FIRING_WEAPON_EIGHT",
-	NULL
+	nullptr
 };
 #endif
 
@@ -135,7 +135,7 @@ public:
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 
 	// ??? ugh
-	Bool isDisguised() const { return m_disguiseAsTemplate != NULL; }
+	Bool isDisguised() const { return m_disguiseAsTemplate != nullptr; }
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
 	void markAsDetected( UnsignedInt numFrames = 0 );

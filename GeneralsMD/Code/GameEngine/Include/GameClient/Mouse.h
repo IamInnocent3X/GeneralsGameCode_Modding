@@ -62,6 +62,7 @@ enum GameMode CPP_11(: Int);
 
 enum MouseButtonState CPP_11(: Int)
 {
+	MBS_None = -1,
 	MBS_Up = 0,
 	MBS_Down,
 	MBS_DoubleClick,
@@ -105,17 +106,14 @@ struct MouseIO
 								 user while - is down/toward user */
 	ICoord2D deltaPos;  ///< overall change in mouse pointer this frame
 
-	MouseButtonState leftState;					// button state: Up, Down, DoubleClick (Which is also down)
+	MouseButtonState leftState;					// button state: None (no event), Up, Down, DoubleClick
 	Int leftEvent;											// Most important event this frame
-	Int leftFrame;											// last frame button state changed
 
 	MouseButtonState rightState;
 	Int rightEvent;
-	Int rightFrame;
 
 	MouseButtonState middleState;
 	Int middleEvent;
-	Int middleFrame;
 };
 
 class CursorInfo
@@ -287,6 +285,7 @@ public:
 	virtual void setPosition( Int x, Int y );						///< set the mouse position
 	virtual void setCursor( MouseCursor cursor ) = 0;		///< set mouse cursor
 
+	void initCapture(); ///< called once to unlock the mouse capture functionality
 	void setCursorCaptureMode(CursorCaptureMode mode); ///< set the rules for the mouse capture
 	void refreshCursorCapture(); ///< refresh the mouse capture
 	Bool isCursorCaptured(); ///< true if the mouse is captured in the game window
@@ -297,7 +296,7 @@ public:
   Int  getCursorTooltipDelay() { return m_tooltipDelay; }
   void setCursorTooltipDelay(Int delay) { m_tooltipDelay = delay; }
 
-	void setCursorTooltip( UnicodeString tooltip, Int tooltipDelay = -1, const RGBColor *color = NULL, Real width = 1.0f );		///< set tooltip string at cursor
+	void setCursorTooltip( UnicodeString tooltip, Int tooltipDelay = -1, const RGBColor *color = nullptr, Real width = 1.0f );		///< set tooltip string at cursor
 	void setMouseText( UnicodeString text, const RGBAColorInt *color, const RGBAColorInt *dropColor );					///< set the cursor text, *NOT* the tooltip text
 	virtual void setMouseLimits( void );					///< update the limit extents the mouse can move in
 	MouseCursor getMouseCursor(void) { return m_currentCursor; }	///< get the current mouse cursor image type
@@ -351,7 +350,6 @@ public:
 
 protected:
 
-	void initCapture();
 	Bool canCapture() const; ///< true if the mouse can be captured
 	void unblockCapture(CursorCaptureBlockReason reason); // unset a reason to block mouse capture
 	void blockCapture(CursorCaptureBlockReason reason); // set a reason to block mouse capture
@@ -393,9 +391,6 @@ protected:
 	Int m_maxX;							///< mouse is locked to this region
 	Int m_minY;							///< mouse is locked to this region
 	Int m_maxY;							///< mouse is locked to this region
-
-	UnsignedInt m_inputFrame;				///< frame input was gathered on
-	UnsignedInt m_deadInputFrame;		///< Frame which last input occured
 
 	Bool m_inputMovesAbsolute;			/**< if TRUE, when processing mouse position
 																	chanages the movement will be done treating

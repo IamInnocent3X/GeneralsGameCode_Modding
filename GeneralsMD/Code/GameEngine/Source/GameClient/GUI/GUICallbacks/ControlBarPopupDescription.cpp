@@ -95,10 +95,10 @@
 
 #include "GameNetwork/NetworkInterface.h"
 
-static WindowLayout *theLayout = NULL;
-static GameWindow *theWindow = NULL;
-static AnimateWindowManager *theAnimateWindowManager = NULL;
-static GameWindow *prevWindow = NULL;
+static WindowLayout *theLayout = nullptr;
+static GameWindow *theWindow = nullptr;
+static AnimateWindowManager *theAnimateWindowManager = nullptr;
+static GameWindow *prevWindow = nullptr;
 static Bool useAnimation = FALSE;
 void ControlBarPopupDescriptionUpdateFunc( WindowLayout *layout, void *param )
 {
@@ -118,7 +118,7 @@ void ControlBarPopupDescriptionUpdateFunc( WindowLayout *layout, void *param )
 		if (theAnimateWindowManager->isFinished() && !wasFinished && theAnimateWindowManager->isReversed())
 		{
 			delete theAnimateWindowManager;
-			theAnimateWindowManager = NULL;
+			theAnimateWindowManager = nullptr;
 			TheControlBar->deleteBuildTooltipLayout();
 		}
 	}
@@ -160,9 +160,9 @@ void ControlBar::showBuildTooltipLayout( GameWindow *cmdButton )
 		{
 //			m_buildToolTipLayout->destroyWindows();
 //			deleteInstance(m_buildToolTipLayout);
-//			m_buildToolTipLayout = NULL;
+//			m_buildToolTipLayout = nullptr;
 			m_buildToolTipLayout->hide(TRUE);
-			prevWindow = NULL;
+			prevWindow = nullptr;
 		}
 		return;
 	}
@@ -217,7 +217,7 @@ void ControlBar::showBuildTooltipLayout( GameWindow *cmdButton )
 		// we're a generic window
 		if(!BitIsSet(cmdButton->winGetStyle(), GWS_USER_WINDOW) && !BitIsSet(cmdButton->winGetStyle(), GWS_STATIC_TEXT))
 			return;
-		populateBuildTooltipLayout(NULL, cmdButton);
+		populateBuildTooltipLayout(nullptr, cmdButton);
 	}
 	m_buildToolTipLayout->hide(FALSE);
 
@@ -315,6 +315,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 			descrip = TheGameText->fetch(commandButton->getDescriptionLabel());
 
 			Drawable *draw = TheInGameUI->getFirstSelectedDrawable();
+			Object *selectedObject = draw ? draw->getObject() : nullptr;
 
 			//For Specialpowers with cost, add text to the tooltip
 			if (commandButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER ||
@@ -335,8 +336,6 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 				}
 			}
 
-
-			Object *selectedObject = draw ? draw->getObject() : NULL;
 			if( selectedObject )
 			{
 				//Special case: Append status of overcharge on China power plant.
@@ -594,7 +593,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 			name = TheGameText->fetch("CONTROLBAR:Power");
 			descrip = TheGameText->fetch("CONTROLBAR:PowerDescription");
 
-			Player* playerToDisplay = TheControlBar->getCurrentlyViewedPlayer();
+			Player* playerToDisplay = getCurrentlyViewedPlayer();
 
 			if( playerToDisplay && playerToDisplay->getEnergy() )
 			{
@@ -655,7 +654,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 		tempDString->setText(descrip);
 		tempDString->getSize(&newSize.x, &newSize.y);
 		TheDisplayStringManager->freeDisplayString(tempDString);
-		tempDString = NULL;
+		tempDString = nullptr;
 		diffSize = newSize.y - size.y;
  		GameWindow *parent = m_buildToolTipLayout->getFirstWindow();
  		if(!parent)
@@ -677,13 +676,13 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 
 //		heightChange = controlBarPos.y - m_defaultControlBarPosition.y;
 
-		GameWindow *marker =  TheWindowManager->winGetWindowFromId(NULL,winNamekey);
+		GameWindow *marker =  TheWindowManager->winGetWindowFromId(nullptr,winNamekey);
 		static ICoord2D basePos;
 		if(!marker)
 		{
 			return;
 		}
-		TheControlBar->getBackgroundMarkerPos(&basePos.x, &basePos.y);
+		getBackgroundMarkerPos(&basePos.x, &basePos.y);
 		ICoord2D curPos, offset;
 		marker->winGetScreenPosition(&curPos.x,&curPos.y);
 
@@ -719,16 +718,16 @@ void ControlBar::hideBuildTooltipLayout()
 void ControlBar::deleteBuildTooltipLayout( void )
 {
 	m_showBuildToolTipLayout = FALSE;
-	prevWindow= NULL;
+	prevWindow= nullptr;
 	m_buildToolTipLayout->hide(TRUE);
 //	if(!m_buildToolTipLayout)
 //		return;
 //
 //	m_buildToolTipLayout->destroyWindows();
 //	deleteInstance(m_buildToolTipLayout);
-//	m_buildToolTipLayout = NULL;
+//	m_buildToolTipLayout = nullptr;
 
 	delete theAnimateWindowManager;
-	theAnimateWindowManager = NULL;
+	theAnimateWindowManager = nullptr;
 
 }

@@ -179,7 +179,6 @@ inline void SET_ALL_DAMAGE_TYPE_BITS(DamageTypeFlags& m)
 
 extern DamageTypeFlags DAMAGE_TYPE_FLAGS_NONE;
 extern DamageTypeFlags DAMAGE_TYPE_FLAGS_ALL;
-void initDamageTypeFlags();
 
 
 //-------------------------------------------------------------------------------------------------
@@ -249,7 +248,7 @@ static const char *const TheDeathNames[] =
 	//New:
 	"CHRONO",	
 
-	NULL
+	nullptr
 };
 static_assert(ARRAY_SIZE(TheDeathNames) == DEATH_NUM_TYPES + 1, "Incorrect array size");
 #endif // end DEFINE_DEATH_NAMES
@@ -289,7 +288,7 @@ public:
 	DamageInfoInput( void )
 	{
 		m_sourceID = INVALID_ID;
-		m_sourceTemplate = NULL;
+		m_sourceTemplate = nullptr;
 		m_sourcePlayerMask = 0;
 		m_damageType = DAMAGE_EXPLOSION;
 		m_damageStatusType = OBJECT_STATUS_NONE;
@@ -309,7 +308,7 @@ public:
 	PlayerMaskType m_sourcePlayerMask;			///< Player mask of m_sourceID.
 	DamageType		 m_damageType;						///< type of damage
 	ObjectStatusTypes m_damageStatusType;		///< If status damage, what type
-	DamageType		 m_damageFXOverride;			///< If not marked as the default of Unresistable, the damage type to use in doDamageFX instead of the real damamge type
+	DamageType		 m_damageFXOverride;			///< If not marked as the default of Unresistable, the damage type to use in doDamageFX instead of the real damage type
 	DeathType			 m_deathType;						///< if this kills us, death type to be used
 	Real					 m_amount;								///< # value of how much damage to inflict
 	Bool						m_kill;									///< will always cause object to die regardless of damage.
