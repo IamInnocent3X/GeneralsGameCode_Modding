@@ -1113,8 +1113,6 @@ static void clampToMap(Coord3D *dest, PlayerType pt)
 Bool AIGroup::friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cmdSource )
 
 {
-	DEBUG_LOG(("!! AIGroup::friend_moveInfantryToPos.\n"));
-
 	if (m_groundPath==nullptr) return false;
 
 	Int numColumns = 3;

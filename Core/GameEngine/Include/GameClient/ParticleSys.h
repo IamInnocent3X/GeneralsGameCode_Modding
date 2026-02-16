@@ -717,7 +717,7 @@ protected:
 
 	Coord3D						m_posOffset;                                        ///< local (to parent transform) offset for created particles
 
-	ParticleSystem *	m_slaveSystem;									///< if non-null, another system this one has control of
+	ParticleSystem *	m_slaveSystem;									///< if non-NULL, another system this one has control of
 	ParticleSystemID	m_slaveSystemID;								///< id of slave system (if present)
 
 	ParticleSystem *	m_masterSystem;									///< if non-null, the system that controls this one

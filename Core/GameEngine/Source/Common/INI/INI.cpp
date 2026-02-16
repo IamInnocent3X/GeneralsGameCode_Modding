@@ -326,7 +326,6 @@ void INI::prepFile( AsciiString filename, INILoadType loadType, Bool optional /*
 	if( file == nullptr )
 	{
 		if (optional) {
-			m_readBufferUsed = 0;
 			DEBUG_LOG(("INI::load, cannot open file '%s'", filename.str()));
 			return;
 		}
@@ -413,7 +412,7 @@ UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, 
 	s_xfer = pXfer;
 	prepFile(filename, loadType, optional);
 
-	if (optional && m_readBufferUsed == 0) {
+	if (optional && m_filename == "None") {
 		// unPrepFile();
 		return 0;
 	}

@@ -186,7 +186,6 @@ inline void SET_ALL_DAMAGE_TYPE_BITS(DamageTypeFlags& m)
 
 extern DamageTypeFlags DAMAGE_TYPE_FLAGS_NONE;
 extern DamageTypeFlags DAMAGE_TYPE_FLAGS_ALL;
-void initDamageTypeFlags();
 
 typedef std::pair<AsciiString, Int>		AsciiStringIntPair;	
 typedef std::vector<AsciiStringIntPair>	CustomFlags;

@@ -510,8 +510,13 @@ const FieldParse* LocomotorTemplate::getFieldParse() const
 		{ "RudderCorrectionRate",			 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_rudderCorrectionRate) },
 		{ "ElevatorCorrectionDegree",	 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionDegree) },
 		{ "ElevatorCorrectionRate",		 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionRate) },
+		{ "RudderCorrectionDegree",		 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_rudderCorrectionDegree) },
+		{ "RudderCorrectionRate",			 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_rudderCorrectionRate) },
+		{ "ElevatorCorrectionDegree",	 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionDegree) },
+		{ "ElevatorCorrectionRate",		 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionRate) },
 		{ "RequiredWaterLevel",        INI::parseUnsignedInt, nullptr, offsetof(LocomotorTemplate, m_requiredWaterLevel)},
-		{ nullptr, nullptr, nullptr, 0 }  // keep this last
+
+		{ nullptr, nullptr, nullptr, 0 }
 
 	};
 	return TheFieldParse;

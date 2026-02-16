@@ -96,7 +96,7 @@ CostModifierUpgradeModuleData::CostModifierUpgradeModuleData( void )
 		{ "IsOneShotUpgrade",		INI::parseBool, nullptr, offsetof( CostModifierUpgradeModuleData, m_isOneShot) },
 		{ "BonusStacksWith",		INI::parseIndexList, TheBonusStackingTypeNames, offsetof( CostModifierUpgradeModuleData, m_stackingType) },
 		
-		{ nullptr, nullptr, nullptr, 0 } 
+		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
 

@@ -676,9 +676,9 @@ Real LaserUpdate::getLifeTimeProgress() const
 //-------------------------------------------------------------------------------------------------
 Real LaserUpdate::getTemplateLaserRadius() const
 {
-	const Drawable *draw = getDrawable();
+	const Drawable* draw = getDrawable();
 	const LaserDrawInterface* ldi = nullptr;
-	for( const DrawModule** d = draw->getDrawModules(); *d; ++d )
+	for (const DrawModule** d = draw->getDrawModules(); *d; ++d)
 	{
 		ldi = (*d)->getLaserDrawInterface();
 		if (ldi)

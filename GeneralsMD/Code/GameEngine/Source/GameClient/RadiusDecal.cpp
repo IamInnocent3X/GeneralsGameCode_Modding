@@ -121,7 +121,7 @@ void RadiusDecalTemplate::xferRadiusDecalTemplate( Xfer *xfer )
 		{ "Style",											INI::parseBitString32,				TheShadowNames,		offsetof( RadiusDecalTemplate, m_shadowType ) },
 		{ "OpacityMin",									INI::parsePercentToReal,			nullptr,							offsetof( RadiusDecalTemplate, m_minOpacity ) },
 		{ "OpacityMax",									INI::parsePercentToReal,			nullptr,							offsetof( RadiusDecalTemplate, m_maxOpacity) },
-		{ "OpacityThrobTime",						INI::parseDurationUnsignedInt, nullptr,							offsetof( RadiusDecalTemplate, m_opacityThrobTime ) },
+		{ "OpacityThrobTime",						INI::parseDurationUnsignedInt,nullptr,							offsetof( RadiusDecalTemplate, m_opacityThrobTime ) },
 		{ "Color",											INI::parseColorInt,						nullptr,							offsetof( RadiusDecalTemplate, m_color ) },
 		{ "OnlyVisibleToOwningPlayer",	INI::parseBool,								nullptr,							offsetof( RadiusDecalTemplate, m_onlyVisibleToOwningPlayer ) },
 		{ nullptr, nullptr, nullptr, 0 }

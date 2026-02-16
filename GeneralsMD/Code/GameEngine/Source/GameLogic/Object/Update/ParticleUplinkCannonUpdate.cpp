@@ -63,7 +63,6 @@
 // enormous camera heights cannot see above the laser origin.
 constexpr const Real ORBITAL_BEAM_Z_OFFSET = 3500.0f;
 
-
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()

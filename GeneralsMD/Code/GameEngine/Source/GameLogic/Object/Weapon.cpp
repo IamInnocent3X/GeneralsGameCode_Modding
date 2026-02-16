@@ -3224,6 +3224,7 @@ WeaponStore::~WeaponStore()
 #if DEBUG_PRINT_WEAPON_USAGE
 	m_weaponUseCounter.clear();
 #endif
+	m_weaponTemplateHashMap.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3307,12 +3308,7 @@ WeaponTemplate *WeaponStore::findWeaponTemplatePrivate( NameKeyType key ) const
 	// search weapon list for name
 	WeaponTemplateMap::const_iterator it = m_weaponTemplateHashMap.find(key);
 	if(it != m_weaponTemplateHashMap.end())
-	{
-#if DEBUG_PRINT_WEAPON_USAGE
-		m_weaponUseCounter[key]++;
-#endif
 		return it->second;
-	}
 
 	return nullptr;
 

@@ -473,7 +473,6 @@ void CaveContain::onRemoving( Object *obj )
 		if (getObject()->getTeam() != nullptr)
 		{
 			changeTeamOnAllConnectedCaves( m_originalTeam, FALSE );
-			m_originalTeam = nullptr;
 			if(!getHasPermanentOwner())
 				m_originalTeam = nullptr;
 		}

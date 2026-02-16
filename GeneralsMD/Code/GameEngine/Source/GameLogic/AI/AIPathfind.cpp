@@ -1350,6 +1350,8 @@ Bool PathfindCell::startPathfind( PathfindCell *goalCell  )
 	m_info->m_prevOpen = nullptr;
 	m_info->m_nextSkip = nullptr;
 	m_info->m_prevSkip = nullptr;
+	m_info->m_nextSuperSkip = nullptr;
+	m_info->m_prevSuperSkip = nullptr;
 	m_info->m_pathParent = nullptr;
 	m_info->m_costSoFar = 0;		// start node, no cost to get here
 	m_info->m_totalCost = 0;
@@ -1485,8 +1487,12 @@ void PathfindCell::releaseInfo(void)
 		return;
 	}
 
-	DEBUG_ASSERTCRASH(m_info->m_prevSkip == nullptr && m_info->m_nextSkip == nullptr, ("Shouldn't have skip links."));
-	DEBUG_ASSERTCRASH(m_info->m_prevSuperSkip == nullptr && m_info->m_nextSuperSkip == nullptr, ("Shouldn't have super skip links."));
+	if( s_useNonRetailPathfindOpenSortedList )
+	{
+		DEBUG_ASSERTCRASH(m_info->m_prevSkip == nullptr && m_info->m_nextSkip == nullptr, ("Shouldn't have skip links."));
+		if( s_useNonRetailPathfindSuperSkip )
+			DEBUG_ASSERTCRASH(m_info->m_prevSuperSkip == nullptr && m_info->m_nextSuperSkip == nullptr, ("Shouldn't have super skip links."));
+	}
 	DEBUG_ASSERTCRASH(m_info->m_prevOpen==nullptr && m_info->m_nextOpen==nullptr, ("Shouldn't be linked."));
 	DEBUG_ASSERTCRASH(m_info->m_open==0 && m_info->m_closed==0, ("Shouldn't be linked."));
 	DEBUG_ASSERTCRASH(m_info->m_goalUnitID==INVALID_ID && m_info->m_posUnitID==INVALID_ID, ("Shouldn't be occupied."));

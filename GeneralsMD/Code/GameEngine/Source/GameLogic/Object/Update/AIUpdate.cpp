@@ -154,9 +154,10 @@ struct AttackAngleData
 #ifdef ALLOW_SURRENDER
 		{ "SurrenderDuration",					INI::parseDurationUnsignedInt,		nullptr, offsetof(AIUpdateModuleData, m_surrenderDuration) },
 #endif
-		{ "ForbidPlayerCommands",				INI::parseBool,										nullptr, offsetof(AIUpdateModuleData, m_forbidPlayerCommands) },
-		{ "TurretsLinked",							INI::parseBool,										nullptr, offsetof(AIUpdateModuleData, m_turretsLinked) },
+    { "ForbidPlayerCommands",				INI::parseBool,										nullptr, offsetof(AIUpdateModuleData, m_forbidPlayerCommands) },
+    { "TurretsLinked",							INI::parseBool,										nullptr, offsetof( AIUpdateModuleData, m_turretsLinked ) },
 		{ "PreferredAttackAngle",				AIUpdateModuleData::parseAttackAngle,					nullptr, 0 },
+
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);

@@ -493,13 +493,12 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "MinDistFromEdgeOfMapForBuild",	 INI::parseReal,				nullptr,			offsetof( GlobalData, m_MinDistFromEdgeOfMapForBuild ) },
 	{ "SupplyBuildBorder",	 INI::parseReal,				nullptr,			offsetof( GlobalData, m_SupplyBuildBorder ) },
 	{ "AllowedHeightVariationForBuilding", INI::parseReal,nullptr,			offsetof( GlobalData, m_allowedHeightVariationForBuilding ) },
-	{ "AllowedHeightVariationForBuildingShipyard", INI::parseReal,nullptr,			offsetof(GlobalData, m_allowedHeightVariationForBuildingShipyard) },
 	{ "MinLowEnergyProductionSpeed",INI::parseReal,				nullptr,			offsetof( GlobalData, m_MinLowEnergyProductionSpeed ) },
 	{ "MaxLowEnergyProductionSpeed",INI::parseReal,				nullptr,			offsetof( GlobalData, m_MaxLowEnergyProductionSpeed ) },
 	{ "LowEnergyPenaltyModifier",		INI::parseReal,				nullptr,			offsetof( GlobalData, m_LowEnergyPenaltyModifier ) },
 	{ "MultipleFactory",						INI::parseReal,				nullptr,			offsetof( GlobalData, m_MultipleFactory ) },
 	{ "RefundPercent",							INI::parsePercentToReal,			nullptr,			offsetof( GlobalData, m_RefundPercent ) },
-
+	{ "AllowedHeightVariationForBuildingShipyard", INI::parseReal,nullptr,			offsetof(GlobalData, m_allowedHeightVariationForBuildingShipyard) },
 	{ "CommandCenterHealRange",			INI::parseReal,				nullptr,			offsetof( GlobalData, m_commandCenterHealRange ) },
 	{ "CommandCenterHealAmount",		INI::parseReal,				nullptr,			offsetof( GlobalData, m_commandCenterHealAmount ) },
 
@@ -714,6 +713,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{"ChronoDamageParticleSystemLarge", INI::parseAsciiString, nullptr, offsetof(GlobalData, m_chronoDisableParticleSystemLarge) },
 	{"ChronoDamageParticleSystemMedium", INI::parseAsciiString, nullptr, offsetof(GlobalData, m_chronoDisableParticleSystemMedium) },
 	{"ChronoDamageParticleSystemSmall", INI::parseAsciiString, nullptr, offsetof(GlobalData, m_chronoDisableParticleSystemSmall) },
+
 
 	{"DefaultExcludedDeathTypes", INI::parseDeathTypeFlagsList, nullptr, offsetof(GlobalData, m_defaultExcludedDeathTypes) },
 	{"HeightAboveTerrainIncludesWater", INI::parseBool, nullptr, offsetof(GlobalData, m_heightAboveTerrainIncludesWater) },

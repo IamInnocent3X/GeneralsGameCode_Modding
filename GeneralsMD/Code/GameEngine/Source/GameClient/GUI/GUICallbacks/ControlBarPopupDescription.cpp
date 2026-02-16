@@ -317,6 +317,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 			descrip = TheGameText->fetch(commandButton->getDescriptionLabel());
 
 			Drawable *draw = TheInGameUI->getFirstSelectedDrawable();
+			Object *selectedObject = draw ? draw->getObject() : nullptr;
 
 			//For Specialpowers with cost, add text to the tooltip
 			if (commandButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER ||
@@ -337,8 +338,6 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 				}
 			}
 
-
-			Object *selectedObject = draw ? draw->getObject() : nullptr;
 			if( selectedObject )
 			{
 				//Special case: Append status of overcharge on China power plant.

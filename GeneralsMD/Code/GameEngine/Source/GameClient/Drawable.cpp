@@ -5833,19 +5833,9 @@ void Drawable::xfer( Xfer *xfer )
 	//xfer->xferUnsignedInt( &m_tintStatus );
 	m_tintStatus.xfer(xfer);
 
-	if (version <= 7)
-	{
-		// prev tint status
-		//xfer->xferUnsignedInt( &m_prevTintStatus );
-		m_prevTintStatus.xfer(xfer);
-
-		// TheSuperHackers @bugfix Caball009 21/12/2025 Trigger tinting after loading a save game.
-		if (xfer->getXferMode() == XFER_LOAD)
-		{
-			//m_prevTintStatus = 0;
-			m_prevTintStatus.clear();
-		}
-	}
+	// prev tint status
+	//xfer->xferUnsignedInt( &m_prevTintStatus );
+	m_prevTintStatus.xfer(xfer);
 
 	xfer->xferUnsignedInt( &m_countFrames );
 	xfer->xferUnsignedInt( &m_dontAssignFrames );
@@ -5902,6 +5892,10 @@ void Drawable::xfer( Xfer *xfer )
 		}
 
 	} 
+
+	// TheSuperHackers @bugfix Caball009 21/12/2025 Trigger tinting after loading a save game.
+	if (xfer->getXferMode() == XFER_LOAD)
+		m_prevTintStatus = 0;
 
 	// fading mode
 	xfer->xferUser( &m_fadeMode, sizeof( FadingMode ) );

@@ -169,8 +169,7 @@ const ScienceInfo* ScienceStore::findScienceInfo(ScienceType st) const
 			{ "DisplayName", INI::parseAndTranslateLabel, nullptr, offsetof( ScienceInfo, m_name) },
 			{ "Description", INI::parseAndTranslateLabel, nullptr, offsetof( ScienceInfo, m_description) },
 			{ "GrantUpgrades", INI::parseAsciiStringVector, nullptr, offsetof( ScienceInfo, m_grantedUpgradeNames) },
-			{ nullptr, nullptr, nullptr, 0 }
-		};
+			{ nullptr, nullptr, nullptr, 0 }		};
 
 		ScienceInfo* info = nullptr;
 
