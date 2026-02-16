@@ -83,6 +83,7 @@ public:
 						m_sizeY = 0.0f;
 						m_offsetX = 0.0f;
 						m_offsetY = 0.0f;
+						m_hasDynamicLength = false;
 				}
 
 				char	m_ShadowName[64];	//when set, overrides the default model shadow (used mostly for Decals).
