@@ -202,9 +202,9 @@ void DelayedUpgradeBehavior::triggerUpgrade(void)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool DelayedUpgradeBehavior::resetUpgrade(UpgradeMaskType keyMask)
+Bool DelayedUpgradeBehavior::resetUpgrade(const UpgradeMaskType& keyMask)
 {
-	// DEBUG_LOG(("DelayedUpgradeBehavior::resetUpgrade()."));
+	DEBUG_LOG(("DelayedUpgradeBehavior::resetUpgrade()."));
 	if (UpgradeMux::resetUpgrade(keyMask)) {
 		m_triggerCompleted = FALSE;
 		m_triggerFrame = 0;

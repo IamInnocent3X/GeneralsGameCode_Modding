@@ -1049,6 +1049,10 @@ W3DModelDrawModuleData::W3DModelDrawModuleData() :
 
   m_receivesDynamicLights = TRUE;
 
+	m_ignoreAnimScaling = FALSE;
+	m_ignoreRotation = FALSE;
+	m_showForOwnerOnly = FALSE;
+
 	// m_ignoreConditionStates defaults to all zero, which is what we want
 }
 
