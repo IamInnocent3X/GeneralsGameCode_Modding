@@ -686,7 +686,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // This requires Non-Retail to be configured for pathfinding. Either through Global data, or defining Non-Retail. Credits to: Mauller
 	{ "UseNonRetailAIPathfindDoublyLinkedList",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDoublyLinkedList) }, // Mauller's Doubly Linked Lists for Optimization.
 	{ "UseNonRetailAIPathfindOpenSortedList",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindOpenSortedList) }, // Mauller's Open Sorted Lists for Optimization.
-	{ "UseNonRetailAIPathfindDoublyLinkedList",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindSuperSkip) },  // Mauller's Open Sorted Lists Super Skip for Optimization.
+	{ "UseNonRetailAIPathfindSuperSkip",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindSuperSkip) },  // Mauller's Open Sorted Lists Super Skip for Optimization.
 	{ "UseNonRetailAIPathfindReverseTransverseInsertion",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindReverseTransverseInsertion) }, // Mauller's Reverse Transverse Insertion for Optimization.
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, nullptr, offsetof(GlobalData, m_corpsesHaveAirDrag) },
