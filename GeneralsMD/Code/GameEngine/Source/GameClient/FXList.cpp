@@ -827,7 +827,7 @@ protected:
 						if (!isValidSurface(primary, &info))
 							continue;
 
-						refHeight = needWaterCheck ? info.m_waterHeight : info.m_groundHeight;
+						refHeight = surfaceInfo->m_isWater ? info.m_waterHeight : info.m_groundHeight;
 					}
 
 					if (m_createAtGroundHeight) {
@@ -835,7 +835,7 @@ protected:
 							newPos.z = refHeight + offset.z + m_height.getValue();
 						}
 						else {
-							refHeight = needWaterCheck ? surfaceInfo->m_waterHeight : surfaceInfo->m_groundHeight;
+							refHeight = surfaceInfo->m_isWater ? surfaceInfo->m_waterHeight : surfaceInfo->m_groundHeight;
 							newPos.z = refHeight + offset.z + m_height.getValue();
 						}
 					}
