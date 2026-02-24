@@ -1049,6 +1049,10 @@ W3DModelDrawModuleData::W3DModelDrawModuleData() :
 
   m_receivesDynamicLights = TRUE;
 
+	m_ignoreAnimScaling = FALSE;
+	m_ignoreRotation = FALSE;
+	m_showForOwnerOnly = FALSE;
+
 	// m_ignoreConditionStates defaults to all zero, which is what we want
 }
 
@@ -1438,7 +1442,6 @@ void W3DModelDrawModuleData::parseConditionState(INI* ini, void *instance, void 
 		{ "AltTurretArtAngle", INI::parseAngleReal, nullptr, offsetof(ModelConditionInfo, m_turrets[1].m_turretArtAngle) },
 		{ "AltTurretPitch",	parseBoneNameKey, nullptr, offsetof(ModelConditionInfo, m_turrets[1].m_turretPitchNameKey) },
 		{ "AltTurretArtPitch", INI::parseAngleReal, nullptr, offsetof(ModelConditionInfo, m_turrets[1].m_turretArtPitch) },
-		{ "ShowSubObject", parseShowHideSubObject, (void*)nullptr, offsetof(ModelConditionInfo, m_hideShowVec) },
 		{ "Turret1ArtAngle", INI::parseAngleReal, nullptr, offsetof(ModelConditionInfo, m_turrets[0].m_turretArtAngle) },
 		{ "Turret1Pitch",	parseBoneNameKey, nullptr, offsetof(ModelConditionInfo, m_turrets[0].m_turretPitchNameKey) },
 		{ "Turret1ArtPitch", INI::parseAngleReal, nullptr, offsetof(ModelConditionInfo, m_turrets[0].m_turretArtPitch) },
@@ -1470,7 +1473,7 @@ void W3DModelDrawModuleData::parseConditionState(INI* ini, void *instance, void 
 		{ "Turret8ArtAngle", INI::parseAngleReal, nullptr, offsetof(ModelConditionInfo, m_turrets[7].m_turretArtAngle) },
 		{ "Turret8Pitch",	parseBoneNameKey, nullptr, offsetof(ModelConditionInfo, m_turrets[7].m_turretPitchNameKey) },
 		{ "Turret8ArtPitch", INI::parseAngleReal, nullptr, offsetof(ModelConditionInfo, m_turrets[7].m_turretArtPitch) },
-		{ "ShowSubObject", parseShowHideSubObject, (void*)0, offsetof(ModelConditionInfo, m_hideShowVec) },
+    { "ShowSubObject", parseShowHideSubObject, (void*)nullptr, offsetof(ModelConditionInfo, m_hideShowVec) },
 		{ "HideSubObject", parseShowHideSubObject, (void*)1, offsetof(ModelConditionInfo, m_hideShowVec) },
 		{ "WeaponFireFXBone", parseWeaponBoneName, nullptr, offsetof(ModelConditionInfo, m_weaponFireFXBoneName[0]) },
 		{ "WeaponRecoilBone", parseWeaponBoneName, nullptr, offsetof(ModelConditionInfo, m_weaponRecoilBoneName[0]) },

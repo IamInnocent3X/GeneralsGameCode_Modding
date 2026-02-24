@@ -698,6 +698,7 @@ public:
 		m_minAllowedHeight = -INFINITY;
 		// m_createAtWaterHeight = FALSE;
 		m_allowedSurfaceType = SURFACE_ALL;
+		m_useSurfaceInfo = FALSE;
 	}
 
 	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real overrideRadius, FXSurfaceInfo* surfaceInfo) const
@@ -826,7 +827,7 @@ protected:
 						if (!isValidSurface(primary, &info))
 							continue;
 
-						refHeight = needWaterCheck ? info.m_waterHeight : info.m_groundHeight;
+						refHeight = surfaceInfo->m_isWater ? info.m_waterHeight : info.m_groundHeight;
 					}
 
 					if (m_createAtGroundHeight) {
@@ -834,7 +835,7 @@ protected:
 							newPos.z = refHeight + offset.z + m_height.getValue();
 						}
 						else {
-							refHeight = needWaterCheck ? surfaceInfo->m_waterHeight : surfaceInfo->m_groundHeight;
+							refHeight = surfaceInfo->m_isWater ? surfaceInfo->m_waterHeight : surfaceInfo->m_groundHeight;
 							newPos.z = refHeight + offset.z + m_height.getValue();
 						}
 					}
@@ -1072,11 +1073,13 @@ void FXList::doFXObj(const Object* primary, const Object* secondary) const
 	if (primary && primary->getShroudedStatus(playerIndex) > OBJECTSHROUD_PARTIAL_CLEAR)
 		return;	//the primary object is fogged or shrouded so don't bother with the effect.
 
+	FXSurfaceInfo surfaceInfo;  // Cached water/height
+
 	for (FXNuggetList::const_iterator it = m_nuggets.begin(); it != m_nuggets.end(); ++it)
 	{
 
 		// HERE THE PRIMARY IS THE GUY RECEIVING THE FX, AND SECONDARY MIGHT BE THE GUY DEALING IT
-		(*it)->doFXObj(primary, secondary);
+		(*it)->doFXObj(primary, secondary, &surfaceInfo);
 	}
 }
 

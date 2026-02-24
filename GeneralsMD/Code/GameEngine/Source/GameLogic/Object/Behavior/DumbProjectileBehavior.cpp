@@ -36,6 +36,7 @@
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/ParticleSys.h"
 #include "GameClient/FXList.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
@@ -126,6 +127,8 @@ DumbProjectileBehavior::DumbProjectileBehavior( Thing *thing, const ModuleData* 
 	m_flightPathEnd.zero();
 	m_currentFlightPathStep = 0;
 	m_extraBonusFlags = 0;
+	m_exhaustSysTmpl = nullptr;
+	m_exhaustID = INVALID_PARTICLE_SYSTEM_ID;
 
   m_hasDetonated = FALSE;
 }
@@ -133,6 +136,7 @@ DumbProjectileBehavior::DumbProjectileBehavior( Thing *thing, const ModuleData* 
 //-------------------------------------------------------------------------------------------------
 DumbProjectileBehavior::~DumbProjectileBehavior()
 {
+	 tossExhaust();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -325,6 +329,16 @@ static Bool calcTrajectory(
 #endif // NOT_IN_USE
 
 //-------------------------------------------------------------------------------------------------
+void DumbProjectileBehavior::tossExhaust()
+{
+	if (m_exhaustID != INVALID_PARTICLE_SYSTEM_ID)
+	{
+		TheParticleSystemManager->destroyParticleSystemByID(m_exhaustID);
+		m_exhaustID = INVALID_PARTICLE_SYSTEM_ID;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 // Prepares the missile for launch via proper weapon-system channels.
 //-------------------------------------------------------------------------------------------------
 void DumbProjectileBehavior::projectileLaunchAtObjectOrPosition(
@@ -407,6 +421,12 @@ void DumbProjectileBehavior::projectileFireAtObjectOrPosition( const Object *vic
 		return;
 	}
 	m_currentFlightPathStep = 0;// We are at the first point, because the launching put us there
+
+	m_exhaustSysTmpl = exhaustSysOverride;
+	if (m_exhaustSysTmpl != nullptr)
+	{
+		m_exhaustID = TheParticleSystemManager->createAttachedParticleSystemID(m_exhaustSysTmpl, getObject());
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -844,6 +864,18 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 		}
 
 	}
+
+	AsciiString exhaustName;
+	if (m_exhaustSysTmpl)
+	{
+		exhaustName = m_exhaustSysTmpl->getName();
+	}
+	xfer->xferAsciiString(&exhaustName);
+	if (exhaustName.isNotEmpty() && m_exhaustSysTmpl == nullptr)
+	{
+		m_exhaustSysTmpl = TheParticleSystemManager->findTemplate(exhaustName);
+	}
+
 
 	// lifespan frame
 	xfer->xferUnsignedInt( &m_lifespanFrame );
