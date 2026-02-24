@@ -553,6 +553,9 @@ public:  // ********************************************************************
 	Bool isInAttackMoveToMode( void ) const		{ return m_attackMoveToMode; }
 	void clearAttackMoveToMode( void )				{ m_attackMoveToMode = FALSE; }
 
+	Bool isInReverseMoveToMode( void ) const;
+	void clearMoveStateIfDoOnce( void );
+
 	void setCameraRotateLeft( Bool set )		{ m_cameraRotatingLeft = set; }
 	void setCameraRotateRight( Bool set )		{ m_cameraRotatingRight = set; }
 	void setCameraZoomIn( Bool set )				{ m_cameraZoomingIn = set; }

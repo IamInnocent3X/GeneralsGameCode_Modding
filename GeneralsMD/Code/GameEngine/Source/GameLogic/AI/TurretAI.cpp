@@ -272,6 +272,7 @@ void TurretAIData::buildFieldParse(MultiIniFieldParse& p)
 		{ "MinTurretAngle",             TurretAIData::parseMinMaxAngle,									nullptr, offsetof(TurretAIData, m_minTurretAngle) },
 		{ "MaxTurretAngle",             TurretAIData::parseMinMaxAngle,									nullptr, offsetof(TurretAIData, m_maxTurretAngle) },
 		{ "UseTurretOffsetForAiming",		INI::parseBool,												nullptr, offsetof(TurretAIData, m_useTurretOffset) },
+		{ "CanFireOnTheMove",			INI::parseBool,												nullptr, offsetof( TurretAIData, m_canFireOnTheMove ) },
 		// { "TurretAngleLimited",             INI::parseBool,									nullptr, offsetof(TurretAIData, m_hasLimitedTurretAngle) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -300,7 +301,8 @@ TurretAI::TurretAI(Object* owner, const TurretAIData* data, WhichTurretType tur)
 	m_enabled(!data->m_initiallyDisabled),
 	m_firesWhileTurning(data->m_firesWhileTurning),
 	m_isForceAttacking(false),
-	m_victimInitialTeam(nullptr)
+	m_victimInitialTeam(nullptr),
+	m_lastTargetObj(INVALID_ID)
 {
 	m_continuousFireExpirationFrame = -1;
 	if (!m_data)
@@ -369,6 +371,7 @@ void TurretAI::xfer( Xfer *xfer )
 
 	xfer->xferUser(&m_target, sizeof(m_target));
 	xfer->xferUnsignedInt(&m_continuousFireExpirationFrame);
+	xfer->xferObjectID( &m_lastTargetObj );
 	Bool tmpBool;
 #define UNPACK_AND_XFER(val) {tmpBool = val; xfer->xferBool(&tmpBool); val = tmpBool;}
 	UNPACK_AND_XFER(m_playRotSound);
@@ -724,6 +727,32 @@ TurretTargetType TurretAI::friend_getTurretTarget( Object*& obj, Coord3D& pos, B
 }
 
 //----------------------------------------------------------------------------------------------------------
+void TurretAI::registerCurrentTargetObject()
+{
+	m_lastTargetObj = INVALID_ID;
+	if (m_target != TARGET_OBJECT)
+		return;
+
+	Object* goalObj = m_turretStateMachine->getGoalObject();
+	if(goalObj && !goalObj->isEffectivelyDead())
+		m_lastTargetObj = goalObj->getID();
+}
+
+//----------------------------------------------------------------------------------------------------------
+Bool TurretAI::canFireOnTheMove() const
+{
+	if(!m_data->m_canFireOnTheMove)
+		return FALSE;
+
+	Object *goalObj = m_turretStateMachine->getGoalObject();
+	// Only get targets that are not ALLIES
+	if(goalObj && !goalObj->isEffectivelyDead() && goalObj->getRelationship(m_owner) != ALLIES)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+//----------------------------------------------------------------------------------------------------------
 void TurretAI::removeSelfAsTargeter()
 {
 	// be paranoid, in case we are called from dtors, etc.
@@ -758,6 +787,12 @@ void TurretAI::setTurretTargetObject( Object *victim, Bool forceAttacking )
 		// if nuking the victim, remove self as targeter before doing anything else.
 		// (note that we never ADD self as targeter here; that is done in the aim state)
 		removeSelfAsTargeter();
+	}
+
+	if (victim && victim->getID() == m_lastTargetObj)
+	{
+		// Once redirecting targets from last state, remove the target as it is set
+		m_lastTargetObj = INVALID_ID;
 	}
 
 	m_turretStateMachine->setGoalObject( victim );	// could be null! this is OK!

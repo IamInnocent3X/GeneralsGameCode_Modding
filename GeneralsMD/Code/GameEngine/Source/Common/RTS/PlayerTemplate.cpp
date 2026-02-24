@@ -133,6 +133,7 @@
 		{ "DoRepairCursorName",					INI::parseAsciiString,													nullptr, offsetof( PlayerTemplate, m_doRepairCursorName ) },
 		{ "ResumeConstructionCursorName",		INI::parseAsciiString,													nullptr, offsetof( PlayerTemplate, m_resumeConstructionCursorName ) },
 		{ "SetRallyPointCursorName",			INI::parseAsciiString,													nullptr, offsetof( PlayerTemplate, m_setRallyPointCursorName ) },
+		{ "ReverseMoveCursorName",				INI::parseAsciiString,													nullptr, offsetof( PlayerTemplate, m_reverseMoveToCursorName ) },
 		{ "BuildCursorName",					INI::parseAsciiString,													nullptr, offsetof( PlayerTemplate, m_buildCursorName ) },
 		{ "InvalidBuildCursorName",				INI::parseAsciiString,													nullptr, offsetof( PlayerTemplate, m_invalidBuildCursorName ) },
 

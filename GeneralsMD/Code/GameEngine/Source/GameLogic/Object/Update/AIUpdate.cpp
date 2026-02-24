@@ -344,7 +344,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_turretSyncFlag = TURRET_INVALID;
 	m_attitude = ATTITUDE_NORMAL;
 	m_nextMoodCheckTime = 0;
-	m_locoClumpScanFrame = 0;
+	//m_locoClumpScanFrame = 0;
 #ifdef ALLOW_DEMORALIZE
 	m_demoralizedFramesLeft = 0;
 #endif
@@ -374,7 +374,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_isInUpdate = FALSE;
 	m_fixLocoInPostProcess = FALSE;
 	m_speedMultiplier = 1.0;
-	m_continueToUpdateFixLocoClump = FALSE;
+	//m_continueToUpdateFixLocoClump = FALSE;
 	//m_locomotorIsLocked = FALSE;
 
 	//m_orbitingRadius = 0.0f;
@@ -796,6 +796,55 @@ Object* AIUpdateInterface::getTurretTargetObject( WhichTurretType tur, Bool clea
 		}
 	}
 	return nullptr;
+}
+
+//=============================================================================
+void AIUpdateInterface::registerCurrentTurretTargetObject(Bool registerAllData)
+{
+	for (int i = 0; i < MAX_TURRETS; i++)
+	{
+		if (m_turretAI[i] && (registerAllData || m_turretAI[i]->canFireOnTheMove()))
+		{
+			m_turretAI[i]->registerCurrentTargetObject();
+		}
+	}
+}
+
+//=============================================================================
+void AIUpdateInterface::orderTurretsToTargetLastObjects()
+{
+	for (int i = 0; i < MAX_TURRETS; i++)
+	{
+		if (m_turretAI[i])
+		{
+			if(m_turretAI[i]->getLastTargetObj() != INVALID_ID)
+			{
+				Object *o = TheGameLogic->findObjectByID(m_turretAI[i]->getLastTargetObj());
+				if(o && !o->isEffectivelyDead())
+				{
+					getObject()->setNeedUpdateTurretPositioning(TRUE);
+					m_turretAI[i]->setTurretTargetObject(o, FALSE);
+				}
+			}
+			else
+			{
+				m_turretAI[i]->setTurretTargetObject(nullptr, FALSE);
+			}
+		}
+	}
+}
+
+//=============================================================================
+Bool AIUpdateInterface::getTurretCanAttackWhileMoving() const
+{
+	for (int i = 0; i < MAX_TURRETS; i++)
+	{
+		if (m_turretAI[i] && m_turretAI[i]->canFireOnTheMove())
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 //=============================================================================
@@ -1253,6 +1302,31 @@ UpdateSleepTime AIUpdateInterface::update( void )
 		}
 		m_movementComplete = FALSE;
 		ignoreObstacle(nullptr);
+
+		Object *obj = getObject();
+		if( !obj->isEffectivelyDead() && obj->getPreserveAttackDataWhileMoving() )
+		{
+			if( obj->getLastVictimID() != INVALID_ID )
+			{
+				WeaponSlotType wslot;
+				obj->getLastShotFiredFrame(&wslot);
+				Weapon *weapon = obj->getWeaponInWeaponSlot(wslot);
+				if( weapon && weapon->getPossibleNextShotFrame() < 0x7fffffff && weapon->getPossibleNextShotFrame() > TheGameLogic->getFrame() )
+				{
+					Object *victim = TheGameLogic->findObjectByID(obj->getLastVictimID());
+					CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, victim, CMD_FROM_AI, (WeaponSlotType)-1, TRUE );
+					if( result == ATTACKRESULT_POSSIBLE )
+					{
+						privateAttackObject( victim, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
+					}
+				}
+			}
+			// Remove the reverse formation setting
+			obj->setReverseFormationID(NO_FORMATION_ID);
+
+			// Order the Turrets to target their last Objects
+			orderTurretsToTargetLastObjects();
+		}
 	}
 
 	UnsignedInt now = TheGameLogic->getFrame();
@@ -1475,10 +1549,10 @@ Real AIUpdateInterface::calculateMaxBlockedSpeed(Object *other) const
 		return m_curMaxBlockedSpeed;
 	}
 	Real maxSpeed = awaySpeed / dotProduct;
-	if (other->getFormationID()!=NO_FORMATION_ID && getObject()->getFormationID()==other->getFormationID() && getObject()->getFormationIsCommandMap()) {
+	if (other->getFormationID()!=NO_FORMATION_ID && getObject()->getFormationID()==other->getFormationID() && !getObject()->getIsDoingReverseMove() && getObject()->getFormationIsCommandMap()) {
 		Bool isAirborne = getObject()->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (getObject()->isKindOf( KINDOF_AIRCRAFT ) && isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
 		if(!isAirborne)
-			maxSpeed *= 0.55f; // don't let formations crowd each other.
+			maxSpeed *= max(0.0f, 1.0f - TheGlobalData->m_formationBlockedSpeedPenalty); // don't let formations crowd each other.
 	}
 	if (maxSpeed>m_curMaxBlockedSpeed) return m_curMaxBlockedSpeed;
 	return maxSpeed;
@@ -2367,7 +2441,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 	Bool blocked = m_blockedFrames > 0;
 	Bool requiresConstantCalling = TRUE;	// assume the worst.
-	UnsignedInt now = TheGameLogic->getFrame();
+	//UnsignedInt now = TheGameLogic->getFrame();
 
 	if (m_curLocomotor)
 	{
@@ -2503,8 +2577,8 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 									pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
 								getObject()->setPosition(&pos);
 							}
-
-							getObject()->setLastActualSpeed(0.0f);
+							//getObject()->setReverseFormationID(NO_FORMATION_ID);
+							//getObject()->setLastActualSpeed(0.0f);
 						}
 						requiresConstantCalling = m_curLocomotor->locoUpdate_maintainCurrentPosition(getObject());
 					}
@@ -2744,7 +2818,8 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 			&& m_isBlocked == FALSE
 			&& requiresConstantCalling == FALSE)
 	{
-		return m_continueToUpdateFixLocoClump && m_locoClumpScanFrame > now ? UPDATE_SLEEP(m_locoClumpScanFrame - now) : UPDATE_SLEEP_FOREVER;
+		//return m_continueToUpdateFixLocoClump && m_locoClumpScanFrame > now ? UPDATE_SLEEP(m_locoClumpScanFrame - now) : UPDATE_SLEEP_FOREVER;
+		return UPDATE_SLEEP_FOREVER;
 	}
 	else
 	{
@@ -3565,6 +3640,18 @@ void AIUpdateInterface::privateIdle(CommandSourceType cmdSource)
 {
 	if (getObject()->isKindOf(KINDOF_PROJECTILE))
 		return;
+
+	// If we are told to idle, stop all our current attacking if we can attack
+	if(m_currentVictimID != INVALID_ID || getStateMachine()->getGoalObject() || getObject()->getPreserveAttackDataWhileMoving())
+	{
+		setCurrentVictim(nullptr);
+		for (int i = 0; i < MAX_TURRETS; ++i)
+			setTurretTargetObject((WhichTurretType)i, nullptr, FALSE);
+		friend_setGoalObject(nullptr);
+	}
+
+	// Remove reverse formation configuration
+	getObject()->setReverseFormationID(NO_FORMATION_ID);
 
 	getStateMachine()->clear();
 	getStateMachine()->setState( AI_IDLE );

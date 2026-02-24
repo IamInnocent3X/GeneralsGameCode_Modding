@@ -250,6 +250,7 @@ public:
 		MSG_META_DEPLOY,														///< selected units 'deploy'
 		MSG_META_CREATE_FORMATION,									///< selected units become a formation
 		MSG_META_MOVE_IN_FORMATION,									///< selected units move in formation
+		MSG_META_REVERSE_MOVE,										///< selected units move in reverse
 		MSG_META_FOLLOW,														///< selected units 'follow'
 		MSG_META_CHAT_PLAYERS,											///< send chat msg to all players
 		MSG_META_CHAT_ALLIES,												///< send chat msg to allied players
@@ -483,6 +484,7 @@ public:
 		MSG_DO_MOVETO_HINT,													///< (location) If clicked, a move would be ordered, "Current Selection" is assumed
 		MSG_DO_ATTACKMOVETO_HINT,										///< (location) If clicked, a move would be ordered, "Current Selection" is assumed
 		MSG_ADD_WAYPOINT_HINT,											///< (location) If clicked, a waypoint will be added for currently selected units.
+		MSG_DO_REVERSE_MOVETO_HINT,										///< (location) If clicked, a move would be ordered, "Current Selection" is assumed
 		//Context command hints
 		MSG_HIJACK_HINT,								///< if clicked, selected unit(s) will attempt to take over vehicle.
 		MSG_SABOTAGE_HINT,
@@ -603,6 +605,7 @@ public:
 		MSG_DO_ATTACKMOVETO,												///< location
 		MSG_DO_FORCEMOVETO,													///< location
 		MSG_ADD_WAYPOINT,														///< location
+		MSG_DO_REVERSE_MOVETO,													///< location
 		MSG_DO_GUARD_POSITION,											///< Guard with the currently selected group
 		MSG_DO_GUARD_OBJECT,												///< Guard with the currently selected group
 		MSG_DO_STOP,																///< Stop with the currently selected group
@@ -628,6 +631,7 @@ public:
 		MSG_SELF_DESTRUCT,													///< Destroys a player's units (for copy protection or to quit to observer)
 		MSG_CREATE_FORMATION,												///< Creates a formation.
 		MSG_MOVE_IN_FORMATION,												///< Units move in formation.
+		MSG_REVERSE_MOVE,													///< Units move in reverse
 		MSG_LOGIC_CRC,															///< CRC from the logic passed around in a network game :)
 		MSG_SET_MINE_CLEARING_DETAIL,								///< CRC from the logic passed around in a network game :)
 		MSG_ENABLE_RETALIATION_MODE,								///< Turn retaliation mode on or off for the specified player.

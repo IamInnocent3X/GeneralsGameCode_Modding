@@ -657,6 +657,9 @@ public:
 	Bool m_enableKillPilotForStructures;
 	Bool m_enableNestedStructures;
 
+	Real m_formationBlockedSpeedPenalty;
+	Real m_globalReverseMoveSpeedPenalty;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

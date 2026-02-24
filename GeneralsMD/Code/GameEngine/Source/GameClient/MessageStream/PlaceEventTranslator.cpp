@@ -320,7 +320,10 @@ GameMessageDisposition PlaceEventTranslator::translateGameMessage(const GameMess
 			}
 
 			if (disp == DESTROY_MESSAGE)
+			{
 				TheInGameUI->clearAttackMoveToMode();
+				TheInGameUI->clearMoveStateIfDoOnce();
+			}
 
 			break;
 

@@ -716,6 +716,7 @@ public:
 	const AsciiString& friend_getBuildCursorName() const {return m_buildCursorName;	}
 	const AsciiString& friend_getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 	const AsciiString& friend_getSalvageCursorName() const {return m_salvageCursorName;	}
+	const AsciiString& friend_getReverseMoveToCursorName() const {return m_reverseMoveToCursorName;	}
 	
 	Bool friend_getUseMyGetRepairAtCursor() const {return m_useMyGetRepairAtCursor;	}
 	Bool friend_getUseMyDockCursor() const {return m_useMyDockCursor;	}
@@ -814,6 +815,7 @@ private:
 	AsciiString				m_enterAggressiveCursorName;
 	AsciiString				m_setRallyPointCursorName;
 	AsciiString				m_salvageCursorName;
+	AsciiString				m_reverseMoveToCursorName;
 	AsciiString				m_buildCursorName;
 	AsciiString				m_invalidBuildCursorName;
 

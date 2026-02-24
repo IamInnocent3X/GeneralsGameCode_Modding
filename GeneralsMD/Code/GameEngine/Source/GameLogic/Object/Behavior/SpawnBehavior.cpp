@@ -1156,8 +1156,6 @@ Bool SpawnBehavior::computeAggregateMembers()
 		{
 			avgSpawnPos.add(currentSpawn->getPosition());
 
-			isMoving = isMoving || currentSpawn->getLastActualSpeed() > 0;
-
 			if( !isMoving )
 			{
 				ai = currentSpawn->getAI();

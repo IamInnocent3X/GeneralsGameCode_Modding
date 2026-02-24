@@ -480,6 +480,10 @@ public:
 	Bool isTurretUsingOffset(WhichTurretType tur) const;
 	Vector2 getTurretOffset2D(WhichTurretType tur, WeaponSlotType wslot) const;
 
+	void registerCurrentTurretTargetObject(Bool registerAllData);
+	void orderTurretsToTargetLastObjects();
+	Bool getTurretCanAttackWhileMoving() const;
+
 	// "Planning Mode" -----------------------------------------------------------------------------------
 	Bool queueWaypoint(const Coord3D* pos);				///< add waypoint to end of move list. return true if success, false if queue was full and those the waypoint not added
 	void clearWaypointQueue(void);								///< reset the waypoint queue to empty
@@ -815,7 +819,7 @@ private:
 	// AI -------------------------------------------------------------------------------------------
 	AttitudeType	m_attitude;
 	UnsignedInt		m_nextMoodCheckTime;
-	UnsignedInt		m_locoClumpScanFrame;
+	//UnsignedInt		m_locoClumpScanFrame;
 
 	// Common AI "status" effects -------------------------------------------------------------------
 #ifdef ALLOW_DEMORALIZE
@@ -852,7 +856,7 @@ private:
 	Bool				m_allowedToChase;						///< Allowed to pursue targets.
 	Bool				m_isInUpdate;								///< If true, we are inside our update method.
 	Bool				m_fixLocoInPostProcess;
-	Bool				m_continueToUpdateFixLocoClump;
+	//Bool				m_continueToUpdateFixLocoClump;
 	//Bool				m_locomotorIsLocked;
 
 	Real        m_speedMultiplier;          ///< global multiplier to move speed (kept in AIUpdate rather than Locomotor because it's persistent)

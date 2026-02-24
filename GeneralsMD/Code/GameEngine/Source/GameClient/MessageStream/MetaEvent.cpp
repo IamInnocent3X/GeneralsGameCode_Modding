@@ -145,6 +145,7 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "DEPLOY",																		GameMessage::MSG_META_DEPLOY },
 	{ "CREATE_FORMATION",													GameMessage::MSG_META_CREATE_FORMATION },
 	{ "MOVE_IN_FORMATION",													GameMessage::MSG_META_MOVE_IN_FORMATION },
+	{ "REVERSE_MOVE",														GameMessage::MSG_META_REVERSE_MOVE },
 	{ "FOLLOW",																		GameMessage::MSG_META_FOLLOW },
 	{ "CHAT_PLAYERS",															GameMessage::MSG_META_CHAT_PLAYERS },
 	{ "CHAT_ALLIES",															GameMessage::MSG_META_CHAT_ALLIES },

@@ -2141,6 +2141,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -3283,6 +3284,7 @@ void ScriptActions::doDisableInput()
 		TheMouse->setVisibility(false);
 		TheInGameUI->deselectAllDrawables();
 		TheInGameUI->clearAttackMoveToMode();
+		TheInGameUI->clearMoveStateIfDoOnce();
 		TheInGameUI->setWaypointMode( FALSE );
 		TheControlBar->deleteBuildTooltipLayout();
 		TheLookAtTranslator->resetModes();

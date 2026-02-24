@@ -564,6 +564,7 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 
 			case GameMessage::MSG_DO_MOVETO:
 			case GameMessage::MSG_DO_ATTACKMOVETO:
+			case GameMessage::MSG_DO_REVERSE_MOVETO:
 			case GameMessage::MSG_GET_REPAIRED:
 			case GameMessage::MSG_GET_HEALED:
 			case GameMessage::MSG_DO_SALVAGE:
@@ -913,6 +914,7 @@ void pickAndPlayUnitVoiceResponse( const DrawableList *list, GameMessage::Type m
 
 				case GameMessage::MSG_DO_MOVETO:
 				case GameMessage::MSG_DO_ATTACKMOVETO:
+				case GameMessage::MSG_DO_REVERSE_MOVETO:
 				case GameMessage::MSG_GET_REPAIRED:
 				case GameMessage::MSG_GET_HEALED:
 				case GameMessage::MSG_DO_SALVAGE:
@@ -1069,6 +1071,10 @@ GameMessage::Type CommandTranslator::issueMoveToLocationCommand( const Coord3D *
 		else if( TheInGameUI->isInAttackMoveToMode())
 		{
 			msgType = GameMessage::MSG_DO_ATTACKMOVETO;
+		}
+		else if( TheInGameUI->isInReverseMoveToMode() )
+		{
+			msgType = GameMessage::MSG_DO_REVERSE_MOVETO;
 		}
 		else if( TheInGameUI->isInForceMoveToMode() )
 		{
@@ -2836,6 +2842,12 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					//Attack move
 					msgType = GameMessage::MSG_DO_ATTACKMOVETO_HINT;
 				}
+				else if( TheInGameUI->isInReverseMoveToMode() )
+				{
+					//THIS CODE WILL NEVER EVER GET CALLED! -- it's a context command now (READ: rip code out)
+					//Reverse move
+					msgType = GameMessage::MSG_DO_REVERSE_MOVETO_HINT;
+				}
 				else
 				{
 					//Normal and forced move.
@@ -3646,6 +3658,17 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 			disp = DESTROY_MESSAGE;
 			break;
+
+		//-----------------------------------------------------------------------------------------
+		case GameMessage::MSG_META_REVERSE_MOVE:
+		{
+			// This message always works on the currently selected team
+			GameMessage *newMsg = TheMessageStream->appendMessage(GameMessage::MSG_REVERSE_MOVE);
+			newMsg->appendBooleanArgument(FALSE);
+
+			disp = DESTROY_MESSAGE;
+			break;
+		}
 
 		//-----------------------------------------------------------------------------------------
 		case GameMessage::MSG_META_DEPLOY:
@@ -4542,6 +4565,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 					disp = DESTROY_MESSAGE;
 					TheInGameUI->clearAttackMoveToMode();
+					TheInGameUI->clearMoveStateIfDoOnce();
 				}
 			}
 
@@ -4650,6 +4674,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 				disp = DESTROY_MESSAGE;
 				TheInGameUI->clearAttackMoveToMode();
+				TheInGameUI->clearMoveStateIfDoOnce();
 
 				//issueMoveToLocationCommand( &pos, draw, DO_COMMAND );
 			}

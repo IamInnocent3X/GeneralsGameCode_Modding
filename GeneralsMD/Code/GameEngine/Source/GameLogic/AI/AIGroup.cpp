@@ -558,6 +558,7 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 		}
 		case GameMessage::MSG_DO_FORCEMOVETO:
 		case GameMessage::MSG_DO_ATTACKMOVETO:
+		case GameMessage::MSG_DO_REVERSE_MOVETO:
 		case GameMessage::MSG_DO_GUARD_POSITION:
 		case GameMessage::MSG_DO_GUARD_OBJECT:
 		{
@@ -756,7 +757,7 @@ Bool AIGroup::getCenter( Coord3D *center )
 	return count > 0;
 }
 
-Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center )
+Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool isDoingReverseMove )
 {
 	Int count = 0;
 	min->x = 1e10f;
@@ -771,6 +772,10 @@ Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center )
 	FormationID id= NO_FORMATION_ID;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
+		if( !isDoingReverseMove )
+		{
+			(*i)->setReverseFormationID(NO_FORMATION_ID);
+		}
 		if( (*i)->isDisabledByType( DISABLED_HELD) )
 		{
 			continue; // don't bother counting riders in the center calculation.
@@ -950,7 +955,7 @@ static const Int PATH_DIAMETER_IN_CELLS = 6;
 /**
  * Move to given position(s)
  */
-Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource )
+Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool isDoingReverseMove )
 
 {
 
@@ -967,7 +972,7 @@ Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cm
 	if (TheGlobalData->m_debugAI==AI_DEBUG_TERRAIN) return false;
 
 	Bool closeEnough = false;
-	getMinMaxAndCenter( &min, &max, &center );
+	getMinMaxAndCenter( &min, &max, &center, isDoingReverseMove );
 	Real distSqr = 4*sqr(TheAI->getAiData()->m_distanceRequiresGroup);
 
 	Int numInfantry = 0;
@@ -2076,7 +2081,7 @@ void clampWaypointPosition( Coord3D &position, Int margin )
 /**
  * Move to given position(s)
  */
-void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, CommandSourceType cmdSource )
+void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, CommandSourceType cmdSource, Bool isDoingReverseMove )
 {
 
   Coord3D position = *p_posIn;
@@ -2091,7 +2096,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	Coord3D dest;
 	Bool tightenGroup = FALSE;
 
-	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
+	Bool isFormation = getMinMaxAndCenter( &min, &max, &center, !addWaypoint && isDoingReverseMove );
 	if (addWaypoint)
   {
     isFormation = false;
@@ -2099,7 +2104,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
 
 	if (!addWaypoint && !isFormation) {
-		friend_computeGroundPath(pos, cmdSource);
+		friend_computeGroundPath(pos, cmdSource, isDoingReverseMove);
 		didInfantry = friend_moveInfantryToPos(pos, cmdSource);
 		didVehicles = friend_moveVehicleToPos(pos, cmdSource);
 	}
@@ -2161,7 +2166,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	}
 
 	if (isFormation) {
-		friend_computeGroundPath(pos, cmdSource);
+		friend_computeGroundPath(pos, cmdSource, isDoingReverseMove);
 		friend_moveFormationToPos(pos, cmdSource);
 		return;
 	}
@@ -3292,7 +3297,7 @@ void AIGroup::groupHackInternet( CommandSourceType cmdSource )				///< Begin hac
 }
 
 
-void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandMap )				///< Create a formation.
+void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandMap, Bool isReverseMove )				///< Create a formation.
 {
 	//Coord3D center;
 	//Coord2D min;
@@ -3311,7 +3316,7 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 		countID = (*i)->getFormationID();
 
 		// New - If the command is not from command map but from Moving as formation, we count the whether to create a new formation based on members present
-		if(!isCommandMap)
+		if(!isReverseMove && !isCommandMap)
 		{
 			if(countID == NO_FORMATION_ID && lastCountID != NO_FORMATION_ID)
 				createNewGroup = TRUE;
@@ -3322,13 +3327,13 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 
 	// New - If the command is not from command map but from Moving as formation
 	//       determine whether to create the group based on the information above and whether the last member counted has a group already
-	if(!isCommandMap && !createNewGroup && lastCountID != NO_FORMATION_ID)
+	if(!isReverseMove && !isCommandMap && !createNewGroup && lastCountID != NO_FORMATION_ID)
 		return;
 
 	Coord3D center;
 	Coord2D min;
 	Coord2D max;
-	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
+	Bool isFormation = getMinMaxAndCenter( &min, &max, &center, isReverseMove );
 	FormationID id = TheAI->getNextFormationID();
 
 	if (count==1 && countID!=NO_FORMATION_ID) {
@@ -3345,7 +3350,7 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
 
 		// New, don't overwrite the Formation set from Command Map and Those Moving in Groups
-		if(obj->getFormationIsCommandMap() && !isCommandMap)
+		if(!isReverseMove && obj->getFormationIsCommandMap() && !isCommandMap)
 			continue;
 
 		if (ai)
@@ -3354,11 +3359,26 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 			Coord2D offset;
 			offset.x = pos.x - center.x;
 			offset.y = pos.y - center.y;
-			obj->setFormationID(id);
-			obj->setFormationOffset(offset);
+			if(isReverseMove)
+			{
+				if(id == NO_FORMATION_ID)
+				{
+					obj->setIsDoingReverseMove();
+				}
+				else
+				{
+					obj->setReverseFormationID(id);
+					obj->setReverseFormationOffset(offset);
+				}
+			}
+			else
+			{
+				obj->setFormationID(id);
+				obj->setFormationOffset(offset);
+			}
 
 			// New, don't mix the Formation set from Command Map and Moving in Groups
-			if(isCommandMap)
+			if(!isReverseMove && isCommandMap)
 				obj->setFormationIsCommandMap(id!=NO_FORMATION_ID);
 		}
 	}
@@ -3753,6 +3773,13 @@ void AIGroup::groupDoCommandButton( const CommandButton *commandButton, CommandS
 //-------------------------------------------------------------------------------------
 void AIGroup::groupDoCommandButtonAtPosition( const CommandButton *commandButton, const Coord3D *pos, CommandSourceType cmdSource )
 {
+	if(commandButton && commandButton->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+	{
+		groupCreateFormation( cmdSource, FALSE, TRUE );
+		groupMoveToPosition( pos, false, cmdSource, TRUE );
+		return;
+	}
+
 	std::list<Object *>::iterator i;
 	Object *source;
 

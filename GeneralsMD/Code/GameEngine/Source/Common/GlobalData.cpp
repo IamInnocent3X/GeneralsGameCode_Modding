@@ -703,6 +703,10 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "EnableKillPilotForStructures",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableKillPilotForStructures) },
 	{ "EnableNestedStructures",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableNestedStructures) },
 
+	{ "FormationBlockedSpeedPenalty",	 INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_formationBlockedSpeedPenalty) },
+	{ "ReverseMoveSpeedPenalty",	 INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_globalReverseMoveSpeedPenalty) },
+
+
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, nullptr, offsetof(GlobalData, m_chronoDamageHealRate)},
 	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageHealAmount) },
@@ -1310,6 +1314,9 @@ GlobalData::GlobalData()
 	m_enableDoubleClick = FALSE;
 	m_enableKillPilotForStructures = FALSE;
 	m_enableNestedStructures = FALSE;
+
+	m_formationBlockedSpeedPenalty = 0.45f;
+	m_globalReverseMoveSpeedPenalty = 0.0f;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

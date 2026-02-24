@@ -444,10 +444,17 @@ public:
 	// User specified formation.
 	void setFormationID(enum FormationID id) {m_formationID = id;}
 	void setFormationIsCommandMap(Bool e) {m_formationIsCommandMap = e;}
-	enum FormationID getFormationID(void) const {return m_formationID;}
+	enum FormationID getFormationID(void) const {return m_reverseFormationID != NO_FORMATION_ID ? m_reverseFormationID : m_formationID;}
 	void setFormationOffset(const Coord2D& offset) {m_formationOffset = offset;}
-	void getFormationOffset(Coord2D* offset) const {*offset = m_formationOffset;}
+	void getFormationOffset(Coord2D* offset) const {*offset = (m_reverseFormationID != NO_FORMATION_ID ? m_reverseFormationOffset : m_formationOffset);}
 	Bool getFormationIsCommandMap() const { return m_formationIsCommandMap; }
+	Bool getIsDoingReverseMove() const { return m_reverseFormationID != NO_FORMATION_ID || m_isDoingReverseMove; }
+
+	void setIsDoingReverseMove() { m_isDoingReverseMove = TRUE; }
+	void setReverseFormationID(enum FormationID id) {m_reverseFormationID = id; m_isDoingReverseMove = FALSE;}
+	void setReverseFormationOffset(const Coord2D& offset) {m_reverseFormationOffset = offset;}
+
+	Bool getPreserveAttackDataWhileMoving() const;
 
 
 //THIS FUNCTION BELONGS AT THE OBJECT LEVEL BECAUSE THERE IS AT LEAST ONE SPECIAL UNIT
@@ -583,7 +590,7 @@ public:
 	void fireCurrentWeapon(const Coord3D* pos);
 	void preFireCurrentWeapon( const Object *victim );
 	void preFireCurrentWeapon(const Coord3D* pos);
-	UnsignedInt getLastShotFiredFrame() const;					///< Get the frame a shot was last fired on
+	UnsignedInt getLastShotFiredFrame(WeaponSlotType *wslot = nullptr) const;					///< Get the frame a shot was last fired on
 	ObjectID getLastVictimID() const;						///< Get the last victim we shot at
 	Weapon* findWaypointFollowingCapableWeapon();
 	Bool getAmmoPipShowingInfo(Int& numTotal, Int& numFull) const;
@@ -946,6 +953,7 @@ public:
 	const AsciiString& getBuildCursorName() const;
 	const AsciiString& getInvalidBuildCursorName() const;
 	const AsciiString& getSalvageCursorName() const;
+	const AsciiString& getReverseMoveToCursorName() const;
 	
 	Bool useMyGetRepairAtCursor() const;
 	Bool useMyDockCursor() const;
@@ -1216,6 +1224,10 @@ private:
 
 	typedef std::hash_map< AsciiString, CommandModifiersVec, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CommandSetModifiersMap;
 	CommandSetModifiersMap						m_controlBarModifiersApplied;						///< By applying Modifers, we can alter the one command shown in a command set
+
+	FormationID										m_reverseFormationID;
+	Coord2D												m_reverseFormationOffset;
+	Bool											m_isDoingReverseMove;
 
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;

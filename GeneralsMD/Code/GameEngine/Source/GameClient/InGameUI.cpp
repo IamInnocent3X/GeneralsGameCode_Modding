@@ -594,6 +594,8 @@ void InGameUI::setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorNam
 	{
 		if(curPlayer->getUnitsMoveInFormation())
 			c = Mouse::MOVE_IN_FORMATION_TO;
+		else if(curPlayer->getUnitsMoveInReverse())
+			c = Mouse::REVERSE_MOVE;
 	}
 
 	Int index = (Int)c;
@@ -630,6 +632,10 @@ void InGameUI::setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorNam
 				case Mouse::MOVE_IN_FORMATION_TO:
 					if(!curPlayer->getPlayerTemplate()->getMoveInFormationToCursorName().isEmpty())
 						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getMoveInFormationToCursorName() );
+					break;
+				case Mouse::REVERSE_MOVE:
+					if(!curPlayer->getPlayerTemplate()->getReverseMoveToCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getReverseMoveToCursorName() );
 					break;
 				case Mouse::ATTACKMOVETO:
 					if(!curPlayer->getPlayerTemplate()->getAttackMoveToCursorName().isEmpty())
@@ -3217,6 +3223,12 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 						else
 							setMouseCursor( Mouse::ATTACKMOVETO, hasSrcObj ? srcObj->getAttackMoveToCursorName() : AsciiString::TheEmptyString );
 						break;
+					case GameMessage::MSG_DO_REVERSE_MOVETO_HINT:
+						if( drawSelectable && obj->isLocallyControlled()  )
+							setMouseCursor( Mouse::SELECTING, hasSrcObj ? srcObj->getSelectingCursorName() : AsciiString::TheEmptyString );
+						else
+							setMouseCursor( Mouse::REVERSE_MOVE, hasSrcObj ? srcObj->getReverseMoveToCursorName() : AsciiString::TheEmptyString );
+						break;
 					case GameMessage::MSG_ADD_WAYPOINT_HINT:
 						setMouseCursor( Mouse::WAYPOINT, hasSrcObj ? srcObj->getWaypointCursorName() : AsciiString::TheEmptyString );
 						break;
@@ -3567,6 +3579,7 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 				{
 					case GameMessage::MSG_DO_MOVETO_HINT:
 					case GameMessage::MSG_DO_ATTACKMOVETO_HINT:
+					case GameMessage::MSG_DO_REVERSE_MOVETO_HINT:
 					case GameMessage::MSG_ADD_WAYPOINT:
 						setMouseCursor(Mouse::BUILD_PLACEMENT, hasSrcObj ? srcObj->getBuildCursorName() : AsciiString::TheEmptyString);
 						break;
@@ -7118,4 +7131,16 @@ void InGameUI::getCurrentSelectedObjectIDs( std::vector<ObjectID> &objectIDs )
 	}
 
 
+}
+
+Bool InGameUI::isInReverseMoveToMode() const
+{
+	return ThePlayerList->getLocalPlayer()->getUnitsMoveInReverse();
+}
+
+void InGameUI::clearMoveStateIfDoOnce()
+{
+	Player *localPlayer = ThePlayerList->getLocalPlayer();
+	if(localPlayer && localPlayer->getMoveStateDoOnce())
+		localPlayer->setUnitsMoveState(MOVE_DEFAULT);
 }

@@ -124,6 +124,13 @@ static const Int NUM_HOTKEY_SQUADS = 10;
 
 enum { NO_HOTKEY_SQUAD = -1 };
 
+enum MoveStateType CPP_11(: Int)
+{
+	MOVE_DEFAULT = 0,
+	MOVE_IN_FORMATION = 1,
+	MOVE_REVERSE = 2
+};
+
 // ------------------------------------------------------------------------------------------------
 typedef Int PlayerIndex;
 #define PLAYER_INDEX_INVALID -1
@@ -774,8 +781,10 @@ public:
 
 	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
 
-	void setUnitsMoveInFormation(void) { m_unitsMoveInFormation = !m_unitsMoveInFormation; }
-	Bool getUnitsMoveInFormation(void) const { return m_unitsMoveInFormation; }
+	void setUnitsMoveState(MoveStateType moveState, Bool doOnce = FALSE);
+	Bool getUnitsMoveInFormation(void) const { return m_unitsMoveState == MOVE_IN_FORMATION; }
+	Bool getUnitsMoveInReverse(void) const { return m_unitsMoveState == MOVE_REVERSE; }
+	Bool getMoveStateDoOnce(void) const { return m_unitsMoveStateDoOnce; }
 
 	Bool forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType spType );
 	Bool isSabotagingObjectGUICommand(void) const { return !m_sabotagingObjectGUICommandName.isEmpty(); }
@@ -892,7 +901,8 @@ private:
 	Bool									m_isPlayerDead;
 	Bool									m_logicalRetaliationModeEnabled;
 
-	Bool									m_unitsMoveInFormation;
+	MoveStateType							m_unitsMoveState;
+	Bool									m_unitsMoveStateDoOnce;
 
 	AsciiString								m_sabotagingObjectGUICommandName;
 	Int										m_sabotagingObjectGUICommandButtonSlot;

@@ -155,6 +155,7 @@ public:
 	const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
 	const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
 	const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	const AsciiString& getReverseMoveToCursorName() const {return m_reverseMoveToCursorName;	}
 	const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
 	const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 
@@ -242,6 +243,7 @@ private:
 	AsciiString m_enterCursorName;
 	AsciiString m_enterAggressiveCursorName;
 	AsciiString m_setRallyPointCursorName;
+	AsciiString m_reverseMoveToCursorName;
 	AsciiString m_buildCursorName;
 	AsciiString m_invalidBuildCursorName;
 };

@@ -1826,6 +1826,24 @@ void AIInternalMoveToState::onExit( StateExitType status )
 				ai->setFinalPosition(&m_goalPosition);
 			}
 		}
+		if(obj->getPreserveAttackDataWhileMoving())
+		{
+			if(ai->getCurrentVictim())
+			{
+				ai->registerCurrentTurretTargetObject(obj->getIsDoingReverseMove());
+				return;
+			}
+
+			for( Int i = 0; i < MAX_TURRETS; i++ )
+			{
+				Object *goalObj = ai->getTurretTargetObject( (WhichTurretType)i, FALSE );
+				if( goalObj )
+				{
+					ai->registerCurrentTurretTargetObject(obj->getIsDoingReverseMove());
+					return;
+				}
+			}
+		}
 	}
 }
 
@@ -2126,7 +2144,7 @@ StateReturnType AIMoveToState::onEnter()
 
 	StateReturnType ret = AIInternalMoveToState::onEnter();
 	// New - Only set the speed to Desired if formation is from Command Map
-	if (getMachineOwner()->getFormationID() != NO_FORMATION_ID && getMachineOwner()->getFormationIsCommandMap()) {
+	if (getMachineOwner()->getFormationID() != NO_FORMATION_ID && !getMachineOwner()->getIsDoingReverseMove() && getMachineOwner()->getFormationIsCommandMap()) {
 		Bool isAirborne = getMachineOwner()->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (getMachineOwner()->isKindOf( KINDOF_AIRCRAFT ) && ai->isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
 		if(!isAirborne)
 		{
@@ -3378,7 +3396,7 @@ StateReturnType AIFollowPathState::onEnter()
 	}
 	StateReturnType ret = AIInternalMoveToState::onEnter();
 	// New - Only set the speed to Desired if formation is from Command Map
-	if (obj->getFormationID() != NO_FORMATION_ID && obj->getFormationIsCommandMap()) {
+	if (obj->getFormationID() != NO_FORMATION_ID && !obj->getIsDoingReverseMove() && obj->getFormationIsCommandMap()) {
 		Bool isAirborne = obj->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) || (obj->isKindOf( KINDOF_AIRCRAFT ) && ai->isDoingGroundMovement() == FALSE) ? TRUE : FALSE;
 		if(!isAirborne)
 		{
@@ -6054,6 +6072,26 @@ void AIAttackState::onExit( StateExitType status )
 	m_attackMachine = nullptr;
 
 	Object *obj = getMachineOwner();
+	AIUpdateInterface *ai = obj->getAI();
+	if(ai && obj->getPreserveAttackDataWhileMoving())
+	{
+		if(ai->getCurrentVictim())
+		{
+			ai->registerCurrentTurretTargetObject(obj->getIsDoingReverseMove());
+			return;
+		}
+
+		for( Int i = 0; i < MAX_TURRETS; i++ )
+		{
+			Object *goalObj = ai->getTurretTargetObject( (WhichTurretType)i, FALSE );
+			if( goalObj )
+			{
+				ai->registerCurrentTurretTargetObject(obj->getIsDoingReverseMove());
+				return;
+			}
+		}
+	}
+
 	obj->clearStatus( MAKE_OBJECT_STATUS_MASK4( OBJECT_STATUS_IS_FIRING_WEAPON,
 																							OBJECT_STATUS_IS_AIMING_WEAPON,
 																							OBJECT_STATUS_IS_ATTACKING,
@@ -6076,7 +6114,7 @@ void AIAttackState::onExit( StateExitType status )
 		}
 	}
 
-	AIUpdateInterface *ai = obj->getAI();
+	//AIUpdateInterface *ai = obj->getAI();
 	if (ai)
 	{
 		//ai->notifyVictimIsDead();	no, do NOT do this here.

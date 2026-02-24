@@ -910,12 +910,12 @@ public:
 	UnsignedShort Num_Refs() const { return m_refCount.Num_Refs(); }
 #endif
 
-	void groupMoveToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource );
+	void groupMoveToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource, Bool isDoingReverseMove = FALSE );
 	void groupMoveToAndEvacuate( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position(s)
 	void groupMoveToAndEvacuateAndExit( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position & unload transport.
 	void groupIdle(CommandSourceType cmdSource);						///< Enter idle state.
 	void groupScatter(CommandSourceType cmdSource);						///< Enter idle state.
-	void groupCreateFormation(CommandSourceType cmdSource, Bool isCommandMap); ///< Make the current selection a user formation.
+	void groupCreateFormation(CommandSourceType cmdSource, Bool isCommandMap, Bool isReverseMove = FALSE); ///< Make the current selection a user formation.
 	void groupTightenToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource );			///< move to given position(s)
 	void groupFollowWaypointPath( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
 	void groupFollowWaypointPathAsTeam( const Waypoint *way, CommandSourceType cmdSource );///< start following the path from the given point
@@ -992,7 +992,7 @@ public:
 
 	Real getSpeed( void );									///< return the speed of the group's slowest member
 	Bool getCenter( Coord3D *center );				///< compute centroid of group
-	Bool getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center );
+	Bool getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool isDoingReverseMove = FALSE );
 	void computeIndividualDestination( Coord3D *dest, const Coord3D *groupDest,
 		Object *obj, const Coord3D *center, Bool isFormation ); ///< compute destination of individual object, based on group destination
 	Int getCount( void );										///< return the number of objects in the group
@@ -1043,7 +1043,7 @@ protected:
 	Bool friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cmdSource );
 	Bool friend_moveVehicleToPos( const Coord3D *pos, CommandSourceType cmdSource );
 	void friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource );
-	Bool friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource );
+	Bool friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool isDoingReverseMove );
 
 private:
 	// AIGroups must be created through TheAI->createGroup()

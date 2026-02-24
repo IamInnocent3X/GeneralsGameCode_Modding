@@ -1766,7 +1766,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 //-------------------------------------------------------------------------------------------------
 Bool StealthUpdate::isDisguisedAndCheckIfNeedOffset() const
 {
-	if(isDisguised() || m_disguiseTransitionFrames)
+	if(getDrawableTemplateWhileDisguised() && (isDisguised() || m_disguiseTransitionFrames))
 	{
 		// Don't need to get offset if the disguised template is the same as the object template
 		if(m_originalDrawableTemplate && m_disguisedDrawableTemplate && m_originalDrawableTemplate->getTemplate() == m_disguisedDrawableTemplate->getTemplate())

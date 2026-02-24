@@ -34,6 +34,8 @@
 const Real DEFAULT_TURN_RATE = 0.01f;
 const Real DEFAULT_PITCH_RATE = 0.01f;
 
+enum ObjectID CPP_11(: Int);
+
 /**
  * The TurretAI state IDs.
  * Each of these constants will be associated with an instance of a State class
@@ -235,6 +237,7 @@ public:
 	Bool						m_initiallyDisabled;		///< manually controlled and disabled.
 	Bool						m_firesWhileTurning;    ///< so the firing state does not instantly expire the turning state
 	Bool						m_isAllowsPitch;				///< This type of turret can pitch up and down as well as spin
+	Bool						m_canFireOnTheMove;				///< Can fire while the object is moving
 
 	Real						m_minTurretAngle;         ///< Minimum turn angle for turret
 	Real						m_maxTurretAngle;         ///< Maximum turn angle for turret
@@ -345,6 +348,10 @@ public:
 
 	Real getRelativeAngleWithOffset(WeaponSlotType wslot, const Coord3D* pos);
 
+	void registerCurrentTargetObject();
+	ObjectID getLastTargetObj() const { return m_lastTargetObj; }
+	Bool canFireOnTheMove() const;
+
 protected:
 	// snapshot interface
 	virtual void crc( Xfer *xfer );
@@ -376,6 +383,7 @@ private:
 	mutable TurretTargetType	m_target;
 	UnsignedInt								m_continuousFireExpirationFrame;
 	UnsignedInt								m_sleepUntil;
+	ObjectID								m_lastTargetObj;
 
 	Bool										m_playRotSound : 1;
 	Bool										m_playPitchSound : 1;

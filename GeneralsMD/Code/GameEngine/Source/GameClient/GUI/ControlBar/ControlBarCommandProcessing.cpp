@@ -814,8 +814,16 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_ATTACK_MOVE:
-			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_META_TOGGLE_ATTACKMOVE, orderData );
+			TheMessageStream->appendMessage( GameMessage::MSG_META_TOGGLE_ATTACKMOVE );
 			break;
+
+		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_REVERSE_MOVE:
+		{
+			GameMessage *newMsg = TheMessageStream->appendMessage(GameMessage::MSG_REVERSE_MOVE);
+			newMsg->appendBooleanArgument(TRUE);
+			break;
+		}
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_STOP:

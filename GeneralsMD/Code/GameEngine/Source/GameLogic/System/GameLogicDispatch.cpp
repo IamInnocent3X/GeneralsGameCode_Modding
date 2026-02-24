@@ -355,13 +355,6 @@ void GameLogic::prepareNewGame( GameMode gameMode, GameDifficulty diff, Int rank
 
 }
 
-// ------------------------------------------------------------------------------------------------
-void clearGroupMovingFormation( Object *obj, void *userData )
-{
-	if(!obj->getFormationIsCommandMap())
-		obj->setFormationID(NO_FORMATION_ID);
-}
-
 //-------------------------------------------------------------------------------------------------
 /** This message handles dispatches object command messages to the
   * appropriate objects.
@@ -869,6 +862,9 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if (currentlySelectedGroup)
 			{
+				if( thisPlayer->getUnitsMoveInFormation() )
+					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
+
 				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupAttackMoveToPosition( &dest, NO_MAX_SHOTS_LIMIT, CMD_FROM_PLAYER );
@@ -904,13 +900,32 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 			if( currentlySelectedGroup )
 			{
-				if( thisPlayer->getUnitsMoveInFormation() )
-					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
+				Bool isReverseMoving = thisPlayer->getUnitsMoveInReverse();
+				if( isReverseMoving || thisPlayer->getUnitsMoveInFormation() )
+					currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE, isReverseMoving );
 
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
 				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
-				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
+				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, isReverseMoving );
+			}
+
+			break;
+		}
+
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_DO_REVERSE_MOVETO:
+		{
+			Coord3D dest = msg->getArgument( 0 )->location;
+
+			if( currentlySelectedGroup )
+			{
+				currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE, TRUE );
+
+				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
+				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
+				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, TRUE );
 			}
 
 			break;
@@ -997,10 +1012,14 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		//---------------------------------------------------------------------------------------------
 		case GameMessage::MSG_MOVE_IN_FORMATION:
 		{
-			thisPlayer->setUnitsMoveInFormation();
-			if( !thisPlayer->getUnitsMoveInFormation() )
-				thisPlayer->iterateObjects( clearGroupMovingFormation, nullptr );
+			thisPlayer->setUnitsMoveState(MOVE_IN_FORMATION);
+			break;
+		}
 
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_REVERSE_MOVE:
+		{
+			thisPlayer->setUnitsMoveState(MOVE_REVERSE, msg->getArgument( 0 )->boolean );
 			break;
 		}
 

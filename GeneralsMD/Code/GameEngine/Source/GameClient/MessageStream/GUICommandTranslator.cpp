@@ -279,7 +279,8 @@ static CommandStatus doGuardCommand( const CommandButton *command, GuardMode gua
 //-------------------------------------------------------------------------------------------------
 /** Do the set rally point command */
 //-------------------------------------------------------------------------------------------------
-static CommandStatus doAttackMoveCommand( const CommandButton *command, const ICoord2D *mouse )
+//static CommandStatus doAttackMoveCommand( const CommandButton *command, const ICoord2D *mouse )
+static CommandStatus doMoveStateCommand( const CommandButton *command, const ICoord2D *mouse )
 {
 
 	// sanity
@@ -312,12 +313,23 @@ static CommandStatus doAttackMoveCommand( const CommandButton *command, const IC
 		orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
 	}
 
+	GameMessage::Type msgType;
+	switch(command->getCommandType())
+	{
+		case GUI_COMMAND_REVERSE_MOVE:
+			msgType = GameMessage::MSG_DO_REVERSE_MOVETO;
+			break; 
+		case GUI_COMMAND_ATTACK_MOVE:
+			msgType = GameMessage::MSG_DO_ATTACKMOVETO;
+			break;
+	}
+
 	// send the message to set the rally point
-	GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_ATTACKMOVETO, orderData );
+	GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( msgType, orderData );
 	msg->appendLocationArgument( world );
 
 	// Play the unit voice response
-	pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_ATTACKMOVETO);
+	pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), msgType);
 
 	return COMMAND_COMPLETE;
 
@@ -542,9 +554,10 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 
 					}
 
+					case GUI_COMMAND_REVERSE_MOVE:
 					case GUI_COMMAND_ATTACK_MOVE:
 					{
-						commandStatus = doAttackMoveCommand( command, &mouse );
+						commandStatus = doMoveStateCommand( command, &mouse ); //doAttackMoveCommand( command, &mouse );
 						break;
 					}
 
@@ -586,7 +599,10 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 	// If we're destroying the message, it means we used it. Therefore, destroy the current
 	// attack move instruction as well.
 	if (disp == DESTROY_MESSAGE)
+	{
 		TheInGameUI->clearAttackMoveToMode();
+		TheInGameUI->clearMoveStateIfDoOnce();
+	}
 
 
 	return disp;

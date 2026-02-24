@@ -279,6 +279,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_privateStatus(0),
 	m_formationID(NO_FORMATION_ID),
 	m_formationIsCommandMap(FALSE),
+	m_reverseFormationID(NO_FORMATION_ID),
+	m_isDoingReverseMove(FALSE),
 	m_isReceivingDifficultyBonus(FALSE),
 	m_singleUseCommandUsed(FALSE),
 	m_scriptStatus(0),
@@ -301,6 +303,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	AsciiString modName;
 
 	m_formationOffset.x = m_formationOffset.y = 0.0f;
+	m_reverseFormationOffset.x = m_reverseFormationOffset.y = 0.0f;
 	m_iPos.zero();
 	for (i = 0; i < MAX_PLAYER_COUNT; ++i)
 	{
@@ -2153,7 +2156,7 @@ void Object::preFireCurrentWeapon(const Coord3D* pos)
 // ============================================================================
 /** Using the firing tracker, return the frame a shot was last fired on */
 // ============================================================================
-UnsignedInt Object::getLastShotFiredFrame() const
+UnsignedInt Object::getLastShotFiredFrame(WeaponSlotType *wslot) const
 {
 	UnsignedInt recent = 0;
 	for (int i = 0; i < WEAPONSLOT_COUNT; ++i)
@@ -2163,7 +2166,11 @@ UnsignedInt Object::getLastShotFiredFrame() const
 		{
 			UnsignedInt when = w->getLastShotFrame();
 			if (when > recent)
+			{
+				if(wslot)
+					*wslot = (WeaponSlotType)i;
 				recent = when;
+			}
 		}
 	}
 	return recent;
@@ -5865,6 +5872,12 @@ void Object::xfer( Xfer *xfer )
 	}
 	xfer->xferBool(&m_formationIsCommandMap);
 
+	xfer->xferUser(&m_reverseFormationID, sizeof(m_reverseFormationID));
+	if (m_reverseFormationID!=NO_FORMATION_ID) {
+		xfer->xferCoord2D(&m_reverseFormationOffset);
+	}
+	xfer->xferBool(&m_isDoingReverseMove);
+
 	// module count
 	UnsignedShort moduleCount = 0;
 	for (BehaviorModule** b = m_behaviors; *b; ++b)
@@ -8037,6 +8050,7 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8175,6 +8189,7 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8225,6 +8240,14 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 				if( ai )
 				{
 					ai->aiAttackMoveToPosition( pos, commandButton->getMaxShotsToFire(), cmdSource );
+					return;
+				}
+				break;
+			case GUI_COMMAND_REVERSE_MOVE:
+				if( ai )
+				{
+					m_isDoingReverseMove = TRUE;
+					ai->aiMoveToPosition( pos, cmdSource );
 					return;
 				}
 				break;
@@ -8355,6 +8378,7 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -10014,6 +10038,12 @@ void Object::setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot )
 	m_weaponSet.setWeaponsActivatedByGUI( set, weaponSlot );
 }
 
+// ------------------------------------------------------------------------------------------------
+Bool Object::getPreserveAttackDataWhileMoving() const
+{
+	return getIsDoingReverseMove() || (getAIUpdateInterface() && getAIUpdateInterface()->getTurretCanAttackWhileMoving());
+}
+
 //=============================================================================
 //== Custom Cursor List
 //=============================================================================
@@ -10037,6 +10067,7 @@ const AsciiString& Object::getSetRallyPointCursorName() const {return getTemplat
 const AsciiString& Object::getBuildCursorName() const {return getTemplate()->friend_getBuildCursorName();	}
 const AsciiString& Object::getInvalidBuildCursorName() const {return getTemplate()->friend_getInvalidBuildCursorName();	}
 const AsciiString& Object::getSalvageCursorName() const {return getTemplate()->friend_getSalvageCursorName();	}
+const AsciiString& Object::getReverseMoveToCursorName() const {return getTemplate()->friend_getReverseMoveToCursorName();	}
 
 Bool Object::useMyGetRepairAtCursor() const {return getTemplate()->friend_getUseMyGetRepairAtCursor();	}
 Bool Object::useMyDockCursor() const {return getTemplate()->friend_getUseMyDockCursor();	}

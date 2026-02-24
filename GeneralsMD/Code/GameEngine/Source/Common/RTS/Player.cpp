@@ -337,7 +337,8 @@ Player::Player( Int playerIndex )
 	m_skillPoints = 0;
 	Int i;
 	m_upgradeList = nullptr;
-	m_unitsMoveInFormation = FALSE;
+	m_unitsMoveState = MOVE_DEFAULT;
+	m_unitsMoveStateDoOnce = FALSE;
 	for(i = 0; i < NUM_HOTKEY_SQUADS; i++)
 	{
 		m_squads[i] = nullptr;
@@ -4890,6 +4891,32 @@ Bool Player::isPlayableSide( void ) const
 }
 
 // ------------------------------------------------------------------------------------------------
+static void clearGroupMovingFormation( Object *obj, void *userData )
+{
+	if(!obj->getFormationIsCommandMap())
+		obj->setFormationID(NO_FORMATION_ID);
+}
+
+// ------------------------------------------------------------------------------------------------
+void Player::setUnitsMoveState(MoveStateType moveState, Bool doOnce)
+{
+	Bool lastIsMoveInFormation = getUnitsMoveInFormation();
+	if(m_unitsMoveState != moveState)
+	{
+		m_unitsMoveState = moveState;
+		m_unitsMoveStateDoOnce = doOnce;
+	}
+	else
+	{
+		m_unitsMoveState = MOVE_DEFAULT;
+		m_unitsMoveStateDoOnce = FALSE;
+	}
+
+	if( lastIsMoveInFormation && !getUnitsMoveInFormation() )
+		iterateObjects( clearGroupMovingFormation, nullptr );
+}
+
+// ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
 void Player::crc( Xfer *xfer )
@@ -5620,7 +5647,7 @@ void Player::xfer( Xfer *xfer )
 	else
 		m_unitsShouldHunt = FALSE;
 
-	xfer->xferBool( &m_unitsMoveInFormation );
+	xfer->xferUser( &m_unitsMoveState, sizeof(MoveStateType) );
 
 	// -------------------------
 	// Xfer ProductionCostChangeMap

@@ -138,6 +138,7 @@ DumbProjectileBehavior::DumbProjectileBehavior( Thing *thing, const ModuleData* 
 	m_extraBonusFlags = 0;
 	m_extraBonusCustomFlags.clear();
 	m_framesTillDecoyed = 0;
+	m_dontDetonateGroundFrames = 0;
 	m_noDamage = FALSE;
 	m_decoyID = INVALID_ID;
 	m_attractedID = INVALID_ID;
@@ -1070,5 +1071,12 @@ void DumbProjectileBehavior::loadPostProcess( void )
 
 	// extend base class
 	UpdateModule::loadPostProcess();
+
+	// IamInnocent - Flight Path is lost during Xfer, need to recalculate flight segments
+	if (!calcFlightPath(false))
+	{
+		//Can only fail if wildly incorrect points
+		TheGameLogic->destroyObject( getObject() );
+	}
 
 }

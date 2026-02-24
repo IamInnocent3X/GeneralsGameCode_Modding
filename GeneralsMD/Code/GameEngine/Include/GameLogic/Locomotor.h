@@ -223,6 +223,10 @@ private:
 	Real											m_elevatorCorrectionRate;
 
 	Int												m_requiredWaterLevel; ///< for LOCO_SHIP, how deep the water must be
+
+	Real											m_maxReverseSpeed;
+	Real											m_maxReverseSpeedDamaged;
+	Real											m_minReverseSpeed;
 };
 
 typedef OVERRIDE<LocomotorTemplate> LocomotorTemplateOverride;
@@ -258,6 +262,8 @@ public:
 	Real getMaxLift(BodyDamageType condition) const;  ///< get acceleration given condition
 	Real getBraking() const;  ///< get braking given condition
 
+	Real getReverseMaxSpeedForCondition(BodyDamageType condition) const;  ///< get reverse max speed given condition
+
 	Real getPreferredHeight() const { return m_preferredHeight;} ///< Just return preferredheight, no damage consideration
 	void restorePreferredHeightFromTemplate() { m_preferredHeight = m_template->m_preferredHeight; };
 	Real getPreferredHeightDamping() const { return m_preferredHeightDamping;}
@@ -266,7 +272,7 @@ public:
 	LocomotorSurfaceTypeMask getLegalSurfaces() const { return m_template->m_surfaces; }
 
 	AsciiString getTemplateName() const { return m_template->m_name;}
-	Real getMinSpeed() const { return m_template->m_minSpeed;}
+	Real getMinSpeed(Object *obj = nullptr, const Coord3D *goalPos = nullptr) const;
 	Real getAccelPitchLimit() const { return m_template->m_accelPitchLimit;}	///< Maximum amount we will pitch up or down under acceleration (including recoil.)
 	Real getDecelPitchLimit() const { return m_template->m_decelPitchLimit;}	///< Maximum amount we will pitch down under deceleration (including recoil.)
 	Real getBounceKick() const { return m_template->m_bounceKick;}						///< How much simulating rough terrain "bounces" a wheel up.
@@ -333,7 +339,7 @@ public:
 	void setMaintainPos(const Coord3D *pos) { m_maintainPos.set(pos); }
 
 	//Returns 0 for non SHIP locomotors
-	inline Int getRequireWaterLevel() const { return m_template->m_appearance == LOCO_SHIP ? m_template->m_requiredWaterLevel : 0; };
+	Int getRequireWaterLevel() const { return m_template->m_appearance == LOCO_SHIP ? m_template->m_requiredWaterLevel : 0; };
 
 #ifdef CIRCLE_FOR_LANDING
 	/**
@@ -392,7 +398,7 @@ protected:
 	void moveTowardsPositionClimb(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
-	void moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
+	void moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed, Bool canReverse);
 	void moveTowardsPositionHover(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionThrust(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionWings(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
@@ -405,14 +411,14 @@ protected:
 	void maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physics);
 	void maintainCurrentPositionWings(Object* obj, PhysicsBehavior *physics);
 
-	PhysicsTurningType rotateTowardsPosition(Object* obj, const Coord3D& goalPos, Real *relAngle=nullptr);
+	PhysicsTurningType rotateTowardsPosition(Object* obj, const Coord3D& goalPos, Real *relAngle=nullptr, Bool isReverse = FALSE);
 
 	/*
 		return true if we can maintain the position without being called every frame (eg, we are
 		resting on the ground), false if not (eg, we are hovering or circling)
 	*/
 	Bool handleBehaviorZ(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos);
-	PhysicsTurningType rotateObjAroundLocoPivot(Object* obj, const Coord3D& goalPos, Real maxTurnRate, Real *relAngle = nullptr);
+	PhysicsTurningType rotateObjAroundLocoPivot(Object* obj, const Coord3D& goalPos, Real maxTurnRate, Real *relAngle = nullptr, Bool isReverse = FALSE);
 
 	Real calcLiftToUseAtPt(Object* obj, PhysicsBehavior *physics, Real curZ, Real surfaceAtPt, Real preferredHeight);
 

@@ -1622,7 +1622,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				// IamInnocent - WARNING: The function below is Very nuclear and will cause Crashes (point being do proceed with caution if use)
 				// Note: The Barrels for the Drawable MUST Match the current Drawable or else it will cause crashes... (Ofcourse)
 				/// Update - Updated regarding Usage, even with Failsaves implemented, should inspect for errors as this function is VERY Volatile. Drawables should all be on Client side and have no affect on Game Logic
-				if(handled)
+				if(handled && currentDraw)
 				{
 					// IamInnocent - technical fix for Disguised Drawables using original offsets for handling Recoil and Muzzles
 					/// Maximum barrel allow for drawables using different templates while using its Original Drawable amount of barrels is the Drawable's Barrel Count - 1
@@ -4175,12 +4175,13 @@ Bool WeaponTemplate::passRequirements(const Object *source) const
 //-------------------------------------------------------------------------------------------------
 Int WeaponTemplate::calcROFForMoving(const Object *source, Int Delay) const
 {
-	if(source == nullptr || source->getPhysics() == nullptr || !source->getPhysics()->isMotive())
+	// The Object must have physics and is moving
+	if(source == nullptr || source->getPhysics() == nullptr || !source->getPhysics()->isMotive() || !source->getAI())
 		return Delay;
 
 	Real value = getROFMovingPenalty();
 
-	if(getROFMovingScales() && source->getAI())
+	if(getROFMovingScales())
 	{
 		Real speed = source->getAI()->getCurLocomotorSpeed();
 

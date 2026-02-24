@@ -300,6 +300,7 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "ResumeConstructionCursorName",		INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_resumeConstructionCursorName ) },
 	{ "SetRallyPointCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_setRallyPointCursorName ) },
 	{ "SalvageCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_salvageCursorName ) },
+	{ "ReverseMoveCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_reverseMoveToCursorName ) },
 	{ "BuildCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_buildCursorName ) },
 	{ "InvalidBuildCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_invalidBuildCursorName ) },
 
@@ -1226,6 +1227,7 @@ ThingTemplate::ThingTemplate() :
 	m_enterAggressiveCursorName.clear();
 	m_setRallyPointCursorName.clear();
 	m_salvageCursorName.clear();
+	m_reverseMoveToCursorName.clear();
 	m_buildCursorName.clear();
 	m_invalidBuildCursorName.clear();
 

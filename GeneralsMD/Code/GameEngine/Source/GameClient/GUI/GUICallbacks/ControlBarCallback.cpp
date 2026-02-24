@@ -116,6 +116,10 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					{
 						cur = Mouse::ATTACKMOVETO;
 					}
+					else if (command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+					{
+						cur = Mouse::REVERSE_MOVE;
+					}
 					else
 					{
 						cur = Mouse::MOVETO;
@@ -203,6 +207,10 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 						if (command && command->getCommandType() == GUI_COMMAND_ATTACK_MOVE)
 						{
 							cur = Mouse::ATTACKMOVETO;
+						}
+						else if (command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+						{
+							cur = Mouse::REVERSE_MOVE;
 						}
 						else
 						{
@@ -306,6 +314,26 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					// Play the unit voice response
 					pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_ATTACKMOVETO);
 				}
+				else if( command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+				{
+					// Attack move has changed from a modifier to a command, so it moves up here.
+
+					OrderNearbyData orderData;
+					if(command->getOrderNearbyRadius())
+					{
+						orderData.Radius = command->getOrderNearbyRadius();
+						orderData.RequiredMask = command->getOrderKindofMask();
+						orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+						orderData.MinDelay = command->getOrderNearbyMinDelay();
+						orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+						orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+					}
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_REVERSE_MOVETO, orderData );
+					msg->appendLocationArgument( world );
+
+					// Play the unit voice response
+					pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_REVERSE_MOVETO);
+				}
 				else
 				{
 					GameMessage *newMsg = nullptr;
@@ -343,6 +371,7 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 	}
 
 	TheInGameUI->clearAttackMoveToMode();
+	TheInGameUI->clearMoveStateIfDoOnce();
 	return MSG_HANDLED;
 
 }

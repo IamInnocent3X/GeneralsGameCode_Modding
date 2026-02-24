@@ -1297,6 +1297,7 @@ Int Mouse::getCursorIndex(const AsciiString& name)
 		"ParticleUplinkCannon",
 
 		"MoveInFormation",
+		"ReverseMove",
 
 		"NukeAttack",
 		"MegaNukeAttack",
@@ -1383,6 +1384,7 @@ Int Mouse::getCursorIndex(const AsciiString& name)
 		"EnterFriendly_Alt",
 		"EnterAggressive_Alt",
 		"SetRallyPoint_Alt",
+		"ReverseMove_Alt,"
 
 		"Normal_Alt2",
 		"Arrow_Alt2",
@@ -1400,6 +1402,7 @@ Int Mouse::getCursorIndex(const AsciiString& name)
 		"EnterFriendly_Alt2",
 		"EnterAggressive_Alt2",
 		"SetRallyPoint_Alt2",
+		"ReverseMove_Alt2,"
 	};
 
 	for (Int i=0; i<NUM_MOUSE_CURSORS; ++i)
