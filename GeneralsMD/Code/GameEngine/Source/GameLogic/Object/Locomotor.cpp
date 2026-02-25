@@ -1617,6 +1617,7 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 //	Real desiredAngle = angle + relAngle;
 	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
 	Real relAngle = stdAngleDiff(desiredAngle, angle);
+	Real originalRelAngle = relAngle;
 
 	Bool moveBackwards = false;
 	Bool turningBackwards = false;
@@ -1662,7 +1663,7 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 
 	const Real SMALL_TURN = PI / 20.0f;
 	if ( ((Real)fabs( relAngle ) > SMALL_TURN && (!obj->getIsDoingReverseMove() || !moveBackwards)) ||
-		 (moveBackwards && obj->getIsDoingReverseMove() && relAngle > -SMALL_TURN && relAngle < SMALL_TURN) )
+		 (moveBackwards && obj->getIsDoingReverseMove() && originalRelAngle > -SMALL_TURN && originalRelAngle < SMALL_TURN) )
 	{
 		if (desiredSpeed>turnSpeed)
 		{

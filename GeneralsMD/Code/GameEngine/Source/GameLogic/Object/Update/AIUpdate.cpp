@@ -1311,7 +1311,7 @@ UpdateSleepTime AIUpdateInterface::update( void )
 				WeaponSlotType wslot;
 				obj->getLastShotFiredFrame(&wslot);
 				Weapon *weapon = obj->getWeaponInWeaponSlot(wslot);
-				if( weapon && weapon->getPossibleNextShotFrame() < 0x7fffffff && weapon->getPossibleNextShotFrame() > TheGameLogic->getFrame() )
+				if( weapon && weapon->getPossibleNextShotFrame() < 0x7fffffff && weapon->getPossibleNextShotFrame() >= TheGameLogic->getFrame() )
 				{
 					Object *victim = TheGameLogic->findObjectByID(obj->getLastVictimID());
 					CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, victim, CMD_FROM_AI, (WeaponSlotType)-1, TRUE );
@@ -3644,6 +3644,28 @@ void AIUpdateInterface::privateIdle(CommandSourceType cmdSource)
 	// If we are told to idle, stop all our current attacking if we can attack
 	if(m_currentVictimID != INVALID_ID || getStateMachine()->getGoalObject() || getObject()->getPreserveAttackDataWhileMoving())
 	{
+		Object *obj = getObject();
+		obj->clearStatus( MAKE_OBJECT_STATUS_MASK4( OBJECT_STATUS_IS_FIRING_WEAPON,
+																							OBJECT_STATUS_IS_AIMING_WEAPON,
+																							OBJECT_STATUS_IS_ATTACKING,
+																							OBJECT_STATUS_IGNORING_STEALTH ) );
+		obj->clearModelConditionState( MODELCONDITION_ATTACKING );
+
+		obj->clearLeechRangeModeForAllWeapons();
+
+		Weapon *curWeapon = obj->getCurrentWeapon();
+		if (curWeapon)
+		{
+			obj->computeFiringTrackerBonusClear(curWeapon);
+			obj->setWeaponsActivatedByGUI(FALSE);
+
+			// Release My Weapon Lock if I am currently Locked in Priority
+			if(obj->isCurWeaponLockedPriority())
+			{
+				obj->releaseWeaponLock(LOCKED_PRIORITY);
+			}
+		}
+
 		setCurrentVictim(nullptr);
 		for (int i = 0; i < MAX_TURRETS; ++i)
 			setTurretTargetObject((WhichTurretType)i, nullptr, FALSE);
