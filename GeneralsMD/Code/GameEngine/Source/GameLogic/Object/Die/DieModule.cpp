@@ -37,6 +37,8 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Object.h"
+#include <GameLogic/TerrainLogic.h>
+
 
 
 
@@ -55,6 +57,8 @@ DieMuxData::DieMuxData() {
 		m_deathTypes &= ~TheGlobalData->m_defaultExcludedDeathTypes;
 		m_deathTypesCustom.first &= ~TheGlobalData->m_defaultExcludedDeathTypes;
 	}
+	m_minWaterDepth = 0.0f;
+	m_maxWaterDepth = std::numeric_limits<Real>::infinity();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -68,8 +72,11 @@ const FieldParse* DieMuxData::getFieldParse()
 		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	nullptr,	offsetof( DieMuxData, m_exemptStatus ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, nullptr,	offsetof( DieMuxData, m_requiredStatus ) },
 		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr,	offsetof( DieMuxData, m_requiredCustomStatus ) },
+		{ "ExemptCustomStatus",			INI::parseAsciiStringVector,	nullptr,	offsetof( DieMuxData, m_exemptCustomStatus ) },
 		{ "CustomDeathTypes",		INI::parseCustomTypes,			nullptr, offsetof( DieMuxData, m_customDeathTypes ) },
-		{ nullptr, nullptr, nullptr, 0 }
+		{ "MinWaterDepth",    INI::parseReal,										nullptr, offsetof(DieMuxData, m_minWaterDepth )},
+		{ "MaxWaterDepth",    INI::parseReal,										nullptr, offsetof(DieMuxData, m_maxWaterDepth )},
+		{ nullptr, nullptr, nullptr, 0 } 
 	};
   return dataFieldParse;
 }
@@ -105,6 +112,27 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	// all 'required' custom statuses must be set for us to run
 	if(!obj->testCustomStatusForAll(m_requiredCustomStatus))
 		return false;
+
+	if ((m_minWaterDepth > 0.0f || m_maxWaterDepth < std::numeric_limits<Short>::infinity()) && obj != nullptr) {
+
+		// if on bride and we need water -> not applicable
+		if (obj->getLayer() > LAYER_GROUND && m_minWaterDepth > 0.0f) {
+			return false;
+		}
+
+		// Water level restriction
+		const Coord3D* pos = obj->getPosition();
+		Real waterZ{ 0 }, terrainZ{ 0 };
+
+		if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterZ, &terrainZ)) {
+			Real depth = waterZ - terrainZ;
+			return depth >= m_minWaterDepth && depth < m_maxWaterDepth;
+		}
+		else {
+			// we are over land
+			if (m_minWaterDepth > 0.0f) return false;
+		}
+	}
 
 	return true;
 }

@@ -39,6 +39,7 @@
 #include "WWMath/matrix3d.h"
 
 class ParticleSystem;
+enum ParticleSystemID CPP_11(: Int);
 class FXList;
 
 
@@ -128,6 +129,9 @@ private:
 	Int										m_flightPathSegments;			///< number of segments in the flightpath (in case we must regen it)
 	Int										m_currentFlightPathStep;	///< Our current index in the flight path vector.  Quicker than popping off.
 	WeaponBonusConditionFlags		m_extraBonusFlags;
+
+	const ParticleSystemTemplate* m_exhaustSysTmpl;
+	ParticleSystemID			m_exhaustID;
 	std::vector<AsciiString> 			m_extraBonusCustomFlags;
 	Bool                  			m_noDamage;
 	UnsignedInt						m_framesTillDecoyed;
@@ -147,5 +151,7 @@ private:
 #if defined(RTS_DEBUG)
 	void displayFlightPath();	///< Uses little debug icons in worldspace to show the path chosen when it is decided upon
 #endif
+
+	void tossExhaust();
 
 };
