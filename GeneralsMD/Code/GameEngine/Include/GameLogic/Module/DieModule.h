@@ -57,7 +57,8 @@ public:
 	ObjectStatusMaskType	m_requiredStatus;					///< die module is ignored if any of these status bits are clear
 	Real									m_minWaterDepth;
 	Real                  m_maxWaterDepth;
-	std::vector<AsciiString>			m_requiredCustomStatus;	
+	std::vector<AsciiString>			m_exemptCustomStatus;
+	std::vector<AsciiString>			m_requiredCustomStatus;
 	std::vector<AsciiString>			m_customStatusTypes;
 	CustomFlags			m_customDeathTypes;
 

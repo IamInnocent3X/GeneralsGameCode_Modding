@@ -50,6 +50,7 @@ DieMuxData::DieMuxData() {
 	m_veterancyLevels = VETERANCY_LEVEL_FLAGS_ALL;
 	m_deathTypesCustom.first = DEATH_TYPE_FLAGS_ALL;
 	m_deathTypesCustom.second.format("ALL");
+	m_exemptCustomStatus.clear();
 	m_requiredCustomStatus.clear();
 	m_customDeathTypes.clear();
 
@@ -71,8 +72,8 @@ const FieldParse* DieMuxData::getFieldParse()
 		{ "VeterancyLevels",	INI::parseVeterancyLevelFlags,			nullptr, offsetof( DieMuxData, m_veterancyLevels ) },
 		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	nullptr,	offsetof( DieMuxData, m_exemptStatus ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, nullptr,	offsetof( DieMuxData, m_requiredStatus ) },
-		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr,	offsetof( DieMuxData, m_requiredCustomStatus ) },
 		{ "ExemptCustomStatus",			INI::parseAsciiStringVector,	nullptr,	offsetof( DieMuxData, m_exemptCustomStatus ) },
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr,	offsetof( DieMuxData, m_requiredCustomStatus ) },
 		{ "CustomDeathTypes",		INI::parseCustomTypes,			nullptr, offsetof( DieMuxData, m_customDeathTypes ) },
 		{ "MinWaterDepth",    INI::parseReal,										nullptr, offsetof(DieMuxData, m_minWaterDepth )},
 		{ "MaxWaterDepth",    INI::parseReal,										nullptr, offsetof(DieMuxData, m_maxWaterDepth )},
@@ -109,7 +110,15 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	if( m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( m_requiredStatus ) )
 		return false;
 
+	// all 'exempt' custom status must be clear for us to run.
+	for(std::vector<AsciiString>::const_iterator it = m_exemptCustomStatus.begin(); it != m_exemptCustomStatus.end(); ++it)
+	{
+		if(obj->testCustomStatus(*it))
+			return false;
+	}
+
 	// all 'required' custom statuses must be set for us to run
+	// But only if we have at least a required custom status to check
 	if(!obj->testCustomStatusForAll(m_requiredCustomStatus))
 		return false;
 
