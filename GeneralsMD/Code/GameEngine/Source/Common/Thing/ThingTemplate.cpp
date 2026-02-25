@@ -239,6 +239,11 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "RemoveModule",					ThingTemplate::parseRemoveModule,		nullptr, 0 },
 	{ "ReplaceModule",				ThingTemplate::parseReplaceModule,	nullptr, 0 },
 	{ "InheritableModule",		ThingTemplate::parseInheritableModule,	nullptr, 0 },
+	{ "OcclusionDelay",					INI::parseDurationUnsignedInt,		nullptr, offsetof( ThingTemplate, m_occlusionDelay ) },
+	{ "AddModule",						ThingTemplate::parseAddModule,			nullptr, 0 },
+	{ "RemoveModule",					ThingTemplate::parseRemoveModule,		nullptr, 0 },
+	{ "ReplaceModule",				ThingTemplate::parseReplaceModule,	nullptr, 0 },
+	{ "InheritableModule",		ThingTemplate::parseInheritableModule,	nullptr, 0 },
 
   { "OverrideableByLikeKind",		ThingTemplate::OverrideableByLikeKind,	nullptr, 0 },
 
@@ -575,7 +580,7 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 	{
 
 //    if (self->getName().compare("GLAVehicleQuadCannon"))
-//      DEBUG_ASSERTCRASH( FALSE, ("WE ARE CLEARING DEFAULT MODULES FROM A QUAD CANNON.") );
+//      DEBUG_CRASH( ("WE ARE CLEARING DEFAULT MODULES FROM A QUAD CANNON.") );
 
 		self->m_behaviorModuleInfo.clearCopiedFromDefaultEntries(interfaceMask, tokenStr, self );
 		self->m_drawModuleInfo.clearCopiedFromDefaultEntries(interfaceMask, tokenStr, self );
