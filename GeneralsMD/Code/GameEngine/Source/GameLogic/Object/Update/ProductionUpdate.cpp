@@ -35,6 +35,7 @@
 #include "Common/CRCDebug.h"
 #include "Common/GameState.h"
 #include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -295,7 +296,7 @@ ProductionUpdate::ProductionUpdate( Thing *thing, const ModuleData* moduleData )
 	m_flagsDirty = FALSE;
 	m_specialPowerConstructionCommandButton = nullptr;
 	m_nextWakeUpTime = 0;
-	m_productionViewedByEnemyFrame = 0;
+	m_productionViewedByEnemyData.clear();
 
 }
 
@@ -1378,23 +1379,52 @@ void ProductionUpdate::setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt)
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void ProductionUpdate::setProductionViewByEnemyFrame(Int frame)
+void ProductionUpdate::setProductionViewByEnemyFrame(Int playerIndex, Int frame)
 {
-	// Set to reveal forever
-	if(m_productionViewedByEnemyFrame < 0)
-		return;
+	UnsignedInt now = TheGameLogic->getFrame();
+	Int viewFrame = frame < 0 ? frame : now + frame;
 
-	if(frame < 0)
-		m_productionViewedByEnemyFrame = frame;
-	else if(TheGameLogic->getFrame() + frame > m_productionViewedByEnemyFrame)
-		m_productionViewedByEnemyFrame = TheGameLogic->getFrame() + frame;
+	for(PlayerDurationVec::iterator it = m_productionViewedByEnemyData.begin(); it != m_productionViewedByEnemyData.end(); ++it)
+	{
+		if(it->first == playerIndex)
+		{
+			// Set to reveal forever
+			if(it->second < 0)
+				return;
+
+			if(viewFrame < 0 || viewFrame > it->second)
+				it->second = viewFrame;
+
+			return;
+		}
+	}
+
+	PlayerDurationPair pair;
+	pair.first = playerIndex;
+	pair.second = viewFrame;
+	m_productionViewedByEnemyData.push_back(pair);
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ProductionUpdate::showProductionViewToEnemy() const
+Bool ProductionUpdate::showProductionViewToEnemy(Team *team) const
 {
-	return m_productionViewedByEnemyFrame < 0 || m_productionViewedByEnemyFrame > TheGameLogic->getFrame();
+	UnsignedInt now = TheGameLogic->getFrame();
+	for(PlayerDurationVec::const_iterator it = m_productionViewedByEnemyData.begin(); it != m_productionViewedByEnemyData.end();)
+	{
+		Player *player = ThePlayerList->getNthPlayer(it->first);
+		if((it->second > 0 && now > it->second) || !player || !player->isPlayerActive())
+		{
+			it = m_productionViewedByEnemyData.erase( it );
+			continue;
+		}
+
+		if(player->getRelationship(team) == ALLIES)
+			return TRUE;
+
+		++it;
+	}
+	return FALSE;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1711,8 +1741,45 @@ void ProductionUpdate::xfer( Xfer *xfer )
 	// next wake up time
 	xfer->xferUnsignedInt( &m_nextWakeUpTime );
 
-	// production viewed by enemy frame
-	xfer->xferInt( &m_productionViewedByEnemyFrame );
+	// production viewed by enemy data
+	UnsignedShort productionViewDataCount = m_productionViewedByEnemyData.size();
+	xfer->xferUnsignedShort( &productionViewDataCount );
+	Int playerIndex;
+	Int viewFrame;
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for(PlayerDurationVec::const_iterator it = m_productionViewedByEnemyData.begin(); it != m_productionViewedByEnemyData.end(); ++it)
+		{
+			playerIndex = it->first;
+			xfer->xferInt( &playerIndex );
+
+			viewFrame = it->second;
+			xfer->xferInt( &viewFrame );
+		}
+	}
+	else
+	{
+		// the queue should be emtpy now
+		if( !m_productionViewedByEnemyData.empty() )
+		{
+
+			DEBUG_CRASH(( "ProductionUpdate::xfer - m_productionViewedByEnemyData is not empty, but should be" ));
+			throw SC_INVALID_DATA;
+
+		}
+
+		for( UnsignedShort i_v = 0; i_v < productionViewDataCount; ++i_v )
+		{
+			// Read and register data
+			xfer->xferInt( &playerIndex );
+			xfer->xferInt( &viewFrame );
+
+			PlayerDurationPair pair;
+			pair.first = playerIndex;
+			pair.second = viewFrame;
+			m_productionViewedByEnemyData.push_back(pair);
+		}
+	}
 
 }
 

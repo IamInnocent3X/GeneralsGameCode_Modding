@@ -134,6 +134,10 @@ public:
 	UnsignedInt m_sabotageFrames;
 	UnsignedInt m_stealCashAmount;
 	UnsignedInt m_powerSabotageFrames;
+	UnsignedInt m_sabotageCaptureTime;
+	UnsignedInt m_sabotageFXDuration;
+
+	const ParticleSystemTemplate *m_sabotageFXParticleSystem;
 
 	Bool m_sabotageIsCapture;
 	Bool m_sabotageIsCollide;
@@ -200,6 +204,8 @@ public:
 		m_stealCashAmount = 0;
 		m_sabotageFrames = 0;
 		m_sabotageProductionViewFrames = 0;
+		m_sabotageCaptureTime = 1;
+		m_sabotageFXDuration = 0;
 		m_powerSabotageFrames = 0;
 		m_powerAmount = 0;
 		m_powerPercentage = 0.0f;
@@ -255,6 +261,7 @@ public:
 		m_specialPowerTemplateToTrigger.clear();
 		m_customTintStatus.clear();
 		m_feedbackSound.clear();
+		m_sabotageFXParticleSystem = nullptr;
 	}
 
 	static void parseDuration( INI *ini, void * /*instance*/, void *store, const void* /*userData*/ )
@@ -366,6 +373,7 @@ public:
 			{ "SabotageIsCapture", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageIsCapture ) },
 			{ "SabotageCaptureBelowHealth", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealth ) },
 			{ "SabotageCaptureBelowHealth%", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealthPercent ) },
+			{ "SabotageCaptureDefectionTime", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureTime ) },
 
 			// Steal Cash Amount
 			{ "StealCashAmount",	INI::parseUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_stealCashAmount ) },
@@ -381,6 +389,8 @@ public:
 
 			// Sabotage General
 			{ "SabotageDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageFrames ) },
+			{ "SabotageFXDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageFXDuration ) },
+			{ "SabotageFXParticleSystem",		INI::parseParticleSystemTemplate, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageFXParticleSystem ) },
 			{ "SabotageDisable", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisable ) },
 			{ "SabotageDisabledType",	DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisabledType ) },
 			{ "SabotageDisableContained", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDisableContained ) },

@@ -4254,7 +4254,7 @@ void Drawable::drawProductionRevealed(const IRegion2D* healthBarRegion)
 
 	const Object *obj = getObject();
 	const ProductionUpdateInterface *puInterface = obj->getProductionUpdateInterface();
-	if( puInterface && puInterface->showProductionViewToEnemy() && rts::getObservedOrLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES )
+	if( puInterface && puInterface->showProductionViewToEnemy(rts::getObservedOrLocalPlayer()->getDefaultTeam()) )
 	{
 		const ProductionEntry *currentProduction = puInterface->firstProduction();
 		const Image* portrait = currentProduction && currentProduction->getProductionObject() ? currentProduction->getProductionObject()->getSelectedPortraitImage() : nullptr;

@@ -50,6 +50,7 @@
 #include "GameClient/Eva.h"
 #include "GameClient/GameText.h"
 #include "GameClient/InGameUI.h"  // useful for printing quick debug strings when we need to
+#include "GameClient/ParticleSys.h"
 
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/Object.h"
@@ -792,31 +793,31 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 		{
 			other->setCommandsDisable(frame, data->m_commandsToDisable);
 		}
+	}
 
-		if(data->m_sabotageType & SABOTAGE_PRODUCTION)
+	if(data->m_sabotageType & SABOTAGE_PRODUCTION)
+	{
+		if(other->getProductionUpdateInterface() && player)
+			other->getProductionUpdateInterface()->setProductionViewByEnemyFrame(player->getPlayerIndex(), data->m_sabotageProductionViewFrames);
+
+		if(otherPlayer)
 		{
-			if(other->getProductionUpdateInterface())
-				other->getProductionUpdateInterface()->setProductionViewByEnemyFrame(data->m_sabotageProductionViewFrames);
-
-			if(otherPlayer)
+			if(data->m_sabotageCostModifierKindOf.any() && data->m_sabotageCostModifierPercentage != 0.0f)
 			{
-				if(data->m_sabotageCostModifierKindOf.any() && data->m_sabotageCostModifierPercentage != 0.0f)
-				{
-					Bool stackWithAny = data->m_sabotageCostModifierStackingType == SAME_TYPE;
-					Bool stackUniqueType = data->m_sabotageCostModifierStackingType == OTHER_TYPE;
+				Bool stackWithAny = data->m_sabotageCostModifierStackingType == SAME_TYPE;
+				Bool stackUniqueType = data->m_sabotageCostModifierStackingType == OTHER_TYPE;
 
-					otherPlayer->addKindOfProductionCostChange(data->m_sabotageCostModifierKindOf, data->m_sabotageCostModifierPercentage,
-																	other->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny, data->m_sabotageCostModifierFrames);
-				}
+				otherPlayer->addKindOfProductionCostChange(data->m_sabotageCostModifierKindOf, data->m_sabotageCostModifierPercentage,
+																other->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny, data->m_sabotageCostModifierFrames);
+			}
 
-				if(data->m_sabotageTimeModifierKindOf.any() && data->m_sabotageTimeModifierPercentage != 0.0f)
-				{
-					Bool stackWithAny = data->m_sabotageTimeModifierStackingType == SAME_TYPE;
-					Bool stackUniqueType = data->m_sabotageTimeModifierStackingType == OTHER_TYPE;
+			if(data->m_sabotageTimeModifierKindOf.any() && data->m_sabotageTimeModifierPercentage != 0.0f)
+			{
+				Bool stackWithAny = data->m_sabotageTimeModifierStackingType == SAME_TYPE;
+				Bool stackUniqueType = data->m_sabotageTimeModifierStackingType == OTHER_TYPE;
 
-					otherPlayer->addKindOfProductionTimeChange(data->m_sabotageTimeModifierKindOf, data->m_sabotageTimeModifierPercentage,
-																	other->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny, data->m_sabotageTimeModifierFrames);
-				}
+				otherPlayer->addKindOfProductionTimeChange(data->m_sabotageTimeModifierKindOf, data->m_sabotageTimeModifierPercentage,
+																other->getTemplate()->getTemplateID(), stackUniqueType, stackWithAny, data->m_sabotageTimeModifierFrames);
 			}
 		}
 	}
@@ -1018,7 +1019,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 		Bool canCapture = TRUE;
 
 		// Whoops. Cancel if it or us is now dead.
-		if( other->isEffectivelyDead() || other->isEffectivelyDead() )
+		if( other->isEffectivelyDead() || getObject()->isEffectivelyDead() )
 			canCapture = FALSE;
 
 		if( canCapture && other->getTeam() == obj->getTeam() )
@@ -1045,7 +1046,37 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 				TheEva->setShouldPlay( EVA_BuildingStolen );
 			}
 
-			other->defect( obj->getControllingPlayer()->getDefaultTeam(), 1); // one frame of flash!
+			other->defect( obj->getControllingPlayer()->getDefaultTeam(), data->m_sabotageCaptureTime ); // one frame of flash!
+		}
+	}
+
+	if ( !other->isEffectivelyDead() && data->m_sabotageFXParticleSystem )
+	{
+		const ParticleSystemTemplate *tmp = data->m_sabotageFXParticleSystem;
+		if (tmp)
+		{
+			ParticleSystem *sys = TheParticleSystemManager->createParticleSystem(tmp);
+			if (sys)
+			{
+				Coord3D offs = {0,0,0};
+				other->getGeometryInfo().makeRandomOffsetWithinFootprint( offs );
+
+				sys->attachToObject(other);
+				sys->setPosition( &offs );	
+
+				if( data->m_sabotageFXDuration > 0 )
+				{
+					UnsignedInt durationInterleaveFactor = 1;
+					Real targetFootprintArea = other->getGeometryInfo().getFootprintArea();
+
+					if ( ( targetFootprintArea < 300) && other->isKindOf( KINDOF_STRUCTURE ))
+					{
+						durationInterleaveFactor = 2;
+					}
+
+					sys->setSystemLifetime( data->m_sabotageFXDuration * durationInterleaveFactor ); //lifetime of the system, not the particles
+				}
+			}
 		}
 	}
 
@@ -1165,20 +1196,20 @@ Bool SabotageBehavior::canDoSabotageSpecialCheck( const Object *other ) const
 		// Limit only to player objects if checks for all kind of
 		if(data->m_sabotageDisableAllKindOf.any() && !other->isNeutralControlled())
 			return TRUE;
+	}
 
-		if(data->m_sabotageType & SABOTAGE_PRODUCTION)
+	if(data->m_sabotageType & SABOTAGE_PRODUCTION)
+	{
+		if(other->getProductionUpdateInterface() && data->m_sabotageProductionViewFrames != 0)
+			return TRUE;
+
+		if(!other->isNeutralControlled())
 		{
-			if(other->getProductionUpdateInterface() && data->m_sabotageProductionViewFrames != 0)
+			if(data->m_sabotageCostModifierKindOf.any() && data->m_sabotageCostModifierPercentage != 0.0f)
 				return TRUE;
 
-			if(!other->isNeutralControlled())
-			{
-				if(data->m_sabotageCostModifierKindOf.any() && data->m_sabotageCostModifierPercentage != 0.0f)
-					return TRUE;
-
-				if(data->m_sabotageTimeModifierKindOf.any() && data->m_sabotageTimeModifierPercentage != 0.0f)
-					return TRUE;
-			}
+			if(data->m_sabotageTimeModifierKindOf.any() && data->m_sabotageTimeModifierPercentage != 0.0f)
+				return TRUE;
 		}
 	}
 

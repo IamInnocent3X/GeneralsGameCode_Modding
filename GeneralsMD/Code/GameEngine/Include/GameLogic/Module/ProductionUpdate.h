@@ -73,6 +73,9 @@ struct ProductionModifier
 	}
 };
 
+typedef std::pair<Int, Int> PlayerDurationPair;
+typedef std::vector<PlayerDurationPair> PlayerDurationVec;
+
 //-------------------------------------------------------------------------------------------------
 /** A ProductionEntry is a single entry representing something that we are supposed to
 	* produce */
@@ -194,9 +197,9 @@ public:
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt) = 0;
 
-	virtual void setProductionViewByEnemyFrame(Int frame) = 0;
+	virtual void setProductionViewByEnemyFrame(Int playerIndex, Int frame) = 0;
 
-	virtual Bool showProductionViewToEnemy() const = 0;
+	virtual Bool showProductionViewToEnemy(Team *team) const = 0;
 
 	//These functions keep track of the special power construction of a new building via a special power instead of standard production interface.
 	//This was added for the sneak attack building functionality.
@@ -255,9 +258,9 @@ public:
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt);
 
-	virtual void setProductionViewByEnemyFrame(Int frame);
+	virtual void setProductionViewByEnemyFrame(Int playerIndex, Int frame);
 
-	virtual Bool showProductionViewToEnemy() const;
+	virtual Bool showProductionViewToEnemy(Team *team) const;
 
 	virtual UpdateSleepTime update( void );					///< the update
 
@@ -300,6 +303,6 @@ protected:
 	ModelConditionFlags m_setFlags;											///< flags to set in model
 	Bool								m_flagsDirty;										///< clearFlags/setFlags needs to be set into the model
 	UnsignedInt							m_nextWakeUpTime;
-	Int									m_productionViewedByEnemyFrame;
+	mutable PlayerDurationVec			m_productionViewedByEnemyData;
 
 };

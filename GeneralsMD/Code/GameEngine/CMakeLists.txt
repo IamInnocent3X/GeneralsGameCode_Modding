@@ -336,6 +336,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/DelayedUpgradeBehavior.h
     Include/GameLogic/Module/FlammableUpdate.h
     Include/GameLogic/Module/FlightDeckBehavior.h
+    Include/GameLogic/Module/DoSabotageBehavior.h
     Include/GameLogic/Module/DroneCarrierAIUpdate.h
     Include/GameLogic/Module/FloatUpdate.h
     Include/GameLogic/Module/FXListDie.h
@@ -892,6 +893,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Behavior/CountermeasuresBehavior.cpp
     Source/GameLogic/Object/Behavior/BattlePlanBonusBehavior.cpp
     Source/GameLogic/Object/Behavior/EnergyShieldBehavior.cpp
+    Source/GameLogic/Object/Behavior/DoSabotageBehavior.cpp
     Source/GameLogic/Object/Behavior/DumbProjectileBehavior.cpp
     Source/GameLogic/Object/Behavior/FreeFallProjectileBehavior.cpp
     Source/GameLogic/Object/Behavior/FireWeaponWhenDamagedBehavior.cpp

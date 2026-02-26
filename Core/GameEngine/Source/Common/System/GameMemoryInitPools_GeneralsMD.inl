@@ -113,6 +113,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "AutoHealBehavior", 1024, 256 },
 	{ "WeaponBonusUpdate", 16, 16 },
 	{ "BuffUpdate", 32, 32 },
+	{ "DoSabotageBehavior", 4096, 32 },
 	{ "GrantStealthBehavior", 4096, 32 },
 	{ "NeutronBlastBehavior", 4096, 32 },
 	{ "CountermeasuresBehavior", 256, 32 },
