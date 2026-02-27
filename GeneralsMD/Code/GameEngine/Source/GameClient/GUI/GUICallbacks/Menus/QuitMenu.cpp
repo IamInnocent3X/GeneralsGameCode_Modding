@@ -243,12 +243,8 @@ static void restartMissionMenu()
 																																		TheScriptEngine->getGlobalDifficulty(),
 																																		rankPointsStartedWith)
 							);
-		//if (TheGlobalData->m_fixedSeed >= 0)
-			//InitRandom(TheGlobalData->m_fixedSeed);
-			InitRandomType(TheGlobalData->m_initRandomType);
-			//DEBUG_LOG(("Restarting Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
-		//else
-		//	InitGameLogicRandom(GameClientRandomValue(0, INT_MAX - 1));
+
+		InitRandom(seed);
 	}
 	//TheTransitionHandler->remove("QuitFull"); //KRISMORNESS ADD
 	//quitMenuLayout = nullptr; //KRISMORNESS ADD

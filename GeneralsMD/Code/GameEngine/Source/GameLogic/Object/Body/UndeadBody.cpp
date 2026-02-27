@@ -154,7 +154,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 			const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( *it );
 			if( !upgradeTemplate )
 			{
-				DEBUG_ASSERTCRASH( 0, ("SecondLifeUpgradeToGrant for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+				DEBUG_CRASH( ("SecondLifeUpgradeToGrant for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 				return;
 			}
 
@@ -210,7 +210,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 				}
 				else
 				{
-					DEBUG_ASSERTCRASH( 0, ("Object %s just Triggered Undead Body but is trying to remove upgrade %s",
+					DEBUG_CRASH( ("Object %s just Triggered Undead Body but is trying to remove upgrade %s",
 						getObject()->getName(),
 						it->str() ) );
 				}
@@ -267,7 +267,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 		{
 			/*if(data->m_multipleLivesMaxHealthOverride.empty())
 			{
-				DEBUG_ASSERTCRASH( 0, ("MultipleLivesMaxHealthVariationOverride is empty while MultipleLivesOverrideTrigger is at Life: %d.", healArray) );
+				DEBUG_CRASH( ("MultipleLivesMaxHealthVariationOverride is empty while MultipleLivesOverrideTrigger is at Life: %d.", healArray) );
 			}*/
 			if(!data->m_multipleLivesMaxHealthOverride.empty() && data->m_multipleLivesMaxHealthOverride.size() > healArray && data->m_multipleLivesMaxHealthOverride[healArray]>0)
 			{
@@ -298,12 +298,12 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 				if(isdigit(*getChars)){
 					if (sscanf( getChars, "%d", &value ) != 1)
 					{
-						DEBUG_ASSERTCRASH( 0, ("MultipleLivesUpgradesToGrant Value isn't a valid digit: %s.", it->str()) );
+						DEBUG_CRASH( ("MultipleLivesUpgradesToGrant Value isn't a valid digit: %s.", it->str()) );
 						throw INI_INVALID_DATA;
 					}
 					if(value < 0 || value > 65535)
 					{
-						DEBUG_ASSERTCRASH( 0, ("MultipleLivesUpgradesToGrant Value is invalid: %d.", value) );
+						DEBUG_CRASH( ("MultipleLivesUpgradesToGrant Value is invalid: %d.", value) );
 						throw INI_INVALID_DATA;
 					}
 				}
@@ -350,12 +350,12 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 				if(isdigit(*getChars)){
 					if (sscanf( getChars, "%d", &value ) != 1)
 					{
-						DEBUG_ASSERTCRASH( 0, ("MultipleLivesUpgradesToGrant Value isn't a valid digit: %s.", it->str()) );
+						DEBUG_CRASH( ("MultipleLivesUpgradesToGrant Value isn't a valid digit: %s.", it->str()) );
 						throw INI_INVALID_DATA;
 					}
 					if(value < 0 || value > 65535)
 					{
-						DEBUG_ASSERTCRASH( 0, ("MultipleLivesUpgradesToGrant Value is invalid: %d.", value) );
+						DEBUG_CRASH( ("MultipleLivesUpgradesToGrant Value is invalid: %d.", value) );
 						throw INI_INVALID_DATA;
 					}
 				}
@@ -389,7 +389,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 						}
 						else
 						{
-							DEBUG_ASSERTCRASH( 0, ("Object %s just Triggered Undead Body for Multiple Lives: %d, but is trying to remove upgrade %s",
+							DEBUG_CRASH( ("Object %s just Triggered Undead Body for Multiple Lives: %d, but is trying to remove upgrade %s",
 								getObject()->getName(),
 								value,
 								it->str() ) );

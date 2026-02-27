@@ -1033,7 +1033,7 @@ Bool SalvageCrateCollide::testUpgrade( Object *other, Bool testMax ) const
 	}
 	if( !theTemplate )
 	{
-		DEBUG_ASSERTCRASH( 0, ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), md->m_grantUpgradeNames[md->m_grantUpgradeNames.size()-1].str() ) );
+		DEBUG_CRASH( ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), md->m_grantUpgradeNames[md->m_grantUpgradeNames.size()-1].str() ) );
 		return FALSE;
 	}
 
@@ -1990,7 +1990,7 @@ void SalvageCrateCollide::grantUpgrades( Object *other )
 		}
 		if( !theTemplate )
 		{
-			DEBUG_ASSERTCRASH( 0, ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), md->m_grantUpgradeNames[i].str() ) );
+			DEBUG_CRASH( ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), md->m_grantUpgradeNames[i].str() ) );
 			return;
 		}
 
@@ -2066,7 +2066,7 @@ void SalvageCrateCollide::doUpgrade( Object *other, const AsciiString& grantUpgr
 		}
 		if( !theTemplate )
 		{
-			DEBUG_ASSERTCRASH( 0, ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), removeUpgradeName.str() ) );
+			DEBUG_CRASH( ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), removeUpgradeName.str() ) );
 			return;
 		}
 		if( theTemplate )
@@ -2085,7 +2085,7 @@ void SalvageCrateCollide::doUpgrade( Object *other, const AsciiString& grantUpgr
 			}
 			else
 			{
-				DEBUG_ASSERTCRASH( 0, ("SalvageCrateCollide trying to removing Upgrade %s from Object %s",
+				DEBUG_CRASH( ("SalvageCrateCollide trying to removing Upgrade %s from Object %s",
 					other->getName().str(),
 					removeUpgradeName.str() ) );
 			}
@@ -2100,7 +2100,7 @@ void SalvageCrateCollide::doUpgrade( Object *other, const AsciiString& grantUpgr
 	}
 	if( !theTemplate )
 	{
-		DEBUG_ASSERTCRASH( 0, ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), grantUpgradeName.str() ) );
+		DEBUG_CRASH( ("SalvageCrateCollide for %s can't find upgrade template %s.", obj->getTemplate()->getName(), grantUpgradeName.str() ) );
 		return;
 	}
 

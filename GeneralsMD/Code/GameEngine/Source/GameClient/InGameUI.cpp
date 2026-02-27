@@ -1897,7 +1897,7 @@ void InGameUI::handleBuildPlacements( void )
 				}  // end else if
 				else
 				{
-					DEBUG_ASSERTCRASH(0, ("InGameUI::handleBuildPlacements (Shipyard placement): Undefined geometry '%d' for '%s'", geom.getGeomType(), m_pendingPlaceType->getName().str()));
+					DEBUG_CRASH( ("InGameUI::handleBuildPlacements (Shipyard placement): Undefined geometry '%d' for '%s'", geom.getGeomType(), m_pendingPlaceType->getName().str()));
 					return;
 				}  // end else
 

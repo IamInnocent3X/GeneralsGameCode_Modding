@@ -147,7 +147,7 @@ void GrantUpgradeCreate::onCreate( void )
 			//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->upgradeNames[i] );
 					if( !upgradeTemplate )
 					{
-						DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+						DEBUG_CRASH( ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 						return;
 					}
 
@@ -208,7 +208,7 @@ void GrantUpgradeCreate::onCreate( void )
 						}
 						else
 						{
-							DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
+							DEBUG_CRASH( ("Object %s just created, but is trying to remove upgrade %s",
 								getObject()->getName(),
 								it->str() ) );
 						}
@@ -282,7 +282,7 @@ void GrantUpgradeCreate::onBuildComplete( void )
 	//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->upgradeNames[i] );
 			if( !upgradeTemplate )
 			{
-				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+				DEBUG_CRASH( ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 				return;
 			}
 
@@ -343,7 +343,7 @@ void GrantUpgradeCreate::onBuildComplete( void )
 				}
 				else
 				{
-					DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
+					DEBUG_CRASH( ("Object %s just created, but is trying to remove upgrade %s",
 						getObject()->getName(),
 						it->str() ) );
 				}

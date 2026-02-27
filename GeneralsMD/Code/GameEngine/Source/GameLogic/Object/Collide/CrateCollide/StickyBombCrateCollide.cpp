@@ -138,7 +138,7 @@ Bool StickyBombCrateCollide::executeCrateBehavior( Object *other )
 			StickyBombUpdateInterface* update = stickyBombObject->getStickyBombUpdateInterface();
 			if (!update)
 			{
-				DEBUG_ASSERTCRASH(0,
+				DEBUG_CRASH(
 					("Unit '%s' attempted to place %s on %s but the bomb requires a StickyBombUpdate module.",
 						getObject()->getTemplate()->getName().str(),
 						stickyBombObject->getTemplate()->getName().str(),

@@ -4351,15 +4351,15 @@ void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real perce
 
 		KindOfPercentProductionChange* tof = *it;
 		Int expiredCount = 0;
-		for(std::vector<UnsignedInt>::iterator it = tof->m_frame.begin(); it != tof->m_frame.end();)
+		for(std::vector<UnsignedInt>::iterator it_frame = tof->m_frame.begin(); it_frame != tof->m_frame.end();)
 		{
-			if(now > (*it))
+			if(now > (*it_frame))
 			{
 				expiredCount++;
-				it = tof->m_frame.erase( it );
+				it_frame = tof->m_frame.erase( it_frame );
 				continue;
 			}
-			++it;
+			++it_frame;
 		}
 		if (expiredCount > 0 ||
 			(tof->m_percent == percent && tof->m_kindOf == kindOf &&
@@ -4384,7 +4384,7 @@ void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real perce
 		}
 		++it;
 	}
-	DEBUG_CRASH(("removeKindOfProductionCostChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.",kindOf, percent));
+	DEBUG_ASSERTCRASH(kindOf == KINDOFMASK_NONE && percent == 0.0f,("removeKindOfProductionCostChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.",kindOf, percent));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4401,9 +4401,9 @@ Real Player::getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const
 		KindOfPercentProductionChange *tof = *it;
 		Bool expired = FALSE;
 		Bool doChange = FALSE;
-		for(std::vector<UnsignedInt>::const_iterator it = tof->m_frame.begin(); it != tof->m_frame.end(); ++it)
+		for(std::vector<UnsignedInt>::const_iterator it_frame = tof->m_frame.begin(); it_frame != tof->m_frame.end(); ++it_frame)
 		{
-			if(now > (*it))
+			if(now > (*it_frame))
 			{
 				expired = TRUE;
 				m_productionCostChangeExpired = TRUE;
@@ -4483,15 +4483,15 @@ void Player::removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percen
 
 		KindOfPercentProductionChange* tof = *it;
 		Int expiredCount = 0;
-		for(std::vector<UnsignedInt>::iterator it = tof->m_frame.begin(); it != tof->m_frame.end();)
+		for(std::vector<UnsignedInt>::iterator it_frame = tof->m_frame.begin(); it_frame != tof->m_frame.end();)
 		{
-			if(now > (*it))
+			if(now > (*it_frame))
 			{
 				expiredCount++;
-				it = tof->m_frame.erase( it );
+				it_frame = tof->m_frame.erase( it_frame );
 				continue;
 			}
-			++it;
+			++it_frame;
 		}
 		if (expiredCount > 0 ||
 			(tof->m_percent == percent && tof->m_kindOf == kindOf &&
@@ -4517,7 +4517,7 @@ void Player::removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percen
 		}
 		++it;
 	}
-	DEBUG_ASSERTCRASH(FALSE, ("removeKindOfProductionTimeChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.", kindOf, percent));
+	DEBUG_ASSERTCRASH(kindOf == KINDOFMASK_NONE && percent == 0.0f, ("removeKindOfProductionTimeChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.", kindOf, percent));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4534,9 +4534,9 @@ Real Player::getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const
 		KindOfPercentProductionChange* tof = *it;
 		Bool expired = FALSE;
 		Bool doChange = FALSE;
-		for(std::vector<UnsignedInt>::const_iterator it = tof->m_frame.begin(); it != tof->m_frame.end(); ++it)
+		for(std::vector<UnsignedInt>::const_iterator it_frame = tof->m_frame.begin(); it_frame != tof->m_frame.end(); ++it_frame)
 		{
-			if(now > (*it))
+			if(now > (*it_frame))
 			{
 				expired = TRUE;
 				m_productionTimeChangeExpired = TRUE;

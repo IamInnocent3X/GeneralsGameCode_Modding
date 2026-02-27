@@ -95,7 +95,7 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 	const UpgradeTemplate* upgradeTemplate = TheUpgradeCenter->findUpgrade(modData->m_upgradeName);
 	if (!upgradeTemplate)
 	{
-		DEBUG_ASSERTCRASH(0, ("UpgradeSpecialPower for %s can't find upgrade template %s.", getObject()->getName(), modData->m_upgradeName));
+		DEBUG_CRASH( ("UpgradeSpecialPower for %s can't find upgrade template %s.", getObject()->getName(), modData->m_upgradeName));
 		return;
 	}
 
@@ -136,7 +136,7 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 	//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( getUpgradeDieModuleData()->upgradeNames[i] );
 			if( !upgradeTemplate )
 			{
-				DEBUG_ASSERTCRASH( 0, ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
+				DEBUG_CRASH( ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), it->str() ) );
 				return;
 			}
 			if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
@@ -196,7 +196,7 @@ void UpgradeSpecialPower::grantUpgrade(Object* object) {
 				}
 				else
 				{
-					DEBUG_ASSERTCRASH( 0, ("Object %s just created, but is trying to remove upgrade %s",
+					DEBUG_CRASH( ("Object %s just created, but is trying to remove upgrade %s",
 						getObject()->getTemplate()->getName().str(),
 						it->str() ) );
 				}

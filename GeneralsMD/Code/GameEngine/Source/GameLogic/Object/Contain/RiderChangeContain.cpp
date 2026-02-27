@@ -935,12 +935,12 @@ Bool RiderChangeContain::compareRiderStatus(const AsciiString& rider, Int checkI
 		Int RiderIndex;
 		if (sscanf( RiderChar, "%d", &RiderIndex ) != 1)
 		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex isn't a valid digit: %s.", RiderChar) );
+			DEBUG_CRASH( ("RiderIndex isn't a valid digit: %s.", RiderChar) );
 			throw INI_INVALID_DATA;
 		}
 		if(RiderIndex < 0 || RiderIndex > 8)
 		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex is invalid: %d.", RiderIndex) );
+			DEBUG_CRASH( ("RiderIndex is invalid: %d.", RiderIndex) );
 			throw INI_INVALID_DATA;
 		}
 
@@ -1319,12 +1319,12 @@ void RiderChangeContain::riderGiveTemplate(RiderData riderData)
 		Int RiderIndex;
 		if (sscanf( RiderChar, "%d", &RiderIndex ) != 1)
 		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex isn't a valid digit: %s.", RiderChar) );
+			DEBUG_CRASH( ("RiderIndex isn't a valid digit: %s.", RiderChar) );
 			throw INI_INVALID_DATA;
 		}
 		if(RiderIndex < 0 || RiderIndex > 8)
 		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex is invalid: %d.", RiderIndex) );
+			DEBUG_CRASH( ("RiderIndex is invalid: %d.", RiderIndex) );
 			throw INI_INVALID_DATA;
 		}
 
@@ -1419,12 +1419,12 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 		Int RiderIndex;
 		if (sscanf( RiderChar, "%d", &RiderIndex ) != 1)
 		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex isn't a valid digit: %s.", RiderChar) );
+			DEBUG_CRASH( ("RiderIndex isn't a valid digit: %s.", RiderChar) );
 			throw INI_INVALID_DATA;
 		}
 		if(RiderIndex < 0 || RiderIndex > 8)
 		{
-			DEBUG_ASSERTCRASH( 0, ("RiderIndex is invalid: %d.", RiderIndex) );
+			DEBUG_CRASH( ("RiderIndex is invalid: %d.", RiderIndex) );
 			throw INI_INVALID_DATA;
 		}
 		

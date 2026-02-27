@@ -1873,7 +1873,7 @@ void OpenContain::doUpgradeChecks( void )
 				
 				if (sscanf( getChars, "%d", &currContain ) != 1)
 				{
-					DEBUG_ASSERTCRASH( 0, ("OpenContain Value isn't a valid digit: %s.", it_a->str()) );
+					DEBUG_CRASH( ("OpenContain Upgrade List Value isn't a valid digit: %s.", it_a->str()) );
 					throw INI_INVALID_DATA;
 				}
 
@@ -1900,7 +1900,7 @@ void OpenContain::doUpgradeChecks( void )
 						if(isdigit(*getChars_c)){
 							if (sscanf( getChars_c, "%d", &currContainConflicts ) != 1)
 							{
-								DEBUG_ASSERTCRASH( 0, ("OpenContain Conflict Upgrade Value isn't a valid digit: %s.", it_c->str()) );
+								DEBUG_CRASH( ("OpenContain Conflict Upgrade Value isn't a valid digit: %s.", it_c->str()) );
 								throw INI_INVALID_DATA;
 							}
 						}
