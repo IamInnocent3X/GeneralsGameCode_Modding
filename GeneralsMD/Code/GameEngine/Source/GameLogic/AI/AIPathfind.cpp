@@ -7005,12 +7005,14 @@ Path *Pathfinder::internalFindPath( Object *obj, const LocomotorSet& locomotorSe
 	parentCell->startPathfind(goalCell);
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -7569,12 +7571,14 @@ Path *Pathfinder::findGroundPath( const Coord3D *from,
 	parentCell->startPathfind(goalCell);
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -8066,12 +8070,14 @@ Path *Pathfinder::internal_findHierarchicalPath( Bool isHuman, const LocomotorSu
 	}
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -9126,12 +9132,14 @@ Int Pathfinder::checkPathCost(Object *obj, const LocomotorSet& locomotorSet, con
 	parentCell->startPathfind(goalCell);
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -9478,12 +9486,14 @@ Path *Pathfinder::findClosestPath( Object *obj, const LocomotorSet& locomotorSet
 	Real closestDistScreenSqr = FLT_MAX;
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -11083,12 +11093,14 @@ Path *Pathfinder::getMoveAwayFromPath(Object* obj, Object *otherObj,
 	parentCell->startPathfind(nullptr);
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -11263,12 +11275,14 @@ Path *Pathfinder::patchPath( const Object *obj, const LocomotorSet& locomotorSet
 	parentCell->startPathfind( nullptr);
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -11564,12 +11578,14 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 	}
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
@@ -11846,12 +11862,14 @@ Path *Pathfinder::findSafePath( const Object *obj, const LocomotorSet& locomotor
 	parentCell->startPathfind( nullptr);
 
 	// initialize "open" list to contain start cell
-#if RETAIL_COMPATIBLE_PATHFINDING
-	if (!s_useFixedPathfinding) {
+//#if RETAIL_COMPATIBLE_PATHFINDING
+	//if (!s_useFixedPathfinding) {
+	if( !s_useNonRetailPathfind && 
+		  !s_useFixedPathfinding ) {
 		m_openList.reset(parentCell);
 	}
 	else
-#endif
+//#endif
 	{
 		m_openList.reset();
 		parentCell->putOnSortedOpenList(m_openList);
