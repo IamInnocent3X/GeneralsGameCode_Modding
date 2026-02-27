@@ -186,8 +186,12 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "AllowCollideForce",	INI::parseBool,		nullptr, offsetof( PhysicsBehaviorModuleData, m_allowCollideForce ) },
 		{ "KillWhenRestingOnGround", INI::parseBool, nullptr, offsetof( PhysicsBehaviorModuleData, m_killWhenRestingOnGround) },
 
+		{ "MagnetResistance",		INI::parsePositiveNonZeroReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
+		{ "ShockResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_shockResistance ) },
+		{ "MagnetResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
+
 		{ "BounceFactor",			INI::parseReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_bounceFactor) },
-		
+
 		{ "MinFallHeightForDamage",			parseHeightToSpeed,		nullptr, offsetof( PhysicsBehaviorModuleData, m_minFallSpeedForDamage) },
 		{ "FallHeightDamageFactor",			INI::parseReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_fallHeightDamageFactor) },
 		{ "PitchRollYawFactor",			INI::parseReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_pitchRollYawFactor) },
@@ -199,12 +203,6 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "DoWaterPhysics", INI::parseBool, nullptr, offsetof(PhysicsBehaviorModuleData, m_doWaterPhysics) },
 		{ "WaterExtraFriction", INI::parseReal, nullptr, offsetof(PhysicsBehaviorModuleData, m_waterExtraFriction) },
 		{ "WaterImpactFX", INI::parseFXList, nullptr, offsetof(PhysicsBehaviorModuleData, m_waterImpactFX) },
-
-		{ "MagnetResistance",		INI::parsePositiveNonZeroReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
-
-		{ "ShockResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_shockResistance ) },
-		{ "MagnetResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
-
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);

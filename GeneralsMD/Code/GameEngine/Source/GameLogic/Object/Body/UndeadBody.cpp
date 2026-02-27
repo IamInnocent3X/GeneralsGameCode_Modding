@@ -116,7 +116,7 @@ void UndeadBody::attemptDamage( DamageInfo *damageInfo )
 
 	if( ( damageInfo->in.m_damageType != DAMAGE_UNRESISTABLE || damageInfo->in.m_notAbsoluteKill == TRUE ) 
 			&& (!m_isSecondLife || m_currentMultipleLives > 0)
-#if RETAIL_COMPATIBLE_CRC
+#if RETAIL_COMPATIBLE_CRC || PRESERVE_RETAIL_BEHAVIOR
 			&& damageInfo->in.m_amount >= getHealth()
 #else
 			// TheSuperHackers @bugfix Stubbjax 20/09/2025 Battle Buses now correctly apply damage modifiers when calculating lethal damage

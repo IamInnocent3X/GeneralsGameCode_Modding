@@ -461,7 +461,7 @@ UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, 
 				}
 				else
 				{
-					DEBUG_ASSERTCRASH( 0, ("[LINE: %d - FILE: '%s'] Unknown block '%s'",
+					DEBUG_CRASH( ("[LINE: %d - FILE: '%s'] Unknown block '%s'",
 														 getLineNum(), getFilename().str(), token ) );
 					throw INI_UNKNOWN_TOKEN;
 				}
@@ -547,7 +547,7 @@ void INI::readLine( void )
 		// check for at the max
 		if ( p == m_buffer+INI_MAX_CHARS_PER_LINE )
 		{
-			DEBUG_ASSERTCRASH( 0, ("Buffer too small (%d) and was truncated, increase INI_MAX_CHARS_PER_LINE", INI_MAX_CHARS_PER_LINE) );
+			DEBUG_CRASH( ("Buffer too small (%d) and was truncated, increase INI_MAX_CHARS_PER_LINE", INI_MAX_CHARS_PER_LINE) );
 		}
 	}
 
@@ -1822,7 +1822,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 
 	if( what == nullptr )
 	{
-		DEBUG_ASSERTCRASH( 0, ("INI::initFromINI - Invalid parameters supplied!") );
+		DEBUG_CRASH( ("INI::initFromINI - Invalid parameters supplied!") );
 		throw INI_INVALID_PARAMS;
 	}
 
@@ -1876,7 +1876,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 
 				if (!found)
 				{
-					DEBUG_ASSERTCRASH( 0, ("[LINE: %d - FILE: '%s'] Unknown field '%s' in block '%s'",
+					DEBUG_CRASH( ("[LINE: %d - FILE: '%s'] Unknown field '%s' in block '%s'",
 														 INI::getLineNum(), INI::getFilename().str(), field, m_curBlockStart) );
 				}
 
@@ -1889,7 +1889,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 		{
 
 			done = TRUE;
-			DEBUG_ASSERTCRASH( 0, ("Error parsing block '%s', in INI file '%s'.  Missing '%s' token",
+			DEBUG_CRASH( ("Error parsing block '%s', in INI file '%s'.  Missing '%s' token",
 												 m_curBlockStart, getFilename().str(), m_blockEndToken) );
 			throw INI_MISSING_END_TOKEN;
 
@@ -1965,7 +1965,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 	if( nameList == nullptr || nameList[ 0 ] == nullptr )
 	{
 
-		DEBUG_ASSERTCRASH( 0, ("INTERNAL ERROR! scanIndexList, invalid name list") );
+		DEBUG_CRASH( ("INTERNAL ERROR! scanIndexList, invalid name list") );
 		throw INI_INVALID_NAME_LIST;
 
 	}
@@ -1990,7 +1990,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 {
 	if( lookupList == nullptr || lookupList[ 0 ].name == nullptr )
 	{
-		DEBUG_ASSERTCRASH( 0, ("INTERNAL ERROR! scanLookupList, invalid name list") );
+		DEBUG_CRASH( ("INTERNAL ERROR! scanLookupList, invalid name list") );
 		throw INI_INVALID_NAME_LIST;
 	}
 

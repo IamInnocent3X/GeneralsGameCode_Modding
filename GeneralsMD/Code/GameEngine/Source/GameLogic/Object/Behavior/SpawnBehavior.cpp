@@ -1315,6 +1315,7 @@ void SpawnBehavior::crc( Xfer *xfer )
 	* Version Info:
 	* 1: Initial version
 	* 2: Added m_initialBurstTimesInited to the save. jba.
+	* 3: TheSuperHackers @bugfix Stubbjax 16/02/2026 Added m_initialBurstCountdown.
 */
 // ------------------------------------------------------------------------------------------------
 void SpawnBehavior::xfer( Xfer *xfer )
@@ -1322,7 +1323,11 @@ void SpawnBehavior::xfer( Xfer *xfer )
 	AsciiString name;
 
 	// version
+#if RETAIL_COMPATIBLE_XFER_SAVE
 	XferVersion currentVersion = 2;
+#else
+	XferVersion currentVersion = 3;
+#endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -1332,6 +1337,10 @@ void SpawnBehavior::xfer( Xfer *xfer )
 
 	if (version >= 2) {
 		xfer->xferBool(&m_initialBurstTimesInited);
+	}
+
+	if (version >= 3) {
+		xfer->xferUnsignedInt(&m_initialBurstCountdown);
 	}
 
 	// spawn template

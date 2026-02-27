@@ -201,14 +201,14 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 	//for(std::vector<AsciiString>::const_iterator it = data->m_gunshipTemplateNames.begin(); it != data->m_gunshipTemplateNames.end(); ++it )
 	for(int i = 0; i < data->m_gunshipTemplateNames.size(); i++ )
 	{
-		/*Object* newGunship = TheGameLogic->findObjectByID(m_gunshipID);
-		const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateName);
-		if (newGunship != nullptr)
-		{
+		//Object* newGunship = TheGameLogic->findObjectByID(m_gunshipID);
+		//const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateName);
+		//if (newGunship != nullptr)
+		//{
 			//    disengageAndDepartAO( newGunship );
-			m_gunshipID = INVALID_ID;
-			newGunship = nullptr;
-		}*/
+		//	m_gunshipID = INVALID_ID;
+		//	newGunship = nullptr;
+		//}
 
 		const ThingTemplate* gunshipTemplate = TheThingFactory->findTemplate(data->m_gunshipTemplateNames[i]);
 		Object* newGunship = TheThingFactory->newObject(gunshipTemplate, getObject()->getTeam());

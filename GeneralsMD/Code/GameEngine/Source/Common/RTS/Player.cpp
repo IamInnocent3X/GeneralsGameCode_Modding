@@ -2670,7 +2670,12 @@ void Player::doBountyForKill(const Object* killer, const Object* victim)
 		return;
 
 	Int costToBuild = victim->getTemplate()->calcCostToBuild(victim->getControllingPlayer());
+#if RETAIL_COMPATIBLE_CRC
 	Int bounty = REAL_TO_INT_CEIL(costToBuild * m_cashBountyPercent);
+#else
+	// TheSuperHackers @bugfix Stubbjax 20/02/2026 Subtract epsilon to ensure bounty is rounded up correctly.
+	Int bounty = ceil((costToBuild * m_cashBountyPercent) - WWMATH_EPSILON);
+#endif
 
 	if( bounty )
 	{
@@ -4379,7 +4384,7 @@ void Player::removeKindOfProductionCostChange(	KindOfMaskType kindOf, Real perce
 		}
 		++it;
 	}
-	DEBUG_ASSERTCRASH(FALSE, ("removeKindOfProductionCostChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.",kindOf, percent));
+	DEBUG_CRASH(("removeKindOfProductionCostChange was called with kindOf=%d and percent=%f. We could not find the entry in the list with these variables. CLH.",kindOf, percent));
 }
 
 //-------------------------------------------------------------------------------------------------

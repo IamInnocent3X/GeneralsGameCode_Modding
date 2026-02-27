@@ -1420,7 +1420,7 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
 			  StickyBombUpdateInterface *update = charge->getStickyBombUpdateInterface();
         if( !update )
         {
-          DEBUG_ASSERTCRASH( 0,
+          DEBUG_CRASH( 
             ("Unit '%s' attempted to place %s on %s but the bomb requires a StickyBombUpdate module.",
             object->getTemplate()->getName().str(),
             charge->getTemplate()->getName().str(),
@@ -1675,7 +1675,7 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
           StickyBombUpdateInterface *update = charge->getStickyBombUpdateInterface();
           if( !update )
           {
-            DEBUG_ASSERTCRASH( 0,
+            DEBUG_CRASH( 
               ("Unit '%s' attempted to place remote charge but the charge '%s' requires a StickyBombUpdate module.",
               object->getTemplate()->getName().str(),
               charge->getTemplate()->getName().str() ) );

@@ -614,7 +614,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			}
 			else if (cmt != CANMAKE_OK)
 			{
-				DEBUG_ASSERTCRASH( 0, ("Cannot create '%s' because the factory object '%s' returns false for canMakeUnit",
+				DEBUG_CRASH( ("Cannot create '%s' because the factory object '%s' returns false for canMakeUnit",
 																whatToBuild->getName().str(),
 																factory->getTemplate()->getName().str()) );
 				break;
@@ -627,7 +627,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			if( pu == nullptr )
 			{
 
-				DEBUG_ASSERTCRASH( 0, ("Cannot create '%s' because the factory object '%s' is not capable of producing units",
+				DEBUG_CRASH( ("Cannot create '%s' because the factory object '%s' is not capable of producing units",
 																whatToBuild->getName().str(),
 																factory->getTemplate()->getName().str()) );
 				break;
@@ -661,7 +661,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			if( i == MAX_BUILD_QUEUE_BUTTONS )
 			{
 
-				DEBUG_ASSERTCRASH( 0, ("Control not found in build queue data") );
+				DEBUG_CRASH( ("Control not found in build queue data") );
 				break;
 
 			}
@@ -785,7 +785,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			if( i == MAX_BUILD_QUEUE_BUTTONS )
 			{
 
-				DEBUG_ASSERTCRASH( 0, ("Control not found in build queue data") );
+				DEBUG_CRASH( ("Control not found in build queue data") );
 				break;
 
 			}
@@ -1155,7 +1155,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		//---------------------------------------------------------------------------------------------
 		default:
 
-			DEBUG_ASSERTCRASH( 0, ("Unknown command '%d'", commandButton->getCommandType()) );
+			DEBUG_CRASH( ("Unknown command '%d'", commandButton->getCommandType()) );
 			return CBC_COMMAND_NOT_USED;
 
 	}

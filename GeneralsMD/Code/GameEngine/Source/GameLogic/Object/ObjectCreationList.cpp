@@ -1597,7 +1597,7 @@ protected:
 			}
 			else
 			{
-				DEBUG_ASSERTCRASH(FALSE,("A OCL with ContainInsideSourceObject failed the contain and is killing the new object."));
+				DEBUG_CRASH(("A OCL with ContainInsideSourceObject failed the contain and is killing the new object."));
 				// If we fail to contain it, we can't just leave it.  Stillborn it.
 				TheGameLogic->destroyObject(obj);
 			}
@@ -1934,7 +1934,7 @@ private:
 	Bool											m_requiresLivePlayer;
 	Bool											m_experienceSink;
 	Bool											m_inheritsWeaponBonus;
-	Bool											m_containInsideSourceObject; ///< The created stuff will be added to the Contain module of the SourceObject
+	Bool											m_containInsideSourceObject; ///< The created stuff will be added to the Conatin module of the SourceObject
 	Bool											m_preserveLayer;
 	Bool											m_nameAreObjects;
 	Bool											m_okToChangeModelColor;

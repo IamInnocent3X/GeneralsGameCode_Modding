@@ -88,7 +88,7 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 				}
 				else
 				{
-					DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
+					DEBUG_CRASH( ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
 						getObject()->getTemplate()->getName().str(),
 						data->m_upgradeName.str(),
 						producer->getTemplate()->getName().str(),
@@ -132,7 +132,7 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 					}
 					else
 					{
-						DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
+						DEBUG_CRASH( ("Object %s just died, but is trying to free upgrade %s in it's producer %s%s",
 							getObject()->getTemplate()->getName().str(),
 							it->str(),
 							producer->getTemplate()->getName().str(), 
@@ -163,7 +163,7 @@ void UpgradeDie::onDie( const DamageInfo *damageInfo )
 		//		const UpgradeTemplate *upgrade = TheUpgradeCenter->findUpgrade( data->m_upgradeNames[i] );
 				if( !upgradeTemplate )
 				{
-					DEBUG_ASSERTCRASH( 0, ("Object %s just died, but is trying to give upgrade %s to it's producer %s",
+					DEBUG_CRASH( ("Object %s just died, but is trying to give upgrade %s to it's producer %s",
 						getObject()->getTemplate()->getName().str(),
 						it->str(),
 						producer->getTemplate()->getName().str()) );
