@@ -215,7 +215,7 @@ void GrantStealthBehavior::grantStealthToObject( Object *obj )
 			}
 			if( !upgradeTemplate )
 			{
-				DEBUG_CRASH( ("GrantUpdateCreate for %s can't find upgrade template %s.", getObject()->getName(), d->m_upgradeName.str()));
+				DEBUG_CRASH( ("GrantStealthBehavior for %s can't find upgrade template %s.", getObject()->getName(), d->m_upgradeName.str()));
 				return;
 			}
 
