@@ -3822,11 +3822,25 @@ void Drawable::drawHealing(const IRegion2D* healthBarRegion)
 	if( obj->isKindOf( KINDOF_NO_HEAL_ICON ) || obj->getStatusBits().test( OBJECT_STATUS_SOLD ) )
 		return;
 
+	Bool dontShowHealing = FALSE;
+	// IamInnocent 27/02/2026 - Don't draw heal icon for disguised objects that does not show healing icon
+	if( obj->getDrawable() && obj->getDrawable()->isKindOf( KINDOF_NO_HEAL_ICON ) )
+		dontShowHealing = TRUE;
+
+	StealthUpdate *stealth = getObject()->getStealth();
+	Bool dontDrawHealingWhenHealedByAllies = stealth && stealth->dontDrawHealingWhenHealedByAllies(rts::getObservedOrLocalPlayer()->getDefaultTeam());
+
+	if( !dontShowHealing && dontDrawHealingWhenHealedByAllies && obj->getSoleHealingBenefactor() != INVALID_ID )
+	{
+		Object *healer = TheGameLogic->findObjectByID(obj->getSoleHealingBenefactor());
+		if( healer && healer->getRelationship(obj) == ALLIES )
+			dontShowHealing = TRUE;
+	}
 
 	// see if healing has been done to us recently
 	Bool showHealing = FALSE;
 	BodyModuleInterface *body = obj->getBodyModule();
-	if( body->getHealth() != body->getMaxHealth() )
+	if( !dontShowHealing && body->getHealth() != body->getMaxHealth() )
 	{
 //		const DamageInfo* lastDamage = body->getLastDamageInfo();
 //		if( lastDamage != nullptr && lastDamage->in.m_damageType == DAMAGE_HEALING
@@ -3834,8 +3848,18 @@ void Drawable::drawHealing(const IRegion2D* healthBarRegion)
 //			)
 		if ( TheGameLogic->getFrame() > HEALING_ICON_DISPLAY_TIME && // because so many things init health early in game
 			(TheGameLogic->getFrame() - body->getLastHealingTimestamp() <= HEALING_ICON_DISPLAY_TIME) )
-
-			showHealing = TRUE;
+		{
+			if(!dontDrawHealingWhenHealedByAllies || !body->getLastDamageInfo())
+			{
+				showHealing = TRUE;
+			}
+			else if(body->getLastDamageInfo()->in.m_sourceID != INVALID_ID)
+			{
+				Object *healer = TheGameLogic->findObjectByID(body->getLastDamageInfo()->in.m_sourceID);
+				if( !healer || healer->getRelationship(obj) != ALLIES )
+					showHealing = TRUE;
+			}
+		}
 	}
 
 	// based on our own kind of we have certain icons to display at a size scale

@@ -761,6 +761,8 @@ protected:
 	Int													m_maxSelectCount;												///< Max number of objects to select
 	UnsignedInt									m_frameSelectionChanged;								///< Frame when the selection last changed.
 
+	ObjectID									m_lastSelectedFrontID;												///< Last selected object in front
+
   Int                         m_duringDoubleClickAttackMoveGuardHintTimer; ///< Frames left to draw the doubleClickFeedbackTimer
   Coord3D                     m_duringDoubleClickAttackMoveGuardHintStashedPosition;
 

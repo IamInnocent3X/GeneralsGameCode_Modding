@@ -125,6 +125,7 @@ public:
 	Bool					m_dontFlashWhenFlickering;
 	Bool					m_disguiseUseOriginalFiringOffset;
 	Bool					m_isSimpleDisguise;
+	Bool					m_dontDrawHealingWhenHealedByAllies;
   std::vector<AsciiString> m_requiredCustomStatus;
   std::vector<AsciiString> m_forbiddenCustomStatus;
 
@@ -170,6 +171,7 @@ public:
   EvaMessage getOwnDetectionEvaEvent() const { return getStealthUpdateModuleData()->m_ownDetectionEvaEvent; }
 	Bool getOrderIdleEnemiesToAttackMeUponReveal() const { return getStealthUpdateModuleData()->m_orderIdleEnemiesToAttackMeUponReveal; }
 	Bool isSimpleDisguise() const { return isDisguised() && getStealthUpdateModuleData()->m_isSimpleDisguise; }
+	Bool dontDrawHealingWhenHealedByAllies(Team *team) const;
 	Object* calcStealthOwner(); //Is it me that can stealth or is it my rider?
 	Bool allowedToStealth( Object *stealthOwner ) const;
   void receiveGrant( Bool active = TRUE, UnsignedInt frames = 0 );

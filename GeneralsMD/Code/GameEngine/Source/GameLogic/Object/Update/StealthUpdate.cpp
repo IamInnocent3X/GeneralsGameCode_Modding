@@ -96,6 +96,7 @@ StealthUpdateModuleData::StealthUpdateModuleData()
 	m_dontFlashWhenFlickering = false;
 	m_disguiseUseOriginalFiringOffset = false;
 	m_isSimpleDisguise = false;
+	m_dontDrawHealingWhenHealedByAllies = false;
 }
 
 
@@ -134,6 +135,7 @@ void StealthUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "DontFlashWhenFlickering",			INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_dontFlashWhenFlickering ) },
 		{ "UseOriginalFiringOffsetWhileDisguised",		INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_disguiseUseOriginalFiringOffset ) },
 		{ "IsSimpleDisguiseForWeapons",		INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_isSimpleDisguise ) },
+		{ "DontDrawHealingWhenHealedByAllies",		INI::parseBool,	nullptr, offsetof( StealthUpdateModuleData, m_dontDrawHealingWhenHealedByAllies ) },
     { "EnemyDetectionEvaEvent",				Eva::parseEvaMessageFromIni,  	nullptr, offsetof( StealthUpdateModuleData, m_enemyDetectionEvaEvent ) },
     { "OwnDetectionEvaEvent",		  		Eva::parseEvaMessageFromIni,  	nullptr, offsetof( StealthUpdateModuleData, m_ownDetectionEvaEvent ) },
 		{ "BlackMarketCheckDelay",				INI::parseDurationUnsignedInt,  nullptr, offsetof( StealthUpdateModuleData, m_blackMarketCheckFrames ) },
@@ -1927,6 +1929,37 @@ Int StealthUpdate::getBarrelCountDisguisedTemplate(WeaponSlotType wslot) const
 Drawable *StealthUpdate::getDrawableTemplateWhileDisguised() const
 {
 	return getStealthUpdateModuleData()->m_disguiseUseOriginalFiringOffset ? m_originalDrawableTemplate : m_disguisedDrawableTemplate;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool StealthUpdate::dontDrawHealingWhenHealedByAllies(Team *team) const
+{
+	// Not disguised, return FALSE;
+	if(!getStealthUpdateModuleData()->m_dontDrawHealingWhenHealedByAllies || !isDisguised() || !getObject()->testStatus(OBJECT_STATUS_DISGUISED) || m_disguiseAsPlayerIndex == -1)
+		return FALSE;
+
+	// Always show to allies
+	if(getObject()->getControllingPlayer()->getRelationship(team) == ALLIES)
+		return FALSE;
+
+	// Do not show if there is no drawable
+	Drawable *draw = getObject()->getDrawable();
+	if(!draw)
+		return TRUE;
+
+	Player *player = ThePlayerList->getNthPlayer(m_disguiseAsPlayerIndex);
+	if(player)
+	{
+		// If we are disguised as an Ally, always show
+		if(player->getRelationship(getObject()->getTeam()) == ALLIES)
+			return FALSE;
+		// else if the local player is Allied or Neutral with the current disguised Team, hide the healing icon
+		else if(player->getRelationship(team) != ENEMIES)
+			return TRUE;
+	}
+
+	// Any other cases, defaults to show
+	return FALSE;
 }
 
 // ------------------------------------------------------------------------------------------------

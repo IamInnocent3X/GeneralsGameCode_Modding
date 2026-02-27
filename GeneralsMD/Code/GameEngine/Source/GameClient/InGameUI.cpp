@@ -1419,6 +1419,7 @@ InGameUI::InGameUI()
 	m_curCusRcType.clear();
 
 	m_soloNexusSelectedDrawableID = INVALID_DRAWABLE_ID;
+	m_lastSelectedFrontID = INVALID_ID;
 
 }
 
@@ -4149,7 +4150,10 @@ void InGameUI::selectDrawablePreserveGUI( Drawable *draw, Bool showFlash )
 		draw->friend_setSelectedSetShowFlash(showFlash);
 
 		// add to our selected list
-		m_selectedDrawables.push_front( draw );
+		if( m_lastSelectedFrontID == draw->getObject()->getID() )
+			m_selectedDrawables.push_front( draw );
+		else
+			m_selectedDrawables.push_back( draw );
 
 		// we now have one more selected drawable
 		incrementSelectCount();
@@ -4432,6 +4436,9 @@ void InGameUI::disregardDrawablePreserveGUI( Drawable *draw )
 		DEBUG_ASSERTCRASH( findIt != m_selectedDrawables.end(),
 											 ("deselectDrawable: Drawable not found in the selected drawable list '%s'",
 											 draw->getTemplate()->getName().str()) );
+		
+		// get last front selected drawable
+		m_lastSelectedFrontID = !m_selectedDrawables.empty() && (*m_selectedDrawables.begin())->getObject() ? (*m_selectedDrawables.begin())->getObject()->getID() : INVALID_ID;
 
 		// remove it from the selected drawable list
 		m_selectedDrawables.erase( findIt );

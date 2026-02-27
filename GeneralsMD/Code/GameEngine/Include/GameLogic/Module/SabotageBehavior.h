@@ -369,7 +369,7 @@ public:
 
 			// Damage and Capture
 			{ "SabotageDamage", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageDamage ) },
-			{ "SabotageMaxHealth%AsDamage", INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotagePercentDamage ) },
+			{ "SabotageMaxHealthPercentAsDamage", INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotagePercentDamage ) },
 			{ "SabotageIsCapture", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageIsCapture ) },
 			{ "SabotageCaptureBelowHealth", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealth ) },
 			{ "SabotageCaptureBelowHealth%", INI::parseReal, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageCaptureBelowHealthPercent ) },
