@@ -2394,8 +2394,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
   // Note: Recorder might not playback correctly if the seed is changed.
   if( !TheGlobalData->m_initRandomType.isEmpty() && ( loadingSaveGame || m_gameMode == GAME_SKIRMISH ) && !isInMultiplayerGame() && TheRecorder && !TheRecorder->isPlaybackMode() )
   {
-	  InitRandomType(TheGlobalData->m_initRandomType, TheSkirmishGameInfo ? TheSkirmishGameInfo->getSeed() : 0, TRUE );
-	  //InitRandomType(TheGlobalData->m_initRandomType, GetTickCount(), TRUE);
+	  InitRandomType(TheGlobalData->m_initRandomType, TheSkirmishGameInfo ? TheSkirmishGameInfo->getSeed() : 0 );
+	  //InitRandomType(TheGlobalData->m_initRandomType, GetTickCount());
 	  //if(TheSkirmishGameInfo)
 	  //	TheSkirmishGameInfo->setSeed(GetGameLogicRandomSeed());
 	  //TheGameInfo->setNewSeedInFrame(getFrame(), GetGameLogicRandomSeed());

@@ -32,7 +32,7 @@
 
 extern void InitRandom();
 extern void InitRandom( UnsignedInt seed );
-extern void InitRandomType( const AsciiString& type, UnsignedInt tickCount = 0, Bool gameLogicOnly = FALSE);
+extern void InitRandomType( const AsciiString& type, UnsignedInt tickCount = 0 );
 extern UnsignedInt GetGameLogicRandomSeed();   ///< Get the seed (used for replays)
 extern UnsignedInt GetGameLogicRandomSeedCRC();///< Get the seed (used for CRCs)
 

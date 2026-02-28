@@ -177,7 +177,7 @@ DEBUG_LOG(( "InitRandom %08lx",seed));
 #endif
 }
 
-void InitRandomType( const AsciiString& type, UnsignedInt tickCount, Bool gameLogicOnly )
+void InitRandomType( const AsciiString& type, UnsignedInt tickCount )
 {
 	Int value = tickCount;
 	if(type == "MORE_RANDOM")
@@ -207,10 +207,7 @@ void InitRandomType( const AsciiString& type, UnsignedInt tickCount, Bool gameLo
 
 	//DEBUG_LOG(("Seed value: %d", value));
 
-	if(gameLogicOnly)
-		InitGameLogicRandom(value);
-	else
-		InitRandom(value);
+	InitRandom(value);
 }
 
 //

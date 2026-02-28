@@ -562,9 +562,9 @@ void GameSpyLaunchGame()
 
 		TheGlobalData->m_useFpsLimit = false;
 
-		// Set the random seed
-		InitGameLogicRandom( TheGameSpyGame->getSeed() );
-		DEBUG_LOG(("InitGameLogicRandom( %d )", TheGameSpyGame->getSeed()));
+		// Set the seeds
+		InitRandom( TheGameSpyGame->getSeed() );
+		DEBUG_LOG(("InitRandom( %d )", TheGameSpyGame->getSeed()));
 
 		if (TheNAT != nullptr) {
 			delete TheNAT;
