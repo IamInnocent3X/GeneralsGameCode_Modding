@@ -66,7 +66,7 @@ FireWeaponCollide::FireWeaponCollide( Thing *thing, const ModuleData* moduleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-FireWeaponCollide::~FireWeaponCollide( void )
+FireWeaponCollide::~FireWeaponCollide()
 {
 	deleteInstance(m_collideWeapon);
 }
@@ -185,7 +185,7 @@ void FireWeaponCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void FireWeaponCollide::loadPostProcess( void )
+void FireWeaponCollide::loadPostProcess()
 {
 
 	// extend base class

@@ -78,19 +78,19 @@ public:
 
 	virtual Bool isRiderChangeContain() const { return FALSE; }
   virtual Bool isSpecialOverlordStyleContainer() const {return FALSE;}
-	virtual Bool killPilotDoesNotKill( void ) const { return TRUE; }
+	virtual Bool killPilotDoesNotKill() const { return TRUE; }
 
-	virtual Int getRawContainMax( void ) const;
-	virtual Int getContainMax( void ) const;
+	virtual Int getRawContainMax() const;
+	virtual Int getContainMax() const;
 
-	virtual Int getExtraSlotsInUse( void ) { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
+	virtual Int getExtraSlotsInUse() { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
 
 	virtual Bool isExitBusy() const;	///< Contain style exiters are getting the ability to space out exits, so ask this before reserveDoor as a kind of no-commitment check.
 	virtual ExitDoorType reserveDoorForExit( const ThingTemplate* objType, Object *specificObject );
 	virtual void unreserveDoorForExit( ExitDoorType exitDoor );
 	virtual Bool isDisplayedOnControlBar() const {return TRUE;}///< Does this container display its contents on the ControlBar?
 
-	virtual void doUpgradeChecks( void );
+	virtual void doUpgradeChecks();
 
 protected:
 
@@ -100,7 +100,7 @@ protected:
 	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const;	///< Hey, can I shoot out of this container?
 
 	virtual void createPayload();
-	void letRidersUpgradeWeaponSet( void );
+	void letRidersUpgradeWeaponSet();
 
 	//Bool m_payloadCreated;
 	Int m_extraSlotsInUse;

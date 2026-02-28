@@ -59,7 +59,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-HelicopterSlowDeathBehaviorModuleData::HelicopterSlowDeathBehaviorModuleData( void )
+HelicopterSlowDeathBehaviorModuleData::HelicopterSlowDeathBehaviorModuleData()
 {
 	m_attachParticleBone.clear();
 	m_bladeBone.clear();
@@ -168,7 +168,7 @@ HelicopterSlowDeathBehavior::HelicopterSlowDeathBehavior( Thing *thing, const Mo
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-HelicopterSlowDeathBehavior::~HelicopterSlowDeathBehavior( void )
+HelicopterSlowDeathBehavior::~HelicopterSlowDeathBehavior()
 {
 
 }
@@ -279,7 +279,7 @@ void HelicopterSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime HelicopterSlowDeathBehavior::update( void )
+UpdateSleepTime HelicopterSlowDeathBehavior::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
 /// IamInnocent - Made Sleepy
@@ -672,7 +672,7 @@ void HelicopterSlowDeathBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void HelicopterSlowDeathBehavior::loadPostProcess( void )
+void HelicopterSlowDeathBehavior::loadPostProcess()
 {
 
 	// extend base class

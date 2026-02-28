@@ -261,7 +261,7 @@ void W3DProjectileStreamDraw::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void W3DProjectileStreamDraw::loadPostProcess( void )
+void W3DProjectileStreamDraw::loadPostProcess()
 {
 
 	// extend base class

@@ -83,13 +83,13 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-HijackerUpdate::~HijackerUpdate( void )
+HijackerUpdate::~HijackerUpdate()
 {
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime HijackerUpdate::update( void )
+UpdateSleepTime HijackerUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
 /// IamInnocent - Done.
@@ -616,7 +616,7 @@ void HijackerUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void HijackerUpdate::loadPostProcess( void )
+void HijackerUpdate::loadPostProcess()
 {
 
 	// extend base class

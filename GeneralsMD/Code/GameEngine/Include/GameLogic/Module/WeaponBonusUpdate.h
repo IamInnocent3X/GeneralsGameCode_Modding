@@ -98,7 +98,7 @@ public:
 	WeaponBonusUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual UpdateSleepTime update( void );
+	virtual UpdateSleepTime update();
 
 protected:
 

@@ -118,7 +118,7 @@ OCLUpdate::OCLUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModul
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-OCLUpdate::~OCLUpdate( void )
+OCLUpdate::~OCLUpdate()
 {
 }
 
@@ -211,7 +211,7 @@ void OCLUpdate::onBuildComplete()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime OCLUpdate::update( void )
+UpdateSleepTime OCLUpdate()
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 #if RETAIL_COMPATIBLE_CRC
@@ -341,16 +341,10 @@ UpdateSleepTime OCLUpdate::update( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime OCLUpdate::calcSleepTime( void ) const
+UpdateSleepTime OCLUpdate::calcSleepTime() const
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 	return UPDATE_SLEEP( m_nextCreationFrame > now ? m_nextCreationFrame - now : UPDATE_SLEEP_FOREVER );
-}
-
-//-------------------------------------------------------------------------------------------------
-void OCLUpdate::resetTimer()
-{
-	setNextCreationFrame();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -493,7 +487,7 @@ void OCLUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void OCLUpdate::loadPostProcess( void )
+void OCLUpdate::loadPostProcess()
 {
 
 	// extend base class

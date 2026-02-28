@@ -326,7 +326,7 @@ void ExperienceTracker::xfer( Xfer *xfer )
 }
 
 //-----------------------------------------------------------------------------
-void ExperienceTracker::loadPostProcess( void )
+void ExperienceTracker::loadPostProcess()
 {
 
 }

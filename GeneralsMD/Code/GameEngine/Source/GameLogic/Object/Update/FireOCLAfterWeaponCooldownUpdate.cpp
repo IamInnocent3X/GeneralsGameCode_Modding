@@ -91,7 +91,7 @@ FireOCLAfterWeaponCooldownUpdate::FireOCLAfterWeaponCooldownUpdate( Thing *thing
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-FireOCLAfterWeaponCooldownUpdate::~FireOCLAfterWeaponCooldownUpdate( void )
+FireOCLAfterWeaponCooldownUpdate::~FireOCLAfterWeaponCooldownUpdate()
 {
 }
 
@@ -134,7 +134,7 @@ Bool FireOCLAfterWeaponCooldownUpdate::checkStartsActive() const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation( )
+void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation()
 {
 	// Very simple; just need to flag the Object as having the player upgrade, and the WeaponSet chooser
 	// will do the work of picking the right one from ini.  This comment is as long as the code. Update: not anymore ;)
@@ -170,7 +170,7 @@ void FireOCLAfterWeaponCooldownUpdate::upgradeImplementation( )
 }
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update( void )
+UpdateSleepTime FireOCLAfterWeaponCooldownUpdate::update()
 {
 	const FireOCLAfterWeaponCooldownUpdateModuleData* data = getFireOCLAfterWeaponCooldownUpdateModuleData();
 	//UpgradeMaskType activation, conflicting;
@@ -349,7 +349,7 @@ void FireOCLAfterWeaponCooldownUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void FireOCLAfterWeaponCooldownUpdate::loadPostProcess( void )
+void FireOCLAfterWeaponCooldownUpdate::loadPostProcess()
 {
 
 	// extend base class

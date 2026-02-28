@@ -94,7 +94,7 @@ void AssaultTransportAIUpdate::goalReset()
 	m_newOccupantsAreNewMembers = FALSE;
 }
 //-------------------------------------------------------------------------------------------------
-AssaultTransportAIUpdate::~AssaultTransportAIUpdate( void )
+AssaultTransportAIUpdate::~AssaultTransportAIUpdate()
 {
 }
 
@@ -723,7 +723,7 @@ Bool AssaultTransportAIUpdate::isIdle() const
 //}
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime AssaultTransportAIUpdate::update( void )
+UpdateSleepTime AssaultTransportAIUpdate::update()
 {
 	Object *transport = getObject();
 	//const AssaultTransportAIUpdateModuleData *data = getAssaultTransportAIUpdateModuleData();
@@ -1301,7 +1301,7 @@ void AssaultTransportAIUpdate::xfer( Xfer *xfer )
 //-------------------------------------------------------------------------------------------------
 /** Load post process */
 //-------------------------------------------------------------------------------------------------
-void AssaultTransportAIUpdate::loadPostProcess( void )
+void AssaultTransportAIUpdate::loadPostProcess()
 {
  // extend base class
 	AIUpdateInterface::loadPostProcess();

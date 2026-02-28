@@ -70,7 +70,7 @@ SlavedUpdate::SlavedUpdate(Thing *thing, const ModuleData *moduleData) : UpdateM
 }
 
 //-------------------------------------------------------------------------------------------------
-SlavedUpdate::~SlavedUpdate(void)
+SlavedUpdate::~SlavedUpdate()
 {
 }
 
@@ -109,7 +109,7 @@ void SlavedUpdate::onSlaverDamage(const DamageInfo *info)
 
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime SlavedUpdate::update(void)
+UpdateSleepTime SlavedUpdate::update()
 {
 	/// @todo srj use SLEEPY_UPDATE here
 	/// IamInnocent - Done
@@ -839,7 +839,7 @@ void SlavedUpdate::xfer(Xfer *xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SlavedUpdate::loadPostProcess(void)
+void SlavedUpdate::loadPostProcess()
 {
 
 	// extend base class

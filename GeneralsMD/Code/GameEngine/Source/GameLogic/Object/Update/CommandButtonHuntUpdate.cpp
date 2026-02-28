@@ -86,7 +86,7 @@ m_commandButton(nullptr)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CommandButtonHuntUpdate::~CommandButtonHuntUpdate( void )
+CommandButtonHuntUpdate::~CommandButtonHuntUpdate()
 {
 
 }
@@ -245,7 +245,7 @@ UpdateSleepTime CommandButtonHuntUpdate::huntEnter( AIUpdateInterface *ai )
 }
 
 //-------------------------------------------------------------------------------------------------
-Object* CommandButtonHuntUpdate::scanClosestTarget(void)
+Object* CommandButtonHuntUpdate::scanClosestTarget()
 {
 	const CommandButtonHuntUpdateModuleData *data = getCommandButtonHuntUpdateModuleData();
 	Object *me = getObject();
@@ -474,7 +474,7 @@ void CommandButtonHuntUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CommandButtonHuntUpdate::loadPostProcess( void )
+void CommandButtonHuntUpdate::loadPostProcess()
 {
 
 	// extend base class

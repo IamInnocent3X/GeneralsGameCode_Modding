@@ -209,7 +209,7 @@ void CaveContain::harmAndForceExitAllContained( DamageInfo *info )
 //-------------------------------------------------------------------------------------------------
 /** Remove all contained objects from the contained list */
 //-------------------------------------------------------------------------------------------------
-void CaveContain::killAllContained( void )
+void CaveContain::killAllContained()
 {
 	// TheSuperHackers @bugfix xezon 04/06/2025 Empty the TunnelSystem's Contained Items List
 	// straight away to prevent a potential child call to catastrophically modify it as well.
@@ -250,7 +250,7 @@ void CaveContain::iterateContained( ContainIterateFunc func, void *userData, Boo
 // ------------------------------------------------------------------------------------------------
 /** Per frame update */
 // ------------------------------------------------------------------------------------------------
-UpdateSleepTime CaveContain::update( void )
+UpdateSleepTime CaveContain::update()
 {
 	const CaveContainModuleData* data = getCaveContainModuleData();
 	// Loading fixes. Cave System does not register properly while the game is loaded.
@@ -529,7 +529,7 @@ UnsignedInt CaveContain::getContainCount() const
 }
 
 // No implementation for Slot expansion... yet
-Int CaveContain::getRawContainMax( void ) const
+Int CaveContain::getRawContainMax() const
 {
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 	if(!myTracker)
@@ -537,7 +537,7 @@ Int CaveContain::getRawContainMax( void ) const
 	return myTracker->getContainMax();
 }
 
-Int CaveContain::getContainMax( void ) const
+Int CaveContain::getContainMax() const
 {
 	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
 	if(!myTracker)
@@ -574,7 +574,7 @@ void CaveContain::onDie( const DamageInfo * damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-void CaveContain::onDelete( void )
+void CaveContain::onDelete()
 {
 	// Being sold is a straight up delete.  no death
 
@@ -590,7 +590,7 @@ void CaveContain::onDelete( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-void CaveContain::onCreate( void )
+void CaveContain::onCreate()
 {
 	m_caveIndex = getCaveContainModuleData()->m_caveIndexData;
 	//TheCaveSystem->registerNewCave( m_caveIndex );
@@ -617,7 +617,7 @@ void CaveContain::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-void CaveContain::onBuildComplete( void )
+void CaveContain::onBuildComplete()
 {
 	//Kris: July 29, 2003
 	//Obsolete -- onObjectCreated handles it before this function gets called.
@@ -722,7 +722,7 @@ void CaveContain::tryToSetCaveIndex( Int newIndex )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void CaveContain::recalcApparentControllingPlayer( void )
+void CaveContain::recalcApparentControllingPlayer()
 {
 	//Record original team first time through.
 	if( m_originalTeam == nullptr )
@@ -1189,7 +1189,7 @@ void CaveContain::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CaveContain::loadPostProcess( void )
+void CaveContain::loadPostProcess()
 {
 
 	// extend base class

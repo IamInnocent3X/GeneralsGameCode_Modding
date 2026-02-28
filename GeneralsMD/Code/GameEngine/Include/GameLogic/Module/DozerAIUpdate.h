@@ -111,15 +111,15 @@ class DozerAIInterface
 
 public:
 
-	virtual void onDelete( void ) = 0;
+	virtual void onDelete() = 0;
 
-	virtual Real getRepairHealthPerSecond( void ) const = 0;	///< get health to repair per second
-	virtual Real getBoredTime( void ) const = 0;							///< how long till we're bored
-	virtual Real getBoredRange( void ) const = 0;							///< when we're bored, we look this far away to do things
-	virtual Bool getRepairClearsParasite( void ) const = 0;					///< whether repairing clears parasite
-	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys( void ) const = 0;					///< keys of parasites able to clear
-	virtual const KindOfMaskType& getRepairKindOf( void ) const = 0;	///< Only these types can repair -- defaults to structures.
-	virtual const KindOfMaskType& getRepairForbiddenKindOf( void ) const = 0;	///< Only these types can repair -- defaults to structures.
+	virtual Real getRepairHealthPerSecond() const = 0;	///< get health to repair per second
+	virtual Real getBoredTime() const = 0;							///< how long till we're bored
+	virtual Real getBoredRange() const = 0;							///< when we're bored, we look this far away to do things
+	virtual Bool getRepairClearsParasite() const = 0;					///< whether repairing clears parasite
+	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys() const = 0;					///< keys of parasites able to clear
+	virtual const KindOfMaskType& getRepairKindOf() const = 0;	///< Only these types can repair -- defaults to structures.
+	virtual const KindOfMaskType& getRepairForbiddenKindOf() const = 0;	///< Only these types can repair -- defaults to structures.
 
 	virtual Object* findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task) = 0;
 
@@ -131,22 +131,22 @@ public:
 
 
 	// get task information
-	virtual DozerTask getMostRecentCommand( void ) = 0;				///< return task that was most recently issued
+	virtual DozerTask getMostRecentCommand() = 0;				///< return task that was most recently issued
 	virtual Bool isTaskPending( DozerTask task ) = 0;					///< is there a desire to do the requested task
 	virtual ObjectID getTaskTarget( DozerTask task ) = 0;			///< get target of task
-	virtual Bool isAnyTaskPending( void ) = 0;								///< is there any dozer task pending
+	virtual Bool isAnyTaskPending() = 0;								///< is there any dozer task pending
 
-	virtual DozerTask getCurrentTask( void ) const = 0;							///< return the current task we're doing
+	virtual DozerTask getCurrentTask() const = 0;							///< return the current task we're doing
 	// the following should only be used from inside the Dozer state machine!
 	// !!! *DO NOT CALL THIS AND SET THE TASK DIRECTLY TO AFFECT BEHAVIOR* !!! ///
 	virtual void setCurrentTask( DozerTask task ) = 0;				///< set the current task of the dozer
 
-	virtual Bool getIsRebuild( void ) = 0;										///< get whether or not this is a rebuild.
+	virtual Bool getIsRebuild() = 0;										///< get whether or not this is a rebuild.
 
 	// task actions
 	virtual void newTask( DozerTask task, Object *target ) = 0;	///< set a desire to do the requested task
 	virtual void cancelTask( DozerTask task ) = 0;							///< cancel this task from the queue, if it's the current task the dozer will stop working on it
-	virtual void resumePreviousTask(void) = 0;									///< resume the previous task if there was one
+	virtual void resumePreviousTask() = 0;									///< resume the previous task if there was one
 
 	// internal methods to manage behavior from within the dozer state machine
 	virtual void internalTaskComplete( DozerTask task ) = 0;					///< set a dozer task as successfully completed
@@ -158,7 +158,7 @@ public:
 	virtual const Coord3D* getDockPoint( DozerTask task, DozerDockPoint point ) = 0;
 
 	virtual void setBuildSubTask( DozerBuildSubTask subTask ) = 0;
-	virtual DozerBuildSubTask getBuildSubTask( void ) = 0;
+	virtual DozerBuildSubTask getBuildSubTask() = 0;
 
 	// repairing
 	virtual Bool canAcceptNewRepair( Object *obj ) = 0;
@@ -178,7 +178,7 @@ class DozerAIUpdateModuleData : public AIUpdateModuleData
 
 public:
 
-	DozerAIUpdateModuleData( void );
+	DozerAIUpdateModuleData();
 
 	// !!!
 	// !!! NOTE: If you edit module data you must do it in both the Dozer *AND* the Worker !!!
@@ -219,20 +219,20 @@ public:
 	virtual DozerAIInterface* getDozerAIInterface() {return this;}
 	virtual const DozerAIInterface* getDozerAIInterface() const {return this;}
 
-	virtual void onDelete( void );
+	virtual void onDelete();
 
 	//
 	// module data methods ... this is LAME, multiple inheritance off an interface with replicated
 	// data and code, ick!
 	// NOTE: If you edit module data you must do it in both the Dozer *AND* the Worker
 	//
-	virtual Real getRepairHealthPerSecond( void ) const;	///< get health to repair per second
-	virtual Real getBoredTime( void ) const;							///< how long till we're bored
-	virtual Real getBoredRange( void ) const;							///< when we're bored, we look this far away to do things
-	virtual Bool getRepairClearsParasite( void ) const;					///< whether repairing clears parasite
-	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys( void ) const;					///< keys of parasites able to clear
-	virtual const KindOfMaskType& getRepairKindOf( void ) const;	///< Only these types can repair -- defaults to structures.
-	virtual const KindOfMaskType& getRepairForbiddenKindOf( void ) const;	///< Only these types can repair -- defaults to structures.
+	virtual Real getRepairHealthPerSecond() const;	///< get health to repair per second
+	virtual Real getBoredTime() const;							///< how long till we're bored
+	virtual Real getBoredRange() const;							///< when we're bored, we look this far away to do things
+	virtual Bool getRepairClearsParasite() const;					///< whether repairing clears parasite
+	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys() const;					///< keys of parasites able to clear
+	virtual const KindOfMaskType& getRepairKindOf() const;	///< Only these types can repair -- defaults to structures.
+	virtual const KindOfMaskType& getRepairForbiddenKindOf() const;	///< Only these types can repair -- defaults to structures.
 
 	virtual Object* findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task);
 
@@ -244,19 +244,19 @@ public:
 
 
 	// get task information
-	virtual DozerTask getMostRecentCommand( void );				///< return task that was most recently issued
+	virtual DozerTask getMostRecentCommand();				///< return task that was most recently issued
 	virtual Bool isTaskPending( DozerTask task );					///< is there a desire to do the requested task
 	virtual ObjectID getTaskTarget( DozerTask task );			///< get target of task
-	virtual Bool isAnyTaskPending( void );								///< is there any dozer task pending
-	virtual DozerTask getCurrentTask( void ) const { return m_currentTask; }	///< return the current task we're doing
+	virtual Bool isAnyTaskPending();								///< is there any dozer task pending
+	virtual DozerTask getCurrentTask() const { return m_currentTask; }	///< return the current task we're doing
 	virtual void setCurrentTask( DozerTask task ) { m_currentTask = task; }	///< set the current task of the dozer
 
-	virtual Bool getIsRebuild( void ) { return m_isRebuild; }	///< get whether or not this building is a rebuild.
+	virtual Bool getIsRebuild() { return m_isRebuild; }	///< get whether or not this building is a rebuild.
 
 	// task actions
 	virtual void newTask( DozerTask task, Object *target );	///< set a desire to do the requested task
 	virtual void cancelTask( DozerTask task );							///< cancel this task from the queue, if it's the current task the dozer will stop working on it
-	virtual void resumePreviousTask(void);									///< resume the previous task if there was one
+	virtual void resumePreviousTask();									///< resume the previous task if there was one
 
 	// internal methods to manage behavior from within the dozer state machine
 	virtual void internalTaskComplete( DozerTask task );					///< set a dozer task as successfully completed
@@ -268,9 +268,9 @@ public:
 	virtual const Coord3D* getDockPoint( DozerTask task, DozerDockPoint point );
 
 	virtual void setBuildSubTask( DozerBuildSubTask subTask ) { m_buildSubTask = subTask; };
-	virtual DozerBuildSubTask getBuildSubTask( void ) { return m_buildSubTask; }
+	virtual DozerBuildSubTask getBuildSubTask() { return m_buildSubTask; }
 
-	virtual UpdateSleepTime update( void );											///< the update entry point
+	virtual UpdateSleepTime update();											///< the update entry point
 
 	// repairing
 	virtual Bool canAcceptNewRepair( Object *obj );
@@ -325,6 +325,6 @@ protected:
 
 private:
 
-	void createMachines( void );		///< create our behavior machines we need
+	void createMachines();		///< create our behavior machines we need
 
 };

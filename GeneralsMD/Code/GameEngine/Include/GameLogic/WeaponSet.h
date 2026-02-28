@@ -185,7 +185,7 @@ public:
 	void clear();
 	void parseWeaponTemplateSet( INI* ini, const ThingTemplate* tt );
 	Bool testWeaponSetFlag( WeaponSetType wst ) const;
-	Bool isSharedReloadTime( void ) const { return m_isReloadTimeShared; }
+	Bool isSharedReloadTime() const { return m_isReloadTimeShared; }
 	Bool isWeaponLockSharedAcrossSets() const {return m_isWeaponLockSharedAcrossSets; }
 	Bool isWeaponReloadSharedAcrossSets() const { return m_isWeaponReloadSharedAcrossSets; }
 	Bool isSharedClip() const { return m_isClipShared; }
@@ -248,7 +248,7 @@ protected:
 	// snapshot methods
 	virtual void crc( Xfer *xfer );
 	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess( void );
+	virtual void loadPostProcess();
 
 public:
 

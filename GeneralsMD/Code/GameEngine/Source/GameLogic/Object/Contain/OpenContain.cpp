@@ -66,7 +66,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-OpenContainModuleData::OpenContainModuleData( void )
+OpenContainModuleData::OpenContainModuleData()
 {
 
 	m_containMax = CONTAIN_MAX_UNKNOWN;  // means we don't care, infinite, unassigned, whatever
@@ -206,7 +206,7 @@ OpenContain::OpenContain( Thing *thing, const ModuleData* moduleData ) : UpdateM
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Int OpenContain::getRawContainMax( void ) const
+Int OpenContain::getRawContainMax() const
 {
 	const OpenContainModuleData *modData = getOpenContainModuleData();
 
@@ -216,7 +216,7 @@ Int OpenContain::getRawContainMax( void ) const
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Int OpenContain::getContainMax( void ) const
+Int OpenContain::getContainMax() const
 {
 	const OpenContainModuleData *modData = getOpenContainModuleData();
 
@@ -252,7 +252,7 @@ void OpenContain::containReactToTransformChange()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime OpenContain::update( void )
+UpdateSleepTime OpenContain::update()
 {
 	m_playerEnteredMask = 0;
 
@@ -522,7 +522,7 @@ void OpenContain::removeAllContained( Bool exposeStealthUnits )
 //-------------------------------------------------------------------------------------------------
 /** Kill all contained objects in the contained list */
 //-------------------------------------------------------------------------------------------------
-void OpenContain::killAllContained( void )
+void OpenContain::killAllContained()
 {
 	// TheSuperHackers @bugfix xezon 23/05/2025 Empty m_containList straight away
 	// to prevent a potential child call to catastrophically modify the m_containList as well.
@@ -963,7 +963,7 @@ void OpenContain::onCollide( Object *other, const Coord3D *loc, const Coord3D *n
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void OpenContain::onDelete( void )	///< Last possible moment cleanup
+void OpenContain::onDelete()	///< Last possible moment cleanup
 {
 	// This uses my literal list, and not the gettor, because we don't want to get redirected some place fancy.
 	for(ContainedItemsList::iterator it = m_containList.begin(); it != m_containList.end(); )
@@ -1325,7 +1325,7 @@ Bool OpenContain::isPassengerAllowedToFire( ObjectID id ) const
 	* to a new damage state, we will want to redeploy all our occupants to be at new fire
 	* points that are reflected in the new artwork */
 //-------------------------------------------------------------------------------------------------
-void OpenContain::monitorConditionChanges( void )
+void OpenContain::monitorConditionChanges()
 {
 	Drawable *draw = getObject()->getDrawable();
 	Bool stateChanged = false;
@@ -1351,7 +1351,7 @@ void OpenContain::monitorConditionChanges( void )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void OpenContain::redeployOccupants( void )
+void OpenContain::redeployOccupants()
 {
 
 	//
@@ -1499,7 +1499,7 @@ void OpenContain::pruneDeadWanters()
 }
 
 //-------------------------------------------------------------------------------------------------
-void OpenContain::markAllPassengersDetected( )
+void OpenContain::markAllPassengersDetected()
 {
 	for( ContainedItemsList::iterator it = m_containList.begin(); it != m_containList.end(); )
 	{
@@ -1720,7 +1720,7 @@ const std::vector<AsciiString>& OpenContain::getCustomWeaponBonusPassedToPasseng
 }
 
 //-------------------------------------------------------------------------------------------------
-Real OpenContain::getDamagePercentageToUnits( void )
+Real OpenContain::getDamagePercentageToUnits()
 {
 	return getOpenContainModuleData()->m_damagePercentageToUnits;
 }
@@ -1746,7 +1746,7 @@ void OpenContain::setRallyPoint( const Coord3D *pos )
 }
 
 //-------------------------------------------------------------------------------------------------
-const Coord3D *OpenContain::getRallyPoint( void ) const
+const Coord3D *OpenContain::getRallyPoint() const
 {
 	if (m_rallyPointExists)
 		return &m_rallyPoint;
@@ -1793,7 +1793,7 @@ void testForAttackingProc( Object *obj, void *userData )
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool OpenContain::isAnyRiderAttacking( void ) const
+Bool OpenContain::isAnyRiderAttacking() const
 {
   Bool wellIsHe = FALSE;
 
@@ -1843,7 +1843,7 @@ void OpenContain::createPayload()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void OpenContain::doUpgradeChecks( void )
+void OpenContain::doUpgradeChecks()
 {
 	const OpenContainModuleData *modData = getOpenContainModuleData();
 	if(!modData->m_containMaxUpgradeList.empty())
@@ -2195,7 +2195,7 @@ void OpenContain::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void OpenContain::loadPostProcess( void )
+void OpenContain::loadPostProcess()
 {
 	Object *us = getObject();
 

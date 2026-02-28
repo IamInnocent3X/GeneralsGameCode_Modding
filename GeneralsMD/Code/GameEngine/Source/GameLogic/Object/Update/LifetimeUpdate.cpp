@@ -60,7 +60,7 @@ LifetimeUpdate::LifetimeUpdate( Thing *thing, const ModuleData* moduleData ) : U
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-LifetimeUpdate::~LifetimeUpdate( void )
+LifetimeUpdate::~LifetimeUpdate()
 {
 }
 
@@ -74,7 +74,7 @@ void LifetimeUpdate::setLifetimeRange( UnsignedInt minFrames, UnsignedInt maxFra
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void LifetimeUpdate::resetLifetime(void)
+void LifetimeUpdate::resetLifetime()
 {
 	const LifetimeUpdateModuleData* d = getLifetimeUpdateModuleData();
 	UnsignedInt delay = delay = calcSleepDelay(d->m_minFrames, d->m_maxFrames);
@@ -94,7 +94,7 @@ UnsignedInt LifetimeUpdate::calcSleepDelay(UnsignedInt minFrames, UnsignedInt ma
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Real LifetimeUpdate::getProgress(void) {
+Real LifetimeUpdate::getProgress() {
 	if (m_dieFrame > 0 && m_startDieFrame > 0) {
 		return INT_TO_REAL(TheGameLogic->getFrame() - m_startDieFrame) / INT_TO_REAL(m_dieFrame - m_startDieFrame);
 	}
@@ -102,7 +102,7 @@ Real LifetimeUpdate::getProgress(void) {
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime LifetimeUpdate::update( void )
+UpdateSleepTime LifetimeUpdate::update()
 {
 	// Kill (NOT destroy) if time is up
 	getObject()->kill();
@@ -147,7 +147,7 @@ void LifetimeUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void LifetimeUpdate::loadPostProcess( void )
+void LifetimeUpdate::loadPostProcess()
 {
 
 	// extend base class

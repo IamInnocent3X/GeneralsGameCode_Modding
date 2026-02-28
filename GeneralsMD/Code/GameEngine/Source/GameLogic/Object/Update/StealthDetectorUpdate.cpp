@@ -99,7 +99,7 @@ StealthDetectorUpdate::StealthDetectorUpdate( Thing *thing, const ModuleData* mo
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-StealthDetectorUpdate::~StealthDetectorUpdate( void )
+StealthDetectorUpdate::~StealthDetectorUpdate()
 {
 }
 
@@ -216,7 +216,7 @@ Bool StealthDetectorUpdate::testUpgrade()
 //-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime StealthDetectorUpdate::update( void )
+UpdateSleepTime StealthDetectorUpdate::update()
 {
 	const StealthDetectorUpdateModuleData *data = getStealthDetectorUpdateModuleData();
 	Object* self = getObject();
@@ -534,7 +534,7 @@ void StealthDetectorUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void StealthDetectorUpdate::loadPostProcess( void )
+void StealthDetectorUpdate::loadPostProcess()
 {
 
 	// extend base class

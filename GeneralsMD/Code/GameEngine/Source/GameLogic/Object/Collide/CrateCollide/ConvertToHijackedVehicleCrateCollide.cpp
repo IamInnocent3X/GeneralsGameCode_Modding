@@ -66,7 +66,7 @@ ConvertToHijackedVehicleCrateCollide::ConvertToHijackedVehicleCrateCollide( Thin
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ConvertToHijackedVehicleCrateCollide::~ConvertToHijackedVehicleCrateCollide( void )
+ConvertToHijackedVehicleCrateCollide::~ConvertToHijackedVehicleCrateCollide()
 {
 }
 
@@ -356,7 +356,7 @@ void ConvertToHijackedVehicleCrateCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ConvertToHijackedVehicleCrateCollide::loadPostProcess( void )
+void ConvertToHijackedVehicleCrateCollide::loadPostProcess()
 {
 
 	// extend base class

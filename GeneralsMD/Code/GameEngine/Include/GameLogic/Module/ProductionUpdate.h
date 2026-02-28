@@ -89,23 +89,23 @@ friend class ProductionUpdate;
 
 public:
 
-	ProductionEntry( void );
+	ProductionEntry();
 	// virtual destructor provided by memory pool object
 
 	/// query what kind of thing is being produced by this entry
-	const ThingTemplate *getProductionObject( void ) const { return m_objectToProduce; }
+	const ThingTemplate *getProductionObject() const { return m_objectToProduce; }
 
 	/// query what kind of upgrade is being produced by this entry
-	const UpgradeTemplate *getProductionUpgrade( void ) const { return m_upgradeToResearch; }
+	const UpgradeTemplate *getProductionUpgrade() const { return m_upgradeToResearch; }
 
 	/// query the production type
-	ProductionType getProductionType( void ) const { return m_type; }
+	ProductionType getProductionType() const { return m_type; }
 
 	/// how much progress is done on this entry
-	Real getPercentComplete( void ) const; // { return m_percentComplete; }
+	Real getPercentComplete() const; // { return m_percentComplete; }
 
 	/// get the unique (to the producer object) production ID
-	ProductionID getProductionID( void ) const { return m_productionID; }
+	ProductionID getProductionID() const { return m_productionID; }
 
 	Int getProductionQuantity() const { return m_productionQuantityTotal; } //How many I try to make
 	Int getProductionQuantityRemaining() const { return m_productionQuantityTotal - m_productionQuantityProduced; }//How many I have made
@@ -158,7 +158,7 @@ public:
   Int														m_maxQueueEntries;							///< max things that can be queued at once.
 	DisabledMaskType							m_disabledTypesToProcess;
 
-	ProductionUpdateModuleData( void );
+	ProductionUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseAppendQuantityModifier( INI* ini, void *instance, void *store, const void *userData );
 	static void parseAppendProductionModifier( INI* ini, void *instance, void *store, const void *userData );
@@ -177,7 +177,7 @@ public:
 	virtual CanMakeType canQueueCreateUnit( const ThingTemplate *unitType ) const = 0;
 	virtual CanMakeType canQueueUpgrade( const UpgradeTemplate *upgrade ) const = 0;
 
-	virtual ProductionID requestUniqueUnitID( void ) = 0;
+	virtual ProductionID requestUniqueUnitID() = 0;
 
 	virtual Bool queueUpgrade( const UpgradeTemplate *upgrade ) = 0;
 	virtual void cancelUpgrade( const UpgradeTemplate *upgrade ) = 0;
@@ -188,11 +188,11 @@ public:
 	virtual void cancelUnitCreate( ProductionID productionID ) = 0;
 	virtual void cancelAllUnitsOfType( const ThingTemplate *unitType) = 0;
 
-	virtual void cancelAndRefundAllProduction( void ) = 0;
+	virtual void cancelAndRefundAllProduction() = 0;
 
-	virtual UnsignedInt getProductionCount( void ) const = 0;
+	virtual UnsignedInt getProductionCount() const = 0;
 
-	virtual const ProductionEntry *firstProduction( void ) const = 0;
+	virtual const ProductionEntry *firstProduction() const = 0;
 	virtual const ProductionEntry *nextProduction( const ProductionEntry *p ) const = 0;
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt) = 0;
@@ -227,7 +227,7 @@ public:
 	// Disabled conditions to process (AI will still process held status)
 	virtual DisabledMaskType getDisabledTypesToProcess() const { return getProductionUpdateModuleData()->m_disabledTypesToProcess; }
 
-	virtual ProductionUpdateInterface* getProductionUpdateInterface( void ) { return this; }
+	virtual ProductionUpdateInterface* getProductionUpdateInterface() { return this; }
 	virtual DieModuleInterface* getDie() { return this; }
 	static ProductionUpdateInterface *getProductionUpdateInterfaceFromObject( Object *obj );
 
@@ -237,7 +237,7 @@ public:
 	/** this method is used to request a unique ID to assign to the production of a single
 	unit.  It is unique to all units that can be created from this source object, but is
 	not unique among multiple source objects */
-	virtual ProductionID requestUniqueUnitID( void ) { ProductionID tmp = m_uniqueID; m_uniqueID = (ProductionID)(m_uniqueID+1); return tmp; }
+	virtual ProductionID requestUniqueUnitID() { ProductionID tmp = m_uniqueID; m_uniqueID = (ProductionID)(m_uniqueID+1); return tmp; }
 
 	virtual Bool queueUpgrade( const UpgradeTemplate *upgrade );				///< queue upgrade "research"
 	virtual void cancelUpgrade( const UpgradeTemplate *upgrade );				///< cancel upgrade "research"
@@ -248,12 +248,12 @@ public:
 	virtual void cancelUnitCreate( ProductionID productionID );		      ///< cancel construction of unit with matching production ID
 	virtual void cancelAllUnitsOfType( const ThingTemplate *unitType);	///< cancel all production of type unitType
 
-	virtual void cancelAndRefundAllProduction( void );									///< cancel and refund anything in the production queue
+	virtual void cancelAndRefundAllProduction();									///< cancel and refund anything in the production queue
 
-	virtual UnsignedInt getProductionCount( void ) const { return m_productionCount; }    ///< return # of things in the production queue
+	virtual UnsignedInt getProductionCount() const { return m_productionCount; }    ///< return # of things in the production queue
 
 	// walking the production list from outside
-	virtual const ProductionEntry *firstProduction( void ) const { return m_productionQueue; }
+	virtual const ProductionEntry *firstProduction() const { return m_productionQueue; }
 	virtual const ProductionEntry *nextProduction( const ProductionEntry *p ) const { return p ? p->m_next : nullptr; }
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt);
@@ -262,7 +262,7 @@ public:
 
 	virtual Bool showProductionViewToEnemy(Team *team) const;
 
-	virtual UpdateSleepTime update( void );					///< the update
+	virtual UpdateSleepTime update();					///< the update
 
 	virtual void onCapture( Player *oldOwner, Player *newOwner );		///< when we are captured
 

@@ -110,7 +110,7 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int TransportContain::getRawContainMax( void ) const
+Int TransportContain::getRawContainMax() const
 {
 	if (getTransportContainModuleData())
 		return getTransportContainModuleData()->m_slotCapacity;
@@ -120,7 +120,7 @@ Int TransportContain::getRawContainMax( void ) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int TransportContain::getContainMax( void ) const
+Int TransportContain::getContainMax() const
 {
 	if (getTransportContainModuleData())
 		return getTransportContainModuleData()->m_slotCapacity + m_containExtra;
@@ -140,7 +140,7 @@ TransportContain::TransportContain( Thing *thing, const ModuleData *moduleData )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-TransportContain::~TransportContain( void )
+TransportContain::~TransportContain()
 {
 
 }
@@ -229,7 +229,7 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void TransportContain::letRidersUpgradeWeaponSet( void )
+void TransportContain::letRidersUpgradeWeaponSet()
 {
 
   const TransportContainModuleData * d = getTransportContainModuleData();
@@ -708,7 +708,7 @@ void TransportContain::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TransportContain::loadPostProcess( void )
+void TransportContain::loadPostProcess()
 {
 
 	// extend base class

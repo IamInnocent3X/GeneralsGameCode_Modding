@@ -652,7 +652,7 @@ Drawable::~Drawable()
 //-------------------------------------------------------------------------------------------------
 /** Run from GameClient::destroyDrawable */
 //-------------------------------------------------------------------------------------------------
-void Drawable::onDestroy( void )
+void Drawable::onDestroy()
 {
 
 	//
@@ -892,7 +892,7 @@ void Drawable::setModelName(const AsciiString& modelName)
 /**
 	This call asks, "In the current animation (if any) how far along are you, from 0.0f to 1.0f".
 */
-Real Drawable::getAnimationScrubScalar( void ) const // lorenzen
+Real Drawable::getAnimationScrubScalar() const // lorenzen
 {
 	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
@@ -1036,7 +1036,7 @@ void Drawable::setShadowsEnabled(Bool enable)
 
 //-------------------------------------------------------------------------------------------------
 /**frees all shadow resources used by this module - used by Options screen.*/
-void Drawable::releaseShadows(void)
+void Drawable::releaseShadows()
 {
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
@@ -1046,7 +1046,7 @@ void Drawable::releaseShadows(void)
 
 //-------------------------------------------------------------------------------------------------
 /**create shadow resources if not already present. Used by Options screen.*/
-void Drawable::allocateShadows(void)
+void Drawable::allocateShadows()
 {
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
@@ -1071,7 +1071,7 @@ void Drawable::setFullyObscuredByShroud(Bool fullyObscured)
 /** Set drawable's "selected" status, if not already set.  Also update running
  * total count of selected drawables. */
 //-------------------------------------------------------------------------------------------------
-void Drawable::friend_setSelected( void )
+void Drawable::friend_setSelected()
 {
 	if(isSelected() == false)
 	{
@@ -1099,7 +1099,7 @@ void Drawable::friend_setSelectedSetShowFlash( Bool showFlash )
 /** Clear drawable's "selected" status, if not already clear.  Also update running
  * total count of selected drawables. */
 //-------------------------------------------------------------------------------------------------
-void Drawable::friend_clearSelected( void )
+void Drawable::friend_clearSelected()
 {
 	if(isSelected())
 	{
@@ -1182,7 +1182,7 @@ void Drawable::onUnselected()
 //-------------------------------------------------------------------------------------------------
 /** get FX color value to add to ALL LIGHTS when drawing */
 //-------------------------------------------------------------------------------------------------
-const Vector3 * Drawable::getTintColor( void ) const
+const Vector3 * Drawable::getTintColor() const
 {
 	if ( m_colorTintEnvelope )
 	{
@@ -1198,7 +1198,7 @@ const Vector3 * Drawable::getTintColor( void ) const
 //-------------------------------------------------------------------------------------------------
 /** get SELECTION color value to add to ALL LIGHTS when drawing */
 //-------------------------------------------------------------------------------------------------
-const Vector3 * Drawable::getSelectionColor( void )	const
+const Vector3 * Drawable::getSelectionColor()	const
 {
 	if (m_selectionFlashEnvelope)
 	{
@@ -1236,7 +1236,7 @@ void Drawable::fadeIn( UnsignedInt frames )		///< decloak object
 }
 
 //-------------------------------------------------------------------------------------------------
-Real Drawable::getScale (void) const
+Real Drawable::getScale () const
 {
 	return m_instanceScale;
 //	return getTemplate()->getAssetScale();
@@ -1401,7 +1401,7 @@ void Drawable::imitateStealthLook( Drawable& otherDraw )
 /** update is called once per frame */
 //-------------------------------------------------------------------------------------------------
 //DECLARE_PERF_TIMER(updateDrawable)
-void Drawable::updateDrawable( void )
+void Drawable::updateDrawable()
 {
 	//USE_PERF_TIMER(updateDrawable)
 
@@ -3154,7 +3154,7 @@ static Bool computeHealthRegion( const Drawable *draw, IRegion2D& region )
 
 // ------------------------------------------------------------------------------------------------
 
-Bool Drawable::drawsAnyUIText( void )
+Bool Drawable::drawsAnyUIText()
 {
 	if (!isSelected())
 		return FALSE;
@@ -3183,7 +3183,7 @@ Bool Drawable::drawsAnyUIText( void )
 	* that we should overlay on the screen any 2D elements for purposes of user interface
 	* information (such as a heatlh bar, veterency levels, etc.) */
 // ------------------------------------------------------------------------------------------------
-void Drawable::drawIconUI( void )
+void Drawable::drawIconUI()
 {
 	if( TheGameLogic->getDrawIconUI() && (TheScriptEngine->getFade()==ScriptEngine::FADE_NONE) )
 	{
@@ -4842,7 +4842,7 @@ void Drawable::setID( DrawableID id )
 // ------------------------------------------------------------------------------------------------
 /** Return drawable ID, this ID is only good on the client */
 // ------------------------------------------------------------------------------------------------
-DrawableID Drawable::getID( void ) const
+DrawableID Drawable::getID() const
 {
 
 	// we should never be getting the ID of a drawable who doesn't yet have and ID assigned to it
@@ -5056,7 +5056,7 @@ void Drawable::setInstanceMatrix( const Matrix3D *instance )
  * If this Drawable is attached to an Object, return the Object's transform instead.
  */
 //-------------------------------------------------------------------------------------------------
-const Matrix3D *Drawable::getTransformMatrix( void ) const
+const Matrix3D *Drawable::getTransformMatrix() const
 {
 	const Object *obj = getObject();
 
@@ -5103,7 +5103,7 @@ void Drawable::setCaptionText( const UnicodeString& captionText )
 }
 
 //-------------------------------------------------------------------------------------------------
-void Drawable::clearCaptionText( void )
+void Drawable::clearCaptionText()
 {
 	if (m_captionDisplayString)
 		TheDisplayStringManager->freeDisplayString(m_captionDisplayString);
@@ -5111,7 +5111,7 @@ void Drawable::clearCaptionText( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-UnicodeString Drawable::getCaptionText( void )
+UnicodeString Drawable::getCaptionText()
 {
 	if (m_captionDisplayString)
 		return m_captionDisplayString->getText();
@@ -5325,7 +5325,7 @@ void Drawable::startAmbientSound( Bool onlyIfPermanent )
 //-------------------------------------------------------------------------------------------------
 /** Stop playing the drawables ambient sound if it has one */
 //-------------------------------------------------------------------------------------------------
-void	Drawable::stopAmbientSound( void )
+void	Drawable::stopAmbientSound()
 {
 	if (m_ambientSound)
   {
@@ -5493,7 +5493,7 @@ void Drawable::setSelectable( Bool selectable )
 //-------------------------------------------------------------------------------------------------
 /** Return whether or not this Drawable is selectable. */
 //-------------------------------------------------------------------------------------------------
-Bool Drawable::isSelectable( void ) const
+Bool Drawable::isSelectable() const
 {
 	return getObject() && getObject()->isSelectable();
 }
@@ -5501,7 +5501,7 @@ Bool Drawable::isSelectable( void ) const
 //-------------------------------------------------------------------------------------------------
 /** Return whether or not this Drawable is selectable as part of a group. */
 //-------------------------------------------------------------------------------------------------
-Bool Drawable::isMassSelectable( void ) const
+Bool Drawable::isMassSelectable() const
 {
 	return getObject() && getObject()->isMassSelectable();
 }
@@ -6249,7 +6249,7 @@ void Drawable::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void Drawable::loadPostProcess( void )
+void Drawable::loadPostProcess()
 {
 		// if we have an object, we don't need to save/load the pos, just restore it.
 		// if we don't, we'd better save it!
@@ -6321,7 +6321,7 @@ const Locomotor* Drawable::getLocomotor() const
 
 //=================================================================================================
 //=================================================================================================
-TintEnvelope::TintEnvelope(void)
+TintEnvelope::TintEnvelope()
 {
 	m_attackRate.Set(0,0,0);
 	m_decayRate.Set(0,0,0);
@@ -6373,7 +6373,7 @@ void TintEnvelope::setDecayFrames( UnsignedInt frames )
 }
 
 //-------------------------------------------------------------------------------------------------
-void TintEnvelope::update(void)
+void TintEnvelope::update()
 {
 	// TheSuperHackers @tweak The tint time step is now decoupled from the render update.
 	const Real timeScale = TheFramePacer->getActualLogicTimeScaleOverFpsRatio();
@@ -6512,7 +6512,7 @@ void TintEnvelope::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load Post Process */
 // ------------------------------------------------------------------------------------------------
-void TintEnvelope::loadPostProcess( void )
+void TintEnvelope::loadPostProcess()
 {
 
 }

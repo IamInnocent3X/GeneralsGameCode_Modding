@@ -104,7 +104,7 @@ CountermeasuresBehavior::CountermeasuresBehavior( Thing *thing, const ModuleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CountermeasuresBehavior::~CountermeasuresBehavior( void )
+CountermeasuresBehavior::~CountermeasuresBehavior()
 {
 }
 
@@ -250,7 +250,7 @@ KindOfMaskType CountermeasuresBehavior::getCountermeasuresKindOfs() const
 //-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime CountermeasuresBehavior::update( void )
+UpdateSleepTime CountermeasuresBehavior::update()
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 	const CountermeasuresBehaviorModuleData *data = getCountermeasuresBehaviorModuleData();
@@ -577,7 +577,7 @@ void CountermeasuresBehavior::xfer( Xfer *xfer )
 //------------------------------------------------------------------------------------------------
 /** Load post process */
 //------------------------------------------------------------------------------------------------
-void CountermeasuresBehavior::loadPostProcess( void )
+void CountermeasuresBehavior::loadPostProcess()
 {
 
 	// extend base class

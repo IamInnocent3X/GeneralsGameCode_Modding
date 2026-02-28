@@ -128,17 +128,17 @@ public:
 	virtual Bool isRiderChangeContain() const { return TRUE; }
 	virtual const Object *friend_getRider() const;
 
-	virtual Bool killPilotDoesNotKill( void ) const;
-	virtual void forceScuttle( void );
+	virtual Bool killPilotDoesNotKill() const;
+	virtual void forceScuttle();
 
 #if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
 	virtual const Object* getKillScoreCreditObj( const Object* killer ) const;
 #endif
 
-	virtual Int getRawContainMax( void ) const;
-	virtual Int getContainMax( void ) const;
+	virtual Int getRawContainMax() const;
+	virtual Int getContainMax() const;
 
-	virtual Int getExtraSlotsInUse( void ) { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
+	virtual Int getExtraSlotsInUse() { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
 
 	virtual Bool isExitBusy() const;	///< Contain style exiters are getting the ability to space out exits, so ask this before reserveDoor as a kind of no-commitment check.
 	virtual ExitDoorType reserveDoorForExit( const ThingTemplate* objType, Object *specificObject );
@@ -149,8 +149,8 @@ public:
 
 	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ); ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
 
-	virtual void doUpgradeChecks( void );
-	virtual void doStatusChecks( void );
+	virtual void doUpgradeChecks();
+	virtual void doStatusChecks();
 
 	void changeRiderTemplateOnStatusUpdate();
 	Bool riderTemplateIsValidChange(ObjectStatusMaskType newStatus);

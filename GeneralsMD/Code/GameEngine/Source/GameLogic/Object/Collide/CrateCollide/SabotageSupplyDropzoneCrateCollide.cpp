@@ -70,7 +70,7 @@ SabotageSupplyDropzoneCrateCollide::SabotageSupplyDropzoneCrateCollide( Thing *t
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-SabotageSupplyDropzoneCrateCollide::~SabotageSupplyDropzoneCrateCollide( void )
+SabotageSupplyDropzoneCrateCollide::~SabotageSupplyDropzoneCrateCollide()
 {
 }
 
@@ -229,7 +229,7 @@ void SabotageSupplyDropzoneCrateCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SabotageSupplyDropzoneCrateCollide::loadPostProcess( void )
+void SabotageSupplyDropzoneCrateCollide::loadPostProcess()
 {
 
 	// extend base class

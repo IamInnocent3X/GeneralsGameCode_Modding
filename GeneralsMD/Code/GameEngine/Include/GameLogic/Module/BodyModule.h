@@ -244,8 +244,8 @@ public:
 	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
 	virtual void setIndestructible( Bool indestructible ) = 0;
-	virtual Bool isIndestructible( void ) const = 0;
-	virtual Bool canBeSubdued( void ) const = 0;
+	virtual Bool isIndestructible() const = 0;
+	virtual Bool canBeSubdued() const = 0;
 
 	virtual void evaluateVisualCondition() = 0;
 	virtual void updateBodyParticleSystems() = 0; // made public for topple and building collapse updates -ML
@@ -347,8 +347,8 @@ public:
 
 
 	virtual void setIndestructible( Bool indestructible ) { }
-	virtual Bool isIndestructible( void ) const { return TRUE; }
-	virtual Bool canBeSubdued( void ) const { return TRUE; }
+	virtual Bool isIndestructible() const { return TRUE; }
+	virtual Bool canBeSubdued() const { return TRUE; }
 
 	//Allows outside systems to apply defensive bonuses or penalties (they all stack as a multiplier!)
 	virtual void applyDamageScalar( Real scalar ) { m_damageScalar *= scalar; }
@@ -377,7 +377,7 @@ protected:
 	// snapshot methods
 	virtual void crc( Xfer *xfer );
 	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess( void );
+	virtual void loadPostProcess();
 
 	Real	m_damageScalar;
 

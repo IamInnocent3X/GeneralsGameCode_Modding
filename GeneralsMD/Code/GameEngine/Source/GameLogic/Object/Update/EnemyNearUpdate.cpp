@@ -54,7 +54,7 @@ EnemyNearUpdate::EnemyNearUpdate( Thing *thing, const ModuleData* moduleData ) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-EnemyNearUpdate::~EnemyNearUpdate( void )
+EnemyNearUpdate::~EnemyNearUpdate()
 {
 }
 
@@ -63,7 +63,7 @@ EnemyNearUpdate::~EnemyNearUpdate( void )
 /**
  * Look around us for enemies.
  */
-void EnemyNearUpdate::checkForEnemies( void )
+void EnemyNearUpdate::checkForEnemies()
 {
 	// periodic enemy checks
 	UnsignedInt now = TheGameLogic->getFrame();
@@ -149,7 +149,7 @@ void EnemyNearUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void EnemyNearUpdate::loadPostProcess( void )
+void EnemyNearUpdate::loadPostProcess()
 {
 
 	// extend base class

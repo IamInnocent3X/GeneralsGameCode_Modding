@@ -1840,7 +1840,7 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void W3DModelDraw::onDrawableBoundToObject(void)
+void W3DModelDraw::onDrawableBoundToObject()
 {
 	getW3DModelDrawModuleData()->validateStuffForTimeAndWeather(getDrawable(),
 											TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT,
@@ -1849,7 +1849,7 @@ void W3DModelDraw::onDrawableBoundToObject(void)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-W3DModelDraw::~W3DModelDraw(void)
+W3DModelDraw::~W3DModelDraw()
 {
 	if (m_trackRenderObject && TheTerrainTracksRenderObjClassSystem)
 	{
@@ -1903,7 +1903,7 @@ void W3DModelDraw::setHidden(Bool hidden)
 }
 
 /**Free all data used by this model's shadow.  This is used to dynamically enable/disable shadows by the options screen*/
-void W3DModelDraw::releaseShadows(void)	///< frees all shadow resources used by this module - used by Options screen.
+void W3DModelDraw::releaseShadows()	///< frees all shadow resources used by this module - used by Options screen.
 {
 	if (m_shadow)
 		m_shadow->release();
@@ -1911,7 +1911,7 @@ void W3DModelDraw::releaseShadows(void)	///< frees all shadow resources used by 
 }
 
 /** Create shadow resources if not already present. This is used to dynamically enable/disable shadows by the options screen*/
-void W3DModelDraw::allocateShadows(void)
+void W3DModelDraw::allocateShadows()
 {
 	const ThingTemplate *tmplate=getDrawable()->getTemplate();
 
@@ -4380,7 +4380,7 @@ void W3DModelDraw::setPauseAnimation(Bool pauseAnim)
 //-------------------------------------------------------------------------------------------------
 #ifdef ALLOW_ANIM_INQUIRIES
 // srj sez: not sure if this is a good idea, for net sync reasons...
-Real W3DModelDraw::getAnimationScrubScalar( void ) const
+Real W3DModelDraw::getAnimationScrubScalar() const
 {
 	return getCurAnimDistanceCovered();
 }
@@ -4991,7 +4991,7 @@ void W3DModelDraw::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void W3DModelDraw::loadPostProcess( void )
+void W3DModelDraw::loadPostProcess()
 {
 
 	// extend base class
@@ -5051,7 +5051,7 @@ void W3DModelDrawModuleData::xfer( Xfer *x )
 }
 
 // ------------------------------------------------------------------------------------------------
-void W3DModelDrawModuleData::loadPostProcess( void )
+void W3DModelDrawModuleData::loadPostProcess()
 {
 }
 

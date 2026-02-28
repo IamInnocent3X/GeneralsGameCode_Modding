@@ -245,7 +245,7 @@ public:
 	UnsignedInt getSpecialObjectCount() const;
 	UnsignedInt getSpecialObjectMax() const;
 	Object* findSpecialObjectWithProducerID( const Object *target );
-	SpecialPowerType getSpecialPowerType( void ) const;
+	SpecialPowerType getSpecialPowerType() const;
 
 	Int getTargetsMask() const { return getSpecialAbilityUpdateModuleData()->m_targetsMask; }
 	virtual const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }

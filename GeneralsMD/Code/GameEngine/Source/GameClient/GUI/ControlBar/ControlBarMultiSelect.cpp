@@ -46,7 +46,7 @@
 //-------------------------------------------------------------------------------------------------
 /** Reset the common command data */
 //-------------------------------------------------------------------------------------------------
-void ControlBar::resetCommonCommandData( void )
+void ControlBar::resetCommonCommandData()
 {
 	Int i;
 
@@ -210,7 +210,7 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 /** Populate the visible command bar with commands that are common to all the objects
 	* that are selected in the UI */
 //-------------------------------------------------------------------------------------------------
-void ControlBar::populateMultiSelect( void )
+void ControlBar::populateMultiSelect()
 {
 	Drawable *draw;
 	Bool firstDrawable = TRUE;
@@ -299,7 +299,7 @@ void ControlBar::populateMultiSelect( void )
 //-------------------------------------------------------------------------------------------------
 /** Update logic for the multi select context sensitive GUI */
 //-------------------------------------------------------------------------------------------------
-void ControlBar::updateContextMultiSelect( void )
+void ControlBar::updateContextMultiSelect()
 {
 	Drawable *draw;
 	Object *obj;

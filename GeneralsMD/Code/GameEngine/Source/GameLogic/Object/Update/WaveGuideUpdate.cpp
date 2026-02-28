@@ -56,7 +56,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-WaveGuideUpdateModuleData::WaveGuideUpdateModuleData( void )
+WaveGuideUpdateModuleData::WaveGuideUpdateModuleData()
 {
 	m_bridgeParticleAngleFudge = 0.0f;
 	m_randomSplashSoundFrequency = 0;
@@ -142,7 +142,7 @@ WaveGuideUpdate::WaveGuideUpdate( Thing *thing, const ModuleData *moduleData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-WaveGuideUpdate::~WaveGuideUpdate( void )
+WaveGuideUpdate::~WaveGuideUpdate()
 {
 
 }
@@ -151,7 +151,7 @@ WaveGuideUpdate::~WaveGuideUpdate( void )
 /** Start the waveguide moving along its waypoint path, bringing water destruction and havok
 	* upon the land */
 // ------------------------------------------------------------------------------------------------
-Bool WaveGuideUpdate::startMoving( void )
+Bool WaveGuideUpdate::startMoving()
 {
 	Object *waveGuide = getObject();
 	Waypoint *waypoint;
@@ -243,7 +243,7 @@ Bool WaveGuideUpdate::startMoving( void )
 // ------------------------------------------------------------------------------------------------
 /** The wave guide has started moving ... this is called once */
 // ------------------------------------------------------------------------------------------------
-Bool WaveGuideUpdate::initWaveGuide( void )
+Bool WaveGuideUpdate::initWaveGuide()
 {
 
 	// start the waveguide movement
@@ -308,7 +308,7 @@ Bool WaveGuideUpdate::initWaveGuide( void )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::computeWaveShapePoints( void )
+void WaveGuideUpdate::computeWaveShapePoints()
 {
 
 	// get the module data
@@ -348,7 +348,7 @@ void WaveGuideUpdate::computeWaveShapePoints( void )
 /** Given the current position and orientation of the wave guide, transform all the wave
 	* shape points so we can quickly access them for multiple reasons */
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::transformWaveShape( void )
+void WaveGuideUpdate::transformWaveShape()
 {
 	Int i;
 	Object *waveGuide = getObject();
@@ -370,7 +370,7 @@ void WaveGuideUpdate::transformWaveShape( void )
 // ------------------------------------------------------------------------------------------------
 /** Update phase for the effects that make up the front shape of the wave */
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::doShapeEffects( void )
+void WaveGuideUpdate::doShapeEffects()
 {
 	const WaveGuideUpdateModuleData *modData = getWaveGuideUpdateModuleData();
 
@@ -417,7 +417,7 @@ void WaveGuideUpdate::doShapeEffects( void )
 // ------------------------------------------------------------------------------------------------
 /** Given all our sample points, make the wave go */
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::doWaterMotion( void )
+void WaveGuideUpdate::doWaterMotion()
 {
 //	Object *waveGuide = getObject();
 
@@ -445,7 +445,7 @@ void WaveGuideUpdate::doWaterMotion( void )
 /** Any points in our wave that are on the shoreline that are close enough to the effect
 	* points for the shore will do those effects */
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::doShoreEffects( void )
+void WaveGuideUpdate::doShoreEffects()
 {
 
 	// this is expensive to do *all* the time
@@ -545,7 +545,7 @@ void WaveGuideUpdate::doShoreEffects( void )
 // ------------------------------------------------------------------------------------------------
 /** Do damage to things that have fallen victim in the path of this enormous wave */
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::doDamage( void )
+void WaveGuideUpdate::doDamage()
 {
 	Object *waveGuide = getObject();
 	const WaveGuideUpdateModuleData *modData = getWaveGuideUpdateModuleData();
@@ -764,7 +764,7 @@ void WaveGuideUpdate::onDisabledEdge( Bool nowDisabled )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-UpdateSleepTime WaveGuideUpdate::update( void )
+UpdateSleepTime WaveGuideUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
 /// IamInnocent - There is no way to make the Wave Features Sleepy, but such is physics.
@@ -945,7 +945,7 @@ void WaveGuideUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void WaveGuideUpdate::loadPostProcess( void )
+void WaveGuideUpdate::loadPostProcess()
 {
 
 	// extend base class

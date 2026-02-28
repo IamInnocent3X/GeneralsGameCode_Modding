@@ -831,7 +831,7 @@ void FiringTracker::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void FiringTracker::loadPostProcess( void )
+void FiringTracker::loadPostProcess()
 {
 
 	// object helper back class

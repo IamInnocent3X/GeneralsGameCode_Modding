@@ -101,13 +101,13 @@ StatusBitsUpgrade::StatusBitsUpgrade( Thing *thing, const ModuleData* moduleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-StatusBitsUpgrade::~StatusBitsUpgrade( void )
+StatusBitsUpgrade::~StatusBitsUpgrade()
 {
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void StatusBitsUpgrade::upgradeImplementation( )
+void StatusBitsUpgrade::upgradeImplementation()
 {
 	const StatusBitsUpgradeModuleData* d = getStatusBitsUpgradeModuleData();
 	Object *obj = getObject();	
@@ -164,7 +164,7 @@ void StatusBitsUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void StatusBitsUpgrade::loadPostProcess( void )
+void StatusBitsUpgrade::loadPostProcess()
 {
 
 	// extend base class

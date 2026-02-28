@@ -208,7 +208,7 @@ void RiderChangeContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int RiderChangeContain::getRawContainMax( void ) const
+Int RiderChangeContain::getRawContainMax() const
 {
 	if (getRiderChangeContainModuleData())
 		return getRiderChangeContainModuleData()->m_slotCapacity;
@@ -218,7 +218,7 @@ Int RiderChangeContain::getRawContainMax( void ) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int RiderChangeContain::getContainMax( void ) const
+Int RiderChangeContain::getContainMax() const
 {
 	if (getRiderChangeContainModuleData())
 		return getRiderChangeContainModuleData()->m_slotCapacity + m_containExtra;
@@ -250,7 +250,7 @@ RiderChangeContain::RiderChangeContain( Thing *thing, const ModuleData *moduleDa
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-RiderChangeContain::~RiderChangeContain( void )
+RiderChangeContain::~RiderChangeContain()
 {
 
 }
@@ -1934,14 +1934,14 @@ const Object *RiderChangeContain::friend_getRider() const
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool RiderChangeContain::killPilotDoesNotKill( void ) const
+Bool RiderChangeContain::killPilotDoesNotKill() const
 {
 	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
 	return !data->m_scuttleType == SCUTTLE_ON_EXIT && !data->m_scuttleType == SCUTTLE_ON_NO_PASSENGERS;
 }
 
 //-------------------------------------------------------------------------------------------------
-void RiderChangeContain::forceScuttle( void )
+void RiderChangeContain::forceScuttle()
 {
 	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
 	Object *bike = getObject();
@@ -2117,7 +2117,7 @@ void RiderChangeContain::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void RiderChangeContain::loadPostProcess( void )
+void RiderChangeContain::loadPostProcess()
 {
 
 	// extend base class

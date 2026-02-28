@@ -58,7 +58,7 @@ m_maxMinorRadius(0)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CheckpointUpdate::~CheckpointUpdate( void )
+CheckpointUpdate::~CheckpointUpdate()
 {
 }
 
@@ -66,7 +66,7 @@ CheckpointUpdate::~CheckpointUpdate( void )
 /**
  * Look around us for enemies.
  */
-void CheckpointUpdate::checkForAlliesAndEnemies( void )
+void CheckpointUpdate::checkForAlliesAndEnemies()
 {
 	// periodic enemy checks
 	// IamInnocent - Remove if(TRUE)? Seems like debug statement.
@@ -219,7 +219,7 @@ void CheckpointUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CheckpointUpdate::loadPostProcess( void )
+void CheckpointUpdate::loadPostProcess()
 {
 
 	// extend base class

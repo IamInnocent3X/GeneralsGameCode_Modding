@@ -51,7 +51,7 @@ CreateCrateDie::CreateCrateDie( Thing *thing, const ModuleData* moduleData ) : D
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CreateCrateDie::~CreateCrateDie( void )
+CreateCrateDie::~CreateCrateDie()
 {
 }
 
@@ -305,7 +305,7 @@ void CreateCrateDie::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CreateCrateDie::loadPostProcess( void )
+void CreateCrateDie::loadPostProcess()
 {
 
 	// extend base class

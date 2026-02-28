@@ -179,7 +179,7 @@ void W3DOverlordAircraftDraw::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void W3DOverlordAircraftDraw::loadPostProcess( void )
+void W3DOverlordAircraftDraw::loadPostProcess()
 {
 
 	// extend base class

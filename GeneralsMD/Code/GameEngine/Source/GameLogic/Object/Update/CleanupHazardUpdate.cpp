@@ -86,7 +86,7 @@ CleanupHazardUpdate::CleanupHazardUpdate( Thing *thing, const ModuleData* module
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CleanupHazardUpdate::~CleanupHazardUpdate( void )
+CleanupHazardUpdate::~CleanupHazardUpdate()
 {
 
 }
@@ -370,7 +370,7 @@ void CleanupHazardUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CleanupHazardUpdate::loadPostProcess( void )
+void CleanupHazardUpdate::loadPostProcess()
 {
 
 	// extend base class

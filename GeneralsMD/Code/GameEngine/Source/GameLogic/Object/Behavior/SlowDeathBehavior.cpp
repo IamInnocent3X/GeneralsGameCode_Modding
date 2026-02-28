@@ -173,7 +173,7 @@ SlowDeathBehavior::SlowDeathBehavior( Thing *thing, const ModuleData* moduleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-SlowDeathBehavior::~SlowDeathBehavior( void )
+SlowDeathBehavior::~SlowDeathBehavior()
 {
 }
 
@@ -755,7 +755,7 @@ void SlowDeathBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SlowDeathBehavior::loadPostProcess( void )
+void SlowDeathBehavior::loadPostProcess()
 {
 
 	// extend base class

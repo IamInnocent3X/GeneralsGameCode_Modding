@@ -110,7 +110,7 @@ WeaponBonusUpdate::WeaponBonusUpdate( Thing *thing, const ModuleData* moduleData
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-WeaponBonusUpdate::~WeaponBonusUpdate( void )
+WeaponBonusUpdate::~WeaponBonusUpdate()
 {
 
 }
@@ -141,7 +141,7 @@ void containIteratingDoTempWeaponBonus( Object *passenger, void *voidData)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime WeaponBonusUpdate::update( void )
+UpdateSleepTime WeaponBonusUpdate::update()
 {
 	const WeaponBonusUpdateModuleData * data = getWeaponBonusUpdateModuleData();
 	Object *me = getObject();
@@ -226,7 +226,7 @@ void WeaponBonusUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void WeaponBonusUpdate::loadPostProcess( void )
+void WeaponBonusUpdate::loadPostProcess()
 {
 
 	// extend base class

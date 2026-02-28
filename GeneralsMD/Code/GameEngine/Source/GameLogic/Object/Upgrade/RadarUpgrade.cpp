@@ -62,14 +62,14 @@ RadarUpgrade::RadarUpgrade( Thing *thing, const ModuleData* moduleData ) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-RadarUpgrade::~RadarUpgrade( void )
+RadarUpgrade::~RadarUpgrade()
 {
 
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void RadarUpgrade::onDelete( void )
+void RadarUpgrade::onDelete()
 {
 	// if we haven't been upgraded there is nothing to clean up
 	if( isAlreadyUpgraded() == FALSE )
@@ -117,7 +117,7 @@ void RadarUpgrade::onCapture( Player *oldOwner, Player *newOwner )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void RadarUpgrade::upgradeImplementation( void )
+void RadarUpgrade::upgradeImplementation()
 {
 	Object *obj = getObject();
 
@@ -209,7 +209,7 @@ void RadarUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void RadarUpgrade::loadPostProcess( void )
+void RadarUpgrade::loadPostProcess()
 {
 
 	// extend base class

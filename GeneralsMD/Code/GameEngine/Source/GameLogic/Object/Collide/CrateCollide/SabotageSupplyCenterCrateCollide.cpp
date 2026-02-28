@@ -70,7 +70,7 @@ SabotageSupplyCenterCrateCollide::SabotageSupplyCenterCrateCollide( Thing *thing
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-SabotageSupplyCenterCrateCollide::~SabotageSupplyCenterCrateCollide( void )
+SabotageSupplyCenterCrateCollide::~SabotageSupplyCenterCrateCollide()
 {
 }
 
@@ -217,7 +217,7 @@ void SabotageSupplyCenterCrateCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SabotageSupplyCenterCrateCollide::loadPostProcess( void )
+void SabotageSupplyCenterCrateCollide::loadPostProcess()
 {
 
 	// extend base class

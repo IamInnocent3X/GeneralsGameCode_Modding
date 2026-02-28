@@ -161,7 +161,7 @@ void TurretStateMachine::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TurretStateMachine::loadPostProcess( void )
+void TurretStateMachine::loadPostProcess()
 {
 }
 
@@ -391,7 +391,7 @@ void TurretAI::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TurretAI::loadPostProcess( void )
+void TurretAI::loadPostProcess()
 {
 	Object *victim = m_turretStateMachine->getGoalObject();
 	if (victim) {
@@ -1524,7 +1524,7 @@ void TurretAIIdleState::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TurretAIIdleState::loadPostProcess( void )
+void TurretAIIdleState::loadPostProcess()
 {
 }
 
@@ -1601,7 +1601,7 @@ void TurretAIIdleScanState::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TurretAIIdleScanState::loadPostProcess( void )
+void TurretAIIdleScanState::loadPostProcess()
 {
 }
 
@@ -1681,7 +1681,7 @@ void TurretAIHoldTurretState::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TurretAIHoldTurretState::loadPostProcess( void )
+void TurretAIHoldTurretState::loadPostProcess()
 {
 }
 

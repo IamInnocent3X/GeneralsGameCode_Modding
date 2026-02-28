@@ -95,7 +95,7 @@ SpecialAbilityUpdate::SpecialAbilityUpdate( Thing *thing, const ModuleData* modu
 }
 
 //-------------------------------------------------------------------------------------------------
-SpecialAbilityUpdate::~SpecialAbilityUpdate( void )
+SpecialAbilityUpdate::~SpecialAbilityUpdate()
 {
   onExit( true );
 }
@@ -187,7 +187,7 @@ Options:
   7 -- FINISH: Stop the special ability
 
 -------------------------------------------------------------------------------------------------*/
-UpdateSleepTime SpecialAbilityUpdate::update( void )
+UpdateSleepTime SpecialAbilityUpdate::update()
 {
 
 /// @todo srj -- this could probably sleep more between stages. maybe someday.
@@ -2230,7 +2230,7 @@ void SpecialAbilityUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SpecialAbilityUpdate::loadPostProcess( void )
+void SpecialAbilityUpdate::loadPostProcess()
 {
 
 	// extend base class

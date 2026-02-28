@@ -177,7 +177,7 @@ CreateObjectDie::CreateObjectDie( Thing *thing, const ModuleData* moduleData ) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CreateObjectDie::~CreateObjectDie( void )
+CreateObjectDie::~CreateObjectDie()
 {
 
 }
@@ -975,7 +975,7 @@ void CreateObjectDie::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CreateObjectDie::loadPostProcess( void )
+void CreateObjectDie::loadPostProcess()
 {
 
 	// extend base class

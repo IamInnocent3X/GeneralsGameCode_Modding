@@ -97,7 +97,7 @@ SpawnBehavior::SpawnBehavior( Thing *thing, const ModuleData* moduleData )
 }
 
 //-------------------------------------------------------------------------------------------------
-SpawnBehavior::~SpawnBehavior( void )
+SpawnBehavior::~SpawnBehavior()
 {
 	m_replacementTimes.clear();
 }
@@ -195,7 +195,7 @@ void SpawnBehavior::onDie( const DamageInfo *damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime SpawnBehavior::update( void )
+UpdateSleepTime SpawnBehavior::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
 /// IamInnocent - Done
@@ -571,7 +571,7 @@ class OrphanData
 
 public:
 
-	OrphanData( void );
+	OrphanData();
 
 	const ThingTemplate *m_matchTemplate;
 	Object *m_source;
@@ -583,7 +583,7 @@ public:
 #define BIG_DISTANCE 99999999.9f
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-OrphanData::OrphanData( void )
+OrphanData::OrphanData()
 {
 
 	m_matchTemplate = nullptr;
@@ -619,7 +619,7 @@ static void findClosestOrphan( Object *obj, void *userData )
 }
 
 // ------------------------------------------------------------------------------------------------
-Object *SpawnBehavior::reclaimOrphanSpawn( void )
+Object *SpawnBehavior::reclaimOrphanSpawn()
 {
 	Player *player = getObject()->getControllingPlayer();
 	const SpawnBehaviorModuleData *md = getSpawnBehaviorModuleData();
@@ -951,7 +951,7 @@ Bool SpawnBehavior::shouldTryToSpawn()
 //* as an average position of all the spawn.
 //********************************************************************
 
-void SpawnBehavior::computeAggregateStates(void)
+void SpawnBehavior::computeAggregateStates()
 {
 	if ( ! m_aggregateHealth || m_computedAggregation ) // sanity
 		return;
@@ -1469,7 +1469,7 @@ void SpawnBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SpawnBehavior::loadPostProcess( void )
+void SpawnBehavior::loadPostProcess()
 {
 
 	// extend base class

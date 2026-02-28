@@ -104,7 +104,7 @@ Real Energy::getEnergySupplyRatio() const
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool Energy::hasSufficientPower(void) const
+Bool Energy::hasSufficientPower() const
 {
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
@@ -891,7 +891,7 @@ void Energy::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void Energy::loadPostProcess( void )
+void Energy::loadPostProcess()
 {
 
 }

@@ -210,9 +210,9 @@ struct Coord2D
 {
 	Real x, y;
 
-	Real length( void ) const { return (Real)sqrt( x*x + y*y ); }
+	Real length() const { return (Real)sqrt( x*x + y*y ); }
 
-	void normalize( void )
+	void normalize()
 	{
 		Real len = length();
 		if( len != 0 )
@@ -222,12 +222,12 @@ struct Coord2D
 		}
 	}
 
-	Real toAngle( void ) const;  ///< turn 2D vector into angle (where angle 0 is down the +x axis)
+	Real toAngle() const;  ///< turn 2D vector into angle (where angle 0 is down the +x axis)
 
 	void rotateByAngle(Real angle); ///< rotate the vector by the given angle (radians)
 };
 
-inline Real Coord2D::toAngle( void ) const
+inline Real Coord2D::toAngle() const
 {
 #if RTS_GENERALS /*&& RETAIL_COMPATIBLE_CRC*/
 	Coord2D vector;
@@ -303,23 +303,23 @@ struct ICoord2D
 {
 	Int x, y;
 
-	Int length( void ) const { return (Int)sqrt( (double)(x*x + y*y) ); }
+	Int length() const { return (Int)sqrt( (double)(x*x + y*y) ); }
 };
 
 struct Region2D
 {
 	Coord2D lo, hi;						// bounds of 2D rectangular region
 
-	Real width( void ) const { return hi.x - lo.x; }
-	Real height( void ) const { return hi.y - lo.y; }
+	Real width() const { return hi.x - lo.x; }
+	Real height() const { return hi.y - lo.y; }
 };
 
 struct IRegion2D
 {
 	ICoord2D lo, hi;					// bounds of 2D rectangular region
 
-	Int width( void ) const { return hi.x - lo.x; }
-	Int height( void ) const { return hi.y - lo.y; }
+	Int width() const { return hi.x - lo.x; }
+	Int height() const { return hi.y - lo.y; }
 };
 
 
@@ -327,10 +327,10 @@ struct Coord3D
 {
 	Real x, y, z;
 
-	Real length( void ) const { return (Real)sqrt( x*x + y*y + z*z ); }
-	Real lengthSqr( void ) const { return ( x*x + y*y + z*z ); }
+	Real length() const { return (Real)sqrt( x*x + y*y + z*z ); }
+	Real lengthSqr() const { return ( x*x + y*y + z*z ); }
 
-	void normalize( void )
+	void normalize()
 	{
 		Real len = length();
 
@@ -349,7 +349,7 @@ struct Coord3D
 		r->z = (a->x * b->y - a->y * b->x);
 	}
 
-	void zero( void )
+	void zero()
 	{
 		x = 0.0f;
 		y = 0.0f;
@@ -410,8 +410,8 @@ struct ICoord3D
 {
 	Int x, y, z;
 
-	Int length( void ) const { return (Int)sqrt( (double)(x*x + y*y + z*z) ); }
-	void zero( void )
+	Int length() const { return (Int)sqrt( (double)(x*x + y*y + z*z) ); }
+	void zero()
 	{
 
 		x = 0;
@@ -424,9 +424,9 @@ struct Region3D
 {
 	Coord3D lo, hi;						// axis-aligned bounding box
 
-	Real width( void ) const { return hi.x - lo.x; }
-	Real height( void ) const { return hi.y - lo.y; }
-	Real depth( void ) const { return hi.z - lo.z; }
+	Real width() const { return hi.x - lo.x; }
+	Real height() const { return hi.y - lo.y; }
+	Real depth() const { return hi.z - lo.z; }
 
 	void zero() { lo.zero(); hi.zero(); }
 
@@ -487,9 +487,9 @@ struct IRegion3D
 {
 	ICoord3D lo, hi;					// axis-aligned bounding box
 
-	Int width( void ) const { return hi.x - lo.x; }
-	Int height( void ) const { return hi.y - lo.y; }
-	Int depth( void ) const { return hi.z - lo.z; }
+	Int width() const { return hi.x - lo.x; }
+	Int height() const { return hi.y - lo.y; }
+	Int depth() const { return hi.z - lo.z; }
 };
 
 

@@ -63,7 +63,7 @@ ThingFactory *TheThingFactory = nullptr;  ///< Thing manager singleton declarati
 //-------------------------------------------------------------------------------------------------
 /** Free all data loaded into this template database */
 //-------------------------------------------------------------------------------------------------
-void ThingFactory::freeDatabase( void )
+void ThingFactory::freeDatabase()
 {
 	while (m_firstTemplate)
 	{
@@ -199,7 +199,7 @@ ThingTemplate* ThingFactory::newOverride( ThingTemplate *thingTemplate )
 //-------------------------------------------------------------------------------------------------
 /** Init */
 //-------------------------------------------------------------------------------------------------
-void ThingFactory::init( void )
+void ThingFactory::init()
 {
 
 }
@@ -207,7 +207,7 @@ void ThingFactory::init( void )
 //-------------------------------------------------------------------------------------------------
 /** Reset */
 //-------------------------------------------------------------------------------------------------
-void ThingFactory::reset( void )
+void ThingFactory::reset()
 {
 	ThingTemplate *t;
 	// go through all templates and delete any overrides
@@ -251,7 +251,7 @@ void ThingFactory::reset( void )
 //-------------------------------------------------------------------------------------------------
 /** Update */
 //-------------------------------------------------------------------------------------------------
-void ThingFactory::update( void )
+void ThingFactory::update()
 {
 
 }
@@ -516,7 +516,7 @@ void ThingFactory::parseObjectExtendDefinition(INI* ini, const AsciiString& name
 const char *outFilenameINI				= "thing.txt";
 const char *outFilenameStringFile	= "thingString.txt";
 
-void resetReportFile( void )
+void resetReportFile()
 {
 	FILE *fp = fopen(outFilenameINI, "w");
 	if (fp)
@@ -544,7 +544,7 @@ void reportMissingNameInStringFile( AsciiString templateName )
 	missingStrings.push_back(templateName);
 }
 
-void dumpMissingStringNames( void )
+void dumpMissingStringNames()
 {
 	missingStrings.sort();
 	FILE *fp = fopen(outFilenameStringFile, "w");

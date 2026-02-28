@@ -65,7 +65,7 @@ SpyVisionUpdate::SpyVisionUpdate( Thing *thing, const ModuleData* moduleData ) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-SpyVisionUpdate::~SpyVisionUpdate( void )
+SpyVisionUpdate::~SpyVisionUpdate()
 {
 }
 
@@ -194,7 +194,7 @@ void SpyVisionUpdate::onDisabledEdge( Bool nowDisabled )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime SpyVisionUpdate::update( void )
+UpdateSleepTime SpyVisionUpdate::update()
 {
 	// IamInnocent - Added Self Granting Upgrades
 	Object *self = getObject();
@@ -323,7 +323,7 @@ void SpyVisionUpdate::doActivationWork( Player *playerToSetFor, Bool setting )
 }
 
 //-------------------------------------------------------------------------------------------------
-void SpyVisionUpdate::onDelete( void )
+void SpyVisionUpdate::onDelete()
 {
 	// If I was left on at the time of death, then turn me off.
 	if( m_currentlyActive )
@@ -433,7 +433,7 @@ void SpyVisionUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SpyVisionUpdate::loadPostProcess( void )
+void SpyVisionUpdate::loadPostProcess()
 {
 
 	// extend base class

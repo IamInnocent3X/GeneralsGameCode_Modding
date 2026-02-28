@@ -101,7 +101,7 @@ public:
 
 	// module methods
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | MODULEINTERFACE_UPGRADE; }
-	virtual void onDelete( void );
+	virtual void onDelete();
 	virtual void onCapture( Player *oldOwner, Player *newOwner );
 	virtual void onDisabledEdge( Bool nowDisabled );
 
@@ -109,7 +109,7 @@ public:
 	virtual UpgradeModuleInterface* getUpgrade() { return this; }
 
 	//Update module
-	virtual UpdateSleepTime update( void );
+	virtual UpdateSleepTime update();
 	virtual void friend_giveSelfUpgrade() { }
 
 	void activateSpyVision( UnsignedInt duration );

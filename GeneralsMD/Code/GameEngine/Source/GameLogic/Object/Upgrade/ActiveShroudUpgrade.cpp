@@ -37,7 +37,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ActiveShroudUpgradeModuleData::ActiveShroudUpgradeModuleData( void )
+ActiveShroudUpgradeModuleData::ActiveShroudUpgradeModuleData()
 {
 
 	m_newShroudRange = 0.0f;
@@ -74,14 +74,14 @@ ActiveShroudUpgrade::ActiveShroudUpgrade( Thing *thing, const ModuleData* module
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ActiveShroudUpgrade::~ActiveShroudUpgrade( void )
+ActiveShroudUpgrade::~ActiveShroudUpgrade()
 {
 
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void ActiveShroudUpgrade::upgradeImplementation( void )
+void ActiveShroudUpgrade::upgradeImplementation()
 {
 	Object *obj = getObject();
 
@@ -159,7 +159,7 @@ void ActiveShroudUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ActiveShroudUpgrade::loadPostProcess( void )
+void ActiveShroudUpgrade::loadPostProcess()
 {
 
 	// extend base class

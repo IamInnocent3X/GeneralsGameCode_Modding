@@ -161,7 +161,7 @@ BattlePlanUpdate::BattlePlanUpdate( Thing *thing, const ModuleData* moduleData )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-BattlePlanUpdate::~BattlePlanUpdate( void )
+BattlePlanUpdate::~BattlePlanUpdate()
 {
 	TheAudio->removeAudioEvent( m_bombardmentUnpack.getPlayingHandle() );
 	TheAudio->removeAudioEvent( m_bombardmentPack.getPlayingHandle() );
@@ -939,7 +939,7 @@ void BattlePlanUpdate::xfer( Xfer *xfer )
 }
 
 //------------------------------------------------------------------------------------------------
-void BattlePlanUpdate::loadPostProcess( void )
+void BattlePlanUpdate::loadPostProcess()
 {
 
 	// extend base class

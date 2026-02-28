@@ -103,7 +103,7 @@ public:
   SpecialPowerTemplate();
 	// virtual destructor prototype provided by MemoryPoolObject
 
-	static const FieldParse* getFieldParse( void ) { return m_specialPowerFieldParse; }
+	static const FieldParse* getFieldParse() { return m_specialPowerFieldParse; }
 
 	void friend_setNameAndID(const AsciiString& name, UnsignedInt id)
 	{
@@ -111,35 +111,35 @@ public:
 		m_id = id;
 	}
 
-	AsciiString getName( void ) const { return getFO()->m_name; }
-	UnsignedInt getID( void ) const { return getFO()->m_id; }
-	SpecialPowerType getSpecialPowerType( void ) const { return getFO()->m_type; }
-	SpecialPowerType getSpecialPowerBehaviorType( void ) const { return getFO()->m_type_behavior; }
-	UnsignedInt getReloadTime( void ) const { return getFO()->m_reloadTime; }
-	ScienceType getRequiredScience( void ) const { return getFO()->m_requiredScience; }
-	const AudioEventRTS *getInitiateSound( void ) const { return &getFO()->m_initiateSound; }
-	const AudioEventRTS *getInitiateAtTargetSound( void ) const { return &getFO()->m_initiateAtLocationSound; }
-	Bool hasPublicTimer( void ) const { return getFO()->m_publicTimer; }
-	Bool isSharedNSync( void ) const { return getFO()->m_sharedNSync; }
-	UnsignedInt getDetectionTime( void ) const { return getFO()->m_detectionTime; }
-	UnsignedInt getViewObjectDuration( void ) const { return getFO()->m_viewObjectDuration; }
-	Real getViewObjectRange( void ) const { return getFO()->m_viewObjectRange; }
+	AsciiString getName() const { return getFO()->m_name; }
+	UnsignedInt getID() const { return getFO()->m_id; }
+	SpecialPowerType getSpecialPowerType() const { return getFO()->m_type; }
+	SpecialPowerType getSpecialPowerBehaviorType() const { return getFO()->m_type_behavior; }
+	UnsignedInt getReloadTime() const { return getFO()->m_reloadTime; }
+	ScienceType getRequiredScience() const { return getFO()->m_requiredScience; }
+	const AudioEventRTS *getInitiateSound() const { return &getFO()->m_initiateSound; }
+	const AudioEventRTS *getInitiateAtTargetSound() const { return &getFO()->m_initiateAtLocationSound; }
+	Bool hasPublicTimer() const { return getFO()->m_publicTimer; }
+	Bool isSharedNSync() const { return getFO()->m_sharedNSync; }
+	UnsignedInt getDetectionTime() const { return getFO()->m_detectionTime; }
+	UnsignedInt getViewObjectDuration() const { return getFO()->m_viewObjectDuration; }
+	Real getViewObjectRange() const { return getFO()->m_viewObjectRange; }
 	Real getRadiusCursorRadius() const { return getFO()->m_radiusCursorRadius; }
 	Bool isShortcutPower() const { return getFO()->m_shortcutPower; }
 	AcademyClassificationType getAcademyClassificationType() const { return m_academyClassificationType; }
-	EvaMessage getEvaDetectedOwn( void ) const { return getFO()->m_eva_detected_own; }
-	EvaMessage getEvaDetectedAlly( void ) const { return getFO()->m_eva_detected_ally; }
-	EvaMessage getEvaDetectedEnemy( void ) const { return getFO()->m_eva_detected_enemy; }
-	EvaMessage getEvaLaunchedOwn(void) const { return getFO()->m_eva_launched_own; }
-	EvaMessage getEvaLaunchedAlly(void) const { return getFO()->m_eva_launched_ally; }
-	EvaMessage getEvaLaunchedEnemy(void) const { return getFO()->m_eva_launched_enemy; }
-	EvaMessage getEvaReadyOwn(void) const { return getFO()->m_eva_ready_own; }
-	EvaMessage getEvaReadyAlly(void) const { return getFO()->m_eva_ready_ally; }
-	EvaMessage getEvaReadyEnemy(void) const { return getFO()->m_eva_ready_enemy; }
-	Int getCost(void) const { return getFO()->m_cost; };
-	Bool getDestroyOnExecute( void ) const { return getFO()->m_destroyOnExecute; }
-	const ObjectCreationList* getOCLOnExecute( void ) const { return getFO()->m_oclOnExecute; }
-	const FXList* getFXOnExecute( void ) const { return getFO()->m_fxOnExecute; }
+	EvaMessage getEvaDetectedOwn() const { return getFO()->m_eva_detected_own; }
+	EvaMessage getEvaDetectedAlly() const { return getFO()->m_eva_detected_ally; }
+	EvaMessage getEvaDetectedEnemy() const { return getFO()->m_eva_detected_enemy; }
+	EvaMessage getEvaLaunchedOwn() const { return getFO()->m_eva_launched_own; }
+	EvaMessage getEvaLaunchedAlly() const { return getFO()->m_eva_launched_ally; }
+	EvaMessage getEvaLaunchedEnemy() const { return getFO()->m_eva_launched_enemy; }
+	EvaMessage getEvaReadyOwn() const { return getFO()->m_eva_ready_own; }
+	EvaMessage getEvaReadyAlly() const { return getFO()->m_eva_ready_ally; }
+	EvaMessage getEvaReadyEnemy() const { return getFO()->m_eva_ready_enemy; }
+	Int getCost() const { return getFO()->m_cost; };
+	Bool getDestroyOnExecute() const { return getFO()->m_destroyOnExecute; }
+	const ObjectCreationList* getOCLOnExecute() const { return getFO()->m_oclOnExecute; }
+	const FXList* getFXOnExecute() const { return getFO()->m_fxOnExecute; }
 private:
 
 	const SpecialPowerTemplate* getFO() const { return (const SpecialPowerTemplate*)friend_getFinalOverride(); }
@@ -187,12 +187,12 @@ class SpecialPowerStore : public SubsystemInterface
 
 public:
 
-	SpecialPowerStore( void );
-	~SpecialPowerStore( void );
+	SpecialPowerStore();
+	~SpecialPowerStore();
 
-	virtual void init( void ) { };
-	virtual void update( void ) { };
-	virtual void reset( void );
+	virtual void init() { };
+	virtual void update() { };
+	virtual void reset();
 
 	const SpecialPowerTemplate *findSpecialPowerTemplate( AsciiString name ) { return findSpecialPowerTemplatePrivate(name); }
 	const SpecialPowerTemplate *findSpecialPowerTemplateByID( UnsignedInt id );
@@ -201,7 +201,7 @@ public:
 	/// does the object (and therefore the player) meet all the requirements to use this power
 	Bool canUseSpecialPower( Object *obj, const SpecialPowerTemplate *specialPowerTemplate );
 
-	Int getNumSpecialPowers( void ); // for WorldBuilder
+	Int getNumSpecialPowers(); // for WorldBuilder
 
 	static void parseSpecialPowerDefinition( INI *ini );
 

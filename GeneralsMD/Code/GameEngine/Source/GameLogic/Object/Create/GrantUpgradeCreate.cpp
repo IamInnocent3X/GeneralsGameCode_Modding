@@ -76,7 +76,7 @@ GrantUpgradeCreate::GrantUpgradeCreate( Thing *thing, const ModuleData* moduleDa
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-GrantUpgradeCreate::~GrantUpgradeCreate( void )
+GrantUpgradeCreate::~GrantUpgradeCreate()
 {
 
 }
@@ -84,7 +84,7 @@ GrantUpgradeCreate::~GrantUpgradeCreate( void )
 //-------------------------------------------------------------------------------------------------
 /** The create callback. */
 //-------------------------------------------------------------------------------------------------
-void GrantUpgradeCreate::onCreate( void )
+void GrantUpgradeCreate::onCreate()
 {
 	const GrantUpgradeCreateModuleData * data = getGrantUpgradeCreateModuleData();
 
@@ -222,7 +222,7 @@ void GrantUpgradeCreate::onCreate( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void GrantUpgradeCreate::onBuildComplete( void )
+void GrantUpgradeCreate::onBuildComplete()
 {
 	if( ! shouldDoOnBuildComplete() )
 		return;
@@ -385,7 +385,7 @@ void GrantUpgradeCreate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void GrantUpgradeCreate::loadPostProcess( void )
+void GrantUpgradeCreate::loadPostProcess()
 {
 
 	// extend base class

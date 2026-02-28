@@ -43,7 +43,7 @@ class MaxHealthUpgradeModuleData: public UpgradeModuleData
 
 public:
 
-	MaxHealthUpgradeModuleData( void );
+	MaxHealthUpgradeModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 
@@ -76,7 +76,7 @@ public:
 
 protected:
 
-	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
+	virtual void upgradeImplementation(); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return true; }
 

@@ -65,10 +65,10 @@ public:
 	/// init to safe default values.
 	void init();
 
-	void resetSciences( void ) { m_prereqSciences.clear(); m_prenegreqSciences.clear(); }
+	void resetSciences() { m_prereqSciences.clear(); m_prenegreqSciences.clear(); }
 	void addSciencePrereq( ScienceType science ) { m_prereqSciences.push_back(science); }
 
-	void resetUnits( void ) { m_prereqUnits.clear();  m_prenegreqUnits.clear(); }
+	void resetUnits() { m_prereqUnits.clear();  m_prenegreqUnits.clear(); }
 	void addUnitPrereq( AsciiString units, Bool orUnitWithPrevious );
 	void addUnitPrereq( const std::vector<AsciiString>& units );
 

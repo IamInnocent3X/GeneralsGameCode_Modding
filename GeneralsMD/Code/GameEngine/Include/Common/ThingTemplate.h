@@ -492,7 +492,7 @@ public:
 	Real getShroudRevealToAllRange() const { return m_shroudRevealToAllRange; }
 
 	// This function is only for use by the AIUpdateModuleData::parseLocomotorSet function.
-	AIUpdateModuleData *friend_getAIModuleInfo(void);
+	AIUpdateModuleData *friend_getAIModuleInfo();
 
 	ShadowType getShadowType() const { return (ShadowType)m_shadowType; }
 	Real getShadowSizeX() const { return m_shadowSizeX; }
@@ -501,15 +501,15 @@ public:
 	Real getShadowOffsetY() const { return m_shadowOffsetY; }
 	Bool hasDynamicShadowLength() const { return m_shadowHasDynamicLength; }
 
-	const AsciiString& getShadowTextureName( void ) const { return m_shadowTextureName; }
-	UnsignedInt getOcclusionDelay(void) const { return m_occlusionDelay;}
+	const AsciiString& getShadowTextureName() const { return m_shadowTextureName; }
+	UnsignedInt getOcclusionDelay() const { return m_occlusionDelay;}
 
 	const ModuleInfo& getBehaviorModuleInfo() const { return m_behaviorModuleInfo; }
 	const ModuleInfo& getDrawModuleInfo() const { return m_drawModuleInfo; }
 	const ModuleInfo& getClientUpdateModuleInfo() const { return m_clientUpdateModuleInfo; }
 
-	const Image *getSelectedPortraitImage( void ) const { return m_selectedPortraitImage; }
-	const Image *getButtonImage( void ) const { return m_buttonImage; }
+	const Image *getSelectedPortraitImage() const { return m_selectedPortraitImage; }
+	const Image *getButtonImage() const { return m_buttonImage; }
 
 	//Code renderer handles these states now.
 	//const AsciiString& getInventoryImageName( InventoryImageType type ) const { return m_inventoryImage[ type ]; }
@@ -643,7 +643,7 @@ public:
 	*/
 	const ThingTemplate *getBuildFacilityTemplate( const Player *player ) const;
 
-	Bool isBuildableItem(void) const;
+	Bool isBuildableItem() const;
 
 	/// calculate how long (in logic frames) it will take the given player to build this unit
 	Int calcTimeToBuild( const Player* player) const;
@@ -661,7 +661,7 @@ public:
 	const FieldParse* getReskinFieldParse() const { return s_objectReskinFieldParseTable; }
 
 	Bool isBuildFacility() const { return m_isBuildFacility; }
-	Real getPlacementViewAngle( void ) const { return m_placementViewAngle; }
+	Real getPlacementViewAngle() const { return m_placementViewAngle; }
 
 	Real getFactoryExitWidth() const { return m_factoryExitWidth; }
 	Real getFactoryExtraBibWidth() const { return m_factoryExtraBibWidth; }
@@ -689,7 +689,7 @@ public:
 
 	AsciiString getUpgradeCameoName( Int n)const{ return m_upgradeCameoUpgradeNames[n];	}
 
-	const WeaponTemplateSetVector& getWeaponTemplateSets(void) const {return m_weaponTemplateSets;}
+	const WeaponTemplateSetVector& getWeaponTemplateSets() const {return m_weaponTemplateSets;}
 
 	Int getMaxPathFindingCellRadius(void) const { return static_cast<Int>(m_maxPathfindingCellRadius); };
 
@@ -742,7 +742,7 @@ protected:
 	//
 	Int getBuildCost() const { return m_buildCost; }
 	Real getBuildTime() const { return m_buildTime; }
-	const PerUnitSoundMap* getAllPerUnitSounds( void ) const { return &m_perUnitSounds; }
+	const PerUnitSoundMap* getAllPerUnitSounds() const { return &m_perUnitSounds; }
 	void validateAudio();
 	const AudioEventRTS* getAudio(ThingTemplateAudioType t) const { return m_audioarray.m_audio[t] ? &m_audioarray.m_audio[t]->m_event : &s_audioEventNoSound; }
   Bool hasAudio(ThingTemplateAudioType t) const { return m_audioarray.m_audio[t] != nullptr; }

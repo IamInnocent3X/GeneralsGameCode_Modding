@@ -149,8 +149,8 @@ public:
 
 	UnsignedInt getDieFrame() { return m_dieFrame; }
 
-	virtual UpdateSleepTime update( void );
-	void doDisableAttack( void );
+	virtual UpdateSleepTime update();
+	void doDisableAttack();
 
 protected:
 
@@ -233,8 +233,8 @@ public:
 	LeafletDropBehavior( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual UpdateSleepTime update( void );
-	//void doDisableAttack( void );
+	virtual UpdateSleepTime update();
+	//void doDisableAttack();
 
   // BehaviorModule
 	virtual DieModuleInterface* getDie() { return this; }

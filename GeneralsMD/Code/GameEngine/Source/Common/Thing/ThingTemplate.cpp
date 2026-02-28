@@ -1239,7 +1239,7 @@ ThingTemplate::ThingTemplate() :
 }
 
 //-------------------------------------------------------------------------------------------------
-AIUpdateModuleData *ThingTemplate::friend_getAIModuleInfo(void)
+AIUpdateModuleData *ThingTemplate::friend_getAIModuleInfo()
 {
 	Int numModInfos = m_behaviorModuleInfo.getCount();
 	for (int j = 0; j < numModInfos; ++j)
@@ -1743,7 +1743,7 @@ Bool ThingTemplate::isEquivalentTo(const ThingTemplate* tt) const
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool ThingTemplate::isBuildableItem(void) const
+Bool ThingTemplate::isBuildableItem() const
 {
 	return (getBuildCost() != 0);
 }

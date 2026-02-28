@@ -87,13 +87,13 @@ LocomotorSetUpgrade::LocomotorSetUpgrade( Thing *thing, const ModuleData* module
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-LocomotorSetUpgrade::~LocomotorSetUpgrade( void )
+LocomotorSetUpgrade::~LocomotorSetUpgrade()
 {
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void LocomotorSetUpgrade::upgradeImplementation( )
+void LocomotorSetUpgrade::upgradeImplementation()
 {
 	Object* obj = getObject();
 	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
@@ -192,7 +192,7 @@ void LocomotorSetUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void LocomotorSetUpgrade::loadPostProcess( void )
+void LocomotorSetUpgrade::loadPostProcess()
 {
 
 	// extend base class

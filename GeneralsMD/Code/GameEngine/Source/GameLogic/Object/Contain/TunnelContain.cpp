@@ -166,7 +166,7 @@ void TunnelContain::harmAndForceExitAllContained( DamageInfo *info )
 //-------------------------------------------------------------------------------------------------
 /** Remove all contained objects from the contained list */
 //-------------------------------------------------------------------------------------------------
-void TunnelContain::killAllContained( void )
+void TunnelContain::killAllContained()
 {
 	// TheSuperHackers @bugfix xezon 04/06/2025 Empty the TunnelSystem's Contained Items List
 	// straight away to prevent a potential child call to catastrophically modify it as well.
@@ -394,7 +394,7 @@ static TunnelInterface* findTunnel(Object* obj)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-void TunnelContain::doUpgradeChecks( void )
+void TunnelContain::doUpgradeChecks()
 {
 	if ( !getObject() )
     	return;
@@ -646,7 +646,7 @@ UnsignedInt TunnelContain::getHeroUnitsContained() const
 }
 
 // No implementation for Slot expansion... yet
-Int TunnelContain::getRawContainMax( void ) const
+Int TunnelContain::getRawContainMax() const
 {
 	Player *owningPlayer = getObject()->getControllingPlayer();
 	if( owningPlayer && owningPlayer->getTunnelSystem() )
@@ -656,7 +656,7 @@ Int TunnelContain::getRawContainMax( void ) const
 	return 0;
 }
 
-Int TunnelContain::getContainMax( void ) const
+Int TunnelContain::getContainMax() const
 {
 	Player *owningPlayer = getObject()->getControllingPlayer();
 	if( owningPlayer && owningPlayer->getTunnelSystem() )
@@ -676,7 +676,7 @@ const ContainedItemsList* TunnelContain::getContainedItemsList() const
 	return nullptr;
 }
 
-UnsignedInt TunnelContain::getFullTimeForHeal(void) const
+UnsignedInt TunnelContain::getFullTimeForHeal() const
 {
 	const TunnelContainModuleData* modData = getTunnelContainModuleData();
 	return modData->m_framesForFullHeal;
@@ -766,7 +766,7 @@ void TunnelContain::onDie( const DamageInfo * damageInfo )
 }
 
 //-------------------------------------------------------------------------------------------------
-void TunnelContain::onDelete( void )
+void TunnelContain::onDelete()
 {
 	// Being sold is a straight up delete.  no death
 
@@ -788,7 +788,7 @@ void TunnelContain::onDelete( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-void TunnelContain::onCreate( void )
+void TunnelContain::onCreate()
 {
 }
 
@@ -814,7 +814,7 @@ void TunnelContain::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TunnelContain::onBuildComplete( void )
+void TunnelContain::onBuildComplete()
 {
 	//Kris: July 29, 2003
 	//Obsolete -- onObjectCreated handles it before this function gets called.
@@ -883,7 +883,7 @@ void TunnelContain::orderAllPassengersToIdle( CommandSourceType commandSource )
 // ------------------------------------------------------------------------------------------------
 /** Per frame update */
 // ------------------------------------------------------------------------------------------------
-UpdateSleepTime TunnelContain::update( void )
+UpdateSleepTime TunnelContain::update()
 {
 	// extending functionality to heal the units within the tunnel system
 	OpenContain::update();
@@ -1394,7 +1394,7 @@ void TunnelContain::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TunnelContain::loadPostProcess( void )
+void TunnelContain::loadPostProcess()
 {
 
 	// extend base class

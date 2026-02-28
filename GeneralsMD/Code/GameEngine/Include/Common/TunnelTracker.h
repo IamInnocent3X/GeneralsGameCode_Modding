@@ -70,7 +70,7 @@ public:
 
 	const std::list< ObjectID > *getContainerList() const {return &m_tunnelIDs;}
 
-	Object *getCurNemesis(void);
+	Object *getCurNemesis();
 	void updateNemesis(const Object *target);
 
 	UnsignedInt getCheckOpenFireFrames() const {return m_checkOpenFireFrames;}
@@ -92,7 +92,7 @@ protected:
 
 	virtual void crc( Xfer *xfer );
 	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess( void );
+	virtual void loadPostProcess();
 
 private:
 	void updateFullHealTime();

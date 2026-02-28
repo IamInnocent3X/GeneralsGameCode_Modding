@@ -123,7 +123,7 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 }
 
 //-------------------------------------------------------------------------------------------------
-DeployStyleAIUpdate::~DeployStyleAIUpdate( void )
+DeployStyleAIUpdate::~DeployStyleAIUpdate()
 {
 }
 
@@ -158,7 +158,7 @@ void DeployStyleAIUpdate::aiDoCommand( const AICommandParms* parms )
 }
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime DeployStyleAIUpdate::update( void )
+UpdateSleepTime DeployStyleAIUpdate::update()
 {
 	// have to call our parent's isIdle, because we override it to never return true
 	// when we have a pending command...
@@ -984,7 +984,7 @@ void DeployStyleAIUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DeployStyleAIUpdate::loadPostProcess( void )
+void DeployStyleAIUpdate::loadPostProcess()
 {
  // extend base class
 	AIUpdateInterface::loadPostProcess();

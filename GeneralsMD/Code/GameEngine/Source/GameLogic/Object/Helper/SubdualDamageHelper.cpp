@@ -52,7 +52,7 @@ SubdualDamageHelper::SubdualDamageHelper( Thing *thing, const ModuleData *modDat
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-SubdualDamageHelper::~SubdualDamageHelper( void )
+SubdualDamageHelper::~SubdualDamageHelper()
 {
 
 }
@@ -297,7 +297,7 @@ void SubdualDamageHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SubdualDamageHelper::loadPostProcess( void )
+void SubdualDamageHelper::loadPostProcess()
 {
 
 	// object helper base class

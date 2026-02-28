@@ -88,7 +88,7 @@ BaseRegenerateUpdate::BaseRegenerateUpdate( Thing *thing, const ModuleData* modu
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-BaseRegenerateUpdate::~BaseRegenerateUpdate( void )
+BaseRegenerateUpdate::~BaseRegenerateUpdate()
 {
 }
 
@@ -113,7 +113,7 @@ void BaseRegenerateUpdate::onDamage( DamageInfo *damageInfo )
 	* to be used in concert with an upgrade and doesn't have any of the "only regenerate
 	* if we haven't been damaged recently" restrictions */
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime BaseRegenerateUpdate::update( void )
+UpdateSleepTime BaseRegenerateUpdate::update()
 {
 	// this is us!
 	Object *me = getObject();
@@ -181,7 +181,7 @@ void BaseRegenerateUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void BaseRegenerateUpdate::loadPostProcess( void )
+void BaseRegenerateUpdate::loadPostProcess()
 {
 
 	// extend base class
