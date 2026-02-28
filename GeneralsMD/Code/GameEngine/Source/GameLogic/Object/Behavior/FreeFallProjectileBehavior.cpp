@@ -653,7 +653,7 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void FreeFallProjectileBehavior::loadPostProcess(void)
+void FreeFallProjectileBehavior::loadPostProcess()
 {
 
 	// extend base class

@@ -220,13 +220,13 @@ BattlePlanBonusBehavior::BattlePlanBonusBehavior(Thing* thing, const ModuleData*
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-BattlePlanBonusBehavior::~BattlePlanBonusBehavior(void)
+BattlePlanBonusBehavior::~BattlePlanBonusBehavior()
 {
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void BattlePlanBonusBehavior::upgradeImplementation(void)
+void BattlePlanBonusBehavior::upgradeImplementation()
 {
 	// DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::upgradeImplementation 0", KEYNAME(getModuleTagNameKey()).str()));
 
@@ -431,7 +431,7 @@ void BattlePlanBonusBehavior::removeBonusForType(BattlePlanStatus plan)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool BattlePlanBonusBehavior::shouldParalyze(void) const
+Bool BattlePlanBonusBehavior::shouldParalyze() const
 {
 	// DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::shouldParalyze ?", KEYNAME(getModuleTagNameKey()).str()));
 	if (isEffectValid()) {
@@ -444,7 +444,7 @@ Bool BattlePlanBonusBehavior::shouldParalyze(void) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool BattlePlanBonusBehavior::isOverrideGlobalBonus(void) const
+Bool BattlePlanBonusBehavior::isOverrideGlobalBonus() const
 {
 	if (isEffectValid()) {
 		return getBattlePlanBonusBehaviorModuleData()->m_overrideGlobal;
@@ -455,7 +455,7 @@ Bool BattlePlanBonusBehavior::isOverrideGlobalBonus(void) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool BattlePlanBonusBehavior::isConflicting(void) const
+Bool BattlePlanBonusBehavior::isConflicting() const
 {
 	// Check for conflicting upgrades
 	UpgradeMaskType activation, conflicting;
@@ -474,7 +474,7 @@ Bool BattlePlanBonusBehavior::isConflicting(void) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void BattlePlanBonusBehavior::removeActiveEffects(void)
+void BattlePlanBonusBehavior::removeActiveEffects()
 {
 	// DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::removeActiveEffects 0", KEYNAME(getModuleTagNameKey()).str()));
 
@@ -488,14 +488,14 @@ void BattlePlanBonusBehavior::removeActiveEffects(void)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool BattlePlanBonusBehavior::isEffectValid(void) const
+Bool BattlePlanBonusBehavior::isEffectValid() const
 {
 	return isUpgradeActive() && !isConflicting();
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool BattlePlanBonusBehavior::isAnyEffectApplied(void) const
+Bool BattlePlanBonusBehavior::isAnyEffectApplied() const
 {
 	for (int i = 0; i < BATTLE_PLAN_COUNT; i++) {
 		if (m_effectApplied[i]) {
@@ -556,7 +556,7 @@ void BattlePlanBonusBehavior::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void BattlePlanBonusBehavior::loadPostProcess(void)
+void BattlePlanBonusBehavior::loadPostProcess()
 {
 
 	// extend base class

@@ -233,7 +233,7 @@ ProductionEntry::~ProductionEntry()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Real ProductionEntry::getPercentComplete( void ) const
+Real ProductionEntry::getPercentComplete() const
 {
 	return INT_TO_REAL( TheGameLogic->getFrame() - m_framesUnderConstruction ) * m_percentComplete * 100.0f;
 }

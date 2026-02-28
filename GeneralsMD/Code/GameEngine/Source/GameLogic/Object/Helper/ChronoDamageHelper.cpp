@@ -46,7 +46,7 @@ ChronoDamageHelper::ChronoDamageHelper( Thing *thing, const ModuleData *modData 
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-ChronoDamageHelper::~ChronoDamageHelper( void )
+ChronoDamageHelper::~ChronoDamageHelper()
 {
 
 }
@@ -123,7 +123,7 @@ void ChronoDamageHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ChronoDamageHelper::loadPostProcess( void )
+void ChronoDamageHelper::loadPostProcess()
 {
 
 	// object helper base class

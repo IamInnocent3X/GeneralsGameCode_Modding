@@ -73,7 +73,7 @@ class ShipSlowDeathBehaviorModuleData : public SlowDeathBehaviorModuleData
 
 public:
 
-	ShipSlowDeathBehaviorModuleData( void );
+	ShipSlowDeathBehaviorModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse &p );
 

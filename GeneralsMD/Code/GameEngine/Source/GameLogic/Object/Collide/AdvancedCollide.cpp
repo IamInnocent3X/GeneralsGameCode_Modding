@@ -89,7 +89,7 @@ AdvancedCollide::AdvancedCollide( Thing *thing, const ModuleData* moduleData ) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-AdvancedCollide::~AdvancedCollide( void )
+AdvancedCollide::~AdvancedCollide()
 {
 	if (m_collideWeapon)
 		deleteInstance(m_collideWeapon);
@@ -250,7 +250,7 @@ void AdvancedCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void AdvancedCollide::loadPostProcess( void )
+void AdvancedCollide::loadPostProcess()
 {
 
 	// extend base class

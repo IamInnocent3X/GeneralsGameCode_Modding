@@ -90,7 +90,7 @@ KodiakDeploymentUpdate::KodiakDeploymentUpdate( Thing *thing, const ModuleData* 
 }
 
 //-------------------------------------------------------------------------------------------------
-KodiakDeploymentUpdate::~KodiakDeploymentUpdate( void )
+KodiakDeploymentUpdate::~KodiakDeploymentUpdate()
 {
 }
 
@@ -294,7 +294,7 @@ void KodiakDeploymentUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void KodiakDeploymentUpdate::loadPostProcess( void )
+void KodiakDeploymentUpdate::loadPostProcess()
 {
 	// extend base class
 	UpdateModule::loadPostProcess();

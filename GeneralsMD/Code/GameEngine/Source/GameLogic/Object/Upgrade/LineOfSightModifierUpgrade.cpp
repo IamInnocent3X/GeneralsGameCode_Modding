@@ -58,7 +58,7 @@ LineOfSightModifierUpgrade::LineOfSightModifierUpgrade( Thing *thing, const Modu
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-LineOfSightModifierUpgrade::~LineOfSightModifierUpgrade( void )
+LineOfSightModifierUpgrade::~LineOfSightModifierUpgrade()
 {
 }
 
@@ -140,7 +140,7 @@ void LineOfSightModifierUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void LineOfSightModifierUpgrade::loadPostProcess( void )
+void LineOfSightModifierUpgrade::loadPostProcess()
 {
 
 	// extend base class

@@ -74,7 +74,7 @@ DroneCarrierAIUpdate::DroneCarrierAIUpdate(Thing* thing, const ModuleData* modul
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DroneCarrierAIUpdate::~DroneCarrierAIUpdate(void)
+DroneCarrierAIUpdate::~DroneCarrierAIUpdate()
 {
 }
 
@@ -821,7 +821,7 @@ void DroneCarrierAIUpdate::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DroneCarrierAIUpdate::loadPostProcess(void)
+void DroneCarrierAIUpdate::loadPostProcess()
 {
 
 	// extend base class

@@ -47,7 +47,7 @@ class WeaponSetUpgradeModuleData : public UpgradeModuleData
 
 public:
 
-	WeaponSetUpgradeModuleData(void);
+	WeaponSetUpgradeModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 

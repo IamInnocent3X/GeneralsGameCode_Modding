@@ -38,7 +38,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-ObjectSpecialPowerHelper::~ObjectSpecialPowerHelper( void )
+ObjectSpecialPowerHelper::~ObjectSpecialPowerHelper()
 {
 	m_nextWakeUpTime = 0;
 	m_countdownPausedUntilFrames.clear();
@@ -157,7 +157,7 @@ void ObjectSpecialPowerHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ObjectSpecialPowerHelper::loadPostProcess( void )
+void ObjectSpecialPowerHelper::loadPostProcess()
 {
 
 	// object helper base class

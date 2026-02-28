@@ -39,7 +39,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-ObjectLevitationHelper::~ObjectLevitationHelper( void )
+ObjectLevitationHelper::~ObjectLevitationHelper()
 {
 	m_magnetLevitateHeight = 0.0f;
 	m_levitateFrame = 0;
@@ -163,7 +163,7 @@ void ObjectLevitationHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ObjectLevitationHelper::loadPostProcess( void )
+void ObjectLevitationHelper::loadPostProcess()
 {
 
 	// object helper base class

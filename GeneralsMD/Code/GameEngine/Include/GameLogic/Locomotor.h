@@ -390,7 +390,7 @@ public:
 
 	void applySpeedMultiplier(Real scalar) { m_speedMultiplier *= scalar; }
 	// void setSpeedMultiplier(Real value) { m_speedMultiplier = value; }
-	Real getSpeedMultiplier(void) const { return m_speedMultiplier; }
+	Real getSpeedMultiplier() const { return m_speedMultiplier; }
 
 protected:
 	void moveTowardsPositionLegs(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);

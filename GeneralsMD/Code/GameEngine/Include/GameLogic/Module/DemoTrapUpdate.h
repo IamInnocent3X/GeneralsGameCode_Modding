@@ -85,7 +85,7 @@ public:
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 
 	virtual void onBuildComplete();
-	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual void onCreate() { onBuildComplete(); }
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	void detonate();

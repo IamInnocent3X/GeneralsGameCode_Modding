@@ -102,7 +102,7 @@ ChronoDeathBehavior::ChronoDeathBehavior( Thing *thing, const ModuleData* module
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ChronoDeathBehavior::~ChronoDeathBehavior( void )
+ChronoDeathBehavior::~ChronoDeathBehavior()
 {
 }
 
@@ -282,7 +282,7 @@ void ChronoDeathBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ChronoDeathBehavior::loadPostProcess( void )
+void ChronoDeathBehavior::loadPostProcess()
 {
 
 	// extend base class

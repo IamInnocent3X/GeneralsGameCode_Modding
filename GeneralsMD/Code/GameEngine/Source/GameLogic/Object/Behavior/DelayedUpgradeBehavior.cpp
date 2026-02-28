@@ -60,13 +60,13 @@ DelayedUpgradeBehavior::DelayedUpgradeBehavior(Thing* thing, const ModuleData* m
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DelayedUpgradeBehavior::~DelayedUpgradeBehavior(void)
+DelayedUpgradeBehavior::~DelayedUpgradeBehavior()
 {
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void DelayedUpgradeBehavior::upgradeImplementation(void)
+void DelayedUpgradeBehavior::upgradeImplementation()
 {
 	// DEBUG_LOG(("DelayedUpgradeBehavior::upgradeImplementation() 1\n"));
 
@@ -98,7 +98,7 @@ void DelayedUpgradeBehavior::upgradeImplementation(void)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime DelayedUpgradeBehavior::update(void)
+UpdateSleepTime DelayedUpgradeBehavior::update()
 {
 	if (m_triggerCompleted) {
 		DEBUG_LOG(("DelayedUpgradeBehavior::Update(): Already triggered. We should not be awake!!!"));
@@ -136,7 +136,7 @@ UpdateSleepTime DelayedUpgradeBehavior::update(void)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void DelayedUpgradeBehavior::triggerUpgrade(void)
+void DelayedUpgradeBehavior::triggerUpgrade()
 {
 
 	const DelayedUpgradeBehaviorModuleData* d = getDelayedUpgradeBehaviorModuleData();
@@ -260,7 +260,7 @@ void DelayedUpgradeBehavior::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DelayedUpgradeBehavior::loadPostProcess(void)
+void DelayedUpgradeBehavior::loadPostProcess()
 {
 
 	// extend base class

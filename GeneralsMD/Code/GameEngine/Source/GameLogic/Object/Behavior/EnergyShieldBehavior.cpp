@@ -124,7 +124,7 @@ EnergyShieldBehavior::EnergyShieldBehavior( Thing *thing, const ModuleData* modu
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-EnergyShieldBehavior::~EnergyShieldBehavior( void )
+EnergyShieldBehavior::~EnergyShieldBehavior()
 {
 
 }
@@ -269,7 +269,7 @@ void EnergyShieldBehavior::upgradeImplementation()
 //-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime EnergyShieldBehavior::update( void )
+UpdateSleepTime EnergyShieldBehavior::update()
 {
 		//DEBUG_LOG((">>> EnergyShieldBehavior::update1 -  m_healingStepCountdown = %d", m_healingStepCountdown));
 
@@ -353,7 +353,7 @@ void EnergyShieldBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void EnergyShieldBehavior::loadPostProcess( void )
+void EnergyShieldBehavior::loadPostProcess()
 {
 
 	// extend base class

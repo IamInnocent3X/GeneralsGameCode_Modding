@@ -39,7 +39,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-UpgradeSpecialPowerModuleData::UpgradeSpecialPowerModuleData(void)
+UpgradeSpecialPowerModuleData::UpgradeSpecialPowerModuleData()
 {
 	m_upgradeName = "";
 	m_upgradeNames.clear();
@@ -77,7 +77,7 @@ UpgradeSpecialPower::UpgradeSpecialPower(Thing* thing, const ModuleData* moduleD
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-UpgradeSpecialPower::~UpgradeSpecialPower(void)
+UpgradeSpecialPower::~UpgradeSpecialPower()
 {
 
 }
@@ -267,7 +267,7 @@ void UpgradeSpecialPower::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void UpgradeSpecialPower::loadPostProcess(void)
+void UpgradeSpecialPower::loadPostProcess()
 {
 
 	// extend base class

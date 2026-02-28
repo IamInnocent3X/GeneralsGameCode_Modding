@@ -144,7 +144,7 @@ public:
 	virtual Bool isNearSubduedRange( Real low, Real high ) const; 
 	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const; 
 
-	virtual Bool cantBeKilled( void ) const { return FALSE; }
+	virtual Bool cantBeKilled() const { return FALSE; }
 
 	virtual void evaluateVisualCondition();
 	virtual void updateBodyParticleSystems();// made public for topple anf building collapse updates -ML
@@ -193,7 +193,7 @@ protected:
 	//virtual void internalAddSubdualDamageCustom( SubdualCustomData delta, const AsciiString &customStatus );	///< change health
 	virtual void internalAddChronoDamage( Real delta );								///< change health
 
-	virtual void applyChronoParticleSystems(void);
+	virtual void applyChronoParticleSystems();
 
 	const Armor getCurrentArmor() const { return m_curArmor; }
 

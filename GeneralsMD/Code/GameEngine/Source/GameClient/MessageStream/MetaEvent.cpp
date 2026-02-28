@@ -1085,7 +1085,7 @@ Bool MetaMap::hasDoubleDownKey(MappableKeyType m) const
 }
 
 //-------------------------------------------------------------------------------------------------
-CommandModifierID MetaMap::allocateCommandModifierKeyID( void )
+CommandModifierID MetaMap::allocateCommandModifierKeyID()
 {
 	/// @todo Find unused value in current command key modifier set
 	m_nextCmdModKeyID = (CommandModifierID)((UnsignedInt)m_nextCmdModKeyID + 1);

@@ -40,7 +40,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-LocomotorSetUpgradeModuleData::LocomotorSetUpgradeModuleData(void)
+LocomotorSetUpgradeModuleData::LocomotorSetUpgradeModuleData()
 {
 	m_setUpgraded = TRUE;
 	m_useLocomotorType = FALSE;

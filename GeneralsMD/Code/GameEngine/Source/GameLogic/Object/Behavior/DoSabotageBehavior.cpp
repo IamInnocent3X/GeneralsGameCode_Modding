@@ -99,7 +99,7 @@ DoSabotageBehavior::DoSabotageBehavior( Thing *thing, const ModuleData* moduleDa
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DoSabotageBehavior::~DoSabotageBehavior( void )
+DoSabotageBehavior::~DoSabotageBehavior()
 {
 
 	if( m_radiusParticleSystemID != INVALID_PARTICLE_SYSTEM_ID )
@@ -112,7 +112,7 @@ DoSabotageBehavior::~DoSabotageBehavior( void )
 //-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime DoSabotageBehavior::update( void )
+UpdateSleepTime DoSabotageBehavior::update()
 {
 
 	Object *self = getObject();
@@ -270,7 +270,7 @@ void DoSabotageBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DoSabotageBehavior::loadPostProcess( void )
+void DoSabotageBehavior::loadPostProcess()
 {
 
 	// extend base class

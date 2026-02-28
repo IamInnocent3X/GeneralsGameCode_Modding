@@ -106,7 +106,7 @@ public:
 
 	// Bunker Buster Properties
 	virtual void harmAndForceExitAllContained( DamageInfo *info );
-  virtual void killAllContained( void );				///< kill all objects on contain list
+  virtual void killAllContained();				///< kill all objects on contain list
 
 	/**
 		return the player that *appears* to control this unit. if null, use getObject()->getControllingPlayer() instead.

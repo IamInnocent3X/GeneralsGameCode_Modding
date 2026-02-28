@@ -58,7 +58,7 @@ StickyBombCrateCollide::StickyBombCrateCollide( Thing *thing, const ModuleData* 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-StickyBombCrateCollide::~StickyBombCrateCollide( void )
+StickyBombCrateCollide::~StickyBombCrateCollide()
 {
 }  
 
@@ -190,7 +190,7 @@ void StickyBombCrateCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void StickyBombCrateCollide::loadPostProcess( void )
+void StickyBombCrateCollide::loadPostProcess()
 {
 
 	// extend base class

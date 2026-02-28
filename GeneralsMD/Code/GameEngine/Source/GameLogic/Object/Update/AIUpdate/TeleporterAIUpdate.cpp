@@ -51,7 +51,7 @@
 
 
 //-------------------------------------------------------------------------------------------------
-TeleporterAIUpdateModuleData::TeleporterAIUpdateModuleData( void )
+TeleporterAIUpdateModuleData::TeleporterAIUpdateModuleData()
 {
 	m_sourceFX = nullptr;
 	m_targetFX = nullptr;
@@ -108,13 +108,13 @@ TeleporterAIUpdate::TeleporterAIUpdate( Thing *thing, const ModuleData* moduleDa
 }
 
 //-------------------------------------------------------------------------------------------------
-TeleporterAIUpdate::~TeleporterAIUpdate( void )
+TeleporterAIUpdate::~TeleporterAIUpdate()
 {
 
 }
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime TeleporterAIUpdate::update(void)
+UpdateSleepTime TeleporterAIUpdate::update()
 {
 	const TeleporterAIUpdateModuleData* d = getTeleporterAIUpdateModuleData();
 	Object* obj = getObject();
@@ -390,7 +390,7 @@ Bool TeleporterAIUpdate::findAttackLocation(Object* victim, const Coord3D* victi
 }
 
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
+UpdateSleepTime TeleporterAIUpdate::doLocomotor()
 {
 	if (!isMoving()) {
 		return AIUpdateInterface::doLocomotor();
@@ -635,7 +635,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor(void)
 /**
  * See if we can do a quick path without pathfinding.
  */
-Bool TeleporterAIUpdate::canComputeQuickPath(void)
+Bool TeleporterAIUpdate::canComputeQuickPath()
 {
 	return true;
 }
@@ -680,7 +680,7 @@ void TeleporterAIUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void TeleporterAIUpdate::loadPostProcess( void )
+void TeleporterAIUpdate::loadPostProcess()
 {
  // extend base class
 	AIUpdateInterface::loadPostProcess();

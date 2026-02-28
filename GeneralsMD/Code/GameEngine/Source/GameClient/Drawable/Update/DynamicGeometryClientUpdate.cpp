@@ -157,7 +157,7 @@ DynamicGeometryClientUpdate::DynamicGeometryClientUpdate( Thing *thing, const Mo
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DynamicGeometryClientUpdate::~DynamicGeometryClientUpdate( void )
+DynamicGeometryClientUpdate::~DynamicGeometryClientUpdate()
 {
 
 }
@@ -167,7 +167,7 @@ DynamicGeometryClientUpdate::~DynamicGeometryClientUpdate( void )
 //-------------------------------------------------------------------------------------------------
 /** The client update callback. */
 //-------------------------------------------------------------------------------------------------
-void DynamicGeometryClientUpdate::clientUpdate( void )
+void DynamicGeometryClientUpdate::clientUpdate()
 {
 	Drawable *draw = getDrawable();
 
@@ -279,7 +279,7 @@ void DynamicGeometryClientUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DynamicGeometryClientUpdate::loadPostProcess( void )
+void DynamicGeometryClientUpdate::loadPostProcess()
 {
 
 	// extend base class

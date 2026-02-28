@@ -60,7 +60,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ShipSlowDeathBehaviorModuleData::ShipSlowDeathBehaviorModuleData( void )
+ShipSlowDeathBehaviorModuleData::ShipSlowDeathBehaviorModuleData()
 {
 	m_attachParticleBoneNames.clear();
 	m_attachParticleSystem = nullptr;
@@ -162,7 +162,7 @@ ShipSlowDeathBehavior::ShipSlowDeathBehavior( Thing *thing, const ModuleData *mo
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ShipSlowDeathBehavior::~ShipSlowDeathBehavior( void )
+ShipSlowDeathBehavior::~ShipSlowDeathBehavior()
 {
 
 }
@@ -204,7 +204,7 @@ void ShipSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime ShipSlowDeathBehavior::update( void )
+UpdateSleepTime ShipSlowDeathBehavior::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
 	// call the base class cause we're extending functionality
@@ -697,7 +697,7 @@ void ShipSlowDeathBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ShipSlowDeathBehavior::loadPostProcess( void )
+void ShipSlowDeathBehavior::loadPostProcess()
 {
 
 	// extend base class

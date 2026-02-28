@@ -160,8 +160,8 @@ public:
 	StateReturnType setTemporaryState( StateID newStateID, Int frameLimitCoount );			///< change the temporary state of the machine, and number of frames limit.
 	StateID getTemporaryState() const {return m_temporaryState?m_temporaryState->getID():INVALID_STATE_ID;}
 
-	AIGuardMachine* getGuardMachine( void );
-	AIGuardRetaliateMachine* getGuardRetaliateMachine( void );
+	AIGuardMachine* getGuardMachine();
+	AIGuardRetaliateMachine* getGuardRetaliateMachine();
 
 public:	// overrides.
 	virtual StateReturnType updateStateMachine();				///< run one step of the machine

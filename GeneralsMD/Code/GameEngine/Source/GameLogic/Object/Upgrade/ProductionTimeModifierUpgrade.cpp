@@ -74,7 +74,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ProductionTimeModifierUpgradeModuleData::ProductionTimeModifierUpgradeModuleData( void )
+ProductionTimeModifierUpgradeModuleData::ProductionTimeModifierUpgradeModuleData()
 {
 
 	m_kindOf = KINDOFMASK_NONE;
@@ -116,14 +116,14 @@ ProductionTimeModifierUpgrade::ProductionTimeModifierUpgrade( Thing *thing, cons
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ProductionTimeModifierUpgrade::~ProductionTimeModifierUpgrade( void )
+ProductionTimeModifierUpgrade::~ProductionTimeModifierUpgrade()
 {
 
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void ProductionTimeModifierUpgrade::onDelete( void )
+void ProductionTimeModifierUpgrade::onDelete()
 {
 	const ProductionTimeModifierUpgradeModuleData* d = getProductionTimeModifierUpgradeModuleData();
 
@@ -168,7 +168,7 @@ void ProductionTimeModifierUpgrade::onCapture( Player *oldOwner, Player *newOwne
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void ProductionTimeModifierUpgrade::upgradeImplementation( void )
+void ProductionTimeModifierUpgrade::upgradeImplementation()
 {
 	Object *obj = getObject();
 	Player *player = getObject()->getControllingPlayer();
@@ -264,7 +264,7 @@ void ProductionTimeModifierUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ProductionTimeModifierUpgrade::loadPostProcess( void )
+void ProductionTimeModifierUpgrade::loadPostProcess()
 {
 
 	// extend base class

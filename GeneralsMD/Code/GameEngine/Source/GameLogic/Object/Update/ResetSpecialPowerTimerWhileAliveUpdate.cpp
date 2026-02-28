@@ -49,7 +49,7 @@ ResetSpecialPowerTimerWhileAliveUpdate::ResetSpecialPowerTimerWhileAliveUpdate( 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ResetSpecialPowerTimerWhileAliveUpdate::~ResetSpecialPowerTimerWhileAliveUpdate( void )
+ResetSpecialPowerTimerWhileAliveUpdate::~ResetSpecialPowerTimerWhileAliveUpdate()
 {
 
 }
@@ -124,7 +124,7 @@ void ResetSpecialPowerTimerWhileAliveUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ResetSpecialPowerTimerWhileAliveUpdate::loadPostProcess( void )
+void ResetSpecialPowerTimerWhileAliveUpdate::loadPostProcess()
 {
 	// extend base class
 	UpdateModule::loadPostProcess();

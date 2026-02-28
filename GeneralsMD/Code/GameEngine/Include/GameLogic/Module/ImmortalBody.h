@@ -51,7 +51,7 @@ public:
 
 	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE);								///< change health
 
-	virtual Bool cantBeKilled( void ) const { return TRUE; }
+	virtual Bool cantBeKilled() const { return TRUE; }
 
 protected:
 

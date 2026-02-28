@@ -103,9 +103,9 @@ public:
 
 	UnsignedInt getDieFrame() { return m_dieFrame; }
 
-	virtual UpdateSleepTime update( void );
-	void applyEffect(void);
-	void removeEffect(void);
+	virtual UpdateSleepTime update();
+	void applyEffect();
+	void removeEffect();
 
 	void applyEffectToObject(Object* obj);
 	void removeEffectFromObject(Object* obj);

@@ -181,7 +181,7 @@ public:
 	const AudioEventRTS* getUnitSpecificSound() const { return &m_unitSpecificSound; }
 	AcademyClassificationType getAcademyClassificationType() const { return m_academyClassificationType; }
 
-	const Bool isSilentCompletion(void) const { return m_silentCompletion; }
+	const Bool isSilentCompletion() const { return m_silentCompletion; }
 
 	/// inventory pictures
 	void cacheButtonImage();

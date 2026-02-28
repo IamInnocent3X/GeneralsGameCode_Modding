@@ -79,14 +79,14 @@ RadiusDecalBehavior::RadiusDecalBehavior( Thing *thing, const ModuleData* module
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-RadiusDecalBehavior::~RadiusDecalBehavior( void )
+RadiusDecalBehavior::~RadiusDecalBehavior()
 {
 	clearDecal();
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void RadiusDecalBehavior::createRadiusDecal( void )
+void RadiusDecalBehavior::createRadiusDecal()
 {
 	const RadiusDecalBehaviorModuleData* data = getRadiusDecalBehaviorModuleData();
 	const RadiusDecalTemplate& tmpl = data->m_decalTemplate;
@@ -119,7 +119,7 @@ void RadiusDecalBehavior::clearDecal()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime RadiusDecalBehavior::update( void )
+UpdateSleepTime RadiusDecalBehavior::update()
 {
 	if (getObject()->isDisabledByType(DISABLED_HELD)) {
 		if (!m_radiusDecal.isEmpty())
@@ -190,7 +190,7 @@ void RadiusDecalBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void RadiusDecalBehavior::loadPostProcess( void )
+void RadiusDecalBehavior::loadPostProcess()
 {
 
 	// extend base class

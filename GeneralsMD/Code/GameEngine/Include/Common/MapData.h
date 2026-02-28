@@ -20,7 +20,7 @@ public:
 	
 
 	static void parseMapDataDefinition( INI* ini );
-	static MapData* createMapDataSystem(void);
+	static MapData* createMapDataSystem();
 
 	Real m_HeightmapScale;
 	Bool m_enableShips;
@@ -34,4 +34,4 @@ extern MapData* TheWriteableMapData;
 
 inline const MapData* const& TheMapData = TheWriteableMapData;
 
-inline MapData* MapData::createMapDataSystem(void) { return NEW MapData; }
+inline MapData* MapData::createMapDataSystem() { return NEW MapData; }

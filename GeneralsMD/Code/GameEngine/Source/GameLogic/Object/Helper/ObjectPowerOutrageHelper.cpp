@@ -38,7 +38,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-ObjectPowerOutrageHelper::~ObjectPowerOutrageHelper( void )
+ObjectPowerOutrageHelper::~ObjectPowerOutrageHelper()
 {
 	m_powerOutrageUntilFrame = 0;
 }
@@ -114,7 +114,7 @@ void ObjectPowerOutrageHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ObjectPowerOutrageHelper::loadPostProcess( void )
+void ObjectPowerOutrageHelper::loadPostProcess()
 {
 
 	// object helper base class

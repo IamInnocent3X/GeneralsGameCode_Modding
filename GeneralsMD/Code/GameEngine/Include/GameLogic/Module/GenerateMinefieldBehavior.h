@@ -94,7 +94,7 @@ public:
 	// CreateModuleInterface
 	virtual CreateModuleInterface* getCreate() { return this; }
 	virtual void onBuildComplete();
-	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual void onCreate() { onBuildComplete(); }
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 
 	// UpdateModule

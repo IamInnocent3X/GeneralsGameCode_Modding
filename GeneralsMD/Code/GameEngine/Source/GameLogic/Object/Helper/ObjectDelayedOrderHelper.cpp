@@ -40,7 +40,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-ObjectDelayedOrderHelper::~ObjectDelayedOrderHelper( void )
+ObjectDelayedOrderHelper::~ObjectDelayedOrderHelper()
 {
 	m_msgType = GameMessage::MSG_INVALID;
 	m_msgArguments.clear();
@@ -270,7 +270,7 @@ void ObjectDelayedOrderHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ObjectDelayedOrderHelper::loadPostProcess( void )
+void ObjectDelayedOrderHelper::loadPostProcess()
 {
 
 	// object helper base class

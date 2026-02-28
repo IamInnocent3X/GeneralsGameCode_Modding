@@ -84,7 +84,7 @@ bool CarrierDroneAIUpdate::isLanding()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CarrierDroneAIUpdate::~CarrierDroneAIUpdate(void)
+CarrierDroneAIUpdate::~CarrierDroneAIUpdate()
 {
 }
 
@@ -250,7 +250,7 @@ void CarrierDroneAIUpdate::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CarrierDroneAIUpdate::loadPostProcess(void)
+void CarrierDroneAIUpdate::loadPostProcess()
 {
 	// extend base class
 	AIUpdateInterface::loadPostProcess();

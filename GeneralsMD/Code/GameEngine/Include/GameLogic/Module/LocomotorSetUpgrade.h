@@ -42,7 +42,7 @@ class LocomotorSetUpgradeModuleData : public UpgradeModuleData
 {
 public:
 
-	LocomotorSetUpgradeModuleData(void);
+	LocomotorSetUpgradeModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseLocomotorType(INI* ini, void* instance, void* store, const void* /*userData*/);

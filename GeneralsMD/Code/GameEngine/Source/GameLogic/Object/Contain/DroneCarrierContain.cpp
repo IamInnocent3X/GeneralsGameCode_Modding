@@ -66,7 +66,7 @@ DroneCarrierContain::DroneCarrierContain(Thing* thing, const ModuleData* moduleD
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DroneCarrierContain::~DroneCarrierContain(void)
+DroneCarrierContain::~DroneCarrierContain()
 {
 }
 
@@ -531,7 +531,7 @@ void DroneCarrierContain::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DroneCarrierContain::loadPostProcess(void)
+void DroneCarrierContain::loadPostProcess()
 {
 
 	// extend base class

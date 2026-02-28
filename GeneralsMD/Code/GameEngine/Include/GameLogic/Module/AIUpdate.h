@@ -570,7 +570,7 @@ public:
 
 	void setCurrentVictim( const Object *nemesis );			///<  Current victim.
 	Object *getCurrentVictim() const;
-	virtual void notifyVictimIsDead() { }
+	virtual void notifyVictimIsDead();
 
 	// if we are attacking a position (and NOT an object), return it. otherwise return null.
 	const Coord3D *getCurrentVictimPos() const;

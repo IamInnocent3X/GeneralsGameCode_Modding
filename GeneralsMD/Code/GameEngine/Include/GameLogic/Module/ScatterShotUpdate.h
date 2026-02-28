@@ -111,7 +111,7 @@ protected:
 
 	Real m_totalTargetDistance;
 
-	void triggerScatterShot(void);
+	void triggerScatterShot();
 	Bool isValidTarget(const Object* victim) const;
 
 private:

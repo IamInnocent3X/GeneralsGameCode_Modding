@@ -779,15 +779,15 @@ public:
 	/** return true attemptToPurchaseScience() would succeed for this science. */
 	Bool isCapableOfPurchasingScience(ScienceType science) const;
 
-	const BattlePlanBonuses* getBattlePlanBonuses(void) const { return m_battlePlanBonuses; }
+	const BattlePlanBonuses* getBattlePlanBonuses() const { return m_battlePlanBonuses; }
 
 	void setUnitsMoveState(MoveStateType moveState, Bool doOnce = FALSE);
-	Bool getUnitsMoveInFormation(void) const { return m_unitsMoveState == MOVE_IN_FORMATION; }
-	Bool getUnitsMoveInReverse(void) const { return m_unitsMoveState == MOVE_REVERSE; }
-	Bool getMoveStateDoOnce(void) const { return m_unitsMoveStateDoOnce; }
+	Bool getUnitsMoveInFormation() const { return m_unitsMoveState == MOVE_IN_FORMATION; }
+	Bool getUnitsMoveInReverse() const { return m_unitsMoveState == MOVE_REVERSE; }
+	Bool getMoveStateDoOnce() const { return m_unitsMoveStateDoOnce; }
 
 	Bool forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType spType );
-	Bool isSabotagingObjectGUICommand(void) const { return !m_sabotagingObjectGUICommandName.isEmpty(); }
+	Bool isSabotagingObjectGUICommand() const { return !m_sabotagingObjectGUICommandName.isEmpty(); }
 	ObjectID getSabotagingObjectGUICommandID() const { return m_sabotagingObjectGUICommandID; }
 	const AsciiString& getSabotagingObjectGUICommandName() const { return m_sabotagingObjectGUICommandName; }
 	void setSabotagingObjectGUICommandName(const AsciiString& name) { m_sabotagingObjectGUICommandName = name; }

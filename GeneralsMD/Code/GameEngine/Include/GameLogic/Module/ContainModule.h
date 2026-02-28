@@ -103,7 +103,7 @@ public:
   virtual Bool isAnyRiderAttacking() const = 0;
   virtual Bool killPilotDoesNotKill() const = 0;
 
-	virtual void forceScuttle( void ) = 0;
+	virtual void forceScuttle() = 0;
 
 #if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
 	virtual const Object *getKillScoreCreditObj( const Object* killer ) const = 0;
@@ -209,10 +209,10 @@ public:
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const = 0;
 	virtual const std::vector<AsciiString>& getCustomWeaponBonusPassedToPassengers() const = 0;
 
-	virtual void doUpgradeChecks( void ) = 0;
-  	virtual void doStatusChecks( void ) = 0;
+	virtual void doUpgradeChecks() = 0;
+  	virtual void doStatusChecks() = 0;
 
-	virtual void clearTargetID( void ) = 0;
+	virtual void clearTargetID() = 0;
 
 
 	// this exists really just so someone can override it to prevent pip showings...

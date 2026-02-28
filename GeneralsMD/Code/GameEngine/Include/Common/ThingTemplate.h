@@ -691,7 +691,7 @@ public:
 
 	const WeaponTemplateSetVector& getWeaponTemplateSets() const {return m_weaponTemplateSets;}
 
-	Int getMaxPathFindingCellRadius(void) const { return static_cast<Int>(m_maxPathfindingCellRadius); };
+	Int getMaxPathFindingCellRadius() const { return static_cast<Int>(m_maxPathfindingCellRadius); };
 
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }

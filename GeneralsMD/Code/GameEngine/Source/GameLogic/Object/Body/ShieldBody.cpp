@@ -110,7 +110,7 @@ ShieldBody::ShieldBody( Thing *thing, const ModuleData* moduleData ) : ActiveBod
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ShieldBody::~ShieldBody( void )
+ShieldBody::~ShieldBody()
 {
 
 }
@@ -449,7 +449,7 @@ void ShieldBody::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ShieldBody::loadPostProcess( void )
+void ShieldBody::loadPostProcess()
 {
 
 	// extend base class

@@ -107,7 +107,7 @@ protected:
 	//virtual void requestApproachPath(Coord3D* destination);	///< computes path to attack the current target, returns false if no path
 	//virtual void requestSafePath(ObjectID repulsor1);	///< computes path to attack the current target, returns false if no path
 
-	virtual Bool canComputeQuickPath(void); ///< Returns true if we can quickly comput a path.  Usually missiles & the like that just move straight to the destination.
+	virtual Bool canComputeQuickPath(); ///< Returns true if we can quickly comput a path.  Usually missiles & the like that just move straight to the destination.
 	virtual Bool computeQuickPath(const Coord3D* destination); ///< Computes a quick path to the destination.
 
 
@@ -115,7 +115,7 @@ protected:
 
 private:
 	void applyRecoverEffects(Real dist);
-	void removeRecoverEffects(void);
+	void removeRecoverEffects();
 
 	AudioEventRTS m_recoverSoundLoop;  ///< Audio to play during recovering
 	UnsignedInt m_disabledUntil;  ///< frame we are done recovering

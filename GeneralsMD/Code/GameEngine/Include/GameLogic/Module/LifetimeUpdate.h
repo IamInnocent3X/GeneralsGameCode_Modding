@@ -74,13 +74,13 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	void setLifetimeRange( UnsignedInt minFrames, UnsignedInt maxFrames );
-	void resetLifetime(void);
+	void resetLifetime();
 	UnsignedInt getDieFrame() const { return m_dieFrame; }
 
 	virtual UpdateSleepTime update();
 
 	Real getProgress();
-	inline Bool showProgressBar(void) const { return getLifetimeUpdateModuleData()->m_showProgressBar; }
+	Bool showProgressBar() const { return getLifetimeUpdateModuleData()->m_showProgressBar; }
 
 private:
 

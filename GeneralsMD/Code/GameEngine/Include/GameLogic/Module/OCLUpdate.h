@@ -87,7 +87,7 @@ public:
 	virtual void onCapture( Player *oldOwner, Player *newOwner );
 	virtual CreateModuleInterface* getCreate() { return this; }
 	virtual void onBuildComplete();
-	virtual void onCreate( void ) { onBuildComplete(); }
+	virtual void onCreate() { onBuildComplete(); }
 	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
 	void setDisabledUntilFrame(UnsignedInt frame);
 	UnsignedInt getRemainingSabotagedFrames() const;

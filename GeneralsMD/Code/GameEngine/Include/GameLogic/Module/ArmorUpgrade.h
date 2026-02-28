@@ -69,7 +69,7 @@ class ArmorUpgradeModuleData : public UpgradeModuleData
 
 public:
 
-	ArmorUpgradeModuleData(void);
+	ArmorUpgradeModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 

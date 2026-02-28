@@ -96,7 +96,7 @@ FireWeaponAdvancedUpdate::FireWeaponAdvancedUpdate( Thing *thing, const ModuleDa
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-FireWeaponAdvancedUpdate::~FireWeaponAdvancedUpdate( void )
+FireWeaponAdvancedUpdate::~FireWeaponAdvancedUpdate()
 {
 	m_deliveryDecal.clear();
 
@@ -311,7 +311,7 @@ Coord3D getScatterRadiusOffset(Real radius) {
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime FireWeaponAdvancedUpdate::update( void )
+UpdateSleepTime FireWeaponAdvancedUpdate::update()
 {
 	const FireWeaponAdvancedUpdateModuleData* data = getFireWeaponAdvancedUpdateModuleData();
 
@@ -483,7 +483,7 @@ void FireWeaponAdvancedUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void FireWeaponAdvancedUpdate::loadPostProcess( void )
+void FireWeaponAdvancedUpdate::loadPostProcess()
 {
 
 	// extend base class

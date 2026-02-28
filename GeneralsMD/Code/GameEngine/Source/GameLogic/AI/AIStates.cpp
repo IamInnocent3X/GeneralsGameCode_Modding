@@ -1089,7 +1089,7 @@ Squad *AIStateMachine::getGoalSquad()
 
 
 //----------------------------------------------------------------------------------------------------------
-AIGuardMachine* AIStateMachine::getGuardMachine(void)
+AIGuardMachine* AIStateMachine::getGuardMachine()
 {
 	if (getCurrentStateID() == AI_GUARD) {
 		AIGuardState* guardState = (AIGuardState*)(StateMachine::internalGetState(getCurrentStateID()));
@@ -1102,7 +1102,7 @@ AIGuardMachine* AIStateMachine::getGuardMachine(void)
 }
 
 //----------------------------------------------------------------------------------------------------------
-AIGuardRetaliateMachine* AIStateMachine::getGuardRetaliateMachine(void)
+AIGuardRetaliateMachine* AIStateMachine::getGuardRetaliateMachine()
 {
 	if (getCurrentStateID() == AI_GUARD_RETALIATE) {
 		AIGuardRetaliateState* guardState = (AIGuardRetaliateState*)(StateMachine::internalGetState(getCurrentStateID()));

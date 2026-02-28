@@ -72,7 +72,7 @@ class BuffTemplate : public MemoryPoolObject
 
 public:
 	// for lookup
-	AsciiString getName(void) const { return m_name; }
+	AsciiString getName() const { return m_name; }
 	void friend_setName(const AsciiString& n) { m_name = n; }
 
 	inline UnsignedInt getMaxStackSize() const { return m_maxStackSize; }
@@ -103,7 +103,7 @@ public:
 
 	void reApplyFlags(Object* targetObj, const BuffTemplate* other) const;
 
-	const FieldParse* getFieldParse(void) const { return TheBuffTemplateFieldParse; }
+	const FieldParse* getFieldParse() const { return TheBuffTemplateFieldParse; }
 
 
 protected:

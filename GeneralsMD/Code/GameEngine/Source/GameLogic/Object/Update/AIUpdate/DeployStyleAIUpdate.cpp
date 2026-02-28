@@ -873,7 +873,7 @@ Bool DeployStyleAIUpdate::checkAfterDeploy(const AsciiString& type) const
 }
 
 // ------------------------------------------------------------------------------------------------
-Bool DeployStyleAIUpdate::isWithinAttackAngle(void) const
+Bool DeployStyleAIUpdate::isWithinAttackAngle() const
 {
 	const Object* self = getObject();
 	const Weapon* weapon = self->getCurrentWeapon();

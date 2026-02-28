@@ -101,7 +101,7 @@ BuffUpdate::BuffUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateMod
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-BuffUpdate::~BuffUpdate( void )
+BuffUpdate::~BuffUpdate()
 {
 
 }
@@ -137,7 +137,7 @@ void containIteratingDoBuff( Object *passenger, void *voidData)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime BuffUpdate::update( void )
+UpdateSleepTime BuffUpdate::update()
 {
 	DEBUG_LOG(("BuffUpdate::update 0"));
 
@@ -239,7 +239,7 @@ void BuffUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void BuffUpdate::loadPostProcess( void )
+void BuffUpdate::loadPostProcess()
 {
 
 	// extend base class

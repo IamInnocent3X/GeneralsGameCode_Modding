@@ -141,7 +141,7 @@ ScatterShotUpdate::ScatterShotUpdate(Thing* thing, const ModuleData* moduleData)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ScatterShotUpdate::~ScatterShotUpdate(void)
+ScatterShotUpdate::~ScatterShotUpdate()
 {
 	if (m_weapon)
 		deleteInstance(m_weapon);
@@ -150,7 +150,7 @@ ScatterShotUpdate::~ScatterShotUpdate(void)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime ScatterShotUpdate::update(void)
+UpdateSleepTime ScatterShotUpdate::update()
 {
 	// DEBUG_LOG((">>> SSU Update 1\n"));
 	const ScatterShotUpdateModuleData* data = getScatterShotUpdateModuleData();
@@ -283,7 +283,7 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 
-void ScatterShotUpdate::triggerScatterShot(void)
+void ScatterShotUpdate::triggerScatterShot()
 {
 	// DEBUG_LOG((">>> SSU - triggerScatterShot 1\n"));
 	m_hasTriggered = TRUE;
@@ -466,7 +466,7 @@ void ScatterShotUpdate::triggerScatterShot(void)
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Real ScatterShotUpdate::getTargetDistance(void) const {
+Real ScatterShotUpdate::getTargetDistance() const {
 	Coord3D goal;
 	Coord3D pos = *getObject()->getPosition();
 	if (m_goalObj != nullptr) {
@@ -685,7 +685,7 @@ void ScatterShotUpdate::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ScatterShotUpdate::loadPostProcess(void)
+void ScatterShotUpdate::loadPostProcess()
 {
 
 	// extend base class

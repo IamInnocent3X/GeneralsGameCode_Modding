@@ -139,7 +139,7 @@ SabotageBehavior::SabotageBehavior( Thing *thing, const ModuleData* moduleData )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-SabotageBehavior::~SabotageBehavior( void )
+SabotageBehavior::~SabotageBehavior()
 {
 }
 
@@ -1306,7 +1306,7 @@ void SabotageBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SabotageBehavior::loadPostProcess( void )
+void SabotageBehavior::loadPostProcess()
 {
 
 	// extend base class

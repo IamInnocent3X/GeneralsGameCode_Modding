@@ -52,7 +52,7 @@ BuffEffectHelper::BuffEffectHelper(Thing* thing, const ModuleData* modData) : Ob
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-BuffEffectHelper::~BuffEffectHelper(void)
+BuffEffectHelper::~BuffEffectHelper()
 {
 	clearAllBuffs();
 	// Do we need to actually delete items from m_buffEffects?
@@ -439,7 +439,7 @@ void BuffEffectHelper::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void BuffEffectHelper::loadPostProcess(void)
+void BuffEffectHelper::loadPostProcess()
 {
 
 	// object helper base class

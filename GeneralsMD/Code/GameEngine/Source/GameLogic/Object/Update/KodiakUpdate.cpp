@@ -145,7 +145,7 @@ m_howitzerTrackerDecal.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
-KodiakUpdate::~KodiakUpdate( void )
+KodiakUpdate::~KodiakUpdate()
 {
 	m_attackAreaDecal.clear();
 	m_targetingReticleDecal.clear();
@@ -1019,7 +1019,7 @@ void KodiakUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void KodiakUpdate::loadPostProcess( void )
+void KodiakUpdate::loadPostProcess()
 {
 
 	// extend base class

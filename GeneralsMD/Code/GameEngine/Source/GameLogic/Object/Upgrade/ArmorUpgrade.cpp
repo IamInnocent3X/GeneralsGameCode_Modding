@@ -61,7 +61,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ArmorUpgradeModuleData::ArmorUpgradeModuleData(void)
+ArmorUpgradeModuleData::ArmorUpgradeModuleData()
 {
 	m_armorSetFlag = ARMORSET_PLAYER_UPGRADE;
 	//m_needsParkedAircraft = FALSE;

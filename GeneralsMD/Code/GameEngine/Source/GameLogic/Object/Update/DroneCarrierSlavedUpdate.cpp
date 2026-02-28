@@ -47,11 +47,11 @@ DroneCarrierSlavedUpdate::DroneCarrierSlavedUpdate(Thing* thing, const ModuleDat
 }
 
 //-------------------------------------------------------------------------------------------------
-DroneCarrierSlavedUpdate::~DroneCarrierSlavedUpdate(void)
+DroneCarrierSlavedUpdate::~DroneCarrierSlavedUpdate()
 {
 }
 
-UpdateSleepTime DroneCarrierSlavedUpdate::update(void)
+UpdateSleepTime DroneCarrierSlavedUpdate::update()
 {
 	if (m_framesToWait > 0)
 	{
@@ -181,7 +181,7 @@ void DroneCarrierSlavedUpdate::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void DroneCarrierSlavedUpdate::loadPostProcess(void)
+void DroneCarrierSlavedUpdate::loadPostProcess()
 {
 
 	// extend base class

@@ -94,7 +94,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UnitProductionBonusUpgradeModuleData::UnitProductionBonusUpgradeModuleData( void )
+UnitProductionBonusUpgradeModuleData::UnitProductionBonusUpgradeModuleData()
 {
 	m_templateNames.clear();
 	m_costPercentage = 0.0f;
@@ -136,14 +136,14 @@ UnitProductionBonusUpgrade::UnitProductionBonusUpgrade( Thing *thing, const Modu
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UnitProductionBonusUpgrade::~UnitProductionBonusUpgrade( void )
+UnitProductionBonusUpgrade::~UnitProductionBonusUpgrade()
 {
 
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-//void UnitProductionBonusUpgrade::onDelete( void )
+//void UnitProductionBonusUpgrade::onDelete()
 //{
 //
 //	// this upgrade module is now "not upgraded"
@@ -161,7 +161,7 @@ UnitProductionBonusUpgrade::~UnitProductionBonusUpgrade( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void UnitProductionBonusUpgrade::upgradeImplementation( void )
+void UnitProductionBonusUpgrade::upgradeImplementation()
 {
 	const UnitProductionBonusUpgradeModuleData * d = getUnitProductionBonusUpgradeModuleData();
 
@@ -213,7 +213,7 @@ void UnitProductionBonusUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void UnitProductionBonusUpgrade::loadPostProcess( void )
+void UnitProductionBonusUpgrade::loadPostProcess()
 {
 
 	// extend base class

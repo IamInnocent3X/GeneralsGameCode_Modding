@@ -69,8 +69,8 @@ public:
 	//void createRadiusDecal( const Coord3D& pos );
 	// void createRadiusDecal( const RadiusDecalTemplate& tmpl, Real radius, const Coord3D& pos );
 	
-	void createRadiusDecal( void );
-	void killRadiusDecal( void );
+	void createRadiusDecal();
+	void killRadiusDecal();
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update();
@@ -128,7 +128,7 @@ private:
 
 	RadiusDecal m_radiusDecal;
 
-	void clearDecal( void );
+	void clearDecal();
 };
 
 

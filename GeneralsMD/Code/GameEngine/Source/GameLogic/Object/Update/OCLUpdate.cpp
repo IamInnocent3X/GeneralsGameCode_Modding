@@ -211,7 +211,7 @@ void OCLUpdate::onBuildComplete()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime OCLUpdate()
+UpdateSleepTime OCLUpdate::update()
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 #if RETAIL_COMPATIBLE_CRC
@@ -345,6 +345,12 @@ UpdateSleepTime OCLUpdate::calcSleepTime() const
 {
 	UnsignedInt now = TheGameLogic->getFrame();
 	return UPDATE_SLEEP( m_nextCreationFrame > now ? m_nextCreationFrame - now : UPDATE_SLEEP_FOREVER );
+}
+
+//-------------------------------------------------------------------------------------------------
+void OCLUpdate::resetTimer()
+{
+	setNextCreationFrame();
 }
 
 // ------------------------------------------------------------------------------------------------

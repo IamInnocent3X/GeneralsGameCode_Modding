@@ -134,7 +134,7 @@ ArmorDamageScalarUpdate::ArmorDamageScalarUpdate( Thing *thing, const ModuleData
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ArmorDamageScalarUpdate::~ArmorDamageScalarUpdate( void )
+ArmorDamageScalarUpdate::~ArmorDamageScalarUpdate()
 {
 	removeEffect();
 }
@@ -142,7 +142,7 @@ ArmorDamageScalarUpdate::~ArmorDamageScalarUpdate( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime ArmorDamageScalarUpdate::update(void)
+UpdateSleepTime ArmorDamageScalarUpdate::update()
 {
 	if (!m_effectApplied) {
 		applyEffect();
@@ -162,7 +162,7 @@ UpdateSleepTime ArmorDamageScalarUpdate::update(void)
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
-void ArmorDamageScalarUpdate::applyEffect(void) {
+void ArmorDamageScalarUpdate::applyEffect() {
 
 	if (m_effectApplied) return;
 
@@ -213,7 +213,7 @@ void ArmorDamageScalarUpdate::applyEffect(void) {
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void ArmorDamageScalarUpdate::removeEffect(void) {
+void ArmorDamageScalarUpdate::removeEffect() {
 
 	if (!m_effectApplied) return;
 
@@ -370,7 +370,7 @@ void ArmorDamageScalarUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ArmorDamageScalarUpdate::loadPostProcess( void )
+void ArmorDamageScalarUpdate::loadPostProcess()
 {
 
 	// extend base class

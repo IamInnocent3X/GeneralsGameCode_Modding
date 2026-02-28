@@ -75,7 +75,7 @@ public:
 	//static Int getInterfaceMask() { return UpdateModule::getInterfaceMask(); }
 
 	//// UpdateModuleInterface
-	//virtual UpdateSleepTime update(void);
+	//virtual UpdateSleepTime update();
 
 	//virtual UpdateModuleInterface* getUpdate() { return this; }
 
@@ -83,7 +83,7 @@ public:
 
 
 	//void setConstructorObject( Object *obj );
-	//ObjectID getConstructorObjectID( void ) { return m_constructorObjectID; }
+	//ObjectID getConstructorObjectID() { return m_constructorObjectID; }
 
 	Real getShieldMaxHealth() const { return getShieldBodyModuleData()->m_shieldMaxHealth; }
 	Real getShieldCurrentHealth() const { return m_currentShieldHealth; }

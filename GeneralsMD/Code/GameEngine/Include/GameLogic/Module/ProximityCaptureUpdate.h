@@ -149,7 +149,7 @@ public:
 
 protected:
 
-	Int checkDominantPlayer( void );
+	Int checkDominantPlayer();
 
 	void handleCaptureProgress(Int dominantPlayer);
 	void handleFlashEffects(Int dominantPlayer);

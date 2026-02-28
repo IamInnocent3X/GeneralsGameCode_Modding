@@ -71,7 +71,7 @@ ProximityCaptureUpdate::ProximityCaptureUpdate( Thing *thing, const ModuleData* 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ProximityCaptureUpdate::~ProximityCaptureUpdate( void )
+ProximityCaptureUpdate::~ProximityCaptureUpdate()
 {
 }
 
@@ -98,7 +98,7 @@ struct PlayerResult {
 //-------------------------------------------------------------------------------------------------
 // Look around us for units
 //-------------------------------------------------------------------------------------------------
-Int ProximityCaptureUpdate::checkDominantPlayer( void )
+Int ProximityCaptureUpdate::checkDominantPlayer()
 {
 	Object* me = getObject();
 	const ProximityCaptureUpdateModuleData* data = getProximityCaptureUpdateModuleData();
@@ -508,7 +508,7 @@ void ProximityCaptureUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ProximityCaptureUpdate::loadPostProcess( void )
+void ProximityCaptureUpdate::loadPostProcess()
 {
 
 	// extend base class

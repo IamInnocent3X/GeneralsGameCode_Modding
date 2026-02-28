@@ -70,7 +70,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	/// the client update callback
-	virtual void clientUpdate( void );
+	virtual void clientUpdate();
 
 	void setScaleMultiplier( Real value ) { m_overrideScale = value; }
 	void setAlphaMultiplier( Real value ) { m_overrideAlpha = value; }

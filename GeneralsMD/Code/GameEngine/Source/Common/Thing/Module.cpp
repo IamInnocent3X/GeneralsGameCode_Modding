@@ -237,7 +237,7 @@ void DrawableModule::loadPostProcess()
 //-------------------------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------------------------
-UpgradeMuxData::UpgradeMuxData(void)
+UpgradeMuxData::UpgradeMuxData()
 {
 	m_triggerUpgradeNames.clear();
 	m_activationUpgradeNames.clear();

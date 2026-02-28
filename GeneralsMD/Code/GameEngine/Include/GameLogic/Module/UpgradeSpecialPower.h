@@ -42,7 +42,7 @@ class UpgradeSpecialPowerModuleData : public SpecialPowerModuleData
 
 public:
 
-	UpgradeSpecialPowerModuleData(void);
+	UpgradeSpecialPowerModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 

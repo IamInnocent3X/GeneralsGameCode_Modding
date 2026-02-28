@@ -2258,7 +2258,7 @@ void ActiveBody::onSubdualChronoChange( Bool isNowSubdued )
 // ------------------------------------------------------------------------------------------------
 /* 	This function is called on state changes only.  Body Type or Aflameness. */
 // ------------------------------------------------------------------------------------------------
-void ActiveBody::applyChronoParticleSystems(void)
+void ActiveBody::applyChronoParticleSystems()
 {
 	deleteAllParticleSystems();
 

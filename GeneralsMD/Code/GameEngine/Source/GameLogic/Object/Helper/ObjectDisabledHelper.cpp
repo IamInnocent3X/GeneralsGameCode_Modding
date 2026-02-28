@@ -37,7 +37,7 @@
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-ObjectDisabledHelper::~ObjectDisabledHelper( void )
+ObjectDisabledHelper::~ObjectDisabledHelper()
 {
 	m_sleepUntil = 0;
 }
@@ -111,7 +111,7 @@ void ObjectDisabledHelper::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ObjectDisabledHelper::loadPostProcess( void )
+void ObjectDisabledHelper::loadPostProcess()
 {
 
 	// object helper base class

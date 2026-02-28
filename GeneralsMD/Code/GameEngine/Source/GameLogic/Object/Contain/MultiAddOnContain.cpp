@@ -118,13 +118,13 @@ MultiAddOnContain::MultiAddOnContain(Thing* thing, const ModuleData* moduleData)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-MultiAddOnContain::~MultiAddOnContain(void)
+MultiAddOnContain::~MultiAddOnContain()
 {
 
 }
 
 
-void MultiAddOnContain::onObjectCreated(void)
+void MultiAddOnContain::onObjectCreated()
 {
   MultiAddOnContain::createPayload();
 }
@@ -152,7 +152,7 @@ void MultiAddOnContain::onObjectCreated(void)
 
 //-------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void MultiAddOnContain::redeployOccupants(void)
+void MultiAddOnContain::redeployOccupants()
 {
   TransportContain::redeployOccupants();
 
@@ -208,7 +208,7 @@ void MultiAddOnContain::createPayload()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-//VecObjectPtr& MultiAddOnContain::getPortableStructures(void) const
+//VecObjectPtr& MultiAddOnContain::getPortableStructures() const
 //{
 //  DEBUG_LOG((">>> MultiAddOnContainModuleData::getPortableStructures 0"));
 //  VecObjectPtr portableStructures;
@@ -256,7 +256,7 @@ void MultiAddOnContain::onDie(const DamageInfo* damageInfo)
 }
 
 //-------------------------------------------------------------------------------------------------
-void MultiAddOnContain::onDelete(void)
+void MultiAddOnContain::onDelete()
 {
   for (Object* obj : m_addOnList) {
     if (obj)
@@ -517,7 +517,7 @@ bool MultiAddOnContain::removeAddOnForRider(Object* obj)
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void MultiAddOnContain::redeployAddOns(void)
+void MultiAddOnContain::redeployAddOns()
 {
   for (const AddOnSlotData& addOn : m_addOnSlots) {
     Object* obj = TheGameLogic->findObjectByID(addOn.portableID);
@@ -675,7 +675,7 @@ void MultiAddOnContain::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void MultiAddOnContain::loadPostProcess(void)
+void MultiAddOnContain::loadPostProcess()
 {
 
   // extend base class

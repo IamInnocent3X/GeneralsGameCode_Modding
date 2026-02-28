@@ -68,7 +68,7 @@ EquipCrateCollide::EquipCrateCollide( Thing *thing, const ModuleData* moduleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-EquipCrateCollide::~EquipCrateCollide( void )
+EquipCrateCollide::~EquipCrateCollide()
 {
 }
 
@@ -426,7 +426,7 @@ void EquipCrateCollide::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void EquipCrateCollide::loadPostProcess( void )
+void EquipCrateCollide::loadPostProcess()
 {
 
 	// extend base class
