@@ -928,6 +928,26 @@ public:
 
 protected:
 
+	static Real getGroundHeight(const Coord3D* pos, PathfindLayerEnum layer) {
+
+		if (layer != LAYER_GROUND) {  // Bridge
+			return TheTerrainLogic->getLayerHeight(pos->x, pos->y, layer) + 1.0;
+		}
+		else if (TheGlobalData->m_heightAboveTerrainIncludesWater) { // do water check
+			Real waterZ = 0;
+			Real terrainZ = 0;
+
+			if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterZ, &terrainZ))
+				return waterZ;
+
+			return terrainZ;
+		}
+		else {  // Ground height only
+			return TheTerrainLogic->getLayerHeight(pos->x, pos->y, layer);
+		}
+	}
+
+
 	void doStuffToObj(
 		Object* obj,
 		const AsciiString& modelName,
@@ -1058,7 +1078,14 @@ protected:
 				obj->setTransformMatrix(mtx);
 			else
 				obj->setOrientation(orientation);
+
+			if (BitIsSet(m_disposition, ON_GROUND_ALIGNED)) {
+				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
+				chunkPos.z = getGroundHeight(pos, layer);
+				obj->setLayer(layer);
+			}
 			obj->setPosition(&chunkPos);
+
 			if (sourceObj && sourceObj->isAboveTerrain())
 			{
 				PhysicsBehavior* physics = obj->getPhysics();
@@ -1090,15 +1117,11 @@ protected:
 
 		}
 
-		if( BitIsSet( m_disposition, ON_GROUND_ALIGNED ) )
+		else if( BitIsSet( m_disposition, ON_GROUND_ALIGNED ))
 		{
-			chunkPos.z = 99999.0f;
-			PathfindLayerEnum layer = TheTerrainLogic->getHighestLayerForDestination(&chunkPos);
 			obj->setOrientation(GameLogicRandomValueReal(0.0f, 2 * PI));
-			chunkPos.z = TheTerrainLogic->getLayerHeight( chunkPos.x, chunkPos.y, layer );
-			// ensure we are slightly above the bridge, to account for fudge & sloppy art
-			if (layer != LAYER_GROUND)
-				chunkPos.z += 1.0f;
+			PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
+			chunkPos.z = getGroundHeight(pos, layer);
 			obj->setLayer(layer);
 			obj->setPosition(&chunkPos);
 		}
