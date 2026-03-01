@@ -37,12 +37,11 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Object.h"
-#include <GameLogic/TerrainLogic.h>
+#include "GameLogic/TerrainLogic.h"
 
 
-
-
-
+// Way higher than map size will allow
+constexpr Real defaultMaxWaterDepth {10000.0};
 
 //-------------------------------------------------------------------------------------------------
 DieMuxData::DieMuxData() {
@@ -53,7 +52,7 @@ DieMuxData::DieMuxData() {
 		m_deathTypes &= ~TheGlobalData->m_defaultExcludedDeathTypes;
 	}
 	m_minWaterDepth = 0.0f;
-	m_maxWaterDepth = std::numeric_limits<Real>::infinity();
+	m_maxWaterDepth = defaultMaxWaterDepth;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -92,9 +91,9 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	if( m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( m_requiredStatus ) )
 		return false;
 
-	if ((m_minWaterDepth > 0.0f || m_maxWaterDepth < std::numeric_limits<Short>::infinity()) && obj != nullptr) {
+	if ((m_minWaterDepth > 0.0f || m_maxWaterDepth < defaultMaxWaterDepth) && obj != nullptr) {
 
-		// if on bride and we need water -> not applicable
+		// if on bridge and we need water -> not applicable
 		if (obj->getLayer() > LAYER_GROUND && m_minWaterDepth > 0.0f) {
 			return false;
 		}

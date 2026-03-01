@@ -157,7 +157,19 @@ ShipSlowDeathBehaviorModuleData::ShipSlowDeathBehaviorModuleData( void )
 ShipSlowDeathBehavior::ShipSlowDeathBehavior( Thing *thing, const ModuleData *moduleData )
 													: SlowDeathBehavior( thing, moduleData )
 {
+	m_deathSound = AudioEventRTS();
+	m_initStartFrame = 0;
+	m_toppleStartFrame = 0;
+	m_sinkStartFrame = 0;
+	m_shipSinkStarted = false;
+	m_chosenToppleType = 0;
 
+	m_toppleVarianceRoll = 0.0f;
+
+	m_curPitch = 0.0f;
+	m_curYaw = 0.0f;
+	m_curRoll = 0.0f;
+	m_curZ = 0.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
