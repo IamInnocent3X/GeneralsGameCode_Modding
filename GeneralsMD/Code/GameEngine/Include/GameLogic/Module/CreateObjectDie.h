@@ -68,6 +68,24 @@ static const char* DispositionNames[] =
 };
 #endif
 
+struct DispositionData
+{
+	Real											m_extraBounciness;
+	Real											m_extraFriction;
+	Coord3D											m_offset;
+	DispositionType									m_disposition;
+	Real											m_dispositionIntensity;
+	Real											m_spinRate;
+	Real											m_yawRate;
+	Real											m_rollRate;
+	Real											m_pitchRate;
+	Real											m_minMag, m_maxMag;
+	Real											m_minPitch, m_maxPitch;
+	AudioEventRTS							m_bounceSound;
+	Bool											m_orientInForceDirection;
+	Bool											m_diesOnBadLand;
+};
+
 //-------------------------------------------------------------------------------------------------
 class CreateObjectDieModuleData : public DieModuleData
 {
@@ -97,21 +115,8 @@ public:
 	Bool											m_transferShieldingTargets;
 	Bool											m_transferSelectionDontClearGroup;
 	Bool											m_transferObjectName;
-	
-	Real											m_extraBounciness;
-	Real											m_extraFriction;
-	Coord3D											m_offset;
-	DispositionType									m_disposition;
-	Real											m_dispositionIntensity;
-	Real											m_spinRate;
-	Real											m_yawRate;
-	Real											m_rollRate;
-	Real											m_pitchRate;
-	Real											m_minMag, m_maxMag;
-	Real											m_minPitch, m_maxPitch;
-	AudioEventRTS							m_bounceSound;
-	Bool											m_orientInForceDirection;
-	Bool											m_diesOnBadLand;
+
+	DispositionData									m_dispositionData;
 
 	CreateObjectDieModuleData();
 
@@ -135,6 +140,5 @@ public:
 
 	virtual void onDie( const DamageInfo *damageInfo );
 
-protected:
-	void doDisposition(Object *sourceObj, Object* obj);
+	static void doDisposition(Object *sourceObj, Object* obj, const DispositionData *data);
 };

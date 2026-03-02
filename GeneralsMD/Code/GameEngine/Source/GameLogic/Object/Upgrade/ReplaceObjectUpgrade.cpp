@@ -99,21 +99,21 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "TransferObjectName",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealthChangeType ) },
 
-		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_orientInForceDirection) },
-		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_extraBounciness ) },
-		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_extraFriction ) },
-		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_offset ) },
-		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( ReplaceObjectUpgradeModuleData, m_disposition ) },
-		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( ReplaceObjectUpgradeModuleData, m_dispositionIntensity ) },
-		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_spinRate) },
-		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_yawRate) },
-		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_rollRate) },
-		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_pitchRate) },
-		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_minMag) },
-		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_maxMag) },
-		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_minPitch) },
-		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_maxPitch) },
-		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_diesOnBadLand) },
+		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_orientInForceDirection) },
+		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_extraBounciness ) },
+		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_extraFriction ) },
+		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_offset ) },
+		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_disposition ) },
+		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_dispositionIntensity ) },
+		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_spinRate) },
+		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_yawRate) },
+		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_rollRate) },
+		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_pitchRate) },
+		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_minMag) },
+		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_maxMag) },
+		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_minPitch) },
+		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_maxPitch) },
+		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_diesOnBadLand) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -208,7 +208,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	replacementObject->setTransformMatrix(&myMatrix);
 	TheAI->pathfinder()->addObjectToPathfindMap( replacementObject );
 
-	doDisposition(me, replacementObject);
+	CreateObjectDie::doDisposition(me, replacementObject, &data->m_dispositionData);
 
 	// Now onCreates were called at the constructor.  This magically created
 	// thing needs to be considered as Built for Game specific stuff.
@@ -512,7 +512,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	}
 
 	// Originally an aspect of Disposition, but carry forward unto end of the function because the object may be killed from damage dealt
-    if ( data->m_diesOnBadLand && replacementObject )
+    if ( data->m_dispositionData.m_diesOnBadLand && replacementObject )
     {
 	    // if we land in the water, we die. alas.
 	    const Coord3D* riderPos = replacementObject->getPosition();
@@ -694,258 +694,6 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 				}
 			}
 		}
-
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-static void calcRandomForce(Real minMag, Real maxMag, Real minPitch, Real maxPitch, Coord3D* force)
-{
-	Real angle = GameLogicRandomValueReal(0, 2*PI);
-	Real pitch = GameLogicRandomValueReal(minPitch, maxPitch);
-	Real mag = GameLogicRandomValueReal(minMag, maxMag);
-
-	Matrix3D mtx(1);
-	mtx.Scale(mag);
-	mtx.Rotate_Z(angle);
-	mtx.Rotate_Y(-pitch);
-
-	Vector3 v = mtx.Get_X_Vector();
-
-	force->x = v.X;
-	force->y = v.Y;
-	force->z = v.Z;
-}
-
-//-------------------------------------------------------------------------------------------------
-void ReplaceObjectUpgrade::doDisposition(Object *sourceObj, Object* obj)
-{
-	// Sanity
-	if( obj == nullptr )
-		return;
-
-	const ReplaceObjectUpgradeModuleData *data = getReplaceObjectUpgradeModuleData();
-
-	const Matrix3D *mtx = sourceObj->getTransformMatrix();
-	Coord3D offset = data->m_offset;
-
-	const Coord3D *pos = sourceObj->getPosition();
-	Coord3D chunkPos = *pos;
-	
-	Real orientation = sourceObj->getOrientation();
-	// Do nothing if vector is 0 or close to 0.
-	if (fabs(offset.x) > WWMATH_EPSILON ||
-		fabs(offset.y) > WWMATH_EPSILON ||
-		fabs(offset.z) > WWMATH_EPSILON)
-	{
-		if (mtx)
-		{
-			adjustVector(&offset, mtx);
-
-			chunkPos.x += offset.x;
-			chunkPos.y += offset.y;
-			chunkPos.z += offset.z;
-		}
-	}
-
-	if( BitIsSet( data->m_disposition, INHERIT_VELOCITY ) && sourceObj )
-	{
-		const PhysicsBehavior *sourcePhysics = sourceObj->getPhysics();
-		PhysicsBehavior *objectPhysics = obj->getPhysics();
-		if( sourcePhysics && objectPhysics )
-		{
-			objectPhysics->applyForce( sourcePhysics->getVelocity() );
-		}
-	}
-
-	if( BitIsSet( data->m_disposition, LIKE_EXISTING ) )
-	{
-		if (mtx && !BitIsSet(data->m_disposition, ALIGN_Z_UP))
-			obj->setTransformMatrix(mtx);
-		else
-			obj->setOrientation(orientation);
-		obj->setPosition(&chunkPos);
-		if (sourceObj && sourceObj->isAboveTerrain())
-		{
-			PhysicsBehavior* physics = obj->getPhysics();
-			if (physics)
-				physics->setAllowToFall(true);
-		}
-
-	//Lorenzen sez:
-	//Since the sneak attack is a structure created with an ocl, it bypasses a lot of the
-	//goodness that it would have gotten from dozerAI::build( the normal way to make structures )
-	// but, since it is a building... lets stamp it down in the pathfind map, here.
-	if ( obj->isKindOf( KINDOF_STRUCTURE ) )
-	{
-		// Flatten the terrain underneath the object, then adjust to the flattened height. jba.
-		TheTerrainLogic->flattenTerrain(obj);
-		Coord3D adjustedPos = *obj->getPosition();
-		adjustedPos.z = TheTerrainLogic->getGroundHeight(pos->x, pos->y);
-		obj->setPosition(&adjustedPos);
-		// Note - very important that we add to map AFTER we flatten terrain. jba.
-		TheAI->pathfinder()->addObjectToPathfindMap( obj );
-
-	}
-
-
-
-
-
-
-
-	}
-
-	if( BitIsSet( data->m_disposition, ON_GROUND_ALIGNED ) )
-	{
-		chunkPos.z = 99999.0f;
-		PathfindLayerEnum layer = TheTerrainLogic->getHighestLayerForDestination(&chunkPos);
-		obj->setOrientation(GameLogicRandomValueReal(0.0f, 2 * PI));
-		chunkPos.z = TheTerrainLogic->getLayerHeight( chunkPos.x, chunkPos.y, layer );
-		// ensure we are slightly above the bridge, to account for fudge & sloppy art
-		if (layer != LAYER_GROUND)
-			chunkPos.z += 1.0f;
-		obj->setLayer(layer);
-		obj->setPosition(&chunkPos);
-	}
-
-	if( BitIsSet( data->m_disposition, SEND_IT_OUT ) )
-	{
-		obj->setOrientation(GameLogicRandomValueReal(0.0f, 2 * PI));
-		chunkPos.z = TheTerrainLogic->getGroundHeight( chunkPos.x, chunkPos.y );
-		obj->setPosition(&chunkPos);
-		PhysicsBehavior* objUp = obj->getPhysics();
-		if (objUp)
-		{
-
-			objUp->setExtraFriction(data->m_extraFriction);
-
-			Coord3D force;
-			Real horizForce = 4.0f * data->m_dispositionIntensity;		// 2
-			force.x = GameLogicRandomValueReal( -horizForce, horizForce );
-			force.y = GameLogicRandomValueReal( -horizForce, horizForce );
-			force.z = 0;
-
-			objUp->applyForce(&force);
-			if (data->m_orientInForceDirection)
-				orientation = atan2(force.y, force.x);
-
-		}
-	}
-
-	if( BitIsSet( data->m_disposition, SEND_IT_FLYING | SEND_IT_UP | RANDOM_FORCE ) )
-	{
-		if (mtx)
-		{
-			//DUMPMATRIX3D(mtx);
-			obj->setTransformMatrix(mtx);
-		}
-		obj->setPosition(&chunkPos);
-		//DUMPCOORD3D(&chunkPos);
-		PhysicsBehavior* objUp = obj->getPhysics();
-		if (objUp)
-		{
-
-			DEBUG_ASSERTCRASH(objUp->getMass() > 0.0f, ("Zero masses are not allowed for obj!"));
-
-			objUp->setExtraBounciness(data->m_extraBounciness);
-			objUp->setExtraFriction(data->m_extraFriction);
-			objUp->setAllowBouncing(true);
-			objUp->setBounceSound(&data->m_bounceSound);
-			//DUMPREAL(data->m_extraBounciness);
-			//DUMPREAL(data->m_extraFriction);
-
-			// if omitted from INI, calc it based on intensity.
-			Real spinRate		= data->m_spinRate >= 0.0f ? data->m_spinRate : (PI/32.0f) * data->m_dispositionIntensity;
-
-			// Treat these as overrides.
-			Real yawRate		= data->m_yawRate		>= 0.0f ? data->m_yawRate		: spinRate;
-			Real rollRate		= data->m_rollRate	>= 0.0f ? data->m_rollRate	: spinRate;
-			Real pitchRate	= data->m_pitchRate >= 0.0f ? data->m_pitchRate : spinRate;
-
-			//DUMPREAL(spinRate);
-			//DUMPREAL(yawRate);
-			//DUMPREAL(rollRate);
-			//DUMPREAL(pitchRate);
-
-			Real yaw = GameLogicRandomValueReal( -yawRate, yawRate );
-			Real roll = GameLogicRandomValueReal( -rollRate, rollRate );
-			Real pitch = GameLogicRandomValueReal( -pitchRate, pitchRate );
-			//DUMPREAL(yaw);
-			//DUMPREAL(roll);
-			//DUMPREAL(pitch);
-
-			Coord3D force;
-			if( BitIsSet( data->m_disposition, SEND_IT_FLYING ) )
-			{
-				Real horizForce = 4.0f * data->m_dispositionIntensity;		// 2
-				Real vertForce = 3.0f * data->m_dispositionIntensity;		// 3
-				force.x = GameLogicRandomValueReal( -horizForce, horizForce );
-				force.y = GameLogicRandomValueReal( -horizForce, horizForce );
-				force.z = GameLogicRandomValueReal( vertForce * 0.33f, vertForce );
-				//DUMPREAL(horizForce);
-				//DUMPREAL(vertForce);
-				//DUMPCOORD3D(&force);
-			}
-			else if (BitIsSet(data->m_disposition, SEND_IT_UP) )
-			{
-				Real horizForce = 2.0f * data->m_dispositionIntensity;
-				Real vertForce = 4.0f * data->m_dispositionIntensity;
-
-				force.x = GameLogicRandomValueReal( -horizForce, horizForce );
-				force.y = GameLogicRandomValueReal( -horizForce, horizForce );
-				force.z = GameLogicRandomValueReal( vertForce * 0.75f, vertForce );
-				//DUMPREAL(horizForce);
-				//DUMPREAL(vertForce);
-				//DUMPCOORD3D(&force);
-			}
-			else
-			{
-				calcRandomForce(data->m_minMag, data->m_maxMag, data->m_minPitch, data->m_maxPitch, &force);
-				//DUMPREAL(data->m_minMag);
-				//DUMPREAL(data->m_maxMag);
-				//DUMPREAL(data->m_minPitch);
-				//DUMPREAL(data->m_maxPitch);
-				//DUMPCOORD3D(&force);
-			}
-			objUp->applyForce(&force);
-			if (data->m_orientInForceDirection)
-			{
-				orientation = atan2(force.y, force.x);
-			}
-			//DUMPREAL(orientation);
-			objUp->setAngles(orientation, 0, 0);
-			objUp->setYawRate(yaw);
-			objUp->setRollRate(roll);
-			objUp->setPitchRate(pitch);
-			//DUMPCOORD3D(objUp->getAcceleration());
-			//DUMPCOORD3D(objUp->getVelocity());
-			//DUMPMATRIX3D(obj->getTransformMatrix());
-
-		}
-	}
-	if( BitIsSet( data->m_disposition, WHIRLING ) )
-	{
-		PhysicsBehavior* objUp = obj->getPhysics();
-		if (objUp)
-		{
-			Real yaw = GameLogicRandomValueReal( -data->m_dispositionIntensity, data->m_dispositionIntensity );
-			Real roll = GameLogicRandomValueReal( -data->m_dispositionIntensity, data->m_dispositionIntensity );
-			Real pitch = GameLogicRandomValueReal( -data->m_dispositionIntensity, data->m_dispositionIntensity );
-
-			objUp->setYawRate(yaw);
-			objUp->setRollRate(roll);
-			objUp->setPitchRate(pitch);
-		}
-	}
-
-	if( BitIsSet( data->m_disposition, FLOATING ) )
-	{
-		static NameKeyType key = NAMEKEY( "FloatUpdate" );
-		FloatUpdate *floatUpdate = (FloatUpdate *)obj->findUpdateModule( key );
-
-		if( floatUpdate )
-			floatUpdate->setEnabled( TRUE );
 
 	}
 }
