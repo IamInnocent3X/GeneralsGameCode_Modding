@@ -86,20 +86,20 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	m_transferObjectName = FALSE;
 	m_previousHealthChangeType = ADD_CURRENT_DAMAGE;
 
-	m_extraBounciness = 0.0f;
-	m_extraFriction = 0.0f;
-	m_disposition = ON_GROUND_ALIGNED;
-	m_dispositionIntensity = 0.0f;
-	m_spinRate = -1.0f;
-	m_yawRate = -1.0f;
-	m_rollRate = -1.0f;
-	m_pitchRate = -1.0f;
-	m_minMag = 0.0f;
-	m_maxMag = 0.0f;
-	m_minPitch = 0.0f;
-	m_maxPitch = 0.0f;
-	m_orientInForceDirection = FALSE;
-	m_diesOnBadLand = FALSE;
+	m_dispositionData.m_extraBounciness = 0.0f;
+	m_dispositionData.m_extraFriction = 0.0f;
+	m_dispositionData.m_disposition = (DispositionType)0;
+	m_dispositionData.m_dispositionIntensity = 0.0f;
+	m_dispositionData.m_spinRate = -1.0f;
+	m_dispositionData.m_yawRate = -1.0f;
+	m_dispositionData.m_rollRate = -1.0f;
+	m_dispositionData.m_pitchRate = -1.0f;
+	m_dispositionData.m_minMag = 0.0f;
+	m_dispositionData.m_maxMag = 0.0f;
+	m_dispositionData.m_minPitch = 0.0f;
+	m_dispositionData.m_maxPitch = 0.0f;
+	m_dispositionData.m_orientInForceDirection = FALSE;
+	m_dispositionData.m_diesOnBadLand = FALSE;
 
 }
 
@@ -143,21 +143,21 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "TransferObjectName",	INI::parseBool,	nullptr, offsetof( CreateObjectDieModuleData, m_transferObjectName ) },
 		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_previousHealthChangeType ) },
 
-		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(CreateObjectDieModuleData, m_orientInForceDirection) },
-		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( CreateObjectDieModuleData, m_extraBounciness ) },
-		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( CreateObjectDieModuleData, m_extraFriction ) },
-		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( CreateObjectDieModuleData, m_offset ) },
-		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( CreateObjectDieModuleData, m_disposition ) },
-		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( CreateObjectDieModuleData, m_dispositionIntensity ) },
-		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_spinRate) },
-		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_yawRate) },
-		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_rollRate) },
-		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_pitchRate) },
-		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(CreateObjectDieModuleData, m_minMag) },
-		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(CreateObjectDieModuleData, m_maxMag) },
-		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(CreateObjectDieModuleData, m_minPitch) },
-		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(CreateObjectDieModuleData, m_maxPitch) },
-		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(CreateObjectDieModuleData, m_diesOnBadLand) },
+		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_orientInForceDirection) },
+		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( CreateObjectDieModuleData, m_dispositionData.m_extraBounciness ) },
+		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( CreateObjectDieModuleData, m_dispositionData.m_extraFriction ) },
+		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( CreateObjectDieModuleData, m_dispositionData.m_offset ) },
+		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( CreateObjectDieModuleData, m_dispositionData.m_disposition ) },
+		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( CreateObjectDieModuleData, m_dispositionData.m_dispositionIntensity ) },
+		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_spinRate) },
+		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_yawRate) },
+		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_rollRate) },
+		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_pitchRate) },
+		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_minMag) },
+		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_maxMag) },
+		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_minPitch) },
+		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_maxPitch) },
+		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(CreateObjectDieModuleData, m_dispositionData.m_diesOnBadLand) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -207,7 +207,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 
 	Object *me = getObject();
 
-	doDisposition(me, newObject);
+	doDisposition(me, newObject, &data->m_dispositionData);
 
 	// Transfer any bombs onto the replacement Object
 	std::vector<ObjectID> BombsMarkedForDestroy;
@@ -537,7 +537,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	}
 
 	// Originally an aspect of Disposition, but carry forward unto end of the function because the object may be killed from damage dealt
-    if ( data->m_diesOnBadLand )
+    if ( data->m_dispositionData.m_diesOnBadLand )
     {
 	    // if we land in the water, we die. alas.
 	    const Coord3D* riderPos = newObject->getPosition();
@@ -709,13 +709,31 @@ static void adjustVector(Coord3D *vec, const Matrix3D* mtx)
 }
 
 //-------------------------------------------------------------------------------------------------
-void CreateObjectDie::doDisposition(Object *sourceObj, Object* obj)
+static Real getGroundHeight(const Coord3D* pos, PathfindLayerEnum layer) {
+
+	if (layer != LAYER_GROUND) {  // Bridge
+		return TheTerrainLogic->getLayerHeight(pos->x, pos->y, layer) + 1.0;
+	}
+	else if (TheGlobalData->m_heightAboveTerrainIncludesWater) { // do water check
+		Real waterZ = 0;
+		Real terrainZ = 0;
+
+		if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterZ, &terrainZ))
+			return waterZ;
+
+		return terrainZ;
+	}
+	else {  // Ground height only
+		return TheTerrainLogic->getLayerHeight(pos->x, pos->y, layer);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void CreateObjectDie::doDisposition(Object *sourceObj, Object* obj, const DispositionData *data)
 {
 	// Sanity
 	if( obj == nullptr )
 		return;
-
-	const CreateObjectDieModuleData *data = getCreateObjectDieModuleData();
 
 	const Matrix3D *mtx = sourceObj->getTransformMatrix();
 	Coord3D offset = data->m_offset;
@@ -755,7 +773,15 @@ void CreateObjectDie::doDisposition(Object *sourceObj, Object* obj)
 			obj->setTransformMatrix(mtx);
 		else
 			obj->setOrientation(orientation);
+
+		if (BitIsSet(data->m_disposition, ON_GROUND_ALIGNED)) {
+			PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
+			chunkPos.z = getGroundHeight(pos, layer);
+			obj->setLayer(layer);
+		}
+
 		obj->setPosition(&chunkPos);
+
 		if (sourceObj && sourceObj->isAboveTerrain())
 		{
 			PhysicsBehavior* physics = obj->getPhysics();
@@ -787,15 +813,11 @@ void CreateObjectDie::doDisposition(Object *sourceObj, Object* obj)
 
 	}
 
-	if( BitIsSet( data->m_disposition, ON_GROUND_ALIGNED ) )
+	else if( BitIsSet( data->m_disposition, ON_GROUND_ALIGNED ) )
 	{
-		chunkPos.z = 99999.0f;
-		PathfindLayerEnum layer = TheTerrainLogic->getHighestLayerForDestination(&chunkPos);
 		obj->setOrientation(GameLogicRandomValueReal(0.0f, 2 * PI));
-		chunkPos.z = TheTerrainLogic->getLayerHeight( chunkPos.x, chunkPos.y, layer );
-		// ensure we are slightly above the bridge, to account for fudge & sloppy art
-		if (layer != LAYER_GROUND)
-			chunkPos.z += 1.0f;
+		PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
+		chunkPos.z = getGroundHeight(pos, layer);
 		obj->setLayer(layer);
 		obj->setPosition(&chunkPos);
 	}

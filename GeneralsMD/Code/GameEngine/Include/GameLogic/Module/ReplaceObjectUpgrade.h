@@ -58,21 +58,8 @@ public:
 	Bool											m_transferSelectionDontClearGroup;
 	Bool											m_transferObjectName;
 	MaxHealthChangeType 							m_transferHealthChangeType;
-	
-	Real											m_extraBounciness;
-	Real											m_extraFriction;
-	Coord3D											m_offset;
-	DispositionType									m_disposition;
-	Real											m_dispositionIntensity;
-	Real											m_spinRate;
-	Real											m_yawRate;
-	Real											m_rollRate;
-	Real											m_pitchRate;
-	Real											m_minMag, m_maxMag;
-	Real											m_minPitch, m_maxPitch;
-	AudioEventRTS							m_bounceSound;
-	Bool											m_orientInForceDirection;
-	Bool											m_diesOnBadLand;
+
+	DispositionData									m_dispositionData;
 
 	ReplaceObjectUpgradeModuleData()
 	{
@@ -96,20 +83,20 @@ public:
 		m_transferObjectName = FALSE;
 		m_transferHealthChangeType = SAME_CURRENTHEALTH;
 		
-		m_extraBounciness = 0.0f;
-		m_extraFriction = 0.0f;
-		m_disposition = ON_GROUND_ALIGNED;
-		m_dispositionIntensity = 0.0f;
-		m_spinRate = -1.0f;
-		m_yawRate = -1.0f;
-		m_rollRate = -1.0f;
-		m_pitchRate = -1.0f;
-		m_minMag = 0.0f;
-		m_maxMag = 0.0f;
-		m_minPitch = 0.0f;
-		m_maxPitch = 0.0f;
-		m_orientInForceDirection = FALSE;
-		m_diesOnBadLand = FALSE;
+		m_dispositionData.m_extraBounciness = 0.0f;
+		m_dispositionData.m_extraFriction = 0.0f;
+		m_dispositionData.m_disposition = (DispositionType)0;
+		m_dispositionData.m_dispositionIntensity = 0.0f;
+		m_dispositionData.m_spinRate = -1.0f;
+		m_dispositionData.m_yawRate = -1.0f;
+		m_dispositionData.m_rollRate = -1.0f;
+		m_dispositionData.m_pitchRate = -1.0f;
+		m_dispositionData.m_minMag = 0.0f;
+		m_dispositionData.m_maxMag = 0.0f;
+		m_dispositionData.m_minPitch = 0.0f;
+		m_dispositionData.m_maxPitch = 0.0f;
+		m_dispositionData.m_orientInForceDirection = FALSE;
+		m_dispositionData.m_diesOnBadLand = FALSE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -131,7 +118,5 @@ protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return false; }
-
-	void doDisposition(Object *sourceObj, Object* obj);
 
 };
