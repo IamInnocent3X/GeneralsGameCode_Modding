@@ -134,6 +134,7 @@ const char* const TintStatusFlags::s_bitNameList[] =
 	"GAINING_CHRONO_DAMAGE",
 	"FORCE_FIELD",
 	"IRON_CURTAIN",
+	"FROZEN",
 	"EXTRA1",
 	"EXTRA2",
 	"EXTRA3",
