@@ -224,6 +224,8 @@ Bool ConvertToCarBombCrateCollide::executeCrateBehavior( Object *other )
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 Bool ConvertToCarBombCrateCollide::revertCollideBehavior(Object *other)
 {
 	CrateCollide::revertCollideBehavior(other);
@@ -264,6 +266,20 @@ Bool ConvertToCarBombCrateCollide::revertCollideBehavior(Object *other)
 	// Indicate that we have reverted the Collied Behavior and no need to continue 
 	return TRUE;
 }
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ConvertToCarBombCrateCollide::friend_executeCrateBehavior( Object *other )
+{
+	Object *obj = getObject();
+	AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	if (ai)
+	{
+		ai->friend_setGoalObject(other);
+	}
+	return executeCrateBehavior(other);
+}
+
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

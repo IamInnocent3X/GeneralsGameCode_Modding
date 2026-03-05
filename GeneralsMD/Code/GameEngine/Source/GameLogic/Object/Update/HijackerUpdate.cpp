@@ -323,7 +323,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 
 			}
 
-			if(!revertedCollide)
+			if(!revertedCollide && target && !target->isEffectivelyDead() && !target->isDestroyed())
 			{
 				for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
 				{
@@ -404,72 +404,222 @@ void HijackerUpdate::setTargetObject( const Object *object )
 
 }
 
-void HijackerUpdate::setRetargetObject( ObjectID ID )
+void HijackerUpdate::clearProperties(Object *target)
 {
-	Object *object = TheGameLogic->findObjectByID( ID );
-	if(object)
+	if(target)
 	{
-		Object *self = getObject();
-		switch(m_hijackType)
+		for (BehaviorModule** m = getObject()->getBehaviorModules(); *m; ++m)
 		{
-			case HIJACK_CARBOMB:
-			case HIJACK_HIJACKER:
+			CollideModuleInterface* collide = (*m)->getCollide();
+			if (!collide)
+				continue;
+
+			if( collide->revertCollideBehavior(target) )
+				break;
+		}
+	}
+	setHijackType( HIJACK_NONE );
+	setTargetObject( nullptr );
+	setIsInVehicle( FALSE );
+	//setUpdate( FALSE );
+	setNoLeechExp( FALSE );
+	setDestroyOnHeal( FALSE );
+	setRemoveOnHeal( FALSE );
+	setDestroyOnClear( FALSE );
+	setDestroyOnTargetDie( FALSE );
+	setPercentDamage( 0.0f );
+	setParasiteKey( AsciiString::TheEmptyString );
+	m_targetObjHealth = 0.0f;
+	m_statusToRemove.clear();
+	m_statusToDestroy.clear();
+	m_customStatusToRemove.clear();
+	m_customStatusToDestroy.clear();
+	m_wasTargetAirborne = false;
+}
+
+void HijackerUpdate::setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites )
+{
+	Object *self = getObject();
+	Object *target = getTargetObject();
+
+	// If no ID, just eject us
+	if( ID == INVALID_ID || destroyHijacker || (getHijackType() == HIJACK_PARASITE && destroyParasites) )
+	{
+		if(target)
+		{
+			// Update the Position for ejection
+			if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
+				m_ejectPos = *target->getPosition();
+			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
+			self->setPosition( &m_ejectPos );
+		}
+
+		Bool isDestroyed = (m_destroyOnTargetDie && ID == INVALID_ID) || destroyHijacker || (getHijackType() == HIJACK_PARASITE && destroyParasites) || m_destroyOnTargetDie;
+		//THIS BLOCK RESTORES HIJACKER TO PARTITION MANAGER AND UNHIDES HIM
+		ThePartitionManager->registerObject( self );
+
+		if( self->getDrawable() )
+		{
+			// so it is time to unhide ourselves and be a pedestrian hijacker again
+			self->getDrawable()->setDrawableHidden( false );
+		}
+
+		// We won't come back here until and unless we have hijacked another vehicle
+		self->clearStatus( MAKE_OBJECT_STATUS_MASK3( OBJECT_STATUS_NO_COLLISIONS, OBJECT_STATUS_MASKED, OBJECT_STATUS_UNSELECTABLE ) );
+
+		AIUpdateInterface* ai = self->getAIUpdateInterface();
+		if ( ai )
+		{
+			ai->aiIdle( CMD_FROM_AI );
+		}
+
+		if (m_wasTargetAirborne && !isDestroyed)
+		{
+			const ThingTemplate* putInContainerTmpl = TheThingFactory->findTemplate(getHijackerUpdateModuleData()->m_parachuteName);
+			DEBUG_ASSERTCRASH(putInContainerTmpl,("DeliverPayload: PutInContainer %s not found!",getHijackerUpdateModuleData()->m_parachuteName.str()));
+			if (putInContainerTmpl)
 			{
-				// Set the new Object for Hijacking
-				self->setHijackingID( object->getID() );
-
-				// Set the vision range
-				object->setVisionRange(self->getVisionRange());
-				object->setShroudClearingRange(self->getShroudClearingRange());
-
-				// Set extra properties according to the Hijack Type
-				if(m_hijackType == HIJACK_CARBOMB)
+				Object* container = TheThingFactory->newObject( putInContainerTmpl, self->getTeam() );
+				container->setPosition(&m_ejectPos);
+				if (container->getContain()->isValidContainerFor(self, true))
 				{
-					object->setWeaponSetFlag( WEAPONSET_CARBOMB );
-					object->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IS_CARBOMB ) );
-					object->setCarBombConverterID( self->getID() );
+					container->getContain()->addToContain(self);
 				}
 				else
 				{
-					object->setHijackerID( self->getID() );
+					DEBUG_CRASH(("DeliverPayload: PutInContainer %s is full, or not valid for the payload!",getHijackerUpdateModuleData()->m_parachuteName.str()));
 				}
-				break;
 			}
-			case HIJACK_PARASITE:
-			case HIJACK_EQUIP:
+
+		}
+
+		clearProperties(target);
+
+		if(isDestroyed)
+			TheGameLogic->destroyObject( self );
+
+		return;
+	}
+
+	Object *newTarget = TheGameLogic->findObjectByID( ID );
+
+	// If no relevant target, eject instead
+	if(!newTarget)
+		setRetargetObject(INVALID_ID, FALSE, FALSE);
+
+	switch(m_hijackType)
+	{
+		case HIJACK_CARBOMB:
+		{
+			for (BehaviorModule** m = self->getBehaviorModules(); *m; ++m)
 			{
-				// We overwrite the module's EquipCrateCollide properties first
-				// The module checks for the Object's and the Modules equipToID to match for being able to overwrite 
-				for (BehaviorModule** m = self->getBehaviorModules(); *m; ++m)
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isCarBombCrateCollide() && collide->wouldLikeToCollideWith( newTarget ) )
 				{
-					CollideModuleInterface* collide = (*m)->getCollide();
-					if (!collide)
+					clearProperties(target);
+					collide->friend_executeCrateBehavior( newTarget );
+					return;
+				}
+			}
+			// Set the new Object for Hijacking
+			self->setHijackingID( newTarget->getID() );
+
+			// Set the vision range
+			newTarget->setVisionRange(self->getVisionRange());
+			newTarget->setShroudClearingRange(self->getShroudClearingRange());
+
+			// Set extra properties according to the Hijack Type
+			newTarget->setWeaponSetFlag( WEAPONSET_CARBOMB );
+			newTarget->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IS_CARBOMB ) );
+			newTarget->setCarBombConverterID( self->getID() );
+			return;
+		}
+		case HIJACK_HIJACKER:
+		{
+			for (BehaviorModule** m = self->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isHijackedVehicleCrateCollide() && collide->wouldLikeToCollideWith( newTarget ) )
+				{
+					clearProperties(target);
+					collide->friend_executeCrateBehavior( newTarget );
+					return;
+				}
+			}
+			// Set the new Object for Hijacking
+			self->setHijackingID( newTarget->getID() );
+
+			// Set the vision range
+			newTarget->setVisionRange(self->getVisionRange());
+			newTarget->setShroudClearingRange(self->getShroudClearingRange());
+
+			// Set extra properties according to the Hijack Type
+			newTarget->setHijackerID( self->getID() );
+			return;
+		}
+		case HIJACK_PARASITE:
+		case HIJACK_EQUIP:
+		{
+			for (BehaviorModule** m = self->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isEquipCrateCollide())
+				{
+					if( (m_hijackType == HIJACK_PARASITE && !collide->isParasiteEquipCrateCollide()) ||
+						(m_hijackType == HIJACK_EQUIP && collide->isParasiteEquipCrateCollide()) )
 						continue;
 
-					if( collide->isEquipCrateCollide() )
+					if( collide->wouldLikeToCollideWith( newTarget ) )
 					{
-						// Check if it is the correct type of EquipCrateCollide module before proceeding
-						if( (m_hijackType == HIJACK_PARASITE && !collide->isParasiteEquipCrateCollide()) ||
-							(m_hijackType == HIJACK_EQUIP && collide->isParasiteEquipCrateCollide()) )
-							continue;
-
-						EquipCrateCollide *eqc = (EquipCrateCollide*) collide;
-						if(eqc)
-							eqc->overwriteEquipToIDModule( ID );
+						clearProperties(target);
+						collide->friend_executeCrateBehavior( newTarget );
+						return;
 					}
 				}
-
-				// Change the current equipper properties to the retargeted object
-				self->setEquipToID( object->getID() );
-
-				object->setEquipObjectID( self->getID() );
-				if(!self->testStatus(OBJECT_STATUS_NO_ATTACK))
-					object->setEquipAttackableObjectID( self->getID() );
-
-				break;
 			}
+			// If no module is found suitable, we just simply put the equipper/parasite onto the new object
+			// The module checks for the Object's and the Modules equipToID to match for being able to overwrite 
+			for (BehaviorModule** m = self->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isEquipCrateCollide() )
+				{
+					// Check if it is the correct type of EquipCrateCollide module before proceeding
+					if( (m_hijackType == HIJACK_PARASITE && !collide->isParasiteEquipCrateCollide()) ||
+						(m_hijackType == HIJACK_EQUIP && collide->isParasiteEquipCrateCollide()) )
+						continue;
+
+					EquipCrateCollide *eqc = (EquipCrateCollide*) collide;
+					if(eqc)
+						eqc->overwriteEquipToIDModule( ID );
+				}
+			}
+
+			// Change the current equipper properties to the retargeted object
+			self->setEquipToID( newTarget->getID() );
+
+			newTarget->setEquipObjectID( self->getID() );
+			if(!self->testStatus(OBJECT_STATUS_NO_ATTACK))
+				newTarget->setEquipAttackableObjectID( self->getID() );
+
+			return;
 		}
 	}
+
+	// Any other cases, eject me
+	setRetargetObject(INVALID_ID, FALSE, FALSE);
 }
 
 Object* HijackerUpdate::getTargetObject() const

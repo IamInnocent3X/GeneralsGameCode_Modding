@@ -108,6 +108,7 @@ public:
 	virtual Bool isEquipCrateCollide() const { return false; }
 	virtual Bool isParasiteEquipCrateCollide() const  { return false; }
 	virtual Bool canDoSabotageSpecialCheck(const Object *other) const { return false; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) { return false; }
 	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
 	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
 

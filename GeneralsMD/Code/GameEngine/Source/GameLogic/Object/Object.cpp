@@ -9362,9 +9362,9 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite)
+void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite, Bool destroyHijacker, Bool destroyParasites)
 {
-	if( transferHijacker && testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
+	if( (transferHijacker || destroyHijacker) && testStatus( OBJECT_STATUS_IS_CARBOMB ) && m_carbombConverterID != INVALID_ID )
 	{
 		Object *converter = TheGameLogic->findObjectByID( m_carbombConverterID );
 
@@ -9373,12 +9373,12 @@ void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bo
 			HijackerUpdateInterface *hijackerUpdate = converter->getHijackerUpdateInterface();
 			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
 			{
-				hijackerUpdate->setRetargetObject(transferToID);
+				hijackerUpdate->setRetargetObject(transferToID, destroyHijacker, FALSE);
 			}
 		}
 	}
 	
-	if( transferHijacker && testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
+	if( (transferHijacker || destroyHijacker) && testStatus( OBJECT_STATUS_HIJACKED ) && m_hijackerID != INVALID_ID )
 	{
 		Object *hijacker = TheGameLogic->findObjectByID( m_hijackerID );
 
@@ -9387,12 +9387,12 @@ void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bo
 			HijackerUpdateInterface *hijackerUpdate = hijacker->getHijackerUpdateInterface();
 			if( hijackerUpdate && hijackerUpdate->getTargetObject() )
 			{
-				hijackerUpdate->setRetargetObject(transferToID);
+				hijackerUpdate->setRetargetObject(transferToID, destroyHijacker, FALSE);
 			}
 		}
 	}
 
-	if( !m_equipObjIDs.empty() && (transferEquipper || transferParasite) )
+	if( !m_equipObjIDs.empty() && (transferEquipper || transferParasite || destroyParasites) )
 	{
 		for (std::vector<ObjectID>::const_iterator it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
 		{
@@ -9403,10 +9403,10 @@ void Object::doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bo
 				HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
 				if( hijackerUpdate && hijackerUpdate->getTargetObject() )
 				{
-					if ( (hijackerUpdate->getHijackType() == HIJACK_PARASITE && transferParasite) ||
+					if ( (hijackerUpdate->getHijackType() == HIJACK_PARASITE && (transferParasite || destroyParasites)) ||
 						 (hijackerUpdate->getHijackType() == HIJACK_EQUIP && transferEquipper) )
 					{
-						hijackerUpdate->setRetargetObject(transferToID);
+						hijackerUpdate->setRetargetObject(transferToID, FALSE, destroyParasites);
 					}
 					
 				}
@@ -9453,7 +9453,7 @@ void Object::registerAssaultTransportID(ObjectID transportID)
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::removeMeFromAssaultTransport(ObjectID replaceID)
+void Object::removeMeFromAssaultTransport()
 {
 	if(m_assaultTransportID == INVALID_ID)
 		return;
@@ -9467,11 +9467,34 @@ void Object::removeMeFromAssaultTransport(ObjectID replaceID)
 		if( atInterface )
 		{
 			atInterface->removeMember( getID() );
-			if(replaceID != INVALID_ID)
-				atInterface->addMember( replaceID );
 		}
 	}
 	m_assaultTransportID = INVALID_ID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::addObjectIntoAssaultTransport(ObjectID addID, Bool aboutToBeDestroyed)
+{
+	if(m_assaultTransportID == INVALID_ID)
+		return;
+
+	Object *transport = TheGameLogic->findObjectByID( m_assaultTransportID );
+	// Don't count dead assault transports, they give final orders
+	AIUpdateInterface *ai = transport && !transport->isEffectivelyDead() ? transport->getAI() : nullptr;
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			if(aboutToBeDestroyed)
+				atInterface->removeMember( getID() );
+
+			if(addID != INVALID_ID)
+				atInterface->addMember( addID );
+		}
+	}
+	if(aboutToBeDestroyed)
+		m_assaultTransportID = INVALID_ID;
 }
 
 //-------------------------------------------------------------------------------------------------

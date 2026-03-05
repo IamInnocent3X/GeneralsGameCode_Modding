@@ -515,6 +515,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/CarrierDroneAIUpdate.h
     Include/GameLogic/Object.h
     Include/GameLogic/ObjectCreationList.h
+    Include/GameLogic/ObjectCreationMux.h
     Include/GameLogic/BuffSystem.h
     Include/GameLogic/ObjectIter.h
     Include/GameLogic/ObjectScriptStatusBits.h
@@ -1012,6 +1013,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Locomotor.cpp
     Source/GameLogic/Object/Object.cpp
     Source/GameLogic/Object/ObjectCreationList.cpp
+    Source/GameLogic/Object/ObjectCreationMux.cpp
     Source/GameLogic/Object/BuffSystem.cpp
     Source/GameLogic/Object/ObjectTypes.cpp
     Source/GameLogic/Object/PartitionManager.cpp

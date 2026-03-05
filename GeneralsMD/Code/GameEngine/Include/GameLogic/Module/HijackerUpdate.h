@@ -73,7 +73,7 @@ class HijackerUpdateInterface
 {
 public:
 	virtual void setTargetObject( const Object *object ) = 0;
-	virtual void setRetargetObject( ObjectID ID ) = 0;
+	virtual void setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites ) = 0;
 	virtual Object* getTargetObject() const = 0;
 	virtual HijackType getHijackType() const = 0;
 	virtual void setUpdate(Bool u ) = 0;
@@ -115,7 +115,7 @@ public:
 	virtual UpdateSleepTime update();							///< called once per frame
 
 	virtual void setTargetObject( const Object *object );
-	virtual void setRetargetObject( ObjectID ID );
+	virtual void setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites );
 	virtual Object* getTargetObject() const;
 	virtual HijackType getHijackType() const { return m_hijackType; }
 	virtual void setUpdate(Bool u ) {m_update = u; if(u) setWakeFrame(getObject(), UPDATE_SLEEP_NONE);}
@@ -139,6 +139,9 @@ public:
 	virtual void setParasiteKey(const AsciiString& ParasiteKey ) {m_parasiteKey = ParasiteKey; }
 	virtual void setParasiteCheckKeys(const std::vector<AsciiString>& ParasiteKeys ) { if(m_isParasite) m_recentParasiteKeys = ParasiteKeys; }
 	virtual void setEjectPos(const Coord3D *pos) { m_ejectPos.set(pos); }
+
+protected:
+	void clearProperties(Object *target);
 
 private:
 

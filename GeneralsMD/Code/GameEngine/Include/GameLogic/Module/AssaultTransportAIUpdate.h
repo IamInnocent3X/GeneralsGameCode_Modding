@@ -82,7 +82,7 @@ public:
 	//virtual void checkMembersList() = 0;
 	virtual void removeMember( ObjectID passengerID ) = 0;
 	virtual void checkPassengerHealth( ObjectID passengerID ) = 0;
-	virtual void addMember(ObjectID replacerID) = 0;
+	virtual void addMember(ObjectID addID) = 0;
 	virtual void doAddMembers() = 0;
 	virtual void onAttack() = 0;
 	virtual Int getCurrentAssaultingMembers() const = 0;
@@ -110,7 +110,7 @@ public:
 	virtual const AssaultTransportAIInterface* getAssaultTransportAIInterface() const { return this; }
 	virtual void beginAssault( const Object *designatedTarget ) const;
 	//virtual void checkMembersList();
-	virtual void addMember( ObjectID replacerID );
+	virtual void addMember( ObjectID addID );
 	virtual void removeMember( ObjectID passengerID );
 	virtual void checkPassengerHealth( ObjectID passengerID );
 	virtual void doAddMembers() { m_doAddMember = TRUE; wakeUpNow(); };

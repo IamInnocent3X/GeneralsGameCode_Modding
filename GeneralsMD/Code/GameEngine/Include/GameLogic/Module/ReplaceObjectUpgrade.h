@@ -31,7 +31,7 @@
 
 #include "GameLogic/Module/UpgradeModule.h"
 #include "GameLogic/Module/BodyModule.h"
-#include "GameLogic/Module/CreateObjectDie.h"
+#include "GameLogic/ObjectCreationMux.h"
 
 //-----------------------------------------------------------------------------
 class ReplaceObjectUpgradeModuleData : public UpgradeModuleData
@@ -39,71 +39,24 @@ class ReplaceObjectUpgradeModuleData : public UpgradeModuleData
 public:
 	AsciiString m_replaceObjectName;
 
-	Bool											m_transferHealth;
-	Bool											m_transferAIStates;
-	Bool											m_transferExperience;
-	Bool											m_transferAttack;
-	Bool											m_transferStatus;
-	Bool											m_transferWeaponBonus;
-	Bool											m_transferDisabledType;
-	Bool											m_transferBombs;
-	Bool											m_transferHijackers;
-	Bool											m_transferEquippers;
-	Bool											m_transferParasites;
-	Bool											m_transferPassengers;
-	Bool											m_transferToAssaultTransport;
-	Bool											m_transferShieldedTargets;
-	Bool											m_transferShieldingTargets;
-	Bool											m_transferSelection;
-	Bool											m_transferSelectionDontClearGroup;
-	Bool											m_transferObjectName;
-	MaxHealthChangeType 							m_transferHealthChangeType;
-
-	DispositionData									m_dispositionData;
+	ObjectCreationMuxData							m_objectCreationData;
 
 	ReplaceObjectUpgradeModuleData()
 	{
-		m_transferHealth = FALSE;
-		m_transferAIStates = FALSE;
-		m_transferExperience = FALSE;
-		m_transferAttack = FALSE;
-		m_transferStatus = FALSE;
-		m_transferWeaponBonus = FALSE;
-		m_transferDisabledType = FALSE;
-		m_transferBombs = FALSE;
-		m_transferHijackers = TRUE;
-		m_transferEquippers = TRUE;
-		m_transferParasites = TRUE;
-		m_transferPassengers = FALSE;
-		m_transferToAssaultTransport = FALSE;
-		m_transferShieldedTargets = FALSE;
-		m_transferShieldingTargets = FALSE;
-		m_transferSelection = TRUE;
-		m_transferSelectionDontClearGroup = FALSE;
-		m_transferObjectName = FALSE;
-		m_transferHealthChangeType = SAME_CURRENTHEALTH;
-		
-		m_dispositionData.m_extraBounciness = 0.0f;
-		m_dispositionData.m_extraFriction = 0.0f;
-		m_dispositionData.m_disposition = (DispositionType)0;
-		m_dispositionData.m_dispositionIntensity = 0.0f;
-		m_dispositionData.m_spinRate = -1.0f;
-		m_dispositionData.m_yawRate = -1.0f;
-		m_dispositionData.m_rollRate = -1.0f;
-		m_dispositionData.m_pitchRate = -1.0f;
-		m_dispositionData.m_minMag = 0.0f;
-		m_dispositionData.m_maxMag = 0.0f;
-		m_dispositionData.m_minPitch = 0.0f;
-		m_dispositionData.m_maxPitch = 0.0f;
-		m_dispositionData.m_orientInForceDirection = FALSE;
-		m_dispositionData.m_diesOnBadLand = FALSE;
+		m_objectCreationData.m_transferHijackers = TRUE;
+		m_objectCreationData.m_transferEquippers = TRUE;
+		m_objectCreationData.m_transferParasites = TRUE;
+		m_objectCreationData.m_ignorePrimaryObstacle = TRUE;
+		m_objectCreationData.m_inheritsSelection = TRUE;
+		m_objectCreationData.m_inheritsSelectionDontClearGroup = FALSE;
+		m_objectCreationData.m_inheritsSquadNumber = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
 
 //-----------------------------------------------------------------------------
-class ReplaceObjectUpgrade : public UpgradeModule
+class ReplaceObjectUpgrade : public UpgradeModule, public ObjectCreationMux
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( ReplaceObjectUpgrade, "ReplaceObjectUpgrade" )
@@ -113,6 +66,8 @@ public:
 
 	ReplaceObjectUpgrade( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype defined by MemoryPoolObject
+
+	virtual const ObjectCreationMuxData *getCreationMuxData() const { return &getReplaceObjectUpgradeModuleData()->m_objectCreationData; }
 
 protected:
 	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading

@@ -423,10 +423,10 @@ void AssaultTransportAIUpdate::addMembers()
 }
 
 //-------------------------------------------------------------------------------------------------
-void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
+void AssaultTransportAIUpdate::addMember(ObjectID addID)
 {
-	Object *replacer = TheGameLogic->findObjectByID( replacerID );
-	if(!replacer)
+	Object *newMember = TheGameLogic->findObjectByID( addID );
+	if(!newMember)
 		return;
 
 	Object *transport = getObject();
@@ -434,12 +434,12 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 	if( contain )
 	{
 		// If we are contained, just update the Assault Transport
-		if(replacer->isContained() && replacer->getContainedBy() == transport)
+		if(newMember->isContained() && newMember->getContainedBy() == transport)
 		{
 			// If we are not valid, just tell us to exit the transport
-			if(!contain->isValidContainerFor(replacer, TRUE))
+			if(!contain->isValidContainerFor(newMember, TRUE))
 			{
-				AIUpdateInterface *ai = replacer ? replacer->getAI() : nullptr;
+				AIUpdateInterface *ai = newMember ? newMember->getAI() : nullptr;
 				ai->aiExit( transport, CMD_FROM_AI );
 				return;
 			}
@@ -449,13 +449,13 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 		}
 
 		// If we are not valid for current transport count, don't add it to the current list
-		if(!contain->isValidContainerFor(replacer, TRUE))
+		if(!contain->isValidContainerFor(newMember, TRUE))
 		{
 			// Order it to attack our designated target if has one
 			Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
-			if( designatedTarget && !designatedTarget->isEffectivelyDead() && !replacer->isContained() && !isMemberWounded( replacer ) )
+			if( designatedTarget && !designatedTarget->isEffectivelyDead() && !newMember->isContained() && !isMemberWounded( newMember ) )
 			{
-				AIUpdateInterface *ai = replacer ? replacer->getAI() : nullptr;
+				AIUpdateInterface *ai = newMember ? newMember->getAI() : nullptr;
 				if( ai && !ai->isMoving() )
 				{
 					if( ai->getGoalObject() != designatedTarget || !ai->isAttacking() )
@@ -474,27 +474,27 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 		if( m_currentMembers < MAX_TRANSPORT_SLOTS )
 		{
 			//Not in list, so add him!
-			m_memberIDs[ m_currentMembers ] = replacer->getID();
+			m_memberIDs[ m_currentMembers ] = newMember->getID();
 
 			// Register the current transport to inform whenever it leaves its transport
-			replacer->registerAssaultTransportID(transport->getID());
+			newMember->registerAssaultTransportID(transport->getID());
 
-			if( replacer->getAI() )
+			if( newMember->getAI() )
 			{
 				//Important! Members of our assault transport must be allowed to chase down designated enemies.
 				//Generally only player commands allow this, so this flag allows AI commands to do the same.
-				replacer->getAI()->setAllowedToChase( TRUE );
+				newMember->getAI()->setAllowedToChase( TRUE );
 			}
 
-			//Check if the replacer is wounded below threshhold (if so make sure we heal him before ordering him to fight!)
-			//if( isMemberWounded( replacer ) )
+			//Check if the new member is wounded below threshhold (if so make sure we heal him before ordering him to fight!)
+			//if( isMemberWounded( newMember ) )
 			//{
-				m_memberHealing[ m_currentMembers ] = isMemberWounded( replacer ); //TRUE;
+				m_memberHealing[ m_currentMembers ] = isMemberWounded( newMember ); //TRUE;
 			//}
 			//if( m_newOccupantsAreNewMembers )
 			//{
 				//New members won't eject out until a new attack order is issued.
-				m_newMember[ m_currentMembers ] = FALSE; //We were originally a member but we have been replaced
+				m_newMember[ m_currentMembers ] = FALSE; //Register as a non-new member
 			//}
 
 			m_countedSlotMember[ m_currentMembers ] = FALSE;
@@ -503,17 +503,17 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 			m_currentMembers++;
 		}
 
-		// If we have a designated target, tell the replacer to attack it!
+		// If we have a designated target, tell the new member to attack it!
 		Object *designatedTarget = TheGameLogic->findObjectByID( m_designatedTarget );
 		if( designatedTarget && !designatedTarget->isEffectivelyDead() )
 		{
-			AIUpdateInterface *ai = replacer ? replacer->getAI() : nullptr;
+			AIUpdateInterface *ai = newMember ? newMember->getAI() : nullptr;
 
-			if( replacer && ai )
+			if( newMember && ai )
 			{
-				Bool contained = replacer->isContained();
+				Bool contained = newMember->isContained();
 				Bool wounded = m_memberHealing[ m_currentMembers - 1 ];
-				if( contained && isMemberHealthy( replacer ) )
+				if( contained && isMemberHealthy( newMember ) )
 				{
 					//This contained member is healthy so order him to exit to start fighting!
 					//New members are exempt!
@@ -523,7 +523,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 					//	m_maxNumInTransport = i+1;
 					if(!m_countedSlotMember[ m_currentMembers - 1 ])
 					{
-						m_maxNumInTransport += replacer->getTransportSlotCount();
+						m_maxNumInTransport += newMember->getTransportSlotCount();
 						m_countedSlotMember[ m_currentMembers - 1 ] = TRUE;
 					}
 				}
@@ -541,7 +541,7 @@ void AssaultTransportAIUpdate::addMember(ObjectID replacerID)
 							ai->aiAttackObject( designatedTarget, NO_MAX_SHOTS_LIMIT, CMD_FROM_AI );
 							if(!m_countedAssaultingMember[ m_currentMembers - 1 ])
 							{
-								m_maxNumAttacking += replacer->getTransportSlotCount();
+								m_maxNumAttacking += newMember->getTransportSlotCount();
 								m_countedAssaultingMember[ m_currentMembers - 1 ] = TRUE;
 							}
 						}
