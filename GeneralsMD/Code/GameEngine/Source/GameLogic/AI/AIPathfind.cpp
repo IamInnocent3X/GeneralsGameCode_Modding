@@ -2788,8 +2788,10 @@ void ZoneBlock::blockCalculateZones(PathfindCell **map, PathfindLayer layers[], 
 zoneStorageType ZoneBlock::getEffectiveZone( LocomotorSurfaceTypeMask acceptableSurfaces,
 																					 Bool crusher, zoneStorageType zone) const
 {
-#if !(RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING)
-	if (zone==PathfindZoneManager::UNINITIALIZED_ZONE) {
+//#if !(RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING)
+	//if (zone==PathfindZoneManager::UNINITIALIZED_ZONE) {
+#if !(RTS_GENERALS)
+	if (!s_useNonRetailPathfind && zone==PathfindZoneManager::UNINITIALIZED_ZONE) {
 		return zone;
 	}
 #endif
@@ -2984,15 +2986,21 @@ void PathfindZoneManager::reset()  ///< Called when the map is reset.
 
 void PathfindZoneManager::markZonesDirty()  ///< Called when the zones need to be recalculated.
 {
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
-	m_nextFrameToCalculateZones = TheGameLogic->getFrame();
-#else
-	if (TheGameLogic->getFrame()<2) {
-		m_nextFrameToCalculateZones = 2;
-		return;
-	}
-	m_nextFrameToCalculateZones = MIN( m_nextFrameToCalculateZones, TheGameLogic->getFrame() + ZONE_UPDATE_FREQUENCY );
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+#if RTS_GENERALS
+	if (!s_useNonRetailPathfind)
+		m_nextFrameToCalculateZones = TheGameLogic->getFrame();
+	else
 #endif
+//#else
+	{
+		if (TheGameLogic->getFrame()<2) {
+			m_nextFrameToCalculateZones = 2;
+			return;
+		}
+		m_nextFrameToCalculateZones = MIN( m_nextFrameToCalculateZones, TheGameLogic->getFrame() + ZONE_UPDATE_FREQUENCY );
+	}
+//#endif
 }
 
 /**
@@ -3044,8 +3052,11 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 			if (bounds.hi.y > globalBounds.hi.y) {
 				bounds.hi.y = globalBounds.hi.y;
 			}
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
-			if (bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) {
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+			//if (bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) {
+#if RTS_GENERALS
+			if (!s_useNonRetailPathfind &&
+				(bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y)) {
 				DEBUG_CRASH(("Incorrect bounds calculation. Logic error, fix me. jba."));
 				continue;
 			}
@@ -3069,8 +3080,11 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 					if (cell->getZone()==0) {
 						cell->setZone(m_maxZone);
 						m_maxZone++;
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
-						if (m_maxZone>= maxZones) {
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+						//if (m_maxZone>= maxZones) {
+#if RTS_GENERALS
+						if (!s_useNonRetailPathfind &&
+							(m_maxZone>= maxZones)) {
 							DEBUG_CRASH(("Ran out of pathfind zones.  SERIOUS ERROR! jba."));
 							break;
 						}
@@ -3145,8 +3159,11 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 
 			if (bounds.hi.y > globalBounds.hi.y)
 				bounds.hi.y = globalBounds.hi.y;
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
-			if (bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) {
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+			//if (bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) {
+#if RTS_GENERALS
+			if (!s_useNonRetailPathfind &&
+				(bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y)) {
 				DEBUG_CRASH(("Incorrect bounds calculation. Logic error, fix me. jba."));
 				continue;
 			}
@@ -3178,7 +3195,9 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 			if ( i > globalBounds.lo.x && r_thisCell.getZone() != map[i-1][j].getZone() ) {
 				const PathfindCell &r_leftCell = map[i-1][j];
 
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+#if RTS_GENERALS
+			  if (!s_useNonRetailPathfind) {
 				if (r_thisCell.getType() == r_leftCell.getType()) {
 					applyZone(r_thisCell, r_leftCell, m_hierarchicalZones, m_maxZone);
 				}
@@ -3197,7 +3216,11 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 				if (crusherGround(r_thisCell, r_leftCell)) {
 					applyZone(r_thisCell, r_leftCell, m_crusherZones, m_maxZone);
 				}
-#else
+			  }
+			  else
+#endif
+//#else
+			  {
 				//if this is true, skip all the ones below
 				if (r_thisCell.getType() == r_leftCell.getType())
 					applyZone(r_thisCell, r_leftCell, m_hierarchicalZones, m_maxZone);
@@ -3224,14 +3247,17 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 					}
 
 				}
-#endif
+			  }
+//#endif
 
 			}
 
 			if (j>globalBounds.lo.y && r_thisCell.getZone()!=map[i][j-1].getZone()) {
 				const PathfindCell &r_topCell = map[i][j-1];
 
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+#if RTS_GENERALS
+			  if (!s_useNonRetailPathfind) {
 				if (r_thisCell.getType() == r_topCell.getType()) {
 					applyZone(r_thisCell, r_topCell, m_hierarchicalZones, m_maxZone);
 				}
@@ -3250,7 +3276,11 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 				if (crusherGround(r_thisCell, r_topCell)) {
 					applyZone(r_thisCell, r_topCell, m_crusherZones, m_maxZone);
 				}
-#else
+			  }
+			  else
+#endif
+//#else
+			  {
 				//if this is true, skip all the ones below
 				if (r_thisCell.getType() == r_topCell.getType())
 					applyZone(r_thisCell, r_topCell, m_hierarchicalZones, m_maxZone);
@@ -3277,7 +3307,8 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 					}
 
 				}
-#endif
+			  }
+//#endif
 
 			}
 
@@ -3624,8 +3655,10 @@ zoneStorageType PathfindZoneManager::getBlockZone(LocomotorSurfaceTypeMask accep
 		return 0;
 	}
 	zoneStorageType zone =  m_zoneBlocks[blockX][blockY].getEffectiveZone(acceptableSurfaces, crusher, cell->getZone());
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
-	if (zone > m_maxZone) {
+//#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+	//if (zone > m_maxZone) {
+#if RTS_GENERALS
+	if ((!s_useNonRetailPathfind && zone > m_maxZone) || (s_useNonRetailPathfind && zone >= m_maxZone)) {
 #else
 	if (zone >= m_maxZone) {
 #endif
@@ -9059,14 +9092,15 @@ struct TightenPathStruct
 		return 0; // failure
 	}
 
-#if RETAIL_COMPATIBLE_CRC
+//#if RETAIL_COMPATIBLE_CRC
 	// TheSuperHackers @bugfix Caball009 27/02/2026 This was originally uninitialized.
 	// The uninitialized values that retail uses here are usually close to zero as long as foundNewDest == false, otherwise it uses the new values of newDestPos.
 	// newDestPos is zero initialized by the caller, so there is no need to check foundNewDest here.
-	Coord3D pos = d->newDestPos;
-#else
-	Coord3D pos = d->orgDestPos;
-#endif
+	//Coord3D pos = d->newDestPos;
+//#else
+	//Coord3D pos = d->orgDestPos;
+//#endif
+	Coord3D pos = s_useNonRetailPathfind ? d->orgDestPos : d->newDestPos;
 
 	if (!TheAI->pathfinder()->checkForAdjust(d->obj, *d->locomotorSet, true, to_x, to_y, to->getLayer(), d->radius, d->center, &pos, nullptr))
 	{
@@ -9090,9 +9124,10 @@ void Pathfinder::tightenPath(Object *obj, const LocomotorSet& locomotorSet, Coor
 	info.locomotorSet = &locomotorSet;
 	info.foundNewDest = false;
 	info.orgDestPos = *to;
-#if RETAIL_COMPATIBLE_CRC
-	info.newDestPos.zero();
-#endif
+//#if RETAIL_COMPATIBLE_CRC
+	if(!s_useNonRetailPathfind)
+		info.newDestPos.zero();
+//#endif
 	iterateCellsAlongLine(*from, *to, info.layer, tightenPathCallback, &info);
 	if (info.foundNewDest) {
 		*from = info.newDestPos;

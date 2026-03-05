@@ -255,7 +255,7 @@ void BattlePlanBonusBehavior::upgradeImplementation()
 		// We still need to apply our bonus, because at this point we do not count as Upgraded
 		// Check for valid KindOf. This shouldn't be needed unless you screwed up your INI, but just to be safe
 		if (player->doesObjectQualifyForBattlePlan(obj)) {
-			applyBonus(bonus, FALSE);
+			applyBonus(static_cast<const BattlePlanBonusesData*>(bonus), FALSE);
 		}
 	}
 
@@ -263,7 +263,7 @@ void BattlePlanBonusBehavior::upgradeImplementation()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void BattlePlanBonusBehavior::applyBonus(const BattlePlanBonuses* bonus, bool checkIsValid /* = True*/)
+void BattlePlanBonusBehavior::applyBonus(const BattlePlanBonusesData* bonus, bool checkIsValid /* = True*/)
 {
 	//DEBUG_LOG(("---\n"));
 	//DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::applyBonus", KEYNAME(getModuleTagNameKey()).str()));
