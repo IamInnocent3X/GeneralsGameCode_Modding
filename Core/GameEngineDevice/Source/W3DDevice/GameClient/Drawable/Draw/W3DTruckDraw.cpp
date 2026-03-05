@@ -548,7 +548,7 @@ void W3DTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 
 	Bool wasPowersliding = m_isPowersliding;
 	m_isPowersliding = false;
-	if (physics->isMotive() && !obj->isSignificantlyAboveTerrain()) {
+	if (physics->isMotive() && !obj->isSignificantlyAboveTerrain() && !overWater) {
 		enableWheelEmitters(true);
 		Coord3D accel = *physics->getAcceleration();
 		accel.z = 0; // ignore gravitational force.

@@ -97,6 +97,7 @@ const char* const DamageTypeFlags::s_bitNameList[] =
 	"TESLA",
 	"JET_TORPEDO",
 	"ANTI_SHIP",
+	"CRYO",
 	// Specific damage types with special logic attached
 	"TORPEDO",
 	"ANTI_TORPEDO",
