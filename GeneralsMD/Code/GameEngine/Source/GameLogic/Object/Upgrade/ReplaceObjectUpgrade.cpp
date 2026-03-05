@@ -60,14 +60,6 @@
 #include "GameClient/Drawable.h"
 #include "GameClient/InGameUI.h"
 
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	Real fricPerSec = INI::scanReal(ini->getNextToken());
-	Real fricPerFrame = fricPerSec * SECONDS_PER_LOGICFRAME_REAL;
-	*(Real *)store = fricPerFrame;
-}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -78,46 +70,10 @@ void ReplaceObjectUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "ReplaceObject",	INI::parseAsciiString,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_replaceObjectName ) },
-
-		{ "TransferHealth",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealth ) },
-		{ "TransferAIStates",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferAIStates ) },
-		{ "TransferExperience",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferExperience ) },
-		{ "TransferAttackers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferAttack ) },
-		{ "TransferStatuses",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferStatus ) },
-		{ "TransferWeaponBonuses",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferWeaponBonus ) },
-		{ "TransferDisabledType",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferDisabledType ) },
-		{ "TransferBombs",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferBombs ) },
-		{ "TransferHijackers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferHijackers ) },
-		{ "TransferEquippers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferEquippers ) },
-		{ "TransferParasites",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferParasites ) },
-		{ "TransferPassengers",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferPassengers ) },
-		{ "TransferToAssaultTransport",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferToAssaultTransport ) },
-		{ "TransferShieldedTargets",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldedTargets ) },
-		{ "TransferShieldingTargets",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferShieldingTargets ) },
-		{ "TransferSelection",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelection ) },
-		{ "TransferSelectionDontClearGroup",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferSelectionDontClearGroup ) },
-		{ "TransferObjectName",	INI::parseBool,	nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_transferObjectName ) },
-		{ "HealthTransferType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( ReplaceObjectUpgradeModuleData, m_transferHealthChangeType ) },
-
-		{ "OrientInForceDirection", INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_orientInForceDirection) },
-		{ "ExtraBounciness",				INI::parseReal,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_extraBounciness ) },
-		{ "ExtraFriction",				parseFrictionPerSec,						nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_extraFriction ) },
-		{ "Offset",						INI::parseCoord3D,				nullptr, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_offset ) },
-		{ "Disposition",			INI::parseBitString32,			DispositionNames, offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_disposition ) },
-		{ "DispositionIntensity",	INI::parseReal,						nullptr,	offsetof( ReplaceObjectUpgradeModuleData, m_dispositionData.m_dispositionIntensity ) },
-		{ "SpinRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_spinRate) },
-		{ "YawRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_yawRate) },
-		{ "RollRate",					INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_rollRate) },
-		{ "PitchRate",				INI::parseAngularVelocityReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_pitchRate) },
-		{ "MinForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_minMag) },
-		{ "MaxForceMagnitude",	INI::parseReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_maxMag) },
-		{ "MinForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_minPitch) },
-		{ "MaxForcePitch",	INI::parseAngleReal,	nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_maxPitch) },
-		{ "DiesOnBadLand",	INI::parseBool, nullptr, offsetof(ReplaceObjectUpgradeModuleData, m_dispositionData.m_diesOnBadLand) },
-
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
+  p.add(ObjectCreationMuxData::getFieldParse(), offsetof( ReplaceObjectUpgradeModuleData, m_objectCreationData ));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -133,22 +89,6 @@ ReplaceObjectUpgrade::~ReplaceObjectUpgrade()
 }
 
 //-------------------------------------------------------------------------------------------------
-static void adjustVector(Coord3D *vec, const Matrix3D* mtx)
-{
-	if (mtx)
-	{
-		Vector3 vectmp;
-		vectmp.X = vec->x;
-		vectmp.Y = vec->y;
-		vectmp.Z = vec->z;
-		vectmp = mtx->Rotate_Vector(vectmp);
-		vec->x = vectmp.X;
-		vec->y = vectmp.Y;
-		vec->z = vectmp.Z;
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void ReplaceObjectUpgrade::upgradeImplementation()
 {
@@ -157,12 +97,15 @@ void ReplaceObjectUpgrade::upgradeImplementation()
 
 	Object *me;
 
+	if(checkIfDontHaveLivePlayer(me) || checkIfSkipWhileSignificantlyAirborne(me))
+		return;
+
 	Bool oldObjectSelected;
 	Int oldObjectSquadNumber;
 	Matrix3D myMatrix;
 	Team* myTeam;
 
-	AIUpdateInterface *ai;
+	//AIUpdateInterface *ai;
 	ObjectStatusMaskType prevStatus;
 
 	{
@@ -179,16 +122,25 @@ void ReplaceObjectUpgrade::upgradeImplementation()
 
 		// IamInnocent - Edited for Selection To Not Clear Group
 		Drawable* selectedDrawable = TheInGameUI->getFirstSelectedDrawable();
-		oldObjectSelected = data->m_transferSelectionDontClearGroup ? me->getDrawable() && me->getDrawable()->isSelected() : selectedDrawable && selectedDrawable->getID() == me->getDrawable()->getID();
+		oldObjectSelected = data->m_objectCreationData.m_inheritsSelectionDontClearGroup ? me->getDrawable() && me->getDrawable()->isSelected() : selectedDrawable && selectedDrawable->getID() == me->getDrawable()->getID();
 		oldObjectSquadNumber = me->getControllingPlayer()->getSquadNumberForObject(me);
 
-		ai = me->getAI();
+		//ai = me->getAI();
 		prevStatus = me->getStatusBits();
 
 		// Remove us first since occupation of cells is apparently not a refcount, but a flag.  If I don't remove, then the new
 		// thing will be placed, and then on deletion I will remove "his" marks.
 		//TheAI->pathfinder()->removeObjectFromPathfindMap(me);
 		//TheGameLogic->destroyObject(me);
+	}
+
+	// Create the container before the replacement Object first
+	Bool requiresContainer = FALSE;
+	Object* container = getPutInContainer(requiresContainer, me->getTeam());
+	if(requiresContainer && !container)
+	{
+		//DEBUG_CRASH( ("CreateObjectDie::onDie() failed to create container %s.", m_objectCreationData.m_putInContainer.str() ) );
+		return;
 	}
 
 	// Don't destroy us first, make us non-interactable
@@ -208,7 +160,27 @@ void ReplaceObjectUpgrade::upgradeImplementation()
 	replacementObject->setTransformMatrix(&myMatrix);
 	TheAI->pathfinder()->addObjectToPathfindMap( replacementObject );
 
-	CreateObjectDie::doDisposition(me, replacementObject, &data->m_dispositionData);
+	if(container == nullptr)
+		doPreserveLayer(me, replacementObject);
+	else
+	{
+		container->setTransformMatrix(&myMatrix);
+		TheAI->pathfinder()->addObjectToPathfindMap( container );
+
+		// Now onCreates were called at the constructor.  This magically created
+		// thing needs to be considered as Built for Game specific stuff.
+		for (BehaviorModule** m = container->getBehaviorModules(); *m; ++m)
+		{
+			CreateModuleInterface* create = (*m)->getCreate();
+			if (!create)
+				continue;
+			create->onBuildComplete();
+		}
+	}
+
+	setProducer(me, replacementObject);
+	doObjectCreation(me, replacementObject);
+	doDisposition(me, replacementObject, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
 
 	// Now onCreates were called at the constructor.  This magically created
 	// thing needs to be considered as Built for Game specific stuff.
@@ -220,424 +192,25 @@ void ReplaceObjectUpgrade::upgradeImplementation()
 		create->onBuildComplete();
 	}
 
-	// Transfer any bombs onto the replacement Object
-	std::vector<ObjectID> BombsMarkedForDestroy;
-	Object *obj = TheGameLogic->getFirstObject();
-	while( obj )
+	doInherit(me, replacementObject, prevStatus);
+	doTransfer(me, replacementObject, FALSE);
+	doPostDisposition(me, replacementObject);
+	doInheritHealth(me, replacementObject);
+	doFadeStuff(me);
+
+	if(container != nullptr)
 	{
-		// Transfer bombs to the replacement Object or destroy them
-		//if( obj->isKindOf( KINDOF_MINE ) )
-		//{
-			//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-			//StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
-			StickyBombUpdateInterface *update = obj->getStickyBombUpdateInterface();
-			if( update && update->getTargetObject() == me )
-			{
-				if(data->m_transferBombs)
-					update->setTargetObject( replacementObject );
-				else
-					BombsMarkedForDestroy.push_back(obj->getID());
-			}
-		//}
-
-		// Transfer attackers
-		if (data->m_transferAttack)
-		{
-			AIUpdateInterface* aiInterface = obj->getAI();
-			if (aiInterface)
-				aiInterface->transferAttack(me->getID(), replacementObject->getID());
-
-		}
-
-		obj = obj->getNextObject();
+		doPreserveLayer(me, container);
+		setProducer(me, container);
+		doObjectCreation(me, container);
+		doDisposition(me, container, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
+		doInherit(me, container, prevStatus);
+		doTransfer(me, container, FALSE);
+		doPostDisposition(me, container);
+		doInheritHealth(me, container);
+		if(container->getContain() != nullptr && !container->isEffectivelyDead() && replacementObject && !replacementObject->isEffectivelyDead() && container->getContain()->isValidContainerFor(replacementObject, true))
+			container->getContain()->addToContain(replacementObject);
 	}
-
-	// Or not, we just get rid of the bomb
-	for(std::vector<ObjectID>::const_iterator it = BombsMarkedForDestroy.begin(); it != BombsMarkedForDestroy.end(); ++it)
-	{
-		Object *bomb = TheGameLogic->findObjectByID(*it);
-		if(bomb)
-			TheGameLogic->destroyObject(bomb);
-	}
-
-	if( data->m_transferAIStates )
-	{
-		AIUpdateInterface *new_ai = replacementObject->getAI();
-		if( ai && new_ai )
-		{
-			//This flag determines if the object has started moving yet... if not
-			//it's a good initial check.
-			Bool isEffectivelyMoving = ai->isMoving() || ai->isWaitingForPath();
-
-			//Are we trying to attack something. If so, we need to be in range before we can do so.
-			Bool isTryingToAttack = ai->isAttacking();
-
-			//Are we in guard mode? If so, are we idle... idle guarders deploy for fastest response against attackers.
-			Bool isInGuardIdleState = ai->friend_isInGuardIdleState();
-
-			// Transfer my Attack State
-			if( isTryingToAttack )
-			{
-				if(ai->getGoalObject() != nullptr)
-				{
-					if(ai->getAIStateType() == AI_FORCE_ATTACK_OBJECT)
-						new_ai->aiForceAttackObject( ai->getGoalObject(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
-					else
-						new_ai->aiAttackObject( ai->getGoalObject(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
-				}
-				else if(ai->getGoalPosition()->length() > 1.0f )
-				{
-					new_ai->aiAttackPosition( ai->getGoalPosition(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
-				}
-			}
-			// Transfer my Guard State
-			else if( isInGuardIdleState )
-			{
-				if(ai->getGuardObject() != INVALID_ID)
-				{
-					Object *guardObj = TheGameLogic->findObjectByID(ai->getGuardObject());
-					if(guardObj)
-						new_ai->aiGuardObject( guardObj, ai->getGuardMode(), ai->getLastCommandSource() );
-				}
-				else if(ai->getGuardLocation()->length() > 1.0f )
-				{
-					new_ai->aiGuardPosition( ai->getGuardLocation(), ai->getGuardMode(), ai->getLastCommandSource() );
-				}
-			}
-			// Transfer my Moving State
-			else if( isEffectivelyMoving )
-			{
-				if( ai->getAIStateType() == AI_ATTACK_MOVE_TO )
-				{
-					//Continue to move towards the attackmove area.
-					new_ai->aiAttackMoveToPosition( ai->getGoalPosition(), NO_MAX_SHOTS_LIMIT, ai->getLastCommandSource() );
-				}
-				else
-				{
-					new_ai->aiMoveToPosition( ai->getGoalPosition(), ai->getLastCommandSource() );
-				}
-			}
-
-			// Transfer my Supply State
-			SupplyTruckAIInterface* supplyTruckAI = ai->getSupplyTruckAIInterface();
-			SupplyTruckAIInterface* supplyTruckNewAI = ai->getSupplyTruckAIInterface();
-			if( supplyTruckAI && supplyTruckNewAI ) {
-				// If it is gathering supplies, tell its replacer to do the same
-				if (supplyTruckAI->isCurrentlyFerryingSupplies() || supplyTruckAI->isForcedIntoWantingState())
-				{
-					supplyTruckNewAI->setForceWantingState(true);
-				}
-			}
-
-			// Transfer my Dozer State
-			DozerAIInterface* DozerAI = ai->getDozerAIInterface();
-			DozerAIInterface* DozerNewAI = ai->getDozerAIInterface();
-			if( DozerAI && DozerNewAI)
-			{
-				
-				// If it is gathering supplies, tell its replacer to do the same
-				if(DozerAI->getCurrentTask() != DOZER_TASK_INVALID)
-				{
-					DozerTask curTask = DozerAI->getCurrentTask();
-					Object *taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget(curTask) );
-					if(taskTarget)
-					{
-						switch(curTask)
-						{
-							case DOZER_TASK_BUILD:
-								new_ai->aiResumeConstruction(taskTarget, ai->getLastCommandSource());
-								break;
-							case DOZER_TASK_REPAIR:
-								new_ai->aiRepair(taskTarget, ai->getLastCommandSource());
-								break;
-						}
-					}
-				}
-				else if (DozerAI->isAnyTaskPending())
-				{
-					for( Int i = 0; i < DOZER_NUM_TASKS; i++ )
-					{
-						if( DozerAI->isTaskPending( (DozerTask)i ) )
-						{
-							Object *taskTarget = TheGameLogic->findObjectByID( DozerAI->getTaskTarget((DozerTask)i) );
-							if(taskTarget)
-							{
-								switch((DozerTask)i)
-								{
-									case DOZER_TASK_BUILD:
-										new_ai->aiResumeConstruction(taskTarget, ai->getLastCommandSource());
-										break;
-									case DOZER_TASK_REPAIR:
-										new_ai->aiRepair(taskTarget, ai->getLastCommandSource());
-										break;
-								}
-							}
-
-							break;
-						}
-					}
-				}
-
-			}
-
-		}
-	}
-
-	if(data->m_transferPassengers && me->getContain())
-	{
-		// Get the unit's contain
-		ContainModuleInterface *contain = me->getContain();
-
-		std::vector<ObjectID>vecID;
-
-		// Disable Enter/Exit Sounds
-		contain->enableLoadSounds(FALSE);
-
-		// Get Contain List
-		ContainedItemsList list;
-		contain->swapContainedItemsList(list);
-
-		ContainedItemsList::iterator it = list.begin();
-		while ( it != list.end() )
-		{
-			Object *obj = *it++;
-			DEBUG_ASSERTCRASH( obj, ("Contain list must not contain null element"));
-
-			// Remove Passenger from current contain
-			contain->removeFromContain( obj, false );
-
-			// Add the Passenger to the list to put into the new container later
-			vecID.push_back(obj->getID());
-		}
-
-		ContainModuleInterface *newContain = replacementObject->getContain();
-
-		if(newContain)
-		{
-			// Disable Enter/Exit Sounds for Replacement Contain
-			newContain->enableLoadSounds(FALSE);
-
-			for(int i = 0; i < vecID.size(); i++)
-			{
-				Object *add = TheGameLogic->findObjectByID( vecID[i] );
-				if(add)
-				{
-					// Add Passenger to current contain if valid
-					if( newContain && newContain->isValidContainerFor(add, TRUE) )
-					{
-						newContain->addToContain(add);
-					}
-				}
-			}
-
-			// Enable Enter/Exit Sounds for Replacement Contain
-			newContain->enableLoadSounds(TRUE);
-		}
-
-	}
-	else
-	{
-		ContainModuleInterface *contain = me->getContain();
-
-		if(contain)
-		{
-			contain->removeAllContained();
-		}
-	}
-
-	// Transfer my experience
-	if (data->m_transferExperience && replacementObject->getExperienceTracker())
-	{
-		VeterancyLevel v = me->getVeterancyLevel();
-		replacementObject->getExperienceTracker()->setHighestExpOrLevel(me->getExperienceTracker()->getCurrentExperience(), v, FALSE);
-	}
-
-	// Assault Transport Matters, switching Transports
-	if(data->m_transferToAssaultTransport && me->getAssaultTransportObjectID() != INVALID_ID)
-	{
-		me->removeMeFromAssaultTransport(replacementObject->getID());
-	}
-
-	// Transfer Statuses
-	if( data->m_transferStatus )
-	{
-		replacementObject->setStatus( prevStatus );
-		replacementObject->setCustomStatusFlags( me->getCustomStatus() );
-
-		replacementObject->doObjectStatusChecks();
-
-		replacementObject->transferStatusHelperData(me->getStatusHelperData());
-		replacementObject->refreshStatusHelper();
-	}
-
-	// Transfer Weapon Bonuses
-	if( data->m_transferWeaponBonus )
-	{
-		replacementObject->setWeaponBonusConditionFlags(me->getWeaponBonusCondition());
-		replacementObject->setWeaponBonusConditionIgnoreClear(me->getWeaponBonusConditionIgnoreClear());
-		replacementObject->setCustomWeaponBonusConditionFlags(me->getCustomWeaponBonusCondition());
-		replacementObject->setCustomWeaponBonusConditionIgnoreClear(me->getCustomWeaponBonusConditionIgnoreClear());
-		replacementObject->doWeaponBonusChange();
-
-		replacementObject->transferTempWeaponBonusHelperData(me->getTempWeaponBonusHelperData());
-		replacementObject->refreshTempWeaponBonusHelper();
-	}
-
-	// Transfer Disabled Type
-	if(data->m_transferDisabledType)
-	{
-		replacementObject->setDisabledTint(me->getDisabledTint());
-		replacementObject->setDisabledCustomTint(me->getDisabledCustomTint());
-		replacementObject->transferDisabledTillFrame(me->getDisabledTillFrame());
-	}
-
-	// Shielded Objects
-	if(data->m_transferShieldedTargets && me->testCustomStatus("SHIELDED_TARGET"))
-	{
-		me->clearCustomStatus("SHIELDED_TARGET");
-		replacementObject->setCustomStatus("SHIELDED_TARGET");
-		replacementObject->setShieldByTargetID(me->getShieldByTargetID(), me->getShieldByTargetType());
-	}
-
-	if(data->m_transferShieldingTargets)
-		replacementObject->setShielding(me->getShieldingTargetID(), me->getShieldByTargetType());
-
-	// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
-	me->doTransferHijacker(replacementObject->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites);
-
-	// Transfer Object Name for Script Engine
-	if (data->m_transferObjectName)
-	{
-		TheScriptEngine->transferObjectName( me->getName(), replacementObject );
-	}
-
-	// Originally an aspect of Disposition, but carry forward unto end of the function because the object may be killed from damage dealt
-    if ( data->m_dispositionData.m_diesOnBadLand && replacementObject )
-    {
-	    // if we land in the water, we die. alas.
-	    const Coord3D* riderPos = replacementObject->getPosition();
-	    Real waterZ, terrainZ;
-	    if (TheTerrainLogic->isUnderwater(riderPos->x, riderPos->y, &waterZ, &terrainZ)
-			    && riderPos->z <= waterZ + 10.0f
-			    && replacementObject->getLayer() == LAYER_GROUND)
-	    {
-		    // don't call kill(); do it manually, so we can specify DEATH_FLOODED
-		    DamageInfo damageInfo;
-		    damageInfo.in.m_damageType = DAMAGE_WATER;	// use this instead of UNRESISTABLE so we don't get a dusty damage effect
-		    damageInfo.in.m_deathType = DEATH_FLOODED;
-		    damageInfo.in.m_sourceID = INVALID_ID;
-		    damageInfo.in.m_amount = HUGE_DAMAGE_AMOUNT;
-		    replacementObject->attemptDamage( &damageInfo );
-	    }
-
-	    // Kill if materialized on impassable ground
-	    Int cellX = REAL_TO_INT( replacementObject->getPosition()->x / PATHFIND_CELL_SIZE );
-	    Int cellY = REAL_TO_INT( replacementObject->getPosition()->y / PATHFIND_CELL_SIZE );
-
-	    PathfindCell* cell = TheAI->pathfinder()->getCell( replacementObject->getLayer(), cellX, cellY );
-	    PathfindCell::CellType cellType = cell ? cell->getType() : PathfindCell::CELL_IMPASSABLE;
-
-	    // If we land outside the map, we die too.
-	    // Otherwise we exist outside the PartitionManger like a cheater.
-	  if( replacementObject->isOffMap()
-      || (cellType == PathfindCell::CELL_CLIFF)
-      || (cellType == PathfindCell::CELL_WATER)
-      || (cellType == PathfindCell::CELL_IMPASSABLE) )
-	    {
-		    // We are sorry, for reasons beyond our control, we are experiencing technical difficulties. Please die.
-		    replacementObject->kill();
-	    }
-
-  // Note: for future enhancement of this feature, we should test the object against the cell type he is on,
-  // using obj->getAI()->hasLocomotorForSurface( __ ). We cshould not assume here that the object can not
-  // find happiness on cliffs or water or whatever.
-
-
-    }
-
-	if( data->m_transferHealth && replacementObject && !replacementObject->isEffectivelyDead() )
-	{
-		//Convert old health to new health.
-		BodyModuleInterface *oldBody = me->getBodyModule();
-		BodyModuleInterface *newBody = replacementObject->getBodyModule();
-		if( oldBody && newBody )
-		{
-			//First transfer subdual damage
-			DamageInfo damInfo;
-			Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
-			if( subdualDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = subdualDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			// Then the Custom Subdual Damage
-			newBody->setCurrentSubdualDamageAmountCustom(oldBody->getCurrentSubdualDamageAmountCustom());
-			replacementObject->transferSubdualHelperData(me->getSubdualHelperData());
-			replacementObject->refreshSubdualHelper();
-
-			//Now transfer the previous health from the old object to the new.
-			/*damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
-			damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-			damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
-			if( damInfo.in.m_amount > 0.0f )
-			{
-				newBody->attemptDamage( &damInfo );
-			}*/
-
-			Real chronoDamageAmount = oldBody->getCurrentChronoDamageAmount();
-			if( chronoDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = chronoDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_CHRONO_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			Real oldHealth = oldBody->getHealth();
-			Real oldMaxHealth = oldBody->getMaxHealth();
-			Real newMaxHealth = newBody->getMaxHealth();
-
-			if(oldHealth <= 0 && (data->m_transferHealthChangeType == PRESERVE_RATIO || data->m_transferHealthChangeType == SAME_CURRENTHEALTH ))
-				replacementObject->kill(); // my that was easy
-			else
-			{
-				switch( data->m_transferHealthChangeType )
-				{
-					case PRESERVE_RATIO:
-					{
-						//400/500 (80%) + 100 becomes 480/600 (80%)
-						//200/500 (40%) - 100 becomes 160/400 (40%)
-						Real ratio = oldHealth / oldMaxHealth;
-						Real newHealth = newMaxHealth * ratio;
-						newBody->internalChangeHealth( newHealth - newMaxHealth, TRUE );
-						break;
-					}
-					// In this case, it becomes ADD_CURRENT_DAMAGE, there's no ADD_CURRENT_HEALTH_TOO
-					case ADD_CURRENT_DAMAGE_NON_LETHAL:
-					case ADD_CURRENT_DAMAGE:
-					{
-						//Add the same amount that we are adding to the max health.
-						//This could kill you if max health is reduced (if we ever have that ability to add buffer health like in D&D)
-						//400/500 (80%) + 100 becomes 500/600 (83%)
-						//200/500 (40%) - 100 becomes 100/400 (25%)
-						if(data->m_transferHealthChangeType == ADD_CURRENT_DAMAGE && fabs(oldHealth - oldMaxHealth) >= newMaxHealth)
-							replacementObject->kill();
-						else
-							newBody->internalChangeHealth( max(1.0f - newMaxHealth, oldHealth - oldMaxHealth), TRUE );
-						break;
-					}
-					case SAME_CURRENTHEALTH:
-						//preserve past health amount
-						newBody->internalChangeHealth( oldHealth - newMaxHealth, TRUE );
-						break;
-				}
-			}
-		}
-	}
-
 
 	// Now we destroy the Object
 	TheAI->pathfinder()->removeObjectFromPathfindMap( me );
@@ -647,53 +220,63 @@ void ReplaceObjectUpgrade::upgradeImplementation()
 	{
 		replacementObject->getControllingPlayer()->onStructureConstructionComplete(nullptr, replacementObject, FALSE);
 
+		doInheritSelection(nullptr, replacementObject, oldObjectSelected, oldObjectSquadNumber);
+
 		// TheSuperHackers @bugfix Stubbjax 26/05/2025 If the old object was selected, select the new one.
 		// IamInnocent 02/12/2025 - Integrated with Transfer Selection Feature added Below
-		/*if (oldObjectSelected)
-		{
-			GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
-			msg->appendBooleanArgument(TRUE);
-			msg->appendObjectIDArgument(replacementObject->getID());
-			TheInGameUI->selectDrawable(replacementObject->getDrawable());
-		}
+		//if (oldObjectSelected)
+		//{
+		//	GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+		//	msg->appendBooleanArgument(TRUE);
+		//	msg->appendObjectIDArgument(replacementObject->getID());
+		//	TheInGameUI->selectDrawable(replacementObject->getDrawable());
+		//}
 
 		// TheSuperHackers @bugfix Stubbjax 26/05/2025 If the old object was grouped, group the new one.
-		if (oldObjectSquadNumber != NO_HOTKEY_SQUAD)
-		{
-			if (replacementObject->isLocallyControlled())
-			{
-				GameMessage* msg = TheMessageStream->appendMessage((GameMessage::Type)(GameMessage::MSG_CREATE_TEAM0 + oldObjectSquadNumber));
-				msg->appendObjectIDArgument(replacementObject->getID());
-			}
-		}*/
+		//if (oldObjectSquadNumber != NO_HOTKEY_SQUAD)
+		//{
+		//	if (replacementObject->isLocallyControlled())
+		//	{
+		//		GameMessage* msg = TheMessageStream->appendMessage((GameMessage::Type)(GameMessage::MSG_CREATE_TEAM0 + oldObjectSquadNumber));
+		//		msg->appendObjectIDArgument(replacementObject->getID());
+		//	}
+		//}
 
 		// Transfer the Selection Status
 		/// IamInnocent 02/12/2025 - Integrated with the selection module from TheSuperHackers @bugfix Stubbjax 26/05/2025
-		if(data->m_transferSelection && oldObjectSelected)
-		{
-			GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
-			if(data->m_transferSelectionDontClearGroup)
-			{
-				msg->appendBooleanArgument(FALSE);
-			}
-			else
-			{
-				msg->appendBooleanArgument(TRUE);
-			}
+		//if(oldObjectSelected)
+		//{
+		//	GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+		//	if(data->m_transferSelectionDontClearGroup)
+		//	{
+		//		msg->appendBooleanArgument(FALSE);
+		//	}
+		//	else
+		//	{
+		//		msg->appendBooleanArgument(TRUE);
+		//	}
 
-			msg->appendObjectIDArgument(replacementObject->getID());
-			TheInGameUI->selectDrawable(replacementObject->getDrawable());
+		//	msg->appendObjectIDArgument(replacementObject->getID());
+		//	TheInGameUI->selectDrawable(replacementObject->getDrawable());
 
-			// TheSuperHackers @bugfix Stubbjax 26/05/2025 If the old object was grouped, group the new one.
-			if (oldObjectSquadNumber != NO_HOTKEY_SQUAD)
-			{
-				if (replacementObject->isLocallyControlled())
-				{
-					GameMessage* msg = TheMessageStream->appendMessage((GameMessage::Type)(GameMessage::MSG_CREATE_TEAM0 + oldObjectSquadNumber));
-					msg->appendObjectIDArgument(replacementObject->getID());
-				}
-			}
-		}
+		//	// TheSuperHackers @bugfix Stubbjax 26/05/2025 If the old object was grouped, group the new one.
+		//	if (oldObjectSquadNumber != NO_HOTKEY_SQUAD)
+		//	{
+		//		if (replacementObject->isLocallyControlled())
+		//		{
+		//			GameMessage* msg = TheMessageStream->appendMessage((GameMessage::Type)(GameMessage::MSG_CREATE_TEAM0 + oldObjectSquadNumber));
+		//			msg->appendObjectIDArgument(replacementObject->getID());
+		//		}
+		//	}
+		//}
+
+	}
+
+	if( container && container->getControllingPlayer() )
+	{
+		container->getControllingPlayer()->onStructureConstructionComplete(nullptr, container, FALSE);
+
+		doInheritSelection(nullptr, container, oldObjectSelected, oldObjectSquadNumber);
 
 	}
 }

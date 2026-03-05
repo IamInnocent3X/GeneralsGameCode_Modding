@@ -279,6 +279,8 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 //	return TRUE;
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
 {
 	CrateCollide::revertCollideBehavior(other);
@@ -320,6 +322,20 @@ Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
 	// Indicate that we have reverted the Collied Behavior and no need to continue 
 	return TRUE;
 }
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ConvertToHijackedVehicleCrateCollide::friend_executeCrateBehavior( Object *other )
+{
+	Object *obj = getObject();
+	AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	if (ai)
+	{
+		ai->friend_setGoalObject(other);
+	}
+	return executeCrateBehavior(other);
+}
+
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

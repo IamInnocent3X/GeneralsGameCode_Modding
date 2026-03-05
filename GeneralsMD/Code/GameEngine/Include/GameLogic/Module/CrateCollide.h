@@ -123,6 +123,7 @@ public:
 	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
 	virtual Bool isEquipCrateCollide() const { return FALSE; }
 	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) { return executeCrateBehavior(other); }
 
 	virtual const AsciiString& getCursorName() const { return getCrateCollideModuleData()->m_cursorName; }
 	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }

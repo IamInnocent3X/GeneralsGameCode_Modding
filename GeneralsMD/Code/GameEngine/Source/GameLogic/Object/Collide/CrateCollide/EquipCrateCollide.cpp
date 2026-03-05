@@ -392,6 +392,20 @@ void EquipCrateCollide::overwriteEquipToIDModule(ObjectID ID)
 		m_equipToID = ID;
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool EquipCrateCollide::friend_executeCrateBehavior( Object *other )
+{
+	Object *obj = getObject();
+	AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	if (ai)
+	{
+		ai->friend_setGoalObject(other);
+	}
+	return executeCrateBehavior(other);
+}
+
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------

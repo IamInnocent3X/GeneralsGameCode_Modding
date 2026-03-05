@@ -1274,6 +1274,20 @@ Bool SabotageBehavior::canDoSabotageSpecialCheck( const Object *other ) const
 
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool SabotageBehavior::friend_executeCrateBehavior( Object *other )
+{
+	Object *obj = getObject();
+	AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	if (ai)
+	{
+		ai->friend_setGoalObject(other);
+	}
+	return executeCrateBehavior(other);
+}
+
+
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------

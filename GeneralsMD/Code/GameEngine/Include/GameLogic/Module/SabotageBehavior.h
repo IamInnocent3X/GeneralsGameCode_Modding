@@ -481,6 +481,8 @@ protected:
 
 	virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
 
+	virtual Bool friend_executeCrateBehavior( Object *other );
+
 private:
 	ObjectUpgradeVec m_upgradeIfCollidesWith;
 };

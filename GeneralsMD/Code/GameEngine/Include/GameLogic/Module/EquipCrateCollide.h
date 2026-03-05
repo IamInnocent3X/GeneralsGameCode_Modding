@@ -110,6 +110,7 @@ protected:
 	virtual Bool executeCrateBehavior( Object *other );
 
 	virtual Bool revertCollideBehavior(Object *other);
+	virtual Bool friend_executeCrateBehavior( Object *other );
 
 	virtual Bool isEquipCrateCollide() const { return TRUE; }
 	virtual Bool isParasiteEquipCrateCollide() const  { return getEquipCrateCollideModuleData()->m_isParasite; }

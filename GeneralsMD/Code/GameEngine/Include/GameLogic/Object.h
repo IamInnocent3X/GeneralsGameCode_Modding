@@ -858,7 +858,7 @@ public:
 	void setHijackingID(ObjectID ID);
 	void setEquipToID(ObjectID ID);
 	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID, const Coord3D *ejectPos = nullptr);
-	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite);
+	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite, Bool destroyHijacker, Bool destroyParasites);
 	Bool checkToSquishHijack(const Object *other) const;
 
 	ObjectID getEquipToID() const { return m_equipToID; }
@@ -869,7 +869,8 @@ public:
 	void doObjectStatusChecks();
 
 	void registerAssaultTransportID(ObjectID transportID);
-	void removeMeFromAssaultTransport(ObjectID replaceID = INVALID_ID);
+	void removeMeFromAssaultTransport();
+	void addObjectIntoAssaultTransport(ObjectID replaceID, Bool aboutToBeDestroyed);
 	void doAssaultTransportHealthUpdate();
 
 	ObjectID getAssaultTransportObjectID() const { return m_assaultTransportID; }
