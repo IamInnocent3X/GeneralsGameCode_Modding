@@ -320,7 +320,8 @@ void W3DTankDraw::doDrawModule(const Matrix3D* transformMtx)
 	// if tank is moving, kick up dust and debris
 	Real velMag = vel->x*vel->x + vel->y*vel->y;		// only care about moving on the ground
 
-	const Bool doStartMoveDebris = velMag > DEBRIS_THRESHOLD && !getDrawable()->isDrawableEffectivelyHidden() && !getFullyObscuredByShroud();
+	const Bool doStartMoveDebris = velMag > DEBRIS_THRESHOLD && !getDrawable()->isDrawableEffectivelyHidden() && !getFullyObscuredByShroud() &&
+		!(obj->isKindOf(KINDOF_NO_MOVE_EFFECTS_ON_WATER) && obj->isOverWater());
 
 	// kick debris higher the faster we move
 	Coord3D velMult;

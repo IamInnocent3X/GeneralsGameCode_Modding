@@ -106,6 +106,7 @@ enum DamageType CPP_11(: Int)
 	DAMAGE_TESLA,
 	DAMAGE_JET_TORPEDO,
 	DAMAGE_ANTI_SHIP,
+	DAMAGE_CRYO,
 	
 	// Specific damage types with special logic attached
 	DAMAGE_TORPEDO, ///< can only attack units over water
@@ -253,6 +254,7 @@ enum DeathType CPP_11(: Int)
 
 	//New Death Types
 	DEATH_CHRONO,
+	DEATH_CRYO,
 	
 	DEATH_NUM_TYPES
 };
@@ -282,7 +284,8 @@ static const char *const TheDeathNames[] =
 	"EXTRA_8",	
 	"POISONED_GAMMA",
 	//New:
-	"CHRONO",	
+	"CHRONO",
+	"CRYO",
 
 	nullptr
 };
