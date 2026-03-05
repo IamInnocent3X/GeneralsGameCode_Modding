@@ -118,10 +118,17 @@ static const char* TheBattlePlanStatusNames[] =
 static_assert(ARRAY_SIZE(TheBattlePlanStatusNames) == PLANSTATUS_COUNT + 1, "Array size");
 #endif
 
-class BattlePlanBonuses : public MemoryPoolObject
+struct BattlePlanBonusesData
 {
-	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(BattlePlanBonuses, "BattlePlanBonuses")
-public:
+	BattlePlanBonusesData() //Default the bonuses to no change.
+		: m_armorScalar(1.0f)
+		, m_bombardment(0)
+		, m_searchAndDestroy(0)
+		, m_holdTheLine(0)
+		, m_sightRangeScalar(1.0f)
+	{
+	}
+
 	Real						m_armorScalar;
 	Int							m_bombardment;				//Represents having weapon bonuses for bombardment plan
 	Int							m_searchAndDestroy;		//Represents having weapon bonuses for searchAndDestroy plan
@@ -129,6 +136,11 @@ public:
 	Real						m_sightRangeScalar;
 	KindOfMaskType	m_validKindOf;
 	KindOfMaskType	m_invalidKindOf;
+};
+
+class BattlePlanBonuses : public BattlePlanBonusesData, public MemoryPoolObject
+{
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(BattlePlanBonuses, "BattlePlanBonuses")
 };
 EMPTY_DTOR(BattlePlanBonuses)
 

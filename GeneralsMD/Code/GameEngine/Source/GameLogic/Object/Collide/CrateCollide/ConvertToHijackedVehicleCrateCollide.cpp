@@ -179,10 +179,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 		DozerAIInterface * dozerAI = targetAI->getDozerAIInterface();
 		if ( dozerAI )
 		{
-			for (UnsignedInt task = DOZER_TASK_FIRST; task < DOZER_NUM_TASKS; ++task)
-			{
-				dozerAI->cancelTask( (DozerTask)task );
-			}
+			dozerAI->cancelAllTasks();
 		}
 	}
 

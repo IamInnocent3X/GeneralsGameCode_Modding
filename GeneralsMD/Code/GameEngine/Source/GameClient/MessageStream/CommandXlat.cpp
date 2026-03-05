@@ -1000,7 +1000,7 @@ static void viewCommandCenter()
 	localPlayer->iterateObjects(findCommandCenterOrMostExpensiveBuilding, &ccl);
 
 	if (ccl.atLeastOne) {
-		TheTacticalView->lookAt(&ccl.loc);
+		TheTacticalView->userLookAt(&ccl.loc);
 	} else {
 		// @todo. Find their starting position and look at that instead?
 	}
@@ -3044,7 +3044,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( temp );
 
 						// center on the unit
-						TheTacticalView->lookAt(temp->getPosition());
+						TheTacticalView->userLookAt(temp->getPosition());
 						break;
 					}
 				}
@@ -3105,7 +3105,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( newDrawable );
 
 						// center on the unit
-						TheTacticalView->lookAt(newDrawable->getPosition());
+						TheTacticalView->userLookAt(newDrawable->getPosition());
 					}
 				}
 			}
@@ -3150,7 +3150,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( temp );
 
 						// center on the unit
-						TheTacticalView->lookAt(temp->getPosition());
+						TheTacticalView->userLookAt(temp->getPosition());
 						break;
 					}
 				}
@@ -3221,7 +3221,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( newDrawable );
 
 						// center on the unit
-						TheTacticalView->lookAt(newDrawable->getPosition());
+						TheTacticalView->userLookAt(newDrawable->getPosition());
 					}
 				}
 			}
@@ -3273,7 +3273,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheAudio->addAudioEvent( &soundEvent );
 
 						// center on the unit
-						TheTacticalView->lookAt(temp->getPosition());
+						TheTacticalView->userLookAt(temp->getPosition());
 						break;
 					}
 				}
@@ -3332,7 +3332,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( newDrawable );
 
 						// center on the unit
-						TheTacticalView->lookAt(newDrawable->getPosition());
+						TheTacticalView->userLookAt(newDrawable->getPosition());
 					}
 				}
 			}
@@ -3377,7 +3377,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( temp );
 
 						// center on the unit
-						TheTacticalView->lookAt(temp->getPosition());
+						TheTacticalView->userLookAt(temp->getPosition());
 						break;
 					}
 				}
@@ -3449,7 +3449,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 						TheInGameUI->selectDrawable( newDrawable );
 
 						// center on the unit
-						TheTacticalView->lookAt(newDrawable->getPosition());
+						TheTacticalView->userLookAt(newDrawable->getPosition());
 					}
 				}
 			}
@@ -3499,7 +3499,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			TheInGameUI->selectDrawable( heroDraw );
 
 			// center on the unit
-			TheTacticalView->lookAt(heroDraw->getPosition());
+			TheTacticalView->userLookAt(heroDraw->getPosition());
 
 			disp = DESTROY_MESSAGE;
 			break;
@@ -3517,7 +3517,9 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			Coord3D lastEvent;
 
 			if( TheRadar->getLastEventLoc( &lastEvent ) )
-				TheTacticalView->lookAt( &lastEvent );
+			{
+				TheTacticalView->userLookAt( &lastEvent );
+			}
 
 			disp = DESTROY_MESSAGE;
 			break;
@@ -5274,8 +5276,8 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			{
 				d = nullptr;
 			}
-			TheTacticalView->setCameraLock(id);
-			TheTacticalView->setCameraLockDrawable(d);
+			TheTacticalView->userSetCameraLock(id);
+			TheTacticalView->userSetCameraLockDrawable(d);
 			disp = DESTROY_MESSAGE;
 			break;
 		}

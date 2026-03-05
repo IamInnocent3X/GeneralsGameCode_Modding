@@ -114,7 +114,6 @@ inline Int IABS(Int x) {	if (x>=0) return x; return -x;};
 //-----------------------------------------------------------------------------------
 static Int frameToShowObstacles;
 
-
 constexpr const UnsignedInt ZONE_UPDATE_FREQUENCY = 300;
 constexpr const UnsignedInt MAX_CELL_COUNT = 500;
 constexpr const UnsignedInt MAX_ADJUSTMENT_CELL_COUNT = 400;
@@ -2789,9 +2788,11 @@ void ZoneBlock::blockCalculateZones(PathfindCell **map, PathfindLayer layers[], 
 zoneStorageType ZoneBlock::getEffectiveZone( LocomotorSurfaceTypeMask acceptableSurfaces,
 																					 Bool crusher, zoneStorageType zone) const
 {
+#if !(RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING)
 	if (zone==PathfindZoneManager::UNINITIALIZED_ZONE) {
 		return zone;
 	}
+#endif
 
 	if (acceptableSurfaces&LOCOMOTORSURFACE_AIR) return 1; // air is all zone 1.
 
@@ -2981,14 +2982,17 @@ void PathfindZoneManager::reset()  ///< Called when the map is reset.
 }
 
 
-void PathfindZoneManager::markZonesDirty( Bool insert )  ///< Called when the zones need to be recalculated.
+void PathfindZoneManager::markZonesDirty()  ///< Called when the zones need to be recalculated.
 {
-
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+	m_nextFrameToCalculateZones = TheGameLogic->getFrame();
+#else
 	if (TheGameLogic->getFrame()<2) {
 		m_nextFrameToCalculateZones = 2;
 		return;
 	}
-    m_nextFrameToCalculateZones = MIN( m_nextFrameToCalculateZones, TheGameLogic->getFrame() + ZONE_UPDATE_FREQUENCY );
+	m_nextFrameToCalculateZones = MIN( m_nextFrameToCalculateZones, TheGameLogic->getFrame() + ZONE_UPDATE_FREQUENCY );
+#endif
 }
 
 /**
@@ -2998,21 +3002,14 @@ void PathfindZoneManager::markZonesDirty( Bool insert )  ///< Called when the zo
  * If you are a multiple terrain vehicle, like amphibious transport, the lookup is a little more
  * complicated.
  */
-
-#define dont_forceRefreshCalling
-#ifdef forceRefreshCalling
-static  Bool  s_stopForceCalling = FALSE;
-#endif
-
 void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer layers[], const IRegion2D &globalBounds )
 {
-
 #ifdef DEBUG_QPF
 #if defined(DEBUG_LOGGING)
 	__int64 startTime64;
 	static double timeToUpdate = 0.0f;
-  static double averageTimeToUpdate = 0.0f;
-  static Int updateSamples = 0;
+	static double averageTimeToUpdate = 0.0f;
+	static Int updateSamples = 0;
 	__int64 endTime64,freq64;
 	QueryPerformanceFrequency((LARGE_INTEGER *)&freq64);
 	QueryPerformanceCounter((LARGE_INTEGER *)&startTime64);
@@ -3047,6 +3044,12 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 			if (bounds.hi.y > globalBounds.hi.y) {
 				bounds.hi.y = globalBounds.hi.y;
 			}
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+			if (bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) {
+				DEBUG_CRASH(("Incorrect bounds calculation. Logic error, fix me. jba."));
+				continue;
+			}
+#endif
 			m_zoneBlocks[xBlock][yBlock].setInteractsWithBridge(false);
 			for( j=bounds.lo.y; j<=bounds.hi.y; j++ )	{
 				for( i=bounds.lo.x; i<=bounds.hi.x; i++ )	{
@@ -3066,6 +3069,12 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 					if (cell->getZone()==0) {
 						cell->setZone(m_maxZone);
 						m_maxZone++;
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+						if (m_maxZone>= maxZones) {
+							DEBUG_CRASH(("Ran out of pathfind zones.  SERIOUS ERROR! jba."));
+							break;
+						}
+#endif
 					}
 					if (cell->getConnectLayer() > LAYER_GROUND) {
  						m_zoneBlocks[xBlock][yBlock].setInteractsWithBridge(true);
@@ -3082,15 +3091,14 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 	m_maxZone = 1;
 	Int collapsedZones[maxZones];
 	collapsedZones[0] = 0;
-
 	for (i=1; i<totalZones; i++) {
-		Int zone = zoneEquivalency[ i ];
+		Int zone = zoneEquivalency[i];
 		if (zone == i) {
-			collapsedZones[ i ] = m_maxZone;
+			collapsedZones[i] = m_maxZone;
 			++m_maxZone;
+		} else {
+			collapsedZones[i] = collapsedZones[zone];
 		}
-		else
-			collapsedZones[ i ] = collapsedZones[zone];
 	}
 
 	// Now map the zones in the map back into the collapsed zones.
@@ -3137,7 +3145,12 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 
 			if (bounds.hi.y > globalBounds.hi.y)
 				bounds.hi.y = globalBounds.hi.y;
-
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+			if (bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) {
+				DEBUG_CRASH(("Incorrect bounds calculation. Logic error, fix me. jba."));
+				continue;
+			}
+#endif
 			m_zoneBlocks[xBlock][yBlock].blockCalculateZones(map, layers, bounds);
 		}
 	}
@@ -3165,8 +3178,29 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 			if ( i > globalBounds.lo.x && r_thisCell.getZone() != map[i-1][j].getZone() ) {
 				const PathfindCell &r_leftCell = map[i-1][j];
 
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+				if (r_thisCell.getType() == r_leftCell.getType()) {
+					applyZone(r_thisCell, r_leftCell, m_hierarchicalZones, m_maxZone);
+				}
+				if (waterGround(r_thisCell, r_leftCell)) {
+					applyZone(r_thisCell, r_leftCell, m_groundWaterZones, m_maxZone);
+				}
+				if (groundRubble(r_thisCell, r_leftCell)) {
+					applyZone(r_thisCell, r_leftCell, m_groundRubbleZones, m_maxZone);
+				}
+				if (groundCliff(r_thisCell, r_leftCell)) {
+					applyZone(r_thisCell, r_leftCell, m_groundCliffZones, m_maxZone);
+				}
+				if (terrain(r_thisCell, r_leftCell)) {
+					applyZone(r_thisCell, r_leftCell, m_terrainZones, m_maxZone);
+				}
+				if (crusherGround(r_thisCell, r_leftCell)) {
+					applyZone(r_thisCell, r_leftCell, m_crusherZones, m_maxZone);
+				}
+#else
+				//if this is true, skip all the ones below
 				if (r_thisCell.getType() == r_leftCell.getType())
-					applyZone(r_thisCell, r_leftCell, m_hierarchicalZones, m_maxZone);//if this is true, skip all the ones below
+					applyZone(r_thisCell, r_leftCell, m_hierarchicalZones, m_maxZone);
 				else {
 					Bool notTerrainOrCrusher = TRUE; // if this is false, skip the if-else-ladder below
 
@@ -3190,12 +3224,34 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 					}
 
 				}
+#endif
 
 			}
 
 			if (j>globalBounds.lo.y && r_thisCell.getZone()!=map[i][j-1].getZone()) {
 				const PathfindCell &r_topCell = map[i][j-1];
 
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+				if (r_thisCell.getType() == r_topCell.getType()) {
+					applyZone(r_thisCell, r_topCell, m_hierarchicalZones, m_maxZone);
+				}
+				if (waterGround(r_thisCell, r_topCell)) {
+					applyZone(r_thisCell, r_topCell, m_groundWaterZones, m_maxZone);
+				}
+				if (groundRubble(r_thisCell, r_topCell)) {
+					applyZone(r_thisCell, r_topCell, m_groundRubbleZones, m_maxZone);
+				}
+				if (groundCliff(r_thisCell, r_topCell)) {
+					applyZone(r_thisCell, r_topCell, m_groundCliffZones, m_maxZone);
+				}
+				if (terrain(r_thisCell, r_topCell)) {
+					applyZone(r_thisCell, r_topCell, m_terrainZones, m_maxZone);
+				}
+				if (crusherGround(r_thisCell, r_topCell)) {
+					applyZone(r_thisCell, r_topCell, m_crusherZones, m_maxZone);
+				}
+#else
+				//if this is true, skip all the ones below
 				if (r_thisCell.getType() == r_topCell.getType())
 					applyZone(r_thisCell, r_topCell, m_hierarchicalZones, m_maxZone);
 				else {
@@ -3221,6 +3277,7 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 					}
 
 				}
+#endif
 
 			}
 
@@ -3254,9 +3311,6 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 		DEBUG_LOG((" =============DONE============= Average time to calculate zones: %f", averageTimeToUpdate));
 		DEBUG_LOG(("                                           Percent of baseline : %f", averageTimeToUpdate/0.003335f));
 		updateSamples = 777;
-#ifdef forceRefreshCalling
-		s_stopForceCalling = TRUE;
-#endif
 	}
 
 #endif
@@ -3570,7 +3624,11 @@ zoneStorageType PathfindZoneManager::getBlockZone(LocomotorSurfaceTypeMask accep
 		return 0;
 	}
 	zoneStorageType zone =  m_zoneBlocks[blockX][blockY].getEffectiveZone(acceptableSurfaces, crusher, cell->getZone());
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+	if (zone > m_maxZone) {
+#else
 	if (zone >= m_maxZone) {
+#endif
 		DEBUG_CRASH(("Invalid zone."));
 		return UNINITIALIZED_ZONE;
 	}
@@ -4549,7 +4607,7 @@ void Pathfinder::classifyFence( Object *obj, Bool insert )
  		}
  	}
 	if (didAnything) {
-		m_zoneManager.markZonesDirty( insert );
+		m_zoneManager.markZonesDirty();
 		m_zoneManager.updateZonesForModify(m_map, m_layers, cellBounds, m_extent);
 	}
 }
@@ -4653,7 +4711,7 @@ void Pathfinder::internal_classifyObjectFootprint( Object *obj, Bool insert )
 	{
 		case GEOMETRY_BOX:
 		{
-			m_zoneManager.markZonesDirty( insert );
+			m_zoneManager.markZonesDirty();
 
 			Real angle = obj->getOrientation();
 
@@ -4712,7 +4770,7 @@ void Pathfinder::internal_classifyObjectFootprint( Object *obj, Bool insert )
 		case GEOMETRY_SPHERE:	// not quite right, but close enough
 		case GEOMETRY_CYLINDER:
 		{
-			m_zoneManager.markZonesDirty( insert );
+			m_zoneManager.markZonesDirty();
 			// fill in all cells that overlap as obstacle cells
 			/// @todo This is a very inefficient circle-rasterizer
 			ICoord2D topLeft, bottomRight;
@@ -6351,13 +6409,7 @@ void Pathfinder::processPathfindQueue()
 #endif
 #endif
 
-	if (
-#ifdef forceRefreshCalling
-#pragma message("AHHHH!, forced calls to pathzonerefresh still in code...  notify M Lorenzen")
-    s_stopForceCalling==FALSE ||
-#endif
-    m_zoneManager.needToCalculateZones())
-  {
+	if (m_zoneManager.needToCalculateZones()) {
 		m_zoneManager.calculateZones(m_map, m_layers, m_extent);
 		return;
 	}
@@ -8993,27 +9045,37 @@ struct TightenPathStruct
 	PathfindLayerEnum layer;
 	Int		radius;
 	Bool	center;
-	Bool	foundDest;
-	Coord3D destPos;
+	Bool	foundNewDest;
+	Coord3D orgDestPos;
+	Coord3D newDestPos;
 };
 
 
 /*static*/ Int Pathfinder::tightenPathCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData)
 {
 	TightenPathStruct* d = (TightenPathStruct*)userData;
-	if (from == nullptr || to==nullptr) return 0;
+	if (from == nullptr || to==nullptr) return 0; // failure
 	if (d->layer != to->getLayer()) {
-		return 0; // abort.
+		return 0; // failure
 	}
-	Coord3D pos;
+
+#if RETAIL_COMPATIBLE_CRC
+	// TheSuperHackers @bugfix Caball009 27/02/2026 This was originally uninitialized.
+	// The uninitialized values that retail uses here are usually close to zero as long as foundNewDest == false, otherwise it uses the new values of newDestPos.
+	// newDestPos is zero initialized by the caller, so there is no need to check foundNewDest here.
+	Coord3D pos = d->newDestPos;
+#else
+	Coord3D pos = d->orgDestPos;
+#endif
+
 	if (!TheAI->pathfinder()->checkForAdjust(d->obj, *d->locomotorSet, true, to_x, to_y, to->getLayer(), d->radius, d->center, &pos, nullptr))
 	{
-		return 0;	// bail early
+		return 0; // failure
 	}
-	d->foundDest = true;
-	d->destPos = pos;
+	d->foundNewDest = true;
+	d->newDestPos = pos;
 
-	return 0;	// keep going
+	return 0; // success but continue
 }
 
 /* Returns the cost, which is in the same units as coord3d distance. */
@@ -9026,10 +9088,14 @@ void Pathfinder::tightenPath(Object *obj, const LocomotorSet& locomotorSet, Coor
 	info.layer = TheTerrainLogic->getLayerForDestination(from);
 	info.obj = obj;
 	info.locomotorSet = &locomotorSet;
-	info.foundDest = false;
+	info.foundNewDest = false;
+	info.orgDestPos = *to;
+#if RETAIL_COMPATIBLE_CRC
+	info.newDestPos.zero();
+#endif
 	iterateCellsAlongLine(*from, *to, info.layer, tightenPathCallback, &info);
-	if (info.foundDest) {
-		*from = info.destPos;
+	if (info.foundNewDest) {
+		*from = info.newDestPos;
 	}
 }
 
@@ -10468,7 +10534,7 @@ void Pathfinder::changeBridgeState( PathfindLayerEnum layer, Bool repaired)
 {
 	if (m_layers[layer].isUnused()) return;
 	if (m_layers[layer].setDestroyed(!repaired)) {
-		m_zoneManager.markZonesDirty( repaired );
+		m_zoneManager.markZonesDirty();
 	}
 }
 
