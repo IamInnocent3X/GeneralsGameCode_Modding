@@ -1784,6 +1784,7 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_whichAnimInCurState = -1;
 	m_nextState = nullptr;
 	m_needUpdateTurretPosition = TRUE;
+	m_lastNeedUpdateTurretPosition = TRUE;
 	m_canDoFXWhileHidden = FALSE;
 	m_doHandleRecoil = TRUE;
 	m_lastDoHandleRecoil = FALSE;
@@ -2496,8 +2497,14 @@ void W3DModelDraw::stopClientParticleSystems()
 void W3DModelDraw::handleClientTurretPositioning()
 {
 
-	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID) || !m_needUpdateTurretPosition)
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
 		return;
+
+	// Fix turret snapping its position when moved away from Camera on Client's side
+	if(!m_needUpdateTurretPosition && !m_lastNeedUpdateTurretPosition)
+		return;
+
+	m_lastNeedUpdateTurretPosition = m_needUpdateTurretPosition;
 
 	for (int tslot = 0; tslot < MAX_TURRETS; ++tslot)
 	{
