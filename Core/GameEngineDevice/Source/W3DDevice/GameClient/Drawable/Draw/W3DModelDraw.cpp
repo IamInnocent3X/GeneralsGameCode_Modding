@@ -1787,7 +1787,6 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_lastNeedUpdateTurretPosition = TRUE;
 	m_canDoFXWhileHidden = FALSE;
 	m_doHandleRecoil = TRUE;
-	m_lastDoHandleRecoil = FALSE;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
 	for (i = 0; i < WEAPONSLOT_COUNT; ++i)
 	{
@@ -1795,6 +1794,8 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	}
 	m_needRecalcBoneParticleSystems = false;
 	m_fullyObscuredByShroud = false;
+	m_needUpdateTurretPosition = true;
+	m_doHandleRecoil = true;
 
 	// only validate the current time-of-day and weather conditions by default.
 	getW3DModelDrawModuleData()->validateStuffForTimeAndWeather(getDrawable(),
@@ -2496,15 +2497,8 @@ void W3DModelDraw::stopClientParticleSystems()
 */
 void W3DModelDraw::handleClientTurretPositioning()
 {
-
-	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID) || !m_needUpdateTurretPosition)
 		return;
-
-	// Fix turret snapping its position when moved away from Camera on Client's side
-	if(!m_needUpdateTurretPosition && !m_lastNeedUpdateTurretPosition)
-		return;
-
-	m_lastNeedUpdateTurretPosition = m_needUpdateTurretPosition;
 
 	for (int tslot = 0; tslot < MAX_TURRETS; ++tslot)
 	{

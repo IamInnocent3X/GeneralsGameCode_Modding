@@ -529,9 +529,7 @@ private:
 
 	Bool													m_canDoFXWhileHidden;
 	Bool													m_needUpdateTurretPosition;
-	Bool													m_lastNeedUpdateTurretPosition;
 	Bool													m_doHandleRecoil;
-	Bool													m_lastDoHandleRecoil;
 
 	void adjustAnimation(const ModelConditionInfo* prevState, Real prevAnimFraction);
 	Real getCurrentAnimFraction() const;
