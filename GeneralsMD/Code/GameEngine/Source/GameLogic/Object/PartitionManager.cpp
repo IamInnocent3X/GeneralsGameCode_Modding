@@ -680,10 +680,9 @@ static void testSphereAgainstRect(
 	Real &distSqr
 )
 {
-	// Get two points that are closest to the facing direction
+	// Get three points that are closest to the facing direction
 	//DEBUG_LOG(("Source Points: x: %f y: %f", a_pos->x, a_pos->y));
-	//Real dx1, dx2, dy1, dy2;
-	//x1 = x2 = y1 = y2 = 0.0f;
+
 	Real minDist, secondMinDist, thirdMinDist;
 	Int minIdx, secondMinIdx, thirdMinIdx;
 	minDist = secondMinDist = thirdMinDist = HUGE_DIST_SQR;
@@ -719,7 +718,7 @@ static void testSphereAgainstRect(
 	// To get accurate readings for the boundaries, the third min Index must be obtained
 	for (i = 0; i < 4; ++i)
 	{
-		if( i == minIdx || i == secondMinIdx || secondMinDist >= dDistSqr[i] )
+		if( i == minIdx || i == secondMinIdx )
 			continue;
 
 		if( thirdMinDist > dDistSqr[i] )
@@ -742,7 +741,7 @@ static void testSphereAgainstRect(
 		polarity_dy == polarity_dy2 && polarity_dy == polarity_dy3 )
 	{
 		// Same directional vector, so get the closest distance from a point.
-		distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+		distSqr = dDistSqr[minIdx];
 		return;
 	}
 
@@ -760,12 +759,8 @@ static void testSphereAgainstRect(
 	if( fabs(relAngle_21) < fabs(relAngle_31) )
 	{
 		//DEBUG_LOG(("Third Min Index - %d replaced Second Min Index - %d.", thirdMinIdx, secondMinIdx));
-		//secondMinDist = thirdMinDist;
 		secondMinIdx = thirdMinIdx;
 	}
-
-	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
-	//DEBUG_LOG(("Min Dist: %f Second Min Dist: %f", minDist, secondMinDist));
 
 	// Get the "reflected" points of pos B, if the points have higher distance than the current points, that means the current points are within boundary
 	Real other_x1 = pts[minIdx].x - b_pos->x;
@@ -774,6 +769,10 @@ static void testSphereAgainstRect(
 	Real new_bpos_y = pts[secondMinIdx].y + other_y1;
 	//Real new_bpos_x = pts[minIdx].x <= pts[secondMinIdx].x ? pts[secondMinIdx].x + other_y1 : pts[secondMinIdx].x - other_y1;
 	//Real new_bpos_y = pts[minIdx].y <= pts[secondMinIdx].y ? pts[secondMinIdx].y + other_x1 : pts[secondMinIdx].y - other_x1;
+
+	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
+	//DEBUG_LOG(("Min Dist: %f Second Min Dist: %f", minDist, secondMinDist));
+
 	Real other_distSqr = sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y);
 
 	//DEBUG_LOG(("Pos B - X: %f Y: %f", b_pos->x, b_pos->y));
@@ -782,7 +781,7 @@ static void testSphereAgainstRect(
 	//DEBUG_LOG(("New Pos B - X: %f Y: %f", new_bpos_x, new_bpos_y));
 	//DEBUG_LOG(("curDistSqr: %f. other distSqr: %f.", curDistSqr, other_distSqr));
 
-	if( curDistSqr < other_distSqr ) //sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y) )
+	if( curDistSqr < other_distSqr )
 	{
 		// The points are within the boundary, set the distance to 0
 		distSqr = 0.0f;
