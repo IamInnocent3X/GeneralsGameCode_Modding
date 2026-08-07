@@ -747,8 +747,11 @@ void WbView3d::setupCamera()
 	if (m_heightMapRenderObj) {
 		m_heightMapRenderObj->setDrawEntireMap(m_showEntireMap);
 	}
-// not needed, handled in OnSize
-//	m_camera->Set_Aspect_Ratio((float)m_actualWinSize.x/(float)m_actualWinSize.y);
+	// Keep the projection matched to the current render resolution so the scene
+	// isn't distorted at non-4:3 window sizes (dynamic resolution scaling).
+	if (m_actualWinSize.y > 0) {
+		m_camera->Set_Aspect_Ratio((float)m_actualWinSize.x/(float)m_actualWinSize.y);
+	}
 }
 
 // ----------------------------------------------------------------------------
