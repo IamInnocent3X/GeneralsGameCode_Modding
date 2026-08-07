@@ -408,6 +408,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/PoisonedBehavior.h
     Include/GameLogic/Module/PowerPlantUpdate.h
     Include/GameLogic/Module/PowerPlantUpgrade.h
+    Include/GameLogic/Module/PropagateUpgradeToContainedUpgrade.h
     Include/GameLogic/Module/POWTruckAIUpdate.h
     Include/GameLogic/Module/POWTruckBehavior.h
     Include/GameLogic/Module/PreorderCreate.h
@@ -1153,6 +1154,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Upgrade/ObjectCreationUpgrade.cpp
     Source/GameLogic/Object/Upgrade/PassengersFireUpgrade.cpp
     Source/GameLogic/Object/Upgrade/PowerPlantUpgrade.cpp
+    Source/GameLogic/Object/Upgrade/PropagateUpgradeToContainedUpgrade.cpp
     Source/GameLogic/Object/Upgrade/RadarUpgrade.cpp
     Source/GameLogic/Object/Upgrade/ReplaceObjectUpgrade.cpp
     Source/GameLogic/Object/Upgrade/StatusBitsUpgrade.cpp

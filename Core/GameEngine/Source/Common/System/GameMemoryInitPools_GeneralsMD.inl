@@ -366,6 +366,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "StealthUpdate", 512, 128 },
 	{ "StealthUpgrade", 256, 32 },
 	{ "StatusBitsUpgrade", 128, 128 },
+	{ "PropagateUpgradeToContainedUpgrade", 32, 32 },
 	{ "SubObjectsUpgrade", 128, 128 },
 	{ "ExperienceScalarUpgrade", 256, 128 },
 	{ "MaxHealthUpgrade", 128, 128 },

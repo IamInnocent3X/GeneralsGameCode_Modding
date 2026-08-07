@@ -232,6 +232,7 @@
 #include "GameLogic/Module/ObjectCreationUpgrade.h"
 #include "GameLogic/Module/RadarUpgrade.h"
 #include "GameLogic/Module/PowerPlantUpgrade.h"
+#include "GameLogic/Module/PropagateUpgradeToContainedUpgrade.h"
 #include "GameLogic/Module/ReplaceObjectUpgrade.h"
 #include "GameLogic/Module/ModelConditionUpgrade.h"
 #include "GameLogic/Module/StatusBitsUpgrade.h"
@@ -553,6 +554,7 @@ void ModuleFactory::init( void )
 	addModule( StealthUpgrade );
 	addModule( RadarUpgrade );
 	addModule( PowerPlantUpgrade );
+	addModule( PropagateUpgradeToContainedUpgrade );
 	addModule( LocomotorSetUpgrade );
 	addModule( ObjectCreationUpgrade );
 	addModule( ReplaceObjectUpgrade );
