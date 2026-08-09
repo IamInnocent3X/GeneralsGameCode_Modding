@@ -48,6 +48,7 @@
 //-------------------------------------------------------------------------------------------------
 W3DDecalDrawModuleData::W3DDecalDrawModuleData()
 {
+	m_renderAboveWater = FALSE;	// default: below water (shadow-like)
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -69,6 +70,7 @@ void W3DDecalDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "FadeInTime", INI::parseDurationUnsignedInt, nullptr, offsetof(W3DDecalDrawModuleData, m_fadeInTime) },
 		{ "SizeX", INI::parseReal, nullptr, offsetof(W3DDecalDrawModuleData, m_decalSizeX) },
 		{ "SizeY", INI::parseReal, nullptr, offsetof(W3DDecalDrawModuleData, m_decalSizeY) },
+		{ "RenderAboveWater", INI::parseBool, nullptr, offsetof(W3DDecalDrawModuleData, m_renderAboveWater) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
@@ -128,6 +130,7 @@ void W3DDecalDraw::init_shadow()
 	shadowInfo.m_sizeY = data->m_decalSizeY;
 	shadowInfo.m_offsetX = 0.0f; // TODO
 	shadowInfo.m_offsetY = 0.0f; // TODO
+	shadowInfo.m_waterRenderMode = data->m_renderAboveWater ? SHADOW_WATER_ABOVE : SHADOW_WATER_BELOW;
 	//shadowInfo.m_hasDynamicLength = FALSE;
 
 	DEBUG_ASSERTCRASH(m_shadow == nullptr, ("m_shadow is not null"));

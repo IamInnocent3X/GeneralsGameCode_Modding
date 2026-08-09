@@ -809,6 +809,21 @@ void testShadowDecal(void)
 */
 
 #define BRIDGE_OFFSET_FACTOR 1.5f
+
+// Resolve a decal's effective "draw above water" choice. Per-decal mode wins; DEFAULT follows the
+// global RadiusDecalsAboveWater flag. Used to split m_decalList between the pre-water and post-water passes.
+static Bool decalDrawsAboveWater(const Shadow *shadow)
+{
+	if (shadow == nullptr)
+		return FALSE;
+	switch (shadow->getWaterRenderMode())
+	{
+		case SHADOW_WATER_ABOVE: return TRUE;
+		case SHADOW_WATER_BELOW: return FALSE;
+		default:                 return TheGlobalData->m_radiusDecalsAboveWater;
+	}
+}
+
 /**Decals have a low poly count so its better to render large numbers at once.  This system will queue them
 up until the buffers fill up.  It will then flush the buffer (draw decals) and be ready for new decals.  This
 is an optimized system that only uses the render objects bounding box to determine shadow visibility.
@@ -1054,7 +1069,7 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 						hmapVertex.X=(float)(i-borderSize)*MAP_XY_FACTOR;
 						hmapVertex.Z=__max((float)hmap->getHeight(i,j)*MAP_HEIGHT_SCALE,layerHeight);
 
-						if ((TheGlobalData->m_heightAboveTerrainIncludesWater || TheGlobalData->m_radiusDecalsAboveWater) && TheTerrainLogic != nullptr) {
+						if ((TheGlobalData->m_heightAboveTerrainIncludesWater || decalDrawsAboveWater(shadow)) && TheTerrainLogic != nullptr) {
 							if (Real waterZ = 0; TheTerrainLogic->isUnderwater(hmapVertex.X, hmapVertex.Y, &waterZ)) {
 								if (waterZ > hmapVertex.Z) hmapVertex.Z = waterZ;
 							}
@@ -1080,7 +1095,7 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 					hmapVertex.X=(float)(i-borderSize)*MAP_XY_FACTOR;
 					hmapVertex.Z=(float)hmap->getHeight(i,j)*MAP_HEIGHT_SCALE+0.01f * MAP_XY_FACTOR;
 
-					if ((TheGlobalData->m_heightAboveTerrainIncludesWater || TheGlobalData->m_radiusDecalsAboveWater) && TheTerrainLogic != nullptr) {
+					if ((TheGlobalData->m_heightAboveTerrainIncludesWater || decalDrawsAboveWater(shadow)) && TheTerrainLogic != nullptr) {
 						if (Real waterZ = 0; TheTerrainLogic->isUnderwater(hmapVertex.X, hmapVertex.Y, &waterZ)) {
 							if (waterZ > hmapVertex.Z) hmapVertex.Z = waterZ;
 						}
@@ -1458,20 +1473,19 @@ Int W3DProjectedShadowManager::renderShadows(RenderInfoClass & rinfo)
 		flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
 		TheDX8MeshRenderer.Flush();	//draw all the shadow receiving objects
 	}
-	// Radius decals (the m_decalList) are normally drawn here, before water. When
-	// TheGlobalData->m_radiusDecalsAboveWater is set they are instead drawn later (after the
-	// water pass) by a separate renderDecals() call from RTS3DScene::Flush, so they appear over water.
-	if (!TheGlobalData->m_radiusDecalsAboveWater)
-		projectionCount += renderDecals(rinfo);
+	// Draw the below-water subset of the decal list here (before water). The above-water subset is
+	// drawn later, after the water pass, by a second renderDecals() call from RTS3DScene::Flush.
+	projectionCount += renderDecals(rinfo, false);
 
 	return projectionCount;
 }
 
 //-------------------------------------------------------------------------------------------------
-/** Draw just the radius-decal list (m_decalList). Split out of renderShadows so it can optionally
-	be drawn after the water pass (see TheGlobalData->m_radiusDecalsAboveWater). */
+/** Draw the decal list (m_decalList), limited to decals whose effective water ordering matches
+	aboveWaterPass. Called once before water (aboveWaterPass=false) and once after (true), so decals
+	can be ordered above or below water per-decal. */
 //-------------------------------------------------------------------------------------------------
-Int W3DProjectedShadowManager::renderDecals(RenderInfoClass & rinfo)
+Int W3DProjectedShadowManager::renderDecals(RenderInfoClass & rinfo, Bool aboveWaterPass)
 {
 	Int projectionCount=0;
 
@@ -1494,6 +1508,10 @@ Int W3DProjectedShadowManager::renderDecals(RenderInfoClass & rinfo)
 
 	for( shadow = m_decalList; shadow; shadow = shadow->m_next )
 	{
+		// only draw the decals belonging to this pass (above vs below water)
+		if (decalDrawsAboveWater(shadow) != aboveWaterPass)
+			continue;
+
 		if (shadow->m_isEnabled && !shadow->m_isInvisibleEnabled)
 		{
 			if (lastShadowDecalTexture == nullptr)
@@ -1582,6 +1600,7 @@ Shadow* W3DProjectedShadowManager::addDecal(Shadow::ShadowTypeInfo *shadowInfo)
 	shadow->setTexture(0,st);	///@todo: Fix projected shadows to allow multiple lights
 	shadow->m_type = shadowType;		/// type of projection
 	shadow->m_allowWorldAlign=allowWorldAlign;	/// wrap shadow around world geometry - else align perpendicular to local z-axis.
+	shadow->setWaterRenderMode(shadowInfo->m_waterRenderMode);
 
 	shadow->m_oowDecalSizeX = 1.0f/decalSizeX;	//one over width
 	shadow->m_oowDecalSizeY = 1.0f/decalSizeY;	//one over height
@@ -1689,6 +1708,7 @@ Shadow* W3DProjectedShadowManager::addDecal(RenderObjClass *robj, Shadow::Shadow
 	shadow->setTexture(0,st);	///@todo: Fix projected shadows to allow multiple lights
 	shadow->m_type = shadowType;		/// type of projection
 	shadow->m_allowWorldAlign=allowWorldAlign;	/// wrap shadow around world geometry - else align perpendicular to local z-axis.
+	shadow->setWaterRenderMode(shadowInfo->m_waterRenderMode);
 
 	AABoxClass box;
 

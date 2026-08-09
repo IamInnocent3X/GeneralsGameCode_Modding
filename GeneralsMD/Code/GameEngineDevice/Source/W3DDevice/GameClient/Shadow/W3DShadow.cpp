@@ -106,7 +106,7 @@ void DoShadows(RenderInfoClass & rinfo, Bool stencilPass)
 void DoDecals(RenderInfoClass & rinfo)
 {
 	if (TheW3DProjectedShadowManager)
-		TheW3DProjectedShadowManager->renderDecals(rinfo);
+		TheW3DProjectedShadowManager->renderDecals(rinfo, true);	//above-water subset
 }
 
 W3DShadowManager::W3DShadowManager( void )

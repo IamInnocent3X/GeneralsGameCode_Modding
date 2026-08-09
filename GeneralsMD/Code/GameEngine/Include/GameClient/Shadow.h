@@ -62,6 +62,14 @@ static const char* const TheShadowNames[] =
 
 #define MAX_SHADOW_LIGHTS 1	//maximum number of shadow casting light sources in scene - support for more than 1 has been dropped from most code.
 
+// Per-decal ordering relative to water (evaluated only by the Zero Hour render path; inert in base Generals).
+enum ShadowWaterMode
+{
+	SHADOW_WATER_DEFAULT = 0,	//follow the global RadiusDecalsAboveWater flag
+	SHADOW_WATER_ABOVE,			//always draw above water
+	SHADOW_WATER_BELOW			//always draw below water (shadow-like)
+};
+
 class RenderObjClass; //forward reference
 class RenderCost;	//forward reference
 
@@ -84,6 +92,7 @@ public:
 						m_offsetX = 0.0f;
 						m_offsetY = 0.0f;
 						m_hasDynamicLength = false;
+						m_waterRenderMode = SHADOW_WATER_DEFAULT;
 				}
 
 				char	m_ShadowName[64];	//when set, overrides the default model shadow (used mostly for Decals).
@@ -95,9 +104,13 @@ public:
 				Real	m_offsetX;			//world shift along x axis
 				Real	m_offsetY;			//world shift along y axis
 				Bool  m_hasDynamicLength;   ///< determines shadow angle based on object height
+				Int		m_waterRenderMode;	//ShadowWaterMode: above/below/default water ordering
 		};
 
-		Shadow(void) : m_diffuse(0xffffffff), m_color(0xffffffff), m_opacity (0x000000ff), m_localAngle(0.0f) {}
+		Shadow(void) : m_diffuse(0xffffffff), m_color(0xffffffff), m_opacity (0x000000ff), m_localAngle(0.0f), m_waterRenderMode(SHADOW_WATER_DEFAULT) {}
+
+		void setWaterRenderMode(Int mode) { m_waterRenderMode = mode; }
+		Int  getWaterRenderMode(void) const { return m_waterRenderMode; }
 
 		///<if this is set, then no render will occur, even if enableShadowRender() is enabled. Used by Shroud.
 		void enableShadowInvisible(Bool isEnabled);
@@ -148,6 +161,7 @@ protected:
 		Real	m_decalSizeY;		/// 1/(world space extent of texture in y direction)
 		Real	m_localAngle;		/// yaw or rotation around z-axis of shadow image when not bound to robj/drawable.
 		Bool  m_hasDynamicLength;  ///< determines shadow angle based on object height
+		Int		m_waterRenderMode;	/// ShadowWaterMode: chooses above/below/default water ordering (Zero Hour only).
 };
 
 
