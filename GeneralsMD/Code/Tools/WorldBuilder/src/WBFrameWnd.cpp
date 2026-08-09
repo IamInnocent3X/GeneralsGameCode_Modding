@@ -120,7 +120,8 @@ BOOL CWB3dFrameWnd::LoadFrame(UINT nIDResource,
 				DWORD dwDefaultStyle,
 				CWnd* pParentWnd,
 				CCreateContext* pContext) {
-	dwDefaultStyle &= ~(WS_SIZEBOX);
+	// Keep WS_SIZEBOX so the render window can be drag-resized; a debounced
+	// handler (CMainFrame::OnSize) rescales the render resolution to fit.
 
 	BOOL ret = CMainFrame::LoadFrame(nIDResource, dwDefaultStyle, CMainFrame::GetMainFrame(), pContext);
 	return(ret);

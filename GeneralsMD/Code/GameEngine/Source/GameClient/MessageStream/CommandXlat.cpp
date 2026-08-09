@@ -57,6 +57,7 @@
 #include "GameClient/CommandXlat.h"
 #include "GameClient/DebugDisplay.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/Keyboard.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/GameText.h"
@@ -1386,6 +1387,59 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 
 		}
 	}
+	else if( BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) )
+	{
+		//N LOCATION BASED SPECIAL (chronosphere = 2; count set by NumberOfTargets)
+		msgType = GameMessage::MSG_DO_SPECIAL_POWER_AT_MULTIPLE_LOCATIONS;
+		if( commandType == DO_COMMAND )
+		{
+			const SpecialPowerTargetRadiusMode radiusMode = command->getTargetRadiusMode();
+
+			// RADIUS_ANCHORED_AREA: the very first click is an anchor that only defines the constraint
+			// area; it is captured but never delivered as a target.
+			if( radiusMode == SPTRM_ANCHORED_AREA && !TheInGameUI->hasSpecialPowerAreaAnchor() )
+			{
+				TheInGameUI->setSpecialPowerAreaAnchor( pos );
+				msgType = GameMessage::MSG_INVALID;
+			}
+			else
+			{
+				// Clamp the pick into the active constraint area (anchor / first / previous target), then
+				// always accept it - out-of-area picks land on the boundary instead of being rejected.
+				Coord3D tpos = *pos;
+				TheInGameUI->clampToSpecialPowerTargetArea( command, tpos );
+
+				{
+					TheInGameUI->addPendingSpecialPowerLocation( &tpos );
+
+					if( TheInGameUI->getPendingSpecialPowerLocationCount() < command->getNumberOfTargets() )
+					{
+						// Still collecting points - commit nothing yet, stay pending.
+						msgType = GameMessage::MSG_INVALID;
+					}
+					else
+					{
+						// Final click: emit ONE deterministic message carrying all target points (the
+						// anchor, if any, is not sent).
+						const std::vector<Coord3D>& targets = TheInGameUI->getPendingSpecialPowerLocations();
+						GameMessage *msg = TheMessageStream->appendMessage( msgType );
+						msg->appendIntegerArgument( command->getSpecialPowerTemplate()->getID() );
+						msg->appendIntegerArgument( (Int)targets.size() );
+						for( std::vector<Coord3D>::const_iterator it = targets.begin(); it != targets.end(); ++it )
+							msg->appendLocationArgument( *it );
+						msg->appendIntegerArgument( command->getOptions() );
+						msg->appendObjectIDArgument( specificSource );
+						TheInGameUI->clearPendingSpecialPowerLocations();
+
+						PickAndPlayInfo info;
+						info.m_drawTarget = target;
+						info.m_specialPowerType = command->getSpecialPowerTemplate()->getSpecialPowerType();
+						pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), msgType, &info );
+					}
+				}
+			}
+		}
+	}
 	else if( BitIsSet( command->getOptions(), NEED_TARGET_POS ) )
 	{
 		//LOCATION BASED SPECIAL
@@ -1448,7 +1502,12 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 		}
 	}
 
-	if( command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && commandType == DO_COMMAND )
+	// N-point (chronosphere) powers commit atomically on the final click and don't use the
+	// fire-then-steer overridable-destination model, so skip the shortcut auto-select/steer block -
+	// it would deselect/select the firing object, which clears the pending point state and
+	// makes the remaining clicks impossible.
+	if( command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && commandType == DO_COMMAND
+			&& !BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) )
 	{
 		Object *obj = sourceDraw->getObject();
 		SpecialPowerUpdateInterface *spUpdate = obj->findSpecialPowerWithOverridableDestination();
@@ -1717,6 +1776,38 @@ GameMessage::Type CommandTranslator::createEnterMessageWithOrderRadius( Drawable
 
 }
 
+//-------------------------------------------------------------------------------------------------
+GameMessage::Type CommandTranslator::createSmartGarrisonMessage( Drawable *target,
+																																 CommandEvaluateType commandType )
+{
+	GameMessage::Type msgType = GameMessage::MSG_DO_SMART_GARRISON;
+
+	// if we're just evaluating then get out of here without actually doing the action
+	if( commandType == EVALUATE_ONLY )
+		return msgType;
+
+	if (!target || !target->getObject())
+		return msgType;
+
+	// sanity
+	DEBUG_ASSERTCRASH( commandType == DO_COMMAND, ("createSmartGarrisonMessage - commandType is not DO_COMMAND") );
+
+	if( m_teamExists )
+	{
+		PickAndPlayInfo info;
+		info.m_drawTarget = target;
+		// reuse the normal "enter" voice response
+		pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER, &info );
+
+		GameMessage *msg = TheMessageStream->appendMessage( msgType );
+		msg->appendObjectIDArgument( target->getObject()->getID() );
+	}
+
+	// return the type of the message used
+	return msgType;
+
+}
+
 //====================================================================================
 CommandTranslator::CommandTranslator() :
 	m_objective(0),
@@ -1858,6 +1949,7 @@ static Bool checkIsNotSelectable(Drawable* drawable)
 GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 																														 const Coord3D *pos,
 																														 CommandEvaluateType type,
+																														 Int modifiers,
 																														 Bool AdditionalCheck )
 {
 	Object *obj = draw ? draw->getObject() : nullptr;
@@ -1920,6 +2012,23 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 			|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT))
 	{
 		GameMessage *hintMessage;
+
+		// Smart Garrison: holding ALT while hovering a transport the selection can enter overrides
+		// waypoint mode and distributes the units across the target plus nearby transports.
+		if( draw && obj && BitIsSet( modifiers, KEY_STATE_ALT )
+				&& TheInGameUI->canSelectedObjectsDoAction( InGameUI::ACTIONTYPE_ENTER_OBJECT, obj, InGameUI::SELECTION_ANY, true ) )
+		{
+			if( type == DO_COMMAND || type == EVALUATE_ONLY )
+			{
+				msgType = createSmartGarrisonMessage( draw, type );
+			}
+			else
+			{
+				msgType = GameMessage::MSG_SMART_GARRISON_HINT;
+				TheMessageStream->appendMessage( msgType );
+			}
+			return msgType;
+		}
 
 		if( TheInGameUI->isInWaypointMode() )
 		{
@@ -2080,8 +2189,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 							break;
 					}
 
-					// null out the GUI command if we're actually doing something
-					if( type == DO_COMMAND )
+					// null out the GUI command if we're actually doing something.
+					// Exception: an N-point (chronosphere) power keeps the command pending between
+					// clicks so the remaining clicks (or a right-click cancel) can still be handled.
+					if( type == DO_COMMAND && !TheInGameUI->hasPendingSpecialPowerLocations() )
 					{
 						TheInGameUI->setGUICommand( nullptr );
 
@@ -3702,7 +3813,9 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 		//-----------------------------------------------------------------------------------------
 		case GameMessage::MSG_META_CHAT_ALLIES:
-			if (TheGameLogic->isInMultiplayerGame() && !TheGameLogic->isInReplayGame())
+			// Chat is available in multiplayer, and in singleplayer/skirmish only when EnableSingleplayerChatwindow is set (for chat commands).
+			if (TheGameLogic->isInInteractiveGame() && !TheGameLogic->isInReplayGame()
+				&& (TheGameLogic->isInMultiplayerGame() || TheGlobalData->m_enableSingleplayerChatWindow))
 			{
 				Player *localPlayer = ThePlayerList->getLocalPlayer();
 				if ((localPlayer && localPlayer->isPlayerActive()) || !TheGlobalData->m_netMinPlayers)
@@ -3716,7 +3829,9 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 		//-----------------------------------------------------------------------------------------
 		case GameMessage::MSG_META_CHAT_EVERYONE:
-			if (TheGameLogic->isInMultiplayerGame() && !TheGameLogic->isInReplayGame())
+			// Chat is available in multiplayer, and in singleplayer/skirmish only when EnableSingleplayerChatwindow is set (for chat commands).
+			if (TheGameLogic->isInInteractiveGame() && !TheGameLogic->isInReplayGame()
+				&& (TheGameLogic->isInMultiplayerGame() || TheGlobalData->m_enableSingleplayerChatWindow))
 			{
 				Player *localPlayer = ThePlayerList->getLocalPlayer();
 				// TheSuperHackers @tweak skyaero 19/07/2025 Observers can now chat
@@ -4374,7 +4489,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (TheInGameUI->isInForceAttackMode()) {
 						evaluateForceAttack(draw, draw->getPosition(), DO_HINT );
 					} else {
-						evaluateContextCommand( draw, draw->getPosition(), DO_HINT, additionalCheck );
+						evaluateContextCommand( draw, draw->getPosition(), DO_HINT, TheKeyboard->getModifierFlags(), additionalCheck );
 					}
 
 					// Do not eat this message, as it itself has another purpose in HintSpy
@@ -4399,7 +4514,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			if (TheInGameUI->isInForceAttackMode()) {
 				evaluateForceAttack( nullptr, &position, DO_HINT );
 			} else {
-				evaluateContextCommand( nullptr, &position, DO_HINT, additionalCheck );
+				evaluateContextCommand( nullptr, &position, DO_HINT, TheKeyboard->getModifierFlags(), additionalCheck );
 			}
 
 			if(additionalCheck)
@@ -4551,7 +4666,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (TheInGameUI->isInForceAttackMode()) {
 						evaluateForceAttack( draw, &pos, DO_COMMAND );
 					} else {
-						evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
+						evaluateContextCommand( draw, &pos, DO_COMMAND, TheKeyboard->getModifierFlags(), TRUE );
 					}
 
 					Player *player = ThePlayerList->getLocalPlayer();
@@ -4660,7 +4775,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				if (TheInGameUI->isInForceAttackMode()) {
 					evaluateForceAttack( draw, &pos, DO_COMMAND );
 				} else {
-					evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
+					evaluateContextCommand( draw, &pos, DO_COMMAND, TheKeyboard->getModifierFlags(), TRUE );
 				}
 
 				Player *player = ThePlayerList->getLocalPlayer();

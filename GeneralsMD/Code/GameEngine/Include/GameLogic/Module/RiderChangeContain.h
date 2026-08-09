@@ -32,11 +32,12 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/TransportContain.h"
 
-#define MAX_RIDERS 8 //***NOTE: If you change this, make sure you update the parsing section!
+#define MAX_RIDERS 16 //***NOTE: If you change this, make sure you update the parsing section!
 
 enum WeaponSetType CPP_11(: Int);
 enum ObjectStatusType CPP_11(: Int);
 enum LocomotorSetType CPP_11(: Int);
+enum ArmorSetType CPP_11(: Int);
 
 struct RiderInfo
 {
@@ -46,6 +47,7 @@ struct RiderInfo
 	ObjectStatusType m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
+	ArmorSetType m_armorSetFlag;
 	AsciiString m_objectCustomStatusType;
 };
 

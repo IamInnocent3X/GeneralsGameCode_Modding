@@ -29,6 +29,7 @@
 #pragma once
 
 #include "Lib/BaseType.h"
+#include "Common/STLTypedefs.h"
 #include "ref_ptr.h"
 
 #include "Common/Geometry.h"
@@ -291,12 +292,14 @@ public:
 	void transferTempWeaponBonusHelperData( HelperTransferData data );
 	HelperTransferData getTempWeaponBonusHelperData() const;
 
-	void scoreTheKill( const Object *victim );						///< I just killed this object.
+	void scoreTheKill( const Object *victim, const DamageInfo *damageInfo = nullptr );						///< I just killed this object.
 	void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback = TRUE );	///< I just achieved this level right this moment
 	void createVeterancyLevelFX(VeterancyLevel oldLevel, VeterancyLevel newLevel);
 	ExperienceTracker* getExperienceTracker() {return m_experienceTracker;}
 	const ExperienceTracker* getExperienceTracker() const {return m_experienceTracker;}
 	VeterancyLevel getVeterancyLevel() const;
+	VeterancyLevel getMaxVeterancyLevel() const;																			///< highest veterancy level this object may reach (template default, overridable)
+	void setMaxVeterancyLevel( VeterancyLevel maxLevel, Bool provideFeedback = TRUE );	///< override the veterancy cap (e.g. from an upgrade)
 
 	inline const AsciiString& getName() const { return m_name; }
 	inline void setName( const AsciiString& newName ) { m_name = newName; }
@@ -545,6 +548,7 @@ public:
 	void doSpecialPower( const SpecialPowerTemplate *specialPowerTemplate, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 	void doSpecialPowerAtObject( const SpecialPowerTemplate *specialPowerTemplate, Object *obj, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 	void doSpecialPowerAtLocation( const SpecialPowerTemplate *specialPowerTemplate, const Coord3D *loc, Real angle, UnsignedInt commandOptions, Bool forced = false );	///< execute power
+	void doSpecialPowerAtMultipleLocations( const SpecialPowerTemplate *specialPowerTemplate, const std::vector<Coord3D>& locs, UnsignedInt commandOptions, Bool forced = false );	///< execute N-point power (chronosphere = source + destination)
 	void doSpecialPowerAtDrawable( const SpecialPowerTemplate *specialPowerTemplate, Drawable *draw, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 	void doSpecialPowerUsingWaypoints( const SpecialPowerTemplate *specialPowerTemplate, const Waypoint *way, UnsignedInt commandOptions, Bool forced = false );	///< execute power
 
@@ -689,7 +693,9 @@ public:
 	void clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
 	
   // note, the !=0 at the end is important, to convert this into a boolean type! (srj)
-	Bool testWeaponBonusCondition(WeaponBonusConditionType wst) const { return (m_weaponBonusCondition & (1 << wst)) != 0; }
+	//Bool testWeaponBonusCondition(WeaponBonusConditionType wst) const { return (m_weaponBonusCondition & (1 << wst)) != 0; }
+	Bool testWeaponBonusCondition(WeaponBonusConditionType wst) const { return m_weaponBonusCondition.test(wst); }
+
 	inline WeaponBonusConditionFlags getWeaponBonusCondition() const { return m_weaponBonusCondition; }
 	inline void setWeaponBonusConditionFlags(WeaponBonusConditionFlags flags) { m_weaponBonusCondition = flags; }
 
@@ -697,12 +703,12 @@ public:
 	void removeWeaponBonusConditionFlags(WeaponBonusConditionFlags flags);
 
 	// Weapon Bonus Against,  i.e. like Target Designator logic
-	inline void setWeaponBonusConditionAgainst(WeaponBonusConditionType wst) { m_weaponBonusConditionAgainst |= (1 << wst); };
-	inline void clearWeaponBonusConditionAgainst(WeaponBonusConditionType wst) { m_weaponBonusConditionAgainst &= ~(1 << wst); };
-	Bool testWeaponBonusConditionAgainst(WeaponBonusConditionType wst) const { return (m_weaponBonusConditionAgainst & (1 << wst)) != 0; }
+	inline void setWeaponBonusConditionAgainst(WeaponBonusConditionType wst) { m_weaponBonusConditionAgainst.set(wst); }
+	inline void clearWeaponBonusConditionAgainst(WeaponBonusConditionType wst) { m_weaponBonusConditionAgainst.set(wst, 0); }
+
+	Bool testWeaponBonusConditionAgainst(WeaponBonusConditionType wst) const { return m_weaponBonusConditionAgainst.test(wst); }
 	inline WeaponBonusConditionFlags getWeaponBonusConditionAgainst() const { return m_weaponBonusConditionAgainst; }
 	inline void setWeaponBonusConditionFlagsAgainst(WeaponBonusConditionFlags flags) { m_weaponBonusConditionAgainst = flags; }
-
 	void applyCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& flags);
 	void removeCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& flags);
 
@@ -834,6 +840,9 @@ public:
 
 	// Get position where to enter this object
 	Coord3D getEnterPosition(ObjectID enteringObject) const;
+
+	// When moving below a bridge, how high does it need to be, simplified to 0-15, where 1 is 10.0 height
+	Short getRequiredBridgeHeight() const;
 
 	void doClearTunnelContainTargetID();
 

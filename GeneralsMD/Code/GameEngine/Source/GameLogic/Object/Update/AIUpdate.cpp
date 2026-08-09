@@ -364,6 +364,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_isMoving = FALSE;
 	m_isBlocked = FALSE;
 	m_isBlockedAndStuck = FALSE;
+	m_forceMoveBackwards = FALSE;
 	m_upgradedLocomotors = FALSE;
 	m_canPathThroughUnits = FALSE;
 	m_randomlyOffsetMoodCheck = FALSE;
@@ -963,7 +964,7 @@ WhichTurretType AIUpdateInterface::getWhichTurretForCurWeapon() const
 //=============================================================================
 Bool AIUpdateInterface::isTurretUsingOffset(WhichTurretType tur) const
 {
-	return (tur != TURRET_INVALID && m_turretAI[tur] != NULL) ?
+	return (tur != TURRET_INVALID && m_turretAI[tur] != nullptr) ?
 		m_turretAI[tur]->isUseTurretOffset() : false;
 }
 
@@ -1245,6 +1246,16 @@ UpdateSleepTime AIUpdateInterface::update( void )
 	USE_PERF_TIMER(AIUpdateInterface_update)
 
 	m_isInUpdate = TRUE;
+
+	// While disabled (other than HELD/dead), suspend all AI logic and only let the locomotor
+	// run, so locos flagged LocomotorWorksWhenDisabled can maintain position. This restores the
+	// pre-DISABLEDMASK_ALL behavior where a disabled AI module's update() was not called at all.
+	if (isAiSuspendedByDisable())
+	{
+		doLocomotor();	// self-gates: does nothing unless the loco works while disabled / maintains position
+		m_isInUpdate = FALSE;
+		return UPDATE_SLEEP_NONE;	// poll each frame so we resume full AI when the disable clears
+	}
 
 	m_completedWaypoint = nullptr; // Reset so state machine update can set it if we just completed the path.
 
@@ -1982,7 +1993,7 @@ Bool AIUpdateInterface::computePath( PathfindServicesInterface *pathServices, Co
 	}
 
 	PathfindLayerEnum destinationLayer = TheTerrainLogic->getLayerForDestination(destination);
-	if (TheAI->pathfinder()->validMovementPosition( getObject()->getCrusherLevel()>0, destinationLayer, m_locomotorSet, destination ) == FALSE)
+	if (TheAI->pathfinder()->validMovementPosition( getObject()->getCrusherLevel()>0, destinationLayer, m_locomotorSet, getObject()->getRequiredBridgeHeight(), destination ) == FALSE)
 	{
 		theNewPath = nullptr;
 	}
@@ -2361,7 +2372,7 @@ Bool AIUpdateInterface::isPathAvailable( const Coord3D *destination ) const
 
 	const Coord3D *myPos = getObject()->getPosition();
 
-	return TheAI->pathfinder()->clientSafeQuickDoesPathExist( m_locomotorSet, myPos, destination );
+	return TheAI->pathfinder()->clientSafeQuickDoesPathExist(m_locomotorSet, getObject()->getRequiredBridgeHeight(), myPos, destination);
 
 }
 
@@ -2388,7 +2399,31 @@ Bool AIUpdateInterface::isQuickPathAvailable( const Coord3D *destination ) const
 //-------------------------------------------------------------------------------------------------
 Bool AIUpdateInterface::isValidLocomotorPosition(const Coord3D* pos) const
 {
-	return TheAI->pathfinder()->validMovementPosition( getObject()->getCrusherLevel()>0, getObject()->getLayer(), m_locomotorSet, pos );
+	return TheAI->pathfinder()->validMovementPosition( getObject()->getCrusherLevel()>0, getObject()->getLayer(), m_locomotorSet, getObject()->getRequiredBridgeHeight(), pos );
+}
+
+//-------------------------------------------------------------------------------------------------
+DisabledMaskType AIUpdateInterface::getDisabledTypesToProcess() const
+{
+	// Only keep ticking while disabled if the current locomotor must keep working while
+	// disabled (e.g. to maintain position). Otherwise process HELD only, so the AI fully
+	// freezes when disabled - matching the original behavior. Note that when no locomotor is
+	// chosen (buildings and other units that never move) we also freeze; the rare mobile unit
+	// flagged LocomotorWorksWhenDisabled will have already selected a locomotor before it can
+	// be disabled in flight.
+	if (m_curLocomotor != nullptr && m_curLocomotor->getLocomotorWorksWhenDisabled())
+		return DISABLEDMASK_ALL;
+
+	return MAKE_DISABLED_MASK( DISABLED_HELD );
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool AIUpdateInterface::isAiSuspendedByDisable() const
+{
+	const Object* obj = getObject();
+	return obj->isDisabled()
+			&& !obj->isDisabledByType(DISABLED_HELD)
+			&& !obj->isEffectivelyDead();
 }
 
 // Spectre Gunship Orbiting factors
@@ -2414,7 +2449,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor( void )
 
 	// Disabled check
 	Bool disabled = getObject()->isDisabled() && !getObject()->isDisabledByType(DISABLED_HELD);
-	if (disabled && m_curLocomotor != NULL)
+	if (disabled && m_curLocomotor != nullptr)
 	{
 		if (!m_curLocomotor->getLocomotorWorksWhenDisabled()) {
 			return UPDATE_SLEEP_FOREVER;
@@ -3168,10 +3203,18 @@ void AIUpdateInterface::aiDoCommand(const AICommandParms* parms)
 #endif
 
 
+	// Any new order cancels a forced-reverse move; the REVERSE_MOVE case below re-sets it.
+	m_forceMoveBackwards = FALSE;
+
 	switch (parms->m_cmd)
 	{
 		case AICMD_MOVE_TO_POSITION:
 		case AICMD_MOVE_TO_POSITION_EVEN_IF_SLEEPING:
+			privateMoveToPosition(&parms->m_pos, parms->m_cmdSource);
+			break;
+		case AICMD_MOVE_TO_POSITION_REVERSE:
+			// same move order, but the locomotor drives the whole path backwards
+			m_forceMoveBackwards = TRUE;
 			privateMoveToPosition(&parms->m_pos, parms->m_cmdSource);
 			break;
 		case AICMD_MOVE_TO_OBJECT:
@@ -5301,7 +5344,7 @@ setTmpValue(now);
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool AIUpdateInterface::friend_isAttackAngleValid(Real relAngle) const
+Bool AIUpdateInterface::friend_isAttackAngleValid(Real relAngle, Real angleThresh /*= 0*/) const
 {
 	const AIUpdateModuleData* data = getAIUpdateModuleData();
 	if (data->m_attackAngles.size() <= 0)
@@ -5310,8 +5353,8 @@ Bool AIUpdateInterface::friend_isAttackAngleValid(Real relAngle) const
 	relAngle = normalizeAngle2PI(relAngle);
 
 	for (AttackAngleData angles : data->m_attackAngles) {
-		Real minAngle = angles.m_minAngle;
-		Real maxAngle = angles.m_maxAngle;
+		Real minAngle = angles.m_minAngle - angleThresh;
+		Real maxAngle = angles.m_maxAngle + angleThresh;
 		Real curAngle = relAngle;
 
 		if (minAngle > maxAngle) {
@@ -5752,12 +5795,13 @@ void AIUpdateInterface::crc( Xfer *x )
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version */
+	* 1: Initial version
+	* 5: Added m_forceMoveBackwards (REVERSE_MOVE order) */
 // ------------------------------------------------------------------------------------------------
 void AIUpdateInterface::xfer( Xfer *xfer )
 {
   // version
-  const XferVersion currentVersion = 4;
+  const XferVersion currentVersion = 5;
   XferVersion version = currentVersion;
   xfer->xferVersion( &version, currentVersion );
 
@@ -5980,6 +6024,9 @@ void AIUpdateInterface::xfer( Xfer *xfer )
 
 	xfer->xferReal(&m_speedMultiplier);
 
+	if (version >= 5)
+		xfer->xferBool(&m_forceMoveBackwards);
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -6049,6 +6096,33 @@ Bool AIUpdateInterface::hasLocomotorForSurface(LocomotorSurfaceType surfaceType)
 }
 
 // ------------------------------------------------------------------------------------------------
+Bool AIUpdateInterface::arePathLayersStillValid() {
+	Path* path = getPath();
+	if (path != nullptr) {
+
+		//Check if going below bridges and if these are still opened/destroyed
+		if (path->needCheckBridges()) {
+			for (UnsignedShort i = PathfindLayerEnum::LAYER_GROUND + 1U; i < PathfindLayerEnum::LAYER_WALL; ++i) {
+				if (path->isPathBelowBridge(i)) {
+					// Path is below bridge -> if Bridge layer is now Passable, no longer valid -> recheck
+					return TheAI->pathfinder()->isPathfindLayerPassable(static_cast<PathfindLayerEnum>(i));
+				}
+			}
+		}
+
+		// Check for going over bridges
+		const PathNode* node = nullptr;
+		for (node = path->getFirstNode(); node != nullptr; node = node->getNextOptimized()) {
+			PathfindLayerEnum layer = node->getLayer();
+			if (layer > LAYER_GROUND && layer < LAYER_LAST) {
+				// check if layer is still valid
+				if (!TheAI->pathfinder()->isPathfindLayerPassable(layer)) return false;
+			}
+		}
+	}
+	return true;
+}
+
 // ------------------------------------------------------------------------------------------------
 void AIUpdateInterface::lockMyLocomotorToOrbit( const Coord3D *pos, Real radius, Real slope )
 {

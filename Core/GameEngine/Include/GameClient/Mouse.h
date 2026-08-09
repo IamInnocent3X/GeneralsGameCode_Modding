@@ -243,8 +243,12 @@ public:
 		HACK,
 		PARTICLE_UPLINK_CANNON,
 
-		MOVE_IN_FORMATION_TO,
+
+		// Appended so existing cursor indices are unchanged.
+		SMART_GARRISON,
 		REVERSE_MOVE,
+
+		MOVE_IN_FORMATION_TO,
 
 		NUKE_ATTACK,
 		MEGA_NUKE_ATTACK,
@@ -350,7 +354,6 @@ public:
 		ENTER_AGGRESSIVELY_ALT2,
 		SET_RALLY_POINT_ALT2,
 		REVERSE_MOVE_ALT2,
-
 
 		// ***** dont forget to update CursorININames[] *****
 		NUM_MOUSE_CURSORS

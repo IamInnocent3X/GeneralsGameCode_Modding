@@ -31,6 +31,7 @@
 #include "Common/ActionManager.h"
 #include "Common/BuildAssistant.h"
 #include "Common/CRCDebug.h"
+#include "Common/GlobalData.h"
 #include "Common/Player.h"
 #include "Common/SpecialPower.h"
 #include "Common/ThingTemplate.h"
@@ -2081,7 +2082,7 @@ void clampWaypointPosition( Coord3D &position, Int margin )
 /**
  * Move to given position(s)
  */
-void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, CommandSourceType cmdSource, Bool isDoingReverseMove )
+void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, CommandSourceType cmdSource, Bool reverse )
 {
 
   Coord3D position = *p_posIn;
@@ -2096,7 +2097,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	Coord3D dest;
 	Bool tightenGroup = FALSE;
 
-	Bool isFormation = getMinMaxAndCenter( &min, &max, &center, !addWaypoint && isDoingReverseMove );
+	Bool isFormation = getMinMaxAndCenter( &min, &max, &center, !addWaypoint && reverse );
 	if (addWaypoint)
   {
     isFormation = false;
@@ -2104,7 +2105,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
 
 	if (!addWaypoint && !isFormation) {
-		friend_computeGroundPath(pos, cmdSource, isDoingReverseMove);
+		friend_computeGroundPath(pos, cmdSource, reverse);
 		didInfantry = friend_moveInfantryToPos(pos, cmdSource);
 		didVehicles = friend_moveVehicleToPos(pos, cmdSource);
 	}
@@ -2166,7 +2167,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	}
 
 	if (isFormation) {
-		friend_computeGroundPath(pos, cmdSource, isDoingReverseMove);
+		friend_computeGroundPath(pos, cmdSource, reverse);
 		friend_moveFormationToPos(pos, cmdSource);
 		return;
 	}
@@ -2276,7 +2277,10 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
 		if( !addWaypoint )
 		{
-			ai->aiMoveToPosition( &dest, cmdSource );
+			if (reverse)
+				ai->aiReverseMoveToPosition( &dest, cmdSource );
+			else
+				ai->aiMoveToPosition( &dest, cmdSource );
 		}
 		else
 		{
@@ -2992,6 +2996,166 @@ void AIGroup::groupEnter( Object *obj, CommandSourceType cmdSource )
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+// Smart Garrison helpers
+//-------------------------------------------------------------------------------------------------
+
+// Coarse transport category, so Smart Garrison never mixes structures / vehicles / aircraft.
+enum SmartGarrisonCategory { SGC_STRUCTURE, SGC_VEHICLE, SGC_AIRCRAFT, SGC_OTHER };
+
+static SmartGarrisonCategory getSmartGarrisonCategory( const Object *obj )
+{
+	if( obj->isKindOf( KINDOF_STRUCTURE ) ) return SGC_STRUCTURE;
+	if( obj->isKindOf( KINDOF_AIRCRAFT ) )  return SGC_AIRCRAFT;	// planes and helicopters
+	if( obj->isKindOf( KINDOF_VEHICLE ) )   return SGC_VEHICLE;
+	return SGC_OTHER;
+}
+
+// Free passenger slots for a container, accounting for multi-slot riders.
+static Int getSmartGarrisonFreeSlots( ContainModuleInterface *contain )
+{
+	Int maxSlots = contain->getContainMax();
+
+	// A rider-swap transport (e.g. combat bike) accepts a new rider by kicking out the old one,
+	// so it always has room for its capacity regardless of the current occupant.
+	if( contain->isRiderChangeContain() )
+		return maxSlots > 0 ? maxSlots : 1;
+
+	if( maxSlots < 0 )
+		return INT_MAX;	// unbounded container
+	Int used = (Int)contain->getContainCount() + contain->getExtraSlotsInUse();
+	Int freeSlots = maxSlots - used;
+	return freeSlots > 0 ? freeSlots : 0;
+}
+
+struct SmartGarrisonCandidate
+{
+	Object *transport;
+	Int remaining;		///< free slots left as we assign members
+	Bool sameType;		///< same template as the initial (hovered) target
+};
+
+// Sort order (applied to everything except the pinned target): same-type transports first,
+// then those with more empty slots first.
+static bool smartGarrisonCandidateLess( const SmartGarrisonCandidate &a, const SmartGarrisonCandidate &b )
+{
+	if( a.sameType != b.sameType )
+		return a.sameType ? true : false;	// same-type before other-type
+	return a.remaining > b.remaining;			// more empty slots first
+}
+
+//-------------------------------------------------------------------------------------------------
+/**
+ * Distribute the selected group across the hovered target transport and other nearby transports,
+ * round-robin by priority: (1) the target, (2) same-type transports, (3) more empty slots, (4) rest.
+ * Units that find no free slot forget the order (get no command). Structures / vehicles / aircraft
+ * are never mixed. Cheap: one partition query + small loops, no per-frame work.
+ */
+void AIGroup::groupSmartGarrison( Object *target, CommandSourceType cmdSource )
+{
+	if( target == NULL || target->getContain() == NULL || m_memberList.empty() )
+		return;
+
+	const SmartGarrisonCategory targetCat = getSmartGarrisonCategory( target );
+	const ThingTemplate *targetTmpl = target->getTemplate();
+	const Player *owner = target->getControllingPlayer();
+	Object *firstMember = m_memberList.front();	// representative rider for the "can enter" prefilter
+
+	std::vector<SmartGarrisonCandidate> candidates;
+
+	// The hovered target is always the first, pinned candidate (if it still has room).
+	Bool targetPinned = false;
+	{
+		Int freeSlots = getSmartGarrisonFreeSlots( target->getContain() );
+		if( freeSlots > 0 )
+		{
+			SmartGarrisonCandidate c;
+			c.transport = target;
+			c.remaining = freeSlots;
+			c.sameType = true;
+			candidates.push_back( c );
+			targetPinned = true;
+		}
+	}
+
+	// One cheap range query for other same-category transports of ours to redistribute into.
+	PartitionFilterSamePlayer      fPlayer( owner );
+	PartitionFilterPossibleToEnter fEnter( firstMember, cmdSource );
+	PartitionFilter *filters[] = { &fPlayer, &fEnter, NULL };
+
+	MemoryPoolObjectHolder holder;
+	SimpleObjectIterator *iter = ThePartitionManager->iterateObjectsInRange(
+		target, TheGlobalData->m_smartGarrisonRange, FROM_CENTER_2D, filters, ITER_FASTEST );
+	holder.hold( iter );
+
+	for( Object *o = iter ? iter->first() : NULL; o != NULL; o = iter->next() )
+	{
+		if( o == target )
+			continue;
+		ContainModuleInterface *contain = o->getContain();
+		if( contain == NULL )
+			continue;
+		if( getSmartGarrisonCategory( o ) != targetCat )
+			continue;	// never mix structures / vehicles / aircraft
+		Int freeSlots = getSmartGarrisonFreeSlots( contain );
+		if( freeSlots <= 0 )
+			continue;
+
+		SmartGarrisonCandidate c;
+		c.transport = o;
+		c.remaining = freeSlots;
+		c.sameType = o->getTemplate()->isEquivalentTo( targetTmpl ) ? true : false;
+		candidates.push_back( c );
+	}
+
+	if( candidates.empty() )
+		return;
+
+	// Order the candidates by priority, keeping the pinned target at the front.
+	std::vector<SmartGarrisonCandidate>::iterator sortBegin = candidates.begin();
+	if( targetPinned )
+		++sortBegin;
+	if( candidates.end() - sortBegin > 1 )
+		std::sort( sortBegin, candidates.end(), smartGarrisonCandidateLess );
+
+	// Round-robin the selected members across the ordered candidates.
+	const Int numCandidates = (Int)candidates.size();
+	Int idx = 0;
+	std::list<Object *>::iterator it;
+	for( it = m_memberList.begin(); it != m_memberList.end(); ++it )
+	{
+		Object *member = *it;
+		AIUpdateInterface *ai = member->getAIUpdateInterface();
+		if( ai == NULL )
+			continue;
+
+		Int cost = member->getTransportSlotCount();
+		if( cost <= 0 )
+			continue;	// not transportable -- forget the order
+
+		// Find the next candidate (round-robin from idx) that can take this member.
+		Int assigned = -1;
+		for( Int tries = 0; tries < numCandidates; ++tries )
+		{
+			Int k = (idx + tries) % numCandidates;
+			SmartGarrisonCandidate &cand = candidates[k];
+			if( cand.remaining >= cost
+					&& cand.transport->getContain()->isValidContainerFor( member, FALSE ) )
+			{
+				assigned = k;
+				break;
+			}
+		}
+
+		if( assigned < 0 )
+			continue;	// no room anywhere -- this unit forgets the order
+
+		candidates[assigned].remaining -= cost;
+		ai->aiEnter( candidates[assigned].transport, cmdSource );
+		idx = (assigned + 1) % numCandidates;	// advance the round-robin cursor
+	}
+}
+
 /**
  * Get near given object and wait for enter clearance
  */
@@ -3435,6 +3599,12 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
 
 
 	//This one requires a position
+	// Precompute the group center/formation state once so SPECIAL_JUMPJET members can each
+	// launch to their own formation-relative target instead of all piling on the click point.
+	Coord2D fMin, fMax;
+	Coord3D fCenter;
+	Bool isFormation = getMinMaxAndCenter( &fMin, &fMax, &fCenter );
+
 	std::list<Object *>::iterator i;
 	for( i = m_memberList.begin(); i != m_memberList.end(); )
 	{
@@ -3462,18 +3632,70 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
+				// Validity/range is still checked against the shared click point.
 				if( TheActionManager->canDoSpecialPowerAtLocation( object, location, CMD_FROM_PLAYER, spTemplate, objectInWay, commandOptions, !isSabotage ) )
 				{
 					if(isSabotage)
 						commandOptions |= IS_DOING_SABOTAGE;
 
-					mod->doSpecialPowerAtLocation( location, angle, commandOptions );
+					// For jumpjet group launches, give each member its own formation-relative target
+					// so the group keeps its formation at the destination instead of stacking up.
+					Coord3D unitLoc = *location;
+					UnsignedInt opts = commandOptions;
+					if( spTemplate->getSpecialPowerType() == SPECIAL_JUMPJET )
+					{
+						computeIndividualDestination( &unitLoc, location, object, &fCenter, isFormation );
+						opts |= FORMATION_LAUNCH;
+					}
+
+					mod->doSpecialPowerAtLocation( &unitLoc, angle, opts );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
 				}
 			}
 		}
 
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+// Chrono-style special power: the player picked a source and a destination. Both points arrive
+// together; validity/range is checked against the source point.
+//-------------------------------------------------------------------------------------------------
+void AIGroup::groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions )
+{
+	if( locs.empty() )
+		return;
+
+	const Coord3D *firstLoc = &locs.front();
+
+	std::list<Object *>::iterator i;
+	for( i = m_memberList.begin(); i != m_memberList.end(); )
+	{
+		Object *object = (*i);
+
+		++i; // just in case the act of specialpowering changes this list
+
+		const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+		if( spTemplate )
+		{
+			// Have to justify the execution in case someone changed their button
+			if( spTemplate->getRequiredScience() != SCIENCE_INVALID )
+			{
+				if( !object->getControllingPlayer()->hasScience(spTemplate->getRequiredScience()) )
+					continue;// Nice try, smacktard.
+			}
+
+			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
+			if( mod )
+			{
+				if( TheActionManager->canDoSpecialPowerAtLocation( object, firstLoc, CMD_FROM_PLAYER, spTemplate, nullptr, commandOptions ) )
+				{
+					object->doSpecialPowerAtMultipleLocations( spTemplate, locs, commandOptions );
+					object->friend_setUndetectedDefector( FALSE );// My secret is out
+				}
+			}
+		}
 	}
 }
 

@@ -316,6 +316,34 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				}
 				else if( command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
 				{
+<<<<<<< HEAD
+					// Attack move has changed from a modifier to a command, so it moves up here.
+
+					OrderNearbyData orderData;
+					if(command->getOrderNearbyRadius())
+					{
+						orderData.Radius = command->getOrderNearbyRadius();
+						orderData.RequiredMask = command->getOrderKindofMask();
+						orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+						orderData.MinDelay = command->getOrderNearbyMinDelay();
+						orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+						orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+					}
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_REVERSE_MOVETO, orderData );
+					msg->appendLocationArgument( world );
+
+					// Play the unit voice response
+					pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_REVERSE_MOVETO);
+=======
+					GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_REVERSE_MOVETO );
+					msg->appendLocationArgument( world );
+
+					// Play the unit voice response (same response as a normal move order)
+					pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_MOVETO);
+>>>>>>> 8c0996300853093997a82960aa47e3fe1608d4c5
+				}
+				else if( command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+				{
 					// Attack move has changed from a modifier to a command, so it moves up here.
 
 					OrderNearbyData orderData;

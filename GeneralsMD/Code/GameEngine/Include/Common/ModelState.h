@@ -288,6 +288,25 @@ enum ModelConditionFlagType CPP_11(: Int)
 	// Ship death
 	MODELCONDITION_SHIP_TOPPLING,
 	MODELCONDITION_SHIP_SINKING,
+
+	// Veterancy ranks beyond HEROIC (appended to preserve existing save values).
+	MODELCONDITION_WEAPONSET_FOUR,
+	MODELCONDITION_WEAPONSET_FIVE,
+
+	// Additional rider slots (appended to preserve existing save values). See RiderChangeContain (MAX_RIDERS).
+	MODELCONDITION_RIDER9,
+	MODELCONDITION_RIDER10,
+	MODELCONDITION_RIDER11,
+	MODELCONDITION_RIDER12,
+	MODELCONDITION_RIDER13,
+	MODELCONDITION_RIDER14,
+	MODELCONDITION_RIDER15,
+	MODELCONDITION_RIDER16,
+
+	// Reserved padding: keeps MODELCONDITION_COUNT distinct from KINDOF_COUNT. BitFlags<N> is keyed only
+	// on its bit count, so two flag enums with an equal COUNT would share one name list (see the guard in
+	// BitFlags.cpp). Do not reuse this slot for a real condition without re-checking the counts.
+	MODELCONDITION_RESERVED_UNIQUE_SIZE_PAD,
 //
 // Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
 // existing values!

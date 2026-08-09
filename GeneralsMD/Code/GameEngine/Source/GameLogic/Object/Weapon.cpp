@@ -44,6 +44,7 @@
 #include "Common/CRCDebug.h"
 #include "Common/GameAudio.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/INI.h"
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
@@ -107,7 +108,9 @@ static void parseAllVetLevelsAsciiString( INI* ini, void* /*instance*/, void * s
 {
 	AsciiString* s = (AsciiString*)store;
 	AsciiString a = ini->getNextAsciiString();
-	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
+	// Only fill through HEROIC; the ranks beyond it (FOUR/FIVE) are resolved from HEROIC in
+	// postProcessLoad, so an explicit per-level HEROIC override still propagates to them.
+	for (Int i = LEVEL_FIRST; i <= LEVEL_HEROIC; ++i)
 		s[i] = a;
 }
 
@@ -129,7 +132,8 @@ static void parseAllVetLevelsFXList( INI* ini, void* /*instance*/, void * store,
 	ConstFXListPtr* s = (ConstFXListPtr*)store;
 	const FXList* fx = nullptr;
 	INI::parseFXList(ini, nullptr, &fx, nullptr);
-	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
+	// Only fill through HEROIC; FOUR/FIVE are resolved from HEROIC in postProcessLoad.
+	for (Int i = LEVEL_FIRST; i <= LEVEL_HEROIC; ++i)
 		s[i] = fx;
 }
 
@@ -151,7 +155,8 @@ static void parseAllVetLevelsPSys( INI* ini, void* /*instance*/, void * store, c
 	ConstParticleSystemTemplatePtr* s = (ConstParticleSystemTemplatePtr*)store;
 	ConstParticleSystemTemplatePtr pst = nullptr;
 	INI::parseParticleSystemTemplate(ini, nullptr, &pst, nullptr);
-	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
+	// Only fill through HEROIC; FOUR/FIVE are resolved from HEROIC in postProcessLoad.
+	for (Int i = LEVEL_FIRST; i <= LEVEL_HEROIC; ++i)
 		s[i] = pst;
 }
 
@@ -221,10 +226,15 @@ WeaponStore *TheWeaponStore = nullptr;					///< the weapon store definition
 const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 {
 
-	{ "PrimaryDamage",						INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_primaryDamage) },
+	{ "PrimaryDamage",						WeaponTemplate::parsePrimaryDamage,			nullptr,							0 },
 	{ "PrimaryDamageRadius",			INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_primaryDamageRadius) },
-	{ "SecondaryDamage",					INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_secondaryDamage) },
+	{ "SecondaryDamage",					WeaponTemplate::parseSecondaryDamage,		nullptr,							0 },
 	{ "SecondaryDamageRadius",		INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_secondaryDamageRadius) },
+	{ "PrimaryDamageTaperOff",		INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_primaryDamageTaperOff) },
+	{ "SecondaryDamageTaperOff",	INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_secondaryDamageTaperOff) },
+	{ "DamageFactorAtMaxRange",		INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_damageFactorAtMaxRange) },
+	{ "RadiusFactorAtMaxRange",		INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_radiusFactorAtMaxRange) },
+	{ "ScatterRadiusFactorAtMaxRange",	INI::parseReal,											nullptr,							offsetof(WeaponTemplate, m_scatterRadiusFactorAtMaxRange) },
 	{ "ShockWaveAmount",					INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_shockWaveAmount) },
 	{ "ShockWaveRadius",					INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_shockWaveRadius) },
 	{ "ShockWaveTaperOff",				INI::parseReal,													nullptr,							offsetof(WeaponTemplate, m_shockWaveTaperOff) },
@@ -503,9 +513,16 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 	m_name													= "NoNameWeapon";
 	m_nameKey												= NAMEKEY_INVALID;
 	m_primaryDamage									= 0.0f;
+	m_primaryDamageVariance					= 0.0f;
 	m_primaryDamageRadius						= 0.0f;
 	m_secondaryDamage								= 0.0f;
+	m_secondaryDamageVariance				= 0.0f;
 	m_secondaryDamageRadius					= 0.0f;
+	m_primaryDamageTaperOff					= 1.0f;	// no taper
+	m_secondaryDamageTaperOff				= 1.0f;	// no taper
+	m_damageFactorAtMaxRange				= 1.0f;	// no range scaling
+	m_radiusFactorAtMaxRange				= 1.0f;	// no range scaling
+	m_scatterRadiusFactorAtMaxRange	= 1.0f;	// no range scaling
 	m_attackRange										= 0.0f;
 	m_minimumAttackRange						= 0.0f;
 	m_requestAssistRange						= 0.0f;
@@ -607,7 +624,7 @@ WeaponTemplate::WeaponTemplate() : m_nextTemplate(nullptr)
 	m_scatterTargetResetTime = 0;
 	m_preAttackFXDelay = 6; // Non-Zero default! 6 frames = 200ms. This should be a good base value to avoid spamming
 	m_laserGroundUnitTargetHeight = 10; // Default Height offset
-	m_scatterOnWaterSurface = false;
+	m_scatterOnWaterSurface = TheGlobalData ? TheGlobalData->m_weaponScatterOnWaterSurfaceDefault : false;
 	m_historicDamageTriggerId = 0;
 	m_resetFireBonesOnReload = false;
 
@@ -757,6 +774,17 @@ void WeaponTemplate::copy_from(const WeaponTemplate& other) {
 
 	// take all values from other
 	*this = other;
+	m_extraBonus = nullptr;
+
+	//WeaponBonusSet must be deep copied
+	if (other.m_extraBonus != nullptr) {
+		m_extraBonus = newInstance(WeaponBonusSet);
+		m_extraBonus->copyFrom(*other.m_extraBonus);
+	}
+
+	//just to make sure
+	this->m_historicDamage.clear();
+	this->m_historicDamageTriggerId = 0;
 
 	this->m_nextTemplate = nextTempl;
 	this->m_name = name;
@@ -837,6 +865,60 @@ void WeaponTemplate::copy_from(const WeaponTemplate& other) {
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Shared smart parser for PrimaryDamage/SecondaryDamage. Accepts a single number for traditional
+		fixed damage, or a labeled "Min:x Max:y" pair for a random damage range. The nominal damage is
+		stored as the max, and the spread (max-min) is stored as the variance, so that the actual damage
+		dealt is rolled as (max - random[0,variance]) == random[min,max]. Storing the max as nominal
+		keeps AI damage estimation and UI unchanged (optimistic). */
+//-------------------------------------------------------------------------------------------------
+static void parseDamageMinMax( INI* ini, Real* nominal, Real* variance )
+{
+	static const char *MIN_LABEL = "Min";
+	static const char *MAX_LABEL = "Max";
+
+	const char* token = ini->getNextTokenOrNull(ini->getSepsColon());
+
+	if( token != nullptr && stricmp(token, MIN_LABEL) == 0 )
+	{
+		// Two entry min/max
+		Real minVal = INI::scanReal(ini->getNextToken(ini->getSepsColon()));
+		Real maxVal = minVal;
+		token = ini->getNextTokenOrNull(ini->getSepsColon());
+		if( token != nullptr && stricmp(token, MAX_LABEL) == 0 )
+			maxVal = INI::scanReal(ini->getNextToken(ini->getSepsColon()));
+
+		// guard against reversed Min/Max
+		if( maxVal < minVal )
+		{
+			Real tmp = maxVal; maxVal = minVal; minVal = tmp;
+		}
+
+		*nominal = maxVal;
+		*variance = maxVal - minVal;
+	}
+	else
+	{
+		// single entry, no label, so the first token is just a number
+		*nominal = INI::scanReal(token);
+		*variance = 0.0f;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void WeaponTemplate::parsePrimaryDamage( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
+{
+	WeaponTemplate* self = (WeaponTemplate*)instance;
+	parseDamageMinMax( ini, &self->m_primaryDamage, &self->m_primaryDamageVariance );
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void WeaponTemplate::parseSecondaryDamage( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
+{
+	WeaponTemplate* self = (WeaponTemplate*)instance;
+	parseDamageMinMax( ini, &self->m_secondaryDamage, &self->m_secondaryDamageVariance );
+}
+
+//-------------------------------------------------------------------------------------------------
 void WeaponTemplate::postProcessLoad()
 {
 	if (!TheThingFactory)
@@ -853,6 +935,18 @@ void WeaponTemplate::postProcessLoad()
 	{
 		m_projectileTmpl = TheThingFactory->findTemplate(m_projectileName);
 		DEBUG_ASSERTCRASH(m_projectileTmpl, ("projectile %s not found!",m_projectileName.str()));
+	}
+
+	// Veterancy ranks beyond HEROIC (FOUR/FIVE) inherit HEROIC's per-level FX/OCL/exhaust entries unless
+	// they were explicitly defined. Do the OCL name copy here, before the name->pointer resolution below.
+	for (Int i = LEVEL_HEROIC + 1; i <= LEVEL_LAST; ++i)
+	{
+		if (m_fireFXs[i] == nullptr)								m_fireFXs[i] = m_fireFXs[LEVEL_HEROIC];
+		if (m_projectileDetonateFXs[i] == nullptr)	m_projectileDetonateFXs[i] = m_projectileDetonateFXs[LEVEL_HEROIC];
+		if (m_projectileExhausts[i] == nullptr)			m_projectileExhausts[i] = m_projectileExhausts[LEVEL_HEROIC];
+		if (m_preAttackFXs[i] == nullptr)						m_preAttackFXs[i] = m_preAttackFXs[LEVEL_HEROIC];
+		if (m_fireOCLNames[i].isEmpty())						m_fireOCLNames[i] = m_fireOCLNames[LEVEL_HEROIC];
+		if (m_projectileDetonationOCLNames[i].isEmpty())	m_projectileDetonationOCLNames[i] = m_projectileDetonationOCLNames[LEVEL_HEROIC];
 	}
 
 	for (Int i = LEVEL_FIRST; i <= LEVEL_LAST; ++i)
@@ -1575,7 +1669,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 		Real reAngle = getWeaponRecoilAmount();
 		Real reDir = reAngle != 0.0f ? (atan2(targetPos.y - sourcePos->y, targetPos.x - sourcePos->x)) : 0.0f;
-		VeterancyLevel v = sourceObj->getVeterancyLevel();
+		VeterancyLevel v = getEffectiveFXVeterancy(sourceObj);
 		const FXList* fx = isProjectileDetonation ? getProjectileDetonateFX(v) : getFireFX(v);
 
 		if ( TheGameLogic->getFrame() < firingWeapon->getSuspendFXFrame() )
@@ -1584,6 +1678,11 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		StealthUpdate *stealth = sourceObj->getStealth();
 
 		Bool handled;
+
+		// The radius handed to UseCallersRadius FX must match the actual damage radius, so apply the same
+		// range-based scaling (RadiusFactorAtMaxRange) that dealDamageInternal uses.
+		Real fxRadius = getPrimaryDamageRadius(bonus) * computeRangeScaleFactor(sourceObj, &targetPos, bonus, m_radiusFactorAtMaxRange, isProjectileDetonation);
+
 		Bool isDisguisedAndCheckIfNeedOffset = stealth && stealth->isDisguisedAndCheckIfNeedOffset();
 		Drawable *currentDraw = isDisguisedAndCheckIfNeedOffset ? stealth->getDrawableTemplateWhileDisguised() : sourceObj->getDrawable();
 		if(isDisguisedAndCheckIfNeedOffset)
@@ -1653,7 +1752,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 																															reAngle,
 																															reDir,
 																															&targetPos,
-																															getPrimaryDamageRadius(bonus)
+																															fxRadius
 																															);
 			}
 		}
@@ -1663,14 +1762,14 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			// bah. just play it at the drawable's pos.
 			//DEBUG_LOG(("*** WeaponFireFX not fully handled by the client"));
 			const Coord3D* where = isContactWeapon() ? &targetPos : (launchPos ? launchPos : currentDraw->getPosition());
-			FXList::doFXPos(fx, where, currentDraw->getTransformMatrix(), getWeaponSpeed(), &targetPos, getPrimaryDamageRadius(bonus));
+			FXList::doFXPos(fx, where, currentDraw->getTransformMatrix(), getWeaponSpeed(), &targetPos, fxRadius);
 		}
 	}
 
 	// Now do the FireOCL if there is one
 	if( sourceObj )
 	{
-		VeterancyLevel v = sourceObj->getVeterancyLevel();
+		VeterancyLevel v = getEffectiveFXVeterancy(sourceObj);
 		const ObjectCreationList *oclToUse = isProjectileDetonation ? getProjectileDetonationOCL(v) : getFireOCL(v);
 		if( oclToUse )
 			ObjectCreationList::create( oclToUse, sourceObj, nullptr );
@@ -1684,6 +1783,25 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		// This weapon scatters, so clear the victimObj, as we are no longer shooting it directly,
 		// and find a random point within the radius to shoot at as victimPos
 		scatterRadius = m_scatterRadius;
+
+		// Scale the scatter radius based on engagement distance / attack range. Scaled from 1.0 at
+		// point-blank to m_scatterRadiusFactorAtMaxRange at (or beyond) the weapon's attack range.
+		// Note: this scales ScatterRadius only, not the infantry-inaccuracy bonus added below.
+		if (m_scatterRadiusFactorAtMaxRange != 1.0f)
+		{
+			Real range = getAttackRange(bonus);
+			if (range > 0.0f)
+			{
+				Coord3D delta;
+				delta.x = victimPos->x - sourcePos->x;
+				delta.y = victimPos->y - sourcePos->y;
+				delta.z = victimPos->z - sourcePos->z;
+				Real t = delta.length() / range;
+				if (t < 0.0f) t = 0.0f;
+				if (t > 1.0f) t = 1.0f;
+				scatterRadius *= 1.0f + (m_scatterRadiusFactorAtMaxRange - 1.0f) * t;
+			}
+		}
 
 		// if it's an object, aim at the center, not the ground part (srj)
 		PathfindLayerEnum targetLayer = LAYER_GROUND;
@@ -1795,7 +1913,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				targetPos.z += m_laserGroundTargetHeight;
 			}
 
-			VeterancyLevel vet = sourceObj->getVeterancyLevel();
+			VeterancyLevel vet = getEffectiveFXVeterancy(sourceObj);
 			const ObjectCreationList* detOCL = getProjectileDetonationOCL(vet);
 			Real laserAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
 			if (detOCL) {
@@ -1810,7 +1928,8 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				Vector3 dir(v.x, v.y, v.z);
 				dir.Normalize(); //This is fantastically crucial for calling buildTransformMatrix!!!!!
 				laserMtx.buildTransformMatrix(pos, dir);
-				FXList::doFXPos(fx, &targetPos, &laserMtx, 0.0f, nullptr, getPrimaryDamageRadius(bonus));
+				Real fxRadius = getPrimaryDamageRadius(bonus) * computeRangeScaleFactor(sourceObj, &targetPos, bonus, m_radiusFactorAtMaxRange, isProjectileDetonation);
+				FXList::doFXPos(fx, &targetPos, &laserMtx, 0.0f, nullptr, fxRadius);
 			}
 
 			if( inflictDamage )
@@ -1920,6 +2039,9 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		}
 		if (pui)
 		{
+			// Use the launcher's veterancy (chain-aware, so a scatter projectile launching further
+			// projectiles keeps the original launcher's level) to pick the exhaust, then snapshot it onto
+			// the new projectile so its own detonation/re-fire FX reference the same launcher veterancy.
 			if(launchPos)
 			{
 				Coord3D tmp = *launchPos;
@@ -1955,7 +2077,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				}
 			}
 
-			VeterancyLevel v = sourceObj->getVeterancyLevel();
+			VeterancyLevel v = getEffectiveFXVeterancy(sourceObj);
 			if( scatterRadius > 0.0f )
 			{
 				//With a scatter radius, don't follow the victim (overriding the intent).
@@ -1965,6 +2087,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			{
 				pui->projectileLaunchAtObjectOrPosition(curTarget, &projectileDestination, sourceObj, wslot, specificBarrelToUse, this, m_projectileExhausts[v], launchPos );
 			}
+			pui->projectileSetLaunchVeterancy(v);
 		}
 		else
 		{
@@ -2297,6 +2420,79 @@ void WeaponTemplate::processHistoricDamage(const Object* source, const Coord3D* 
 }
 #endif
 
+//-------------------------------------------------------------------------------------------------
+// Compute the range-based scaling factor (1.0 at point-blank, factorAtMaxRange at/beyond attack range)
+// for the engagement from 'source' to 'pos'. The origin is the firing source's position for direct and
+// laser weapons; for projectile detonations the firing source is the projectile, so the launcher's
+// position captured at launch time (projectileGetLaunchPos) is used instead. Returns 1.0 if the factor
+// is unused, the origin is unknown, or the weapon has no attack range.
+//-------------------------------------------------------------------------------------------------
+Real WeaponTemplate::computeRangeScaleFactor(const Object* source, const Coord3D* pos, const WeaponBonus& bonus, Real factorAtMaxRange, Bool isProjectileDetonation) const
+{
+	if (factorAtMaxRange == 1.0f || pos == nullptr)
+		return 1.0f;
+
+	Coord3D fromPos;
+	Bool haveFromPos = false;
+	if (isProjectileDetonation && source != nullptr && source->isKindOf(KINDOF_PROJECTILE))
+	{
+		for (BehaviorModule** u = source->getBehaviorModules(); *u; ++u)
+		{
+			ProjectileUpdateInterface* pui = (*u)->getProjectileUpdateInterface();
+			if (pui != nullptr)
+			{
+				haveFromPos = pui->projectileGetLaunchPos(fromPos);
+				break;
+			}
+		}
+	}
+	else if (source != nullptr)
+	{
+		fromPos = *source->getPosition();
+		haveFromPos = true;
+	}
+
+	Real range = getAttackRange(bonus);
+	if (!haveFromPos || range <= 0.0f)
+		return 1.0f;
+
+	Coord3D delta;
+	delta.x = pos->x - fromPos.x;
+	delta.y = pos->y - fromPos.y;
+	delta.z = pos->z - fromPos.z;
+	Real t = delta.length() / range;
+	if (t < 0.0f) t = 0.0f;
+	if (t > 1.0f) t = 1.0f;
+	return 1.0f + (factorAtMaxRange - 1.0f) * t;
+}
+
+//-------------------------------------------------------------------------------------------------
+// Veterancy level to use for veterancy FX/OCL selection. When the firing source is itself a projectile
+// carrying a launcher-veterancy snapshot (taken at the original launch), that value is used; this keeps
+// VeterancyProjectileExhaust / VeterancyFireFX / VeterancyProjectileDetonationFX / VeterancyFireOCL /
+// VeterancyProjectileDetonationOCL referencing the launcher across projectile detonation and ScatterShot
+// re-fire (including chained scattershots). Otherwise the object's own veterancy is used.
+//-------------------------------------------------------------------------------------------------
+VeterancyLevel WeaponTemplate::getEffectiveFXVeterancy(const Object* sourceObj) const
+{
+	if (sourceObj != nullptr)
+	{
+		for (BehaviorModule** u = sourceObj->getBehaviorModules(); *u; ++u)
+		{
+			ProjectileUpdateInterface* pui = (*u)->getProjectileUpdateInterface();
+			if (pui != nullptr)
+			{
+				VeterancyLevel v;
+				if (pui->projectileGetLaunchVeterancy(v))
+					return v;
+				break;
+			}
+		}
+		return sourceObj->getVeterancyLevel();
+	}
+	return LEVEL_REGULAR;
+}
+
 static Bool testValidForAttack(const Object* victim, Int antiMask, ObjectID primaryID, Relationship r)
 {
 	// Sanity
@@ -2450,6 +2646,30 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		Real primaryDamage = getPrimaryDamage(bonus);
 		Real secondaryDamage = getSecondaryDamage(bonus);
 		Int affects = getAffectsMask();
+
+		// Apply random damage variance (from Min:/Max: definition). Roll once per shot so that every
+		// victim caught in the blast takes the same rolled damage. Must use the synchronized game-logic
+		// RNG so multiplayer clients stay in sync.
+		const Real damageBonusScalar = bonus.getField(WeaponBonus::DAMAGE);
+		if (m_primaryDamageVariance > 0.0f)
+			primaryDamage -= GameLogicRandomValueReal(0.0f, m_primaryDamageVariance * damageBonusScalar);
+		if (m_secondaryDamageVariance > 0.0f)
+			secondaryDamage -= GameLogicRandomValueReal(0.0f, m_secondaryDamageVariance * damageBonusScalar);
+
+		// Apply range-based scaling of damage and/or damage radii. Each is scaled from 1.0 at point-blank
+		// to its factor at (or beyond) the weapon's attack range, based on the engagement distance.
+		if (m_damageFactorAtMaxRange != 1.0f)
+		{
+			Real rangeDamageFactor = computeRangeScaleFactor(source, pos, bonus, m_damageFactorAtMaxRange, isProjectileDetonation);
+			primaryDamage *= rangeDamageFactor;
+			secondaryDamage *= rangeDamageFactor;
+		}
+		if (m_radiusFactorAtMaxRange != 1.0f)
+		{
+			Real rangeRadiusFactor = computeRangeScaleFactor(source, pos, bonus, m_radiusFactorAtMaxRange, isProjectileDetonation);
+			primaryRadius *= rangeRadiusFactor;
+			secondaryRadius *= rangeRadiusFactor;
+		}
 
 		DEBUG_ASSERTCRASH(secondaryRadius >= primaryRadius || secondaryRadius == 0.0f, ("secondary radius should be >= primary radius (or zero)"));
 
@@ -2959,10 +3179,37 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			}
 			// note, don't bother with damage multipliers here...
 			// that's handled internally by the attemptDamage() method.
+			Real damageAmount;
 			if(checkForRailgunOnly)
-				damageInfo.in.m_amount = getRailgunUsesSecondaryDamage() ? secondaryDamage : primaryDamage;
+			{
+				damageAmount = getRailgunUsesSecondaryDamage() ? secondaryDamage : primaryDamage;
+			}
+			else if (curVictimDistSqr <= primaryRadiusSqr)
+			{
+				// inside the primary blast: taper from full damage at the center to
+				// m_primaryDamageTaperOff at the edge of the primary radius.
+				damageAmount = primaryDamage;
+				if (m_primaryDamageTaperOff != 1.0f && primaryRadius > 0.0f)
+				{
+					Real t = sqrtf(curVictimDistSqr) / primaryRadius;
+					if (t > 1.0f) t = 1.0f;
+					damageAmount *= 1.0f + (m_primaryDamageTaperOff - 1.0f) * t;
+				}
+			}
 			else
-				damageInfo.in.m_amount = (curVictimDistSqr <= primaryRadiusSqr) ? primaryDamage : secondaryDamage;
+			{
+				// in the secondary ring: taper from full secondary damage at the inner edge
+				// (primary radius) to m_secondaryDamageTaperOff at the outer edge (secondary radius).
+				damageAmount = secondaryDamage;
+				if (m_secondaryDamageTaperOff != 1.0f && secondaryRadius > primaryRadius)
+				{
+					Real t = (sqrtf(curVictimDistSqr) - primaryRadius) / (secondaryRadius - primaryRadius);
+					if (t < 0.0f) t = 0.0f;
+					if (t > 1.0f) t = 1.0f;
+					damageAmount *= 1.0f + (m_secondaryDamageTaperOff - 1.0f) * t;
+				}
+			}
+			damageInfo.in.m_amount = damageAmount;
 
 			if( killSelf )
 			{
@@ -3692,7 +3939,8 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 	WeaponBonusConditionFlags flags = bonusRefObj->getWeaponBonusCondition();
 	std::vector<AsciiString> customFlags = bonusRefObj->getCustomWeaponBonusCondition();
 	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
-	flags |= extraBonusFlags;
+	//flags |= extraBonusFlags;
+	flags.set(extraBonusFlags);
 
 	Int flagSize = customFlags.size();
 	for( std::vector<AsciiString>::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
@@ -3707,7 +3955,7 @@ void Weapon::computeBonus(const Object *source, WeaponBonusConditionFlags extraB
 		const ContainModuleInterface *theirContain = bonusRefObj->getContainedBy()->getContain();
 		if( theirContain && theirContain->isWeaponBonusPassedToPassengers() )
 		{
-			flags |= theirContain->getWeaponBonusPassedToPassengers();
+			flags.set(theirContain->getWeaponBonusPassedToPassengers());
 
 			// CustomFlags
 			std::vector<AsciiString> unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
@@ -3742,7 +3990,8 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 	WeaponBonusConditionFlags flags = source->getWeaponBonusCondition();
 	std::vector<AsciiString> customFlags = source->getCustomWeaponBonusCondition();
 	//CRCDEBUG_LOG(("Weapon::computeBonus() - flags are %X for %s", flags, DescribeObject(source).str()));
-	flags |= extraBonusFlags;
+	//flags |= extraBonusFlags;
+	flags.set(extraBonusFlags);
 
 	Int flagSize = customFlags.size();
 	for( std::vector<AsciiString>::const_iterator it = extraBonusCustomFlags.begin(); it != extraBonusCustomFlags.end(); ++it )
@@ -3757,7 +4006,7 @@ void WeaponTemplate::private_computeBonus(const Object *source, WeaponBonusCondi
 		const ContainModuleInterface *theirContain = source->getContainedBy()->getContain();
 		if( theirContain && theirContain->isWeaponBonusPassedToPassengers() )
 		{
-			flags |= theirContain->getWeaponBonusPassedToPassengers();
+			flags.set(theirContain->getWeaponBonusPassedToPassengers());
 
 			// CustomFlags
 			std::vector<AsciiString> unitCustomFlags = theirContain->getCustomWeaponBonusPassedToPassengers();
@@ -6258,7 +6507,7 @@ void WeaponBonus::appendBonuses(WeaponBonus& bonus) const
 //-------------------------------------------------------------------------------------------------
 void WeaponBonusSet::parseWeaponBonusSet(INI* ini)
 {
-	WeaponBonusConditionType wb = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusNames);
+	WeaponBonusConditionType wb = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), WeaponBonusConditionFlags::getBitNames());
 	WeaponBonus::Field wf = (WeaponBonus::Field)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusFieldNames);
 	m_bonus[wb].setField(wf, INI::scanPercentToReal(ini->getNextToken()));
 }
@@ -6308,10 +6557,27 @@ void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus&
 
 	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
 	{
-		if ((flags & (1 << i)) == 0)
+		if (!flags.test(i))
 			continue;
 
 		this->m_bonus[i].appendBonuses(bonus);
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+void WeaponBonusSet::copyFrom(const WeaponBonusSet& other)
+{
+	// Prevent self-assignment
+	if (this == &other)
+	{
+		return;
+	}
+
+	// Iterate through and copy each WeaponBonus struct individually.
+  // The compiler's default assignment operator for WeaponBonus will safely 
+	// copy the inner Real m_field[FIELD_COUNT] array.
+	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+	{
+		this->m_bonus[i] = other.m_bonus[i];
+	}
+}

@@ -62,6 +62,7 @@
 #include "GameLogic/Module/SupplyWarehouseDockUpdate.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/SpecialAbilityUpdate.h"
+#include "GameLogic/Module/SpecialPowerDesignatorUpdate.h"
 #include "GameLogic/Weapon.h"
 
 #include "GameLogic/ExperienceTracker.h"//LORENZEN
@@ -418,8 +419,8 @@ Bool ActionManager::canRepairObject( const Object *obj, const Object *objectToRe
 	}
 
 	//GS So here's the ensuring that they can't be repaired
-	if( objectToRepair->isKindOf(KINDOF_BRIDGE) || objectToRepair->isKindOf(KINDOF_BRIDGE_TOWER) )
-		return FALSE;
+	//if (objectToRepair->isKindOf(KINDOF_BRIDGE) || objectToRepair->isKindOf(KINDOF_BRIDGE_TOWER))
+	//	return FALSE;
 
 	// nothing can be done with things that are under construction
 	if( obj->getStatusBits().test( OBJECT_STATUS_UNDER_CONSTRUCTION ) ||
@@ -1785,6 +1786,65 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			}
 		}
 
+		// Check target designator
+
+		if (spTemplate->isNeedsTargetDesignator()) {
+			bool isDesignatorInRange = false;
+			static NameKeyType key_SpecialPowerDesignatorUpdate = NAMEKEY("SpecialPowerDesignatorUpdate");
+
+			//Iterate over all object and find this module!
+
+			//PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES );
+			PartitionFilterSamePlayer filterPlayer(obj->getControllingPlayer());
+			PartitionFilterSameMapStatus filterMapStatus(obj);
+			PartitionFilterAlive filterAlive;
+			PartitionFilterAcceptByKindOf filterKindOf(MAKE_KINDOF_MASK(KINDOF_TARGET_DESIGNATOR), KINDOFMASK_NONE);
+			PartitionFilter* filters[] = { &filterPlayer, &filterAlive, &filterMapStatus, &filterKindOf, NULL };
+			Real MAX_SCAN_RANGE = 5000.0f; //TODO: GlobalData?
+			// scan objects in our region
+			ObjectIterator* iter = ThePartitionManager->iterateObjectsInRange(loc, MAX_SCAN_RANGE, FROM_CENTER_2D, filters);
+			Object* obj2;
+			MemoryPoolObjectHolder hold(iter);
+			for (obj2 = iter->first(); obj2; obj2 = iter->next()) {
+
+				SpecialPowerDesignatorUpdate* update = (SpecialPowerDesignatorUpdate*)obj2->findUpdateModule(key_SpecialPowerDesignatorUpdate);
+				if (update) {
+					if (update->isValidDesignatorForSpecialPower(spTemplate)) {
+
+						Real distSqr = ThePartitionManager->getDistanceSquared(obj2, loc, FROM_CENTER_2D);
+						Real radius = update->getDesignatorRadius();
+						if (distSqr <= (radius*radius)) {
+							isDesignatorInRange = true;
+							break;
+						}
+					}
+				}
+			}
+			if (!isDesignatorInRange)
+				return FALSE;
+		}
+
+		//static NameKeyType key_SpecialPowerDesignatorUpdate = NAMEKEY("SpecialPowerDesignatorUpdate");
+
+		//PartitionFilterSamePlayer filterPlayer(ThePlayerList->getLocalPlayer());
+		//PartitionFilterAlive filterAlive;
+		//PartitionFilterAcceptByKindOf filterKindOf(MAKE_KINDOF_MASK(KINDOF_TARGET_DESIGNATOR), KINDOFMASK_NONE);
+		//PartitionFilter* filters[] = { &filterPlayer, &filterAlive, &filterKindOf, NULL };
+		//// scan objects on entire map
+		//ObjectIterator* iter = ThePartitionManager->iterateAllObjects(filters);
+		//Object* obj;
+		//MemoryPoolObjectHolder hold(iter);
+		//for (obj = iter->first(); obj; obj = iter->next()) {
+
+		//	SpecialPowerDesignatorUpdate* update = (SpecialPowerDesignatorUpdate*)obj->findUpdateModule(key_SpecialPowerDesignatorUpdate);
+		//	if (update) {
+		//		if (update->isValidDesignatorForSpecialPower(powerTemplate)) {
+		//			update->setActive(true);
+		//		}
+		//	}
+		//}
+
+
 		// First check terrain type, if it is cared about.  Don't return a true, since there are more checks.
 		switch(behaviorType)
 		{
@@ -1795,6 +1855,13 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			{
 				if( TheTerrainLogic->isUnderwater( loc->x, loc->y ) )
 					return FALSE;
+			}
+			case SPECIAL_JUMPJET:
+			{
+				if (TheTerrainLogic->isUnderwater(loc->x, loc->y)
+					|| TheTerrainLogic->isCliffCell(loc->x, loc->y)) {
+					return FALSE;
+				}
 			}
 		}
 
@@ -1846,6 +1913,7 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			case SPECIAL_CLEANUP_AREA:
 			case SPECIAL_SNEAK_ATTACK:
 			case SPECIAL_BATTLESHIP_BOMBARDMENT:
+			case SPECIAL_JUMPJET:
 				//Don't allow "damaging" special powers in shrouded areas, but Fogged are okay.
 				return ThePartitionManager->getShroudStatusForPlayer( obj->getControllingPlayer()->getPlayerIndex(), loc ) != CELLSHROUD_SHROUDED;
 
@@ -1876,6 +1944,7 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			case SPECIAL_TIMED_CHARGES:
 			case SPECIAL_CASH_BOUNTY:
 			case SPECIAL_CHANGE_BATTLE_PLANS:
+			case SPECIAL_TOGGLE_DRAWBRIDGE:
 				return false;
 		}
 	}
@@ -2195,6 +2264,8 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 			case SPECIAL_CLEANUP_AREA:
 			case SPECIAL_LAUNCH_BAIKONUR_ROCKET:
 			case SPECIAL_SNEAK_ATTACK:
+			case SPECIAL_TOGGLE_DRAWBRIDGE:
+			case SPECIAL_JUMPJET:
 				return false;
 
 			case SPECIAL_REMOTE_CHARGES:
@@ -2443,6 +2514,10 @@ SpecialPowerType ActionManager::getFallbackBehaviorType(SpecialPowerType type) {
 	case SUPW_SPECIAL_CRYOBOMB:
 		return SPECIAL_LEAFLET_DROP;
 
+	case SPECIAL_TOGGLE_DRAWBRIDGE:
+		// this has special code
+		return SPECIAL_TOGGLE_DRAWBRIDGE;
+
 	default:
 		return SPECIAL_NEUTRON_MISSILE;
 	}
@@ -2549,6 +2624,7 @@ Bool ActionManager::canDoSpecialPower( const Object *obj, const SpecialPowerTemp
 			case SPECIAL_DETONATE_DIRTY_NUKE:
 			case SPECIAL_CHANGE_BATTLE_PLANS:
 			case SPECIAL_LAUNCH_BAIKONUR_ROCKET:
+			case SPECIAL_TOGGLE_DRAWBRIDGE:
 				//Detonate's any existing charges
 				return true;
 		}

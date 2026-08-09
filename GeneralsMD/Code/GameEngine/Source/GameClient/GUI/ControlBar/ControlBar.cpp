@@ -65,6 +65,7 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/ControlBarScheme.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/FXList.h"
 #include "GameClient/Display.h"
 #include "GameClient/DisplayStringManager.h"
 #include "GameClient/GameClient.h"
@@ -91,6 +92,8 @@ ControlBar *TheControlBar = nullptr;
 const Image* ControlBar::m_rankVeteranIcon	= nullptr;
 const Image* ControlBar::m_rankEliteIcon		= nullptr;
 const Image* ControlBar::m_rankHeroicIcon		= nullptr;
+const Image* ControlBar::m_rankFourIcon			= nullptr;
+const Image* ControlBar::m_rankFiveIcon			= nullptr;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // CommandButton //////////////////////////////////////////////////////////////////////////////////
@@ -114,10 +117,20 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "PurchasedLabel",				INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_purchasedLabel ) },
 	{ "ConflictingLabel",			INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_conflictingLabel ) },
 	{ "ButtonImage",					INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_buttonImageName ) },
+	{ "MarkerObject",					INI::parseThingTemplate,		 nullptr, offsetof( CommandButton, m_markerTemplate ) },
+	{ "MarkerFX",							INI::parseFXList,						 nullptr, offsetof( CommandButton, m_markerFX ) },
+	{ "NumberOfTargets",			INI::parseInt,							 nullptr, offsetof( CommandButton, m_numberOfTargets ) },
+	{ "TargetRadius",					INI::parseReal,							 nullptr, offsetof( CommandButton, m_targetRadius ) },
+	{ "TargetRadiusMode",			INI::parseIndexList,				 TheSpecialPowerTargetRadiusModeNames, offsetof( CommandButton, m_targetRadiusMode ) },
 	{ "CursorName",						INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_cursorName ) },
+	{ "SecondCursorName",			INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_secondCursorName ) },
 	{ "InvalidCursorName",		INI::parseAsciiString,       nullptr, offsetof( CommandButton, m_invalidCursorName ) },
 	{ "ButtonBorderType",			INI::parseLookupList,				 CommandButtonMappedBorderTypeNames, offsetof( CommandButton, m_commandButtonBorder ) },
 	{ "RadiusCursorType",			INI::parseIndexList,				 TheRadiusCursorNames, offsetof( CommandButton, m_radiusCursor ) },
+	{ "AnchorRadiusCursorType",	INI::parseIndexList,				 TheRadiusCursorNames, offsetof( CommandButton, m_anchorRadiusCursor ) },
+	{ "AnchorRadius",					INI::parseReal,							 nullptr, offsetof( CommandButton, m_anchorRadius ) },
+	{ "TargetDecalRadius",		INI::parseReal,							 nullptr, offsetof( CommandButton, m_targetDecalRadius ) },
+	{ "AnchorDecalRadius",		INI::parseReal,							 nullptr, offsetof( CommandButton, m_anchorDecalRadius ) },
 	{ "CustomRadiusCursorType",			INI::parseAsciiString,			nullptr, offsetof( CommandButton, m_customRadiusCursor ) },
 	{ "UnitSpecificSound",		INI::parseAudioEventRTS,		 nullptr, offsetof( CommandButton, m_unitSpecificSound ) },
 	{ "OrderNearbyUnitsRadius",				INI::parseReal, nullptr, offsetof( CommandButton, m_orderNearbyRadius ) },
@@ -674,6 +687,11 @@ CommandButton::CommandButton( void )
 
 	m_command = GUI_COMMAND_NONE;
 	m_thingTemplate = nullptr;
+	m_markerTemplate = nullptr;
+	m_markerFX = nullptr;
+	m_numberOfTargets = 2;	// back-compat default: the chronosphere two-point power
+	m_targetRadius = 0.0f;
+	m_targetRadiusMode = SPTRM_NONE;
 	m_upgradeTemplate = nullptr;
 	m_weaponSlot = PRIMARY_WEAPON;
 	m_maxShotsToFire = 0x7fffffff;	// huge number
@@ -689,6 +707,7 @@ CommandButton::CommandButton( void )
 	m_flashCount = 0;
 	m_conflictingLabel.clear();
 	m_cursorName.clear();
+	m_secondCursorName.clear();
 	m_descriptionLabel.clear();
 	m_invalidCursorName.clear();
 	m_name.clear();
@@ -700,6 +719,10 @@ CommandButton::CommandButton( void )
 	//m_prev = nullptr;
 	m_next = nullptr;
 	m_radiusCursor = RADIUSCURSOR_NONE;
+	m_anchorRadiusCursor = RADIUSCURSOR_NONE;
+	m_anchorRadius = 0.0f;
+	m_targetDecalRadius = 0.0f;
+	m_anchorDecalRadius = 0.0f;
 	m_customRadiusCursor.clear();
 
 	m_orderNearbyRadius = 0.0f;
@@ -1525,6 +1548,8 @@ void ControlBar::init( void )
 		m_rankVeteranIcon = TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron1L" ) : nullptr;
 		m_rankEliteIcon		= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron2L" ) : nullptr;
 		m_rankHeroicIcon	= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron3L" ) : nullptr;
+		m_rankFourIcon		= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron4L" ) : nullptr;
+		m_rankFiveIcon		= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron5L" ) : nullptr;
 
 
 //		if(!m_controlBarResizer)

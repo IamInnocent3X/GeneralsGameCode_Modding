@@ -72,6 +72,7 @@ public:
 		m_energyProduction = 0;
 		m_energyConsumption = 0;
 		m_powerSabotagedTillFrame = 0;
+		m_infinitePower = FALSE;
 		m_owner = owner;
 	}
 
@@ -98,6 +99,10 @@ public:
 
 	void setPowerSabotagedTillFrame( UnsignedInt frame, Int Amount = 0, Real Percent = 0.0f ); // { m_powerSabotagedTillFrame = frame; }
 	UnsignedInt getPowerSabotagedTillFrame() const { return m_powerSabotagedTillFrame; }
+
+	/// when set, the player always has sufficient power (overrides production/consumption and sabotage).
+	void setInfinitePower( Bool enable ) { m_infinitePower = enable; }
+	Bool hasInfinitePower() const { return m_infinitePower; }
 
 	void setEnergyGivenTo( UnsignedInt frame, Int amount, Int playerIndex, ObjectID specificID = INVALID_ID, Int maxEnergy = 0 );
 	void setEnergyReceivedFrom( Int playerIndex );
@@ -129,6 +134,7 @@ private:
 	Int		m_energyConsumption;	///< level of energy consumption, in kw
 	Int		m_energyProduced;		///< total amount of energy able to produced, in kw
 	UnsignedInt m_powerSabotagedTillFrame; ///< If power is sabotaged, the frame will be greater than now.
+	Bool	m_infinitePower;			///< cheat: always have sufficient power
 	Player *m_owner;						///< Tight pointer to the Player I am intrinsic to.
 
 	//struct PowerLossObjData

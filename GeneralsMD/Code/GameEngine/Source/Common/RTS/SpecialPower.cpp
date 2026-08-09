@@ -221,6 +221,10 @@ const char* const SpecialPowerMaskType::s_bitNameList[] =
 	 "SUPW_SPECIAL_SPECTRE_GUNSHIP",
 	 "SUPW_SPECIAL_ORBITAL_STRIKE",
 
+	 "SPECIAL_TOGGLE_DRAWBRIDGE",
+
+	 "SPECIAL_JUMPJET",
+
 	nullptr
 };
 static_assert(ARRAY_SIZE(SpecialPowerMaskType::s_bitNameList) == SpecialPowerMaskType::NumBits + 1, "Incorrect array size");
@@ -306,6 +310,7 @@ void SpecialPowerStore::parseSpecialPowerDefinition( INI *ini )
 	{ "EvaReadyOwn",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_own) },
 	{ "EvaReadyAlly",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_ally) },
 	{ "EvaReadyEnemy",						INI::parseEvaNameIndexList,			TheEvaMessageNames, offsetof(SpecialPowerTemplate, m_eva_ready_enemy) },
+	{ "NeedsTargetDesignator",						INI::parseBool,										nullptr, offsetof(SpecialPowerTemplate, m_needsTargetDesignator) },
 	{ "Cost",											INI::parseInt,									nullptr, offsetof(SpecialPowerTemplate, m_cost) },
 	{ "DeleteUserOnExecute",					INI::parseBool,					nullptr,	offsetof( SpecialPowerTemplate, m_destroyOnExecute ) },
 	{ "FXOnExecute",							INI::parseFXList,					nullptr, offsetof( SpecialPowerTemplate, m_fxOnExecute ) },

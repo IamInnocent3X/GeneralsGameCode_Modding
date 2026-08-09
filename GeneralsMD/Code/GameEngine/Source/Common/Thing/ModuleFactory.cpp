@@ -70,6 +70,7 @@
 #include "GameLogic/Module/RailedTransportContain.h"
 #include "GameLogic/Module/RiderChangeContain.h"
 #include "GameLogic/Module/TransportContain.h"
+#include "GameLogic/Module/JumpjetContain.h"
 #include "GameLogic/Module/MobNexusContain.h"
 #include "GameLogic/Module/TunnelContain.h"
 #include "GameLogic/Module/OverlordContain.h"
@@ -85,6 +86,8 @@
 #include "GameLogic/Module/BunkerBusterBehavior.h"
 #include "GameLogic/Module/FireWeaponWhenDamagedBehavior.h"
 #include "GameLogic/Module/FireWeaponWhenDeadBehavior.h"
+#include "GameLogic/Module/FireWeaponOnKillBehavior.h"
+#include "GameLogic/Module/CreateObjectOnKillBehavior.h"
 #include "GameLogic/Module/DelayedUpgradeBehavior.h"
 #include "GameLogic/Module/GenerateMinefieldBehavior.h"
 #include "GameLogic/Module/ParkingPlaceBehavior.h"
@@ -148,6 +151,8 @@
 #include "GameLogic/Module/PilotFindVehicleUpdate.h"
 #include "GameLogic/Module/DemoTrapUpdate.h"
 #include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
+#include "GameLogic/Module/ChronoSphereUpdateModule.h"
+#include "GameLogic/Module/MultiLocationSpecialPowerUpdate.h"
 #include "GameLogic/Module/SpectreGunshipUpdate.h"
 #include "GameLogic/Module/SpectreGunshipDeploymentUpdate.h"
 #include "GameLogic/Module/KodiakUpdate.h"
@@ -157,10 +162,13 @@
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/Module/RadiusDecalUpdate.h"
 #include "GameLogic/Module/RadiusDecalBehavior.h"
+#include "GameLogic/Module/SpecialPowerDesignatorUpdate.h"
 #include "GameLogic/Module/AutoDepositUpdate.h"
 #include "GameLogic/Module/MissileAIUpdate.h"
+#include "GameLogic/Module/JumpjetMissileAIUpdate.h"
 #include "GameLogic/Module/NeutronMissileUpdate.h"
 #include "GameLogic/Module/OCLUpdate.h"
+#include "GameLogic/Module/OrbitalBeamUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #ifdef ALLOW_SURRENDER
 #include "GameLogic/Module/POWTruckAIUpdate.h"
@@ -212,6 +220,8 @@
 #include "GameLogic/Module/DroneCarrierSlavedUpdate.h"
 #include "GameLogic/Module/DroneCarrierContain.h"
 #include "GameLogic/Module/CarrierDroneAIUpdate.h"
+#include "GameLogic/Module/DrawBridgeTowerUpdate.h"
+#include "GameLogic/Module/DrawBridgeUpdate.h"
 
 // upgrade includes
 #include "GameLogic/Module/ActiveShroudUpgrade.h"
@@ -224,6 +234,7 @@
 #include "GameLogic/Module/ObjectCreationUpgrade.h"
 #include "GameLogic/Module/RadarUpgrade.h"
 #include "GameLogic/Module/PowerPlantUpgrade.h"
+#include "GameLogic/Module/PropagateUpgradeToContainedUpgrade.h"
 #include "GameLogic/Module/ReplaceObjectUpgrade.h"
 #include "GameLogic/Module/ModelConditionUpgrade.h"
 #include "GameLogic/Module/StatusBitsUpgrade.h"
@@ -237,6 +248,7 @@
 #include "GameLogic/Module/UnitProductionBonusUpgrade.h"
 #include "GameLogic/Module/ExperienceScalarUpgrade.h"
 #include "GameLogic/Module/MaxHealthUpgrade.h"
+#include "GameLogic/Module/CrateApplyUpgrade.h"
 
 // create includes
 #include "GameLogic/Module/LockWeaponCreate.h"
@@ -285,6 +297,7 @@
 #include "GameLogic/Module/HiveStructureBody.h"
 #include "GameLogic/Module/ShieldBody.h"
 #include "GameLogic/Module/UndeadBody.h"
+#include "GameLogic/Module/BridgeTowerBody.h"
 
 // contain includes
 // (none)
@@ -377,6 +390,7 @@ void ModuleFactory::init( void )
 	addModule( GarrisonContain );
 	addModule( InternetHackContain );
 	addModule( TransportContain );
+	addModule( JumpjetContain );
 	addModule( RiderChangeContain );
 	addModule( RailedTransportContain );
 	addModule( MobNexusContain );
@@ -394,6 +408,8 @@ void ModuleFactory::init( void )
 	addModule( BunkerBusterBehavior );
 	addModule( FireWeaponWhenDamagedBehavior );
 	addModule( FireWeaponWhenDeadBehavior );
+	addModule( FireWeaponOnKillBehavior );
+	addModule( CreateObjectOnKillBehavior );
 	addModule( DelayedUpgradeBehavior );
 	addModule( GenerateMinefieldBehavior );
 	addModule( ParkingPlaceBehavior );
@@ -440,6 +456,7 @@ void ModuleFactory::init( void )
 	addModule( LifetimeUpdate );
 	addModule( RadiusDecalUpdate );
 	addModule( RadiusDecalBehavior );
+	addModule( SpecialPowerDesignatorUpdate );
 	addModule( EMPUpdate );
   addModule( LeafletDropBehavior );
 	addModule( AutoDepositUpdate );
@@ -447,6 +464,7 @@ void ModuleFactory::init( void )
 	addModule( BuffUpdate );
 	addModule( ArmorDamageScalarUpdate );
 	addModule( MissileAIUpdate );
+	addModule( JumpjetMissileAIUpdate );
 	addModule( NeutronMissileUpdate );
 	addModule( FireSpreadUpdate );
 	addModule( FireWeaponUpdate );
@@ -471,6 +489,8 @@ void ModuleFactory::init( void )
 	addModule( PilotFindVehicleUpdate );
 	addModule( DemoTrapUpdate );
 	addModule( ParticleUplinkCannonUpdate );
+	addModule( ChronoSphereUpdateModule );
+	addModule( MultiLocationSpecialPowerUpdate );
 	addModule( SpectreGunshipUpdate );
 	addModule( SpectreGunshipDeploymentUpdate );
 	addModule( KodiakUpdate );
@@ -490,6 +510,7 @@ void ModuleFactory::init( void )
 	addModule( SlavedUpdate );
 	addModule( MobMemberSlavedUpdate );
 	addModule( OCLUpdate );
+	addModule( OrbitalBeamUpdate );
 	addModule( SpecialAbilityUpdate );
 	addModule( MissileLauncherBuildingUpdate );
 	addModule( SupplyCenterProductionExitUpdate );
@@ -521,6 +542,8 @@ void ModuleFactory::init( void )
 	addModule( DroneCarrierAIUpdate );
 	addModule( DroneCarrierSlavedUpdate );
 	addModule( CarrierDroneAIUpdate );
+	addModule( DrawBridgeTowerUpdate );
+	addModule( DrawBridgeUpdate );
 
 	// upgrade modules
 	addModule( CostModifierUpgrade );
@@ -536,6 +559,7 @@ void ModuleFactory::init( void )
 	addModule( StealthUpgrade );
 	addModule( RadarUpgrade );
 	addModule( PowerPlantUpgrade );
+	addModule( PropagateUpgradeToContainedUpgrade );
 	addModule( LocomotorSetUpgrade );
 	addModule( LineOfSightModifierUpgrade );
 	addModule( ObjectCreationUpgrade );
@@ -547,6 +571,7 @@ void ModuleFactory::init( void )
 	addModule( WeaponBonusUpgrade );
 	addModule( ExperienceScalarUpgrade );
 	addModule( MaxHealthUpgrade );
+	addModule( CrateApplyUpgrade );
 
 	// create modules
 	addModule( LockWeaponCreate );
@@ -595,6 +620,7 @@ void ModuleFactory::init( void )
 	addModule( HiveStructureBody );
 	addModule( ShieldBody );
 	addModule( UndeadBody );
+	addModule( BridgeTowerBody );
 
 	// contain modules
 	// (none)

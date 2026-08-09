@@ -43,6 +43,8 @@ ExperienceScalarUpgradeModuleData::ExperienceScalarUpgradeModuleData( void )
 	//m_initiallyActive = false;
 	m_addXPScalar = 0.0f;
 	m_addXPValueScalar = 0.0f;
+	m_setMaxVeterancyLevel = LEVEL_INVALID;	// don't change the cap unless specified
+	//m_prevMaxVeterancyDiff = -1;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -57,6 +59,7 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(ExperienceScalarUpgradeModuleData, m_initiallyActive) },
 		{ "AddXPScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPScalar ) },
 		{ "AddXPValueScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPValueScalar ) },
+		{ "SetMaxVeterancyLevel",	INI::parseIndexList, TheVeterancyNames, offsetof( ExperienceScalarUpgradeModuleData, m_setMaxVeterancyLevel ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 
@@ -121,6 +124,10 @@ void ExperienceScalarUpgrade::upgradeImplementation( )
 		xpTracker->setExperienceScalar( xpTracker->getExperienceScalar() + value );
 		xpTracker->setExperienceValueScalar( xpTracker->getExperienceValueScalar() + scalar );
 	}
+
+	// Optionally raise/lower the object's veterancy cap.
+	if( data->m_setMaxVeterancyLevel != LEVEL_INVALID )
+		obj->setMaxVeterancyLevel( data->m_setMaxVeterancyLevel );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -152,6 +159,7 @@ void ExperienceScalarUpgrade::xfer( Xfer *xfer )
 
 	xfer->xferBool(&m_hasExecuted);
 
+	//xfer->xferInt(&m_prevMaxVeterancyDiff);
 }
 
 // ------------------------------------------------------------------------------------------------

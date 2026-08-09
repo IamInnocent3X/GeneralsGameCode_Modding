@@ -44,7 +44,9 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
-
+#include "GameLogic/ExperienceTracker.h"
+#include "Common/AudioEventRTS.h"
+#include "Common/MiscAudio.h"
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -253,15 +255,18 @@ UpdateSleepTime AutoHealBehavior::update( void )
 		MemoryPoolObjectHolder hold( iter );
 		for( obj = iter->first(); obj; obj = iter->next() )
 		{
-			// do not heal if we are at max health already
+			// do not heal if we are at max health already, still apply if salvage/promotion is granted
 			BodyModuleInterface *body = obj->getBodyModule();
-			if( body->getHealth() < body->getMaxHealth() )
+			if( (body->getHealth() < body->getMaxHealth())
+					|| canApplyArmorSalvage( obj )
+					|| canApplyWeaponSalvage( obj )
+					|| canApplyLevelUp( obj ) )
 			{
 				if( obj->isAnyKindOf( d->m_kindOf ) && !obj->isAnyKindOf( d->m_forbiddenKindOf ) )
 				{
 					if( !d->m_skipSelfForHealing || obj != getObject() )
 					{
-						pulseHealObject( obj );
+						Bool healed = pulseHealObject( obj );
 
 						// IamInnocent - Added disguise check to not show healing icon when disguised as Unselectable Objects (trees, etc. )
 						Bool isDisguised = FALSE;
@@ -272,7 +277,7 @@ UpdateSleepTime AutoHealBehavior::update( void )
 						  )
 							isDisguised = TRUE;
 						
-						if( d->m_singleBurst && TheGameLogic->getDrawIconUI() && !isDisguised )
+						if( healed && d->m_singleBurst && TheGameLogic->getDrawIconUI() && !isDisguised )
 						{
 							if( TheAnim2DCollection && TheGlobalData->m_getHealedAnimationName.isEmpty() == FALSE )
 							{
@@ -300,30 +305,102 @@ UpdateSleepTime AutoHealBehavior::update( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool AutoHealBehavior::canApplyWeaponSalvage(const Object* obj) const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return data->m_grantSalvageUpgrade && obj->isKindOf(KINDOF_WEAPON_SALVAGER) && !obj->testWeaponSetFlag(WEAPONSET_CRATEUPGRADE_TWO);
+}
+
+Bool AutoHealBehavior::canApplyArmorSalvage(const Object* obj) const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return data->m_grantSalvageUpgrade && obj->isKindOf(KINDOF_ARMOR_SALVAGER) && !obj->testArmorSetFlag(ARMORSET_CRATE_UPGRADE_TWO);
+}
+
+Bool AutoHealBehavior::canApplyLevelUp(const Object* obj) const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return data->m_grantPromotion && obj->getExperienceTracker()->isTrainable() && obj->getExperienceTracker()->getVeterancyLevel() < LEVEL_HEROIC;
+}
+
+// ------------------------------------------------------------------------------------------------
+static void applyWeaponSalvage(Object* unit)
+{
+	if (unit->testWeaponSetFlag(WEAPONSET_CRATEUPGRADE_ONE))
+	{
+		unit->clearWeaponSetFlag(WEAPONSET_CRATEUPGRADE_ONE);
+		unit->setWeaponSetFlag(WEAPONSET_CRATEUPGRADE_TWO);
+	}
+	else
+	{
+		unit->setWeaponSetFlag(WEAPONSET_CRATEUPGRADE_ONE);
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+static void applyArmorSalvage(Object* unit)
+{
+	if (unit->testArmorSetFlag(ARMORSET_CRATE_UPGRADE_ONE))
+	{
+		unit->clearArmorSetFlag(ARMORSET_CRATE_UPGRADE_ONE);
+		unit->setArmorSetFlag(ARMORSET_CRATE_UPGRADE_TWO);
+		unit->clearAndSetModelConditionState(MODELCONDITION_ARMORSET_CRATEUPGRADE_ONE, MODELCONDITION_ARMORSET_CRATEUPGRADE_TWO);
+	}
+	else
+	{
+		unit->setArmorSetFlag(ARMORSET_CRATE_UPGRADE_ONE);
+		unit->setModelConditionState(MODELCONDITION_ARMORSET_CRATEUPGRADE_ONE);
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+static void doLevelGain(Object* unit)
+{
+	unit->getExperienceTracker()->gainExpForLevel(1);
+}
+
+static void doSalvageEffect(Object* unit) {
+	//Play the salvage installation crate pickup sound.
+	AudioEventRTS soundToPlay = TheAudio->getMiscAudio()->m_crateSalvage;
+	soundToPlay.setObjectID(unit->getID());
+	TheAudio->addAudioEvent(&soundToPlay);
+}
+
 //-------------------------------------------------------------------------------------------------
-void AutoHealBehavior::pulseHealObject( Object *obj )
+//-------------------------------------------------------------------------------------------------
+Bool AutoHealBehavior::pulseHealObject(Object* obj)
 {
 	if (m_stopped)
-		return;
+		return false;
 
-	const AutoHealBehaviorModuleData *data = getAutoHealBehaviorModuleData();
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	bool needsHeal{ true };
 
+	if (data->m_grantSalvageUpgrade || data->m_grantPromotion) {
+		// Need to check for full HP 
+		BodyModuleInterface* body = obj->getBodyModule();
+		needsHeal = (body != nullptr) && (body->getHealth() < body->getMaxHealth());
+	}
+	if (needsHeal) {
+		if (data->m_radius == 0.0f)
+			obj->attemptHealingWithParasiteClear(data->m_healingAmount, getObject(), data->m_clearsParasite, data->m_clearsParasiteKeys );
+		else 
+			obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite, data->m_clearsParasiteKeys );
+	}
 
-	if ( data->m_radius == 0.0f )
-		obj->attemptHealingWithParasiteClear(data->m_healingAmount, getObject(), data->m_clearsParasite, data->m_clearsParasiteKeys );
-	else
-		obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite, data->m_clearsParasiteKeys );
+	if (canApplyArmorSalvage(obj)) {
+		applyArmorSalvage(obj);
+		doSalvageEffect(obj);
+	}
+	else if (canApplyWeaponSalvage(obj)) {
+		applyWeaponSalvage(obj);
+		doSalvageEffect(obj);
+	}
+	else if (canApplyLevelUp(obj)) {
+		doLevelGain(obj);
+	}
 
-
-	Bool isDisguised = FALSE;
-	if(obj && obj->isDisguised() &&
-		ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES &&
-		obj->getDrawable() &&
-		(obj->getDrawable()->getTemplate()->isKindOf(KINDOF_MINE) || obj->getDrawable()->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
-	  )
-		isDisguised = TRUE;
-	
-	if( data->m_unitHealPulseParticleSystemTmpl && !isDisguised )
+	if( needsHeal && data->m_unitHealPulseParticleSystemTmpl )
 	{
 		ParticleSystem *system = TheParticleSystemManager->createParticleSystem( data->m_unitHealPulseParticleSystemTmpl );
 		if( system )
@@ -333,6 +410,7 @@ void AutoHealBehavior::pulseHealObject( Object *obj )
 	}
 
 	m_soonestHealFrame = TheGameLogic->getFrame() + data->m_healingDelay;// In case onDamage tries to wake us up early
+	return needsHeal;
 }
 
 // ------------------------------------------------------------------------------------------------

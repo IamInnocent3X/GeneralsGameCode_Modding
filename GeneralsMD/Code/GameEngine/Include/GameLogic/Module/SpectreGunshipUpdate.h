@@ -66,6 +66,7 @@ public:
   Real                  m_strafingIncrement;
   Real                  m_orbitInsertionSlope;
   Real                  m_randomOffsetForHowitzer;
+  Bool                  m_hitWaterSurface;
   Bool                  m_useMyProducerForSpecialPower;
   Bool                  m_useLocomotorToUpdateOrbit;
   Bool                  m_gunshipDontUpdateOrbit;
@@ -73,6 +74,7 @@ public:
   AsciiString				    m_cursorName;
 
 	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystem;
+	const ParticleSystemTemplate * m_gattlingStrafeFXParticleSystemWater;
 
 	SpectreGunshipUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);

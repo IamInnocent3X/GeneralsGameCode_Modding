@@ -46,6 +46,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_VIEW_BRUSHFEEDBACK, OnViewBrushfeedback)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_BRUSHFEEDBACK, OnUpdateViewBrushfeedback)
 	ON_WM_DESTROY()
+	ON_WM_SIZE()
 	ON_WM_TIMER()
 	ON_WM_CANCELMODE()
 	ON_COMMAND(ID_EDIT_CAMERAOPTIONS, OnEditCameraoptions)
@@ -343,6 +344,40 @@ void CMainFrame::adjustWindowSize(void)
 	m_3dViewWidth = viewWidth;
 }
 
+// ----------------------------------------------------------------------------
+// Debounce a burst of resize events: (re)start a one-shot timer so the render
+// resolution is only rescaled once the user stops dragging.
+void CMainFrame::ScheduleAdjustViewAfterResize(void)
+{
+	KillTimer(ADJUST_VIEW_TIMER);
+	SetTimer(ADJUST_VIEW_TIMER, 1000, nullptr);
+}
+
+// ----------------------------------------------------------------------------
+// Reset the 3D render resolution to match the current 3D-view client size.
+// Does NOT move the window (unlike adjustWindowSize), so it never re-triggers
+// WM_SIZE -- no feedback loop.
+void CMainFrame::applyDynamicResolution(void)
+{
+	WbView3d *pView = CWorldBuilderDoc::GetActive3DView();
+	if (pView == nullptr) {
+		return;
+	}
+	CRect client;
+	pView->GetClientRect(&client);
+	Int w = client.Width();
+	Int h = client.Height();
+	if (w <= 0 || h <= 0) {
+		return;
+	}
+	// reset3dEngineDisplaySize early-returns if the size is unchanged.
+	pView->reset3dEngineDisplaySize(w, h);
+	m_3dViewWidth = w;
+	// Persist so the last window-fit size is restored on next launch.
+	::AfxGetApp()->WriteProfileInt(MAIN_FRAME_SECTION, "Width", w);
+	::AfxGetApp()->WriteProfileInt(MAIN_FRAME_SECTION, "Height", h);
+}
+
 BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 {
 	if( !CFrameWnd::PreCreateWindow(cs) )
@@ -499,11 +534,28 @@ void CMainFrame::OnDestroy()
 		KillTimer(m_hAutoSaveTimer);
 	}
 	m_hAutoSaveTimer = 0;
+	KillTimer(ADJUST_VIEW_TIMER);
 	CFrameWnd::OnDestroy();
+}
+
+void CMainFrame::OnSize(UINT nType, int cx, int cy)
+{
+	CFrameWnd::OnSize(nType, cx, cy);
+	// Ignore minimize and degenerate sizes; otherwise debounce a render rescale.
+	if (nType == SIZE_MINIMIZED || cx <= 0 || cy <= 0) {
+		return;
+	}
+	ScheduleAdjustViewAfterResize();
 }
 
 void CMainFrame::OnTimer(UINT nIDEvent)
 {
+	if (nIDEvent == ADJUST_VIEW_TIMER) {
+		KillTimer(ADJUST_VIEW_TIMER);
+		applyDynamicResolution();
+		return;
+	}
+
 	CWorldBuilderDoc *pDoc = CWorldBuilderDoc::GetActiveDoc();
 	if (pDoc && pDoc->needAutoSave()) {
 		m_autoSaving = true;

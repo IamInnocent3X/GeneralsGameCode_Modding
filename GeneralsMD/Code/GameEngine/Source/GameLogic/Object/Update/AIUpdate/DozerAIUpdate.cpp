@@ -746,8 +746,8 @@ StateReturnType DozerActionDoActionState::update( void )
 				Bool canHeal = TRUE;
 
 				// if we are repairing a bridge, create scaffolding over the bridge if we need to
-				if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
-					dozerAI->createBridgeScaffolding( goalObject );
+				//if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
+				//	dozerAI->createBridgeScaffolding( goalObject );
 
 				// the builder is now actively repairing something, we'll borrow the constructing animation
 				dozer->setModelConditionState( MODELCONDITION_ACTIVELY_CONSTRUCTING );
@@ -756,19 +756,19 @@ StateReturnType DozerActionDoActionState::update( void )
 				// when repairing bridges, we cannot actually do any repairing until the
 				// scaffolding is extended and all the way complete
 				//
-				if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
-				{
-					BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( goalObject );
-					DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower interface") );
-					Object *bridgeObject = TheGameLogic->findObjectByID( btbi->getBridgeID() );
-					DEBUG_ASSERTCRASH( bridgeObject, ("Unable to find bridge center object") );
-					BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject( bridgeObject );
-					DEBUG_ASSERTCRASH( bbi, ("Unable to find bridge interface from tower goal object during repair") );
-
-					if( bbi->isScaffoldInMotion() == TRUE )
-						canHeal = FALSE;
-
-				}
+				//if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
+				//{
+				//	BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( goalObject );
+				//	DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower interface") );
+				//	Object *bridgeObject = TheGameLogic->findObjectByID( btbi->getBridgeID() );
+				//	DEBUG_ASSERTCRASH( bridgeObject, ("Unable to find bridge center object") );
+				//	BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject( bridgeObject );
+				//	DEBUG_ASSERTCRASH( bbi, ("Unable to find bridge interface from tower goal object during repair") );
+				//
+				//	if( bbi->isScaffoldInMotion() == TRUE )
+				//		canHeal = FALSE;
+				//
+				//}
 
 				// do healing
 				if( canHeal )
@@ -1643,6 +1643,10 @@ void DozerAIUpdate::removeBridgeScaffolding( Object *bridgeTower )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime DozerAIUpdate::update( void )
 {
+	// Suspend dozer tasks (build/repair) while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
 	/// IamInnocent - Made Sleepy
 
 	//
@@ -1914,30 +1918,31 @@ void DozerAIUpdate::privateRepair( Object *obj, CommandSourceType cmdSource )
 	// if this object is a bridge tower, we need to check the status of the bridge in order
 	// to check for a 'duplicate repair'
 	//
-	//if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
-	//{
-	//	BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
-	//	DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
-  //
-	//	Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
-	//	DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
-	//	if( BitIsSet( bridge->getStatusBits(), OBJECT_STATUS_UNDERGOING_REPAIR ) == TRUE )
-	//		return;
-  //
-	//}
+	if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
+	{
+		BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
+		DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
+  
+		Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
+		DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
+		//if( BitIsSet( bridge->getStatusBits(), OBJECT_STATUS_UNDERGOING_REPAIR ) == TRUE )
+		if (bridge != nullptr && bridge->getStatusBits().test(OBJECT_STATUS_UNDERGOING_REPAIR))
+			return;
+  
+	}
 
 
 	// for bridges, set the status for the bridge object
-	//if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
-	//{
-	//	BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
-	//	DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
-	//
-	//  Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
-	//	DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
-	//	bridge->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
-  //
-	//}
+	if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
+	{
+		BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
+		DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
+	
+	  Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
+		DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
+		bridge->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
+  
+	}
 
 	// start the new task
 	newTask( DOZER_TASK_REPAIR, obj );

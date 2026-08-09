@@ -83,6 +83,7 @@ OpenContainModuleData::OpenContainModuleData( void )
  	m_allowAlliesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Allies for All Units
  	m_allowEnemiesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Stealth Garrison Status
  	m_allowNeutralInside = TRUE;
+	m_passengerWeaponBonusVec.clear();
 	m_initialPayload.clear();
 	m_containMaxUpgradeList.clear();
 	m_containMaxUpgradeListConflicts.clear();
@@ -875,6 +876,11 @@ void OpenContain::onRemoving( Object *rider)
 			AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
 			fallingSound.setObjectID(rider->getID());
 			TheAudio->addAudioEvent(&fallingSound);
+
+			const OpenContainModuleData* d = getOpenContainModuleData();
+			for (Int i = 0; i < d->m_passengerWeaponBonusVec.size(); i++) {
+				rider->clearWeaponBonusCondition(d->m_passengerWeaponBonusVec[i]);
+			}
 		}
 	}
 }

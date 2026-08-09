@@ -329,6 +329,10 @@ Real WorkerAIUpdate::getWarehouseScanDistance() const
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime WorkerAIUpdate::update( void )
 {
+	// Suspend worker tasks (build/repair/supply) while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
 	/// IamInnocent - Made Sleepy
 
 	//

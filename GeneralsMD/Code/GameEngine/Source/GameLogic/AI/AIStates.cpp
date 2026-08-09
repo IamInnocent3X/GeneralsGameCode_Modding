@@ -1913,6 +1913,11 @@ StateReturnType AIInternalMoveToState::update()
 		//DEBUG_LOG(("Info - Blocked - recomputing."));
 	}
 
+	// Check if all bridges on the current path are still valid
+	if (!forceRecompute && !ai->arePathLayersStillValid()) {
+		forceRecompute = true;
+	}
+
 	//Determine if we are on a cliff cell... if so, use the climbing model condition
 	//instead of moving.
 	Int cellX = REAL_TO_INT( obj->getPosition()->x / PATHFIND_CELL_SIZE );
@@ -2531,6 +2536,12 @@ Bool AIAttackApproachTargetState::computePath()
 		//CRCDEBUG_LOG(("AIAttackApproachTargetState::computePath - bailing because of min time for object %d", getMachineOwner()->getID()));
 		return true;
 	}
+
+	// Check if all bridges on the current path are still valid
+	if (!forceRepath && !ai->arePathLayersStillValid()) {
+		forceRepath = true;
+	}
+
 
 	m_approachTimestamp = TheGameLogic->getFrame();
 
@@ -5174,7 +5185,7 @@ StateReturnType AIAttackAimAtTargetState::update()
 		Real relAngle = m_isAttackingObject ?
 			ThePartitionManager->getRelativeAngle2D(source, victim) :
 			ThePartitionManager->getRelativeAngle2D(source, getMachineGoalPosition());
-		if (sourceAI->friend_isAttackAngleValid(relAngle)) {
+		if (sourceAI->friend_isAttackAngleValid(relAngle, 0.07f * 2)) {  //about 4 degrees threshold
 			//DEBUG_LOG((">>> friend_isAttackAngleValid(%f) = True", relAngle * 180.0 / PI));
 
 			// Workaround for ships TODO: Make this work for everything
@@ -5287,6 +5298,7 @@ StateReturnType AIAttackAimAtTargetState::update()
 		{ // Check our preferred angle on how to move.
 
 			//We ignore AimDelta here.
+			//aimDelta = REL_THRESH * 5;  // about 10 degrees
 			aimDelta = REL_THRESH;
 
 			Real relAttackAngle = sourceAI->friend_getClosestAttackAngle(relAngle);
@@ -5390,8 +5402,8 @@ StateReturnType AIAttackAimAtTargetState::update()
 			}
 		}
 
-		//if (fabs(stdAngleDiff(desiredAngle,relAngle)) < aimDelta /*&& !m_preAttackFrames*/ )
-		if (fabs(relAngle) < aimDelta && !hasPreferredAngle /*&& !m_preAttackFrames*/)
+		if (fabs(stdAngleDiff(desiredAngle,relAngle)) < aimDelta /*&& !m_preAttackFrames*/ )
+		//if (fabs(relAngle) < aimDelta && !hasPreferredAngle /*&& !m_preAttackFrames*/)
 		{
 			AIUpdateInterface* victimAI = victim ? victim->getAI() : nullptr;
 			// add ourself as a targeter BEFORE calling isTemporarilyPreventingAimSuccess().

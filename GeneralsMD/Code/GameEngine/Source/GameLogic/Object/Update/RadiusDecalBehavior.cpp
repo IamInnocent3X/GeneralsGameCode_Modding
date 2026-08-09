@@ -43,6 +43,7 @@ RadiusDecalBehaviorModuleData::RadiusDecalBehaviorModuleData()
 {
 	//m_initiallyActive = false;
 	m_decalRadius = 0.0f;
+	m_worksWhileContained = false;
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -54,6 +55,7 @@ RadiusDecalBehaviorModuleData::RadiusDecalBehaviorModuleData()
 		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(RadiusDecalBehaviorModuleData, m_initiallyActive) },
 		{ "RadiusDecal",						RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( RadiusDecalBehaviorModuleData, m_decalTemplate) },
 		{ "Radius",			INI::parseReal,									nullptr,	offsetof( RadiusDecalBehaviorModuleData, m_decalRadius) },
+		{ "WorksWhileContained",					INI::parseBool,						nullptr, offsetof(RadiusDecalBehaviorModuleData, m_worksWhileContained) },
 		{ 0, 0, 0, 0 }
 	};
 
@@ -121,7 +123,7 @@ void RadiusDecalBehavior::clearDecal()
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime RadiusDecalBehavior::update( void )
 {
-	if (getObject()->isDisabledByType(DISABLED_HELD)) {
+	if (getObject()->isDisabledByType(DISABLED_HELD) && !getRadiusDecalBehaviorModuleData()->m_worksWhileContained) {
 		if (!m_radiusDecal.isEmpty())
 			clearDecal();
 		return UPDATE_SLEEP_NONE;  // We wait to be re-enabled

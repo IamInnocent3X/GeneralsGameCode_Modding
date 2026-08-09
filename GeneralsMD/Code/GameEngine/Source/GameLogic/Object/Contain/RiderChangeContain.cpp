@@ -46,6 +46,7 @@
 
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
+#include "GameLogic/ArmorSet.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Locomotor.h"
@@ -121,6 +122,66 @@ void RiderChangeContainModuleData::parseRiderInfo( INI* ini, void *instance, voi
 
 	//Locomotor set type
 	rider->m_locomotorSetType = (LocomotorSetType)INI::scanIndexList( ini->getNextToken(), TheLocomotorSetNames );
+
+	//Armor set (optional, last token; keeps existing rider lines valid)
+	rider->m_armorSetFlag = ARMORSET_NONE;
+	const char* armorToken = ini->getNextTokenOrNull();
+	if( armorToken )
+		rider->m_armorSetFlag = (ArmorSetType)INI::scanIndexList( armorToken, ArmorSetFlags::getBitNames() );
+}
+
+void RiderChangeContainModuleData::parseRiderInfoCustom(INI* ini, void* instance, void* store, const void* /*userData*/)
+{
+	RiderInfo rider;
+	const char* name = ini->getNextToken();
+
+	//Template name
+	rider.m_templateName.format(name);
+
+	//Model condition state
+	INI::parseIndexList(ini, instance, &(rider.m_modelConditionFlagType), ModelConditionFlags::getBitNames());
+
+	//Weaponset
+	INI::parseIndexList(ini, instance, &(rider.m_weaponSetFlag), WeaponSetFlags::getBitNames());
+
+	//Object status
+	name = ini->getNextToken();
+	Int count = 0;
+	Int bitindex = -1;
+	for(ConstCharPtrArray findname = ObjectStatusMaskType::getBitNames(); *findname; findname++, count++ )
+	{
+		if( stricmp( *findname, name ) == 0 )
+		{
+			bitindex = count;
+			break;
+		}
+	}
+	if (bitindex >= 0)
+	{
+		rider.m_objectStatusType = (ObjectStatusType)bitindex;
+		rider.m_objectCustomStatusType.clear();
+	}
+	else
+	{
+		rider.m_objectStatusType = (ObjectStatusType)0;
+		rider.m_objectCustomStatusType.format(name);
+	}
+
+	//Command set override
+	name = ini->getNextToken();
+	rider.m_commandSet.format(name);
+
+	//Locomotor set type
+	rider.m_locomotorSetType = (LocomotorSetType)INI::scanIndexList(ini->getNextToken(), TheLocomotorSetNames);
+
+	//Armor set (optional, last token; keeps existing rider lines valid)
+	rider.m_armorSetFlag = ARMORSET_NONE;
+	const char* armorToken = ini->getNextTokenOrNull();
+	if( armorToken )
+		rider.m_armorSetFlag = (ArmorSetType)INI::scanIndexList( armorToken, ArmorSetFlags::getBitNames() );
+
+	std::vector<RiderInfo>* s = (std::vector<RiderInfo>*)store;
+	s->push_back(rider);
 }
 
 void RiderChangeContainModuleData::parseRiderInfoCustom(INI* ini, void* instance, void* store, const void* /*userData*/)
@@ -187,6 +248,14 @@ void RiderChangeContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "Rider6",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[5] ) },
 		{ "Rider7",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[6] ) },
 		{ "Rider8",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[7] ) },
+		{ "Rider9",					parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[8] ) },
+		{ "Rider10",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[9] ) },
+		{ "Rider11",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[10] ) },
+		{ "Rider12",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[11] ) },
+		{ "Rider13",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[12] ) },
+		{ "Rider14",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[13] ) },
+		{ "Rider15",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[14] ) },
+		{ "Rider16",				parseRiderInfo,					nullptr, offsetof( RiderChangeContainModuleData, m_riders[15] ) },
 		{ "RiderCustom",			parseRiderInfoCustom,			nullptr, offsetof(RiderChangeContainModuleData, m_ridersCustom) },
 		{ "RiderChangeOnStatusTypes",	INI::parseBool,					nullptr, offsetof(RiderChangeContainModuleData, m_riderNotRequired) },
 		{ "RiderUseUpgradeNames",		INI::parseBool,					nullptr, offsetof(RiderChangeContainModuleData, m_useUpgradeNames) },
@@ -604,6 +673,10 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 		//Also set the correct weaponset flag
 		obj->setWeaponSetFlag( riderInfo.m_weaponSetFlag );
 
+		//Also set the correct armorset flag (if any)
+		if( data->m_riders[ i ].m_armorSetFlag != ARMORSET_NONE )
+			obj->setArmorSetFlag( data->m_riders[ i ].m_armorSetFlag );
+
 		//Also set the object status
 		if (riderInfo.m_objectCustomStatusType.isEmpty())
 		{
@@ -866,6 +939,10 @@ Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& 
 
 		//Also clear the current weaponset flag
 		bike->clearWeaponSetFlag( riderInfo.m_weaponSetFlag );
+
+		//Also clear the current armorset flag (if any)
+		if( riderInfo.m_armorSetFlag != ARMORSET_NONE )
+			bike->clearArmorSetFlag( riderInfo.m_armorSetFlag );
 
 		//Also clear the object status
 		if ( riderInfo.m_objectCustomStatusType.isEmpty() )
@@ -1434,6 +1511,10 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 		//Also clear the current weaponset flag
 		obj->clearWeaponSetFlag( data->m_riders[ RiderIndex ].m_weaponSetFlag );
 
+		//Also clear the current armorset flag (if any)
+		if( data->m_riders[ RiderIndex ].m_armorSetFlag != ARMORSET_NONE )
+			obj->clearArmorSetFlag( data->m_riders[ RiderIndex ].m_armorSetFlag );
+
 		// Don't clear its Status for Status Checks!
 		if(!clearStatus)
 			return;
@@ -1460,6 +1541,10 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 
 				//Also clear the current weaponset flag
 				obj->clearWeaponSetFlag( (*it).m_weaponSetFlag );
+
+				//Also clear the current armorset flag (if any)
+				if( (*it).m_armorSetFlag != ARMORSET_NONE )
+					obj->clearArmorSetFlag( (*it).m_armorSetFlag );
 
 				// Don't clear its Status for Status Checks!
 				if(!clearStatus)
@@ -1498,6 +1583,10 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 
 		obj->clearWeaponSetFlag( data->m_riders[ i ].m_weaponSetFlag );
 
+		//Also clear the current armorset flag (if any)
+		if( data->m_riders[ i ].m_armorSetFlag != ARMORSET_NONE )
+			obj->clearArmorSetFlag( data->m_riders[ i ].m_armorSetFlag );
+
 		if (data->m_riders[ i ].m_objectCustomStatusType.isEmpty())
 		{
 			obj->clearStatus(MAKE_OBJECT_STATUS_MASK(data->m_riders[ i ].m_objectStatusType));
@@ -1512,6 +1601,10 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 		obj->clearModelConditionFlags( MAKE_MODELCONDITION_MASK( (*it).m_modelConditionFlagType ) );
 
 		obj->clearWeaponSetFlag( (*it).m_weaponSetFlag );
+
+		//Also clear the current armorset flag (if any)
+		if( (*it).m_armorSetFlag != ARMORSET_NONE )
+			obj->clearArmorSetFlag( (*it).m_armorSetFlag );
 
 		if ((*it).m_objectCustomStatusType.isEmpty())
 		{

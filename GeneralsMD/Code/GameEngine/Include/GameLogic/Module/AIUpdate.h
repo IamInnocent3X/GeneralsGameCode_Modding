@@ -314,11 +314,11 @@ public:
 
 	virtual AIUpdateInterface* getAIUpdateInterface() { return this; }
 
-	// Disabled conditions to process (AI will still process held status)
-	//virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
-
-	// We need to process all disabled types to allow Locomotor working while disabled
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	// Disabled conditions to process. By default the AI only processes HELD (so a disabled
+	// unit's AI fully freezes, as it always did). We additionally process all disabled types
+	// only when the current locomotor must keep working while disabled, so it can maintain
+	// position. (Implemented in the .cpp because it needs the full Locomotor definition.)
+	virtual DisabledMaskType getDisabledTypesToProcess() const;
 
 	// Some very specific, complex behaviors are used by more than one AIUpdate.  Here are their interfaces.
 	virtual DozerAIInterface* getDozerAIInterface() {return nullptr;}
@@ -515,8 +515,10 @@ public:
 	Bool isQuickPathAvailable( const Coord3D *destination ) const;  ///< does a path (using quick pathfind) exist between us and the destination
 	Int getNumFramesBlocked(void) const {return m_blockedFrames;}
 	Bool isBlockedAndStuck(void) const {return m_isBlockedAndStuck;}
+	Bool isForcedMoveBackwards(void) const {return m_forceMoveBackwards;}	///< True while a REVERSE_MOVE order is being executed.
 	virtual Bool canComputeQuickPath(void); ///< Returns true if we can quickly comput a path.  Usually missiles & the like that just move straight to the destination.
 	virtual Bool computeQuickPath(const Coord3D *destination); ///< Computes a quick path to the destination.
+	Bool arePathLayersStillValid(); ///< Check if the current used layers are still passable
 
 	Bool isMoving() const;
 	Bool isMovingAwayFrom(Object* obj) const;
@@ -660,6 +662,12 @@ protected:
 	virtual UpdateSleepTime doLocomotor();	// virtual so subclasses can override
 	virtual void chooseGoodLocomotorFromCurrentSet();
 
+	// True when a disable type should suspend AI logic. We still run while disabled
+	// (DISABLEDMASK_ALL) so the locomotor can maintain position, but all other AI logic
+	// (state machine, attacking, pathfinding, economy) must be frozen. HELD never suspends,
+	// and death is handled separately by the normal update path.
+	Bool isAiSuspendedByDisable() const;
+
 	void setLastCommandSource(CommandSourceType source);
 
 	// subclasses may want to override this, to use a subclass of AIStateMachine.
@@ -696,7 +704,7 @@ public:
 #endif
 
 	// this is intended for use ONLY by AIAttackAimAtTargetState.
-	Bool friend_isAttackAngleValid(Real relAngle) const;
+	Bool friend_isAttackAngleValid(Real relAngle, Real angleThresh) const;
 	Real friend_getClosestAttackAngle(Real relAngle) const;
 
 	Object* getGoalObject() { return getStateMachine()->getGoalObject(); }	///< return the id of the current state of the machine
@@ -846,6 +854,7 @@ private:
 	Bool				m_isMoving;									///< True if we are in an AIInternalMoveToState.
 	Bool				m_isBlocked;
 	Bool				m_isBlockedAndStuck;				///< True if we are stuck & need to recompute path.
+	Bool				m_forceMoveBackwards;				///< True while executing a REVERSE_MOVE order; forces the locomotor to drive backwards.
 	Bool				m_upgradedLocomotors;
 	Bool				m_canPathThroughUnits;			///< Can path through units.
 	Bool				m_randomlyOffsetMoodCheck;	///< If true, randomly offset the mood check rate next time, to avoid "spiking" of ai checks

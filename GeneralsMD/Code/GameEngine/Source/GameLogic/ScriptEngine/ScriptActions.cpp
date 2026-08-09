@@ -1166,6 +1166,15 @@ void ScriptActions::doBuildBaseStructure(const AsciiString& buildingType, Bool f
 	}
 }
 
+void ScriptActions::doBuildShipyard(const AsciiString& buildingType)
+{
+	// This action ALWAYS occur on the current player.
+	Player* thePlayer = TheScriptEngine->getCurrentPlayer();
+	if (thePlayer) {
+		thePlayer->buildShipyard(buildingType);
+	}
+}
+
 
 //-------------------------------------------------------------------------------------------------
 /** createUnitOnTeamAt */
@@ -2132,6 +2141,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUI_COMMAND_CANCEL_UNIT_BUILD:
 			case GUI_COMMAND_CANCEL_UPGRADE:
 			case GUI_COMMAND_ATTACK_MOVE:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
@@ -6636,6 +6646,9 @@ void ScriptActions::executeAction( ScriptAction *pAction )
 			return;
 		case ScriptAction::SKIRMISH_BUILD_STRUCTURE_FLANK:
 			doBuildBaseStructure(pAction->getParameter(0)->getString(), true);
+			return;
+		case ScriptAction::SKIRMISH_BUILD_SHIPYARD:
+			doBuildShipyard(pAction->getParameter(0)->getString());
 			return;
 		case ScriptAction::RECRUIT_TEAM:
 			doRecruitTeam(pAction->getParameter(0)->getString(), pAction->getParameter(1)->getReal());

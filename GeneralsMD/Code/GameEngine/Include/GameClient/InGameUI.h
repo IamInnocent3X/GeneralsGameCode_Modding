@@ -435,6 +435,21 @@ public:  // ********************************************************************
 	virtual void setGUICommand( const CommandButton *command );				///< the command has been clicked in the UI and needs additional data
 	virtual const CommandButton *getGUICommand( void ) const;								///< get the pending gui command
 
+	// N-point (NEED_N_TARGET_POS) special power selection: the target clicks are captured client-side
+	// and commit nothing; only the final click dispatches. RADIUS_ANCHORED_AREA additionally captures a
+	// first "anchor" click that defines the constraint area but is never a delivered target. Right-click
+	// cancels (via setGUICommand). The chronosphere is the N=2 case.
+	virtual void addPendingSpecialPowerLocation( const Coord3D *loc );							///< append an accepted target point (+ spawn a marker)
+	virtual const std::vector<Coord3D>& getPendingSpecialPowerLocations( void ) const { return m_pendingSpecialPowerLocations; }
+	virtual Int getPendingSpecialPowerLocationCount( void ) const { return (Int)m_pendingSpecialPowerLocations.size(); }
+	virtual Bool hasPendingSpecialPowerLocations( void ) const { return !m_pendingSpecialPowerLocations.empty() || m_hasSpecialPowerAreaAnchor; }
+	virtual void setSpecialPowerAreaAnchor( const Coord3D *loc );									///< store the RADIUS_ANCHORED_AREA anchor (constraint-only, + spawn a marker)
+	virtual const Coord3D *getSpecialPowerAreaAnchor( void ) const { return &m_specialPowerAreaAnchor; }
+	virtual Bool hasSpecialPowerAreaAnchor( void ) const { return m_hasSpecialPowerAreaAnchor; }
+	virtual void clearPendingSpecialPowerLocations( void );												///< clear target points + anchor + all markers
+	virtual Bool getSpecialPowerTargetAreaConstraint( const CommandButton *cmd, Coord3D &outCenter, Real &outRadius ) const;	///< active target-phase area constraint (anchor/first/prev), false if none
+	virtual Bool clampToSpecialPowerTargetArea( const CommandButton *cmd, Coord3D &pos ) const;		///< clamp pos into the active constraint area; returns TRUE if a constraint applied
+
 	// build interface
 	virtual void placeBuildAvailable( const ThingTemplate *build, Drawable *buildDrawable );				///< built thing being placed
 	virtual const ThingTemplate *getPendingPlaceType( void );					///< get item we're trying to place
@@ -464,7 +479,7 @@ public:  // ********************************************************************
 	virtual Bool isAnySelectedKindOf( KindOfType kindOf ) const;		///< is any selected object a kind of
 	virtual Bool isAllSelectedKindOf( KindOfType kindOf ) const;		///< are all selected objects a kind of
 
-	virtual void setRadiusCursor(RadiusCursorType r, const AsciiString& cr, const SpecialPowerTemplate* sp, WeaponSlotType wslot);
+	virtual void setRadiusCursor(RadiusCursorType r, const AsciiString& cr, const SpecialPowerTemplate* sp, WeaponSlotType wslot, Real radiusOverride = -1.0f);
 	virtual void setRadiusCursorNone() { setRadiusCursor(RADIUSCURSOR_NONE, nullptr, nullptr, PRIMARY_WEAPON); }
 
 	virtual void setInputEnabled( Bool enable );										///< Set the input enabled or disabled
@@ -631,6 +646,8 @@ public:
 	virtual void DEBUG_addFloatingText(const AsciiString& text,const Coord3D * pos, Color color);
 #endif
 
+	const SpecialPowerTemplate* getTargetDesignatorPower();
+
 protected:
 	// snapshot methods
 	virtual void crc( Xfer *xfer );
@@ -638,6 +655,11 @@ protected:
 	virtual void loadPostProcess( void );
 
 protected:
+
+	void spawnSpecialPowerLocationMarker( const Coord3D *loc, Bool isAnchor = FALSE );	///< spawn the optional client-only marker (model + one-shot FX) + radius decal at an accepted N-point pick; isAnchor selects the ANCHORED_AREA anchor cursor/radius
+	void destroySpecialPowerLocationMarkers( void );	///< remove all N-point special power marker drawables if present
+	void destroySpecialPowerLocationDecals( void );	///< remove all N-point special power radius decals if present
+	void resolveSpecialPowerRadiusCursor( const CommandButton *command, RadiusCursorType &outType, Real &outRadius );	///< phase-aware mouse radius cursor for ANCHORED_AREA (anchor vs target)
 
 	// ----------------------------------------------------------------------------------------------
 	// Protected Types ------------------------------------------------------------------------------
@@ -700,6 +722,9 @@ protected:
 	void handleBuildPlacements( void );													///< handle updating of placement icons based on mouse pos
 	void handleRadiusCursor();																	///< handle updating of "radius cursors" that follow the mouse pos
 
+	//void showDesignatorDecals(const SpecialPowerTemplate* powerTemplate);
+	//void hideDesignatorDecals(void);
+
 	void incrementSelectCount( void ) { ++m_selectCount; }			///< Increase by one the running total of "selected" drawables
 	void decrementSelectCount( void ) { --m_selectCount; }			///< Decrease by one the running total of "selected" drawables
 	virtual View *createView( void ) = 0;												///< Factory for Views
@@ -749,6 +774,11 @@ protected:
 	MoveHintStruct							m_moveHint[ MAX_MOVE_HINTS ];
 	Int													m_nextMoveHint;
 	const CommandButton *				m_pendingGUICommand;										///< GUI command that needs additional interaction from the user
+	std::vector<Coord3D>				m_pendingSpecialPowerLocations;					///< accepted target points for a NEED_N_TARGET_POS power (in click order)
+	Bool												m_hasSpecialPowerAreaAnchor;						///< TRUE once a RADIUS_ANCHORED_AREA anchor is captured
+	Coord3D											m_specialPowerAreaAnchor;								///< the RADIUS_ANCHORED_AREA anchor (constraint only, never delivered)
+	std::vector<Drawable*>			m_specialPowerLocationMarkers;					///< client-only marker drawables shown at each accepted point/anchor
+	std::vector<RadiusDecal*>		m_specialPowerLocationDecals;						///< client-only radius decals shown at each accepted point/anchor (heap-owned; RadiusDecal copy is broken)
 	BuildProgress								m_buildProgress[ MAX_BUILD_PROGRESS ];	///< progress for building units
 	const ThingTemplate *				m_pendingPlaceType;											///< type of built thing we're trying to place
 	ObjectID										m_pendingPlaceSourceObjectID;						///< source object of the thing constructing the item
@@ -949,6 +979,7 @@ protected:
 	RadiusDecalTemplate					m_radiusCursors[RADIUSCURSOR_COUNT];
 	RadiusDecal									m_curRadiusCursor;
 	RadiusCursorType						m_curRcType;
+	Real										m_curRcRadiusOverride;					///< last radius override applied to m_curRadiusCursor (-1 = SpecialPower default); guards phase rebuilds
 
 	typedef std::hash_map< NameKeyType, RadiusDecalTemplate, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > RadiusDecalTemplateMap;
 	RadiusDecalTemplateMap m_customRadiusCursors;
@@ -989,6 +1020,11 @@ protected:
 	Int													m_currentIdleWorkerDisplay;
 
 	DrawableID									m_soloNexusSelectedDrawableID;  ///< The drawable of the nexus, if only one angry mob is selected, otherwise, null
+
+	// UI Decals
+	//Bool							m_showDesignatorDecals;
+	const CommandButton* m_designatorCommand;
+
 
 	// ----------------------------------------------------------------------------------------------
 	// STATIC Protected Data -------------------------------------------------------------------------------

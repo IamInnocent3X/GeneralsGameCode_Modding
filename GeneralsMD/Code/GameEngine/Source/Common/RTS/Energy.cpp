@@ -67,6 +67,7 @@ Energy::Energy()
 	m_energyConsumption = 0;
 	m_owner = nullptr;
 	m_powerSabotagedTillFrame = 0;
+	m_infinitePower = FALSE;
 	m_checkEnergyGivenTime = 0;
 	m_energyBonus = 0;
 	m_powerSabotageData.clear();
@@ -78,6 +79,12 @@ Energy::Energy()
 //-----------------------------------------------------------------------------
 Int Energy::getProduction() const
 {
+	if( m_infinitePower )
+	{
+		// always report at least enough production to cover consumption.
+		return m_energyProduction > m_energyConsumption ? m_energyProduction : m_energyConsumption;
+	}
+
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
 		//Power sabotaged, therefore no power.
@@ -90,6 +97,9 @@ Int Energy::getProduction() const
 Real Energy::getEnergySupplyRatio() const
 {
 	DEBUG_ASSERTCRASH(m_energyProduction >= 0 && m_energyConsumption >= 0, ("neg Energy numbers"));
+
+	if( m_infinitePower )
+		return 1.0f;
 
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
@@ -106,6 +116,9 @@ Real Energy::getEnergySupplyRatio() const
 //-------------------------------------------------------------------------------------------------
 Bool Energy::hasSufficientPower(void) const
 {
+	if( m_infinitePower )
+		return TRUE;
+
 	if( TheGameLogic->getFrame() < m_powerSabotagedTillFrame )
 	{
 		//Power sabotaged, therefore no power.
@@ -685,13 +698,14 @@ void Energy::crc( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version */
+	* 1: Initial version
+	* 4: infinite power cheat flag */
 // ------------------------------------------------------------------------------------------------
 void Energy::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 3;
+	XferVersion currentVersion = 4;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -724,7 +738,7 @@ void Energy::xfer( Xfer *xfer )
 	if( version >= 3 )
 	{
 		xfer->xferUnsignedInt( &m_powerSabotagedTillFrame );
-		
+	
 		xfer->xferUnsignedInt( &m_checkEnergyGivenTime );
 
 		UnsignedShort sabotageCount = m_powerSabotageData.size();
@@ -884,6 +898,12 @@ void Energy::xfer( Xfer *xfer )
 			}
 
 		}
+	}
+
+	// infinite power cheat flag
+	if( version >= 4 )
+	{
+		xfer->xferBool( &m_infinitePower );
 	}
 
 }

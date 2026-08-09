@@ -51,6 +51,7 @@ class DebrisDrawInterface;
 class TracerDrawInterface;
 class RopeDrawInterface;
 class LaserDrawInterface;
+class DecalDrawInterface;
 class TreeDrawInterface;
 class FXList;
 enum TerrainDecalType CPP_11(: Int);
@@ -84,6 +85,8 @@ public:
 	virtual void setTerrainDecalSize(Real x, Real y) {};
 	virtual void setTerrainDecalOpacity(Real o) {};
 
+	virtual void reactToTeleport() {};	///< object was instantly relocated (e.g. chronosphere) - break tread marks etc.
+
 	virtual void setFullyObscuredByShroud(Bool fullyObscured) = 0;
 
 	virtual Bool isVisible() const { return true; }	///< for limiting tree sway, etc to visible objects
@@ -108,6 +111,9 @@ public:
 
 	virtual LaserDrawInterface* getLaserDrawInterface() { return nullptr; }
 	virtual const LaserDrawInterface* getLaserDrawInterface() const { return nullptr; }
+
+	//virtual DecalDrawInterface* getDecalDrawInterface() { return nullptr; }
+	//virtual const DecalDrawInterface* getDecalDrawInterface() const { return nullptr; }
 
 	virtual TreeDrawInterface* getTreeDrawInterface() { return nullptr; }
 	virtual const TreeDrawInterface* getTreeDrawInterface() const { return nullptr; }
@@ -151,6 +157,13 @@ class LaserDrawInterface
 public:
 	virtual Real getLaserTemplateWidth() const = 0;
 };
+
+//-------------------------------------------------------------------------------------------------
+//class DecalDrawInterface
+//{
+//public:
+//	virtual void initDecal(AsciiString texture, Real opacity, Int color, ShadowType type, UnsignedInt lifetime, UnsignedInt fadeOutTime, UnsignedInt fadeInTime, Real sizeX, Real sizeY) = 0;
+//};
 
 //-------------------------------------------------------------------------------------------------
 class ObjectDrawInterface

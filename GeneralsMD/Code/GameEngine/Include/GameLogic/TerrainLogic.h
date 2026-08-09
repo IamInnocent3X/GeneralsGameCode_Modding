@@ -141,7 +141,9 @@ public:
 	ObjectID				bridgeObjectID;
 	ObjectID				towerObjectID[ BRIDGE_MAX_TOWERS ];
 	Bool						damageStateChanged;
-
+	// For destroyed bridges or open drawbridges there is an area of the bridge that should not collide, this should be a subarea of the bridge rectangle
+	Coord3D					fromLeftHole, fromRightHole, toLeftHole, toRightHole; /// The 4 corners of the rectangle for a hole in the bridge
+	Bool						drawBridgeOpened;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -191,7 +193,7 @@ public:
 	/// Get the bridges logical info.
 	void getBridgeInfo(class BridgeInfo *pInfo) {*pInfo = m_bridgeInfo; }
 	/// See if the point is on the bridge.
-	Bool isPointOnBridge(const Coord3D *pLoc);
+	Bool isPointOnBridge(const Coord3D *pLoc, bool ignoreHole = true);
 	Drawable *pickBridge(const Vector3 &from, const Vector3 &to, Vector3 *pos);
 	void updateDamageState(void); ///< Updates a bridge's damage info.
 	const BridgeInfo *peekBridgeInfo(void) const {return &m_bridgeInfo;}
@@ -205,6 +207,9 @@ public:
 	void setBridgeObjectID( ObjectID id ) { m_bridgeInfo.bridgeObjectID = id; }
 	void setTowerObjectID( ObjectID id, BridgeTowerType which ) { m_bridgeInfo.towerObjectID[ which ] = id; }
 
+	Bool hasHoleArea(); // check if this bridge has defined a hole area for damaged/drawbridge state
+	Bool hasHole(); // Check if bridge currently has a hole (destroyed/drawbridge open)
+	void setDrawBridgeStage(bool open); // change if bridge is open/closed 
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -234,6 +239,10 @@ public:
 	virtual void getMaximumPathfindExtent( Region3D *extent ) const { DEBUG_CRASH(("not implemented"));  }		///< @todo This should not be a stub - this should own this functionality
 	virtual Coord3D findClosestEdgePoint( const Coord3D *closestTo ) const ;
 	virtual Coord3D findFarthestEdgePoint( const Coord3D *farthestFrom ) const ;
+
+	virtual Coord3D findEdgePointForAngle(const Coord3D* pos, Real angle, bool farthest = FALSE, bool closest = FALSE) const;
+
+
 	virtual Bool isClearLineOfSight(const Coord3D& pos, const Coord3D& posOther) const;
 
 	virtual AsciiString getSourceFilename( void ) { return m_filenameString; }
@@ -298,6 +307,9 @@ public:
 
 	virtual void updateBridgeDamageStates(void); ///< Updates bridge's damage info.
 
+	/// Check if a point is in a NO_SHIPYARD area
+	virtual bool isInNoShipyardZone(const Coord3D * pos);
+
 	Bool anyBridgesDamageStatesChanged(void) {return m_bridgeDamageStatesChanged; } ///< Bridge damage states updated.
 	Bool isBridgeRepaired(const Object *bridge); ///< Is bridge repaired?
 	Bool isBridgeBroken(const Object *bridge); ///< Is bridge Broken?
@@ -317,6 +329,8 @@ public:
 
   void flattenTerrain(Object *obj);  ///< Flatten the terrain under a building.
   void createCraterInTerrain(Object *obj);  ///< Flatten the terrain under a building.
+
+	Real getShipyardPlacementAngle(const Coord3D& worldPos, const ThingTemplate* thing);
 
 protected:
 

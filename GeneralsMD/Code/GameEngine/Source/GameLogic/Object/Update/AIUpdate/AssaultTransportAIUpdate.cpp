@@ -731,8 +731,13 @@ UpdateSleepTime AssaultTransportAIUpdate::update( void )
 	if( transport->isEffectivelyDead() )
 	{
 		giveFinalOrders();
-		return UPDATE_SLEEP_FOREVER;
+		return AIUpdateInterface::update();
+		//return UPDATE_SLEEP_FOREVER;
 	}
+
+	// Suspend assault coordination while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
 
 	//First removing dead members or members that have been ordered to do something outside of this AI.
 	/*

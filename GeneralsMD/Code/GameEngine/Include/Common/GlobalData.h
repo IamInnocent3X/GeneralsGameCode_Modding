@@ -340,6 +340,8 @@ public:
 	// Latency insertion, packet loss for network debugging
 	Int m_netMinPlayers;					///< Min players needed to start a net game
 
+	Bool m_enableSingleplayerChatWindow;	///< Allow the in-game chat window in singleplayer/skirmish (for chat commands)
+
 	UnsignedInt m_defaultIP;			///< preferred IP address for LAN
 	UnsignedInt m_firewallBehavior;	///< Last detected firewall behavior
 	Bool m_firewallSendDelay;			///< Use send delay for firewall connection negotiations
@@ -610,6 +612,9 @@ public:
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 	Bool m_heightAboveTerrainIncludesWater;
 	Bool m_hideScorchmarksAboveGround;
+	Bool m_weaponScatterOnWaterSurfaceDefault;	///< default for WeaponTemplate ScatterOnWaterSurface when not set per-weapon
+	Bool m_reverseMoveIgnoreAngleThreshold;	///< if true, a manual REVERSE_MOVE order reverses regardless of heading; if false, only when the goal is behind us
+	Real m_smartGarrisonRange;	///< radius searched for additional transports by the Smart Garrison command
 
 	// Water depth lighting
 	RGBColor m_terrainHeightAmbientLightColor1;

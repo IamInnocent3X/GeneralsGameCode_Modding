@@ -125,6 +125,7 @@ DumbProjectileBehavior::DumbProjectileBehavior( Thing *thing, const ModuleData* 
 {
 	m_launcherID = INVALID_ID;
 	m_victimID = INVALID_ID;
+	m_launchVeterancy = LEVEL_REGULAR;
 	m_shrapnelLaunchID = INVALID_ID;
 	m_detonationWeaponTmpl = nullptr;
 	m_lifespanFrame = 0;
@@ -983,7 +984,8 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	// 2: Added m_launchVeterancy (for veterancy FX/OCL selection)
+	XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -997,6 +999,10 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 	xfer->xferObjectID( &m_victimID );
 
 	xfer->xferObjectID( &m_attractedID );
+
+	// launch veterancy
+	if( version >= 2 )
+		xfer->xferUser( &m_launchVeterancy, sizeof( m_launchVeterancy ) );
 
 	xfer->xferInt( &m_flightPathSegments );
 	xfer->xferReal( &m_flightPathSpeed );
