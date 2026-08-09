@@ -597,14 +597,6 @@ public:
 	Bool m_reverseMoveIgnoreAngleThreshold;	///< if true, a manual REVERSE_MOVE order reverses regardless of heading; if false, only when the goal is behind us
 	Real m_smartGarrisonRange;	///< radius searched for additional transports by the Smart Garrison command
 
-	// Water depth lighting
-	RGBColor m_terrainHeightAmbientLightColor1;
-	RGBColor m_terrainHeightAmbientLightColor2;
-	Real m_terrainHeightAmbientLightHeightStart;
-	Real m_terrainHeightAmbientLightHeight1;
-	Real m_terrainHeightAmbientLightHeight2;
-	Bool m_terrainHeightAmbientLightAdditive;
-
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 
