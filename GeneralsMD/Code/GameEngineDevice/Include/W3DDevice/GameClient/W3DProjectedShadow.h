@@ -57,6 +57,7 @@ class W3DProjectedShadowManager	: public ProjectedShadowManager
 		void shutdown(void);			///<free all assets prior to shutdown of entire game.
 		void prepareShadows();
 		Int	 renderShadows(RenderInfoClass & rinfo);	///<iterate over each object and render its shadow onto affected objects.
+		Int	 renderDecals(RenderInfoClass & rinfo);	///<draw just the radius-decal list; may be called after the water pass.
 		void ReleaseResources(void);	///<release device dependent D3D resources.
 		Bool ReAcquireResources(void);	///<allocate device dependent D3D resources.
 		void invalidateCachedLightPositions(void);	///<forces shadows to update regardless of last lightposition

@@ -710,6 +710,20 @@ void W3DProjectedShadowManager::flushDecals(W3DShadowTexture *texture, ShadowTyp
 
 	DX8Wrapper::Apply_Render_State_Changes();	//force update of view and projection matrices
 
+	// Force single-texture (texture * vertex diffuse) for both color and alpha, and disable any extra
+	// texture stages / alpha test. Necessary because other renderers (notably water) set raw multi-stage
+	// texture states directly on the device (bypassing DX8Wrapper's cache); without this the leftover
+	// stage state corrupts the decal output, making decals invisible when drawn after the water pass.
+	m_pDev->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);
+	m_pDev->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	m_pDev->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+	m_pDev->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_MODULATE);
+	m_pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+	m_pDev->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+	m_pDev->SetTextureStageState(1, D3DTSS_COLOROP,   D3DTOP_DISABLE);
+	m_pDev->SetTextureStageState(1, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
+	m_pDev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+
 //Alpha Blended Shadows
 //	m_pDev->SetRenderState( D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA );
 //	m_pDev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA  );
@@ -1040,7 +1054,7 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 						hmapVertex.X=(float)(i-borderSize)*MAP_XY_FACTOR;
 						hmapVertex.Z=__max((float)hmap->getHeight(i,j)*MAP_HEIGHT_SCALE,layerHeight);
 
-						if (TheGlobalData->m_heightAboveTerrainIncludesWater && TheTerrainLogic != nullptr) {
+						if ((TheGlobalData->m_heightAboveTerrainIncludesWater || TheGlobalData->m_radiusDecalsAboveWater) && TheTerrainLogic != nullptr) {
 							if (Real waterZ = 0; TheTerrainLogic->isUnderwater(hmapVertex.X, hmapVertex.Y, &waterZ)) {
 								if (waterZ > hmapVertex.Z) hmapVertex.Z = waterZ;
 							}
@@ -1066,7 +1080,7 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 					hmapVertex.X=(float)(i-borderSize)*MAP_XY_FACTOR;
 					hmapVertex.Z=(float)hmap->getHeight(i,j)*MAP_HEIGHT_SCALE+0.01f * MAP_XY_FACTOR;
 
-					if (TheGlobalData->m_heightAboveTerrainIncludesWater && TheTerrainLogic != nullptr) {
+					if ((TheGlobalData->m_heightAboveTerrainIncludesWater || TheGlobalData->m_radiusDecalsAboveWater) && TheTerrainLogic != nullptr) {
 						if (Real waterZ = 0; TheTerrainLogic->isUnderwater(hmapVertex.X, hmapVertex.Y, &waterZ)) {
 							if (waterZ > hmapVertex.Z) hmapVertex.Z = waterZ;
 						}
@@ -1444,38 +1458,66 @@ Int W3DProjectedShadowManager::renderShadows(RenderInfoClass & rinfo)
 		flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
 		TheDX8MeshRenderer.Flush();	//draw all the shadow receiving objects
 	}
-	if (m_decalList)
+	// Radius decals (the m_decalList) are normally drawn here, before water. When
+	// TheGlobalData->m_radiusDecalsAboveWater is set they are instead drawn later (after the
+	// water pass) by a separate renderDecals() call from RTS3DScene::Flush, so they appear over water.
+	if (!TheGlobalData->m_radiusDecalsAboveWater)
+		projectionCount += renderDecals(rinfo);
+
+	return projectionCount;
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Draw just the radius-decal list (m_decalList). Split out of renderShadows so it can optionally
+	be drawn after the water pass (see TheGlobalData->m_radiusDecalsAboveWater). */
+//-------------------------------------------------------------------------------------------------
+Int W3DProjectedShadowManager::renderDecals(RenderInfoClass & rinfo)
+{
+	Int projectionCount=0;
+
+	if (!TheTerrainRenderObject || !m_decalList)
+		return projectionCount;
+
+	//According to Nvidia there's a D3D bug that happens if you don't start with a
+	//new dynamic VB each frame - so we force a DISCARD by overflowing the counter.
+	//(also needed because water was drawn between the shadow pass and here)
+	nShadowDecalVertsInBuf = 0xffff;
+	nShadowDecalIndicesInBuf = 0xffff;
+
+	TheDX8MeshRenderer.Set_Camera(&rinfo.Camera);
+
+	W3DProjectedShadow *shadow;
+
+	//keep track of active decal texture so we can render all decals at once.
+	W3DShadowTexture *lastShadowDecalTexture=nullptr;
+	ShadowType lastShadowType = SHADOW_NONE;
+
+	for( shadow = m_decalList; shadow; shadow = shadow->m_next )
 	{
-		//keep track of active decal texture so we can render all decals at once.
-		W3DShadowTexture *lastShadowDecalTexture=nullptr;
-		ShadowType lastShadowType = SHADOW_NONE;
-
-		for( shadow = m_decalList; shadow; shadow = shadow->m_next )
+		if (shadow->m_isEnabled && !shadow->m_isInvisibleEnabled)
 		{
-			if (shadow->m_isEnabled && !shadow->m_isInvisibleEnabled)
-			{
-				if (lastShadowDecalTexture == nullptr)
-					lastShadowDecalTexture=m_decalList->m_shadowTexture[0];
-				if (lastShadowType == SHADOW_NONE)
-					lastShadowType = m_decalList->m_type;
+			if (lastShadowDecalTexture == nullptr)
+				lastShadowDecalTexture=m_decalList->m_shadowTexture[0];
+			if (lastShadowType == SHADOW_NONE)
+				lastShadowType = m_decalList->m_type;
 
-				if (shadow->m_shadowTexture[0] != lastShadowDecalTexture ||
-					shadow->m_type != lastShadowType)
-				{	flushDecals(lastShadowDecalTexture,lastShadowType);	//switched to a new texture, need to render polys using last texture.
-					lastShadowDecalTexture=shadow->m_shadowTexture[0];
-					lastShadowType=shadow->m_type;
-				}
-				///@todo: may need to fix this if shadows are large enough to be seen while object is not visible
-				if (!(shadow->m_robj && !shadow->m_robj->Is_Really_Visible()))
-				{	//queueSimpleDecal(shadow);
-					queueDecal(shadow);	//only draw shadow if casting object is visible
-					projectionCount++;
-				}
+			if (shadow->m_shadowTexture[0] != lastShadowDecalTexture ||
+				shadow->m_type != lastShadowType)
+			{	flushDecals(lastShadowDecalTexture,lastShadowType);	//switched to a new texture, need to render polys using last texture.
+				lastShadowDecalTexture=shadow->m_shadowTexture[0];
+				lastShadowType=shadow->m_type;
+			}
+			///@todo: may need to fix this if shadows are large enough to be seen while object is not visible
+			if (!(shadow->m_robj && !shadow->m_robj->Is_Really_Visible()))
+			{	//queueSimpleDecal(shadow);
+				queueDecal(shadow);	//only draw shadow if casting object is visible
+				projectionCount++;
 			}
 		}
-
-		flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
 	}
+
+	flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
+
 	return projectionCount;
 }
 

@@ -99,6 +99,16 @@ void DoShadows(RenderInfoClass & rinfo, Bool stencilPass)
 
 }
 
+// Draw only the radius-decal list. Used to render radius decals AFTER the water pass so they
+// appear over water (see TheGlobalData->m_radiusDecalsAboveWater).
+// NOTE: does NOT gate on isShadowScene() - the stencil-shadow pass (DoShadows(...,true)) runs
+// before water and resets that flag to FALSE, so it is already false by the time we get here.
+void DoDecals(RenderInfoClass & rinfo)
+{
+	if (TheW3DProjectedShadowManager)
+		TheW3DProjectedShadowManager->renderDecals(rinfo);
+}
+
 W3DShadowManager::W3DShadowManager( void )
 {
 	DEBUG_ASSERTCRASH(TheW3DVolumetricShadowManager == nullptr && TheW3DProjectedShadowManager == nullptr,

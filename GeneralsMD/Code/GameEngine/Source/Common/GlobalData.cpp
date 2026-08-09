@@ -580,6 +580,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 
 	{"DefaultExcludedDeathTypes", INI::parseDeathTypeFlagsList, NULL, offsetof(GlobalData, m_defaultExcludedDeathTypes) },
 	{"HeightAboveTerrainIncludesWater", INI::parseBool, NULL, offsetof(GlobalData, m_heightAboveTerrainIncludesWater) },
+	{"RadiusDecalsAboveWater", INI::parseBool, NULL, offsetof(GlobalData, m_radiusDecalsAboveWater) },
 	{"HideScorchmarksAboveGround", INI::parseBool, NULL, offsetof(GlobalData, m_hideScorchmarksAboveGround) },
 
 
@@ -1176,6 +1177,7 @@ GlobalData::GlobalData()
 	// m_chronoTintStatusType = TINT_STATUS_INVALID;
 
 	m_heightAboveTerrainIncludesWater = false;
+	m_radiusDecalsAboveWater = false;
 
 }  // end GlobalData
 

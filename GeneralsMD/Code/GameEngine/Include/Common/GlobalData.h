@@ -592,6 +592,7 @@ public:
 
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 	Bool m_heightAboveTerrainIncludesWater;
+	Bool m_radiusDecalsAboveWater;	///< if true, radius decals (cursors) render over water instead of under it
 	Bool m_hideScorchmarksAboveGround;
 	Bool m_weaponScatterOnWaterSurfaceDefault;	///< default for WeaponTemplate ScatterOnWaterSurface when not set per-weapon
 	Bool m_reverseMoveIgnoreAngleThreshold;	///< if true, a manual REVERSE_MOVE order reverses regardless of heading; if false, only when the goal is behind us
