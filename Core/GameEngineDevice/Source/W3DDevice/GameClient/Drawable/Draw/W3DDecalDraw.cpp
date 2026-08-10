@@ -125,7 +125,24 @@ void W3DDecalDraw::init_shadow()
 	strlcpy(shadowInfo.m_ShadowName, data->m_textureName.str(), ARRAY_SIZE(shadowInfo.m_ShadowName));
 	shadowInfo.allowUpdates = FALSE;		//shadow image will never update
 	shadowInfo.allowWorldAlign = TRUE;	//shadow image will wrap around world objects
-	shadowInfo.m_type = data->m_type;
+
+	// W3DDecalDraw is a standalone FX decal, not a real object shadow. Only the decal-use blend types
+	// are valid here; SHADOW_DECAL (and other shadow/projection/volume types) route into object-shadow
+	// code paths that assume a shadow-casting object + runtime shadow texture, which crashes for stacked
+	// FX decals. Coerce anything else to SHADOW_ALPHA_DECAL.
+	ShadowType decalType;
+	if (data->m_type == SHADOW_ADDITIVE_DECAL)
+		decalType = SHADOW_ADDITIVE_DECAL;
+	else if (data->m_type == SHADOW_ALPHA_DECAL)
+		decalType = SHADOW_ALPHA_DECAL;
+	else
+	{
+		DEBUG_CRASH(("W3DDecalDraw: Style must be SHADOW_ALPHA_DECAL or SHADOW_ADDITIVE_DECAL (got 0x%x); "
+			"SHADOW_DECAL and shadow/projection types are not supported for FX decals and can crash. "
+			"Coercing to SHADOW_ALPHA_DECAL.", (Int)data->m_type));
+		decalType = SHADOW_ALPHA_DECAL;
+	}
+	shadowInfo.m_type = decalType;
 	shadowInfo.m_sizeX = data->m_decalSizeX;
 	shadowInfo.m_sizeY = data->m_decalSizeY;
 	shadowInfo.m_offsetX = 0.0f; // TODO

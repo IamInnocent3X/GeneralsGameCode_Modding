@@ -1025,10 +1025,21 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 		Int numVerts = vertsPerRow *vertsPerColumn;	//number of terrain vertices
 		Int numIndex=(endX - startX) * (endY-startY)*6;	//6 indices per terrain cell (2 triangles).
 
+		// Skip a pathologically large decal that can't fit a single buffer (would overrun the DISCARD lock).
+		if (numVerts > SHADOW_DECAL_VERTEX_SIZE || numIndex > SHADOW_DECAL_INDEX_SIZE)
+			return;
+
 		SHADOW_DECAL_VERTEX* pvVertices;
 		UnsignedShort *pvIndices;
 
-		if (nShadowDecalVertsInBuf > (SHADOW_DECAL_VERTEX_SIZE-numVerts))	//check if room for model verts
+		// Decide a single flush for the whole decal: if EITHER the vertex or index buffer would overflow,
+		// flush and discard BOTH together. Checking them independently lets the two buffers desync (a decal
+		// uses ~6x more indices than verts, so the index buffer overflows first), which corrupts the shared
+		// batch bookkeeping and eventually makes DrawIndexedPrimitive read past the vertex buffer -> crash.
+		Bool needFlush = (nShadowDecalVertsInBuf   > (SHADOW_DECAL_VERTEX_SIZE - numVerts)) ||
+						 (nShadowDecalIndicesInBuf > (SHADOW_DECAL_INDEX_SIZE  - numIndex));
+
+		if (needFlush)
 		{	//flush the buffer by drawing the contents and re-locking again
 			flushDecals(shadow->m_shadowTexture[0], shadow->m_type);
 			if (shadowDecalVertexBufferD3D->Lock(0,numVerts*sizeof(SHADOW_DECAL_VERTEX),(unsigned char**)&pvVertices,D3DLOCK_DISCARD) != D3D_OK)
@@ -1114,16 +1125,15 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 
 		shadowDecalVertexBufferD3D->Unlock();
 
-		if (nShadowDecalIndicesInBuf > (SHADOW_DECAL_INDEX_SIZE-numIndex))	//check if room for model verts
-		{	//flush the buffer by drawing the contents and re-locking again
-			flushDecals(shadow->m_shadowTexture[0], shadow->m_type);
-
+		// Use the SAME flush decision as the vertex buffer above so both buffers reset in lockstep.
+		// flushDecals + the vertex/batch-counter resets already happened in the vertex block; here we
+		// only need to discard-lock the index buffer and reset the index counters.
+		if (needFlush)
+		{
 			if (shadowDecalIndexBufferD3D->Lock(0,numIndex*sizeof(short),(unsigned char**)&pvIndices,D3DLOCK_DISCARD) != D3D_OK)
 				return;
 
 			nShadowDecalStartBatchIndex=0;
-			nShadowDecalPolysInBatch=0;	//reset number of polys in texture batch
-			nShadowDecalVertsInBatch=0;
 			nShadowDecalIndicesInBuf=0;
 		}
 		else
