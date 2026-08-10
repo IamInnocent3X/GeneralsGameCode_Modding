@@ -198,6 +198,7 @@ TurretAIData::TurretAIData()
 	m_initiallyDisabled = false;
 	m_firesWhileTurning = FALSE;
 	m_isAllowsPitch = false;
+	m_canFireOnTheMove = false;
 
 	m_minTurretAngle = 0.0;
 	m_maxTurretAngle = 0.0;

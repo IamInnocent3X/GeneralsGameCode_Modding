@@ -659,7 +659,7 @@ protected:
 	void spawnSpecialPowerLocationMarker( const Coord3D *loc, Bool isAnchor = FALSE );	///< spawn the optional client-only marker (model + one-shot FX) + radius decal at an accepted N-point pick; isAnchor selects the ANCHORED_AREA anchor cursor/radius
 	void destroySpecialPowerLocationMarkers( void );	///< remove all N-point special power marker drawables if present
 	void destroySpecialPowerLocationDecals( void );	///< remove all N-point special power radius decals if present
-	void resolveSpecialPowerRadiusCursor( const CommandButton *command, RadiusCursorType &outType, Real &outRadius );	///< phase-aware mouse radius cursor for ANCHORED_AREA (anchor vs target)
+	void resolveSpecialPowerRadiusCursor( const CommandButton *command, RadiusCursorType &outType, AsciiString &outCustomType, Real &outRadius );	///< phase-aware mouse radius cursor for ANCHORED_AREA (anchor vs target)
 
 	// ----------------------------------------------------------------------------------------------
 	// Protected Types ------------------------------------------------------------------------------

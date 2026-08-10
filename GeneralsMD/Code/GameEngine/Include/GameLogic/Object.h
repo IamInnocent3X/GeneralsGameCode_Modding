@@ -451,10 +451,10 @@ public:
 	void setFormationOffset(const Coord2D& offset) {m_formationOffset = offset;}
 	void getFormationOffset(Coord2D* offset) const {*offset = (m_reverseFormationID != NO_FORMATION_ID ? m_reverseFormationOffset : m_formationOffset);}
 	Bool getFormationIsCommandMap() const { return m_formationIsCommandMap; }
-	Bool getIsDoingReverseMove() const { return m_reverseFormationID != NO_FORMATION_ID || m_isDoingReverseMove; }
+	Bool getIsDoingReverseMove() const;
 
-	void setIsDoingReverseMove() { m_isDoingReverseMove = TRUE; }
-	void setReverseFormationID(enum FormationID id) {m_reverseFormationID = id; m_isDoingReverseMove = FALSE;}
+	//void setIsDoingReverseMove() { m_isDoingReverseMove = TRUE; }
+	void setReverseFormationID(enum FormationID id) {m_reverseFormationID = id;} //m_isDoingReverseMove = FALSE;
 	void setReverseFormationOffset(const Coord2D& offset) {m_reverseFormationOffset = offset;}
 
 	Bool getPreserveAttackDataWhileMoving() const;
@@ -686,9 +686,13 @@ public:
 	void setCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear = TRUE);
 	void clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgnoreClear = TRUE);
 
-	void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
-	void clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst);
+	// Weapon Bonus Ignore Clear for Designators towards bonuses registered onto Helpers,  i.e. like Target Designator logic
+	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) { m_weaponBonusConditionIC.set(wst); }
+	inline void clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) { m_weaponBonusConditionIC.set(wst, 0); }
 
+	Bool testWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) const { return m_weaponBonusConditionIC.test(wst); }
+	inline WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
+	inline void setWeaponBonusConditionFlagsIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
 	void setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
 	void clearCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst);
 	
@@ -731,9 +735,9 @@ public:
 	//const ObjectCustomStatusType *getCustomWeaponBonusConditionIgnoreClear() const { return &m_customWeaponBonusConditionIC; }
 	std::vector<AsciiString> getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
 
-	inline void setWeaponBonusConditionIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
-	//void setCustomWeaponBonusConditionIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
-	void setCustomWeaponBonusConditionIgnoreClear(const std::vector<AsciiString>& vec) { m_customWeaponBonusConditionIC = vec; }
+	inline void setWeaponBonusConditionFlagsIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
+	//void setCustomWeaponBonusConditionFlagsIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
+	void setCustomWeaponBonusConditionFlagsIgnoreClear(const std::vector<AsciiString>& vec) { m_customWeaponBonusConditionIC = vec; }
 
 	void doWeaponBonusChange() { m_weaponSet.weaponSetOnWeaponBonusChange(this); }
 
@@ -865,6 +869,7 @@ public:
 	void doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, const std::vector<AsciiString>& clearKeys, ObjectID damagerID, const Coord3D *ejectPos = nullptr);
 	void doTransferHijacker(ObjectID transferToID, Bool transferHijacker, Bool transferEquipper, Bool transferParasite, Bool destroyHijacker, Bool destroyParasites);
 	Bool checkToSquishHijack(const Object *other) const;
+	Bool hasParasites() const;
 
 	ObjectID getEquipToID() const { return m_equipToID; }
 
@@ -964,6 +969,7 @@ public:
 	const AsciiString& getInvalidBuildCursorName() const;
 	const AsciiString& getSalvageCursorName() const;
 	const AsciiString& getReverseMoveToCursorName() const;
+	const AsciiString& getSmartGarrisonCursorName() const;
 	
 	Bool useMyGetRepairAtCursor() const;
 	Bool useMyDockCursor() const;
@@ -1237,7 +1243,7 @@ private:
 
 	FormationID										m_reverseFormationID;
 	Coord2D												m_reverseFormationOffset;
-	Bool											m_isDoingReverseMove;
+	//Bool											m_isDoingReverseMove;
 
 	// --------- PERFORMANCE OPTIMIZATION VARIABLES
 	Bool											m_isMobMember;

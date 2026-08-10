@@ -964,7 +964,7 @@ public:
 	void groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *object, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 	void groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *drawable, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 	void groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *object, UnsignedInt commandOptions, Bool isSabotage = FALSE );
-	void groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions );
+	void groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 #ifdef ALLOW_SURRENDER
 	void groupSurrender( const Object *objWeSurrenderedTo, Bool surrender, CommandSourceType cmdSource );
 #endif
@@ -1003,7 +1003,7 @@ public:
 
 	Real getSpeed( void );									///< return the speed of the group's slowest member
 	Bool getCenter( Coord3D *center );				///< compute centroid of group
-	Bool getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool isDoingReverseMove = FALSE );
+	Bool getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool reverse = FALSE );
 	void computeIndividualDestination( Coord3D *dest, const Coord3D *groupDest,
 		Object *obj, const Coord3D *center, Bool isFormation ); ///< compute destination of individual object, based on group destination
 	Int getCount( void );										///< return the number of objects in the group
@@ -1053,8 +1053,8 @@ protected:
 
 	Bool friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cmdSource );
 	Bool friend_moveVehicleToPos( const Coord3D *pos, CommandSourceType cmdSource );
-	void friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource );
-	Bool friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool isDoingReverseMove );
+	void friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse );
+	Bool friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse );
 
 private:
 	// AIGroups must be created through TheAI->createGroup()

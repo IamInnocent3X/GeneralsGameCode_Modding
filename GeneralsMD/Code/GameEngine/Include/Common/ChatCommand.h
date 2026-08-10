@@ -57,6 +57,7 @@ public:
 	Bool getGrantAllUpgrades() const { return m_grantAllUpgrades; }
 	Int getAddVeterancyLevel() const { return m_addVeterancyLevel; }
 	Int getAddSalvageTier() const { return m_addSalvageTier; }
+	const AsciiString& getAddSalvageCrateName() const { return m_addSalvageCrate; }
 	Real getProductionSpeedMultiplier() const { return m_productionSpeedMultiplier; }
 
 	/** Run this command's effects. Inspects the parsed members and acts accordingly. */
@@ -73,6 +74,7 @@ private:
 	Bool m_grantAllUpgrades = FALSE;		///< "GrantAllUpgrades" attribute; when TRUE, grants the local player all player-type upgrades.
 	Int m_addVeterancyLevel = 0;			///< "AddVeterancyLevel" attribute; promote selected units by this many veterancy levels (negative demotes), capped to the valid range.
 	Int m_addSalvageTier = 0;				///< "AddSalvageTier" attribute; change selected salvagers' crate-upgrade tier by this much (negative removes), capped 0..2.
+	AsciiString m_addSalvageCrate;			///< "AddSalvageCrateName" attribute; ObjectTemplate name to take in place of Salvage Tiers. 'AddSalvageTier' contributes to the number of crates granted. Requires the template to declared with 'SalvageCrateCollide' module. 
 	Real m_productionSpeedMultiplier = 0.0f;	///< "ProductionSpeedMultiplier" attribute; build-speed multiplier for the local player (>1 builds faster). 0 means the field was absent (no change).
 
 	static const FieldParse s_fieldParseTable[];

@@ -285,6 +285,9 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "CustomTintStatusUnderPowered",	INI::parseAsciiString, 	nullptr, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
 	{ "ModelConditionUnderPowered", ModelConditionFlags::parseFromINI, nullptr, offsetof( ThingTemplate, m_modelConditionUnderPowered ) },
 
+	// Reverse Move Properties
+	{ "CanFireTurretsWhileReverseMoving",			INI::parseBool,		nullptr, offsetof( ThingTemplate, m_canFireTurretsWhileReverseMoving ) },
+
 	// Customize Action Cursors
 	{ "SelectingCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_selectingCursorName ) },
 	{ "MoveCursorName",						INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_moveToCursorName ) },
@@ -305,6 +308,7 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "SetRallyPointCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_setRallyPointCursorName ) },
 	{ "SalvageCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_salvageCursorName ) },
 	{ "ReverseMoveCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_reverseMoveToCursorName ) },
+	{ "SmartGarrisonCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_smartGarrisonCursorName ) },
 	{ "BuildCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_buildCursorName ) },
 	{ "InvalidBuildCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_invalidBuildCursorName ) },
 
@@ -1282,6 +1286,8 @@ ThingTemplate::ThingTemplate() :
 	m_tintStatusUnderPowered = TINT_STATUS_INVALID;
 	m_customTintStatusUnderPowered.clear();
 
+	m_canFireTurretsWhileReverseMoving = TRUE;
+
 	m_genericInvalidCursorName.clear();
 	m_selectingCursorName.clear();
 	m_moveToCursorName.clear();
@@ -1301,6 +1307,7 @@ ThingTemplate::ThingTemplate() :
 	m_setRallyPointCursorName.clear();
 	m_salvageCursorName.clear();
 	m_reverseMoveToCursorName.clear();
+	m_smartGarrisonCursorName.clear();
 	m_buildCursorName.clear();
 	m_invalidBuildCursorName.clear();
 

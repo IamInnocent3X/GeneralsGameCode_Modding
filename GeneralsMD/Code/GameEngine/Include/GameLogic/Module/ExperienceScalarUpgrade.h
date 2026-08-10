@@ -75,4 +75,5 @@ protected:
 
 private:
 	Bool m_hasExecuted;
+	Int m_prevMaxVeterancyDiff;
 };

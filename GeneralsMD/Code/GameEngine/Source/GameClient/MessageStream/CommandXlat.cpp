@@ -1156,7 +1156,8 @@ GameMessage::Type CommandTranslator::createAttackMessage( Drawable *draw,
  */
 GameMessage::Type CommandTranslator::issueAttackCommand( Drawable *target,
 																												 CommandEvaluateType commandType,
-																												 GUICommandType command )
+																												 GUICommandType command,
+																												 const CommandButton *commandButton )
 {
 	GameMessage::Type msgType = GameMessage::MSG_INVALID;
 
@@ -1174,7 +1175,8 @@ GameMessage::Type CommandTranslator::issueAttackCommand( Drawable *target,
 		//DEBUG_LOG(("issuing team-attack cmd against %s",enemy->getTemplate()->getName().str()));
 
 		// insert team attack command message into stream
-		switch( command )
+		GUICommandType commandToUse = commandButton ? commandButton->getCommandType() : command;
+		switch( commandToUse )
 		{
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
@@ -1194,100 +1196,23 @@ GameMessage::Type CommandTranslator::issueAttackCommand( Drawable *target,
 		{
 			GameMessage *attackMsg;
 
-			attackMsg = TheMessageStream->appendMessage( msgType );
+			if(commandButton && commandButton->getOrderNearbyRadius()) {
+				OrderNearbyData orderData;
+				orderData.Radius = commandButton->getOrderNearbyRadius();
+				orderData.RequiredMask = commandButton->getOrderKindofMask();
+				orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
+				orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
+				orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
+				orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
+
+				attackMsg = TheMessageStream->appendMessageWithOrderNearby( msgType, orderData );
+			} else {
+				attackMsg = TheMessageStream->appendMessage( msgType );
+			}
 
 			attackMsg->appendObjectIDArgument( targetObj->getID() );	// must pass target object ID to logic
 
 			// if we have a stats collector, increment the stats
-			if(TheStatsCollector)
-				TheStatsCollector->incrementAttackCount();
-		}
-	}
-	else
-	{
-		DEBUG_LOG(("issuing NON-team-attack cmd against %s",target->getTemplate()->getName().str()));
-
-		// send single attack command for selected drawable
-		const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
-
-		// loop through all the selected drawables
-		Drawable *draw;
-		for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
-		{
-			draw = *it;
-			msgType = createAttackMessage(draw, target, commandType );
-		}
-	}
-
-	// only make sounds if the command was for real
-	if( commandType == DO_COMMAND )
-	{
-		PickAndPlayInfo info;
-		info.m_air = targetObj->isUsingAirborneLocomotor();
-		info.m_drawTarget = target;
-		pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), msgType, &info );
-	}
-
-	// return the actual message type created
-	return msgType;
-
-}
-
-GameMessage::Type CommandTranslator::issueAttackCommandWithOrderRadius( Drawable *target,
-																												 CommandEvaluateType commandType,
-																												 const CommandButton *command )
-{
-	GameMessage::Type msgType = GameMessage::MSG_INVALID;
-
-	if (target == nullptr)
-		return msgType;
-
-	// you cannot attack an enemy that has no object representation
-	Object *targetObj = target->getObject();
-	if( !targetObj )
-		return msgType;
-
-	if( m_teamExists && command )
-	{
-
-		//DEBUG_LOG(("issuing team-attack cmd against %s",enemy->getTemplate()->getName().str()));
-
-		// insert team attack command message into stream
-		switch( command->getCommandType() )
-		{
-#ifdef ALLOW_SURRENDER
-			case GUICOMMANDMODE_PICK_UP_PRISONER:
-				msgType = GameMessage::MSG_PICK_UP_PRISONER;
-				break;
-#endif
-			case GUI_COMMAND_NONE:
-				msgType = GameMessage::MSG_DO_ATTACK_OBJECT;
-				break;
-			default:
-				DEBUG_CRASH( ("issueAttackCommand was passed in a GUICommandType type that isn't supported yet...") );
-				return msgType;
-		}
-
-		// only create the message if our command type is DO_COMMAND
-		if( commandType == DO_COMMAND )
-		{
-			GameMessage *attackMsg;
-
-			OrderNearbyData orderData;
-			if(command->getOrderNearbyRadius())
-			{
-				orderData.Radius = command->getOrderNearbyRadius();
-				orderData.RequiredMask = command->getOrderKindofMask();
-				orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
-				orderData.MinDelay = command->getOrderNearbyMinDelay();
-				orderData.MaxDelay = command->getOrderNearbyMaxDelay();
-				orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
-			}
-			attackMsg = TheMessageStream->appendMessageWithOrderNearby( msgType, orderData );
-
-			attackMsg->appendObjectIDArgument( targetObj->getID() );	// must pass target object ID to logic
-
-			// if we have a stats collector, inrement the stats
 			if(TheStatsCollector)
 				TheStatsCollector->incrementAttackCount();
 		}
@@ -1686,43 +1611,6 @@ GameMessage::Type CommandTranslator::issueFireWeaponCommand( const CommandButton
 
 //-------------------------------------------------------------------------------------------------
 GameMessage::Type CommandTranslator::createEnterMessage( Drawable *enter,
-																												 CommandEvaluateType commandType )
-{
-	GameMessage::Type msgType = GameMessage::MSG_ENTER;
-
-	// if we're just evaluating then get out of here without actually doing the action
-	if( commandType == EVALUATE_ONLY )
-		return msgType;
-
-	if (!enter || !enter->getObject())
-		return msgType;
-
-	// sanity
-	DEBUG_ASSERTCRASH( commandType == DO_COMMAND, ("createEnterMessage - commandType is not DO_COMMAND") );
-
-	if( m_teamExists )
-	{
-		PickAndPlayInfo info;
-		info.m_drawTarget = enter;
-		pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), msgType, &info );
-
-		GameMessage *enterMsg = TheMessageStream->appendMessage( msgType );
-		enterMsg->appendObjectIDArgument( INVALID_ID );		// 0 means current "selection team" of this player
-		enterMsg->appendObjectIDArgument( enter->getObject()->getID() );
-
-	}
-	else
-	{
-		DEBUG_CRASH(("Shouldn't get here. jkmcd"));
-	}
-
-	// return the type of the message used
-	return msgType;
-
-}
-
-//-------------------------------------------------------------------------------------------------
-GameMessage::Type CommandTranslator::createEnterMessageWithOrderRadius( Drawable *enter,
 																												 CommandEvaluateType commandType,
 																												 const CommandButton *command )
 {
@@ -2164,11 +2052,11 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 						case GUICOMMANDMODE_HIJACK_VEHICLE:
 						case GUICOMMANDMODE_SABOTAGE_BUILDING:
 						case GUICOMMANDMODE_EQUIP_OBJECT:
-							msgType = createEnterMessageWithOrderRadius( draw, type, command );
+							msgType = createEnterMessage( draw, type, command );
 							break;
 #ifdef ALLOW_SURRENDER
 						case GUICOMMANDMODE_PICK_UP_PRISONER:
-							msgType = issueAttackCommandWithOrderRadius( draw, type, command );
+							msgType = issueAttackCommand( draw, type, GUICOMMANDMODE_PICK_UP_PRISONER, command );
 							break;
 #endif
 						case GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT:
@@ -4672,10 +4560,13 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					Player *player = ThePlayerList->getLocalPlayer();
 					if(player->isSabotagingObjectGUICommand())
 					{
-						player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
-						player->setSabotagingObjectGUICommandID(INVALID_ID);
-						player->setSabotagingObjectGUICommandButtonSlot(-1);
-						player->selectDrawablesBeforeSabotaging();
+						if( !command || !BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) || TheInGameUI->getPendingSpecialPowerLocationCount() >= command->getNumberOfTargets() )
+						{
+							player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+							player->setSabotagingObjectGUICommandID(INVALID_ID);
+							player->setSabotagingObjectGUICommandButtonSlot(-1);
+							player->selectDrawablesBeforeSabotaging();
+						}
 					}
 
 					disp = DESTROY_MESSAGE;
@@ -4781,10 +4672,13 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				Player *player = ThePlayerList->getLocalPlayer();
 				if(player->isSabotagingObjectGUICommand())
 				{
-					player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
-					player->setSabotagingObjectGUICommandID(INVALID_ID);
-					player->setSabotagingObjectGUICommandButtonSlot(-1);
-					player->selectDrawablesBeforeSabotaging();
+					if( !command || !BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) || TheInGameUI->getPendingSpecialPowerLocationCount() >= command->getNumberOfTargets() )
+					{
+						player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+						player->setSabotagingObjectGUICommandID(INVALID_ID);
+						player->setSabotagingObjectGUICommandButtonSlot(-1);
+						player->selectDrawablesBeforeSabotaging();
+					}
 				}
 
 				disp = DESTROY_MESSAGE;

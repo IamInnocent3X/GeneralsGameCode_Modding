@@ -84,6 +84,7 @@ OpenContainModuleData::OpenContainModuleData( void )
  	m_allowEnemiesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Stealth Garrison Status
  	m_allowNeutralInside = TRUE;
 	m_passengerWeaponBonusVec.clear();
+	m_passengerCustomWeaponBonusVec.clear();
 	m_initialPayload.clear();
 	m_containMaxUpgradeList.clear();
 	m_containMaxUpgradeListConflicts.clear();
@@ -115,6 +116,7 @@ OpenContainModuleData::OpenContainModuleData( void )
  		{ "AllowEnemiesInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowEnemiesInside ) },
  		{ "AllowNeutralInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowNeutralInside ) },
 		{ "PassengerWeaponBonusList",       INI::parseWeaponBonusVectorKeepDefault, nullptr, offsetof(OpenContainModuleData, m_passengerWeaponBonusVec) },
+		{ "PassengerCustomWeaponBonusList",       INI::parseAsciiStringVector, nullptr, offsetof(OpenContainModuleData, m_passengerCustomWeaponBonusVec) },
 		{ "InitialPayload", 				parseInitialPayload, nullptr, 0 },
 		{ "ContainMaxTriggeredBy", 			INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeList) },
 		{ "ContainMaxConflictsWith", 		INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeListConflicts) },
@@ -852,6 +854,10 @@ void OpenContain::onContaining( Object *rider, Bool wasSelected )
 		rider->setWeaponBonusCondition(d->m_passengerWeaponBonusVec[i]);
 	}
 
+	for (Int i = 0; i < d->m_passengerCustomWeaponBonusVec.size(); i++) {
+		rider->setCustomWeaponBonusCondition(d->m_passengerCustomWeaponBonusVec[i]);
+	}
+
 	// Play audio
 	if( m_loadSoundsEnabled )
 	{
@@ -880,6 +886,10 @@ void OpenContain::onRemoving( Object *rider)
 			const OpenContainModuleData* d = getOpenContainModuleData();
 			for (Int i = 0; i < d->m_passengerWeaponBonusVec.size(); i++) {
 				rider->clearWeaponBonusCondition(d->m_passengerWeaponBonusVec[i]);
+			}
+
+			for (Int i = 0; i < d->m_passengerCustomWeaponBonusVec.size(); i++) {
+				rider->clearCustomWeaponBonusCondition(d->m_passengerCustomWeaponBonusVec[i]);
 			}
 		}
 	}

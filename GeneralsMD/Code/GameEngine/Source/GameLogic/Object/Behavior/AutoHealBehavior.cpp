@@ -32,6 +32,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 #include "Common/Thing.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 #include "Common/INI.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -41,6 +42,7 @@
 #include "GameClient/InGameUI.h"
 #include "GameLogic/Module/AutoHealBehavior.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -323,6 +325,12 @@ Bool AutoHealBehavior::canApplyLevelUp(const Object* obj) const
 	return data->m_grantPromotion && obj->getExperienceTracker()->isTrainable() && obj->getExperienceTracker()->getVeterancyLevel() < LEVEL_HEROIC;
 }
 
+Bool AutoHealBehavior::canApplySalvageCrate() const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return !data->m_grantSalvageCrateName.isEmpty() && TheThingFactory && TheThingFactory->findTemplate( data->m_grantSalvageCrateName );
+}
+
 // ------------------------------------------------------------------------------------------------
 static void applyWeaponSalvage(Object* unit)
 {
@@ -366,6 +374,58 @@ static void doSalvageEffect(Object* unit) {
 	TheAudio->addAudioEvent(&soundToPlay);
 }
 
+// ------------------------------------------------------------------------------------------------
+static void applySalvageCrate(Object* unit, const AsciiString& crateName)
+{
+	const ThingTemplate *tmpl = TheThingFactory ? TheThingFactory->findTemplate( crateName ) : nullptr;
+	if (tmpl)
+	{
+		/*const ModuleInfo& mi = tmpl->getBehaviorModuleInfo();
+		for( Int modIdx = 0; modIdx < mi.getCount(); ++modIdx )
+		{
+			modName = mi.getNthName(modIdx);
+			if( !modName.compare( "SalvageCrateCollide" ) )
+			{
+				const SalvageCrateCollideModuleData *data = (const SalvageCrateCollideModuleData*)mi.getNthData( modIdx );
+
+				//It does, so see if the player has that upgrade
+				if( data )
+				{
+					const ModuleTemplate* mt = findModuleTemplate(modName, MODULETYPE_BEHAVIOR);
+					if (mt)
+					{
+						Module* mod = (*mt->m_createProc)( thing, moduleData );
+
+					BehaviorModule* newMod = (BehaviorModule*)TheModuleFactory->newModule(obj, modName, mi.getNthData(modIdx), MODULETYPE_BEHAVIOR);
+					CollideModuleInterface* collide = newMod->getCollide();
+					if (collide && collide->isSalvageCrateCollide()) {
+						for( int salvage_times = 0; salvage_times < m_addSalvageTier; salvage_times++ )
+							collide->friend_executeCrateBehavior( obj );
+					}
+				}
+			}
+		}*/
+
+		Player *player = unit ? unit->getControllingPlayer() : nullptr;
+		Team *team = player ? player->getDefaultTeam() : nullptr;
+		Object *crate = TheThingFactory->newObject( tmpl, team );
+		if (crate)
+		{
+			for (BehaviorModule** m = crate->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (collide && collide->isSalvageCrateCollide())
+					collide->friend_executeCrateBehavior( obj );
+			}
+			TheGameLogic->destroyObject(crate);
+		}
+	}
+	else if (!tmpl)
+	{
+		DEBUG_LOG((">>> AutoHealBehavior applySalvageCrate: ThingTemplate '%s' not found.", crateName.str()));
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 Bool AutoHealBehavior::pulseHealObject(Object* obj)
@@ -379,7 +439,7 @@ Bool AutoHealBehavior::pulseHealObject(Object* obj)
 	if (data->m_grantSalvageUpgrade || data->m_grantPromotion) {
 		// Need to check for full HP 
 		BodyModuleInterface* body = obj->getBodyModule();
-		needsHeal = (body != nullptr) && (body->getHealth() < body->getMaxHealth());
+		needsHeal = ((body != nullptr) && (body->getHealth() < body->getMaxHealth()) || ((data->m_clearsParasite || !data->m_clearsParasiteKeys.empty()) && obj->hasParasites()));
 	}
 	if (needsHeal) {
 		if (data->m_radius == 0.0f)
@@ -388,7 +448,10 @@ Bool AutoHealBehavior::pulseHealObject(Object* obj)
 			obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite, data->m_clearsParasiteKeys );
 	}
 
-	if (canApplyArmorSalvage(obj)) {
+	if( canApplySalvageCrate(obj) ) {
+		applySalvageCrate(obj, data->m_grantSalvageCrateName);
+	}
+	else if (canApplyArmorSalvage(obj)) {
 		applyArmorSalvage(obj);
 		doSalvageEffect(obj);
 	}

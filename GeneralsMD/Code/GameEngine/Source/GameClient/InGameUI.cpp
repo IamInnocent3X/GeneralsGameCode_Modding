@@ -639,6 +639,10 @@ void InGameUI::setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorNam
 					if(!curPlayer->getPlayerTemplate()->getReverseMoveToCursorName().isEmpty())
 						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getReverseMoveToCursorName() );
 					break;
+				case Mouse::SMART_GARRISON:
+					if(!curPlayer->getPlayerTemplate()->getSmartGarrisonCursorName().isEmpty())
+						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getSmartGarrisonCursorName() );
+					break;
 				case Mouse::ATTACKMOVETO:
 					if(!curPlayer->getPlayerTemplate()->getAttackMoveToCursorName().isEmpty())
 						index = TheMouse->getCursorIndex( curPlayer->getPlayerTemplate()->getAttackMoveToCursorName() );
@@ -1573,7 +1577,7 @@ void InGameUI::init( void )
 	* before the anchor is placed the cursor previews the anchor circle, afterwards the target circle.
 	* outType/outRadius default to the button's target cursor + "SpecialPower default size" (-1). */
 //-------------------------------------------------------------------------------------------------
-void InGameUI::resolveSpecialPowerRadiusCursor( const CommandButton *command, RadiusCursorType &outType, Real &outRadius )
+void InGameUI::resolveSpecialPowerRadiusCursor( const CommandButton *command, RadiusCursorType &outType, AsciiString &outCustomType, Real &outRadius )
 {
 	outType = command->getRadiusCursorType();
 	outRadius = -1.0f;	// -1 => use the SpecialPower's RadiusCursorRadius
@@ -1584,6 +1588,8 @@ void InGameUI::resolveSpecialPowerRadiusCursor( const CommandButton *command, Ra
 	Real decalRadius;
 	if( command->getTargetRadiusMode() == SPTRM_ANCHORED_AREA && !hasSpecialPowerAreaAnchor() )
 	{
+		if( !command->getCustomAnchorRadiusCursorType().isEmpty() )
+			outCustomType = command->getCustomAnchorRadiusCursorType();
 		if( command->getAnchorRadiusCursorType() != RADIUSCURSOR_NONE )
 			outType = command->getAnchorRadiusCursorType();
 		decalRadius = command->getEffectiveAnchorDecalRadius();
@@ -3298,7 +3304,7 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 							setMouseCursor( Mouse::ENTER_FRIENDLY, hasSrcObj ? srcObj->getEnterCursorName() : AsciiString::TheEmptyString );
 						break;
 					case GameMessage::MSG_SMART_GARRISON_HINT:
-						setMouseCursor( Mouse::SMART_GARRISON );
+						setMouseCursor( Mouse::SMART_GARRISON, hasSrcObj ? srcObj->getSmartGarrisonCursorName() : AsciiString::TheEmptyString );
 						break;
 					case GameMessage::MSG_CONVERT_TO_CARBOMB_HINT:
 					case GameMessage::MSG_HIJACK_HINT:
@@ -3657,10 +3663,11 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 						}
 						{
 							RadiusCursorType rcType;
+							AsciiString cusRcType;
 							Real rcRadius;
-							resolveSpecialPowerRadiusCursor( m_pendingGUICommand, rcType, rcRadius );
+							resolveSpecialPowerRadiusCursor( m_pendingGUICommand, rcType, cusRcType, rcRadius );
 							setRadiusCursor(rcType,
-															m_pendingGUICommand->getCustomRadiusCursorType(), 
+															cusRcType, 
 															m_pendingGUICommand->getSpecialPowerTemplate(),
 															m_pendingGUICommand->getWeaponSlot(),
 															rcRadius);
@@ -3675,10 +3682,11 @@ void InGameUI::createCommandHint( const GameMessage *msg )
 							setMouseCursor( Mouse::CROSS );
 						{
 							RadiusCursorType rcType;
+							AsciiString cusRcType;
 							Real rcRadius;
-							resolveSpecialPowerRadiusCursor( m_pendingGUICommand, rcType, rcRadius );
+							resolveSpecialPowerRadiusCursor( m_pendingGUICommand, rcType, cusRcType, rcRadius );
 							setRadiusCursor(rcType,
-															m_pendingGUICommand->getCustomRadiusCursorType(), 
+															cusRcType, 
 															m_pendingGUICommand->getSpecialPowerTemplate(),
 															m_pendingGUICommand->getWeaponSlot(),
 															rcRadius);
@@ -3900,10 +3908,11 @@ void InGameUI::setGUICommand( const CommandButton *command )
 		// but we will set the radius cursor here, so you can see it bleeding out from beneath the panel
 
 		RadiusCursorType rcType;
+		AsciiString cusRcType;
 		Real rcRadius;
-		resolveSpecialPowerRadiusCursor( command, rcType, rcRadius );
+		resolveSpecialPowerRadiusCursor( command, rcType, cusRcType, rcRadius );
 		setRadiusCursor(rcType,
-										command->getCustomRadiusCursorType(),
+										cusRcType,
 										command->getSpecialPowerTemplate(),
 										command->getWeaponSlot(),
 										rcRadius);
@@ -3964,22 +3973,40 @@ void InGameUI::spawnSpecialPowerLocationMarker( const Coord3D *loc, Bool isAncho
 	// uses AnchorRadiusCursorType + AnchorDecalRadius, each falling back when unset. Owned by the local
 	// player, so it is only ever drawn here.
 	RadiusCursorType rc = m_pendingGUICommand->getRadiusCursorType();
+	AsciiString cusRc = m_pendingGUICommand->getCustomRadiusCursorType();
 	Real radius = m_pendingGUICommand->getEffectiveTargetDecalRadius();
 	if( isAnchor )
 	{
+		if( !m_pendingGUICommand->getCustomAnchorRadiusCursorType().isEmpty() )
+			cusRc = m_pendingGUICommand->getCustomAnchorRadiusCursorType();
 		if( m_pendingGUICommand->getAnchorRadiusCursorType() != RADIUSCURSOR_NONE )
 			rc = m_pendingGUICommand->getAnchorRadiusCursorType();
 		radius = m_pendingGUICommand->getEffectiveAnchorDecalRadius();
 	}
-	if( rc != RADIUSCURSOR_NONE && radius > 0.0f && m_radiusCursors[rc].valid() )
+	if( radius > 0.0f )
 	{
+		NameKeyType cursKey;
+		Bool hasValidCursor = false;
+		Bool hasValidCustomCursor = false;
+		if(!cusRc.isEmpty()) {
+			cursKey = TheNameKeyGenerator->nameToKey(customCursorType);
+			hasValidCustomCursor = m_customRadiusCursors[cursKey].valid();
+		}
+
+		if(!hasValidCustomCursor && rc != RADIUSCURSOR_NONE && m_radiusCursors[rc].valid())
+			hasValidCursor = true;
+
+		if(!hasValidCursor && !hasValidCustomCursor)
+			return;
+
 		Player *localPlayer = ThePlayerList ? ThePlayerList->getLocalPlayer() : nullptr;
 		if( localPlayer )
 		{
 			// heap-owned: RadiusDecal's copy ctor/operator= are unimplemented stubs, so it must never be
 			// copied. Construct in place into *decal and store the pointer.
 			RadiusDecal *decal = new RadiusDecal();
-			m_radiusCursors[rc].createRadiusDecal( *loc, radius, localPlayer, *decal );
+			if(hasValidCustomCursor) m_customRadiusCursors[cursKey].createRadiusDecal( *loc, radius, localPlayer, *decal );
+			else if(hasValidCursor) m_radiusCursors[rc].createRadiusDecal( *loc, radius, localPlayer, *decal );
 			decal->setPosition( *loc );
 			m_specialPowerLocationDecals.push_back( decal );
 		}

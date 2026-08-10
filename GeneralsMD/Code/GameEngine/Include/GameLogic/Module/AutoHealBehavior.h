@@ -65,6 +65,7 @@ public:
 	const ParticleSystemTemplate*				m_unitHealPulseParticleSystemTmpl;	//Optional particle system applying to each object getting healed each heal pulse.
 	Bool									m_grantSalvageUpgrade; //Apply a salvage upgrade to unit when healing
 	Bool									m_grantPromotion;      //Give unit a levelup when healing
+	AsciiString								m_grantSalvageCrateName; //Apply a salvage crate to unit when healing
 
 	AutoHealBehaviorModuleData()
 	{
@@ -107,6 +108,7 @@ public:
 			{ "ClearsParasite",				INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
 			{ "ClearsParasiteKeys",			INI::parseAsciiStringVector,								nullptr, offsetof( AutoHealBehaviorModuleData, m_clearsParasiteKeys) },
 			{ "DisableWhenUnmanned",		INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_disableWhenUnmanned) },
+			{ "GrantSalvageCrateName",		INI::parseAsciiString,										nullptr, offsetof( AutoHealBehaviorModuleData, m_grantSalvageCrateName ) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -204,6 +206,8 @@ private:
 	Bool canApplyWeaponSalvage(const Object* obj) const;
 	Bool canApplyArmorSalvage(const Object* obj) const;
 	Bool canApplyLevelUp(const Object* obj) const;
+
+	Bool canApplySalvageCrate() const;
 
 	// Return if healing occured
 	Bool pulseHealObject( Object *obj );

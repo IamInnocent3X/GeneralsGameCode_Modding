@@ -649,6 +649,25 @@ Bool SalvageCrateCollide::isValidToExecute( const Object *other ) const
 //-------------------------------------------------------------------------------------------------
 Bool SalvageCrateCollide::executeCrateBehavior( Object *other )
 {
+	executeCrateFunction(other);
+
+	other->getControllingPlayer()->getAcademyStats()->recordSalvageCollected();
+
+	CrateCollide::executeCrateBehavior(other);
+
+	return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool SalvageCrateCollide::friend_executeCrateBehavior( Object *other )
+{
+	executeCrateFunction(other);
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool SalvageCrateCollide::executeCrateFunction( Object *other )
+{
 	const SalvageCrateCollideModuleData *md = getSalvageCrateCollideModuleData();
 	Bool playCrateSound = false;
 	Bool playMoneySound = false;
@@ -911,12 +930,6 @@ Bool SalvageCrateCollide::executeCrateBehavior( Object *other )
 		TheAudio->addAudioEvent(&soundToPlay);
 	}
 	*/
-
-	other->getControllingPlayer()->getAcademyStats()->recordSalvageCollected();
-
-	CrateCollide::executeCrateBehavior(other);
-
-	return TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------

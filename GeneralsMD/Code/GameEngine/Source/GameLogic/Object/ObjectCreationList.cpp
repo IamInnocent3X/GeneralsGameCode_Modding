@@ -1109,8 +1109,8 @@ protected:
 		//if (m_inheritsWeaponBonus && sourceObj) {
 		//	obj->setWeaponBonusConditionFlags(sourceObj->getWeaponBonusCondition());
 		//	obj->setCustomWeaponBonusConditionFlags(sourceObj->getCustomWeaponBonusCondition());
-		//	obj->setWeaponBonusConditionIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
-		//	obj->setCustomWeaponBonusConditionIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
+		//	obj->setWeaponBonusConditionFlagsIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
+		//	obj->setCustomWeaponBonusConditionFlagsIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
 		//	obj->doWeaponBonusChange();
 
 		//	obj->transferTempWeaponBonusHelperData(sourceObj->getTempWeaponBonusHelperData());

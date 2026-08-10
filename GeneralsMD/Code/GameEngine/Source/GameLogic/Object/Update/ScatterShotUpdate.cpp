@@ -188,8 +188,8 @@ UpdateSleepTime ScatterShotUpdate::update(void)
 
 					WeaponBonusConditionFlags bonusFlagsIC = launcher->getWeaponBonusConditionIgnoreClear();
 					std::vector<AsciiString> customBonusFlagsIC = launcher->getCustomWeaponBonusConditionIgnoreClear();
-					getObject()->setWeaponBonusConditionIgnoreClear(bonusFlagsIC);
-					getObject()->setCustomWeaponBonusConditionIgnoreClear(customBonusFlagsIC);
+					getObject()->setWeaponBonusConditionFlagsIgnoreClear(bonusFlagsIC);
+					getObject()->setCustomWeaponBonusConditionFlagsIgnoreClear(customBonusFlagsIC);
 
 					// Special Chain Scattershot case:
 					if (data->m_avoidPrevTarget) {

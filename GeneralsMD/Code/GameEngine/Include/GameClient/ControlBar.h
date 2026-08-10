@@ -420,6 +420,7 @@ public:
 	Real getEffectiveTargetDecalRadius() const { return m_targetDecalRadius > 0.0f ? m_targetDecalRadius : m_targetRadius; }	///< drawn per-target decal size
 	Real getEffectiveAnchorDecalRadius() const { return m_anchorDecalRadius > 0.0f ? m_anchorDecalRadius : getEffectiveAnchorConstraintRadius(); }	///< drawn anchor decal size
 	const AsciiString& getCustomRadiusCursorType() const { return m_customRadiusCursor; }
+	const AsciiString& getCustomAnchorRadiusCursorType() const { return m_customAnchorRadiusCursor; }
 	WeaponSlotType getWeaponSlot() const { return m_weaponSlot; }
 	Int getMaxShotsToFire() const { return m_maxShotsToFire; }
 	const ScienceVec& getScienceVec() const { return m_science; }
@@ -481,6 +482,7 @@ private:
 	AsciiString										m_secondCursorName;						///< cursor name for picks after the first of a NEED_N_TARGET_POS power; falls back to m_cursorName if empty
 	AsciiString										m_invalidCursorName;					///< cursor name for invalid version
 	AsciiString										m_customRadiusCursor;								///< radius cursor, if any
+	AsciiString										m_customAnchorRadiusCursor;								///< radius cursor, if any
 	// bleah. shouldn't be mutable, but is. sue me. (Kris) -snork!
 	mutable AsciiString										m_textLabel;									///< string manager text label
 	mutable AsciiString										m_descriptionLabel;						///< The description of the current command, read in from the ini

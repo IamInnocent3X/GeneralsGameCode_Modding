@@ -758,7 +758,7 @@ Bool AIGroup::getCenter( Coord3D *center )
 	return count > 0;
 }
 
-Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool isDoingReverseMove )
+Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool reverse )
 {
 	Int count = 0;
 	min->x = 1e10f;
@@ -773,7 +773,7 @@ Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, B
 	FormationID id= NO_FORMATION_ID;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
-		if( !isDoingReverseMove )
+		if( !reverse )
 		{
 			(*i)->setReverseFormationID(NO_FORMATION_ID);
 		}
@@ -956,7 +956,7 @@ static const Int PATH_DIAMETER_IN_CELLS = 6;
 /**
  * Move to given position(s)
  */
-Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool isDoingReverseMove )
+Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse )
 
 {
 
@@ -973,7 +973,7 @@ Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cm
 	if (TheGlobalData->m_debugAI==AI_DEBUG_TERRAIN) return false;
 
 	Bool closeEnough = false;
-	getMinMaxAndCenter( &min, &max, &center, isDoingReverseMove );
+	getMinMaxAndCenter( &min, &max, &center, reverse );
 	Real distSqr = 4*sqr(TheAI->getAiData()->m_distanceRequiresGroup);
 
 	Int numInfantry = 0;
@@ -1477,7 +1477,7 @@ Bool AIGroup::friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cm
 /**
  * Move to given position(s)
  */
-void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource )
+void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse )
 {
 	Real dx, dy;
 	Coord3D center;
@@ -1588,7 +1588,10 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 			Coord3D dest = endPoint;
 			dest.x += offset.x;
 			dest.y += offset.y;
-			ai->aiMoveToPosition( &dest, cmdSource );
+			if (reverse)
+				ai->aiReverseMoveToPosition( &dest, cmdSource );
+			else
+				ai->aiMoveToPosition( &dest, cmdSource );
 		}
 
 	}
@@ -1663,7 +1666,10 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 			}
 		}
 
-		ai->aiMoveToPosition( &dest, cmdSource );
+		if (reverse)
+			ai->aiReverseMoveToPosition( &dest, cmdSource );
+		else
+			ai->aiMoveToPosition( &dest, cmdSource );
 	}
 }
 //-------------------------------------------------------------------------------------------------
@@ -2168,7 +2174,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
 	if (isFormation) {
 		friend_computeGroundPath(pos, cmdSource, reverse);
-		friend_moveFormationToPos(pos, cmdSource);
+		friend_moveFormationToPos(pos, cmdSource, reverse);
 		return;
 	}
 
@@ -3527,9 +3533,9 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandM
 			{
 				if(id == NO_FORMATION_ID)
 				{
-					obj->setIsDoingReverseMove();
+					//obj->setIsDoingReverseMove();
 				}
-				else
+				else if(ai->getCurLocomotor() && ai->getCurLocomotor()->canMoveBackwards())
 				{
 					obj->setReverseFormationID(id);
 					obj->setReverseFormationOffset(offset);
@@ -3662,7 +3668,7 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
 // Chrono-style special power: the player picked a source and a destination. Both points arrive
 // together; validity/range is checked against the source point.
 //-------------------------------------------------------------------------------------------------
-void AIGroup::groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions, Bool isSabotage )
 {
 	if( locs.empty() )
 		return;
@@ -3689,8 +3695,11 @@ void AIGroup::groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPowerAtLocation( object, firstLoc, CMD_FROM_PLAYER, spTemplate, nullptr, commandOptions ) )
+				if( TheActionManager->canDoSpecialPowerAtLocation( object, firstLoc, CMD_FROM_PLAYER, spTemplate, nullptr, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					object->doSpecialPowerAtMultipleLocations( spTemplate, locs, commandOptions );
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
 				}

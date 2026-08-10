@@ -132,6 +132,7 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "TargetDecalRadius",		INI::parseReal,							 nullptr, offsetof( CommandButton, m_targetDecalRadius ) },
 	{ "AnchorDecalRadius",		INI::parseReal,							 nullptr, offsetof( CommandButton, m_anchorDecalRadius ) },
 	{ "CustomRadiusCursorType",			INI::parseAsciiString,			nullptr, offsetof( CommandButton, m_customRadiusCursor ) },
+	{ "CustomAnchorRadiusCursorType",	INI::parseAsciiString,			nullptr, offsetof( CommandButton, m_customAnchorRadiusCursor ) },
 	{ "UnitSpecificSound",		INI::parseAudioEventRTS,		 nullptr, offsetof( CommandButton, m_unitSpecificSound ) },
 	{ "OrderNearbyUnitsRadius",				INI::parseReal, nullptr, offsetof( CommandButton, m_orderNearbyRadius ) },
 	{ "OrderNearbyUnitsKindof",					KindOfMaskType::parseFromINI,		nullptr, offsetof( CommandButton, m_orderKindof ) },
@@ -724,6 +725,7 @@ CommandButton::CommandButton( void )
 	m_targetDecalRadius = 0.0f;
 	m_anchorDecalRadius = 0.0f;
 	m_customRadiusCursor.clear();
+	m_customAnchorRadiusCursor.clear();
 
 	m_orderNearbyRadius = 0.0f;
 	m_orderKindof = KINDOFMASK_NONE;

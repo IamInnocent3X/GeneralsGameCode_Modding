@@ -281,7 +281,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_formationID(NO_FORMATION_ID),
 	m_formationIsCommandMap(FALSE),
 	m_reverseFormationID(NO_FORMATION_ID),
-	m_isDoingReverseMove(FALSE),
+	//m_isDoingReverseMove(FALSE),
 	m_isReceivingDifficultyBonus(FALSE),
 	m_singleUseCommandUsed(FALSE),
 	m_scriptStatus(0),
@@ -5901,7 +5901,7 @@ void Object::xfer( Xfer *xfer )
 	if (m_reverseFormationID!=NO_FORMATION_ID) {
 		xfer->xferCoord2D(&m_reverseFormationOffset);
 	}
-	xfer->xferBool(&m_isDoingReverseMove);
+	//xfer->xferBool(&m_isDoingReverseMove);
 
 	// module count
 	UnsignedShort moduleCount = 0;
@@ -8313,7 +8313,7 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_REVERSE_MOVE:
 				if( ai )
 				{
-					m_isDoingReverseMove = TRUE;
+					//m_isDoingReverseMove = TRUE;
 					ai->aiReverseMoveToPosition( pos, cmdSource );
 					return;
 				}
@@ -9531,6 +9531,28 @@ Bool Object::checkToSquishHijack(const Object *other) const
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool Object::hasParasites() const
+{
+	// no equipped objects
+	if( m_equipObjIDs.empty() )
+		return false;
+
+	for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+	{
+		Object *equipObj = TheGameLogic->findObjectByID( (*it) );
+
+		if(equipObj)
+		{
+			HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->isParasite() )
+				return true;
+		}
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
 void Object::registerAssaultTransportID(ObjectID transportID)
 {
 	m_assaultTransportID = transportID;
@@ -10146,9 +10168,15 @@ void Object::setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot )
 }
 
 // ------------------------------------------------------------------------------------------------
+Bool getIsDoingReverseMove() const
+{
+	return m_ai && m_ai->isForcedMoveBackwards() && ( m_reverseFormationID != NO_FORMATION_ID || m_ai->getCurLocomotor() && m_ai->getCurLocomotor()->isMovingBackwards() );
+}
+
+// ------------------------------------------------------------------------------------------------
 Bool Object::getPreserveAttackDataWhileMoving() const
 {
-	return getIsDoingReverseMove() || (getAIUpdateInterface() && getAIUpdateInterface()->getTurretCanAttackWhileMoving());
+	return (getIsDoingReverseMove() && getTemplate()->getCanFireTurretsWhileReverseMoving()) || (m_ai && m_ai->getTurretCanAttackWhileMoving());
 }
 
 //=============================================================================
@@ -10175,6 +10203,7 @@ const AsciiString& Object::getBuildCursorName() const {return getTemplate()->fri
 const AsciiString& Object::getInvalidBuildCursorName() const {return getTemplate()->friend_getInvalidBuildCursorName();	}
 const AsciiString& Object::getSalvageCursorName() const {return getTemplate()->friend_getSalvageCursorName();	}
 const AsciiString& Object::getReverseMoveToCursorName() const {return getTemplate()->friend_getReverseMoveToCursorName();	}
+const AsciiString& Object::getSmartGarrisonCursorName() const {return getTemplate()->friend_getSmartGarrisonCursorName();	}
 
 Bool Object::useMyGetRepairAtCursor() const {return getTemplate()->friend_getUseMyGetRepairAtCursor();	}
 Bool Object::useMyDockCursor() const {return getTemplate()->friend_getUseMyDockCursor();	}

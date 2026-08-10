@@ -647,14 +647,14 @@ public:
 
 	Bool m_fixHulksFreezingAboveTerrain;
 
-	Bool m_fixAIPathfindClumpForManyPlayers;
+	/*Bool m_fixAIPathfindClumpForManyPlayers;
 	Bool m_useNonRetailAIPathfind;
 	Bool m_useNonRetailAIPathfindAllocation;
 	Bool m_useNonRetailAIPathfindDynamicAlloc; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfindDoublyLinkedList; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfindOpenSortedList; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfindSuperSkip; // Credits to: Mauller
-	Bool m_useNonRetailAIPathfindReverseTransverseInsertion; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindReverseTransverseInsertion; // Credits to: Mauller*/
 	Bool m_dynamicTargeting;
 	Bool m_useAccurateSphereToRectCollision;
 	Bool m_checkBoxBoundariesForDistCalc;
@@ -664,6 +664,13 @@ public:
 
 	Real m_formationBlockedSpeedPenalty;
 	Real m_globalReverseMoveSpeedPenalty;
+
+	Bool m_enableReverseMoveByDefaultForWheels;	///< configuration for enabling reverse move by default for all non-motorcycles vehicles & ships
+	Bool m_enableReverseMoveByDefaultForTreads;
+	Bool m_enableReverseMoveByDefaultForShips;
+	Bool m_enableReverseMoveByDefaultForHover;
+	Bool m_enableReverseMoveByDefaultForThrust;
+	Bool m_enableReverseMoveByDefaultForOther;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

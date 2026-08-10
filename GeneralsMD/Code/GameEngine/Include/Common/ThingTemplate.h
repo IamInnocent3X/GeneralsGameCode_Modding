@@ -720,6 +720,7 @@ public:
 	const AsciiString& friend_getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 	const AsciiString& friend_getSalvageCursorName() const {return m_salvageCursorName;	}
 	const AsciiString& friend_getReverseMoveToCursorName() const {return m_reverseMoveToCursorName;	}
+	const AsciiString& friend_getSmartGarrisonCursorName() const {return m_smartGarrisonCursorName;	}
 	
 	Bool friend_getUseMyGetRepairAtCursor() const {return m_useMyGetRepairAtCursor;	}
 	Bool friend_getUseMyDockCursor() const {return m_useMyDockCursor;	}
@@ -736,6 +737,8 @@ public:
 	const std::vector<AsciiString>& getCustomStatusUnderPowered() const { return m_customStatusUnderPowered; }
 	TintStatus getTintStatusUnderPowered() const { return m_tintStatusUnderPowered; }
 	const AsciiString& getCustomTintStatusUnderPowered() const { return m_customTintStatusUnderPowered; }
+
+	Bool getCanFireTurretsWhileReverseMoving() const  { return m_canFireTurretsWhileReverseMoving; }
 
 protected:
 
@@ -824,6 +827,7 @@ private:
 	AsciiString				m_setRallyPointCursorName;
 	AsciiString				m_salvageCursorName;
 	AsciiString				m_reverseMoveToCursorName;
+	AsciiString				m_smartGarrisonCursorName;
 	AsciiString				m_buildCursorName;
 	AsciiString				m_invalidBuildCursorName;
 
@@ -927,6 +931,7 @@ private:
 	Bool          m_equipGuard;
 	Bool          m_parasiteGuard;
 	Bool					m_setDisabledWhenUnderpowered;
+	Bool					m_canFireTurretsWhileReverseMoving;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority

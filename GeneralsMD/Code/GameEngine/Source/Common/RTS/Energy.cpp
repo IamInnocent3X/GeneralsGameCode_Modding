@@ -114,7 +114,7 @@ Real Energy::getEnergySupplyRatio() const
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool Energy::hasSufficientPower(void) const
+Bool Energy::hasSufficientPower() const
 {
 	if( m_infinitePower )
 		return TRUE;

@@ -49,6 +49,9 @@
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
 
+#include "GameLogic/Module/CollideModule.h"
+//#include "GameLogic/Module/SalvageCrateCollide.h"
+
 //-------------------------------------------------------------------------------------------------
 ChatCommandStore* TheChatCommandStore = nullptr;
 
@@ -63,6 +66,7 @@ const FieldParse ChatCommand::s_fieldParseTable[] =
 	{ "GrantAllUpgrades",		INI::parseBool,			nullptr,	offsetof( ChatCommand, m_grantAllUpgrades ) },
 	{ "AddVeterancyLevel",		INI::parseInt,			nullptr,	offsetof( ChatCommand, m_addVeterancyLevel ) },
 	{ "AddSalvageTier",			INI::parseInt,			nullptr,	offsetof( ChatCommand, m_addSalvageTier ) },
+	{ "AddSalvageCrateName",	INI::parseAsciiString,			nullptr,	offsetof( ChatCommand, m_addSalvageCrate ) },
 	{ "ProductionSpeedMultiplier",	INI::parseReal,		nullptr,	offsetof( ChatCommand, m_productionSpeedMultiplier ) },
 	{ NULL, NULL, 0, 0 }  // keep this last
 };
@@ -287,40 +291,97 @@ void ChatCommand::execute() const
 				if (!obj)
 					continue;
 
-				Bool changed = FALSE;
-
-				if (obj->isKindOf( KINDOF_WEAPON_SALVAGER ))
+				if(m_addSalvageCrate.isEmpty())
 				{
-					Int cur = obj->testWeaponSetFlag( WEAPONSET_CRATEUPGRADE_TWO ) ? 2
-							: obj->testWeaponSetFlag( WEAPONSET_CRATEUPGRADE_ONE ) ? 1 : 0;
-					Int next = cur + m_addSalvageTier;
-					next = next < 0 ? 0 : (next > 2 ? 2 : next);
-					if (next != cur)
+					Bool changed = FALSE;
+
+					if (obj->isKindOf( KINDOF_WEAPON_SALVAGER ))
 					{
-						setWeaponSalvageTier( obj, next );
-						changed = TRUE;
+						Int cur = obj->testWeaponSetFlag( WEAPONSET_CRATEUPGRADE_TWO ) ? 2
+								: obj->testWeaponSetFlag( WEAPONSET_CRATEUPGRADE_ONE ) ? 1 : 0;
+						Int next = cur + m_addSalvageTier;
+						next = next < 0 ? 0 : (next > 2 ? 2 : next);
+						if (next != cur)
+						{
+							setWeaponSalvageTier( obj, next );
+							changed = TRUE;
+						}
 					}
-				}
 
-				if (obj->isKindOf( KINDOF_ARMOR_SALVAGER ))
-				{
-					Int cur = obj->testArmorSetFlag( ARMORSET_CRATE_UPGRADE_TWO ) ? 2
-							: obj->testArmorSetFlag( ARMORSET_CRATE_UPGRADE_ONE ) ? 1 : 0;
-					Int next = cur + m_addSalvageTier;
-					next = next < 0 ? 0 : (next > 2 ? 2 : next);
-					if (next != cur)
+					if (obj->isKindOf( KINDOF_ARMOR_SALVAGER ))
 					{
-						setArmorSalvageTier( obj, next );
-						changed = TRUE;
+						Int cur = obj->testArmorSetFlag( ARMORSET_CRATE_UPGRADE_TWO ) ? 2
+								: obj->testArmorSetFlag( ARMORSET_CRATE_UPGRADE_ONE ) ? 1 : 0;
+						Int next = cur + m_addSalvageTier;
+						next = next < 0 ? 0 : (next > 2 ? 2 : next);
+						if (next != cur)
+						{
+							setArmorSalvageTier( obj, next );
+							changed = TRUE;
+						}
 					}
-				}
 
-				// play the salvage crate pickup sound on the unit when its tier changed.
-				if (changed && TheAudio && TheAudio->getMiscAudio())
+					// play the salvage crate pickup sound on the unit when its tier changed.
+					if (changed && TheAudio && TheAudio->getMiscAudio())
+					{
+						AudioEventRTS sound = TheAudio->getMiscAudio()->m_crateSalvage;
+						sound.setObjectID( obj->getID() );
+						TheAudio->addAudioEvent( &sound );
+					}
+
+				} 
+				else
 				{
-					AudioEventRTS sound = TheAudio->getMiscAudio()->m_crateSalvage;
-					sound.setObjectID( obj->getID() );
-					TheAudio->addAudioEvent( &sound );
+					const ThingTemplate *tmpl = TheThingFactory ? TheThingFactory->findTemplate( m_addSalvageCrate ) : nullptr;
+					if (tmpl)
+					{
+						/*const ModuleInfo& mi = tmpl->getBehaviorModuleInfo();
+						for( Int modIdx = 0; modIdx < mi.getCount(); ++modIdx )
+						{
+							modName = mi.getNthName(modIdx);
+							if( !modName.compare( "SalvageCrateCollide" ) )
+							{
+								const SalvageCrateCollideModuleData *data = (const SalvageCrateCollideModuleData*)mi.getNthData( modIdx );
+
+								//It does, so see if the player has that upgrade
+								if( data )
+								{
+									const ModuleTemplate* mt = findModuleTemplate(modName, MODULETYPE_BEHAVIOR);
+									if (mt)
+									{
+										Module* mod = (*mt->m_createProc)( thing, moduleData );
+
+									BehaviorModule* newMod = (BehaviorModule*)TheModuleFactory->newModule(obj, modName, mi.getNthData(modIdx), MODULETYPE_BEHAVIOR);
+									CollideModuleInterface* collide = newMod->getCollide();
+									if (collide && collide->isSalvageCrateCollide()) {
+										for( int salvage_times = 0; salvage_times < m_addSalvageTier; salvage_times++ )
+											collide->friend_executeCrateBehavior( obj );
+									}
+								}
+							}
+						}*/
+
+						Player *player = ThePlayerList ? ThePlayerList->getLocalPlayer() : nullptr;
+						Team *team = player ? player->getDefaultTeam() : nullptr;
+						Object *crate = TheThingFactory->newObject( tmpl, team );
+						if (crate)
+						{
+							for (BehaviorModule** m = crate->getBehaviorModules(); *m; ++m)
+							{
+								CollideModuleInterface* collide = (*m)->getCollide();
+								if (collide && collide->isSalvageCrateCollide()) {
+									for( int salvage_times = 0; salvage_times < m_addSalvageTier; salvage_times++ )
+										collide->friend_executeCrateBehavior( obj );
+								}
+							}
+							TheGameLogic->destroyObject(crate);
+						}
+
+					}
+					else if (!tmpl)
+					{
+						DEBUG_LOG((">>> CHAT COMMAND AddSalvageCrateName: ThingTemplate '%s' not found.", m_addSalvageCrate.str()));
+					}
 				}
 			}
 		}

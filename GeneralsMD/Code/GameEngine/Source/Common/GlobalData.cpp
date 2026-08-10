@@ -111,7 +111,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 {
 	TrackerBonusCT TrackType;
 
-	TrackType.bonus = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusNames);
+	TrackType.bonus = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), WeaponBonusConditionFlags::getBitNames());
 
 	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
@@ -686,7 +686,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 
 	// Functions below except 'UseNonRetailAIPathfindDynamicAlloc', and 'UseNonRetailAIPathfindOpenSortedList' are automatically enabled if RETAIL_COMPATIBLE_PATHFINDING is disabled.
 	// 'UseNonRetailAIPathfindAllocation' is enabled when either RETAIL_COMPATIBLE_PATHFINDING or RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION is disabled.
-	{ "UseNonRetailPathfindToFixPathfindForManyPlayers",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // This method uses UseNonRetailAIPathfindAllocation after having 6 or more players in a map
+	/*{ "UseNonRetailPathfindToFixPathfindForManyPlayers",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // This method uses UseNonRetailAIPathfindAllocation after having 6 or more players in a map
 	{ "UseNonRetailAIPathfind",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - If use Retail, AI Pathfind can be configured to use Non-Retail method
 	{ "UseNonRetailAIPathfindAllocation",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindAllocation) },
 	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // This requires Non-Retail to be configured for pathfinding. Either through Global data, or defining Non-Retail. Credits to: Mauller
@@ -694,6 +694,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "UseNonRetailAIPathfindOpenSortedList",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindOpenSortedList) }, // Mauller's Open Sorted Lists for Optimization.
 	{ "UseNonRetailAIPathfindSuperSkip",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindSuperSkip) },  // Mauller's Open Sorted Lists Super Skip for Optimization.
 	{ "UseNonRetailAIPathfindReverseTransverseInsertion",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindReverseTransverseInsertion) }, // Mauller's Reverse Transverse Insertion for Optimization.
+	*/
 
 	{ "FlungCorpsesHasAirDrag",	INI::parseBool, nullptr, offsetof(GlobalData, m_corpsesHaveAirDrag) },
 
@@ -711,6 +712,13 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 
 	{ "FormationBlockedSpeedPenalty",	 INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_formationBlockedSpeedPenalty) },
 	{ "ReverseMoveSpeedPenalty",	 INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_globalReverseMoveSpeedPenalty) },
+
+	{ "EnableReverseMoveByDefaultForTreads",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForTreads ) },
+	{ "EnableReverseMoveByDefaultForWheels",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForWheels ) },
+	{ "EnableReverseMoveByDefaultForHover",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForHover ) },
+	{ "EnableReverseMoveByDefaultForShips",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForShips ) },
+	{ "EnableReverseMoveByDefaultForThrust",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForThrust ) },
+	{ "EnableReverseMoveByDefaultForOther",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForOther ) },
 
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
@@ -1306,14 +1314,14 @@ GlobalData::GlobalData()
 	m_useEfficientDrawableScheme = FALSE;
 
 	//m_fixLocoClump = FALSE;
-	m_fixAIPathfindClumpForManyPlayers = FALSE;
+	/*m_fixAIPathfindClumpForManyPlayers = FALSE;
 	m_useNonRetailAIPathfind = FALSE;
 	m_useNonRetailAIPathfindAllocation = FALSE;
 	m_useNonRetailAIPathfindDynamicAlloc = FALSE; // Credits to: Mauller
 	m_useNonRetailAIPathfindDoublyLinkedList = FALSE; // Credits to: Mauller
 	m_useNonRetailAIPathfindOpenSortedList = FALSE; // Credits to: Mauller
 	m_useNonRetailAIPathfindSuperSkip = FALSE; // Credits to: Mauller
-	m_useNonRetailAIPathfindReverseTransverseInsertion = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindReverseTransverseInsertion = FALSE; // Credits to: Mauller*/
 
 	m_corpsesHaveAirDrag = FALSE;
 	m_hideCashTextFromEnemies = FALSE;
@@ -1328,6 +1336,13 @@ GlobalData::GlobalData()
 
 	m_formationBlockedSpeedPenalty = 0.45f;
 	m_globalReverseMoveSpeedPenalty = 0.0f;
+
+	m_enableReverseMoveByDefaultForWheels = TRUE;
+	m_enableReverseMoveByDefaultForTreads = TRUE;
+	m_enableReverseMoveByDefaultForShips = TRUE;
+	m_enableReverseMoveByDefaultForHover = TRUE;
+	m_enableReverseMoveByDefaultForThrust = TRUE;
+	m_enableReverseMoveByDefaultForOther = TRUE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

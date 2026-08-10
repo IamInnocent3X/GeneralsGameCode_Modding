@@ -214,7 +214,10 @@ void ObjectCreationMux::doObjectCreation( const Object *sourceObj, Object *obj )
 		body->setInitialHealth(healthPercent * 100.0f);
 
 	if (data->m_experienceSink && sourceObj) {
-		obj->getExperienceTracker()->setExperienceSink(sourceObj->getID());
+		// Chain the sink: if the caller is itself a sink for someone else (e.g. a projectile
+		// whose sink is the launcher), pledge to that final owner, not the transient caller.
+		ObjectID sinkID = sourceObj->getExperienceTracker()->getExperienceSink();
+		obj->getExperienceTracker()->setExperienceSink(sinkID != INVALID_ID ? sinkID : sourceObj->getID());
 	}
 
 
@@ -702,6 +705,13 @@ void ObjectCreationMux::doDisposition( const Object *sourceObj, Object *obj, con
 		chunkPos.z = getGroundHeight(pos, layer);
 		obj->setLayer(layer);
 		obj->setPosition(&chunkPos);
+
+		//Set water model condition if demotrap on water
+		if (obj->isKindOf(KINDOF_DEMOTRAP)) {
+			if (TheTerrainLogic->isUnderwater(chunkPos.x, chunkPos.y)) {
+				obj->setModelConditionState(MODELCONDITION_OVER_WATER);
+			}
+		}
 	}
 
 	if( BitIsSet( data->m_disposition, SEND_IT_OUT ) )
