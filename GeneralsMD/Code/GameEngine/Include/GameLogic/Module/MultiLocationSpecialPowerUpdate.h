@@ -64,6 +64,7 @@ public:
 	// once the caster has actually stopped attacking.
 	Bool											m_waitForAttackComplete;	///< advance only when the caster stops attacking
 	UnsignedInt								m_maxWaitPerTarget;				///< safety cap per point, so an unattackable point cannot stall the sequence
+	AsciiString 			m_cursorName;
 
 	MultiLocationSpecialPowerUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -86,7 +87,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const { return m_active; }
@@ -106,6 +107,10 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return true; }
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}	///< unused: delivery goes through setSpecialPowerMultiLocations
 	virtual void setSpecialPowerMultiLocations( const std::vector<Coord3D>& locs );
+	virtual const AsciiString& getCursorName() const { return getMultiLocationSpecialPowerUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
+
 
 	virtual void onObjectCreated();
 	virtual UpdateSleepTime update();

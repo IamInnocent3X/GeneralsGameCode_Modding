@@ -316,7 +316,8 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 		}
 		if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 		{
-			if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+			//if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+			if ( weaponBonusTypeNoClear.test(weaponBonusType) && me->testWeaponBonusCondition(weaponBonusType) )
 			{
 				me->clearWeaponBonusCondition(weaponBonusType, FALSE);
 			}
@@ -453,7 +454,8 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 				else
 				{
 					// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-					if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+					//if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+					if ( weaponBonusTypeNoClear.test(it->bonus) && me->testWeaponBonusCondition(it->bonus) )
 					{
 						me->clearWeaponBonusCondition(it->bonus, FALSE);
 					}
@@ -515,7 +517,8 @@ void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
 	if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 	{
 		// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-		if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+		//if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+		if ( weaponBonusTypeNoClear.test(weaponBonusType) && me->testWeaponBonusCondition(weaponBonusType) )
 		{
 			me->clearWeaponBonusCondition(weaponBonusType, FALSE);
 		}
@@ -557,7 +560,8 @@ void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
 			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
 			{
 				// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-				if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+				//if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+				if ( weaponBonusTypeNoClear.test(it->bonus) && me->testWeaponBonusCondition(it->bonus) )
 					me->clearWeaponBonusCondition(it->bonus, FALSE);
 			}
 		}

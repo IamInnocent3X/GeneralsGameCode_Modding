@@ -361,9 +361,7 @@ void ChatCommand::execute() const
 							}
 						}*/
 
-						Player *player = ThePlayerList ? ThePlayerList->getLocalPlayer() : nullptr;
-						Team *team = player ? player->getDefaultTeam() : nullptr;
-						Object *crate = TheThingFactory->newObject( tmpl, team );
+						Object *crate = TheThingFactory->newObject( tmpl, nullptr );
 						if (crate)
 						{
 							for (BehaviorModule** m = crate->getBehaviorModules(); *m; ++m)

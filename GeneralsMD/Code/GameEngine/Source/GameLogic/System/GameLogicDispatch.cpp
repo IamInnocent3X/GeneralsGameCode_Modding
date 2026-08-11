@@ -919,7 +919,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		}
 
 		//---------------------------------------------------------------------------------------------
-		case GameMessage::MSG_DO_REVERSE_MOVETO:
+		case GameMessage::MSG_DO_FORCEMOVETO:
 		{
 			Coord3D dest = msg->getArgument( 0 )->location;
 
@@ -930,7 +930,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 
 				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
-				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, /*reverse=*/true );
+				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER );
 			}
 
 			break;
@@ -970,7 +970,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
 				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
-				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, TRUE );
+				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, /*reverse=*/true );
 			}
 
 			break;

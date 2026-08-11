@@ -33,13 +33,13 @@ class FireWeaponOnKillBehaviorModuleData : public BehaviorModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
+	//Bool									m_initiallyActive;
 	KillMuxData						m_killMuxData;
 	const WeaponTemplate* m_killWeapon;						///< fire this weapon at the victim when we kill something
 
 	FireWeaponOnKillBehaviorModuleData()
 	{
-		m_initiallyActive = false;
+		//m_initiallyActive = false;
 		m_killWeapon = nullptr;
 	}
 
@@ -47,7 +47,7 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool,							nullptr, offsetof( FireWeaponOnKillBehaviorModuleData, m_initiallyActive ) },
+			//{ "StartsActive",	INI::parseBool,							nullptr, offsetof( FireWeaponOnKillBehaviorModuleData, m_initiallyActive ) },
 			{ "KillWeapon",		INI::parseWeaponTemplate,		nullptr, offsetof( FireWeaponOnKillBehaviorModuleData, m_killWeapon ) },
 			{ 0, 0, 0, 0 }
 		};
@@ -101,6 +101,12 @@ protected:
 		getFireWeaponOnKillBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getFireWeaponOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval()
 	{
 		getFireWeaponOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
@@ -111,9 +117,15 @@ protected:
 		return getFireWeaponOnKillBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const
+	{
+		return getFireWeaponOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 private:
 

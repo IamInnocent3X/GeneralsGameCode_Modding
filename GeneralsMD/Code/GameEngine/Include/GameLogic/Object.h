@@ -732,11 +732,8 @@ public:
 	void setCustomWeaponBonusConditionFlags(const std::vector<AsciiString>& customFlags) { m_customWeaponBonusCondition = customFlags; }
 	Bool testCustomWeaponBonusCondition(const AsciiString& cst) const;
 
-	WeaponBonusConditionFlags getWeaponBonusConditionIgnoreClear() const { return m_weaponBonusConditionIC; }
 	//const ObjectCustomStatusType *getCustomWeaponBonusConditionIgnoreClear() const { return &m_customWeaponBonusConditionIC; }
 	std::vector<AsciiString> getCustomWeaponBonusConditionIgnoreClear() const { return m_customWeaponBonusConditionIC; }
-
-	inline void setWeaponBonusConditionFlagsIgnoreClear(WeaponBonusConditionFlags flags) { m_weaponBonusConditionIC = flags; }
 	//void setCustomWeaponBonusConditionFlagsIgnoreClear(ObjectCustomStatusType map) { m_customWeaponBonusConditionIC = map; }
 	void setCustomWeaponBonusConditionFlagsIgnoreClear(const std::vector<AsciiString>& vec) { m_customWeaponBonusConditionIC = vec; }
 

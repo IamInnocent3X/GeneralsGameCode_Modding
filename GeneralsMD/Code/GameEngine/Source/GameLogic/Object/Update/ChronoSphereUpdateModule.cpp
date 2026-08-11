@@ -59,6 +59,7 @@ ChronoSphereUpdateModuleData::ChronoSphereUpdateModuleData()
 	m_unitTargetFX = nullptr;
 	m_sourceOCL = nullptr;
 	m_targetOCL = nullptr;
+	m_cursorName.clear();
 	// m_requiredKindOf / m_forbiddenKindOf default-construct empty
 }
 
@@ -80,6 +81,10 @@ ChronoSphereUpdateModuleData::ChronoSphereUpdateModuleData()
 		{ "UnitTargetFX",					INI::parseFXList,								nullptr,				offsetof( ChronoSphereUpdateModuleData, m_unitTargetFX ) },
 		{ "SourceOCL",						INI::parseObjectCreationList,		nullptr,				offsetof( ChronoSphereUpdateModuleData, m_sourceOCL ) },
 		{ "TargetOCL",						INI::parseObjectCreationList,		nullptr,				offsetof( ChronoSphereUpdateModuleData, m_targetOCL ) },
+
+		// Custom Cursor
+		{ "CursorName",							INI::parseAsciiString,	nullptr,						offsetof( ChronoSphereUpdateModuleData, m_cursorName ) },
+
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
@@ -123,7 +128,7 @@ void ChronoSphereUpdateModule::onObjectCreated()
 // First click: the source point arrives here as targetPos. The destination (second click) is
 // delivered separately via setSpecialPowerOverridableDestination().
 //-------------------------------------------------------------------------------------------------
-Bool ChronoSphereUpdateModule::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool ChronoSphereUpdateModule::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	if( m_specialPowerModule == nullptr || m_specialPowerModule->getSpecialPowerTemplate() != specialPowerTemplate )
 	{

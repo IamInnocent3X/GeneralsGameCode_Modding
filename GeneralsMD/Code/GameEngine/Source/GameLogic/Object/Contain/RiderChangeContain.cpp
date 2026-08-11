@@ -130,6 +130,8 @@ void RiderChangeContainModuleData::parseRiderInfo( INI* ini, void *instance, voi
 		rider->m_armorSetFlag = (ArmorSetType)INI::scanIndexList( armorToken, ArmorSetFlags::getBitNames() );
 }
 
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 void RiderChangeContainModuleData::parseRiderInfoCustom(INI* ini, void* instance, void* store, const void* /*userData*/)
 {
 	RiderInfo rider;
@@ -179,54 +181,6 @@ void RiderChangeContainModuleData::parseRiderInfoCustom(INI* ini, void* instance
 	const char* armorToken = ini->getNextTokenOrNull();
 	if( armorToken )
 		rider.m_armorSetFlag = (ArmorSetType)INI::scanIndexList( armorToken, ArmorSetFlags::getBitNames() );
-
-	std::vector<RiderInfo>* s = (std::vector<RiderInfo>*)store;
-	s->push_back(rider);
-}
-
-void RiderChangeContainModuleData::parseRiderInfoCustom(INI* ini, void* instance, void* store, const void* /*userData*/)
-{
-	RiderInfo rider;
-	const char* name = ini->getNextToken();
-
-	//Template name
-	rider.m_templateName.format(name);
-
-	//Model condition state
-	INI::parseIndexList(ini, instance, &(rider.m_modelConditionFlagType), ModelConditionFlags::getBitNames());
-
-	//Weaponset
-	INI::parseIndexList(ini, instance, &(rider.m_weaponSetFlag), WeaponSetFlags::getBitNames());
-
-	//Object status
-	name = ini->getNextToken();
-	Int count = 0;
-	Int bitindex = -1;
-	for(ConstCharPtrArray findname = ObjectStatusMaskType::getBitNames(); *findname; findname++, count++ )
-	{
-		if( stricmp( *findname, name ) == 0 )
-		{
-			bitindex = count;
-			break;
-		}
-	}
-	if (bitindex >= 0)
-	{
-		rider.m_objectStatusType = (ObjectStatusType)bitindex;
-		rider.m_objectCustomStatusType.clear();
-	}
-	else
-	{
-		rider.m_objectStatusType = (ObjectStatusType)0;
-		rider.m_objectCustomStatusType.format(name);
-	}
-
-	//Command set override
-	name = ini->getNextToken();
-	rider.m_commandSet.format(name);
-
-	//Locomotor set type
-	rider.m_locomotorSetType = (LocomotorSetType)INI::scanIndexList(ini->getNextToken(), TheLocomotorSetNames);
 
 	std::vector<RiderInfo>* s = (std::vector<RiderInfo>*)store;
 	s->push_back(rider);
@@ -674,8 +628,8 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 		obj->setWeaponSetFlag( riderInfo.m_weaponSetFlag );
 
 		//Also set the correct armorset flag (if any)
-		if( data->m_riders[ i ].m_armorSetFlag != ARMORSET_NONE )
-			obj->setArmorSetFlag( data->m_riders[ i ].m_armorSetFlag );
+		if( riderInfo.m_armorSetFlag != ARMORSET_NONE )
+			obj->setArmorSetFlag( riderInfo.m_armorSetFlag );
 
 		//Also set the object status
 		if (riderInfo.m_objectCustomStatusType.isEmpty())

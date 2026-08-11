@@ -6894,18 +6894,6 @@ void Object::clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgn
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
-{
-	m_weaponBonusConditionIC.set(wst);
-}
-
-//-------------------------------------------------------------------------------------------------
-void Object::clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
-{
-	m_weaponBonusConditionIC.set(wst, 0);
-}
-
-//-------------------------------------------------------------------------------------------------
 void Object::setCustomWeaponBonusConditionIgnoreClear(const AsciiString& cst) 
 {
 	if(!checkWithinStringVec(cst, m_customWeaponBonusConditionIC))
@@ -8116,7 +8104,6 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
-			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8256,7 +8243,6 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
-			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8446,7 +8432,6 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
-			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -9535,6 +9520,8 @@ Bool Object::hasParasites() const
 	if( m_equipObjIDs.empty() )
 		return false;
 
+	// Check for all equippers to find if any is a Parasite
+	std::vector<ObjectID>::const_iterator it;
 	for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
 	{
 		Object *equipObj = TheGameLogic->findObjectByID( (*it) );
@@ -10015,7 +10002,7 @@ const CommandButton *Object::getCommandButtonForSlot( Int slotNum, const Command
 {
 	AsciiString commandSetString = set ? set->getName() : AsciiString::TheEmptyString;
 	if( commandSetString.isEmpty() || m_controlBarModifiersApplied.empty() )
-		return set && set->getCommandButton( slotNum );
+		return set ? set->getCommandButton( slotNum ) : nullptr;
 
 	CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.find(commandSetString);
 	if(it != m_controlBarModifiersApplied.end())
@@ -10027,7 +10014,7 @@ const CommandButton *Object::getCommandButtonForSlot( Int slotNum, const Command
 		}
 	}
 
-	return nullptr;
+	return set ? set->getCommandButton( slotNum ) : nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -10166,7 +10153,7 @@ void Object::setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot )
 }
 
 // ------------------------------------------------------------------------------------------------
-Bool getIsDoingReverseMove() const
+Bool Object::getIsDoingReverseMove() const
 {
 	return m_ai && m_ai->isForcedMoveBackwards() && ( m_reverseFormationID != NO_FORMATION_ID || m_ai->getCurLocomotor() && m_ai->getCurLocomotor()->isMovingBackwards() );
 }

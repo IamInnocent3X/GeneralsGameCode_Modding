@@ -400,22 +400,20 @@ static void applySalvageCrate(Object* unit, const AsciiString& crateName)
 					CollideModuleInterface* collide = newMod->getCollide();
 					if (collide && collide->isSalvageCrateCollide()) {
 						for( int salvage_times = 0; salvage_times < m_addSalvageTier; salvage_times++ )
-							collide->friend_executeCrateBehavior( obj );
+							collide->friend_executeCrateBehavior( unit );
 					}
 				}
 			}
 		}*/
 
-		Player *player = unit ? unit->getControllingPlayer() : nullptr;
-		Team *team = player ? player->getDefaultTeam() : nullptr;
-		Object *crate = TheThingFactory->newObject( tmpl, team );
+		Object *crate = TheThingFactory->newObject( tmpl, nullptr );
 		if (crate)
 		{
 			for (BehaviorModule** m = crate->getBehaviorModules(); *m; ++m)
 			{
 				CollideModuleInterface* collide = (*m)->getCollide();
 				if (collide && collide->isSalvageCrateCollide())
-					collide->friend_executeCrateBehavior( obj );
+					collide->friend_executeCrateBehavior( unit );
 			}
 			TheGameLogic->destroyObject(crate);
 		}
@@ -448,7 +446,7 @@ Bool AutoHealBehavior::pulseHealObject(Object* obj)
 			obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite, data->m_clearsParasiteKeys );
 	}
 
-	if( canApplySalvageCrate(obj) ) {
+	if( canApplySalvageCrate() ) {
 		applySalvageCrate(obj, data->m_grantSalvageCrateName);
 	}
 	else if (canApplyArmorSalvage(obj)) {

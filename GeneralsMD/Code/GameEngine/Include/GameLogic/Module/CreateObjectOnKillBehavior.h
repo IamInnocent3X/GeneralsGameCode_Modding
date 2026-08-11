@@ -33,7 +33,7 @@ class CreateObjectOnKillBehaviorModuleData : public BehaviorModuleData
 {
 public:
 	UpgradeMuxData						m_upgradeMuxData;
-	Bool											m_initiallyActive;
+	//Bool											m_initiallyActive;
 	KillMuxData								m_killMuxData;
 	const ObjectCreationList* m_ocl;						///< spawn this OCL at the victim when we kill something
 	Bool											m_createAtKillerLocation;	///< spawn at the killer's position instead of the victim's
@@ -41,7 +41,7 @@ public:
 
 	CreateObjectOnKillBehaviorModuleData()
 	{
-		m_initiallyActive = false;
+		//m_initiallyActive = false;
 		m_ocl = nullptr;
 		m_createAtKillerLocation = false;
 		m_createObjectForVictim = false;
@@ -51,7 +51,7 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool,									nullptr, offsetof( CreateObjectOnKillBehaviorModuleData, m_initiallyActive ) },
+			//{ "StartsActive",	INI::parseBool,									nullptr, offsetof( CreateObjectOnKillBehaviorModuleData, m_initiallyActive ) },
 			{ "CreationList",		INI::parseObjectCreationList,		nullptr, offsetof( CreateObjectOnKillBehaviorModuleData, m_ocl ) },
 			{ "CreateAtKillerLocation",	INI::parseBool,				nullptr, offsetof( CreateObjectOnKillBehaviorModuleData, m_createAtKillerLocation ) },
 			{ "CreateObjectForVictim",	INI::parseBool,				nullptr, offsetof( CreateObjectOnKillBehaviorModuleData, m_createObjectForVictim ) },
@@ -107,6 +107,12 @@ protected:
 		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant()
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval()
 	{
 		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
@@ -117,9 +123,15 @@ protected:
 		return getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const
+	{
+		return getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 private:
 

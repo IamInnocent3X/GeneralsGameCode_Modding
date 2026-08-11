@@ -580,7 +580,7 @@ void SalvageCrateCollideModuleData::parseWeaponBonus( INI* ini, void *instance, 
 		WeaponBonusTypes bonus;
 
 		Int count = 0;
-		for(ConstCharPtrArray name = TheWeaponBonusNames; *name; name++, count++ )
+		for(ConstCharPtrArray name = WeaponBonusConditionFlags::getBitNames(); *name; name++, count++ )
 		{
 			if( stricmp( *name, token ) == 0 )
 			{

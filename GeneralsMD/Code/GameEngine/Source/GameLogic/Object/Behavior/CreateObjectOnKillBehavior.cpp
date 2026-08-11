@@ -35,10 +35,11 @@ CreateObjectOnKillBehavior::CreateObjectOnKillBehavior( Thing *thing, const Modu
 {
 	m_lastTriggerFrame = 0;
 
-	if (getCreateObjectOnKillBehaviorModuleData()->m_initiallyActive)
-	{
-		giveSelfUpgrade();
-	}
+	// IamInnocent - Implemented in the reworked UpgradeMux
+	//if (getCreateObjectOnKillBehaviorModuleData()->m_initiallyActive)
+	//{
+	//	giveSelfUpgrade();
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -48,15 +48,18 @@
 // Grant one upgrade to one rider, skipping riders that already have it or that have no module
 // reacting to it, so we don't dirty their upgrade mask needlessly.
 //-------------------------------------------------------------------------------------------------
-static void tryGrantUpgradeToRider( Object *rider, const UpgradeTemplate *upgradeTemplate )
+static void tryGrantUpgradeToRider( Object *rider, const UpgradeTemplate *upgradeTemplate, Bool isGrant )
 {
 	if( rider == nullptr )
 		return;
 
-	if( rider->hasUpgrade( upgradeTemplate ) || !rider->affectedByUpgrade( upgradeTemplate ) )
+	if( !rider->affectedByUpgrade( upgradeTemplate ) || (isGrant && rider->hasUpgrade( upgradeTemplate )) || (!isGrant && !rider->hasUpgrade( upgradeTemplate )) )
 		return;
 
-	rider->giveUpgrade( upgradeTemplate );
+	if(isGrant)
+		rider->giveUpgrade( upgradeTemplate );
+	else
+		rider->removeUpgrade( upgradeTemplate );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -77,6 +80,7 @@ void PropagateUpgradeToContainedUpgradeModuleData::buildFieldParse(MultiIniField
 //-------------------------------------------------------------------------------------------------
 PropagateUpgradeToContainedUpgrade::PropagateUpgradeToContainedUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -98,6 +102,32 @@ void PropagateUpgradeToContainedUpgrade::upgradeImplementation( )
 		return;
 	}
 
+	const PropagateUpgradeToContainedUpgradeModuleData *data = getPropagateUpgradeToContainedUpgradeModuleData();
+
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	if( UpgradeStatus == 1 )
+	{
+		m_hasExecuted = TRUE;
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+	else
+	{
+		return;
+	}
+
 	const ContainedItemsList *contained = contain->getContainedItemsList();
 
 	// Some containers keep an object in a separate hidden slot that is NOT in the contained list,
@@ -107,7 +137,7 @@ void PropagateUpgradeToContainedUpgrade::upgradeImplementation( )
 	if( rawHiddenRider != nullptr )
 		hiddenRider = TheGameLogic->findObjectByID( rawHiddenRider->getID() );
 
-	const std::vector<AsciiString> &names = getPropagateUpgradeToContainedUpgradeModuleData()->m_upgradeNamesToPropagate;
+	const std::vector<AsciiString> &names = data->m_upgradeNamesToPropagate;
 
 	for( std::vector<AsciiString>::const_iterator nameIt = names.begin(); nameIt != names.end(); ++nameIt )
 	{
@@ -133,13 +163,13 @@ void PropagateUpgradeToContainedUpgrade::upgradeImplementation( )
 				Object *rider = *it;
 				++it;
 
-				tryGrantUpgradeToRider( rider, upgradeTemplate );
+				tryGrantUpgradeToRider( rider, upgradeTemplate, m_hasExecuted );
 			}
 		}
 
 		// hiddenRider is guarded against being a duplicate of a listed rider by tryGrantUpgradeToRider's
 		// hasUpgrade() check, so it is safe to also grant here.
-		tryGrantUpgradeToRider( hiddenRider, upgradeTemplate );
+		tryGrantUpgradeToRider( hiddenRider, upgradeTemplate, m_hasExecuted );
 	}
 }
 
@@ -169,6 +199,8 @@ void PropagateUpgradeToContainedUpgrade::xfer( Xfer *xfer )
 
 	// extend base class
 	UpgradeModule::xfer( xfer );
+
+	xfer->xferBool(&m_hasExecuted);
 
 }
 

@@ -138,6 +138,7 @@ public:
 	const FieldParse* getFieldParse() const;
 
 	void friend_setName(const AsciiString& n) { m_name = n; }
+	void declaredCanMoveBackwards() { m_useDefaultCanMoveBackwards = false; }
 
 	void validate();
 

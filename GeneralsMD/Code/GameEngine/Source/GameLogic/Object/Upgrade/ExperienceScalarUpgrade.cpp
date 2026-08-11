@@ -44,7 +44,6 @@ ExperienceScalarUpgradeModuleData::ExperienceScalarUpgradeModuleData( void )
 	m_addXPScalar = 0.0f;
 	m_addXPValueScalar = 0.0f;
 	m_setMaxVeterancyLevel = LEVEL_INVALID;	// don't change the cap unless specified
-	m_prevMaxVeterancyDiff = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -72,6 +71,7 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 ExperienceScalarUpgrade::ExperienceScalarUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
 	m_hasExecuted = FALSE;
+	m_prevMaxVeterancyDiff = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ void ExperienceScalarUpgrade::upgradeImplementation( )
 
 		// Optionally raise/lower the object's veterancy cap.
 		if( data->m_setMaxVeterancyLevel != LEVEL_INVALID && m_prevMaxVeterancyDiff != 0 ) {
-			obj->setMaxVeterancyLevel( obj->getMaxVeterancyLevel() - m_prevMaxVeterancyDiff );
+			obj->setMaxVeterancyLevel( (VeterancyLevel)(obj->getMaxVeterancyLevel() - m_prevMaxVeterancyDiff) );
 			m_prevMaxVeterancyDiff = 0;
 		}
 

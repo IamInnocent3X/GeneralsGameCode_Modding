@@ -292,7 +292,15 @@ static CommandStatus doMoveStateCommand( const CommandButton *command, const ICo
 	// so we must be sure there is only one thing selected (that thing we will set the point on)
 	//
 	Drawable *draw = TheInGameUI->getFirstSelectedDrawable();
-	DEBUG_ASSERTCRASH( draw, ("doAttackMoveCommand: No selected object(s)") );
+	switch(command->getCommandType())
+	{
+		case GUI_COMMAND_REVERSE_MOVE:
+			DEBUG_ASSERTCRASH( draw, ("doReverseMoveCommand: No selected object(s)") );
+			break; 
+		case GUI_COMMAND_ATTACK_MOVE:
+			DEBUG_ASSERTCRASH( draw, ("doAttackMoveCommand: No selected object(s)") );
+			break;
+	}
 
 	// sanity
 	if( draw == nullptr || draw->getObject() == nullptr )
@@ -330,37 +338,6 @@ static CommandStatus doMoveStateCommand( const CommandButton *command, const ICo
 
 	// Play the unit voice response
 	pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), msgType);
-
-	return COMMAND_COMPLETE;
-
-}
-
-//-------------------------------------------------------------------------------------------------
-/** Do the reverse move command -- move to the target position, driving backwards */
-//-------------------------------------------------------------------------------------------------
-static CommandStatus doReverseMoveCommand( const CommandButton *command, const ICoord2D *mouse )
-{
-
-	// sanity
-	if( command == nullptr || mouse == nullptr )
-		return COMMAND_COMPLETE;
-
-	Drawable *draw = TheInGameUI->getFirstSelectedDrawable();
-	DEBUG_ASSERTCRASH( draw, ("doReverseMoveCommand: No selected object(s)") );
-
-	// sanity
-	if( draw == nullptr || draw->getObject() == nullptr )
-		return COMMAND_COMPLETE;
-
-	// convert mouse point to world coords
-	Coord3D world;
-	TheTacticalView->screenToTerrain( mouse, &world );
-
-	GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_REVERSE_MOVETO );
-	msg->appendLocationArgument( world );
-
-	// Play the unit voice response (same response as a normal move order)
-	pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_MOVETO);
 
 	return COMMAND_COMPLETE;
 
@@ -589,12 +566,6 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 					case GUI_COMMAND_ATTACK_MOVE:
 					{
 						commandStatus = doMoveStateCommand( command, &mouse ); //doAttackMoveCommand( command, &mouse );
-						break;
-					}
-
-					case GUI_COMMAND_REVERSE_MOVE:
-					{
-						commandStatus = doReverseMoveCommand( command, &mouse );
 						break;
 					}
 

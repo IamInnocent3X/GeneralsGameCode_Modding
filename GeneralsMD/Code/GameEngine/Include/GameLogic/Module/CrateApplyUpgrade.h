@@ -19,6 +19,7 @@ class CrateApplyUpgradeModuleData : public UpgradeModuleData
 public:
 	Bool m_applySalvageUpgrade;
 	Bool m_applyLevelUp;
+	AsciiString m_applySalvageCrateName;
 
 	CrateApplyUpgradeModuleData( void );
 
@@ -46,11 +47,13 @@ protected:
 
 	virtual void upgradeImplementation( void ); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool hasUpgradeRefresh() { return false; }
 
 	Bool canApplyAnyCrateUpgade() const;
 
 	Bool canApplyWeaponUpgrade() const;
 	Bool canApplyArmorUpgrade() const;
 	Bool canApplyLevelUp() const;
+	Bool canApplySalvageCrateName() const;
 
 };

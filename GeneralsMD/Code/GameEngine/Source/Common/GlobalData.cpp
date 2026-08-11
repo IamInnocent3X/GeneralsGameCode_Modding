@@ -1337,12 +1337,12 @@ GlobalData::GlobalData()
 	m_formationBlockedSpeedPenalty = 0.45f;
 	m_globalReverseMoveSpeedPenalty = 0.0f;
 
-	m_enableReverseMoveByDefaultForWheels = TRUE;
-	m_enableReverseMoveByDefaultForTreads = TRUE;
-	m_enableReverseMoveByDefaultForShips = TRUE;
-	m_enableReverseMoveByDefaultForHover = TRUE;
-	m_enableReverseMoveByDefaultForThrust = TRUE;
-	m_enableReverseMoveByDefaultForOther = TRUE;
+	m_enableReverseMoveByDefaultForWheels = FALSE;
+	m_enableReverseMoveByDefaultForTreads = FALSE;
+	m_enableReverseMoveByDefaultForShips = FALSE;
+	m_enableReverseMoveByDefaultForHover = FALSE;
+	m_enableReverseMoveByDefaultForThrust = FALSE;
+	m_enableReverseMoveByDefaultForOther = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:

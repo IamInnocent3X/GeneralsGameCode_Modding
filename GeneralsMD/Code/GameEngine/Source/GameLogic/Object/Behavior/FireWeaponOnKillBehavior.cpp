@@ -35,10 +35,11 @@ FireWeaponOnKillBehavior::FireWeaponOnKillBehavior( Thing *thing, const ModuleDa
 {
 	m_lastTriggerFrame = 0;
 
-	if (getFireWeaponOnKillBehaviorModuleData()->m_initiallyActive)
-	{
-		giveSelfUpgrade();
-	}
+	// IamInnocent - Implemented in the reworked UpgradeMux
+	//if (getFireWeaponOnKillBehaviorModuleData()->m_initiallyActive)
+	//{
+	//	giveSelfUpgrade();
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------

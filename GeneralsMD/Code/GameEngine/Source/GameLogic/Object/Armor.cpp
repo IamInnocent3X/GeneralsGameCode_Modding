@@ -118,7 +118,8 @@ Real ArmorTemplate::scaleArmorBonus(ObjectStatusMaskType statusType, WeaponBonus
 	{
 		for (int i = 0; i < m_weaponBonusFlags.size(); i++)
 		{
-			if ((weaponBonusType & (1 << m_weaponBonusFlags[i])) == 0)
+			//if ((weaponBonusType & (1 << m_weaponBonusFlags[i])) == 0)
+			if (weaponBonusType.test(m_weaponBonusFlags[i]) == 0)
 				continue;
 
 			damage *= m_weaponBonusCoefficient[m_weaponBonusFlags[i]];
@@ -413,7 +414,7 @@ void ArmorTemplate::parseArmorBonus(INI* ini, void* instance, void* /* store */,
 	Bool isWeaponBonusCondition = false;
 
 	Int count = 0;
-	for(ConstCharPtrArray name = TheWeaponBonusNames; *name; name++, count++ )
+	for(ConstCharPtrArray name = WeaponBonusConditionFlags::getBitNames(); *name; name++, count++ )
 	{
 		if( stricmp( *name, conditionName ) == 0 )
 		{

@@ -23,6 +23,7 @@ class DrawBridgeTowerUpdateModuleData : public ModuleData
 {
 public:
 	SpecialPowerTemplate *m_specialPowerTemplate;
+	AsciiString 			m_cursorName;
 
 	DrawBridgeTowerUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -72,7 +73,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const {return false;}
@@ -81,6 +82,10 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const;
+	virtual const AsciiString& getCursorName() const { return getDrawBridgeTowerUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
+
 
 	virtual void onObjectCreated();
 	virtual void onDelete();

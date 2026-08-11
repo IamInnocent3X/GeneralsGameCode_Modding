@@ -3989,7 +3989,7 @@ void InGameUI::spawnSpecialPowerLocationMarker( const Coord3D *loc, Bool isAncho
 		Bool hasValidCursor = false;
 		Bool hasValidCustomCursor = false;
 		if(!cusRc.isEmpty()) {
-			cursKey = TheNameKeyGenerator->nameToKey(customCursorType);
+			cursKey = TheNameKeyGenerator->nameToKey(cusRc);
 			hasValidCustomCursor = m_customRadiusCursors[cursKey].valid();
 		}
 

@@ -25,7 +25,6 @@
 // AIPathfind.cpp
 // AI pathfinding system
 // Author: Michael S. Booth, October 2001
-
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "GameLogic/AIPathfind.h"
@@ -1920,8 +1919,6 @@ Int PathfindCell::releaseOpenList( PathfindCellList &list )
 #endif
 
 		// IamInnocent - Added sanity checks to prevent crashing
-		// NOTE: Although this prevents crashing, to have this to happen means that ground units can no longer move
-		// AIPathfind needs some serious rework.
 		if (curInfo && curInfo->m_nextOpen) {
 			list.m_head = curInfo->m_nextOpen->m_cell;
 		} else {
@@ -4389,7 +4386,6 @@ void Pathfinder::classifyObjectFootprint( Object *obj, Bool insert )
       return;
 #endif
 
-
 		removeUnitFromPathfindMap(obj);
 		if (obj->isKindOf(KINDOF_WALK_ON_TOP_OF_WALL)) {
 			if (!m_layers[LAYER_WALL].isUnused()) {
@@ -4452,7 +4448,6 @@ void Pathfinder::internal_classifyObjectFootprint( Object *obj, Bool insert )
 
 #if !(RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING)
 	IRegion2D cellBounds;
-										 
 	cellBounds.lo.x = REAL_TO_INT_FLOOR((pos->x + 0.5f)/PATHFIND_CELL_SIZE_F);
 	cellBounds.lo.y = REAL_TO_INT_FLOOR((pos->y + 0.5f)/PATHFIND_CELL_SIZE_F);
 	cellBounds.hi = cellBounds.lo;
@@ -4734,6 +4729,7 @@ void Pathfinder::internal_classifyObjectFootprint( Object *obj, Bool insert )
 void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
 {
 	Coord3D topLeftCorner, bottomRightCorner;
+
 
 	Bool hasObstacle =  (cell->getType() == PathfindCell::CELL_OBSTACLE) ;
 
@@ -5337,11 +5333,6 @@ Bool Pathfinder::checkDestination(const Object *obj, Int cellX, Int cellY, Pathf
 			if (obj->getRelationship(unit) == ALLIES) {
 				return false; 	// Don't usurp your allies goals.  jba.
 			}
-#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
-				if (!unit->getAIUpdateInterface()->isIdle()) {
-					return false; // can't path through not-idle units.
-				}
-#endif
 			if (cell->getFlags()==PathfindCell::UNIT_PRESENT_FIXED) {
 				Bool canCrush = obj->canCrushOrSquish(unit, TEST_CRUSH_OR_SQUISH);
 				if (!canCrush) {
@@ -5443,6 +5434,11 @@ Bool Pathfinder::checkForMovement(const Object *obj, TCheckMovementInfo &info)
 				if (!unit->getAIUpdateInterface()) {
 					return false; // can't path through not-idle units.
 				}
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+				if (!unit->getAIUpdateInterface()->isIdle()) {
+					return false; // can't path through not-idle units.
+				}
+#endif
 				Bool found = false;
 				Int k;
 				for (k=0; k<numAlly; k++) {
@@ -5655,8 +5651,8 @@ Bool Pathfinder::adjustToLandingDestination(Object *obj, Coord3D *dest)
 	TheTerrainLogic->getMaximumPathfindExtent(&extent);
 	// If the object is off the map & the goal is off the map, it is a scripted setup, so just
 	// go to the dest.
-	if (!extent.isInRegionNoZ(*dest)) {
-		if (!extent.isInRegionNoZ(*obj->getPosition())) {
+	if (!extent.isInRegionNoZ(dest)) {
+		if (!extent.isInRegionNoZ(obj->getPosition())) {
 			return true;
 		}
 	}
@@ -5753,7 +5749,6 @@ Bool Pathfinder::adjustDestination(Object *obj, const LocomotorSet& locomotorSet
 	}
 #else
 	Coord3D adjustDest = *dest;
-
 	if (checkForAdjust(obj, locomotorSet, isHuman, i, j, layer, iRadius, center, &adjustDest, groupDest)) {
 		// TheSuperHackers @bugfix stephanmeesters 15/06/2026 Destination adjustment always snaps to the nearest grid cell
 		// even when no adjustment is necessary because there are no obstructions. For single units this adjustment
@@ -5793,6 +5788,7 @@ Bool Pathfinder::adjustDestination(Object *obj, const LocomotorSet& locomotorSet
 			}
 		}
 	}
+
 	if (groupDest) {
 		// Didn't work, so just do simple adjust.
 		return(adjustDestination(obj, locomotorSet, dest, nullptr));
@@ -6307,10 +6303,6 @@ void Pathfinder::processPathfindQueue()
 			m_queuePRHead = 0;
 		}
 	}
-	if (pathsFound > 0) {
-		PROFILER_PLOT("PathfindCells", (double)m_cumulativeCellsAllocated);
-		PROFILER_PLOT("PathfindPaths", (double)pathsFound);
-	}
 #ifdef DEBUG_QPF
 	if (pathsFound>0) {
 #ifdef DEBUG_LOGGING
@@ -6648,8 +6640,6 @@ Int Pathfinder::examineNeighboringCells(PathfindCell *parentCell, PathfindCell *
 #else
 				newCostSoFar += 3*COST_DIAGONAL;
 #endif
-				if (!canPathThroughUnits)
-				newCostSoFar += 3*COST_DIAGONAL;
 				if (!canPathThroughUnits)
 					newCell->setBlockedByAlly(true);
 			}
@@ -7244,8 +7234,7 @@ struct MADStruct
 		if (d->obj->getRelationship(otherObj)!=ALLIES) {
 			return 0;  // Only move allies.
 		}
-		if( otherObj && otherObj->getAI() && !otherObj->getAI()->isMoving() )
-		{
+		if (otherObj && otherObj->getAI() && !otherObj->getAI()->isMoving()) {
 #if !(RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING)
 			//Kris: Patch 1.01 November 3, 2003
 			//Black Lotus exploit fix -- moving while hacking.
@@ -10376,9 +10365,6 @@ void Pathfinder::updateGoal( Object *obj, const Coord3D *newGoalPos, PathfindLay
 
 	AIUpdateInterface *ai = obj->getAIUpdateInterface();
 	if (!ai) return; // only consider ai objects.
-
-
-
 	if (!ai->isDoingGroundMovement()) {
 #if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
 		Bool isUnmannedHelicopter = false;
@@ -11487,6 +11473,7 @@ Path *Pathfinder::findAttackPath( const Object *obj, const LocomotorSet& locomot
 #if !(RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING)
 				// put parent cell onto closed list - its evaluation is finished
 				parentCell->putOnClosedList( m_closedList );
+
 				if (obj->isKindOf(KINDOF_VEHICLE)) {
 					// Strip backwards.
 					PathfindCell *lastBlocked = nullptr;

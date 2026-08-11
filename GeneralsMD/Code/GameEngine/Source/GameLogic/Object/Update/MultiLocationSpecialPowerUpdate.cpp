@@ -84,6 +84,7 @@ MultiLocationSpecialPowerUpdateModuleData::MultiLocationSpecialPowerUpdateModule
 	m_delay = 0;
 	m_waitForAttackComplete = FALSE;
 	m_maxWaitPerTarget = 0;
+	m_cursorName.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -101,6 +102,7 @@ MultiLocationSpecialPowerUpdateModuleData::MultiLocationSpecialPowerUpdateModule
 		{ "Delay",								INI::parseDurationUnsignedInt,	nullptr, offsetof( MultiLocationSpecialPowerUpdateModuleData, m_delay ) },
 		{ "WaitForAttackComplete",	INI::parseBool,								nullptr, offsetof( MultiLocationSpecialPowerUpdateModuleData, m_waitForAttackComplete ) },
 		{ "MaxWaitPerTarget",			INI::parseDurationUnsignedInt,	nullptr, offsetof( MultiLocationSpecialPowerUpdateModuleData, m_maxWaitPerTarget ) },
+		{ "CursorName",							INI::parseAsciiString,	nullptr, offsetof( MultiLocationSpecialPowerUpdateModuleData, m_cursorName ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
@@ -226,7 +228,7 @@ UnsignedInt MultiLocationSpecialPowerUpdate::getPollInterval() const
 // First click: the first target point arrives here as targetPos. The rest of the points arrive
 // together via setSpecialPowerMultiLocations() once the final click commits.
 //-------------------------------------------------------------------------------------------------
-Bool MultiLocationSpecialPowerUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool MultiLocationSpecialPowerUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	if( m_specialPowerModule == nullptr || m_specialPowerModule->getSpecialPowerTemplate() != specialPowerTemplate )
 	{

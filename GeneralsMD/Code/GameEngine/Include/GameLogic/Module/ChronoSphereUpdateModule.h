@@ -55,6 +55,8 @@ public:
 	const ObjectCreationList	*m_sourceOCL;	///< OCL fired at the source when the power activates (instant, ignores TeleportDelay)
 	const ObjectCreationList	*m_targetOCL;	///< OCL fired at the destination when the power activates (instant)
 
+	AsciiString 			m_cursorName;
+
 	ChronoSphereUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
 
@@ -76,7 +78,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
 	virtual Bool isSpecialAbility() const { return false; }
 	virtual Bool isSpecialPower() const { return true; }
 	virtual Bool isActive() const { return m_active; }
@@ -84,6 +86,10 @@ public:
 	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const { return m_active; }
 	virtual ScienceType getExtraRequiredScience() const { return SCIENCE_INVALID; }
+	virtual const AsciiString& getCursorName() const { return getChronoSphereUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
+	virtual void setDelay(UnsignedInt delayFrame) { }
+
 
 	// The chronosphere is the N=2 case of the generic N-point delivery: both clicked points arrive
 	// together via setSpecialPowerMultiLocations (locs[0] = source, locs[1] = destination).

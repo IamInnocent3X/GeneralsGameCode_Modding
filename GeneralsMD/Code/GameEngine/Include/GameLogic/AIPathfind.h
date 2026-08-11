@@ -186,9 +186,9 @@ public:
 
 protected:
 	// snapshot interface
-	virtual void crc( Xfer *xfer ) override;
-	virtual void xfer( Xfer *xfer ) override;
-	virtual void loadPostProcess() override;
+	virtual void crc( Xfer *xfer );
+	virtual void xfer( Xfer *xfer );
+	virtual void loadPostProcess();
 
 protected:
 	enum {MAX_CPOP=20};			///< Max times we will return the cached cpop.
@@ -376,6 +376,7 @@ public:
 
 	// IamInnocent - Added sanity checks
 	inline PathfindCell *getNextOpen() {return m_info && m_info->m_nextOpen?m_info->m_nextOpen->m_cell: nullptr;}
+	inline PathfindCell *getPrevOpen() {return m_info && m_info->m_prevOpen?m_info->m_prevOpen->m_cell: nullptr;}
 
 	inline UnsignedShort getXIndex() const {return m_info ? m_info->m_pos.x : 0;}
 	inline UnsignedShort getYIndex() const {return m_info ? m_info->m_pos.y : 0;}
@@ -640,25 +641,25 @@ private:
 class PathfindServicesInterface {
 public:
 	virtual Path *findPath( Object *obj, const LocomotorSet& locomotorSet, const Coord3D *from,
-		const Coord3D *to ) override;	///< Find a short, valid path between given locations
+		const Coord3D *to )=0;	///< Find a short, valid path between given locations
 	/** Find a short, valid path to a location NEAR the to location.
 		This succeeds when the destination is unreachable (like inside a building).
 		If the destination is unreachable, it will adjust the to point.  */
 	virtual Path *findClosestPath( Object *obj, const LocomotorSet& locomotorSet, const Coord3D *from,
-		Coord3D *to, Bool blocked, Real pathCostMultiplier, Bool moveAllies ) override;
+		Coord3D *to, Bool blocked, Real pathCostMultiplier, Bool moveAllies )=0;
 
 	/** Find a short, valid path to a location that obj can attack victim from.  */
 	virtual Path *findAttackPath( const Object *obj, const LocomotorSet& locomotorSet, const Coord3D *from,
-		const Object *victim, const Coord3D* victimPos, const Weapon *weapon ) override;
+		const Object *victim, const Coord3D* victimPos, const Weapon *weapon )=0;
 
 	/** Find a short, valid path to a location that is away from the repulsors.  */
 	virtual Path *findSafePath( const Object *obj, const LocomotorSet& locomotorSet,
-		const Coord3D *from, const Coord3D* repulsorPos1, const Coord3D* repulsorPos2, Real repulsorRadius ) override;
+		const Coord3D *from, const Coord3D* repulsorPos1, const Coord3D* repulsorPos2, Real repulsorRadius ) = 0;
 
 	/** Patch to the exiting path from the current position, either because we became blocked,
   or because we had to move off the path to avoid other units. */
 	virtual Path *patchPath( const Object *obj, const LocomotorSet& locomotorSet,
-		Path *originalPath, Bool blocked ) override;
+		Path *originalPath, Bool blocked ) = 0;
 
 };
 

@@ -42,6 +42,7 @@
 DrawBridgeTowerUpdateModuleData::DrawBridgeTowerUpdateModuleData()
 {
 	m_specialPowerTemplate = nullptr;
+	m_cursorName.clear();
 
 }
 
@@ -53,6 +54,9 @@ DrawBridgeTowerUpdateModuleData::DrawBridgeTowerUpdateModuleData()
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "SpecialPowerTemplate",									INI::parseSpecialPowerTemplate,	nullptr, offsetof(DrawBridgeTowerUpdateModuleData, m_specialPowerTemplate) },
+
+		// Custom Cursor
+		{ "CursorName",							INI::parseAsciiString,	nullptr,						offsetof(DrawBridgeTowerUpdateModuleData, m_cursorName) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -100,7 +104,7 @@ void DrawBridgeTowerUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool DrawBridgeTowerUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
+Bool DrawBridgeTowerUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate* specialPowerTemplate, const Object* targetObj, const Drawable *targetDraw, const Coord3D* targetPos, const Waypoint* way, UnsignedInt commandOptions)
 {
 	if (m_specialPowerModule->getSpecialPowerTemplate() != specialPowerTemplate)
 	{

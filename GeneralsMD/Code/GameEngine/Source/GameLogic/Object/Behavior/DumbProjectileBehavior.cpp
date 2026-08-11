@@ -1069,7 +1069,8 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 	xfer->xferObjectID(&m_shrapnelLaunchID);
 	xfer->xferUnsignedInt(&m_dontDetonateGroundFrames);
 
-	xfer->xferUnsignedInt(&m_extraBonusFlags);
+	m_extraBonusFlags.xfer(xfer);
+	//xfer->xferUnsignedInt(&m_extraBonusFlags);
 
 	if( xfer->getXferMode() == XFER_SAVE )
 	{

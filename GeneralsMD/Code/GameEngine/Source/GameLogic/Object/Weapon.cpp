@@ -358,7 +358,7 @@ const FieldParse WeaponTemplate::TheWeaponTemplateFieldParseTable[] =
 	{ "SubdualForbiddenKindOf",					KindOfMaskType::parseFromINI,	nullptr, 					offsetof( WeaponTemplate, m_subdualForbiddenKindOf ) },
 
 	{ "FiringTrackerStatusTrigger",				ObjectStatusMaskType::parseSingleBitFromINIVector,	nullptr,		offsetof(WeaponTemplate, m_firingTrackerStatusTrigger) },	
-	{ "FiringTrackerBonusConditionType",		INI::parseIndexList,	TheWeaponBonusNames, 				offsetof(WeaponTemplate, m_firingTrackerBonusConditionGive ) },
+	{ "FiringTrackerBonusConditionType",		INI::parseIndexList,	WeaponBonusConditionFlags::getBitNames(), 				offsetof(WeaponTemplate, m_firingTrackerBonusConditionGive ) },
 	{ "FiringTrackerCustomStatusTrigger",				INI::parseAsciiStringVector,	nullptr,			offsetof(WeaponTemplate, m_firingTrackerCustomStatusTrigger) },
 	{ "FiringTrackerCustomBonusConditionType",			INI::parseQuotedAsciiString,	nullptr,			offsetof(WeaponTemplate, m_firingTrackerCustomBonusConditionGive ) },
 
@@ -6530,7 +6530,7 @@ void WeaponBonusSet::parseWeaponBonusSet(INI* ini)
 void WeaponBonusSet::parseCustomWeaponBonusSet(INI* ini)
 {
 	
-	//WeaponBonusConditionType wb = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusNames);
+	//WeaponBonusConditionType wb = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), WeaponBonusConditionFlags::getBitNames());
 	AsciiString customStatus = ini->getNextQuotedAsciiString();
 	WeaponBonus::Field wf = (WeaponBonus::Field)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusFieldNames);
 	// So now we have a 3D array. One for checking DamageTypes, and one for checking CustomDamageTypes.

@@ -59,9 +59,7 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
-#include "GameLogic/Module/FloatUpdate.h"
 #include "GameLogic/Module/HijackerUpdate.h"
-#include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/StickyBombUpdate.h"
 #include "GameLogic/Module/SupplyTruckAIUpdate.h"
 
@@ -256,8 +254,8 @@ void ObjectCreationMux::doInherit( const Object *sourceObj, Object *obj, ObjectS
 	if (data->m_inheritsWeaponBonus && sourceObj) {
 		obj->setWeaponBonusConditionFlags(sourceObj->getWeaponBonusCondition());
 		obj->setCustomWeaponBonusConditionFlags(sourceObj->getCustomWeaponBonusCondition());
-		obj->setWeaponBonusConditionIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
-		obj->setCustomWeaponBonusConditionIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
+		obj->setWeaponBonusConditionFlagsIgnoreClear(sourceObj->getWeaponBonusConditionIgnoreClear());
+		obj->setCustomWeaponBonusConditionFlagsIgnoreClear(sourceObj->getCustomWeaponBonusConditionIgnoreClear());
 		obj->doWeaponBonusChange();
 
 		obj->transferTempWeaponBonusHelperData(sourceObj->getTempWeaponBonusHelperData());

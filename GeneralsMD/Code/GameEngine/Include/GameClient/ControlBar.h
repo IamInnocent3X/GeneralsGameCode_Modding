@@ -226,7 +226,6 @@ enum GUICommandType CPP_11(: Int)
 	GUI_COMMAND_GUARD_FAR,
 	GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT,
 	GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY,
-	GUI_COMMAND_REVERSE_MOVE,							///< reverse move command
 	GUI_COMMAND_STOP,											///< stop moving
 	GUI_COMMAND_WAYPOINTS,								///< create a set of waypoints for this unit
 	GUI_COMMAND_EXIT_CONTAINER,						///< an inventory box for a container like a structure or transport
@@ -295,7 +294,6 @@ static const char *const TheGuiCommandNames[] =
 	"GUARD_FAR",
 	"GUARD_FAR_WITHOUT_PURSUIT",
 	"GUARD_FAR_FLYING_UNITS_ONLY",
-	"REVERSE_MOVE",
 	"STOP",
 	"WAYPOINTS",
 	"EXIT_CONTAINER",
