@@ -188,9 +188,12 @@ inline void Shadow::setOpacity(Int value)
 		if (m_type & SHADOW_ADDITIVE_DECAL)
 		{
 			Real fvalue=(Real)m_opacity/255.0f;
-			m_diffuse=REAL_TO_INT(((Real)(m_color & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 8) & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 16) & 0xff) * fvalue));
+			// Premultiply each channel by opacity and pack into its correct byte (D3DCOLOR 0xAARRGGBB).
+			// Additive blend (ONE/ONE) ignores alpha, so fade is done by scaling RGB toward black.
+			Int r = REAL_TO_INT((Real)((m_color >> 16) & 0xff) * fvalue);
+			Int g = REAL_TO_INT((Real)((m_color >>  8) & 0xff) * fvalue);
+			Int b = REAL_TO_INT((Real)( m_color        & 0xff) * fvalue);
+			m_diffuse = (r << 16) | (g << 8) | b;
 		}
 	}
 }
@@ -208,9 +211,12 @@ inline void Shadow::setColor(Color value)
 		if (m_type & SHADOW_ADDITIVE_DECAL)
 		{
 			Real fvalue=(Real)m_opacity/255.0f;
-			m_diffuse=REAL_TO_INT(((Real)(m_color & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 8) & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 16) & 0xff) * fvalue));
+			// Premultiply each channel by opacity and pack into its correct byte (D3DCOLOR 0xAARRGGBB).
+			// Additive blend (ONE/ONE) ignores alpha, so fade is done by scaling RGB toward black.
+			Int r = REAL_TO_INT((Real)((m_color >> 16) & 0xff) * fvalue);
+			Int g = REAL_TO_INT((Real)((m_color >>  8) & 0xff) * fvalue);
+			Int b = REAL_TO_INT((Real)( m_color        & 0xff) * fvalue);
+			m_diffuse = (r << 16) | (g << 8) | b;
 		}
 	}
 }
