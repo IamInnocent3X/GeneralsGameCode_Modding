@@ -110,10 +110,7 @@ void CommandButtonHuntUpdate::setCommandButton(const AsciiString& buttonName)
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			m_commandButton = obj->getCommandModifierOverrideForSlot(i); 
-			if(m_commandButton == nullptr) 
-				m_commandButton =  commandSet->getCommandButton(i);
-
+			m_commandButton = obj->getCommandButtonForSlot(i, commandSet); 
 
 			if( m_commandButton )
 			{
@@ -449,9 +446,7 @@ void CommandButtonHuntUpdate::xfer( Xfer *xfer )
 				for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 				{
 
-					button = us->getCommandModifierOverrideForSlot(i); 
-					if(button == nullptr) 
-						button =  commandSet->getCommandButton(i);
+					button = us->getCommandButtonForSlot(i, commandSet); 
 
 					if( button && button->getName() == m_commandButtonName )
 					{

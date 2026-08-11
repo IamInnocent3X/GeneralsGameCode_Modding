@@ -183,9 +183,7 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = transport->getCommandModifierOverrideForSlot(i); 
-		if(commandButton == nullptr) 
-			commandButton =  commandSet->getCommandButton(i);
+		commandButton = transport->getCommandButtonForSlot(i, commandSet);
 
 		// is this an inventory exit command
 		if( commandButton && commandButton->getCommandType() == GUI_COMMAND_EXIT_CONTAINER )
@@ -308,9 +306,7 @@ void ControlBar::populateCommand( Object *obj )
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = obj->getCommandModifierOverrideForSlot(i); 
-		if(commandButton == nullptr) 
-			commandButton =  commandSet->getCommandButton(i);
+		commandButton = obj->getCommandButtonForSlot(i, commandSet);
 
 		// if button is not present, just hide the window
 		if( commandButton == nullptr )

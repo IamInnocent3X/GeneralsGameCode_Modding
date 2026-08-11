@@ -8804,9 +8804,7 @@ Bool Object::canProduceUpgrade( const UpgradeTemplate *upgrade )
 
 	for( Int buttonIndex = 0; buttonIndex < MAX_COMMANDS_PER_SET; buttonIndex++ )
 	{
-		const CommandButton *button = getCommandModifierOverrideForSlot(buttonIndex); 
-		if ( button == nullptr )
-			button = set->getCommandButton(buttonIndex);
+		const CommandButton *button = getCommandButtonForSlot(buttonIndex, set); 
 
 		if( button  &&  button->getUpgradeTemplate()  &&  (button->getUpgradeTemplate() == upgrade) )
 			return TRUE; // getUpgradeTemplate only returns something if it is actually an upgrade
@@ -10013,11 +10011,11 @@ void Object::setNeedUpdateTurretPositioning(Bool set)
 }
 
 // ------------------------------------------------------------------------------------------------
-const CommandButton *Object::getCommandModifierOverrideForSlot( Int slotNum, AsciiString commandSetName ) const
+const CommandButton *Object::getCommandButtonForSlot( Int slotNum, const CommandSet *set ) const
 {
-	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
-	if(commandSetString.isEmpty() || m_controlBarModifiersApplied.empty() )
-		return nullptr;
+	AsciiString commandSetString = set ? set->getName() : AsciiString::TheEmptyString;
+	if( commandSetString.isEmpty() || m_controlBarModifiersApplied.empty() )
+		return set && set->getCommandButton( slotNum );
 
 	CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.find(commandSetString);
 	if(it != m_controlBarModifiersApplied.end())

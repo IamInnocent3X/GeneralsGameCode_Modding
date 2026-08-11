@@ -743,9 +743,7 @@ void Player::update()
 				if( set )
 				{
 					// get command button
-					const CommandButton *command = obj->getCommandModifierOverrideForSlot(m_sabotagingObjectGUICommandButtonSlot); 
-					if(command == nullptr)
-						command = set->getCommandButton(m_sabotagingObjectGUICommandButtonSlot);
+					const CommandButton *command = obj->getCommandButtonForSlot(m_sabotagingObjectGUICommandButtonSlot, set); 
 
 					// no command or not a special power command or its from shortcut
 					if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER && command->getSpecialPowerTemplate() && BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_TARGET ) )
@@ -4699,9 +4697,7 @@ Bool Player::forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType s
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			// get command button
-			const CommandButton *command = other->getCommandModifierOverrideForSlot(i); 
-			if(command == nullptr) 
-				command =  set->getCommandButton(i);
+			const CommandButton *command = other->getCommandButtonForSlot(i, set);
 
 			// no command or not a special power command or its from shortcut
 			if( !command || command->getCommandType() != GUI_COMMAND_SPECIAL_POWER || !command->getSpecialPowerTemplate() )

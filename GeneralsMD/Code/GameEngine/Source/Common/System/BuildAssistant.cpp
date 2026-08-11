@@ -1432,9 +1432,7 @@ Bool BuildAssistant::isPossibleToMakeUnit( Object *builder, const ThingTemplate 
 	{
 
 		// get this button
-		commandButton = builder->getCommandModifierOverrideForSlot(i); 
-		if(commandButton == nullptr) 
-			commandButton =  commandSet->getCommandButton(i);
+		commandButton = builder->getCommandButtonForSlot(i, commandSet); 
 
 		if( commandButton &&
 				(commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD || commandButton->getCommandType() == GUI_COMMAND_DOZER_CONSTRUCT) &&

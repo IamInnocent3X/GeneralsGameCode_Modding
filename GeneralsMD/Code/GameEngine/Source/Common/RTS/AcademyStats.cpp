@@ -146,9 +146,7 @@ void AcademyStats::init( const Player *player )
 	{
 		for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
-			const CommandButton *button = info.obj->getCommandModifierOverrideForSlot( i ); 
-			if(button == nullptr) 
-				button =  m_dozerCommandSet->getCommandButton( i );
+			const CommandButton *button = info.obj->getCommandButtonForSlot( i, m_dozerCommandSet ); 
 
 			if( button )
 			{

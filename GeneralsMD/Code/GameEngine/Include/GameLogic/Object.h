@@ -63,6 +63,7 @@ class BodyModuleInterface;
 class CollideModule;
 class CollideModuleInterface;
 class CommandButton;
+class CommandSet;
 class ContainModuleInterface;
 class CountermeasuresBehaviorInterface;
 class CreateModuleInterface;
@@ -940,7 +941,7 @@ public:
 
 	void setNeedUpdateTurretPositioning(Bool set);
 
-	const CommandButton *getCommandModifierOverrideForSlot( Int slotNum, AsciiString commandSetName = AsciiString::TheEmptyString ) const;
+	const CommandButton *getCommandButtonForSlot( Int slotNum, const CommandSet *set ) const;
 	Bool hasModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName = AsciiString::TheEmptyString ) const;
 	Bool registerModiferCommandOverrideWithinCommandSet( Int slotNum, const AsciiString& commandButtonName, AsciiString commandSetName = AsciiString::TheEmptyString );
 	Bool removeModiferCommandOverrideWithinCommandSet( Int slotNum, AsciiString commandButtonName = AsciiString::TheEmptyString, AsciiString commandSetName = AsciiString::TheEmptyString );

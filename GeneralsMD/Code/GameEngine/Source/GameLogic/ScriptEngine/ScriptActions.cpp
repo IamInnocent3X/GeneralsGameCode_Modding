@@ -2193,9 +2193,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 		{
 			for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 			{
-				const CommandButton *aCommandButton = obj->getCommandModifierOverrideForSlot(i); 
-				if(aCommandButton == nullptr) 
-					aCommandButton =  commandSet->getCommandButton(i);
+				const CommandButton *aCommandButton = obj->getCommandButtonForSlot(i, commandSet); 
 
 				if( commandButton == aCommandButton )
 				{
@@ -4362,9 +4360,7 @@ void ScriptActions::doNamedUseCommandButtonAbility( const AsciiString& unit, con
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = theObj->getCommandModifierOverrideForSlot(i); 
-			if(commandButton == nullptr) 
-				commandButton =  commandSet->getCommandButton(i);
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -4398,10 +4394,7 @@ void ScriptActions::doNamedUseCommandButtonAbilityOnNamed( const AsciiString& un
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = theObj->getCommandModifierOverrideForSlot(i); 
-			if(commandButton == nullptr) 
-				commandButton =  commandSet->getCommandButton(i);
-
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -4435,10 +4428,7 @@ void ScriptActions::doNamedUseCommandButtonAbilityAtWaypoint( const AsciiString&
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = theObj->getCommandModifierOverrideForSlot(i); 
-			if(commandButton == nullptr) 
-				commandButton =  commandSet->getCommandButton(i);
-
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -4477,10 +4467,7 @@ void ScriptActions::doNamedUseCommandButtonAbilityUsingWaypointPath( const Ascii
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = theObj->getCommandModifierOverrideForSlot(i); 
-			if(commandButton == nullptr) 
-				commandButton =  commandSet->getCommandButton(i);
-
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{

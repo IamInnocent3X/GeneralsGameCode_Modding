@@ -3936,9 +3936,7 @@ void ControlBar::updateSpecialPowerShortcut( void )
 					{
 						for( Int commandIndex = 0; commandIndex < MAX_COMMANDS_PER_SET; commandIndex++ )
 						{
-							const CommandButton *evalButton = obj->getCommandModifierOverrideForSlot( commandIndex ); 
-							if(evalButton == nullptr) 
-								evalButton =  commandSet->getCommandButton( commandIndex );
+							const CommandButton *evalButton = obj->getCommandButtonForSlot( commandIndex, commandSet ); 
 
 							GameWindow *evalButtonWin = m_commandWindows[ commandIndex ];
 							if( evalButton && evalButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
