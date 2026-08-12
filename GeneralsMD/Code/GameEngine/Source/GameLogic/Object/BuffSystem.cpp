@@ -241,8 +241,8 @@ EMPTY_DTOR(ValueModifierBuffEffectNugget)
 //	{
 //		static const FieldParse myFieldParse[] =
 //		{
-//			{ "WeaponBonus", INI::parseIndexList,	TheWeaponBonusNames, offsetof(FlagModifierBuffEffectNugget, m_bonusType) },
-//			{ "WeaponBonusAgainst", INI::parseIndexList,	TheWeaponBonusNames, offsetof(FlagModifierBuffEffectNugget, m_bonusTypeAgainst) },
+//			{ "WeaponBonus", INI::parseIndexList,	WeaponBonusConditionFlags::getBitNames(), offsetof(FlagModifierBuffEffectNugget, m_bonusType) },
+//			{ "WeaponBonusAgainst", INI::parseIndexList,	WeaponBonusConditionFlags::getBitNames(), offsetof(FlagModifierBuffEffectNugget, m_bonusTypeAgainst) },
 //			{ "WeaponSetFlag", INI::parseIndexList, WeaponSetFlags::getBitNames(), offsetof(FlagModifierBuffEffectNugget, m_weaponSetFlag) },
 //			{ "ArmorSetFlag", INI::parseIndexList,	ArmorSetFlags::getBitNames(), offsetof(FlagModifierBuffEffectNugget, m_armorSetFlag) },
 //			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(FlagModifierBuffEffectNugget, m_statusToSet) },
@@ -427,8 +427,8 @@ void BuffTemplate::parseFlagModifier(INI* ini, void* instance, void* /*store*/, 
 	{
 		static const FieldParse myFieldParse[] =
 		{
-			{ "WeaponBonus", INI::parseIndexList,	TheWeaponBonusNames, offsetof(BuffTemplate, m_bonusType) },
-			{ "WeaponBonusAgainst", INI::parseIndexList,	TheWeaponBonusNames, offsetof(BuffTemplate, m_bonusTypeAgainst) },
+			{ "WeaponBonus", INI::parseIndexList,	WeaponBonusConditionFlags::getBitNames(), offsetof(BuffTemplate, m_bonusType)},
+			{ "WeaponBonusAgainst", INI::parseIndexList,	WeaponBonusConditionFlags::getBitNames(), offsetof(BuffTemplate, m_bonusTypeAgainst) },
 			{ "WeaponSetFlag", INI::parseIndexList, WeaponSetFlags::getBitNames(), offsetof(BuffTemplate, m_weaponSetFlag) },
 			{ "ArmorSetFlag", INI::parseIndexList,	ArmorSetFlags::getBitNames(), offsetof(BuffTemplate, m_armorSetFlag) },
 			{ "StatusToSet", ObjectStatusMaskType::parseFromINI,	nullptr, offsetof(BuffTemplate, m_statusToSet) },

@@ -622,21 +622,20 @@ static Real fast_hypot(Real x, Real y)
 //-----------------------------------------------------------------------------
 static Real atan2approx(Real y, Real x)
 {
+  if (x == 0 && y == 0)
+	return 0.0f;
+
   Real absx, absy;
   absy = fabs(y);
   absx = fabs(x);
   short octant = ((x<0) << 2) + ((y<0) << 1 ) + (absx <= absy);
   switch (octant) {
     case 0: {
-        if (x == 0 && y == 0)
-          return 0;
         Real val = absy/absx;
         return (M_PI_4_P_0273 - 0.273*val)*val; //1st octant
         break;
       }
     case 1:{
-        if (x == 0 && y == 0)
-          return 0.0;
         Real val = absx/absy;
         return M_PI_2 - (M_PI_4_P_0273 - 0.273*val)*val; //2nd octant
         break;
@@ -683,10 +682,9 @@ static void testSphereAgainstRect(
 	Real &distSqr
 )
 {
-	// Get two points that are closest to the facing direction
+	// Get three points that are closest to the facing direction
 	//DEBUG_LOG(("Source Points: x: %f y: %f", a_pos->x, a_pos->y));
-	//Real dx1, dx2, dy1, dy2;
-	//x1 = x2 = y1 = y2 = 0.0f;
+
 	Real minDist, secondMinDist, thirdMinDist;
 	Int minIdx, secondMinIdx, thirdMinIdx;
 	minDist = secondMinDist = thirdMinDist = HUGE_DIST_SQR;
@@ -722,7 +720,7 @@ static void testSphereAgainstRect(
 	// To get accurate readings for the boundaries, the third min Index must be obtained
 	for (i = 0; i < 4; ++i)
 	{
-		if( i == minIdx || i == secondMinIdx || secondMinDist >= dDistSqr[i] )
+		if( i == minIdx || i == secondMinIdx )
 			continue;
 
 		if( thirdMinDist > dDistSqr[i] )
@@ -745,7 +743,7 @@ static void testSphereAgainstRect(
 		polarity_dy == polarity_dy2 && polarity_dy == polarity_dy3 )
 	{
 		// Same directional vector, so get the closest distance from a point.
-		distSqr = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+		distSqr = dDistSqr[minIdx];
 		return;
 	}
 
@@ -763,12 +761,8 @@ static void testSphereAgainstRect(
 	if( fabs(relAngle_21) < fabs(relAngle_31) )
 	{
 		//DEBUG_LOG(("Third Min Index - %d replaced Second Min Index - %d.", thirdMinIdx, secondMinIdx));
-		//secondMinDist = thirdMinDist;
 		secondMinIdx = thirdMinIdx;
 	}
-
-	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
-	//DEBUG_LOG(("Min Dist: %f Second Min Dist: %f", minDist, secondMinDist));
 
 	// Get the "reflected" points of pos B, if the points have higher distance than the current points, that means the current points are within boundary
 	Real other_x1 = pts[minIdx].x - b_pos->x;
@@ -777,6 +771,10 @@ static void testSphereAgainstRect(
 	Real new_bpos_y = pts[secondMinIdx].y + other_y1;
 	//Real new_bpos_x = pts[minIdx].x <= pts[secondMinIdx].x ? pts[secondMinIdx].x + other_y1 : pts[secondMinIdx].x - other_y1;
 	//Real new_bpos_y = pts[minIdx].y <= pts[secondMinIdx].y ? pts[secondMinIdx].y + other_x1 : pts[secondMinIdx].y - other_x1;
+
+	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
+	//DEBUG_LOG(("Min Dist: %f Second Min Dist: %f", minDist, secondMinDist));
+
 	Real other_distSqr = sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y);
 
 	//DEBUG_LOG(("Pos B - X: %f Y: %f", b_pos->x, b_pos->y));
@@ -785,7 +783,7 @@ static void testSphereAgainstRect(
 	//DEBUG_LOG(("New Pos B - X: %f Y: %f", new_bpos_x, new_bpos_y));
 	//DEBUG_LOG(("curDistSqr: %f. other distSqr: %f.", curDistSqr, other_distSqr));
 
-	if( curDistSqr < other_distSqr ) //sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y) )
+	if( curDistSqr < other_distSqr )
 	{
 		// The points are within the boundary, set the distance to 0
 		distSqr = 0.0f;
@@ -796,6 +794,13 @@ static void testSphereAgainstRect(
 	Real sqr_boundary_h = sqr(pts[minIdx].x - pts[secondMinIdx].x) + sqr(pts[minIdx].y - pts[secondMinIdx].y);
 	Real sqr_boundary_1 = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
 	Real sqr_boundary_2 = sqr(derivative[secondMinIdx][0]) + sqr(derivative[secondMinIdx][1]);
+
+	// Safety checks for potential division by zero from sqr_boundary_h, which makes the value infinite. From Greptile SuperHackers
+	if(fabs(sqr_boundary_h) < WWMATH_EPSILON * WWMATH_EPSILON)
+	{
+		distSqr = HUGE_DIST_SQR;
+		return;
+	}
 
 	//Real boundary_h = fast_hypot(pts[minIdx].x - pts[secondMinIdx].x, pts[minIdx].y - pts[secondMinIdx].y);
 	//Real boundary_1 = fast_hypot(dx1, dy1);
@@ -5513,6 +5518,7 @@ Bool PartitionManager::tryPosition( const Coord3D *center,
 
 		// check for path existence
 		if( ai && TheAI->pathfinder()->clientSafeQuickDoesPathExist( ai->getLocomotorSet(),
+																									options->sourceToPathToDest->getRequiredBridgeHeight(),
 																									options->sourceToPathToDest->getPosition(),
 																									&pos ) == FALSE )
 				return FALSE;

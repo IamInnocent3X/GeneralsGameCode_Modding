@@ -420,6 +420,8 @@ void Player::init(const PlayerTemplate* pt)
 	m_DEMO_instantBuild = FALSE;
 #endif
 
+	m_ignoreUnitPrereqs = FALSE;
+
 	if (pt)
 	{
 		m_side = pt->getSide();
@@ -506,6 +508,8 @@ void Player::init(const PlayerTemplate* pt)
 		if (tof)
 			deleteInstance(tof);
 	}
+
+	m_productionSpeedMultiplier = 1.0f;
 
 	m_productionCostChangeExpired = FALSE;
 	m_productionTimeChangeExpired = FALSE;
@@ -739,9 +743,7 @@ void Player::update()
 				if( set )
 				{
 					// get command button
-					const CommandButton *command = obj->getCommandModifierOverrideForSlot(m_sabotagingObjectGUICommandButtonSlot); 
-					if(command == nullptr)
-						command = set->getCommandButton(m_sabotagingObjectGUICommandButtonSlot);
+					const CommandButton *command = obj->getCommandButtonForSlot(m_sabotagingObjectGUICommandButtonSlot, set); 
 
 					// no command or not a special power command or its from shortcut
 					if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER && command->getSpecialPowerTemplate() && BitIsSet( command->getOptions(), COMMAND_OPTION_NEED_TARGET ) )
@@ -2599,6 +2601,14 @@ void Player::buildBaseDefenseStructure(const AsciiString &thingName, Bool flank)
 }
 
 //=============================================================================
+void Player::buildShipyard(const AsciiString &thingName) {
+	if (m_ai)
+	{
+		m_ai->buildAIShipyard(thingName);
+	}
+}
+
+//=============================================================================
 void Player::buildSpecificBuilding(const AsciiString &thingName)
 {
 	if (m_ai)
@@ -3288,14 +3298,16 @@ Bool Player::canBuild(const ThingTemplate *tmplate) const
 		Bool prereqsOK = true;
 		for (Int i = 0; i < tmplate->getPrereqCount(); i++)
 		{
+			if(!prereqsOK) break; // IamInnocent - Added Faster loop break;
 			const ProductionPrerequisite *pre = tmplate->getNthPrereq(i);
-			if (pre->isSatisfied(this) == false )
+			if (pre->isSatisfied(this, ignoresUnitPrereqs()) == false )
 				prereqsOK = false;
 		}
 		for (Int i_n = 0; i_n < tmplate->getNegPrereqCount(); i_n++)
 		{
-			const ProductionPrerequisite *pre = tmplate->getNthNegPrereq(i_n);
-			if (pre->isSatisfied(this) == false)
+			if(!prereqsOK) break; // IamInnocent - Added Faster loop break;
+			const ProductionPrerequisite *negpre = tmplate->getNthNegPrereq(i_n);
+			if (negpre->isSatisfied(this, ignoresUnitPrereqs()) == false )
 				prereqsOK = false;
 		}
 
@@ -3708,6 +3720,14 @@ void Player::onPowerBrownOutChange( Bool brownOut )
 		enableRadar(); //This doesn't give radar necessarily, it just removes the restriction
 
 	iterateObjects( doPowerDisable, &brownOut );// This function is so cool.
+}
+
+//-------------------------------------------------------------------------------------------------
+void Player::setInfinitePower( Bool enable )
+{
+	m_energy.setInfinitePower( enable );
+	// refresh power-dependent objects to match the new supply state.
+	onPowerBrownOutChange( !m_energy.hasSufficientPower() );
 }
 
 
@@ -4676,9 +4696,7 @@ Bool Player::forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType s
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			// get command button
-			const CommandButton *command = other->getCommandModifierOverrideForSlot(i); 
-			if(command == nullptr) 
-				command =  set->getCommandButton(i);
+			const CommandButton *command = other->getCommandButtonForSlot(i, set);
 
 			// no command or not a special power command or its from shortcut
 			if( !command || command->getCommandType() != GUI_COMMAND_SPECIAL_POWER || !command->getSpecialPowerTemplate() )
@@ -4963,7 +4981,7 @@ void Player::xfer( Xfer *xfer )
 {
 
 	// version
-	const XferVersion currentVersion = 8;
+	const XferVersion currentVersion = 9;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -5723,6 +5741,11 @@ void Player::xfer( Xfer *xfer )
 	}
 	//------------------------
 
+	// production speed multiplier (build-time scale for units/upgrades/buildings)
+	if (version >= 9)
+		xfer->xferReal(&m_productionSpeedMultiplier);
+	else
+		m_productionSpeedMultiplier = 1.0f;
 
 }
 

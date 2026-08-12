@@ -80,6 +80,7 @@
 #include "GameLogic/Module/DemoTrapUpdate.h"
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/DieModule.h"
+#include "GameLogic/Module/OnKillModule.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
 #include "GameLogic/Module/FireOCLAfterWeaponCooldownUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
@@ -280,7 +281,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_formationID(NO_FORMATION_ID),
 	m_formationIsCommandMap(FALSE),
 	m_reverseFormationID(NO_FORMATION_ID),
-	m_isDoingReverseMove(FALSE),
+	//m_isDoingReverseMove(FALSE),
 	m_isReceivingDifficultyBonus(FALSE),
 	m_singleUseCommandUsed(FALSE),
 	m_scriptStatus(0),
@@ -4177,8 +4178,18 @@ Bool Object::isMobileNonStatusNotAttacking(Bool checkDisable) const
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::scoreTheKill( const Object *victim )
+void Object::scoreTheKill( const Object *victim, const DamageInfo *damageInfo )
 {
+	// Notify any OnKill modules first, before the score/experience early-outs below. These are FX/reaction
+	// modules that do their own relationship/status/kindof filtering, so they must fire even for kills the
+	// scorekeeper ignores (e.g. allies, neutrals, non-playable sides).
+	for (BehaviorModule** b = getBehaviorModules(); *b; ++b)
+	{
+		OnKillModuleInterface* onKill = (*b)->getOnKill();
+		if (onKill != nullptr)
+			onKill->onKilledObject( const_cast<Object*>(victim), damageInfo );
+	}
+
 	// Do stuff that has nothing to do with experience points here, like tell our Player we killed something
 	/// @todo Multiplayer score hook location?
 
@@ -4235,6 +4246,19 @@ void Object::scoreTheKill( const Object *victim )
 VeterancyLevel Object::getVeterancyLevel() const
 {
 	return m_experienceTracker ? m_experienceTracker->getVeterancyLevel() : LEVEL_REGULAR;
+}
+
+//-------------------------------------------------------------------------------------------------
+VeterancyLevel Object::getMaxVeterancyLevel() const
+{
+	return m_experienceTracker ? m_experienceTracker->getMaxVeterancyLevel() : LEVEL_LAST;
+}
+
+//-------------------------------------------------------------------------------------------------
+void Object::setMaxVeterancyLevel( VeterancyLevel maxLevel, Bool provideFeedback )
+{
+	if (m_experienceTracker)
+		m_experienceTracker->setMaxVeterancyLevel( maxLevel, provideFeedback );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4371,39 +4395,42 @@ void Object::onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel ne
 	if (body)
 		body->onVeterancyLevelChanged( oldLevel, newLevel, provideFeedback );
 
+	// Clear every veterancy weapon-set flag / bonus condition first, then set the one for the new level.
+	// This keeps promotions and demotions (including into/out of the new FOUR/FIVE ranks) clean.
+	clearWeaponSetFlag(WEAPONSET_VETERAN);
+	clearWeaponSetFlag(WEAPONSET_ELITE);
+	clearWeaponSetFlag(WEAPONSET_HERO);
+	clearWeaponSetFlag(WEAPONSET_FOUR);
+	clearWeaponSetFlag(WEAPONSET_FIVE);
+	clearWeaponBonusCondition(WEAPONBONUSCONDITION_VETERAN);
+	clearWeaponBonusCondition(WEAPONBONUSCONDITION_ELITE);
+	clearWeaponBonusCondition(WEAPONBONUSCONDITION_HERO);
+	clearWeaponBonusCondition(WEAPONBONUSCONDITION_VETERANCY_FOUR);
+	clearWeaponBonusCondition(WEAPONBONUSCONDITION_VETERANCY_FIVE);
+
 	switch (newLevel)
 	{
 		case LEVEL_REGULAR:
-			clearWeaponSetFlag(WEAPONSET_VETERAN);
-			clearWeaponSetFlag(WEAPONSET_ELITE);
-			clearWeaponSetFlag(WEAPONSET_HERO);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_VETERAN);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_ELITE);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_HERO);
 			break;
 		case LEVEL_VETERAN:
 			setWeaponSetFlag(WEAPONSET_VETERAN);
-			clearWeaponSetFlag(WEAPONSET_ELITE);
-			clearWeaponSetFlag(WEAPONSET_HERO);
 			setWeaponBonusCondition(WEAPONBONUSCONDITION_VETERAN);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_ELITE);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_HERO);
 			break;
 		case LEVEL_ELITE:
-			clearWeaponSetFlag(WEAPONSET_VETERAN);
 			setWeaponSetFlag(WEAPONSET_ELITE);
-			clearWeaponSetFlag(WEAPONSET_HERO);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_VETERAN);
 			setWeaponBonusCondition(WEAPONBONUSCONDITION_ELITE);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_HERO);
 			break;
 		case LEVEL_HEROIC:
-			clearWeaponSetFlag(WEAPONSET_VETERAN);
-			clearWeaponSetFlag(WEAPONSET_ELITE);
 			setWeaponSetFlag(WEAPONSET_HERO);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_VETERAN);
-			clearWeaponBonusCondition(WEAPONBONUSCONDITION_ELITE);
 			setWeaponBonusCondition(WEAPONBONUSCONDITION_HERO);
+			break;
+		case LEVEL_FOUR:
+			setWeaponSetFlag(WEAPONSET_FOUR);
+			setWeaponBonusCondition(WEAPONBONUSCONDITION_VETERANCY_FOUR);
+			break;
+		case LEVEL_FIVE:
+			setWeaponSetFlag(WEAPONSET_FIVE);
+			setWeaponBonusCondition(WEAPONBONUSCONDITION_VETERANCY_FIVE);
 			break;
 	}
 
@@ -5291,8 +5318,8 @@ void Object::crc( Xfer *xfer )
 	}
 #endif // DEBUG_CRC
 
-	xfer->xferUnsignedInt(&m_weaponBonusCondition);
-	xfer->xferUnsignedInt(&m_weaponBonusConditionIC);
+	m_weaponBonusCondition.xfer(xfer);
+	m_weaponBonusConditionIC.xfer(xfer);
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -5301,7 +5328,7 @@ void Object::crc( Xfer *xfer )
 	}
 #endif // DEBUG_CRC
 
-	xfer->xferUnsignedInt(&m_weaponBonusConditionAgainst);
+	m_weaponBonusConditionAgainst.xfer(xfer);
 #ifdef DEBUG_CRC
 	if (doLogging)
 	{
@@ -5823,8 +5850,6 @@ void Object::xfer( Xfer *xfer )
 
 	xfer->xferCoord3D ( &m_currentTargetCoords );
 
-	xfer->xferBool( &m_turretNeedPositioning );
-
 	// Entered & exited housekeeping.
 	Int i;
 	xfer->xferByte(&m_numTriggerAreasActive);
@@ -5876,7 +5901,7 @@ void Object::xfer( Xfer *xfer )
 	if (m_reverseFormationID!=NO_FORMATION_ID) {
 		xfer->xferCoord2D(&m_reverseFormationOffset);
 	}
-	xfer->xferBool(&m_isDoingReverseMove);
+	//xfer->xferBool(&m_isDoingReverseMove);
 
 	// module count
 	UnsignedShort moduleCount = 0;
@@ -6140,7 +6165,8 @@ void Object::xfer( Xfer *xfer )
 	{
 		// xfer the weaponSetFlags FIRST, since we need 'em to restore the weaponSet properly. (srj)
 		m_curWeaponSetFlags.xfer( xfer );
-		xfer->xferUnsignedInt(&m_weaponBonusCondition);
+		m_weaponBonusCondition.xfer(xfer);
+		//xfer->xferUnsignedInt(&m_weaponBonusCondition);
 		xfer->xferUser(&m_lastWeaponCondition, sizeof(m_lastWeaponCondition));
 
 		// do the weaponSet itself after all the weapon-related stuff, just in case
@@ -6232,7 +6258,7 @@ void Object::xfer( Xfer *xfer )
 	else
 		m_isReceivingDifficultyBonus = FALSE;
 
-	xfer->xferUnsignedInt(&m_weaponBonusConditionAgainst);
+	m_weaponBonusConditionAgainst.xfer(xfer);
 
 	UnsignedShort powerLossSize = m_powerLoss.size();
 	xfer->xferUnsignedShort( &powerLossSize );// HANDY LITTLE SHORT TO SIZE MY LIST
@@ -6342,6 +6368,7 @@ void Object::loadPostProcess()
 	else
 		m_containedBy = nullptr;
 
+	setNeedUpdateTurretPositioning(TRUE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -6696,7 +6723,9 @@ void Object::onDie( DamageInfo *damageInfo )
 void Object::setWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
-	m_weaponBonusCondition |= (1 << wst);
+	m_weaponBonusCondition.set(wst);
+
+	assert(&oldCondition != &m_weaponBonusCondition);
 
 	if(setIgnoreClear)
 		setWeaponBonusConditionIgnoreClear(wst);
@@ -6712,7 +6741,9 @@ void Object::setWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnor
 void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgnoreClear)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
-	m_weaponBonusCondition &= ~(1 << wst);
+	m_weaponBonusCondition.set(wst, 0);
+
+	assert(&oldCondition != &m_weaponBonusCondition);
 
 	if(setIgnoreClear)
 		clearWeaponBonusConditionIgnoreClear(wst);
@@ -6730,7 +6761,7 @@ void Object::clearWeaponBonusCondition(WeaponBonusConditionType wst, Bool setIgn
 void Object::applyWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
 {
 	WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
-	m_weaponBonusCondition |= flags;
+	m_weaponBonusCondition.set(flags);
 
 	if (oldCondition != m_weaponBonusCondition)
 	{
@@ -6743,7 +6774,8 @@ void Object::applyWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
 void Object::removeWeaponBonusConditionFlags(WeaponBonusConditionFlags flags)
 	{
 		WeaponBonusConditionFlags oldCondition = m_weaponBonusCondition;
-		m_weaponBonusCondition &= ~flags;
+		//m_weaponBonusCondition &= ~flags;
+		m_weaponBonusCondition.clear(flags);
 
 		if (oldCondition != m_weaponBonusCondition)
 		{
@@ -6856,18 +6888,6 @@ void Object::clearCustomWeaponBonusCondition(const AsciiString& cst, Bool setIgn
 		// Our weapon bonus just changed, so we need to immediately update our weapons
 		m_weaponSet.weaponSetOnWeaponBonusChange(this);
 	}
-}
-
-//-------------------------------------------------------------------------------------------------
-void Object::setWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
-{
-	m_weaponBonusConditionIC |= (1 << wst); 
-}
-
-//-------------------------------------------------------------------------------------------------
-void Object::clearWeaponBonusConditionIgnoreClear(WeaponBonusConditionType wst) 
-{
-	m_weaponBonusConditionIC &= ~(1 << wst);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -7907,6 +7927,39 @@ void Object::doSpecialPowerAtDrawable( const SpecialPowerTemplate *specialPowerT
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Execute an N-point special power. The first point is delivered like a normal location special
+	* (it triggers initiateIntentToDoSpecialPower); all captured points are then handed to the update
+	* module at once through setSpecialPowerMultiLocations. The chronosphere is the N=2 case. */
+//-------------------------------------------------------------------------------------------------
+void Object::doSpecialPowerAtMultipleLocations( const SpecialPowerTemplate *specialPowerTemplate,
+																								const std::vector<Coord3D>& locs, UnsignedInt commandOptions, Bool forced )
+{
+
+	if (isDisabled())
+		return;
+
+	if( locs.empty() )
+		return;
+
+	// sanity
+	if( !forced && TheSpecialPowerStore->canUseSpecialPower( this, specialPowerTemplate ) == FALSE )
+		return;
+
+	// get the module and execute at the first point
+	SpecialPowerModuleInterface *mod = getSpecialPowerModule( specialPowerTemplate );
+	if( mod )
+	{
+		mod->doSpecialPowerAtLocation( &locs.front(), INVALID_ANGLE, commandOptions );
+
+		// hand all captured target points to the update module at once
+		SpecialPowerUpdateInterface *spu = findSpecialPowerWithOverridableDestination( specialPowerTemplate->getSpecialPowerType() );
+		if( spu )
+			spu->setSpecialPowerMultiLocations( locs );
+	}
+
+}
+
+//-------------------------------------------------------------------------------------------------
 /** Execute special power */
 //-------------------------------------------------------------------------------------------------
 void Object::doSpecialPowerUsingWaypoints( const SpecialPowerTemplate *specialPowerTemplate, const Waypoint *way, UnsignedInt commandOptions, Bool forced )
@@ -8038,6 +8091,7 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_CANCEL_UNIT_BUILD:
 			case GUI_COMMAND_CANCEL_UPGRADE:
 			case GUI_COMMAND_ATTACK_MOVE:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
@@ -8047,7 +8101,6 @@ void Object::doCommandButton( const CommandButton *commandButton, CommandSourceT
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
-			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8177,6 +8230,7 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_OBJECT_UPGRADE:
 			case GUI_COMMAND_CANCEL_UPGRADE:
 			case GUI_COMMAND_ATTACK_MOVE:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
@@ -8186,7 +8240,6 @@ void Object::doCommandButtonAtObject( const CommandButton *commandButton, Object
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
-			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8243,8 +8296,8 @@ void Object::doCommandButtonAtPosition( const CommandButton *commandButton, cons
 			case GUI_COMMAND_REVERSE_MOVE:
 				if( ai )
 				{
-					m_isDoingReverseMove = TRUE;
-					ai->aiMoveToPosition( pos, cmdSource );
+					//m_isDoingReverseMove = TRUE;
+					ai->aiReverseMoveToPosition( pos, cmdSource );
 					return;
 				}
 				break;
@@ -8358,6 +8411,7 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 				break;
 			}
 			case GUI_COMMAND_ATTACK_MOVE:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_STOP:
 			case GUI_COMMAND_DOZER_CONSTRUCT:
 			case GUI_COMMAND_DOZER_CONSTRUCT_CANCEL:
@@ -8375,7 +8429,6 @@ void Object::doCommandButtonUsingWaypoints( const CommandButton *commandButton, 
 			case GUI_COMMAND_GUARD_FAR:
 			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
-			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -8733,9 +8786,7 @@ Bool Object::canProduceUpgrade( const UpgradeTemplate *upgrade )
 
 	for( Int buttonIndex = 0; buttonIndex < MAX_COMMANDS_PER_SET; buttonIndex++ )
 	{
-		const CommandButton *button = getCommandModifierOverrideForSlot(buttonIndex); 
-		if ( button == nullptr )
-			button = set->getCommandButton(buttonIndex);
+		const CommandButton *button = getCommandButtonForSlot(buttonIndex, set); 
 
 		if( button  &&  button->getUpgradeTemplate()  &&  (button->getUpgradeTemplate() == upgrade) )
 			return TRUE; // getUpgradeTemplate only returns something if it is actually an upgrade
@@ -9076,6 +9127,22 @@ Coord3D Object::getEnterPosition(ObjectID enteringObject) const {
 		ret.z += offset.z;
 	}
 	return ret;
+}
+
+//-------------------------------------------------------------------------------------------------
+Short Object::getRequiredBridgeHeight() const {
+	// Return 1-15 depending on geometry height, 0 if no_collide
+	Byte tmplHeight = getTemplate()->getRequiredBridgeHeight();
+	if (tmplHeight > -1) {
+		return static_cast<Short>(tmplHeight);
+	}
+	else if (isKindOf(KINDOF_NO_COLLIDE)) {
+		return 0;
+	}
+	else {
+		Real geometryHeight = getGeometryInfo().getMaxHeightAbovePosition();
+		return std::clamp(static_cast<Short>(geometryHeight / 10.0f), static_cast<Short>(1), static_cast<Short>(15));
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -9441,6 +9508,30 @@ Bool Object::checkToSquishHijack(const Object *other) const
 
 	return true;
 
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Object::hasParasites() const
+{
+	// no equipped objects
+	if( m_equipObjIDs.empty() )
+		return false;
+
+	// Check for all equippers to find if any is a Parasite
+	std::vector<ObjectID>::const_iterator it;
+	for (it = m_equipObjIDs.begin(); it != m_equipObjIDs.end(); ++it)
+	{
+		Object *equipObj = TheGameLogic->findObjectByID( (*it) );
+
+		if(equipObj)
+		{
+			HijackerUpdateInterface *hijackerUpdate = equipObj->getHijackerUpdateInterface();
+			if( hijackerUpdate && hijackerUpdate->isParasite() )
+				return true;
+		}
+	}
+
+	return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -9904,11 +9995,11 @@ void Object::setNeedUpdateTurretPositioning(Bool set)
 }
 
 // ------------------------------------------------------------------------------------------------
-const CommandButton *Object::getCommandModifierOverrideForSlot( Int slotNum, AsciiString commandSetName ) const
+const CommandButton *Object::getCommandButtonForSlot( Int slotNum, const CommandSet *set ) const
 {
-	AsciiString commandSetString = commandSetName.isEmpty() ? getCommandSetString() : commandSetName;
-	if(commandSetString.isEmpty() || m_controlBarModifiersApplied.empty() )
-		return nullptr;
+	AsciiString commandSetString = set ? set->getName() : AsciiString::TheEmptyString;
+	if( commandSetString.isEmpty() || m_controlBarModifiersApplied.empty() )
+		return set ? set->getCommandButton( slotNum ) : nullptr;
 
 	CommandSetModifiersMap::const_iterator it = m_controlBarModifiersApplied.find(commandSetString);
 	if(it != m_controlBarModifiersApplied.end())
@@ -9920,7 +10011,7 @@ const CommandButton *Object::getCommandModifierOverrideForSlot( Int slotNum, Asc
 		}
 	}
 
-	return nullptr;
+	return set ? set->getCommandButton( slotNum ) : nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -10059,9 +10150,15 @@ void Object::setWeaponsActivatedByGUI( Bool set, WeaponSlotType weaponSlot )
 }
 
 // ------------------------------------------------------------------------------------------------
+Bool Object::getIsDoingReverseMove() const
+{
+	return m_ai && m_ai->isForcedMoveBackwards() && ( m_reverseFormationID != NO_FORMATION_ID || m_ai->getCurLocomotor() && m_ai->getCurLocomotor()->isMovingBackwards() );
+}
+
+// ------------------------------------------------------------------------------------------------
 Bool Object::getPreserveAttackDataWhileMoving() const
 {
-	return getIsDoingReverseMove() || (getAIUpdateInterface() && getAIUpdateInterface()->getTurretCanAttackWhileMoving());
+	return (getIsDoingReverseMove() && getTemplate()->getCanFireTurretsWhileReverseMoving()) || (m_ai && m_ai->getTurretCanAttackWhileMoving());
 }
 
 //=============================================================================
@@ -10088,6 +10185,7 @@ const AsciiString& Object::getBuildCursorName() const {return getTemplate()->fri
 const AsciiString& Object::getInvalidBuildCursorName() const {return getTemplate()->friend_getInvalidBuildCursorName();	}
 const AsciiString& Object::getSalvageCursorName() const {return getTemplate()->friend_getSalvageCursorName();	}
 const AsciiString& Object::getReverseMoveToCursorName() const {return getTemplate()->friend_getReverseMoveToCursorName();	}
+const AsciiString& Object::getSmartGarrisonCursorName() const {return getTemplate()->friend_getSmartGarrisonCursorName();	}
 
 Bool Object::useMyGetRepairAtCursor() const {return getTemplate()->friend_getUseMyGetRepairAtCursor();	}
 Bool Object::useMyDockCursor() const {return getTemplate()->friend_getUseMyDockCursor();	}

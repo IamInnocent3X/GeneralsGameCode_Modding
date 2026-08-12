@@ -76,6 +76,7 @@ public:
 	virtual void setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites ) = 0;
 	virtual Object* getTargetObject() const = 0;
 	virtual HijackType getHijackType() const = 0;
+	virtual Bool isParasite() const = 0;
 	virtual void setUpdate(Bool u ) = 0;
 	virtual void setHijackType( HijackType i ) = 0;
 	virtual void setIsInVehicle(Bool i ) = 0;
@@ -118,6 +119,7 @@ public:
 	virtual void setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites );
 	virtual Object* getTargetObject() const;
 	virtual HijackType getHijackType() const { return m_hijackType; }
+	virtual Bool isParasite() const { return m_isParasite; }
 	virtual void setUpdate(Bool u ) {m_update = u; if(u) setWakeFrame(getObject(), UPDATE_SLEEP_NONE);}
 	virtual void setIsInVehicle(Bool i ) {m_isInVehicle = i;}
 	virtual void setHijackType( HijackType i ) { m_hijackType = i; }

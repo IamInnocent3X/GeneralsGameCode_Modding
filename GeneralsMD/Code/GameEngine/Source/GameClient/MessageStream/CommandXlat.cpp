@@ -57,6 +57,7 @@
 #include "GameClient/CommandXlat.h"
 #include "GameClient/DebugDisplay.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/Keyboard.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/GameText.h"
@@ -1155,7 +1156,8 @@ GameMessage::Type CommandTranslator::createAttackMessage( Drawable *draw,
  */
 GameMessage::Type CommandTranslator::issueAttackCommand( Drawable *target,
 																												 CommandEvaluateType commandType,
-																												 GUICommandType command )
+																												 GUICommandType command,
+																												 const CommandButton *commandButton )
 {
 	GameMessage::Type msgType = GameMessage::MSG_INVALID;
 
@@ -1173,7 +1175,8 @@ GameMessage::Type CommandTranslator::issueAttackCommand( Drawable *target,
 		//DEBUG_LOG(("issuing team-attack cmd against %s",enemy->getTemplate()->getName().str()));
 
 		// insert team attack command message into stream
-		switch( command )
+		GUICommandType commandToUse = commandButton ? commandButton->getCommandType() : command;
+		switch( commandToUse )
 		{
 #ifdef ALLOW_SURRENDER
 			case GUICOMMANDMODE_PICK_UP_PRISONER:
@@ -1193,100 +1196,23 @@ GameMessage::Type CommandTranslator::issueAttackCommand( Drawable *target,
 		{
 			GameMessage *attackMsg;
 
-			attackMsg = TheMessageStream->appendMessage( msgType );
+			if(commandButton && commandButton->getOrderNearbyRadius()) {
+				OrderNearbyData orderData;
+				orderData.Radius = commandButton->getOrderNearbyRadius();
+				orderData.RequiredMask = commandButton->getOrderKindofMask();
+				orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
+				orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
+				orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
+				orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
+
+				attackMsg = TheMessageStream->appendMessageWithOrderNearby( msgType, orderData );
+			} else {
+				attackMsg = TheMessageStream->appendMessage( msgType );
+			}
 
 			attackMsg->appendObjectIDArgument( targetObj->getID() );	// must pass target object ID to logic
 
 			// if we have a stats collector, increment the stats
-			if(TheStatsCollector)
-				TheStatsCollector->incrementAttackCount();
-		}
-	}
-	else
-	{
-		DEBUG_LOG(("issuing NON-team-attack cmd against %s",target->getTemplate()->getName().str()));
-
-		// send single attack command for selected drawable
-		const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
-
-		// loop through all the selected drawables
-		Drawable *draw;
-		for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
-		{
-			draw = *it;
-			msgType = createAttackMessage(draw, target, commandType );
-		}
-	}
-
-	// only make sounds if the command was for real
-	if( commandType == DO_COMMAND )
-	{
-		PickAndPlayInfo info;
-		info.m_air = targetObj->isUsingAirborneLocomotor();
-		info.m_drawTarget = target;
-		pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), msgType, &info );
-	}
-
-	// return the actual message type created
-	return msgType;
-
-}
-
-GameMessage::Type CommandTranslator::issueAttackCommandWithOrderRadius( Drawable *target,
-																												 CommandEvaluateType commandType,
-																												 const CommandButton *command )
-{
-	GameMessage::Type msgType = GameMessage::MSG_INVALID;
-
-	if (target == nullptr)
-		return msgType;
-
-	// you cannot attack an enemy that has no object representation
-	Object *targetObj = target->getObject();
-	if( !targetObj )
-		return msgType;
-
-	if( m_teamExists && command )
-	{
-
-		//DEBUG_LOG(("issuing team-attack cmd against %s",enemy->getTemplate()->getName().str()));
-
-		// insert team attack command message into stream
-		switch( command->getCommandType() )
-		{
-#ifdef ALLOW_SURRENDER
-			case GUICOMMANDMODE_PICK_UP_PRISONER:
-				msgType = GameMessage::MSG_PICK_UP_PRISONER;
-				break;
-#endif
-			case GUI_COMMAND_NONE:
-				msgType = GameMessage::MSG_DO_ATTACK_OBJECT;
-				break;
-			default:
-				DEBUG_CRASH( ("issueAttackCommand was passed in a GUICommandType type that isn't supported yet...") );
-				return msgType;
-		}
-
-		// only create the message if our command type is DO_COMMAND
-		if( commandType == DO_COMMAND )
-		{
-			GameMessage *attackMsg;
-
-			OrderNearbyData orderData;
-			if(command->getOrderNearbyRadius())
-			{
-				orderData.Radius = command->getOrderNearbyRadius();
-				orderData.RequiredMask = command->getOrderKindofMask();
-				orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
-				orderData.MinDelay = command->getOrderNearbyMinDelay();
-				orderData.MaxDelay = command->getOrderNearbyMaxDelay();
-				orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
-			}
-			attackMsg = TheMessageStream->appendMessageWithOrderNearby( msgType, orderData );
-
-			attackMsg->appendObjectIDArgument( targetObj->getID() );	// must pass target object ID to logic
-
-			// if we have a stats collector, inrement the stats
 			if(TheStatsCollector)
 				TheStatsCollector->incrementAttackCount();
 		}
@@ -1386,6 +1312,59 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 
 		}
 	}
+	else if( BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) )
+	{
+		//N LOCATION BASED SPECIAL (chronosphere = 2; count set by NumberOfTargets)
+		msgType = GameMessage::MSG_DO_SPECIAL_POWER_AT_MULTIPLE_LOCATIONS;
+		if( commandType == DO_COMMAND )
+		{
+			const SpecialPowerTargetRadiusMode radiusMode = command->getTargetRadiusMode();
+
+			// RADIUS_ANCHORED_AREA: the very first click is an anchor that only defines the constraint
+			// area; it is captured but never delivered as a target.
+			if( radiusMode == SPTRM_ANCHORED_AREA && !TheInGameUI->hasSpecialPowerAreaAnchor() )
+			{
+				TheInGameUI->setSpecialPowerAreaAnchor( pos );
+				msgType = GameMessage::MSG_INVALID;
+			}
+			else
+			{
+				// Clamp the pick into the active constraint area (anchor / first / previous target), then
+				// always accept it - out-of-area picks land on the boundary instead of being rejected.
+				Coord3D tpos = *pos;
+				TheInGameUI->clampToSpecialPowerTargetArea( command, tpos );
+
+				{
+					TheInGameUI->addPendingSpecialPowerLocation( &tpos );
+
+					if( TheInGameUI->getPendingSpecialPowerLocationCount() < command->getNumberOfTargets() )
+					{
+						// Still collecting points - commit nothing yet, stay pending.
+						msgType = GameMessage::MSG_INVALID;
+					}
+					else
+					{
+						// Final click: emit ONE deterministic message carrying all target points (the
+						// anchor, if any, is not sent).
+						const std::vector<Coord3D>& targets = TheInGameUI->getPendingSpecialPowerLocations();
+						GameMessage *msg = TheMessageStream->appendMessage( msgType );
+						msg->appendIntegerArgument( command->getSpecialPowerTemplate()->getID() );
+						msg->appendIntegerArgument( (Int)targets.size() );
+						for( std::vector<Coord3D>::const_iterator it = targets.begin(); it != targets.end(); ++it )
+							msg->appendLocationArgument( *it );
+						msg->appendIntegerArgument( command->getOptions() );
+						msg->appendObjectIDArgument( specificSource );
+						TheInGameUI->clearPendingSpecialPowerLocations();
+
+						PickAndPlayInfo info;
+						info.m_drawTarget = target;
+						info.m_specialPowerType = command->getSpecialPowerTemplate()->getSpecialPowerType();
+						pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), msgType, &info );
+					}
+				}
+			}
+		}
+	}
 	else if( BitIsSet( command->getOptions(), NEED_TARGET_POS ) )
 	{
 		//LOCATION BASED SPECIAL
@@ -1448,7 +1427,12 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 		}
 	}
 
-	if( command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && commandType == DO_COMMAND )
+	// N-point (chronosphere) powers commit atomically on the final click and don't use the
+	// fire-then-steer overridable-destination model, so skip the shortcut auto-select/steer block -
+	// it would deselect/select the firing object, which clears the pending point state and
+	// makes the remaining clicks impossible.
+	if( command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT && commandType == DO_COMMAND
+			&& !BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) )
 	{
 		Object *obj = sourceDraw->getObject();
 		SpecialPowerUpdateInterface *spUpdate = obj->findSpecialPowerWithOverridableDestination();
@@ -1627,43 +1611,6 @@ GameMessage::Type CommandTranslator::issueFireWeaponCommand( const CommandButton
 
 //-------------------------------------------------------------------------------------------------
 GameMessage::Type CommandTranslator::createEnterMessage( Drawable *enter,
-																												 CommandEvaluateType commandType )
-{
-	GameMessage::Type msgType = GameMessage::MSG_ENTER;
-
-	// if we're just evaluating then get out of here without actually doing the action
-	if( commandType == EVALUATE_ONLY )
-		return msgType;
-
-	if (!enter || !enter->getObject())
-		return msgType;
-
-	// sanity
-	DEBUG_ASSERTCRASH( commandType == DO_COMMAND, ("createEnterMessage - commandType is not DO_COMMAND") );
-
-	if( m_teamExists )
-	{
-		PickAndPlayInfo info;
-		info.m_drawTarget = enter;
-		pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), msgType, &info );
-
-		GameMessage *enterMsg = TheMessageStream->appendMessage( msgType );
-		enterMsg->appendObjectIDArgument( INVALID_ID );		// 0 means current "selection team" of this player
-		enterMsg->appendObjectIDArgument( enter->getObject()->getID() );
-
-	}
-	else
-	{
-		DEBUG_CRASH(("Shouldn't get here. jkmcd"));
-	}
-
-	// return the type of the message used
-	return msgType;
-
-}
-
-//-------------------------------------------------------------------------------------------------
-GameMessage::Type CommandTranslator::createEnterMessageWithOrderRadius( Drawable *enter,
 																												 CommandEvaluateType commandType,
 																												 const CommandButton *command )
 {
@@ -1710,6 +1657,38 @@ GameMessage::Type CommandTranslator::createEnterMessageWithOrderRadius( Drawable
 	else
 	{
 		DEBUG_CRASH(("Shouldn't get here. jkmcd"));
+	}
+
+	// return the type of the message used
+	return msgType;
+
+}
+
+//-------------------------------------------------------------------------------------------------
+GameMessage::Type CommandTranslator::createSmartGarrisonMessage( Drawable *target,
+																																 CommandEvaluateType commandType )
+{
+	GameMessage::Type msgType = GameMessage::MSG_DO_SMART_GARRISON;
+
+	// if we're just evaluating then get out of here without actually doing the action
+	if( commandType == EVALUATE_ONLY )
+		return msgType;
+
+	if (!target || !target->getObject())
+		return msgType;
+
+	// sanity
+	DEBUG_ASSERTCRASH( commandType == DO_COMMAND, ("createSmartGarrisonMessage - commandType is not DO_COMMAND") );
+
+	if( m_teamExists )
+	{
+		PickAndPlayInfo info;
+		info.m_drawTarget = target;
+		// reuse the normal "enter" voice response
+		pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER, &info );
+
+		GameMessage *msg = TheMessageStream->appendMessage( msgType );
+		msg->appendObjectIDArgument( target->getObject()->getID() );
 	}
 
 	// return the type of the message used
@@ -1858,6 +1837,7 @@ static Bool checkIsNotSelectable(Drawable* drawable)
 GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 																														 const Coord3D *pos,
 																														 CommandEvaluateType type,
+																														 Int modifiers,
 																														 Bool AdditionalCheck )
 {
 	Object *obj = draw ? draw->getObject() : nullptr;
@@ -1920,6 +1900,23 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 			|| (command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT))
 	{
 		GameMessage *hintMessage;
+
+		// Smart Garrison: holding ALT while hovering a transport the selection can enter overrides
+		// waypoint mode and distributes the units across the target plus nearby transports.
+		if( draw && obj && BitIsSet( modifiers, KEY_STATE_ALT )
+				&& TheInGameUI->canSelectedObjectsDoAction( InGameUI::ACTIONTYPE_ENTER_OBJECT, obj, InGameUI::SELECTION_ANY, true ) )
+		{
+			if( type == DO_COMMAND || type == EVALUATE_ONLY )
+			{
+				msgType = createSmartGarrisonMessage( draw, type );
+			}
+			else
+			{
+				msgType = GameMessage::MSG_SMART_GARRISON_HINT;
+				TheMessageStream->appendMessage( msgType );
+			}
+			return msgType;
+		}
 
 		if( TheInGameUI->isInWaypointMode() )
 		{
@@ -2055,11 +2052,11 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 						case GUICOMMANDMODE_HIJACK_VEHICLE:
 						case GUICOMMANDMODE_SABOTAGE_BUILDING:
 						case GUICOMMANDMODE_EQUIP_OBJECT:
-							msgType = createEnterMessageWithOrderRadius( draw, type, command );
+							msgType = createEnterMessage( draw, type, command );
 							break;
 #ifdef ALLOW_SURRENDER
 						case GUICOMMANDMODE_PICK_UP_PRISONER:
-							msgType = issueAttackCommandWithOrderRadius( draw, type, command );
+							msgType = issueAttackCommand( draw, type, GUICOMMANDMODE_PICK_UP_PRISONER, command );
 							break;
 #endif
 						case GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT:
@@ -2080,8 +2077,10 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 							break;
 					}
 
-					// null out the GUI command if we're actually doing something
-					if( type == DO_COMMAND )
+					// null out the GUI command if we're actually doing something.
+					// Exception: an N-point (chronosphere) power keeps the command pending between
+					// clicks so the remaining clicks (or a right-click cancel) can still be handled.
+					if( type == DO_COMMAND && !TheInGameUI->hasPendingSpecialPowerLocations() )
 					{
 						TheInGameUI->setGUICommand( nullptr );
 
@@ -2521,9 +2520,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 				for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 				{
 					// get command button
-					const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
-					if(command == nullptr) 
-						command =  set->getCommandButton(i);
+					const CommandButton *command = source->getCommandButtonForSlot(i, set); 
 
 					if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 					{
@@ -2580,9 +2577,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 					{
 						// get command button
-						const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
-						if(command == nullptr) 
-							command =  set->getCommandButton(i);
+						const CommandButton *command = source->getCommandButtonForSlot(i, set); 
 
 						if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 						{
@@ -2628,9 +2623,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 					{
 						// get command button
-						const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
-						if(command == nullptr) 
-							command =  set->getCommandButton(i);
+						const CommandButton *command = source->getCommandButtonForSlot(i, set); 
 
 						if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 						{
@@ -2676,9 +2669,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 					for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 					{
 						// get command button
-						const CommandButton *command = source->getCommandModifierOverrideForSlot(i); 
-						if(command == nullptr) 
-							command =  set->getCommandButton(i);
+						const CommandButton *command = source->getCommandButtonForSlot(i, set); 
 
 						if( command && command->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 						{
@@ -3704,7 +3695,9 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 		//-----------------------------------------------------------------------------------------
 		case GameMessage::MSG_META_CHAT_ALLIES:
-			if (TheGameLogic->isInMultiplayerGame() && !TheGameLogic->isInReplayGame())
+			// Chat is available in multiplayer, and in singleplayer/skirmish only when EnableSingleplayerChatwindow is set (for chat commands).
+			if (TheGameLogic->isInInteractiveGame() && !TheGameLogic->isInReplayGame()
+				&& (TheGameLogic->isInMultiplayerGame() || TheGlobalData->m_enableSingleplayerChatWindow))
 			{
 				Player *localPlayer = ThePlayerList->getLocalPlayer();
 				if ((localPlayer && localPlayer->isPlayerActive()) || !TheGlobalData->m_netMinPlayers)
@@ -3718,7 +3711,9 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 
 		//-----------------------------------------------------------------------------------------
 		case GameMessage::MSG_META_CHAT_EVERYONE:
-			if (TheGameLogic->isInMultiplayerGame() && !TheGameLogic->isInReplayGame())
+			// Chat is available in multiplayer, and in singleplayer/skirmish only when EnableSingleplayerChatwindow is set (for chat commands).
+			if (TheGameLogic->isInInteractiveGame() && !TheGameLogic->isInReplayGame()
+				&& (TheGameLogic->isInMultiplayerGame() || TheGlobalData->m_enableSingleplayerChatWindow))
 			{
 				Player *localPlayer = ThePlayerList->getLocalPlayer();
 				// TheSuperHackers @tweak skyaero 19/07/2025 Observers can now chat
@@ -4376,7 +4371,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (TheInGameUI->isInForceAttackMode()) {
 						evaluateForceAttack(draw, draw->getPosition(), DO_HINT );
 					} else {
-						evaluateContextCommand( draw, draw->getPosition(), DO_HINT, additionalCheck );
+						evaluateContextCommand( draw, draw->getPosition(), DO_HINT, TheKeyboard->getModifierFlags(), additionalCheck );
 					}
 
 					// Do not eat this message, as it itself has another purpose in HintSpy
@@ -4401,7 +4396,7 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			if (TheInGameUI->isInForceAttackMode()) {
 				evaluateForceAttack( nullptr, &position, DO_HINT );
 			} else {
-				evaluateContextCommand( nullptr, &position, DO_HINT, additionalCheck );
+				evaluateContextCommand( nullptr, &position, DO_HINT, TheKeyboard->getModifierFlags(), additionalCheck );
 			}
 
 			if(additionalCheck)
@@ -4553,16 +4548,19 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 					if (TheInGameUI->isInForceAttackMode()) {
 						evaluateForceAttack( draw, &pos, DO_COMMAND );
 					} else {
-						evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
+						evaluateContextCommand( draw, &pos, DO_COMMAND, TheKeyboard->getModifierFlags(), TRUE );
 					}
 
 					Player *player = ThePlayerList->getLocalPlayer();
 					if(player->isSabotagingObjectGUICommand())
 					{
-						player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
-						player->setSabotagingObjectGUICommandID(INVALID_ID);
-						player->setSabotagingObjectGUICommandButtonSlot(-1);
-						player->selectDrawablesBeforeSabotaging();
+						if( !command || !BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) || TheInGameUI->getPendingSpecialPowerLocationCount() >= command->getNumberOfTargets() )
+						{
+							player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+							player->setSabotagingObjectGUICommandID(INVALID_ID);
+							player->setSabotagingObjectGUICommandButtonSlot(-1);
+							player->selectDrawablesBeforeSabotaging();
+						}
 					}
 
 					disp = DESTROY_MESSAGE;
@@ -4662,16 +4660,19 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				if (TheInGameUI->isInForceAttackMode()) {
 					evaluateForceAttack( draw, &pos, DO_COMMAND );
 				} else {
-					evaluateContextCommand( draw, &pos, DO_COMMAND, TRUE );
+					evaluateContextCommand( draw, &pos, DO_COMMAND, TheKeyboard->getModifierFlags(), TRUE );
 				}
 
 				Player *player = ThePlayerList->getLocalPlayer();
 				if(player->isSabotagingObjectGUICommand())
 				{
-					player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
-					player->setSabotagingObjectGUICommandID(INVALID_ID);
-					player->setSabotagingObjectGUICommandButtonSlot(-1);
-					player->selectDrawablesBeforeSabotaging();
+					if( !command || !BitIsSet( command->getOptions(), NEED_N_TARGET_POS ) || TheInGameUI->getPendingSpecialPowerLocationCount() >= command->getNumberOfTargets() )
+					{
+						player->setSabotagingObjectGUICommandName(AsciiString::TheEmptyString);
+						player->setSabotagingObjectGUICommandID(INVALID_ID);
+						player->setSabotagingObjectGUICommandButtonSlot(-1);
+						player->selectDrawablesBeforeSabotaging();
+					}
 				}
 
 				disp = DESTROY_MESSAGE;

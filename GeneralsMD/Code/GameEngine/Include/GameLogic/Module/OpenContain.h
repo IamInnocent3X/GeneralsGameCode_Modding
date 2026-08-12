@@ -79,6 +79,7 @@ public:
  	Bool m_allowNeutralInside;			///< allow neutral inside us
 
 	WeaponBonusConditionTypeVec m_passengerWeaponBonusVec;  ///< weaponBonus types granted to passengers
+	std::vector<AsciiString> m_passengerCustomWeaponBonusVec;  ///< custom weaponBonus types granted to passengers
 
 	Int m_containExtra;
 	std::vector<AsciiString> m_containMaxUpgradeList;

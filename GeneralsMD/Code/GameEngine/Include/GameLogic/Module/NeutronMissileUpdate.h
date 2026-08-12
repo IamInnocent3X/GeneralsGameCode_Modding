@@ -102,6 +102,9 @@ public:
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }											///< return true if the missile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }	///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) { m_launchVeterancy = v; }	///< snapshot the launcher's veterancy at launch (for veterancy FX/OCL selection)
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }	///< launcher's veterancy at launch time
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual const Coord3D *getVelocity() const { return &m_vel; }		///< get current velocity
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
@@ -123,6 +126,8 @@ private:
 	MissileStateType m_state;						///< the behavior state of the missile
 	Coord3D m_targetPos;								///< the position of the target
 	Coord3D m_intermedPos;
+	Coord3D m_launchPos;								///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	VeterancyLevel m_launchVeterancy;		///< launcher's veterancy at launch time (for veterancy FX/OCL selection)
 
 	ObjectID m_launcherID;							///< ID of object that launched us (zero if not yet launched)
 	WeaponSlotType m_attach_wslot;			///< where to fire the missile from

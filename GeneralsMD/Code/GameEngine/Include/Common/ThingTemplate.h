@@ -518,6 +518,7 @@ public:
 
 	Int getExperienceValue(Int level) const { return m_experienceValues[level]; }
 	Int getExperienceRequired(Int level) const {return m_experienceRequired[level]; }
+	VeterancyLevel getMaxVeterancyLevel() const { return m_maxVeterancyLevel; }
 	Bool isTrainable() const{return m_isTrainable; }
 	Bool isEnterGuard() const{return m_enterGuard; }
 	Bool isHijackGuard() const{return m_hijackGuard; }
@@ -693,6 +694,8 @@ public:
 
 	Int getMaxPathFindingCellRadius() const { return static_cast<Int>(m_maxPathfindingCellRadius); };
 
+	Byte getRequiredBridgeHeight(void) const { return m_requiredBridgeHeight; };
+
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }
 
@@ -717,6 +720,7 @@ public:
 	const AsciiString& friend_getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 	const AsciiString& friend_getSalvageCursorName() const {return m_salvageCursorName;	}
 	const AsciiString& friend_getReverseMoveToCursorName() const {return m_reverseMoveToCursorName;	}
+	const AsciiString& friend_getSmartGarrisonCursorName() const {return m_smartGarrisonCursorName;	}
 	
 	Bool friend_getUseMyGetRepairAtCursor() const {return m_useMyGetRepairAtCursor;	}
 	Bool friend_getUseMyDockCursor() const {return m_useMyDockCursor;	}
@@ -733,6 +737,8 @@ public:
 	const std::vector<AsciiString>& getCustomStatusUnderPowered() const { return m_customStatusUnderPowered; }
 	TintStatus getTintStatusUnderPowered() const { return m_tintStatusUnderPowered; }
 	const AsciiString& getCustomTintStatusUnderPowered() const { return m_customTintStatusUnderPowered; }
+
+	Bool getCanFireTurretsWhileReverseMoving() const  { return m_canFireTurretsWhileReverseMoving; }
 
 protected:
 
@@ -756,6 +762,9 @@ protected:
 	static void parsePrerequisites( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseModuleName(INI* ini, void *instance, void* /*store*/, const void* userData);
 	static void parseIntList(INI* ini, void *instance, void* store, const void* userData);
+	static void parseExperienceValueList(INI* ini, void *instance, void* store, const void* userData);
+	static void parseExperienceRequiredList(INI* ini, void *instance, void* store, const void* userData);
+	static void parseSkillPointValueList(INI* ini, void *instance, void* store, const void* userData);
 
 	static void parsePerUnitSounds(INI* ini, void *instance, void* store, const void* userData);
 	static void parsePerUnitFX(INI* ini, void *instance, void* store, const void* userData);
@@ -768,6 +777,8 @@ protected:
 
   static void parseMaxSimultaneous(INI *ini, void *instance, void *store, const void *userData);
   static void parseMaxSimultaneousOfTypeDifficulty(INI *ini, void *instance, void *store, const void *userData);
+
+	static void parseRequiredBridgeHeight(INI* ini, void* instance, void* store, const void* userData);
 
 	Bool removeModuleInfo(const AsciiString& moduleToRemove, AsciiString& clearedModuleNameOut);
 
@@ -816,6 +827,7 @@ private:
 	AsciiString				m_setRallyPointCursorName;
 	AsciiString				m_salvageCursorName;
 	AsciiString				m_reverseMoveToCursorName;
+	AsciiString				m_smartGarrisonCursorName;
 	AsciiString				m_buildCursorName;
 	AsciiString				m_invalidBuildCursorName;
 
@@ -831,6 +843,7 @@ private:
 	Int											m_skillPointValues[LEVEL_COUNT];
 	Int											m_experienceValues[LEVEL_COUNT];		///< How much I am worth at each experience level
 	Int											m_experienceRequired[LEVEL_COUNT];	///< How many experience points I need for each level
+	VeterancyLevel					m_maxVeterancyLevel;								///< highest veterancy level this object may ever reach
 
 	//Code renderer handles these states now.
 	//AsciiString							m_inventoryImage[ INV_IMAGE_NUM_IMAGES ];  ///< portrait inventory pictures
@@ -918,6 +931,7 @@ private:
 	Bool          m_equipGuard;
 	Bool          m_parasiteGuard;
 	Bool					m_setDisabledWhenUnderpowered;
+	Bool					m_canFireTurretsWhileReverseMoving;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority
@@ -932,6 +946,7 @@ private:
 	UnsignedByte	m_crushableLevel;						///< Specifies the level of crushability (must be hit by a crusher greater than this to crush me).
 	Byte					m_ammoPipsStyle;                ///< How ammo pips are displayed for this thing
 	UnsignedByte  m_maxPathfindingCellRadius;  ///< Limit cells radius for pathfinding, defaults to 2, can be increased for large units
+	Byte					m_requiredBridgeHeight;      ///< simplified height required to fit under bridge, range: -1 to 15, -1 will use Geometry height, other values to override
 	// ---- Other
 	DisabledType							m_disabledTypeUnderPowered;
 	WeaponBonusConditionTypeVec 			m_bonusUnderPowered;

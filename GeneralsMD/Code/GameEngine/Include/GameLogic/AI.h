@@ -419,6 +419,7 @@ enum AICommandType CPP_11(: Int)	// Stored in save file, do not reorder/renumber
 	AICMD_EVACUATE_INSTANTLY,
 	AICMD_EXIT_INSTANTLY,
 	AICMD_GUARD_RETALIATE,
+	AICMD_MOVE_TO_POSITION_REVERSE,	// same as AICMD_MOVE_TO_POSITION, but the unit drives there in reverse.
 };
 
 struct AICommandParms
@@ -487,6 +488,14 @@ public:
 	void aiMoveToPositionEvenIfSleeping( const Coord3D *pos, CommandSourceType cmdSource )
 	{
 		AICommandParms parms(AICMD_MOVE_TO_POSITION_EVEN_IF_SLEEPING, cmdSource);
+		parms.m_pos = *pos;
+		aiDoCommand(&parms);
+	}
+
+	/// same as aiMoveToPosition, but the unit drives the whole path in reverse
+	void aiReverseMoveToPosition( const Coord3D *pos, CommandSourceType cmdSource )
+	{
+		AICommandParms parms(AICMD_MOVE_TO_POSITION_REVERSE, cmdSource);
 		parms.m_pos = *pos;
 		aiDoCommand(&parms);
 	}
@@ -910,7 +919,7 @@ public:
 	UnsignedShort Num_Refs() const { return m_refCount.Num_Refs(); }
 #endif
 
-	void groupMoveToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource, Bool isDoingReverseMove = FALSE );
+	void groupMoveToPosition( const Coord3D *pos, Bool addWaypoint, CommandSourceType cmdSource, Bool reverse = false );
 	void groupMoveToAndEvacuate( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position(s)
 	void groupMoveToAndEvacuateAndExit( const Coord3D *pos, CommandSourceType cmdSource );			///< move to given position & unload transport.
 	void groupIdle(CommandSourceType cmdSource);						///< Enter idle state.
@@ -939,6 +948,7 @@ public:
 	void groupGetHealed( Object *healDepot, CommandSourceType cmdSource );		///< go get healed at the heal depot
 	void groupGetRepaired( Object *repairDepot, CommandSourceType cmdSource );///< go get repaired at the repair depot
 	void groupEnter( Object *obj, CommandSourceType cmdSource );							///< enter the given object
+	void groupSmartGarrison( Object *target, CommandSourceType cmdSource );	///< distribute the group across the target and nearby transports (round-robin by priority)
 	void groupDock( Object *obj, CommandSourceType cmdSource );							///< get near given object and wait for enter clearance
 	void groupExit( Object *objectToExit, CommandSourceType cmdSource );			///< get out of this Object
 	void groupEvacuate( CommandSourceType cmdSource );												///< empty its contents
@@ -954,6 +964,7 @@ public:
 	void groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *object, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 	void groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *drawable, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 	void groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *object, UnsignedInt commandOptions, Bool isSabotage = FALSE );
+	void groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions, Bool isSabotage = FALSE );
 #ifdef ALLOW_SURRENDER
 	void groupSurrender( const Object *objWeSurrenderedTo, Bool surrender, CommandSourceType cmdSource );
 #endif
@@ -992,7 +1003,7 @@ public:
 
 	Real getSpeed();									///< return the speed of the group's slowest member
 	Bool getCenter( Coord3D *center );				///< compute centroid of group
-	Bool getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool isDoingReverseMove = FALSE );
+	Bool getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool reverse = FALSE );
 	void computeIndividualDestination( Coord3D *dest, const Coord3D *groupDest,
 		Object *obj, const Coord3D *center, Bool isFormation ); ///< compute destination of individual object, based on group destination
 	Int getCount();										///< return the number of objects in the group
@@ -1042,8 +1053,8 @@ protected:
 
 	Bool friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cmdSource );
 	Bool friend_moveVehicleToPos( const Coord3D *pos, CommandSourceType cmdSource );
-	void friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource );
-	Bool friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool isDoingReverseMove );
+	void friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse );
+	Bool friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse );
 
 private:
 	// AIGroups must be created through TheAI->createGroup()

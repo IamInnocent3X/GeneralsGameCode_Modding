@@ -28,7 +28,10 @@
 
 #pragma once
 
-typedef UnsignedInt WeaponBonusConditionFlags;
+#include "GameLogic/WeaponBonusConditionType.h"
+
+// Updated by AW, Mar 2026: changed into BitFlags
+typedef BitFlags<WEAPONBONUSCONDITION_COUNT> WeaponBonusConditionFlags;
 //typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ObjectCustomStatusType;
 
 //-------------------------------------------------------------------------------------------------

@@ -167,7 +167,7 @@ static void doSetRallyPoint( Object *obj, const Coord3D& pos )
 
 	LocomotorSet locomotorSet;
 	locomotorSet.addLocomotor( TheLocomotorStore->findLocomotorTemplate( key ) );
-	if( TheAI->pathfinder()->clientSafeQuickDoesPathExist( locomotorSet, obj->getPosition(), &rallyPointPos) == FALSE )
+	if( TheAI->pathfinder()->clientSafeQuickDoesPathExist( locomotorSet, obj->getRequiredBridgeHeight(), obj->getPosition(), &rallyPointPos) == FALSE )
 	{
 
 		// user feedback
@@ -805,6 +805,51 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		}
 
 		//---------------------------------------------------------------------------------------------
+		// N-point (chronosphere) special power: all target points committed together in one message.
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_MULTIPLE_LOCATIONS:
+		{
+			// first argument is the special power ID
+			UnsignedInt specialPowerID = msg->getArgument( 0 )->integer;
+
+			// argument 1 is the number of target points that follow
+			Int count = msg->getArgument( 1 )->integer;
+
+			// arguments 2 .. 2+count-1 are the target locations (in click order)
+			std::vector<Coord3D> locs;
+			locs.reserve( count );
+			for( Int p = 0; p < count; ++p )
+				locs.push_back( msg->getArgument( 2 + p )->location );
+
+			// Command button options -- special power may care about variance options
+			UnsignedInt options = msg->getArgument( 2 + count )->integer;
+
+			// check for possible specific source, ignoring selection.
+			ObjectID sourceID = msg->getArgument( 3 + count )->objectID;
+			Object* source = findObjectByID(sourceID);
+			if (source != nullptr)
+			{
+				AIGroupPtr theGroup = TheAI->createGroup();
+				theGroup->add(source);
+				theGroup->groupDoSpecialPowerAtMultipleLocations( specialPowerID, locs, options );
+#if RETAIL_COMPATIBLE_AIGROUP
+				TheAI->destroyGroup(theGroup);
+#else
+				theGroup->removeAll();
+#endif
+			}
+			else
+			{
+				//Use the selected group!
+				if( currentlySelectedGroup )
+				{
+					currentlySelectedGroup->groupDoSpecialPowerAtMultipleLocations( specialPowerID, locs, options );
+				}
+			}
+			break;
+
+		}
+
+		//---------------------------------------------------------------------------------------------
 		case GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE:
 		case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
 		{
@@ -925,7 +970,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
 				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
-				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, TRUE );
+				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, /*reverse=*/true );
 			}
 
 			break;
@@ -1124,6 +1169,25 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 				currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
 				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
 				currentlySelectedGroup->groupEnter( enter, CMD_FROM_PLAYER );
+			}
+
+			break;
+
+		}
+
+		//---------------------------------------------------------------------------------------------
+		case GameMessage::MSG_DO_SMART_GARRISON:
+		{
+			Object *target = findObjectByID( msg->getArgument( 0 )->objectID );
+
+			// sanity
+			if( target == nullptr )
+				break;
+
+			if( currentlySelectedGroup )
+			{
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->groupSmartGarrison( target, CMD_FROM_PLAYER );
 			}
 
 			break;

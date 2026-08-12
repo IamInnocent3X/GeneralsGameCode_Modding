@@ -175,6 +175,15 @@ public:
 	/// Given a location, return closest location on path, and along-path dist to end as function result
 	void markOptimized() {m_isOptimized = true;}
 
+	inline Bool needCheckBridges() const { return m_moveUnderBridges != 0U; };
+
+	static inline UnsignedShort layerIndexToBitFlag(UnsignedShort layer_index) {
+		return static_cast<UnsignedShort>(1u << layer_index);
+	};
+
+	inline void setPathBelowBridge(PathfindLayerEnum layer) { BitSet(m_moveUnderBridges, layerIndexToBitFlag(static_cast<UnsignedShort>(layer))); };
+	inline Bool isPathBelowBridge(UnsignedShort layer_index) { return BitIsSet(m_moveUnderBridges, layerIndexToBitFlag(layer_index)); };
+
 protected:
 	// snapshot interface
 	virtual void crc( Xfer *xfer );
@@ -195,6 +204,9 @@ protected:
 	Coord3D									m_cpopIn;
 	ClosestPointOnPathInfo	m_cpopOut;
 	const PathNode*					m_cpopRecentStart;
+
+	// Stores opened/destroyed bridges that this path moves below.
+	UnsignedShort m_moveUnderBridges; // 16bit -> use as bitset for PATHFIND LAYER ENUMS (2-14 for bridges)
 };
 
 //----------------------------------------------------------------------------------------------------------
@@ -209,9 +221,9 @@ class PathfindCellInfo
 {
 	friend class PathfindCell;
 public:
-//#if RETAIL_COMPATIBLE_PATHFINDING
+#if RETAIL_COMPATIBLE_PATHFINDING
 	static void forceCleanPathFindCellInfos();
-//#endif
+#endif
 	static void allocateCellInfos();
 	static void releaseCellInfos();
 
@@ -223,7 +235,7 @@ protected:
 	static PathfindCellInfo *s_firstFree;							///<
 
 
-	PathfindCellInfo* m_nextOpen, * m_prevOpen, * m_nextSkip, * m_prevSkip, * m_nextSuperSkip, * m_prevSuperSkip;						///< for A* "open" list, shared by closed list
+	PathfindCellInfo *m_nextOpen, *m_prevOpen;						///< for A* "open" list, shared by closed list
 
 	PathfindCellInfo *m_pathParent;												///< "parent" cell from pathfinder
 	PathfindCell *m_cell;															///< Cell this info belongs to currently.
@@ -254,16 +266,23 @@ class PathfindCellList
 	friend class PathfindCell;
 
 public:
-	PathfindCellList() : m_head(nullptr) {}
+	PathfindCellList() : m_head(nullptr), m_tail(nullptr) {}
 
-	void reset(PathfindCell* newHead = nullptr) { m_head = newHead; }
+#if RETAIL_COMPATIBLE_PATHFINDING
+	void reset(PathfindCell* newHead = nullptr) { m_head = newHead; m_tail = nullptr; }
+#else
+	void reset() { m_head = nullptr; m_tail = nullptr; }
+#endif
 
 	PathfindCell* getHead() const { return m_head; }
 
 	Bool empty() const { return m_head == nullptr; }
 
+	Bool canReverseSort(PathfindCell& currentCell) const;
+
 private:
 	PathfindCell* m_head;
+	PathfindCell* m_tail;
 };
 
 /**
@@ -302,10 +321,6 @@ public:
 	PathfindCell();
 	~PathfindCell();
 
-//#if !RETAIL_COMPATIBLE_PATHFINDING
-	PathfindCellInfo* getCellInfo();
-//#endif
-
 	Bool setTypeAsObstacle( Object *obstacle, Bool isFence, const ICoord2D &pos );				///< flag this cell as an obstacle, from the given one
 	Bool removeObstacle( Object *obstacle );				///< unflag this cell as an obstacle, from the given one
 	void setType( CellType type );	///< set the cell type
@@ -314,11 +329,11 @@ public:
 	Bool isAircraftGoal() const {return m_aircraftGoal != 0;}
 
 	Bool isObstaclePresent( ObjectID objID ) const;					///< return true if the given object ID is registered as an obstacle in this cell
-//#if RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
+#if RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION
 	// TheSuperHackers @info isObstructionInvalid() and clearObstruction() only used during retail compatible pathfinding failover cleanup
 	Bool isObstructionInvalid() const { return m_obstacleID != INVALID_ID && m_info == nullptr && (m_type == CELL_OBSTACLE || m_type == CELL_IMPASSABLE); }
 	void clearObstruction() { m_type = CELL_CLEAR; m_obstacleID = INVALID_ID; m_obstacleIsFence = false; m_obstacleIsTransparent = false; }
-//#endif
+#endif
 
 	inline Bool isObstacleTransparent() const;
 	inline Bool isObstacleFence() const;
@@ -329,6 +344,17 @@ public:
 	UnsignedInt costToHierGoal( PathfindCell *goal );
 
 	UnsignedInt costSoFar( PathfindCell *parent );
+
+#if RETAIL_COMPATIBLE_PATHFINDING
+	// Forward insertion sort that is 100% retail compatible
+	void forwardInsertionSortRetailCompatible(PathfindCellList& list);
+#endif
+
+	// Forward insertion sort, in ascending cost order
+	void forwardInsertionSort(PathfindCellList& list);
+
+	// Reverse insertion sort, in ascending cost order
+	void reverseInsertionSort(PathfindCellList& list);
 
 	/// put self on "open" list in ascending cost order
 	void putOnSortedOpenList( PathfindCellList &list );
@@ -350,9 +376,7 @@ public:
 
 	// IamInnocent - Added sanity checks
 	inline PathfindCell *getNextOpen() {return m_info && m_info->m_nextOpen?m_info->m_nextOpen->m_cell: nullptr;}
-	inline PathfindCell *getPrevOpen() {return m_info && m_info->m_prevOpen?m_info->m_prevOpen->m_cell: nullptr; }
-	inline PathfindCell* getNextSkip() { return m_info && m_info->m_nextSkip ? m_info->m_nextSkip->m_cell : nullptr; }
-	inline PathfindCell* getNextSuperSkip() { return m_info && m_info->m_nextSuperSkip ? m_info->m_nextSuperSkip->m_cell : nullptr; }
+	inline PathfindCell *getPrevOpen() {return m_info && m_info->m_prevOpen?m_info->m_prevOpen->m_cell: nullptr;}
 
 	inline UnsignedShort getXIndex() const {return m_info ? m_info->m_pos.x : 0;}
 	inline UnsignedShort getYIndex() const {return m_info ? m_info->m_pos.y : 0;}
@@ -364,6 +388,8 @@ public:
 	inline Bool getClosed() const {return m_info ? m_info->m_closed:FALSE;}
 	inline UnsignedInt getCostSoFar() const {return m_info ? m_info->m_costSoFar : 0;}
 	inline UnsignedInt getTotalCost() const {return m_info ? m_info->m_totalCost : 0;}
+
+	inline UnsignedInt getTotalCostDifference(PathfindCell& other) const;
 
 	inline void setCostSoFar(UnsignedInt cost) { if( m_info ) m_info->m_costSoFar = cost;}
 	inline void setTotalCost(UnsignedInt cost) { if( m_info ) m_info->m_totalCost = cost;}
@@ -379,6 +405,11 @@ public:
 
 	Short getWaterLevel() const { return m_waterLevel; }
 	void setWaterLevel(Short level) { m_waterLevel = level; }
+
+	UnsignedByte getBridgeHeight() const { return m_bridgeHeight; }
+	void setBridgeHeight(UnsignedByte height) { m_bridgeHeight = height; }
+	PathfindLayerEnum getBridgeLayer() const { return (PathfindLayerEnum)m_bridgeLayer; }
+	void setBridgeLayer(PathfindLayerEnum layer) { m_bridgeLayer = (UnsignedByte)layer; }
 
 	Bool allocateInfo(const ICoord2D &pos);
 	void releaseInfo();
@@ -400,10 +431,10 @@ public:
 	void setConnectLayer( PathfindLayerEnum layer ) { m_connectsToLayer = layer; }	///< set the cell layer	connect id
 	PathfindLayerEnum getConnectLayer() const { return (PathfindLayerEnum)m_connectsToLayer; }				///< get the cell layer connect id
 
+	/// Get the layer if this cell under a bridge that is currently destroyed or opened or LAYER_INVALID if not
+	PathfindLayerEnum getUnderDestroyedBridgeLayer() const;
+
 private:
-//#if !RETAIL_COMPATIBLE_PATHFINDING
-	PathfindCellInfo m_pathfindCellInfo;
-//#endif
 	PathfindCellInfo *m_info;
 	ObjectID m_obstacleID;	                  ///< the object ID who overlaps this cell
 	UnsignedInt m_blockedByAlly : 1;          ///< True if this cell is blocked by an allied unit.
@@ -420,10 +451,9 @@ private:
 	UnsignedByte m_layer : 4;                 ///< Layer of this cell.
 	//This is added for ship pathing
 	Short m_waterLevel:8; ///< how far away is this cell from land (distance transform), capped at 15
-
-	// Tail of open list for reverse searching
-	static PathfindCell* s_openlistTail;
-
+	//This is added for bridge pathing, determine if unit can go under bridge or not
+	UnsignedByte m_bridgeHeight : 4;  // stored as number 0-15, rounded from 0.0-150.0 float. Space below bridge (to ground or water)
+	UnsignedByte m_bridgeLayer : 4; // Layer number of bridge above this cell
 };
 
 typedef PathfindCell *PathfindCellP;
@@ -622,14 +652,14 @@ public:
 	virtual Path *findAttackPath( const Object *obj, const LocomotorSet& locomotorSet, const Coord3D *from,
 		const Object *victim, const Coord3D* victimPos, const Weapon *weapon )=0;
 
+	/** Find a short, valid path to a location that is away from the repulsors.  */
+	virtual Path *findSafePath( const Object *obj, const LocomotorSet& locomotorSet,
+		const Coord3D *from, const Coord3D* repulsorPos1, const Coord3D* repulsorPos2, Real repulsorRadius ) = 0;
+
 	/** Patch to the exiting path from the current position, either because we became blocked,
   or because we had to move off the path to avoid other units. */
 	virtual Path *patchPath( const Object *obj, const LocomotorSet& locomotorSet,
 		Path *originalPath, Bool blocked ) = 0;
-
-	/** Find a short, valid path to a location that is away from the repulsors.  */
-	virtual Path *findSafePath( const Object *obj, const LocomotorSet& locomotorSet,
-		const Coord3D *from, const Coord3D* repulsorPos1, const Coord3D* repulsorPos2, Real repulsorRadius ) = 0;
 
 };
 
@@ -671,8 +701,8 @@ public:
 	void xfer( Xfer *xfer );
 	void loadPostProcess();
 
-	Bool clientSafeQuickDoesPathExist( const LocomotorSet& locomotorSet, const Coord3D *from, const Coord3D *to );  ///< Can we build any path at all between the locations	(terrain & buildings check - fast)
-	Bool clientSafeQuickDoesPathExistForUI( const LocomotorSet& locomotorSet, const Coord3D *from, const Coord3D *to );  ///< Can we build any path at all between the locations	(terrain onlyk - fast)
+	Bool clientSafeQuickDoesPathExist( const LocomotorSet& locomotorSet, Short requiredBridgeHeight, const Coord3D *from, const Coord3D *to );  ///< Can we build any path at all between the locations	(terrain & buildings check - fast)
+	Bool clientSafeQuickDoesPathExistForUI( const LocomotorSet& locomotorSet, const Coord3D *from, const Coord3D *to );  ///< Can we build any path at all between the locations	(terrain only - fast)
 	Bool slowDoesPathExist( Object *obj, const Coord3D *from,
 		const Coord3D *to, ObjectID ignoreObject=INVALID_ID );  ///< Can we build any path at all between the locations	(terrain, buildings & units check - slower)
 
@@ -720,9 +750,9 @@ public:
 
 	void setIgnoreObstacleID( ObjectID objID );					///< if non-zero, the pathfinder will ignore the given obstacle
 
-	Bool validMovementPosition( Bool isCrusher, LocomotorSurfaceTypeMask acceptableSurfaces, Int requiredWaterLevel, PathfindCell *toCell, PathfindCell *fromCell = nullptr );		///< Return true if given position is a valid movement location
-	Bool validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, Int x, Int y );					///< Return true if given position is a valid movement location
-	Bool validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, const Coord3D *pos );		///< Return true if given position is a valid movement location
+	Bool validMovementPosition( Bool isCrusher, LocomotorSurfaceTypeMask acceptableSurfaces, Int requiredWaterLevel, Short requiredBridgeHeight, PathfindCell *toCell, PathfindCell *fromCell = nullptr );		///< Return true if given position is a valid movement location
+	Bool validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, Short requiredBridgeHeight, Int x, Int y );					///< Return true if given position is a valid movement location
+	Bool validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, Short requiredBridgeHeight, const Coord3D *pos );		///< Return true if given position is a valid movement location
 	Bool validMovementTerrain( PathfindLayerEnum layer, const Locomotor* locomotor, const Coord3D *pos );		///< Return true if given position is a valid movement location
 
 	Locomotor* chooseBestLocomotorForPosition(PathfindLayerEnum layer,  LocomotorSet* locomotorSet, const Coord3D* pos );
@@ -730,8 +760,6 @@ public:
 	Bool isViewBlockedByObstacle(const Object* obj, const Object* objOther);	///< Return true if the straight line between the given points contains any obstacle, and thus blocks vision
 
 	Bool isAttackViewBlockedByObstacle(const Object* obj, const Coord3D& attackerPos,  const Object* victim, const Coord3D& victimPos);	///< Return true if the straight line between the given points contains any obstacle, and thus blocks vision
-
-	Bool isPathBlockedByObstacle(const Object* obj, const Coord3D& attackerPos,  const Object* victim, const Coord3D& targetPos);	///< Return true if the straight line between the given points contains any obstacle, and thus blocks vision
 
 	Bool isLinePassable( const Object *obj, LocomotorSurfaceTypeMask acceptableSurfaces,
 		PathfindLayerEnum layer, const Coord3D& startWorld, const Coord3D& endWorld,
@@ -748,9 +776,9 @@ public:
 	Path *getDebugPath();
 	void setDebugPath( Path *debugpath );
 
-//#if RETAIL_COMPATIBLE_PATHFINDING
+#if RETAIL_COMPATIBLE_PATHFINDING
 	void forceCleanCells();
-//#endif
+#endif
 	void cleanOpenAndClosedLists();
 
 	// Adjusts the destination to a spot near dest that is not occupied by other units.
@@ -772,6 +800,11 @@ public:
 	Bool goalPosition(Object *obj, Coord3D *pos); // Returns the goal position on the grid.
 
 	PathfindLayerEnum addBridge(Bridge *theBridge); // Adds a bridge layer, and returns the layer id.
+
+	// return if the passed layer is currently passable (checks for destroyed bridges)
+	inline Bool isPathfindLayerPassable(PathfindLayerEnum layer) {
+		return !m_layers[layer].isUnused() && !m_layers[layer].isDestroyed();
+	}
 
 	void addWallPiece(Object *wallPiece); // Adds a wall piece.
 	void removeWallPiece(Object *wallPiece);  // Removes a wall piece.
@@ -839,7 +872,6 @@ protected:
 	static Int lineBlockedByObstacleCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
 	static Int tightenPathCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
 	static Int attackBlockedByObstacleCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
-	static Int pathBlockedByObstacleCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
  	static Int examineCellsCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
  	static Int groundCellsCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
  	static Int moveAlliesDestinationCallback(Pathfinder* pathfinder, PathfindCell* from, PathfindCell* to, Int to_x, Int to_y, void* userData);
@@ -919,6 +951,11 @@ private:
 	Int						m_queuePRHead;
 	Int						m_queuePRTail;
 	Int						m_cumulativeCellsAllocated;
+
+#if RTS_ZEROHOUR && RETAIL_COMPATIBLE_CRC
+public:
+	Bool					m_classifyFenceZeroInit;
+#endif
 };
 
 
@@ -933,18 +970,18 @@ inline void Pathfinder::worldToGrid( const Coord3D *pos, ICoord2D *cellIndex )
 	cellIndex->y = REAL_TO_INT(pos->y/PATHFIND_CELL_SIZE);
 }
 
-inline Bool Pathfinder::validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, Int x, Int y )
+inline Bool Pathfinder::validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, Short requiredBridgeHeight, Int x, Int y )
 {
-	return validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), getCell(layer, x, y));
+	return validMovementPosition( isCrusher, locomotorSet.getValidSurfaces(), locomotorSet.getRequiredWaterLevel(), requiredBridgeHeight, getCell(layer, x, y) );
 }
 
-inline Bool Pathfinder::validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, const Coord3D *pos )
+inline Bool Pathfinder::validMovementPosition( Bool isCrusher, PathfindLayerEnum layer, const LocomotorSet& locomotorSet, Short requiredBridgeHeight, const Coord3D *pos )
 {
 
 	Int x = REAL_TO_INT(pos->x/PATHFIND_CELL_SIZE);
 	Int y = REAL_TO_INT(pos->y/PATHFIND_CELL_SIZE);
 
-	return validMovementPosition( isCrusher, layer, locomotorSet, x, y );
+	return validMovementPosition( isCrusher, layer, locomotorSet, requiredBridgeHeight, x, y );
 }
 
 inline const Coord3D *Pathfinder::getDebugPathPosition()

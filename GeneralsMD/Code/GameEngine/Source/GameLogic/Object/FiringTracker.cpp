@@ -191,12 +191,20 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 	UnsignedInt fireSoundLoopTime = weaponFired->getFireSoundLoopTime();
 	if (fireSoundLoopTime != 0)
 	{
-		// If the sound has stopped playing, then we need to re-add it.
-		if (m_frameToStopLoopingSound == 0 || !TheAudio->isCurrentlyPlaying(m_audioHandle))
+		AudioEventRTS audio = weaponFired->getFireSound();
+
+		// Re-add the looping sound if it has stopped playing, or if the weapon (and thus
+		// the fire sound) has switched to a different sound while we keep firing.
+		Bool fireSoundChanged = (audio.getEventName() != m_currentFireSoundName);
+		if (m_frameToStopLoopingSound == 0 || !TheAudio->isCurrentlyPlaying(m_audioHandle) || fireSoundChanged)
 		{
-			AudioEventRTS audio = weaponFired->getFireSound();
+			// Stop the previous looping sound (e.g. weapon switched to one with a different fire sound).
+			TheAudio->removeAudioEvent( m_audioHandle );
+			m_audioHandle = AHSV_NoSound;
+
 			audio.setObjectID(getObject()->getID());
 			m_audioHandle = TheAudio->addAudioEvent( &audio );
+			m_currentFireSoundName = audio.getEventName();
 		}
 		m_frameToStopLoopingSound = now + fireSoundLoopTime;
 	}
@@ -308,7 +316,8 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 		}
 		if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 		{
-			if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+			//if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+			if ( weaponBonusTypeNoClear.test(weaponBonusType) && me->testWeaponBonusCondition(weaponBonusType) )
 			{
 				me->clearWeaponBonusCondition(weaponBonusType, FALSE);
 			}
@@ -445,7 +454,8 @@ void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const 
 				else
 				{
 					// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-					if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+					//if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+					if ( weaponBonusTypeNoClear.test(it->bonus) && me->testWeaponBonusCondition(it->bonus) )
 					{
 						me->clearWeaponBonusCondition(it->bonus, FALSE);
 					}
@@ -507,7 +517,8 @@ void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
 	if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
 	{
 		// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-		if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+		//if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+		if ( weaponBonusTypeNoClear.test(weaponBonusType) && me->testWeaponBonusCondition(weaponBonusType) )
 		{
 			me->clearWeaponBonusCondition(weaponBonusType, FALSE);
 		}
@@ -549,7 +560,8 @@ void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
 			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
 			{
 				// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
-				if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+				//if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+				if ( weaponBonusTypeNoClear.test(it->bonus) && me->testWeaponBonusCondition(it->bonus) )
 					me->clearWeaponBonusCondition(it->bonus, FALSE);
 			}
 		}
@@ -584,6 +596,7 @@ UpdateSleepTime FiringTracker::update()
 		{
 			TheAudio->removeAudioEvent( m_audioHandle );
 			m_audioHandle = AHSV_NoSound;
+			m_currentFireSoundName.clear();
 			m_frameToStopLoopingSound = 0;
 		}
 	}
@@ -760,7 +773,7 @@ void FiringTracker::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_frameToStartCooldown );
 
 	// currenly applied weaponBonus against the prev target
-	xfer->xferUnsignedInt(&m_prevTargetWeaponBonus);
+	m_prevTargetWeaponBonus.xfer(xfer);
 
 	// currenly applied custom weaponBonus against the prev target
 	if( xfer->getXferMode() == XFER_SAVE )

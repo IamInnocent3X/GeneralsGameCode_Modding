@@ -120,9 +120,7 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 			if (! m_commandWindows[ i ]) continue;
 
 			// get command
-			command = obj->getCommandModifierOverrideForSlot(i); 
-			if(command == nullptr) 
-				command =  commandSet->getCommandButton(i);
+			command = obj->getCommandButtonForSlot(i, commandSet);
 
 			// add if present and can be used in a multi select
 			if( command && BitIsSet( command->getOptions(), OK_FOR_MULTI_SELECT ) == TRUE )
@@ -154,9 +152,7 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 			if (! m_commandWindows[ i ]) continue;
 
 			// get the command
-			command = obj->getCommandModifierOverrideForSlot(i); 
-			if(command == nullptr) 
-				command =  commandSet->getCommandButton(i);
+			command = obj->getCommandButtonForSlot(i, commandSet);
 
 			// IamInnocent - designate attack move and reverse move as common moves
 			Bool hasCommonMove = (command && command->getCommandType() == GUI_COMMAND_ATTACK_MOVE) ||

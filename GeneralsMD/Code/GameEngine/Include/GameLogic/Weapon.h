@@ -34,6 +34,7 @@
 #include "Common/GameCommon.h"
 
 #include "GameLogic/Damage.h"
+#include "GameLogic/WeaponBonusConditionType.h"
 #include "Common/DisabledTypes.h"
 #include "Common/STLTypedefs.h"
 #include "GameClient/TintStatus.h"
@@ -52,6 +53,7 @@ class WeaponTemplate;
 class INI;
 class ParticleSystemTemplate;
 enum NameKeyType CPP_11(: Int);
+
 
 //-------------------------------------------------------------------------------------------------
 const Int NO_MAX_SHOTS_LIMIT = 0x7fffffff;
@@ -171,143 +173,71 @@ static const char *const TheWeaponCollideMaskNames[] =
 };
 #endif
 
-//-------------------------------------------------------------------------------------------------
-//
-// Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
-// existing values!
-//
-enum WeaponBonusConditionType CPP_11(: Int)
-{
-	// The access and use of this enum has the bit shifting built in, so this is a 0,1,2,3,4,5 enum
-	WEAPONBONUSCONDITION_INVALID = -1,
 
-	WEAPONBONUSCONDITION_GARRISONED = 0,
-	WEAPONBONUSCONDITION_HORDE,
-	WEAPONBONUSCONDITION_CONTINUOUS_FIRE_MEAN,
-	WEAPONBONUSCONDITION_CONTINUOUS_FIRE_FAST,
-	WEAPONBONUSCONDITION_NATIONALISM,
-	WEAPONBONUSCONDITION_PLAYER_UPGRADE,
-	WEAPONBONUSCONDITION_DRONE_SPOTTING,
-#ifdef ALLOW_DEMORALIZE
-	WEAPONBONUSCONDITION_DEMORALIZED,
-#else
-	WEAPONBONUSCONDITION_DEMORALIZED_OBSOLETE,
-#endif
-	WEAPONBONUSCONDITION_ENTHUSIASTIC,
-	WEAPONBONUSCONDITION_VETERAN,
-	WEAPONBONUSCONDITION_ELITE,
-	WEAPONBONUSCONDITION_HERO,
-	WEAPONBONUSCONDITION_BATTLEPLAN_BOMBARDMENT,
-	WEAPONBONUSCONDITION_BATTLEPLAN_HOLDTHELINE,
-	WEAPONBONUSCONDITION_BATTLEPLAN_SEARCHANDDESTROY,
-	WEAPONBONUSCONDITION_SUBLIMINAL,
-	WEAPONBONUSCONDITION_SOLO_HUMAN_EASY,
-	WEAPONBONUSCONDITION_SOLO_HUMAN_NORMAL,
-	WEAPONBONUSCONDITION_SOLO_HUMAN_HARD,
-	WEAPONBONUSCONDITION_SOLO_AI_EASY,
-	WEAPONBONUSCONDITION_SOLO_AI_NORMAL,
-	WEAPONBONUSCONDITION_SOLO_AI_HARD,
-	WEAPONBONUSCONDITION_TARGET_FAERIE_FIRE,
-  WEAPONBONUSCONDITION_FANATICISM, // FOR THE NEW GC INFANTRY GENERAL... adds to nationalism
-	WEAPONBONUSCONDITION_FRENZY_ONE,
-	WEAPONBONUSCONDITION_FRENZY_TWO,
-	WEAPONBONUSCONDITION_FRENZY_THREE,
-	// New added bonus types
-	WEAPONBONUSCONDITION_CONTAINED,  // applied by default when contained
-	WEAPONBONUSCONDITION_FRENZY_FOUR,
-	WEAPONBONUSCONDITION_FRENZY_FIVE,
+// Update AW, Mar 2026: Moved to BitFlags.cpp
 
-	WEAPONBONUSCONDITION_BOOST_ONE,
-	WEAPONBONUSCONDITION_BOOST_TWO,
-	WEAPONBONUSCONDITION_BOOST_THREE,
-
-	WEAPONBONUSCONDITION_DEMORALIZED_ONE,
-	WEAPONBONUSCONDITION_DEMORALIZED_TWO,
-	WEAPONBONUSCONDITION_DEMORALIZED_THREE,
-
-	WEAPONBONUSCONDITION_TARGET_PAINT_ONE,
-	WEAPONBONUSCONDITION_TARGET_PAINT_TWO,
-	WEAPONBONUSCONDITION_TARGET_PAINT_THREE,
-
-	WEAPONBONUSCONDITION_CRYO_ONE,
-	WEAPONBONUSCONDITION_CRYO_TWO,
-	WEAPONBONUSCONDITION_CRYO_THREE,
-
-	WEAPONBONUSCONDITION_EXTRA1,
-	WEAPONBONUSCONDITION_EXTRA2,
-	WEAPONBONUSCONDITION_EXTRA3,
-	WEAPONBONUSCONDITION_EXTRA4,
-	WEAPONBONUSCONDITION_EXTRA5,
-	WEAPONBONUSCONDITION_EXTRA6,
-	WEAPONBONUSCONDITION_EXTRA7,
-	WEAPONBONUSCONDITION_EXTRA8,
-
-
-	WEAPONBONUSCONDITION_COUNT
-};
-#ifdef DEFINE_WEAPONBONUSCONDITION_NAMES
-static const char *const TheWeaponBonusNames[] =
-{
-	// This is a RHS enum (weapon.ini will have WeaponBonus = IT) so it is all caps
-	"GARRISONED",
-	"HORDE",
-	"CONTINUOUS_FIRE_MEAN",
-	"CONTINUOUS_FIRE_FAST",
-	"NATIONALISM",
-	"PLAYER_UPGRADE",
-	"DRONE_SPOTTING",
-#ifdef ALLOW_DEMORALIZE
-	"DEMORALIZED",
-#else
-	"DEMORALIZED_OBSOLETE",
-#endif
-	"ENTHUSIASTIC",
-	"VETERAN",
-	"ELITE",
-	"HERO",
-	"BATTLEPLAN_BOMBARDMENT",
-	"BATTLEPLAN_HOLDTHELINE",
-	"BATTLEPLAN_SEARCHANDDESTROY",
-	"SUBLIMINAL",
-	"SOLO_HUMAN_EASY",
-	"SOLO_HUMAN_NORMAL",
-	"SOLO_HUMAN_HARD",
-	"SOLO_AI_EASY",
-	"SOLO_AI_NORMAL",
-	"SOLO_AI_HARD",
-	"TARGET_FAERIE_FIRE",
-  "FANATICISM", // FOR THE NEW GC INFANTRY GENERAL... adds to nationalism
-	"FRENZY_ONE",
-	"FRENZY_TWO",
-	"FRENZY_THREE",
-	"CONTAINED",
-	"FRENZY_FOUR",
-	"FRENZY_FIVE",
-	"BOOST_ONE",
-	"BOOST_TWO",
-	"BOOST_THREE",
-	"DEMORALIZED_ONE",
-	"DEMORALIZED_TWO",
-	"DEMORALIZED_THREE",
-	"TARGET_PAINT_ONE",
-	"TARGET_PAINT_TWO",
-	"TARGET_PAINT_THREE",
-	"CRYO_ONE",
-	"CRYO_TWO",
-	"CRYO_THREE",
-	"EXTRA1",
-	"EXTRA2",
-	"EXTRA3",
-	"EXTRA4",
-	"EXTRA5",
-	"EXTRA6",
-	"EXTRA7",
-	"EXTRA8",
-	nullptr
-};
-static_assert(ARRAY_SIZE(TheWeaponBonusNames) == WEAPONBONUSCONDITION_COUNT + 1, "Incorrect array size");
-#endif
-
+//#ifdef DEFINE_WEAPONBONUSCONDITION_NAMES
+//static const char *const TheWeaponBonusNames[] =
+//{
+//	// This is a RHS enum (weapon.ini will have WeaponBonus = IT) so it is all caps
+//	"GARRISONED",
+//	"HORDE",
+//	"CONTINUOUS_FIRE_MEAN",
+//	"CONTINUOUS_FIRE_FAST",
+//	"NATIONALISM",
+//	"PLAYER_UPGRADE",
+//	"DRONE_SPOTTING",
+//#ifdef ALLOW_DEMORALIZE
+//	"DEMORALIZED",
+//#else
+//	"DEMORALIZED_OBSOLETE",
+//#endif
+//	"ENTHUSIASTIC",
+//	"VETERAN",
+//	"ELITE",
+//	"HERO",
+//	"BATTLEPLAN_BOMBARDMENT",
+//	"BATTLEPLAN_HOLDTHELINE",
+//	"BATTLEPLAN_SEARCHANDDESTROY",
+//	"SUBLIMINAL",
+//	"SOLO_HUMAN_EASY",
+//	"SOLO_HUMAN_NORMAL",
+//	"SOLO_HUMAN_HARD",
+//	"SOLO_AI_EASY",
+//	"SOLO_AI_NORMAL",
+//	"SOLO_AI_HARD",
+//	"TARGET_FAERIE_FIRE",
+//  "FANATICISM", // FOR THE NEW GC INFANTRY GENERAL... adds to nationalism
+//	"FRENZY_ONE",
+//	"FRENZY_TWO",
+//	"FRENZY_THREE",
+//	"CONTAINED",
+//	"FRENZY_FOUR",
+//	"FRENZY_FIVE",
+//	"BOOST_ONE",
+//	"BOOST_TWO",
+//	"BOOST_THREE",
+//	"DEMORALIZED_ONE",
+//	"DEMORALIZED_TWO",
+//	"DEMORALIZED_THREE",
+//	"TARGET_PAINT_ONE",
+//	"TARGET_PAINT_TWO",
+//	"TARGET_PAINT_THREE",
+//	"CRYO_ONE",
+//	"CRYO_TWO",
+//	"CRYO_THREE",
+//	"EXTRA1",
+//	"EXTRA2",
+//	"EXTRA3",
+//	"EXTRA4",
+//	"EXTRA5",
+//	"EXTRA6",
+//	"EXTRA7",
+//	"EXTRA8",
+//	nullptr
+//};
+//static_assert(ARRAY_SIZE(TheWeaponBonusNames) == WEAPONBONUSCONDITION_COUNT + 1, "Incorrect array size");
+//#endif
 
 typedef std::vector<WeaponBonusConditionType> WeaponBonusConditionTypeVec;
 
@@ -417,6 +347,9 @@ private:
 public:
 	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, const std::vector<AsciiString>& customFlags) const;
 	//void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const;
+
+	//Copy bonues from other WeaponBonusSet, needed for WeaponExtend for deep copy
+	void copyFrom(const WeaponBonusSet& other);
 
 	void parseWeaponBonusSet(INI* ini);
 	static void parseWeaponBonusSet(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
@@ -734,6 +667,15 @@ public:
 
 protected:
 
+	// compute the range-based scaling factor (1.0 at point-blank to factorAtMaxRange at attack range)
+	// for the engagement from 'source' to 'pos'. Uses launch-time position for projectile detonations.
+	Real computeRangeScaleFactor(const Object* source, const Coord3D* pos, const WeaponBonus& bonus, Real factorAtMaxRange, Bool isProjectileDetonation) const;
+
+	// veterancy level to use for FX/OCL selection: the launcher's veterancy snapshotted at launch when
+	// 'sourceObj' is a projectile (covers detonation and ScatterShot re-fire, incl. chains), else the
+	// object's own veterancy.
+	VeterancyLevel getEffectiveFXVeterancy(const Object* sourceObj) const;
+
 	// actually deal out the damage.
 	void dealDamageInternal(ObjectID sourceID, ObjectID victimID, const Coord3D *pos, const WeaponBonus& bonus, Bool isProjectileDetonation, WeaponSlotType wslot = PRIMARY_WEAPON, Int specificBarrelToUse = 0) const;
 	void trimOldHistoricDamage() const;
@@ -749,6 +691,8 @@ private:
 	static void parseCustomWeaponBonusSet( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseScatterTarget( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 	static void parseShotDelay( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
+	static void parsePrimaryDamage( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
+	static void parseSecondaryDamage( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ );
 
 	static const FieldParse TheWeaponTemplateFieldParseTable[];		///< the parse table for INI definition
 
@@ -757,10 +701,17 @@ private:
 	AsciiString m_projectileStreamName;			///< Name of object that tracks are stream, if we have one
 	AsciiString m_laserName;								///< Name of the laser object that persists.
 	AsciiString m_laserBoneName;						///< Where to put the laser object
-	Real m_primaryDamage;										///< primary damage amount
+	Real m_primaryDamage;										///< primary damage amount (nominal/max when variance is used)
+	Real m_primaryDamageVariance;						///< if nonzero, actual primary damage is randomly reduced by up to this much (from Min:/Max: definition)
 	Real m_primaryDamageRadius;							///< primary damage radius range
-	Real m_secondaryDamage;									///< secondary damage amount
+	Real m_secondaryDamage;									///< secondary damage amount (nominal/max when variance is used)
+	Real m_secondaryDamageVariance;					///< if nonzero, actual secondary damage is randomly reduced by up to this much (from Min:/Max: definition)
 	Real m_secondaryDamageRadius;						///< secondary damage radius range
+	Real m_primaryDamageTaperOff;						///< factor of primary damage applied at the edge of the primary radius (1.0 = no taper)
+	Real m_secondaryDamageTaperOff;					///< factor of secondary damage applied at the edge of the secondary radius (1.0 = no taper)
+	Real m_damageFactorAtMaxRange;					///< scales damage based on engagement distance / attack range (1.0 = no scaling)
+	Real m_radiusFactorAtMaxRange;					///< scales damage radii based on engagement distance / attack range (1.0 = no scaling)
+	Real m_scatterRadiusFactorAtMaxRange;		///< scales ScatterRadius based on engagement distance / attack range (1.0 = no scaling)
 	Real m_shockWaveAmount;									///( How much shockwave generated
 	Real m_shockWaveRadius;									///( How far shockwave effect affects objects
 	Real m_shockWaveTaperOff;								///( How much shockwave is left at the tip of the shockwave radius

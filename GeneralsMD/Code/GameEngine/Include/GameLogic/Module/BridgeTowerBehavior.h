@@ -33,6 +33,7 @@
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/DamageModule.h"
 #include "GameLogic/Module/DieModule.h"
+#include "GameClient/TerrainRoads.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 
@@ -71,6 +72,7 @@ public:
 	virtual void setBridge( Object *bridge );
 	virtual ObjectID getBridgeID();
 	virtual void setTowerType( BridgeTowerType type );
+	virtual void onCapture(Player* oldOwner, Player* newOwner) override;
 
 	static BridgeTowerBehaviorInterface *getBridgeTowerBehaviorInterfaceFromObject( Object *obj );
 

@@ -120,7 +120,8 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 	m_targetPos.zero();
 	m_intermedPos.zero();
 	m_intermedPosBackup.zero();
-	m_assignedBackup = FALSE;
+	m_launchPos.zero();
+	m_launchVeterancy = LEVEL_REGULAR;
 	m_accel.zero();
 	m_vel.zero();
 
@@ -137,6 +138,7 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 	m_decoyID = INVALID_ID;
 	m_attractedID = INVALID_ID;
 	m_isJammed = FALSE;
+	m_assignedBackup = FALSE;
 
 	m_exhaustSysTmpl = nullptr;
 
@@ -210,6 +212,8 @@ void NeutronMissileUpdate::projectileLaunchAtObjectOrPosition(const Object *vict
 	DEBUG_ASSERTCRASH(specificBarrelToUse>=0, ("specificBarrelToUse must now be explicit"));
 
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
+	if (launcher)
+		m_launchPos = *launcher->getPosition();
 	m_attach_wslot = wslot;
 	m_attach_specificBarrelToUse = specificBarrelToUse;
 
@@ -661,7 +665,9 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	// 2: Added m_launchPos (for DamageFactorAtMaxRange)
+	// 3: Added m_launchVeterancy (for veterancy FX/OCL selection)
+	XferVersion currentVersion = 3;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -716,6 +722,14 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 
 	// height at launch
 	xfer->xferReal( &m_heightAtLaunch );
+
+	// launch pos
+	if( version >= 2 )
+		xfer->xferCoord3D( &m_launchPos );
+
+	// launch veterancy
+	if( version >= 3 )
+		xfer->xferUser( &m_launchVeterancy, sizeof( m_launchVeterancy ) );
 
 	// decal, if any
 	m_deliveryDecal.xferRadiusDecal(xfer);

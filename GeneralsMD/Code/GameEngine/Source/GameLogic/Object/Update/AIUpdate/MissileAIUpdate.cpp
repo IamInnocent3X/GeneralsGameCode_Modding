@@ -178,6 +178,8 @@ MissileAIUpdate::MissileAIUpdate( Thing *thing, const ModuleData* moduleData ) :
 	m_extraBonusFlags = 0;
 	m_extraBonusCustomFlags.clear();
 	m_originalTargetPos.zero();
+	m_launchPos.zero();
+	m_launchVeterancy = LEVEL_REGULAR;
 	m_framesTillDecoyed = 0;
 	m_noDamage = FALSE;
 	m_isJammed = FALSE;
@@ -245,6 +247,8 @@ void MissileAIUpdate::projectileLaunchAtObjectOrPosition(
 	DEBUG_ASSERTCRASH(specificBarrelToUse>=0, ("specificBarrelToUse must now be explicit"));
 
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
+	if (launcher)
+		m_launchPos = *launcher->getPosition();
 	m_detonationWeaponTmpl = detWeap;
 	m_extraBonusFlags = launcher ? launcher->getWeaponBonusCondition() : 0;
 	if(launcher)
@@ -1472,7 +1476,7 @@ void MissileAIUpdate::crc( Xfer *xfer )
 void MissileAIUpdate::xfer( Xfer *xfer )
 {
   // version
-  const XferVersion currentVersion = 7;
+  const XferVersion currentVersion = 9;
   XferVersion version = currentVersion;
   xfer->xferVersion( &version, currentVersion );
 
@@ -1526,7 +1530,8 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 
 	if (version >= 4)
 	{
-		xfer->xferUnsignedInt(&m_extraBonusFlags);
+		m_extraBonusFlags.xfer(xfer);
+		//xfer->xferUnsignedInt(&m_extraBonusFlags);
 		xfer->xferUser( &m_exhaustID, sizeof( m_exhaustID ) );
 	}
 
@@ -1576,6 +1581,16 @@ void MissileAIUpdate::xfer( Xfer *xfer )
 				m_extraBonusCustomFlags.push_back(bonusName);
 			}
 		}
+	}
+
+	if( version >= 8 )
+	{
+		xfer->xferCoord3D( &m_launchPos );
+	}
+
+	if( version >= 9 )
+	{
+		xfer->xferUser( &m_launchVeterancy, sizeof( m_launchVeterancy ) );
 	}
 }
 

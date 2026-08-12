@@ -219,7 +219,11 @@ protected:
 	/// This is the game logic execution function that all real CrateCollides will implement
 	virtual Bool executeCrateBehavior( Object *other );
 
+	/// This is used for a variation of crate collide function that differs from executeCrateBehavior for ChatCommands... Do not imitate
+	virtual Bool friend_executeCrateBehavior( Object *other );
+
 private:
+	Bool executeCrateFunction( Object *other );
 	Bool eligibleForWeaponSet( Object *other );
 	Bool eligibleForArmorSet( Object *other );
 	Bool eligibleForLevel( Object *other );

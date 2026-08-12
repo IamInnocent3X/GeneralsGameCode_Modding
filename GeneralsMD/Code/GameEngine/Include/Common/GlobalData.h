@@ -340,6 +340,8 @@ public:
 	// Latency insertion, packet loss for network debugging
 	Int m_netMinPlayers;					///< Min players needed to start a net game
 
+	Bool m_enableSingleplayerChatWindow;	///< Allow the in-game chat window in singleplayer/skirmish (for chat commands)
+
 	UnsignedInt m_defaultIP;			///< preferred IP address for LAN
 	UnsignedInt m_firewallBehavior;	///< Last detected firewall behavior
 	Bool m_firewallSendDelay;			///< Use send delay for firewall connection negotiations
@@ -610,6 +612,9 @@ public:
 	DeathTypeFlags m_defaultExcludedDeathTypes;
 	Bool m_heightAboveTerrainIncludesWater;
 	Bool m_hideScorchmarksAboveGround;
+	Bool m_weaponScatterOnWaterSurfaceDefault;	///< default for WeaponTemplate ScatterOnWaterSurface when not set per-weapon
+	Bool m_reverseMoveIgnoreAngleThreshold;	///< if true, a manual REVERSE_MOVE order reverses regardless of heading; if false, only when the goal is behind us
+	Real m_smartGarrisonRange;	///< radius searched for additional transports by the Smart Garrison command
 
 	// Water depth lighting
 	RGBColor m_terrainHeightAmbientLightColor1;
@@ -642,14 +647,14 @@ public:
 
 	Bool m_fixHulksFreezingAboveTerrain;
 
-	Bool m_fixAIPathfindClumpForManyPlayers;
+	/*Bool m_fixAIPathfindClumpForManyPlayers;
 	Bool m_useNonRetailAIPathfind;
 	Bool m_useNonRetailAIPathfindAllocation;
 	Bool m_useNonRetailAIPathfindDynamicAlloc; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfindDoublyLinkedList; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfindOpenSortedList; // Credits to: Mauller
 	Bool m_useNonRetailAIPathfindSuperSkip; // Credits to: Mauller
-	Bool m_useNonRetailAIPathfindReverseTransverseInsertion; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindReverseTransverseInsertion; // Credits to: Mauller*/
 	Bool m_dynamicTargeting;
 	Bool m_useAccurateSphereToRectCollision;
 	Bool m_checkBoxBoundariesForDistCalc;
@@ -659,6 +664,15 @@ public:
 
 	Real m_formationBlockedSpeedPenalty;
 	Real m_globalReverseMoveSpeedPenalty;
+
+	Bool m_enableReverseMoveByDefaultForWheels;	///< configuration for enabling reverse move by default for all non-motorcycles vehicles & ships
+	Bool m_enableReverseMoveByDefaultForTreads;
+	Bool m_enableReverseMoveByDefaultForShips;
+	Bool m_enableReverseMoveByDefaultForHover;
+	Bool m_enableReverseMoveByDefaultForThrust;
+	Bool m_enableReverseMoveByDefaultForOther;
+
+	Bool m_accelerateObjectsWithLowAccel;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }

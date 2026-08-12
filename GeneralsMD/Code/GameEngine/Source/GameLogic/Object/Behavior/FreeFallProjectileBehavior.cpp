@@ -119,6 +119,8 @@ FreeFallProjectileBehavior::FreeFallProjectileBehavior(Thing* thing, const Modul
 	m_victimID = INVALID_ID;
 	m_shrapnelLaunchID = INVALID_ID;
 	m_targetPos.zero();
+	m_launchPos.zero();
+	m_launchVeterancy = LEVEL_REGULAR;
 	m_targetPosBackup.zero();
 	m_assignedBackup = FALSE;
 	m_detonationWeaponTmpl = nullptr;
@@ -213,6 +215,8 @@ void FreeFallProjectileBehavior::projectileLaunchAtObjectOrPosition(
 	DEBUG_ASSERTCRASH(specificBarrelToUse >= 0, ("specificBarrelToUse must now be explicit"));
 
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
+	if (launcher)
+		m_launchPos = *launcher->getPosition();
 	m_extraBonusFlags = launcher ? launcher->getWeaponBonusCondition() : 0;
 	if(launcher)
 		m_extraBonusCustomFlags = launcher->getCustomWeaponBonusCondition();
@@ -552,7 +556,9 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	// 2: Added m_launchPos (for DamageFactorAtMaxRange)
+	// 3: Added m_launchVeterancy (for veterancy FX/OCL selection)
+	XferVersion currentVersion = 3;
 	XferVersion version = currentVersion;
 	xfer->xferVersion(&version, currentVersion);
 
@@ -571,6 +577,14 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 	xfer->xferCoord3D(&m_targetPosBackup);
 
 	xfer->xferBool( &m_assignedBackup );
+
+	// launch pos
+	if (version >= 2)
+		xfer->xferCoord3D(&m_launchPos);
+
+	// launch veterancy
+	if (version >= 3)
+		xfer->xferUser(&m_launchVeterancy, sizeof(m_launchVeterancy));
 
 	// weapon template
 	AsciiString weaponTemplateName;
@@ -618,7 +632,8 @@ void FreeFallProjectileBehavior::xfer(Xfer* xfer)
 
 	xfer->xferObjectID(&m_shrapnelLaunchID);
 
-	xfer->xferUnsignedInt(&m_extraBonusFlags);
+	m_extraBonusFlags.xfer(xfer);
+	//xfer->xferUnsignedInt(&m_extraBonusFlags);
 
 	if( xfer->getXferMode() == XFER_SAVE )
 	{

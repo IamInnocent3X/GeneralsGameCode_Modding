@@ -271,6 +271,10 @@ public:
 	void addPowerBonus(Object *obj) { m_energy.addPowerBonus(obj); }
 	void removePowerBonus(Object *obj) { m_energy.removePowerBonus(obj); }
 
+	/// cheat: set/toggle infinite power, refreshing power-dependent objects to match.
+	void setInfinitePower(Bool enable);
+	void toggleInfinitePower() { setInfinitePower( !m_energy.hasInfinitePower() ); }
+
 	ResourceGatheringManager *getResourceGatheringManager(){ return m_resourceGatheringManager; }
 	TunnelTracker* getTunnelSystem(){ return m_tunnelSystem; }
 
@@ -377,6 +381,11 @@ public:
 	Bool buildsInstantly() const { return m_DEMO_instantBuild; }
 #endif
 
+	/// When set, unit/building build prerequisites are ignored for this player (science prereqs still apply).
+	void toggleIgnoreUnitPrereqs() { m_ignoreUnitPrereqs = !m_ignoreUnitPrereqs; }
+	void setIgnoreUnitPrereqs(Bool enable) { m_ignoreUnitPrereqs = enable; }
+	Bool ignoresUnitPrereqs() const { return m_ignoreUnitPrereqs; }
+
 	///< Power just changed at all.  Didn't make two functions so you can't forget to undo something you didin one of them.
 	///< @todo Can't do edge trigger until after demo; make things check for power on creation
 	void onPowerBrownOutChange( Bool brownOut );
@@ -433,6 +442,10 @@ public:
 		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE, UnsignedInt frame = 0);
 	/// Returns production cost change based on typeof (Used for upgrades)
 	Real getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const;
+
+	/// Build-speed multiplier applied to units, upgrades and buildings. >1 builds faster. Set via the ProductionSpeedMultiplier chat command.
+	Real getProductionSpeedMultiplier() const { return m_productionSpeedMultiplier; }
+	void setProductionSpeedMultiplier( Real m ) { m_productionSpeedMultiplier = m; }
 
 
 	/** Return bonus or penalty for construction of this thing.
@@ -643,6 +656,9 @@ public:
 
 	/// Build structure type on front or flank of base.  Gets passed to aiPlayer.
 	void buildBaseDefenseStructure(const AsciiString &thingName, Bool flank);
+
+	/// Build shipyard. Gets passed to aiPlayer.
+	void buildShipyard(const AsciiString& thingName);
 
 	/// Recruits an instance of a specific team.  Gets passed to aiPlayer.
 	void recruitSpecificTeam(TeamPrototype *teamProto, Real recruitRadius);
@@ -882,6 +898,8 @@ private:
 	Bool									m_DEMO_instantBuild;		///< Can I build anything in one frame?
 #endif
 
+	Bool									m_ignoreUnitPrereqs;		///< ignore unit/building build prereqs (science prereqs still apply)
+
 	ScoreKeeper						m_scoreKeeper;					///< The local scorekeeper for this player
 
 	// Production Cost modifier
@@ -890,6 +908,9 @@ private:
 	mutable KindOfPercentProductionChangeList m_kindOfPercentProductionChangeList;
 	// Production Time modifier (we can re-use the same types)
 	mutable KindOfPercentProductionChangeList m_kindOfPercentProductionTimeChangeList;
+
+	// Global build-speed multiplier for this player (>1 = faster). Defaults to 1.0 (no change).
+	Real m_productionSpeedMultiplier;
 
 
 	typedef std::list<SpecialPowerReadyTimerType> SpecialPowerReadyTimerList;

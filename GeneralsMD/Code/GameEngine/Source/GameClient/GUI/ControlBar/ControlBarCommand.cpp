@@ -51,6 +51,7 @@
 #include "GameLogic/Module/SpecialAbilityUpdate.h"
 #include "GameLogic/Module/VeterancyGainCreate.h"
 #include "GameLogic/Module/HackInternetAIUpdate.h"
+#include "GameLogic/Module/DrawBridgeTowerUpdate.h"
 #include "GameLogic/Weapon.h"
 
 #include "GameClient/InGameUI.h"
@@ -182,9 +183,7 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = transport->getCommandModifierOverrideForSlot(i); 
-		if(commandButton == nullptr) 
-			commandButton =  commandSet->getCommandButton(i);
+		commandButton = transport->getCommandButtonForSlot(i, commandSet);
 
 		// is this an inventory exit command
 		if( commandButton && commandButton->getCommandType() == GUI_COMMAND_EXIT_CONTAINER )
@@ -307,9 +306,7 @@ void ControlBar::populateCommand( Object *obj )
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = obj->getCommandModifierOverrideForSlot(i); 
-		if(commandButton == nullptr) 
-			commandButton =  commandSet->getCommandButton(i);
+		commandButton = obj->getCommandButtonForSlot(i, commandSet);
 
 		// if button is not present, just hide the window
 		if( commandButton == nullptr )
@@ -975,6 +972,10 @@ const Image* ControlBar::calculateVeterancyOverlayForThing( const ThingTemplate 
 			return m_rankEliteIcon;
 		case LEVEL_HEROIC:
 			return m_rankHeroicIcon;
+		case LEVEL_FOUR:
+			return m_rankFourIcon;
+		case LEVEL_FIVE:
+			return m_rankFiveIcon;
 	}
 	return nullptr;
 }
@@ -997,6 +998,10 @@ const Image* ControlBar::calculateVeterancyOverlayForObject( const Object *obj )
 			return m_rankEliteIcon;
 		case LEVEL_HEROIC:
 			return m_rankHeroicIcon;
+		case LEVEL_FOUR:
+			return m_rankFourIcon;
+		case LEVEL_FIVE:
+			return m_rankFiveIcon;
 	}
 	return nullptr;
 }
@@ -1498,6 +1503,15 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				static NameKeyType key_BattlePlanUpdate = NAMEKEY( "BattlePlanUpdate" );
 				BattlePlanUpdate *update = (BattlePlanUpdate*)obj->findUpdateModule( key_BattlePlanUpdate );
 				if( update && update->getCommandOption() & command->getOptions() )
+				{
+					return COMMAND_ACTIVE;
+				}
+			}
+			else if (mod->getSpecialPowerTemplate()->getSpecialPowerType() == SPECIAL_TOGGLE_DRAWBRIDGE)
+			{
+				static NameKeyType key_drawBridgeTowerUpdate = NAMEKEY("DrawBridgeTowerUpdate");
+				DrawBridgeTowerUpdate* update = (DrawBridgeTowerUpdate*)obj->findUpdateModule(key_drawBridgeTowerUpdate);
+				if (update && update->getCommandOption() & command->getOptions())
 				{
 					return COMMAND_ACTIVE;
 				}

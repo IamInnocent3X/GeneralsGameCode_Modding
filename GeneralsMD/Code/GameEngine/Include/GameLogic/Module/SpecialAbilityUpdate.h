@@ -78,6 +78,8 @@ public:
 	Bool									m_approachRequiresLOS;
   Bool                  m_needToFaceTarget;
   Bool                  m_persistenceRequiresRecharge;
+  Bool                  m_requiresMoveToTurn;	///< if set, orient by moving toward target (for locomotors that can't turn in place) instead of facing in place
+  Real                  m_facingAngleTolerance;	///< heading delta (radians) considered "facing target" when m_requiresMoveToTurn
   Bool					m_useSabotageBehavior;
   Bool					m_canHackOrCaptureAirborneTargets;
   Bool					m_destroyOnExecute;
@@ -130,6 +132,8 @@ public:
 		m_preTriggerUnstealthFrames = 0;
     m_needToFaceTarget = TRUE;
     m_persistenceRequiresRecharge = FALSE;
+    m_requiresMoveToTurn = FALSE;
+    m_facingAngleTolerance = 0.1f;	// ~5.7 degrees
 	m_targetsMask = 0;
 	m_kindOf = KINDOFMASK_NONE;
 	m_forbiddenKindOf.clear();
@@ -188,6 +192,8 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+      { "RequiresMoveToTurn",         INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_requiresMoveToTurn ) },
+      { "FacingAngleTolerance",       INI::parseAngleReal,							nullptr, offsetof( SpecialAbilityUpdateModuleData, m_facingAngleTolerance ) },
 	  		{ "WeaponSlot",						INI::parseQuotedAsciiString,		nullptr, offsetof( SpecialAbilityUpdateModuleData, m_weaponSlotName ) },
 	  		{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( SpecialAbilityUpdateModuleData, m_disabledType ) },
 			{ "UseSabotageBehavior",				INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_useSabotageBehavior ) },
@@ -326,6 +332,7 @@ private:
 	ObjectID											m_targetID;
 	DrawableID											m_targetDrawID;
 	Coord3D												m_targetPos;
+	UnsignedInt										m_commandOptions;	//Command option flags this ability was triggered with (e.g. FORMATION_LAUNCH).
 	Int														m_locationCount;
 	std::list<ObjectID>						m_specialObjectIDList; //The list of special objects
 	UnsignedInt										m_specialObjectEntries;				 //The size of the list of member Objects

@@ -93,6 +93,20 @@ const char* const WeaponSetFlags::s_bitNameList[] =
 	"GARRISONED",
 	"CONTAINED",
 
+	//New Veterancy levels
+	"LEVEL_FOUR",
+	"LEVEL_FIVE",
+
+	//Additional rider slots
+	"WEAPON_RIDER9",
+	"WEAPON_RIDER10",
+	"WEAPON_RIDER11",
+	"WEAPON_RIDER12",
+	"WEAPON_RIDER13",
+	"WEAPON_RIDER14",
+	"WEAPON_RIDER15",
+	"WEAPON_RIDER16",
+
 	nullptr
 };
 static_assert(ARRAY_SIZE(WeaponSetFlags::s_bitNameList) == WeaponSetFlags::NumBits + 1, "Incorrect array size");
@@ -358,7 +372,6 @@ void WeaponSet::updateWeaponSet(const Object* obj)
 		m_hasDamageWeapon = false;
 		for (Int i = WEAPONSLOT_COUNT - 1; i >= PRIMARY_WEAPON ; --i)
 		{
-			m_weapons[i] = nullptr;
 			if (set->isWeaponReloadSharedAcrossSets() && (m_weapons[i] != nullptr)) {  //This is a bit of redundant code, but it keeps it cleaner overall.
 
 				// if shareReloadTime, use first prevWeapon for all slots

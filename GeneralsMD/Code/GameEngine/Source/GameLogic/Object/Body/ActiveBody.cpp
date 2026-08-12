@@ -547,7 +547,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					//{
 					//	//Bike is moving, so just blow it up instead.
 					//	if (killer)
-					//		killer->scoreTheKill( obj );
+					//		killer->scoreTheKill( obj, damageInfo );
 					//	obj->kill();
 					//}
 					//else
@@ -562,7 +562,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					//
 					//		//Kill the rider.
 					//		if (killer)
-					//			killer->scoreTheKill(rider);
+					//			killer->scoreTheKill(rider, damageInfo);
 					//		rider->kill();
 					//	}
 					//}
@@ -575,10 +575,10 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					{
 #if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
 						if(rider)
-							killer->scoreTheKill(rider);
+							killer->scoreTheKill(rider, damageInfo);
 #else
 						if (contain->getKillScoreCreditObj(killer))
-							killer->scoreTheKill( contain->getKillScoreCreditObj(killer) );
+							killer->scoreTheKill( contain->getKillScoreCreditObj(killer), damageInfo );
 #endif
 					}
 
@@ -661,7 +661,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 						if (!thingToKill->isEffectivelyDead() )
 						{
 							if (killer)
-								killer->scoreTheKill( thingToKill );
+								killer->scoreTheKill( thingToKill, damageInfo );
 							thingToKill->kill();
 							++numKilled;
 							thingToKill->getControllingPlayer()->getAcademyStats()->recordClearedGarrisonedBuilding();
@@ -758,7 +758,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 					if (!thingToKill->isEffectivelyDead() )
 					{
 						if (killer)
-							killer->scoreTheKill( thingToKill );
+							killer->scoreTheKill( thingToKill, damageInfo );
 						thingToKill->kill();
 						++numKilled;
 						thingToKill->getControllingPlayer()->getAcademyStats()->recordClearedGarrisonedBuilding();
@@ -940,7 +940,7 @@ void ActiveBody::attemptDamage( DamageInfo *damageInfo )
 			// Give our killer credit for killing us, if there is one.
 			if( killer )
 			{
-				killer->scoreTheKill( obj );
+				killer->scoreTheKill( obj, damageInfo );
 			}
 
 			obj->doHijackerUpdate(TRUE, FALSE, damageInfo->in.m_clearsParasite, damageInfo->in.m_clearsParasiteKeys, damageInfo->in.m_sourceID );
@@ -2603,27 +2603,31 @@ void ActiveBody::onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLeve
 	// now change the cur (setMaxHealth now handles it)
 	//internalChangeHealth( newHealth - m_currentHealth );
 
+	// Clear every veterancy armor-set flag first, then set the one for the new level, so promotions and
+	// demotions (including into/out of the new FOUR/FIVE ranks) stay clean.
+	clearArmorSetFlag(ARMORSET_VETERAN);
+	clearArmorSetFlag(ARMORSET_ELITE);
+	clearArmorSetFlag(ARMORSET_HERO);
+	clearArmorSetFlag(ARMORSET_FOUR);
+	clearArmorSetFlag(ARMORSET_FIVE);
 	switch (newLevel)
 	{
 		case LEVEL_REGULAR:
-			clearArmorSetFlag(ARMORSET_VETERAN);
-			clearArmorSetFlag(ARMORSET_ELITE);
-			clearArmorSetFlag(ARMORSET_HERO);
 			break;
 		case LEVEL_VETERAN:
 			setArmorSetFlag(ARMORSET_VETERAN);
-			clearArmorSetFlag(ARMORSET_ELITE);
-			clearArmorSetFlag(ARMORSET_HERO);
 			break;
 		case LEVEL_ELITE:
-			clearArmorSetFlag(ARMORSET_VETERAN);
 			setArmorSetFlag(ARMORSET_ELITE);
-			clearArmorSetFlag(ARMORSET_HERO);
 			break;
 		case LEVEL_HEROIC:
-			clearArmorSetFlag(ARMORSET_VETERAN);
-			clearArmorSetFlag(ARMORSET_ELITE);
 			setArmorSetFlag(ARMORSET_HERO);
+			break;
+		case LEVEL_FOUR:
+			setArmorSetFlag(ARMORSET_FOUR);
+			break;
+		case LEVEL_FIVE:
+			setArmorSetFlag(ARMORSET_FIVE);
 			break;
 	}
 }

@@ -384,7 +384,15 @@ Object *BuildAssistant::buildObjectNow( Object *constructorObject, const ThingTe
 		Coord3D groundPos;
 		groundPos.x = pos->x;
 		groundPos.y = pos->y;
-		groundPos.z = TheTerrainLogic->getGroundHeight( groundPos.x, groundPos.y );
+		if (!what->isKindOf(KINDOF_SHIPYARD)) {
+			groundPos.z = TheTerrainLogic->getGroundHeight(groundPos.x, groundPos.y);
+		}
+		else {
+			//If shipyard adjust to water height
+			Real waterZ{ 0.0 }, terrainZ{ 0.0 };
+			TheTerrainLogic->isUnderwater(groundPos.x, groundPos.y, &waterZ, &terrainZ);
+			groundPos.z = std::max(waterZ, terrainZ);
+		}
 		obj->setPosition( &groundPos );
 
 		obj->setOrientation( angle );
@@ -1152,6 +1160,11 @@ LegalBuildCode BuildAssistant::isLocationLegalToBuild( const Coord3D *worldPos,
 		else {
 			// IF Shipyard need some special code
 
+			// check if building center is in a NO_SHIPYARD map area
+			if (TheTerrainLogic->isInNoShipyardZone(worldPos)) {
+				return LBC_RESTRICTED_TERRAIN;
+			}
+
 			//
 			// check the footprint of where the structure would go to be clear of any non-buildable
 			// tiles and to make sure there isn't a restricted tile and to make sure it's "flat" enough
@@ -1419,9 +1432,7 @@ Bool BuildAssistant::isPossibleToMakeUnit( Object *builder, const ThingTemplate 
 	{
 
 		// get this button
-		commandButton = builder->getCommandModifierOverrideForSlot(i); 
-		if(commandButton == nullptr) 
-			commandButton =  commandSet->getCommandButton(i);
+		commandButton = builder->getCommandButtonForSlot(i, commandSet); 
 
 		if( commandButton &&
 				(commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD || commandButton->getCommandType() == GUI_COMMAND_DOZER_CONSTRUCT) &&

@@ -113,6 +113,9 @@ public:
 	virtual Bool projectileHandleCollision( Object *other );
 	virtual Bool projectileIsArmed() const { return m_isArmed; }
 	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) { m_launchVeterancy = v; }
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
 	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ); ///< Number of frames till missile diverts to countermeasures.
 	virtual void projectileNowJammed(Bool noDamage = FALSE);///< We lose our Object target and scatter to the ground
 	virtual void projectileNowDrawn(ObjectID attractorID);
@@ -130,10 +133,13 @@ public:
 	virtual UpdateSleepTime update();
 	virtual void onDelete();
 
+	virtual void switchToState(MissileStateType s);
+
+	virtual MissileStateType getMissileState() { return m_state; }
 
 protected:
 
-	void detonate();
+	virtual void detonate();
 
 private:
 
@@ -148,6 +154,8 @@ private:
 	Real									m_maxAccel;
 	Coord3D								m_originalTargetPos;			///< When firing uphill, we aim high to clear the brow of the hill.  jba.
 	Coord3D								m_prevPos;
+	Coord3D								m_launchPos;							///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	VeterancyLevel				m_launchVeterancy;				///< launcher's veterancy at launch time (for veterancy FX/OCL selection)
 	WeaponBonusConditionFlags		m_extraBonusFlags;
 	std::vector<AsciiString> 			m_extraBonusCustomFlags;
 	const WeaponTemplate*	m_detonationWeaponTmpl;		///< weapon to fire at end (or null)
@@ -180,7 +188,5 @@ private:
 	void airborneTargetGone();											///< My airborne target has died, so I have to do something cool to make up for that
 
 	void tossExhaust();
-	void switchToState(MissileStateType s);
-
 
 };

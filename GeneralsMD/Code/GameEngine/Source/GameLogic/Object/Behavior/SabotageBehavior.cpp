@@ -855,7 +855,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 			disableSPData.disableSpyVisionDoesNotResetTimer = data->m_sabotageDisableSpyVisionDoesNotResetTimer;
 		}
 	
-		Bool useCommandsUponSabotage = data->m_useCommandsUponSabotage && !obj->isNeutralControlled();
+		Bool useCommandsUponSabotage = data->m_useCommandsUponSabotage;
 		if( data->m_sabotageResetSpecialPowers ||
 			data->m_sabotageResetOCLUpdate ||
 			data->m_sabotageResetSpyVision ||
@@ -1240,7 +1240,7 @@ Bool SabotageBehavior::canDoSabotageSpecialCheck( const Object *other ) const
 		if((data->m_sabotageResetOCLUpdate || doDisableOCLUpdate) && other->getOCLUpdate())
 			return TRUE;
 
-		Bool useCommandsUponSabotage = data->m_useCommandsUponSabotage && !getObject()->isNeutralControlled();
+		Bool useCommandsUponSabotage = data->m_useCommandsUponSabotage;
 		if( data->m_sabotageResetSpecialPowers ||
 			data->m_sabotageResetSpyVision ||
 			doPauseSpecialPowers ||

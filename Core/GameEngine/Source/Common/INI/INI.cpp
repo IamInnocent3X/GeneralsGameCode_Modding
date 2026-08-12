@@ -93,6 +93,7 @@ static const BlockParse theTypeTable[] =
 	{ "BuffTemplate",					INI::parseBuffTemplateDefinition },
 	{ "Campaign",						INI::parseCampaignDefinition },
  	{ "ChallengeGenerals",				INI::parseChallengeModeDefinition },
+	{ "ChatCommand",				INI::parseChatCommandDefinition },
 	{ "CommandButton",			INI::parseCommandButtonDefinition },
 	{ "CommandMap",					INI::parseMetaMapDefinition },
 	{ "CommandMouseModifier",		INI::parseMouseCommandModifierDefinition },
@@ -948,7 +949,7 @@ void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void 
 			asv->clear();
 			return;
 		}
-		asv->push_back((WeaponBonusConditionType)INI::scanIndexList(token, TheWeaponBonusNames));
+		asv->push_back((WeaponBonusConditionType)INI::scanIndexList(token, WeaponBonusConditionFlags::getBitNames()));
 	}
 }
 
@@ -965,7 +966,7 @@ void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void 
 			asv->clear();
 			return;
 		}
-		asv->push_back((WeaponBonusConditionType)INI::scanIndexList(token, TheWeaponBonusNames));
+		asv->push_back((WeaponBonusConditionType)INI::scanIndexList(token, WeaponBonusConditionFlags::getBitNames()));
 	}
 }
 

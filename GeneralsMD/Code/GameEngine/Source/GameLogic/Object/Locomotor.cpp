@@ -334,6 +334,10 @@ LocomotorTemplate::LocomotorTemplate()
 	m_airborneTargetingHeight = INT_MAX;
 	m_stickToGround = false;
 	m_canMoveBackward = false;
+	// defaults match the values the backwards-movement logic used before these were configurable
+	m_backwardsMoveAngleThreshold = PI/2;
+	m_backwardsMoveDistanceFactorThreshold = 5.0f;
+	m_backwardsMoveSpeedFactor = 1.0f;
 	m_hasSuspension = false;
 	m_wheelTurnAngle = 0;
 	m_maximumWheelExtension = 0;
@@ -356,6 +360,8 @@ LocomotorTemplate::LocomotorTemplate()
 	m_maxReverseSpeed = 0.0f;
 	m_maxReverseSpeedDamaged = 0.0f;
 	m_minReverseSpeed = 0.0f;
+
+	m_useDefaultCanMoveBackwards = true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -446,6 +452,14 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 }
 
 //-------------------------------------------------------------------------------------------------
+static void parseCanMoveBackwards( INI* ini, void* instance, void * store, const void* /*userData*/ )
+{
+	LocomotorTemplate* self = (LocomotorTemplate*) instance;
+	self->declaredCanMoveBackwards();
+	*(Bool*)store = INI::scanBool(ini->getNextToken());
+}
+
+//-------------------------------------------------------------------------------------------------
 const FieldParse* LocomotorTemplate::getFieldParse() const
 {
 	static const FieldParse TheFieldParse[] =
@@ -497,7 +511,10 @@ const FieldParse* LocomotorTemplate::getFieldParse() const
 		{ "LocomotorWorksWhenDisabled", INI::parseBool, nullptr, offsetof(LocomotorTemplate, m_locomotorWorksWhenDisabled) },
 		{ "AirborneTargetingHeight", INI::parseInt, nullptr, offsetof( LocomotorTemplate, m_airborneTargetingHeight ) },
 		{ "StickToGround",				INI::parseBool,			nullptr,	offsetof(LocomotorTemplate, m_stickToGround) },
-		{ "CanMoveBackwards",				INI::parseBool,			nullptr,	offsetof(LocomotorTemplate, m_canMoveBackward) },
+		{ "CanMoveBackwards",				parseCanMoveBackwards,			nullptr,	offsetof(LocomotorTemplate, m_canMoveBackward) },
+		{ "BackwardsMoveAngleThreshold",				INI::parseAngleReal,	nullptr,	offsetof(LocomotorTemplate, m_backwardsMoveAngleThreshold) },
+		{ "BackwardsMoveDistanceFactorThreshold",	INI::parseReal,			nullptr,	offsetof(LocomotorTemplate, m_backwardsMoveDistanceFactorThreshold) },
+		{ "BackwardsMoveSpeedFactor",				INI::parseReal,			nullptr,	offsetof(LocomotorTemplate, m_backwardsMoveSpeedFactor) },
 		{ "HasSuspension",				INI::parseBool,			nullptr,	offsetof(LocomotorTemplate, m_hasSuspension) },
 		{ "FrontWheelTurnAngle", INI::parseAngleReal, nullptr, offsetof(LocomotorTemplate, m_wheelTurnAngle) },
 		{ "MaximumWheelExtension", INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_maximumWheelExtension) },
@@ -743,6 +760,9 @@ Locomotor::Locomotor(const LocomotorTemplate* tmpl)
 	m_donutTimer = TheGameLogic->getFrame()+DONUT_TIME_DELAY_SECONDS*LOGICFRAMES_PER_SECOND;
 
 	m_speedMultiplier = 1.0;
+
+	m_previousTurnAccelAddition = 0.0f;
+	m_previousTurnAccelStuckFrames = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -839,6 +859,9 @@ void Locomotor::xfer( Xfer *xfer )
 
 	xfer->xferReal(&m_speedMultiplier);
 
+	xfer->xferInt(&m_previousTurnAccelStuckFrames);
+	xfer->xferReal(&m_previousTurnAccelAddition);
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -857,55 +880,42 @@ void Locomotor::startMove()
 }
 
 //-------------------------------------------------------------------------------------------------
-Real Locomotor::getMaxSpeedForCondition(BodyDamageType condition) const
+Real Locomotor::getMaxSpeedForCondition(BodyDamageType condition, Bool reverse) const
 {
-	Real speed;
-
-	if( IS_CONDITION_BETTER( condition, TheGlobalData->m_movementPenaltyDamageState ) )
-		speed = m_template->m_maxSpeed;
-	else
-		speed = m_template->m_maxSpeedDamaged;
-
-	speed *= m_speedMultiplier;
-
-	if (speed > m_maxSpeed)
-		speed = m_maxSpeed;
-
-	return speed;
-}
-
-//-------------------------------------------------------------------------------------------------
-Real Locomotor::getReverseMaxSpeedForCondition(BodyDamageType condition) const
-{
-	Real speed;
-	Bool useDefault = TRUE;
+	Real speed, forwardSpeed;
+	Bool useReverseSpeed;
 
 	if( IS_CONDITION_BETTER( condition, TheGlobalData->m_movementPenaltyDamageState ) )
 	{
-		useDefault = m_template->m_maxReverseSpeed <= 0.0f;
-		speed = useDefault ? m_template->m_maxSpeed : m_template->m_maxReverseSpeed;
+		useReverseSpeed = reverse && m_template->m_maxReverseSpeed > 0.0f;
+		speed = useReverseSpeed ? m_template->m_maxReverseSpeed : m_template->m_maxSpeed;
+		if(reverse) forwardSpeed = m_template->m_maxSpeed;
 	}
 	else
 	{
-		useDefault = m_template->m_maxReverseSpeedDamaged <= 0.0f;
-		speed = useDefault ? m_template->m_maxSpeedDamaged : m_template->m_maxReverseSpeedDamaged;
+		useReverseSpeed = reverse && m_template->m_maxReverseSpeedDamaged > 0.0f;
+		speed = useReverseSpeed ? m_template->m_maxReverseSpeedDamaged : m_template->m_maxSpeedDamaged;
+		if(reverse) forwardSpeed = m_template->m_maxReverseSpeedDamaged;
 	}
 
 	speed *= m_speedMultiplier;
 
-	Real factor = max(0.0f, 1.0f - TheGlobalData->m_globalReverseMoveSpeedPenalty);
-	speed *= factor;
+	if(reverse) {
+		Real factor = max(0.0f, 1.0f - TheGlobalData->m_globalReverseMoveSpeedPenalty);
+		speed *= factor;
+		// Limit reverse speed to max speed if there is speed penalty configured with positive values
+		// Is it really needed?
+		if(TheGlobalData->m_globalReverseMoveSpeedPenalty > 0.0f && useReverseSpeed)
+		{
+			forwardSpeed *= factor;
+			if(speed > forwardSpeed)
+				speed = forwardSpeed;
+		}
+	}
 
 	if (speed > m_maxSpeed)
 		speed = m_maxSpeed;
 
-	if(TheGlobalData->m_globalReverseMoveSpeedPenalty > 0.0f && !useDefault)
-	{
-		Real forwardSpeed = getMaxSpeedForCondition(condition);
-		forwardSpeed *= factor;
-		if(speed > forwardSpeed)
-			speed = forwardSpeed;
-	}
 	return speed;
 }
 
@@ -1035,12 +1045,12 @@ void Locomotor::locoUpdate_moveTowardsAngle(Object* obj, Real goalAngle)
 }
 
 //-------------------------------------------------------------------------------------------------
-PhysicsTurningType Locomotor::rotateTowardsPosition(Object* obj, const Coord3D& goalPos, Real *relAngle, Bool isReverse)
+PhysicsTurningType Locomotor::rotateTowardsPosition(Object* obj, const Coord3D& goalPos, Real *relAngle)
 {
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
 	Real turnRate = getMaxTurnRate(bdt);
 
-	PhysicsTurningType rotating = rotateObjAroundLocoPivot(obj, goalPos, turnRate, relAngle, isReverse);
+	PhysicsTurningType rotating = rotateObjAroundLocoPivot(obj, goalPos, turnRate, relAngle);
 	return rotating;
 }
 
@@ -1069,19 +1079,19 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	setFlag(MAINTAIN_POS_IS_VALID, false);
 
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-	Bool moveBackwards = obj->getIsDoingReverseMove();
-	if(moveBackwards)
+
+	PhysicsBehavior *physics = obj->getPhysics();
+	if (physics == nullptr)
 	{
-		Real angle = obj->getOrientation();
-//		Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//		Real desiredAngle = angle + relAngle;
-		Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-		Real relAngle = stdAngleDiff(desiredAngle, angle);
-		if(fabs(relAngle) < PI/2)
-			moveBackwards = FALSE;
+		DEBUG_CRASH(("you can only apply Locomotors to objects with Physics"));
+		return;
 	}
 
-	Real maxSpeed = moveBackwards ? getReverseMaxSpeedForCondition(bdt) : getMaxSpeedForCondition(bdt);
+	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
+	Real relAngle = stdAngleDiff(desiredAngle, obj->getOrientation());
+	Bool moveBackwards = shouldMoveBackwards(obj, physics, relAngle, onPathDistToGoal);
+
+	Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
 
 	// sanity, we cannot use desired speed that is greater than our max speed we are capable of moving at
 	if( desiredSpeed > maxSpeed )
@@ -1092,12 +1102,6 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 	{
 		setFlag(IS_BRAKING, false);
 		m_brakingFactor = 1.0f;
-	}
-	PhysicsBehavior *physics = obj->getPhysics();
-	if (physics == nullptr)
-	{
-		DEBUG_CRASH(("you can only apply Locomotors to objects with Physics"));
-		return;
 	}
 
 	// Skip moveTowardsPosition if physics say you're stunned
@@ -1185,7 +1189,7 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 		Real turnRate = getMaxTurnRate(obj->getBodyModule()->getDamageState());
 		if (m_template->m_wanderWidthFactor == 0.0f)
 		{
-			*blocked = (TURN_NONE != rotateObjAroundLocoPivot(obj, goalPos, turnRate, nullptr, moveBackwards));
+			*blocked = (TURN_NONE != rotateObjAroundLocoPivot(obj, goalPos, turnRate, nullptr));
 		}
 
 		// it is very important to be sure to call this in all situations, even if not moving in 2d space.
@@ -1237,7 +1241,7 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 					break;
 			case LOCO_OTHER:
 			default:
-					moveTowardsPositionOther(obj, physics, goalPos, onPathDistToGoal, desiredSpeed, TRUE);
+					moveTowardsPositionOther(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
 					break;
 		}
 	}
@@ -1399,6 +1403,7 @@ void Locomotor::locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D&
 		}	else {
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
 		}
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;*/
 
 		/*
@@ -1450,24 +1455,103 @@ void Locomotor::locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D&
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+// Decide (with hysteresis) whether a can-rotate-in-place locomotor (treads/hover) should reverse toward
+// a goal that is behind it instead of turning all the way around. Mirrors the wheels heuristic: only
+// start reversing while essentially stopped, when the goal is behind us (relAngle > 90 degrees) AND close
+// enough that backing up beats spinning around; keep reversing until the goal is no longer behind us.
+// Maintains the MOVING_BACKWARDS flag (also read by collision code via isMovingBackwards()).
+//-------------------------------------------------------------------------------------------------
+Bool Locomotor::shouldMoveBackwards(Object* obj, PhysicsBehavior *physics, Real relAngle, Real onPathDistToGoal)
+{
+	if (!canMoveBackwards() && !obj->getIsDoingReverseMove())
+	{
+		setFlag(MOVING_BACKWARDS, false);
+		return false;
+	}
+
+	// A REVERSE_MOVE order forces reversing for the whole path, bypassing the distance heuristic.
+	// (Still gated on CanMoveBackwards by the check above.) Unless ReverseMoveIgnoreAngleThreshold
+	// is set, we still require the goal to be behind us (same angle gate as automatic reversing),
+	// so a reverse order only engages when the current heading allows it.
+	if (obj->getAIUpdateInterface() && obj->getAIUpdateInterface()->isForcedMoveBackwards()
+			&& (TheGlobalData->m_reverseMoveIgnoreAngleThreshold
+					|| fabs(relAngle) > m_template->m_backwardsMoveAngleThreshold))
+	{
+		setFlag(MOVING_BACKWARDS, true);
+		return true;
+	}
+
+	const Real angleThreshold = m_template->m_backwardsMoveAngleThreshold;
+	const Real reverseDist = m_template->m_backwardsMoveDistanceFactorThreshold * obj->getGeometryInfo().getMajorRadius();
+
+	if (physics->getForwardSpeed2D() == 0.0f)
+	{
+		setFlag(MOVING_BACKWARDS, false);
+		if (fabs(relAngle) > angleThreshold && onPathDistToGoal <= reverseDist)
+			setFlag(MOVING_BACKWARDS, true);
+	}
+
+	if (getFlag(MOVING_BACKWARDS))
+	{
+		// stop reversing once the goal is in front of us again, or once it has moved beyond the reverse
+		// distance (e.g. the goal was reassigned far away) -- then turn around and drive forward instead.
+		if (fabs(relAngle) < angleThreshold || onPathDistToGoal > reverseDist)
+			setFlag(MOVING_BACKWARDS, false);
+		else
+			return true;
+	}
+	return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool Locomotor::canMoveBackwards() const
+{
+	if (!m_template->m_canMoveBackward)
+	{
+		if(m_template->m_useDefaultCanMoveBackwards) {
+			switch (m_template->m_appearance)
+			{
+				case LOCO_WHEELS_FOUR:
+					return TheGlobalData->m_enableReverseMoveByDefaultForWheels;
+					break;
+				case LOCO_TREADS:
+					return TheGlobalData->m_enableReverseMoveByDefaultForTreads;
+					break;
+				case LOCO_SHIP:
+					return TheGlobalData->m_enableReverseMoveByDefaultForShips;
+					break;
+				case LOCO_HOVER:
+					return TheGlobalData->m_enableReverseMoveByDefaultForHover;
+					break;
+				case LOCO_THRUST:
+					return TheGlobalData->m_enableReverseMoveByDefaultForThrust;
+					break;
+				case LOCO_OTHER:
+					return TheGlobalData->m_enableReverseMoveByDefaultForOther;
+					break;
+				default:
+					break;
+			}
+		}
+		return false;
+	}
+
+	return true;
+}
+
+//-------------------------------------------------------------------------------------------------
 void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed)
 {
 
 	// sanity, we cannot use desired speed that is greater than our max speed we are capable of moving at
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-	Bool moveBackwards = obj->getIsDoingReverseMove();
-	if(moveBackwards)
-	{
-		Real angle = obj->getOrientation();
-//		Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//		Real desiredAngle = angle + relAngle;
-		Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-		Real relAngle = stdAngleDiff(desiredAngle, angle);
-		if(fabs(relAngle) < PI/2)
-			moveBackwards = FALSE;
-	}
+	// Decide whether to reverse toward a goal that is behind us.
+	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
+	Real relAngle = stdAngleDiff(desiredAngle, obj->getOrientation());
+	Bool moveBackwards = shouldMoveBackwards(obj, physics, relAngle, onPathDistToGoal);
 
-	Real maxSpeed = moveBackwards ? getReverseMaxSpeedForCondition(bdt) : getMaxSpeedForCondition(bdt);
+	Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
 
 	if( desiredSpeed > maxSpeed )
 		desiredSpeed = maxSpeed;
@@ -1481,9 +1565,23 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	//
 //	Real angle = obj->getOrientation();
 //	Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//	Real desiredAngle = angle + relAngle;
-	Real relAngle ;
-	PhysicsTurningType rotating = rotateTowardsPosition(obj, goalPos, &relAngle, moveBackwards);
+//	Real desiredAngle = angle + relAngle;	
+	if (moveBackwards)
+		desiredSpeed *= m_template->m_backwardsMoveSpeedFactor;
+
+	PhysicsTurningType rotating;
+	if (moveBackwards)
+	{
+		// keep our heading and steer our rear toward the goal, then drive in reverse.
+		Coord3D backwardPos = *obj->getPosition();
+		backwardPos.x -= (goalPos.x - obj->getPosition()->x);
+		backwardPos.y -= (goalPos.y - obj->getPosition()->y);
+		rotating = rotateTowardsPosition(obj, backwardPos, &relAngle);
+	}
+	else
+	{
+		rotating = rotateTowardsPosition(obj, goalPos, &relAngle);
+	}
 	physics->setTurning(rotating);
 
 	//
@@ -1507,15 +1605,13 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 //		speed = m_minTurnSpeed;
 
 	Real actualSpeed = physics->getForwardSpeed2D();
+	if (moveBackwards)
+		actualSpeed = -actualSpeed;	// treat as speed in our direction of travel (reverse)
 	Real slowDownTime = actualSpeed / getBraking();
 	Real slowDownDist = (actualSpeed/1.50f) * slowDownTime;
 
 	if(fabs(actualSpeed) > 0)
 		obj->setLastActualSpeed(fabs(actualSpeed));
-
-	if (moveBackwards) {
-		actualSpeed = -actualSpeed;
-	}
 
 	Real distSqr = ThePartitionManager->getDistanceSquared(obj, &goalPos, FROM_BOUNDINGSPHERE_2D);
 	//if (sqr(dx)+sqr(dy)<sqr(2*PATHFIND_CELL_SIZE_F) && angleCoeff > 0.05) {
@@ -1560,18 +1656,17 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 	// Maintain goal speed
 	//
 	Real speedDelta = goalSpeed - actualSpeed;
-	if (moveBackwards) {
-		speedDelta = -goalSpeed+actualSpeed;
-	}
+	if (moveBackwards)
+		speedDelta = -goalSpeed + actualSpeed;
 	if (speedDelta != 0.0f)
 	{
 		Real mass = physics->getMass();
 		Real acceleration;
-		if (moveBackwards) {
+		if (moveBackwards)
 			acceleration = (speedDelta < 0.0f) ? -maxAcceleration : m_brakingFactor*getBraking();
-		}	else {
+		else
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -m_brakingFactor*getBraking();
-		}
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;
 
 		/*
@@ -1598,14 +1693,14 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed)
 {
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-	Real maxSpeed = getMaxSpeedForCondition(bdt);
+	//Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
 	Real maxTurnRate = getMaxTurnRate(bdt);
 	Real maxAcceleration = getMaxAcceleration(bdt);
-	Real originalDesiredSpeed = desiredSpeed;
+	//Real originalDesiredSpeed = desiredSpeed;
 
 	// sanity, we cannot use desired speed that is greater than our max speed we are capable of moving at
-	if( desiredSpeed > maxSpeed )
-		desiredSpeed = maxSpeed;
+	//if( desiredSpeed > maxSpeed )
+	//	desiredSpeed = maxSpeed;
 
 	// Locomotion for wheeled vehicles, ie trucks.
 	//
@@ -1617,16 +1712,14 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 //	Real desiredAngle = angle + relAngle;
 	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
 	Real relAngle = stdAngleDiff(desiredAngle, angle);
-	Real originalRelAngle = relAngle;
-
-	Bool moveBackwards = false;
-	Bool turningBackwards = false;
+	//Bool turningBackwards = false;
+	//Real originalRelAngle = relAngle;
 
 	// Wheeled vehicles can only turn while moving, so make sure the turn speed is reasonable.
-	if (turnSpeed < maxSpeed/4.0f)
-	{
-		turnSpeed = maxSpeed/4.0f;
-	}
+	//if (turnSpeed < maxSpeed/4.0f)
+	//{
+	//	turnSpeed = maxSpeed/4.0f;
+	//}
 
 
 	Real actualSpeed = physics->getForwardSpeed2D();
@@ -1634,51 +1727,92 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 	if(fabs(actualSpeed) > 0)
 		obj->setLastActualSpeed(fabs(actualSpeed));
 
+	Bool moveBackwards = false;
 	Bool do3pointTurn = false;
 #if 1
+	const Real backwardsAngleThreshold = m_template->m_backwardsMoveAngleThreshold;
+	const Real backwardsDist = m_template->m_backwardsMoveDistanceFactorThreshold * obj->getGeometryInfo().getMajorRadius();
+
+	// A REVERSE_MOVE order forces reversing along the whole path (no three-point turn). Unless
+	// ReverseMoveIgnoreAngleThreshold is set, we still require the goal to be behind us (same angle
+	// gate as automatic reversing), so a reverse order only engages when the heading allows it.
+	Bool locoCanMoveBackwards = canMoveBackwards();
+	const Bool forceBackwards = locoCanMoveBackwards
+		&& obj->getAIUpdateInterface() && obj->getAIUpdateInterface()->isForcedMoveBackwards()
+		&& (TheGlobalData->m_reverseMoveIgnoreAngleThreshold
+				|| fabs(relAngle) > backwardsAngleThreshold);
+	if (forceBackwards) {
+		setFlag(MOVING_BACKWARDS, true);
+		setFlag(DOING_THREE_POINT_TURN, false);
+		moveBackwards = true;
+		do3pointTurn = false;
+		desiredAngle = stdAngleDiff(desiredAngle, PI);
+		relAngle = stdAngleDiff(desiredAngle, angle);
+	}
+	else
 	if (actualSpeed==0.0f) {
 		setFlag(MOVING_BACKWARDS, false);
-		if (m_template->m_canMoveBackward && fabs(relAngle) > PI/2) {
+		if (locoCanMoveBackwards && fabs(relAngle) > backwardsAngleThreshold) {
 			setFlag(MOVING_BACKWARDS, true );
-			setFlag(DOING_THREE_POINT_TURN, onPathDistToGoal>5*obj->getGeometryInfo().getMajorRadius());
+			setFlag(DOING_THREE_POINT_TURN, onPathDistToGoal>backwardsDist);
 		}
 
 	}
-	if (getFlag(MOVING_BACKWARDS) || obj->getIsDoingReverseMove()) {
-		if (fabs(relAngle) < PI/2) {
+	// (skipped when forced: the reverse heading was already resolved above)
+	if (!forceBackwards && getFlag(MOVING_BACKWARDS)) {
+		if (fabs(relAngle) < backwardsAngleThreshold) {
 			moveBackwards = false;
 			setFlag(MOVING_BACKWARDS, false);
 		} else {
 			moveBackwards = true;
-			setFlag(DOING_THREE_POINT_TURN, onPathDistToGoal>5*obj->getGeometryInfo().getMajorRadius());
+			setFlag(DOING_THREE_POINT_TURN, onPathDistToGoal>backwardsDist);
 			do3pointTurn = getFlag(DOING_THREE_POINT_TURN);
 			if (!do3pointTurn) {
 				desiredAngle = stdAngleDiff(desiredAngle, PI);
 				relAngle = stdAngleDiff(desiredAngle, angle);
 			}
-			turningBackwards = obj->getIsDoingReverseMove() || !do3pointTurn;
+			//turningBackwards = obj->getIsDoingReverseMove() || !do3pointTurn;
 		}
 	}
 #endif
 
+	Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
+	if( desiredSpeed > maxSpeed )
+		desiredSpeed = maxSpeed;
+
+	if (turnSpeed < maxSpeed/4.0f)
+	{
+		turnSpeed = maxSpeed/4.0f;
+	}
+
 	const Real SMALL_TURN = PI / 20.0f;
-	if ( ((Real)fabs( relAngle ) > SMALL_TURN && (!obj->getIsDoingReverseMove() || !moveBackwards)) ||
-		 (moveBackwards && obj->getIsDoingReverseMove() && originalRelAngle > -SMALL_TURN && originalRelAngle < SMALL_TURN) )
+	if ((Real)fabs( relAngle ) > SMALL_TURN)
 	{
 		if (desiredSpeed>turnSpeed)
 		{
 			desiredSpeed = turnSpeed;
 		}
 	}
-	else if( obj->getIsDoingReverseMove() && moveBackwards )
-	{
-		maxSpeed = getReverseMaxSpeedForCondition(bdt);
-		if( originalDesiredSpeed > maxSpeed )
-			desiredSpeed = maxSpeed;
-	}
+//	if ( ((Real)fabs( relAngle ) > SMALL_TURN && !forceBackwards && !turningBackwards) ||
+//		 ((forceBackwards || turningBackwards) && (Real)fabs(originalRelAngle) < SMALL_TURN) )
+//	if ( ((Real)fabs( relAngle ) > SMALL_TURN && (!obj->getIsDoingReverseMove() || !moveBackwards)) ||
+//		 (moveBackwards && obj->getIsDoingReverseMove() && originalRelAngle > -SMALL_TURN && originalRelAngle < SMALL_TURN) )
+//	{
+//		if (desiredSpeed>turnSpeed)
+//		{
+//			desiredSpeed = turnSpeed;
+//		}
+//	}
+//	else if( obj->getIsDoingReverseMove() && moveBackwards )
+//	{
+//		maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
+//		if( originalDesiredSpeed > maxSpeed )
+//			desiredSpeed = maxSpeed;
+//	}
 
 	Real goalSpeed = desiredSpeed;
 	if (moveBackwards) {
+		goalSpeed *= m_template->m_backwardsMoveSpeedFactor;
 		actualSpeed = -actualSpeed;
 	}
 
@@ -1800,14 +1934,15 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 	Real turnAmount = turnFactor*maxTurnRate;
 
 	PhysicsTurningType rotating;
-	//if (moveBackwards && !do3pointTurn) {
-	//	Coord3D backwardPos = *obj->getPosition();
-	//	backwardPos.x += -(goalPos.x - obj->getPosition()->x);
-	//	backwardPos.y += -(goalPos.y - obj->getPosition()->y);
-	//	rotating = rotateObjAroundLocoPivot(obj, backwardPos, turnAmount);
-	//} else {
-		rotating = rotateObjAroundLocoPivot(obj, goalPos, turnAmount, nullptr, turningBackwards);
-	//}
+	//if (turningBackwards || (moveBackwards && !do3pointTurn)) {
+	if (moveBackwards && !do3pointTurn) {
+		Coord3D backwardPos = *obj->getPosition();
+		backwardPos.x += -(goalPos.x - obj->getPosition()->x);
+		backwardPos.y += -(goalPos.y - obj->getPosition()->y);
+		rotating = rotateObjAroundLocoPivot(obj, backwardPos, turnAmount);
+	} else {
+		rotating = rotateObjAroundLocoPivot(obj, goalPos, turnAmount);
+	}
 
 	physics->setTurning(rotating);
 
@@ -1827,6 +1962,7 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 		}	else {
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -m_brakingFactor*getBraking();
 		}
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;
 
 		/*
@@ -1920,25 +2056,53 @@ Bool Locomotor::fixInvalidPosition(Object* obj, PhysicsBehavior *physics)
 }
 
 //-------------------------------------------------------------------------------------------------
-Real Locomotor::getMinSpeed(Object *obj, const Coord3D *goalPos) const
+void Locomotor::fixAccelStuck(Real &acceleration, Real lastActualSpeed, Real actualSpeed)
 {
-	if(!obj || !goalPos || m_template->m_minReverseSpeed == 0.0f)
-		return m_template->m_minSpeed;
+	// IamInnocent - Fix objects not moving while acceleration is too low.
+	if(!getFlag(MOVING_BACKWARDS) && !TheGlobalData->m_accelerateObjectsWithLowAccel)
+		return;
 
-	Bool moveBackwards = obj->getIsDoingReverseMove();
+	// Don't accelerate objects that are braking
+	if(getFlag(IS_BRAKING))
+		return;
 
-	if(moveBackwards)
-	{
-		Real angle = obj->getOrientation();
-//		Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//		Real desiredAngle = angle + relAngle;
-		Real desiredAngle = atan2(goalPos->y - obj->getPosition()->y, goalPos->x - obj->getPosition()->x);
-		Real relAngle = stdAngleDiff(desiredAngle, angle);
-		if(fabs(relAngle) < PI/2)
-			moveBackwards = FALSE;
+	Real accelAmount = acceleration;
+	accelAmount = fabs(accelAmount);
+
+	// Only applies to low accel locomotors or locomotors with acceleration
+	if(accelAmount > 0.08f || accelAmount <= 0.0f) //or 98*SEC_PER_LOGICFRAME_SQR
+		return;
+
+	const Real LOGICFRAMES_PER_SECONDS_REAL = (Real)LOGICFRAMES_PER_SECOND;
+	const Real SECONDS_PER_LOGICFRAME_REAL = 1.0f / LOGICFRAMES_PER_SECONDS_REAL;
+	const Real SEC_PER_LOGICFRAME_SQR = (SECONDS_PER_LOGICFRAME_REAL * SECONDS_PER_LOGICFRAME_REAL);
+
+	if(lastActualSpeed >= clamp(SECONDS_PER_LOGICFRAME_REAL, accelAmount * 2.0f, 0.5f) && actualSpeed > 0.0f) {
+		//if(m_previousTurnAccelStuckFrames>=3) DEBUG_LOG(("Unstucked from Accel. Actual Speed: %f , Acceleration %f", lastActualSpeed, acceleration));
+		m_previousTurnAccelStuckFrames = 0;
+		if(m_previousTurnAccelAddition>0) {
+			m_previousTurnAccelAddition-=max(SEC_PER_LOGICFRAME_SQR, accelAmount * 0.25f);
+			if(m_previousTurnAccelAddition<0) m_previousTurnAccelAddition = 0.0f;
+		}
+		return;
 	}
 
-	return moveBackwards ? m_template->m_minReverseSpeed : m_template->m_minSpeed;
+	if(m_previousTurnAccelStuckFrames>=3 && (lastActualSpeed < SEC_PER_LOGICFRAME_SQR || (actualSpeed < SEC_PER_LOGICFRAME_SQR && lastActualSpeed > actualSpeed))) {
+		m_previousTurnAccelAddition+=max(SEC_PER_LOGICFRAME_SQR, accelAmount * 0.25f);
+		acceleration += acceleration > 0 ? m_previousTurnAccelAddition : -m_previousTurnAccelAddition;
+		//DEBUG_LOG(("Actual Speed: %f , Acceleration %f", lastActualSpeed, acceleration));
+	} else {
+		m_previousTurnAccelStuckFrames++;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Real Locomotor::getMinSpeed() const
+{
+	if(m_template->m_minReverseSpeed == 0.0f)
+		return m_template->m_minSpeed;
+
+	return isMovingBackwards() ? m_template->m_minReverseSpeed * m_template->m_backwardsMoveSpeedFactor : m_template->m_minSpeed;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2232,21 +2396,21 @@ void Locomotor::moveTowardsPositionWings(Object* obj, PhysicsBehavior *physics, 
 			Coord3D desiredPos = goalPos;
 			desiredPos.x += Cos(angleTowardPos) * turnRadius;
 			desiredPos.y += Sin(angleTowardPos) * turnRadius;
-			moveTowardsPositionOther(obj, physics, desiredPos, 0, desiredSpeed, FALSE);
+			moveTowardsPositionOther(obj, physics, desiredPos, 0, desiredSpeed);
 			return;
 		}
 	}
 #endif
 
 	// handle the 2D component.
-	moveTowardsPositionOther(obj, physics, goalPos, onPathDistToGoal, desiredSpeed, FALSE);
+	moveTowardsPositionOther(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
 }
 
 //-------------------------------------------------------------------------------------------------
 void Locomotor::moveTowardsPositionHover(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed)
 {
 	// handle the 2D component.
-	moveTowardsPositionOther(obj, physics, goalPos, onPathDistToGoal, desiredSpeed, TRUE);
+	moveTowardsPositionOther(obj, physics, goalPos, onPathDistToGoal, desiredSpeed);
 
 	// Only hover locomotors care about their OverWater special effects.  (OverWater also affects speed, so this is not a client thing)
 	if( obj->isOverWater() )
@@ -2273,26 +2437,17 @@ void Locomotor::moveTowardsPositionHover(Object* obj, PhysicsBehavior *physics, 
 void Locomotor::moveTowardsPositionThrust(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed)
 {
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-	Bool moveBackwards = obj->getIsDoingReverseMove();
+	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
+	Real relAngle = stdAngleDiff(desiredAngle, obj->getOrientation());
+	Bool moveBackwards = shouldMoveBackwards(obj, physics, relAngle, onPathDistToGoal);
 
-	if(moveBackwards)
-	{
-		Real angle = obj->getOrientation();
-//		Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//		Real desiredAngle = angle + relAngle;
-		Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-		Real relAngle = stdAngleDiff(desiredAngle, angle);
-		if(fabs(relAngle) < PI/2)
-			moveBackwards = FALSE;
-	}
-
-	Real maxForwardSpeed = moveBackwards ? getReverseMaxSpeedForCondition(bdt) : getMaxSpeedForCondition(bdt);
-	Real minSpeed = getMinSpeed(obj, &goalPos);
+	Real maxForwardSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
+	Real minSpeed = getMinSpeed();
 	desiredSpeed = clamp(minSpeed, desiredSpeed, maxForwardSpeed);
 	Real actualForwardSpeed = physics->getForwardSpeed3D();
 
-	if(actualForwardSpeed > 0)
-		obj->setLastActualSpeed(actualForwardSpeed);
+	if(fabs(actualForwardSpeed) > 0)
+		obj->setLastActualSpeed(fabs(actualForwardSpeed));
 
 	if (getBraking() > 0)
 	{
@@ -2304,6 +2459,8 @@ void Locomotor::moveTowardsPositionThrust(Object* obj, PhysicsBehavior *physics,
 
 	if (moveBackwards) {
 		actualForwardSpeed = -actualForwardSpeed;
+		if(desiredSpeed * m_template->m_backwardsMoveSpeedFactor > minSpeed)
+			desiredSpeed *= m_template->m_backwardsMoveSpeedFactor;
 	}
 
 	Coord3D localGoalPos = goalPos;
@@ -2537,17 +2694,8 @@ Real Locomotor::calcLiftToUseAtPt(Object* obj, PhysicsBehavior *physics, Real cu
 
 //-------------------------------------------------------------------------------------------------
 PhysicsTurningType Locomotor::rotateObjAroundLocoPivot(Object* obj, const Coord3D& goalPos,
-																											 Real maxTurnRate, Real *relAngle, Bool isReverse)
+																											 Real maxTurnRate, Real *relAngle)
 {
-	Coord3D doPos = goalPos;
-	if(isReverse)
-	{
-		Coord3D backwardPos = *obj->getPosition();
-		backwardPos.x += -(goalPos.x - obj->getPosition()->x);
-		backwardPos.y += -(goalPos.y - obj->getPosition()->y);
-		doPos = backwardPos;
-	}
-
 	Real angle = obj->getOrientation();
 	Real offset = getTurnPivotOffset();
 
@@ -2564,8 +2712,8 @@ PhysicsTurningType Locomotor::rotateObjAroundLocoPivot(Object* obj, const Coord3
 		const Coord3D* dir = obj->getUnitDirectionVector2D();
 		turnPos.x += dir->x * turnPointOffset;
 		turnPos.y += dir->y * turnPointOffset;
-		Real dx =doPos.x - turnPos.x;
-		Real dy = doPos.y - turnPos.y;
+		Real dx =goalPos.x - turnPos.x;
+		Real dy = goalPos.y - turnPos.y;
 		// If we are very close to the goal, we twitch due to rounding error.  So just return. jba.
 		if (fabs(dx)<0.1f && fabs(dy)<0.1f) return TURN_NONE;
 		Real desiredAngle = atan2(dy, dx);
@@ -2606,7 +2754,7 @@ PhysicsTurningType Locomotor::rotateObjAroundLocoPivot(Object* obj, const Coord3
 	}
 	else
 	{
-		Real desiredAngle = atan2(doPos.y - obj->getPosition()->y, doPos.x - obj->getPosition()->x);
+		Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
 		Real amount = stdAngleDiff(desiredAngle, angle);
 		if (relAngle) *relAngle = amount;
 		if (amount>maxTurnRate) {
@@ -2799,25 +2947,16 @@ Bool Locomotor::handleBehaviorZ(Object* obj, PhysicsBehavior *physics, const Coo
 }
 
 //-------------------------------------------------------------------------------------------------
-void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed, Bool canReverse)
+void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed)
 {
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
 	Real maxAcceleration = getMaxAcceleration(bdt);
-
-	Bool moveBackwards = canReverse && obj->getIsDoingReverseMove();
-	if(moveBackwards)
-	{
-		Real angle = obj->getOrientation();
-//		Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//		Real desiredAngle = angle + relAngle;
-		Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-		Real relAngle = stdAngleDiff(desiredAngle, angle);
-		if(fabs(relAngle) < PI/2)
-			moveBackwards = FALSE;
-	}
+	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
+	Real relAngle = stdAngleDiff(desiredAngle, obj->getOrientation());
+	Bool moveBackwards = shouldMoveBackwards(obj, physics, relAngle, onPathDistToGoal);
 
 	// sanity, we cannot use desired speed that is greater than our max speed we are capable of moving at
-	Real maxSpeed = moveBackwards ? getReverseMaxSpeedForCondition(bdt) : getMaxSpeedForCondition(bdt);
+	Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
 
 	if( desiredSpeed > maxSpeed )
 		desiredSpeed = maxSpeed;
@@ -2828,10 +2967,6 @@ void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, 
 	if(fabs(actualSpeed) > 0)
 		obj->setLastActualSpeed(fabs(actualSpeed));
 
-	if (moveBackwards) {
-		actualSpeed = -actualSpeed;
-	}
-
 	// Locomotion for other things, ie don't know what it is jba :)
 	//
 	// Orient toward goal position
@@ -2840,6 +2975,15 @@ void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, 
 	//
 	const Coord3D* pos =  obj->getPosition();
 	Coord3D dirToApplyForce = *obj->getUnitDirectionVector2D();
+
+	// Decide whether to reverse toward a goal that is behind us (opt-in via CanMoveBackwards).
+	//Real desiredAngle = atan2(goalPos.y - pos->y, goalPos.x - pos->x);
+	//Real relAngle = stdAngleDiff(desiredAngle, obj->getOrientation());
+	if (moveBackwards)
+	{
+		actualSpeed = -actualSpeed;	// treat as speed in our direction of travel (reverse)
+		goalSpeed *= m_template->m_backwardsMoveSpeedFactor;
+	}
 
 //DEBUG_ASSERTLOG(!getFlag(ULTRA_ACCURATE),("thresh %f %f (%f %f)",
 //fabs(goalPos.y - pos->y),fabs(goalPos.x - pos->x),
@@ -2855,15 +2999,24 @@ void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, 
 		dirToApplyForce.z = 0.0f;
 		dirToApplyForce.normalize();
 	}
+	else if (moveBackwards)
+	{
+		// keep our heading and steer our rear toward the goal, then drive in reverse.
+		Coord3D backwardPos = *pos;
+		backwardPos.x -= (goalPos.x - pos->x);
+		backwardPos.y -= (goalPos.y - pos->y);
+		PhysicsTurningType rotating = rotateTowardsPosition(obj, backwardPos);
+		physics->setTurning(rotating);
+	}
 	else
 	{
-		PhysicsTurningType rotating = rotateTowardsPosition(obj, goalPos, nullptr, moveBackwards);
+		PhysicsTurningType rotating = rotateTowardsPosition(obj, goalPos);
 		physics->setTurning(rotating);
 	}
 
 	if (!getFlag(NO_SLOW_DOWN_AS_APPROACHING_DEST))
 	{
-		Real minSpeed = canReverse ? getMinSpeed(obj, &goalPos) : getMinSpeed();
+		Real minSpeed = getMinSpeed();
 		Real slowDownDist = calcSlowDownDist(actualSpeed, minSpeed, getBraking());
 		if (onPathDistToGoal < slowDownDist)
 		{
@@ -2875,18 +3028,17 @@ void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, 
 	// Maintain goal speed
 	//
 	Real speedDelta = goalSpeed - actualSpeed;
-	if (moveBackwards) {
-		speedDelta = -goalSpeed+actualSpeed;
-	}
+	if (moveBackwards)
+		speedDelta = -goalSpeed + actualSpeed;
 	if (speedDelta != 0.0f)
 	{
 		Real mass = physics->getMass();
 		Real acceleration;
-		if (moveBackwards) {
+		if (moveBackwards)
 			acceleration = (speedDelta < 0.0f) ? -maxAcceleration : getBraking();
-		}	else {
+		else
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
-		}
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;
 
 		/*
@@ -2987,7 +3139,7 @@ void Locomotor::maintainCurrentPositionThrust(Object* obj, PhysicsBehavior *phys
 {
 	DEBUG_ASSERTCRASH(getFlag(MAINTAIN_POS_IS_VALID), ("invalid maintain pos"));
 	/// @todo srj -- should these also use the "circling radius" stuff, like wings?
-	moveTowardsPositionThrust(obj, physics, m_maintainPos, 0, getMinSpeed(obj, &m_maintainPos));
+	moveTowardsPositionThrust(obj, physics, m_maintainPos, 0, getMinSpeed());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3036,7 +3188,7 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 	if (physics->isMotive())	// no need to stop something that isn't moving.
 	{
 		BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-		Real minSpeed = getMinSpeed(obj, obj->getAI() ? obj->getAI()->getGoalPosition() : nullptr);
+		Real minSpeed = getMinSpeed();
 		DEBUG_ASSERTCRASH(minSpeed == 0.0f, ("HOVER should always have zero minSpeeds (otherwise, they WING)"));
 
 		//BodyDamageType bdt = obj->getBodyModule()->getDamageState();
@@ -3051,20 +3203,15 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 		if(fabs(actualSpeed) > 0)
 			obj->setLastActualSpeed(fabs(actualSpeed));
 
-		Bool moveBackwards = obj->getIsDoingReverseMove() && obj->getAI() && obj->getAI()->getGoalPosition();
-		if(moveBackwards)
-		{
+		Bool moveBackwards = false;
+
+		if(obj->getAI() && obj->getAI()->getGoalPosition()) {
 			Coord3D goalPos = *(obj->getAI()->getGoalPosition());
-			Real angle = obj->getOrientation();
-//			Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
-//			Real desiredAngle = angle + relAngle;
 			Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-			Real relAngle = stdAngleDiff(desiredAngle, angle);
-			if(fabs(relAngle) < PI/2)
-				moveBackwards = FALSE;
+			Real relAngle = stdAngleDiff(desiredAngle, obj->getOrientation());
+			moveBackwards = shouldMoveBackwards(obj, physics, relAngle, obj->getAI()->getLocomotorDistanceToGoal());
 		}
 		if (moveBackwards) {
-			actualSpeed = -actualSpeed;
 			speedDelta = -minSpeed+actualSpeed;
 		}
 		if (fabs(speedDelta) > minSpeed)
@@ -3076,6 +3223,7 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 			}	else {
 				acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
 			}
+			fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 			Real accelForce = mass * acceleration;
 
 			/*

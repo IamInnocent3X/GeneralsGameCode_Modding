@@ -328,6 +328,8 @@ const Int MAX_ENABLED_MODULES								= 16;
  	s_veterancyImage[1] = TheMappedImageCollection->findImageByName("SCVeter1");
 	s_veterancyImage[2] = TheMappedImageCollection->findImageByName("SCVeter2");
 	s_veterancyImage[3] = TheMappedImageCollection->findImageByName("SCVeter3");
+	s_veterancyImage[4] = TheMappedImageCollection->findImageByName("SCVeter4");
+	s_veterancyImage[5] = TheMappedImageCollection->findImageByName("SCVeter5");
 
 	s_fullAmmo	= TheMappedImageCollection->findImageByName("SCPAmmoFull");
 	s_emptyAmmo	= TheMappedImageCollection->findImageByName("SCPAmmoEmpty");
@@ -681,6 +683,17 @@ Bool Drawable::isVisible()
 		}
 	}
 	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Notify draw modules that the object was instantly relocated (teleport), so visual effects that
+	* interpolate between frames (e.g. terrain tread marks) don't stretch across the jump. */
+void Drawable::reactToTeleport()
+{
+	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
+	{
+		(*dm)->reactToTeleport();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

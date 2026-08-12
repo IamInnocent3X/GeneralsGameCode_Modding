@@ -292,7 +292,15 @@ static CommandStatus doMoveStateCommand( const CommandButton *command, const ICo
 	// so we must be sure there is only one thing selected (that thing we will set the point on)
 	//
 	Drawable *draw = TheInGameUI->getFirstSelectedDrawable();
-	DEBUG_ASSERTCRASH( draw, ("doAttackMoveCommand: No selected object(s)") );
+	switch(command->getCommandType())
+	{
+		case GUI_COMMAND_REVERSE_MOVE:
+			DEBUG_ASSERTCRASH( draw, ("doReverseMoveCommand: No selected object(s)") );
+			break; 
+		case GUI_COMMAND_ATTACK_MOVE:
+			DEBUG_ASSERTCRASH( draw, ("doAttackMoveCommand: No selected object(s)") );
+			break;
+	}
 
 	// sanity
 	if( draw == nullptr || draw->getObject() == nullptr )
