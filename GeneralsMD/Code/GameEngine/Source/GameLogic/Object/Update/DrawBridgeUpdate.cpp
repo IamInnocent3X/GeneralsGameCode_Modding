@@ -78,7 +78,7 @@ DrawBridgeUpdate::DrawBridgeUpdate(Thing* thing, const ModuleData* moduleData) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DrawBridgeUpdate::~DrawBridgeUpdate(void)
+DrawBridgeUpdate::~DrawBridgeUpdate()
 {
 }
 
@@ -168,7 +168,7 @@ void DrawBridgeUpdate::onBridgeRepaired()
 
 // This method launches units away by applying force in a 45 degree upwards angle to simulate an opening
 // drawbridge. The side depends on position from center. The push is in bridge length direction.
-void DrawBridgeUpdate::pushObjectsOnOpeningDrawbridge( void ) {
+void DrawBridgeUpdate::pushObjectsOnOpeningDrawbridge() {
 	// horizontal acceleration to apply; if no push force is configured, do nothing.
 	// The force is scaled by each object's mass below so this is the acceleration every unit feels.
 	Real pushAccel = getDrawBridgeUpdateModuleData()->m_openingPushForce;
@@ -298,7 +298,7 @@ void DrawBridgeUpdate::pushObjectsOnOpeningDrawbridge( void ) {
 }
 
 // When a drawbridge is closed units or ships directly below it that are too high need to be killed
-void DrawBridgeUpdate::destroyObjectsUnderClosingDrawbridge( void ) {
+void DrawBridgeUpdate::destroyObjectsUnderClosingDrawbridge() {
 	Object* bridge = getObject();
 	const Coord3D* bridgePos = bridge->getPosition();
 
@@ -425,7 +425,7 @@ void DrawBridgeUpdate::xfer(Xfer* xfer)
 }
 
 //------------------------------------------------------------------------------------------------
-void DrawBridgeUpdate::loadPostProcess(void)
+void DrawBridgeUpdate::loadPostProcess()
 {
 	
 	// extend base class

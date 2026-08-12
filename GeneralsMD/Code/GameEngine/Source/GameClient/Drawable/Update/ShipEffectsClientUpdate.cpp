@@ -54,7 +54,7 @@ ShipEffectsClientUpdate::ShipEffectsClientUpdate( Thing *thing, const ModuleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ShipEffectsClientUpdate::~ShipEffectsClientUpdate( void )
+ShipEffectsClientUpdate::~ShipEffectsClientUpdate()
 {
 
 }
@@ -63,7 +63,7 @@ ShipEffectsClientUpdate::~ShipEffectsClientUpdate( void )
 //-------------------------------------------------------------------------------------------------
 /** The client update callback. */
 //-------------------------------------------------------------------------------------------------
-void ShipEffectsClientUpdate::clientUpdate( void )
+void ShipEffectsClientUpdate::clientUpdate()
 {
 	//THIS IS HAPPENING CLIENT-SIDE
 	// I CAN DO WHAT I NEED HERE AND NOT HAVE TO BE LOGIC SYNC-SAFE
@@ -124,7 +124,7 @@ void ShipEffectsClientUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ShipEffectsClientUpdate::loadPostProcess( void )
+void ShipEffectsClientUpdate::loadPostProcess()
 {
 
 	// extend base class

@@ -72,7 +72,7 @@ DrawBridgeTowerUpdate::DrawBridgeTowerUpdate(Thing* thing, const ModuleData* mod
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-DrawBridgeTowerUpdate::~DrawBridgeTowerUpdate(void)
+DrawBridgeTowerUpdate::~DrawBridgeTowerUpdate()
 {
 }
 
@@ -229,7 +229,7 @@ void DrawBridgeTowerUpdate::xfer(Xfer* xfer)
 }
 
 //------------------------------------------------------------------------------------------------
-void DrawBridgeTowerUpdate::loadPostProcess(void)
+void DrawBridgeTowerUpdate::loadPostProcess()
 {
 	
 	// extend base class

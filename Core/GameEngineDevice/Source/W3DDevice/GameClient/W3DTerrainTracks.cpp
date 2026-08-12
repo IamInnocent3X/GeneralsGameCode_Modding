@@ -303,7 +303,7 @@ void TerrainTracksRenderObjClass::addCapEdgeToTrack(Real x, Real y)
 * feathered to transparent - that way the quad joining it to the first edge of the new strip is
 * alpha0->alpha0 (invisible) and no line bridges the teleport distance. */
 //=============================================================================
-void TerrainTracksRenderObjClass::breakTrack(void)
+void TerrainTracksRenderObjClass::breakTrack()
 {
 	if (m_activeEdgeCount > 0)
 	{

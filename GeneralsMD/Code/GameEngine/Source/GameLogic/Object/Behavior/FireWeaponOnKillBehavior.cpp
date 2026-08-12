@@ -44,7 +44,7 @@ FireWeaponOnKillBehavior::FireWeaponOnKillBehavior( Thing *thing, const ModuleDa
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-FireWeaponOnKillBehavior::~FireWeaponOnKillBehavior( void )
+FireWeaponOnKillBehavior::~FireWeaponOnKillBehavior()
 {
 }
 
@@ -109,7 +109,7 @@ void FireWeaponOnKillBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void FireWeaponOnKillBehavior::loadPostProcess( void )
+void FireWeaponOnKillBehavior::loadPostProcess()
 {
 	// extend base class
 	BehaviorModule::loadPostProcess();

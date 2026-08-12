@@ -74,10 +74,10 @@ public:
 	virtual Bool canLaunchToPosition(const Coord3D* targetPos, Coord3D* newPos, Bool keepFormation = false);
 
 	// virtual UpdateSleepTime update();
-	virtual void onDelete(void);
+	virtual void onDelete();
 
-	// Bool isLanding( void );
-	Real getGoalDistance(void);
+	// Bool isLanding();
+	Real getGoalDistance();
 
 protected:
 

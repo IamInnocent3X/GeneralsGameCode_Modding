@@ -152,7 +152,7 @@ OrbitalBeamUpdate::OrbitalBeamUpdate( Thing *thing, const ModuleData* moduleData
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-OrbitalBeamUpdate::~OrbitalBeamUpdate( void )
+OrbitalBeamUpdate::~OrbitalBeamUpdate()
 {
 	// Clean up any beams still alive if we get destroyed prematurely.
 	for( std::vector<DrawableID>::iterator it = m_chargeBeamIDs.begin(); it != m_chargeBeamIDs.end(); ++it )
@@ -593,7 +593,7 @@ void OrbitalBeamUpdate::destroyChargeBeamSystems()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime OrbitalBeamUpdate::update( void )
+UpdateSleepTime OrbitalBeamUpdate::update()
 {
 	// Orbital beam update has multiple stages
 	// 0: initial delay, waiting
@@ -952,7 +952,7 @@ void OrbitalBeamUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void OrbitalBeamUpdate::loadPostProcess( void )
+void OrbitalBeamUpdate::loadPostProcess()
 {
 
 	// extend base class

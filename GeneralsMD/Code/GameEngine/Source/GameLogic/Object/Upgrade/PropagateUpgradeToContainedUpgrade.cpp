@@ -85,7 +85,7 @@ PropagateUpgradeToContainedUpgrade::PropagateUpgradeToContainedUpgrade( Thing *t
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-PropagateUpgradeToContainedUpgrade::~PropagateUpgradeToContainedUpgrade( void )
+PropagateUpgradeToContainedUpgrade::~PropagateUpgradeToContainedUpgrade()
 {
 }
 
@@ -207,7 +207,7 @@ void PropagateUpgradeToContainedUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void PropagateUpgradeToContainedUpgrade::loadPostProcess( void )
+void PropagateUpgradeToContainedUpgrade::loadPostProcess()
 {
 
 	// extend base class

@@ -1534,7 +1534,7 @@ Bool BridgeBehavior::isScaffoldInMotion()
 
 }
 
-void BridgeBehavior::onRepaired(void)
+void BridgeBehavior::onRepaired()
 {
 	m_repairedFrame = TheGameLogic->getFrame();
 

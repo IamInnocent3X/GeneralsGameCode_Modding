@@ -44,7 +44,7 @@ CreateObjectOnKillBehavior::CreateObjectOnKillBehavior( Thing *thing, const Modu
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CreateObjectOnKillBehavior::~CreateObjectOnKillBehavior( void )
+CreateObjectOnKillBehavior::~CreateObjectOnKillBehavior()
 {
 }
 
@@ -111,7 +111,7 @@ void CreateObjectOnKillBehavior::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CreateObjectOnKillBehavior::loadPostProcess( void )
+void CreateObjectOnKillBehavior::loadPostProcess()
 {
 	// extend base class
 	BehaviorModule::loadPostProcess();

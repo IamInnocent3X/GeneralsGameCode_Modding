@@ -122,7 +122,7 @@ MultiLocationSpecialPowerUpdate::MultiLocationSpecialPowerUpdate( Thing *thing, 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-MultiLocationSpecialPowerUpdate::~MultiLocationSpecialPowerUpdate( void )
+MultiLocationSpecialPowerUpdate::~MultiLocationSpecialPowerUpdate()
 {
 }
 
@@ -370,7 +370,7 @@ void MultiLocationSpecialPowerUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void MultiLocationSpecialPowerUpdate::loadPostProcess( void )
+void MultiLocationSpecialPowerUpdate::loadPostProcess()
 {
 	// extend base class
 	SpecialPowerUpdateModule::loadPostProcess();

@@ -21,7 +21,7 @@ public:
 	Bool m_applyLevelUp;
 	AsciiString m_applySalvageCrateName;
 
-	CrateApplyUpgradeModuleData( void );
+	CrateApplyUpgradeModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 
@@ -45,7 +45,7 @@ public:
 
 protected:
 
-	virtual void upgradeImplementation( void ); ///< Here's the actual work of Upgrading
+	virtual void upgradeImplementation(); ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() { return false; }
 	virtual Bool hasUpgradeRefresh() { return false; }
 

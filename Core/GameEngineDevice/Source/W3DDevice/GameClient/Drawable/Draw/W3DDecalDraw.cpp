@@ -100,7 +100,7 @@ W3DDecalDraw::W3DDecalDraw( Thing *thing, const ModuleData* moduleData ) : DrawM
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-W3DDecalDraw::~W3DDecalDraw( void )
+W3DDecalDraw::~W3DDecalDraw()
 {
 	if (m_shadow)
 		m_shadow->release();
@@ -288,7 +288,7 @@ void W3DDecalDraw::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void W3DDecalDraw::loadPostProcess( void )
+void W3DDecalDraw::loadPostProcess()
 {
 
 	// extend base class

@@ -101,7 +101,7 @@ JumpjetMissileAIUpdate::~JumpjetMissileAIUpdate()
 }
 
 //-------------------------------------------------------------------------------------------------
-void JumpjetMissileAIUpdate::onDelete(void)
+void JumpjetMissileAIUpdate::onDelete()
 {
 	MissileAIUpdate::onDelete();
 }
@@ -291,7 +291,7 @@ void JumpjetMissileAIUpdate::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void JumpjetMissileAIUpdate::loadPostProcess(void)
+void JumpjetMissileAIUpdate::loadPostProcess()
 {
 	// extend base class
 	MissileAIUpdate::loadPostProcess();

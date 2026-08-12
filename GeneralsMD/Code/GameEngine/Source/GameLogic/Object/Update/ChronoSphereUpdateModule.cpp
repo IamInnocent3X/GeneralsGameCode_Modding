@@ -103,7 +103,7 @@ ChronoSphereUpdateModule::ChronoSphereUpdateModule( Thing *thing, const ModuleDa
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ChronoSphereUpdateModule::~ChronoSphereUpdateModule( void )
+ChronoSphereUpdateModule::~ChronoSphereUpdateModule()
 {
 }
 
@@ -322,7 +322,7 @@ void ChronoSphereUpdateModule::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void ChronoSphereUpdateModule::loadPostProcess( void )
+void ChronoSphereUpdateModule::loadPostProcess()
 {
 	// extend base class
 	SpecialPowerUpdateModule::loadPostProcess();

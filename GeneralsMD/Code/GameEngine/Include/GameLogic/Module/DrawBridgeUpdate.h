@@ -59,8 +59,8 @@ public:
 	void onBridgeRepaired();
 
 protected:
-	void pushObjectsOnOpeningDrawbridge( void );
-	void destroyObjectsUnderClosingDrawbridge (void );
+	void pushObjectsOnOpeningDrawbridge();
+	void destroyObjectsUnderClosingDrawbridge();
 
 	bool m_bridgeOpened;
 

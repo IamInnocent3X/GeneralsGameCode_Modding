@@ -127,7 +127,7 @@ public:
 	virtual bool					Simple_Evaluate_Bone(int boneindex, Matrix3D *tm) const;
 	virtual bool					Simple_Evaluate_Bone(int boneindex, float frame, Matrix3D *tm) const;
 
-	virtual bool					Is_Double_Anim(void) const;
+	virtual bool					Is_Double_Anim() const;
 
 	// (gth) TESTING DYNAMICALLY SWAPPING SKELETONS!
 	virtual void					Set_HTree(HTreeClass * htree);

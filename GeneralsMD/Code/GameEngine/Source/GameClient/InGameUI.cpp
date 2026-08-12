@@ -4044,7 +4044,7 @@ void InGameUI::setSpecialPowerAreaAnchor( const Coord3D *loc )
 //-------------------------------------------------------------------------------------------------
 /** Clear all captured target points + the area anchor + every marker drawable. */
 //-------------------------------------------------------------------------------------------------
-void InGameUI::clearPendingSpecialPowerLocations( void )
+void InGameUI::clearPendingSpecialPowerLocations()
 {
 	m_pendingSpecialPowerLocations.clear();
 	m_hasSpecialPowerAreaAnchor = FALSE;
@@ -4129,7 +4129,7 @@ Bool InGameUI::clampToSpecialPowerTargetArea( const CommandButton *cmd, Coord3D 
 //-------------------------------------------------------------------------------------------------
 /** Remove all N-point special power marker drawables, if any. */
 //-------------------------------------------------------------------------------------------------
-void InGameUI::destroySpecialPowerLocationMarkers( void )
+void InGameUI::destroySpecialPowerLocationMarkers()
 {
 	for( std::vector<Drawable*>::iterator it = m_specialPowerLocationMarkers.begin(); it != m_specialPowerLocationMarkers.end(); ++it )
 	{
@@ -4142,7 +4142,7 @@ void InGameUI::destroySpecialPowerLocationMarkers( void )
 //-------------------------------------------------------------------------------------------------
 /** Remove all N-point special power radius decals, if any. */
 //-------------------------------------------------------------------------------------------------
-void InGameUI::destroySpecialPowerLocationDecals( void )
+void InGameUI::destroySpecialPowerLocationDecals()
 {
 	for( std::vector<RadiusDecal*>::iterator it = m_specialPowerLocationDecals.begin(); it != m_specialPowerLocationDecals.end(); ++it )
 		delete *it;	// ~RadiusDecal calls clear() -> releases the shadow

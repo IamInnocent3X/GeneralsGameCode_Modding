@@ -23,7 +23,7 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CrateApplyUpgradeModuleData::CrateApplyUpgradeModuleData( void )
+CrateApplyUpgradeModuleData::CrateApplyUpgradeModuleData()
 {
 	m_applySalvageUpgrade = false;
 	m_applyLevelUp = false;
@@ -66,7 +66,7 @@ Bool CrateApplyUpgrade::wouldUpgrade(const UpgradeMaskType& keyMask) const
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-CrateApplyUpgrade::~CrateApplyUpgrade( void )
+CrateApplyUpgrade::~CrateApplyUpgrade()
 {
 
 }
@@ -167,7 +167,7 @@ static void applySalvageCrate(Object* unit, const AsciiString& crateName)
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void CrateApplyUpgrade::upgradeImplementation(void)
+void CrateApplyUpgrade::upgradeImplementation()
 {
 	Object* self = getObject();
 
@@ -257,7 +257,7 @@ void CrateApplyUpgrade::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void CrateApplyUpgrade::loadPostProcess( void )
+void CrateApplyUpgrade::loadPostProcess()
 {
 
 	// extend base class

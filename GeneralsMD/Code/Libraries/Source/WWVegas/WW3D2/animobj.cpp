@@ -1532,7 +1532,7 @@ void Animatable3DObjClass::Set_HTree(HTreeClass * new_htree)
 }
 
 // ----------------------------------------------------
-bool Animatable3DObjClass::Is_Double_Anim(void) const {
+bool Animatable3DObjClass::Is_Double_Anim() const {
 	return CurMotionMode == DOUBLE_ANIM;
 }
 

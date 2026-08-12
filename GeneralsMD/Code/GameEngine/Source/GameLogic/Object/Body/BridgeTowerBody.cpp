@@ -22,7 +22,7 @@ BridgeTowerBody::BridgeTowerBody( Thing *thing, const ModuleData* moduleData )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-BridgeTowerBody::~BridgeTowerBody( void )
+BridgeTowerBody::~BridgeTowerBody()
 {
 
 }
@@ -101,7 +101,7 @@ void BridgeTowerBody::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void BridgeTowerBody::loadPostProcess( void )
+void BridgeTowerBody::loadPostProcess()
 {
 
 	// extend base class

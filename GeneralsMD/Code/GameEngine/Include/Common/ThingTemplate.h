@@ -694,7 +694,7 @@ public:
 
 	Int getMaxPathFindingCellRadius() const { return static_cast<Int>(m_maxPathfindingCellRadius); };
 
-	Byte getRequiredBridgeHeight(void) const { return m_requiredBridgeHeight; };
+	Byte getRequiredBridgeHeight() const { return m_requiredBridgeHeight; };
 
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficulty() const { return m_maxSimultaneousOfTypeDifficulty; }
 	const MaxSimultaneousOfTypeDifficulty& getMaxSimultaneousOfTypeDifficultyAI() const { return m_maxSimultaneousOfTypeDifficultyAI; }

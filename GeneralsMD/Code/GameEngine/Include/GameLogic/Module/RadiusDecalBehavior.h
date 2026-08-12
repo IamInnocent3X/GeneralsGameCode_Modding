@@ -80,7 +80,7 @@ public:
 
 protected:
 
-	void clearDecal(void);
+	void clearDecal();
 
 	virtual void upgradeImplementation()
 	{

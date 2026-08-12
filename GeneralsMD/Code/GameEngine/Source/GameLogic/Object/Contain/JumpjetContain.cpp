@@ -109,7 +109,7 @@ JumpjetContain::JumpjetContain(Thing* thing, const ModuleData* moduleData) :
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-JumpjetContain::~JumpjetContain(void)
+JumpjetContain::~JumpjetContain()
 {
 }
 
@@ -147,7 +147,7 @@ Bool JumpjetContain::isValidContainerFor(const Object* rider, Bool checkCapacity
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime JumpjetContain::update(void)
+UpdateSleepTime JumpjetContain::update()
 {
 	OpenContain::update();
 
@@ -464,7 +464,7 @@ void JumpjetContain::xfer(Xfer* xfer)
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void JumpjetContain::loadPostProcess(void)
+void JumpjetContain::loadPostProcess()
 {
 
 	// extend base class

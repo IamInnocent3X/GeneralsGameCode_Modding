@@ -80,7 +80,7 @@ SpecialPowerDesignatorUpdate::SpecialPowerDesignatorUpdate( Thing *thing, const 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-SpecialPowerDesignatorUpdate::~SpecialPowerDesignatorUpdate( void )
+SpecialPowerDesignatorUpdate::~SpecialPowerDesignatorUpdate()
 {
 }
 
@@ -100,7 +100,7 @@ void SpecialPowerDesignatorUpdate::triggerSpecialPower()
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-UpdateSleepTime SpecialPowerDesignatorUpdate::update( void )
+UpdateSleepTime SpecialPowerDesignatorUpdate::update()
 {
 	const SpecialPowerDesignatorUpdateModuleData* data = getSpecialPowerDesignatorUpdateModuleData();
 
@@ -170,7 +170,7 @@ void SpecialPowerDesignatorUpdate::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Load post process */
 // ------------------------------------------------------------------------------------------------
-void SpecialPowerDesignatorUpdate::loadPostProcess( void )
+void SpecialPowerDesignatorUpdate::loadPostProcess()
 {
 
 	// extend base class
