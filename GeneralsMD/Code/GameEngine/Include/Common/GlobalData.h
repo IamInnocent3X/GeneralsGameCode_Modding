@@ -672,6 +672,8 @@ public:
 	Bool m_enableReverseMoveByDefaultForThrust;
 	Bool m_enableReverseMoveByDefaultForOther;
 
+	Bool m_accelerateObjectsWithLowAccel;
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 

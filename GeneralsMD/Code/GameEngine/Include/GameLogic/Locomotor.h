@@ -471,6 +471,8 @@ private:
 	Bool getFlag(LocoFlag f) const { return (m_flags & (1 << f)) != 0; }
 	void setFlag(LocoFlag f, Bool b) { if (b) m_flags |= (1<<f); else m_flags &= ~(1<<f); }
 
+	void fixAccelStuck(Real &acceleration, Real lastActualSpeed, Real actualSpeed);
+
 	LocomotorTemplateOverride m_template;		///< the kind of Locomotor this is
 	Coord3D			m_maintainPos;
 	Real				m_brakingFactor;
@@ -480,6 +482,8 @@ private:
 	Real				m_maxBraking;
 	Real				m_maxTurnRate;
 	Real				m_closeEnoughDist;
+	Real				m_previousTurnAccelAddition;
+	Int					m_previousTurnAccelStuckFrames;
 #ifdef CIRCLE_FOR_LANDING
 	Real				m_circleThresh;
 #endif

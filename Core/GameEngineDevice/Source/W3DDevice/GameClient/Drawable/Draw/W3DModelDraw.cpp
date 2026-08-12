@@ -4543,7 +4543,7 @@ void W3DModelDraw::reactToTransformChange( const Matrix3D* oldMtx,
 		// the handedness of the next edge and twist the quad bridging it to the previous one. Track the
 		// travel direction so we can cut the strip at the transition instead.
 		Bool movingBackwards = FALSE;
-		const AIUpdateInterface* ai = obj->getAIUpdateInterface();
+		const AIUpdateInterface* ai = obj ? obj->getAIUpdateInterface() : nullptr;
 		if (ai && ai->getCurLocomotor())
 			movingBackwards = ai->getCurLocomotor()->isMovingBackwards();
 

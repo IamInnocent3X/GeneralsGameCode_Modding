@@ -760,6 +760,9 @@ Locomotor::Locomotor(const LocomotorTemplate* tmpl)
 	m_donutTimer = TheGameLogic->getFrame()+DONUT_TIME_DELAY_SECONDS*LOGICFRAMES_PER_SECOND;
 
 	m_speedMultiplier = 1.0;
+
+	m_previousTurnAccelAddition = 0.0f;
+	m_previousTurnAccelStuckFrames = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -855,6 +858,9 @@ void Locomotor::xfer( Xfer *xfer )
 	xfer->xferReal(&m_offsetIncrement);
 
 	xfer->xferReal(&m_speedMultiplier);
+
+	xfer->xferInt(&m_previousTurnAccelStuckFrames);
+	xfer->xferReal(&m_previousTurnAccelAddition);
 
 }
 
@@ -1397,6 +1403,7 @@ void Locomotor::locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D&
 		}	else {
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
 		}
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;*/
 
 		/*
@@ -1659,6 +1666,7 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 			acceleration = (speedDelta < 0.0f) ? -maxAcceleration : m_brakingFactor*getBraking();
 		else
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -m_brakingFactor*getBraking();
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;
 
 		/*
@@ -1685,39 +1693,33 @@ void Locomotor::moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics,
 void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed)
 {
 	BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-	// Decide whether to reverse toward a goal that is behind us.
-	Real angle = obj->getOrientation();
-	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-	Real relAngle = stdAngleDiff(desiredAngle, angle);
-	Bool moveBackwards = shouldMoveBackwards(obj, physics, relAngle, onPathDistToGoal);
-
-	Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
+	//Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
 	Real maxTurnRate = getMaxTurnRate(bdt);
 	Real maxAcceleration = getMaxAcceleration(bdt);
 	//Real originalDesiredSpeed = desiredSpeed;
 
 	// sanity, we cannot use desired speed that is greater than our max speed we are capable of moving at
-	if( desiredSpeed > maxSpeed )
-		desiredSpeed = maxSpeed;
+	//if( desiredSpeed > maxSpeed )
+	//	desiredSpeed = maxSpeed;
 
 	// Locomotion for wheeled vehicles, ie trucks.
 	//
 	// See if we are turning.  If so, use the min turn speed.
 	//
 	Real turnSpeed = m_template->m_minTurnSpeed;
-	//Real angle = obj->getOrientation();
+	Real angle = obj->getOrientation();
 //	Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &goalPos );
 //	Real desiredAngle = angle + relAngle;
-	//Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
-	//Real relAngle = stdAngleDiff(desiredAngle, angle);
+	Real desiredAngle = atan2(goalPos.y - obj->getPosition()->y, goalPos.x - obj->getPosition()->x);
+	Real relAngle = stdAngleDiff(desiredAngle, angle);
 	//Bool turningBackwards = false;
 	//Real originalRelAngle = relAngle;
 
 	// Wheeled vehicles can only turn while moving, so make sure the turn speed is reasonable.
-	if (turnSpeed < maxSpeed/4.0f)
-	{
-		turnSpeed = maxSpeed/4.0f;
-	}
+	//if (turnSpeed < maxSpeed/4.0f)
+	//{
+	//	turnSpeed = maxSpeed/4.0f;
+	//}
 
 
 	Real actualSpeed = physics->getForwardSpeed2D();
@@ -1725,6 +1727,7 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 	if(fabs(actualSpeed) > 0)
 		obj->setLastActualSpeed(fabs(actualSpeed));
 
+	Bool moveBackwards = false;
 	Bool do3pointTurn = false;
 #if 1
 	const Real backwardsAngleThreshold = m_template->m_backwardsMoveAngleThreshold;
@@ -1772,6 +1775,15 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 		}
 	}
 #endif
+
+	Real maxSpeed = getMaxSpeedForCondition(bdt, moveBackwards);
+	if( desiredSpeed > maxSpeed )
+		desiredSpeed = maxSpeed;
+
+	if (turnSpeed < maxSpeed/4.0f)
+	{
+		turnSpeed = maxSpeed/4.0f;
+	}
 
 	const Real SMALL_TURN = PI / 20.0f;
 	if ((Real)fabs( relAngle ) > SMALL_TURN)
@@ -1950,6 +1962,7 @@ void Locomotor::moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics,
 		}	else {
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -m_brakingFactor*getBraking();
 		}
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;
 
 		/*
@@ -2040,6 +2053,47 @@ Bool Locomotor::fixInvalidPosition(Object* obj, PhysicsBehavior *physics)
 	}
 	return false;
 #endif
+}
+
+//-------------------------------------------------------------------------------------------------
+void Locomotor::fixAccelStuck(Real &acceleration, Real lastActualSpeed, Real actualSpeed)
+{
+	// IamInnocent - Fix objects not moving while acceleration is too low.
+	if(!getFlag(MOVING_BACKWARDS) && !TheGlobalData->m_accelerateObjectsWithLowAccel)
+		return;
+
+	// Don't accelerate objects that are braking
+	if(getFlag(IS_BRAKING))
+		return;
+
+	Real accelAmount = acceleration;
+	accelAmount = fabs(accelAmount);
+
+	// Only applies to low accel locomotors or locomotors with acceleration
+	if(accelAmount > 0.08f || accelAmount <= 0.0f) //or 98*SEC_PER_LOGICFRAME_SQR
+		return;
+
+	const Real LOGICFRAMES_PER_SECONDS_REAL = (Real)LOGICFRAMES_PER_SECOND;
+	const Real SECONDS_PER_LOGICFRAME_REAL = 1.0f / LOGICFRAMES_PER_SECONDS_REAL;
+	const Real SEC_PER_LOGICFRAME_SQR = (SECONDS_PER_LOGICFRAME_REAL * SECONDS_PER_LOGICFRAME_REAL);
+
+	if(lastActualSpeed >= clamp(SECONDS_PER_LOGICFRAME_REAL, accelAmount * 2.0f, 0.5f) && actualSpeed > 0.0f) {
+		//if(m_previousTurnAccelStuckFrames>=3) DEBUG_LOG(("Unstucked from Accel. Actual Speed: %f , Acceleration %f", lastActualSpeed, acceleration));
+		m_previousTurnAccelStuckFrames = 0;
+		if(m_previousTurnAccelAddition>0) {
+			m_previousTurnAccelAddition-=max(SEC_PER_LOGICFRAME_SQR, accelAmount * 0.25f);
+			if(m_previousTurnAccelAddition<0) m_previousTurnAccelAddition = 0.0f;
+		}
+		return;
+	}
+
+	if(m_previousTurnAccelStuckFrames>=3 && (lastActualSpeed < SEC_PER_LOGICFRAME_SQR || (actualSpeed < SEC_PER_LOGICFRAME_SQR && lastActualSpeed > actualSpeed))) {
+		m_previousTurnAccelAddition+=max(SEC_PER_LOGICFRAME_SQR, accelAmount * 0.25f);
+		acceleration += acceleration > 0 ? m_previousTurnAccelAddition : -m_previousTurnAccelAddition;
+		//DEBUG_LOG(("Actual Speed: %f , Acceleration %f", lastActualSpeed, acceleration));
+	} else {
+		m_previousTurnAccelStuckFrames++;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2984,6 +3038,7 @@ void Locomotor::moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, 
 			acceleration = (speedDelta < 0.0f) ? -maxAcceleration : getBraking();
 		else
 			acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
+		fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 		Real accelForce = mass * acceleration;
 
 		/*
@@ -3168,6 +3223,7 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 			}	else {
 				acceleration = (speedDelta > 0.0f) ? maxAcceleration : -getBraking();
 			}
+			fixAccelStuck(acceleration, obj->getLastActualSpeed(), fabs(actualSpeed));
 			Real accelForce = mass * acceleration;
 
 			/*

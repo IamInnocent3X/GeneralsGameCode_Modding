@@ -720,6 +720,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "EnableReverseMoveByDefaultForThrust",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForThrust ) },
 	{ "EnableReverseMoveByDefaultForOther",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForOther ) },
 
+	{ "AccelerateObjectsWithLowAccel",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_accelerateObjectsWithLowAccel ) },
 
 	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
 	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, nullptr, offsetof(GlobalData, m_chronoDamageHealRate)},
@@ -1343,6 +1344,8 @@ GlobalData::GlobalData()
 	m_enableReverseMoveByDefaultForHover = FALSE;
 	m_enableReverseMoveByDefaultForThrust = FALSE;
 	m_enableReverseMoveByDefaultForOther = FALSE;
+
+	m_accelerateObjectsWithLowAccel = FALSE;
 
 	// --------------------------------------------------------------------------
 	// INIT TINT STATUS TYPES:
