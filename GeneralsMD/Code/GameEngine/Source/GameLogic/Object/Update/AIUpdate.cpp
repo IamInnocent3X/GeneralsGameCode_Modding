@@ -822,7 +822,6 @@ void AIUpdateInterface::orderTurretsToTargetLastObjects()
 				Object *o = TheGameLogic->findObjectByID(m_turretAI[i]->getLastTargetObj());
 				if(o && !o->isEffectivelyDead())
 				{
-					getObject()->setNeedUpdateTurretPositioning(TRUE);
 					m_turretAI[i]->setTurretTargetObject(o, FALSE);
 				}
 			}

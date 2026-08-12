@@ -2031,6 +2031,7 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
 	m_prevAnimHelper.fraction = -1;
 
 	m_needUpdateTurretPosition = true;
+	m_lastNeedUpdateTurretPosition = true;
 	m_doHandleRecoil = true;
 	m_canDoFXWhileHidden = false;
 
@@ -2834,8 +2835,16 @@ void W3DModelDraw::stopClientParticleSystems()
 */
 void W3DModelDraw::handleClientTurretPositioning()
 {
-	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID) || !m_needUpdateTurretPosition)
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::TURRETS_VALID))
 		return;
+
+	if (!m_needUpdateTurretPosition)
+	{
+		if(!m_lastNeedUpdateTurretPosition) 
+			return;
+
+		m_lastNeedUpdateTurretPosition = false;
+	}
 
 	for (int tslot = 0; tslot < MAX_TURRETS; ++tslot)
 	{
@@ -4254,6 +4263,7 @@ const ModelConditionInfo* stateToUse = findBestInfo(draw->getModelConditionFlags
 void W3DModelDraw::setNeedUpdateTurretPositioning(Bool set)
 {
 	m_needUpdateTurretPosition = set; // A simple function with the dangers of an atomic bomb, misuse and it'll cause desync
+	if(set) m_lastNeedUpdateTurretPosition = true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5464,8 +5474,6 @@ void W3DModelDraw::xfer( Xfer *xfer )
 
 	xfer->xferAsciiString( &m_modelName );
 
-	xfer->xferBool( &m_needUpdateTurretPosition );
-
 	xfer->xferBool( &m_canDoFXWhileHidden );
 
 }
@@ -5480,6 +5488,7 @@ void W3DModelDraw::loadPostProcess( void )
 	DrawModule::loadPostProcess();
 
 	m_needUpdateTurretPosition = TRUE;
+	m_lastNeedUpdateTurretPosition = TRUE;
 	m_doHandleRecoil = TRUE;
 
 }
