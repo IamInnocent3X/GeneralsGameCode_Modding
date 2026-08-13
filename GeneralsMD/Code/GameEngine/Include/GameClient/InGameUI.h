@@ -639,6 +639,10 @@ public:  // ********************************************************************
 	// INI file parsing
 	virtual const FieldParse* getFieldParse( void ) const { return s_fieldParseTable; }
 
+	// Generic "RadiusCursor" parser: cursor type is the token after the keyword (e.g. "GUARD_AREA"),
+	// then the RadiusDecalTemplate fields; stores into m_radiusCursors[type].
+	static void parseRadiusCursor( INI* ini, void* instance, void* store, const void* userData );
+
 
 	//Provides a global way to determine whether or not we can issue orders to what we have selected.
 	Bool areSelectedObjectsControllable() const;
