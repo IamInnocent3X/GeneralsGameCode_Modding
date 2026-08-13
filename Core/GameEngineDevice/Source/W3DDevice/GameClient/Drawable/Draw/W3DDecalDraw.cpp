@@ -143,8 +143,10 @@ void W3DDecalDraw::init_shadow()
 		decalType = SHADOW_ALPHA_DECAL;
 	}
 	shadowInfo.m_type = decalType;
-	shadowInfo.m_sizeX = data->m_decalSizeX;
-	shadowInfo.m_sizeY = data->m_decalSizeY;
+	// honor the drawable's per-instance scale so FX-nugget scale variance affects decal size
+	Real scale = getDrawable()->getInstanceScale();
+	shadowInfo.m_sizeX = data->m_decalSizeX * scale;
+	shadowInfo.m_sizeY = data->m_decalSizeY * scale;
 	shadowInfo.m_offsetX = 0.0f; // TODO
 	shadowInfo.m_offsetY = 0.0f; // TODO
 	shadowInfo.m_waterRenderMode = data->m_renderAboveWater ? SHADOW_WATER_ABOVE : SHADOW_WATER_BELOW;
@@ -169,8 +171,11 @@ void W3DDecalDraw::init_renderBox(const Matrix3D* transformMtx)
 {
 	const W3DDecalDrawModuleData* data = getW3DDecalDrawModuleData();
 
+	// honor the drawable's per-instance scale so FX-nugget scale variance affects decal size
+	Real scale = getDrawable()->getInstanceScale();
+
 	Vector3 center = { 0, 0, 0 };
-	Vector3 extent = { data->m_decalSizeX, data->m_decalSizeY, 1.0f };
+	Vector3 extent = { data->m_decalSizeX * scale, data->m_decalSizeY * scale, 1.0f };
 
 	m_renderBox = NEW OBBoxRenderObjClass(
 		OBBoxClass(center, extent)
