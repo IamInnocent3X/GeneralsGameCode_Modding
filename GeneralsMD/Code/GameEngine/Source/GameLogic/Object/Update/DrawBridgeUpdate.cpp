@@ -9,6 +9,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/BitFlagsIO.h"
+#include "Common/GameAudio.h"
 #include "Common/Radar.h"
 #include "Common/PlayerList.h"
 #include "Common/ThingTemplate.h"
@@ -48,6 +49,11 @@ DrawBridgeUpdateModuleData::DrawBridgeUpdateModuleData()
 	m_closingDuration = 0U;
 	m_openingPushForce = 0.0f;
 	m_closingDamageTime = 0U;
+
+	m_openingFX = nullptr;
+	m_openFX = nullptr;
+	m_closingFX = nullptr;
+	m_closedFX = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -61,6 +67,12 @@ DrawBridgeUpdateModuleData::DrawBridgeUpdateModuleData()
 		{ "ClosingDuration", INI::parseDurationUnsignedInt, nullptr, offsetof(DrawBridgeUpdateModuleData, m_closingDuration)},
 		{ "OpeningPushForce", INI::parseAccelerationReal, nullptr, offsetof(DrawBridgeUpdateModuleData, m_openingPushForce)},
 		{ "ClosingDamageTime", INI::parseDurationUnsignedInt, nullptr, offsetof(DrawBridgeUpdateModuleData, m_closingDamageTime)},
+		{ "BridgeOpeningFX", INI::parseFXList, nullptr, offsetof(DrawBridgeUpdateModuleData, m_openingFX)},
+		{ "BridgeOpenFX", INI::parseFXList, nullptr, offsetof(DrawBridgeUpdateModuleData, m_openFX)},
+		{ "BridgeClosingFX", INI::parseFXList, nullptr, offsetof(DrawBridgeUpdateModuleData, m_closingFX)},
+		{ "BridgeClosedFX", INI::parseFXList, nullptr, offsetof(DrawBridgeUpdateModuleData, m_closedFX)},
+		{ "BridgeOpeningAudio", INI::parseAudioEventRTS, nullptr, offsetof(DrawBridgeUpdateModuleData, m_openingAudio)},
+		{ "BridgeClosingAudio", INI::parseAudioEventRTS, nullptr, offsetof(DrawBridgeUpdateModuleData, m_closingAudio)},
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
@@ -74,12 +86,34 @@ DrawBridgeUpdate::DrawBridgeUpdate(Thing* thing, const ModuleData* moduleData) :
 	m_nextReadyFrame = 0U;
 	m_openingFrame = 0U;
 	m_closingDamageFrame = 0U;
+
+	const DrawBridgeUpdateModuleData* data = getDrawBridgeUpdateModuleData();
+	m_transitionState = BRIDGE_TRANSITION_NONE;
+	m_transitionDoneFrame = 0U;
+
+	// runtime copies of the configured looping audio, tied to this object
+	m_openingAudio = data->m_openingAudio;
+	m_openingAudio.setObjectID(getObject()->getID());
+	m_closingAudio = data->m_closingAudio;
+	m_closingAudio.setObjectID(getObject()->getID());
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 DrawBridgeUpdate::~DrawBridgeUpdate()
 {
+	stopTransitionAudio();
+}
+
+//-------------------------------------------------------------------------------------------------
+// Stop any looping opening/closing audio that is currently playing.
+//-------------------------------------------------------------------------------------------------
+void DrawBridgeUpdate::stopTransitionAudio()
+{
+	if (m_openingAudio.isCurrentlyPlaying())
+		TheAudio->removeAudioEvent(m_openingAudio.getPlayingHandle());
+	if (m_closingAudio.isCurrentlyPlaying())
+		TheAudio->removeAudioEvent(m_closingAudio.getPlayingHandle());
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -87,6 +121,8 @@ DrawBridgeUpdate::~DrawBridgeUpdate()
 // ------------------------------------------------------------------------------------------------
 void DrawBridgeUpdate::onDelete()
 {
+	stopTransitionAudio();
+
 	// extend base class
 	UpdateModule::onDelete();
 
@@ -133,12 +169,30 @@ bool DrawBridgeUpdate::setDrawBridgeState(bool opened, const Object* fromTower)
 				obj->setGeometryInfo(openBridgeGeom);
 				m_openingFrame = TheGameLogic->getFrame();
 				m_closingDamageFrame = 0U;
+
+				// bridge starts opening: fire the opening FX and loop the opening audio until it finishes
+				stopTransitionAudio();
+				if (data->m_openingFX)
+					FXList::doFXPos(data->m_openingFX, obj->getPosition());
+				m_openingAudio.setPosition(obj->getPosition());
+				m_openingAudio.setPlayingHandle(TheAudio->addAudioEvent(&m_openingAudio));
+				m_transitionState = BRIDGE_TRANSITION_OPENING;
+				m_transitionDoneFrame = m_nextReadyFrame;
 			}
 			else {
 				obj->clearAndSetModelConditionState(MODELCONDITION_DOOR_1_OPENING, MODELCONDITION_DOOR_1_CLOSING);
 				obj->setGeometryInfo(obj->getTemplate()->getTemplateGeometryInfo());
 				m_openingFrame = 0U; // when rapid toggling is possible
 				m_closingDamageFrame = TheGameLogic->getFrame() + data->m_closingDamageTime;
+
+				// bridge starts closing: fire the closing FX and loop the closing audio until it finishes
+				stopTransitionAudio();
+				if (data->m_closingFX)
+					FXList::doFXPos(data->m_closingFX, obj->getPosition());
+				m_closingAudio.setPosition(obj->getPosition());
+				m_closingAudio.setPlayingHandle(TheAudio->addAudioEvent(&m_closingAudio));
+				m_transitionState = BRIDGE_TRANSITION_CLOSING;
+				m_transitionDoneFrame = m_nextReadyFrame;
 			}
 		}
 		return true;
@@ -150,6 +204,9 @@ void DrawBridgeUpdate::onBridgeDestroyed()
 {
 	m_openingFrame = 0U;
 	m_closingDamageFrame = 0U;
+	stopTransitionAudio();
+	m_transitionState = BRIDGE_TRANSITION_NONE;
+	m_transitionDoneFrame = 0U;
 	Object* obj = getObject();
 	obj->clearModelConditionFlags(MODELCONDITION_DOOR_1_OPENING);
 	obj->clearModelConditionFlags(MODELCONDITION_DOOR_1_CLOSING);
@@ -160,6 +217,9 @@ void DrawBridgeUpdate::onBridgeRepaired()
 {
 	m_openingFrame = 0U;
 	m_closingDamageFrame = 0U;
+	stopTransitionAudio();
+	m_transitionState = BRIDGE_TRANSITION_NONE;
+	m_transitionDoneFrame = 0U;
 	Object* obj = getObject();
 	obj->clearModelConditionFlags(MODELCONDITION_DOOR_1_OPENING);
 	obj->clearModelConditionFlags(MODELCONDITION_DOOR_1_CLOSING);
@@ -386,6 +446,17 @@ UpdateSleepTime DrawBridgeUpdate::update()
 			m_closingDamageFrame = 0U;
 		}
 	}
+
+	// The opening/closing animation just finished: fire the finished FX and stop the looping audio.
+	if (m_transitionState != BRIDGE_TRANSITION_NONE && TheGameLogic->getFrame() >= m_transitionDoneFrame) {
+		const DrawBridgeUpdateModuleData* data = getDrawBridgeUpdateModuleData();
+		const FXList* finishedFX = (m_transitionState == BRIDGE_TRANSITION_OPENING) ? data->m_openFX : data->m_closedFX;
+		if (finishedFX)
+			FXList::doFXPos(finishedFX, getObject()->getPosition());
+		stopTransitionAudio();
+		m_transitionState = BRIDGE_TRANSITION_NONE;
+		m_transitionDoneFrame = 0U;
+	}
 	return UPDATE_SLEEP_NONE;
 }
 
@@ -403,12 +474,13 @@ void DrawBridgeUpdate::crc(Xfer* xfer)
 // Xfer method
 //	Version Info:
 //	1: Initial version
+//	2: Added opening/closing transition state for finish FX + looping audio
 //------------------------------------------------------------------------------------------------
 void DrawBridgeUpdate::xfer(Xfer* xfer)
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion(&version, currentVersion);
 
@@ -422,6 +494,12 @@ void DrawBridgeUpdate::xfer(Xfer* xfer)
 	xfer->xferUnsignedInt(&m_openingFrame);
 
 	xfer->xferUnsignedInt(&m_closingDamageFrame);
+
+	if (version >= 2)
+	{
+		xfer->xferUser(&m_transitionState, sizeof(m_transitionState));
+		xfer->xferUnsignedInt(&m_transitionDoneFrame);
+	}
 }
 
 //------------------------------------------------------------------------------------------------

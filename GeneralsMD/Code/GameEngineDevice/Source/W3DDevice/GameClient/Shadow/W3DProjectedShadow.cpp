@@ -710,6 +710,20 @@ void W3DProjectedShadowManager::flushDecals(W3DShadowTexture *texture, ShadowTyp
 
 	DX8Wrapper::Apply_Render_State_Changes();	//force update of view and projection matrices
 
+	// Force single-texture (texture * vertex diffuse) for both color and alpha, and disable any extra
+	// texture stages / alpha test. Necessary because other renderers (notably water) set raw multi-stage
+	// texture states directly on the device (bypassing DX8Wrapper's cache); without this the leftover
+	// stage state corrupts the decal output, making decals invisible when drawn after the water pass.
+	m_pDev->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);
+	m_pDev->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+	m_pDev->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+	m_pDev->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_MODULATE);
+	m_pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+	m_pDev->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+	m_pDev->SetTextureStageState(1, D3DTSS_COLOROP,   D3DTOP_DISABLE);
+	m_pDev->SetTextureStageState(1, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
+	m_pDev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+
 //Alpha Blended Shadows
 //	m_pDev->SetRenderState( D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA );
 //	m_pDev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA  );
@@ -795,6 +809,21 @@ void testShadowDecal()
 */
 
 #define BRIDGE_OFFSET_FACTOR 1.5f
+
+// Resolve a decal's effective "draw above water" choice. Per-decal mode wins; DEFAULT follows the
+// global RadiusDecalsAboveWater flag. Used to split m_decalList between the pre-water and post-water passes.
+static Bool decalDrawsAboveWater(const Shadow *shadow)
+{
+	if (shadow == nullptr)
+		return FALSE;
+	switch (shadow->getWaterRenderMode())
+	{
+		case SHADOW_WATER_ABOVE: return TRUE;
+		case SHADOW_WATER_BELOW: return FALSE;
+		default:                 return TheGlobalData->m_radiusDecalsAboveWater;
+	}
+}
+
 /**Decals have a low poly count so its better to render large numbers at once.  This system will queue them
 up until the buffers fill up.  It will then flush the buffer (draw decals) and be ready for new decals.  This
 is an optimized system that only uses the render objects bounding box to determine shadow visibility.
@@ -996,10 +1025,21 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 		Int numVerts = vertsPerRow *vertsPerColumn;	//number of terrain vertices
 		Int numIndex=(endX - startX) * (endY-startY)*6;	//6 indices per terrain cell (2 triangles).
 
+		// Skip a pathologically large decal that can't fit a single buffer (would overrun the DISCARD lock).
+		if (numVerts > SHADOW_DECAL_VERTEX_SIZE || numIndex > SHADOW_DECAL_INDEX_SIZE)
+			return;
+
 		SHADOW_DECAL_VERTEX* pvVertices;
 		UnsignedShort *pvIndices;
 
-		if (nShadowDecalVertsInBuf > (SHADOW_DECAL_VERTEX_SIZE-numVerts))	//check if room for model verts
+		// Decide a single flush for the whole decal: if EITHER the vertex or index buffer would overflow,
+		// flush and discard BOTH together. Checking them independently lets the two buffers desync (a decal
+		// uses ~6x more indices than verts, so the index buffer overflows first), which corrupts the shared
+		// batch bookkeeping and eventually makes DrawIndexedPrimitive read past the vertex buffer -> crash.
+		Bool needFlush = (nShadowDecalVertsInBuf   > (SHADOW_DECAL_VERTEX_SIZE - numVerts)) ||
+						 (nShadowDecalIndicesInBuf > (SHADOW_DECAL_INDEX_SIZE  - numIndex));
+
+		if (needFlush)
 		{	//flush the buffer by drawing the contents and re-locking again
 			flushDecals(shadow->m_shadowTexture[0], shadow->m_type);
 			if (shadowDecalVertexBufferD3D->Lock(0,numVerts*sizeof(SHADOW_DECAL_VERTEX),(unsigned char**)&pvVertices,D3DLOCK_DISCARD) != D3D_OK)
@@ -1040,7 +1080,7 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 						hmapVertex.X=(float)(i-borderSize)*MAP_XY_FACTOR;
 						hmapVertex.Z=__max((float)hmap->getHeight(i,j)*MAP_HEIGHT_SCALE,layerHeight);
 
-						if (TheGlobalData->m_heightAboveTerrainIncludesWater && TheTerrainLogic != nullptr) {
+						if ((TheGlobalData->m_heightAboveTerrainIncludesWater || decalDrawsAboveWater(shadow)) && TheTerrainLogic != nullptr) {
 							if (Real waterZ = 0; TheTerrainLogic->isUnderwater(hmapVertex.X, hmapVertex.Y, &waterZ)) {
 								if (waterZ > hmapVertex.Z) hmapVertex.Z = waterZ;
 							}
@@ -1066,7 +1106,7 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 					hmapVertex.X=(float)(i-borderSize)*MAP_XY_FACTOR;
 					hmapVertex.Z=(float)hmap->getHeight(i,j)*MAP_HEIGHT_SCALE+0.01f * MAP_XY_FACTOR;
 
-					if (TheGlobalData->m_heightAboveTerrainIncludesWater && TheTerrainLogic != nullptr) {
+					if ((TheGlobalData->m_heightAboveTerrainIncludesWater || decalDrawsAboveWater(shadow)) && TheTerrainLogic != nullptr) {
 						if (Real waterZ = 0; TheTerrainLogic->isUnderwater(hmapVertex.X, hmapVertex.Y, &waterZ)) {
 							if (waterZ > hmapVertex.Z) hmapVertex.Z = waterZ;
 						}
@@ -1085,16 +1125,15 @@ void W3DProjectedShadowManager::queueDecal(W3DProjectedShadow *shadow)
 
 		shadowDecalVertexBufferD3D->Unlock();
 
-		if (nShadowDecalIndicesInBuf > (SHADOW_DECAL_INDEX_SIZE-numIndex))	//check if room for model verts
-		{	//flush the buffer by drawing the contents and re-locking again
-			flushDecals(shadow->m_shadowTexture[0], shadow->m_type);
-
+		// Use the SAME flush decision as the vertex buffer above so both buffers reset in lockstep.
+		// flushDecals + the vertex/batch-counter resets already happened in the vertex block; here we
+		// only need to discard-lock the index buffer and reset the index counters.
+		if (needFlush)
+		{
 			if (shadowDecalIndexBufferD3D->Lock(0,numIndex*sizeof(short),(unsigned char**)&pvIndices,D3DLOCK_DISCARD) != D3D_OK)
 				return;
 
 			nShadowDecalStartBatchIndex=0;
-			nShadowDecalPolysInBatch=0;	//reset number of polys in texture batch
-			nShadowDecalVertsInBatch=0;
 			nShadowDecalIndicesInBuf=0;
 		}
 		else
@@ -1444,38 +1483,69 @@ Int W3DProjectedShadowManager::renderShadows(RenderInfoClass & rinfo)
 		flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
 		TheDX8MeshRenderer.Flush();	//draw all the shadow receiving objects
 	}
-	if (m_decalList)
+	// Draw the below-water subset of the decal list here (before water). The above-water subset is
+	// drawn later, after the water pass, by a second renderDecals() call from RTS3DScene::Flush.
+	projectionCount += renderDecals(rinfo, false);
+
+	return projectionCount;
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Draw the decal list (m_decalList), limited to decals whose effective water ordering matches
+	aboveWaterPass. Called once before water (aboveWaterPass=false) and once after (true), so decals
+	can be ordered above or below water per-decal. */
+//-------------------------------------------------------------------------------------------------
+Int W3DProjectedShadowManager::renderDecals(RenderInfoClass & rinfo, Bool aboveWaterPass)
+{
+	Int projectionCount=0;
+
+	if (!TheTerrainRenderObject || !m_decalList)
+		return projectionCount;
+
+	//According to Nvidia there's a D3D bug that happens if you don't start with a
+	//new dynamic VB each frame - so we force a DISCARD by overflowing the counter.
+	//(also needed because water was drawn between the shadow pass and here)
+	nShadowDecalVertsInBuf = 0xffff;
+	nShadowDecalIndicesInBuf = 0xffff;
+
+	TheDX8MeshRenderer.Set_Camera(&rinfo.Camera);
+
+	W3DProjectedShadow *shadow;
+
+	//keep track of active decal texture so we can render all decals at once.
+	W3DShadowTexture *lastShadowDecalTexture=nullptr;
+	ShadowType lastShadowType = SHADOW_NONE;
+
+	for( shadow = m_decalList; shadow; shadow = shadow->m_next )
 	{
-		//keep track of active decal texture so we can render all decals at once.
-		W3DShadowTexture *lastShadowDecalTexture=nullptr;
-		ShadowType lastShadowType = SHADOW_NONE;
+		// only draw the decals belonging to this pass (above vs below water)
+		if (decalDrawsAboveWater(shadow) != aboveWaterPass)
+			continue;
 
-		for( shadow = m_decalList; shadow; shadow = shadow->m_next )
+		if (shadow->m_isEnabled && !shadow->m_isInvisibleEnabled)
 		{
-			if (shadow->m_isEnabled && !shadow->m_isInvisibleEnabled)
-			{
-				if (lastShadowDecalTexture == nullptr)
-					lastShadowDecalTexture=m_decalList->m_shadowTexture[0];
-				if (lastShadowType == SHADOW_NONE)
-					lastShadowType = m_decalList->m_type;
+			if (lastShadowDecalTexture == nullptr)
+				lastShadowDecalTexture=m_decalList->m_shadowTexture[0];
+			if (lastShadowType == SHADOW_NONE)
+				lastShadowType = m_decalList->m_type;
 
-				if (shadow->m_shadowTexture[0] != lastShadowDecalTexture ||
-					shadow->m_type != lastShadowType)
-				{	flushDecals(lastShadowDecalTexture,lastShadowType);	//switched to a new texture, need to render polys using last texture.
-					lastShadowDecalTexture=shadow->m_shadowTexture[0];
-					lastShadowType=shadow->m_type;
-				}
-				///@todo: may need to fix this if shadows are large enough to be seen while object is not visible
-				if (!(shadow->m_robj && !shadow->m_robj->Is_Really_Visible()))
-				{	//queueSimpleDecal(shadow);
-					queueDecal(shadow);	//only draw shadow if casting object is visible
-					projectionCount++;
-				}
+			if (shadow->m_shadowTexture[0] != lastShadowDecalTexture ||
+				shadow->m_type != lastShadowType)
+			{	flushDecals(lastShadowDecalTexture,lastShadowType);	//switched to a new texture, need to render polys using last texture.
+				lastShadowDecalTexture=shadow->m_shadowTexture[0];
+				lastShadowType=shadow->m_type;
+			}
+			///@todo: may need to fix this if shadows are large enough to be seen while object is not visible
+			if (!(shadow->m_robj && !shadow->m_robj->Is_Really_Visible()))
+			{	//queueSimpleDecal(shadow);
+				queueDecal(shadow);	//only draw shadow if casting object is visible
+				projectionCount++;
 			}
 		}
-
-		flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
 	}
+
+	flushDecals(lastShadowDecalTexture,lastShadowType);	//make sure there are not any unrendered decals left over.
+
 	return projectionCount;
 }
 
@@ -1540,6 +1610,7 @@ Shadow* W3DProjectedShadowManager::addDecal(Shadow::ShadowTypeInfo *shadowInfo)
 	shadow->setTexture(0,st);	///@todo: Fix projected shadows to allow multiple lights
 	shadow->m_type = shadowType;		/// type of projection
 	shadow->m_allowWorldAlign=allowWorldAlign;	/// wrap shadow around world geometry - else align perpendicular to local z-axis.
+	shadow->setWaterRenderMode(shadowInfo->m_waterRenderMode);
 
 	shadow->m_oowDecalSizeX = 1.0f/decalSizeX;	//one over width
 	shadow->m_oowDecalSizeY = 1.0f/decalSizeY;	//one over height
@@ -1647,6 +1718,7 @@ Shadow* W3DProjectedShadowManager::addDecal(RenderObjClass *robj, Shadow::Shadow
 	shadow->setTexture(0,st);	///@todo: Fix projected shadows to allow multiple lights
 	shadow->m_type = shadowType;		/// type of projection
 	shadow->m_allowWorldAlign=allowWorldAlign;	/// wrap shadow around world geometry - else align perpendicular to local z-axis.
+	shadow->setWaterRenderMode(shadowInfo->m_waterRenderMode);
 
 	AABoxClass box;
 

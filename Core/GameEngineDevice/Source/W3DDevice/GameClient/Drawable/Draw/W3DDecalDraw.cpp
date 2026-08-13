@@ -48,6 +48,7 @@
 //-------------------------------------------------------------------------------------------------
 W3DDecalDrawModuleData::W3DDecalDrawModuleData()
 {
+	m_renderAboveWater = FALSE;	// default: below water (shadow-like)
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -69,6 +70,7 @@ void W3DDecalDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "FadeInTime", INI::parseDurationUnsignedInt, nullptr, offsetof(W3DDecalDrawModuleData, m_fadeInTime) },
 		{ "SizeX", INI::parseReal, nullptr, offsetof(W3DDecalDrawModuleData, m_decalSizeX) },
 		{ "SizeY", INI::parseReal, nullptr, offsetof(W3DDecalDrawModuleData, m_decalSizeY) },
+		{ "RenderAboveWater", INI::parseBool, nullptr, offsetof(W3DDecalDrawModuleData, m_renderAboveWater) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
@@ -123,11 +125,31 @@ void W3DDecalDraw::init_shadow()
 	strlcpy(shadowInfo.m_ShadowName, data->m_textureName.str(), ARRAY_SIZE(shadowInfo.m_ShadowName));
 	shadowInfo.allowUpdates = FALSE;		//shadow image will never update
 	shadowInfo.allowWorldAlign = TRUE;	//shadow image will wrap around world objects
-	shadowInfo.m_type = data->m_type;
-	shadowInfo.m_sizeX = data->m_decalSizeX;
-	shadowInfo.m_sizeY = data->m_decalSizeY;
+
+	// W3DDecalDraw is a standalone FX decal, not a real object shadow. Only the decal-use blend types
+	// are valid here; SHADOW_DECAL (and other shadow/projection/volume types) route into object-shadow
+	// code paths that assume a shadow-casting object + runtime shadow texture, which crashes for stacked
+	// FX decals. Coerce anything else to SHADOW_ALPHA_DECAL.
+	ShadowType decalType;
+	if (data->m_type == SHADOW_ADDITIVE_DECAL)
+		decalType = SHADOW_ADDITIVE_DECAL;
+	else if (data->m_type == SHADOW_ALPHA_DECAL)
+		decalType = SHADOW_ALPHA_DECAL;
+	else
+	{
+		DEBUG_CRASH(("W3DDecalDraw: Style must be SHADOW_ALPHA_DECAL or SHADOW_ADDITIVE_DECAL (got 0x%x); "
+			"SHADOW_DECAL and shadow/projection types are not supported for FX decals and can crash. "
+			"Coercing to SHADOW_ALPHA_DECAL.", (Int)data->m_type));
+		decalType = SHADOW_ALPHA_DECAL;
+	}
+	shadowInfo.m_type = decalType;
+	// honor the drawable's per-instance scale so FX-nugget scale variance affects decal size
+	Real scale = getDrawable()->getInstanceScale();
+	shadowInfo.m_sizeX = data->m_decalSizeX * scale;
+	shadowInfo.m_sizeY = data->m_decalSizeY * scale;
 	shadowInfo.m_offsetX = 0.0f; // TODO
 	shadowInfo.m_offsetY = 0.0f; // TODO
+	shadowInfo.m_waterRenderMode = data->m_renderAboveWater ? SHADOW_WATER_ABOVE : SHADOW_WATER_BELOW;
 	//shadowInfo.m_hasDynamicLength = FALSE;
 
 	DEBUG_ASSERTCRASH(m_shadow == nullptr, ("m_shadow is not null"));
@@ -149,8 +171,11 @@ void W3DDecalDraw::init_renderBox(const Matrix3D* transformMtx)
 {
 	const W3DDecalDrawModuleData* data = getW3DDecalDrawModuleData();
 
+	// honor the drawable's per-instance scale so FX-nugget scale variance affects decal size
+	Real scale = getDrawable()->getInstanceScale();
+
 	Vector3 center = { 0, 0, 0 };
-	Vector3 extent = { data->m_decalSizeX, data->m_decalSizeY, 1.0f };
+	Vector3 extent = { data->m_decalSizeX * scale, data->m_decalSizeY * scale, 1.0f };
 
 	m_renderBox = NEW OBBoxRenderObjClass(
 		OBBoxClass(center, extent)

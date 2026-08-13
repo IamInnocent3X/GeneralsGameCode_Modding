@@ -57,6 +57,7 @@
 #include <d3dx8core.h>
 
 #include "Common/GlobalData.h"
+#include "Common/MapData.h"
 #include "Common/PerfTimer.h"
 #include "Common/Xfer.h"
 
@@ -598,10 +599,10 @@ void BaseHeightMapRenderObjClass::doTheLight(VERTEX_FORMAT *vb, Vector3*light, V
 	// ---------------------------------------------
 	// Height based ambient light factor (for water)
 	// ---------------------------------------------
-	if (TheGlobalData &&
-		TheGlobalData->m_terrainHeightAmbientLightHeightStart > 0 &&
-		(TheGlobalData->m_terrainHeightAmbientLightHeight1 >= 0 || TheGlobalData->m_terrainHeightAmbientLightHeight2 >= 0) &&
-		vb->z <= TheGlobalData->m_terrainHeightAmbientLightHeightStart
+	if (TheMapData &&
+		TheMapData->m_terrainHeightAmbientLightHeightStart > 0 &&
+		(TheMapData->m_terrainHeightAmbientLightHeight1 >= 0 || TheMapData->m_terrainHeightAmbientLightHeight2 >= 0) &&
+		vb->z <= TheMapData->m_terrainHeightAmbientLightHeightStart
 		) {
 		Real col1R, col1G, col1B, col2R, col2G, col2B;
 		//Real factor1 = 0.0;
@@ -614,33 +615,33 @@ void BaseHeightMapRenderObjClass::doTheLight(VERTEX_FORMAT *vb, Vector3*light, V
 		Real colB;
 
 		// case 1: only one color
-		if (TheGlobalData->m_terrainHeightAmbientLightHeight1 <= 0)
+		if (TheMapData->m_terrainHeightAmbientLightHeight1 <= 0)
 		{
-			col1R = TheGlobalData->m_terrainHeightAmbientLightColor2.red;
-			col1G = TheGlobalData->m_terrainHeightAmbientLightColor2.green;
-			col1B = TheGlobalData->m_terrainHeightAmbientLightColor2.blue;
-			height1 = TheGlobalData->m_terrainHeightAmbientLightHeight2;
+			col1R = TheMapData->m_terrainHeightAmbientLightColor2.red;
+			col1G = TheMapData->m_terrainHeightAmbientLightColor2.green;
+			col1B = TheMapData->m_terrainHeightAmbientLightColor2.blue;
+			height1 = TheMapData->m_terrainHeightAmbientLightHeight2;
 		}
-		else if (TheGlobalData->m_terrainHeightAmbientLightHeight2 <= 0) {
-			col1R = TheGlobalData->m_terrainHeightAmbientLightColor1.red;
-			col1G = TheGlobalData->m_terrainHeightAmbientLightColor1.green;
-			col1B = TheGlobalData->m_terrainHeightAmbientLightColor1.blue;
-			height1 = TheGlobalData->m_terrainHeightAmbientLightHeight1;
+		else if (TheMapData->m_terrainHeightAmbientLightHeight2 <= 0) {
+			col1R = TheMapData->m_terrainHeightAmbientLightColor1.red;
+			col1G = TheMapData->m_terrainHeightAmbientLightColor1.green;
+			col1B = TheMapData->m_terrainHeightAmbientLightColor1.blue;
+			height1 = TheMapData->m_terrainHeightAmbientLightHeight1;
 		}
 		else
 		{ // case 2: both colors
 
-			col1R = TheGlobalData->m_terrainHeightAmbientLightColor1.red;
-			col1G = TheGlobalData->m_terrainHeightAmbientLightColor1.green;
-			col1B = TheGlobalData->m_terrainHeightAmbientLightColor1.blue;
-			col2R = TheGlobalData->m_terrainHeightAmbientLightColor2.red;
-			col2G = TheGlobalData->m_terrainHeightAmbientLightColor2.green;
-			col2B = TheGlobalData->m_terrainHeightAmbientLightColor2.blue;
-			height1 = TheGlobalData->m_terrainHeightAmbientLightHeight1;
-			height2 = TheGlobalData->m_terrainHeightAmbientLightHeight2;
+			col1R = TheMapData->m_terrainHeightAmbientLightColor1.red;
+			col1G = TheMapData->m_terrainHeightAmbientLightColor1.green;
+			col1B = TheMapData->m_terrainHeightAmbientLightColor1.blue;
+			col2R = TheMapData->m_terrainHeightAmbientLightColor2.red;
+			col2G = TheMapData->m_terrainHeightAmbientLightColor2.green;
+			col2B = TheMapData->m_terrainHeightAmbientLightColor2.blue;
+			height1 = TheMapData->m_terrainHeightAmbientLightHeight1;
+			height2 = TheMapData->m_terrainHeightAmbientLightHeight2;
 		}
 
-		bool multiply = !TheGlobalData->m_terrainHeightAmbientLightAdditive;
+		bool multiply = !TheMapData->m_terrainHeightAmbientLightAdditive;
 		Real base;
 		if (multiply)
 			base = 1.0;
@@ -648,7 +649,7 @@ void BaseHeightMapRenderObjClass::doTheLight(VERTEX_FORMAT *vb, Vector3*light, V
 			base = 0.0;
 
 		if (vb->z > height1) {
-			Real t = WWMath::Clamp(invLerp(TheGlobalData->m_terrainHeightAmbientLightHeightStart, height1, vb->z));
+			Real t = WWMath::Clamp(invLerp(TheMapData->m_terrainHeightAmbientLightHeightStart, height1, vb->z));
 			colR = col1R * t + (1.0 - t) * base;
 			colG = col1G * t + (1.0 - t) * base;
 			colB = col1B * t + (1.0 - t) * base;

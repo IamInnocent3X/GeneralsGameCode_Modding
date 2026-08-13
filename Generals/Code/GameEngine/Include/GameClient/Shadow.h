@@ -62,6 +62,14 @@ static const char* const TheShadowNames[] =
 
 #define MAX_SHADOW_LIGHTS 1	//maximum number of shadow casting light sources in scene - support for more than 1 has been dropped from most code.
 
+// Per-decal ordering relative to water (evaluated only by the Zero Hour render path; inert here).
+enum ShadowWaterMode
+{
+	SHADOW_WATER_DEFAULT = 0,	//follow the global RadiusDecalsAboveWater flag
+	SHADOW_WATER_ABOVE,			//always draw above water
+	SHADOW_WATER_BELOW			//always draw below water (shadow-like)
+};
+
 class RenderObjClass; //forward reference
 class RenderCost;	//forward reference
 
@@ -83,6 +91,7 @@ public:
 						m_sizeY = 0.0f;
 						m_offsetX = 0.0f;
 						m_offsetY = 0.0f;
+						m_waterRenderMode = SHADOW_WATER_DEFAULT;
 				}
 
 				char	m_ShadowName[64];	//when set, overrides the default model shadow (used mostly for Decals).
@@ -93,9 +102,13 @@ public:
 				Real	m_sizeY;			//world size of decal projection
 				Real	m_offsetX;			//world shift along x axis
 				Real	m_offsetY;			//world shift along y axis
+				Int		m_waterRenderMode;	//ShadowWaterMode: above/below/default water ordering
 		};
 
-		Shadow() : m_diffuse(0xffffffff), m_color(0xffffffff), m_opacity (0x000000ff), m_localAngle(0.0f) {}
+		Shadow() : m_diffuse(0xffffffff), m_color(0xffffffff), m_opacity (0x000000ff), m_localAngle(0.0f), m_waterRenderMode(SHADOW_WATER_DEFAULT) {}
+
+		void setWaterRenderMode(Int mode) { m_waterRenderMode = mode; }
+		Int  getWaterRenderMode() const { return m_waterRenderMode; }
 
 		///<if this is set, then no render will occur, even if enableShadowRender() is enabled. Used by Shroud.
 		void enableShadowInvisible(Bool isEnabled);
@@ -143,6 +156,7 @@ protected:
 		Real	m_decalSizeX;		/// 1/(world space extent of texture in x direction)
 		Real	m_decalSizeY;		/// 1/(world space extent of texture in y direction)
 		Real	m_localAngle;		/// yaw or rotation around z-axis of shadow image when not bound to robj/drawable.
+		Int		m_waterRenderMode;	/// ShadowWaterMode: chooses above/below/default water ordering (Zero Hour only).
 };
 
 
@@ -174,9 +188,12 @@ inline void Shadow::setOpacity(Int value)
 		if (m_type & SHADOW_ADDITIVE_DECAL)
 		{
 			Real fvalue=(Real)m_opacity/255.0f;
-			m_diffuse=REAL_TO_INT(((Real)(m_color & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 8) & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 16) & 0xff) * fvalue));
+			// Premultiply each channel by opacity and pack into its correct byte (D3DCOLOR 0xAARRGGBB).
+			// Additive blend (ONE/ONE) ignores alpha, so fade is done by scaling RGB toward black.
+			Int r = REAL_TO_INT((Real)((m_color >> 16) & 0xff) * fvalue);
+			Int g = REAL_TO_INT((Real)((m_color >>  8) & 0xff) * fvalue);
+			Int b = REAL_TO_INT((Real)( m_color        & 0xff) * fvalue);
+			m_diffuse = (r << 16) | (g << 8) | b;
 		}
 	}
 }
@@ -194,9 +211,12 @@ inline void Shadow::setColor(Color value)
 		if (m_type & SHADOW_ADDITIVE_DECAL)
 		{
 			Real fvalue=(Real)m_opacity/255.0f;
-			m_diffuse=REAL_TO_INT(((Real)(m_color & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 8) & 0xff) * fvalue))
-					|REAL_TO_INT(((Real)((m_color >> 16) & 0xff) * fvalue));
+			// Premultiply each channel by opacity and pack into its correct byte (D3DCOLOR 0xAARRGGBB).
+			// Additive blend (ONE/ONE) ignores alpha, so fade is done by scaling RGB toward black.
+			Int r = REAL_TO_INT((Real)((m_color >> 16) & 0xff) * fvalue);
+			Int g = REAL_TO_INT((Real)((m_color >>  8) & 0xff) * fvalue);
+			Int b = REAL_TO_INT((Real)( m_color        & 0xff) * fvalue);
+			m_diffuse = (r << 16) | (g << 8) | b;
 		}
 	}
 }

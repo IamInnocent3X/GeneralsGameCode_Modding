@@ -736,15 +736,10 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 
 	{"DefaultExcludedDeathTypes", INI::parseDeathTypeFlagsList, nullptr, offsetof(GlobalData, m_defaultExcludedDeathTypes) },
 	{"HeightAboveTerrainIncludesWater", INI::parseBool, nullptr, offsetof(GlobalData, m_heightAboveTerrainIncludesWater) },
+	{"RadiusDecalsAboveWater", INI::parseBool, nullptr, offsetof(GlobalData, m_radiusDecalsAboveWater) },
 	{"HideScorchmarksAboveGround", INI::parseBool, nullptr, offsetof(GlobalData, m_hideScorchmarksAboveGround) },
 
 
-	{ "TerrainHeightAmbientLightColor1",			INI::parseRGBColor,			nullptr,			offsetof(GlobalData, m_terrainHeightAmbientLightColor1) },
-	{ "TerrainHeightAmbientLightColor2",			INI::parseRGBColor,			nullptr,			offsetof(GlobalData, m_terrainHeightAmbientLightColor2) },
-	{ "TerrainHeightAmbientLightStart",			INI::parseReal,			nullptr,			offsetof(GlobalData, m_terrainHeightAmbientLightHeightStart) },
-	{ "TerrainHeightAmbientLightHeight1",			INI::parseReal,			nullptr,			offsetof(GlobalData, m_terrainHeightAmbientLightHeight1) },
-	{ "TerrainHeightAmbientLightHeight2",			INI::parseReal,			nullptr,			offsetof(GlobalData, m_terrainHeightAmbientLightHeight2) },
-	{ "TerrainHeightAmbientLightAdditive",			INI::parseBool,			nullptr,			offsetof(GlobalData, m_terrainHeightAmbientLightAdditive) },
 	{ nullptr,					nullptr,						nullptr,						0 }
 
 };
@@ -1399,20 +1394,7 @@ GlobalData::GlobalData()
 	// m_chronoTintStatusType = TINT_STATUS_INVALID;
 
 	m_heightAboveTerrainIncludesWater = false;
-
-	m_terrainHeightAmbientLightColor1.red = 0;
-	m_terrainHeightAmbientLightColor1.green = 0;
-	m_terrainHeightAmbientLightColor1.blue = 0;
-
-	m_terrainHeightAmbientLightColor2.red = 0;
-	m_terrainHeightAmbientLightColor2.green = 0;
-	m_terrainHeightAmbientLightColor2.blue = 0;
-
-	m_terrainHeightAmbientLightHeightStart = -1;
-	m_terrainHeightAmbientLightHeight1 = -1;
-	m_terrainHeightAmbientLightHeight2 = -1;
-
-	m_terrainHeightAmbientLightAdditive = false;
+	m_radiusDecalsAboveWater = false;
 
 }
 

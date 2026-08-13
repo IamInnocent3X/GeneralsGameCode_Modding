@@ -73,6 +73,7 @@
 extern void PrepareShadows();
 extern void DoTrees(RenderInfoClass & rinfo);
 extern void DoShadows(RenderInfoClass & rinfo, Bool stencilPass);
+extern void DoDecals(RenderInfoClass & rinfo);
 extern void DoParticles(RenderInfoClass & rinfo);
 
 // No texturing, no zbuffer reading/writing, primary gradient, no
@@ -875,6 +876,11 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 		DoShadows(rinfo, true);	//draw all stencil shadows
 
 	WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);	//draws things like water
+
+	//draw the above-water decal subset AFTER water so those decals show over it (still depth-tested, so
+	//objects stay on top). Which decals qualify is decided per-decal (global flag + per-decal water mode).
+	if (m_customPassMode == SCENE_PASS_DEFAULT && Get_Extra_Pass_Polygon_Mode() == EXTRA_PASS_DISABLE)
+		DoDecals(rinfo);
 
 	if (m_customPassMode == SCENE_PASS_DEFAULT && Get_Extra_Pass_Polygon_Mode() == EXTRA_PASS_DISABLE)
 		flushTranslucentObjects(rinfo);	//draw all translucent meshes which don't need per-polygon sorting.

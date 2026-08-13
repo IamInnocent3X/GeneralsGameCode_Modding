@@ -49,6 +49,7 @@ public:
 	ShadowType m_type;		/// type of projection
 	Real m_decalSizeX;		/// 1/(world space extent of texture in x direction)
 	Real m_decalSizeY;		/// 1/(world space extent of texture in y direction)
+	Bool m_renderAboveWater;	/// if true, this decal draws above water (else below, shadow-like)
 
 	W3DDecalDrawModuleData();
 	~W3DDecalDrawModuleData();
