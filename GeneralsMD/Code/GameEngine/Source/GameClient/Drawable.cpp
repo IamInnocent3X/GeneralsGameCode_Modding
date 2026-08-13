@@ -3598,6 +3598,10 @@ void Drawable::drawEnthusiastic(const IRegion2D* healthBarRegion)
 	//
 	// only display if have enthusiasm
 
+	// hardcoded fix to prevent projectiles that got the bonus from the launcher from showing the icon
+	if (obj->isKindOf(KINDOF_PROJECTILE))
+		return;
+
 	if( obj->testWeaponBonusCondition( WEAPONBONUSCONDITION_ENTHUSIASTIC ) == TRUE &&
 			healthBarRegion != nullptr )
 	{

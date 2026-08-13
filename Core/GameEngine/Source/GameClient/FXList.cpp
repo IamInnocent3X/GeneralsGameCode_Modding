@@ -481,11 +481,8 @@ public:
 
 	DecalFXNugget()
 	{
-		m_templateName.set("GenericDecal"); // TODO
-		//m_templateName = AsciiString::TheEmptyString;
-		//m_textureName = AsciiString::TheEmptyString;
-		//m_opacity = 1.0;		///< value between 0 and 1
-		//m_color = 0;		///< color in ARGB format. (Alpha is ignored).
+		// m_templateNames left empty; doFXPos falls back to "GenericDecal" if none listed.
+		m_scale.setRange(1.0f, 1.0f, GameClientRandomVariable::CONSTANT);	// default = no scale variance
 		m_lifetime = 0;
 	/*	m_fadeOutTime = 0;
 		m_fadeInTime = 0;
@@ -514,7 +511,12 @@ public:
 				}
 			}
 
-			Drawable* drawable = TheThingFactory->newDrawable(TheThingFactory->findTemplate(m_templateName));
+			// pick one of the listed decal templates at random (fall back to GenericDecal if none listed)
+			AsciiString tmplName = m_templateNames.empty()
+				? AsciiString("GenericDecal")
+				: m_templateNames[GameClientRandomValue(0, (Int)m_templateNames.size() - 1)];
+
+			Drawable* drawable = TheThingFactory->newDrawable(TheThingFactory->findTemplate(tmplName));
 			if (!drawable)
 				return;
 
@@ -530,6 +532,10 @@ public:
 
 			if (m_randomAngle)
 				drawable->setOrientation(GameClientRandomValueReal(0, PI * 2));
+
+			// apply per-spawn random uniform scale variance (default range 1..1 = no change);
+			// W3DDecalDraw multiplies its decal size by the drawable's instance scale.
+			drawable->setInstanceScale(drawable->getInstanceScale() * m_scale.getValue());
 
 			drawable->setExpirationDate(TheGameLogic->getFrame() + m_lifetime);
 		}
@@ -555,7 +561,8 @@ public:
 	{
 		static const FieldParse myFieldParse[] =
 		{
-			{ "DecalName",			INI::parseAsciiString,			nullptr, offsetof(DecalFXNugget, m_templateName) },
+			{ "DecalName",			INI::parseAsciiStringVectorAppend, nullptr, offsetof(DecalFXNugget, m_templateNames) },
+			{ "Scale",					INI::parseGameClientRandomVariable, nullptr, offsetof(DecalFXNugget, m_scale) },
 			{ "Lifetime",        INI::parseDurationUnsignedInt, nullptr, offsetof(DecalFXNugget, m_lifetime) },
 			{ "Offset",					INI::parseCoord3D,		nullptr, offsetof(DecalFXNugget, m_offset) },
 			{ "Angle",					INI::parseReal,             nullptr, offsetof(DecalFXNugget, m_angle) },
@@ -571,7 +578,8 @@ public:
 	}
 
 private:
-	AsciiString	m_templateName;
+	std::vector<AsciiString> m_templateNames;	///< one is picked at random per spawn ("DecalName", repeatable)
+	GameClientRandomVariable m_scale;			///< random uniform size factor per spawn ("Scale = low high")
 	UnsignedInt m_lifetime;
 	Coord3D	m_offset;
 	Real m_angle;
