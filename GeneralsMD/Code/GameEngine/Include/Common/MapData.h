@@ -25,7 +25,16 @@ public:
 	Real m_HeightmapScale;
 	Bool m_enableShips;
 
+	// Height based terrain ambient light (e.g. water depth lighting). Per-map.
+	RGBColor m_terrainHeightAmbientLightColor1;
+	RGBColor m_terrainHeightAmbientLightColor2;
+	Real m_terrainHeightAmbientLightHeightStart;
+	Real m_terrainHeightAmbientLightHeight1;
+	Real m_terrainHeightAmbientLightHeight2;
+	Bool m_terrainHeightAmbientLightAdditive;
+
 private:
+	void setDefaults();
 	static const FieldParse s_MapDataFieldParseTable[];
 };
 
