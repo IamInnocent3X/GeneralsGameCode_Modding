@@ -30,6 +30,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #define DEFINE_SHADOW_NAMES
+#define DEFINE_RADIUSCURSOR_NAMES
 
 #include "Common/ActionManager.h"
 #include "Common/FramePacer.h"
@@ -1031,6 +1032,10 @@ const FieldParse InGameUI::s_fieldParseTable[] =
 	{ "DrawRMBScrollAnchor",									INI::parseBool,					nullptr,		offsetof( InGameUI, m_drawRMBScrollAnchor ) },
 	{ "MoveRMBScrollAnchor",									INI::parseBool,					nullptr,		offsetof( InGameUI, m_moveRMBScrollAnchor ) },
 
+	// Generic form: "RadiusCursor <CursorType>" (type named on the header line). The per-cursor keywords
+	// below are kept for backwards compatibility.
+	{ "RadiusCursor", InGameUI::parseRadiusCursor, nullptr, 0 },
+
 	{ "AttackDamageAreaRadiusCursor", RadiusDecalTemplate::parseRadiusDecalTemplate, nullptr, offsetof( InGameUI, m_radiusCursors[RADIUSCURSOR_ATTACK_DAMAGE_AREA] ) },
 	{ "AttackScatterAreaRadiusCursor", RadiusDecalTemplate::parseRadiusDecalTemplate, nullptr, offsetof( InGameUI, m_radiusCursors[RADIUSCURSOR_ATTACK_SCATTER_AREA] ) },
 	{ "AttackContinueAreaRadiusCursor", RadiusDecalTemplate::parseRadiusDecalTemplate, nullptr, offsetof( InGameUI, m_radiusCursors[RADIUSCURSOR_ATTACK_CONTINUE_AREA] ) },
@@ -1103,6 +1108,34 @@ const FieldParse InGameUI::s_fieldParseTable[] =
 
 	{ nullptr,													nullptr,										nullptr,		0 }
 };
+
+//-------------------------------------------------------------------------------------------------
+/** Generic radius-cursor parser. INI form: "RadiusCursor <CursorType>" where <CursorType> is a name
+	from TheRadiusCursorNames (e.g. GUARD_AREA), followed by the RadiusDecalTemplate fields. The parsed
+	definition is stored in m_radiusCursors[<CursorType>]. */
+//-------------------------------------------------------------------------------------------------
+/*static*/ void InGameUI::parseRadiusCursor( INI* ini, void* instance, void* /*store*/, const void* /*userData*/ )
+{
+	InGameUI* self = (InGameUI*)instance;
+
+	// cursor type is the token right after the "RadiusCursor" keyword (e.g. "GUARD_AREA")
+	const char* typeName = ini->getNextToken();
+	if( typeName == nullptr )
+	{
+		DEBUG_CRASH(( "RadiusCursor: missing CursorType name on header line" ));
+		return;
+	}
+
+	Int type = INI::scanIndexList( typeName, TheRadiusCursorNames );	// raises INI_INVALID_DATA if unknown
+	if( type <= RADIUSCURSOR_NONE || type >= RADIUSCURSOR_COUNT )
+	{
+		DEBUG_CRASH(( "RadiusCursor: invalid CursorType '%s'", typeName ));
+		return;
+	}
+
+	// parse the remaining decal fields into the selected slot (reuse the existing block parser)
+	RadiusDecalTemplate::parseRadiusDecalTemplate( ini, instance, &self->m_radiusCursors[type], nullptr );
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse MouseCursor entry */
@@ -1728,6 +1761,10 @@ void InGameUI::setRadiusCursor(RadiusCursorType cursorType, const AsciiString& c
 				radius = specPowTempl ? specPowTempl->getRadiusCursorRadius() : 0.0f;
 				break;
 
+			default:
+				// any other (newer) special-power cursor type: use the SpecialPower's configured radius
+				radius = specPowTempl ? specPowTempl->getRadiusCursorRadius() : 0.0f;
+				break;
 		}
 	}
 
