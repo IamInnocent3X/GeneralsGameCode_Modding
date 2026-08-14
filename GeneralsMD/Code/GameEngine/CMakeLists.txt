@@ -343,6 +343,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/FlightDeckBehavior.h
     Include/GameLogic/Module/DroneCarrierAIUpdate.h
     Include/GameLogic/Module/FloatUpdate.h
+    Include/GameLogic/Module/GlobalLightingModifierUpdate.h
     Include/GameLogic/Module/FXListDie.h
     Include/GameLogic/Module/GarrisonContain.h
     Include/GameLogic/Module/GenerateMinefieldBehavior.h
@@ -1085,6 +1086,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Update/FireWeaponAdvancedUpdate.cpp
     Source/GameLogic/Object/Update/FlammableUpdate.cpp
     Source/GameLogic/Object/Update/FloatUpdate.cpp
+    Source/GameLogic/Object/Update/GlobalLightingModifierUpdate.cpp
     Source/GameLogic/Object/Update/HeightDieUpdate.cpp
     Source/GameLogic/Object/Update/HelicopterSlowDeathUpdate.cpp
     Source/GameLogic/Object/Update/ShipSlowDeathBehavior.cpp

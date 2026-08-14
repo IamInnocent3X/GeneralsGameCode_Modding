@@ -148,6 +148,7 @@ set(GAMEENGINE_SRC
     Include/GameClient/ClientInstance.h
     Include/GameClient/ClientRandomValue.h
     Include/GameClient/Color.h
+    Include/GameClient/GlobalLightingModifier.h
 #    Include/GameClient/CommandXlat.h
 #    Include/GameClient/ControlBar.h
 #    Include/GameClient/ControlBarResizer.h
@@ -700,6 +701,7 @@ set(GAMEENGINE_SRC
     Source/Common/WorkerProcess.cpp
     Source/GameClient/ClientInstance.cpp
     Source/GameClient/Color.cpp
+    Source/GameClient/GlobalLightingModifier.cpp
     Source/GameClient/Credits.cpp
 #    Source/GameClient/Display.cpp
     Source/GameClient/DisplayString.cpp

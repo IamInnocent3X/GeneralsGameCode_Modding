@@ -134,6 +134,7 @@
 #include "GameLogic/Module/FireWeaponAdvancedUpdate.h"
 #include "GameLogic/Module/FlammableUpdate.h"
 #include "GameLogic/Module/FloatUpdate.h"
+#include "GameLogic/Module/GlobalLightingModifierUpdate.h"
 #include "GameLogic/Module/TensileFormationUpdate.h"
 #include "GameLogic/Module/HackInternetAIUpdate.h"
 #include "GameLogic/Module/DeployStyleAIUpdate.h"
@@ -466,6 +467,7 @@ void ModuleFactory::init( void )
 	addModule( FireWeaponAdvancedUpdate );
 	addModule( FlammableUpdate );
 	addModule( FloatUpdate );
+	addModule( GlobalLightingModifierUpdate );
 	addModule( TensileFormationUpdate );
 	addModule( HeightDieUpdate );
 	addModule( ScatterShotUpdate );
