@@ -72,20 +72,20 @@ public:
 	RadarUpgrade( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype defined by MemoryPoolObject
 
-	virtual RadarUpgradeInterface* getRadarUpgradeInterface() { return this; }
+	virtual RadarUpgradeInterface* getRadarUpgradeInterface() override { return this; }
 
-	virtual void onDelete();																///< we have some work to do when this module goes away
-	virtual void onCapture( Player *oldOwner, Player *newOwner );	///< object containing upgrade has changed teams
-	virtual Bool getIsDisableProof() const { return getRadarUpgradeModuleData()->m_isDisableProof; }
-	virtual Bool isUpgraded() const { return isAlreadyUpgraded(); }
+	virtual void onDelete() override;																///< we have some work to do when this module goes away
+	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;	///< object containing upgrade has changed teams
+	virtual Bool getIsDisableProof() const override { return getRadarUpgradeModuleData()->m_isDisableProof; }
+	virtual Bool isUpgraded() const override { return isAlreadyUpgraded(); }
 
 	void doRadarUpgrade(Bool isAdd);
 
 protected:
 
-	virtual void upgradeImplementation(); ///< Here's the actual work of Upgrading
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return true; }
+	virtual void upgradeImplementation() override; ///< Here's the actual work of Upgrading
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 private:
 	Bool m_hasExecuted;

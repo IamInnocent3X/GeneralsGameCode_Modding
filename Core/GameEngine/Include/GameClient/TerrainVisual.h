@@ -148,8 +148,8 @@ typedef SeismicSimulationList::iterator SeismicSimulationListIt;
 
 class DomeStyleSeismicFilter : public SeismicSimulationFilterBase
 {
-  virtual SeismicSimStatusCode filterCallback( WorldHeightMapInterfaceClass *heightMap, const SeismicSimulationNode *node );
-  virtual Real applyGravityCallback( Real velocityIn );
+  virtual SeismicSimStatusCode filterCallback( WorldHeightMapInterfaceClass *heightMap, const SeismicSimulationNode *node ) override;
+  virtual Real applyGravityCallback( Real velocityIn ) override;
 };
 
 
@@ -160,10 +160,7 @@ typedef enum _TerrainLOD CPP_11(: Int)
 {
 	TERRAIN_LOD_INVALID,
 	TERRAIN_LOD_MIN,  // note that this is less than max
-	TERRAIN_LOD_STRETCH_NO_CLOUDS,
-	TERRAIN_LOD_HALF_CLOUDS,
 	TERRAIN_LOD_NO_CLOUDS,
-	TERRAIN_LOD_STRETCH_CLOUDS,
 	TERRAIN_LOD_NO_WATER,
 	TERRAIN_LOD_MAX,  // note that this is larger than min
 	TERRAIN_LOD_AUTOMATIC,
@@ -177,10 +174,7 @@ static const char *const TerrainLODNames[] =
 {
 	"NONE",
 	"MIN",
-	"STRETCH_NO_CLOUDS",
-	"HALF_CLOUDS",
 	"NO_CLOUDS",
-	"STRETCH_CLOUDS",
 	"NO_WATER",
 	"MAX",
 	"AUTOMATIC",
@@ -203,11 +197,11 @@ public:
 	enum {NumSkyboxTextures = 5};
 
 	TerrainVisual();
-	virtual ~TerrainVisual();
+	virtual ~TerrainVisual() override;
 
-	virtual void init();
-	virtual void reset();
-	virtual void update();
+	virtual void init() override;
+	virtual void reset() override;
+	virtual void update() override;
 
 	virtual Bool load( AsciiString filename );
 
@@ -298,9 +292,9 @@ public:
 protected:
 
 	// snapshot methods
-	virtual void crc( Xfer *xfer );
-	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 
 	AsciiString m_filenameString;							///< file with terrain data
 

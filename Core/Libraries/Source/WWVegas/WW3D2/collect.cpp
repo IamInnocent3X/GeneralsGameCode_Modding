@@ -72,9 +72,9 @@
 
 
 #include "collect.h"
-#include "chunkio.h"
+#include "WWLib/chunkio.h"
 #include "camera.h"
-#include "wwdebug.h"
+#include "WWDebug/wwdebug.h"
 #include "snapPts.h"
 #include "assetmgr.h"
 #include "ww3d.h"
@@ -117,21 +117,21 @@ protected:
 ** CollectionPrototypeClass this is the render object prototype for
 ** Collections.
 */
-class CollectionPrototypeClass : public W3DMPO, public PrototypeClass
+class CollectionPrototypeClass : public PrototypeClass
 {
-	W3DMPO_GLUE(CollectionPrototypeClass)
+	W3DMPO_CODE(CollectionPrototypeClass)
 public:
 	CollectionPrototypeClass(CollectionDefClass * def)		{ ColDef = def; WWASSERT(ColDef); }
 
-	virtual const char *			Get_Name() const			{ return ColDef->Get_Name(); }
-	virtual int								Get_Class_ID() const	{ return RenderObjClass::CLASSID_COLLECTION; }
-	virtual RenderObjClass *	Create()							{ return NEW_REF( CollectionClass, (*ColDef)); }
-	virtual void							DeleteSelf()							{ delete this; }
+	virtual const char *			Get_Name() const override { return ColDef->Get_Name(); }
+	virtual int								Get_Class_ID() const override { return RenderObjClass::CLASSID_COLLECTION; }
+	virtual RenderObjClass *	Create() override							{ return NEW_REF( CollectionClass, (*ColDef)); }
+	virtual void							DeleteSelf() override { delete this; }
 
 	CollectionDefClass *			ColDef;
 
 protected:
-	virtual ~CollectionPrototypeClass()					{ delete ColDef; }
+	virtual ~CollectionPrototypeClass() override { delete ColDef; }
 };
 
 
@@ -809,7 +809,7 @@ void CollectionClass::Update_Obj_Space_Bounding_Volumes()
 {
 	int i;
 	if (SubObjects.Count() <= 0) {
-		BoundSphere = SphereClass(Vector3(0,0,0),0);
+		BoundSphere = SphereClass();
 		BoundBox.Center.Set(0,0,0);
 		BoundBox.Extent.Set(0,0,0);
 		return;

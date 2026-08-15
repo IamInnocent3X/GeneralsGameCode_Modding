@@ -49,9 +49,9 @@ public:
 	ImmortalBody( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE);								///< change health
+	virtual void internalChangeHealth( Real delta, Bool changeModelCondition = TRUE) override;								///< change health
 
-	virtual Bool cantBeKilled() const { return TRUE; }
+	virtual Bool cantBeKilled() const override { return TRUE; }
 
 protected:
 

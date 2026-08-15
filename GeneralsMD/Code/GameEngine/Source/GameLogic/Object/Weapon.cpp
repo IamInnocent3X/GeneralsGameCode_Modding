@@ -79,6 +79,7 @@
 #include "GameLogic/Module/AssistedTargetingUpdate.h"
 #include "GameLogic/Module/ProjectileStreamUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/TerrainLogic.h"
 
@@ -835,13 +836,12 @@ void WeaponTemplate::copy_from(const WeaponTemplate& other) {
 	static const char *MIN_LABEL = "Min";
 	static const char *MAX_LABEL = "Max";
 
-	const char* token = ini->getNextTokenOrNull(ini->getSepsColon());
-
+	const char* token = ini->getNextToken(ini->getSepsColon());
 	if( stricmp(token, MIN_LABEL) == 0 )
 	{
 		// Two entry min/max
 		self->m_minDelayBetweenShots = INI::scanInt(ini->getNextToken(ini->getSepsColon()));
-		token = ini->getNextTokenOrNull(ini->getSepsColon());
+		token = ini->getNextToken(ini->getSepsColon());
 		if( stricmp(token, MAX_LABEL) != 0 )
 		{
 			// Messed up double entry
@@ -1156,11 +1156,21 @@ Real WeaponTemplate::estimateWeaponTemplateDamage(
   // hmm.. must be shooting a firebase or such, if there is noone home to take the bullet, return 0!
   if ( victimObj->isKindOf( KINDOF_STRUCTURE) && damageType == DAMAGE_SNIPER )
   {
+
+#if RETAIL_COMPATIBLE_CRC || PRESERVE_SNIPING_EMPTY_STINGER_SITES
     if ( victimObj->getContain() )
     {
       if ( victimObj->getContain()->getContainCount() == 0 )
         return 0.0f;
     }
+#else
+		// TheSuperHackers @bugfix Stubbjax 22/06/2026 Only allow targeting Stinger Sites when they contain Soldiers.
+		const Bool hasOccupants = victimObj->getContain() && victimObj->getContain()->getContainCount() > 0;
+		const Bool hasSlaves = victimObj->getSpawnBehaviorInterface() && victimObj->getSpawnBehaviorInterface()->getSlaveCount() > 0;
+
+		if (!hasOccupants && !hasSlaves)
+			return 0.0f;
+#endif
   }
 
 
@@ -1664,7 +1674,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 		else
 		{
 			// IamInnocent - Removed inline from this function
-			//targetPos.set( &targetedPos );
+			//targetPos.set( *&targetedPos );
 			targetPos = targetedPos;
 		}
 		Real reAngle = getWeaponRecoilAmount();
@@ -1880,7 +1890,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 					if(TheGlobalData->m_dynamicTargeting)
 						projectileDestination = targetedPos;
 					else
-						projectileDestination.set( curTarget->getPosition() );
+						projectileDestination.set( *curTarget->getPosition() );
 				}
 				if (firingWeapon->getContinuousLaserLoopTime() > 0)
 					firingWeapon->handleContinuousLaser(sourceObj, curTarget, &projectileDestination);
@@ -2221,7 +2231,7 @@ void WeaponTemplate::createPreAttackFX
 	}
 }
 //-------------------------------------------------------------------------------------------------
-#if RETAIL_COMPATIBLE_CRC || PRESERVE_RETAIL_BEHAVIOR
+#if RETAIL_COMPATIBLE_CRC || PRESERVE_UNRELIABLE_FIRESTORMS
 void WeaponTemplate::trimOldHistoricDamage() const
 {
 	UnsignedInt expirationDate = TheGameLogic->getFrame() - TheGlobalData->m_historicDamageLimit;
@@ -2332,7 +2342,7 @@ static Int getVictimAntiMask(const Object* victim)
 }
 
 //-------------------------------------------------------------------------------------------------
-#if RETAIL_COMPATIBLE_CRC || PRESERVE_RETAIL_BEHAVIOR
+#if RETAIL_COMPATIBLE_CRC || PRESERVE_UNRELIABLE_FIRESTORMS
 void WeaponTemplate::processHistoricDamage(const Object* source, const Coord3D* pos) const
 {
 	//
@@ -2975,8 +2985,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 			damageDirection.zero();
 			if( curVictim && source )
 			{
-				damageDirection.set( curVictim->getPosition() );
-				damageDirection.sub( source->getPosition() );
+				damageDirection.set( *curVictim->getPosition() );
+				damageDirection.sub( *source->getPosition() );
 			}
 
 			Real allowedAngle = getRadiusDamageAngle();
@@ -3535,7 +3545,7 @@ const WeaponTemplate *WeaponStore::findWeaponTemplate( const AsciiString& name )
 	if (name.compareNoCase("None") == 0)
 		return nullptr;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
-	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!",name));
+	DEBUG_ASSERTCRASH(wt != nullptr, ("Weapon %s not found!", name.str()));
 	return wt;
 }
 

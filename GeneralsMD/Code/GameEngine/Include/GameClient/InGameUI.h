@@ -494,12 +494,12 @@ public:  // ********************************************************************
 	};
 
 	InGameUI();
-	virtual ~InGameUI();
+	virtual ~InGameUI() override;
 
 	// Inherited from subsystem interface -----------------------------------------------------------
-	virtual	void init();															///< Initialize the in-game user interface
-	virtual void update();														///< Update the UI by calling preDraw(), draw(), and postDraw()
-	virtual void reset();															///< Reset
+	virtual	void init() override;															///< Initialize the in-game user interface
+	virtual void update() override;														///< Update the UI by calling preDraw(), draw(), and postDraw()
+	virtual void reset() override;															///< Reset
 	//-----------------------------------------------------------------------------------------------
 
 	// interface for the popup messages
@@ -596,7 +596,7 @@ public:  // ********************************************************************
 	virtual void selectDrawable( Drawable *draw );					///< Mark given Drawable as "selected"
 	virtual void selectDrawablePreserveGUI( Drawable *draw, Bool showFlash );					///< Mark given Drawable as "selected", but don't clear any Pending Commands.
 	virtual void deselectDrawable( Drawable *draw );				///< Clear "selected" status from Drawable
-	virtual void deselectAllDrawables( Bool postMsg = true );							///< Clear the "select" flag from all drawables
+	virtual void deselectAllDrawables();							///< Clear the "select" flag from all drawables
 	virtual Int getSelectCount() { return m_selectCount; }		///< Get count of currently selected drawables
 	virtual Int getMaxSelectCount() { return m_maxSelectCount; }	///< Get the max number of selected drawables
 	virtual UnsignedInt getFrameSelectionChanged() { return m_frameSelectionChanged; }	///< Get the max number of selected drawables
@@ -619,7 +619,7 @@ public:  // ********************************************************************
 	virtual void disregardDrawablePreserveGUI( Drawable *draw );	///< Drawable is being destroyed, clean up any UI elements associated with it, also preserve the GUI
 
 	virtual void preDraw();														///< Logic which needs to occur before the UI renders
-	virtual void draw() = 0;													///< Render the in-game user interface
+	virtual void draw() override = 0;													///< Render the in-game user interface
 	virtual void postDraw();													///< Logic which needs to occur after the UI renders
 	virtual void postWindowDraw();											///< Logic which needs to occur after the WindowManager has repainted the menus
 
@@ -784,9 +784,9 @@ public:
 
 protected:
 	// snapshot methods
-	virtual void crc( Xfer *xfer );
-	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 
 protected:
 
@@ -861,7 +861,7 @@ protected:
 
 	void incrementSelectCount() { ++m_selectCount; }			///< Increase by one the running total of "selected" drawables
 	void decrementSelectCount() { --m_selectCount; }			///< Decrease by one the running total of "selected" drawables
-	virtual View *createView() = 0;												///< Factory for Views
+	virtual View *createView(bool dummy = false) = 0;								///< Factory for Views
 	void evaluateSoloNexus( Drawable *newlyAddedDrawable = nullptr );
 
 	/// expire a hint from of the specified type at the hint index
@@ -992,6 +992,7 @@ protected:
 		{
 			LabelType_Team,
 			LabelType_Money,
+			LabelType_MoneyPerMinute,
 			LabelType_Rank,
 			LabelType_Xp,
 
@@ -1002,6 +1003,7 @@ protected:
 		{
 			ValueType_Team,
 			ValueType_Money,
+			ValueType_MoneyPerMinute,
 			ValueType_Rank,
 			ValueType_Xp,
 			ValueType_Name,

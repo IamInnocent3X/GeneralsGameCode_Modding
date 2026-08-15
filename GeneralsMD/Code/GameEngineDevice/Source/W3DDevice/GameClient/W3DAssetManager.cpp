@@ -43,28 +43,28 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#include <always.h>
+#include <WWLib/always.h>
 #include "W3DDevice/GameClient/W3DAssetManager.h"
-#include "proto.h"
-#include "rendobj.h"
-#include <vector3.h>
-#include "mesh.h"
-#include "hlod.h"
-#include "matinfo.h"
-#include "meshmdl.h"
-#include "part_emt.h"
-#include "vertmaterial.h"
-#include "dx8wrapper.h"
-#include "texture.h"
-#include "surfaceclass.h"
-#include "textureloader.h"
-#include "ww3dformat.h"
-#include "colorspace.h"
-#include <wwprofile.h>
-#include "wwmemlog.h"
-#include "ffactory.h"
-#include "font3d.h"
-#include "render2dsentence.h"
+#include "WW3D2/proto.h"
+#include "WW3D2/rendobj.h"
+#include <WWMath/vector3.h>
+#include "WW3D2/mesh.h"
+#include "WW3D2/hlod.h"
+#include "WW3D2/matinfo.h"
+#include "WW3D2/meshmdl.h"
+#include "WW3D2/part_emt.h"
+#include "WW3D2/vertmaterial.h"
+#include "WW3D2/dx8wrapper.h"
+#include "WW3D2/texture.h"
+#include "WW3D2/surfaceclass.h"
+#include "WW3D2/textureloader.h"
+#include "WW3D2/ww3dformat.h"
+#include "WW3D2/colorspace.h"
+#include <WWDebug/wwprofile.h>
+#include "WWDebug/wwmemlog.h"
+#include "WWLib/ffactory.h"
+#include "WW3D2/font3d.h"
+#include "WW3D2/render2dsentence.h"
 #include "Common/PerfTimer.h"
 #include "Common/GlobalData.h"
 #include "Common/GameCommon.h"
@@ -100,10 +100,10 @@ class W3DPrototypeClass : public MemoryPoolObject, public PrototypeClass
 public:
 	W3DPrototypeClass(RenderObjClass * proto, const AsciiString& name);
 
-	virtual const char*					Get_Name() const			{ return Name.str(); }
-	virtual int									Get_Class_ID() const	{ return Proto->Class_ID(); }
-	virtual RenderObjClass *		Create();
-	virtual void								DeleteSelf()							{	deleteInstance(this); }
+	virtual const char*					Get_Name() const override { return Name.str(); }
+	virtual int									Get_Class_ID() const override { return Proto->Class_ID(); }
+	virtual RenderObjClass *		Create() override;
+	virtual void								DeleteSelf() override							{	deleteInstance(this); }
 
 protected:
 	//virtual ~W3DPrototypeClass();

@@ -76,7 +76,7 @@ void PropagateUpgradeToContainedUpgradeModuleData::buildFieldParse(MultiIniField
   p.add(dataFieldParse);
 }
 
-//-------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------- 
 //-------------------------------------------------------------------------------------------------
 PropagateUpgradeToContainedUpgrade::PropagateUpgradeToContainedUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {

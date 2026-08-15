@@ -84,22 +84,22 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_UPGRADE); }
 
 	// BehaviorModule
-	virtual DieModuleInterface* getDie() { return this; }
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
-	virtual UpdateSleepTime update();
+	virtual DieModuleInterface* getDie() override { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
+	virtual UpdateSleepTime update() override;
 
 	// DamageModuleInterface
-	virtual void onDie( const DamageInfo *damageInfo );
+	virtual void onDie( const DamageInfo *damageInfo ) override;
 
 	// CreateModuleInterface
-	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onBuildComplete();
-	virtual void onCreate() { onBuildComplete(); }
-	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 
 	// UpdateModule
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
-	virtual void friend_giveSelfUpgrade() { }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void friend_giveSelfUpgrade() override { }
 
 	void setMinefieldTarget(const Coord3D* pos);
 
@@ -107,35 +107,35 @@ public:
 
 protected:
 
-	virtual void upgradeImplementation();
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual void upgradeImplementation() override;
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
 		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}

@@ -187,11 +187,11 @@ LogClass BonePosLog("bonePositions.txt");
 
 #else // DEBUG_CRC
 
-#define BONEPOS_LOG(x) {}
-#define BONEPOS_DUMPMATRIX3D(x) {}
-#define BONEPOS_DUMPMATRIX3DNAMED(x, y) {}
-#define BONEPOS_DUMPREAL(x) {}
-#define BONEPOS_DUMPREALNAMED(x, y) {}
+#define BONEPOS_LOG(x)
+#define BONEPOS_DUMPMATRIX3D(x)
+#define BONEPOS_DUMPMATRIX3DNAMED(x, y)
+#define BONEPOS_DUMPREAL(x)
+#define BONEPOS_DUMPREALNAMED(x, y)
 
 #endif // DEBUG_CRC
 
@@ -2551,98 +2551,100 @@ void W3DModelDraw::adjustAnimation(const ModelConditionInfo* prevState, Real pre
 
 		const W3DAnimationInfo& animInfo = m_curState->m_animations[m_whichAnimInCurState];
 
-		HAnimClass* animHandle = animInfo.getAnimHandle();	// note that this now returns an ADDREFED handle, which must be released by the caller!
-		if (m_renderObject && animHandle)
+		if (m_renderObject)
 		{
-			Int startFrame = 0;
-			if (m_curState->m_mode == RenderObjClass::ANIM_MODE_ONCE_BACKWARDS ||
-					m_curState->m_mode == RenderObjClass::ANIM_MODE_LOOP_BACKWARDS)
+			HAnimClass* animHandle = animInfo.getAnimHandle();	// note that this now returns an ADDREFED handle, which must be released by the caller!
+			if (animHandle)
 			{
-				startFrame = animHandle->Get_Num_Frames()-1;
-			}
-
-			if (testFlagBit(m_curState->m_flags, RANDOMIZE_START_FRAME))
-			{
-				startFrame = GameClientRandomValue(0, animHandle->Get_Num_Frames()-1);
-			}
-			else if (testFlagBit(m_curState->m_flags, START_FRAME_FIRST))
-			{
-				startFrame = 0;
-			}
-			else if (testFlagBit(m_curState->m_flags, START_FRAME_LAST))
-			{
-				startFrame = animHandle->Get_Num_Frames()-1;
-			}
-			// order is important here: MAINTAIN_FRAME_ACROSS_STATES is overridden by the other bits, above.
-			else if (isAnyMaintainFrameFlagSet(m_curState->m_flags) &&
-					prevState &&
-					prevState != m_curState &&
-					isAnyMaintainFrameFlagSet(prevState->m_flags) &&
-					isCommonMaintainFrameFlagSet(m_curState->m_flags, prevState->m_flags) &&
-					prevAnimFraction >= 0.0)
-			{
-				startFrame = REAL_TO_INT(prevAnimFraction * (animHandle->Get_Num_Frames()-1));
-			}
-
-			// ANIMATION BLENDING
-			if (prevState &&
-				m_whichAnimInPrevState >= 0 &&
-				m_curState->m_animBlendTime > 0) {
-
-				const W3DAnimationInfo& animInfoPrev = prevState->m_animations[m_whichAnimInPrevState];
-				HAnimClass* animHandlePrev = animInfoPrev.getAnimHandle();
-
-				if (animHandlePrev != nullptr && m_renderObject->Class_ID() == RenderObjClass::CLASSID_HLOD) {
-
-						//DEBUG_LOG((">>>>BLEND ANIMS!!"));
-
-						HLodClass* hlod = (HLodClass*)m_renderObject;
-
-						Real factor = GameClientRandomValueReal(m_curState->m_animMinSpeedFactor, m_curState->m_animMaxSpeedFactor);
-
-						Int startFramePrev = REAL_TO_INT(m_prevAnimHelper.frameNum);
-
-						// maxBlendTime = currentAnim duration in milliseconds
-						Int animBlendTime = m_curState->m_animBlendTime;
-						Int curAnimDurMS = REAL_TO_INT((animHandle->Get_Num_Frames() * 1000.0f / animHandle->Get_Frame_Rate()) * factor);
-						if (animBlendTime > curAnimDurMS) {
-							animBlendTime = curAnimDurMS;
-						}
-						hlod->Set_Animation(
-							animHandle,
-							startFrame,
-							animHandlePrev,
-							startFramePrev,
-							1.0f, //We start with prev anim and fade into the new anim
-							m_curState->m_mode,
-							m_prevAnimHelper.mode,
-							animBlendTime
-						);
-						// Let's ignore speed factor for prev anim for now
-						// We need to find out when the prev anim is supposed to fade out:
-
-						hlod->Set_Animation_Frame_Rate_Multiplier(factor); //This might need to be different
+				Int startFrame = 0;
+				if (m_curState->m_mode == RenderObjClass::ANIM_MODE_ONCE_BACKWARDS ||
+						m_curState->m_mode == RenderObjClass::ANIM_MODE_LOOP_BACKWARDS)
+				{
+					startFrame = animHandle->Get_Num_Frames()-1;
 				}
 
-				REF_PTR_RELEASE(animHandle);
-				REF_PTR_RELEASE(animHandlePrev);
-				animHandle = NULL;
-				animHandlePrev = NULL;
-			}
-			else {
-				m_renderObject->Set_Animation(animHandle, startFrame, m_curState->m_mode);
-				REF_PTR_RELEASE(animHandle);
-				animHandle = NULL;
-
-				if (m_renderObject->Class_ID() == RenderObjClass::CLASSID_HLOD)
+				if (testFlagBit(m_curState->m_flags, RANDOMIZE_START_FRAME))
 				{
-					HLodClass* hlod = (HLodClass*)m_renderObject;
-					Real factor = GameClientRandomValueReal(m_curState->m_animMinSpeedFactor, m_curState->m_animMaxSpeedFactor);
-					hlod->Set_Animation_Frame_Rate_Multiplier(factor);
+					startFrame = GameClientRandomValue(0, animHandle->Get_Num_Frames()-1);
+				}
+				else if (testFlagBit(m_curState->m_flags, START_FRAME_FIRST))
+				{
+					startFrame = 0;
+				}
+				else if (testFlagBit(m_curState->m_flags, START_FRAME_LAST))
+				{
+					startFrame = animHandle->Get_Num_Frames()-1;
+				}
+				// order is important here: MAINTAIN_FRAME_ACROSS_STATES is overridden by the other bits, above.
+				else if (isAnyMaintainFrameFlagSet(m_curState->m_flags) &&
+						prevState &&
+						prevState != m_curState &&
+						isAnyMaintainFrameFlagSet(prevState->m_flags) &&
+						isCommonMaintainFrameFlagSet(m_curState->m_flags, prevState->m_flags) &&
+						prevAnimFraction >= 0.0)
+				{
+					startFrame = REAL_TO_INT(prevAnimFraction * (animHandle->Get_Num_Frames()-1));
+				}
+
+				// ANIMATION BLENDING
+				if (prevState &&
+					m_whichAnimInPrevState >= 0 &&
+					m_curState->m_animBlendTime > 0) {
+
+					const W3DAnimationInfo& animInfoPrev = prevState->m_animations[m_whichAnimInPrevState];
+					HAnimClass* animHandlePrev = animInfoPrev.getAnimHandle();
+
+					if (animHandlePrev != nullptr && m_renderObject->Class_ID() == RenderObjClass::CLASSID_HLOD) {
+
+							//DEBUG_LOG((">>>>BLEND ANIMS!!"));
+
+							HLodClass* hlod = (HLodClass*)m_renderObject;
+
+							Real factor = GameClientRandomValueReal(m_curState->m_animMinSpeedFactor, m_curState->m_animMaxSpeedFactor);
+
+							Int startFramePrev = REAL_TO_INT(m_prevAnimHelper.frameNum);
+
+							// maxBlendTime = currentAnim duration in milliseconds
+							Int animBlendTime = m_curState->m_animBlendTime;
+							Int curAnimDurMS = REAL_TO_INT((animHandle->Get_Num_Frames() * 1000.0f / animHandle->Get_Frame_Rate()) * factor);
+							if (animBlendTime > curAnimDurMS) {
+								animBlendTime = curAnimDurMS;
+							}
+							hlod->Set_Animation(
+								animHandle,
+								startFrame,
+								animHandlePrev,
+								startFramePrev,
+								1.0f, //We start with prev anim and fade into the new anim
+								m_curState->m_mode,
+								m_prevAnimHelper.mode,
+								animBlendTime
+							);
+							// Let's ignore speed factor for prev anim for now
+							// We need to find out when the prev anim is supposed to fade out:
+
+							hlod->Set_Animation_Frame_Rate_Multiplier(factor); //This might need to be different
+					}
+
+					REF_PTR_RELEASE(animHandle);
+					REF_PTR_RELEASE(animHandlePrev);
+					animHandle = NULL;
+					animHandlePrev = NULL;
+				}
+				else {
+					m_renderObject->Set_Animation(animHandle, startFrame, m_curState->m_mode);
+					REF_PTR_RELEASE(animHandle);
+					animHandle = NULL;
+
+					if (m_renderObject->Class_ID() == RenderObjClass::CLASSID_HLOD)
+					{
+						HLodClass* hlod = (HLodClass*)m_renderObject;
+						Real factor = GameClientRandomValueReal(m_curState->m_animMinSpeedFactor, m_curState->m_animMaxSpeedFactor);
+						hlod->Set_Animation_Frame_Rate_Multiplier(factor);
+					}
 				}
 			}
 		}
-
 	}
 	else
 	{

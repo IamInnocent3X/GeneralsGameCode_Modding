@@ -103,20 +103,28 @@ class WorldHeightMap : public RefCountClass,
 {
 	friend class TerrainTextureClass;
 	friend class AlphaTerrainTextureClass;
-	friend class W3DCustomEdging;
 	friend class AlphaEdgeTextureClass;
 
 #define NO_EVAL_TILING_MODES
 
 public:
+
+	struct DrawArea
+	{
+		Int originX;
+		Int originY;
+		Int sizeX;
+		Int sizeY;
+	};
+
 #ifdef EVAL_TILING_MODES
 	enum {TILE_4x4, TILE_6x6, TILE_8x8} m_tileMode;
 #endif
 	enum {
 		NORMAL_DRAW_WIDTH = 1 + 4*VERTEX_BUFFER_TILE_LENGTH,
 		NORMAL_DRAW_HEIGHT = 1 + 4*VERTEX_BUFFER_TILE_LENGTH,
-		STRETCH_DRAW_WIDTH = 1 + 2*VERTEX_BUFFER_TILE_LENGTH,
-		STRETCH_DRAW_HEIGHT = 1 + 2*VERTEX_BUFFER_TILE_LENGTH,
+		LOW_ANGLE_DRAW_WIDTH = 1 + (NORMAL_DRAW_WIDTH-1) * 2,
+		LOW_ANGLE_DRAW_HEIGHT = 1 + (NORMAL_DRAW_HEIGHT-1) * 2,
 	};
 
 protected:
@@ -222,7 +230,7 @@ protected:
 
 public: // constructors/destructors
 	WorldHeightMap(ChunkInputStream *pFile, Bool bHMapOnly=false);	// read from file.
-	~WorldHeightMap();			// destroy.
+	virtual ~WorldHeightMap() override;			// destroy.
 
 public:  // Boundary info
 	const VecICoord2D& getAllBoundaries() const { return m_boundaries; }
@@ -234,17 +242,19 @@ public:  // height map info.
 	HeightSampleType *getDataPtr() {return m_data;}
 
 
-	Int getXExtent() {return m_width;}	///<number of vertices in x
-	Int getYExtent() {return m_height;}	///<number of vertices in y
+	Int getXExtent() const {return m_width;}	///<number of vertices in x
+	Int getYExtent() const {return m_height;}	///<number of vertices in y
+
+	Region2D getDrawRegion2D();
 
 	Int getDrawOrgX() {return m_drawOriginX;}
 	Int getDrawOrgY() {return m_drawOriginY;}
 
 	Int getDrawWidth() {return m_drawWidthX;}
 	Int getDrawHeight() {return m_drawHeightY;}
-	void setDrawWidth(Int width) {m_drawWidthX = width; if (m_drawWidthX>m_width) m_drawWidthX = m_width;}
-	void setDrawHeight(Int height) {m_drawHeightY = height; if (m_drawHeightY>m_height) m_drawHeightY = m_height;}
-	virtual Int getBorderSize() {return m_borderSize;}
+	void setDrawWidth(Int width) {DEBUG_ASSERTCRASH(width <= m_width, ("Draw width must not exceed map width")); m_drawWidthX = width;}
+	void setDrawHeight(Int height) {DEBUG_ASSERTCRASH(height <= m_height, ("Draw height must not exceed map height")); m_drawHeightY = height;}
+	virtual Int getBorderSize() override {return m_borderSize;}
   Int getBorderSizeInline() const { return m_borderSize; }
 	/// Get height with the offset that HeightMapRenderObjClass uses built in.
 	HeightSampleType getDisplayHeight(Int x, Int y) { return m_data[x+m_drawOriginX+m_width*(y+m_drawOriginY)];}
@@ -261,6 +271,8 @@ public:  // height map info.
 
 	void getUVForBlend(Int edgeClass, Region2D *range);
 
+	DrawArea createDrawArea(Int xOrg, Int yOrg);
+	Bool setDrawArea(const DrawArea& drawArea);
 	Bool setDrawOrg(Int xOrg, Int yOrg);
 
 	static void freeListOfMapObjects();
@@ -297,10 +309,10 @@ public:  // tile and texture info.
   Bool getSeismicUpdateFlag(Int xIndex, Int yIndex) const;
   void setSeismicUpdateFlag(Int xIndex, Int yIndex, Bool value);
   void clearSeismicUpdateFlags() ;
-  virtual Real getSeismicZVelocity(Int xIndex, Int yIndex) const;
-  virtual void setSeismicZVelocity(Int xIndex, Int yIndex, Real value);
+  virtual Real getSeismicZVelocity(Int xIndex, Int yIndex) const override;
+  virtual void setSeismicZVelocity(Int xIndex, Int yIndex, Real value) override;
   void fillSeismicZVelocities( Real value );
-  virtual Real getBilinearSampleSeismicZVelocity( Int x, Int y);
+  virtual Real getBilinearSampleSeismicZVelocity( Int x, Int y) override;
 
 
 
@@ -311,6 +323,8 @@ public:  // Flat tile texture info.
 	UnsignedByte *getPointerToTileData(Int xIndex, Int yIndex, Int width);
 	Bool getRawTileData(Short tileNdx, Int width, UnsignedByte *buffer, Int bufLen);
 	UnsignedByte *getRGBAlphaDataForWidth(Int width, TBlendTileInfo *pBlend);
+
+	void getScaledDrawArea(Int &width, Int &height);
 
 public:  // modify height value
 	void setRawHeight(Int xIndex, Int yIndex, HeightSampleType height) {

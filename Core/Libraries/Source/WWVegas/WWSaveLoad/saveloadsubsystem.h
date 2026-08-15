@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "always.h"
-#include "bittype.h"
+#include "WWLib/always.h"
+#include "WWLib/bittype.h"
 #include "postloadable.h"
 
 class ChunkLoadClass;
@@ -63,7 +63,7 @@ class SaveLoadSubSystemClass : public PostLoadableClass
 public:
 
 	SaveLoadSubSystemClass ();
-	virtual ~SaveLoadSubSystemClass ();
+	virtual ~SaveLoadSubSystemClass () override;
 
 	virtual uint32				Chunk_ID () const = 0;
 

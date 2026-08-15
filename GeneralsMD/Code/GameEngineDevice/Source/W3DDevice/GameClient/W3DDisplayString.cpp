@@ -49,6 +49,7 @@
 #include <stdlib.h>
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
+#include "GameClient/Display.h"
 #include "GameClient/GameClient.h"
 #include "W3DDevice/GameClient/W3DDisplayString.h"
 #include "GameClient/HotKey.h"
@@ -216,17 +217,22 @@ void W3DDisplayString::draw( Int x, Int y, Color color, Color dropColor, Int xDr
 		m_textRenderer.Set_Location( Vector2( m_textPos.x, m_textPos.y ) );
 		m_textRenderer.Draw_Sentence( m_currTextColor );
 
-		if(m_useHotKey)
+		if (m_useHotKey)
 		{
 			m_textRendererHotKey.Reset_Polys();
 			m_textRendererHotKey.Set_Location( Vector2( m_textPos.x + m_hotKeyPos.x , m_textPos.y +m_hotKeyPos.y) );
 			m_textRendererHotKey.Draw_Sentence( m_hotKeyColor );
-			m_textRendererHotKey.Render();
 		}
 
 	}
 
-	// render the text
+	TheDisplay->flush();
+
+	if (m_useHotKey)
+	{
+		m_textRendererHotKey.Render();
+	}
+
 	m_textRenderer.Render();
 
 	// we are for sure using display resources now
@@ -300,7 +306,10 @@ void W3DDisplayString::setFont( GameFont *font )
 	// set the font in our renderer
 	m_textRenderer.Set_Font( static_cast<FontCharsClass *>(m_font->fontData) );
 
-	m_textRendererHotKey.Set_Font( static_cast<FontCharsClass *>(TheFontLibrary->getFont(font->nameString,font->pointSize, TRUE)->fontData) );
+	if( GameFont *boldFont = TheFontLibrary->getFont( font->nameString, font->pointSize, TRUE ) )
+	{
+		m_textRendererHotKey.Set_Font( static_cast<FontCharsClass *>(boldFont->fontData) );
+	}
 	// recompute extents for text with new font
 	computeExtents();
 

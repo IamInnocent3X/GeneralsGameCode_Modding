@@ -336,7 +336,7 @@ void StickyBombUpdate::detonate()
 				// And we make FX based on that size too.
 				FXList::doFXPos(data->m_geometryBasedDamageFX, boobyTrappedObject->getPosition(), nullptr, 0, nullptr, secondaryDamageRange);
 			}
-
+		
 			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(damageInfo.in.m_sourceID, m_targetID, boobyTrappedObject->getPosition());
 		}
 		else if(data->m_geometryBasedDamageWeaponTemplate->getShrapnelDoesNotRequireVictim())
@@ -364,17 +364,31 @@ void StickyBombUpdate::detonate()
 		}
 	}
 
+#if RETAIL_COMPATIBLE_CRC
 	if( getObject()->isKindOf(KINDOF_BOOBY_TRAP) && boobyTrappedObject )
 	{
 		// This kind of sticky bomb needs to set a status, so the poor victim can trigger us from assorted places
 		boobyTrappedObject->clearStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_BOOBY_TRAPPED) );
 	}
+#endif
 
 	getObject()->kill();// Most things just fire weapons in their death modules
 }
 
+#if !RETAIL_COMPATIBLE_CRC
+void StickyBombUpdate::onDelete()
+{
+	// TheSuperHackers @bugfix Stubbjax 05/08/2026 Clear booby trap status when destroyed, not just when detonated.
+	if (getObject()->isKindOf(KINDOF_BOOBY_TRAP))
+	{
+		Object* boobyTrappedObject = getTargetObject();
 
-
+		// This kind of sticky bomb needs to set a status, so the poor victim can trigger us from assorted places
+		if (boobyTrappedObject)
+			boobyTrappedObject->clearStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_BOOBY_TRAPPED));
+	}
+}
+#endif
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 Anim2DTemplate* StickyBombUpdate::getAnimBaseTemplate() {

@@ -285,7 +285,7 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 		}
 	}
 
-	// Fixed moving while deployed. 
+	// IamInnocent - Fixed moving while deployed by checking for the undeploying state requirements instead of deploying.
 	if( isTryingToMove || m_doUndeploy )
 	{
 		switch( m_state )
@@ -340,7 +340,17 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 		}
 
 	}
+	// TheSuperHackers @bugfix Caball009 27/07/2026 The pathfinding code may use a stricter attack range check than used
+	// in this function, so the range check is insufficient. Objects are not allowed to deploy and attack if they're moving.
+#if RETAIL_COMPATIBLE_CRC
+	//if (isInRange || isInGuardIdleState )
+	// IamInnocent - Fixed moving while deployed state by checking the undeploying state requirements instead of deploying.
 	else if( m_isInRange || isInGuardIdleState || m_doDeploy )
+#else
+	// @todo Simplify the code by moving the second branch up so 'isTryingToMove' is checked first.
+	// IamInnocent - Fixed moving while deployed state by checking the undeploying state requirements instead of deploying.
+	else if ( (!isTryingToMove && (isInRange || isInGuardIdleState)) || m_doDeploy )
+#endif
 	{
 		switch( m_state )
 		{

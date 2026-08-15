@@ -43,12 +43,12 @@
 
 #pragma once
 
-#include "always.h"
+#include "WWLib/always.h"
 #include "persist.h"
 #include "parameter.h"
 #include "simpleparameter.h"
 #include "parameterlist.h"
-#include "wwdebug.h"
+#include "WWDebug/wwdebug.h"
 
 //////////////////////////////////////////////////////////////////////////////////
 //
@@ -96,7 +96,6 @@ EditableClass::Lock_Parameter (int i)
 inline void
 EditableClass::Unlock_Parameter (int i)
 {
-	return ;
 }
 
 //#define	PARAM_EDITING_ON

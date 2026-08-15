@@ -30,10 +30,10 @@
 #include "rinfo.h"
 #include "dx8wrapper.h"
 #include "sortingrenderer.h"
-#include "vp.h"
-#include "Vector3i.h"
-#include "RANDOM.h"
-#include "v3_rnd.h"
+#include "WWMath/vp.h"
+#include "WWMath/Vector3i.h"
+#include "WWLib/RANDOM.h"
+#include "WWMath/v3_rnd.h"
 
 
 /* We have chunking logic which handles N segments at a time. To simplify the subdivision logic,
@@ -199,7 +199,6 @@ void StreakRendererClass::Render
 )
 {
 	//NOTHING!
-	return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////

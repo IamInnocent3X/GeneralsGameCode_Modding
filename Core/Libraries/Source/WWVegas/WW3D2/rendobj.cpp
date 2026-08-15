@@ -74,21 +74,21 @@
 
 #include "rendobj.h"
 #include "assetmgr.h"
-#include "win.h"
-#include "pot.h"
+#include "WWLib/win.h"
+#include "WWMath/pot.h"
 #include "scene.h"
-#include "colmath.h"
+#include "WWMath/colmath.h"
 #include "coltest.h"
 #include "inttest.h"
-#include "wwdebug.h"
+#include "WWDebug/wwdebug.h"
 #include "matinfo.h"
 #include "htree.h"
 #include "predlod.h"
 #include "camera.h"
 #include "ww3d.h"
-#include "chunkio.h"
-#include "persistfactory.h"
-#include "saveload.h"
+#include "WWLib/chunkio.h"
+#include "WWSaveLoad/persistfactory.h"
+#include "WWSaveLoad/saveload.h"
 #include "ww3dids.h"
 #include "intersec.h"
 
@@ -1173,8 +1173,6 @@ void RenderObjClass::Add_Dependencies_To_List
 			file_list.Add (::Filename_From_Asset_Name (base_model_name));
 		}
 	}
-
-	return;
 }
 
 
@@ -1194,9 +1192,9 @@ void RenderObjClass::Add_Dependencies_To_List
 
 class RenderObjPersistFactoryClass : public PersistFactoryClass
 {
-	virtual uint32				Chunk_ID() const;
-	virtual PersistClass *	Load(ChunkLoadClass & cload) const;
-	virtual void				Save(ChunkSaveClass & csave,PersistClass * obj)	const;
+	virtual uint32				Chunk_ID() const override;
+	virtual PersistClass *	Load(ChunkLoadClass & cload) const override;
+	virtual void				Save(ChunkSaveClass & csave,PersistClass * obj)	const override;
 
 	enum
 	{

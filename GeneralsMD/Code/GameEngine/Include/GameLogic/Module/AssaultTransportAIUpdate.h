@@ -103,19 +103,19 @@ public:
 	AssaultTransportAIUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
- 	virtual void aiDoCommand(const AICommandParms* parms);
-	virtual Bool isIdle() const;
-	virtual UpdateSleepTime update();
-	virtual AssaultTransportAIInterface* getAssaultTransportAIInterface() { return this; }
-	virtual const AssaultTransportAIInterface* getAssaultTransportAIInterface() const { return this; }
-	virtual void beginAssault( const Object *designatedTarget ) const;
-	//virtual void checkMembersList();
-	virtual void addMember( ObjectID addID );
-	virtual void removeMember( ObjectID passengerID );
-	virtual void checkPassengerHealth( ObjectID passengerID );
-	virtual void doAddMembers() { m_doAddMember = TRUE; wakeUpNow(); };
-	virtual void onAttack();
-	virtual Int getCurrentAssaultingMembers() const { return getAssaultTransportAIUpdateModuleData()->m_canEnterOnMembersExit ? 0 : m_maxNumInTransport; }
+ 	virtual void aiDoCommand(const AICommandParms* parms) override;
+	virtual Bool isIdle() const override;
+	virtual UpdateSleepTime update() override;
+	virtual AssaultTransportAIInterface* getAssaultTransportAIInterface() override { return this; }
+	virtual const AssaultTransportAIInterface* getAssaultTransportAIInterface() const override { return this; }
+	virtual void beginAssault( const Object *designatedTarget ) const override;
+	//virtual void checkMembersList() override;
+	virtual void addMember( ObjectID addID ) override;
+	virtual void removeMember( ObjectID passengerID ) override;
+	virtual void checkPassengerHealth( ObjectID passengerID ) override;
+	virtual void doAddMembers() override { m_doAddMember = TRUE; wakeUpNow(); };
+	virtual void onAttack() override;
+	virtual Int getCurrentAssaultingMembers() const override { return getAssaultTransportAIUpdateModuleData()->m_canEnterOnMembersExit ? 0 : m_maxNumInTransport; }
 
 	void addMembers();
 

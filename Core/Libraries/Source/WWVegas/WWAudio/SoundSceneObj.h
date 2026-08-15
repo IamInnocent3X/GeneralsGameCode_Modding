@@ -34,12 +34,12 @@
 
 #pragma once
 
-#include "always.h"
+#include "WWLib/always.h"
 #include "WWAudio.h"
-#include "bittype.h"
-#include "persist.h"
-#include "multilist.h"
-#include "mutex.h"
+#include "WWLib/bittype.h"
+#include "WWSaveLoad/persist.h"
+#include "WWLib/multilist.h"
+#include "WWLib/mutex.h"
 
 /////////////////////////////////////////////////////////////////////////////////
 // Forward declarations
@@ -89,7 +89,7 @@ class SoundSceneObjClass : public MultiListObjectClass, public PersistClass, pub
 		//////////////////////////////////////////////////////////////////////
 		SoundSceneObjClass ();
 		SoundSceneObjClass (const SoundSceneObjClass &src);
-		virtual ~SoundSceneObjClass ();
+		virtual ~SoundSceneObjClass () override;
 
 		//////////////////////////////////////////////////////////////////////
 		//	Public operators
@@ -178,8 +178,8 @@ class SoundSceneObjClass : public MultiListObjectClass, public PersistClass, pub
 		//////////////////////////////////////////////////////////////////////
 		//	From PersistClass
 		//////////////////////////////////////////////////////////////////////
-		bool						Save (ChunkSaveClass &csave);
-		bool						Load (ChunkLoadClass &cload);
+		virtual bool						Save (ChunkSaveClass &csave) override;
+		virtual bool						Load (ChunkLoadClass &cload) override;
 
 	protected:
 
@@ -246,8 +246,6 @@ SoundSceneObjClass::On_Event
 				break;
 		}
 	}
-
-	return ;
 }
 
 
@@ -265,5 +263,4 @@ SoundSceneObjClass::Register_Callback
 {
 	m_RegisteredEvents = events;
 	m_pCallback = callback;
-	return ;
 }

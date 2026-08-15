@@ -79,11 +79,11 @@
 #include "assetmgr.h"
 #include <assert.h>
 
-#include "bittype.h"
-#include "chunkio.h"
-#include "realcrc.h"
+#include "WWLib/bittype.h"
+#include "WWLib/chunkio.h"
+#include "WWLib/realcrc.h"
 
-#include "wwdebug.h"
+#include "WWDebug/wwdebug.h"
 
 #include "htreemgr.h"
 #include "hanimmgr.h"
@@ -96,23 +96,23 @@
 #include "htree.h"
 #include "collect.h"
 #include "ww3d.h"
-#include "ffactory.h"
+#include "WWLib/ffactory.h"
 #include "boxrobj.h"
 #include "nullrobj.h"
 #include "distlod.h"
 #include "hlod.h"
 #include "agg_def.h"
-#include "wwstring.h"
-#include "wwmemlog.h"
+#include "WWLib/wwstring.h"
+#include "WWDebug/wwmemlog.h"
 #include "dazzle.h"
 #include "dx8wrapper.h"
 #include "dx8renderer.h"
 #include "metalmap.h"
 #include "w3dexclusionlist.h"
-#include <INI.h>
+#include <WWLib/INI.h>
 #include <windows.h>
 #include <d3dx8core.h>
-#include "wwprofile.h"
+#include "WWDebug/wwprofile.h"
 #include "assetstatus.h"
 #include "ringobj.h"
 #include "sphereobj.h"
@@ -134,9 +134,9 @@ static NullPrototypeClass _NullPrototype;
 class RObjIterator : public RenderObjIterator
 {
 public:
-	virtual bool					Is_Done();
-	virtual const char *			Current_Item_Name();
-	virtual int						Current_Item_Class_ID();
+	virtual bool					Is_Done() override;
+	virtual const char *			Current_Item_Name() override;
+	virtual int						Current_Item_Class_ID() override;
 protected:
 	friend class WW3DAssetManager;
 };
@@ -151,10 +151,10 @@ class HAnimIterator : public AssetIterator
 public:
 	HAnimIterator() : Iterator( WW3DAssetManager::Get_Instance()->HAnimManager ) { };
 
-	virtual void			First() { Iterator.First(); }
-	virtual void			Next()	{ Iterator.Next(); }
-	virtual bool			Is_Done() { return Iterator.Is_Done(); }
-	virtual const char *	Current_Item_Name() { return Iterator.Get_Current_Anim()->Get_Name(); }
+	virtual void			First() override { Iterator.First(); }
+	virtual void			Next() override	{ Iterator.Next(); }
+	virtual bool			Is_Done() override { return Iterator.Is_Done(); }
+	virtual const char *	Current_Item_Name() override { return Iterator.Get_Current_Anim()->Get_Name(); }
 
 protected:
 	HAnimManagerIterator	Iterator;
@@ -164,8 +164,8 @@ protected:
 class HTreeIterator : public AssetIterator
 {
 public:
-	virtual bool					Is_Done();
-	virtual const char *			Current_Item_Name();
+	virtual bool					Is_Done() override;
+	virtual const char *			Current_Item_Name() override;
 protected:
 	friend class WW3DAssetManager;
 };
@@ -174,10 +174,10 @@ class Font3DDataIterator : public AssetIterator
 {
 public:
 
-	virtual void					First() { Node = WW3DAssetManager::Get_Instance()->Font3DDatas.Head(); }
-	virtual void					Next()	{ Node = Node->Next(); }
-	virtual bool					Is_Done() { return Node==nullptr; }
-	virtual const char *			Current_Item_Name() { return Node->Data()->Name; }
+	virtual void					First() override { Node = WW3DAssetManager::Get_Instance()->Font3DDatas.Head(); }
+	virtual void					Next() override	{ Node = Node->Next(); }
+	virtual bool					Is_Done() override { return Node==nullptr; }
+	virtual const char *			Current_Item_Name() override { return Node->Data()->Name; }
 
 protected:
 
@@ -1615,8 +1615,6 @@ void WW3DAssetManager::Remove_Prototype(PrototypeClass *proto)
 		// Now remove this from our vector-array of prototypes
 		Prototypes.Delete (proto);
 	}
-
-	return;
 }
 
 
@@ -1646,8 +1644,6 @@ void WW3DAssetManager::Remove_Prototype(const char *name)
 			proto->DeleteSelf();
 		}
 	}
-
-	return;
 }
 
 

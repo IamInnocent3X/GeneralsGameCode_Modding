@@ -36,22 +36,22 @@
 
 #pragma once
 
-#include "vector2.h"
-#include "vector3.h"
-#include "vector4.h"
-#include "Vector3i.h"
-#include "sharebuf.h"
+#include "WWMath/vector2.h"
+#include "WWMath/vector3.h"
+#include "WWMath/vector4.h"
+#include "WWMath/Vector3i.h"
+#include "WWLib/sharebuf.h"
 #include "shader.h"
-#include "wwdebug.h"
+#include "WWDebug/wwdebug.h"
 #include "vertmaterial.h"
-#include "bittype.h"
-#include "colmath.h"
-#include "simplevec.h"
-#include "wwstring.h"
+#include "WWLib/bittype.h"
+#include "WWMath/colmath.h"
+#include "WWLib/simplevec.h"
+#include "WWLib/wwstring.h"
 #include "rinfo.h"
 #include "meshgeometry.h"
 #include "meshmatdesc.h"
-#include "dx8list.h"
+#include "WW3D2/dx8list.h"
 
 class TextureClass;
 class RenderInfoClass;
@@ -117,9 +117,9 @@ struct VertexFormatXYZNDUV2;
 ** GapFillerClass
 ** This class is used to generate gap-filling polygons for "N-Patched" meshes
 */
-class GapFillerClass : public W3DMPO
+class GapFillerClass
 {
-	W3DMPO_GLUE(GapFillerClass)
+	W3DMPO_CODE(GapFillerClass)
 
 	TriIndex* PolygonArray;
 	unsigned PolygonCount;
@@ -129,7 +129,7 @@ class GapFillerClass : public W3DMPO
 	ShaderClass* ShaderArray[MeshMatDescClass::MAX_PASSES];
 	MeshModelClass* mmc;
 
-	GapFillerClass& operator = (const GapFillerClass&) CPP_11(= delete);
+	GapFillerClass& operator = (const GapFillerClass&) FUNCTION_DELETE;
 public:
 	GapFillerClass(MeshModelClass* mmc);
 	GapFillerClass(const GapFillerClass& that);
@@ -147,14 +147,14 @@ public:
 
 class MeshModelClass : public MeshGeometryClass
 {
-	W3DMPO_GLUE(MeshModelClass)
+	W3DMPO_CODE(MeshModelClass)
 	GapFillerClass* GapFiller;
 
 public:
 
 	MeshModelClass();
 	MeshModelClass(const MeshModelClass & that);
-	~MeshModelClass();
+	virtual ~MeshModelClass() override;
 
 	MeshModelClass & operator = (const MeshModelClass & that);
 	void							Reset(int polycount,int vertcount,int passcount);
@@ -224,7 +224,7 @@ public:
 	void							Make_Color_Array_Unique(int array_index=0);
 
 	// Load the w3d file format
-	WW3DErrorType				Load_W3D(ChunkLoadClass & cload);
+	virtual WW3DErrorType				Load_W3D(ChunkLoadClass & cload) override;
 
 	/////////////////////////////////////////////////////////////////////////////////////
 	//	Decal interface

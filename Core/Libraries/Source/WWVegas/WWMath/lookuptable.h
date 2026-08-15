@@ -38,10 +38,10 @@
 
 #pragma once
 
-#include "always.h"
-#include "simplevec.h"
-#include "wwstring.h"
-#include "multilist.h"
+#include "WWLib/always.h"
+#include "WWLib/simplevec.h"
+#include "WWLib/wwstring.h"
+#include "WWLib/multilist.h"
 #include "wwmath.h"
 
 
@@ -60,7 +60,7 @@ class LookupTableClass : public RefCountClass, public MultiListObjectClass
 public:
 
 	LookupTableClass(int sample_count = 256);
-	virtual ~LookupTableClass();
+	virtual ~LookupTableClass() override;
 
 	void								Init(const char * name,Curve1DClass * curve);
 	float								Get_Value(float input);

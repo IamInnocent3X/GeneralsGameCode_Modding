@@ -84,7 +84,7 @@
 #include "osdep.h"
 #endif
 
-#include "always.h"
+#include "WWLib/always.h"
 #include <assert.h>
 #include "vector2.h"
 #include "vector3.h"
@@ -283,6 +283,10 @@ public:
 	// the "world" uses x-y as the ground and z as altitude.
 	// Used for pointing cameras at targets.
 	void	Look_At(const Vector3 &p,const Vector3 &t,float roll);
+
+	// Points the negative Z axis at dir.
+	// Used for looking with cameras into directions.
+	void Look_At_Dir(const Vector3 &pos, const Vector3 &dir, float roll);
 
 	// Previous look_at function follows the camera coordinate convention.
 	// This one follows the object convention used in Commando and G.  I
@@ -1801,9 +1805,9 @@ WWINLINE void	Matrix3D::Inverse_Rotate_Vector(const Matrix3D & A,const Vector3 &
 	out->Z = (A[0][2] * v->X + A[1][2] * v->Y + A[2][2] * v->Z);
 }
 
-class DynamicMatrix3D : public W3DMPO
+class DynamicMatrix3D
 {
-	W3DMPO_GLUE(DynamicMatrix3D)
+	W3DMPO_CODE(DynamicMatrix3D)
 public:
 	Matrix3D Mat;
 };

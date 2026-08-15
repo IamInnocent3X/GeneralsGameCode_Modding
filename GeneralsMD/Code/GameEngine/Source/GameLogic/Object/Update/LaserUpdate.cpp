@@ -191,7 +191,7 @@ void LaserUpdate::updateStartPos()
 			//      create a nasty assert.
 			//TheGameClient->destroyDrawable( getDrawable() );
 
-			m_startPos.set( parentDrawable->getPosition() );
+			m_startPos.set( *parentDrawable->getPosition() );
 			DEBUG_CRASH( ("LaserUpdate::updateStartPos() -- Drawable %s is expecting to find a bone %s but can't. Defaulting to position of drawable.",
 				parentDrawable->getTemplate()->getName().str(), m_parentBoneName.str() ) );
 
@@ -485,15 +485,12 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 			if( data->m_particleSystemName.isNotEmpty() )
 			{
 				const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate( data->m_particleSystemName );
-				if( tmp )
+				system = TheParticleSystemManager->createParticleSystem( tmp );
+				if( system )
 				{
-					system = TheParticleSystemManager->createParticleSystem( tmp );
-					if( system )
-					{
-						m_particleSystemID = system->getSystemID();
-						if (data->m_useHouseColor) {
-							system->tintColorsAllFrames(m_hexColor);
-						}
+					m_particleSystemID = system->getSystemID();
+					if (data->m_useHouseColor) {
+						system->tintColorsAllFrames(m_hexColor);
 					}
 				}
 			}
@@ -502,15 +499,12 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 			if( data->m_targetParticleSystemName.isNotEmpty() )
 			{
 				const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate( data->m_targetParticleSystemName );
-				if( tmp )
+				system = TheParticleSystemManager->createParticleSystem( tmp );
+				if( system )
 				{
-					system = TheParticleSystemManager->createParticleSystem( tmp );
-					if( system )
-					{
-						m_targetParticleSystemID = system->getSystemID();
-						if (data->m_useHouseColor) {
-							system->tintColorsAllFrames(m_hexColor);
-						}
+					m_targetParticleSystemID = system->getSystemID();
+					if (data->m_useHouseColor) {
+						system->tintColorsAllFrames(m_hexColor);
 					}
 				}
 			}
@@ -544,8 +538,8 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 	Coord3D posToUse;
 	if( parent == nullptr )
 	{
-		posToUse.set( startPos );
-		posToUse.add( endPos );
+		posToUse.set( *startPos );
+		posToUse.add( *endPos );
 		posToUse.scale( 0.5 );
 	}
 	else

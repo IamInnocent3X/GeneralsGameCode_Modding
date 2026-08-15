@@ -111,22 +111,22 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	/// This collide method gets called when collision occur
-	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
+	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
 
-	virtual Bool wouldLikeToCollideWith(const Object* other) const { return isValidToExecute(other); }
+	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return isValidToExecute(other); }
 
-	virtual Bool revertCollideBehavior(Object *other);
+	virtual Bool revertCollideBehavior(Object *other) override;
 
-	virtual Bool isRailroad() const { return FALSE;};
- 	virtual Bool isCarBombCrateCollide() const { return FALSE; }
-	virtual Bool isHijackedVehicleCrateCollide() const { return FALSE; }
-	virtual Bool isSabotageBuildingCrateCollide() const { return FALSE; }
-	virtual Bool isEquipCrateCollide() const { return FALSE; }
-	virtual Bool isParasiteEquipCrateCollide() const  { return FALSE; }
-	virtual Bool friend_executeCrateBehavior( Object *other ) { return executeCrateBehavior(other); }
+	virtual Bool isRailroad() const override { return FALSE;};
+ 	virtual Bool isCarBombCrateCollide() const override { return FALSE; }
+	virtual Bool isHijackedVehicleCrateCollide() const override { return FALSE; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return FALSE; }
+	virtual Bool isEquipCrateCollide() const override { return FALSE; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return FALSE; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return executeCrateBehavior(other); }
 
-	virtual const AsciiString& getCursorName() const { return getCrateCollideModuleData()->m_cursorName; }
-	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getCursorName() const override { return getCrateCollideModuleData()->m_cursorName; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 protected:
 

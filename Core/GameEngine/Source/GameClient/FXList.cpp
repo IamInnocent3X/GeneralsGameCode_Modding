@@ -210,7 +210,7 @@ public:
 		m_allowedSurfaceType = SURFACE_ALL;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* surfaceInfo) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (m_allowedSurfaceType != SURFACE_ALL || m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY) {
 
@@ -231,7 +231,7 @@ public:
 		TheAudio->addAudioEvent(&sound);
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* secondary = nullptr, FXSurfaceInfo* surfaceInfo = nullptr) const
+	virtual void doFXObj(const Object* primary, const Object* secondary = nullptr, FXSurfaceInfo* surfaceInfo = nullptr) const override
 	{
 		if (m_allowedSurfaceType != SURFACE_ALL || m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY) {
 
@@ -328,7 +328,7 @@ public:
 		m_probability = 1.0f;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real primarySpeed, const Coord3D *secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real primarySpeed, const Coord3D *secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (m_probability <= GameClientRandomValueReal(0, 1))
 			return;
@@ -426,7 +426,7 @@ public:
 		m_secondaryOffset.x = m_secondaryOffset.y = m_secondaryOffset.z = 0;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		const ThingTemplate* tmpl = TheThingFactory->findTemplate(m_templateName);
 		DEBUG_ASSERTCRASH(tmpl, ("RayEffect %s not found",m_templateName.str()));
@@ -604,7 +604,7 @@ public:
 		m_color.red = m_color.green = m_color.blue = 0;
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* /*secondary*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXObj(const Object* primary, const Object* /*secondary*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -621,7 +621,7 @@ public:
 		}
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -669,7 +669,7 @@ public:
 	{
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ , FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ , FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -729,7 +729,7 @@ public:
 	{
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* surfaceInfo) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (primary)
 		{
@@ -827,7 +827,7 @@ public:
 		m_useSurfaceInfo = FALSE;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real overrideRadius, FXSurfaceInfo* surfaceInfo) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real overrideRadius, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (primary)
 		{
@@ -839,7 +839,7 @@ public:
 		}
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* secondary, FXSurfaceInfo* surfaceInfo) const
+	virtual void doFXObj(const Object* primary, const Object* secondary, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (primary)
 		{
@@ -917,7 +917,7 @@ protected:
 		}
 
 		const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate(m_name);
-		DEBUG_ASSERTCRASH(tmp, ("ParticleSystem %s not found",m_name.str()));
+		DEBUG_ASSERTCRASH(TheParticleSystemManager->isDummy() || tmp, ("ParticleSystem %s not found",m_name.str()));
 		if (tmp)
 		{
 			Bool needHeightCheck = m_createAtGroundHeight || m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY || m_allowedSurfaceType != SURFACE_ALL;
@@ -943,6 +943,7 @@ protected:
 
 					newPos.x = primary->x + offset.x + radius * cos(angle);
 					newPos.y = primary->y + offset.y + radius * sin(angle);
+					newPos.z = primary->z + offset.z;
 
 					Real refHeight;
 					if (needExactCheck) {
@@ -966,7 +967,7 @@ protected:
 						}
 					}
 					else {
-						newPos.z = primary->z + offset.z + m_height.getValue();
+						newPos.z += m_height.getValue();
 					}
 
 					if (m_orientToObject && mtx)
@@ -1068,12 +1069,12 @@ public:
     m_orientToBone = true;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		DEBUG_CRASH(("You must use the object form for this effect"));
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* /*secondary*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	virtual void doFXObj(const Object* primary, const Object* /*secondary*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{

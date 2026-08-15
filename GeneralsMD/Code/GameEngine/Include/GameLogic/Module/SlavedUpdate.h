@@ -151,14 +151,14 @@ public:
 	SlavedUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual SlavedUpdateInterface* getSlavedUpdateInterface() { return this; }
+	virtual SlavedUpdateInterface* getSlavedUpdateInterface() override { return this; }
 
-	virtual ObjectID getSlaverID() const { return m_slaver; }
-	virtual void onEnslave( const Object *slaver );
-	virtual void onSlaverDie( const DamageInfo *info );
-	virtual void onSlaverDamage( const DamageInfo *info );
-	virtual void onObjectCreated();
-	virtual Bool isSelfTasking() const { return FALSE; };
+	virtual ObjectID getSlaverID() const override { return m_slaver; }
+	virtual void onEnslave( const Object *slaver ) override;
+	virtual void onSlaverDie( const DamageInfo *info ) override;
+	virtual void onSlaverDamage( const DamageInfo *info ) override;
+	virtual void onObjectCreated() override;
+	virtual Bool isSelfTasking() const override { return FALSE; };
 
 	virtual void informMySlaverSelfInfo();
 	virtual void informMySlaverSelfTasking(Bool set) { }
@@ -173,7 +173,7 @@ public:
 	void setRepairModelConditionStates( ModelConditionFlagType flag );
 	void moveToNewRepairSpot();
 
-	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
+	virtual UpdateSleepTime update() override;	///< Deciding whether or not to make new guys
 
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 

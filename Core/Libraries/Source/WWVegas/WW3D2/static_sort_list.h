@@ -39,7 +39,7 @@
 #pragma once
 
 #include "robjlist.h"
-#include "w3d_file.h"
+#include "WW3D2/w3d_file.h"
 
 class RenderInfoClass;
 
@@ -64,10 +64,10 @@ class DefaultStaticSortListClass : public StaticSortListClass
 		///////////////////////////////////////////////////////////////////////////////////
 		// Construction.
 		DefaultStaticSortListClass();
-		virtual ~DefaultStaticSortListClass();
+		virtual ~DefaultStaticSortListClass() override;
 
-		virtual void 	Add_To_List(RenderObjClass * robj, unsigned int sort_level);
-		virtual void 	Render_And_Clear(RenderInfoClass & rinfo);
+		virtual void 	Add_To_List(RenderObjClass * robj, unsigned int sort_level) override;
+		virtual void 	Render_And_Clear(RenderInfoClass & rinfo) override;
 
 
 		unsigned int 	Get_Min_Sort() const 			{return MinSort;};

@@ -63,6 +63,17 @@
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Weapon.h"
 
+#if __cplusplus >= 201611L
+#define USE_STD_FROM_CHARS_PARSING 1
+#else
+#define USE_STD_FROM_CHARS_PARSING 0
+#endif
+
+#if USE_STD_FROM_CHARS_PARSING
+#include <charconv>
+#include <string_view>
+#include <type_traits>
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -82,79 +93,77 @@ struct BlockParse
 };
 static const BlockParse theTypeTable[] =
 {
-	{ "AIData",							INI::parseAIDataDefinition },
-	{ "Animation",					INI::parseAnim2DDefinition },
-	{ "Armor",							INI::parseArmorDefinition },
-	{ "ArmorExtend",							INI::parseArmorExtendDefinition },
-	{ "CustomDamageTypes",						INI::parseCustomDamageTypesDefinition },
-	{ "AudioEvent",					INI::parseAudioEventDefinition },
-	{ "AudioSettings",			INI::parseAudioSettingsDefinition },
-	{ "Bridge",							INI::parseTerrainBridgeDefinition },
+	{ "AIData",                         INI::parseAIDataDefinition },
+	{ "Animation",                      INI::parseAnim2DDefinition },
+	{ "Armor",                          INI::parseArmorDefinition },
+	{ "ArmorExtend",					INI::parseArmorExtendDefinition },
+	{ "CustomDamageTypes",				INI::parseCustomDamageTypesDefinition },
+	{ "AudioEvent",                     INI::parseAudioEventDefinition },
+	{ "AudioSettings",                  INI::parseAudioSettingsDefinition },
+	{ "BenchProfile",                   INI::parseBenchProfile },
+	{ "Bridge",                         INI::parseTerrainBridgeDefinition },
 	{ "BuffTemplate",					INI::parseBuffTemplateDefinition },
-	{ "Campaign",						INI::parseCampaignDefinition },
- 	{ "ChallengeGenerals",				INI::parseChallengeModeDefinition },
-	{ "ChatCommand",				INI::parseChatCommandDefinition },
-	{ "CommandButton",			INI::parseCommandButtonDefinition },
-	{ "CommandMap",					INI::parseMetaMapDefinition },
+	{ "Campaign",                       INI::parseCampaignDefinition },
+	{ "ChallengeGenerals",              INI::parseChallengeModeDefinition },
+	{ "ChatCommand",					INI::parseChatCommandDefinition },
+	{ "CommandButton",                  INI::parseCommandButtonDefinition },
+	{ "CommandMap",                     INI::parseMetaMapDefinition },
 	{ "CommandMouseModifier",		INI::parseMouseCommandModifierDefinition },
-	{ "CommandSet",					INI::parseCommandSetDefinition },
-	{ "ControlBarScheme",		INI::parseControlBarSchemeDefinition },
-	{ "ControlBarResizer",	INI::parseControlBarResizerDefinition },
-	{ "CrateData",					INI::parseCrateTemplateDefinition },
-	{ "Credits",						INI::parseCredits},
-	{ "WindowTransition",		INI::parseWindowTransitions},
-	{ "DamageFX",						INI::parseDamageFXDefinition },
-	{ "DialogEvent",				INI::parseDialogDefinition },
-	{ "DrawGroupInfo",		INI::parseDrawGroupNumberDefinition },
-	{ "EvaEvent",						INI::parseEvaEvent },
-	{ "FXList",							INI::parseFXListDefinition },
-	{ "GameData",						INI::parseGameDataDefinition },
-	{ "InGameUI",						INI::parseInGameUIDefinition },
-	{ "Locomotor",					INI::parseLocomotorTemplateDefinition },
+	{ "CommandSet",                     INI::parseCommandSetDefinition },
+	{ "ControlBarResizer",              INI::parseControlBarResizerDefinition },
+	{ "ControlBarScheme",               INI::parseControlBarSchemeDefinition },
+	{ "CrateData",                      INI::parseCrateTemplateDefinition },
+	{ "Credits",                        INI::parseCredits },
+	{ "DamageFX",                       INI::parseDamageFXDefinition },
+	{ "DialogEvent",                    INI::parseDialogDefinition },
+	{ "DrawGroupInfo",                  INI::parseDrawGroupNumberDefinition },
+	{ "DynamicGameLOD",                 INI::parseDynamicGameLODDefinition },
+	{ "EvaEvent",                       INI::parseEvaEvent },
+	{ "FXList",                         INI::parseFXListDefinition },
+	{ "GameData",                       INI::parseGameDataDefinition },
+	{ "HeaderTemplate",                 INI::parseHeaderTemplateDefinition },
+	{ "InGameUI",                       INI::parseInGameUIDefinition },
+	{ "LODPreset",                      INI::parseLODPreset },
+	{ "Language",                       INI::parseLanguageDefinition },
+	{ "Locomotor",                      INI::parseLocomotorTemplateDefinition },
 	{ "LocomotorExtend",		INI::parseLocomotorExtendTemplateDefinition },
-	{ "Language",						INI::parseLanguageDefinition },
-	{ "MapCache",						INI::parseMapCacheDefinition },
-	{ "MapData",						INI::parseMapDataDefinition },
-	{ "MappedImage",				INI::parseMappedImageDefinition },
-	{ "MiscAudio",					INI::parseMiscAudio},
-	{ "Mouse",							INI::parseMouseDefinition },
-	{ "MouseCursor",				INI::parseMouseCursorDefinition },
-	{ "MultiplayerColor",		INI::parseMultiplayerColorDefinition },
-  { "MultiplayerStartingMoneyChoice",		INI::parseMultiplayerStartingMoneyChoiceDefinition },
-	{ "OnlineChatColors",		INI::parseOnlineChatColorDefinition },
-	{ "MultiplayerSettings",INI::parseMultiplayerSettingsDefinition },
-	{ "MusicTrack",					INI::parseMusicTrackDefinition },
-	{ "Object",							INI::parseObjectDefinition },
-	{ "ObjectCreationList",	INI::parseObjectCreationListDefinition },
-	{ "ObjectReskin",				INI::parseObjectReskinDefinition },
+	{ "MapCache",                       INI::parseMapCacheDefinition },
+	{ "MapData",                        INI::parseMapDataDefinition },
+	{ "MappedImage",                    INI::parseMappedImageDefinition },
+	{ "MiscAudio",                      INI::parseMiscAudio },
+	{ "Mouse",                          INI::parseMouseDefinition },
+	{ "MouseCursor",                    INI::parseMouseCursorDefinition },
+	{ "MultiplayerColor",               INI::parseMultiplayerColorDefinition },
+	{ "MultiplayerSettings",            INI::parseMultiplayerSettingsDefinition },
+	{ "MultiplayerStartingMoneyChoice", INI::parseMultiplayerStartingMoneyChoiceDefinition },
+	{ "MusicTrack",                     INI::parseMusicTrackDefinition },
+	{ "Object",                         INI::parseObjectDefinition },
+	{ "ObjectCreationList",             INI::parseObjectCreationListDefinition },
+	{ "ObjectReskin",                   INI::parseObjectReskinDefinition },
 	{ "ObjectExtend",				INI::parseObjectExtendDefinition },
-	{ "ParticleSystem",			INI::parseParticleSystemDefinition },
-	{ "PlayerTemplate",			INI::parsePlayerTemplateDefinition },
-	{ "Road",								INI::parseTerrainRoadDefinition },
-	{ "Science",						INI::parseScienceDefinition },
-	{ "Rank",								INI::parseRankDefinition },
-	{ "SpecialPower",				INI::parseSpecialPowerDefinition },
-	{ "ShellMenuScheme",		INI::parseShellMenuSchemeDefinition },
-	{ "Terrain",						INI::parseTerrainDefinition },
-	{ "Upgrade",						INI::parseUpgradeDefinition },
-	{ "Video",							INI::parseVideoDefinition },
-	{ "WaterSet",						INI::parseWaterSettingDefinition },
-	{ "WaterTransparency",	INI::parseWaterTransparencyDefinition },
-	{ "Weather",						INI::parseWeatherDefinition },
-	{ "Weapon",							INI::parseWeaponTemplateDefinition },
+	{ "OnlineChatColors",               INI::parseOnlineChatColorDefinition },
+	{ "ParticleSystem",                 INI::parseParticleSystemDefinition },
+	{ "PlayerTemplate",                 INI::parsePlayerTemplateDefinition },
+	{ "Rank",                           INI::parseRankDefinition },
+	{ "ReallyLowMHz",                   parseReallyLowMHz },
+	{ "Road",                           INI::parseTerrainRoadDefinition },
+	{ "Science",                        INI::parseScienceDefinition },
+	{ "ScriptAction",                   ScriptEngine::parseScriptAction },
+	{ "ScriptCondition",                ScriptEngine::parseScriptCondition },
+	{ "ShellMenuScheme",                INI::parseShellMenuSchemeDefinition },
+	{ "SpecialPower",                   INI::parseSpecialPowerDefinition },
+	{ "StaticGameLOD",                  INI::parseStaticGameLODDefinition },
+	{ "Terrain",                        INI::parseTerrainDefinition },
+	{ "Upgrade",                        INI::parseUpgradeDefinition },
+	{ "Video",                          INI::parseVideoDefinition },
+	{ "WaterSet",                       INI::parseWaterSettingDefinition },
+	{ "WaterTransparency",              INI::parseWaterTransparencyDefinition },
+	{ "Weapon",                         INI::parseWeaponTemplateDefinition },
 	{ "WeaponExtend",       INI::parseWeaponExtendTemplateDefinition },
-	{ "WebpageURL",					INI::parseWebpageURLDefinition },
-	{ "HeaderTemplate",			INI::parseHeaderTemplateDefinition },
-	{ "StaticGameLOD",			INI::parseStaticGameLODDefinition },
-	{ "DynamicGameLOD",			INI::parseDynamicGameLODDefinition },
-	{ "LODPreset",					INI::parseLODPreset },
-	{	"BenchProfile",				INI::parseBenchProfile },
-	{	"ReallyLowMHz",				parseReallyLowMHz },
-	{	"ScriptAction",				ScriptEngine::parseScriptAction },
-	{	"ScriptCondition",		ScriptEngine::parseScriptCondition },
-	{ "CustomRadiusCursor",			INI::parseCustomRadiusDecalDefinition },
-
-	{ nullptr,									nullptr },
+	{ "Weather",                        INI::parseWeatherDefinition },
+	{ "WebpageURL",                     INI::parseWebpageURLDefinition },
+	{ "WindowTransition",               INI::parseWindowTransitions },
+	{ "CustomRadiusCursor",				INI::parseCustomRadiusDecalDefinition },
 };
 
 
@@ -166,21 +175,7 @@ Bool INI::isValidINIFilename( const char *filename )
 	if( filename == nullptr )
 		return FALSE;
 
-	Int len = strlen( filename );
-	if( len < 3 )
-		return FALSE;
-
-	if( filename[ len - 1 ] != 'I' && filename[ len - 1 ] != 'i' )
-		return FALSE;
-
-	if( filename[ len - 2 ] != 'N' && filename[ len - 2 ] != 'n' )
-		return FALSE;
-
-	if( filename[ len - 3 ] != 'I' && filename[ len - 3 ] != 'i' )
-		return FALSE;
-
-	return TRUE;
-
+	return endsWithNoCase(filename, ".ini");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -198,24 +193,11 @@ INI::INI()
 	m_filename					= "None";
 	m_loadType					= INI_LOAD_INVALID;
 	m_lineNum						= 0;
-	m_seps							= " \n\r\t=";			///< make sure you update m_sepsPercent/m_sepsColon as well
-	m_sepsPercent				= " \n\r\t=%%";
-	m_sepsColon					= " \n\r\t=:";
-	m_sepsQuote					= "\"\n=";				///< stop at " = EOL
-	m_blockEndToken			= "END";
-	m_endOfFile					= FALSE;
 	m_buffer[0]					= 0;
+	m_endOfFile					= FALSE;
 #ifdef DEBUG_CRASHING
 	m_curBlockStart[0]	= 0;
 #endif
-
-}
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-INI::~INI()
-{
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -268,42 +250,34 @@ UnsignedInt INI::loadDirectory( AsciiString dirName, INILoadType loadType, Xfer 
 	if (dirName.isEmpty())
 			throw INI_INVALID_DIRECTORY;
 
-	try
+	FilenameList filenameList;
+	dirName.concat('\\');
+	TheFileSystem->getFileListInDirectory(dirName, "*.ini", filenameList, subdirs);
+	// Load the INI files in the dir now, in a sorted order.  This keeps things the same between machines
+	// in a network game.
+	FilenameList::const_iterator it = filenameList.begin();
+	while (it != filenameList.end())
 	{
-		FilenameList filenameList;
-		dirName.concat('\\');
-		TheFileSystem->getFileListInDirectory(dirName, "*.ini", filenameList, subdirs);
-		// Load the INI files in the dir now, in a sorted order.  This keeps things the same between machines
-		// in a network game.
-		FilenameList::const_iterator it = filenameList.begin();
-		while (it != filenameList.end())
-		{
-			AsciiString tempname;
-			tempname = (*it).str() + dirName.getLength();
+		AsciiString tempname;
+		tempname = (*it).str() + dirName.getLength();
 
-			if ((tempname.find('\\') == nullptr) && (tempname.find('/') == nullptr)) {
-				// this file doesn't reside in a subdirectory, load it first.
-				filesRead += load( *it, loadType, pXfer );
-			}
-			++it;
+		if ((tempname.find('\\') == nullptr) && (tempname.find('/') == nullptr)) {
+			// this file doesn't reside in a subdirectory, load it first.
+			filesRead += load( *it, loadType, pXfer );
 		}
-
-		it = filenameList.begin();
-		while (it != filenameList.end())
-		{
-			AsciiString tempname;
-			tempname = (*it).str() + dirName.getLength();
-
-			if ((tempname.find('\\') != nullptr) || (tempname.find('/') != nullptr)) {
-				filesRead += load( *it, loadType, pXfer );
-			}
-			++it;
-		}
+		++it;
 	}
-	catch (...)
+
+	it = filenameList.begin();
+	while (it != filenameList.end())
 	{
-		// propagate the exception
-		throw;
+		AsciiString tempname;
+		tempname = (*it).str() + dirName.getLength();
+
+		if ((tempname.find('\\') != nullptr) || (tempname.find('/') != nullptr)) {
+			filesRead += load( *it, loadType, pXfer );
+		}
+		++it;
 	}
 
 	return filesRead;
@@ -366,13 +340,14 @@ void INI::unPrepFile()
 //-------------------------------------------------------------------------------------------------
 static INIBlockParse findBlockParse(const char* token)
 {
-	for (const BlockParse* parse = theTypeTable; parse->token; ++parse)
+	for (size_t i = 0; i < ARRAY_SIZE(theTypeTable); ++i)
 	{
-		if (strcmp( parse->token, token ) == 0)
+		if (strcmp(theTypeTable[i].token, token) == 0)
 		{
-			return parse->parse;
+			return theTypeTable[i].parse;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -431,7 +406,7 @@ UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, 
 			AsciiString currentLine = m_buffer;
 
 			// the first word is the type of data we're processing
-			const char *token = strtok( m_buffer, m_seps );
+			const char *token = strtok( m_buffer, getSeps() );
 
 			// skip non MapData blocks if loading
 			bool skip = (loadType == INI_LOAD_MAPDATA_ONLY) && (strcmp(token, "MapData") != 0);
@@ -791,7 +766,7 @@ void INI::parseAsciiStringVector( INI* ini, void * /*instance*/, void *store, co
 {
 	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
 	asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token; token = ini->getNextTokenOrNull())
 	{
 		asv->push_back(token);
 	}
@@ -806,7 +781,73 @@ void INI::parseAsciiStringVectorAppend( INI* ini, void * /*instance*/, void *sto
 	// asv->clear();
 	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
+		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
+		nkv->push_back(nameKey);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseNameKeyVectorAppend( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	if (!TheNameKeyGenerator) {
+		DEBUG_LOG(("name key generator not found"));
+		DEBUG_CRASH(("name key generator not found"));
+		throw INI_INVALID_DATA;
+	}
+
+	std::vector<NameKeyType>* nkv = (std::vector<NameKeyType>*)store;
+	// nope, don't clear. duh.
+	// nkv->clear();
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
+		nkv->push_back(nameKey);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
+	//asv->clear();
+	
+	Int parsing = 1;
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		if(parsing == 3)
+		{
+			if(stricmp(token, "yes") != 0 && stricmp(token, "no") != 0)
+			{
+				DEBUG_CRASH(("invalid boolean token %s -- expected Yes or No",token));
+				throw INI_INVALID_DATA;
+			}
+			parsing = 1;
+		}
+		else if(parsing == 2)
+		{
+			parsing++;
+		}
+		else if(parsing == 1)
+		{
+			if(stricmp(token, "TURRET") != 0 && stricmp(token, "OBJECT") != 0 && stricmp(token, "DEPLOYED") != 0)
+			{
+				DEBUG_CRASH(("%s is invalid, can only parse OBJECT or TURRET." token));
+				throw INI_INVALID_DATA;
+			}
+			parsing++;
+		}
+		else
+		{
+			DEBUG_CRASH(("It shouldn't happen..."));
+		}
 		asv->push_back(token);
+	}
+	if( parsing != 1 )
+	{
+		DEBUG_CRASH(("Declaration for parseDeployFunctionChangeUpgrade is incomplete."));
+		throw INI_INVALID_DATA;
 	}
 }
 
@@ -925,7 +966,7 @@ void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void 
 {
 	ScienceVec* asv = (ScienceVec*)store;
 	asv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token; token = ini->getNextTokenOrNull())
 	{
 		if (stricmp(token, "None") == 0)
 		{
@@ -1176,7 +1217,7 @@ void INI::parseBitString32( INI* ini, void * /*instance*/, void *store, const vo
 	Bool foundAddOrSub = false;
 
 	// loop through all tokens
-	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	for (const char *token = ini->getNextTokenOrNull(); token; token = ini->getNextTokenOrNull())
 	{
 		if (stricmp(token, "NONE") == 0)
 		{
@@ -1433,23 +1474,22 @@ void INI::parseICoord2D( INI* ini, void * /*instance*/, void *store, const void*
 void INI::parseDynamicAudioEventRTS( INI *ini, void * /*instance*/, void *store, const void* userData )
 {
 	const char *token = ini->getNextToken();
-	DynamicAudioEventRTS** theSound = (DynamicAudioEventRTS**)store;
+	RefCountPtr<DynamicAudioEventRTS>* theSound = (RefCountPtr<DynamicAudioEventRTS>*)store;
 
 	// translate the string into a sound
 	if (stricmp(token, "NoSound") == 0)
 	{
-		deleteInstance(*theSound);
-		*theSound = nullptr;
+		theSound->Clear();
 	}
 	else
 	{
 		if (*theSound == nullptr)
-			*theSound = newInstance(DynamicAudioEventRTS);
-		(*theSound)->m_event.setEventName(AsciiString(token));
+			*theSound = Create_No_Add_Ref(newInstance(DynamicAudioEventRTS));
+		(*theSound)->setEventName(AsciiString(token));
 	}
 
 	if (*theSound)
-		TheAudio->getInfoForAudioEvent(&(*theSound)->m_event);
+		TheAudio->getInfoForAudioEvent(theSound->Peek());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1839,7 +1879,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 		if( field )
 		{
 
-			if( stricmp( field, m_blockEndToken ) == 0 )
+			if( stricmp( field, getEndToken() ) == 0 )
 			{
 				done = TRUE;
 			}
@@ -1891,7 +1931,7 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 
 			done = TRUE;
 			DEBUG_CRASH( ("Error parsing block '%s', in INI file '%s'.  Missing '%s' token",
-												 m_curBlockStart, getFilename().str(), m_blockEndToken) );
+												 m_curBlockStart, getFilename().str(), getEndToken()) );
 			throw INI_MISSING_END_TOKEN;
 
 		}
@@ -1903,7 +1943,6 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 //-------------------------------------------------------------------------------------------------
 /*static*/ const char* INI::getNextToken(const char* seps)
 {
-	if (!seps) seps = getSeps();
 	const char *token = ::strtok(nullptr, seps);
 	if (!token)
 		throw INI_INVALID_DATA;
@@ -1913,7 +1952,6 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 //-------------------------------------------------------------------------------------------------
 /*static*/ const char* INI::getNextTokenOrNull(const char* seps)
 {
-	if (!seps) seps = getSeps();
 	const char *token = ::strtok(nullptr, seps);
 	return token;
 }
@@ -1924,40 +1962,95 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 	return TheScienceStore->friend_lookupScience( token );
 }
 
+#if USE_STD_FROM_CHARS_PARSING
+
+template <typename Type>
+Type scanType(std::string_view token)
+{
+	DEBUG_ASSERTCRASH(!token.empty(), ("token is not expected to be empty"));
+
+	// Unlike sscanf, std::from_chars cannot parse "+".
+	// Consume the plus symbol to accommodate custom ini files that have numbers prefixed with a plus.
+	if (token[0] == '+')
+	{
+		token.remove_prefix(1);
+	}
+
+	// Unlike sscanf, std::from_chars cannot parse "-" as unsigned integer.
+	std::conditional_t<std::is_integral_v<Type>, Int64, Type> result{};
+	const auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), result);
+
+	if (ec != std::errc{})
+	{
+		throw INI_INVALID_DATA;
+	}
+
+	return static_cast<Type>(result);
+}
+
+#endif
+
 //-------------------------------------------------------------------------------------------------
 /*static*/ Int INI::scanInt(const char* token)
 {
+#if USE_STD_FROM_CHARS_PARSING == 1
+	return scanType<Int>(token);
+#else
 	Int value;
 	if (sscanf( token, "%d", &value ) != 1)
 		throw INI_INVALID_DATA;
+
+#if USE_STD_FROM_CHARS_PARSING == -1
+	if (value != scanType<Int>(token))
+		throw INI_INVALID_DATA;
+#endif
+
 	return value;
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ UnsignedInt INI::scanUnsignedInt(const char* token)
 {
+#if USE_STD_FROM_CHARS_PARSING == 1
+	return scanType<UnsignedInt>(token);
+#else
 	UnsignedInt value;
 	if (sscanf( token, "%u", &value ) != 1)	// unsigned int is %u, not %d
 		throw INI_INVALID_DATA;
+
+#if USE_STD_FROM_CHARS_PARSING == -1
+	if (value != scanType<UnsignedInt>(token))
+		throw INI_INVALID_DATA;
+#endif
+
 	return value;
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ Real INI::scanReal(const char* token)
 {
+#if USE_STD_FROM_CHARS_PARSING == 1
+	return scanType<Real>(token);
+#else
 	Real value;
 	if (sscanf( token, "%f", &value ) != 1)
 		throw INI_INVALID_DATA;
+
+#if USE_STD_FROM_CHARS_PARSING == -1
+	if (value != scanType<Real>(token))
+		throw INI_INVALID_DATA;
+#endif
+
 	return value;
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ Real INI::scanPercentToReal(const char* token)
 {
-	Real value;
-	if (sscanf( token, "%f", &value ) != 1)
-		throw INI_INVALID_DATA;
-	return value / 100.0f;
+	return scanReal(token) / 100.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1996,14 +2089,11 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 	}
 
 	// search for matching name
-	Bool found = false;
 	for( const LookupListRec* lookup = &lookupList[0]; lookup->name; lookup++ )
 	{
 		if( stricmp( lookup->name, token ) == 0 )
 		{
 			return lookup->value;
-			found = true;
-			break;
 		}
 	}
 
@@ -2148,12 +2238,10 @@ void INI::parseSoundsList( INI* ini, void *instance, void *store, const void* /*
 	std::vector<AsciiString> *vec = (std::vector<AsciiString>*) store;
 	vec->clear();
 
-	const char* SEPS = " \t,=";
-	const char *c = ini->getNextTokenOrNull(SEPS);
-	while ( c )
+	constexpr const char* Seps = " \t,=";
+	for (const char* token = ini->getNextTokenOrNull(Seps); token; token = ini->getNextTokenOrNull(Seps))
 	{
-		vec->push_back( c );
-		c = ini->getNextTokenOrNull(SEPS);
+		vec->push_back(token);
 	}
 }
 

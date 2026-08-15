@@ -38,7 +38,7 @@
 #include <assert.h>
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
-#include "always.h"
+#include "WWLib/always.h"
 #include "GameClient/View.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/light.h"
@@ -569,9 +569,9 @@ class W3DShadowGeometry : public RefCountClass, public	HashableClass
 	public:
 
 		W3DShadowGeometry() { };
-		~W3DShadowGeometry() { };
+		virtual ~W3DShadowGeometry() override { };
 
-		virtual	const char * Get_Key()	{ return m_namebuf;	}
+		virtual	const char * Get_Key() override { return m_namebuf;	}
 
 		Int init (RenderObjClass *robj);
 		Int initFromHLOD (RenderObjClass *robj);	///<initialize the geometry from a W3D HLOD object.
@@ -3258,7 +3258,6 @@ void W3DVolumetricShadowManager::renderShadows( Bool forceStencilFill )
 	Int numRenderedShadows = 0;
 
  	AABoxClass bbox;
-	SphereClass bsphere;
 
  	//Get a bounding box around our visible universe.  Bounded by terrain and the sky
  	//so much tighter fitting volume than what's actually visible.  This will cull
@@ -3819,9 +3818,9 @@ class MissingGeomClass : public HashableClass {
 
 public:
 	MissingGeomClass( const char * name ) : Name( name ) {}
-	virtual	~MissingGeomClass() {}
+	virtual	~MissingGeomClass() override {}
 
-	virtual	const char * Get_Key()	{ return Name;	}
+	virtual	const char * Get_Key() override { return Name;	}
 
 private:
 	StringClass	Name;

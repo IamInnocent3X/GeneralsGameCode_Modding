@@ -39,8 +39,8 @@
 
 #pragma once
 
-#include "always.h"
-#include "shader.h"
+#include "WWLib/always.h"
+#include "WW3D2/shader.h"
 
 class TextureClass;
 class VertexMaterialClass;
@@ -65,7 +65,7 @@ class MaterialPassClass : public RefCountClass
 public:
 
 	MaterialPassClass();
-	~MaterialPassClass();
+	virtual ~MaterialPassClass() override;
 
 	/// MW: Had to make this virtual so app can perform direct/custom D3D setup.
 	virtual void	Install_Materials() const;

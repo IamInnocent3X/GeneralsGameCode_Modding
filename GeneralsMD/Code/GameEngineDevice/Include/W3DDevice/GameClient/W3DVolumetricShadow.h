@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "matrix4.h"
+#include "WWMath/matrix4.h"
 #include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "GameClient/Shadow.h"
 
@@ -102,10 +102,10 @@ class W3DVolumetricShadow	: public Shadow
 
 	protected:
 
-		virtual void release()	{TheW3DVolumetricShadowManager->removeShadow(this);}	///<release shadow from manager
+		virtual void release() override	{TheW3DVolumetricShadowManager->removeShadow(this);}	///<release shadow from manager
 
 		#if defined(RTS_DEBUG)
-		virtual void getRenderCost(RenderCost & rc) const;
+		virtual void getRenderCost(RenderCost & rc) const override;
 		#endif
 
 		// tie in geometry and transformation for this shadow

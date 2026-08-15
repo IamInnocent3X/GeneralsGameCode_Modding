@@ -566,7 +566,7 @@ void FlightDeckBehavior::calcPPInfo( ObjectID id, PPInfo *info )
 
 		//Cache the runway's takeoff distance used by JetAIUpdate for calculating lift.
 		Coord3D vector = info->runwayStart;
-		vector.sub( &info->runwayEnd );
+		vector.sub( info->runwayEnd );
 		info->runwayTakeoffDist = vector.length();
 
 		for (std::vector<RunwayInfo>::iterator it = m_runways.begin(); it != m_runways.end(); ++it)
@@ -879,7 +879,7 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
 
 			if( pos )
 			{
-				pos->set( &myIt->m_prep );
+				pos->set( myIt->m_prep );
 			}
 			break;
 		}
@@ -947,7 +947,7 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
 					checkForPlaneInWay = TRUE;
 					if( pos )
 					{
-						pos->set( &thatIt->m_prep );
+						pos->set( thatIt->m_prep );
 					}
 				}
 			}
@@ -957,7 +957,7 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
  				checkForPlaneInWay = FALSE;
 				if( pos )
 				{
-					pos->set( &myIt->m_prep ); //reset the original position.
+					pos->set( myIt->m_prep ); //reset the original position.
 					bestIt = m_spaces.end();
 				}
 			}
@@ -1430,13 +1430,13 @@ void FlightDeckBehavior::aiDoCommand(const AICommandParms* parms)
 		{
 			case AICMD_GUARD_POSITION:
 				m_designatedTarget = INVALID_ID;
-				m_designatedPosition.set( &parms->m_pos );
+				m_designatedPosition.set( parms->m_pos );
 				m_designatedCommand = parms->m_cmd;
 				propagateOrdersToPlanes();
 				break;
 			case AICMD_ATTACK_POSITION:
 				m_designatedTarget = INVALID_ID;
-				m_designatedPosition.set( &parms->m_pos );
+				m_designatedPosition.set( parms->m_pos );
 				m_designatedCommand = parms->m_cmd;
 				propagateOrdersToPlanes();
 				break;
@@ -1449,7 +1449,7 @@ void FlightDeckBehavior::aiDoCommand(const AICommandParms* parms)
 				break;
 			case AICMD_ATTACKMOVE_TO_POSITION:
 				m_designatedTarget = INVALID_ID;
-				m_designatedPosition.set( &parms->m_pos );
+				m_designatedPosition.set( parms->m_pos );
 				m_designatedCommand = parms->m_cmd;
 				propagateOrdersToPlanes();
 				break;
@@ -1714,7 +1714,7 @@ void FlightDeckBehavior::xfer( Xfer *xfer )
 	xfer->xferUnsignedInt( &m_startedProductionFrame );
 	xfer->xferUnsignedInt( &m_nextAllowedProductionFrame );
 	xfer->xferObjectID( &m_designatedTarget );
-	Int commandType;
+	Int commandType = (Int)m_designatedCommand;
 	xfer->xferInt( &commandType );
 	m_designatedCommand = (AICommandType)commandType;
 	xfer->xferCoord3D( &m_designatedPosition );
@@ -1731,7 +1731,8 @@ void FlightDeckBehavior::xfer( Xfer *xfer )
 			xfer->xferUnsignedInt( &m_rampUpFrame[ i ] );
 			xfer->xferUnsignedInt( &m_catapultSystemFrame[ i ] );
 			xfer->xferUnsignedInt( &m_lowerRampFrame[ i ] );
-			xfer->xferBool( &m_rampUp[ MAX_RUNWAYS ] );
+			// TheSuperHackers @bugfix bobtista 22/07/2026 Index the ramp state by runway instead of reading and writing one element past the array.
+			xfer->xferBool( &m_rampUp[ i ] );
 		}
 		else
 		{

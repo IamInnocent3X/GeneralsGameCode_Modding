@@ -38,13 +38,13 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "vertmaterial.h"
-#include "realcrc.h"
-#include "wwdebug.h"
+#include "WWLib/realcrc.h"
+#include "WWDebug/wwdebug.h"
 #include "w3d_util.h"
-#include "chunkio.h"
+#include "WWLib/chunkio.h"
 #include "w3derr.h"
-#include "INI.h"
-#include "XSTRAW.h"
+#include "WWLib/INI.h"
+#include "WWLib/XSTRAW.h"
 #include "dx8wrapper.h"
 
 
@@ -53,9 +53,9 @@ static unsigned int unique=1;
 VertexMaterialClass* VertexMaterialClass::Presets[VertexMaterialClass::PRESET_COUNT];
 
 #ifdef DYN_MAT8
-class DynD3DMATERIAL8 : public W3DMPO
+class DynD3DMATERIAL8
 {
-	W3DMPO_GLUE(DynD3DMATERIAL8)
+	W3DMPO_CODE(DynD3DMATERIAL8)
 public:
 	D3DMATERIAL8 Mat;
 };

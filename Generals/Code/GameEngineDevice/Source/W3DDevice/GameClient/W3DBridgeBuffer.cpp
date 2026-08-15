@@ -49,7 +49,7 @@
 #include "W3DDevice/GameClient/W3DBridgeBuffer.h"
 
 #include "W3DDevice/GameClient/W3DAssetManager.h"
-#include <texture.h>
+#include <WW3D2/texture.h>
 #include "Common/GlobalData.h"
 #include "Common/RandomValue.h"
 #include "Common/ThingFactory.h"
@@ -623,7 +623,6 @@ void W3DBridge::getIndicesNVertices(UnsignedShort *destination_ib, VertexFormatX
 	*curVertexP += numV;
 	m_numVertex += numV;
 	m_numPolygons += numI/3;
-	return;
 }
 
 //=============================================================================

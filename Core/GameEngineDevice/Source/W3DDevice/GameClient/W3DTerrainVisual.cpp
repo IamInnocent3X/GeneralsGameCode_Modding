@@ -42,6 +42,7 @@
 
 #include "GameClient/Drawable.h"
 #include "GameClient/ClientRandomValue.h"
+#include "GameClient/View.h"
 
 #include "GameLogic/Object.h"
 #include "GameLogic/GameLogic.h"
@@ -69,7 +70,7 @@
 class TestSeismicFilter : public SeismicSimulationFilterBase
 {
 
-  virtual SeismicSimStatusCode filterCallback( WorldHeightMapInterfaceClass *heightMap, const SeismicSimulationNode *node )
+  virtual SeismicSimStatusCode filterCallback( WorldHeightMapInterfaceClass *heightMap, const SeismicSimulationNode *node ) override
   {
 
 
@@ -140,7 +141,7 @@ class TestSeismicFilter : public SeismicSimulationFilterBase
       return SEISMIC_STATUS_ZERO_ENERGY;
   }
 
-  virtual Real applyGravityCallback( Real velocityIn )
+  virtual Real applyGravityCallback( Real velocityIn ) override
   {
     Real velocityOut = velocityIn;
     velocityOut -= 1.5f;
@@ -493,6 +494,10 @@ void W3DTerrainVisual::updateSeismicSimulations()
         ++it;
 
 	  }
+
+	if (TheTacticalView) {
+		TheTacticalView->onHeightMapChanged();
+	}
 
   }
 }

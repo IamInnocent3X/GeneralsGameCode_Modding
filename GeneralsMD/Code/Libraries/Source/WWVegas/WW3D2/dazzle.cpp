@@ -39,23 +39,23 @@
 
 
 #include "dazzle.h"
-#include "simplevec.h"
-#include "vector2.h"
+#include "WWLib/simplevec.h"
+#include "WWMath/vector2.h"
 #include "camera.h"
 #include "ww3d.h"
-#include "wwstring.h"
-#include "wwdebug.h"
+#include "WWLib/wwstring.h"
+#include "WWDebug/wwdebug.h"
 #include "assetmgr.h"
-#include "Vector3i.h"
-#include "quat.h"
-#include "INI.h"
-#include "Point.h"
+#include "WWMath/Vector3i.h"
+#include "WWMath/quat.h"
+#include "WWLib/INI.h"
+#include "WWLib/Point.h"
 #include "rinfo.h"
 #include "vertmaterial.h"
-#include "chunkio.h"
-#include "WWFILE.h"
-#include "inisup.h"
-#include "persistfactory.h"
+#include "WWLib/chunkio.h"
+#include "WWLib/WWFILE.h"
+#include "WWLib/inisup.h"
+#include "WWSaveLoad/persistfactory.h"
 #include "ww3dids.h"
 #include "dx8wrapper.h"
 #include "dx8vertexbuffer.h"
@@ -63,10 +63,10 @@
 #include "sortingrenderer.h"
 #include "texture.h"
 #include "scene.h"
-#include "wwprofile.h"
+#include "WWDebug/wwprofile.h"
 #include "visrasterizer.h"
 #include <limits.h>
-#include <wwprofile.h>
+#include <WWDebug/wwprofile.h>
 
 
 // All dazzle types appear under Dazzles_List in the dazzle.ini file.
@@ -555,8 +555,6 @@ void DazzleTypeClass::Calculate_Intensities(
 			halo_intensity*=1.0f-distance;	// Scale down intensity
 		}
 	}
-
-	return;
 }
 
 // ----------------------------------------------------------------------------
@@ -1229,8 +1227,6 @@ void DazzleRenderObjClass::Render_Dazzle(CameraClass* camera)
 		DX8Wrapper::Set_Index_Buffer(ib_access,dazzle_vertex_count);
 		DX8Wrapper::Set_Shader(default_halo_shader);
 		DX8Wrapper::Set_Texture(0,types[type]->Get_Halo_Texture());
-		SphereClass sphere(Get_Position(),0.1f);
-
 		DX8Wrapper::Draw_Triangles(0,halo_poly_count,0,vertex_count);
 	}
 
@@ -1238,7 +1234,6 @@ void DazzleRenderObjClass::Render_Dazzle(CameraClass* camera)
 		DX8Wrapper::Set_Index_Buffer(ib_access,0);
 		DX8Wrapper::Set_Shader(default_dazzle_shader);
 		DX8Wrapper::Set_Texture(0,types[type]->Get_Dazzle_Texture());
-		SphereClass sphere(Vector3(0.0f,0.0f,0.0f),0.0f);
 		DX8Wrapper::Draw_Triangles(0,dazzle_poly_count,0,vertex_count);
 	}
 
@@ -1246,7 +1241,6 @@ void DazzleRenderObjClass::Render_Dazzle(CameraClass* camera)
 		DX8Wrapper::Set_Index_Buffer(ib_access,dazzle_vertex_count+halo_vertex_count);
 		DX8Wrapper::Set_Shader(default_dazzle_shader);
 		DX8Wrapper::Set_Texture(0,lensflare->Get_Texture());
-		SphereClass sphere(Vector3(0.0f,0.0f,0.0f),0.0f);
 		DX8Wrapper::Draw_Triangles(0,lensflare_poly_count,0,vertex_count);
 	}
 
@@ -1430,9 +1424,9 @@ void DazzleRenderObjClass::Special_Render(SpecialRenderInfoClass & rinfo)
 
 class DazzlePersistFactoryClass : public PersistFactoryClass
 {
-	virtual uint32				Chunk_ID() const;
-	virtual PersistClass *	Load(ChunkLoadClass & cload) const;
-	virtual void				Save(ChunkSaveClass & csave,PersistClass * obj)	const;
+	virtual uint32				Chunk_ID() const override;
+	virtual PersistClass *	Load(ChunkLoadClass & cload) const override;
+	virtual void				Save(ChunkSaveClass & csave,PersistClass * obj)	const override;
 
 	enum
 	{

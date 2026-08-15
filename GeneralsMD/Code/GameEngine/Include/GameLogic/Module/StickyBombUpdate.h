@@ -124,9 +124,12 @@ public:
 	StickyBombUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual void onObjectCreated();
+	virtual void onObjectCreated() override;
+#if !RETAIL_COMPATIBLE_CRC
+	virtual void onDelete() override;
+#endif
 
-	virtual UpdateSleepTime update();							///< called once per frame
+	virtual UpdateSleepTime update() override;							///< called once per frame
 
 	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return this; }
 

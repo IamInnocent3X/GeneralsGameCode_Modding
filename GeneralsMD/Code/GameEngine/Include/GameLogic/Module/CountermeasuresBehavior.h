@@ -169,67 +169,67 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | MODULEINTERFACE_UPGRADE; }
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
-	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() { return this; }
-	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
+	virtual CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() override { return this; }
+	virtual const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const override { return this; }
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+	virtual UpdateSleepTime update() override;
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 
 	// CountermeasuresBehaviorInterface
-	virtual void reportMissileForCountermeasures( Object *missile );
-	virtual ObjectID calculateCountermeasureToDivertTo( const Object& victim );
-	virtual void reloadCountermeasures();
-	virtual void setCountermeasuresParked();
-	virtual Bool isActive() const;
-	virtual Bool getCountermeasuresMustReloadAtAirfield() const;
-	virtual Bool getCountermeasuresMustReloadAtDocks() const;
-	virtual Bool getCountermeasuresMustReloadAtBarracks() const;
-	virtual Bool getCountermeasuresNoAirborne() const;
-	virtual Bool getCountermeasuresConsiderGround() const;
-	virtual KindOfMaskType getCountermeasuresKindOfs() const;
+	virtual void reportMissileForCountermeasures( Object *missile ) override;
+	virtual ObjectID calculateCountermeasureToDivertTo( const Object& victim ) override;
+	virtual void reloadCountermeasures() override;
+	virtual void setCountermeasuresParked() override;
+	virtual Bool isActive() const override;
+	virtual Bool getCountermeasuresMustReloadAtAirfield() const override;
+	virtual Bool getCountermeasuresMustReloadAtDocks() const override;
+	virtual Bool getCountermeasuresMustReloadAtBarracks() const override;
+	virtual Bool getCountermeasuresNoAirborne() const override;
+	virtual Bool getCountermeasuresConsiderGround() const override;
+	virtual KindOfMaskType getCountermeasuresKindOfs() const override;
 
 protected:
 
-	virtual void upgradeImplementation();
+	virtual void upgradeImplementation() override;
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
 		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return true; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 	void launchVolley();
 

@@ -183,9 +183,9 @@ public:
 protected:
 
 	// snapshot methods
-	virtual void crc( Xfer *xfer );
-	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 
 private:
 
@@ -323,7 +323,6 @@ public:
 	TintEnvelope *getColorTintEnvelope() { return m_colorTintEnvelope; }
 	void setColorTintEnvelope( TintEnvelope &source ) { if (m_colorTintEnvelope) *m_colorTintEnvelope = source; }
 
-
   void imitateStealthLook( Drawable& otherDraw );
 
 	void setTerrainDecal(TerrainDecalType type);	///<decal that is to appear under the drawable
@@ -394,9 +393,6 @@ public:
 
 	void setFullyObscuredByShroud(Bool fullyObscured);
 	Bool getFullyObscuredByShroud() {return m_drawableFullyObscuredByShroud;}
-
-  // Put on ice until later... M Lorenzen
-  //	inline UnsignedByte getFullyObscuredByShroudWithCheatSpy() {return (UnsignedByte)m_drawableFullyObscuredByShroud | 128;}//8 looks like a zero in most fonts
 
 	Bool getDrawsInMirror() const { return BitIsSet(m_status, DRAWABLE_STATUS_DRAWS_IN_MIRROR) || isKindOf(KINDOF_CAN_CAST_REFLECTIONS); }
 
@@ -618,7 +614,7 @@ public:
   // Stuff for overriding ambient sound
   const AudioEventInfo * getBaseSoundAmbientInfo() const; //< Possible starting point if only some parameters are customized
   void enableAmbientSoundFromScript( Bool enable );
-  const AudioEventRTS * getAmbientSound() const { return m_ambientSound == nullptr ? nullptr : &m_ambientSound->m_event; }
+  const AudioEventRTS * getAmbientSound() const { return m_ambientSound == nullptr ? nullptr : m_ambientSound.Peek(); }
   void setCustomSoundAmbientOff(); //< Kill the ambient sound
   void setCustomSoundAmbientInfo( DynamicAudioEventInfo * customAmbientInfo ); //< Set ambient sound.
   void clearCustomSoundAmbient() { clearCustomSoundAmbient( true ); } //< Return to using defaults
@@ -635,15 +631,15 @@ public:
 protected:
 
 	// snapshot methods
-	virtual void crc( Xfer *xfer );
-	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 	void xferDrawableModules( Xfer *xfer );
 
 	void	startAmbientSound( BodyDamageType dt, TimeOfDay tod, Bool onlyIfPermanent = false );
 
-	Drawable *asDrawableMeth() { return this; }
-	const Drawable *asDrawableMeth() const { return this; }
+	virtual Drawable *asDrawableMeth() override { return this; }
+	virtual const Drawable *asDrawableMeth() const override { return this; }
 
 	Module** getModuleList(ModuleType i)
 	{
@@ -684,7 +680,7 @@ protected:
 	void validatePos() const;
 #endif
 
-	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
+	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle) override;
 	void updateHiddenStatus();
 	Bool checkDrawModuleNullptr(DrawModule** dm);
 
@@ -752,7 +748,7 @@ private:
 
 	PhysicsXformInfo* m_physicsXform;
 
-	DynamicAudioEventRTS*	m_ambientSound;		///< sound module for ambient sound (lazily allocated)
+	RefCountPtr<DynamicAudioEventRTS> m_ambientSound;		///< sound module for ambient sound (lazily allocated)
 
 	Module** m_modules[NUM_DRAWABLE_MODULE_TYPES];
 

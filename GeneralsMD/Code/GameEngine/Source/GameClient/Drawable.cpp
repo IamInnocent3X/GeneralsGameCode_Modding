@@ -81,13 +81,7 @@
 #include "GameClient/Shadow.h"
 #include "GameClient/GameText.h"
 
-#include "ww3d.h"
-
-//#define KRIS_BRUTAL_HACK_FOR_AIRCRAFT_CARRIER_DEBUGGING
-#ifdef KRIS_BRUTAL_HACK_FOR_AIRCRAFT_CARRIER_DEBUGGING
-	#include "GameLogic/Module/ParkingPlaceBehavior.h"
-#endif
-
+#include "WW3D2/ww3d.h"
 
 #define VERY_TRANSPARENT_MATERIAL_PASS_OPACITY (0.001f)
 #define MATERIAL_PASS_OPACITY_FADE_SCALAR (0.8f)
@@ -158,17 +152,13 @@ static_assert(ARRAY_SIZE(TintStatusFlags::s_bitNameList) == TintStatusFlags::Num
  *
  * OK, so it's a bit of a hack, but it saves memory in every Drawable
  */
-static DynamicAudioEventInfo  * getNoSoundMarker()
+class DynamicAudioEventInfoStatic : public DynamicAudioEventInfo
+{};
+static DynamicAudioEventInfoStatic s_noSoundMarker;
+
+static DynamicAudioEventInfo* getNoSoundMarker()
 {
-  static DynamicAudioEventInfo  * marker = nullptr;
-
-  if ( marker == nullptr )
-  {
-    // Initialize first time function is called
-    marker = newInstance( DynamicAudioEventInfo  );
-  }
-
-  return marker;
+	return &s_noSoundMarker;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -624,8 +614,7 @@ Drawable::~Drawable()
 
 	stopAmbientSound();
 
-	deleteInstance(m_ambientSound);
-	m_ambientSound = nullptr;
+	m_ambientSound.Clear();
 
   clearCustomSoundAmbient( false );
 
@@ -1388,8 +1377,6 @@ void Drawable::setEffectiveOpacity( Real pulseFactor, Real explicitOpacity /* = 
 	m_effectiveStealthOpacity = m_stealthOpacity + pulseAmount;
 }
 
-
-
 //-------------------------------------------------------------------------------------------------
 void Drawable::imitateStealthLook( Drawable& otherDraw )
 {
@@ -1402,14 +1389,6 @@ void Drawable::imitateStealthLook( Drawable& otherDraw )
   m_secondMaterialPassOpacity = otherDraw.getSecondMaterialPassOpacity();
 
 }
-
-
-
-
-
-
-
-
 
 //-------------------------------------------------------------------------------------------------
 /** update is called once per frame */
@@ -1737,15 +1716,15 @@ void Drawable::updateDrawable()
   // End result: a hack of testing the looping bit and only restarting the sound if the looping
   // bit is on and the loop count is 0 (loop forever).
   if( m_ambientSound && m_ambientSoundEnabled && m_ambientSoundEnabledFromScript &&
-      !m_ambientSound->m_event.getEventName().isEmpty() && !m_ambientSound->m_event.isCurrentlyPlaying() )
+      !m_ambientSound->getEventName().isEmpty() && !m_ambientSound->isCurrentlyPlaying() )
   {
-    const AudioEventInfo * eventInfo = m_ambientSound->m_event.getAudioEventInfo();
+    const AudioEventInfo * eventInfo = m_ambientSound->getAudioEventInfo();
 
     if ( eventInfo == nullptr && TheAudio != nullptr )
     {
       // We'll need this in a second anyway so cache it
-      TheAudio->getInfoForAudioEvent( &m_ambientSound->m_event );
-      eventInfo = m_ambientSound->m_event.getAudioEventInfo();
+      TheAudio->getInfoForAudioEvent( m_ambientSound.Peek() );
+      eventInfo = m_ambientSound->getAudioEventInfo();
     }
 
     if ( eventInfo == nullptr || ( eventInfo->isPermanentSound() ) )
@@ -1764,7 +1743,7 @@ void Drawable::onLevelStart()
   // actually start the sound if the constructor is called during level load.
   if( m_ambientSoundEnabled && m_ambientSoundEnabledFromScript &&
       ( m_ambientSound == nullptr ||
-        ( !m_ambientSound->m_event.getEventName().isEmpty() && !m_ambientSound->m_event.isCurrentlyPlaying() ) ) )
+        ( !m_ambientSound->getEventName().isEmpty() && !m_ambientSound->isCurrentlyPlaying() ) ) )
   {
     // Unlike the check in the update() function, we want to do this for looping & one-shot sounds equally
     startAmbientSound();
@@ -1986,7 +1965,6 @@ void Drawable::calcPhysicsXformHoverOrWings( const Locomotor *locomotor, Physics
 	const Real LATERAL_ACCEL_COEFF = locomotor->getLateralAccelCoef();
 	const Real UNIFORM_AXIAL_DAMPING = locomotor->getUniformAxialDamping();
 
-
 	// get object from logic
 	Object *obj = getObject();
 	if (obj == nullptr)
@@ -2197,8 +2175,8 @@ void Drawable::calcPhysicsXformTreads( const Locomotor *locomotor, PhysicsXformI
 				up.normalize();
 
 				Coord3D prp;
-				prp.crossProduct( &v, &up, &prp );
-				normal.crossProduct( &prp, &v, &normal );
+				prp.crossProduct( v, up, prp );
+				normal.crossProduct( prp, v, normal );
 
 				// compute unit normal
 				normal.normalize();
@@ -3781,48 +3759,6 @@ void Drawable::drawUIText()
 													TheDrawGroupInfo->m_dropShadowOffsetY);
 
 	}
-
-#ifdef KRIS_BRUTAL_HACK_FOR_AIRCRAFT_CARRIER_DEBUGGING
-	if( obj->testStatus( OBJECT_STATUS_DECK_HEIGHT_OFFSET ) )
-	{
-		Object *carrier = TheGameLogic->findObjectByID( obj->getProducerID() );
-		if( carrier )
-		{
-			for (BehaviorModule** i = carrier->getBehaviorModules(); *i; ++i)
-			{
-				ParkingPlaceBehaviorInterface *pp = (*i)->getParkingPlaceBehaviorInterface();
-				if( pp )
-				{
-					Int index = pp->getSpaceIndex( obj->getID() );
-
-					Int xPos = healthBarRegion->lo.x;
-					Int yPos = healthBarRegion->lo.y;
-
-					if (TheDrawGroupInfo->m_usingPixelOffsetX) {
-						xPos += TheDrawGroupInfo->m_pixelOffsetX;
-					} else {
-						xPos += (healthBarRegion->width() * TheDrawGroupInfo->m_percentOffsetX);
-					}
-
-					if (TheDrawGroupInfo->m_usingPixelOffsetY) {
-						yPos += TheDrawGroupInfo->m_pixelOffsetY;
-					} else {
-						yPos += (healthBarRegion->width() * TheDrawGroupInfo->m_percentOffsetY);
-					}
-
-					m_groupNumber = TheDisplayStringManager->getGroupNumeralString(index);
-
-
-					m_groupNumber->draw(xPos, yPos, color,
-															TheDrawGroupInfo->m_colorForTextDropShadow,
-															TheDrawGroupInfo->m_dropShadowOffsetX,
-															TheDrawGroupInfo->m_dropShadowOffsetY);
-					break;
-				}
-			}
-		}
-	}
-#endif
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -4852,7 +4788,7 @@ void Drawable::setID( DrawableID id )
 	{
 		TheGameClient->addDrawableToLookupTable( this );
 		if (m_ambientSound)
-			m_ambientSound->m_event.setDrawableID(m_id);
+			m_ambientSound->setDrawableID(m_id);
 	}
 
 }
@@ -5215,7 +5151,7 @@ void Drawable::clearCustomSoundAmbient( bool restartSound )
   if ( m_ambientSound )
   {
     // Make sure sound doesn't keep a reference to the deleted pointer
-    m_ambientSound->m_event.setAudioEventInfo( nullptr );
+    m_ambientSound->setAudioEventInfo( nullptr );
   }
 
   // Stop using old info
@@ -5245,11 +5181,11 @@ void Drawable::startAmbientSound(BodyDamageType dt, TimeOfDay tod, Bool onlyIfPe
     if ( m_customSoundAmbientInfo != getNoSoundMarker() )
     {
       if (m_ambientSound == nullptr)
-        m_ambientSound = newInstance(DynamicAudioEventRTS);
+        m_ambientSound.Assign_No_Add_Ref(newInstance(DynamicAudioEventRTS));
 
       // Make sure m_event will accept the custom info
-      m_ambientSound->m_event.setEventName( m_customSoundAmbientInfo->m_audioName );
-      m_ambientSound->m_event.setAudioEventInfo( m_customSoundAmbientInfo );
+      m_ambientSound->setEventName( m_customSoundAmbientInfo->m_audioName );
+      m_ambientSound->setAudioEventInfo( m_customSoundAmbientInfo );
       trySound = TRUE;
     }
   }
@@ -5261,9 +5197,9 @@ void Drawable::startAmbientSound(BodyDamageType dt, TimeOfDay tod, Bool onlyIfPe
 	  if( audio.getEventName().isNotEmpty() )
 	  {
 		  if (m_ambientSound == nullptr)
-			  m_ambientSound = newInstance(DynamicAudioEventRTS);
+			  m_ambientSound.Assign_No_Add_Ref(newInstance(DynamicAudioEventRTS));
 
-		  (m_ambientSound->m_event) = audio;
+		  *m_ambientSound = audio;
 		  trySound = TRUE;
 	  }
 	  else if( dt != BODY_PRISTINE && dt != BODY_RUBBLE )
@@ -5275,8 +5211,8 @@ void Drawable::startAmbientSound(BodyDamageType dt, TimeOfDay tod, Bool onlyIfPe
 		  if( pristineAudio.getEventName().isNotEmpty() )
 		  {
 			  if (m_ambientSound == nullptr)
-				  m_ambientSound = newInstance(DynamicAudioEventRTS);
-			  (m_ambientSound->m_event) = pristineAudio;
+				  m_ambientSound.Assign_No_Add_Ref(newInstance(DynamicAudioEventRTS));
+			  *m_ambientSound = pristineAudio;
 			  trySound = TRUE;
 		  }
 	  }
@@ -5285,7 +5221,7 @@ void Drawable::startAmbientSound(BodyDamageType dt, TimeOfDay tod, Bool onlyIfPe
 
 	if( trySound && m_ambientSound )
 	{
-		const AudioEventInfo *info = m_ambientSound->m_event.getAudioEventInfo();
+		const AudioEventInfo *info = m_ambientSound->getAudioEventInfo();
 		if( info )
 		{
       if ( !onlyIfPermanent || info->isPermanentSound() )
@@ -5293,30 +5229,29 @@ void Drawable::startAmbientSound(BodyDamageType dt, TimeOfDay tod, Bool onlyIfPe
 			  if( BitIsSet( info->m_type, ST_GLOBAL) || info->m_priority == AP_CRITICAL )
 			  {
 				  //Play it anyways.
-				  m_ambientSound->m_event.setDrawableID(getID());
-				  m_ambientSound->m_event.setTimeOfDay(tod);
-				  m_ambientSound->m_event.setPlayingHandle(TheAudio->addAudioEvent( &m_ambientSound->m_event ));
+				  m_ambientSound->setDrawableID(getID());
+				  m_ambientSound->setTimeOfDay(tod);
+				  m_ambientSound->setPlayingHandle(TheAudio->addAudioEvent( m_ambientSound.Peek() ));
 			  }
 			  else
 			  {
 				  //Check if it's close enough to try playing (optimization)
 				  Coord3D vector = *getPosition();
-				  vector.sub( TheAudio->getListenerPosition() );
+				  vector.sub( *TheAudio->getListenerPosition() );
 				  Real distSqr = vector.lengthSqr();
 				  if( distSqr < sqr( info->m_maxDistance ) )
 				  {
-					  m_ambientSound->m_event.setDrawableID(getID());
-					  m_ambientSound->m_event.setTimeOfDay(tod);
-					  m_ambientSound->m_event.setPlayingHandle(TheAudio->addAudioEvent( &m_ambientSound->m_event ));
+					  m_ambientSound->setDrawableID(getID());
+					  m_ambientSound->setTimeOfDay(tod);
+					  m_ambientSound->setPlayingHandle(TheAudio->addAudioEvent( m_ambientSound.Peek() ));
 				  }
 			  }
       }
 		}
 		else
 		{
-			DEBUG_CRASH( ("Ambient sound %s missing! Skipping...", m_ambientSound->m_event.getEventName().str() ) );
-			deleteInstance(m_ambientSound);
-			m_ambientSound = nullptr;
+			DEBUG_CRASH( ("Ambient sound %s missing! Skipping...", m_ambientSound->getEventName().str() ) );
+			m_ambientSound.Clear();
 		}
 	}
 }
@@ -5347,7 +5282,7 @@ void	Drawable::stopAmbientSound()
 {
 	if (m_ambientSound)
   {
-		TheAudio->removeAudioEvent(m_ambientSound->m_event.getPlayingHandle());
+		TheAudio->removeAudioEvent(m_ambientSound->getPlayingHandle());
   }
 }
 
@@ -5698,8 +5633,8 @@ void Drawable::xferDrawableModules( Xfer *xfer )
 	*    during the module xfer (CBD)
 	* 4: Added m_ambientSoundEnabled flag
 	* 5: save full mtx, not pos+orient.
-	* 6: Added m_ambientSoundEnabledFromScript flag
-	* 7: Save the customize ambient sound info
+	* 6: Added m_ambientSoundEnabledFromScript flag (Added in Zero Hour)
+	* 7: Save the customize ambient sound info (Added in Zero Hour)
 	* 8: TheSuperHackers @bugfix Removed m_prevTintStatus because loading its value is unnecessary and undesirable
 	*/
 // ------------------------------------------------------------------------------------------------
@@ -5707,7 +5642,9 @@ void Drawable::xfer( Xfer *xfer )
 {
 
 	// version
-#if RETAIL_COMPATIBLE_XFER_SAVE
+#if RETAIL_COMPATIBLE_XFER_SAVE && RTS_GENERALS
+	const XferVersion currentVersion = 5;
+#elif RETAIL_COMPATIBLE_XFER_SAVE
 	const XferVersion currentVersion = 7;
 #else
 	const XferVersion currentVersion = 8;
@@ -5720,9 +5657,8 @@ void Drawable::xfer( Xfer *xfer )
 	//and restore it in loadPostProcess().
 	if( xfer->getXferMode() == XFER_LOAD && m_ambientSound )
 	{
-		TheAudio->killAudioEventImmediately( m_ambientSound->m_event.getPlayingHandle() );
-		deleteInstance(m_ambientSound);
-		m_ambientSound = nullptr;
+		TheAudio->killAudioEventImmediately( m_ambientSound->getPlayingHandle() );
+		m_ambientSound.Clear();
 	}
 
 	// drawable id
@@ -6408,7 +6344,7 @@ void TintEnvelope::update()
 		{
 			const Vector3 decayRate = m_decayRate * timeScale;
 
-			if (decayRate.Length() > m_currentColor.Length() || m_currentColor.Length() <= FADE_RATE_EPSILON) 
+			if (decayRate.Length() > m_currentColor.Length() || m_currentColor.Length() <= FADE_RATE_EPSILON)
 			{
 				// We are at rest
 				m_envState = ENVELOPE_STATE_REST;

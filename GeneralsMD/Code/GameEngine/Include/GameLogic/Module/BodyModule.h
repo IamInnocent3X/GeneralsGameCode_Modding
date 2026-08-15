@@ -268,92 +268,58 @@ public:
 	static Int getInterfaceMask() { return MODULEINTERFACE_BODY; }
 
 	// BehaviorModule
-	virtual BodyModuleInterface* getBody() { return this; }
+	virtual BodyModuleInterface* getBody() override { return this; }
 
-	/**
-		Try to damage this Object. The module's Armor
-		will be taken into account, so the actual damage done may vary
-		considerably from what you requested. Also note that (if damage is done)
-		the DamageFX will be invoked to provide a/v fx as appropriate.
-	*/
-	virtual void attemptDamage( DamageInfo *damageInfo ) = 0;
+	virtual Real getMaxHealth() const override {return 0.0f;}  ///< return max health
+	virtual Real getPreviousHealth() const override { return 0.0f; } ///< return previous health
 
-	/**
-		Instead of having negative damage count as healing, or allowing access to the private
-		changeHealth Method, we will use this parallel to attemptDamage to do healing without hack.
-	*/
-	virtual void attemptHealing( DamageInfo *healingInfo ) = 0;
+	virtual Real getSubdualDamageCap() const override {return 0.0f;}
+	virtual UnsignedInt getSubdualDamageHealRate() const override {return 0;}
+	virtual Real getSubdualDamageHealAmount() const override {return 0.0f;}
+	virtual Bool hasAnySubdualDamage() const override {return FALSE;}
+	virtual Real getCurrentSubdualDamageAmount() const override { return 0.0f; }
 
-	/**
-		Estimate the (unclipped) damage that would be done to this object
-		by the given damage (taking bonuses, armor, etc into account),
-		but DO NOT alter the body in any way. (This is used by the AI system
-		to choose weapons.)
-	*/
-	virtual Real estimateDamage( DamageInfoInput& damageInfo ) const = 0;
+	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const override {return 0.0f;}
+	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const override {return 0;}
+	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const override {return 0.0f;}
+	virtual Bool hasAnySubdualDamageCustom() const override {return FALSE;}
+	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const override { std::vector<AsciiString> dummy; return dummy; }
+	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const override { CustomSubdualCurrentDamageMap dummy; return dummy; }
+	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) override { }
 
-	virtual Real getHealth() const = 0;													///< get current health
+	virtual UnsignedInt getChronoDamageHealRate() const override { return 0; }
+	virtual Real getChronoDamageHealAmount() const override { return 0.0f; }
+	virtual Bool hasAnyChronoDamage() const override { return FALSE; }
+	virtual Real getCurrentChronoDamageAmount() const override { return 0.0f; }
 
-	virtual Real getMaxHealth() const {return 0.0f;}  ///< return max health
-	virtual Real getPreviousHealth() const { return 0.0f; } ///< return previous health
+	virtual Real getInitialHealth() const override {return 0.0f;}  // return initial health
 
-	virtual Real getSubdualDamageCap() const {return 0.0f;}
-	virtual UnsignedInt getSubdualDamageHealRate() const {return 0;}
-	virtual Real getSubdualDamageHealAmount() const {return 0.0f;}
-	virtual Bool hasAnySubdualDamage() const{return FALSE;}
-	virtual Real getCurrentSubdualDamageAmount() const { return 0.0f; }
+	virtual const DamageInfo *getLastDamageInfo() const override { return nullptr; }	///< return info on last damage dealt to this object
+	virtual UnsignedInt getLastDamageTimestamp() const override { return 0; }	///< return frame of last damage dealt
+	virtual UnsignedInt getLastHealingTimestamp() const override { return 0; }	///< return frame of last healing dealt
+	virtual ObjectID getClearableLastAttacker() const override { return INVALID_ID; }
+	virtual void clearLastAttacker() override { }
+	virtual Bool getFrontCrushed() const override { return false; }
+	virtual Bool getBackCrushed() const override { return false; }
 
-	virtual Real getSubdualDamageCapCustom(const AsciiString& customStatus) const {return 0.0f;}
-	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const {return 0;}
-	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const {return 0.0f;}
-	virtual Bool hasAnySubdualDamageCustom() const{return FALSE;}
-	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const { std::vector<AsciiString> dummy; return dummy; }
-	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const { CustomSubdualCurrentDamageMap dummy; return dummy; }
-	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) { }
+	virtual void setInitialHealth(Int initialPercent) override  {  } ///< Sets the initial load health %.
+	virtual void setMaxHealth(Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH ) override  {  } ///< Sets the max health.
+	virtual void setSubdualCap( Real subdualCap ) override  {  } 
+	virtual void setSubdualHealRate( UnsignedInt subdualHealRate ) override  {  } 
+	virtual void setSubdualHealAmount( Real subdualHealAmount ) override  {  } 
 
-	virtual UnsignedInt getChronoDamageHealRate() const { return 0; }
-	virtual Real getChronoDamageHealAmount() const { return 0.0f; }
-	virtual Bool hasAnyChronoDamage() const { return FALSE; }
-	virtual Real getCurrentChronoDamageAmount() const { return 0.0f; }
-
-	virtual Real getInitialHealth() const {return 0.0f;}  // return initial health
-
-	virtual BodyDamageType getDamageState() const = 0;
-	virtual void setDamageState( BodyDamageType newState ) = 0;	///< control damage state directly.  Will adjust hitpoints.
-	virtual void setAflame( Bool setting ) = 0;///< This is a major change like a damage state.
-
-	virtual void onVeterancyLevelChanged( VeterancyLevel oldLevel, VeterancyLevel newLevel, Bool provideFeedback = FALSE ) = 0;	///< I just achieved this level right this moment
-
-	virtual void setArmorSetFlag(ArmorSetType ast) = 0;
-	virtual void clearArmorSetFlag(ArmorSetType ast) = 0;
-	virtual Bool testArmorSetFlag(ArmorSetType ast) = 0;
-
-	virtual const DamageInfo *getLastDamageInfo() const { return nullptr; }	///< return info on last damage dealt to this object
-	virtual UnsignedInt getLastDamageTimestamp() const { return 0; }	///< return frame of last damage dealt
-	virtual UnsignedInt getLastHealingTimestamp() const { return 0; }	///< return frame of last healing dealt
-	virtual ObjectID getClearableLastAttacker() const { return INVALID_ID; }
-	virtual void clearLastAttacker() { }
-	virtual Bool getFrontCrushed() const { return false; }
-	virtual Bool getBackCrushed() const { return false; }
-
-	virtual void setInitialHealth(Int initialPercent)  {  } ///< Sets the initial load health %.
-	virtual void setMaxHealth(Real maxHealth, MaxHealthChangeType healthChangeType = SAME_CURRENTHEALTH )  {  } ///< Sets the max health.
-	virtual void setSubdualCap( Real subdualCap )  {  } 
-	virtual void setSubdualHealRate( UnsignedInt subdualHealRate )  {  } 
-	virtual void setSubdualHealAmount( Real subdualHealAmount )  {  } 
-
-	virtual void setFrontCrushed(Bool v) { DEBUG_CRASH(("you should never call this for generic Bodys")); }
-	virtual void setBackCrushed(Bool v) { DEBUG_CRASH(("you should never call this for generic Bodys")); }
+	virtual void setFrontCrushed(Bool v) override { DEBUG_CRASH(("you should never call this for generic Bodys")); }
+	virtual void setBackCrushed(Bool v) override { DEBUG_CRASH(("you should never call this for generic Bodys")); }
 
 
-	virtual void setIndestructible( Bool indestructible ) { }
-	virtual Bool isIndestructible() const { return TRUE; }
-	virtual Bool canBeSubdued() const { return TRUE; }
+	virtual void setIndestructible( Bool indestructible ) override { }
+	virtual Bool isIndestructible() const override { return TRUE; }
+	virtual Bool canBeSubdued() const override { return TRUE; }
 
 	//Allows outside systems to apply defensive bonuses or penalties (they all stack as a multiplier!)
-	virtual void applyDamageScalar( Real scalar ) { m_damageScalar *= scalar; }
-	virtual Real getDamageScalar() const { return m_damageScalar; }
-	virtual void overrideDamageFX(DamageFX* damageFX) { }
+	virtual void applyDamageScalar( Real scalar ) override { m_damageScalar *= scalar; }
+	virtual Real getDamageScalar() const override { return m_damageScalar; }
+	virtual void overrideDamageFX(DamageFX* damageFX) override { }
 
 	/**
 		Change the module's health by the given delta. Note that
@@ -369,15 +335,15 @@ public:
 	virtual Bool isNearSubduedRange( Real low, Real high ) const = 0; 
 	virtual Bool isNearSubduedRangeCustom( Real low, Real high, const AsciiString &customStatus ) const = 0; 
 
-	virtual void evaluateVisualCondition() { }
-	virtual void updateBodyParticleSystems() { };// made public for topple anf building collapse updates -ML
+	virtual void evaluateVisualCondition() override { }
+	virtual void updateBodyParticleSystems() override { };// made public for topple anf building collapse updates -ML
 
 protected:
 
 	// snapshot methods
-	virtual void crc( Xfer *xfer );
-	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 
 	Real	m_damageScalar;
 

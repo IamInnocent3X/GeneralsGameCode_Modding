@@ -48,9 +48,9 @@ public:
 	// virtual destructor prototype defined by MemoryPoolObject
 
 protected:
-	virtual void upgradeImplementation( ); ///< Here's the actual work of Upgrading
-  virtual Bool isSubObjectsUpgrade() { return false; }
-  virtual Bool hasUpgradeRefresh() { return true; }
+	virtual void upgradeImplementation( ) override; ///< Here's the actual work of Upgrading
+  virtual Bool isSubObjectsUpgrade() override { return false; }
+  virtual Bool hasUpgradeRefresh() override { return true; }
 
 private:
 	Bool m_hasExecuted;

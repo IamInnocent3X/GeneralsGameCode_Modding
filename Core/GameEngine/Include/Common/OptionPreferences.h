@@ -30,6 +30,9 @@
 
 #pragma once
 
+#include "WW3D2/ww3d.h"
+#include "WW3D2/texturefilter.h"
+
 #include "Common/UserPreferences.h"
 
 typedef UnsignedInt CursorCaptureMode;
@@ -42,10 +45,22 @@ class OptionPreferences : public UserPreferences
 {
 public:
 	OptionPreferences();
-	virtual ~OptionPreferences();
+	virtual ~OptionPreferences() override;
+
+	enum AntiAliasingMode CPP_11(: Int)
+	{
+		AntiAliasingMode_OFF = 0,
+		AntiAliasingMode_MSAA_2X,
+		AntiAliasingMode_MSAA_4X,
+		AntiAliasingMode_MSAA_8X,
+		AntiAliasingMode_Count
+	};
 
 	Bool loadFromIniFile();
 
+	WW3D::MultiSampleModeEnum getAntiAliasing() const;
+	TextureFilterClass::TextureFilterMode getTextureFilterMode() const;
+	TextureFilterClass::AnisotropicFilterMode getTextureAnisotropyLevel() const;
 	UnsignedInt getLANIPAddress();
 	UnsignedInt getOnlineIPAddress();
 	void setLANIPAddress(AsciiString IP);
@@ -54,8 +69,10 @@ public:
 	void setOnlineIPAddress(UnsignedInt IP);
 	Bool getArchiveReplaysEnabled() const;
 	Bool getAlternateMouseModeEnabled();
+	Bool getRightMouseScrollWithAlternateMouseEnabled() const;
 	Bool getRetaliationModeEnabled();
 	Bool getDoubleClickAttackMoveEnabled();
+	Int getJpegQuality() const;
 	Real getScrollFactor();
 	Bool getDrawScrollAnchor();
 	Bool getMoveScrollAnchor();
@@ -67,7 +84,6 @@ public:
 	Bool getScreenEdgeScrollEnabledInWindowedApp() const;
 	Bool getScreenEdgeScrollEnabledInFullscreenApp() const;
 	ScreenEdgeScrollMode getScreenEdgeScrollMode() const;
-	Bool getSendDelay();
 	Int getFirewallBehavior();
 	Short getFirewallPortAllocationDelta();
 	UnsignedShort getFirewallPortOverride();
@@ -113,4 +129,6 @@ public:
 	Real getResolutionFontAdjustment();
 
 	Bool getShowMoneyPerMinute() const;
+
+	Real getGameWindowTransitionSpeedMultiplier() const;
 };

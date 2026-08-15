@@ -113,9 +113,9 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// slow death methods
-	virtual void onDie( const DamageInfo *damageInfo );
-	virtual void beginSlowDeath( const DamageInfo *damageInfo );
-	virtual UpdateSleepTime update();
+	virtual void onDie( const DamageInfo *damageInfo ) override;
+	virtual void beginSlowDeath( const DamageInfo *damageInfo ) override;
+	virtual UpdateSleepTime update() override;
 
 	virtual Bool friend_isSlowDeathActivated() const { return m_groundCheckFrame || isSlowDeathActivated(); }
 	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }

@@ -901,7 +901,7 @@ UpdateSleepTime TunnelContain::update()
 
 		if (tunnelSystem)
 		{
-#if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
+#if RETAIL_COMPATIBLE_CRC || PRESERVE_TUNNEL_HEAL_STACKING
 			tunnelSystem->healObjects(modData->m_framesForFullHeal);
 #endif
 			tunnelSystem->removeDontLoadSound(TheGameLogic->getFrame());

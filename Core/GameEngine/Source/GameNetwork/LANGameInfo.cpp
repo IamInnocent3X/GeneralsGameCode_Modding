@@ -34,7 +34,7 @@
 #include "GameNetwork/LANGameInfo.h"
 #include "GameNetwork/LANAPICallbacks.h"
 #include "Common/MultiplayerSettings.h"
-#include "strtok_r.h"
+#include "WWLib/strtok_r.h"
 /*
 #include "GameNetwork/LAN.h"
 #include "GameNetwork/LANGame.h"
@@ -161,13 +161,13 @@ Int LANGameInfo::getSlotNum( UnicodeString userName )
 	return -1;
 }
 
-Bool LANGameInfo::amIHost()
+Bool LANGameInfo::amIHost() const
 {
 	DEBUG_ASSERTCRASH(m_inGame, ("Looking for game slot while not in game"));
 	if (!m_inGame)
 		return false;
 
-	return getLANSlot(0)->isLocalPlayer();
+	return getConstLANSlot(0)->isLocalPlayer();
 }
 
 void LANGameInfo::setMap( AsciiString mapName )

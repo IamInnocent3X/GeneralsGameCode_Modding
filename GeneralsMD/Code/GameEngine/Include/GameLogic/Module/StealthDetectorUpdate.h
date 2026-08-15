@@ -100,8 +100,8 @@ public:
 	Bool isSDEnabled() const { return m_enabled; }
 	void setSDEnabled( Bool enabled );
 	void doUpgrade();
-	virtual UpdateSleepTime update();
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
+	virtual UpdateSleepTime update() override;
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 
 protected:
 	Bool testUpgrade();

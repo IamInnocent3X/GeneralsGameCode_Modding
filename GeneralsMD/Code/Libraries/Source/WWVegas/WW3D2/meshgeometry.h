@@ -38,18 +38,18 @@
 
 #pragma once
 
-#include "always.h"
-#include "bittype.h"
-#include "simplevec.h"
-#include "sharebuf.h"
-#include "w3derr.h"
-#include "vector3.h"
-#include "Vector3i.h"
-#include "vector4.h"
-#include "wwdebug.h"
-#include "multilist.h"
-#include "coltest.h"
-#include "inttest.h"
+#include "WWLib/always.h"
+#include "WWLib/bittype.h"
+#include "WWLib/simplevec.h"
+#include "WWLib/sharebuf.h"
+#include "WW3D2/w3derr.h"
+#include "WWMath/vector3.h"
+#include "WWMath/Vector3i.h"
+#include "WWMath/vector4.h"
+#include "WWDebug/wwdebug.h"
+#include "WWLib/multilist.h"
+#include "WW3D2/coltest.h"
+#include "WW3D2/inttest.h"
 
 
 class AABoxClass;
@@ -83,15 +83,13 @@ typedef Vector3i16 TriIndex;
 ** This class encapsulates the geometry data for a triangle mesh.
 */
 
-class MeshGeometryClass : public W3DMPO, public RefCountClass, public MultiListObjectClass
+class MeshGeometryClass : public RefCountClass, public MultiListObjectClass
 {
-	//W3DMPO_GLUE(MeshGeometryClass)
-
 public:
 
 	MeshGeometryClass();
 	MeshGeometryClass(const MeshGeometryClass & that);
-	virtual ~MeshGeometryClass();
+	virtual ~MeshGeometryClass() override;
 
 	MeshGeometryClass & operator = (const MeshGeometryClass & that);
 

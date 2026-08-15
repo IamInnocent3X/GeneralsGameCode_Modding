@@ -63,47 +63,47 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
 
 	// update methods
-	virtual UpdateSleepTime update();							///< called once per frame
+	virtual UpdateSleepTime update() override;							///< called once per frame
 	void refreshUpdateMod(Bool weaponFired);
 	Bool isActive() const { return m_isActive; }
 
 protected:
-	virtual void upgradeImplementation();
+	virtual void upgradeImplementation() override;
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
 		getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const;
+	virtual Bool checkStartsActive() const override;
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return true; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 	void resetStats();
 	void fireOCL();

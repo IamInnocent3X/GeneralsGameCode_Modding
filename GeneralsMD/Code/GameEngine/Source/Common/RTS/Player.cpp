@@ -200,8 +200,8 @@ void dumpBattlePlanBonuses(const BattlePlanBonusesData *b, AsciiString name, con
 		kindofMaskAsAsciiString(b->m_invalidKindOf).str()));
 }
 #else
-#define DUMPBATTLEPLANBONUSES(x,y,z) {}
-#define CRCDUMPBATTLEPLANBONUSES(x,y,z) {}
+#define DUMPBATTLEPLANBONUSES(x,y,z)
+#define CRCDUMPBATTLEPLANBONUSES(x,y,z)
 #endif // DEBUG_CRC
 
 // ------------------------------------------------------------------------------------------------
@@ -823,14 +823,16 @@ void Player::update()
 				GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_ENABLE_RETALIATION_MODE );
 				if( msg )
 				{
+#if RETAIL_COMPATIBLE_CRC
 					msg->appendIntegerArgument( getPlayerIndex() );
+#endif
 					msg->appendBooleanArgument( TheGlobalData->m_clientRetaliationModeEnabled );
 				}
 			}
 		}
 	}
 
-#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+#if !(RETAIL_COMPATIBLE_CRC || PRESERVE_TUNNEL_HEAL_STACKING)
 	// TheSuperHackers @bugfix Stubbjax 26/09/2025 The Tunnel System now heals
 	// all units once per frame instead of once per frame per Tunnel Network.
 	TunnelTracker* tunnelSystem = getTunnelSystem();
@@ -1318,9 +1320,6 @@ struct PlayerObjectFindInfo
 //-------------------------------------------------------------------------------------------------
 static void doFindCommandCenter(Object* obj, void* userData)
 {
-	if (!obj)
-		return;
-
 	PlayerObjectFindInfo* info = (PlayerObjectFindInfo*)userData;
 
 	if (info->obj == nullptr
@@ -2361,12 +2360,51 @@ void Player::setObjectsEnabled(AsciiString templateTypeToAffect, Bool enable)
 }
 
 //=============================================================================
+static void cancelUpgradeInProduction(Object* obj, void* userData)
+{
+	const UpgradeTemplate* upgradeTemplate = static_cast<const UpgradeTemplate*>(userData);
+	ProductionUpdateInterface* pui = ProductionUpdate::getProductionUpdateInterfaceFromObject(obj);
+
+	if (pui && pui->isUpgradeInQueue(upgradeTemplate))
+	{
+		pui->cancelUpgrade(upgradeTemplate);
+	}
+}
+
+//=============================================================================
 void Player::transferAssetsFromThat(Player *that)
 {
 	Team *defaultTeam = getDefaultTeam();
 	if (!defaultTeam) {
 		return;
 	}
+
+#if !RETAIL_COMPATIBLE_CRC
+	// TheSuperHackers @bugfix Stubbjax 03/02/2026 Cancel any in-progress player upgrades 'that'
+	// player currently has in progress that 'this' player already has in progress or completed.
+	std::vector<const UpgradeTemplate*> upgradesToCancel;
+	for (Upgrade* upgrade = that->m_upgradeList; upgrade; upgrade = upgrade->friend_getNext())
+	{
+		const UpgradeTemplate* upgradeTemplate = upgrade->getTemplate();
+
+		if (upgrade->getStatus() == UPGRADE_STATUS_IN_PRODUCTION
+			&& upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER
+			&& (hasUpgradeComplete(upgradeTemplate) || hasUpgradeInProduction(upgradeTemplate)))
+		{
+			upgradesToCancel.push_back(upgradeTemplate);
+		}
+	}
+
+	for (std::vector<const UpgradeTemplate*>::iterator cancelIt = upgradesToCancel.begin(); cancelIt != upgradesToCancel.end(); ++cancelIt)
+	{
+		const UpgradeTemplate* upgradeTemplate = *cancelIt;
+		that->iterateObjects(cancelUpgradeInProduction, const_cast<UpgradeTemplate*>(upgradeTemplate));
+	}
+
+	// TheSuperHackers @bugfix Stubbjax 03/02/2026 Ensure the in-progress upgrade mask is copied from 'that'
+	// player to 'this' player to prevent duplicate player upgrades being purchased.
+	m_upgradesInProgress.set(that->m_upgradesInProgress);
+#endif
 
 	std::list<Object *> objsToTransfer;
 
@@ -2698,7 +2736,7 @@ void Player::doBountyForKill(const Object* killer, const Object* victim)
 		moneyString.format( TheGameText->fetch( "GUI:AddCash" ), bounty );
 		Coord3D pos;
 		pos.zero();
-		pos.add( killer->getPosition() );
+		pos.add( *killer->getPosition() );
 		pos.z += 10.0f; //add a little z to make it show up above the unit.
 		if(killer->showCashText())
 			TheInGameUI->addFloatingText( moneyString, &pos, GameMakeColor( 255, 255, 0, 255 ) );
@@ -3543,13 +3581,13 @@ void Player::removeUpgrade( const UpgradeTemplate *upgradeTemplate )
 		if( upgrade->getStatus() == UPGRADE_STATUS_COMPLETE )
 			onUpgradeRemoved();
 
-	if( ThePlayerList->getLocalPlayer() == this )
-	{
-		TheControlBar->markUIDirty();
-	}
+		deleteInstance(upgrade);
 
+		if( ThePlayerList->getLocalPlayer() == this )
+		{
+			TheControlBar->markUIDirty();
+		}
 	}
-
 }
 
 //=================================================================================================
@@ -3877,8 +3915,7 @@ Bool Player::doesObjectQualifyForBattlePlan( Object *obj ) const
 }
 
 //-------------------------------------------------------------------------------------------------
-// note, bonus is an in-out parm.
-void Player::changeBattlePlan( BattlePlanStatus plan, Int delta, BattlePlanBonusesData *bonus )
+void Player::changeBattlePlan( BattlePlanStatus plan, Int delta, const BattlePlanBonusesData *bonus )
 {
 	DUMPBATTLEPLANBONUSES(bonus, this, nullptr);
 	Bool addBonus = false;
@@ -3932,22 +3969,24 @@ void Player::changeBattlePlan( BattlePlanStatus plan, Int delta, BattlePlanBonus
 	else if( removeBonus )
 	{
 		//First, inverse the bonuses
-		bonus->m_armorScalar				= 1.0f / __max( bonus->m_armorScalar, 0.01f );
-		bonus->m_sightRangeScalar		= 1.0f / __max( bonus->m_sightRangeScalar, 0.01f );
-		if( bonus->m_bombardment > 0 )
+		BattlePlanBonusesData invertedBonus = *bonus;
+
+		invertedBonus.m_armorScalar = 1.0f / __max(bonus->m_armorScalar, 0.01f);
+		invertedBonus.m_sightRangeScalar = 1.0f / __max(bonus->m_sightRangeScalar, 0.01f);
+		if (invertedBonus.m_bombardment > 0)
 		{
-			bonus->m_bombardment			= -1;
+			invertedBonus.m_bombardment = -1;
 		}
-		if( bonus->m_holdTheLine > 0 )
+		if (invertedBonus.m_holdTheLine > 0)
 		{
-			bonus->m_holdTheLine			= -1;
+			invertedBonus.m_holdTheLine = -1;
 		}
-		if( bonus->m_searchAndDestroy > 0 )
+		if (invertedBonus.m_searchAndDestroy > 0)
 		{
-			bonus->m_searchAndDestroy	= -1;
+			invertedBonus.m_searchAndDestroy = -1;
 		}
 
-		applyBattlePlanBonusesForPlayerObjects( bonus );
+		applyBattlePlanBonusesForPlayerObjects(&invertedBonus);
 	}
 }
 
@@ -4138,7 +4177,16 @@ void Player::applyBattlePlanBonusesForPlayerObjects( const BattlePlanBonusesData
 	}
 
 	DUMPBATTLEPLANBONUSES(m_battlePlanBonuses, this, nullptr);
+#if RETAIL_COMPATIBLE_CRC
 	iterateObjects( localApplyBattlePlanBonusesToObject, const_cast<BattlePlanBonusesData *>(bonus) );
+#else
+	// TheSuperHackers @bugfix Stubbjax 05/02/2026 Apply all bonuses the player has rather than just the most recent.
+	BattlePlanBonusesData newBonus = *m_battlePlanBonuses;
+	newBonus.m_armorScalar = bonus->m_armorScalar;
+	newBonus.m_sightRangeScalar = bonus->m_sightRangeScalar;
+
+	iterateObjects(localApplyBattlePlanBonusesToObject, &newBonus);
+#endif
 }
 
 
@@ -4170,7 +4218,7 @@ void Player::processCreateTeamGameMessage(Int hotkeyNum, const GameMessage *msg)
 //-------------------------------------------------------------------------------------------------
 /** Select a hotkey team based on this GameMessage */
 //-------------------------------------------------------------------------------------------------
-void Player::processSelectTeamGameMessage(Int hotkeyNum, GameMessage *msg) {
+void Player::processSelectTeamGameMessage(Int hotkeyNum) {
 	if ((hotkeyNum < 0) || (hotkeyNum >= NUM_HOTKEY_SQUADS)) {
 		DEBUG_CRASH(("processSelectTeamGameMessage got an invalid hotkey number"));
 		return;
@@ -4200,7 +4248,7 @@ void Player::processSelectTeamGameMessage(Int hotkeyNum, GameMessage *msg) {
 //-------------------------------------------------------------------------------------------------
 /** Select a hotkey team based on this GameMessage */
 //-------------------------------------------------------------------------------------------------
-void Player::processAddTeamGameMessage(Int hotkeyNum, GameMessage *msg) {
+void Player::processAddTeamGameMessage(Int hotkeyNum) {
 	if ((hotkeyNum < 0) || (hotkeyNum >= NUM_HOTKEY_SQUADS)) {
 		DEBUG_CRASH(("processAddTeamGameMessage got an invalid hotkey number"));
 		return;

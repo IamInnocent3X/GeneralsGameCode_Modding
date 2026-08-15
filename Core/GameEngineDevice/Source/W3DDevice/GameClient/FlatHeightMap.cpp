@@ -49,13 +49,13 @@
 #include "W3DDevice/GameClient/FlatHeightMap.h"
 
 #include <stdlib.h>
-#include <assetmgr.h>
-#include <texture.h>
-#include <tri.h>
-#include <colmath.h>
-#include <coltest.h>
-#include <rinfo.h>
-#include <camera.h>
+#include <WW3D2/assetmgr.h>
+#include <WW3D2/texture.h>
+#include <WWMath/tri.h>
+#include <WWMath/colmath.h>
+#include <WW3D2/coltest.h>
+#include <WW3D2/rinfo.h>
+#include <WW3D2/camera.h>
 #include <d3dx8core.h>
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
@@ -76,7 +76,6 @@
 #include "W3DDevice/GameClient/W3DRoadBuffer.h"
 #include "W3DDevice/GameClient/W3DBridgeBuffer.h"
 #include "W3DDevice/GameClient/W3DWaypointBuffer.h"
-#include "W3DDevice/GameClient/W3DCustomEdging.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
@@ -243,7 +242,10 @@ void FlatHeightMapRenderObjClass::oversizeTerrain(Int tilesToOversize)
 	// Not needed with flat version. [3/20/2003]
 }
 
-
+void FlatHeightMapRenderObjClass::setTerrainDrawSize(Int width, Int height)
+{
+	// Not needed with flat version.
+}
 
 //=============================================================================
 // HeightMapRenderObjClass::doPartialUpdate
@@ -405,13 +407,13 @@ rendered portion of the terrain.  Only a 96x96 section is rendered at any time,
 even though maps can be up to 1024x1024.  This function determines which subset
 is rendered. */
 //=============================================================================
-void FlatHeightMapRenderObjClass::updateCenter(CameraClass *camera , RefRenderObjListIterator *pLightsIterator)
+void FlatHeightMapRenderObjClass::updateCenter(CameraClass *camera, const Vector3 *cameraPivot, RefRenderObjListIterator *pLightsIterator)
 {
 #ifdef DO_UNIT_TIMINGS
 #pragma MESSAGE("*** WARNING *** DOING DO_UNIT_TIMINGS!!!!")
 	return;
 #endif
-	BaseHeightMapRenderObjClass::updateCenter(camera, pLightsIterator);
+	BaseHeightMapRenderObjClass::updateCenter(camera, cameraPivot, pLightsIterator);
 	m_needFullUpdate = false;
 	Int i, j;
 	Int culled = 0;
@@ -603,16 +605,12 @@ void FlatHeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 	}
 #endif
 
-#ifdef DO_SCORCH
 	DX8Wrapper::Set_Texture(0,nullptr);
 	DX8Wrapper::Set_Texture(1,nullptr);
 	m_stageTwoTexture->restore();
 
-	ShaderClass::Invalidate();
-	if (!ShaderClass::Is_Backface_Culling_Inverted()) {
-		drawScorches();
-	}
-#endif
+	drawScorches();
+
 	DX8Wrapper::Set_Texture(0,nullptr);
 	DX8Wrapper::Set_Texture(1,nullptr);
 	m_stageTwoTexture->restore();

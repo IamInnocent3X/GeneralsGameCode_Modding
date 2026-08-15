@@ -38,15 +38,15 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#include "always.h"
+#include "WWLib/always.h"
 #include "render2d.h"
-#include "mutex.h"
+#include "WWLib/mutex.h"
 #include "ww3d.h"
 #include "font3d.h"
-#include "rect.h"
+#include "WWMath/rect.h"
 #include "texture.h"
-#include "matrix4.h"
-#include "matrix3d.h"
+#include "WWMath/matrix4.h"
+#include "WWMath/matrix3d.h"
 #include "dx8wrapper.h"
 #include "dx8indexbuffer.h"
 #include "dx8vertexbuffer.h"
@@ -54,8 +54,8 @@
 #include "vertmaterial.h"
 #include "dx8fvf.h"
 #include "dx8caps.h"
-#include "wwprofile.h"
-#include "wwmemlog.h"
+#include "WWDebug/wwprofile.h"
+#include "WWDebug/wwmemlog.h"
 #include "assetmgr.h"
 
 RectClass							Render2DClass::ScreenResolution( 0,0,0,0 );
@@ -78,7 +78,6 @@ Render2DClass::Render2DClass( TextureClass* tex ) :
 {
 	Set_Texture( tex );
    Shader = Get_Default_Shader();
-	return ;
 }
 
 Render2DClass::~Render2DClass()
@@ -577,7 +576,6 @@ void	Render2DClass::Add_Rect( const RectClass & rect, float border_width, uint32
 		fill_rect.Bottom	-= border_width - 1;
 	}
 	Add_Quad (fill_rect, fill_color);
-	return ;
 }
 
 void	Render2DClass::Add_Outline( const RectClass & rect, float width, unsigned long color )

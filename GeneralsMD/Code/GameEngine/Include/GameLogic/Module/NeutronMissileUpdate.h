@@ -83,12 +83,12 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
 
 	// BehaviorModule
-	virtual DieModuleInterface* getDie() { return this; }
+	virtual DieModuleInterface* getDie() override { return this; }
 
 	// DieModuleInterface
-	virtual void onDie( const DamageInfo *damageInfo );
+	virtual void onDie( const DamageInfo *damageInfo ) override;
 
-	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
+	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() override { return this; }
 
 	enum MissileStateType
 	{
@@ -98,28 +98,28 @@ public:
 		DEAD
 	};
 
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr );
-	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
-	virtual Bool projectileIsArmed() const { return m_isArmed; }											///< return true if the missile is armed and ready to explode
-	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
-	virtual Bool projectileGetLaunchPos(Coord3D& pos) const { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }	///< launcher's position at launch time (for DamageFactorAtMaxRange)
-	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) { m_launchVeterancy = v; }	///< snapshot the launcher's veterancy at launch (for veterancy FX/OCL selection)
-	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }	///< launcher's veterancy at launch time
-	virtual Bool projectileHandleCollision( Object *other );
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) override;
+	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) override;
+	virtual Bool projectileIsArmed() const override { return m_isArmed; }											///< return true if the missile is armed and ready to explode
+	virtual ObjectID projectileGetLauncherID() const override { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const override { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }	///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) override { m_launchVeterancy = v; }	///< snapshot the launcher's veterancy at launch (for veterancy FX/OCL selection)
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const override { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }	///< launcher's veterancy at launch time
+	virtual Bool projectileHandleCollision( Object *other ) override;
 	virtual const Coord3D *getVelocity() const { return &m_vel; }		///< get current velocity
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
-	virtual void projectileNowJammed(Bool noDamage = FALSE);
-	virtual void projectileNowDrawn(ObjectID attractorID);
-	virtual Object* getTargetObject() { return nullptr; }
-	virtual const Coord3D* getTargetPosition();
-	virtual Bool projectileShouldDetonateOnGround() const { return TRUE; } // Yes, we should detonate on ground if we are aiming at a moving object
-	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) {}
-	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) override;
+	virtual void projectileNowJammed(Bool noDamage = FALSE) override;
+	virtual void projectileNowDrawn(ObjectID attractorID) override;
+	virtual Object* getTargetObject() override { return nullptr; }
+	virtual const Coord3D* getTargetPosition() override;
+	virtual Bool projectileShouldDetonateOnGround() const override { return TRUE; } // Yes, we should detonate on ground if we are aiming at a moving object
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) override {}
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
 
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
-	virtual UpdateSleepTime update();
-	virtual void onDelete();
+	virtual UpdateSleepTime update() override;
+	virtual void onDelete() override;
 
 private:
 

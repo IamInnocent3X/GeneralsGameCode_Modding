@@ -77,7 +77,7 @@ public:
 	void resetLifetime();
 	UnsignedInt getDieFrame() const { return m_dieFrame; }
 
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	Real getProgress();
 	Bool showProgressBar() const { return getLifetimeUpdateModuleData()->m_showProgressBar; }

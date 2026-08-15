@@ -265,16 +265,16 @@ struct AttackAngleData
 	}
 
 	self->m_locomotorTemplates[set].clear();
-	for (const char* locoName = ini->getNextToken(); locoName; locoName = ini->getNextTokenOrNull())
+	for (const char* token = ini->getNextToken(); token; token = ini->getNextTokenOrNull())
 	{
-		if (!*locoName || stricmp(locoName, "None") == 0)
+		if (!*token || stricmp(token, "None") == 0)
 			continue;
 
-		NameKeyType locoKey = NAMEKEY(locoName);
+		NameKeyType locoKey = NAMEKEY(token);
 		const LocomotorTemplate* lt = TheLocomotorStore->findLocomotorTemplate(locoKey);
 		if (!lt)
 		{
-			DEBUG_CRASH(("Locomotor %s not found!",locoName));
+			DEBUG_CRASH(("Locomotor %s not found!",token));
 			throw INI_INVALID_DATA;
 		}
 		self->m_locomotorTemplates[set].push_back(lt);
@@ -1959,10 +1959,10 @@ Bool AIUpdateInterface::computePath( PathfindServicesInterface *pathServices, Co
 	m_retryPath = false;
 	Region3D extent;
 	TheTerrainLogic->getMaximumPathfindExtent(&extent);
-	if (!extent.isInRegionNoZ(destination)) {
+	if (!extent.isInRegionNoZ(*destination)) {
 		// We're going off the map.
 		Coord3D pos = *getObject()->getPosition();
-		if (!extent.isInRegionNoZ(&pos))	{
+		if (!extent.isInRegionNoZ(pos))	{
 			// We're starting off the map.  Since we're off the map, we can't pathfind so just build a path.
 			return computeQuickPath(destination);
 		}
@@ -2259,7 +2259,7 @@ Bool AIUpdateInterface::computeAttackPath( PathfindServicesInterface *pathServic
 				// If the move is a short distance, just do a find closest path to our current
 				// position.  This will unstack us if we are on top of another unit. jba.
 				Coord3D objPos = *getObject()->getPosition();
-				goal.sub(&objPos);
+				goal.sub(objPos);
 				if (goal.length()<3*PATHFIND_CELL_SIZE_F) {
 					destroyPath();
 					TheAI->pathfinder()->adjustDestination(getObject(), m_locomotorSet, &objPos);
@@ -2388,7 +2388,11 @@ Bool AIUpdateInterface::isQuickPathAvailable( const Coord3D *destination ) const
 
 	const Coord3D *myPos = getObject()->getPosition();
 
-	return TheAI->pathfinder()->clientSafeQuickDoesPathExistForUI( m_locomotorSet, myPos, destination );
+#if RTS_GENERALS && RETAIL_COMPATIBLE_PATHFINDING
+	return TheAI->pathfinder()->clientSafeQuickDoesPathExist(m_locomotorSet, myPos, destination);
+#else
+	return TheAI->pathfinder()->clientSafeQuickDoesPathExistForUI(m_locomotorSet, myPos, destination);
+#endif
 
 }
 
@@ -4323,7 +4327,6 @@ void AIUpdateInterface::privateRepair( Object *obj, CommandSourceType cmdSource 
 {
 
 	// there is no "default" way for generic objects to repair each other
-	return;
 
 }
 
@@ -4336,7 +4339,6 @@ void AIUpdateInterface::privatePickUpPrisoner( Object *prisoner, CommandSourceTy
 {
 
 	// there is no "default" way for generic units to pick up prisoners
-	return;
 
 }
 #endif
@@ -4350,7 +4352,6 @@ void AIUpdateInterface::privateReturnPrisoners( Object *prison, CommandSourceTyp
 {
 
 	// there is no "default" way for generic units to return prisoners
-	return;
 
 }
 #endif
@@ -4363,7 +4364,6 @@ void AIUpdateInterface::privateResumeConstruction( Object *obj, CommandSourceTyp
 {
 
 	// there is no "default" way for generic objects to resume construction
-	return;
 
 }
 
@@ -4459,14 +4459,24 @@ void AIUpdateInterface::privateExit( Object *objectToExit, CommandSourceType cmd
 	if (!objectToExit)
 	{
 		objectToExit = us->getContainedBy();
-	}
 
-	if (!objectToExit)
-		return;
+		if (!objectToExit)
+			return;
+	}
+	else
+	{
+		// TheSuperHackers @bugfix Caball009 10/08/2026 Don't process invalid exit commands,
+		// because an object should not attempt to exit something it's not contained by.
+#if !RETAIL_COMPATIBLE_CRC
+		// @todo Remove function parameter 'objectToExit' because it's become obsolete.
+
+		if (us->getContainedBy() != objectToExit)
+			return;
+#endif
+	}
 
   if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) || objectToExit->isDisabledByType( DISABLED_FROZEN ) )
     return;
-
 
 	// we must go thru this state (rather than calling exitObjectViaDoor directly!),
 	// because a few containers might need to delay to allow
@@ -4488,10 +4498,21 @@ void AIUpdateInterface::privateExitInstantly( Object *objectToExit, CommandSourc
 	if (!objectToExit)
 	{
 		objectToExit = us->getContainedBy();
-	}
 
-	if (!objectToExit)
-		return;
+		if (!objectToExit)
+			return;
+	}
+	else
+	{
+		// TheSuperHackers @bugfix Caball009 10/08/2026 Don't process invalid exit commands,
+		// because an object should not attempt to exit something it's not contained by.
+#if !RETAIL_COMPATIBLE_CRC
+		// @todo Remove function parameter 'objectToExit' because it's become obsolete.
+
+		if (us->getContainedBy() != objectToExit)
+			return;
+#endif
+	}
 
   if ( objectToExit->isDisabledByType( DISABLED_SUBDUED ) || objectToExit->isDisabledByType( DISABLED_FROZEN ) )
     return;
@@ -4692,7 +4713,7 @@ void AIUpdateInterface::privateGuardPosition( const Coord3D *pos, GuardMode guar
 		// Clip to playable area.
 		Region3D r;
 		TheTerrainLogic->getExtent(&r);
-		if (!r.isInRegionNoZ(&adjPos))
+		if (!r.isInRegionNoZ(adjPos))
 			adjPos = TheTerrainLogic->findClosestEdgePoint(&adjPos);
 	}
 	m_locationToGuard = adjPos;
@@ -5788,13 +5809,22 @@ void AIUpdateInterface::crc( Xfer *x )
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version
-	* 5: Added m_forceMoveBackwards (REVERSE_MOVE order) */
+	* 1: Initial version, contains specific surrender and demoralize variables
+	* 2: Added m_demoralizedFramesLeft (behind ALLOW_DEMORALIZE)
+	* 3: Removed lastFrameMoved and repulsorCountdown; removed surrender and demoralize variables
+	* 4: Read m_curLocomotorSet from ini
+	* 5: TheSuperHackers @fix Fixed out-of-bounds xfer of m_guardTargetType
+	* 6: Added m_forceMoveBackwards (REVERSE_MOVE order)
+	*/
 // ------------------------------------------------------------------------------------------------
 void AIUpdateInterface::xfer( Xfer *xfer )
 {
   // version
-  const XferVersion currentVersion = 5;
+//#if RETAIL_COMPATIBLE_CRC || RETAIL_COMPATIBLE_XFER_SAVE
+//	const XferVersion currentVersion = 5;
+//#else
+	const XferVersion currentVersion = 5;
+//#endif
   XferVersion version = currentVersion;
   xfer->xferVersion( &version, currentVersion );
 
@@ -5811,8 +5841,22 @@ void AIUpdateInterface::xfer( Xfer *xfer )
 	xfer->xferObjectID(&m_currentVictimID);
 	xfer->xferReal(&m_desiredSpeed);
 	xfer->xferUser(&m_lastCommandSource, sizeof(m_lastCommandSource));
-	xfer->xferUser(&m_guardTargetType[0], sizeof(m_guardTargetType));
-	xfer->xferUser(&m_guardTargetType[1], sizeof(m_guardTargetType));
+
+	if (version < 5)
+	{
+		// TheSuperHackers @fix The original code effectively accessed m_guardTargetType[0], [1], [1], [2].
+		// The last one is out-of-bounds and points to m_locationToGuard.
+		static_assert(sizeof(m_locationToGuard) >= sizeof(m_guardTargetType[2]), "Xfer size must not exceed variable size");
+
+		xfer->xferUser(&m_guardTargetType[0], sizeof(m_guardTargetType));
+		xfer->xferUser(&m_guardTargetType[1], sizeof(m_guardTargetType[1]));
+		xfer->xferUser(&m_locationToGuard, sizeof(m_guardTargetType[2]));
+	}
+	else
+	{
+		xfer->xferUser(m_guardTargetType, sizeof(m_guardTargetType));
+	}
+
 	xfer->xferCoord3D(&m_locationToGuard);
 
 	xfer->xferObjectID(&m_objectToGuard);

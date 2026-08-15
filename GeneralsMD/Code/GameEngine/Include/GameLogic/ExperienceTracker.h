@@ -70,9 +70,9 @@ public:
 	void setHighestExpOrLevel( Int experienceGain, VeterancyLevel newLevel, Bool provideFeedback = TRUE ); ///< Sets the Object according to the highest level from the given exp or the level set
 
 	// --------------- inherited from Snapshot interface --------------
-	void crc( Xfer *xfer );
-	void xfer( Xfer *xfer );
-	void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 
 private:
 	Object*						m_parent;														///< Object I am owned by

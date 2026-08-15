@@ -97,20 +97,20 @@ public:
 	SpyVisionUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual SpyVisionUpdate* getSpyVisionUpdate() { return this; }
+	virtual SpyVisionUpdate* getSpyVisionUpdate() override { return this; }
 
 	// module methods
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | MODULEINTERFACE_UPGRADE; }
-	virtual void onDelete();
-	virtual void onCapture( Player *oldOwner, Player *newOwner );
-	virtual void onDisabledEdge( Bool nowDisabled );
+	virtual void onDelete() override;
+	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;
+	virtual void onDisabledEdge( Bool nowDisabled ) override;
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
 
 	//Update module
-	virtual UpdateSleepTime update();
-	virtual void friend_giveSelfUpgrade() { }
+	virtual UpdateSleepTime update() override;
+	virtual void friend_giveSelfUpgrade() override { }
 
 	void activateSpyVision( UnsignedInt duration );
 
@@ -122,39 +122,39 @@ public:
 protected:
 
 	// UpgradeMux functions.  Mux standing, of course, for Majorly Ugly Xhitcode
-	virtual void upgradeImplementation();
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void upgradeImplementation() override;
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getSpyVisionUpdateModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getSpyVisionUpdateModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getSpyVisionUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
 		getSpyVisionUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getSpyVisionUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getSpyVisionUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return true; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 private:
 

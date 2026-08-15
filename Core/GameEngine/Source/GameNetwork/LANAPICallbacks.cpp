@@ -29,7 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
-#include "strtok_r.h"
+#include "WWLib/strtok_r.h"
 #include "Common/GameEngine.h"
 #include "Common/GlobalData.h"
 #include "Common/MessageStream.h"
@@ -91,6 +91,18 @@ UnicodeString LANAPIInterface::getErrorStringFromReturnType( ReturnType ret )
 		default:
 			return TheGameText->fetch("LAN:ErrorUnknown");
 	}
+}
+
+// TheSuperHackers @feature arcticdolphin 08/08/2026 Adds /me emotes to LAN player chat, consistent with WOL
+void LANAPI::RequestPlayerChat( UnicodeString message )
+{
+	if (message.startsWithNoCase(L"/me "))
+	{
+		RequestChat(UnicodeString(message.str() + 4), LANCHAT_EMOTE);
+		return;
+	}
+
+	RequestChat(message, LANCHAT_NORMAL);
 }
 
 // On functions are (generally) the result of network traffic

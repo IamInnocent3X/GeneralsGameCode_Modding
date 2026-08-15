@@ -37,10 +37,10 @@
 
 #pragma once
 
-#include "always.h"
-#include "hash.h"
-#include "wwstring.h"
-#include "Vector.h"
+#include "WWLib/always.h"
+#include "WWLib/hash.h"
+#include "WWLib/wwstring.h"
+#include "WWLib/Vector.h"
 
 class HAnimClass;
 class ChunkLoadClass;
@@ -53,9 +53,9 @@ class MissingAnimClass : public HashableClass {
 
 public:
 	MissingAnimClass( const char * name ) : Name( name ) {}
-	virtual	~MissingAnimClass() {}
+	virtual	~MissingAnimClass() override {}
 
-	virtual	const char * Get_Key()	{ return Name;	}
+	virtual	const char * Get_Key() override { return Name;	}
 
 private:
 	StringClass	Name;

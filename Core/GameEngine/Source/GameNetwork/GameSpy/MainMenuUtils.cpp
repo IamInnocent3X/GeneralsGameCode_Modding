@@ -808,10 +808,8 @@ void StopAsyncDNSCheck()
 {
 	if (s_asyncDNSThreadHandle)
 	{
-#ifdef DEBUG_CRASHING
-		Int res =
-#endif
-			TerminateThread(s_asyncDNSThreadHandle,0);
+		MAYBE_UNUSED Int res = TerminateThread(s_asyncDNSThreadHandle, 0);
+		(void)res;
 		DEBUG_ASSERTCRASH(res, ("Could not terminate the Async DNS Lookup thread!"));	// Thread still not killed!
 	}
 	s_asyncDNSThreadHandle = nullptr;
@@ -855,15 +853,6 @@ static void reallyStartPatchCheck()
 	std::string configURL, motdURL;
 
 	FormatURLFromRegistry(gameURL, mapURL, configURL, motdURL);
-
-	std::string proxy;
-	if (GetStringFromRegistry("", "Proxy", proxy))
-	{
-		if (!proxy.empty())
-		{
-			ghttpSetProxy(proxy.c_str());
-		}
-	}
 
 	// check for a patch first
 	DEBUG_LOG(("Game patch check: [%s]", gameURL.c_str()));

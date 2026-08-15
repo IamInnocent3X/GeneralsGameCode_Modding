@@ -212,9 +212,6 @@ void Shell::update()
 			else if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
 				TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
 		}
-		
-		// Update the animate window manager
-		m_animateWindowManager->update();
 
 		m_schemeManager->update();
 
@@ -222,6 +219,8 @@ void Shell::update()
 		lastUpdate = now;
 
 	}
+
+	m_animateWindowManager->update();
 
 }
 
@@ -524,7 +523,7 @@ void Shell::showShell( Bool runInit )
 
 	if (!TheGlobalData->m_shellMapOn && m_screenCount == 0)
   {
-#ifdef RTS_PROFILE
+#ifdef RTS_PROFILE_LEGACY
     Profile::StopRange("init");
 #endif
 	//else

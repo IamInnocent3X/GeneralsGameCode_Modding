@@ -129,12 +129,12 @@ public:
 	DeployStyleAIUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
- 	virtual void aiDoCommand(const AICommandParms* parms);
-	virtual Bool isIdle() const;
-	//virtual void doIdleUpdate() { wakeUpNow(); }
-	virtual void doStatusUpdate();
-	virtual void doUpgradeUpdate();
-	virtual UpdateSleepTime update();
+ 	virtual void aiDoCommand(const AICommandParms* parms) override;
+	virtual Bool isIdle() const override;
+	//virtual void doIdleUpdate() override { wakeUpNow(); }
+	virtual void doStatusUpdate() override;
+	virtual void doUpgradeUpdate() override;
+	virtual UpdateSleepTime update() override;
 
 	UnsignedInt getUnpackTime()					const { return getDeployStyleAIUpdateModuleData()->m_unpackTime; }
 	UnsignedInt getPackTime()						const { return getDeployStyleAIUpdateModuleData()->m_packTime; }

@@ -36,14 +36,14 @@
 
 #pragma once
 
-#include "always.h"
-#include "simplevec.h"
-#include "vector2.h"
+#include "WWLib/always.h"
+#include "WWLib/simplevec.h"
+#include "WWMath/vector2.h"
 
 #include "shader.h"
-#include "widestring.h"
-#include "rect.h"
-#include "bittype.h"
+#include "WWLib/widestring.h"
+#include "WWMath/rect.h"
+#include "WWLib/bittype.h"
 
 class	Font3DInstanceClass;
 class TextureClass;
@@ -90,9 +90,9 @@ class	Vector4;
 /*
 ** Render2DClass
 */
-class Render2DClass : public W3DMPO
+class Render2DClass
 {
-	W3DMPO_GLUE(Render2DClass)
+	W3DMPO_CODE(Render2DClass)
 public:
 	Render2DClass( TextureClass* tex = nullptr );
 	virtual ~Render2DClass();
@@ -189,9 +189,9 @@ protected:
 class Render2DTextClass : public Render2DClass {
 public:
 	Render2DTextClass(Font3DInstanceClass *font=nullptr);
-	~Render2DTextClass();
+	virtual ~Render2DTextClass() override;
 
-	virtual	void	Reset();
+	virtual	void	Reset() override;
 
 	Font3DInstanceClass *	Peek_Font()				{ return Font; }
 	void	Set_Font( Font3DInstanceClass *font );

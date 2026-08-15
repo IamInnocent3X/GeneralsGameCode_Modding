@@ -112,8 +112,8 @@ public:
 	HijackerUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual HijackerUpdateInterface* getHijackerUpdateInterface() { return this; }
-	virtual UpdateSleepTime update();							///< called once per frame
+	virtual HijackerUpdateInterface* getHijackerUpdateInterface() override { return this; }
+	virtual UpdateSleepTime update() override;							///< called once per frame
 
 	virtual void setTargetObject( const Object *object );
 	virtual void setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites );

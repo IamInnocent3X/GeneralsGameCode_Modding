@@ -36,14 +36,14 @@
 
 #pragma once
 
-#include "always.h"
+#include "WWLib/always.h"
 
-#include "vector3.h"
+#include "WWMath/vector3.h"
 #include "w3d_file.h"
 #include "meshbuild.h"
-#include "w3derr.h"
+#include "WW3D2/w3derr.h"
 #include "mapper.h"
-#include "wwstring.h"
+#include "WWLib/wwstring.h"
 
 class ChunkLoadClass;
 class ChunkSaveClass;
@@ -60,9 +60,9 @@ struct _D3DMATERIAL8;
 ** This is simply the typical W3D thin-wrapper around the surrender vertex material.
 ** The vertex material defines things like the lighting properties of a vertex.
 */
-class VertexMaterialClass : public W3DMPO, public RefCountClass
+class VertexMaterialClass : public RefCountClass
 {
-	W3DMPO_GLUE(VertexMaterialClass)
+	W3DMPO_CODE(VertexMaterialClass)
 
 	friend DX8Wrapper;
 
@@ -101,7 +101,7 @@ public:
 
 	VertexMaterialClass();
 	VertexMaterialClass(const VertexMaterialClass & src);
-	~VertexMaterialClass();
+	virtual ~VertexMaterialClass() override;
 
 	VertexMaterialClass &	operator = (const VertexMaterialClass &src);
 	VertexMaterialClass *	Clone() { VertexMaterialClass * mat = NEW_REF (VertexMaterialClass,()); *mat = *this; return mat;}

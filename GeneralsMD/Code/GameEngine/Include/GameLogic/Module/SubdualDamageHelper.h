@@ -54,9 +54,9 @@ public:
 	SubdualDamageHelper( Thing *thing, const ModuleData *modData );
 	// virtual destructor prototype provided by memory pool object
 
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
-	virtual UpdateSleepTime update();
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual UpdateSleepTime update() override;
 
 	void notifySubdualDamage( Real amount );
 	void notifySubdualDamageCustom( SubdualCustomData subdualData, const AsciiString& customStatus );

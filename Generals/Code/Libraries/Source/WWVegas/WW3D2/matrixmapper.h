@@ -39,9 +39,9 @@
 
 #pragma once
 
-#include "always.h"
-#include "bittype.h"
-#include "matrix4.h"
+#include "WWLib/always.h"
+#include "WWLib/bittype.h"
+#include "WWMath/matrix4.h"
 #include "mapper.h"
 
 // Modified to use DX 8 texture matrices
@@ -60,7 +60,7 @@
 */
 class MatrixMapperClass : public TextureMapperClass
 {
-	W3DMPO_GLUE(MatrixMapperClass)
+	W3DMPO_CODE(MatrixMapperClass)
 public:
 
 	enum {
@@ -94,9 +94,9 @@ public:
 
 	void						Compute_Texture_Coordinate(const Vector3 & point,Vector3 * set_stq);
 
-	TextureMapperClass*	Clone() const { 	WWASSERT(0);	return nullptr; }
+	virtual TextureMapperClass*	Clone() const override { 	WWASSERT(0);	return nullptr; }
 
-	virtual void			Apply(int uv_array_index);
+	virtual void			Apply(int uv_array_index) override;
 
 protected:
 

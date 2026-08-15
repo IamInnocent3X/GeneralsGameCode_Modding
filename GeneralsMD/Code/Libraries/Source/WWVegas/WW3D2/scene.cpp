@@ -62,11 +62,11 @@
 
 
 #include "scene.h"
-#include "plane.h"
+#include "WWMath/plane.h"
 #include "camera.h"
 #include "ww3d.h"
 #include "rinfo.h"
-#include "chunkio.h"
+#include "WWLib/chunkio.h"
 #include "dx8renderer.h"
 #include "dx8wrapper.h"
 #include "sortingrenderer.h"
@@ -96,10 +96,10 @@ enum
 class SimpleSceneIterator : public SceneIterator
 {
 public:
-	virtual void					First();
-	virtual void					Next();
-	virtual bool					Is_Done();
-	virtual RenderObjClass *	Current_Item();
+	virtual void					First() override;
+	virtual void					Next() override;
+	virtual bool					Is_Done() override;
+	virtual RenderObjClass *	Current_Item() override;
 
 protected:
 

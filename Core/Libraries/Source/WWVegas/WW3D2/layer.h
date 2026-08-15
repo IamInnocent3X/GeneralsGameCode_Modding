@@ -36,9 +36,9 @@
 
 #pragma once
 
-#include "always.h"
-#include "LISTNODE.h"
-#include "vector3.h"
+#include "WWLib/always.h"
+#include "WWLib/LISTNODE.h"
+#include "WWMath/vector3.h"
 
 class SceneClass;
 class CameraClass;
@@ -54,7 +54,7 @@ public:
 	LayerClass();
 	LayerClass(SceneClass * s,CameraClass * c,bool clear = false,bool clearz = false,const Vector3 & color = Vector3(0,0,0));
 	LayerClass(const LayerClass & src);
-	~LayerClass();
+	virtual ~LayerClass() override;
 
 
 	/*

@@ -106,32 +106,32 @@ public:
 
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_COLLIDE); }
 
-	virtual void onObjectCreated();
+	virtual void onObjectCreated() override;
 
 	// BehaviorModule
-	virtual CollideModuleInterface* getCollide() { return this; }
+	virtual CollideModuleInterface* getCollide() override { return this; }
 
 	// CollideModuleInterface
-	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
-	virtual void doSabotage( Object *other, Object *obj ) { }
-	virtual Bool wouldLikeToCollideWith(const Object* other) const { return false; }
+	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
+	virtual void doSabotage( Object *other, Object *obj ) override { }
+	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return false; }
 	virtual Bool revertCollideBehavior(Object *other) { return false; }
-	virtual Bool isCarBombCrateCollide() const { return false; }
-	virtual Bool isHijackedVehicleCrateCollide() const { return false; }
-	virtual Bool isRailroad() const { return false;}
-	virtual Bool isSalvageCrateCollide() const { return false; }
-	virtual Bool isSabotageBuildingCrateCollide() const { return false; }
-	virtual Bool isEquipCrateCollide() const { return false; }
-	virtual Bool isParasiteEquipCrateCollide() const  { return false; }
-	virtual Bool canDoSabotageSpecialCheck(const Object *other) const { return false; }
-	virtual Bool friend_executeCrateBehavior( Object *other ) { return false; }
-	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
-	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
+	virtual Bool isCarBombCrateCollide() const override { return false; }
+	virtual Bool isHijackedVehicleCrateCollide() const override { return false; }
+	virtual Bool isRailroad() const override { return false;}
+	virtual Bool isSalvageCrateCollide() const override { return false; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return false; }
+	virtual Bool isEquipCrateCollide() const override { return false; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const override { return false; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return false; }
+	virtual const AsciiString& getCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 	// Disabled conditions to process -- all
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
 	void applyForce( const Coord3D *force );		///< apply a force at the object's CG
 	void applyShock( const Coord3D *force );					///< apply a shockwave force against the object's CG
@@ -232,8 +232,8 @@ public:
 	void setBounceSound(const AudioEventRTS* bounceSound);
 	void setWaterImpactSound(const AudioEventRTS* waterImpactSound);
 	void setWaterImpactFX(const FXList* waterImpactFX);
-	const AudioEventRTS* getBounceSound() { return m_bounceSound ? &m_bounceSound->m_event : TheAudio->getValidSilentAudioEvent(); }
-	const AudioEventRTS* getWaterImpactSound() { return m_waterImpactSound ? &m_waterImpactSound->m_event : TheAudio->getValidSilentAudioEvent(); }
+	const AudioEventRTS* getBounceSound() { return m_bounceSound ? m_bounceSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
+	const AudioEventRTS* getWaterImpactSound() { return m_waterImpactSound ? &m_waterImpactSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
 
 	/**
 		Reset all values (vel, accel, etc) to starting values.
@@ -262,7 +262,7 @@ protected:
 		interesting oscillations can occur in some situations, with friction being applied
 		either before or after the locomotive force, making for huge stuttery messes. (srj)
 	*/
-	virtual SleepyUpdatePhase getUpdatePhase() const { return PHASE_PHYSICS; }
+	virtual SleepyUpdatePhase getUpdatePhase() const override { return PHASE_PHYSICS; }
 
 	Real getAerodynamicFriction() const;
 	Real getForwardFriction() const;
@@ -303,7 +303,7 @@ private:
 		IMMUNE_TO_FALLING_DAMAGE				= 0x0100,
 		IS_IN_FREEFALL									= 0x0200,
 		IS_IN_UPDATE										= 0x0400,
-		IS_STUNNED											= 0x0800,
+		IS_STUNNED											= 0x0800, // Added in Zero Hour
 		WAS_ABOVE_WATER_LAST_FRAME      = 0x1000,
 	};
 
@@ -315,8 +315,8 @@ private:
 	Real												m_yawRate;								///< rate of rotation around up vector
 	Real												m_rollRate;								///< rate of rotation around forward vector
 	Real												m_pitchRate;							///< rate or rotation around side vector
-	DynamicAudioEventRTS*				m_bounceSound;						///< The sound for when this thing bounces, or nullptr
-	DynamicAudioEventRTS*				m_waterImpactSound;						///< The sound for when this thing hits the water surface, or NULL
+	RefCountPtr<DynamicAudioEventRTS> m_bounceSound;			///< The sound for when this thing bounces, or nullptr
+	RefCountPtr<DynamicAudioEventRTS>				m_waterImpactSound;						///< The sound for when this thing hits the water surface, or NULL
 	Coord3D											m_accel;									///< current acceleration
 	Coord3D											m_prevAccel;							///< last frame's acceleration
 	Coord3D											m_vel;										///< current velocity

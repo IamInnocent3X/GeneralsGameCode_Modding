@@ -216,7 +216,7 @@ void OCLSpecialPower::doSpecialPowerAtLocation( const Coord3D *loc, Real angle, 
 			createdObject = ObjectCreationList::create( ocl, getObject(), &creationCoord, &targetCoord, angle );
 			break;
 		case USE_OWNER_OBJECT:
-			creationCoord.set( &targetCoord );
+			creationCoord.set( targetCoord );
 			createdObject = ObjectCreationList::create( ocl, getObject(), &creationCoord, &targetCoord, angle, false );
 			break;
 		case CREATE_ABOVE_LOCATION:
@@ -261,7 +261,7 @@ void OCLSpecialPower::doSpecialPower( UnsignedInt commandOptions )
 		return;
 
 	Coord3D creationCoord;
-	creationCoord.set( getObject()->getPosition() );
+	creationCoord.set( *getObject()->getPosition() );
 
 	// get the module data
 	const OCLSpecialPowerModuleData* modData = getOCLSpecialPowerModuleData();

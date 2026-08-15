@@ -86,31 +86,31 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_COLLIDE); }
 
 	// BehaviorModule
-	virtual CollideModuleInterface* getCollide() { return this; }
+	virtual CollideModuleInterface* getCollide() override { return this; }
 
 	void applyTopplingForce( const Coord3D* toppleDirection, Real toppleSpeed, UnsignedInt options);
 	Bool isAbleToBeToppled() const;
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	// CollideModuleInterface
-	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal );
-	virtual void doSabotage( Object *other, Object *obj ) { }
+	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
+	virtual void doSabotage( Object *other, Object *obj ) override { }
 	/// this is used for things like pilots, to determine if they can "enter" something
-	virtual Bool wouldLikeToCollideWith(const Object* other) const { return false; }
-	virtual Bool revertCollideBehavior(Object *other) { return false; }
-	virtual Bool isHijackedVehicleCrateCollide() const { return false; }
-	virtual Bool isCarBombCrateCollide() const { return false; }
-	virtual Bool isRailroad() const { return false; }
-	virtual Bool isSalvageCrateCollide() const { return false; }
-	virtual Bool isSabotageBuildingCrateCollide() const { return false; }
-	virtual Bool isEquipCrateCollide() const { return false; }
-	virtual Bool isParasiteEquipCrateCollide() const  { return false; }
-	virtual Bool canDoSabotageSpecialCheck(const Object *other) const { return false; }
-	virtual Bool friend_executeCrateBehavior( Object *other ) { return false; }
-	virtual const AsciiString& getCursorName() const { return AsciiString::TheEmptyString; }
-	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return AsciiString::TheEmptyString; }
+	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return false; }
+	virtual Bool revertCollideBehavior(Object *other) override { return false; }
+	virtual Bool isHijackedVehicleCrateCollide() const override { return false; }
+	virtual Bool isCarBombCrateCollide() const override { return false; }
+	virtual Bool isRailroad() const override { return false; }
+	virtual Bool isSalvageCrateCollide() const override { return false; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return false; }
+	virtual Bool isEquipCrateCollide() const override { return false; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const override { return false; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return false; }
+	virtual const AsciiString& getCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 protected:
 

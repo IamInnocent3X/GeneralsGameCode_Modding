@@ -123,11 +123,13 @@ public:
 	virtual Bool areAllSlavesStealthed() const = 0;
 	virtual void revealSlaves() = 0;
 	virtual Bool doSlavesHaveFreedom() const = 0;
+	virtual Int getSlaveCount() const = 0;
+	
 	virtual void friend_refreshUpdate(Bool isInstant) = 0;
 	virtual void updateMobMembers() = 0;
 	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) = 0;
 	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) = 0;
-	
+
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -149,53 +151,54 @@ public:
 
 	// module methods
 	static Int getInterfaceMask() { return (MODULEINTERFACE_UPDATE) | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_DAMAGE); }
-	virtual void onDelete();
-	virtual UpdateModuleInterface *getUpdate() { return this; }
-	virtual DieModuleInterface *getDie() { return this; }
-	virtual DamageModuleInterface *getDamage() { return this; }
-	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return this; }
-	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void friend_refreshUpdate(Bool isInstant);
-	virtual void updateMobMembers();
+	virtual void onDelete() override;
+	virtual UpdateModuleInterface *getUpdate() override { return this; }
+	virtual DieModuleInterface *getDie() override { return this; }
+	virtual DamageModuleInterface *getDamage() override { return this; }
+	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() override { return this; }
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void friend_refreshUpdate(Bool isInstant) override;
+	virtual void updateMobMembers() override;
 
 	// update methods
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	// die methods
-	virtual void onDie( const DamageInfo *damageInfo );
+	virtual void onDie( const DamageInfo *damageInfo ) override;
 
 	// damage methods
-	virtual void onDamage( DamageInfo *damageInfo );
-	virtual void onHealing( DamageInfo *damageInfo ) { }
+	virtual void onDamage( DamageInfo *damageInfo ) override;
+	virtual void onHealing( DamageInfo *damageInfo ) override { }
 	virtual void onBodyDamageStateChange( const DamageInfo* damageInfo,
 																				BodyDamageType oldState,
-																				BodyDamageType newState) { }
+																				BodyDamageType newState) override { }
 		
 	// create methods
-	virtual void onBuildComplete() { refreshUpdate(); }
-	virtual void onCreate() { }
-	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	virtual void onBuildComplete() override { refreshUpdate(); }
+	virtual void onCreate() override { }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 
 	// SpawnBehaviorInterface methods
-	virtual Bool maySpawnSelfTaskAI( Real maxSelfTaskersRatio );
-	virtual void onSpawnDeath( ObjectID deadSpawn, DamageInfo *damageInfo );	///< Something we spawned and set up to tell us it died just died.
-	virtual Object* getClosestSlave( const Coord3D *pos );
-	virtual void orderSlavesToAttackTarget( Object *target, Int maxShotsToFire, CommandSourceType cmdSource );
-	virtual void orderSlavesToAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource );
-	virtual CanAttackResult getCanAnySlavesAttackSpecificTarget( AbleToAttackType attackType, const Object *target, CommandSourceType cmdSource );
-	virtual CanAttackResult getCanAnySlavesUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *victim, const Coord3D *pos, CommandSourceType cmdSource );
-	virtual Bool canAnySlavesAttack();
-	virtual void orderSlavesToGoIdle( CommandSourceType cmdSource );
-	virtual void orderSlavesDisabledUntil( DisabledType type, UnsignedInt frame );
-	virtual void orderSlavesToClearDisabled( DisabledType type );
-	virtual void giveSlavesStealthUpgrade( Bool grantStealth );
-	virtual Bool areAllSlavesStealthed() const;
-	virtual void revealSlaves();
-	virtual Bool doSlavesHaveFreedom() const { return getSpawnBehaviorModuleData()->m_slavesHaveFreeWill; }
-	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth);
-	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking);
+	virtual Bool maySpawnSelfTaskAI( Real maxSelfTaskersRatio ) override;
+	virtual void onSpawnDeath( ObjectID deadSpawn, DamageInfo *damageInfo ) override;	///< Something we spawned and set up to tell us it died just died.
+	virtual Object* getClosestSlave( const Coord3D *pos ) override;
+	virtual void orderSlavesToAttackTarget( Object *target, Int maxShotsToFire, CommandSourceType cmdSource ) override;
+	virtual void orderSlavesToAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource ) override;
+	virtual CanAttackResult getCanAnySlavesAttackSpecificTarget( AbleToAttackType attackType, const Object *target, CommandSourceType cmdSource ) override;
+	virtual CanAttackResult getCanAnySlavesUseWeaponAgainstTarget( AbleToAttackType attackType, const Object *victim, const Coord3D *pos, CommandSourceType cmdSource ) override;
+	virtual Bool canAnySlavesAttack() override;
+	virtual void orderSlavesToGoIdle( CommandSourceType cmdSource ) override;
+	virtual void orderSlavesDisabledUntil( DisabledType type, UnsignedInt frame ) override;
+	virtual void orderSlavesToClearDisabled( DisabledType type ) override;
+	virtual void giveSlavesStealthUpgrade( Bool grantStealth ) override;
+	virtual Bool areAllSlavesStealthed() const override;
+	virtual void revealSlaves() override;
+	virtual Bool doSlavesHaveFreedom() const override { return getSpawnBehaviorModuleData()->m_slavesHaveFreeWill; }
+	virtual Int getSlaveCount() const override { return m_spawnCount; }
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) override;
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) override;
 
-	virtual void refreshUpdate();
+	virtual void refreshUpdate() override;
 
 	// **********************************************************************************************
 	// our own methods

@@ -38,10 +38,10 @@
 
 #pragma once
 
-#include "always.h"
-#include "vector3.h"
-#include "multilist.h"
-#include "mempool.h"
+#include "WWLib/always.h"
+#include "WWMath/vector3.h"
+#include "WWLib/multilist.h"
+#include "WWLib/mempool.h"
 
 class CameraClass;
 
@@ -80,7 +80,7 @@ public:
 	{
 	public:
 		CameraShakerClass(const Vector3 & position,float radius,float duration,float power);
-		~CameraShakerClass();
+		virtual ~CameraShakerClass() override;
 
 		void					Timestep(float dt)							{ ElapsedTime += dt; }
 		bool					Is_Expired()								{ return (ElapsedTime >= Duration); }

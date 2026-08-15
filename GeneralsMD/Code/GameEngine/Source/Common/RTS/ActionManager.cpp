@@ -36,6 +36,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/ActionManager.h"
+#include "Common/BuildAssistant.h"
 #include "Common/GlobalData.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -527,7 +528,7 @@ Bool ActionManager::canResumeConstructionOf( const Object *obj,
 	// in the future)
 	//
 	Object *builder = TheGameLogic->findObjectByID( objectBeingConstructed->getBuilderID() );
-#if RETAIL_COMPATIBLE_CRC || PRESERVE_RETAIL_BEHAVIOR
+#if RETAIL_COMPATIBLE_CRC || PRESERVE_BUILDING_RESUMPTION_DELAY
 	if( builder )
 #else
 	// TheSuperHackers @bugfix Stubbjax 18/11/2025 Allow scaffold to be immediately resumed after builder death.
@@ -1738,7 +1739,7 @@ inline Bool isPointOnMap( const Coord3D  *testPos )
 {
 	Region3D mapRegion;
 	TheTerrainLogic->getExtent( &mapRegion );
-	return mapRegion.isInRegionNoZ( testPos );
+	return mapRegion.isInRegionNoZ( *testPos );
 
 }
 
@@ -1865,7 +1866,7 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			}
 		}
 
-		// Last check is shroudedness, if it is cared about
+		// Second check is shroudedness, if it is cared about
 		switch(behaviorType)
 		{
 			case SPECIAL_DAISY_CUTTER:
@@ -1911,7 +1912,6 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			case SUPW_SPECIAL_PARTICLE_UPLINK_CANNON:
 			case LAZR_SPECIAL_PARTICLE_UPLINK_CANNON:
 			case SPECIAL_CLEANUP_AREA:
-			case SPECIAL_SNEAK_ATTACK:
 			case SPECIAL_BATTLESHIP_BOMBARDMENT:
 			case SPECIAL_JUMPJET:
 				//Don't allow "damaging" special powers in shrouded areas, but Fogged are okay.
@@ -1946,6 +1946,34 @@ Bool ActionManager::canDoSpecialPowerAtLocation( const Object *obj, const Coord3
 			case SPECIAL_CHANGE_BATTLE_PLANS:
 			case SPECIAL_TOGGLE_DRAWBRIDGE:
 				return false;
+		}
+
+		// TheSuperHackers @fix stephanmeesters 04/04/2026 Some special powers can spawn a building.
+		// To avoid cheating, verify that it is legal to place this building.
+		switch( spTemplate->getSpecialPowerType() )
+		{
+			case SPECIAL_SNEAK_ATTACK:
+			{
+#if RETAIL_COMPATIBLE_CRC
+				return ThePartitionManager->getShroudStatusForPlayer( obj->getControllingPlayer()->getPlayerIndex(), loc ) != CELLSHROUD_SHROUDED;
+#else
+				const ThingTemplate* referenceThing = mod->getReferenceThingTemplate();
+				if (!referenceThing)
+					return FALSE;
+
+				const Real angle = referenceThing->getPlacementViewAngle();
+
+				return TheBuildAssistant->isLocationLegalToBuild(
+					loc, referenceThing, angle,
+					BuildAssistant::USE_QUICK_PATHFIND |
+					BuildAssistant::TERRAIN_RESTRICTIONS |
+					BuildAssistant::CLEAR_PATH |
+					BuildAssistant::NO_OBJECT_OVERLAP |
+					BuildAssistant::SHROUD_REVEALED |
+					BuildAssistant::IGNORE_STEALTHED,
+					obj, nullptr) == LBC_OK;
+#endif
+			}
 		}
 	}
 	return false;

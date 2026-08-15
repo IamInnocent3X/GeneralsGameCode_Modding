@@ -56,9 +56,9 @@ public:
 	TempWeaponBonusHelper( Thing *thing, const ModuleData *modData );
 	// virtual destructor prototype provided by memory pool object
 
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
-	virtual UpdateSleepTime update();
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual UpdateSleepTime update() override;
 
 	void doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus = TINT_STATUS_INVALID );
 

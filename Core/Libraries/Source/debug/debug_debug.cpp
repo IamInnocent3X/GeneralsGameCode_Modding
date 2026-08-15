@@ -33,7 +33,7 @@
 #include "internal_io.h"
 #include <stdlib.h>
 #include <windows.h>
-#include <WWCommon.h>
+#include <WWLib/WWCommon.h>
 #include <new>      // needed for placement new prototype
 
 // a little dummy variable that makes the linker actually include
@@ -1498,7 +1498,7 @@ void Debug::WriteBuildInfo()
     (*this) << " internal " << m_intVersion;
   #if defined(RTS_DEBUG)
     operator<<(" debug");
-  #elif defined(RTS_PROFILE)
+  #elif defined(RTS_PROFILE_LEGACY) || defined(RTS_PROFILE_TRACY)
     operator<<(" profile");
   #else
     operator<<(" release");

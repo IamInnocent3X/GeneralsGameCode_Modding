@@ -40,12 +40,12 @@
 
 #pragma once
 
-#include "always.h"
-#include "sphere.h"
+#include "WWLib/always.h"
+#include "WWMath/sphere.h"
 #include "coltype.h"
-#include "aabox.h"
-#include "persist.h"
-#include "multilist.h"
+#include "WWMath/aabox.h"
+#include "WWSaveLoad/persist.h"
+#include "WWLib/multilist.h"
 #include "robjlist.h"
 #include <float.h>
 
@@ -218,7 +218,7 @@ public:
 	RenderObjClass();
 	RenderObjClass(const RenderObjClass & src);
 	RenderObjClass & operator = (const RenderObjClass &);
-	virtual ~RenderObjClass()																					{ if (RenderHook) delete RenderHook; }
+	virtual ~RenderObjClass() override { if (RenderHook) delete RenderHook; }
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -495,9 +495,9 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Persistent object save-load interface
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual const PersistFactoryClass &	Get_Factory () const;
-	virtual bool					Save (ChunkSaveClass &csave);
-	virtual bool					Load (ChunkLoadClass &cload);
+	virtual const PersistFactoryClass &	Get_Factory () const override;
+	virtual bool					Save (ChunkSaveClass &csave) override;
+	virtual bool					Load (ChunkLoadClass &cload) override;
 
 	// Application-specific render hook:
 	RenderHookClass *				Get_Render_Hook() { return RenderHook; }

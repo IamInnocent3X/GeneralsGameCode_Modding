@@ -107,35 +107,35 @@ public:
 		ATTACK_RANDOM_PATH = 8, ///< fly toward victim
 	};
 
-	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
-	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr );
-	virtual Bool projectileHandleCollision( Object *other );
-	virtual Bool projectileIsArmed() const { return m_isArmed; }
-	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual Bool projectileGetLaunchPos(Coord3D& pos) const { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }
-	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) { m_launchVeterancy = v; }
-	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ); ///< Number of frames till missile diverts to countermeasures.
-	virtual void projectileNowJammed(Bool noDamage = FALSE);///< We lose our Object target and scatter to the ground
-	virtual void projectileNowDrawn(ObjectID attractorID);
-	virtual Object* getTargetObject();
-	virtual const Coord3D* getTargetPosition();
+	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() override { return this; }
+	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) override;
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) override;
+	virtual Bool projectileHandleCollision( Object *other ) override;
+	virtual Bool projectileIsArmed() const override { return m_isArmed; }
+	virtual ObjectID projectileGetLauncherID() const override { return m_launcherID; }
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const override { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) override { m_launchVeterancy = v; }
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const override { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) override; ///< Number of frames till missile diverts to countermeasures.
+	virtual void projectileNowJammed(Bool noDamage = FALSE) override;///< We lose our Object target and scatter to the ground
+	virtual void projectileNowDrawn(ObjectID attractorID) override;
+	virtual Object* getTargetObject() override;
+	virtual const Coord3D* getTargetPosition() override;
 	virtual bool projectileShouldCollideWithWater() const override;
-	virtual Bool projectileShouldDetonateOnGround() const { return false; }
-	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
-	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual Bool projectileShouldDetonateOnGround() const override { return false; }
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) override { m_shrapnelLaunchID = shrapnelLaunchID; }
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
 
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
-	virtual Bool processCollision(PhysicsBehavior *physics, Object *other); ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
+	virtual Bool processCollision(PhysicsBehavior *physics, Object *other) override; ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
 
-	virtual UpdateSleepTime update();
-	virtual void onDelete();
+	virtual UpdateSleepTime update() override;
+	virtual void onDelete() override;
 
-	virtual void switchToState(MissileStateType s);
+	virtual void switchToState(MissileStateType s) override;
 
-	virtual MissileStateType getMissileState() { return m_state; }
+	virtual MissileStateType getMissileState() override { return m_state; }
 
 protected:
 

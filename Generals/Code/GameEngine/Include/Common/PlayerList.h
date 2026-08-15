@@ -52,6 +52,7 @@
 class DataChunkInput;
 struct DataChunkInfo;
 class DataChunkOutput;
+class GameInfo;
 class Player;
 class Team;
 class TeamFactory;
@@ -77,12 +78,12 @@ class PlayerList : public SubsystemInterface,
 public:
 
 	PlayerList();
-	~PlayerList();
+	virtual ~PlayerList() override;
 
 	// subsystem methods
-	virtual void init();
-	virtual void reset();
-	virtual void update();
+	virtual void init() override;
+	virtual void reset() override;
+	virtual void update() override;
 
 	virtual void newGame(); // called during GameLogic::startNewGame()
 	virtual void newMap();	 // Called after a new map is loaded.
@@ -150,18 +151,23 @@ public:
 	*/
 	PlayerMaskType getPlayersWithRelationship( Int srcPlayerIndex, UnsignedInt allowedRelationships );
 
+	Int getSlotIndex(Int playerIndex) const;
+
 protected:
 
 	// snapshot methods
-	virtual void crc( Xfer *xfer );
-	virtual void xfer( Xfer *xfer );
-	virtual void loadPostProcess();
+	virtual void crc( Xfer *xfer ) override;
+	virtual void xfer( Xfer *xfer ) override;
+	virtual void loadPostProcess() override;
 
 private:
+	void assignSlotIndices(const GameInfo& gameInfo);
+	void setSlotIndex(Int playerIndex, Int slotIndex);
 
 	Player				*m_local;
 	Int						m_playerCount;
 	Player				*m_players[MAX_PLAYER_COUNT];
+	Int						m_slotIndices[MAX_PLAYER_COUNT];
 
 };
 

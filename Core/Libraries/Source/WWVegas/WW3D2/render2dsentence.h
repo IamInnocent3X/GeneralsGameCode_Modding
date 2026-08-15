@@ -36,12 +36,12 @@
 
 #pragma once
 
-#include "always.h"
-#include "render2d.h"
-#include "Vector.h"
-#include "vector2i.h"
-#include "wwstring.h"
-#include "win.h"
+#include "WWLib/always.h"
+#include "WW3D2/render2d.h"
+#include "WWLib/Vector.h"
+#include "WWMath/vector2i.h"
+#include "WWLib/wwstring.h"
+#include "WWLib/win.h"
 
 /*
 ** FontCharsClass
@@ -51,9 +51,9 @@ class	SurfaceClass;
 //
 //	Private data structures
 //
-class FontCharsClassCharDataStruct : public W3DMPO
+class FontCharsClassCharDataStruct
 {
-	W3DMPO_GLUE(FontCharsClassCharDataStruct)
+	W3DMPO_CODE(FontCharsClassCharDataStruct)
 public:
 	WCHAR				Value;
 	short				Width;
@@ -62,21 +62,21 @@ public:
 
 enum { CHAR_BUFFER_LEN		= 32768 };
 
-class FontCharsBuffer : public W3DMPO
+class FontCharsBuffer
 {
-	W3DMPO_GLUE(FontCharsBuffer)
+	W3DMPO_CODE(FontCharsBuffer)
 public:
 	uint16			Buffer[CHAR_BUFFER_LEN];
 };
 
 
-class FontCharsClass : public W3DMPO, public RefCountClass
+class FontCharsClass : public RefCountClass
 {
-	W3DMPO_GLUE(FontCharsClass)
+	W3DMPO_CODE(FontCharsClass)
 
 public:
 	FontCharsClass();
-	~FontCharsClass();
+	virtual ~FontCharsClass() override;
 
 	// TR: Hack for unicode font support
 	FontCharsClass					*AlternateUnicodeFont;

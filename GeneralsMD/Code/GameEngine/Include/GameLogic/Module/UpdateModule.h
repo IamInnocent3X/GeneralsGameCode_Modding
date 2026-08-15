@@ -171,15 +171,15 @@ public:
 	static Int getInterfaceMask() { return (MODULEINTERFACE_UPDATE); }
 
 	// BehaviorModule
-	virtual UpdateModuleInterface* getUpdate() { return this; }
+	virtual UpdateModuleInterface* getUpdate() override { return this; }
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update() = 0;
 	
-	virtual void doRemovedFrom() { }
-	virtual void refreshUpdate() { }
+	virtual void doRemovedFrom() override { }
+	virtual void refreshUpdate() override { }
 
-	DisabledMaskType getDisabledTypesToProcess() const
+	virtual DisabledMaskType getDisabledTypesToProcess() const override
 	{
 		return DISABLEDMASK_NONE;
 	}
