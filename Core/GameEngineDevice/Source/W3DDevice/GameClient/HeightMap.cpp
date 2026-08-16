@@ -64,6 +64,7 @@
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/View.h"
 #include "GameClient/Water.h"
+#include "GameClient/GlobalLightingModifier.h"
 
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/TerrainLogic.h"
@@ -2102,6 +2103,11 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 		if (TheTerrainTracksRenderObjClassSystem)
 			TheTerrainTracksRenderObjClassSystem->flush();
 
+		// Phase 2: draw-time global lighting tint over the terrain footprint (terrain + roads + scorches +
+		// bridges). Skipped on the reflection pass. Drawn before the shroud so fog-of-war stays black.
+		if (!ShaderClass::Is_Backface_Culling_Inverted() && GlobalLightingModifierManager::get().hasActiveContributors())
+			renderLightingModifierOverlay();
+
 		if (m_shroud && rinfo.Additional_Pass_Count())
 		{
 			rinfo.Peek_Additional_Pass(0)->Install_Materials();
@@ -2130,6 +2136,96 @@ void HeightMapRenderObjClass::Render(RenderInfoClass & rinfo)
 }
 
 
+
+//-------------------------------------------------------------------------------------------------
+static UnsignedInt packLightingColor01( Real r, Real g, Real b )
+{
+	Int ir = REAL_TO_INT( r * 255.0f + 0.5f ); if (ir < 0) ir = 0; if (ir > 255) ir = 255;
+	Int ig = REAL_TO_INT( g * 255.0f + 0.5f ); if (ig < 0) ig = 0; if (ig > 255) ig = 255;
+	Int ib = REAL_TO_INT( b * 255.0f + 0.5f ); if (ib < 0) ib = 0; if (ib > 255) ib = 255;
+	return 0xff000000 | (((UnsignedInt)ir) << 16) | (((UnsignedInt)ig) << 8) | ((UnsignedInt)ib);
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Draw-time global lighting tint: re-draws the terrain tiles as flat-color overlay passes that
+	multiply and/or add the combined lighting-modifier color over whatever is already in the frame
+	buffer within the terrain footprint (terrain + roads + scorches + bridges). Cheap (no vertex
+	re-bake); only runs when a modifier is active. Depth test is ALWAYS so on-terrain features at a
+	slight z-offset are tinted too; z-write is off and objects render afterwards, so objects are
+	unaffected (they get their own tint from the object light-environment path). */
+//-------------------------------------------------------------------------------------------------
+void HeightMapRenderObjClass::renderLightingModifierOverlay(void)
+{
+	RGBColor mul, add;
+	GlobalLightingModifierManager::get().computeCombined( mul, add );
+
+	const Bool doMul = (mul.red < 0.999f || mul.green < 0.999f || mul.blue < 0.999f);
+	const Bool doAdd = (add.red > 0.001f || add.green > 0.001f || add.blue > 0.001f);
+	if (!doMul && !doAdd)
+		return;
+
+	// build the multiply / additive overlay shaders once (untextured solid, depth-test always, no z-write)
+	static Bool s_init = false;
+	static ShaderClass s_mulShader;
+	static ShaderClass s_addShader;
+	if (!s_init)
+	{
+		s_mulShader = ShaderClass::_PresetOpaqueSolidShader;
+		s_mulShader.Set_Depth_Mask( ShaderClass::DEPTH_WRITE_DISABLE );
+		s_mulShader.Set_Depth_Compare( ShaderClass::PASS_ALWAYS );
+		s_mulShader.Set_Src_Blend_Func( ShaderClass::SRCBLEND_ZERO );
+		s_mulShader.Set_Dst_Blend_Func( ShaderClass::DSTBLEND_SRC_COLOR );
+
+		s_addShader = s_mulShader;
+		s_addShader.Set_Src_Blend_Func( ShaderClass::SRCBLEND_ONE );
+		s_addShader.Set_Dst_Blend_Func( ShaderClass::DSTBLEND_ONE );
+
+		s_init = true;
+	}
+
+	Matrix3D tm(Transform);
+	DX8Wrapper::Set_Texture(0, nullptr);
+	DX8Wrapper::Set_Texture(1, nullptr);
+	m_stageTwoTexture->restore();
+	ShaderClass::Invalidate();
+	DX8Wrapper::Set_Material(m_vertexMaterialClass);
+	DX8Wrapper::Set_Transform(D3DTS_WORLD, tm);
+	DX8Wrapper::Set_Index_Buffer(m_indexBuffer, 0);
+
+	for (Int passIndex = 0; passIndex < 2; passIndex++)
+	{
+		if (passIndex == 0 && !doMul) continue;
+		if (passIndex == 1 && !doAdd) continue;
+
+		DX8Wrapper::Set_Shader( passIndex == 0 ? s_mulShader : s_addShader );
+		DX8Wrapper::Set_Texture(0, nullptr);
+		DX8Wrapper::Apply_Render_State_Changes();
+
+		// force stage 0 to emit a flat constant color from TFACTOR (ignore vertex diffuse / textures)
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_COLOROP,   D3DTOP_SELECTARG1);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_COLORARG1, D3DTA_TFACTOR);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(1, D3DTSS_COLOROP,   D3DTOP_DISABLE);
+
+		UnsignedInt col = (passIndex == 0) ? packLightingColor01(mul.red, mul.green, mul.blue)
+										   : packLightingColor01(add.red, add.green, add.blue);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_TEXTUREFACTOR, col);
+
+		for (Int j = 0; j < m_numVBTilesY; j++)
+			for (Int i = 0; i < m_numVBTilesX; i++)
+			{
+				DX8Wrapper::Set_Vertex_Buffer(getVertexBufferTile(i, j));
+				if (Is_Hidden() == 0)
+					DX8Wrapper::Draw_Triangles(0, HEIGHTMAP_POLYGON_NUM, 0, HEIGHTMAP_VERTEX_NUM);
+			}
+	}
+
+	// leave the pipeline in a sane state for subsequent draws
+	DX8Wrapper::Set_DX8_Render_State(D3DRS_TEXTUREFACTOR, 0xffffffff);
+	DX8Wrapper::Set_Texture(0, nullptr);
+	DX8Wrapper::Set_Texture(1, nullptr);
+	ShaderClass::Invalidate();
+}
 
 ///Performs additional terrain rendering pass, blending in the black shroud texture.
 void HeightMapRenderObjClass::renderTerrainPass(CameraClass *pCamera)

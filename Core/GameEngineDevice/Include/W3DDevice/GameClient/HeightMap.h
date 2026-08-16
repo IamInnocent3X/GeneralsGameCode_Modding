@@ -113,6 +113,7 @@ protected:
 	///update vertex buffers associated with the given rectangle
 	void initDestAlphaLUT(void);	///<initialize water depth LUT stored in m_destAlphaTexture
 	void renderTerrainPass(CameraClass *pCamera);	///< renders additional terrain pass.
+	void renderLightingModifierOverlay(void);	///< draw-time global lighting tint over the terrain footprint (no re-bake).
 	Int	getNumExtraBlendTiles(Bool visible) { return visible?m_numVisibleExtraBlendTiles:m_numExtraBlendTiles;}
 	void freeIndexVertexBuffers(void);
 	void renderExtraBlendTiles(void);	///< render 3-way blend tiles that have blend of 3 textures.
