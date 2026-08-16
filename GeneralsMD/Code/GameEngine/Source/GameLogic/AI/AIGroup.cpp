@@ -323,13 +323,41 @@ Bool AIGroup::removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer )
 }
 
 /**
- * Do the orders delayed to any of the objects that are nearby
+ * Do the order nearby data of the message, if any
  */
-Bool AIGroup::doAddNearbyMembers( OrderNearbyData orderData )
+Bool AIGroup::doOrderNearbyData( const GameMessage *msg )
 {
-	// Do nothing for invalid radius
+	// Sanity
+	if (!msg)
+		return FALSE;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+
 	if(orderData.Radius <= 0.0f)
 		return FALSE;
+
+	if(orderData.MinDelay > 0 || orderData.MaxDelay > 0 || orderData.IntervalDelay > 0)
+		doDelayedNearbyMembers(msg);
+	else
+		doAddNearbyMembers(msg);
+
+	return TRUE;
+}
+
+/**
+ * Do the orders delayed to any of the objects that are nearby
+ */
+Bool AIGroup::doAddNearbyMembers( const GameMessage *msg )
+{
+	// Do nothing for invalid radius
+	//if(orderData.Radius <= 0.0f)
+	//	return FALSE;
+
+	// Sanity
+	if (!msg)
+		return FALSE;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
 
 	ListObjectPtrIt it;
 	KindOfMaskType validNonAIKindofs;
@@ -576,11 +604,27 @@ static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const
 /**
  * Add any objects that are nearby the current selected objects
  */
-Bool AIGroup::doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments )
+Bool AIGroup::doDelayedNearbyMembers( const GameMessage *msg )
 {
 	// Do nothing for invalid radius or if no currently selected group
-	if(orderData.Radius <= 0.0f)
+	//if(orderData.Radius <= 0.0f)
+	//	return FALSE;
+
+	// Sanity
+	if (!msg)
 		return FALSE;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+	GameMessage::Type type = msg->getType();
+	std::vector<GameMessageArgumentStruct> arguments;
+
+	Int numArgs = msg->getArgumentCount();
+	for (Int i = 0; i < numArgs; ++i) {
+		GameMessageArgumentStruct curArgument;
+		curArgument.type = msg->getArgumentDataType(i);
+		curArgument.data = *(msg->getArgument(i));
+		arguments.push_back(curArgument);
+	}
 
 	ListObjectPtrIt it;
 	KindOfMaskType validNonAIKindofs;

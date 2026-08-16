@@ -310,16 +310,21 @@ private:
 	bool onDoWeaponAtLocation(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoSpecialPower(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoSpecialPowerAtLocation(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onDoSpecialPowerAtMultipleLocations(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onDoSpecialPowerAtDrawable(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoSpecialPowerAtObject(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoAttackmoveto(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoForcemoveto(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoMoveto(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onDoReverseMoveto(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onAddWaypoint(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoGuardPosition(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoGuardObject(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoStop(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDoScatter(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onCreateFormation(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onSettingMoveInFormation(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onSettingReverseMove(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onClearIngamePopupMessage(GameMessage *msg);
 	bool onDoCheer(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 #if defined(RTS_DEBUG) || defined (_ALLOW_DEBUG_CHEATS_IN_RELEASE)
@@ -330,6 +335,7 @@ private:
 	bool onEnter(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onExit(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onEvacuate(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onEvacuateMe(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onExecuteRailedTransport(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onInternetHack(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onGetRepaired(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
@@ -349,6 +355,7 @@ private:
 	bool onDozerCancelConstruct(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onSell(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onToggleOvercharge(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onDisablePower(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 #ifdef ALLOW_SURRENDER
 	bool onDoSurrender(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onPickUpPrisoner(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);

@@ -265,6 +265,8 @@ GameMessageDisposition PlaceEventTranslator::translateGameMessage(const GameMess
 								placeMsg->appendObjectIDArgument( INVALID_ID ); //There is no object in the way.
 								placeMsg->appendIntegerArgument( commandButton->getOptions() ); //Command button options.
 								placeMsg->appendObjectIDArgument( builderObj->getID() ); //The source object responsible for firing the special.
+								Bool isSabotagingGUICommand = ThePlayerList && ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && commandButton->getName() == ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandName();
+								placeMsg->appendBooleanArgument( isSabotagingGUICommand );
 
 								// get out of pending placement mode, this will also clear the arrow anchor status
 								TheInGameUI->placeBuildAvailable( nullptr, nullptr );

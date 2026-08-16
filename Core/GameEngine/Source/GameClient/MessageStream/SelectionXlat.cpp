@@ -36,6 +36,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 
 #include "GameLogic/Damage.h"
 #include "GameLogic/GameLogic.h"
@@ -60,6 +61,12 @@
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
+// Lorenzen changed this to a member of SelectionTranslator, providing external access
+// name ly in rebuildholeexposedie, where we decide whether to create GLA Holes when hand-of-Godding
+//#if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
+//static Bool TheHandOfGodSelectionMode = false;
+//#endif
+
 #if defined(RTS_DEBUG)
 static Bool TheHurtSelectionMode = false;
 static Bool TheDebugSelectionMode = false;
@@ -114,28 +121,33 @@ struct SFWRec
  * Returns true if the drawable can be selected under the current rules
  * of the system
  */
-Bool CanSelectDrawable( const Drawable *draw, Bool dragSelecting )
+Bool CanSelectDrawable( const Drawable *draw, Bool dragSelecting, Bool BypassObjectChecks )
 {
 
-	if(!draw || !draw->getObject())
+	if(!draw || (!BypassObjectChecks && !draw->getObject()) )
 	{
 		return FALSE;  // can't select
 	}
 	const Object *obj = draw->getObject();
 
-	if( obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE))
+	if(obj)
 	{
-		//Don't select dead/dying units.
-		return FALSE;
-	}
 
-	//Added this to support attacking cargo planes without being able to select them.
-	//I added the KINDOF_FORCEATTACKABLE to them, but unsure if it's possible to select
-	//something without the KINDOF_SELECTABLE -- so doing a LATE code change. My gut
-	//says we should simply have the KINDOF_SELECTABLE check only... but best to be safe.
-	if( !obj->isKindOf( KINDOF_SELECTABLE ) && obj->isKindOf( KINDOF_FORCEATTACKABLE ) )
-	{
-		return FALSE;
+		if( obj->isEffectivelyDead() && !obj->isKindOf(KINDOF_ALWAYS_SELECTABLE))
+		{
+			//Don't select dead/dying units.
+			return FALSE;
+		}
+
+		//Added this to support attacking cargo planes without being able to select them.
+		//I added the KINDOF_FORCEATTACKABLE to them, but unsure if it's possible to select
+		//something without the KINDOF_SELECTABLE -- so doing a LATE code change. My gut
+		//says we should simply have the KINDOF_SELECTABLE check only... but best to be safe.
+		if( !obj->isKindOf( KINDOF_SELECTABLE ) && obj->isKindOf( KINDOF_FORCEATTACKABLE ) )
+		{
+			return FALSE;
+		}
+
 	}
 
 	// hidden objects cannot be selected
@@ -181,21 +193,24 @@ Bool CanSelectDrawable( const Drawable *draw, Bool dragSelecting )
 		return FALSE;
 	}
 
-	// You cannot select something that has a logic override of unselectability or masked
-	if( obj->getStatusBits().testForAny( MAKE_OBJECT_STATUS_MASK2( OBJECT_STATUS_UNSELECTABLE, OBJECT_STATUS_MASKED ) ) )
+	if(obj)
 	{
-		return FALSE;
-	}
+		// You cannot select something that has a logic override of unselectability or masked
+		if( obj->getStatusBits().testForAny( MAKE_OBJECT_STATUS_MASK2( OBJECT_STATUS_UNSELECTABLE, OBJECT_STATUS_MASKED ) ) )
+		{
+			return FALSE;
+		}
 
-	if (!obj->isSelectable())
-	{
-		return false;
-	}
-	//Now allowing the selection of everything including enemies... but only if not drag selecting.
-	//In fact the only way you can drag select is if the unit is on your team.
-	if( dragSelecting && !obj->isLocallyControlled() )
-	{
-		return FALSE;
+		if (!obj->isSelectable())
+		{
+			return false;
+		}
+		//Now allowing the selection of everything including enemies... but only if not drag selecting.
+		//In fact the only way you can drag select is if the unit is on your team.
+		if( dragSelecting && !obj->isLocallyControlled() )
+		{
+			return FALSE;
+		}
 	}
 
 	//Now we can select anything that is selectable.
@@ -218,14 +233,14 @@ static Bool canSelectWrapper( Drawable *draw, void *userData )
 static Bool selectSingleDrawableWithoutSound( Drawable *draw )
 {
 
+	// since we are single selecting a drawable, unselect everything else
+	deselectAll();
+
+	// do the drawable selection
+	TheInGameUI->selectDrawable( draw );
+
 	Object *obj = draw->getObject();
 	if (obj != nullptr) {
-		// since we are single selecting a drawable, unselect everything else
-		TheInGameUI->deselectAllDrawables();
-
-		// do the drawable selection
-		TheInGameUI->selectDrawable(draw);
-
 		GameMessage *msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
 		msg->appendBooleanArgument(TRUE);
 		msg->appendObjectIDArgument(obj->getID());
@@ -247,12 +262,17 @@ SelectionTranslator::SelectionTranslator()
 	m_dragSelecting = FALSE;
 	m_lastGroupSelTime = 0;
 	m_lastGroupSelGroup = -1;
-	m_leftMouseDownAnchor.zero();
-	m_rightMouseDownAnchor.zero();
-	m_rightMouseDownTimeMs = 0;
-	m_rightMouseDownCameraPos.zero();
+	m_selectFeedbackAnchor.x = 0;
+	m_selectFeedbackAnchor.y = 0;
+	m_deselectFeedbackAnchor.x = 0;
+	m_deselectFeedbackAnchor.y = 0;
+	m_lastClick = 0;
+	m_deselectDownCameraPosition.zero();
 	m_displayedMaxWarning = FALSE;
 	m_selectCountMap.clear();
+	m_lastTreeDraw = nullptr;
+	m_lastTreeName = AsciiString::TheEmptyString;
+	m_isMouseOverATree = FALSE;
 
 	TheSelectionTranslator = this;
 
@@ -336,6 +356,28 @@ Bool SelectionTranslator::killThemKillThemAll( Drawable *draw, GameMessage *kill
 		}
 	}
 	return false;
+}
+
+//-----------------------------------------------------------------------------
+static Bool checkIsNotSelectable(Drawable* drawable)
+{
+	// Sanity
+	if(!drawable || !drawable->getTemplate())
+		return FALSE;
+
+	Object *obj = drawable ? drawable->getObject() : nullptr;
+	if(obj)
+	{
+		if(obj->isKindOf(KINDOF_MINE) || obj->isKindOf(KINDOF_SHRUBBERY))
+			return TRUE;
+
+		if( obj->hasDisguiseAndIsNotDetected() &&
+			(drawable->getTemplate()->isKindOf(KINDOF_MINE) || drawable->getTemplate()->isKindOf(KINDOF_SHRUBBERY)) &&
+			ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES )
+			return TRUE;
+	}
+
+	return FALSE;
 }
 
 //-----------------------------------------------------------------------------
@@ -572,12 +614,15 @@ GameMessageDisposition SelectionTranslator::onRawMousePosition(MAYBE_UNUSED cons
 
 		//Kris: We want to show information such as the popup text on objects that are forceattackable even
 		//      when we're not in force attackable mode!
-		UnsignedInt pickType = getPickTypesForContext( true /*TheInGameUI->isInForceAttackMode()*/ );
+		//UnsignedInt pickType = getPickTypesForContext( true /*TheInGameUI->isInForceAttackMode()*/ );
 
-		Drawable *underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType) pickType );
+		Bool isSelectingShrubbery = FALSE;
+		//Drawable *underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType)0xffffffff );
+		Drawable *underCursor = getDrawableUnderCursor(pixel, isSelectingShrubbery);
 		Object *objUnderCursor = underCursor ? underCursor->getObject() : nullptr;
 
-		if( objUnderCursor && (!objUnderCursor->isEffectivelyDead() || objUnderCursor->isKindOf( KINDOF_ALWAYS_SELECTABLE )) )
+		if( isSelectingShrubbery ||
+			(objUnderCursor && (!objUnderCursor->isEffectivelyDead() || objUnderCursor->isKindOf( KINDOF_ALWAYS_SELECTABLE ))) )
 		{
 			mouseoverMessage = TheMessageStream->appendMessage( GameMessage::MSG_MOUSEOVER_DRAWABLE_HINT );
 			mouseoverMessage->appendDrawableIDArgument( underCursor->getID() );
@@ -595,6 +640,64 @@ GameMessageDisposition SelectionTranslator::onRawMousePosition(MAYBE_UNUSED cons
 	}
 
 	return KEEP_MESSAGE;
+}
+
+// IamInnocent - Hackky way to select Objects disguised as non-selectable drawables (trees, etc. )
+Drawable* SelectionTranslator::getDrawableUnderCursor(ICoord2D pixel, Bool &isSelectingShrubbery)
+{
+	Drawable *underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType)0xffffffff );
+
+	// IamInnocent - Added for Selecting Shrubbery
+	m_isMouseOverATree = FALSE;
+
+	const CommandButton *command = TheInGameUI->getGUICommand();
+	if(!underCursor && command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ))
+	{
+		Coord3D position;
+		TheTacticalView->screenToTerrain( &pixel, &position );
+
+		AsciiString treeName  = TheGameClient->findTreeNameInPos(&position);
+		if(!treeName.isEmpty())
+		{
+			// Set to indicate that the Mouse is over a Tree Drawable;
+			m_isMouseOverATree = TRUE;
+
+			if(m_lastTreeName == treeName && m_lastTreeDraw)
+			{
+				underCursor = m_lastTreeDraw;
+				isSelectingShrubbery = TRUE;
+			}
+			else
+			{
+				const ThingTemplate *treeTemplate = TheThingFactory->findTemplate( "GenericTree" );
+				if(treeTemplate)
+				{
+					Drawable *treeDraw = TheThingFactory->newDrawable( treeTemplate );
+					if( treeDraw )
+					{
+						if(m_lastTreeDraw)
+							TheGameClient->destroyDrawable(m_lastTreeDraw);
+						
+						treeDraw->setModelName(treeName);
+						underCursor = treeDraw;
+						m_lastTreeDraw = treeDraw;
+						m_lastTreeName = treeName;
+						isSelectingShrubbery = TRUE;
+
+						treeDraw->setPosition( &position );
+						treeDraw->setDrawableHidden( true );
+					}
+				}
+			}
+		}
+	}
+
+	if(!isSelectingShrubbery && checkIsNotSelectable(underCursor)) {
+		UnsignedInt pickType = getPickTypesForContext( true /*TheInGameUI->isInForceAttackMode()*/ );
+		underCursor = TheTacticalView->pickDrawable( &pixel, TheInGameUI->isInForceAttackMode(), (PickType) pickType );
+	}
+
+	return underCursor;
 }
 
 GameMessageDisposition SelectionTranslator::onMouseLeftDoubleClick(MAYBE_UNUSED const GameMessage *msg)
@@ -616,7 +719,10 @@ GameMessageDisposition SelectionTranslator::onMouseLeftDoubleClick(MAYBE_UNUSED 
 	Bool selectAcrossMap = (BitIsSet(modifiers, KEY_STATE_ALT) ? TRUE : FALSE);
 
 	// only allow things that are selectable. Also, we aren't allowed to
-	Drawable *picked = TheTacticalView->pickDrawable( &region.lo, FALSE, PICK_TYPE_SELECTABLE);
+	Drawable *picked = TheTacticalView->pickDrawable( &region.lo, FALSE, (PickType)0xffffffff); //PICK_TYPE_SELECTABLE);
+
+	if(checkIsNotSelectable(picked))
+		picked = TheTacticalView->pickDrawable( &region.lo, FALSE, PICK_TYPE_SELECTABLE );
 
 	// If there wasn't anyone to pick, then we want to propagate this double click.
 	if (picked == nullptr)
@@ -697,24 +803,44 @@ GameMessageDisposition SelectionTranslator::onMouseoverDrawableHint(MAYBE_UNUSED
 	if( command )
 	{
 		if( command->getCommandType() == GUI_COMMAND_ATTACK_MOVE ||
+				command->getCommandType() == GUI_COMMAND_REVERSE_MOVE ||
 				command->getCommandType() == GUI_COMMAND_GUARD ||
 				command->getCommandType() == GUI_COMMAND_GUARD_WITHOUT_PURSUIT ||
-				command->getCommandType() == GUI_COMMAND_GUARD_FLYING_UNITS_ONLY )
+				command->getCommandType() == GUI_COMMAND_GUARD_FLYING_UNITS_ONLY ||
+				command->getCommandType() == GUI_COMMAND_GUARD_FAR ||
+				command->getCommandType() == GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT ||
+				command->getCommandType() == GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY )
 		{
 			//These GUI commands can take care of themselves -- don't let
 			//the selection translator meddle.
 			ignoreCommand = TRUE;
 		}
 	}
-	if( !ignoreCommand && !draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) )
+	Bool isDetected = FALSE;
+	Bool isSelectingShrubbery = command && BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) ? TRUE : FALSE;
+	Object *drawObj = draw->getObject();
+	
+	if(drawObj){
+		if( (drawObj->isDisguised() && ThePlayerList->getLocalPlayer()->getRelationship(drawObj->getTeam()) == ALLIES) ||
+			drawObj->hasDetectedDisguise() )
+			isDetected = TRUE;
+	}
+
+	if( !ignoreCommand &&
+		(!draw->getTemplate()->isKindOf( KINDOF_SHRUBBERY ) ||
+			isDetected ||
+			isSelectingShrubbery )
+		)
 	{
-		if( CanSelectDrawable( draw, FALSE ) )
+		if( CanSelectDrawable( draw, FALSE, isSelectingShrubbery ) )
 		{
-			TheMouse->setCursor(Mouse::SELECTING);
+			//TheMouse->setCursor(Mouse::SELECTING);
+			TheInGameUI->friend_setMouseCursor(Mouse::SELECTING, draw->getTemplate()->friend_getSelectingCursorName(), 3);
 		}
 		else
 		{
-			TheMouse->setCursor( Mouse::ARROW );
+			//TheMouse->setCursor( Mouse::ARROW );
+			TheInGameUI->friend_setMouseCursor(Mouse::ARROW, "Dummy", 2);
 		}
 	}
 
@@ -1006,6 +1132,7 @@ GameMessageDisposition SelectionTranslator::onMouseLeftClick(MAYBE_UNUSED const 
 	}
 
 	TheInGameUI->clearAttackMoveToMode();
+	TheInGameUI->clearMoveStateIfDoOnce();
 
 	return DESTROY_MESSAGE;
 }
@@ -1096,12 +1223,15 @@ GameMessageDisposition SelectionTranslator::onRawMouseRightButtonUp(MAYBE_UNUSED
 		//when you right click.
 		if( TheInGameUI->getGUICommand() )
 		{
-			//Cancel GUI command mode... don't deselect units.
-			TheInGameUI->setGUICommand( nullptr );
-			TheInGameUI->setScrolling( FALSE );
+			if(!ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand())
+			{
+				//Cancel GUI command mode... don't deselect units.
+				TheInGameUI->setGUICommand( nullptr );
+				TheInGameUI->setScrolling( FALSE );
 
-			//With a GUI command cancel, we want no other behavior.
-			return DESTROY_MESSAGE;
+				//With a GUI command cancel, we want no other behavior.
+				return DESTROY_MESSAGE;
+			}
 		}
 		else
 		{

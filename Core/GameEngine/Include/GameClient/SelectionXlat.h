@@ -95,6 +95,7 @@ private:
 	GameMessageDisposition onMetaAddTeam(const GameMessage *msg);
 	GameMessageDisposition onMetaViewTeam(const GameMessage *msg);
 	GameMessageDisposition onMetaOptions(const GameMessage *msg);
+	Drawable* getDrawableUnderCursor(ICoord2D pixel, Bool &isSelectingShrubbery);
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	GameMessageDisposition onCheatToggleHandOfGodMode(const GameMessage *msg);
 #endif

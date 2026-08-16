@@ -34,7 +34,6 @@
 #include "Common/GameType.h"
 #include "GameLogic/Damage.h"
 #include "Common/STLTypedefs.h"
-#include "Common/MessageStream.h"
 
 class AIGroup;
 class AttackPriorityInfo;
@@ -49,6 +48,7 @@ class Player;
 class PolygonTrigger;
 class UpgradeTemplate;
 class WeaponTemplate;
+class GameMessage;
 
 enum GUICommandType CPP_11(: Int);
 enum HackerAttackMode CPP_11(: Int);
@@ -1023,11 +1023,14 @@ public:
 	// Removes any objects that aren't owned by the player, and returns true if the group was emptied.
 	Bool removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer );
 
+	// Do the order nearby data of the message, if any
+	Bool doOrderNearbyData( const GameMessage *msg );
+
 	// Add any objects that are nearby the current selected objects
-	Bool doAddNearbyMembers( OrderNearbyData orderData );
+	Bool doAddNearbyMembers( const GameMessage *msg );
 
 	// Do the orders delayed to any of the objects that are nearby
-	Bool doDelayedNearbyMembers( OrderNearbyData orderData, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments );
+	Bool doDelayedNearbyMembers( const GameMessage *msg );
 
 	// Remove the nearby objects from the member list
 	Bool clearExtraMembers();

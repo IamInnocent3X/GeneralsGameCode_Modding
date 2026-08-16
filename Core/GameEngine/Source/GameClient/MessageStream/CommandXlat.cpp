@@ -1337,6 +1337,7 @@ GameMessage::Type CommandTranslator::issueSpecialPowerCommand( const CommandButt
 							msg->appendLocationArgument( *it );
 						msg->appendIntegerArgument( command->getOptions() );
 						msg->appendObjectIDArgument( specificSource );
+						msg->appendBooleanArgument( isSabotagingGUICommand );
 						TheInGameUI->clearPendingSpecialPowerLocations();
 
 						PickAndPlayInfo info;
