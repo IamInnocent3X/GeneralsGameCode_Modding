@@ -117,8 +117,8 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo ) override;
 	virtual UpdateSleepTime update() override;
 
-	virtual Bool friend_isSlowDeathActivated() const { return m_groundCheckFrame || isSlowDeathActivated(); }
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual Bool friend_isSlowDeathActivated() const override { return m_groundCheckFrame || isSlowDeathActivated(); }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 protected:
 

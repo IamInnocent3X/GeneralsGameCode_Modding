@@ -81,40 +81,40 @@ public:
 	MultiAddOnContain(Thing* thing, const ModuleData* moduleData);
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual OpenContain* asOpenContain() { return this; }  ///< treat as open container
-	virtual Bool isHealContain() const { return false; } ///< true when container only contains units while healing (not a transport!)
-	virtual Bool isTunnelContain() const { return FALSE; }
-	virtual Bool isImmuneToClearBuildingAttacks() const { return true; }
-	virtual Bool isSpecialOverlordStyleContainer() const { return TRUE; }
+	virtual OpenContain* asOpenContain() override { return this; }  ///< treat as open container
+	virtual Bool isHealContain() const override { return false; } ///< true when container only contains units while healing (not a transport!)
+	virtual Bool isTunnelContain() const override { return FALSE; }
+	virtual Bool isImmuneToClearBuildingAttacks() const override { return true; }
+	virtual Bool isSpecialOverlordStyleContainer() const override { return TRUE; }
 
-	virtual void onDie(const DamageInfo* damageInfo);  ///< the die callback
-	virtual void onDelete();	///< Last possible moment cleanup
-	virtual void onCapture(Player* oldOwner, Player* newOwner);
-	virtual void onObjectCreated();
-	virtual void onContaining(Object* obj, Bool wasSelected);
-	virtual void onRemoving(Object* obj);
+	virtual void onDie(const DamageInfo* damageInfo) override;  ///< the die callback
+	virtual void onDelete() override;	///< Last possible moment cleanup
+	virtual void onCapture(Player* oldOwner, Player* newOwner) override;
+	virtual void onObjectCreated() override;
+	virtual void onContaining(Object* obj, Bool wasSelected) override;
+	virtual void onRemoving(Object* obj) override;
 	//virtual UpdateSleepTime update();							///< called once per frame
 
-	virtual void onSelling();
+	virtual void onSelling() override;
 
-	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const;
+	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const override;
 	//virtual void addToContain(Object* obj);				///< add 'obj' to contain list
 	//virtual void addToContainList(Object* obj);		///< The part of AddToContain that inheritors can override (Can't do whole thing because of all the private stuff involved)
 	//virtual void removeFromContain(Object* obj, Bool exposeStealthUnits = FALSE);	///< remove 'obj' from contain list
 	//virtual void removeAllContained( Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
-	virtual Bool isEnclosingContainerFor(const Object* obj) const;	///< Does this type of Contain Visibly enclose its contents?
-	virtual Bool isPassengerAllowedToFire(ObjectID id = INVALID_ID) const;	///< Hey, can I shoot out of this container?
+	virtual Bool isEnclosingContainerFor(const Object* obj) const override;	///< Does this type of Contain Visibly enclose its contents?
+	virtual Bool isPassengerAllowedToFire(ObjectID id = INVALID_ID) const override;	///< Hey, can I shoot out of this container?
 
 	// Friend for our Draw module only.
 	//virtual const Object* friend_getRider() const; ///< Damn.  The draw order dependency bug for riders means that our draw module needs to cheat to get around it.
 
 	///< if my object gets selected, then my visible passengers should, too
 	///< this gets called from
-	virtual void clientVisibleContainedFlashAsSelected();
+	virtual void clientVisibleContainedFlashAsSelected() override;
 
-	virtual void redeployOccupants();
+	virtual void redeployOccupants() override;
 
-	virtual Bool getContainerPipsToShow(Int& numTotal, Int& numFull)
+	virtual Bool getContainerPipsToShow(Int& numTotal, Int& numFull) override
 	{
 		if (getMultiAddOnContainModuleData()->m_drawPips == FALSE)
 		{
@@ -124,12 +124,12 @@ public:
 		return ContainModuleInterface::getContainerPipsToShow(numTotal, numFull);
 	}
 
-	virtual void createPayload();
+	virtual void createPayload() override;
 
-	virtual short getRiderSlot(ObjectID riderID) const;
+	virtual short getRiderSlot(ObjectID riderID) const override;
 	virtual short getPortableSlot(ObjectID riderID) const;
-	virtual const ContainedItemsList* getAddOnList() const { return &m_addOnList; }
-	virtual ContainedItemsList* getAddOnList() { return &m_addOnList; }
+	virtual const ContainedItemsList* getAddOnList() const override { return &m_addOnList; }
+	virtual ContainedItemsList* getAddOnList() override { return &m_addOnList; }
 
 	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0,0,0); };
 

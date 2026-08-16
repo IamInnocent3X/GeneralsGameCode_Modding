@@ -84,54 +84,54 @@ public:
 	static Int getInterfaceMask() { return BehaviorModule::getInterfaceMask() | (MODULEINTERFACE_UPGRADE); }
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
-	virtual OnKillModuleInterface* getOnKill() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
+	virtual OnKillModuleInterface* getOnKill() override { return this; }
 
 	// OnKillModuleInterface
-	virtual void onKilledObject( Object *victim, const DamageInfo *damageInfo );
+	virtual void onKilledObject( Object *victim, const DamageInfo *damageInfo ) override;
 
 protected:
 
-	virtual void upgradeImplementation()
+	virtual void upgradeImplementation() override
 	{
 		// nothing!
 	}
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getCreateObjectOnKillBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 private:
 

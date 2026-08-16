@@ -133,9 +133,9 @@ public:
 	virtual UpdateSleepTime update() override;
 	virtual void onDelete() override;
 
-	virtual void switchToState(MissileStateType s) override;
+	virtual void switchToState(MissileStateType s);
 
-	virtual MissileStateType getMissileState() override { return m_state; }
+	virtual MissileStateType getMissileState() { return m_state; }
 
 protected:
 

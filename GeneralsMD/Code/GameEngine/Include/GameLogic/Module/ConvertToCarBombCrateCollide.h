@@ -81,7 +81,7 @@ public:
 	ConvertToCarBombCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual Bool friend_executeCrateBehavior( Object *other );
+	virtual Bool friend_executeCrateBehavior( Object *other ) override;
 
 protected:
 

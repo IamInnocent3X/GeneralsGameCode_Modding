@@ -54,11 +54,11 @@ public:
 	DrawBridgeUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual void onObjectCreated();
-	virtual void onDelete();
-	virtual UpdateSleepTime update();
+	virtual void onObjectCreated() override;
+	virtual void onDelete() override;
+	virtual UpdateSleepTime update() override;
 
-	virtual CommandOption getCommandOption() const;
+	virtual CommandOption getCommandOption() const override;
 
 	Bool setDrawBridgeState(bool opened, const Object* fromTower);
 

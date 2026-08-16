@@ -50,7 +50,7 @@ struct DrawableColorTint
 	UnsignedInt decayFrames;
 };
 
-typedef BitFlags<TINT_STATUS_COUNT> TintStatusFlags;
+typedef BitFlags<TINT_STATUS_COUNT, struct TintStatusFlagsTag> TintStatusFlags;
 //TO-DO: Convert AsciiString to NameKeyType. NOTE: DONE.
 //NOTE: REVERTED. As for some reason hashmap is unusable. Needs investigation.
 typedef std::pair<AsciiString, DrawableColorTint> CustomTintStatusType;

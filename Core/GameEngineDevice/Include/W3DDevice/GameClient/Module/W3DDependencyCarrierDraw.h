@@ -22,7 +22,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual void doDrawModule(const Matrix3D* transformMtx) override;
-	virtual void notifyDrawModuleDependencyCleared();///< if you were waiting for something before you drew, it's ready now
+	virtual void notifyDrawModuleDependencyCleared() override;///< if you were waiting for something before you drew, it's ready now
 	virtual void adjustTransformMtx(Matrix3D& mtx) const override;
 
 protected:

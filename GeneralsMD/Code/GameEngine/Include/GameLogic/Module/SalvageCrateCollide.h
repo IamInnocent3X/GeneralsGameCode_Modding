@@ -220,7 +220,7 @@ protected:
 	virtual Bool executeCrateBehavior( Object *other ) override;
 
 	/// This is used for a variation of crate collide function that differs from executeCrateBehavior for ChatCommands... Do not imitate
-	virtual Bool friend_executeCrateBehavior( Object *other );
+	virtual Bool friend_executeCrateBehavior( Object *other ) override;
 
 private:
 	Bool executeCrateFunction( Object *other );

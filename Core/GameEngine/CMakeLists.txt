@@ -210,6 +210,7 @@ set(GAMEENGINE_SRC
     Include/GameClient/Module/AnimatedParticleSysBoneClientUpdate.h
     Include/GameClient/Module/BeaconClientUpdate.h
     Include/GameClient/Module/SwayClientUpdate.h
+    Include/GameClient/Module/DynamicGeometryClientUpdate.h
     Include/GameClient/Mouse.h
     Include/GameClient/ParabolicEase.h
     Include/GameClient/ParticleSys.h
@@ -714,6 +715,7 @@ set(GAMEENGINE_SRC
     Source/GameClient/Drawable/Update/AnimatedParticleSysBoneClientUpdate.cpp
     Source/GameClient/Drawable/Update/BeaconClientUpdate.cpp
     Source/GameClient/Drawable/Update/SwayClientUpdate.cpp
+    Source/GameClient/Drawable/Update/DynamicGeometryClientUpdate.cpp
     Source/GameClient/DrawGroupInfo.cpp
 #    Source/GameClient/Eva.cpp
     Source/GameClient/FXList.cpp

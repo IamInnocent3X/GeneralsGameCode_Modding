@@ -44,41 +44,41 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
 
 	// BehaviorModule
-	virtual DieModuleInterface* getDie() { return this; }
+	virtual DieModuleInterface* getDie() override { return this; }
 
 	// UpdateModule
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	// SpawnBehaviorInterface
-	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() { return this; }
+	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() override { return this; }
 
-	virtual Bool maySpawnSelfTaskAI(Real maxSelfTaskersRatio) { return false; };
-	virtual void onSpawnDeath(ObjectID deadSpawn, DamageInfo* damageInfo);
-	virtual Object* getClosestSlave(const Coord3D* pos);
-	virtual void orderSlavesToAttackTarget(Object* target, Int maxShotsToFire, CommandSourceType cmdSource);
-	virtual void orderSlavesToAttackPosition(const Coord3D* pos, Int maxShotsToFire, CommandSourceType cmdSource);
-	virtual CanAttackResult getCanAnySlavesAttackSpecificTarget(AbleToAttackType attackType, const Object* target, CommandSourceType cmdSource);
-	virtual CanAttackResult getCanAnySlavesUseWeaponAgainstTarget(AbleToAttackType attackType, const Object* victim, const Coord3D* pos, CommandSourceType cmdSource);
-	virtual Bool canAnySlavesAttack();
-	virtual void orderSlavesToGoIdle(CommandSourceType cmdSource);
-	virtual void orderSlavesDisabledUntil(DisabledType type, UnsignedInt frame);
-	virtual void orderSlavesToClearDisabled(DisabledType type);
-	virtual void giveSlavesStealthUpgrade(Bool grantStealth);
-	virtual Bool areAllSlavesStealthed() const;
-	virtual void revealSlaves();
-	virtual Bool doSlavesHaveFreedom() const { return false; };
+	virtual Bool maySpawnSelfTaskAI(Real maxSelfTaskersRatio) override { return false; };
+	virtual void onSpawnDeath(ObjectID deadSpawn, DamageInfo* damageInfo) override;
+	virtual Object* getClosestSlave(const Coord3D* pos) override;
+	virtual void orderSlavesToAttackTarget(Object* target, Int maxShotsToFire, CommandSourceType cmdSource) override;
+	virtual void orderSlavesToAttackPosition(const Coord3D* pos, Int maxShotsToFire, CommandSourceType cmdSource) override;
+	virtual CanAttackResult getCanAnySlavesAttackSpecificTarget(AbleToAttackType attackType, const Object* target, CommandSourceType cmdSource) override;
+	virtual CanAttackResult getCanAnySlavesUseWeaponAgainstTarget(AbleToAttackType attackType, const Object* victim, const Coord3D* pos, CommandSourceType cmdSource) override;
+	virtual Bool canAnySlavesAttack() override;
+	virtual void orderSlavesToGoIdle(CommandSourceType cmdSource) override;
+	virtual void orderSlavesDisabledUntil(DisabledType type, UnsignedInt frame) override;
+	virtual void orderSlavesToClearDisabled(DisabledType type) override;
+	virtual void giveSlavesStealthUpgrade(Bool grantStealth) override;
+	virtual Bool areAllSlavesStealthed() const override;
+	virtual void revealSlaves() override;
+	virtual Bool doSlavesHaveFreedom() const override { return false; };
 
 	// IamInnocent - SpawnBehaviorInterface properties for MobMemberSlavedUpdate, required to be declared for SpawnBehaviorInterfaces
-	virtual void friend_refreshUpdate(Bool isInstant) {}
-	virtual void updateMobMembers() {}
-	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) { return FALSE; }
-	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) { return FALSE; }
+	virtual void friend_refreshUpdate(Bool isInstant) override {}
+	virtual void updateMobMembers() override {}
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) override { return FALSE; }
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) override { return FALSE; }
 
 	// DieModule
-	virtual void onDie(const DamageInfo* damageInfo);
+	virtual void onDie(const DamageInfo* damageInfo) override;
 
 	// AIUpdateInterface
-	virtual void aiDoCommand(const AICommandParms* parms);
+	virtual void aiDoCommand(const AICommandParms* parms) override;
 
 	static bool isDroneCombatReady(Object* drone);
 

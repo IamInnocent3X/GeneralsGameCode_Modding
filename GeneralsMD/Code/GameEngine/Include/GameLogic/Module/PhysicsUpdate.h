@@ -115,7 +115,7 @@ public:
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
 	virtual void doSabotage( Object *other, Object *obj ) override { }
 	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return false; }
-	virtual Bool revertCollideBehavior(Object *other) { return false; }
+	virtual Bool revertCollideBehavior(Object *other) override { return false; }
 	virtual Bool isCarBombCrateCollide() const override { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const override { return false; }
 	virtual Bool isRailroad() const override { return false;}
@@ -233,7 +233,7 @@ public:
 	void setWaterImpactSound(const AudioEventRTS* waterImpactSound);
 	void setWaterImpactFX(const FXList* waterImpactFX);
 	const AudioEventRTS* getBounceSound() { return m_bounceSound ? m_bounceSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
-	const AudioEventRTS* getWaterImpactSound() { return m_waterImpactSound ? &m_waterImpactSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
+	const AudioEventRTS* getWaterImpactSound() { return m_waterImpactSound ? m_waterImpactSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
 
 	/**
 		Reset all values (vel, accel, etc) to starting values.

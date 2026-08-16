@@ -88,15 +88,15 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
 
 	// BehaviorModule
-	virtual DieModuleInterface* getDie() { return this; }
+	virtual DieModuleInterface* getDie() override { return this; }
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual UpdateSleepTime update() override;
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
 	// DieModuleInterface
-	virtual void onDie( const DamageInfo *damageInfo );
-	virtual Bool isDieApplicable(const DamageInfo* damageInfo) const { return getChronoDeathBehaviorModuleData()->m_dieMuxData.isDieApplicable(getObject(), damageInfo); }
+	virtual void onDie( const DamageInfo *damageInfo ) override;
+	virtual Bool isDieApplicable(const DamageInfo* damageInfo) const override { return getChronoDeathBehaviorModuleData()->m_dieMuxData.isDieApplicable(getObject(), damageInfo); }
 
 
 protected:

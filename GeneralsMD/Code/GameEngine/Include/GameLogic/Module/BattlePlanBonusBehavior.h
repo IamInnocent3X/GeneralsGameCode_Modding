@@ -127,8 +127,8 @@ public:
 	static Int getInterfaceMask() { return BehaviorModule::getInterfaceMask() | MODULEINTERFACE_UPGRADE; }
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
-	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
+	virtual BattlePlanBonusBehaviorInterface* getBattlePlanBonusBehaviorInterface() override { return this; }
 
 protected:
 	// BattlePlan stuff
@@ -144,45 +144,45 @@ protected:
 
 	// Upgrade stuff
 
-	virtual void upgradeImplementation();
+	virtual void upgradeImplementation() override;
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getBattlePlanBonusBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
 
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 private:
 	Bool isEffectValid() const;

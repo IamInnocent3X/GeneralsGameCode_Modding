@@ -89,10 +89,10 @@ public:
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle) override {}
 	virtual void reactToGeometryChange() override {}
 
-	virtual const AsciiString& getModelName() const { return getW3DTreeDrawModuleData()->m_modelName; }
+	virtual const AsciiString& getModelName() const override { return getW3DTreeDrawModuleData()->m_modelName; }
 
-	virtual TreeDrawInterface* getTreeDrawInterface() { return this; }
-	virtual const TreeDrawInterface* getTreeDrawInterface() const { return this; }
+	virtual TreeDrawInterface* getTreeDrawInterface() override { return this; }
+	virtual const TreeDrawInterface* getTreeDrawInterface() const override { return this; }
 
 protected:
 

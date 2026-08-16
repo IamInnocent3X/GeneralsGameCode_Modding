@@ -81,12 +81,12 @@ public:
 	virtual void onObjectCreated() override;
 	virtual UpdateSleepTime update() override;
 
-	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 
-	virtual void onBuildComplete();
-	virtual void onCreate() { onBuildComplete(); }
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	void detonate();
 

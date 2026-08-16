@@ -160,8 +160,8 @@ public:
 	virtual void onObjectCreated() override;
 	virtual Bool isSelfTasking() const override { return FALSE; };
 
-	virtual void informMySlaverSelfInfo();
-	virtual void informMySlaverSelfTasking(Bool set) { }
+	virtual void informMySlaverSelfInfo() override;
+	virtual void informMySlaverSelfTasking(Bool set) override { }
 
 
 	void doScoutLogic( const Coord3D *mastersDestination );
@@ -175,9 +175,9 @@ public:
 
 	virtual UpdateSleepTime update() override;	///< Deciding whether or not to make new guys
 
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
-	virtual void friend_refreshUpdate(Bool isInstant) { if(isInstant) update(); else refreshUpdate(); }
+	virtual void friend_refreshUpdate(Bool isInstant) override { if(isInstant) update(); else refreshUpdate(); }
 
 	UpdateSleepTime calcSleepTime() const;
 

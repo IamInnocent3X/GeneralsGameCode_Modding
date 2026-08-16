@@ -147,8 +147,8 @@ template <size_t NUMBITS, typename TAG>
 	*storeAsInt = bitIndex;
 }
 
-template <size_t NUMBITS>
-void BitFlags<NUMBITS>::parseSingleBitFromINIVector(INI* ini, void* /*instance*/, void *store, const void* /*userData*/)
+template <size_t NUMBITS, typename TAG>
+void BitFlags<NUMBITS, TAG>::parseSingleBitFromINIVector(INI* ini, void* /*instance*/, void *store, const void* /*userData*/)
 {
 	std::vector<Int>* v = (std::vector<Int>*)store;
 	v->clear();

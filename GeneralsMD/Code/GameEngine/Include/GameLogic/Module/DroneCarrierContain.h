@@ -42,9 +42,9 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	//Only allow slaved units in
-	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const;
+	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const override;
 
-	virtual Bool isEnclosingContainerFor(const Object* obj) const { return true; } //TODO param in module
+	virtual Bool isEnclosingContainerFor(const Object* obj) const override { return true; } //TODO param in module
 
 	virtual Bool isPassengerAllowedToFire(ObjectID id = INVALID_ID) const override;	///< Hey, can I shoot out of this container?
 

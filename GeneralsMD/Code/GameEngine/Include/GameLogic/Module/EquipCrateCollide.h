@@ -104,16 +104,16 @@ public:
 protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
-	virtual Bool isValidToExecute( const Object *other ) const;
+	virtual Bool isValidToExecute( const Object *other ) const override;
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other );
+	virtual Bool executeCrateBehavior( Object *other ) override;
 
-	virtual Bool revertCollideBehavior(Object *other);
-	virtual Bool friend_executeCrateBehavior( Object *other );
+	virtual Bool revertCollideBehavior(Object *other) override;
+	virtual Bool friend_executeCrateBehavior( Object *other ) override;
 
-	virtual Bool isEquipCrateCollide() const { return TRUE; }
-	virtual Bool isParasiteEquipCrateCollide() const  { return getEquipCrateCollideModuleData()->m_isParasite; }
+	virtual Bool isEquipCrateCollide() const override { return TRUE; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return getEquipCrateCollideModuleData()->m_isParasite; }
 
 private:
 	ObjectID m_equipToID;

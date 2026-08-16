@@ -156,10 +156,10 @@ public:
 	virtual Int getProbabilityModifier( const DamageInfo *damageInfo ) const override;
 	virtual Bool isDieApplicable(const DamageInfo *damageInfo) const override { return getSlowDeathBehaviorModuleData()->m_dieMuxData.isDieApplicable(getObject(), damageInfo); }
 
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
-	virtual void friend_refreshUpdate() { refreshUpdate(); }
-	virtual Bool friend_isSlowDeathActivated() const { return isSlowDeathActivated(); }
-	virtual Bool layerUpdate(Bool hitTree);
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
+	virtual Bool friend_isSlowDeathActivated() const override { return isSlowDeathActivated(); }
+	virtual Bool layerUpdate(Bool hitTree) override;
 
 	virtual Bool canOptimizeHulkBehavior() const { return true; }
 

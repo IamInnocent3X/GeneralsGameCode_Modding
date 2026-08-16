@@ -82,10 +82,10 @@ public:
 	TeleporterAIUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	/// this is never disabled, since we want disabled things to continue recovering from teleport
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
 protected:
 
@@ -95,7 +95,7 @@ protected:
 
 	Bool isLocationValid(Object* obj, const Coord3D* targetPos, Object* victim, const Coord3D* victimPos, Weapon* weap);
 
-	virtual UpdateSleepTime doLocomotor();
+	virtual UpdateSleepTime doLocomotor() override;
 
 	//virtual Bool getTreatAsAircraftForLocoDistToGoal() const;
 
@@ -111,7 +111,7 @@ protected:
 	virtual Bool computeQuickPath(const Coord3D* destination) override; ///< Computes a quick path to the destination.
 
 
-	 virtual AIStateMachine* makeStateMachine();
+	 virtual AIStateMachine* makeStateMachine() override;
 
 private:
 	void applyRecoverEffects(Real dist);

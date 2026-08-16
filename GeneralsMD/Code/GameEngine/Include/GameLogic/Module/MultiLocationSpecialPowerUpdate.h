@@ -87,14 +87,14 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
-	virtual Bool isSpecialAbility() const { return false; }
-	virtual Bool isSpecialPower() const { return true; }
-	virtual Bool isActive() const { return m_active; }
-	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return this; }
-	virtual CommandOption getCommandOption() const { return (CommandOption)0; }
-	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const { return m_active; }
-	virtual ScienceType getExtraRequiredScience() const { return SCIENCE_INVALID; }
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) override;
+	virtual Bool isSpecialAbility() const override { return false; }
+	virtual Bool isSpecialPower() const override { return true; }
+	virtual Bool isActive() const override { return m_active; }
+	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() override { return this; }
+	virtual CommandOption getCommandOption() const override { return (CommandOption)0; }
+	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const override { return m_active; }
+	virtual ScienceType getExtraRequiredScience() const override { return SCIENCE_INVALID; }
 
 	// All N captured target points arrive together through the multi-location channel - see
 	// Object::doSpecialPowerAtMultipleLocations. doesSpecialPowerHaveOverridableDestination stays
@@ -103,20 +103,20 @@ public:
 	// active overridable destination - otherwise the client keeps the targeting cursor alive for the
 	// whole spawn sequence (canOverrideSpecialPowerDestination). Only the non-active variant stays true
 	// so the delivery finder (findSpecialPowerWithOverridableDestination) still reaches this module.
-	virtual Bool doesSpecialPowerHaveOverridableDestinationActive() const { return FALSE; }
-	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return true; }
-	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}	///< unused: delivery goes through setSpecialPowerMultiLocations
-	virtual void setSpecialPowerMultiLocations( const std::vector<Coord3D>& locs );
-	virtual const AsciiString& getCursorName() const { return getMultiLocationSpecialPowerUpdateModuleData()->m_cursorName; }
-	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
-	virtual void setDelay(UnsignedInt delayFrame) { }
+	virtual Bool doesSpecialPowerHaveOverridableDestinationActive() const override { return FALSE; }
+	virtual Bool doesSpecialPowerHaveOverridableDestination() const override { return true; }
+	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) override {}	///< unused: delivery goes through setSpecialPowerMultiLocations
+	virtual void setSpecialPowerMultiLocations( const std::vector<Coord3D>& locs ) override;
+	virtual const AsciiString& getCursorName() const override { return getMultiLocationSpecialPowerUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual void setDelay(UnsignedInt delayFrame) override { }
 
 
-	virtual void onObjectCreated();
-	virtual UpdateSleepTime update();
+	virtual void onObjectCreated() override;
+	virtual UpdateSleepTime update() override;
 
 	// termination conditions
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK4( DISABLED_SUBDUED, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK4( DISABLED_SUBDUED, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
 
 protected:
 

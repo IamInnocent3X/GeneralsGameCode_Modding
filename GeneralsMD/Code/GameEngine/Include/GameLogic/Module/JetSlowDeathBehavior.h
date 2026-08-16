@@ -92,8 +92,8 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo ) override;
 	virtual UpdateSleepTime update() override;
 
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
-	virtual Bool layerUpdate(Bool hitTree);
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual Bool layerUpdate(Bool hitTree) override;
 
 protected:
 

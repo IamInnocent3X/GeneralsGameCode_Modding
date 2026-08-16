@@ -95,7 +95,7 @@ protected:
 	// virtual Bool isValidToExecute( const Object *other ) const;
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other );
+	virtual Bool executeCrateBehavior( Object *other ) override;
 	
 	/// This would allow entering buildings? Lets disable it for now
 	// virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }

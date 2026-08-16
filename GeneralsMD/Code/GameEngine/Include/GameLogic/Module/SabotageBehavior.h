@@ -463,25 +463,25 @@ public:
 
   //void doSabotageFeedbackFX( const Object *other, SabotageVictimType type = SAB_VICTIM_GENERIC, AsciiString name = AsciiString::TheEmptyString );
 
-	virtual void doSabotage( Object *other, Object *obj );
+	virtual void doSabotage( Object *other, Object *obj ) override;
 
-	virtual Bool canDoSabotageSpecialCheck(const Object *other) const;
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const override;
 
-	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const { return getSabotageBehaviorModuleData()->m_specialPowerTemplateToTrigger; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return getSabotageBehaviorModuleData()->m_specialPowerTemplateToTrigger; }
 
-	virtual Bool wouldLikeToCollideWith(const Object* other) const { return isValidToExecute(other); }
+	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return isValidToExecute(other); }
 
 protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
-	virtual Bool isValidToExecute( const Object *other ) const;
+	virtual Bool isValidToExecute( const Object *other ) const override;
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other );
+	virtual Bool executeCrateBehavior( Object *other ) override;
 
-	virtual Bool isSabotageBuildingCrateCollide() const { return TRUE; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return TRUE; }
 
-	virtual Bool friend_executeCrateBehavior( Object *other );
+	virtual Bool friend_executeCrateBehavior( Object *other ) override;
 
 private:
 	ObjectUpgradeVec m_upgradeIfCollidesWith;

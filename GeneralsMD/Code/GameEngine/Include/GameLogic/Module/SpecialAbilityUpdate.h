@@ -244,8 +244,8 @@ public:
 	virtual CommandOption getCommandOption() const override { return (CommandOption)0; }
 	virtual UpdateSleepTime update() override;
 
-	virtual Bool getUsesSabotageBehavior() const override { return getSpecialAbilityUpdateModuleData()->m_useSabotageBehavior; }
-	virtual Bool canHackOrCaptureAirborneTargets() const override { return getSpecialAbilityUpdateModuleData()->m_canHackOrCaptureAirborneTargets; }
+	virtual Bool getUsesSabotageBehavior() const { return getSpecialAbilityUpdateModuleData()->m_useSabotageBehavior; }
+	virtual Bool canHackOrCaptureAirborneTargets() const { return getSpecialAbilityUpdateModuleData()->m_canHackOrCaptureAirborneTargets; }
 
 	// ??? ugh, public stuff that shouldn't be -- hell yeah!
 	UnsignedInt getSpecialObjectCount() const;

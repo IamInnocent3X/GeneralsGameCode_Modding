@@ -118,68 +118,68 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | MODULEINTERFACE_UPGRADE; }  // | MODULEINTERFACE_DAMAGE; 
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
-	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() { return this; }
-	//virtual DamageModuleInterface* getDamage() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
+	virtual EnergyShieldBehaviorInterface* getEnergyShieldBehaviorInterface() override { return this; }
+	//virtual DamageModuleInterface* getDamage() override { return this; }
 
 	// DamageModuleInterface
-	//virtual void onDamage( DamageInfo *damageInfo );
-	//virtual void onHealing( DamageInfo *damageInfo ) { }
-	//virtual void onBodyDamageStateChange(const DamageInfo* damageInfo, BodyDamageType oldState, BodyDamageType newState) { }
+	//virtual void onDamage( DamageInfo *damageInfo ) override;
+	//virtual void onHealing( DamageInfo *damageInfo ) override { }
+	//virtual void onBodyDamageStateChange(const DamageInfo* damageInfo, BodyDamageType oldState, BodyDamageType newState) override { }
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
-	//virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual UpdateSleepTime update() override;
+	//virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
 	//EnergyShieldBehaviorInterface
-	virtual void applyDamage(Real amount);
-	virtual bool isActive() const { return isUpgradeActive(); }
-	virtual bool shouldShowHealthBar(bool selected) const;
-	virtual Real getShieldPercent() const;
-	virtual RGBAColorInt getHealthBarColor() const { return getEnergyShieldBehaviorModuleData()->m_barColor; }
-	virtual RGBAColorInt getHealthBarBackgroundColor() const { return getEnergyShieldBehaviorModuleData()->m_barBGColor; };
+	virtual void applyDamage(Real amount) override;
+	virtual bool isActive() const override { return isUpgradeActive(); }
+	virtual bool shouldShowHealthBar(bool selected) const override;
+	virtual Real getShieldPercent() const override;
+	virtual RGBAColorInt getHealthBarColor() const override { return getEnergyShieldBehaviorModuleData()->m_barColor; }
+	virtual RGBAColorInt getHealthBarBackgroundColor() const override { return getEnergyShieldBehaviorModuleData()->m_barBGColor; };
 
 protected:
 
-	virtual void upgradeImplementation();
+	virtual void upgradeImplementation() override;
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getEnergyShieldBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
 
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 
 private:

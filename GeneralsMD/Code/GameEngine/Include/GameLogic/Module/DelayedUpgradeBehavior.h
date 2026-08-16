@@ -97,59 +97,59 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | MODULEINTERFACE_UPGRADE; }
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
 
 	// UpdateModule
-	virtual UpdateSleepTime update();
-	virtual void friend_giveSelfUpgrade() { }
+	virtual UpdateSleepTime update() override;
+	virtual void friend_giveSelfUpgrade() override { }
 
 	// This should be active while disabled
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
 protected:
 
 	void triggerUpgrade();
 
-	virtual Bool resetUpgrade(const UpgradeMaskType& keyMask);  // When this upgrade is removed, we reset our triggers.
+	virtual Bool resetUpgrade(const UpgradeMaskType& keyMask) override;  // When this upgrade is removed, we reset our triggers.
 
-	virtual void upgradeImplementation();
+	virtual void upgradeImplementation() override;
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 	
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getDelayedUpgradeBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 };
 

@@ -64,7 +64,7 @@ public:
 	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_UPGRADE); }
 
 	// BehaviorModule
-	virtual UpgradeModuleInterface* getUpgrade() { return this; }
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
 
 	//void createRadiusDecal( const Coord3D& pos );
 	// void createRadiusDecal( const RadiusDecalTemplate& tmpl, Real radius, const Coord3D& pos );
@@ -73,57 +73,57 @@ public:
 	void killRadiusDecal();
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
-	virtual void friend_giveSelfUpgrade() { }
+	virtual UpdateSleepTime update() override;
+	virtual void friend_giveSelfUpgrade() override { }
 
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return MAKE_DISABLED_MASK(DISABLED_HELD); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK(DISABLED_HELD); }
 
 protected:
 
 	void clearDecal();
 
-	virtual void upgradeImplementation()
+	virtual void upgradeImplementation() override
 	{
 		createRadiusDecal();
 		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 	}
 
-	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const
+	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
 		getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.getUpgradeActivationMasks(activation, conflicting);
 	}
 
-	virtual void performUpgradeFX()
+	virtual void performUpgradeFX() override
 	{
 		getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
-	virtual void processUpgradeGrant()
+	virtual void processUpgradeGrant() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 	
-	virtual void processUpgradeRemoval()
+	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
 		getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
 	}
 
-	virtual Bool requiresAllActivationUpgrades() const
+	virtual Bool requiresAllActivationUpgrades() const override
 	{
 		return getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
-	virtual Bool checkStartsActive() const
+	virtual Bool checkStartsActive() const override
 	{
 		return getRadiusDecalBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
-	virtual Bool isSubObjectsUpgrade() { return false; }
-	virtual Bool hasUpgradeRefresh() { return false; }
+	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 
 	RadiusDecal m_radiusDecal;

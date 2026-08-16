@@ -34,7 +34,7 @@
 class BuildListInfo;
 class SpecialPowerTemplate;
 
-typedef BitFlags<10> UsedShipyardsMask;
+typedef BitFlags<10, struct UsedShipyardsMaskTag> UsedShipyardsMask;
 
 /**
  * The computer-controlled opponent.

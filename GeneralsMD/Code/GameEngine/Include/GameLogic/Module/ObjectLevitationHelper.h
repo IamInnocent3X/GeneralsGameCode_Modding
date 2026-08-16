@@ -53,8 +53,8 @@ public:
 	ObjectLevitationHelper( Thing *thing, const ModuleData *modData ) : ObjectHelper( thing, modData ) { }
 	// virtual destructor prototype provided by memory pool object
 
-	virtual UpdateSleepTime update();
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
+	virtual UpdateSleepTime update() override;
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
 	void doLevitation( Real height );
 

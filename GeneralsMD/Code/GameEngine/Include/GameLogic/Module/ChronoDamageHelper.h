@@ -52,8 +52,8 @@ public:
 	ChronoDamageHelper( Thing *thing, const ModuleData *modData );
 	// virtual destructor prototype provided by memory pool object
 
-	virtual DisabledMaskType getDisabledTypesToProcess() const { return DISABLEDMASK_ALL; }
-	virtual UpdateSleepTime update();
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
+	virtual UpdateSleepTime update() override;
 
 	void notifyChronoDamage( Real amount );
 

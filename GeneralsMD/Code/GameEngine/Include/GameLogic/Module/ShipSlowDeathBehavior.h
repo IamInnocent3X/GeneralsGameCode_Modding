@@ -146,7 +146,7 @@ public:
 	ShipSlowDeathBehavior( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual void beginSlowDeath( const DamageInfo *damageInfo );	///< begin the slow death cycle
+	virtual void beginSlowDeath( const DamageInfo *damageInfo ) override;	///< begin the slow death cycle
 	virtual UpdateSleepTime update();
 
 protected:

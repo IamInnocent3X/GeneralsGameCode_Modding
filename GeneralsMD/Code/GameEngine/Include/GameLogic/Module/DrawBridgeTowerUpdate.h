@@ -73,25 +73,25 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions );
-	virtual Bool isSpecialAbility() const { return false; }
-	virtual Bool isSpecialPower() const { return true; }
-	virtual Bool isActive() const {return false;}
-	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() { return this; }
-	virtual Bool doesSpecialPowerHaveOverridableDestinationActive() const { return false; } //Is it active now?
-	virtual Bool doesSpecialPowerHaveOverridableDestination() const { return false; }	//Does it have it, even if it's not active?
-	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) {}
-	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const;
-	virtual const AsciiString& getCursorName() const { return getDrawBridgeTowerUpdateModuleData()->m_cursorName; }
-	virtual const AsciiString& getInvalidCursorName() const { return AsciiString::TheEmptyString; }
-	virtual void setDelay(UnsignedInt delayFrame) { }
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) override;
+	virtual Bool isSpecialAbility() const override { return false; }
+	virtual Bool isSpecialPower() const override { return true; }
+	virtual Bool isActive() const override {return false;}
+	virtual SpecialPowerUpdateInterface* getSpecialPowerUpdateInterface() override { return this; }
+	virtual Bool doesSpecialPowerHaveOverridableDestinationActive() const override { return false; } //Is it active now?
+	virtual Bool doesSpecialPowerHaveOverridableDestination() const override { return false; }	//Does it have it, even if it's not active?
+	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) override {}
+	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) override const;
+	virtual const AsciiString& getCursorName() const override { return getDrawBridgeTowerUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual void setDelay(UnsignedInt delayFrame) override { }
 
 
-	virtual void onObjectCreated();
-	virtual void onDelete();
-	virtual UpdateSleepTime update();
+	virtual void onObjectCreated() override;
+	virtual void onDelete() override;
+	virtual UpdateSleepTime update() override;
 
-	virtual CommandOption getCommandOption() const;
+	virtual CommandOption getCommandOption() const override;
 
 protected:
 	DrawBridgeUpdate* getDrawBridgeUpdate() const;

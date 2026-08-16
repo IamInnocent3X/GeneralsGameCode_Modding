@@ -89,29 +89,29 @@ public:
 	// virtual destructor provided by memory pool object
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
-	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() { return this; }
+	virtual UpdateSleepTime update() override;
+	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() override { return this; }
 
 	// ProjectileUpdateInterface
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr );
-	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride );
-	virtual Bool projectileHandleCollision( Object *other );
-	virtual Bool projectileIsArmed() const { return true; }
-	virtual ObjectID projectileGetLauncherID() const { return m_launcherID; }
-	virtual Bool projectileGetLaunchPos(Coord3D& pos) const { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }
-	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) { m_launchVeterancy = v; }
-	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID );
-	virtual void projectileNowJammed(Bool noDamage = FALSE);
-	virtual void projectileNowDrawn(ObjectID attractorID);
-	virtual Object* getTargetObject();
-	virtual const Coord3D* getTargetPosition();
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) override;
+	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) override;
+	virtual Bool projectileHandleCollision( Object *other ) override;
+	virtual Bool projectileIsArmed() const override { return true; }
+	virtual ObjectID projectileGetLauncherID() const override { return m_launcherID; }
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const override { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) override { m_launchVeterancy = v; }
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const override { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) override;
+	virtual void projectileNowJammed(Bool noDamage = FALSE) override;
+	virtual void projectileNowDrawn(ObjectID attractorID) override;
+	virtual Object* getTargetObject() override;
+	virtual const Coord3D* getTargetPosition() override;
 	virtual bool projectileShouldCollideWithWater() const override;
-	virtual Bool projectileShouldDetonateOnGround() const { return getFreeFallProjectileBehaviorModuleData()->m_detonateOnGround; }
+	virtual Bool projectileShouldDetonateOnGround() const override { return getFreeFallProjectileBehaviorModuleData()->m_detonateOnGround; }
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) { m_shrapnelLaunchID = shrapnelLaunchID; }
-	virtual void friend_refreshUpdate() { refreshUpdate(); }
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
 
-	virtual void refreshUpdate() { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 protected:
 
