@@ -34,14 +34,15 @@ class GlobalLightingModifierUpdateModuleData : public UpdateModuleData
 public:
 	enum LightingBlendMode CPP_11(: Int)
 	{
-		LIGHTINGMOD_DARKEN = 0,		///< multiply lighting toward TargetColor (use a dark color)
-		LIGHTINGMOD_COLORIZE,		///< multiply lighting toward TargetColor (tint)
-		LIGHTINGMOD_BRIGHTEN		///< add TargetColor to lighting
+		LIGHTINGMOD_MULTIPLY = 0,	///< multiply lighting toward TargetColor (darken / tint)
+		LIGHTINGMOD_ADDITIVE		///< add TargetColor to lighting (brighten / additive tint)
 	};
 
 	RGBColor		m_targetColor;		///< the color to multiply/add toward
 	Int				m_blendMode;		///< LightingBlendMode
-	Real			m_intensity;		///< 0..1 (or higher for BRIGHTEN) strength at full fade
+	Real			m_intensity;		///< 0..1 (or higher for ADDITIVE) strength at full fade
+	UnsignedInt		m_initialDelayFrames;	///< after the gate is met, wait this long before activating (0 = none)
+	UnsignedInt		m_durationFrames;	///< once activated, stay active this long then fade out (0 = infinite)
 	UnsignedInt		m_fadeInFrames;		///< frames to ramp in when activated
 	UnsignedInt		m_fadeOutFrames;	///< frames to ramp out when deactivated
 	AsciiString		m_requiredUpgrade;	///< if set, only active while this upgrade is owned (else always active while alive)
@@ -68,7 +69,9 @@ public:
 
 protected:
 
-	Bool computeActive( void ) const;	///< is this instance currently contributing (before fade)?
+	Bool computeConditionMet( void ) const;	///< is the activation gate satisfied right now (alive + upgrade)?
 
 	Real m_weight;			///< current fade weight 0..1
+	Bool m_triggered;		///< has the gate been met and the timed cycle started?
+	UnsignedInt m_triggerFrame;	///< frame the gate was first met (start of InitialDelay)
 };

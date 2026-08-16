@@ -23,15 +23,15 @@
 #include "Common/Player.h"
 #include "Common/Upgrade.h"
 #include "Common/Xfer.h"
+#include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/GlobalLightingModifierUpdate.h"
 
 //-------------------------------------------------------------------------------------------------
 static const char* const TheLightingBlendModeNames[] =
 {
-	"DARKEN",
-	"COLORIZE",
-	"BRIGHTEN",
+	"MULTIPLY",
+	"ADDITIVE",
 	nullptr
 };
 
@@ -39,8 +39,10 @@ static const char* const TheLightingBlendModeNames[] =
 GlobalLightingModifierUpdateModuleData::GlobalLightingModifierUpdateModuleData()
 {
 	m_targetColor.red = m_targetColor.green = m_targetColor.blue = 0.0f;
-	m_blendMode = LIGHTINGMOD_DARKEN;
+	m_blendMode = LIGHTINGMOD_MULTIPLY;
 	m_intensity = 1.0f;
+	m_initialDelayFrames = 0;	// no delay
+	m_durationFrames = 0;		// infinite (stays active until gate drops)
 	m_fadeInFrames = 1;
 	m_fadeOutFrames = 1;
 	// m_requiredUpgrade defaults empty -> always active while alive
@@ -56,6 +58,8 @@ GlobalLightingModifierUpdateModuleData::GlobalLightingModifierUpdateModuleData()
 		{ "TargetColor",		INI::parseRGBColor,				nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_targetColor ) },
 		{ "BlendMode",			INI::parseIndexList,			TheLightingBlendModeNames,		offsetof( GlobalLightingModifierUpdateModuleData, m_blendMode ) },
 		{ "Intensity",			INI::parseReal,					nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_intensity ) },
+		{ "InitialDelay",		INI::parseDurationUnsignedInt,	nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_initialDelayFrames ) },
+		{ "Duration",			INI::parseDurationUnsignedInt,	nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_durationFrames ) },
 		{ "FadeInTime",			INI::parseDurationUnsignedInt,	nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_fadeInFrames ) },
 		{ "FadeOutTime",		INI::parseDurationUnsignedInt,	nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_fadeOutFrames ) },
 		{ "RequiredUpgrade",	INI::parseAsciiString,			nullptr,						offsetof( GlobalLightingModifierUpdateModuleData, m_requiredUpgrade ) },
@@ -67,7 +71,9 @@ GlobalLightingModifierUpdateModuleData::GlobalLightingModifierUpdateModuleData()
 //-------------------------------------------------------------------------------------------------
 GlobalLightingModifierUpdate::GlobalLightingModifierUpdate( Thing *thing, const ModuleData* moduleData ) :
 	UpdateModule( thing, moduleData ),
-	m_weight( 0.0f )	// start faded out; ramps in
+	m_weight( 0.0f ),	// start faded out; ramps in
+	m_triggered( FALSE ),
+	m_triggerFrame( 0 )
 {
 	GlobalLightingModifierManager::get().registerContributor( this );
 }
@@ -79,7 +85,7 @@ GlobalLightingModifierUpdate::~GlobalLightingModifierUpdate( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool GlobalLightingModifierUpdate::computeActive( void ) const
+Bool GlobalLightingModifierUpdate::computeConditionMet( void ) const
 {
 	const Object* obj = getObject();
 	if( obj == nullptr || obj->isEffectivelyDead() )
@@ -107,7 +113,37 @@ UpdateSleepTime GlobalLightingModifierUpdate::update( void )
 {
 	const GlobalLightingModifierUpdateModuleData* d = getGlobalLightingModifierUpdateModuleData();
 
-	Real target = computeActive() ? 1.0f : 0.0f;
+	// Determine the timed activation target (0 or 1).
+	Real target;
+	if( !computeConditionMet() )
+	{
+		// gate not satisfied (dead, or required upgrade lost): fade out and allow a future re-trigger
+		m_triggered = FALSE;
+		target = 0.0f;
+	}
+	else
+	{
+		UnsignedInt now = TheGameLogic->getFrame();
+		if( !m_triggered )
+		{
+			m_triggered = TRUE;
+			m_triggerFrame = now;	// start of InitialDelay
+		}
+
+		UnsignedInt elapsed = now - m_triggerFrame;
+		if( elapsed < d->m_initialDelayFrames )
+		{
+			target = 0.0f;	// still delayed
+		}
+		else
+		{
+			UnsignedInt activeElapsed = elapsed - d->m_initialDelayFrames;
+			if( d->m_durationFrames == 0 || activeElapsed < d->m_durationFrames )
+				target = 1.0f;	// active
+			else
+				target = 0.0f;	// duration expired -> fade out (stays done while the gate holds)
+		}
+	}
 
 	if( m_weight < target )
 	{
@@ -142,15 +178,14 @@ void GlobalLightingModifierUpdate::getLightingContribution( RGBColor& outMul, RG
 	const RGBColor& c = d->m_targetColor;
 	switch( d->m_blendMode )
 	{
-		case GlobalLightingModifierUpdateModuleData::LIGHTINGMOD_BRIGHTEN:
+		case GlobalLightingModifierUpdateModuleData::LIGHTINGMOD_ADDITIVE:
 			// additive: add the target color scaled by strength
 			outAdd.red   = c.red   * s;
 			outAdd.green = c.green * s;
 			outAdd.blue  = c.blue  * s;
 			break;
 
-		case GlobalLightingModifierUpdateModuleData::LIGHTINGMOD_DARKEN:
-		case GlobalLightingModifierUpdateModuleData::LIGHTINGMOD_COLORIZE:
+		case GlobalLightingModifierUpdateModuleData::LIGHTINGMOD_MULTIPLY:
 		default:
 			// multiplicative: lerp each channel from 1 (no change) toward the target color
 			outMul.red   = 1.0f + ( c.red   - 1.0f ) * s;
@@ -169,17 +204,24 @@ void GlobalLightingModifierUpdate::crc( Xfer *xfer )
 //-------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version */
+	* 1: Initial version
+	* 2: Added timed activation state (m_triggered, m_triggerFrame) */
 //-------------------------------------------------------------------------------------------------
 void GlobalLightingModifierUpdate::xfer( Xfer *xfer )
 {
-	XferVersion currentVersion = 1;
+	XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
 	UpdateModule::xfer( xfer );
 
 	xfer->xferReal( &m_weight );
+
+	if( version >= 2 )
+	{
+		xfer->xferBool( &m_triggered );
+		xfer->xferUnsignedInt( &m_triggerFrame );
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
