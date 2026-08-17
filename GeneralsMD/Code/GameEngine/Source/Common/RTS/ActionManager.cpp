@@ -1081,7 +1081,8 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 				  TheInGameUI->getGUICommand()->getCommandType() != GUICOMMANDMODE_EQUIP_OBJECT )
 			  )
 			  {
-				  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, objectToEquip, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
+				  // Need to check if there are any weapons able to be used by the object towards to target, and if so, only triggers if force attacking
+				  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() || obj->getRelationship(objectToEquip) != ENEMIES ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, objectToEquip, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 				  if((result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
 				  	   obj->getRelationship(objectToEquip) == ALLIES ||
 					   (obj->getRelationship(objectToEquip) != ENEMIES && canEnterObject( obj, objectToEquip, commandSource, CHECK_CAPACITY, FALSE )) )

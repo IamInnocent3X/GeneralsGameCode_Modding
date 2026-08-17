@@ -252,7 +252,7 @@ Bool CrateCollide::revertCollideBehavior( Object *other )
 {
 	const CrateCollideModuleData* md = getCrateCollideModuleData();
 	Object *obj = getObject();
-	
+
 	// Clear other statuses set by this module
 	obj->clearStatus( md->m_statusToSet );
 	for(std::vector<AsciiString>::const_iterator it = md->m_customStatusToSet.begin(); it != md->m_customStatusToSet.end(); ++it)

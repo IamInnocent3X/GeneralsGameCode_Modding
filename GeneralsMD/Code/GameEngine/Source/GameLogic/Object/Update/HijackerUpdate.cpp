@@ -76,6 +76,8 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	m_customStatusToDestroy.clear();
 	m_recentParasiteKeys.clear();
 	m_wasTargetAirborne = false;
+	m_lastRemoved = false;
+	m_lastKilled = false;
 	m_ejectPos.zero();
 	m_hijackType = HIJACK_NONE;
 //	m_ejectPilotDMI = nullptr;
@@ -86,6 +88,53 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 HijackerUpdate::~HijackerUpdate()
 {
 }
+
+#if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
+//-------------------------------------------------------------------------------------------------
+static void scatterToNearbyPosition(Object* obj)
+{
+	//
+	// for now we will just set the position of the object that is being removed from us
+	// at a random angle away from our center out some distance
+	//
+
+	//
+	// pick an angle that is in the view of the current camera position so that
+	// the thing will come out "toward" the player and they can see it
+	// NOPE, can't do that ... all players screen angles will be different, unless
+	// we maintain the angle of each players screen in the player structure or something
+	//
+	Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
+//	angle = TheTacticalView->getAngle();
+//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
+
+	Real minRadius = 2*obj->getGeometryInfo().getBoundingCircleRadius();
+	Real maxRadius = minRadius + minRadius / 2.0f;
+	Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
+
+	Coord3D pos;
+	pos.x = dist * Cos( angle ) + obj->getPosition()->x;
+	pos.y = dist * Sin( angle ) + obj->getPosition()->y;
+	if(!obj->isSignificantlyAboveTerrain()) pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
+
+	// set orientation
+	obj->setOrientation( angle );
+
+	AIUpdateInterface *ai = obj->getAIUpdateInterface();
+	if( ai && !obj->isEffectivelyDead() )
+	{
+ 		ai->aiMoveToPosition( &pos, CMD_FROM_AI );
+
+	}
+	else
+	{
+
+		// no ai, just set position at the target pos
+		obj->setPosition( &pos );
+
+	}
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -246,12 +295,22 @@ UpdateSleepTime HijackerUpdate::update()
 			}
 		}
 
+		// Check if we have last ejected
+		Bool lastEject = m_eject && revertedCollide && !isDestroyed;
+
 		setEject( FALSE );
 		setClear( FALSE );
 		setHealed( FALSE );
 		setNoSelfDamage( FALSE );
 
-		if( target && !target->isEffectivelyDead() && !target->isDestroyed() && !revertedCollide)
+		if(lastEject) {
+			m_lastRemoved = isRemoved;
+			m_lastKilled = isKilled;
+			obj->setPosition( &m_ejectPos );
+			return UPDATE_SLEEP_NONE;
+		}
+
+		if( target && !target->isEffectivelyDead() && !target->isDestroyed() && !revertedCollide )
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
 			if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
@@ -295,29 +354,37 @@ UpdateSleepTime HijackerUpdate::update()
 				obj->clearStatus( MAKE_OBJECT_STATUS_MASK3( OBJECT_STATUS_NO_COLLISIONS, OBJECT_STATUS_MASKED, OBJECT_STATUS_UNSELECTABLE ) );
 
 				AIUpdateInterface* ai = obj->getAIUpdateInterface();
-				if ( ai )
+				if ( ai && !isDestroyed && !isKilled && !m_lastKilled )
 				{
 					ai->aiIdle( CMD_FROM_AI );
 				}
 
-				if (m_wasTargetAirborne && !isDestroyed && !isKilled)
-				{
-					const ThingTemplate* putInContainerTmpl = TheThingFactory->findTemplate(getHijackerUpdateModuleData()->m_parachuteName);
-					DEBUG_ASSERTCRASH(putInContainerTmpl,("DeliverPayload: PutInContainer %s not found!",getHijackerUpdateModuleData()->m_parachuteName.str()));
-					if (putInContainerTmpl)
+				if( !isDestroyed ) {
+					if (m_wasTargetAirborne && !obj->isEffectivelyDead())
 					{
-						Object* container = TheThingFactory->newObject( putInContainerTmpl, obj->getTeam() );
-						container->setPosition(&m_ejectPos);
-						if (container->getContain()->isValidContainerFor(obj, true))
+						const ThingTemplate* putInContainerTmpl = TheThingFactory->findTemplate(getHijackerUpdateModuleData()->m_parachuteName);
+						DEBUG_ASSERTCRASH(putInContainerTmpl,("DeliverPayload: PutInContainer %s not found!",getHijackerUpdateModuleData()->m_parachuteName.str()));
+						if (putInContainerTmpl)
 						{
-							container->getContain()->addToContain(obj);
+							Object* container = TheThingFactory->newObject( putInContainerTmpl, obj->getTeam() );
+							container->setPosition(&m_ejectPos);
+							if (container->getContain()->isValidContainerFor(obj, true))
+							{
+								container->getContain()->addToContain(obj);
+							}
+							else
+							{
+								DEBUG_CRASH(("DeliverPayload: PutInContainer %s is full, or not valid for the payload!",getHijackerUpdateModuleData()->m_parachuteName.str()));
+							}
 						}
-						else
-						{
-							DEBUG_CRASH(("DeliverPayload: PutInContainer %s is full, or not valid for the payload!",getHijackerUpdateModuleData()->m_parachuteName.str()));
-						}
-					}
 
+					}
+#if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
+					else
+					{
+						scatterToNearbyPosition(obj);
+					}
+#endif
 				}
 
 
@@ -358,10 +425,14 @@ UpdateSleepTime HijackerUpdate::update()
 			{
 				TheGameLogic->destroyObject( obj );
 			}
-			else if(isKilled)
+			else if(isKilled || m_lastKilled)
 			{
 				obj->kill();
 			}
+
+			m_lastRemoved = false;
+			m_lastKilled = false;
+
 
 		}
 
@@ -690,6 +761,12 @@ void HijackerUpdate::xfer( Xfer *xfer )
 
 	// destroy on target die
 	xfer->xferBool( &m_destroyOnTargetDie );
+
+	// was last removed
+	xfer->xferBool( &m_lastRemoved );
+
+	// was last killed
+	xfer->xferBool( &m_lastKilled );
 
 	// Damage Percentage
 	xfer->xferReal( &m_percentDamage );
