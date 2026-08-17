@@ -3276,11 +3276,21 @@ void AIGroup::groupEvacuate( CommandSourceType cmdSource )
 	}
 }
 
-void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, OrderNearbyData orderData )
+void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, const GameMessage *msg )
 {
 	// Do nothing for invalid radius
-	if(orderData.Radius <= 0.0f)
+	//if(orderData.Radius <= 0.0f)
+	//	return;
+
+	// Sanity
+	if (!msg)
 		return;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+	if(orderData.Radius <= 0.0f) {
+		DEBUG_CRASH(("ENTER_ME command requires a declared radius to be used"));
+		return;
+	}
 
 	ListObjectPtrIt it;
 
@@ -3419,7 +3429,7 @@ void AIGroup::groupGuardPosition( const Coord3D *pos, GuardMode guardMode, Comma
 	}
 
 	Coord3D guardPos;
-	guardPos.set( pos );
+	guardPos.set( *pos );
 
 	Bool guardCurrentPos = guardMode == GUARDMODE_CURRENT_POS || guardMode == GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT || guardMode == GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY ? TRUE : FALSE;
 
@@ -3430,7 +3440,7 @@ void AIGroup::groupGuardPosition( const Coord3D *pos, GuardMode guardMode, Comma
 		if (ai)
 		{
 			if(guardCurrentPos)
-				guardPos.set((*i)->getPosition());
+				guardPos.set(*(*i)->getPosition());
 
 			ai->aiGuardPosition( &guardPos, guardMode, cmdSource );
 		}

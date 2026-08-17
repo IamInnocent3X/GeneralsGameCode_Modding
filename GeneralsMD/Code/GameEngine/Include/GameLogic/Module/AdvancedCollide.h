@@ -102,7 +102,7 @@ protected:
 
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
 
-	virtual Bool shouldTrigger(Object* other) override;
+	virtual Bool shouldTrigger(Object* other);
 
 private:
 	Weapon* m_collideWeapon;

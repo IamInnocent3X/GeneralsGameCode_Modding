@@ -177,12 +177,12 @@ void NeutronMissileUpdate::projectileNowJammed(Bool noDamage)
 	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
 
 	if(!m_assignedBackup)
-		m_intermedPosBackup.set(&m_intermedPos);
+		m_intermedPosBackup.set(m_intermedPos);
 
 	m_assignedBackup = TRUE;
 
 	Coord3D targetPosition;
-	targetPosition.set(&m_intermedPosBackup);
+	targetPosition.set(m_intermedPosBackup);
 
 	Real scatter = d->m_distanceScatterWhenJammed;
 	targetPosition.x += GameLogicRandomValue(-scatter, scatter);
@@ -191,7 +191,7 @@ void NeutronMissileUpdate::projectileNowJammed(Bool noDamage)
 																											targetPosition.y, 
 																											TheTerrainLogic->getHighestLayerForDestination(&targetPosition) );
 																											
-	m_intermedPos.set(&targetPosition);
+	m_intermedPos.set(targetPosition);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -1189,7 +1189,7 @@ const AsciiString& W3DTreeBuffer::findTreeNameInPos(const Coord3D* loc) const
 				}
 				Coord3D delta;
 				delta.set(m_trees[treeNdx].location.X, m_trees[treeNdx].location.Y, m_trees[treeNdx].location.Z );
-				delta.sub(&pos);
+				delta.sub(pos);
 				if (radius*radius>delta.lengthSqr()) {
 					return m_treeTypes[m_trees[treeNdx].treeType].m_data->m_modelName;
 				}

@@ -94,7 +94,7 @@ static void checkForAutoHeal( Object *testObj, void *userData )
 //-------------------------------------------------------------------------------------------------
 AutoHealBehavior::AutoHealBehavior( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
 {
-	const AutoHealBehaviorModuleData *d = getAutoHealBehaviorModuleData();
+	//const AutoHealBehaviorModuleData *d = getAutoHealBehaviorModuleData();
 
 	m_radiusParticleSystemID = INVALID_PARTICLE_SYSTEM_ID;
 	m_soonestHealFrame = 0;

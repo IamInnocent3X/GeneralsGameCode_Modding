@@ -186,12 +186,12 @@ void DumbProjectileBehavior::projectileNowJammed(Bool noDamage)
 	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
 
 	if (!m_assignedBackup)
-		m_flightPathEndBackup.set(&m_flightPathEnd);
+		m_flightPathEndBackup.set(m_flightPathEnd);
 
 	m_assignedBackup = TRUE;
 
 	Coord3D targetPosition;
-	targetPosition.set(&m_flightPathEndBackup);
+	targetPosition.set(m_flightPathEndBackup);
 
 	Real scatter = d->m_distanceScatterWhenJammed;
 	targetPosition.x += GameLogicRandomValue(-scatter, scatter);
@@ -200,7 +200,7 @@ void DumbProjectileBehavior::projectileNowJammed(Bool noDamage)
 																											targetPosition.y, 
 																											TheTerrainLogic->getHighestLayerForDestination(&targetPosition) );
 																											
-	m_flightPathEnd.set(&targetPosition);
+	m_flightPathEnd.set(targetPosition);
 
 	if (!calcFlightPath(false))
 	{

@@ -217,7 +217,7 @@ UpdateSleepTime MobMemberSlavedUpdate::update()
 		return calcSleepTime();
 	}
 
-	m_masterlastCoord.set( masterCoord );
+	m_masterlastCoord.set( *masterCoord );
 
 	Object *victim = getObject()->getAIUpdateInterface()->getCurrentVictim();
 	Object *masterVictim = master->getAIUpdateInterface()->getCurrentVictim();

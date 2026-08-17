@@ -285,7 +285,7 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 		}
 	}
 
-	// IamInnocent - Fixed moving while deployed by checking for the undeploying state requirements instead of deploying.
+	// IamInnocent - Fixed moving while deployed by checking for the undeploying state requirements first instead of deploying.
 	if( isTryingToMove || m_doUndeploy )
 	{
 		switch( m_state )
@@ -349,7 +349,7 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 #else
 	// @todo Simplify the code by moving the second branch up so 'isTryingToMove' is checked first.
 	// IamInnocent - Fixed moving while deployed state by checking the undeploying state requirements instead of deploying.
-	else if ( (!isTryingToMove && (isInRange || isInGuardIdleState)) || m_doDeploy )
+	else if ( (!isTryingToMove && (m_isInRange || isInGuardIdleState)) || m_doDeploy )
 #endif
 	{
 		switch( m_state )

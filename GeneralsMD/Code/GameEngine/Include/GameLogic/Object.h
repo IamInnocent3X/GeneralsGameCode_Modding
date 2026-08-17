@@ -941,7 +941,7 @@ public:
 	void setIgnoreRailgunCheck() { m_ignoreRailgunCheck = TRUE; }
 
 	const Coord3D* getCurrentTargetCoord() const { return &m_currentTargetCoords; }
-	void setCurrentTargetCoord(const Coord3D *pos) { m_currentTargetCoords.set(pos); }
+	void setCurrentTargetCoord(const Coord3D *pos) { m_currentTargetCoords.set(*pos); }
 
 	void setNeedUpdateTurretPositioning(Bool set);
 

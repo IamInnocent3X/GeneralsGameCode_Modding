@@ -781,73 +781,7 @@ void INI::parseAsciiStringVectorAppend( INI* ini, void * /*instance*/, void *sto
 	// asv->clear();
 	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
-		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
-		nkv->push_back(nameKey);
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-void INI::parseNameKeyVectorAppend( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	if (!TheNameKeyGenerator) {
-		DEBUG_LOG(("name key generator not found"));
-		DEBUG_CRASH(("name key generator not found"));
-		throw INI_INVALID_DATA;
-	}
-
-	std::vector<NameKeyType>* nkv = (std::vector<NameKeyType>*)store;
-	// nope, don't clear. duh.
-	// nkv->clear();
-	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
-	{
-		NameKeyType nameKey = TheNameKeyGenerator->nameToKey(token);
-		nkv->push_back(nameKey);
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-void INI::parseDeployFunctionChangeUpgrade( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	std::vector<AsciiString>* asv = (std::vector<AsciiString>*)store;
-	//asv->clear();
-	
-	Int parsing = 1;
-	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
-	{
-		if(parsing == 3)
-		{
-			if(stricmp(token, "yes") != 0 && stricmp(token, "no") != 0)
-			{
-				DEBUG_CRASH(("invalid boolean token %s -- expected Yes or No",token));
-				throw INI_INVALID_DATA;
-			}
-			parsing = 1;
-		}
-		else if(parsing == 2)
-		{
-			parsing++;
-		}
-		else if(parsing == 1)
-		{
-			if(stricmp(token, "TURRET") != 0 && stricmp(token, "OBJECT") != 0 && stricmp(token, "DEPLOYED") != 0)
-			{
-				DEBUG_CRASH(("%s is invalid, can only parse OBJECT or TURRET." token));
-				throw INI_INVALID_DATA;
-			}
-			parsing++;
-		}
-		else
-		{
-			DEBUG_CRASH(("It shouldn't happen..."));
-		}
 		asv->push_back(token);
-	}
-	if( parsing != 1 )
-	{
-		DEBUG_CRASH(("Declaration for parseDeployFunctionChangeUpgrade is incomplete."));
-		throw INI_INVALID_DATA;
 	}
 }
 

@@ -1808,7 +1808,7 @@ static Bool checkIsNotSelectable(Drawable* drawable)
 	return FALSE;
 }
 
-void CommandTranslator::resolveContextTarget( Drawable *&draw, Object *&obj, Drawable *&drawableInWay, Int modifiers, Bool AdditionalCheck )
+void CommandTranslator::resolveContextTarget( Drawable *&draw, Object *&obj, Drawable *&drawableInWay )
 {
 	//This piece of code is used to prevent interaction with unselectable objects or masked objects. When we
 	//call this function, we typically pass in both a position and a drawable (if applicable), so if the
@@ -1905,6 +1905,8 @@ void CommandTranslator::resolveGuiCommandTarget( const CommandButton *command, D
 
 GameMessage::Type CommandTranslator::handleSmartGarrisonCommand( const Coord3D *pos, Drawable *draw, CommandEvaluateType type )
 {
+	GameMessage::Type msgType = GameMessage::MSG_INVALID;
+
 	// Smart Garrison: holding ALT while hovering a transport the selection can enter overrides
 	// waypoint mode and distributes the units across the target plus nearby transports.
 	if( type == DO_COMMAND || type == EVALUATE_ONLY )
@@ -1941,7 +1943,7 @@ GameMessage::Type CommandTranslator::handleWaypointModeCommand( const Coord3D *p
 	return msgType;
 }
 
-GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *command, Drawable *draw, Object *obj, const Coord3D *pos, CommandEvaluateType type )
+GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *command, Drawable *&draw, Drawable *drawableInWay, Object *obj, const Coord3D *pos, CommandEvaluateType type, Bool isSabotage )
 {
 	GameMessage::Type msgType = GameMessage::MSG_INVALID;
 
@@ -1982,7 +1984,7 @@ GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *comm
 			break;
 		}
 		case GUI_COMMAND_SPECIAL_POWER:
-			currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, draw, pos, InGameUI::SELECTION_ANY, command->getOptions(), nullptr, !isSabotagingGUICommand );
+			currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, draw, pos, InGameUI::SELECTION_ANY, command->getOptions(), nullptr, !isSabotage );
 			break;
 		case GUI_COMMAND_FIRE_WEAPON:
 			currentlyValid = TheInGameUI->canSelectedObjectsEffectivelyUseWeapon( command, obj, pos, InGameUI::SELECTION_ANY );
@@ -1994,8 +1996,8 @@ GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *comm
 
 	if( currentlyValid )
 	{
-				if(BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) && drawableInWay && drawableInWay->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
-					draw = drawableInWay;
+		if(BitIsSet( command->getOptions(), ALLOW_SHRUBBERY_TARGET ) && drawableInWay && drawableInWay->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
+			draw = drawableInWay;
 
 		if( type == DO_COMMAND || type == EVALUATE_ONLY )
 		{
@@ -2374,7 +2376,7 @@ GameMessage::Type CommandTranslator::handleEquipObjectCommand( Drawable *draw, C
 	else
 	{
 		msgType = GameMessage::MSG_EQUIP_HINT;
-		hintMessage = TheMessageStream->appendMessage( msgType );
+		GameMessage *hintMessage = TheMessageStream->appendMessage( msgType );
 		hintMessage->appendObjectIDArgument( draw->getObject()->getID() );
 	}
 	return msgType;
@@ -2720,7 +2722,9 @@ GameMessage::Type CommandTranslator::handleDefaultMoveCommand( Drawable *draw, D
 // ------------------------------------------------------------------------------------------------
 GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 																														 const Coord3D *pos,
-																														 CommandEvaluateType type )
+																														 CommandEvaluateType type,
+																														 Int modifiers,
+																														 Bool AdditionalCheck )
 {
 	Object *obj = draw ? draw->getObject() : nullptr;
 	Drawable *drawableInWay = draw;
@@ -2820,7 +2824,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 			|| command->getCommandType() == GUI_COMMAND_SPECIAL_POWER
 			|| command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT))
 	{
-		return handleGuiCommand( command, draw, obj, pos, type );
+		return handleGuiCommand( command, draw, drawableInWay, obj, pos, type, isSabotagingGUICommand );
 	}
 	else if( command && (command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT
 					 || command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT) )
@@ -4484,7 +4488,6 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			if( TheMouse->isClick(
 				m_leftMouseDownTimeMs, m_leftMouseUpTimeMs,
 				m_leftMouseDownAnchor, m_leftMouseUpAnchor) )
-			{
 			{
 				m_leftMouseClickEvaluate = TRUE;
 			}

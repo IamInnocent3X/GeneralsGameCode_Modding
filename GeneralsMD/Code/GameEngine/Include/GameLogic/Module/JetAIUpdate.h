@@ -92,7 +92,7 @@ public:
 	virtual void setLocomotorGoalNone() override;
 	virtual Bool isIdle() const override;
 	virtual Bool isTaxiingToParking() const override; //only applies to jets interacting with runways.
-	virtual Bool isReloading() const override;
+	virtual Bool isReloading() const;
 
 	virtual void doIdleUpdate() override { m_doStateChange = TRUE; wakeUpNow(); }
 	virtual void doStateChange() override { m_doStateChange = TRUE; }
@@ -104,7 +104,7 @@ public:
 	virtual Bool isTemporarilyPreventingAimSuccess() const override;
 	virtual Bool isDoingGroundMovement() const override;
 	virtual void notifyVictimIsDead() override;
-	virtual Bool isOutOfSpecialReloadAmmo() const override;
+	virtual Bool isOutOfSpecialReloadAmmo() const;
 
 	const Coord3D* friend_getProducerLocation() const { return &m_producerLocation; }
 	Real friend_getOutOfAmmoDamagePerSecond() const { return getJetAIUpdateModuleData()->m_outOfAmmoDamagePerSecond; }

@@ -1220,7 +1220,7 @@ bool GameLogic::onDoSpecialPower(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &curr
 #if !RETAIL_COMPATIBLE_CRC
 		// TheSuperHackers @fix stephanmeesters 01/03/2026 Validate the origin of the source object
 		Player *msgPlayer = getMessagePlayer(msg);
-		if ( source->getControllingPlayer() != msgPlayer && !msg->getArgument( argumentIndex++ )->boolean )
+		if ( source->getControllingPlayer() != msgPlayer && !msg->getArgument( 3 )->boolean )
 		{
 			// IamInnocent - Last Argument indicates whether the Player is doing a Sabotaging Command on the command that is being sabotaged
 			DEBUG_CRASH( ("MSG_DO_SPECIAL_POWER: Player '%ls' attempted to control the object '%s' owned by player '%ls'.",
@@ -1446,7 +1446,7 @@ bool GameLogic::onDoAttackmoveto(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &curr
 
 	if (currentlySelectedGroup)
 	{
-		if( thisPlayer->getUnitsMoveInFormation() )
+		if( getMessagePlayer(msg)->getUnitsMoveInFormation() )
 			currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
 
 		currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
@@ -1463,7 +1463,7 @@ bool GameLogic::onDoForcemoveto(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &curre
 
 	if (currentlySelectedGroup)
 	{
-		if( thisPlayer->getUnitsMoveInFormation() )
+		if( getMessagePlayer(msg)->getUnitsMoveInFormation() )
 			currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE );
 
 		currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
@@ -1480,8 +1480,9 @@ bool GameLogic::onDoMoveto(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlyS
 
 	if( currentlySelectedGroup )
 	{
-		Bool isReverseMoving = thisPlayer->getUnitsMoveInReverse();
-		if( isReverseMoving || thisPlayer->getUnitsMoveInFormation() )
+		Player *msgPlayer = getMessagePlayer(msg);
+		Bool isReverseMoving = msgPlayer->getUnitsMoveInReverse();
+		if( isReverseMoving || msgPlayer->getUnitsMoveInFormation() )
 			currentlySelectedGroup->groupCreateFormation( CMD_FROM_PLAYER, FALSE, isReverseMoving );
 
 		//DEBUG_LOG(("GameLogicDispatch - got a MSG_DO_MOVETO command"));
@@ -1576,7 +1577,7 @@ bool GameLogic::onCreateFormation(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &cur
 {
 	if (currentlySelectedGroup)
 	{
-		currentlySelectedGroup->groupCreateFormation(CMD_FROM_PLAYER);
+		currentlySelectedGroup->groupCreateFormation(CMD_FROM_PLAYER, TRUE);
 	}
 
 	return true;
@@ -1584,13 +1585,13 @@ bool GameLogic::onCreateFormation(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &cur
 
 bool GameLogic::onSettingMoveInFormation(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlySelectedGroup)
 {
-	msgPlayer->setUnitsMoveState(MOVE_IN_FORMATION);
+	getMessagePlayer(msg)->setUnitsMoveState(MOVE_IN_FORMATION);
 	return true;
 }
 
 bool GameLogic::onSettingReverseMove(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlySelectedGroup)
 {
-	msgPlayer->setUnitsMoveState(MOVE_REVERSE, msg->getArgument( 0 )->boolean );
+	getMessagePlayer(msg)->setUnitsMoveState(MOVE_REVERSE, msg->getArgument( 0 )->boolean );
 	return true;
 }
 
@@ -1761,7 +1762,7 @@ bool GameLogic::onEnterMe(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlySe
 {
 	// issue command for either single object or for selected group
 	if( currentlySelectedGroup )
-		currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msg->getOrderNearbyData() );
+		currentlySelectedGroup->groupEnterToSelected( CMD_FROM_PLAYER, msg );
 
 	return true;
 }

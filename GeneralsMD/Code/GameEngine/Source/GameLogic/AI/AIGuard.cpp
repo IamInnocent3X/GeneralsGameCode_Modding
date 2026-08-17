@@ -688,8 +688,8 @@ StateReturnType AIGuardReturnState::onEnter()
 
 					// Set the new goal position to move to
 					Coord3D Direction;
-					Direction.set( me->getPosition() );
-					Direction.sub( &m_goalPosition );
+					Direction.set( *me->getPosition() );
+					Direction.sub( m_goalPosition );
 
 					Real adjustedRange = range - 2 * radius;
 					if(adjustedRange > 0)
@@ -703,7 +703,7 @@ StateReturnType AIGuardReturnState::onEnter()
 					}
 					else
 					{
-						m_goalPosition.set( me->getPosition() );
+						m_goalPosition.set( *me->getPosition() );
 					}
 
 				}

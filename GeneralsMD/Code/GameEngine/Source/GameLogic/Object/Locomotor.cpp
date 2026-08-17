@@ -45,7 +45,7 @@
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/AIUpdate.h"
-#include "vector3.h"
+#include "WWMath/vector3.h"
 #include <array>
 static const Real DONUT_TIME_DELAY_SECONDS=2.5f;
 static const Real DONUT_DISTANCE=4.0*PATHFIND_CELL_SIZE_F;
@@ -1289,7 +1289,7 @@ void Locomotor::locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalP
 			}*/
 			/// IamInnocent - Changed to use Coord3D's inner function
 			Coord3D movePos = goalPos;
-			movePos.sub( &pos );
+			movePos.sub( pos );
 			dist = movePos.length();
 			if (vel > dist)
 				vel = dist;	// do not overcompensate!

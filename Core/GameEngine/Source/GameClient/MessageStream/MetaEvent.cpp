@@ -446,8 +446,8 @@ void MetaMap::registerAsciiStringForCommandKey(const AsciiString& data, Int offs
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-MetaEventTranslator::MetaEventTranslator(),
-	m_lastKeyDown(0),
+MetaEventTranslator::MetaEventTranslator() : 
+	m_lastKeyDown(MK_NONE),
 	m_lastKeyDownTime(0),
 	m_lastNonRepeatKeyDown(MK_NONE),
 	m_lastNonRepeatKeyDownTime(0)
@@ -832,10 +832,10 @@ void MetaEventTranslator::registerSystemDoubleDown(Bool triggeredDoubleDown, Int
 		Int timenow = timeGetTime();
 		if(!(systemKeyState & KEY_STATE_AUTOREPEAT))
 		{
-			m_lastNonRepeatKeyDown = key;
+			m_lastNonRepeatKeyDown = keyType;
 			m_lastNonRepeatKeyDownTime = timenow + 500;
 		}
-		m_lastKeyDown = key;
+		m_lastKeyDown = keyType;
 		m_lastKeyDownTime = timenow + 500;
 	}
 }

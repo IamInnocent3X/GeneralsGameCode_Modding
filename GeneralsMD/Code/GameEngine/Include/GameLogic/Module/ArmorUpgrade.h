@@ -95,7 +95,7 @@ protected:
 	virtual Bool isSubObjectsUpgrade() override { return false; }
 	virtual Bool hasUpgradeRefresh() override { return true; }
 
-	virtual Bool attemptUpgrade(UpgradeMaskType keyMask) override;
+	virtual Bool attemptUpgrade(UpgradeMaskType keyMask);
 
 private:
 	TerrainDecalType m_lastTerrainDecalType;

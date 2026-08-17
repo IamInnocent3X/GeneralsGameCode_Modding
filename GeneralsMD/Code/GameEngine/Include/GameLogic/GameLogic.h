@@ -335,7 +335,7 @@ private:
 	bool onEnter(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onExit(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onEvacuate(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
-	bool onEvacuateMe(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onEnterMe(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onExecuteRailedTransport(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onInternetHack(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onGetRepaired(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);

@@ -101,8 +101,8 @@ static void adjustVectorXY(Coord3D* vec, const Matrix3D* mtx)
 		u.y = Sin(angle);
 		u.z = 0.0f;
 
-		y.crossProduct(&z, &u, &y);
-		x.crossProduct(&y, &z, &x);
+		y.crossProduct(z, u, y);
+		x.crossProduct(y, z, x);
 
 		mat.Set(x.x, y.x, z.x, pos.x,
 			      x.y, y.y, z.y, pos.y,

@@ -4763,7 +4763,7 @@ Int PartitionManager::getObjectsAlongLine(
 		return 0; // Don't do railgun if there is no Checking Distance
 
 	Coord3D dirVec = posOther;
-	dirVec.sub(&pos);
+	dirVec.sub(pos);
 
 	Real distance = dirVec.length();
 	Int checkTimes = REAL_TO_INT_CEIL(distance/RailgunCheckDistance);

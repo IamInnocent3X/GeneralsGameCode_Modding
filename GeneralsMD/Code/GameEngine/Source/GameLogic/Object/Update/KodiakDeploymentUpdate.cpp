@@ -19,7 +19,6 @@
 #include "GameClient/Drawable.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/FXList.h"
-#include "GameClient/ParticleSys.h"
 
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/GameLogic.h"
@@ -126,13 +125,13 @@ Bool KodiakDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTe
 
 	if (!BitIsSet(commandOptions, COMMAND_FIRED_BY_SCRIPT) && !BitIsSet( commandOptions, IS_DOING_SABOTAGE ))
 	{
-		/******CHANGE*******/		m_initialTargetPosition.set(targetPos);
+		/******CHANGE*******/		m_initialTargetPosition.set(*targetPos);
 	}
 	else
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
 		m_specialPowerModule->setReadyFrame(now);
-		/******CHANGE*******/   	m_initialTargetPosition.set(targetPos);
+		/******CHANGE*******/   	m_initialTargetPosition.set(*targetPos);
 		//		setLogicalStatus( GUNSHIPDEPLOY_STATUS_INSERTING );
 	}
 
@@ -178,7 +177,7 @@ Bool KodiakDeploymentUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTe
 
 		// HERE WE NEED TO CREATE THE POINT FURTHER OFF THE MAP SO WE CANT SEE THE LAME HOVER AND ACCELLERATE BEHAVIOR
 		Coord3D deltaToCreationPoint = m_initialTargetPosition;
-		deltaToCreationPoint.sub(&creationCoord);
+		deltaToCreationPoint.sub(creationCoord);
 		Real distanceFromTarget = deltaToCreationPoint.length();
 		deltaToCreationPoint.normalize();
 		deltaToCreationPoint.x *= (distanceFromTarget + data->m_gunshipOrbitRadius);

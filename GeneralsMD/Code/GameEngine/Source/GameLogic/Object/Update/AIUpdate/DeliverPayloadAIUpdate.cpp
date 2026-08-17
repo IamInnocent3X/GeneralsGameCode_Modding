@@ -329,7 +329,7 @@ void DeliverPayloadAIUpdate::deliverPayload(
 
 	if (decalOffset != nullptr) {
 		Coord3D decalPos = *targetPos;
-		decalPos.add(decalOffset);
+		decalPos.add(*decalOffset);
 		m_data.m_deliveryDecalTemplate.createRadiusDecal(decalPos,
 			m_data.m_deliveryDecalRadius, getObject()->getControllingPlayer(), m_deliveryDecal);
 	}

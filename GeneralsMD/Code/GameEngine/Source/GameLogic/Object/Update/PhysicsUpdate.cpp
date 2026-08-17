@@ -48,7 +48,6 @@
 #include "GameLogic/Weapon.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/LogicRandomValue.h"
-#include "GameClient/FXList.h"
 #include "GameClient/GameCLient.h"
 
 const Real DEFAULT_MASS = 1.0f;
@@ -753,7 +752,7 @@ void PhysicsBehavior::doHelicopterSlowDeathForce( Real forwardAngle, Real forwar
 void PhysicsBehavior::setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel)
 {
 	m_doConstantMotion = TRUE;
-	m_constantMotionToLoc.set(toPos);
+	m_constantMotionToLoc.set(*toPos);
 	m_constantMaxSpeed = maxSpeed;
 	m_constantMaxAccel = maxAccel;
 }
@@ -1114,7 +1113,7 @@ UpdateSleepTime PhysicsBehavior::update()
 		//DEBUG_LOG((">>> WATER IMPACT NOW!"));
 		// do water splash sound
 		if (m_waterImpactSound) {
-			AudioEventRTS collisionSound = m_waterImpactSound.Peek();
+			AudioEventRTS collisionSound = *m_waterImpactSound.Peek();
 			collisionSound.setObjectID(getObject()->getID());
 			TheAudio->addAudioEvent(&collisionSound);
 		}

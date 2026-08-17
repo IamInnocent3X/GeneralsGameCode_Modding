@@ -52,7 +52,7 @@ public:
 	Bool m_renderAboveWater;	/// if true, this decal draws above water (else below, shadow-like)
 
 	W3DDecalDrawModuleData();
-	~W3DDecalDrawModuleData();
+	virtual ~W3DDecalDrawModuleData() override;
 	static void buildFieldParse(MultiIniFieldParse& p);
 	// ugh, hack
 	virtual const W3DDecalDrawModuleData* getAsW3DDecalDrawModuleData() const { return this; }

@@ -874,7 +874,7 @@ void MilesAudioManager::handleLoopStopEarly(PlayingAudio* audio) {
 			releaseMilesHandles(audio);
 			closeFile(audio->m_file);	// close it so as not to leak it.
 
-			audio->m_file = playSample3D(audio->m_audioEventRTS, audio->m_3DSample);
+			audio->m_file = playSample3D(audio->m_audioEventRTS.Peek(), audio->m_3DSample);
 
 			// If we don't have a file now, then we should drop to the stopped status so that 
 			// We correctly close this handle.

@@ -1154,7 +1154,7 @@ Bool SpawnBehavior::computeAggregateMembers()
 
 		if( currentSpawn )
 		{
-			avgSpawnPos.add(currentSpawn->getPosition());
+			avgSpawnPos.add(*currentSpawn->getPosition());
 
 			if( !isMoving )
 			{
@@ -1175,7 +1175,7 @@ Bool SpawnBehavior::computeAggregateMembers()
 	// HEALTH BOX POSITION *****************************
 	// pick a centered, average spot to draw the health box
 	avgSpawnPos.scale(1.0f / spawnCount);
-	avgSpawnPos.sub(obj->getPosition());
+	avgSpawnPos.sub(*obj->getPosition());
 	obj->setHealthBoxOffset(avgSpawnPos);
 
 

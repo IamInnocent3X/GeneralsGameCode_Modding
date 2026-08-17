@@ -6165,7 +6165,7 @@ void AIUpdateInterface::lockMyLocomotorToOrbit( const Coord3D *pos, Real radius,
 {
 	/*m_locomotorIsLocked = TRUE;
 	//m_curLocomotor->setOrbit(pos, radius, slope);
-	m_orbitingPos.set(pos);
+	m_orbitingPos.set(*pos);
 	m_orbitingRadius = radius;
 	m_orbitInsertionSlope = slope;
 	getStateMachine()->setTemporaryState(AI_MOVE_TO, LOGICFRAMES_PER_SECOND * 20);

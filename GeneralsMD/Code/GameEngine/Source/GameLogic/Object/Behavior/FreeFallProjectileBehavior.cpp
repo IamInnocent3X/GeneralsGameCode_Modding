@@ -169,12 +169,12 @@ void FreeFallProjectileBehavior::projectileNowJammed(Bool noDamage)
 	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
 
 	if(!m_assignedBackup)
-		m_targetPosBackup.set(&m_targetPos);
+		m_targetPosBackup.set(m_targetPos);
 
 	m_assignedBackup = TRUE;
 
 	Coord3D targetPosition;
-	targetPosition.set(&m_targetPosBackup);
+	targetPosition.set(m_targetPosBackup);
 
 	Real scatter = d->m_distanceScatterWhenJammed;
 	targetPosition.x += GameLogicRandomValue(-scatter, scatter);
@@ -183,7 +183,7 @@ void FreeFallProjectileBehavior::projectileNowJammed(Bool noDamage)
 																											targetPosition.y, 
 																											TheTerrainLogic->getHighestLayerForDestination(&targetPosition) );
 																											
-	m_targetPos.set(&targetPosition);
+	m_targetPos.set(targetPosition);
 }
 
 //-------------------------------------------------------------------------------------------------

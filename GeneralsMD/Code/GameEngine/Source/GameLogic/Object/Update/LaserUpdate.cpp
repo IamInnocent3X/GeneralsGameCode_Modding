@@ -172,8 +172,8 @@ void LaserUpdate::updateStartPos()
 	// Avoid teleporting units having their laser dragged with them
 	if (parentDrawable->isKindOf(KINDOF_TELEPORTER) && !(oldStartPos.x == 0 && oldStartPos.y == 0 && oldStartPos.z == 0)) {
 		Coord3D diff;
-		diff.set(parentDrawable->getPosition());
-		diff.sub(&oldStartPos);
+		diff.set(*parentDrawable->getPosition());
+		diff.sub(oldStartPos);
 		Real MAX_TELEPORT_DISTSQR = 400.0; // 20.0 distance
 		if (diff.lengthSqr() > MAX_TELEPORT_DISTSQR)
 			return;
@@ -657,9 +657,9 @@ void LaserUpdate::updateContinuousLaser(const Object* parent, const Object* targ
 	Coord3D posToUse;
 	if (parent == nullptr)
 	{
-		posToUse.set(startPos);
-		posToUse.add(endPos);
-		posToUse.scale(0.5);
+		posToUse.set( *startPos );
+		posToUse.add( *endPos );
+		posToUse.scale( 0.5 );
 	}
 	else
 	{

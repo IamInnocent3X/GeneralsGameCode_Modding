@@ -96,7 +96,7 @@ public:
 
 	// DieModuleInterface
 	virtual void onDie( const DamageInfo *damageInfo ) override;
-	virtual Bool isDieApplicable(const DamageInfo* damageInfo) const override { return getChronoDeathBehaviorModuleData()->m_dieMuxData.isDieApplicable(getObject(), damageInfo); }
+	virtual Bool isDieApplicable(const DamageInfo* damageInfo) const { return getChronoDeathBehaviorModuleData()->m_dieMuxData.isDieApplicable(getObject(), damageInfo); }
 
 
 protected:

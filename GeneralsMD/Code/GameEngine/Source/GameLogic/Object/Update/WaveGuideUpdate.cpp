@@ -843,7 +843,7 @@ UpdateSleepTime WaveGuideUpdate::update()
 	if(m_lastPos.x != currentPos->x || m_lastPos.y != currentPos->y || m_lastPos.z != currentPos->z)
 		transformWaveShape();
 
-	m_lastPos.set( currentPos );
+	m_lastPos.set( *currentPos );
 	// see if we are close enough to the end of our journey on the waypoint path
 	Real distSquared = PATH_EXTRA_DISTANCE * PATH_EXTRA_DISTANCE;
 	Coord2D v;

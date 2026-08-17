@@ -58,7 +58,7 @@ public:
 	virtual void onDelete() override;
 	virtual UpdateSleepTime update() override;
 
-	virtual CommandOption getCommandOption() const override;
+	CommandOption getCommandOption() const;
 
 	Bool setDrawBridgeState(bool opened, const Object* fromTower);
 

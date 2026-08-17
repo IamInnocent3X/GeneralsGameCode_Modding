@@ -1639,17 +1639,17 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				{
 					Real distance = sqrt(distSqr);
 					Real shrukenDistance = distance * 0.5f;
-					adjustedHeight = min(shrukenDistance, targetHeight);
+					adjustedHeight = std::min(shrukenDistance, targetHeight);
 				}
 				Real dz = 0.25f*adjustedHeight;
 				if(targetCoord.z > dz)
 				{
-					Real max_dz = min(dz, 0.5f*adjustedHeight - targetCoord.z);
+					Real max_dz = std::min(dz, 0.5f*adjustedHeight - targetCoord.z);
 					dz = GameLogicRandomValueReal(-dz, max_dz);
 				}
 				else
 				{
-					Real min_dz = max(-dz, targetCoord.z - 0.25f*adjustedHeight);
+					Real min_dz = std::max(-dz, targetCoord.z - 0.25f*adjustedHeight);
 					dz = GameLogicRandomValueReal(min_dz, dz);
 				}
 				targetCoord.z += dz;
@@ -1747,8 +1747,8 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 							else
 								barrelCount -= maxBarrelCount;
 						}
-						maxBarrelCount = max(0, maxBarrelCount-1);
-						barrelCount = min(barrelCount, maxBarrelCount);
+						maxBarrelCount = std::max(0, maxBarrelCount-1);
+						barrelCount = std::min(barrelCount, maxBarrelCount);
 					}
 					sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, barrelCount, reAngle, reDir, fx != nullptr, FALSE);
 				}
@@ -1909,7 +1909,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			// Handle Detonation OCL
 			Coord3D targetPos; // We need a better position to match the visual laser;
-			//targetPos.set(&projectileDestination); // IamInnocent - Removed inline from this function
+			//targetPos.set(*&projectileDestination); // IamInnocent - Removed inline from this function
 			targetPos = projectileDestination;
 
 			if (curTarget) {
@@ -2154,7 +2154,7 @@ void WeaponTemplate::createPreAttackFX
 		}
 		else if (victimPos)
 		{
-			targetPos.set(victimPos);
+			targetPos.set(*victimPos);
 		}
 
 		/*DEBUG_LOG((">>> INFO - creating PRE_ATTACK FX for '%s' with victim '%s' and pos '(%f, %f, %f)' \n",
@@ -2204,8 +2204,8 @@ void WeaponTemplate::createPreAttackFX
 						else
 							barrelCount -= maxBarrelCount;
 					}
-					maxBarrelCount = max(0, maxBarrelCount-1);
-					barrelCount = min(barrelCount, maxBarrelCount);
+					maxBarrelCount = std::max(0, maxBarrelCount-1);
+					barrelCount = std::min(barrelCount, maxBarrelCount);
 				}
 				sourceObj->getDrawable()->handleWeaponFireRecoil(wslot, specificBarrelToUse, 0.0f, 0.0f, FALSE, TRUE);
 			}
@@ -2788,7 +2788,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					{
 						// Extend (or Reduce) the targeting distance based on the configuration
 						railgunDirection = posOther;
-						railgunDirection.sub( &srcPos );
+						railgunDirection.sub( srcPos );
 
 						Real railgunAngle = atan2(railgunDirection.y, railgunDirection.x);
 						posOther.x += Cos(railgunAngle) * RailgunExtraDistance;
@@ -2799,7 +2799,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					{
 						// If there is any Max Distance configured, then calculate whether it has reached the Max Distance
 						railgunDirection = posOther;
-						railgunDirection.sub( &srcPos );
+						railgunDirection.sub( srcPos );
 						Real railgunDist = railgunDirection.length();
 						if(railgunDist > RailgunMaxDistance)
 						{
@@ -3025,19 +3025,19 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					damageInfo.in.m_shockWaveAmount *= -1;
 					if(m_shockWaveUseCenter)
 					{
-						shockWaveVector.set( pos );
-						shockWaveVector.sub( curVictim->getPosition() );
+						shockWaveVector.set( *pos );
+						shockWaveVector.sub( *curVictim->getPosition() );
 					}
 					else if(source)
 					{
-						shockWaveVector.set( source->getPosition() );
-						shockWaveVector.sub( curVictim->getPosition() );
+						shockWaveVector.set( *source->getPosition() );
+						shockWaveVector.sub( *curVictim->getPosition() );
 					}
 				}
 				else if(m_shockWaveUseCenter)
 				{
-					shockWaveVector.set( curVictim->getPosition() );
-					shockWaveVector.sub( pos );
+					shockWaveVector.set( *curVictim->getPosition() );
+					shockWaveVector.sub( *pos );
 				}
 
 				if(m_shockWaveRespectsCenter)
@@ -3051,8 +3051,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					{
 						Coord3D centerVector;
 
-						centerVector.set( curVictim->getPosition() );
-						centerVector.sub( pos );
+						centerVector.set( *curVictim->getPosition() );
+						centerVector.sub( *pos );
 
 						if(damageInfo.in.m_shockWaveAmount > centerVector.length())
 							damageInfo.in.m_shockWaveAmount = centerVector.length();
@@ -3106,8 +3106,8 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				{
 					if(m_magnetUseCenter)
 					{
-						magnetVector.set( curVictim->getPosition() );
-						magnetVector.sub( pos );
+						magnetVector.set( *curVictim->getPosition() );
+						magnetVector.sub( *pos );
 					}
 					distance = magnetVector.length();
 				}
@@ -3117,13 +3117,13 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 					// Populate the damge information with the magnet information
 					if(m_magnetTaperOffDistance > 0 && distance > m_magnetTaperOffDistance)
 					{
-						Real ratio = max(0.0f, Real(1.0f - ( distance - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOffDistance ) ));
+						Real ratio = std::max(0.0f, Real(1.0f - ( distance - m_magnetTaperOffDistance ) * ( m_magnetTaperOffRatio / m_magnetTaperOffDistance ) ));
 						
 						damageInfo.in.m_magnetAmount *= ratio;
 					}
 					else if(m_magnetTaperOnDistance > 0 && distance < m_magnetTaperOnDistance)
 					{
-						Real ratio = max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - distance ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
+						Real ratio = std::max(0.0f, Real(1.0f + ( m_magnetTaperOnDistance - distance ) * ( m_magnetTaperOnRatio / m_magnetTaperOnDistance ) ));
 						
 						damageInfo.in.m_magnetAmount *= ratio;
 					}
@@ -3135,19 +3135,19 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 							damageInfo.in.m_magnetAmount *= -1;
 							if(m_magnetUseCenter)
 							{
-								magnetVector.set( pos );
-								magnetVector.sub( curVictim->getPosition() );
+								magnetVector.set( *pos );
+								magnetVector.sub( *curVictim->getPosition() );
 							}
 							else if( source )
 							{
-								magnetVector.set( source->getDrawable()->getPosition() );
-								magnetVector.sub( curVictim->getPosition() );
+								magnetVector.set( *source->getDrawable()->getPosition() );
+								magnetVector.sub( *curVictim->getPosition() );
 							}
 						}
 						else if( !m_magnetUseCenter && source )
 						{
-							magnetVector.set( curVictim->getPosition() );
-							magnetVector.sub( source->getDrawable()->getPosition() );
+							magnetVector.set( *curVictim->getPosition() );
+							magnetVector.sub( *source->getDrawable()->getPosition() );
 						}
 						
 						if(m_magnetRespectsCenter)
@@ -3424,7 +3424,7 @@ void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, con
 	}
 
 	Coord3D spawnPos;
-	spawnPos.set( getProjectileTemplate() != nullptr ? source->getPosition() : pos );
+	spawnPos.set( getProjectileTemplate() != nullptr ? *source->getPosition() : *pos );
 
 	for(int i = 0; i < m_shrapnelBonusCount; i++)
 	{
@@ -3449,7 +3449,7 @@ void WeaponTemplate::privateDoShrapnel(ObjectID sourceID, ObjectID victimID, con
 		{
 			Real angle = GameLogicRandomValueReal( 0, 2*PI );
 			Coord3D targetPos;
-			targetPos.set( pos );
+			targetPos.set( *pos );
 			targetPos.x += range * Cos(angle);
 			targetPos.y += range * Sin(angle);
 			targetPos.z = TheTerrainLogic->getGroundHeight(targetPos.x, targetPos.y);

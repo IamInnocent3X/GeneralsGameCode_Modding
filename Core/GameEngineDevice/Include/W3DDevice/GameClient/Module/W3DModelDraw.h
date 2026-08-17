@@ -459,7 +459,7 @@ public:
 	RenderObjClass *getRenderObject() { return m_renderObject; }
 	virtual Bool updateBonesForClientParticleSystems() override;///< this will reposition particle systems on the fly ML
 
-	virtual void handleFXEvents() override;  // Check frame times and trigger FX events at correct positions
+	virtual void handleFXEvents();  // Check frame times and trigger FX events at correct positions
 
 	virtual void onDrawableBoundToObject() override;
 	virtual void setTerrainDecalSize(Real x, Real y) override;

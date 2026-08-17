@@ -779,7 +779,7 @@ void MissileAIUpdate::doAttackState(Bool turnOK, Bool randomPath)
 				targetPos = *getGoalPosition();
 
 			// get halfway position
-			targetPos.add(getObject()->getPosition());
+			targetPos.add(*getObject()->getPosition());
 			targetPos.scale(0.5);
 
 			// TODO: add flag or check for Z scattering
@@ -803,7 +803,7 @@ void MissileAIUpdate::doAttackState(Bool turnOK, Bool randomPath)
 			};
 			adjustVector(&offset, &mtx);
 
-			targetPos.add(&offset);
+			targetPos.add(offset);
 
 			if (!d->m_isTorpedo) {
 				// Make sure Z is above ground

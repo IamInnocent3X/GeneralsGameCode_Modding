@@ -53,7 +53,7 @@ public:
 	UnsignedInt m_interpolationType;
 
 	DynamicGeometryClientUpdateModuleData();
-	~DynamicGeometryClientUpdateModuleData();
+	virtual ~DynamicGeometryClientUpdateModuleData() override;
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
 //-------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class DynamicGeometryClientUpdate : public ClientUpdateModule
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( DynamicGeometryClientUpdate, "DynamicGeometryClientUpdate" )
-	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( DynamicGeometryClientUpdate, DynamicGeometryClientUpdateModuleData);
+	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( DynamicGeometryClientUpdate, DynamicGeometryClientUpdateModuleData );
 
 public:
 

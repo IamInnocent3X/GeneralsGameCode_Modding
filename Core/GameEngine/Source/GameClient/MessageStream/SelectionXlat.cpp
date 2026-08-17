@@ -233,14 +233,14 @@ static Bool canSelectWrapper( Drawable *draw, void *userData )
 static Bool selectSingleDrawableWithoutSound( Drawable *draw )
 {
 
-	// since we are single selecting a drawable, unselect everything else
-	deselectAll();
-
-	// do the drawable selection
-	TheInGameUI->selectDrawable( draw );
-
 	Object *obj = draw->getObject();
 	if (obj != nullptr) {
+		// since we are single selecting a drawable, unselect everything else
+		TheInGameUI->deselectAllDrawables();
+
+		// do the drawable selection
+		TheInGameUI->selectDrawable(draw);
+
 		GameMessage *msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
 		msg->appendBooleanArgument(TRUE);
 		msg->appendObjectIDArgument(obj->getID());
@@ -262,12 +262,10 @@ SelectionTranslator::SelectionTranslator()
 	m_dragSelecting = FALSE;
 	m_lastGroupSelTime = 0;
 	m_lastGroupSelGroup = -1;
-	m_selectFeedbackAnchor.x = 0;
-	m_selectFeedbackAnchor.y = 0;
-	m_deselectFeedbackAnchor.x = 0;
-	m_deselectFeedbackAnchor.y = 0;
-	m_lastClick = 0;
-	m_deselectDownCameraPosition.zero();
+	m_leftMouseDownAnchor.zero();
+	m_rightMouseDownAnchor.zero();
+	m_rightMouseDownTimeMs = 0;
+	m_rightMouseDownCameraPos.zero();
 	m_displayedMaxWarning = FALSE;
 	m_selectCountMap.clear();
 	m_lastTreeDraw = nullptr;

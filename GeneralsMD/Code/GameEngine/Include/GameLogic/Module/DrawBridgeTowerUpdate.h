@@ -81,7 +81,7 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestinationActive() const override { return false; } //Is it active now?
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const override { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) override {}
-	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) override const;
+	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const override;
 	virtual const AsciiString& getCursorName() const override { return getDrawBridgeTowerUpdateModuleData()->m_cursorName; }
 	virtual const AsciiString& getInvalidCursorName() const override { return AsciiString::TheEmptyString; }
 	virtual void setDelay(UnsignedInt delayFrame) override { }

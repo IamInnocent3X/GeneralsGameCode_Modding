@@ -2596,7 +2596,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 
 			// Set up the magnet force to use apply on object
 			Coord3D magnetForce;
-			magnetForce.set( &damageInfo->in.m_magnetVector );
+			magnetForce.set( damageInfo->in.m_magnetVector );
 
 			// Process Magnet Force differently for Ground and Airborne targets
 			if (!isAirborneTarget())
