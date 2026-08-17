@@ -158,6 +158,7 @@ static PoolSizeRec PoolSizes[] =
 	{ "FireWeaponAdvancedUpdate", 32, 32 },
 	{ "FlammableUpdate", 512, 256 },
 	{ "FloatUpdate", 512, 128 },
+	{ "GlobalLightingModifierUpdate", 16, 16 },
 	{ "TensileFormationUpdate", 256, 32 },
 	{ "GarrisonContain", 256, 32 },
 	{ "HealCrateCollide", 32, 32 },

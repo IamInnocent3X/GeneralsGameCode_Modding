@@ -47,6 +47,7 @@
 #include "GameClient/ParticleSys.h"
 #include "GameClient/Color.h"
 #include "GameClient/View.h"
+#include "GameClient/GlobalLightingModifier.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DDynamicLight.h"
@@ -988,11 +989,66 @@ void RTS3DScene::Render(RenderInfoClass & rinfo)
 	{
 		if (m_customPassMode == SCENE_PASS_DEFAULT)
 		{
+			// Global lighting modifier (Phase 1: object lighting). If any modifier objects are active,
+			// tint the global directional lights + scene ambient for this frame's object lighting, then
+			// restore afterward. Terrain (baked) is not affected in Phase 1.
+			GlobalLightingModifierManager& lmMgr = GlobalLightingModifierManager::get();
+			Bool lmActive = lmMgr.hasActiveContributors();
+			Vector3 lmSavedAmbient;
+			Vector3 lmSavedDiffuse[LightEnvironmentClass::MAX_LIGHTS];
+			Vector3 lmSavedLightAmbient[LightEnvironmentClass::MAX_LIGHTS];
+			if (lmActive)
+			{
+				RGBColor lmMul, lmAdd;
+				lmMgr.computeCombined(lmMul, lmAdd);
+
+				lmSavedAmbient = Get_Ambient_Light();
+				Vector3 amb = lmSavedAmbient;
+				amb.X = amb.X * lmMul.red   + lmAdd.red;    if (amb.X < 0.0f) amb.X = 0.0f;
+				amb.Y = amb.Y * lmMul.green + lmAdd.green;  if (amb.Y < 0.0f) amb.Y = 0.0f;
+				amb.Z = amb.Z * lmMul.blue  + lmAdd.blue;   if (amb.Z < 0.0f) amb.Z = 0.0f;
+				Set_Ambient_Light(amb);
+
+				for (Int lmi = 0; lmi < m_numGlobalLights; lmi++)
+				{
+					LightClass* lmL = m_globalLight[lmi];
+					if (lmL == NULL)
+						continue;
+					lmL->Get_Diffuse(&lmSavedDiffuse[lmi]);
+					lmL->Get_Ambient(&lmSavedLightAmbient[lmi]);
+
+					Vector3 d = lmSavedDiffuse[lmi];
+					d.X = d.X * lmMul.red   + lmAdd.red;    if (d.X < 0.0f) d.X = 0.0f;
+					d.Y = d.Y * lmMul.green + lmAdd.green;  if (d.Y < 0.0f) d.Y = 0.0f;
+					d.Z = d.Z * lmMul.blue  + lmAdd.blue;   if (d.Z < 0.0f) d.Z = 0.0f;
+					lmL->Set_Diffuse(d);
+
+					Vector3 a = lmSavedLightAmbient[lmi];
+					a.X = a.X * lmMul.red   + lmAdd.red;    if (a.X < 0.0f) a.X = 0.0f;
+					a.Y = a.Y * lmMul.green + lmAdd.green;  if (a.Y < 0.0f) a.Y = 0.0f;
+					a.Z = a.Z * lmMul.blue  + lmAdd.blue;   if (a.Z < 0.0f) a.Z = 0.0f;
+					lmL->Set_Ambient(a);
+				}
+			}
+
 			//Regular rendering pass with no effects
 			updatePlayerColorPasses();///@todo: this probably doesn't need to be done each frame.
 			updateFixedLightEnvironments(rinfo);
 			Customized_Render(rinfo);
 			Flush(rinfo);
+
+			if (lmActive)
+			{
+				Set_Ambient_Light(lmSavedAmbient);
+				for (Int lmi = 0; lmi < m_numGlobalLights; lmi++)
+				{
+					LightClass* lmL = m_globalLight[lmi];
+					if (lmL == NULL)
+						continue;
+					lmL->Set_Diffuse(lmSavedDiffuse[lmi]);
+					lmL->Set_Ambient(lmSavedLightAmbient[lmi]);
+				}
+			}
 		}
 		else if (m_customPassMode == SCENE_PASS_ALPHA_MASK)
 		{
