@@ -1943,7 +1943,7 @@ GameMessage::Type CommandTranslator::handleWaypointModeCommand( const Coord3D *p
 	return msgType;
 }
 
-GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *command, Drawable *&draw, Drawable *drawableInWay, Object *obj, const Coord3D *pos, CommandEvaluateType type, Bool isSabotage )
+GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *command, Drawable *draw, Drawable *drawableInWay, Object *obj, const Coord3D *pos, CommandEvaluateType type, Bool isSabotage )
 {
 	GameMessage::Type msgType = GameMessage::MSG_INVALID;
 
@@ -1978,13 +1978,13 @@ GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *comm
 		{
 			Object* unit = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
 			if( unit )
-				currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, draw, pos, InGameUI::SELECTION_ANY, command->getOptions(), unit );
+				currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, drawableInWay, pos, InGameUI::SELECTION_ANY, command->getOptions(), unit );
 			else
 				currentlyValid = false;
 			break;
 		}
 		case GUI_COMMAND_SPECIAL_POWER:
-			currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, draw, pos, InGameUI::SELECTION_ANY, command->getOptions(), nullptr, !isSabotage );
+			currentlyValid = TheInGameUI->canSelectedObjectsDoSpecialPower( command, obj, drawableInWay, pos, InGameUI::SELECTION_ANY, command->getOptions(), nullptr, !isSabotage );
 			break;
 		case GUI_COMMAND_FIRE_WEAPON:
 			currentlyValid = TheInGameUI->canSelectedObjectsEffectivelyUseWeapon( command, obj, pos, InGameUI::SELECTION_ANY );
@@ -2724,7 +2724,7 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 																														 const Coord3D *pos,
 																														 CommandEvaluateType type,
 																														 Int modifiers,
-																														 Bool AdditionalCheck )
+																														 Bool additionalCheck )
 {
 	Object *obj = draw ? draw->getObject() : nullptr;
 	Drawable *drawableInWay = draw;
@@ -2735,55 +2735,6 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 	if( obj && obj->isLocallyControlled() && TheInGameUI->isInPreferSelectionMode() )
 	{
 		return GameMessage::MSG_INVALID;
-	}
-	
-	Bool isClick = m_leftMouseClickEvaluate || m_rightMouseClickEvaluate;
-	//UnsignedInt pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
-	//Drawable *draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
-	//																								TheInGameUI->isInForceAttackMode(),
-	//																								(PickType) pickType);
-	//Object* obj = draw ? draw->getObject() : nullptr;
-
-	if( AdditionalCheck )
-	{
-		const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
-		const CommandButton *command = TheInGameUI->getGUICommand();
-
-		// loop through all the selected drawables
-		for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
-		{
-			Object *other = (*it) ? (*it)->getObject() : nullptr;
-
-			if (command != nullptr && command->getOrderNearbyRadius() > 0.0f)
-			{
-				// We don't count delay for this feature
-				checkOtherMembersForParasiteActive(other, obj, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask());
-			}
-
-			if( !other->hasParasiteCollide() )
-				continue;
-
-			AIUpdateInterface *ai = other ? other->getAI() : nullptr;
-			if( ai )
-			{
-				// obj is the current draw->getObject()
-				if( !other->getParasiteCollideActive() && obj && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ) )
-				{
-					other->setParasiteCollideActive(TRUE);
-				}
-				else if( (!m_mouseOverDrawable && !ai->getGoalObject()) || 
-						( isClick && obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) ))
-				{
-					other->setParasiteCollideActive(FALSE);
-				}
-			}
-		}
-	}
-
-	if(isClick)
-	{
-		m_leftMouseClickEvaluate = FALSE;
-		m_rightMouseClickEvaluate = FALSE;
 	}
 
 	// Kris: Now that we can select non-controllable units/structures, don't allow any actions to be performed.
@@ -2816,6 +2767,8 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 	{
 		return handleWaypointModeCommand( pos, draw, type );
 	}
+
+	evaluateAdditionalChecks(obj, additionalCheck);
 
 	CanAttackResult result = ATTACKRESULT_NOT_POSSIBLE;
 
@@ -2938,6 +2891,60 @@ GameMessage::Type CommandTranslator::evaluateContextCommand( Drawable *draw,
 	else
 	{
 		return handleDefaultMoveCommand( draw, drawableInWay, pos, type );
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void CommandTranslator::evaluateAdditionalChecks( Object *obj, Bool doAdditionalChecks )
+{
+	Bool isClick = m_leftMouseClickEvaluate || m_rightMouseClickEvaluate;
+	//UnsignedInt pickType = getPickTypesForContext( TheInGameUI->isInForceAttackMode() );
+	//Drawable *draw = TheTacticalView->pickDrawable(&msg->getArgument(0)->pixelRegion.lo,
+	//																								TheInGameUI->isInForceAttackMode(),
+	//																								(PickType) pickType);
+	//Object* obj = draw ? draw->getObject() : nullptr;
+
+	if( doAdditionalChecks )
+	{
+		const DrawableList *selected = TheInGameUI->getAllSelectedDrawables();
+		const CommandButton *command = TheInGameUI->getGUICommand();
+
+		// loop through all the selected drawables
+		for( DrawableListCIt it = selected->begin(); it != selected->end(); ++it )
+		{
+			Object *other = (*it) ? (*it)->getObject() : nullptr;
+
+			if (command != nullptr && command->getOrderNearbyRadius() > 0.0f)
+			{
+				// We don't count delay for this feature
+				checkOtherMembersForParasiteActive(other, obj, command->getOrderNearbyRadius(), command->getOrderKindofMask(), command->getOrderKindofForbiddenMask());
+			}
+
+			if( !other->hasParasiteCollide() )
+				continue;
+
+			AIUpdateInterface *ai = other ? other->getAI() : nullptr;
+			if( ai )
+			{
+				// obj is the current draw->getObject()
+				if( !other->getParasiteCollideActive() && obj && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER ) )
+				{
+					other->setParasiteCollideActive(TRUE);
+				}
+				else if( (!m_mouseOverDrawable && !ai->getGoalObject()) || 
+						( isClick && obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) ))
+				{
+					other->setParasiteCollideActive(FALSE);
+				}
+			}
+		}
+	}
+
+	if(isClick)
+	{
+		m_leftMouseClickEvaluate = FALSE;
+		m_rightMouseClickEvaluate = FALSE;
 	}
 }
 

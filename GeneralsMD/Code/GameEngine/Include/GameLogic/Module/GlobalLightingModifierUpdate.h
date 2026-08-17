@@ -62,10 +62,10 @@ public:
 	GlobalLightingModifierUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	// LightingModifierContributor
-	virtual void getLightingContribution( RGBColor& outMul, RGBColor& outAdd ) const;
+	virtual void getLightingContribution( RGBColor& outMul, RGBColor& outAdd ) const override;
 
 protected:
 

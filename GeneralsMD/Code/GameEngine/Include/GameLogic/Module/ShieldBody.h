@@ -96,10 +96,10 @@ public:
 
 protected:
 
-	virtual void attemptDamage(DamageInfo* damageInfo);		///< try to damage this object
-	virtual void doDamageFX(const DamageInfo* damageInfo);
+	virtual void attemptDamage(DamageInfo* damageInfo) override;		///< try to damage this object
+	virtual void doDamageFX(const DamageInfo* damageInfo) override;
 
-	virtual void onDisabledEdge(Bool nowDisabled);
+	virtual void onDisabledEdge(Bool nowDisabled) override;
 
 	//ObjectID m_constructorObjectID;					///< object that built this structure
 

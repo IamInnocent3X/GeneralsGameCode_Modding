@@ -89,12 +89,12 @@ public:
 	ScatterShotUpdate(Thing* thing, const ModuleData* moduleData);
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	static Int getInterfaceMask() { return MODULEINTERFACE_DIE; }
 
 	// BehaviorModule
-	virtual DieModuleInterface* getDie() { return this; }
+	virtual DieModuleInterface* getDie() override { return this; }
 
 	void onDie(const DamageInfo* damageInfo);
 

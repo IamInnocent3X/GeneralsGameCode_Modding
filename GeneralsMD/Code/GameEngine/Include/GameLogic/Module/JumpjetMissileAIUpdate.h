@@ -67,14 +67,14 @@ class JumpjetMissileAIUpdate : public MissileAIUpdate
 public:
 	JumpjetMissileAIUpdate(Thing* thing, const ModuleData* moduleData);
 
-	virtual void projectileFireAtObjectOrPosition(const Object* victim, const Coord3D* victimPos, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride);
-	virtual Bool projectileHandleCollision(Object* other);
+	virtual void projectileFireAtObjectOrPosition(const Object* victim, const Coord3D* victimPos, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride) override;
+	virtual Bool projectileHandleCollision(Object* other) override;
 	// virtual Bool processCollision(PhysicsBehavior *physics, Object *other); ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
 
 	virtual Bool canLaunchToPosition(const Coord3D* targetPos, Coord3D* newPos, Bool keepFormation = false);
 
 	// virtual UpdateSleepTime update();
-	virtual void onDelete();
+	virtual void onDelete() override;
 
 	// Bool isLanding();
 	Real getGoalDistance();

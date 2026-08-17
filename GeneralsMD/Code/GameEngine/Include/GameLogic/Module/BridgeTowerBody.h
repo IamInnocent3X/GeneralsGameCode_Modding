@@ -25,7 +25,7 @@ public:
 	BridgeTowerBody( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual void attemptDamage( DamageInfo *damageInfo );		///< try to damage this object
+	virtual void attemptDamage( DamageInfo *damageInfo ) override;		///< try to damage this object
 
 protected:
 

@@ -93,7 +93,7 @@ public:
 	virtual void onObjectCreated() override;
 	virtual void onContaining(Object* obj, Bool wasSelected) override;
 	virtual void onRemoving(Object* obj) override;
-	//virtual UpdateSleepTime update();							///< called once per frame
+	//virtual UpdateSleepTime update() override;							///< called once per frame
 
 	virtual void onSelling() override;
 

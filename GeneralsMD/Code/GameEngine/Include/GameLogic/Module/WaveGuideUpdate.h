@@ -79,7 +79,7 @@ public:
 
 	virtual UpdateSleepTime update() override;		///< the update implementation
 
-	virtual void onDisabledEdge( Bool nowDisabled );
+	virtual void onDisabledEdge( Bool nowDisabled ) override;
 
 protected:
 

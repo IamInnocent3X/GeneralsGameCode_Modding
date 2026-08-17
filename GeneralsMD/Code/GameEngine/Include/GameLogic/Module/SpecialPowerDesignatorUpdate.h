@@ -68,7 +68,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// UpdateModuleInterface
-	virtual UpdateSleepTime update();
+	virtual UpdateSleepTime update() override;
 
 	Real getDesignatorRadius() { return getSpecialPowerDesignatorUpdateModuleData()->m_designatorRadius; }
 

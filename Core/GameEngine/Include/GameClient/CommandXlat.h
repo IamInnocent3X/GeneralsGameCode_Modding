@@ -43,7 +43,8 @@ public:
 
 
 	GameMessage::Type evaluateForceAttack( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
-	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type, Int modifiers = 0, Bool AdditionalCheck = FALSE );
+	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type, Int modifiers = 0, Bool additionalCheck = false );
+	void evaluateAdditionalChecks( Object *obj, Bool doAdditionalChecks );
 
 private:
 
@@ -80,7 +81,7 @@ private:
 
 	GameMessage::Type handleWaypointModeCommand( const Coord3D *pos, Drawable *draw, CommandEvaluateType type );
 	GameMessage::Type handleSmartGarrisonCommand( const Coord3D *pos, Drawable *draw, CommandEvaluateType type );
-	GameMessage::Type handleGuiCommand( const CommandButton *command, Drawable *&draw, Drawable *drawableInWay, Object *obj, const Coord3D *pos, CommandEvaluateType type, Bool isSabotage );
+	GameMessage::Type handleGuiCommand( const CommandButton *command, Drawable *draw, Drawable *drawableInWay, Object *obj, const Coord3D *pos, CommandEvaluateType type, Bool isSabotage );
 	GameMessage::Type handleSpecialPowerConstructCommand( const CommandButton *command, Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
 	GameMessage::Type handleSpecialPowerOverrideDestinationCommand( const Coord3D *pos, CommandEvaluateType type );
 	GameMessage::Type handleResumeConstructionCommand( Object *obj, CommandEvaluateType type );

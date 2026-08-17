@@ -659,11 +659,11 @@ Drawable* SelectionTranslator::getDrawableUnderCursor(ICoord2D pixel, Bool &isSe
 		{
 			// Set to indicate that the Mouse is over a Tree Drawable;
 			m_isMouseOverATree = TRUE;
+			isSelectingShrubbery = TRUE;
 
 			if(m_lastTreeName == treeName && m_lastTreeDraw)
 			{
 				underCursor = m_lastTreeDraw;
-				isSelectingShrubbery = TRUE;
 			}
 			else
 			{
@@ -680,7 +680,6 @@ Drawable* SelectionTranslator::getDrawableUnderCursor(ICoord2D pixel, Bool &isSe
 						underCursor = treeDraw;
 						m_lastTreeDraw = treeDraw;
 						m_lastTreeName = treeName;
-						isSelectingShrubbery = TRUE;
 
 						treeDraw->setPosition( &position );
 						treeDraw->setDrawableHidden( true );

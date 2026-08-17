@@ -251,7 +251,6 @@
 // client update includes
 #include "GameClient/Module/AnimatedParticleSysBoneClientUpdate.h"
 #include "GameClient/Module/SwayClientUpdate.h"
-#include "GameClient/Module/DynamicGeometryClientUpdate.h"
 #include "GameClient/Module/BeaconClientUpdate.h"
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
@@ -502,7 +501,6 @@ void ModuleFactory::init()
 	// client update modules
 	addModule( AnimatedParticleSysBoneClientUpdate );
 	addModule( SwayClientUpdate );
-	addModule( DynamicGeometryClientUpdate );
 	addModule( BeaconClientUpdate );
 
 }

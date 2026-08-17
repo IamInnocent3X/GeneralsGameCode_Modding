@@ -29,9 +29,9 @@ public:
 	DroneCarrierSlavedUpdate(Thing* thing, const ModuleData* moduleData);
 	// virtual destructor prototype provided by memory pool declaration
 
-	virtual UpdateSleepTime update();	///< Deciding whether or not to make new guys
+	virtual UpdateSleepTime update() override;	///< Deciding whether or not to make new guys
 
-	virtual SlavedUpdateInterface* getSlavedUpdateInterface() { return this; }
+	virtual SlavedUpdateInterface* getSlavedUpdateInterface() override { return this; }
 
 };
 

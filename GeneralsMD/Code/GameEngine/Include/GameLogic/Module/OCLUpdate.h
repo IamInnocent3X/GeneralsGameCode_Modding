@@ -86,12 +86,12 @@ public:
 	void resetTimer(); ///< added for sabotage purposes.
 	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
-	virtual void onDisabledEdge( Bool nowDisabled );
-	virtual void onCapture( Player *oldOwner, Player *newOwner );
-	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onBuildComplete();
-	virtual void onCreate() { onBuildComplete(); }
-	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	virtual void onDisabledEdge( Bool nowDisabled ) override;
+	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 	void setDisabledUntilFrame(UnsignedInt frame);
 	UnsignedInt getRemainingSabotagedFrames() const;
 	UpdateSleepTime calcSleepTime() const;
