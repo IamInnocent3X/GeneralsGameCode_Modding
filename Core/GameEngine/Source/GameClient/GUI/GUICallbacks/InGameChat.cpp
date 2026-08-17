@@ -234,13 +234,11 @@ void ToggleInGameChat( Bool immediate )
 				if (!msg.isEmpty() && !handleInGameSlashCommands(msg) && TheNetwork && TheGameInfo)
 				{
 					const Player *localPlayer = ThePlayerList->getLocalPlayer();
-					AsciiString playerName;
 					Int playerMask = 0;
 
 					for (Int i=0; i<MAX_SLOTS; ++i)
 					{
-						playerName.format("player%d", i);
-						const Player *player = ThePlayerList->findPlayerWithNameKey( TheNameKeyGenerator->nameToKey( playerName ) );
+						const Player *player = ThePlayerList->getPlayerFromSlotIndex(i);
 						if (player && localPlayer)
 						{
 							switch (inGameChatType)
