@@ -539,6 +539,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	Bool hasSpecialPowerModule = FALSE;
 
+	m_hasParasiteCrateCollide = FALSE;
+
 	// behaviors are always done first, so they get into the publicModule arrays
 	// before anything else.
 	for (modIdx = 0; modIdx < mi.getCount(); ++modIdx)
@@ -698,7 +700,6 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_assaultTransportID = INVALID_ID;
 
-	m_hasParasiteCrateCollide = FALSE;
 	m_parasiteCollideActive = FALSE;
 
 	// Sleepy Updates Revamp Variables
