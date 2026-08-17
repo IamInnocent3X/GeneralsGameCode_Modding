@@ -839,7 +839,7 @@ public:
 	inline void	setSafeOcclusionFrame(UnsignedInt frame) { m_safeOcclusionFrame = frame;}
 
 	void setParasiteCollideActive(Bool set) { m_parasiteCollideActive = set;}
-	const Bool getParasiteCollideActive() const { return m_parasiteCollideActive;}
+	Bool getParasiteCollideActive() const { return m_parasiteCollideActive;}
 
 	// All of our cheating for radars and power go here.
 	// This is the function that we now call in becomingTeamMember to adjust our power.
@@ -935,7 +935,7 @@ public:
 	void setSelectablesBoundTo(const std::vector<ObjectID>& IDs);
 	void setDontDoGroupSelecting(Bool e) { m_dontDoGroupSelecting = e; }
 	const std::vector<ObjectID>& getSelectablesBoundTo() const { return m_selectionBoundsTo; }
-	const Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
+	Bool getDontDoGroupSelecting() const { return m_dontDoGroupSelecting; }
 
 	Bool getIgnoreRailgunCheck() const { return m_ignoreRailgunCheck; }
 	void setIgnoreRailgunCheck() { m_ignoreRailgunCheck = TRUE; }

@@ -2932,10 +2932,13 @@ void CommandTranslator::evaluateAdditionalChecks( Object *obj, Bool doAdditional
 				{
 					other->setParasiteCollideActive(TRUE);
 				}
-				else if( (!m_mouseOverDrawable && !ai->getGoalObject()) || 
-						( isClick && obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) ))
+				else
 				{
-					other->setParasiteCollideActive(FALSE);
+					Bool noTarget = !m_mouseOverDrawable && !ai->getGoalObject();
+					Bool targetingEnter = isClick && obj && obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( other, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE );
+					//Bool followthroughTarget = !targetingEnter && isClick && obj && other->getParasiteCollideActive() && TheActionManager->canEquipObject( other, obj, CMD_FROM_PLAYER );
+					if( noTarget || targetingEnter )
+						other->setParasiteCollideActive(FALSE);
 				}
 			}
 		}
@@ -2990,10 +2993,13 @@ void CommandTranslator::checkOtherMembersForParasiteActive( const Object* select
 			{
 				currentObj->setParasiteCollideActive(TRUE);
 			}
-			else if( (!m_mouseOverDrawable && !ai->getGoalObject()) || 
-					( isClick && obj && obj->getRelationship(currentObj) != ENEMIES && TheActionManager->canEnterObject( currentObj, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE ) ))
+			else
 			{
-				currentObj->setParasiteCollideActive(FALSE);
+				Bool noTarget = !m_mouseOverDrawable && !ai->getGoalObject();
+				Bool targetingEnter = isClick && obj && obj->getRelationship(currentObj) != ENEMIES && TheActionManager->canEnterObject( currentObj, obj, ai->getLastCommandSource(), CHECK_CAPACITY, FALSE );
+				//Bool followthroughTarget = !targetingEnter && isClick && obj && currentObj->getParasiteCollideActive() && TheActionManager->canEquipObject( currentObj, obj, CMD_FROM_PLAYER );
+				if( noTarget || targetingEnter )
+					currentObj->setParasiteCollideActive(FALSE);
 			}
 		}
 	}
