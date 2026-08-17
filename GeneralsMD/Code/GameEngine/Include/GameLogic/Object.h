@@ -869,7 +869,9 @@ public:
 	Bool checkToSquishHijack(const Object *other) const;
 	Bool hasParasites() const;
 
+	ObjectID getHijackingID() const { return m_hijackingID; }
 	ObjectID getEquipToID() const { return m_equipToID; }
+	ObjectID getCarBombConverterID() const { return m_carbombConverterID; }
 
 	Bool hasParasiteCollide() const { return m_hasParasiteCrateCollide; }
 

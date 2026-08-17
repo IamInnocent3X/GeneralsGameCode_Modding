@@ -135,7 +135,7 @@ public:
 	virtual void setCustomStatusToRemove(const std::vector<AsciiString>& i ) {m_customStatusToRemove = i;}
 	virtual void setCustomStatusToDestroy(const std::vector<AsciiString>& i ) {m_customStatusToDestroy = i;}
 	virtual void setClear(Bool u ) {m_clear = u;}
-	virtual void setEject(Bool u ) {m_eject = u;}
+	virtual void setEject(Bool u ) {m_eject = u; if(m_eject) update(); } // Update immediately if set to eject
 	virtual void setHealed(Bool u ) {m_healed = u;}
 	virtual void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
 	virtual void setParasiteKey(const AsciiString& ParasiteKey ) {m_parasiteKey = ParasiteKey; }
@@ -163,6 +163,8 @@ private:
 	Bool     	 m_eject;
 	Bool     	 m_healed;
 	Bool     	 m_noSelfDamage;
+	Bool		 m_lastRemoved;
+	Bool		 m_lastKilled;
 	Real		 m_percentDamage;
 	Real		 m_targetObjHealth;
 	AsciiString	 m_parasiteKey;

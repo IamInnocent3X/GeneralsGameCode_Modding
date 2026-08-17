@@ -9348,8 +9348,10 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 				if(checkClear && ejectPos)
 					hijackerUpdate->setEjectPos( ejectPos );
 					
-				if(checkDie)
+				if(checkDie) {
+					hijackerUpdate->setEjectPos( getPosition() );
 					hijackerUpdate->setEject( TRUE );
+				}
 				else if(checkHealed)
 					hijackerUpdate->setHealed( TRUE );
 			}
@@ -9369,14 +9371,16 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 				// If I am self healing or the damager is me dont deal damage to me 
 				if(damagerID == m_hijackerID || checkHealed)
 					hijackerUpdate->setNoSelfDamage( TRUE );
-				
+
 				hijackerUpdate->setClear( checkClear );
 
 				if(checkClear && ejectPos)
 					hijackerUpdate->setEjectPos( ejectPos );
-					
-				if(checkDie)
+
+				if(checkDie) {
+					hijackerUpdate->setEjectPos( getPosition() );
 					hijackerUpdate->setEject( TRUE );
+				}
 				else if(checkHealed)
 					hijackerUpdate->setHealed( TRUE );
 			}
@@ -9419,8 +9423,10 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 					if(checkClear && ejectPos)
 						hijackerUpdate->setEjectPos( ejectPos );
 
-					if(checkDie)
+					if(checkDie) {
+						hijackerUpdate->setEjectPos( getPosition() );
 						hijackerUpdate->setEject( TRUE );
+					}
 					else if(checkHealed)
 						hijackerUpdate->setHealed( TRUE );
 				}

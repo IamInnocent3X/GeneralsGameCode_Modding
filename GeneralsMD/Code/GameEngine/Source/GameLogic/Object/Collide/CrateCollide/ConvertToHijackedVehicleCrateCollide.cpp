@@ -283,6 +283,10 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 //-------------------------------------------------------------------------------------------------
 Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
 {
+	// If we are not hijacking or not the right hijacked object, don't revert.
+	if(getObject()->getHijackingID() == INVALID_ID || getObject()->getHijackingID() != other->getID())
+		return FALSE;
+
 	CrateCollide::revertCollideBehavior(other);
 
 	getObject()->setHijackingID(INVALID_ID);

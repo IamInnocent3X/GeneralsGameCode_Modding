@@ -124,7 +124,8 @@ Bool EquipCrateCollide::isValidToExecute( const Object *other ) const
 			  !obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) &&
 			  !obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
 		  {
-			  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, other, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
+			  // Need to check if there are any weapons able to be used by the object towards to target, and if so, only triggers if force attacking
+			  CanAttackResult result = obj->getAbleToAttackSpecificObject( TheInGameUI->isInForceAttackMode() || obj->getRelationship(other) != ENEMIES ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, other, CMD_FROM_PLAYER, (WeaponSlotType)-1, TRUE );
 			  if(( result != ATTACKRESULT_NOT_POSSIBLE && result != ATTACKRESULT_INVALID_SHOT ) ||
 			  	   obj->getRelationship(other) == ALLIES ||
 				   ( obj->getRelationship(other) != ENEMIES && TheActionManager->canEnterObject( obj, other, lastCommandSource, CHECK_CAPACITY, FALSE ))
@@ -278,9 +279,9 @@ void EquipCrateCollide::setEquipStatus(Object *other)
 void EquipCrateCollide::clearEquipStatus()
 {
 	// If we are not equipped, or this is not the correct Equip Crate Collide module, return
-	if(getObject()->getEquipToID() == INVALID_ID || getObject()->getEquipToID() != m_equipToID)
+	if(getObject()->getEquipToID() == INVALID_ID || m_equipToID == INVALID_ID || getObject()->getEquipToID() != m_equipToID)
 		return;
-	
+
 	Object *obj = getObject();
 	const EquipCrateCollideModuleData* data = getEquipCrateCollideModuleData();
 
@@ -361,7 +362,7 @@ void EquipCrateCollide::clearEquipStatus()
 Bool EquipCrateCollide::revertCollideBehavior(Object *other)
 {
 	// If we are not equipped, or this is not the correct Equip Crate Collide module, return
-	if(getObject()->getEquipToID() == INVALID_ID || getObject()->getEquipToID() != m_equipToID)
+	if(getObject()->getEquipToID() == INVALID_ID || m_equipToID == INVALID_ID || getObject()->getEquipToID() != m_equipToID || m_equipToID != other->getID())
 		return FALSE;
 
 	ObjectID currentEquippedID = getObject()->getEquipToID();
