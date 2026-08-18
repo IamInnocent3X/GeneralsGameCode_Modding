@@ -140,10 +140,13 @@ public:
 	virtual void setNoSelfDamage(Bool u ) {m_noSelfDamage = u;} // This is to prevent Parasite from dealing damage to their allies
 	virtual void setParasiteKey(const AsciiString& ParasiteKey ) {m_parasiteKey = ParasiteKey; }
 	virtual void setParasiteCheckKeys(const std::vector<AsciiString>& ParasiteKeys ) { if(m_isParasite) m_recentParasiteKeys = ParasiteKeys; }
-	virtual void setEjectPos(const Coord3D *pos) { m_ejectPos.set(*pos); }
+	virtual void setEjectPos(const Coord3D *pos) { m_ejectPos.set(*pos); m_lastSetEjectPos = true; }
 
 protected:
 	void clearProperties(Object *target);
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+	void scatterToNearbyPosition();
+#endif
 
 private:
 
@@ -165,8 +168,10 @@ private:
 	Bool     	 m_noSelfDamage;
 	Bool		 m_lastRemoved;
 	Bool		 m_lastKilled;
+	Bool		 m_lastSetEjectPos;
 	Real		 m_percentDamage;
 	Real		 m_targetObjHealth;
+	Real		 m_lastTargetBoundingRadius;
 	AsciiString	 m_parasiteKey;
 	ObjectStatusMaskType 	m_statusToRemove;
 	ObjectStatusMaskType 	m_statusToDestroy;
