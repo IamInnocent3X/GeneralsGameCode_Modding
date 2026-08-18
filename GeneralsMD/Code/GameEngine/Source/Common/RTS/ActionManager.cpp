@@ -76,7 +76,7 @@ ActionManager *TheActionManager = nullptr;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-static Bool appearsToContainFriendlies(const Object* obj, const Object* otherObject)
+static Bool appearsToContainFriendlies(const Object* obj, const Object* otherObject, Int targetMask)
 {
 	// check if the object is a container containing stealth units tricking
 	// the player into thinking it isn't actually an enemy.
@@ -86,9 +86,12 @@ static Bool appearsToContainFriendlies(const Object* obj, const Object* otherObj
 		const Player *otherPlayer = otherContain->getApparentControllingPlayer(obj->getControllingPlayer());
 //	if( otherPlayer && otherPlayer->getRelationship( obj->getTeam() ) != ENEMIES )
 // the above test is wrong; we want to know how WE consider THEM, not how THEY consider US
-		if (otherPlayer && obj->getTeam()->getRelationship(otherPlayer->getDefaultTeam()) != ENEMIES)
+		if (otherPlayer)
 		{
-			return TRUE;
+			Relationship r = obj->getTeam()->getRelationship(otherPlayer->getDefaultTeam());
+			Bool checkAlliesAndNeutral = targetMask != 0 ? r == ALLIES : r != ENEMIES;
+			if(checkAlliesAndNeutral)
+				return TRUE;
 		}
 	}
 	return FALSE;
@@ -122,6 +125,20 @@ static Bool isObjectShroudedForAction ( const Object *source, const Object *targ
 	}
 
 	return FALSE;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+static Bool preventExecuteSpecialPowerAction( const Object *obj, SpecialPowerType type )
+{
+	if( !obj )
+		return FALSE;
+
+	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( type );
+	if( spUpdate && spUpdate->getCanOnlyExecuteThroughCommand() )
+		return FALSE;
+
+	return TRUE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1100,10 +1117,15 @@ Bool ActionManager::canEquipObject( const Object *obj, const Object *objectToEqu
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canMakeObjectDefector( const Object *obj, const Object *objectToMakeDefector, CommandSourceType commandSource ) //LORENZEN
+Bool ActionManager::canMakeObjectDefector( const Object *obj, const Object *objectToMakeDefector, CommandSourceType commandSource, Bool checkSourceRequirements ) //LORENZEN
 {
 	// sanity
 	if( obj == nullptr || objectToMakeDefector == nullptr )
+	{
+		return FALSE;
+	}
+
+	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_DEFECTOR) )
 	{
 		return FALSE;
 	}
@@ -1138,7 +1160,7 @@ Bool ActionManager::canMakeObjectDefector( const Object *obj, const Object *obje
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 
-Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectToCapture, CommandSourceType commandSource )
+Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectToCapture, CommandSourceType commandSource, Bool checkSourceRequirements )
 {
 
 	// sanity
@@ -1175,8 +1197,17 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 
 
 	SpecialPowerModuleInterface *spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_INFANTRY_CAPTURE_BUILDING );
-	if (!spInterface)
+	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_INFANTRY_CAPTURE_BUILDING );
+	if (!spInterface) {
 		spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
+		spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
+
+		if( spInterface && checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_CAPTURE_BUILDING) )
+			return FALSE;
+
+	} else if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_INFANTRY_CAPTURE_BUILDING) )
+		return FALSE;
+
 	if (!spInterface)
 		return false;
 
@@ -1200,13 +1231,13 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	//	return FALSE;
 	//}
 
-	if( !spInterface->canHackOrCaptureAirborneTargets() && objectToCapture->isAirborneTarget() )
+	if( (!spUpdate || !spUpdate->canHackOrCaptureAirborneTargets()) && objectToCapture->isAirborneTarget() )
 	{
 		return false;
 	}
 
-	KindOfMaskType kindofMask = spInterface->getKindOfs();
-	KindOfMaskType forbiddenMask = spInterface->getForbiddenKindOfs();
+	KindOfMaskType kindofMask = spUpdate ? spUpdate->getKindOfs() : KINDOFMASK_NONE;
+	KindOfMaskType forbiddenMask = spUpdate ? spUpdate->getForbiddenKindOfs() : KINDOFMASK_NONE;
 	if(kindofMask == KINDOFMASK_NONE)
 	{
 		kindofMask.set( KINDOF_STRUCTURE );
@@ -1228,11 +1259,35 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	if (isObjectShroudedForAction(obj, objectToCapture, commandSource))
 		return FALSE;
 
+	Bool canTarget = TRUE;
+	Bool canOmniCapture = spUpdate && spUpdate->canOmniCapture();
+
 	Relationship r = obj->getRelationship(objectToCapture);
+	Int targetsMask = spUpdate ? spUpdate->getTargetsMask() : 0;
+
+	if( targetsMask == 0 )
+	{
+		// ensure that it's capturable, and not allied
+		// exception: we can always capture enemy bldgs, regardless of kindof
+		if (!(r == ENEMIES || ((canOmniCapture || objectToCapture->isKindOf(KINDOF_CAPTURABLE)) && r != ALLIES)))
+			canTarget = FALSE;
+	}
+	else if(((targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			((targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			((targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+			)
+	{
+		canTarget = FALSE;
+	}
+
+	if( !objectToCapture->isKindOf(KINDOF_CAPTURABLE) && !canOmniCapture )
+	{
+		canTarget = FALSE;
+	}
 
 	// ensure that it's capturable, and not allied
 	// exception: we can always capture enemy bldgs, regardless of kindof
-	if (!(r == ENEMIES || (objectToCapture->isKindOf(KINDOF_CAPTURABLE) && r != ALLIES)))
+	if (!canTarget)
 		return false;
 
 	//If the enemy unit is stealthed and not detected, then we can't capture it!
@@ -1258,11 +1313,11 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 
 	// Also check if the object is a container containing stealth units, tricking
 	// the player into thinking it isn't actually an enemy.
-	if (appearsToContainFriendlies(obj, objectToCapture))
+	if (appearsToContainFriendlies(obj, objectToCapture, targetsMask))
 		return FALSE;
 
 	// New, check if the Action uses Sabotage Behavior for activation
-	if( spInterface->getUsesSabotageBehavior() )
+	if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 	{
 		Bool found = FALSE;
 		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -1286,7 +1341,7 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource, Bool checkSourceRequirements)
+Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource, Bool checkSourceRequirements )
 {
 	// sanity
 	if( obj == nullptr || objectToHack == nullptr )
@@ -1314,6 +1369,7 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 
 
 	SpecialPowerModuleInterface *spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK );
+	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK );
 	if (checkSourceRequirements)
 	{
 		if( !spInterface || spInterface->getPercentReady() < 1.0f )
@@ -1322,6 +1378,9 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 			return FALSE;
 		}
 	}
+
+	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK) )
+		return FALSE;
 
 	if( objectToHack->isEffectivelyDead() )
 	{
@@ -1334,7 +1393,7 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 	//	return false;
 	//}
 
-	if( !spInterface->canHackOrCaptureAirborneTargets() && objectToHack->isAirborneTarget() )
+	if( (!spUpdate || !spUpdate->canHackOrCaptureAirborneTargets()) && objectToHack->isAirborneTarget() )
 	{
 		return false;
 	}
@@ -1343,10 +1402,26 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 	if (isObjectShroudedForAction(obj, objectToHack, commandSource))
 		return FALSE;
 
+	Bool canTarget = TRUE;
+	Int targetsMask = spUpdate ? spUpdate->getTargetsMask() : 0;
+
 	Relationship r = obj->getRelationship(objectToHack);
 
-	// Make sure object is an enemy
-	if( r == ENEMIES )
+	if( targetsMask == 0 )
+	{
+		// Make sure object is an enemy
+		if( r != ENEMIES )
+			canTarget = FALSE;
+	}
+	else if(((targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			((targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			((targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+			)
+	{
+		canTarget = FALSE;
+	}
+
+	if( canTarget )
 	{
 
 		//Make sure we are targeting a building!
@@ -1355,13 +1430,11 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		//	return FALSE;
 		//}
 
-		KindOfMaskType kindofMask = spInterface->getKindOfs();
-		KindOfMaskType forbiddenMask = spInterface->getForbiddenKindOfs();
+		KindOfMaskType kindofMask = spUpdate ? spUpdate->getKindOfs() : KINDOFMASK_NONE;
+		KindOfMaskType forbiddenMask = spUpdate ? spUpdate->getForbiddenKindOfs() : KINDOFMASK_NONE;
 		if(kindofMask == KINDOFMASK_NONE)
 		{
-			kindofMask.set( KINDOF_STRUCTURE );
-			forbiddenMask.set( KINDOF_VEHICLE );
-			forbiddenMask.set( KINDOF_AIRCRAFT );
+			kindofMask.set( KINDOF_VEHICLE );
 		}
 
 		if( !objectToHack->isAnyKindOf( kindofMask ) || objectToHack->isAnyKindOf( forbiddenMask ) )
@@ -1379,11 +1452,11 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 
 		//Also check if the object is a container containing stealth units tricking
 		//the player into thinking it isn't actually an enemy.
-		if (appearsToContainFriendlies(obj, objectToHack))
+		if (appearsToContainFriendlies(obj, objectToHack, targetsMask))
 			return FALSE;
 
 		// New, check if the Action uses Sabotage Behavior for activation
-		if( spInterface->getUsesSabotageBehavior() )
+		if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 		{
 			Bool found = FALSE;
 			for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -1453,7 +1526,7 @@ Bool ActionManager::canPickUpPrisoner( const Object *obj, const Object *prisoner
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource )
+Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource, Bool checkSourceRequirements )
 {
 	// sanity
 	if( obj == nullptr || objectToHack == nullptr )
@@ -1478,12 +1551,16 @@ Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *obj
 
 
 	SpecialPowerModuleInterface *spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
+	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_STEAL_CASH_HACK );
 	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() == obj->getID();
 	if( !spInterface || ( !isSabotagingGUICommand && spInterface->getPercentReady() < 1.0f ) )
 	{
 		//Special not ready or non-existent.
 		return false;
 	}
+
+	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_STEAL_CASH_HACK) )
+		return FALSE;
 
 	if( objectToHack->isEffectivelyDead() )
 	{
@@ -1499,10 +1576,26 @@ Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *obj
 	if (isObjectShroudedForAction(obj, objectToHack, commandSource))
 		return FALSE;
 
+	Bool canTarget = TRUE;
+	Int targetsMask = spUpdate ? spUpdate->getTargetsMask() : 0;
+
 	Relationship r = obj->getRelationship(objectToHack);
 
-	// Make sure object is an enemy
-	if( r == ENEMIES )
+	if( targetsMask == 0 )
+	{
+		// Make sure object is an enemy
+		if( r != ENEMIES )
+			canTarget = FALSE;
+	}
+	else if(((targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			((targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			((targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+			)
+	{
+		canTarget = FALSE;
+	}
+
+	if( canTarget )
 	{
 
 		//Make sure we are targeting something that contains cash!
@@ -1533,7 +1626,7 @@ Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *obj
 
 		//Also check if the object is a container containing stealth units tricking
 		//the player into thinking it isn't actually an enemy.
-		if (appearsToContainFriendlies(obj, objectToHack))
+		if (appearsToContainFriendlies(obj, objectToHack, targetsMask))
 			return FALSE;
 
 		return TRUE;
@@ -1543,7 +1636,7 @@ Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *obj
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource )
+Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Object *objectToHack, CommandSourceType commandSource, Bool checkSourceRequirements )
 {
 	// sanity
 	if( obj == nullptr || objectToHack == nullptr )
@@ -1559,12 +1652,16 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	}
 
 	SpecialPowerModuleInterface *spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_HACKER_DISABLE_BUILDING );
+	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_HACKER_DISABLE_BUILDING );
 	Bool isSabotagingGUICommand = ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandID() == obj->getID();
 	if( !spInterface || ( !isSabotagingGUICommand && spInterface->getPercentReady() < 1.0f ) )
 	{
 		//Special not ready or non-existent.
 		return FALSE;
 	}
+
+	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_HACKER_DISABLE_BUILDING) )
+		return FALSE;
 
 	if( objectToHack->isEffectivelyDead() )
 	{
@@ -1575,11 +1672,22 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	if (isObjectShroudedForAction(obj, objectToHack, commandSource))
 		return FALSE;
 
+	Int targetsMask = spUpdate ? spUpdate->getTargetsMask() : 0;
 	Relationship r = obj->getRelationship(objectToHack);
 
-	// Make sure object is an enemy
-	if( r != ENEMIES )
+	if( targetsMask == 0 )
+	{
+		// Make sure object is an enemy
+		if( r != ENEMIES )
+			return FALSE;
+	}
+	else if(((targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			((targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			((targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+			)
+	{
 		return FALSE;
+	}
 
 	//Make sure we are targeting a building!
 	// IamInnocent - Dehardcoded
@@ -1588,13 +1696,13 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	//	return FALSE;
 	//}
 
-	if( !spInterface->canHackOrCaptureAirborneTargets() && objectToHack->isAirborneTarget() )
+	if( (!spUpdate || !spUpdate->canHackOrCaptureAirborneTargets()) && objectToHack->isAirborneTarget() )
 	{
 		return false;
 	}
 
-	KindOfMaskType kindofMask = spInterface->getKindOfs();
-	KindOfMaskType forbiddenMask = spInterface->getForbiddenKindOfs();
+	KindOfMaskType kindofMask = spUpdate ? spUpdate->getKindOfs() : KINDOFMASK_NONE;
+	KindOfMaskType forbiddenMask = spUpdate ? spUpdate->getForbiddenKindOfs() : KINDOFMASK_NONE;
 	if(kindofMask == KINDOFMASK_NONE)
 	{
 		kindofMask.set( KINDOF_STRUCTURE );
@@ -1628,11 +1736,11 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 
 	//Also check if the object is a container containing stealth units tricking
 	//the player into thinking it isn't actually an enemy.
-	if (appearsToContainFriendlies(obj, objectToHack))
+	if (appearsToContainFriendlies(obj, objectToHack, targetsMask))
 		return FALSE;
 
 	// New, check if the Action uses Sabotage Behavior for activation
-	if( spInterface->getUsesSabotageBehavior() )
+	if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 	{
 		Bool found = FALSE;
 		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -2056,11 +2164,39 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 				return FALSE;
 
 			case SPECIAL_TANKHUNTER_TNT_ATTACK:
+			{
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_TANKHUNTER_TNT_ATTACK );
+
+				// Condition: I have declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						break;
+
+					Int targetMask = spUpdate->getTargetsMask();
+					if( targetMask != 0 &&
+						((targetMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        	((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        	((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+					  )
+					{
+						break;
+					}
+
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							return true;
+						else
+							break;
+					}
+				}
 				if( target->isKindOf( KINDOF_STRUCTURE ) || (target->isKindOf( KINDOF_VEHICLE ) && !target->isKindOf(KINDOF_AIRCRAFT)) )
 				{
 					return true;
 				}
 				break;
+			}
 
 			case SPECIAL_BOOBY_TRAP:
 			{
@@ -2120,27 +2256,57 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 			}
 
 			case SPECIAL_HACKER_DISABLE_BUILDING:
+			{
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_HACKER_DISABLE_BUILDING );
+
+				// Condition: I have declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						break;
+
+					Int targetMask = spUpdate->getTargetsMask();
+					if(targetMask == 0)
+						targetMask = WEAPON_AFFECTS_ENEMIES;
+
+					if(((targetMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        	((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        	((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+					  )
+					{
+						break;
+					}
+
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							return canDisableBuildingViaHacking( obj, target, commandSource, false );
+						else
+							break;
+					}
+				}
 				//Can only disable buildings...
-				if( target->isKindOf( KINDOF_STRUCTURE ) && r == ENEMIES )
+				if( target->isKindOf( KINDOF_STRUCTURE ) && (r == ENEMIES || spUpdate) )
 				{
 					//Make sure the building is considered hackable (temp: using capturable)
 					if( !target->isKindOf( KINDOF_CAPTURABLE ) || target->isKindOf( KINDOF_REBUILD_HOLE ) )
 					{
 						return FALSE;
 					}
-					return true;
+					return canDisableBuildingViaHacking( obj, target, commandSource, false );
 				}
 				break;
+			}
 
 			case SPECIAL_INFANTRY_CAPTURE_BUILDING:
 			case SPECIAL_BLACKLOTUS_CAPTURE_BUILDING:
-				return canCaptureBuilding( obj, target, commandSource );
+				return canCaptureBuilding( obj, target, commandSource, false );
 
 			case SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK:
 				return canDisableVehicleViaHacking( obj, target, commandSource, false );
 
 			case SPECIAL_BLACKLOTUS_STEAL_CASH_HACK:
-				return canStealCashViaHacking( obj, target, commandSource );
+				return canStealCashViaHacking( obj, target, commandSource, false );
 
 			case SPECIAL_CASH_HACK:
 				//Can only disable enemy supply centers.
@@ -2223,7 +2389,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
 					{
 						if( target->isAnyKindOf(spUpdate->getKindOfs()) && r == ENEMIES)
-							return canMakeObjectDefector( obj, target, commandSource );
+							return canMakeObjectDefector( obj, target, commandSource, false );
 						else
 							break;
 					}
@@ -2240,7 +2406,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 						//neutral or same-team units are worthless defectors
 						if( r == ENEMIES )
 						{
-							return canMakeObjectDefector( obj, target, commandSource );
+							return canMakeObjectDefector( obj, target, commandSource, false );
 						}
 					}
 				}
@@ -2306,11 +2472,34 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 						target->isKindOf( KINDOF_BRIDGE_TOWER ) )
 					return FALSE;
 
-				if( target->isKindOf( KINDOF_STRUCTURE ) || target->isKindOf( KINDOF_VEHICLE ) )
-				{
+				//if( target->isKindOf( KINDOF_STRUCTURE ) || target->isKindOf( KINDOF_VEHICLE ) )
+				//{
 					SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( spTemplate->getSpecialPowerType() );
 					if( spUpdate )
 					{
+						if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+							return false;
+
+						Int targetMask = spUpdate->getTargetsMask();
+						if( targetMask != 0 &&
+							((targetMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+							((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+							((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+						)
+						{
+							return false;
+						}
+
+						if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+						{
+							if( !target->isAnyKindOf(spUpdate->getKindOfs()) )
+								return false;
+						}
+						else if( !(target->isKindOf( KINDOF_STRUCTURE ) || target->isKindOf( KINDOF_VEHICLE )) )
+						{
+							return false;
+						}
+
 						//Make sure we have enough equipment to place an additional charge.
 						if( spUpdate->getSpecialObjectCount() < spUpdate->getSpecialObjectMax() )
 						{
@@ -2344,7 +2533,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 							return true;
 						}
 					}
-				}
+				//}
 				break;
 			}
 		}

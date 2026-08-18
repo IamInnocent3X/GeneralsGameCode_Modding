@@ -200,6 +200,8 @@ public:
 
 	SabotageBehaviorModuleData()
 	{
+		m_targetsMask = WEAPON_AFFECTS_ENEMIES;
+
 		m_sabotageType = 0;
 		m_stealCashAmount = 0;
 		m_sabotageFrames = 0;

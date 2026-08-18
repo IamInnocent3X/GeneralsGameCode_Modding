@@ -71,10 +71,6 @@ public:
 	virtual const AudioEventRTS& getInitiateSound() const = 0;
 	virtual Bool startsReady() const = 0;
 	virtual Bool isScriptOnly() const = 0;
-	virtual Bool getUsesSabotageBehavior() const = 0;
-	virtual Bool canHackOrCaptureAirborneTargets() const = 0;
-	virtual const KindOfMaskType& getKindOfs() const = 0;
-	virtual const KindOfMaskType& getForbiddenKindOfs() const = 0;
 
 	//If the special power launches a construction site, we need to know the final product for placement purposes.
 	virtual const ThingTemplate* getReferenceThingTemplate() const = 0;
@@ -169,12 +165,6 @@ public:
 
 	virtual Bool startsReady() const override;
 	virtual Bool isScriptOnly() const override;
-
-	virtual Bool getUsesSabotageBehavior() const override { return FALSE; }
-	virtual Bool canHackOrCaptureAirborneTargets() const override { return FALSE; }
-
-	virtual const KindOfMaskType& getKindOfs() const override { return KINDOFMASK_NONE; }
-	virtual const KindOfMaskType& getForbiddenKindOfs() const override { return KINDOFMASK_NONE; }
 
 	//If the special power launches a construction site, we need to know the final product for placement purposes.
 	virtual const ThingTemplate* getReferenceThingTemplate() const override { return nullptr; }

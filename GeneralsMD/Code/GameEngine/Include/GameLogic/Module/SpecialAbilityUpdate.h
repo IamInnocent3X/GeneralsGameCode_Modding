@@ -82,6 +82,8 @@ public:
   Real                  m_facingAngleTolerance;	///< heading delta (radians) considered "facing target" when m_requiresMoveToTurn
   Bool					m_useSabotageBehavior;
   Bool					m_canHackOrCaptureAirborneTargets;
+  Bool					m_canOmniCapture;
+  Bool					m_canOnlyExecuteThroughCommand;
   Bool					m_destroyOnExecute;
   const FXList 			*m_fxOnExecute;
   const ObjectCreationList *m_oclOnExecute;
@@ -141,6 +143,8 @@ public:
 	m_disabledType = DISABLED_HACKED;
 	m_useSabotageBehavior = FALSE;
 	m_canHackOrCaptureAirborneTargets = FALSE;
+	m_canOmniCapture = FALSE;
+	m_canOnlyExecuteThroughCommand = FALSE;
 	m_cursorName.clear();
 	m_invalidCursorName.clear();
 	m_destroyOnExecute = FALSE;
@@ -194,10 +198,12 @@ public:
       { "PersistenceRequiresRecharge",INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
       { "RequiresMoveToTurn",         INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_requiresMoveToTurn ) },
       { "FacingAngleTolerance",       INI::parseAngleReal,							nullptr, offsetof( SpecialAbilityUpdateModuleData, m_facingAngleTolerance ) },
+	  { "CanOnlyExecuteThroughCommand",         INI::parseBool,						nullptr, offsetof( SpecialAbilityUpdateModuleData, m_canOnlyExecuteThroughCommand ) },
 	  		{ "WeaponSlot",						INI::parseQuotedAsciiString,		nullptr, offsetof( SpecialAbilityUpdateModuleData, m_weaponSlotName ) },
 	  		{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( SpecialAbilityUpdateModuleData, m_disabledType ) },
 			{ "UseSabotageBehavior",				INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_useSabotageBehavior ) },
 			{ "CanHackOrCaptureAirborneTargets",	INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_canHackOrCaptureAirborneTargets ) },
+			{ "CanOmniCapture",						INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_canOmniCapture ) },
 	  		{ "CursorName",						INI::parseAsciiString,			 	nullptr, offsetof( SpecialAbilityUpdateModuleData, m_cursorName ) },
 			{ "InvalidCursorName",				INI::parseAsciiString,       		nullptr, offsetof( SpecialAbilityUpdateModuleData, m_invalidCursorName ) },
 			{ "AffectsTargets", 				INI::parseBitString32, 	TheWeaponAffectsMaskNames, offsetof( SpecialAbilityUpdateModuleData, m_targetsMask) },
@@ -244,8 +250,9 @@ public:
 	virtual CommandOption getCommandOption() const override { return (CommandOption)0; }
 	virtual UpdateSleepTime update() override;
 
-	virtual Bool getUsesSabotageBehavior() const { return getSpecialAbilityUpdateModuleData()->m_useSabotageBehavior; }
-	virtual Bool canHackOrCaptureAirborneTargets() const { return getSpecialAbilityUpdateModuleData()->m_canHackOrCaptureAirborneTargets; }
+	Bool getUsesSabotageBehavior() const { return getSpecialAbilityUpdateModuleData()->m_useSabotageBehavior; }
+	Bool canHackOrCaptureAirborneTargets() const { return getSpecialAbilityUpdateModuleData()->m_canHackOrCaptureAirborneTargets; }
+	Bool canOmniCapture() const { return getSpecialAbilityUpdateModuleData()->m_canOmniCapture; }
 
 	// ??? ugh, public stuff that shouldn't be -- hell yeah!
 	UnsignedInt getSpecialObjectCount() const;
@@ -254,8 +261,9 @@ public:
 	SpecialPowerType getSpecialPowerType() const;
 
 	Int getTargetsMask() const { return getSpecialAbilityUpdateModuleData()->m_targetsMask; }
-	virtual const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }
-	virtual const KindOfMaskType& getForbiddenKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_forbiddenKindOf; }
+	const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }
+	const KindOfMaskType& getForbiddenKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_forbiddenKindOf; }
+	Bool getCanOnlyExecuteThroughCommand() const { return getSpecialAbilityUpdateModuleData()->m_canOnlyExecuteThroughCommand; }
 	WeaponSlotType getWeaponSlot() const;
 
 protected:

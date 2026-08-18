@@ -1338,7 +1338,7 @@ void RiderChangeContain::riderGiveTemplate(RiderData riderData)
 	// Register the New Template if it isn't granted OnContaining or if it wasn't switching to the last Template
 	if(m_loaded && riderData.timeFrame)
 		m_theRiderDataRecord.push_back(riderData);
-	
+
 	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
 	const char* RiderChar = riderData.templateName.str();
 	Object* obj = getObject();
@@ -1664,7 +1664,7 @@ void RiderChangeContain::doStatusChecks()
 	// There's nothing to refer to remove template
 	if(m_theRiderDataRecord.empty())
 		return;
-	
+
 	// If the Object doesn't use Status to change its Template, do nothing
 	if (getRiderChangeContainModuleData()->m_riderNotRequired == FALSE)
 		return;
