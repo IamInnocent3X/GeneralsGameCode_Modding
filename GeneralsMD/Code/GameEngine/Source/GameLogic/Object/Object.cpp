@@ -9348,10 +9348,8 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 				if(checkClear && ejectPos)
 					hijackerUpdate->setEjectPos( ejectPos );
 					
-				if(checkDie) {
-					hijackerUpdate->setEjectPos( getPosition() );
+				if(checkDie)
 					hijackerUpdate->setEject( TRUE );
-				}
 				else if(checkHealed)
 					hijackerUpdate->setHealed( TRUE );
 			}
@@ -9377,10 +9375,8 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 				if(checkClear && ejectPos)
 					hijackerUpdate->setEjectPos( ejectPos );
 
-				if(checkDie) {
-					hijackerUpdate->setEjectPos( getPosition() );
+				if(checkDie)
 					hijackerUpdate->setEject( TRUE );
-				}
 				else if(checkHealed)
 					hijackerUpdate->setHealed( TRUE );
 			}
@@ -9423,10 +9419,8 @@ void Object::doHijackerUpdate(Bool checkDie, Bool checkHealed, Bool checkClear, 
 					if(checkClear && ejectPos)
 						hijackerUpdate->setEjectPos( ejectPos );
 
-					if(checkDie) {
-						hijackerUpdate->setEjectPos( getPosition() );
+					if(checkDie)
 						hijackerUpdate->setEject( TRUE );
-					}
 					else if(checkHealed)
 						hijackerUpdate->setHealed( TRUE );
 				}

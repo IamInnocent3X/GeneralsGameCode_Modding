@@ -78,6 +78,8 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 	m_wasTargetAirborne = false;
 	m_lastRemoved = false;
 	m_lastKilled = false;
+	m_lastSetEjectPos = false;
+	m_lastTargetBoundingRadius = 0.0f;
 	m_ejectPos.zero();
 	m_hijackType = HIJACK_NONE;
 //	m_ejectPilotDMI = nullptr;
@@ -88,53 +90,6 @@ HijackerUpdate::HijackerUpdate( Thing *thing, const ModuleData *moduleData ) : U
 HijackerUpdate::~HijackerUpdate( void )
 {
 }
-
-#if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
-//-------------------------------------------------------------------------------------------------
-static void scatterToNearbyPosition(Object* obj)
-{
-	//
-	// for now we will just set the position of the object that is being removed from us
-	// at a random angle away from our center out some distance
-	//
-
-	//
-	// pick an angle that is in the view of the current camera position so that
-	// the thing will come out "toward" the player and they can see it
-	// NOPE, can't do that ... all players screen angles will be different, unless
-	// we maintain the angle of each players screen in the player structure or something
-	//
-	Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
-//	angle = TheTacticalView->getAngle();
-//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
-
-	Real minRadius = 2*obj->getGeometryInfo().getBoundingCircleRadius();
-	Real maxRadius = minRadius + minRadius / 2.0f;
-	Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
-
-	Coord3D pos;
-	pos.x = dist * Cos( angle ) + obj->getPosition()->x;
-	pos.y = dist * Sin( angle ) + obj->getPosition()->y;
-	if(!obj->isSignificantlyAboveTerrain()) pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
-
-	// set orientation
-	obj->setOrientation( angle );
-
-	AIUpdateInterface *ai = obj->getAIUpdateInterface();
-	if( ai && !obj->isEffectivelyDead() )
-	{
- 		ai->aiMoveToPosition( &pos, CMD_FROM_AI );
-
-	}
-	else
-	{
-
-		// no ai, just set position at the target pos
-		obj->setPosition( &pos );
-
-	}
-}
-#endif
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -281,7 +236,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 				}
 
 				// Update the Position for ejection
-				if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
+				if(!m_lastSetEjectPos)
 					m_ejectPos = *target->getPosition();
 				m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 				obj->setPosition( &m_ejectPos );
@@ -296,7 +251,7 @@ UpdateSleepTime HijackerUpdate::update( void )
 		}
 
 		// Check if we have last ejected
-		Bool lastEject = m_eject && revertedCollide && !isDestroyed;
+		Bool lastEject = m_eject && target && revertedCollide && !isDestroyed;
 
 		setEject( FALSE );
 		setClear( FALSE );
@@ -306,14 +261,14 @@ UpdateSleepTime HijackerUpdate::update( void )
 		if(lastEject) {
 			m_lastRemoved = isRemoved;
 			m_lastKilled = isKilled;
-			obj->setPosition( &m_ejectPos );
+			m_lastTargetBoundingRadius = target->getGeometryInfo().getBoundingCircleRadius();
 			return UPDATE_SLEEP_NONE;
 		}
 
 		if( target && !target->isEffectivelyDead() && !target->isDestroyed() && !revertedCollide )
 		{
 			// @todo I think we should test for ! IsEffectivelyDead() as well, here
-			if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
+			if(!m_lastSetEjectPos)
 				m_ejectPos = *target->getPosition();
 			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 			obj->setPosition( &m_ejectPos );
@@ -379,10 +334,10 @@ UpdateSleepTime HijackerUpdate::update( void )
 						}
 
 					}
-#if PRESERVE_RETAIL_BEHAVIOR || RETAIL_COMPATIBLE_CRC
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
 					else
 					{
-						scatterToNearbyPosition(obj);
+						scatterToNearbyPosition();
 					}
 #endif
 				}
@@ -441,6 +396,8 @@ UpdateSleepTime HijackerUpdate::update( void )
 	{
 		m_wasTargetAirborne = false;
 	}
+
+	m_lastSetEjectPos = false;
 
 	setUpdate( FALSE );
 
@@ -508,6 +465,54 @@ void HijackerUpdate::clearProperties(Object *target)
 	m_wasTargetAirborne = false;
 }
 
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+//-------------------------------------------------------------------------------------------------
+void HijackerUpdate::scatterToNearbyPosition()
+{
+	Object *me = getObject();
+	//
+	// for now we will just set the position of the object that is being removed from us
+	// at a random angle away from our center out some distance
+	//
+
+	//
+	// pick an angle that is in the view of the current camera position so that
+	// the thing will come out "toward" the player and they can see it
+	// NOPE, can't do that ... all players screen angles will be different, unless
+	// we maintain the angle of each players screen in the player structure or something
+	//
+	Real angle = GameLogicRandomValueReal( 0.0f, 2.0f * PI );
+//	angle = TheTacticalView->getAngle();
+//	angle -= GameLogicRandomValueReal( PI / 3.0f, 2.0f * (PI / 3.0F) );
+
+	Real minRadius = 2*m_lastTargetBoundingRadius;
+	Real maxRadius = minRadius + minRadius / 2.0f;
+	Real dist = GameLogicRandomValueReal( minRadius, maxRadius );
+
+	Coord3D pos;
+	pos.x = dist * Cos( angle ) + m_ejectPos.x;
+	pos.y = dist * Sin( angle ) + m_ejectPos.y;
+	pos.z = me->isSignificantlyAboveTerrain() ? m_ejectPos.z : TheTerrainLogic->getGroundHeight( pos.x, pos.y );
+
+	// set orientation
+	me->setOrientation( angle );
+
+	AIUpdateInterface *ai = me->getAIUpdateInterface();
+	if( ai && !me->isSignificantlyAboveTerrain() && !me->isEffectivelyDead() )
+	{
+ 		ai->aiMoveToPosition( &pos, CMD_FROM_AI );
+
+	}
+	else
+	{
+
+		// no ai, just set position at the target pos
+		me->setPosition( &pos );
+
+	}
+}
+#endif
+
 void HijackerUpdate::setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool destroyParasites )
 {
 	Object *self = getObject();
@@ -519,7 +524,7 @@ void HijackerUpdate::setRetargetObject( ObjectID ID, Bool destroyHijacker, Bool 
 		if(target)
 		{
 			// Update the Position for ejection
-			if(m_ejectPos.x < WWMATH_EPSILON && m_ejectPos.y < WWMATH_EPSILON && m_ejectPos.z < WWMATH_EPSILON)
+			if(!m_lastSetEjectPos)
 				m_ejectPos = *target->getPosition();
 			m_wasTargetAirborne = target->isSignificantlyAboveTerrain();
 			self->setPosition( &m_ejectPos );
@@ -768,11 +773,17 @@ void HijackerUpdate::xfer( Xfer *xfer )
 	// was last killed
 	xfer->xferBool( &m_lastKilled );
 
+	// last set eject pos
+	xfer->xferBool( &m_lastSetEjectPos );
+
 	// Damage Percentage
 	xfer->xferReal( &m_percentDamage );
 
 	// Health of target
 	xfer->xferReal( &m_targetObjHealth );
+
+	// Last target bounding radius
+	xfer->xferReal( &m_lastTargetBoundingRadius );
 
 	// Parasite Key
 	xfer->xferAsciiString( &m_parasiteKey );
