@@ -180,12 +180,13 @@ Bool SabotageBehavior::isValidToExecute( const Object *other ) const
 	}
 #endif
 
-	Relationship r = getObject()->getRelationship( other );
-	if( r != ENEMIES )
-	{
-		//Can only sabotage enemy buildings.
-		return FALSE;
-	}
+	// IamInnocent - Dehardcoded
+	//Relationship r = getObject()->getRelationship( other );
+	//if( r != ENEMIES )
+	//{
+	//	//Can only sabotage enemy buildings.
+	//	return FALSE;
+	//}
 
 	return TRUE;
 }
@@ -337,20 +338,71 @@ static void sabotageAllSpecificSpecialPowers( Object *obj, void *userData )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-static void grantPlayerUpgrade( Player *player, const AsciiString upgradeName )
+static void grantUpgrade( Object *obj, const AsciiString upgradeName )
 {
 	const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( upgradeName );
 	if(!upgradeTemplate)
+	{
+		DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", upgradeName->str()));
+		throw INI_INVALID_DATA;
 		return;
+	}
 
-	player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
-	player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
+	Player *player = obj->getControllingPlayer();
+
+	if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+	{
+		if(obj->isNeutralControlled())
+			return;
+
+		player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
+		player->addUpgrade( upgradeTemplate, UPGRADE_STATUS_COMPLETE );
+	}
+	else if(obj->affectedByUpgrade( upgradeTemplate ))
+	{
+		ProductionUpdateInterface *pui = obj->getProductionUpdateInterface();
+		if( pui )
+		{
+			pui->cancelUpgrade( upgradeTemplate );
+		}
+		obj->giveUpgrade( upgradeTemplate );
+		obj->giveUpgrade( upgradeTemplate );
+	}
+
 	player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-static void grantPlayerSabotageUpgradeOrScience( Player *player, const ScienceVec& scienceVec, const std::vector<AsciiString>& upgradeVec, SabotageGrantType grantType )
+static Bool upgradeCanBeGranted( Object *obj, const AsciiString upgradeName )
+{
+	const UpgradeTemplate *upgradeTemplate = TheUpgradeCenter->findUpgrade( upgradeName );
+	if(!upgradeTemplate)
+	{
+		DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", upgradeName->str()));
+		throw INI_INVALID_DATA;
+		return FALSE;
+	}
+
+	if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+	{
+		if(obj->isNeutralControlled())
+			return FALSE;
+
+		Player *player = obj->getControllingPlayer();
+		return player && !player->hasUpgradeComplete( upgradeTemplate );
+	}
+	else if(obj->affectedByUpgrade( upgradeTemplate ))
+	{
+		return !obj->hasUpgrade( upgradeTemplate );
+	}
+
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+static void grantSabotageUpgradeOrScience( Object *obj, const ScienceVec& scienceVec, const std::vector<AsciiString>& upgradeVec, SabotageGrantType grantType )
 {
 	Bool isGrantingScience = upgradeVec.empty();
 	Bool isGrantingUpgrade = scienceVec.empty();
@@ -381,6 +433,8 @@ static void grantPlayerSabotageUpgradeOrScience( Player *player, const ScienceVe
 		default:
 			break;
 	}
+
+	Player *player = obj->getControllingPlayer();
 
 	Int i = random ? GameLogicRandomValue(0, vecSize - 1) : orderStart;
 	std::vector<Int> doneRandomValue;
@@ -418,12 +472,12 @@ static void grantPlayerSabotageUpgradeOrScience( Player *player, const ScienceVe
 			}
 			else if( isGrantingUpgrade )
 			{
-				if( i == 0 && !player->hasUpgradeComplete( upgradeTemplate ) )
+				if( i == 0 && upgradeCanBeGranted(obj, upgradeVec[i]) )
 				{
-					grantPlayerUpgrade( player, upgradeVec[i] );
+					grantUpgrade( obj, upgradeVec[i] );
 					break;
 				}
-				else if( player->hasUpgradeComplete( upgradeTemplate ) )
+				else if( !upgradeCanBeGranted(obj, upgradeVec[i]) )
 				{
 					// Increment the index to the next order
 					i++;
@@ -431,14 +485,14 @@ static void grantPlayerSabotageUpgradeOrScience( Player *player, const ScienceVe
 						break;
 
 					// grant the science as it is not found
-					grantPlayerUpgrade( player, upgradeVec[i] );
+					grantUpgrade( obj, upgradeVec[i] );
 					break;
 				}
 			}
 		}
-		else if( isGrantingUpgrade && !player->hasUpgradeComplete( upgradeTemplate ))
+		else if( isGrantingUpgrade && upgradeCanBeGranted(obj, upgradeVec[i]) )
 		{
-			grantPlayerUpgrade( player, upgradeVec[i] );
+			grantUpgrade( obj, upgradeVec[i] );
 			granted = TRUE;
 		}
 		else if( isGrantingScience && !player->hasScience( scienceVec[i] ))
@@ -591,52 +645,50 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 		other->attemptDamage( &damageInfo );
 	}
 
+	std::vector<AsciiString> upgradeVec;
+	ScienceVec scienceVec = data->m_sciencesGranted;
+	for(ObjectScienceVec::const_iterator it_sv = data->m_sciencesGrantedIfCollidesWith.begin(); it_sv != data->m_sciencesGrantedIfCollidesWith.end(); ++it_sv)
+	{
+		const ThingTemplate *tt = TheThingFactory->findTemplate(it_sv->first);	// could be null!
+		if ( tt && tt->isEquivalentTo( other->getTemplate() ) )
+		{
+			for(ScienceVec::const_iterator it_sci = it_sv->second.begin(); it_sci != it_sv->second.end(); ++it_sci)
+				scienceVec.push_back(*it_sci);
+		}
+	}
+
+	if(!scienceVec.empty()) 
+		grantSabotageUpgradeOrScience(obj, scienceVec, upgradeVec, data->m_sciencesGrantType);
+
+	scienceVec.clear();
+	upgradeVec = data->m_grantUpgradeNames;
+	for(ObjectUpgradeVec::const_iterator it_uv = m_upgradeIfCollidesWith.begin(); it_uv != m_upgradeIfCollidesWith.end(); ++it_uv)
+	{
+		const ThingTemplate *tt = TheThingFactory->findTemplate(it_uv->first);	// could be null!
+		if ( tt && tt->isEquivalentTo( other->getTemplate() ) )
+		{
+			for(std::vector<AsciiString>::const_iterator it_up = it_uv->second.begin(); it_up != it_uv->second.end(); ++it_up)
+				upgradeVec.push_back(*it_up);
+		}
+	}
+
+	if(!upgradeVec.empty()) 
+		grantSabotageUpgradeOrScience(obj, scienceVec, upgradeVec, data->m_sciencesGrantType);
+
 	Player *player = obj->getControllingPlayer();
 	Player *otherPlayer = other->getControllingPlayer();
 
-	if( !obj->isNeutralControlled() )
+	// Grant Instances
+	if( !obj->isNeutralControlled() && (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
 	{
-		std::vector<AsciiString> upgradeVec;
-		ScienceVec scienceVec = data->m_sciencesGranted;
-		for(ObjectScienceVec::const_iterator it_sv = data->m_sciencesGrantedIfCollidesWith.begin(); it_sv != data->m_sciencesGrantedIfCollidesWith.end(); ++it_sv)
+		for(std::vector<NameKeyType>::const_iterator it_key = data->m_commandInstancesToGrant.begin(); it_key != data->m_commandInstancesToGrant.end(); ++it_key)
 		{
-			const ThingTemplate *tt = TheThingFactory->findTemplate(it_sv->first);	// could be null!
-			if ( tt && tt->isEquivalentTo( other->getTemplate() ) )
-			{
-				for(ScienceVec::const_iterator it_sci = it_sv->second.begin(); it_sci != it_sv->second.end(); ++it_sci)
-					scienceVec.push_back(*it_sci);
-			}
+			player->grantInstance( (*it_key) );
 		}
-
-		grantPlayerSabotageUpgradeOrScience(player, scienceVec, upgradeVec, data->m_sciencesGrantType);
-
-		scienceVec.clear();
-		upgradeVec = data->m_grantUpgradeNames;
-		for(ObjectUpgradeVec::const_iterator it_uv = m_upgradeIfCollidesWith.begin(); it_uv != m_upgradeIfCollidesWith.end(); ++it_uv)
+		for(NameKeyIntVec::const_iterator it_ki = data->m_commandInstancesToGrantWithAmount.begin(); it_ki != data->m_commandInstancesToGrantWithAmount.end(); ++it_ki)
 		{
-			const ThingTemplate *tt = TheThingFactory->findTemplate(it_uv->first);	// could be null!
-			if ( tt && tt->isEquivalentTo( other->getTemplate() ) )
-			{
-				for(std::vector<AsciiString>::const_iterator it_up = it_uv->second.begin(); it_up != it_uv->second.end(); ++it_up)
-					upgradeVec.push_back(*it_up);
-			}
+			player->grantInstance( it_ki->first, it_ki->second );
 		}
-
-		grantPlayerSabotageUpgradeOrScience(player, scienceVec, upgradeVec, data->m_upgradesGrantType);
-
-		// Grant Instances
-		if( (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
-		{
-			for(std::vector<NameKeyType>::const_iterator it_key = data->m_commandInstancesToGrant.begin(); it_key != data->m_commandInstancesToGrant.end(); ++it_key)
-			{
-				player->grantInstance( (*it_key) );
-			}
-			for(NameKeyIntVec::const_iterator it_ki = data->m_commandInstancesToGrantWithAmount.begin(); it_ki != data->m_commandInstancesToGrantWithAmount.end(); ++it_ki)
-			{
-				player->grantInstance( it_ki->first, it_ki->second );
-			}
-		}
-
 	}
 
 	//Steal cash!
@@ -777,7 +829,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 		if(data->m_sabotageDisableContained && other->getContain())
 			other->getContain()->iterateContained( disableHacker, &disableData, FALSE );
 
-		if(data->m_sabotageDisableAllKindOf.any() && otherPlayer)
+		if(data->m_sabotageDisableAllKindOf.any() && otherPlayer && otherPlayer != ThePlayerList->getNeutralPlayer())
 		{
 			disableData.kindOfs = data->m_sabotageDisableAllKindOf;
 			disableData.forbiddenKindOfs = data->m_sabotageDisableAllForbiddenKindOf;
@@ -989,7 +1041,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 			}
 		}
 
-		if(otherPlayer)
+		if(otherPlayer && otherPlayer != ThePlayerList->getNeutralPlayer())
 		{
 			//Loop through every internet center to temporarily disable the spy vision upgrades.
 
@@ -1041,7 +1093,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 			}
 
 			//Play the "building stolen" EVA event if the local player is the victim!
-			if( data->m_sabotageDoAlert && other && !other->isNeutralControlled() && other->isLocallyViewed() )
+			if( data->m_sabotageDoAlert && other->getRelationship(obj) == ENEMIES && other->isLocallyViewed() )
 			{
 				TheEva->setShouldPlay( EVA_BuildingStolen );
 			}
@@ -1119,30 +1171,27 @@ Bool SabotageBehavior::canDoSabotageSpecialCheck( const Object *other ) const
 			return TRUE;
 	}
 
-	if( !getObject()->isNeutralControlled() )
+	if( !getObject()->isNeutralControlled() && (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
+		return TRUE;
+
+	if(!data->m_grantUpgradeNames.empty())
+		return TRUE;
+
+	if(!data->m_sciencesGranted.empty())
+		return TRUE;
+
+	for(ObjectScienceVec::const_iterator it_sv = data->m_sciencesGrantedIfCollidesWith.begin(); it_sv != data->m_sciencesGrantedIfCollidesWith.end(); ++it_sv)
 	{
-		if( (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
+		const ThingTemplate *tt = TheThingFactory->findTemplate(it_sv->first);	// could be null!
+		if ( tt && tt->isEquivalentTo( other->getTemplate() ) && !it_sv->second.empty() )
 			return TRUE;
+	}
 
-		if(!data->m_grantUpgradeNames.empty())
+	for(ObjectUpgradeVec::const_iterator it_uv = m_upgradeIfCollidesWith.begin(); it_uv != m_upgradeIfCollidesWith.end(); ++it_uv)
+	{
+		const ThingTemplate *tt = TheThingFactory->findTemplate(it_uv->first);	// could be null!
+		if ( tt && tt->isEquivalentTo( other->getTemplate() ) && !it_uv->second.empty() )
 			return TRUE;
-
-		if(!data->m_sciencesGranted.empty())
-			return TRUE;
-
-		for(ObjectScienceVec::const_iterator it_sv = data->m_sciencesGrantedIfCollidesWith.begin(); it_sv != data->m_sciencesGrantedIfCollidesWith.end(); ++it_sv)
-		{
-			const ThingTemplate *tt = TheThingFactory->findTemplate(it_sv->first);	// could be null!
-			if ( tt && tt->isEquivalentTo( other->getTemplate() ) && !it_sv->second.empty() )
-				return TRUE;
-		}
-
-		for(ObjectUpgradeVec::const_iterator it_uv = m_upgradeIfCollidesWith.begin(); it_uv != m_upgradeIfCollidesWith.end(); ++it_uv)
-		{
-			const ThingTemplate *tt = TheThingFactory->findTemplate(it_uv->first);	// could be null!
-			if ( tt && tt->isEquivalentTo( other->getTemplate() ) && !it_uv->second.empty() )
-				return TRUE;
-		}
 	}
 
 	// Can Steal cash!

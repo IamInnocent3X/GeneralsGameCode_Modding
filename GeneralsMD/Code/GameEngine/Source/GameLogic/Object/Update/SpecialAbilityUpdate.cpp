@@ -268,6 +268,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
 
     if (target != nullptr)
     {
+      Bool isAllyAndAffected = (data->m_targetsMask & WEAPON_AFFECTS_ALLIES ) != 0 && (getObject()->getRelationship(target) == ALLIES);
       if (target->isEffectivelyDead())
         shouldAbort = TRUE;
       else switch (data->m_specialPowerTemplate->getSpecialPowerType())
@@ -276,7 +277,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
         case SPECIAL_BLACKLOTUS_CAPTURE_BUILDING:
         case SPECIAL_HACKER_DISABLE_BUILDING:
         {
-          if (target->getTeam() == getObject()->getTeam())
+          if (!isAllyAndAffected && target->getTeam() == getObject()->getTeam())
           {
             // it's been captured by a colleague! we should stop.
             shouldAbort = TRUE;
@@ -286,7 +287,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
         case SPECIAL_BLACKLOTUS_STEAL_CASH_HACK:
         case SPECIAL_BOOBY_TRAP:
         {
-          if ( target->testStatus( OBJECT_STATUS_STEALTHED ) && (target->testStatus( OBJECT_STATUS_DETECTED ) == FALSE ) )
+          if ( target->testStatus( OBJECT_STATUS_STEALTHED ) && (target->testStatus( OBJECT_STATUS_DETECTED ) == FALSE ) && !isAllyAndAffected )
           {
 				    if ( !isPreparationComplete() )
               shouldAbort = TRUE;
@@ -298,7 +299,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
         {
           if ( ! needToUnpack() )
           {
-            if ( target->testStatus( OBJECT_STATUS_STEALTHED ) && (target->testStatus( OBJECT_STATUS_DETECTED ) == FALSE ) )
+            if ( target->testStatus( OBJECT_STATUS_STEALTHED ) && (target->testStatus( OBJECT_STATUS_DETECTED ) == FALSE ) && !isAllyAndAffected )
             {
 				      if ( !isPreparationComplete() )
                 shouldAbort = TRUE;
@@ -323,7 +324,7 @@ UpdateSleepTime SpecialAbilityUpdate::update( void )
         }
         case SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK:
         {
-          if ( target->testStatus( OBJECT_STATUS_STEALTHED ) && (target->testStatus( OBJECT_STATUS_DETECTED ) == FALSE ) )
+          if ( target->testStatus( OBJECT_STATUS_STEALTHED ) && (target->testStatus( OBJECT_STATUS_DETECTED ) == FALSE ) && !isAllyAndAffected )
           {
             // where'd my target go? 'Twas here just a second ago.
 				    shouldAbort = TRUE;
@@ -1061,6 +1062,10 @@ void SpecialAbilityUpdate::startPreparation()
         {
           return;
         }
+        if (data->m_useSabotageBehavior && !canDoSabotageSpecialCheck(target, spTemplate->getName()) )
+        {
+          return;
+        }
       }
 
 
@@ -1090,8 +1095,18 @@ void SpecialAbilityUpdate::startPreparation()
       {
 
         Relationship r = getObject()->getRelationship(target);
-        if( r == ALLIES )
+        if( data->m_targetsMask == 0 )
+        {
+          if( r == ALLIES )
+            return;
+        }
+        else if(((data->m_targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+                ((data->m_targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+                ((data->m_targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+              )
+        {
           return;
+        }
 
         if( !data->m_canHackOrCaptureAirborneTargets && target->isAirborneTarget() )// is in the sky
         {
@@ -1276,9 +1291,19 @@ Bool SpecialAbilityUpdate::continuePreparation()
       }
 
       Relationship r = getObject()->getRelationship(target);
-      if( r == ALLIES )
+      if( data->m_targetsMask == 0 )
       {
-        //It's been captured by a colleague, so cancel!
+        if( r == ALLIES )
+        {
+          //It's been captured by a colleague, so cancel!
+          return false;
+        }
+      }
+      else if(((data->m_targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        ((data->m_targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        ((data->m_targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+            )
+      {
         return false;
       }
 
@@ -1467,8 +1492,18 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       }
 
       Relationship r = object->getRelationship(target);
-      if ( r == ALLIES)
+      if( data->m_targetsMask == 0 )
+      {
+        if( r == ALLIES )
+          return;
+      }
+      else if(((data->m_targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+              ((data->m_targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+              ((data->m_targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+            )
+      {
         return;
+      }
 
       // see if there's sabotage behavior to override
       if( data->m_useSabotageBehavior )
