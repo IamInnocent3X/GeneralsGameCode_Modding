@@ -115,7 +115,7 @@ void StatusBitsUpgrade::upgradeImplementation( )
 	obj->setStatus( d->m_statusToSet );
 	obj->clearStatus( d->m_statusToClear );
 	obj->setCustomStatus( d->m_customStatusToSet );
-	obj->clearCustomStatus( d->m_customStatusToSet );
+	obj->clearCustomStatus( d->m_customStatusToClear );
 	for (Int i = 0; i < d->m_bonusToSet.size(); i++) {
 		obj->setWeaponBonusCondition(d->m_bonusToSet[i]);
 	}

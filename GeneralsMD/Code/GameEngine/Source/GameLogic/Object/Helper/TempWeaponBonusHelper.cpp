@@ -198,7 +198,10 @@ void TempWeaponBonusHelper::clearTempWeaponBonus()
 void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, const AsciiString& customStatus, UnsignedInt duration, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	Int durationAsInt = REAL_TO_INT_FLOOR(duration);
-	UnsignedInt frameToRemove = TheGameLogic->getFrame() + durationAsInt;
+	UnsignedInt now = TheGameLogic->getFrame();
+	UnsignedInt frameToRemove = now + durationAsInt;
+	Bool assignWeaponBonus = TRUE;
+	Bool assignTintStatus = FALSE;
 	
 	// Clear any different status we may have.  Re-getting the same status will just reset the timer
 	
@@ -209,14 +212,19 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 		CustomStatusTypeMap::iterator it = m_customBonusMap.find(customStatus);
 		if(it != m_customBonusMap.end())
 		{
-			(*it).second = frameToRemove;
+			if(now < (*it).second)
+				assignWeaponBonus = FALSE;
+
+			if((*it).second < frameToRemove)
+				(*it).second = frameToRemove;
 		}
 		else
 		{
 			m_customBonusMap[customStatus] = frameToRemove;
 		}
 
-		getObject()->setCustomWeaponBonusCondition(customStatus);
+		if(assignWeaponBonus)
+			getObject()->setCustomWeaponBonusCondition(customStatus);
 	}
 	// If custom status is not present, assign the status type instead!
 	else
@@ -224,14 +232,19 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 		StatusTypeMap::iterator it = m_bonusMap.find((UnsignedShort)status);
 		if(it != m_bonusMap.end())
 		{
-			(*it).second = frameToRemove;
+			if(now < (*it).second)
+				assignWeaponBonus = FALSE;
+
+			if((*it).second < frameToRemove)
+				(*it).second = frameToRemove;
 		}
 		else
 		{
 			m_bonusMap[(UnsignedShort)status] = frameToRemove;
 		}
 
-		getObject()->setWeaponBonusCondition(status);
+		if(assignWeaponBonus)
+			getObject()->setWeaponBonusCondition(status);
 	}
 
 	//m_frameToRemove = TheGameLogic->getFrame() + durationAsInt;
@@ -239,7 +252,8 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 	// Now for the Tint Statuses
 	if (getObject()->getDrawable())
 	{
-		Bool assignTintStatus = TRUE;
+		Bool hasTintDataInVec = FALSE;
+		assignTintStatus = TRUE;
 
 		if(!customTintStatus.isEmpty())
 		{
@@ -247,20 +261,26 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 			{
 				if((*it).first == customTintStatus)
 				{
-					(*it).second = frameToRemove;
-					assignTintStatus = FALSE;
+					hasTintDataInVec = TRUE;
+					if(now < (*it).second)
+						assignTintStatus = FALSE;
+
+					if((*it).second < frameToRemove)
+						(*it).second = frameToRemove;
+
 					break;
 				}
 			}
-			if(assignTintStatus == TRUE)
+			if(!hasTintDataInVec)
 			{
 				CustomTintStatusDurationPair statusPair;
 				statusPair.first = customTintStatus;
 				statusPair.second = frameToRemove;
 				m_customTintStatus.push_back(statusPair);
 			}
-		
-			getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
+
+			if(assignTintStatus)
+				getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
 
 		}
 		else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
@@ -268,20 +288,26 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 			{
 				if((*it).first == tintStatus)
 				{
-					(*it).second = frameToRemove;
-					assignTintStatus = FALSE;
+					hasTintDataInVec = TRUE;
+					if(now < (*it).second)
+						assignTintStatus = FALSE;
+
+					if((*it).second < frameToRemove)
+						(*it).second = frameToRemove;
+
 					break;
 				}
 			}
-			if(assignTintStatus == TRUE)
+			if(!hasTintDataInVec)
 			{
 				TintStatusDurationPair statusPair;
 				statusPair.first = tintStatus;
 				statusPair.second = frameToRemove;
 				m_currentTint.push_back(statusPair);
 			}
-			
-			getObject()->getDrawable()->setTintStatus(tintStatus);
+
+			if(assignTintStatus)
+				getObject()->getDrawable()->setTintStatus(tintStatus);
 
 		}
 
@@ -294,7 +320,7 @@ void TempWeaponBonusHelper::doTempWeaponBonus( WeaponBonusConditionType status, 
 	//setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 	// We set the wake frame for updating, because running for loops everyframe is expensive
-	if(frameToRemove < m_frameToRemove || !m_earliestDurationAsInt)
+	if((assignWeaponBonus || assignTintStatus) && (frameToRemove < m_frameToRemove || !m_earliestDurationAsInt))
 	{
 		m_earliestDurationAsInt = durationAsInt;
 		m_frameToRemove = frameToRemove;

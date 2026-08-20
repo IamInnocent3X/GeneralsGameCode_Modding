@@ -604,9 +604,6 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 	if ( thing && thing->isEquivalentTo(rider->getTemplate() ) )
 	{
 		const RiderChangeContainModuleData *data = getRiderChangeContainModuleData();
-		
-		// Skip an instance of Comparison after the New Rider has been set. Mandatory everytime a new Template is set.
-		m_dontCompare = TRUE;
 
 		// Don't register the Rider if we do not use More Than One Riders
 		Bool cond_1 = m_loaded || m_theRiderDataRecord.empty() ? TRUE : FALSE;
@@ -673,6 +670,9 @@ Bool RiderChangeContain::riderChangeContainingCheck(Object* rider, const RiderIn
 #endif
 			bikeTracker->setVeterancyLevel( riderTracker->getVeterancyLevel(), FALSE );
 			riderTracker->setExperienceAndLevel( 0, FALSE );
+
+		// Skip an instance of Comparison after the New Rider has been set. Mandatory everytime a new Template is set.
+		onRiderTemplateChange();
 
 		return TRUE;
 	}
@@ -884,10 +884,7 @@ Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& 
 	{
 		if(checkRecordOnly == TRUE)
 			return TRUE;
-		
-		// Skip an instance of Comparison after the An Old Rider has been removed, as the Status Type may change.
-		m_dontCompare = TRUE;
-		
+
 		//This is our rider, so clear the current model condition.
 		bike->clearModelConditionFlags( MAKE_MODELCONDITION_MASK2(riderInfo.m_modelConditionFlagType, MODELCONDITION_DOOR_1_CLOSING ) );
 
@@ -920,6 +917,9 @@ Bool RiderChangeContain::riderChangeRemoveCheck(Object* rider, const RiderInfo& 
 			riderTracker->setVeterancyLevel( bikeTracker->getVeterancyLevel(), FALSE );
 			bikeTracker->setExperienceAndLevel( 0, FALSE );
 		}
+
+		// Skip an instance of Comparison after the An Old Rider has been removed, as the Status Type may change.
+		onRiderTemplateChange();
 
 		return TRUE;
 	}
@@ -1074,20 +1074,7 @@ UpdateSleepTime RiderChangeContain::update()
 	}
 
 	// Don't compare the Status Types after the Template Switch, because OnContaining also sets and removes Statuses
-	if(m_dontCompare)
-	{
-		Object* obj = getObject();
-		
-		const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
-		const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
-		m_prevMaskToCheck = playerMask;
-		m_prevMaskToCheck.set( objectMask );
-
-		m_prevStatus = obj->getStatusBits();
-		m_prevCustomStatusTypes = obj->getCustomStatus();
-
-		m_dontCompare = FALSE;
-	}
+	m_dontCompare = FALSE;
 
 	if( m_scuttledOnFrame != 0 )
 	{
@@ -1215,7 +1202,7 @@ Bool RiderChangeContain::riderTemplateIsValidChange(ObjectStatusMaskType newStat
 				riderData.timeFrame = TheGameLogic->getFrame();
 				riderData.statusType = (ObjectStatusType)(*it).m_objectStatusType;
 				riderData.customStatusType.clear();
-				
+
 				// Give the new template
 				riderGiveTemplate(riderData);
 
@@ -1331,9 +1318,6 @@ Bool RiderChangeContain::riderTemplateIsValidRemoval(const AsciiString& oldCusto
 // Function to Change the Object according to the Rider Template.
 void RiderChangeContain::riderGiveTemplate(RiderData riderData)
 {
-	// Skip an instance of Comparison after the New Rider has been set. Mandatory everytime a new Template is set.
-	m_dontCompare = TRUE;
-
 	// Save Load fixes, we don't want to do anything with the Records if the game has just been loaded
 	// Register the New Template if it isn't granted OnContaining or if it wasn't switching to the last Template
 	if(m_loaded && riderData.timeFrame)
@@ -1431,13 +1415,16 @@ void RiderChangeContain::riderGiveTemplate(RiderData riderData)
 			stealth->markAsDetected();
 		}
 	}
+
+	// Skip an instance of Comparison after the New Rider has been set. Mandatory everytime a new Template is set.
+	onRiderTemplateChange();
+
 }
 
 
 void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clearStatus)
 {
 	//m_firstChange = FALSE;
-	m_dontCompare = TRUE;
 
 	const RiderChangeContainModuleData* data = getRiderChangeContainModuleData();
 	const char* RiderChar = rider.str();
@@ -1518,7 +1505,27 @@ void RiderChangeContain::removeRiderTemplate(const AsciiString& rider, Bool clea
 			}
 		}
 	}
+
+	// Skip an instance of Comparison after the An Old Rider has been removed, as the Status Type may change.
+	onRiderTemplateChange();
+
 }
+
+void RiderChangeContain::onRiderTemplateChange()
+{
+	m_dontCompare = TRUE;
+
+	Object* obj = getObject();
+
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+	m_prevMaskToCheck = playerMask;
+	m_prevMaskToCheck.set( objectMask );
+
+	m_prevStatus = obj->getStatusBits();
+	m_prevCustomStatusTypes = obj->getCustomStatus();
+}
+
 
 // Stripping function that basically removes all Rider Templates from the Unit. 
 //... Desperate times calls for desperate measures. 

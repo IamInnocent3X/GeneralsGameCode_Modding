@@ -181,7 +181,10 @@ void StatusDamageHelper::clearStatusCondition()
 void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration, const AsciiString& customStatus, const AsciiString& customTintStatus, TintStatus tintStatus )
 {
 	Int durationAsInt = REAL_TO_INT_FLOOR(duration);
-	UnsignedInt frameToHeal = TheGameLogic->getFrame() + durationAsInt;
+	UnsignedInt now = TheGameLogic->getFrame();
+	UnsignedInt frameToHeal = now + durationAsInt;
+	Bool assignStatus = TRUE;
+	Bool assignTintStatus = FALSE;
 	
 	// Clear any different status we may have.  Re-getting the same status will just reset the timer
 	
@@ -192,14 +195,19 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 		CustomStatusTypeMap::iterator it = m_customStatusToHeal.find(customStatus);
 		if(it != m_customStatusToHeal.end())
 		{
-			(*it).second = frameToHeal;
+			if(now < (*it).second)
+				assignStatus = FALSE;
+
+			if((*it).second < frameToHeal) 
+				(*it).second = frameToHeal;
 		}
 		else
 		{
 			m_customStatusToHeal[customStatus] = frameToHeal;
 		}
 
-		getObject()->setCustomStatus( customStatus );
+		if(assignStatus)
+			getObject()->setCustomStatus( customStatus );
 	}
 	// If custom status is not present, assign the status type instead!
 	else
@@ -207,14 +215,19 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 		StatusTypeMap::iterator it = m_statusToHeal.find((UnsignedShort)status);
 		if(it != m_statusToHeal.end())
 		{
-			(*it).second = frameToHeal;
+			if(now < (*it).second)
+				assignStatus = FALSE;
+
+			if((*it).second < frameToHeal) 
+				(*it).second = frameToHeal;
 		}
 		else
 		{
 			m_statusToHeal[(UnsignedShort)status] = frameToHeal;
 		}
 
-		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
+		if(assignStatus)
+			getObject()->setStatus( MAKE_OBJECT_STATUS_MASK(status) );
 	}
 
 	//m_frameToHeal = TheGameLogic->getFrame() + durationAsInt;
@@ -222,7 +235,8 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 	// Now for the Tint Statuses
 	if (getObject()->getDrawable())
 	{
-		Bool assignTintStatus = TRUE;
+		Bool hasTintDataInVec = FALSE;
+		assignTintStatus = TRUE;
 
 		if(!customTintStatus.isEmpty())
 		{
@@ -230,20 +244,26 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 			{
 				if((*it).first == customTintStatus)
 				{
-					(*it).second = frameToHeal;
-					assignTintStatus = FALSE;
+					hasTintDataInVec = TRUE;
+					if(now < (*it).second)
+						assignTintStatus = FALSE;
+
+					if((*it).second < frameToHeal)
+						(*it).second = frameToHeal;
+
 					break;
 				}
 			}
-			if(assignTintStatus == TRUE)
+			if(!hasTintDataInVec)
 			{
 				CustomTintStatusDurationPair statusPair;
 				statusPair.first = customTintStatus;
 				statusPair.second = frameToHeal;
 				m_customTintStatus.push_back(statusPair);
 			}
-		
-			getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
+
+			if(assignTintStatus)
+				getObject()->getDrawable()->setCustomTintStatus(customTintStatus);
 
 		}
 		else if (tintStatus > TINT_STATUS_INVALID && tintStatus < TINT_STATUS_COUNT) {
@@ -251,20 +271,26 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 			{
 				if((*it).first == tintStatus)
 				{
-					(*it).second = frameToHeal;
-					assignTintStatus = FALSE;
+					hasTintDataInVec = TRUE;
+					if(now < (*it).second)
+						assignTintStatus = FALSE;
+
+					if((*it).second < frameToHeal)
+						(*it).second = frameToHeal;
+
 					break;
 				}
 			}
-			if(assignTintStatus == TRUE)
+			if(!hasTintDataInVec)
 			{
 				TintStatusDurationPair statusPair;
 				statusPair.first = tintStatus;
 				statusPair.second = frameToHeal;
 				m_currentTint.push_back(statusPair);
 			}
-			
-			getObject()->getDrawable()->setTintStatus(tintStatus);
+
+			if(assignTintStatus)
+				getObject()->getDrawable()->setTintStatus(tintStatus);
 
 		}
 
@@ -277,7 +303,7 @@ void StatusDamageHelper::doStatusDamage( ObjectStatusTypes status, Real duration
 	//setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 
 	// We set the wake frame for updating, because running for loops everyframe is expensive
-	if(frameToHeal < m_frameToHeal || !m_earliestDurationAsInt)
+	if((assignStatus || assignTintStatus) && (frameToHeal < m_frameToHeal || !m_earliestDurationAsInt))
 	{
 		m_earliestDurationAsInt = durationAsInt;
 		m_frameToHeal = frameToHeal;

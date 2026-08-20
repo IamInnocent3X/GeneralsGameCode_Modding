@@ -181,6 +181,8 @@ protected:
 	virtual Bool isSpecificRiderFreeToExit(Object* obj);
 	virtual void createPayload();
 
+	void onRiderTemplateChange();
+
 private:
 
 	Int m_extraSlotsInUse;
