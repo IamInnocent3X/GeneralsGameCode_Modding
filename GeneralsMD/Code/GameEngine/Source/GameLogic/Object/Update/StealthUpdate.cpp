@@ -226,7 +226,7 @@ StealthUpdate::StealthUpdate( Thing *thing, const ModuleData* moduleData ) : Upd
 			{
 				if( disguiseObj->isAnyKindOf(forbiddenMask) )
 					continue;
-				
+
 				if( disguiseObj->isAnyKindOf(disguiseMask) )
 					foundDisguise = TRUE;
 

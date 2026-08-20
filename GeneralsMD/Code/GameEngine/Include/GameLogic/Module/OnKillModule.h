@@ -60,6 +60,18 @@ public:
 	Real									m_triggerChance;					///< chance (0..1) that an applicable kill actually triggers the effect
 	UnsignedInt						m_cooldownFrames;					///< min frames between triggers (0 = no cooldown)
 
+	DeathFlagsCustom m_deathTypesCustom;
+	DamageFlagsCustom	m_damageTypesCustom;
+	CustomFlags			m_customDeathTypes;
+	CustomFlags 	m_customDamageTypes;
+
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
+	std::vector<AsciiString> m_victimRequiredCustomStatus;
+	std::vector<AsciiString> m_victimForbiddenCustomStatus;
+
 	KillMuxData();
 	static const FieldParse* getFieldParse();
 

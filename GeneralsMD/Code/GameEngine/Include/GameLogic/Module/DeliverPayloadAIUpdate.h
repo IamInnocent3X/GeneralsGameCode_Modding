@@ -319,6 +319,8 @@ public:
 	DeliverPayloadAIUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	static Int getInterfaceMask() { return MODULEINTERFACE_DAMAGE; }
+
 	virtual AIFreeToExitType getAiFreeToExit(const Object* exiter) const;
 
 	// For calculating distance towards AIUpdates.

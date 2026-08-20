@@ -31,6 +31,7 @@
 #pragma once
 
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/DieModule.h"
 #include "GameClient/Anim2D.h"
 
 class WeaponTemplate;
@@ -45,6 +46,8 @@ public:
 	WeaponTemplate*	m_geometryBasedDamageWeaponTemplate;
 	FXList*					m_geometryBasedDamageFX;
 
+	const WeaponTemplate* m_detonateWeapon;
+
 	AsciiString m_animBaseTemplate;
 	AsciiString m_animTimedTemplate;
 	Bool m_showTimer;     ///< if this is disabled, only use animBase for timed bombs
@@ -54,6 +57,8 @@ public:
 
 	Bool m_bomberGetsExperienceOnKill;
 	Bool m_doSabotageOnDetonate;
+	Bool m_stickyBombPersistsEvenIfTargetGone;
+	Bool m_stickyBombDetonatesEvenIfTargetGone;
 
 	StickyBombUpdateModuleData()
 	{
@@ -63,8 +68,11 @@ public:
 		m_animBaseTemplate = AsciiString::TheEmptyString;
 		m_animTimedTemplate = AsciiString::TheEmptyString;
 		m_showTimer = TRUE;
+		m_detonateWeapon = nullptr;
 		m_bomberGetsExperienceOnKill = FALSE;
 		m_doSabotageOnDetonate = FALSE;
+		m_stickyBombPersistsEvenIfTargetGone = FALSE;
+		m_stickyBombDetonatesEvenIfTargetGone = FALSE;
 	}
 
 	static void parseAnimBaseName(INI* ini, void* instance, void* store, const void* userData);
@@ -83,7 +91,10 @@ public:
 			{ "Animation2DTimed",		parseAnimTimedName,					nullptr, 0 },
 			{ "ShowTimer",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_showTimer) },
 			{ "BomberGetsExperienceOnKill",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_bomberGetsExperienceOnKill ) },
-			{ "DoSabotageOnDetonate",		INI::parseBool,					nullptr, offsetof( StickyBombUpdateModuleData, m_doSabotageOnDetonate ) },
+			{ "StickyBombPersistsEvenIfTargetGone",			INI::parseBool,		nullptr, offsetof( StickyBombUpdateModuleData, m_stickyBombPersistsEvenIfTargetGone ) },
+			{ "StickyBombDetonatesEvenIfTargetGone",		INI::parseBool,		nullptr, offsetof( StickyBombUpdateModuleData, m_stickyBombDetonatesEvenIfTargetGone ) },
+			{ "DoSabotageOnDetonate",		INI::parseBool,						nullptr, offsetof( StickyBombUpdateModuleData, m_doSabotageOnDetonate ) },
+			{ "StickyBombWeapon", 			INI::parseWeaponTemplate,			nullptr, offsetof( StickyBombUpdateModuleData, m_detonateWeapon ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -113,7 +124,9 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-class StickyBombUpdate : public UpdateModule, public StickyBombUpdateInterface
+class StickyBombUpdate : public UpdateModule,
+ 														 public DieModuleInterface,
+ 														 public StickyBombUpdateInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( StickyBombUpdate, "StickyBombUpdate" )
@@ -124,11 +137,15 @@ public:
 	StickyBombUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	// module methods
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
+
 	virtual void onObjectCreated();
 
 	virtual UpdateSleepTime update();							///< called once per frame
 
 	virtual StickyBombUpdateInterface* getStickyBombUpdateInterface() { return this; }
+	virtual DieModuleInterface* getDie() { return this; }
 
 	virtual void initStickyBomb( Object *object, const Object *bomber, const Coord3D *specificPos = nullptr );
 	virtual void detonate();
@@ -136,6 +153,9 @@ public:
 	virtual UnsignedInt getDetonationFrame() const { return m_dieFrame; }
 	virtual Object* getTargetObject() const;
 	virtual void setTargetObject( Object *obj );
+
+	// die module methods
+	virtual void onDie( const DamageInfo *damageInfo );
 
 	//AsciiString getAnimBaseTemplate() { return getStickyBombUpdateModuleData()->m_animBaseTemplate; }
 	//AsciiString getAnimTimedTemplate() { return getStickyBombUpdateModuleData()->m_animTimedTemplate; }
@@ -148,6 +168,9 @@ public:
 
 	virtual Bool showAnimBaseTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimBase; }
 	virtual Bool showAnimTimedTemplate() { return !getStickyBombUpdateModuleData()->m_hideAnimTimed; }
+
+protected:
+  void triggerStickyBomb();
 
 private:
 

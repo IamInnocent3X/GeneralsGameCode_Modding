@@ -488,8 +488,14 @@ Bool MissileAIUpdate::projectileHandleCollision( Object *other )
 	}
 
 	// Don't detonate On Ground
-	if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
-		return true;
+	if(m_dontDetonateGroundFrames > TheGameLogic->getFrame()) {
+		Coord3D dirVec;
+		dirVec.x = getTargetPosition()->x - getObject()->getPosition()->x;
+		dirVec.y = getTargetPosition()->y - getObject()->getPosition()->y;
+		dirVec.z = getTargetPosition()->z - getObject()->getPosition()->z;
+		if(dirVec.lengthSqr() > 1.0f)
+			return true;
+	}
 
 	// collided with something... blow'd up!
 	detonate();
@@ -1172,7 +1178,12 @@ UpdateSleepTime MissileAIUpdate::update()
 			getObject()->setPosition(&tmp);
 			if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
 			{
-				return UPDATE_SLEEP_NONE;
+				Coord3D dirVec;
+				dirVec.x = getTargetPosition()->x - getObject()->getPosition()->x;
+				dirVec.y = getTargetPosition()->y - getObject()->getPosition()->y;
+				dirVec.z = getTargetPosition()->z - getObject()->getPosition()->z;
+				if(dirVec.lengthSqr() > 1.0f)
+					return UPDATE_SLEEP_NONE;
 			}
 			// blow'd up!
 			detonate();

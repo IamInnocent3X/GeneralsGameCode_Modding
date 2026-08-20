@@ -655,8 +655,14 @@ Bool DumbProjectileBehavior::projectileHandleCollision( Object *other )
 	}
 
 	// Don't detonate On Ground
-	if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
-		return true;
+	if(m_dontDetonateGroundFrames > TheGameLogic->getFrame()) {
+		Coord3D dirVec;
+		dirVec.x = getTargetPosition()->x - getObject()->getPosition()->x;
+		dirVec.y = getTargetPosition()->y - getObject()->getPosition()->y;
+		dirVec.z = getTargetPosition()->z - getObject()->getPosition()->z;
+		if(dirVec.lengthSqr() > 1.0f)
+			return true;
+	}
 
 	// collided with something... blow'd up!
 	detonate();
@@ -708,6 +714,8 @@ void DumbProjectileBehavior::detonate()
 		obj->getDrawable()->setDrawableHidden(true);
 
   m_hasDetonated = TRUE;
+
+	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
 
 }
 
@@ -914,7 +922,12 @@ UpdateSleepTime DumbProjectileBehavior::update()
 			getObject()->setPosition(&tmp);
 			if(m_dontDetonateGroundFrames > TheGameLogic->getFrame())
 			{
-				return UPDATE_SLEEP_NONE;
+				Coord3D dirVec;
+				dirVec.x = getTargetPosition()->x - getObject()->getPosition()->x;
+				dirVec.y = getTargetPosition()->y - getObject()->getPosition()->y;
+				dirVec.z = getTargetPosition()->z - getObject()->getPosition()->z;
+				if(dirVec.lengthSqr() > 1.0f)
+					return UPDATE_SLEEP_NONE;
 			}
 			// blow'd up!
 			detonate();

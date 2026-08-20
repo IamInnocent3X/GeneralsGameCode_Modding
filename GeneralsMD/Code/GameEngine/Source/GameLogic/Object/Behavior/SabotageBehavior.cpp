@@ -352,7 +352,7 @@ static void grantUpgrade( Object *obj, const AsciiString upgradeName )
 
 	if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 	{
-		if(obj->isNeutralControlled())
+		if(!player || player == ThePlayerList->getNeutralPlayer())
 			return;
 
 		player->findUpgradeInQueuesAndCancelThem( upgradeTemplate );
@@ -369,7 +369,8 @@ static void grantUpgrade( Object *obj, const AsciiString upgradeName )
 		obj->giveUpgrade( upgradeTemplate );
 	}
 
-	player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
+	if(player && player != ThePlayerList->getNeutralPlayer())
+		player->getAcademyStats()->recordUpgrade( upgradeTemplate, TRUE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -386,10 +387,10 @@ static Bool upgradeCanBeGranted( Object *obj, const AsciiString upgradeName )
 
 	if( upgradeTemplate->getUpgradeType() == UPGRADE_TYPE_PLAYER )
 	{
-		if(obj->isNeutralControlled())
+		Player *player = obj->getControllingPlayer();
+		if(!player || player == ThePlayerList->getNeutralPlayer())
 			return FALSE;
 
-		Player *player = obj->getControllingPlayer();
 		return player && !player->hasUpgradeComplete( upgradeTemplate );
 	}
 	else if(obj->affectedByUpgrade( upgradeTemplate ))
@@ -404,11 +405,13 @@ static Bool upgradeCanBeGranted( Object *obj, const AsciiString upgradeName )
 //-------------------------------------------------------------------------------------------------
 static void grantSabotageUpgradeOrScience( Object *obj, const ScienceVec& scienceVec, const std::vector<AsciiString>& upgradeVec, SabotageGrantType grantType )
 {
-	Bool isGrantingScience = upgradeVec.empty();
+	Player *player = obj->getControllingPlayer();
+
+	Bool isGrantingScience = upgradeVec.empty() && player && player != ThePlayerList->getNeutralPlayer();
 	Bool isGrantingUpgrade = scienceVec.empty();
 
 	// Both are empty
-	if(isGrantingScience && isGrantingUpgrade)
+	if(upgradeVec.empty() && isGrantingUpgrade)
 		return;
 
 	Int vecSize;
@@ -426,15 +429,12 @@ static void grantSabotageUpgradeOrScience( Object *obj, const ScienceVec& scienc
 			random = TRUE;
 			break;
 		case GRANT_LAST_DONT_HAVE:
-		case GRANT_LIKE_LEVELING_UP:
 			orderStart = vecSize - 1;
 			reverse = TRUE;
 			break;
 		default:
 			break;
 	}
-
-	Player *player = obj->getControllingPlayer();
 
 	Int i = random ? GameLogicRandomValue(0, vecSize - 1) : orderStart;
 	std::vector<Int> doneRandomValue;
@@ -679,7 +679,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 	Player *otherPlayer = other->getControllingPlayer();
 
 	// Grant Instances
-	if( !obj->isNeutralControlled() && (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
+	if( player && player != ThePlayerList->getNeutralPlayer() && (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
 	{
 		for(std::vector<NameKeyType>::const_iterator it_key = data->m_commandInstancesToGrant.begin(); it_key != data->m_commandInstancesToGrant.end(); ++it_key)
 		{
@@ -692,7 +692,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 	}
 
 	//Steal cash!
-	if((data->m_sabotageType & SABOTAGE_CASH) && (data->m_stealCashAmount || data->m_stealCashPercentage))
+	if(otherPlayer && otherPlayer != ThePlayerList->getNeutralPlayer() && (data->m_sabotageType & SABOTAGE_CASH) && (data->m_stealCashAmount || data->m_stealCashPercentage))
 	{
 		Money *targetMoney = otherPlayer->getMoney();
 		Money *objectMoney = player->getMoney();
@@ -767,7 +767,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 		Int energy = other->getTemplate()->getEnergyProduction();
 		Int bonus = other->getTemplate()->getEnergyBonus();
 
-		if( doSpecific )
+		if( doSpecific || (otherPlayer && otherPlayer == ThePlayerList->getNeutralPlayer()) )
 		{
 			if( other->isKindOf(KINDOF_POWERED) || other->isKindOf(KINDOF_POWERED_TANK) || energy != 0 || bonus != 0 )
 			{
@@ -1065,13 +1065,12 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 		}
 	}
 
-	
-	if( data->m_sabotageIsCapture )
+	if( data->m_sabotageIsCapture && player && player->isPlayerActive() )
 	{
 		Bool canCapture = TRUE;
 
-		// Whoops. Cancel if it or us is now dead.
-		if( other->isEffectivelyDead() || getObject()->isEffectivelyDead() )
+		// Whoops. Cancel if it is now dead.
+		if( other->isEffectivelyDead() )
 			canCapture = FALSE;
 
 		if( canCapture && other->getTeam() == obj->getTeam() )
@@ -1098,7 +1097,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 				TheEva->setShouldPlay( EVA_BuildingStolen );
 			}
 
-			other->defect( obj->getControllingPlayer()->getDefaultTeam(), data->m_sabotageCaptureTime ); // one frame of flash!
+			other->defect( player->getDefaultTeam(), data->m_sabotageCaptureTime ); // one frame of flash!
 		}
 	}
 
@@ -1151,11 +1150,13 @@ Bool SabotageBehavior::canDoSabotageSpecialCheck( const Object *other ) const
 	if( data->m_sabotageDamage || data->m_sabotagePercentDamage )
 		return TRUE;
 
-	if( data->m_sabotageIsCapture )
+	Player *player = getObject()->getControllingPlayer();
+
+	if( data->m_sabotageIsCapture && player && player->isPlayerActive() )
 	{
 		Bool canCapture = TRUE;
 
-		if( other->isEffectivelyDead() || getObject()->isEffectivelyDead() )
+		if( other->isEffectivelyDead() )
 			canCapture = FALSE;
 
 		if( canCapture && other->getTeam() == getObject()->getTeam() )
@@ -1171,7 +1172,7 @@ Bool SabotageBehavior::canDoSabotageSpecialCheck( const Object *other ) const
 			return TRUE;
 	}
 
-	if( !getObject()->isNeutralControlled() && (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
+	if( player && player != ThePlayerList->getNeutralPlayer() && (!data->m_commandInstancesToGrant.empty() || !data->m_commandInstancesToGrantWithAmount.empty()) )
 		return TRUE;
 
 	if(!data->m_grantUpgradeNames.empty())

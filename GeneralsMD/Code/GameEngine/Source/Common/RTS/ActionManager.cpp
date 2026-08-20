@@ -1318,21 +1318,7 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	// New, check if the Action uses Sabotage Behavior for activation
 	if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 	{
-		Bool found = FALSE;
-		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-		{
-			CollideModuleInterface* collide = (*m)->getCollide();
-			if (!collide)
-				continue;
-
-			if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToCapture) )
-			{
-				found = TRUE;
-				break;
-			}
-		}
-		if(!found)
-			return FALSE;
+		return spUpdate->friend_canUseSabotageOnObject(objectToCapture, spInterface->getPowerName());
 	}
 
   return TRUE;
@@ -1457,21 +1443,7 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		// New, check if the Action uses Sabotage Behavior for activation
 		if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 		{
-			Bool found = FALSE;
-			for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-			{
-				CollideModuleInterface* collide = (*m)->getCollide();
-				if (!collide)
-					continue;
-
-				if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToHack) )
-				{
-					found = TRUE;
-					break;
-				}
-			}
-			if(!found)
-				return FALSE;
+			return spUpdate->friend_canUseSabotageOnObject(objectToHack, spInterface->getPowerName());
 		}
 
 		return TRUE;
@@ -1741,21 +1713,7 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	// New, check if the Action uses Sabotage Behavior for activation
 	if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 	{
-		Bool found = FALSE;
-		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-		{
-			CollideModuleInterface* collide = (*m)->getCollide();
-			if (!collide)
-				continue;
-
-			if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToHack) )
-			{
-				found = TRUE;
-				break;
-			}
-		}
-		if(!found)
-			return FALSE;
+		return spUpdate->friend_canUseSabotageOnObject(objectToHack, spInterface->getPowerName());
 	}
 
 	return TRUE;
@@ -2155,6 +2113,11 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 						break;
 					}
 
+					if ( spUpdate->getUsesSabotageBehavior() && !spUpdate->friend_canUseSabotageOnObject(target, spTemplate->getName()) )
+					{
+						break;
+					}
+
 					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
 					{
 						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
@@ -2172,8 +2135,42 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 
 			case SPECIAL_BOOBY_TRAP:
 			{
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_BOOBY_TRAP );
+
+				// Condition: I have declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						return FALSE;
+
+					Int targetMask = spUpdate->getTargetsMask();
+					if( targetMask == 0 ) {
+						targetMask == WEAPON_AFFECTS_NEUTRALS | WEAPON_AFFECTS_ALLIES;
+					}
+
+					if(((targetMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        	((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        	((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+					  )
+					{
+						return FALSE;
+					}
+
+					if ( spUpdate->getUsesSabotageBehavior() && !spUpdate->friend_canUseSabotageOnObject(target, spTemplate->getName()) )
+					{
+						return FALSE;
+					}
+
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							return TRUE;
+						else
+							return FALSE;
+					}
+				}
 				// We can booby trap any building that is allied or neutral
-				if( target->isKindOf(KINDOF_STRUCTURE) && (r == NEUTRAL || r == ALLIES) )
+				if( target->isKindOf(KINDOF_STRUCTURE) ) // && (r == NEUTRAL || r == ALLIES) )
 				{
 					return TRUE;
 				}
@@ -2462,12 +2459,17 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 							return false;
 						}
 
-						if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+						if( spUpdate->getKindOfs() != KINDOFMASK_NONE ) 
 						{
 							if( !target->isAnyKindOf(spUpdate->getKindOfs()) )
 								return false;
 						}
 						else if( !(target->isKindOf( KINDOF_STRUCTURE ) || target->isKindOf( KINDOF_VEHICLE )) )
+						{
+							return false;
+						}
+
+						if ( spUpdate->getUsesSabotageBehavior() && !spUpdate->friend_canUseSabotageOnObject(target, spTemplate->getName()) )
 						{
 							return false;
 						}

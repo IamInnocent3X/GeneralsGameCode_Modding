@@ -188,14 +188,19 @@ void StickyBombUpdate::initStickyBomb( Object *target, const Object *bomber, con
 UpdateSleepTime StickyBombUpdate::update( void )
 {
 	// Continually reset position of stickybomb to match the position of the target.
+	const StickyBombUpdateModuleData* d = getStickyBombUpdateModuleData();
 	const Object *target = getTargetObject();
 	Object *self = getObject();
 	if( target )
 	{
-		if( target->isEffectivelyDead() )
+		if( target->isEffectivelyDead() && !d->m_stickyBombPersistsEvenIfTargetGone )
 		{
 			//If the target is dead, then
-			TheGameLogic->destroyObject( self );
+			if(d->m_stickyBombDetonatesEvenIfTargetGone)
+				detonate();
+			else
+				TheGameLogic->destroyObject( self );
+
 			return UPDATE_SLEEP_NONE;
 		}
 
@@ -212,7 +217,6 @@ UpdateSleepTime StickyBombUpdate::update( void )
 		}
 		else // make the bomb follow the target around
 		{
-			const StickyBombUpdateModuleData* d = getStickyBombUpdateModuleData();
 			const Coord3D *pos = target->getPosition();
 			Coord3D newPos;
 			newPos.x = pos->x;
@@ -252,17 +256,84 @@ void StickyBombUpdate::setTargetObject( Object *obj )
 //-------------------------------------------------------------------------------------------------
 void StickyBombUpdate::detonate()
 {
+	m_detonated = TRUE;
+
+	getObject()->kill();// Most things just fire weapons in their death modules
+
+	getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
+}
+
+// ------------------------------------------------------------------------------------------------
+/** The death callback */
+// ------------------------------------------------------------------------------------------------
+void StickyBombUpdate::onDie( const DamageInfo *damageInfo )
+{
+	if(m_dieFrame == -2 || (m_dieFrame > 0 && fabs(TheGameLogic->getFrame() - m_dieFrame) <= 1)) {
+		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // If our death is triggered because of a time-bomb, then we are considered detonated
+
+		triggerStickyBomb();
+	}
+}
+
+
+// ------------------------------------------------------------------------------------------------
+/** The trigger callback */
+// ------------------------------------------------------------------------------------------------
+void StickyBombUpdate::triggerStickyBomb()
+{
 	const StickyBombUpdateModuleData *data = getStickyBombUpdateModuleData();
 
 	Object* boobyTrappedObject = getTargetObject();
-	if( data->m_geometryBasedDamageWeaponTemplate )
+	Object *obj = getObject();
+	Object *source = TheGameLogic->findObjectByID( m_shooterID );
+	if(!source || source->isEffectivelyDead() || source->isDestroyed() )
+		source = obj;
+
+	Coord3D boobyTrappedObjectPos = *obj->getPosition();
+
+	if( boobyTrappedObject )
+	{
+		boobyTrappedObjectPos = *boobyTrappedObject->getPosition();
+
+		if( data->m_doSabotageOnDetonate && !boobyTrappedObject->isDestroyed() && !boobyTrappedObject->isEffectivelyDead() )
+		{
+			for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isSabotageBuildingCrateCollide() && collide->canDoSabotageSpecialCheck(boobyTrappedObject) )
+				{
+					collide->doSabotage(boobyTrappedObject, source);
+				}
+			}
+		}
+	}
+
+	if( data->m_detonateWeapon )
+	{
+		if(boobyTrappedObject)
+			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, source, boobyTrappedObject, boobyTrappedObject->getPosition(), obj->getID());
+		else {
+			Coord3D targetPos = boobyTrappedObjectPos;
+			if( !boobyTrappedObject || !boobyTrappedObject->isSignificantlyAboveTerrain() || boobyTrappedObject->isKindOf( KINDOF_IMMOBILE ) )
+			{
+				targetPos.z = TheTerrainLogic->getGroundHeight(targetPos.x, targetPos.y);
+				//keep it at ground height for non-ground objects
+			}
+
+			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, source, &targetPos, &boobyTrappedObjectPos, obj->getID());
+		}
+	}
+	else if( data->m_geometryBasedDamageWeaponTemplate )
 	{
 		// We need to hurt people based on the size of the thing we are on.  The radius in our weapon
 		// is the radius beyond our borders
 		if( boobyTrappedObject )
 		{
 			WeaponBonus nullBonus;
-			Real boundingCircle = boobyTrappedObject->getGeometryInfo().getBoundingCircleRadius();
+			Real boundingCircle = boobyTrappedObject ? boobyTrappedObject->getGeometryInfo().getBoundingCircleRadius() : obj->getGeometryInfo().getBoundingCircleRadius();
 			Real primaryDamage = data->m_geometryBasedDamageWeaponTemplate->getPrimaryDamage(nullBonus);
 			Real secondaryDamage = data->m_geometryBasedDamageWeaponTemplate->getSecondaryDamage(nullBonus);
 			Real primaryDamageRange = data->m_geometryBasedDamageWeaponTemplate->getPrimaryDamageRadius(nullBonus);
@@ -273,7 +344,7 @@ void StickyBombUpdate::detonate()
 			Real radius = max(primaryDamageRange, secondaryDamageRange);
 
 			SimpleObjectIterator *iter;
-			iter = ThePartitionManager->iterateObjectsInRange(boobyTrappedObject->getPosition(), radius, FROM_BOUNDINGSPHERE_3D);
+			iter = ThePartitionManager->iterateObjectsInRange(&boobyTrappedObjectPos, radius, FROM_BOUNDINGSPHERE_3D);
 			MemoryPoolObjectHolder hold(iter);
 			Real curVictimDistSqr;
 			Object *curVictim = iter->firstWithNumeric(&curVictimDistSqr);
@@ -334,10 +405,10 @@ void StickyBombUpdate::detonate()
 			if( data->m_geometryBasedDamageFX )
 			{
 				// And we make FX based on that size too.
-				FXList::doFXPos(data->m_geometryBasedDamageFX, boobyTrappedObject->getPosition(), nullptr, 0, nullptr, secondaryDamageRange);
+				FXList::doFXPos(data->m_geometryBasedDamageFX, &boobyTrappedObjectPos, nullptr, 0, nullptr, secondaryDamageRange);
 			}
 
-			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(damageInfo.in.m_sourceID, m_targetID, boobyTrappedObject->getPosition());
+			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(damageInfo.in.m_sourceID, m_targetID, &boobyTrappedObjectPos);
 		}
 		else if(data->m_geometryBasedDamageWeaponTemplate->getShrapnelDoesNotRequireVictim())
 		{
@@ -345,32 +416,12 @@ void StickyBombUpdate::detonate()
 		}
 	}
 
-	if( data->m_doSabotageOnDetonate && boobyTrappedObject && !boobyTrappedObject->isDestroyed() && !boobyTrappedObject->isEffectivelyDead() )
-	{
-		Object *obj = m_shooterID != INVALID_ID ? TheGameLogic->findObjectByID( m_shooterID ) : getObject();
-		if(obj && (obj->isEffectivelyDead() || obj->isDestroyed()) )
-			obj = getObject();
-
-		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-		{
-			CollideModuleInterface* collide = (*m)->getCollide();
-			if (!collide)
-				continue;
-
-			if( collide->isSabotageBuildingCrateCollide() && collide->canDoSabotageSpecialCheck(boobyTrappedObject) )
-			{
-				collide->doSabotage(boobyTrappedObject, obj);
-			}
-		}
-	}
-
-	if( getObject()->isKindOf(KINDOF_BOOBY_TRAP) && boobyTrappedObject )
+		if( getObject()->isKindOf(KINDOF_BOOBY_TRAP) && boobyTrappedObject )
 	{
 		// This kind of sticky bomb needs to set a status, so the poor victim can trigger us from assorted places
 		boobyTrappedObject->clearStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_BOOBY_TRAPPED) );
 	}
 
-	getObject()->kill();// Most things just fire weapons in their death modules
 }
 
 

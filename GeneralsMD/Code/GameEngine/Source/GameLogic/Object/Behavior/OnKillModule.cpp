@@ -39,6 +39,18 @@ KillMuxData::KillMuxData()
 	m_damageTypes = DAMAGE_TYPE_FLAGS_ALL;
 	m_triggerChance = 1.0f;					// always trigger
 	m_cooldownFrames = 0;						// no cooldown
+
+	m_deathTypesCustom.first = DEATH_TYPE_FLAGS_ALL;
+	m_deathTypesCustom.second.format("ALL");
+	m_damageTypesCustom.first = DAMAGE_TYPE_FLAGS_ALL;
+	m_damageTypesCustom.second.format("ALL");
+	m_requiredCustomStatus.clear();
+	m_forbiddenCustomStatus.clear();
+	m_victimRequiredCustomStatus.clear();
+	m_victimForbiddenCustomStatus.clear();
+	m_customDeathTypes.clear();
+	m_customDamageTypes.clear();
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -51,11 +63,21 @@ const FieldParse* KillMuxData::getFieldParse()
 		{ "RequiresAllKindOfs",		INI::parseBool,											nullptr, offsetof( KillMuxData, m_requiresAllKindOfs ) },
 		{ "RequiredKilledStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( KillMuxData, m_victimRequiredStatus ) },
 		{ "ForbiddenKilledStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( KillMuxData, m_victimForbiddenStatus ) },
+		{ "RequiredKilledCustomStatus",		INI::parseAsciiStringVector,	nullptr, offsetof( KillMuxData, m_victimRequiredCustomStatus ) },
+		{ "ForbiddenKilleCustomdStatus",	INI::parseAsciiStringVector,	nullptr, offsetof( KillMuxData, m_victimForbiddenCustomStatus ) },
 		{ "KilledRelationship",			INI::parseBitString32,							TheWeaponAffectsMaskNames, offsetof( KillMuxData, m_victimRelationship ) },
-		{ "DeathTypes",						INI::parseDeathTypeFlags,						nullptr, offsetof( KillMuxData, m_deathTypes ) },
-		{ "DamageTypes",					INI::parseDamageTypeFlags,					nullptr, offsetof( KillMuxData, m_damageTypes ) },
+		{ "DeathTypes",						INI::parseDeathTypeFlagsCustom,						nullptr, offsetof( KillMuxData, m_deathTypesCustom ) },
+		{ "DamageTypes",					INI::parseDamageTypeFlagsCustom,					nullptr, offsetof( KillMuxData, m_damageTypesCustom ) },
 		{ "TriggerChance",				INI::parsePercentToReal,						nullptr, offsetof( KillMuxData, m_triggerChance ) },
 		{ "CooldownTime",					INI::parseDurationUnsignedInt,			nullptr, offsetof( KillMuxData, m_cooldownFrames ) },
+
+		{ "CustomDamageTypes", 		INI::parseCustomTypes, 			nullptr, offsetof( KillMuxData, m_customDamageTypes ) },
+		{ "CustomDeathTypes",		INI::parseCustomTypes,			nullptr, offsetof( KillMuxData, m_customDeathTypes ) },
+		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( KillMuxData, m_requiredStatus ) },
+		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( KillMuxData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( KillMuxData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( KillMuxData, m_forbiddenCustomStatus ) },
+	
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	return dataFieldParse;
@@ -67,13 +89,40 @@ Bool KillMuxData::isKillApplicable( const Object *killer, const Object *victim, 
 	if (killer == nullptr || victim == nullptr)
 		return false;
 
+	if(damageInfo != nullptr)
+	{
+		// wrong death type? punt (only when we actually have damage context)
+		if(damageInfo->in.m_customDeathType.isEmpty())
+		{
+			if (!getDeathTypeFlag(m_deathTypesCustom.first, damageInfo->in.m_deathType))
+				return false;
+		}
+		else
+		{
+			if(!getCustomTypeFlag(m_deathTypesCustom.second, m_customDeathTypes, damageInfo->in.m_customDeathType))
+				return false;
+		}
+
+		// wrong damage type? punt (only when we actually have damage context)
+		if(damageInfo->in.m_customDamageType.isEmpty())
+		{
+			if (!getDamageTypeFlag(m_damageTypesCustom.first, damageInfo->in.m_damageType))
+				return false;
+		}
+		else
+		{
+			if(!getCustomTypeFlag(m_damageTypesCustom.second, m_customDamageTypes, damageInfo->in.m_customDamageType))
+				return false;
+		}
+	}
+
 	// wrong death type? punt (only when we actually have damage context)
-	if (damageInfo != nullptr && !getDeathTypeFlag(m_deathTypes, damageInfo->in.m_deathType))
-		return false;
+	//if (damageInfo != nullptr && !getDeathTypeFlag(m_deathTypes, damageInfo->in.m_deathType))
+	//	return false;
 
 	// wrong damage type? punt (only when we actually have damage context)
-	if (damageInfo != nullptr && !getDamageTypeFlag(m_damageTypes, damageInfo->in.m_damageType))
-		return false;
+	//if (damageInfo != nullptr && !getDamageTypeFlag(m_damageTypes, damageInfo->in.m_damageType))
+	//	return false;
 
 	// victim KindOf: must never have a forbidden bit, and must match the required bits either fully
 	// (ALL) or partially (ANY) depending on m_requiresAllKindOfs.
@@ -97,6 +146,37 @@ Bool KillMuxData::isKillApplicable( const Object *killer, const Object *victim, 
 	// all 'forbidden' status bits must be clear.
 	if (m_victimForbiddenStatus.any() && victim->getStatusBits().testForAny(m_victimForbiddenStatus))
 		return false;
+	
+	// Support custom statuses
+	if(victim->testCustomStatusForAll(m_requiredCustomStatus))
+		return false;
+
+	for(std::vector<AsciiString>::const_iterator it = m_victimForbiddenCustomStatus.begin(); it != m_victimForbiddenCustomStatus.end(); ++it)
+	{
+		if(victim->testCustomStatus(*it))
+			return false;
+	}
+
+	// Check Source Object
+	ObjectStatusMaskType status = killer->getStatusBits();
+
+	//We need all required status or else we fail
+	if( m_requiredStatus.any() && !status.testForAll( m_requiredStatus ) )
+		return false;
+
+	//If we have any forbidden statii, then fail
+	if( status.testForAny( m_forbiddenStatus ) )
+		return false;
+
+	// Support custom statuses
+	if(!killer->testCustomStatusForAll(m_requiredCustomStatus))
+		return false;
+
+	for(std::vector<AsciiString>::const_iterator it = m_forbiddenCustomStatus.begin(); it != m_forbiddenCustomStatus.end(); ++it)
+	{
+		if(killer->testCustomStatus(*it))
+			return false;
+	}
 
 	// relationship of the victim to the killer must be in the allowed set.
 	Relationship r = killer->getRelationship(victim);

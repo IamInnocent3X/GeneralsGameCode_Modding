@@ -530,6 +530,8 @@ void NeutronMissileUpdate::detonate()
 	m_state = DEAD;
 	if (obj->getDrawable())
 		obj->getDrawable()->setDrawableHidden(true);
+
+	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -148,7 +148,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// module methods
-	static Int getInterfaceMask( void ) { return (MODULEINTERFACE_UPDATE) | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_DAMAGE); }
+	static Int getInterfaceMask( void ) { return (MODULEINTERFACE_UPDATE) | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_DAMAGE) | (MODULEINTERFACE_CREATE); }
 	virtual void onDelete( void );
 	virtual UpdateModuleInterface *getUpdate() { return this; }
 	virtual DieModuleInterface *getDie() { return this; }

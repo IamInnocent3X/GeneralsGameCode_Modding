@@ -81,7 +81,7 @@ public:
 	// virtual destructor prototype provided by MemoryPoolObject
 
 	// module methods
-	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_CREATE); }
 	virtual void onDelete( void );
 	void onObjectCreated( void );
 
