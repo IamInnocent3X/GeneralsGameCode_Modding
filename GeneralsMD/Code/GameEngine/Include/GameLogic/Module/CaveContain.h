@@ -119,6 +119,7 @@ public:
 	virtual Int getRawContainMax() const override;
 	virtual Int getContainMax() const override;
 	virtual const ContainedItemsList* getContainedItemsList() const override;
+	virtual Bool isContained( const Object *obj ) const override;
 	virtual Bool isDisplayedOnControlBar() const override { return TRUE; } ///< Does this container display its contents on the ControlBar?
 	virtual Bool isKickOutOnCapture() override { return FALSE; }///< Caves and Tunnels don't kick out on capture.
 
