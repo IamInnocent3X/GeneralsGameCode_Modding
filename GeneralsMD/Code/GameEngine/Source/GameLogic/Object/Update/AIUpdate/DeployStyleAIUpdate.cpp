@@ -479,7 +479,7 @@ void DeployStyleAIUpdate::doStatusUpdate()
 
 	if(!m_hasUndeploy)
 	{
-		m_hasUndeploy = data->m_statusToUndeploy.any() && self->getStatusBits().testForAny( data->m_statusToUndeploy );
+		m_hasUndeploy = !self->getStatusBits().testForNone( data->m_statusToUndeploy );
 		if(!m_hasUndeploy)
 		{
 			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
@@ -498,7 +498,7 @@ void DeployStyleAIUpdate::doStatusUpdate()
 
 	if(!m_hasDeploy && !m_hasUndeploy )
 	{
-		m_hasDeploy = ( data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ) );
+		m_hasDeploy = !self->getStatusBits().testForNone( data->m_statusToDeploy );
 		if(!m_hasDeploy)
 		{
 			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
@@ -542,7 +542,7 @@ void DeployStyleAIUpdate::doRemoveStatusTrigger()
 	Object *self = getObject();
 	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
 
-	if(data->m_statusToDeploy.any() && self->getStatusBits().testForAny( data->m_statusToDeploy ))
+	if(!self->getStatusBits().testForNone( data->m_statusToDeploy ))
 	{
 		m_doUndeploy = FALSE;
 		m_doDeploy = TRUE;
@@ -557,7 +557,7 @@ void DeployStyleAIUpdate::doRemoveStatusTrigger()
 			self->setCustomStatus((*it), FALSE);
 		}
 	}
-	if(data->m_statusToUndeploy.any()  && self->getStatusBits().testForAny( data->m_statusToUndeploy ))
+	if(!self->getStatusBits().testForNone( data->m_statusToUndeploy ))
 	{
 		m_doDeploy = FALSE;
 		m_doUndeploy = TRUE;

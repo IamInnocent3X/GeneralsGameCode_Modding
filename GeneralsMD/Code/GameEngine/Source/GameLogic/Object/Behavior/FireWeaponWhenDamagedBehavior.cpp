@@ -199,7 +199,7 @@ void FireWeaponWhenDamagedBehavior::onDamage( DamageInfo *damageInfo )
 
 	//We need all required status or else we fail
 	// If we have any requirements
-	if( d->m_requiredStatus.any()  &&  !obj->getStatusBits().testForAll( d->m_requiredStatus ) )
+	if( !obj->getStatusBits().testForAll( d->m_requiredStatus ) )
 		return; 
 
 	//If we have any forbidden statii, then fail

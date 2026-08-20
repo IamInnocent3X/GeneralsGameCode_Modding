@@ -2737,7 +2737,14 @@ UpdateSleepTime JetAIUpdate::update()
 		if (m_attackLocoExpireFrame != 0)
 		{
 			if(now >= m_attackLocoExpireFrame)
+			{
+#if !RETAIL_COMPATIBLE_CRC
+				// TheSuperHackers @bugfix arcticdolphin 04/03/2026 Reset locomotor when attack locomotor timer expires.
+				// Relevant for the Supersonic Mode of the USA Aurora.
+				chooseLocomotorSet(LOCOMOTORSET_NORMAL);
+#endif
 				m_attackLocoExpireFrame = 0;
+			}
 			else
 				attackLocoExpireFrame = m_attackLocoExpireFrame - now;
 		}
@@ -2861,6 +2868,19 @@ void JetAIUpdate::checkStateChange()
 				getStateMachine()->clear();
 				setLastCommandSource( CMD_FROM_AI );
 				getStateMachine()->setState( TAKING_OFF_AWAIT_CLEARANCE );
+#if !RETAIL_COMPATIBLE_CRC
+				// TheSuperHackers @bugfix arcticdolphin 02/03/2026 Move healed helicopter to rally point if present.
+				if (Object *airfield = TheGameLogic->findObjectByID( jet->getProducerID() ))
+				{
+					if (ExitInterface *exitInterface = airfield->getObjectExitInterface())
+					{
+						if (const Coord3D *rallyPoint = exitInterface->getRallyPoint())
+						{
+							aiMoveToPosition( rallyPoint, CMD_FROM_AI );
+						}
+					}
+				}
+#endif
 			}
 			else
 			{

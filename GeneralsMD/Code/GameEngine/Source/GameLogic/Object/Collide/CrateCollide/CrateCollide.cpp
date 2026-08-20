@@ -429,7 +429,7 @@ Bool CrateCollide::passRequirements() const
 
 	//We need all required status or else we fail
 	// If we have any requirements
-	if(statusRequired.any() && !source->getStatusBits().testForAll(statusRequired))
+	if(!source->getStatusBits().testForAll(statusRequired))
 		return FALSE;
 
 	//If we have any forbidden statii, then fail

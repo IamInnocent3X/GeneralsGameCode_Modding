@@ -91,11 +91,11 @@ Bool KillMuxData::isKillApplicable( const Object *killer, const Object *victim, 
 	}
 
 	// all 'required' status bits must be set.
-	if (m_victimRequiredStatus.any() && !victim->getStatusBits().testForAll(m_victimRequiredStatus))
+	if (!victim->getStatusBits().testForAll(m_victimRequiredStatus))
 		return false;
 
 	// all 'forbidden' status bits must be clear.
-	if (m_victimForbiddenStatus.any() && victim->getStatusBits().testForAny(m_victimForbiddenStatus))
+	if (victim->getStatusBits().testForAny(m_victimForbiddenStatus))
 		return false;
 
 	// relationship of the victim to the killer must be in the allowed set.
