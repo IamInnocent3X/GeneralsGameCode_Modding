@@ -443,7 +443,11 @@ Bool CaveContain::isContained( const Object *obj ) const
 	if (OpenContain::isContained(obj))
 		return TRUE;
 
-	const ContainedItemsList *items = getContainedItemsList();
+	TunnelTracker *myTracker = TheCaveSystem->getTunnelTracker( getCaveContainModuleData()->m_caveUsesTeams, m_caveIndex, getObject()->getTeam() );
+	if(!myTracker)
+		return FALSE;
+
+	const ContainedItemsList *items = myTracker->getContainedItemsList();
 	return items != nullptr && std::find(items->begin(), items->end(), obj) != items->end();
 }
 
