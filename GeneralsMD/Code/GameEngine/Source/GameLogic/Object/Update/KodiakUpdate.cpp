@@ -66,6 +66,8 @@ KodiakUpdateModuleData::KodiakUpdateModuleData()
   m_aaAttackAreaRadius = 250.0f;
   m_missileScatterRadius = 250.0f;
 
+  m_areaDecalRadius = 250.0f;
+
   m_numMainTurrets = 1;
   m_numSideTurrets = 0;
   m_numAATurrets = 0;
@@ -93,6 +95,7 @@ static Real zero = 0.0f;
 		{ "GunshipOrbitRadius",	            INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_gunshipOrbitRadius ) },
     { "MissileLockRadius",	            INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_missileLockRadius) },
 		{ "AttackAreaDecal",		            RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( KodiakUpdateModuleData, m_attackAreaDecalTemplate ) },
+		{ "AreaDecalRadius",		            INI::parseReal,				            NULL, offsetof( KodiakUpdateModuleData, m_areaDecalRadius ) },
 		{ "TargetingReticleDecal",		      RadiusDecalTemplate::parseRadiusDecalTemplate,	NULL, offsetof( KodiakUpdateModuleData, m_targetingReticleDecalTemplate ) },
     { "ScatterTarget",						KodiakUpdateModuleData::parseScatterTarget,			NULL,							0 },
     { "MainTurrets",	                    INI::parseUnsignedInt,		NULL, offsetof(KodiakUpdateModuleData, m_numMainTurrets) },
@@ -233,7 +236,7 @@ Bool KodiakUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *sp
   }
 
 
-	data->m_attackAreaDecalTemplate.createRadiusDecal( *getObject()->getPosition(), data->m_attackAreaRadius, getObject()->getControllingPlayer(), m_attackAreaDecal);
+	data->m_attackAreaDecalTemplate.createRadiusDecal( *getObject()->getPosition(), data->m_areaDecalRadius, getObject()->getControllingPlayer(), m_attackAreaDecal);
 	data->m_targetingReticleDecalTemplate.createRadiusDecal( *getObject()->getPosition(), data->m_targetingReticleRadius, getObject()->getControllingPlayer(), m_targetingReticleDecal);
 
 
