@@ -80,6 +80,7 @@ StickyBombUpdate::StickyBombUpdate( Thing *thing, const ModuleData *moduleData )
 	m_dieFrame		= 0;
 	m_nextPingFrame = 0;
 	m_veterancyLevel = LEVEL_REGULAR;
+	m_detonated		= FALSE;
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
 
@@ -268,7 +269,7 @@ void StickyBombUpdate::detonate()
 // ------------------------------------------------------------------------------------------------
 void StickyBombUpdate::onDie( const DamageInfo *damageInfo )
 {
-	if(m_dieFrame == -2 || (m_dieFrame > 0 && fabs(TheGameLogic->getFrame() - m_dieFrame) <= 1)) {
+	if(m_detonated || (m_dieFrame > 0 && fabs(TheGameLogic->getFrame() - m_dieFrame) <= 1)) {
 		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // If our death is triggered because of a time-bomb, then we are considered detonated
 
 		triggerStickyBomb();
@@ -505,6 +506,9 @@ void StickyBombUpdate::xfer( Xfer *xfer )
 
 	// shooter ID
 	xfer->xferObjectID( &m_shooterID );
+
+	// has detonated
+	xfer->xferBool( &m_detonated );
 
 }
 
