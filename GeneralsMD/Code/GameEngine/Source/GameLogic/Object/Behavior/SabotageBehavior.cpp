@@ -391,7 +391,7 @@ static Bool upgradeCanBeGranted( Object *obj, const AsciiString upgradeName )
 		if(!player || player == ThePlayerList->getNeutralPlayer())
 			return FALSE;
 
-		return player && !player->hasUpgradeComplete( upgradeTemplate );
+		return !player->hasUpgradeComplete( upgradeTemplate );
 	}
 	else if(obj->affectedByUpgrade( upgradeTemplate ))
 	{
@@ -429,6 +429,7 @@ static void grantSabotageUpgradeOrScience( Object *obj, const ScienceVec& scienc
 			random = TRUE;
 			break;
 		case GRANT_LAST_DONT_HAVE:
+		case GRANT_LIKE_LEVELING_UP:
 			orderStart = vecSize - 1;
 			reverse = TRUE;
 			break;
@@ -673,7 +674,7 @@ void SabotageBehavior::doSabotage( Object *other, Object *obj )
 	}
 
 	if(!upgradeVec.empty()) 
-		grantSabotageUpgradeOrScience(obj, scienceVec, upgradeVec, data->m_sciencesGrantType);
+		grantSabotageUpgradeOrScience(obj, scienceVec, upgradeVec, data->m_upgradesGrantType);
 
 	Player *player = obj->getControllingPlayer();
 	Player *otherPlayer = other->getControllingPlayer();
