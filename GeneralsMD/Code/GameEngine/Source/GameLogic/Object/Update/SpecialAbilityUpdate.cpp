@@ -1472,6 +1472,9 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         //Setting the producer ID allows the sticky bomb update module to initialize
         //and setup timers, etc.
         update->initStickyBomb( target, object );
+
+        if( data->m_useSabotageBehavior )
+          doSabotage( target, spTemplate->getName() );
       }
       break;
     }
@@ -1732,6 +1735,9 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
           //Setting the producer ID allows the sticky bomb update module to initialize
           //and setup timers, etc.
           update->initStickyBomb( target, object );
+
+          if( data->m_useSabotageBehavior )
+            doSabotage( target, spTemplate->getName() );
         }
       }
       break;
