@@ -1475,7 +1475,6 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
 
         if( data->m_useSabotageBehavior )
           doSabotage( target, spTemplate->getName() );
-
       }
       break;
     }

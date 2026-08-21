@@ -266,6 +266,10 @@ public:
 	Bool getCanOnlyExecuteThroughCommand() const { return getSpecialAbilityUpdateModuleData()->m_canOnlyExecuteThroughCommand; }
 	WeaponSlotType getWeaponSlot() const;
 
+	Bool friend_canUseSabotageOnObject(const Object *other, const AsciiString& specialPowerName) {
+		return getUsesSabotageBehavior() && canDoSabotageSpecialCheck( other, specialPowerName );
+	}
+
 protected:
 	void onExit( Bool cleanup );
 

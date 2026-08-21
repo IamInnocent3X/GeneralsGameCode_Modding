@@ -132,13 +132,13 @@ static Bool isObjectShroudedForAction ( const Object *source, const Object *targ
 static Bool preventExecuteSpecialPowerAction( const Object *obj, SpecialPowerType type )
 {
 	if( !obj )
-		return FALSE;
+		return FALSE; // By feature this should return true, but for all Sanity cases, the ethic is to return false
 
 	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( type );
 	if( spUpdate && spUpdate->getCanOnlyExecuteThroughCommand() )
-		return FALSE;
+		return TRUE;
 
-	return TRUE;
+	return FALSE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1125,7 +1125,7 @@ Bool ActionManager::canMakeObjectDefector( const Object *obj, const Object *obje
 		return FALSE;
 	}
 
-	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_DEFECTOR) )
+	if( checkSourceRequirements && preventExecuteSpecialPowerAction(obj, SPECIAL_DEFECTOR) )
 	{
 		return FALSE;
 	}
@@ -1202,10 +1202,10 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 		spInterface = obj->findSpecialPowerModuleInterface( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
 		spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_BLACKLOTUS_CAPTURE_BUILDING );
 
-		if( spInterface && checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_CAPTURE_BUILDING) )
+		if( spInterface && checkSourceRequirements && preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_CAPTURE_BUILDING) )
 			return FALSE;
 
-	} else if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_INFANTRY_CAPTURE_BUILDING) )
+	} else if( checkSourceRequirements && preventExecuteSpecialPowerAction(obj, SPECIAL_INFANTRY_CAPTURE_BUILDING) )
 		return FALSE;
 
 	if (!spInterface)
@@ -1319,21 +1319,7 @@ Bool ActionManager::canCaptureBuilding( const Object *obj, const Object *objectT
 	// New, check if the Action uses Sabotage Behavior for activation
 	if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 	{
-		Bool found = FALSE;
-		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-		{
-			CollideModuleInterface* collide = (*m)->getCollide();
-			if (!collide)
-				continue;
-
-			if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToCapture) )
-			{
-				found = TRUE;
-				break;
-			}
-		}
-		if(!found)
-			return FALSE;
+		return spUpdate->friend_canUseSabotageOnObject(objectToCapture, spInterface->getPowerName());
 	}
 
   return TRUE;
@@ -1379,7 +1365,7 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		}
 	}
 
-	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK) )
+	if( checkSourceRequirements && preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_DISABLE_VEHICLE_HACK) )
 		return FALSE;
 
 	if( objectToHack->isEffectivelyDead() )
@@ -1458,21 +1444,7 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		// New, check if the Action uses Sabotage Behavior for activation
 		if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 		{
-			Bool found = FALSE;
-			for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-			{
-				CollideModuleInterface* collide = (*m)->getCollide();
-				if (!collide)
-					continue;
-
-				if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToHack) )
-				{
-					found = TRUE;
-					break;
-				}
-			}
-			if(!found)
-				return FALSE;
+			return spUpdate->friend_canUseSabotageOnObject(objectToHack, spInterface->getPowerName());
 		}
 
 		return TRUE;
@@ -1559,7 +1531,7 @@ Bool ActionManager::canStealCashViaHacking( const Object *obj, const Object *obj
 		return false;
 	}
 
-	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_STEAL_CASH_HACK) )
+	if( checkSourceRequirements && preventExecuteSpecialPowerAction(obj, SPECIAL_BLACKLOTUS_STEAL_CASH_HACK) )
 		return FALSE;
 
 	if( objectToHack->isEffectivelyDead() )
@@ -1660,7 +1632,7 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 		return FALSE;
 	}
 
-	if( checkSourceRequirements && !preventExecuteSpecialPowerAction(obj, SPECIAL_HACKER_DISABLE_BUILDING) )
+	if( checkSourceRequirements && preventExecuteSpecialPowerAction(obj, SPECIAL_HACKER_DISABLE_BUILDING) )
 		return FALSE;
 
 	if( objectToHack->isEffectivelyDead() )
@@ -1742,21 +1714,7 @@ Bool ActionManager::canDisableBuildingViaHacking( const Object *obj, const Objec
 	// New, check if the Action uses Sabotage Behavior for activation
 	if( spUpdate && spUpdate->getUsesSabotageBehavior() )
 	{
-		Bool found = FALSE;
-		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
-		{
-			CollideModuleInterface* collide = (*m)->getCollide();
-			if (!collide)
-				continue;
-
-			if( collide->isSabotageBuildingCrateCollide() && collide->getSpecialPowerTemplateToTrigger() == spInterface->getPowerName() && collide->canDoSabotageSpecialCheck(objectToHack) )
-			{
-				found = TRUE;
-				break;
-			}
-		}
-		if(!found)
-			return FALSE;
+		return spUpdate->friend_canUseSabotageOnObject(objectToHack, spInterface->getPowerName());
 	}
 
 	return TRUE;
@@ -2183,6 +2141,12 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 						break;
 					}
 
+					// Able to do Sabotage on both Ability and Bombs since checks can be subjugated with KindOfs and AffectsTargets
+					//if ( spUpdate->getUsesSabotageBehavior() && !spUpdate->friend_canUseSabotageOnObject(target, spTemplate->getName()) )
+					//{
+					//	break;
+					//}
+
 					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
 					{
 						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
@@ -2200,8 +2164,43 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 
 			case SPECIAL_BOOBY_TRAP:
 			{
+				SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_BOOBY_TRAP );
+
+				// Condition: I have declared target types for the Enum.
+				if( spUpdate )
+				{
+					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
+						return FALSE;
+
+					Int targetMask = spUpdate->getTargetsMask();
+					if( targetMask == 0 ) {
+						targetMask == WEAPON_AFFECTS_NEUTRALS | WEAPON_AFFECTS_ALLIES;
+					}
+
+					if(((targetMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			        	((targetMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			        	((targetMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+					  )
+					{
+						return FALSE;
+					}
+
+					// Able to do Sabotage on both Ability and Bombs since checks can be subjugated with KindOfs and AffectsTargets
+					//if ( spUpdate->getUsesSabotageBehavior() && !spUpdate->friend_canUseSabotageOnObject(target, spTemplate->getName()) )
+					//{
+					//	return FALSE;
+					//}
+
+					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+					{
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
+							return TRUE;
+						else
+							return FALSE;
+					}
+				}
 				// We can booby trap any building that is allied or neutral
-				if( target->isKindOf(KINDOF_STRUCTURE) && (r == NEUTRAL || r == ALLIES) )
+				if( target->isKindOf(KINDOF_STRUCTURE) ) // && (r == NEUTRAL || r == ALLIES) )
 				{
 					return TRUE;
 				}
@@ -2490,7 +2489,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 							return false;
 						}
 
-						if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
+						if( spUpdate->getKindOfs() != KINDOFMASK_NONE ) 
 						{
 							if( !target->isAnyKindOf(spUpdate->getKindOfs()) )
 								return false;
@@ -2499,6 +2498,12 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 						{
 							return false;
 						}
+
+						// Able to do Sabotage on both Ability and Bombs since checks can be subjugated with KindOfs and AffectsTargets
+						//if ( spUpdate->getUsesSabotageBehavior() && !spUpdate->friend_canUseSabotageOnObject(target, spTemplate->getName()) )
+						//{
+						//	return false;
+						//}
 
 						//Make sure we have enough equipment to place an additional charge.
 						if( spUpdate->getSpecialObjectCount() < spUpdate->getSpecialObjectMax() )

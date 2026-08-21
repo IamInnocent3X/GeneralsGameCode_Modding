@@ -76,6 +76,7 @@ class OCLUpdate : public UpdateModule, public CreateModuleInterface
 
 public:
 
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_CREATE); }
 	OCLUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 

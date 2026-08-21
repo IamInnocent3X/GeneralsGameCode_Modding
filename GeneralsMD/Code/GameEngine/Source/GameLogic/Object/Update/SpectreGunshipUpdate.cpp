@@ -695,7 +695,10 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 
 
             // IF THE GATTLING GUN HAS BEEN PLINKING THE TARGET LONG ENOUGH, LETS FOLLOW WITH A VOLLEY OF HOWITZER FIRE
-            if ( m_okToFireHowitzerCounter > data->m_howitzerFollowLag )
+            if ( m_okToFireHowitzerCounter > data->m_howitzerFollowLag &&
+                 !gunship->testCustomStatus("AIM_NO_ATTACK") && 
+                 !gunship->testCustomStatus("STOP_ATTACKING") && 
+                 !gunship->testCustomStatus("ZERO_DAMAGE") )
             {
               WeaponTemplate *wt = data->m_howitzerWeaponTemplate;
               if( wt )

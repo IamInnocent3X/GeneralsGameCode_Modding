@@ -230,6 +230,8 @@ class LeafletDropBehavior : public EMPUpdate,
 
 public:
 
+	// module methods
+	static Int getInterfaceMask() { return MODULEINTERFACE_DIE; }
 	LeafletDropBehavior( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 

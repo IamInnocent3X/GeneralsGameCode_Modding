@@ -319,13 +319,15 @@ public:
 	DeliverPayloadAIUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	static Int getInterfaceMask() { return MODULEINTERFACE_DAMAGE; }
+
 	virtual AIFreeToExitType getAiFreeToExit(const Object* exiter) const override;
 
 	// For calculating distance towards AIUpdates.
-	virtual DamageModuleInterface* getDamage() { return this; }
-	virtual void onDamage( DamageInfo *damageInfo );
-	virtual void onHealing( DamageInfo *damageInfo ) { }
-	virtual void onBodyDamageStateChange(const DamageInfo* damageInfo, BodyDamageType oldState, BodyDamageType newState) { }
+	virtual DamageModuleInterface* getDamage() override { return this; }
+	virtual void onDamage( DamageInfo *damageInfo ) override;
+	virtual void onHealing( DamageInfo *damageInfo ) override { }
+	virtual void onBodyDamageStateChange(const DamageInfo* damageInfo, BodyDamageType oldState, BodyDamageType newState) override { }
 
 	const Coord3D* getTargetPos() const { return &m_targetPos; }
 	const Coord3D* getMoveToPos() const { return &m_moveToPos; }

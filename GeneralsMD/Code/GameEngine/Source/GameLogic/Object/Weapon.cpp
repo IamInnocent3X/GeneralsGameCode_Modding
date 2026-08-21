@@ -2070,7 +2070,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 				}
 
 				projectile->setPosition(&tmp);
-				
+
 				projectile->setOrientation(atan2(projectileDestination.y, projectileDestination.x));
 
 				if(shrapnelLaunchID != INVALID_ID)
@@ -3500,7 +3500,7 @@ void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object
 		return;
 	Weapon* w = allocateNewWeapon(wt, PRIMARY_WEAPON);
 	w->loadAmmoNow(source);
-	w->fireWeapon(source, pos);
+	w->fireWeaponOnSpot(source, pos);
 	deleteInstance(w);
 }
 
@@ -3512,7 +3512,7 @@ void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object
 		return;
 	Weapon* w = allocateNewWeapon(wt, PRIMARY_WEAPON);
 	w->loadAmmoNow(source);
-	w->fireWeapon(source, target);
+	w->fireWeaponOnSpot(source, target);
 	deleteInstance(w);
 }
 
@@ -5374,12 +5374,13 @@ Bool Weapon::fireWeapon(const Object *source, const Coord3D* pos, ObjectID* proj
 //-------------------------------------------------------------------------------------------------
 Bool Weapon::fireWeaponOnSpot(const Object *source, Object *target, ObjectID* projectileID, const Coord3D* sourcePos, ObjectID shrapnelLaunchID)
 {
-	if (source->testCustomStatus("AIM_NO_ATTACK"))
-	{
-		if (projectileID)
-			*projectileID = INVALID_ID;
-		return false;
-	}
+	// IamInnocent - Shrapnels or other detonate weapons are not affected by this
+	//if (source->testCustomStatus("AIM_NO_ATTACK"))
+	//{
+	//	if (projectileID)
+	//		*projectileID = INVALID_ID;
+	//	return false;
+	//}
 	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s at %s", DescribeObject(source).str(), DescribeObject(target).str()));
 	return privateFireWeapon( source, target, nullptr, false, false, 0, projectileID, TRUE, dummy, sourcePos, shrapnelLaunchID );
@@ -5389,12 +5390,13 @@ Bool Weapon::fireWeaponOnSpot(const Object *source, Object *target, ObjectID* pr
 // return true if we auto-reloaded our clip after firing.
 Bool Weapon::fireWeaponOnSpot(const Object *source, const Coord3D* pos, ObjectID* projectileID, const Coord3D* sourcePos, ObjectID shrapnelLaunchID)
 {
-	if (source->testCustomStatus("AIM_NO_ATTACK"))
-	{
-		if (projectileID)
-			*projectileID = INVALID_ID;
-		return false;
-	}
+	// IamInnocent - Shrapnels or other detonate weapons are not affected by this
+	//if (source->testCustomStatus("AIM_NO_ATTACK"))
+	//{
+	//	if (projectileID)
+	//		*projectileID = INVALID_ID;
+	//	return false;
+	//}
 	std::vector<AsciiString> dummy;
 	//CRCDEBUG_LOG(("Weapon::fireWeapon() for %s", DescribeObject(source).str()));
 	return privateFireWeapon( source, nullptr, pos, false, false, 0, projectileID, TRUE, dummy, sourcePos, shrapnelLaunchID );

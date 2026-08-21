@@ -81,14 +81,14 @@ public:
 	// virtual destructor prototype provided by MemoryPoolObject
 
 	// module methods
-	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_CREATE); }
 	virtual void onDelete() override;
 	virtual void onObjectCreated() override;
 
-	virtual CreateModuleInterface* getCreate() { return this; }
-	virtual void onBuildComplete();
-	virtual void onCreate() { onBuildComplete(); }
-	virtual Bool shouldDoOnBuildComplete() const { return FALSE; }
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 
 	// update module methods
 	virtual UpdateSleepTime update() override;
@@ -103,7 +103,7 @@ public:
 	// so we can toggle everyone off.
 	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
-	virtual void doRemovedFrom();
+	virtual void doRemovedFrom() override;
 
 	// our own public module methods
 
