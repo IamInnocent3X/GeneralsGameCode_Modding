@@ -260,8 +260,6 @@ void StickyBombUpdate::detonate()
 	m_detonated = TRUE;
 
 	getObject()->kill();// Most things just fire weapons in their death modules
-
-	getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -270,7 +268,7 @@ void StickyBombUpdate::detonate()
 void StickyBombUpdate::onDie( const DamageInfo *damageInfo )
 {
 	if(m_detonated || (m_dieFrame > 0 && fabs(TheGameLogic->getFrame() - m_dieFrame) <= 1)) {
-		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // If our death is triggered because of a time-bomb, then we are considered detonated
+		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
 
 		triggerStickyBomb();
 	}
