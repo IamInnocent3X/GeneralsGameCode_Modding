@@ -15,8 +15,7 @@
 
 This is a forked expansion towards [Generals Game Modding](https://github.com/Andreas-W/GeneralsGameCode_Modding) which is a feature expansion of [Generals Game Code](https://github.com/TheSuperHackers/GeneralsGameCode) that is designed for INI *Modding*.
 
-You can find the changelog of the extra features listed in this version
-[here.](https://docs.google.com/document/d/1TColmJupsZFrKGLTg5I4UuLZ_e0nzpId)
+Click [**Here**](https://docs.google.com/document/d/1TColmJupsZFrKGLTg5I4UuLZ_e0nzpId) for the documentation of changes for this expansion.
 
 # Welcome to the Generals Game Code Project
 
