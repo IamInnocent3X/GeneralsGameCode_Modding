@@ -386,8 +386,8 @@ public:
 			{ "SabotageStealsPower", INI::parseBool, nullptr, offsetof( SabotageBehaviorModuleData, m_stealsPower ) },
 			{ "SabotagePowerAmount", INI::parseInt, nullptr, offsetof( SabotageBehaviorModuleData, m_powerAmount ) },
 			{ "SabotagePowerPercentage", INI::parsePercentToReal, nullptr, offsetof( SabotageBehaviorModuleData, m_powerPercentage ) },
-			{ "SabotageSpecificObjects", INI::parseAsciiStringVector, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificObjects ) },
-			{ "SabotageSpecificKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificKindOf ) },
+			{ "SabotagePowerSpecificObjects", INI::parseAsciiStringVector, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificObjects ) },
+			{ "SabotagePowerSpecificKindOf", KindOfMaskType::parseFromINI, nullptr, offsetof( SabotageBehaviorModuleData, m_powerSabotageSpecificKindOf ) },
 
 			// Sabotage General
 			{ "SabotageDuration", INI::parseDurationUnsignedInt, nullptr, offsetof( SabotageBehaviorModuleData, m_sabotageFrames ) },

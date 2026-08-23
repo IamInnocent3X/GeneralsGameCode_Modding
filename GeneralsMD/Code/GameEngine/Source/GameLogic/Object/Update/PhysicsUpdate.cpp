@@ -1194,7 +1194,7 @@ void PhysicsBehavior::checkSlowDeathBehaviors()
 				Real ground = TheTerrainLogic->getLayerHeight( tmpPt.x, tmpPt.y, newLayer );
 				if (pos->z <= ground + 1.0f )
 				{
-					DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER Passed"));
+					//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER Passed"));
 					doCheck = TRUE;
 				}
 				break;
@@ -1221,7 +1221,7 @@ void PhysicsBehavior::checkSlowDeathBehaviors()
 				}
 				if( height <= 0.0f )
 				{
-					DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET Passed"));
+					//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET Passed"));
 					doCheck = TRUE;
 				}
 				break;
