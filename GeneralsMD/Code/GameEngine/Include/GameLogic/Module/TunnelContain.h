@@ -161,7 +161,7 @@ protected:
 	void checkRemoveOwnGuard();
 	void checkRemoveOtherGuard();
 	//void doHoleRebuildChecks();
-	virtual void createPayload();
+	virtual void createPayload() override;
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 

@@ -150,7 +150,7 @@ protected:
 	void removeAllNonOwnContained( Team *myTeam, Bool exposeStealthUnits = FALSE );				///< remove all objects on contain list
 	void scatterToNearbyPosition(Object *obj);
 
-	virtual void createPayload();
+	virtual void createPayload() override;
 
 	Bool m_needToRunOnBuildComplete;
 	Int m_caveIndex;

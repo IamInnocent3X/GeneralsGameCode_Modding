@@ -100,7 +100,7 @@ protected:
 	virtual Bool isSpecificRiderFreeToExit(Object* obj);
 	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const override;	///< Hey, can I shoot out of this container?
 
-	virtual void createPayload();
+	virtual void createPayload() override;
 	void letRidersUpgradeWeaponSet();
 
 	//Bool m_payloadCreated;
