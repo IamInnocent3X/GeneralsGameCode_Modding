@@ -440,10 +440,10 @@ void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool i
 				StickyBombUpdateInterface *update = iterObj->getStickyBombUpdateInterface();
 				if( update && update->getTargetObject() == sourceObj )
 				{
-					if(data->m_transferBombs)
-						update->setTargetObject( obj );
-					else if(data->m_destroyBombs)
+					if(data->m_destroyBombs)
 						BombsMarkedForDestroy.push_back(iterObj->getID());
+					else if(data->m_transferBombs)
+						update->setTargetObject( obj );
 				}
 			//}
 

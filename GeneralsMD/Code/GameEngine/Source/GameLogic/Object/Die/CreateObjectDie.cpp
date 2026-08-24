@@ -84,8 +84,9 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "CreationList",	INI::parseObjectCreationList,		nullptr,											offsetof( CreateObjectDieModuleData, m_ocl ) },
-		{ "TransferPreviousHealth", INI::parseBool, nullptr	,offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealth ) },
+		{ "TransferPreviousHealth", INI::parseBool, nullptr	, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealth ) },
 		{ "TransferHealthChangeType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealthChangeType ) },
+		{ "TransferPreviousHealthDontTransferAttackers", INI::parseBool, nullptr	, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsPreviousHealthDontTransferAttackers ) },
 		{ "TransferSelection", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSelection ) },
 		{ "TransferSelectionDontClearGroup", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSelectionDontClearGroup ) },
 		{ "TransferSelectionSquadNumber", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSquadNumber ) },
