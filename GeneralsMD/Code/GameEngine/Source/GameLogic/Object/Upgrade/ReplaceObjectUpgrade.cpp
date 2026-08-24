@@ -193,7 +193,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	}
 
 	doInherit(me, replacementObject, prevStatus);
-	doTransfer(me, replacementObject, FALSE);
+	doTransfer(me, replacementObject, TRUE, container != nullptr, FALSE);
 	doPostDisposition(me, replacementObject);
 	doInheritHealth(me, replacementObject);
 	doFadeStuff(me);
@@ -205,7 +205,7 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 		doObjectCreation(me, container);
 		doDisposition(me, container, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
 		doInherit(me, container, prevStatus);
-		doTransfer(me, container, FALSE);
+		doTransfer(me, container, TRUE, TRUE, TRUE);
 		doPostDisposition(me, container);
 		doInheritHealth(me, container);
 		if(container->getContain() != nullptr && !container->isEffectivelyDead() && replacementObject && !replacementObject->isEffectivelyDead() && container->getContain()->isValidContainerFor(replacementObject, true))
@@ -220,7 +220,8 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	{
 		replacementObject->getControllingPlayer()->onStructureConstructionComplete(nullptr, replacementObject, FALSE);
 
-		doInheritSelection(nullptr, replacementObject, oldObjectSelected, oldObjectSquadNumber);
+		if(oldObjectSelected)
+			doInheritSelection(nullptr, replacementObject, oldObjectSelected, oldObjectSquadNumber);
 
 		// TheSuperHackers @bugfix Stubbjax 26/05/2025 If the old object was selected, select the new one.
 		// IamInnocent 02/12/2025 - Integrated with Transfer Selection Feature added Below
@@ -276,7 +277,8 @@ void ReplaceObjectUpgrade::upgradeImplementation( )
 	{
 		container->getControllingPlayer()->onStructureConstructionComplete(nullptr, container, FALSE);
 
-		doInheritSelection(nullptr, container, oldObjectSelected, oldObjectSquadNumber);
+		if(oldObjectSelected)
+			doInheritSelection(nullptr, container, oldObjectSelected, oldObjectSquadNumber);
 
 	}
 }

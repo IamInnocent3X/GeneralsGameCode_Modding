@@ -57,7 +57,6 @@ TunnelContain::TunnelContain( Thing *thing, const ModuleData* moduleData ) : Ope
 {
 	m_needToRunOnBuildComplete = true;
 	m_isCurrentlyRegistered = FALSE;
-	m_lastFiringObjID = INVALID_ID;
 	m_lastFiringPos.zero();
 	m_rebuildChecked = TRUE;
 
@@ -910,14 +909,16 @@ UpdateSleepTime TunnelContain::update( void )
 		}
 
 		Bool openFireCheck;
+		Bool ready = !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING );
 
 		// Check if the Tunnel has OpenContained Upgrade enabled. If so, skip updateNemesis
 		// Also don't check for Dead Tunnels, or Tunnels that are Holes.
-		if(hasPassengerAllowedToFire() && !obj->isEffectivelyDead() && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+		if(ready && hasPassengerAllowedToFire() && !obj->isEffectivelyDead())
 		{
 			//Bool openFireUpgrade = TRUE;
 
-			if(obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) || obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) || obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) || obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
+			AIStateType aiState = obj->getAI() ? obj->getAI()->getAIStateType() : AI_IDLE;
+			if(aiState == AI_FORCE_ATTACK_OBJECT || aiState == AI_ATTACK_OBJECT || aiState == AI_ATTACK_POSITION || obj->testStatus( OBJECT_STATUS_IS_ATTACKING ) || obj->testStatus( OBJECT_STATUS_IS_FIRING_WEAPON ) || obj->testStatus( OBJECT_STATUS_IS_AIMING_WEAPON ) || obj->testStatus( OBJECT_STATUS_IGNORING_STEALTH ))
 				openFireCheck = TRUE;
 
 			/*if(!modData->m_activationUpgradeNames.empty() && openFireCheck)
@@ -956,22 +957,23 @@ UpdateSleepTime TunnelContain::update( void )
 			{
 				ObjectID currFiringObjID = INVALID_ID;
 				Coord3D currFiringPos;
-				
+
 				if(obj->getAI() )
 				{
 					currFiringPos = *obj->getAI()->getGoalPosition();
 					if(obj->getAI()->getGoalObject())
 						currFiringObjID = obj->getAI()->getGoalObject()->getID();
 				}
-				if( ( currFiringObjID != INVALID_ID && m_lastFiringObjID != currFiringObjID ) || ( currFiringObjID == INVALID_ID && m_lastFiringPos != currFiringPos ) )
+				if( currFiringObjID != INVALID_ID || m_lastFiringPos != currFiringPos )
 					doOpenFire();
 			}
 
 			//if(openFireUpgrade)
 				return UPDATE_SLEEP_NONE;
 		}
-		if (!hasPassengerAllowedToFire() && modData->m_passengersAllowedToFire && !m_rebuildChecked && !obj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) && !obj->testStatus( OBJECT_STATUS_RECONSTRUCTING ))
+		if (ready && !hasPassengerAllowedToFire() && modData->m_passengersAllowedToFire && !m_rebuildChecked)
 		{
+			// Finished building, set the rebuilding as checked.
 			//doHoleRebuildChecks();
 			m_rebuildChecked = TRUE;
 		}
@@ -1005,22 +1007,47 @@ UpdateSleepTime TunnelContain::update( void )
 struct NemesisHolder
 {
 	Object *Nemesis;
+	Bool IsForcedAttack;
+	CommandSourceType CommandSource;
+	const Coord3D *AttackPos;
 };
 
 static void attackAtMyTarget( Object *obj, void *nemesisHolder )
 {
-	if (!obj || ((NemesisHolder*)nemesisHolder)->Nemesis == nullptr)
+	if (!obj)
 	{
 		return;
 	}
 
-	if(obj->isKindOf( KINDOF_CAN_ATTACK) && obj->getAI())
+	if( obj->getAI() && obj->isAbleToAttack() )
 	{
-		const Weapon* weapon = obj->getCurrentWeapon();
-		if (weapon && weapon->isWithinAttackRange(obj, ((NemesisHolder*)nemesisHolder)->Nemesis ))
+		CommandSourceType commandSource = ((NemesisHolder*)nemesisHolder)->CommandSource;
+		Object *nemesis = ((NemesisHolder*)nemesisHolder)->Nemesis;
+		if(nemesis)
 		{
-			obj->getAI()->friend_setGoalObject( ((NemesisHolder*)nemesisHolder)->Nemesis );
+			Bool isForcedAttack = ((NemesisHolder*)nemesisHolder)->IsForcedAttack;
+			CanAttackResult result = obj->getAbleToAttackSpecificObject( isForcedAttack ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, nemesis, commandSource );
+			if( result == ATTACKRESULT_POSSIBLE )
+			{
+				if(isForcedAttack)
+					obj->getAI()->aiForceAttackObject( nemesis, NO_MAX_SHOTS_LIMIT, commandSource );
+				else
+					obj->getAI()->aiAttackObject( nemesis, NO_MAX_SHOTS_LIMIT, commandSource );
+			}
 		}
+		else if(((NemesisHolder*)nemesisHolder)->AttackPos->lengthSqr() > 1.0f )
+		{
+			CanAttackResult result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, ((NemesisHolder*)nemesisHolder)->AttackPos, CMD_FROM_PLAYER ) ;
+			if( result == ATTACKRESULT_POSSIBLE )
+			{
+				obj->getAI()->aiAttackPosition( ((NemesisHolder*)nemesisHolder)->AttackPos, NO_MAX_SHOTS_LIMIT, commandSource );
+			}
+		}
+		//const Weapon* weapon = obj->getCurrentWeapon();
+		//if (weapon && weapon->isWithinAttackRange(obj, ((NemesisHolder*)nemesisHolder)->Nemesis ))
+		//{
+		//	obj->getAI()->friend_setGoalObject( ((NemesisHolder*)nemesisHolder)->Nemesis );
+		//}
 	}
 }
 
@@ -1047,7 +1074,7 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	tunnelTracker->setCheckOpenFireFrames(now + LOGICFRAMES_PER_SECOND + 1);
 
 	Bool changeTunnels = FALSE;
-	
+
 	ContainModuleInterface *contain = me->getContain();
 
 	// Check if the Occupants are within this Tunnel. If yes, only do the targeting and don't need to change tunnels.
@@ -1061,11 +1088,14 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 		{
 			// Check if this is the Tunnel where the object is currently at, change if there is one that is not in the current Object
 			ContainedItemsList::const_iterator it_test = items->begin();
-			while ( !changeTunnels && it_test != items->end() )
+			while ( it_test != items->end() )
 			{
 				Object *test_obj = *it_test++;
 				if( test_obj->getContainedBy() != me )
+				{
 					changeTunnels = TRUE;
+					break;
+				}
 			}
 		}
 	}
@@ -1076,19 +1106,23 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 	if(ai && isAttacking)
 	{
 		nemesis = ai->getGoalObject();
-
 		m_lastFiringPos = *ai->getGoalPosition();
-		if(nemesis)
-			m_lastFiringObjID = nemesis->getID();
 	}
+	else
+	{
+		m_lastFiringPos.zero();
+	}
+
+	NemesisHolder nemesisHolder;
+	nemesisHolder.Nemesis = nemesis;
+	nemesisHolder.IsForcedAttack = ai->getAIStateType() == AI_FORCE_ATTACK_OBJECT;
+	nemesisHolder.CommandSource = ai->getLastCommandSource();
 
 	if(!changeTunnels)
 	{
 		// Direct the current units in the current tunnel to attack the target Object
-		if(nemesis)
+		if(isAttacking)
 		{
-			NemesisHolder nemesisHolder;
-			nemesisHolder.Nemesis = nemesis;
 			tunnelTracker->iterateContained( attackAtMyTarget, (void*)&nemesisHolder, FALSE );
 		}
 
@@ -1097,11 +1131,11 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 
 	// Disable the Garrison Sound First
 	tunnelTracker->setDontLoadSound(now + LOGICFRAMES_PER_SECOND);
-	
+
 	// Redirect the units onto another Tunnel by Re-Garrisoning them.
 	ContainedItemsList list;
 	tunnelTracker->swapContainedItemsList(list);
-	
+
 	std::vector<ObjectID>vecID;
 
 	ContainedItemsList::iterator it = list.begin();
@@ -1125,13 +1159,9 @@ void TunnelContain::doOpenFire(Bool isAttacking)
 				contain->addToContain(add);
 			}
 
-			if(nemesis && add->isKindOf( KINDOF_CAN_ATTACK) && add->getAI())
+			if(isAttacking)
 			{
-				const Weapon* weapon = add->getCurrentWeapon();
-				if (weapon && weapon->isWithinAttackRange(add, nemesis))
-				{
-					add->getAI()->friend_setGoalObject( nemesis );
-				}
+				attackAtMyTarget(add, (void*)&nemesisHolder);
 			}
 
 		}

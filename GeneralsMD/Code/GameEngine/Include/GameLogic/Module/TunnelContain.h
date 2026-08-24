@@ -145,7 +145,6 @@ public:
 	virtual Bool shouldDoOnBuildComplete() const { return m_needToRunOnBuildComplete; }
 
 	virtual void doUpgradeChecks( void );
-	virtual void clearTargetID() { m_lastFiringObjID = INVALID_ID; }
 
 	// so that the ppl within the tunnel network can get healed
 	virtual UpdateSleepTime update();												///< called once per frame
@@ -166,7 +165,7 @@ protected:
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
 private:
-	ObjectID m_lastFiringObjID;
+	//ObjectID m_lastFiringObjID;
 	Coord3D m_lastFiringPos;
 	//Bool m_payloadCreated;
 	Bool m_hasBunker;

@@ -150,7 +150,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	doObjectCreation(me, newObject);
 	doDisposition(me, newObject, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
 	doInherit(me, newObject, me->getStatusBits());
-	doTransfer(me, newObject, FALSE);
+	doTransfer(me, newObject, TRUE, container != nullptr, FALSE);
 	doPostDisposition(me, newObject);
 	doInheritHealth(me, newObject);
 	doInheritSelection(me, newObject);
@@ -163,7 +163,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 		doObjectCreation(me, container);
 		doDisposition(me, container, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
 		doInherit(me, container, me->getStatusBits());
-		doTransfer(me, container, FALSE);
+		doTransfer(me, container, TRUE, TRUE, TRUE);
 		doPostDisposition(me, container);
 		doInheritHealth(me, container);
 		doInheritSelection(me, container);

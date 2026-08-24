@@ -996,7 +996,9 @@ protected:
 		const Matrix3D *mtx,
 		Real orientation,
 		const Object *sourceObj,
-		UnsignedInt lifetimeFrames
+		UnsignedInt lifetimeFrames,
+		Bool hasContainer,
+		Bool isContainer
 	) const
 	{
 		//obj->setProducer(sourceObj);
@@ -1081,7 +1083,7 @@ protected:
 		}
 
 		doInherit(sourceObj, obj, sourceObj->getStatusBits());
-		doTransfer(sourceObj, obj, FALSE);
+		doTransfer(sourceObj, obj, FALSE, hasContainer, isContainer); //Empty model name means that it is the container
 		doDisposition(sourceObj, obj, pos, mtx, orientation, m_nameAreObjects);
 		doPostDisposition(sourceObj, obj);
 		doInheritHealth(sourceObj, obj);
@@ -1528,12 +1530,12 @@ protected:
 					DEBUG_CRASH(("A mismatch is likely to happen if this code path is used in a match with unpatched clients."));
 #endif
 				}
-				doStuffToObj( debris, m_names[pick], &resultPos, mtx, orientation, sourceObj, lifetimeFrames );
+				doStuffToObj( debris, m_names[pick], &resultPos, mtx, orientation, sourceObj, lifetimeFrames, container != nullptr, FALSE );
 			}
 			else
 			{
 				// do stuff to contained objects too
-				doStuffToObj( debris, m_names[pick], pos, mtx, orientation, sourceObj, lifetimeFrames );
+				doStuffToObj( debris, m_names[pick], pos, mtx, orientation, sourceObj, lifetimeFrames, container != nullptr, FALSE );
 			}
 
 			doFadeStuff(sourceObj);
@@ -1560,7 +1562,7 @@ protected:
 #endif
 
 		if (container)
-			doStuffToObj( container, AsciiString::TheEmptyString, pos, mtx, orientation, sourceObj, lifetimeFrames );
+			doStuffToObj( container, AsciiString::TheEmptyString, pos, mtx, orientation, sourceObj, lifetimeFrames, TRUE, TRUE );
 
 		return firstObject;
 	}
