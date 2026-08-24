@@ -277,13 +277,13 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	// Set Underpowered Properties
 	{ "DisabledWhenUnderpowered",			INI::parseBool,		nullptr, offsetof( ThingTemplate, m_setDisabledWhenUnderpowered ) },
 	{ "DisabledTypeWhenUnderpowered",		DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( ThingTemplate, m_disabledTypeUnderPowered ) },
-	{ "StatusUnderPowered",			ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( ThingTemplate, m_statusUnderPowered ) },
-	{ "CustomStatusUnderPowered",	INI::parseAsciiStringVector, nullptr, offsetof( ThingTemplate, m_customStatusUnderPowered ) },
-	{ "WeaponBonusUnderPowered",	INI::parseWeaponBonusVector, nullptr, offsetof( ThingTemplate, m_bonusUnderPowered ) },
-	{ "CustomWeaponBonusUnderPowered",			INI::parseAsciiStringVector, nullptr, offsetof( ThingTemplate, m_customBonusUnderPowered ) },
-	{ "TintStatusUnderPowered",			TintStatusFlags::parseSingleBitFromINI,		nullptr, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
-	{ "CustomTintStatusUnderPowered",	INI::parseAsciiString, 	nullptr, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
-	{ "ModelConditionUnderPowered", ModelConditionFlags::parseFromINI, nullptr, offsetof( ThingTemplate, m_modelConditionUnderPowered ) },
+	{ "StatusUnderpowered",			ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( ThingTemplate, m_statusUnderPowered ) },
+	{ "CustomStatusUnderpowered",	INI::parseAsciiStringVector, nullptr, offsetof( ThingTemplate, m_customStatusUnderPowered ) },
+	{ "WeaponBonusUnderpowered",	INI::parseWeaponBonusVector, nullptr, offsetof( ThingTemplate, m_bonusUnderPowered ) },
+	{ "CustomWeaponBonusUnderpowered",			INI::parseAsciiStringVector, nullptr, offsetof( ThingTemplate, m_customBonusUnderPowered ) },
+	{ "TintStatusUnderpowered",			TintStatusFlags::parseSingleBitFromINI,		nullptr, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
+	{ "CustomTintStatusUnderpowered",	INI::parseAsciiString, 	nullptr, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
+	{ "ModelConditionUnderpowered", ModelConditionFlags::parseFromINI, nullptr, offsetof( ThingTemplate, m_modelConditionUnderPowered ) },
 
 	// Reverse Move Properties
 	{ "CanFireTurretsWhileReverseMoving",			INI::parseBool,		nullptr, offsetof( ThingTemplate, m_canFireTurretsWhileReverseMoving ) },
