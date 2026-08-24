@@ -5146,8 +5146,6 @@ StateReturnType AIAttackAimAtTargetState::onEnter()
 	m_setLocomotor = false;
 
 	source->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_IS_AIMING_WEAPON ) );
-	if(m_isForceAttacking)
-		source->doClearTunnelContainTargetID();
 	return STATE_CONTINUE;
 }
 

@@ -62,6 +62,7 @@ TransportContainModuleData::TransportContainModuleData()
   m_armedRidersUpgradeWeaponSet = FALSE;
 	m_resetMoodCheckTimeOnExit = true;
 	m_destroyRidersWhoAreNotFreeToExit = false;
+	m_allowOtherTeamUnitsInside = false;
 	m_exitPitchRate = 0.0f;
 	m_healthRegen = 0.0f;
 	m_exitDelay = 0;
@@ -98,6 +99,7 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "ExitDelay",	INI::parseDurationUnsignedInt,		nullptr, offsetof( TransportContainModuleData, m_exitDelay ) },
 		{ "ArmedRidersUpgradeMyWeaponSet",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_armedRidersUpgradeWeaponSet ) },
 		{ "DelayExitInAir",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_isDelayExitInAir ) },
+		{ "AllowOtherTeamUnitsInside",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_allowOtherTeamUnitsInside ) },
 
     { nullptr, nullptr, nullptr, 0 }
   };
@@ -187,7 +189,9 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 //		return false;
 
 // no... actually, only OUR OWN units can be transported.
-	if (rider->getControllingPlayer() != getObject()->getControllingPlayer())
+// IamInnocent 24/8/26 - Dehardcoded
+	const TransportContainModuleData * d = getTransportContainModuleData();
+	if (rider->getControllingPlayer() != getObject()->getControllingPlayer() && !d->m_allowOtherTeamUnitsInside )
 		return false;
 
 	Int transportSlotCount = rider->getTransportSlotCount();

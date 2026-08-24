@@ -64,7 +64,7 @@ const FieldParse* KillMuxData::getFieldParse()
 		{ "RequiredKilledStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( KillMuxData, m_victimRequiredStatus ) },
 		{ "ForbiddenKilledStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( KillMuxData, m_victimForbiddenStatus ) },
 		{ "RequiredKilledCustomStatus",		INI::parseAsciiStringVector,	nullptr, offsetof( KillMuxData, m_victimRequiredCustomStatus ) },
-		{ "ForbiddenKilleCustomdStatus",	INI::parseAsciiStringVector,	nullptr, offsetof( KillMuxData, m_victimForbiddenCustomStatus ) },
+		{ "ForbiddenKilledCustomStatus",	INI::parseAsciiStringVector,	nullptr, offsetof( KillMuxData, m_victimForbiddenCustomStatus ) },
 		{ "KilledRelationship",			INI::parseBitString32,							TheWeaponAffectsMaskNames, offsetof( KillMuxData, m_victimRelationship ) },
 		{ "DeathTypes",						INI::parseDeathTypeFlagsCustom,						nullptr, offsetof( KillMuxData, m_deathTypesCustom ) },
 		{ "DamageTypes",					INI::parseDamageTypeFlagsCustom,					nullptr, offsetof( KillMuxData, m_damageTypesCustom ) },
@@ -146,7 +146,7 @@ Bool KillMuxData::isKillApplicable( const Object *killer, const Object *victim, 
 	// all 'forbidden' status bits must be clear.
 	if (victim->getStatusBits().testForAny(m_victimForbiddenStatus))
 		return false;
-	
+
 	// Support custom statuses
 	if(victim->testCustomStatusForAll(m_requiredCustomStatus))
 		return false;

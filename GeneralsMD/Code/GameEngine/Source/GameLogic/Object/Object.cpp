@@ -9205,14 +9205,6 @@ Short Object::getRequiredBridgeHeight() const {
 }
 
 //-------------------------------------------------------------------------------------------------
-void Object::doClearTunnelContainTargetID()
-{
-	// Reset targetID each time ordering an attack
-	if( getContain() && getContain()->isTunnelContain() )
-		getContain()->clearTargetID();
-}
-
-//-------------------------------------------------------------------------------------------------
 void Object::setEquipObjectID(ObjectID equipObjID)
 {
 	if(equipObjID == INVALID_ID)

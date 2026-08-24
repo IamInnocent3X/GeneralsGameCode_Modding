@@ -49,6 +49,7 @@ public:
 	Bool							m_resetMoodCheckTimeOnExit;
 	Bool							m_destroyRidersWhoAreNotFreeToExit;
 	Bool							m_isDelayExitInAir;
+	Bool							m_allowOtherTeamUnitsInside;
 
 	TransportContainModuleData();
 

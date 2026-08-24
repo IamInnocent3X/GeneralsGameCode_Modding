@@ -853,8 +853,6 @@ public:
 	// When moving below a bridge, how high does it need to be, simplified to 0-15, where 1 is 10.0 height
 	Short getRequiredBridgeHeight() const;
 
-	void doClearTunnelContainTargetID();
-
 	void setEquipObjectID(ObjectID equipObjID);
 	void clearEquipObjectID(ObjectID equipObjID);
 	void clearLastEquipObjectID(ObjectID equipObjID);

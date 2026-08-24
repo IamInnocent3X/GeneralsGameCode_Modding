@@ -84,8 +84,9 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "CreationList",	INI::parseObjectCreationList,		nullptr,											offsetof( CreateObjectDieModuleData, m_ocl ) },
-		{ "TransferPreviousHealth", INI::parseBool, nullptr	,offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealth ) },
+		{ "TransferPreviousHealth", INI::parseBool, nullptr	, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealth ) },
 		{ "TransferHealthChangeType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealthChangeType ) },
+		{ "TransferPreviousHealthDontTransferAttackers", INI::parseBool, nullptr	, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsPreviousHealthDontTransferAttackers ) },
 		{ "TransferSelection", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSelection ) },
 		{ "TransferSelectionDontClearGroup", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSelectionDontClearGroup ) },
 		{ "TransferSelectionSquadNumber", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSquadNumber ) },
@@ -149,7 +150,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	doObjectCreation(me, newObject);
 	doDisposition(me, newObject, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
 	doInherit(me, newObject, me->getStatusBits());
-	doTransfer(me, newObject, FALSE);
+	doTransfer(me, newObject, TRUE, container != nullptr, FALSE);
 	doPostDisposition(me, newObject);
 	doInheritHealth(me, newObject);
 	doInheritSelection(me, newObject);
@@ -162,7 +163,7 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 		doObjectCreation(me, container);
 		doDisposition(me, container, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
 		doInherit(me, container, me->getStatusBits());
-		doTransfer(me, container, FALSE);
+		doTransfer(me, container, TRUE, TRUE, TRUE);
 		doPostDisposition(me, container);
 		doInheritHealth(me, container);
 		doInheritSelection(me, container);

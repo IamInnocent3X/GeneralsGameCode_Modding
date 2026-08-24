@@ -190,7 +190,7 @@ public:
 	virtual void doInherit( const Object *sourceObj, Object *obj, ObjectStatusMaskType prevStatus ) const;
 	virtual void doInheritHealth( const Object *sourceObj, Object *obj ) const;
 	virtual void doInheritSelection( const Object *sourceObj, Object *obj, Bool bypassSourceCheck = FALSE, Int oldSquadNumber = -1) const;
-	virtual void doTransfer( const Object *sourceObj, Object *obj, Bool isDestroyLater ) const;
+	virtual void doTransfer( const Object *sourceObj, Object *obj, Bool isDestroyLater, Bool hasContainer, Bool isContainer ) const;
 	virtual void doDisposition( const Object *sourceObj, Object *obj, const Coord3D *pos, const Matrix3D *mtx, Real orientation, Bool nameAreObjects ) const;
 	virtual void doPostDisposition( const Object *sourceObj, Object *obj ) const;
 	virtual void doFadeStuff( const Object *sourceObj ) const;

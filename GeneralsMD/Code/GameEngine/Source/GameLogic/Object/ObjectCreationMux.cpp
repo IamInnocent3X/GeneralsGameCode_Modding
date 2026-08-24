@@ -413,7 +413,7 @@ void ObjectCreationMux::doInherit( const Object *sourceObj, Object *obj, ObjectS
 }
 
 //-------------------------------------------------------------------------------------------------
-void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool isDestroyLater ) const
+void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool isDestroyLater, Bool hasContainer, Bool isContainer ) const
 {
 	// Sanity
 	if(!sourceObj || !obj)
@@ -423,11 +423,102 @@ void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool i
 	if(!getCreationMuxData())
 		return;
 
+	// Unconst_cast the source. Dirty hack
+	Object *source = TheGameLogic->findObjectByID(sourceObj->getID());
+	if(!source)
+		return;
+
 	const ObjectCreationMuxData *data = getCreationMuxData();
+
+	if(!isContainer)
+	{
+		if(data->m_transferPassengers && source->getContain())
+		{
+			// Get the unit's contain
+			ContainModuleInterface *contain = source->getContain();
+
+			std::vector<ObjectID>vecID;
+
+			// Disable Enter/Exit Sounds
+			contain->enableLoadSounds(FALSE);
+
+			// Get Contain List
+			ContainedItemsList list;
+			contain->swapContainedItemsList(list);
+
+			ContainedItemsList::iterator it = list.begin();
+			while ( it != list.end() )
+			{
+				Object *contained = *it++;
+				DEBUG_ASSERTCRASH( contained, ("Contain list must not contain null element"));
+
+				// trigger an onRemoving event for 'm_object' no longer containing 'itemToRemove->m_object'
+				contain->onRemoving( contained );
+
+				contained->onRemovedFrom( source );
+
+				// Remove Passenger from current contain
+				contain->removeFromContain( contained, false );
+
+				// Add the Passenger to the list to put into the new container later
+				vecID.push_back(contained->getID());
+			}
+
+			ContainModuleInterface *newContain = obj->getContain();
+
+			if(newContain)
+			{
+				// Disable Enter/Exit Sounds for New Contain
+				newContain->enableLoadSounds(FALSE);
+
+				for(int i = 0; i < vecID.size(); i++)
+				{
+					Object *add = TheGameLogic->findObjectByID( vecID[i] );
+					if(add)
+					{
+						// Add Passenger to current contain if valid
+						if( newContain && newContain->isValidContainerFor(add, TRUE) )
+						{
+							newContain->addToContain(add);
+						}
+					}
+				}
+
+				// Enable Enter/Exit Sounds for New Contain
+				newContain->enableLoadSounds(TRUE);
+			}
+
+			// Enable Enter/Exit Sounds for Previous Contain
+			contain->enableLoadSounds(TRUE);
+
+		}
+		else if(isDestroyLater)
+		{
+			ContainModuleInterface *contain = source->getContain();
+
+			if(contain)
+			{
+				contain->removeAllContained();
+			}
+		}
+
+		// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
+		if(source)
+			source->doTransferHijacker(obj->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites, data->m_destroyHijackers, data->m_destroyParasites);
+
+		// Transfer Object Name for Script Engine
+		if (data->m_transferObjectName && ((data->m_inheritsVeterancy && !data->m_dontTransferObjectNameAfterInheritingVeterancy) || !obj->getExperienceTracker()->isTrainable()))
+			TheScriptEngine->transferObjectName( source->getName(), obj );
+
+		// If we have a container, and we are not the container, we stop here
+		if(hasContainer)
+			return;
+	}
+
 	std::vector<ObjectID> BombsMarkedForDestroy;
 
 	// Transfer any bombs onto the created Object
-	if(data->m_transferAttackers || data->m_transferBombs || data->m_destroyBombs)
+	if((data->m_inheritsHealth && !data->m_inheritsPreviousHealthDontTransferAttackers) || data->m_transferAttackers || data->m_transferBombs || data->m_destroyBombs)
 	{
 		Object *iterObj = TheGameLogic->getFirstObject();
 		while( iterObj )
@@ -440,10 +531,10 @@ void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool i
 				StickyBombUpdateInterface *update = iterObj->getStickyBombUpdateInterface();
 				if( update && update->getTargetObject() == sourceObj )
 				{
-					if(data->m_transferBombs)
-						update->setTargetObject( obj );
-					else if(data->m_destroyBombs)
+					if(data->m_destroyBombs)
 						BombsMarkedForDestroy.push_back(iterObj->getID());
+					else if(data->m_transferBombs)
+						update->setTargetObject( obj );
 				}
 			//}
 
@@ -467,76 +558,6 @@ void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool i
 			TheGameLogic->destroyObject(bomb);
 	}
 
-	if(data->m_transferPassengers && sourceObj->getContain())
-	{
-		// Get the unit's contain
-		ContainModuleInterface *contain = sourceObj->getContain();
-
-		std::vector<ObjectID>vecID;
-
-		// Disable Enter/Exit Sounds
-		contain->enableLoadSounds(FALSE);
-
-		// Get Contain List
-		ContainedItemsList list;
-		contain->swapContainedItemsList(list);
-
-		ContainedItemsList::iterator it = list.begin();
-		while ( it != list.end() )
-		{
-			Object *contained = *it++;
-			DEBUG_ASSERTCRASH( contained, ("Contain list must not contain null element"));
-
-			// Remove Passenger from current contain
-			contain->removeFromContain( contained, false );
-
-			// Add the Passenger to the list to put into the new container later
-			vecID.push_back(contained->getID());
-		}
-
-		ContainModuleInterface *newContain = obj->getContain();
-
-		if(newContain)
-		{
-			// Disable Enter/Exit Sounds for New Contain
-			newContain->enableLoadSounds(FALSE);
-
-			for(int i = 0; i < vecID.size(); i++)
-			{
-				Object *add = TheGameLogic->findObjectByID( vecID[i] );
-				if(add)
-				{
-					// Add Passenger to current contain if valid
-					if( newContain && newContain->isValidContainerFor(add, TRUE) )
-					{
-						newContain->addToContain(add);
-					}
-				}
-			}
-
-			// Enable Enter/Exit Sounds for New Contain
-			newContain->enableLoadSounds(TRUE);
-		}
-
-		// Enable Enter/Exit Sounds for Previous Contain
-		contain->enableLoadSounds(TRUE);
-
-	}
-	else if(isDestroyLater)
-	{
-		ContainModuleInterface *contain = sourceObj->getContain();
-
-		if(contain)
-		{
-			contain->removeAllContained();
-		}
-	}
-
-	// Unconst_cast the source. Dirty hack
-	Object *source = TheGameLogic->findObjectByID(sourceObj->getID());
-	if(!source)
-		return;
-
 	// Assault Transport Matters, switching Transports
 	if(data->m_addToAssaultTransport && source && source->getAssaultTransportObjectID() != INVALID_ID)
 	{
@@ -553,14 +574,6 @@ void ObjectCreationMux::doTransfer( const Object *sourceObj, Object *obj, Bool i
 
 	if(data->m_transferShieldingTargets)
 		obj->setShielding(sourceObj->getShieldingTargetID(), sourceObj->getShieldByTargetType());
-
-	// Transfer Objects with HijackerUpdate module (Checks within the Object Function for approval)
-	if(source)
-		source->doTransferHijacker(obj->getID(), data->m_transferHijackers, data->m_transferEquippers, data->m_transferParasites, data->m_destroyHijackers, data->m_destroyParasites);
-
-	// Transfer Object Name for Script Engine
-	if (data->m_transferObjectName && (!data->m_inheritsVeterancy || data->m_dontTransferObjectNameAfterInheritingVeterancy || !obj->getExperienceTracker()->isTrainable()))
-		TheScriptEngine->transferObjectName( source->getName(), obj );
 }
 
 
