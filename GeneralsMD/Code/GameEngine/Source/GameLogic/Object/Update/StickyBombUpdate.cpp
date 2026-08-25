@@ -312,8 +312,9 @@ void StickyBombUpdate::triggerStickyBomb()
 
 	if( data->m_detonateWeapon )
 	{
+		Object *damager = data->m_bomberGetsExperienceOnKill ? source : obj;
 		if(boobyTrappedObject)
-			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, source, boobyTrappedObject, boobyTrappedObject->getPosition(), obj->getID());
+			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, damager, boobyTrappedObject, boobyTrappedObject->getPosition(), obj->getID());
 		else {
 			Coord3D targetPos = boobyTrappedObjectPos;
 			if( !boobyTrappedObject || !boobyTrappedObject->isSignificantlyAboveTerrain() || boobyTrappedObject->isKindOf( KINDOF_IMMOBILE ) )
@@ -322,7 +323,7 @@ void StickyBombUpdate::triggerStickyBomb()
 				//keep it at ground height for non-ground objects
 			}
 
-			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, source, &targetPos, &boobyTrappedObjectPos, obj->getID());
+			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, damager, &targetPos, &boobyTrappedObjectPos, obj->getID());
 		}
 	}
 	else if( data->m_geometryBasedDamageWeaponTemplate )

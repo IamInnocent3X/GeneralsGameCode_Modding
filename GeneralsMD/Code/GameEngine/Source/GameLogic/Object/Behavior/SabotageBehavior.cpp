@@ -548,7 +548,7 @@ static void doSabotageFeedbackFX( const Object *obj, const Object *other, Sabota
     return;
   if ( ! other )
     return;
-  if ( type == SAB_VICTIM_GENERIC && name.isEmpty() )
+  if ( type == SAB_VICTIM_NONE && name.isEmpty() )
 	return;
 
 	AudioEventRTS soundToPlay;

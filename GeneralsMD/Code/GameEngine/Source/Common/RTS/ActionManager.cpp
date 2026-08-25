@@ -1132,7 +1132,24 @@ Bool ActionManager::canMakeObjectDefector( const Object *obj, const Object *obje
 	Relationship r = obj->getRelationship(objectToMakeDefector);
 
 	//Only make defectors of enemy objects
-	if( r != ENEMIES )
+	// IamInnocent - Dehardcoded
+	//if( r != ENEMIES )
+	//{
+	//	return FALSE;
+	//}
+
+	SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( SPECIAL_DEFECTOR );
+	Int targetsMask = spUpdate ? spUpdate->getTargetsMask() : 0;
+
+	if( targetsMask == 0 )
+	{
+		if (r != ENEMIES)
+			return FALSE;
+	}
+	else if(((targetsMask & WEAPON_AFFECTS_ALLIES ) == 0 || r != ALLIES) &&
+			((targetsMask & WEAPON_AFFECTS_ENEMIES ) == 0 || r != ENEMIES ) &&
+			((targetsMask & WEAPON_AFFECTS_NEUTRALS ) == 0 || r != NEUTRAL )
+			)
 	{
 		return FALSE;
 	}
@@ -2220,7 +2237,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					}
 				}
 				//Can only use laser guided missiles on vehicles!
-				if( target->isKindOf( KINDOF_VEHICLE ) && r == ENEMIES )
+				if( target->isKindOf( KINDOF_VEHICLE ) && (r == ENEMIES || spUpdate) )
 				{
 					return true;
 				}
@@ -2357,10 +2374,10 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 				{
 					if( target->isAnyKindOf(spUpdate->getForbiddenKindOfs()) )
 						break;
-					
+
 					if(spUpdate->getKindOfs() != KINDOFMASK_NONE) 
 					{
-						if( target->isAnyKindOf(spUpdate->getKindOfs()) && r == ENEMIES)
+						if( target->isAnyKindOf(spUpdate->getKindOfs()) )
 							return canMakeObjectDefector( obj, target, commandSource, false );
 						else
 							break;
@@ -2376,7 +2393,7 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 //				if ( target->isKindOf( KINDOF_CAN_ATTACK ) )
 					{
 						//neutral or same-team units are worthless defectors
-						if( r == ENEMIES )
+						if( r == ENEMIES || spUpdate )
 						{
 							return canMakeObjectDefector( obj, target, commandSource, false );
 						}
