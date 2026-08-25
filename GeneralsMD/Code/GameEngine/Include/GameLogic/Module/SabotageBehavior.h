@@ -64,7 +64,8 @@ static const char *const TheSabotageNames[] =
 
 enum SabotageVictimType CPP_11(: Int)
 {
-	SAB_VICTIM_GENERIC = 0,
+	SAB_VICTIM_NONE = 0,
+	SAB_VICTIM_GENERIC,
 	SAB_VICTIM_COMMAND_CENTER,
 	SAB_VICTIM_FAKE_BUILDING,
 	SAB_VICTIM_INTERNET_CENTER,
@@ -79,6 +80,7 @@ enum SabotageVictimType CPP_11(: Int)
 
 static const char *const TheSabotageFeedbackNames[] =
 {
+	"NONE",
 	"GENERIC",
 	"COMMAND_CENTER",
 	"FAKE_BUILDING",
@@ -257,7 +259,7 @@ public:
 		m_sabotageDisableAllForbiddenKindOf.clear();
 		m_sabotageCostModifierFrames = 0;
 		m_sabotageTimeModifierFrames = 0;
-		m_feedbackType = SAB_VICTIM_GENERIC;
+		m_feedbackType = SAB_VICTIM_NONE;
 		m_sabotageDisabledType = DISABLED_HACKED;
 		m_tintStatus = TINT_STATUS_INVALID;
 		m_specialPowerTemplateToTrigger.clear();
