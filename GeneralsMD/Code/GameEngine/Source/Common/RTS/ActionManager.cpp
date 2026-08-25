@@ -1421,6 +1421,7 @@ Bool ActionManager::canDisableVehicleViaHacking( const Object *obj, const Object
 		if(kindofMask == KINDOFMASK_NONE)
 		{
 			kindofMask.set( KINDOF_VEHICLE );
+			forbiddenMask.set( KINDOF_AIRCRAFT );
 		}
 
 		if( !objectToHack->isAnyKindOf( kindofMask ) || objectToHack->isAnyKindOf( forbiddenMask ) )
