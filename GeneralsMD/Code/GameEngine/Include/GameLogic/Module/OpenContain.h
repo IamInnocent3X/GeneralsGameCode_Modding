@@ -301,10 +301,10 @@ protected:
 	// exists primarily for TransportContain to override
 	virtual void killRidersWhoAreNotFreeToExit() { }
 
-	virtual short getRiderSlot(ObjectID riderID) const { return -1; }
-	virtual short getPortableSlot(ObjectID portableID) const { return -1; }
-	virtual const ContainedItemsList* getAddOnList() const { return nullptr; }
-	virtual ContainedItemsList* getAddOnList() { return nullptr; }
+	virtual short getRiderSlot(ObjectID riderID) const override { return -1; }
+	virtual short getPortableSlot(ObjectID portableID) const override { return -1; }
+	virtual const ContainedItemsList* getAddOnList() const override { return nullptr; }
+	virtual ContainedItemsList* getAddOnList() override { return nullptr; }
 
 	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0, 0, 0); };
 

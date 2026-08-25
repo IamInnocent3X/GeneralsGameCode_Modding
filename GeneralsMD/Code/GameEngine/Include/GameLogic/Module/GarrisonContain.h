@@ -166,7 +166,7 @@ public:
 
   virtual void setEvacDisposition( EvacDisposition disp ) override { m_evacDisposition = disp; };
 
-  virtual Bool isHidingGarrisonFromNonAllies() const { return m_hideGarrisonedStateFromNonallies; }
+  virtual Bool isHidingGarrisonFromNonAllies() const override { return m_hideGarrisonedStateFromNonallies; }
 
 protected:
 
