@@ -186,14 +186,14 @@ Bool KodiakUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *sp
 
 	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) )
 	{
-		m_initialTargetPosition.set( targetPos );
-		m_overrideTargetDestination.set( targetPos );
+		m_initialTargetPosition.set( *targetPos );
+		m_overrideTargetDestination.set( *targetPos );
 	}
 	else
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
 		m_specialPowerModule->setReadyFrame( now );
-   	m_initialTargetPosition.set( targetPos );
+   	m_initialTargetPosition.set( *targetPos );
 		setLogicalStatus( GUNSHIP_STATUS_INSERTING );
 	}
 
@@ -284,7 +284,7 @@ Bool KodiakUpdate::isPointOffMap( const Coord3D& testPos ) const
 	Region3D mapRegion;
 	TheTerrainLogic->getExtentIncludingBorder( &mapRegion );
 
-	if (!mapRegion.isInRegionNoZ( &testPos ))
+	if (!mapRegion.isInRegionNoZ( testPos ))
 		return true;
 
 	return false;
@@ -399,7 +399,7 @@ UpdateSleepTime KodiakUpdate::update()
       if ( m_status == GUNSHIP_STATUS_INSERTING || m_status == GUNSHIP_STATUS_ORBITING )
       {
         Coord3D pos = *gunship->getPosition();
-        pos.sub( &m_initialTargetPosition );
+        pos.sub(m_initialTargetPosition );
         pos.z = zero;
         Real distanceToTarget = pos.length();
 
@@ -410,7 +410,7 @@ UpdateSleepTime KodiakUpdate::update()
         if (m_movementPosition.equals(zero_pos)) {
           // set the direction
           Coord3D direction = m_initialTargetPosition;
-          direction.sub(gunship->getPosition());
+          direction.sub(*gunship->getPosition());
           direction.z = zero;
           direction.normalize();
 
@@ -419,7 +419,7 @@ UpdateSleepTime KodiakUpdate::update()
         }
 
         Coord3D target_move_location = *gunship->getPosition();
-        target_move_location.add(&m_movementPosition);
+        target_move_location.add(m_movementPosition);
         
         if ( shipAI)
         {
@@ -430,7 +430,7 @@ UpdateSleepTime KodiakUpdate::update()
 
         //Constrain Target Override to the targeting radius
         Coord3D overrideTargetDelta = m_initialTargetPosition;
-        overrideTargetDelta.sub( &m_overrideTargetDestination );
+        overrideTargetDelta.sub(m_overrideTargetDestination );
         if ( overrideTargetDelta.length() > constraintRadius )
         {
           overrideTargetDelta.normalize();
@@ -878,7 +878,7 @@ void KodiakUpdate::disengageAndDepartAO( Object *gunship )
     Real mapSize = 99999.0f;
     exitPoint.x *= mapSize;
     exitPoint.y *= mapSize;
-    exitPoint.add( gunship->getPosition() );
+    exitPoint.add( *gunship->getPosition() );
 
     shipAI->aiMoveToPosition( &exitPoint, CMD_FROM_AI );
 
