@@ -973,12 +973,12 @@ class HeliTakeoffOrLandingState : public State
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(HeliTakeoffOrLandingState, "HeliTakeoffOrLandingState")
 protected:
 	// snapshot interface
-	virtual void crc(Xfer* xfer) override
+	virtual void crc( Xfer *xfer ) override
 	{
 		// empty. jba.
 	}
 
-	virtual void xfer(Xfer* xfer) override
+	virtual void xfer( Xfer *xfer ) override
 	{
 		// version
 		XferVersion currentVersion = 1;
@@ -1142,7 +1142,7 @@ public:
 		return STATE_CONTINUE;
 	}
 
-	virtual void onExit(StateExitType status) override
+	virtual void onExit( StateExitType status ) override
 	{
 		// just in case.
 		Object* jet = getMachineOwner();

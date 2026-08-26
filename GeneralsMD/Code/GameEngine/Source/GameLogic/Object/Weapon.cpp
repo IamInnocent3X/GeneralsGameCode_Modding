@@ -79,8 +79,8 @@
 #include "GameLogic/Module/AssistedTargetingUpdate.h"
 #include "GameLogic/Module/ProjectileStreamUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
-#include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/Module/LifetimeUpdate.h"
+#include "GameLogic/Module/SpawnBehavior.h"
 #include "GameLogic/TerrainLogic.h"
 
 #define RATIONALIZE_ATTACK_RANGE
@@ -1909,8 +1909,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			// Handle Detonation OCL
 			Coord3D targetPos; // We need a better position to match the visual laser;
-			//targetPos.set(*&projectileDestination); // IamInnocent - Removed inline from this function
-			targetPos = projectileDestination;
+			targetPos.set(projectileDestination);
 
 			if (curTarget) {
 				if (!curTarget->isKindOf(KINDOF_PROJECTILE) && !curTarget->isAirborneTarget()) {

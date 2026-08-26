@@ -159,7 +159,6 @@ static void doSetRallyPoint( Object *obj, const Coord3D& pos )
 		if (TheTerrainLogic->isUnderwater(rallyPointPos.x, rallyPointPos.y, &waterZ)) {
 			rallyPointPos.z = waterZ;
 		}
-
 	}
 	else {
 		key = NAMEKEY("BasicHumanLocomotor");
@@ -167,7 +166,7 @@ static void doSetRallyPoint( Object *obj, const Coord3D& pos )
 
 	LocomotorSet locomotorSet;
 	locomotorSet.addLocomotor( TheLocomotorStore->findLocomotorTemplate( key ) );
-	if( TheAI->pathfinder()->clientSafeQuickDoesPathExist( locomotorSet, obj->getRequiredBridgeHeight(), obj->getPosition(), &rallyPointPos) == FALSE )
+	if( TheAI->pathfinder()->clientSafeQuickDoesPathExist( locomotorSet, obj->getRequiredBridgeHeight(), obj->getPosition(), &rallyPointPos ) == FALSE )
 	{
 
 		// user feedback
@@ -217,7 +216,7 @@ static void doSetRallyPoint( Object *obj, const Coord3D& pos )
 	if( exitInterface )
 	{
 		// set the rally point
-		exitInterface->setRallyPoint( &rallyPointPos);
+		exitInterface->setRallyPoint( &rallyPointPos );
 
 	}
 
@@ -553,6 +552,20 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			onDoAttackmoveto(msg, currentlySelectedGroup);
 			break;
 		}
+		case GameMessage::MSG_DO_REVERSE_MOVETO:
+		{
+			Coord3D dest = msg->getArgument( 0 )->location;
+
+			if (currentlySelectedGroup)
+			{
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, /*reverse=*/true );
+			}
+
+			break;
+		}
+
+		//---------------------------------------------------------------------------------------------
 		case GameMessage::MSG_DO_FORCEMOVETO:
 		{
 			onDoForcemoveto(msg, currentlySelectedGroup);
@@ -646,6 +659,25 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 			onEnter(msg, currentlySelectedGroup);
 			break;
 		}
+		case GameMessage::MSG_DO_SMART_GARRISON:
+		{
+			Object *target = findObjectByID( msg->getArgument( 0 )->objectID );
+
+			// sanity
+			if( target == nullptr )
+				break;
+
+			if( currentlySelectedGroup )
+			{
+				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
+				currentlySelectedGroup->groupSmartGarrison( target, CMD_FROM_PLAYER );
+			}
+
+			break;
+
+		}
+
+		//---------------------------------------------------------------------------------------------
 		case GameMessage::MSG_EXIT:
 		{
 			onExit(msg, currentlySelectedGroup);
@@ -2667,7 +2699,7 @@ bool GameLogic::onPurchaseScience(MAYBE_UNUSED GameMessage *msg)
 	if( science == SCIENCE_INVALID )
 		return false;
 
-	msgPlayer->attemptToPurchaseScience(science);
+	msgPlayer->attemptToPurchaseScience(science, TRUE);
 
 	return true;
 }

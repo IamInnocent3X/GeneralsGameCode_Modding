@@ -67,9 +67,7 @@ public:
 	virtual Bool areAllSlavesStealthed() const override;
 	virtual void revealSlaves() override;
 	virtual Bool doSlavesHaveFreedom() const override { return false; };
-
-	// IamInnocent - declared for TheSuperHackers @bugfix Stubbjax 22/06/2026 Only allow targeting Stinger Sites when they contain Soldiers.
-	virtual Int getSlaveCount() const override { return 0; }
+	virtual Int getSlaveCount() const override { return (Int)m_spawnIDs.size(); }
 
 	// IamInnocent - SpawnBehaviorInterface properties for MobMemberSlavedUpdate, required to be declared for SpawnBehaviorInterfaces
 	virtual void friend_refreshUpdate(Bool isInstant) override {}

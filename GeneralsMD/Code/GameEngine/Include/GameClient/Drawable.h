@@ -319,7 +319,6 @@ public:
 	Bool hasCustomTintStatus() const { return m_tintCustomStatus.size() > 0; };
 	Bool testCustomTintStatus(const AsciiString& customStatusType) const;
 
-
 	TintEnvelope *getColorTintEnvelope() { return m_colorTintEnvelope; }
 	void setColorTintEnvelope( TintEnvelope &source ) { if (m_colorTintEnvelope) *m_colorTintEnvelope = source; }
 

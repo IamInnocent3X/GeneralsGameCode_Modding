@@ -83,8 +83,8 @@ void W3DModuleFactory::init()
 #if !(RTS_GENERALS && RETAIL_COMPATIBLE_CRC)
 	addModule( W3DTreeDraw );
 	addModule( W3DPropDraw );
-#endif
 	addModule( W3DDecalDraw );
 	addModule( W3DDependencyCarrierDraw );
+#endif
 
 }

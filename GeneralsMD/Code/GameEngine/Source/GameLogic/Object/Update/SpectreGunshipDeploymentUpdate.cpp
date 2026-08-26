@@ -185,14 +185,14 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 
 	if (!BitIsSet(commandOptions, COMMAND_FIRED_BY_SCRIPT) && !BitIsSet( commandOptions, IS_DOING_SABOTAGE ))
 	{
-		/******CHANGE*******/		m_initialTargetPosition.set(*targetPos);
+/******CHANGE*******/		m_initialTargetPosition.set( *targetPos );
 	}
 	else
 	{
 		UnsignedInt now = TheGameLogic->getFrame();
-		m_specialPowerModule->setReadyFrame(now);
-		/******CHANGE*******/   	m_initialTargetPosition.set(*targetPos);
-		//		setLogicalStatus( GUNSHIPDEPLOY_STATUS_INSERTING );
+		m_specialPowerModule->setReadyFrame( now );
+/******CHANGE*******/   	m_initialTargetPosition.set( *targetPos );
+//		setLogicalStatus( GUNSHIPDEPLOY_STATUS_INSERTING );
 	}
 
 	Bool first = TRUE;
@@ -222,7 +222,7 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 		if (newGunship)
 		{
 			//PRODUCER
-			newGunship->setProducer(getObject());
+			newGunship->setProducer( getObject() );
 
 			Coord3D creationPos;
 			switch (data->m_createLoc)
@@ -296,46 +296,46 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 
 			Real preferredElevation = newGunship->getAI()->getCurLocomotor()->getPreferredHeight();
 			creationCoord.z = preferredElevation;
-			newGunship->setPosition(&creationCoord);
+			newGunship->setPosition( &creationCoord );
 
 			//ORIENTATION
 			Real orient = atan2(m_initialTargetPosition.y - creationCoord.y, m_initialTargetPosition.x - creationCoord.x);
-			newGunship->setOrientation(orient);
+			newGunship->setOrientation( orient );
 
 			// ID
 			//m_gunshipID = newGunship->getID();
-			m_gunshipIDs.push_back(newGunship->getID());
+			m_gunshipIDs.push_back( newGunship->getID() );
 			Coord3D currentPos = m_initialTargetPosition;
 
 			if(!first && (data->m_attackMaxAreaVariation || data->m_attackMinAreaVariation) )
 			{
 				Real maxValue = data->m_attackMaxAreaVariation > data->m_attackMinAreaVariation ? data->m_attackMaxAreaVariation : data->m_attackMinAreaVariation;
-				Int direction = GameLogicRandomValue(0,1);
+				Int direction = GameLogicRandomValue( 0,1 );
 
 				if(direction == 1)
-					currentPos.x += GameLogicRandomValue(data->m_attackMinAreaVariation, maxValue);
+					currentPos.x += GameLogicRandomValue( data->m_attackMinAreaVariation, maxValue );
 				else
-					currentPos.x += GameLogicRandomValue(-maxValue, -data->m_attackMinAreaVariation);
+					currentPos.x += GameLogicRandomValue( -maxValue, -data->m_attackMinAreaVariation );
 				
 				// Do it again for the y-axis
 				direction = GameLogicRandomValue(0,1);
 				if(direction == 1)
-					currentPos.y += GameLogicRandomValue(data->m_attackMinAreaVariation, maxValue);
+					currentPos.y += GameLogicRandomValue( data->m_attackMinAreaVariation, maxValue );
 				else
-					currentPos.y += GameLogicRandomValue(-maxValue, -data->m_attackMinAreaVariation);
+					currentPos.y += GameLogicRandomValue( -maxValue, -data->m_attackMinAreaVariation );
 
-				m_attackCoords.push_back(currentPos);
+				m_attackCoords.push_back( currentPos );
 			}
 
 			Coord3D attackPos = data->m_gunshipsHaveIndividualAttackRadius ? currentPos : m_initialTargetPosition;
 
 			// FIRE THE SPECIAL POWER OF THE GUNSHIP
-			/*SpecialPowerModuleInterface* shipSPMInterface = newGunship->getSpecialPowerModule(specialPowerTemplate);
+			/*SpecialPowerModuleInterface* shipSPMInterface = newGunship->getSpecialPowerModule( specialPowerTemplate );
 			if (shipSPMInterface)
 			{
 				SpecialPowerModule* spModule = (SpecialPowerModule*)shipSPMInterface;
-				spModule->markSpecialPowerTriggered(&attackPos);
-				spModule->doSpecialPowerAtLocation(&attackPos, INVALID_ANGLE, commandOptions);
+				spModule->markSpecialPowerTriggered( &attackPos );
+				spModule->doSpecialPowerAtLocation( &attackPos, INVALID_ANGLE, commandOptions );
 			}*/
 			SpecialPowerModuleInterface* shipSPMInterface = nullptr;
 			SpecialPowerUpdateInterface *shipSPUInterface = nullptr;
@@ -345,8 +345,8 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 				if(shipSPMInterface && shipSPMInterface->isModuleForPower( specialPowerTemplate ))
 				{
 					SpecialPowerModule* spModule = (SpecialPowerModule*)shipSPMInterface;
-					spModule->markSpecialPowerTriggered(&attackPos);
-					spModule->doSpecialPowerAtLocation(&attackPos, INVALID_ANGLE, commandOptions);
+					spModule->markSpecialPowerTriggered( &attackPos );
+					spModule->doSpecialPowerAtLocation( &attackPos, INVALID_ANGLE, commandOptions );
 				}
 
 				if(data->m_gunshipSpawnDelay.size() <= i ||
@@ -357,8 +357,8 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 				if( shipSPUInterface && shipSPUInterface->doesSpecialPowerHaveOverridableDestination() )
 				{
 					shipSPUInterface->setDelay(now + data->m_gunshipSpawnDelay[i]);
-					if(!data->m_gunshipsHaveIndividualAttackRadius && !first && (data->m_attackMaxAreaVariation || data->m_attackMinAreaVariation))
-						shipSPUInterface->setSpecialPowerOverridableDestination(&currentPos);
+					if(!data->m_gunshipsHaveIndividualAttackRadius && !first && ( data->m_attackMaxAreaVariation || data->m_attackMinAreaVariation ))
+						shipSPUInterface->setSpecialPowerOverridableDestination( &currentPos );
 				}
 			}
 
@@ -366,7 +366,7 @@ Bool SpectreGunshipDeploymentUpdate::initiateIntentToDoSpecialPower(const Specia
 			// TheSuperHackers @bugfix arcticdolphin 04/03/2026 Only select the gunship on the local client that controls the unit.
     		// TheGameLogic->selectObject( newGunship, TRUE, getObject()->getControllingPlayer()->getPlayerMask(), newGunship->isLocallyControlled() );
 			if(first)
-				TheGameLogic->selectObject(newGunship, TRUE, getObject()->getControllingPlayer()->getPlayerMask(), getObject()->isLocallyControlled());
+				TheGameLogic->selectObject( newGunship, TRUE, getObject()->getControllingPlayer()->getPlayerMask(), getObject()->isLocallyControlled() );
 
 			//else
 			//	continue;

@@ -657,9 +657,9 @@ void LaserUpdate::updateContinuousLaser(const Object* parent, const Object* targ
 	Coord3D posToUse;
 	if (parent == nullptr)
 	{
-		posToUse.set( *startPos );
-		posToUse.add( *endPos );
-		posToUse.scale( 0.5 );
+		posToUse.set(*startPos);
+		posToUse.add(*endPos);
+		posToUse.scale(0.5);
 	}
 	else
 	{

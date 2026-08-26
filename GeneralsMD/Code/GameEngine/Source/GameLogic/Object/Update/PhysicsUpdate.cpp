@@ -1824,13 +1824,6 @@ void PhysicsBehavior::onCollide( Object *other, const Coord3D *loc, const Coord3
 					if (obj->isKindOf(KINDOF_VEHICLE) && (!other->isAirborneTarget() || getPhysicsBehaviorModuleData()->m_vehicleCrashAllowAirborne))
 					{
 #if RETAIL_COMPATIBLE_CRC
-						//DEBUG_LOG((
-						//	">>> PhysicsUpdate - fire vehicleCrashesIntoNonBuildingWeapon; obj = %s (%d); other = %s (%d).\n",
-						//	obj->getTemplate()->getName().str(),
-						//	obj->getID(),
-						//	other->getTemplate()->getName().str(),
-						//	other->getID()
-						//	));
 						TheWeaponStore->createAndFireTempWeapon(getPhysicsBehaviorModuleData()->m_vehicleCrashesIntoNonBuildingWeaponTemplate, obj, obj->getPosition());
 #else
 						// TheSuperHackers @bugfix Stubbjax 19/04/2026 Prevent non-building collisions from repeatedly dealing collateral damage to other objects.

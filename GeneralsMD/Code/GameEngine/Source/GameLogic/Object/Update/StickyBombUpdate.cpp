@@ -423,22 +423,11 @@ void StickyBombUpdate::triggerStickyBomb()
 		boobyTrappedObject->clearStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_BOOBY_TRAPPED) );
 	}
 #endif
+
 }
 
-#if !RETAIL_COMPATIBLE_CRC
-void StickyBombUpdate::onDelete()
-{
-	// TheSuperHackers @bugfix Stubbjax 05/08/2026 Clear booby trap status when destroyed, not just when detonated.
-	if (getObject()->isKindOf(KINDOF_BOOBY_TRAP))
-	{
-		Object* boobyTrappedObject = getTargetObject();
 
-		// This kind of sticky bomb needs to set a status, so the poor victim can trigger us from assorted places
-		if (boobyTrappedObject)
-			boobyTrappedObject->clearStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_BOOBY_TRAPPED));
-	}
-}
-#endif
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 Anim2DTemplate* StickyBombUpdate::getAnimBaseTemplate() {
@@ -476,6 +465,20 @@ Anim2DTemplate* StickyBombUpdate::getAnimTimedTemplate() {
 }
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
+#if !RETAIL_COMPATIBLE_CRC
+void StickyBombUpdate::onDelete()
+{
+	// TheSuperHackers @bugfix Stubbjax 05/08/2026 Clear booby trap status when destroyed, not just when detonated.
+	if (getObject()->isKindOf(KINDOF_BOOBY_TRAP))
+	{
+		Object* boobyTrappedObject = getTargetObject();
+
+		// This kind of sticky bomb needs to set a status, so the poor victim can trigger us from assorted places
+		if (boobyTrappedObject)
+			boobyTrappedObject->clearStatus(MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_BOOBY_TRAPPED));
+	}
+}
+#endif
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

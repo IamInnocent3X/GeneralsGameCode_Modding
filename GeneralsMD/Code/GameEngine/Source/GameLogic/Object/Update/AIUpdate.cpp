@@ -5818,11 +5818,11 @@ void AIUpdateInterface::crc( Xfer *x )
 void AIUpdateInterface::xfer( Xfer *xfer )
 {
   // version
-//#if RETAIL_COMPATIBLE_CRC || RETAIL_COMPATIBLE_XFER_SAVE
-//	const XferVersion currentVersion = 5;
-//#else
-	const XferVersion currentVersion = 5;
-//#endif
+#if RETAIL_COMPATIBLE_CRC || RETAIL_COMPATIBLE_XFER_SAVE
+	const XferVersion currentVersion = 4;
+#else
+	const XferVersion currentVersion = 6;
+#endif
   XferVersion version = currentVersion;
   xfer->xferVersion( &version, currentVersion );
 
@@ -6059,7 +6059,7 @@ void AIUpdateInterface::xfer( Xfer *xfer )
 
 	xfer->xferReal(&m_speedMultiplier);
 
-	if (version >= 5)
+	if (version >= 6)
 		xfer->xferBool(&m_forceMoveBackwards);
 
 }

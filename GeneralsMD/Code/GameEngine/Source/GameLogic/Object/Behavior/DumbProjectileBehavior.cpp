@@ -999,12 +999,12 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 {
 
 	// version
-//#if RETAIL_COMPATIBLE_XFER_SAVE
 	// 2: Added m_launchVeterancy (for veterancy FX/OCL selection)
-//	XferVersion currentVersion = 2;
-//#else
+#if RETAIL_COMPATIBLE_XFER_SAVE
+	XferVersion currentVersion = 1;
+#else
 	XferVersion currentVersion = 2;
-//#endif
+#endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -1027,11 +1027,6 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 	xfer->xferReal( &m_flightPathSpeed );
 	xfer->xferCoord3D( &m_flightPathStart );
 	xfer->xferCoord3D( &m_flightPathEnd );
-	xfer->xferCoord3D( &m_flightPathEndBackup );
-
-	xfer->xferBool( &m_assignedBackup );
-
-	xfer->xferBool(&m_noDamage);
 
 	// weapon template
 	AsciiString weaponTemplateName = AsciiString::TheEmptyString;
@@ -1081,46 +1076,49 @@ void DumbProjectileBehavior::xfer( Xfer *xfer )
 	if( version >= 2 )
 	{
 		xfer->xferInt( &m_currentFlightPathStep );
-	}
 
-	xfer->xferUnsignedInt( &m_framesTillDecoyed );
-	xfer->xferBool( &m_noDamage );
+		xfer->xferCoord3D( &m_flightPathEndBackup );
 
-	xfer->xferUnsignedInt(&m_detonateDistance);
-	xfer->xferObjectID(&m_decoyID);
-	xfer->xferBool( &m_isJammed );
+		xfer->xferUnsignedInt( &m_framesTillDecoyed );
+		xfer->xferBool( &m_assignedBackup );
+		xfer->xferBool( &m_noDamage );
 
-	xfer->xferObjectID(&m_shrapnelLaunchID);
-	xfer->xferUnsignedInt(&m_dontDetonateGroundFrames);
+		xfer->xferUnsignedInt(&m_detonateDistance);
+		xfer->xferObjectID(&m_decoyID);
+		xfer->xferBool( &m_isJammed );
 
-	m_extraBonusFlags.xfer(xfer);
-	//xfer->xferUnsignedInt(&m_extraBonusFlags);
+		xfer->xferObjectID(&m_shrapnelLaunchID);
+		xfer->xferUnsignedInt(&m_dontDetonateGroundFrames);
 
-	if( xfer->getXferMode() == XFER_SAVE )
-	{
-		for (std::vector<AsciiString>::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
+		m_extraBonusFlags.xfer(xfer);
+		//xfer->xferUnsignedInt(&m_extraBonusFlags);
+
+		if( xfer->getXferMode() == XFER_SAVE )
 		{
-			AsciiString bonusName = (*it);
-			xfer->xferAsciiString(&bonusName);
+			for (std::vector<AsciiString>::const_iterator it = m_extraBonusCustomFlags.begin(); it != m_extraBonusCustomFlags.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
 		}
-		AsciiString empty;
-		xfer->xferAsciiString(&empty);
-	}
-	else if (xfer->getXferMode() == XFER_LOAD)
-	{
-		if (m_extraBonusCustomFlags.empty() == false)
+		else if (xfer->getXferMode() == XFER_LOAD)
 		{
-			DEBUG_CRASH(( "GameLogic::xfer - m_extraBonusCustomFlags should be empty, but is not"));
-			//throw SC_INVALID_DATA;
-		}
-		
-		for (;;) 
-		{
-			AsciiString bonusName;
-			xfer->xferAsciiString(&bonusName);
-			if (bonusName.isEmpty())
-				break;
-			m_extraBonusCustomFlags.push_back(bonusName);
+			if (m_extraBonusCustomFlags.empty() == false)
+			{
+				DEBUG_CRASH(( "GameLogic::xfer - m_extraBonusCustomFlags should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_extraBonusCustomFlags.push_back(bonusName);
+			}
 		}
 	}
 

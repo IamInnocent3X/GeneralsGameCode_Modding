@@ -287,11 +287,6 @@ public:
 	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const override { CustomSubdualCurrentDamageMap dummy; return dummy; }
 	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) override { }
 
-	virtual UnsignedInt getChronoDamageHealRate() const override { return 0; }
-	virtual Real getChronoDamageHealAmount() const override { return 0.0f; }
-	virtual Bool hasAnyChronoDamage() const override { return FALSE; }
-	virtual Real getCurrentChronoDamageAmount() const override { return 0.0f; }
-
 	virtual Real getInitialHealth() const override {return 0.0f;}  // return initial health
 
 	virtual const DamageInfo *getLastDamageInfo() const override { return nullptr; }	///< return info on last damage dealt to this object
@@ -308,9 +303,13 @@ public:
 	virtual void setSubdualHealRate( UnsignedInt subdualHealRate ) override  {  } 
 	virtual void setSubdualHealAmount( Real subdualHealAmount ) override  {  } 
 
+	virtual UnsignedInt getChronoDamageHealRate() const override { return 0; }
+	virtual Real getChronoDamageHealAmount() const override { return 0.0f; }
+	virtual Bool hasAnyChronoDamage() const override { return FALSE; }
+	virtual Real getCurrentChronoDamageAmount() const override { return 0.0f; }
+
 	virtual void setFrontCrushed(Bool v) override { DEBUG_CRASH(("you should never call this for generic Bodys")); }
 	virtual void setBackCrushed(Bool v) override { DEBUG_CRASH(("you should never call this for generic Bodys")); }
-
 
 	virtual void setIndestructible( Bool indestructible ) override { }
 	virtual Bool isIndestructible() const override { return TRUE; }

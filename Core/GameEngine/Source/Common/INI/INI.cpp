@@ -102,10 +102,10 @@ static const BlockParse theTypeTable[] =
 	{ "AudioSettings",                  INI::parseAudioSettingsDefinition },
 	{ "BenchProfile",                   INI::parseBenchProfile },
 	{ "Bridge",                         INI::parseTerrainBridgeDefinition },
-	{ "BuffTemplate",					INI::parseBuffTemplateDefinition },
+	{ "BuffTemplate",                   INI::parseBuffTemplateDefinition },
 	{ "Campaign",                       INI::parseCampaignDefinition },
 	{ "ChallengeGenerals",              INI::parseChallengeModeDefinition },
-	{ "ChatCommand",					INI::parseChatCommandDefinition },
+	{ "ChatCommand",                    INI::parseChatCommandDefinition },
 	{ "CommandButton",                  INI::parseCommandButtonDefinition },
 	{ "CommandMap",                     INI::parseMetaMapDefinition },
 	{ "CommandMouseModifier",		INI::parseMouseCommandModifierDefinition },
@@ -126,7 +126,7 @@ static const BlockParse theTypeTable[] =
 	{ "LODPreset",                      INI::parseLODPreset },
 	{ "Language",                       INI::parseLanguageDefinition },
 	{ "Locomotor",                      INI::parseLocomotorTemplateDefinition },
-	{ "LocomotorExtend",		INI::parseLocomotorExtendTemplateDefinition },
+	{ "LocomotorExtend",                INI::parseLocomotorExtendTemplateDefinition },
 	{ "MapCache",                       INI::parseMapCacheDefinition },
 	{ "MapData",                        INI::parseMapDataDefinition },
 	{ "MappedImage",                    INI::parseMappedImageDefinition },
@@ -139,6 +139,7 @@ static const BlockParse theTypeTable[] =
 	{ "MusicTrack",                     INI::parseMusicTrackDefinition },
 	{ "Object",                         INI::parseObjectDefinition },
 	{ "ObjectCreationList",             INI::parseObjectCreationListDefinition },
+	{ "ObjectExtend",                   INI::parseObjectExtendDefinition },
 	{ "ObjectReskin",                   INI::parseObjectReskinDefinition },
 	{ "ObjectExtend",				INI::parseObjectExtendDefinition },
 	{ "OnlineChatColors",               INI::parseOnlineChatColorDefinition },
@@ -159,7 +160,7 @@ static const BlockParse theTypeTable[] =
 	{ "WaterSet",                       INI::parseWaterSettingDefinition },
 	{ "WaterTransparency",              INI::parseWaterTransparencyDefinition },
 	{ "Weapon",                         INI::parseWeaponTemplateDefinition },
-	{ "WeaponExtend",       INI::parseWeaponExtendTemplateDefinition },
+	{ "WeaponExtend",                   INI::parseWeaponExtendTemplateDefinition },
 	{ "Weather",                        INI::parseWeatherDefinition },
 	{ "WebpageURL",                     INI::parseWebpageURLDefinition },
 	{ "WindowTransition",               INI::parseWindowTransitions },
@@ -198,6 +199,7 @@ INI::INI()
 #ifdef DEBUG_CRASHING
 	m_curBlockStart[0]	= 0;
 #endif
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -409,7 +411,7 @@ UnsignedInt INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer, 
 			const char *token = strtok( m_buffer, getSeps() );
 
 			// skip non MapData blocks if loading
-			bool skip = (loadType == INI_LOAD_MAPDATA_ONLY) && (strcmp(token, "MapData") != 0);
+			bool skip = (loadType == INI_LOAD_MAPDATA_ONLY) && token && (strcmp(token, "MapData") != 0);
 
 			if( token && !skip)
 			{

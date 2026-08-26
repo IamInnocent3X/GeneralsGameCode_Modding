@@ -1918,7 +1918,6 @@ void InGameUI::evaluateSoloNexus( Drawable *newlyAddedDrawable )
 
 }
 
-
 void InGameUI::handleBuildPlacements()
 {
 
@@ -1951,8 +1950,8 @@ void InGameUI::handleBuildPlacements()
 					Coord3D worldStart, worldEnd;
 
 					// project the start and the end points of the line anchor into the 3D world
-					if( TheTacticalView->screenToTerrain(&start, &worldStart) &&
-						TheTacticalView->screenToTerrain(&end, &worldEnd) )
+					if( TheTacticalView->screenToTerrain( &start, &worldStart ) &&
+						TheTacticalView->screenToTerrain( &end, &worldEnd ) )
 					{
 						Coord2D v;
 						v.x = worldEnd.x - worldStart.x;
@@ -2009,7 +2008,6 @@ void InGameUI::handleBuildPlacements()
 		to do is set a simple angle and have it automatically change, ug! */
 		if( TheTacticalView->screenToTerrain( &loc, &world ) )
 		{
-
 			// If shipyard move up building to at least waterheight if lower
 			if (m_pendingPlaceType->isKindOf(KINDOF_SHIPYARD)) {
 				Real waterZ{ 0 };

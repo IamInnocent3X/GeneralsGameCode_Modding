@@ -435,19 +435,18 @@ void LocomotorTemplate::validate()
 		}
 	}
 
-#if RTS_GENERALS
-	// TheSuperHackers @info DecelerationPitchLimit was just added in Zero Hour and is therefore defaulted to
-	// AccelerationPitchLimit when zero to preserve the original behavior of Generals.
-	if (m_decelPitchLimit == 0.0f)
-		m_decelPitchLimit = m_accelPitchLimit;
-#endif
-
 	if (m_appearance != LOCO_SHIP) {
 		if (m_requiredWaterLevel > 0) {
 			DEBUG_CRASH(("Non SHIP locomotors should not have a 'RequiredWaterLevel' of greater than 0!"));
 		}
 	}
 
+#if RTS_GENERALS
+	// TheSuperHackers @info DecelerationPitchLimit was just added in Zero Hour and is therefore defaulted to
+	// AccelerationPitchLimit when zero to preserve the original behavior of Generals.
+	if (m_decelPitchLimit == 0.0f)
+		m_decelPitchLimit = m_accelPitchLimit;
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -542,10 +541,6 @@ const FieldParse* LocomotorTemplate::getFieldParse() const
 		{ "RudderCorrectionRate",			 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_rudderCorrectionRate) }, // Added in Zero Hour
 		{ "ElevatorCorrectionDegree",	 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionDegree) }, // Added in Zero Hour
 		{ "ElevatorCorrectionRate",		 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionRate) }, // Added in Zero Hour
-		{ "RudderCorrectionDegree",		 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_rudderCorrectionDegree) },
-		{ "RudderCorrectionRate",			 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_rudderCorrectionRate) },
-		{ "ElevatorCorrectionDegree",	 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionDegree) },
-		{ "ElevatorCorrectionRate",		 INI::parseReal, nullptr, offsetof(LocomotorTemplate, m_elevatorCorrectionRate) },
 		{ "RequiredWaterLevel",        INI::parseUnsignedInt, nullptr, offsetof(LocomotorTemplate, m_requiredWaterLevel)},
 
 		{ nullptr, nullptr, nullptr, 0 }
