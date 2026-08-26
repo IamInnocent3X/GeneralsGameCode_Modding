@@ -34,6 +34,7 @@
 typedef BitFlags<WEAPONBONUSCONDITION_COUNT, struct WeaponBonusConditionFlagsTag> WeaponBonusConditionFlags;
 //typedef std::hash_map< AsciiString, Int, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ObjectCustomStatusType;
 
+// TO-DO Move this to higher/lower function
 //-------------------------------------------------------------------------------------------------
 inline Bool checkWithinStringVec(const AsciiString& str, const std::vector<AsciiString>& vec)
 {

@@ -354,6 +354,7 @@ private:
 	bool onDozerConstruct(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDozerCancelConstruct(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onSell(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
+	bool onSmartGarrison(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onToggleOvercharge(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 	bool onDisablePower(GameMessage *msg, AIGroupPtr &currentlySelectedGroup);
 #ifdef ALLOW_SURRENDER

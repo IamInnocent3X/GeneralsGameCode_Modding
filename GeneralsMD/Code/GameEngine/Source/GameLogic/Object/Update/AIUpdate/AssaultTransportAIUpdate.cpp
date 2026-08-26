@@ -587,7 +587,7 @@ void AssaultTransportAIUpdate::onAttack()
 			m_isAttackObject = TRUE;
 			return;
 		}
-		
+
 		//Look for members not currently attacking this target.
 		for( int i = 0; i < m_currentMembers; i++ )
 		{

@@ -3103,7 +3103,7 @@ static bool smartGarrisonCandidateLess( const SmartGarrisonCandidate &a, const S
  */
 void AIGroup::groupSmartGarrison( Object *target, CommandSourceType cmdSource )
 {
-	if( target == NULL || target->getContain() == NULL || m_memberList.empty() )
+	if( target == nullptr || target->getContain() == nullptr || m_memberList.empty() )
 		return;
 
 	const SmartGarrisonCategory targetCat = getSmartGarrisonCategory( target );
@@ -3131,19 +3131,19 @@ void AIGroup::groupSmartGarrison( Object *target, CommandSourceType cmdSource )
 	// One cheap range query for other same-category transports of ours to redistribute into.
 	PartitionFilterSamePlayer      fPlayer( owner );
 	PartitionFilterPossibleToEnter fEnter( firstMember, cmdSource );
-	PartitionFilter *filters[] = { &fPlayer, &fEnter, NULL };
+	PartitionFilter *filters[] = { &fPlayer, &fEnter, nullptr };
 
 	MemoryPoolObjectHolder holder;
 	SimpleObjectIterator *iter = ThePartitionManager->iterateObjectsInRange(
 		target, TheGlobalData->m_smartGarrisonRange, FROM_CENTER_2D, filters, ITER_FASTEST );
 	holder.hold( iter );
 
-	for( Object *o = iter ? iter->first() : NULL; o != NULL; o = iter->next() )
+	for( Object *o = iter ? iter->first() : nullptr; o != nullptr; o = iter->next() )
 	{
 		if( o == target )
 			continue;
 		ContainModuleInterface *contain = o->getContain();
-		if( contain == NULL )
+		if( contain == nullptr )
 			continue;
 		if( getSmartGarrisonCategory( o ) != targetCat )
 			continue;	// never mix structures / vehicles / aircraft
@@ -3176,7 +3176,7 @@ void AIGroup::groupSmartGarrison( Object *target, CommandSourceType cmdSource )
 	{
 		Object *member = *it;
 		AIUpdateInterface *ai = member->getAIUpdateInterface();
-		if( ai == NULL )
+		if( ai == nullptr )
 			continue;
 
 		Int cost = member->getTransportSlotCount();

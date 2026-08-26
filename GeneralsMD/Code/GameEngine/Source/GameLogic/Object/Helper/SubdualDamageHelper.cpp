@@ -66,7 +66,7 @@ UpdateSleepTime SubdualDamageHelper::update()
 	UnsignedInt nextHealingStep = 0; //= 1e9; //Just a portion shy away from UPDATE_SLEEP_FOREVER
 
 	std::vector<AsciiString> subdualDamageCustom;
-	subdualDamageCustom = body->getAnySubdualDamageCustom();
+	subdualDamageCustom = body->getSubdualDamageCustomPresent();
 	//if( !subdualDamageCustom.empty() )
 	//{
 		for(int i = 0; i < subdualDamageCustom.size(); i++)

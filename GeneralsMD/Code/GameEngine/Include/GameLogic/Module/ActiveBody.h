@@ -96,7 +96,7 @@ public:
 	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const override;
 	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const override;
 	virtual Bool hasAnySubdualDamageCustom() const override;
-	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const override;
+	virtual std::vector<AsciiString> getSubdualDamageCustomPresent() const override;
 	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const override { return m_currentSubdualDamageCustom; }
 	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) override { m_currentSubdualDamageCustom = currentSubdualCustom; }
 

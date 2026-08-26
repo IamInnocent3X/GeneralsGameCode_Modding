@@ -554,14 +554,7 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		}
 		case GameMessage::MSG_DO_REVERSE_MOVETO:
 		{
-			Coord3D dest = msg->getArgument( 0 )->location;
-
-			if (currentlySelectedGroup)
-			{
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
-				currentlySelectedGroup->groupMoveToPosition( &dest, false, CMD_FROM_PLAYER, /*reverse=*/true );
-			}
-
+			onDoReverseMoveto(msg, currentlySelectedGroup);
 			break;
 		}
 
@@ -576,11 +569,6 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 		case GameMessage::MSG_DO_MOVETO:
 		{
 			onDoMoveto(msg, currentlySelectedGroup);
-			break;
-		}
-		case GameMessage::MSG_DO_REVERSE_MOVETO:
-		{
-			onDoReverseMoveto(msg, currentlySelectedGroup);
 			break;
 		}
 		case GameMessage::MSG_ADD_WAYPOINT:
@@ -654,27 +642,14 @@ void GameLogic::logicMessageDispatcher( GameMessage *msg, void *userData )
 #endif
 
 		case GameMessage::MSG_ENTER:
-		case GameMessage::MSG_DO_SMART_GARRISON:
 		{
 			onEnter(msg, currentlySelectedGroup);
 			break;
 		}
 		case GameMessage::MSG_DO_SMART_GARRISON:
 		{
-			Object *target = findObjectByID( msg->getArgument( 0 )->objectID );
-
-			// sanity
-			if( target == nullptr )
-				break;
-
-			if( currentlySelectedGroup )
-			{
-				currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_TEMPORARILY);	// release any temporary locks.
-				currentlySelectedGroup->groupSmartGarrison( target, CMD_FROM_PLAYER );
-			}
-
+			onSmartGarrison(msg, currentlySelectedGroup);
 			break;
-
 		}
 
 		//---------------------------------------------------------------------------------------------
@@ -1700,18 +1675,7 @@ bool GameLogic::onDebugKillObject(MAYBE_UNUSED GameMessage *msg)
 
 bool GameLogic::onEnter(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlySelectedGroup)
 {
-	Int objMsgArg;
-	switch( msg->getType() )
-	{
-		case GameMessage::MSG_ENTER:
-			objMsgArg = 1;
-			break;
-		case GameMessage::MSG_DO_SMART_GARRISON:
-			objMsgArg = 0;
-			break;
-	}
-
-	Object *enter = findObjectByID( msg->getArgument( objMsgArg )->objectID );
+	Object *enter = findObjectByID( msg->getArgument( 1 )->objectID );
 
 	// sanity
 	if( enter == nullptr )
@@ -1785,6 +1749,24 @@ bool GameLogic::onEvacuate(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlyS
 
 		// no, this is bad, don't do here, do when POSTING message
 		//			pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_EVACUATE );
+	}
+
+	return true;
+}
+
+bool GameLogic::onSmartGarrison(MAYBE_UNUSED GameMessage *msg, AIGroupPtr &currentlySelectedGroup)
+{
+	Object *target = findObjectByID( msg->getArgument( 0 )->objectID );
+
+	// sanity
+	if( target == nullptr )
+		return false;
+
+	if( currentlySelectedGroup )
+	{
+		currentlySelectedGroup->setWeaponsActivatedByGUIForGroup(FALSE);
+		currentlySelectedGroup->releaseWeaponLockForGroup(LOCKED_PRIORITY);	// release any temporary locks.
+		currentlySelectedGroup->groupSmartGarrison( target, CMD_FROM_PLAYER );
 	}
 
 	return true;

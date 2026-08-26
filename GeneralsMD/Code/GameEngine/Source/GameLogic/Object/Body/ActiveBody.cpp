@@ -2416,7 +2416,7 @@ Bool ActiveBody::hasAnySubdualDamageCustom() const
 }
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-std::vector<AsciiString> ActiveBody::getAnySubdualDamageCustom() const
+std::vector<AsciiString> ActiveBody::getSubdualDamageCustomPresent() const
 {
 	std::vector<AsciiString> stringVec;
 	for(CustomSubdualCurrentDamageMap::const_iterator it = m_currentSubdualDamageCustom.begin(); it != m_currentSubdualDamageCustom.end(); ++it)

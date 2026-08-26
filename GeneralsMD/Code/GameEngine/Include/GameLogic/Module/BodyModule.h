@@ -189,7 +189,7 @@ public:
 	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const = 0;
 	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const = 0;
 	virtual Bool hasAnySubdualDamageCustom() const = 0;
-	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const = 0;
+	virtual std::vector<AsciiString> getSubdualDamageCustomPresent() const = 0;
 	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const = 0;
 	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) = 0;
 
@@ -283,7 +283,7 @@ public:
 	virtual UnsignedInt getSubdualDamageHealRateCustom(const AsciiString& customStatus) const override {return 0;}
 	virtual Real getSubdualDamageHealAmountCustom(const AsciiString& customStatus) const override {return 0.0f;}
 	virtual Bool hasAnySubdualDamageCustom() const override {return FALSE;}
-	virtual std::vector<AsciiString> getAnySubdualDamageCustom() const override { std::vector<AsciiString> dummy; return dummy; }
+	virtual std::vector<AsciiString> getSubdualDamageCustomPresent() const override { std::vector<AsciiString> dummy; return dummy; }
 	virtual CustomSubdualCurrentDamageMap getCurrentSubdualDamageAmountCustom() const override { CustomSubdualCurrentDamageMap dummy; return dummy; }
 	virtual void setCurrentSubdualDamageAmountCustom(CustomSubdualCurrentDamageMap currentSubdualCustom) override { }
 
