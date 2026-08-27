@@ -32,11 +32,12 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/TransportContain.h"
 
-#define MAX_RIDERS 8 //***NOTE: If you change this, make sure you update the parsing section!
+#define MAX_RIDERS 16 //***NOTE: If you change this, make sure you update the parsing section!
 
 enum WeaponSetType CPP_11(: Int);
 enum ObjectStatusType CPP_11(: Int);
 enum LocomotorSetType CPP_11(: Int);
+enum ArmorSetType CPP_11(: Int);
 
 struct RiderInfo
 {
@@ -46,7 +47,41 @@ struct RiderInfo
 	ObjectStatusType m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
+	ArmorSetType m_armorSetFlag;
+	AsciiString m_objectCustomStatusType;
 };
+
+struct RiderData
+{
+	AsciiString templateName;
+	UnsignedInt timeFrame;
+	ObjectStatusType statusType;
+	AsciiString customStatusType;
+};
+
+enum ScuttleType CPP_11(: Int)
+{
+	SCUTTLE_INVALID = 0,
+	SCUTTLE_ON_EXIT = 1,
+	SCUTTLE_ON_NO_PASSENGERS = 2,
+	SCUTTLE_NEVER = 3,
+
+	SCUTTLE_COUNT
+
+};
+
+#ifdef DEFINE_SCUTTLE_NAMES
+static const char *TheScuttleNames[] = 
+{
+	"INVALID",
+	"ON_EXIT",
+	"ON_NO_PASSENGERS",
+	"NEVER",
+
+	nullptr
+};
+#endif
+
 
 //-------------------------------------------------------------------------------------------------
 class RiderChangeContainModuleData : public TransportContainModuleData
@@ -54,13 +89,22 @@ class RiderChangeContainModuleData : public TransportContainModuleData
 public:
 
 	RiderInfo m_riders[ MAX_RIDERS ];
+	std::vector<RiderInfo> m_ridersCustom;
 	UnsignedInt m_scuttleFrames;
 	ModelConditionFlagType m_scuttleState;
+	Bool m_riderNotRequired;
+	Bool m_useUpgradeNames;
+	Bool m_dontDestroyPassengersOnKill;
+	Bool m_dontEvacuateOnEnter;
+	Bool m_canContainNonRiders;
+	Bool m_moreThanOneRiders;
+	ScuttleType m_scuttleType;
 
 	RiderChangeContainModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseRiderInfo( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	static void parseRiderInfoCustom( INI* ini, void *instance, void *store, const void* /*userData*/ );
 
 };
 
@@ -86,6 +130,14 @@ public:
 	virtual Bool isRiderChangeContain() const override { return TRUE; }
 	virtual const Object *friend_getRider() const override;
 
+	virtual Bool killPilotDoesNotKill() const override;
+	virtual void forceScuttle() override;
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+	virtual const Object* getKillScoreCreditObj( const Object* killer ) const override;
+#endif
+
+	virtual Int getRawContainMax() const override;
 	virtual Int getContainMax() const override;
 
 	virtual Int getExtraSlotsInUse() override { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
@@ -97,12 +149,39 @@ public:
 
 	virtual Bool getContainerPipsToShow( Int& numTotal, Int& numFull ) override;
 
+	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ) override; ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
+
+	virtual void doUpgradeChecks() override;
+	virtual void doStatusChecks() override;
+
+	void changeRiderTemplateOnStatusUpdate();
+	Bool riderTemplateIsValidChange(ObjectStatusMaskType newStatus);
+	Bool riderTemplateIsValidChange(const AsciiString& newCustomStatus);
+	Bool riderTemplateIsValidRemoval(ObjectStatusMaskType newStatus);
+	Bool riderTemplateIsValidRemoval(const AsciiString& newCustomStatus);
+	void riderGiveTemplate(RiderData riderData);
+	//void riderRemoveAll(); // The more expensive option. Execute once for loaded units to fix object states.
+
+	void loadPreviousState(); // Loads the previous Rider Template of the existing unit if StatusCheck or UpgradeCheck is enabled
+	void doRegisterUpgradeNames();
+	void registerNewRiderDataOnContain(RiderData riderData);
+	void removeRiderTemplate(const AsciiString& rider, Bool clearStatus); // Remove the template
+	void removeRiderDataRecord(const AsciiString& rider); // Use in line with Remove Template, also clears it from the Rider Change Records
+	void clearAllTimeFramedDataRecords();
+	
+	Bool checkHasRiderTemplate( const Object *rider ) const;
+	Bool compareRiderStatus(const AsciiString& rider, Int checkIndex) const;
+	Bool riderChangeContainingCheck( Object *rider, const RiderInfo& riderInfo );
+	Bool riderChangeRemoveCheck( Object *rider, const RiderInfo& riderInfo, Bool checkRecordOnly);
+
 protected:
 
 	// exists primarily for RiderChangeContain to override
 	virtual void killRidersWhoAreNotFreeToExit() override;
 	virtual Bool isSpecificRiderFreeToExit(Object* obj) override;
 	virtual void createPayload() override;
+
+	void onRiderTemplateChange();
 
 private:
 
@@ -111,5 +190,28 @@ private:
 	UnsignedInt m_scuttledOnFrame;
 
 	Bool m_containing; //doesn't require xfer.
+	Bool m_loaded; //same
+	Bool m_dontCompare; //me too
+	Bool m_registeredUpgradeNames; // me three
+
+	ObjectStatusMaskType m_prevStatus;
+	std::vector<AsciiString> m_prevCustomStatusTypes;
+
+	ObjectStatusType m_riderDataStatusRegister;
+	AsciiString m_riderDataCustomStatusRegister;
+
+	struct RiderUpgrade
+	{
+		AsciiString									templateName;
+		Int											templateRider;
+
+		RiderUpgrade() : templateName(AsciiString::TheEmptyString), templateRider(-1)
+		{
+		}
+	};
+
+	std::vector<RiderUpgrade>			m_upgradeTemplates;
+	UpgradeMaskType						m_prevMaskToCheck;
+	std::vector<RiderData>				m_theRiderDataRecord;
 
 };

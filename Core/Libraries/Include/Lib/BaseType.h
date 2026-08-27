@@ -296,6 +296,7 @@ struct Coord2D
 
 	Real toAngle() const;  ///< turn 2D vector into angle (where angle 0 is down the +x axis)
 
+	void rotateByAngle(Real angle); ///< rotate the vector by the given angle (radians)
 	void add( const Coord2D &a )
 	{
 		x += a.x;
@@ -403,6 +404,18 @@ inline Real Coord2D::toAngle() const
 
 	return y < 0.0f ? -ACos(c) : ACos(c);
 #endif
+}
+
+inline void Coord2D::rotateByAngle(Real angle)
+{
+	Real cs = Cos(angle);
+	Real sn = Sin(angle);
+
+	Real px = x * cs - y * sn;
+	Real py = x * sn + y * cs;
+
+	x = px;
+	y = py;
 }
 
 struct ICoord2D
@@ -832,3 +845,8 @@ struct RGBAColorInt
 	UnsignedInt red, green, blue, alpha;  // range between 0 and 255
 
 };
+
+// Modulo function working with negative values, required for angles
+inline Real nmod(Real x, Real y) {
+    return fmod(fmod(x, y) + y, y);
+}

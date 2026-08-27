@@ -44,11 +44,15 @@
 
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameClient/FXList.h"
+#include "GameLogic/ObjectCreationList.h"
 #include "GameLogic/Module/DeletionUpdate.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
+#include "GameLogic/Module/SpecialPowerDesignatorUpdate.h"
 #include "GameLogic/ScriptEngine.h"
+#include "GameLogic/PartitionManager.h"
 
 #include "GameClient/Eva.h"
 #include "GameClient/InGameUI.h"
@@ -443,7 +447,7 @@ void SpecialPowerModule::startPowerRecharge()
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	Bool valid = false;
 	// tell our update modules that we intend to do this special power.
@@ -457,7 +461,7 @@ Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj
 			{
 				if( spu->doesSpecialPowerUpdatePassScienceTest() )
 				{
-					if( spu->initiateIntentToDoSpecialPower( getSpecialPowerModuleData()->m_specialPowerTemplate, targetObj, targetPos, way, commandOptions ) )
+					if( spu->initiateIntentToDoSpecialPower( getSpecialPowerModuleData()->m_specialPowerTemplate, targetObj, targetDraw, targetPos, way, commandOptions ) )
 					{
 						//Kris: Aug 2003
 						//We have executed the special power, so don't try to execute any more. This logic
@@ -498,12 +502,45 @@ Bool SpecialPowerModule::initiateIntentToDoSpecialPower( const Object *targetObj
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::triggerSpecialPower( const Coord3D *location )
 {
+
+	Int cost{ getSpecialPowerTemplate()->getCost() };
+	if ( cost > 0) {
+		Player* ply = getObject()->getControllingPlayer();
+		if (ply != nullptr && ply->getMoney()->countMoney() < cost) {
+			// Not enough money
+			return;
+		}
+		else if (ply!=nullptr) {
+			ply->getMoney()->withdraw(cost);
+		}
+		else {
+			DEBUG_LOG(("Cannot withdraw money for SpecialPower '%s', player is null", getSpecialPowerTemplate()->getName().str()));
+		}
+	}
+
 	aboutToDoSpecialPower( location );	// do BEFORE recharge
+
+	handleTargetDesignator(location);
 
 	createViewObject(location);
 
 	// we won't be able to use the power for X number of frames now
 	startPowerRecharge();
+
+	if( getSpecialPowerTemplate()->getOCLOnExecute() != nullptr )
+	{
+		ObjectCreationList::create(getSpecialPowerTemplate()->getOCLOnExecute(), getObject(), nullptr);
+	}
+
+	if( getSpecialPowerTemplate()->getFXOnExecute() != nullptr )
+	{
+		FXList::doFXObj(getSpecialPowerTemplate()->getFXOnExecute(), getObject(), nullptr);
+	}
+
+	if( getSpecialPowerTemplate()->getDestroyOnExecute() )
+	{
+		TheGameLogic->destroyObject( getObject() );
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -552,7 +589,6 @@ void SpecialPowerModule::markSpecialPowerTriggered( const Coord3D *location )
 {
 	triggerSpecialPower( location );
 }
-
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -659,7 +695,122 @@ void SpecialPowerModule::aboutToDoSpecialPower( const Coord3D *location )
       }
     }
 	}
+  // Check if SpecialPower eva event instead of hardcoded stuff
+  bool isOwn = localPlayer == getObject()->getControllingPlayer();
+  bool isAlly = localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES;
+  bool isEnemy = !isOwn && !isAlly;
+  bool isDefault = type < SPECIAL_ION_CANNON; // first new Special Power
 
+  //Check SpecialPower Eva
+  const SpecialPowerTemplate* specialPowerTemp = getSpecialPowerModuleData()->m_specialPowerTemplate;
+  EvaMessage eva = EVA_Invalid;
+
+  if (isOwn) {
+	  eva = specialPowerTemp->getEvaLaunchedOwn();
+  }
+  else if (isAlly) {
+	  eva = specialPowerTemp->getEvaLaunchedAlly();
+  }
+  else if (isEnemy) {
+	  eva = specialPowerTemp->getEvaLaunchedEnemy();
+  }
+
+  if (eva > EVA_FIRST) {
+	  TheEva->setShouldPlay(eva);
+  }
+  else if (eva == EVA_Invalid && isDefault) { 
+	//Do the old hardcoded stuff for undefined default powers
+
+	  // Only play the EVA sounds if this is not the local player, and the local player doesn't consider the 
+		// person an enemy.
+		// Kris: Actually, all players need to hear these warnings.
+	  // Ian: But now there are different Eva messages depending on who launched
+		//if (localPlayer != getObject()->getControllingPlayer() && localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES) 
+	  {
+		  if (type == SPECIAL_PARTICLE_UPLINK_CANNON || type == SUPW_SPECIAL_PARTICLE_UPLINK_CANNON || type == LAZR_SPECIAL_PARTICLE_UPLINK_CANNON)
+		  {
+			  if (localPlayer == getObject()->getControllingPlayer())
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Own_ParticleCannon);
+			  }
+			  else if (localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES)
+			  {
+				  // Note: counting relationship NEUTRAL as ally. Not sure if this makes a difference???
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Ally_ParticleCannon);
+			  }
+			  else
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Enemy_ParticleCannon);
+			  }
+		  }
+		  else if (type == SPECIAL_NEUTRON_MISSILE || type == NUKE_SPECIAL_NEUTRON_MISSILE || type == SUPW_SPECIAL_NEUTRON_MISSILE)
+		  {
+			  if (localPlayer == getObject()->getControllingPlayer())
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Own_Nuke);
+			  }
+			  else if (localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES)
+			  {
+				  // Note: counting relationship NEUTRAL as ally. Not sure if this makes a difference???
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Ally_Nuke);
+			  }
+			  else
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Enemy_Nuke);
+			  }
+		  }
+		  else if (type == SPECIAL_SCUD_STORM)
+		  {
+			  if (localPlayer == getObject()->getControllingPlayer())
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Own_ScudStorm);
+			  }
+			  else if (localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES)
+			  {
+				  // Note: counting relationship NEUTRAL as ally. Not sure if this makes a difference???
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Ally_ScudStorm);
+			  }
+			  else
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Enemy_ScudStorm);
+			  }
+		  }
+		  else if (type == SPECIAL_GPS_SCRAMBLER || type == SLTH_SPECIAL_GPS_SCRAMBLER)
+		  {
+			  // This is Ghetto.  Voices should be ini lines in the special power entry.  You shouldn't have to 
+			  // add to an enum to get a new voice
+			  if (localPlayer == getObject()->getControllingPlayer())
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Own_GPS_Scrambler);
+			  }
+			  else if (localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES)
+			  {
+				  // Note: counting relationship NEUTRAL as ally. Not sure if this makes a difference???
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Ally_GPS_Scrambler);
+			  }
+			  else
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Enemy_GPS_Scrambler);
+			  }
+		  }
+		  else if (type == SPECIAL_SNEAK_ATTACK)
+		  {
+			  if (localPlayer == getObject()->getControllingPlayer())
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Own_Sneak_Attack);
+			  }
+			  else if (localPlayer->getRelationship(getObject()->getTeam()) != ENEMIES)
+			  {
+				  // Note: counting relationship NEUTRAL as ally. Not sure if this makes a difference???
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Ally_Sneak_Attack);
+			  }
+			  else
+			  {
+				  TheEva->setShouldPlay(EVA_SuperweaponLaunched_Enemy_Sneak_Attack);
+			  }
+		  }
+	  }
+  }
 	// get module data
 	const SpecialPowerModuleData *modData = getSpecialPowerModuleData();
 
@@ -689,13 +840,13 @@ void SpecialPowerModule::aboutToDoSpecialPower( const Coord3D *location )
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPower( UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ( (!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( nullptr, nullptr, nullptr, commandOptions );
+	initiateIntentToDoSpecialPower( nullptr, nullptr, nullptr, nullptr, commandOptions );
 
 	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
 	//An example of a case that wouldn't trigger immediately is for a unit that needs to
@@ -711,13 +862,13 @@ void SpecialPowerModule::doSpecialPower( UnsignedInt commandOptions )
 //-------------------------------------------------------------------------------------------------
 void SpecialPowerModule::doSpecialPowerAtObject( Object *obj, UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ((!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( obj, nullptr, nullptr, commandOptions );
+	initiateIntentToDoSpecialPower( obj, nullptr, nullptr, nullptr, commandOptions );
 
 	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
 	//An example of a case that wouldn't trigger immediately is for a unit that needs to
@@ -731,15 +882,37 @@ void SpecialPowerModule::doSpecialPowerAtObject( Object *obj, UnsignedInt comman
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void SpecialPowerModule::doSpecialPowerAtLocation( const Coord3D *loc, Real angle, UnsignedInt commandOptions )
+void SpecialPowerModule::doSpecialPowerAtDrawable( Drawable *draw, UnsignedInt commandOptions )
 {
-	if (m_pausedCount > 0 || getObject()->isDisabled()) {
+	if ((!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
 		return;
 	}
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( nullptr, loc, nullptr, commandOptions );
+	initiateIntentToDoSpecialPower( nullptr, draw, nullptr, nullptr, commandOptions );
+
+	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
+	//An example of a case that wouldn't trigger immediately is for a unit that needs to
+	//close to range before firing the special attack. A case that would trigger immediately
+	//is the napalm strike. If we don't call this now, it's up to the update module to do so.
+	if( !getSpecialPowerModuleData()->m_updateModuleStartsAttack )
+	{
+		triggerSpecialPower( draw->getPosition() );
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void SpecialPowerModule::doSpecialPowerAtLocation( const Coord3D *loc, Real angle, UnsignedInt commandOptions )
+{
+	if ((!BitIsSet( commandOptions, IS_DOING_SABOTAGE ) && m_pausedCount > 0) || getObject()->isDisabled()) {
+		return;
+	}
+
+	//This tells the update module that we want to do our special power. The update modules
+	//will then start processing each frame.
+	initiateIntentToDoSpecialPower( nullptr, nullptr, loc, nullptr, commandOptions );
 
 #if RETAIL_COMPATIBLE_CRC
 	// TheSuperHackers @info we need to leave early if we are in the MissileLauncherBuildingUpdate crash fix codepath
@@ -767,7 +940,7 @@ void SpecialPowerModule::doSpecialPowerUsingWaypoints( const Waypoint *way, Unsi
 
 	//This tells the update module that we want to do our special power. The update modules
 	//will then start processing each frame.
-	initiateIntentToDoSpecialPower( nullptr, nullptr, way, commandOptions );
+	initiateIntentToDoSpecialPower( nullptr, nullptr, nullptr, way, commandOptions );
 
 	//Only trigger the special power immediately if the updatemodule doesn't start the attack.
 	//An example of a case that wouldn't trigger immediately is for a unit that needs to
@@ -832,6 +1005,58 @@ UnsignedInt SpecialPowerModule::getReadyFrame() const
 		return m_availableOnFrame;
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void SpecialPowerModule::handleTargetDesignator(const Coord3D* loc)
+{
+	const SpecialPowerModuleData* data = getSpecialPowerModuleData();
+	if (!data->m_specialPowerTemplate->isNeedsTargetDesignator())
+		return;
+
+	// Get closest Target designator object
+	static NameKeyType key_SpecialPowerDesignatorUpdate = NAMEKEY("SpecialPowerDesignatorUpdate");
+
+	//Iterate over all object and find this module!
+	Object* obj = getObject();
+
+	//PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES );
+	PartitionFilterSamePlayer filterPlayer(obj->getControllingPlayer());
+	PartitionFilterSameMapStatus filterMapStatus(obj);
+	PartitionFilterAlive filterAlive;
+	PartitionFilterAcceptByKindOf filterKindOf(MAKE_KINDOF_MASK(KINDOF_TARGET_DESIGNATOR), KINDOFMASK_NONE);
+	PartitionFilter* filters[] = { &filterPlayer, &filterAlive, &filterMapStatus, &filterKindOf, NULL };
+	Real MAX_SCAN_RANGE = 5000.0f; //TODO: GlobalData?
+	// scan objects in our region
+	ObjectIterator* iter = ThePartitionManager->iterateObjectsInRange(loc, MAX_SCAN_RANGE, FROM_CENTER_2D, filters);
+	Object* obj2;
+	//Object* closestObj = nullptr;
+	SpecialPowerDesignatorUpdate* closestObjUpdate = nullptr;
+	MemoryPoolObjectHolder hold(iter);
+	Real minDistSqr = INFINITY;
+	for (obj2 = iter->first(); obj2; obj2 = iter->next()) {
+
+		SpecialPowerDesignatorUpdate* update = (SpecialPowerDesignatorUpdate*)obj2->findUpdateModule(key_SpecialPowerDesignatorUpdate);
+		if (update) {
+			if (update->isValidDesignatorForSpecialPower(data->m_specialPowerTemplate)) {
+
+				Real distSqr = ThePartitionManager->getDistanceSquared(obj2, loc, FROM_CENTER_2D);
+				Real radius = update->getDesignatorRadius();
+				if (distSqr <= (radius * radius) && minDistSqr) {
+					if (distSqr < minDistSqr) {
+						//closestObj = obj2;
+						closestObjUpdate = update;
+						minDistSqr = distSqr;
+					}
+				}
+			}
+		}
+	}
+	if (closestObjUpdate != nullptr)
+		closestObjUpdate->triggerSpecialPower();
+		
+}
+
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

@@ -76,6 +76,7 @@ public:
 	Int m_depositAmount;
 	Int m_initialCaptureBonus;
 	Bool m_isActualMoney;
+	Real m_textZOffset;
 	std::list<upgradePair> m_upgradeBoost;
 
 	AutoDepositUpdateModuleData()
@@ -97,6 +98,7 @@ public:
 			{ "InitialCaptureBonus",		INI::parseInt,		nullptr, offsetof( AutoDepositUpdateModuleData, m_initialCaptureBonus ) },
 			{ "ActualMoney",						INI::parseBool,		nullptr, offsetof( AutoDepositUpdateModuleData, m_isActualMoney ) },
 			{ "UpgradedBoost",					parseUpgradePair,		nullptr, offsetof( AutoDepositUpdateModuleData, m_upgradeBoost ) },
+			{ "TextHeightOffset",	      INI::parseReal,		nullptr, offsetof( AutoDepositUpdateModuleData, m_textZOffset ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);

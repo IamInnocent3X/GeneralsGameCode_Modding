@@ -49,24 +49,28 @@ class AutoHealBehaviorModuleData : public UpdateModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
 	Bool									m_singleBurst;
-	Int										m_healingAmount;
+	Real										m_healingAmount;
 	UnsignedInt						m_healingDelay;
 	UnsignedInt						m_startHealingDelay;	///< how long since our last damage till autoheal starts.
 	Real									m_radius; //If non-zero, then it becomes a area effect.
 	Bool									m_affectsWholePlayer; ///< I have more than a range, I try to affect everything the player owns
 	Bool									m_skipSelfForHealing; ///< Don't heal myself.
+	Bool									m_clearsParasite; ///< Healing clears parasite
+	Bool									m_disableWhenUnmanned; ///< Disabled When Unmannered from Neutron Blast or Kill Pilot
+	std::vector<AsciiString> 				m_clearsParasiteKeys; ///< Parasite keys to clear
 	KindOfMaskType				m_kindOf;	//Only these types can heal -- defaults to everything.
 	KindOfMaskType				m_forbiddenKindOf;	//Only these types can heal -- defaults to everything.
 	const ParticleSystemTemplate*				m_radiusParticleSystemTmpl;					//Optional particle system meant to apply to entire effect for entire duration.
 	const ParticleSystemTemplate*				m_unitHealPulseParticleSystemTmpl;	//Optional particle system applying to each object getting healed each heal pulse.
+	Bool									m_grantSalvageUpgrade; //Apply a salvage upgrade to unit when healing
+	Bool									m_grantPromotion;      //Give unit a levelup when healing
+	AsciiString								m_grantSalvageCrateName; //Apply a salvage crate to unit when healing
 
 	AutoHealBehaviorModuleData()
 	{
-		m_initiallyActive = false;
 		m_singleBurst = FALSE;
-		m_healingAmount = 0;
+		m_healingAmount = 0.0f;
 		m_healingDelay = UINT_MAX;
 		m_startHealingDelay = 0;
 		m_radius = 0.0f;
@@ -74,17 +78,22 @@ public:
 		m_unitHealPulseParticleSystemTmpl = nullptr;
 		m_affectsWholePlayer = FALSE;
 		m_skipSelfForHealing = FALSE;
+		m_clearsParasite = FALSE;
+		m_disableWhenUnmanned = TRUE;
+		m_clearsParasiteKeys.clear();
 		SET_ALL_KINDOFMASK_BITS( m_kindOf );
 		m_forbiddenKindOf.clear();
+		m_grantSalvageUpgrade = false;
+		m_grantPromotion = false;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, nullptr, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
+			//{ "StartsActive",	INI::parseBool, nullptr, offsetof( AutoHealBehaviorModuleData, m_initiallyActive ) },
 			{ "SingleBurst",	INI::parseBool, nullptr, offsetof( AutoHealBehaviorModuleData, m_singleBurst ) },
-			{ "HealingAmount",		INI::parseInt,												nullptr, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
+			{ "HealingAmount",		INI::parseReal,												nullptr, offsetof( AutoHealBehaviorModuleData, m_healingAmount ) },
 			{ "HealingDelay",			INI::parseDurationUnsignedInt,				nullptr, offsetof( AutoHealBehaviorModuleData, m_healingDelay ) },
 			{ "Radius",						INI::parseReal,												nullptr, offsetof( AutoHealBehaviorModuleData, m_radius ) },
 			{ "KindOf",						KindOfMaskType::parseFromINI,											nullptr, offsetof( AutoHealBehaviorModuleData, m_kindOf ) },
@@ -94,6 +103,12 @@ public:
 			{ "StartHealingDelay",			INI::parseDurationUnsignedInt,				nullptr, offsetof( AutoHealBehaviorModuleData, m_startHealingDelay ) },
 			{ "AffectsWholePlayer",			INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_affectsWholePlayer ) },
 			{ "SkipSelfForHealing",			INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_skipSelfForHealing ) },
+			{ "GrantSalvageUpgrade",		INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_grantSalvageUpgrade ) },
+			{ "GrantPromotion",			    INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_grantPromotion ) },
+			{ "ClearsParasite",				INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_clearsParasite ) },
+			{ "ClearsParasiteKeys",			INI::parseAsciiStringVector,								nullptr, offsetof( AutoHealBehaviorModuleData, m_clearsParasiteKeys) },
+			{ "DisableWhenUnmanned",		INI::parseBool,												nullptr, offsetof( AutoHealBehaviorModuleData, m_disableWhenUnmanned) },
+			{ "GrantSalvageCrateName",		INI::parseAsciiString,										nullptr, offsetof( AutoHealBehaviorModuleData, m_grantSalvageCrateName ) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -133,10 +148,13 @@ public:
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update() override;
+	virtual void friend_giveSelfUpgrade() override { }
 	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 
 	void stopHealing();
 	void undoUpgrade(); ///<pretend like we have not been activated yet, so we can be reactivated later
+
+	Bool disableWhenUnmanned() const { return getAutoHealBehaviorModuleData()->m_disableWhenUnmanned; }
 
 protected:
 
@@ -155,6 +173,12 @@ protected:
 		getAutoHealBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getAutoHealBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
@@ -166,14 +190,27 @@ protected:
 		return getAutoHealBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const
+	{
+		return getAutoHealBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 
 private:
 
-	void pulseHealObject( Object *obj );
+	Bool canApplyWeaponSalvage(const Object* obj) const;
+	Bool canApplyArmorSalvage(const Object* obj) const;
+	Bool canApplyLevelUp(const Object* obj) const;
+
+	Bool canApplySalvageCrate() const;
+
+	// Return if healing occured
+	Bool pulseHealObject( Object *obj );
 	void createEmitters();
 
 	ParticleSystemID m_radiusParticleSystemID;

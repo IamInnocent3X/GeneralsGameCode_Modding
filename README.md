@@ -2,6 +2,12 @@
 [![GeneralsX CI](https://github.com/fbraz3/GeneralsX/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fbraz3/GeneralsX/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/fbraz3/GeneralsX?include_prereleases&sort=date&display_name=tag&style=flat&label=Release)](https://github.com/fbraz3/GeneralsX/releases)
 
+# IamInnocent's Implementation Changelog
+
+This is a forked expansion towards [Generals Game Modding](https://github.com/Andreas-W/GeneralsGameCode_Modding) applying both expansion's feature towards [Generals X](https://github.com/fbraz3/GeneralsX) which by itself is a feature expansion of [Generals Game Code](https://github.com/TheSuperHackers/GeneralsGameCode).
+
+Click [**Here**](https://docs.google.com/document/d/1TColmJupsZFrKGLTg5I4UuLZ_e0nzpId) for the documentation of the list of changes for this expansion.
+
 # GeneralsX - Cross-Platform Command & Conquer: Generals
 
 GeneralsX delivers **Linux and macOS** builds of **Command & Conquer: Generals and Zero Hour** through a single modern codebase.

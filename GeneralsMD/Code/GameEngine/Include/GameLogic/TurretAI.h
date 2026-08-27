@@ -34,6 +34,8 @@
 const Real DEFAULT_TURN_RATE = 0.01f;
 const Real DEFAULT_PITCH_RATE = 0.01f;
 
+enum ObjectID CPP_11(: Int);
+
 /**
  * The TurretAI state IDs.
  * Each of these constants will be associated with an instance of a State class
@@ -235,12 +237,20 @@ public:
 	Bool						m_initiallyDisabled;		///< manually controlled and disabled.
 	Bool						m_firesWhileTurning;    ///< so the firing state does not instantly expire the turning state
 	Bool						m_isAllowsPitch;				///< This type of turret can pitch up and down as well as spin
+	Bool						m_canFireOnTheMove;				///< Can fire while the object is moving
+
+	Real						m_minTurretAngle;         ///< Minimum turn angle for turret
+	Real						m_maxTurretAngle;         ///< Maximum turn angle for turret
+	Bool						m_hasLimitedTurretAngle;   ///< this type of turret has limited angles
+
+	Bool						m_useTurretOffset;			///< use Turret Offset for angle calculations
 
 	TurretAIData();
 	static void buildFieldParse(MultiIniFieldParse& p);
 
 	static void parseTurretSweep(INI* ini, void *instance, void *store, const void* userData);
 	static void parseTurretSweepSpeed(INI* ini, void *instance, void *store, const void* userData);
+	static void parseMinMaxAngle(INI* ini, void *instance, void *store, const void* userData);
 };
 EMPTY_DTOR(TurretAIData)
 
@@ -282,6 +292,12 @@ public:
 	UnsignedInt getMaxIdleScanInterval() const { return m_data->m_maxIdleScanInterval;	}
 	UnsignedInt getRecenterTime() const { return m_data->m_recenterTime;	}
 	Object* getOwner() { return m_owner; }
+
+	Real getMinTurretAngle() const { return m_data->m_minTurretAngle; }
+	Real getMaxTurretAngle() const { return m_data->m_maxTurretAngle; }
+	Bool hasLimitedTurretAngle() const { return m_data->m_hasLimitedTurretAngle; }
+	Bool isUseTurretOffset() const { return m_data->m_useTurretOffset; }
+
 	const Object* getOwner() const { return m_owner; }
 
 	Bool isOwnersCurWeaponOnTurret() const;
@@ -330,6 +346,12 @@ public:
 	UnsignedInt friend_getNextIdleMoodTargetFrame() const;
 	void friend_notifyStateMachineChanged();
 
+	Real getRelativeAngleWithOffset(WeaponSlotType wslot, const Coord3D* pos);
+
+	void registerCurrentTargetObject();
+	ObjectID getLastTargetObj() const { return m_lastTargetObj; }
+	Bool canFireOnTheMove() const;
+
 protected:
 	// snapshot interface
 	virtual void crc( Xfer *xfer ) override;
@@ -338,10 +360,12 @@ protected:
 
 private:
 
-
 	void startRotOrPitchSound();					///< start turret rotation sound
 	void stopRotOrPitchSound();						///< stop turret rotation sound
 	void removeSelfAsTargeter();
+
+	Bool getTurretRotationDir(Real desiredAngle, Real minAngle, Real maxAngle);  ///< Min/Max turn angle checks
+
 
 #ifdef INTER_TURRET_DELAY
 	void getOtherTurretWeaponInfo(Int& numSelf, Int& numSelfReloading, Int& numSelfReady, Int& numOther, Int& numOtherReloading, Int& numOtherReady) const;
@@ -359,6 +383,7 @@ private:
 	mutable TurretTargetType	m_target;
 	UnsignedInt								m_continuousFireExpirationFrame;
 	UnsignedInt								m_sleepUntil;
+	ObjectID								m_lastTargetObj;
 
 	Bool										m_playRotSound : 1;
 	Bool										m_playPitchSound : 1;

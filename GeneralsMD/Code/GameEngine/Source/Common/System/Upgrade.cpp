@@ -123,6 +123,7 @@ const FieldParse UpgradeTemplate::m_upgradeFieldParseTable[] =
 	{ "ResearchSound",			INI::parseAudioEventRTS,	nullptr, offsetof( UpgradeTemplate, m_researchSound ) },
 	{ "UnitSpecificSound",	INI::parseAudioEventRTS,	nullptr, offsetof( UpgradeTemplate, m_unitSpecificSound ) },
 	{ "AcademyClassify",		INI::parseIndexList,			TheAcademyClassificationTypeNames, offsetof( UpgradeTemplate, m_academyClassificationType ) },
+	{ "SilentCompletion",		INI::parseBool,						nullptr, offsetof(UpgradeTemplate, m_silentCompletion) },
 	{ nullptr,						nullptr,												 nullptr, 0 }
 
 };
@@ -162,7 +163,14 @@ Int UpgradeTemplate::calcTimeToBuild( Player *player ) const
 #endif
 
 	///@todo modify this by power state of player
-	return m_buildTime * static_cast<float>(LOGICFRAMES_PER_SECOND);
+	Int buildTime = REAL_TO_INT_CEIL(m_buildTime * static_cast<float>(LOGICFRAMES_PER_SECOND));
+
+	// global per-player build-speed multiplier (ProductionSpeedMultiplier chat command); >1 researches faster
+	Real speedMultiplier = player->getProductionSpeedMultiplier();
+	if (speedMultiplier > 0.0f)
+		buildTime = REAL_TO_INT_CEIL( buildTime / speedMultiplier );
+
+	return buildTime;
 
 }
 
@@ -273,6 +281,12 @@ void UpgradeCenter::init()
 
 	up = newUpgrade("");
 	up->friend_makeVeterancyUpgrade(LEVEL_HEROIC);
+
+	up = newUpgrade("");
+	up->friend_makeVeterancyUpgrade(LEVEL_FOUR);
+
+	up = newUpgrade("");
+	up->friend_makeVeterancyUpgrade(LEVEL_FIVE);
 
 }
 

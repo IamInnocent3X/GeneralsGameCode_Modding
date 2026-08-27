@@ -52,7 +52,6 @@
 #include "GameClient/GameClient.h"
 #include "GameClient/GameText.h"
 #include "GameClient/MapUtil.h"
-#include "GameClient/MessageBox.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/TerrainVisual.h"
@@ -553,8 +552,8 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 /** Save the current state of the engine in a save file
 	* NOTE: filename is a *filename only* */
 // ------------------------------------------------------------------------------------------------
-SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
-															SaveFileType saveType, SnapshotType which )
+SaveResult GameState::saveGame( AsciiString filename, UnicodeString desc,
+													SaveFileType saveType, SnapshotType which )
 {
 
 	// if there is no filename, this is a new file being created, find an appropriate filename
@@ -564,7 +563,7 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 	{
 
 		DEBUG_CRASH(( "GameState::saveGame - Unable to find valid filename for save game" ));
-		return SC_NO_FILE_AVAILABLE;
+		return SaveResult( SC_NO_FILE_AVAILABLE );
 
 	}
 
@@ -582,10 +581,8 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 	try {
 		xferSave.open( filepath );
 	} catch(...) {
-		// print error message to the user
-		TheInGameUI->message( "GUI:Error" );
 		DEBUG_LOG(( "Error opening file '%s'", filepath.str() ));
-		return SC_ERROR;
+		return SaveResult( SC_UNABLE_TO_OPEN_FILE, filename );
 	}
 
 	// save our save file type
@@ -613,35 +610,23 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 	catch( ... )
 	{
 
-		UnicodeString ufilepath;
-		ufilepath.translate(filepath);
-
-		UnicodeString msg;
-		msg.format( TheGameText->fetch("GUI:ErrorSavingGame"), ufilepath.str() );
-
-		MessageBoxOk(TheGameText->fetch("GUI:Error"), msg, nullptr);
-
 		// close the file and get out of here
 		xferSave.close();
-		return SC_ERROR;
+		return SaveResult( SC_ERROR, filename );
 
 	}
 
 	// close the file
 	xferSave.close();
 
-	// print message to the user for game successfully saved
-	UnicodeString msg = TheGameText->fetch( "GUI:GameSaveComplete" );
-	TheInGameUI->message( msg );
-
-	return SC_OK;
+	return SaveResult( SC_OK, filename );
 
 }
 
 // ------------------------------------------------------------------------------------------------
 /** A mission save */
 // ------------------------------------------------------------------------------------------------
-SaveCode GameState::missionSave()
+SaveResult GameState::missionSave()
 {
 
 	// get campaign
@@ -737,15 +722,6 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 			TheGameLogic->clearGameData( FALSE );
 		TheGameEngine->reset();
 
-		// print error message to the user
-		UnicodeString ufilepath;
-		ufilepath.translate(filepath);
-
-		UnicodeString msg;
-		msg.format( TheGameText->fetch("GUI:ErrorLoadingGame"), ufilepath.str() );
-
-		MessageBoxOk(TheGameText->fetch("GUI:Error"), msg, nullptr);
-
 		return SC_INVALID_DATA;	// you can't use a naked "throw" outside of a catch statement!
 
 	}
@@ -758,7 +734,8 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 	if( getSaveGameInfo()->saveFileType == SAVE_FILE_TYPE_MISSION )
 	{
 
-		InitRandom(0);
+		InitRandomType(TheGlobalData->m_initRandomType);
+		//DEBUG_LOG(("Saving Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 
 		TheWritableGlobalData->m_pendingFile = getSaveGameInfo()->missionMapName;
 		GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_NEW_GAME );

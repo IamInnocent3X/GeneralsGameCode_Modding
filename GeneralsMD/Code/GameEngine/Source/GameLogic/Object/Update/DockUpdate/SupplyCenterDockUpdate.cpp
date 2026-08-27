@@ -146,7 +146,7 @@ Bool SupplyCenterDockUpdate::action( Object* docker, Object *drone )
 		}
 	}
 
-	if (value > 0 && getObject()->isLogicallyVisible())
+	if (value > 0 && getObject()->isLogicallyVisible() && getObject()->showCashText() )
 	{
 		// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
 		// Setup info for adding a floating text

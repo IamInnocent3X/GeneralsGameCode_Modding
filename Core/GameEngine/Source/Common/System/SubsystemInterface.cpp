@@ -151,7 +151,7 @@ void SubsystemInterfaceList::removeSubsystem(SubsystemInterface* sys)
 #endif
 }
 //-----------------------------------------------------------------------------
-void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, Xfer *pXfer, AsciiString name)
+void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, Xfer *pXfer, AsciiString name, Bool optional /*=FALSE*/)
 {
 	// GeneralsX @bugfix BenderAI 14/02/2026 Handle nullptr subsystems (e.g., CDManager on Linux)
 	// CreateCDManager() and other platform-specific factories may return nullptr
@@ -177,14 +177,14 @@ void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* 
 	if (path1) {
 		fprintf(stderr, "[SUBSYS] initSubsystem('%s') - loadFileDirectory('%s') START\n", name.str(), path1);
 		fflush(stderr);
-		ini.loadFileDirectory(path1, INI_LOAD_OVERWRITE, pXfer );
+		ini.loadFileDirectory(path1, INI_LOAD_OVERWRITE, pXfer, TRUE, optional);
 		fprintf(stderr, "[SUBSYS] initSubsystem('%s') - loadFileDirectory('%s') DONE\n", name.str(), path1);
 		fflush(stderr);
 	}
 	if (path2) {
 		fprintf(stderr, "[SUBSYS] initSubsystem('%s') - loadFileDirectory('%s') START\n", name.str(), path2);
 		fflush(stderr);
-		ini.loadFileDirectory(path2, INI_LOAD_OVERWRITE, pXfer );
+		ini.loadFileDirectory(path2, INI_LOAD_OVERWRITE, pXfer, TRUE, optional);
 		fprintf(stderr, "[SUBSYS] initSubsystem('%s') - loadFileDirectory('%s') DONE\n", name.str(), path2);
 		fflush(stderr);
 	}

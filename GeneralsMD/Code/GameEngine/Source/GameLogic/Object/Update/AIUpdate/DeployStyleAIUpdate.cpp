@@ -56,6 +56,70 @@ DeployStyleAIUpdate::DeployStyleAIUpdate( Thing *thing, const ModuleData* module
 {
 	m_state = READY_TO_MOVE;
 	m_frameToWaitForDeploy = 0;
+	m_isInRange = FALSE;
+	m_doDeploy = FALSE;
+	m_doUndeploy = FALSE;
+	m_hasDeploy = FALSE;
+	m_hasUndeploy = FALSE;
+	m_doRemoveStatusAfterTrigger = FALSE;
+	m_deployTurretFunctionChangeUpgrade.clear();
+	m_deployObjectFunctionChangeUpgrade.clear();
+	m_turretDeployedFunctionChangeUpgrade.clear();
+
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+
+	m_moveAfterDeploy = data->m_moveAfterDeploy;
+	m_deployNoRelocate = data->m_deployNoRelocate;
+
+	if(!data->m_deployFunctionChangeUpgrade.empty())
+	{
+		Int parsing = 0;
+
+		for(std::vector<AsciiString>::const_iterator it = data->m_deployFunctionChangeUpgrade.begin(); it != data->m_deployFunctionChangeUpgrade.end(); ++it)
+		{
+			Bool isNotParse = FALSE;
+			if(stricmp((*it).str(), "TURRET") != 0 && stricmp((*it).str(), "OBJECT") != 0 && stricmp((*it).str(), "DEPLOYED") != 0)
+			{
+				isNotParse = TRUE;
+			}
+			if(parsing == 1 && isNotParse)
+			{
+				m_deployTurretFunctionChangeUpgrade.push_back(*it);
+			}
+			else if(parsing == 2 && isNotParse)
+			{
+				m_deployObjectFunctionChangeUpgrade.push_back(*it);
+			}
+			else if(parsing == 3  && isNotParse)
+			{
+				m_turretDeployedFunctionChangeUpgrade.push_back(*it);
+			}
+			else if(stricmp((*it).str(), "TURRET") == 0)
+			{
+				parsing = 1;
+			}
+			else if(stricmp((*it).str(), "OBJECT") == 0)
+			{
+				parsing = 2;
+			}
+			else if(stricmp((*it).str(), "DEPLOYED") == 0)
+			{
+				parsing = 3;
+			}
+		}
+	}
+
+	m_needsDeployToFireObject = TRUE;
+	m_needsDeployToFireTurret = TRUE;
+
+	if(doTurretsFunctionOnlyWhenDeployed())
+	{
+		m_needsDeployToFireDeployed = FALSE;
+	}
+	else
+	{
+		m_needsDeployToFireDeployed = TRUE;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -88,12 +152,18 @@ void DeployStyleAIUpdate::aiDoCommand( const AICommandParms* parms )
 			break;
 	}
 	*/
+	// IamInnocent - Added SleepyUpdates
+	wakeUpNow();
 	AIUpdateInterface::aiDoCommand( parms );
 }
 
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime DeployStyleAIUpdate::update()
 {
+	// Suspend deploy/undeploy timers while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
 	// have to call our parent's isIdle, because we override it to never return true
 	// when we have a pending command...
 	Object *self = getObject();
@@ -106,28 +176,100 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 
 	//Are we trying to attack something. If so, we need to be in range before we can do so.
 	Bool isTryingToAttack = getStateMachine()->isInAttackState();
-	Bool isInRange = FALSE;
+	//Bool isInRange = FALSE;
 
 	//Are we in guard mode? If so, are we idle... idle guarders deploy for fastest response against attackers.
 	Bool isInGuardIdleState = getStateMachine()->isInGuardIdleState();
 
 	AIUpdateInterface *ai = self->getAI();
 
-	if( isTryingToAttack && weapon )
+	if(m_hasDeploy)
+		m_doDeploy = TRUE;
+	else if(m_hasUndeploy)
+		m_doUndeploy = TRUE;
+
+	// Check whether we are Deploying while in the middle of Moving
+	if(m_doDeploy && isTryingToMove && ( m_state == READY_TO_MOVE || m_state == UNDEPLOY || m_state == ALIGNING_TURRETS ) )
+	{
+		ai->aiIdle(CMD_FROM_AI);
+		isTryingToMove = FALSE;
+		m_doUndeploy = FALSE;
+	}
+
+	// Check whether we are Undeploying while Deploying or Fully Deployed
+	if(m_doUndeploy && ( m_state == READY_TO_ATTACK || m_state == DEPLOY ) )
+	{
+		ai->aiIdle(CMD_FROM_AI);
+		isTryingToAttack = FALSE;
+		isInGuardIdleState = FALSE;
+		m_doDeploy = FALSE;
+	}
+
+	// New function that determines whether an Object requires to be Deployed to Fire its Weapon
+	Bool needsDeployToFire = TRUE;
+
+	if(data->m_deployInitiallyDisabled)
+	{
+		needsDeployToFire = FALSE;
+	}
+
+	//if(!m_deployObjectFunctionChangeUpgrade.empty())
+	//{
+	//	needsDeployToFire = checkForDeployUpgrades("OBJECT");
+	//}
+	if(!m_deployObjectFunctionChangeUpgrade.empty())
+	{
+		needsDeployToFire = m_needsDeployToFireObject;
+	}
+
+
+	if(!needsDeployToFire)
+	{
+		isTryingToMove = FALSE;
+		isInGuardIdleState = FALSE;
+		isTryingToAttack = FALSE;
+	}
+
+	if( isTryingToAttack && weapon && !m_isInRange )
 	{
 		Object *victim = ai->getCurrentVictim();
 		if( victim )
 		{
-			isInRange = weapon->isWithinAttackRange( self, victim );
+			m_isInRange = weapon->isWithinAttackRange( self, victim );
 		}
 		else
 		{
 			const Coord3D *pos = ai->getCurrentVictimPos();
 			if( pos )
 			{
-				isInRange = weapon->isWithinAttackRange( self, pos );
+				m_isInRange = weapon->isWithinAttackRange( self, pos );
 			}
 		}
+	}
+	else if( !isTryingToAttack )
+	{
+		m_isInRange = FALSE;
+	}
+
+	// New features
+	// Able to move after deploying
+	if(m_moveAfterDeploy && ( m_state == DEPLOY || m_state == READY_TO_ATTACK || m_doDeploy ))
+	{
+		isTryingToMove = FALSE;
+	}
+
+	// New feature, disables relocating after Deploying
+	if(m_deployNoRelocate && !m_moveAfterDeploy && !m_doUndeploy && ( m_state != READY_TO_MOVE || m_doDeploy ) )
+	{
+		// No moving, but you can still designate next destinations
+		self->setStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IMMOBILE) );
+
+		isTryingToMove = FALSE;
+	}
+	// You can only clear this status by Undeploying
+	else if((m_deployNoRelocate || m_moveAfterDeploy) && self->testStatus(OBJECT_STATUS_IMMOBILE) && m_doUndeploy )
+	{
+		self->clearStatus( MAKE_OBJECT_STATUS_MASK(OBJECT_STATUS_IMMOBILE) );
 	}
 
 	if( m_frameToWaitForDeploy != 0 && now >= m_frameToWaitForDeploy)
@@ -143,41 +285,8 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 		}
 	}
 
-	// TheSuperHackers @bugfix Caball009 27/07/2026 The pathfinding code may use a stricter attack range check than used
-	// in this function, so the range check is insufficient. Objects are not allowed to deploy and attack if they're moving.
-#if RETAIL_COMPATIBLE_CRC
-	if (isInRange || isInGuardIdleState)
-#else
-	// @todo Simplify the code by moving the second branch up so 'isTryingToMove' is checked first.
-	if (!isTryingToMove && (isInRange || isInGuardIdleState))
-#endif
-	{
-		switch( m_state )
-		{
-			case READY_TO_MOVE:
-				//We're need to deploy before we can attack.
-				setMyState( DEPLOY );
-				break;
-			case READY_TO_ATTACK:
-				//Let the AI handle attacking.
-				break;
-			case DEPLOY:
-				//We can't start attacking until we are fully deployed.
-				break;
-			case UNDEPLOY:
-				if( m_frameToWaitForDeploy != 0 )
-				{
-					//Reverse the undeploy at it's current frame!
-					setMyState( DEPLOY, TRUE );
-				}
-				break;
-			case ALIGNING_TURRETS:
-				//If turrets are aligning, we are able to attack right now.
-				setMyState( READY_TO_ATTACK );
-				break;
-		}
-	}
-	else if( isTryingToMove )
+	// IamInnocent - Fixed moving while deployed by checking for the undeploying state requirements first instead of deploying.
+	if( isTryingToMove || m_doUndeploy )
 	{
 		switch( m_state )
 		{
@@ -223,6 +332,73 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 				break;
 			}
 		}
+
+		// After sequence checks
+		if( m_state == READY_TO_MOVE )
+		{
+			m_doUndeploy = FALSE;
+		}
+
+	}
+	// TheSuperHackers @bugfix Caball009 27/07/2026 The pathfinding code may use a stricter attack range check than used
+	// in this function, so the range check is insufficient. Objects are not allowed to deploy and attack if they're moving.
+#if RETAIL_COMPATIBLE_CRC
+	//if (isInRange || isInGuardIdleState )
+	// IamInnocent - Fixed moving while deployed state by checking the undeploying state requirements instead of deploying.
+	else if( m_isInRange || isInGuardIdleState || m_doDeploy )
+#else
+	// @todo Simplify the code by moving the second branch up so 'isTryingToMove' is checked first.
+	// IamInnocent - Fixed moving while deployed state by checking the undeploying state requirements instead of deploying.
+	else if ( (!isTryingToMove && (m_isInRange || isInGuardIdleState)) || m_doDeploy )
+#endif
+	{
+		switch( m_state )
+		{
+			case READY_TO_MOVE:
+				//We're need to deploy before we can attack.
+				if (data->m_turnBeforeUnpacking) {
+					// Check if we finished turning before deploying
+					if (isWithinAttackAngle()) {
+						setMyState(DEPLOY);
+					}
+					else {
+						// stay in READY_TO_MOVE state
+						break;
+					}
+				}
+				else { // Deploy right away
+					setMyState(DEPLOY);
+				}
+				break;
+			case READY_TO_ATTACK:
+				//Let the AI handle attacking.
+				break;
+			case DEPLOY:
+				//We can't start attacking until we are fully deployed.
+				break;
+			case UNDEPLOY:
+				if( m_frameToWaitForDeploy != 0 )
+				{
+					//Reverse the undeploy at it's current frame!
+					setMyState( DEPLOY, TRUE );
+				}
+				break;
+			case ALIGNING_TURRETS:
+				//If turrets are aligning, we are able to attack right now.
+				setMyState( READY_TO_ATTACK );
+				break;
+		}
+
+		// After sequence checks
+		if( m_doDeploy )
+		{
+			if( m_state == READY_TO_ATTACK )
+			{
+				m_doDeploy = FALSE;
+			}
+		}
+		
+		m_doUndeploy = FALSE;
 	}
 
 	switch( m_state )
@@ -271,16 +447,156 @@ UpdateSleepTime DeployStyleAIUpdate::update()
 			break;
 	}
 
-	AIUpdateInterface::update();
+	if(m_doRemoveStatusAfterTrigger)
+	{
+		doRemoveStatusTrigger();
+		m_doRemoveStatusAfterTrigger = FALSE;
+	}
+
+	UpdateSleepTime ret = AIUpdateInterface::update();
+
+	// IamInnocent - Added Sleepy Updates
+	if(m_frameToWaitForDeploy || m_state == ALIGNING_TURRETS || getStateMachine()->getTemporaryState() == AI_BUSY)
+		return UPDATE_SLEEP_NONE;
+	else
+		return ret;
 	//We can't sleep the deploy AI because any new commands need to be caught and sent
 	//into busy state during the update.
-	return UPDATE_SLEEP_NONE;
+	///return UPDATE_SLEEP_NONE;
+	//// IamInnocent 11/10/2025 - Made Sleepy
 
+}
+
+// ------------------------------------------------------------------------------------------------
+void DeployStyleAIUpdate::doStatusUpdate()
+{
+	Object *self = getObject();
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+	Bool prevHasUndeploy = m_hasUndeploy;
+	Bool prevHasDeploy = m_hasDeploy;
+	m_hasUndeploy = FALSE;
+	m_hasDeploy = FALSE;
+
+	if(!m_hasUndeploy)
+	{
+		m_hasUndeploy = !self->getStatusBits().testForNone( data->m_statusToUndeploy );
+		if(!m_hasUndeploy)
+		{
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+			{
+				if (self->testCustomStatus(*it))
+				{
+					m_hasUndeploy = TRUE;
+					break;
+				}
+			}
+		}
+	}
+
+	if(m_hasUndeploy && !data->m_removeStatusAfterTrigger )
+		m_hasDeploy = FALSE;
+
+	if(!m_hasDeploy && !m_hasUndeploy )
+	{
+		m_hasDeploy = !self->getStatusBits().testForNone( data->m_statusToDeploy );
+		if(!m_hasDeploy)
+		{
+			for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+			{
+				if (self->testCustomStatus(*it))
+				{
+					m_hasDeploy = TRUE;
+					break;
+				}
+			}
+		}
+	}
+
+	if(m_hasDeploy && !data->m_removeStatusAfterTrigger)
+		m_hasUndeploy = FALSE;		// There can only be One! ...Unless you are checking whether which status trigger rules first
+
+	// Trigger the Update
+	if(prevHasDeploy != m_hasDeploy || prevHasUndeploy != m_hasUndeploy)
+		wakeUpNow();
+
+	if(data->m_removeStatusAfterTrigger)
+	{
+		if(m_hasDeploy)
+		{
+			m_doDeploy = TRUE;
+			m_hasDeploy = FALSE;
+			m_doRemoveStatusAfterTrigger = TRUE;
+		}
+		if(m_hasUndeploy)
+		{
+			m_doUndeploy = TRUE;
+			m_hasUndeploy = FALSE;
+			m_doRemoveStatusAfterTrigger = TRUE;
+		}
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+void DeployStyleAIUpdate::doRemoveStatusTrigger()
+{
+	Object *self = getObject();
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+
+	if(!self->getStatusBits().testForNone( data->m_statusToDeploy ))
+	{
+		m_doUndeploy = FALSE;
+		m_doDeploy = TRUE;
+		self->clearStatus( data->m_statusToDeploy );
+	}
+	for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToDeploy.begin(); it != data->m_customStatusToDeploy.end(); ++it)
+	{
+		if (self->testCustomStatus(*it))
+		{
+			m_doUndeploy = FALSE;
+			m_doDeploy = TRUE;
+			self->setCustomStatus((*it), FALSE);
+		}
+	}
+	if(!self->getStatusBits().testForNone( data->m_statusToUndeploy ))
+	{
+		m_doDeploy = FALSE;
+		m_doUndeploy = TRUE;
+		self->clearStatus( data->m_statusToUndeploy );
+	}
+	for(std::vector<AsciiString>::const_iterator it = data->m_customStatusToUndeploy.begin(); it != data->m_customStatusToUndeploy.end(); ++it)
+	{
+		if (self->testCustomStatus(*it))
+		{
+			m_doDeploy = FALSE;
+			m_doUndeploy = TRUE;
+			self->setCustomStatus((*it), FALSE);
+		}
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+void DeployStyleAIUpdate::doUpgradeUpdate()
+{
+	m_moveAfterDeploy = checkAfterDeploy("HAS_MOVEMENT");
+	m_deployNoRelocate = checkAfterDeploy("NO_RELOCATE");
+	m_needsDeployToFireObject = checkForDeployUpgrades("OBJECT"); 
+	m_needsDeployToFireTurret = checkForDeployUpgrades("TURRET");
+	m_needsDeployToFireDeployed = checkForDeployUpgrades("DEPLOYED");
+
+	// Trigger the Update
+	wakeUpNow();
 }
 
 //-------------------------------------------------------------------------------------------------
 void DeployStyleAIUpdate::setMyState( DeployStateTypes stateID, Bool reverseDeploy )
 {
+	// Sleepy Updates
+	if(m_state == stateID &&
+		 !m_frameToWaitForDeploy &&
+		 getStateMachine()->getTemporaryState() != AI_BUSY
+	  )
+		return;
+
 	m_state = stateID;
 	Object *self = getObject();
 	UnsignedInt now = TheGameLogic->getFrame();
@@ -419,6 +735,180 @@ void DeployStyleAIUpdate::setMyState( DeployStateTypes stateID, Bool reverseDepl
 		}
 	}
 
+
+	if(!m_deployTurretFunctionChangeUpgrade.empty())
+	{
+		if(stateID == READY_TO_MOVE || stateID == UNDEPLOY)
+		{
+			Bool needsDeployToFire = m_needsDeployToFireTurret;
+			WhichTurretType tur = getWhichTurretForCurWeapon();
+			if( tur != TURRET_INVALID )
+			{
+				setTurretEnabled( tur, !needsDeployToFire );
+			}
+		}
+	}
+
+	if(!m_turretDeployedFunctionChangeUpgrade.empty() && stateID == READY_TO_ATTACK)
+	{
+		Bool needsDeployToFire = m_needsDeployToFireDeployed;
+		WhichTurretType tur = getWhichTurretForCurWeapon();
+		if( tur != TURRET_INVALID )
+		{
+			setTurretEnabled( tur, !needsDeployToFire );
+		}
+	}
+
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool DeployStyleAIUpdate::checkForDeployUpgrades(const AsciiString& type) const
+{
+	const Object *self = getObject();
+	std::vector<AsciiString> checkVector;
+	Bool checkUpgrade = TRUE;
+	Bool dontCheckValue = FALSE;
+	Bool needsDeployToFire = TRUE;
+
+	if(type == "OBJECT")
+	{
+		checkVector = m_deployObjectFunctionChangeUpgrade;
+	}
+	else if(type == "TURRET")
+	{
+		checkVector = m_deployTurretFunctionChangeUpgrade;
+	}
+	else if(type == "DEPLOYED")
+	{
+		checkVector = m_turretDeployedFunctionChangeUpgrade;
+		if(doTurretsFunctionOnlyWhenDeployed())
+			needsDeployToFire = FALSE;
+	}
+
+	for(std::vector<AsciiString>::const_iterator it = checkVector.begin(); it != checkVector.end(); ++it)
+	{
+		if(checkUpgrade)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(!self->getControllingPlayer()->hasUpgradeComplete(ut))
+				{
+					dontCheckValue = TRUE;
+				}
+			}
+			else if( !self->hasUpgrade(ut) )
+			{
+				dontCheckValue = TRUE;
+			}
+		}
+		else if(dontCheckValue)
+		{
+			dontCheckValue = FALSE;
+		}
+		else
+		{
+			if(stricmp( it->str(), "yes" ) == 0)
+			{
+				needsDeployToFire = TRUE;
+			}
+			else if(stricmp( it->str(), "no" ) == 0)
+			{
+				needsDeployToFire = FALSE;
+			}
+		}
+
+		if(checkUpgrade)
+			checkUpgrade = FALSE;
+		else
+			checkUpgrade = TRUE;
+	}
+
+	return needsDeployToFire;
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool DeployStyleAIUpdate::checkAfterDeploy(const AsciiString& type) const
+{
+	const Object *self = getObject();
+	const DeployStyleAIUpdateModuleData *data = getDeployStyleAIUpdateModuleData();
+	std::vector<AsciiString> checkVector;
+	Bool checkUpgrade = TRUE;
+	Bool checkValue = FALSE;
+
+	if( type == "NO_RELOCATE")
+		checkVector = data->m_deployNoRelocateUpgrades;
+	else if( type == "HAS_MOVEMENT")
+		checkVector = data->m_moveAfterDeployUpgrades;
+
+	for(std::vector<AsciiString>::const_iterator it = checkVector.begin(); it != checkVector.end(); ++it)
+	{
+		if(checkUpgrade)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
+				{
+					checkValue = TRUE;
+				}
+			}
+			else if( self->hasUpgrade(ut) )
+			{
+				checkValue = TRUE;
+			}
+		}
+		else if(checkValue)
+		{
+			return INI::scanBool((*it).str());
+		}
+
+		if(checkUpgrade)
+			checkUpgrade = FALSE;
+		else
+			checkUpgrade = TRUE;
+	}
+	if( type == "NO_RELOCATE")
+		return data->m_deployNoRelocate;
+	else if( type == "HAS_MOVEMENT")
+		return data->m_moveAfterDeploy;
+	else
+		return FALSE;
+}
+
+// ------------------------------------------------------------------------------------------------
+Bool DeployStyleAIUpdate::isWithinAttackAngle() const
+{
+	const Object* self = getObject();
+	const Weapon* weapon = self->getCurrentWeapon();
+	const AIUpdateInterface* ai = self->getAI();
+
+	Object* victim = ai->getCurrentVictim();
+	const Coord3D* pos;
+	if (victim)
+		pos = victim->getPosition();
+	else
+		pos = ai->getCurrentVictimPos();
+
+	if (pos == nullptr || weapon == nullptr)
+		return false;
+
+	Real aimDelta = weapon->getTemplate()->getAimDelta();
+
+	// TODO: get limited turret turn angle
+
+	Real relAngle = ThePartitionManager->getRelativeAngle2D(self, pos);
+	return abs(relAngle) <= aimDelta;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -447,6 +937,17 @@ void DeployStyleAIUpdate::xfer( Xfer *xfer )
 
  // extend base class
 	AIUpdateInterface::xfer(xfer);
+
+	xfer->xferBool( &m_isInRange );
+	xfer->xferBool( &m_doDeploy );
+	xfer->xferBool( &m_doUndeploy );
+	xfer->xferBool( &m_hasDeploy );
+	xfer->xferBool( &m_hasUndeploy );
+	xfer->xferBool( &m_moveAfterDeploy );
+	xfer->xferBool( &m_deployNoRelocate );
+	xfer->xferBool( &m_needsDeployToFireObject );
+	xfer->xferBool( &m_needsDeployToFireTurret );
+	xfer->xferBool( &m_needsDeployToFireDeployed );
 
 	if( version >= 4 )
 	{

@@ -53,8 +53,9 @@ enum UpgradeStatusType CPP_11(: Int)
 
 //The maximum number of upgrades.
 // TheSuperHackers @tweak Stubbjax 22/01/2026 Increases max upgrade count from Generals:64, Zero Hour:128 to allow for more upgrades.
-// A value of 512 was chosen to allow room for plenty of upgrades while also conserving memory.
-#define UPGRADE_MAX_COUNT 512
+// Fork raises this further to 1024 to accommodate the fork's additional upgrades (crate upgrades,
+// PropagateUpgradeToContained, etc.). Costs 128 bytes per UpgradeMaskType vs 64 at 512.
+#define UPGRADE_MAX_COUNT 1024
 
 typedef BitFlags<UPGRADE_MAX_COUNT, struct UpgradeMaskTypeTag>	UpgradeMaskType;
 
@@ -181,6 +182,8 @@ public:
 	const AudioEventRTS* getUnitSpecificSound() const { return &m_unitSpecificSound; }
 	AcademyClassificationType getAcademyClassificationType() const { return m_academyClassificationType; }
 
+	const Bool isSilentCompletion() const { return m_silentCompletion; }
+
 	/// inventory pictures
 	void cacheButtonImage();
 	const Image* getButtonImage() const { return m_buttonImage; }
@@ -210,6 +213,8 @@ protected:
 	AudioEventRTS	m_researchSound;			///< Sound played when upgrade researched.
 	AudioEventRTS	m_unitSpecificSound;	///< Secondary sound played when upgrade researched.
 	AcademyClassificationType m_academyClassificationType; ///< A value used by the academy to evaluate advice based on what players do.
+
+	Bool m_silentCompletion;						///< hide notification and audio when this upgrade is completed.
 
 	UpgradeTemplate *m_next;						///< next
 	UpgradeTemplate *m_prev;						///< prev

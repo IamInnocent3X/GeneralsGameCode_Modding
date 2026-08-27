@@ -52,6 +52,10 @@ WanderAIUpdate::~WanderAIUpdate()
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime WanderAIUpdate::update()
 {
+	// Suspend wandering while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
 	// If I'm standing still, move somewhere
 	if (isIdle())
 	{
@@ -62,10 +66,11 @@ UpdateSleepTime WanderAIUpdate::update()
 	}
 
 	// extend
-	/*UpdateSleepTime ret =*/ AIUpdateInterface::update();
+	/*UpdateSleepTime ret =*/ return AIUpdateInterface::update();
 	//return (mine < ret) ? mine : ret;
 	/// @todo srj -- someday, make sleepy. for now, must not sleep.
-	return UPDATE_SLEEP_NONE;
+	////return UPDATE_SLEEP_NONE;
+	///// IamInnocent 11/10/2025 - Made Sleepy
 }
 
 // ------------------------------------------------------------------------------------------------

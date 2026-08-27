@@ -65,10 +65,10 @@ public:
 	/// init to safe default values.
 	void init();
 
-	void resetSciences() { m_prereqSciences.clear(); }
+	void resetSciences() { m_prereqSciences.clear(); m_prenegreqSciences.clear(); }
 	void addSciencePrereq( ScienceType science ) { m_prereqSciences.push_back(science); }
 
-	void resetUnits() { m_prereqUnits.clear(); }
+	void resetUnits() { m_prereqUnits.clear();  m_prenegreqUnits.clear(); }
 	void addUnitPrereq( AsciiString units, Bool orUnitWithPrevious );
 	void addUnitPrereq( const std::vector<AsciiString>& units );
 
@@ -79,8 +79,9 @@ public:
 	/// not satisfied yet
 	UnicodeString getRequiresList(const Player *player) const;
 
-	/// return true iff the player satisfies our set of prerequisites
-	Bool isSatisfied(const Player *player) const;
+	/// return true iff the player satisfies our set of prerequisites.
+	/// if ignoreUnitPrereqs is set, only science prerequisites are enforced.
+	Bool isSatisfied(const Player *player, Bool ignoreUnitPrereqs = FALSE) const;
 
 	/**
 		return the BuildFacilityTemplate, if any.
@@ -95,6 +96,12 @@ public:
 	const ThingTemplate *getExistingBuildFacilityTemplate( const Player *player ) const;
 
 	Int getAllPossibleBuildFacilityTemplates(const ThingTemplate* tmpls[], Int maxtmpls) const;
+
+	UnicodeString getNegativeRequiresList(const Player *player) const;
+	UnicodeString getNegativeRequiresListScience(const Player *player) const;
+	void addScienceNegPrereq( ScienceType science ) { m_prenegreqSciences.push_back(science); }
+	void addUnitNegPrereq( AsciiString units, Bool orUnitWithPrevious );
+	void addUnitNegPrereq( const std::vector<AsciiString>& units );
 
 private:
 
@@ -112,9 +119,13 @@ private:
 
 	enum { MAX_PREREQ = 32 };
 	Int calcNumPrereqUnitsOwned(const Player *player, Int counts[MAX_PREREQ]) const;
+	Int calcNumNegPrereqUnitsOwned(const Player *player, Int counts[MAX_PREREQ]) const;
 
 	std::vector<PrereqUnitRec>	m_prereqUnits;
 	ScienceVec									m_prereqSciences;
+
+	std::vector<PrereqUnitRec>	m_prenegreqUnits;
+	ScienceVec									m_prenegreqSciences;
 };
 
 //-----------------------------------------------------------------------------

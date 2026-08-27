@@ -31,6 +31,24 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameClient/TintStatus.h"
+
+typedef std::hash_map<AsciiString, UnsignedInt, rts::hash<AsciiString>, rts::equal_to<AsciiString> > CustomStatusTypeMap;
+typedef std::hash_map<UnsignedShort, UnsignedInt, rts::hash<UnsignedShort>, rts::equal_to<UnsignedShort> > StatusTypeMap;
+typedef std::pair<TintStatus, UnsignedInt> TintStatusDurationPair;
+typedef std::pair<AsciiString, UnsignedInt> CustomTintStatusDurationPair;
+typedef std::vector<TintStatusDurationPair> TintStatusDurationVec;
+typedef std::vector<CustomTintStatusDurationPair> CustomTintStatusDurationVec;
+
+struct HelperTransferData
+{
+	UnsignedInt frameEnd;
+	UnsignedInt earliestDurationAsInt;
+	StatusTypeMap statusMap;
+	CustomStatusTypeMap customStatusMap;
+	TintStatusDurationVec currentTint;
+	CustomTintStatusDurationVec customTintStatus;
+};
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------

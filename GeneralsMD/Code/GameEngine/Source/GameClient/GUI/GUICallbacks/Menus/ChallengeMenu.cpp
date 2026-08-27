@@ -686,7 +686,8 @@ WindowMsgHandledType ChallengeMenuSystem( GameWindow *window, UnsignedInt msg, W
         // GameEngine will still apply the default "FRAME CAP" as it does during "Solo Missions."
         msg->appendIntegerArgument(LOGICFRAMES_PER_SECOND);	// FPS limit
 
-				InitRandom(0);
+				InitRandomType(TheGlobalData->m_initRandomType);
+				//DEBUG_LOG(("Playing Challenge. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 			}
 			else if( controlID == buttonBackID )
 			{

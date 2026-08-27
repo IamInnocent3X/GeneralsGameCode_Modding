@@ -33,6 +33,7 @@
 #include "Common/GameMemory.h"
 #include "Common/AudioEventRTS.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/WeaponBonusConditionFlags.h"
 
 class Object;
 class Weapon;
@@ -61,6 +62,9 @@ public:
 
 	virtual UpdateSleepTime update() override;	///< See if spin down is needed because we haven't shot in a while
 
+	void computeFiringTrackerBonus(const Weapon *weaponToFire, const Object *victim);
+	void computeFiringTrackerBonusClear(const Weapon *weaponToFire);
+
 protected:
 
 	/*
@@ -87,4 +91,12 @@ private:
 
 	UnsignedInt			m_frameToStopLoopingSound;	///< if sound is looping, frame to stop looping it (or zero if not looping)
 	AudioHandle			m_audioHandle;
+	AsciiString			m_currentFireSoundName;			///< event name of the currently looping fire sound, so we can detect a weapon (sound) switch
+
+	WeaponBonusConditionFlags m_prevTargetWeaponBonus;  ///< weaponBonus against previous target
+	std::vector<AsciiString>	m_prevTargetCustomWeaponBonus;  ///< custom weaponBonus against previous target
+
+	Bool 				m_firingTrackerBonusCleared; ///< have I cleared my Tracker Bonus
+	ObjectStatusMaskType		m_prevTargetStatus;  ///< previous Target's Status
+	std::vector<AsciiString>	m_prevTargetCustomStatus;  ///< previous Target's Custom Status
 };

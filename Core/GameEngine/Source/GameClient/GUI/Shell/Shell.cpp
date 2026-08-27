@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/RandomValue.h"
+#include "Common/FramePacer.h"
 #include "GameClient/Shell.h"
 #include "GameClient/WindowLayout.h"
 #include "GameClient/GameWindowManager.h"
@@ -90,12 +91,7 @@ void Shell::construct()
 //-------------------------------------------------------------------------------------------------
 void Shell::deconstruct()
 {
-	WindowLayout *newTop = top();
-	while(newTop)
-	{
-		popImmediate();
-		newTop = top();
-	}
+	destroyScreenStack();
 
 	if(m_background)
 	{
@@ -136,6 +132,31 @@ void Shell::deconstruct()
 		deleteInstance(m_optionsLayout);
 		m_optionsLayout = nullptr;
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+/** TheSuperHackers @bugfix CryoTheRenegade 10/08/2026 Tear down every screen on the stack without initializing uncovered layouts.
+	* Used when the shell itself is being destroyed. */
+//-------------------------------------------------------------------------------------------------
+void Shell::destroyScreenStack()
+{
+	while( top() )
+	{
+		WindowLayout *screen = top();
+
+		// do NOT set pending pop, we are going to force a pop after the shutdown is run
+		m_pendingPop = FALSE;
+
+		Bool immediatePop = TRUE;
+		screen->runShutdown( &immediatePop );
+
+		unlinkScreen( screen );
+		screen->destroyWindows();
+		deleteInstance( screen );
+	}
+
+	if (TheIMEManager)
+		TheIMEManager->detach();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -203,6 +224,13 @@ void Shell::update()
 			deleteInstance(m_background);
 			m_background = nullptr;
 
+		}
+		if(TheFramePacer && m_isShellActive)
+		{
+			if(TheGlobalData->m_shellMapOn && m_shellMapOn && TheGlobalData->m_menufps > 0 && TheGlobalData->m_menufps <= TheGlobalData->m_framesPerSecondLimit)
+				TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_menufps);
+			else if(TheGlobalData->m_newfpsLimit > 0 && TheGlobalData->m_newfpsLimit <= TheGlobalData->m_framesPerSecondLimit)
+				TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_newfpsLimit);
 		}
 
 		m_schemeManager->update();
@@ -581,6 +609,18 @@ void Shell::showShellMap(Bool useShellMap )
 			top()->bringForward();
 		m_shellMapOn = FALSE;
 		m_clearBackground = FALSE;
+
+		// MUSIC
+		// TODO
+		//AsciiString musicName = "Shell";
+		//if (!musicName.isEmpty())
+		//{
+		//	TheAudio->removeAudioEvent(AHSV_StopTheMusicFade);
+		//	AudioEventRTS event(musicName);
+		//	event.setShouldFade(TRUE);
+		//	TheAudio->addAudioEvent(&event);
+		//	TheAudio->update();//Since GameEngine::update() is suspended until after I am gone... 
+		//}
 	}
 }
 

@@ -36,6 +36,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/HealContain.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CountermeasuresBehavior.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,6 +48,8 @@ HealContainModuleData::HealContainModuleData()
 {
 
 	m_framesForFullHeal = 0;
+	m_healingClearsParasite = TRUE;
+	m_healingClearsParasiteKeys.clear();
 
 }
 
@@ -60,6 +63,8 @@ HealContainModuleData::HealContainModuleData()
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "TimeForFullHeal", INI::parseDurationUnsignedInt, nullptr, offsetof( HealContainModuleData, m_framesForFullHeal ) },
+		{ "HealingClearsParasite",			INI::parseBool,	nullptr, offsetof( HealContainModuleData, m_healingClearsParasite ) },
+		{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, nullptr, offsetof( HealContainModuleData, m_healingClearsParasiteKeys ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 
@@ -138,10 +143,14 @@ Bool HealContain::doHeal( Object *obj, UnsignedInt framesForFullHeal )
 {
 	Bool doneHealing = FALSE;
 
+	const HealContainModuleData *modData = getHealContainModuleData();
+
 	// setup the healing damageInfo structure with all but the amount
 	DamageInfo healInfo;
 	healInfo.in.m_damageType = DAMAGE_HEALING;
 	healInfo.in.m_deathType = DEATH_NONE;
+	healInfo.in.m_clearsParasite = modData->m_healingClearsParasite;
+	healInfo.in.m_clearsParasiteKeys = modData->m_healingClearsParasiteKeys;
 	healInfo.in.m_sourceID = getObject()->getID();
 
 	// get body module of the thing to heal
@@ -174,6 +183,12 @@ Bool HealContain::doHeal( Object *obj, UnsignedInt framesForFullHeal )
 		// do the healing
 		body->attemptHealing( &healInfo );
 
+	}
+
+	CountermeasuresBehaviorInterface *cbi = obj->getCountermeasuresBehaviorInterface();
+	if( cbi && cbi->getCountermeasuresMustReloadAtBarracks() )
+	{
+		cbi->reloadCountermeasures();
 	}
 
 	// return if we're done healing

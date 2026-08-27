@@ -37,7 +37,6 @@
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 
 #define MAX_ENABLED_DYNAMIC_LIGHTS 20
-typedef UnsignedByte HeightSampleType;	//type of data to store in heightmap
 class W3DTreeBuffer;
 class W3DBibBuffer;
 class W3DRoadBuffer;
@@ -127,7 +126,7 @@ public:
   }
 
 
-	UnsignedByte getClipHeight(Int x, Int y) const
+	HeightSampleType getClipHeight(Int x, Int y) const
 	{
 		Int xextent = m_map->getXExtent() - 1;
 		Int yextent = m_map->getYExtent() - 1;
@@ -171,6 +170,8 @@ public:
 		const GeometryInfo& geom,
 		Real angle
 	);
+
+	const AsciiString& findTreeNameInPos(const Coord3D* loc) const;
 
 	/// Add a bib at location.
 	void addTerrainBib(Vector3 corners[4], ObjectID id, Bool highlight);

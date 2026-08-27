@@ -31,6 +31,7 @@
 #include "Common/ActionManager.h"
 #include "Common/BuildAssistant.h"
 #include "Common/CRCDebug.h"
+#include "Common/GlobalData.h"
 #include "Common/Player.h"
 #include "Common/SpecialPower.h"
 #include "Common/ThingTemplate.h"
@@ -41,6 +42,7 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/Line2D.h"
+#include "GameClient/GameClient.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
@@ -55,6 +57,7 @@
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
 #include "GameLogic/ObjectIter.h"
+#include "GameLogic/PartitionManager.h"
 
 
 /**
@@ -77,6 +80,7 @@ AIGroup::AIGroup()
 	m_id = TheAI->getNextGroupID();
 	m_memberListSize = 0;
 	m_memberList.clear();
+	m_memberListExtraID.clear();
 	//DEBUG_LOG(( "AIGroup #%d created", m_id ));
 }
 
@@ -318,6 +322,427 @@ Bool AIGroup::removeAnyObjectsNotOwnedByPlayer( const Player *ownerPlayer )
 	return FALSE;
 }
 
+/**
+ * Do the order nearby data of the message, if any
+ */
+Bool AIGroup::doOrderNearbyData( const GameMessage *msg )
+{
+	// Sanity
+	if (!msg)
+		return FALSE;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+
+	if(orderData.Radius <= 0.0f)
+		return FALSE;
+
+	if(orderData.MinDelay > 0 || orderData.MaxDelay > 0 || orderData.IntervalDelay > 0)
+		doDelayedNearbyMembers(msg);
+	else
+		doAddNearbyMembers(msg);
+
+	return TRUE;
+}
+
+/**
+ * Do the orders delayed to any of the objects that are nearby
+ */
+Bool AIGroup::doAddNearbyMembers( const GameMessage *msg )
+{
+	// Do nothing for invalid radius
+	//if(orderData.Radius <= 0.0f)
+	//	return FALSE;
+
+	// Sanity
+	if (!msg)
+		return FALSE;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+
+	ListObjectPtrIt it;
+	KindOfMaskType validNonAIKindofs;
+	validNonAIKindofs.set(KINDOF_STRUCTURE);
+	validNonAIKindofs.set(KINDOF_ALWAYS_SELECTABLE);
+
+	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
+		Object *obj = (*it);
+		if (!obj) {
+			continue;
+		}
+
+		// If we reached the end of the current list before the new members are added, break
+		if (!m_memberListExtraID.empty() && obj->getID() == m_memberListExtraID[0]) {
+			break;
+		}
+
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, nullptr };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		orderData.Radius, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+		
+		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
+		{
+			// Don't do command on ally objects
+			if( currentObj->getTeam() != obj->getTeam() )
+				continue;
+
+			// Don't do objects that are Under Construction
+			if( currentObj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) || currentObj->testStatus( OBJECT_STATUS_RECONSTRUCTING ) )
+				continue;
+
+			// Skip the check for current members
+			if( isMember(currentObj) )
+				continue;
+
+			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
+
+			//If this object doesn't have an AIUpdateInterface, then
+			//don't add it to the group UNLESS it is a structure! Structures
+			//with AIUpdateInterfaces also issue similar commands, but those
+			//commands don't need AI updates... they are instant commands like
+			//evacuate or triggering certain special powers...
+			if( ai == nullptr && !currentObj->isAnyKindOf( validNonAIKindofs ) )
+			{
+				continue;
+			}
+
+			m_memberList.push_back( currentObj );
+			m_memberListExtraID.push_back( currentObj->getID() );
+			++m_memberListSize;
+
+		}
+
+		++it;
+	}
+
+	return FALSE;
+}
+
+/**
+ * Check whether an Object can do the passed command
+ */
+static Bool checkActionTypeForCommand(Object *obj, GameMessage::Type type, const std::vector<GameMessageArgumentStruct>& arguments)
+{
+	Bool canDoAction = TRUE;
+	AIUpdateInterface *ai = obj->getAIUpdateInterface();
+
+	switch(type)
+	{
+		case GameMessage::MSG_DO_WEAPON:
+		case GameMessage::MSG_DO_WEAPON_AT_OBJECT:
+		case GameMessage::MSG_DO_WEAPON_AT_LOCATION:
+		{
+			CanAttackResult result; 
+			if(type == GameMessage::MSG_DO_WEAPON_AT_LOCATION)
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, &arguments[1].data.location, CMD_FROM_PLAYER ) ;
+			else if(type == GameMessage::MSG_DO_WEAPON_AT_OBJECT)
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, TheGameLogic->findObjectByID( arguments[1].data.objectID ), nullptr, CMD_FROM_PLAYER ) ;
+			else if(type == GameMessage::MSG_DO_WEAPON)
+				result = obj->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, obj->getPosition(), CMD_FROM_PLAYER ) ;	
+
+			if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+			{
+				canDoAction = FALSE;
+			}
+
+			break;
+		}
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT:
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE:
+		case GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION:
+		case GameMessage::MSG_DO_SPECIAL_POWER:
+		{
+			UnsignedInt specialPowerID = arguments[0].data.integer;
+			const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+			if( spTemplate )
+			{
+				SpecialPowerModuleInterface *mod = obj->getSpecialPowerModule( spTemplate );
+				// no special power
+				if( !mod )
+				{
+					canDoAction = FALSE;
+					break;
+				}
+
+				// cannot do special power
+				if(type == GameMessage::MSG_DO_SPECIAL_POWER && !TheActionManager->canDoSpecialPower( obj, spTemplate, CMD_FROM_PLAYER, arguments[2].data.integer, !arguments[3].data.boolean ))
+					canDoAction = FALSE;
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_OBJECT && !TheActionManager->canDoSpecialPowerAtObject( obj, TheGameLogic->findObjectByID( arguments[1].data.objectID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer, !arguments[5].data.boolean ) )
+					canDoAction = FALSE;
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_DRAWABLE && !TheActionManager->canDoSpecialPowerAtDrawable( obj, TheGameClient->findDrawableByID( arguments[4].data.drawableID ), CMD_FROM_PLAYER, spTemplate, arguments[2].data.integer, !arguments[5].data.boolean ) )
+					canDoAction = FALSE;
+				else if(type == GameMessage::MSG_DO_SPECIAL_POWER_AT_LOCATION && !TheActionManager->canDoSpecialPowerAtLocation( obj, &arguments[1].data.location, CMD_FROM_PLAYER, spTemplate, TheGameLogic->findObjectByID( arguments[3].data.objectID ), arguments[2].data.integer, !arguments[6].data.boolean ) )
+					canDoAction = FALSE;
+			}
+			break;
+		}
+		case GameMessage::MSG_QUEUE_UPGRADE:
+		{
+			const UpgradeTemplate *upgradeT = TheUpgradeCenter->findUpgradeByKey( (NameKeyType)(arguments[1].data.integer) );
+			if (!upgradeT)	// sanity
+			{
+				canDoAction = FALSE;
+				break;
+			}
+			// make sure that the this object can actually build the upgrade
+			// There is an extra check for Object type only.  These are the same checks as in
+			// ControlCommandProcessing when the message was going out.  We are just revalidating on the
+			// way in to stop cheaters.
+			if( ! TheUpgradeCenter->canAffordUpgrade( obj->getControllingPlayer(), upgradeT, FALSE ) )
+			{
+				canDoAction = FALSE;
+				break;
+			}
+			if( upgradeT->getUpgradeType() == UPGRADE_TYPE_OBJECT )
+			{
+				if( obj->hasUpgrade( upgradeT )  || !obj->affectedByUpgrade( upgradeT ) )
+				{
+					canDoAction = FALSE;
+					break;
+				}
+			}
+
+			// Ever think to check if this thing can actually build the upgrade to "stop cheaters"?
+			if( !obj->canProduceUpgrade(upgradeT) )
+			{
+				canDoAction = FALSE;
+				break;
+			}// They have faked their button; go out of sync. (Cheater will execute it, non cheater will not execute it.)
+
+			// producer must have a production update
+			ProductionUpdateInterface *pu = obj->getProductionUpdateInterface();
+			if( pu == nullptr )
+			{
+				canDoAction = FALSE;
+				break;
+			}
+
+			if ( pu->canQueueUpgrade( upgradeT ) == CANMAKE_QUEUE_FULL )
+			{
+				canDoAction = FALSE;
+			}//So we don't charge them for something that we can't build... happy happy
+
+			break;
+		}
+		case GameMessage::MSG_DISABLE_POWER:
+		{
+			if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0 && obj->getTemplate()->getEnergyBonus() == 0)
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_TOGGLE_OVERCHARGE:
+		{
+			canDoAction = FALSE;
+
+			OverchargeBehaviorInterface *obi;
+			for( BehaviorModule **bmi = obj->getBehaviorModules(); *bmi; ++bmi )
+			{
+
+				obi = (*bmi)->getOverchargeBehaviorInterface();
+				if( obi )
+				{
+					canDoAction = TRUE;
+					break;
+				}
+			}
+
+			break;
+		}
+		case GameMessage::MSG_SELL:
+		{
+			if( obj->isKindOf( KINDOF_STRUCTURE ) == FALSE )
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_INTERNET_HACK:
+		{
+			if( !ai || !ai->getHackInternetAIInterface() )
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_EVACUATE:
+		{
+			if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+			{
+				canDoAction = FALSE;
+				break;
+			}
+
+			ContainModuleInterface *contain = obj->getContain();
+			if( !contain || contain->getContainCount() == 0)
+				canDoAction = FALSE;
+
+			break;
+		}
+		case GameMessage::MSG_DO_FORCEMOVETO:
+		case GameMessage::MSG_DO_ATTACKMOVETO:
+		case GameMessage::MSG_DO_REVERSE_MOVETO:
+		case GameMessage::MSG_DO_GUARD_POSITION:
+		case GameMessage::MSG_DO_GUARD_OBJECT:
+		{
+			if(!ai || !ai->getCurLocomotor())
+				canDoAction = FALSE;
+
+			break;
+		}
+
+	}
+	return canDoAction;
+}
+
+/**
+ * Add any objects that are nearby the current selected objects
+ */
+Bool AIGroup::doDelayedNearbyMembers( const GameMessage *msg )
+{
+	// Do nothing for invalid radius or if no currently selected group
+	//if(orderData.Radius <= 0.0f)
+	//	return FALSE;
+
+	// Sanity
+	if (!msg)
+		return FALSE;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+	GameMessage::Type type = msg->getType();
+	std::vector<GameMessageArgumentStruct> arguments;
+
+	Int numArgs = msg->getArgumentCount();
+	for (Int i = 0; i < numArgs; ++i) {
+		GameMessageArgumentStruct curArgument;
+		curArgument.type = msg->getArgumentDataType(i);
+		curArgument.data = *(msg->getArgument(i));
+		arguments.push_back(curArgument);
+	}
+
+	ListObjectPtrIt it;
+	KindOfMaskType validNonAIKindofs;
+
+	// Only Selectables can have delayed order helper
+	orderData.RequiredMask.set(KINDOF_SELECTABLE);
+	validNonAIKindofs.set(KINDOF_STRUCTURE);
+	validNonAIKindofs.set(KINDOF_ALWAYS_SELECTABLE);
+
+	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
+		Object *obj = (*it);
+		if (!obj) {
+			continue;
+		}
+
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, nullptr };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		orderData.Radius, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+
+		UnsignedInt delay = orderData.MinDelay > 0 || orderData.MaxDelay > 0 ? GameLogicRandomValue(orderData.MinDelay, orderData.MaxDelay) : 0;
+
+		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
+		{
+			// Don't do command on ally objects
+			if( currentObj->getTeam() != obj->getTeam() )
+				continue;
+
+			// Don't do objects that are Under Construction
+			if( currentObj->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION ) || currentObj->testStatus( OBJECT_STATUS_RECONSTRUCTING ) )
+				continue;
+
+			// Skip the check for current members
+			if( isMember(currentObj) )
+				continue;
+
+			// Skip members that are already done
+			VecObjectIDIt it_2;
+			Bool done = FALSE;
+			for (it_2 = m_memberListExtraID.begin(); it_2 != m_memberListExtraID.end(); ++it_2) {
+				if((*it_2) == currentObj->getID())
+				{
+					done = TRUE;
+					break;
+				}
+			}
+			if(done)
+				continue;
+
+			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
+
+			//If this object doesn't have an AIUpdateInterface, then
+			//don't add it to the group UNLESS it is a structure! Structures
+			//with AIUpdateInterfaces also issue similar commands, but those
+			//commands don't need AI updates... they are instant commands like
+			//evacuate or triggering certain special powers...
+			if( ai == nullptr && !currentObj->isAnyKindOf( validNonAIKindofs ) )
+			{
+				continue;
+			}
+
+			Bool canDoAction = checkActionTypeForCommand(currentObj, type, arguments);
+
+			if(canDoAction == FALSE)
+				continue;
+
+			delay += orderData.IntervalDelay;
+			currentObj->appendDelayedCommand(type, arguments, delay);
+
+			m_memberListExtraID.push_back( currentObj->getID() );
+
+		}
+
+		++it;
+	}
+
+	m_memberListExtraID.clear();
+
+	return FALSE;
+}
+
+/**
+ * Remove the nearby objects from the member list
+ */
+Bool AIGroup::clearExtraMembers()
+{
+	VecObjectIDIt it;
+	for (it = m_memberListExtraID.begin(); it != m_memberListExtraID.end(); ++it) {
+		Object *obj = TheGameLogic->findObjectByID(*it);
+		if (!obj) {
+			continue;
+		}
+
+		std::list<Object *>::iterator i = std::find( m_memberList.begin(), m_memberList.end(), obj );
+
+		// make sure object is actually in the group
+		if (i == m_memberList.end())
+			continue;
+
+		// remove it
+		m_memberList.erase( i );
+		--m_memberListSize;
+
+	}
+
+	m_memberListExtraID.clear();
+
+	return FALSE;
+}
+
 
 /**
  * Compute the centroid of the group
@@ -377,7 +802,7 @@ Bool AIGroup::getCenter( Coord3D *center )
 	return count > 0;
 }
 
-Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center )
+Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center, Bool reverse )
 {
 	Int count = 0;
 	min->x = 1e10f;
@@ -392,6 +817,10 @@ Bool AIGroup::getMinMaxAndCenter( Coord2D *min, Coord2D *max, Coord3D *center )
 	FormationID id= NO_FORMATION_ID;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
+		if( !reverse )
+		{
+			(*i)->setReverseFormationID(NO_FORMATION_ID);
+		}
 		if( (*i)->isDisabledByType( DISABLED_HELD) )
 		{
 			continue; // don't bother counting riders in the center calculation.
@@ -453,10 +882,14 @@ void AIGroup::recompute()
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		// don't consider immobile things for leadership
-		if ((*i)->isKindOf(KINDOF_IMMOBILE))
+		if ((*i)->isKindOf(KINDOF_IMMOBILE) || (*i)->testStatus( OBJECT_STATUS_IMMOBILE ))
 			continue;
 
-		if( (*i)->isDisabledByType( DISABLED_HELD) )
+		// don't consider (chrono) teleporters (they are very fast, or currently disabled)
+		if ((*i)->isKindOf(KINDOF_TELEPORTER))
+			continue;
+
+		if( (*i)->isDisabledByType( DISABLED_HELD) ) 
 		{
 			continue; // don't bother counting riders in the max speed calculation.
 		}
@@ -538,6 +971,14 @@ void AIGroup::computeIndividualDestination( Coord3D *dest, const Coord3D *groupD
 	dest->x = groupDest->x + v.x;
 	dest->y = groupDest->y + v.y;
 	dest->z = TheTerrainLogic->getLayerHeight( dest->x, dest->y, layer );
+
+	if (TheGlobalData->m_heightAboveTerrainIncludesWater) {
+		// Put waypoints on water surface instead of ground
+		if (Real waterZ = 0; TheTerrainLogic->isUnderwater(dest->x, dest->y, &waterZ)) {
+			if (waterZ > dest->z) dest->z = waterZ;
+		}
+	}
+
 	AIUpdateInterface *ai = obj->getAIUpdateInterface();
 	if (ai && ai->isDoingGroundMovement()) {
 		if (isFormation) {
@@ -559,7 +1000,7 @@ static const Int PATH_DIAMETER_IN_CELLS = 6;
 /**
  * Move to given position(s)
  */
-Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource )
+Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse )
 
 {
 
@@ -576,7 +1017,7 @@ Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cm
 	if (TheGlobalData->m_debugAI==AI_DEBUG_TERRAIN) return false;
 
 	Bool closeEnough = false;
-	getMinMaxAndCenter( &min, &max, &center );
+	getMinMaxAndCenter( &min, &max, &center, reverse );
 	Real distSqr = 4*sqr(TheAI->getAiData()->m_distanceRequiresGroup);
 
 	Int numInfantry = 0;
@@ -595,6 +1036,11 @@ Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cm
 		{
 			continue;
 		}
+		if (obj->isKindOf(KINDOF_TELEPORTER))
+		{
+			continue;
+		}
+
 		if( obj->isKindOf( KINDOF_INFANTRY ) )
 		{
  			numInfantry++;
@@ -660,7 +1106,7 @@ Bool AIGroup::friend_computeGroundPath( const Coord3D *pos, CommandSourceType cm
 			{
 				if (!TheAI->pathfinder()->isLinePassable(obj,
 								ai->getLocomotorSet().getValidSurfaces(), obj->getLayer(), *obj->getPosition(),
-								center, false, true)) {
+								center, false, true, ai->getLocomotorSet().getRequiredWaterLevel())) {
 					isPassable = false;
 				}
 			}
@@ -786,7 +1232,11 @@ Bool AIGroup::friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cm
 	PlayerType controllingPlayerType = PLAYER_COMPUTER;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
-		if ((*i)->isDisabledByType( DISABLED_HELD ) )
+		if ((*i)->isKindOf(KINDOF_TELEPORTER))
+		{
+			continue;
+		}
+		if ((*i)->isDisabledByType( DISABLED_HELD ) ) 
 		{
 			continue; // don't bother telling the occupants to move.
 		}
@@ -1071,7 +1521,7 @@ Bool AIGroup::friend_moveInfantryToPos( const Coord3D *pos, CommandSourceType cm
 /**
  * Move to given position(s)
  */
-void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource )
+void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType cmdSource, Bool reverse )
 {
 	Real dx, dy;
 	Coord3D center;
@@ -1120,6 +1570,7 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 
 	// Move.
 	std::list<Object *>::iterator i;
+	std::vector<Object *> skipFormUnits;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		if ((*i)->isDisabledByType( DISABLED_HELD ) )
@@ -1131,6 +1582,20 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 		if (ai == nullptr)
 		{
 			continue;
+		}
+
+		if ( theUnit->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )//helicopter
+		{
+			skipFormUnits.push_back(theUnit);
+			continue;
+		}
+		else if ( theUnit->isKindOf( KINDOF_AIRCRAFT ) )// fixed wing aircraft only
+		{
+			if ( ai->isDoingGroundMovement() == FALSE ) //if unit is airborne
+			{
+				skipFormUnits.push_back(theUnit);
+				continue;//then keep spread formation after move
+			}
 		}
 
 		Bool isDifferentFormation = false;
@@ -1167,9 +1632,88 @@ void AIGroup::friend_moveFormationToPos( const Coord3D *pos, CommandSourceType c
 			Coord3D dest = endPoint;
 			dest.x += offset.x;
 			dest.y += offset.y;
-			ai->aiMoveToPosition( &dest, cmdSource );
+			if (reverse)
+				ai->aiReverseMoveToPosition( &dest, cmdSource );
+			else
+				ai->aiMoveToPosition( &dest, cmdSource );
 		}
 
+	}
+
+	if(skipFormUnits.empty())
+		return;
+
+	// Move.
+	MemoryPoolObjectHolder iterHolder;
+	SimpleObjectIterator *iter = newInstance(SimpleObjectIterator);
+	iterHolder.hold(iter);
+	for( size_t j = 0; j < skipFormUnits.size(); ++j )
+	{
+		Real dx, dy;
+		if( !skipFormUnits[j]->isMobileNonStatusNotAttacking(FALSE) )
+		{
+			continue;
+		}
+		Coord3D unitPos = *(skipFormUnits[j]->getPosition());
+		TheAI->pathfinder()->removeGoal(skipFormUnits[j]);
+		dx = unitPos.x - pos->x;
+		dy = unitPos.y - pos->y;
+		// adjust so units are sorted first by move priority.
+		Real adjust = 0;
+#if 0	 // Nope.  jba.
+		LocomotorPriority movePriority = LOCO_MOVES_FRONT;
+		AIUpdateInterface *ai = skipFormUnits[j]->getAIUpdateInterface();
+		if (ai->getCurLocomotor()) {
+			movePriority = ai->getCurLocomotor()->getMovePriority();
+			if (movePriority == LOCO_MOVES_MIDDLE) {
+				adjust = 100*100*PATHFIND_CELL_SIZE_F*PATHFIND_CELL_SIZE_F;
+			} else if (movePriority == LOCO_MOVES_BACK) {
+				adjust = 200*200*PATHFIND_CELL_SIZE_F*PATHFIND_CELL_SIZE_F;
+			}
+		}
+#endif
+		iter->insert(skipFormUnits[j], adjust + dx*dx+dy*dy);
+	}
+
+	Coord3D dest;
+	Coord3D goalPos = *pos;
+	iter->sort(ITER_SORTED_NEAR_TO_FAR);
+	// Works better if you let the near units get the first paths... jba.
+	// Move the ones nearest the goal first.  Reduces collision problems later.
+	Object *theUnit;
+	for (theUnit = iter->first(); theUnit; theUnit = iter->next())
+	{
+		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
+		computeIndividualDestination( &dest, &goalPos, theUnit, &center, FALSE );
+
+		if( cmdSource == CMD_FROM_PLAYER && theUnit->getStatusBits().test( OBJECT_STATUS_CAN_STEALTH ) && ai->canAutoAcquire() )
+		{
+			//When ordering a combat stealth unit to move, there is a single special case we want to handle.
+			//When a stealth unit is currently not stealthed and doesn't autoacquire while stealthed,
+			//then when the player specifically orders the unit to stop, we want to not autoacquire until
+			//he is able to stealth again. Of course, if he's detected, then don't bother trying.
+			if( !theUnit->getStatusBits().test( OBJECT_STATUS_STEALTHED ) && !theUnit->getStatusBits().test( OBJECT_STATUS_DETECTED ) )
+			{
+				//Not stealthed, not detected -- so do auto-acquire while stealthed?
+				if( !ai->canAutoAcquireWhileStealthed() )
+				{
+          StealthUpdate *stealth = theUnit->getStealth();
+					if( stealth )
+					{
+						//Delay the mood check time (for autoacquire) until after the unit can stealth again.
+						UnsignedInt stealthFrames = stealth->getStealthDelay();
+						//Skew it a little due to having a large group selected.
+						UnsignedInt randomFrames = GameLogicRandomValue( 0, LOGICFRAMES_PER_SECOND );
+						ai->setNextMoodCheckTime( TheGameLogic->getFrame() + stealthFrames + randomFrames );
+					}
+				}
+			}
+		}
+
+		if (reverse)
+			ai->aiReverseMoveToPosition( &dest, cmdSource );
+		else
+			ai->aiMoveToPosition( &dest, cmdSource );
 	}
 }
 //-------------------------------------------------------------------------------------------------
@@ -1588,7 +2132,7 @@ void clampWaypointPosition( Coord3D &position, Int margin )
 /**
  * Move to given position(s)
  */
-void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, CommandSourceType cmdSource )
+void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, CommandSourceType cmdSource, Bool reverse )
 {
 
   Coord3D position = *p_posIn;
@@ -1603,7 +2147,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	Coord3D dest;
 	Bool tightenGroup = FALSE;
 
-	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
+	Bool isFormation = getMinMaxAndCenter( &min, &max, &center, !addWaypoint && reverse );
 	if (addWaypoint)
   {
     isFormation = false;
@@ -1611,7 +2155,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
 
 	if (!addWaypoint && !isFormation) {
-		friend_computeGroundPath(pos, cmdSource);
+		friend_computeGroundPath(pos, cmdSource, reverse);
 		didInfantry = friend_moveInfantryToPos(pos, cmdSource);
 		didVehicles = friend_moveVehicleToPos(pos, cmdSource);
 	}
@@ -1637,7 +2181,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
     if ( groupMember->isKindOf( KINDOF_PRODUCED_AT_HELIPAD ) )//helicopter
     {
-      isFormation = FALSE;
+      //isFormation = FALSE;
       extraMargin = MAX( extraMargin, groupMember->getGeometryInfo().getMajorRadius() );
     }
     else if ( groupMember->isKindOf( KINDOF_AIRCRAFT ) )// fixed wing aircraft only
@@ -1645,7 +2189,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 			if ( groupMember->getAI() && groupMember->getAI()->isDoingGroundMovement() == FALSE ) //if unit is airborne
       {
 				tightenGroup = FALSE;	// Don't tighten aircraft.  It is a bad idea. jba.
-				isFormation = FALSE;//then keep spread formation after move
+				//isFormation = FALSE;//then keep spread formation after move
       }
 
       extraMargin = MAX( extraMargin, STD_AIRCRAFT_EXTRA_MARGIN );
@@ -1673,8 +2217,8 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	}
 
 	if (isFormation) {
-		friend_computeGroundPath(pos, cmdSource);
-		friend_moveFormationToPos(pos, cmdSource);
+		friend_computeGroundPath(pos, cmdSource, reverse);
+		friend_moveFormationToPos(pos, cmdSource, reverse);
 		return;
 	}
 
@@ -1689,7 +2233,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 		{
 			continue; // don't bother telling the occupants to move.
 		}
-		if( (*i)->isKindOf( KINDOF_IMMOBILE ) )
+		if( !(*i)->isMobileNonStatusNotAttacking(FALSE) )
 		{
 			continue;
 		}
@@ -1742,6 +2286,7 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 	for (theUnit = iter->first(); theUnit; theUnit = iter->next())
 	{
 		theUnit->setFormationID(NO_FORMATION_ID);
+		theUnit->setFormationIsCommandMap(FALSE);
 		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
 		if (firstUnit) {
 			if (isFormation) {
@@ -1782,7 +2327,10 @@ void AIGroup::groupMoveToPosition( const Coord3D *p_posIn, Bool addWaypoint, Com
 
 		if( !addWaypoint )
 		{
-			ai->aiMoveToPosition( &dest, cmdSource );
+			if (reverse)
+				ai->aiReverseMoveToPosition( &dest, cmdSource );
+			else
+				ai->aiMoveToPosition( &dest, cmdSource );
 		}
 		else
 		{
@@ -1823,7 +2371,7 @@ void AIGroup::groupScatter( CommandSourceType cmdSource )
 		{
 			continue; // don't bother telling the occupants to move.
 		}
-		if( (*i)->isKindOf( KINDOF_IMMOBILE ) )
+		if( (*i)->isKindOf( KINDOF_IMMOBILE ) || (*i)->testStatus( OBJECT_STATUS_IMMOBILE ))
 		{
 			continue;
 		}
@@ -1921,7 +2469,7 @@ void AIGroup::groupTightenToPosition( const Coord3D *pos, Bool addWaypoint, Comm
 		{
 			continue; // don't bother telling the occupants to move.
 		}
-		if( (*i)->isKindOf( KINDOF_IMMOBILE ) )
+		if( (*i)->isKindOf( KINDOF_IMMOBILE ) || (*i)->testStatus( OBJECT_STATUS_IMMOBILE ))
 		{
 			continue;
 		}
@@ -2160,7 +2708,7 @@ void AIGroup::groupFollowPath( const std::vector<Coord3D>* path, Object *ignoreO
 /**
  * Attack given object
  */
-void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShotsToFire, CommandSourceType cmdSource )
+void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShotsToFire, CommandSourceType cmdSource, Bool doResetActivatedInGUI, Bool doResetActivatedInGUIForSameUnit )
 {
 	if (!victim) {
 		// Hard to kill em if they're already dead.  jba
@@ -2205,7 +2753,10 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 				for( ContainedItemsList::const_iterator it = items->begin(); it != items->end(); ++it )
 				{
 					Object* garrisonedMember = *it;
-					CanAttackResult result = garrisonedMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource );
+
+					if (!contain->isPassengerAllowedToFire(garrisonedMember->getID())) continue;
+
+					CanAttackResult result = garrisonedMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource, (WeaponSlotType)-1, TRUE );
 					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
 						AIUpdateInterface *memberAI = garrisonedMember->getAI();
@@ -2228,8 +2779,42 @@ void AIGroup::groupAttackObjectPrivate( Bool forced, Object *victim, Int maxShot
 			spawnInterface->orderSlavesToAttackTarget( victim, maxShotsToFire, cmdSource );
 		}
 
+		if(!theUnit->getEquipAttackableObjectIDs().empty())
+		{
+			std::vector<ObjectID> IDs = theUnit->getEquipAttackableObjectIDs();
+			for( std::vector<ObjectID>::const_iterator it = IDs.begin(); it != IDs.end(); ++it )
+			{
+				Object* equipMember = TheGameLogic->findObjectByID(*it);
+				if(equipMember)
+				{
+					CanAttackResult result = equipMember->getAbleToAttackSpecificObject( forced ? ATTACK_NEW_TARGET_FORCED : ATTACK_NEW_TARGET, victim, cmdSource, (WeaponSlotType)-1, TRUE );
+					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+					{
+						AIUpdateInterface *equipAI = equipMember->getAI();
+						if( equipAI )
+						{
+							if (forced)
+								equipAI->aiForceAttackObject( victim, maxShotsToFire, cmdSource );
+							else
+								equipAI->aiAttackObject( victim, maxShotsToFire, cmdSource );
+						}
+					}
+				}
+			}
+		}
+	
 		//Order the specific group object to attack!
 		AIUpdateInterface *ai = theUnit->getAIUpdateInterface();
+
+		if( doResetActivatedInGUIForSameUnit || (doResetActivatedInGUI && (!ai || ai->getGoalObject() != victim)) )
+		{
+			theUnit->setWeaponsActivatedByGUI(FALSE);
+		}
+		else if(theUnit->getWeaponSlotActivatedByGUI() >= 0 && doResetActivatedInGUI)
+		{
+			theUnit->setWeaponLock( theUnit->getWeaponSlotActivatedByGUI(), LOCKED_TEMPORARILY );
+		}
+
 		if( ai && theUnit != victim )
 		{
 			if (forced)
@@ -2293,6 +2878,9 @@ void AIGroup::groupAttackPosition( const Coord3D *pos, Int maxShotsToFire, Comma
 				for( ContainedItemsList::const_iterator it = items->begin(); it != items->end(); ++it )
 				{
 					Object* garrisonedMember = *it;
+
+					if (!contain->isPassengerAllowedToFire(garrisonedMember->getID())) continue;
+
 					CanAttackResult result = garrisonedMember->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, &attackPos, cmdSource ) ;
 					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 					{
@@ -2311,6 +2899,27 @@ void AIGroup::groupAttackPosition( const Coord3D *pos, Int maxShotsToFire, Comma
 		if( spawnInterface && !spawnInterface->doSlavesHaveFreedom() )
 		{
 			spawnInterface->orderSlavesToAttackPosition( &attackPos, maxShotsToFire, cmdSource );
+		}
+
+		if(!(*i)->getEquipAttackableObjectIDs().empty())
+		{
+			std::vector<ObjectID> IDs = (*i)->getEquipAttackableObjectIDs();
+			for( std::vector<ObjectID>::const_iterator it = IDs.begin(); it != IDs.end(); ++it )
+			{
+				Object* equipMember = TheGameLogic->findObjectByID(*it);
+				if(equipMember)
+				{
+					CanAttackResult result = equipMember->getAbleToUseWeaponAgainstTarget( ATTACK_NEW_TARGET, nullptr, &attackPos, cmdSource ) ;
+					if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
+					{
+						AIUpdateInterface *equipAI = equipMember->getAI();
+						if( equipAI )
+						{
+							equipAI->aiAttackPosition( &attackPos, maxShotsToFire, cmdSource );
+						}
+					}
+				}
+			}
 		}
 
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
@@ -2437,6 +3046,166 @@ void AIGroup::groupEnter( Object *obj, CommandSourceType cmdSource )
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+// Smart Garrison helpers
+//-------------------------------------------------------------------------------------------------
+
+// Coarse transport category, so Smart Garrison never mixes structures / vehicles / aircraft.
+enum SmartGarrisonCategory { SGC_STRUCTURE, SGC_VEHICLE, SGC_AIRCRAFT, SGC_OTHER };
+
+static SmartGarrisonCategory getSmartGarrisonCategory( const Object *obj )
+{
+	if( obj->isKindOf( KINDOF_STRUCTURE ) ) return SGC_STRUCTURE;
+	if( obj->isKindOf( KINDOF_AIRCRAFT ) )  return SGC_AIRCRAFT;	// planes and helicopters
+	if( obj->isKindOf( KINDOF_VEHICLE ) )   return SGC_VEHICLE;
+	return SGC_OTHER;
+}
+
+// Free passenger slots for a container, accounting for multi-slot riders.
+static Int getSmartGarrisonFreeSlots( ContainModuleInterface *contain )
+{
+	Int maxSlots = contain->getContainMax();
+
+	// A rider-swap transport (e.g. combat bike) accepts a new rider by kicking out the old one,
+	// so it always has room for its capacity regardless of the current occupant.
+	if( contain->isRiderChangeContain() )
+		return maxSlots > 0 ? maxSlots : 1;
+
+	if( maxSlots < 0 )
+		return INT_MAX;	// unbounded container
+	Int used = (Int)contain->getContainCount() + contain->getExtraSlotsInUse();
+	Int freeSlots = maxSlots - used;
+	return freeSlots > 0 ? freeSlots : 0;
+}
+
+struct SmartGarrisonCandidate
+{
+	Object *transport;
+	Int remaining;		///< free slots left as we assign members
+	Bool sameType;		///< same template as the initial (hovered) target
+};
+
+// Sort order (applied to everything except the pinned target): same-type transports first,
+// then those with more empty slots first.
+static bool smartGarrisonCandidateLess( const SmartGarrisonCandidate &a, const SmartGarrisonCandidate &b )
+{
+	if( a.sameType != b.sameType )
+		return a.sameType ? true : false;	// same-type before other-type
+	return a.remaining > b.remaining;			// more empty slots first
+}
+
+//-------------------------------------------------------------------------------------------------
+/**
+ * Distribute the selected group across the hovered target transport and other nearby transports,
+ * round-robin by priority: (1) the target, (2) same-type transports, (3) more empty slots, (4) rest.
+ * Units that find no free slot forget the order (get no command). Structures / vehicles / aircraft
+ * are never mixed. Cheap: one partition query + small loops, no per-frame work.
+ */
+void AIGroup::groupSmartGarrison( Object *target, CommandSourceType cmdSource )
+{
+	if( target == nullptr || target->getContain() == nullptr || m_memberList.empty() )
+		return;
+
+	const SmartGarrisonCategory targetCat = getSmartGarrisonCategory( target );
+	const ThingTemplate *targetTmpl = target->getTemplate();
+	const Player *owner = target->getControllingPlayer();
+	Object *firstMember = m_memberList.front();	// representative rider for the "can enter" prefilter
+
+	std::vector<SmartGarrisonCandidate> candidates;
+
+	// The hovered target is always the first, pinned candidate (if it still has room).
+	Bool targetPinned = false;
+	{
+		Int freeSlots = getSmartGarrisonFreeSlots( target->getContain() );
+		if( freeSlots > 0 )
+		{
+			SmartGarrisonCandidate c;
+			c.transport = target;
+			c.remaining = freeSlots;
+			c.sameType = true;
+			candidates.push_back( c );
+			targetPinned = true;
+		}
+	}
+
+	// One cheap range query for other same-category transports of ours to redistribute into.
+	PartitionFilterSamePlayer      fPlayer( owner );
+	PartitionFilterPossibleToEnter fEnter( firstMember, cmdSource );
+	PartitionFilter *filters[] = { &fPlayer, &fEnter, nullptr };
+
+	MemoryPoolObjectHolder holder;
+	SimpleObjectIterator *iter = ThePartitionManager->iterateObjectsInRange(
+		target, TheGlobalData->m_smartGarrisonRange, FROM_CENTER_2D, filters, ITER_FASTEST );
+	holder.hold( iter );
+
+	for( Object *o = iter ? iter->first() : nullptr; o != nullptr; o = iter->next() )
+	{
+		if( o == target )
+			continue;
+		ContainModuleInterface *contain = o->getContain();
+		if( contain == nullptr )
+			continue;
+		if( getSmartGarrisonCategory( o ) != targetCat )
+			continue;	// never mix structures / vehicles / aircraft
+		Int freeSlots = getSmartGarrisonFreeSlots( contain );
+		if( freeSlots <= 0 )
+			continue;
+
+		SmartGarrisonCandidate c;
+		c.transport = o;
+		c.remaining = freeSlots;
+		c.sameType = o->getTemplate()->isEquivalentTo( targetTmpl ) ? true : false;
+		candidates.push_back( c );
+	}
+
+	if( candidates.empty() )
+		return;
+
+	// Order the candidates by priority, keeping the pinned target at the front.
+	std::vector<SmartGarrisonCandidate>::iterator sortBegin = candidates.begin();
+	if( targetPinned )
+		++sortBegin;
+	if( candidates.end() - sortBegin > 1 )
+		std::sort( sortBegin, candidates.end(), smartGarrisonCandidateLess );
+
+	// Round-robin the selected members across the ordered candidates.
+	const Int numCandidates = (Int)candidates.size();
+	Int idx = 0;
+	std::list<Object *>::iterator it;
+	for( it = m_memberList.begin(); it != m_memberList.end(); ++it )
+	{
+		Object *member = *it;
+		AIUpdateInterface *ai = member->getAIUpdateInterface();
+		if( ai == nullptr )
+			continue;
+
+		Int cost = member->getTransportSlotCount();
+		if( cost <= 0 )
+			continue;	// not transportable -- forget the order
+
+		// Find the next candidate (round-robin from idx) that can take this member.
+		Int assigned = -1;
+		for( Int tries = 0; tries < numCandidates; ++tries )
+		{
+			Int k = (idx + tries) % numCandidates;
+			SmartGarrisonCandidate &cand = candidates[k];
+			if( cand.remaining >= cost
+					&& cand.transport->getContain()->isValidContainerFor( member, FALSE ) )
+			{
+				assigned = k;
+				break;
+			}
+		}
+
+		if( assigned < 0 )
+			continue;	// no room anywhere -- this unit forgets the order
+
+		candidates[assigned].remaining -= cost;
+		ai->aiEnter( candidates[assigned].transport, cmdSource );
+		idx = (assigned + 1) % numCandidates;	// advance the round-robin cursor
+	}
+}
+
 /**
  * Get near given object and wait for enter clearance
  */
@@ -2507,6 +3276,117 @@ void AIGroup::groupEvacuate( CommandSourceType cmdSource )
 	}
 }
 
+void AIGroup::groupEnterToSelected( CommandSourceType cmdSource, const GameMessage *msg )
+{
+	// Do nothing for invalid radius
+	//if(orderData.Radius <= 0.0f)
+	//	return;
+
+	// Sanity
+	if (!msg)
+		return;
+
+	OrderNearbyData orderData = msg->getOrderNearbyData();
+	if(orderData.Radius <= 0.0f) {
+		DEBUG_CRASH(("ENTER_ME command requires a declared radius to be used"));
+		return;
+	}
+
+	ListObjectPtrIt it;
+
+	for (it = m_memberList.begin(); it != m_memberList.end(); /* empty */) {
+		Object *obj = (*it);
+		// If we are not valid, or we don't have any contain, do nothing
+		if (!obj || !obj->getContain()) {
+			continue;
+		}
+
+		PartitionFilterRelationship relationship( obj, PartitionFilterRelationship::ALLOW_ALLIES);
+		PartitionFilterAcceptByKindOf filterKindof( orderData.RequiredMask, orderData.ForbiddenMask );
+		PartitionFilterSameMapStatus filterMapStatus(obj);
+		PartitionFilterAlive filterAlive;
+		PartitionFilter *filters[] = { &relationship, &filterKindof, &filterAlive, &filterMapStatus, nullptr };
+
+		// scan objects in our region
+		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( obj->getPosition(), 
+																		orderData.Radius, 
+																		FROM_CENTER_2D, 
+																		filters, ITER_FASTEST );
+		MemoryPoolObjectHolder hold( iter );
+
+		UnsignedInt delay = orderData.MinDelay > 0 || orderData.MaxDelay > 0 ? GameLogicRandomValue(orderData.MinDelay, orderData.MaxDelay) : 0;
+
+		for( Object *currentObj = iter->first(); currentObj; currentObj = iter->next() )
+		{
+			// Don't contain ally objects
+			if( currentObj->getTeam() != obj->getTeam() )
+				continue;
+
+			// Don't do already designated objects
+			/*Bool alreadyDesignated = FALSE;
+			for(VecObjectIDIt::const_iterator it_2 = m_memberListExtraID.begin(); it_2 != m_memberListExtraID.end(); ++it_2)
+			{
+				if(currentObj->getID() == (*it_2))
+				{
+					alreadyDesignated = TRUE;
+					break;
+				}
+			}
+			if(alreadyDesignated)
+				continue;
+			*/
+
+			// Generally, selected object cant contain the Object
+			if( !TheActionManager->canEnterObject( currentObj, obj, cmdSource, CHECK_CAPACITY ) )
+			{
+				continue;
+			}
+
+			// Skip the check for current members
+			if( isMember(currentObj) )
+				continue;
+
+			// Skip check for members that are currently contained
+			if( currentObj->isContained() )
+				continue;
+
+			// If we are unselectable, don't tell us to contain
+			ObjectStatusMaskType status = currentObj->getStatusBits();
+			if( status.test(OBJECT_STATUS_NO_COLLISIONS) || status.test(OBJECT_STATUS_MASKED) || status.test(OBJECT_STATUS_UNSELECTABLE) )
+				continue;
+
+			AIUpdateInterface *ai = currentObj->getAIUpdateInterface();
+
+			if( ai )
+			{
+				delay += orderData.IntervalDelay;
+				if(delay)
+				{
+					std::vector<GameMessageArgumentStruct> arguments;
+					GameMessageArgumentStruct curArgument;
+
+					curArgument.type = ARGUMENTDATATYPE_OBJECTID;
+					curArgument.data.objectID = INVALID_ID;
+					arguments.push_back(curArgument);
+
+					curArgument.data.objectID = obj->getID();
+					arguments.push_back(curArgument);
+
+					currentObj->appendDelayedCommand(GameMessage::MSG_ENTER, arguments, delay);
+				}
+				else
+					ai->aiEnter(obj, cmdSource);
+			}
+			
+			//m_memberListExtraID.push_back( currentObj->getID() );
+		}
+
+		++it;
+	}
+
+	//m_memberListExtraID.clear();
+}
+
 /**
 	* Execute railed transport behavior
 	*/
@@ -2544,9 +3424,14 @@ void AIGroup::groupGoProne( const DamageInfo *damageInfo, CommandSourceType cmdS
  */
 void AIGroup::groupGuardPosition( const Coord3D *pos, GuardMode guardMode, CommandSourceType cmdSource )
 {
-	if (!pos) {
+	if (!pos && guardMode != GUARDMODE_CURRENT_POS && guardMode != GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT && guardMode != GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY ) {
 		return;
 	}
+
+	Coord3D guardPos;
+	guardPos.set( *pos );
+
+	Bool guardCurrentPos = guardMode == GUARDMODE_CURRENT_POS || guardMode == GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT || guardMode == GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY ? TRUE : FALSE;
 
 	std::list<Object *>::iterator i;
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
@@ -2554,7 +3439,10 @@ void AIGroup::groupGuardPosition( const Coord3D *pos, GuardMode guardMode, Comma
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
 		if (ai)
 		{
-			ai->aiGuardPosition( pos, guardMode, cmdSource );
+			if(guardCurrentPos)
+				guardPos.set(*(*i)->getPosition());
+
+			ai->aiGuardPosition( &guardPos, guardMode, cmdSource );
 		}
 	}
 }
@@ -2633,14 +3521,16 @@ void AIGroup::groupHackInternet( CommandSourceType cmdSource )				///< Begin hac
 }
 
 
-void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create a formation.
+void AIGroup::groupCreateFormation( CommandSourceType cmdSource, Bool isCommandMap, Bool isReverseMove )				///< Create a formation.
 {
-	Coord3D center;
-	Coord2D min;
-	Coord2D max;
-	Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
+	//Coord3D center;
+	//Coord2D min;
+	//Coord2D max;
+	//Bool isFormation = getMinMaxAndCenter( &min, &max, &center );
 	std::list<Object *>::iterator i;
-	FormationID id = TheAI->getNextFormationID();
+	//FormationID id = TheAI->getNextFormationID();
+	Bool createNewGroup = FALSE;
+	FormationID lastCountID = NO_FORMATION_ID;
 
 	Int count = 0;
 	FormationID countID = NO_FORMATION_ID;
@@ -2648,12 +3538,33 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create
 	{
 		count++;
 		countID = (*i)->getFormationID();
+
+		// New - If the command is not from command map but from Moving as formation, we count the whether to create a new formation based on members present
+		if(!isReverseMove && !isCommandMap)
+		{
+			if(countID == NO_FORMATION_ID && lastCountID != NO_FORMATION_ID)
+				createNewGroup = TRUE;
+
+			lastCountID = countID;
+		}
 	}
+
+	// New - If the command is not from command map but from Moving as formation
+	//       determine whether to create the group based on the information above and whether the last member counted has a group already
+	if(!isReverseMove && !isCommandMap && !createNewGroup && lastCountID != NO_FORMATION_ID)
+		return;
+
+	Coord3D center;
+	Coord2D min;
+	Coord2D max;
+	Bool isFormation = getMinMaxAndCenter( &min, &max, &center, isReverseMove );
+	FormationID id = TheAI->getNextFormationID();
+
 	if (count==1 && countID!=NO_FORMATION_ID) {
 		isFormation = true;
 	}
 
-	if (isFormation) {
+	if (isFormation && !createNewGroup) {
 		id = NO_FORMATION_ID;
 	}
 
@@ -2661,14 +3572,38 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create
 	{
 		Object *obj = (*i);
 		AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
+
+		// New, don't overwrite the Formation set from Command Map and Those Moving in Groups
+		if(!isReverseMove && obj->getFormationIsCommandMap() && !isCommandMap)
+			continue;
+
 		if (ai)
 		{
 			Coord3D pos = *obj->getPosition();
 			Coord2D offset;
 			offset.x = pos.x - center.x;
 			offset.y = pos.y - center.y;
-			obj->setFormationID(id);
-			obj->setFormationOffset(offset);
+			if(isReverseMove)
+			{
+				if(id == NO_FORMATION_ID)
+				{
+					//obj->setIsDoingReverseMove();
+				}
+				else if(ai->getCurLocomotor() && ai->getCurLocomotor()->canMoveBackwards())
+				{
+					obj->setReverseFormationID(id);
+					obj->setReverseFormationOffset(offset);
+				}
+			}
+			else
+			{
+				obj->setFormationID(id);
+				obj->setFormationOffset(offset);
+			}
+
+			// New, don't mix the Formation set from Command Map and Moving in Groups
+			if(!isReverseMove && isCommandMap)
+				obj->setFormationIsCommandMap(id!=NO_FORMATION_ID);
 		}
 	}
 }
@@ -2678,7 +3613,7 @@ void AIGroup::groupCreateFormation( CommandSourceType cmdSource )				///< Create
  * don't use AIUpdateInterfaces!!! No special power uses an AIUpdateInterface immediately, but special
  * abilities, which are derived from special powers do... and are unit triggered. Those do have AI.
  */
-void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt commandOptions, Bool isSabotage )
 {
 	//This is the no target, no position version.
 	std::list<Object *>::iterator i;
@@ -2700,8 +3635,11 @@ void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt comma
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPower( object, spTemplate, CMD_FROM_PLAYER, commandOptions ) )
+				if( TheActionManager->canDoSpecialPower( object, spTemplate, CMD_FROM_PLAYER, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					mod->doSpecialPower( commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
@@ -2716,11 +3654,17 @@ void AIGroup::groupDoSpecialPower( UnsignedInt specialPowerID, UnsignedInt comma
  * don't use AIUpdateInterfaces!!! No special power uses an AIUpdateInterface immediately, but special
  * abilities, which are derived from special powers do... and are unit triggered. Those do have AI.
  */
-void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *objectInWay, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const Coord3D *location, Real angle, const Object *objectInWay, UnsignedInt commandOptions, Bool isSabotage )
 {
 
 
 	//This one requires a position
+	// Precompute the group center/formation state once so SPECIAL_JUMPJET members can each
+	// launch to their own formation-relative target instead of all piling on the click point.
+	Coord2D fMin, fMax;
+	Coord3D fCenter;
+	Bool isFormation = getMinMaxAndCenter( &fMin, &fMax, &fCenter );
+
 	std::list<Object *>::iterator i;
 	for( i = m_memberList.begin(); i != m_memberList.end(); )
 	{
@@ -2748,9 +3692,23 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPowerAtLocation( object, location, CMD_FROM_PLAYER, spTemplate, objectInWay, commandOptions ) )
+				// Validity/range is still checked against the shared click point.
+				if( TheActionManager->canDoSpecialPowerAtLocation( object, location, CMD_FROM_PLAYER, spTemplate, objectInWay, commandOptions, !isSabotage ) )
 				{
-					mod->doSpecialPowerAtLocation( location, angle, commandOptions );
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
+					// For jumpjet group launches, give each member its own formation-relative target
+					// so the group keeps its formation at the destination instead of stacking up.
+					Coord3D unitLoc = *location;
+					UnsignedInt opts = commandOptions;
+					if( spTemplate->getSpecialPowerType() == SPECIAL_JUMPJET )
+					{
+						computeIndividualDestination( &unitLoc, location, object, &fCenter, isFormation );
+						opts |= FORMATION_LAUNCH;
+					}
+
+					mod->doSpecialPowerAtLocation( &unitLoc, angle, opts );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
 				}
@@ -2760,12 +3718,56 @@ void AIGroup::groupDoSpecialPowerAtLocation( UnsignedInt specialPowerID, const C
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+// Chrono-style special power: the player picked a source and a destination. Both points arrive
+// together; validity/range is checked against the source point.
+//-------------------------------------------------------------------------------------------------
+void AIGroup::groupDoSpecialPowerAtMultipleLocations( UnsignedInt specialPowerID, const std::vector<Coord3D>& locs, UnsignedInt commandOptions, Bool isSabotage )
+{
+	if( locs.empty() )
+		return;
+
+	const Coord3D *firstLoc = &locs.front();
+
+	std::list<Object *>::iterator i;
+	for( i = m_memberList.begin(); i != m_memberList.end(); )
+	{
+		Object *object = (*i);
+
+		++i; // just in case the act of specialpowering changes this list
+
+		const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+		if( spTemplate )
+		{
+			// Have to justify the execution in case someone changed their button
+			if( spTemplate->getRequiredScience() != SCIENCE_INVALID )
+			{
+				if( !object->getControllingPlayer()->hasScience(spTemplate->getRequiredScience()) )
+					continue;// Nice try, smacktard.
+			}
+
+			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
+			if( mod )
+			{
+				if( TheActionManager->canDoSpecialPowerAtLocation( object, firstLoc, CMD_FROM_PLAYER, spTemplate, nullptr, commandOptions, !isSabotage ) )
+				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
+					object->doSpecialPowerAtMultipleLocations( spTemplate, locs, commandOptions );
+					object->friend_setUndetectedDefector( FALSE );// My secret is out
+				}
+			}
+		}
+	}
+}
+
 /**
  * The unit(s)/structure will perform it's special power -- special powers triggered by buildings
  * don't use AIUpdateInterfaces!!! No special power uses an AIUpdateInterface immediately, but special
  * abilities, which are derived from special powers do... and are unit triggered. Those do have AI.
  */
-void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *target, UnsignedInt commandOptions )
+void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *target, UnsignedInt commandOptions, Bool isSabotage )
 {
 	//This one requires a target
 	std::list<Object *>::iterator i;
@@ -2788,9 +3790,49 @@ void AIGroup::groupDoSpecialPowerAtObject( UnsignedInt specialPowerID, Object *t
 			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
 			if( mod )
 			{
-				if( TheActionManager->canDoSpecialPowerAtObject( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions ) )
+				if( TheActionManager->canDoSpecialPowerAtObject( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions, !isSabotage ) )
 				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
 					mod->doSpecialPowerAtObject( target, commandOptions );
+
+					object->friend_setUndetectedDefector( FALSE );// My secret is out
+				}
+			}
+		}
+	}
+}
+
+void AIGroup::groupDoSpecialPowerAtDrawable( UnsignedInt specialPowerID, Drawable *target, UnsignedInt commandOptions, Bool isSabotage )
+{
+	//This one requires a target
+	std::list<Object *>::iterator i;
+	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
+	{
+		//Special powers do a lot of different things, but the top level stuff doesn't use
+		//ai interface code. It finds the special power module and calls it directly for each object.
+
+		Object *object = (*i);
+		const SpecialPowerTemplate *spTemplate = TheSpecialPowerStore->findSpecialPowerTemplateByID( specialPowerID );
+		if( spTemplate )
+		{
+			// Have to justify the execution in case someone changed their button
+			if( spTemplate->getRequiredScience() != SCIENCE_INVALID )
+			{
+				if( !object->getControllingPlayer()->hasScience(spTemplate->getRequiredScience()) )
+					continue;// Nice try, smacktard.
+			}
+
+			SpecialPowerModuleInterface *mod = object->getSpecialPowerModule( spTemplate );
+			if( mod )
+			{
+				if( TheActionManager->canDoSpecialPowerAtDrawable( object, target, CMD_FROM_PLAYER, spTemplate, commandOptions, !isSabotage ) )
+				{
+					if(isSabotage)
+						commandOptions |= IS_DOING_SABOTAGE;
+
+					mod->doSpecialPowerAtDrawable( target, commandOptions );
 
 					object->friend_setUndetectedDefector( FALSE );// My secret is out
 				}
@@ -2879,6 +3921,42 @@ void AIGroup::groupToggleOvercharge( CommandSourceType cmdSource )
 				obi->toggle();
 
 		}
+
+	}
+
+}
+
+/**
+	* Tell all things in the group to disable their power ... if possible
+	*/
+void AIGroup::groupDisablePower( CommandSourceType cmdSource )
+{
+	std::list<Object *>::iterator i;
+	Object *obj;
+	Bool checked = FALSE;
+	Bool hasDisabledPower = FALSE;
+
+	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
+	{
+
+		// get object
+		obj = *i;
+
+		// We can't disable you
+		if(!obj->isKindOf(KINDOF_POWERED) && !obj->isKindOf(KINDOF_POWERED_TANK) && obj->getTemplate()->getEnergyProduction() == 0 && obj->getTemplate()->getEnergyBonus() == 0)
+			continue;
+
+		if(!checked && obj->isDisabledPowerByCommand() && !obj->isPowerSabotaged())
+		{
+			checked = TRUE;
+			hasDisabledPower = TRUE;
+			i = m_memberList.begin();
+		}
+
+		if(!hasDisabledPower)
+			obj->doDisablePower(TRUE);
+		else
+			obj->clearDisablePower(TRUE);
 
 	}
 
@@ -2980,6 +4058,13 @@ void AIGroup::groupDoCommandButton( const CommandButton *commandButton, CommandS
 //-------------------------------------------------------------------------------------
 void AIGroup::groupDoCommandButtonAtPosition( const CommandButton *commandButton, const Coord3D *pos, CommandSourceType cmdSource )
 {
+	if(commandButton && commandButton->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+	{
+		groupCreateFormation( cmdSource, FALSE, TRUE );
+		groupMoveToPosition( pos, false, cmdSource, TRUE );
+		return;
+	}
+
 	std::list<Object *>::iterator i;
 	Object *source;
 
@@ -3086,6 +4171,25 @@ void AIGroup::releaseWeaponLockForGroup(WeaponLockType lockType)
 	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
 	{
 		(*i)->releaseWeaponLock(lockType);
+	}
+}
+
+void AIGroup::setWeaponsActivatedByGUIForGroup(Bool set, WeaponSlotType weaponSlot)
+{
+	std::list<Object *>::iterator i;
+	for( i = m_memberList.begin(); i != m_memberList.end(); ++i )
+	{
+		if(!set)
+		{
+			const AIUpdateInterface *ai = (*i)->getAIUpdateInterface();
+			if (ai && ai->isAttacking()) {
+				(*i)->setWeaponsActivatedByGUI(set);
+			}
+		}
+		else
+		{
+			(*i)->setWeaponsActivatedByGUI(set, weaponSlot);
+		}
 	}
 }
 
@@ -3275,7 +4379,8 @@ Object *AIGroup::getCommandButtonSourceObject( GUICommandType type )
 		const CommandButton *commandButton;
 		for(Int i = 0; i < MAX_COMMANDS_PER_SET; ++i)
 		{
-			commandButton = commandSet->getCommandButton(i);
+			commandButton = object->getCommandButtonForSlot(i, commandSet); 
+
 			if(commandButton && (commandButton->getCommandType() == type)) {
 				return object;
 			}

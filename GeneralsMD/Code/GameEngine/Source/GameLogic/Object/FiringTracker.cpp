@@ -52,6 +52,9 @@ FiringTracker::FiringTracker(Thing* thing, const ModuleData *modData) : UpdateMo
  	m_frameToForceReload = 0;
 	m_frameToStopLoopingSound = 0;
 	m_audioHandle = AHSV_NoSound;
+	m_firingTrackerBonusCleared = FALSE;
+	m_prevTargetCustomWeaponBonus.clear();
+	m_prevTargetCustomStatus.clear();
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
 
@@ -82,6 +85,7 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 	Object *me = getObject();
 	const Object *victim = TheGameLogic->findObjectByID(victimID); // May be null for ground shot
 
+	// Old Target Designator Logic
 	if( victim && victim->testStatus(OBJECT_STATUS_FAERIE_FIRE) )
 	{
 		if( !me->testWeaponBonusCondition(WEAPONBONUSCONDITION_TARGET_FAERIE_FIRE) )
@@ -97,6 +101,36 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 		{
 			me->clearWeaponBonusCondition(WEAPONBONUSCONDITION_TARGET_FAERIE_FIRE);
 		}
+	}
+
+	// New Buff based 'WeaponBonusAgainst' Logic
+	{
+		WeaponBonusConditionFlags targetBonusFlags = 0;  // if we attack the ground, this stays empty
+		std::vector<AsciiString> targetBonusCustomFlags;
+		if (victim)
+		{
+			targetBonusFlags = victim->getWeaponBonusConditionAgainst();
+			targetBonusCustomFlags = victim->getCustomWeaponBonusConditionAgainst();
+		}
+
+		// If new bonus is different from previous, remove it.
+		if (targetBonusFlags != m_prevTargetWeaponBonus || targetBonusCustomFlags != m_prevTargetCustomWeaponBonus) {
+			me->removeWeaponBonusConditionFlags(m_prevTargetWeaponBonus);
+			me->removeCustomWeaponBonusConditionFlags(m_prevTargetCustomWeaponBonus);
+		}
+
+		// If we have a new bonus, apply it
+		if (targetBonusFlags != 0) {
+			me->applyWeaponBonusConditionFlags(targetBonusFlags);
+		}
+
+		if (!targetBonusCustomFlags.empty()) {
+			me->applyCustomWeaponBonusConditionFlags(targetBonusCustomFlags);
+		}
+
+		m_prevTargetWeaponBonus = targetBonusFlags;
+		m_prevTargetCustomWeaponBonus = targetBonusCustomFlags;
+
 	}
 
 	if( victimID == m_victimID )
@@ -157,12 +191,20 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 	UnsignedInt fireSoundLoopTime = weaponFired->getFireSoundLoopTime();
 	if (fireSoundLoopTime != 0)
 	{
-		// If the sound has stopped playing, then we need to re-add it.
-		if (m_frameToStopLoopingSound == 0 || !TheAudio->isCurrentlyPlaying(m_audioHandle))
+		AudioEventRTS audio = weaponFired->getFireSound();
+
+		// Re-add the looping sound if it has stopped playing, or if the weapon (and thus
+		// the fire sound) has switched to a different sound while we keep firing.
+		Bool fireSoundChanged = (audio.getEventName() != m_currentFireSoundName);
+		if (m_frameToStopLoopingSound == 0 || !TheAudio->isCurrentlyPlaying(m_audioHandle) || fireSoundChanged)
 		{
-			AudioEventRTS audio = weaponFired->getFireSound();
+			// Stop the previous looping sound (e.g. weapon switched to one with a different fire sound).
+			TheAudio->removeAudioEvent( m_audioHandle );
+			m_audioHandle = AHSV_NoSound;
+
 			audio.setObjectID(getObject()->getID());
 			m_audioHandle = TheAudio->addAudioEvent( &audio );
+			m_currentFireSoundName = audio.getEventName();
 		}
 		m_frameToStopLoopingSound = now + fireSoundLoopTime;
 	}
@@ -171,11 +213,364 @@ void FiringTracker::shotFired(const Weapon* weaponFired, ObjectID victimID)
 		AudioEventRTS fireAndForgetSound = weaponFired->getFireSound();
 		fireAndForgetSound.setObjectID(getObject()->getID());
 		TheAudio->addAudioEvent(&fireAndForgetSound);
-		m_frameToStopLoopingSound = 0;
+		// m_frameToStopLoopingSound = 0;
 	}
 
 
 	setWakeFrame(me, calcTimeToSleep());
+}
+
+//-------------------------------------------------------------------------------------------------
+void FiringTracker::computeFiringTrackerBonus(const Weapon *weaponToFire, const Object *victim)
+{
+	if(!victim || !weaponToFire)
+		return;
+
+	// do nothing if it is the last victim we shot, and no new statuses have been added to it.
+	if(m_victimID == victim->getID() && m_prevTargetStatus == victim->getStatusBits() && m_prevTargetCustomStatus == victim->getCustomStatus())
+		return;
+
+	Object *me = getObject();
+
+	std::vector<ObjectStatusTypes> weaponStatusTypes = weaponToFire->getFiringTrackerStatusTypes();
+	WeaponBonusConditionType weaponBonusType = weaponToFire->getFiringTrackerBonusCondition();
+	std::vector<AsciiString> customWeaponStatusTypes = weaponToFire->getFiringTrackerCustomStatusTypes();
+	AsciiString customWeaponBonusType = weaponToFire->getFiringTrackerCustomBonusCondition();
+
+	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
+	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
+
+	// Get bonuses granted outside of FiringTrackerBonus
+	WeaponBonusConditionFlags weaponBonusTypeNoClear = me->getWeaponBonusConditionIgnoreClear();
+	std::vector<AsciiString> customWeaponBonusTypeNoClear = me->getCustomWeaponBonusConditionIgnoreClear();
+
+	Bool DoStatusBuff = FALSE;
+	// Get the victim's custom status
+	std::vector<AsciiString> victimCustomStatus = victim->getCustomStatus();
+
+	// New Bonuses Set, enable the bonuses to be cleared
+	m_firingTrackerBonusCleared = FALSE;
+	m_prevTargetStatus = victim->getStatusBits();
+	m_prevTargetCustomStatus = victimCustomStatus;
+
+	// Test for Bonuses Provided by the weapon template.
+	/// The bonuses are granted when any of the statuses are found on the target
+	if(!customWeaponBonusType.isEmpty() && !victimCustomStatus.empty())
+	{
+		for (std::vector<AsciiString>::const_iterator it = customWeaponStatusTypes.begin(); it != customWeaponStatusTypes.end(); ++it )
+		{
+			DoStatusBuff = checkWithinStringVec((*it), victimCustomStatus);
+			if(DoStatusBuff)
+				break;
+			/*std::vector<AsciiString>::const_iterator it2 = victimCustomStatus.find(*it);
+			if(it2 != victimCustomStatus.end() && it2->second == 1)
+			{
+				DoStatusBuff = TRUE;
+				break;
+			}*/
+		}
+	}
+	if(!DoStatusBuff && !weaponStatusTypes.empty())
+	{
+		for (std::vector<ObjectStatusTypes>::const_iterator it = weaponStatusTypes.begin(); it != weaponStatusTypes.end(); ++it)
+		{
+			DoStatusBuff = victim->testStatus(*it);
+			if(DoStatusBuff)
+				break;
+		}
+	}
+	if( DoStatusBuff == TRUE )
+	{
+		if(!customWeaponBonusType.isEmpty())
+		{
+			me->setCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+		}
+		if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
+		{
+			if( !me->testWeaponBonusCondition(weaponBonusType) )
+			{
+				// We shoot faster at guys marked thusly
+				me->setWeaponBonusCondition(weaponBonusType, FALSE);
+			}
+		}
+	}
+	else
+	{
+		// A ground shot or the lack of the status on the target will clear this
+		if(!customWeaponBonusType.isEmpty())
+		{
+			// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
+			if(!checkWithinStringVec(customWeaponBonusType, customWeaponBonusTypeNoClear))
+				me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+
+			//if(it != customWeaponBonusTypeNoClear.end())
+			//{
+				// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
+			//	if(it->second == 0) 
+			//		me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+			//}
+			//else
+			//{
+			//	me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+			//}
+		}
+		if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
+		{
+			//if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+			if ( weaponBonusTypeNoClear.test(weaponBonusType) && me->testWeaponBonusCondition(weaponBonusType) )
+			{
+				me->clearWeaponBonusCondition(weaponBonusType, FALSE);
+			}
+		}
+	}
+
+	// The bonus provided by the Global Data
+
+	// Test for each of the Custom Bonuses within the Global Data
+	if(!globalTrackerCustomCT.empty())
+	{
+
+		for (std::vector<GlobalData::TrackerCustomBonusCT>::const_iterator it = globalTrackerCustomCT.begin(); it != globalTrackerCustomCT.end(); ++it )
+		{
+
+			Bool DoBuffGlobal = FALSE;
+			// Test for the Custom Statuses first
+			/*if(!victimCustomStatus.empty())
+			{
+				for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
+				{
+					std::vector<AsciiString>::const_iterator it3 = victimCustomStatus.find(*it2);
+					if(it3 != victimCustomStatus.end() && it3->second == 1)
+					{
+						DoBuffGlobal = TRUE;
+						break;
+					}
+				}
+			}*/
+			if(!victimCustomStatus.empty())
+			{
+				for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
+				{
+					DoBuffGlobal = checkWithinStringVec((*it2), victimCustomStatus);
+					if(DoBuffGlobal)
+						break;
+				}
+			}
+			// If don't have the required status, Test for all the ObjectStatuses
+			if(!DoBuffGlobal && !it->status.empty())
+			{
+				for (std::vector<ObjectStatusTypes>::const_iterator it3 = it->status.begin(); it3 != it->status.end(); ++it3)
+				{
+					DoBuffGlobal = victim->testStatus(*it3);
+					if(DoBuffGlobal)
+						break;
+				}
+			}
+
+			// Provide the Custom Weapon Bonus to the Attacker
+			if(!it->bonus.isEmpty())
+			{
+				if( DoBuffGlobal == TRUE )
+				{
+					me->setCustomWeaponBonusCondition(it->bonus, FALSE);
+				}
+				// Remove the Custom Weapon Bonus from the Attacker
+				else
+				{
+					// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
+					if(!checkWithinStringVec(it->bonus, customWeaponBonusTypeNoClear))
+						me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
+					//std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear.find(it->bonus);
+
+					//if(it2 != customWeaponBonusTypeNoClear->end())
+					//{
+						// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
+					//	if(it2->second == 0) 
+					//		me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
+					//}
+					//else
+					//{
+					//	me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
+					//}
+				}
+			}
+
+		}
+
+	}
+
+	// Test for each of the Weapon Bonuses within the Global Data
+	if(!globalTrackerCT.empty())
+	{
+
+		for (std::vector<GlobalData::TrackerBonusCT>::const_iterator it = globalTrackerCT.begin(); it != globalTrackerCT.end(); ++it )
+		{
+
+			Bool DoBuffGlobal = FALSE;
+			// Test for the custom statuses first
+			if(!victimCustomStatus.empty())
+			{
+				for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
+				{
+					DoBuffGlobal = checkWithinStringVec((*it2), victimCustomStatus);
+					if(DoBuffGlobal)
+						break;
+				}
+			}
+			/*if(!victimCustomStatus.empty())
+			{
+				for (std::vector<AsciiString>::const_iterator it2 = it->c_status.begin(); it2 != it->c_status.end(); ++it2 )
+				{
+					std::vector<AsciiString>::const_iterator it3 = victimCustomStatus.find(*it2);
+					if(it3 != victimCustomStatus.end() && it3->second == 1)
+					{
+						DoBuffGlobal = TRUE;
+						break;
+					}
+				}
+			}*/
+			// If don't have the required status, Test for all the ObjectStatuses
+			if(!DoBuffGlobal && !it->status.empty())
+			{
+				for (std::vector<ObjectStatusTypes>::const_iterator it3 = it->status.begin(); it3 != it->status.end(); ++it3)
+				{
+					DoBuffGlobal = victim->testStatus(*it3);
+					if(DoBuffGlobal)
+						break;
+				}
+			}
+
+			// Provide the Weapon Bonus to the Attacker
+			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
+			{
+				if( DoBuffGlobal == TRUE )
+				{
+					if( !me->testWeaponBonusCondition(it->bonus) )
+					{
+						me->setWeaponBonusCondition(it->bonus, FALSE);
+					}
+				}
+				// Remove the Weapon Bonus from the Attacker
+				else
+				{
+					// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
+					//if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+					if ( weaponBonusTypeNoClear.test(it->bonus) && me->testWeaponBonusCondition(it->bonus) )
+					{
+						me->clearWeaponBonusCondition(it->bonus, FALSE);
+					}
+				}
+			}
+
+		}
+
+	}
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void FiringTracker::computeFiringTrackerBonusClear(const Weapon *weaponToFire)
+{
+	// Don't need to scan everytime
+	if(!weaponToFire || m_firingTrackerBonusCleared)
+		return;
+
+	Object *me = getObject();
+
+	WeaponBonusConditionType weaponBonusType = weaponToFire->getFiringTrackerBonusCondition();
+	AsciiString customWeaponBonusType = weaponToFire->getFiringTrackerCustomBonusCondition();
+
+	std::vector<GlobalData::TrackerBonusCT> globalTrackerCT = TheGlobalData->m_statusWeaponBonus;
+	std::vector<GlobalData::TrackerCustomBonusCT> globalTrackerCustomCT = TheGlobalData->m_statusCustomWeaponBonus;
+
+	// Get bonuses granted outside of FiringTrackerBonus
+	WeaponBonusConditionFlags weaponBonusTypeNoClear = me->getWeaponBonusConditionIgnoreClear();
+	std::vector<AsciiString> customWeaponBonusTypeNoClear = me->getCustomWeaponBonusConditionIgnoreClear();
+
+	if(!customWeaponBonusType.isEmpty())
+	{
+		// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
+		Bool doClearBonus = TRUE;
+		for (std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear.begin(); it2 != customWeaponBonusTypeNoClear.end(); ++it2 )
+		{
+			if((*it2) == customWeaponBonusType)
+			{
+				doClearBonus = FALSE;
+				break;
+			}
+		}
+		if(doClearBonus)
+			me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+		//std::vector<AsciiString>::const_iterator it = customWeaponBonusTypeNoClear->find(customWeaponBonusType);
+
+		//if(it != customWeaponBonusTypeNoClear->end())
+		//{
+			// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
+		//	if(it->second == 0) 
+		//		me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+		//}
+		//else
+		//{
+		//	me->clearCustomWeaponBonusCondition(customWeaponBonusType, FALSE);
+		//}
+	}
+	if(weaponBonusType != WEAPONBONUSCONDITION_INVALID)
+	{
+		// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
+		//if( (weaponBonusTypeNoClear & (1 << weaponBonusType)) != 0 && me->testWeaponBonusCondition(weaponBonusType) )
+		if ( weaponBonusTypeNoClear.test(weaponBonusType) && me->testWeaponBonusCondition(weaponBonusType) )
+		{
+			me->clearWeaponBonusCondition(weaponBonusType, FALSE);
+		}
+	}
+
+	// The bonus provided by the Global Data
+
+	// Clear for each of the Custom Bonuses within the Global Data
+	if(!globalTrackerCustomCT.empty())
+	{
+		for (std::vector<GlobalData::TrackerCustomBonusCT>::const_iterator it = globalTrackerCustomCT.begin(); it != globalTrackerCustomCT.end(); ++it )
+		{
+			if(!it->bonus.isEmpty())
+			{
+				// If the bonus is currently granted outside of FiringTrackerBonus, don't clear it.
+				if(!checkWithinStringVec(it->bonus, customWeaponBonusTypeNoClear))
+					me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
+				//std::vector<AsciiString>::const_iterator it2 = customWeaponBonusTypeNoClear->find(it->bonus);
+
+				//if(it2 != customWeaponBonusTypeNoClear->end())
+				//{
+					// If the bonus has been cleared outside of FiringTrackerBonus, clear it.
+				//	if(it2->second == 0) 
+				//		me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
+				//}
+				//else
+				//{
+				//	me->clearCustomWeaponBonusCondition(it->bonus, FALSE);
+				//}
+			}
+		}
+	}
+
+	// Clear for each of the Weapon Bonuses within the Global Data
+	if(!globalTrackerCT.empty())
+	{
+		for (std::vector<GlobalData::TrackerBonusCT>::const_iterator it = globalTrackerCT.begin(); it != globalTrackerCT.end(); ++it )
+		{
+			if(it->bonus != WEAPONBONUSCONDITION_INVALID)
+			{
+				// If the bonus is currently granted outside of FiringTrackerBonus, and it exists within the Unit's WeaponBonus don't clear it.
+				//if( (weaponBonusTypeNoClear & (1 << it->bonus)) != 0 && me->testWeaponBonusCondition(it->bonus) )
+				if ( weaponBonusTypeNoClear.test(it->bonus) && me->testWeaponBonusCondition(it->bonus) )
+					me->clearWeaponBonusCondition(it->bonus, FALSE);
+			}
+		}
+	}
+
+	m_firingTrackerBonusCleared = TRUE;
+	m_prevTargetStatus.clear();
+	m_prevTargetCustomStatus.clear();
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -201,6 +596,7 @@ UpdateSleepTime FiringTracker::update()
 		{
 			TheAudio->removeAudioEvent( m_audioHandle );
 			m_audioHandle = AHSV_NoSound;
+			m_currentFireSoundName.clear();
 			m_frameToStopLoopingSound = 0;
 		}
 	}
@@ -375,6 +771,73 @@ void FiringTracker::xfer( Xfer *xfer )
 
 	// frame to start cooldown
 	xfer->xferUnsignedInt( &m_frameToStartCooldown );
+
+	// currenly applied weaponBonus against the prev target
+	m_prevTargetWeaponBonus.xfer(xfer);
+
+	// currenly applied custom weaponBonus against the prev target
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for (std::vector<AsciiString>::const_iterator it = m_prevTargetCustomWeaponBonus.begin(); it != m_prevTargetCustomWeaponBonus.end(); ++it )
+		{
+			AsciiString bonusName = (*it);
+			xfer->xferAsciiString(&bonusName);
+		}
+		AsciiString empty;
+		xfer->xferAsciiString(&empty);
+	}
+	else if (xfer->getXferMode() == XFER_LOAD)
+	{
+		if (m_prevTargetCustomWeaponBonus.empty() == false)
+		{
+			DEBUG_CRASH(( "FiringTracker::xfer - m_prevTargetCustomWeaponBonus should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+		
+		for (;;) 
+		{
+			AsciiString bonusName;
+			xfer->xferAsciiString(&bonusName);
+			if (bonusName.isEmpty())
+				break;
+			m_prevTargetCustomWeaponBonus.push_back(bonusName);
+		}
+	}
+
+	// cleared firing tracker bonus
+	xfer->xferBool( &m_firingTrackerBonusCleared );
+
+	// previous target status
+	m_prevTargetStatus.xfer( xfer );
+
+	// previous target custom status
+	if( xfer->getXferMode() == XFER_SAVE )
+	{
+		for (std::vector<AsciiString>::const_iterator it = m_prevTargetCustomStatus.begin(); it != m_prevTargetCustomStatus.end(); ++it )
+		{
+			AsciiString bonusName = (*it);
+			xfer->xferAsciiString(&bonusName);
+		}
+		AsciiString empty;
+		xfer->xferAsciiString(&empty);
+	}
+	else if (xfer->getXferMode() == XFER_LOAD)
+	{
+		if (m_prevTargetCustomStatus.empty() == false)
+		{
+			DEBUG_CRASH(( "FiringTracker::xfer - m_prevTargetCustomStatus should be empty, but is not"));
+			//throw SC_INVALID_DATA;
+		}
+		
+		for (;;) 
+		{
+			AsciiString bonusName;
+			xfer->xferAsciiString(&bonusName);
+			if (bonusName.isEmpty())
+				break;
+			m_prevTargetCustomStatus.push_back(bonusName);
+		}
+	}
 
 }
 

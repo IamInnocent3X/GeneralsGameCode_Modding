@@ -47,13 +47,13 @@ public:
 	const FXList					*m_defaultDeathFX;								///< default fx to make
 	UpgradeMuxData				m_upgradeMuxData;
 	Bool									m_orientToObject;
-	Bool									m_initiallyActive;
+	//Bool									m_initiallyActive;
 
 	FXListDieModuleData()
 	{
 		m_defaultDeathFX = nullptr;
 		m_orientToObject = TRUE;
-		m_initiallyActive = TRUE; //Patch 1.02 -- Craptacular HACK -- should default to FALSE but only ONE case sets it false out of 847!
+		m_upgradeMuxData.m_initiallyActive = TRUE; //Patch 1.02 -- Craptacular HACK -- should default to FALSE but only ONE case sets it false out of 847!
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -62,7 +62,7 @@ public:
 
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",					INI::parseBool, nullptr, offsetof( FXListDieModuleData, m_initiallyActive ) },
+			//{ "StartsActive",					INI::parseBool, nullptr, offsetof( FXListDieModuleData, m_initiallyActive ) },
 			{ "DeathFX",							INI::parseFXList,		nullptr, offsetof( FXListDieModuleData, m_defaultDeathFX ) },
 			{ "OrientToObject",				INI::parseBool,		nullptr, offsetof( FXListDieModuleData, m_orientToObject ) },
 			{ 0, 0, 0, 0 }
@@ -110,6 +110,12 @@ protected:
 		getFXListDieModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getFXListDieModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
@@ -121,9 +127,15 @@ protected:
 		return getFXListDieModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const override
+	{
+		return getFXListDieModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 
 };

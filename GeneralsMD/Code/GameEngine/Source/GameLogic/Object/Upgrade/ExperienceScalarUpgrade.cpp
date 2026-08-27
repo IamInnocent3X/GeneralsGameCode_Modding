@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/ExperienceTracker.h"
@@ -39,7 +40,10 @@
 //-------------------------------------------------------------------------------------------------
 ExperienceScalarUpgradeModuleData::ExperienceScalarUpgradeModuleData()
 {
+	//m_initiallyActive = false;
 	m_addXPScalar = 0.0f;
+	m_addXPValueScalar = 0.0f;
+	m_setMaxVeterancyLevel = LEVEL_INVALID;	// don't change the cap unless specified
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -51,7 +55,10 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 	static const FieldParse dataFieldParse[] =
 	{
+		//{ "StartsActive",	INI::parseBool, nullptr, offsetof(ExperienceScalarUpgradeModuleData, m_initiallyActive) },
 		{ "AddXPScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPScalar ) },
+		{ "AddXPValueScalar",	INI::parseReal,		nullptr, offsetof( ExperienceScalarUpgradeModuleData, m_addXPValueScalar ) },
+		{ "SetMaxVeterancyLevel",	INI::parseIndexList, TheVeterancyNames, offsetof( ExperienceScalarUpgradeModuleData, m_setMaxVeterancyLevel ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 
@@ -63,6 +70,8 @@ void ExperienceScalarUpgradeModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 ExperienceScalarUpgrade::ExperienceScalarUpgrade( Thing *thing, const ModuleData* moduleData ) : UpgradeModule( thing, moduleData )
 {
+	m_hasExecuted = FALSE;
+	m_prevMaxVeterancyDiff = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -79,11 +88,56 @@ void ExperienceScalarUpgrade::upgradeImplementation()
 
 	//Simply add the xp scalar to the xp tracker!
 	Object *obj = getObject();
+
+	const UpgradeMaskType& objectMask = obj->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = obj->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
+
+	//First make sure we have the right combination of upgrades
+	Int UpgradeStatus = wouldRefreshUpgrade(maskToCheck, m_hasExecuted);
+
+	Real value, scalar;
+
+	if( UpgradeStatus == 1 )
+	{
+		m_hasExecuted = TRUE;
+		value = data->m_addXPScalar;
+		scalar = data->m_addXPValueScalar;
+
+		// Optionally raise/lower the object's veterancy cap.
+		if( data->m_setMaxVeterancyLevel != LEVEL_INVALID ) {
+			m_prevMaxVeterancyDiff = data->m_setMaxVeterancyLevel - obj->getMaxVeterancyLevel();
+			obj->setMaxVeterancyLevel( data->m_setMaxVeterancyLevel );
+		}
+	}
+	else if( UpgradeStatus == 2 )
+	{
+		m_hasExecuted = FALSE;
+		value = -data->m_addXPScalar;
+		scalar = -data->m_addXPValueScalar;
+
+		// Optionally raise/lower the object's veterancy cap.
+		if( data->m_setMaxVeterancyLevel != LEVEL_INVALID && m_prevMaxVeterancyDiff != 0 ) {
+			obj->setMaxVeterancyLevel( (VeterancyLevel)(obj->getMaxVeterancyLevel() - m_prevMaxVeterancyDiff) );
+			m_prevMaxVeterancyDiff = 0;
+		}
+
+		// Remove the Upgrade Execution Status so it is treated as activation again
+		setUpgradeExecuted(false);
+	}
+	else
+	{
+		return;
+	}
+
 	ExperienceTracker *xpTracker = obj->getExperienceTracker();
 	if( xpTracker )
 	{
-		xpTracker->setExperienceScalar( xpTracker->getExperienceScalar() + data->m_addXPScalar );
+		xpTracker->setExperienceScalar( xpTracker->getExperienceScalar() + value );
+		xpTracker->setExperienceValueScalar( xpTracker->getExperienceValueScalar() + scalar );
 	}
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -113,6 +167,9 @@ void ExperienceScalarUpgrade::xfer( Xfer *xfer )
 	// extend base class
 	UpgradeModule::xfer( xfer );
 
+	xfer->xferBool(&m_hasExecuted);
+
+	xfer->xferInt(&m_prevMaxVeterancyDiff);
 }
 
 // ------------------------------------------------------------------------------------------------

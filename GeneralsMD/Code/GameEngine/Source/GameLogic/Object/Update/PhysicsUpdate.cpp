@@ -45,7 +45,9 @@
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/Locomotor.h"
 #include "GameLogic/LogicRandomValue.h"
+#include "GameClient/GameCLient.h"
 
 const Real DEFAULT_MASS = 1.0f;
 
@@ -136,7 +138,11 @@ PhysicsBehaviorModuleData::PhysicsBehaviorModuleData()
 	m_pitchRollYawFactor = 2.0f;
 	m_vehicleCrashesIntoBuildingWeaponTemplate = TheWeaponStore->findWeaponTemplate("VehicleCrashesIntoBuildingWeapon");
 	m_vehicleCrashesIntoNonBuildingWeaponTemplate = TheWeaponStore->findWeaponTemplate("VehicleCrashesIntoNonBuildingWeapon");
+	m_vehicleCrashAllowAirborne = FALSE;
+	m_bounceFactor = 1.0f;
+	m_magnetResistance = 0.0f;
 
+	m_waterImpactFX = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -180,13 +186,23 @@ static void parseFrictionPerSec( INI* ini, void * /*instance*/, void *store, con
 		{ "AllowCollideForce",	INI::parseBool,		nullptr, offsetof( PhysicsBehaviorModuleData, m_allowCollideForce ) },
 		{ "KillWhenRestingOnGround", INI::parseBool, nullptr, offsetof( PhysicsBehaviorModuleData, m_killWhenRestingOnGround) },
 
+		{ "MagnetResistance",		INI::parsePositiveNonZeroReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
+		{ "ShockResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_shockResistance ) },
+		{ "MagnetResistancePercent",		INI::parsePercentToReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_magnetResistance ) },
+
+		{ "BounceFactor",			INI::parseReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_bounceFactor) },
+
 		{ "MinFallHeightForDamage",			parseHeightToSpeed,		nullptr, offsetof( PhysicsBehaviorModuleData, m_minFallSpeedForDamage) },
 		{ "FallHeightDamageFactor",			INI::parseReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_fallHeightDamageFactor) },
 		{ "PitchRollYawFactor",			INI::parseReal,		nullptr, offsetof( PhysicsBehaviorModuleData, m_pitchRollYawFactor) },
 
 		{ "VehicleCrashesIntoBuildingWeaponTemplate", INI::parseWeaponTemplate, nullptr, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashesIntoBuildingWeaponTemplate) },
 		{ "VehicleCrashesIntoNonBuildingWeaponTemplate", INI::parseWeaponTemplate, nullptr, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashesIntoNonBuildingWeaponTemplate) },
+		{ "VehicleCrashWeaponAllowAirborne", INI::parseBool, nullptr, offsetof(PhysicsBehaviorModuleData, m_vehicleCrashAllowAirborne) },
 
+		{ "DoWaterPhysics", INI::parseBool, nullptr, offsetof(PhysicsBehaviorModuleData, m_doWaterPhysics) },
+		{ "WaterExtraFriction", INI::parseReal, nullptr, offsetof(PhysicsBehaviorModuleData, m_waterExtraFriction) },
+		{ "WaterImpactFX", INI::parseFXList, nullptr, offsetof(PhysicsBehaviorModuleData, m_waterImpactFX) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
@@ -226,6 +242,27 @@ PhysicsBehavior::PhysicsBehavior( Thing *thing, const ModuleData* moduleData ) :
 
 	m_pui = nullptr;
 	m_bounceSound = nullptr;
+	m_waterImpactSound = nullptr;
+
+	m_waterImpactFX = getPhysicsBehaviorModuleData()->m_waterImpactFX;
+
+	m_rollRateStatic = 0.0f;
+	m_rollStaticFactor = 1.0f;
+	m_pitchRateStatic = 0.0f;
+
+	m_forwardAngle = 0.0f;
+	m_forwardSpeed = 0.0f;
+	m_spiralOrbitTurnRate = 0.0f;
+	m_spiralOrbitForwardSpeedDamping = 0.0f;
+	m_orbitDirection = 0;
+	m_spinRate = 0.0f;
+
+	m_aerialSlowDeathBehaviorCheck = SLOWDEATH_INVALID;
+
+	m_doConstantMotion = FALSE;
+	m_constantMotionToLoc.zero();
+	m_constantMaxSpeed = 0;
+	m_constantMaxAccel = 0;
 
 #ifdef SLEEPY_PHYSICS
 	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
@@ -271,9 +308,18 @@ Bool PhysicsBehavior::isIgnoringCollisionsWith(ObjectID id) const
 }
 
 //-------------------------------------------------------------------------------------------------
+Real PhysicsBehavior::getExtraFriction() const
+{
+	if (getPhysicsBehaviorModuleData()->m_doWaterPhysics && getObject()->isBelowWater())
+		return m_extraFriction + getPhysicsBehaviorModuleData()->m_waterExtraFriction;
+
+	return m_extraFriction;
+}
+//-------------------------------------------------------------------------------------------------
+
 Real PhysicsBehavior::getAerodynamicFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_aerodynamicFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_aerodynamicFriction + getExtraFriction();
 	if (f < MIN_AERO_FRICTION) f = MIN_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -282,7 +328,7 @@ Real PhysicsBehavior::getAerodynamicFriction() const
 //-------------------------------------------------------------------------------------------------
 Real PhysicsBehavior::getForwardFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_forwardFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_forwardFriction + getExtraFriction();
 	if (f < MIN_NON_AERO_FRICTION) f = MIN_NON_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -291,7 +337,7 @@ Real PhysicsBehavior::getForwardFriction() const
 //-------------------------------------------------------------------------------------------------
 Real PhysicsBehavior::getLateralFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_lateralFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_lateralFriction + getExtraFriction();
 	if (f < MIN_NON_AERO_FRICTION) f = MIN_NON_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -300,7 +346,7 @@ Real PhysicsBehavior::getLateralFriction() const
 //-------------------------------------------------------------------------------------------------
 Real PhysicsBehavior::getZFriction() const
 {
-	Real f = getPhysicsBehaviorModuleData()->m_ZFriction + m_extraFriction;
+	Real f = getPhysicsBehaviorModuleData()->m_ZFriction + getExtraFriction();
 	if (f < MIN_NON_AERO_FRICTION) f = MIN_NON_AERO_FRICTION;
 	if (f > MAX_FRICTION) f = MAX_FRICTION;
 	return f;
@@ -501,8 +547,12 @@ Bool PhysicsBehavior::handleBounce(Real oldZ, Real newZ, Real groundZ, Coord3D* 
 	if (getFlag(ALLOW_BOUNCE) && newZ <= groundZ)
 	{
 		const Real MIN_STIFF = 0.01f;
-		const Real MAX_STIFF = 0.99f;
+		// const Real MAX_STIFF = 0.99f;
+		const Real MAX_STIFF = 10.0f; // Why not more? :D
 		Real stiffness = TheGlobalData->m_groundStiffness;
+
+		stiffness *= getPhysicsBehaviorModuleData()->m_bounceFactor;
+
 		if (stiffness < MIN_STIFF) stiffness = MIN_STIFF;
 		if (stiffness > MAX_STIFF) stiffness = MAX_STIFF;
 
@@ -608,6 +658,111 @@ void PhysicsBehavior::setBounceSound(const AudioEventRTS* bounceSound)
 }
 
 //-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setWaterImpactSound(const AudioEventRTS* waterImpactSound)
+{
+	if (waterImpactSound)
+	{
+		if (m_waterImpactSound == nullptr)
+			m_waterImpactSound.Assign_No_Add_Ref(newInstance(DynamicAudioEventRTS));
+
+		*m_waterImpactSound = *waterImpactSound;
+	}
+	else
+	{
+		m_waterImpactSound.Clear();
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setWaterImpactFX(const FXList* waterImpactFX)
+{
+	m_waterImpactFX = waterImpactFX;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setRollRateConstant(Real roll, Real rollFactor)
+{
+	setRollRate(roll);
+
+	m_rollRateStatic = roll;
+	m_rollStaticFactor = rollFactor;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setPitchRateConstant(Real pitch)
+{
+	setPitchRate(pitch);
+
+	m_pitchRateStatic = pitch;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::applyHelicopterSlowDeathSpin( Real spinRate )
+{
+	if(!m_spinRate)
+		doHelicopterSlowDeathSpin( spinRate );
+
+	m_spinRate = spinRate;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::doHelicopterSlowDeathSpin( Real spinRate )
+{
+	Matrix3D xfrm = *getObject()->getTransformMatrix();
+	xfrm.In_Place_Pre_Rotate_Z(spinRate * m_orbitDirection);
+	getObject()->setTransformMatrix( &xfrm );
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping )
+{
+	if(!m_forwardSpeed)
+		doHelicopterSlowDeathForce(forwardAngle, forwardSpeed);
+
+	m_forwardAngle = forwardAngle;
+	m_forwardSpeed = forwardSpeed;
+	m_spiralOrbitTurnRate = spiralOrbitTurnRate;
+	m_spiralOrbitForwardSpeedDamping = spiralOrbitForwardSpeedDamping;
+	m_orbitDirection = orbitDirection;
+	
+	// update our forward angle for travelling along the large spiral downward circle
+	m_forwardAngle += (m_spiralOrbitTurnRate * m_orbitDirection);
+
+	// adjust our forward spiral orbit by the damping factor specified
+	m_forwardSpeed *= m_spiralOrbitForwardSpeedDamping;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed )
+{
+	// If there's no force to apply, do nothing
+	if(!forwardSpeed)
+		return;
+
+	Coord3D force;
+	force.x = DOUBLE_TO_REAL( Cos( forwardAngle ) ) * forwardSpeed;
+	force.y = DOUBLE_TO_REAL( Sin( forwardAngle ) ) * forwardSpeed;
+	force.z = 0.0f;
+	applyMotiveForce( &force );
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel)
+{
+	m_doConstantMotion = TRUE;
+	m_constantMotionToLoc.set(*toPos);
+	m_constantMaxSpeed = maxSpeed;
+	m_constantMaxAccel = maxAccel;
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::removeConstantMotionToLoc()
+{
+	m_doConstantMotion = FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
 /**
  * Basic rigid body physics using an Euler integrator.
  * @todo Currently, only translations are integrated. Rotations should also be integrated. (MSB)
@@ -639,6 +794,20 @@ UpdateSleepTime PhysicsBehavior::update()
 
 	if (!obj->isDisabledByType(DISABLED_HELD))
 	{
+		if(m_doConstantMotion)
+		{
+			//locoUpdate_moveTowardsPositionForced();
+			AIUpdateInterface* ai = obj->getAIUpdateInterface();
+			if(ai && ai->getCurLocomotor())
+			{
+				//DEBUG_LOG(("Applying Forced Locomotor. Frame: %d.", TheGameLogic->getFrame()));
+				
+				Bool blocked = FALSE;
+				ai->getCurLocomotor()->locoUpdate_moveTowardsPosition(getObject(),
+					m_constantMotionToLoc, 0.0f, m_constantMaxSpeed, &blocked);
+			}
+		}
+		
 		Matrix3D mtx = *obj->getTransformMatrix();
 
 		applyGravitationalForces();
@@ -725,6 +894,16 @@ UpdateSleepTime PhysicsBehavior::update()
 			Real yawRateToUse = m_yawRate * d->m_pitchRollYawFactor;
 			Real pitchRateToUse = m_pitchRate * d->m_pitchRollYawFactor;
 			Real rollRateToUse = m_rollRate * d->m_pitchRollYawFactor;
+
+			if(m_rollRateStatic)
+			{
+				setRollRate(m_rollRateStatic * m_rollStaticFactor);
+				m_rollStaticFactor *= m_rollStaticFactor;
+			}
+			if(m_pitchRateStatic)
+			{
+				setPitchRate(m_pitchRateStatic);
+			}
 
 			// With a center of mass listing, pitchRate needs to dampen towards straight down/straight up
 			Real offset = getCenterOfMassOffset();
@@ -813,6 +992,10 @@ UpdateSleepTime PhysicsBehavior::update()
 		{
 			obj->setTransformMatrix(&mtx);
 		}
+
+		// IamInnocent - Passed SlowDeathBehaviors to Physics Update for Updates
+		checkSlowDeathBehaviors();
+
 	}
 
 	// reset the acceleration for accumulation next frame
@@ -827,7 +1010,22 @@ UpdateSleepTime PhysicsBehavior::update()
 		applyForce(&bounceForce);
 	}
 
-	Bool airborneAtEnd = obj->isAboveTerrain();
+	// Check our height state:
+
+	Bool isUnderWater{ false };
+	Bool airborneAtEnd{ false };
+	if (m_pui != nullptr && m_pui->projectileShouldCollideWithWater()) {
+		// For projectiles that collide with water, we consider water as not airborne
+		airborneAtEnd = obj->isAboveTerrainOrWater();
+		isUnderWater = obj->isBelowWater();
+	}
+	else {
+		airborneAtEnd = obj->isAboveTerrain();
+		if (d->m_doWaterPhysics) {
+			isUnderWater = obj->isBelowWater();
+			//DEBUG_LOG((">>> WATER CHECK: %d", isUnderWater));
+		}
+	}
 
 	// it's not good enough to check for airborne being different between
 	// the start and end of this func... we have to compare since last frame,
@@ -890,6 +1088,9 @@ UpdateSleepTime PhysicsBehavior::update()
 		if (obj->isDisabledByType(DISABLED_FREEFALL))
 			obj->clearDisabled(DISABLED_FREEFALL);
 		obj->clearModelConditionState(MODELCONDITION_FREEFALL);
+
+		if(getFlag(WAS_AIRBORNE_LAST_FRAME))
+			obj->doSlowDeathRefreshUpdate();
 	}
 
 
@@ -906,11 +1107,198 @@ UpdateSleepTime PhysicsBehavior::update()
 		}
 	}
 
+	if (d->m_doWaterPhysics && getFlag(WAS_ABOVE_WATER_LAST_FRAME) && isUnderWater)
+	{
+		//DEBUG_LOG((">>> WATER IMPACT NOW!"));
+		// do water splash sound
+		if (m_waterImpactSound) {
+			AudioEventRTS collisionSound = *m_waterImpactSound.Peek();
+			collisionSound.setObjectID(getObject()->getID());
+			TheAudio->addAudioEvent(&collisionSound);
+		}
+
+		FXList::doFXObj(m_waterImpactFX, getObject());
+	}
+
+	if(TheGlobalData->m_useEfficientDrawableScheme && obj->getDrawable())
+	{
+		//Coord3D currPos = *obj->getPosition();
+		//Region3D *region = TheGameClient->getEfficientDrawableRegion();
+		//if( currPos.x >= region->lo.x && currPos.x <= region->hi.x &&
+		//	currPos.y >= region->lo.y && currPos.y <= region->hi.y &&
+		//		currPos.z >= region->lo.z && currPos.z <= region->hi.z )
+		/// IamInnocent - Moved comparison above to GameClient
+			TheGameClient->informClientNewDrawable(obj->getDrawable());
+	}
+
 	setFlag(UPDATE_EVER_RUN, true);
 	setFlag(WAS_AIRBORNE_LAST_FRAME, airborneAtEnd);
+	setFlag(WAS_ABOVE_WATER_LAST_FRAME, !isUnderWater);
 
 	setFlag(IS_IN_UPDATE, false);
 	return calcSleepTime();
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::checkSlowDeathBehaviors()
+{
+	Object*	obj = getObject();
+
+	const Coord3D *pos = obj->getPosition();
+	
+	// HelicopterSlowDeathBehavior stuff.
+	// Update here and make the behavior Sleept
+	if(m_spinRate)
+	{
+		doHelicopterSlowDeathSpin( m_spinRate );
+	}
+	if(m_forwardSpeed)
+	{
+		doHelicopterSlowDeathForce( m_forwardAngle, m_forwardSpeed );
+		
+		// update our forward angle for travelling along the large spiral downward circle
+		m_forwardAngle += (m_spiralOrbitTurnRate * m_orbitDirection);
+
+		// adjust our forward spiral orbit by the damping factor specified
+		m_forwardSpeed *= m_spiralOrbitForwardSpeedDamping;
+	}
+
+	// Update SlowDeathBehavior to set their layers for sleepy Updates
+	// We ignore normal Slow Death because SlowDeathRefresh Update is below and checks after an Object hits the ground from Airborne
+	if(m_aerialSlowDeathBehaviorCheck > 0)
+	{
+		Bool doCheck = FALSE;
+		// do not allow object to pass through the ground
+		switch(m_aerialSlowDeathBehaviorCheck)
+		{
+			case SLOWDEATH_NORMAL:
+			{
+				if(!obj->isAboveTerrain())
+					doCheck = TRUE;
+
+				break;
+			}
+			case SLOWDEATH_HELICOPTER:
+			{
+				//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER"));
+				// srj sez: if we haven't yet hit the ground, adjust our layer properly so we crash on bridges
+				Coord3D tmpPt = *pos;
+				tmpPt.z = 99999.0f;
+				PathfindLayerEnum newLayer = TheTerrainLogic->getHighestLayerForDestination(&tmpPt);
+				obj->setLayer(newLayer);
+
+				Real ground = TheTerrainLogic->getLayerHeight( tmpPt.x, tmpPt.y, newLayer );
+				if (pos->z <= ground + 1.0f )
+				{
+					//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_HELICOPTER Passed"));
+					doCheck = TRUE;
+				}
+				break;
+			}
+			case SLOWDEATH_JET:
+			{
+				//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET"));
+				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(pos);
+				obj->setLayer(layer);
+				Real height;
+				if (layer == LAYER_GROUND)
+				{
+					// (this is more efficient than getGroundHeight because the info is cached)
+					height = obj->getHeightAboveTerrain();
+				}
+				else
+				{
+					Real layerHeight = TheTerrainLogic->getLayerHeight( pos->x, pos->y, layer );
+					height = pos->z - layerHeight;
+					// slop a little bit for bridges, since we tend to end up fractionally
+					// above 'em, and it's easier to just slop it here
+					if (height >= 0.0f && height <= 1.0f)
+						height = 0.0f;
+				}
+				if( height <= 0.0f )
+				{
+					//DEBUG_LOG(("PhysicsBehavior: Check SLOWDEATH_JET Passed"));
+					doCheck = TRUE;
+				}
+				break;
+			}
+		}
+		if(doCheck)
+			obj->doSlowDeathLayerUpdate(FALSE);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void PhysicsBehavior::locoUpdate_moveTowardsPositionForced()
+{
+	Object *obj = getObject();
+	// Skip moveTowardsPosition if physics say you're stunned
+	if(getIsStunned() || obj->testCustomStatus("DISABLED_MOVEMENT"))
+	{
+		return;
+	}
+
+	setTurning(TURN_NONE);
+
+	Real maxAcceleration = m_constantMaxAccel;
+
+	Real goalSpeed = m_constantMaxSpeed;
+	Real actualSpeed = getForwardSpeed2D();
+
+	if(actualSpeed > 0)
+		obj->setLastActualSpeed(actualSpeed);
+
+	// Locomotion for other things, ie don't know what it is jba :)
+	//
+	// Orient toward goal position
+	// exception: if very close (ie, we could get there in 2 frames or less),\
+	// and ULTRA_ACCURATE, just slide into place
+	//
+	//const Coord3D* pos =  obj->getPosition();
+	Coord3D dirToApplyForce = *obj->getUnitDirectionVector2D();
+
+//DEBUG_ASSERTLOG(!getFlag(ULTRA_ACCURATE),("thresh %f %f (%f %f)",
+//fabs(goalPos.y - pos->y),fabs(goalPos.x - pos->x),
+//fabs(goalPos.y - pos->y)/goalSpeed,fabs(goalPos.x - pos->x)/goalSpeed));
+	/*if (getFlag(ULTRA_ACCURATE) &&
+				fabs(goalPos.y - pos->y) <= goalSpeed * m_template->m_ultraAccurateSlideIntoPlaceFactor &&
+				fabs(goalPos.x - pos->x) <= goalSpeed * m_template->m_ultraAccurateSlideIntoPlaceFactor)
+	{
+		// don't turn, just slide in the right direction
+		physics->setTurning(TURN_NONE);
+		dirToApplyForce.x = goalPos.x - pos->x;
+		dirToApplyForce.y = goalPos.y - pos->y;
+		dirToApplyForce.z = 0.0f;
+		dirToApplyForce.normalize();
+	}*/
+
+	//
+	// Maintain goal speed
+	//
+	Real speedDelta = goalSpeed - actualSpeed;
+	//if (speedDelta != 0.0f)
+	//{
+	DEBUG_LOG(("Applying Forced Locomotor. Frame: %d.", TheGameLogic->getFrame()));
+	
+	Real mass = getMass();
+	Real acceleration = maxAcceleration;
+	Real accelForce = mass * acceleration;
+
+	/*
+		don't accelerate/brake more than necessary. do a quick calc to
+		see how much force we really need to achieve our goal speed...
+	*/
+	Real maxForceNeeded = mass * speedDelta;
+	if (fabs(accelForce) > fabs(maxForceNeeded))
+		accelForce = maxForceNeeded;
+
+	Coord3D force;
+	force.x = accelForce * dirToApplyForce.x;
+	force.y = accelForce * dirToApplyForce.y;
+	force.z = 0.0f;
+
+	// apply forces to object
+	applyMotiveForce( &force );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -922,6 +1310,7 @@ UpdateSleepTime PhysicsBehavior::calcSleepTime() const
 			&& !getFlag(HAS_PITCHROLLYAW)
 			&& !isMotive()
 			&& (getObject()->getLayer() == LAYER_GROUND && !getObject()->isAboveTerrain())
+			&& m_aerialSlowDeathBehaviorCheck == SLOWDEATH_INVALID
 			&& getCurrentOverlap() == INVALID_ID
 			&& getPreviousOverlap() == INVALID_ID
 			&& getFlag(UPDATE_EVER_RUN))
@@ -953,21 +1342,32 @@ Real PhysicsBehavior::getVelocityMagnitude() const
 Real PhysicsBehavior::getForwardSpeed2D() const
 {
 	const Coord3D *dir = getObject()->getUnitDirectionVector2D();
-
 	Real vx = m_vel.x * dir->x;
 	Real vy = m_vel.y * dir->y;
-
 	Real dot = vx + vy;
 
-	Real speedSquared = vx*vx + vy*vy;
-//	DEBUG_ASSERTCRASH( speedSquared != 0, ("zero speedSquared will overflow WWMath::SqrtfOrigin()!") );// lorenzen... sanity check
+	if (TheGlobalData->m_useOldMoveSpeed) {
 
-	Real speed = (Real)WWMath::SqrtfOrigin( speedSquared );
+		Real speedSquared = vx * vx + vy * vy;
+		//	DEBUG_ASSERTCRASH( speedSquared != 0, ("zero speedSquared will overflow WWMath::SqrtfOrigin()!") );// lorenzen... sanity check
 
-	if (dot >= 0.0f)
-		return speed;
+		Real speed = (Real)WWMath::SqrtfOrigin(speedSquared);
 
-	return -speed;
+		if (dot >= 0.0f)
+			return speed;
+
+		return -speed;
+	}
+	else {
+		//Note: using fixes from https://github.com/TheSuperHackers/GeneralsGameCode/issues/123#issuecomment-2827246587
+
+		//Return the speed of the unit - Magnitude of the velocity is the speed
+		if (dot >= 0.0f)
+			return (Real)WWMath::SqrtfOrigin(sqr(m_vel.x) + sqr(m_vel.y));
+
+		//Negative dot product means the unit is moving in reverse
+		return -(Real)WWMath::SqrtfOrigin(sqr(m_vel.x) + sqr(m_vel.y));
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -978,19 +1378,29 @@ Real PhysicsBehavior::getForwardSpeed2D() const
 Real PhysicsBehavior::getForwardSpeed3D() const
 {
 	Vector3 dir = getObject()->getTransformMatrix()->Get_X_Vector();
-
 	Real vx = m_vel.x * dir.X;
 	Real vy = m_vel.y * dir.Y;
 	Real vz = m_vel.z * dir.Z;
-
 	Real dot = vx + vy + vz;
 
-	Real speed = (Real)WWMath::SqrtfOrigin( vx*vx + vy*vy + vz*vz );
+	if (TheGlobalData->m_useOldMoveSpeed) {
+		Real speed = (Real)WWMath::SqrtfOrigin(vx * vx + vy * vy + vz * vz);
 
-	if (dot >= 0.0f)
-		return speed;
+		if (dot >= 0.0f)
+			return speed;
 
-	return -speed;
+		return -speed;
+	}
+	else {
+		//Note: using fixes from https://github.com/TheSuperHackers/GeneralsGameCode/issues/123#issuecomment-2827246587
+
+		//Return the speed of the unit - Magnitude of the velocity is the speed
+		if (dot >= 0.0f)
+			return (Real)WWMath::SqrtfOrigin(sqr(m_vel.x) + sqr(m_vel.y) + sqr(m_vel.z));
+
+		//Negative dot product means the unit is moving in reverse
+		return -(Real)WWMath::SqrtfOrigin(sqr(m_vel.x) + sqr(m_vel.y) + sqr(m_vel.z));
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1091,7 +1501,11 @@ Real PhysicsBehavior::getMass() const
 	Real mass = m_mass;
 	ContainModuleInterface* contain = getObject()->getContain();
 	if (contain)
-		mass += contain->getContainedItemsMass();
+	{
+		Real cmass = contain->getContainedItemsMass();
+		contain->setContainedItemsMass(cmass);
+		mass += cmass;
+	}
 	return mass;
 }
 
@@ -1316,6 +1730,10 @@ void PhysicsBehavior::onCollide( Object *other, const Coord3D *loc, const Coord3
 
 
 	m_lastCollidee = other->getID();
+	if(other->isKindOf( KINDOF_SHRUBBERY ))
+	{
+		obj->doSlowDeathLayerUpdate(TRUE);
+	}
 
 	Real dist = WWMath::SqrtfOrigin(distSqr);
 	Real overlap = usRadius + themRadius - dist;
@@ -1383,7 +1801,7 @@ void PhysicsBehavior::onCollide( Object *other, const Coord3D *loc, const Coord3
 				else
 				{
 					// fall into a nonbuilding -- whatever. if we're a vehicle, quietly do a little damage.
-					if (obj->isKindOf(KINDOF_VEHICLE))
+					if (obj->isKindOf(KINDOF_VEHICLE) && (!other->isAirborneTarget() || getPhysicsBehaviorModuleData()->m_vehicleCrashAllowAirborne))
 					{
 						TheWeaponStore->createAndFireTempWeapon(getPhysicsBehaviorModuleData()->m_vehicleCrashesIntoNonBuildingWeaponTemplate, obj, obj->getPosition());
 					}
@@ -1844,6 +2262,36 @@ void PhysicsBehavior::xfer( Xfer *xfer )
 
 	// pitch rate
 	xfer->xferReal( &m_pitchRate );
+
+	// roll that never changes
+	xfer->xferReal( &m_rollRateStatic );
+
+	// roll static constant factor
+	xfer->xferReal( &m_rollStaticFactor );
+
+	// pitch that never changes
+	xfer->xferReal( &m_pitchRateStatic );
+
+	// forward angle from slow death
+	xfer->xferReal( &m_forwardAngle );
+
+	// forward speed from slow death
+	xfer->xferReal( &m_forwardSpeed );
+
+	// spiral orbit turn rate from slow death
+	xfer->xferReal( &m_spiralOrbitTurnRate );
+
+	// spiral orbit forward speed damping from slow death
+	xfer->xferReal( &m_spiralOrbitForwardSpeedDamping );
+
+	// orbit direction from slow death
+	xfer->xferInt( &m_orbitDirection );
+
+	// aerial slow death behavior check
+	xfer->xferUser( &m_aerialSlowDeathBehaviorCheck, sizeof( SlowDeathType ) );
+
+	// helicopter slow death spin
+	xfer->xferReal( &m_spinRate );
 
 	// we dont' need to mess with sound stuff
 	// m_bounceSound <---- do nothing with this

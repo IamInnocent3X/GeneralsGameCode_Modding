@@ -32,19 +32,21 @@
 
 #include "Common/Player.h"
 #include "Common/ThingTemplate.h"
-#include "Common/ThingFactory.h"
+//#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/TransportContain.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Weapon.h"
+#include "GameLogic/WeaponSetType.h"
 
 
 // ------------------------------------------------------------------------------------------------
@@ -60,8 +62,8 @@ TransportContainModuleData::TransportContainModuleData()
   m_armedRidersUpgradeWeaponSet = FALSE;
 	m_resetMoodCheckTimeOnExit = true;
 	m_destroyRidersWhoAreNotFreeToExit = false;
+	m_allowOtherTeamUnitsInside = false;
 	m_exitPitchRate = 0.0f;
-	m_initialPayload.count = 0;
 	m_healthRegen = 0.0f;
 	m_exitDelay = 0;
 	m_isDelayExitInAir = FALSE;
@@ -72,19 +74,8 @@ TransportContainModuleData::TransportContainModuleData()
 	//
 	m_allowInsideKindOf = MAKE_KINDOF_MASK( KINDOF_INFANTRY );
 
-}
+	m_passengerWeaponBonusVec.push_back(WEAPONBONUSCONDITION_CONTAINED);
 
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-void TransportContainModuleData::parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
-{
-	TransportContainModuleData* self = (TransportContainModuleData*)instance;
-	const char* name = ini->getNextToken();
-	const char* countStr = ini->getNextTokenOrNull();
-	Int count = countStr ? INI::scanInt(countStr) : 1;
-
-	self->m_initialPayload.name.set(name);
-	self->m_initialPayload.count = count;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -104,11 +95,11 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "DestroyRidersWhoAreNotFreeToExit",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_destroyRidersWhoAreNotFreeToExit ) },
 		{ "ExitBone",	INI::parseAsciiString,		nullptr, offsetof( TransportContainModuleData, m_exitBone ) },
 		{ "ExitPitchRate",	INI::parseAngularVelocityReal,		nullptr, offsetof( TransportContainModuleData, m_exitPitchRate ) },
-		{ "InitialPayload", parseInitialPayload, nullptr, 0 },
 		{ "HealthRegen%PerSec", INI::parseReal, nullptr, offsetof( TransportContainModuleData, m_healthRegen ) },
 		{ "ExitDelay",	INI::parseDurationUnsignedInt,		nullptr, offsetof( TransportContainModuleData, m_exitDelay ) },
 		{ "ArmedRidersUpgradeMyWeaponSet",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_armedRidersUpgradeWeaponSet ) },
 		{ "DelayExitInAir",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_isDelayExitInAir ) },
+		{ "AllowOtherTeamUnitsInside",	INI::parseBool,		nullptr, offsetof( TransportContainModuleData, m_allowOtherTeamUnitsInside ) },
 
     { nullptr, nullptr, nullptr, 0 }
   };
@@ -121,10 +112,20 @@ void TransportContainModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Int TransportContain::getContainMax() const
+Int TransportContain::getRawContainMax() const
 {
 	if (getTransportContainModuleData())
 		return getTransportContainModuleData()->m_slotCapacity;
+
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Int TransportContain::getContainMax() const
+{
+	if (getTransportContainModuleData())
+		return getTransportContainModuleData()->m_slotCapacity + m_containExtra;
 
 	return 0;
 }
@@ -188,7 +189,9 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 //		return false;
 
 // no... actually, only OUR OWN units can be transported.
-	if (rider->getControllingPlayer() != getObject()->getControllingPlayer())
+// IamInnocent 24/8/26 - Dehardcoded
+	const TransportContainModuleData * d = getTransportContainModuleData();
+	if (rider->getControllingPlayer() != getObject()->getControllingPlayer() && !d->m_allowOtherTeamUnitsInside )
 		return false;
 
 	Int transportSlotCount = rider->getTransportSlotCount();
@@ -201,6 +204,21 @@ Bool TransportContain::isValidContainerFor(const Object* rider, Bool checkCapaci
 	{
     Int containMax = getContainMax();
     Int containCount = getContainCount();
+
+	const AIUpdateInterface *ai = getObject()->getAI();
+	if( ai )
+	{
+		const AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			// Count the current Assaulting members of the deployment
+			containCount += atInterface->getCurrentAssaultingMembers();
+
+			// we are originally from this transport, so we can come in if its not occupied.
+			if (atInterface->getCurrentAssaultingMembers() >= transportSlotCount && rider->getAssaultTransportObjectID() != INVALID_ID && rider->getAssaultTransportObjectID() == getObject()->getID())
+				containCount -= transportSlotCount;
+		}
+	}
 
 		return (m_extraSlotsInUse + containCount + transportSlotCount <= containMax);
 
@@ -301,6 +319,12 @@ void TransportContain::onContaining( Object *rider, Bool wasSelected )
 
 	}
 
+
+	// give the object a contained version of its weapon
+	// rider->setWeaponBonusCondition(WEAPONBONUSCONDITION_CONTAINED);
+	rider->setWeaponSetFlag(WEAPONSET_CONTAINED);
+
+
   if ( getTransportContainModuleData()->m_armedRidersUpgradeWeaponSet )
     letRidersUpgradeWeaponSet();
 
@@ -330,6 +354,10 @@ void TransportContain::onRemoving( Object *rider )
 	rider->clearDisabled( DISABLED_HELD );
 
 	const TransportContainModuleData* d = getTransportContainModuleData();
+
+	// give the object back a regular weapon
+	rider->clearWeaponBonusCondition(WEAPONBONUSCONDITION_CONTAINED);
+	rider->clearWeaponSetFlag(WEAPONSET_CONTAINED);
 
 	if (!d->m_exitBone.isEmpty())
 	{
@@ -433,33 +461,19 @@ void TransportContain::onRemoving( Object *rider )
 // ------------------------------------------------------------------------------------------------
 void TransportContain::createPayload()
 {
-	TransportContainModuleData* self = (TransportContainModuleData*)getTransportContainModuleData();
+	//TransportContainModuleData* self = (TransportContainModuleData*)getTransportContainModuleData();
 
-	Int count = self->m_initialPayload.count;
-	const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( self->m_initialPayload.name );
 	Object* object = getObject();
 	ContainModuleInterface *contain = object->getContain();
 
 	if( contain )
 	{
 		contain->enableLoadSounds( FALSE );
-		for( int i = 0; i < count; i++ )
-		{
-			//We are creating a transport that comes with a initial payload, so add it now!
-			Object* payload = TheThingFactory->newObject( payloadTemplate, object->getControllingPlayer()->getDefaultTeam() );
-			if( contain->isValidContainerFor( payload, true ) )
-			{
-				contain->addToContain( payload );
-			}
-			else
-			{
-				DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
-			}
-		}
+		OpenContain::createPayload();
 		contain->enableLoadSounds( TRUE );
 	}
 
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 
 }
 
@@ -469,7 +483,7 @@ UpdateSleepTime TransportContain::update()
 {
 	const TransportContainModuleData *moduleData = getTransportContainModuleData();
 
-	if (m_payloadCreated == FALSE)
+	if (getPayloadCreated() == FALSE)
 	{
 #if RETAIL_COMPATIBLE_CRC
 		createPayload();
@@ -669,9 +683,23 @@ void TransportContain::onCapture( Player *oldOwner, Player *newOwner )
 		else
 		{
 			//Use standard
+#if RETAIL_COMPATIBLE_CRC
 			orderAllPassengersToExit( CMD_FROM_AI, FALSE );
+#else
+      // TheSuperHackers @bugfix Stubbjax 20/11/2025 Only eject passengers if the new owner is not allied with the old owner.
+			if (oldOwner->getRelationship(newOwner->getDefaultTeam()) != ALLIES)
+				orderAllPassengersToExit(CMD_FROM_AI, FALSE);
+#endif
 		}
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void TransportContain::doUpgradeChecks()
+{
+	// extend base class
+	OpenContain::doUpgradeChecks();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -702,7 +730,7 @@ void TransportContain::xfer( Xfer *xfer )
 	OpenContain::xfer( xfer );
 
 	// payload created
-	xfer->xferBool( &m_payloadCreated );
+	//xfer->xferBool( &m_payloadCreated );
 
 	// extra slots in use
 	xfer->xferInt( &m_extraSlotsInUse );

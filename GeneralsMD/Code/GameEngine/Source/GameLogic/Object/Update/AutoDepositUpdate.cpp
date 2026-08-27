@@ -130,7 +130,7 @@ void AutoDepositUpdate::awardInitialCaptureBonus( Player *player )
 		moneyString.format( TheGameText->fetch( "GUI:AddCash" ), getAutoDepositUpdateModuleData()->m_initialCaptureBonus );
 		Coord3D pos;
 		pos.set( *getObject()->getPosition() );
-		pos.z += 10.0f; //add a little z to make it show up above the unit.
+		pos.z += 10.0f + getAutoDepositUpdateModuleData()->m_textZOffset; //add a little z to make it show up above the unit.
 		Color color = player->getPlayerColor() | GameMakeColor( 0, 0, 0, 230 );
 		TheInGameUI->addFloatingText( moneyString, &pos, color );
 	}
@@ -144,6 +144,7 @@ UpdateSleepTime AutoDepositUpdate::update()
 {
 	const AutoDepositUpdateModuleData *modData = getAutoDepositUpdateModuleData();
 /// @todo srj use SLEEPY_UPDATE here
+//// IamInnocent 13/10/2025 - Done.
 	if( TheGameLogic->getFrame() >= m_depositOnFrame)
 	{
 		if (!m_initialized) {
@@ -173,7 +174,7 @@ UpdateSleepTime AutoDepositUpdate::update()
 		{
 
       const Object *owner = getObject();
-      if ( owner )
+      if ( owner && owner->showCashText() )
       {
 
 			  // OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
@@ -181,7 +182,7 @@ UpdateSleepTime AutoDepositUpdate::update()
 			  moneyString.format( TheGameText->fetch( "GUI:AddCash" ), moneyAmount );
 			  Coord3D pos;
 			  pos.set( *getObject()->getPosition() );
-			  pos.z += 10.0f; //add a little z to make it show up above the unit.
+			  pos.z += 10.0f + modData->m_textZOffset; //add a little z to make it show up above the unit.
 
         if ( owner->isKindOf( KINDOF_STRUCTURE ) )
         {
@@ -198,7 +199,8 @@ UpdateSleepTime AutoDepositUpdate::update()
 		}
 	}
 
-	return UPDATE_SLEEP_NONE;
+	return m_depositOnFrame > TheGameLogic->getFrame() ? UPDATE_SLEEP(m_depositOnFrame - TheGameLogic->getFrame()) : UPDATE_SLEEP_NONE;
+	//return UPDATE_SLEEP_NONE;
 }
 
 //------------------------------------------------------------------------------------------------

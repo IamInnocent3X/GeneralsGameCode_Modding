@@ -79,6 +79,8 @@ public:
 
 	virtual UpdateSleepTime update() override;		///< the update implementation
 
+	virtual void onDisabledEdge( Bool nowDisabled ) override;
+
 protected:
 
 	Bool initWaveGuide();						///< initialize the waveguide on motion start
@@ -106,5 +108,6 @@ protected:
 	UnsignedInt m_splashSoundFrame;				///< frame we last tried to play a splash sound on
 
 	Coord3D m_finalDestination;						///< the final destination of the waveguide path
+	Coord3D m_lastPos;
 
 };

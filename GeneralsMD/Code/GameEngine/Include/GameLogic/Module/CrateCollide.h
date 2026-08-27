@@ -30,12 +30,14 @@
 #pragma once
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "GameLogic/Weapon.h"
 #include "GameLogic/Module/CollideModule.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Thing;
 class Anim2DTemplate;
 class FXList;
+class ObjectCreationList;
 enum ScienceType CPP_11(: Int);
 
 //-------------------------------------------------------------------------------------------------
@@ -44,17 +46,52 @@ class CrateCollideModuleData : public CollideModuleData
 public:
 	KindOfMaskType	m_kindof;				///< the kind(s) of units that can be collided with
 	KindOfMaskType	m_kindofnot;		///< the kind(s) of units that CANNOT be collided with
+	KindOfMaskType	m_kindofany;		///< the units with any kind(s) that can be collided with (independent from m_kindof)
 	Bool m_isForbidOwnerPlayer;			///< This crate cannot be picked up by the player of the dead thing that made it.
+	Bool m_isAllowNeutralPlayer;		///< This crate can be picked up by the neutral player
 	Bool m_isBuildingPickup;			///< This crate can be picked up by a Building (bypassing AI requirement)
 	Bool m_isHumanOnlyPickup;				///< Can this crate only be picked up by a human player?  (Mission thing)
+	Bool m_isAllowPickAboveTerrain;				///< Can this crate only be picked when on the ground�?
 	Bool m_allowMultiPickup;				///< Can this crate be picked up by multiple objects on the same frame?
 	ScienceType m_pickupScience;		///< Can only be picked up by a unit whose player has this science
 	FXList *m_executeFX;						///< FXList to play when activated
+	Int m_targetsMask;
+	AsciiString m_cursorName;
+	std::vector<AsciiString> m_rejectKeys;
+
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
+	std::vector<AsciiString> m_activationUpgradeNames;
+	std::vector<AsciiString> m_conflictingUpgradeNames;
+	Bool m_requiresAllTriggers;
+
+	ObjectStatusMaskType m_statusToRemove;
+	std::vector<AsciiString> m_customStatusToRemove;
+	ObjectStatusMaskType m_statusToDestroy;
+	std::vector<AsciiString> m_customStatusToDestroy;
+	ObjectStatusMaskType m_statusToSet;
+	std::vector<AsciiString> m_customStatusToSet;
+	ObjectStatusMaskType m_statusToGive;
+	std::vector<AsciiString> m_customStatusToGive;
+	WeaponBonusConditionTypeVec m_bonusToGive;
+	std::vector<AsciiString> m_customBonusToGive;
 
 	AsciiString m_executionAnimationTemplate;				///< Anim2D to play at crate location
 	Real m_executeAnimationDisplayTimeInSeconds;		///< time to play animation for
 	Real m_executeAnimationZRisePerSecond;					///< rise animation up while playing
 	Bool m_executeAnimationFades;										///< animation fades out
+
+	Bool m_destroyOnCollide;							///Destroy/Delete the Object after executing the ability
+	FXList 			*m_fxOnCollide; //< FX Spawned on the Object after finish executing the ability
+	ObjectCreationList *m_oclOnCollide; //< OCL Spawned on the Object after finish executing the ability
+
+	Real m_damagePercentageToUnit;
+	Bool m_destroyOnTargetDie;
+	Bool m_destroyOnHeal;
+	Bool m_removeOnHeal;
+	Bool m_leechExpFromObject;
 
 	CrateCollideModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -70,19 +107,6 @@ class CrateCollide : public CollideModule
 
 public:
 
-enum SabotageVictimType CPP_11(: Int)
-{
-	SAB_VICTIM_GENERIC = 0,
-	SAB_VICTIM_COMMAND_CENTER,
-	SAB_VICTIM_FAKE_BUILDING,
-	SAB_VICTIM_INTERNET_CENTER,
-	SAB_VICTIM_MILITARY_FACTORY,
-	SAB_VICTIM_POWER_PLANT,
-	SAB_VICTIM_SUPERWEAPON,
-	SAB_VICTIM_SUPPLY_CENTER,
-	SAB_VICTIM_DROP_ZONE,
-};
-
 	CrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
@@ -91,19 +115,27 @@ enum SabotageVictimType CPP_11(: Int)
 
 	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return isValidToExecute(other); }
 
+	virtual Bool revertCollideBehavior(Object *other) override;
+
 	virtual Bool isRailroad() const override { return FALSE;};
  	virtual Bool isCarBombCrateCollide() const override { return FALSE; }
 	virtual Bool isHijackedVehicleCrateCollide() const override { return FALSE; }
 	virtual Bool isSabotageBuildingCrateCollide() const override { return FALSE; }
+	virtual Bool isEquipCrateCollide() const override { return FALSE; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return FALSE; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return executeCrateBehavior(other); }
 
-  void doSabotageFeedbackFX( const Object *other, SabotageVictimType type = SAB_VICTIM_GENERIC );
+	virtual const AsciiString& getCursorName() const override { return getCrateCollideModuleData()->m_cursorName; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 protected:
 
 	/// This is the game logic execution function that all real CrateCollides will implement
-	virtual Bool executeCrateBehavior( Object *other ) = 0;
+	virtual Bool executeCrateBehavior( Object *other );
 
 	/// This allows specific vetoes to certain types of crates and their data
 	virtual Bool isValidToExecute( const Object *other ) const;
+
+	Bool passRequirements() const;
 
 };

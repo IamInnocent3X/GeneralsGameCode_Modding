@@ -60,8 +60,26 @@ public:
 
 	Real						m_lockDistance;				///< If I get this close to my target, guaranteed hit.
 	Bool						m_detonateCallsKill;			///< if true, kill() will be called, instead of KILL_SELF state, which calls destroy.
-  Int             m_killSelfDelay;      ///< If I have detonated and entered the KILL-SELF state, how ling do I wait before I Kill/destroy self?
-	MissileAIUpdateModuleData();
+    Int             m_killSelfDelay;      ///< If I have detonated and entered the KILL-SELF state, how ling do I wait before I Kill/destroy self?
+	
+	// Real	m_turnRateAttacking;    ///< Turn rate of the missile after ignition and no-turn stage
+	// Real	m_turnRateInitial;      ///< Turn rate of the missile during no-turn stage
+
+	Real	m_zDirFactor;          ///< Z correction factor for AA weapons with no pitch
+
+	Real m_randomPathOffset;       ///< Max distance to scatter for random path offset
+
+	Bool m_applyLauncherBonus;     ///< Apply the launcher's weapon bonus flags (for any non-detonate triggered weapon)
+
+	Bool m_isTorpedo; ///< die outside of water, strike objects from below.
+
+	Bool						m_allowSubdual;
+	Bool						m_allowAttract;
+
+	Bool						m_allowRetargeting;
+	Bool						m_allowRetargetingThroughFog;
+
+    MissileAIUpdateModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 
@@ -86,26 +104,42 @@ public:
 		DEAD					= 5,
 		KILL					= 6, ///< Hit victim (cheat).
 		KILL_SELF			= 7, ///< Destroy self.
+		ATTACK_RANDOM_PATH = 8, ///< fly toward victim
 	};
 
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() override { return this; }
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) override;
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride) override;
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) override;
 	virtual Bool projectileHandleCollision( Object *other ) override;
 	virtual Bool projectileIsArmed() const override { return m_isArmed; }
 	virtual ObjectID projectileGetLauncherID() const override { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) override; ///< Number of frames till missile diverts to countermeasures.
-	virtual void projectileNowJammed() override;///< We lose our Object target and scatter to the ground
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const override { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) override { m_launchVeterancy = v; }
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const override { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) override; ///< Number of frames till missile diverts to countermeasures.
+	virtual void projectileNowJammed(Bool noDamage = FALSE) override;///< We lose our Object target and scatter to the ground
+	virtual void projectileNowDrawn(ObjectID attractorID) override;
+	virtual Object* getTargetObject() override;
+	virtual const Coord3D* getTargetPosition() override;
+	virtual bool projectileShouldCollideWithWater() const override;
+	virtual Bool projectileShouldDetonateOnGround() const override { return false; }
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) override { m_shrapnelLaunchID = shrapnelLaunchID; }
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
+
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	virtual Bool processCollision(PhysicsBehavior *physics, Object *other) override; ///< Returns true if the physics collide should apply the force.  Normally not.  jba.
 
 	virtual UpdateSleepTime update() override;
 	virtual void onDelete() override;
 
+	virtual void switchToState(MissileStateType s);
+
+	virtual MissileStateType getMissileState() { return m_state; }
 
 protected:
 
-	void detonate();
+	virtual void detonate();
 
 private:
 
@@ -116,10 +150,14 @@ private:
 	ObjectID							m_victimID;								///< ID of object that I am rocketing towards (INVALID_ID if not yet launched)
 	UnsignedInt						m_fuelExpirationDate;			///< how long 'til we run out of fuel
 	Real									m_noTurnDistLeft;					///< when zero, ok to start turning
+	Real									m_randomPathDistLeft;					///< when zero, leave random path
 	Real									m_maxAccel;
 	Coord3D								m_originalTargetPos;			///< When firing uphill, we aim high to clear the brow of the hill.  jba.
 	Coord3D								m_prevPos;
+	Coord3D								m_launchPos;							///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	VeterancyLevel				m_launchVeterancy;				///< launcher's veterancy at launch time (for veterancy FX/OCL selection)
 	WeaponBonusConditionFlags		m_extraBonusFlags;
+	std::vector<AsciiString> 			m_extraBonusCustomFlags;
 	const WeaponTemplate*	m_detonationWeaponTmpl;		///< weapon to fire at end (or null)
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 	ParticleSystemID			m_exhaustID;								///< our exhaust particle system (if any)
@@ -128,11 +166,21 @@ private:
 	Bool									m_isArmed;								///< if true, missile will explode on contact
 	Bool									m_noDamage;								///< if true, missile will not cause damage when it detonates. (Used for flares).
 	Bool									m_isJammed;								///< No target, just shooting at a scattered position
+	Bool									m_doVictimPosForLaunch;
+
+	UnsignedInt						m_detonateDistance;
+	ObjectID						m_decoyID;
+	ObjectID						m_shrapnelLaunchID;
+
+	UnsignedInt						m_dontDetonateGroundFrames;
+
+	UnsignedInt						m_killSelfTime;
+	UnsignedInt						m_nextWakeUpTime;
 
 	void doPrelaunchState();
 	void doLaunchState();
 	void doIgnitionState();
-	void doAttackState(Bool turnOK);
+	void doAttackState(Bool turnOK, Bool randomPath = FALSE);
 	void doKillState();
 	void doKillSelfState();
 	void doDeadState();
@@ -140,7 +188,5 @@ private:
 	void airborneTargetGone();											///< My airborne target has died, so I have to do something cool to make up for that
 
 	void tossExhaust();
-	void switchToState(MissileStateType s);
-
 
 };

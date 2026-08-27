@@ -33,6 +33,7 @@
 #include "Common/ModelState.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameClient/Anim2D.h"
 
 // FORWARD REFERENCES //////////////////////////////////////////////////////////////////////////////
 class ProductionEntry;
@@ -51,6 +52,29 @@ enum ProductionType CPP_11(: Int)
 	PRODUCTION_UNIT,
 	PRODUCTION_UPGRADE
 };
+
+//-------------------------------------------------------------------------------------------------
+struct QuantityModifier
+{
+	AsciiString m_templateName;
+	Int					m_quantity;
+};
+
+//-------------------------------------------------------------------------------------------------
+struct ProductionModifier
+{
+	AsciiString 			 m_templateName;
+	Int						 m_quantity;
+	std::vector<QuantityModifier>	m_otherTemplateNames;
+
+	ProductionModifier() : m_templateName(nullptr), m_quantity(1)
+	{
+		m_otherTemplateNames.clear();
+	}
+};
+
+typedef std::pair<Int, Int> PlayerDurationPair;
+typedef std::vector<PlayerDurationPair> PlayerDurationVec;
 
 //-------------------------------------------------------------------------------------------------
 /** A ProductionEntry is a single entry representing something that we are supposed to
@@ -78,7 +102,7 @@ public:
 	ProductionType getProductionType() const { return m_type; }
 
 	/// how much progress is done on this entry
-	Real getPercentComplete() const { return m_percentComplete; }
+	Real getPercentComplete() const; // { return m_percentComplete; }
 
 	/// get the unique (to the producer object) production ID
 	ProductionID getProductionID() const { return m_productionID; }
@@ -87,6 +111,9 @@ public:
 	Int getProductionQuantityRemaining() const { return m_productionQuantityTotal - m_productionQuantityProduced; }//How many I have made
 
 	void oneProductionSuccessful() { ++m_productionQuantityProduced; m_exitDoor = DOOR_NONE_AVAILABLE; }//increment, and mark door to re-reserve
+	void oneProductionSuccessfulBindSelection(ObjectID bindID) { if(m_bindsSelectionOnGroupsProduced) m_bindsSelectionOnGroupsData.push_back(bindID); }//increment, and mark door to re-reserve
+	void setNewProduction(); //Set new production for production modifier
+	void setBindsSelection(); //Binds the selection for the produced group
 
 	ExitDoorType getExitDoor() const { return m_exitDoor; }
 	void setExitDoor(ExitDoorType exitDoor) { m_exitDoor = exitDoor; }
@@ -104,18 +131,15 @@ protected:
 	Int m_framesUnderConstruction;										///< counter for how many frames we've been under construction (incremented once per update)
 	Int m_productionQuantityTotal;										///< it is now possible to construct multiple units simultaneously.
 	Int m_productionQuantityProduced;									///< And we need to allow pausing within an entry, so we keep track of number of sub-successes
+	Int m_newTemplateAmount;											///< Production Amount to indicate the production modifier template to use
+	std::vector<QuantityModifier> m_productionExtraData;				///< Extra production data
+	std::vector<ObjectID> m_bindsSelectionOnGroupsData;					///< Binds selections for Units Produced in Groups. Selecting one of the units selects them all.
+	Bool m_bindsSelectionOnGroupsProduced;								///< See above
 	ExitDoorType m_exitDoor;
 
 	ProductionEntry *m_next;													///< next in list
 	ProductionEntry *m_prev;													///< prev in list
 
-};
-
-//-------------------------------------------------------------------------------------------------
-struct QuantityModifier
-{
-	AsciiString m_templateName;
-	Int					m_quantity;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -129,12 +153,15 @@ public:
 	UnsignedInt										m_doorClosingTime;							///< in frames, time it takes to close the door
 	UnsignedInt										m_constructionCompleteDuration; ///< in frames, how long we state in "construction complete" condition after making something
 	std::vector<QuantityModifier>	m_quantityModifiers;						///< Quantity modifiers modify the number of specified object to created whenever produced.
+	std::vector<ProductionModifier>	m_productionModifiers;						///< Production modifiers modify the number of specified object and whether they will create other objects to created whenever produced.
+	Bool											m_bindsSelection;			///< Binds selections for Units Produced in Groups. Selecting one of the units selects them all.
   Int														m_maxQueueEntries;							///< max things that can be queued at once.
 	DisabledMaskType							m_disabledTypesToProcess;
 
 	ProductionUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
 	static void parseAppendQuantityModifier( INI* ini, void *instance, void *store, const void *userData );
+	static void parseAppendProductionModifier( INI* ini, void *instance, void *store, const void *userData );
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -169,6 +196,10 @@ public:
 	virtual const ProductionEntry *nextProduction( const ProductionEntry *p ) const = 0;
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt) = 0;
+
+	virtual void setProductionViewByEnemyFrame(Int playerIndex, Int frame) = 0;
+
+	virtual Bool showProductionViewToEnemy(Team *team) const = 0;
 
 	//These functions keep track of the special power construction of a new building via a special power instead of standard production interface.
 	//This was added for the sneak attack building functionality.
@@ -227,7 +258,13 @@ public:
 
 	virtual void setHoldDoorOpen(ExitDoorType exitDoor, Bool holdIt) override;
 
+	virtual void setProductionViewByEnemyFrame(Int playerIndex, Int frame) override;
+
+	virtual Bool showProductionViewToEnemy(Team *team) const override;
+
 	virtual UpdateSleepTime update() override;					///< the update
+
+	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;		///< when we are captured
 
 	//These functions keep track of the special power construction of a new building via a special power instead of standard production interface.
 	//This was added for the sneak attack building functionality.
@@ -236,6 +273,8 @@ public:
 
 	// DieModuleInterface
 	virtual void onDie( const DamageInfo *damageInfo ) override;
+
+	UpdateSleepTime calcSleepTime() const;
 
 protected:
 
@@ -263,5 +302,7 @@ protected:
 	ModelConditionFlags m_clearFlags;										///< flags to clear from model
 	ModelConditionFlags m_setFlags;											///< flags to set in model
 	Bool								m_flagsDirty;										///< clearFlags/setFlags needs to be set into the model
+	UnsignedInt							m_nextWakeUpTime;
+	mutable PlayerDurationVec			m_productionViewedByEnemyData;
 
 };

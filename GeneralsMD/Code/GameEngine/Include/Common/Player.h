@@ -109,13 +109,35 @@ static const char *const ScienceAvailabilityNames[] =
 static_assert(ARRAY_SIZE(ScienceAvailabilityNames) == SCIENCE_AVAILABILITY_COUNT + 1, "Incorrect array size");
 #endif	// end DEFINE_SCIENCE_AVAILABILITY_NAMES
 
+#ifdef DEFINE_DIFFICULTY_NAMES
+static const char *TheDifficultyNames[] = 
+{
+	"EASY",			
+	"NORMAL",			
+	"HARD",					
+
+	nullptr
+};
+static_assert(ARRAY_SIZE(TheDifficultyNames) == DIFFICULTY_COUNT + 1, "Incorrect array size");
+#endif // end DEFINE_DIFFICULTY_NAMES
+
 static const Int NUM_HOTKEY_SQUADS = 10;
 
 enum { NO_HOTKEY_SQUAD = -1 };
 
+enum MoveStateType CPP_11(: Int)
+{
+	MOVE_DEFAULT = 0,
+	MOVE_IN_FORMATION = 1,
+	MOVE_REVERSE = 2
+};
+
 // ------------------------------------------------------------------------------------------------
 typedef Int PlayerIndex;
 #define PLAYER_INDEX_INVALID -1
+
+typedef std::pair<GameDifficulty, UnsignedInt> MaxSimultaneousOfTypeDifficultyPair;
+typedef std::vector<MaxSimultaneousOfTypeDifficultyPair> MaxSimultaneousOfTypeDifficulty;
 
 // ------------------------------------------------------------------------------------------------
 class KindOfPercentProductionChange : public MemoryPoolObject
@@ -123,8 +145,12 @@ class KindOfPercentProductionChange : public MemoryPoolObject
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(KindOfPercentProductionChange, "KindOfPercentProductionChange")
 public:
 	KindOfMaskType		m_kindOf;
-	Real							m_percent;
-	UnsignedInt				m_ref;
+	Real				m_percent;
+	UnsignedInt			m_ref;  // Counter
+	Bool				m_stackWithAny; // this entry can stack with any of same values
+	UnsignedInt         m_templateID;  // Bonus Source thingtemplate
+	std::vector<UnsignedInt> m_frame;  // Duration
+
 };
 EMPTY_DTOR(KindOfPercentProductionChange)
 
@@ -247,6 +273,10 @@ public:
 	void addPowerBonus(Object *obj) { m_energy.addPowerBonus(obj); }
 	void removePowerBonus(Object *obj) { m_energy.removePowerBonus(obj); }
 
+	/// cheat: set/toggle infinite power, refreshing power-dependent objects to match.
+	void setInfinitePower(Bool enable);
+	void toggleInfinitePower() { setInfinitePower( !m_energy.hasInfinitePower() ); }
+
 	ResourceGatheringManager *getResourceGatheringManager(){ return m_resourceGatheringManager; }
 	TunnelTracker* getTunnelSystem(){ return m_tunnelSystem; }
 
@@ -326,7 +356,12 @@ public:
 	Upgrade *findUpgrade( const UpgradeTemplate *upgradeTemplate );
 
 	void onUpgradeCompleted( const UpgradeTemplate *upgradeTemplate );				///< An upgrade just finished, do things like tell all objects to recheck UpgradeModules
-	void onUpgradeRemoved(){}					///< An upgrade just got removed, this doesn't do anything now.
+	void findUpgradeInQueuesAndCancelThem( const UpgradeTemplate *upgradeTemplate );	///< Find existing upgrades queue among a player that are currently in production and cancel them.
+	void onUpgradeRemoved();					///< An upgrade just got removed, this doesn't do anything now.
+
+	Bool hasInstance( const std::vector<NameKeyType>& instances, Bool requiresAllInstances ) const;		///< does player have the required instance
+	void grantInstance( NameKeyType nameKey, Int amount = 0 );											///< grants the player instances
+	void useInstance( const std::vector<NameKeyType>& instances, Bool requiresAllInstances );		///< uses an instance
 
 #if defined(RTS_DEBUG)
 	/// Prereq disabling cheat key
@@ -347,6 +382,11 @@ public:
 	void enableInstantBuild(Bool enable) { m_DEMO_instantBuild = enable; }
 	Bool buildsInstantly() const { return m_DEMO_instantBuild; }
 #endif
+
+	/// When set, unit/building build prerequisites are ignored for this player (science prereqs still apply).
+	void toggleIgnoreUnitPrereqs() { m_ignoreUnitPrereqs = !m_ignoreUnitPrereqs; }
+	void setIgnoreUnitPrereqs(Bool enable) { m_ignoreUnitPrereqs = enable; }
+	Bool ignoresUnitPrereqs() const { return m_ignoreUnitPrereqs; }
 
 	///< Power just changed at all.  Didn't make two functions so you can't forget to undo something you didin one of them.
 	///< @todo Can't do edge trigger until after demo; make things check for power on creation
@@ -384,11 +424,31 @@ public:
 	void friend_applyDifficultyBonusesForObject(Object* obj, Bool apply) const;
 
 	/// Decrement the ref counter on the typeof production list node
-	void removeKindOfProductionCostChange(KindOfMaskType kindOf, Real percent);
+	void removeKindOfProductionCostChange(KindOfMaskType kindOf, Real percent,
+										  UnsignedInt sourceTemplateID = INVALID_ID,
+										  Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
 	/// add type of production cost change (Used for upgrades)
-	void addKindOfProductionCostChange( KindOfMaskType kindOf, Real percent);
+	void addKindOfProductionCostChange( KindOfMaskType kindOf, Real percent,
+										UnsignedInt sourceTemplateID = INVALID_ID,
+										Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE, UnsignedInt frame = 0);
 	/// Returns production cost change based on typeof (Used for upgrades)
 	Real getProductionCostChangeBasedOnKindOf( KindOfMaskType kindOf ) const;
+
+	/// Decrement the ref counter on the typeof production list node
+	void removeKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
+		UnsignedInt sourceTemplateID = INVALID_ID,
+		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE);
+	/// add type of production cost change (Used for upgrades)
+	void addKindOfProductionTimeChange(KindOfMaskType kindOf, Real percent,
+		UnsignedInt sourceTemplateID = INVALID_ID,
+		Bool stackUniqueType = FALSE, Bool stackWithAny = FALSE, UnsignedInt frame = 0);
+	/// Returns production cost change based on typeof (Used for upgrades)
+	Real getProductionTimeChangeBasedOnKindOf(KindOfMaskType kindOf) const;
+
+	/// Build-speed multiplier applied to units, upgrades and buildings. >1 builds faster. Set via the ProductionSpeedMultiplier chat command.
+	Real getProductionSpeedMultiplier() const { return m_productionSpeedMultiplier; }
+	void setProductionSpeedMultiplier( Real m ) { m_productionSpeedMultiplier = m; }
+
 
 	/** Return bonus or penalty for construction of this thing.
 	*/
@@ -401,6 +461,12 @@ public:
 	/** Return starting veterancy level of a newly built thing of this type
 	*/
 	VeterancyLevel getProductionVeterancyLevel( AsciiString buildTemplateName ) const;
+
+
+	// These values can now be set via module
+	void addProductionCostChangePercent(AsciiString buildTemplateName, Real percent);
+	void addProductionTimeChangePercent(AsciiString buildTemplateName, Real percent);
+
 
 	// Friend function for the script engine's usage.
 	void friend_setSkillset(Int skillSet);
@@ -564,7 +630,7 @@ public:
 	Bool getUnitsShouldHunt() const { return m_unitsShouldHunt; }
 
 	/// All of our units are new spied upon; they sight for the given enemy
-	void setUnitsVisionSpied( Bool setting, KindOfMaskType whichUnits, PlayerIndex byWhom );
+	void setUnitsVisionSpied( Bool setting, KindOfMaskType whichUnits, KindOfMaskType forbiddenUnits, PlayerIndex byWhom, Bool requiresAllTypes );
 
 	/// Destroy all of the teams for this player, causing him to DIE.
 	void killPlayer();
@@ -592,6 +658,9 @@ public:
 
 	/// Build structure type on front or flank of base.  Gets passed to aiPlayer.
 	void buildBaseDefenseStructure(const AsciiString &thingName, Bool flank);
+
+	/// Build shipyard. Gets passed to aiPlayer.
+	void buildShipyard(const AsciiString& thingName);
 
 	/// Recruits an instance of a specific team.  Gets passed to aiPlayer.
 	void recruitSpecificTeam(TeamPrototype *teamProto, Real recruitRadius);
@@ -682,7 +751,7 @@ private:
 	 this call externally, you probably don't... you should probably be
 	 using grantScience() instead.
 	*/
-	Bool addScience(ScienceType science);
+	Bool addScience(ScienceType science, Bool playerAction = FALSE);
 
 public:
 	Int getSkillPoints() const						{ return m_skillPoints; }
@@ -716,7 +785,7 @@ public:
 		attempt to purchase the science, but use prereqs, and charge points.
 		return true if successful.
 	*/
-	Bool attemptToPurchaseScience(ScienceType science);
+	Bool attemptToPurchaseScience(ScienceType science, Bool playerAction = FALSE);
 
 	/**
 		grant the science, ignore prereqs & charge no points,
@@ -728,6 +797,22 @@ public:
 
 	/** return true attemptToPurchaseScience() would succeed for this science. */
 	Bool isCapableOfPurchasingScience(ScienceType science) const;
+
+	const BattlePlanBonuses* getBattlePlanBonuses() const { return m_battlePlanBonuses; }
+
+	void setUnitsMoveState(MoveStateType moveState, Bool doOnce = FALSE);
+	Bool getUnitsMoveInFormation() const { return m_unitsMoveState == MOVE_IN_FORMATION; }
+	Bool getUnitsMoveInReverse() const { return m_unitsMoveState == MOVE_REVERSE; }
+	Bool getMoveStateDoOnce() const { return m_unitsMoveStateDoOnce; }
+
+	Bool forceDoCommandButtonSpecialPower( Object *other, SpecialPowerType spType );
+	Bool isSabotagingObjectGUICommand() const { return !m_sabotagingObjectGUICommandName.isEmpty(); }
+	ObjectID getSabotagingObjectGUICommandID() const { return m_sabotagingObjectGUICommandID; }
+	const AsciiString& getSabotagingObjectGUICommandName() const { return m_sabotagingObjectGUICommandName; }
+	void setSabotagingObjectGUICommandName(const AsciiString& name) { m_sabotagingObjectGUICommandName = name; }
+	void setSabotagingObjectGUICommandID(ObjectID ID) { m_sabotagingObjectGUICommandID = ID; }
+	void setSabotagingObjectGUICommandButtonSlot(Int slot) { m_sabotagingObjectGUICommandButtonSlot = slot; }
+	void selectDrawablesBeforeSabotaging();
 
 protected:
 
@@ -815,11 +900,19 @@ private:
 	Bool									m_DEMO_instantBuild;		///< Can I build anything in one frame?
 #endif
 
+	Bool									m_ignoreUnitPrereqs;		///< ignore unit/building build prereqs (science prereqs still apply)
+
 	ScoreKeeper						m_scoreKeeper;					///< The local scorekeeper for this player
 
+	// Production Cost modifier
 	typedef std::list<KindOfPercentProductionChange*> KindOfPercentProductionChangeList;
 	typedef KindOfPercentProductionChangeList::iterator KindOfPercentProductionChangeListIt;
 	mutable KindOfPercentProductionChangeList m_kindOfPercentProductionChangeList;
+	// Production Time modifier (we can re-use the same types)
+	mutable KindOfPercentProductionChangeList m_kindOfPercentProductionTimeChangeList;
+
+	// Global build-speed multiplier for this player (>1 = faster). Defaults to 1.0 (no change).
+	Real m_productionSpeedMultiplier;
 
 
 	typedef std::list<SpecialPowerReadyTimerType> SpecialPowerReadyTimerList;
@@ -831,4 +924,18 @@ private:
 
 	Bool									m_isPlayerDead;
 	Bool									m_logicalRetaliationModeEnabled;
+
+	MoveStateType							m_unitsMoveState;
+	Bool									m_unitsMoveStateDoOnce;
+
+	AsciiString								m_sabotagingObjectGUICommandName;
+	Int										m_sabotagingObjectGUICommandButtonSlot;
+	ObjectID								m_sabotagingObjectGUICommandID;
+	std::vector<ObjectID>					m_lastSelectedObjIDs;
+
+	mutable Bool							m_productionCostChangeExpired;
+	mutable Bool							m_productionTimeChangeExpired;
+
+	NameKeyIntVec								m_instances;
+
 };

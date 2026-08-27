@@ -71,6 +71,9 @@ public:
 
 	Bool m_stayOnSameLayerAsMaster;
 
+	Bool m_repairClearsParasite;
+	std::vector<AsciiString> m_repairClearsParasiteKeys;
+
 	SlavedUpdateModuleData()
 	{
 		m_guardMaxRange = 0;
@@ -89,6 +92,8 @@ public:
 		m_minReadyFrames = 0;
 		m_maxReadyFrames = 0;
 		m_stayOnSameLayerAsMaster = false;
+		m_repairClearsParasite = true;
+		m_repairClearsParasiteKeys.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -115,6 +120,8 @@ public:
 			{ "RepairWeldingSys",		INI::parseAsciiString,	nullptr, offsetof( SlavedUpdateModuleData, m_weldingSysName ) },
 			{ "RepairWeldingFXBone", INI::parseAsciiString, nullptr, offsetof( SlavedUpdateModuleData, m_weldingFXBone ) },
 			{ "StayOnSameLayerAsMaster", INI::parseBool, nullptr, offsetof( SlavedUpdateModuleData, m_stayOnSameLayerAsMaster ) },
+			{ "RepairClearsParasite",	INI::parseBool,	nullptr, offsetof( SlavedUpdateModuleData, m_repairClearsParasite ) },
+			{ "RepairClearsParasiteKeys",	INI::parseAsciiStringVector, nullptr, offsetof( SlavedUpdateModuleData, m_repairClearsParasiteKeys ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -153,6 +160,9 @@ public:
 	virtual void onObjectCreated() override;
 	virtual Bool isSelfTasking() const override { return FALSE; };
 
+	virtual void informMySlaverSelfInfo() override;
+	virtual void informMySlaverSelfTasking(Bool set) override { }
+
 
 	void doScoutLogic( const Coord3D *mastersDestination );
 	void doAttackLogic( const Object *target );
@@ -165,7 +175,13 @@ public:
 
 	virtual UpdateSleepTime update() override;	///< Deciding whether or not to make new guys
 
-private:
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+
+	virtual void friend_refreshUpdate(Bool isInstant) override { if(isInstant) update(); else refreshUpdate(); }
+
+	UpdateSleepTime calcSleepTime() const;
+
+protected:
 	void startSlavedEffects( const Object *slaver );	///< We have been marked as Slaved, so we can't be selected or move too far or other stuff
 	void stopSlavedEffects();		///< We are no longer slaved.
 
@@ -174,4 +190,5 @@ private:
 	Int m_framesToWait;
 	RepairStates m_repairState;
 	Bool m_repairing;
+	Bool m_noAggregateHealth;
 };

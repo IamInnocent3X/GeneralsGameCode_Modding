@@ -48,11 +48,15 @@ class AssaultTransportAIUpdateModuleData : public AIUpdateModuleData
 public:
 	Real m_membersGetHealedAtLifeRatio;
 	Real m_clearRangeRequiredToContinueAttackMove;
+	Bool m_retreatWoundedMembersOnAssault;
+	Bool m_canEnterOnMembersExit;
 
 	AssaultTransportAIUpdateModuleData()
 	{
 		m_membersGetHealedAtLifeRatio = 0.0f;
 		m_clearRangeRequiredToContinueAttackMove = 50.0f;
+		m_retreatWoundedMembersOnAssault = TRUE;
+		m_canEnterOnMembersExit = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -62,6 +66,8 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "MembersGetHealedAtLifeRatio",						INI::parseReal,	nullptr, offsetof( AssaultTransportAIUpdateModuleData, m_membersGetHealedAtLifeRatio ) },
+			{ "MembersRetreatOnWounded",						INI::parseBool,	nullptr, offsetof( AssaultTransportAIUpdateModuleData, m_retreatWoundedMembersOnAssault ) },
+			{ "PassengersCanEnterOnMembersExit",						INI::parseBool,	nullptr, offsetof( AssaultTransportAIUpdateModuleData, m_canEnterOnMembersExit ) },
 			{ "ClearRangeRequiredToContinueAttackMove", INI::parseReal, nullptr, offsetof( AssaultTransportAIUpdateModuleData, m_clearRangeRequiredToContinueAttackMove ) },
 			{ 0, 0, 0, 0 }
 		};
@@ -73,6 +79,13 @@ class AssaultTransportAIInterface
 {
 public:
 	virtual void beginAssault( const Object *designatedTarget ) const = 0;
+	//virtual void checkMembersList() = 0;
+	virtual void removeMember( ObjectID passengerID ) = 0;
+	virtual void checkPassengerHealth( ObjectID passengerID ) = 0;
+	virtual void addMember(ObjectID addID) = 0;
+	virtual void doAddMembers() = 0;
+	virtual void onAttack() = 0;
+	virtual Int getCurrentAssaultingMembers() const = 0;
 };
 
 
@@ -96,8 +109,17 @@ public:
 	virtual AssaultTransportAIInterface* getAssaultTransportAIInterface() override { return this; }
 	virtual const AssaultTransportAIInterface* getAssaultTransportAIInterface() const override { return this; }
 	virtual void beginAssault( const Object *designatedTarget ) const override;
+	//virtual void checkMembersList() override;
+	virtual void addMember( ObjectID addID ) override;
+	virtual void removeMember( ObjectID passengerID ) override;
+	virtual void checkPassengerHealth( ObjectID passengerID ) override;
+	virtual void doAddMembers() override { m_doAddMember = TRUE; wakeUpNow(); };
+	virtual void onAttack() override;
+	virtual Int getCurrentAssaultingMembers() const override { return getAssaultTransportAIUpdateModuleData()->m_canEnterOnMembersExit ? 0 : m_maxNumInTransport; }
 
-	UpdateSleepTime calcSleepTime();
+	void addMembers();
+
+	//UpdateSleepTime calcSleepTime();
 
 	void reset();
 	Bool isMemberWounded( const Object *member ) const;	//Member requires medical attention?
@@ -108,15 +130,27 @@ public:
 
 protected:
 
+	virtual void privateAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource ) override;///< Extension.  Also tell occupants to attackObject
+	virtual void privateAttackPosition( const Coord3D *pos, Int maxShotsToFire, CommandSourceType cmdSource ) override;///< Extension.  Also tell occupants to attackPosition
+	virtual void privateForceAttackObject( Object *victim, Int maxShotsToFire, CommandSourceType cmdSource ) override;///< Extension.  Also tell occupants to forceAttackObject
+
+	void removeAllMembers();
+	void goalReset();
+
   ObjectID					m_memberIDs[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_memberHealing[ MAX_TRANSPORT_SLOTS ];
 	Bool							m_newMember[ MAX_TRANSPORT_SLOTS ];
+	Bool							m_countedSlotMember[ MAX_TRANSPORT_SLOTS ];
+	Bool							m_countedAssaultingMember[ MAX_TRANSPORT_SLOTS ];
   Coord3D						m_attackMoveGoalPos;
   mutable ObjectID	m_designatedTarget;
 	AssaultStateTypes	m_state;
-	UnsignedInt				m_framesRemaining;
+	//UnsignedInt				m_framesRemaining;
 	Int								m_currentMembers;
+	Int								m_maxNumInTransport;
+	Int								m_maxNumAttacking;
 	Bool							m_isAttackMove;
 	Bool							m_isAttackObject;
 	Bool							m_newOccupantsAreNewMembers;
+	Bool					m_doAddMember;
 };

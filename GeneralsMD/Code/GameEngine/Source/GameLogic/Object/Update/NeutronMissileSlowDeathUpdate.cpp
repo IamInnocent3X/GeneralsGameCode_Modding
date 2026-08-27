@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/Player.h"
 #include "Common/Xfer.h"
 #include "GameClient/FXList.h"
@@ -212,23 +213,38 @@ NeutronMissileSlowDeathBehavior::~NeutronMissileSlowDeathBehavior()
 
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void NeutronMissileSlowDeathBehavior::beginSlowDeath( const DamageInfo *damageInfo )
+{
+
+	// extending functionality
+	SlowDeathBehavior::beginSlowDeath( damageInfo );
+
+	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
+
+}
+
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 UpdateSleepTime NeutronMissileSlowDeathBehavior::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done. Made Sleepy
 	// get the module data
 	const NeutronMissileSlowDeathBehaviorModuleData *modData = getNeutronMissileSlowDeathBehaviorModuleData();
 
 	// call the base class cause we're extending functionality
-	SlowDeathBehavior::update();
+	UpdateSleepTime ret = SlowDeathBehavior::update();
 
 	// get out of here if we're not activated yet
 	if( isSlowDeathActivated() == FALSE )
-		return UPDATE_SLEEP_NONE;
+		return ret;
+		//return UPDATE_SLEEP_NONE;
 
 	// get the current frame
 	UnsignedInt currFrame = TheGameLogic->getFrame();
+	UnsignedInt nextWakeUpTime = 0;
 
 	// when we become activated we want to do a few things
 	if( m_activationFrame == 0 )
@@ -255,36 +271,92 @@ UpdateSleepTime NeutronMissileSlowDeathBehavior::update()
 		if( modData->m_blastInfo[ i ].enabled == FALSE )
 			continue;
 
-		// has the time of this blast come
-		if( m_completedBlasts[ i ] == FALSE &&
-				(currFrame - m_activationFrame > modData->m_blastInfo[ i ].delay) )
+		if(m_completedBlasts[ i ] == FALSE)
 		{
+			// has the time of this blast come
+			//if( m_completedBlasts[ i ] == FALSE &&
+			if(		(currFrame - m_activationFrame > modData->m_blastInfo[ i ].delay) )
+			{
 
-			// do the blast
-			doBlast( &modData->m_blastInfo[ i ] );
+				// do the blast
+				doBlast( &modData->m_blastInfo[ i ] );
 
-			// mark this blast as complete now
-			m_completedBlasts[ i ] = TRUE;
+				// mark this blast as complete now
+				m_completedBlasts[ i ] = TRUE;
 
+			}
+			else
+			{
+				// get its time to blast so we can set the wake up frame
+				UnsignedInt delay = modData->m_blastInfo[ i ].delay + m_activationFrame + 1 - currFrame;
+				if( !nextWakeUpTime || nextWakeUpTime > delay )
+					nextWakeUpTime = delay;
+			}
 		}
 
-		// has the time for a scorch blast come
-		if( m_completedScorchBlasts[ i ] == FALSE &&
-		    (currFrame - m_activationFrame > modData->m_blastInfo[ i ].scorchDelay) )
+		if( m_completedScorchBlasts[ i ] == FALSE )
 		{
+			// has the time for a scorch blast come
+			//if( m_completedScorchBlasts[ i ] == FALSE &&
+			if(	(currFrame - m_activationFrame > modData->m_blastInfo[ i ].scorchDelay) )
+			{
 
-			// do the scorch blast
-			doScorchBlast( &modData->m_blastInfo[ i ] );
+				// do the scorch blast
+				doScorchBlast( &modData->m_blastInfo[ i ] );
 
-			// mark this scorch blast as complete now
-			m_completedScorchBlasts[ i ] = TRUE;
+				// mark this scorch blast as complete now
+				m_completedScorchBlasts[ i ] = TRUE;
 
+			}
+			else
+			{
+				// get its time to blast so we can set the wake up frame
+				UnsignedInt delay = modData->m_blastInfo[ i ].scorchDelay  + m_activationFrame + 1 - currFrame;
+				if( !nextWakeUpTime || nextWakeUpTime > delay )
+					nextWakeUpTime = delay;
+			}
 		}
-
 	}
 
-	return UPDATE_SLEEP_NONE;
+	UpdateSleepTime mine = UPDATE_SLEEP( nextWakeUpTime ? nextWakeUpTime : UPDATE_SLEEP_FOREVER );
+	return ( mine < ret ) ? mine : ret;
 
+}
+
+static void debugDrawBlastCircle( const Coord3D *center, Real radius, Real tileWidth,
+																 Int frameDuration, const RGBColor &color )
+{
+	extern void addIcon(const Coord3D *pos, Real width, Int frameDuration, RGBColor color);
+
+	if( radius <= 0.0f )
+		return;
+
+	// space the icons roughly one tile apart along the circumference, within sane bounds
+	tileWidth = max( tileWidth, 1.0f );
+	Int segments = (Int)ceilf( (2.0f * PI * radius) / tileWidth * 0.5f );
+	segments = clamp(1, segments, 256);
+
+	for( Int i = 0; i < segments; ++i )
+	{
+		Real angle = (2.0f * PI * i) / segments;
+		Coord3D pos;
+
+		pos.x = center->x + radius * cosf( angle );
+		pos.y = center->y + radius * sinf( angle );
+		pos.z = TheTerrainLogic->getGroundHeight( pos.x, pos.y );
+
+		addIcon( &pos, tileWidth, frameDuration, color );
+	}
+}
+
+static void debugDrawBlastRadii( Object *missile, const BlastInfo *blastInfo, Real tileWidth, Int frameDuration )
+{
+	constexpr const RGBColor innerColor = { 0.0f, 1.0f, 1.0f }; // cyan, everything in here takes full damage
+	constexpr const RGBColor outerColor = { 1.0f, 1.0f, 0.0f }; // yellow, damage falls off out here
+	const Coord3D *missilePos = missile->getPosition();
+
+	debugDrawBlastCircle( missilePos, blastInfo->innerRadius, tileWidth, frameDuration, innerColor );
+	debugDrawBlastCircle( missilePos, blastInfo->outerRadius, tileWidth, frameDuration, outerColor );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -314,6 +386,14 @@ void NeutronMissileSlowDeathBehavior::doBlast( const BlastInfo *blastInfo )
 	// scan objects around us and do damage to objects we have "passed over" and are behind us
 	if( blastInfo->outerRadius )
 	{
+#if defined(RTS_DEBUG)
+		if( TheGlobalData->m_debugProjectilePath && (blastInfo->maxDamage > 0.0f || blastInfo->minDamage > 0.0f) )
+		{
+			constexpr const Int frameDuration = 60 * LOGICFRAMES_PER_SECOND;
+			debugDrawBlastRadii( missile, blastInfo, TheGlobalData->m_debugProjectileTileWidth, frameDuration );
+		}
+#endif
+
 		ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( missilePos,
 																																			 blastInfo->outerRadius,
 																																			 FROM_CENTER_2D,

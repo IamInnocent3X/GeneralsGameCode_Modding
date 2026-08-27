@@ -44,6 +44,8 @@ private:
 	const RadiusDecalTemplate*	m_template;
 	Shadow*											m_decal;
 	Bool												m_empty;
+	UnsignedInt										m_lastOpacityThrobTime;
+	Bool											m_firstOpacityThrobCalculated;
 public:
 	RadiusDecal();
 	RadiusDecal(const RadiusDecal& that);
@@ -72,6 +74,7 @@ private:
 	Real					m_minOpacity;
 	Real					m_maxOpacity;
 	UnsignedInt		m_opacityThrobTime;
+	Real 			m_invOpacityThrobTime;
 	Color					m_color;
 	Bool					m_onlyVisibleToOwningPlayer;
 
@@ -87,4 +90,15 @@ public:
 	void createRadiusDecal(const Coord3D& pos, Real radius, const Player* owningPlayer, RadiusDecal& result) const;
 
 	static void parseRadiusDecalTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
+
+	// DEBUG:
+	/*void debugPrint() const {
+		DEBUG_LOG(("-- m_name = %s\n", m_name.str()));
+		DEBUG_LOG(("-- m_shadowType = %d\n", m_shadowType));
+		DEBUG_LOG(("-- m_minOpacity = %f\n", m_minOpacity));
+		DEBUG_LOG(("-- m_maxOpacity = %f\n", m_maxOpacity));
+		DEBUG_LOG(("-- m_opacityThrobTime = %d\n", m_opacityThrobTime));
+		DEBUG_LOG(("-- m_color = %d\n", m_color));
+		DEBUG_LOG(("-- m_onlyVisibleToOwningPlayer = %d\n", m_onlyVisibleToOwningPlayer));
+	};*/
 };

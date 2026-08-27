@@ -41,6 +41,7 @@ class INI;
 // has all condition flags set to zero.
 enum ArmorSetType CPP_11(: Int)
 {
+	ARMORSET_NONE = -1,
 	// The access and use of this enum has the bit shifting built in, so this is a 0,1,2,3,4,5 enum
 	ARMORSET_VETERAN		= 0,
 	ARMORSET_ELITE			= 1,
@@ -50,6 +51,31 @@ enum ArmorSetType CPP_11(: Int)
 	ARMORSET_SECOND_LIFE = 5,	///< Body Module has marked us as on our second life
 	ARMORSET_CRATE_UPGRADE_ONE, ///< Just like weaponset type from salvage.
 	ARMORSET_CRATE_UPGRADE_TWO,
+	ARMORSET_PLAYER_UPGRADE2,
+	ARMORSET_PLAYER_UPGRADE3,
+	ARMORSET_PLAYER_UPGRADE4,
+
+	// Veterancy ranks beyond HEROIC. Appended (not inserted) to preserve existing save values.
+	ARMORSET_FOUR,
+	ARMORSET_FIVE,
+
+	// Rider slots (appended to preserve existing save values). See RiderChangeContain (MAX_RIDERS).
+	ARMORSET_RIDER1,
+	ARMORSET_RIDER2,
+	ARMORSET_RIDER3,
+	ARMORSET_RIDER4,
+	ARMORSET_RIDER5,
+	ARMORSET_RIDER6,
+	ARMORSET_RIDER7,
+	ARMORSET_RIDER8,
+	ARMORSET_RIDER9,
+	ARMORSET_RIDER10,
+	ARMORSET_RIDER11,
+	ARMORSET_RIDER12,
+	ARMORSET_RIDER13,
+	ARMORSET_RIDER14,
+	ARMORSET_RIDER15,
+	ARMORSET_RIDER16,
 
 	ARMORSET_COUNT
 };

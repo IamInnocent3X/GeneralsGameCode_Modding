@@ -36,6 +36,44 @@
 #include "Common/BitFlagsIO.h"
 #include "Common/ModelState.h"
 #include "GameLogic/ArmorSet.h"
+#include "GameLogic/WeaponBonusConditionFlags.h"
+#include "Common/KindOf.h"
+#include "GameLogic/WeaponSetType.h"
+#include "Common/DisabledTypes.h"
+#include "Common/ObjectStatusTypes.h"
+#include "GameLogic/Damage.h"
+#include "Common/SpecialPowerMaskType.h"
+#include "Common/Upgrade.h"
+#include "GameClient/TintStatus.h"
+
+//-------------------------------------------------------------------------------------------------
+// BitFlags<N> is templated ONLY on its bit count, so two enums with the same *_COUNT collapse to the
+// SAME type and share a single static s_bitNameList. When that happens, INI parsing for one flag type
+// silently looks up names in the other's list (e.g. a KindOf parse reading ModelCondition names). Guard
+// against it: every BitFlags specialization's size must be unique. If this assert fires, nudge one enum's
+// COUNT to a free value (e.g. add a reserved padding entry) -- see the free/used counts in this list.
+//-------------------------------------------------------------------------------------------------
+namespace
+{
+	constexpr int s_bitFlagsSizes[] =
+	{
+		KINDOF_COUNT, MODELCONDITION_COUNT, WEAPONBONUSCONDITION_COUNT, WEAPONSET_COUNT,
+		ARMORSET_COUNT, DISABLED_COUNT, OBJECT_STATUS_COUNT, DAMAGE_NUM_TYPES,
+		SPECIALPOWER_COUNT, UPGRADE_MAX_COUNT, TINT_STATUS_COUNT
+	};
+	constexpr bool areBitFlagsSizesUnique()
+	{
+		for (size_t i = 0; i < ARRAY_SIZE(s_bitFlagsSizes); ++i)
+			for (size_t j = i + 1; j < ARRAY_SIZE(s_bitFlagsSizes); ++j)
+				if (s_bitFlagsSizes[i] == s_bitFlagsSizes[j])
+					return false;
+		return true;
+	}
+	static_assert(areBitFlagsSizesUnique(),
+		"Two BitFlags<> specializations share the same bit count; equal counts collapse to the same type "
+		"and share one s_bitNameList, so INI parsing for one flag type will use another's names. Nudge one "
+		"enum's *_COUNT to a unique value (e.g. add a reserved padding entry).");
+}
 
 template<>
 const char* const ModelConditionFlags::s_bitNameList[] =
@@ -172,6 +210,68 @@ const char* const ModelConditionFlags::s_bitNameList[] =
 
 	"DISGUISED",
 
+	// New Weaponsets
+	"WEAPONSET_PLAYER_UPGRADE2",
+	"WEAPONSET_PLAYER_UPGRADE3",
+	"WEAPONSET_PLAYER_UPGRADE4",
+
+	// New Weaponslots (D-H)
+	
+	"PREATTACK_D",
+	"FIRING_D",
+	"BETWEEN_FIRING_SHOTS_D",
+	"RELOADING_D",
+	"USING_WEAPON_D",
+
+	"PREATTACK_E",
+	"FIRING_E",
+	"BETWEEN_FIRING_SHOTS_E",
+	"RELOADING_E",
+	"USING_WEAPON_E",
+
+	"PREATTACK_F",
+	"FIRING_F",
+	"BETWEEN_FIRING_SHOTS_F",
+	"RELOADING_F",
+	"USING_WEAPON_F",
+
+	"PREATTACK_G",
+	"FIRING_G",
+	"BETWEEN_FIRING_SHOTS_G",
+	"RELOADING_G",
+	"USING_WEAPON_G",
+
+	"PREATTACK_H",
+	"FIRING_H",
+	"BETWEEN_FIRING_SHOTS_H",
+	"RELOADING_H",
+	"USING_WEAPON_H",
+
+	"TAKEOFF",
+	"LANDING",
+
+	"TELEPORT_RECOVER",
+
+	"CARRIER_DOOR_OPENING",
+	"CARRIER_DOOR_CLOSING",
+
+	"SHIP_TOPPLING",
+	"SHIP_SINKING",
+
+	"WEAPONSET_FOUR",
+	"WEAPONSET_FIVE",
+
+	"RIDER9",
+	"RIDER10",
+	"RIDER11",
+	"RIDER12",
+	"RIDER13",
+	"RIDER14",
+	"RIDER15",
+	"RIDER16",
+
+	"RESERVED_UNIQUE_SIZE_PAD",
+
 	nullptr
 };
 static_assert(ARRAY_SIZE(ModelConditionFlags::s_bitNameList) == ModelConditionFlags::NumBits + 1, "Incorrect array size");
@@ -187,7 +287,96 @@ const char* const ArmorSetFlags::s_bitNameList[] =
 	"SECOND_LIFE",
 	"CRATE_UPGRADE_ONE",
 	"CRATE_UPGRADE_TWO",
+	"PLAYER_UPGRADE2",
+	"PLAYER_UPGRADE3",
+	"PLAYER_UPGRADE4",
+	"LEVEL_FOUR",
+	"LEVEL_FIVE",
+
+	"ARMOR_RIDER1",
+	"ARMOR_RIDER2",
+	"ARMOR_RIDER3",
+	"ARMOR_RIDER4",
+	"ARMOR_RIDER5",
+	"ARMOR_RIDER6",
+	"ARMOR_RIDER7",
+	"ARMOR_RIDER8",
+	"ARMOR_RIDER9",
+	"ARMOR_RIDER10",
+	"ARMOR_RIDER11",
+	"ARMOR_RIDER12",
+	"ARMOR_RIDER13",
+	"ARMOR_RIDER14",
+	"ARMOR_RIDER15",
+	"ARMOR_RIDER16",
 
 	nullptr
 };
 static_assert(ARRAY_SIZE(ArmorSetFlags::s_bitNameList) == ArmorSetFlags::NumBits + 1, "Incorrect array size");
+
+
+
+template<>
+const char* const WeaponBonusConditionFlags::s_bitNameList[] =
+{
+	// This is a RHS enum (weapon.ini will have WeaponBonus = IT) so it is all caps
+	"GARRISONED",
+	"HORDE",
+	"CONTINUOUS_FIRE_MEAN",
+	"CONTINUOUS_FIRE_FAST",
+	"NATIONALISM",
+	"PLAYER_UPGRADE",
+	"DRONE_SPOTTING",
+#ifdef ALLOW_DEMORALIZE
+	"DEMORALIZED",
+#else
+	"DEMORALIZED_OBSOLETE",
+#endif
+	"ENTHUSIASTIC",
+	"VETERAN",
+	"ELITE",
+	"HERO",
+	"BATTLEPLAN_BOMBARDMENT",
+	"BATTLEPLAN_HOLDTHELINE",
+	"BATTLEPLAN_SEARCHANDDESTROY",
+	"SUBLIMINAL",
+	"SOLO_HUMAN_EASY",
+	"SOLO_HUMAN_NORMAL",
+	"SOLO_HUMAN_HARD",
+	"SOLO_AI_EASY",
+	"SOLO_AI_NORMAL",
+	"SOLO_AI_HARD",
+	"TARGET_FAERIE_FIRE",
+	"FANATICISM", // FOR THE NEW GC INFANTRY GENERAL... adds to nationalism
+	"FRENZY_ONE",
+	"FRENZY_TWO",
+	"FRENZY_THREE",
+	"CONTAINED",
+	"FRENZY_FOUR",
+	"FRENZY_FIVE",
+	"BOOST_ONE",
+	"BOOST_TWO",
+	"BOOST_THREE",
+	"DEMORALIZED_ONE",
+	"DEMORALIZED_TWO",
+	"DEMORALIZED_THREE",
+	"TARGET_PAINT_ONE",
+	"TARGET_PAINT_TWO",
+	"TARGET_PAINT_THREE",
+	"CRYO_ONE",
+	"CRYO_TWO",
+	"CRYO_THREE",
+	"EXTRA1",
+	"EXTRA2",
+	"EXTRA3",
+	"EXTRA4",
+	"EXTRA5",
+	"EXTRA6",
+	"EXTRA7",
+	"EXTRA8",
+	"LEVEL_FOUR",
+	"LEVEL_FIVE",
+	nullptr
+};
+static_assert(ARRAY_SIZE(WeaponBonusConditionFlags::s_bitNameList) == WEAPONBONUSCONDITION_COUNT + 1, "Incorrect array size");
+

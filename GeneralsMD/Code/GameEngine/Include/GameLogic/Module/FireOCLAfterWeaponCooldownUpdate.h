@@ -62,14 +62,16 @@ public:
 	FireOCLAfterWeaponCooldownUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	// BehaviorModule
+	virtual UpgradeModuleInterface* getUpgrade() override { return this; }
+
 	// update methods
 	virtual UpdateSleepTime update() override;							///< called once per frame
+	void refreshUpdateMod(Bool weaponFired);
+	Bool isActive() const { return m_isActive; }
 
 protected:
-	virtual void upgradeImplementation() override
-	{
-		// nothing!
-	}
+	virtual void upgradeImplementation() override;
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
@@ -79,6 +81,12 @@ protected:
 	virtual void performUpgradeFX() override
 	{
 		getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
 	virtual void processUpgradeRemoval() override
@@ -92,7 +100,10 @@ protected:
 		return getFireOCLAfterWeaponCooldownUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const override;
+
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 	void resetStats();
 	void fireOCL();
@@ -100,7 +111,10 @@ protected:
 private:
 
 	Bool				m_valid;
+	Bool				m_weaponFired;
+	Bool				m_isActive;
 	UnsignedInt m_consecutiveShots;
 	UnsignedInt m_startFrame;
+	UnsignedInt m_checkFrame;
 
 };

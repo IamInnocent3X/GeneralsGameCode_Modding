@@ -400,7 +400,8 @@ void setFPSTextBox( Int sliderPos )
 		return;
 	UnicodeString text;
 	staticTextGameSpeed->winEnable(TRUE);
-	if(sliderPos > GREATER_NO_FPS_LIMIT)
+	if( ( sliderPos > GREATER_NO_FPS_LIMIT && TheGlobalData->m_newskirmishfpsSystem == FALSE ) || 
+			( TheGlobalData->m_newskirmishfpsSystem == TRUE && sliderPos > TheGlobalData->m_framesPerSecondLimit && TheGlobalData->m_framesPerSecondLimit >= GREATER_NO_FPS_LIMIT ) )
 	{
 		// set static text to --
 		text.set(L"--");
@@ -425,7 +426,8 @@ void reallyDoStart()
 	GameWindow *sliderGameSpeed = TheWindowManager->winGetWindowFromId( parentSkirmishGameOptions, sliderGameSpeedID );
 	Int maxFPS = GadgetSliderGetPosition( sliderGameSpeed );
 	DEBUG_LOG(("GameSpeedSlider was at %d", maxFPS));
-	if (maxFPS > GREATER_NO_FPS_LIMIT)
+	if ( ( maxFPS > GREATER_NO_FPS_LIMIT && TheGlobalData->m_newskirmishfpsSystem == FALSE ) ||
+			( TheGlobalData->m_newskirmishfpsSystem == TRUE && maxFPS > TheGlobalData->m_framesPerSecondLimit && TheGlobalData->m_framesPerSecondLimit >= GREATER_NO_FPS_LIMIT ) )
 		maxFPS = 1000;
 	// GeneralsX @tweak felipebraz 20/06/2026 Clamp FPS limit from skirmish game speed slider to 30..120
 	if (maxFPS < 30)
@@ -1315,7 +1317,10 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 	TheSkirmishGameInfo->setSlot(1, gSlot);
 
 	ParseAsciiStringToGameInfo(TheSkirmishGameInfo, prefs.getSlotList());
+	// We set the seed later for Single Player Games
 	TheSkirmishGameInfo->setSeed(GetTickCount());
+
+	//DEBUG_LOG(("Skirmish Initiated. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), UnsignedInt(seed)));
 
 	UnsignedInt isPreorder = 0;
 	GetUnsignedIntFromRegistry("", "Preorder", isPreorder);
@@ -1355,9 +1360,14 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 	// set up the game speed slider
 //	NameKeyType sliderGameSpeedID = TheNameKeyGenerator->nameToKey( "SkirmishGameOptionsMenu.wnd:SliderGameSpeed" );
 	GameWindow *sliderGameSpeed = TheWindowManager->winGetWindowFromId( parentSkirmishGameOptions, sliderGameSpeedID );
+	Bool useNewSliderSpeed = TheGlobalData->m_newskirmishfpsSystem == TRUE && TheGlobalData->m_framesPerSecondLimit > 121;
 	// GeneralsX @tweak felipebraz 20/06/2026 Set up the skirmish slider to represent rendering FPS limit (30..120+)
-	GadgetSliderSetMinMax( sliderGameSpeed, 30, 121 );
-	Int sliderPos = max(30,min(121,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit)));
+	GadgetSliderSetMinMax( sliderGameSpeed, 30, useNewSliderSpeed ? TheGlobalData->m_framesPerSecondLimit : 121 );
+	Int sliderPos;
+	if(useNewSliderSpeed)
+  		sliderPos = max(30,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit));
+	else
+  		sliderPos = max(30,min(121,prefs.getInt("FPS", TheGlobalData->m_framesPerSecondLimit)));
 	GadgetSliderSetPosition( sliderGameSpeed, sliderPos );
 	setFPSTextBox(sliderPos);
 	buttonStart->winSetText(TheGameText->fetch("GUI:Start"));

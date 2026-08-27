@@ -69,6 +69,9 @@ NeutronMissileUpdateModuleData::NeutronMissileUpdateModuleData()
 	m_specialSpeedHeight = 0.0f;
 	m_specialJitterDistance = 0.0f;
 	m_deliveryDecalRadius = 0;
+	m_allowSubdual = TRUE;
+	m_allowAttract = TRUE;
+	m_distanceScatterWhenJammed = 75.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -91,6 +94,11 @@ void NeutronMissileUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "IgnitionFX",				INI::parseFXList,		nullptr, offsetof( NeutronMissileUpdateModuleData, m_ignitionFX ) },
 		{ "DeliveryDecal",						RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( NeutronMissileUpdateModuleData, m_deliveryDecalTemplate ) },
 		{ "DeliveryDecalRadius",			INI::parseReal,									nullptr,	offsetof( NeutronMissileUpdateModuleData, m_deliveryDecalRadius ) },
+
+		{ "AllowSubdual", INI::parseBool, nullptr, offsetof( NeutronMissileUpdateModuleData, m_allowSubdual ) },
+		{ "AllowAttract", INI::parseBool, nullptr, offsetof( NeutronMissileUpdateModuleData, m_allowAttract ) },
+		{ "DistanceScatterWhenJammed",INI::parseReal,		nullptr, offsetof( NeutronMissileUpdateModuleData, m_distanceScatterWhenJammed ) },
+
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 
@@ -111,6 +119,9 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 
 	m_targetPos.zero();
 	m_intermedPos.zero();
+	m_intermedPosBackup.zero();
+	m_launchPos.zero();
+	m_launchVeterancy = LEVEL_REGULAR;
 	m_accel.zero();
 	m_vel.zero();
 
@@ -123,6 +134,11 @@ NeutronMissileUpdate::NeutronMissileUpdate( Thing *thing, const ModuleData* modu
 	m_attach_specificBarrelToUse = 0;
 	m_heightAtLaunch = 0;
 	m_frameAtLaunch = 0;
+	m_framesTillDecoyed = 0;
+	m_decoyID = INVALID_ID;
+	m_attractedID = INVALID_ID;
+	m_isJammed = FALSE;
+	m_assignedBackup = FALSE;
 
 	m_exhaustSysTmpl = nullptr;
 
@@ -139,14 +155,65 @@ void NeutronMissileUpdate::onDelete()
 {
 }
 
+void NeutronMissileUpdate::setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID )
+{
+	UnsignedInt now = TheGameLogic->getFrame();
+	m_framesTillDecoyed = now + frames;
+	m_detonateDistance = distance;
+	m_decoyID = victimID;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeutronMissileUpdate::projectileNowJammed(Bool noDamage)
+{
+	if( m_isJammed )
+		return; // Already jammed
+
+	const NeutronMissileUpdateModuleData* d = getNeutronMissileUpdateModuleData();
+
+	if(!d->m_allowSubdual)
+		return;
+
+	getObject()->setModelConditionState(MODELCONDITION_JAMMED);
+
+	if(!m_assignedBackup)
+		m_intermedPosBackup.set(m_intermedPos);
+
+	m_assignedBackup = TRUE;
+
+	Coord3D targetPosition;
+	targetPosition.set(m_intermedPosBackup);
+
+	Real scatter = d->m_distanceScatterWhenJammed;
+	targetPosition.x += GameLogicRandomValue(-scatter, scatter);
+	targetPosition.y += GameLogicRandomValue(-scatter, scatter);
+	targetPosition.z = TheTerrainLogic->getLayerHeight(	targetPosition.x, 
+																											targetPosition.y, 
+																											TheTerrainLogic->getHighestLayerForDestination(&targetPosition) );
+																											
+	m_intermedPos.set(targetPosition);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeutronMissileUpdate::projectileNowDrawn(ObjectID attractorID)
+{
+	if(!m_isJammed && getNeutronMissileUpdateModuleData()->m_allowAttract)
+	{
+		m_attractedID = attractorID;
+		m_isJammed = TRUE;
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 // Prepares the missile for launch via proper weapon-system channels.
 //-------------------------------------------------------------------------------------------------
-void NeutronMissileUpdate::projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride)
+void NeutronMissileUpdate::projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos )
 {
 	DEBUG_ASSERTCRASH(specificBarrelToUse>=0, ("specificBarrelToUse must now be explicit"));
 
 	m_launcherID = launcher ? launcher->getID() : INVALID_ID;
+	if (launcher)
+		m_launchPos = *launcher->getPosition();
 	m_attach_wslot = wslot;
 	m_attach_specificBarrelToUse = specificBarrelToUse;
 
@@ -171,7 +238,7 @@ void NeutronMissileUpdate::projectileFireAtObjectOrPosition( const Object *victi
 	m_state = LAUNCH;
 	m_stateTimestamp = TheGameLogic->getFrame();
 
-	if( victim )
+	if( victim && !TheGlobalData->m_dynamicTargeting)
 	{
 		// CalcTarget will add half the target's height.  But in this case, we are aiming at the ground
 		// and need to stay aiming at the ground.
@@ -463,6 +530,8 @@ void NeutronMissileUpdate::detonate()
 	m_state = DEAD;
 	if (obj->getDrawable())
 		obj->getDrawable()->setDrawableHidden(true);
+
+	obj->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -473,6 +542,16 @@ UpdateSleepTime NeutronMissileUpdate::update()
 {
 	m_deliveryDecal.update();
 
+	if(m_attractedID != INVALID_ID)
+	{
+		Object* attracted = nullptr;
+		attracted = TheGameLogic->findObjectByID( m_attractedID );
+		if (attracted)
+		{
+			m_intermedPos = *attracted->getPosition();
+			m_intermedPos.z += getNeutronMissileUpdateModuleData()->m_targetFromDirectlyAbove;
+		}
+	}
 	if (!m_reachedIntermediatePos)
 	{
 		Real distSqr = ThePartitionManager->getDistanceSquared(getObject(), &m_intermedPos, FROM_CENTER_3D);
@@ -526,9 +605,48 @@ UpdateSleepTime NeutronMissileUpdate::update()
 		normal.z = -1.0f;
 		getObject()->onCollide(nullptr, getObject()->getPosition(), &normal);
 	}
+
+	//If this missile has been marked to divert to countermeasures, check when
+	//that will occur, then do it when the timer expires.
+	if( m_framesTillDecoyed && m_framesTillDecoyed <= TheGameLogic->getFrame() && m_state != DEAD )
+	{
+		// Since it doesn't have a tracker, we want blow it up instead.
+		// If there's no configured distance, blow it up.
+		if(m_detonateDistance == 0)
+		{
+			m_framesTillDecoyed = 0;
+			detonate();
+			return UPDATE_SLEEP_NONE;
+		}
+		// Calculate if the Projectile is near to the victim.
+		Object *victim = nullptr;
+		if(m_decoyID != INVALID_ID)
+		{
+			victim = TheGameLogic->findObjectByID( m_decoyID );
+		}
+		if (victim)
+		{
+			Coord3D curVictimPos;
+			victim->getGeometryInfo().getCenterPosition(*victim->getPosition(), curVictimPos);
+			Real victimDistance = sqrt(ThePartitionManager->getDistanceSquared( getObject(), &curVictimPos, FROM_CENTER_2D ) );
+			// If the distance is close enough, blow it up 
+			if(victimDistance && m_detonateDistance >= victimDistance)
+			{
+				m_framesTillDecoyed = 0;
+				detonate();
+				return UPDATE_SLEEP_NONE;
+			}
+		}
+	}
+
 	return UPDATE_SLEEP_NONE;
 }
-
+// ------------------------------------------------------------------------------------------------
+const Coord3D* NeutronMissileUpdate::getTargetPosition()
+{
+	const Coord3D* constPos = &m_targetPos;
+	return constPos;
+}
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
@@ -549,7 +667,9 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	// 2: Added m_launchPos (for DamageFactorAtMaxRange)
+	// 3: Added m_launchVeterancy (for veterancy FX/OCL selection)
+	XferVersion currentVersion = 3;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -564,6 +684,10 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 
 	// intermed pos
 	xfer->xferCoord3D( &m_intermedPos );
+
+	xfer->xferCoord3D( &m_intermedPosBackup );
+
+	xfer->xferBool( &m_assignedBackup );
 
 	// launcher ID
 	xfer->xferObjectID( &m_launcherID );
@@ -601,6 +725,14 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 	// height at launch
 	xfer->xferReal( &m_heightAtLaunch );
 
+	// launch pos
+	if( version >= 2 )
+		xfer->xferCoord3D( &m_launchPos );
+
+	// launch veterancy
+	if( version >= 3 )
+		xfer->xferUser( &m_launchVeterancy, sizeof( m_launchVeterancy ) );
+
 	// decal, if any
 	m_deliveryDecal.xferRadiusDecal(xfer);
 
@@ -627,6 +759,12 @@ void NeutronMissileUpdate::xfer( Xfer *xfer )
 		}
 
 	}
+
+	xfer->xferUnsignedInt( &m_framesTillDecoyed );
+	xfer->xferUnsignedInt(&m_detonateDistance);
+	xfer->xferObjectID(&m_decoyID);
+	xfer->xferObjectID( &m_attractedID );
+	xfer->xferBool( &m_isJammed );
 
 }
 

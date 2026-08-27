@@ -33,7 +33,7 @@
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/DamageModule.h"
 #include "GameLogic/Module/UpdateModule.h"
-
+#include "GameLogic/Damage.h"
 
 //-------------------------------------------------------------------------------------------------
 class PoisonedBehaviorModuleData : public UpdateModuleData
@@ -41,6 +41,29 @@ class PoisonedBehaviorModuleData : public UpdateModuleData
 public:
 	UnsignedInt m_poisonDamageIntervalData; // How often I retake poison damage dealt me
 	UnsignedInt m_poisonDurationData;				// And how long after the last poison dose I am poisoned
+	DamageType m_damageType;
+	DamageType m_damageTypeFX;
+	Real m_poisonDamage;
+	Real m_poisonDamageMultiplier;
+	DeathType m_deathType;
+	ObjectStatusTypes m_damageStatusType;
+	AsciiString m_customDamageType;
+	AsciiString m_customDamageStatusType;
+	AsciiString m_customDeathType;
+	Real m_statusDuration;
+	Bool m_doStatusDamage;
+	Bool m_statusDurationTypeCorrelate;
+	TintStatus m_tintStatus;
+	AsciiString m_customTintStatus;
+	DamageFlagsCustom m_damageTypesReaction;
+	CustomFlags m_customDamageTypesReaction;
+	DamageFlagsCustom m_damageTypesCure;
+	CustomFlags m_customDamageTypesCure;
+	Bool m_poisonUnpurgable;
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
 
 	PoisonedBehaviorModuleData();
 

@@ -56,6 +56,7 @@
 #include "GameLogic/Module/SpecialPowerModule.h"
 #include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/LaserUpdate.h"
 #include "GameLogic/Module/ActiveBody.h"
 
 // TheSuperHackers @fix Mirelle 04/02/2026: Raised from 500.0f so that
@@ -93,6 +94,10 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
   m_doubleClickToFastDriveDelay		= 500;
 	m_swathOfDeathAmplitude					= 0.0f;
 	m_swathOfDeathDistance					=	0.0f;
+	m_hitWaterSurface								= false;
+	m_customDamageType.clear();
+	m_customDeathType.clear();
+	m_cursorName.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -153,7 +158,16 @@ ParticleUplinkCannonUpdateModuleData::ParticleUplinkCannonUpdateModuleData()
     { "ManualDrivingSpeed",										INI::parseReal,									nullptr, offsetof( ParticleUplinkCannonUpdateModuleData, m_manualDrivingSpeed ) },
     { "ManualFastDrivingSpeed",								INI::parseReal,									nullptr, offsetof( ParticleUplinkCannonUpdateModuleData, m_manualFastDrivingSpeed ) },
     { "DoubleClickToFastDriveDelay",					INI::parseDurationUnsignedInt,	nullptr, offsetof( ParticleUplinkCannonUpdateModuleData, m_doubleClickToFastDriveDelay ) },
+    { "HitWaterSurface",											INI::parseBool,									nullptr, offsetof( ParticleUplinkCannonUpdateModuleData, m_hitWaterSurface ) },
 
+	// New Features
+	// Custom DamageTypes
+	{ "CustomDamageType",						INI::parseAsciiString,	nullptr,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDamageType) },
+	{ "CustomDeathType",						INI::parseAsciiString,	nullptr,							offsetof( ParticleUplinkCannonUpdateModuleData, m_customDeathType) },
+
+	// Custom Cursor
+	{ "CursorName",								INI::parseAsciiString,	nullptr,							offsetof( ParticleUplinkCannonUpdateModuleData, m_cursorName) },
+	
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
@@ -268,7 +282,7 @@ void ParticleUplinkCannonUpdate::onObjectCreated()
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
+Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions )
 {
 	const ParticleUplinkCannonUpdateModuleData *data = getParticleUplinkCannonUpdateModuleData();
 
@@ -278,7 +292,7 @@ Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPow
 		return FALSE;
 	}
 
-	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) )
+	if( !BitIsSet( commandOptions, COMMAND_FIRED_BY_SCRIPT ) && !BitIsSet( commandOptions, IS_DOING_SABOTAGE ) )
 	{
 		DEBUG_ASSERTCRASH(targetPos, ("Particle Cannon target data must not be null"));
 
@@ -439,7 +453,9 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 			if( me->isDisabledByType( DISABLED_UNDERPOWERED ) ||
 					me->isDisabledByType( DISABLED_EMP ) ||
 					me->isDisabledByType( DISABLED_SUBDUED ) ||
-					me->isDisabledByType( DISABLED_HACKED ) )
+					me->isDisabledByType( DISABLED_HACKED ) ||
+					me->isDisabledByType( DISABLED_CONSTRAINED ) ||
+					me->isDisabledByType( DISABLED_FROZEN ) )
 			{
 				//We must end the special power early! ABORT! ABORT!
 				m_startDecayFrame = now;
@@ -461,6 +477,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_nextScorchMarkFrame = now;
 					m_damagePulsesMade = 0;
 					m_nextDamagePulseFrame = now;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			case LASERSTATUS_BORN:
@@ -480,6 +502,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					}
 					m_orbitToTargetLaserRadius.setDecayFrames( data->m_widthGrowFrames );
 					m_laserStatus = LASERSTATUS_DECAYING;
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			}
@@ -502,6 +530,12 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					m_laserStatus = LASERSTATUS_DEAD;
 					m_startAttackFrame = 0;
 					setLogicalStatus( STATUS_IDLE );
+
+					if(TheGlobalData->m_useEfficientDrawableScheme)
+					{
+						// Redraw everything
+						TheGameClient->clearEfficientDrawablesList();
+					}
 				}
 				break;
 			}
@@ -625,8 +659,18 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 				m_currentTargetPosition.y += vector.y;
 			}
 
-			//Regardless of which method we used to set the target position, make sure the z position is at the terrain.
-			m_currentTargetPosition.z = TheTerrainLogic->getGroundHeight( m_currentTargetPosition.x, m_currentTargetPosition.y );
+			//Regardless of which method we used to set the target position, make sure the z position is at the terrain
+			//(or, when configured, at the water surface over water).
+			Real waterZ;
+			if( data->m_hitWaterSurface &&
+					TheTerrainLogic->isUnderwater( m_currentTargetPosition.x, m_currentTargetPosition.y, &waterZ ) )
+			{
+				m_currentTargetPosition.z = waterZ;
+			}
+			else
+			{
+				m_currentTargetPosition.z = TheTerrainLogic->getGroundHeight( m_currentTargetPosition.x, m_currentTargetPosition.y );
+			}
 
 			Coord3D orbitPosition;
 			orbitPosition.set( m_currentTargetPosition );
@@ -705,6 +749,9 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 				damageInfo.in.m_sourceID = me->getID();
 				damageInfo.in.m_damageType = data->m_damageType;
 				damageInfo.in.m_deathType = data->m_deathType;
+
+				damageInfo.in.m_customDamageType = data->m_customDamageType;
+				damageInfo.in.m_customDeathType = data->m_customDeathType;
 
 				PartitionFilterAlive filterAlive;
 				PartitionFilter *filters[] = { &filterAlive, nullptr };

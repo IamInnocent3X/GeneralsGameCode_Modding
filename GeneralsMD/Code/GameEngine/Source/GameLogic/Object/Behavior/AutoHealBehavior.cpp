@@ -32,18 +32,23 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 #include "Common/Thing.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 #include "Common/INI.h"
 #include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "Common/Xfer.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/Anim2D.h"
 #include "GameClient/InGameUI.h"
 #include "GameLogic/Module/AutoHealBehavior.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
-
+#include "GameLogic/ExperienceTracker.h"
+#include "Common/AudioEventRTS.h"
+#include "Common/MiscAudio.h"
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -89,13 +94,13 @@ static void checkForAutoHeal( Object *testObj, void *userData )
 //-------------------------------------------------------------------------------------------------
 AutoHealBehavior::AutoHealBehavior( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
 {
-	const AutoHealBehaviorModuleData *d = getAutoHealBehaviorModuleData();
+	//const AutoHealBehaviorModuleData *d = getAutoHealBehaviorModuleData();
 
 	m_radiusParticleSystemID = INVALID_PARTICLE_SYSTEM_ID;
 	m_soonestHealFrame = 0;
 	m_stopped = false;
 
-	if (d->m_initiallyActive)
+	if (checkStartsActive())
 	{
 		giveSelfUpgrade();
 		// start these guys with random phasings so that we don't
@@ -241,17 +246,29 @@ UpdateSleepTime AutoHealBehavior::update()
 		MemoryPoolObjectHolder hold( iter );
 		for( obj = iter->first(); obj; obj = iter->next() )
 		{
-			// do not heal if we are at max health already
+			// do not heal if we are at max health already, still apply if salvage/promotion is granted
 			BodyModuleInterface *body = obj->getBodyModule();
-			if( body->getHealth() < body->getMaxHealth() )
+			if( (body->getHealth() < body->getMaxHealth())
+					|| canApplyArmorSalvage( obj )
+					|| canApplyWeaponSalvage( obj )
+					|| canApplyLevelUp( obj ) )
 			{
 				if( obj->isAnyKindOf( d->m_kindOf ) && !obj->isAnyKindOf( d->m_forbiddenKindOf ) )
 				{
 					if( !d->m_skipSelfForHealing || obj != getObject() )
 					{
-						pulseHealObject( obj );
+						Bool healed = pulseHealObject( obj );
 
-						if( d->m_singleBurst && TheGameLogic->getDrawIconUI() )
+						// IamInnocent - Added disguise check to not show healing icon when disguised as Unselectable Objects (trees, etc. )
+						Bool isDisguised = FALSE;
+						if(obj->isDisguised() &&
+							ThePlayerList->getLocalPlayer()->getRelationship(obj->getTeam()) != ALLIES &&
+							obj->getDrawable() &&
+							(obj->getDrawable()->getTemplate()->isKindOf(KINDOF_MINE) || obj->getDrawable()->getTemplate()->isKindOf(KINDOF_SHRUBBERY))
+						  )
+							isDisguised = TRUE;
+						
+						if( healed && d->m_singleBurst && TheGameLogic->getDrawIconUI() && !isDisguised )
 						{
 							if( TheAnim2DCollection && TheGlobalData->m_getHealedAnimationName.isEmpty() == FALSE )
 							{
@@ -279,22 +296,161 @@ UpdateSleepTime AutoHealBehavior::update()
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool AutoHealBehavior::canApplyWeaponSalvage(const Object* obj) const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return data->m_grantSalvageUpgrade && obj->isKindOf(KINDOF_WEAPON_SALVAGER) && !obj->testWeaponSetFlag(WEAPONSET_CRATEUPGRADE_TWO);
+}
+
+Bool AutoHealBehavior::canApplyArmorSalvage(const Object* obj) const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return data->m_grantSalvageUpgrade && obj->isKindOf(KINDOF_ARMOR_SALVAGER) && !obj->testArmorSetFlag(ARMORSET_CRATE_UPGRADE_TWO);
+}
+
+Bool AutoHealBehavior::canApplyLevelUp(const Object* obj) const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return data->m_grantPromotion && obj->getExperienceTracker()->isTrainable() && obj->getExperienceTracker()->getVeterancyLevel() < LEVEL_HEROIC;
+}
+
+Bool AutoHealBehavior::canApplySalvageCrate() const
+{
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	return !data->m_grantSalvageCrateName.isEmpty() && TheThingFactory && TheThingFactory->findTemplate( data->m_grantSalvageCrateName );
+}
+
+// ------------------------------------------------------------------------------------------------
+static void applyWeaponSalvage(Object* unit)
+{
+	if (unit->testWeaponSetFlag(WEAPONSET_CRATEUPGRADE_ONE))
+	{
+		unit->clearWeaponSetFlag(WEAPONSET_CRATEUPGRADE_ONE);
+		unit->setWeaponSetFlag(WEAPONSET_CRATEUPGRADE_TWO);
+	}
+	else
+	{
+		unit->setWeaponSetFlag(WEAPONSET_CRATEUPGRADE_ONE);
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+static void applyArmorSalvage(Object* unit)
+{
+	if (unit->testArmorSetFlag(ARMORSET_CRATE_UPGRADE_ONE))
+	{
+		unit->clearArmorSetFlag(ARMORSET_CRATE_UPGRADE_ONE);
+		unit->setArmorSetFlag(ARMORSET_CRATE_UPGRADE_TWO);
+		unit->clearAndSetModelConditionState(MODELCONDITION_ARMORSET_CRATEUPGRADE_ONE, MODELCONDITION_ARMORSET_CRATEUPGRADE_TWO);
+	}
+	else
+	{
+		unit->setArmorSetFlag(ARMORSET_CRATE_UPGRADE_ONE);
+		unit->setModelConditionState(MODELCONDITION_ARMORSET_CRATEUPGRADE_ONE);
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+static void doLevelGain(Object* unit)
+{
+	unit->getExperienceTracker()->gainExpForLevel(1);
+}
+
+static void doSalvageEffect(Object* unit) {
+	//Play the salvage installation crate pickup sound.
+	AudioEventRTS soundToPlay = TheAudio->getMiscAudio()->m_crateSalvage;
+	soundToPlay.setObjectID(unit->getID());
+	TheAudio->addAudioEvent(&soundToPlay);
+}
+
+// ------------------------------------------------------------------------------------------------
+static void applySalvageCrate(Object* unit, const AsciiString& crateName)
+{
+	const ThingTemplate *tmpl = TheThingFactory ? TheThingFactory->findTemplate( crateName ) : nullptr;
+	if (tmpl)
+	{
+		/*const ModuleInfo& mi = tmpl->getBehaviorModuleInfo();
+		for( Int modIdx = 0; modIdx < mi.getCount(); ++modIdx )
+		{
+			modName = mi.getNthName(modIdx);
+			if( !modName.compare( "SalvageCrateCollide" ) )
+			{
+				const SalvageCrateCollideModuleData *data = (const SalvageCrateCollideModuleData*)mi.getNthData( modIdx );
+
+				//It does, so see if the player has that upgrade
+				if( data )
+				{
+					const ModuleTemplate* mt = findModuleTemplate(modName, MODULETYPE_BEHAVIOR);
+					if (mt)
+					{
+						Module* mod = (*mt->m_createProc)( thing, moduleData );
+
+					BehaviorModule* newMod = (BehaviorModule*)TheModuleFactory->newModule(obj, modName, mi.getNthData(modIdx), MODULETYPE_BEHAVIOR);
+					CollideModuleInterface* collide = newMod->getCollide();
+					if (collide && collide->isSalvageCrateCollide()) {
+						for( int salvage_times = 0; salvage_times < m_addSalvageTier; salvage_times++ )
+							collide->friend_executeCrateBehavior( unit );
+					}
+				}
+			}
+		}*/
+
+		Object *crate = TheThingFactory->newObject( tmpl, nullptr );
+		if (crate)
+		{
+			for (BehaviorModule** m = crate->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (collide && collide->isSalvageCrateCollide())
+					collide->friend_executeCrateBehavior( unit );
+			}
+			TheGameLogic->destroyObject(crate);
+		}
+	}
+	else if (!tmpl)
+	{
+		DEBUG_LOG((">>> AutoHealBehavior applySalvageCrate: ThingTemplate '%s' not found.", crateName.str()));
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
-void AutoHealBehavior::pulseHealObject( Object *obj )
+//-------------------------------------------------------------------------------------------------
+Bool AutoHealBehavior::pulseHealObject(Object* obj)
 {
 	if (m_stopped)
-		return;
+		return false;
 
-	const AutoHealBehaviorModuleData *data = getAutoHealBehaviorModuleData();
+	const AutoHealBehaviorModuleData* data = getAutoHealBehaviorModuleData();
+	bool needsHeal{ true };
 
+	if (data->m_grantSalvageUpgrade || data->m_grantPromotion) {
+		// Need to check for full HP 
+		BodyModuleInterface* body = obj->getBodyModule();
+		needsHeal = ((body != nullptr) && (body->getHealth() < body->getMaxHealth()) || ((data->m_clearsParasite || !data->m_clearsParasiteKeys.empty()) && obj->hasParasites()));
+	}
+	if (needsHeal) {
+		if (data->m_radius == 0.0f)
+			obj->attemptHealingWithParasiteClear(data->m_healingAmount, getObject(), data->m_clearsParasite, data->m_clearsParasiteKeys );
+		else 
+			obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay, data->m_clearsParasite, data->m_clearsParasiteKeys );
+	}
 
-	if ( data->m_radius == 0.0f )
-		obj->attemptHealing(data->m_healingAmount, getObject());
-	else
-		obj->attemptHealingFromSoleBenefactor( data->m_healingAmount, getObject(), data->m_healingDelay );
+	if( canApplySalvageCrate() ) {
+		applySalvageCrate(obj, data->m_grantSalvageCrateName);
+	}
+	else if (canApplyArmorSalvage(obj)) {
+		applyArmorSalvage(obj);
+		doSalvageEffect(obj);
+	}
+	else if (canApplyWeaponSalvage(obj)) {
+		applyWeaponSalvage(obj);
+		doSalvageEffect(obj);
+	}
+	else if (canApplyLevelUp(obj)) {
+		doLevelGain(obj);
+	}
 
-
-	if( data->m_unitHealPulseParticleSystemTmpl )
+	if( needsHeal && data->m_unitHealPulseParticleSystemTmpl )
 	{
 		ParticleSystem *system = TheParticleSystemManager->createParticleSystem( data->m_unitHealPulseParticleSystemTmpl );
 		if( system )
@@ -304,6 +460,7 @@ void AutoHealBehavior::pulseHealObject( Object *obj )
 	}
 
 	m_soonestHealFrame = TheGameLogic->getFrame() + data->m_healingDelay;// In case onDamage tries to wake us up early
+	return needsHeal;
 }
 
 // ------------------------------------------------------------------------------------------------

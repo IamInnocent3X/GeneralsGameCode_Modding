@@ -34,6 +34,7 @@
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 //-------------------------------------------------------------------------------------------------
 class GenerateMinefieldBehaviorModuleData : public BehaviorModuleData
@@ -66,6 +67,7 @@ private:
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 class GenerateMinefieldBehavior : public UpdateModule,
+																	public CreateModuleInterface,
 																	public DieModuleInterface,
 																	public UpgradeMux
 {
@@ -79,7 +81,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// module methods
-	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_UPGRADE); }
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_UPGRADE) | (MODULEINTERFACE_CREATE); }
 
 	// BehaviorModule
 	virtual DieModuleInterface* getDie() override { return this; }
@@ -89,12 +91,25 @@ public:
 	// DamageModuleInterface
 	virtual void onDie( const DamageInfo *damageInfo ) override;
 
+	// CreateModuleInterface
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
+
+	// UpdateModule
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual void friend_giveSelfUpgrade() override { }
+
 	void setMinefieldTarget(const Coord3D* pos);
+
+	Bool canUpgrade() const;
 
 protected:
 
 	virtual void upgradeImplementation() override;
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
@@ -103,6 +118,11 @@ protected:
 	virtual void performUpgradeFX() override
 	{
 		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 	virtual void processUpgradeRemoval() override
 	{
@@ -115,12 +135,19 @@ protected:
 		return getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const override
+	{
+		return getGenerateMinefieldBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
+	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 private:
 	Coord3D							m_target;
 	Bool								m_hasTarget;
 	Bool								m_generated;
 	Bool								m_upgraded;
+	Bool								m_giveSelfUpgrade;
 	std::list<ObjectID> m_mineList;
 
 	const Coord3D* getMinefieldTarget() const;

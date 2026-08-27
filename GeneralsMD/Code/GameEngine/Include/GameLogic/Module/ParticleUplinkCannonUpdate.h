@@ -100,9 +100,15 @@ public:
 	AsciiString		m_annihilationSoundName;
 	AsciiString		m_damagePulseRemnantObjectName;
 
+	AsciiString m_customDamageType;
+	AsciiString m_customDeathType;
+
+	AsciiString m_cursorName;
+
   Real					m_manualDrivingSpeed;
   Real					m_manualFastDrivingSpeed;
   UnsignedInt		m_doubleClickToFastDriveDelay;
+	Bool          m_hitWaterSurface;
 
 	ParticleUplinkCannonUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -155,7 +161,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) override;
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) override;
 	virtual Bool isSpecialAbility() const override { return false; }
 	virtual Bool isSpecialPower() const override { return true; }
 	virtual Bool isActive() const override {return m_status != STATUS_IDLE;}
@@ -163,6 +169,9 @@ public:
 	virtual CommandOption getCommandOption() const override { return (CommandOption)0; }
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const override;
 	virtual ScienceType getExtraRequiredScience() const override { return SCIENCE_INVALID; } //Does this object have more than one special power module with the same spTemplate?
+	virtual const AsciiString& getCursorName() const override { return getParticleUplinkCannonUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual void setDelay(UnsignedInt delayFrame) override { }
 
 	virtual void onObjectCreated() override;
 	virtual UpdateSleepTime update() override;
@@ -185,7 +194,7 @@ public:
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) override;
 
 	// Disabled conditions to process (termination conditions!)
-	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK4( DISABLED_SUBDUED, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED ); }
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK6( DISABLED_SUBDUED, DISABLED_FROZEN, DISABLED_UNDERPOWERED, DISABLED_EMP, DISABLED_HACKED, DISABLED_CONSTRAINED ); }
 
 protected:
 

@@ -44,6 +44,7 @@
 #include "GameLogic/Object.h"
 
 #include "GameLogic/Module/ProductionUpdate.h"
+#include "GameLogic/TerrainLogic.h"
 
 
 
@@ -185,6 +186,14 @@ GameMessageDisposition PlaceEventTranslator::translateGameMessage(const GameMess
 				if( isLineBuild && !TheTacticalView->screenToTerrain( &anchorEnd, &worldEnd ) )
 					break;
 
+				// If shipyard move up building to at least waterheight if lower
+				if (build->isKindOf(KINDOF_SHIPYARD)) {
+					Real waterZ{ 0 };
+					if (TheTerrainLogic->isUnderwater(worldStart.x, worldStart.y, &waterZ)) {
+						worldStart.z = std::max(worldStart.z, waterZ);
+					}
+				}
+
 				Object *builderObj = TheGameLogic->findObjectByID( TheInGameUI->getPendingPlaceSourceObjectID() );
 
 				//Kris: September 27, 2002
@@ -256,6 +265,8 @@ GameMessageDisposition PlaceEventTranslator::translateGameMessage(const GameMess
 								placeMsg->appendObjectIDArgument( INVALID_ID ); //There is no object in the way.
 								placeMsg->appendIntegerArgument( commandButton->getOptions() ); //Command button options.
 								placeMsg->appendObjectIDArgument( builderObj->getID() ); //The source object responsible for firing the special.
+								Bool isSabotagingGUICommand = ThePlayerList && ThePlayerList->getLocalPlayer()->isSabotagingObjectGUICommand() && commandButton->getName() == ThePlayerList->getLocalPlayer()->getSabotagingObjectGUICommandName();
+								placeMsg->appendBooleanArgument( isSabotagingGUICommand );
 
 								// get out of pending placement mode, this will also clear the arrow anchor status
 								TheInGameUI->placeBuildAvailable( nullptr, nullptr );
@@ -314,7 +325,10 @@ GameMessageDisposition PlaceEventTranslator::translateGameMessage(const GameMess
 			}
 
 			if (disp == DESTROY_MESSAGE)
+			{
 				TheInGameUI->clearAttackMoveToMode();
+				TheInGameUI->clearMoveStateIfDoOnce();
+			}
 
 			break;
 

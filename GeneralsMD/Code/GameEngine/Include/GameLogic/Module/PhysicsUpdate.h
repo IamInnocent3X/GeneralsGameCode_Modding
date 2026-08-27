@@ -36,11 +36,21 @@
 
 enum ObjectID CPP_11(: Int);
 
+class FXList;
+
 enum PhysicsTurningType CPP_11(: Int)
 {
 	TURN_NEGATIVE = -1,
 	TURN_NONE = 0,
 	TURN_POSITIVE = 1
+};
+
+enum SlowDeathType CPP_11(: Int)
+{
+	SLOWDEATH_INVALID = 0,
+	SLOWDEATH_NORMAL = 1,
+	SLOWDEATH_JET = 2,
+	SLOWDEATH_HELICOPTER = 3
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -63,7 +73,15 @@ public:
 	Real	m_minFallSpeedForDamage;
 	Real	m_fallHeightDamageFactor;
 	Real	m_pitchRollYawFactor;
+	Bool    m_vehicleCrashAllowAirborne;
+	Real    m_bounceFactor;
 
+	Bool  m_doWaterPhysics;  //< We only do water collission checks if this is set!
+	Real  m_waterExtraFriction;
+	const FXList* m_waterImpactFX;
+
+	Real	m_magnetResistance;
+  
 	const WeaponTemplate* m_vehicleCrashesIntoBuildingWeaponTemplate;
 	const WeaponTemplate* m_vehicleCrashesIntoNonBuildingWeaponTemplate;
 
@@ -95,12 +113,20 @@ public:
 
 	// CollideModuleInterface
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
+	virtual void doSabotage( Object *other, Object *obj ) override { }
 	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return false; }
+	virtual Bool revertCollideBehavior(Object *other) override { return false; }
 	virtual Bool isCarBombCrateCollide() const override { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const override { return false; }
 	virtual Bool isRailroad() const override { return false;}
 	virtual Bool isSalvageCrateCollide() const override { return false; }
-	virtual Bool isSabotageBuildingCrateCollide() const override { return FALSE; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return false; }
+	virtual Bool isEquipCrateCollide() const override { return false; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const override { return false; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return false; }
+	virtual const AsciiString& getCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update() override;
@@ -163,6 +189,19 @@ public:
 	void setRollRate(Real roll);
 	void setYawRate(Real yaw);
 
+	void setRollRateConstant(Real roll, Real rollFactor = 1.0f );
+	void setPitchRateConstant(Real pitch);
+
+	void applyHelicopterSlowDeathSpin( Real spin );
+	void doHelicopterSlowDeathSpin( Real spin );
+	void applyHelicopterSlowDeathForce( Real forwardAngle, Real spiralOrbitTurnRate, Int orbitDirection, Real forwardSpeed, Real spiralOrbitForwardSpeedDamping );
+	void doHelicopterSlowDeathForce( Real forwardAngle, Real forwardSpeed );
+
+	void applyAerialSlowDeathBehaviorCheck( SlowDeathType type ) { m_aerialSlowDeathBehaviorCheck = type; }
+
+	void setConstantMotionToLoc(const Coord3D *toPos, Real maxSpeed, Real maxAccel);
+	void removeConstantMotionToLoc();
+
 	/*
 		stickToGround and allowToFall seem contradictory... here's the deal.
 
@@ -191,7 +230,10 @@ public:
 	void setExtraFriction(Real b) { m_extraFriction = b; }
 
 	void setBounceSound(const AudioEventRTS* bounceSound);
+	void setWaterImpactSound(const AudioEventRTS* waterImpactSound);
+	void setWaterImpactFX(const FXList* waterImpactFX);
 	const AudioEventRTS* getBounceSound() { return m_bounceSound ? m_bounceSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
+	const AudioEventRTS* getWaterImpactSound() { return m_waterImpactSound ? m_waterImpactSound.Peek() : TheAudio->getValidSilentAudioEvent(); }
 
 	/**
 		Reset all values (vel, accel, etc) to starting values.
@@ -207,6 +249,9 @@ public:
 	Bool isIgnoringCollisionsWith(ObjectID id) const;
 
 	Bool getAllowCollideForce() const { return getFlag(ALLOW_COLLIDE_FORCE); }
+
+	Real getShockResistance() const { return getPhysicsBehaviorModuleData()->m_shockResistance; }
+	Real getMagnetResistance() const { return getPhysicsBehaviorModuleData()->m_magnetResistance; }
 
 protected:
 
@@ -236,6 +281,12 @@ protected:
 
 	void testStunnedUnitForDestruction();
 
+	Real getExtraFriction() const;
+
+	void checkSlowDeathBehaviors();
+
+	void locoUpdate_moveTowardsPositionForced();
+
 private:
 
 	enum PhysicsFlagsType
@@ -252,7 +303,8 @@ private:
 		IMMUNE_TO_FALLING_DAMAGE				= 0x0100,
 		IS_IN_FREEFALL									= 0x0200,
 		IS_IN_UPDATE										= 0x0400,
-		IS_STUNNED											= 0x0800, // Added in Zero Hour
+		IS_STUNNED											= 0x0800,
+		WAS_ABOVE_WATER_LAST_FRAME      = 0x1000,
 	};
 
 	/*
@@ -263,7 +315,8 @@ private:
 	Real												m_yawRate;								///< rate of rotation around up vector
 	Real												m_rollRate;								///< rate of rotation around forward vector
 	Real												m_pitchRate;							///< rate or rotation around side vector
-	RefCountPtr<DynamicAudioEventRTS> m_bounceSound;			///< The sound for when this thing bounces, or nullptr
+	RefCountPtr<DynamicAudioEventRTS>				m_bounceSound;						///< The sound for when this thing bounces, or nullptr
+	RefCountPtr<DynamicAudioEventRTS>				m_waterImpactSound;						///< The sound for when this thing hits the water surface, or NULL
 	Coord3D											m_accel;									///< current acceleration
 	Coord3D											m_prevAccel;							///< last frame's acceleration
 	Coord3D											m_vel;										///< current velocity
@@ -281,6 +334,27 @@ private:
 	mutable Real								m_velMag;									///< magnitude of cur vel (recalced when m_vel changes)
 
 	Bool												m_originalAllowBounce;		///< original state of allow bounce
+
+	const FXList*											m_waterImpactFX;
+
+	Real										m_rollRateStatic;
+	Real										m_rollStaticFactor;
+
+	Real										m_pitchRateStatic;
+
+	Real 										m_forwardAngle;
+	Real 										m_forwardSpeed;
+	Real 										m_spiralOrbitTurnRate;
+	Real 										m_spiralOrbitForwardSpeedDamping;
+	Real 										m_spinRate;
+	Int 										m_orbitDirection;
+
+	Bool										m_doConstantMotion;
+	Real 										m_constantMaxSpeed;
+	Real 										m_constantMaxAccel;
+	Coord3D										m_constantMotionToLoc;
+
+	SlowDeathType								m_aerialSlowDeathBehaviorCheck;
 
 	void setFlag(PhysicsFlagsType f, Bool set) { if (set) m_flags |= f; else m_flags &= ~f; }
 	Bool getFlag(PhysicsFlagsType f) const { return (m_flags & f) != 0; }

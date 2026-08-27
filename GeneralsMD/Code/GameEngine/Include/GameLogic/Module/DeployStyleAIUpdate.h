@@ -52,6 +52,18 @@ public:
 	Bool						m_turretsFunctionOnlyWhenDeployed;
 	Bool						m_turretsMustCenterBeforePacking;
 	Bool						m_manualDeployAnimations;
+	Bool						m_turnBeforeUnpacking;
+	Bool						m_removeStatusAfterTrigger;
+	Bool						m_deployNoRelocate;
+	Bool						m_moveAfterDeploy;
+	Bool						m_deployInitiallyDisabled;
+	ObjectStatusMaskType 		m_statusToDeploy;
+	ObjectStatusMaskType 		m_statusToUndeploy;
+	std::vector<AsciiString> 	m_customStatusToDeploy;
+	std::vector<AsciiString> 	m_customStatusToUndeploy;
+	std::vector<AsciiString> 	m_deployFunctionChangeUpgrade;
+	std::vector<AsciiString> 	m_deployNoRelocateUpgrades;
+	std::vector<AsciiString> 	m_moveAfterDeployUpgrades;
 
 	DeployStyleAIUpdateModuleData()
 	{
@@ -61,6 +73,16 @@ public:
 		m_turretsFunctionOnlyWhenDeployed = false;
 		m_turretsMustCenterBeforePacking = FALSE;
 		m_manualDeployAnimations = FALSE;
+		m_turnBeforeUnpacking = FALSE;
+		m_removeStatusAfterTrigger = FALSE;
+		m_deployInitiallyDisabled = FALSE;
+		m_deployNoRelocate = FALSE;
+		m_moveAfterDeploy = FALSE;
+		m_deployNoRelocateUpgrades.clear();
+		m_moveAfterDeployUpgrades.clear();
+		m_customStatusToDeploy.clear();
+		m_customStatusToUndeploy.clear();
+		m_deployFunctionChangeUpgrade.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -75,6 +97,18 @@ public:
 			{ "TurretsFunctionOnlyWhenDeployed", INI::parseBool,		nullptr, offsetof( DeployStyleAIUpdateModuleData, m_turretsFunctionOnlyWhenDeployed ) },
 			{ "TurretsMustCenterBeforePacking", INI::parseBool,			nullptr, offsetof( DeployStyleAIUpdateModuleData, m_turretsMustCenterBeforePacking ) },
 			{ "ManualDeployAnimations",	INI::parseBool,							nullptr, offsetof( DeployStyleAIUpdateModuleData, m_manualDeployAnimations ) },
+			{ "TurnBeforeUnpacking",	INI::parseBool,							nullptr, offsetof( DeployStyleAIUpdateModuleData, m_turnBeforeUnpacking ) },
+			{ "StatusToDeploy",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( DeployStyleAIUpdateModuleData, m_statusToDeploy ) },
+			{ "StatusToUndeploy",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( DeployStyleAIUpdateModuleData, m_statusToUndeploy ) },
+			{ "CustomStatusToDeploy",	INI::parseAsciiStringVector, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_customStatusToDeploy ) },
+			{ "CustomStatusToUndeploy",	INI::parseAsciiStringVector, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_customStatusToUndeploy ) },
+			{ "RemoveStatusAfterTrigger",	INI::parseBool, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_removeStatusAfterTrigger ) },
+			{ "DeployNoRelocate",	INI::parseBool, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_deployNoRelocate ) },
+			{ "MoveAfterDeploy",	INI::parseBool, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_moveAfterDeploy ) },
+			{ "DeployNoRelocateUpgrades",	INI::parseAsciiStringVector, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_deployNoRelocateUpgrades ) },
+			{ "MoveAfterDeployUpgrades",	INI::parseAsciiStringVector, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_moveAfterDeployUpgrades ) },
+			{ "DeployInitiallyDisabled",	INI::parseBool, nullptr, 	offsetof( DeployStyleAIUpdateModuleData, m_deployInitiallyDisabled ) },
+			{ "ChangeInitiallyDisabledUpgrades", INI::parseDeployFunctionChangeUpgrade, nullptr, offsetof( DeployStyleAIUpdateModuleData, m_deployFunctionChangeUpgrade ) },
 			{ 0, 0, 0, 0 }
 		};
 		p.add(dataFieldParse);
@@ -97,6 +131,9 @@ public:
 
  	virtual void aiDoCommand(const AICommandParms* parms) override;
 	virtual Bool isIdle() const override;
+	//virtual void doIdleUpdate() override { wakeUpNow(); }
+	virtual void doStatusUpdate() override;
+	virtual void doUpgradeUpdate() override;
 	virtual UpdateSleepTime update() override;
 
 	UnsignedInt getUnpackTime()					const { return getDeployStyleAIUpdateModuleData()->m_unpackTime; }
@@ -104,9 +141,28 @@ public:
 	Bool doTurretsFunctionOnlyWhenDeployed() const { return getDeployStyleAIUpdateModuleData()->m_turretsFunctionOnlyWhenDeployed; }
 	Bool doTurretsHaveToCenterBeforePacking() const { return getDeployStyleAIUpdateModuleData()->m_turretsMustCenterBeforePacking; }
 	void setMyState( DeployStateTypes StateID, Bool reverseDeploy = FALSE );
-
 protected:
+
+	Bool checkForDeployUpgrades(const AsciiString& type) const;
+	Bool checkAfterDeploy(const AsciiString& type) const;
+	void doRemoveStatusTrigger();
 
 	DeployStateTypes				m_state;
 	UnsignedInt							m_frameToWaitForDeploy;
+
+	Bool isWithinAttackAngle() const;
+	Bool							m_isInRange;
+	Bool							m_doDeploy;
+	Bool							m_doUndeploy;
+	Bool							m_hasDeploy;
+	Bool							m_hasUndeploy;
+	Bool							m_moveAfterDeploy;
+	Bool							m_deployNoRelocate;
+	Bool							m_needsDeployToFireObject;
+	Bool							m_needsDeployToFireTurret;
+	Bool							m_needsDeployToFireDeployed;
+	Bool							m_doRemoveStatusAfterTrigger;
+	std::vector<AsciiString> 		m_deployObjectFunctionChangeUpgrade;
+	std::vector<AsciiString> 		m_deployTurretFunctionChangeUpgrade;
+	std::vector<AsciiString> 		m_turretDeployedFunctionChangeUpgrade;
 };

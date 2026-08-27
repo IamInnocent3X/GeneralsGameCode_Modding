@@ -562,9 +562,9 @@ void GameSpyLaunchGame()
 
 		// TheGlobalData->m_useFpsLimit = false; // GeneralsX @bugfix fbraz3 21/07/2026 Keep FPS limiter active in multiplayer to avoid rendering at uncapped 500+ FPS
 
-		// Set the random seed
-		InitGameLogicRandom( TheGameSpyGame->getSeed() );
-		DEBUG_LOG(("InitGameLogicRandom( %d )", TheGameSpyGame->getSeed()));
+		// Set the seeds
+		InitRandom( TheGameSpyGame->getSeed() );
+		DEBUG_LOG(("InitRandom( %d )", TheGameSpyGame->getSeed()));
 
 		if (TheNAT != nullptr) {
 			delete TheNAT;

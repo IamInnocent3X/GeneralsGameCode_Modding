@@ -384,7 +384,15 @@ Object *BuildAssistant::buildObjectNow( Object *constructorObject, const ThingTe
 		Coord3D groundPos;
 		groundPos.x = pos->x;
 		groundPos.y = pos->y;
-		groundPos.z = TheTerrainLogic->getGroundHeight( groundPos.x, groundPos.y );
+		if (!what->isKindOf(KINDOF_SHIPYARD)) {
+			groundPos.z = TheTerrainLogic->getGroundHeight(groundPos.x, groundPos.y);
+		}
+		else {
+			//If shipyard adjust to water height
+			Real waterZ{ 0.0 }, terrainZ{ 0.0 };
+			TheTerrainLogic->isUnderwater(groundPos.x, groundPos.y, &waterZ, &terrainZ);
+			groundPos.z = std::max(waterZ, terrainZ);
+		}
 		obj->setPosition( &groundPos );
 
 		obj->setOrientation( angle );
@@ -478,6 +486,12 @@ struct SampleBuildData
 	Real loZ;								///< lowest sample point used
 };
 
+struct SampleBuildDataShipyard : public SampleBuildData
+{
+	Short waterSamples;			///< how many samples hit water tiles
+	Short landSamples;			///< how many samples hit land tiles
+};
+
 //-------------------------------------------------------------------------------------------------
 /** This will check the build conditions at the specified sample location point */
 //-------------------------------------------------------------------------------------------------
@@ -533,6 +547,73 @@ static void checkSampleBuildLocation( const Coord3D *samplePoint, void *userData
 	}
 
 }
+
+//-------------------------------------------------------------------------------------------------
+/** This will check the build conditions at the specified sample location point */
+//-------------------------------------------------------------------------------------------------
+static void checkSampleBuildLocationShipyard(const Coord3D* samplePoint, void* userData)
+{
+	TerrainType* terrain;
+	SampleBuildDataShipyard* sampleData = (SampleBuildDataShipyard*)userData;
+
+	// get the terrain tile here
+	terrain = TheTerrainVisual->getTerrainTile(samplePoint->x, samplePoint->y);
+	if (terrain)
+	{
+
+		// check for the restricts building flag
+		if (terrain->getRestrictConstruction())
+			sampleData->terrainRestricted = TRUE;
+
+	}  // end if
+
+	Int cellX = REAL_TO_INT_FLOOR(samplePoint->x / PATHFIND_CELL_SIZE);
+	Int cellY = REAL_TO_INT_FLOOR(samplePoint->y / PATHFIND_CELL_SIZE);
+
+	PathfindCell* cell = TheAI->pathfinder()->getCell(LAYER_GROUND, cellX, cellY);
+	if (!cell) {
+		sampleData->terrainRestricted = TRUE;
+	}
+	else {
+		enum PathfindCell::CellType type = cell->getType();
+		if ((type == PathfindCell::CELL_CLIFF) ||
+			(type == PathfindCell::CELL_IMPASSABLE)) {
+			sampleData->terrainRestricted = true;
+		}
+	}
+
+	//
+	// record the highest and lowest Z points from all the samples and do not allow
+	// building when the difference between them is too great
+	//
+	if (samplePoint->z < sampleData->loZ)
+		sampleData->loZ = samplePoint->z;
+	if (samplePoint->z > sampleData->hiZ)
+		sampleData->hiZ = samplePoint->z;
+
+	// too close to edge of map?
+	if (TheGlobalData->m_MinDistFromEdgeOfMapForBuild > 0.0f)
+	{
+		if (samplePoint->x < sampleData->mapRegion.lo.x + TheGlobalData->m_MinDistFromEdgeOfMapForBuild
+			|| samplePoint->x > sampleData->mapRegion.hi.x - TheGlobalData->m_MinDistFromEdgeOfMapForBuild
+			|| samplePoint->y < sampleData->mapRegion.lo.y + TheGlobalData->m_MinDistFromEdgeOfMapForBuild
+			|| samplePoint->y > sampleData->mapRegion.hi.y - TheGlobalData->m_MinDistFromEdgeOfMapForBuild)
+		{
+			sampleData->terrainRestricted = TRUE;
+		}
+	}
+
+	//Sample is valid
+	if (cell != nullptr && !sampleData->terrainRestricted) {
+		if (cell->getType() == PathfindCell::CELL_WATER) {
+			sampleData->waterSamples++;
+		}
+		else {
+			sampleData->landSamples++;
+		}
+	}
+
+}  // end checkSampleBuildLocation
 
 //-------------------------------------------------------------------------------------------------
 /** This function will call the user callback at each "sample point" across the footprint
@@ -704,7 +785,7 @@ LegalBuildCode BuildAssistant::isLocationClearOfObjects( const Coord3D *worldPos
 		if (them->isKindOf(KINDOF_INERT))
 			continue;
 
-		if (them->isKindOf(KINDOF_IMMOBILE))
+		if (them->isKindOf(KINDOF_IMMOBILE)|| them->testStatus( OBJECT_STATUS_IMMOBILE ))
 		{
 			if (onlyCheckEnemies && builderObject && rel != ENEMIES)
 				continue;
@@ -871,7 +952,7 @@ LegalBuildCode BuildAssistant::isLocationClearOfObjects( const Coord3D *worldPos
 		}
 
 		// an immobile object will obstruct our building no matter what team it's on
-		if ( them->isKindOf( KINDOF_IMMOBILE ) )	{
+		if ( them->isKindOf( KINDOF_IMMOBILE ) || them->testStatus( OBJECT_STATUS_IMMOBILE ))	{
 			Bool shrouded = builderObject && them->getShroudedStatus(builderObject->getControllingPlayer()->getPlayerIndex()) >= OBJECTSHROUD_FOGGED;
 			/* Check for overlap of my exit rectangle to his geom info. */
 			if (checkMyExit && ThePartitionManager->geomCollidesWithGeom(them->getPosition(), hisBounds, them->getOrientation(),
@@ -1000,7 +1081,7 @@ LegalBuildCode BuildAssistant::isLocationLegalToBuild( const Coord3D *worldPos,
 	}
 
 	// if clear path is requested check to see if the builder object can get there (unless it's a structure)
-	if( BitIsSet( options, CLEAR_PATH ) && builderObject && !builderObject->isKindOf( KINDOF_IMMOBILE ) )
+	if( BitIsSet( options, CLEAR_PATH ) && builderObject && !builderObject->isKindOf( KINDOF_IMMOBILE ) && !builderObject->testStatus( OBJECT_STATUS_IMMOBILE ))
 	{
 		const AIUpdateInterface *ai = builderObject->getAIUpdateInterface();
 
@@ -1014,8 +1095,15 @@ LegalBuildCode BuildAssistant::isLocationLegalToBuild( const Coord3D *worldPos,
 		if( ai == nullptr )
 			return LBC_NO_CLEAR_PATH;
 
-		if( ai->isQuickPathAvailable( worldPos ) == FALSE )
+		if (build->isKindOf(KINDOF_SHIPYARD)) {
+		  // bypass Path check for now
+			// TODO checking bounding box?
+		}
+		else {
+
+			if (ai->isQuickPathAvailable(worldPos) == FALSE)
 				return LBC_NO_CLEAR_PATH;
+		}
 
 	}
 
@@ -1038,33 +1126,97 @@ LegalBuildCode BuildAssistant::isLocationLegalToBuild( const Coord3D *worldPos,
 			return LBC_RESTRICTED_TERRAIN;
 		}
 
-		//
-		// check the footprint of where the structure would go to be clear of any non-buildable
-		// tiles and to make sure there isn't a restricted tile and to make sure it's "flat" enough
-		//
-		SampleBuildData sampleData;
-		TheTerrainLogic->getExtent( &sampleData.mapRegion );
-		sampleData.terrainRestricted = FALSE;
-		sampleData.hiZ = terrainExtent.lo.z;  // note we set hi point to lowest point
-		sampleData.loZ = terrainExtent.hi.z;  // note we set lo point to highest point
 
-		// quick check at triple res.
-		iterateFootprint( build, angle, worldPos, 3*sampleResolution,
-		                  checkSampleBuildLocation, &sampleData );
-		if( sampleData.terrainRestricted == TRUE )
-			return LBC_RESTRICTED_TERRAIN;
-		// check if the height across the whole footprint area is too varied (not flat enough)
-		if( sampleData.hiZ - sampleData.loZ > TheGlobalData->m_allowedHeightVariationForBuilding )
-			return LBC_NOT_FLAT_ENOUGH;
+		if (!build->isKindOf(KINDOF_SHIPYARD)) {
+			//
+			// check the footprint of where the structure would go to be clear of any non-buildable
+			// tiles and to make sure there isn't a restricted tile and to make sure it's "flat" enough
+			//
+			SampleBuildData sampleData;
+			TheTerrainLogic->getExtent(&sampleData.mapRegion);
+			sampleData.terrainRestricted = FALSE;
+			sampleData.hiZ = terrainExtent.lo.z;  // note we set hi point to lowest point
+			sampleData.loZ = terrainExtent.hi.z;  // note we set lo point to highest point
 
-		// careful check at full res.
-		iterateFootprint( build, angle, worldPos, sampleResolution,
-		                  checkSampleBuildLocation, &sampleData );
-		if( sampleData.terrainRestricted == TRUE )
-			return LBC_RESTRICTED_TERRAIN;
-		// check if the height across the whole footprint area is too varied (not flat enough)
-		if( sampleData.hiZ - sampleData.loZ > TheGlobalData->m_allowedHeightVariationForBuilding )
-			return LBC_NOT_FLAT_ENOUGH;
+			// quick check at triple res.
+			iterateFootprint(build, angle, worldPos, 3 * sampleResolution,
+				checkSampleBuildLocation, &sampleData);
+			if (sampleData.terrainRestricted == TRUE)
+				return LBC_RESTRICTED_TERRAIN;
+			// check if the height across the whole footprint area is too varied (not flat enough)
+						if (sampleData.hiZ - sampleData.loZ > TheGlobalData->m_allowedHeightVariationForBuilding)
+				return LBC_NOT_FLAT_ENOUGH;
+
+			// careful check at full res.
+			iterateFootprint(build, angle, worldPos, sampleResolution,
+				checkSampleBuildLocation, &sampleData);
+			if (sampleData.terrainRestricted == TRUE)
+				return LBC_RESTRICTED_TERRAIN;
+			// check if the height across the whole footprint area is too varied (not flat enough)
+
+			if (sampleData.hiZ - sampleData.loZ > TheGlobalData->m_allowedHeightVariationForBuilding)
+				return LBC_NOT_FLAT_ENOUGH;
+		}
+		else {
+			// IF Shipyard need some special code
+
+			// check if building center is in a NO_SHIPYARD map area
+			if (TheTerrainLogic->isInNoShipyardZone(worldPos)) {
+				return LBC_RESTRICTED_TERRAIN;
+			}
+
+			//
+			// check the footprint of where the structure would go to be clear of any non-buildable
+			// tiles and to make sure there isn't a restricted tile and to make sure it's "flat" enough
+			// Also check how many samples are on water or land for shipyards
+			//
+			SampleBuildDataShipyard sampleData;
+			TheTerrainLogic->getExtent(&sampleData.mapRegion);
+			sampleData.terrainRestricted = FALSE;
+			sampleData.hiZ = terrainExtent.lo.z;  // note we set hi point to lowest point
+			sampleData.loZ = terrainExtent.hi.z;  // note we set lo point to highest point
+			sampleData.waterSamples = 0;
+			sampleData.landSamples = 0;
+
+			// quick check at triple res.
+			iterateFootprint(build, angle, worldPos, 3 * sampleResolution,
+				checkSampleBuildLocationShipyard, &sampleData);
+			if (sampleData.terrainRestricted == TRUE)
+				return LBC_RESTRICTED_TERRAIN;
+			// check if the height across the whole footprint area is too varied (not flat enough)
+			if (sampleData.hiZ - sampleData.loZ > TheGlobalData->m_allowedHeightVariationForBuildingShipyard)
+				return LBC_NOT_FLAT_ENOUGH;
+
+			if (sampleData.waterSamples == 0 || sampleData.landSamples == 0) {
+				return LBC_RESTRICTED_TERRAIN;
+			}
+
+			// Reset sample count before detailed check
+			sampleData.waterSamples = 0;
+			sampleData.landSamples = 0;
+
+			// careful check at full res.
+			iterateFootprint(build, angle, worldPos, sampleResolution,
+				checkSampleBuildLocationShipyard, &sampleData);
+			if (sampleData.terrainRestricted == TRUE)
+				return LBC_RESTRICTED_TERRAIN;
+			// check if the height across the whole footprint area is too varied (not flat enough)
+
+			if (sampleData.hiZ - sampleData.loZ > TheGlobalData->m_allowedHeightVariationForBuildingShipyard)
+				return LBC_NOT_FLAT_ENOUGH;
+
+
+			//Check if enough parts in water and land
+			Short totalSamples = sampleData.waterSamples + sampleData.landSamples;
+			Real threshold_water = totalSamples * 0.6f;
+			Real threshold_land = 1.0f;
+			Real max_land = totalSamples * 0.2f;
+
+			if (static_cast<Real>(sampleData.waterSamples) < threshold_water || static_cast<Real>(sampleData.landSamples) < threshold_land || static_cast<Real>(sampleData.landSamples) > max_land) {
+				return LBC_RESTRICTED_TERRAIN;
+			}
+
+		}
 
 	}
 
@@ -1096,7 +1248,7 @@ void BuildAssistant::addBibs(const Coord3D *worldPos,
 		if( isRemovableForConstruction( them ) == TRUE )
 			continue;
 
-		if( them->isKindOf( KINDOF_IMMOBILE ) )	{
+		if( them->isKindOf( KINDOF_IMMOBILE ) || them->testStatus( OBJECT_STATUS_IMMOBILE ))	{
 			TheTerrainVisual->addFactionBib(them, true);
 		}
 
@@ -1280,7 +1432,8 @@ Bool BuildAssistant::isPossibleToMakeUnit( Object *builder, const ThingTemplate 
 	{
 
 		// get this button
-		commandButton = commandSet->getCommandButton(i);
+		commandButton = builder->getCommandButtonForSlot(i, commandSet); 
+
 		if( commandButton &&
 				(commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD || commandButton->getCommandType() == GUI_COMMAND_DOZER_CONSTRUCT) &&
 				commandButton->getThingTemplate() && commandButton->getThingTemplate()->isEquivalentTo(whatToBuild) )

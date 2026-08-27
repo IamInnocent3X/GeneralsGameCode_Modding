@@ -75,17 +75,25 @@ public:
 	Real m_warehouseScanDistance;
  	AudioEventRTS m_suppliesDepletedVoice;						///< Sound played when I take the last box.
 	Int m_upgradedSupplyBoost;
+	Bool m_repairClearsParasite;								///< repairing object clears any parasite within them
+	std::vector<AsciiString> m_repairClearsParasiteKeys;
+	KindOfMaskType m_kindOf;									///< Only these types can repair -- defaults to structures.
+	KindOfMaskType m_forbiddenKindOf;							///< Only these types can repair -- defaults to structures.
 
 	WorkerAIUpdateModuleData()
 	{
 		m_maxBoxesData = 0;
 		m_repairHealthPercentPerSecond = 0.0f;
+		m_kindOf = MAKE_KINDOF_MASK(KINDOF_STRUCTURE);
+		m_forbiddenKindOf.clear();
 		m_boredTime = 0.0f;
 		m_boredRange = 0.0f;
 		m_centerDelay = 0;
 		m_warehouseDelay = 0;
 		m_warehouseScanDistance = 100;
 		m_upgradedSupplyBoost = 0;
+		m_repairClearsParasite = TRUE;
+		m_repairClearsParasiteKeys.clear();
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -96,6 +104,10 @@ public:
 		{
 			{ "MaxBoxes",					INI::parseInt,		nullptr, offsetof( WorkerAIUpdateModuleData, m_maxBoxesData ) },
 			{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	nullptr, offsetof( WorkerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+			{ "RepairKindOf",	KindOfMaskType::parseFromINI,	nullptr, offsetof( WorkerAIUpdateModuleData, m_kindOf ) },
+			{ "RepairForbiddenKindOf",	KindOfMaskType::parseFromINI,	nullptr, offsetof( WorkerAIUpdateModuleData, m_forbiddenKindOf ) },
+			{ "RepairClearsParasite",			INI::parseBool,	nullptr, offsetof( WorkerAIUpdateModuleData, m_repairClearsParasite ) },
+			{ "RepairClearsParasiteKeys",		INI::parseAsciiStringVector, nullptr, offsetof( WorkerAIUpdateModuleData, m_repairClearsParasiteKeys ) },
 			{ "BoredTime",										INI::parseDurationReal,		nullptr, offsetof( WorkerAIUpdateModuleData, m_boredTime ) },
 			{ "BoredRange",										INI::parseReal,						nullptr, offsetof( WorkerAIUpdateModuleData, m_boredRange ) },
 			{ "SupplyCenterActionDelay", INI::parseDurationUnsignedInt, nullptr, offsetof( WorkerAIUpdateModuleData, m_centerDelay ) },
@@ -139,6 +151,12 @@ public:
 	virtual Real getRepairHealthPerSecond() const override;	///< get health to repair per second
 	virtual Real getBoredTime() const override;							///< how long till we're bored
 	virtual Real getBoredRange() const override;							///< when we're bored, we look this far away to do things
+	virtual Bool getRepairClearsParasite() const override;					///< whether repairing clears parasite
+	virtual const std::vector<AsciiString>& getRepairClearsParasiteKeys() const override;					///< keys of parasites able to clear
+	virtual const KindOfMaskType& getRepairKindOf() const override;	///< Only these types can repair -- defaults to structures.
+	virtual const KindOfMaskType& getRepairForbiddenKindOf() const override;	///< Only these types can repair -- defaults to structures.
+
+	virtual Object* findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task) override;
 
 	virtual Object *construct( const ThingTemplate *what,
 														 const Coord3D *pos, Real angle,

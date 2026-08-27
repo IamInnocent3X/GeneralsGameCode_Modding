@@ -50,6 +50,9 @@
 #define TWO_D_WINDOW_SECTION "TwoDWindow"
 #define MAIN_FRAME_SECTION "MainFrame"
 
+// Timer id used to debounce dynamic-resolution rescaling on window resize (distinct from the autosave timer id 1).
+#define ADJUST_VIEW_TIMER 6969
+
 class LayersList;
 class ScriptDialog;
 
@@ -86,6 +89,8 @@ public:
 	void OnEditGloballightoptions();
 	void ResetWindowPositions();
 	void adjustWindowSize();
+	void ScheduleAdjustViewAfterResize();
+	void applyDynamicResolution();
 	Bool isAutoSaving() {return m_autoSaving;};
 	void handleCameraChange();
 	void onEditScripts();
@@ -143,6 +148,7 @@ protected:
 	afx_msg void OnViewBrushfeedback();
 	afx_msg void OnUpdateViewBrushfeedback(CCmdUI* pCmdUI);
 	afx_msg void OnDestroy();
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnTimer(UINT nIDEvent);
 	afx_msg void OnEditCameraoptions();
 	//}}AFX_MSG

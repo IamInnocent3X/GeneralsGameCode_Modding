@@ -30,6 +30,7 @@
 #include "GameClient/InGameUI.h"
 
 class ThingTemplate;
+class Drawable;
 
 typedef std::map<const ThingTemplate *, int> SelectCountMap;
 typedef SelectCountMap::iterator SelectCountMapIt;
@@ -57,6 +58,10 @@ private:
 	Bool selectFriends( Drawable *draw, GameMessage *createTeamMsg, Bool dragSelecting );
 	Bool killThemKillThemAll( Drawable *draw, GameMessage *killThemAllMsg );
 
+	Drawable *m_lastTreeDraw;
+	AsciiString m_lastTreeName;
+	Bool m_isMouseOverATree;
+
 public:
 	SelectionTranslator();
 	virtual ~SelectionTranslator() override;
@@ -65,6 +70,9 @@ public:
 	//changes the mode of drag selecting to it's opposite
 	void setDragSelecting(Bool dragSelect);
 	void setLeftMouseButton(Bool state);
+
+	Drawable* getLastTreeDraw() const { return m_lastTreeDraw; }
+	Bool getIsMouseOverATree() const { return m_isMouseOverATree; }
 
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
   Bool m_HandOfGodSelectionMode;
@@ -87,6 +95,7 @@ private:
 	GameMessageDisposition onMetaAddTeam(const GameMessage *msg);
 	GameMessageDisposition onMetaViewTeam(const GameMessage *msg);
 	GameMessageDisposition onMetaOptions(const GameMessage *msg);
+	Drawable* getDrawableUnderCursor(ICoord2D pixel, Bool &isSelectingShrubbery);
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	GameMessageDisposition onCheatToggleHandOfGodMode(const GameMessage *msg);
 #endif
@@ -97,5 +106,5 @@ private:
 #endif
 };
 
-Bool CanSelectDrawable( const Drawable *draw, Bool dragSelecting );
+Bool CanSelectDrawable( const Drawable *draw, Bool dragSelecting, Bool BypassObjectChecks = FALSE );
 extern SelectionTranslator *TheSelectionTranslator;

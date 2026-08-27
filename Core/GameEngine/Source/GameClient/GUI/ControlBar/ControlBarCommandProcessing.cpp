@@ -51,6 +51,7 @@
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/AnimateWindowManager.h"
+#include "GameClient/MetaEvent.h"
 
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
@@ -111,6 +112,180 @@ CBCommandStatus ControlBar::processCommandTransitionUI( GameWindow *control, Gad
 
 	return CBC_COMMAND_USED;
 
+}
+
+//-------------------------------------------------------------------------------------------------
+CBCommandStatus ControlBar::processCommandSetModifierButtonClick( GameWindow *control,
+																							GadgetGameMessage gadgetMessage )
+{
+	// get the command pointer from the control user data we put in the button
+	const CommandButton *commandButton = (const CommandButton *)GadgetButtonGetData(control);
+	if( !commandButton )
+	{
+		DEBUG_CRASH( ("ControlBar::processCommandSetModifierButtonClick() -- Button activated has no data. Ignoring...") );
+		return CBC_COMMAND_NOT_USED;
+	}
+
+	// sanity, we won't process messages if we have no source object,
+	// unless we're CB_CONTEXT_PURCHASE_SCIENCE or GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
+	if( m_currContext != CB_CONTEXT_MULTI_SELECT &&
+			commandButton->getCommandType() != GUI_COMMAND_PURCHASE_SCIENCE &&
+			commandButton->getCommandType() != GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT &&
+			commandButton->getCommandType() != GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT &&
+			commandButton->getCommandType() != GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE &&
+			(m_currentSelectedDrawable == nullptr || m_currentSelectedDrawable->getObject() == nullptr) )
+	{
+
+		if( m_currContext != CB_CONTEXT_NONE )
+			switchToContext( CB_CONTEXT_NONE, nullptr );
+		return CBC_COMMAND_NOT_USED;
+
+	}
+
+	// sanity
+	if( control == nullptr )
+		return CBC_COMMAND_NOT_USED;
+
+	// the context sensitive gui only is only made of buttons ... sanity
+	if( control->winGetInputFunc() != GadgetPushButtonInput )
+		return CBC_COMMAND_NOT_USED;
+
+
+	if( commandButton == nullptr )
+		return CBC_COMMAND_NOT_USED;
+
+
+	MouseState mouseInput;
+	switch(gadgetMessage)
+	{
+		case GBM_CLICKED_LEFT:
+			mouseInput = LEFT_CLICK;
+			break;
+		case GBM_CLICKED_RIGHT:
+			mouseInput = RIGHT_CLICK;
+			break;
+		case GBM_CLICKED_MIDDLE:
+			mouseInput = MIDDLE_CLICK;
+			break;
+		case GBM_DOUBLE_CLICKED_LEFT:
+			mouseInput = LEFT_DOUBLE_CLICK;
+			break;
+		case GBM_DOUBLE_CLICKED_RIGHT:
+			mouseInput = RIGHT_DOUBLE_CLICK;
+			break;
+		case GBM_DOUBLE_CLICKED_MIDDLE:
+			mouseInput = MIDDLE_DOUBLE_CLICK;
+			break;
+		case GBM_SCROLL_DOWN:
+			mouseInput = SCROLL_DOWN;
+			break;
+		case GBM_SCROLL_UP:
+			mouseInput = SCROLL_UP;
+			break;
+		default:
+			return CBC_COMMAND_NOT_USED; // do nothing
+			break;
+	}
+
+	// get the selected object
+	Object *obj = m_currentSelectedDrawable ? m_currentSelectedDrawable->getObject() : nullptr;
+	if(!obj)
+		return CBC_COMMAND_NOT_USED;
+
+	AsciiString OriginalButtonName;
+	const CommandSet *set = findCommandSet(obj->getCommandSetString());
+
+	for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+	{
+		GameWindow *button = m_commandWindows[ i ];
+		if( button == nullptr || button != control )
+			continue;
+
+		if( !isMouseWithinCommandButton( i, &TheMouse->getMouseStatus()->pos ) )
+			continue;
+
+		OriginalButtonName = set->getOriginalButtonName(i);
+		break;
+	}
+
+	if(OriginalButtonName.isEmpty())
+		return CBC_COMMAND_NOT_USED;
+
+	MouseModifierKeysList mouseCommandModifiers = TheMetaMap->getMouseCommandModifiersMeta( mouseInput, OriginalButtonName );
+	if(mouseCommandModifiers.Keys.empty())
+		return CBC_COMMAND_NOT_USED;
+
+	if(checkForCommandSetModifierOverrideMouse(mouseCommandModifiers, commandButton))
+		return CBC_COMMAND_USED;
+	else
+		return CBC_COMMAND_NOT_USED;
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::isMouseWithinCommandButton(Int i, const ICoord2D *mousePos) const
+{
+	// Sanity
+	if(m_commandWindows[ i ] == nullptr)
+		return false;
+
+	ICoord2D commandPos, commandSize;
+	m_commandWindows[ i ]->winGetScreenPosition(&commandPos.x, &commandPos.y);
+	m_commandWindows[ i ]->winGetSize(&commandSize.x, &commandSize.y);
+
+	return mousePos->x >= commandPos.x &&
+	mousePos->x <= commandPos.x + commandSize.x &&
+	mousePos->y >= commandPos.y &&
+	mousePos->y <= commandPos.y + commandSize.y;
+}
+
+//-------------------------------------------------------------------------------------------------
+//Bool ControlBar::isMouseWithinUnitBuildCommandButton(const ICoord2D *mousePos, Bool isRightMouse) const
+//{
+	// Sanity
+//	if(mousePos->x >= m_controlBarButtonsPos.lo.x &&
+//		mousePos->x <= m_controlBarButtonsPos.hi.x &&
+//		mousePos->y >= m_controlBarButtonsPos.lo.y &&
+//		mousePos->y <= m_controlBarButtonsPos.hi.y)
+//	{
+//		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+//		{
+//			GameWindow *button = m_commandWindows[ i ];
+//			if( button == nullptr )
+//				continue;
+//
+//			if( isMouseWithinCommandButton( i, mousePos ) )
+//			{
+//				// Check if the button focuses on Right Click
+//				if(BitIsSet( button->winGetInstanceData()->getStatus(), WIN_STATUS_RIGHT_CLICK ))
+//				{
+//					if(!isRightMouse)
+//						return false;
+//				}
+//				else
+//				{
+//					if(isRightMouse)
+//						return false;
+//				}
+
+//				const CommandButton *commandButton = (const CommandButton *)GadgetButtonGetData(button);
+//				if(commandButton && commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD)
+//					return true;
+//				else
+//					return false;
+//			}
+//		}
+//	}
+//	return false;
+//}
+
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::isWindowUnitBuildCommand( GameWindow *control ) const
+{
+	const CommandButton *commandButton = (const CommandButton *)GadgetButtonGetData(control);
+	if( commandButton && commandButton->getCommandType() == GUI_COMMAND_UNIT_BUILD )
+		return true;
+	else
+		return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -199,16 +374,30 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 	Player *player = ThePlayerList->getLocalPlayer();
 	if( player )
 	{
+		if( player->isSabotagingObjectGUICommand() )
+			return CBC_COMMAND_NOT_USED;
+
 		AudioEventRTS sound = *commandButton->getUnitSpecificSound();
 		sound.setPlayerIndex( player->getPlayerIndex() );
 		TheAudio->addAudioEvent( &sound );
+	}
+
+	OrderNearbyData orderData;
+	if(commandButton->getOrderNearbyRadius())
+	{
+		orderData.Radius = commandButton->getOrderNearbyRadius();
+		orderData.RequiredMask = commandButton->getOrderKindofMask();
+		orderData.ForbiddenMask = commandButton->getOrderKindofForbiddenMask();
+		orderData.MinDelay = commandButton->getOrderNearbyMinDelay();
+		orderData.MaxDelay = commandButton->getOrderNearbyMaxDelay();
+		orderData.IntervalDelay = commandButton->getOrderNearbyIntervalDelay();
 	}
 
 	if( BitIsSet( commandButton->getOptions(), COMMAND_OPTION_NEED_TARGET ) )
 	{
 		if (commandButton->getOptions() & USES_MINE_CLEARING_WEAPONSET)
 		{
-			TheMessageStream->appendMessage( GameMessage::MSG_SET_MINE_CLEARING_DETAIL );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SET_MINE_CLEARING_DETAIL, orderData );
 		}
 
 		//June 06, 2002 -- Major change
@@ -569,7 +758,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_QUEUE_UPGRADE );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_QUEUE_UPGRADE, orderData );
 			msg->appendObjectIDArgument( objID );
 			msg->appendIntegerArgument( upgradeT->getUpgradeNameKey() );
 
@@ -620,14 +809,22 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_ATTACK_MOVE:
-			TheMessageStream->appendMessage(GameMessage::MSG_META_TOGGLE_ATTACKMOVE);
+			TheMessageStream->appendMessage( GameMessage::MSG_META_TOGGLE_ATTACKMOVE );
 			break;
+
+		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_REVERSE_MOVE:
+		{
+			GameMessage *newMsg = TheMessageStream->appendMessage(GameMessage::MSG_REVERSE_MOVE);
+			newMsg->appendBooleanArgument(TRUE);
+			break;
+		}
 
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_STOP:
 		{
 			// This message always works on the currently selected team
-			TheMessageStream->appendMessage(GameMessage::MSG_DO_STOP);
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_STOP, orderData );
 			break;
 		}
 
@@ -726,7 +923,21 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 
 			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
 				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_EVACUATE );
-				TheMessageStream->appendMessage( GameMessage::MSG_EVACUATE );
+				TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EVACUATE, orderData );
+			}
+
+			break;
+		}  // end evacuate
+
+		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_ENTER_ME:
+		{
+			// Cancel GUI command mode.
+			TheInGameUI->setGUICommand( nullptr );
+
+			if (BitIsSet(commandButton->getOptions(), NEED_TARGET_POS) == FALSE) {
+				pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_ENTER_ME );
+				TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_ENTER_ME, orderData );
 			}
 
 			break;
@@ -735,7 +946,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		// --------------------------------------------------------------------------------------------
 		case GUI_COMMAND_EXECUTE_RAILED_TRANSPORT:
 		{
-			TheMessageStream->appendMessage( GameMessage::MSG_EXECUTE_RAILED_TRANSPORT );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_EXECUTE_RAILED_TRANSPORT, orderData );
 			break;
 		}
 
@@ -743,7 +954,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_HACK_INTERNET:
 		{
 			pickAndPlayUnitVoiceResponse( TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_INTERNET_HACK );
-			TheMessageStream->appendMessage( GameMessage::MSG_INTERNET_HACK );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_INTERNET_HACK, orderData );
 			break;
 		}
 
@@ -759,7 +970,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		{
 
 			// command needs no additional data, send the message
-			TheMessageStream->appendMessage( GameMessage::MSG_SELL );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SELL, orderData );
 			break;
 
 		}
@@ -768,7 +979,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_TOGGLE_OVERCHARGE:
 		{
 
-			TheMessageStream->appendMessage( GameMessage::MSG_TOGGLE_OVERCHARGE );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_TOGGLE_OVERCHARGE, orderData );
 			break;
 
 		}
@@ -778,7 +989,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_POW_RETURN_TO_PRISON:
 		{
 
-			TheMessageStream->appendMessage( GameMessage::MSG_RETURN_TO_PRISON );
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_RETURN_TO_PRISON, orderData );
 			break;
 
 		}
@@ -796,17 +1007,49 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_GUARD:
 		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 		case GUI_COMMAND_COMBATDROP:
 		{
 			DEBUG_CRASH(("hmm, should never occur"));
 		}
 		break;
 
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		{
+			// Cancel GUI command mode.
+			TheInGameUI->setGUICommand( nullptr );
+
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_GUARD_POSITION, orderData );
+			GuardMode guardMode;
+			switch( commandButton->getCommandType() )
+			{
+				case GUI_COMMAND_GUARD_CURRENT_POS:
+					guardMode = GUARDMODE_CURRENT_POS;
+					break;
+				case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+					guardMode = GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT;
+					break;
+				case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+					guardMode = GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY;
+					break;
+			}
+			Coord3D noPos;
+			noPos.zero();
+			msg->appendLocationArgument(noPos);
+			msg->appendIntegerArgument(guardMode);
+
+			break;
+		}  // end evacuate
+
 		//---------------------------------------------------------------------------------------------
 		case GUI_COMMAND_SWITCH_WEAPON:
 		{
 				// command needs no additional data, send the message
-				GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_SWITCH_WEAPONS );
+				GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_SWITCH_WEAPONS, orderData );
 
 				//Play mode change acknowledgement
 				PickAndPlayInfo info;
@@ -822,7 +1065,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_FIRE_WEAPON:
 		{
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_WEAPON );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_WEAPON, orderData );
 			msg->appendIntegerArgument( commandButton->getWeaponSlot() );
 			msg->appendIntegerArgument( commandButton->getMaxShotsToFire() );
 
@@ -841,7 +1084,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 				break;
 
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_SPECIAL_POWER );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_SPECIAL_POWER, orderData );
 			msg->appendIntegerArgument( spTemplate->getID() );
 			msg->appendIntegerArgument( commandButton->getOptions() );
 			msg->appendObjectIDArgument( obj->getID() );
@@ -852,7 +1095,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 		case GUI_COMMAND_SPECIAL_POWER:
 		{
 			// command needs no additional data, send the message
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_SPECIAL_POWER );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_SPECIAL_POWER, orderData );
 			msg->appendIntegerArgument( commandButton->getSpecialPowerTemplate()->getID() );
 			msg->appendIntegerArgument( commandButton->getOptions() );
 			msg->appendObjectIDArgument( INVALID_ID );	// no specific source
@@ -884,7 +1127,7 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			}
 
 
-			GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_PURCHASE_SCIENCE );
+			GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_PURCHASE_SCIENCE, orderData );
 			msg->appendIntegerArgument( st );
 
 			markUIDirty();
@@ -892,6 +1135,17 @@ CBCommandStatus ControlBar::processCommandUI( GameWindow *control,
 			break;
 
 		}
+
+		//---------------------------------------------------------------------------------------------
+		case GUI_COMMAND_DISABLE_POWER:
+		{
+
+			// command needs no additional data, send the message
+
+			TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DISABLE_POWER, orderData );
+			break;
+
+		}  // end sell
 
 		//---------------------------------------------------------------------------------------------
 		default:

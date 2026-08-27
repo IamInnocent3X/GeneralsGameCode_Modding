@@ -96,13 +96,21 @@ public:
 
 	// CollideModuleInterface
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
+	virtual void doSabotage( Object *other, Object *obj ) override { }
 	/// this is used for things like pilots, to determine if they can "enter" something
 	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return false; }
+	virtual Bool revertCollideBehavior(Object *other) override { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const override { return false; }
 	virtual Bool isCarBombCrateCollide() const override { return false; }
 	virtual Bool isRailroad() const override { return false; }
 	virtual Bool isSalvageCrateCollide() const override { return false; }
-	virtual Bool isSabotageBuildingCrateCollide() const override { return FALSE; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return false; }
+	virtual Bool isEquipCrateCollide() const override { return false; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const override { return false; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return false; }
+	virtual const AsciiString& getCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 protected:
 

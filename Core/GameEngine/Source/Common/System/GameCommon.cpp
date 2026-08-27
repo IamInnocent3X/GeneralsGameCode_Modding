@@ -36,6 +36,8 @@ const char *const TheVeterancyNames[] =
 	"VETERAN",
 	"ELITE",
 	"HEROIC",
+	"LEVEL_FOUR",
+	"LEVEL_FIVE",
 	nullptr
 };
 static_assert(ARRAY_SIZE(TheVeterancyNames) == LEVEL_COUNT + 1, "Incorrect array size");
@@ -67,3 +69,16 @@ Real normalizeAngle(Real angle)
 	return angle;
 }
 
+// ----------------------------------------------------------
+Real normalizeAngle2PI(Real angle)
+{
+	angle = nmod(angle, TWO_PI);
+	if (angle < 0) angle += TWO_PI;
+	return angle;
+}
+
+//-------------------------------------------------------------------------------------------------
+extern Real stdAngleDiffMod(Real a1, Real a2) {
+	return WWMath::Normalize_Angle(nmod(a1 - a2, TWO_PI));
+	//return normalizeAngle(nmod(a1 - a2, 2 * PI));
+}

@@ -116,6 +116,10 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					{
 						cur = Mouse::ATTACKMOVETO;
 					}
+					else if (command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+					{
+						cur = Mouse::REVERSE_MOVE;
+					}
 					else
 					{
 						cur = Mouse::MOVETO;
@@ -123,7 +127,8 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				}
 
 				// Groovy
-				TheMouse->setCursor(cur);
+				//TheMouse->setCursor(cur);
+				TheInGameUI->friend_setMouseCursor(cur, "Dummy", 2);
 
 			}
 
@@ -178,10 +183,15 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					Int index = TheMouse->getCursorIndex( command->getCursorName() );
 
+					//if( index != Mouse::INVALID_MOUSE_CURSOR )
+					//	TheMouse->setCursor( (Mouse::MouseCursor)index );
+					//else
+					//	TheMouse->setCursor( Mouse::CROSS );
+
 					if( index != Mouse::INVALID_MOUSE_CURSOR )
-						TheMouse->setCursor( (Mouse::MouseCursor)index );
+						TheInGameUI->friend_setMouseCursor( (Mouse::MouseCursor)index, "Dummy", 2 );
 					else
-						TheMouse->setCursor( Mouse::CROSS );
+						TheInGameUI->friend_setMouseCursor( Mouse::CROSS, "Dummy", 2 );
 
 				}
 				else
@@ -198,6 +208,10 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 						{
 							cur = Mouse::ATTACKMOVETO;
 						}
+						else if (command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+						{
+							cur = Mouse::REVERSE_MOVE;
+						}
 						else
 						{
 							cur = Mouse::MOVETO;
@@ -205,7 +219,8 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 					}
 
 					// Groovy
-					TheMouse->setCursor(cur);
+					//TheMouse->setCursor(cur);
+					TheInGameUI->friend_setMouseCursor(cur, "Dummy", 2);
 				}
 
 			}
@@ -283,11 +298,41 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				{
 					// Attack move has changed from a modifier to a command, so it moves up here.
 
-					GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_DO_ATTACKMOVETO );
+					OrderNearbyData orderData;
+					if(command->getOrderNearbyRadius())
+					{
+						orderData.Radius = command->getOrderNearbyRadius();
+						orderData.RequiredMask = command->getOrderKindofMask();
+						orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+						orderData.MinDelay = command->getOrderNearbyMinDelay();
+						orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+						orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+					}
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_ATTACKMOVETO, orderData );
 					msg->appendLocationArgument( world );
 
 					// Play the unit voice response
 					pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_ATTACKMOVETO);
+				}
+				else if( command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE)
+				{
+					// Attack move has changed from a modifier to a command, so it moves up here.
+
+					OrderNearbyData orderData;
+					if(command->getOrderNearbyRadius())
+					{
+						orderData.Radius = command->getOrderNearbyRadius();
+						orderData.RequiredMask = command->getOrderKindofMask();
+						orderData.ForbiddenMask = command->getOrderKindofForbiddenMask();
+						orderData.MinDelay = command->getOrderNearbyMinDelay();
+						orderData.MaxDelay = command->getOrderNearbyMaxDelay();
+						orderData.IntervalDelay = command->getOrderNearbyIntervalDelay();
+					}
+					GameMessage *msg = TheMessageStream->appendMessageWithOrderNearby( GameMessage::MSG_DO_REVERSE_MOVETO, orderData );
+					msg->appendLocationArgument( world );
+
+					// Play the unit voice response
+					pickAndPlayUnitVoiceResponse(TheInGameUI->getAllSelectedDrawables(), GameMessage::MSG_DO_REVERSE_MOVETO);
 				}
 				else
 				{
@@ -326,9 +371,24 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 	}
 
 	TheInGameUI->clearAttackMoveToMode();
+	TheInGameUI->clearMoveStateIfDoOnce();
 	return MSG_HANDLED;
 
 }
+
+
+static Bool buttonTriggersOnMouseDown(GameWindow *window)
+{
+	// Buttons with the on down status set trigger on mouse down. jba. [8/6/2003]
+	Bool onDown = BitIsSet( window->winGetStatus(), WIN_STATUS_ON_MOUSE_DOWN);
+
+	// Checkboxes always trigger on mouse down. jba [8/6/2003]
+	if (BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE )) {
+		onDown = true;
+	}
+	return onDown;
+}
+
 
 //-------------------------------------------------------------------------------------------------
 /** Input procedure for the control bar */
@@ -476,6 +536,71 @@ WindowMsgHandledType ControlBarSystem( GameWindow *window, UnsignedInt msg,
 			break;
 		}
 
+		//---------------------------------------------------------------------------------------------
+		case GBM_CLICKED_LEFT:
+		case GBM_CLICKED_RIGHT:
+		case GBM_CLICKED_MIDDLE:
+		case GBM_DOUBLE_CLICKED_LEFT:
+		case GBM_DOUBLE_CLICKED_RIGHT:
+		case GBM_DOUBLE_CLICKED_MIDDLE:
+		case GBM_SCROLL_UP:
+		case GBM_SCROLL_DOWN:
+		{
+			CBCommandStatus statusResult = CBC_COMMAND_NOT_USED;
+			GameWindow *control = (GameWindow *)mData1;
+			statusResult = TheControlBar->processCommandSetModifierButtonClick( control, (GadgetGameMessage)msg );
+
+			if(statusResult == CBC_COMMAND_USED)
+			{
+				WinInstanceData *instData = window->winGetInstanceData();
+				if (buttonTriggersOnMouseDown(window)) {
+					if( BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) )
+					{
+
+						if( BitIsSet( instData->m_state, WIN_STATE_SELECTED ) )
+							BitClear( instData->m_state, WIN_STATE_SELECTED );
+						else
+							BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+
+					}
+					else
+					{
+
+						// just select as normal
+						BitSet( instData->m_state, WIN_STATE_SELECTED );
+
+					}
+				}
+				else
+				{
+					if( BitIsSet( instData->getState(), WIN_STATE_SELECTED ) &&
+						BitIsSet( window->winGetStatus(), WIN_STATUS_CHECK_LIKE ) == FALSE )
+					{
+
+						BitClear( instData->m_state, WIN_STATE_SELECTED );
+
+					}
+				}
+				
+				PushButtonData *pData = (PushButtonData *)window->winGetUserData();
+				AudioEventRTS buttonClick;
+				if(pData && pData->altSound.isNotEmpty())
+					buttonClick.setEventName(pData->altSound);
+				else
+					buttonClick.setEventName("GUIClick");
+
+				if( TheAudio )
+				{
+					TheAudio->addAudioEvent( &buttonClick );
+				}
+
+			}
+
+			break;
+
+		}
+	
 		//---------------------------------------------------------------------------------------------
 		default:
 			return MSG_IGNORED;

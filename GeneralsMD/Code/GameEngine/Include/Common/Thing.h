@@ -95,9 +95,7 @@ public:
 
 	Thing( const ThingTemplate *thingTemplate );
 
-	/**
-		return the thing template for this thing.
-	*/
+	/** Return the final override of this thing's template. */
 	const ThingTemplate *getTemplate() const;
 
 	// convenience method for patching isKindOf thru to template.
@@ -128,6 +126,10 @@ public:
 	Real getHeightAboveTerrain() const;
 	Real getHeightAboveTerrainOrWater() const;
 
+	Bool isOverWater() const;  ///< Checks if the object is above or below a water surface
+	Bool isAboveWater() const;  ///< Checks if the object is above (but not below) a water surface
+	Bool isBelowWater() const;  ///< Checks if the object is below (but not above) a water surface
+
 	Bool isAboveTerrain() const { return getHeightAboveTerrain() > 0.0f; }
 	Bool isAboveTerrainOrWater() const { return getHeightAboveTerrainOrWater() > 0.0f; }
 
@@ -135,6 +137,7 @@ public:
 	If we treat this as airborne, then they slide down slopes.  This checks whether
 	they are high enough that we should let them act like they're flying. jba. */
 	Bool isSignificantlyAboveTerrain() const ;
+	Bool isSignificantlyAboveTerrainOrWater() const ;
 
 	void convertBonePosToWorldPos(const Coord3D* bonePos, const Matrix3D* boneTransform, Coord3D* worldPos, Matrix3D* worldTransform) const;
 
@@ -186,6 +189,7 @@ private:
 	mutable Coord3D		m_cachedDirVector;									///< unit direction vector
 	mutable Real			m_cachedAltitudeAboveTerrain;
 	mutable Real			m_cachedAltitudeAboveTerrainOrWater;
+	mutable Bool			m_cachedIsOverWater;
 	mutable Int				m_cacheFlags;
 
 };

@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#include "Common/GlobalData.h"
 #include "Common/GameUtility.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -42,14 +43,28 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/GameLogic.h" // For frame number
 #include "GameLogic/Module/LaserUpdate.h"
+#include "GameLogic/Module/LifetimeUpdate.h"  // for beam lifetime
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/Weapon.h"
 #include "WWMath/vector3.h"
 
+#ifdef RTS_INTERNAL
+// for occasional debugging...
+//#pragma optimize("", off)
+//#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
+#endif
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 LaserUpdateModuleData::LaserUpdateModuleData()
 {
 	m_punchThroughScalar = 0.0f;
+	m_fadeInDurationFrames = 0;
+	m_fadeOutDurationFrames = 0;
+	m_widenDurationFrames = 0;
+	m_decayDurationFrames = 0;
+	m_hasMultiDraw = FALSE;
+	m_useHouseColor = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -62,23 +77,15 @@ LaserUpdateModuleData::LaserUpdateModuleData()
 		{ "MuzzleParticleSystem",		INI::parseAsciiString,	nullptr, offsetof( LaserUpdateModuleData, m_particleSystemName ) },
 		{ "TargetParticleSystem",		INI::parseAsciiString,  nullptr, offsetof( LaserUpdateModuleData, m_targetParticleSystemName ) },
 		{ "PunchThroughScalar",			INI::parseReal,					nullptr, offsetof( LaserUpdateModuleData, m_punchThroughScalar ) },
+		{ "BeamFadeInDuration",				INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_fadeInDurationFrames) },
+		{ "BeamFadeOutDuration",			INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_fadeOutDurationFrames) },
+		{ "BeamGrowDuration",				INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_widenDurationFrames) },
+		{ "BeamShrinkDuration",				INI::parseDurationUnsignedInt,		nullptr, offsetof(LaserUpdateModuleData, m_decayDurationFrames) },
+		{ "UseMultiLaserDraw",			INI::parseBool,		nullptr, offsetof(LaserUpdateModuleData, m_hasMultiDraw) },
+		{ "UseHouseColoredParticles",			INI::parseBool,		nullptr, offsetof(LaserUpdateModuleData, m_useHouseColor) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
-}
-
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-LaserRadiusUpdate::LaserRadiusUpdate()
-{
-	m_widening = false;
-	m_widenStartFrame = 0;
-	m_widenFinishFrame = 0;
-	m_currentWidthScalar = 1.0f;
-	m_decaying = false;
-	m_decayStartFrame = 0;
-	m_decayFinishFrame = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -90,10 +97,32 @@ LaserUpdate::LaserUpdate( Thing *thing, const ModuleData* moduleData ) : ClientU
 	m_startPos.zero();
 	m_particleSystemID = INVALID_PARTICLE_SYSTEM_ID;
 	m_targetParticleSystemID = INVALID_PARTICLE_SYSTEM_ID;
+	m_widening = false;
+	m_widenStartFrame = 0;
+	m_widenFinishFrame = 0;
+	m_currentWidthScalar = 1.0f;
+	m_decaying = false;
+	m_decayStartFrame = 0;
+	m_decayFinishFrame = 0;
+
+	m_fadingIn = false;
+	m_fadeInStartFrame = 0;
+	m_fadeInFinishFrame = 0;
+	m_currentAlphaScalar = 1.0f;
+	m_fadingOut = false;
+	m_fadeOutStartFrame = 0;
+	m_fadeOutFinishFrame = 0;
+
 	m_parentID = INVALID_DRAWABLE_ID;
 	m_targetID = INVALID_DRAWABLE_ID;
 	m_parentBoneName.clear();
-}
+
+	m_hexColor = 0;
+
+	m_parentObjID = INVALID_ID;
+
+	// m_isMultiDraw = FALSE;
+} 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -119,6 +148,37 @@ void LaserUpdate::updateStartPos()
 	if( parentDrawable == nullptr )
 		return;// Can't update if no one to ask
 
+	if( m_parentObjID != INVALID_ID )
+	{
+		Object *parent = TheGameLogic->findObjectByID(m_parentObjID);
+		if(parent)
+		{
+			//StealthUpdate *stealth = parent->getStealth();
+			//Bool isDisguisedAndCheckIfNeedOffset = stealth && stealth->isDisguisedAndCheckIfNeedOffset();
+			//if(isDisguisedAndCheckIfNeedOffset && parentDrawable)
+			//{
+				// Un-const it
+				Drawable *parentDraw = TheGameClient->findDrawableByID(m_parentID);
+				Weapon::setFirePositionForDrawable(parent, parentDraw, parent->getCurrentWeaponSlot(), parent->getCurrentSpecificBarrel());
+				parentDraw->setPosition( parent->getPosition() );
+				parentDraw->setOrientation( parent->getOrientation() );
+				parentDraw->updateDrawable();
+				if(TheGlobalData->m_useEfficientDrawableScheme)
+					TheGameClient->informClientNewDrawable(parentDraw);
+			//}
+		}
+	}
+
+	// Avoid teleporting units having their laser dragged with them
+	if (parentDrawable->isKindOf(KINDOF_TELEPORTER) && !(oldStartPos.x == 0 && oldStartPos.y == 0 && oldStartPos.z == 0)) {
+		Coord3D diff;
+		diff.set(*parentDrawable->getPosition());
+		diff.sub(oldStartPos);
+		Real MAX_TELEPORT_DISTSQR = 400.0; // 20.0 distance
+		if (diff.lengthSqr() > MAX_TELEPORT_DISTSQR)
+			return;
+	}
+
 	if( m_parentBoneName.isNotEmpty() )
 	{
 		Matrix3D startPosMatrix;
@@ -143,6 +203,16 @@ void LaserUpdate::updateStartPos()
 		m_startPos.x = startPosMatrix.Get_X_Translation();
 		m_startPos.y = startPosMatrix.Get_Y_Translation();
 		m_startPos.z = startPosMatrix.Get_Z_Translation();
+
+		// Update ParticleSystem Position
+		if (m_particleSystemID)
+		{
+			ParticleSystem* system = TheParticleSystemManager->findParticleSystem(m_particleSystemID);
+			if (system)
+			{
+				system->setPosition(&m_startPos);
+			}
+		}
 	}
 	else
 	{
@@ -201,30 +271,29 @@ void LaserUpdate::clientUpdate()
 {
 	updateStartPos();
 	updateEndPos();
-	m_dirty |= m_laserRadius.updateRadius();
-}
 
-//-------------------------------------------------------------------------------------------------
-bool LaserRadiusUpdate::updateRadius()
-{
-	bool updated = false;
+	UnsignedInt now = TheGameLogic->getFrame();
+	if (m_decayStartFrame > 0 && now > m_decayStartFrame)
+		m_decaying = true;
+
 	if( m_decaying )
 	{
-		UnsignedInt now = TheGameLogic->getFrame();
 		m_currentWidthScalar = 1.0f - (Real)(now - m_decayStartFrame) / (Real)(m_decayFinishFrame - m_decayStartFrame);
-		updated = true;
+		m_dirty = true;
 		if( m_currentWidthScalar <= 0.0f )
 		{
 			m_currentWidthScalar = 0.0f;
-			//m_decaying = false // ?????
+
+			//When decay is finished... delete the laser.
+			//TheGameLogic->destroyObject( getObject() );
+			return;
 		}
 	}
 	else if( m_widening )
 	{
 		//We need to resize our laser width based on the growth ratio completed.
-		UnsignedInt now = TheGameLogic->getFrame();
 		m_currentWidthScalar = (Real)(now - m_widenStartFrame) / (Real)(m_widenFinishFrame - m_widenStartFrame);
-		updated = true;
+		m_dirty = true;
 		if( m_currentWidthScalar >= 1.0f )
 		{
 			m_currentWidthScalar = 1.0f;
@@ -232,11 +301,35 @@ bool LaserRadiusUpdate::updateRadius()
 		}
 	}
 
-	return updated;
+	if (m_fadeOutStartFrame > 0 && now > m_fadeOutStartFrame)
+		m_fadingOut = true;
+
+	if (m_fadingOut)
+	{
+		m_currentAlphaScalar = 1.0f - (Real)(now - m_fadeOutStartFrame) / (Real)(m_fadeOutFinishFrame - m_fadeOutStartFrame);
+		m_dirty = true;
+		if (m_currentAlphaScalar <= 0.0f)
+		{
+			m_currentAlphaScalar = 0.0f;
+			return;
+		}
+	}
+	else if (m_fadingIn)
+	{
+		//We need to resize our laser width based on the growth ratio completed.
+		m_currentAlphaScalar = (Real)(now - m_fadeInStartFrame) / (Real)(m_fadeInFinishFrame - m_fadeInStartFrame);
+		m_dirty = true;
+		if (m_currentAlphaScalar >= 1.0f)
+		{
+			m_currentAlphaScalar = 1.0f;
+			m_fadingIn = false;
+		}
+	}
+
+	return;
 }
 
-//-------------------------------------------------------------------------------------------------
-void LaserRadiusUpdate::setDecayFrames( UnsignedInt decayFrames )
+void LaserUpdate::setDecayFrames( UnsignedInt decayFrames )
 {
 	if( decayFrames > 0 )
 	{
@@ -248,8 +341,24 @@ void LaserRadiusUpdate::setDecayFrames( UnsignedInt decayFrames )
 }
 
 //-------------------------------------------------------------------------------------------------
-void LaserRadiusUpdate::initRadius( Int sizeDeltaFrames )
+void LaserUpdate::startFadeOut( UnsignedInt fadeFrames )
 {
+	if( fadeFrames == 0 )
+		return;
+
+	m_fadingOut = true;
+	m_fadeOutStartFrame = TheGameLogic->getFrame();
+	m_fadeOutFinishFrame = m_fadeOutStartFrame + fadeFrames;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void LaserUpdate::initLaser( const Object *parent, const Object *target, const Coord3D *startPos, const Coord3D *endPos, AsciiString parentBoneName, Int sizeDeltaFrames )
+{
+	m_startFrame = TheGameLogic->getFrame();
+	const LaserUpdateModuleData *data = getLaserUpdateModuleData();
+	ParticleSystem *system;
+	// ParticleCannon logic
 	if( sizeDeltaFrames > 0 )
 	{
 		m_widening = true;
@@ -264,40 +373,51 @@ void LaserRadiusUpdate::initRadius( Int sizeDeltaFrames )
 		m_decayFinishFrame = m_decayStartFrame - sizeDeltaFrames;
 		m_currentWidthScalar = 1.0f;
 	}
-}
 
-//-------------------------------------------------------------------------------------------------
-void LaserRadiusUpdate::xfer( Xfer *xfer )
-{
-	// widening
-	xfer->xferBool( &m_widening );
+	// Try to get beam lifetime
+	Drawable* draw = getDrawable();
+	if (draw) {
+		Object* obj = draw->getObject();
+		if (obj) {
+			static NameKeyType key_LifetimeUpdate = NAMEKEY("LifetimeUpdate");
+			LifetimeUpdate* update = (LifetimeUpdate*)obj->findUpdateModule(key_LifetimeUpdate);
+			if (update) {
+				m_dieFrame = update->getDieFrame();
+			}
 
-	// decaying
-	xfer->xferBool( &m_decaying );
+			//if (m_useHouseColor) {
+			if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
+				m_hexColor = obj->getNightIndicatorColor();
+			else
+				m_hexColor = obj->getIndicatorColor();
 
-	// widen start frame
-	xfer->xferUnsignedInt( &m_widenStartFrame );
+			//}
+		}
+	}
 
-	// widen finish frame
-	xfer->xferUnsignedInt( &m_widenFinishFrame );
-
-	// current width scalar
-	xfer->xferReal( &m_currentWidthScalar );
-
-	// decay start frame
-	xfer->xferUnsignedInt( &m_decayStartFrame );
-
-	// decay finish frame
-	xfer->xferUnsignedInt( &m_decayFinishFrame );
-}
-
-//-------------------------------------------------------------------------------------------------
-void LaserUpdate::initLaser( const Object *parent, const Object *target, const Coord3D *startPos, const Coord3D *endPos, AsciiString parentBoneName, Int sizeDeltaFrames )
-{
-	const LaserUpdateModuleData *data = getLaserUpdateModuleData();
-	ParticleSystem *system;
-
-	m_laserRadius.initRadius( sizeDeltaFrames );
+	// Set up Fade/Widen from module data
+	if (data->m_widenDurationFrames > 0) {
+		m_widening = true;
+		m_widenStartFrame = TheGameLogic->getFrame();
+		m_widenFinishFrame = m_widenStartFrame + data->m_widenDurationFrames;
+		m_currentWidthScalar = 0.0f;
+	}
+	if (data->m_fadeInDurationFrames > 0) {
+		m_fadingIn = true;
+		m_fadeInStartFrame = TheGameLogic->getFrame();
+		m_fadeInFinishFrame = m_fadeInStartFrame + data->m_fadeInDurationFrames;
+		m_currentAlphaScalar = 0.0f;
+	}
+	if (m_dieFrame > 0) {
+		if (data->m_decayDurationFrames > 0) {
+			m_decayFinishFrame = m_dieFrame;
+			m_decayStartFrame = m_decayFinishFrame - data->m_decayDurationFrames;
+		}
+		if (data->m_fadeOutDurationFrames > 0) {
+			m_fadeOutFinishFrame = m_dieFrame;
+			m_fadeOutStartFrame = m_fadeOutFinishFrame - data->m_fadeOutDurationFrames;
+		}
+	}
 
 	// Write down the bone name override
 	m_parentBoneName = parentBoneName;
@@ -305,9 +425,17 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 	//Record IDs if we have them, then figure out starting points
 	if( parent )
 	{
+		StealthUpdate *stealth = parent->getStealth();
+		Bool isDisguisedAndCheckIfNeedOffset = stealth && stealth->isDisguisedAndCheckIfNeedOffset();
+		Drawable *parentDraw = isDisguisedAndCheckIfNeedOffset ? stealth->getDrawableTemplateWhileDisguised() : parent->getDrawable();
+		if(isDisguisedAndCheckIfNeedOffset && parentDraw)
+		{
+			m_parentObjID = parent->getID(); // Only for such specific cases we get the parent ID
+		}
+		
 		// If a source object, use it
-		if( parent->getDrawable() )
-			m_parentID = parent->getDrawable()->getID();
+		if( parentDraw )
+			m_parentID = parentDraw->getID();
 
 		updateStartPos();
 	}
@@ -357,12 +485,12 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 			if( data->m_particleSystemName.isNotEmpty() )
 			{
 				const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate( data->m_particleSystemName );
-				if( tmp )
+				system = TheParticleSystemManager->createParticleSystem( tmp );
+				if( system )
 				{
-					system = TheParticleSystemManager->createParticleSystem( tmp );
-					if( system )
-					{
-						m_particleSystemID = system->getSystemID();
+					m_particleSystemID = system->getSystemID();
+					if (data->m_useHouseColor) {
+						system->tintColorsAllFrames(m_hexColor);
 					}
 				}
 			}
@@ -371,12 +499,12 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 			if( data->m_targetParticleSystemName.isNotEmpty() )
 			{
 				const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate( data->m_targetParticleSystemName );
-				if( tmp )
+				system = TheParticleSystemManager->createParticleSystem( tmp );
+				if( system )
 				{
-					system = TheParticleSystemManager->createParticleSystem( tmp );
-					if( system )
-					{
-						m_targetParticleSystemID = system->getSystemID();
+					m_targetParticleSystemID = system->getSystemID();
+					if (data->m_useHouseColor) {
+						system->tintColorsAllFrames(m_hexColor);
 					}
 				}
 			}
@@ -419,24 +547,153 @@ void LaserUpdate::initLaser( const Object *parent, const Object *target, const C
 		posToUse = *parent->getPosition();
 	}
 
-	Drawable *draw = getDrawable();
+	// Drawable *draw = getDrawable();
 	if( draw )
 	{
+		// When initializing the laser, keep track if it has multiple draw modules.
+		// Update: This is a very special case, makes more sense to set it in INI, rather than check it every time
+		/* int numDraws = 0;
+		LaserDrawInterface* ldi = nullptr;
+		for (DrawModule** d = draw->getDrawModules(); *d; ++d)
+		{
+			ldi = (*d)->getLaserDrawInterface();
+			if (ldi)
+			{
+				numDraws++;
+			}
+		}
+		if (numDraws > 1) {
+			m_isMultiDraw = TRUE;
+		}*/
+
 		draw->setPosition( &posToUse );
 	}
 
 	m_dirty = true;
 }
+//-------------------------------------------------------------------------------------------------
+void LaserUpdate::updateContinuousLaser(const Object* parent, const Object* target, const Coord3D* startPos, const Coord3D* endPos)
+{
+	m_startFrame = TheGameLogic->getFrame();
+	const LaserUpdateModuleData* data = getLaserUpdateModuleData();
+	ParticleSystem* system;
+
+	// Try to get beam lifetime (assuming it was updated before callin this function)
+	Drawable* draw = getDrawable();
+	if (draw) {
+		Object* obj = draw->getObject();
+		if (obj) {
+			static NameKeyType key_LifetimeUpdate = NAMEKEY("LifetimeUpdate");
+			LifetimeUpdate* update = (LifetimeUpdate*)obj->findUpdateModule(key_LifetimeUpdate);
+			if (update) {
+				m_dieFrame = update->getDieFrame();
+			}
+		}
+	}
+
+	// Update fadeOut/Decay frames
+	if (m_dieFrame > 0) {
+		if (data->m_decayDurationFrames > 0) {
+			m_decayFinishFrame = m_dieFrame;
+			m_decayStartFrame = m_decayFinishFrame - data->m_decayDurationFrames;
+		}
+		if (data->m_fadeOutDurationFrames > 0) {
+			m_fadeOutFinishFrame = m_dieFrame;
+			m_fadeOutStartFrame = m_fadeOutFinishFrame - data->m_fadeOutDurationFrames;
+		}
+	}
+
+	// Honor an explicit start override only when there is no parent object anchoring the origin.
+	// Parent-anchored lasers (e.g. weapon beams) keep their bone/parent-based start; a parentless
+	// caller that supplies an explicit start (e.g. a vertical orbital beam whose origin tracks the
+	// moving ground point) gets its origin updated, matching initLaser.
+	if (parent == NULL && startPos)
+		m_startPos = *startPos;
+
+	if (target && !endPos)
+	{
+		// If a target object, use it (unless we override it!)
+		if (target->getDrawable())
+			m_targetID = target->getDrawable()->getID();
+
+		m_endPos = *target->getPosition();
+	}
+	else if (endPos)
+	{
+		// just use what they gave, no override here 
+		m_endPos = *endPos;
+	}
+	else
+	{
+		// if they gave nothing, then we are screwed
+		TheGameClient->destroyDrawable(getDrawable());
+		return;
+	}
+
+	//Adjust the position of any existing particle system.
+	//PLEASE NOTE You cannot check an ID for null.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	if (m_particleSystemID)
+	{
+		system = TheParticleSystemManager->findParticleSystem(m_particleSystemID);
+		if (system)
+		{
+			system->setPosition(&m_startPos);
+		}
+	}
+
+	//PLEASE NOTE You cannot check an ID for null.  This should be a check against INVALID_PARTICLE_SYSTEM_ID.  Can't change it on the last day without a bug though.
+	if (m_targetParticleSystemID)
+	{
+		system = TheParticleSystemManager->findParticleSystem(m_targetParticleSystemID);
+		if (system)
+		{
+			system->setPosition(&m_endPos);
+		}
+	}
+
+	//Important! Set the laser position to the average of both points or else
+	//it probably won't get rendered!!!
+	// And as a client update, we cannot set the logic position.
+	Coord3D posToUse;
+	if (parent == nullptr)
+	{
+		posToUse.set(*startPos);
+		posToUse.add(*endPos);
+		posToUse.scale(0.5);
+	}
+	else
+	{
+		posToUse = *parent->getPosition();
+	}
+
+	// Drawable *draw = getDrawable();
+	if (draw)
+	{
+		draw->setPosition(&posToUse);
+	}
+
+	m_dirty = true;
+}
+//------------------------------------------------------------------------------------------------
+
+Real LaserUpdate::getLifeTimeProgress() const
+{
+	if (m_startFrame > 0 && m_dieFrame > 0) {
+		return (Real)(TheGameLogic->getFrame() - m_startFrame) / (Real)(m_dieFrame - m_startFrame);
+	}
+	return 0.0f;
+}
+
 
 //-------------------------------------------------------------------------------------------------
 Real LaserUpdate::getTemplateLaserRadius() const
 {
-	const Drawable *draw = getDrawable();
+	const Drawable* draw = getDrawable();
 	const LaserDrawInterface* ldi = nullptr;
-	for( const DrawModule** d = draw->getDrawModules(); *d; ++d )
+	for (const DrawModule** d = draw->getDrawModules(); *d; ++d)
 	{
 		ldi = (*d)->getLaserDrawInterface();
-		if( ldi )
+		if (ldi)
 		{
 			//***NOTE***
 			//While it appears the logic is accessing client data, it is actually accessing template module
@@ -496,12 +753,64 @@ void LaserUpdate::xfer( Xfer *xfer )
 	// target particle system id
 	xfer->xferUser( &m_targetParticleSystemID, sizeof( ParticleSystemID ) );
 
-	m_laserRadius.xfer( xfer );
+	// start frame
+	xfer->xferUnsignedInt(&m_startFrame);
+
+	// die frame
+	xfer->xferUnsignedInt(&m_dieFrame);
+
+	// widening
+	xfer->xferBool( &m_widening );
+
+	// decaying
+	xfer->xferBool( &m_decaying );
+
+	// widen start frame
+	xfer->xferUnsignedInt( &m_widenStartFrame );
+
+	// widen finish frame
+	xfer->xferUnsignedInt( &m_widenFinishFrame );
+
+	// current width scalar
+	xfer->xferReal( &m_currentWidthScalar );
+
+	// decay start frame
+	xfer->xferUnsignedInt( &m_decayStartFrame );
+
+	// decay finish frame
+	xfer->xferUnsignedInt( &m_decayFinishFrame );
+
+	// fadingIn
+	xfer->xferBool(&m_fadingIn);
+
+	// fadingOut
+	xfer->xferBool(&m_fadingOut);
+
+	// fade in start frame
+	xfer->xferUnsignedInt(&m_fadeInStartFrame);
+
+	// fade in finish frame
+	xfer->xferUnsignedInt(&m_fadeInFinishFrame);
+
+	// current alpha scalar
+	xfer->xferReal(&m_currentAlphaScalar);
+
+	// fade out start frame
+	xfer->xferUnsignedInt(&m_fadeOutStartFrame);
+
+	// fade out finish frame
+	xfer->xferUnsignedInt(&m_fadeOutFinishFrame);
 
 	xfer->xferDrawableID(&m_parentID);
 	xfer->xferDrawableID(&m_targetID);
+	xfer->xferObjectID(&m_parentObjID);
 
 	xfer->xferAsciiString(&m_parentBoneName);
+
+	xfer->xferInt(&m_hexColor);
+
+	// multi draw
+	// xfer->xferBool(&m_isMultiDraw);
 
 }
 
@@ -514,4 +823,105 @@ void LaserUpdate::loadPostProcess()
 	// extend base class
 	ClientUpdateModule::loadPostProcess();
 
+}
+
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+LaserRadiusUpdate::LaserRadiusUpdate()
+{
+	m_widening = false;
+	m_widenStartFrame = 0;
+	m_widenFinishFrame = 0;
+	m_currentWidthScalar = 1.0f;
+	m_decaying = false;
+	m_decayStartFrame = 0;
+	m_decayFinishFrame = 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool LaserRadiusUpdate::updateRadius()
+{
+	bool updated = false;
+	if (m_decaying)
+	{
+		UnsignedInt now = TheGameLogic->getFrame();
+		m_currentWidthScalar = 1.0f - (Real)(now - m_decayStartFrame) / (Real)(m_decayFinishFrame - m_decayStartFrame);
+		updated = true;
+		if (m_currentWidthScalar <= 0.0f)
+		{
+			m_currentWidthScalar = 0.0f;
+			//m_decaying = false // ?????
+		}
+	}
+	else if (m_widening)
+	{
+		//We need to resize our laser width based on the growth ratio completed.
+		UnsignedInt now = TheGameLogic->getFrame();
+		m_currentWidthScalar = (Real)(now - m_widenStartFrame) / (Real)(m_widenFinishFrame - m_widenStartFrame);
+		updated = true;
+		if (m_currentWidthScalar >= 1.0f)
+		{
+			m_currentWidthScalar = 1.0f;
+			m_widening = false;
+		}
+	}
+
+	return updated;
+}
+
+//-------------------------------------------------------------------------------------------------
+void LaserRadiusUpdate::setDecayFrames(UnsignedInt decayFrames)
+{
+	if (decayFrames > 0)
+	{
+		m_decaying = true;
+		m_decayStartFrame = TheGameLogic->getFrame();
+		m_decayFinishFrame = m_decayStartFrame + decayFrames;
+		m_currentWidthScalar = 1.0f;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void LaserRadiusUpdate::initRadius(Int sizeDeltaFrames)
+{
+	if (sizeDeltaFrames > 0)
+	{
+		m_widening = true;
+		m_widenStartFrame = TheGameLogic->getFrame();
+		m_widenFinishFrame = m_widenStartFrame + sizeDeltaFrames;
+		m_currentWidthScalar = 0.0f;
+	}
+	else if (sizeDeltaFrames < 0)
+	{
+		m_decaying = true;
+		m_decayStartFrame = TheGameLogic->getFrame();
+		m_decayFinishFrame = m_decayStartFrame - sizeDeltaFrames;
+		m_currentWidthScalar = 1.0f;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void LaserRadiusUpdate::xfer(Xfer* xfer)
+{
+	// widening
+	xfer->xferBool(&m_widening);
+
+	// decaying
+	xfer->xferBool(&m_decaying);
+
+	// widen start frame
+	xfer->xferUnsignedInt(&m_widenStartFrame);
+
+	// widen finish frame
+	xfer->xferUnsignedInt(&m_widenFinishFrame);
+
+	// current width scalar
+	xfer->xferReal(&m_currentWidthScalar);
+
+	// decay start frame
+	xfer->xferUnsignedInt(&m_decayStartFrame);
+
+	// decay finish frame
+	xfer->xferUnsignedInt(&m_decayFinishFrame);
 }

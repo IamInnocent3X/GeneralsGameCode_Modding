@@ -178,7 +178,13 @@ enum GuardMode CPP_11(: Int)
 {
 	GUARDMODE_NORMAL,
 	GUARDMODE_GUARD_WITHOUT_PURSUIT,	// no pursuit out of guard area
-	GUARDMODE_GUARD_FLYING_UNITS_ONLY	// ignore nonflyers
+	GUARDMODE_GUARD_FLYING_UNITS_ONLY,	// ignore nonflyers
+	GUARDMODE_CURRENT_POS,
+	GUARDMODE_CURRENT_POS_WITHOUT_PURSUIT,
+	GUARDMODE_CURRENT_POS_FLYING_UNITS_ONLY,
+	GUARDMODE_FAR,
+	GUARDMODE_FAR_WITHOUT_PURSUIT,	// no pursuit out of guard area
+	GUARDMODE_FAR_FLYING_UNITS_ONLY	// ignore nonflyers
 };
 
 // ---------------------------------------------------
@@ -201,12 +207,14 @@ enum VeterancyLevel CPP_11(: Int)
 	LEVEL_VETERAN,
 	LEVEL_ELITE,
 	LEVEL_HEROIC,
+	LEVEL_FOUR,
+	LEVEL_FIVE,
 
 	LEVEL_COUNT,
 	LEVEL_INVALID,
 
 	LEVEL_FIRST = 0,
-	LEVEL_LAST = LEVEL_HEROIC
+	LEVEL_LAST = LEVEL_FIVE
 };
 
 // TheVeterancyNames is defined in GameCommon.cpp
@@ -222,6 +230,14 @@ enum CommandSourceType CPP_11(: Int)
 	CMD_FROM_AI,
 	CMD_FROM_DOZER,							// Special rare command when the dozer originates a command to attack a mine. Mines are not ai-attackable, and it seems deceitful for the dozer to generate a player or script command. jba.
 	CMD_DEFAULT_SWITCH_WEAPON,	// Special case: A weapon that can be chosen -- this is the default case (machine gun vs flashbang).
+	CMD_SYNC_TO_PRIMARY,  // This weapon can only be used when PRIMARY is fired
+	CMD_SYNC_TO_SECONDARY,  // This weapon can only be used when SECONDARY is fired
+	CMD_SYNC_TO_TERTIARY,  // This weapon can only be used when TERTIARY is fired
+	CMD_SYNC_TO_FOUR,  // This weapon can only be used when WEAPON_FOUR is fired
+	CMD_SYNC_TO_FIVE,  // ...
+	CMD_SYNC_TO_SIX,  // ...
+	CMD_SYNC_TO_SEVEN,  // ...
+	CMD_SYNC_TO_EIGHT,  // ...
 
 	COMMAND_SOURCE_TYPE_COUNT
 };
@@ -474,6 +490,12 @@ enum WhichTurretType CPP_11(: Int)
 
 	TURRET_MAIN = 0,
 	TURRET_ALT,
+	TURRET_3,
+	TURRET_4,
+	TURRET_5,
+	TURRET_6,
+	TURRET_7,
+	TURRET_8,
 
 	MAX_TURRETS
 };
@@ -489,6 +511,15 @@ inline Real stdAngleDiff(Real a1, Real a2)
 {
 	return normalizeAngle(a1 - a2);
 }
+
+// ------------------------------------------------------------------------
+// normalized angle difference between a1 and a2, respecting negative values and wraparound
+extern Real stdAngleDiffMod(Real a1, Real a2);
+
+// ------------------------------------------------------------------------
+// normalize an angle between 0 and 2PI
+extern Real normalizeAngle2PI(Real angle);
+
 
 // ------------------------------------------------------------------------
 // NOTE NOTE NOTE: Keep TheRelationShipNames in sync with this enum

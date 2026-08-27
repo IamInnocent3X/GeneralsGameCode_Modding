@@ -47,6 +47,7 @@
 #include "Common/FileSystem.h"
 #include "Common/ArchiveFileSystem.h"
 #include "Common/LocalFileSystem.h"
+#include "Common/ChatCommand.h"
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
 #include "Common/RandomValue.h"
@@ -70,6 +71,7 @@
 #include "Common/GameLOD.h"
 #include "Common/Registry.h"
 #include "Common/GameCommon.h"	// FOR THE ALLOW_DEBUG_CHEATS_IN_RELEASE #define
+#include "Common/MapData.h"
 
 #include "GameLogic/Armor.h"
 #include "GameLogic/AI.h"
@@ -84,6 +86,7 @@
 #include "GameLogic/RankInfo.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
+#include "GameLogic/BuffSystem.h"
 
 #include "GameClient/ClientInstance.h"
 #include "GameClient/FXList.h"
@@ -161,10 +164,11 @@ void initSubsystem(
 	SUBSYSTEM* sys,
 	Xfer *pXfer,
 	const char* path1 = nullptr,
-	const char* path2 = nullptr)
+	const char* path2 = nullptr,
+	bool optional = FALSE)
 {
 	sysref = sys;
-	TheSubsystemList->initSubsystem(sys, path1, path2, pXfer, name);
+	TheSubsystemList->initSubsystem(sys, path1, path2, pXfer, name, optional);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -468,6 +472,7 @@ void GameEngine::init()
 	initSubsystem(TheWritableGlobalData, "TheWritableGlobalData", TheWritableGlobalData, &xferCRC, "Data\\INI\\Default\\GameData", "Data\\INI\\GameData");
 	TheWritableGlobalData->parseCustomDefinition();
 
+		initSubsystem(TheWriteableMapData, "TheWriteableMapData", MapData::createMapDataSystem(), &xferCRC);
 	// GeneralsX @feature felipebraz 08/06/2026 Auto-create SagePatch.ini in user data dir with defaults.
 	// This replaces the run.sh copy approach with engine-managed defaults.
 	{
@@ -671,7 +676,9 @@ void GameEngine::init()
 		initSubsystem(TheDamageFXStore,"TheDamageFXStore", MSGNEW("GameEngineSubsystem") DamageFXStore(), &xferCRC, nullptr, "Data\\INI\\DamageFX");
 		initSubsystem(TheArmorStore,"TheArmorStore", MSGNEW("GameEngineSubsystem") ArmorStore(), &xferCRC, nullptr, "Data\\INI\\Armor");
 		initSubsystem(TheBuildAssistant,"TheBuildAssistant", MSGNEW("GameEngineSubsystem") BuildAssistant, nullptr);
-
+		initSubsystem(TheBuffTemplateStore, "TheBuffTemplateStore", MSGNEW("GameEngineSubsystem") BuffTemplateStore(), &xferCRC, nullptr, "Data\\INI\\BuffTemplate", TRUE);
+		// ChatCommands.ini is optional and client-only; do not feed it into the CRC.
+		initSubsystem(TheChatCommandStore, "TheChatCommandStore", MSGNEW("GameEngineSubsystem") ChatCommandStore(), nullptr, nullptr, "Data\\INI\\ChatCommands", TRUE);
 
 	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
 	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
@@ -835,7 +842,9 @@ void GameEngine::init()
 				msg->appendIntegerArgument(GAME_SINGLE_PLAYER);
 				msg->appendIntegerArgument(DIFFICULTY_NORMAL);
 				msg->appendIntegerArgument(0);
-				InitRandom(0);
+				InitRandomType(TheGlobalData->m_initRandomType);
+				
+				//DEBUG_LOG(("Playing Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 			}
 		}
 

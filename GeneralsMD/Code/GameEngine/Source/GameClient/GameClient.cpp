@@ -84,6 +84,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/GhostObject.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"		// For TheScriptEngine - jkmcd
 
 #define DRAWABLE_HASH_SIZE	8192
@@ -112,6 +113,16 @@ GameClient::GameClient()
 	TheDrawGroupInfo = new DrawGroupInfo;
 
 	m_intro = nullptr;
+
+	m_drawablesIterateList.clear();
+	m_drawablesIterateListMarkedForClear = FALSE;
+
+	m_axisAlignedRegion.lo.x = 0.0f;
+	m_axisAlignedRegion.lo.y = 0.0f;
+	m_axisAlignedRegion.lo.z = 0.0f;
+	m_axisAlignedRegion.hi.x = 0.0f;
+	m_axisAlignedRegion.hi.y = 0.0f;
+	m_axisAlignedRegion.hi.z = 0.0f;
 }
 
 //std::vector<std::string>	preloadTextureNamesGlobalHack;
@@ -130,6 +141,17 @@ GameClient::~GameClient()
 
 	// clear any drawable TOC we might have
 	m_drawableTOC.clear();
+
+	m_drawablesIterateList.clear();
+
+	m_drawablesIterateListMarkedForClear = FALSE;
+
+	m_axisAlignedRegion.lo.x = 0.0f;
+	m_axisAlignedRegion.lo.y = 0.0f;
+	m_axisAlignedRegion.lo.z = 0.0f;
+	m_axisAlignedRegion.hi.x = 0.0f;
+	m_axisAlignedRegion.hi.y = 0.0f;
+	m_axisAlignedRegion.hi.z = 0.0f;
 
 	//DEBUG_LOG(("Preloaded texture files ------------------------------------------"));
 	//for (Int oog=0; oog<preloadTextureNamesGlobalHack2.size(); ++oog)
@@ -300,6 +322,7 @@ void GameClient::init()
 		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") HotKeyTranslator,	25 );
 		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") PlaceEventTranslator,	30 );
 		m_translators[ m_numTranslators++ ] = TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") GUICommandTranslator, 40 );
+		m_translators[ m_numTranslators++ ] = TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") CommandSetTranslator, 45 );
 		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") SelectionTranslator,	50 );
 		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") LookAtTranslator,			60 );
 		m_translators[ m_numTranslators ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") CommandTranslator,		70 );
@@ -489,6 +512,17 @@ void GameClient::reset()
 
 	// clear any drawable TOC we might have
 	m_drawableTOC.clear();
+
+	m_drawablesIterateList.clear();
+
+	m_drawablesIterateListMarkedForClear = FALSE;
+
+	m_axisAlignedRegion.lo.x = 0.0f;
+	m_axisAlignedRegion.lo.y = 0.0f;
+	m_axisAlignedRegion.lo.z = 0.0f;
+	m_axisAlignedRegion.hi.x = 0.0f;
+	m_axisAlignedRegion.hi.y = 0.0f;
+	m_axisAlignedRegion.hi.z = 0.0f;
 
 	// TheSuperHackers @fix Mauller 13/04/2025 Reset the drawable id so it does not keep growing over the lifetime of the game.
 	m_nextDrawableID = (DrawableID)1;
@@ -810,21 +844,134 @@ Bool GameClient::isMovieAbortRequested()
  */
 void GameClient::iterateDrawablesInRegion( Region3D *region, GameClientFuncPtr userFunc, void *userData )
 {
-	Drawable *draw, *nextDrawable;
-
-	for( draw = m_drawableList; draw; draw=nextDrawable )
+	if(m_drawablesIterateListMarkedForClear)
 	{
-		nextDrawable = draw->getNextDrawable();
-
-		Coord3D pos = *draw->getPosition();
-		if( region == nullptr ||
-			  (pos.x >= region->lo.x && pos.x <= region->hi.x &&
-			   pos.y >= region->lo.y && pos.y <= region->hi.y &&
-				 pos.z >= region->lo.z && pos.z <= region->hi.z) )
+		m_drawablesIterateList.clear();
+		m_drawablesIterateListMarkedForClear = FALSE;
+	}
+	
+	if(region != nullptr && TheGlobalData->m_useEfficientDrawableScheme && !m_drawablesIterateList.empty())
+	{
+		//IamInnocent - Attempted to use an Efficient Implementation of PartitionManager code to use WorldCell for Finding Drawables - 7/10/2025
+		for( std::list< Drawable* >::iterator it = m_drawablesIterateList.begin(); it != m_drawablesIterateList.end();)
 		{
-			(*userFunc)( draw, userData );
+			Coord3D pos = *(*it)->getPosition();
+			if( pos.x >= region->lo.x && pos.x <= region->hi.x &&
+				pos.y >= region->lo.y && pos.y <= region->hi.y &&
+					pos.z >= region->lo.z && pos.z <= region->hi.z )
+			{
+				(*userFunc)( (*it), userData );
+			}
+			else
+			{
+				it = m_drawablesIterateList.erase(it);
+				continue;
+			}
+			++it;
+		}
+
+	}
+	else if(region == nullptr || ThePartitionManager->hasNoOffset() || 
+	    ( !TheGlobalData->m_usePartitionManagerToIterateDrawables || TheGlobalData->m_usePartitionManagerToIterateDrawablesOnlySelect ) )
+	{
+		Drawable *draw, *nextDrawable;
+
+		for( draw = m_drawableList; draw; draw=nextDrawable )
+		{
+			nextDrawable = draw->getNextDrawable();
+
+			Coord3D pos = *draw->getPosition();
+			if( region == nullptr ||
+				(pos.x >= region->lo.x && pos.x <= region->hi.x &&
+				pos.y >= region->lo.y && pos.y <= region->hi.y &&
+					pos.z >= region->lo.z && pos.z <= region->hi.z) )
+			{
+				if(TheGlobalData->m_useEfficientDrawableScheme)
+					addDrawableToEfficientList(draw);
+				(*userFunc)( draw, userData );
+			}
 		}
 	}
+	else
+	{
+		//IamInnocent - Attempted to use PartitionManager code to use WorldCell for Finding Drawables - 6/10/2025
+		std::list< Drawable* > drawables = ThePartitionManager->getDrawablesInRegion( nullptr );
+		
+		for( std::list< Drawable* >::iterator it = drawables.begin(); it != drawables.end(); ++it )
+		{
+			Coord3D pos = *(*it)->getPosition();
+			if( pos.x >= region->lo.x && pos.x <= region->hi.x &&
+				pos.y >= region->lo.y && pos.y <= region->hi.y &&
+					pos.z >= region->lo.z && pos.z <= region->hi.z )
+			{
+				if(TheGlobalData->m_useEfficientDrawableScheme)
+					addDrawableToEfficientList(*it);
+				(*userFunc)( (*it), userData );
+			}
+		}
+	}
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * Inform the Client to add this Unit to the Efficient Drawable List
+ */
+void GameClient::informClientNewDrawable(Drawable *draw)
+{
+	// sanity
+	if( draw == nullptr )
+		return;
+
+	// Efficient drawing scheme is not on
+	// Checked on the Thing.cpp
+	//if(!TheGlobalData->m_useEfficientDrawableScheme)
+	//	return;
+
+	// Only inform New Drawable if the drawables are checked at least once.
+	if(m_drawablesIterateList.empty())
+		return;
+
+	Coord3D currPos = *draw->getPosition();
+	Region3D *region = getEfficientDrawableRegion();
+	if( currPos.x <= region->lo.x || currPos.x >= region->hi.x ||
+		currPos.y <= region->lo.y || currPos.y >= region->hi.y ||
+			currPos.z <= region->lo.z || currPos.z >= region->hi.z )
+		return;
+
+	addDrawableToEfficientList(draw);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * Add drawable to the Efficient Drawable List
+ */
+void GameClient::addDrawableToEfficientList(Drawable *draw)
+{
+	std::list< Drawable* >::iterator it = std::find(m_drawablesIterateList.begin(), m_drawablesIterateList.end(), draw);
+	if (it == m_drawablesIterateList.end())
+	{
+		m_drawablesIterateList.push_back( draw );
+		TheTacticalView->setUpdateEfficient();
+	}
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * Remove drawable from the Efficient Drawable List
+ */
+void GameClient::removeDrawableFromEfficientList(Drawable *draw)
+{
+	std::list< Drawable* >::iterator it = std::find(m_drawablesIterateList.begin(), m_drawablesIterateList.end(), draw);
+	if (it != m_drawablesIterateList.end())
+	{
+		m_drawablesIterateList.erase(it);
+	}
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * Clear Efficient Drawable List, Mark for Later
+ */
+void GameClient::clearEfficientDrawablesList()
+{
+	m_drawablesIterateListMarkedForClear = TRUE;
+	TheTacticalView->setUpdateEfficient();
 }
 
 /**Helper function to update fake GLA structures to become visible to certain players.
@@ -855,6 +1002,40 @@ void GameClient::destroyDrawable( Drawable *draw )
 
 	// remove any notion of the Drawable in the in-game user interface
 	TheInGameUI->disregardDrawable( draw );
+
+	// remove from the master list
+	draw->removeFromList(&m_drawableList);
+
+	//
+	// because drawables and objects are tightly coupled, not only MUST we maintain
+	// our links in all instances, but it is NECESSARY for the client to actually
+	// modify data in the logic, that is the pointer in an object to *this* drawable
+	//
+	Object *obj = draw->getObject();
+	if( obj )
+	{
+
+		DEBUG_ASSERTCRASH( obj->getDrawable() == draw, ("Object/Drawable pointer mismatch!") );
+		obj->friend_bindToDrawable( nullptr );
+
+	}
+
+	// remove the drawable from our hash of drawables
+	removeDrawableFromLookupTable( draw );
+
+	// free storage
+	deleteInstance(draw);
+
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * Destroy the drawable immediately.
+ */
+void GameClient::destroyDrawablePreserveGUI( Drawable *draw )
+{
+
+	// remove any notion of the Drawable in the in-game user interface
+	TheInGameUI->disregardDrawablePreserveGUI( draw );
 
 	// remove from the master list
 	draw->removeFromList(&m_drawableList);

@@ -35,6 +35,8 @@
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/DamageModule.h"
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Weapon.h"
+#include "GameClient/TintStatus.h"
 
 //-------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -50,6 +52,20 @@ public:
 	Real m_healthPercentToDrainPerSecond;			///< when active, this much health is drained
 	Real m_notAllowedWhenHealthBelowPercent;	///< you cannot overcharge when object is below this health %
 
+	DamageType m_damageTypeFX;
+	WeaponBonusConditionTypeVec m_bonusToSet;
+	ObjectStatusMaskType m_statusToSet;
+	ModelConditionFlags  m_modelConditionToSet;
+	std::vector<AsciiString> m_customBonusToSet;
+	std::vector<AsciiString> m_customStatusToSet;
+	TintStatus m_tintStatusToSet;
+	AsciiString m_customTintStatusToSet;
+
+	Bool m_showDescriptionLabel; 
+	Bool m_showOverchargeExhausted;
+	AsciiString m_overchargeOnLabel;
+	AsciiString m_overchargeOffLabel;
+	AsciiString m_overchargeExhaustedMessage;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -62,7 +78,9 @@ public:
 	virtual void toggle() = 0;
 	virtual void enable( Bool enable ) = 0;
 	virtual Bool isOverchargeActive() = 0;
-
+	virtual Bool showDescriptionLabel() const = 0;
+	virtual const AsciiString& getOverchargeOnLabel() const = 0;
+	virtual const AsciiString& getOverchargeOffLabel() const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -102,6 +120,10 @@ public:
 	virtual void toggle() override;						///< toggle overcharge on/off
 	virtual void enable( Bool enable ) override;			///< turn overcharge on/off
 	virtual Bool isOverchargeActive() override { return m_overchargeActive; }
+
+	virtual Bool showDescriptionLabel() const override { return getOverchargeBehaviorModuleData()->m_showDescriptionLabel; }
+	virtual const AsciiString& getOverchargeOnLabel() const override { return getOverchargeBehaviorModuleData()->m_overchargeOnLabel; }
+	virtual const AsciiString& getOverchargeOffLabel() const override { return getOverchargeBehaviorModuleData()->m_overchargeOffLabel; }
 
 	virtual void onDelete() override;																///< we have some work to do when this module goes away
 	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;	///< object containing upgrade has changed teams

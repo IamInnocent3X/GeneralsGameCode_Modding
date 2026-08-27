@@ -37,6 +37,7 @@
 #include "GameClient/Color.h"
 #include "WWMath/matrix3d.h"
 #include "GameClient/DrawableInfo.h"
+#include "GameClient/TintStatus.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class PositionalSound;
@@ -154,6 +155,7 @@ public:
 	TWheelInfo m_wheelInfo;			///< Wheel offset & angle info for a wheeled type locomotor.
 
 	DrawableLocoInfo();
+	void reset();
 };
 
 //-----------------------------------------------------------------------------
@@ -238,16 +240,6 @@ enum DrawableStatus CPP_11(: DrawableStatusBits)
 	DRAWABLE_STATUS_DEFAULT = DRAWABLE_STATUS_SHADOWS,
 };
 
-enum TintStatus CPP_11(: Int)
-{
-	TINT_STATUS_DISABLED		= 0x00000001,///< drawable tint color is deathly dark grey
-	TINT_STATUS_IRRADIATED	= 0x00000002,///< drawable tint color is sickly green
-	TINT_STATUS_POISONED		= 0x00000004,///< drawable tint color is open-sore red
-	TINT_STATUS_GAINING_SUBDUAL_DAMAGE		= 0x00000008,///< When gaining subdual damage, we tint SUBDUAL_DAMAGE_COLOR
-	TINT_STATUS_FRENZY			= 0x00000010,///< When frenzied, we tint FRENZY_COLOR
-
-};
-
 //-----------------------------------------------------------------------------
 //Keep this enum in sync with the TerrainDecalTextureName array in drawable.cpp
 //
@@ -311,9 +303,22 @@ public:
 	void friend_bindToObject( Object *obj ); ///< bind this drawable to an object ID. for use ONLY by GameLogic!
 	void setIndicatorColor(Color color);
 
-	void setTintStatus( TintStatus statusBits ) { BitSet( m_tintStatus, statusBits ); };
-	void clearTintStatus( TintStatus statusBits ) { BitClear( m_tintStatus, statusBits ); };
-	Bool testTintStatus( TintStatus statusBits ) const { return BitIsSet( m_tintStatus, statusBits ); };
+	//void setTintStatus( TintStatus statusBits ) { BitSet( m_tintStatus, statusBits ); };
+	//void clearTintStatus( TintStatus statusBits ) { BitClear( m_tintStatus, statusBits ); };
+	//Bool testTintStatus( TintStatus statusBits ) const { return BitIsSet( m_tintStatus, statusBits ); };
+
+	void setTintStatus(TintStatus statusType) { if(m_countFrames || m_dontAssignFrames) return; m_tintStatus.set(statusType); };
+	void setAndClearTintFast(TintStatus statusType);
+	void clearTintStatus(TintStatus statusType, bool clearLater = FALSE);
+	Bool testTintStatus(TintStatus statusType) const { return m_tintStatus.test(statusType); };
+	// TO-DO: Change AsciiString to NameKeyType
+	// TO-DO: REVERTED. Game will not register.
+	void setCustomTintStatus(const AsciiString& customStatusType);
+	void setAndClearCustomTintFast(const AsciiString& customStatusType);
+	void clearCustomTintStatus(const AsciiString& customStatusType, bool clearLater = FALSE);
+	Bool hasCustomTintStatus() const { return m_tintCustomStatus.size() > 0; };
+	Bool testCustomTintStatus(const AsciiString& customStatusType) const;
+
 	TintEnvelope *getColorTintEnvelope() { return m_colorTintEnvelope; }
 	void setColorTintEnvelope( TintEnvelope &source ) { if (m_colorTintEnvelope) *m_colorTintEnvelope = source; }
 
@@ -351,6 +356,7 @@ public:
 	// Override.
 	void setPosition( const Coord3D *pos );
 	void reactToGeometryChange();
+	void reactToTeleport();	///< object was instantly relocated - break interpolated visuals (tread marks)
 
 	const GeometryInfo& getDrawableGeometryInfo() const;
 
@@ -452,6 +458,24 @@ public:
 							const Coord3D* victimPos,
 							Real damageRadius
 							);
+	Bool handleWeaponPreAttackFX(
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		const FXList* fxl,
+		Real weaponSpeed,
+		Real recoilAmount,
+		Real recoilAngle,
+		const Coord3D* victimPos,
+		Real damageRadius
+	);
+	Bool handleWeaponFireRecoil(
+		WeaponSlotType wslot,
+		Int specificBarrelToUse,
+		Real recoilAmount,
+		Real recoilAngle,
+		Bool checkHandled,
+		Bool isPreAttack
+	);
 
 	Int getBarrelCount(WeaponSlotType wslot) const;
 
@@ -488,6 +512,10 @@ public:
 	Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const;
 
 	Bool getProjectileLaunchOffset(WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos = nullptr) const;
+	Bool getWeaponFireOffset(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch);
+	void setNeedUpdateTurretPositioning(Bool set);
+	void setCanDoFXWhileHidden(Bool set);
 
 	/**
 		This call says, "I want the current animation (if any) to take n frames to complete a single cycle".
@@ -508,6 +536,8 @@ public:
 
 	void updateSubObjects();
 	void showSubObject( const AsciiString& name, Bool show );
+	const AsciiString& getModelName() const;
+	void setModelName(const AsciiString& modelName);
 
 #ifdef ALLOW_ANIM_INQUIRIES
 // srj sez: not sure if this is a good idea, for net sync reasons...
@@ -523,6 +553,8 @@ public:
 	void friend_setSelected();							///< mark drawable as "selected"
 	void friend_clearSelected();						///< clear drawable's "selected"
 
+	void friend_setSelectedSetShowFlash( Bool showFlash );		///< mark drawable as "selected"
+
 	Vector3 * getAmbientLight();					///< get color value to add to ambient light when drawing
 	void setAmbientLight( Vector3 *ambient );		///< set color value to add to ambient light when drawing
 
@@ -536,6 +568,11 @@ public:
 	// note that this is not the 'get' inverse of setDrawableOpacity, since stealthing can also affect the effective opacity!
 	Real getEffectiveOpacity() const { return m_explicitOpacity * m_effectiveStealthOpacity; }		///< get alpha/opacity value used to override defaults when drawing.
 	void setEffectiveOpacity( Real pulseFactor, Real explicitOpacity = -1.0f );
+
+	// AW: new params for additive transparency scaling (=emissive)
+	void setEmissiveOpacityScaling(bool value) { m_isEmissiveOpacityScaling = value; }
+	bool getEmissiveOpacityScaling() const { return m_isEmissiveOpacityScaling; }
+	Real getEmissiveOpacity() const { if (m_isEmissiveOpacityScaling) return getEffectiveOpacity(); else return 1.0; }
 
 	// this is for the add'l pass fx which operates completely independently of the stealth opacity effects. Draw() does the fading every frame.
 	Real getSecondMaterialPassOpacity() const { return m_secondMaterialPassOpacity; }		///< get alpha/opacity value used to render add'l  rendering pass.
@@ -587,6 +624,8 @@ public:
   Real friend_getStealthOpacity() { return m_stealthOpacity; }
   Real friend_getExplicitOpacity() { return m_explicitOpacity; }
   Real friend_getEffectiveStealthOpacity() { return m_effectiveStealthOpacity; }
+
+	void resetPhysicsXform();
 
 protected:
 
@@ -642,6 +681,7 @@ protected:
 
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle) override;
 	void updateHiddenStatus();
+	Bool checkDrawModuleNullptr(DrawModule** dm);
 
 	void replaceModelConditionStateInDrawable();
 
@@ -664,6 +704,8 @@ private:
 	Real m_stealthOpacity;			///< <<minimum>> opacity due to stealth. pulse is between opaque and this
 	Real m_effectiveStealthOpacity;			///< opacity actually used to render with, after the pulse and stuff.
 
+	Bool m_isEmissiveOpacityScaling;   ///< should emissive color be scaled with opacity (needed for fading out additive objects)
+
 	Real m_decalOpacityFadeTarget;
 	Real m_decalOpacityFadeRate;
 	Real m_decalOpacity;
@@ -677,8 +719,17 @@ private:
   DynamicAudioEventInfo *m_customSoundAmbientInfo; ///< If not nullptr, info about the ambient sound to attach to this object
 
 	DrawableStatusBits m_status;		///< status bits (see DrawableStatus enum)
-	UnsignedInt m_tintStatus;				///< tint color status bits (see TintStatus enum)
-	UnsignedInt m_prevTintStatus;///< for edge testing with m_tintStatus
+	TintStatusFlags m_tintStatus;				///< tint color status bits (see TintStatus enum)
+	TintStatusFlags m_prevTintStatus;///< for edge testing with m_tintStatus
+	std::vector<AsciiString> m_tintCustomStatus;
+	std::vector<AsciiString> m_prevTintCustomStatus;
+	TintStatus m_eraseTint;
+	TintStatus m_tintStatusTypeQuick;
+	AsciiString m_eraseCustomTint;
+	AsciiString m_customTintStatusTypeQuick;
+	UnsignedInt m_countFrames;
+	UnsignedInt m_dontAssignFrames;
+	Bool m_changedCustomStatus;
 
 	enum FadingMode
 	{
@@ -758,6 +809,9 @@ private:
 	void drawContained( const IRegion2D *healthBarRegion );					///< draw icons
 	void drawVeterancy( const IRegion2D *healthBarRegion );					///< draw veterency information
 
+	//new:
+	void drawProgress(const IRegion2D* healthBarRegion);							///< draw progress bar (shield, deploy, teleport, etc.)
+
 	void drawEmoticon( const IRegion2D* healthBarRegion );
 	void drawHealthBar( const IRegion2D* healthBarRegion );					///< draw heath bar
 	void drawHealing( const IRegion2D* healthBarRegion );						///< draw icons
@@ -768,13 +822,18 @@ private:
 	void drawBombed( const IRegion2D* healthBarRegion );						///< draw icons
 	void drawDisabled( const IRegion2D* healthBarRegion );					///< draw icons
 	void drawBattlePlans( const IRegion2D* healthBarRegion );				///< Icons rendering for active battle plan statii
+	void drawProductionRevealed( const IRegion2D* healthBarRegion );			///< draw production query of the current factory
 
 	Bool drawsAnyUIText();
 
 	static Bool							s_staticImagesInited;
 	static const Image*			s_veterancyImage[LEVEL_COUNT];
+
 	static const Image*			s_fullAmmo;
 	static const Image*			s_emptyAmmo;
+	static const Image*         s_fullAmmoThin;
+	static const Image*         s_emptyAmmoThin;
+
 	static const Image*			s_fullContainer;
 	static const Image*			s_emptyContainer;
 	static Anim2DTemplate**	s_animationTemplates;

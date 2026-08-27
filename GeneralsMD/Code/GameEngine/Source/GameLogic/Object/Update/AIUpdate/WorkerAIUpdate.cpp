@@ -159,6 +159,16 @@ Real WorkerAIUpdate::getRepairHealthPerSecond() const
 	return getWorkerAIUpdateModuleData()->m_repairHealthPercentPerSecond;
 }
 // ------------------------------------------------------------------------------------------------
+Bool WorkerAIUpdate::getRepairClearsParasite() const
+{
+	return getWorkerAIUpdateModuleData()->m_repairClearsParasite;
+}
+// ------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& WorkerAIUpdate::getRepairClearsParasiteKeys() const
+{
+	return getWorkerAIUpdateModuleData()->m_repairClearsParasiteKeys;
+}
+// ------------------------------------------------------------------------------------------------
 Real WorkerAIUpdate::getBoredTime() const
 {
 	return getWorkerAIUpdateModuleData()->m_boredTime;
@@ -167,6 +177,90 @@ Real WorkerAIUpdate::getBoredTime() const
 Real WorkerAIUpdate::getBoredRange() const
 {
 	return getWorkerAIUpdateModuleData()->m_boredRange;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& WorkerAIUpdate::getRepairKindOf() const
+{
+	return getWorkerAIUpdateModuleData()->m_kindOf;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& WorkerAIUpdate::getRepairForbiddenKindOf() const
+{
+	return getWorkerAIUpdateModuleData()->m_forbiddenKindOf;
+}
+// ------------------------------------------------------------------------------------------------
+Object* WorkerAIUpdate::findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task)
+{
+	Coord3D position;
+	if (target->isKindOf(KINDOF_BRIDGE))
+	{
+		BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject(target);
+		if (bbi)
+		{
+			AIUpdateInterface* ai = me->getAI();
+
+			// have to repair at a tower.
+			Real bestDistSqr = 1e10f;
+			Object* bestTower = nullptr;
+			for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i)
+			{
+				Object* tower = TheGameLogic->findObjectByID(bbi->getTowerID((BridgeTowerType)i));
+				if( tower )
+				{
+					Coord3D tmp;
+					Bool found = DozerAIUpdate::findGoodBuildOrRepairPosition(me, tower, tmp);
+					// do isPathAvail against the result of this, NOT the tower pos,
+					// since towers are often in cliff cells.
+					if (found && ai->isPathAvailable(&tmp))
+					{
+						Real thisDistSqr = sqr(me->getPosition()->x - tmp.x) + sqr(me->getPosition()->y - tmp.y);
+						if (thisDistSqr < bestDistSqr)
+						{
+							position = tmp;
+							bestDistSqr = thisDistSqr;
+							bestTower = tower;
+						}
+					}
+				}
+			}
+			if (bestTower)
+			{
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+				Coord3D offset;
+				offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+				offset.normalize();
+				offset.scale(5*PATHFIND_CELL_SIZE_F);
+				position.add(offset); // move away from the dock point at the end of build.
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+				m_task[ task ].m_targetObjectID = bestTower->getID();
+
+				return bestTower;
+			}
+
+			DEBUG_CRASH(("should not happen, no reachable tower found"));
+			return nullptr;
+		}
+	}
+
+	DozerAIUpdate::findGoodBuildOrRepairPosition(me, target, position);
+
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+	Coord3D offset;
+	offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+	offset.normalize();
+	offset.scale(5*PATHFIND_CELL_SIZE_F);
+	position.add(offset); // move away from the dock point at the end of build.
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+
+	return target;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -235,6 +329,11 @@ Real WorkerAIUpdate::getWarehouseScanDistance() const
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime WorkerAIUpdate::update()
 {
+	// Suspend worker tasks (build/repair/supply) while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
+	/// IamInnocent - Made Sleepy
 
 	//
 	// NOTE: Any changes to DozerAIUpdate::* you probably want to reflect and copy into
@@ -254,15 +353,20 @@ UpdateSleepTime WorkerAIUpdate::update()
 		//getCurLocomotor()->setUltraAccurate( TRUE );
 
 	// extend the normal AI system
-	AIUpdateInterface::update();
+	UpdateSleepTime ret = AIUpdateInterface::update();
 
 	// do nothing if we're dead
 	///@todo shouldn't this be at a higher level?
 	if( getObject()->isEffectivelyDead() )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// run our own state machine, and the appropriate sub machine
-	m_workerMachine->updateStateMachine();
+	StateReturnType stRet = m_workerMachine->updateStateMachine();
+
+	UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	ret = (mine < ret) ? mine : ret;
 
 	if( m_workerMachine->getCurrentStateID() == AS_DOZER )
 	{
@@ -292,16 +396,20 @@ UpdateSleepTime WorkerAIUpdate::update()
 		}
 
 		// update dozer behavior
-		m_dozerMachine->updateStateMachine();
+		stRet = m_dozerMachine->updateStateMachine();
 
 	}
 	else
 	{
-		m_supplyTruckStateMachine->updateStateMachine();
+		stRet = m_supplyTruckStateMachine->updateStateMachine();
 		// If we are harvesting, we can be diverted to clear mines.  jba.
 		getObject()->setWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL);//maybe go clear some mines, if I feel like it
 	}
-	return UPDATE_SLEEP_NONE;
+
+	mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	return (mine < ret) ? mine : ret;
+	//return UPDATE_SLEEP_NONE;
 }
 
 
@@ -416,11 +524,15 @@ Object *WorkerAIUpdate::construct( const ThingTemplate *what,
 	obj->setPosition( pos );
 	obj->setOrientation( angle );
 
-	// Flatten the terrain underneath the object, then adjust to the flattened height. jba.
-	TheTerrainLogic->flattenTerrain(obj);
-	Coord3D adjustedPos = *pos;
-	adjustedPos.z = TheTerrainLogic->getGroundHeight(pos->x, pos->y);
-	obj->setPosition(&adjustedPos);
+	// Do not flatten shipyards
+	if (!obj->isKindOf(KINDOF_SHIPYARD)) {
+
+		// Flatten the terrain underneath the object, then adjust to the flattened height. jba.
+		TheTerrainLogic->flattenTerrain(obj);
+		Coord3D adjustedPos = *pos;
+		adjustedPos.z = TheTerrainLogic->getGroundHeight(pos->x, pos->y);
+		obj->setPosition(&adjustedPos);
+	}
 
 	// Note - very important that we add to map AFTER we flatten terrain. jba.
 	TheAI->pathfinder()->addObjectToPathfindMap( obj );

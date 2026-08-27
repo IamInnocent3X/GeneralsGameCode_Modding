@@ -93,6 +93,7 @@
 #include "GameLogic/Module/OverchargeBehavior.h"
 #include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/ScriptEngine.h"
+#include "Common/SpecialPower.h"
 
 #include "GameNetwork/NetworkInterface.h"
 
@@ -267,11 +268,16 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 
 	Player *player = ThePlayerList->getLocalPlayer();
 	UnicodeString name, cost, descrip;
-	UnicodeString requiresFormat = UnicodeString::TheEmptyString, requiresList;
+	UnicodeString requiresFormat = UnicodeString::TheEmptyString, requiresList, requiresNegativeFormat = UnicodeString::TheEmptyString, requiresNegativeList, requiresNegativeFormatS = UnicodeString::TheEmptyString, requiresNegativeListS;
 	Bool firstRequirement = true;
+	Bool firstNegativeRequirement = true;
+	Bool firstNegativeRequirementS = true;
 	const ProductionPrerequisite *prereq;
 	Bool fireScienceButton = false;
 	UnsignedInt costToBuild = 0;
+	Bool isUseSpecialpowerButtonWithCost = false;
+
+
 
 	if(commandButton)
 	{
@@ -331,6 +337,26 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 
 			Drawable *draw = TheInGameUI->getFirstSelectedDrawable();
 			Object *selectedObject = draw ? draw->getObject() : nullptr;
+
+			//For Specialpowers with cost, add text to the tooltip
+			if (commandButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER ||
+				commandButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT ||
+				commandButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT ||
+				commandButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT) {
+				const SpecialPowerTemplate* spt = commandButton->getSpecialPowerTemplate();
+				if (spt != nullptr && spt->getCost() > 0) {
+					isUseSpecialpowerButtonWithCost = true;
+
+					costToBuild = spt->getCost();
+					cost.format(TheGameText->fetch("TOOLTIP:Cost"), costToBuild);
+
+					if (player->getMoney()->countMoney() < costToBuild) {
+						descrip.concat(L"\n\n");
+						descrip.concat(TheGameText->fetch("TOOLTIP:TooltipNotEnoughMoneyToBuild"));
+					}
+				}
+			}
+
 			if( selectedObject )
 			{
 				//Special case: Append status of overcharge on China power plant.
@@ -341,18 +367,17 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 						for( BehaviorModule **bmi = selectedObject->getBehaviorModules(); *bmi; ++bmi )
 						{
 							obi = (*bmi)->getOverchargeBehaviorInterface();
-							if( obi )
+							if( obi && obi->showDescriptionLabel() )
 							{
 								descrip.concat( L"\n" );
 								if( obi->isOverchargeActive() )
-									descrip.concat( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOn" ) );
+									descrip.concat( TheGameText->fetch( obi->getOverchargeOnLabel().str() ) );// ( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOn" ) );
 								else
-									descrip.concat( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOff" ) );
+									descrip.concat( TheGameText->fetch( obi->getOverchargeOffLabel().str() ) );// ( TheGameText->fetch( "TOOLTIP:TooltipNukeReactorOverChargeIsOff" ) );
 							}
 						}
 					}
 				}
-
 				//Special case: When building units & buildings, the CanMakeType determines reasons for not being able to buy stuff.
 				else if( thingTemplate )
 				{
@@ -373,7 +398,11 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 							break;
 						case CANMAKE_MAXED_OUT_FOR_PLAYER:
 							descrip.concat( L"\n\n" );
-							if ( thingTemplate->isKindOf( KINDOF_STRUCTURE ) )
+							if( thingTemplate->getCustomMaxedOutMessage() != UnicodeString::TheEmptyString)
+							{
+								descrip.concat( thingTemplate->getCustomMaxedOutMessage() );
+							}
+							else if ( thingTemplate->isKindOf( KINDOF_STRUCTURE ) )
 							{
 								bool exists;
 								UnicodeString text = TheGameText->fetch("TOOLTIP:TooltipCannotBuildBuildingBecauseMaximumNumber", &exists);
@@ -458,6 +487,61 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					descrip.concat(L"\n");
 				descrip.concat(requiresFormat);
 
+			}
+
+			// Do not ask for Negative Prerequisites if the Object wants to Hide its Info
+			if(!thingTemplate->getNegPrereqHideInfo())
+			{
+				// ask each negative prerequisite to give us a list of the satisfied negative prerequisites
+				for( Int i=0; i<thingTemplate->getNegPrereqCount(); i++ ) 
+				{
+					prereq = thingTemplate->getNthNegPrereq(i);
+					requiresNegativeList = prereq->getNegativeRequiresList(player);
+					requiresNegativeListS = prereq->getNegativeRequiresListScience(player);
+
+					if( requiresNegativeList != UnicodeString::TheEmptyString ) 
+					{
+						// make sure to put in 'returns' to space things correctly
+						if (firstNegativeRequirement)
+							firstNegativeRequirement = false;
+						else
+							requiresNegativeFormat.concat(L", ");
+					}
+
+					if( requiresNegativeListS != UnicodeString::TheEmptyString ) 
+					{
+						// make sure to put in 'returns' to space things correctly
+						if (firstNegativeRequirementS)
+							firstNegativeRequirementS = false;
+						else
+							requiresNegativeFormatS.concat(L", ");
+					}
+
+					requiresNegativeFormat.concat(requiresNegativeList);
+
+					requiresNegativeFormatS.concat(requiresNegativeListS);
+				}
+				if( !requiresNegativeFormat.isEmpty() || !requiresNegativeFormatS.isEmpty() )
+				{
+					UnicodeString requireNegativeFormat = TheGameText->fetch("CONTROLBAR:NegativeRequirements");
+					UnicodeString requireNegativeFormatS = TheGameText->fetch("CONTROLBAR:GeneralsPromotionNeg");
+					if (!requiresNegativeFormat.isEmpty())
+					{
+						requiresNegativeFormat.format(requireNegativeFormat.str(), requiresNegativeFormat.str());
+					}
+					if (!requiresNegativeFormatS.isEmpty())
+					{
+						requiresNegativeFormatS.format(requireNegativeFormatS.str(), requiresNegativeFormatS.str());
+					}
+					if(!descrip.isEmpty())
+						descrip.concat(L"\n");
+					descrip.concat(requiresNegativeFormat);
+
+					if(!requiresNegativeFormat.isEmpty() && !requiresNegativeFormatS.isEmpty())
+						descrip.concat(L"\n");
+					descrip.concat(requiresNegativeFormatS);
+
+				}
 			}
 		}
 		else if( upgradeTemplate )
@@ -544,10 +628,13 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 		{
 			TheScienceStore->getNameAndDescription(st, name, descrip);
 
-			costToBuild = TheScienceStore->getSciencePurchaseCost( st );
-			if( costToBuild > 0 )
-			{
-				cost.format( TheGameText->fetch("TOOLTIP:ScienceCost"), costToBuild );
+			// Do not override cost when special power has cost
+			if (!isUseSpecialpowerButtonWithCost) {
+				costToBuild = TheScienceStore->getSciencePurchaseCost(st);
+				if (costToBuild > 0)
+				{
+					cost.format(TheGameText->fetch("TOOLTIP:ScienceCost"), costToBuild);
+				}
 			}
 
 			// ask each prerequisite to give us a list of the non satisfied prerequisites
@@ -575,6 +662,60 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					if(!descrip.isEmpty())
 						descrip.concat(L"\n");
 					descrip.concat(requiresFormat);
+				}
+
+				if(!thingTemplate->getNegPrereqHideInfo())
+				{
+					// ask each negative prerequisite to give us a list of the satisfied negative prerequisites
+					for( Int i=0; i<thingTemplate->getNegPrereqCount(); i++ ) 
+					{
+						prereq = thingTemplate->getNthNegPrereq(i);
+						requiresNegativeList = prereq->getNegativeRequiresList(player);
+						requiresNegativeListS = prereq->getNegativeRequiresListScience(player);
+
+						if( requiresNegativeList != UnicodeString::TheEmptyString ) 
+						{
+							// make sure to put in 'returns' to space things correctly
+							if (firstNegativeRequirement)
+								firstNegativeRequirement = false;
+							else
+								requiresNegativeFormat.concat(L", ");
+						}
+
+						if( requiresNegativeListS != UnicodeString::TheEmptyString ) 
+						{
+							// make sure to put in 'returns' to space things correctly
+							if (firstNegativeRequirementS)
+								firstNegativeRequirementS = false;
+							else
+								requiresNegativeFormatS.concat(L", ");
+						}
+
+						requiresNegativeFormat.concat(requiresNegativeList);
+
+						requiresNegativeFormatS.concat(requiresNegativeListS);
+					}
+					if( !requiresNegativeFormat.isEmpty() || !requiresNegativeFormatS.isEmpty() )
+					{
+						UnicodeString requireNegativeFormat = TheGameText->fetch("CONTROLBAR:NegativeRequirements");
+						UnicodeString requireNegativeFormatS = TheGameText->fetch("CONTROLBAR:GeneralsPromotionNeg");
+						if (!requiresNegativeFormat.isEmpty())
+						{
+							requiresNegativeFormat.format(requireNegativeFormat.str(), requiresNegativeFormat.str());
+						}
+						if (!requiresNegativeFormatS.isEmpty())
+						{
+							requiresNegativeFormatS.format(requireNegativeFormatS.str(), requiresNegativeFormatS.str());
+						}
+						if(!descrip.isEmpty())
+							descrip.concat(L"\n");
+						descrip.concat(requiresNegativeFormat);
+
+						if(!requiresNegativeFormat.isEmpty() && !requiresNegativeFormatS.isEmpty())
+							descrip.concat(L"\n");
+						descrip.concat(requiresNegativeFormatS);
+
+					}
 				}
 			}
 

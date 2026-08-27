@@ -45,6 +45,7 @@
 #include "Common/Team.h"
 #include "Lib/trig.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameClient/GameClient.h"
 
 
 static constexpr const Real InitialThingPosX = 0.0f;
@@ -169,6 +170,17 @@ void Thing::setPositionZ( Real z )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
+	if(AsObject(this))
+	{
+		AsObject(this)->doMovingUpdate();
+	}
+	if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		if(AsObject(this) && AsObject(this)->getDrawable())
+			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
+		else if(AsDrawable(this))
+			TheGameClient->informClientNewDrawable(AsDrawable(this));
+	}
 }
 
 //=============================================================================
@@ -198,6 +210,17 @@ void Thing::setPosition( const Coord3D *pos )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'", m_template->getName().str() ));
+	if(AsObject(this))
+	{
+		AsObject(this)->doMovingUpdate();
+	}
+	if(TheGameClient && TheGlobalData->m_useEfficientDrawableScheme)
+	{
+		if(AsObject(this) && AsObject(this)->getDrawable())
+			TheGameClient->informClientNewDrawable(AsObject(this)->getDrawable());
+		else if(AsDrawable(this))
+			TheGameClient->informClientNewDrawable(AsDrawable(this));
+	}
 }
 
 //=============================================================================
@@ -320,16 +343,53 @@ Real Thing::getHeightAboveTerrainOrWater() const
 		Real waterZ;
 		if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterZ))
 		{
+			//if(!m_cachedIsOverWater && AsObject(this))
+			//	AsObject(this)->doOverWaterUpdate_unConst();
 			m_cachedAltitudeAboveTerrainOrWater = pos->z - waterZ;
+			m_cachedIsOverWater = TRUE;
 		}
 		else
 		{
+			if(m_cachedIsOverWater && AsObject(this))
+				AsObject(this)->doOverWaterUpdate_unConst();
 			m_cachedAltitudeAboveTerrainOrWater = getHeightAboveTerrain();
+			m_cachedIsOverWater = FALSE;
 		}
 		m_cacheFlags |= VALID_ALTITUDE_SEALEVEL;
 	}
 	return m_cachedAltitudeAboveTerrainOrWater;
 }
+
+// ------------------------------------------------------------------------------
+Bool Thing::isOverWater() const
+{
+	if (!(m_cacheFlags & VALID_ALTITUDE_SEALEVEL))
+	{
+		getHeightAboveTerrainOrWater();
+	}
+	return m_cachedIsOverWater;
+}
+
+// ------------------------------------------------------------------------------
+Bool Thing::isBelowWater() const
+{
+	if (!(m_cacheFlags & VALID_ALTITUDE_SEALEVEL))
+	{
+		getHeightAboveTerrainOrWater();
+	}
+	return m_cachedIsOverWater && m_cachedAltitudeAboveTerrainOrWater <= 0;
+}
+
+// ------------------------------------------------------------------------------
+Bool Thing::isAboveWater() const
+{
+	if (!(m_cacheFlags & VALID_ALTITUDE_SEALEVEL))
+	{
+		getHeightAboveTerrainOrWater();
+	}
+	return m_cachedIsOverWater && m_cachedAltitudeAboveTerrainOrWater > 0;
+}
+
 
 //=============================================================================
 /** If we treat this as airborne, then they slide down slopes.  This checks whether
@@ -340,6 +400,13 @@ Bool Thing::isSignificantlyAboveTerrain() const
 	// If it's high enough that it will take more than 3 frames to return to the ground,
 	// then it's significantly airborne.  jba
 	return (getHeightAboveTerrain() > -(3*3)*TheGlobalData->m_gravity);
+}
+//-------------------------------------------------------------------------------------------------
+Bool Thing::isSignificantlyAboveTerrainOrWater() const
+{
+	// If it's high enough that it will take more than 3 frames to return to the ground,
+	// then it's significantly airborne.  jba
+	return (getHeightAboveTerrainOrWater() > -(3 * 3) * TheGlobalData->m_gravity);
 }
 
 
@@ -356,10 +423,10 @@ void Thing::convertBonePosToWorldPos(const Coord3D* bonePos, const Matrix3D* bon
 	}
 	if (worldPos)
 	{
-		Vector3 vector;
-		vector.X = bonePos->x;
-		vector.Y = bonePos->y;
-		vector.Z = bonePos->z;
+		Vector3 vector(bonePos->x, bonePos->y, bonePos->z);
+		//vector.X = bonePos->x;
+		//vector.Y = bonePos->y;
+		//vector.Z = bonePos->z;
 		m_transform.Transform_Vector(m_transform, vector, &vector);
 		worldPos->x = vector.X;
 		worldPos->y = vector.Y;
@@ -378,14 +445,14 @@ void Thing::transformPoint( const Coord3D *in, Coord3D *out )
 		return;
 
 	// for conversion
-	Vector3 vectorIn;
+	Vector3 vectorIn(in->x, in->y, in->z);
 	Vector3 vectorOut;
 
 	///@ todo this is dumb and we should not have to convert types
 	// convert to Vector3 datatypes
-	vectorIn.X = in->x;
-	vectorIn.Y = in->y;
-	vectorIn.Z = in->z;
+	//vectorIn.X = in->x;
+	//vectorIn.Y = in->y;
+	//vectorIn.Z = in->z;
 
 	// do the transform
 	m_transform.Transform_Vector( m_transform, vectorIn, &vectorOut );

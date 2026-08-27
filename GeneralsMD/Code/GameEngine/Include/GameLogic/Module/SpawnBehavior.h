@@ -38,6 +38,7 @@ const Int SPAWN_UPDATE_RATE = LOGICFRAMES_PER_SECOND/2; ///< This is a low prior
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DamageModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 //-------------------------------------------------------------------------------------------------
 class ThingTemplate;
@@ -123,12 +124,19 @@ public:
 	virtual void revealSlaves() = 0;
 	virtual Bool doSlavesHaveFreedom() const = 0;
 	virtual Int getSlaveCount() const = 0;
+	
+	virtual void friend_refreshUpdate(Bool isInstant) = 0;
+	virtual void updateMobMembers() = 0;
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) = 0;
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) = 0;
+
 };
 
 // ------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 class SpawnBehavior : public UpdateModule,
 											public SpawnBehaviorInterface,
+											public CreateModuleInterface,
 											public DieModuleInterface,
 											public DamageModuleInterface
 {
@@ -142,12 +150,15 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// module methods
-	static Int getInterfaceMask() { return (MODULEINTERFACE_UPDATE) | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_DAMAGE); }
+	static Int getInterfaceMask() { return (MODULEINTERFACE_UPDATE) | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_DAMAGE) | (MODULEINTERFACE_CREATE); }
 	virtual void onDelete() override;
 	virtual UpdateModuleInterface *getUpdate() override { return this; }
 	virtual DieModuleInterface *getDie() override { return this; }
 	virtual DamageModuleInterface *getDamage() override { return this; }
 	virtual SpawnBehaviorInterface* getSpawnBehaviorInterface() override { return this; }
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void friend_refreshUpdate(Bool isInstant) override;
+	virtual void updateMobMembers() override;
 
 	// update methods
 	virtual UpdateSleepTime update() override;
@@ -161,6 +172,11 @@ public:
 	virtual void onBodyDamageStateChange( const DamageInfo* damageInfo,
 																				BodyDamageType oldState,
 																				BodyDamageType newState) override { }
+		
+	// create methods
+	virtual void onBuildComplete() override { refreshUpdate(); }
+	virtual void onCreate() override { }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 
 	// SpawnBehaviorInterface methods
 	virtual Bool maySpawnSelfTaskAI( Real maxSelfTaskersRatio ) override;
@@ -179,6 +195,10 @@ public:
 	virtual void revealSlaves() override;
 	virtual Bool doSlavesHaveFreedom() const override { return getSpawnBehaviorModuleData()->m_slavesHaveFreeWill; }
 	virtual Int getSlaveCount() const override { return m_spawnCount; }
+	virtual Bool informSlaveInfo(ObjectID slaveID, Real currHealth, Real currMaxHealth) override;
+	virtual Bool informSelfTasking(ObjectID slaveID, Bool selfTasking) override;
+
+	virtual void refreshUpdate() override;
 
 	// **********************************************************************************************
 	// our own methods
@@ -186,6 +206,7 @@ public:
 	void startSpawning();	///< Whoever owns this module may want to turn it on
 
 	void computeAggregateStates();
+	Bool computeAggregateMembers();
 //	void notifySelfTasking( Bool isSelfTasking );
 
 private:
@@ -219,6 +240,21 @@ private:
 	UnsignedInt m_selfTaskingSpawnCount;		///< How many of my spawn have I authorized to do their own thing?
 
 	UnsignedInt m_initialBurstCountdown;
+	UnsignedInt m_nextWakeUpTime;
+
+	Bool m_computedAggregation;
+
+	struct SpawnInfo
+	{
+		Real health;
+		Real maxHealth;
+		Bool isSelfTasking;
+	};
+
+	typedef std::hash_map<ObjectID, SpawnInfo, rts::hash<ObjectID>, rts::equal_to<ObjectID> > spawnInfoMap;
+	typedef spawnInfoMap::iterator spawnInfoMapIterator;
+
+	spawnInfoMap m_spawnIDsInfo;				///< My darling little spawns.  I need to keep track of them explicitly for the Slave type stuff
 
 	std::vector<AsciiString>::const_iterator m_templateNameIterator;
 

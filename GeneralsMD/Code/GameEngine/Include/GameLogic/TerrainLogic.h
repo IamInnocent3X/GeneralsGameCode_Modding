@@ -141,7 +141,9 @@ public:
 	ObjectID				bridgeObjectID;
 	ObjectID				towerObjectID[ BRIDGE_MAX_TOWERS ];
 	Bool						damageStateChanged;
-
+	// For destroyed bridges or open drawbridges there is an area of the bridge that should not collide, this should be a subarea of the bridge rectangle
+	Coord3D					fromLeftHole, fromRightHole, toLeftHole, toRightHole; /// The 4 corners of the rectangle for a hole in the bridge
+	Bool						drawBridgeOpened;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -191,7 +193,7 @@ public:
 	/// Get the bridges logical info.
 	void getBridgeInfo(class BridgeInfo *pInfo) {*pInfo = m_bridgeInfo; }
 	/// See if the point is on the bridge.
-	Bool isPointOnBridge(const Coord3D *pLoc);
+	Bool isPointOnBridge(const Coord3D *pLoc, bool ignoreHole = true);
 	Drawable *pickBridge(const Vector3 &from, const Vector3 &to, Vector3 *pos);
 	void updateDamageState(); ///< Updates a bridge's damage info.
 	const BridgeInfo *peekBridgeInfo() const {return &m_bridgeInfo;}
@@ -205,6 +207,9 @@ public:
 	void setBridgeObjectID( ObjectID id ) { m_bridgeInfo.bridgeObjectID = id; }
 	void setTowerObjectID( ObjectID id, BridgeTowerType which ) { m_bridgeInfo.towerObjectID[ which ] = id; }
 
+	Bool hasHoleArea(); // check if this bridge has defined a hole area for damaged/drawbridge state
+	Bool hasHole(); // Check if bridge currently has a hole (destroyed/drawbridge open)
+	void setDrawBridgeStage(bool open); // change if bridge is open/closed 
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -234,6 +239,10 @@ public:
 	virtual void getMaximumPathfindExtent( Region3D *extent ) const { DEBUG_CRASH(("not implemented"));  }		///< @todo This should not be a stub - this should own this functionality
 	virtual Coord3D findClosestEdgePoint( const Coord3D *closestTo ) const ;
 	virtual Coord3D findFarthestEdgePoint( const Coord3D *farthestFrom ) const ;
+
+	virtual Coord3D findEdgePointForAngle(const Coord3D* pos, Real angle, bool farthest = FALSE, bool closest = FALSE) const;
+
+
 	virtual Bool isClearLineOfSight(const Coord3D& pos, const Coord3D& posOther) const;
 
 	virtual AsciiString getSourceFilename() { return m_filenameString; }
@@ -241,6 +250,7 @@ public:
 	virtual PathfindLayerEnum alignOnTerrain( Real angle, const Coord3D& pos, Bool stickToGround, Matrix3D& mtx);
 
 	virtual Bool isUnderwater( Real x, Real y, Real *waterZ = nullptr, Real *terrainZ = nullptr );			///< is point under water
+	virtual Real getWaterZ(Real x, Real y);			///< return water height; -1 = no water
 	virtual Bool isCliffCell( Real x, Real y) const;			///< is point cliff cell
 	virtual const WaterHandle* getWaterHandle( Real x, Real y );					///< get water handle at this location
 	virtual const WaterHandle* getWaterHandleByName( AsciiString name );	///< get water handle by name
@@ -288,11 +298,17 @@ public:
 
 	virtual Drawable *pickBridge(const Vector3 &from, const Vector3 &to, Vector3 *pos);
 
+	// get water around a world point
+	virtual bool pickWaterPlane(const Vector3 &from, const Vector3 &to, const Vector3 &aroundPos, Vector3 &outPos);
+
 	virtual void addBridgeToLogic(BridgeInfo *pInfo, Dict *props, AsciiString bridgeTemplateName); ///< Adds a bridge's logical info.
 	virtual void addLandmarkBridgeToLogic(Object *bridgeObj); ///< Adds a bridge's logical info.
 	virtual void deleteBridge( Bridge *bridge );	///< remove a bridge
 
 	virtual void updateBridgeDamageStates(); ///< Updates bridge's damage info.
+
+	/// Check if a point is in a NO_SHIPYARD area
+	virtual bool isInNoShipyardZone(const Coord3D * pos);
 
 	Bool anyBridgesDamageStatesChanged() {return m_bridgeDamageStatesChanged; } ///< Bridge damage states updated.
 	Bool isBridgeRepaired(const Object *bridge); ///< Is bridge repaired?
@@ -313,6 +329,8 @@ public:
 
   void flattenTerrain(Object *obj);  ///< Flatten the terrain under a building.
   void createCraterInTerrain(Object *obj);  ///< Flatten the terrain under a building.
+
+	Real getShipyardPlacementAngle(const Coord3D& worldPos, const ThingTemplate* thing);
 
 protected:
 

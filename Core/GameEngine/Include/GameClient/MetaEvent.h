@@ -267,6 +267,7 @@ enum MappableKeyTransition CPP_11(: Int)
 	DOWN,
 	UP,
 	DOUBLEDOWN,	// if a key transition is repeated immediately, we generate this.
+	DOUBLEDOWN_NO_REPEAT,	// if a key transition is repeated immediately, we generate this, but don't need to reapply modifiers
 
 	MAPPABLE_KEY_TRANSITION_COUNT
 };
@@ -276,6 +277,7 @@ static const LookupListRec TransitionNames[] =
 	{ "DOWN",				DOWN },
 	{ "UP",					UP },
 	{ "DOUBLEDOWN",	DOUBLEDOWN },
+	{ "DOUBLEDOWN_NO_REPEAT",	DOUBLEDOWN_NO_REPEAT },
 	{ nullptr, 0	}
 };
 static_assert(ARRAY_SIZE(TransitionNames) == MAPPABLE_KEY_TRANSITION_COUNT + 1, "Incorrect array size");
@@ -332,6 +334,44 @@ static const char* const TheCommandUsableInNames[] =
 };
 
 // -------------------------------------------------------------------------------
+// MouseState sets for Command Set Override.
+enum MouseState CPP_11(: Int)
+{
+	STATE_NONE						= 0,
+	LEFT_CLICK,
+	RIGHT_CLICK,
+	MIDDLE_CLICK,
+	LEFT_DOUBLE_CLICK,
+	RIGHT_DOUBLE_CLICK,
+	MIDDLE_DOUBLE_CLICK,
+	SCROLL_DOWN,
+	SCROLL_UP,
+
+	MOUSE_STATE_COUNT
+};
+
+static const LookupListRec MouseStateNames[] =
+{
+	{ "NONE",							STATE_NONE },
+	{ "LEFT_CLICK",						LEFT_CLICK },
+	{ "RIGHT_CLICK",					RIGHT_CLICK },
+	{ "MIDDLE_CLICK",					MIDDLE_CLICK },
+	{ "LEFT_DOUBLE_CLICK",				LEFT_DOUBLE_CLICK },
+	{ "RIGHT_DOUBLE_CLICK",				RIGHT_DOUBLE_CLICK },
+	{ "MIDDLE_DOUBLE_CLICK",			MIDDLE_DOUBLE_CLICK },
+	{ "SCROLL_DOWN",					SCROLL_DOWN },
+	{ "SCROLL_UP",						SCROLL_UP },
+	{ nullptr, 0	}
+};
+
+/// A unique, generic "identifier" used to access CommandSetModifiers.
+enum CommandModifierID CPP_11(: Int)
+{
+	INVALID_KEY_ID = 0,
+	FORCE_COMMAND_KEY_TO_LONG_SIZE = 0x7ffffff
+};
+
+// -------------------------------------------------------------------------------
 class MetaMapRec : public MemoryPoolObject
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(MetaMapRec, "MetaMapRec")
@@ -342,6 +382,7 @@ public:
 	MappableKeyTransition		m_transition;			///< the state of the key
 	MappableKeyModState			m_modState;				///< the required state of the ctrl-alt-shift keys
 	CommandUsableInType			m_usableIn;				///< the allowed place the command can be used in
+	CommandModifierID			m_commandModifierID;	///< the command modifier ID for registering command keys
 	// Next fields are added for Key mapping Dialog
 	MappableKeyCategories		m_category;				///< This is the category the key falls under
 	UnicodeString						m_description;		///< The description string for the keys
@@ -354,9 +395,88 @@ EMPTY_DTOR(MetaMapRec)
 class MetaEventTranslator : public GameMessageTranslator
 {
 private:
+	struct KeyDownInfo
+	{
+		KeyDownInfo() : m_modStateBits(0) {}
 
-	Int						m_lastKeyDown;	// really a MappableKeyType
-	Int						m_lastModState;	// really a MappableKeyModState
+		static UnsignedInt getMaxKeyModStateCount()
+		{
+			return 7;
+		}
+
+		static MappableKeyModState toKeyModState(UnsignedInt index)
+		{
+			switch (index)
+			{
+			case 0: return CTRL;
+			case 1: return ALT;
+			case 2: return SHIFT;
+			case 3: return CTRL_ALT;
+			case 4: return SHIFT_CTRL;
+			case 5: return SHIFT_ALT;
+			case 6: return SHIFT_ALT_CTRL;
+			}
+			return NONE;
+		}
+
+		static UnsignedInt toIndex(MappableKeyModState modState)
+		{
+			switch (modState)
+			{
+			case CTRL: return 0;
+			case ALT: return 1;
+			case SHIFT: return 2;
+			case CTRL_ALT: return 3;
+			case SHIFT_CTRL: return 4;
+			case SHIFT_ALT: return 5;
+			case SHIFT_ALT_CTRL: return 6;
+			}
+			return 7;
+		}
+
+		Bool isKeyDown() const
+		{
+			return m_modStateBits != 0;
+		}
+
+		MappableKeyModState getKeyModState(UnsignedInt index)
+		{
+			if (BitIsSet(m_modStateBits, 1 << index))
+			{
+				return toKeyModState(index);
+			}
+			return NONE;
+		}
+
+		void clearKeyModState(UnsignedInt index)
+		{
+			BitClear(m_modStateBits, 1 << index);
+		}
+
+		Bool hasKeyModState(MappableKeyModState modState) const
+		{
+			return BitIsSet(m_modStateBits, 1 << toIndex(modState));
+		}
+
+		void setKeyModState(MappableKeyModState modState)
+		{
+			BitSet(m_modStateBits, 1 << toIndex(modState));
+		}
+
+		void clearKeyModState(MappableKeyModState modState)
+		{
+			BitClear(m_modStateBits, 1 << toIndex(modState));
+		}
+
+	private:
+		UnsignedByte m_modStateBits; ///< Fits all combinations of CTRL+ALT+SHIFT, storing 1 bit for each
+	};
+
+	KeyDownInfo m_keyDownInfos[KEY_COUNT];
+	Int	m_lastKeyDown; // really a MappableKeyType
+	Int	m_lastKeyDownTime; // last key down time in real time
+	Int	m_lastNonRepeatKeyDown;	// really a MappableKeyType Non-Repeat
+	Int	m_lastNonRepeatKeyDownTime; // last non-repeat key down time in real time
 
 	enum { NUM_MOUSE_BUTTONS = 3 };
 	ICoord2D m_mouseDownPosition[NUM_MOUSE_BUTTONS];
@@ -370,6 +490,87 @@ public:
 private:
 	void onMouseEvent(const GameMessage *msg);
 	void onKeyEvent(const GameMessage *msg, GameMessageDisposition &disp);
+	void onKeyModStateRemoved(GameMessageDisposition &disp, MappableKeyModState keyModState);
+	void onKeyPressed(GameMessageDisposition &disp, Int systemKeyState, MappableKeyType keyType, MappableKeyModState keyModState);
+	void registerSystemDoubleDown(Bool triggeredDoubleDown, Int systemKeyState, MappableKeyType keyType);
+	Bool checkIsDoingDoubleDown(MappableKeyType keyType, MappableKeyTransition transitionType) const;
+
+	static MappableKeyType getActionKeyType(Int systemKey); ///< CRTL, ALT, SHIFT will be treated as MK_NONE
+	static MappableKeyModState getKeyModState(Int systemKeyState); ///< Extract CTRL, ALT, SHIFT key mod state
+};
+
+struct MouseModifierKeysList
+{
+	std::vector<AsciiString>	Keys;
+	std::vector<AsciiString>	KeysButtonNeedsEnable;
+	std::vector<AsciiString>	KeysSingular;
+	std::vector<AsciiString>	KeysRandom;
+	std::vector<AsciiString>	KeysStopsAtEnd;
+
+	MouseModifierKeysList()
+	{
+		Keys.clear();
+		KeysButtonNeedsEnable.clear();
+		KeysSingular.clear();
+		KeysRandom.clear();
+		KeysStopsAtEnd.clear();
+	}
+};
+
+// ------------------------------------------------------------------------------------------------
+struct ModifierKeyList
+{
+	Bool						KeyRequireEnabled;
+	Bool						IsSingular;
+	Bool						IsRandom;
+	Bool						StopsAtEnd;
+	std::vector<AsciiString>	Keys;
+	std::vector<AsciiString>	CommandButtonsToTrigger;
+
+	ModifierKeyList() : KeyRequireEnabled(FALSE), IsSingular(FALSE), IsRandom(FALSE), StopsAtEnd(FALSE)
+	{
+		Keys.clear();
+		CommandButtonsToTrigger.clear();
+	}
+};
+
+// ------------------------------------------------------------------------------------------------
+class ModifierKeyTemplate
+{
+	friend class MetaMap;
+private:
+	MouseState					m_mouseState;
+	Bool						m_keyRequireEnabled;
+	Bool						m_isSingular;
+	Bool						m_isRandom;
+	Bool						m_stopsAtEnd;
+	std::vector<AsciiString>	m_keys;
+	std::vector<AsciiString>	m_commandButtonsToTrigger;
+
+public:
+	ModifierKeyTemplate()
+	{
+		m_mouseState = STATE_NONE;
+		m_keyRequireEnabled = FALSE;
+		m_isSingular = FALSE;
+		m_isRandom = FALSE;
+		m_stopsAtEnd = FALSE;
+		m_keys.clear();
+		m_commandButtonsToTrigger.clear();
+	}
+
+	void reset()
+	{
+		m_mouseState = STATE_NONE;
+		m_keyRequireEnabled = FALSE;
+		m_isSingular = FALSE;
+		m_isRandom = FALSE;
+		m_stopsAtEnd = FALSE;
+		m_keys.clear();
+		m_commandButtonsToTrigger.clear();
+	}
+
+	static void parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/);
 };
 
 //-----------------------------------------------------------------------------
@@ -378,11 +579,27 @@ class MetaMap : public SubsystemInterface
 	friend class MetaEventTranslator;
 
 private:
+	ModifierKeyTemplate modifierKeyParser;
 	MetaMapRec *m_metaMaps;
+
+	std::vector<MappableKeyType> m_doubleDownKeysVec;
+
+	typedef std::hash_map< AsciiString, MouseModifierKeysList, rts::hash<AsciiString>, rts::equal_to<AsciiString> > MouseModifierKeySpecificMap;
+	MouseModifierKeysList m_mouseModifierKeysUniversal[MOUSE_STATE_COUNT];
+	MouseModifierKeySpecificMap m_mouseModifierKeysSpecific[MOUSE_STATE_COUNT];
+
+	CommandModifierID m_nextCmdModKeyID;
+	std::vector<ModifierKeyList> m_cmdModKeyVector;
 
 protected:
 	GameMessage::Type findGameMessageMetaType(const char* name);
 	MetaMapRec *getMetaMapRec(GameMessage::Type t);
+	void pushDoubleDownKeyList(MappableKeyType m);
+	void doMouseCommandModifierParsing();
+	void registerBoolForCommandKey(Bool data, Int offset);
+	void registerAsciiStringForCommandKey(const AsciiString& data, Int offset);
+	void registerModifierKeysList( CommandModifierID keyID );
+	CommandModifierID allocateCommandModifierKeyID();
 
 public:
 
@@ -394,6 +611,9 @@ public:
 	virtual void update() override { }
 
 	static void parseMetaMap(INI* ini);
+	static void parseMouseCommandModifierDefinition(INI* ini);
+	static void parseBoolForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData );
+	static void parseAsciiStringVectorForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData );
 
 	// TheSuperHackers @feature Function to generate default key mappings
 	// for actions that were not found in a CommandMap.ini
@@ -402,6 +622,24 @@ public:
 	void verifyMetaMap();
 
 	const MetaMapRec *getFirstMetaMapRec() const { return m_metaMaps; }
+	MouseModifierKeysList getMouseCommandModifiersMeta( MouseState mouseInput, const AsciiString& commandButtonName ) const;
+	Bool hasDoubleDownKey(MappableKeyType m) const;
+	ModifierKeyList findCommandKeyModByID( CommandModifierID id );
 };
+
+inline ModifierKeyList MetaMap::findCommandKeyModByID( CommandModifierID id )
+{
+	if( id == INVALID_KEY_ID )
+	{
+		ModifierKeyList dummy;
+		return dummy;
+	}
+
+	if( (size_t)id < m_cmdModKeyVector.size() )
+		return m_cmdModKeyVector[(size_t)id];
+
+	ModifierKeyList dummy;
+	return dummy;
+}
 
 extern MetaMap *TheMetaMap;

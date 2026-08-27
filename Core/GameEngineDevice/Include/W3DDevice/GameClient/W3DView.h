@@ -251,6 +251,8 @@ public:
 
 	virtual void setGuardBandBias( const Coord2D *gb ) override { m_guardBandBias.x = gb->x; m_guardBandBias.y = gb->y; }
 
+	virtual void setUpdateEfficient(void) { m_updateEfficient = TRUE; }
+
 private:
 
 	CameraClass *m_3DCamera;												///< camera representation for 3D scene
@@ -339,7 +341,9 @@ private:
 	Bool				m_useRealZoomCam;
 	AsciiString		m_cameraSlaveObjectName;
 	AsciiString		m_cameraSlaveObjectBoneName;
-};
+
+	Bool				m_updateEfficient;
+};  // end class W3DView
 
 // EXTERNALS //////////////////////////////////////////////////////////////////////////////////////
 extern Real TheW3DFrameLengthInMsec;

@@ -32,6 +32,7 @@
 
 #include "Common/Xfer.h"
 #include "GameLogic/Module/DynamicGeometryInfoUpdate.h"
+#include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 
 //-------------------------------------------------------------------------------------------------
@@ -102,6 +103,7 @@ DynamicGeometryInfoUpdate::DynamicGeometryInfoUpdate( Thing *thing, const Module
 	m_finalHeight = modData->m_finalHeight;
 	m_finalMajorRadius = modData->m_finalMajorRadius;
 	m_finalMinorRadius = modData->m_finalMinorRadius;
+	m_invTransitionTime = 1/modData->m_transitionTime;
 
 }
 
@@ -117,19 +119,27 @@ DynamicGeometryInfoUpdate::~DynamicGeometryInfoUpdate()
 UpdateSleepTime DynamicGeometryInfoUpdate::update()
 {
 /// @todo srj use SLEEPY_UPDATE here
+/// IamInnocent - Done
 	if( m_finished )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+
+	UnsignedInt now = TheGameLogic->getFrame();
 
 	if( !m_started )
 	{
 
-		m_startingDelayCountdown--;
-		if( m_startingDelayCountdown > 0 )
-			return UPDATE_SLEEP_NONE;
+		m_startingDelayCountdown += now;
+		//m_startingDelayCountdown--;
+		//if( m_startingDelayCountdown > 0 )
+		//	return UPDATE_SLEEP_NONE;
 
 		m_started = TRUE;
+		return m_startingDelayCountdown > now ? UPDATE_SLEEP(m_startingDelayCountdown - now) : UPDATE_SLEEP_NONE;
 
 	}
+
+	if( m_startingDelayCountdown > now )
+		return UPDATE_SLEEP(m_startingDelayCountdown - now);
 
 	// Either we've been running, or we just started right now.  Doesn't matter.
 	const DynamicGeometryInfoUpdateModuleData *data = getDynamicGeometryInfoUpdateModuleData();
@@ -139,7 +149,7 @@ UpdateSleepTime DynamicGeometryInfoUpdate::update()
 	Real ratio = 1.0f;
 	if (data->m_transitionTime > 0)
 	{
-		ratio = (float)m_timeActive / (float)data->m_transitionTime;
+		ratio = (float)m_timeActive * (float)m_invTransitionTime;
 	}
 
 	newHeight = m_initialHeight + (ratio * (m_finalHeight - m_initialHeight));
@@ -254,6 +264,9 @@ void DynamicGeometryInfoUpdate::xfer( Xfer *xfer )
 
 	// final minor radius
 	xfer->xferReal( &m_finalMinorRadius );
+
+	// inverted transition time.
+	xfer->xferReal( &m_invTransitionTime );
 
 }
 

@@ -39,6 +39,7 @@
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Module/DamageModule.h"
+#include "GameLogic/Weapon.h"
 #include "Common/AudioEventRTS.h"
 #include "Common/KindOf.h"
 #include "Common/GameMemory.h"
@@ -46,6 +47,12 @@
 
 // ------------------------------------------------------------------------------------------------
 enum { CONTAIN_MAX_UNKNOWN = -1 };  // means we don't care, infinite, unassigned, whatever
+
+struct InitialPayload
+{
+	AsciiString name;
+	Int count;
+};
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -66,12 +73,24 @@ public:
 	KindOfMaskType m_allowInsideKindOf;			///< objects must have at least one of these kind of bits set to be contained by us
 	KindOfMaskType m_forbidInsideKindOf;		///< objects must have NONE of these kind of bits set to be contained by us
 	Bool m_weaponBonusPassedToPassengers;		///< Do our passengers get to use our weapon bonuses?
+	Bool m_allowOwnUnitsInside;				///< allow own units inside us
  	Bool m_allowAlliesInside;				///< allow allies inside us
  	Bool m_allowEnemiesInside;			///< allow enemies inside us
  	Bool m_allowNeutralInside;			///< allow neutral inside us
 
+	WeaponBonusConditionTypeVec m_passengerWeaponBonusVec;  ///< weaponBonus types granted to passengers
+	std::vector<AsciiString> m_passengerCustomWeaponBonusVec;  ///< custom weaponBonus types granted to passengers
+
+	Int m_containExtra;
+	std::vector<AsciiString> m_containMaxUpgradeList;
+	std::vector<AsciiString> m_containMaxUpgradeListConflicts;
+	std::vector<int> m_containMaxUpgradeListRequiresAll;
+
+	std::vector<InitialPayload> m_initialPayload;
+
 	OpenContainModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
+	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -105,12 +124,20 @@ public:
 
 	// CollideModuleInterface
 	virtual void onCollide( Object *other, const Coord3D *loc, const Coord3D *normal ) override;
+	virtual void doSabotage( Object *other, Object *obj ) override { }
 	virtual Bool wouldLikeToCollideWith(const Object* other) const override { return false; }
+	virtual Bool revertCollideBehavior(Object *other) override { return false; }
 	virtual Bool isCarBombCrateCollide() const override { return false; }
 	virtual Bool isHijackedVehicleCrateCollide() const override { return false; }
 	virtual Bool isRailroad() const override { return false;}
 	virtual Bool isSalvageCrateCollide() const override { return false; }
-	virtual Bool isSabotageBuildingCrateCollide() const override { return FALSE; }
+	virtual Bool isSabotageBuildingCrateCollide() const override { return false; }
+	virtual Bool isEquipCrateCollide() const override { return false; }
+	virtual Bool isParasiteEquipCrateCollide() const override { return false; }
+	virtual Bool canDoSabotageSpecialCheck(const Object *other) const override { return false; }
+	virtual Bool friend_executeCrateBehavior( Object *other ) override { return false; }
+	virtual const AsciiString& getCursorName() const override { return AsciiString::TheEmptyString; }
+	virtual const AsciiString& getSpecialPowerTemplateToTrigger() const override { return AsciiString::TheEmptyString; }
 
 	// UpdateModule
 	virtual UpdateSleepTime update() override;				///< called once per frame
@@ -159,6 +186,7 @@ public:
   virtual void harmAndForceExitAllContained( DamageInfo *info ) override; // apply canned damage against those contains
 	virtual Bool isEnclosingContainerFor( const Object *obj ) const override;	///< Does this type of Contain Visibly enclose its contents?
 	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const override;	///< Hey, can I shoot out of this container?
+	virtual Bool hasPassengerAllowedToFire() const override { return m_passengerAllowedToFire; }	///< Hey, can I shoot out of this container?
 
   virtual void setPassengerAllowedToFire( Bool permission = TRUE ) override { m_passengerAllowedToFire = permission; }	///< Hey, can I shoot out of this container?
 
@@ -171,13 +199,18 @@ public:
 	virtual void iterateContained( ContainIterateFunc func, void *userData, Bool reverse ) override;
 	virtual UnsignedInt getContainCount() const override { return m_containListSize; }
 	virtual const ContainedItemsList* getContainedItemsList() const override { return &m_containList; }
+	virtual Bool isContained( const Object *obj ) const override;
 	virtual const Object *friend_getRider() const override {return nullptr;} ///< Damn.  The draw order dependency bug for riders means that our draw module needs to cheat to get around it.
 	virtual Real getContainedItemsMass() const override;
+	virtual void setContainedItemsMass(Real mass) override { m_containMass = mass; }
 	virtual UnsignedInt getStealthUnitsContained() const override { return m_stealthUnitsContained; }
 	virtual UnsignedInt getHeroUnitsContained() const override { return m_heroUnitsContained; }
 
+	virtual void swapContainedItemsList(ContainedItemsList& newList) override;
+
 	virtual PlayerMaskType getPlayerWhoEntered() const override { return m_playerEnteredMask; }
 
+	virtual Int getRawContainMax() const override;
 	virtual Int getContainMax() const override;
 
 	// ExitInterface
@@ -206,6 +239,18 @@ public:
 	virtual Bool isImmuneToClearBuildingAttacks() const override { return true; }
   virtual Bool isSpecialOverlordStyleContainer() const override { return false; }
   virtual Bool isAnyRiderAttacking() const override;
+  virtual Bool killPilotDoesNotKill() const override { return true; }
+
+	virtual void forceScuttle() override { }
+
+#if !PRESERVE_RETAIL_BEHAVIOR && !RETAIL_COMPATIBLE_CRC
+	virtual const Object* getKillScoreCreditObj( const Object* killer ) const override { return nullptr; }
+#endif
+
+  	virtual void doUpgradeChecks() override;
+  	virtual void doStatusChecks() override {}
+
+	virtual void clearTargetID() override {}
 
 	/**
 		this is used for containers that must do something to allow people to enter or exit...
@@ -225,6 +270,7 @@ public:
 
 	virtual Bool isWeaponBonusPassedToPassengers() const override;
 	virtual WeaponBonusConditionFlags getWeaponBonusPassedToPassengers() const override;
+	virtual const std::vector<AsciiString>& getCustomWeaponBonusPassedToPassengers() const override;
 
 	virtual void enableLoadSounds( Bool enable ) override { m_loadSoundsEnabled = enable; }
 
@@ -232,6 +278,8 @@ public:
   virtual Object* getClosestRider ( const Coord3D *pos ) override;
 
   virtual void setEvacDisposition( EvacDisposition disp ) override {};
+
+  virtual Bool isHidingGarrisonFromNonAllies() const override { return false; }
 protected:
 
 	virtual void monitorConditionChanges();				///< check to see if we need to update our occupant positions from a model change or anything else
@@ -253,10 +301,23 @@ protected:
 	// exists primarily for TransportContain to override
 	virtual void killRidersWhoAreNotFreeToExit() { }
 
+	virtual short getRiderSlot(ObjectID riderID) const override { return -1; }
+	virtual short getPortableSlot(ObjectID portableID) const override { return -1; }
+	virtual const ContainedItemsList* getAddOnList() const override { return nullptr; }
+	virtual ContainedItemsList* getAddOnList() override { return nullptr; }
+
+	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0, 0, 0); };
+
+	virtual void createPayload();
+	Bool getPayloadCreated() const { return m_payloadCreated; }
+	void setPayloadCreated(Bool e) { m_payloadCreated = e; }
+
 	void pruneDeadWanters();
 
 	ContainedItemsList	m_containList;						///< the list of contained objects
 	UnsignedInt					m_containListSize;							///< size of contained list
+
+	Int				  	m_containExtra;
 private:
 
 	typedef std::map< ObjectID, ObjectEnterExitType, std::less<ObjectID>/**/> ObjectEnterExitMap;
@@ -285,4 +346,7 @@ private:
 	Bool								m_rallyPointExists;										///< Only move to the rally point if this is true
 	Bool								m_loadSoundsEnabled;								///< Don't serialize -- used for disabling sounds during payload creation.
   Bool                m_passengerAllowedToFire;      ///< Newly promoted from the template data to the module for upgrade overriding access
+
+	Real			  m_containMass;
+	Bool			  m_payloadCreated;
 };

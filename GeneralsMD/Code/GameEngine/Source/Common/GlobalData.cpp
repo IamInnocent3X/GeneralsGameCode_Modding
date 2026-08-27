@@ -42,6 +42,7 @@
 #define DEFINE_WEATHER_NAMES
 #define DEFINE_BODYDAMAGETYPE_NAMES
 #define DEFINE_PANNING_NAMES
+#define DEFINE_WEAPONBONUSCONDITION_NAMES
 
 #include "Common/AddonCompat.h"
 #include "Common/crc.h"
@@ -52,6 +53,7 @@
 #include "Common/Registry.h"
 #include "Common/OptionPreferences.h"
 #include "Common/version.h"
+#include "Common/AsciiString.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/Weapon.h"
@@ -60,6 +62,7 @@
 #include "GameClient/Color.h"
 #include "GameClient/Display.h"
 #include "GameClient/TerrainVisual.h"
+#include "GameClient/TintStatus.h"
 
 #include "GameNetwork/FirewallHelper.h"
 
@@ -82,6 +85,117 @@ GlobalData* TheWritableGlobalData = nullptr;				///< The global data singleton
 //-------------------------------------------------------------------------------------------------
 GlobalData* GlobalData::m_theOriginal = nullptr;
 
+
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void GlobalData::parseTintStatusType(INI* ini, void* instance, void* store, const void* userData)
+{
+	TintStatus tintType = (TintStatus)INI::scanIndexList(ini->getNextToken(), TintStatusFlags::getBitNames());
+
+	DrawableColorTint* colorTintTypes = (DrawableColorTint*)(store);
+	DrawableColorTint* tintEntry = &colorTintTypes[tintType];
+
+	INI::parseRGBColorReal(ini, instance, &tintEntry->color, nullptr);
+	INI::parseRGBColorReal(ini, instance, &tintEntry->colorInfantry, nullptr);
+
+	INI::parseUnsignedInt(ini, instance, &tintEntry->attackFrames, nullptr);
+	INI::parseUnsignedInt(ini, instance, &tintEntry->decayFrames, nullptr);
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void GlobalData::parseTintCustomStatusType(INI* ini, void* instance, void* store, const void* userData)
+{
+	// TO-DO Convert HashMap. NOTE: DONE!
+	//NOTE: REVERTED. As for some reason hashmap is unusable. Needs investigation.
+
+	CustomTintStatusType cst;
+	cst.first = ini->getNextQuotedAsciiString();
+
+	INI::parseRGBColorReal(ini, instance, &cst.second.color, nullptr);
+	INI::parseRGBColorReal(ini, instance, &cst.second.colorInfantry, nullptr);
+
+	INI::parseUnsignedInt(ini, instance, &cst.second.attackFrames, nullptr);
+	INI::parseUnsignedInt(ini, instance, &cst.second.decayFrames, nullptr);
+
+	CustomTintStatusVec* s = (CustomTintStatusVec*)(store);
+	s->push_back(cst);
+
+	// Add it to the hash table.
+	//&colorTintCustomTypes[string] = tintEntry;
+}
+
+/*static*/ void GlobalData::parseTrackerWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData)
+{
+	TrackerBonusCT TrackType;
+
+	TrackType.bonus = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), WeaponBonusConditionFlags::getBitNames());
+
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		ObjectStatusTypes ost = (ObjectStatusTypes)ObjectStatusMaskType::getSingleBitFromName(token);
+		if(ost >= 0 && ost != OBJECT_STATUS_COUNT)
+		{
+			TrackType.status.push_back(ost);
+		}
+		else
+		{
+			TrackType.c_status.push_back(token);
+		}
+	}
+
+	std::vector<TrackerBonusCT>* s = (std::vector<TrackerBonusCT>*)(store);
+	s->push_back(TrackType);
+
+	// Doesn't work
+	/*
+	Bool addMore = FALSE;
+	for (std::vector<TrackerBonusCT>::const_iterator it = s->begin(); it != s->end(); ++it)
+	{
+		if((*it).bonus == TrackType.bonus)
+		{
+			addMore = TRUE;
+			for (std::vector<ObjectStatusTypes>::const_iterator it2 = TrackType.status.begin(); it2 != TrackType.status.end(); ++it2)
+			{
+				(*it)->status.push_back(*it2);
+			}
+			for (std::vector<AsciiString>::const_iterator it3 = TrackType.c_status.begin(); it3 != TrackType.c_status.end(); ++it3)
+			{
+				(*it)->c_status.push_back(*it3);
+			}
+			break;
+		}
+	}
+	if(addMore == FALSE)
+	{
+		s->push_back(TrackType);
+	}
+	*/
+}
+
+/*static*/ void GlobalData::parseTrackerCustomWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData)
+{
+	TrackerCustomBonusCT TrackType;
+
+	TrackType.bonus = ini->getNextQuotedAsciiString();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		ObjectStatusTypes ost = (ObjectStatusTypes)ObjectStatusMaskType::getSingleBitFromName(token);
+		if(ost >= 0 && ost != OBJECT_STATUS_COUNT)
+		{
+			TrackType.status.push_back(ost);
+		}
+		else
+		{
+			TrackType.c_status.push_back(token);
+		}
+	}
+	
+	std::vector<TrackerCustomBonusCT>* s = (std::vector<TrackerCustomBonusCT>*)(store);
+	s->push_back(TrackType);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,6 +211,10 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "UseTrees",									INI::parseBool,				nullptr,			offsetof( GlobalData, m_useTrees ) },
 	{ "UseFPSLimit",							INI::parseBool,				nullptr,			offsetof( GlobalData, m_useFpsLimit ) },
 	{ "DumpAssetUsage",						INI::parseBool,				nullptr,			offsetof( GlobalData, m_dumpAssetUsage ) },
+	{ "EnableSingleplayerChatwindow",	INI::parseBool,				nullptr,			offsetof( GlobalData, m_enableSingleplayerChatWindow ) },
+	{ "WeaponScatterOnWaterSurfaceDefault",	INI::parseBool,			nullptr,			offsetof( GlobalData, m_weaponScatterOnWaterSurfaceDefault ) },
+	{ "ReverseMoveIgnoreAngleThreshold",	INI::parseBool,			nullptr,			offsetof( GlobalData, m_reverseMoveIgnoreAngleThreshold ) },
+	{ "SmartGarrisonRange",				INI::parseReal,				nullptr,			offsetof( GlobalData, m_smartGarrisonRange ) },
 	{ "FramesPerSecondLimit",			INI::parseInt,				nullptr,			offsetof( GlobalData, m_framesPerSecondLimit ) },
 	{ "ChipsetType",							INI::parseInt,				nullptr,			offsetof( GlobalData, m_chipSetType ) },
 	{ "MaxShellScreens",					INI::parseInt,				nullptr,			offsetof( GlobalData, m_maxShellScreens ) },
@@ -109,7 +227,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "Use3WayTerrainBlends",			INI::parseInt,				nullptr,			offsetof( GlobalData, m_use3WayTerrainBlends ) },
 	{ "StretchTerrain",						INI::parseBool,				nullptr,			offsetof( GlobalData, m_stretchTerrain ) },
 	{ "UseHalfHeightMap",					INI::parseBool,				nullptr,			offsetof( GlobalData, m_useHalfHeightMap ) },
-
+	{ "ViewportHeightScale",      INI::parseReal,				nullptr,			offsetof( GlobalData, m_viewportHeightScale ) },
 
 	{ "DrawEntireTerrain",					INI::parseBool,				nullptr,			offsetof( GlobalData, m_drawEntireTerrain ) },
 	{ "TerrainLOD",									INI::parseIndexList,	TerrainLODNames,	offsetof( GlobalData, m_terrainLOD ) },
@@ -224,6 +342,8 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "ContainerPipWorldOffset",				INI::parseCoord3D,				nullptr,			offsetof( GlobalData, m_containerPipWorldOffset ) },
 	{ "AmmoPipScreenOffset",						INI::parseCoord2D,				nullptr,			offsetof( GlobalData, m_ammoPipScreenOffset ) },
 	{ "ContainerPipScreenOffset",				INI::parseCoord2D,				nullptr,			offsetof( GlobalData, m_containerPipScreenOffset ) },
+
+	{ "ProgressBarYOffset",				INI::parseReal,				nullptr,			offsetof(GlobalData, m_progressBarYOffset) },
 
 	{ "HistoricDamageLimit",				INI::parseDurationUnsignedInt,				nullptr,			offsetof( GlobalData, m_historicDamageLimit ) },
 
@@ -404,7 +524,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "LowEnergyPenaltyModifier",		INI::parseReal,				nullptr,			offsetof( GlobalData, m_LowEnergyPenaltyModifier ) },
 	{ "MultipleFactory",						INI::parseReal,				nullptr,			offsetof( GlobalData, m_MultipleFactory ) },
 	{ "RefundPercent",							INI::parsePercentToReal,			nullptr,			offsetof( GlobalData, m_RefundPercent ) },
-
+	{ "AllowedHeightVariationForBuildingShipyard", INI::parseReal,nullptr,			offsetof(GlobalData, m_allowedHeightVariationForBuildingShipyard) },
 	{ "CommandCenterHealRange",			INI::parseReal,				nullptr,			offsetof( GlobalData, m_commandCenterHealRange ) },
 	{ "CommandCenterHealAmount",		INI::parseReal,				nullptr,			offsetof( GlobalData, m_commandCenterHealAmount ) },
 
@@ -431,6 +551,8 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "HealthBonus_Veteran",				INI::parsePercentToReal, nullptr,	offsetof( GlobalData, m_healthBonus[LEVEL_VETERAN]) },
 	{ "HealthBonus_Elite",					INI::parsePercentToReal, nullptr,	offsetof( GlobalData, m_healthBonus[LEVEL_ELITE]) },
 	{ "HealthBonus_Heroic",					INI::parsePercentToReal, nullptr,	offsetof( GlobalData, m_healthBonus[LEVEL_HEROIC]) },
+	{ "HealthBonus_Four",						INI::parsePercentToReal, nullptr,	offsetof( GlobalData, m_healthBonus[LEVEL_FOUR]) },
+	{ "HealthBonus_Five",						INI::parsePercentToReal, nullptr,	offsetof( GlobalData, m_healthBonus[LEVEL_FIVE]) },
 
 	{ "HumanSoloPlayerHealthBonus_Easy",					INI::parsePercentToReal,			nullptr,			offsetof( GlobalData, m_soloPlayerHealthBonusForDifficulty[PLAYER_HUMAN][DIFFICULTY_EASY] ) },
 	{ "HumanSoloPlayerHealthBonus_Normal",				INI::parsePercentToReal,			nullptr,			offsetof( GlobalData, m_soloPlayerHealthBonusForDifficulty[PLAYER_HUMAN][DIFFICULTY_NORMAL] ) },
@@ -441,6 +563,10 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "AISoloPlayerHealthBonus_Hard",				INI::parsePercentToReal,			nullptr,			offsetof( GlobalData, m_soloPlayerHealthBonusForDifficulty[PLAYER_COMPUTER][DIFFICULTY_HARD] ) },
 
 	{ "WeaponBonus",								WeaponBonusSet::parseWeaponBonusSetPtr,	nullptr,	offsetof( GlobalData, m_weaponBonusSet ) },
+	{ "CustomWeaponBonus",					WeaponBonusSet::parseCustomWeaponBonusSetPtr,	nullptr,	offsetof( GlobalData, m_weaponBonusSet ) },
+
+	{ "FiringTrackerWeaponBonusStatus",					GlobalData::parseTrackerWeaponBonusStatus,	nullptr,	offsetof( GlobalData, m_statusWeaponBonus ) },
+	{ "FiringTrackerCustomWeaponBonusStatus",			GlobalData::parseTrackerCustomWeaponBonusStatus,	nullptr,	offsetof( GlobalData, m_statusCustomWeaponBonus ) },
 
 	{ "DefaultStructureRubbleHeight",	INI::parseReal,			nullptr,			offsetof( GlobalData, m_defaultStructureRubbleHeight ) },
 
@@ -558,9 +684,98 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 	{ "ExtraLogging",								INI::parseBool,				nullptr,			offsetof( GlobalData, m_extraLogging ) },
 #endif
 
+	{ "UseVanillaDiagonalMoveSpeed",	      INI::parseBool,		nullptr,			offsetof(GlobalData, m_useOldMoveSpeed) },
+	{ "TintStatus",	 GlobalData::parseTintStatusType, nullptr, offsetof(GlobalData, m_colorTintTypes) },
+	{ "CustomTintStatus",	 GlobalData::parseTintCustomStatusType, nullptr, offsetof(GlobalData, m_colorTintCustomTypes) },
+
+	{ "CountermeasuresDetonateNonTrackingMissiles",	 INI::parseBool, nullptr, offsetof(GlobalData, m_countermeasuresDetonateNonTracking) },
+	
+	{ "NewSkirmishFPSSystem",	 INI::parseBool, nullptr, offsetof(GlobalData, m_newskirmishfpsSystem) },
+	{ "LoadSkirmishFPS",	 INI::parseBool, nullptr, offsetof(GlobalData, m_skirmishloadfps) },
+	{ "MenuScreenFPS",	 INI::parseUnsignedInt, nullptr, offsetof(GlobalData, m_menufps) },
+	{ "InGameFPS",	 INI::parseUnsignedInt, nullptr, offsetof(GlobalData, m_newfpsLimit) },
+
+	{ "SeedRandomType",	 INI::parseAsciiString, nullptr, offsetof(GlobalData, m_initRandomType) },
+
+	{ "DrawWidthFactor", INI::parseReal, nullptr, offsetof( GlobalData, m_drawWidthFactor ) },
+	{ "DrawHeightFactor", INI::parseReal, nullptr, offsetof( GlobalData, m_drawHeightFactor ) },
+
+	{ "UsePartitionManagerToIterateDrawables",	 INI::parseBool, nullptr, offsetof(GlobalData, m_usePartitionManagerToIterateDrawables) },
+	{ "UsePartitionManagerToIterateDrawablesOnlySelect",	 INI::parseBool, nullptr, offsetof(GlobalData, m_usePartitionManagerToIterateDrawablesOnlySelect) },
+	{ "UseEfficientIterateDrawablesScheme",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useEfficientDrawableScheme) },
+
+	//{ "AttemptToFixGroundLocomotorClump",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixLocoClump) }, // OBSELETE
+
+	// Functions below except 'UseNonRetailAIPathfindDynamicAlloc', and 'UseNonRetailAIPathfindOpenSortedList' are automatically enabled if RETAIL_COMPATIBLE_PATHFINDING is disabled.
+	// 'UseNonRetailAIPathfindAllocation' is enabled when either RETAIL_COMPATIBLE_PATHFINDING or RETAIL_COMPATIBLE_PATHFINDING_ALLOCATION is disabled.
+	/*{ "UseNonRetailPathfindToFixPathfindForManyPlayers",	 INI::parseBool, nullptr, offsetof(GlobalData, m_fixAIPathfindClumpForManyPlayers) }, // This method uses UseNonRetailAIPathfindAllocation after having 6 or more players in a map
+	{ "UseNonRetailAIPathfind",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfind) }, // IamInnocent - If use Retail, AI Pathfind can be configured to use Non-Retail method
+	{ "UseNonRetailAIPathfindAllocation",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindAllocation) },
+	{ "UseNonRetailAIPathfindDynamicAlloc",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDynamicAlloc) }, // This requires Non-Retail to be configured for pathfinding. Either through Global data, or defining Non-Retail. Credits to: Mauller
+	{ "UseNonRetailAIPathfindDoublyLinkedList",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindDoublyLinkedList) }, // Mauller's Doubly Linked Lists for Optimization.
+	{ "UseNonRetailAIPathfindOpenSortedList",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindOpenSortedList) }, // Mauller's Open Sorted Lists for Optimization.
+	{ "UseNonRetailAIPathfindSuperSkip",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindSuperSkip) },  // Mauller's Open Sorted Lists Super Skip for Optimization.
+	{ "UseNonRetailAIPathfindReverseTransverseInsertion",	 INI::parseBool, nullptr, offsetof(GlobalData, m_useNonRetailAIPathfindReverseTransverseInsertion) }, // Mauller's Reverse Transverse Insertion for Optimization.
+	*/
+
+	{ "FlungCorpsesHasAirDrag",	INI::parseBool, nullptr, offsetof(GlobalData, m_corpsesHaveAirDrag) },
+
+	{ "HideCashFromShowingToEnemies",	INI::parseBool, nullptr, offsetof(GlobalData, m_hideCashTextFromEnemies) },
+	{ "HideCashFromShowingToEnemiesInvisibleUnitsOnly",	INI::parseBool, nullptr, offsetof(GlobalData, m_hideCashTextFromEnemiesInvisibleUnitsOnly) },
+	{ "FixHulksFreezingAboveTerrain",	INI::parseBool, nullptr, offsetof(GlobalData, m_fixHulksFreezingAboveTerrain) },
+
+	{ "UseDynamicTargetingForWeapons",	INI::parseBool, nullptr, offsetof(GlobalData, m_dynamicTargeting) },
+	{ "UseAccurateSphereToRectCollision",	INI::parseBool, nullptr, offsetof(GlobalData, m_useAccurateSphereToRectCollision) },
+	{ "CheckBoxBoundariesForDistCalc",	INI::parseBool, nullptr, offsetof(GlobalData, m_checkBoxBoundariesForDistCalc) },
+
+	{ "EnableDoubleClick",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableDoubleClick) },
+	{ "EnableKillPilotForStructures",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableKillPilotForStructures) },
+	{ "EnableNestedStructures",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableNestedStructures) },
+
+	{ "FormationBlockedSpeedPenalty",	 INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_formationBlockedSpeedPenalty) },
+	{ "ReverseMoveSpeedPenalty",	 INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_globalReverseMoveSpeedPenalty) },
+
+	{ "EnableReverseMoveByDefaultForTreads",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForTreads ) },
+	{ "EnableReverseMoveByDefaultForWheels",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForWheels ) },
+	{ "EnableReverseMoveByDefaultForHover",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForHover ) },
+	{ "EnableReverseMoveByDefaultForShips",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForShips ) },
+	{ "EnableReverseMoveByDefaultForThrust",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForThrust ) },
+	{ "EnableReverseMoveByDefaultForOther",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_enableReverseMoveByDefaultForOther ) },
+
+	{ "AccelerateObjectsWithLowAccel",		INI::parseBool,			nullptr,			offsetof( GlobalData, m_accelerateObjectsWithLowAccel ) },
+
+	{"ChronoDamageDisableThreshold", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageDisableThreshold)},
+	{"ChronoDamageHealRate", INI::parseDurationUnsignedInt, nullptr, offsetof(GlobalData, m_chronoDamageHealRate)},
+	{"ChronoDamageHealAmountPercent", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDamageHealAmount) },
+	{"ChronoDamageOpacityStart", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDisableAlphaStart) },
+	{"ChronoDamageOpacityEnd", INI::parsePercentToReal, nullptr, offsetof(GlobalData, m_chronoDisableAlphaEnd) },
+	
+	// {"ChronoDamageTintStatusType", TintStatusFlags::parseSingleBitFromINI, nullptr, offsetof(GlobalData, m_chronoTintStatusType) },
+	{"ChronoDamageParticleSystemLarge", INI::parseAsciiString, nullptr, offsetof(GlobalData, m_chronoDisableParticleSystemLarge) },
+	{"ChronoDamageParticleSystemMedium", INI::parseAsciiString, nullptr, offsetof(GlobalData, m_chronoDisableParticleSystemMedium) },
+	{"ChronoDamageParticleSystemSmall", INI::parseAsciiString, nullptr, offsetof(GlobalData, m_chronoDisableParticleSystemSmall) },
+
+
+	{"DefaultExcludedDeathTypes", INI::parseDeathTypeFlagsList, nullptr, offsetof(GlobalData, m_defaultExcludedDeathTypes) },
+	{"HeightAboveTerrainIncludesWater", INI::parseBool, nullptr, offsetof(GlobalData, m_heightAboveTerrainIncludesWater) },
+	{"RadiusDecalsAboveWater", INI::parseBool, nullptr, offsetof(GlobalData, m_radiusDecalsAboveWater) },
+	{"HideScorchmarksAboveGround", INI::parseBool, nullptr, offsetof(GlobalData, m_hideScorchmarksAboveGround) },
+
+
 	{ nullptr,					nullptr,						nullptr,						0 }
 
 };
+
+
+
+// Helper function
+/*static*/ void GlobalData::setColorTintEntry(DrawableColorTint* arr, int index, RGBColor color, RGBColor colorInfantry, UnsignedInt attackFrames, UnsignedInt decayFrames)
+{
+	arr[index].color = color;
+	arr[index].colorInfantry = colorInfantry;
+	arr[index].attackFrames = attackFrames;
+	arr[index].decayFrames = decayFrames;
+}
 
 
 //-------------------------------------------------------------------------------------------------
@@ -650,6 +865,9 @@ GlobalData::GlobalData()
 	m_useHeatEffects = TRUE;
 	// GeneralsX @tweak felipebraz 20/06/2026 Default render FPS limit to 60 FPS instead of uncapped/0.
 	m_useFpsLimit = TRUE;
+	m_weaponScatterOnWaterSurfaceDefault = FALSE;
+	m_reverseMoveIgnoreAngleThreshold = FALSE;
+	m_smartGarrisonRange = 100.0f;
 	m_dumpAssetUsage = FALSE;
 	m_framesPerSecondLimit = 60;
 	m_chipSetType = 0;
@@ -889,12 +1107,15 @@ GlobalData::GlobalData()
 
 	m_netMinPlayers = 1; // allowing sandbox mode
 
+	m_enableSingleplayerChatWindow = FALSE;
+
 	m_defaultIP = 0;
 
 	m_BuildSpeed = 0.0f;
 	m_MinDistFromEdgeOfMapForBuild = 0.0f;
 	m_SupplyBuildBorder = 0.0f;
 	m_allowedHeightVariationForBuilding = 0.0f;
+	m_allowedHeightVariationForBuildingShipyard = 0.0f;
 	m_MinLowEnergyProductionSpeed = 0.0f;
 	m_MaxLowEnergyProductionSpeed = 0.0f;
 	m_LowEnergyPenaltyModifier = 0.0f;
@@ -1029,6 +1250,8 @@ GlobalData::GlobalData()
 
 	m_defaultStructureRubbleHeight = 1.0f;
 	m_weaponBonusSet = newInstance(WeaponBonusSet);
+	m_statusWeaponBonus.clear();
+	m_statusCustomWeaponBonus.clear();
 
 	m_shellMapName.set("Maps\\ShellMap1\\ShellMap1.map");
 	m_shellMapOn =TRUE;
@@ -1080,6 +1303,111 @@ GlobalData::GlobalData()
 	m_useRightMouseScrollWithAlternateMouse = TRUE;
 	m_clientRetaliationModeEnabled = TRUE; //On by default.
 	m_doubleClickAttackMove = FALSE;
+
+	m_countermeasuresDetonateNonTracking = FALSE; //More realistic destruction. Won't seemingly home onto the immovable target dealing no damage.
+
+	m_useOldMoveSpeed = FALSE;  //Fix is enabled by default
+
+
+	m_newskirmishfpsSystem = FALSE;
+	m_skirmishloadfps = FALSE;
+	m_menufps = 0;
+	m_newfpsLimit = 0;
+	m_initRandomType = AsciiString::TheEmptyString;
+
+	m_drawWidthFactor = 1.0f;
+	m_drawHeightFactor = 1.0f;
+
+	m_usePartitionManagerToIterateDrawables = FALSE;
+	m_usePartitionManagerToIterateDrawablesOnlySelect = FALSE;
+	m_useEfficientDrawableScheme = FALSE;
+
+	//m_fixLocoClump = FALSE;
+	/*m_fixAIPathfindClumpForManyPlayers = FALSE;
+	m_useNonRetailAIPathfind = FALSE;
+	m_useNonRetailAIPathfindAllocation = FALSE;
+	m_useNonRetailAIPathfindDynamicAlloc = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindDoublyLinkedList = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindOpenSortedList = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindSuperSkip = FALSE; // Credits to: Mauller
+	m_useNonRetailAIPathfindReverseTransverseInsertion = FALSE; // Credits to: Mauller*/
+
+	m_corpsesHaveAirDrag = FALSE;
+	m_hideCashTextFromEnemies = FALSE;
+	m_hideCashTextFromEnemiesInvisibleUnitsOnly = FALSE;
+	m_fixHulksFreezingAboveTerrain = FALSE;
+	m_dynamicTargeting = FALSE;
+	m_useAccurateSphereToRectCollision = FALSE;
+	m_checkBoxBoundariesForDistCalc = FALSE;
+	m_enableDoubleClick = FALSE;
+	m_enableKillPilotForStructures = FALSE;
+	m_enableNestedStructures = FALSE;
+
+	m_formationBlockedSpeedPenalty = 0.45f;
+	m_globalReverseMoveSpeedPenalty = 0.0f;
+
+	m_enableReverseMoveByDefaultForWheels = FALSE;
+	m_enableReverseMoveByDefaultForTreads = FALSE;
+	m_enableReverseMoveByDefaultForShips = FALSE;
+	m_enableReverseMoveByDefaultForHover = FALSE;
+	m_enableReverseMoveByDefaultForThrust = FALSE;
+	m_enableReverseMoveByDefaultForOther = FALSE;
+
+	m_accelerateObjectsWithLowAccel = FALSE;
+
+	// --------------------------------------------------------------------------
+	// INIT TINT STATUS TYPES:
+
+	//old consts for reference. Do not use this outside initialization here.
+	// const RGBColor SICKLY_GREEN_POISONED_COLOR	= {-1.0f,  1.0f, -1.0f};
+	const RGBColor DARK_GRAY_DISABLED_COLOR			= {-0.5f, -0.5f, -0.5f};
+	// const RGBColor RED_IRRADIATED_COLOR					= { 1.0f, -1.0f, -1.0f};
+	const RGBColor SUBDUAL_DAMAGE_COLOR					= {-0.2f, -0.2f,  0.8f};
+	const RGBColor FRENZY_COLOR									= { 0.2f, -0.2f, -0.2f};
+	const RGBColor FRENZY_COLOR_INFANTRY				= { 0.0f, -0.7f, -0.7f};
+
+	setColorTintEntry(m_colorTintTypes, TINT_STATUS_DISABLED, DARK_GRAY_DISABLED_COLOR, DARK_GRAY_DISABLED_COLOR, 30, 30 );
+	// setColorTintEntry(m_colorTintTypes, TINT_STATUS_IRRADIATED, RED_IRRADIATED_COLOR, RED_IRRADIATED_COLOR, 30, 30 );
+	// setColorTintEntry(m_colorTintTypes, TINT_STATUS_POISONED, SICKLY_GREEN_POISONED_COLOR, SICKLY_GREEN_POISONED_COLOR, 30, 30 );
+	setColorTintEntry(m_colorTintTypes, TINT_STATUS_GAINING_SUBDUAL_DAMAGE, SUBDUAL_DAMAGE_COLOR, SUBDUAL_DAMAGE_COLOR, 150, 150 );
+	setColorTintEntry(m_colorTintTypes, TINT_STATUS_FRENZY, FRENZY_COLOR, FRENZY_COLOR_INFANTRY, 30, 30);
+
+
+	for (i = 0; i < TINT_STATUS_COUNT; i++) {
+		DrawableColorTint tc = m_colorTintTypes[i];
+
+		DEBUG_LOG((">> GLOBAL_DATA: m_colorTintTypes[%d] = {(%f, %f, %f), (%f, %f, %f), %d, %d}\n",
+			i, tc.color.red, tc.color.green, tc.color.blue, tc.colorInfantry.red, tc.colorInfantry.green, tc.colorInfantry.blue,
+			tc.attackFrames, tc.decayFrames));
+	}
+	
+	for (CustomTintStatusVec::const_iterator it = m_colorTintCustomTypes.begin(); it != m_colorTintCustomTypes.end(); ++it)
+	{
+		DrawableColorTint tc = it->second;
+
+		DEBUG_LOG((">> GLOBAL_DATA: m_colorTintCustomTypes for %s = {(%f, %f, %f), (%f, %f, %f), %d, %d}\n",
+			it->first.str(), tc.color.red, tc.color.green, tc.color.blue, tc.colorInfantry.red, tc.colorInfantry.green, tc.colorInfantry.blue,
+			tc.attackFrames, tc.decayFrames));
+	}
+	
+	// ------------------------------------------------------------------------------
+
+	m_chronoDamageDisableThreshold = 0.1;
+	m_chronoDamageHealRate = 15;
+	m_chronoDamageHealAmount = 0.1;
+
+	m_chronoDisableAlphaStart = 1.0;
+	m_chronoDisableAlphaEnd = 1.0;
+
+	m_defaultExcludedDeathTypes = DEATH_TYPE_FLAGS_NONE;
+
+	m_chronoDisableParticleSystemLarge.clear();
+	m_chronoDisableParticleSystemMedium.clear();
+	m_chronoDisableParticleSystemSmall.clear();
+	// m_chronoTintStatusType = TINT_STATUS_INVALID;
+
+	m_heightAboveTerrainIncludesWater = false;
+	m_radiusDecalsAboveWater = false;
 
 }
 
@@ -1266,6 +1594,8 @@ void GlobalData::parseGameDataDefinition( INI* ini )
 
 	TheWritableGlobalData->m_xResolution = xres;
 	TheWritableGlobalData->m_yResolution = yres;
+
+	//DEBUG_LOG(("Finished Parsing Global Data"));
 }
 
 void GlobalData::parseCustomDefinition()

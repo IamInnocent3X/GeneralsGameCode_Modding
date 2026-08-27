@@ -56,6 +56,9 @@
 #include "Common/Snapshot.h"
 #include "Common/Geometry.h"
 #include "GameClient/Display.h"	// for ShroudLevel
+#include "GameClient/Drawable.h"
+
+class Drawable;
 
 //-----------------------------------------------------------------------------
 //           defines
@@ -92,6 +95,8 @@ class Team;
 class ThingTemplate;
 class GhostObject;
 class CommandButton;
+class FXList;
+class ObjectCreationList;
 
 enum CommandSourceType CPP_11(: Int);
 
@@ -155,6 +160,16 @@ enum DistanceCalculationType CPP_11(: Int)
 };
 
 //=====================================
+/** */
+//=====================================
+enum HeightBoundaryCheckType CPP_11(: Int)
+{
+	DEFAULT_HEIGHT_CHECK	= 0,
+	SKIP_HEIGHT_CHECK	= 1,
+	BOUNDARY_HEIGHT_CHECK	= 2
+};
+
+//=====================================
 /**
 	a Plain Old Data structure that is used to get optional results from collidesWith().
 */
@@ -162,6 +177,14 @@ struct CollideLocAndNormal
 {
 	Coord3D loc;
 	Coord3D normal;
+	Real distSqr;
+	HeightBoundaryCheckType heightCheck;
+
+	CollideLocAndNormal() : distSqr(0.0f), heightCheck(DEFAULT_HEIGHT_CHECK)
+	{
+		loc.zero();
+		normal.zero();
+	}
 };
 
 //=====================================
@@ -741,8 +764,9 @@ private:
 	const Object *m_obj;
 	CommandSourceType m_commandSource;
 	AbleToAttackType m_attackType;
+	Bool m_getResultOnly;
 public:
-	PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource);
+	PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource, Bool getResultOnly = FALSE );
 	virtual Bool allow(Object *objOther) override;
 #if defined(RTS_DEBUG)
 	virtual const char* debugGetName() override { return "PartitionFilterPossibleToAttack"; }
@@ -787,6 +811,24 @@ public:
 
 //=====================================
 /**
+	Only objects that Can Possibly be equppped by the given object
+*/
+class PartitionFilterPossibleToEquip : public PartitionFilter
+{
+private:
+	const Object *m_obj;
+	CommandSourceType m_commandSource;
+
+public:
+	PartitionFilterPossibleToEquip(const Object *obj, CommandSourceType commandSource);
+	virtual Bool allow(Object *objOther) override;
+#if defined(RTS_DEBUG)
+	virtual const char* debugGetName() override { return "PartitionFilterPossibleToEquip"; }
+#endif
+};
+
+//=====================================
+/**
  * Accept only the last object who attacked me. Very fast.
  */
 class PartitionFilterLastAttackedBy : public PartitionFilter
@@ -814,6 +856,22 @@ public:
 	virtual Bool allow(Object *objOther) override;
 #if defined(RTS_DEBUG)
 	virtual const char* debugGetName() override { return "PartitionFilterAcceptByObjectStatus"; }
+#endif
+};
+
+//=====================================
+/**
+	Only objects that match the given masks are accepted.
+*/
+class PartitionFilterAcceptByObjectCustomStatus : public PartitionFilter
+{
+private:
+	std::vector<AsciiString> m_mustBeSet, m_mustBeClear;
+public:
+	PartitionFilterAcceptByObjectCustomStatus( std::vector<AsciiString> mustBeSet, std::vector<AsciiString> mustBeClear) : m_mustBeSet(mustBeSet), m_mustBeClear(mustBeClear) { }
+	virtual Bool allow(Object *objOther) override;
+#if defined(RTS_DEBUG)
+	virtual const char* debugGetName() override { return "PartitionFilterAcceptByObjectCustomStatus"; }
 #endif
 };
 
@@ -1275,6 +1333,39 @@ protected:
 		Coord3D *closestVecArg
 	);
 
+	Int getObjectsAlongLine(
+		const Object* source,
+		const Coord3D& pos,
+		const Coord3D& posOther,
+		Real radius,
+		Real infantryRadius,
+		Real checkPerDistance,
+		const FXList* railgunfx,
+		const ObjectCreationList *railgunocl,
+		DistanceCalculationType dc,
+		PartitionFilter **filters,
+		SimpleObjectIterator *iter,
+		Bool checkBehind,
+		Real *closestDistArg,
+		Coord3D *closestVecArg
+	);
+
+	Int checkObjectsAlongLine(
+		ObjectID sourceID,
+		const Coord3D& startingPos,
+		const Coord3D& currentPos,
+		const Coord3D& endPos,
+		Real radius,
+		Real infantryRadius,
+		Real dirAngle,
+		DistanceCalculationType dc,
+		PartitionFilter **filters,
+		SimpleObjectIterator *iter,
+		Bool checkBehind,
+		Real *closestDistArg,
+		Coord3D *closestDistVec
+	);
+
 	void shutdown();
 
 	/// used to validate the positions for findPositionAround family of methods
@@ -1388,6 +1479,8 @@ public:
 	Real getRelativeAngle2D( const Object *obj, const Object *otherObj );
 	Real getRelativeAngle2D( const Object *obj, const Coord3D *pos );
 
+	Real getRelativeAngle2DWithOffset( const Object *obj, Vector2 offset, const Coord3D *pos );
+
 	void getVectorTo(const Object *obj, const Object *otherObj, DistanceCalculationType dc, Coord3D& vec);
 	void getVectorTo(const Object *obj, const Coord3D *pos, DistanceCalculationType dc, Coord3D& vec);
 
@@ -1439,6 +1532,21 @@ public:
 		Bool use2D = false
 	);
 
+	SimpleObjectIterator *iterateObjectsAlongLine(
+		const Object* source,
+		const Coord3D *pos,
+		const Coord3D *posOther,
+		Real radius,
+		Real infantryRadius,
+		Real checkPerDistance,
+		const FXList* railgunfx,
+		const ObjectCreationList *railgunocl,
+		DistanceCalculationType dc,
+		Bool checkBehind = FALSE,
+		PartitionFilter **filters = nullptr,
+		IterOrderType order = ITER_FASTEST
+	);
+
 	Bool isColliding( const Object *a, const Object *b ) const;
 
 	/// Checks a geometry against an arbitrary geometry.
@@ -1447,7 +1555,9 @@ public:
 							Real angle1,
 							const Coord3D* pos2,
 							const GeometryInfo& geom2,
-							Real angle2
+							Real angle2,
+							HeightBoundaryCheckType heightCheckType = DEFAULT_HEIGHT_CHECK,
+							Real *abDistSqr = nullptr
   ) const;
 
 	/// finding legal positions in the world
@@ -1533,6 +1643,10 @@ public:
 	// If saveToFog is false, then we are writing STORE_PERMENANT_REVEAL
 	void storeFoggedCells(ShroudStatusStoreRestore &outPartitionStore, Bool storeToFog) const;
 	void restoreFoggedCells(const ShroudStatusStoreRestore &inPartitionStore, Bool restoreToFog);
+
+	std::list<Drawable*> getDrawablesInRegion( IRegion2D *region2D );
+	std::list<Drawable*> getDrawablesInRegionEfficient();
+	Bool hasNoOffset() const { return m_radiusVec.empty(); }
 };
 
 // -----------------------------------------------------------------------------

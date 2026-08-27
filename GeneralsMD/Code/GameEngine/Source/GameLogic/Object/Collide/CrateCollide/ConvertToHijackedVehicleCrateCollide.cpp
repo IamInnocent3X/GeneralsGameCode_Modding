@@ -61,6 +61,7 @@
 //-------------------------------------------------------------------------------------------------
 ConvertToHijackedVehicleCrateCollide::ConvertToHijackedVehicleCrateCollide( Thing *thing, const ModuleData* moduleData ) : CrateCollide( thing, moduleData )
 {
+	m_originalName.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -88,17 +89,18 @@ Bool ConvertToHijackedVehicleCrateCollide::isValidToExecute( const Object *other
 		return FALSE; //Kris: Patch 1.03 -- Prevent hijackers from being able to hijack battle buses.
 	}
 
-	if( other->isKindOf( KINDOF_AIRCRAFT ) || other->isKindOf( KINDOF_BOAT ) )
-	{
-		//Can't hijack planes and boats!
-		return FALSE;
-	}
+	// IamInnocent - Dehardcoded
+	//if( other->isKindOf( KINDOF_AIRCRAFT ) || other->isKindOf( KINDOF_BOAT ) )
+	//{
+	//	//Can't hijack planes and boats!
+	//	return FALSE;
+	//}
 
-	if( other->isKindOf( KINDOF_DRONE ) )
-	{
-		//Can't hijack drones!
-		return FALSE;
-	}
+	//if( other->isKindOf( KINDOF_DRONE ) )
+	//{
+	//	//Can't hijack drones!
+	//	return FALSE;
+	//}
 
 	if( other->getStatusBits().test( OBJECT_STATUS_HIJACKED ) )
 	{
@@ -112,20 +114,20 @@ Bool ConvertToHijackedVehicleCrateCollide::isValidToExecute( const Object *other
 		return FALSE;
 	}
 
-	if( other->isKindOf( KINDOF_TRANSPORT ) )
-	{
+	//if( other->isKindOf( KINDOF_TRANSPORT ) )
+	//{
 		//Kris: Allow empty transports to be hijacked.
-		if( other->getContain() && other->getContain()->getContainCount() > 0 )
+		if( other->getContain() && other->getContain()->getContainCount() > 0 && !getConvertToHijackedVehicleCrateCollideModuleData()->m_canHijackOccupiedContain )
 		{
 			return FALSE;// dustin sez: do not jack vehicles that may carry hostile passengers
 		}
-	}
+	//}
 
 	//Kris: Make sure you can't hijack any aircraft (or hijack-enter).
-	if( other->isKindOf( KINDOF_AIRCRAFT ) )
-	{
-		return FALSE;
-	}
+	//if( other->isKindOf( KINDOF_AIRCRAFT ) )
+	//{
+	//	return FALSE;
+	//}
 
 	//VeterancyLevel veterancyLevel = other->getVeterancyLevel();
 	//if( veterancyLevel >= LEVEL_ELITE )
@@ -162,18 +164,23 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	other->setTeam( obj->getControllingPlayer()->getDefaultTeam() );
 	other->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );// I claim this car in the name of the GLA
+	other->setHijackerID(obj->getID());
 
 	AIUpdateInterface* targetAI = other->getAIUpdateInterface();
-	targetAI->aiMoveToPosition( other->getPosition(), CMD_FROM_AI );
-	targetAI->aiIdle( CMD_FROM_AI );
-
-
-	//Just in case this target is a dozer, lets make him stop al his dozer tasks, like building and repairing,
-	//So the previous owner does not benefit from these tasks
-	DozerAIInterface * dozerAI = targetAI->getDozerAIInterface();
-	if ( dozerAI )
+	// Enable ConvertToHijack to convert objects without AIInterface
+	if(targetAI)
 	{
-		dozerAI->cancelAllTasks();
+		targetAI->aiMoveToPosition( other->getPosition(), CMD_FROM_AI );
+		targetAI->aiIdle( CMD_FROM_AI );
+
+
+		//Just in case this target is a dozer, lets make him stop al his dozer tasks, like building and repairing,
+		//So the previous owner does not benefit from these tasks
+		DozerAIInterface * dozerAI = targetAI->getDozerAIInterface();
+		if ( dozerAI )
+		{
+			dozerAI->cancelAllTasks();
+		}
 	}
 
 	AudioEventRTS hijackEvent( "HijackDriver", obj->getID() );
@@ -181,6 +188,7 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	//In order to make things easier for the designers, we are going to transfer the hijacker's name
 	//to the car... so the designer can control the car with their scripts.
+	m_originalName = other->getName();
 	TheScriptEngine->transferObjectName( obj->getName(), other );
 
 	ExperienceTracker *targetExp = other->getExperienceTracker();
@@ -210,15 +218,31 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 		return TRUE;
 	}
 
+	const ConvertToHijackedVehicleCrateCollideModuleData *data = getConvertToHijackedVehicleCrateCollideModuleData();
+
 	// I we have made it this far, we are going to ride in this vehicle for a while
 	// get the name of the hijackerupdate
-	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
-	HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+	//HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
+	//if( hijackerUpdate )
+	HijackerUpdateInterface *hijackerUpdate = obj->getHijackerUpdateInterface();
 	if( hijackerUpdate )
 	{
+		obj->setHijackingID( other->getID() );
 		hijackerUpdate->setTargetObject( other );
+		hijackerUpdate->setHijackType( HIJACK_HIJACKER );
 		hijackerUpdate->setIsInVehicle( TRUE );
 		hijackerUpdate->setUpdate( TRUE );
+
+		hijackerUpdate->setNoLeechExp( !data->m_leechExpFromObject );
+		hijackerUpdate->setDestroyOnHeal( data->m_destroyOnHeal );
+		hijackerUpdate->setRemoveOnHeal( data->m_removeOnHeal );
+		hijackerUpdate->setDestroyOnTargetDie( data->m_destroyOnTargetDie );
+		hijackerUpdate->setPercentDamage( data->m_damagePercentageToUnit );
+		hijackerUpdate->setStatusToRemove( data->m_statusToRemove );
+		hijackerUpdate->setStatusToDestroy( data->m_statusToDestroy );
+		hijackerUpdate->setCustomStatusToRemove( data->m_customStatusToRemove );
+		hijackerUpdate->setCustomStatusToDestroy( data->m_customStatusToDestroy );
 
 		// flag bits so hijacker won't be selectible or collideable
 		//while within the vehicle
@@ -245,10 +269,74 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 	if( obj->getDrawable() )
 		obj->getDrawable()->setDrawableHidden( true );
 
+	CrateCollide::executeCrateBehavior(other);
+
 	// By returning FALSE, we will not remove the object (Hijacker)
 	return FALSE;
 //	return TRUE;
 }
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ConvertToHijackedVehicleCrateCollide::revertCollideBehavior(Object *other)
+{
+	// If we are not hijacking or not the right hijacked object, don't revert.
+	if(getObject()->getHijackingID() == INVALID_ID || getObject()->getHijackingID() != other->getID())
+		return FALSE;
+
+	CrateCollide::revertCollideBehavior(other);
+
+	getObject()->setHijackingID(INVALID_ID);
+	getObject()->setLastExitedFrame(TheGameLogic->getFrame() + 10*LOGICFRAMES_PER_SECOND);
+
+	// If the Object doesn't exist, or is destroyed we stop here.
+	if(!other || other->isDestroyed() || other->isEffectivelyDead())
+		return FALSE;
+
+	// We are not hijacked
+	if(other->getTeam() != getObject()->getTeam())
+		return FALSE;
+
+	// Clear the status to make it Hijackable
+	other->clearStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_HIJACKED ) );
+
+	// Set its name back to the original name
+	TheScriptEngine->transferObjectName( m_originalName, other );
+
+	// Copied from NeutronBlastBehavior
+	// Make it unmanned, so units can easily check the ability to "take control of it"
+	other->setDisabled( DISABLED_UNMANNED );
+
+	if ( other->getAI() )
+	other->getAI()->aiIdle( CMD_FROM_AI );
+
+	TheGameLogic->deselectObject(other, PLAYERMASK_ALL, TRUE);
+
+	// Clear any terrain decals here
+	Drawable* draw = other->getDrawable();
+	if (draw)
+		draw->setTerrainDecal(TERRAIN_DECAL_NONE);
+
+	// Convert it to the neutral team so it renders gray giving visual representation that it is unmanned.
+	other->setTeam( ThePlayerList->getNeutralPlayer()->getDefaultTeam() );
+
+	// Indicate that we have reverted the Collied Behavior and no need to continue 
+	return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ConvertToHijackedVehicleCrateCollide::friend_executeCrateBehavior( Object *other )
+{
+	Object *obj = getObject();
+	AIUpdateInterface* ai = obj->getAIUpdateInterface();
+	if (ai)
+	{
+		ai->friend_setGoalObject(other);
+	}
+	return executeCrateBehavior(other);
+}
+
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -276,6 +364,9 @@ void ConvertToHijackedVehicleCrateCollide::xfer( Xfer *xfer )
 
 	// extend base class
 	CrateCollide::xfer( xfer );
+
+	// original name
+	xfer->xferAsciiString( &m_originalName );
 
 }
 

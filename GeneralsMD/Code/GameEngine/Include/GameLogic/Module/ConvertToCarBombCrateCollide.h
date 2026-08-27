@@ -32,6 +32,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Module.h"
+#include "Common/Team.h"
 #include "GameLogic/Module/CrateCollide.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -48,7 +49,11 @@ public:
 	ConvertToCarBombCrateCollideModuleData()
 	{
 		m_rangeOfEffect = 0;
+		m_destroyOnTargetDie = TRUE;
 		m_fxList = nullptr;
+		m_kindofnot.clear();
+		m_kindofnot.set(KINDOF_AIRCRAFT);
+		m_kindofnot.set(KINDOF_BOAT);
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -76,6 +81,8 @@ public:
 	ConvertToCarBombCrateCollide( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	virtual Bool friend_executeCrateBehavior( Object *other ) override;
+
 protected:
 
 	/// This allows specific vetoes to certain types of crates and their data
@@ -83,6 +90,13 @@ protected:
 
 	/// This is the game logic execution function that all real CrateCollides will implement
 	virtual Bool executeCrateBehavior( Object *other ) override;
+	virtual Bool revertCollideBehavior(Object *other) override;
 	virtual Bool isRailroad() const override { return FALSE;};
 	virtual Bool isCarBombCrateCollide() const override { return TRUE; }
+
+private:
+	AsciiString m_originalName;
+	Real m_originalVisionRange;
+	Real m_originalShroudClearingRange;
+	Team *m_originalTeam;
 };

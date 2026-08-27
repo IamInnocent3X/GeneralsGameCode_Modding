@@ -66,6 +66,7 @@ GameMessageDisposition HintSpyTranslator::translateGameMessage(const GameMessage
 		case GameMessage::MSG_DEFECTOR_HINT:
 		case GameMessage::MSG_DO_MOVETO_HINT:
 		case GameMessage::MSG_DO_ATTACKMOVETO_HINT:
+		case GameMessage::MSG_DO_REVERSE_MOVETO_HINT:
 		case GameMessage::MSG_DO_ATTACK_OBJECT_HINT:
 		case GameMessage::MSG_DO_ATTACK_OBJECT_AFTER_MOVING_HINT:
 		case GameMessage::MSG_DO_FORCE_ATTACK_OBJECT_HINT:
@@ -77,11 +78,13 @@ GameMessageDisposition HintSpyTranslator::translateGameMessage(const GameMessage
 		case GameMessage::MSG_DO_REPAIR_HINT:
 		case GameMessage::MSG_RESUME_CONSTRUCTION_HINT:
 		case GameMessage::MSG_ENTER_HINT:
+		case GameMessage::MSG_SMART_GARRISON_HINT:
 		case GameMessage::MSG_HIJACK_HINT:
 #ifdef RTS_ZEROHOUR
 		case GameMessage::MSG_SABOTAGE_HINT:
 #endif
 		case GameMessage::MSG_CONVERT_TO_CARBOMB_HINT:
+		case GameMessage::MSG_EQUIP_HINT:
 #ifdef ALLOW_SURRENDER
 		case GameMessage::MSG_PICK_UP_PRISONER_HINT:
 #endif
@@ -117,6 +120,7 @@ GameMessageDisposition HintSpyTranslator::translateGameMessage(const GameMessage
 		case GameMessage::MSG_DO_ATTACKMOVETO:
 		case GameMessage::MSG_DO_FORCEMOVETO:
 		case GameMessage::MSG_ADD_WAYPOINT:
+		case GameMessage::MSG_DO_REVERSE_MOVETO:
 			TheInGameUI->createMoveHint( msg );
 			break;
 

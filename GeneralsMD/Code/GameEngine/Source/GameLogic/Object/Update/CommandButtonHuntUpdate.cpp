@@ -110,7 +110,7 @@ void CommandButtonHuntUpdate::setCommandButton(const AsciiString& buttonName)
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			m_commandButton = commandSet->getCommandButton(i);
+			m_commandButton = obj->getCommandButtonForSlot(i, commandSet); 
 
 			if( m_commandButton )
 			{
@@ -166,6 +166,7 @@ UpdateSleepTime CommandButtonHuntUpdate::update()
 		case GUICOMMANDMODE_HIJACK_VEHICLE:
 		case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 		case GUICOMMANDMODE_SABOTAGE_BUILDING:
+		case GUICOMMANDMODE_EQUIP_OBJECT:
 			return huntEnter( ai );
 		default:
 			return UPDATE_SLEEP_FOREVER;
@@ -260,6 +261,7 @@ Object* CommandButtonHuntUpdate::scanClosestTarget()
 			break;
 		case GUICOMMANDMODE_HIJACK_VEHICLE:
 		case GUICOMMANDMODE_SABOTAGE_BUILDING:
+		case GUICOMMANDMODE_EQUIP_OBJECT:
 			isEnter = TRUE;
 			break;
 	}
@@ -379,6 +381,9 @@ Object* CommandButtonHuntUpdate::scanClosestTarget()
 				case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 					valid = TheActionManager->canConvertObjectToCarBomb( me, other, CMD_FROM_AI );
 					break;
+				case GUICOMMANDMODE_EQUIP_OBJECT:
+					valid = TheActionManager->canEquipObject( me, other, CMD_FROM_AI );
+					break;
 			}
 			if( valid )
 			{
@@ -441,7 +446,8 @@ void CommandButtonHuntUpdate::xfer( Xfer *xfer )
 				for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 				{
 
-					button = commandSet->getCommandButton(i);
+					button = us->getCommandButtonForSlot(i, commandSet); 
+
 					if( button && button->getName() == m_commandButtonName )
 					{
 

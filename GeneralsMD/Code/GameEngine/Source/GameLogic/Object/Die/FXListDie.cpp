@@ -46,10 +46,10 @@
 //-------------------------------------------------------------------------------------------------
 FXListDie::FXListDie( Thing *thing, const ModuleData* moduleData ) : DieModule( thing, moduleData )
 {
-	if( getFXListDieModuleData()->m_initiallyActive )
-	{
-		giveSelfUpgrade();
-	}
+	//if( checkStartsActive() )
+	//{
+	//	giveSelfUpgrade();
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -322,7 +322,8 @@ static void doGameStart()
 	msg->appendIntegerArgument(GAME_SINGLE_PLAYER);
 	msg->appendIntegerArgument(TheCampaignManager->getGameDifficulty());
 	msg->appendIntegerArgument(TheCampaignManager->getRankPoints());
-	InitRandom(0);
+	InitRandomType(TheGlobalData->m_initRandomType);
+	//DEBUG_LOG(("Starting Single Player Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 
 	isShuttingDown = TRUE;
 }

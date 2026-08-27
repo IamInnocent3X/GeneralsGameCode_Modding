@@ -43,7 +43,8 @@ public:
 
 
 	GameMessage::Type evaluateForceAttack( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
-	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
+	GameMessage::Type evaluateContextCommand( Drawable *draw, const Coord3D *pos, CommandEvaluateType type, Int modifiers = 0, Bool additionalCheck = false );
+	void evaluateAdditionalChecks( Object *obj, Bool doAdditionalChecks );
 
 private:
 
@@ -55,12 +56,22 @@ private:
 	ICoord2D m_rightMouseUpAnchor;			// the location of a possible mouse drag end
 	UnsignedInt m_rightMouseDownTimeMs;	// when the mouse down happened
 	UnsignedInt m_rightMouseUpTimeMs;		// when the mouse up happened
+	Bool m_rightMouseClickEvaluate;
+
+	ICoord2D m_leftMouseDownAnchor;		// the location of a possible mouse drag start
+	ICoord2D m_leftMouseUpAnchor;		// the location of a possible mouse drag end
+	UnsignedInt m_leftMouseDownTimeMs;	// when the mouse down happened
+	UnsignedInt m_leftMouseUpTimeMs;		// when the mouse up happened
+	Bool m_leftMouseClickEvaluate;
+
+	Drawable *m_mouseOverDrawable;
 
 	GameMessage::Type createMoveToLocationMessage( Drawable *draw, const Coord3D *dest, CommandEvaluateType commandType );
 	GameMessage::Type createAttackMessage( Drawable *draw, Drawable *other, CommandEvaluateType commandType );
-	GameMessage::Type createEnterMessage( Drawable *enter, CommandEvaluateType commandType );
+	GameMessage::Type createEnterMessage( Drawable *enter, CommandEvaluateType commandType, const CommandButton *command = nullptr );
+	GameMessage::Type createSmartGarrisonMessage( Drawable *target, CommandEvaluateType commandType );
 	GameMessage::Type issueMoveToLocationCommand( const Coord3D *pos, Drawable *drawableInWay, CommandEvaluateType commandType );
-	GameMessage::Type issueAttackCommand( Drawable *target, CommandEvaluateType commandType, GUICommandType command = (GUICommandType)0 );
+	GameMessage::Type issueAttackCommand( Drawable *target, CommandEvaluateType commandType, GUICommandType command = (GUICommandType)0, const CommandButton *commandButton = nullptr );
 	GameMessage::Type issueSpecialPowerCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos, Object* ignoreSelObj );
 	GameMessage::Type issueFireWeaponCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos );
 	GameMessage::Type issueCombatDropCommand( const CommandButton *command, CommandEvaluateType commandType, Drawable *target, const Coord3D *pos );
@@ -69,7 +80,8 @@ private:
 	void resolveGuiCommandTarget( const CommandButton *command, Drawable *&draw, Object *&obj );
 
 	GameMessage::Type handleWaypointModeCommand( const Coord3D *pos, Drawable *draw, CommandEvaluateType type );
-	GameMessage::Type handleGuiCommand( const CommandButton *command, Drawable *draw, Object *obj, const Coord3D *pos, CommandEvaluateType type );
+	GameMessage::Type handleSmartGarrisonCommand( const Coord3D *pos, Drawable *draw, CommandEvaluateType type );
+	GameMessage::Type handleGuiCommand( const CommandButton *command, Drawable *draw, Drawable *drawableInWay, Object *obj, const Coord3D *pos, CommandEvaluateType type, Bool isSabotage );
 	GameMessage::Type handleSpecialPowerConstructCommand( const CommandButton *command, Drawable *draw, const Coord3D *pos, CommandEvaluateType type );
 	GameMessage::Type handleSpecialPowerOverrideDestinationCommand( const Coord3D *pos, CommandEvaluateType type );
 	GameMessage::Type handleResumeConstructionCommand( Object *obj, CommandEvaluateType type );
@@ -80,6 +92,7 @@ private:
 	GameMessage::Type handleHijackVehicleCommand( Drawable *draw, CommandEvaluateType type );
 	GameMessage::Type handleConvertObjectToCarBombCommand( Drawable *draw, Object *obj, CommandEvaluateType type );
 	GameMessage::Type handleSabotageBuildingCommand( Drawable *draw, CommandEvaluateType type );
+	GameMessage::Type handleEquipObjectCommand( Drawable *draw, CommandEvaluateType type );
 	GameMessage::Type handleSalvageCommand( Object *obj, CommandEvaluateType type );
 	GameMessage::Type handleEnterObjectCommand( Drawable *draw, Object *obj, CommandEvaluateType type );
 	GameMessage::Type handleAttackObjectCommand( Drawable *draw, Object *obj, CommandEvaluateType type, GameMessage::Type hintType );
@@ -93,6 +106,8 @@ private:
 	GameMessage::Type handleDefaultMoveCommand( Drawable *draw, Drawable *drawableInWay, const Coord3D *pos, CommandEvaluateType type );
 
 	virtual GameMessageDisposition translateGameMessage(const GameMessage *msg) override;
+
+	void checkOtherMembersForParasiteActive( const Object* selectedObj, const Object* obj, Real radius, KindOfMaskType acceptMask, KindOfMaskType rejectMask );
 };
 
 

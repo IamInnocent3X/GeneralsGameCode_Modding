@@ -33,12 +33,14 @@
 #include "Common/AudioEventRTS.h"
 #include "Common/INI.h"
 #include "GameLogic/Module/SpecialPowerUpdateModule.h"
+#include "GameLogic/Weapon.h"
 #include "GameClient/ParticleSys.h"
 
 class DamageInfo;
 class SpecialPowerTemplate;
 class SpecialPowerModule;
 class FXList;
+class ObjectCreationList;
 enum SpecialPowerType CPP_11(: Int);
 
 #define SPECIAL_ABILITY_HUGE_DISTANCE 10000000.0f
@@ -76,12 +78,31 @@ public:
 	Bool									m_approachRequiresLOS;
   Bool                  m_needToFaceTarget;
   Bool                  m_persistenceRequiresRecharge;
+  Bool                  m_requiresMoveToTurn;	///< if set, orient by moving toward target (for locomotors that can't turn in place) instead of facing in place
+  Real                  m_facingAngleTolerance;	///< heading delta (radians) considered "facing target" when m_requiresMoveToTurn
+  Bool					m_useSabotageBehavior;
+  Bool					m_canHackOrCaptureAirborneTargets;
+  Bool					m_canOmniCapture;
+  Bool					m_canOnlyExecuteThroughCommand;
+  Bool					m_destroyOnExecute;
+  const FXList 			*m_fxOnExecute;
+  const ObjectCreationList *m_oclOnExecute;
 
 	const ParticleSystemTemplate *m_disableFXParticleSystem;
 	AudioEventRTS					m_packSound;
 	AudioEventRTS					m_unpackSound;
 	AudioEventRTS					m_prepSoundLoop;
 	AudioEventRTS					m_triggerSound;
+
+	Int							m_targetsMask;
+	KindOfMaskType 				m_kindOf;
+	KindOfMaskType 				m_forbiddenKindOf;
+
+	DisabledType				m_disabledType;
+
+	AsciiString					m_weaponSlotName;
+	AsciiString					m_cursorName;
+	AsciiString					m_invalidCursorName;
 
 	SpecialAbilityUpdateModuleData()
 	{
@@ -113,6 +134,22 @@ public:
 		m_preTriggerUnstealthFrames = 0;
     m_needToFaceTarget = TRUE;
     m_persistenceRequiresRecharge = FALSE;
+    m_requiresMoveToTurn = FALSE;
+    m_facingAngleTolerance = 0.1f;	// ~5.7 degrees
+	m_targetsMask = 0;
+	m_kindOf = KINDOFMASK_NONE;
+	m_forbiddenKindOf.clear();
+	m_weaponSlotName.format("SECONDARY");
+	m_disabledType = DISABLED_HACKED;
+	m_useSabotageBehavior = FALSE;
+	m_canHackOrCaptureAirborneTargets = FALSE;
+	m_canOmniCapture = FALSE;
+	m_canOnlyExecuteThroughCommand = FALSE;
+	m_cursorName.clear();
+	m_invalidCursorName.clear();
+	m_destroyOnExecute = FALSE;
+	m_fxOnExecute = nullptr;
+	m_oclOnExecute = nullptr;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -159,6 +196,22 @@ public:
 			{ "ApproachRequiresLOS",				INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_approachRequiresLOS ) },
       { "NeedToFaceTarget",           INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_needToFaceTarget ) },
       { "PersistenceRequiresRecharge",INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_persistenceRequiresRecharge ) },
+      { "RequiresMoveToTurn",         INI::parseBool,										nullptr, offsetof( SpecialAbilityUpdateModuleData, m_requiresMoveToTurn ) },
+      { "FacingAngleTolerance",       INI::parseAngleReal,							nullptr, offsetof( SpecialAbilityUpdateModuleData, m_facingAngleTolerance ) },
+	  { "CanOnlyExecuteThroughCommand",         INI::parseBool,						nullptr, offsetof( SpecialAbilityUpdateModuleData, m_canOnlyExecuteThroughCommand ) },
+	  		{ "WeaponSlot",						INI::parseQuotedAsciiString,		nullptr, offsetof( SpecialAbilityUpdateModuleData, m_weaponSlotName ) },
+	  		{ "DisabledType",	DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( SpecialAbilityUpdateModuleData, m_disabledType ) },
+			{ "UseSabotageBehavior",				INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_useSabotageBehavior ) },
+			{ "CanHackOrCaptureAirborneTargets",	INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_canHackOrCaptureAirborneTargets ) },
+			{ "CanOmniCapture",						INI::parseBool,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_canOmniCapture ) },
+	  		{ "CursorName",						INI::parseAsciiString,			 	nullptr, offsetof( SpecialAbilityUpdateModuleData, m_cursorName ) },
+			{ "InvalidCursorName",				INI::parseAsciiString,       		nullptr, offsetof( SpecialAbilityUpdateModuleData, m_invalidCursorName ) },
+			{ "AffectsTargets", 				INI::parseBitString32, 	TheWeaponAffectsMaskNames, offsetof( SpecialAbilityUpdateModuleData, m_targetsMask) },
+	  		{ "KindOf",						KindOfMaskType::parseFromINI,											nullptr, offsetof( SpecialAbilityUpdateModuleData, m_kindOf ) },
+			{ "ForbiddenKindOf",			KindOfMaskType::parseFromINI,											nullptr, offsetof( SpecialAbilityUpdateModuleData, m_forbiddenKindOf ) },
+	  		{ "DeleteUserOnExecute",					INI::parseBool,							nullptr, offsetof( SpecialAbilityUpdateModuleData, m_destroyOnExecute ) },
+			{ "FXOnExecute",							INI::parseFXList,					nullptr, offsetof( SpecialAbilityUpdateModuleData, m_fxOnExecute ) },
+			{ "OCLOnExecute", 							INI::parseObjectCreationList, 		nullptr, offsetof( SpecialAbilityUpdateModuleData, m_oclOnExecute ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
@@ -178,7 +231,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	// SpecialPowerUpdateInterface
-	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) override;
+	virtual Bool initiateIntentToDoSpecialPower(const SpecialPowerTemplate *specialPowerTemplate, const Object *targetObj, const Drawable *targetDraw, const Coord3D *targetPos, const Waypoint *way, UnsignedInt commandOptions ) override;
 	virtual Bool isSpecialAbility() const override { return true; }
 	virtual Bool isSpecialPower() const override { return false; }
 	virtual Bool isActive() const override { return m_active; }
@@ -186,6 +239,9 @@ public:
 	virtual Bool doesSpecialPowerHaveOverridableDestination() const override { return false; }	//Does it have it, even if it's not active?
 	virtual void setSpecialPowerOverridableDestination( const Coord3D *loc ) override {}
 	virtual Bool isPowerCurrentlyInUse( const CommandButton *command = nullptr ) const override;
+	virtual const AsciiString& getCursorName() const override { return getSpecialAbilityUpdateModuleData()->m_cursorName; }
+	virtual const AsciiString& getInvalidCursorName() const override { return getSpecialAbilityUpdateModuleData()->m_invalidCursorName; }
+	virtual void setDelay(UnsignedInt delayFrame) override { }
 
 //	virtual Bool isBusy() const { return m_isBusy; }
 
@@ -194,11 +250,25 @@ public:
 	virtual CommandOption getCommandOption() const override { return (CommandOption)0; }
 	virtual UpdateSleepTime update() override;
 
+	Bool getUsesSabotageBehavior() const { return getSpecialAbilityUpdateModuleData()->m_useSabotageBehavior; }
+	Bool canHackOrCaptureAirborneTargets() const { return getSpecialAbilityUpdateModuleData()->m_canHackOrCaptureAirborneTargets; }
+	Bool canOmniCapture() const { return getSpecialAbilityUpdateModuleData()->m_canOmniCapture; }
+
 	// ??? ugh, public stuff that shouldn't be -- hell yeah!
 	UnsignedInt getSpecialObjectCount() const;
 	UnsignedInt getSpecialObjectMax() const;
 	Object* findSpecialObjectWithProducerID( const Object *target );
 	SpecialPowerType getSpecialPowerType() const;
+
+	Int getTargetsMask() const { return getSpecialAbilityUpdateModuleData()->m_targetsMask; }
+	const KindOfMaskType& getKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_kindOf; }
+	const KindOfMaskType& getForbiddenKindOfs() const { return getSpecialAbilityUpdateModuleData()->m_forbiddenKindOf; }
+	Bool getCanOnlyExecuteThroughCommand() const { return getSpecialAbilityUpdateModuleData()->m_canOnlyExecuteThroughCommand; }
+	WeaponSlotType getWeaponSlot() const;
+
+	Bool friend_canUseSabotageOnObject(const Object *other, const AsciiString& specialPowerName) {
+		return getUsesSabotageBehavior() && canDoSabotageSpecialCheck( other, specialPowerName );
+	}
 
 protected:
 	void onExit( Bool cleanup );
@@ -254,6 +324,9 @@ protected:
 		return (m_active || getSpecialAbilityUpdateModuleData()->m_alwaysValidateSpecialObjects) ? UPDATE_SLEEP_NONE : UPDATE_SLEEP_FOREVER;
 	}
 
+	void doSabotage( Object *other, const AsciiString& specialPowerName );
+	Bool canDoSabotageSpecialCheck( const Object *other, const AsciiString& specialPowerName ) const;
+
 private:
 
 	enum PackingState
@@ -269,7 +342,9 @@ private:
 	UnsignedInt										m_prepFrames;
 	UnsignedInt										m_animFrames;	//Used for packing/unpacking unit before or after using ability.
 	ObjectID											m_targetID;
+	DrawableID											m_targetDrawID;
 	Coord3D												m_targetPos;
+	UnsignedInt										m_commandOptions;	//Command option flags this ability was triggered with (e.g. FORMATION_LAUNCH).
 	Int														m_locationCount;
 	std::list<ObjectID>						m_specialObjectIDList; //The list of special objects
 	UnsignedInt										m_specialObjectEntries;				 //The size of the list of member Objects

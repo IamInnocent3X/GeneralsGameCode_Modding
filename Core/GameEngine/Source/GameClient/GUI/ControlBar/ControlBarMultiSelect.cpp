@@ -120,7 +120,7 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 			if (! m_commandWindows[ i ]) continue;
 
 			// get command
-			command = commandSet->getCommandButton(i);
+			command = obj->getCommandButtonForSlot(i, commandSet);
 
 			// add if present and can be used in a multi select
 			if( command && BitIsSet( command->getOptions(), OK_FOR_MULTI_SELECT ) == TRUE )
@@ -152,14 +152,17 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 			if (! m_commandWindows[ i ]) continue;
 
 			// get the command
-			command = commandSet->getCommandButton(i);
+			command = obj->getCommandButtonForSlot(i, commandSet);
 
-			Bool attackMove = (command && command->getCommandType() == GUI_COMMAND_ATTACK_MOVE) ||
-												(m_commonCommands[ i ] && m_commonCommands[ i ]->getCommandType() == GUI_COMMAND_ATTACK_MOVE);
+			// IamInnocent - designate attack move and reverse move as common moves
+			Bool hasCommonMove = (command && command->getCommandType() == GUI_COMMAND_ATTACK_MOVE) ||
+												(command && command->getCommandType() == GUI_COMMAND_REVERSE_MOVE) ||
+												(m_commonCommands[ i ] && m_commonCommands[ i ]->getCommandType() == GUI_COMMAND_ATTACK_MOVE) ||
+												(m_commonCommands[ i ] && m_commonCommands[ i ]->getCommandType() == GUI_COMMAND_REVERSE_MOVE);
 
 			// Kris: When any units have attack move, they all get it. This is to allow
 			// combat units to be selected with the odd dozer or pilot and still retain that ability.
-			if( attackMove && !m_commonCommands[ i ] )
+			if( hasCommonMove && !m_commonCommands[ i ] )
 			{
 				// put it in the common command set
 				m_commonCommands[ i ] = command;
@@ -171,7 +174,7 @@ void ControlBar::addCommonCommands( Drawable *draw, Bool firstDrawable )
 				// set the command into the control
 				setControlCommand( m_commandWindows[ i ], command );
 			}
-			else if( command != m_commonCommands[ i ] && !attackMove )
+			else if( command != m_commonCommands[ i ] && !hasCommonMove )
 			{
 				//
 				// if this command does not match the command that is in the common command set then
@@ -355,6 +358,9 @@ void ControlBar::updateContextMultiSelect()
 
 			// can we do the command
 			CommandAvailability availability = getCommandAvailability( command, obj, win );
+
+			if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+				availability = COMMAND_HIDDEN;
 
 			win->winClearStatus( WIN_STATUS_NOT_READY );
 			win->winClearStatus( WIN_STATUS_ALWAYS_COLOR );

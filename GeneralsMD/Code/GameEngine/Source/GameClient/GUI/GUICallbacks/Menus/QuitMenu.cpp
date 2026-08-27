@@ -333,7 +333,8 @@ void ToggleQuitMenu()
 	else
 	{
 
-		TheMouse->setCursor( Mouse::ARROW );
+		//TheMouse->setCursor(Mouse::ARROW);
+		TheInGameUI->friend_setMouseCursor(Mouse::ARROW, "Dummy", 2);
 
 		TheControlBar->hidePurchaseScience();
 		if ( TheGameLogic->isInMultiplayerGame()  || TheGameLogic->isInReplayGame() )

@@ -39,8 +39,11 @@
 #include "Common/Overridable.h"
 #include "Common/Override.h"
 
+#include "GameClient/Eva.h"
+
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class ObjectCreationList;
+class FXList;
 class Object;
 enum ScienceType CPP_11(: Int);
 struct FieldParse;
@@ -111,6 +114,7 @@ public:
 	AsciiString getName() const { return getFO()->m_name; }
 	UnsignedInt getID() const { return getFO()->m_id; }
 	SpecialPowerType getSpecialPowerType() const { return getFO()->m_type; }
+	SpecialPowerType getSpecialPowerBehaviorType() const { return getFO()->m_type_behavior; }
 	UnsignedInt getReloadTime() const { return getFO()->m_reloadTime; }
 	ScienceType getRequiredScience() const { return getFO()->m_requiredScience; }
 	const AudioEventRTS *getInitiateSound() const { return &getFO()->m_initiateSound; }
@@ -122,8 +126,21 @@ public:
 	Real getViewObjectRange() const { return getFO()->m_viewObjectRange; }
 	Real getRadiusCursorRadius() const { return getFO()->m_radiusCursorRadius; }
 	Bool isShortcutPower() const { return getFO()->m_shortcutPower; }
+	Bool isNeedsTargetDesignator() const { return getFO()->m_needsTargetDesignator; }
 	AcademyClassificationType getAcademyClassificationType() const { return m_academyClassificationType; }
-
+	EvaMessage getEvaDetectedOwn() const { return getFO()->m_eva_detected_own; }
+	EvaMessage getEvaDetectedAlly() const { return getFO()->m_eva_detected_ally; }
+	EvaMessage getEvaDetectedEnemy() const { return getFO()->m_eva_detected_enemy; }
+	EvaMessage getEvaLaunchedOwn() const { return getFO()->m_eva_launched_own; }
+	EvaMessage getEvaLaunchedAlly() const { return getFO()->m_eva_launched_ally; }
+	EvaMessage getEvaLaunchedEnemy() const { return getFO()->m_eva_launched_enemy; }
+	EvaMessage getEvaReadyOwn() const { return getFO()->m_eva_ready_own; }
+	EvaMessage getEvaReadyAlly() const { return getFO()->m_eva_ready_ally; }
+	EvaMessage getEvaReadyEnemy() const { return getFO()->m_eva_ready_enemy; }
+	Int getCost() const { return getFO()->m_cost; };
+	Bool getDestroyOnExecute() const { return getFO()->m_destroyOnExecute; }
+	const ObjectCreationList* getOCLOnExecute() const { return getFO()->m_oclOnExecute; }
+	const FXList* getFXOnExecute() const { return getFO()->m_fxOnExecute; }
 private:
 
 	const SpecialPowerTemplate* getFO() const { return (const SpecialPowerTemplate*)friend_getFinalOverride(); }
@@ -144,6 +161,22 @@ private:
 	Bool							m_publicTimer;				///< display a countdown timer for this special power for all to see
 	Bool							m_sharedNSync;				///< If true, this is a special that is shared between all of a player's command centers
 	Bool							m_shortcutPower;		///< Is this shortcut power capable of being fired by the side panel?
+	Bool							m_needsTargetDesignator;		///< Is this special power only allowed to hit designated areas
+	SpecialPowerType	m_type_behavior; //< behave like a default special power, used by new ones only
+	EvaMessage m_eva_detected_own; //< eva event when constructed by self
+	EvaMessage m_eva_detected_ally; //< eva event when constructed by ally
+	EvaMessage m_eva_detected_enemy; //< eva event when constructed by enemy
+	EvaMessage m_eva_launched_own; //< eva event when launched by self
+	EvaMessage m_eva_launched_ally; //< eva event when launched by ally
+	EvaMessage m_eva_launched_enemy; //< eva event when launched by enemy
+	EvaMessage m_eva_ready_own; //< eva event when own ready
+	EvaMessage m_eva_ready_ally; //< eva event when ally ready
+	EvaMessage m_eva_ready_enemy; //< eva event when enemy ready
+	Int							  m_cost; ///< money cost to use special power
+
+	Bool m_destroyOnExecute; //< Destroy the Object after finish executing the ability
+	const FXList 			*m_fxOnExecute; //< FX Spawned on the Object after finish executing the ability
+	const ObjectCreationList *m_oclOnExecute; //< OCL Spawned on the Object after finish executing the ability
 
 	static const FieldParse m_specialPowerFieldParse[];		///< the parse table
 

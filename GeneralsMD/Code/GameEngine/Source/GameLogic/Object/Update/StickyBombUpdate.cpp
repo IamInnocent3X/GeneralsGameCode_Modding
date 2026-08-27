@@ -34,6 +34,7 @@
 
 #include "Common/ThingTemplate.h"
 #include "Common/Player.h"
+#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/FXList.h"
@@ -45,6 +46,7 @@
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/GameLogic.h"
 
 // PRIVATE ////////////////////////////////////////////////////////////////////////////////////////
@@ -52,11 +54,33 @@
 // PUBLIC /////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void StickyBombUpdateModuleData::parseAnimBaseName(INI* ini, void* instance, void* store, const void* /*userData*/)
+{
+	StickyBombUpdateModuleData* self = (StickyBombUpdateModuleData*)instance;
+	self->m_animBaseTemplate = ini->getNextAsciiString();
+	if (stricmp(self->m_animBaseTemplate.str(), "NONE") == 0) {
+		self->m_hideAnimBase = TRUE;
+	}
+}
+//-------------------------------------------------------------------------------------------------
+void StickyBombUpdateModuleData::parseAnimTimedName(INI* ini, void* instance, void* store, const void* /*userData*/)
+{
+	StickyBombUpdateModuleData* self = (StickyBombUpdateModuleData*)instance;
+	self->m_animTimedTemplate = ini->getNextAsciiString();
+	if (stricmp(self->m_animTimedTemplate.str(), "NONE") == 0) {
+		self->m_hideAnimTimed = TRUE;
+	}
+}
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 StickyBombUpdate::StickyBombUpdate( Thing *thing, const ModuleData *moduleData ) : UpdateModule( thing, moduleData )
 {
 	m_targetID		= INVALID_ID;
+	m_shooterID		= INVALID_ID;
 	m_dieFrame		= 0;
 	m_nextPingFrame = 0;
+	m_veterancyLevel = LEVEL_REGULAR;
+	m_detonated		= FALSE;
 	setWakeFrame(getObject(), UPDATE_SLEEP_FOREVER);
 }
 
@@ -77,6 +101,8 @@ void StickyBombUpdate::onObjectCreated()
 	Object* shooter = TheGameLogic->findObjectByID( shooterID );
 	if( shooter )
 	{
+		m_shooterID = shooterID;
+		m_veterancyLevel = shooter->getVeterancyLevel();
 		//Find the shooters target!
 		AIUpdateInterface *ai = shooter->getAIUpdateInterface();
 		if( ai )
@@ -163,14 +189,19 @@ void StickyBombUpdate::initStickyBomb( Object *target, const Object *bomber, con
 UpdateSleepTime StickyBombUpdate::update()
 {
 	// Continually reset position of stickybomb to match the position of the target.
+	const StickyBombUpdateModuleData* d = getStickyBombUpdateModuleData();
 	const Object *target = getTargetObject();
 	Object *self = getObject();
 	if( target )
 	{
-		if( target->isEffectivelyDead() )
+		if( target->isEffectivelyDead() && !d->m_stickyBombPersistsEvenIfTargetGone )
 		{
 			//If the target is dead, then
-			TheGameLogic->destroyObject( self );
+			if(d->m_stickyBombDetonatesEvenIfTargetGone)
+				detonate();
+			else
+				TheGameLogic->destroyObject( self );
+
 			return UPDATE_SLEEP_NONE;
 		}
 
@@ -187,7 +218,6 @@ UpdateSleepTime StickyBombUpdate::update()
 		}
 		else // make the bomb follow the target around
 		{
-			const StickyBombUpdateModuleData* d = getStickyBombUpdateModuleData();
 			const Coord3D *pos = target->getPosition();
 			Coord3D newPos;
 			newPos.x = pos->x;
@@ -227,17 +257,83 @@ void StickyBombUpdate::setTargetObject( Object *obj )
 //-------------------------------------------------------------------------------------------------
 void StickyBombUpdate::detonate()
 {
+	m_detonated = TRUE;
+
+	getObject()->kill();// Most things just fire weapons in their death modules
+}
+
+// ------------------------------------------------------------------------------------------------
+/** The death callback */
+// ------------------------------------------------------------------------------------------------
+void StickyBombUpdate::onDie( const DamageInfo *damageInfo )
+{
+	if(m_detonated || (m_dieFrame > 0 && fabs(TheGameLogic->getFrame() - m_dieFrame) <= 1)) {
+		getObject()->setStatus( MAKE_OBJECT_STATUS_MASK( OBJECT_STATUS_MISSILE_KILLING_SELF ) ); // IamInnocent 19/8/2026 - Enable all Projectile/Bomb Modules to be compatible with Bunker Buster
+
+		triggerStickyBomb();
+	}
+}
+
+
+// ------------------------------------------------------------------------------------------------
+/** The trigger callback */
+// ------------------------------------------------------------------------------------------------
+void StickyBombUpdate::triggerStickyBomb()
+{
 	const StickyBombUpdateModuleData *data = getStickyBombUpdateModuleData();
 
 	Object* boobyTrappedObject = getTargetObject();
-	if( data->m_geometryBasedDamageWeaponTemplate )
+	Object *obj = getObject();
+	Object *source = TheGameLogic->findObjectByID( m_shooterID );
+	if(!source || source->isEffectivelyDead() || source->isDestroyed() )
+		source = obj;
+
+	Coord3D boobyTrappedObjectPos = *obj->getPosition();
+
+	if( boobyTrappedObject )
+	{
+		boobyTrappedObjectPos = *boobyTrappedObject->getPosition();
+
+		if( data->m_doSabotageOnDetonate && !boobyTrappedObject->isDestroyed() && !boobyTrappedObject->isEffectivelyDead() )
+		{
+			for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+			{
+				CollideModuleInterface* collide = (*m)->getCollide();
+				if (!collide)
+					continue;
+
+				if( collide->isSabotageBuildingCrateCollide() && collide->canDoSabotageSpecialCheck(boobyTrappedObject) )
+				{
+					collide->doSabotage(boobyTrappedObject, source);
+				}
+			}
+		}
+	}
+
+	if( data->m_detonateWeapon )
+	{
+		Object *damager = data->m_bomberGetsExperienceOnKill ? source : obj;
+		if(boobyTrappedObject)
+			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, damager, boobyTrappedObject, boobyTrappedObject->getPosition(), obj->getID());
+		else {
+			Coord3D targetPos = boobyTrappedObjectPos;
+			if( !boobyTrappedObject || !boobyTrappedObject->isSignificantlyAboveTerrain() || boobyTrappedObject->isKindOf( KINDOF_IMMOBILE ) )
+			{
+				targetPos.z = TheTerrainLogic->getGroundHeight(targetPos.x, targetPos.y);
+				//keep it at ground height for non-ground objects
+			}
+
+			TheWeaponStore->createAndFireTempWeaponOnSpot(data->m_detonateWeapon, damager, &targetPos, &boobyTrappedObjectPos, obj->getID());
+		}
+	}
+	else if( data->m_geometryBasedDamageWeaponTemplate )
 	{
 		// We need to hurt people based on the size of the thing we are on.  The radius in our weapon
 		// is the radius beyond our borders
 		if( boobyTrappedObject )
 		{
 			WeaponBonus nullBonus;
-			Real boundingCircle = boobyTrappedObject->getGeometryInfo().getBoundingCircleRadius();
+			Real boundingCircle = boobyTrappedObject ? boobyTrappedObject->getGeometryInfo().getBoundingCircleRadius() : obj->getGeometryInfo().getBoundingCircleRadius();
 			Real primaryDamage = data->m_geometryBasedDamageWeaponTemplate->getPrimaryDamage(nullBonus);
 			Real secondaryDamage = data->m_geometryBasedDamageWeaponTemplate->getSecondaryDamage(nullBonus);
 			Real primaryDamageRange = data->m_geometryBasedDamageWeaponTemplate->getPrimaryDamageRadius(nullBonus);
@@ -248,7 +344,7 @@ void StickyBombUpdate::detonate()
 			Real radius = max(primaryDamageRange, secondaryDamageRange);
 
 			SimpleObjectIterator *iter;
-			iter = ThePartitionManager->iterateObjectsInRange(boobyTrappedObject->getPosition(), radius, FROM_BOUNDINGSPHERE_3D);
+			iter = ThePartitionManager->iterateObjectsInRange(&boobyTrappedObjectPos, radius, FROM_BOUNDINGSPHERE_3D);
 			MemoryPoolObjectHolder hold(iter);
 			Real curVictimDistSqr;
 			Object *curVictim = iter->firstWithNumeric(&curVictimDistSqr);
@@ -259,6 +355,47 @@ void StickyBombUpdate::detonate()
 			damageInfo.in.m_sourcePlayerMask = getObject()->getControllingPlayer()->getPlayerMask();
 			damageInfo.in.m_damageStatusType = data->m_geometryBasedDamageWeaponTemplate->getDamageStatusType();
 
+			if(data->m_bomberGetsExperienceOnKill)
+				damageInfo.in.m_giveKillExpToID = m_shooterID;
+
+			damageInfo.in.m_isFlame = data->m_geometryBasedDamageWeaponTemplate->getIsFlame();
+			//damageInfo.in.m_projectileCollidesWithBurn = data->m_geometryBasedDamageWeaponTemplate->getProjectileCollidesWithBurn();
+			damageInfo.in.m_isPoison = data->m_geometryBasedDamageWeaponTemplate->getIsPoison();
+			damageInfo.in.m_poisonMuzzleFlashesGarrison = data->m_geometryBasedDamageWeaponTemplate->getPoisonMuzzleFlashesGarrison();
+			damageInfo.in.m_isDisarm = data->m_geometryBasedDamageWeaponTemplate->getIsDisarm();
+			damageInfo.in.m_killsGarrison = data->m_geometryBasedDamageWeaponTemplate->getKillsGarrison();
+			damageInfo.in.m_killsGarrisonAmount = data->m_geometryBasedDamageWeaponTemplate->getKillsGarrisonAmount();
+			damageInfo.in.m_playSpecificVoice = data->m_geometryBasedDamageWeaponTemplate->PlaySpecificVoice();
+			damageInfo.in.m_statusDuration = data->m_geometryBasedDamageWeaponTemplate->getStatusDuration();
+			damageInfo.in.m_doStatusDamage = data->m_geometryBasedDamageWeaponTemplate->getDoStatusDamage(m_veterancyLevel);
+			damageInfo.in.m_statusDurationTypeCorrelate = data->m_geometryBasedDamageWeaponTemplate->getStatusDurationTypeCorrelate();
+			damageInfo.in.m_tintStatus = data->m_geometryBasedDamageWeaponTemplate->getTintStatusType(m_veterancyLevel);
+			damageInfo.in.m_customTintStatus = data->m_geometryBasedDamageWeaponTemplate->getCustomTintStatusType(m_veterancyLevel);
+
+			damageInfo.in.m_isSubdual = data->m_geometryBasedDamageWeaponTemplate->getIsSubdual(m_veterancyLevel);
+			damageInfo.in.m_subdualDealsNormalDamage = data->m_geometryBasedDamageWeaponTemplate->getSubdualDealsNormalDamage(m_veterancyLevel);
+			damageInfo.in.m_subdualDamageMultiplier = data->m_geometryBasedDamageWeaponTemplate->getSubdualDamageMultiplier(m_veterancyLevel);
+			damageInfo.in.m_subdualForbiddenKindOf = data->m_geometryBasedDamageWeaponTemplate->getSubdualForbiddenKindOf();
+			
+			damageInfo.in.m_notAbsoluteKill = data->m_geometryBasedDamageWeaponTemplate->getIsNotAbsoluteKill();
+			damageInfo.in.m_isMissileAttractor = data->m_geometryBasedDamageWeaponTemplate->getIsMissileAttractor();
+			damageInfo.in.m_subduedProjectileNoDamage = data->m_geometryBasedDamageWeaponTemplate->getSubdueProjectileNoDamage();
+			damageInfo.in.m_protectionTypes = data->m_geometryBasedDamageWeaponTemplate->getProtectionTypes();
+
+			damageInfo.in.m_subdualCustomType = data->m_geometryBasedDamageWeaponTemplate->getSubdualCustomType();
+			damageInfo.in.m_customSubdualCustomTint = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualCustomTint(m_veterancyLevel);
+			damageInfo.in.m_customSubdualTint = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualTint(m_veterancyLevel);
+			damageInfo.in.m_customSubdualHasDisable = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualHasDisable(m_veterancyLevel);
+			damageInfo.in.m_customSubdualHasDisableProjectiles = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualHasDisableProjectiles(m_veterancyLevel);
+			damageInfo.in.m_customSubdualClearOnTrigger = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualClearOnTrigger(m_veterancyLevel);
+			damageInfo.in.m_customSubdualDoStatus = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualDoStatus(m_veterancyLevel);
+			damageInfo.in.m_customSubdualOCL = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualOCL(m_veterancyLevel);
+			damageInfo.in.m_customSubdualDisableType = data->m_geometryBasedDamageWeaponTemplate->getCustomSubdualDisableType();
+
+			damageInfo.in.m_customDamageType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageType();
+			damageInfo.in.m_customDeathType = data->m_geometryBasedDamageWeaponTemplate->getCustomDeathType();
+			damageInfo.in.m_customDamageStatusType = data->m_geometryBasedDamageWeaponTemplate->getCustomDamageStatusType();
+			
 			for (; curVictim != nullptr; curVictim = iter ? iter->nextWithNumeric(&curVictimDistSqr) : nullptr)
 			{
 				damageInfo.in.m_amount = (curVictimDistSqr <= primaryDamageRangeSqr) ? primaryDamage : secondaryDamage;
@@ -268,8 +405,14 @@ void StickyBombUpdate::detonate()
 			if( data->m_geometryBasedDamageFX )
 			{
 				// And we make FX based on that size too.
-				FXList::doFXPos(data->m_geometryBasedDamageFX, boobyTrappedObject->getPosition(), nullptr, 0, nullptr, secondaryDamageRange);
+				FXList::doFXPos(data->m_geometryBasedDamageFX, &boobyTrappedObjectPos, nullptr, 0, nullptr, secondaryDamageRange);
 			}
+
+			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(damageInfo.in.m_sourceID, m_targetID, &boobyTrappedObjectPos);
+		}
+		else if(data->m_geometryBasedDamageWeaponTemplate->getShrapnelDoesNotRequireVictim())
+		{
+			data->m_geometryBasedDamageWeaponTemplate->privateDoShrapnel(getObject()->getID(), INVALID_ID, getObject()->getPosition());
 		}
 	}
 
@@ -281,9 +424,47 @@ void StickyBombUpdate::detonate()
 	}
 #endif
 
-	getObject()->kill();// Most things just fire weapons in their death modules
 }
 
+
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Anim2DTemplate* StickyBombUpdate::getAnimBaseTemplate() {
+
+	if (getStickyBombUpdateModuleData()->m_animBaseTemplate.isNotEmpty()) {
+		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNotEmpty"));
+		if (m_animBaseTemplate == nullptr) {
+			m_animBaseTemplate = TheAnim2DCollection->findTemplate(getStickyBombUpdateModuleData()->m_animBaseTemplate);
+		}
+		//DEBUG_LOG(("SBU::getAnimBaseTemplate - isNull = %d", m_animBaseTemplate == nullptr));
+		return m_animBaseTemplate;
+	}
+
+	//DEBUG_LOG(("SBU::getAnimBaseTemplate - is Empty ?!"));
+
+	return nullptr;
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+
+Anim2DTemplate* StickyBombUpdate::getAnimTimedTemplate() {
+	if (getStickyBombUpdateModuleData()->m_animTimedTemplate.isNotEmpty()) {
+		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNotEmpty"));
+		if (m_animTimedTemplate == nullptr) {
+			m_animTimedTemplate = TheAnim2DCollection->findTemplate(getStickyBombUpdateModuleData()->m_animTimedTemplate);
+		}
+		//DEBUG_LOG(("SBU::getAnimTimedTemplate - isNull = %d", m_animTimedTemplate == nullptr));
+		return m_animTimedTemplate;
+	}
+
+	//DEBUG_LOG(("SBU::getAnimTimedTemplate - is Empty ?!"));
+
+	return nullptr;
+
+}
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 #if !RETAIL_COMPATIBLE_CRC
 void StickyBombUpdate::onDelete()
 {
@@ -334,6 +515,15 @@ void StickyBombUpdate::xfer( Xfer *xfer )
 
 	//Next frame that a ping sound will play.
 	xfer->xferUnsignedInt( &m_nextPingFrame );
+
+	// veterancy level for weapon bonunses
+	xfer->xferUser( &m_veterancyLevel, sizeof( VeterancyLevel ) );
+
+	// shooter ID
+	xfer->xferObjectID( &m_shooterID );
+
+	// has detonated
+	xfer->xferBool( &m_detonated );
 
 }
 

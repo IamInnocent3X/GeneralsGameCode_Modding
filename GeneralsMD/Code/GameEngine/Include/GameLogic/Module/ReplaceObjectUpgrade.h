@@ -30,6 +30,8 @@
 #pragma once
 
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/ObjectCreationMux.h"
 
 //-----------------------------------------------------------------------------
 class ReplaceObjectUpgradeModuleData : public UpgradeModuleData
@@ -37,15 +39,24 @@ class ReplaceObjectUpgradeModuleData : public UpgradeModuleData
 public:
 	AsciiString m_replaceObjectName;
 
+	ObjectCreationMuxData							m_objectCreationData;
+
 	ReplaceObjectUpgradeModuleData()
 	{
+		m_objectCreationData.m_transferHijackers = TRUE;
+		m_objectCreationData.m_transferEquippers = TRUE;
+		m_objectCreationData.m_transferParasites = TRUE;
+		m_objectCreationData.m_ignorePrimaryObstacle = TRUE;
+		m_objectCreationData.m_inheritsSelection = TRUE;
+		m_objectCreationData.m_inheritsSelectionDontClearGroup = FALSE;
+		m_objectCreationData.m_inheritsSquadNumber = TRUE;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 };
 
 //-----------------------------------------------------------------------------
-class ReplaceObjectUpgrade : public UpgradeModule
+class ReplaceObjectUpgrade : public UpgradeModule, public ObjectCreationMux
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( ReplaceObjectUpgrade, "ReplaceObjectUpgrade" )
@@ -56,8 +67,11 @@ public:
 	ReplaceObjectUpgrade( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype defined by MemoryPoolObject
 
+	virtual const ObjectCreationMuxData *getCreationMuxData() const { return &getReplaceObjectUpgradeModuleData()->m_objectCreationData; }
+
 protected:
 	virtual void upgradeImplementation( ) override; ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 };

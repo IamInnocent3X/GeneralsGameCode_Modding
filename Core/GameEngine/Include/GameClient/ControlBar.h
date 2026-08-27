@@ -34,6 +34,7 @@
 #include "Common/GameType.h"
 #include "Common/Overridable.h"
 #include "Common/Science.h"
+#include "Common/MessageStream.h"		// for GameMessageTranslator
 #include "GameClient/Color.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -45,6 +46,7 @@ class Object;
 class ThingTemplate;
 class WeaponTemplate;
 class SpecialPowerTemplate;
+class FXList;
 class WindowVideoManager;
 class WindowVideoManager;
 class AnimateWindowManager;
@@ -59,7 +61,10 @@ class ControlBarResizer;
 class GameWindowTransitionsHandler;
 class DisplayString;
 
+struct MouseModifierKeysList;
+
 enum ProductionID CPP_11(: Int);
+enum CommandModifierID CPP_11(: Int);
 
 enum CommandSourceType CPP_11(: Int);
 enum ProductionType CPP_11(: Int);
@@ -67,6 +72,7 @@ enum GadgetGameMessage CPP_11(: Int);
 enum ScienceType CPP_11(: Int);
 enum TimeOfDay CPP_11(: Int);
 enum RadiusCursorType CPP_11(: Int);
+enum NameKeyType CPP_11(: Int);
 
 //-------------------------------------------------------------------------------------------------
 /** Command options */
@@ -100,6 +106,13 @@ enum CommandOption CPP_11(: Int)
 	USES_MINE_CLEARING_WEAPONSET= 0x00200000,	// uses the special mine-clearing weaponset, even if not current
 	CAN_USE_WAYPOINTS						= 0x00400000, // button has option to use a waypoint path
 	MUST_BE_STOPPED							= 0x00800000, // Unit must be stopped in order to be able to use button.
+	FORMATION_LAUNCH						= 0x01000000, // code-only: jumpjet group launch, keep formation offset instead of random scatter.
+	NEED_N_TARGET_POS						= 0x02000000, // command needs the user to select N target positions (NumberOfTargets); only the final click commits (chronosphere = 2).
+	NEED_INSTANCE							= 0x04000000, // command requires specific instances to be enabled
+	HIDE_WHEN_UNAVAILABLE							= 0x08000000, // hide the command on UI if the user doesn't meet its requirements
+	IS_DOING_SABOTAGE							= 0x10000000, // is doing sabotage (unable to be parsed)
+	//SET_RIDER							= 0x20000000, // command sets the payloads for the transport (if any)
+	//SET_UPGRADE							= 0x40000000, // command sets upgrades for the object (if any)
 };
 
 #ifdef DEFINE_COMMAND_OPTION_NAMES
@@ -133,6 +146,37 @@ static const char *const TheCommandOptionNames[] =
 	"USES_MINE_CLEARING_WEAPONSET",
 	"CAN_USE_WAYPOINTS",
 	"MUST_BE_STOPPED",
+	"FORMATION_LAUNCH",
+	"NEED_N_TARGET_POS",
+	"NEED_INSTANCE",
+	"HIDE_WHEN_UNAVAILABLE",
+	"---DO-NOT-USE---2", //IS_DOING_SABOTAGE
+	//"SET_RIDER",
+	//"SET_UPGRADE",
+
+	nullptr
+};
+#endif  // end DEFINE_COMMAND_OPTION_NAMES
+
+//-------------------------------------------------------------------------------------------------
+/** How the successive clicks of a NEED_N_TARGET_POS power are constrained to a radius. Enforced
+	* client-side while capturing the points (an out-of-range click is rejected, not committed). */
+//-------------------------------------------------------------------------------------------------
+enum SpecialPowerTargetRadiusMode CPP_11(: Int)
+{
+	SPTRM_NONE = 0,					///< no distance constraint; every click is a delivered target
+	SPTRM_AREA_FROM_FIRST,	///< first click is a target AND the center; later clicks must be within TargetRadius of it
+	SPTRM_ANCHORED_AREA,		///< first click is an anchor only (NOT delivered); every target click must be within TargetRadius of it
+	SPTRM_CHAIN_PREVIOUS,		///< first click is a target; each later click must be within TargetRadius of the previous click
+};
+
+#ifdef DEFINE_COMMAND_OPTION_NAMES
+static const char *const TheSpecialPowerTargetRadiusModeNames[] =
+{
+	"NONE",
+	"AREA_FROM_FIRST",
+	"ANCHORED_AREA",
+	"CHAIN_PREVIOUS",
 
 	nullptr
 };
@@ -144,6 +188,7 @@ const UnsignedInt COMMAND_OPTION_NEED_TARGET =
 					NEED_TARGET_NEUTRAL_OBJECT |
 					NEED_TARGET_ALLY_OBJECT |
 					NEED_TARGET_POS |
+					NEED_N_TARGET_POS |
 					CONTEXTMODE_COMMAND;
 
 const UnsignedInt COMMAND_OPTION_NEED_OBJECT_TARGET =
@@ -176,10 +221,17 @@ enum GUICommandType CPP_11(: Int)
 	GUI_COMMAND_GUARD,										///< guard command
 	GUI_COMMAND_GUARD_WITHOUT_PURSUIT,		///< guard command, no pursuit out of guard area
 	GUI_COMMAND_GUARD_FLYING_UNITS_ONLY,	///< guard command, ignore nonflyers
+	GUI_COMMAND_GUARD_CURRENT_POS,
+	GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT,
+	GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY,
+	GUI_COMMAND_GUARD_FAR,
+	GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT,
+	GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY,
 	GUI_COMMAND_STOP,											///< stop moving
 	GUI_COMMAND_WAYPOINTS,								///< create a set of waypoints for this unit
 	GUI_COMMAND_EXIT_CONTAINER,						///< an inventory box for a container like a structure or transport
 	GUI_COMMAND_EVACUATE,									///< dump all our contents
+	GUI_COMMAND_ENTER_ME,									///< tell nearby objects to enter me
 	GUI_COMMAND_EXECUTE_RAILED_TRANSPORT,	///< execute railed transport sequence
 	GUI_COMMAND_BEACON_DELETE,						///< delete a beacon
 	GUI_COMMAND_SET_RALLY_POINT,					///< set rally point for a structure
@@ -199,6 +251,7 @@ enum GUICommandType CPP_11(: Int)
 	GUICOMMANDMODE_HIJACK_VEHICLE,
 	GUICOMMANDMODE_CONVERT_TO_CARBOMB,
 	GUICOMMANDMODE_SABOTAGE_BUILDING,
+	GUICOMMANDMODE_EQUIP_OBJECT,
 #ifdef ALLOW_SURRENDER
 	GUICOMMANDMODE_PICK_UP_PRISONER,			///< POW Truck assigned to pick up a specific prisoner
 #endif
@@ -214,6 +267,10 @@ enum GUICommandType CPP_11(: Int)
 	GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT, ///< do a shortcut special power using the construct building interface
 
 	GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE,
+
+	GUI_COMMAND_REVERSE_MOVE,							///< move to the target position driving in reverse
+
+	GUI_COMMAND_DISABLE_POWER,							///< Power down an Object
 
 	// add more commands here, don't forget to update the string command list below too ...
 
@@ -235,10 +292,17 @@ static const char *const TheGuiCommandNames[] =
 	"GUARD",
 	"GUARD_WITHOUT_PURSUIT",
 	"GUARD_FLYING_UNITS_ONLY",
+	"GUARD_CURRENT_POS",
+	"GUARD_CURRENT_POS_WITHOUT_PURSUIT",
+	"GUARD_CURRENT_POS_FLYING_UNITS_ONLY",
+	"GUARD_FAR",
+	"GUARD_FAR_WITHOUT_PURSUIT",
+	"GUARD_FAR_FLYING_UNITS_ONLY",
 	"STOP",
 	"WAYPOINTS",
 	"EXIT_CONTAINER",
 	"EVACUATE",
+	"ENTER_ME",
 	"EXECUTE_RAILED_TRANSPORT",
 	"BEACON_DELETE",
 	"SET_RALLY_POINT",
@@ -256,6 +320,7 @@ static const char *const TheGuiCommandNames[] =
 	"HIJACK_VEHICLE",
 	"CONVERT_TO_CARBOMB",
 	"SABOTAGE_BUILDING",
+	"EQUIP_OBJECT",
 #ifdef ALLOW_SURRENDER
 	"PICK_UP_PRISONER",
 #endif
@@ -268,6 +333,9 @@ static const char *const TheGuiCommandNames[] =
 	"SPECIAL_POWER_CONSTRUCT",
 	"SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT",
 	"SELECT_ALL_UNITS_OF_TYPE",
+	"REVERSE_MOVE",
+
+	"DISABLE_POWER",
 
 	nullptr
 };
@@ -296,6 +364,7 @@ static const LookupListRec CommandButtonMappedBorderTypeNames[] =
 	{ nullptr, 0	}
 };
 static_assert(ARRAY_SIZE(CommandButtonMappedBorderTypeNames) == COMMAND_BUTTON_BORDER_COUNT + 1, "Incorrect array size");
+
 //-------------------------------------------------------------------------------------------------
 /** Command buttons are used to load the buttons we place on throughout the command bar
 	* interface in different context sensitive windows depending on the situation and
@@ -329,6 +398,7 @@ public:
 
 	const AsciiString& getName() const { return m_name; }
 	const AsciiString& getCursorName() const { return m_cursorName; }
+	const AsciiString& getSecondCursorName() const { return m_secondCursorName; }
 	const AsciiString& getInvalidCursorName() const { return m_invalidCursorName; }
 	const AsciiString& getTextLabel() const { return m_textLabel; }
 	const AsciiString& getDescriptionLabel() const { return m_descriptionLabel; }
@@ -339,9 +409,24 @@ public:
 	GUICommandType getCommandType() const { return m_command; }
 	UnsignedInt getOptions() const { return m_options; }
 	OVERRIDE<ThingTemplate> getThingTemplate() const { return m_thingTemplate; }
+	const ThingTemplate* getMarkerObject() const { return m_markerTemplate; }
+	const FXList* getMarkerFX() const { return m_markerFX; }
+	Int getNumberOfTargets() const { return m_numberOfTargets; }
+	Real getTargetRadius() const { return m_targetRadius; }
+	SpecialPowerTargetRadiusMode getTargetRadiusMode() const { return m_targetRadiusMode; }
 	const UpgradeTemplate* getUpgradeTemplate() const { return m_upgradeTemplate; }
 	const SpecialPowerTemplate* getSpecialPowerTemplate() const { return m_specialPower; }
 	RadiusCursorType getRadiusCursorType() const { return m_radiusCursor; }
+	RadiusCursorType getAnchorRadiusCursorType() const { return m_anchorRadiusCursor; }
+	Real getAnchorRadius() const { return m_anchorRadius; }
+	Real getTargetDecalRadius() const { return m_targetDecalRadius; }
+	Real getAnchorDecalRadius() const { return m_anchorDecalRadius; }
+	// effective radii - centralize the "fall back to the constraint radius when unset" rule
+	Real getEffectiveAnchorConstraintRadius() const { return m_anchorRadius > 0.0f ? m_anchorRadius : m_targetRadius; }	///< ANCHORED_AREA allowed-area (clamp) radius
+	Real getEffectiveTargetDecalRadius() const { return m_targetDecalRadius > 0.0f ? m_targetDecalRadius : m_targetRadius; }	///< drawn per-target decal size
+	Real getEffectiveAnchorDecalRadius() const { return m_anchorDecalRadius > 0.0f ? m_anchorDecalRadius : getEffectiveAnchorConstraintRadius(); }	///< drawn anchor decal size
+	const AsciiString& getCustomRadiusCursorType() const { return m_customRadiusCursor; }
+	const AsciiString& getCustomAnchorRadiusCursorType() const { return m_customAnchorRadiusCursor; }
 	WeaponSlotType getWeaponSlot() const { return m_weaponSlot; }
 	Int getMaxShotsToFire() const { return m_maxShotsToFire; }
 	const ScienceVec& getScienceVec() const { return m_science; }
@@ -351,6 +436,16 @@ public:
 
 	GameWindow* getWindow() const { return m_window;	}
 	Int getFlashCount() const { return m_flashCount; }
+
+	Real getOrderNearbyRadius() const { return m_orderNearbyRadius; }
+	KindOfMaskType getOrderKindofMask() const { return m_orderKindof; }
+	KindOfMaskType getOrderKindofForbiddenMask() const { return m_orderKindofNot; }
+	UnsignedInt getOrderNearbyMinDelay() const { return m_orderMinDelay; }
+	UnsignedInt getOrderNearbyMaxDelay() const { return m_orderMaxDelay; }
+	UnsignedInt getOrderNearbyIntervalDelay() const { return m_orderIntervalDelay; }
+
+	std::vector<NameKeyType> getInstancesRequired() const { return m_instancesRequired; }
+	Bool getRequiresAllInstances() const { return m_requiresAllInstances; }
 
 	const CommandButton* getNext() const { return m_next; }
 
@@ -377,12 +472,23 @@ private:
 	CommandButton*								m_next;
 	UnsignedInt										m_options;										///< command options (see CommandOption enum)
 	const ThingTemplate*					m_thingTemplate;							///< for commands that use thing templates in command data
+	const ThingTemplate*					m_markerTemplate;							///< client-only marker model shown at each pick of a NEED_N_TARGET_POS power
+	const FXList*									m_markerFX;										///< one-shot client FX played at each pick of a NEED_N_TARGET_POS power
+	Int														m_numberOfTargets;						///< number of delivered target points a NEED_N_TARGET_POS power needs before it commits
+	Real													m_targetRadius;								///< radius (dist) constraint for NEED_N_TARGET_POS clicks; meaning depends on m_targetRadiusMode
+	SpecialPowerTargetRadiusMode	m_targetRadiusMode;						///< how successive NEED_N_TARGET_POS clicks are radius-constrained
 	const UpgradeTemplate*				m_upgradeTemplate;						///< for commands that use upgrade templates in command data
 	const SpecialPowerTemplate*		m_specialPower;								///< actual special power template
 	RadiusCursorType							m_radiusCursor;								///< radius cursor, if any
+	RadiusCursorType							m_anchorRadiusCursor;					///< ANCHORED_AREA anchor decal cursor; falls back to m_radiusCursor if NONE
+	Real													m_anchorRadius;								///< ANCHORED_AREA allowed-area (clamp) radius; falls back to m_targetRadius if 0
+	Real													m_targetDecalRadius;					///< drawn per-target decal size; falls back to m_targetRadius if 0
+	Real													m_anchorDecalRadius;					///< drawn anchor decal size; falls back to the anchor constraint radius if 0
 	AsciiString										m_cursorName;									///< cursor name for placement (NEED_TARGET_POS) or valid version (CONTEXTMODE_COMMAND)
+	AsciiString										m_secondCursorName;						///< cursor name for picks after the first of a NEED_N_TARGET_POS power; falls back to m_cursorName if empty
 	AsciiString										m_invalidCursorName;					///< cursor name for invalid version
-
+	AsciiString										m_customRadiusCursor;								///< radius cursor, if any
+	AsciiString										m_customAnchorRadiusCursor;								///< radius cursor, if any
 	// bleah. shouldn't be mutable, but is. sue me. (Kris) -snork!
 	mutable AsciiString										m_textLabel;									///< string manager text label
 	mutable AsciiString										m_descriptionLabel;						///< The description of the current command, read in from the ini
@@ -397,6 +503,16 @@ private:
 	GameWindow*										m_window;											///< used during the run-time assignment of a button to a gadget button window
 	AudioEventRTS									m_unitSpecificSound;					///< Unit sound played whenever button is clicked.
 
+	Real											m_orderNearbyRadius;
+	KindOfMaskType									m_orderKindof;
+	KindOfMaskType									m_orderKindofNot;
+	UnsignedInt										m_orderMinDelay;
+	UnsignedInt										m_orderMaxDelay;
+	UnsignedInt										m_orderIntervalDelay;
+
+	std::vector<NameKeyType>						m_instancesRequired;
+	Bool											m_requiresAllInstances;
+
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
 	mutable const Image*					m_buttonImage;								///< button image
 	// bleah. shouldn't be mutable, but is. sue me. (srj)
@@ -408,16 +524,16 @@ private:
 /** Command sets are collections of configurable command buttons.  They are used in the
 	* command context sensitive window in the battle user interface */
 //-------------------------------------------------------------------------------------------------
-enum { MAX_COMMANDS_PER_SET = 18 };  // user interface max is 14 (but internally it's 18 for script only buttons!)
-enum { MAX_RIGHT_HUD_UPGRADE_CAMEOS = 5};
+enum { MAX_COMMANDS_PER_SET = 32 };  // user interface max is 14 (but internally it's 18 for script only buttons!)
+enum { MAX_RIGHT_HUD_UPGRADE_CAMEOS = 9};
 enum {
-			 MAX_PURCHASE_SCIENCE_RANK_1 = 4,
-			 MAX_PURCHASE_SCIENCE_RANK_3 = 15,
-			 MAX_PURCHASE_SCIENCE_RANK_8 = 4,
+			 MAX_PURCHASE_SCIENCE_RANK_1 = 7,
+			 MAX_PURCHASE_SCIENCE_RANK_3 = 21,
+			 MAX_PURCHASE_SCIENCE_RANK_8 = 7,
 			};
 enum { MAX_STRUCTURE_INVENTORY_BUTTONS = 10 }; // there are this many physical buttons in "inventory" windows for structures
 enum { MAX_BUILD_QUEUE_BUTTONS = 9 };// physical button count for the build queue
-enum { MAX_SPECIAL_POWER_SHORTCUTS = 11};
+enum { MAX_SPECIAL_POWER_SHORTCUTS = 32};
 class CommandSet : public Overridable
 {
 
@@ -430,6 +546,8 @@ public:
 
 	const AsciiString& getName() const { return m_name; }
 	const CommandButton* getCommandButton(Int i) const;
+	const AsciiString& getModifierForCommandButtonOverrideName(Int i, const AsciiString& key) const;
+	const AsciiString& getOriginalButtonName(Int i) const { return m_originalButtonName[ i ]; }
 
 	// only for the control bar.
 	CommandSet* friend_getNext() { return m_next; }
@@ -442,7 +560,12 @@ private:
 	static void parseCommandButton( INI* ini, void *instance, void *store, const void *userData );
 
 	AsciiString m_name;															  ///< name of this command set
+	AsciiString m_originalButtonName[ MAX_COMMANDS_PER_SET ];
 	const CommandButton *m_command[ MAX_COMMANDS_PER_SET ]; ///< the set of command buttons that make this set
+
+	typedef std::vector<std::pair<AsciiString, AsciiString>> ModifierCommandType;
+	typedef std::hash_map< Int, ModifierCommandType, std::hash<Int>, std::equal_to<Int> > ModifierCommandMap;
+	ModifierCommandMap						m_modifierCommandMap;								///< By applying Modifers, we can alter the one command shown in a command set
 
 	CommandSet *m_next;
 
@@ -787,6 +910,20 @@ public:
 
 	void drawSpecialPowerShortcutMultiplierText();
 
+	//Int getRemainingSciencePointsAvailableToPurchase( Player* player ) const;
+
+	Bool checkForCommandSetModifierOverride(CommandModifierID keyID);
+	Bool checkForCommandSetModifierOverrideMouse(MouseModifierKeysList keys, const CommandButton *commandButton);
+	Bool checkForResetOverride(Bool &checkOverridePresent, Int &i, const AsciiString& presentButtonName, Bool isLastAvailableKey, GameWindow **button);
+	CBCommandStatus processCommandSetModifierButtonClick( GameWindow *control, GadgetGameMessage gadgetMessage );
+
+	Bool isMouseWithinCommandButton(Int i, const ICoord2D *mousePos) const;
+	//Bool isMouseWithinUnitBuildCommandButton(const ICoord2D *mousePos, Bool isRightMouse) const;
+	Bool isWindowUnitBuildCommand( GameWindow *control ) const;
+
+	CommandAvailability friend_getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = nullptr, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const
+	{ return getCommandAvailability( command, obj, win, applyToWin, forceDisabledEvaluation, skipResourceCheck ); }
+
 protected:
 	void updateRadarAttackGlow ();
 
@@ -851,7 +988,8 @@ protected:
 	static void populateInvDataCallback( Object *obj, void *userData );
 
 	// the following methods are for updating the currently showing context
-	CommandAvailability getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = nullptr, Bool forceDisabledEvaluation = FALSE ) const;
+	CommandAvailability getCommandAvailability( const CommandButton *command, Object *obj, GameWindow *win, GameWindow *applyToWin = nullptr, Bool forceDisabledEvaluation = FALSE, Bool skipResourceCheck = FALSE ) const;
+	Bool getCommandHideable( const CommandButton *command, Object *obj ) const;
 	void updateContextMultiSelect();
 	void updateContextPurchaseScience();
 	void updateContextCommand();
@@ -874,7 +1012,7 @@ protected:
 
 	// methods to help out with each context
 	void updateConstructionTextDisplay( Object *obj );
-	void updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real percent );
+	void updateOCLTimerTextDisplay( UnsignedInt totalSeconds, Real percent, UnsignedInt sabotagedSeconds );
 
 	void setUpDownImages();
 		// methods for flashing cameos
@@ -1025,6 +1163,8 @@ private:
 	static const Image *m_rankVeteranIcon;
 	static const Image *m_rankEliteIcon;
 	static const Image *m_rankHeroicIcon;
+	static const Image *m_rankFourIcon;
+	static const Image *m_rankFiveIcon;
 
 	const Image *m_generalButtonEnable;
 	const Image *m_generalButtonHighlight;
@@ -1041,12 +1181,26 @@ private:
 	Int m_remainingRadarAttackGlowFrames;
 	GameWindow *m_radarAttackGlowWindow;
 
+	//IRegion2D m_controlBarButtonsPos;
+
 #if defined(RTS_DEBUG)
 	UnsignedInt m_lastFrameMarkedDirty;
 	UnsignedInt m_consecutiveDirtyFrames;
 #endif
 //	ControlBarResizer *m_controlBarResizer;
 
+};
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+class CommandSetTranslator : public GameMessageTranslator
+{
+public:
+
+	CommandSetTranslator();
+	~CommandSetTranslator();
+
+	virtual GameMessageDisposition translateGameMessage( const GameMessage *msg );
 };
 
 // EXTERNALS //////////////////////////////////////////////////////////////////////////////////////

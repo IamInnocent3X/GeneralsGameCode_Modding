@@ -99,6 +99,7 @@ public:
 	virtual void setTeamColor( Int red, Int green, Int blue ) override;  ///< @todo superhack for demo, remove!!!
 	virtual void setTextureLOD( Int level ) override;
 	virtual void notifyTerrainObjectMoved(Object *obj) override;
+	virtual const AsciiString& findTreeNameInPos(const Coord3D* loc) const override;
 
 protected:
 

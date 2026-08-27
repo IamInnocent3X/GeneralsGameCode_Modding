@@ -30,6 +30,7 @@
 
 #include "Common/StateMachine.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/DamageModule.h"
 #include "GameClient/RadiusDecal.h"
 
 class DeliverPayloadData;
@@ -254,6 +255,9 @@ public:
 	Coord3D								m_dropVariance;
 	UnsignedInt						m_dropDelay;
 	Bool									m_fireWeapon;
+
+	UnsignedInt          m_fireWeaponSlots;
+
 	Bool									m_selfDestructObject;
 	Int										m_visibleNumBones;						///< The number of visible bones to process.
 	Real									m_diveStartDistance;
@@ -268,6 +272,7 @@ public:
 	const WeaponTemplate	*m_visiblePayloadWeaponTemplate;
 	RadiusDecalTemplate		m_deliveryDecalTemplate;
 	Real									m_deliveryDecalRadius;
+	Bool									m_strafingWeaponTargetsWater;
 
 	DeliverPayloadData()
 	{
@@ -278,6 +283,7 @@ public:
 		m_dropVariance.zero();
 		m_dropDelay = 0;
 		m_fireWeapon = false;
+		m_fireWeaponSlots = 1u << PRIMARY_WEAPON;
 		m_visibleNumBones = 0;
 		m_diveStartDistance = 0.0f;
 		m_diveEndDistance = 0.0f;
@@ -294,13 +300,15 @@ public:
 		m_visibleDropBoneName.clear();
 		m_visiblePayloadTemplateName.clear();
 		m_visibleSubObjectName.clear();
+		m_strafingWeaponTargetsWater = false;
 	}
 
 	static const FieldParse* getFieldParse();
 };
 
 //-------------------------------------------------------------------------------------------------
-class DeliverPayloadAIUpdate : public AIUpdateInterface
+class DeliverPayloadAIUpdate : public AIUpdateInterface,
+												 public DamageModuleInterface
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( DeliverPayloadAIUpdate, "DeliverPayloadAIUpdate"  )
 	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( DeliverPayloadAIUpdate, DeliverPayloadAIUpdateModuleData )
@@ -311,7 +319,15 @@ public:
 	DeliverPayloadAIUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
+	static Int getInterfaceMask() { return MODULEINTERFACE_DAMAGE; }
+
 	virtual AIFreeToExitType getAiFreeToExit(const Object* exiter) const override;
+
+	// For calculating distance towards AIUpdates.
+	virtual DamageModuleInterface* getDamage() override { return this; }
+	virtual void onDamage( DamageInfo *damageInfo ) override;
+	virtual void onHealing( DamageInfo *damageInfo ) override { }
+	virtual void onBodyDamageStateChange(const DamageInfo* damageInfo, BodyDamageType oldState, BodyDamageType newState) override { }
 
 	const Coord3D* getTargetPos() const { return &m_targetPos; }
 	const Coord3D* getMoveToPos() const { return &m_moveToPos; }
@@ -326,6 +342,7 @@ public:
 	const Coord3D& getDropOffset() const { return m_data.m_dropOffset; }
 	const Coord3D& getDropVariance() const { return m_data.m_dropVariance; }
 	Bool isFireWeapon() const { return m_data.m_fireWeapon; }
+	Bool shouldFireWeaponSlot(WeaponSlotType wslot) const { return (m_data.m_fireWeaponSlots & (1 << wslot)) != 0; }
 	Int getVisibleItemsDelivered() const { return m_visibleItemsDelivered; }
 	void setVisibleItemsDelivered( Int num ) { m_visibleItemsDelivered = num; }
 
@@ -333,7 +350,7 @@ public:
 	Bool isOffMap() const;
 	Real calcMinTurnRadius(Real* timeToTravelThatDist) const;
 
-	void deliverPayload( const Coord3D *moveToPos, const Coord3D *targetPos, const DeliverPayloadData *data );
+	void deliverPayload( const Coord3D *moveToPos, const Coord3D *targetPos, const DeliverPayloadData *data, const Coord3D *decalOffset = nullptr );
 	void deliverPayloadViaModuleData( const Coord3D *moveToPos );
 
 	const DeliverPayloadData* getData() { return &m_data; }
@@ -359,6 +376,8 @@ protected:
 	Real													m_previousDistanceSqr;
 	Bool													m_freeToExit;
 	Bool													m_acceptingCommands;
+	UnsignedInt												m_wakeUpTime;
+	UnsignedInt												m_reSleepFrame;
 
 	enum DiveState	// Stored in save file as int, don't renumber!  jba.
 	{

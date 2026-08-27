@@ -181,6 +181,24 @@ StateReturnType DozerActionPickActionPosState::update()
 
 	}
 
+	// If the repairing object has moved recently
+	AIUpdateInterface *goalAi = goalObject->getAIUpdateInterface();
+	if( goalAi && goalAi->isMoving() && goalObject->getLastActualSpeed() > 0.01f )
+	{
+		goalObject = dozerAI->findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(dozer, goalObject, m_task);
+		if (goalObject == nullptr)
+		{
+			// to be clean get rid of the goal object we set
+			getMachine()->setGoalObject( nullptr );
+
+			// cancel our task
+			dozerAI->cancelTask( m_task );
+
+			// exit with failure
+			return STATE_FAILURE; // could happen for some bridges
+		}
+	}
+
 	// pick a location to move to
 	Coord3D goalPos;
 	const Coord3D *pos = dozerAI->getDockPoint( m_task, DOZER_DOCK_POINT_START );
@@ -297,6 +315,37 @@ StateReturnType DozerActionMoveToActionPosState::update()
 	// sanity
 	if( goalObject == nullptr || dozer == nullptr )
 		return STATE_FAILURE;
+
+	// If the object has moved recently, update the dock points
+	AIUpdateInterface *goalAi = goalObject->getAIUpdateInterface();
+	if( goalAi && goalAi->isMoving() && goalObject->getLastActualSpeed() > 0.01f )
+	{
+		goalObject = nullptr;
+		return STATE_FAILURE;
+		//DozerAIInterface *dozerAI = ai->getDozerAIInterface();
+		//Object *previousGoalObject = goalObject;
+		//goalObject = dozerAI->findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(dozer, goalObject, m_task);
+		//if (goalObject == nullptr)
+		//	return STATE_FAILURE; // could happen for some bridges
+		//else
+		//{
+		//	if(previousGoalObject != goalObject)
+		//	{
+		//		getMachine()->setGoalObject( goalObject );
+		//		ai->ignoreObstacle(goalObject);
+		//	}
+
+		//	Coord3D newPos;
+		//	const Coord3D *pos = dozerAI->getDockPoint( m_task, DOZER_DOCK_POINT_START );
+		//	if( pos )
+		//	{
+		//		newPos = *pos;
+		//		getMachine()->setGoalPosition( &newPos );
+		//		ai->ignoreObstacle(goalObject);
+		//		ai->aiMoveToPosition( &newPos, CMD_FROM_AI );
+		//	}
+		//}
+	}
 
 	AIUpdateInterface *ai = dozer->getAIUpdateInterface();
 	ObjectID currentRepairer = goalObject->getSoleHealingBenefactor();
@@ -483,6 +532,23 @@ StateReturnType DozerActionDoActionState::update()
 
 	if ( dozer->isDisabledByType( DISABLED_UNMANNED ) )// Yipes, I've been sniped!
 		return STATE_FAILURE;
+
+	// If the object has moved recently, we need to update the position
+	AIUpdateInterface *goalAi = goalObject->getAIUpdateInterface();
+	if( goalAi && goalAi->isMoving() && goalObject->getLastActualSpeed() > 0.01f )
+	{
+		goalObject = nullptr;
+		return STATE_FAILURE;
+		//Object *previousGoalObject = goalObject;
+		//goalObject = dozerAI->findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(dozer, goalObject, m_task);
+		//if (goalObject == nullptr)
+		//	return STATE_FAILURE; // could happen for some bridges
+		//else if(previousGoalObject != goalObject)
+		//{
+		//	getMachine()->setGoalObject( goalObject );
+		//	ai->ignoreObstacle(goalObject);
+		//}
+	}
 
 	// do the task
 	Bool complete = FALSE;
@@ -680,8 +746,8 @@ StateReturnType DozerActionDoActionState::update()
 				Bool canHeal = TRUE;
 
 				// if we are repairing a bridge, create scaffolding over the bridge if we need to
-				if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
-					dozerAI->createBridgeScaffolding( goalObject );
+				//if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
+				//	dozerAI->createBridgeScaffolding( goalObject );
 
 				// the builder is now actively repairing something, we'll borrow the constructing animation
 				dozer->setModelConditionState( MODELCONDITION_ACTIVELY_CONSTRUCTING );
@@ -690,19 +756,19 @@ StateReturnType DozerActionDoActionState::update()
 				// when repairing bridges, we cannot actually do any repairing until the
 				// scaffolding is extended and all the way complete
 				//
-				if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
-				{
-					BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( goalObject );
-					DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower interface") );
-					Object *bridgeObject = TheGameLogic->findObjectByID( btbi->getBridgeID() );
-					DEBUG_ASSERTCRASH( bridgeObject, ("Unable to find bridge center object") );
-					BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject( bridgeObject );
-					DEBUG_ASSERTCRASH( bbi, ("Unable to find bridge interface from tower goal object during repair") );
-
-					if( bbi->isScaffoldInMotion() == TRUE )
-						canHeal = FALSE;
-
-				}
+				//if( goalObject->isKindOf( KINDOF_BRIDGE_TOWER ) )
+				//{
+				//	BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( goalObject );
+				//	DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower interface") );
+				//	Object *bridgeObject = TheGameLogic->findObjectByID( btbi->getBridgeID() );
+				//	DEBUG_ASSERTCRASH( bridgeObject, ("Unable to find bridge center object") );
+				//	BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject( bridgeObject );
+				//	DEBUG_ASSERTCRASH( bbi, ("Unable to find bridge interface from tower goal object during repair") );
+				//
+				//	if( bbi->isScaffoldInMotion() == TRUE )
+				//		canHeal = FALSE;
+				//
+				//}
 
 				// do healing
 				if( canHeal )
@@ -713,7 +779,7 @@ StateReturnType DozerActionDoActionState::update()
 												LOGICFRAMES_PER_SECOND;
 
 					// try to give it a little bit-o-health
-					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2) )//this frame and the next
+					if ( ! goalObject->attemptHealingFromSoleBenefactor(health, dozer, 2, dozerAI->getRepairClearsParasite(), dozerAI->getRepairClearsParasiteKeys() ) )//this frame and the next
 					{
 						// goalObject->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
 						// This bit used to be set way back in DozerAIUpdate::privateRepair(), but it has been outmoded
@@ -886,10 +952,11 @@ static Object *findObjectToRepair( Object *dozer )
 	const DozerAIInterface *dozerAI = dozer->getAIUpdateInterface()->getDozerAIInterface();
 
 	PartitionFilterSamePlayer filter1( dozer->getControllingPlayer() );
-	PartitionFilterAcceptByKindOf filter2( MAKE_KINDOF_MASK( KINDOF_STRUCTURE ),
-																				 KINDOFMASK_NONE );
+	//PartitionFilterAcceptByKindOf filter2( MAKE_KINDOF_MASK( KINDOF_STRUCTURE ),
+	//																			 KINDOFMASK_NONE );
 	PartitionFilterSameMapStatus filterMapStatus(dozer);
-	PartitionFilter *filters[] = { &filter1, &filter2, &filterMapStatus, nullptr };
+	//PartitionFilter *filters[] = { &filter1, &filter2, &filterMapStatus, nullptr };
+	PartitionFilter *filters[] = { &filter1, &filterMapStatus, nullptr };
 	ObjectIterator *iter = ThePartitionManager->iterateObjectsInRange( dozer->getPosition(),
 																																		 dozerAI->getBoredRange(),
 																																		 FROM_CENTER_2D,
@@ -901,6 +968,12 @@ static Object *findObjectToRepair( Object *dozer )
 	Real closestRepairTargetDistSqr = 0.0f;
 	for( obj = iter->first(); obj; obj = iter->next() )
 	{
+
+		if( !obj->isAnyKindOf(dozerAI->getRepairKindOf()) )
+			continue;
+
+		if( obj->isAnyKindOf(dozerAI->getRepairForbiddenKindOf()) )
+			continue;
 
 		// ignore objects we cant repair
 		if( TheActionManager->canRepairObject( dozer, obj, CMD_FROM_AI ) == FALSE )
@@ -1426,6 +1499,11 @@ DozerAIUpdateModuleData::DozerAIUpdateModuleData()
 {
 
 	m_repairHealthPercentPerSecond = 0.0f;
+	m_kindOf.clear();
+	m_kindOf.set(KINDOF_STRUCTURE);
+	m_forbiddenKindOf.clear();
+	m_repairClearsParasite = TRUE;
+	m_repairClearsParasiteKeys.clear();
 	m_boredTime = 0.0f;
 	m_boredRange = 0.0f;
 
@@ -1439,6 +1517,10 @@ void DozerAIUpdateModuleData::buildFieldParse( MultiIniFieldParse& p)
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "RepairHealthPercentPerSecond",	INI::parsePercentToReal,	nullptr, offsetof( DozerAIUpdateModuleData, m_repairHealthPercentPerSecond ) },
+		{ "RepairKindOf",	KindOfMaskType::parseFromINI,	nullptr, offsetof( DozerAIUpdateModuleData, m_kindOf ) },
+		{ "RepairForbiddenKindOf",	KindOfMaskType::parseFromINI,	nullptr, offsetof( DozerAIUpdateModuleData, m_forbiddenKindOf ) },
+		{ "RepairClearsParasite",			INI::parseBool,	nullptr, offsetof( DozerAIUpdateModuleData, m_repairClearsParasite ) },
+		{ "RepairClearsParasiteKeys", 		INI::parseAsciiStringVector, nullptr, offsetof( DozerAIUpdateModuleData, m_repairClearsParasiteKeys ) },
 		{ "BoredTime",										INI::parseDurationReal,		nullptr, offsetof( DozerAIUpdateModuleData, m_boredTime ) },
 		{ "BoredRange",										INI::parseReal,						nullptr, offsetof( DozerAIUpdateModuleData, m_boredRange ) },
 		{ nullptr, nullptr, nullptr, 0 }
@@ -1576,6 +1658,11 @@ void DozerAIUpdate::removeBridgeScaffolding( Object *bridgeTower )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime DozerAIUpdate::update()
 {
+	// Suspend dozer tasks (build/repair) while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
+	/// IamInnocent - Made Sleepy
 
 	//
 	// NOTE: Any changes to DozerAIUpdate::* you probably want to reflect and copy into
@@ -1602,7 +1689,8 @@ UpdateSleepTime DozerAIUpdate::update()
 	// do nothing if we're dead
 	///@todo shouldn't this be at a higher level?
 	if( getObject()->isEffectivelyDead() )
-		return UPDATE_SLEEP_NONE;
+		return UPDATE_SLEEP_FOREVER;
+		//return UPDATE_SLEEP_NONE;
 
 	// get and validate our current task
 	DozerTask currentTask = getCurrentTask();
@@ -1633,9 +1721,12 @@ UpdateSleepTime DozerAIUpdate::update()
 		getObject()->setWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL);//maybe go clear some mines, if I feel like it
 
 	// run our own state machine
-	m_dozerMachine->updateStateMachine();
+	StateReturnType stRet = m_dozerMachine->updateStateMachine();
 
-	return UPDATE_SLEEP_NONE;
+	UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+
+	return (mine < result) ? mine : result;
+	//return UPDATE_SLEEP_NONE;
 
 }
 
@@ -1726,11 +1817,15 @@ Object *DozerAIUpdate::construct( const ThingTemplate *what,
 	obj->setPosition( pos );
 	obj->setOrientation( angle );
 
-	// Flatten the terrain underneath the object, then adjust to the flattened height. jba.
-	TheTerrainLogic->flattenTerrain(obj);
-	Coord3D adjustedPos = *pos;
-	adjustedPos.z = TheTerrainLogic->getGroundHeight(pos->x, pos->y);
-	obj->setPosition(&adjustedPos);
+	// Do not flatten shipyards
+	if (!obj->isKindOf(KINDOF_SHIPYARD)) {
+
+		// Flatten the terrain underneath the object, then adjust to the flattened height. jba.
+		TheTerrainLogic->flattenTerrain(obj);
+		Coord3D adjustedPos = *pos;
+		adjustedPos.z = TheTerrainLogic->getGroundHeight(pos->x, pos->y);
+		obj->setPosition(&adjustedPos);
+	}
 
 	// Note - very important that we add to map AFTER we flatten terrain. jba.
 	TheAI->pathfinder()->addObjectToPathfindMap( obj );
@@ -1838,30 +1933,31 @@ void DozerAIUpdate::privateRepair( Object *obj, CommandSourceType cmdSource )
 	// if this object is a bridge tower, we need to check the status of the bridge in order
 	// to check for a 'duplicate repair'
 	//
-	//if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
-	//{
-	//	BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
-	//	DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
-  //
-	//	Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
-	//	DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
-	//	if( BitIsSet( bridge->getStatusBits(), OBJECT_STATUS_UNDERGOING_REPAIR ) == TRUE )
-	//		return;
-  //
-	//}  // end if
+	if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
+	{
+		BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
+		DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
+  
+		Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
+		DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
+		//if( BitIsSet( bridge->getStatusBits(), OBJECT_STATUS_UNDERGOING_REPAIR ) == TRUE )
+		if (bridge != nullptr && bridge->getStatusBits().test(OBJECT_STATUS_UNDERGOING_REPAIR))
+			return;
+  
+	}
 
 
 	// for bridges, set the status for the bridge object
-	//if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
-	//{
-	//	BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
-	//	DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
-	//
-	//  Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
-	//	DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
-	//	bridge->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
-  //
-	//}  // end if
+	if( obj->isKindOf( KINDOF_BRIDGE_TOWER ) )
+	{
+		BridgeTowerBehaviorInterface *btbi = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( obj );
+		DEBUG_ASSERTCRASH( btbi, ("Unable to find bridge tower behavior interface") );
+	
+	  Object *bridge = TheGameLogic->findObjectByID( btbi->getBridgeID() );
+		DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
+		bridge->setStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
+  
+	}
 
 	// start the new task
 	newTask( DOZER_TASK_REPAIR, obj );
@@ -1976,6 +2072,82 @@ void DozerAIUpdate::privateResumeConstruction( Object *obj, CommandSourceType cm
 	}
 
 	findGoodBuildOrRepairPosition(me, target, positionOut);
+	return target;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Object* DozerAIUpdate::findGoodBuildOrRepairPositionAndTargetAndSetDockPoint(Object* me, Object* target, DozerTask task)
+{
+	Coord3D position;
+	if (target->isKindOf(KINDOF_BRIDGE))
+	{
+		BridgeBehaviorInterface *bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject(target);
+		if (bbi)
+		{
+			AIUpdateInterface* ai = me->getAI();
+
+			// have to repair at a tower.
+			Real bestDistSqr = 1e10f;
+			Object* bestTower = nullptr;
+			for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i)
+			{
+				Object* tower = TheGameLogic->findObjectByID(bbi->getTowerID((BridgeTowerType)i));
+				if( tower )
+				{
+					Coord3D tmp;
+					Bool found = findGoodBuildOrRepairPosition(me, tower, tmp);
+					// do isPathAvail against the result of this, NOT the tower pos,
+					// since towers are often in cliff cells.
+					if (found && ai->isPathAvailable(&tmp))
+					{
+						Real thisDistSqr = sqr(me->getPosition()->x - tmp.x) + sqr(me->getPosition()->y - tmp.y);
+						if (thisDistSqr < bestDistSqr)
+						{
+							position = tmp;
+							bestDistSqr = thisDistSqr;
+							bestTower = tower;
+						}
+					}
+				}
+			}
+			if (bestTower)
+			{
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+				Coord3D offset;
+				offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+				offset.normalize();
+				offset.scale(5*PATHFIND_CELL_SIZE_F);
+				position.add(offset); // move away from the dock point at the end of build.
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+				m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+				m_task[ task ].m_targetObjectID = bestTower->getID();
+
+				return bestTower;
+			}
+
+			DEBUG_CRASH(("should not happen, no reachable tower found"));
+			return nullptr;
+		}
+	}
+
+	findGoodBuildOrRepairPosition(me, target, position);
+
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].valid			= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_START ].location	= position;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].valid		= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_ACTION ].location = position;
+	Coord3D offset;
+	offset.set(position.x-target->getPosition()->x, position.y-target->getPosition()->y, 0);
+	offset.normalize();
+	offset.scale(5*PATHFIND_CELL_SIZE_F);
+	position.add(offset); // move away from the dock point at the end of build.
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].valid				= TRUE;
+	m_dockPoint[ task ][ DOZER_DOCK_POINT_END ].location		= position;
+
 	return target;
 }
 
@@ -2247,9 +2419,9 @@ void DozerAIUpdate::internalTaskCompleteOrCancelled( DozerTask task )
 			//		DEBUG_ASSERTCRASH( bridge, ("Unable to find bridge object") );
 			//		bridge->clearStatus( OBJECT_STATUS_UNDERGOING_REPAIR );
 			//
-			//	}  // end if
+			//	}
       //
-			//}  // end if
+			//}
 
 			break;
 
@@ -2361,6 +2533,16 @@ Real DozerAIUpdate::getRepairHealthPerSecond() const
 	return getDozerAIUpdateModuleData()->m_repairHealthPercentPerSecond;
 }
 // ------------------------------------------------------------------------------------------------
+Bool DozerAIUpdate::getRepairClearsParasite() const
+{
+	return getDozerAIUpdateModuleData()->m_repairClearsParasite;
+}
+// ------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& DozerAIUpdate::getRepairClearsParasiteKeys() const
+{
+	return getDozerAIUpdateModuleData()->m_repairClearsParasiteKeys;
+}
+// ------------------------------------------------------------------------------------------------
 Real DozerAIUpdate::getBoredTime() const
 {
 	return getDozerAIUpdateModuleData()->m_boredTime;
@@ -2373,6 +2555,16 @@ Real DozerAIUpdate::getBoredRange() const
 		return TheAI->getAiData()->m_aiDozerBoredRadiusModifier*getDozerAIUpdateModuleData()->m_boredRange;
 	}
 	return getDozerAIUpdateModuleData()->m_boredRange;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& DozerAIUpdate::getRepairKindOf() const
+{
+	return getDozerAIUpdateModuleData()->m_kindOf;
+}
+// ------------------------------------------------------------------------------------------------
+const KindOfMaskType& DozerAIUpdate::getRepairForbiddenKindOf() const
+{
+	return getDozerAIUpdateModuleData()->m_forbiddenKindOf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

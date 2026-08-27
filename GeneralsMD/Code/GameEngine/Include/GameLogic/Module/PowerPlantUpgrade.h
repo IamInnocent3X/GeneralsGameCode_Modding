@@ -57,5 +57,8 @@ protected:
 
 	virtual void upgradeImplementation() override; ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; } /// This module works differently, as a fire and forget module, so we do it differently
 
+private:
+	Bool m_hasExecuted;
 };

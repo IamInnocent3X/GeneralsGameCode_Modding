@@ -41,7 +41,6 @@ class FireWeaponWhenDamagedBehaviorModuleData : public UpdateModuleData
 {
 public:
 	UpgradeMuxData				m_upgradeMuxData;
-	Bool									m_initiallyActive;
 	DamageTypeFlags				m_damageTypes;
 	Real									m_damageAmount;
 	const WeaponTemplate* m_reactionWeaponPristine;///< fire these weapons only when damage is received
@@ -52,10 +51,26 @@ public:
 	const WeaponTemplate*	m_continuousWeaponDamaged;
 	const WeaponTemplate*	m_continuousWeaponReallyDamaged;
 	const WeaponTemplate*	m_continuousWeaponRubble;
+	UnsignedInt				m_continuousDurationPristine;
+	UnsignedInt				m_continuousDurationDamaged;
+	UnsignedInt				m_continuousDurationReallyDamaged;
+	UnsignedInt				m_continuousDurationRubble;
+	UnsignedInt				m_continuousIntervalPristine;
+	UnsignedInt				m_continuousIntervalDamaged;
+	UnsignedInt				m_continuousIntervalReallyDamaged;
+	UnsignedInt				m_continuousIntervalRubble;
+	AsciiString				m_weaponSlotName;
+
+	DamageFlagsCustom	m_damageTypesCustom;
+	CustomFlags 	m_customDamageTypes;
+
+	ObjectStatusMaskType m_requiredStatus;
+	ObjectStatusMaskType m_forbiddenStatus;
+	std::vector<AsciiString> m_requiredCustomStatus;
+	std::vector<AsciiString> m_forbiddenCustomStatus;
 
 	FireWeaponWhenDamagedBehaviorModuleData()
 	{
-		m_initiallyActive = false;
 		m_reactionWeaponPristine = nullptr;
 		m_reactionWeaponDamaged = nullptr;
 		m_reactionWeaponReallyDamaged = nullptr;
@@ -66,6 +81,23 @@ public:
 		m_continuousWeaponRubble = nullptr;
 		m_damageTypes = DAMAGE_TYPE_FLAGS_ALL;
 		m_damageAmount = 0;
+
+		m_weaponSlotName.format("PRIMARY");
+		m_damageTypesCustom.first = DAMAGE_TYPE_FLAGS_ALL;
+		m_damageTypesCustom.second.format("ALL");
+		m_requiredCustomStatus.clear();
+		m_forbiddenCustomStatus.clear();
+
+		m_customDamageTypes.clear();
+
+		m_continuousDurationPristine = 0;  
+		m_continuousDurationDamaged = 0; 	
+		m_continuousDurationReallyDamaged = 0; 	
+		m_continuousDurationRubble = 0; 	
+		m_continuousIntervalPristine = 0;  
+		m_continuousIntervalDamaged = 0; 	
+		m_continuousIntervalReallyDamaged = 0; 	
+		m_continuousIntervalRubble = 0; 
 	}
 
 
@@ -73,7 +105,6 @@ public:
 	{
 		static const FieldParse dataFieldParse[] =
 		{
-			{ "StartsActive",	INI::parseBool, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_initiallyActive ) },
 			{ "ReactionWeaponPristine", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponPristine) },
 			{ "ReactionWeaponDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_reactionWeaponDamaged) },
 			{ "ReactionWeaponReallyDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,	m_reactionWeaponReallyDamaged) },
@@ -82,8 +113,25 @@ public:
 			{ "ContinuousWeaponDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousWeaponDamaged) },
 			{ "ContinuousWeaponReallyDamaged", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousWeaponReallyDamaged) },
 			{ "ContinuousWeaponRubble", INI::parseWeaponTemplate, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousWeaponRubble) },
-			{ "DamageTypes", INI::parseDamageTypeFlags, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageTypes ) },
+			{ "DamageTypes", INI::parseDamageTypeFlagsCustom, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageTypesCustom ) },
 			{ "DamageAmount", INI::parseReal, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_damageAmount ) },
+			
+			{ "CustomDamageTypes", INI::parseCustomTypes, nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_customDamageTypes ) },
+			{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredStatus ) },
+			{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenStatus ) },
+			{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_requiredCustomStatus ) },
+			{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_forbiddenCustomStatus ) },
+			{ "WeaponSlot",		INI::parseQuotedAsciiString,	nullptr, offsetof( FireWeaponWhenDamagedBehaviorModuleData, m_weaponSlotName ) },
+
+			{ "ContinuousDurationPristine", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationPristine) },
+			{ "ContinuousDurationDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousDurationDamaged) },
+			{ "ContinuousDurationReallyDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousDurationReallyDamaged) },
+			{ "ContinuousDurationRubble", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousDurationRubble) },
+			{ "ContinuousIntervalPristine", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalPristine) },
+			{ "ContinuousIntervalDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,			m_continuousIntervalDamaged) },
+			{ "ContinuousIntervalReallyDamaged", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,m_continuousIntervalReallyDamaged) },
+			{ "ContinuousIntervalRubble", INI::parseDurationUnsignedInt, nullptr, offsetof(FireWeaponWhenDamagedBehaviorModuleData,				m_continuousIntervalRubble) },
+
 			{ 0, 0, 0, 0 }
 		};
 
@@ -144,6 +192,12 @@ protected:
 		getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
 
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
+
 	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
@@ -155,9 +209,15 @@ protected:
 		return getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const override
+	{
+		return getFireWeaponWhenDamagedBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 private:
 	Weapon *m_reactionWeaponPristine;
@@ -168,5 +228,8 @@ private:
 	Weapon *m_continuousWeaponDamaged;
 	Weapon *m_continuousWeaponReallyDamaged;
 	Weapon *m_continuousWeaponRubble;
+	UnsignedInt	m_duration;
+	UnsignedInt	m_interval;
+	Bool m_innate;
 
 };

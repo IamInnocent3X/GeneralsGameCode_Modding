@@ -202,6 +202,7 @@ set(GAMEENGINE_SRC
 #    Include/GameClient/Module/AnimatedParticleSysBoneClientUpdate.h
 #    Include/GameClient/Module/BeaconClientUpdate.h
 #    Include/GameClient/Module/SwayClientUpdate.h
+#    Include/GameClient/Module/DynamicGeometryClientUpdate.h
 #    Include/GameClient/Mouse.h
 #    Include/GameClient/ParabolicEase.h
 #    Include/GameClient/ParticleSys.h
@@ -276,6 +277,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/CaveContain.h
     Include/GameLogic/Module/CheckpointUpdate.h
     Include/GameLogic/Module/ChinookAIUpdate.h
+    Include/GameLogic/Module/MultiLocationSpecialPowerUpdate.h
     Include/GameLogic/Module/CleanupAreaPower.h
     Include/GameLogic/Module/CleanupHazardUpdate.h
     Include/GameLogic/Module/CollideModule.h
@@ -473,6 +475,7 @@ set(GAMEENGINE_SRC
     Include/GameLogic/Module/WorkerAIUpdate.h
     Include/GameLogic/Object.h
     Include/GameLogic/ObjectCreationList.h
+    Include/GameLogic/ObjectCreationMux.h
     Include/GameLogic/ObjectIter.h
     Include/GameLogic/ObjectScriptStatusBits.h
     Include/GameLogic/ObjectTypes.h
@@ -686,6 +689,7 @@ set(GAMEENGINE_SRC
 #    Source/GameClient/Drawable/Update/AnimatedParticleSysBoneClientUpdate.cpp
 #    Source/GameClient/Drawable/Update/BeaconClientUpdate.cpp
 #    Source/GameClient/Drawable/Update/SwayClientUpdate.cpp
+#    Source/GameClient/Drawable/Update/DynamicGeometryClientUpdate.cpp
 #    Source/GameClient/DrawGroupInfo.cpp
     Source/GameClient/Eva.cpp
 #    Source/GameClient/FXList.cpp
@@ -941,13 +945,13 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Helper/ObjectHelper.cpp
     Source/GameLogic/Object/Helper/ObjectRepulsorHelper.cpp
     Source/GameLogic/Object/Helper/ObjectSMCHelper.cpp
-    Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp
     Source/GameLogic/Object/Helper/StatusDamageHelper.cpp
     Source/GameLogic/Object/Helper/SubdualDamageHelper.cpp
     Source/GameLogic/Object/Helper/TempWeaponBonusHelper.cpp
     Source/GameLogic/Object/Locomotor.cpp
     Source/GameLogic/Object/Object.cpp
     Source/GameLogic/Object/ObjectCreationList.cpp
+    Source/GameLogic/Object/ObjectCreationMux.cpp
     Source/GameLogic/Object/ObjectTypes.cpp
     Source/GameLogic/Object/PartitionManager.cpp
     Source/GameLogic/Object/SimpleObjectIterator.cpp
@@ -986,6 +990,7 @@ set(GAMEENGINE_SRC
     Source/GameLogic/Object/Update/BattlePlanUpdate.cpp
     Source/GameLogic/Object/Update/BoneFXUpdate.cpp
     Source/GameLogic/Object/Update/CheckpointUpdate.cpp
+    Source/GameLogic/Object/Update/MultiLocationSpecialPowerUpdate.cpp
     Source/GameLogic/Object/Update/CleanupHazardUpdate.cpp
     Source/GameLogic/Object/Update/CommandButtonHuntUpdate.cpp
     Source/GameLogic/Object/Update/DeletionUpdate.cpp
@@ -1130,6 +1135,124 @@ set(GAMEENGINE_SRC
 #    Source/GameNetwork/User.cpp
 #    Source/GameNetwork/WOLBrowser/WebBrowser.cpp
 #    Source/Precompiled/PreRTS.cpp
+
+    # TheSuperHackers @merge Fork feature modules (GeneralsMD-only, not part of base/Core)
+    Include/Common/ChatCommand.h
+    Include/Common/MapData.h
+    Include/GameClient/TintStatus.h
+    Include/GameLogic/BuffSystem.h
+    Include/GameLogic/Module/AdvancedCollide.h
+    Include/GameLogic/Module/ArmorDamageScalarUpdate.h
+    Include/GameLogic/Module/BattlePlanBonusBehavior.h
+    Include/GameLogic/Module/BridgeTowerBody.h
+    Include/GameLogic/Module/BuffEffectHelper.h
+    Include/GameLogic/Module/BuffUpdate.h
+    Include/GameLogic/Module/CarrierDroneAIUpdate.h
+    Include/GameLogic/Module/ChronoDamageHelper.h
+    Include/GameLogic/Module/ChronoDeathBehavior.h
+    Include/GameLogic/Module/ChronoSphereUpdateModule.h
+    Include/GameLogic/Module/CrateApplyUpgrade.h
+    Include/GameLogic/Module/CreateObjectOnKillBehavior.h
+    Include/GameLogic/Module/DelayedUpgradeBehavior.h
+    Include/GameLogic/Module/DrawBridgeTowerUpdate.h
+    Include/GameLogic/Module/DrawBridgeUpdate.h
+    Include/GameLogic/Module/DroneCarrierAIUpdate.h
+    Include/GameLogic/Module/DroneCarrierContain.h
+    Include/GameLogic/Module/DroneCarrierSlavedUpdate.h
+    Include/GameLogic/Module/EnergyShieldBehavior.h
+    Include/GameLogic/Module/FireWeaponAdvancedUpdate.h
+    Include/GameLogic/Module/FireWeaponOnKillBehavior.h
+    Include/GameLogic/Module/FreeFallProjectileBehavior.h
+    Include/GameLogic/Module/GlobalLightingModifierUpdate.h
+    Include/GameLogic/Module/JumpjetContain.h
+    Include/GameLogic/Module/JumpjetMissileAIUpdate.h
+    Include/GameLogic/Module/KodiakDeploymentUpdate.h
+    Include/GameLogic/Module/KodiakUpdate.h
+    Include/GameLogic/Module/MultiAddOnContain.h
+    Include/GameLogic/Module/MultiLocationSpecialPowerUpdate.h
+    Include/GameLogic/Module/OnKillModule.h
+    Include/GameLogic/Module/OrbitalBeamUpdate.h
+    Include/GameLogic/Module/ProductionTimeModifierUpgrade.h
+    Include/GameLogic/Module/PropagateUpgradeToContainedUpgrade.h
+    Include/GameLogic/Module/ProximityCaptureUpdate.h
+    Include/GameLogic/Module/RadiusDecalBehavior.h
+    Include/GameLogic/Module/ResetSpecialPowerTimerWhileAliveUpdate.h
+    Include/GameLogic/Module/ScatterShotUpdate.h
+    Include/GameLogic/Module/ShieldBody.h
+    Include/GameLogic/Module/ShipSlowDeathBehavior.h
+    Include/GameLogic/Module/SpecialPowerDesignatorUpdate.h
+    Include/GameLogic/Module/StickyBombCrateCollide.h
+    Include/GameLogic/Module/TeleporterAIUpdate.h
+    Include/GameLogic/Module/UnitProductionBonusUpgrade.h
+    Include/GameLogic/Module/UpgradeSpecialPower.h
+    Include/GameLogic/WeaponBonusConditionType.h
+    Source/Common/ChatCommand.cpp
+    Source/Common/MapData.cpp
+    Source/GameLogic/Object/Behavior/BattlePlanBonusBehavior.cpp
+    Source/GameLogic/Object/Behavior/ChronoDeathBehavior.cpp
+    Source/GameLogic/Object/Behavior/CreateObjectOnKillBehavior.cpp
+    Source/GameLogic/Object/Behavior/DelayedUpgradeBehavior.cpp
+    Source/GameLogic/Object/Behavior/EnergyShieldBehavior.cpp
+    Source/GameLogic/Object/Behavior/FireWeaponOnKillBehavior.cpp
+    Source/GameLogic/Object/Behavior/FreeFallProjectileBehavior.cpp
+    Source/GameLogic/Object/Behavior/OnKillModule.cpp
+    Source/GameLogic/Object/Body/BridgeTowerBody.cpp
+    Source/GameLogic/Object/Body/ShieldBody.cpp
+    Source/GameLogic/Object/BuffSystem.cpp
+    Source/GameLogic/Object/Collide/AdvancedCollide.cpp
+    Source/GameLogic/Object/Collide/CrateCollide/StickyBombCrateCollide.cpp
+    Source/GameLogic/Object/Contain/DroneCarrierContain.cpp
+    Source/GameLogic/Object/Contain/JumpjetContain.cpp
+    Source/GameLogic/Object/Contain/MultiAddOnContain.cpp
+    Source/GameLogic/Object/Helper/BuffEffectHelper.cpp
+    Source/GameLogic/Object/Helper/ChronoDamageHelper.cpp
+    Source/GameLogic/Object/SpecialPower/UpgradeSpecialPower.cpp
+    Source/GameLogic/Object/Update/AIUpdate/CarrierDroneAIUpdate.cpp
+    Source/GameLogic/Object/Update/AIUpdate/DroneCarrierAIUpdate.cpp
+    Source/GameLogic/Object/Update/AIUpdate/JumpjetMissileAIUpdate.cpp
+    Source/GameLogic/Object/Update/AIUpdate/TeleporterAIUpdate.cpp
+    Source/GameLogic/Object/Update/ArmorDamageScalarUpdate.cpp
+    Source/GameLogic/Object/Update/BuffUpdate.cpp
+    Source/GameLogic/Object/Update/ChronoSphereUpdateModule.cpp
+    Source/GameLogic/Object/Update/DrawBridgeTowerUpdate.cpp
+    Source/GameLogic/Object/Update/DrawBridgeUpdate.cpp
+    Source/GameLogic/Object/Update/DroneCarrierSlavedUpdate.cpp
+    Source/GameLogic/Object/Update/FireWeaponAdvancedUpdate.cpp
+    Source/GameLogic/Object/Update/GlobalLightingModifierUpdate.cpp
+    Source/GameLogic/Object/Update/KodiakDeploymentUpdate.cpp
+    Source/GameLogic/Object/Update/KodiakUpdate.cpp
+    Source/GameLogic/Object/Update/MultiLocationSpecialPowerUpdate.cpp
+    Source/GameLogic/Object/Update/OrbitalBeamUpdate.cpp
+    Source/GameLogic/Object/Update/ProximityCaptureUpdate.cpp
+    Source/GameLogic/Object/Update/RadiusDecalBehavior.cpp
+    Source/GameLogic/Object/Update/ResetSpecialPowerTimerWhileAliveUpdate.cpp
+    Source/GameLogic/Object/Update/ScatterShotUpdate.cpp
+    Source/GameLogic/Object/Update/ShipSlowDeathBehavior.cpp
+    Source/GameLogic/Object/Update/SpecialPowerDesignatorUpdate.cpp
+    Source/GameLogic/Object/Upgrade/CrateApplyUpgrade.cpp
+    Source/GameLogic/Object/Upgrade/ProductionTimeModifierUpgrade.cpp
+    Source/GameLogic/Object/Upgrade/PropagateUpgradeToContainedUpgrade.cpp
+    Source/GameLogic/Object/Upgrade/UnitProductionBonusUpgrade.cpp
+
+    Include/GameLogic/Module/DoSabotageBehavior.h
+    Include/GameLogic/Module/EquipCrateCollide.h
+    Include/GameLogic/Module/LineOfSightModifierUpgrade.h
+    Include/GameLogic/Module/ObjectDelayedOrderHelper.h
+    Include/GameLogic/Module/ObjectDisabledHelper.h
+    Include/GameLogic/Module/ObjectLevitationHelper.h
+    Include/GameLogic/Module/ObjectPowerOutrageHelper.h
+    Include/GameLogic/Module/ObjectSpecialPowerHelper.h
+    Include/GameLogic/Module/SabotageBehavior.h
+    Source/GameLogic/Object/Behavior/DoSabotageBehavior.cpp
+    Source/GameLogic/Object/Behavior/SabotageBehavior.cpp
+    Source/GameLogic/Object/Collide/CrateCollide/EquipCrateCollide.cpp
+    Source/GameLogic/Object/Helper/ObjectDelayedOrderHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectDisabledHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectPowerOutrageHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectSpecialPowerHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp
+    Source/GameLogic/Object/Helper/ObjectLevitationHelper.cpp
+    Source/GameLogic/Object/Upgrade/LineOfSightModifierUpgrade.cpp
 )
 
 if(RTS_GAMEMEMORY_ENABLE)
@@ -1152,7 +1275,6 @@ endif()
 add_library(z_gameengine STATIC)
 
 target_sources(z_gameengine PRIVATE ${GAMEENGINE_SRC})
-
 target_include_directories(z_gameengine PUBLIC
     Include
 )

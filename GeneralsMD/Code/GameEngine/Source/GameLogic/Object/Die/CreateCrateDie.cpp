@@ -208,7 +208,14 @@ Object *CreateCrateDie::createCrate( CrateTemplate const *currentCrateData )
 	fpOptions.minRadius = 0.0f;
 	fpOptions.maxRadius = 5.0f;
 	fpOptions.relationshipObject = getObject();
-	fpOptions.flags = FPF_IGNORE_ALLY_OR_NEUTRAL_UNITS; // So the dead guy won't block, nor will his dead hulk.
+	
+	if (currentCrateData->m_allowWater) {
+		fpOptions.flags = static_cast<FindPositionFlags>(FPF_IGNORE_ALLY_OR_NEUTRAL_UNITS | FPF_IGNORE_WATER);
+	}
+	else {
+		fpOptions.flags = FPF_IGNORE_ALLY_OR_NEUTRAL_UNITS; // So the dead guy won't block, nor will his dead hulk.
+	}
+
 	if (layer != LAYER_GROUND) {
 		creationPoint = centerPoint;
 		spotFound = true;
@@ -223,7 +230,13 @@ Object *CreateCrateDie::createCrate( CrateTemplate const *currentCrateData )
 		fpOptions.minRadius = 0.0f;
 		fpOptions.maxRadius = 125.0f;
 		fpOptions.relationshipObject = nullptr;
-		fpOptions.flags = FPF_NONE;
+
+		if (currentCrateData->m_allowWater) {
+			fpOptions.flags = FPF_IGNORE_WATER;
+		}
+		else {
+			fpOptions.flags = FPF_NONE;
+		}
 		if( ThePartitionManager->findPositionAround( &centerPoint, &fpOptions, &creationPoint ) )
 		{
 			spotFound = TRUE;
@@ -232,18 +245,34 @@ Object *CreateCrateDie::createCrate( CrateTemplate const *currentCrateData )
 
 	if( spotFound )
 	{
+		bool swimming = false;
+		//Move up to water surface if unterwater
+		if (currentCrateData->m_allowWater && getObject()->isOverWater()) {
+			Real waterZ{ 0 };
+			if (TheTerrainLogic->isUnderwater(creationPoint.x, creationPoint.y, &waterZ)) {
+				creationPoint.z = std::max(creationPoint.z, waterZ);
+				swimming = true;
+			}
+		}
+
 		Object *newCrate = TheThingFactory->newObject( crateType, nullptr );
 		newCrate->setPosition( &creationPoint );
 		newCrate->setOrientation( GameLogicRandomValueReal( 0, 2*PI ) );
 		newCrate->setLayer(layer);
+
+		Real decalScale = 2.5f;
+		if (swimming) {
+			newCrate->setModelConditionState(MODELCONDITION_OVER_WATER);
+			decalScale = 3.0f;
+		}
 
 		Drawable *crateDrawable = newCrate->getDrawable();
 
 		if( crateDrawable )
 		{
 			crateDrawable->setTerrainDecal(TERRAIN_DECAL_CRATE);
-			crateDrawable->setTerrainDecalSize(2.5f * newCrate->getGeometryInfo().getMajorRadius(),
-																2.5f * newCrate->getGeometryInfo().getMajorRadius() )	;
+			crateDrawable->setTerrainDecalSize(decalScale * newCrate->getGeometryInfo().getMajorRadius(),
+																				 decalScale * newCrate->getGeometryInfo().getMajorRadius() )	;
 			crateDrawable->setTerrainDecalFadeTarget(1.0f, 0.03f);
 		}
 

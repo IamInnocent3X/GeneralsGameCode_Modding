@@ -56,6 +56,9 @@ public:
 	const FXList*	m_ignitionFX;			///< FXList to do when missile 'ignites'
 	RadiusDecalTemplate	m_deliveryDecalTemplate;
 	Real					m_deliveryDecalRadius;
+	Bool					m_allowSubdual;
+	Bool					m_allowAttract;
+	Real					m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
 	NeutronMissileUpdateModuleData();
 
@@ -95,14 +98,25 @@ public:
 		DEAD
 	};
 
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride) override;
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) override;
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) override;
 	virtual Bool projectileIsArmed() const override { return m_isArmed; }											///< return true if the missile is armed and ready to explode
 	virtual ObjectID projectileGetLauncherID() const override { return m_launcherID; }				///< Return firer of missile. Returns 0 if not yet fired.
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const override { if (m_launcherID == INVALID_ID) return false; pos = m_launchPos; return true; }	///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) override { m_launchVeterancy = v; }	///< snapshot the launcher's veterancy at launch (for veterancy FX/OCL selection)
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const override { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }	///< launcher's veterancy at launch time
 	virtual Bool projectileHandleCollision( Object *other ) override;
 	virtual const Coord3D *getVelocity() const { return &m_vel; }		///< get current velocity
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) override {}
-	virtual void projectileNowJammed() override {}
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) override;
+	virtual void projectileNowJammed(Bool noDamage = FALSE) override;
+	virtual void projectileNowDrawn(ObjectID attractorID) override;
+	virtual Object* getTargetObject() override { return nullptr; }
+	virtual const Coord3D* getTargetPosition() override;
+	virtual Bool projectileShouldDetonateOnGround() const override { return TRUE; } // Yes, we should detonate on ground if we are aiming at a moving object
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) override {}
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
+
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 	virtual UpdateSleepTime update() override;
 	virtual void onDelete() override;
@@ -112,6 +126,8 @@ private:
 	MissileStateType m_state;						///< the behavior state of the missile
 	Coord3D m_targetPos;								///< the position of the target
 	Coord3D m_intermedPos;
+	Coord3D m_launchPos;								///< launcher's position at launch time (for DamageFactorAtMaxRange)
+	VeterancyLevel m_launchVeterancy;		///< launcher's veterancy at launch time (for veterancy FX/OCL selection)
 
 	ObjectID m_launcherID;							///< ID of object that launched us (zero if not yet launched)
 	WeaponSlotType m_attach_wslot;			///< where to fire the missile from
@@ -128,6 +144,15 @@ private:
 	UnsignedInt m_frameAtLaunch;
 	Real m_heightAtLaunch;
 	RadiusDecal	m_deliveryDecal;
+
+	UnsignedInt	m_framesTillDecoyed;
+	UnsignedInt	m_detonateDistance;
+	ObjectID m_decoyID;
+	ObjectID m_attractedID;
+	Coord3D m_intermedPosBackup;
+
+	Bool m_isJammed;
+	Bool m_assignedBackup;
 
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 

@@ -92,12 +92,17 @@ public:
 	virtual void beginSlowDeath( const DamageInfo *damageInfo ) override;
 	virtual UpdateSleepTime update() override;
 
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
+	virtual Bool layerUpdate(Bool hitTree) override;
+
 protected:
 
 	UnsignedInt m_timerDeathFrame;					///< fame we died on
 	UnsignedInt m_timerOnGroundFrame;				///< frame we landed on the ground on
 
-	Real m_rollRate;												///< our roll rate
+	//Real m_rollRate;												///< our roll rate
+	Bool m_setRoll;													///< set physics to update roll constantly
+	UnsignedInt m_nextWakeUpTime;
 
 	AudioEventRTS m_deathLoopSound;					///< death loop sound
 

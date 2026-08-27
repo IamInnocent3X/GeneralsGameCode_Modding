@@ -32,6 +32,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/PropagandaTowerBehavior.h"
+#include "GameLogic/Module/CreateModule.h"
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 
@@ -59,12 +60,15 @@ public:
 	Real m_upgradedAutoHealPercentPerSecond;		///< Different percent to use for healing if upgraded too
 	const FXList *m_upgradedPulseFX;						///< FXList to play for pulse when upgraded
 	Bool m_affectsSelf;													///< Allow effect to affect ourselves
+	Bool m_autoHealClearsParasite;										///< Destroys Parasites on Healing
+	std::vector<AsciiString> m_autoHealClearsParasiteKeys;				///< Parasite Keys able to Clear
 
 };
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 class PropagandaTowerBehavior : public UpdateModule,
+																public CreateModuleInterface,
 																public DieModuleInterface
 {
 
@@ -77,9 +81,14 @@ public:
 	// virtual destructor prototype provided by MemoryPoolObject
 
 	// module methods
-	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE); }
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_DIE) | (MODULEINTERFACE_CREATE); }
 	virtual void onDelete() override;
 	virtual void onObjectCreated() override;
+
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
 
 	// update module methods
 	virtual UpdateSleepTime update() override;
@@ -93,6 +102,8 @@ public:
 	// of our effect on people.  We don't say "Be affected for n frames", we toggle people.  We need to process
 	// so we can toggle everyone off.
 	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
+
+	virtual void doRemovedFrom() override;
 
 	// our own public module methods
 

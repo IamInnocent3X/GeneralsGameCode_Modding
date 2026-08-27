@@ -52,6 +52,9 @@ public:
 
 	void setVeterancyLevel( VeterancyLevel newLevel, Bool provideFeedback = TRUE );						///< Set Level to this
 	void setMinVeterancyLevel( VeterancyLevel newLevel, Bool provideFeedback = TRUE );					///< Set Level to AT LEAST this... if we are already >= this level, do nothing.
+
+	VeterancyLevel getMaxVeterancyLevel() const { return m_maxVeterancyLevel; }				///< Highest level this object may reach (hard cap, regardless of ExperienceRequired).
+	void setMaxVeterancyLevel( VeterancyLevel maxLevel, Bool provideFeedback = TRUE );	///< Change the cap; demotes the current level if it now exceeds the cap.
 	void addExperiencePoints( Int experienceGain, Bool canScaleForBonus = TRUE );	///< Gain this many exp.
 	Bool gainExpForLevel(Int levelsToGain, Bool canScaleForBonus = TRUE );			  ///< Gain enough exp to gain a level. return false if can't gain a level.
 	Bool canGainExpForLevel(Int levelsToGain) const;															///< return same value as gainExpForLevel, but don't change anything
@@ -60,7 +63,11 @@ public:
 	ObjectID getExperienceSink() const;
 
 	Real getExperienceScalar() const { return m_experienceScalar; }
+	Real getExperienceValueScalar() const { return m_experienceValueScalar; }
 	void setExperienceScalar( Real scalar ) { m_experienceScalar = scalar; }
+	void setExperienceValueScalar( Real scalar ) { m_experienceValueScalar = scalar; }
+
+	void setHighestExpOrLevel( Int experienceGain, VeterancyLevel newLevel, Bool provideFeedback = TRUE ); ///< Sets the Object according to the highest level from the given exp or the level set
 
 	// --------------- inherited from Snapshot interface --------------
 	virtual void crc( Xfer *xfer ) override;
@@ -70,8 +77,10 @@ public:
 private:
 	Object*						m_parent;														///< Object I am owned by
 	VeterancyLevel		m_currentLevel;											///< Level of experience
+	VeterancyLevel		m_maxVeterancyLevel;								///< Hard cap on the level I can reach (from template, overridable)
 	Int								m_currentExperience;								///< Number of experience points
 	ObjectID					m_experienceSink;										///< ID of object I have pledged my experience point gains to
 	Real							m_experienceScalar;									///< Scales any experience gained by this multiplier.
+	Real							m_experienceValueScalar;									///< Scales any experience given by this multiplier.
 	Bool							m_isTrainable;											///< Can I gain experience?
 };

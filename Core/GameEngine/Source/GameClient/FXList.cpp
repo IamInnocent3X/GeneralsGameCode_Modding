@@ -30,6 +30,8 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#define DEFINE_SHADOW_NAMES
+
 #include "GameClient/FXList.h"
 
 #include "Common/DrawModule.h"
@@ -50,6 +52,9 @@
 #include "GameClient/Drawable.h"
 #include "GameClient/ParticleSys.h"
 #include "GameLogic/PartitionManager.h"
+#include "GameClient/Shadow.h"
+#include "../../../GameEngineDevice/Include/W3DDevice/GameClient/Module/W3DModelDraw.h"
+#include "../../../GameEngineDevice/Include/W3DDevice/GameClient/W3DShadow.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
@@ -73,19 +78,121 @@ static void adjustVector(Coord3D *vec, const Matrix3D* mtx)
 		vec->z = vectmp.Z;
 	}
 }
+//-------------------------------------------------------------------------------------------------
+static void adjustVectorXY(Coord3D* vec, const Matrix3D* mtx)
+{
+	if (mtx)
+	{
+		//This can be optimized probably.
+
+		Coord3D u, x, y, z, pos;
+		Matrix3D mat;
+		Real angle = mtx->Get_Z_Rotation();
+
+		pos.x = mtx->Get_X_Translation();
+		pos.y = mtx->Get_Y_Translation();
+		pos.z = mtx->Get_Z_Translation();
+	
+		z.x = 0.0f;
+		z.y = 0.0f;
+		z.z = 1.0f;
+
+		u.x = Cos(angle);
+		u.y = Sin(angle);
+		u.z = 0.0f;
+
+		y.crossProduct(z, u, y);
+		x.crossProduct(y, z, x);
+
+		mat.Set(x.x, y.x, z.x, pos.x,
+			      x.y, y.y, z.y, pos.y,
+			      x.z, y.z, z.z, pos.z);
+
+		Vector3 vectmp;
+		vectmp.X = vec->x;
+		vectmp.Y = vec->y;
+		vectmp.Z = vec->z;
+		vectmp = mat.Rotate_Vector(vectmp);
+		vec->x = vectmp.X;
+		vec->y = vectmp.Y;
+		vec->z = vectmp.Z;
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE CLASSES ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-void FXNugget::doFXObj(const Object* primary, const Object* secondary) const
+void FXNugget::doFXObj(const Object* primary, const Object* secondary, FXSurfaceInfo* surfaceInfo) const
 {
 	const Coord3D* p = primary ? primary->getPosition() : nullptr;
 	const Matrix3D* mtx = primary ? primary->getTransformMatrix() : nullptr;
 	const Real speed = 0.0f;	// yes, that's right -- NOT the object's speed.
 	const Coord3D* s = secondary ? secondary->getPosition() : nullptr;
-	doFXPos(p, mtx, speed, s);
+	doFXPos(p, mtx, speed, s, 0.0f, surfaceInfo);
+}
+
+//-------------------------------------------------------------------------------------------------
+static const char* const AllowedSurfaceNames[] =
+{
+	"ALL",
+	"LAND",
+	"WATER",
+	nullptr
+};
+
+enum AllowedSurfaceType CPP_11(: Int) {
+	SURFACE_ALL = 0,
+	SURFACE_LAND,
+	SURFACE_WATER
+};
+
+// --------
+static bool getSurfaceInfo(const Coord3D* primary, FXSurfaceInfo* surfaceInfo, Bool checkWater)
+{
+	if (surfaceInfo == nullptr || primary == nullptr)
+		return false;
+
+	if (TheTerrainLogic == nullptr)
+		return false;
+
+	// Check if we already have the info
+	if (surfaceInfo->m_isValid) {
+		if (!checkWater || surfaceInfo->m_isWaterChecked) {
+			return true;
+		}
+		else { // compute missing water info
+			surfaceInfo->m_waterHeight = TheTerrainLogic->getWaterZ(primary->x, primary->y);
+			surfaceInfo->m_isWater = surfaceInfo->m_waterHeight > surfaceInfo->m_groundHeight;
+			surfaceInfo->m_isWaterChecked = true;
+			return true;
+		}
+	}
+
+	PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(primary);
+
+	if (layer != LAYER_GROUND) {  // Bridge
+		surfaceInfo->m_groundHeight = TheTerrainLogic->getLayerHeight(primary->x, primary->y, layer);
+		surfaceInfo->m_isBridge = true;
+		surfaceInfo->m_isWaterChecked = true;  // if there's a bridge, it can't be water
+	}
+	else if (checkWater) { // || TheGlobalData->m_heightAboveTerrainIncludesWater) { // do water check
+		Real waterZ = 0;
+		Real terrainZ = 0;
+		
+		surfaceInfo->m_isWater = TheTerrainLogic->isUnderwater(primary->x, primary->y, &waterZ, &terrainZ);
+
+		surfaceInfo->m_groundHeight = terrainZ;
+		surfaceInfo->m_waterHeight = waterZ;
+		surfaceInfo->m_isWaterChecked = true;
+	} else {  // Ground height only
+		surfaceInfo->m_groundHeight = TheTerrainLogic->getLayerHeight(primary->x, primary->y, layer);
+	}
+
+	surfaceInfo->m_isValid = true;
+
+	return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -95,8 +202,25 @@ class SoundFXNugget : public FXNugget
 
 public:
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ ) const override
+	SoundFXNugget()
 	{
+		m_soundName.clear();
+		m_maxAllowedHeight = INFINITY;
+		m_minAllowedHeight = -INFINITY;
+		m_allowedSurfaceType = SURFACE_ALL;
+	}
+
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* surfaceInfo) const override
+	{
+		if (m_allowedSurfaceType != SURFACE_ALL || m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY) {
+
+			if (!getSurfaceInfo(primary, surfaceInfo, m_allowedSurfaceType != SURFACE_ALL))
+				return;
+
+			if (!isValidSurface(primary, surfaceInfo))
+				return;
+		}
+
 		AudioEventRTS sound(m_soundName);
 
 		if (primary)
@@ -107,8 +231,17 @@ public:
 		TheAudio->addAudioEvent(&sound);
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* secondary = nullptr) const override
+	virtual void doFXObj(const Object* primary, const Object* secondary = nullptr, FXSurfaceInfo* surfaceInfo = nullptr) const override
 	{
+		if (m_allowedSurfaceType != SURFACE_ALL || m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY) {
+
+			if (!getSurfaceInfo(primary->getPosition(), surfaceInfo, m_allowedSurfaceType != SURFACE_ALL))
+				return;
+
+			if (!isValidSurface(primary->getPosition(), surfaceInfo))
+				return;
+		}
+
 		AudioEventRTS sound(m_soundName);
 		if (primary)
 		{
@@ -119,12 +252,15 @@ public:
 		TheAudio->addAudioEvent(&sound);
 	}
 
-
 	static void parse(INI *ini, void *instance, void* /*store*/, const void* /*userData*/)
 	{
 		static const FieldParse myFieldParse[] =
 		{
 			{ "Name",									INI::parseAsciiString,	nullptr, offsetof( SoundFXNugget, m_soundName ) },
+			{ "MinAllowedHeight",			INI::parseReal,							nullptr, offsetof(SoundFXNugget, m_minAllowedHeight) },
+			{ "MaxAllowedHeight",			INI::parseReal,							nullptr, offsetof(SoundFXNugget, m_maxAllowedHeight) },
+			{ "AllowedSurface",				INI::parseIndexList,				AllowedSurfaceNames, offsetof(SoundFXNugget, m_allowedSurfaceType) },
+
 			{ nullptr, nullptr, nullptr, 0 }
 		};
 
@@ -134,7 +270,34 @@ public:
 	}
 
 private:
+
+
+	bool isValidSurface(const Coord3D* primary, FXSurfaceInfo* surfaceInfo) const  //@TODO unify code with ParticleSystemFXNugget
+	{
+		if (primary == nullptr || surfaceInfo == nullptr)
+			return false;
+
+		Real refHeight;
+		if (surfaceInfo->m_isWater) {
+			if (m_allowedSurfaceType == SURFACE_LAND) return false;
+			refHeight = surfaceInfo->m_waterHeight;
+		}
+		else {
+			if (m_allowedSurfaceType == SURFACE_WATER) return false;
+			refHeight = surfaceInfo->m_groundHeight;
+		}
+
+		Real zOffset = primary->z - refHeight;
+		if (zOffset < m_minAllowedHeight || zOffset > m_maxAllowedHeight) return false;
+
+		return true;
+	}
+
 	AsciiString		m_soundName;
+
+	Real						m_maxAllowedHeight;
+	Real						m_minAllowedHeight;
+	AllowedSurfaceType m_allowedSurfaceType;
 };
 EMPTY_DTOR(SoundFXNugget)
 
@@ -165,7 +328,7 @@ public:
 		m_probability = 1.0f;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real primarySpeed, const Coord3D *secondary, const Real /*overrideRadius*/ ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real primarySpeed, const Coord3D *secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (m_probability <= GameClientRandomValueReal(0, 1))
 			return;
@@ -263,7 +426,7 @@ public:
 		m_secondaryOffset.x = m_secondaryOffset.y = m_secondaryOffset.z = 0;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * secondary, const Real /*overrideRadius*/ ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		const ThingTemplate* tmpl = TheThingFactory->findTemplate(m_templateName);
 		DEBUG_ASSERTCRASH(tmpl, ("RayEffect %s not found",m_templateName.str()));
@@ -309,6 +472,127 @@ private:
 };
 EMPTY_DTOR(RayEffectFXNugget)
 
+
+//-------------------------------------------------------------------------------------------------
+class DecalFXNugget : public FXNugget
+{
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(DecalFXNugget, "DecalFXNugget")
+public:
+
+	DecalFXNugget()
+	{
+		// m_templateNames left empty; doFXPos falls back to "GenericDecal" if none listed.
+		m_scale.setRange(1.0f, 1.0f, GameClientRandomVariable::CONSTANT);	// default = no scale variance
+		m_lifetime = 0;
+	/*	m_fadeOutTime = 0;
+		m_fadeInTime = 0;
+		m_type = 0;		/// type of projection
+		m_decalSizeX = 0.0;		/// 1/(world space extent of texture in x direction)
+		m_decalSizeY = 0.0;		/// 1/(world space extent of texture in y direction)*/
+		m_offset.x = m_offset.y = m_offset.z = 0;
+		m_angle = 0.0;
+		m_orientToObject = FALSE;
+		m_randomAngle = FALSE;
+		m_probability = 1.0f;
+	}
+
+	virtual void doFXPos(const Coord3D* primary, const Matrix3D* primaryMtx, const Real primarySpeed, const Coord3D* secondary, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const
+	{
+		if (m_probability <= GameClientRandomValueReal(0, 1))
+			return;
+
+		if (primary)
+		{
+			Coord3D offset = m_offset;
+			if (primaryMtx) {
+				if (m_orientToObject)
+				{
+					adjustVector(&offset, primaryMtx);
+				}
+			}
+
+			// pick one of the listed decal templates at random (fall back to GenericDecal if none listed)
+			AsciiString tmplName = m_templateNames.empty()
+				? AsciiString("GenericDecal")
+				: m_templateNames[GameClientRandomValue(0, (Int)m_templateNames.size() - 1)];
+
+			Drawable* drawable = TheThingFactory->newDrawable(TheThingFactory->findTemplate(tmplName));
+			if (!drawable)
+				return;
+
+			// Does it even make sense to set the matrix?
+			if (primaryMtx && m_orientToObject)
+				drawable->setTransformMatrix(primaryMtx);
+
+			Coord3D newPos;
+			newPos.x = primary->x + offset.x;
+			newPos.y = primary->y + offset.y;
+			newPos.z = primary->z + offset.z;
+			drawable->setPosition(&newPos);
+
+			if (m_randomAngle)
+				drawable->setOrientation(GameClientRandomValueReal(0, PI * 2));
+
+			// apply per-spawn random uniform scale variance (default range 1..1 = no change);
+			// W3DDecalDraw multiplies its decal size by the drawable's instance scale.
+			drawable->setInstanceScale(drawable->getInstanceScale() * m_scale.getValue());
+
+			drawable->setExpirationDate(TheGameLogic->getFrame() + m_lifetime);
+		}
+		else
+		{
+			DEBUG_CRASH(("You must have a primary source for this effect"));
+		}
+	}
+
+	virtual void doFXObj(const Object* primary, const Object* secondary, FXSurfaceInfo* surfaceInfo) const
+	{
+		if (primary)
+		{
+			doFXPos(primary->getPosition(), primary->getTransformMatrix(), 0.0f, nullptr, 0.0f, surfaceInfo);
+		}
+		else
+		{
+			DEBUG_CRASH(("You must have a primary source for this effect"));
+		}
+	}
+
+	static void parse(INI* ini, void* instance, void* /*store*/, const void* /*userData*/)
+	{
+		static const FieldParse myFieldParse[] =
+		{
+			{ "DecalName",			INI::parseAsciiStringVectorAppend, nullptr, offsetof(DecalFXNugget, m_templateNames) },
+			{ "Scale",					INI::parseGameClientRandomVariable, nullptr, offsetof(DecalFXNugget, m_scale) },
+			{ "Lifetime",        INI::parseDurationUnsignedInt, nullptr, offsetof(DecalFXNugget, m_lifetime) },
+			{ "Offset",					INI::parseCoord3D,		nullptr, offsetof(DecalFXNugget, m_offset) },
+			{ "Angle",					INI::parseReal,             nullptr, offsetof(DecalFXNugget, m_angle) },
+			{ "RandomAngle",		INI::parseBool,             nullptr, offsetof(DecalFXNugget, m_randomAngle) },
+			{ "OrientToObject",		INI::parseBool,             nullptr, offsetof(DecalFXNugget, m_orientToObject) },
+			{ "Probability",		INI::parseReal,             nullptr, offsetof(DecalFXNugget, m_probability) },
+			{ nullptr, nullptr, nullptr, 0 }
+		};
+
+		DecalFXNugget* nugget = newInstance(DecalFXNugget);
+		ini->initFromINI(nugget, myFieldParse);
+		((FXList*)instance)->addFXNugget(nugget);
+	}
+
+private:
+	std::vector<AsciiString> m_templateNames;	///< one is picked at random per spawn ("DecalName", repeatable)
+	GameClientRandomVariable m_scale;			///< random uniform size factor per spawn ("Scale = low high")
+	UnsignedInt m_lifetime;
+	Coord3D	m_offset;
+	Real m_angle;
+	Bool m_orientToObject;
+	Bool m_randomAngle;
+
+	// spawn parameters
+	Real m_probability;
+  // TODO: Height/Surface, etc.
+};
+EMPTY_DTOR(DecalFXNugget)
+
+
 //-------------------------------------------------------------------------------------------------
 class LightPulseFXNugget : public FXNugget
 {
@@ -320,7 +604,7 @@ public:
 		m_color.red = m_color.green = m_color.blue = 0;
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* /*secondary*/) const override
+	virtual void doFXObj(const Object* primary, const Object* /*secondary*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -337,7 +621,7 @@ public:
 		}
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -385,7 +669,7 @@ public:
 	{
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ , FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -445,10 +729,24 @@ public:
 	{
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (primary)
 		{
+			// If scormarks are high above the ground
+			if (TheGlobalData->m_hideScorchmarksAboveGround) {
+				if (!getSurfaceInfo(primary, surfaceInfo, false))
+					return;
+
+				PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(primary);
+				if (layer != LAYER_GROUND)
+					return;
+
+				Real groundHeight = TheTerrainLogic->getLayerHeight(primary->x, primary->y, layer);
+				if (primary->z - groundHeight > m_radius)
+					return;
+			}
+
 			Int scorch = m_scorch;
 			if (scorch < 0)
 			{
@@ -521,13 +819,19 @@ public:
 		m_createAtGroundHeight = FALSE;
 		m_useCallersRadius = FALSE;
 		m_rotateX = m_rotateY = m_rotateZ = 0;
+
+		m_maxAllowedHeight = INFINITY;
+		m_minAllowedHeight = -INFINITY;
+		// m_createAtWaterHeight = FALSE;
+		m_allowedSurfaceType = SURFACE_ALL;
+		m_useSurfaceInfo = FALSE;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real overrideRadius ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real overrideRadius, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (primary)
 		{
-			reallyDoFX(primary, primaryMtx, nullptr, overrideRadius);
+			reallyDoFX(primary, primaryMtx, nullptr, overrideRadius, surfaceInfo);
 		}
 		else
 		{
@@ -535,7 +839,7 @@ public:
 		}
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* secondary) const override
+	virtual void doFXObj(const Object* primary, const Object* secondary, FXSurfaceInfo* surfaceInfo) const override
 	{
 		if (primary)
 		{
@@ -550,12 +854,12 @@ public:
 				Matrix3D aimingMatrix(1);
 				aimingMatrix.Rotate_Z( aimingAngle );
 
-				reallyDoFX(primary->getPosition(), &aimingMatrix, primary, 0.0f);
+				reallyDoFX(primary->getPosition(), &aimingMatrix, primary, 0.0f, surfaceInfo);
 			}
 			else
 				// if we have an object, then adjust the offset and direction by the object's transformation
 				// matrix, so that (say) an offset of +10 in the z axis "follows" the orientation of the object.
-				reallyDoFX(primary->getPosition(), primary->getTransformMatrix(), primary, 0.0f);
+				reallyDoFX(primary->getPosition(), primary->getTransformMatrix(), primary, 0.0f, surfaceInfo);
 		}
 		else
 		{
@@ -577,10 +881,18 @@ public:
 			{ "RotateY",							INI::parseAngleReal,				nullptr, offsetof( ParticleSystemFXNugget, m_rotateY ) },
 			{ "RotateZ",							INI::parseAngleReal,				nullptr, offsetof( ParticleSystemFXNugget, m_rotateZ ) },
 			{ "OrientToObject",				INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_orientToObject ) },
+			{ "OrientOffset",				  INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_orientOffset ) },
+			{ "OrientXY",				      INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_orientXY ) },
 			{ "Ricochet",				      INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_ricochet ) },
 			{ "AttachToObject",				INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_attachToObject ) },
 			{ "CreateAtGroundHeight",	INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_createAtGroundHeight ) },
 			{ "UseCallersRadius",			INI::parseBool,							nullptr, offsetof( ParticleSystemFXNugget, m_useCallersRadius ) },
+			// New height controls
+			// { "CreateAtWaterHeight",	INI::parseBool,							nullptr, offsetof(ParticleSystemFXNugget, m_createAtWaterHeight) },
+			{ "MinAllowedHeight",			INI::parseReal,							nullptr, offsetof(ParticleSystemFXNugget, m_minAllowedHeight) },
+			{ "MaxAllowedHeight",			INI::parseReal,							nullptr, offsetof(ParticleSystemFXNugget, m_maxAllowedHeight) },
+			{ "AllowedSurface",				INI::parseIndexList,				AllowedSurfaceNames, offsetof(ParticleSystemFXNugget, m_allowedSurfaceType) },
+			{ "UseCachedSurfaceInfo", INI::parseBool,							nullptr, offsetof(ParticleSystemFXNugget, m_useSurfaceInfo) },
 			{ nullptr, nullptr, nullptr, 0 }
 		};
 
@@ -591,18 +903,35 @@ public:
 
 protected:
 
-	void reallyDoFX(const Coord3D *primary, const Matrix3D* mtx, const Object* thingToAttachTo, Real overrideRadius ) const
+	void reallyDoFX(const Coord3D *primary, const Matrix3D* mtx, const Object* thingToAttachTo, Real overrideRadius, FXSurfaceInfo* surfaceInfo) const
 	{
 		Coord3D offset = m_offset;
-		if (mtx)
-		{
-			adjustVector(&offset, mtx);
+		if (mtx) {
+			if (m_orientToObject || m_orientOffset)
+			{
+				adjustVector(&offset, mtx);
+			}
+			if (m_orientXY) {
+				adjustVectorXY(&offset, mtx);
+			}
 		}
 
 		const ParticleSystemTemplate *tmp = TheParticleSystemManager->findTemplate(m_name);
 		DEBUG_ASSERTCRASH(tmp, ("ParticleSystem %s not found",m_name.str()));
 		if (tmp)
 		{
+			Bool needHeightCheck = m_createAtGroundHeight || m_minAllowedHeight > -INFINITY || m_maxAllowedHeight < INFINITY || m_allowedSurfaceType != SURFACE_ALL;
+			Bool needWaterCheck = needHeightCheck && (m_allowedSurfaceType != SURFACE_ALL || TheGlobalData->m_heightAboveTerrainIncludesWater);
+			Bool needExactCheck = needHeightCheck && !m_useSurfaceInfo && (offset.x != 0 || offset.y != 0 || m_radius.getMinimumValue() != 0 || m_radius.getMaximumValue() != 0);
+
+			if (needHeightCheck && !needExactCheck) {
+				if (!getSurfaceInfo(primary, surfaceInfo, needWaterCheck))
+					return;
+
+				if (!isValidSurface(primary, surfaceInfo))
+					return;
+			}
+
 			for (Int i = 0; i < m_count; i++ )
 			{
 				ParticleSystem *sys = TheParticleSystemManager->createParticleSystem(tmp);
@@ -610,27 +939,43 @@ protected:
 				{
 					Coord3D newPos;
 					Real radius = m_radius.getValue();
-					Real angle = GameClientRandomValueReal( 0.0f, 2.0f * PI );
+					Real angle = GameClientRandomValueReal(0.0f, 2.0f * PI);
 
 					newPos.x = primary->x + offset.x + radius * cos(angle);
 					newPos.y = primary->y + offset.y + radius * sin(angle);
 					newPos.z = primary->z + offset.z;
-					if( m_createAtGroundHeight && TheTerrainLogic )
-					{
-						//old way:
-						//newPos.z = TheTerrainLogic->getGrsoundHeight( newPos.x, newPos.y ) + 1;// The plus one prevents scissoring with terrain
 
-						//new way: now we allow bridges in the GroundHeight.
-						PathfindLayerEnum layer = TheTerrainLogic->getLayerForDestination(&newPos);
-						newPos.z = TheTerrainLogic->getLayerHeight( newPos.x, newPos.y, layer );
+					Real refHeight;
+					if (needExactCheck) {
+						FXSurfaceInfo info;
+						if (!getSurfaceInfo(primary, &info, needWaterCheck))
+							continue;
+
+						if (!isValidSurface(primary, &info))
+							continue;
+
+						refHeight = info.m_isWater ? info.m_waterHeight : info.m_groundHeight;
 					}
-					else
-						newPos.z += m_height.getValue();
 
+					if (m_createAtGroundHeight) {
+						if (needExactCheck) {
+							newPos.z = refHeight + offset.z + m_height.getValue();
+						}
+						else {
+							refHeight = surfaceInfo->m_isWater ? surfaceInfo->m_waterHeight : surfaceInfo->m_groundHeight;
+							newPos.z = refHeight + offset.z + m_height.getValue();
+						}
+					}
+					else {
+						newPos.z += m_height.getValue();
+					}
 
 					if (m_orientToObject && mtx)
 					{
 						sys->setLocalTransform(mtx);
+					}
+					else if (m_orientXY) {
+						sys->rotateLocalTransformZ(mtx->Get_Z_Rotation());
 					}
 					if (m_rotateX != 0.0f)
 						sys->rotateLocalTransformX(m_rotateX);
@@ -651,7 +996,7 @@ protected:
 						sys->setInitialDelay(delayInFrames);
 					}
 
-					if( m_useCallersRadius  &&  overrideRadius )
+					if( m_useCallersRadius && overrideRadius )
 					{
 						ParticleSystemInfo::EmissionVolumeType type = sys->getEmisionVolumeType();
 
@@ -675,10 +1020,39 @@ private:
 	GameClientRandomVariable	m_delay;
 	Real						m_rotateX, m_rotateY, m_rotateZ;
 	Bool						m_orientToObject;
+	Bool            m_orientOffset;
+	Bool            m_orientXY;
 	Bool						m_attachToObject;
 	Bool						m_createAtGroundHeight;
 	Bool						m_useCallersRadius;
 	Bool						m_ricochet;
+
+	Real						m_maxAllowedHeight;
+	Real						m_minAllowedHeight;
+	//Bool						m_createAtWaterHeight;
+	AllowedSurfaceType m_allowedSurfaceType;
+	Bool						m_useSurfaceInfo;
+
+	bool isValidSurface(const Coord3D* primary, FXSurfaceInfo* surfaceInfo) const  //@TODO unify code with SoundFXNugget
+	{
+		if (primary == nullptr || surfaceInfo == nullptr)
+			return false;
+
+		Real refHeight;
+		if (surfaceInfo->m_isWater) {
+			if (m_allowedSurfaceType == SURFACE_LAND) return false;
+			refHeight = surfaceInfo->m_waterHeight;
+		}
+		else {
+			if (m_allowedSurfaceType == SURFACE_WATER) return false;
+			refHeight = surfaceInfo->m_groundHeight;
+		}
+
+		Real zOffset = primary->z - refHeight;
+		if (zOffset < m_minAllowedHeight || zOffset > m_maxAllowedHeight) return false;
+
+		return true;
+	}
 };
 EMPTY_DTOR(ParticleSystemFXNugget)
 
@@ -695,12 +1069,12 @@ public:
     m_orientToBone = true;
 	}
 
-	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ ) const override
+	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		DEBUG_CRASH(("You must use the object form for this effect"));
 	}
 
-	virtual void doFXObj(const Object* primary, const Object* /*secondary*/) const override
+	virtual void doFXObj(const Object* primary, const Object* /*secondary*/, FXSurfaceInfo* /*surfaceInfo*/) const override
 	{
 		if (primary)
 		{
@@ -778,6 +1152,7 @@ static const FieldParse TheFXListFieldParse[] =
 	{ "TerrainScorch",							TerrainScorchFXNugget::parse, nullptr, 0},
 	{ "ParticleSystem",							ParticleSystemFXNugget::parse, nullptr, 0},
 	{ "FXListAtBonePos",						FXListAtBonePosFXNugget::parse, nullptr, 0},
+	{ "Decal",											DecalFXNugget::parse, nullptr, 0},
 	{ nullptr, nullptr, nullptr, 0 }
 };
 
@@ -810,9 +1185,11 @@ void FXList::doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const R
 	if (ThePartitionManager->getShroudStatusForPlayer(playerIndex, primary) != CELLSHROUD_CLEAR)
 		return;
 
+	FXSurfaceInfo surfaceInfo;  // Cached water/height
+
 	for (FXNuggetList::const_iterator it = m_nuggets.begin(); it != m_nuggets.end(); ++it)
 	{
-		(*it)->doFXPos(primary, primaryMtx, primarySpeed, secondary, overrideRadius);
+		(*it)->doFXPos(primary, primaryMtx, primarySpeed, secondary, overrideRadius, &surfaceInfo);
 	}
 }
 
@@ -824,11 +1201,13 @@ void FXList::doFXObj(const Object* primary, const Object* secondary) const
 	if (primary && primary->getShroudedStatus(playerIndex) > OBJECTSHROUD_PARTIAL_CLEAR)
 		return;	//the primary object is fogged or shrouded so don't bother with the effect.
 
+	FXSurfaceInfo surfaceInfo;  // Cached water/height
+
 	for (FXNuggetList::const_iterator it = m_nuggets.begin(); it != m_nuggets.end(); ++it)
 	{
 
 		// HERE THE PRIMARY IS THE GUY RECEIVING THE FX, AND SECONDARY MIGHT BE THE GUY DEALING IT
-		(*it)->doFXObj(primary, secondary);
+		(*it)->doFXObj(primary, secondary, &surfaceInfo);
 	}
 }
 

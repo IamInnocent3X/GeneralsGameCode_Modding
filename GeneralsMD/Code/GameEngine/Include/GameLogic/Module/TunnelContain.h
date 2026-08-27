@@ -37,25 +37,34 @@
 #include "GameLogic/Module/CreateModule.h"
 #include "Common/GameMemory.h"
 class Team;
+class PassengersFireUpgrade;
 
 //-------------------------------------------------------------------------------------------------
 class TunnelContainModuleData : public OpenContainModuleData
 {
 public:
-
 	Real m_framesForFullHeal;			///< time (in frames) something becomes fully healed
+	Bool m_removeOtherPassengersAllowToFire;
+	//std::vector<AsciiString> m_activationUpgradeNames;
+	std::vector<AsciiString> m_upgradeDisableOtherNames;
+	std::vector<AsciiString> m_upgradeDisableOwnNames;
+
 
 	TunnelContainModuleData()
 	{
 
 		// by default, takes no time to heal ppl
 		m_framesForFullHeal = 1.0f;
+		m_removeOtherPassengersAllowToFire = FALSE;
+		m_upgradeDisableOtherNames.clear();
+		m_upgradeDisableOwnNames.clear();
 
 		//
 		// by default we say that transports can have infantry inside them, this will be totally
 		// overwritten by any data provided from the INI entry tho
 		//
 		m_allowInsideKindOf = MAKE_KINDOF_MASK(KINDOF_INFANTRY);
+		m_allowInsideKindOf.set(KINDOF_VEHICLE);
 
 	}
 
@@ -66,13 +75,16 @@ public:
 		static const FieldParse dataFieldParse[] =
 		{
 			{ "TimeForFullHeal", INI::parseDurationReal, nullptr, offsetof( TunnelContainModuleData, m_framesForFullHeal ) },
+			{ "RemoveOtherTunnelBunkerOnUpgrade", INI::parseBool, nullptr, offsetof( TunnelContainModuleData, m_removeOtherPassengersAllowToFire ) },
+			{ "UpgradesDisableOtherTunnelGuard", INI::parseAsciiStringVector, nullptr, offsetof( TunnelContainModuleData, m_upgradeDisableOtherNames ) },
+			{ "UpgradesDisableOwnTunnelGuard", INI::parseAsciiStringVector, nullptr, offsetof( TunnelContainModuleData, m_upgradeDisableOwnNames ) },
 			{ 0, 0, 0, 0 }
 		};
     p.add(dataFieldParse);
 	}
 };
 
-class TunnelContain : public OpenContain, public CreateModuleInterface
+class TunnelContain : public OpenContain, public CreateModuleInterface, public TunnelInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( TunnelContain, "TunnelContain" )
@@ -84,6 +96,7 @@ public:
 	// virtual destructor prototype provided by memory pool declaration
 
 	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual TunnelInterface* getTunnelInterface() override { return this; }
 	static Int getInterfaceMask() { return OpenContain::getInterfaceMask() | (MODULEINTERFACE_CREATE); }
 
 	virtual OpenContain *asOpenContain() override { return this; }  ///< treat as open container
@@ -102,6 +115,8 @@ public:
 	virtual void orderAllPassengersToExit( CommandSourceType commandSource, Bool instantly ) override; ///< All of the smarts of exiting are in the passenger's AIExit. removeAllFrommContain is a last ditch system call, this is the game Evacuate
 	virtual void orderAllPassengersToIdle( CommandSourceType commandSource ) override; ///< Just like it sounds
 
+	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const override;	///< Hey, can I shoot out of this container?
+
 	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const override;
 	virtual void addToContainList( Object *obj ) override;		///< The part of AddToContain that inheritors can override (Can't do whole thing because of all the private stuff involved)
 	virtual void removeFromContain( Object *obj, Bool exposeStealthUnits = FALSE ) override;	///< remove 'obj' from contain list
@@ -113,8 +128,10 @@ public:
 	virtual void iterateContained( ContainIterateFunc func, void *userData, Bool reverse ) override;
 	virtual UnsignedInt getContainCount() const override;
 	virtual UnsignedInt getHeroUnitsContained() const override;
+	virtual Int getRawContainMax() const override;
 	virtual Int getContainMax() const override;
 	virtual const ContainedItemsList* getContainedItemsList() const override;
+	virtual Bool isContained( const Object *obj ) const override;
 	virtual UnsignedInt getFullTimeForHeal() const; ///< Returns the time in frames until a contained object becomes fully healed
 	virtual Bool isDisplayedOnControlBar() const override { return TRUE; } ///< Does this container display its contents on the ControlBar?
 	virtual Bool isKickOutOnCapture() override { return FALSE; }///< Caves and Tunnels don't kick out on capture.
@@ -128,13 +145,31 @@ public:
 	virtual void onBuildComplete() override;
 	virtual Bool shouldDoOnBuildComplete() const override { return m_needToRunOnBuildComplete; }
 
+	virtual void doUpgradeChecks() override;
+
 	// so that the ppl within the tunnel network can get healed
 	virtual UpdateSleepTime update() override;												///< called once per frame
+
+	virtual void removeBunker() override;
+	virtual void removeGuard() override { m_hasTunnelGuard = FALSE; }
 
 protected:
 
 	void scatterToNearbyPosition(Object* obj);
+	void doOpenFire(Bool isAttacking = TRUE);
+	void doRemoveOtherPassengersAllowToFire();
+	void checkRemoveOwnGuard();
+	void checkRemoveOtherGuard();
+	//void doHoleRebuildChecks();
+	virtual void createPayload() override;
 	Bool m_needToRunOnBuildComplete;
 	Bool m_isCurrentlyRegistered; ///< Keeps track if this is registered with the player, so we don't double remove and mess up
 
+private:
+	//ObjectID m_lastFiringObjID;
+	Coord3D m_lastFiringPos;
+	//Bool m_payloadCreated;
+	Bool m_hasBunker;
+	Bool m_hasTunnelGuard;
+	Bool m_rebuildChecked;
 };

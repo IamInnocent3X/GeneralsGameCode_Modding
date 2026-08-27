@@ -38,7 +38,12 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/BridgeBehavior.h"
 #include "GameLogic/Module/BridgeTowerBehavior.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameLogic/ObjectIter.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameClient/Line2D.h"
+#include "GameClient/FXList.h"
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -85,6 +90,35 @@ void BridgeTowerBehavior::setTowerType( BridgeTowerType type )
 
 	m_type = type;
 
+}
+
+void BridgeTowerBehavior::onCapture(Player* oldOwner, Player* newOwner)
+{
+	Object* bridge = TheGameLogic->findObjectByID(getBridgeID());
+
+	// sanity
+	if (bridge == nullptr)
+		return;
+
+	// get the bridge behavior module for our bridge
+	BehaviorModule** bmi;
+	BridgeBehaviorInterface* bridgeInterface = nullptr;
+	for (bmi = bridge->getBehaviorModules(); *bmi; ++bmi)
+	{
+		bridgeInterface = (*bmi)->getBridgeBehaviorInterface();
+		if (bridgeInterface)
+			break;
+	}
+
+	if (bridgeInterface != nullptr) {
+		// broadcast capture to all towers via bridge
+		bridgeInterface->towerCaptured(oldOwner, newOwner, getObject());
+	}
+}
+
+static void createDebugFX(const Coord3D* pos, const char* name) {
+	const FXList* debug_fx1 = TheFXListStore->findFXList(name);
+	FXList::doFXPos(debug_fx1, pos);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -228,8 +262,30 @@ void BridgeTowerBehavior::onHealing( DamageInfo *damageInfo )
 			// heal bridge object, but make sure it's done through the bridge interface
 			// so that it doesn't automatically propagate that healing to the towers.
 			//
-			BodyModuleInterface *bridgeBody = bridge->getBodyModule();
-			bridge->attemptHealing(healingPercentage * bridgeBody->getMaxHealth(), getObject());
+
+			BodyModuleInterface* bridgeBody = bridge->getBodyModule();
+			// if bridge is fully destroyed, do not heal it
+			if (bridgeBody->getHealth() > 0.0f) {
+				bridge->attemptHealing(healingPercentage * bridgeBody->getMaxHealth(), getObject());
+			}
+
+			// if healed to full, repair bridge if destroyed
+			if (body->getHealth() >= body->getMaxHealth() && bridgeBody->getHealth() <= 0.0f) {
+				bridge->attemptHealing(bridgeBody->getMaxHealth(), getObject());
+
+				Bridge* terrainBridge = TheTerrainLogic->findBridgeAt(bridge->getPosition());
+				if (terrainBridge != nullptr) {
+					terrainBridge->setDrawBridgeStage(false);
+				}
+				bridgeInterface->onRepaired();
+
+				//TODO Heal UP effect, condition state?
+				/*BridgeBehaviorInterface* bbi = BridgeBehavior::getBridgeBehaviorInterfaceFromObject(bridge);
+				if (bbi != nullptr) {
+					// tell the bridge to create scaffolding if necessary
+					bbi->createScaffolding();
+				}*/
+			}
 
 		}
 

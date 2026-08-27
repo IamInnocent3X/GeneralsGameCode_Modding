@@ -780,7 +780,6 @@ ParticleSystemInfo::ParticleSystemInfo()
 
 }
 
-
 void ParticleSystemInfo::tintAllColors( Color tintColor )
 {
 	RGBColor rgb;
@@ -789,6 +788,7 @@ void ParticleSystemInfo::tintAllColors( Color tintColor )
 	//This tints all but the first colorKey!!!
 	for (int key = 1; key < MAX_KEYFRAMES; ++key )
 	{
+		// AW: Isn't this wrong? rgb.red is already float
 		m_colorKey[ key ].color.red   *= (Real)(rgb.red  ) / 255.0f;
 		m_colorKey[ key ].color.green *= (Real)(rgb.green) / 255.0f;
 		m_colorKey[ key ].color.blue  *= (Real)(rgb.blue ) / 255.0f;
@@ -796,6 +796,21 @@ void ParticleSystemInfo::tintAllColors( Color tintColor )
 
 }
 
+// ----------------
+void ParticleSystemInfo::tintColorsAllFrames(Color tintColor)
+{
+	RGBColor rgb;
+	rgb.setFromInt(tintColor);
+
+	//This tints all but the first colorKey!!!
+	for (int key = 0; key < MAX_KEYFRAMES; key++)
+	{
+		m_colorKey[key].color.red *= rgb.red;
+		m_colorKey[key].color.green *= rgb.green;
+		m_colorKey[key].color.blue *= rgb.blue;
+	}
+
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */
@@ -1189,6 +1204,15 @@ ParticleSystem::ParticleSystem( const ParticleSystemTemplate *sysTemplate,
 
 	m_particleType = sysTemplate->m_particleType;
 	m_particleTypeName = sysTemplate->m_particleTypeName;
+
+#if PRESERVE_RETAIL_PARTICLES
+	// TheSuperHackers @info Hack to allow isUsingSmudge() functionality with retail smudge particles
+	// The retail data template for smudge particles is not correctly configured with the smudge particle type
+	if (m_particleType != ParticleType::SMUDGE && m_particleTypeName.startsWithNoCase("SMUDGE."))
+	{
+		m_particleType = ParticleType::SMUDGE;
+	}
+#endif
 
 	m_isStopped = false;
 
@@ -3031,8 +3055,8 @@ void ParticleSystemManager::update()
 			if (sys->isUsingDrawables())
 				continue;
 
-			// temporary hack that checks if texture name starts with "SMUD" - if so, we can assume it's a smudge type
-			if (/*sys->isUsingSmudge()*/ *((DWORD *)sys->getParticleTypeName().str()) == 0x44554D53)
+			// Handle smudge type particles
+			if (sys->isUsingSmudge())
 			{
 				for (Particle *p = sys->getFirstParticle(); p; p = p->m_systemNext)
 				{

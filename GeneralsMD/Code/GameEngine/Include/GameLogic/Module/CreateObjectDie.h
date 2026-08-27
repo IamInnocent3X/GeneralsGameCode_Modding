@@ -31,6 +31,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/INI.h"
+#include "GameLogic/ObjectCreationMux.h"
 #include "GameLogic/Module/DieModule.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -44,8 +45,8 @@ class CreateObjectDieModuleData : public DieModuleData
 public:
 
 	const ObjectCreationList* m_ocl;			///< object creaton list to make
-	Bool m_transferPreviousHealth; ///< Transfers previous health before death to the new object created.
-	Bool m_transferSelection;      ///< Transfers selection state before death to the new object created.
+
+	ObjectCreationMuxData							m_objectCreationData;
 
 	CreateObjectDieModuleData();
 
@@ -56,7 +57,7 @@ public:
 //-------------------------------------------------------------------------------------------------
 /** When this object dies, create another object in its place */
 //-------------------------------------------------------------------------------------------------
-class CreateObjectDie : public DieModule
+class CreateObjectDie : public DieModule, public ObjectCreationMux
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( CreateObjectDie, "CreateObjectDie"  )
@@ -69,4 +70,5 @@ public:
 
 	virtual void onDie( const DamageInfo *damageInfo ) override;
 
+	virtual const ObjectCreationMuxData *getCreationMuxData() const { return &getCreateObjectDieModuleData()->m_objectCreationData; }
 };

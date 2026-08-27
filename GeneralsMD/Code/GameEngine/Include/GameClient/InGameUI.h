@@ -34,6 +34,7 @@
 #include "Common/GameType.h"
 #include "Common/MessageStream.h"		// for GameMessageTranslator
 #include "Common/KindOf.h"
+#include "Common/NameKeyGenerator.h"
 #include "Common/SpecialPowerType.h"
 #include "Common/Snapshot.h"
 #include "Common/STLTypedefs.h"
@@ -100,6 +101,76 @@ enum RadiusCursorType CPP_11(: Int)
 	RADIUSCURSOR_CLEARMINES,
 	RADIUSCURSOR_AMBULANCE,
 
+	//New OFS and Generic Radius Cursors
+	RADIUSCURSOR_IONCANNON,
+	RADIUSCURSOR_CLUSTERMISSILE,
+	RADIUSCURSOR_SUNSTORM,
+  RADIUSCURSOR_METEORSTRIKE,
+  RADIUSCURSOR_PUNISHER,
+  RADIUSCURSOR_CHEMICALMISSILE,
+
+	RADIUSCURSOR_CARPETBOMB_USA,
+	RADIUSCURSOR_MOAB,
+	RADIUSCURSOR_SUPERSONICSTRIKE,
+	RADIUSCURSOR_HELISUPPORT,
+	RADIUSCURSOR_INTERCEPTORS,
+	RADIUSCURSOR_HOLOGRAMS,
+	RADIUSCURSOR_PARADROP_AIRF,
+
+	RADIUSCURSOR_COASTALBARRAGE,
+	RADIUSCURSOR_PARADROP_COMMANDOS,
+
+	RADIUSCURSOR_IONSTRIKE,
+	RADIUSCURSOR_CRYOBOMB,
+	RADIUSCURSOR_FORCEFIELD,
+	RADIUSCURSOR_SPACESHIP,
+	RADIUSCURSOR_ORBITALSTRIKE,
+	RADIUSCURSOR_DROPPODS,
+	RADIUSCURSOR_DROPPODS_SUPER,
+
+	RADIUSCURSOR_LASERSTRIKE,
+	RADIUSCURSOR_ANTIMATTERBOMB,
+	RADIUSCURSOR_CHRONOAMBUSH,
+	RADIUSCURSOR_CHRONOSPHERE,
+	RADIUSCURSOR_SUBORBITALSTRIKE,
+	RADIUSCURSOR_NANOSWARM,
+
+	RADIUSCURSOR_SPYPLANE,
+	RADIUSCURSOR_OBSERVATION,
+
+	RADIUSCURSOR_AIRSTRIKE_NUKE,
+	RADIUSCURSOR_ICBM_NUKE,
+	RADIUSCURSOR_CARPETBOMB_NUKE,
+	RADIUSCURSOR_ARTILLERYBARRAGE_NUKE,
+
+	RADIUSCURSOR_SUPERHACK,
+	RADIUSCURSOR_SYSTEMHACK,
+	RADIUSCURSOR_CARPETBOMB_NAPALM,
+	RADIUSCURSOR_DRAGONSTAR,
+	RADIUSCURSOR_SPIDERMINES,
+
+	RADIUSCURSOR_EARTHSHAKER,
+	RADIUSCURSOR_IRONCURTAIN,
+	RADIUSCURSOR_PARADROP_TANK,
+
+	RADIUSCURSOR_MORTARBARRAGE,
+	RADIUSCURSOR_NAPALMBOMB,
+	RADIUSCURSOR_PARADROP_LARGE,
+
+	RADIUSCURSOR_DEMOTRAPS,
+	RADIUSCURSOR_FRENZY_GLA,
+	RADIUSCURSOR_GPSSCRAMBLER,
+	RADIUSCURSOR_JUNKREPAIR,
+	RADIUSCURSOR_ROCKETBARRAGE,
+	RADIUSCURSOR_CARPETBOMB_CLUSTER,
+	RADIUSCURSOR_SUICIDEPLANE,
+	RADIUSCURSOR_ARTILLERYBARRAGE_GLA,
+
+	RADIUSCURSOR_VIRUS,
+	RADIUSCURSOR_CHEMTRAILS,
+	RADIUSCURSOR_AIRSTRIKE_GLA,
+	RADIUSCURSOR_CHEMICALBOMB,
+	RADIUSCURSOR_TOXINDROP,
 
 	RADIUSCURSOR_COUNT
 };
@@ -141,6 +212,66 @@ static const char *const TheRadiusCursorNames[] =
 
 	"CLEARMINES",
 	"AMBULANCE",
+
+	//New OFS and Generic Radius Cursors
+	"IONCANNON",
+	"CLUSTERMISSILE",
+	"SUNSTORM",
+	"METEORSTRIKE",
+	"PUNISHER",
+	"CHEMICALMISSILE",
+	"CARPETBOMB_USA",
+	"MOAB",
+	"SUPERSONICSTRIKE",
+	"HELISUPPORT",
+	"INTERCEPTORS",
+	"HOLOGRAMS",
+	"PARADROP_AIRF",
+	"COASTALBARRAGE",
+	"PARADROP_COMMANDOS",
+	"IONSTRIKE",
+	"CRYOBOMB",
+	"FORCEFIELD",
+	"SPACESHIP",
+	"ORBITALSTRIKE",
+	"DROPPODS",
+	"DROPPODS_SUPER",
+	"LASERSTRIKE",
+	"ANTIMATTERBOMB",
+	"CHRONOAMBUSH",
+	"CHRONOSPHERE",
+	"SUBORBITALSTRIKE",
+	"NANOSWARM",
+	"SPYPLANE",
+	"OBSERVATION",
+	"AIRSTRIKE_NUKE",
+	"ICBM_NUKE",
+	"CARPETBOMB_NUKE",
+	"ARTILLERYBARRAGE_NUKE",
+	"SUPERHACK",
+	"SYSTEMHACK",
+	"CARPETBOMB_NAPALM",
+	"DRAGONSTAR",
+	"SPIDERMINES",
+	"EARTHSHAKER",
+	"IRONCURTAIN",
+	"PARADROP_TANK",
+	"MORTARBARRAGE",
+	"NAPALMBOMB",
+	"PARADROP_LARGE",
+	"DEMOTRAPS",
+	"FRENZY_GLA",
+	"GPSSCRAMBLER",
+	"JUNKREPAIR",
+	"ROCKETBARRAGE",
+	"CARPETBOMB_CLUSTER",
+	"SUICIDEPLANE",
+	"ARTILLERYBARRAGE_GLA",
+	"VIRUS",
+	"CHEMTRAILS",
+	"AIRSTRIKE_GLA",
+	"CHEMICALBOMB",
+	"TOXINDROP",
 
 	nullptr
 };
@@ -346,6 +477,7 @@ public:  // ********************************************************************
 		ACTIONTYPE_ENTER_OBJECT,
 		ACTIONTYPE_HIJACK_VEHICLE,
 		ACTIONTYPE_CONVERT_OBJECT_TO_CARBOMB,
+		ACTIONTYPE_EQUIP_OBJECT,
 		ACTIONTYPE_CAPTURE_BUILDING,
 		ACTIONTYPE_DISABLE_VEHICLE_VIA_HACKING,
 #ifdef ALLOW_SURRENDER
@@ -433,6 +565,21 @@ public:  // ********************************************************************
 	virtual void setGUICommand( const CommandButton *command );				///< the command has been clicked in the UI and needs additional data
 	virtual const CommandButton *getGUICommand() const;								///< get the pending gui command
 
+	// N-point (NEED_N_TARGET_POS) special power selection: the target clicks are captured client-side
+	// and commit nothing; only the final click dispatches. RADIUS_ANCHORED_AREA additionally captures a
+	// first "anchor" click that defines the constraint area but is never a delivered target. Right-click
+	// cancels (via setGUICommand). The chronosphere is the N=2 case.
+	virtual void addPendingSpecialPowerLocation( const Coord3D *loc );							///< append an accepted target point (+ spawn a marker)
+	virtual const std::vector<Coord3D>& getPendingSpecialPowerLocations() const { return m_pendingSpecialPowerLocations; }
+	virtual Int getPendingSpecialPowerLocationCount() const { return (Int)m_pendingSpecialPowerLocations.size(); }
+	virtual Bool hasPendingSpecialPowerLocations() const { return !m_pendingSpecialPowerLocations.empty() || m_hasSpecialPowerAreaAnchor; }
+	virtual void setSpecialPowerAreaAnchor( const Coord3D *loc );									///< store the RADIUS_ANCHORED_AREA anchor (constraint-only, + spawn a marker)
+	virtual const Coord3D *getSpecialPowerAreaAnchor() const { return &m_specialPowerAreaAnchor; }
+	virtual Bool hasSpecialPowerAreaAnchor() const { return m_hasSpecialPowerAreaAnchor; }
+	virtual void clearPendingSpecialPowerLocations();												///< clear target points + anchor + all markers
+	virtual Bool getSpecialPowerTargetAreaConstraint( const CommandButton *cmd, Coord3D &outCenter, Real &outRadius ) const;	///< active target-phase area constraint (anchor/first/prev), false if none
+	virtual Bool clampToSpecialPowerTargetArea( const CommandButton *cmd, Coord3D &pos ) const;		///< clamp pos into the active constraint area; returns TRUE if a constraint applied
+
 	// build interface
 	virtual void placeBuildAvailable( const ThingTemplate *build, Drawable *buildDrawable );				///< built thing being placed
 	virtual const ThingTemplate *getPendingPlaceType();					///< get item we're trying to place
@@ -447,6 +594,7 @@ public:  // ********************************************************************
 
 	// Drawable selection mechanisms
 	virtual void selectDrawable( Drawable *draw );					///< Mark given Drawable as "selected"
+	virtual void selectDrawablePreserveGUI( Drawable *draw, Bool showFlash );					///< Mark given Drawable as "selected", but don't clear any Pending Commands.
 	virtual void deselectDrawable( Drawable *draw );				///< Clear "selected" status from Drawable
 	virtual void deselectAllDrawables();							///< Clear the "select" flag from all drawables
 	virtual Int getSelectCount() { return m_selectCount; }		///< Get count of currently selected drawables
@@ -461,13 +609,14 @@ public:  // ********************************************************************
 	virtual Bool isAnySelectedKindOf( KindOfType kindOf ) const;		///< is any selected object a kind of
 	virtual Bool isAllSelectedKindOf( KindOfType kindOf ) const;		///< are all selected objects a kind of
 
-	virtual void setRadiusCursor(RadiusCursorType r, const SpecialPowerTemplate* sp, WeaponSlotType wslot);
-	virtual void setRadiusCursorNone() { setRadiusCursor(RADIUSCURSOR_NONE, nullptr, PRIMARY_WEAPON); }
+	virtual void setRadiusCursor(RadiusCursorType r, const AsciiString& cr, const SpecialPowerTemplate* sp, WeaponSlotType wslot, Real radiusOverride = -1.0f);
+	virtual void setRadiusCursorNone() { setRadiusCursor(RADIUSCURSOR_NONE, nullptr, nullptr, PRIMARY_WEAPON); }
 
 	virtual void setInputEnabled( Bool enable );										///< Set the input enabled or disabled
 	virtual Bool getInputEnabled() { return m_inputEnabled; }	///< Get the current input status
 
 	virtual void disregardDrawable( Drawable *draw );				///< Drawable is being destroyed, clean up any UI elements associated with it
+	virtual void disregardDrawablePreserveGUI( Drawable *draw );	///< Drawable is being destroyed, clean up any UI elements associated with it, also preserve the GUI
 
 	virtual void preDraw();														///< Logic which needs to occur before the UI renders
 	virtual void draw() override = 0;													///< Render the in-game user interface
@@ -494,6 +643,10 @@ public:  // ********************************************************************
 	// INI file parsing
 	virtual const FieldParse* getFieldParse() const { return s_fieldParseTable; }
 
+	// Generic "RadiusCursor" parser: cursor type is the token after the keyword (e.g. "GUARD_AREA"),
+	// then the RadiusDecalTemplate fields; stores into m_radiusCursors[type].
+	static void parseRadiusCursor( INI* ini, void* instance, void* store, const void* userData );
+
 
 	//Provides a global way to determine whether or not we can issue orders to what we have selected.
 	Bool areSelectedObjectsControllable() const;
@@ -502,7 +655,7 @@ public:  // ********************************************************************
 	//Wrapper function that checks a specific action.
 	CanAttackResult getCanSelectedObjectsAttack( ActionType action, const Object *objectToInteractWith, SelectionRules rule, Bool additionalChecking = FALSE ) const;
 	Bool canSelectedObjectsDoAction( ActionType action, const Object *objectToInteractWith, SelectionRules rule, Bool additionalChecking = FALSE ) const;
-	Bool canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj ) const;
+	Bool canSelectedObjectsDoSpecialPower( const CommandButton *command, const Object *objectToInteractWith, const Drawable *drawableToInteractWith, const Coord3D *position, SelectionRules rule, UnsignedInt commandOptions, Object* ignoreSelObj, Bool checkSourceRequirements = TRUE ) const;
 	Bool canSelectedObjectsEffectivelyUseWeapon( const CommandButton *command, const Object *objectToInteractWith, const Coord3D *position, SelectionRules rule ) const;
 	Bool canSelectedObjectsOverrideSpecialPowerDestination( const Coord3D *loc, SelectionRules rule, SpecialPowerType spType = SPECIAL_INVALID ) const;
 
@@ -549,6 +702,9 @@ public:  // ********************************************************************
 	Bool isInAttackMoveToMode() const		{ return m_attackMoveToMode; }
 	void clearAttackMoveToMode()				{ m_attackMoveToMode = FALSE; }
 
+	Bool isInReverseMoveToMode() const;
+	void clearMoveStateIfDoOnce();
+
 	void setCameraRotateLeft( Bool set )		{ m_cameraRotatingLeft = set; }
 	void setCameraRotateRight( Bool set )		{ m_cameraRotatingRight = set; }
 	void setCameraZoomIn( Bool set )				{ m_cameraZoomingIn = set; }
@@ -584,6 +740,12 @@ public:  // ********************************************************************
 	void setDrawRMBScrollAnchor(Bool b) { m_drawRMBScrollAnchor = b; }
 	void setMoveRMBScrollAnchor(Bool b) { m_moveRMBScrollAnchor = b; }
 
+	static void parseCustomRadiusDecalDefinition(INI *ini);
+
+	void friend_setMouseCursor(Mouse::MouseCursor c, const AsciiString& cn, Int check) { setMouseCursor(c, cn, check); }
+
+	void getCurrentSelectedObjectIDs( std::vector<ObjectID>& objectIDs );
+
 private:
 	virtual Int getIdleWorkerCount();
 	virtual Object *findIdleWorker( Object *obj);
@@ -618,6 +780,8 @@ public:
 	virtual void DEBUG_addFloatingText(const AsciiString& text,const Coord3D * pos, Color color);
 #endif
 
+	const SpecialPowerTemplate* getTargetDesignatorPower();
+
 protected:
 	// snapshot methods
 	virtual void crc( Xfer *xfer ) override;
@@ -625,6 +789,11 @@ protected:
 	virtual void loadPostProcess() override;
 
 protected:
+
+	void spawnSpecialPowerLocationMarker( const Coord3D *loc, Bool isAnchor = FALSE );	///< spawn the optional client-only marker (model + one-shot FX) + radius decal at an accepted N-point pick; isAnchor selects the ANCHORED_AREA anchor cursor/radius
+	void destroySpecialPowerLocationMarkers();	///< remove all N-point special power marker drawables if present
+	void destroySpecialPowerLocationDecals();	///< remove all N-point special power radius decals if present
+	void resolveSpecialPowerRadiusCursor( const CommandButton *command, RadiusCursorType &outType, AsciiString &outCustomType, Real &outRadius );	///< phase-aware mouse radius cursor for ANCHORED_AREA (anchor vs target)
 
 	// ----------------------------------------------------------------------------------------------
 	// Protected Types ------------------------------------------------------------------------------
@@ -687,6 +856,9 @@ protected:
 	void handleBuildPlacements();													///< handle updating of placement icons based on mouse pos
 	void handleRadiusCursor();																	///< handle updating of "radius cursors" that follow the mouse pos
 
+	//void showDesignatorDecals(const SpecialPowerTemplate* powerTemplate);
+	//void hideDesignatorDecals();
+
 	void incrementSelectCount() { ++m_selectCount; }			///< Increase by one the running total of "selected" drawables
 	void decrementSelectCount() { --m_selectCount; }			///< Decrease by one the running total of "selected" drawables
 	virtual View *createView(bool dummy = false) = 0;								///< Factory for Views
@@ -698,7 +870,7 @@ protected:
 	void createControlBar();			///< create the control bar user interface
 	void createReplayControl();		///< create the replay control window
 
-	void setMouseCursor(Mouse::MouseCursor c);
+	void setMouseCursor(Mouse::MouseCursor c, const AsciiString& cursorName = AsciiString::TheEmptyString, Int checkString = 1);
 
 
 	void addMessageText( const UnicodeString& formattedMessage, const RGBColor *rgbColor = nullptr );  ///< internal workhorse for adding plain text for messages
@@ -710,6 +882,8 @@ protected:
 
 	void clearWorldAnimations();					///< delete all world animations
 	void updateAndDrawWorldAnimations();	///< update and draw visible world animations
+
+	Bool findCrateCollideCommandHint( const Object *obj, const Object *other, const GameMessage *msg, Bool &isParasite );
 
 	SuperweaponInfo* findSWInfo(Int playerIndex, const AsciiString& powerName, ObjectID id, const SpecialPowerTemplate *powerTemplate);
 
@@ -734,6 +908,11 @@ protected:
 	MoveHintStruct							m_moveHint[ MAX_MOVE_HINTS ];
 	Int													m_nextMoveHint;
 	const CommandButton *				m_pendingGUICommand;										///< GUI command that needs additional interaction from the user
+	std::vector<Coord3D>				m_pendingSpecialPowerLocations;					///< accepted target points for a NEED_N_TARGET_POS power (in click order)
+	Bool												m_hasSpecialPowerAreaAnchor;						///< TRUE once a RADIUS_ANCHORED_AREA anchor is captured
+	Coord3D											m_specialPowerAreaAnchor;								///< the RADIUS_ANCHORED_AREA anchor (constraint only, never delivered)
+	std::vector<Drawable*>			m_specialPowerLocationMarkers;					///< client-only marker drawables shown at each accepted point/anchor
+	std::vector<RadiusDecal*>		m_specialPowerLocationDecals;						///< client-only radius decals shown at each accepted point/anchor (heap-owned; RadiusDecal copy is broken)
 	BuildProgress								m_buildProgress[ MAX_BUILD_PROGRESS ];	///< progress for building units
 	const ThingTemplate *				m_pendingPlaceType;											///< type of built thing we're trying to place
 	ObjectID										m_pendingPlaceSourceObjectID;						///< source object of the thing constructing the item
@@ -745,6 +924,8 @@ protected:
 	Int													m_selectCount;													///< Number of objects currently "selected"
 	Int													m_maxSelectCount;												///< Max number of objects to select
 	UnsignedInt									m_frameSelectionChanged;								///< Frame when the selection last changed.
+
+	ObjectID									m_lastSelectedFrontID;												///< Last selected object in front
 
   Int                         m_duringDoubleClickAttackMoveGuardHintTimer; ///< Frames left to draw the doubleClickFeedbackTimer
   Coord3D                     m_duringDoubleClickAttackMoveGuardHintStashedPosition;
@@ -934,6 +1115,11 @@ protected:
 	RadiusDecalTemplate					m_radiusCursors[RADIUSCURSOR_COUNT];
 	RadiusDecal									m_curRadiusCursor;
 	RadiusCursorType						m_curRcType;
+	Real										m_curRcRadiusOverride;					///< last radius override applied to m_curRadiusCursor (-1 = SpecialPower default); guards phase rebuilds
+
+	typedef std::hash_map< NameKeyType, RadiusDecalTemplate, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > RadiusDecalTemplateMap;
+	RadiusDecalTemplateMap m_customRadiusCursors;
+	AsciiString			   m_curCusRcType;
 
 	//Floating Text Data
 	FloatingTextList						m_floatingTextList;				///< Our list of floating text
@@ -970,6 +1156,11 @@ protected:
 	Int													m_currentIdleWorkerDisplay;
 
 	DrawableID									m_soloNexusSelectedDrawableID;  ///< The drawable of the nexus, if only one angry mob is selected, otherwise, null
+
+	// UI Decals
+	//Bool							m_showDesignatorDecals;
+	const CommandButton* m_designatorCommand;
+
 
 	// ----------------------------------------------------------------------------------------------
 	// STATIC Protected Data -------------------------------------------------------------------------------

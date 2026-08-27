@@ -527,7 +527,14 @@ Object *AIPlayer::buildStructureWithDozer(const ThingTemplate *bldgPlan, BuildLi
 	}
 	// construct the building
 	Coord3D pos = *info->getLocation();
-	pos.z += TheTerrainLogic->getGroundHeight(pos.x, pos.y);
+	if (bldgPlan->isKindOf(KINDOF_SHIPYARD)) {
+		Real waterZ, terrainZ;
+		TheTerrainLogic->isUnderwater(pos.x, pos.y, &waterZ, &terrainZ);
+		pos.z = std::max(waterZ, terrainZ);
+	}
+	else {
+		pos.z += TheTerrainLogic->getGroundHeight(pos.x, pos.y);
+	}
 	if( !dozer->getAIUpdateInterface() )
 	{
 		return nullptr;
@@ -619,6 +626,7 @@ Object *AIPlayer::buildStructureWithDozer(const ThingTemplate *bldgPlan, BuildLi
 
 	TheTerrainVisual->removeAllBibs();	// isLocationLegalToBuild adds bib feedback, turn it off.  jba.
 	if (!TheAI->pathfinder()->clientSafeQuickDoesPathExist(dozer->getAI()->getLocomotorSet(),
+		dozer->getRequiredBridgeHeight(),
 		dozer->getPosition(), &pos)) {
 		AsciiString bldgName = bldgPlan->getName();
 		bldgName.concat(" - Dozer unable to reach building.  Teleporting.");
@@ -1763,6 +1771,18 @@ void AIPlayer::buildSpecificAIBuilding(const AsciiString &thingName)
 }
 
 // ------------------------------------------------------------------------------------------------
+/** Build a structure at shipyard location */
+// ------------------------------------------------------------------------------------------------
+void AIPlayer::buildAIShipyard(const AsciiString &thingName)
+{
+	//
+	AsciiString teamStr = "Error : Solo ai doesn't support BuildShipyard. '";
+	teamStr.concat(thingName);
+	teamStr.concat("' not built.");
+	TheScriptEngine->AppendDebugMessage(teamStr, false);
+}
+
+// ------------------------------------------------------------------------------------------------
 /** Build an upgrade. */
 // ------------------------------------------------------------------------------------------------
 void AIPlayer::buildUpgrade(const AsciiString &upgrade)
@@ -1827,7 +1847,7 @@ void AIPlayer::buildUpgrade(const AsciiString &upgrade)
 			for( Int j = 0; j < MAX_COMMANDS_PER_SET; j++ )
 			{
 				//Get the command button.
-				const CommandButton *commandButton = commandSet->getCommandButton(j);
+				const CommandButton *commandButton = factory->getCommandButtonForSlot(j, commandSet); 
 				if (commandButton==nullptr) continue;
 				if (commandButton->getName().isEmpty() )	continue;
 				if (commandButton->getUpgradeTemplate() == nullptr )	continue;

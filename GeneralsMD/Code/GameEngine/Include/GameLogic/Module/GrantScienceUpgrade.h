@@ -73,6 +73,7 @@ public:
 protected:
 	virtual void upgradeImplementation( ) override; ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 private:
 

@@ -36,16 +36,9 @@
 class TransportContainModuleData : public OpenContainModuleData
 {
 public:
-	struct InitialPayload
-	{
-		AsciiString name;
-		Int count;
-	};
-
 	Int								m_slotCapacity;								///< max units that can be inside us
 	Real							m_exitPitchRate;
 	AsciiString				m_exitBone;
-	InitialPayload		m_initialPayload;
 	Real							m_healthRegen;
 	UnsignedInt				m_exitDelay;
 	Bool							m_scatterNearbyOnExit;
@@ -56,11 +49,12 @@ public:
 	Bool							m_resetMoodCheckTimeOnExit;
 	Bool							m_destroyRidersWhoAreNotFreeToExit;
 	Bool							m_isDelayExitInAir;
+	Bool							m_allowOtherTeamUnitsInside;
 
 	TransportContainModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
-	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	//static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 
 };
 
@@ -85,7 +79,9 @@ public:
 
 	virtual Bool isRiderChangeContain() const override { return FALSE; }
   virtual Bool isSpecialOverlordStyleContainer() const override {return FALSE;}
+	virtual Bool killPilotDoesNotKill() const override { return TRUE; }
 
+	virtual Int getRawContainMax() const override;
 	virtual Int getContainMax() const override;
 
 	virtual Int getExtraSlotsInUse() override { return m_extraSlotsInUse; }///< Transports have the ability to carry guys how take up more than spot.
@@ -95,6 +91,8 @@ public:
 	virtual void unreserveDoorForExit( ExitDoorType exitDoor ) override;
 	virtual Bool isDisplayedOnControlBar() const override {return TRUE;}///< Does this container display its contents on the ControlBar?
 
+	virtual void doUpgradeChecks() override;
+
 protected:
 
 	// exists primarily for TransportContain to override
@@ -102,14 +100,12 @@ protected:
 	virtual Bool isSpecificRiderFreeToExit(Object* obj);
 	virtual Bool isPassengerAllowedToFire( ObjectID id = INVALID_ID ) const override;	///< Hey, can I shoot out of this container?
 
-	virtual void createPayload();
+	virtual void createPayload() override;
 	void letRidersUpgradeWeaponSet();
 
-	Bool m_payloadCreated;
-
-private:
-
+	//Bool m_payloadCreated;
 	Int m_extraSlotsInUse;
+
 	UnsignedInt m_frameExitNotBusy;
 
 };

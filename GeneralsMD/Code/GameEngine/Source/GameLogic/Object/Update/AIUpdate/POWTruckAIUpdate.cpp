@@ -168,6 +168,9 @@ void POWTruckAIUpdate::aiDoCommand( const AICommandParms *parms )
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime POWTruckAIUpdate::update()
 {
+	// Suspend POW collection tasks while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
 
 	// we are ultra accurate
 	if( getCurLocomotor() )
@@ -813,7 +816,8 @@ void POWTruckAIUpdate::unloadPrisonersToPrison( Object *prison )
 
 				pos.z += prison->getGeometryInfo().getMaxHeightAbovePosition();
 				moneyString.format( TheGameText->fetch( "GUI:AddCash" ), prisonUnloadData.bounty );
-				TheInGameUI->addFloatingText( moneyString, &pos, moneyColor );
+				if(us->showCashText())
+					TheInGameUI->addFloatingText( moneyString, &pos, moneyColor );
 
 			}
 

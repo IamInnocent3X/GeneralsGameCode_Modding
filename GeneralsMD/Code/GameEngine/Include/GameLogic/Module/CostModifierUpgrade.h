@@ -74,6 +74,20 @@ class Player;
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 
+enum BonusStackingType CPP_11(: Int)
+{
+	NO_STACKING = 0,  // Default behaviour: Values of different percentage stack
+	OTHER_TYPE = 1,  // Values from the different source object types stack.
+	SAME_TYPE = 2   // Values from the same type of source object stack.
+};
+static const char* TheBonusStackingTypeNames[] =
+{
+	"DIFFERENT_VALUE",
+	"OTHER_TYPE",
+	"SAME_TYPE",
+	nullptr
+};
+
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 class CostModifierUpgradeModuleData : public UpgradeModuleData
@@ -87,6 +101,8 @@ public:
 
 	Real m_percentage;
 	KindOfMaskType m_kindOf;
+	Bool m_isOneShot;
+	BonusStackingType m_stackingType;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -106,9 +122,14 @@ public:
 	virtual void onDelete() override;																///< we have some work to do when this module goes away
 	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;
 
+	void doCostModifier(Bool isAdd);
+
 protected:
 
 	virtual void upgradeImplementation() override; ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
+private:
+	Bool m_hasExecuted;
 };

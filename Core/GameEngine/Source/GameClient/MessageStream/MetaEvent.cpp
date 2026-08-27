@@ -144,6 +144,8 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STOP",																			GameMessage::MSG_META_STOP },
 	{ "DEPLOY",																		GameMessage::MSG_META_DEPLOY },
 	{ "CREATE_FORMATION",													GameMessage::MSG_META_CREATE_FORMATION },
+	{ "MOVE_IN_FORMATION",													GameMessage::MSG_META_MOVE_IN_FORMATION },
+	{ "REVERSE_MOVE",														GameMessage::MSG_META_REVERSE_MOVE },
 	{ "FOLLOW",																		GameMessage::MSG_META_FOLLOW },
 	{ "CHAT_PLAYERS",															GameMessage::MSG_META_CHAT_PLAYERS },
 	{ "CHAT_ALLIES",															GameMessage::MSG_META_CHAT_ALLIES },
@@ -192,6 +194,8 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STEP_FRAME",																GameMessage::MSG_META_STEP_FRAME },
 	{ "STEP_FRAME_ALT",														GameMessage::MSG_META_STEP_FRAME_ALT },
 	{ "DEMO_INSTANT_QUIT",												GameMessage::MSG_META_DEMO_INSTANT_QUIT },
+
+	{ "COMMAND_SET_MODIFIER",												GameMessage::MSG_META_COMMAND_SET_MODIFIER },
 
 #if defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)//may be defined in GameCommon.h
 	{ "CHEAT_RUNSCRIPT1",								        	GameMessage::MSG_CHEAT_RUNSCRIPT1 },
@@ -358,6 +362,7 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ nullptr, 0	}
 };
 
+constexpr const Int OFFSETS[6] = {1, 2, 3, 4, 5, 6};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -373,18 +378,81 @@ static const FieldParse TheMetaMapFieldParseTable[] =
 	{ "Description",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_description ) },
 	{ "DisplayName",				INI::parseAndTranslateLabel,		nullptr, offsetof( MetaMapRec, m_displayName ) },
 
+	{ "CommandModifierKeys", MetaMap::parseAsciiStringVectorForCommandKey, &(OFFSETS[0]), 0 },
+	{ "CommandModifierNeedsButtonEnabled", MetaMap::parseBoolForCommandKey, &(OFFSETS[1]), 0 },
+	{ "CommandModifierIsSingular", MetaMap::parseBoolForCommandKey, &(OFFSETS[2]), 0 },
+	{ "CommandModifierIsRandom", MetaMap::parseBoolForCommandKey, &(OFFSETS[3]), 0 },
+	{ "CommandModifierStopsAtEnd", MetaMap::parseBoolForCommandKey, &(OFFSETS[4]), 0 },
+	{ "CommandButtonsToTrigger", MetaMap::parseAsciiStringVectorForCommandKey, &(OFFSETS[5]), 0 },
+
 	{ nullptr,									nullptr,														nullptr, 0 }
 
 };
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::parseBoolForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData )
+{
+	Int offset = *(const Int*)userData;
+	TheMetaMap->registerBoolForCommandKey(INI::scanBool(ini->getNextToken()), offset);
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::registerBoolForCommandKey(Bool data, Int offset)
+{
+	switch(offset)
+	{
+		case 2:
+			modifierKeyParser.m_keyRequireEnabled = data;
+			break;
+		case 3:
+			modifierKeyParser.m_isSingular = data;
+			break;
+		case 4:
+			modifierKeyParser.m_isRandom = data;
+			break;
+		case 5:
+			modifierKeyParser.m_stopsAtEnd = data;
+			break;
+		default:
+			break;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::parseAsciiStringVectorForCommandKey( INI* ini, void * /*instance*/, void * /*store*/, const void* userData )
+{
+	Int offset = *(const Int*)userData;
+	std::vector<AsciiString> asv;
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+		TheMetaMap->registerAsciiStringForCommandKey(AsciiString(token), offset);
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::registerAsciiStringForCommandKey(const AsciiString& data, Int offset)
+{
+	switch(offset)
+	{
+		case 1:
+			modifierKeyParser.m_keys.push_back(data);
+			break;
+		case 6:
+			modifierKeyParser.m_commandButtonsToTrigger.push_back(data);
+			break;
+		default:
+			break;
+	}
+}
 
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////////////////////////
 
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-MetaEventTranslator::MetaEventTranslator() :
+MetaEventTranslator::MetaEventTranslator() : 
 	m_lastKeyDown(MK_NONE),
-	m_lastModState(0)
+	m_lastKeyDownTime(0),
+	m_lastNonRepeatKeyDown(MK_NONE),
+	m_lastNonRepeatKeyDownTime(0)
 {
 	for (Int i = 0; i < NUM_MOUSE_BUTTONS; ++i) {
 		m_nextUpShouldCreateDoubleClick[i] = FALSE;
@@ -577,35 +645,56 @@ void MetaEventTranslator::onKeyEvent(const GameMessage *msg, GameMessageDisposit
 		if (!isMessageUsable(map->m_usableIn))
 			continue;
 
-		// check for the special case of mods-only-changed.
-		if (
-				map->m_key == MK_NONE &&
-				newModState != m_lastModState &&
-				(
-					(map->m_transition == UP && map->m_modState == m_lastModState) ||
-					(map->m_transition == DOWN && map->m_modState == newModState)
-				)
-			)
-		{
-			//DEBUG_LOG(("Frame %d: MetaEventTranslator::translateGameMessage() Mods-only change: %s", TheGameLogic->getFrame(), findGameMessageNameByType(map->m_meta)));
-			/*GameMessage *metaMsg =*/ TheMessageStream->appendMessage(map->m_meta);
-			disp = DESTROY_MESSAGE;
-			break;
+				const Bool isMatchingKeyCombo = map->m_key == keyDown && map->m_modState == keyDownModState;
+				const Bool isTransitionUp = map->m_transition == UP;
+
+				if (!(isMatchingKeyCombo && isTransitionUp))
+					continue;
+
+				if(map->m_meta == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+				{
+					GameMessage *metaMsg = TheMessageStream->appendMessage(map->m_meta);
+					metaMsg->appendIntegerArgument( (Int)map->m_commandModifierID );
+				}
+				else
+				{
+					TheMessageStream->appendMessage(map->m_meta);
+				}
+				disp = DESTROY_MESSAGE;
+			}
 		}
+	}
+}
 
-		// ok, now check for "normal" key transitions.
-		if (
-				map->m_key == key &&
-				map->m_modState == newModState &&
-				(
-					(map->m_transition == UP && (systemKeyState & KEY_STATE_UP)) ||
-					(map->m_transition == DOWN && (systemKeyState & KEY_STATE_DOWN)) //||
-					//(map->m_transition == DOUBLEDOWN && (systemKeyState & KEY_STATE_DOWN) && m_lastKeyDown == key)
-				)
-			)
+//-------------------------------------------------------------------------------------------------
+void MetaEventTranslator::onKeyPressed(GameMessageDisposition &disp, Int systemKeyState, MappableKeyType keyType, MappableKeyModState keyModState)
+{
+	Bool triggeredDoubleDown = FALSE;
+
+	// TheSuperHackers @info The regular key handler only triggers events when the mapped key is pressed,
+	// not when the modifier (CTRL, ALT, SHIFT) is pressed, unless the key is MK_NONE.
+
+	for (const MetaMapRec *map = TheMetaMap->getFirstMetaMapRec(); map; map = map->m_next)
+	{
+		if (!isMessageUsable(map->m_usableIn))
+			continue;
+
+		// IamInnocent 15/8/26 - Reworked & Implemented Double Down function for SH Commit
+		Bool TransitionIsDoubleDown = map->m_transition == DOUBLEDOWN || map->m_transition == DOUBLEDOWN_NO_REPEAT;
+		Bool isDoingDoubleDown = (systemKeyState & KEY_STATE_DOWN) && checkIsDoingDoubleDown(keyType, map->m_transition);
+
+		const Bool isMatchingKeyCombo = map->m_key == keyType && map->m_modState == keyModState;
+		const Bool isMatchingTransitionUp = map->m_transition == UP && (systemKeyState & KEY_STATE_UP) != 0;
+		const Bool isMatchingTransitionDown = map->m_transition == DOWN && (systemKeyState & KEY_STATE_DOWN) != 0 && !isDoingDoubleDown;
+		const Bool isMatchingTransitionDoubleDown = TransitionIsDoubleDown && isDoingDoubleDown;
+
+		if (isMatchingKeyCombo && (isMatchingTransitionUp || isMatchingTransitionDown || isMatchingTransitionDoubleDown))
 		{
+			// Clear the KeyDownTime for DOUBLEDOWN
+			if(TransitionIsDoubleDown)
+				triggeredDoubleDown = TRUE;
 
-			if (systemKeyState & KEY_STATE_AUTOREPEAT)
+			if( systemKeyState & KEY_STATE_AUTOREPEAT )
 			{
 				// if it's an autorepeat of a "known" key, don't generate the meta-event,
 				// but DO eat the keystroke so no one else can mess with it
@@ -636,10 +725,14 @@ void MetaEventTranslator::onKeyEvent(const GameMessage *msg, GameMessageDisposit
 			      break;
 	      }
 
-
-				/*GameMessage *metaMsg =*/ TheMessageStream->appendMessage(map->m_meta);
+				GameMessage *metaMsg = TheMessageStream->appendMessage(map->m_meta);
 				//DEBUG_LOG(("Frame %d: MetaEventTranslator::translateGameMessage() normal: %s", TheGameLogic->getFrame(), findGameMessageNameByType(map->m_meta)));
+				if(map->m_meta == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+				{
+					metaMsg->appendIntegerArgument( (Int)map->m_commandModifierID );
+				}
 			}
+
 			disp = DESTROY_MESSAGE;
 			break;
 		}
@@ -651,7 +744,6 @@ void MetaEventTranslator::onKeyEvent(const GameMessage *msg, GameMessageDisposit
 
 
 #ifdef DUMP_ALL_KEYS_TO_LOG
-
 	          WideChar Wkey = TheKeyboard->getPrintableKey(key, 0);
 	          UnicodeString uKey;
 	          uKey.set(&Wkey);
@@ -660,11 +752,103 @@ void MetaEventTranslator::onKeyEvent(const GameMessage *msg, GameMessageDisposit
   	          DEBUG_LOG(("^%s ", aKey.str()));
 #endif
 
-  }
+		registerSystemDoubleDown(triggeredDoubleDown, systemKeyState, keyType);
 
+		if (keyModState != NONE)
+		{
+			// Remember that this key and mod state are pressed.
+			m_keyDownInfos[keyType].setKeyModState(keyModState);
+		}
+	}
+	else
+	{
+		if (keyModState != NONE)
+		{
+			DEBUG_ASSERTCRASH(keyType != MK_NONE, ("Key is expected to be not MK_NONE"));
 
+			// Forget that this key and mod state are pressed.
+			m_keyDownInfos[keyType].clearKeyModState(keyModState);
+		}
+	}
+}
 
-  m_lastModState = newModState;
+//-------------------------------------------------------------------------------------------------
+MappableKeyType MetaEventTranslator::getActionKeyType(Int systemKey)
+{
+	switch (systemKey)
+	{
+	case KEY_LCTRL:
+	case KEY_RCTRL:
+	case KEY_LSHIFT:
+	case KEY_RSHIFT:
+	case KEY_LALT:
+	case KEY_RALT:
+		return MK_NONE;
+	default:
+		return (MappableKeyType)systemKey;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+MappableKeyModState MetaEventTranslator::getKeyModState(Int systemKeyState)
+{
+	// for our purposes here, we don't care to distinguish between right and left keys,
+	// so just fudge a little to simplify things.
+	Int keyModState = 0;
+
+	if( systemKeyState & KEY_STATE_CONTROL )
+	{
+		keyModState |= CTRL;
+	}
+
+	if( systemKeyState & KEY_STATE_SHIFT )
+	{
+		keyModState |= SHIFT;
+	}
+
+	if( systemKeyState & KEY_STATE_ALT )
+	{
+		keyModState |= ALT;
+	}
+
+	return (MappableKeyModState)keyModState;
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaEventTranslator::registerSystemDoubleDown(Bool triggeredDoubleDown, Int systemKeyState, MappableKeyType keyType)
+{
+	if(triggeredDoubleDown)
+	{
+		m_lastKeyDownTime = 0;
+		m_lastNonRepeatKeyDownTime = 0;
+	}
+	else
+	{
+		Int timenow = timeGetTime();
+		if(!(systemKeyState & KEY_STATE_AUTOREPEAT))
+		{
+			m_lastNonRepeatKeyDown = keyType;
+			m_lastNonRepeatKeyDownTime = timenow + 500;
+		}
+		m_lastKeyDown = keyType;
+		m_lastKeyDownTime = timenow + 500;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool MetaEventTranslator::checkIsDoingDoubleDown(MappableKeyType keyType, MappableKeyTransition transitionType) const
+{
+	Int timenow = timeGetTime();
+	switch(transitionType)
+	{
+		case DOUBLEDOWN:
+			return m_lastKeyDown == keyType && m_lastKeyDownTime >= timenow && TheMetaMap->hasDoubleDownKey(keyType);
+			break;
+		case DOUBLEDOWN_NO_REPEAT:
+			return m_lastNonRepeatKeyDown == keyType && m_lastNonRepeatKeyDownTime >= timenow && TheMetaMap->hasDoubleDownKey(keyType);
+			break;
+	}
+	return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -675,6 +859,17 @@ void MetaEventTranslator::onKeyEvent(const GameMessage *msg, GameMessageDisposit
 MetaMap::MetaMap() :
 	m_metaMaps(nullptr)
 {
+	m_doubleDownKeysVec.clear();
+	m_cmdModKeyVector.clear();
+	m_nextCmdModKeyID = INVALID_KEY_ID;
+	for(int i = 0; i < MOUSE_STATE_COUNT; i++)
+	{
+		m_mouseModifierKeysUniversal[i].Keys.clear();
+		m_mouseModifierKeysUniversal[i].KeysButtonNeedsEnable.clear();
+		m_mouseModifierKeysUniversal[i].KeysSingular.clear();
+		m_mouseModifierKeysUniversal[i].KeysRandom.clear();
+		m_mouseModifierKeysSpecific[i].clear();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -685,6 +880,17 @@ MetaMap::~MetaMap()
 		MetaMapRec *next = m_metaMaps->m_next;
 		deleteInstance(m_metaMaps);
 		m_metaMaps = next;
+	}
+	m_doubleDownKeysVec.clear();
+	m_cmdModKeyVector.clear();
+	m_nextCmdModKeyID = INVALID_KEY_ID;
+	for(int i = 0; i < MOUSE_STATE_COUNT; i++)
+	{
+		m_mouseModifierKeysUniversal[i].Keys.clear();
+		m_mouseModifierKeysUniversal[i].KeysButtonNeedsEnable.clear();
+		m_mouseModifierKeysUniversal[i].KeysSingular.clear();
+		m_mouseModifierKeysUniversal[i].KeysRandom.clear();
+		m_mouseModifierKeysSpecific[i].clear();
 	}
 }
 
@@ -702,10 +908,17 @@ GameMessage::Type MetaMap::findGameMessageMetaType(const char* name)
 //-------------------------------------------------------------------------------------------------
 MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 {
-	for (MetaMapRec *map = m_metaMaps; map; map = map->m_next)
+	if(t == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
 	{
-		if (map->m_meta == t)
-			return map;
+		TheMetaMap->modifierKeyParser.reset();
+	}
+	else
+	{
+		for (MetaMapRec *map = m_metaMaps; map; map = map->m_next)
+		{
+			if (map->m_meta == t)
+				return map;
+		}
 	}
 
 	// not found.. create a new one.
@@ -718,6 +931,7 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 	m->m_category = CATEGORY_MISC;
 	m->m_description.clear();
 	m->m_displayName.clear();
+	m->m_commandModifierID = INVALID_KEY_ID;
 	m->m_next = m_metaMaps;
 	m_metaMaps = m;
 
@@ -739,6 +953,18 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 		throw INI_INVALID_DATA;
 
 	ini->initFromINI(map, TheMetaMapFieldParseTable);
+
+	if(t == GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+	{
+		if(TheMetaMap->modifierKeyParser.m_keys.empty())
+			throw INI_INVALID_DATA;
+
+		map->m_commandModifierID = TheMetaMap->allocateCommandModifierKeyID();
+		TheMetaMap->registerModifierKeysList(map->m_commandModifierID);
+	}
+
+	if(map->m_transition == DOUBLEDOWN || map->m_transition == DOUBLEDOWN_NO_REPEAT)
+		TheMetaMap->pushDoubleDownKeyList(map->m_key);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -977,3 +1203,204 @@ void MetaMap::verifyMetaMap()
 	MetaMap::parseMetaMap(ini);
 }
 
+//-------------------------------------------------------------------------------------------------
+void MetaMap::pushDoubleDownKeyList(MappableKeyType m)
+{
+	for(std::vector<MappableKeyType>::const_iterator it = m_doubleDownKeysVec.begin(); it != m_doubleDownKeysVec.end(); ++it)
+	{
+		if ((*it) == m)
+			return;
+	}
+	m_doubleDownKeysVec.push_back(m);
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool MetaMap::hasDoubleDownKey(MappableKeyType m) const
+{
+	for(std::vector<MappableKeyType>::const_iterator it = m_doubleDownKeysVec.begin(); it != m_doubleDownKeysVec.end(); ++it)
+	{
+		if ((*it) == m)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
+CommandModifierID MetaMap::allocateCommandModifierKeyID()
+{
+	/// @todo Find unused value in current command key modifier set
+	m_nextCmdModKeyID = (CommandModifierID)((UnsignedInt)m_nextCmdModKeyID + 1);
+	CommandModifierID ret = m_nextCmdModKeyID;
+	return ret;
+}
+
+// ------------------------------------------------------------------------------------------------
+void MetaMap::registerModifierKeysList( CommandModifierID keyID )
+{
+	// sanity
+	if( keyID == INVALID_KEY_ID )
+		return;
+
+	ModifierKeyList keyList;
+
+	if( m_cmdModKeyVector.empty() )
+		m_cmdModKeyVector.push_back(keyList); // dummy data as first unit;
+
+	keyList.KeyRequireEnabled = modifierKeyParser.m_keyRequireEnabled;
+	keyList.IsSingular = modifierKeyParser.m_isSingular;
+	keyList.IsRandom = modifierKeyParser.m_isRandom;
+	keyList.StopsAtEnd = modifierKeyParser.m_stopsAtEnd;
+	keyList.Keys = modifierKeyParser.m_keys;
+	keyList.CommandButtonsToTrigger = modifierKeyParser.m_commandButtonsToTrigger;
+
+	while( keyID >= m_cmdModKeyVector.size() )
+		m_cmdModKeyVector.push_back(keyList);
+
+	if(m_cmdModKeyVector[keyID].Keys != keyList.Keys)
+		DEBUG_CRASH(("Should never happen."));
+}
+
+//-------------------------------------------------------------------------------------------------
+MouseModifierKeysList MetaMap::getMouseCommandModifiersMeta( MouseState mouseInput, const AsciiString& commandButtonName ) const
+{
+	DEBUG_ASSERTCRASH(mouseInput > STATE_NONE && mouseInput < MOUSE_STATE_COUNT, ("Invalid Mouse Input."));
+
+	MouseModifierKeysList keys = m_mouseModifierKeysUniversal[mouseInput];
+
+	MouseModifierKeySpecificMap::const_iterator it = m_mouseModifierKeysSpecific[mouseInput].find(commandButtonName);
+	if(it != m_mouseModifierKeysSpecific[mouseInput].end())
+	{
+		std::vector<AsciiString>::const_iterator it_s;
+		for(it_s = it->second.Keys.begin(); it_s != it->second.Keys.end(); ++it_s)
+			keys.Keys.push_back(*it_s);
+
+		for(it_s = it->second.KeysButtonNeedsEnable.begin(); it_s != it->second.KeysButtonNeedsEnable.end(); ++it_s)
+			keys.KeysButtonNeedsEnable.push_back(*it_s);
+
+		for(it_s = it->second.KeysSingular.begin(); it_s != it->second.KeysSingular.end(); ++it_s)
+			keys.KeysSingular.push_back(*it_s);
+
+		for(it_s = it->second.KeysRandom.begin(); it_s != it->second.KeysRandom.end(); ++it_s)
+			keys.KeysRandom.push_back(*it_s);
+
+		for(it_s = it->second.KeysStopsAtEnd.begin(); it_s != it->second.KeysStopsAtEnd.end(); ++it_s)
+			keys.KeysStopsAtEnd.push_back(*it_s);
+	}
+
+	return keys;
+}
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void INI::parseMouseCommandModifierDefinition(INI* ini)
+{
+	MetaMap::parseMouseCommandModifierDefinition(ini);
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::parseMouseCommandModifierDefinition(INI* ini)
+{
+	TheMetaMap->modifierKeyParser.reset();
+	ModifierKeyTemplate::parseMouseModifierKeyTemplate(ini, nullptr, &TheMetaMap->modifierKeyParser, nullptr);
+	TheMetaMap->doMouseCommandModifierParsing();
+}
+
+// ------------------------------------------------------------------------------------------------
+/*static*/ void ModifierKeyTemplate::parseMouseModifierKeyTemplate(INI* ini, void *instance, void * store, const void* /*userData*/)
+{
+	static const FieldParse myFieldParse[] =
+	{
+		{ "MouseState", INI::parseLookupList,	MouseStateNames, offsetof( ModifierKeyTemplate, m_mouseState ) },
+		{ "ModifierKeys", INI::parseAsciiStringVectorAppend, nullptr, offsetof( ModifierKeyTemplate, m_keys ) },
+		{ "NeedsButtonEnabled", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_keyRequireEnabled ) },
+		{ "IsSingular", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_isSingular ) },
+		{ "IsRandom", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_isRandom ) },
+		{ "StopsAtEnd", INI::parseBool, nullptr, offsetof( ModifierKeyTemplate, m_stopsAtEnd ) },
+		{ "CommandButtonsToTrigger", INI::parseAsciiStringVector, nullptr, offsetof( ModifierKeyTemplate, m_commandButtonsToTrigger ) },
+
+		{ nullptr, nullptr, nullptr, 0 }
+	};
+
+	ini->initFromINI(store, myFieldParse);
+}
+
+//-------------------------------------------------------------------------------------------------
+void MetaMap::doMouseCommandModifierParsing()
+{
+	if(modifierKeyParser.m_mouseState <= STATE_NONE || modifierKeyParser.m_mouseState >= MOUSE_STATE_COUNT)
+	{
+		DEBUG_CRASH(("Mouse Command Modifier does not have a State declared."));
+		throw INI_INVALID_DATA;
+	}
+
+	if(modifierKeyParser.m_keys.empty())
+	{
+		DEBUG_CRASH(("Mouse Command Modifier does not have key(s) declared."));
+		throw INI_INVALID_DATA;
+	}
+
+	Bool keyRequireEnable = modifierKeyParser.m_keyRequireEnabled;
+	Bool isSingular = modifierKeyParser.m_isSingular;
+	Bool isRandom = modifierKeyParser.m_isRandom;
+	Bool stopsAtEnd = modifierKeyParser.m_stopsAtEnd;
+
+	MouseState mouseState = modifierKeyParser.m_mouseState;
+	std::vector<AsciiString> keys = modifierKeyParser.m_keys;
+	std::vector<AsciiString> commandButtonsToTrigger = modifierKeyParser.m_commandButtonsToTrigger;
+	std::vector<AsciiString>::iterator it_s;
+
+	// Register the Keys List onto relevant lists
+	if(commandButtonsToTrigger.empty())
+	{
+		for(it_s = keys.begin(); it_s != keys.end(); ++it_s)
+		{
+			m_mouseModifierKeysUniversal[mouseState].Keys.push_back(*it_s);
+
+			if(keyRequireEnable)
+				m_mouseModifierKeysUniversal[mouseState].KeysButtonNeedsEnable.push_back(*it_s);
+			if(isSingular)
+				m_mouseModifierKeysUniversal[mouseState].KeysSingular.push_back(*it_s);
+			if(isRandom)
+				m_mouseModifierKeysUniversal[mouseState].KeysRandom.push_back(*it_s);
+			if(stopsAtEnd)
+				m_mouseModifierKeysUniversal[mouseState].KeysStopsAtEnd.push_back(*it_s);
+		}
+	}
+	else
+	{
+		for(std::vector<AsciiString>::const_iterator it_command = commandButtonsToTrigger.begin(); it_command != commandButtonsToTrigger.end(); ++it_command)
+		{
+			MouseModifierKeySpecificMap::iterator it = m_mouseModifierKeysSpecific[mouseState].find(*it_command);
+			if(it != m_mouseModifierKeysSpecific[mouseState].end())
+			{
+				for(it_s = keys.begin(); it_s != keys.end(); ++it_s)
+				{
+					it->second.Keys.push_back(*it_s);
+
+					if(keyRequireEnable)
+						it->second.KeysButtonNeedsEnable.push_back(*it_s);
+					if(isSingular)
+						it->second.KeysSingular.push_back(*it_s);
+					if(isRandom)
+						it->second.KeysRandom.push_back(*it_s);
+					if(stopsAtEnd)
+						it->second.KeysStopsAtEnd.push_back(*it_s);
+				}
+			}
+			else
+			{
+				MouseModifierKeysList keysList;
+				keysList.Keys = keys;
+				if(keyRequireEnable)
+					keysList.KeysButtonNeedsEnable = keys;
+				if(isSingular)
+					keysList.KeysSingular = keys;
+				if(isRandom)
+					keysList.KeysRandom = keys;
+				if(stopsAtEnd)
+					keysList.KeysStopsAtEnd = keys;
+
+				m_mouseModifierKeysSpecific[mouseState][(*it_command)] = keysList;
+			}
+		}
+	}
+}

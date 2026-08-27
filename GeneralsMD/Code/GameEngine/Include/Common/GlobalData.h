@@ -35,6 +35,7 @@
 #include "Common/GameMemory.h"
 #include "Common/SubsystemInterface.h"
 #include "GameClient/Color.h"
+#include "GameClient/TintStatus.h"
 #include "Common/STLTypedefs.h"
 #include "Common/Money.h"
 
@@ -47,6 +48,10 @@ class INI;
 class WeaponBonusSet;
 enum BodyDamageType CPP_11(: Int);
 enum AIDebugOptions CPP_11(: Int);
+enum ObjectStatusTypes CPP_11(: Int);
+enum WeaponBonusConditionType CPP_11(: Int);
+typedef UnsignedInt DeathTypeFlags;
+//enum DrawableColorTint CPP_11(: Int);
 
 // PUBLIC /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -98,6 +103,20 @@ public:
 		RGBColor ambient;
 		RGBColor diffuse;
 		Coord3D lightPos;
+	};
+
+	struct TrackerBonusCT
+	{
+		WeaponBonusConditionType bonus;
+		std::vector<ObjectStatusTypes> status;
+		std::vector<AsciiString> c_status;
+	};
+
+	struct TrackerCustomBonusCT
+	{
+		AsciiString bonus;
+		std::vector<ObjectStatusTypes> status;
+		std::vector<AsciiString> c_status;
 	};
 
 	//-----------------------------------------------------------------------------------------------
@@ -220,6 +239,8 @@ public:
 	Real m_ammoPipScaleFactor;
 	Real m_containerPipScaleFactor;
 
+	Real m_progressBarYOffset;
+
 	UnsignedInt m_historicDamageLimit;
 
 	//Settings for terrain tracks left by vehicles with treads or wheels
@@ -329,6 +350,8 @@ public:
 	// Latency insertion, packet loss for network debugging
 	Int m_netMinPlayers;					///< Min players needed to start a net game
 
+	Bool m_enableSingleplayerChatWindow;	///< Allow the in-game chat window in singleplayer/skirmish (for chat commands)
+
 	UnsignedInt m_defaultIP;			///< preferred IP address for LAN
 	UnsignedInt m_firewallBehavior;	///< Last detected firewall behavior
 	UnsignedInt m_firewallPortOverride;	///< User-specified port to be used
@@ -339,6 +362,7 @@ public:
 	Real m_MinDistFromEdgeOfMapForBuild;
 	Real m_SupplyBuildBorder;
 	Real m_allowedHeightVariationForBuilding;  ///< how "flat" is still flat enough to build on
+	Real m_allowedHeightVariationForBuildingShipyard;  ///< how "flat" is still flat enough to build on
 	Real m_MinLowEnergyProductionSpeed;
 	Real m_MaxLowEnergyProductionSpeed;
 	Real m_LowEnergyPenaltyModifier;
@@ -366,6 +390,8 @@ public:
 	WeaponBonusSet* m_weaponBonusSet;
 	Real m_healthBonus[LEVEL_COUNT];			///< global bonuses to health for veterancy.
 	Real m_defaultStructureRubbleHeight;	///< for rubbled structures, compress height to this if none specified
+	std::vector<TrackerBonusCT> m_statusWeaponBonus;
+	std::vector<TrackerCustomBonusCT> m_statusCustomWeaponBonus;
 
 	AsciiString m_shellMapName;				///< Holds the shell map name
 	Bool m_shellMapOn;								///< User can set the shell map not to load
@@ -576,6 +602,83 @@ public:
 	//-allAdvice feature
 	//Bool m_allAdvice;
 
+	DrawableColorTint	m_colorTintTypes[TINT_STATUS_COUNT];
+	CustomTintStatusVec m_colorTintCustomTypes;
+	Bool	m_colorTintTypes2; // [TINT_STATUS_COUNT] ;
+
+	Bool m_useOldMoveSpeed;
+
+	Real m_chronoDamageDisableThreshold;
+	UnsignedInt m_chronoDamageHealRate;
+	Real m_chronoDamageHealAmount;
+
+	Real m_chronoDisableAlphaStart;
+	Real m_chronoDisableAlphaEnd;
+
+	// TintStatus m_chronoTintStatusType;
+	AsciiString m_chronoDisableParticleSystemLarge;
+	AsciiString m_chronoDisableParticleSystemMedium;
+	AsciiString m_chronoDisableParticleSystemSmall;
+
+	//AudioEventRTS m_chronoDisableSoundLoop;
+
+	DeathTypeFlags m_defaultExcludedDeathTypes;
+	Bool m_heightAboveTerrainIncludesWater;
+	Bool m_radiusDecalsAboveWater;	///< if true, radius decals (cursors) render over water instead of under it
+	Bool m_hideScorchmarksAboveGround;
+	Bool m_weaponScatterOnWaterSurfaceDefault;	///< default for WeaponTemplate ScatterOnWaterSurface when not set per-weapon
+	Bool m_reverseMoveIgnoreAngleThreshold;	///< if true, a manual REVERSE_MOVE order reverses regardless of heading; if false, only when the goal is behind us
+	Real m_smartGarrisonRange;	///< radius searched for additional transports by the Smart Garrison command
+
+	Bool m_countermeasuresDetonateNonTracking;
+
+	Bool m_newskirmishfpsSystem;
+	Bool m_skirmishloadfps;
+	UnsignedInt m_menufps;
+	UnsignedInt m_newfpsLimit;
+	AsciiString m_initRandomType;
+
+	Real m_drawWidthFactor;
+	Real m_drawHeightFactor;
+
+	Bool m_usePartitionManagerToIterateDrawables;
+	Bool m_usePartitionManagerToIterateDrawablesOnlySelect;
+	Bool m_useEfficientDrawableScheme;
+
+	//Bool m_fixLocoClump;
+	Bool m_corpsesHaveAirDrag;
+
+	Bool m_hideCashTextFromEnemies;
+	Bool m_hideCashTextFromEnemiesInvisibleUnitsOnly;
+
+	Bool m_fixHulksFreezingAboveTerrain;
+
+	/*Bool m_fixAIPathfindClumpForManyPlayers;
+	Bool m_useNonRetailAIPathfind;
+	Bool m_useNonRetailAIPathfindAllocation;
+	Bool m_useNonRetailAIPathfindDynamicAlloc; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindDoublyLinkedList; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindOpenSortedList; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindSuperSkip; // Credits to: Mauller
+	Bool m_useNonRetailAIPathfindReverseTransverseInsertion; // Credits to: Mauller*/
+	Bool m_dynamicTargeting;
+	Bool m_useAccurateSphereToRectCollision;
+	Bool m_checkBoxBoundariesForDistCalc;
+	Bool m_enableDoubleClick;
+	Bool m_enableKillPilotForStructures;
+	Bool m_enableNestedStructures;
+
+	Real m_formationBlockedSpeedPenalty;
+	Real m_globalReverseMoveSpeedPenalty;
+
+	Bool m_enableReverseMoveByDefaultForWheels;	///< configuration for enabling reverse move by default for all non-motorcycles vehicles & ships
+	Bool m_enableReverseMoveByDefaultForTreads;
+	Bool m_enableReverseMoveByDefaultForShips;
+	Bool m_enableReverseMoveByDefaultForHover;
+	Bool m_enableReverseMoveByDefaultForThrust;
+	Bool m_enableReverseMoveByDefaultForOther;
+
+	Bool m_accelerateObjectsWithLowAccel;
 
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
@@ -603,6 +706,12 @@ private:
 	GlobalData(const GlobalData& that) = delete;
 	GlobalData& operator=(const GlobalData& that) = default;
 #endif
+
+	static void setColorTintEntry(DrawableColorTint* arr, int index, RGBColor color, RGBColor colorInfantry, UnsignedInt attackFrames, UnsignedInt decayFrames);
+	static void parseTintStatusType(INI* ini, void* instance, void* store, const void* userData);
+	static void parseTintCustomStatusType(INI* ini, void* instance, void* store, const void* userData);
+	static void parseTrackerWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData);
+	static void parseTrackerCustomWeaponBonusStatus(INI* ini, void* instance, void* store, const void* userData);
 
 };
 

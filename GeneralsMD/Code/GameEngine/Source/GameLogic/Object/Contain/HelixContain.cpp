@@ -92,7 +92,7 @@ HelixContain::HelixContain( Thing *thing, const ModuleData *moduleData ) :
 								 TransportContain( thing, moduleData )
 {
 
-  m_payloadCreated = FALSE;
+  setPayloadCreated(FALSE);
   m_portableStructureID = INVALID_ID;
 
 }
@@ -130,16 +130,17 @@ UpdateSleepTime HelixContain::update()
 
 void HelixContain::redeployOccupants()
 {
-  Coord3D firePos = *getObject()->getPosition();
-  firePos.z += 8;
+	// Removed by AndiW: This restores proper firebones, if the parent vehicle model has them
 
-
-	for (ContainedItemsList::iterator it = m_containList.begin(); it != m_containList.end(); ++it)
-  {
-    Object* rider = *it;
-    if (rider)
-      rider->setPosition( &firePos );
-  }
+	// Coord3D firePos = *getObject()->getPosition();
+	// firePos.z += 8;
+	// for (ContainedItemsList::iterator it = m_containList.begin(); it != m_containList.end(); ++it)
+	// {
+	//   Object* rider = *it;
+	//   if (rider)
+	//     rider->setPosition( &firePos );
+	// }
+	OpenContain::redeployOccupants();
 }
 
 
@@ -172,7 +173,7 @@ void HelixContain::createPayload()
 			  }
 			  else
 			  {
-				  DEBUG_CRASH( ( "HelixContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
+				  DEBUG_CRASH( ( "HelixContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), (*iter).str() ) );
 			  }
 
       }
@@ -184,7 +185,7 @@ void HelixContain::createPayload()
 
   }
 
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 
 }
 
@@ -432,8 +433,8 @@ void HelixContain::onContaining( Object *obj, Bool wasSelected )
 	TransportContain::onContaining( obj, wasSelected );
 
 	// give the object a garrisoned version of its weapon
-	obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
-  obj->setDisabled( DISABLED_HELD );
+	// obj->setWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
+    obj->setDisabled( DISABLED_HELD );
 
 
   if ( obj->isKindOf( KINDOF_PORTABLE_STRUCTURE ) && getObject()->testStatus( OBJECT_STATUS_STEALTHED ) )
@@ -459,7 +460,7 @@ void HelixContain::onRemoving( Object *obj )
 	TransportContain::onRemoving(obj);
 
 	// give the object back a regular weapon
-	obj->clearWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
+	//obj->clearWeaponBonusCondition( WEAPONBONUSCONDITION_GARRISONED );
   obj->clearDisabled( DISABLED_HELD );
 
 }

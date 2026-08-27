@@ -1893,10 +1893,18 @@ void DX8TextureCategoryClass::Render()
 			{	//mesh has material override of some kind
 				//adjust the opacity of this model
 				float oldOpacity=vmaterial->Get_Opacity();
+
 				Vector3 oldDiffuse;
+				Vector3 oldEmissive;
+
+
 				Vector2 oldUVOffset;
 				unsigned int oldUVOffsetSyncTime;
 				vmaterial->Get_Diffuse(&oldDiffuse);
+
+				vmaterial->Get_Emissive(&oldEmissive);
+
+
 				LinearOffsetTextureMapperClass *oldMapper=(LinearOffsetTextureMapperClass *)vmaterial->Peek_Mapper();
 				if ( mesh->Get_User_Data() && *(int *)mesh->Get_User_Data() == RenderObjClass::USER_DATA_MATERIAL_OVERRIDE && oldMapper && oldMapper->Mapper_ID() == TextureMapperClass::MAPPER_ID_LINEAR_OFFSET)
 				{	RenderObjClass::Material_Override *matOverride=(RenderObjClass::Material_Override *)mesh->Get_User_Data();
@@ -1913,7 +1921,11 @@ void DX8TextureCategoryClass::Render()
 					if (mesh->Is_Additive())
 					{	//additvie blended mesh can't switch to alpha or we will get a black outline.
 						//so adjust diffuse color instead.
+						//DEBUG_LOG((">>>DX8Renderer: ADDITIVE + ALPHA OVERRIDE - alpha = %f", mesh->Get_Alpha_Override()));
 						vmaterial->Set_Diffuse(mesh->Get_Alpha_Override(),mesh->Get_Alpha_Override(),mesh->Get_Alpha_Override());
+
+						vmaterial->Set_Emissive(mesh->Get_Emissive_Override(), mesh->Get_Emissive_Override(), mesh->Get_Emissive_Override());
+
 						theAlphaShader = theShader;	//keep using additive blending.
 					}
 					vmaterial->Set_Opacity(mesh->Get_Alpha_Override());
@@ -1926,6 +1938,9 @@ void DX8TextureCategoryClass::Render()
 					DX8Wrapper::Set_DX8_Render_State(D3DRS_ALPHAREF,0x60);
 					vmaterial->Set_Opacity(oldOpacity);	//restore previous value
 					vmaterial->Set_Diffuse(oldDiffuse.X,oldDiffuse.Y,oldDiffuse.Z);
+
+					vmaterial->Set_Emissive(oldEmissive.X, oldEmissive.Y, oldEmissive.Z);
+
 					DX8Wrapper::Set_Shader(theShader);	//restore previous value
 				}
 				else

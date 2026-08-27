@@ -38,6 +38,7 @@
 //
 enum WeaponSetType CPP_11(: Int)
 {
+	WEAPONSET_NONE = -1,
 	// The access and use of this enum has the bit shifting built in, so this is a 0,1,2,3,4,5 enum
 	WEAPONSET_VETERAN		= 0,
 	WEAPONSET_ELITE,
@@ -56,6 +57,28 @@ enum WeaponSetType CPP_11(: Int)
 	WEAPONSET_RIDER6,
 	WEAPONSET_RIDER7,
 	WEAPONSET_RIDER8,
+	WEAPONSET_PLAYER_UPGRADE2,  // New sets to support multiple weapon upgrades
+	WEAPONSET_PLAYER_UPGRADE3,
+	WEAPONSET_PLAYER_UPGRADE4,
+
+	WEAPONSET_GARRISONED,
+	WEAPONSET_CONTAINED,
+
+	// Veterancy ranks beyond HEROIC. Appended (not inserted) to preserve existing save values and the
+	// positional TheWeaponSetTypeToModelConditionTypeMap ordering.
+	WEAPONSET_FOUR,
+	WEAPONSET_FIVE,
+
+	// Additional rider slots (appended to preserve existing save values and the positional
+	// TheWeaponSetTypeToModelConditionTypeMap ordering). See RiderChangeContain (MAX_RIDERS).
+	WEAPONSET_RIDER9,
+	WEAPONSET_RIDER10,
+	WEAPONSET_RIDER11,
+	WEAPONSET_RIDER12,
+	WEAPONSET_RIDER13,
+	WEAPONSET_RIDER14,
+	WEAPONSET_RIDER15,
+	WEAPONSET_RIDER16,
 
 	WEAPONSET_COUNT
 };

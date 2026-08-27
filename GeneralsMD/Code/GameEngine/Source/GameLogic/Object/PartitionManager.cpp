@@ -76,9 +76,13 @@
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/Squad.h"
 #include "GameLogic/GhostObject.h"
+#include "GameLogic/Weapon.h"
+#include "GameLogic/ObjectCreationList.h"
 
 #include "GameClient/Line2D.h"
 #include "GameClient/ControlBar.h"
+#include "GameClient/InGameUI.h"
+#include "GameClient/FXList.h"
 
 #ifdef RTS_DEBUG
 //#include "GameClient/InGameUI.h"	// for debugHints
@@ -100,6 +104,8 @@
 extern void addIcon(const Coord3D *pos, Real width, Int numFramesDuration, RGBColor color);
 
 const Real HUGE_DIST_SQR = (HUGE_DIST*HUGE_DIST);
+
+//const Real RAD_TO_DEGREE_FACTOR = 180.0f / PI;
 
 #define DISABLE_INVALID_PREVENTION	//Steven, I had to turn this off because it was causing problem with map border resizing (USA04). -MW
 
@@ -348,11 +354,29 @@ static void rectToFourPoints(
 	const CollideInfo *a,		// z is ignored
 	Coord2D pts[]
 );
+
 static void testRotatedPointsAgainstRect(
 	const Coord2D *pts,				// an array of 4
 	const CollideInfo *a,
 	Coord2D *avg,
 	Int *avgTot
+);
+/*static void testRotatedPointsAgainstSphere(
+	const Coord2D *pts,				// an array of 4
+	const CollideInfo *a,
+	Coord2D *avg,
+	Int *avgTot,
+	Real *minDistSqr
+);
+static Real fast_hypot(
+	Real x,
+	Real y
+);*/
+static void testSphereAgainstRect(
+	const Coord2D pts[],				// an array of 4
+	const Coord3D *a_pos,
+	const Coord3D *b_pos,
+	Real &distSqr
 );
 
 static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo);
@@ -429,8 +453,380 @@ static void testRotatedPointsAgainstRect(
 			avg->x += pts->x;
 			avg->y += pts->y;
 			*avgTot += 1;
+
+			/*if(minDistSqr)
+			{
+				Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
+				if(*minDistSqr > distanceSqr)
+					*minDistSqr = distanceSqr;
+			}*/
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+/*static void testRotatedPointsAgainstSphere(
+	const Coord2D *pts,				// an array of 4
+	const CollideInfo *a,
+	Coord2D *avg,
+	Int *avgTot,
+	Real *minDistSqr
+)
+{
+	Real radius = a->geom.getMajorRadius();
+
+#ifdef INTENSE_DEBUG
+	Real circ_l = a->position.x - radius;
+	Real circ_r = a->position.x + radius;
+	Real circ_t = a->position.y - radius;
+	Real circ_b = a->position.y + radius;
+#endif
+
+	// Spheres have no angles
+	Real c = (Real)Cos(0);
+	Real s = (Real)Sin(0);
+
+	for (Int i = 0; i < 4; ++i, ++pts)
+	{
+		// convert to a delta relative to rect ctr
+		Real ptx = pts->x - a->position.x;
+		Real pty = pts->y - a->position.y;
+
+		// inverse-rotate it to the right coord system
+		Real ptx_new = (Real)fabs(ptx*c - pty*s);
+		Real pty_new = (Real)fabs(ptx*s + pty*c);
+
+#ifdef INTENSE_DEBUG
+		//Real mag_a = sqr(ptx)+sqr(pty);
+		//Real mag_b = sqr(ptx_new)+sqr(pty_new);
+		//DEBUG_ASSERTCRASH(fabs(mag_a - mag_b) <= 1.0, ("hmm, unlikely"));
+
+		Bool pass = FALSE;
+		const Int MAXR = 32;
+		char dir[MAXR];
+
+		switch(i)
+		{
+			// tl
+			case 0:
+				pass = circ_r >= pts->x && circ_b >= pts->y;
+				sprintf( dir, "Top Left" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_l, circ_t));
+				DEBUG_LOG(("Coordinates - Circle, Bottom Right. X: %f. Y: %f", circ_r, circ_b));
+				break;
+			// tr
+			case 1:
+				pass = circ_l <= pts->x && circ_b >= pts->y;
+				sprintf( dir, "Top Right" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_r, circ_t));
+				DEBUG_LOG(("Coordinates - Circle, Bottom Left. X: %f. Y: %f", circ_l, circ_b));
+				break;
+			// bl
+			case 2:
+				pass = circ_r >= pts->x && circ_t <= pts->y;
+				sprintf( dir, "Bottom Left" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_l, circ_b));
+				DEBUG_LOG(("Coordinates - Circle, Top Right. X: %f. Y: %f", circ_r, circ_t));
+				break;
+			// br
+			case 3:
+				pass = circ_l <= pts->x && circ_t <= pts->y;
+				sprintf( dir, "Bottom Right" );
+				DEBUG_LOG(("Coordinates - Rectangle, %s. X: %f. Y: %f", dir, pts->x, pts->y));
+				DEBUG_LOG(("Coordinates - Circle, %s. X: %f. Y: %f", dir, circ_r, circ_b));
+				DEBUG_LOG(("Coordinates - Circle, Top Left. X: %f. Y: %f", circ_l, circ_t));
+				break;
+		}
+#endif
+
+		if (ptx_new <= radius && pty_new <= radius)
+		{
+#ifdef INTENSE_DEBUG
+			DEBUG_LOG(("Check passed Rectangle points to Sphere. Direction: %s. Radius %f. X: %f. Y: %f", dir, radius, ptx_new, pty_new));
+			if(pass)
+				DEBUG_LOG(("Case: %s satisfies boundary checks.", dir));
+			else
+				DEBUG_LOG(("Case: %s Does NOT satisfy boundary checks!", dir));
+#endif
+			avg->x += pts->x;
+			avg->y += pts->y;
+			*avgTot += 1;
+
+			Real distanceSqr = sqr(ptx_new) + sqr(pty_new);
+			if(*minDistSqr > distanceSqr)
+				*minDistSqr = distanceSqr;
+#ifdef INTENSE_DEBUG
+			DEBUG_LOG(("avgx: %f avgy: %f, avgTot: %d", avg->x, avg->y, *avgTot));
+		}
+		else if(pass)
+		{
+			DEBUG_LOG(("Check Coordinates passed but does Not meet Sphere Radius. Direction: %s. Radius %f. X: %f. Y: %f", dir, radius, ptx_new, pty_new));
+#endif
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+static Real fast_hypot(Real x, Real y)
+{
+	// Fast approximation of Boundary length, generally if one line has the length of only 10% or less of the other line, we take the longest line as the boundary.
+	// Has an error rate of approx 0.5%.
+	// Example: A line of dx = 5, and dy = 0.5, would give h = 5.025, we take dx directly
+	//Real dSqr = x*x + y*y;
+	//Real curGuess = 1.0f;
+	//Real tolerance = 0.1f;
+	//while(fabs( (curGuess * curGuess) / dSqr - 1.0) > tolerance)
+	//	curGuess = ((dSqr/curGuess) + curGuess) * 0.5;
+	//return curGuess;
+
+	Real dx = fabs(x);
+	Real dy = fabs(y);
+
+	// Longest line and shortest between x and y
+	Real a, b;
+	if(dx > dy)
+	{
+		a = dx;
+		b = dy;
+	}
+	else
+	{
+		a = dy;
+		b = dx;
+	}
+
+	Real ratio = b / a;
+	ratio *= ratio;
+	//Real maxTolerance = 0.1f * dmax;
+	//Real distTolerance = max(20.0f, 0.5f * maxTolerance);
+
+	// Two conditions:
+	// - the difference must be less than a maximum of 20 units, or 5% of the maximum length (to be not more than 1 whole unit)
+	// - the min length must be 10% or less than the max length
+	//if(dmin < distTolerance && dmin <= maxTolerance)
+	//	return dmax;
+	//else
+
+	// max error ≈ 1.04 %
+	return a * ( 1 + 0.428 * ratio );
+}
+*/
+
+// fast atan2: https://github.com/ducha-aiki/fast_atan2
+/*atan(x) ~ x*(pi/4+0.273-0.273*x) */
+#define M_PI_4_P_0273	1.05839816339744830962 //M_PI/4 + 0.273
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static Real atan2approx(Real y, Real x)
+{
+  if (x == 0 && y == 0)
+	return 0.0f;
+
+  Real absx, absy;
+  absy = fabs(y);
+  absx = fabs(x);
+  short octant = ((x<0) << 2) + ((y<0) << 1 ) + (absx <= absy);
+  switch (octant) {
+    case 0: {
+        Real val = absy/absx;
+        return (M_PI_4_P_0273 - 0.273*val)*val; //1st octant
+        break;
+      }
+    case 1:{
+        Real val = absx/absy;
+        return M_PI_2 - (M_PI_4_P_0273 - 0.273*val)*val; //2nd octant
+        break;
+      }
+    case 2: {
+        Real val =absy/absx;
+        return -(M_PI_4_P_0273 - 0.273*val)*val; //8th octant
+        break;
+      }
+    case 3: {
+        Real val =absx/absy;
+        return -M_PI_2 + (M_PI_4_P_0273 - 0.273*val)*val;//7th octant
+        break;
+      }
+    case 4: {
+        Real val =absy/absx;
+        return  M_PI - (M_PI_4_P_0273 - 0.273*val)*val;  //4th octant
+      }
+    case 5: {
+        Real val =absx/absy;
+        return  M_PI_2 + (M_PI_4_P_0273 - 0.273*val)*val;//3rd octant
+        break;
+      }
+    case 6: {
+        Real val =absy/absx;
+        return -M_PI + (M_PI_4_P_0273 - 0.273*val)*val; //5th octant
+        break;
+      }
+    case 7: {
+        Real val =absx/absy;
+        return -M_PI_2 - (M_PI_4_P_0273 - 0.273*val)*val; //6th octant
+        break;
+      }
+    default:
+      return 0.0f;
+    }
+}
+
+//-----------------------------------------------------------------------------
+static void testSphereAgainstRect(
+	const Coord2D pts[],				// an array of 4
+	const Coord3D *a_pos,
+	const Coord3D *b_pos,
+	Real &distSqr
+)
+{
+	// Get three points that are closest to the facing direction
+	//DEBUG_LOG(("Source Points: x: %f y: %f", a_pos->x, a_pos->y));
+
+	Real minDist, secondMinDist, thirdMinDist;
+	Int minIdx, secondMinIdx, thirdMinIdx;
+	minDist = secondMinDist = thirdMinDist = HUGE_DIST_SQR;
+	minIdx = secondMinIdx = thirdMinIdx = -1;
+
+	Real derivative[4][2];
+	Real dDistSqr[4];
+	Int i;
+	for (i = 0; i < 4; ++i)
+	{
+		derivative[i][0] = pts[i].x - a_pos->x;
+		derivative[i][1] = pts[i].y - a_pos->y;
+
+		dDistSqr[i] = sqr(derivative[i][0]) + sqr(derivative[i][1]);
+		//DEBUG_LOG(("Distance for point - %d: %f.", i, dDistSqr[i]));
+
+		if(minDist > dDistSqr[i])
+		{
+			secondMinIdx = minIdx;
+			secondMinDist = minDist;
+			minDist = dDistSqr[i];
+			minIdx = i;
+
+			continue;
+		}
+		if( secondMinDist > dDistSqr[i] && dDistSqr[i] > minDist )
+		{
+			secondMinDist = dDistSqr[i];
+			secondMinIdx = i;
+		}
+	}
+
+	// To get accurate readings for the boundaries, the third min Index must be obtained
+	for (i = 0; i < 4; ++i)
+	{
+		if( i == minIdx || i == secondMinIdx )
+			continue;
+
+		if( thirdMinDist > dDistSqr[i] )
+		{
+			thirdMinDist = dDistSqr[i];
+			thirdMinIdx = i;
+		}
+	}
+
+	DEBUG_ASSERTCRASH(thirdMinIdx >= 0 && thirdMinIdx <= 3, ("Hmm, this should not be possible."));
+
+	Bool polarity_dx = derivative[minIdx][0] >= 0.0f;
+	Bool polarity_dy = derivative[minIdx][1] >= 0.0f;
+	Bool polarity_dx2 = derivative[secondMinIdx][0] >= 0.0f;
+	Bool polarity_dy2 = derivative[secondMinIdx][1] >= 0.0f;
+	Bool polarity_dx3 = derivative[thirdMinIdx][0] >= 0.0f;
+	Bool polarity_dy3 = derivative[thirdMinIdx][1] >= 0.0f;
+
+	if( polarity_dx == polarity_dx2 && polarity_dx == polarity_dx3 &&
+		polarity_dy == polarity_dy2 && polarity_dy == polarity_dy3 )
+	{
+		// Same directional vector, so get the closest distance from a point.
+		distSqr = dDistSqr[minIdx];
+		return;
+	}
+
+	// If the third Min Angle is higher than the Second Min Angle, that means the Second Min Point is actually not the right point for Boundary Checking
+	Real angle1 = atan2approx(derivative[minIdx][1], derivative[minIdx][0]);
+	Real angle2 = atan2approx(derivative[secondMinIdx][1], derivative[secondMinIdx][0]);
+	Real angle3 = atan2approx(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0]);
+	//DEBUG_LOG(("Atan2 approx first - %f second - %f third - %f.", angle1, angle2, angle3));
+	//DEBUG_LOG(("Atan2 first - %f second - %f third - %f.", atan2(derivative[minIdx][1], derivative[minIdx][0]), atan2(derivative[secondMinIdx][1], derivative[secondMinIdx][0]), atan2(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0])));
+
+	Real relAngle_21 = stdAngleDiff(angle2, angle1);
+	//Real relAngle_32 = stdAngleDiff(angle3, angle2);
+	Real relAngle_31 = stdAngleDiff(angle3, angle1);
+	//DEBUG_LOG(("RelAngle 21 - %f 32 - %f 31 - %f.", relAngle_21, relAngle_32, relAngle_31));
+	if( fabs(relAngle_21) < fabs(relAngle_31) )
+	{
+		//DEBUG_LOG(("Third Min Index - %d replaced Second Min Index - %d.", thirdMinIdx, secondMinIdx));
+		secondMinIdx = thirdMinIdx;
+	}
+
+	// Get the "reflected" points of pos B, if the points have higher distance than the current points, that means the current points are within boundary
+	Real other_x1 = pts[minIdx].x - b_pos->x;
+	Real other_y1 = pts[minIdx].y - b_pos->y;
+	Real new_bpos_x = pts[secondMinIdx].x + other_x1;
+	Real new_bpos_y = pts[secondMinIdx].y + other_y1;
+	//Real new_bpos_x = pts[minIdx].x <= pts[secondMinIdx].x ? pts[secondMinIdx].x + other_y1 : pts[secondMinIdx].x - other_y1;
+	//Real new_bpos_y = pts[minIdx].y <= pts[secondMinIdx].y ? pts[secondMinIdx].y + other_x1 : pts[secondMinIdx].y - other_x1;
+
+	Real curDistSqr = sqr(b_pos->x - a_pos->x) + sqr(b_pos->y - a_pos->y);
+	//DEBUG_LOG(("Min Dist: %f Second Min Dist: %f", minDist, secondMinDist));
+
+	Real other_distSqr = sqr(new_bpos_x - a_pos->x) + sqr(new_bpos_y - a_pos->y);
+
+	//DEBUG_LOG(("Pos B - X: %f Y: %f", b_pos->x, b_pos->y));
+	//DEBUG_LOG(("MinIdx - X: %f Y: %f. Second MinIdx - X: %f Y: %f", pts[minIdx].x, pts[minIdx].y, pts[secondMinIdx].x, pts[secondMinIdx].y));
+	//DEBUG_LOG(("Pos A - X: %f Y: %f.", a_pos->x, a_pos->y));
+	//DEBUG_LOG(("New Pos B - X: %f Y: %f", new_bpos_x, new_bpos_y));
+	//DEBUG_LOG(("curDistSqr: %f. other distSqr: %f.", curDistSqr, other_distSqr));
+
+	if( curDistSqr < other_distSqr )
+	{
+		// The points are within the boundary, set the distance to 0
+		distSqr = 0.0f;
+		return;
+	}
+
+	// Get the Triangle length of all 3 points
+	Real sqr_boundary_h = sqr(pts[minIdx].x - pts[secondMinIdx].x) + sqr(pts[minIdx].y - pts[secondMinIdx].y);
+	Real sqr_boundary_1 = sqr(derivative[minIdx][0]) + sqr(derivative[minIdx][1]);
+	Real sqr_boundary_2 = sqr(derivative[secondMinIdx][0]) + sqr(derivative[secondMinIdx][1]);
+
+	// Safety checks for potential division by zero from sqr_boundary_h, which makes the value infinite. From Greptile SuperHackers
+	if(fabs(sqr_boundary_h) < WWMATH_EPSILON * WWMATH_EPSILON)
+	{
+		distSqr = HUGE_DIST_SQR;
+		return;
+	}
+
+	//Real boundary_h = fast_hypot(pts[minIdx].x - pts[secondMinIdx].x, pts[minIdx].y - pts[secondMinIdx].y);
+	//Real boundary_1 = fast_hypot(dx1, dy1);
+	//Real boundary_2 = fast_hypot(dx2, dy2);
+	//Real sqr_boundary_h = sqr(boundary_h);
+	//Real sqr_boundary_1 = sqr(boundary_1);
+	//Real sqr_boundary_h = sqr((*pts)[minIdx].x - (*pts)[lastMinIdx].x) + sqr((*pts)[minIdx].y - (*pts)[lastMinIdx].y);
+
+	// Heron's formula (Not reliable for accounting the edges)
+	//Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
+	//Real Area = sqrtf(semiPeri * (semiPeri - boundary_h) * (semiPeri - boundary_1) * (semiPeri - boundary_2));
+	//distSqr = sqr(Area * 2 / boundary_h);
+
+	// Law of Cosines (Demonstration)
+	//sqr(boundary_1) = sqr(boundary_2) + sqr(boundary_h) - (2 * boundary_2 * boundary_h * cos(angle_1)); // b^2 = a^2 + c^2 - 2ac cos B 
+
+	// Converting formula to count for Radius
+	//Real cosAngle_1 = (sqr(boundary_2) + sqr(boundary_h) - sqr(boundary_1)) * 0.5  / (boundary_2 * boundary_h));
+	//Real boundary_h1 = cosAngle_1 * boundary_2;
+
+	// Formula Summarization
+	Real boundary_h1 = (sqr_boundary_2 + sqr_boundary_h - sqr_boundary_1) * 0.5 / sqrtf(sqr_boundary_h);
+	distSqr = sqr_boundary_2 - sqr(boundary_h1);
+	//DEBUG_LOG(("sqr_boundary_1: %f. sqr_boundary_2: %f.", sqr_boundary_1, sqr_boundary_2));
+	//DEBUG_LOG(("sqr_boundary_h: %f. boundary_h1: %f.", sqr_boundary_h, boundary_h1));
+	//DEBUG_LOG(("distSqr: %f. distBoundarySqr: %f.", distSqr, distBoundarySqr));
 }
 
 //-----------------------------------------------------------------------------
@@ -470,6 +866,12 @@ static void rectToFourPoints(
 */
 static Bool xy_collideTest_Circle_Rect(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo)
 {
+	if(!TheGlobalData->m_useAccurateSphereToRectCollision)
+	{
+		CollideInfo atmp = *a;
+		atmp.geom.setMinorRadius(atmp.geom.getMajorRadius());
+		return xy_collideTest_Rect_Rect(&atmp, b, cinfo);
+	}
 	Bool result = xy_collideTest_Rect_Circle(b, a, cinfo);
 	if (cinfo)
 		flipCoord3D(&cinfo->normal);
@@ -482,20 +884,38 @@ static Bool xy_collideTest_Circle_Rect(const CollideInfo *a, const CollideInfo *
 */
 static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *b, CollideLocAndNormal *cinfo)
 {
-#if 1
+//#if 1
 	/// @todo srj -- this is better than the other one, since it actually handles rotated rects,
 	// but still not as accurate as is could be. (srj)
-	CollideInfo btmp = *b;
-	btmp.geom.setMinorRadius(btmp.geom.getMajorRadius());
-	return xy_collideTest_Rect_Rect(a, &btmp, cinfo);
-#else
+	/// IamInnocent - edited... 20 years later in the future
+	if(!TheGlobalData->m_useAccurateSphereToRectCollision)
+	{
+		CollideInfo btmp = *b;
+		btmp.geom.setMinorRadius(btmp.geom.getMajorRadius());
+		return xy_collideTest_Rect_Rect(a, &btmp, cinfo);
+	}
+//#else
 	// note, this actually tests the intersection of the the rect with the circle's
 	// bounding box. in practice, this is usually good enough, since most of
 	// our sphere/cyl shapes are small relative to boxes. (in fact, the WWMath
 	// library takes a similar shortcut when colliding spheres with boxes in 3d.
 	// so I figured it was probably good enough for us too.)
 
-	Real circ_l = b->position.x - b->geom.getMajorRadius();
+	// IamInnocent - Added trigonemtry checks for radius to bounds (expensive)
+	Coord3D diff;
+	vecDiff_3D(&b->position, &a->position, &diff);
+	Real distSqr = calcSqrDist_3D(&diff);
+	Real touchingDistSqr = sqr(a->geom.getBoundingSphereRadius() + b->geom.getMajorRadius());
+	if(distSqr > touchingDistSqr)
+		return false;
+
+	Coord2D pts[4];
+	rectToFourPoints(a, pts);
+	testSphereAgainstRect(pts, &b->position, &a->position, distSqr);
+
+	//DEBUG_LOG(("Radius: %f Distance: %f", b->geom.getMajorRadius(), distSqr));
+
+	/*Real circ_l = b->position.x - b->geom.getMajorRadius();
 	Real circ_r = b->position.x + b->geom.getMajorRadius();
 	Real circ_t = b->position.y - b->geom.getMajorRadius();
 	Real circ_b = b->position.y + b->geom.getMajorRadius();
@@ -506,19 +926,46 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 
 	if (circ_r >= rect_l &&	circ_l <= rect_r &&
 		circ_b >= rect_t &&	circ_t <= rect_b)
+	*/
+	if(distSqr <= sqr(b->geom.getMajorRadius()))
 	{
 		if (cinfo)
 		{
-			vecDiff_2D(&b->position, &a->position, &cinfo->normal);
+			cinfo->normal = diff;
+			flipCoord3D(&cinfo->normal);
 			cinfo->normal.normalize();
-			cinfo->loc.x = (maxReal(circ_l, rect_l) + minReal(circ_r, rect_r)) * 0.5f;
-			cinfo->loc.y = (maxReal(circ_t, rect_t) + minReal(circ_b, rect_b)) * 0.5f;
-			cinfo->loc.z = (a->position.z + b->position.z) * 0.5f;
+			cinfo->loc = b->position;
+			projectCoord3D(&cinfo->loc, &cinfo->normal, b->geom.getMajorRadius());
+
+			//vecDiff_2D(&b->position, &a->position, &cinfo->normal);
+			//cinfo->normal.normalize();
+			//cinfo->loc.x = (maxReal(circ_l, rect_l) + minReal(circ_r, rect_r)) * 0.5f;
+			//cinfo->loc.y = (maxReal(circ_t, rect_t) + minReal(circ_b, rect_b)) * 0.5f;
+
+			//cinfo->loc.x = avg.x / avgTot;
+			//cinfo->loc.y = avg.y / avgTot;
+			//cinfo->loc.z = (a->position.z + b->position.z) * 0.5f;
+
+			// Get the distance for damage calculation
+			//if(minDistSqr < HUGE_DIST_SQR)
+			//{
+				//Real minDist = sqrtf(minDistSqr);
+				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
+				//minDist = minDist - boundingDistance;
+				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
+				//cinfo->distSqr = minDistSqr;
+			//}
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
+				cinfo->distSqr = distSqr;
 		}
 		return true;
 	}
+	//else
+	//{
+	//	DEBUG_LOG(("Rect_Circle XY check Failed"));
+	//}
 	return false;
-#endif
+//#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -540,6 +987,13 @@ static Bool xy_collideTest_Circle_Circle(const CollideInfo *a, const CollideInfo
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
+			{
+				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(b->position.x - a->position.x) + sqr(b->position.y - a->position.y) : distSqr;
+				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			}
 		}
 
 		return true;
@@ -556,12 +1010,15 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 	Coord2D pts[4];
 	Coord2D avg; avg.x = avg.y = 0.0f;
 	Int avgTot = 0;
+	//Real minDistSqr = HUGE_DIST_SQR;
 
 	rectToFourPoints(a, pts);
 	testRotatedPointsAgainstRect(pts, b, &avg, &avgTot);
+	//testRotatedPointsAgainstRect(pts, b, &avg, &avgTot, cinfo->heightCheck != DEFAULT_HEIGHT_CHECK ? &minDistSqr : nullptr);
 
 	rectToFourPoints(b, pts);
 	testRotatedPointsAgainstRect(pts, a, &avg, &avgTot);
+	//testRotatedPointsAgainstRect(pts, a, &avg, &avgTot, cinfo->heightCheck != DEFAULT_HEIGHT_CHECK ? &minDistSqr : nullptr);
 
 	if (avgTot > 0)
 	{
@@ -586,6 +1043,19 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 			// or (b) come up with a better definition of a useful normal in this case,
 			// I'm not sure we can do a whole lot better... (srj)
 			vecDiff_2D(&b->position, &a->position, &cinfo->normal);
+
+			// Get the distance for damage calculation
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
+			{
+				//Real minDist = sqrtf(minDistSqr);
+				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
+				//minDist = minDist - boundingDistance;
+				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
+				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(cinfo->normal.x) + sqr(cinfo->normal.y) : sqr(cinfo->normal.x) + sqr(cinfo->normal.y) + sqr(b->position.z - a->position.z);
+				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			}
+
 			cinfo->normal.normalize();
 		}
 		return true;
@@ -684,6 +1154,8 @@ inline Bool z_collideTest_Nonsphere_Nonsphere(CollideTestProc xyproc, const Coll
 		// just need to adjust the z-coord of collideLoc
 		if (cinfo)
 		{
+			if(closeEnough)
+				cinfo->distSqr = 0.0f; // a is within b, it will have negative distance
 			if (b->position.z > a->position.z)
 				cinfo->loc.z = (b->position.z + a->position.z + a->geom.getMaxHeightAbovePosition()) * 0.5f;
 			else
@@ -710,6 +1182,13 @@ static Bool collideTest_Sphere_Sphere(const CollideInfo *a, const CollideInfo *b
 			cinfo->normal.normalize();
 			cinfo->loc = a->position;
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
+			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
+			{
+				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(b->position.x - a->position.x) + sqr(b->position.y - a->position.y) : distSqr;
+				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
+			}
 		}
 
 		return true;
@@ -2047,17 +2526,64 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		Real angle1,
 		const Coord3D* pos2,
 		const GeometryInfo& geom2,
-		Real angle2) const
+		Real angle2,
+		HeightBoundaryCheckType heightCheckType,
+		Real *abDistSqr) const
 {
-	CollideInfo thisInfo(pos1, geom1, angle1);
-	CollideInfo thatInfo(pos2, geom2, angle2);
+	Real a_LowHeightBoundary;
+	Real a_HiHeightBoundary;
+	Real b_LowHeightBoundary;
+	Real b_HiHeightBoundary;
+
+	switch(heightCheckType)
+	{
+		case SKIP_HEIGHT_CHECK:
+			a_LowHeightBoundary = 0.0f;
+			a_HiHeightBoundary = HUGE_DIST;
+			b_LowHeightBoundary = b_HiHeightBoundary = pos2->z;
+			break;
+		case BOUNDARY_HEIGHT_CHECK:
+		{
+			a_LowHeightBoundary = pos1->z - geom1.getMaxHeightAbovePosition();
+			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
+			if(TheGlobalData->m_useAccurateSphereToRectCollision)
+			{
+				b_LowHeightBoundary = pos2->z;
+				b_HiHeightBoundary = pos2->z + geom2.getMaxHeightAbovePosition();
+			}
+			else
+			{
+				b_LowHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() - geom2.getBoundingSphereRadius();
+				b_HiHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() + geom2.getBoundingSphereRadius();
+			}
+			break;
+		}
+		default:
+			a_LowHeightBoundary = pos1->z;
+			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
+			b_LowHeightBoundary = pos2->z;
+			b_HiHeightBoundary = pos2->z + geom2.getMaxHeightAbovePosition();
+			break;
+	}
 
 	// invariant for all geometries: first do z collision check.
-	if (thisInfo.position.z + thisInfo.geom.getMaxHeightAbovePosition() >= thatInfo.position.z &&
-			thisInfo.position.z <= thatInfo.position.z + thatInfo.geom.getMaxHeightAbovePosition())
+	if ( a_HiHeightBoundary >= b_LowHeightBoundary &&
+			a_LowHeightBoundary <= b_HiHeightBoundary )
 	{
+		CollideInfo thisInfo(pos1, geom1, angle1);
+		CollideInfo thatInfo(pos2, geom2, angle2);
+
 		GeometryType thisGeom = geom1.getGeomType();
 		GeometryType thatGeom = geom2.getGeomType();
+
+#ifdef INTENSE_DEBUG
+		if(heightCheckType == BOUNDARY_HEIGHT_CHECK && thatGeom == GEOMETRY_BOX)
+		{
+			DEBUG_LOG(("A_geoType: %d, B_geoType: %d.", thisInfo.geom.getGeomType(), thatInfo.geom.getGeomType()));
+			DEBUG_LOG(("A_bot: %f, A_top: %f", a_LowHeightBoundary, a_HiHeightBoundary));
+			DEBUG_LOG(("B_bot default: %f, B_top default: %f.", b_LowHeightBoundary, b_HiHeightBoundary));
+		}
+#endif
 
 		//
 		// NOTE: This assumes geometry enumerations that start at GEOMETRY_FIRST AND depends on the
@@ -2065,7 +2591,13 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 		//
 		CollideTestProc collideProc = theCollideTestProcs[ (thisGeom - GEOMETRY_FIRST) * GEOMETRY_NUM_TYPES + (thatGeom - GEOMETRY_FIRST) ];
 		CollideLocAndNormal cloc;
-		return (*collideProc)(&thisInfo, &thatInfo, &cloc);
+		cloc.distSqr = 0.0f;
+		cloc.heightCheck = heightCheckType;
+		Bool doesCollide = (*collideProc)(&thisInfo, &thatInfo, &cloc);
+
+		if(cloc.heightCheck != DEFAULT_HEIGHT_CHECK && abDistSqr)
+			*abDistSqr = cloc.distSqr;
+		return doesCollide;
 	}
 	else
 	{
@@ -3385,14 +3917,35 @@ Object *PartitionManager::getClosestObjects(
 					continue;
 				thisMod->friend_setDoneFlag(theIterFlag);
 
-				Real thisDistSqr;
-				Coord3D distVec;
-				if (!(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
-					continue;
-
 				if (!filtersAllow(filters, thisObj))
 					continue;
 
+				Real thisDistSqr;
+				Coord3D distVec;
+				Bool useNewStructureCheck = FALSE;
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				{
+					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+					if(geomInfo.getGeomType() == GEOMETRY_BOX)
+					{
+						useNewStructureCheck = TRUE;
+						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
+						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
+							continue;
+							//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+
+						//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+					}
+				}
+				if (!useNewStructureCheck && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
+					continue;
+
+				//if(thisObj->isKindOf(KINDOF_STRUCTURE))
+				//{
+				//	DEBUG_LOG(("Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+				//	DEBUG_LOG(("Source Pos: X: %f Y: %f Z: %f", objPos->x, objPos->y, objPos->z));
+				//	DEBUG_LOG(("Object Pos: X: %f Y: %f Z: %f", thisObj->getPosition()->x, thisObj->getPosition()->y, thisObj->getPosition()->z));
+				//}
 				// ok, this is within the range, and the filters allow it.
 				// add it to the iter, if we have one....
 				if (iterArg)
@@ -3459,14 +4012,26 @@ Object *PartitionManager::getClosestObjects(
 
 			thisMod->friend_setDoneFlag(theIterFlag);
 
+			// check the filters
+			if (!filtersAllow(filters, thisObj))
+				continue;
+
 			// hmm, ok, calc the distance.
 			Real thisDistSqr;
 			Coord3D distVec;
-			if (!(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
-				continue;
-
-			// check the filters now
-			if (!filtersAllow(filters, thisObj))
+			Bool useNewStructureCheck = FALSE;
+			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			{
+				const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+				if(geomInfo.getGeomType() == GEOMETRY_BOX)
+				{
+					useNewStructureCheck = TRUE;
+					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
+					if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
+						continue;
+				}
+			}
+			if (!useNewStructureCheck && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
 				continue;
 
 			// ok, guess this is a winner!
@@ -3519,6 +4084,349 @@ Object *PartitionManager::getClosestObjects(
 	return closestObj;	// might be null...
 }
 
+//-----------------------------------------------------------------------------
+std::list<Drawable*> PartitionManager::getDrawablesInRegion( IRegion2D *region2D )
+{
+	//IamInnocent - Attempted to use PartitionManager code to use WorldCell for Finding Drawables - 6/10/2025
+	std::list<Drawable*> drawables;
+
+	ICoord2D loRegion, hiRegion;
+	Coord3D loWorld, hiWorld;
+
+	if(region2D != nullptr)
+	{
+		loRegion.x = region2D->lo.x;
+		loRegion.y = region2D->lo.y;
+		hiRegion.x = region2D->hi.x;
+		hiRegion.y = region2D->hi.y;
+	}
+	else
+	{
+		IRegion2D region;
+		ICoord2D origin;
+		ICoord2D size;
+
+		TheTacticalView->getOrigin( &origin.x, &origin.y );
+		size.x = TheTacticalView->getWidth();
+		size.y = TheTacticalView->getHeight();
+
+		TheInGameUI->buildRegion( &origin, &size, &region );
+		loRegion.x = region.lo.x;
+		loRegion.y = region.lo.y;
+		hiRegion.x = region.hi.x;
+		hiRegion.y = region.hi.y;
+		//loRegion.x = region3D->lo.x;
+		//loRegion.y = region3D->lo.y;
+		//hiRegion.x = region3D->hi.x;
+		//hiRegion.y = region3D->hi.y;
+	}
+	TheTacticalView->screenToTerrain( &loRegion, &loWorld );
+	TheTacticalView->screenToTerrain( &hiRegion, &hiWorld );
+
+	Int cellCenterX, cellCenterY;
+	Real centerX = loWorld.x + (hiWorld.x - loWorld.x) / 2;
+	Real centerY = loWorld.y + (hiWorld.y - loWorld.y) / 2;
+	worldToCell(centerX, centerY, &cellCenterX, &cellCenterY);
+
+	/*
+		m_radiusVec[curRadius] contains a list of the cells (foo) that could
+		contain objects that are <= (curRadius * cellSize) distance away from cell (0,0).
+	*/
+#ifdef FASTER_GCO
+
+	Int maxRadius = m_maxGcoRadius;
+	Real maxDist = hiWorld.x - loWorld.x > loWorld.y - hiWorld.y ? hiWorld.x - loWorld.x : loWorld.y - hiWorld.y;
+	if (maxDist < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		/// Need to increase the minimum value to be able to select air units under a small region
+		maxRadius = minInt(m_maxGcoRadius, worldToCellDist(max(200.0f,maxDist)));
+	}
+#if defined(INTENSE_DEBUG)
+	/*
+		Note, if you ever enable this code, be forewarned that it can give
+		you "false positives" for objects that are located just off the map... (srj)
+	*/
+	Int maxRadiusLimit = maxRadius + 3;
+	if (maxRadiusLimit > m_maxGcoRadius) maxRadiusLimit = m_maxGcoRadius;
+#else
+	Int maxRadiusLimit = maxRadius;
+#endif
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	/*
+		m_radiusVec[curRadius] contains a list of the cells (foo) that could
+		contain objects that are <= (curRadius * cellSize) distance away from cell (0,0).
+	*/
+  for (Int curRadius = 0; curRadius <= maxRadiusLimit; ++curRadius)
+  {
+    const OffsetVec& offsets = m_radiusVec[curRadius];
+		if (offsets.empty())
+			continue;
+    for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
+		{
+			PartitionCell* thisCell = getCellAt(cellCenterX + it->x, cellCenterY + it->y);
+			if (thisCell == nullptr)
+				continue;
+
+			for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
+			{
+				PartitionData *thisMod = thisCoi->getModule();
+				Object *thisObj = thisMod->getObject();
+
+				if (thisObj == nullptr)
+					continue;
+
+				// since an object can exist in multiple COIs, we use this to avoid processing
+				// the same one more than once.
+				if (thisMod->friend_getDoneFlag() == theIterFlag)
+					continue;
+				thisMod->friend_setDoneFlag(theIterFlag);
+
+				if (!thisObj->getDrawable())
+					continue;
+
+				drawables.push_back( thisObj->getDrawable() );
+
+			} // next coi
+		}	// next cell in this radius
+  } // next radius
+
+#else // not FASTER_GCO
+
+	CellOutwardIterator iter(this, cellCenterX, cellCenterY);
+	if (maxDist < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		Int max = worldToCellDist(maxDist) + 1;
+		// default value for "max" is largest possible, based on map size, so we should
+		// never make it any larger than that
+		if (max < iter.getMaxRadius())
+			iter.setMaxRadius(max);
+	}
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	PartitionCell *thisCell;
+	while ((thisCell = iter.nextNonEmpty()) != nullptr)
+	{
+		CellAndObjectIntersection *nextCoi;
+		for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
+		{
+			nextCoi = thisCoi->getNextCoi();
+
+			PartitionData *thisMod = thisCoi->getModule();
+
+			Object *thisObj = thisMod->getObject();
+
+			if (thisObj == nullptr)
+				continue;
+
+			if (thisMod->friend_getDoneFlag() == theIterFlag)
+				continue;
+
+			thisMod->friend_setDoneFlag(theIterFlag);
+
+			if (!thisObj->getDrawable())
+				continue;
+
+			drawables.push_back( thisObj->getDrawable() );
+		}
+	}
+
+#endif  // not FASTER_GCO
+	return drawables;
+}
+
+
+std::list<Drawable*> PartitionManager::getDrawablesInRegionEfficient()
+{
+	//IamInnocent - Attempted to use PartitionManager code to use WorldCell for Finding Drawables Only check borders- 6/10/2025
+
+	std::list<Drawable*> drawables;
+
+	ICoord2D loRegion, hiRegion;
+	Coord3D loWorld, hiWorld;
+
+	IRegion2D region;
+	ICoord2D origin;
+	ICoord2D size;
+
+	TheTacticalView->getOrigin( &origin.x, &origin.y );
+	size.x = TheTacticalView->getWidth();
+	size.y = TheTacticalView->getHeight();
+
+	TheInGameUI->buildRegion( &origin, &size, &region );
+	loRegion.x = region.lo.x;
+	loRegion.y = region.lo.y;
+	hiRegion.x = region.hi.x;
+	hiRegion.y = region.hi.y;
+
+	TheTacticalView->screenToTerrain( &loRegion, &loWorld );
+	TheTacticalView->screenToTerrain( &hiRegion, &hiWorld );
+
+	Int loCellCenterX, loCellCenterY, hiCellCenterX, hiCellCenterY;
+	worldToCell(loWorld.x, loWorld.y, &loCellCenterX, &loCellCenterY);
+	worldToCell(hiWorld.x, hiWorld.y, &hiCellCenterX, &hiCellCenterY);
+
+	// Prevents scanning the border of the edge that may cause lags
+	hiCellCenterY++;
+
+  for (Int direction = 0; direction < 2; direction++)
+  {
+		Int curCell, endCell;
+		switch(direction){
+			case 0:
+				curCell = loCellCenterX;
+				endCell = hiCellCenterX;
+				break;
+			case 1:
+				curCell = hiCellCenterY;
+				endCell = loCellCenterY;
+				break;
+		}
+			for (Int direction2 = 0; direction2 < 2; direction2++)
+			{
+				Int curX, curY;
+				switch(direction){
+					case 0:
+					{
+						if(direction2 == 0)
+						{
+							curX = curCell;
+							curY = loCellCenterY;
+						}
+						else
+						{
+							curX = curCell;
+							curY = hiCellCenterY;
+						}
+						break;
+					}
+					case 1:
+					{
+						if(direction2 == 0)
+						{
+							curX = loCellCenterX;
+							curY = curCell;
+						}
+						else
+						{
+							curX = hiCellCenterX;
+							curY = curCell;
+						}
+						break;
+					}
+				}
+			for (Int cur = curCell; cur <= endCell; ++cur)
+			{
+
+				Int useX, useY;
+				switch(direction){
+					case 0:
+					{
+						useX = cur;
+						useY = curY;
+						break;
+					}
+					case 1:
+					{
+						useX = curX;
+						useY = cur;
+						break;
+					}
+				}
+
+			#ifdef FASTER_GCO
+
+				static Int theIterFlag = 1;	// nonzero, thanks
+				++theIterFlag;
+
+				for (Int curRadius = 0; curRadius <= 2; ++curRadius)
+				{
+					const OffsetVec& offsets = m_radiusVec[curRadius];
+						if (offsets.empty())
+							continue;
+					for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
+						{
+							PartitionCell* thisCell = getCellAt(useX + it->x, useY + it->y);
+							if (thisCell == nullptr)
+								continue;
+
+							for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
+							{
+								PartitionData *thisMod = thisCoi->getModule();
+								Object *thisObj = thisMod->getObject();
+
+								if (thisObj == nullptr)
+									continue;
+
+								// since an object can exist in multiple COIs, we use this to avoid processing
+								// the same one more than once.
+								if (thisMod->friend_getDoneFlag() == theIterFlag)
+									continue;
+								thisMod->friend_setDoneFlag(theIterFlag);
+
+								if (!thisObj->getDrawable())
+									continue;
+
+								drawables.push_back( thisObj->getDrawable() );
+
+							} // next coi
+						}	// next cell in this radius
+				} // next radius
+
+				
+			#else // not FASTER_GCO
+
+				CellOutwardIterator iter(this, useX, useY);
+				// don't go outwards any farther than necessary.
+				Int max = worldToCellDist(2) + 1;
+				// default value for "max" is largest possible, based on map size, so we should
+				// never make it any larger than that
+				if (2 < iter.getMaxRadius())
+					iter.setMaxRadius(2);
+
+				static Int theIterFlag = 1;	// nonzero, thanks
+				++theIterFlag;
+
+				PartitionCell *thisCell;
+				while ((thisCell = iter.nextNonEmpty()) != nullptr)
+				{
+					CellAndObjectIntersection *nextCoi;
+					for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
+					{
+						nextCoi = thisCoi->getNextCoi();
+
+						PartitionData *thisMod = thisCoi->getModule();
+
+						Object *thisObj = thisMod->getObject();
+
+						if (thisObj == nullptr)
+							continue;
+
+						if (thisMod->friend_getDoneFlag() == theIterFlag)
+							continue;
+
+						thisMod->friend_setDoneFlag(theIterFlag);
+
+						if (!thisObj->getDrawable())
+							continue;
+
+						drawables.push_back( thisObj->getDrawable() );
+					}
+				}
+
+			#endif  // not FASTER_GCO
+			}   // next cell
+		}	// next direction2
+  } // next direction
+
+	return drawables;
+}
 
 //-----------------------------------------------------------------------------
 Object *PartitionManager::getClosestObject(
@@ -3668,6 +4576,60 @@ Real PartitionManager::getRelativeAngle2D( const Object *obj, const Coord3D *pos
 }
 
 //-----------------------------------------------------------------------------
+Real PartitionManager::getRelativeAngle2DWithOffset(const Object* obj, Vector2 offset, const Coord3D* pos)
+{
+	Coord3D v;
+
+	// compute vector to given position
+	Coord3D objPos = *obj->getPosition();
+
+	offset.Rotate(obj->getOrientation());
+	objPos.x += offset.X;
+	objPos.y += offset.Y;
+
+	v.x = pos->x - objPos.x;
+	v.y = pos->y - objPos.y;
+	v.z = 0.0f;
+
+	Real dist = (Real)sqrtf(sqr(v.x) + sqr(v.y));
+
+	// normalize
+	if (dist == 0.0f)
+		return 0.0f;
+
+
+	const Coord3D *dir = obj->getUnitDirectionVector2D();
+
+	Real distInv = 1.0f / dist;
+	v.x *= distInv;
+	v.y *= distInv;
+	v.z *= distInv;
+
+	// dot of two unit vectors is cos of angle
+	Real c = dir->x*v.x + dir->y*v.y; // + dir->z*v.z;
+
+	// bound it in case of numerical error
+	if (c < -1.0)
+		c = -1.0;
+	else if (c > 1.0)
+		c = 1.0;
+
+	Real value = (Real)ACos( c );
+
+	// Determine sign by checking Z component of dir cross v
+	// Note this is assumes 2D, and is identical to dotting the perpendicular of v with dir
+	Real perpZ = dir->x * v.y - dir->y * v.x;
+	if (perpZ < 0.0f)
+		value = -value;
+
+	// note: to make this 3D, 'dir' and 'v' can be normalized and dotted just as they are
+	// to test sign, compute N = dir X v, then P = N x dir, then S = P . v, where sign of
+	// S is sign of angle - MSB
+
+	return value;
+}
+
+//-----------------------------------------------------------------------------
 SimpleObjectIterator *PartitionManager::iterateObjectsInRange(
 	const Object *obj,
 	Real maxDist,
@@ -3727,6 +4689,627 @@ SimpleObjectIterator* PartitionManager::iteratePotentialCollisions(
 
 	getClosestObjects(nullptr, pos, maxDist, use2D ? FROM_BOUNDINGSPHERE_2D : FROM_BOUNDINGSPHERE_3D, filters, iter, nullptr, nullptr);
 
+	iterHolder.release();
+	return iter;
+}
+
+/*struct IterData
+{
+	Real radius;
+	Coord3D startingPos;
+	DistanceCalculationType dc;
+	PartitionFilter **filters;
+	SimpleObjectIterator *iterArg;
+};*/
+
+
+static Bool testValidForRailgunCheck(const Object* obj)
+{
+	// Sanity
+	if( !obj )
+		return FALSE;
+
+	// Object is not attackable, don't do anything
+	if( obj->isKindOf( KINDOF_UNATTACKABLE ) )
+		return FALSE;
+
+	// Object is okay for railgun target
+	if( obj->isKindOf(KINDOF_VEHICLE) ||
+		obj->isKindOf(KINDOF_AIRCRAFT) ||
+		obj->isKindOf(KINDOF_STRUCTURE) ||
+		obj->isKindOf(KINDOF_INFANTRY) ||
+		obj->isKindOf(KINDOF_MINE) ||
+		obj->isKindOf(KINDOF_SHRUBBERY) ||
+		obj->isKindOf(KINDOF_PARACHUTE) ||
+		obj->isKindOf(KINDOF_SMALL_MISSILE) ||
+		obj->isKindOf(KINDOF_BALLISTIC_MISSILE) ||
+		obj->isKindOf(KINDOF_PROJECTILE) ||
+		obj->isKindOf(KINDOF_CLEANUP_HAZARD)
+	  )
+	  return TRUE;
+
+	return FALSE;
+}
+
+
+//-----------------------------------------------------------------------------
+// Uses Bresenham line algorithm from www.gamedev.net.
+Int PartitionManager::getObjectsAlongLine(
+	const Object* source,
+	const Coord3D& pos,
+	const Coord3D& posOther,
+	Real radius,
+	Real infantryRadius,
+	Real checkPerDistance,
+	const FXList* railgunfx,
+	const ObjectCreationList *railgunocl,
+	DistanceCalculationType dc,
+	PartitionFilter **filters,
+	SimpleObjectIterator *iterArg,
+	Bool checkBehind,
+	Real *closestDistArg,
+	Coord3D *closestVecArg
+)
+{
+	// IamInnocent - Reworked the checking Distance, now only need to count distance between one cell to check
+	Real RailgunCheckDistance = checkPerDistance;
+	if(RailgunCheckDistance == 0.0f)
+		RailgunCheckDistance = m_cellSize;
+
+	if(RailgunCheckDistance <= 0)
+		return 0; // Don't do railgun if there is no Checking Distance
+
+	Coord3D dirVec = posOther;
+	dirVec.sub(pos);
+
+	Real distance = dirVec.length();
+	Int checkTimes = REAL_TO_INT_CEIL(distance/RailgunCheckDistance);
+
+	Real heightDiff = posOther.z - pos.z;
+	Real heightCheckPerTime = 0.0f;
+	if(heightDiff > WWMATH_EPSILON || heightDiff < WWMATH_EPSILON)
+		heightCheckPerTime = heightDiff/checkTimes;
+
+	Real angle = atan2(posOther.y - pos.y, posOther.x - pos.x);
+	ObjectID sourceID = source->getID();
+
+	for(int i = 1; i < checkTimes; i++)
+	{
+		Coord3D currentPos;
+		currentPos.x = pos.x + Cos(angle) * i * RailgunCheckDistance;
+		currentPos.y = pos.y + Sin(angle) * i * RailgunCheckDistance;
+
+		Real groundHeight = TheTerrainLogic->getGroundHeight( currentPos.x, currentPos.y );
+		currentPos.z = max(groundHeight, pos.z + i * heightCheckPerTime);
+
+		checkObjectsAlongLine(sourceID, pos, currentPos, posOther, radius, infantryRadius, angle, dc, filters, iterArg, checkBehind, closestDistArg, closestVecArg);
+
+		if( railgunfx )
+			FXList::doFXPos(railgunfx, &currentPos);
+		if( railgunocl )
+		{
+			Object *obj = ObjectCreationList::create( railgunocl, source, &currentPos, nullptr, angle);
+			if(obj && !testValidForRailgunCheck(obj))
+				obj->setIgnoreRailgunCheck();
+		}
+	}
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+Int PartitionManager::checkObjectsAlongLine(
+	ObjectID sourceID,
+	const Coord3D& startingPos,
+	const Coord3D& currentPos,
+	const Coord3D& endPos,
+	Real radius,
+	Real infantryRadius,
+	Real dirAngle,
+	DistanceCalculationType dc,
+	PartitionFilter **filters,
+	SimpleObjectIterator *iterArg,
+	Bool checkBehind,
+	Real *closestDistArg,
+	Coord3D *closestVecArg
+)
+{
+	//IterData* data = (IterData*)userData;
+	Int cellCenterX, cellCenterY;
+	worldToCell(currentPos.x, currentPos.y, &cellCenterX, &cellCenterY);
+	// IamInnocent - not accurate according to the Position
+	//Int cellCenterX = cellX;
+	//Int cellCenterY = cellY;
+
+	//const Coord3D* faceDir = source->getUnitDirectionVector2D();
+
+		//USE_PERF_TIMER(getClosestObjects)
+
+#ifdef DUMP_PERF_STATS
+	if (TheGameLogic->getFrame() != s_gcoPerfFrame)
+	{
+		s_gcoPerfFrame = TheGameLogic->getFrame();
+		s_countInClosestObjectsThisFrame = 0;
+		s_timeInClosestObjectsThisFrame = 0;
+	}
+	++s_countInClosestObjects;
+	++s_countInClosestObjectsThisFrame;
+
+	Int64 startTime64;
+	GetPrecisionTimer(&startTime64);
+#endif
+
+#ifdef RTS_DEBUG
+	static Int theEntrancyCount = 0;
+	DEBUG_ASSERTCRASH(theEntrancyCount == 0, ("sorry, this routine is not reentrant"));
+	++theEntrancyCount;
+#endif
+
+	Real closestDistSqr = radius * radius;	// if it's not closer than this, we shouldn't consider it anyway...
+	Coord3D closestVec;
+#if !RETAIL_COMPATIBLE_CRC // TheSuperHackers @info This should be safe to initialize because it is unused, but let us be extra safe for now.
+	closestVec.x = radius;
+	closestVec.y = radius;
+	closestVec.z = radius;
+#endif
+
+#ifdef FASTER_GCO
+
+	Int maxRadius = m_maxGcoRadius;
+	Int allocRadius = maxRadius;
+	if (radius < HUGE_DIST)
+	{
+		allocRadius = minInt(m_maxGcoRadius, worldToCellDist(radius));
+		// don't go outwards any farther than necessary.
+		maxRadius = maxInt(allocRadius, worldToCellDist(infantryRadius));
+	}
+#if defined(INTENSE_DEBUG)
+	/*
+		Note, if you ever enable this code, be forewarned that it can give
+		you "false positives" for objects that are located just off the map... (srj)
+	*/
+	Int maxRadiusLimit = maxRadius + 3;
+	if (maxRadiusLimit > m_maxGcoRadius) maxRadiusLimit = m_maxGcoRadius;
+#else
+	Int maxRadiusLimit = maxRadius;
+#endif
+
+	DistCalcProc distProc = theDistCalcProcs[dc];
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	/*
+		m_radiusVec[curRadius] contains a list of the cells (foo) that could
+		contain objects that are <= (curRadius * cellSize) distance away from cell (0,0).
+	*/
+  for (Int curRadius = 0; curRadius <= maxRadiusLimit; ++curRadius)
+  {
+	const OffsetVec& offsets = m_radiusVec[curRadius];
+		if (offsets.empty())
+			continue;
+    for (OffsetVec::const_iterator it = offsets.begin(); it != offsets.end(); ++it)
+		{
+			PartitionCell* thisCell = getCellAt(cellCenterX + it->x, cellCenterY + it->y);
+			if (thisCell == nullptr)
+				continue;
+
+			for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = thisCoi->getNextCoi())
+			{
+				PartitionData *thisMod = thisCoi->getModule();
+				Object *thisObj = thisMod->getObject();
+
+				// never compare against ourself.
+				if (thisObj == nullptr || thisObj->getID() == sourceID)
+					continue;
+
+				// since an object can exist in multiple COIs, we use this to avoid processing
+				// the same one more than once.
+				if (thisMod->friend_getDoneFlag() == theIterFlag)
+					continue;
+				thisMod->friend_setDoneFlag(theIterFlag);
+
+				// If we are only checking for Infantry, ignore if not Infantry
+				if(!thisObj->isKindOf(KINDOF_INFANTRY) && curRadius > allocRadius)
+					continue;
+
+				// Skip object if not valid for railgun target while spawned by ocls
+				if(thisObj->getIgnoreRailgunCheck())
+					continue;
+
+				// Skip object if it is behind the starting point direction vector
+				Coord3D objPos = *thisObj->getPosition();
+				//Real relAngle = getRelativeAngle2D(source, thisObj) * RAD_TO_DEGREE_FACTOR;
+	
+				// Modified from Locomotor::rotateObjAroundLocoPivot
+				Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
+				Real relAngle = stdAngleDiff(desiredAngle, dirAngle);
+
+				// We don't hit objects that are behind us;
+				if(fabs(relAngle) > 1.0f)
+					continue;
+
+				if(!checkBehind)
+				{
+					Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
+					Real checkAngle = stdAngleDiff(currAngle, dirAngle);
+					// Skip object if hit directional threshold
+					if(fabs(checkAngle) > 1.0f)
+						continue;
+				}
+
+				Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
+				Real thisDistSqr;
+				Coord3D distVec;
+				Bool useNewStructureCheck = FALSE;
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				{
+					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+					if(geomInfo.getGeomType() == GEOMETRY_BOX)
+					{
+						useNewStructureCheck = TRUE;
+						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
+						if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
+							continue;
+					}
+				}
+				if (!useNewStructureCheck && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+					continue;
+
+				//if( setContinue )
+				/*{
+					//if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+					{
+						DEBUG_LOG(("Skipped from Partition Distance Check. Object: %s. ObjectID: %d.", thisObj->getTemplate()->getName().str(), thisObj->getID()));
+						DEBUG_LOG(("Distance Sqr: %f", thisDistSqr));
+						DEBUG_LOG(("Source Pos: X: %f Y: %f Z: %f", currentPos.x, currentPos.y, currentPos.z));
+						DEBUG_LOG(("Object Pos: X: %f Y: %f Z: %f", objPos.x, objPos.y, objPos.z));
+						continue;
+					}
+
+					// Have a different set of rules for checking infantry
+					//if ((*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+					{
+						//Coord3D checkPos = currentPos;
+						//Coord3D currDir = *thisObj->getPosition();
+						//checkPos.z = source->getPosition()->z;
+						//currDir.sub( &checkPos );
+
+						Real dx2, dy2;
+						dx2 = currentPos.x - objPos.x;
+						dy2 = currentPos.y - objPos.y;
+
+						Real dx3, dy3;
+						dx3 = startingPos.x - objPos.x;
+						dy3 = startingPos.y - objPos.y;
+
+						Real fakeLogFactor = 16.0f;
+						if(radius >= 3.35)
+							fakeLogFactor = 40.0f;
+						else if(radius > 1.0)
+							fakeLogFactor = min(40.0f, max(16.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1))));
+						Real checkDistSqr = max(10.0f, closestDistSqr);
+						checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
+
+						Real firAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+						Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+						Real angleThreshold = max(radius * 0.5f, 0.25f);
+
+						if((dx2*dx2 + dy2*dy2) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx3*dx3 + dy3*dy3) > 5000.0f))
+						{
+							continue;
+						}
+					}
+				}*/
+
+				// IamInnocent - Don't use distProc function because it involves more calculations than necessary
+				switch (dc)
+				{
+					case FROM_CENTER_2D:
+					case FROM_CENTER_3D:
+						(*distProc)(&startingPos, nullptr, &objPos, thisObj, thisDistSqr, distVec, checkDistSqr);
+						break;
+					case FROM_BOUNDINGSPHERE_2D:
+					case FROM_BOUNDINGSPHERE_3D:
+					{
+						Coord3D diff;
+						diff.x = objPos.x - startingPos.x;
+						diff.y = objPos.y - startingPos.y;
+						diff.z = 0.0f;
+
+						Real actualDistSqr = sqr(diff.x) + sqr(diff.y);
+						if(dc == FROM_BOUNDINGSPHERE_3D)
+						{
+							diff.z = objPos.z + thisObj->getGeometryInfo().getZDeltaToCenterPosition() - startingPos.z;
+							actualDistSqr += sqr(diff.z);
+						}
+
+						Real shrunkenDistSqr = actualDistSqr;
+						Real totalRad = thisObj->getGeometryInfo().getBoundingCircleRadius();
+						// We deviate and use hackaround for skipping larger numbers calculations here, since Railgun doesn't check distance when calculating Damage
+						if (totalRad > 0.0f && totalRad * totalRad >= actualDistSqr)
+						{
+							Real actualDist = sqrtf(actualDistSqr);
+							Real shrunkenDist = actualDist - totalRad;
+							if (shrunkenDist <= 0.0f)
+							{
+								shrunkenDistSqr = 0.0f;	// sorry, distances can't be negative
+							}
+							else
+							{
+								shrunkenDistSqr = sqr(shrunkenDist);
+							}
+						}
+
+						thisDistSqr = shrunkenDistSqr;
+
+						break;
+					}
+				}
+
+				if (!filtersAllow(filters, thisObj))
+					continue;
+
+				// ok, this is within the range, and the filters allow it.
+				// add it to the iter, if we have one....
+				if (iterArg)
+				{
+					iterArg->insert(thisObj, thisDistSqr);
+				}
+				else
+				{
+					DEBUG_CRASH(("Iterate Cells Along Line needs iter!"));
+				}
+
+			}
+		}
+  }
+
+#else // not FASTER_GCO
+
+// IamInnocent - Infantru has different checks for line. This is implemented in FASTER_GCO, but not implemented here.
+// This is due to the constraints that the not FASTER_CGO don't use for loops to check for values.
+	CellOutwardIterator iter(this, cellCenterX, cellCenterY);
+	if (radius < HUGE_DIST)
+	{
+		// don't go outwards any farther than necessary.
+		Int max = worldToCellDist(radius) + 1;
+		// default value for "max" is largest possible, based on map size, so we should
+		// never make it any larger than that
+		if (max < iter.getMaxRadius())
+			iter.setMaxRadius(max);
+	}
+
+	static Int theIterFlag = 1;	// nonzero, thanks
+	++theIterFlag;
+
+	PartitionCell *thisCell;
+	while ((thisCell = iter.nextNonEmpty()) != nullptr)
+	{
+		CellAndObjectIntersection *nextCoi;
+		for (CellAndObjectIntersection *thisCoi = thisCell->getFirstCoiInCell(); thisCoi; thisCoi = nextCoi)
+		{
+			nextCoi = thisCoi->getNextCoi();
+
+			PartitionData *thisMod = thisCoi->getModule();
+
+			Object *thisObj = thisMod->getObject();
+
+			// never compare against ourself.
+			if (thisObj == nullptr || thisObj->getID() == sourceID)
+				continue;
+
+			if (thisMod->friend_getDoneFlag() == theIterFlag)
+				continue;
+
+			thisMod->friend_setDoneFlag(theIterFlag);
+
+			// Skip object if it is behind the starting point direction vector
+			Coord3D objPos = *thisObj->getPosition();
+			//Real relAngle = getRelativeAngle2D(source, thisObj) * RAD_TO_DEGREE_FACTOR;
+
+			// Modified from Locomotor::rotateObjAroundLocoPivot
+			Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
+			Real relAngle = stdAngleDiff(desiredAngle, dirAngle);
+
+			// We don't hit objects that are behind us;
+			if(fabs(relAngle) > 1.0f)
+				continue;
+
+			if(!checkBehind)
+			{
+				Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
+				Real checkAngle = stdAngleDiff(currAngle, dirAngle);
+				// Skip object if hit directional threshold
+				if(fabs(checkAngle) > 1.0f)
+					continue;
+			}
+
+			// hmm, ok, calc the distance.
+			Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
+			Real thisDistSqr;
+			Coord3D distVec;
+
+			Bool useNewStructureCheck = FALSE;
+			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			{
+				const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
+				if(geomInfo.getGeomType() == GEOMETRY_BOX)
+				{
+					useNewStructureCheck = TRUE;
+					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
+					if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
+						continue;
+				}
+			}
+			if (!useNewStructureCheck && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
+				continue;
+
+			//if( setContinue )
+			/*{
+				//if( !thisObj->isKindOf(KINDOF_INFANTRY) || radius >= 20.0f )
+				{
+					DEBUG_LOG(("Skipped from Partition Distance Check. Object: %s. ObjectID: %d.", thisObj->getTemplate()->getName().str(), thisObj->getID()));
+					DEBUG_LOG(("Distance Sqr: %f", thisDistSqr));
+					DEBUG_LOG(("Source Pos: X: %f Y: %f Z: %f", currentPos.x, currentPos.y, currentPos.z));
+					DEBUG_LOG(("Object Pos: X: %f Y: %f Z: %f", objPos.x, objPos.y, objPos.z));
+					continue;
+				}
+
+				// Have a different set of rules for checking infantry
+				//if ((*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+				{
+					//Coord3D checkPos = currentPos;
+					//Coord3D currDir = *thisObj->getPosition();
+					//checkPos.z = source->getPosition()->z;
+					//currDir.sub( &checkPos );
+
+					Real dx2, dy2;
+					dx2 = currentPos.x - objPos.x;
+					dy2 = currentPos.y - objPos.y;
+
+					Real dx3, dy3;
+					dx3 = startingPos.x - objPos.x;
+					dy3 = startingPos.y - objPos.y;
+
+					Real fakeLogFactor = 16.0f;
+					if(radius >= 3.35)
+						fakeLogFactor = 40.0f;
+					else if(radius > 1.0)
+						fakeLogFactor = min(40.0f, max(16.0f, (Real)(pow(2, radius + 4) * 0.5 * radius / (closestDistSqr + radius - 1))));
+					Real checkDistSqr = max(10.0f, closestDistSqr);
+					checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
+
+					Real firAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+					Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+					Real angleThreshold = max(radius * 0.5f, 0.25f);
+
+					if((dx2*dx2 + dy2*dy2) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx3*dx3 + dy3*dy3) > 5000.0f))
+					{
+						continue;
+					}
+				}
+			}*/
+
+			// IamInnocent - Don't use distProc function because it involves more calculations than necessary
+			switch (dc)
+			{
+				case FROM_CENTER_2D:
+				case FROM_CENTER_3D:
+					(*distProc)(&startingPos, nullptr, &objPos, thisObj, &thisDistSqr, &distVec, checkDistSqr);
+					break;
+				case FROM_BOUNDINGSPHERE_2D:
+				case FROM_BOUNDINGSPHERE_3D:
+				{
+					Coord3D diff;
+					diff.x = objPos.x - startingPos.x;
+					diff.y = objPos.y - startingPos.y;
+					diff.z = 0.0f;
+
+					Real actualDistSqr = sqr(diff.x) + sqr(diff.y);
+					if(dc == FROM_BOUNDINGSPHERE_3D)
+					{
+						diff.z = objPos.z + thisObj->getGeometryInfo().getZDeltaToCenterPosition() - startingPos.z;
+						actualDistSqr += sqr(diff.z);
+					}
+
+					Real shrunkenDistSqr = actualDistSqr;
+					Real totalRad = thisObj->getGeometryInfo().getBoundingCircleRadius();
+					// We deviate and use hackaround for skipping larger numbers calculations here, since Railgun doesn't check distance when calculating Damage
+					if (totalRad > 0.0f && totalRad * totalRad >= actualDistSqr)
+					{
+						Real actualDist = sqrtf(actualDistSqr);
+						Real shrunkenDist = actualDist - totalRad;
+						if (shrunkenDist <= 0.0f)
+						{
+							shrunkenDistSqr = 0.0f;	// sorry, distances can't be negative
+						}
+						else
+						{
+							shrunkenDistSqr = sqr(shrunkenDist);
+						}
+					}
+
+					thisDistSqr = shrunkenDistSqr;
+
+					break;
+				}
+			}
+
+			// check the filters now
+			if (!filtersAllow(filters, thisObj))
+				continue;
+
+			// ok, guess this is a winner!
+			if (iterArg)
+			{
+				iterArg->insert(thisObj, thisDistSqr);
+			}
+			else
+			{
+				DEBUG_CRASH(("Iterate Cells Along Line needs iter!"));
+			}
+		}
+	}
+
+#endif  // not FASTER_GCO
+
+	if (closestVecArg)
+	{
+		*closestVecArg = closestVec;
+	}
+	if (closestDistArg)
+	{
+		*closestDistArg = (Real)sqrtf(closestDistSqr);
+	}
+
+#ifdef RTS_DEBUG
+	--theEntrancyCount;
+#endif
+#ifdef DUMP_PERF_STATS
+	Int64 endTime64;
+	GetPrecisionTimer(&endTime64);
+	Int64 delta = (endTime64 - startTime64);
+	s_timeInClosestObjects += delta;
+	s_timeInClosestObjectsThisFrame += delta;
+#endif
+
+
+	return 0;	// zero to continue
+}
+
+//-----------------------------------------------------------------------------
+SimpleObjectIterator *PartitionManager::iterateObjectsAlongLine(
+	const Object* source,
+	const Coord3D *pos,
+	const Coord3D *posOther,
+	Real radius,
+	Real infantryRadius,
+	Real checkPerDistance,
+	const FXList* railgunfx,
+	const ObjectCreationList *railgunocl,
+	DistanceCalculationType dc,
+	Bool checkBehind,
+	PartitionFilter **filters,
+	IterOrderType order
+)
+{
+	MemoryPoolObjectHolder iterHolder;
+	SimpleObjectIterator *iter = newInstance(SimpleObjectIterator);
+	iterHolder.hold(iter);
+
+	/*IterData data;
+	data.radius = radius;
+	data.startingPos = *pos;
+	data.dc = dc;
+	data.filters = filters;
+	data.iterArg = iter;*/
+
+	getObjectsAlongLine(source, *pos, *posOther, radius, infantryRadius, checkPerDistance, railgunfx, railgunocl, dc, filters, iter, checkBehind, nullptr, nullptr);
+
+	//iterateCellsAlongLine(*pos, *posOther, (*CellAlongLineProc)checkObjectsAlongLine, &data);
+
+	iter->sort(order);
 	iterHolder.release();
 	return iter;
 }
@@ -3932,6 +5515,7 @@ Bool PartitionManager::tryPosition( const Coord3D *center,
 
 		// check for path existence
 		if( ai && TheAI->pathfinder()->clientSafeQuickDoesPathExist( ai->getLocomotorSet(),
+																									options->sourceToPathToDest->getRequiredBridgeHeight(),
 																									options->sourceToPathToDest->getPosition(),
 																									&pos ) == FALSE )
 				return FALSE;
@@ -4573,6 +6157,22 @@ Bool PartitionManager::isClearLineOfSightTerrain(const Object* obj, const Coord3
 
 	if (obj)
 	{
+		// IamInnocent - Enable Objects to bypass Line of Sight Checking
+		if(!obj->hasDefaultLineOfSightEnabled())
+			return TRUE;
+
+		const Weapon* w = obj->getCurrentWeapon();
+		if (obj->isKindOf(KINDOF_IMMOBILE)) {
+			// Don't take terrain blockage into account, since we can't move around it. jba.
+			w = nullptr;
+		}
+		if (w)
+		{
+			if(w->getWeaponBypassLineOfSight())
+				return TRUE;
+		}
+
+		
 		pos = *obj->getPosition();
 		// note that we want to measure from the top of the collision
 		// shape, not the bottom! (most objects have eyes a lot closer
@@ -5429,10 +7029,11 @@ Bool PartitionFilterLineOfSight::allow(Object *objOther)
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-PartitionFilterPossibleToAttack::PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource) :
+PartitionFilterPossibleToAttack::PartitionFilterPossibleToAttack(AbleToAttackType t, const Object *obj, CommandSourceType commandSource, Bool getResultOnly ) :
 	m_attackType(t),
 	m_obj(obj),
-	m_commandSource(commandSource)
+	m_commandSource(commandSource),
+	m_getResultOnly(getResultOnly)
 {
 }
 
@@ -5444,7 +7045,7 @@ Bool PartitionFilterPossibleToAttack::allow(Object *objOther)
 	// we should have already filtered out isAbleToAttack!
 	DEBUG_ASSERTCRASH(m_obj->isAbleToAttack(), ("if the object is unable to attack at all, you should filter that out ahead of time!"));
 
-	CanAttackResult result = m_obj->getAbleToAttackSpecificObject( m_attackType, objOther, m_commandSource );
+	CanAttackResult result = m_obj->getAbleToAttackSpecificObject( m_attackType, objOther, m_commandSource, (WeaponSlotType)-1, m_getResultOnly );
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{
 		return TRUE;
@@ -5488,6 +7089,27 @@ Bool PartitionFilterPossibleToHijack::allow(Object *objOther)
 		return FALSE;
 
 	if( TheActionManager->canHijackVehicle(m_obj, objOther, m_commandSource) )
+		return TRUE;
+	else
+		return FALSE;
+}
+
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+PartitionFilterPossibleToEquip::PartitionFilterPossibleToEquip(const Object *obj, CommandSourceType commandSource) :
+	m_obj(obj),
+	m_commandSource(commandSource)
+{
+}
+
+//-----------------------------------------------------------------------------
+Bool PartitionFilterPossibleToEquip::allow(Object *objOther)
+{
+	if (!objOther || !m_obj)
+		return FALSE;
+
+	if( TheActionManager->canEquipObject( m_obj, objOther, m_commandSource ) )
 		return TRUE;
 	else
 		return FALSE;
@@ -5542,6 +7164,25 @@ Bool PartitionFilterRejectByObjectStatus::allow(Object *objOther)
 	return !( status.testForAll( m_mustBeSet ) && status.testForNone( m_mustBeClear ) );
 }
 
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+Bool PartitionFilterAcceptByObjectCustomStatus::allow(Object *objOther)
+{
+	Bool allow = objOther->testCustomStatusForAll( m_mustBeSet ) ? TRUE : FALSE;
+	if(allow)
+	{
+		for (std::vector<AsciiString>::const_iterator it = m_mustBeClear.begin(); it != m_mustBeClear.end(); ++it)
+		{
+			if(objOther->testCustomStatus( *it ))
+				return FALSE;
+		}
+	}
+	return allow;
+}
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -5615,8 +7256,9 @@ Bool PartitionFilterStealthedAndUndetected::allow( Object *objOther )
 	{
 		//This handles neutral containers that hold stealth units. This specifically fixes a bug where hunt scripts would ignore
 		//this case -- units would acquire the building Jarmen Kell occupied even though it was not stealth detected.
+		///IamInnocent 16/10/2025 - HotFix: Could return null from CaveContain.
 		const ContainModuleInterface* contain = objOther->getContain();
-		if( contain && !contain->getContainedItemsList()->empty() )
+		if( contain && contain->getContainedItemsList() && !contain->getContainedItemsList()->empty() )
 		{
 			const Player* victimApparentController = contain->getApparentControllingPlayer( m_obj->getControllingPlayer() );
 			//Check if it's stealthed!

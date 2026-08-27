@@ -32,6 +32,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/Recorder.h"
+#include "Common/KindOf.h"
 
 #include "GameClient/InGameUI.h"
 #include "GameLogic/GameLogic.h"
@@ -57,6 +58,14 @@ GameMessage::GameMessage( GameMessage::Type type )
 	m_playerIndex = ThePlayerList->getLocalPlayer()->getPlayerIndex();
 	m_type = type;
 	m_list = nullptr;
+	m_orderData.Radius = 0.0f;
+	m_orderData.RequiredMask = KINDOFMASK_NONE;
+	m_orderData.ForbiddenMask = KINDOFMASK_NONE;
+	m_orderData.MinDelay = 0;
+	m_orderData.MaxDelay = 0;
+	m_orderData.IntervalDelay = 0;
+	m_doSingleID = INVALID_ID;
+	m_doSingleAddStat = FALSE;
 }
 
 
@@ -308,6 +317,8 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_META_STOP)
 	CASE_LABEL(MSG_META_DEPLOY)
 	CASE_LABEL(MSG_META_CREATE_FORMATION)
+	CASE_LABEL(MSG_META_MOVE_IN_FORMATION)
+	CASE_LABEL(MSG_META_REVERSE_MOVE)
 	CASE_LABEL(MSG_META_FOLLOW)
 	CASE_LABEL(MSG_META_CHAT_PLAYERS)
 	CASE_LABEL(MSG_META_CHAT_ALLIES)
@@ -527,14 +538,17 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_DO_REPAIR_HINT)
 	CASE_LABEL(MSG_RESUME_CONSTRUCTION_HINT)
 	CASE_LABEL(MSG_ENTER_HINT)
+	CASE_LABEL(MSG_SMART_GARRISON_HINT)
 	CASE_LABEL(MSG_DOCK_HINT)
 	CASE_LABEL(MSG_DO_MOVETO_HINT)
 	CASE_LABEL(MSG_DO_ATTACKMOVETO_HINT)
 	CASE_LABEL(MSG_ADD_WAYPOINT_HINT)
+	CASE_LABEL(MSG_DO_REVERSE_MOVETO_HINT)
 	CASE_LABEL(MSG_HIJACK_HINT)
 	CASE_LABEL(MSG_SABOTAGE_HINT)
 	CASE_LABEL(MSG_FIREBOMB_HINT)
 	CASE_LABEL(MSG_CONVERT_TO_CARBOMB_HINT)
+	CASE_LABEL(MSG_EQUIP_HINT)
 	CASE_LABEL(MSG_CAPTUREBUILDING_HINT)
 
 #ifdef ALLOW_SURRENDER
@@ -592,6 +606,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_DO_SPECIAL_POWER)
 	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_LOCATION)
 	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_OBJECT)
+	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_DRAWABLE)
 	CASE_LABEL(MSG_SET_RALLY_POINT)
 	CASE_LABEL(MSG_PURCHASE_SCIENCE)
 	CASE_LABEL(MSG_QUEUE_UPGRADE)
@@ -604,6 +619,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_SELL)
 	CASE_LABEL(MSG_EXIT)
 	CASE_LABEL(MSG_EVACUATE)
+	CASE_LABEL(MSG_ENTER_ME)
 	CASE_LABEL(MSG_EXECUTE_RAILED_TRANSPORT)
 	CASE_LABEL(MSG_COMBATDROP_AT_LOCATION)
 	CASE_LABEL(MSG_COMBATDROP_AT_OBJECT)
@@ -616,11 +632,14 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_DO_REPAIR)
 	CASE_LABEL(MSG_RESUME_CONSTRUCTION)
 	CASE_LABEL(MSG_ENTER)
+	CASE_LABEL(MSG_EQUIP)
 	CASE_LABEL(MSG_DOCK)
 	CASE_LABEL(MSG_DO_MOVETO)
 	CASE_LABEL(MSG_DO_ATTACKMOVETO)
+	CASE_LABEL(MSG_DO_SMART_GARRISON)
 	CASE_LABEL(MSG_DO_FORCEMOVETO)
 	CASE_LABEL(MSG_ADD_WAYPOINT)
+	CASE_LABEL(MSG_DO_REVERSE_MOVETO)
 	CASE_LABEL(MSG_DO_GUARD_POSITION)
 	CASE_LABEL(MSG_DO_GUARD_OBJECT)
 	CASE_LABEL(MSG_DO_STOP)
@@ -628,6 +647,7 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_INTERNET_HACK)
 	CASE_LABEL(MSG_DO_CHEER)
 	CASE_LABEL(MSG_TOGGLE_OVERCHARGE)
+	CASE_LABEL(MSG_DISABLE_POWER)
 	CASE_LABEL(MSG_SWITCH_WEAPONS)
 	CASE_LABEL(MSG_CONVERT_TO_CARBOMB)
 	CASE_LABEL(MSG_CAPTUREBUILDING)
@@ -644,9 +664,9 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_SET_REPLAY_CAMERA)
 	CASE_LABEL(MSG_SELF_DESTRUCT)
 	CASE_LABEL(MSG_CREATE_FORMATION)
+	CASE_LABEL(MSG_MOVE_IN_FORMATION)
+	CASE_LABEL(MSG_REVERSE_MOVE)
 	CASE_LABEL(MSG_LOGIC_CRC)
-	CASE_LABEL(MSG_SET_MINE_CLEARING_DETAIL)
-	CASE_LABEL(MSG_ENABLE_RETALIATION_MODE)
 	CASE_LABEL(MSG_BEGIN_DEBUG_NETWORK_MESSAGES)
 
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
@@ -662,6 +682,9 @@ const char *GameMessage::getCommandTypeAsString(GameMessage::Type t)
 	CASE_LABEL(MSG_OBJECT_POSITION)
 	CASE_LABEL(MSG_OBJECT_ORIENTATION)
 	CASE_LABEL(MSG_OBJECT_JOINED_TEAM)
+	CASE_LABEL(MSG_SET_MINE_CLEARING_DETAIL)
+	CASE_LABEL(MSG_ENABLE_RETALIATION_MODE)
+	CASE_LABEL(MSG_DO_SPECIAL_POWER_AT_MULTIPLE_LOCATIONS)
 
 #ifdef ALLOW_SURRENDER
 	CASE_LABEL(MSG_DO_SURRENDER)
@@ -710,6 +733,32 @@ GameMessageList::~GameMessageList()
 void GameMessageList::appendMessage( GameMessage *msg )
 {
 	msg->friend_setNext(nullptr);
+
+	if (m_lastMessage)
+	{
+		m_lastMessage->friend_setNext(msg);
+		msg->friend_setPrev(m_lastMessage);
+		m_lastMessage = msg;
+	}
+	else
+	{
+		// first message
+		m_firstMessage = msg;
+		m_lastMessage = msg;
+		msg->friend_setPrev(nullptr);
+	}
+
+	// note containment within message itself
+	msg->friend_setList(this);
+}
+
+/**
+ * Append message to end of message list with order radius properties
+ */
+void GameMessageList::appendMessageWithOrderNearby( GameMessage *msg, OrderNearbyData orderData )
+{
+	msg->friend_setNext(nullptr);
+	msg->friend_setOrderData(orderData);
 
 	if (m_lastMessage)
 	{
@@ -862,6 +911,21 @@ GameMessage *MessageStream::appendMessage( GameMessage::Type type )
 
 	// add message to list
 	GameMessageList::appendMessage( msg );
+
+	return msg;
+}
+
+/**
+ * Create a new message of the given message type and append it
+ * to this message stream.  Return the message such that any data
+ * associated with this message can be attached to it.
+ */
+GameMessage *MessageStream::appendMessageWithOrderNearby( GameMessage::Type type, OrderNearbyData orderData )
+{
+	GameMessage *msg = newInstance(GameMessage)( type );
+
+	// add message to list
+	GameMessageList::appendMessageWithOrderNearby( msg, orderData );
 
 	return msg;
 }

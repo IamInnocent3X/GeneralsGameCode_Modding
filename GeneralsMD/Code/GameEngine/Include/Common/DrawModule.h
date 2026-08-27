@@ -51,6 +51,8 @@ class DebrisDrawInterface;
 class TracerDrawInterface;
 class RopeDrawInterface;
 class LaserDrawInterface;
+class DecalDrawInterface;
+class TreeDrawInterface;
 class FXList;
 enum TerrainDecalType CPP_11(: Int);
 enum ShadowType CPP_11(: Int);
@@ -83,6 +85,8 @@ public:
 	virtual void setTerrainDecalSize(Real x, Real y) {};
 	virtual void setTerrainDecalOpacity(Real o) {};
 
+	virtual void reactToTeleport() {};	///< object was instantly relocated (e.g. chronosphere) - break tread marks etc.
+
 	virtual void setFullyObscuredByShroud(Bool fullyObscured) = 0;
 
 	virtual Bool isVisible() const { return true; }	///< for limiting tree sway, etc to visible objects
@@ -107,6 +111,12 @@ public:
 
 	virtual LaserDrawInterface* getLaserDrawInterface() { return nullptr; }
 	virtual const LaserDrawInterface* getLaserDrawInterface() const { return nullptr; }
+
+	//virtual DecalDrawInterface* getDecalDrawInterface() { return nullptr; }
+	//virtual const DecalDrawInterface* getDecalDrawInterface() const { return nullptr; }
+
+	virtual TreeDrawInterface* getTreeDrawInterface() { return nullptr; }
+	virtual const TreeDrawInterface* getTreeDrawInterface() const { return nullptr; }
 
 };
 inline DrawModule::DrawModule( Thing *thing, const ModuleData* moduleData ) : DrawableModule( thing, moduleData ) { }
@@ -149,6 +159,13 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+//class DecalDrawInterface
+//{
+//public:
+//	virtual void initDecal(AsciiString texture, Real opacity, Int color, ShadowType type, UnsignedInt lifetime, UnsignedInt fadeOutTime, UnsignedInt fadeInTime, Real sizeX, Real sizeY) = 0;
+//};
+
+//-------------------------------------------------------------------------------------------------
 class ObjectDrawInterface
 {
 public:
@@ -176,6 +193,10 @@ public:
 	virtual Int getCurrentBonePositions(const char* boneNamePrefix, Int startIndex, Coord3D* positions, Matrix3D* transforms, Int maxBones) const = 0;
 	virtual Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const = 0;
 	virtual Bool getProjectileLaunchOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos) const = 0;
+	virtual Bool getWeaponFireOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const = 0;
+	virtual Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch) = 0;
+	virtual void setNeedUpdateTurretPositioning(Bool set) = 0;
+	virtual void setCanDoFXWhileHidden(Bool set) = 0;
 	virtual void updateProjectileClipStatus( UnsignedInt shotsRemaining, UnsignedInt maxShots, WeaponSlotType slot ) = 0; ///< This will do the show/hide work if ProjectileBoneFeedbackEnabled is set.
 	virtual void updateDrawModuleSupplyStatus( Int maxSupply, Int currentSupply ) = 0; ///< This will do visual feedback on Supplies carried
 	virtual void notifyDrawModuleDependencyCleared() = 0; ///< if you were waiting for something before you drew, it's ready now
@@ -184,6 +205,8 @@ public:
 	virtual void replaceModelConditionState(const ModelConditionFlags& a) = 0;
 	virtual void replaceIndicatorColor(Color color) = 0;
 	virtual Bool handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) = 0;
+	virtual Bool handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) = 0;
+	virtual Bool handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarrelToUse, Bool checkHandled) = 0;
 	virtual Int getBarrelCount(WeaponSlotType wslot) const = 0;
 
 	virtual void setSelectable(Bool selectable) = 0;
@@ -195,6 +218,7 @@ public:
 		Note that you must call this AFTER setting the condition codes.
 	*/
 	virtual void setAnimationLoopDuration(UnsignedInt numFrames) = 0;
+	virtual bool isIgnoreAnimLoopDuration() const = 0;
 
 	/**
 		similar to the above, but assumes that the current state is a "ONCE",
@@ -215,6 +239,9 @@ public:
 	virtual void updateSubObjects() = 0;
 	virtual void showSubObject( const AsciiString& name, Bool show ) = 0;
 
+	virtual void setModelName(const AsciiString& name) = 0;
+	virtual const AsciiString& getModelName() const = 0;
+
 	/**
 		This call asks, "In the current animation (if any) how far along are you, from 0.0f to 1.0f".
 	*/
@@ -222,6 +249,12 @@ public:
 // srj sez: not sure if this is a good idea, for net sync reasons...
 	virtual Real getAnimationScrubScalar() const { return 0.0f;};
 #endif
+};
+
+class TreeDrawInterface
+{
+public:
+	virtual const AsciiString& getModelName() const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

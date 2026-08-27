@@ -54,10 +54,12 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 #include "GameLogic/Module/UpdateModule.h"
+
 //-----------------------------------------------------------------------------
 // FORWARD REFERENCES /////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 enum WeaponBonusConditionType CPP_11(: Int);
+enum TintStatus CPP_11(: Int);
 
 //-----------------------------------------------------------------------------
 // TYPE DEFINES ///////////////////////////////////////////////////////////////
@@ -70,10 +72,15 @@ public:
 
 	KindOfMaskType						m_requiredAffectKindOf;						///< Must be set on target
 	KindOfMaskType						m_forbiddenAffectKindOf;	///< Must be clear on target
+	Int									m_targetsMask;				///< ALLIES, ENEMIES or NEUTRALS
+	Bool								m_isAffectAirborne;					///< Affect Airborne targets
 	UnsignedInt								m_bonusDuration;					///< How long a hit lasts on target
 	UnsignedInt								m_bonusDelay;							///< How often to pulse
 	Real											m_bonusRange;							///< How far to affect
 	WeaponBonusConditionType	m_bonusConditionType;			///< Status to give
+	AsciiString					m_bonusCustomConditionType;
+	AsciiString					m_customTintStatus;
+	TintStatus m_tintStatus;         ///< tint color to apply
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 };

@@ -3716,17 +3716,12 @@ void AIUpdateInterface::privateExit( Object *objectToExit, CommandSourceType cmd
 	}
 	else
 	{
-		// TheSuperHackers @bugfix Caball009 10/08/2026 Don't process invalid exit commands,
+		// TheSuperHackers @bugfix Caball009 / Okladnoj 10/08/2026 Don't process invalid exit commands,
 		// because an object should not attempt to exit something it's not contained by.
 #if !RETAIL_COMPATIBLE_CRC
-		if (us->getContainedBy() != objectToExit)
-		{
-			const Player *unitPlayer = us->getControllingPlayer();
-			const Player *exitPlayer = objectToExit ? objectToExit->getControllingPlayer() : nullptr;
-			if (!unitPlayer || unitPlayer != exitPlayer
-				|| !isSharedNetworkExitContainer(us->getContainedBy(), objectToExit))
-				return;
-		}
+		const ContainModuleInterface *contain = objectToExit->getContain();
+		if (contain == nullptr || !contain->isContained(us))
+			return;
 #endif
 	}
 

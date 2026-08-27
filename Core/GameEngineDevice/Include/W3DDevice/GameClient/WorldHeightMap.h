@@ -36,8 +36,9 @@
 #include "Common/MapObject.h"
 
 #include "Common/STLTypedefs.h"
+#include "Common/GlobalData.h"
 typedef std::vector<ICoord2D> VecICoord2D;
-
+typedef UnsignedShort HeightSampleType;	//type of data to store in heightmap, changed to short (2bytes) to allow more height difference
 
 /** MapObject class
 Not ref counted.  Do not store pointers to this class.  */
@@ -132,7 +133,7 @@ protected:
 	Int m_borderSize;		///< Non-playable border area.
 	VecICoord2D m_boundaries;	///< the in-game boundaries
 	Int m_dataSize;			///< size of m_data.
-	UnsignedByte *m_data;	///< array of z(height) values in the height map.
+	HeightSampleType *m_data;	///< array of z(height) values in the height map.
 
   UnsignedByte *m_seismicUpdateFlag;  ///< array of bits to prevent ovelapping physics-update regions from doubling effects on shared cells
   UnsignedInt   m_seismicUpdateWidth; ///< width of the array holding SeismicUpdateFlags
@@ -238,7 +239,7 @@ public:  // height map info.
 	static Int getMinHeightValue() {return K_MIN_HEIGHT;}
 	static Int getMaxHeightValue() {return K_MAX_HEIGHT;}
 
-	UnsignedByte *getDataPtr() {return m_data;}
+	HeightSampleType *getDataPtr() {return m_data;}
 
 
 	Int getXExtent() const {return m_width;}	///<number of vertices in x
@@ -256,10 +257,10 @@ public:  // height map info.
 	virtual Int getBorderSize() override {return m_borderSize;}
   Int getBorderSizeInline() const { return m_borderSize; }
 	/// Get height with the offset that HeightMapRenderObjClass uses built in.
-	UnsignedByte getDisplayHeight(Int x, Int y) { return m_data[x+m_drawOriginX+m_width*(y+m_drawOriginY)];}
+	HeightSampleType getDisplayHeight(Int x, Int y) { return m_data[x+m_drawOriginX+m_width*(y+m_drawOriginY)];}
 
 	/// Get height in normal coordinates.
-	UnsignedByte getHeight(Int xIndex, Int yIndex)
+	HeightSampleType getHeight(Int xIndex, Int yIndex)
 	{
 		Int ndx = (yIndex*m_width)+xIndex;
 		if ((ndx>=0) && (ndx<m_dataSize) && m_data)
@@ -323,8 +324,10 @@ public:  // Flat tile texture info.
 	Bool getRawTileData(Short tileNdx, Int width, UnsignedByte *buffer, Int bufLen);
 	UnsignedByte *getRGBAlphaDataForWidth(Int width, TBlendTileInfo *pBlend);
 
+	void getScaledDrawArea(Int &width, Int &height);
+
 public:  // modify height value
-	void setRawHeight(Int xIndex, Int yIndex, UnsignedByte height) {
+	void setRawHeight(Int xIndex, Int yIndex, HeightSampleType height) {
 		Int ndx = (yIndex*m_width)+xIndex;
 		if ((ndx>=0) && (ndx<m_dataSize) && m_data) m_data[ndx]=height;
 	};

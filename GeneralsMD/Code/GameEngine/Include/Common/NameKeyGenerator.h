@@ -48,6 +48,9 @@ enum NameKeyType CPP_11(: Int)
 	FORCE_NAMEKEYTYPE_LONG	= 0x7fffffff, // a trick to ensure the NameKeyType is a 32-bit int
 };
 
+typedef std::pair<NameKeyType, Int> NameKeyIntPair;
+typedef std::vector<NameKeyIntPair>	NameKeyIntVec;
+
 //-------------------------------------------------------------------------------------------------
 // A bucket entry for the name key generator
 //-------------------------------------------------------------------------------------------------

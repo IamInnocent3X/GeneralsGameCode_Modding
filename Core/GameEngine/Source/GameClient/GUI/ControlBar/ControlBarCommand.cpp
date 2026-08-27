@@ -42,6 +42,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
 #include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/JetAIUpdate.h"
 #include "GameLogic/Module/OverchargeBehavior.h"
 #include "GameLogic/Module/ProductionUpdate.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
@@ -50,6 +51,7 @@
 #include "GameLogic/Module/SpecialAbilityUpdate.h"
 #include "GameLogic/Module/VeterancyGainCreate.h"
 #include "GameLogic/Module/HackInternetAIUpdate.h"
+#include "GameLogic/Module/DrawBridgeTowerUpdate.h"
 #include "GameLogic/Weapon.h"
 
 #include "GameClient/InGameUI.h"
@@ -58,6 +60,7 @@
 #include "GameClient/GameWindow.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/GadgetPushButton.h"
+#include "GameClient/MetaEvent.h"
 
 
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
@@ -166,6 +169,8 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 	// The extra slots bit means that a tank that takes up three slots will make two transport
 	// buttons disappear off the end to show he takes up more room.
 	transportMax = transportMax - contain->getExtraSlotsInUse();
+	if(transportMax <= 0)
+		transportMax = 1; // For RiderChangeContain
 
 	Int firstInventoryIndex = -1;
 	Int lastInventoryIndex = -1;
@@ -178,7 +183,7 @@ void ControlBar::doTransportInventoryUI( Object *transport, const CommandSet *co
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = commandSet->getCommandButton(i);
+		commandButton = transport->getCommandButtonForSlot(i, commandSet);
 
 		// is this an inventory exit command
 		if( commandButton && commandButton->getCommandType() == GUI_COMMAND_EXIT_CONTAINER )
@@ -301,7 +306,7 @@ void ControlBar::populateCommand( Object *obj )
 		if (! m_commandWindows[ i ]) continue;
 
 		// get command button
-		commandButton = commandSet->getCommandButton(i);
+		commandButton = obj->getCommandButtonForSlot(i, commandSet);
 
 		// if button is not present, just hide the window
 		if( commandButton == nullptr )
@@ -800,6 +805,9 @@ void ControlBar::updateContextCommand()
 
 	}
 
+	UnsignedInt now = TheGameLogic->getFrame();
+	Bool commandSetDisabled = obj->getCommandSetDisabledUntil() > now;
+
 	// evaluate each command on whether or not it should be enabled
 	for( i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 	{
@@ -840,8 +848,15 @@ void ControlBar::updateContextCommand()
 			win->winClearStatus( WIN_STATUS_ALWAYS_COLOR );
 		}
 
+		Bool commandDisabled = commandSetDisabled || obj->isCommandDisabled(now, command->getName());
+
 		// is the command available
 		CommandAvailability availability = getCommandAvailability( command, obj, win );
+		if(commandDisabled && availability != COMMAND_HIDDEN)
+			availability = COMMAND_RESTRICTED;
+
+		if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+			availability = COMMAND_HIDDEN;
 
 		// enable/disable the window control
 		switch( availability )
@@ -957,6 +972,10 @@ const Image* ControlBar::calculateVeterancyOverlayForThing( const ThingTemplate 
 			return m_rankEliteIcon;
 		case LEVEL_HEROIC:
 			return m_rankHeroicIcon;
+		case LEVEL_FOUR:
+			return m_rankFourIcon;
+		case LEVEL_FIVE:
+			return m_rankFiveIcon;
 	}
 	return nullptr;
 }
@@ -979,6 +998,10 @@ const Image* ControlBar::calculateVeterancyOverlayForObject( const Object *obj )
 			return m_rankEliteIcon;
 		case LEVEL_HEROIC:
 			return m_rankHeroicIcon;
+		case LEVEL_FOUR:
+			return m_rankFourIcon;
+		case LEVEL_FIVE:
+			return m_rankFiveIcon;
 	}
 	return nullptr;
 }
@@ -1009,7 +1032,8 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 																												Object *obj,
 																												GameWindow *win,
 																												GameWindow *applyToWin,
-																												Bool forceDisabledEvaluation ) const
+																												Bool forceDisabledEvaluation,
+																												Bool skipResourceCheck ) const
 {
 	if(	command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
 			|| command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT )
@@ -1052,14 +1076,26 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 	if( BitIsSet( command->getOptions(), MUST_BE_STOPPED ) )
 	{
-		//This button can only be activated when the unit isn't moving!
+		// This button can only be activated when the unit isn't moving!
+		// Jets can be idle while in the air, so we need to do more checks
 		AIUpdateInterface *ai = obj->getAI();
-		if( ai && ai->isMoving() )
-		{
-			return COMMAND_RESTRICTED;
+		if( ai ) {
+			JetAIUpdate* jetAI = ai->getJetAIUpdate();
+			if (jetAI) {
+				if (!jetAI->isParkedInHangar()) {
+					return COMMAND_RESTRICTED;
+				}
+			}
+			else if (ai->isMoving()) {
+				return COMMAND_RESTRICTED;
+			}
 		}
 	}
 
+	//Disabled Chrono does not allow *any* commands
+	if ( obj->isDisabledByType( DISABLED_CHRONO ) )
+        return COMMAND_RESTRICTED;
+ 
 	//Other disabled objects are unable to use buttons -- so gray them out.
 	Bool disabled = obj->isDisabled();
 
@@ -1078,6 +1114,7 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		GUICommandType commandType = command->getCommandType();
 		if( commandType != GUI_COMMAND_SELL &&
 				commandType != GUI_COMMAND_EVACUATE &&
+				commandType != GUI_COMMAND_ENTER_ME &&
 				commandType != GUI_COMMAND_EXIT_CONTAINER &&
 				commandType != GUI_COMMAND_BEACON_DELETE &&
 				commandType != GUI_COMMAND_SET_RALLY_POINT &&
@@ -1109,6 +1146,14 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			{
 				return COMMAND_RESTRICTED;
 			}
+		}
+	}
+
+	if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+	{
+		if( !player->hasInstance( command->getInstancesRequired(), command->getRequiresAllInstances() ) )
+		{
+			return COMMAND_RESTRICTED;
 		}
 	}
 
@@ -1175,7 +1220,7 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				return COMMAND_HIDDEN;
 
     //since the container can be subdued, , M Lorenzen 8/11
-      if ( obj->isDisabledByType( DISABLED_SUBDUED ) )
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
         return COMMAND_RESTRICTED;
 
 			break;
@@ -1345,6 +1390,12 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 		case GUI_COMMAND_GUARD:
 		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			// always available
 			break;
 
@@ -1366,7 +1417,7 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			//
 
     //since the container can be subdued, the above is no longer true, M Lorenzen 8/11
-      if ( obj->isDisabledByType( DISABLED_SUBDUED ) )
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
         return COMMAND_RESTRICTED;
 
 			break;
@@ -1379,7 +1430,21 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			if( !obj->getContain() || obj->getContain()->getContainCount() <= 0 )
 				return COMMAND_RESTRICTED;
 
-      if ( obj->isDisabledByType( DISABLED_SUBDUED ) )
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+        return COMMAND_RESTRICTED;
+
+
+			break;
+		}
+
+		case GUI_COMMAND_ENTER_ME:
+		{
+
+			// if we have no container or we are full to contain
+			if( !obj->getContain() || obj->getContain()->getContainMax() <= 0 || obj->getContain()->getContainCount() >= obj->getContain()->getContainMax() )
+				return COMMAND_RESTRICTED;
+
+      if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
         return COMMAND_RESTRICTED;
 
 			break;
@@ -1413,12 +1478,16 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				DEBUG_CRASH(( "Object %s does not contain special power module (%s) to execute.  Did you forget to add it to the object INI?",
 											obj->getTemplate()->getName().str(), command->getSpecialPowerTemplate()->getName().str() ));
 			}
-			else if( mod->isReady() == FALSE )
+			else if( !skipResourceCheck && mod->isReady() == FALSE )
 			{
 				Int percent =  mod->getPercentReady() * 100;
 
 				GadgetButtonDrawInverseClock( applyToWin, percent, m_buildUpClockColor );
 				return COMMAND_NOT_READY;
+			}
+			else if (!skipResourceCheck && command->getSpecialPowerTemplate()->getCost() > 0 && player->getMoney()->countMoney() < command->getSpecialPowerTemplate()->getCost()) {
+				// Cannot afford
+				return COMMAND_CANT_AFFORD;
 			}
 			else if( SpecialAbilityUpdate *spUpdate = obj->findSpecialAbilityUpdate( command->getSpecialPowerTemplate()->getSpecialPowerType() ) )
 			{
@@ -1432,6 +1501,15 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 				static NameKeyType key_BattlePlanUpdate = NAMEKEY( "BattlePlanUpdate" );
 				BattlePlanUpdate *update = (BattlePlanUpdate*)obj->findUpdateModule( key_BattlePlanUpdate );
 				if( update && update->getCommandOption() & command->getOptions() )
+				{
+					return COMMAND_ACTIVE;
+				}
+			}
+			else if (mod->getSpecialPowerTemplate()->getSpecialPowerType() == SPECIAL_TOGGLE_DRAWBRIDGE)
+			{
+				static NameKeyType key_drawBridgeTowerUpdate = NAMEKEY("DrawBridgeTowerUpdate");
+				DrawBridgeTowerUpdate* update = (DrawBridgeTowerUpdate*)obj->findUpdateModule(key_drawBridgeTowerUpdate);
+				if (update && update->getCommandOption() & command->getOptions())
 				{
 					return COMMAND_ACTIVE;
 				}
@@ -1521,6 +1599,15 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			//We can *always* select a unit :)
 			return COMMAND_AVAILABLE;
 		}
+
+		
+		case GUI_COMMAND_DISABLE_POWER:
+		{
+			if (obj->isDisabledPowerByCommand())
+				return COMMAND_ACTIVE;
+
+			break;
+		}
 	}
 
 	// all is well with the command
@@ -1528,3 +1615,956 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 }
 
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::getCommandHideable( const CommandButton *command,
+																												Object *obj ) const
+																												//GameWindow *win,
+																												//GameWindow *applyToWin ) const
+{
+	if(	command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT
+			|| command->getCommandType() == GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT )
+	{
+		if (ThePlayerList && ThePlayerList->getLocalPlayer())
+			obj = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
+		else
+			obj = nullptr;
+	}
+
+	//If we modify the button (like a gadget clock overlay), then sometimes we may wish to apply it to a specific different button.
+	//But if we don't specify anything (default), then make them the same.
+	//if( !applyToWin )
+	//{
+	//	applyToWin = win;
+	//}
+
+	if (obj == nullptr)
+		return TRUE;	// probably better than crashing....
+
+	Player *player = obj->getControllingPlayer();
+
+	//It's possible for command buttons to be a single use only type of a button -- like detonating a nuke from a convoy truck.
+	if( obj->hasSingleUseCommandBeenUsed() )
+	{
+		return TRUE;
+	}
+
+	//Other disabled objects are unable to use buttons -- so gray them out.
+	//Bool disabled = obj->isDisabled();
+
+	// if we are only disabled by being underpowered, and this button doesn't care, well, fix it
+	//if (disabled
+	//		&& BitIsSet(command->getOptions(), IGNORES_UNDERPOWERED)
+	//		&& obj->getDisabledFlags().test(DISABLED_UNDERPOWERED)
+	//		&& obj->getDisabledFlags().count() == 1)
+	//{
+	//	disabled = false;
+	//}
+
+ 	//if (disabled && !forceDisabledEvaluation)
+ 	//{
+
+	//	GUICommandType commandType = command->getCommandType();
+	//	if( commandType != GUI_COMMAND_SELL &&
+	//			commandType != GUI_COMMAND_EVACUATE &&
+	//			commandType != GUI_COMMAND_ENTER_ME &&
+	//			commandType != GUI_COMMAND_EXIT_CONTAINER &&
+	//			commandType != GUI_COMMAND_BEACON_DELETE &&
+	//			commandType != GUI_COMMAND_SET_RALLY_POINT &&
+	//			commandType != GUI_COMMAND_STOP &&
+	//			commandType != GUI_COMMAND_SWITCH_WEAPON )
+	//	{
+	//		if( getCommandAvailability( command, obj, win, applyToWin, TRUE ) == COMMAND_HIDDEN )
+	//		{
+	//			return TRUE;
+	//		}
+ 	//		return TRUE;
+	//	}
+ 	//}
+
+	// if the command requires an upgrade and we don't have it we can't do it
+	if( BitIsSet( command->getOptions(), NEED_UPGRADE ) )
+	{
+		const UpgradeTemplate *upgradeT = command->getUpgradeTemplate();
+		if (upgradeT)
+		{
+			// upgrades come in the form of player upgrades and object upgrades
+			if( upgradeT->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if( player->hasUpgradeComplete( upgradeT ) == FALSE )
+					return TRUE;
+			}
+			else if( upgradeT->getUpgradeType() == UPGRADE_TYPE_OBJECT &&
+							 obj->hasUpgrade( upgradeT ) == FALSE )
+			{
+				return TRUE;
+			}
+		}
+	}
+
+	if( BitIsSet( command->getOptions(), NEED_INSTANCE ) )
+	{
+		if( !player->hasInstance( command->getInstancesRequired(), command->getRequiresAllInstances() ) )
+		{
+			return TRUE;
+		}
+	}
+
+	//if (obj->testScriptStatusBit(OBJECT_STATUS_SCRIPT_DISABLED) || obj->testScriptStatusBit(OBJECT_STATUS_SCRIPT_UNPOWERED))
+	//{
+		// if the object status is disabled or unpowered, you cannot do anything to it.
+	//	return FALSE;
+	//}
+
+	//if( BitIsSet( command->getOptions(), MUST_BE_STOPPED ) )
+	//{
+		// This button can only be activated when the unit isn't moving!
+		// Jets can be idle while in the air, so we need to do more checks
+	//	AIUpdateInterface *ai = obj->getAI();
+	//	if( ai ) {
+	//		JetAIUpdate* jetAI = ai->getJetAIUpdate();
+	//		if (jetAI) {
+	//			if (!jetAI->isParkedInHangar()) {
+	//				return FALSE;
+	//			}
+	//		}
+	//		else if (ai->isMoving()) {
+	//			return FALSE;
+	//		}
+	//	}
+	//}
+
+	//ProductionUpdateInterface *pu = obj->getProductionUpdateInterface();
+	//if( pu && pu->firstProduction() && BitIsSet( command->getOptions(), NOT_QUEUEABLE ) )
+	//{
+	//	return FALSE;
+	//}
+
+
+	//Bool queueMaxed = pu ? ( pu->getProductionCount() == MAX_BUILD_QUEUE_BUTTONS ) : FALSE;
+
+	switch( command->getCommandType() )
+	{
+		case GUI_COMMAND_DOZER_CONSTRUCT:
+		{
+      const ThingTemplate * whatToBuild = command->getThingTemplate();
+
+			// sanity, non dozer object
+			if( obj->isKindOf( KINDOF_DOZER ) == FALSE )
+			{
+				return TRUE;
+			}
+
+			// get the dozer ai update interface
+			DozerAIInterface* dozerAI = nullptr;
+			if( obj->getAIUpdateInterface() == nullptr )
+				return TRUE;
+
+			dozerAI = obj->getAIUpdateInterface()->getDozerAIInterface();
+
+			DEBUG_ASSERTCRASH( dozerAI != nullptr, ("Something KINDOF_DOZER must have a Dozer-like AIUpdate") );
+			if( dozerAI == nullptr )
+				return TRUE;
+
+			// return whether or not the player can build this thing
+			if( player->canBuild( whatToBuild ) == FALSE )
+				return TRUE;
+
+			// if building anything at all right now we can't build another
+			//if( dozerAI->isTaskPending( DOZER_TASK_BUILD ) == TRUE )
+			//{
+			//	return FALSE;
+			//}
+
+			//if( !player->canAffordBuild( whatToBuild ) )
+			//{
+			//	return FALSE;
+			//}
+
+
+			break;
+		}
+
+		case GUI_COMMAND_SELL:
+		{
+    //since the container can be subdued, , M Lorenzen 8/11
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+			break;
+		}
+
+		case GUI_COMMAND_UNIT_BUILD:
+		{
+
+			// return whether or not the player can build this thing
+			//NOTE: Player::canBuild() only checks prerequisites!
+			if( player->canBuild( command->getThingTemplate() ) == FALSE )
+				return TRUE;
+
+			//if( queueMaxed )
+			//{
+			//	return FALSE;
+			//}
+
+			//CanMakeType makeType = TheBuildAssistant->canMakeUnit( obj, command->getThingTemplate() );
+			//if( makeType == CANMAKE_MAXED_OUT_FOR_PLAYER || makeType == CANMAKE_PARKING_PLACES_FULL )
+			//{
+			//	//Disable the button if the player has a max amount of these units in build queue or existance.
+			//	return FALSE;
+			//}
+			//if( makeType == CANMAKE_NO_MONEY )
+			//{
+			//	return FALSE;
+			//}
+
+			break;
+		}
+
+		case GUI_COMMAND_PLAYER_UPGRADE:
+		{
+			for( size_t i = 0; i < command->getScienceVec().size(); i++ )
+			{
+				ScienceType st = command->getScienceVec()[ i ];
+				if( !player->hasScience( st ) )
+				{
+					return TRUE;
+				}
+			}
+			//if( queueMaxed )
+			//{
+			//	return FALSE;
+			//}
+			// if we can build it, we must also NOT already have it or be building it
+			//if( player->hasUpgradeComplete( command->getUpgradeTemplate() ) == TRUE ||
+			//		player->hasUpgradeInProduction( command->getUpgradeTemplate() ) == TRUE )
+			//	return FALSE;
+
+			// if this is an upgrade create we must be able to build it.
+			//if( TheUpgradeCenter->canAffordUpgrade( player, command->getUpgradeTemplate() ) == FALSE )
+			//	return FALSE;
+
+			break;
+		}
+
+		case GUI_COMMAND_OBJECT_UPGRADE:
+		{
+			for( size_t i = 0; i < command->getScienceVec().size(); i++ )
+			{
+				ScienceType st = command->getScienceVec()[ i ];
+				if( !player->hasScience( st ) )
+				{
+					return TRUE;
+				}
+			}
+			//if( queueMaxed )
+			//{
+			//	return FALSE;
+			//}
+			// no production update, can't possibly do this command
+			//if( pu == nullptr )
+			//{
+			//	return FALSE;
+			//}
+
+			//
+			// if this object already has this upgrade, or is researching it already in the queue
+			// we will disable the button so you can't build another one
+			//
+			//if( obj->hasUpgrade( command->getUpgradeTemplate() ) == TRUE ||
+			//		pu->isUpgradeInQueue( command->getUpgradeTemplate() ) == TRUE ||
+			//		obj->affectedByUpgrade( command->getUpgradeTemplate() ) == FALSE )
+			//	return FALSE;
+
+			//if( TheUpgradeCenter->canAffordUpgrade( player, command->getUpgradeTemplate() ) == FALSE )
+			//	return FALSE;
+
+			break;
+		}
+
+		case GUI_COMMAND_FIRE_WEAPON:
+		{
+			AIUpdateInterface *ai = obj->getAIUpdateInterface();
+
+			// no ai, can't possibly fire weapon
+			if( ai == nullptr )
+				return TRUE;
+
+			// ask the ai if the weapon is ready to fire
+			const Weapon* w = obj->getWeaponInWeaponSlot( command->getWeaponSlot() );
+
+			// changed this to Log rather than Crash, because this can legitimately happen now for
+			// dozers and workers with mine-clearing stuff... (srj)
+			//DEBUG_ASSERTLOG( w, ("Unit %s's CommandButton %s is trying to access weaponslot %d, but doesn't have a weapon there in its FactionUnit ini entry.",
+			//	obj->getTemplate()->getName().str(), command->getName().str(), (Int)command->getWeaponSlot() ) );
+
+			UnsignedInt now = TheGameLogic->getFrame();
+
+			/// @Kris -- We need to show the button as always available for anything with a 0 clip reload time.
+			if( w && w->getClipReloadTime( obj ) == 0 )
+			{
+				return FALSE;
+			}
+
+			if( w == nullptr																	// No weapon
+				|| w->getStatus() != READY_TO_FIRE					// Weapon not ready
+				|| w->getPossibleNextShotFrame() == now			// Weapon ready, but could fire this exact frame (handle button flicker since it may be going to fire anyway)
+/// @todo srj -- not sure why this next check is necessary, but the Comanche missile buttons will flicker without it. figure out someday.
+/// @todo ml  -- and note: that the "now-1" below causes zero-clip-reload weapons to never be ready, so I added this
+/// If you make changes to this code, make sure that the DragonTank's firewall weapon can be retargeted while active,
+/// that is, while the tank is squirting out flames all over the floor, you can click the firewall button (or "F"),
+/// and re-target the firewall without having to stop or move in-betwen.. Thanks for reading
+				|| (w->getPossibleNextShotFrame()==now-1)
+				)
+			{
+				if ( w != nullptr )
+				{
+					return TRUE;
+				}
+				else
+				{
+					// if this is a mine-clearing button but we don't have the right weaponset,
+					// just declare it available... we'll switch weaponsets when the time comes
+					if (
+						(command->getOptions() & USES_MINE_CLEARING_WEAPONSET) != 0
+						&& !obj->testWeaponSetFlag(WEAPONSET_MINE_CLEARING_DETAIL)
+					)
+					{
+						return TRUE;
+					}
+
+					// no weapon in the slot means "gray me out"
+					//return FALSE;
+				}
+			}
+
+			break;
+		}
+
+		case GUI_COMMAND_GUARD:
+		case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_CURRENT_POS:
+		case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+		case GUI_COMMAND_GUARD_FAR:
+		case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+		case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
+			// always available
+			break;
+
+		case GUI_COMMAND_COMBATDROP:
+		{
+			//if( getRappellerCount(obj) <= 0 )
+			//{
+			//	return FALSE;
+			//}
+			break;
+		}
+
+		case GUI_COMMAND_EXIT_CONTAINER:
+		{
+
+			//
+			// this method is really used as a per frame update to see if we should enable
+			// disable a control ... inventory of objects shows as buttons have that enable
+			// disable logic handled elsewhere, where if the contained count of the entire
+			// container changes the UI is completely repopulated
+			//
+
+    //since the container can be subdued, the above is no longer true, M Lorenzen 8/11
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+			break;
+		}
+
+		case GUI_COMMAND_EVACUATE:
+		{
+
+			// if we have no contained objects we can't evacuate anything
+			//if( !obj->getContain() || obj->getContain()->getContainCount() <= 0 )
+			//	return FALSE;
+
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+
+			break;
+		}
+
+		case GUI_COMMAND_ENTER_ME:
+		{
+
+			// if we have no container or we are full to contain
+			//if( !obj->getContain() || obj->getContain()->getContainMax() <= 0 || obj->getContain()->getContainCount() >= obj->getContain()->getContainMax() )
+			//	return FALSE;
+
+      //if ( obj->isDisabledByType( DISABLED_SUBDUED ) || obj->isDisabledByType( DISABLED_FROZEN ) )
+	  //{
+		//return FALSE;
+	  //}
+
+
+			break;
+		}
+
+		case GUI_COMMAND_SPECIAL_POWER:
+		case GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT:
+		case GUI_COMMAND_SPECIAL_POWER_CONSTRUCT:
+		case GUI_COMMAND_SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT:
+		{
+			break;
+		}
+
+		case GUI_COMMAND_HACK_INTERNET:
+		{
+			break;
+		}
+
+		case GUI_COMMAND_STOP:
+		{
+			break;
+		}
+	}
+	return FALSE;
+
+}
+
+struct LastCommandModifier
+{
+	Int slot;
+	AsciiString key;
+	AsciiString commandButtonName;
+};
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::checkForCommandSetModifierOverride(CommandModifierID keyID)
+{
+	ModifierKeyList keyList = TheMetaMap->findCommandKeyModByID(keyID);
+
+	// no keys, do nothing
+	if(keyList.Keys.empty())
+		return false;
+
+	// get the selected object
+	Object *obj = m_currentSelectedDrawable ? m_currentSelectedDrawable->getObject() : nullptr;
+	if(!obj)
+		return false;
+
+	// only modify units that are your own
+	if(!obj->isLocallyControlled())
+		return false;
+
+	// get the dozer ai update interface
+	DozerAIInterface* dozerAI = obj->getAIUpdateInterface() ? obj->getAIUpdateInterface()->getDozerAIInterface() : nullptr;
+
+	// Don't change the command set while currently busy
+	if( dozerAI && dozerAI->isTaskPending( DOZER_TASK_BUILD ) == TRUE )
+		return false;
+
+	// get command set
+	const CommandSet *commandSet = findCommandSet( obj->getCommandSetString() );
+	if( !commandSet )
+		return false;
+
+	Bool set = false;
+	Bool doRemove = false;
+	Bool doSingular = keyList.IsSingular;
+	Bool doRandom = keyList.IsRandom;
+	Bool checkOverridePresent = false;
+	Bool isLastAvailableKey = false;
+	AsciiString overrideButtonPresentName;
+	std::vector<LastCommandModifier> lastPresentCommands;
+
+	// Warning, hell on earth Below.
+
+	for( Int i = 0; i < MAX_COMMANDS_PER_SET; ++i )
+	{
+		GameWindow *button = m_commandWindows[ i ];
+		if( button != nullptr )
+		{
+			AsciiString commandButtonOverrideName;
+			Bool doSkip = FALSE;
+
+			// If the command modifier needs the button Enabled, we only check for buttons that are enabled
+			if(keyList.KeyRequireEnabled && !button->winGetEnabled())
+			{
+				doSkip = TRUE;
+			}
+			else if(!keyList.CommandButtonsToTrigger.empty())
+			{
+				doSkip = TRUE;
+				AsciiString commandName = commandSet->getOriginalButtonName(i);
+				for(std::vector<AsciiString>::const_iterator it = keyList.CommandButtonsToTrigger.begin(); it != keyList.CommandButtonsToTrigger.end(); ++it)
+				{
+					if(commandName == (*it))
+					{
+						doSkip = FALSE;
+						break;
+					}
+				}
+			}
+
+			if(doSkip)
+			{
+				// Specific case where this is the last Command in the command set and we haven't finished checking the override is present
+				if( !checkOverridePresent && i == MAX_COMMANDS_PER_SET - 1 )
+				{
+					if(!overrideButtonPresentName.isEmpty() && isLastAvailableKey)
+						doRemove = TRUE;
+
+					checkOverridePresent = true;
+					// reset the values
+					i = -1;
+				}
+				continue;
+			}
+
+
+			// Check for the current button, get rid of the previous data
+			overrideButtonPresentName.clear();
+			isLastAvailableKey = true;	// Assume true because buttons may not contain any modifier keys
+
+			if(!checkOverridePresent)
+			{
+				// Check first if the current Modifier Action reset the command button override to its default status.
+				Bool overrideIsPresent = FALSE;
+
+				// Get the Command Button Name to override, if any
+				for(std::vector<AsciiString>::const_iterator it = keyList.Keys.begin(); it != keyList.Keys.end(); ++it)
+				{
+					// Get if the Command Set has the modifier key for the current slot
+					commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+					if(commandButtonOverrideName.isEmpty())
+						continue;
+
+					isLastAvailableKey = false; // We got a key
+
+					// Check if we have the override currently in the command bar
+					if(!overrideIsPresent)
+						overrideIsPresent = obj->hasModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+					if(overrideIsPresent)
+					{
+						// Register the name and data if not yet done
+						if(overrideButtonPresentName.isEmpty())
+						{
+							// We get whether we are the last Key in the list
+							overrideButtonPresentName = commandButtonOverrideName;
+
+							// Register the present key data for checking later
+							LastCommandModifier commandData;
+							commandData.slot = i;
+							commandData.key = (*it);
+							commandData.commandButtonName = overrideButtonPresentName;
+							lastPresentCommands.push_back(commandData);
+
+							// Set its the Last Available Key, remove once another key is available
+							isLastAvailableKey = true;
+
+							// We stop checking if we do singular
+							if(doSingular)
+								break;
+						}
+					}
+					else if(!overrideButtonPresentName.isEmpty())
+					{
+						// If we have a new key ahead of the current override, tell the system to register the new override instead
+						//isLastAvailableKey = false;
+						checkOverridePresent = true;
+						break;
+					}
+				}
+				if(i == MAX_COMMANDS_PER_SET - 1 || checkOverridePresent || !isLastAvailableKey)
+				{
+					if(!overrideButtonPresentName.isEmpty() && isLastAvailableKey)
+						doRemove = TRUE;
+
+					checkOverridePresent = true;
+					// reset the values
+					i = -1;
+				}
+				continue;
+			}
+
+
+			// Checking if the current button is being overriden
+			Bool doOverride = FALSE;
+			AsciiString lastPresentKey;
+			std::vector<AsciiString> AvailableButtons;
+			commandButtonOverrideName.clear();
+			lastPresentKey.clear();
+
+			// Get the last present key at current slot
+			for(std::vector<LastCommandModifier>::const_iterator it_command = lastPresentCommands.begin(); it_command != lastPresentCommands.end(); ++it_command)
+			{
+				if(it_command->slot == i)
+				{
+					// If we do Singular, we only get the data and stop here
+					if(doSingular)
+						doSkip = TRUE;
+
+					doOverride = TRUE;
+					lastPresentKey = it_command->key;
+					overrideButtonPresentName = it_command->commandButtonName;
+					//it_command = lastPresentCommands.erase( it_command );
+					break;
+				}
+				//++it_command;
+			}
+
+			if(!doSkip)
+			{
+				// Get the Command Button Name to override, if any
+				for(std::vector<AsciiString>::const_iterator it = keyList.Keys.begin(); it != keyList.Keys.end(); ++it)
+				{
+					// If we are not doing random, skip until we get the present Key
+					if(!doRandom && !lastPresentKey.isEmpty())
+					{
+						if(lastPresentKey == (*it))
+							lastPresentKey.clear();
+
+						continue;
+					}
+
+					commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+
+					// No override, check next key
+					if(commandButtonOverrideName.isEmpty())
+						continue;
+
+					// Same command button as before, deliberate mistake
+					if(commandButtonOverrideName == overrideButtonPresentName)
+						continue;
+
+					doOverride = true;
+
+					if(doRandom)
+						AvailableButtons.push_back(commandButtonOverrideName);
+					else
+						break;
+				}
+			}
+
+			// if we are doing or done with overriding, process the registration and control bar
+			if(doOverride)
+			{
+				if(!keyList.StopsAtEnd && doRemove && !overrideButtonPresentName.isEmpty())
+				{
+					if(obj->removeModiferCommandOverrideWithinCommandSet(i, overrideButtonPresentName))
+						set = true;
+				}
+				else if(doRandom && !AvailableButtons.empty())
+				{
+					// We only do Random for buttons that aren't the last on the list
+					if(overrideButtonPresentName.isEmpty() || AvailableButtons[AvailableButtons.size()-1] != overrideButtonPresentName)
+					{
+						// Get a random index until its one that isn't currently on the override list
+						Int randomIdx = GameLogicRandomValue(0, AvailableButtons.size()-1);
+						while(!overrideButtonPresentName.isEmpty() && AvailableButtons[randomIdx] == overrideButtonPresentName)
+							randomIdx = GameLogicRandomValue(0, AvailableButtons.size()-1);
+
+						if(obj->registerModiferCommandOverrideWithinCommandSet(i, AvailableButtons[randomIdx]))
+							set = true;
+					}
+				}
+				else if(!commandButtonOverrideName.isEmpty())
+				{
+					if(obj->registerModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName))
+						set = true;
+				}
+			}
+
+		}
+		else if( !checkOverridePresent && i == MAX_COMMANDS_PER_SET - 1 )
+		{
+			if(!overrideButtonPresentName.isEmpty() && isLastAvailableKey)
+				doRemove = TRUE;
+
+			// reset the values after checking whether the command set can be replaced
+			checkOverridePresent = true;
+			i = -1;
+		}
+	}
+
+	// Play the Audio
+	if(set)
+	{
+		markUIDirty();
+		// cancel any pending GUI commands
+		TheInGameUI->setGUICommand( nullptr );
+
+		AudioEventRTS buttonClick;
+		buttonClick.setEventName("GUIClick");
+
+		if( TheAudio )
+		{
+			TheAudio->addAudioEvent( &buttonClick );
+		}
+	}
+
+	return set;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool ControlBar::checkForCommandSetModifierOverrideMouse(MouseModifierKeysList keys, const CommandButton *commandButton)
+{
+	// no keys, do nothing
+	if(keys.Keys.empty())
+		return false;
+
+	// get the selected object
+	Object *obj = m_currentSelectedDrawable ? m_currentSelectedDrawable->getObject() : nullptr;
+	if(!obj)
+		return false;
+
+	// only modify units that are your own
+	if(!obj->isLocallyControlled())
+		return false;
+
+	// get the dozer ai update interface
+	DozerAIInterface* dozerAI = obj->getAIUpdateInterface() ? obj->getAIUpdateInterface()->getDozerAIInterface() : nullptr;
+
+	// Don't change the command set while currently busy
+	if( dozerAI && dozerAI->isTaskPending( DOZER_TASK_BUILD ) == TRUE )
+		return false;
+
+	// for mouse related features, the command button must be pointed by the mouse to apply the override
+	/// This is already checked before calling the function, but sanity.
+	if(commandButton == nullptr)
+		return false;
+
+	// get command set
+	const CommandSet *commandSet = findCommandSet( obj->getCommandSetString() );
+	if( !commandSet )
+		return false;
+
+	Bool set = false;
+
+	for( Int i = 0; i < MAX_COMMANDS_PER_SET; ++i )
+	{
+		GameWindow *button = m_commandWindows[ i ];
+		if( button != nullptr )
+		{
+			// If we change commands with mouse, we only get the command the mouse is pointed at
+			const CommandButton *command = (const CommandButton *)GadgetButtonGetData(button);
+			if( !command || command != commandButton )
+				continue;
+
+			if( !isMouseWithinCommandButton( i, &TheMouse->getMouseStatus()->pos ) )
+				continue;
+
+			Bool overrideIsPresent = FALSE;
+			Bool isLastAvailableKey = TRUE;	// Assume true because buttons may not contain any modifier keys
+			Bool isRandom = FALSE;
+			Bool isSingular = FALSE;
+			Bool stopsAtEnd = FALSE;
+			LastCommandModifier lastPresentCommand;
+			lastPresentCommand.slot = -1;
+			lastPresentCommand.key.clear();
+			lastPresentCommand.commandButtonName.clear();
+
+			for(std::vector<AsciiString>::const_iterator it = keys.Keys.begin(); it != keys.Keys.end(); ++it)
+			{
+				// Get the Command Button Name to override, if any
+				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+
+				// No Button Name to Override, get next key
+				if(commandButtonOverrideName.isEmpty())
+					continue;
+
+				// Check if the key needs the button to be enabled
+				if(!button->winGetEnabled())
+				{
+					if(checkWithinStringVec((*it), keys.KeysButtonNeedsEnable))
+						continue;
+				}
+
+				isLastAvailableKey = FALSE; // We got a key
+
+				if(!overrideIsPresent)
+				{
+					overrideIsPresent = obj->hasModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+					if(overrideIsPresent)
+					{
+						lastPresentCommand.slot = i;
+						lastPresentCommand.key = (*it);
+						lastPresentCommand.commandButtonName = commandButtonOverrideName;
+
+						isLastAvailableKey = TRUE;
+
+						isSingular = checkWithinStringVec((*it), keys.KeysSingular);
+						if(isSingular)
+						{
+							stopsAtEnd = checkWithinStringVec((*it), keys.KeysStopsAtEnd);
+							break;
+						}
+					}
+				}
+				else
+				{
+					//isLastAvailableKey = FALSE;
+					break;
+				}
+
+			}
+
+			if(isSingular && lastPresentCommand.slot != -1)
+			{
+				if(stopsAtEnd)
+				{
+					break;
+				}
+				else if(obj->removeModiferCommandOverrideWithinCommandSet(lastPresentCommand.slot))
+				{
+					set = true;
+					break;
+				}
+			}
+
+			for(std::vector<AsciiString>::const_iterator it = keys.Keys.begin(); it != keys.Keys.end(); ++it)
+			{
+				if(!lastPresentCommand.key.isEmpty())
+				{
+					if(lastPresentCommand.key == (*it))
+					{
+						stopsAtEnd = checkWithinStringVec(lastPresentCommand.key, keys.KeysStopsAtEnd);
+						lastPresentCommand.key.clear();
+						if(stopsAtEnd || !isLastAvailableKey)
+							continue;
+					}
+					else
+						continue;
+				}
+
+				// Check if the key needs the button to be enabled
+				if(!button->winGetEnabled())
+				{
+					if(checkWithinStringVec((*it), keys.KeysButtonNeedsEnable))
+						continue;
+				}
+
+				// Get the Command Button Name to override, if any
+				AsciiString commandButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it));
+
+				// No Button Name to Override, get next key
+				if(commandButtonOverrideName.isEmpty())
+					continue;
+
+				// If we are pointed, get the instance of whether we need to do remove for current slot
+				Bool overrideIsPresent = lastPresentCommand.commandButtonName == commandButtonOverrideName; //obj->hasModiferCommandOverrideWithinCommandSet(i, commandButtonOverrideName);
+
+				// Get the modifier settings
+				if(!isLastAvailableKey)
+				{
+					isRandom = checkWithinStringVec((*it), keys.KeysRandom);
+					isSingular = checkWithinStringVec((*it), keys.KeysSingular);
+					stopsAtEnd = checkWithinStringVec((*it), keys.KeysStopsAtEnd);
+				}
+
+				if(isSingular)
+				{
+					// Process the modifier for Singular Keys
+					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && overrideIsPresent, i, commandButtonOverrideName))
+						set = true;
+
+					break;
+				}
+				else if(isRandom)
+				{
+					// Process the modifier for Random Modifier
+					std::vector<AsciiString> AvailableButtons;
+					for(std::vector<AsciiString>::const_iterator it_r = keys.KeysRandom.begin(); it_r != keys.KeysRandom.end(); ++it_r)
+					{
+						if(!button->winGetEnabled())
+						{
+							if(checkWithinStringVec((*it_r), keys.KeysButtonNeedsEnable))
+								continue;
+						}
+
+						AsciiString currentButtonOverrideName = commandSet->getModifierForCommandButtonOverrideName(i, (*it_r));
+
+						// No override, check next key
+						if(currentButtonOverrideName.isEmpty())
+							continue;
+
+						// If we are doing random, we get all the available keys except the current one
+						if(lastPresentCommand.commandButtonName.isEmpty() || currentButtonOverrideName != lastPresentCommand.commandButtonName)
+							AvailableButtons.push_back(currentButtonOverrideName);
+					}
+					if(!AvailableButtons.empty())
+					{
+						if(obj->processModiferCommandOverrideWithinCommandSet(FALSE, i, AvailableButtons[GameLogicRandomValue(0, AvailableButtons.size()-1)]))
+							set = true;
+					}
+					else
+					{
+						if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && overrideIsPresent, i, commandButtonOverrideName))
+							set = true;
+					}
+					break;
+				}
+				else
+				{
+					if(obj->processModiferCommandOverrideWithinCommandSet(!stopsAtEnd && isLastAvailableKey, i, commandButtonOverrideName))
+					{
+						set = true;
+						break;
+					}
+				}
+			}
+
+			break;
+
+		}
+	}
+
+	if(set)
+	{
+		markUIDirty();
+		// cancel any pending GUI commands
+		TheInGameUI->setGUICommand( nullptr );
+		return true;
+	}
+	else
+		return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+CommandSetTranslator::CommandSetTranslator()
+{
+
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+CommandSetTranslator::~CommandSetTranslator()
+{
+
+}
+
+//-------------------------------------------------------------------------------------------------
+GameMessageDisposition CommandSetTranslator::translateGameMessage(const GameMessage *msg)
+{
+	GameMessageDisposition disp = KEEP_MESSAGE;
+	GameMessage::Type t = msg->getType();
+
+	// We only do Command Set Modifiers
+	if(t != GameMessage::MSG_META_COMMAND_SET_MODIFIER)
+		return disp;
+
+	if(TheControlBar->checkForCommandSetModifierOverride((CommandModifierID)msg->getArgument(0)->integer))
+		return DESTROY_MESSAGE;
+	else
+		return disp;
+}

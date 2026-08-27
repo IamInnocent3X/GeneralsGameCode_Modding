@@ -116,7 +116,11 @@ BridgeInfo::BridgeInfo()
 	bridgeObjectID = INVALID_ID;
 	for( Int i = 0; i < BRIDGE_MAX_TOWERS; ++i )
 		towerObjectID[ i ] = INVALID_ID;
-
+	fromLeftHole.zero();
+	fromRightHole.zero();
+	toLeftHole.zero();
+	toRightHole.zero();
+	drawBridgeOpened = false;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -385,6 +389,22 @@ Bridge::Bridge(Object *bridgeObj)
 		return;
 	}
 
+	// if defined, set hole are for destroyable bridges/drawbridges
+	if (bridgeTemplate->getBridgeHoleAreaPercentage() > 0.0f) {
+		Real factor = std::clamp(bridgeTemplate->getBridgeHoleAreaPercentage(), 0.0f, 1.0f);
+		Real holeSizeX = bridgeObj->getGeometryInfo().getMajorRadius() * factor;
+		m_bridgeInfo.fromLeftHole.set(pos->x - holeSizeX * c - halfsizeY * s, pos->y + halfsizeY * c - holeSizeX * s, pos->z);
+		m_bridgeInfo.toLeftHole.set(pos->x + holeSizeX * c - halfsizeY * s, pos->y + halfsizeY * c + holeSizeX * s, pos->z);
+		m_bridgeInfo.fromRightHole.set(pos->x - holeSizeX * c + halfsizeY * s, pos->y - halfsizeY * c - holeSizeX * s, pos->z);
+		m_bridgeInfo.toRightHole.set(pos->x + holeSizeX * c + halfsizeY * s, pos->y - halfsizeY * c + holeSizeX * s, pos->z);
+	}
+	else {
+		m_bridgeInfo.fromLeftHole.zero();
+		m_bridgeInfo.toLeftHole.zero();
+		m_bridgeInfo.fromRightHole.zero();
+		m_bridgeInfo.toRightHole.zero();
+	}
+
 	Coord2D v;
 	v.x = m_bridgeInfo.toLeft.x - m_bridgeInfo.toRight.x;
 	v.y = m_bridgeInfo.toLeft.y - m_bridgeInfo.toRight.y;
@@ -444,11 +464,26 @@ Bridge::~Bridge()
 
 }
 
+Bool Bridge::hasHoleArea() {
+	const Coord3D zero(0,0,0);
+	return !(m_bridgeInfo.fromLeftHole == zero &&
+		m_bridgeInfo.fromRightHole == zero &&
+		m_bridgeInfo.toLeftHole == zero &&
+		m_bridgeInfo.toRightHole == zero);
+}
+
+Bool Bridge::hasHole() {
+	return m_bridgeInfo.drawBridgeOpened;
+}
+
+void Bridge::setDrawBridgeStage(bool open) {
+	m_bridgeInfo.drawBridgeOpened = open;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** isPointOnBridge - see if point is on bridge. */
 //-------------------------------------------------------------------------------------------------
-Bool Bridge::isPointOnBridge(const Coord3D *pLoc)
+Bool Bridge::isPointOnBridge(const Coord3D *pLoc, bool ignoreHole)
 {
 	if (pLoc->x < m_bounds.lo.x) return(false);
 	if (pLoc->x > m_bounds.hi.x) return(false);
@@ -456,12 +491,29 @@ Bool Bridge::isPointOnBridge(const Coord3D *pLoc)
 	if (pLoc->y > m_bounds.hi.y) return(false);
 
 	Vector3 testPt(pLoc->x, pLoc->y, pLoc->z);
+	unsigned char flags{ 0U };
+
+	// If bridge has hole and point is in hole area -> not on bridge
+	if (!ignoreHole && hasHole() && hasHoleArea()) {
+		Vector3 left1(m_bridgeInfo.fromLeftHole.x, m_bridgeInfo.fromLeftHole.y, m_bridgeInfo.fromLeftHole.z);
+		Vector3 right1(m_bridgeInfo.fromRightHole.x, m_bridgeInfo.fromRightHole.y, m_bridgeInfo.fromRightHole.z);
+		Vector3 left2(m_bridgeInfo.toLeftHole.x, m_bridgeInfo.toLeftHole.y, m_bridgeInfo.toLeftHole.z);
+		Vector3 right2(m_bridgeInfo.toRightHole.x, m_bridgeInfo.toRightHole.y, m_bridgeInfo.toRightHole.z);
+
+		//If point is in hole area -> not on bridge
+		if (Point_In_Triangle_2D(left1, right1, left2, testPt, 0, 1, flags)) {
+			return false;
+		}
+		if (Point_In_Triangle_2D(right1, left2, right2, testPt, 0, 1, flags)) {
+			return false;
+		}
+	}
+
+	// Check full bridge rectangle
 	Vector3 left1(m_bridgeInfo.fromLeft.x, m_bridgeInfo.fromLeft.y, m_bridgeInfo.fromLeft.z);
 	Vector3 right1(m_bridgeInfo.fromRight.x, m_bridgeInfo.fromRight.y, m_bridgeInfo.fromRight.z);
 	Vector3 left2(m_bridgeInfo.toLeft.x, m_bridgeInfo.toLeft.y, m_bridgeInfo.toLeft.z);
 	Vector3 right2(m_bridgeInfo.toRight.x, m_bridgeInfo.toRight.y, m_bridgeInfo.toRight.z);
-
-	unsigned char flags;
 
 	if (Point_In_Triangle_2D(left1, right1, left2, testPt, 0, 1, flags)) {
 		return true;
@@ -855,7 +907,7 @@ Drawable *Bridge::pickBridge(const Vector3 &from, const Vector3 &to, Vector3 *po
 	loc.y = intersectPos.Y;
 	loc.z = intersectPos.Z;
 
-	if (isPointOnBridge(&loc)) {
+	if (isPointOnBridge(&loc, true)) {
 		*pos = intersectPos;
 		//DEBUG_LOG(("Picked bridge %.2f, %.2f, %.2f", intersectPos.X, intersectPos.Y, intersectPos.Z));
 		Object *bridge = TheGameLogic->findObjectByID(m_bridgeInfo.bridgeObjectID);
@@ -1646,6 +1698,21 @@ PolygonTrigger *TerrainLogic::getTriggerAreaByName( AsciiString name )
 	return nullptr;
 }
 
+//-------------------------------------------------------------------------------------------------
+/** check if point is in NO_SHIPYARD polygon */
+//-------------------------------------------------------------------------------------------------
+bool TerrainLogic::isInNoShipyardZone(const Coord3D* pos) {
+	ICoord3D iPos {std::round(pos->x), std::round(pos->y), std::round(pos->z)};
+	for (PolygonTrigger* pTrig = PolygonTrigger::getFirstPolygonTrigger(); pTrig; pTrig = pTrig->getNext()) {
+		if (pTrig->getTriggerName().startsWithNoCase("NO_SHIPYARD")) {
+			if (pTrig->pointInTrigger(iPos))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Finds the bridge at a given x/y coordinate.  */
@@ -1655,7 +1722,7 @@ Bridge * TerrainLogic::findBridgeAt( const Coord3D *pLoc) const
 
 	Bridge *pBridge = getFirstBridge();
 	while (pBridge) {
-		if (pBridge->isPointOnBridge(pLoc)) {
+		if (pBridge->isPointOnBridge(pLoc, true)) {
 			return(pBridge);
 		}
 		pBridge = pBridge->getNext();
@@ -1674,7 +1741,7 @@ Bridge * TerrainLogic::findBridgeLayerAt( const Coord3D *pLoc, PathfindLayerEnum
 	Bridge *pBridge = getFirstBridge();
 	while (pBridge)
 	{
-		if (pBridge->getLayer() == layer && (!clip || pBridge->isPointOnBridge(pLoc)))
+		if (pBridge->getLayer() == layer && (!clip || pBridge->isPointOnBridge(pLoc, true)))
 		{
 			return(pBridge);
 		}
@@ -1705,7 +1772,8 @@ PathfindLayerEnum TerrainLogic::getLayerForDestination(const Coord3D *pos)
 	}
 
 	while (pBridge ) {
-		if (pBridge->isPointOnBridge(pos) ) {
+		// filter out destroyed bridges or open draw bridges
+		if (pBridge->isPointOnBridge(pos, false) ) {
 			Real delta = fabs(pos->z-pBridge->getBridgeHeight(pos, nullptr));
 			if (delta<bestDistance) {
 				bestLayer = pBridge->getLayer();
@@ -1742,7 +1810,8 @@ PathfindLayerEnum TerrainLogic::getHighestLayerForDestination(const Coord3D *pos
 		if (onlyHealthyBridges && pBridge->peekBridgeInfo()->curDamageState == BODY_RUBBLE)
 			continue;
 
-		if (pBridge->isPointOnBridge(pos) ) {
+		//filter out bridges that are currently destroyed or open drawbridges
+		if (pBridge->isPointOnBridge(pos, false)) {
 			Real delta = pos->z - pBridge->getBridgeHeight(pos, nullptr);
 			// must be ABOVE (or on) the bridge for this call. (srj)
 			if (delta >= 0 && fabs(delta) < fabs(bestDistance)) {
@@ -1771,10 +1840,10 @@ Bool TerrainLogic::objectInteractsWithBridgeLayer(Object *obj, Int layer, Bool c
 	}
 	Bridge *pBridge = getFirstBridge();
 
-	while (pBridge ) {
+	while (pBridge) {
 		if (pBridge->getLayer() == layer) {
 			Bool match = false;
-			if (pBridge->isPointOnBridge(obj->getPosition()) ) {
+			if (pBridge->isPointOnBridge(obj->getPosition(), false) ) {
 				match = true;
 			}
 
@@ -1984,6 +2053,34 @@ Drawable *TerrainLogic::pickBridge(const Vector3 &from, const Vector3 &to, Vecto
 	return(curDraw);
 }
 
+bool TerrainLogic::pickWaterPlane(const Vector3& from, const Vector3& to, const Vector3& aroundPos, Vector3 &outPos) {
+	Real waterZ{ 0 };
+	if (isUnderwater(aroundPos.X, aroundPos.Y, &waterZ)) {
+		Vector3 normal(0, 0, 1.0f);
+		Vector3 point(aroundPos.X, aroundPos.Y, waterZ);
+
+		PlaneClass plane(normal, point);
+
+		Real t;
+		plane.Compute_Intersection(from, to, &t);
+		Vector3 intersectPos;
+		intersectPos = from + (to - from) * t;
+
+		outPos.X = intersectPos.X;
+		outPos.Y = intersectPos.Y;
+		outPos.Z = intersectPos.Z;
+
+		return true;
+	}
+	else {
+		outPos.X = 0;
+		outPos.Y = 0;
+		outPos.Z = 0;
+		return false;
+	}
+}
+
+
 //-------------------------------------------------------------------------------------------------
 /** Deletes the bridges list. */
 //-------------------------------------------------------------------------------------------------
@@ -2144,7 +2241,117 @@ Coord3D TerrainLogic::findFarthestEdgePoint( const Coord3D *farthestFrom ) const
 }
 
 
+//-------------------------------------------------------------------------------------------------
+/** Returns the ground aligned point on the bounding box closest to the given point*/
+//-------------------------------------------------------------------------------------------------
+Coord3D TerrainLogic::findEdgePointForAngle(const Coord3D* pos, Real angle, bool farthest/* = FALSE*/, bool closest/* = FALSE*/) const
+{
+	Region3D mapExtent;
+	getExtent(&mapExtent);
 
+	// Map bounds (XY only)
+	const Real minX = mapExtent.lo.x;
+	const Real minY = mapExtent.lo.y;
+	const Real maxX = mapExtent.hi.x;
+	const Real maxY = mapExtent.hi.y;
+
+	const Real x0 = pos->x;
+	const Real y0 = pos->y;
+
+	// Direction from angle
+	const Real dx = std::cos(angle);
+	const Real dy = std::sin(angle);
+
+	// Small epsilon for float comparisons
+	const Real eps = static_cast<Real>(1e-6);
+
+	struct Hit
+	{
+		Real t;
+		Real x;
+		Real y;
+	};
+
+	Hit hits[4];
+	int hitCount = 0;
+
+	auto addHit = [&](Real t)
+		{
+			if (t < 0) return; // only forward along the ray
+
+			const Real x = x0 + t * dx;
+			const Real y = y0 + t * dy;
+
+			// Keep only points that lie on the rectangle boundary
+			if (x >= minX - eps && x <= maxX + eps &&
+				y >= minY - eps && y <= maxY + eps)
+			{
+				// Avoid duplicates (corner hits can be found twice)
+				for (int i = 0; i < hitCount; ++i)
+				{
+					if (std::abs(hits[i].x - x) < eps &&
+						std::abs(hits[i].y - y) < eps)
+					{
+						return;
+					}
+				}
+
+				hits[hitCount++] = { t, x, y };
+			}
+		};
+
+	// Intersect ray P(t) = (x0,y0) + t(dx,dy), t >= 0
+	// with the 4 rectangle edges
+
+	// x = minX
+	if (std::abs(dx) > eps)
+		addHit((minX - x0) / dx);
+
+	// x = maxX
+	if (std::abs(dx) > eps)
+		addHit((maxX - x0) / dx);
+
+	// y = minY
+	if (std::abs(dy) > eps)
+		addHit((minY - y0) / dy);
+
+	// y = maxY
+	if (std::abs(dy) > eps)
+		addHit((maxY - y0) / dy);
+
+	// No hit should only happen if pos is invalid or outside map
+	if (hitCount == 0)
+		return *pos;
+
+	// Default behavior:
+	// - if closest == true  -> nearest hit
+	// - if farthest == true -> farthest hit
+	// - otherwise           -> nearest forward hit
+	int best = 0;
+
+	if (farthest)
+	{
+		for (int i = 1; i < hitCount; ++i)
+		{
+			if (hits[i].t > hits[best].t)
+				best = i;
+		}
+	}
+	else // closest or default
+	{
+		for (int i = 1; i < hitCount; ++i)
+		{
+			if (hits[i].t < hits[best].t)
+				best = i;
+		}
+	}
+
+	Coord3D result = *pos;
+	result.x = hits[best].x;
+	result.y = hits[best].y;
+	// preserve original Z (XY only matters)
+	return result;
+}
 
 
 //-------------------------------------------------------------------------------------------------
@@ -2186,6 +2393,29 @@ Bool TerrainLogic::isUnderwater( Real x, Real y, Real *waterZ, Real *terrainZ )
 
 	return terrainHeight < wZ;
 
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Only check for water height; return False if not over water */
+//-------------------------------------------------------------------------------------------------
+Real TerrainLogic::getWaterZ(Real x, Real y) {
+	// get the water handle at this location
+	const WaterHandle* waterHandle = getWaterHandle(x, y);
+
+	// if no water here, no height, no nuttin
+	if (waterHandle == nullptr)
+	{
+		return -1.0;
+	}
+
+	// if this water handle is a grid water use the grid height function, otherwise look into
+	// the polygon trigger
+	Real wZ = 0.0f;
+	if (waterHandle == &m_gridWaterHandle)
+		TheTerrainVisual->getWaterGridHeight(x, y, &wZ);
+	else
+		wZ = getWaterHeight(waterHandle);
+	return wZ;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2655,7 +2885,7 @@ void TerrainLogic::setActiveBoundary(Int newActiveBoundary)
 // ------------------------------------------------------------------------------------------------
 void TerrainLogic::flattenTerrain(Object *obj)
 {
-	if (obj->getGeometryInfo().getIsSmall()) {
+	if (obj->getGeometryInfo().getIsSmall() || obj->isKindOf(KINDOF_SHIPYARD)) {
 		return;
 	}
 
@@ -2866,7 +3096,51 @@ void TerrainLogic::flattenTerrain(Object *obj)
 
 }
 
+Real TerrainLogic::getShipyardPlacementAngle(const Coord3D & worldPos, const ThingTemplate* thing) {
+	Real angle{ 0.0f };
 
+	if (thing == nullptr) return 0.0f;
+
+	const GeometryInfo& geom = thing->getTemplateGeometryInfo();
+
+	Real check_radius = 0.0f;
+	if (geom.getGeomType() == GEOMETRY_BOX)
+	{
+		check_radius = std::max(geom.getMinorRadius(), geom.getMajorRadius());
+	}  // end if
+	else if (geom.getGeomType() == GEOMETRY_SPHERE ||
+		geom.getGeomType() == GEOMETRY_CYLINDER)
+	{
+		check_radius = geom.getBoundingCircleRadius();
+	}  // end else if
+	else
+	{
+		DEBUG_ASSERTCRASH(0, ("InGameUI::handleBuildPlacements (Shipyard placement): Undefined geometry '%d' for '%s'", geom.getGeomType(), thing->getName().str()));
+		return 0.0f;
+	}  // end else
+
+	//Check 4 sample points
+	Real hx1 = TheTerrainLogic->getGroundHeight(worldPos.x + check_radius, worldPos.y);
+	Real hx2 = TheTerrainLogic->getGroundHeight(worldPos.x - check_radius, worldPos.y);
+	Real hy1 = TheTerrainLogic->getGroundHeight(worldPos.x, worldPos.y + check_radius);
+	Real hy2 = TheTerrainLogic->getGroundHeight(worldPos.x, worldPos.y - check_radius);
+
+	Real dx = hx1 - hx2;
+	Real dy = hy1 - hy2;
+
+	Coord2D v;
+	v.x = dx;
+	v.y = dy;
+	constexpr Real pi2 = PI * 2.0f;
+	angle = v.toAngle() + thing->getPlacementViewAngle();
+	if (angle < 0.0f) {
+		angle += pi2;
+	}
+	else if (angle > pi2) {
+		angle -= pi2;
+	}
+	return angle;
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Dig a deep circular gorge into the terrain beneath an object. */

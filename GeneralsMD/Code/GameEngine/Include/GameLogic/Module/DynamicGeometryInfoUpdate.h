@@ -97,5 +97,6 @@ protected:
 	Real m_finalHeight;
 	Real m_finalMajorRadius;
 	Real m_finalMinorRadius;
+	Real m_invTransitionTime;
 
 };

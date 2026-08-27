@@ -30,15 +30,34 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #define DEFINE_OBJECT_STATUS_NAMES
+#define DEFINE_MAXHEALTHCHANGETYPE_NAMES						// for TheMaxHealthChangeTypeNames[]
+#define DEFINE_DISPOSITION_NAMES
 #include "GameLogic/Module/AIUpdate.h"
+#include "Common/Player.h"
 #include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
+#include "GameLogic/AIPathfind.h"
+#include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/ScriptEngine.h"
+#include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/CreateObjectDie.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
+#include "GameLogic/Module/DozerAIUpdate.h"
+#include "GameLogic/Module/FloatUpdate.h"
+#include "GameLogic/Module/HijackerUpdate.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/StickyBombUpdate.h"
+#include "GameLogic/Module/SupplyTruckAIUpdate.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/Weapon.h" // NoMaxShotsLimit
 #include "GameLogic/ObjectCreationList.h"
+#include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameClient/Drawable.h"
 #include "GameClient/InGameUI.h"
+
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -46,8 +65,14 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 {
 
 	m_ocl = nullptr;
-	m_transferPreviousHealth = FALSE;
-	m_transferSelection = FALSE;
+
+	m_objectCreationData.m_inheritsPreviousHealthDontTransferAttackers = FALSE;
+	m_objectCreationData.m_transferHijackers = TRUE;
+	m_objectCreationData.m_transferEquippers = TRUE;
+	m_objectCreationData.m_transferParasites = TRUE;
+	m_objectCreationData.m_inheritsHealthChangeType = ADD_CURRENT_DAMAGE;
+	m_objectCreationData.m_destroyBombs = TRUE;
+	m_objectCreationData.m_ignorePrimaryObstacle = TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -59,11 +84,17 @@ CreateObjectDieModuleData::CreateObjectDieModuleData()
 	static const FieldParse dataFieldParse[] =
 	{
 		{ "CreationList",	INI::parseObjectCreationList,		nullptr,											offsetof( CreateObjectDieModuleData, m_ocl ) },
-		{ "TransferPreviousHealth", INI::parseBool, nullptr	,offsetof( CreateObjectDieModuleData, m_transferPreviousHealth ) },
-		{ "TransferSelection", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_transferSelection ) },
+		{ "TransferPreviousHealth", INI::parseBool, nullptr	, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealth ) },
+		{ "TransferHealthChangeType",		INI::parseIndexList,		TheMaxHealthChangeTypeNames, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsHealthChangeType ) },
+		{ "TransferPreviousHealthDontTransferAttackers", INI::parseBool, nullptr	, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsPreviousHealthDontTransferAttackers ) },
+		{ "TransferSelection", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSelection ) },
+		{ "TransferSelectionDontClearGroup", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSelectionDontClearGroup ) },
+		{ "TransferSelectionSquadNumber", INI::parseBool, nullptr, offsetof( CreateObjectDieModuleData, m_objectCreationData.m_inheritsSquadNumber ) },
+
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
+	p.add(ObjectCreationMuxData::getFieldParse(), offsetof( CreateObjectDieModuleData, m_objectCreationData ));
 
 }
 
@@ -93,73 +124,128 @@ void CreateObjectDie::onDie( const DamageInfo * damageInfo )
 	if (!isDieApplicable(damageInfo))
 		return;
 
+	Object *me = getObject();
+
+	if(checkIfDontHaveLivePlayer(me) || checkIfSkipWhileSignificantlyAirborne(me))
+		return;
+
+	Bool requiresContainer = FALSE;
+	Object* container = getPutInContainer(requiresContainer, me->getTeam());
+	if(requiresContainer && !container)
+	{
+		//DEBUG_CRASH( ("CreateObjectDie::onDie() failed to create container %s.", m_objectCreationData.m_putInContainer.str() ) );
+		return;
+	}
+
 	Object *damageDealer = TheGameLogic->findObjectByID( damageInfo->in.m_sourceID );
 
 	Object *newObject = ObjectCreationList::create( data->m_ocl, getObject(), damageDealer );
-	if (!newObject)
+	if(!newObject)
 		return;
 
-	//If we're transferring previous health, we're transferring the last known
-	//health before we died. In the case of the sneak attack tunnel network, it
-	//is killed after the lifetime update expires.
-	if( data->m_transferPreviousHealth )
+	if(container == nullptr)
+		doPreserveLayer(me, newObject);
+
+	setProducer(me, newObject);
+	doObjectCreation(me, newObject);
+	doDisposition(me, newObject, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
+	doInherit(me, newObject, me->getStatusBits());
+	doTransfer(me, newObject, TRUE, container != nullptr, FALSE);
+	doPostDisposition(me, newObject);
+	doInheritHealth(me, newObject);
+	doInheritSelection(me, newObject);
+	doFadeStuff(me);
+
+	if(container != nullptr)
 	{
-		//Convert old health to new health.
-		Object *oldObject = getObject();
-		BodyModuleInterface *oldBody = oldObject->getBodyModule();
-		BodyModuleInterface *newBody = newObject->getBodyModule();
-		if( oldBody && newBody )
-		{
-			//First transfer subdual damage
-			DamageInfo damInfo;
-			Real subdualDamageAmount = oldBody->getCurrentSubdualDamageAmount();
-			if( subdualDamageAmount > 0.0f )
-			{
-				damInfo.in.m_amount = subdualDamageAmount;
-				damInfo.in.m_damageType = DAMAGE_SUBDUAL_UNRESISTABLE;
-				damInfo.in.m_sourceID = INVALID_ID;
-				newBody->attemptDamage( &damInfo );
-			}
-
-			//Now transfer the previous health from the old object to the new.
-			damInfo.in.m_amount = oldBody->getMaxHealth() - oldBody->getPreviousHealth();
-			damInfo.in.m_damageType = DAMAGE_UNRESISTABLE;
-			damInfo.in.m_sourceID = oldBody->getLastDamageInfo()->in.m_sourceID;
-			if( damInfo.in.m_amount > 0.0f )
-			{
-				newBody->attemptDamage( &damInfo );
-			}
-
-		}
-
-		//Transfer attackers.
-		for( Object *obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
-		{
-			AIUpdateInterface* ai = obj->getAI();
-			if (!ai)
-				continue;
-
-			ai->transferAttack( oldObject->getID(), newObject->getID() );
-		}
+		doPreserveLayer(me, container);
+		setProducer(me, container);
+		doObjectCreation(me, container);
+		doDisposition(me, container, me->getPosition(), me->getTransformMatrix(), me->getOrientation(), TRUE);
+		doInherit(me, container, me->getStatusBits());
+		doTransfer(me, container, TRUE, TRUE, TRUE);
+		doPostDisposition(me, container);
+		doInheritHealth(me, container);
+		doInheritSelection(me, container);
+		if(container->getContain() != nullptr && !container->isEffectivelyDead() && newObject && !newObject->isEffectivelyDead() && container->getContain()->isValidContainerFor(newObject, true))
+			container->getContain()->addToContain(newObject);
 	}
+
+	// Transfer any bombs onto the replacement Object
+	//std::vector<ObjectID> BombsMarkedForDestroy;
+	//Object *obj = TheGameLogic->getFirstObject();
+	//while( obj )
+	//{
+		// Transfer bombs to the replacement Object or destroy them
+		//if( obj->isKindOf( KINDOF_MINE ) )
+		//{
+			//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+			//StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
+		//	StickyBombUpdateInterface *update = obj->getStickyBombUpdateInterface();
+		//	if( update && update->getTargetObject() == me )
+		//	{
+		//		if(data->m_transferBombs)
+		//			update->setTargetObject( newObject );
+		//		else
+		//			BombsMarkedForDestroy.push_back(obj->getID());
+		//	}
+		//}
+
+		// Transfer attackers
+		/// IamInnocent - Transfer Previous Health also transfer the Attackers for this module.
+		//if ((data->m_transferPreviousHealth && !data->m_transferPreviousHealthDontTransferAttackers) || data->m_transferAttackers)
+		//{
+		//	AIUpdateInterface* aiInterface = obj->getAI();
+		//	if (aiInterface)
+		//		aiInterface->transferAttack(me->getID(), newObject->getID());
+
+		//}
+
+		//obj = obj->getNextObject();
+	//}
+
+	// Or not, we just get rid of the bomb
+	//for(std::vector<ObjectID>::const_iterator it = BombsMarkedForDestroy.begin(); it != BombsMarkedForDestroy.end(); ++it)
+	//{
+	//	Object *bomb = TheGameLogic->findObjectByID(*it);
+	//	if(bomb)
+	//		TheGameLogic->destroyObject(bomb);
+	//}
+
+	// Transfer the Selection Status
+	/// IamInnocent - Integrated with the selection module from TheSuperHackers below
+	/*if(data->m_transferSelection && newObject->isSelectable() && me->getDrawable() && newObject->getDrawable())
+	{
+		if(me->getDrawable()->isSelected())
+			TheGameLogic->selectObject(newObject, FALSE, me->getControllingPlayer()->getPlayerMask(), me->isLocallyControlled());
+	}*/
 
 	// TheSuperHackers @bugfix Stubbjax 02/10/2025 If the old object was selected, select the new one.
 	// This is important for the Sneak Attack, which is spawned via a CreateObjectDie module.
-	if (data->m_transferSelection)
-	{
-		Object* oldObject = getObject();
-		Drawable* selectedDrawable = TheInGameUI->getFirstSelectedDrawable();
-		Bool oldObjectSelected = selectedDrawable && selectedDrawable->getID() == oldObject->getDrawable()->getID();
+	// IamInnocent 02/12/2025 - Edited for Multi-Select of modules
+	//if (data->m_transferSelection && me->getDrawable() && me->getDrawable()->isSelected())
+	//{
+		//Object* oldObject = getObject();
+		//Drawable* selectedDrawable = TheInGameUI->getFirstSelectedDrawable();
+		//Bool oldObjectSelected = selectedDrawable && selectedDrawable->getID() == oldObject->getDrawable()->getID();
 
-		if (oldObjectSelected)
-		{
-			GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
-			msg->appendBooleanArgument(TRUE);
-			msg->appendObjectIDArgument(newObject->getID());
-			TheInGameUI->selectDrawable(newObject->getDrawable());
-		}
-	}
+		//if (oldObjectSelected)
+		//GameMessage* msg = TheMessageStream->appendMessage(GameMessage::MSG_CREATE_SELECTED_GROUP_NO_SOUND);
+		//if(data->m_transferSelectionDontClearGroup)
+		//{
+		//	msg->appendBooleanArgument(FALSE);
+		//}
+		//else
+		//{
+		//	msg->appendBooleanArgument(TRUE);
+		//}
+
+		//msg->appendObjectIDArgument(newObject->getID());
+		//TheInGameUI->selectDrawable(newObject->getDrawable());
+	//}
+
 }
+
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

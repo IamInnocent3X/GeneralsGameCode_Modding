@@ -34,6 +34,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 class Player;
 
@@ -45,9 +46,11 @@ public:
 
 	Bool						m_needsUpgrade;
 	Bool						m_selfPowered;
+	Bool						m_spyOnRequiresAllTypes;
 	UnsignedInt			m_selfPoweredDuration;
 	UnsignedInt			m_selfPoweredInterval;
 	KindOfMaskType	m_spyOnKindof;
+	KindOfMaskType	m_spyOnForbiddenKindof;
 
 	SpyVisionUpdateModuleData()
 	{
@@ -57,6 +60,8 @@ public:
 		m_selfPoweredInterval = 0;
 		m_spyOnKindof = KINDOFMASK_NONE;
 		m_spyOnKindof.flip();
+		m_spyOnForbiddenKindof = KINDOFMASK_NONE;
+		m_spyOnRequiresAllTypes = false;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -68,6 +73,8 @@ public:
 			{ "SelfPoweredDuration",	INI::parseDurationUnsignedInt,	nullptr, offsetof( SpyVisionUpdateModuleData, m_selfPoweredDuration ) },
 			{ "SelfPoweredInterval",	INI::parseDurationUnsignedInt,	nullptr, offsetof( SpyVisionUpdateModuleData, m_selfPoweredInterval ) },
 			{ "SpyOnKindof",					KindOfMaskType::parseFromINI,		nullptr, offsetof( SpyVisionUpdateModuleData, m_spyOnKindof ) },
+			{ "SpyOnForbiddenKindof",			KindOfMaskType::parseFromINI,		nullptr, offsetof( SpyVisionUpdateModuleData, m_spyOnForbiddenKindof ) },
+			{ "SpyOnRequiresAllTypes",			INI::parseBool,						nullptr, offsetof( SpyVisionUpdateModuleData, m_spyOnRequiresAllTypes ) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -103,11 +110,14 @@ public:
 
 	//Update module
 	virtual UpdateSleepTime update() override;
+	virtual void friend_giveSelfUpgrade() override { }
 
 	void activateSpyVision( UnsignedInt duration );
 
-	void setDisabledUntilFrame( UnsignedInt frame );
+	void setDisabledUntilFrame( UnsignedInt frame, Bool doesNotResetTimer = FALSE );
 	UnsignedInt getDisabledUntilFrame() const { return m_disabledUntilFrame; }
+
+	void resetTimer(); ///< added for sabotage purposes.
 
 protected:
 
@@ -121,6 +131,11 @@ protected:
 	{
 		getSpyVisionUpdateModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getSpyVisionUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
 	virtual void processUpgradeRemoval() override
 	{
 		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritance is CRAP.
@@ -131,15 +146,26 @@ protected:
 	{
 		return getSpyVisionUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
+
+	virtual Bool checkStartsActive() const override
+	{
+		return getSpyVisionUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 private:
 
 	void doActivationWork( Player *playerToSetFor, Bool setting );
 
 	UnsignedInt m_deactivateFrame;
+	UnsignedInt m_lastActivatedFrame; // for sabotaged records
 	UnsignedInt m_disabledUntilFrame; //sabotaged, emp'd, etc.
+	UnsignedInt m_resumeDuration; //resume duration from last disable
 	Bool m_currentlyActive;
 	Bool m_resetTimersNextUpdate;
+	Bool m_giveSelfUpgrade;
+	Bool m_hasExecuted;
 };

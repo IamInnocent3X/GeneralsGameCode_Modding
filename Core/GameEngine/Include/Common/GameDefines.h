@@ -28,11 +28,11 @@
 #endif
 
 #ifndef PRESERVE_CHINOOK_PASSENGER_DUMPING
-#define PRESERVE_CHINOOK_PASSENGER_DUMPING (1)
+#define PRESERVE_CHINOOK_PASSENGER_DUMPING (0)
 #endif
 
 #ifndef PRESERVE_HARDCODED_BLACK_LOTUS_CASH_HACK
-#define PRESERVE_HARDCODED_BLACK_LOTUS_CASH_HACK (1)
+#define PRESERVE_HARDCODED_BLACK_LOTUS_CASH_HACK (0)
 #endif
 
 #ifndef PRESERVE_MULTI_CRATE_PICKUP
@@ -44,7 +44,7 @@
 #endif
 
 #ifndef PRESERVE_NO_XP_FROM_OCL_KILLS
-#define PRESERVE_NO_XP_FROM_OCL_KILLS (1)
+#define PRESERVE_NO_XP_FROM_OCL_KILLS (0)
 #endif
 
 #ifndef PRESERVE_NO_XP_FROM_POISON_KILLS
@@ -56,7 +56,7 @@
 #endif
 
 #ifndef PRESERVE_PERPETUAL_HORDE_BONUS
-#define PRESERVE_PERPETUAL_HORDE_BONUS (1)
+#define PRESERVE_PERPETUAL_HORDE_BONUS (0)
 #endif
 
 #ifndef PRESERVE_PREMATURE_BATTLE_BUS_DEATH
@@ -64,7 +64,7 @@
 #endif
 
 #ifndef PRESERVE_RADAR_WARNING_SUPPRESSION
-#define PRESERVE_RADAR_WARNING_SUPPRESSION (1)
+#define PRESERVE_RADAR_WARNING_SUPPRESSION (0)
 #endif
 
 #ifndef PRESERVE_STRUCTURE_STEALTH_DURING_REPAIR
@@ -72,7 +72,7 @@
 #endif
 
 #ifndef PRESERVE_TUNNEL_HEAL_STACKING
-#define PRESERVE_TUNNEL_HEAL_STACKING (1)
+#define PRESERVE_TUNNEL_HEAL_STACKING (0)
 #endif
 
 #ifndef PRESERVE_UNRELIABLE_FIRESTORMS
@@ -87,12 +87,16 @@
 #define PRESERVE_RETAIL_SCRIPTED_CAMERA (0) // Retain scripted camera behavior present in retail Generals 1.08 and Zero Hour 1.04
 #endif
 
+#ifndef PRESERVE_RETAIL_PARTICLES
+#define PRESERVE_RETAIL_PARTICLES (0) // Preserve original look of particles present in retail Generals 1.08 and Zero Hour 1.04
+#endif
+
 #ifndef RETAIL_COMPATIBLE_CRC
 #define RETAIL_COMPATIBLE_CRC (0) // Game is expected to be CRC compatible with retail Generals 1.08, Zero Hour 1.04
 #endif
 
 #ifndef RETAIL_COMPATIBLE_XFER_SAVE
-#define RETAIL_COMPATIBLE_XFER_SAVE (1) // Game is expected to be Xfer Save compatible with retail Generals 1.08, Zero Hour 1.04
+#define RETAIL_COMPATIBLE_XFER_SAVE (0) // Game is expected to be Xfer Save compatible with retail Generals 1.08, Zero Hour 1.04
 #endif
 
 // This is here to easily toggle between the retail compatible with fixed pathfinding fallback and pure fixed pathfinding mode

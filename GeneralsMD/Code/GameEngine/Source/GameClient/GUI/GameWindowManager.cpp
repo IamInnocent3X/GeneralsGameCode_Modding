@@ -54,7 +54,9 @@
 #include "GameClient/GadgetCheckBox.h"
 #include "GameClient/GlobalLanguage.h"
 #include "GameClient/GameWindowTransitions.h"
+#include "GameClient/ControlBar.h"
 #include "Common/NameKeyGenerator.h"
+#include "GameLogic/GameLogic.h" // Note: Do Not Ever do Anything that Corresponds with GameLogic HERE. This is solely used to identify whether we can do command set modifiers
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 GameWindowManager *TheWindowManager = nullptr;
@@ -141,7 +143,7 @@ WindowMsgHandledType PassSelectedButtonsToParentSystem( GameWindow *window, Unsi
 	if( window == nullptr )
 		return MSG_IGNORED;
 
-	if( (msg == GBM_SELECTED)  ||  (msg == GBM_SELECTED_RIGHT) || (msg == GBM_MOUSE_ENTERING) || (msg == GBM_MOUSE_LEAVING) || (msg == GEM_EDIT_DONE))
+	if( (msg == GBM_SELECTED)  ||  (msg == GBM_SELECTED_RIGHT) || (msg == GBM_MOUSE_ENTERING) || (msg == GBM_MOUSE_LEAVING) || (msg == GEM_EDIT_DONE)  ||  (msg == GBM_CLICKED_LEFT)  ||  (msg == GBM_CLICKED_RIGHT)  ||  (msg == GBM_CLICKED_MIDDLE)  ||  (msg == GBM_DOUBLE_CLICKED_LEFT)  ||  (msg == GBM_DOUBLE_CLICKED_RIGHT)  ||  (msg == GBM_DOUBLE_CLICKED_MIDDLE)  ||  (msg == GBM_SCROLL_DOWN)  ||  (msg == GBM_SCROLL_UP) )
 	{
 		GameWindow *parent = window->winGetParent();
 
@@ -1138,6 +1140,57 @@ WinInputReturnCode GameWindowManager::winProcessMouseEvent( GameWindowMessage ms
 
 				}
 
+			}
+
+			if( TheGameLogic->isInInteractiveGame() && toolTipWindow && BitIsSet( toolTipWindow->winGetStyle(), GWS_PUSH_BUTTON ) )
+			{
+				switch( msg )
+				{
+					// --------------------------------------------------------------------
+					case GWM_LEFT_UP:
+					case GWM_LEFT_DOWN:
+					case GWM_LEFT_DOUBLE_CLICK:
+					case GWM_RIGHT_UP:
+					case GWM_RIGHT_DOWN:
+					case GWM_RIGHT_DOUBLE_CLICK:
+					{
+						WinInstanceData *instData = toolTipWindow->winGetInstanceData();
+						if(BitIsSet( instData->getStatus(), WIN_STATUS_RIGHT_CLICK ))
+						{
+							if( msg == GWM_RIGHT_UP || msg == GWM_RIGHT_DOWN || (msg == GWM_RIGHT_DOUBLE_CLICK && TheControlBar->isWindowUnitBuildCommand(toolTipWindow)) )
+								break;
+						}
+						else
+						{
+							if( msg == GWM_LEFT_UP || msg == GWM_LEFT_DOWN || (msg == GWM_LEFT_DOUBLE_CLICK && TheControlBar->isWindowUnitBuildCommand(toolTipWindow)) )
+								break;
+						}
+						FALLTHROUGH;
+					}
+					case GWM_MIDDLE_UP:
+					case GWM_MIDDLE_DOWN:
+					case GWM_MIDDLE_DOUBLE_CLICK:
+					case GWM_WHEEL_UP:
+					case GWM_WHEEL_DOWN:
+					{
+						GameWindow *curWindow = toolTipWindow;
+						GameWindow *lastNewWindow = nullptr;
+						while(curWindow != lastNewWindow){
+							lastNewWindow = curWindow;
+							curWindow = curWindow->winPointInUnenabledChild(mousePos->x, mousePos->y);
+							if(!lastNewWindow->winGetEnabled())
+							{
+								WindowMsgHandledType msgtypecall = winSendInputMsg( lastNewWindow, msg, packedMouseCoords, 0 );
+								if(msgtypecall != MSG_IGNORED)
+									break;
+							}
+						}
+						break;
+
+					}
+					default:
+						break;
+				}
 			}
 
 		}

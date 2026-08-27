@@ -60,6 +60,7 @@ private:
 	ScienceVec						m_prereqSciences;
 	Int										m_sciencePurchasePointCost;
 	Bool									m_grantable;
+	std::vector<AsciiString>	m_grantedUpgradeNames;
 
 	ScienceInfo() :
 		m_science(SCIENCE_INVALID),
@@ -87,6 +88,8 @@ public:
 	Bool isValidScience(ScienceType st) const;
 
 	Bool isScienceGrantable(ScienceType st) const;
+
+	Bool getGrantedUpgradeNames(ScienceType st, std::vector<AsciiString>& grantedUpgradeNames) const;
 
 	Bool getNameAndDescription(ScienceType st, UnicodeString& name, UnicodeString& description) const;
 

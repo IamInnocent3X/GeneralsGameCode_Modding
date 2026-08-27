@@ -59,7 +59,7 @@ enum LocomotorAppearance CPP_11(: Int)
 	LOCO_CLIMBER,			// human climber - backs down cliffs.
 	LOCO_OTHER,
 	LOCO_MOTORCYCLE, // Added in Zero Hour
-
+	LOCO_SHIP,
 	LOCOMOTOR_APPEARANCE_COUNT
 };
 
@@ -84,7 +84,7 @@ static const char *const TheLocomotorAppearanceNames[] =
 	"CLIMBER",
 	"OTHER",
 	"MOTORCYCLE",
-
+	"SHIP",
 	nullptr
 };
 static_assert(ARRAY_SIZE(TheLocomotorAppearanceNames) == LOCOMOTOR_APPEARANCE_COUNT + 1, "Array size");
@@ -101,6 +101,7 @@ enum LocomotorBehaviorZ CPP_11(: Int)
 	Z_FIXED_ABSOLUTE_HEIGHT,						// stays fixed at absolute height, regardless of physics
 	Z_RELATIVE_TO_GROUND_AND_BUILDINGS,	// stays fixed at surface-rel height including buildings, regardless of physics
 	Z_SMOOTH_RELATIVE_TO_HIGHEST_LAYER,	// try to follow a height relative to the highest layer.
+	Z_SEA_SURFACE_RELATIVE_HEIGHT,     //try to follow a specific height relative to terrain / water height, optimized for submarines
 
 	LOCOMOTOR_BEHAVIOR_Z_COUNT
 };
@@ -116,6 +117,7 @@ static const char *const TheLocomotorBehaviorZNames[] =
 	"FIXED_ABSOLUTE_HEIGHT",
 	"FIXED_RELATIVE_TO_GROUND_AND_BUILDINGS",
 	"RELATIVE_TO_HIGHEST_LAYER",
+	"SEA_SURFACE_RELATIVE_HEIGHT",
 
 	nullptr
 };
@@ -136,6 +138,7 @@ public:
 	const FieldParse* getFieldParse() const;
 
 	void friend_setName(const AsciiString& n) { m_name = n; }
+	void declaredCanMoveBackwards() { m_useDefaultCanMoveBackwards = false; }
 
 	void validate();
 
@@ -198,11 +201,15 @@ private:
 	Real											m_ultraAccurateSlideIntoPlaceFactor;			///< how much we can fudge turning when ultra-accurate
 
 	Bool											m_locomotorWorksWhenDead;	///< should locomotor continue working even when object is "dead"?
+	Bool											m_locomotorWorksWhenDisabled;	///< should locomotor continue working even when object is disabled?
 	Bool											m_allowMotiveForceWhileAirborne;	///< can we apply motive when airborne?
 	Bool											m_apply2DFrictionWhenAirborne;	// apply "2d friction" even when airborne... useful for realistic-looking movement
 	Bool											m_downhillOnly;	// pinewood derby, moves only by gravity pulling downhill
 	Bool											m_stickToGround;				// if true, can't leave ground
 	Bool											m_canMoveBackward;				// if true, can move backwards.
+	Real											m_backwardsMoveAngleThreshold;			///< goal must be at least this far off our heading (radians) before we reverse
+	Real											m_backwardsMoveDistanceFactorThreshold;	///< max reverse distance, as a factor of the object's MajorRadius
+	Real											m_backwardsMoveSpeedFactor;					///< multiplier applied to desired speed while moving backwards
 	Bool											m_hasSuspension;				///< If true, calculate 4 wheel independent suspension values.
 	Real											m_maximumWheelExtension; ///< Maximum distance wheels can move down.  (negative value)
 	Real											m_maximumWheelCompression; ///< Maximum distance wheels can move up.  (positive value)
@@ -218,6 +225,14 @@ private:
 	Real											m_rudderCorrectionRate;
 	Real											m_elevatorCorrectionDegree;
 	Real											m_elevatorCorrectionRate;
+
+	Int												m_requiredWaterLevel; ///< for LOCO_SHIP, how deep the water must be
+
+	Real											m_maxReverseSpeed;
+	Real											m_maxReverseSpeedDamaged;
+	Real											m_minReverseSpeed;
+
+	Bool 											m_useDefaultCanMoveBackwards;
 };
 
 typedef OVERRIDE<LocomotorTemplate> LocomotorTemplateOverride;
@@ -236,6 +251,9 @@ public:
 	void locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalPos,
 		Real onPathDistToGoal, Real desiredSpeed, Bool *blocked);
 	void locoUpdate_moveTowardsAngle(Object* obj, Real angle);
+
+	void locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D& goalPos,
+		Real onPathDistToGoal, Real desiredSpeed, Bool *blocked);
 	/**
 		Kill any current (2D) velocity (but stay at current position, or as close as possible)
 
@@ -244,7 +262,7 @@ public:
 	*/
 	Bool locoUpdate_maintainCurrentPosition(Object* obj);
 
-	Real getMaxSpeedForCondition(BodyDamageType condition) const;  ///< get max speed given condition
+	Real getMaxSpeedForCondition(BodyDamageType condition, Bool reverse = FALSE) const;  ///< get max speed given condition
 	Real getMaxTurnRate(BodyDamageType condition) const;  ///< get max turning rate given condition
 	Real getMaxAcceleration(BodyDamageType condition) const;  ///< get acceleration given condition
 	Real getMaxLift(BodyDamageType condition) const;  ///< get acceleration given condition
@@ -258,7 +276,8 @@ public:
 	LocomotorSurfaceTypeMask getLegalSurfaces() const { return m_template->m_surfaces; }
 
 	AsciiString getTemplateName() const { return m_template->m_name;}
-	Real getMinSpeed() const { return m_template->m_minSpeed;}
+	Real getMinSpeed() const;
+	Real getMinTurnSpeed() const { return m_template->m_minTurnSpeed;}	///< must be going >= this speed to turn (0 = can turn in place)
 	Real getAccelPitchLimit() const { return m_template->m_accelPitchLimit;}	///< Maximum amount we will pitch up or down under acceleration (including recoil.)
 	Real getDecelPitchLimit() const { return m_template->m_decelPitchLimit;}	///< Maximum amount we will pitch down under deceleration (including recoil.)
 	Real getBounceKick() const { return m_template->m_bounceKick;}						///< How much simulating rough terrain "bounces" a wheel up.
@@ -283,11 +302,12 @@ public:
 	Bool getAllowMotiveForceWhileAirborne() const { return m_template->m_allowMotiveForceWhileAirborne; }
 	Int getAirborneTargetingHeight() const { return m_template->m_airborneTargetingHeight; }
 	Bool getLocomotorWorksWhenDead() const { return m_template->m_locomotorWorksWhenDead; }
+	Bool getLocomotorWorksWhenDisabled() const { return m_template->m_locomotorWorksWhenDisabled; }
 	Bool getStickToGround() const { return m_template->m_stickToGround; }
 	Real getCloseEnoughDist() const { return m_closeEnoughDist; }
 	Bool isCloseEnoughDist3D() const { return getFlag(IS_CLOSE_ENOUGH_DIST_3D); }
 	Bool hasSuspension() const {return m_template->m_hasSuspension;}
-	Bool canMoveBackwards() const {return m_template->m_canMoveBackward;}
+	Bool canMoveBackwards() const; //{return m_template->m_canMoveBackward;}
 	Real getMaxWheelExtension() const {return m_template->m_maximumWheelExtension;}
 	Real getMaxWheelCompression() const {return m_template->m_maximumWheelCompression;}
 	Real getWheelTurnAngle() const {return m_template->m_wheelTurnAngle;}
@@ -320,6 +340,11 @@ public:
 	Bool isInvalidPositionAllowed() const { return getFlag( ALLOW_INVALID_POSITION ); }
 
 	void setPreferredHeight( Real height ) { m_preferredHeight = height; }
+
+	void setMaintainPos(const Coord3D *pos) { m_maintainPos.set(*pos); }
+
+	//Returns 0 for non SHIP locomotors
+	Int getRequireWaterLevel() const { return m_template->m_appearance == LOCO_SHIP ? m_template->m_requiredWaterLevel : 0; };
 
 #ifdef CIRCLE_FOR_LANDING
 	/**
@@ -366,12 +391,19 @@ public:
 
 	void startMove(); ///< Indicates that a move is starting, primarily to reset the donut timer. jba.
 
+	static Real getSurfaceHtAtPt(Real x, Real y);
+
+	void applySpeedMultiplier(Real scalar) { m_speedMultiplier *= scalar; }
+	// void setSpeedMultiplier(Real value) { m_speedMultiplier = value; }
+	Real getSpeedMultiplier() const { return m_speedMultiplier; }
+
 protected:
 	void moveTowardsPositionLegs(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionLegsWander(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionClimb(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
+	Bool shouldMoveBackwards(Object* obj, PhysicsBehavior *physics, Real relAngle, Real onPathDistToGoal);	///< decide (with hysteresis) whether to reverse toward a goal that is behind us, for locos that can rotate in place (treads/hover)
 	void moveTowardsPositionOther(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionHover(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionThrust(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
@@ -394,7 +426,6 @@ protected:
 	Bool handleBehaviorZ(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos);
 	PhysicsTurningType rotateObjAroundLocoPivot(Object* obj, const Coord3D& goalPos, Real maxTurnRate, Real *relAngle = nullptr);
 
-	Real getSurfaceHtAtPt(Real x, Real y);
 	Real calcLiftToUseAtPt(Object* obj, PhysicsBehavior *physics, Real curZ, Real surfaceAtPt, Real preferredHeight);
 
 	Bool fixInvalidPosition(Object* obj, PhysicsBehavior *physics);
@@ -440,6 +471,8 @@ private:
 	Bool getFlag(LocoFlag f) const { return (m_flags & (1 << f)) != 0; }
 	void setFlag(LocoFlag f, Bool b) { if (b) m_flags |= (1<<f); else m_flags &= ~(1<<f); }
 
+	void fixAccelStuck(Real &acceleration, Real lastActualSpeed, Real actualSpeed);
+
 	LocomotorTemplateOverride m_template;		///< the kind of Locomotor this is
 	Coord3D			m_maintainPos;
 	Real				m_brakingFactor;
@@ -449,6 +482,8 @@ private:
 	Real				m_maxBraking;
 	Real				m_maxTurnRate;
 	Real				m_closeEnoughDist;
+	Real				m_previousTurnAccelAddition;
+	Int					m_previousTurnAccelStuckFrames;
 #ifdef CIRCLE_FOR_LANDING
 	Real				m_circleThresh;
 #endif
@@ -460,6 +495,7 @@ private:
 	Real				m_offsetIncrement;
 	UnsignedInt m_donutTimer;				///< Frame time to keep units from doing the donut. jba.
 
+	Real			    m_speedMultiplier;  ///< scalar to max speed and acceleration
 
 };
 
@@ -497,6 +533,7 @@ public:
 
 
 	static void parseLocomotorTemplateDefinition(INI* ini);
+	static void parseLocomotorExtendTemplateDefinition(INI* ini);
 
 protected:
 

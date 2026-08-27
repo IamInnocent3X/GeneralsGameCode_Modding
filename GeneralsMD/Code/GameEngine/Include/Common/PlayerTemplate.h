@@ -100,6 +100,7 @@ public:
 	const ProductionVeterancyMap& getProductionVeterancyLevels() const { return m_productionVeterancyLevels; }
 	Bool isObserver() const { return m_observer; }
 	Bool isPlayableSide() const { return m_playableSide; }
+	Bool isRandomableForAI() const { return m_randomableForAI; }
 
 	AsciiString getScoreScreen () const { return m_scoreScreenImage;	}
 	AsciiString getLoadScreen () const { return m_loadScreenImage;	}
@@ -132,6 +133,32 @@ public:
 
 	AsciiString getLoadScreenMusic() const {return m_loadScreenMusic;	}
 	AsciiString getScoreScreenMusic() const { return m_scoreScreenMusic; }
+
+	const AsciiString& getArrowCursorName() const {return m_arrowCursorName;	}
+	const AsciiString& getScrollCursorName() const {return m_scrollCursorName;	}
+	const AsciiString& getTargetCursorName() const {return m_targetCursorName;	}
+	const AsciiString& getGenericInvalidCursorName() const {return m_genericInvalidCursorName;	}
+	const AsciiString& getSelectingCursorName() const {return m_selectingCursorName;	}
+	const AsciiString& getMoveToCursorName() const {return m_moveToCursorName;	}
+	const AsciiString& getMoveInFormationToCursorName() const {return m_moveInFormationToCursorName;	}
+	const AsciiString& getAttackMoveToCursorName() const {return m_attackMoveToCursorName;	}
+	const AsciiString& getWaypointCursorName() const {return m_waypointCursorName;	}
+	const AsciiString& getAttackObjectCursorName() const {return m_attackObjectCursorName;	}
+	const AsciiString& getForceAttackObjectCursorName() const {return m_forceAttackObjectCursorName;	}
+	const AsciiString& getForceAttackGroundCursorName() const {return m_forceAttackGroundCursorName;	}
+	const AsciiString& getOutrangeCursorName() const {return m_outrangeCursorName;	}
+	const AsciiString& getGetRepairAtCursorName() const {return m_getRepairAtCursorName;	}
+	const AsciiString& getDockCursorName() const {return m_dockCursorName;	}
+	const AsciiString& getGetHealedCursorName() const {return m_getHealedCursorName;	}
+	const AsciiString& getDoRepairCursorName() const {return m_doRepairCursorName;	}
+	const AsciiString& getResumeConstructionCursorName() const {return m_resumeConstructionCursorName;	}
+	const AsciiString& getEnterCursorName() const {return m_enterCursorName;	}
+	const AsciiString& getEnterAggressiveCursorName() const {return m_enterAggressiveCursorName;	}
+	const AsciiString& getSetRallyPointCursorName() const {return m_setRallyPointCursorName;	}
+	const AsciiString& getReverseMoveToCursorName() const {return m_reverseMoveToCursorName;	}
+	const AsciiString& getSmartGarrisonCursorName() const {return m_smartGarrisonCursorName;	}
+	const AsciiString& getBuildCursorName() const {return m_buildCursorName;	}
+	const AsciiString& getInvalidBuildCursorName() const {return m_invalidBuildCursorName;	}
 
   Bool isOldFaction() const { return m_oldFaction; }
 
@@ -173,6 +200,7 @@ private:
 	Bool							m_observer;
 	Bool							m_playableSide;
   Bool              m_oldFaction;                       ///< Faction existed in the original Generals
+	Bool							m_randomableForAI;
 
 	Int								m_intrinsicSPP;
 
@@ -194,6 +222,32 @@ private:
 	AsciiString m_strMedallionNormal;
 	AsciiString m_strMedallionHilite;
 	AsciiString m_strMedallionSelected;
+
+	AsciiString m_arrowCursorName;
+	AsciiString m_scrollCursorName;
+	AsciiString m_targetCursorName;
+	AsciiString m_genericInvalidCursorName;
+	AsciiString m_selectingCursorName;
+	AsciiString m_moveToCursorName;
+	AsciiString m_moveInFormationToCursorName;
+	AsciiString m_attackMoveToCursorName;
+	AsciiString m_waypointCursorName;
+	AsciiString m_attackObjectCursorName;
+	AsciiString m_forceAttackObjectCursorName;
+	AsciiString m_forceAttackGroundCursorName;
+	AsciiString m_outrangeCursorName;
+	AsciiString m_getRepairAtCursorName;
+	AsciiString m_dockCursorName;
+	AsciiString m_getHealedCursorName;
+	AsciiString m_doRepairCursorName;
+	AsciiString m_resumeConstructionCursorName;
+	AsciiString m_enterCursorName;
+	AsciiString m_enterAggressiveCursorName;
+	AsciiString m_setRallyPointCursorName;
+	AsciiString m_reverseMoveToCursorName;
+	AsciiString m_smartGarrisonCursorName;
+	AsciiString m_buildCursorName;
+	AsciiString m_invalidBuildCursorName;
 };
 
 // ----------------------------------------------------------------------------------------------

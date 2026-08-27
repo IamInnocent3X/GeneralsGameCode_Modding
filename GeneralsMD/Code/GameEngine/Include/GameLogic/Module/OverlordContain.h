@@ -49,7 +49,7 @@ public:
 
 
 	static void buildFieldParse(MultiIniFieldParse& p);
-	static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
+	//static void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -109,6 +109,7 @@ private:
 	// contain list access
 	virtual void iterateContained( ContainIterateFunc func, void *userData, Bool reverse ) override;
 	virtual UnsignedInt getContainCount() const override;
+	virtual Int getRawContainMax() const override;
 	virtual Int getContainMax() const override;
 	virtual const ContainedItemsList* getContainedItemsList() const override;
 
@@ -122,6 +123,13 @@ private:
 	virtual Bool getContainerPipsToShow(Int& numTotal, Int& numFull) override;
 	virtual void createPayload() override;
 
+	virtual short getRiderSlot(ObjectID riderID) const override;
+	virtual short getPortableSlot(ObjectID portableID) const override;
+	virtual const ContainedItemsList* getAddOnList() const override;
+	virtual ContainedItemsList* getAddOnList() override;
+
+	virtual Coord3D getEnterPositionOffset(ObjectID object) const override { return Coord3D(0, 0, 0); };
+
 private:
 	/**< An empty overlord is a container, but a full one redirects calls to its passengers.  If this returns null,
 	we are either empty or carrying a non container.
@@ -129,7 +137,7 @@ private:
 	ContainModuleInterface *getRedirectedContain() const; ///< And this gets what are redirecting to.
 	void activateRedirectedContain();///< I need to shut this off since I can talk directly to my bunker, but he can never directly see me
 	void deactivateRedirectedContain();
-  void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
+  //void parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ );
 
 	Bool m_redirectionActivated;
 

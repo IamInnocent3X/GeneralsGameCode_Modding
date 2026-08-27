@@ -40,6 +40,7 @@
 #include "Common/Player.h"
 #include "Common/RandomValue.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
 
 #include "GameClient/Drawable.h"
@@ -50,6 +51,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/OpenContain.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/AssaultTransportAIUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -77,9 +79,16 @@ OpenContainModuleData::OpenContainModuleData()
 	m_allowInsideKindOf.clear(); m_allowInsideKindOf.flip();		// everything is allowed
 	m_forbidInsideKindOf.clear();	// nothing is forbidden
 	m_weaponBonusPassedToPassengers = FALSE;
- 	m_allowAlliesInside = TRUE;
- 	m_allowEnemiesInside = TRUE;
+	m_allowOwnUnitsInside = TRUE;
+	m_allowAlliesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Allies for All Units
+ 	m_allowEnemiesInside = FALSE;	// IamInnocent 30/01/26 - Now defaults to False since revamped Action Manager and IsValidContainerFor now checks for Stealth Garrison Status
  	m_allowNeutralInside = TRUE;
+	m_passengerWeaponBonusVec.clear();
+	m_passengerCustomWeaponBonusVec.clear();
+	m_initialPayload.clear();
+	m_containMaxUpgradeList.clear();
+	m_containMaxUpgradeListConflicts.clear();
+	m_containMaxUpgradeListRequiresAll.clear();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -102,14 +111,52 @@ OpenContainModuleData::OpenContainModuleData()
 		{ "NumberOfExitPaths",				INI::parseInt, nullptr, offsetof( OpenContainModuleData, m_numberOfExitPaths ) },
 		{ "DoorOpenTime",							INI::parseDurationUnsignedInt, nullptr, offsetof( OpenContainModuleData, m_doorOpenTime ) },
  		{ "WeaponBonusPassedToPassengers", INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_weaponBonusPassedToPassengers ) },
- 		{ "AllowAlliesInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowAlliesInside ) },
+ 		{ "AllowOwnUnitsInside",			INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowOwnUnitsInside ) },
+		{ "AllowAlliesInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowAlliesInside ) },
  		{ "AllowEnemiesInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowEnemiesInside ) },
  		{ "AllowNeutralInside",				INI::parseBool,	nullptr, offsetof( OpenContainModuleData, m_allowNeutralInside ) },
+		{ "PassengerWeaponBonusList",       INI::parseWeaponBonusVectorKeepDefault, nullptr, offsetof(OpenContainModuleData, m_passengerWeaponBonusVec) },
+		{ "PassengerCustomWeaponBonusList",       INI::parseAsciiStringVector, nullptr, offsetof(OpenContainModuleData, m_passengerCustomWeaponBonusVec) },
+		{ "InitialPayload", 				parseInitialPayload, nullptr, 0 },
+		{ "ContainMaxTriggeredBy", 			INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeList) },
+		{ "ContainMaxConflictsWith", 		INI::parseAsciiStringWithColonVectorAppend, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeListConflicts) },
+		{ "ContainMaxRequiresAllTriggers", 	INI::parseIntVector, nullptr, offsetof( OpenContainModuleData, m_containMaxUpgradeListRequiresAll) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
 	p.add(DieMuxData::getFieldParse(), offsetof( OpenContainModuleData, m_dieMuxData ));
 
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+/*static*/ void OpenContainModuleData::parseInitialPayload( INI* ini, void *instance, void *store, const void* /*userData*/ )
+{
+	OpenContainModuleData* self = (OpenContainModuleData*)instance;
+
+	Bool parseFirst = TRUE;
+	InitialPayload payload;
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		if(parseFirst)
+		{
+			payload.name.set(token);
+			parseFirst = FALSE;
+		}
+		else
+		{
+			Int count = INI::scanInt(token);
+			payload.count = count;
+			parseFirst = TRUE;
+
+			self->m_initialPayload.push_back(payload);
+		}
+	}
+	if(parseFirst == FALSE)
+	{
+		payload.count = 1;
+		self->m_initialPayload.push_back(payload);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,14 +188,32 @@ OpenContain::OpenContain( Thing *thing, const ModuleData* moduleData ) : UpdateM
 	m_noFirePointsInArt = false;
 	m_whichExitPath = 1;
 	m_loadSoundsEnabled = TRUE;
+	m_containMass = 0.0f;
+	m_payloadCreated = FALSE;
 
   m_passengerAllowedToFire = getOpenContainModuleData()->m_passengersAllowedToFire;
+  m_containExtra = 0;
   // overridable by setPass...()  in the parent interface (for use by upgrade module)
 
 	for( Int i = 0; i < MAX_FIRE_POINTS; i++ )
 	{
 		m_firePoints[ i ].Make_Identity();
 	}
+
+	//DEBUG_LOG(("OpenContain(): ('%s') m_passengerWeaponBonusVec:\n", getObject()->getTemplate()->getName().str()));
+	//const OpenContainModuleData* d = getOpenContainModuleData();
+	//for (i = 0; i < d->m_passengerWeaponBonusVec.size(); i++) {
+	//	DEBUG_LOG(("-- (%d)\n", d->m_passengerWeaponBonusVec[i]));
+	//}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+Int OpenContain::getRawContainMax() const
+{
+	const OpenContainModuleData *modData = getOpenContainModuleData();
+
+	return modData->m_containMax;
 
 }
 
@@ -158,7 +223,7 @@ Int OpenContain::getContainMax() const
 {
 	const OpenContainModuleData *modData = getOpenContainModuleData();
 
-	return modData->m_containMax;
+	return modData->m_containMax + m_containExtra;
 
 }
 
@@ -282,6 +347,9 @@ void OpenContain::addOrRemoveObjFromWorld(Object* obj, Bool add)
 //-------------------------------------------------------------------------------------------------
 void OpenContain::addToContain( Object *rider )
 {
+	if (rider->isDisabledByType(DISABLED_TELEPORT))
+		return;
+
 	if( getObject()->checkAndDetonateBoobyTrap(rider) )
 	{
 		// Whoops, I was mined.  Cancel if I (or they) am now dead.
@@ -373,6 +441,8 @@ void OpenContain::addToContain( Object *rider )
 	if( getObject()->getContain() )
 	{
 		getObject()->getContain()->onContaining( rider, wasSelected );
+		getObject()->getContain()->setContainedItemsMass(0.0f);
+		getObject()->clearInvSqrtMass();
 	}
 
 	// ensure our occupants are positioned correctly.
@@ -387,9 +457,24 @@ void OpenContain::addToContain( Object *rider )
 
 	doLoadSound();
 
+	AIUpdateInterface *ai = getObject()->getAI();
+	if( ai )
+	{
+		AssaultTransportAIInterface *atInterface = ai->getAssaultTransportAIInterface();
+		if( atInterface )
+		{
+			atInterface->doAddMembers();
+		}
+	}
+
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool OpenContain::isContained( const Object *obj ) const
+{
+	return obj->getContainedBy() == getObject();
+}
+
 //-------------------------------------------------------------------------------------------------
 void OpenContain::addToContainList( Object *rider )
 {
@@ -531,6 +616,13 @@ void OpenContain::harmAndForceExitAllContained( DamageInfo *info )
 
 }
 
+
+// ------------------------------------------------------------------------
+void OpenContain::swapContainedItemsList(ContainedItemsList& newList)
+{
+	m_containList.swap(newList);
+	m_containListSize = (Int)m_containList.size();
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -721,6 +813,8 @@ void OpenContain::removeFromContainViaIterator( ContainedItemsList::iterator it,
 	if( getObject()->getContain() )
 	{
 		getObject()->getContain()->onRemoving( rider );
+		getObject()->getContain()->setContainedItemsMass(0.0f);
+		getObject()->clearInvSqrtMass();
 	}
 
 	// trigger an onRemovedFrom event for 'remove'
@@ -786,6 +880,16 @@ void OpenContain::scatterToNearbyPosition(Object* rider)
 //-------------------------------------------------------------------------------------------------
 void OpenContain::onContaining( Object *rider, Bool wasSelected )
 {
+
+	const OpenContainModuleData* d = getOpenContainModuleData();
+	for (Int i = 0; i < d->m_passengerWeaponBonusVec.size(); i++) {
+		rider->setWeaponBonusCondition(d->m_passengerWeaponBonusVec[i]);
+	}
+
+	for (Int i = 0; i < d->m_passengerCustomWeaponBonusVec.size(); i++) {
+		rider->setCustomWeaponBonusCondition(d->m_passengerCustomWeaponBonusVec[i]);
+	}
+
 	// Play audio
 	if( m_loadSoundsEnabled )
 	{
@@ -799,15 +903,27 @@ void OpenContain::onContaining( Object *rider, Bool wasSelected )
 void OpenContain::onRemoving( Object *rider)
 {
 	// Play audio
-	AudioEventRTS exitSound = *getObject()->getTemplate()->getSoundExit();
-	exitSound.setObjectID(getObject()->getID());
-	TheAudio->addAudioEvent(&exitSound);
+	if( m_loadSoundsEnabled )
+	{
+		AudioEventRTS exitSound = *getObject()->getTemplate()->getSoundExit();
+		exitSound.setObjectID(getObject()->getID());
+		TheAudio->addAudioEvent(&exitSound);
 
-	if (rider) {
-		// This is a misnomer, but it makes it clearer for the user.
-		AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
-		fallingSound.setObjectID(rider->getID());
-		TheAudio->addAudioEvent(&fallingSound);
+		if (rider) {
+			// This is a misnomer, but it makes it clearer for the user.
+			AudioEventRTS fallingSound = *rider->getTemplate()->getSoundFalling();
+			fallingSound.setObjectID(rider->getID());
+			TheAudio->addAudioEvent(&fallingSound);
+
+			const OpenContainModuleData* d = getOpenContainModuleData();
+			for (Int i = 0; i < d->m_passengerWeaponBonusVec.size(); i++) {
+				rider->clearWeaponBonusCondition(d->m_passengerWeaponBonusVec[i]);
+			}
+
+			for (Int i = 0; i < d->m_passengerCustomWeaponBonusVec.size(); i++) {
+				rider->clearCustomWeaponBonusCondition(d->m_passengerCustomWeaponBonusVec[i]);
+			}
+		}
 	}
 }
 
@@ -815,6 +931,13 @@ void OpenContain::onRemoving( Object *rider)
 Real OpenContain::getContainedItemsMass() const
 {
 	/// @todo srj -- may want to cache this information.
+	////IamInnocent 13/10/2025 - Done.
+	if(m_containListSize == 0)
+		return 0.0f;
+
+	if(m_containMass)
+		return m_containMass;
+
 	Real mass = 0;
 	for(ContainedItemsList::const_iterator it = m_containList.begin(); it != m_containList.end(); ++it)
 	{
@@ -922,6 +1045,17 @@ void OpenContain::onDie( const DamageInfo * damageInfo )
 	killRidersWhoAreNotFreeToExit();
 #endif
 
+	static NameKeyType createObjDie_key = NAMEKEY("CreateObjectDie");
+
+	for (BehaviorModule** b = getObject()->getBehaviorModules(); *b; ++b)
+	{
+		if ((*b)->getModuleNameKey() == createObjDie_key)
+		{
+			//we stop here and the module carry out the contain removal
+			return;
+		}
+	}
+
 	// Leaving this commented out to show it can't work.  We are about to die, so they will have zero
 	// chance to hit an exitState::Update.  At least we would clean them up in onDelete.
 //	orderAllPassengersToExit( CMD_FROM_AI, FALSE );
@@ -933,6 +1067,10 @@ void OpenContain::onDie( const DamageInfo * damageInfo )
 // ------------------------------------------------------------------------------------------------
 Bool OpenContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
+	
+	//if (obj->isDisabledByType(DISABLED_TELEPORT))
+	//	return false;
+
 	const Object *us = getObject();
 	const OpenContainModuleData *modData = getOpenContainModuleData();
 
@@ -947,8 +1085,26 @@ Bool OpenContain::isValidContainerFor(const Object* obj, Bool checkCapacity) con
  	// check relationship, note that this behavior is defined as the relation between
  	// 'obj' and the container 'us', and not the reverse
  	//
+	/// IamInnocent - Separated AllowOwnUnitsInside from AllowAlliesInside
+	if( us->getControllingPlayer() == obj->getControllingPlayer() )
+		return modData->m_allowOwnUnitsInside;
+
+	/// IamInnocent - Added support for Stealth Garrison
+	Relationship r;
+	ContainModuleInterface *contain = us->getContain();
+	if(contain && contain->isHidingGarrisonFromNonAllies() && !obj->getIsUndetectedDefector() && !us->getIsUndetectedDefector())
+	{
+		const Player *otherPlayer = contain->getApparentControllingPlayer(obj->getControllingPlayer());
+		if (!otherPlayer)
+			otherPlayer = obj->getControllingPlayer();
+		r = otherPlayer->getRelationship( us->getTeam() );
+	}
+	else
+	{
+		r = obj->getRelationship( us );
+	}
  	Bool relationshipRestricted = FALSE;
- 	Relationship r = obj->getRelationship( us );
+ 	//Relationship r = obj->getRelationship( us );
  	switch( r )
  	{
  		case ALLIES:
@@ -1625,6 +1781,13 @@ WeaponBonusConditionFlags OpenContain::getWeaponBonusPassedToPassengers() const
 }
 
 //-------------------------------------------------------------------------------------------------
+const std::vector<AsciiString>& OpenContain::getCustomWeaponBonusPassedToPassengers() const
+{
+	// Our entire weapon bonus flag set is passed on.  Maybe that could be limited in the future.
+	return getObject()->getCustomWeaponBonusCondition();
+}
+
+//-------------------------------------------------------------------------------------------------
 Real OpenContain::getDamagePercentageToUnits()
 {
 	return getOpenContainModuleData()->m_damagePercentageToUnits;
@@ -1719,6 +1882,187 @@ Bool OpenContain::isAnyRiderAttacking() const
   return wellIsHe;
 }
 
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void OpenContain::createPayload()
+{
+	const OpenContainModuleData *data = getOpenContainModuleData();
+	Object *object = getObject();
+	ContainModuleInterface *contain = object->getContain();
+
+	// Sanity
+	if(!contain)
+		return;
+
+	for(std::vector<InitialPayload>::const_iterator it = data->m_initialPayload.begin(); it != data->m_initialPayload.end(); ++it)
+	{
+		Int count = it->count;
+		const ThingTemplate* payloadTemplate = TheThingFactory->findTemplate( it->name );
+
+		for( int i = 0; i < count; i++ )
+		{
+			//We are creating a transport that comes with a initial payload, so add it now!
+			Object* payload = TheThingFactory->newObject( payloadTemplate, object->getControllingPlayer()->getDefaultTeam() );
+			if( contain->isValidContainerFor( payload, true ) )
+			{
+				contain->addToContain( payload );
+			}
+			else
+			{
+				DEBUG_CRASH( ( "DeliverPayload: PutInContainer %s is full, or not valid for the payload %s!", object->getName().str(), it->name.str() ) );
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void OpenContain::doUpgradeChecks()
+{
+	const OpenContainModuleData *modData = getOpenContainModuleData();
+	if(!modData->m_containMaxUpgradeList.empty())
+	{
+		// Reset for every check
+		m_containExtra = 0;
+
+		const Object *source = getObject();
+		Int containMax = getRawContainMax();
+		Int currContain = containMax;
+		Int currContainConflicts = 0;
+		std::vector<Int> AvailableCapacities;
+		Bool gotUpgrade = FALSE;
+		Bool Conflict = FALSE;
+		Bool RequiresAllTriggers = FALSE;
+		std::vector<AsciiString>::const_iterator it_a;
+		for( it_a = modData->m_containMaxUpgradeList.begin(); it_a != modData->m_containMaxUpgradeList.end(); it_a++)
+		{
+			const char* getChars = it_a->str();
+			if(isdigit(*getChars)){
+				// Input last containCount before checking the next one
+				if(gotUpgrade)
+				{
+					AvailableCapacities.push_back(currContain);
+					gotUpgrade = FALSE;
+				}
+				
+				if (sscanf( getChars, "%d", &currContain ) != 1)
+				{
+					DEBUG_CRASH( ("OpenContain Upgrade List Value isn't a valid digit: %s.", it_a->str()) );
+					throw INI_INVALID_DATA;
+				}
+
+				// Reset the upgrade check properties
+				RequiresAllTriggers = FALSE;
+				Conflict = FALSE;
+
+				// RequiresAllTrigers
+				for( std::vector<int>::const_iterator it_t = modData->m_containMaxUpgradeListRequiresAll.begin(); it_t != modData->m_containMaxUpgradeListRequiresAll.end(); it_t++)
+				{
+					if((*it_t) == currContain)
+					{
+						RequiresAllTriggers = TRUE;
+						break;
+					}
+				}
+				// Conflicting Upgrades
+				if(!modData->m_containMaxUpgradeListConflicts.empty())
+				{
+					std::vector<AsciiString>::const_iterator it_c;
+					for( it_c = modData->m_containMaxUpgradeListConflicts.begin(); it_c != modData->m_containMaxUpgradeListConflicts.end(); it_c++)
+					{
+						const char* getChars_c = it_c->str();
+						if(isdigit(*getChars_c)){
+							if (sscanf( getChars_c, "%d", &currContainConflicts ) != 1)
+							{
+								DEBUG_CRASH( ("OpenContain Conflict Upgrade Value isn't a valid digit: %s.", it_c->str()) );
+								throw INI_INVALID_DATA;
+							}
+						}
+						// Only find the conflicts for the current Contain
+						else if(currContainConflicts == currContain)
+						{
+							const UpgradeTemplate* ut_c = TheUpgradeCenter->findUpgrade( *it_c );
+							if( !ut_c )
+							{
+								DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_c->str()));
+								throw INI_INVALID_DATA;
+							}
+							if ( ut_c->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+							{
+								if(source->getControllingPlayer()->hasUpgradeComplete(ut_c))
+									Conflict = TRUE;
+							}
+							else if( source->hasUpgrade(ut_c) )
+							{
+								Conflict = TRUE;
+							}
+						}
+
+						if(Conflict)
+							break;
+					}
+				}
+
+			}
+			else if(currContain != containMax && Conflict == FALSE)
+			{
+				// Skip an instance if we already have an Upgrade present
+				if(!RequiresAllTriggers && gotUpgrade)
+					continue;
+
+				const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
+				if( !ut )
+				{
+					DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_a->str()));
+					throw INI_INVALID_DATA;
+				}
+				if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+				{
+					if(source->getControllingPlayer()->hasUpgradeComplete(ut))
+					{
+						gotUpgrade = TRUE;
+					}
+					else if(RequiresAllTriggers)
+					{
+						// RequiredAllTriggers requires All Upgrades to satisfy the list, if one is not satisfied, then it is considered no Upgrade
+						Conflict = TRUE;
+						gotUpgrade = FALSE;
+					}
+				}
+				else if( source->hasUpgrade(ut) )
+				{
+					gotUpgrade = TRUE;
+				}
+				else if(RequiresAllTriggers)
+				{
+					// RequiredAllTriggers requires All Upgrades to satisfy the list, if one is not satisfied, then it is considered no Upgrade
+					Conflict = TRUE;
+					gotUpgrade = FALSE;
+				}
+			}
+		}
+
+		if(gotUpgrade)
+		{
+			AvailableCapacities.push_back(currContain);
+		}
+
+		Int biggestSize = containMax;
+		for(int i = 0; i < AvailableCapacities.size(); i++)
+		{
+			if(biggestSize == containMax || biggestSize < AvailableCapacities[i])
+				biggestSize = AvailableCapacities[i];
+		}
+		m_containExtra = biggestSize - containMax;
+
+	}
+} // end doUpgradeChecks
 
 
 
@@ -1855,6 +2199,15 @@ void OpenContain::xfer( Xfer *xfer )
 
 	// rally point exists
 	xfer->xferBool( &m_rallyPointExists );
+
+	// contained items mass
+	xfer->xferReal( &m_containMass );
+
+	// contain max
+	xfer->xferInt( &m_containExtra );
+
+	// payload created
+	xfer->xferBool( &m_payloadCreated );
 
 	// enter exit map info
 	UnsignedShort enterExitCount = m_objectEnterExitInfo.size();

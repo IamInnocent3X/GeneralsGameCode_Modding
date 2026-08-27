@@ -129,6 +129,16 @@ struct ParticleSysBoneInfo
 typedef std::vector<ParticleSysBoneInfo> ParticleSysBoneInfoVector;
 
 //-------------------------------------------------------------------------------------------------
+struct FXEventInfo
+{
+	AsciiString boneName;
+	const FXList* fx;
+	UnsignedInt frame;
+};
+
+typedef std::vector<FXEventInfo> FXEventInfoVector;
+
+//-------------------------------------------------------------------------------------------------
 struct PristineBoneInfo
 {
 	Matrix3D mtx;
@@ -222,11 +232,17 @@ struct ModelConditionInfo
 	Real															m_animMinSpeedFactor; //Min speed factor (randomized each time it's played)
 	Real															m_animMaxSpeedFactor; //Max speed factor (randomized each time it's played)
 
+	FXEventInfoVector									m_fxEvents;			///<frames, Bone names and attached FXLists
+
 	mutable PristineBoneInfoMap				m_pristineBones;
 	mutable TurretInfo								m_turrets[MAX_TURRETS];
 	mutable WeaponBarrelInfoVec				m_weaponBarrelInfoVec[WEAPONSLOT_COUNT];
 	mutable Bool											m_hasRecoilBonesOrMuzzleFlashes[WEAPONSLOT_COUNT];
 	mutable Byte											m_validStuff;
+
+	// Animation Blending (needs WalkerDraw)
+	UnsignedInt m_animBlendTime;
+
 
 	enum
 	{
@@ -292,6 +308,7 @@ public:
 	mutable Vector3										m_attachToDrawableBoneOffset;
 #endif
 	Int																m_defaultState;
+	Int																m_lastRealConditionStateIndex;	///< index of last DefaultConditionState/ConditionState, used by AutoConditionState
 	Int																m_projectileBoneFeedbackEnabledSlots;	///< Hide and show the launch bone geometries according to clip status adjustments.
 	Real															m_initialRecoil;
 	Real															m_maxRecoil;
@@ -310,6 +327,15 @@ public:
 
   Bool                              m_receivesDynamicLights; ///< just like it sounds... it sets a property of Drawable, actually
 
+  Bool                              m_ignoreAnimScaling; ///< ignore external scaling of animation speed, e.g. for PreAttack.
+
+	Bool															m_ignoreRotation;  ///< ignore all rotations for this draw module 
+
+	Bool															m_showForOwnerOnly;  ///< show this model only to the owning player 
+
+	Bool															m_keepRecoilAcrossStates;  ///< Don't reset recoil bones when switching states
+
+	// Bool															m_disableMoveEffectsOverWater;  ///< disable track marks and tread/wheel anims over water
 
 	W3DModelDrawModuleData();
 	virtual ~W3DModelDrawModuleData() override;
@@ -366,6 +392,7 @@ public:
 
 	virtual Bool isVisible() const override;
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle) override;
+	virtual void reactToTeleport() override;
 	virtual void reactToGeometryChange() override { }
 
 	// this method must ONLY be called from the client, NEVER From the logic, not even indirectly.
@@ -376,6 +403,10 @@ public:
 	virtual Int getCurrentBonePositions(const char* boneNamePrefix, Int startIndex, Coord3D* positions, Matrix3D* transforms, Int maxBones) const override;
 	virtual Bool getCurrentWorldspaceClientBonePositions(const char* boneName, Matrix3D& transform) const override;
 	virtual Bool getProjectileLaunchOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos = nullptr) const override;
+	virtual Bool getWeaponFireOffset(const ModelConditionFlags& condition, WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const override;
+	virtual Bool doTurretPositioning(WhichTurretType tslot, Real turretAngle, Real turretPitch) override;
+	virtual void setNeedUpdateTurretPositioning(Bool set) override;
+	virtual void setCanDoFXWhileHidden(Bool set) override;
 	virtual void updateProjectileClipStatus( UnsignedInt shotsRemaining, UnsignedInt maxShots, WeaponSlotType slot ) override; ///< This will do the show/hide work if ProjectileBoneFeedbackEnabled is set.
 	virtual void updateDrawModuleSupplyStatus( Int maxSupply, Int currentSupply ) override; ///< This will do visual feedback on Supplies carried
 	virtual void notifyDrawModuleDependencyCleared() override {}///< if you were waiting for something before you drew, it's ready now
@@ -384,6 +415,8 @@ public:
 	virtual void replaceModelConditionState(const ModelConditionFlags& c) override;
 	virtual void replaceIndicatorColor(Color color) override;
 	virtual Bool handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) override;
+	virtual Bool handleWeaponPreAttackFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, const Coord3D* victimPos, Real damageRadius) override;
+	virtual Bool handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarrelToUse, Bool checkHandled) override;
 	virtual Int getBarrelCount(WeaponSlotType wslot) const override;
 	virtual void setSelectable(Bool selectable) override; // Change the selectability of the model.
 
@@ -394,6 +427,7 @@ public:
 		Note that you must call this AFTER setting the condition codes.
 	*/
 	virtual void setAnimationLoopDuration(UnsignedInt numFrames) override;
+	virtual bool isIgnoreAnimLoopDuration() const override { return getW3DModelDrawModuleData()->m_ignoreAnimScaling; }
 
 	/**
 		similar to the above, but assumes that the current state is a "ONCE",
@@ -425,9 +459,14 @@ public:
 	RenderObjClass *getRenderObject() { return m_renderObject; }
 	virtual Bool updateBonesForClientParticleSystems() override;///< this will reposition particle systems on the fly ML
 
+	virtual void handleFXEvents();  // Check frame times and trigger FX events at correct positions
+
 	virtual void onDrawableBoundToObject() override;
 	virtual void setTerrainDecalSize(Real x, Real y) override;
 	virtual void setTerrainDecalOpacity(Real o) override;
+
+	virtual void setModelName(const AsciiString& name) override;
+	virtual const AsciiString& getModelName() const override;
 
 protected:
 
@@ -483,6 +522,16 @@ private:
 		Int				boneIndex;
 	};
 
+	struct AnimInfoHelper
+	{
+		Int		frameNum;
+		Int		mode;
+		float	numFrames;
+		float	fraction;
+	};
+	AnimInfoHelper m_prevAnimHelper;
+	AnimInfoHelper getCurrentAnimHelper() const;
+
 
 	typedef std::vector<WeaponRecoilInfo>	WeaponRecoilInfoVec;
 	typedef std::vector<ParticleSysTrackerType>	ParticleSystemIDVec;
@@ -502,17 +551,25 @@ private:
 	Shadow*												m_shadow;													///< Updates/Renders shadows of this object
 	Shadow*												m_terrainDecal;
 	TerrainTracksRenderObjClass*	m_trackRenderObject;							///< This is rendered under object
+	Bool													m_lastTrackWasBackwards;					///< travel direction of the last laid tread edge, to detect fwd<->rev flips
 	ParticleSystemIDVec						m_particleSystemIDs;							///< The ID numbers of the particle systems currently running.
 	std::vector<ModelConditionInfo::HideShowSubObjInfo>		m_subObjectVec;
 	Bool													m_hideHeadlights;
 	Bool													m_pauseAnimation;
 	Int														m_animationMode;
+	Bool													m_isFirstDrawModule;
+	AsciiString												m_modelName;
+
+	Bool													m_canDoFXWhileHidden;
+	Bool													m_needUpdateTurretPosition;
+	Bool													m_lastNeedUpdateTurretPosition;
+	Bool													m_doHandleRecoil;
 
 	void adjustAnimation(const ModelConditionInfo* prevState, Real prevAnimFraction);
 	Real getCurrentAnimFraction() const;
 	void applyCorrectModelStateAnimation();
 	const ModelConditionInfo* findTransitionForSig(TransitionSig sig) const;
-	void rebuildWeaponRecoilInfo(const ModelConditionInfo* state);
+	void rebuildWeaponRecoilInfo(const ModelConditionInfo* state, bool clear = TRUE);
 	void doHideShowProjectileObjects( UnsignedInt showCount, UnsignedInt maxCount, WeaponSlotType slot );///< Means effectively, show m of n.
 	void nukeCurrentRender(Matrix3D* xform);
 	void doStartOrStopParticleSys();

@@ -278,6 +278,8 @@ public:
 	virtual void forceCameraAreaConstraintRecalc() {}
 	virtual void setGuardBandBias( const Coord2D *gb ) = 0;
 
+	virtual void setUpdateEfficient(void) {}
+
 protected:
 
 	friend class Display;

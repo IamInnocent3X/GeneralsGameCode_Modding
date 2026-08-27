@@ -42,11 +42,11 @@ class GarrisonContainModuleData : public OpenContainModuleData
 public:
 
 
-	struct InitialRoster
-	{
-		AsciiString templateName;
-		Int count;
-	};
+	//struct InitialRoster
+	//{
+	//	AsciiString templateName;
+	//	Int count;
+	//};
 
 
 	Bool m_doIHealObjects;
@@ -54,8 +54,11 @@ public:
 	Bool m_mobileGarrison;
 	Bool m_immuneToClearBuildingAttacks;
   Bool m_isEnclosingContainer;
+	Bool m_healingClearsParasite;
 
-	InitialRoster		m_initialRoster;
+	std::vector<InitialPayload>		m_initialRoster;
+
+	std::vector<AsciiString>	m_healingClearsParasiteKeys;
 
 	GarrisonContainModuleData();
 
@@ -71,6 +74,8 @@ public:
 			{ "InitialRoster", parseInitialRoster, nullptr, 0 },
 			{ "ImmuneToClearBuildingAttacks", INI::parseBool, nullptr, offsetof( GarrisonContainModuleData, m_immuneToClearBuildingAttacks ) },
       { "IsEnclosingContainer", INI::parseBool, nullptr, offsetof( GarrisonContainModuleData, m_isEnclosingContainer ) },
+			{ "HealingClearsParasite",			INI::parseBool,	nullptr, offsetof( GarrisonContainModuleData, m_healingClearsParasite ) },
+			{ "HealingClearsParasiteKeys",		INI::parseAsciiStringVector, nullptr, offsetof( GarrisonContainModuleData, m_healingClearsParasiteKeys ) },
 
 			{ 0, 0, 0, 0 }
 		};
@@ -80,12 +85,30 @@ public:
 	static void parseInitialRoster( INI* ini, void *instance, void *store, const void* )
 	{
 		GarrisonContainModuleData* self = (GarrisonContainModuleData*)instance;
-		const char* name = ini->getNextToken();
-		const char* countStr = ini->getNextTokenOrNull();
-		Int count = countStr ? INI::scanInt(countStr) : 1;
 
-		self->m_initialRoster.templateName.set(name);
-		self->m_initialRoster.count = count;
+		Bool parseFirst = TRUE;
+		InitialPayload roster;
+		for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+		{
+			if(parseFirst)
+			{
+				roster.name.set(token);
+				parseFirst = FALSE;
+			}
+			else
+			{
+				Int count = INI::scanInt(token);
+				roster.count = count;
+				parseFirst = TRUE;
+
+				self->m_initialRoster.push_back(roster);
+			}
+		}
+		if(parseFirst == FALSE)
+		{
+			roster.count = 1;
+			self->m_initialRoster.push_back(roster);
+		}
 	};
 
 
@@ -142,6 +165,8 @@ public:
   virtual void onDamage( DamageInfo *info ) override;
 
   virtual void setEvacDisposition( EvacDisposition disp ) override { m_evacDisposition = disp; };
+
+  virtual Bool isHidingGarrisonFromNonAllies() const override { return m_hideGarrisonedStateFromNonallies; }
 
 protected:
 

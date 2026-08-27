@@ -73,7 +73,8 @@ public:
 	// BehaviorModule
 	virtual CreateModuleInterface* getCreate() override { return this; }
 
-	virtual void onBuildComplete() override { m_needToRunOnBuildComplete = FALSE; }	///< This is called when you are a finished game object
+	//virtual void onBuildComplete() override { m_needToRunOnBuildComplete = FALSE; }	///< This is called when you are a finished game object
+	virtual void onBuildComplete() override;
 	virtual Bool shouldDoOnBuildComplete() const override { return m_needToRunOnBuildComplete; }
 
 private:

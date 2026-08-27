@@ -45,7 +45,8 @@
 // ------------------------------------------------------------------------------------------------
 BaseRegenerateUpdateModuleData::BaseRegenerateUpdateModuleData()
 {
-
+	m_baseRegenClearsParasite = FALSE;
+	m_baseRegenClearsParasiteKeys.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -56,6 +57,8 @@ void BaseRegenerateUpdateModuleData::buildFieldParse( MultiIniFieldParse &p )
 
 	static const FieldParse dataFieldParse[] =
 	{
+		{ "BaseRegenClearsParasite", INI::parseBool, nullptr,	offsetof( BaseRegenerateUpdateModuleData, m_baseRegenClearsParasite ) },
+		{ "BaseRegenClearsParasiteKeys", INI::parseAsciiStringVector, nullptr, offsetof( BaseRegenerateUpdateModuleData, m_baseRegenClearsParasiteKeys) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 
@@ -139,7 +142,8 @@ UpdateSleepTime BaseRegenerateUpdate::update()
 		// do some healing
 		Real amount = HEAL_RATE * (body->getMaxHealth() * TheGlobalData->m_baseRegenHealthPercentPerSecond) /
 														 static_cast<float>(LOGICFRAMES_PER_SECOND);
-		me->attemptHealing(amount, me);
+		const BaseRegenerateUpdateModuleData *data = getBaseRegenerateUpdateModuleData();
+		me->attemptHealingWithParasiteClear(amount, me, data->m_baseRegenClearsParasite, data->m_baseRegenClearsParasiteKeys);
 
 		return UPDATE_SLEEP(HEAL_RATE);
 	}

@@ -41,6 +41,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Locomotor.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/ParticleSys.h"
 #include "W3DDevice/GameClient/W3DGameClient.h"
@@ -519,19 +520,33 @@ void W3DTankTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 	if (physics == nullptr)
 		return;
 
+	// skip wheel animations - if over water
+	bool overWater = false;
+	if (obj->isKindOf(KINDOF_NO_MOVE_EFFECTS_ON_WATER) && obj->isOverWater() && !obj->isSignificantlyAboveTerrainOrWater()) {
+		overWater = true;
+		// we need to zero all wheel offsets
+
+	}
+
 	const Coord3D *vel = physics->getVelocity();
 	Real speed = physics->getVelocityMagnitude();
 
 	const TWheelInfo *wheelInfo = getDrawable()->getWheelInfo();	// note, can return null!
 	if (wheelInfo && (m_frontLeftTireBone || m_rearLeftTireBone))
 	{
-		const Real rotationFactor = getW3DTankTruckDrawModuleData()->m_rotationSpeedMultiplier;
-		const Real powerslideRotationAddition = getW3DTankTruckDrawModuleData()->m_powerslideRotationAddition * m_isPowersliding;
+		if (!overWater) {
+			const Real rotationFactor = getW3DTankTruckDrawModuleData()->m_rotationSpeedMultiplier;
+			const Real powerslideRotationAddition = getW3DTankTruckDrawModuleData()->m_powerslideRotationAddition * m_isPowersliding;
 
-		m_frontWheelRotation += rotationFactor*speed;
-		m_rearWheelRotation += rotationFactor*(speed+powerslideRotationAddition);
-		m_frontWheelRotation = WWMath::Normalize_Angle(m_frontWheelRotation);
-		m_rearWheelRotation = WWMath::Normalize_Angle(m_rearWheelRotation);
+			m_frontWheelRotation += rotationFactor * speed;
+			m_rearWheelRotation += rotationFactor * (speed + powerslideRotationAddition);
+			m_frontWheelRotation = WWMath::Normalize_Angle(m_frontWheelRotation);
+			m_rearWheelRotation = WWMath::Normalize_Angle(m_rearWheelRotation);
+		}
+
+		// For now, just use the same values for mid wheels -- may want to do independent calcs later...
+		m_midFrontWheelRotation = m_frontWheelRotation;
+		m_midRearWheelRotation = m_rearWheelRotation;
 
 		Matrix3D wheelXfrm(1);
 		if (m_frontLeftTireBone)
@@ -596,7 +611,7 @@ void W3DTankTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 
 	Bool wasPowersliding = m_isPowersliding;
 	m_isPowersliding = false;
-	if (physics->isMotive() && !obj->isSignificantlyAboveTerrain()) {
+	if (physics->isMotive() && !obj->isSignificantlyAboveTerrain() && !overWater) {
 		enableWheelEmitters(true);
 		Coord3D accel = *physics->getAcceleration();
 		accel.z = 0; // ignore gravitational force.
@@ -657,7 +672,8 @@ void W3DTankTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 		// if tank is moving, kick up dust and debris
 	Real velMag = vel->x*vel->x + vel->y*vel->y;		// only care about moving on the ground
 
-	const Bool doStartMoveDebris = velMag > DEBRIS_THRESHOLD && !getDrawable()->isDrawableEffectivelyHidden() && !getFullyObscuredByShroud();
+	const Bool doStartMoveDebris = velMag > DEBRIS_THRESHOLD && !getDrawable()->isDrawableEffectivelyHidden() && !getFullyObscuredByShroud() &&
+		!(obj->isKindOf(KINDOF_NO_MOVE_EFFECTS_ON_WATER) && obj->isOverWater());
 
 	// kick debris higher the faster we move
 	Coord3D velMult;
@@ -692,7 +708,7 @@ void W3DTankTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 	}
 
 	//Update movement of treads
-	if (m_treadCount)
+	if (m_treadCount && !(obj->isKindOf(KINDOF_NO_MOVE_EFFECTS_ON_WATER) && obj->isOverWater()))
 	{
 		Real offset_u;
 		Real treadScrollSpeed=getW3DTankTruckDrawModuleData()->m_treadAnimationRate;
@@ -715,9 +731,14 @@ void W3DTankTruckDraw::doDrawModule(const Matrix3D* transformMtx)
 			//we stop scrolling when tank slows down to reduce the appearance of sliding
 			//tread scrolling speed was not directly tied into tank velocity because it looked odd
 			//under certain situations when tank moved sideways.
+			// Invert the tread scroll direction when the unit is moving backwards.
+			Real treadDir = -treadScrollSpeed;
+			const Locomotor* loco = obj->getAIUpdateInterface() ? obj->getAIUpdateInterface()->getCurLocomotor() : nullptr;
+			if (loco && loco->isMovingBackwards())
+				treadDir = treadScrollSpeed;
 			for (Int i=0; i<m_treadCount; i++)
 			{
-				offset_u = pTread->m_materialSettings.customUVOffset.X - treadScrollSpeed;
+				offset_u = pTread->m_materialSettings.customUVOffset.X + treadDir;
 				// ensure coordinates of offset are in [0, 1] range:
 				offset_u = offset_u - WWMath::Floor(offset_u);
 				pTread->m_materialSettings.customUVOffset.Set(offset_u,0);

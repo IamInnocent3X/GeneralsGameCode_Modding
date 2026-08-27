@@ -51,6 +51,8 @@ public:
 
 	virtual void attemptDamage( DamageInfo *damageInfo ) override;		///< try to damage this object
 
+	virtual Bool cantBeKilled() const { return TRUE; }
+
 protected:
 
 };

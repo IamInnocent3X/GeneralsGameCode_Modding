@@ -46,6 +46,7 @@
 
 // INCLUDES /////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Snapshot.h"
+#include "Common/GameType.h"
 
 // ----------------------------------------------------------------------------------------------
 
@@ -71,6 +72,7 @@ public:
 		m_energyProduction = 0;
 		m_energyConsumption = 0;
 		m_powerSabotagedTillFrame = 0;
+		m_infinitePower = FALSE;
 		m_owner = owner;
 	}
 
@@ -95,13 +97,24 @@ public:
 	void addPowerBonus( Object *obj );
 	void removePowerBonus( Object *obj );
 
-	void setPowerSabotagedTillFrame( UnsignedInt frame ) { m_powerSabotagedTillFrame = frame; }
+	void setPowerSabotagedTillFrame( UnsignedInt frame, Int Amount = 0, Real Percent = 0.0f ); // { m_powerSabotagedTillFrame = frame; }
 	UnsignedInt getPowerSabotagedTillFrame() const { return m_powerSabotagedTillFrame; }
+
+	/// when set, the player always has sufficient power (overrides production/consumption and sabotage).
+	void setInfinitePower( Bool enable ) { m_infinitePower = enable; }
+	Bool hasInfinitePower() const { return m_infinitePower; }
+
+	void setEnergyGivenTo( UnsignedInt frame, Int amount, Int playerIndex, ObjectID specificID = INVALID_ID, Int maxEnergy = 0 );
+	void setEnergyReceivedFrom( Int playerIndex );
 
 	/**
 		return the percentage of energy needed that we actually produce, as a 0.0 ... 1.0 fraction.
 	*/
 	Real getEnergySupplyRatio() const;
+
+	void calculateCurrentBonusEnergy();
+	Int calculateMaxEnergyFromOtherPlayers();
+	Int calculateEnergyGivenToPlayer(Int PlayerIndex, UnsignedInt &checkEnergyTime);
 
 protected:
 
@@ -113,10 +126,49 @@ protected:
 	void addProduction(Int amt);
 	void addConsumption(Int amt);
 
+	Int getTotalPower() const { return m_energyProduction + m_energyBonus; }
+
 private:
 
 	Int		m_energyProduction;		///< level of energy production, in kw
 	Int		m_energyConsumption;	///< level of energy consumption, in kw
+	Int		m_energyProduced;		///< total amount of energy able to produced, in kw
 	UnsignedInt m_powerSabotagedTillFrame; ///< If power is sabotaged, the frame will be greater than now.
+	Bool	m_infinitePower;			///< cheat: always have sufficient power
 	Player *m_owner;						///< Tight pointer to the Player I am intrinsic to.
+
+	//struct PowerLossObjData
+	//{
+	//	Int Amount;
+	//	Int MaxEnergy;
+	//	ObjectID SpecificID;
+	//};
+
+	struct SabotageData
+	{
+		UnsignedInt Frame;
+		Int Amount;
+		//Int MaxEnergy;
+		//Int PlayerIndex;
+		Real Percent;
+		//ObjectID SpecificID;
+	};
+
+	typedef std::vector<SabotageData> SabotageVec;
+	SabotageVec m_powerSabotageData;
+
+	struct EnergyStolenData
+	{
+		UnsignedInt Frame;
+		Int Amount;
+		Int MaxEnergy;
+		Int PlayerIndex;
+		ObjectID SpecificID;
+	};
+
+	typedef std::vector<EnergyStolenData> EnergyStolenVec;
+	EnergyStolenVec	 m_energyGivenTo;
+	std::vector<Int> m_energyTransferActiveReceivedPlayers;
+	UnsignedInt		m_checkEnergyGivenTime;
+	Int				m_energyBonus;
 };

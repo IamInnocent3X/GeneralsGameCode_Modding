@@ -176,7 +176,7 @@ class MilesAudioManager : public AudioManager
 		///< NOTE NOTE NOTE !!DO NOT USE THIS IN FOR GAMELOGIC PURPOSES!! NOTE NOTE NOTE
 		virtual Bool isCurrentlyPlaying( AudioHandle handle ) override;
 
-		virtual void notifyOfAudioCompletion( UnsignedInt handle, UnsignedInt flags ) override; ///< Is called on MSS Timer thread
+		virtual void notifyOfAudioCompletion( UnsignedInt handle, UnsignedInt flags, bool isEarlyStop=false ) override; ///< Is called on MSS Timer thread
 		virtual PlayingAudio *findPlayingAudioFrom( UnsignedInt handle, UnsignedInt flags );
 
 		virtual UnsignedInt getProviderCount() const override;
@@ -287,6 +287,8 @@ class MilesAudioManager : public AudioManager
 		void initFilters( HSAMPLE sample, AudioEventRTS *eventInfo );
 		void initFilters3D( H3DSAMPLE sample, AudioEventRTS *eventInfo, const Coord3D *pos );
 
+		void handleLoopStopEarly(PlayingAudio* audio);
+
 	protected:
 		ProviderInfo m_provider3D[MAXPROVIDERS];
 		UnsignedInt m_providerCount;
@@ -361,7 +363,7 @@ class MilesAudioManagerDummy : public MilesAudioManager
 	//virtual void openDevice() override {}
 	//virtual void closeDevice() override {}
 	//virtual void* getDevice() override { return nullptr; }
-	virtual void notifyOfAudioCompletion(UnsignedInt audioCompleted, UnsignedInt flags) override {}
+	virtual void notifyOfAudioCompletion(UnsignedInt audioCompleted, UnsignedInt flags, bool isEarlyStop = false) override {}
 	virtual UnsignedInt getProviderCount() const override { return 0; };
 	virtual AsciiString getProviderName(UnsignedInt providerNum) const override { return AsciiString::TheEmptyString; }
 	virtual UnsignedInt getProviderIndex(AsciiString providerName) const override { return 0; }

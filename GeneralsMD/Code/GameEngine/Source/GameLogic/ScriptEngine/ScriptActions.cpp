@@ -1157,6 +1157,15 @@ void ScriptActions::doBuildBaseStructure(const AsciiString& buildingType, Bool f
 	}
 }
 
+void ScriptActions::doBuildShipyard(const AsciiString& buildingType)
+{
+	// This action ALWAYS occur on the current player.
+	Player* thePlayer = TheScriptEngine->getCurrentPlayer();
+	if (thePlayer) {
+		thePlayer->buildShipyard(buildingType);
+	}
+}
+
 
 //-------------------------------------------------------------------------------------------------
 /** createUnitOnTeamAt */
@@ -2111,6 +2120,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 				//Various enter type hunts.
 				break;
 
@@ -2122,9 +2132,16 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUI_COMMAND_CANCEL_UNIT_BUILD:
 			case GUI_COMMAND_CANCEL_UPGRADE:
 			case GUI_COMMAND_ATTACK_MOVE:
+			case GUI_COMMAND_REVERSE_MOVE:
 			case GUI_COMMAND_GUARD:
 			case GUI_COMMAND_GUARD_WITHOUT_PURSUIT:
 			case GUI_COMMAND_GUARD_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_CURRENT_POS:
+			case GUI_COMMAND_GUARD_CURRENT_POS_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_CURRENT_POS_FLYING_UNITS_ONLY:
+			case GUI_COMMAND_GUARD_FAR:
+			case GUI_COMMAND_GUARD_FAR_WITHOUT_PURSUIT:
+			case GUI_COMMAND_GUARD_FAR_FLYING_UNITS_ONLY:
 			case GUI_COMMAND_WAYPOINTS:
 			case GUI_COMMAND_EXIT_CONTAINER:
 			case GUI_COMMAND_EVACUATE:
@@ -2134,6 +2151,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUI_COMMAND_SELL:
 			case GUI_COMMAND_HACK_INTERNET:
 			case GUI_COMMAND_TOGGLE_OVERCHARGE:
+			case GUI_COMMAND_DISABLE_POWER:
 #ifdef ALLOW_SURRENDER
 			case GUI_COMMAND_POW_RETURN_TO_PRISON:
 #endif
@@ -2165,7 +2183,8 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 		{
 			for( int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 			{
-				const CommandButton *aCommandButton = commandSet->getCommandButton(i);
+				const CommandButton *aCommandButton = obj->getCommandButtonForSlot(i, commandSet); 
+
 				if( commandButton == aCommandButton )
 				{
 					//We found the matching command button so now order the unit to do what the button wants.
@@ -2193,6 +2212,7 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUICOMMANDMODE_HIJACK_VEHICLE:
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
+			case GUICOMMANDMODE_EQUIP_OBJECT:
 			{
 					static NameKeyType key_CommandButtonHuntUpdate = NAMEKEY("CommandButtonHuntUpdate");
 
@@ -3267,6 +3287,7 @@ void ScriptActions::doDisableInput()
 		TheMouse->setVisibility(false);
 		TheInGameUI->deselectAllDrawables();
 		TheInGameUI->clearAttackMoveToMode();
+		TheInGameUI->clearMoveStateIfDoOnce();
 		TheInGameUI->setWaypointMode( FALSE );
 		TheControlBar->deleteBuildTooltipLayout();
 		TheLookAtTranslator->resetModes();
@@ -3723,8 +3744,9 @@ void ScriptActions::doNamedSetBoobytrapped( const AsciiString& thingTemplateName
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				//StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				StickyBombUpdateInterface *update = boobytrap->getStickyBombUpdateInterface();
 				if( update )
 				{
 					//The charge gets positioned randomly on the outside of the perimeter of the victim.
@@ -3762,8 +3784,9 @@ void ScriptActions::doTeamSetBoobytrapped( const AsciiString& thingTemplateName,
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
-				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				//static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				//StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
+				StickyBombUpdateInterface *update = boobytrap->getStickyBombUpdateInterface();
 				if( update )
 				{
 					//The charge gets positioned randomly on the outside of the perimeter of the victim.
@@ -4332,7 +4355,7 @@ void ScriptActions::doNamedUseCommandButtonAbility( const AsciiString& unit, con
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = commandSet->getCommandButton(i);
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -4366,7 +4389,7 @@ void ScriptActions::doNamedUseCommandButtonAbilityOnNamed( const AsciiString& un
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = commandSet->getCommandButton(i);
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -4400,7 +4423,7 @@ void ScriptActions::doNamedUseCommandButtonAbilityAtWaypoint( const AsciiString&
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = commandSet->getCommandButton(i);
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -4439,7 +4462,7 @@ void ScriptActions::doNamedUseCommandButtonAbilityUsingWaypointPath( const Ascii
 		for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
 		{
 			//Get the command button.
-			const CommandButton *commandButton = commandSet->getCommandButton(i);
+			const CommandButton *commandButton = theObj->getCommandButtonForSlot(i, commandSet); 
 
 			if( commandButton )
 			{
@@ -6606,6 +6629,9 @@ void ScriptActions::executeAction( ScriptAction *pAction )
 			return;
 		case ScriptAction::SKIRMISH_BUILD_STRUCTURE_FLANK:
 			doBuildBaseStructure(pAction->getParameter(0)->getString(), true);
+			return;
+		case ScriptAction::SKIRMISH_BUILD_SHIPYARD:
+			doBuildShipyard(pAction->getParameter(0)->getString());
 			return;
 		case ScriptAction::RECRUIT_TEAM:
 			doRecruitTeam(pAction->getParameter(0)->getString(), pAction->getParameter(1)->getReal());

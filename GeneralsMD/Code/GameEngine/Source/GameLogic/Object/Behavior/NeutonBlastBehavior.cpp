@@ -114,29 +114,43 @@ void NeutronBlastBehavior::neutronBlastToObject( Object *obj )
 	}
 
 	// Kill if object is infantry
-	if (obj->isKindOf(KINDOF_INFANTRY))
+	//if (obj->isKindOf(KINDOF_INFANTRY))
+	//{
+	//	obj->kill();
+	//}
+
+	// Kill all contained if it is a container
+	if ( obj->isAnyKindOf( data->m_kindOfToKillContained ) )
+	{
+		ContainModuleInterface *contain = obj->getContain();
+		if( contain )
+		{
+			contain->killAllContained();
+		}
+	}
+
+	if( obj->isAnyKindOf( data->m_forbiddenKindOf ) )
+	{
+		return;
+	}
+
+	// Kill if object is to Kill
+	if ( obj->isAnyKindOf( data->m_kindOfToKill ) )
 	{
 		obj->kill();
 	}
-
-	// Kill all contained if it is a container
-	ContainModuleInterface *contain = obj->getContain();
-	if( contain )
-	{
-		contain->killAllContained();
-	}
-
 	// Kill pilots of vehicles
-	if( obj->isKindOf( KINDOF_VEHICLE ) && !obj->isKindOf( KINDOF_DRONE ) )
+	//if( obj->isKindOf( KINDOF_VEHICLE ) && !obj->isKindOf( KINDOF_DRONE ) )
+	else if( obj->isAnyKindOf( data->m_kindOf ) )
 	{
 		// If the vehicle is a combat bike, kill the whole thing
-		if ( obj->isKindOf( KINDOF_CLIFF_JUMPER ) )
-		{
-			obj->kill();
-		}
+		//if ( obj->isKindOf( KINDOF_CLIFF_JUMPER ) )
+		//{
+		//	obj->kill();
+		//}
 		// Just kill the pilot of the vehicle
-		else
-		{
+		//else
+		//{
 			// Make it unmanned, so units can easily check the ability to "take control of it"
 			obj->setDisabled( DISABLED_UNMANNED );
 
@@ -152,7 +166,7 @@ void NeutronBlastBehavior::neutronBlastToObject( Object *obj )
 
 			// Convert it to the neutral team so it renders gray giving visual representation that it is unmanned.
 			obj->setTeam( ThePlayerList->getNeutralPlayer()->getDefaultTeam() );
-		}
+		//}
 	}
 }
 

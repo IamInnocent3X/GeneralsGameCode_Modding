@@ -1,0 +1,74 @@
+// FILE: DroneCarrierContain.h ////////////////////////////////////////////////////////////////////////
+// Desc:   expanded transport contain to work with drone carrier
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma once
+
+// USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
+#include "GameLogic/Module/OpenContain.h"
+#include "GameLogic/Module/TransportContain.h"
+#include "GameLogic/Module/GarrisonContain.h"
+
+
+enum DeathType CPP_11(: Int);
+
+//-------------------------------------------------------------------------------------------------
+class DroneCarrierContainModuleData: public TransportContainModuleData
+{
+public:
+	Real							m_launchVelocityBoost;
+	DeathType					m_deathTypeToContained;
+	std::vector<Coord3D> m_enterPositionOffsets;
+	Bool							m_keepSlotAssignment;
+	Int               m_numLaunchBones;
+	AsciiString				m_launchBone;
+
+	DroneCarrierContainModuleData();
+
+	static void buildFieldParse(MultiIniFieldParse& p);
+	static void parseEnterPositionOffset(INI* ini, void* instance, void* /*store*/, const void* /*userData*/);
+};
+
+//-------------------------------------------------------------------------------------------------
+class DroneCarrierContain: public TransportContain
+{
+
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(DroneCarrierContain, "DroneCarrierContain")
+	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA(DroneCarrierContain, DroneCarrierContainModuleData)
+
+public:
+
+	DroneCarrierContain(Thing* thing, const ModuleData* moduleData);
+	// virtual destructor prototype provided by memory pool declaration
+
+	//Only allow slaved units in
+	virtual Bool isValidContainerFor(const Object* obj, Bool checkCapacity) const override;
+
+	virtual Bool isEnclosingContainerFor(const Object* obj) const override { return true; } //TODO param in module
+
+	virtual Bool isPassengerAllowedToFire(ObjectID id = INVALID_ID) const override;	///< Hey, can I shoot out of this container?
+
+	//support for specific exit bones
+	virtual void onRemoving(Object* obj) override;
+	virtual void onContaining(Object* obj, Bool wasSelected) override;		///< object now contains 'obj'
+
+	virtual short getRiderSlot(ObjectID riderID) const override;
+	virtual short getPortableSlot(ObjectID portableID) const override;
+	virtual const ContainedItemsList* getAddOnList() const override;
+	virtual ContainedItemsList* getAddOnList() override;
+
+	virtual Coord3D getEnterPositionOffset(ObjectID object) const override;
+
+	virtual void onDie(const DamageInfo* damageInfo) override;
+
+	// Called from the AI update to reload the contained drones
+	void updateContainedReloadingStatus();
+
+	// Called from Carrier AI if a drone dies
+	void onDroneDeath(ObjectID deadDrone);
+
+protected:
+
+	// Saves slot assignement and frame when entered
+	std::vector<std::tuple<ObjectID, UnsignedInt, Bool>> m_contained_units;
+};

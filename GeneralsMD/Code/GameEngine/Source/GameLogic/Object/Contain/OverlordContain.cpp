@@ -91,7 +91,7 @@ OverlordContain::OverlordContain( Thing *thing, const ModuleData *moduleData ) :
 {
 	m_redirectionActivated = FALSE;
 
-  m_payloadCreated = FALSE;
+  setPayloadCreated(FALSE);
 
 }
 
@@ -211,7 +211,7 @@ void OverlordContain::createPayload()
 			  }
 			  else
 			  {
-				  DEBUG_CRASH( ( "OverlordContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), self->m_initialPayload.name.str() ) );
+				  DEBUG_CRASH( ( "OverlordContain::createPayload: %s is full, or not valid for the payload %s!", object->getName().str(), (*iter).str() ) );
 			  }
 
       }
@@ -223,7 +223,7 @@ void OverlordContain::createPayload()
 
   }
 
-	m_payloadCreated = TRUE;
+	setPayloadCreated(TRUE);
 
 }
 
@@ -348,7 +348,7 @@ Bool OverlordContain::isKickOutOnCapture()
 void OverlordContain::addToContainList( Object *obj )
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == nullptr )
+	if( getRedirectedContain() == nullptr || obj->isKindOf(KINDOF_PORTABLE_STRUCTURE))
 	{
 		TransportContain::addToContainList( obj );
 		return;
@@ -361,7 +361,7 @@ void OverlordContain::addToContainList( Object *obj )
 void OverlordContain::addToContain( Object *obj )
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == nullptr )
+	if( getRedirectedContain() == nullptr || obj->isKindOf(KINDOF_PORTABLE_STRUCTURE))
 	{
 		TransportContain::addToContain( obj );
 		return;
@@ -379,7 +379,7 @@ void OverlordContain::addToContain( Object *obj )
 void OverlordContain::removeFromContain( Object *obj, Bool exposeStealthUnits )
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == nullptr )
+	if( getRedirectedContain() == nullptr || obj->isKindOf(KINDOF_PORTABLE_STRUCTURE))
 	{
 		TransportContain::removeFromContain( obj, exposeStealthUnits );
 		return;
@@ -433,7 +433,7 @@ void OverlordContain::iterateContained( ContainIterateFunc func, void *userData,
 void OverlordContain::onContaining( Object *obj, Bool wasSelected )
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == nullptr )
+	if( getRedirectedContain() == nullptr || obj->isKindOf(KINDOF_PORTABLE_STRUCTURE))
 	{
 		TransportContain::onContaining( obj, wasSelected );
 
@@ -487,7 +487,7 @@ void OverlordContain::killAllContained()
 void OverlordContain::onRemoving( Object *obj )
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == nullptr )
+	if( getRedirectedContain() == nullptr || obj->isKindOf(KINDOF_PORTABLE_STRUCTURE))
 	{
 		TransportContain::onRemoving( obj );
 		return;
@@ -503,7 +503,7 @@ void OverlordContain::onRemoving( Object *obj )
 Bool OverlordContain::isValidContainerFor(const Object* obj, Bool checkCapacity) const
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
-	if( getRedirectedContain() == nullptr )
+	if( getRedirectedContain() == nullptr || obj->isKindOf(KINDOF_PORTABLE_STRUCTURE))
 		return TransportContain::isValidContainerFor( obj, checkCapacity );
 
 	return getRedirectedContain()->isValidContainerFor( obj, checkCapacity );
@@ -538,6 +538,16 @@ Bool OverlordContain::getContainerPipsToShow(Int& numTotal, Int& numFull)
 }
 
 //-------------------------------------------------------------------------------------------------
+Int OverlordContain::getRawContainMax() const
+{
+	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
+	if( getRedirectedContain() == nullptr )
+		return TransportContain::getRawContainMax();
+
+	return getRedirectedContain()->getRawContainMax();
+}
+
+//-------------------------------------------------------------------------------------------------
 Int OverlordContain::getContainMax() const
 {
 	// Do you mean me the Overlord, or my behavior of passing stuff on to my passengers?
@@ -564,7 +574,8 @@ Bool OverlordContain::isEnclosingContainerFor( const Object *obj ) const
 	// for Overlord subObjects, once I have a passenger, _I_ become a transport of their type.
 	// So, the answer to this question depends on if it is my passenger asking, or theirs.
 	// As always, I can't use convenience functions that get redirected on a ? like this.
-	if( m_containListSize > 0  &&  obj ==  m_containList.front() )
+	//if( m_containListSize > 0  &&  obj ==  m_containList.front() )
+	if( m_containListSize > 0  &&  obj->isKindOf(KINDOF_PORTABLE_STRUCTURE) )
 		return FALSE;
 
 	return TRUE;
@@ -661,7 +672,34 @@ Bool OverlordContain::isPassengerAllowedToFire( ObjectID id ) const
 	return TransportContain::isPassengerAllowedToFire();
 }
 
+const ContainedItemsList* OverlordContain::getAddOnList() const
+{
+	return &m_containList;
+}
 
+ContainedItemsList* OverlordContain::getAddOnList() {
+	return &m_containList;
+}
+
+short OverlordContain::getRiderSlot(ObjectID riderID) const {
+	ContainedItemsList::const_iterator it;
+	it = m_containList.begin();
+
+	short idx = 0;
+	while (it != m_containList.end())
+	{
+		Object* object = *it;
+		if (object->getID() == riderID) {
+			return idx;
+		}
+		++idx;
+		++it;
+	}
+	return -1;
+}
+short OverlordContain::getPortableSlot(ObjectID portableID) const {
+	return getRiderSlot(portableID);
+}
 
 // ------------------------------------------------------------------------------------------------
 /** CRC */

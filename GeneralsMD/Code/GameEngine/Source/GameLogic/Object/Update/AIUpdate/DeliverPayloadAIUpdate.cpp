@@ -52,6 +52,20 @@
 
 
 //-------------------------------------------------------------------------------------------------
+// duplicate from TurretAI
+static void parseTWS(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
+{
+	UnsignedInt* tws = (UnsignedInt*)store;
+	const char* token = ini->getNextToken();
+	while (token != nullptr)
+	{
+		WeaponSlotType wslot = (WeaponSlotType)INI::scanIndexList(token, TheWeaponSlotTypeNames);
+		*tws |= (1 << wslot);
+		token = ini->getNextTokenOrNull();
+	}
+}
+// ---
+
 const FieldParse* DeliverPayloadData::getFieldParse()
 {
 	static const FieldParse dataFieldParse[] =
@@ -80,6 +94,7 @@ const FieldParse* DeliverPayloadData::getFieldParse()
 
 		//Weapon based payload
 		{ "FireWeapon",											INI::parseBool,								nullptr, offsetof( DeliverPayloadData, m_fireWeapon ) },
+		{ "FireWeaponSlots",	parseTWS,															nullptr, offsetof(DeliverPayloadData, m_fireWeaponSlots) },
 
 		//Specify an additional weaponslot to be fired while strafing
 		{ "DiveStartDistance",							INI::parseReal,								nullptr, offsetof( DeliverPayloadData, m_diveStartDistance ) },
@@ -90,6 +105,8 @@ const FieldParse* DeliverPayloadData::getFieldParse()
 
 		{ "DeliveryDecal",									RadiusDecalTemplate::parseRadiusDecalTemplate,	nullptr, offsetof( DeliverPayloadData, m_deliveryDecalTemplate ) },
 		{ "DeliveryDecalRadius",						INI::parseReal, nullptr, offsetof(DeliverPayloadData, m_deliveryDecalRadius) },
+
+		{ "StrafingWeaponTargetsWater",	    INI::parseBool,								nullptr, offsetof(DeliverPayloadData, m_strafingWeaponTargetsWater) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -119,6 +136,8 @@ DeliverPayloadAIUpdate::DeliverPayloadAIUpdate( Thing *thing, const ModuleData* 
 	m_freeToExit = FALSE;
 	m_acceptingCommands = TRUE;
 	m_diveState = DIVESTATE_PREDIVE;
+
+	m_wakeUpTime = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -157,10 +176,16 @@ Bool DeliverPayloadAIUpdate::isAllowedToRespondToAiCommands(const AICommandParms
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime DeliverPayloadAIUpdate::update()
 {
+	// While disabled (e.g. DelayDeliveryFrames hold), suspend delivery logic so the
+	// approach/deliver state machine does not advance while we are frozen in place.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
 	m_deliveryDecal.update();
+	StateReturnType stRet;
 
 	if(!(isAiInDeadState()) && m_deliverPayloadStateMachine)
-		m_deliverPayloadStateMachine->updateStateMachine();
+		stRet = m_deliverPayloadStateMachine->updateStateMachine();
 
 	//Handling diving logic (regardless of state)
 	if( m_diveState != DIVESTATE_POSTDIVE )
@@ -170,8 +195,24 @@ UpdateSleepTime DeliverPayloadAIUpdate::update()
 			//Check to see if we are close enough to start diving.
 			Real startDiveDistanceSquared = sqr( getData()->m_diveStartDistance );
 			Real currentDistanceSquared  = ThePartitionManager->getDistanceSquared( getObject(), getTargetPos(), FROM_CENTER_2D );
+
+			if(m_reSleepFrame && m_reSleepFrame > TheGameLogic->getFrame())
+			{
+				m_wakeUpTime = 0;
+			}
+			else
+			{
+				PhysicsBehavior* p = getObject()->getPhysics();
+				Real additionalFactor = 0.0f;
+				if(p && m_reSleepFrame)
+					additionalFactor = p->getVelocityMagnitude();
+
+				m_wakeUpTime = REAL_TO_INT_FLOOR(sqrt(currentDistanceSquared - startDiveDistanceSquared) / ( additionalFactor + getObject()->getAIUpdateInterface()->getCurLocomotor()->getMaxSpeedForCondition(getObject()->getBodyModule()->getDamageState()) ));
+				m_reSleepFrame = 0;
+			}
 			if( currentDistanceSquared <= startDiveDistanceSquared )
 			{
+				m_wakeUpTime = 0;
 				m_diveState = DIVESTATE_DIVING;
 				getObject()->getAIUpdateInterface()->getCurLocomotor()->setUsePreciseZPos( true );
 
@@ -185,6 +226,8 @@ UpdateSleepTime DeliverPayloadAIUpdate::update()
 		}
 		else
 		{
+			m_wakeUpTime = 0;
+
 			//Check to see when we shall end diving
 			Real endDiveDistanceSquared = sqr( getData()->m_diveEndDistance );
 			Real currentDistanceSquared  = ThePartitionManager->getDistanceSquared( getObject(), getTargetPos(), FROM_CENTER_3D );
@@ -220,6 +263,12 @@ UpdateSleepTime DeliverPayloadAIUpdate::update()
 
 					strafePoint.add( velocity );
 					strafePoint.z = TheTerrainLogic->getGroundHeight( strafePoint.x, strafePoint.y );
+					if (getData()->m_strafingWeaponTargetsWater) {
+						Real waterz{ 0 };
+						if (TheTerrainLogic->isUnderwater(strafePoint.x, strafePoint.y, &waterz)) {
+							strafePoint.z = waterz;
+						}
+					}
 
 					// lock it just till the weapon is empty or the attack is "done"
 					getObject()->setWeaponLock( m_data.m_strafingWeaponSlot, LOCKED_TEMPORARILY );
@@ -230,16 +279,38 @@ UpdateSleepTime DeliverPayloadAIUpdate::update()
 		}
 	}
 
-	AIUpdateInterface::update();
+	UpdateSleepTime ret = AIUpdateInterface::update();
+	if( m_reSleepFrame || ( m_diveState == DIVESTATE_DIVING && m_data.m_strafingWeaponSlot != -1 ))
+	{
+		return UPDATE_SLEEP_NONE;	// ignore our parent, and never sleep
+	}
+	else
+	{
+		UpdateSleepTime mine = IS_STATE_SLEEP(stRet) ? UPDATE_SLEEP(GET_STATE_SLEEP_FRAMES(stRet)) : UPDATE_SLEEP_NONE;
+		mine = m_wakeUpTime && m_wakeUpTime < GET_STATE_SLEEP_FRAMES(mine) ? UPDATE_SLEEP(m_wakeUpTime) : mine;
+		return (mine < ret) ? mine : ret;
+	}
+		//return UPDATE_SLEEP_NONE;	// ignore our parent, and never sleep
 
-	return UPDATE_SLEEP_NONE;	// ignore our parent, and never sleep
+	// IamInnocent 11/10/2025 - Made SleepyUpdate
+}
+
+void DeliverPayloadAIUpdate::onDamage( DamageInfo *damageInfo )
+{ 
+	if(m_diveState == DIVESTATE_PREDIVE && (damageInfo->in.m_shockWaveAmount || damageInfo->in.m_magnetAmount))
+	{
+		Int second = REAL_TO_INT_CEIL(damageInfo->in.m_shockWaveAmount + damageInfo->in.m_magnetAmount);
+		m_reSleepFrame = TheGameLogic->getFrame() + max((Int)(LOGICFRAMES_PER_SECOND),second);
+		wakeUpNow();
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
 void DeliverPayloadAIUpdate::deliverPayload(
 	const Coord3D *moveToPos,
 	const Coord3D *targetPos,
-	const DeliverPayloadData *data
+	const DeliverPayloadData *data,
+	const Coord3D *decalOffset /* = NULL*/
 )
 {
 
@@ -255,8 +326,18 @@ void DeliverPayloadAIUpdate::deliverPayload(
 	m_data			= *data;
 
 	m_deliveryDecal.clear();
-	m_data.m_deliveryDecalTemplate.createRadiusDecal(*targetPos,
-		m_data.m_deliveryDecalRadius, getObject()->getControllingPlayer(), m_deliveryDecal);
+
+	if (decalOffset != nullptr) {
+		Coord3D decalPos = *targetPos;
+		decalPos.add(*decalOffset);
+		m_data.m_deliveryDecalTemplate.createRadiusDecal(decalPos,
+			m_data.m_deliveryDecalRadius, getObject()->getControllingPlayer(), m_deliveryDecal);
+	}
+	else {
+		m_data.m_deliveryDecalTemplate.createRadiusDecal(*targetPos,
+			m_data.m_deliveryDecalRadius, getObject()->getControllingPlayer(), m_deliveryDecal);
+	}
+	
 
 	if( m_data.m_diveStartDistance <= 0.0f )
 	{
@@ -421,6 +502,7 @@ void DeliverPayloadAIUpdate::xfer( Xfer *xfer )
 	xfer->xferCoord3D(&m_moveToPos);
 	xfer->xferInt(&m_visibleItemsDelivered);
 	xfer->xferUser(&m_diveState, sizeof(m_diveState));
+	xfer->xferUnsignedInt(&m_wakeUpTime);
 
 	DeliverPayloadData data = m_data;
 
@@ -435,6 +517,7 @@ void DeliverPayloadAIUpdate::xfer( Xfer *xfer )
 	xfer->xferCoord3D(&data.m_dropVariance);
 	xfer->xferUnsignedInt(&data.m_dropDelay);
 	xfer->xferBool(&data.m_fireWeapon);
+	xfer->xferUnsignedInt(&data.m_fireWeaponSlots);
 	xfer->xferBool(&data.m_selfDestructObject);
 	xfer->xferInt(&data.m_visibleNumBones);
 	xfer->xferReal(&data.m_diveStartDistance);
@@ -716,7 +799,17 @@ StateReturnType DeliveringState::update() // Kick a dude out every so often
 			pos.x += ai->getDropOffset().x;
 			pos.y += ai->getDropOffset().y;
 			pos.z += ai->getDropOffset().z;
-			owner->fireCurrentWeapon( &pos );
+
+			for (int i = 0; i < WEAPONSLOT_COUNT; i++) {
+				WeaponSlotType wslot = (WeaponSlotType)i;
+				if (ai->shouldFireWeaponSlot(wslot)) {
+					owner->setWeaponLock(wslot, LOCKED_TEMPORARILY);
+					owner->fireCurrentWeapon(&pos);
+				}
+			}
+			//owner->fireCurrentWeapon( &pos );
+
+
 			TheGameLogic->destroyObject( item );
 		}
 		else

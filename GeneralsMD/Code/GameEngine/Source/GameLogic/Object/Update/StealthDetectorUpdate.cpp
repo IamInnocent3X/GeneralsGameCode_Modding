@@ -74,6 +74,13 @@ void StealthDetectorUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "ExtraForbiddenKindOf",				KindOfMaskType::parseFromINI,				nullptr, offsetof( StealthDetectorUpdateModuleData, m_extraDetectKindofNot ) },
 		{ "CanDetectWhileGarrisoned",		INI::parseBool,											nullptr, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileGarrisoned ) },
 		{ "CanDetectWhileContained",		INI::parseBool,											nullptr, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileTransported ) },
+		{ "TriggeredBy",							INI::parseAsciiStringVector, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_activationUpgradeNames ) },
+		{ "ConflictsWith",							INI::parseAsciiStringVector, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_conflictingUpgradeNames ) },
+		{ "RequiresAllTriggers",					INI::parseBool, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_requiresAllTriggers ) },
+		{ "ExtraRequiredStatus",				ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthDetectorUpdateModuleData, m_extraRequiredStatus ) },
+		{ "ExtraForbiddenStatus",				ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthDetectorUpdateModuleData, m_extraForbiddenStatus ) },
+		{ "ExtraRequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( StealthDetectorUpdateModuleData, m_extraRequiredCustomStatus ) },
+		{ "ExtraForbiddenCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( StealthDetectorUpdateModuleData, m_extraForbiddenCustomStatus ) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -84,7 +91,7 @@ void StealthDetectorUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 StealthDetectorUpdate::StealthDetectorUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
 {
 	const StealthDetectorUpdateModuleData *data = getStealthDetectorUpdateModuleData();
-	m_enabled = !data->m_initiallyDisabled;
+	m_enabled = !data->m_initiallyDisabled && testUpgrade();
 	// start these guys with random phasings so that we don't
 	// have all of 'em check on the same frame.
 	setWakeFrame(getObject(), m_enabled ? UPDATE_SLEEP(GameLogicRandomValue(1, data->m_updateRate)) : UPDATE_SLEEP_FOREVER);
@@ -138,6 +145,75 @@ Bool PartitionFilterStealthedOrStealthGarrisoned::allow( Object *objOther)
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void StealthDetectorUpdate::doUpgrade()
+{
+	setSDEnabled( testUpgrade() );
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+Bool StealthDetectorUpdate::testUpgrade()
+{
+	const StealthDetectorUpdateModuleData *data = getStealthDetectorUpdateModuleData();
+	Object* self = getObject();
+
+	if(!data->m_conflictingUpgradeNames.empty())
+	{
+		std::vector<AsciiString>::const_iterator it_c;
+		for( it_c = data->m_conflictingUpgradeNames.begin(); it_c != data->m_conflictingUpgradeNames.end(); it_c++)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_c );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_c->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
+					return FALSE;
+			}
+			else if( self->hasUpgrade(ut) )
+			{
+				return FALSE;
+			}
+		}
+	}
+
+	if(!data->m_activationUpgradeNames.empty())
+	{
+		Bool gotUpgrade = FALSE;
+		std::vector<AsciiString>::const_iterator it_a;
+		for( it_a = data->m_activationUpgradeNames.begin(); it_a != data->m_activationUpgradeNames.end(); it_a++)
+		{
+			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
+			if( !ut )
+			{
+				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_a->str()));
+				throw INI_INVALID_DATA;
+			}
+			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
+			{
+				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
+					gotUpgrade = TRUE;
+			}
+			else if( self->hasUpgrade(ut) )
+			{
+				gotUpgrade = TRUE;
+			}
+			if(!data->m_requiresAllTriggers && gotUpgrade)
+				return TRUE;
+			else if(data->m_requiresAllTriggers && !gotUpgrade)
+				return FALSE;
+		}
+		return gotUpgrade;
+	}
+
+	return TRUE;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** The update callback. */
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime StealthDetectorUpdate::update()
@@ -184,10 +260,12 @@ UpdateSleepTime StealthDetectorUpdate::update()
 	// only consider items that are currently stealthed.
 	PartitionFilterStealthedOrStealthGarrisoned		filterStealthOrStealthGarrisoned;
 	//PartitionFilterAcceptByObjectStatus		filterStatus(OBJECT_STATUS_STEALTHED, 0);
+	PartitionFilterAcceptByObjectStatus			filterStatus(data->m_extraRequiredStatus, data->m_extraForbiddenStatus);
+	PartitionFilterAcceptByObjectCustomStatus		filterCustomStatus(data->m_extraRequiredCustomStatus, data->m_extraForbiddenCustomStatus);
 	PartitionFilterRelationship						filterTeam(self, PartitionFilterRelationship::ALLOW_ENEMIES | PartitionFilterRelationship::ALLOW_NEUTRAL );
 	PartitionFilterAcceptByKindOf					filterKindof(data->m_extraDetectKindof, data->m_extraDetectKindofNot);
 	PartitionFilterSameMapStatus					filterMapStatus(getObject());
-	PartitionFilter*											filters[] = { &filterStealthOrStealthGarrisoned, &filterTeam, &filterKindof, &filterMapStatus, nullptr };
+	PartitionFilter*											filters[] = { &filterStealthOrStealthGarrisoned, &filterTeam, &filterStatus, &filterCustomStatus, &filterKindof, &filterMapStatus, nullptr };
 
 	Real visionRange = self->getVisionRange();
 	if( data->m_detectionRange > 0.0f )

@@ -100,6 +100,10 @@ Bool HackInternetAIUpdate::isHackingPackingOrUnpacking() const
 //-------------------------------------------------------------------------------------------------
 UpdateSleepTime HackInternetAIUpdate::update()
 {
+	// Suspend hacking (and pending-command handling) while disabled; only the locomotor runs.
+	if (isAiSuspendedByDisable())
+		return AIUpdateInterface::update();
+
 	// have to call our parent's isIdle, because we override it to never return true
 	// when we have a pending command...
 	if( AIUpdateInterface::isIdle() )
@@ -114,10 +118,11 @@ UpdateSleepTime HackInternetAIUpdate::update()
 		}
 	}
 
-	/*UpdateSleepTime ret =*/ AIUpdateInterface::update();
+	/*UpdateSleepTime ret =*/ return AIUpdateInterface::update();
 	//return (mine < ret) ? mine : ret;
 	/// @todo srj -- someday, make sleepy. for now, must not sleep.
-	return UPDATE_SLEEP_NONE;
+	////return UPDATE_SLEEP_NONE;
+	///// IamInnocent 11/10/2025 - Made Sleepy
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -141,6 +146,10 @@ void HackInternetAIUpdate::aiDoCommand(const AICommandParms* parms)
 	//then
 	if( currentState == HACK_INTERNET || currentState == PACKING )
 	{
+		// IamInnocent - Added SleepyUpdates
+		if(isIdle())
+			wakeUpNow();
+		
 		// nuke any existing pending cmd
 		m_pendingCommand.store(*parms);
 		m_hasPendingCommand = true;
@@ -480,7 +489,7 @@ StateReturnType HackInternetState::update()
 		return STATE_FAILURE;
 	}
 
-	if( owner->isDisabledByType( DISABLED_HACKED ) )
+	if( owner->isDisabledByType( DISABLED_HACKED ) || owner->isDisabledByType( DISABLED_CONSTRAINED ) )
 	{
 		//Don't hack while hacked, hehe.
 		return STATE_CONTINUE;
@@ -543,7 +552,7 @@ StateReturnType HackInternetState::update()
 				//Grant the unit some experience for a successful hack.
 				xp->addExperiencePoints( ai->getXpPerCashUpdate() );
 
-				if (owner->isLogicallyVisible())
+				if( owner->isLogicallyVisible() && owner->showCashText() )
 				{
 					// OY LOOK!  I AM USING LOCAL PLAYER.  Do not put anything other than TheInGameUI->addFloatingText in the block this controls!!!
 					//Display cash income floating over the hacker.

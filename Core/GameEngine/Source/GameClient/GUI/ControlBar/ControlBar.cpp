@@ -60,11 +60,13 @@
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/Module/RebuildHoleBehavior.h"
 #include "GameLogic/ScriptEngine.h"
+#include "GameLogic/TerrainLogic.h"
 
 #include "GameClient/AnimateWindowManager.h"
 #include "GameClient/ControlBar.h"
 #include "GameClient/ControlBarScheme.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/FXList.h"
 #include "GameClient/Display.h"
 #include "GameClient/DisplayStringManager.h"
 #include "GameClient/GameClient.h"
@@ -93,6 +95,8 @@ ControlBar *TheControlBar = nullptr;
 const Image* ControlBar::m_rankVeteranIcon	= nullptr;
 const Image* ControlBar::m_rankEliteIcon		= nullptr;
 const Image* ControlBar::m_rankHeroicIcon		= nullptr;
+const Image* ControlBar::m_rankFourIcon			= nullptr;
+const Image* ControlBar::m_rankFiveIcon			= nullptr;
 
 // GeneralsX @bugfix arazmj 24/08/2026 Preserve command card aspect ratios on widescreen displays.
 static void centerWindowsWithUniformHorizontalScale(GameWindow **windows, Int count, GameWindow *parent)
@@ -202,11 +206,31 @@ const FieldParse CommandButton::s_commandButtonFieldParseTable[] =
 	{ "PurchasedLabel",				INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_purchasedLabel ) },
 	{ "ConflictingLabel",			INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_conflictingLabel ) },
 	{ "ButtonImage",					INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_buttonImageName ) },
+	{ "MarkerObject",					INI::parseThingTemplate,		 nullptr, offsetof( CommandButton, m_markerTemplate ) },
+	{ "MarkerFX",							INI::parseFXList,						 nullptr, offsetof( CommandButton, m_markerFX ) },
+	{ "NumberOfTargets",			INI::parseInt,							 nullptr, offsetof( CommandButton, m_numberOfTargets ) },
+	{ "TargetRadius",					INI::parseReal,							 nullptr, offsetof( CommandButton, m_targetRadius ) },
+	{ "TargetRadiusMode",			INI::parseIndexList,				 TheSpecialPowerTargetRadiusModeNames, offsetof( CommandButton, m_targetRadiusMode ) },
 	{ "CursorName",						INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_cursorName ) },
+	{ "SecondCursorName",			INI::parseAsciiString,			 nullptr, offsetof( CommandButton, m_secondCursorName ) },
 	{ "InvalidCursorName",		INI::parseAsciiString,       nullptr, offsetof( CommandButton, m_invalidCursorName ) },
 	{ "ButtonBorderType",			INI::parseLookupList,				 CommandButtonMappedBorderTypeNames, offsetof( CommandButton, m_commandButtonBorder ) },
 	{ "RadiusCursorType",			INI::parseIndexList,				 TheRadiusCursorNames, offsetof( CommandButton, m_radiusCursor ) },
+	{ "AnchorRadiusCursorType",	INI::parseIndexList,				 TheRadiusCursorNames, offsetof( CommandButton, m_anchorRadiusCursor ) },
+	{ "AnchorRadius",					INI::parseReal,							 nullptr, offsetof( CommandButton, m_anchorRadius ) },
+	{ "TargetDecalRadius",		INI::parseReal,							 nullptr, offsetof( CommandButton, m_targetDecalRadius ) },
+	{ "AnchorDecalRadius",		INI::parseReal,							 nullptr, offsetof( CommandButton, m_anchorDecalRadius ) },
+	{ "CustomRadiusCursorType",			INI::parseAsciiString,			nullptr, offsetof( CommandButton, m_customRadiusCursor ) },
+	{ "CustomAnchorRadiusCursorType",	INI::parseAsciiString,			nullptr, offsetof( CommandButton, m_customAnchorRadiusCursor ) },
 	{ "UnitSpecificSound",		INI::parseAudioEventRTS,		 nullptr, offsetof( CommandButton, m_unitSpecificSound ) },
+	{ "OrderNearbyUnitsRadius",				INI::parseReal, nullptr, offsetof( CommandButton, m_orderNearbyRadius ) },
+	{ "OrderNearbyUnitsKindof",					KindOfMaskType::parseFromINI,		nullptr, offsetof( CommandButton, m_orderKindof ) },
+	{ "OrderNearbyUnitsForbiddenKindof",		KindOfMaskType::parseFromINI,		nullptr, offsetof( CommandButton, m_orderKindofNot ) },
+	{ "OrderNearbyUnitsMinDelay",		INI::parseDurationUnsignedInt,		nullptr, offsetof( CommandButton, m_orderMinDelay ) },
+	{ "OrderNearbyUnitsMaxDelay",		INI::parseDurationUnsignedInt,		nullptr, offsetof( CommandButton, m_orderMaxDelay ) },
+	{ "OrderNearbyUnitsIntervalDelay",	INI::parseDurationUnsignedInt,		nullptr, offsetof( CommandButton, m_orderIntervalDelay ) },
+	{ "InstancesRequired",			INI::parseNameKeyVectorAppend,			nullptr, offsetof( CommandButton, m_instancesRequired ) },
+	{ "RequiresAllInstances",		INI::parseBool,			nullptr, offsetof( CommandButton, m_requiresAllInstances ) },
 
 	{ nullptr,						nullptr,												 nullptr, 0 }
 
@@ -314,7 +338,8 @@ void ControlBar::populatePurchaseScience( Player* player )
 		if( commandButton == nullptr || BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) )
 		{
 			// hide window on interface
-			m_sciencePurchaseWindowsRank1[ i ]->winHide( TRUE );
+			if(m_sciencePurchaseWindowsRank1[ i ] != nullptr) 
+				m_sciencePurchaseWindowsRank1[ i ]->winHide( TRUE );
 		}
 		else
 		{
@@ -376,7 +401,8 @@ void ControlBar::populatePurchaseScience( Player* player )
 		if( commandButton == nullptr || BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) )
 		{
 			// hide window on interface
-			m_sciencePurchaseWindowsRank3[ i ]->winHide( TRUE );
+			if (m_sciencePurchaseWindowsRank3[ i ] != nullptr)
+				m_sciencePurchaseWindowsRank3[ i ]->winHide( TRUE );
 		}
 		else
 		{
@@ -441,7 +467,8 @@ void ControlBar::populatePurchaseScience( Player* player )
 		if( commandButton == nullptr || BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) )
 		{
 			// hide window on interface
-			m_sciencePurchaseWindowsRank8[ i ]->winHide( TRUE );
+			if (m_sciencePurchaseWindowsRank8[ i ] != nullptr)
+				m_sciencePurchaseWindowsRank8[ i ]->winHide( TRUE );
 		}
 		else
 		{
@@ -619,6 +646,112 @@ void ControlBar::updateContextPurchaseScience()
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+/*Int ControlBar::getRemainingSciencePointsAvailableToPurchase( Player* player ) const
+{
+//	TheInGameUI->deselectAllDrawables();
+
+	const CommandSet *commandSet1;
+	const CommandSet *commandSet3;
+	const CommandSet *commandSet8;
+	Int i;
+	if(TheScriptEngine->isGameEnding())
+		return 0;
+	// get command set
+	if(!player ||!player->getPlayerTemplate() || player->getPlayerTemplate()->getPurchaseScienceCommandSetRank1().isEmpty() ||
+			player->getPlayerTemplate()->getPurchaseScienceCommandSetRank3().isEmpty() ||
+			player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8().isEmpty())
+		return 0;
+	commandSet1 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank1()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+	commandSet3 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank3()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+	commandSet8 = TheControlBar->findCommandSet(player->getPlayerTemplate()->getPurchaseScienceCommandSetRank8()); // TEMP WILL CHANGE TO PROPER WAY ONCE WORKING
+
+
+	// if no command set match is found hide all the buttons
+	if( commandSet1 == nullptr ||
+			commandSet3 == nullptr ||
+			commandSet8 == nullptr )
+		return 0;
+
+	// populate the button with commands defined
+	const CommandButton *commandButton;
+	Int cost = 0;
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_1; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet1->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == nullptr && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st) &&
+				TheScienceStore->playerHasPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_3; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet3->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == nullptr && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_8; i++ )
+	{
+
+		// get command button
+		commandButton = commandSet8->getCommandButton(i);
+
+		// if button is not present, we skip the check
+		if( !commandButton == nullptr && !BitIsSet( commandButton->getOptions(), SCRIPT_ONLY ) && !commandButton->getScienceVec().empty())
+		{
+			ScienceType	st = commandButton->getScienceVec()[ 0 ];
+
+			if( !player->isScienceDisabled( st ) &&
+				!player->isScienceHidden( st ) &&
+				!player->hasScience(st) &&
+				TheScienceStore->playerHasRootPrereqsForScience(player, st) &&
+				TheScienceStore->playerHasPrereqsForScience(player, st)
+			  )
+			{
+				cost += TheScienceStore->getSciencePurchaseCost(st);
+			}
+		}  // end else
+
+	}  // end for
+
+	return cost;
+
+}*/
+
+//-------------------------------------------------------------------------------------------------
 /** parse command definition */
 //-------------------------------------------------------------------------------------------------
 void CommandButton::parseCommand( INI* ini, void *instance, void *store, const void *userData )
@@ -652,6 +785,11 @@ CommandButton::CommandButton()
 
 	m_command = GUI_COMMAND_NONE;
 	m_thingTemplate = nullptr;
+	m_markerTemplate = nullptr;
+	m_markerFX = nullptr;
+	m_numberOfTargets = 2;	// back-compat default: the chronosphere two-point power
+	m_targetRadius = 0.0f;
+	m_targetRadiusMode = SPTRM_NONE;
 	m_upgradeTemplate = nullptr;
 	m_weaponSlot = PRIMARY_WEAPON;
 	m_maxShotsToFire = 0x7fffffff;	// huge number
@@ -667,6 +805,7 @@ CommandButton::CommandButton()
 	m_flashCount = 0;
 	m_conflictingLabel.clear();
 	m_cursorName.clear();
+	m_secondCursorName.clear();
 	m_descriptionLabel.clear();
 	m_invalidCursorName.clear();
 	m_name.clear();
@@ -678,7 +817,22 @@ CommandButton::CommandButton()
 	//m_prev = nullptr;
 	m_next = nullptr;
 	m_radiusCursor = RADIUSCURSOR_NONE;
+	m_anchorRadiusCursor = RADIUSCURSOR_NONE;
+	m_anchorRadius = 0.0f;
+	m_targetDecalRadius = 0.0f;
+	m_anchorDecalRadius = 0.0f;
+	m_customRadiusCursor.clear();
+	m_customAnchorRadiusCursor.clear();
 
+	m_orderNearbyRadius = 0.0f;
+	m_orderKindof = KINDOFMASK_NONE;
+	m_orderKindofNot = KINDOFMASK_NONE;
+	m_orderMinDelay = 0;
+	m_orderMaxDelay = 0;
+	m_orderIntervalDelay = 0;
+
+	m_instancesRequired.clear();
+	m_requiresAllInstances = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -727,7 +881,9 @@ Bool CommandButton::isValidToUseOn(const Object *sourceObj, const Object *target
 	if (m_upgradeTemplate) {
 		// @todo: Make a const version of pui. We're not altering the production queue, so this const-cast
 		// is okay.
-		ProductionUpdateInterface *pui = const_cast<Object*>(sourceObj)->getProductionUpdateInterface();
+		//ProductionUpdateInterface *pui = const_cast<Object*>(sourceObj)->getProductionUpdateInterface();
+		/// IamInnocent - Done this misc
+		const ProductionUpdateInterface *pui = sourceObj->getProductionUpdateInterface();
 		if (pui) {
 			const ProductionEntry *pe = pui->firstProduction();
 			while (pe) {
@@ -781,8 +937,15 @@ Bool CommandButton::isValidToUseOn(const Object *sourceObj, const Object *target
 Bool CommandButton::isReady(const Object *sourceObj) const
 {
 	SpecialPowerModuleInterface *mod = sourceObj->getSpecialPowerModule( m_specialPower );
-	if( mod && mod->getPercentReady() == 1.0f )
-		return true;
+	if (mod) {
+		bool ready = mod->getPercentReady() == 1.0f;
+		bool can_afford{ true };
+		if (m_specialPower->getCost() > 0) {
+			can_afford = sourceObj->getControllingPlayer()->getMoney()->countMoney() >= m_specialPower->getCost();
+		}
+
+		if (ready && can_afford) return true;
+	}
 
 	if (m_upgradeTemplate && sourceObj->affectedByUpgrade(m_upgradeTemplate) && !sourceObj->hasUpgrade(m_upgradeTemplate))
 		return true;
@@ -825,6 +988,20 @@ const FieldParse CommandSet::m_commandSetFieldParseTable[] =
 	{ "16",			CommandSet::parseCommandButton, (void *)15,		offsetof( CommandSet, m_command ) },
 	{ "17",			CommandSet::parseCommandButton, (void *)16,		offsetof( CommandSet, m_command ) },
 	{ "18",			CommandSet::parseCommandButton, (void *)17,		offsetof( CommandSet, m_command ) },
+	{ "19",			CommandSet::parseCommandButton, (void *)18,		offsetof( CommandSet, m_command ) },
+	{ "20",			CommandSet::parseCommandButton, (void *)19,		offsetof( CommandSet, m_command ) },
+	{ "21",			CommandSet::parseCommandButton, (void *)20,		offsetof( CommandSet, m_command ) },
+	{ "22",			CommandSet::parseCommandButton, (void *)21,		offsetof( CommandSet, m_command ) },
+	{ "23",			CommandSet::parseCommandButton, (void *)22,		offsetof( CommandSet, m_command ) },
+	{ "24",			CommandSet::parseCommandButton, (void *)23,		offsetof( CommandSet, m_command ) },
+	{ "25",			CommandSet::parseCommandButton, (void *)24,		offsetof( CommandSet, m_command ) },
+	{ "26",			CommandSet::parseCommandButton, (void *)25,		offsetof( CommandSet, m_command ) },
+	{ "27",			CommandSet::parseCommandButton, (void *)26,		offsetof( CommandSet, m_command ) },
+	{ "28",			CommandSet::parseCommandButton, (void *)27,		offsetof( CommandSet, m_command ) },
+	{ "29",			CommandSet::parseCommandButton, (void *)28,		offsetof( CommandSet, m_command ) },
+	{ "30",			CommandSet::parseCommandButton, (void *)29,		offsetof( CommandSet, m_command ) },
+	{ "31",			CommandSet::parseCommandButton, (void *)30,		offsetof( CommandSet, m_command ) },
+	{ "32",			CommandSet::parseCommandButton, (void *)31,		offsetof( CommandSet, m_command ) },
 	{ nullptr,			nullptr,														 nullptr,				0	}
 
 };
@@ -896,32 +1073,73 @@ void CommandButton::copyButtonTextFrom( const CommandButton *button, Bool shortc
 //-------------------------------------------------------------------------------------------------
 void CommandSet::parseCommandButton( INI* ini, void *instance, void *store, const void *userData )
 {
-	const char *token = ini->getNextToken();
-
-	// get find the command button from this name
-	const CommandButton *commandButton = TheControlBar->findCommandButton( AsciiString( token ) );
-	if( commandButton == nullptr )
+	CommandSet* self = (CommandSet*)instance;
+	AsciiString ModifierKey;
+	std::pair<AsciiString, AsciiString> KeyToCommandButton;
+	//const char *token = ini->getNextToken();
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
 	{
 
-		DEBUG_CRASH(( "[LINE: %d - FILE: '%s'] Unknown command '%s' found in command set",
-								  ini->getLineNum(), ini->getFilename().str(), token ));
-		throw INI_INVALID_DATA;
+		// get find the command button from this name
+		const CommandButton *commandButton = TheControlBar->findCommandButton( AsciiString( token ) );
+		if( commandButton == nullptr )
+		{
 
+			if(ModifierKey.isEmpty())
+			{
+				ModifierKey.format(token);
+				continue;
+			}
+
+			DEBUG_CRASH(( "[LINE: %d - FILE: '%s'] Unknown command '%s' found in command set",
+									ini->getLineNum(), ini->getFilename().str(), token ));
+			throw INI_INVALID_DATA;
+
+		}
+
+		// register to the modifiers vector
+		if(!ModifierKey.isEmpty())
+		{
+			Int idx = (Int)userData;
+
+			// sanity
+			DEBUG_ASSERTCRASH( idx < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range",
+												idx) );
+
+			KeyToCommandButton.first = ModifierKey;
+			KeyToCommandButton.second = AsciiString( token );
+			ModifierCommandMap::iterator it = self->m_modifierCommandMap.find(idx);
+			if(it != self->m_modifierCommandMap.end())
+			{
+				it->second.push_back(KeyToCommandButton);
+			}
+			else
+			{
+				ModifierCommandType ModifierCommandVec;
+				ModifierCommandVec.push_back(KeyToCommandButton);
+				self->m_modifierCommandMap[idx] = ModifierCommandVec;
+			}
+
+			ModifierKey.clear();
+
+			continue;
+		}
+
+		// get the index to store the command at, and the command array itself
+		const CommandButton **buttonArray = (const CommandButton **)store;
+		// GeneralsX @bugfix BenderAI 12/02/2026 - Cast via intptr_t for 64-bit compatibility
+		// userData is actually an integer index stored as a pointer (common pattern in callbacks).
+		// On 64-bit Linux, void* is 8 bytes but Int is 4 bytes. Cast through intptr_t first.
+		Int buttonIndex = static_cast<Int>(reinterpret_cast<intptr_t>(userData));
+
+		// sanity
+		DEBUG_ASSERTCRASH( buttonIndex < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range",
+											buttonIndex) );
+
+		// save it
+		buttonArray[ buttonIndex ] = commandButton;
+		self->m_originalButtonName[ buttonIndex ] = AsciiString( token );
 	}
-
-	// get the index to store the command at, and the command array itself
-	const CommandButton **buttonArray = (const CommandButton **)store;
-	// GeneralsX @bugfix BenderAI 12/02/2026 - Cast via intptr_t for 64-bit compatibility
-	// userData is actually an integer index stored as a pointer (common pattern in callbacks).
-	// On 64-bit Linux, void* is 8 bytes but Int is 4 bytes. Cast through intptr_t first.
-	Int buttonIndex = static_cast<Int>(reinterpret_cast<intptr_t>(userData));
-
-	// sanity
-	DEBUG_ASSERTCRASH( buttonIndex < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range",
-										 buttonIndex) );
-
-	// save it
-	buttonArray[ buttonIndex ] = commandButton;
 
 }
 
@@ -932,7 +1150,12 @@ CommandSet::CommandSet(const AsciiString& name) :
 	m_next(nullptr)
 {
 	for( Int i = 0; i < MAX_COMMANDS_PER_SET; i++ )
+	{
 		m_command[ i ] = nullptr;
+		m_originalButtonName[ i ].clear();
+	}
+
+	m_modifierCommandMap.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -945,6 +1168,26 @@ const CommandButton* CommandSet::getCommandButton(Int i) const
 		return button;
 
 	return m_command[i];
+}
+
+//-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+const AsciiString& CommandSet::getModifierForCommandButtonOverrideName(Int i, const AsciiString& key) const
+{
+	// Sanity
+	if(key.isEmpty())
+		return AsciiString::TheEmptyString;
+
+	ModifierCommandMap::const_iterator it = m_modifierCommandMap.find(i);
+	if(it != m_modifierCommandMap.end())
+	{
+		for(ModifierCommandType::const_iterator it_2 = it->second.begin(); it_2 != it->second.end(); ++it_2)
+		{
+			if(it_2->first == key)
+				return it_2->second;
+		}
+	}
+	return AsciiString::TheEmptyString;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1065,6 +1308,8 @@ ControlBar::ControlBar()
 	m_radarAttackGlowOn = FALSE;
 	m_remainingRadarAttackGlowFrames = 0;
 	m_radarAttackGlowWindow = nullptr;
+
+	//m_controlBarButtonsPos.lo.x = m_controlBarButtonsPos.lo.y = m_controlBarButtonsPos.hi.x = m_controlBarButtonsPos.hi.y = 0;
 
 #if defined(RTS_DEBUG)
 	m_lastFrameMarkedDirty = 0;
@@ -1227,6 +1472,29 @@ void ControlBar::init()
 				m_commandWindows[ i ]->winGetPosition(&commandPos.x, &commandPos.y);
 				m_commandWindows[ i ]->winGetSize(&commandSize.x, &commandSize.y);
 				m_commandWindows[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
+
+				//if(i == 0 || m_controlBarButtonsPos.hi.y != 0)
+				//{
+				//	m_commandWindows[ i ]->winGetScreenPosition(&firstPos.x, &firstPos.y);
+				//	if(m_controlBarButtonsPos.lo.x == 0.0f)
+				//		m_controlBarButtonsPos.lo.x = firstPos.x;
+				//	else if(firstPos.x + commandSize.x > m_controlBarButtonsPos.hi.x)
+				//		m_controlBarButtonsPos.hi.x = firstPos.x + commandSize.x;
+
+				//	DEBUG_LOG(("Lo - X: %d Y: %d", m_controlBarButtonsPos.lo.x, m_controlBarButtonsPos.lo.y));
+				//	DEBUG_LOG(("Hi - X: %d Y: %d", m_controlBarButtonsPos.hi.x, m_controlBarButtonsPos.hi.y));
+				//}
+				//else if(firstPos.x != 0)
+				//{
+				//	m_commandWindows[ i ]->winGetScreenPosition(&secondPos.x, &secondPos.y);
+				//	if(secondPos.y != firstPos.y)
+				//	{
+				//		m_controlBarButtonsPos.lo.y = min(secondPos.y, firstPos.y);
+				//		m_controlBarButtonsPos.hi.y = max(secondPos.y, firstPos.y) + commandSize.y;
+
+				//		firstPos.x = 0;
+				//	}
+				//}
 			}
 
 	// removed from multiplayer branch
@@ -1289,6 +1557,10 @@ void ControlBar::init()
 				TheWindowManager->winGetWindowFromId( m_rightHUDWindow, id );
 			m_rightHUDUpgradeCameos[ i ]->winSetStatus( WIN_STATUS_USE_OVERLAY_STATES );
 		}
+		centerWindowsWithUniformHorizontalScale(
+			buildQueueWindows,
+			MAX_BUILD_QUEUE_BUTTONS,
+			m_contextParent[ CP_BUILD_QUEUE ]);
 
 		// GeneralsX @bugfix arazmj 24/08/2026 Apply aspect-correct geometry to control-bar card controls.
 		centerWindowsWithUniformHorizontalScale(
@@ -1406,6 +1678,8 @@ void ControlBar::init()
 		m_rankVeteranIcon = TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron1L" ) : nullptr;
 		m_rankEliteIcon		= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron2L" ) : nullptr;
 		m_rankHeroicIcon	= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron3L" ) : nullptr;
+		m_rankFourIcon		= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron4L" ) : nullptr;
+		m_rankFiveIcon		= TheMappedImageCollection ? TheMappedImageCollection->findImageByName( "SSChevron5L" ) : nullptr;
 
 
 //		if(!m_controlBarResizer)
@@ -2002,8 +2276,9 @@ void ControlBar::evaluateContextUI()
 		if( obj->getStatusBits().test( OBJECT_STATUS_SOLD ) )
 			return;
 
-		static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
-		OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+		//static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
+		//OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
+		OCLUpdate *update = obj->getOCLUpdate();
 
 		//
 		// a command center is context sensitive itself, if a side has *NOT* been chosen we display
@@ -2789,6 +3064,9 @@ void ControlBar::setPortraitByObject( Object *obj )
 
 		for(Int i = 0; i < MAX_UPGRADE_CAMEO_UPGRADES; ++i)
 		{
+			if (m_rightHUDUpgradeCameos[i] == nullptr)
+				continue;
+
 			AsciiString upgradeName = thing->getUpgradeCameoName(i);
 			if(upgradeName.isEmpty())
 			{
@@ -2829,7 +3107,8 @@ void ControlBar::setPortraitByObject( Object *obj )
 		m_rightHUDWindow->winSetStatus( WIN_STATUS_IMAGE );
 		m_rightHUDCameoWindow->winClearStatus( WIN_STATUS_IMAGE );
 		for(Int i = 0; i < MAX_UPGRADE_CAMEO_UPGRADES; ++i)
-			m_rightHUDUpgradeCameos[i]->winHide(TRUE);
+			if (m_rightHUDUpgradeCameos[i] != nullptr)
+				m_rightHUDUpgradeCameos[i]->winHide(TRUE);
 
 		//Clear any overlay the portrait had on it.
 		GadgetButtonDrawOverlayImage( m_rightHUDCameoWindow, nullptr );
@@ -2874,8 +3153,17 @@ void ControlBar::showRallyPoint(const Coord3D* loc)
 	// sanity
 	DEBUG_ASSERTCRASH(marker, ("showRallyPoint: No rally point marker found"));
 
-	// set the position of the rally point drawable to the position passed in
-	marker->setPosition(loc);
+	// Adapt position to water height if under water
+	Real waterZ{ 0 };
+	if (TheTerrainLogic->isUnderwater(loc->x, loc->y, &waterZ)) {
+		Coord3D waterLoc = *loc;
+		waterLoc.z = waterZ;
+		marker->setPosition(&waterLoc);
+	}
+	else {
+		// set the position of the rally point drawable to the position passed in
+		marker->setPosition(loc);
+	}
 	marker->setOrientation(TheGlobalData->m_downwindAngle); // To blow down wind -- ML
 
 	// set the marker colors to that of the local player
@@ -3488,6 +3776,16 @@ void ControlBar::populateSpecialPowerShortcut( Player *player)
 				}
 			}
 
+			if( BitIsSet( commandButton->getOptions(), NEED_INSTANCE ) )
+			{
+				if( !ThePlayerList->getLocalPlayer()->hasInstance( commandButton->getInstancesRequired(), commandButton->getRequiresAllInstances() ) )
+				{
+					//Kris: 8/13/03 - Don't show shortcut buttons that require upgrades we don't have. As far as
+					//I know, only the radar van scan has this. The MOAB is handled differently (sciences).
+					continue;
+				}
+			}
+
 			//
 			// commands that require sciences we don't have are hidden so they never show up
 			// cause we can never pick "another" general technology throughout the game
@@ -3653,8 +3951,8 @@ void ControlBar::populateSpecialPowerShortcut( Player *player)
 			m_specialPowerShortcutButtonParents[ currentButton ]->winEnable( TRUE );
 
 			// populate the visible button with data from the command button
-			setControlCommand( m_specialPowerShortcutButtons[ currentButton ], commandButton );
-			GadgetButtonSetAltSound(m_specialPowerShortcutButtons[ currentButton ], "GUIGenShortcutClick");
+			setControlCommand(m_specialPowerShortcutButtons[currentButton], commandButton);
+			GadgetButtonSetAltSound(m_specialPowerShortcutButtons[currentButton], "GUIGenShortcutClick");
 			currentButton++;
 
 		}
@@ -3677,9 +3975,7 @@ Bool ControlBar::hasAnyShortcutSelection() const
 		const CommandButton *command;
 
 		win = m_specialPowerShortcutButtons[ i ];
-		if( win == nullptr )
-			continue;
-		if( win->winIsHidden() == TRUE )
+		if( win == nullptr || win->winIsHidden() == TRUE )
 			continue;
 
 		// get the command from the control
@@ -3759,7 +4055,7 @@ void ControlBar::updateSpecialPowerShortcut()
 		if( win == nullptr )
 			continue;
 
-		if( win->winIsHidden() == TRUE )
+		if( win==nullptr || win->winIsHidden() == TRUE )
 			continue;
 		// get the command from the control
 		command = (const CommandButton *)GadgetButtonGetData(win);
@@ -3782,6 +4078,9 @@ void ControlBar::updateSpecialPowerShortcut()
 		{
 			obj = ThePlayerList->getLocalPlayer()->findMostReadyShortcutSpecialPowerOfType( command->getSpecialPowerTemplate()->getSpecialPowerType() );
 			availability = getCommandAvailability( command, obj, win );
+
+			if( BitIsSet( command->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( command, obj ) )
+				availability = COMMAND_HIDDEN;
 		}
 		else if( command->getCommandType() == GUI_COMMAND_SELECT_ALL_UNITS_OF_TYPE )
 		{
@@ -3803,12 +4102,17 @@ void ControlBar::updateSpecialPowerShortcut()
 					{
 						for( Int commandIndex = 0; commandIndex < MAX_COMMANDS_PER_SET; commandIndex++ )
 						{
-							const CommandButton *evalButton = commandSet->getCommandButton( commandIndex );
+							const CommandButton *evalButton = obj->getCommandButtonForSlot( commandIndex, commandSet ); 
+
 							GameWindow *evalButtonWin = m_commandWindows[ commandIndex ];
 							if( evalButton && evalButton->getCommandType() == GUI_COMMAND_SPECIAL_POWER )
 							{
 								//We want to evaluate the special powerbutton... but apply the clock overlay to our button!
 								availability = getCommandAvailability( evalButton, obj, evalButtonWin, win );
+
+								if( BitIsSet( evalButton->getOptions(), HIDE_WHEN_UNAVAILABLE ) && availability == COMMAND_RESTRICTED && getCommandHideable( evalButton, obj ) )
+									availability = COMMAND_HIDDEN;
+
 								break;
 							}
 						}
@@ -3853,7 +4157,7 @@ void ControlBar::drawSpecialPowerShortcutMultiplierText()
 		if( win == nullptr )
 			continue;
 
-		if( win->winIsHidden() == TRUE )
+		if( win == nullptr || win->winIsHidden() == TRUE )
 			continue;
 		// get the command from the control
 		command = (const CommandButton *)GadgetButtonGetData(win);
@@ -3932,7 +4236,7 @@ void ControlBar::showSpecialPowerShortcut()
 	Bool dontAnimate = TRUE;
 	for( Int i = 0; i < m_currentlyUsedSpecialPowersButtons; ++i )
 	{
-		if (m_specialPowerShortcutButtons[i] && m_specialPowerShortcutButtons[i]->winGetUserData())
+		if ( m_specialPowerShortcutButtons[i] == nullptr || (m_specialPowerShortcutButtons[i] && m_specialPowerShortcutButtons[i]->winGetUserData()) )
 		{
 			dontAnimate = FALSE;
 			break;

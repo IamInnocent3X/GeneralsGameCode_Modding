@@ -58,6 +58,17 @@ public:
 	UnsignedInt						m_missileDecoyFrames;
 	UnsignedInt						m_countermeasureReactionFrames;
 	Bool									m_mustReloadAtAirfield;
+	Bool									m_mustReloadNearDock;
+	Bool									m_mustReloadAtBarracks;
+	KindOfMaskType 					m_reactingKindofs;
+	Bool							m_noAirborne;
+	Bool							m_considerGround;
+	Bool							m_continuousVolleyInAir;
+	std::vector<AsciiString>		m_reloadNearObjects;
+	Real							m_dockDistance;
+	Int								m_volleyLimit;
+	UnsignedInt						m_detonateDistance;
+
 
 	CountermeasuresBehaviorModuleData()
 	{
@@ -66,10 +77,20 @@ public:
     m_framesBetweenVolleys  = 0;
 		m_numberOfVolleys       = 0;
     m_reloadFrames          = 0;
+	m_volleyLimit			= 0;
     m_evasionRate           = 0.0f;
 		m_mustReloadAtAirfield	= FALSE;
+		m_mustReloadNearDock	= FALSE;
+		m_mustReloadAtBarracks	= FALSE;
 		m_missileDecoyFrames		= 0;
 		m_volleyVelocityFactor  = 1.0f;
+		m_reactingKindofs = KINDOFMASK_NONE;
+		m_reloadNearObjects.clear();
+		m_continuousVolleyInAir = TRUE;
+		m_noAirborne = FALSE;
+		m_considerGround = FALSE;
+		m_dockDistance = 100.0f;
+		m_detonateDistance = 0;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p)
@@ -88,6 +109,17 @@ public:
 			{ "MustReloadAtAirfield",		INI::parseBool,									nullptr, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadAtAirfield ) },
 			{ "MissileDecoyDelay",			INI::parseDurationUnsignedInt,	nullptr, offsetof( CountermeasuresBehaviorModuleData, m_missileDecoyFrames ) },
 			{ "ReactionLaunchLatency",	INI::parseDurationUnsignedInt,	nullptr, offsetof( CountermeasuresBehaviorModuleData, m_countermeasureReactionFrames ) },
+
+			{ "VolleyLimitPerMissile",	INI::parseInt,					nullptr, offsetof( CountermeasuresBehaviorModuleData, m_volleyLimit ) },
+			{ "ContinuousVolleyInAir",	INI::parseBool,					nullptr, offsetof( CountermeasuresBehaviorModuleData, m_continuousVolleyInAir ) },
+			{ "ReactingToKindOfs",	KindOfMaskType::parseFromINI,	nullptr, offsetof( CountermeasuresBehaviorModuleData, m_reactingKindofs ) },
+			{ "NoAirboneCountermeasures",	INI::parseBool,					nullptr, offsetof( CountermeasuresBehaviorModuleData, m_noAirborne ) },
+			{ "GroundCountermeasures",	INI::parseBool,					nullptr, offsetof( CountermeasuresBehaviorModuleData, m_considerGround ) },
+			{ "NonTrackingDetonateDistance", INI::parseUnsignedInt,					nullptr, offsetof( CountermeasuresBehaviorModuleData, m_detonateDistance ) },
+			{ "MustReloadAtBarracks",		INI::parseBool,									nullptr, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadAtBarracks ) },
+			{ "MustReloadNearRepairDocks",		INI::parseBool,								nullptr, offsetof( CountermeasuresBehaviorModuleData, m_mustReloadNearDock ) },
+			{ "MustReloadObjectDistance",	INI::parseReal,							nullptr,		offsetof( CountermeasuresBehaviorModuleData, m_dockDistance ) },
+			{ "MustReloadNearObjects",	INI::parseAsciiStringVector,				nullptr,		offsetof( CountermeasuresBehaviorModuleData, m_reloadNearObjects ) },
 			{ 0, 0, 0, 0 }
 		};
 
@@ -107,7 +139,14 @@ public:
 	virtual void reportMissileForCountermeasures( Object *missile ) = 0;
 	virtual ObjectID calculateCountermeasureToDivertTo( const Object& victim ) = 0;
 	virtual void reloadCountermeasures() = 0;
+	virtual void setCountermeasuresParked() = 0;
 	virtual Bool isActive() const = 0;
+	virtual Bool getCountermeasuresMustReloadAtAirfield() const = 0;
+	virtual Bool getCountermeasuresMustReloadAtDocks() const = 0;
+	virtual Bool getCountermeasuresMustReloadAtBarracks() const = 0;
+	virtual Bool getCountermeasuresNoAirborne() const = 0;
+	virtual Bool getCountermeasuresConsiderGround() const = 0;
+	virtual KindOfMaskType getCountermeasuresKindOfs() const = 0;
 };
 
 
@@ -142,15 +181,18 @@ public:
 	virtual void reportMissileForCountermeasures( Object *missile ) override;
 	virtual ObjectID calculateCountermeasureToDivertTo( const Object& victim ) override;
 	virtual void reloadCountermeasures() override;
+	virtual void setCountermeasuresParked() override;
 	virtual Bool isActive() const override;
-
+	virtual Bool getCountermeasuresMustReloadAtAirfield() const override;
+	virtual Bool getCountermeasuresMustReloadAtDocks() const override;
+	virtual Bool getCountermeasuresMustReloadAtBarracks() const override;
+	virtual Bool getCountermeasuresNoAirborne() const override;
+	virtual Bool getCountermeasuresConsiderGround() const override;
+	virtual KindOfMaskType getCountermeasuresKindOfs() const override;
 
 protected:
 
-	virtual void upgradeImplementation() override
-	{
-		setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
-	}
+	virtual void upgradeImplementation() override;
 
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const override
 	{
@@ -160,6 +202,12 @@ protected:
 	virtual void performUpgradeFX() override
 	{
 		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
 	}
 
 	virtual void processUpgradeRemoval() override
@@ -173,9 +221,15 @@ protected:
 		return getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
 
+	virtual Bool checkStartsActive() const override
+	{
+		return getCountermeasuresBehaviorModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
+
 	Bool isUpgradeActive() const { return isAlreadyUpgraded(); }
 
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
 	void launchVolley();
 
@@ -188,4 +242,9 @@ private:
 	UnsignedInt m_reactionFrame;						//The frame countermeasures will be launched after initial hostile act.
 	UnsignedInt m_nextVolleyFrame;					//Frame the next volley is fired.
 	UnsignedInt m_reloadFrame;							//The frame countermeasures will be ready to use again.
+	UnsignedInt m_currentVolley;
+	UnsignedInt m_checkDelay;
+	Bool m_parked;
+	Bool m_hasExecuted;
+	ObjectID m_dockObjectID;
 };

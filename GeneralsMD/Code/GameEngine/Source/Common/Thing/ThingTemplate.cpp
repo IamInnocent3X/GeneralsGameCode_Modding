@@ -37,6 +37,8 @@
 #define DEFINE_EDITOR_SORTING_NAMES				// for EditorSortingNames[]
 #define DEFINE_RADAR_PRIORITY_NAMES				// for RadarPriorityNames[]
 #define DEFINE_BUILDABLE_STATUS_NAMES			// for BuildableStatusNames[]
+#define DEFINE_AMMO_PIPS_STYLE_NAMES			// for AmmoPipsStyleNames[]
+#define DEFINE_DIFFICULTY_NAMES					// for DifficultyNames[]
 
 #include "Common/DamageFX.h"
 #include "Common/GameAudio.h"
@@ -56,6 +58,8 @@
 #include "Common/ThingFactory.h"
 #include "Common/ThingSort.h"
 #include "Common/BitFlagsIO.h"
+#include "Common/DisabledTypes.h"
+#include "Common/ObjectStatusTypes.h"
 
 #include "GameClient/Drawable.h"
 #include "GameClient/FXList.h"
@@ -71,6 +75,8 @@
 #include "GameLogic/Weapon.h"
 
 #include "Common/UnitTimings.h" //Contains the DO_UNIT_TIMINGS define jba.
+#include <Common/LocalFile.h>
+#include <Common/RAMFile.h>
 
 
 //-------------------------------------------------------------------------------------------------
@@ -146,12 +152,15 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "FactoryExitWidth",			INI::parseReal,												nullptr,		offsetof( ThingTemplate, m_factoryExitWidth ) },
 	{ "FactoryExtraBibWidth",	INI::parseReal,												nullptr,		offsetof( ThingTemplate, m_factoryExtraBibWidth ) },
 
-	{ "SkillPointValue",			ThingTemplate::parseIntList,					(void*)LEVEL_COUNT,		offsetof( ThingTemplate, m_skillPointValues ) },
-	{ "ExperienceValue",			ThingTemplate::parseIntList,					(void*)LEVEL_COUNT,		offsetof( ThingTemplate, m_experienceValues ) },
-	{ "ExperienceRequired",		ThingTemplate::parseIntList,					(void*)LEVEL_COUNT,		offsetof( ThingTemplate, m_experienceRequired ) },
+	{ "SkillPointValue",			ThingTemplate::parseSkillPointValueList,			nullptr,		offsetof( ThingTemplate, m_skillPointValues ) },
+	{ "ExperienceValue",			ThingTemplate::parseExperienceValueList,			nullptr,		offsetof( ThingTemplate, m_experienceValues ) },
+	{ "ExperienceRequired",		ThingTemplate::parseExperienceRequiredList,		nullptr,		offsetof( ThingTemplate, m_experienceRequired ) },
+	{ "MaxVeterancyLevel",		INI::parseIndexList,				TheVeterancyNames,		offsetof( ThingTemplate, m_maxVeterancyLevel ) },
 	{ "IsTrainable",					INI::parseBool,												nullptr,									offsetof( ThingTemplate, m_isTrainable ) },
 	{ "EnterGuard",						INI::parseBool,												nullptr,									offsetof( ThingTemplate, m_enterGuard ) },
 	{ "HijackGuard",					INI::parseBool,												nullptr,									offsetof( ThingTemplate, m_hijackGuard ) },
+	{ "EquipGuard",						INI::parseBool,												nullptr,									offsetof( ThingTemplate, m_equipGuard ) },
+	{ "ParasiteGuard",					INI::parseBool,												nullptr,									offsetof( ThingTemplate, m_parasiteGuard ) },
 
 	{ "Side",									INI::parseAsciiString,								nullptr,	offsetof( ThingTemplate, m_defaultOwningSide ) },
 
@@ -193,6 +202,10 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "UpgradeCameo3",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 2 ] ) },
 	{ "UpgradeCameo4",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 3 ] ) },
 	{ "UpgradeCameo5",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 4 ] ) },
+	{ "UpgradeCameo6",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 5 ] ) },
+	{ "UpgradeCameo7",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 6 ] ) },
+	{ "UpgradeCameo8",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 7 ] ) },
+	{ "UpgradeCameo9",		INI::parseAsciiString,	nullptr,		offsetof( ThingTemplate, m_upgradeCameoUpgradeNames[ 8 ] ) },
 
 // NOTE NOTE NOTE -- s_objectFieldParseTable and s_objectReskinFieldParseTable must be updated in tandem -- see comment above
 
@@ -244,11 +257,12 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "GeometryHeight",				GeometryInfo::parseGeometryHeight,			nullptr,		offsetof( ThingTemplate, m_geometryInfo ) },
 	{ "GeometryIsSmall",			GeometryInfo::parseGeometryIsSmall,			nullptr,		offsetof( ThingTemplate, m_geometryInfo ) },
 	{ "Shadow",								INI::parseBitString8,		TheShadowNames,		offsetof( ThingTemplate, m_shadowType ) },
-	{ "ShadowSizeX",					INI::parseReal,						nullptr,	offsetof( ThingTemplate, m_shadowSizeX ) },
-	{ "ShadowSizeY",					INI::parseReal,						nullptr,	offsetof( ThingTemplate, m_shadowSizeY ) },
-	{ "ShadowOffsetX",				INI::parseReal,						nullptr,	offsetof( ThingTemplate, m_shadowOffsetX ) },
-	{ "ShadowOffsetY",				INI::parseReal,						nullptr,	offsetof( ThingTemplate, m_shadowOffsetY ) },
-	{ "ShadowTexture",				INI::parseAsciiString,		nullptr,	offsetof( ThingTemplate, m_shadowTextureName ) },
+	{ "ShadowSizeX",					INI::parseReal,						nullptr,	offsetof(ThingTemplate, m_shadowSizeX) },
+	{ "ShadowSizeY",					INI::parseReal,						nullptr,	offsetof(ThingTemplate, m_shadowSizeY) },
+	{ "ShadowOffsetX",				INI::parseReal,						nullptr,	offsetof(ThingTemplate, m_shadowOffsetX) },
+	{ "ShadowOffsetY",				INI::parseReal,						nullptr,	offsetof(ThingTemplate, m_shadowOffsetY) },
+	{ "ShadowTexture",				INI::parseAsciiString,		nullptr,	offsetof(ThingTemplate, m_shadowTextureName) },
+	{ "ShadowDynamicLengthWhenAirborne",	INI::parseBool,		nullptr,	offsetof( ThingTemplate, m_shadowHasDynamicLength) },
 	{ "OcclusionDelay",					INI::parseDurationUnsignedInt,		nullptr, offsetof( ThingTemplate, m_occlusionDelay ) },
 	{ "AddModule",						ThingTemplate::parseAddModule,			nullptr, 0 },
 	{ "RemoveModule",					ThingTemplate::parseRemoveModule,		nullptr, 0 },
@@ -265,6 +279,67 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
   { "MaxSimultaneousLinkKey",	NameKeyGenerator::parseStringAsNameKeyType,		nullptr, offsetof(ThingTemplate, m_maxSimultaneousLinkKey ) },
 	{ "CrusherLevel",					INI::parseUnsignedByte,			nullptr, offsetof( ThingTemplate, m_crusherLevel ) },
 	{ "CrushableLevel",				INI::parseUnsignedByte,			nullptr, offsetof( ThingTemplate, m_crushableLevel ) },
+	{ "AmmoPipsStyle",  INI::parseByteSizedIndexList, AmmoPipsStyleNames, offsetof(ThingTemplate, m_ammoPipsStyle) },
+	{ "MaxPathfindingCellRadius", INI::parseUnsignedByte, nullptr, offsetof(ThingTemplate, m_maxPathfindingCellRadius) },
+	{ "RequiredBridgeHeight", ThingTemplate::parseRequiredBridgeHeight, nullptr,  0 },
+
+	// Extra Features Starts Here
+
+	// Prerequisite to Deny the Unit from Building
+	{ "NegativePrerequisites",				ThingTemplate::parseNegativePrerequisites,	0, 0 },
+	{ "HideNegativePrerequisites",			INI::parseBool,		nullptr, offsetof( ThingTemplate, m_negprereqHideInfo ) },
+	
+  	// Expansion Towards MaxSimultaneous
+  	{ "MaxSimultaneousLinkObjects",			INI::parseAsciiStringVector,				nullptr,		offsetof( ThingTemplate, m_maxSimultaneousLinkObjects ) },
+  	{ "MaxSimultaneousOfTypeDifficulty",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			nullptr,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficulty ) },
+	{ "MaxSimultaneousOfTypeDifficultyAIOverride",		ThingTemplate::parseMaxSimultaneousOfTypeDifficulty,			nullptr,		offsetof( ThingTemplate, m_maxSimultaneousOfTypeDifficultyAI ) },
+	{ "MaxSimultaneousOfTypeCustomMessage",			INI::parseAndTranslateLabel,				nullptr,		offsetof( ThingTemplate, m_maxSimultaneousCustomMessage ) },
+
+	// Set Underpowered Properties
+	{ "DisabledWhenUnderpowered",			INI::parseBool,		nullptr, offsetof( ThingTemplate, m_setDisabledWhenUnderpowered ) },
+	{ "DisabledTypeWhenUnderpowered",		DisabledMaskType::parseSingleBitFromINI, nullptr, offsetof( ThingTemplate, m_disabledTypeUnderPowered ) },
+	{ "StatusUnderpowered",			ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( ThingTemplate, m_statusUnderPowered ) },
+	{ "CustomStatusUnderpowered",	INI::parseAsciiStringVector, nullptr, offsetof( ThingTemplate, m_customStatusUnderPowered ) },
+	{ "WeaponBonusUnderpowered",	INI::parseWeaponBonusVector, nullptr, offsetof( ThingTemplate, m_bonusUnderPowered ) },
+	{ "CustomWeaponBonusUnderpowered",			INI::parseAsciiStringVector, nullptr, offsetof( ThingTemplate, m_customBonusUnderPowered ) },
+	{ "TintStatusUnderpowered",			TintStatusFlags::parseSingleBitFromINI,		nullptr, offsetof( ThingTemplate, m_tintStatusUnderPowered ) },
+	{ "CustomTintStatusUnderpowered",	INI::parseAsciiString, 	nullptr, offsetof( ThingTemplate, m_customTintStatusUnderPowered ) },
+	{ "ModelConditionUnderpowered", ModelConditionFlags::parseFromINI, nullptr, offsetof( ThingTemplate, m_modelConditionUnderPowered ) },
+
+	// Reverse Move Properties
+	{ "CanFireTurretsWhileReverseMoving",			INI::parseBool,		nullptr, offsetof( ThingTemplate, m_canFireTurretsWhileReverseMoving ) },
+
+	// Customize Action Cursors
+	{ "SelectingCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_selectingCursorName ) },
+	{ "MoveCursorName",						INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_moveToCursorName ) },
+	{ "AttackMoveCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_attackMoveToCursorName ) },
+	{ "WaypointCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_waypointCursorName ) },
+	{ "GenericInvalidCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_genericInvalidCursorName ) },
+	{ "EnterCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_enterCursorName ) },
+	{ "EnterAggressiveCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_enterAggressiveCursorName ) },
+	{ "AttackCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_attackObjectCursorName ) },
+	{ "ForceAttackCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_forceAttackObjectCursorName ) },
+	{ "ForceAttackGroundCursorName",		INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_forceAttackGroundCursorName ) },
+	{ "OutrangeCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_outrangeCursorName ) },
+	{ "GetRepairAtCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_getRepairAtCursorName ) },
+	{ "DockCursorName",						INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_dockCursorName ) },
+	{ "GetHealedCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_getHealedCursorName ) },
+	{ "DoRepairCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_doRepairCursorName ) },
+	{ "ResumeConstructionCursorName",		INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_resumeConstructionCursorName ) },
+	{ "SetRallyPointCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_setRallyPointCursorName ) },
+	{ "SalvageCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_salvageCursorName ) },
+	{ "ReverseMoveCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_reverseMoveToCursorName ) },
+	{ "SmartGarrisonCursorName",			INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_smartGarrisonCursorName ) },
+	{ "BuildCursorName",					INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_buildCursorName ) },
+	{ "InvalidBuildCursorName",				INI::parseAsciiString,													nullptr, offsetof( ThingTemplate, m_invalidBuildCursorName ) },
+
+	// Enables the Target Object to use their Cursor instead of the Selected Object's Cursor
+	{ "UseMyDockCursor",					INI::parseBool,													nullptr, offsetof( ThingTemplate, m_useMyDockCursor ) },
+	{ "UseMyGetHealedCursor",				INI::parseBool,													nullptr, offsetof( ThingTemplate, m_useMyGetHealedCursor ) },
+	{ "UseMyGetRepairAtCursor",				INI::parseBool,													nullptr, offsetof( ThingTemplate, m_useMyGetRepairAtCursor ) },
+	{ "UseMyEnterCursor",					INI::parseBool,													nullptr, offsetof( ThingTemplate, m_useMyEnterCursor ) },
+	{ "UseMySalvageCursor",					INI::parseBool,													nullptr, offsetof( ThingTemplate, m_useMySalvageCursor ) },
+
 
 	{ nullptr, nullptr, nullptr, 0 }
 
@@ -647,6 +722,54 @@ void ThingTemplate::parseIntList(INI* ini, void *instance, void* store, const vo
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Read a variable-length list of ints (up to LEVEL_COUNT) into a per-veterancy-level array. Returns
+	the number of values actually provided. Used by the veterancy experience parsers so that INI lines
+	which only specify the original four ranks still parse after LEVEL_FOUR/LEVEL_FIVE were added. */
+//-------------------------------------------------------------------------------------------------
+static Int parseVeterancyIntList(INI* ini, Int* intList)
+{
+	Int count = 0;
+	for( const char* token = ini->getNextTokenOrNull(); token != nullptr && count < LEVEL_COUNT; token = ini->getNextTokenOrNull() )
+	{
+		intList[count++] = INI::scanInt(token);
+	}
+	return count;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ThingTemplate::parseExperienceValueList(INI* ini, void *instance, void* store, const void* userData)
+{
+	// Trailing (unspecified) levels inherit the last specified value, so a unit granted FOUR/FIVE is
+	// worth the same as its highest defined rank (normally HEROIC).
+	Int *intList = (Int*)store;
+	Int n = parseVeterancyIntList(ini, intList);
+	Int fill = (n > 0) ? intList[n - 1] : 0;
+	for( Int i = n; i < LEVEL_COUNT; ++i )
+		intList[i] = fill;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ThingTemplate::parseExperienceRequiredList(INI* ini, void *instance, void* store, const void* userData)
+{
+	// Trailing (unspecified) levels are unreachable by default (INT_MAX), so objects cannot climb into
+	// FOUR/FIVE naturally unless the INI explicitly provides a requirement for them.
+	Int *intList = (Int*)store;
+	Int n = parseVeterancyIntList(ini, intList);
+	for( Int i = n; i < LEVEL_COUNT; ++i )
+		intList[i] = INT_MAX;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ThingTemplate::parseSkillPointValueList(INI* ini, void *instance, void* store, const void* userData)
+{
+	// Trailing (unspecified) levels fall back to "use experience value" (which itself inherits HEROIC).
+	Int *intList = (Int*)store;
+	Int n = parseVeterancyIntList(ini, intList);
+	for( Int i = n; i < LEVEL_COUNT; ++i )
+		intList[i] = USE_EXP_VALUE_FOR_SKILL_VALUE;
+}
+
+//-------------------------------------------------------------------------------------------------
 static void parsePrerequisiteUnit( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
 {
 	std::vector<ProductionPrerequisite>* v = (std::vector<ProductionPrerequisite>*)instance;
@@ -691,6 +814,53 @@ void ThingTemplate::parsePrerequisites( INI* ini, void *instance, void *store, c
 	}
 
 	ini->initFromINI(&self->m_prereqInfo, myFieldParse);
+}
+
+//-------------------------------------------------------------------------------------------------
+static void parseNegativePrerequisiteUnit( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
+{
+	std::vector<ProductionPrerequisite>* v = (std::vector<ProductionPrerequisite>*)instance;
+
+	ProductionPrerequisite prereq;
+	Bool orUnitWithPrevious = FALSE;
+	for (const char *token = ini->getNextToken(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		prereq.addUnitNegPrereq( AsciiString( token ), orUnitWithPrevious );
+		orUnitWithPrevious = TRUE;
+	}
+
+	v->push_back(prereq);
+}
+
+//-------------------------------------------------------------------------------------------------
+static void parseNegativePrerequisiteScience( INI* ini, void *instance, void * /*store*/, const void* /*userData*/ )
+{
+	std::vector<ProductionPrerequisite>* v = (std::vector<ProductionPrerequisite>*)instance;
+
+	ProductionPrerequisite prereq;
+	prereq.addScienceNegPrereq(INI::scanScience(ini->getNextToken()));
+
+	v->push_back(prereq);
+}
+
+//-------------------------------------------------------------------------------------------------
+void ThingTemplate::parseNegativePrerequisites( INI* ini, void *instance, void *store, const void* userData )
+{
+	ThingTemplate* self = (ThingTemplate*)instance;
+
+	static const FieldParse myFieldParse[] = 
+	{
+		{ "Object", parseNegativePrerequisiteUnit, 0, 0 },
+		{ "Science", parseNegativePrerequisiteScience,	0, 0 },
+		{ 0, 0, 0, 0 }
+	};
+
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	{
+		self->m_negprereqInfo.clear();
+	}
+
+	ini->initFromINI(&self->m_negprereqInfo, myFieldParse);
 }
 
 //-------------------------------------------------------------------------------------------Static
@@ -1001,6 +1171,59 @@ void ThingTemplate::parseMaxSimultaneous(INI *ini, void *instance, void *store, 
   }
 }
 
+//-------------------------------------------------------------------------------------------------
+// Parse required Bridge height as real, divide by 10 and round to byte -1 to 15
+void ThingTemplate::parseRequiredBridgeHeight(INI* ini, void* instance, void* store, const void* userData)
+{
+	ThingTemplate* self = (ThingTemplate*)instance;
+
+	const char* token = ini->getNextToken();
+	Real value = INI::scanReal(token);
+
+	if (value < 0.0f) {
+		self->m_requiredBridgeHeight = -1;
+	}
+	else {
+		self->m_requiredBridgeHeight = std::clamp(static_cast<byte>(value / 10.0f), static_cast<byte>(0), static_cast<byte>(15));
+	}
+}
+//-------------------------------------------------------------------------------------------------
+void ThingTemplate::parseMaxSimultaneousOfTypeDifficulty( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
+{
+	MaxSimultaneousOfTypeDifficultyPair up;
+	Bool ParseNext = FALSE;
+	Int count = 0;
+
+	MaxSimultaneousOfTypeDifficulty* s = (MaxSimultaneousOfTypeDifficulty*)store;
+	s->clear();
+
+	for (const char *token = ini->getNextTokenOrNull(); token != nullptr; token = ini->getNextTokenOrNull())
+	{
+		count++;
+		if(count > DIFFICULTY_COUNT * 2)
+		{
+			DEBUG_CRASH(("Invalid configuration of Difficulty to Amount of MaxSimultaneousOfType"));
+			throw INI_INVALID_DATA;
+		}
+		if(!ParseNext)
+		{
+			up.first = (GameDifficulty)INI::scanIndexList(token, TheDifficultyNames);
+			ParseNext = TRUE;
+		}
+		else
+		{
+			INI::parseUnsignedInt(ini, nullptr, &up.second, nullptr);
+			s->push_back(up);
+			ParseNext = FALSE;
+		}
+		count++;
+	}
+	if(ParseNext)
+	{
+		DEBUG_CRASH(("Invalid configuration of Difficulty to Amount of MaxSimultaneousOfType"));
+		throw INI_INVALID_DATA;
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -1029,13 +1252,19 @@ ThingTemplate::ThingTemplate() :
 	for( Int levelIndex = 0; levelIndex < LEVEL_COUNT; levelIndex++ )
 	{
 		m_experienceValues[levelIndex] = 0;
-		m_experienceRequired[levelIndex] = 0;
+		// Levels beyond HEROIC (FOUR/FIVE) default to an unreachable experience requirement, so objects
+		// can never climb into them naturally -- they only apply when granted explicitly.
+		m_experienceRequired[levelIndex] = (levelIndex > LEVEL_HEROIC) ? INT_MAX : 0;
 		// -1 means "same value as experienceValues for that level"
 		m_skillPointValues[levelIndex] = USE_EXP_VALUE_FOR_SKILL_VALUE;
 	}
+	// By default an object may reach the highest vanilla rank; MaxVeterancyLevel can cap it lower.
+	m_maxVeterancyLevel = LEVEL_HEROIC;
 	m_isTrainable = FALSE;
 	m_enterGuard = FALSE;
 	m_hijackGuard = FALSE;
+	m_equipGuard = FALSE;
+	m_parasiteGuard = FALSE;
 
 	m_templateID = 0;
 	m_kindof = KINDOFMASK_NONE;
@@ -1054,6 +1283,7 @@ ThingTemplate::ThingTemplate() :
 	m_shadowSizeY = 0.0f;
 	m_shadowOffsetX = 0.0f;
 	m_shadowOffsetY = 0.0f;
+	m_shadowHasDynamicLength = false;
 	m_occlusionDelay = TheGlobalData->m_defaultOcclusionDelay;
 
 	m_structureRubbleHeight = 0;
@@ -1065,6 +1295,50 @@ ThingTemplate::ThingTemplate() :
 	m_crusherLevel = 0;			//Unspecified, this object is unable to crush anything!
 	m_crushableLevel = 255; //Unspecified, this object is unable to be crushed by anything!
 
+	m_ammoPipsStyle = AMMO_PIPS_DEFAULT;
+	m_maxPathfindingCellRadius = 2U;
+	m_requiredBridgeHeight = -1;
+
+	m_maxSimultaneousLinkObjects.clear();
+	m_maxSimultaneousOfTypeDifficulty.clear();
+	m_maxSimultaneousOfTypeDifficultyAI.clear();
+	m_maxSimultaneousCustomMessage = UnicodeString::TheEmptyString;
+
+	m_setDisabledWhenUnderpowered = TRUE;
+	m_disabledTypeUnderPowered = DISABLED_UNDERPOWERED;
+	m_tintStatusUnderPowered = TINT_STATUS_INVALID;
+	m_customTintStatusUnderPowered.clear();
+
+	m_canFireTurretsWhileReverseMoving = TRUE;
+
+	m_genericInvalidCursorName.clear();
+	m_selectingCursorName.clear();
+	m_moveToCursorName.clear();
+	m_attackMoveToCursorName.clear();
+	m_waypointCursorName.clear();
+	m_attackObjectCursorName.clear();
+	m_forceAttackObjectCursorName.clear();
+	m_forceAttackGroundCursorName.clear();
+	m_outrangeCursorName.clear();
+	m_getRepairAtCursorName.clear();
+	m_dockCursorName.clear();
+	m_getHealedCursorName.clear();
+	m_doRepairCursorName.clear();
+	m_resumeConstructionCursorName.clear();
+	m_enterCursorName.clear();
+	m_enterAggressiveCursorName.clear();
+	m_setRallyPointCursorName.clear();
+	m_salvageCursorName.clear();
+	m_reverseMoveToCursorName.clear();
+	m_smartGarrisonCursorName.clear();
+	m_buildCursorName.clear();
+	m_invalidBuildCursorName.clear();
+
+	m_useMyGetRepairAtCursor = FALSE;
+	m_useMyDockCursor = FALSE;
+	m_useMyGetHealedCursor = FALSE;
+	m_useMyEnterCursor = FALSE;
+	m_useMySalvageCursor = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1261,6 +1535,18 @@ void ThingTemplate::setCopiedFromDefault()
 }
 
 //-------------------------------------------------------------------------------------------------
+void ThingTemplate::setCopiedFromDefaultExtended()
+{
+	//only set weapons and armors as copied, so they get cleared when defining new ones as they
+	// cannot be removed with RemoveModule
+	m_armorCopiedFromDefault = true;
+	m_weaponsCopiedFromDefault = true;
+	//m_behaviorModuleInfo.setCopiedFromDefault(true);
+	//m_drawModuleInfo.setCopiedFromDefault(true);
+	//m_clientUpdateModuleInfo.setCopiedFromDefault(true);
+}
+
+//-------------------------------------------------------------------------------------------------
 ThingTemplate::~ThingTemplate()
 {
 	// note, we don't need to take any special action for Armor/WeaponSets...
@@ -1312,6 +1598,28 @@ void ThingTemplate::resolveNames()
 		// Command centers are considered factories. jba.
 		m_isBuildFacility = true;
 	}
+
+	for (i = 0; i < m_negprereqInfo.size(); i++)
+	{
+		m_negprereqInfo[i].resolveNames();
+	}
+	
+	/*
+		
+	for (i = 0; i < m_negprereqInfo.size(); i++)
+	{
+		Int count = m_negprereqInfo[i].getAllPossibleNegativeBuildFacilityTemplates(tmpls, MAX_BF);
+		for (j = 0; j < count; j++)
+		{
+			// casting const away is a little evil, but justified in this case:
+			// PropductionPrerequisite should only be allowed 'const' access,
+			// but ThingTemplate can muck with stuff with gleeful abandon. (srj)
+			if( tmpls[ j ] )
+				const_cast<ThingTemplate*>(tmpls[j])->m_isBuildFacility = true;
+			// DEBUG_LOG(("BF: %s is a buildfacility for %s",tmpls[j]->m_nameString.str(),this->m_nameString.str()));
+		}
+	}
+	*/
 
 	// keep a pointer to portrait and button image if present for speed later
 	if( TheMappedImageCollection )
@@ -1570,7 +1878,13 @@ Int ThingTemplate::calcTimeToBuild( const Player* player) const
 	buildTime *= player->getHandicap()->getHandicap(Handicap::BUILDTIME, this);
 
 	Real factionModifier = 1 + player->getProductionTimeChangePercent( getName() );
+	factionModifier *= player->getProductionTimeChangeBasedOnKindOf(m_kindof);
 	buildTime *= factionModifier;
+
+	// global per-player build-speed multiplier (ProductionSpeedMultiplier chat command); >1 builds faster
+	Real speedMultiplier = player->getProductionSpeedMultiplier();
+	if (speedMultiplier > 0.0f)
+		buildTime /= speedMultiplier;
 
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	if( player->buildsInstantly() )

@@ -49,12 +49,14 @@ HeightDieUpdateModuleData::HeightDieUpdateModuleData()
 {
 
 	m_targetHeightAboveTerrain = 0.0f;
+	m_dieAboveTargetHeight = FALSE;
 	m_targetHeightIncludesStructures = FALSE;
 	m_onlyWhenMovingDown = FALSE;
+	m_onlyWhenMovingUp = FALSE;
 	m_destroyAttachedParticlesAtHeight = -1.0f;
 	m_snapToGroundOnDeath = FALSE;
 	m_initialDelay = 0;
-
+	m_targetHeightIncludesWater = false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -68,10 +70,13 @@ void HeightDieUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 	{
 		{ "TargetHeight", INI::parseReal, nullptr, offsetof( HeightDieUpdateModuleData, m_targetHeightAboveTerrain ) },
 		{ "TargetHeightIncludesStructures", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_targetHeightIncludesStructures ) },
+		{ "DieAboveTargetHeight", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_dieAboveTargetHeight) },
 		{ "OnlyWhenMovingDown", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_onlyWhenMovingDown ) },
+		{ "OnlyWhenMovingUp", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_onlyWhenMovingUp ) },
 		{ "DestroyAttachedParticlesAtHeight", INI::parseReal, nullptr, offsetof( HeightDieUpdateModuleData, m_destroyAttachedParticlesAtHeight ) },
 		{ "SnapToGroundOnDeath", INI::parseBool, nullptr, offsetof( HeightDieUpdateModuleData, m_snapToGroundOnDeath ) },
 		{ "InitialDelay", INI::parseDurationUnsignedInt, nullptr, offsetof( HeightDieUpdateModuleData, m_initialDelay ) },
+		{ "TargetHeightIncludesWater", INI::parseBool, nullptr, offsetof(HeightDieUpdateModuleData, m_targetHeightIncludesWater) },
 		{ nullptr, nullptr, nullptr, 0 }
 
 	};
@@ -148,8 +153,23 @@ UpdateSleepTime HeightDieUpdate::update()
 
 		}
 
+		if (modData->m_onlyWhenMovingUp)
+		{
+
+			if (pos->z <= m_lastPosition.z)
+				directionOK = FALSE;
+
+		}
+
 		// get the terrain height
-		Real terrainHeightAtPos = TheTerrainLogic->getGroundHeight( pos->x, pos->y );
+		Real terrainHeightAtPosNoWater = TheTerrainLogic->getGroundHeight(pos->x, pos->y);
+		Real terrainHeightAtPos{ terrainHeightAtPosNoWater };
+		if (modData->m_targetHeightIncludesWater) {
+			Real waterz{ 0 };
+			if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterz)) {
+				terrainHeightAtPos = waterz;
+			}
+		}
 
 		// if including structures, check for bridges
 		if (modData->m_targetHeightIncludesStructures)
@@ -215,19 +235,26 @@ UpdateSleepTime HeightDieUpdate::update()
 
 		}
 
+		bool doTheKill = false;
+
+		if (modData->m_dieAboveTargetHeight)
+			doTheKill = pos->z > targetHeight && directionOK;
+		else
+			doTheKill = pos->z < targetHeight && directionOK;
+
 		// if we are below the target height ... DIE!
-		if( pos->z < targetHeight && directionOK )
+		if(doTheKill)
 		{
 
 			// if we're supposed to snap us to the ground on death do so
 			// AND: even if we're not snapping to ground, be sure we don't go BELOW ground
-			if( modData->m_snapToGroundOnDeath || pos->z < terrainHeightAtPos )
+			if( modData->m_snapToGroundOnDeath || pos->z < terrainHeightAtPosNoWater )
 			{
 				Coord3D ground;
 
 				ground.x = pos->x;
 				ground.y = pos->y;
-				ground.z = terrainHeightAtPos;
+				ground.z = terrainHeightAtPosNoWater;
 				getObject()->setPosition( &ground );
 
 			}

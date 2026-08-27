@@ -202,7 +202,8 @@ void TerrainTracksRenderObjClass::addCapEdgeToTrack(Real x, Real y)
 	PathfindLayerEnum objectLayer;
 	Real eHeight;
 
-	if (m_ownerDrawable && (objectLayer=m_ownerDrawable->getObject()->getLayer()) != LAYER_GROUND)
+	// IamInnocent - Edited for Checking Disguises
+	if (m_ownerDrawable && m_ownerDrawable->getObject() && (objectLayer=m_ownerDrawable->getObject()->getLayer()) != LAYER_GROUND)
 		eHeight=BRIDGE_OFFSET_FACTOR+TheTerrainLogic->getLayerHeight(x,y,objectLayer,&vZTmp);
 	else
 		eHeight=TheTerrainLogic->getGroundHeight(x,y,&vZTmp);
@@ -295,6 +296,28 @@ void TerrainTracksRenderObjClass::addCapEdgeToTrack(Real x, Real y)
 }
 
 //=============================================================================
+// TerrainTracksRenderObjClass::breakTrack
+//=============================================================================
+/** End the current strip so the next edge starts a fresh, unconnected anchor (used on teleport).
+* The edge buffer is one continuous ring, so the existing edges are kept but the last one is
+* feathered to transparent - that way the quad joining it to the first edge of the new strip is
+* alpha0->alpha0 (invisible) and no line bridges the teleport distance. */
+//=============================================================================
+void TerrainTracksRenderObjClass::breakTrack()
+{
+	if (m_activeEdgeCount > 0)
+	{
+		Int maxEdgeCount = TheTerrainTracksRenderObjClassSystem->m_maxTankTrackEdges;
+		Int lastAddedEdge = m_topIndex - 1;
+		if (lastAddedEdge < 0)
+			lastAddedEdge = maxEdgeCount - 1;
+		m_edges[lastAddedEdge].alpha = 0.0f;	//feather the tip of the old strip
+	}
+	m_haveAnchor = false;	//next edge starts a new anchor
+	m_haveCap = TRUE;
+}
+
+//=============================================================================
 // TerrainTracksRenderObjClass::addEdgeToTrack
 //=============================================================================
 /** Try to add an additional segment to track mark.  Will do nothing if distance
@@ -309,7 +332,9 @@ void TerrainTracksRenderObjClass::addEdgeToTrack(Real x, Real y)
 	if (!m_haveAnchor)
 	{	//no anchor yet, make this point an anchor.
 		PathfindLayerEnum objectLayer;
-		if (m_ownerDrawable && (objectLayer=m_ownerDrawable->getObject()->getLayer()) != LAYER_GROUND)
+
+		// IamInnocent - Edited for Checking Disguises
+		if (m_ownerDrawable && m_ownerDrawable->getObject() && (objectLayer=m_ownerDrawable->getObject()->getLayer()) != LAYER_GROUND)
 			m_lastAnchor=Vector3(x,y,TheTerrainLogic->getLayerHeight(x,y,objectLayer)+BRIDGE_OFFSET_FACTOR);
 		else
 			m_lastAnchor=Vector3(x,y,TheTerrainLogic->getGroundHeight(x,y));
@@ -327,7 +352,8 @@ void TerrainTracksRenderObjClass::addEdgeToTrack(Real x, Real y)
 	Real eHeight;
 	PathfindLayerEnum objectLayer;
 
-	if (m_ownerDrawable && (objectLayer=m_ownerDrawable->getObject()->getLayer()) != LAYER_GROUND)
+	// IamInnocent - Edited for Checking Disguises
+		if (m_ownerDrawable && m_ownerDrawable->getObject() && (objectLayer=m_ownerDrawable->getObject()->getLayer()) != LAYER_GROUND)
 		eHeight=BRIDGE_OFFSET_FACTOR+TheTerrainLogic->getLayerHeight(x,y,objectLayer,&vZTmp);
 	else
 		eHeight=TheTerrainLogic->getGroundHeight(x,y,&vZTmp);

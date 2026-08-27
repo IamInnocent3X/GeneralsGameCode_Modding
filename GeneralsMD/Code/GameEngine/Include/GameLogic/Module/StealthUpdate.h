@@ -36,6 +36,7 @@
 class Thing;
 enum StealthLookType CPP_11(: Int);
 enum EvaMessage CPP_11(: Int);
+enum WeaponSetType CPP_11(: Int);
 class FXList;
 
 enum
@@ -48,9 +49,13 @@ enum
 	STEALTH_NOT_WHILE_FIRING_TERTIARY		= 0x00000020,
 	STEALTH_ONLY_WITH_BLACK_MARKET			= 0x00000040,
 	STEALTH_NOT_WHILE_TAKING_DAMAGE			= 0x00000080,
-  STEALTH_NOT_WHILE_RIDERS_ATTACKING  = 0x00000100,
-
-	STEALTH_NOT_WHILE_FIRING_WEAPON			= (STEALTH_NOT_WHILE_FIRING_PRIMARY | STEALTH_NOT_WHILE_FIRING_SECONDARY | STEALTH_NOT_WHILE_FIRING_TERTIARY),
+	STEALTH_NOT_WHILE_RIDERS_ATTACKING  = 0x00000100,
+	STEALTH_NOT_WHILE_FIRING_FOUR		= 0x00000200,
+	STEALTH_NOT_WHILE_FIRING_FIVE		= 0x00000400,
+	STEALTH_NOT_WHILE_FIRING_SIX		= 0x00000800,
+	STEALTH_NOT_WHILE_FIRING_SEVEN 		= 0x00001000,
+	STEALTH_NOT_WHILE_FIRING_EIGHT		= 0x00002000,
+	STEALTH_NOT_WHILE_FIRING_WEAPON			= (STEALTH_NOT_WHILE_FIRING_PRIMARY | STEALTH_NOT_WHILE_FIRING_SECONDARY | STEALTH_NOT_WHILE_FIRING_TERTIARY | STEALTH_NOT_WHILE_FIRING_FOUR | STEALTH_NOT_WHILE_FIRING_FIVE | STEALTH_NOT_WHILE_FIRING_SIX | STEALTH_NOT_WHILE_FIRING_SEVEN | STEALTH_NOT_WHILE_FIRING_EIGHT),
 };
 
 #ifdef DEFINE_STEALTHLEVEL_NAMES
@@ -64,10 +69,23 @@ static const char *const TheStealthLevelNames[] =
 	"FIRING_TERTIARY",
 	"NO_BLACK_MARKET",
 	"TAKING_DAMAGE",
-  "RIDERS_ATTACKING",
+    "RIDERS_ATTACKING",
+	"FIRING_WEAPON_FOUR",
+	"FIRING_WEAPON_FIVE",
+	"FIRING_WEAPON_SIX",
+	"FIRING_WEAPON_SEVEN",
+	"FIRING_WEAPON_EIGHT",
 	nullptr
 };
 #endif
+typedef std::pair<Int, Coord3D> BarrelCoordType;
+typedef std::vector<BarrelCoordType> BarrelCoordVec;
+struct FiringPosStruct
+{
+	Int weaponSlot;
+	Int barrelCount;
+	BarrelCoordVec posVec;
+};
 
 #define INVALID_OPACITY -1.0f
 
@@ -90,6 +108,8 @@ public:
 	UnsignedInt		m_stealthDelay;
 	UnsignedInt		m_stealthLevel;
 	UnsignedInt		m_blackMarketCheckFrames;
+	UnsignedInt		m_disguiseFriendlyFlickerDelay;
+	UnsignedInt		m_disguiseFlickerTransitionTime;
   EvaMessage    m_enemyDetectionEvaEvent;
   EvaMessage    m_ownDetectionEvaEvent;
   Bool					m_innateStealth;
@@ -97,6 +117,17 @@ public:
 	Bool					m_teamDisguised;
 	Bool					m_useRiderStealth;
   Bool          m_grantedBySpecialPower;
+    Bool					m_innateDisguise;
+	Bool					m_autoDisguiseWhenAvailable;
+	Bool					m_canStealthWhileDisguised;
+	Bool					m_disguiseRetainAfterDetected;
+	Bool					m_preservePendingCommandWhenDetected;
+	Bool					m_dontFlashWhenFlickering;
+	Bool					m_disguiseUseOriginalFiringOffset;
+	Bool					m_isSimpleDisguise;
+	Bool					m_dontDrawHealingWhenHealedByAllies;
+  std::vector<AsciiString> m_requiredCustomStatus;
+  std::vector<AsciiString> m_forbiddenCustomStatus;
 
   StealthUpdateModuleData();
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -126,22 +157,40 @@ public:
 
 	// ??? ugh
 	Bool isDisguised() const { return m_disguiseAsTemplate != nullptr; }
+	Bool hasLastDisguiseTemplate() const { return m_lastDisguiseAsTemplate != nullptr; }
+	Bool isDisguiseTransitioning() const { return m_disguiseTransitionFrames > 0; }
 	Int getDisguisedPlayerIndex() const { return m_disguiseAsPlayerIndex; }
+	const AsciiString& getDisguisedModelName() const { return m_disguiseModelName; }
 	const ThingTemplate *getDisguisedTemplate() { return m_disguiseAsTemplate; }
 	void markAsDetected( UnsignedInt numFrames = 0 );
-	void disguiseAsObject( const Object *target ); //wrapper function for ease.
+	void disguiseAsObject( const Object *target, const Drawable *drawTemplate = nullptr, Bool doLast = FALSE ); //wrapper function for ease.
 	Real getFriendlyOpacity() const;
 	UnsignedInt getStealthDelay() const { return getStealthUpdateModuleData()->m_stealthDelay; }
 	UnsignedInt getStealthLevel() const { return getStealthUpdateModuleData()->m_stealthLevel; }
   EvaMessage getEnemyDetectionEvaEvent() const { return getStealthUpdateModuleData()->m_enemyDetectionEvaEvent; }
   EvaMessage getOwnDetectionEvaEvent() const { return getStealthUpdateModuleData()->m_ownDetectionEvaEvent; }
 	Bool getOrderIdleEnemiesToAttackMeUponReveal() const { return getStealthUpdateModuleData()->m_orderIdleEnemiesToAttackMeUponReveal; }
+	Bool isSimpleDisguise() const { return isDisguised() && getStealthUpdateModuleData()->m_isSimpleDisguise; }
+	Bool dontDrawHealingWhenHealedByAllies(Team *team) const;
 	Object* calcStealthOwner(); //Is it me that can stealth or is it my rider?
 	Bool allowedToStealth( Object *stealthOwner ) const;
   void receiveGrant( Bool active = TRUE, UnsignedInt frames = 0 );
 
   Bool isGrantedBySpecialPower() { return getStealthUpdateModuleData()->m_grantedBySpecialPower; }
 	Bool isTemporaryGrant() { return m_framesGranted > 0; }
+
+	Bool canStealthWhileDisguised() const { return getStealthUpdateModuleData()->m_canStealthWhileDisguised; }
+
+	void setStealthLevelOverride(UnsignedInt stealthLevel) { m_stealthLevelOverride = stealthLevel; }
+
+	void refreshUpdate();
+
+	Bool isDisguisedAndCheckIfNeedOffset() const;
+	//Bool getFiringOffsetWhileDisguised(WeaponSlotType wslot, Int specificBarrelToUse, Coord3D *pos) const;
+	Int getBarrelCountWhileDisguised(WeaponSlotType wslot) const;
+	Int getBarrelCountDisguisedTemplate(WeaponSlotType wslot) const;
+
+	Drawable *getDrawableTemplateWhileDisguised() const;
 
 protected:
 
@@ -151,8 +200,12 @@ protected:
 	void hintDetectableWhileUnstealthed() ;
 
 	void changeVisualDisguise();
+	void changeVisualDisguiseFlicker(Bool doFlick);
+	void SetFiringOffsets(Bool setDisguised);
 
 	UpdateSleepTime calcSleepTime() const;
+
+	//const Object* calcStealthOwnerConst() const; //Is it me that can stealth or is it my rider?
 
 private:
 	UnsignedInt						m_stealthAllowedFrame;
@@ -162,6 +215,8 @@ private:
 
 	Real                  m_pulsePhaseRate;
 	Real                  m_pulsePhase;
+
+	UnsignedInt						m_stealthLevelOverride;   //Override stealth conditions via upgrade
 
 	//Disguise only members
 	Int										m_disguiseAsPlayerIndex;		//The player team we are wanting to disguise as (might not actually be disguised yet).
@@ -176,4 +231,29 @@ private:
 	Bool									m_xferRestoreDisguise;			//Tells us we need to restore our disguise
 	WeaponSetType					m_requiresWeaponSetType;
 
+	const ThingTemplate  *m_lastDisguiseAsTemplate;				//The disguise template (might not actually be using it yet)
+	Int					  m_lastDisguiseAsPlayerIndex;		//The player team we are wanting to disguise as (might not actually be disguised yet).
+
+	Bool							m_flicked;							//Have I been flicked?
+	Bool							m_flicking;							//I am flicking, don't remove my statuses
+	UnsignedInt						m_flickerFrame;						//frames to flicker for disguised Objects
+
+	Bool							m_disguiseTransitionIsFlicking;		//Current transition is flicking
+
+	mutable UnsignedInt				m_nextWakeUpFrame;					//Next Wake Up Frame, only use for calcSleepTime, dont xfer
+
+	Bool							m_preserveLastGUI;					//Select objects silently to not overwrite the Control Bar and GUI Commands
+
+	Bool							m_markForClearStealthLater;			//Fix Disguises auto Disguise back when Detected
+	Bool							m_isNotAutoDisguise;				//Fix Disguises auto Disguise back when Detected
+
+	AsciiString						m_disguiseModelName;				//Disguise Model for overwriting the current template
+
+	Bool							m_updatePulse;						//Saves update for going extra checks by indicating that it only checks for pulse phase
+	mutable Bool					m_updatePulseOnly;					//See above
+
+	//std::vector<FiringPosStruct>	m_originalDrawableFiringOffsets;	//For storing firing positions for disguised Objects
+	//std::vector<FiringPosStruct>	m_disguisedDrawableFiringOffsets;	//See above
+	Drawable						*m_disguisedDrawableTemplate;		//See above
+	Drawable						*m_originalDrawableTemplate;		//See above
 };

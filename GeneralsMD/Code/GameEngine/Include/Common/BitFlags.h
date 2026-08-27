@@ -113,6 +113,16 @@ public:
 		m_bits.set(idx5);
 	}
 
+	BitFlags(BogusInitType k, Int idx1, Int idx2, Int idx3, Int idx4, Int idx5, Int idx6)
+	{
+		m_bits.set(idx1);
+		m_bits.set(idx2);
+		m_bits.set(idx3);
+		m_bits.set(idx4);
+		m_bits.set(idx5);
+		m_bits.set(idx6);
+	}
+
 	// Set all given indices in the array.
 	BitFlags(BogusInitType, const Int* idxs, Int count)
 	{
@@ -281,6 +291,7 @@ public:
 	void xfer(Xfer* xfer);
 	static void parseFromINI(INI* ini, void* /*instance*/, void *store, const void* /*userData*/); ///< Returns a BitFlag
 	static void parseSingleBitFromINI(INI* ini, void* /*instance*/, void *store, const void* /*userData*/); ///< Returns an int, the Index of the one bit
+	static void parseSingleBitFromINIVector(INI* ini, void* /*instance*/, void *store, const void* /*userData*/); ///< Returns an int, the Index of the one bit
 
 	void buildDescription( AsciiString* str ) const
 	{

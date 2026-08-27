@@ -31,21 +31,34 @@
 
 #define DEFINE_OBJECT_STATUS_NAMES
 #include "Common/Xfer.h"
+#include "Common/GlobalData.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/DieModule.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/TerrainLogic.h"
 
 
-
-
+// Way higher than map size will allow
+constexpr Real defaultMaxWaterDepth {10000.0};
 
 //-------------------------------------------------------------------------------------------------
-DieMuxData::DieMuxData() :
-	m_deathTypes(DEATH_TYPE_FLAGS_ALL),
-	m_veterancyLevels(VETERANCY_LEVEL_FLAGS_ALL)
-{
+DieMuxData::DieMuxData() {
+	m_deathTypes = DEATH_TYPE_FLAGS_ALL;
+	m_veterancyLevels = VETERANCY_LEVEL_FLAGS_ALL;
+	m_deathTypesCustom.first = DEATH_TYPE_FLAGS_ALL;
+	m_deathTypesCustom.second.format("ALL");
+	m_exemptCustomStatus.clear();
+	m_requiredCustomStatus.clear();
+	m_customDeathTypes.clear();
+
+	if (TheGlobalData) {
+		m_deathTypes &= ~TheGlobalData->m_defaultExcludedDeathTypes;
+		m_deathTypesCustom.first &= ~TheGlobalData->m_defaultExcludedDeathTypes;
+	}
+	m_minWaterDepth = 0.0f;
+	m_maxWaterDepth = defaultMaxWaterDepth;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -53,11 +66,17 @@ const FieldParse* DieMuxData::getFieldParse()
 {
 	static const FieldParse dataFieldParse[] =
 	{
-		{ "DeathTypes",				INI::parseDeathTypeFlags,						nullptr, offsetof( DieMuxData, m_deathTypes ) },
+		//{ "DeathTypes",				INI::parseDeathTypeFlags,						nullptr, offsetof( DieMuxData, m_deathTypes ) },
+		{ "DeathTypes",			INI::parseDeathTypeFlagsCustom,				nullptr, offsetof(DieMuxData, m_deathTypesCustom) },
 		{ "VeterancyLevels",	INI::parseVeterancyLevelFlags,			nullptr, offsetof( DieMuxData, m_veterancyLevels ) },
 		{ "ExemptStatus",			ObjectStatusMaskType::parseFromINI,	nullptr,	offsetof( DieMuxData, m_exemptStatus ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI, nullptr,	offsetof( DieMuxData, m_requiredStatus ) },
-		{ nullptr, nullptr, nullptr, 0 }
+		{ "ExemptCustomStatus",			INI::parseAsciiStringVector,	nullptr,	offsetof( DieMuxData, m_exemptCustomStatus ) },
+		{ "RequiredCustomStatus",	INI::parseAsciiStringVector, nullptr,	offsetof( DieMuxData, m_requiredCustomStatus ) },
+		{ "CustomDeathTypes",		INI::parseCustomTypes,			nullptr, offsetof( DieMuxData, m_customDeathTypes ) },
+		{ "MinWaterDepth",    INI::parseReal,										nullptr, offsetof(DieMuxData, m_minWaterDepth )},
+		{ "MaxWaterDepth",    INI::parseReal,										nullptr, offsetof(DieMuxData, m_maxWaterDepth )},
+		{ nullptr, nullptr, nullptr, 0 } 
 	};
   return dataFieldParse;
 }
@@ -66,8 +85,16 @@ const FieldParse* DieMuxData::getFieldParse()
 Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo) const
 {
 	// wrong death type? punt
-	if (!getDeathTypeFlag(m_deathTypes, damageInfo->in.m_deathType))
-		return false;
+	if(damageInfo->in.m_customDeathType.isEmpty())
+	{
+		if (!getDeathTypeFlag(m_deathTypesCustom.first, damageInfo->in.m_deathType))
+			return false;
+	}
+	else
+	{
+		if(!getCustomTypeFlag(m_deathTypesCustom.second, m_customDeathTypes, damageInfo->in.m_customDeathType))
+			return false;
+	}
 
 	// wrong vet level? punt
 	if (!getVeterancyLevelFlag(m_veterancyLevels, obj->getVeterancyLevel()))
@@ -80,6 +107,39 @@ Bool DieMuxData::isDieApplicable(const Object* obj, const DamageInfo *damageInfo
 	// all 'required' bits must be set for us to run.
 	if( !obj->getStatusBits().testForAll( m_requiredStatus ) )
 		return false;
+
+	// all 'exempt' custom status must be clear for us to run.
+	for(std::vector<AsciiString>::const_iterator it = m_exemptCustomStatus.begin(); it != m_exemptCustomStatus.end(); ++it)
+	{
+		if(obj->testCustomStatus(*it))
+			return false;
+	}
+
+	// all 'required' custom statuses must be set for us to run
+	// But only if we have at least a required custom status to check
+	if(!obj->testCustomStatusForAll(m_requiredCustomStatus))
+		return false;
+
+	if ((m_minWaterDepth > 0.0f || m_maxWaterDepth < defaultMaxWaterDepth) && obj != nullptr) {
+
+		// if on bridge and we need water -> not applicable
+		if (obj->getLayer() > LAYER_GROUND && m_minWaterDepth > 0.0f) {
+			return false;
+		}
+
+		// Water level restriction
+		const Coord3D* pos = obj->getPosition();
+		Real waterZ{ 0 }, terrainZ{ 0 };
+
+		if (TheTerrainLogic->isUnderwater(pos->x, pos->y, &waterZ, &terrainZ)) {
+			Real depth = waterZ - terrainZ;
+			return depth >= m_minWaterDepth && depth < m_maxWaterDepth;
+		}
+		else {
+			// we are over land
+			if (m_minWaterDepth > 0.0f) return false;
+		}
+	}
 
 	return true;
 }

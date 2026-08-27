@@ -77,6 +77,7 @@
 #include "GameLogic/VictoryConditions.h"
 #include "GameClient/Display.h"
 #include "GameClient/GUICallbacks.h"
+#include "GameClient/SaveLoadFeedback.h"
 #include "GameClient/WindowLayout.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/Gadget.h"
@@ -239,7 +240,8 @@ void startNextCampaignGame()
 	// present here is what actually loads. Shell::showShellMap(TRUE) may have overwritten it above.
 	TheWritableGlobalData->m_pendingFile = TheCampaignManager->getCurrentMap();
 
-	InitRandom(0);
+	InitRandomType(TheGlobalData->m_initRandomType);
+	//DEBUG_LOG(("Starting Next Campaign. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 }
 
 
@@ -947,7 +949,7 @@ void finishSinglePlayerInit()
 			GadgetButtonSetText(buttonContinue, TheGameText->fetch("GUI:SaveAndContinue"));
 
 			// auto save game
-			TheGameState->missionSave();
+			presentSaveResult( TheGameState->missionSave() );
 			if(staticTextGameSaved)
 				staticTextGameSaved->winHide(FALSE);
 		}

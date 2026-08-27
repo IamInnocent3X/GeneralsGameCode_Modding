@@ -39,6 +39,7 @@
 #include "WWMath/matrix3d.h"
 
 class ParticleSystem;
+enum ParticleSystemID CPP_11(: Int);
 class FXList;
 
 
@@ -62,7 +63,13 @@ public:
 	KindOfMaskType	m_garrisonHitKillKindofNot;		///< the kind(s) of units that CANNOT be collided with
 	const FXList*		m_garrisonHitKillFX;
 	Real m_flightPathAdjustDistPerFrame;
+	Bool m_applyLauncherBonus;
+	Bool m_allowSubdual;
+	Bool m_allowAttract;
+	Real m_distanceScatterWhenJammed;	///< How far I scatter when Jammed
 
+	Real m_dynamicHeightMinScale;
+	Real m_dynamicHeightMinRange;
 
 	DumbProjectileBehaviorModuleData();
 
@@ -87,13 +94,25 @@ public:
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() override { return this; }
 
 	// ProjectileUpdateInterface
-	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride) override;
+	virtual void projectileLaunchAtObjectOrPosition(const Object *victim, const Coord3D* victimPos, const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse, const WeaponTemplate* detWeap, const ParticleSystemTemplate* exhaustSysOverride, const Coord3D *launchPos = nullptr ) override;
 	virtual void projectileFireAtObjectOrPosition( const Object *victim, const Coord3D *victimPos, const WeaponTemplate *detWeap, const ParticleSystemTemplate* exhaustSysOverride ) override;
 	virtual Bool projectileHandleCollision( Object *other ) override;
 	virtual Bool projectileIsArmed() const override { return true; }
 	virtual ObjectID projectileGetLauncherID() const override { return m_launcherID; }
-	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames ) override {}
-	virtual void projectileNowJammed() override {}
+	virtual Bool projectileGetLaunchPos(Coord3D& pos) const override { if (m_launcherID == INVALID_ID) return false; pos = m_flightPathStart; return true; }
+	virtual void projectileSetLaunchVeterancy(VeterancyLevel v) override { m_launchVeterancy = v; }
+	virtual Bool projectileGetLaunchVeterancy(VeterancyLevel& v) const override { if (m_launcherID == INVALID_ID) return false; v = m_launchVeterancy; return true; }
+	virtual void setFramesTillCountermeasureDiversionOccurs( UnsignedInt frames, UnsignedInt distance, ObjectID victimID ) override;
+	virtual void projectileNowJammed(Bool noDamage = FALSE) override;
+	virtual void projectileNowDrawn(ObjectID attractorID) override;
+	virtual Object* getTargetObject() override;
+	virtual const Coord3D* getTargetPosition() override;
+	virtual Bool projectileShouldCollideWithWater() const override;
+	virtual Bool projectileShouldDetonateOnGround() const override { return false; }
+	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) override { m_shrapnelLaunchID = shrapnelLaunchID; }
+	virtual void friend_refreshUpdate() override { refreshUpdate(); }
+
+	virtual void refreshUpdate() override { setWakeFrame(getObject(), UPDATE_SLEEP_NONE); }
 
 protected:
 
@@ -104,6 +123,7 @@ private:
 
 	ObjectID							m_launcherID;							///< ID of object that launched us (zero if not yet launched)
 	ObjectID							m_victimID;								///< ID of object we are targeting (zero if not yet launched)
+	VeterancyLevel				m_launchVeterancy;				///< launcher's veterancy at launch time (for veterancy FX/OCL selection)
 	const WeaponTemplate*	m_detonationWeaponTmpl;		///< weapon to fire at end (or null)
 	UnsignedInt						m_lifespanFrame;					///< if we haven't collided by this frame, blow up anyway
 	VecCoord3D						m_flightPath;							///< The frame by frame flight path in a Bezier curve
@@ -114,11 +134,28 @@ private:
 	Int										m_currentFlightPathStep;	///< Our current index in the flight path vector.  Quicker than popping off.
 	WeaponBonusConditionFlags		m_extraBonusFlags;
 
-  Bool                  m_hasDetonated;           ///<
+	const ParticleSystemTemplate* m_exhaustSysTmpl;
+	ParticleSystemID			m_exhaustID;
+	std::vector<AsciiString> 			m_extraBonusCustomFlags;
+	Bool                  			m_noDamage;
+	UnsignedInt						m_framesTillDecoyed;
+	UnsignedInt						m_detonateDistance;
+	ObjectID						m_decoyID;
+	ObjectID						m_attractedID;
+	Coord3D							m_flightPathEndBackup;
+	ObjectID						m_shrapnelLaunchID;
+
+	UnsignedInt						m_dontDetonateGroundFrames;
+  
+  Bool                  m_hasDetonated;           ///< 
+  Bool                  m_isJammed;
+  Bool                  m_assignedBackup;
 
 	Bool calcFlightPath(Bool recalcNumSegments);
 #if defined(RTS_DEBUG)
 	void displayFlightPath();	///< Uses little debug icons in worldspace to show the path chosen when it is decided upon
 #endif
+
+	void tossExhaust();
 
 };

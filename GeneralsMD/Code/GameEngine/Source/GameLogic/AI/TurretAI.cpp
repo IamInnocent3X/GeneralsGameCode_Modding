@@ -36,6 +36,8 @@
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
 
+#include "GameClient/Drawable.h"
+
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Object.h"
@@ -211,6 +213,11 @@ TurretAIData::TurretAIData()
 	m_initiallyDisabled = false;
 	m_firesWhileTurning = FALSE;
 	m_isAllowsPitch = false;
+	m_canFireOnTheMove = false;
+
+	m_minTurretAngle = 0.0;
+	m_maxTurretAngle = 0.0;
+	m_hasLimitedTurretAngle = false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -240,6 +247,16 @@ void TurretAIData::parseTurretSweepSpeed(INI* ini, void *instance, void * /*stor
 	INI::parseReal( ini, instance, &self->m_turretSweepSpeedModifier[wslot], nullptr );
 }
 
+
+//-------------------------------------------------------------------------------------------------
+/*static*/ void TurretAIData::parseMinMaxAngle(INI* ini, void* instance, void* store, const void* userData)
+{
+	INI::parseAngleReal(ini, instance, store, userData);
+	TurretAIData* self = (TurretAIData*)instance;
+	self->m_hasLimitedTurretAngle = TRUE;
+}
+
+
 //----------------------------------------------------------------------------------------------------------
 void TurretAIData::buildFieldParse(MultiIniFieldParse& p)
 {
@@ -266,6 +283,11 @@ void TurretAIData::buildFieldParse(MultiIniFieldParse& p)
 		{ "RecenterTime",						INI::parseDurationUnsignedInt,				nullptr, offsetof( TurretAIData, m_recenterTime ) },
 		{ "InitiallyDisabled",			INI::parseBool,												nullptr, offsetof( TurretAIData, m_initiallyDisabled ) },
 		{ "FiresWhileTurning",			INI::parseBool,												nullptr, offsetof( TurretAIData, m_firesWhileTurning ) },
+		{ "MinTurretAngle",             TurretAIData::parseMinMaxAngle,									nullptr, offsetof(TurretAIData, m_minTurretAngle) },
+		{ "MaxTurretAngle",             TurretAIData::parseMinMaxAngle,									nullptr, offsetof(TurretAIData, m_maxTurretAngle) },
+		{ "UseTurretOffsetForAiming",		INI::parseBool,												nullptr, offsetof(TurretAIData, m_useTurretOffset) },
+		{ "CanFireOnTheMove",			INI::parseBool,												nullptr, offsetof( TurretAIData, m_canFireOnTheMove ) },
+		// { "TurretAngleLimited",             INI::parseBool,									nullptr, offsetof(TurretAIData, m_hasLimitedTurretAngle) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
@@ -293,7 +315,8 @@ TurretAI::TurretAI(Object* owner, const TurretAIData* data, WhichTurretType tur)
 	m_enabled(!data->m_initiallyDisabled),
 	m_firesWhileTurning(data->m_firesWhileTurning),
 	m_isForceAttacking(false),
-	m_victimInitialTeam(nullptr)
+	m_victimInitialTeam(nullptr),
+	m_lastTargetObj(INVALID_ID)
 {
 	m_continuousFireExpirationFrame = -1;
 	if (!m_data)
@@ -362,6 +385,7 @@ void TurretAI::xfer( Xfer *xfer )
 
 	xfer->xferUser(&m_target, sizeof(m_target));
 	xfer->xferUnsignedInt(&m_continuousFireExpirationFrame);
+	xfer->xferObjectID( &m_lastTargetObj );
 	Bool tmpBool;
 #define UNPACK_AND_XFER(val) {tmpBool = val; xfer->xferBool(&tmpBool); val = tmpBool;}
 	UNPACK_AND_XFER(m_playRotSound);
@@ -390,15 +414,171 @@ void TurretAI::loadPostProcess()
 }
 
 //----------------------------------------------------------------------------------------------------------
+static bool IsInArc(Real a, Real min, Real max)
+{
+	if (min <= max)
+		return a >= min && a <= max;
+	else
+		return a >= min || a <= max;
+}
+// --
+static Real CCWDistance(Real from, Real to)
+{
+	Real d = to - from;
+	if (d < 0) d += TWO_PI;
+	return d;
+}
+// --
+static bool ccwLeavesAllowedArc(Real from, Real to, Real min, Real max)
+{
+	//if (min > max) { // simplify
+	//	max += TWO_PI;
+	//}
+	//if (from > to) {
+	//	to += TWO_PI;
+	//}
+
+	Real disallowedCenter;
+
+	if (min > max) {
+		disallowedCenter  = normalizeAngle2PI(((max + TWO_PI + min) / 2.0) + PI);
+	}
+	else {
+		disallowedCenter = normalizeAngle2PI(((max + min) / 2.0) + PI);
+	}
+	/*DEBUG_LOG((">>> ccw check: from = %f, to = %f, min = %f, max = %f. disCenter = %f",
+		from * 180 / PI, to * 180 / PI, min * 180 / PI, max * 180 / PI, disallowedCenter * 180 / PI));*/
+
+
+	if (from <= to)
+		return disallowedCenter >= from && disallowedCenter <= to;
+	else
+		return disallowedCenter >= from || disallowedCenter <= to; // wraparound
+}
+// -------
+// return True if CCW, False if CW
+Bool TurretAI::getTurretRotationDir(Real desiredAngle, Real minAngle, Real maxAngle)
+{
+	Real origAngle = getTurretAngle();
+
+	origAngle = normalizeAngle2PI(origAngle);
+	desiredAngle = normalizeAngle2PI(desiredAngle);
+
+	Bool wantCCW = stdAngleDiffMod(desiredAngle, origAngle) > 0;
+
+	// If allowed arc < 180�, shortest path is always safe
+	Real diff = maxAngle - minAngle;
+	if (abs(diff) < PI)
+	//if (stdAngleDiffMod(maxAngle, minAngle) < PI)
+		return wantCCW;
+
+	minAngle = normalizeAngle2PI(minAngle);
+	maxAngle = normalizeAngle2PI(maxAngle);
+
+	//minAngle = WWMath::Normalize_Angle(minAngle);
+	//maxAngle = WWMath::Normalize_Angle(maxAngle);
+
+	// Check if preferred direction leaves allowed arc
+	/*DEBUG_LOG((">>> curAngle = %f, targetAngle = %f, shortest dir = %d",
+		origAngle*180/PI, desiredAngle*180/PI, wantCCW));*/
+
+	if (wantCCW)
+	{
+		if (ccwLeavesAllowedArc(origAngle, desiredAngle, minAngle, maxAngle)) {
+			//DEBUG_LOG((">>> >>> CCW check failed -> must turn CW"));
+			return false; // must go CW
+		}
+	}
+	else
+	{
+		// CW is reverse CCW
+		if (ccwLeavesAllowedArc(desiredAngle, origAngle, minAngle, maxAngle)) {
+			//DEBUG_LOG((">>> >>> CW check failed -> must turn CCW"));
+			return true; // must go CCW
+		}
+	}
+
+	return wantCCW;
+}
+
+//----------------------------------------------------------------------------------------------------------
 Bool TurretAI::friend_turnTowardsAngle(Real desiredAngle, Real rateModifier, Real relThresh)
 {
 	desiredAngle = normalizeAngle(desiredAngle);
+	//desiredAngle = WWMath::Normalize_Angle(desiredAngle);
 
 	// rotate turret back to zero angle
 	Real origAngle = getTurretAngle();
 	Real actualAngle = origAngle;
 	Real turnRate = getTurnRate() * rateModifier;
-	Real angleDiff = normalizeAngle(desiredAngle - actualAngle);
+	// Real angleDiff = normalizeAngle(desiredAngle - actualAngle);
+	Real angleDiff = stdAngleDiffMod(desiredAngle, actualAngle);
+
+	Real minAngle = getMinTurretAngle();
+	Real maxAngle = getMaxTurretAngle();
+
+	// ---
+	if (hasLimitedTurretAngle()) {
+		if (maxAngle < minAngle) { // This might be a backwards facing configuration
+			maxAngle = nmod(maxAngle, 2.0 * PI);
+			desiredAngle = nmod(desiredAngle, 2.0 * PI);
+		}
+
+		//DEBUG_LOG((">>> TurretAI::friend_turnTowardsAngle: minAngle = %f, maxAngle = %f, desiredAngle = %f, angleDiff = %f.\n",
+		//	minAngle / PI * 180.0, maxAngle / PI * 180.0, desiredAngle / PI * 180.0, angleDiff / PI * 180.0));
+
+		bool isWithinLimit = true;
+		if ((desiredAngle > maxAngle)) {
+			desiredAngle = maxAngle;
+			// desiredAngle = getNaturalTurretAngle();
+			isWithinLimit = false;
+		}
+		else if (desiredAngle < minAngle) {
+			desiredAngle = minAngle;
+			// desiredAngle = getNaturalTurretAngle();
+			isWithinLimit = false;
+		}
+		if (!isWithinLimit) {
+			// angleDiff = normalizeAngle(desiredAngle - actualAngle);
+			angleDiff = stdAngleDiffMod(desiredAngle, actualAngle);
+
+			// Are we close enough to the desired angle to just snap there?
+			if (fabs(angleDiff) < turnRate)
+			{
+				// we are centered
+				actualAngle = desiredAngle;
+
+				getOwner()->clearModelConditionState(MODELCONDITION_TURRET_ROTATE);
+			}
+			else
+			{
+				bool rotate_ccw = false;
+				if (hasLimitedTurretAngle())
+					rotate_ccw = getTurretRotationDir(desiredAngle, minAngle, maxAngle);
+				else
+					rotate_ccw = (angleDiff > 0);
+
+				if (rotate_ccw)
+					actualAngle += turnRate;
+				else
+					actualAngle -= turnRate;
+
+				getOwner()->setModelConditionState(MODELCONDITION_TURRET_ROTATE);
+				m_playRotSound = true;
+			}
+
+			//m_angle = normalizeAngle(actualAngle);
+			m_angle = WWMath::Normalize_Angle(actualAngle);
+
+			if (m_angle != origAngle)
+				getOwner()->reactToTurretChange(m_whichTurret, origAngle, m_pitch);
+
+			return false;
+		}
+	}
+	// -----
+	//desiredAngle = normalizeAngle(desiredAngle);
+	//desiredAngle = WWMath::Normalize_Angle(desiredAngle);
 
 	// Are we close enough to the desired angle to just snap there?
 	if (fabs(angleDiff) < turnRate)
@@ -410,7 +590,14 @@ Bool TurretAI::friend_turnTowardsAngle(Real desiredAngle, Real rateModifier, Rea
 	}
 	else
 	{
-		if (angleDiff > 0)
+		// for limited angle check if we need to take the longer route to the target
+		bool rotate_ccw = false;
+		if (hasLimitedTurretAngle())
+			rotate_ccw = getTurretRotationDir(desiredAngle, minAngle, maxAngle);
+		else
+			rotate_ccw = (angleDiff > 0);
+
+		if (rotate_ccw)
 			actualAngle += turnRate;
 		else
 			actualAngle -= turnRate;
@@ -419,12 +606,16 @@ Bool TurretAI::friend_turnTowardsAngle(Real desiredAngle, Real rateModifier, Rea
 		m_playRotSound = true;
 	}
 
-	m_angle = normalizeAngle(actualAngle);
+	//m_angle = normalizeAngle(actualAngle);
+	m_angle = WWMath::Normalize_Angle(actualAngle);
 
 	if( m_angle != origAngle )
 		getOwner()->reactToTurretChange( m_whichTurret, origAngle, m_pitch );
 
-	Bool aligned = fabs(m_angle - desiredAngle) <= relThresh;
+	// Bool aligned = fabs(m_angle - desiredAngle) <= relThresh;
+	Bool aligned = fabs(stdAngleDiffMod(m_angle, desiredAngle)) <= relThresh;
+
+	// DEBUG_LOG((">>> TurretAI::friend_turnTowardsAngle: aligned = %d, actualAngle = %f, m_angle = %f, desiredAngle = %f, relThresh = %f\n", aligned, actualAngle * PI / 180.0, m_angle * PI / 180.0, desiredAngle * PI / 180.0, relThresh * PI / 180.0));
 
 	return aligned;
 }
@@ -550,6 +741,32 @@ TurretTargetType TurretAI::friend_getTurretTarget( Object*& obj, Coord3D& pos, B
 }
 
 //----------------------------------------------------------------------------------------------------------
+void TurretAI::registerCurrentTargetObject()
+{
+	m_lastTargetObj = INVALID_ID;
+	if (m_target != TARGET_OBJECT)
+		return;
+
+	Object* goalObj = m_turretStateMachine->getGoalObject();
+	if(goalObj && !goalObj->isEffectivelyDead())
+		m_lastTargetObj = goalObj->getID();
+}
+
+//----------------------------------------------------------------------------------------------------------
+Bool TurretAI::canFireOnTheMove() const
+{
+	if(!m_data->m_canFireOnTheMove)
+		return FALSE;
+
+	Object *goalObj = m_turretStateMachine->getGoalObject();
+	// Only get targets that are not ALLIES
+	if(goalObj && !goalObj->isEffectivelyDead() && goalObj->getRelationship(m_owner) != ALLIES)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+//----------------------------------------------------------------------------------------------------------
 void TurretAI::removeSelfAsTargeter()
 {
 	// be paranoid, in case we are called from dtors, etc.
@@ -586,6 +803,12 @@ void TurretAI::setTurretTargetObject( Object *victim, Bool forceAttacking )
 		removeSelfAsTargeter();
 	}
 
+	if (victim && victim->getID() == m_lastTargetObj)
+	{
+		// Once redirecting targets from last state, remove the target as it is set
+		m_lastTargetObj = INVALID_ID;
+	}
+
 	m_turretStateMachine->setGoalObject( victim );	// could be null! this is OK!
 	m_target = victim ? TARGET_OBJECT : TARGET_NONE;
 	m_targetWasSetByIdleMood = false;
@@ -600,6 +823,7 @@ void TurretAI::setTurretTargetObject( Object *victim, Bool forceAttacking )
 		if (sid != TURRETAI_AIM && sid != TURRETAI_FIRE)
 			m_turretStateMachine->setState( TURRETAI_AIM );
 		m_victimInitialTeam = victim->getTeam();
+		getOwner()->setNeedUpdateTurretPositioning(TRUE);
 	}
 	else
 	{
@@ -640,6 +864,7 @@ void TurretAI::setTurretTargetPosition( const Coord3D* pos )
 		if (sid != TURRETAI_AIM && sid != TURRETAI_FIRE)
 			m_turretStateMachine->setState( TURRETAI_AIM );
 		m_victimInitialTeam = nullptr;
+		getOwner()->setNeedUpdateTurretPositioning(TRUE);
 	}
 	else
 	{
@@ -654,6 +879,7 @@ void TurretAI::setTurretTargetPosition( const Coord3D* pos )
 void TurretAI::recenterTurret()
 {
 	m_turretStateMachine->setState( TURRETAI_RECENTER );
+	getOwner()->setNeedUpdateTurretPositioning(TRUE);
 }
 
 //----------------------------------------------------------------------------------------------------------
@@ -761,6 +987,7 @@ UpdateSleepTime TurretAI::updateTurretAI()
 //-------------------------------------------------------------------------------------------------
 void TurretAI::setTurretEnabled( Bool enabled )
 {
+	if (enabled) getOwner()->setNeedUpdateTurretPositioning(TRUE);
 	if (enabled && !m_enabled)
 	{
 		// be sure we wake up!
@@ -899,6 +1126,26 @@ void TurretAI::friend_checkForIdleMoodTarget()
 		m_targetWasSetByIdleMood = true;
 	}
 }
+
+
+// ---------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------
+Real TurretAI::getRelativeAngleWithOffset(WeaponSlotType wslot, const Coord3D* pos)
+{
+	Matrix3D attachTransform(true);
+	Coord3D turretRotPos = { 0.0f, 0.0f, 0.0f };
+	Coord3D turretPitchPos = { 0.0f, 0.0f, 0.0f };
+	const Drawable* draw = getOwner()->getDrawable();
+	if (!draw || !draw->getProjectileLaunchOffset(wslot, 0, &attachTransform, m_whichTurret, &turretRotPos, &turretPitchPos))
+	{
+		return ThePartitionManager->getRelativeAngle2D(getOwner(), pos);
+	}
+	Vector2 offset = { turretRotPos.x, turretRotPos.y };
+	return ThePartitionManager->getRelativeAngle2DWithOffset(getOwner(), offset, pos);
+
+}
+
+
 
 #ifdef INTER_TURRET_DELAY
 //----------------------------------------------------------------------------------------------------------
@@ -1077,7 +1324,13 @@ StateReturnType TurretAIAimTurretState::update()
 
 	Real turnSpeedModifier = 1.0f;// Just like how recentering turns you half speed, sweeping can change your turn speed
 
-	Real relAngle = ThePartitionManager->getRelativeAngle2D( obj, &enemyPosition );
+	Real relAngle;
+	if (turret->isUseTurretOffset()) {
+		relAngle = turret->getRelativeAngleWithOffset(slot, &enemyPosition);
+	}
+	else {
+		relAngle = ThePartitionManager->getRelativeAngle2D(obj, &enemyPosition);
+	}
 
 	Real aimAngle = relAngle;
 	Real sweep = turret->getTurretFireAngleSweepForWeaponSlot( slot );
@@ -1155,7 +1408,14 @@ StateReturnType TurretAIAimTurretState::update()
 					Real dist = v.length();
 					if (range<1) range = 1; // paranoia. jba.
 					// As the unit gets closer, reduce the pitch so we don't shoot over him.
-					Real groundPitch = turret->getGroundUnitPitch() * (dist/range);
+			
+					Real groundPitch;
+					if (dist > range) {
+						groundPitch = turret->getGroundUnitPitch();
+					}
+					else {
+						groundPitch = turret->getGroundUnitPitch() * (dist / range);
+					}
 					desiredPitch = actualPitch+groundPitch;
 					if (desiredPitch < turret->getMinPitch()) {
 						desiredPitch = turret->getMinPitch();
@@ -1167,6 +1427,8 @@ StateReturnType TurretAIAimTurretState::update()
 
 		pitchAlignedToNemesis = turret->friend_turnTowardsPitch(desiredPitch, 1.0f);
 	}
+
+	obj->setNeedUpdateTurretPositioning(!turnAlignedToNemesis || !pitchAlignedToNemesis);
 
 	// For now, we require that we're within range before we can successfully exit the AIM state,
 	// and move into the FIRE state.
@@ -1232,12 +1494,14 @@ StateReturnType TurretAIRecenterTurretState::update()
   if( getMachineOwner()->testStatus( OBJECT_STATUS_UNDER_CONSTRUCTION))
     return STATE_CONTINUE;//ML so that under-construction base-defenses do not re-center while under construction
 
-
 	TurretAI* turret = getTurretAI();
 	Bool angleAligned = turret->friend_turnTowardsAngle(turret->getNaturalTurretAngle(), 0.5f, 0.0f);
 	Bool pitchAligned = turret->friend_turnTowardsPitch(turret->getNaturalTurretPitch(), 0.5f);
 
-	if( angleAligned && pitchAligned )
+	Bool turretAligned = angleAligned && pitchAligned;
+	getMachineOwner()->setNeedUpdateTurretPositioning(!turretAligned);
+
+	if( turretAligned )
 		return STATE_SUCCESS;
 
 	return STATE_CONTINUE;
@@ -1389,7 +1653,10 @@ StateReturnType TurretAIIdleScanState::update()
 	Bool angleAligned = getTurretAI()->friend_turnTowardsAngle(getTurretAI()->getNaturalTurretAngle() + m_desiredAngle, 0.5f, 0.0f);
 	Bool pitchAligned = getTurretAI()->friend_turnTowardsPitch(getTurretAI()->getNaturalTurretPitch(), 0.5f);
 
-	if( angleAligned && pitchAligned )
+	Bool turretAligned = angleAligned && pitchAligned;
+	getMachineOwner()->setNeedUpdateTurretPositioning(!turretAligned);
+
+	if( turretAligned )
 		return STATE_SUCCESS;
 
 	return STATE_CONTINUE;

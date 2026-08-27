@@ -47,6 +47,8 @@ void FireWeaponCollideModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "FireOnce",					INI::parseBool,											nullptr, offsetof( FireWeaponCollideModuleData, m_fireOnce ) },
 		{ "RequiredStatus",		ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponCollideModuleData, m_requiredStatus ) },
 		{ "ForbiddenStatus",	ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( FireWeaponCollideModuleData, m_forbiddenStatus ) },
+		{ "RequiredCustomStatus",		INI::parseAsciiStringVector,	nullptr, offsetof( FireWeaponCollideModuleData, m_requiredCustomStatus ) },
+		{ "ForbiddenCustomStatus",	INI::parseAsciiStringVector,	nullptr, offsetof( FireWeaponCollideModuleData, m_forbiddenCustomStatus ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
   p.add(dataFieldParse);
@@ -86,6 +88,7 @@ void FireWeaponCollide::onCollide( Object *other, const Coord3D *loc, const Coor
 	if( shouldFireWeapon() )
 	{
 		m_collideWeapon->loadAmmoNow( me );
+		me->computeFiringTrackerBonus(m_collideWeapon, other);
 		m_collideWeapon->fireWeapon( me, other );
 	}
 }
@@ -97,6 +100,10 @@ Bool FireWeaponCollide::shouldFireWeapon()
 
 	ObjectStatusMaskType status = getObject()->getStatusBits();
 
+	// Sanity
+	if( m_collideWeapon == nullptr )
+		return FALSE;
+	
 	//We need all required status or else we fail
 	if( !status.testForAll( d->m_requiredStatus ) )
 		return FALSE;
@@ -107,6 +114,19 @@ Bool FireWeaponCollide::shouldFireWeapon()
 
 	if( m_everFired && d->m_fireOnce )
 		return FALSE;// can only fire once ever
+
+	if(!getObject()->testCustomStatusForAll(d->m_requiredCustomStatus))
+		return FALSE;
+
+	for(std::vector<AsciiString>::const_iterator it = d->m_forbiddenCustomStatus.begin(); it != d->m_forbiddenCustomStatus.end(); ++it)
+	{
+		if(getObject()->testCustomStatus(*it))
+			return FALSE;
+	}
+
+	// If it does not need the weapon's requirements, do not fire
+	if(!m_collideWeapon->getTemplate()->passRequirements(getObject()))
+		return FALSE;
 
 	return TRUE;
 }

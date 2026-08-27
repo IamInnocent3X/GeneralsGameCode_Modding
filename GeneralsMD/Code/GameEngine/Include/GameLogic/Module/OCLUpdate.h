@@ -31,6 +31,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/UpdateModule.h"
+#include "GameLogic/Module/CreateModule.h"
 
 class ObjectCreationList;
 
@@ -54,6 +55,9 @@ public:
 	Bool												m_isCreateAtEdge;				///< Otherwise, it is created on top of myself
 	Bool												m_isFactionTriggered;		///< Faction has to be present before update will happen
 
+	Bool												m_isDirectionalDelivery;		///< Deliver payload aligned to source object
+	Bool												m_isDirectionalDeliveryFurthestEdge;		///< always get the furthest edge matching angle
+
 	OCLUpdateModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -64,7 +68,7 @@ private:
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class OCLUpdate : public UpdateModule
+class OCLUpdate : public UpdateModule, public CreateModuleInterface
 {
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( OCLUpdate, "OCLUpdate" )
@@ -72,6 +76,7 @@ class OCLUpdate : public UpdateModule
 
 public:
 
+	static Int getInterfaceMask() { return UpdateModule::getInterfaceMask() | (MODULEINTERFACE_CREATE); }
 	OCLUpdate( Thing *thing, const ModuleData* moduleData );
 	// virtual destructor prototype provided by memory pool declaration
 
@@ -82,10 +87,24 @@ public:
 	void resetTimer(); ///< added for sabotage purposes.
 	virtual DisabledMaskType getDisabledTypesToProcess() const override { return DISABLEDMASK_ALL; }
 
+	virtual void onDisabledEdge( Bool nowDisabled ) override;
+	virtual void onCapture( Player *oldOwner, Player *newOwner ) override;
+	virtual CreateModuleInterface* getCreate() override { return this; }
+	virtual void onBuildComplete() override;
+	virtual void onCreate() override { onBuildComplete(); }
+	virtual Bool shouldDoOnBuildComplete() const override { return FALSE; }
+	void setDisabledUntilFrame(UnsignedInt frame);
+	UnsignedInt getRemainingSabotagedFrames() const;
+	UpdateSleepTime calcSleepTime() const;
+
 protected:
 
 	UnsignedInt			m_nextCreationFrame;
 	UnsignedInt			m_timerStartedFrame;
+	UnsignedInt			m_nextCreationDelay;
+	UnsignedInt			m_timerStartedDelay;
+	UnsignedInt			m_disabledUntilFrame;
+	Real				m_countdownPercentWhileDisabled;
 	Bool						m_isFactionNeutral;
 	Color						m_currentPlayerColor;
 

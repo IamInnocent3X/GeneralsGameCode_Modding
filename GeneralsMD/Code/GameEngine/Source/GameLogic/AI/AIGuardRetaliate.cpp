@@ -98,7 +98,7 @@ static Bool hasAttackedMeAndICanReturnFire( State *thisState, void* /*userData*/
 		return FALSE;
 	}
 
-	CanAttackResult result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET, target, CMD_FROM_AI);
+	CanAttackResult result = obj->getAbleToAttackSpecificObject(ATTACK_NEW_TARGET, target, CMD_FROM_AI, (WeaponSlotType)-1, TRUE);
 	if( result == ATTACKRESULT_POSSIBLE || result == ATTACKRESULT_POSSIBLE_AFTER_MOVING )
 	{
 		return TRUE;
@@ -242,12 +242,14 @@ Bool AIGuardRetaliateMachine::lookForInnerTarget()
 	}
 
 	PartitionFilterRelationship					f1(owner, PartitionFilterRelationship::ALLOW_ENEMIES);
-	PartitionFilterPossibleToAttack			f2(ATTACK_NEW_TARGET, owner, CMD_FROM_AI);
+	PartitionFilterPossibleToAttack			f2(ATTACK_NEW_TARGET, owner, CMD_FROM_AI, TRUE);
 	PartitionFilterSameMapStatus				filterMapStatus(owner);
 	PartitionFilterRelationship					f5(owner, PartitionFilterRelationship::ALLOW_NEUTRAL);
 	PartitionFilterPossibleToEnter			f6(owner, CMD_FROM_AI);
 	PartitionFilterPossibleToHijack			f7(owner, CMD_FROM_AI);
 	PartitionFilterRejectBuildings			f8( owner );
+	PartitionFilterPossibleToEquip			f9(owner, CMD_FROM_AI);
+	PartitionFilterRelationship				f10(owner, PartitionFilterRelationship::ALLOW_ALLIES);
 
 	PartitionFilter *filters[16];
 	Int count = 0;
@@ -262,6 +264,15 @@ Bool AIGuardRetaliateMachine::lookForInnerTarget()
 		{
 			filters[count++] = &f1;
 			filters[count++] = &f7;
+		}
+		else if (owner->getTemplate()->isEquipGuard() || owner->getTemplate()->isParasiteGuard())
+		{
+			if(owner->getTemplate()->isParasiteGuard())
+				filters[count++] = &f1;
+			else
+				filters[count++] = &f10;
+
+			filters[count++] = &f9;
 		}
 		else
 		{
@@ -497,7 +508,7 @@ AIGuardRetaliateOuterState::~AIGuardRetaliateOuterState()
 //--------------------------------------------------------------------------------------
 StateReturnType AIGuardRetaliateOuterState::onEnter()
 {
-	//if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT)
+	//if (getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_WITHOUT_PURSUIT || getGuardMachine()->getGuardMode() == GUARDMODE_GUARD_FAR_WITHOUT_PURSUIT )
 	//{
 	//	// "patrol" mode does not follow targets outside the guard area.
 	//	return STATE_SUCCESS;

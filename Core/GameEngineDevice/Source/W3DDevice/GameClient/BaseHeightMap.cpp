@@ -1,4 +1,4 @@
-/*
+﻿/*
 **	Command & Conquer Generals Zero Hour(tm)
 **	Copyright 2025 Electronic Arts Inc.
 **
@@ -57,6 +57,7 @@
 #include <d3dx8core.h>
 
 #include "Common/GlobalData.h"
+#include "Common/MapData.h"
 #include "Common/PerfTimer.h"
 #include "Common/Xfer.h"
 
@@ -495,6 +496,13 @@ void BaseHeightMapRenderObjClass::ReAcquireResources()
 	}
 }
 
+// --------
+static float invLerp(float a, float b, float v)
+{
+	if (a == b) return 0.0f; // avoid divide by zero
+	return (v - a) / (b - a);
+}
+
 //=============================================================================
 // BaseHeightMapRenderObjClass::doTheLight
 //=============================================================================
@@ -594,6 +602,99 @@ void BaseHeightMapRenderObjClass::doTheLight(VERTEX_FORMAT *vb, const Vector3*li
 	if (shadeB > 1.0) shadeB = 1.0;
 	if(shadeB < 0.0f) shadeB = 0.0f;
 
+	// ---------------------------------------------
+	// Height based ambient light factor (for water)
+	// ---------------------------------------------
+	if (TheMapData &&
+		TheMapData->m_terrainHeightAmbientLightHeightStart > 0 &&
+		(TheMapData->m_terrainHeightAmbientLightHeight1 >= 0 || TheMapData->m_terrainHeightAmbientLightHeight2 >= 0) &&
+		vb->z <= TheMapData->m_terrainHeightAmbientLightHeightStart
+		) {
+		Real col1R, col1G, col1B, col2R, col2G, col2B;
+		//Real factor1 = 0.0;
+		//Real factor2 = 0.0;
+		Real height1 = -1;
+		Real height2 = -1;
+
+		Real colR;
+		Real colG;
+		Real colB;
+
+		// case 1: only one color
+		if (TheMapData->m_terrainHeightAmbientLightHeight1 <= 0)
+		{
+			col1R = TheMapData->m_terrainHeightAmbientLightColor2.red;
+			col1G = TheMapData->m_terrainHeightAmbientLightColor2.green;
+			col1B = TheMapData->m_terrainHeightAmbientLightColor2.blue;
+			height1 = TheMapData->m_terrainHeightAmbientLightHeight2;
+		}
+		else if (TheMapData->m_terrainHeightAmbientLightHeight2 <= 0) {
+			col1R = TheMapData->m_terrainHeightAmbientLightColor1.red;
+			col1G = TheMapData->m_terrainHeightAmbientLightColor1.green;
+			col1B = TheMapData->m_terrainHeightAmbientLightColor1.blue;
+			height1 = TheMapData->m_terrainHeightAmbientLightHeight1;
+		}
+		else
+		{ // case 2: both colors
+
+			col1R = TheMapData->m_terrainHeightAmbientLightColor1.red;
+			col1G = TheMapData->m_terrainHeightAmbientLightColor1.green;
+			col1B = TheMapData->m_terrainHeightAmbientLightColor1.blue;
+			col2R = TheMapData->m_terrainHeightAmbientLightColor2.red;
+			col2G = TheMapData->m_terrainHeightAmbientLightColor2.green;
+			col2B = TheMapData->m_terrainHeightAmbientLightColor2.blue;
+			height1 = TheMapData->m_terrainHeightAmbientLightHeight1;
+			height2 = TheMapData->m_terrainHeightAmbientLightHeight2;
+		}
+
+		bool multiply = !TheMapData->m_terrainHeightAmbientLightAdditive;
+		Real base;
+		if (multiply)
+			base = 1.0;
+		else
+			base = 0.0;
+
+		if (vb->z > height1) {
+			Real t = WWMath::Clamp(invLerp(TheMapData->m_terrainHeightAmbientLightHeightStart, height1, vb->z));
+			colR = col1R * t + (1.0 - t) * base;
+			colG = col1G * t + (1.0 - t) * base;
+			colB = col1B * t + (1.0 - t) * base;
+		}
+
+		// Between height1 and height2
+		else if (height2 > -1 && vb->z > height2)
+		{
+			Real t = WWMath::Clamp(invLerp(height1, height2, vb->z));
+			Real factor1 = 1.0f - t; // 1 → 0
+			Real factor2 = t;        // 0 → 1
+
+			colR = col1R * factor1 + col2R * factor2;
+			colG = col1G * factor1 + col2G * factor2;
+			colB = col1B * factor1 + col2B * factor2;
+		}
+		// below
+		else {
+			colR = col2R;
+			colG = col2G;
+			colB = col2B;
+		}
+
+		if (multiply) {
+			shadeR *= colR;
+			shadeG *= colG;
+			shadeB *= colB;
+		}
+		else {
+			shadeR = WWMath::Clamp(shadeR + colR);
+			shadeG = WWMath::Clamp(shadeG + colG);
+			shadeB = WWMath::Clamp(shadeB + colB);
+		}
+	}
+	// ---------------------------------------------
+
+
+
+	// Old, inactive code
 	if (m_useDepthFade && vb->z <= TheGlobalData->m_waterPositionZ)
 	{	//height is below water level
 		//reduce lighting values based on light fall off as it travels through water.
@@ -931,7 +1032,7 @@ Real BaseHeightMapRenderObjClass::getHeightMapHeight(Real x, Real y, Coord3D* no
 		return getClipHeight(ix, iy) * MAP_HEIGHT_SCALE;
 	}
 
-	const UnsignedByte* data = logicHeightMap->getDataPtr();
+	const HeightSampleType* data = logicHeightMap->getDataPtr();
 	int idx = ix + iy*xExtent;
 	float p0 = data[idx];
 	float p2 = data[idx + xExtent + 1];
@@ -1093,7 +1194,7 @@ Bool BaseHeightMapRenderObjClass::isClearLineOfSight(const Coord3D& pos, const C
 	Real zinc = dz * nsInv;
 
 	Bool result = true;
-	const UnsignedByte* data = logicHeightMap->getDataPtr();
+	const HeightSampleType* data = logicHeightMap->getDataPtr();
 	Int xExtent = logicHeightMap->getXExtent();
 	Int yExtent = logicHeightMap->getYExtent();
 	for (Int curpixel = 0; curpixel < numpixels; curpixel++)
@@ -1241,7 +1342,7 @@ Real BaseHeightMapRenderObjClass::getMaxCellHeight(Real x, Real y) const
 	if (iY >= (logicHeightMap->getYExtent()-1)) {
 		iY = logicHeightMap->getYExtent()-2;
 	}
-	UnsignedByte *data = logicHeightMap->getDataPtr();
+	HeightSampleType *data = logicHeightMap->getDataPtr();
 	p0=data[iX+iY*logicHeightMap->getXExtent()]*MAP_HEIGHT_SCALE;
 	p1=data[(iX+offset)+iY*logicHeightMap->getXExtent()]*MAP_HEIGHT_SCALE;
 	p2=data[(iX+offset)+(iY+offset)*logicHeightMap->getXExtent()]*MAP_HEIGHT_SCALE;
@@ -1993,6 +2094,18 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 	}
 }
 
+//=============================================================================
+// BaseHeightMapRenderObjClass::findTreeNameInPos
+//=============================================================================
+/** Get the tree name under the given position.*/
+//=============================================================================
+const AsciiString& BaseHeightMapRenderObjClass::findTreeNameInPos(const Coord3D* loc) const
+{
+	if (m_treeBuffer) {
+		return m_treeBuffer->findTreeNameInPos(loc);
+	}
+	return AsciiString::TheEmptyString;
+}
 //=============================================================================
 // BaseHeightMapRenderObjClass::removeTreesAndPropsForConstruction
 //=============================================================================

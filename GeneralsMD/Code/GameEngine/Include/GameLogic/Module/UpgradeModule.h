@@ -39,7 +39,7 @@
 #include "GameLogic/Module/BehaviorModule.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
-class Player;
+//class Player;
 
 //-------------------------------------------------------------------------------------------------
 /** OBJECT DIE MODULE base class */
@@ -54,11 +54,18 @@ public:
 	virtual Bool attemptUpgrade( const UpgradeMaskType& keyMask ) = 0;
 	virtual Bool wouldUpgrade( const UpgradeMaskType& keyMask ) const = 0;
 	virtual Bool resetUpgrade( const UpgradeMaskType& keyMask ) = 0;
+	virtual Int wouldRefreshUpgrade( const UpgradeMaskType& keyMask, Bool hasExecuted ) const = 0;
 	virtual Bool isSubObjectsUpgrade() = 0;
+	virtual Bool hasUpgradeRefresh() = 0;
 	virtual void forceRefreshUpgrade() = 0;
+	virtual void forceRefreshMyUpgrade() = 0;
 	virtual Bool testUpgradeConditions( const UpgradeMaskType& keyMask ) const = 0;
+	virtual Bool startsActive() const = 0;
+	virtual void friend_giveSelfUpgrade() = 0;
 
 };
+
+typedef std::vector<std::pair<Int, Bool>> DifficultyBoolVec;
 
 //-------------------------------------------------------------------------------------------------
 class UpgradeMuxData	// does NOT inherit from ModuleData.
@@ -68,43 +75,34 @@ public:
 	mutable std::vector<AsciiString>	m_activationUpgradeNames;
 	mutable std::vector<AsciiString>	m_conflictingUpgradeNames;
 	mutable std::vector<AsciiString>	m_removalUpgradeNames;
-
+	mutable std::vector<AsciiString>	m_grantUpgradeNames;
+	
 	mutable const FXList*							m_fxListUpgrade;
 	mutable UpgradeMaskType						m_activationMask;				///< Activation only supports a single name currently
 	mutable UpgradeMaskType						m_conflictingMask;			///< Conflicts support multiple listings, and they are an OR
 	mutable Bool											m_requiresAllTriggers;
+	mutable Bool											m_initiallyActive;
+	mutable Bool											m_startsActiveForAI;
+	mutable Bool											m_parsedStartsActiveForAI;
+	mutable Bool											m_startsActiveChecksForConflictsWith;
+	mutable DifficultyBoolVec								m_initiallyActiveDifficulty;
+	mutable DifficultyBoolVec								m_startsActiveDifficultyForAI;
 
-	UpgradeMuxData()
-	{
-		m_triggerUpgradeNames.clear();
-		m_activationUpgradeNames.clear();
-		m_conflictingUpgradeNames.clear();
-		m_removalUpgradeNames.clear();
 
-		m_fxListUpgrade = nullptr;
-		m_activationMask.clear();
-		m_conflictingMask.clear();
-		m_requiresAllTriggers = false;
-	}
+	UpgradeMuxData();
+	static const FieldParse* getFieldParse();
 
-	static const FieldParse* getFieldParse()
-	{
-		static const FieldParse dataFieldParse[] =
-		{
-			{ "TriggeredBy",		INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_activationUpgradeNames ) },
-			{ "ConflictsWith",	INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_conflictingUpgradeNames ) },
-			{ "RemovesUpgrades",INI::parseAsciiStringVector, nullptr, offsetof( UpgradeMuxData, m_removalUpgradeNames ) },
-			{ "FXListUpgrade",	INI::parseFXList, nullptr, offsetof( UpgradeMuxData, m_fxListUpgrade ) },
-			{ "RequiresAllTriggers", INI::parseBool, nullptr, offsetof( UpgradeMuxData, m_requiresAllTriggers ) },
-			{ 0, 0, 0, 0 }
-		};
-		return dataFieldParse;
-	}
+	static void parseStartsActiveForAI(INI *ini, void *instance, void *store, const void *userData);
+	static void parseDifficultyBoolVector(INI *ini, void *instance, void *store, const void *userData);
+
 	Bool requiresAllActivationUpgrades() const;
 	void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const;	///< The first time someone looks at my mask, I'll figure it out.
 	void performUpgradeFX(Object* obj) const;
 	void muxDataProcessUpgradeRemoval(Object* obj) const;
+	void muxDataProcessUpgradeGrant(Object* obj) const;
 	Bool isTriggeredBy(const std::string &upgrade) const;
+
+	Bool muxDataCheckStartsActive(const Object* obj) const;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -119,10 +117,14 @@ public:
 	virtual Bool isAlreadyUpgraded() const override ;
 	// ***DANGER! DANGER! Don't use this, unless you are forcing an already made upgrade to refresh!!
 	virtual void forceRefreshUpgrade() override;
+	virtual void forceRefreshMyUpgrade() override { upgradeImplementation(); }
 	virtual Bool attemptUpgrade( const UpgradeMaskType& keyMask ) override;
 	virtual Bool wouldUpgrade( const UpgradeMaskType& keyMask ) const override;
+	virtual Int wouldRefreshUpgrade( const UpgradeMaskType& keyMask, Bool hasExecuted ) const override;
 	virtual Bool resetUpgrade( const UpgradeMaskType& keyMask ) override;
 	virtual Bool testUpgradeConditions( const UpgradeMaskType& keyMask ) const override;
+	virtual Bool startsActive() const override { return checkStartsActive(); }
+	virtual void friend_giveSelfUpgrade() override { giveSelfUpgrade(); }
 
 protected:
 
@@ -131,8 +133,11 @@ protected:
 	virtual void getUpgradeActivationMasks(UpgradeMaskType& activation, UpgradeMaskType& conflicting) const = 0; ///< Here's the actual work of Upgrading
 	virtual void performUpgradeFX() = 0;	///< perform the associated fx list
 	virtual Bool requiresAllActivationUpgrades() const = 0;
+	virtual Bool hasUpgradeRefresh() = 0;
 	virtual void processUpgradeRemoval() = 0;
-
+	virtual void processUpgradeGrant() = 0;
+	virtual Bool checkStartsActive() const = 0;
+	
 	void giveSelfUpgrade();
 
 	//
@@ -146,6 +151,7 @@ protected:
 
 private:
 	Bool m_upgradeExecuted;				///< Upgrade only executes once
+	mutable Bool m_freeUpgrade;			///< Upgrade is initially active
 
 };
 
@@ -183,7 +189,18 @@ public:
 
 	bool isTriggeredBy(const std::string & upgrade) const { return getUpgradeModuleData()->m_upgradeMuxData.isTriggeredBy(upgrade); }
 
+	const std::vector<AsciiString>& getActivationUpgradeNames() const
+	{ 
+		return getUpgradeModuleData()->m_upgradeMuxData.m_triggerUpgradeNames;
+	}
+	
 protected:
+
+	virtual void processUpgradeGrant() override
+	{
+		// I can't take it any more.  Let the record show that I think the UpgradeMux multiple inheritence is CRAP.
+		getUpgradeModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
 
 	virtual void processUpgradeRemoval() override
 	{
@@ -204,6 +221,11 @@ protected:
 	virtual void performUpgradeFX() override
 	{
 		getUpgradeModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
+	}
+
+	virtual Bool checkStartsActive() const override
+	{
+		return getUpgradeModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
 	}
 
 };

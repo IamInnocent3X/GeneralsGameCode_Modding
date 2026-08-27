@@ -46,7 +46,11 @@ public:
 
 	static void buildFieldParse(MultiIniFieldParse& p);
 
-	Real m_addXPScalar;
+	// IamInnocent 21/01/2026 - Unified StartsActive onto UpgradeMuxData
+	//Bool m_initiallyActive;   // Apply upgrade immediately
+	Real m_addXPScalar;   ///< Additive bonus to scalar for XP this unit gains
+	Real m_addXPValueScalar;  ///< Additive bonus to scalar for XP this unit gives when killed
+	VeterancyLevel m_setMaxVeterancyLevel;  ///< if not LEVEL_INVALID, override the object's max veterancy cap
 
 };
 
@@ -67,5 +71,9 @@ protected:
 
 	virtual void upgradeImplementation() override; ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() override { return false; }
+	virtual Bool hasUpgradeRefresh() override { return true; }
 
+private:
+	Bool m_hasExecuted;
+	Int m_prevMaxVeterancyDiff;
 };
