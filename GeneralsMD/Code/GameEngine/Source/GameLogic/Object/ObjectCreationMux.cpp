@@ -747,7 +747,7 @@ void ObjectCreationMux::doDisposition( const Object *sourceObj, Object *obj, con
 
 			objUp->applyForce(&force);
 			if (data->m_orientInForceDirection)
-				orientation = atan2(force.y, force.x);
+				orientation = WWMath::Atan2Origin(force.y, force.x);
 
 		}
 	}
@@ -840,7 +840,7 @@ void ObjectCreationMux::doDisposition( const Object *sourceObj, Object *obj, con
 			objUp->applyForce(&force);
 			if (data->m_orientInForceDirection)
 			{
-				orientation = atan2(force.y, force.x);
+				orientation = WWMath::Atan2Origin(force.y, force.x);
 			}
 			DUMPREAL(orientation);
 			objUp->setAngles(orientation, 0, 0);

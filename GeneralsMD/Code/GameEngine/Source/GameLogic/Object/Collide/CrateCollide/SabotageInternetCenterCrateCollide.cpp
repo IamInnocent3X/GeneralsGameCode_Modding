@@ -119,7 +119,7 @@ SabotageInternetCenterCrateCollide::~SabotageInternetCenterCrateCollide()
 //static void disableHacker( Object *obj, void *userData )
 //{
 //	// GeneralsX @build BenderAI 12/02/2026 64-bit safe pointer cast
-	UnsignedInt frame = static_cast<UnsignedInt>(reinterpret_cast<uintptr_t>(userData));
+//	UnsignedInt frame = static_cast<UnsignedInt>(reinterpret_cast<uintptr_t>(userData));
 //	if( obj )
 //	{
 //		obj->setDisabledUntil( DISABLED_HACKED, frame );

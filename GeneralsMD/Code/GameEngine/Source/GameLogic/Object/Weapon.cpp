@@ -1601,7 +1601,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			if (sourceObj->isAboveTerrain())
 			{
 				// Don't do a 180 degree turn.
-				Real angle = atan2(-dir.y, -dir.x);
+				Real angle = WWMath::Atan2Origin(-dir.y, -dir.x);
 				Real relAngle = sourceObj->getOrientation()- angle;
 				if (relAngle>2*PI) relAngle -= 2*PI;
 				if (relAngle<-2*PI) relAngle += 2*PI;
@@ -1619,7 +1619,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			Real shrukenDistance = distance * 0.33;
 			Real adjustedHeight = sourceObj->isAboveTerrain() ? targetHeight : min(shrukenDistance, targetHeight);
 
-			Real angle = atan2(dir.y, dir.x);
+			Real angle = WWMath::Atan2Origin(dir.y, dir.x);
 			Real deviateAngle = 0.39f * adjustedHeight / targetHeight;
 			Real targetAngle = angle + GameLogicRandomValueReal(-deviateAngle,deviateAngle); // About +-45 degrees deviation
 
@@ -1978,7 +1978,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 			VeterancyLevel vet = getEffectiveFXVeterancy(sourceObj);
 			const ObjectCreationList* detOCL = getProjectileDetonationOCL(vet);
-			Real laserAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+			Real laserAngle = WWMath::Atan2Origin(v.y, v.x);  //TODO: check if this should be inverted
 			if (detOCL) {
 				//TODO: should we consider a proper 3D matrix?
 				ObjectCreationList::create(detOCL, sourceObj, &targetPos, nullptr, laserAngle);
@@ -2008,7 +2008,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 			VeterancyLevel vet = sourceObj->getVeterancyLevel();
 			const ObjectCreationList* detOCL = getProjectileDetonationOCL(vet);
 			if (detOCL) {
-				Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+				Real weaponAngle = WWMath::Atan2Origin(v.y, v.x);  //TODO: check if this should be inverted
 				//TODO: should we consider a proper 3D matrix?
 				ObjectCreationList::create(detOCL, sourceObj, damagePos, nullptr, weaponAngle);
 			}
@@ -2124,7 +2124,7 @@ UnsignedInt WeaponTemplate::fireWeaponTemplate
 
 				projectile->setPosition(&tmp);
 
-				projectile->setOrientation(atan2(projectileDestination.y, projectileDestination.x));
+				projectile->setOrientation(WWMath::Atan2Origin(projectileDestination.y, projectileDestination.x));
 
 				if(shrapnelLaunchID != INVALID_ID)
 					pui->setShrapnelLaunchID(shrapnelLaunchID);
@@ -2843,7 +2843,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 						railgunDirection = posOther;
 						railgunDirection.sub( srcPos );
 
-						Real railgunAngle = atan2(railgunDirection.y, railgunDirection.x);
+						Real railgunAngle = WWMath::Atan2Origin(railgunDirection.y, railgunDirection.x);
 						posOther.x += Cos(railgunAngle) * RailgunExtraDistance;
 						posOther.y += Sin(railgunAngle) * RailgunExtraDistance;
 					}
@@ -3254,7 +3254,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageAmount = primaryDamage;
 				if (m_primaryDamageTaperOff != 1.0f && primaryRadius > 0.0f)
 				{
-					Real t = sqrtf(curVictimDistSqr) / primaryRadius;
+					Real t = WWMath::SqrtfOrigin(curVictimDistSqr) / primaryRadius;
 					if (t > 1.0f) t = 1.0f;
 					damageAmount *= 1.0f + (m_primaryDamageTaperOff - 1.0f) * t;
 				}
@@ -3266,7 +3266,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 				damageAmount = secondaryDamage;
 				if (m_secondaryDamageTaperOff != 1.0f && secondaryRadius > primaryRadius)
 				{
-					Real t = (sqrtf(curVictimDistSqr) - primaryRadius) / (secondaryRadius - primaryRadius);
+					Real t = (WWMath::SqrtfOrigin(curVictimDistSqr) - primaryRadius) / (secondaryRadius - primaryRadius);
 					if (t < 0.0f) t = 0.0f;
 					if (t > 1.0f) t = 1.0f;
 					damageAmount *= 1.0f + (m_secondaryDamageTaperOff - 1.0f) * t;
@@ -3678,7 +3678,7 @@ void WeaponStore::update()
 					v.x = ddi->m_delayDamagePos.x - sourcePos->x;
 					v.y = ddi->m_delayDamagePos.y - sourcePos->y;
 					v.z = ddi->m_delayDamagePos.z - sourcePos->z;
-					Real weaponAngle = atan2(v.y, v.x);  //TODO: check if this should be inverted
+					Real weaponAngle = WWMath::Atan2Origin(v.y, v.x);  //TODO: check if this should be inverted
 					//TODO: should we consider a proper 3D matrix?
 					ObjectCreationList::create(detOCL, sourceObj, &ddi->m_delayDamagePos, nullptr, weaponAngle);
 				}
@@ -5200,8 +5200,8 @@ Bool Weapon::privateFireWeapon(
 
 				Real angle = m_scatterTargetsAngle;
 				if (m_template->isScatterTargetAligned()) {
-					angle += atan2(targetPos.y - srcPos.y, targetPos.x - srcPos.x);
-					// angle += atan2(srcPos.y - targetPos.y, srcPos.x - targetPos.x);
+					angle += WWMath::Atan2Origin(targetPos.y - srcPos.y, targetPos.x - srcPos.x);
+					// angle += WWMath::Atan2Origin(srcPos.y - targetPos.y, srcPos.x - targetPos.x);
 				}
 
 				Real cosA = Cos(angle);

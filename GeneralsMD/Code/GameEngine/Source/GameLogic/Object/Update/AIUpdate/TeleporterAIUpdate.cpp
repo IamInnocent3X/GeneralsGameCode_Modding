@@ -329,7 +329,7 @@ Bool TeleporterAIUpdate::findAttackLocation(Object* victim, const Coord3D* victi
 	Coord2D direction;
 	direction.x = -dir.x;
 	direction.y = -dir.y;
-	Real initAngle = atan2(direction.y, direction.x);  // angle from victim to target
+	Real initAngle = WWMath::Atan2Origin(direction.y, direction.x);  // angle from victim to target
 
 	direction.normalize();
 
@@ -536,7 +536,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor()
 	// Get initial dist and dir
 	// distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
 	Real dist = sqrt(distSq);
-	Real targetAngle = atan2(dir.y, dir.x);
+	Real targetAngle = WWMath::Atan2Origin(dir.y, dir.x);
 	dir.normalize();
 
 	// We are within min range
@@ -578,7 +578,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor()
 
 		//recompute distance and angle
 		distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
-		////targetAngle = atan2(dir.y, dir.x);
+		////targetAngle = WWMath::Atan2Origin(dir.y, dir.x);
 		dist = sqrt(distSq);
 
 		//DEBUG_LOG((">>> TPAI - doLoc: isAttacking, dist = %f, reqRange = %f\n", dist, requiredRange));
@@ -602,8 +602,8 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor()
 		//recompute distance and angle
 		distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
 
-		// targetAngle = atan2(dir.y, dir.x);
-		targetAngle = atan2(goalPos->y - targetPos.y, goalPos->x - targetPos.x);
+		// targetAngle = WWMath::Atan2Origin(dir.y, dir.x);
+		targetAngle = WWMath::Atan2Origin(goalPos->y - targetPos.y, goalPos->x - targetPos.x);
 		dist = sqrt(distSq);
 	}
 	else {
@@ -612,7 +612,7 @@ UpdateSleepTime TeleporterAIUpdate::doLocomotor()
 
 		//recompute distance and angle
 		distSq = ThePartitionManager->getDistanceSquared(obj, &targetPos, FROM_CENTER_2D, &dir);
-		targetAngle = atan2(dir.y, dir.x);
+		targetAngle = WWMath::Atan2Origin(dir.y, dir.x);
 		dist = sqrt(distSq);
 
 		// We are within min range (Not sure why, but we need to check this again here)

@@ -752,7 +752,7 @@ static void testSphereAgainstRect(
 	Real angle2 = atan2approx(derivative[secondMinIdx][1], derivative[secondMinIdx][0]);
 	Real angle3 = atan2approx(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0]);
 	//DEBUG_LOG(("Atan2 approx first - %f second - %f third - %f.", angle1, angle2, angle3));
-	//DEBUG_LOG(("Atan2 first - %f second - %f third - %f.", atan2(derivative[minIdx][1], derivative[minIdx][0]), atan2(derivative[secondMinIdx][1], derivative[secondMinIdx][0]), atan2(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0])));
+	//DEBUG_LOG(("Atan2 first - %f second - %f third - %f.", WWMath::Atan2Origin(derivative[minIdx][1], derivative[minIdx][0]), WWMath::Atan2Origin(derivative[secondMinIdx][1], derivative[secondMinIdx][0]), WWMath::Atan2Origin(derivative[thirdMinIdx][1], derivative[thirdMinIdx][0])));
 
 	Real relAngle_21 = stdAngleDiff(angle2, angle1);
 	//Real relAngle_32 = stdAngleDiff(angle3, angle2);
@@ -811,7 +811,7 @@ static void testSphereAgainstRect(
 
 	// Heron's formula (Not reliable for accounting the edges)
 	//Real semiPeri = (boundary_h + boundary_1 + boundary_2) * 0.5;
-	//Real Area = sqrtf(semiPeri * (semiPeri - boundary_h) * (semiPeri - boundary_1) * (semiPeri - boundary_2));
+	//Real Area = WWMath::SqrtfOrigin(semiPeri * (semiPeri - boundary_h) * (semiPeri - boundary_1) * (semiPeri - boundary_2));
 	//distSqr = sqr(Area * 2 / boundary_h);
 
 	// Law of Cosines (Demonstration)
@@ -822,7 +822,7 @@ static void testSphereAgainstRect(
 	//Real boundary_h1 = cosAngle_1 * boundary_2;
 
 	// Formula Summarization
-	Real boundary_h1 = (sqr_boundary_2 + sqr_boundary_h - sqr_boundary_1) * 0.5 / sqrtf(sqr_boundary_h);
+	Real boundary_h1 = (sqr_boundary_2 + sqr_boundary_h - sqr_boundary_1) * 0.5 / WWMath::SqrtfOrigin(sqr_boundary_h);
 	distSqr = sqr_boundary_2 - sqr(boundary_h1);
 	//DEBUG_LOG(("sqr_boundary_1: %f. sqr_boundary_2: %f.", sqr_boundary_1, sqr_boundary_2));
 	//DEBUG_LOG(("sqr_boundary_h: %f. boundary_h1: %f.", sqr_boundary_h, boundary_h1));
@@ -949,7 +949,7 @@ static Bool xy_collideTest_Rect_Circle(const CollideInfo *a, const CollideInfo *
 			// Get the distance for damage calculation
 			//if(minDistSqr < HUGE_DIST_SQR)
 			//{
-				//Real minDist = sqrtf(minDistSqr);
+				//Real minDist = WWMath::SqrtfOrigin(minDistSqr);
 				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
 				//minDist = minDist - boundingDistance;
 				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
@@ -989,9 +989,9 @@ static Bool xy_collideTest_Circle_Circle(const CollideInfo *a, const CollideInfo
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
 			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 			{
-				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+				//cinfo->distSqr = sqr(WWMath::SqrtfOrigin(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
 				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(b->position.x - a->position.x) + sqr(b->position.y - a->position.y) : distSqr;
-				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				Real distance = WWMath::SqrtfOrigin(distanceSqr) - b->geom.getBoundingSphereRadius();
 				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
 		}
@@ -1047,12 +1047,12 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 			// Get the distance for damage calculation
 			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 			{
-				//Real minDist = sqrtf(minDistSqr);
+				//Real minDist = WWMath::SqrtfOrigin(minDistSqr);
 				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
 				//minDist = minDist - boundingDistance;
 				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
 				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(cinfo->normal.x) + sqr(cinfo->normal.y) : sqr(cinfo->normal.x) + sqr(cinfo->normal.y) + sqr(b->position.z - a->position.z);
-				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				Real distance = WWMath::SqrtfOrigin(distanceSqr) - b->geom.getBoundingSphereRadius();
 				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
 
@@ -1184,9 +1184,9 @@ static Bool collideTest_Sphere_Sphere(const CollideInfo *a, const CollideInfo *b
 			projectCoord3D(&cinfo->loc, &cinfo->normal, a->geom.getMajorRadius());
 			if(cinfo->heightCheck != DEFAULT_HEIGHT_CHECK)
 			{
-				//cinfo->distSqr = sqr(sqrtf(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
+				//cinfo->distSqr = sqr(WWMath::SqrtfOrigin(distSqr) - b->geom.getMajorRadius()); // Formula is touchingDistSqr - b_Radius, this is the summarization
 				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(b->position.x - a->position.x) + sqr(b->position.y - a->position.y) : distSqr;
-				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
+				Real distance = WWMath::SqrtfOrigin(distanceSqr) - b->geom.getBoundingSphereRadius();
 				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
 		}
@@ -4591,7 +4591,7 @@ Real PartitionManager::getRelativeAngle2DWithOffset(const Object* obj, Vector2 o
 	v.y = pos->y - objPos.y;
 	v.z = 0.0f;
 
-	Real dist = (Real)sqrtf(sqr(v.x) + sqr(v.y));
+	Real dist = (Real)WWMath::SqrtfOrigin(sqr(v.x) + sqr(v.y));
 
 	// normalize
 	if (dist == 0.0f)
@@ -4770,7 +4770,7 @@ Int PartitionManager::getObjectsAlongLine(
 	if(heightDiff > WWMATH_EPSILON || heightDiff < WWMATH_EPSILON)
 		heightCheckPerTime = heightDiff/checkTimes;
 
-	Real angle = atan2(posOther.y - pos.y, posOther.x - pos.x);
+	Real angle = WWMath::Atan2Origin(posOther.y - pos.y, posOther.x - pos.x);
 	ObjectID sourceID = source->getID();
 
 	for(int i = 1; i < checkTimes; i++)
@@ -4922,7 +4922,7 @@ Int PartitionManager::checkObjectsAlongLine(
 				//Real relAngle = getRelativeAngle2D(source, thisObj) * RAD_TO_DEGREE_FACTOR;
 	
 				// Modified from Locomotor::rotateObjAroundLocoPivot
-				Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
+				Real desiredAngle = WWMath::Atan2Origin(objPos.y - startingPos.y, objPos.x - startingPos.x);
 				Real relAngle = stdAngleDiff(desiredAngle, dirAngle);
 
 				// We don't hit objects that are behind us;
@@ -4931,7 +4931,7 @@ Int PartitionManager::checkObjectsAlongLine(
 
 				if(!checkBehind)
 				{
-					Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
+					Real currAngle = WWMath::Atan2Origin(endPos.y - objPos.y, endPos.x - objPos.x);
 					Real checkAngle = stdAngleDiff(currAngle, dirAngle);
 					// Skip object if hit directional threshold
 					if(fabs(checkAngle) > 1.0f)
@@ -4991,8 +4991,8 @@ Int PartitionManager::checkObjectsAlongLine(
 						Real checkDistSqr = max(10.0f, closestDistSqr);
 						checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
 
-						Real firAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
-						Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+						Real firAngle = WWMath::Atan2Origin(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+						Real objAngle = WWMath::Atan2Origin(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
 						Real angleThreshold = max(radius * 0.5f, 0.25f);
 
 						if((dx2*dx2 + dy2*dy2) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx3*dx3 + dy3*dy3) > 5000.0f))
@@ -5029,7 +5029,7 @@ Int PartitionManager::checkObjectsAlongLine(
 						// We deviate and use hackaround for skipping larger numbers calculations here, since Railgun doesn't check distance when calculating Damage
 						if (totalRad > 0.0f && totalRad * totalRad >= actualDistSqr)
 						{
-							Real actualDist = sqrtf(actualDistSqr);
+							Real actualDist = WWMath::SqrtfOrigin(actualDistSqr);
 							Real shrunkenDist = actualDist - totalRad;
 							if (shrunkenDist <= 0.0f)
 							{
@@ -5109,7 +5109,7 @@ Int PartitionManager::checkObjectsAlongLine(
 			//Real relAngle = getRelativeAngle2D(source, thisObj) * RAD_TO_DEGREE_FACTOR;
 
 			// Modified from Locomotor::rotateObjAroundLocoPivot
-			Real desiredAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x);
+			Real desiredAngle = WWMath::Atan2Origin(objPos.y - startingPos.y, objPos.x - startingPos.x);
 			Real relAngle = stdAngleDiff(desiredAngle, dirAngle);
 
 			// We don't hit objects that are behind us;
@@ -5118,7 +5118,7 @@ Int PartitionManager::checkObjectsAlongLine(
 
 			if(!checkBehind)
 			{
-				Real currAngle = atan2(endPos.y - objPos.y, endPos.x - objPos.x);
+				Real currAngle = WWMath::Atan2Origin(endPos.y - objPos.y, endPos.x - objPos.x);
 				Real checkAngle = stdAngleDiff(currAngle, dirAngle);
 				// Skip object if hit directional threshold
 				if(fabs(checkAngle) > 1.0f)
@@ -5180,8 +5180,8 @@ Int PartitionManager::checkObjectsAlongLine(
 					Real checkDistSqr = max(10.0f, closestDistSqr);
 					checkDistSqr = min(400.0f, checkDistSqr * fakeLogFactor);
 
-					Real firAngle = atan2(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
-					Real objAngle = atan2(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+					Real firAngle = WWMath::Atan2Origin(endPos.y - startingPos.y, endPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
+					Real objAngle = WWMath::Atan2Origin(objPos.y - startingPos.y, objPos.x - startingPos.x) * RAD_TO_DEGREE_FACTOR;
 					Real angleThreshold = max(radius * 0.5f, 0.25f);
 
 					if((dx2*dx2 + dy2*dy2) > checkDistSqr && (fabs(firAngle - objAngle) > angleThreshold || (dx3*dx3 + dy3*dy3) > 5000.0f))
@@ -5218,7 +5218,7 @@ Int PartitionManager::checkObjectsAlongLine(
 					// We deviate and use hackaround for skipping larger numbers calculations here, since Railgun doesn't check distance when calculating Damage
 					if (totalRad > 0.0f && totalRad * totalRad >= actualDistSqr)
 					{
-						Real actualDist = sqrtf(actualDistSqr);
+						Real actualDist = WWMath::SqrtfOrigin(actualDistSqr);
 						Real shrunkenDist = actualDist - totalRad;
 						if (shrunkenDist <= 0.0f)
 						{
@@ -5260,7 +5260,7 @@ Int PartitionManager::checkObjectsAlongLine(
 	}
 	if (closestDistArg)
 	{
-		*closestDistArg = (Real)sqrtf(closestDistSqr);
+		*closestDistArg = (Real)WWMath::SqrtfOrigin(closestDistSqr);
 	}
 
 #ifdef RTS_DEBUG

@@ -250,7 +250,7 @@ Coord3D FireWeaponAdvancedUpdate::getNextTargetPos() {
 
 			/*const Coord3D srcPos = m_initialPosition; //*getObject()->getPosition();
 			Real angle = 0.0f; // getObject()->getOrientation();
-			angle += atan2(targetPos.y - srcPos.y, targetPos.x - srcPos.x);
+			angle += WWMath::Atan2Origin(targetPos.y - srcPos.y, targetPos.x - srcPos.x);
 
 			Real cosA = Cos(angle);
 			Real sinA = Sin(angle);

@@ -751,7 +751,7 @@ UpdateSleepTime OrbitalBeamUpdate::update()
 						// Spiral inward: radius shrinks to 0 while the angle sweeps the total rotation.
 						const Real dx = start.x - center.x;
 						const Real dy = start.y - center.y;
-						const Real baseAngle = atan2( dy, dx );
+						const Real baseAngle = WWMath::Atan2Origin( dy, dx );
 						const Real baseRadius = sqrt( dx * dx + dy * dy );
 						const Real curRadius = baseRadius * (1.0f - t);
 						const Real curAngle = baseAngle + t * data->m_chargeBeamRotation;

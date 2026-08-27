@@ -1667,7 +1667,7 @@ void ActiveBody::doSubdual( const DamageInfo *damageInfo, Bool *alreadyHandled, 
 						v.x = victimPos->x - sourcePos->x;
 						v.y = victimPos->y - sourcePos->y;
 					}
-					angle = damager ? atan2(v.y, v.x) : INVALID_ANGLE;
+					angle = damager ? WWMath::Atan2Origin(v.y, v.x) : INVALID_ANGLE;
 					ObjectCreationList::create(damageInfo->in.m_customSubdualOCL, damager ? damager : obj, obj->getPosition(), nullptr, angle );
 				}
 
