@@ -361,19 +361,9 @@ static void testRotatedPointsAgainstRect(
 	Coord2D *avg,
 	Int *avgTot
 );
-/*static void testRotatedPointsAgainstSphere(
-	const Coord2D *pts,				// an array of 4
-	const CollideInfo *a,
-	Coord2D *avg,
-	Int *avgTot,
-	Real *minDistSqr
-);
-static Real fast_hypot(
-	Real x,
-	Real y
-);*/
+
 static void testSphereAgainstRect(
-	const Coord2D pts[],				// an array of 4
+	const Coord2D pts[],			// an array of 4
 	const Coord3D *a_pos,
 	const Coord3D *b_pos,
 	Real &distSqr
@@ -676,13 +666,13 @@ static Real atan2approx(Real y, Real x)
 
 //-----------------------------------------------------------------------------
 static void testSphereAgainstRect(
-	const Coord2D pts[],				// an array of 4
+	const Coord2D pts[],			// an array of 4
 	const Coord3D *a_pos,
 	const Coord3D *b_pos,
 	Real &distSqr
 )
 {
-	// Get three points that are closest to the facing direction
+	// Get three points that are closest to the source
 	//DEBUG_LOG(("Source Points: x: %f y: %f", a_pos->x, a_pos->y));
 
 	Real minDist, secondMinDist, thirdMinDist;
@@ -758,13 +748,14 @@ static void testSphereAgainstRect(
 	//Real relAngle_32 = stdAngleDiff(angle3, angle2);
 	Real relAngle_31 = stdAngleDiff(angle3, angle1);
 	//DEBUG_LOG(("RelAngle 21 - %f 32 - %f 31 - %f.", relAngle_21, relAngle_32, relAngle_31));
+
 	if( fabs(relAngle_21) < fabs(relAngle_31) )
 	{
 		//DEBUG_LOG(("Third Min Index - %d replaced Second Min Index - %d.", thirdMinIdx, secondMinIdx));
 		secondMinIdx = thirdMinIdx;
 	}
 
-	// Get the "reflected" points of pos B, if the points have higher distance than the current points, that means the current points are within boundary
+	// Get the "reflected" points of pos B, if these points have higher distance than the current points, that means the current points are within boundary
 	Real other_x1 = pts[minIdx].x - b_pos->x;
 	Real other_y1 = pts[minIdx].y - b_pos->y;
 	Real new_bpos_x = pts[secondMinIdx].x + other_x1;
@@ -1051,7 +1042,19 @@ static Bool xy_collideTest_Rect_Rect(const CollideInfo *a, const CollideInfo *b,
 				//Real boundingDistance = a->geom.getBoundingSphereRadius() - a->geom.getMajorRadius();
 				//minDist = minDist - boundingDistance;
 				//cinfo->distSqr = minDist > 0.0f ? sqr(minDist) : 0.0f;
-				Real distanceSqr = cinfo->heightCheck == SKIP_HEIGHT_CHECK ? sqr(cinfo->normal.x) + sqr(cinfo->normal.y) : sqr(cinfo->normal.x) + sqr(cinfo->normal.y) + sqr(b->position.z - a->position.z);
+				Real distanceSqr;
+				switch(cinfo->heightCheck)
+				{
+					case BOUNDARY_HEIGHT_CHECK:
+						distanceSqr = sqr(cinfo->normal.x) + sqr(cinfo->normal.y) + sqr(b->position.z - a->position.z);
+						break;
+					case SKIP_HEIGHT_CHECK:
+						distanceSqr = sqr(cinfo->normal.x) + sqr(cinfo->normal.y);
+						break;
+					default:
+						break; //Do nothing if not these two values
+				}
+
 				Real distance = sqrtf(distanceSqr) - b->geom.getBoundingSphereRadius();
 				cinfo->distSqr = distance > 0.0f ? sqr(distance) : 0.0f;
 			}
@@ -2543,21 +2546,11 @@ Bool PartitionManager::geomCollidesWithGeom(const Coord3D* pos1,
 			b_LowHeightBoundary = b_HiHeightBoundary = pos2->z;
 			break;
 		case BOUNDARY_HEIGHT_CHECK:
-		{
 			a_LowHeightBoundary = pos1->z - geom1.getMaxHeightAbovePosition();
 			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
-			if(TheGlobalData->m_useAccurateSphereToRectCollision)
-			{
-				b_LowHeightBoundary = pos2->z;
-				b_HiHeightBoundary = pos2->z + geom2.getMaxHeightAbovePosition();
-			}
-			else
-			{
-				b_LowHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() - geom2.getBoundingSphereRadius();
-				b_HiHeightBoundary = pos2->z + geom2.getZDeltaToCenterPosition() + geom2.getBoundingSphereRadius();
-			}
+			b_LowHeightBoundary = TheGlobalData->m_useAccurateSphereToRectCollision ? pos2->z : pos2->z + geom2.getZDeltaToCenterPosition() - geom2.getBoundingSphereRadius();
+			b_HiHeightBoundary = TheGlobalData->m_useAccurateSphereToRectCollision ? pos2->z + geom2.getMaxHeightAbovePosition() : pos2->z + geom2.getZDeltaToCenterPosition() + geom2.getBoundingSphereRadius();
 			break;
-		}
 		default:
 			a_LowHeightBoundary = pos1->z;
 			a_HiHeightBoundary = pos1->z + geom1.getMaxHeightAbovePosition();
@@ -3925,14 +3918,16 @@ Object *PartitionManager::getClosestObjects(
 
 				Real thisDistSqr;
 				Coord3D distVec;
-				Bool useNewStructureCheck = FALSE;
-				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+
+				// TheSuperHackers @fix IamInnocent 31/12/2025 Added boundary box checks for structures to get an accurate hitbox instead of a hitcircle.
+				Bool checkForBoxStructure = false;
+				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (dc == FROM_BOUNDINGSPHERE_2D || dc == FROM_BOUNDINGSPHERE_3D))
 				{
 					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
 					if(geomInfo.getGeomType() == GEOMETRY_BOX)
 					{
-						useNewStructureCheck = TRUE;
-						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
+						checkForBoxStructure = true;
+						const GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
 						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 							continue;
 							//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
@@ -3940,7 +3935,7 @@ Object *PartitionManager::getClosestObjects(
 						//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 					}
 				}
-				if (!useNewStructureCheck && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
+				if (!checkForBoxStructure && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
 					continue;
 
 				//if(thisObj->isKindOf(KINDOF_STRUCTURE))
