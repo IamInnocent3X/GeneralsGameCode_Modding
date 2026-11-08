@@ -5,6 +5,8 @@
 !.gitattributes
 !.github
 !.gitmodules
+!.mcp.json
+!/.claude/
 
 *.user
 *.ncb
@@ -49,9 +51,9 @@ thumbs.db
 /Dependencies/MaxSDK/maxsdk
 /tmp/
 
-## AI assistant config (user-specific)
-/.claude/
-/CLAUDE.md
+## AI assistant config (user-specific); shared skills are tracked
+/.claude/*
+!/.claude/skills/
 
 ## IntelliJ, CLion, etc.
 /.idea
@@ -67,3 +69,9 @@ build.ninja
 ## Python
 __pycache__/
 *.pyc
+.venv/
+
+## Town scripts
+scripts/worldbuilder-mcp/town/work/
+scripts/worldbuilder-mcp/cliffs/work/
+scripts/worldbuilder-mcp/mapgen/work/

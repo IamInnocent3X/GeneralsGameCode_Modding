@@ -750,13 +750,19 @@ void FiringTracker::crc( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version */
+	* 1: Initial version
+	* 2: TheSuperHackers @bugfix bobtista 11/10/2026 Save m_frameToForceReload and m_frameToStopLoopingSound
+	*/
 // ------------------------------------------------------------------------------------------------
 void FiringTracker::xfer( Xfer *xfer )
 {
 
 	// version
+#if RETAIL_COMPATIBLE_XFER_SAVE
 	XferVersion currentVersion = 1;
+#else
+	XferVersion currentVersion = 3;
+#endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -775,67 +781,79 @@ void FiringTracker::xfer( Xfer *xfer )
 	// currenly applied weaponBonus against the prev target
 	m_prevTargetWeaponBonus.xfer(xfer);
 
-	// currenly applied custom weaponBonus against the prev target
-	if( xfer->getXferMode() == XFER_SAVE )
+	if( version >= 2 )
 	{
-		for (std::vector<AsciiString>::const_iterator it = m_prevTargetCustomWeaponBonus.begin(); it != m_prevTargetCustomWeaponBonus.end(); ++it )
-		{
-			AsciiString bonusName = (*it);
-			xfer->xferAsciiString(&bonusName);
-		}
-		AsciiString empty;
-		xfer->xferAsciiString(&empty);
-	}
-	else if (xfer->getXferMode() == XFER_LOAD)
-	{
-		if (m_prevTargetCustomWeaponBonus.empty() == false)
-		{
-			DEBUG_CRASH(( "FiringTracker::xfer - m_prevTargetCustomWeaponBonus should be empty, but is not"));
-			//throw SC_INVALID_DATA;
-		}
-		
-		for (;;) 
-		{
-			AsciiString bonusName;
-			xfer->xferAsciiString(&bonusName);
-			if (bonusName.isEmpty())
-				break;
-			m_prevTargetCustomWeaponBonus.push_back(bonusName);
-		}
+		// frame to force reload
+		xfer->xferUnsignedInt( &m_frameToForceReload );
+
+		// frame to stop looping sound
+		xfer->xferUnsignedInt( &m_frameToStopLoopingSound );
 	}
 
-	// cleared firing tracker bonus
-	xfer->xferBool( &m_firingTrackerBonusCleared );
-
-	// previous target status
-	m_prevTargetStatus.xfer( xfer );
-
-	// previous target custom status
-	if( xfer->getXferMode() == XFER_SAVE )
+	if( version >= 3 )
 	{
-		for (std::vector<AsciiString>::const_iterator it = m_prevTargetCustomStatus.begin(); it != m_prevTargetCustomStatus.end(); ++it )
+		// currenly applied custom weaponBonus against the prev target
+		if( xfer->getXferMode() == XFER_SAVE )
 		{
-			AsciiString bonusName = (*it);
-			xfer->xferAsciiString(&bonusName);
+			for (std::vector<AsciiString>::const_iterator it = m_prevTargetCustomWeaponBonus.begin(); it != m_prevTargetCustomWeaponBonus.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
 		}
-		AsciiString empty;
-		xfer->xferAsciiString(&empty);
-	}
-	else if (xfer->getXferMode() == XFER_LOAD)
-	{
-		if (m_prevTargetCustomStatus.empty() == false)
+		else if (xfer->getXferMode() == XFER_LOAD)
 		{
-			DEBUG_CRASH(( "FiringTracker::xfer - m_prevTargetCustomStatus should be empty, but is not"));
-			//throw SC_INVALID_DATA;
+			if (m_prevTargetCustomWeaponBonus.empty() == false)
+			{
+				DEBUG_CRASH(( "FiringTracker::xfer - m_prevTargetCustomWeaponBonus should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_prevTargetCustomWeaponBonus.push_back(bonusName);
+			}
 		}
-		
-		for (;;) 
+
+		// cleared firing tracker bonus
+		xfer->xferBool( &m_firingTrackerBonusCleared );
+
+		// previous target status
+		m_prevTargetStatus.xfer( xfer );
+
+		// previous target custom status
+		if( xfer->getXferMode() == XFER_SAVE )
 		{
-			AsciiString bonusName;
-			xfer->xferAsciiString(&bonusName);
-			if (bonusName.isEmpty())
-				break;
-			m_prevTargetCustomStatus.push_back(bonusName);
+			for (std::vector<AsciiString>::const_iterator it = m_prevTargetCustomStatus.begin(); it != m_prevTargetCustomStatus.end(); ++it )
+			{
+				AsciiString bonusName = (*it);
+				xfer->xferAsciiString(&bonusName);
+			}
+			AsciiString empty;
+			xfer->xferAsciiString(&empty);
+		}
+		else if (xfer->getXferMode() == XFER_LOAD)
+		{
+			if (m_prevTargetCustomStatus.empty() == false)
+			{
+				DEBUG_CRASH(( "FiringTracker::xfer - m_prevTargetCustomStatus should be empty, but is not"));
+				//throw SC_INVALID_DATA;
+			}
+			
+			for (;;) 
+			{
+				AsciiString bonusName;
+				xfer->xferAsciiString(&bonusName);
+				if (bonusName.isEmpty())
+					break;
+				m_prevTargetCustomStatus.push_back(bonusName);
+			}
 		}
 	}
 

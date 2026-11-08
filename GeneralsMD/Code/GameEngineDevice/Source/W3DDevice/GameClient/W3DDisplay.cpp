@@ -35,6 +35,8 @@ static void drawFramerateBar();
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 #include <numeric>
+#include <algorithm>
+#include <functional>
 #include <stdlib.h>
 #include <windows.h>
 #include <io.h>
@@ -79,8 +81,16 @@ static void drawFramerateBar();
 #include "W3DDevice/GameClient/W3DWater.h"
 #include "W3DDevice/GameClient/W3DVideoBuffer.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
+#include "W3DDevice/GameClient/W3DMaterials.h"
+#include "W3DDevice/GameClient/W3DPostProcess.h"
 #include "W3DDevice/GameClient/W3DDebugDisplay.h"
 #include "W3DDevice/GameClient/W3DProjectedShadow.h"
+#include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DShadowMap.h"
+
+#ifdef RTS_RENDERER_DX12
+#include <d3d8on12_ext.h>
+#endif
 #include "W3DDevice/GameClient/W3DScreenshot.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "WWMath/wwmath.h"
@@ -107,6 +117,7 @@ static void drawFramerateBar();
 #include "GameLogic/GameLogic.h"
 #ifdef DUMP_PERF_STATS
 #include "GameLogic/PartitionManager.h"
+#include "Common/GameMcp.h"
 #endif
 
 #include "WinMain.h"
@@ -360,6 +371,7 @@ RTS3DScene *W3DDisplay::m_3DScene = nullptr;
 RTS2DScene *W3DDisplay::m_2DScene = nullptr;
 RTS3DInterfaceScene *W3DDisplay::m_3DInterfaceScene = nullptr;
 W3DAssetManager *W3DDisplay::m_assetManager = nullptr;
+W3DDisplay::OverlayDrawFunc W3DDisplay::m_overlayDraw = nullptr;
 
 //=============================================================================
 	// note, can't use the ones from PerfTimer.h 'cuz they are currently
@@ -391,6 +403,7 @@ W3DDisplay::W3DDisplay()
 	m_2DScene = nullptr;
 	m_3DInterfaceScene = nullptr;
 	m_averageFPS = TheGlobalData->m_framesPerSecondLimit;
+	m_low1PercentFPS = TheGlobalData->m_framesPerSecondLimit;
 #if defined(RTS_DEBUG)
 	m_timerAtCumuFPSStart = 0;
 #endif
@@ -405,11 +418,20 @@ W3DDisplay::W3DDisplay()
 
 	for (i = 0; i < DisplayStringCount; i++)
 		m_displayStrings[i] = nullptr;
+	m_benchmarkDisplayString = nullptr;
+	m_cinematicDisplayString = nullptr;
 
 	m_batchTexture = nullptr;
 	m_batchMode = DRAW_IMAGE_ALPHA;
 	m_batchGrayscale = FALSE;
 	m_batchNeedsInit = FALSE;
+
+	m_historyOffset = 0;
+	m_historyCount = 1;
+	m_lastUpdateTime64 = 0;
+	m_lastLow1PercentUpdateMs = 0;
+	m_currentFPS = 30.0f;
+	std::fill(m_durationHistory, m_durationHistory + FPS_HISTORY_SIZE, QuantizedUnsignedShort((UnsignedShort)(QuantizedTicksPerSecond / 30)));
 
 #ifdef PROFILER_ENABLED
 	m_profilerFrameCapture = NEW W3DProfilerFrameCapture();
@@ -440,6 +462,8 @@ W3DDisplay::~W3DDisplay()
 		TheDisplayStringManager->freeDisplayString(m_benchmarkDisplayString);
 	}
 
+	TheDisplayStringManager->freeDisplayString(m_cinematicDisplayString);
+
 	// delete 2D renderer
 	if( m_2DRender )
 	{
@@ -467,6 +491,11 @@ W3DDisplay::~W3DDisplay()
 	// shutdown
 	Debug_Statistics::Shutdown_Statistics();
 	if (!TheGlobalData->m_headless)
+		delete TheW3DPostProcess;
+		TheW3DPostProcess = nullptr;
+		// Before the assets go: it holds map textures.
+		delete TheW3DMaterials;
+		TheW3DMaterials = nullptr;
 		W3DShaderManager::shutdown();
 	m_assetManager->Free_Assets();
 	delete m_assetManager;
@@ -733,8 +762,110 @@ void W3DDisplay::init2DScene()
 /** Initialize or re-initialize the W3D display system.  Here we need to
   * create our window, and get our 3D hardware setup and online */
 //=============================================================================
+#ifdef RTS_GAME_MCP
+static bool mcpPostProcessAvailable() { return TheW3DPostProcess != nullptr && TheW3DPostProcess->isAvailable(); }
+static bool mcpPostProcessRunning() { return TheW3DPostProcess != nullptr && TheW3DPostProcess->isRunning(); }
+static void mcpPostProcessReload() { if (TheW3DPostProcess) TheW3DPostProcess->reload(); }
+static bool mcpPostProcessSetParameter(const char *pass, const char *name, const Real *values, Int count)
+{
+	return TheW3DPostProcess != nullptr && TheW3DPostProcess->setParameter(pass, name, values, count);
+}
+static void mcpPostProcessGetPasses(std::vector<AsciiString> &passes, AsciiString &error)
+{
+	if (TheW3DPostProcess)
+	{
+		passes = TheW3DPostProcess->getPasses();
+		error = TheW3DPostProcess->getError();
+	}
+}
+static void mcpSetGpuTiming(bool enabled)
+{
+#ifdef RTS_RENDERER_DX12
+	if (ID3D8On12PostProcess *postProcess = DX8Wrapper::Get_Post_Process())
+		postProcess->Set_Gpu_Timing(enabled);
+#endif
+}
+static void mcpGetGpuTiming(GameMcpGpuTiming &timing)
+{
+	timing.enabled = false;
+	timing.frames = 0;
+	timing.frame = timing.shadowMap = timing.shadows = timing.postProcess = 0.0f;
+	timing.draws = timing.pipelineChanges = timing.tableChanges = 0.0f;
+	timing.passes.clear();
+#ifdef RTS_RENDERER_DX12
+	if (ID3D8On12PostProcess *postProcess = DX8Wrapper::Get_Post_Process())
+	{
+		D3D8ON12_GPU_TIMING gpu;
+		postProcess->Get_Gpu_Timing(&gpu);
+		timing.enabled = gpu.enabled != FALSE;
+		timing.frames = (Int)gpu.frames;
+		timing.frame = gpu.frame;
+		timing.shadowMap = gpu.shadowMap;
+		timing.shadows = gpu.shadows;
+		timing.postProcess = gpu.postProcess;
+		for (UINT i = 0; i < gpu.passCount; ++i)
+			timing.passes.push_back(gpu.passes[i]);
+		timing.draws = gpu.draws;
+		timing.pipelineChanges = gpu.pipelineChanges;
+		timing.tableChanges = gpu.tableChanges;
+	}
+#endif
+}
+static bool mcpShadowMapAvailable() { return DX8Wrapper::Get_Shadow_Mapper() != nullptr; }
+static void mcpShadowMapGetState(bool &active, bool &rendered, Int &casters, Real &coverage, Real &sunElevation, Int &debug, UnsignedInt &shadowColor)
+{
+	active = TheW3DShadowMap != nullptr && TheW3DShadowMap->isActive();
+	rendered = TheW3DShadowMap != nullptr && TheW3DShadowMap->wasRendered();
+	casters = TheW3DShadowMap != nullptr ? TheW3DShadowMap->getCasterCount() : 0;
+	coverage = TheW3DShadowMap != nullptr ? TheW3DShadowMap->getCoverage() : 0.0f;
+	sunElevation = TheW3DShadowMap != nullptr ? TheW3DShadowMap->getSunElevation() : 0.0f;
+	debug = TheW3DShadowMap != nullptr ? TheW3DShadowMap->getDebug() : 0;
+	shadowColor = TheW3DShadowManager != nullptr ? TheW3DShadowManager->getShadowColor() : 0;
+}
+static void mcpShadowMapSetDebug(Int debug) { if (TheW3DShadowMap) TheW3DShadowMap->setDebug(debug); }
+static bool mcpMaterialsAvailable() { return TheW3DMaterials != nullptr && TheW3DMaterials->isAvailable(); }
+static bool mcpMaterialsRunning() { return TheW3DMaterials != nullptr && TheW3DMaterials->isRunning(); }
+static void mcpMaterialsSetEnabled(bool enabled) { if (TheW3DMaterials) TheW3DMaterials->setEnabled(enabled); }
+static void mcpMaterialsReload() { if (TheW3DMaterials) TheW3DMaterials->reload(); }
+static bool mcpMaterialsSetParameter(const char *material, const char *name, const Real *values, Int count)
+{
+	return TheW3DMaterials != nullptr && TheW3DMaterials->setParameter(material, name, values, count);
+}
+static void mcpMaterialsGetState(std::vector<AsciiString> &names, std::vector<Int> &meshTextures, std::vector<AsciiString> &uses,
+	AsciiString &error)
+{
+	if (TheW3DMaterials)
+	{
+		TheW3DMaterials->getMaterials(names, meshTextures, uses);
+		error = TheW3DMaterials->getError();
+	}
+}
+static void mcpMaterialsCollectTextures(std::vector<AsciiString> &names) { if (TheW3DMaterials) TheW3DMaterials->collectTextures(names); }
+#endif
+
 void W3DDisplay::init()
 {
+#ifdef RTS_GAME_MCP
+	TheGameMcpScreenshot = W3D_WriteScreenshotFile;
+	TheGameMcpPostProcess.isAvailable = mcpPostProcessAvailable;
+	TheGameMcpPostProcess.isRunning = mcpPostProcessRunning;
+	TheGameMcpPostProcess.reload = mcpPostProcessReload;
+	TheGameMcpPostProcess.setParameter = mcpPostProcessSetParameter;
+	TheGameMcpPostProcess.getPasses = mcpPostProcessGetPasses;
+	TheGameMcpPostProcess.setGpuTiming = mcpSetGpuTiming;
+	TheGameMcpPostProcess.getGpuTiming = mcpGetGpuTiming;
+	TheGameMcpShadowMap.isAvailable = mcpShadowMapAvailable;
+	TheGameMcpShadowMap.getState = mcpShadowMapGetState;
+	TheGameMcpShadowMap.setDebug = mcpShadowMapSetDebug;
+	TheGameMcpMaterials.isAvailable = mcpMaterialsAvailable;
+	TheGameMcpMaterials.isRunning = mcpMaterialsRunning;
+	TheGameMcpMaterials.setEnabled = mcpMaterialsSetEnabled;
+	TheGameMcpMaterials.reload = mcpMaterialsReload;
+	TheGameMcpMaterials.setParameter = mcpMaterialsSetParameter;
+	TheGameMcpMaterials.getState = mcpMaterialsGetState;
+	TheGameMcpMaterials.collectTextures = mcpMaterialsCollectTextures;
+#endif
+
 
 	//
 	// call our base class init, this method should be able to handle re-entry
@@ -939,6 +1070,11 @@ void W3DDisplay::init()
 		init3DScene();
 		W3DShaderManager::init();
 
+		TheW3DPostProcess = new W3DPostProcess;
+		TheW3DPostProcess->init();
+		TheW3DMaterials = new W3DMaterials;
+		TheW3DMaterials->init();
+
 		// Create and initialize the debug display
 		m_nativeDebugDisplay = NEW W3DDebugDisplay();
 		m_debugDisplay = m_nativeDebugDisplay;
@@ -967,6 +1103,7 @@ void W3DDisplay::init()
 
 	// we're now online
 	m_initialized = true;
+	m_lastUpdateTime64 = getPerformanceCounter();
 	if( TheGlobalData->m_displayDebug )
 	{
 		m_debugDisplayCallback = StatDebugDisplay;
@@ -1010,14 +1147,77 @@ void W3DDisplay::reset()
 
 const UnsignedInt START_CUMU_FRAME = LOGICFRAMES_PER_SECOND / 2;	// skip first half-sec
 
-void W3DDisplay::updateAverageFPS()
+void W3DDisplay::addFpsSample(Real elapsedSeconds)
 {
-	constexpr const Int FPS_HISTORY_SIZE = 30;
+	QuantizedUnsignedShort duration = QuantizedUnsignedShort::fromSeconds(elapsedSeconds);
 
-	static Int64 lastUpdateTime64 = 0;
-	static Int historyOffset = 0;
-	static Real fpsHistory[FPS_HISTORY_SIZE] = {0};
+	m_currentFPS = 1.0f / elapsedSeconds;
+	m_durationHistory[m_historyOffset] = duration;
 
+	m_historyOffset = (m_historyOffset + 1) & (FPS_HISTORY_SIZE - 1);
+	if (m_historyCount < FPS_HISTORY_SIZE)
+	{
+		m_historyCount++;
+	}
+}
+
+Real W3DDisplay::calculateAverageFPS(Real timeWindowSeconds)
+{
+	UnsignedInt unitsSum = 0;
+	Int samples = 0;
+	const UnsignedInt windowUnits = (UnsignedInt)(timeWindowSeconds * QuantizedTicksPerSecond);
+
+	for (Int i = 0; i < m_historyCount; ++i)
+	{
+		Int idx = (m_historyOffset - 1 - i) & (FPS_HISTORY_SIZE - 1);
+		unitsSum += m_durationHistory[idx].getValue();
+		samples++;
+
+		if (unitsSum >= windowUnits)
+		{
+			break;
+		}
+	}
+
+	return (Real)samples * QuantizedTicksPerSecond / (Real)unitsSum;
+}
+
+Real W3DDisplay::calculateLow1PercentFPS(Real timeWindowSeconds)
+{
+	UnsignedInt unitsSum = 0;
+	Int sampleCount = 0;
+	const UnsignedInt windowUnits = (UnsignedInt)(timeWindowSeconds * QuantizedTicksPerSecond);
+	UnsignedShort sortBuffer[FPS_HISTORY_SIZE];
+
+	Int i;
+	for (i = 0; i < m_historyCount; ++i)
+	{
+		Int idx = (m_historyOffset - 1 - i) & (FPS_HISTORY_SIZE - 1);
+		const UnsignedShort units = m_durationHistory[idx].getValue();
+		unitsSum += units;
+		sortBuffer[sampleCount++] = units;
+
+		if (unitsSum >= windowUnits)
+		{
+			break;
+		}
+	}
+
+	const Int low1PercentSampleCount = std::max((sampleCount + 50) / 100, 1);
+
+	std::nth_element(sortBuffer, sortBuffer + low1PercentSampleCount, sortBuffer + sampleCount, std::greater<UnsignedShort>());
+
+	UnsignedInt durationUnitsSum = 0;
+	for (i = 0; i < low1PercentSampleCount; ++i)
+	{
+		durationUnitsSum += sortBuffer[i];
+	}
+
+	return (Real)low1PercentSampleCount * QuantizedTicksPerSecond / (Real)durationUnitsSum;
+}
+
+void W3DDisplay::updatePerformanceMetrics()
+{
 	const Int64 freq64 = getPerformanceCounterFrequency();
 	const Int64 time64 = getPerformanceCounter();
 
@@ -1028,23 +1228,13 @@ void W3DDisplay::updateAverageFPS()
 	}
 #endif
 
-	const Int64 timeDiff = time64 - lastUpdateTime64;
+	const Int64 timeDiff = time64 - m_lastUpdateTime64;
+	Real elapsedSeconds = (Real)timeDiff / (Real)freq64;
 
-	// convert elapsed time to seconds
-	Real elapsedSeconds = (Real)timeDiff/(Real)freq64;
+	addFpsSample(elapsedSeconds);
+	m_averageFPS = calculateAverageFPS(1.0f); // 1.0s window for smooth Dynamic LOD tracking and UI matching
 
-	// append new sample to fps history.
-	if (historyOffset >= FPS_HISTORY_SIZE)
-		historyOffset = 0;
-
-	m_currentFPS = 1.0f/elapsedSeconds;
-	fpsHistory[historyOffset++] = m_currentFPS;
-
-	// determine average frame rate over our past history.
-	const Real sum = std::accumulate(fpsHistory, fpsHistory + FPS_HISTORY_SIZE, 0.0f);
-	m_averageFPS = sum / FPS_HISTORY_SIZE;
-
-	lastUpdateTime64 = time64;
+	m_lastUpdateTime64 = time64;
 }
 
 #if defined(RTS_DEBUG)	//debug hack to view object under mouse stats
@@ -1151,7 +1341,7 @@ void W3DDisplay::gatherDebugStats()
 		Int LOD = TheGlobalData->m_terrainLOD;
 		//unibuffer.format( L"FPS: %.2f, %.2fms mapLOD=%d [cumu FPS=%.2f] draws: %.2f sort: %.2f", fps, ms, LOD, cumuFPS, drawsPerFrame,sortPolysPerFrame);
 		if (TheGlobalData->m_useFpsLimit)
-				unibuffer.format( L"%.2f/%d FPS, ", fps, TheFramePacer->getFramesPerSecondLimit());
+				unibuffer.format( L"%.2f/%d FPS, ", fps, TheFramePacer->getActualFramesPerSecondLimit());
 		else
 				unibuffer.format( L"%.2f FPS, ", fps);
 
@@ -1770,6 +1960,18 @@ Real W3DDisplay::getAverageFPS()
 	return m_averageFPS;
 }
 
+Real W3DDisplay::getLow1PercentFPS()
+{
+	const UnsignedInt now = timeGetTime();
+	const UnsignedInt elapsedMs = now - m_lastLow1PercentUpdateMs;
+	if (elapsedMs >= 1000)
+	{
+		m_low1PercentFPS = calculateLow1PercentFPS(3.0f);
+		m_lastLow1PercentUpdateMs = now - (elapsedMs % 1000);
+	}
+	return m_low1PercentFPS;
+}
+
 Real W3DDisplay::getCurrentFPS()
 {
 	return m_currentFPS;
@@ -1778,6 +1980,51 @@ Real W3DDisplay::getCurrentFPS()
 Int W3DDisplay::getLastFrameDrawCalls()
 {
 	return Debug_Statistics::Get_Draw_Calls();
+}
+
+// W3DDisplay::update =========================================================
+/** Update the client state of the W3D Display */
+//=============================================================================
+void W3DDisplay::update()
+{
+	Display::update();
+
+	if (TheGlobalData->m_headless)
+		return;
+
+	// TheSuperHackers @bugfix The client updates have moved here from W3DDisplay::draw, so that
+	// they also advance when the draw is skipped, for example when the window is minimized.
+
+	Bool freezeTime = TheFramePacer->isTimeFrozen() || TheFramePacer->isGameHalted();
+
+	if (!freezeTime && TheScriptEngine->isTimeFast())
+	{
+		/// @todo: I'm assuming the first view is our main 3D view.
+		W3DView *primaryW3DView=(W3DView *)getFirstView();
+		primaryW3DView->updateCameraMovements();  // Update camera motion effects.
+		return;
+	}
+
+	//update state of all the terrain tracks (fade, remove, etc.)
+	if (TheGlobalData->m_loadScreenRender != TRUE)
+	{
+		if (TheTerrainTracksRenderObjClassSystem)
+			TheTerrainTracksRenderObjClassSystem->update();
+	}
+
+	WW3D::Update_Logic_Frame_Time(TheFramePacer->getLogicTimeStepMilliseconds());
+
+	// TheSuperHackers @info This binds the WW3D update to the logic update.
+	WW3D::Sync(TheGameLogic->hasUpdated());
+
+	// update all views of the world - recomputes data which will affect drawing
+	if (DX8Wrapper::Has_Device() && DX8Wrapper::Test_Cooperative_Level() == D3D_OK)
+	{
+		// Checking if we have the device before updating views because the heightmap crashes otherwise while
+		// trying to refresh the visible terrain geometry.
+		// TheSuperHackers @todo Remove the renderer dependency from the update.
+		updateViews();
+	}
 }
 
 //=============================================================================
@@ -1807,7 +2054,7 @@ void W3DDisplay::draw()
 	// TheSuperHackers @feature bobtista 10/07/2026 Show messages for screenshots finished by the screenshot thread.
 	W3D_UpdateScreenshotMessages();
 
-	updateAverageFPS();
+	updatePerformanceMetrics();
 	if (TheGlobalData->m_enableDynamicLOD && TheGameLogic->getShowDynamicLOD())
 	{
 		DynamicGameLODLevel lod=TheGameLODManager->findDynamicLODLevel(m_averageFPS);
@@ -1889,21 +2136,13 @@ AGAIN:
 
 	if (!freezeTime && TheScriptEngine->isTimeFast())
 	{
-		primaryW3DView->updateCameraMovements();  // Update camera motion effects.
 		return;
 	}
 
 	Debug_Statistics::Begin_Statistics();	//reset all counters (polygons, vertices, etc) before drawing
 
-	//update state of all the terrain tracks (fade, remove, etc.)
-	/// @todo: Is there a better place to put per-frame updates like this?
-
 	if(TheGlobalData->m_loadScreenRender != TRUE)
 	{
-
-		if (TheTerrainTracksRenderObjClassSystem)
-			TheTerrainTracksRenderObjClassSystem->update();
-
 		//Shroud data is needed to render all other views, so handle this first.
 		if (TheTerrainRenderObject)
 		{
@@ -1918,11 +2157,6 @@ AGAIN:
 		}
 	}
 
-	WW3D::Update_Logic_Frame_Time(TheFramePacer->getLogicTimeStepMilliseconds());
-
-	// TheSuperHackers @info This binds the WW3D update to the logic update.
-	WW3D::Sync(TheGameLogic->hasUpdated());
-
 	static Int now;
 	now=timeGetTime();
 
@@ -1936,23 +2170,19 @@ AGAIN:
 		// limit the framerate, because while fast time is on, the game logic is running as fast as it can.
 	}
 
+	Bool viewsUpdated = TRUE;
+
 	do {
 
-		// update all views of the world - recomputes data which will affect drawing
-		if (DX8Wrapper::_Get_D3D_Device8() && (DX8Wrapper::_Get_D3D_Device8()->TestCooperativeLevel()) == D3D_OK)
+		if (DX8Wrapper::Has_Device() && DX8Wrapper::Test_Cooperative_Level() == D3D_OK)
 		{	//Checking if we have the device before updating views because the heightmap crashes otherwise while
 			//trying to refresh the visible terrain geometry.
-//			if(TheGlobalData->m_loadScreenRender != TRUE)
+			// TheSuperHackers @info The views are updated in W3DDisplay::update, except in the repeated passes
+			// of this loop, which keep moving the camera while the time is frozen for a camera movement.
+			if (!viewsUpdated)
 				updateViews();
-     		TheParticleSystemManager->update();//LORENZEN AND WILCZYNSKI MOVED THIS FROM ITS NATIVE POSITION, ABOVE
-                                           //FOR THE PURPOSE OF LETTING THE PARTICLE SYSTEM LOOK UP THE RENDER OBJECT"S
-                                           //TRANSFORM MATRIX, WHILE IT IS STILL VALID (HAVING DONE ITS CLIENT TRANSFORMS
-                                           //BUT NOT YET RESETTING TOT HE LOGICAL TRANSFORM)
-                                           //THE RESULT IS THAT PARTICLESYSTEMS LINKED TO BONES IN DRAWABLES.OBJECTS
-                                           //MOVE WITH THE CLIENT TRANSFORMS, NOW.
-                                           //REVOLUTIONARY!
-                                           //-LORENZEN
 
+			TheParticleSystemManager->DRAW();
 
 			if (TheWaterRenderObj && TheGlobalData->m_waterType == 2)
 				TheWaterRenderObj->updateRenderTargetTextures(primaryW3DView->get3DCamera());	//do a render into each texture
@@ -1961,7 +2191,12 @@ AGAIN:
 			//before we enter main rendering loop.
 			if (TheW3DProjectedShadowManager)
 				TheW3DProjectedShadowManager->updateRenderTargetTextures();
+
+			if (TheW3DShadowMap)
+				TheW3DShadowMap->update(primaryW3DView->get3DCamera());
 		}
+
+		viewsUpdated = FALSE;
 
 		Debug_Statistics::End_Statistics();	//record number of polygons rendered in RenderTargetTextures.
 
@@ -2018,28 +2253,29 @@ AGAIN:
 				// display cinematicText over the black
 				if( m_cinematicText != AsciiString::TheEmptyString && m_cinematicTextFrames != 0)
 				{
-					DisplayString *displayString = TheDisplayStringManager->newDisplayString();
+					if( m_cinematicDisplayString == nullptr )
+						m_cinematicDisplayString = TheDisplayStringManager->newDisplayString();
 
 					// set word wrap if necessary
 
 					Int wordWrapWidth = TheDisplay->getWidth() - 20;
-					displayString->setWordWrap( wordWrapWidth );
-					displayString->setWordWrapCentered( TRUE );
+					m_cinematicDisplayString->setWordWrap( wordWrapWidth );
+					m_cinematicDisplayString->setWordWrapCentered( TRUE );
 
 					UnicodeString text;
 					text.translate( m_cinematicText );
-					displayString->setText( text );
+					m_cinematicDisplayString->setText( text );
 					Color color = GameMakeColor( 255, 255, 255, 255 );  // white
 					Color backColor = GameMakeColor( 0, 0, 0, 0 );      // black
-					displayString->setFont( m_cinematicFont );
+					m_cinematicDisplayString->setFont( m_cinematicFont );
 					Int height = TheDisplay->getHeight() * .9;
 
 					Int width;
-					if( displayString->getWidth() > TheDisplay->getWidth() )
+					if( m_cinematicDisplayString->getWidth() > TheDisplay->getWidth() )
 						width = 20;
 					else
-						width = ( TheDisplay->getWidth() - displayString->getWidth() ) / 2;
-					displayString->draw( width, height, color, backColor );
+						width = ( TheDisplay->getWidth() - m_cinematicDisplayString->getWidth() ) / 2;
+					m_cinematicDisplayString->draw( width, height, color, backColor );
 
 					m_cinematicTextFrames--;
 				}
@@ -2076,6 +2312,9 @@ AGAIN:
 					m_profilerFrameCapture->Capture(getWidth(), getHeight());
 				}
 #endif
+				if (m_overlayDraw)
+					m_overlayDraw();
+
 				// render is all done!
 				WW3D::End_Render();
 			}

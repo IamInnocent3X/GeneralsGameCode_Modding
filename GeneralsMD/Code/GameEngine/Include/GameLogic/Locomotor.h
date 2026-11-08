@@ -138,14 +138,34 @@ public:
 	const FieldParse* getFieldParse() const;
 
 	void friend_setName(const AsciiString& n) { m_name = n; }
+
+	// Read access for tools.
+	const AsciiString& friend_getName() const { return m_name; }
+	Real friend_getMaxSpeed() const { return m_maxSpeed; }	///< distance per logic frame
+	LocomotorSurfaceTypeMask friend_getSurfaces() const { return m_surfaces; }
+
 	void declaredCanMoveBackwards() { m_useDefaultCanMoveBackwards = false; }
 
 	void validate();
 
-protected:
-
-
 private:
+
+	/// TheSuperHackers @info Speeds authored in INI are understated by the forward speed the Locomotor measures
+	/// itself with, which is what made objects move faster on diagonal headings than on axis aligned ones.
+	/// These accessors hand out the authored speed compensated for that, in world distance per logic frame.
+	/// They all return the authored value unchanged in retail compatible builds.
+	Real getActualMaxSpeed() const;
+	Real getActualMaxSpeedDamaged() const;
+	Real getActualMinSpeed() const;
+	Real getActualMinTurnSpeed() const;
+
+	Real getActualReverseMaxSpeed() const;
+	Real getActualReverseMaxSpeedDamaged() const;
+	Real getActualReverseMinSpeed() const;
+
+	/// Compensate an authored speed. Returns it unchanged when the mover is commanded with retail speeds.
+	Real scaleSpeed(Real speed) const;
+
 	/**
 		Units check:
 
@@ -166,6 +186,9 @@ private:
 	Real											m_liftDamaged;					///< max lift when damaged
 	Real											m_braking;							///< max braking (deceleration)
 	Real											m_minTurnSpeed;					///< we must be going >= this speed in order to turn
+#if USE_RETAIL_PHYSICS_FORWARD_SPEED_AVERAGE()
+	Real											m_speedScale;						///< factor that turns an authored speed into its compensated speed
+#endif
 	Real											m_preferredHeight;			///< our preferred height (if flying)
 	Real											m_preferredHeightDamping;		///< how aggressively to adjust to preferred height: 1.0 = very much so, 0.1 = gradually, etc
 	Real											m_circlingRadius;				///< for flying things, the radius at which they circle their "maintain" destination. (pos = cw, neg = ccw, 0 = smallest possible)
@@ -207,6 +230,7 @@ private:
 	Bool											m_downhillOnly;	// pinewood derby, moves only by gravity pulling downhill
 	Bool											m_stickToGround;				// if true, can't leave ground
 	Bool											m_canMoveBackward;				// if true, can move backwards.
+	Bool											m_requiresMoveToTurn;			///< if true, can't pivot in place (aim/face drive forward and turn via the normal mover)
 	Real											m_backwardsMoveAngleThreshold;			///< goal must be at least this far off our heading (radians) before we reverse
 	Real											m_backwardsMoveDistanceFactorThreshold;	///< max reverse distance, as a factor of the object's MajorRadius
 	Real											m_backwardsMoveSpeedFactor;					///< multiplier applied to desired speed while moving backwards
@@ -250,7 +274,7 @@ public:
 
 	void locoUpdate_moveTowardsPosition(Object* obj, const Coord3D& goalPos,
 		Real onPathDistToGoal, Real desiredSpeed, Bool *blocked);
-	void locoUpdate_moveTowardsAngle(Object* obj, Real angle);
+	void locoUpdate_moveTowardsAngle(Object* obj, Real angle, Bool turnByReversing = false);	///< turnByReversing: back up to turn (needs CanMoveBackwards)
 
 	void locoUpdate_moveTowardsPositionForced(Object* obj, const Coord3D& goalPos,
 		Real onPathDistToGoal, Real desiredSpeed, Bool *blocked);
@@ -277,7 +301,9 @@ public:
 
 	AsciiString getTemplateName() const { return m_template->m_name;}
 	Real getMinSpeed() const;
-	Real getMinTurnSpeed() const { return m_template->m_minTurnSpeed;}	///< must be going >= this speed to turn (0 = can turn in place)
+	Real getMinTurnSpeed() const;
+	Bool getRequiresMoveToTurn() const { return m_template->m_requiresMoveToTurn; }
+	Bool canTurnInPlace() const { return getMinSpeed() == 0.0f && !getRequiresMoveToTurn(); }
 	Real getAccelPitchLimit() const { return m_template->m_accelPitchLimit;}	///< Maximum amount we will pitch up or down under acceleration (including recoil.)
 	Real getDecelPitchLimit() const { return m_template->m_decelPitchLimit;}	///< Maximum amount we will pitch down under deceleration (including recoil.)
 	Real getBounceKick() const { return m_template->m_bounceKick;}						///< How much simulating rough terrain "bounces" a wheel up.
@@ -331,6 +357,7 @@ public:
 		DEBUG_ASSERTCRASH(!(speed <= 0.0f && m_template->m_appearance == LOCO_THRUST), ("THRUST locos may not have zero speeds!"));
 		m_maxSpeed = speed;
 	}
+	void setMaxSpeedToMinSpeed() { setMaxSpeed(m_template->m_minSpeed); }
 	void setMaxAcceleration(Real accel) { m_maxAccel = accel; }
 	void setMaxBraking(Real braking) { m_maxBraking = braking; }
 	void setMaxTurnRate(Real turn) { m_maxTurnRate = turn; }
@@ -398,8 +425,9 @@ public:
 	Real getSpeedMultiplier() const { return m_speedMultiplier; }
 
 protected:
+	Real getMaxSpeedOverride() const;
+
 	void moveTowardsPositionLegs(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
-	void moveTowardsPositionLegsWander(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionClimb(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionWheels(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
 	void moveTowardsPositionTreads(Object* obj, PhysicsBehavior *physics, const Coord3D& goalPos, Real onPathDistToGoal, Real desiredSpeed);
@@ -465,7 +493,8 @@ private:
 		DOING_THREE_POINT_TURN,	// If we are doing a 3 pt turn.
 		CLIMBING,								// If we are in the process of climbing.
 		IS_CLOSE_ENOUGH_DIST_3D,
-		OFFSET_INCREASING
+		OFFSET_INCREASING,
+		REVERSE_TO_TURN				// transient (set/cleared within locoUpdate_moveTowardsAngle): force reversing to turn
 	};
 
 	Bool getFlag(LocoFlag f) const { return (m_flags & (1 << f)) != 0; }

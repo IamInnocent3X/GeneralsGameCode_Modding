@@ -71,6 +71,9 @@ public:
 	Real m_dynamicHeightMinScale;
 	Real m_dynamicHeightMinRange;
 
+	Bool m_linearFlightPath;				///< fly a straight line at constant speed instead of the Bezier curve
+	UnsignedInt m_killSelfDelay;		///< frames to linger (hidden, particles still emitting) after detonation before dying
+
 	DumbProjectileBehaviorModuleData();
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -91,6 +94,8 @@ public:
 
 	// UpdateModuleInterface
 	virtual UpdateSleepTime update() override;
+	// we hold ourselves (DISABLED_HELD) while lingering after detonation (KillSelfDelay) and must keep updating to die
+	virtual DisabledMaskType getDisabledTypesToProcess() const override { return MAKE_DISABLED_MASK( DISABLED_HELD ); }
 	virtual ProjectileUpdateInterface* getProjectileUpdateInterface() override { return this; }
 
 	// ProjectileUpdateInterface
@@ -108,6 +113,7 @@ public:
 	virtual Object* getTargetObject() override;
 	virtual const Coord3D* getTargetPosition() override;
 	virtual Bool projectileShouldCollideWithWater() const override;
+	virtual Bool projectileIsLingering() const override { return m_hasDetonated && getDumbProjectileBehaviorModuleData()->m_killSelfDelay > 0; }
 	virtual Bool projectileShouldDetonateOnGround() const override { return false; }
 	virtual void setShrapnelLaunchID(ObjectID shrapnelLaunchID) override { m_shrapnelLaunchID = shrapnelLaunchID; }
 	virtual void friend_refreshUpdate() override { refreshUpdate(); }
@@ -118,6 +124,7 @@ protected:
 
 	void positionForLaunch(const Object *launcher, WeaponSlotType wslot, Int specificBarrelToUse);
 	void detonate();
+	void doDetonationDeath();
 
 private:
 
@@ -136,7 +143,7 @@ private:
 
 	const ParticleSystemTemplate* m_exhaustSysTmpl;
 	ParticleSystemID			m_exhaustID;
-	std::vector<AsciiString> 			m_extraBonusCustomFlags;
+	std::vector<AsciiString> 		m_extraBonusCustomFlags;
 	Bool                  			m_noDamage;
 	UnsignedInt						m_framesTillDecoyed;
 	UnsignedInt						m_detonateDistance;
@@ -150,6 +157,7 @@ private:
   Bool                  m_hasDetonated;           ///< 
   Bool                  m_isJammed;
   Bool                  m_assignedBackup;
+	UnsignedInt						m_killSelfFrame;					///< while lingering after detonation: frame at which we die (0 = not lingering)
 
 	Bool calcFlightPath(Bool recalcNumSegments);
 #if defined(RTS_DEBUG)

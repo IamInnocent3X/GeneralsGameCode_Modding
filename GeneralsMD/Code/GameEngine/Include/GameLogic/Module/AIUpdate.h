@@ -211,6 +211,12 @@ public:
 	//Bool m_attackAngleMirrored;
 	std::vector<AttackAngleData> m_attackAngles;
 
+	Bool m_minRangeRetreatStraight;	///< when inside weapon min range, back off straight away from the target, just far enough
+	Bool m_aimByReversing;					///< no-turret aiming at a target in front: turn by backing up instead of driving forward
+	Real m_aimByReversingMaxAngle;	///< only reverse to aim if the target is at most this far off the nose (radians)
+	Real m_aimByReversingMargin;		///< safety margin added to the min range in the "would a forward turn get too close" test
+	Real m_aimByReversingTurnFactor;	///< scales the forward-turn closing estimate (turn radius * sin(angle))
+
 
   AIUpdateModuleData();
 	virtual ~AIUpdateModuleData() override;
@@ -347,6 +353,11 @@ public:
 
 	//Real getAttackAngle() const { return getAIUpdateModuleData()->m_attackAngle; }
 	Bool useAttackAngle() const { return getAIUpdateModuleData()->m_useAttackAngle; }
+	Bool isMinRangeRetreatStraight() const { return getAIUpdateModuleData()->m_minRangeRetreatStraight; }
+	Bool isAimByReversing() const { return getAIUpdateModuleData()->m_aimByReversing; }
+	Real getAimByReversingMaxAngle() const { return getAIUpdateModuleData()->m_aimByReversingMaxAngle; }
+	Real getAimByReversingMargin() const { return getAIUpdateModuleData()->m_aimByReversingMargin; }
+	Real getAimByReversingTurnFactor() const { return getAIUpdateModuleData()->m_aimByReversingTurnFactor; }
 	//Bool isAttackAngleMirrored() const { return getAIUpdateModuleData()->m_attackAngleMirrored; }
 
 	// this is present solely for some transports to override, so that they can land before 
@@ -437,6 +448,7 @@ public:
 	virtual void setLocomotorGoalPositionOnPath();
 	virtual void setLocomotorGoalPositionExplicit(const Coord3D& newPos);
 	virtual void setLocomotorGoalOrientation(Real angle);
+	void setLocomotorGoalOrientationByReversing(Real angle);	///< like setLocomotorGoalOrientation, but turn by backing up (AimByReversing)
 	virtual void setLocomotorGoalNone();
 	virtual Bool isDoingGroundMovement() const;  ///< True if moving along ground.
 
@@ -774,6 +786,11 @@ private:
 	Coord3D			m_requestedDestination;
 	Coord3D			m_requestedDestination2;
 	UnsignedInt	m_pathTimestamp;						///< time of path construction
+	UnsignedInt	m_lastPathRequestFrame;			///< when requestPath last asked the pathfinder
+	ICoord2D		m_lastPathRequestCell;			///< cell we were in at that request
+	ICoord2D		m_lastPathRequestGoalCell;	///< cell we asked a path to at that request
+	Int					m_repeatedPathRequests;			///< same request again soon after, without having moved
+	UnsignedInt	m_lastPathQueueFrame;				///< when we last went into the pathfind queue
 	ObjectID		m_ignoreObstacleID;					///< ignore this obstacle when pathfinding
 	Real				m_pathExtraDistance;				///< If we are following a waypoint path, there will be extra distance beyond the current path.
 	ICoord2D		m_pathfindGoalCell;					///< Cell we are moving towards.
@@ -811,6 +828,7 @@ private:
 	LocomotorSetType	m_curLocomotorSet;
 	LocoGoalType			m_locomotorGoalType;
 	Coord3D						m_locomotorGoalData;
+	Bool							m_locomotorGoalTurnByReversing;	///< ANGLE goal: turn by backing up (AimByReversing). Not saved.
 	Coord3D					m_lastPos;
 	Coord3D					m_lastRequestedDestination;
 

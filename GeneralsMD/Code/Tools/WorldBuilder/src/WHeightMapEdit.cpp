@@ -95,7 +95,7 @@ WorldHeightMapEdit::WorldHeightMapEdit(Int width, Int height, UnsignedByte initi
 		m_sourceTiles[i]=nullptr;
 		m_edgeTiles[i]=nullptr;
 	}
-	if (width<0 || height < 0) {
+	if (!isValidPlayableMapSize(width, height, border)) {
 		AfxMessageBox(IDS_BAD_VALUE);
 		return;
 	}
@@ -325,7 +325,7 @@ WorldHeightMapEdit::WorldHeightMapEdit(ChunkInputStream *pStrm):
 Bool WorldHeightMapEdit::remapTextures()
 {
 	Int i;
-	Bool anyChanges;
+	Bool anyChanges = false;
 	for (i=0; i<m_numTextureClasses; i++) {
 		TerrainModal modalTerrainDlg(m_textureClasses[i].name, this);
 		if (IDOK==modalTerrainDlg.DoModal()) {
@@ -593,7 +593,8 @@ void WorldHeightMapEdit::saveToFile(DataChunkOutput &chunkWriter)
 		std::vector<UnsignedByte> binary_data(m_dataSize);
 		const Real f = 1.0f / TheMapData->m_HeightmapScale;
 		for (size_t i = 0; i < m_dataSize; i++) {
-			binary_data[i] = std::clamp(static_cast<UnsignedByte>(std::round(m_data[i] * f)), static_cast<UnsignedByte>(0U), static_cast<UnsignedByte>(255U));
+			// Clamp before narrowing to a byte, otherwise an out of range height wraps around.
+			binary_data[i] = static_cast<UnsignedByte>(std::clamp(static_cast<Int>(std::round(m_data[i] * f)), K_MIN_HEIGHT, K_MAX_HEIGHT));
 		}
 
 		chunkWriter.writeArrayOfBytes((char *)&binary_data[0], m_dataSize);
@@ -1435,7 +1436,7 @@ void WorldHeightMapEdit::blendToThisClass(Int xIndex, Int yIndex,
 		Fills the region at xIndex, yIndex with the specified texture. DoReplace forces texture to
 		be replaced on entire map.
 */
-Bool WorldHeightMapEdit::floodFill(Int xIndex, Int yIndex, Int textureClass, Bool doReplace)
+Bool WorldHeightMapEdit::floodFill(Int xIndex, Int yIndex, Int textureClass, Bool doReplace, Bool askToConfirm)
 {
 	Int ndx = (yIndex*m_width)+xIndex;
 	Int curTileClass = getTextureClass(xIndex, yIndex, true);
@@ -1455,11 +1456,16 @@ Bool WorldHeightMapEdit::floodFill(Int xIndex, Int yIndex, Int textureClass, Boo
 		}
 	}
 	if (!canFitTexture(textureClass) || doReplace) {
-		CString confirm;
-		confirm.Format(IDS_CONFIRM_REPLACE_TEXTURE, m_globalTextureClasses[curTileClass].name.str());
-		Int msg = ::AfxMessageBox(confirm, MB_YESNO);
-		::AfxGetMainWnd()->SetFocus();
-		if (msg == IDNO) {
+		if (askToConfirm) {
+			CString confirm;
+			confirm.Format(IDS_CONFIRM_REPLACE_TEXTURE, m_globalTextureClasses[curTileClass].name.str());
+			Int msg = ::AfxMessageBox(confirm, MB_YESNO);
+			::AfxGetMainWnd()->SetFocus();
+			if (msg == IDNO) {
+				return false;
+			}
+		} else if (!doReplace) {
+			// Without a prompt, only replace everywhere when the caller asked for it.
 			return false;
 		}
 		doReplace = true;
@@ -1636,9 +1642,27 @@ void WorldHeightMapEdit::showTileStatusInfo()
 	setHeight
 		This sets the height, and adjusts the cliff flag for the cells affected.
 */
-void WorldHeightMapEdit::setHeight(Int xIndex, Int yIndex, UnsignedByte height) {
+Int WorldHeightMapEdit::snapHeight(Int height, Int currentHeight)
+{
+	Real scale = TheMapData->m_HeightmapScale;
+	if (scale <= 0.0f) scale = 1.0f;
+	const Real stored = height / scale;
+	Int step = (Int)floor(stored);
+	const Real fraction = stored - step;
+	if (fabs(fraction - 0.5f) < 0.001f) {
+		if (height > currentHeight) step++;
+	} else if (fraction > 0.5f) {
+		step++;
+	}
+	if (step < K_MIN_HEIGHT) step = K_MIN_HEIGHT;
+	if (step > K_MAX_HEIGHT) step = K_MAX_HEIGHT;
+	// Same rounding as when the map is loaded.
+	return (Int)std::round(step * scale);
+}
+
+void WorldHeightMapEdit::setHeight(Int xIndex, Int yIndex, Int height) {
 		Int ndx = (yIndex*m_width)+xIndex;
-		if ((ndx>=0) && (ndx<m_dataSize) && m_data) m_data[ndx]=height;
+		if ((ndx>=0) && (ndx<m_dataSize) && m_data) m_data[ndx]=(HeightSampleType)snapHeight(height, m_data[ndx]);
 		setCellCliffFlagFromHeights(xIndex, yIndex);
 		setCellCliffFlagFromHeights(xIndex-1, yIndex);
 		setCellCliffFlagFromHeights(xIndex, yIndex-1);
@@ -1651,6 +1675,462 @@ void WorldHeightMapEdit::setHeight(Int xIndex, Int yIndex, UnsignedByte height) 
 		This optimizes the tiles and blend tiles, recalculating them
 		and removing any unused ones.
 */
+// Direction of the opaque side of a blend, following blendSpecificTiles: horizontal blends are
+// opaque on the left when inverted, vertical ones at the bottom, and diagonals point at their
+// corner. Long diagonals store the complementary corner, which transforms the same way.
+static void getBlendDirection(const TBlendTileInfo &info, Int *dx, Int *dy)
+{
+	const Bool inverted = (info.inverted & INVERTED_MASK) != 0;
+	if (info.horiz) {
+		*dx = inverted ? -1 : 1;
+		*dy = 0;
+	} else if (info.vert) {
+		*dx = 0;
+		*dy = inverted ? -1 : 1;
+	} else {
+		*dx = info.rightDiagonal ? 1 : -1;
+		*dy = inverted ? -1 : 1;
+	}
+}
+
+static void setBlendDirection(TBlendTileInfo *info, Int dx, Int dy)
+{
+	Bool inverted;
+	info->horiz = info->vert = info->rightDiagonal = info->leftDiagonal = false;
+	if (dy == 0) {
+		info->horiz = true;
+		inverted = dx < 0;
+	} else if (dx == 0) {
+		info->vert = true;
+		inverted = dy < 0;
+	} else {
+		info->rightDiagonal = dx > 0;
+		info->leftDiagonal = dx < 0;
+		inverted = dy < 0;
+	}
+	info->inverted = (info->inverted & FLIPPED_MASK) | (inverted ? INVERTED_MASK : 0);
+}
+
+static Bool isDiagonalNeedingFlip(const TBlendTileInfo &info)
+{
+	const Bool inverted = (info.inverted & INVERTED_MASK) != 0;
+	return (info.rightDiagonal && !inverted) || (info.leftDiagonal && inverted);
+}
+
+void WorldHeightMapEdit::copyTransformedFrom(WorldHeightMapEdit *src, const HeightMapTransform &xf, Bool heights, Bool textures, Bool passability)
+{
+	DEBUG_ASSERTCRASH(src->m_width == m_width && src->m_height == m_height, ("copyTransformedFrom needs maps of the same size"));
+	if (src->m_width != m_width || src->m_height != m_height) {
+		return;
+	}
+	Int x, y, sx, sy;
+	if (heights) {
+		for (y = 0; y < m_height; y++) {
+			for (x = 0; x < m_width; x++) {
+				if (xf.sourceVertex(x, y, &sx, &sy)) {
+					// Raw copy: passability is copied separately below.
+					m_data[y*m_width + x] = src->m_data[sy*m_width + sx];
+				}
+			}
+		}
+	}
+	if (!textures && !passability) {
+		return;
+	}
+	for (y = 0; y < m_height-1; y++) {
+		for (x = 0; x < m_width-1; x++) {
+			if (!xf.sourceCell(x, y, &sx, &sy)) {
+				continue;
+			}
+			if (passability) {
+				setCliffState(x, y, src->getCliffState(sx, sy));
+			}
+			if (!textures) {
+				continue;
+			}
+			const Int ndx = y*m_width + x;
+			const Int srcNdx = sy*m_width + sx;
+			const Int baseClass = src->getTextureClassFromNdx(src->m_tileNdxes[srcNdx]);
+			if (baseClass < 0) {
+				continue;
+			}
+			// Tiles depend on the cell position inside the texture, so recompute them instead of copying.
+			m_tileNdxes[ndx] = getTileNdxForClass(x, y, baseClass);
+			m_cliffInfoNdxes[ndx] = 0;
+			m_blendTileNdxes[ndx] = 0;
+			m_extraBlendTileNdxes[ndx] = 0;
+
+			TBlendTileInfo blends[2];
+			Bool hasBlend[2] = { src->m_blendTileNdxes[srcNdx] != 0, src->m_extraBlendTileNdxes[srcNdx] != 0 };
+			if (!hasBlend[0]) {
+				continue;
+			}
+			for (Int layer = 0; layer < 2; layer++) {
+				if (!hasBlend[layer]) continue;
+				blends[layer] = src->m_blendedTiles[layer == 0 ? src->m_blendTileNdxes[srcNdx] : src->m_extraBlendTileNdxes[srcNdx]];
+				const Int blendClass = src->getTextureClassFromNdx(blends[layer].blendNdx);
+				if (blendClass < 0) {
+					hasBlend[layer] = false;
+					continue;
+				}
+				blends[layer].blendNdx = getTileNdxForClass(x, y, blendClass);
+				Int dx, dy;
+				getBlendDirection(blends[layer], &dx, &dy);
+				xf.mapDirection(x, y, &dx, &dy);
+				setBlendDirection(&blends[layer], dx, dy);
+				blends[layer].inverted &= ~FLIPPED_MASK;
+			}
+			// A mirror changes which triangle split the diagonal layers need, so rederive the forced
+			// flips that keep a horizontal/vertical layer consistent with a diagonal one (see blendSpecificTiles).
+			for (Int layer = 0; layer < 2; layer++) {
+				const Int other = 1 - layer;
+				if (hasBlend[layer] && hasBlend[other] && (blends[layer].horiz || blends[layer].vert) && isDiagonalNeedingFlip(blends[other])) {
+					blends[layer].inverted |= FLIPPED_MASK;
+				}
+			}
+			if (hasBlend[0]) {
+				const Int blendNdx = findOrCreateBlendTile(&blends[0]);
+				m_blendTileNdxes[ndx] = blendNdx > 0 ? blendNdx : 0;
+			}
+			if (hasBlend[1] && m_blendTileNdxes[ndx] != 0) {
+				const Int blendNdx = findOrCreateBlendTile(&blends[1]);
+				m_extraBlendTileNdxes[ndx] = blendNdx > 0 ? blendNdx : 0;
+			}
+		}
+	}
+}
+
+void WorldHeightMapEdit::clearBlends(Int x0, Int y0, Int x1, Int y1)
+{
+	for (Int y = y0; y <= y1; y++) {
+		for (Int x = x0; x <= x1; x++) {
+			if (x < 0 || y < 0 || x >= m_width || y >= m_height) continue;
+			const Int ndx = y*m_width + x;
+			m_blendTileNdxes[ndx] = 0;
+			m_extraBlendTileNdxes[ndx] = 0;
+		}
+	}
+}
+
+/// The texture class that a blend layer fades in, or -1 for an empty layer.
+Int WorldHeightMapEdit::getBlendLayerClass(Int blendNdx)
+{
+	if (blendNdx <= 0) return -1;
+	return getTextureClassFromNdx(m_blendedTiles[blendNdx].blendNdx);
+}
+
+namespace
+{
+	/// How many of a cell's neighbours have one texture class.
+	struct BlendNeighbor
+	{
+		Int texClass;
+		Int sides;
+		Int total;
+	};
+
+	/// Collects the texture classes around a cell that are to blend into it, most sides first:
+	/// a side blend works with either flip of the cell, so it goes into the first layer.
+	Int collectBlendNeighbors(const Int *baseClasses, Int width, Int height, Int x, Int y,
+		const std::set<Int> &classes, BlendNeighbor *out)
+	{
+		const Int self = baseClasses[y*width + x];
+		Int count = 0;
+		for (Int j = y-1; j <= y+1; j++) {
+			for (Int i = x-1; i <= x+1; i++) {
+				if (i < 0 || j < 0 || i >= width || j >= height) continue;
+				if (i == x && j == y) continue;
+				const Int cls = baseClasses[j*width + i];
+				if (cls < 0 || cls == self || !classes.count(cls)) continue;
+				Int k;
+				for (k = 0; k < count; k++) {
+					if (out[k].texClass == cls) break;
+				}
+				if (k == count) {
+					out[k].texClass = cls;
+					out[k].sides = 0;
+					out[k].total = 0;
+					count++;
+				}
+				out[k].total++;
+				if (i == x || j == y) out[k].sides++;
+			}
+		}
+		for (Int a = 1; a < count; a++) {
+			BlendNeighbor cur = out[a];
+			Int b = a-1;
+			while (b >= 0 && (out[b].sides < cur.sides || (out[b].sides == cur.sides &&
+				(out[b].total < cur.total || (out[b].total == cur.total && out[b].texClass > cur.texClass))))) {
+				out[b+1] = out[b];
+				b--;
+			}
+			out[b+1] = cur;
+		}
+		return count;
+	}
+}
+
+/// blendToThisClass, but reading the neighbours from the base classes: a neighbour that already
+/// carries a blend still counts as its texture.
+void WorldHeightMapEdit::blendCellToClass(Int xIndex, Int yIndex, Int textureClass, Int sides, Int edgeClass, const Int *baseClasses)
+{
+	#define IS_CLASS(i, j) ((i) >= 0 && (j) >= 0 && (i) < m_width && (j) < m_height && baseClasses[(j)*m_width + (i)] == textureClass)
+	const Bool left = IS_CLASS(xIndex-1, yIndex);
+	const Bool right = IS_CLASS(xIndex+1, yIndex);
+	const Bool bottom = IS_CLASS(xIndex, yIndex-1);
+	const Bool top = IS_CLASS(xIndex, yIndex+1);
+
+	if (sides == 2 && !(left && right) && !(top && bottom)) {
+		// Corner: a long diagonal blend, as in blendToThisClass.
+		Int srcXIndex = xIndex;
+		Int srcYIndex = yIndex;
+		if (top) srcYIndex--;
+		if (bottom) srcYIndex++;
+		if (left) srcXIndex++;
+		if (right) srcXIndex--;
+		blendSpecificTiles(xIndex, yIndex, srcXIndex, srcYIndex, m_tileNdxes[yIndex*m_width + xIndex],
+			getBlendTileNdxForClass(xIndex, yIndex, textureClass), true, edgeClass);
+	} else if (sides > 0) {
+		if (left) blendTile(xIndex, yIndex, xIndex-1, yIndex, textureClass, edgeClass);
+		else if (right) blendTile(xIndex, yIndex, xIndex+1, yIndex, textureClass, edgeClass);
+		else if (bottom) blendTile(xIndex, yIndex, xIndex, yIndex-1, textureClass, edgeClass);
+		else blendTile(xIndex, yIndex, xIndex, yIndex+1, textureClass, edgeClass);
+	} else {
+		for (Int j = yIndex-1; j <= yIndex+1; j += 2) {
+			for (Int i = xIndex-1; i <= xIndex+1; i += 2) {
+				if (IS_CLASS(i, j)) {
+					blendTile(xIndex, yIndex, i, j, textureClass, edgeClass);
+					return;
+				}
+			}
+		}
+	}
+	#undef IS_CLASS
+}
+
+void WorldHeightMapEdit::blendAllEdges(const std::set<Int> &classes, Int globalEdgeClass, Int x0, Int y0, Int x1, Int y1)
+{
+	const Int localEdgeClass = globalEdgeClass >= 0 ? allocateEdgeTiles(globalEdgeClass) : -1;
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 >= m_width) x1 = m_width-1;
+	if (y1 >= m_height) y1 = m_height-1;
+
+	Int *baseClasses = new Int[m_dataSize];
+	for (Int y = 0; y < m_height; y++) {
+		for (Int x = 0; x < m_width; x++) {
+			baseClasses[y*m_width + x] = getTextureClass(x, y, true);
+		}
+	}
+
+	// A cell mostly surrounded by another texture becomes that texture, as in autoBlendOut:
+	// blends from three sides would obliterate it anyway.
+	BlendNeighbor neighbors[8];
+	Bool changed = true;
+	for (Int pass = 0; changed && pass < 8; pass++) {
+		changed = false;
+		for (Int y = y0; y <= y1; y++) {
+			for (Int x = x0; x <= x1; x++) {
+				const Int count = collectBlendNeighbors(baseClasses, m_width, m_height, x, y, classes, neighbors);
+				for (Int k = 0; k < count; k++) {
+					if (neighbors[k].sides > 2 || neighbors[k].total > 5) {
+						const Int ndx = y*m_width + x;
+						m_tileNdxes[ndx] = getTileNdxForClass(x, y, neighbors[k].texClass);
+						m_blendTileNdxes[ndx] = 0;
+						m_extraBlendTileNdxes[ndx] = 0;
+						baseClasses[ndx] = neighbors[k].texClass;
+						changed = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	for (Int y = y0; y <= y1; y++) {
+		for (Int x = x0; x <= x1; x++) {
+			const Int ndx = y*m_width + x;
+			const Int count = collectBlendNeighbors(baseClasses, m_width, m_height, x, y, classes, neighbors);
+			for (Int k = 0; k < count && m_extraBlendTileNdxes[ndx] == 0; k++) {
+				const Int cls = neighbors[k].texClass;
+				if (getBlendLayerClass(m_blendTileNdxes[ndx]) == cls || getBlendLayerClass(m_extraBlendTileNdxes[ndx]) == cls) continue;
+				// When a diagonal cannot match the flip of the first layer nothing is applied, and the next class gets its turn.
+				blendCellToClass(x, y, cls, neighbors[k].sides, localEdgeClass, baseClasses);
+			}
+		}
+	}
+	delete[] baseClasses;
+}
+
+namespace
+{
+	enum CornerBlendKind
+	{
+		CORNER_BLEND_TOP,
+		CORNER_BLEND_BOTTOM,
+		CORNER_BLEND_LEFT,
+		CORNER_BLEND_RIGHT,
+		CORNER_BLEND_TOP_LEFT,
+		CORNER_BLEND_TOP_RIGHT,
+		CORNER_BLEND_BOTTOM_LEFT,
+		CORNER_BLEND_BOTTOM_RIGHT,
+		CORNER_BLEND_BOTTOM_LEFT_LARGE
+	};
+}
+
+/// Puts a blend into the cell's first free layer. The two-layer cases of blendCellFromCorners only
+/// pair blends of the same flip, so this needs no flip handling like blendSpecificTiles.
+void WorldHeightMapEdit::addCornerBlend(Int xIndex, Int yIndex, Int textureClass, Int blendKind)
+{
+	const Int ndx = yIndex*m_width + xIndex;
+	TBlendTileInfo blendInfo;
+	blendInfo.blendNdx = getBlendTileNdxForClass(xIndex, yIndex, textureClass);
+	if (blendInfo.blendNdx == m_tileNdxes[ndx]) return;
+	blendInfo.horiz = blendKind == CORNER_BLEND_LEFT || blendKind == CORNER_BLEND_RIGHT;
+	blendInfo.vert = blendKind == CORNER_BLEND_TOP || blendKind == CORNER_BLEND_BOTTOM;
+	blendInfo.rightDiagonal = blendKind == CORNER_BLEND_TOP_LEFT || blendKind == CORNER_BLEND_BOTTOM_LEFT || blendKind == CORNER_BLEND_BOTTOM_LEFT_LARGE;
+	blendInfo.leftDiagonal = blendKind == CORNER_BLEND_TOP_RIGHT || blendKind == CORNER_BLEND_BOTTOM_RIGHT;
+	blendInfo.inverted = blendKind == CORNER_BLEND_TOP || blendKind == CORNER_BLEND_RIGHT
+		|| blendKind == CORNER_BLEND_TOP_LEFT || blendKind == CORNER_BLEND_TOP_RIGHT;
+	blendInfo.longDiagonal = blendKind == CORNER_BLEND_BOTTOM_LEFT_LARGE;
+	blendInfo.customBlendEdgeClass = -1;
+	updateFlatCellForAdjacentCliffs(xIndex, yIndex, textureClass);
+	const Short newNdx = findOrCreateBlendTile(&blendInfo);
+	if (newNdx < 0) return;
+	if (m_blendTileNdxes[ndx] == 0) m_blendTileNdxes[ndx] = newNdx;
+	else if (m_extraBlendTileNdxes[ndx] == 0) m_extraBlendTileNdxes[ndx] = newNdx;
+}
+
+/// Chooses the base texture and blends of a cell from the textures at its four corners.
+/// Based on GenerateBlendTiles of Genesis.Processors/TextureGenerator.cs (The CWC Team).
+void WorldHeightMapEdit::blendCellFromCorners(Int xIndex, Int yIndex, Int *corners)
+{
+	const Int stride = m_width + 1;
+	Int *lowerLeft = corners + yIndex*stride + xIndex;
+	Int t0, t1, t2, t3;
+	for (;;) {
+		t0 = lowerLeft[0];
+		t1 = lowerLeft[1];
+		t2 = lowerLeft[stride];
+		t3 = lowerLeft[stride + 1];
+		if (t0 < 0 || t1 < 0 || t2 < 0 || t3 < 0) return;
+		Int distinct = 1;
+		if (t1 != t0) distinct++;
+		if (t2 != t0 && t2 != t1) distinct++;
+		if (t3 != t0 && t3 != t1 && t3 != t2) distinct++;
+		if (distinct != 4 && !(t0 == t3 && t1 == t2 && t0 != t1)) break;
+		// A checkerboard or four different textures cannot be blended: the upper right corner gives way.
+		lowerLeft[stride + 1] = t1;
+	}
+
+	Int base = t0, blend1 = -1, kind1 = 0, blend2 = -1, kind2 = 0;
+	#define BLEND1(cls, kind) { blend1 = cls; kind1 = kind; }
+	#define BLEND2(cls, kind) { blend2 = cls; kind2 = kind; }
+	if (t0 == t1 && t0 == t2 && t0 == t3) {
+		// One texture.
+	} else if (t0 == t1) {
+		if (t0 == t2) BLEND1(t3, CORNER_BLEND_BOTTOM_LEFT)
+		else if (t0 == t3) BLEND1(t2, CORNER_BLEND_BOTTOM_RIGHT)
+		else if (t2 == t3) BLEND1(t2, CORNER_BLEND_BOTTOM)
+		else {
+			base = t3;
+			BLEND1(t0, CORNER_BLEND_TOP)
+			BLEND2(t2, CORNER_BLEND_BOTTOM_RIGHT)
+		}
+	} else if (t0 == t2) {
+		if (t0 == t3) BLEND1(t1, CORNER_BLEND_TOP_LEFT)
+		else if (t1 == t3) BLEND1(t1, CORNER_BLEND_LEFT)
+		else {
+			base = t3;
+			BLEND1(t0, CORNER_BLEND_RIGHT)
+			BLEND2(t1, CORNER_BLEND_TOP_LEFT)
+		}
+	} else if (t2 == t3) {
+		if (t2 == t1) {
+			// Genesis makes t2 the base and blends a small corner of t0 over it. The same picture with t0
+			// as the base keeps the cell's texture, so that blending again does not eat away this corner.
+			BLEND1(t2, CORNER_BLEND_BOTTOM_LEFT_LARGE)
+		} else {
+			BLEND1(t2, CORNER_BLEND_BOTTOM)
+			BLEND2(t1, CORNER_BLEND_TOP_LEFT)
+		}
+	} else if (t1 == t3) {
+		BLEND1(t1, CORNER_BLEND_LEFT)
+		BLEND2(t2, CORNER_BLEND_BOTTOM_RIGHT)
+	} else if (t0 == t3) {
+		BLEND1(t1, CORNER_BLEND_TOP_LEFT)
+		BLEND2(t2, CORNER_BLEND_BOTTOM_RIGHT)
+	} else {
+		base = t1;
+		BLEND1(t0, CORNER_BLEND_TOP_RIGHT)
+		BLEND2(t3, CORNER_BLEND_BOTTOM_LEFT)
+	}
+	#undef BLEND1
+	#undef BLEND2
+
+	const Int ndx = yIndex*m_width + xIndex;
+	if (getTextureClass(xIndex, yIndex, true) != base) {
+		m_tileNdxes[ndx] = getTileNdxForClass(xIndex, yIndex, base);
+	}
+	if (blend1 >= 0) addCornerBlend(xIndex, yIndex, blend1, kind1);
+	if (blend2 >= 0) addCornerBlend(xIndex, yIndex, blend2, kind2);
+}
+
+void WorldHeightMapEdit::blendCorners(Int x0, Int y0, Int x1, Int y1)
+{
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 >= m_width) x1 = m_width-1;
+	if (y1 >= m_height) y1 = m_height-1;
+	clearBlends(x0, y0, x1, y1);
+
+	// One more row and column than cells: the last ones repeat the edge of the map.
+	const Int stride = m_width + 1;
+	Int *corners = new Int[stride * (m_height + 1)];
+	for (Int y = 0; y <= m_height; y++) {
+		for (Int x = 0; x <= m_width; x++) {
+			corners[y*stride + x] = getTextureClass(x < m_width ? x : m_width-1, y < m_height ? y : m_height-1, true);
+		}
+	}
+	for (Int x = x0; x <= x1; x++) {
+		for (Int y = y0; y <= y1; y++) {
+			blendCellFromCorners(x, y, corners);
+		}
+	}
+	delete[] corners;
+}
+
+void WorldHeightMapEdit::getBlendStats(Int x0, Int y0, Int x1, Int y1, Int *pBlended, Int *pThreeWay, Int *pHardEdges)
+{
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 >= m_width) x1 = m_width-1;
+	if (y1 >= m_height) y1 = m_height-1;
+	Int blended = 0, threeWay = 0, hardEdges = 0;
+	for (Int y = y0; y <= y1; y++) {
+		for (Int x = x0; x <= x1; x++) {
+			const Int ndx = y*m_width + x;
+			if (m_blendTileNdxes[ndx] != 0 || m_extraBlendTileNdxes[ndx] != 0) blended++;
+			if (m_extraBlendTileNdxes[ndx] != 0) threeWay++;
+			const Int cls = getTextureClass(x, y, true);
+			for (Int d = 0; d < 2; d++) {
+				const Int nx = d == 0 ? x+1 : x;
+				const Int ny = d == 0 ? y : y+1;
+				if (nx > x1 || ny > y1) continue;
+				const Int other = ny*m_width + nx;
+				const Int otherCls = getTextureClass(nx, ny, true);
+				if (cls == otherCls) continue;
+				if (getBlendLayerClass(m_blendTileNdxes[ndx]) == otherCls || getBlendLayerClass(m_extraBlendTileNdxes[ndx]) == otherCls) continue;
+				if (getBlendLayerClass(m_blendTileNdxes[other]) == cls || getBlendLayerClass(m_extraBlendTileNdxes[other]) == cls) continue;
+				hardEdges++;
+			}
+		}
+	}
+	*pBlended = blended;
+	*pThreeWay = threeWay;
+	*pHardEdges = hardEdges;
+}
+
 Bool WorldHeightMapEdit::optimizeTiles()
 {
 	// Run through all the tile indexes changing to tile classes.
@@ -1770,6 +2250,10 @@ Bool WorldHeightMapEdit::resize(Int newXSize, Int newYSize, Int newHeight, Int n
 							Bool anchorLeft, Bool anchorRight, Coord3D *pObjOffset)
 {
 	if (newBorder<0) newBorder = 0;
+	if (!isValidPlayableMapSize(newXSize, newYSize, newBorder)) {
+		AfxMessageBox(IDS_BAD_VALUE);
+		return(false);
+	}
 	newXSize += 2*newBorder;
 	newYSize += 2*newBorder;
 	Int newDataSize = newXSize*newYSize;
@@ -1808,7 +2292,7 @@ Bool WorldHeightMapEdit::resize(Int newXSize, Int newYSize, Int newHeight, Int n
 	Short *tileNdxes = new Short[newDataSize];
 	Short *blendTileNdxes = new Short[newDataSize];
 	Short *extraBlendTileNdxes = new Short[newDataSize];
-	HeightSampleType *data = new HeightSampleType[newDataSize];
+	HeightSampleType *data = new HeightSampleType[newDataSize + newXSize+1];
 	Short  *cliffInfoNdxes = new Short[newDataSize];
 
 	Int i, j;
@@ -1851,11 +2335,11 @@ Bool WorldHeightMapEdit::resize(Int newXSize, Int newYSize, Int newHeight, Int n
 		}
 	}
 
-	delete(m_tileNdxes);
-	delete(m_cliffInfoNdxes);
-	delete(m_blendTileNdxes);
-	delete(m_extraBlendTileNdxes);
-	delete(m_data);
+	delete[] m_tileNdxes;
+	delete[] m_cliffInfoNdxes;
+	delete[] m_blendTileNdxes;
+	delete[] m_extraBlendTileNdxes;
+	delete[] m_data;
 	m_tileNdxes = tileNdxes;
 	m_blendTileNdxes = blendTileNdxes;
 	m_extraBlendTileNdxes = extraBlendTileNdxes;
@@ -1865,13 +2349,15 @@ Bool WorldHeightMapEdit::resize(Int newXSize, Int newYSize, Int newHeight, Int n
 	m_height = newYSize;
 	m_borderSize = newBorder;
 	m_dataSize = newDataSize;
-	delete(m_cellCliffState);
-	delete(m_cellFlipState);
+	delete[] m_cellCliffState;
+	delete[] m_cellFlipState;
 	Int numBytesX = (m_width+7)/8;	//how many bytes to fit all bitflags
  	m_flipStateWidth=numBytesX;
 
 	m_cellFlipState	= MSGNEW("WorldHeightMapEdit::resize") UnsignedByte[numBytesX*m_height];
 	m_cellCliffState	= MSGNEW("WorldHeightMapEdit::resize") UnsignedByte[numBytesX*m_height];
+	memset(m_cellFlipState,0,numBytesX*m_height);
+	memset(m_cellCliffState,0,numBytesX*m_height);
 
 	// Verify index remapping
 	for(i=0; i<m_dataSize; i++) {
@@ -1887,6 +2373,149 @@ Bool WorldHeightMapEdit::resize(Int newXSize, Int newYSize, Int newHeight, Int n
 	}
 	initCliffFlagsFromHeights();
 
+	optimizeTiles();
+	return(true);
+}
+
+static Int clampIndex(Int value, Int maxValue)
+{
+	if (value < 0) return 0;
+	if (value > maxValue) return maxValue;
+	return value;
+}
+
+// Boundaries start at the lower left corner of the playable area, so cells added on that side
+// always widen them. Cells added on the far side only do when the boundary reaches that edge;
+// hand-drawn boundaries often end a few cells short of it or past it, so a small gap still counts.
+static Int resizeBoundary(Int boundary, Int oldPlayable, Int newPlayable, Int addNear, Int addFar)
+{
+	const Int NEAR_EDGE_CELLS = 5;
+	Int result = boundary + addNear;
+	if (boundary >= oldPlayable - NEAR_EDGE_CELLS) {
+		result += addFar;
+	}
+	result = clampIndex(result, newPlayable);
+	return result < 1 ? 1 : result;
+}
+
+Bool WorldHeightMapEdit::resizeBySides(Int addLeft, Int addBottom, Int addRight, Int addTop, Int newBorder, Int fillHeight, Int fillTextureClass)
+{
+	if (newBorder<0) newBorder = 0;
+	const Int oldPlayableX = m_width - 2*m_borderSize;
+	const Int oldPlayableY = m_height - 2*m_borderSize;
+	const Int newPlayableX = oldPlayableX + addLeft + addRight;
+	const Int newPlayableY = oldPlayableY + addBottom + addTop;
+	if (newPlayableX < 2 || newPlayableY < 2) {
+		return(false);
+	}
+	const Int newXSize = newPlayableX + 2*newBorder;
+	const Int newYSize = newPlayableY + 2*newBorder;
+	const Int newDataSize = newXSize*newYSize;
+	// Old index of the new index 0.
+	const Int xOffset = m_borderSize - newBorder - addLeft;
+	const Int yOffset = m_borderSize - newBorder - addBottom;
+
+	Short *tileNdxes = new Short[newDataSize];
+	Short *blendTileNdxes = new Short[newDataSize];
+	Short *extraBlendTileNdxes = new Short[newDataSize];
+	Short *cliffInfoNdxes = new Short[newDataSize];
+	// Same paranoia row as in the constructor.
+	HeightSampleType *data = new HeightSampleType[newDataSize + newXSize+1];
+	memset(data, 0, (newDataSize + newXSize+1)*sizeof(HeightSampleType));
+	const Int numBytesX = (newXSize+7)/8;	//how many bytes to fit all bitflags
+	UnsignedByte *flipState = new UnsignedByte[numBytesX*newYSize];
+	UnsignedByte *cliffState = new UnsignedByte[numBytesX*newYSize];
+	memset(flipState, 0, numBytesX*newYSize);
+	memset(cliffState, 0, numBytesX*newYSize);
+
+	Int i, j;
+	for (j=0; j<newYSize; j++) {
+		for (i=0; i<newXSize; i++) {
+			const Int newNdx = i+j*newXSize;
+			const Int oldI = i+xOffset;
+			const Int oldJ = j+yOffset;
+			// Heights live on vertices, everything else on cells. A cell is addressed by its lower
+			// left vertex, so the last row and column have no cell.
+			const Bool vertexInRange = oldI>=0 && oldI<m_width && oldJ>=0 && oldJ<m_height;
+			const Bool cellInRange = oldI>=0 && oldI<m_width-1 && oldJ>=0 && oldJ<m_height-1;
+			if (vertexInRange || fillHeight<0) {
+				data[newNdx] = m_data[clampIndex(oldI, m_width-1) + clampIndex(oldJ, m_height-1)*m_width];
+			} else {
+				data[newNdx] = (HeightSampleType)snapHeight(fillHeight, fillHeight);
+			}
+			const Int oldNdx = clampIndex(oldI, m_width-2) + clampIndex(oldJ, m_height-2)*m_width;
+			if (cellInRange) {
+				tileNdxes[newNdx] = m_tileNdxes[oldNdx];
+				blendTileNdxes[newNdx] = m_blendTileNdxes[oldNdx];
+				extraBlendTileNdxes[newNdx] = m_extraBlendTileNdxes[oldNdx];
+				cliffInfoNdxes[newNdx] = m_cliffInfoNdxes[oldNdx];
+				const UnsignedByte bit = (UnsignedByte)(1<<(i&0x7));
+				if (getFlipState(oldI, oldJ)) flipState[j*numBytesX + (i>>3)] |= bit;
+				if (getCliffState(oldI, oldJ)) cliffState[j*numBytesX + (i>>3)] |= bit;
+			} else {
+				tileNdxes[newNdx] = m_tileNdxes[oldNdx];
+				const Int texClass = fillTextureClass >= 0 ? fillTextureClass : getTextureClassFromNdx(m_tileNdxes[oldNdx]);
+				if (texClass >= 0) {
+					// Tiles depend on the cell position inside the texture. Use the position the cell
+					// would have in the old map, so the new cells continue the old tiling.
+					const Int period = 2*m_globalTextureClasses[texClass].width;
+					Int tileX = oldI, tileY = oldJ;
+					if (period > 0) {
+						tileX = ((oldI % period) + period) % period;
+						tileY = ((oldJ % period) + period) % period;
+					}
+					tileNdxes[newNdx] = getTileNdxForClass(tileX, tileY, texClass);
+				}
+				blendTileNdxes[newNdx] = 0;
+				extraBlendTileNdxes[newNdx] = 0;
+				cliffInfoNdxes[newNdx] = 0;
+			}
+		}
+	}
+
+	delete[] m_tileNdxes;
+	delete[] m_cliffInfoNdxes;
+	delete[] m_blendTileNdxes;
+	delete[] m_extraBlendTileNdxes;
+	delete[] m_data;
+	delete[] m_cellCliffState;
+	delete[] m_cellFlipState;
+	const Int oldWidth = m_width;
+	const Int oldHeight = m_height;
+	m_tileNdxes = tileNdxes;
+	m_blendTileNdxes = blendTileNdxes;
+	m_extraBlendTileNdxes = extraBlendTileNdxes;
+	m_cliffInfoNdxes = cliffInfoNdxes;
+	m_data = data;
+	m_cellFlipState = flipState;
+	m_cellCliffState = cliffState;
+	m_flipStateWidth = numBytesX;
+	m_width = newXSize;
+	m_height = newYSize;
+	m_borderSize = newBorder;
+	m_dataSize = newDataSize;
+
+	// Old cells keep their passability; new cells get it from their heights.
+	for (j=0; j<m_height-1; j++) {
+		for (i=0; i<m_width-1; i++) {
+			const Int oldI = i+xOffset;
+			const Int oldJ = j+yOffset;
+			if (oldI<0 || oldI>=oldWidth-1 || oldJ<0 || oldJ>=oldHeight-1) {
+				setCellCliffFlagFromHeights(i, j);
+			}
+		}
+	}
+
+	for (size_t b=0; b<m_boundaries.size(); b++) {
+		ICoord2D &boundary = m_boundaries[b];
+		if (boundary.x == 0 || boundary.y == 0) {
+			continue;
+		}
+		boundary.x = resizeBoundary(boundary.x, oldPlayableX, newPlayableX, addLeft, addRight);
+		boundary.y = resizeBoundary(boundary.y, oldPlayableY, newPlayableY, addBottom, addTop);
+	}
+
+	setDrawOrg(0,0);
 	optimizeTiles();
 	return(true);
 }
@@ -2542,7 +3171,68 @@ Bool WorldHeightMapEdit::doCliffAdjustment(Int xIndex, Int yIndex)
 		}
 
 	}
+	delete [] pProcessed;
 	return(true);
+}
+
+Bool WorldHeightMapEdit::isCliffCell(Int xIndex, Int yIndex)
+{
+	if (xIndex<0 || yIndex<0 || xIndex>=m_width-1 || yIndex>=m_height-1) return false;
+	Int ndx = (yIndex*m_width)+xIndex;
+	Int h0 = m_data[ndx];
+	Int h1 = m_data[ndx+1];
+	Int h2 = m_data[ndx+m_width+1];
+	Int h3 = m_data[ndx+m_width];
+	Int maxH = IABS(h0-h1);
+	if (IABS(h1-h2)>maxH) maxH = IABS(h1-h2);
+	if (IABS(h2-h3)>maxH) maxH = IABS(h2-h3);
+	if (IABS(h3-h0)>maxH) maxH = IABS(h3-h0);
+	return maxH*HEIGHT_SCALE > STRETCH_LIMIT/2.0f;
+}
+
+Int WorldHeightMapEdit::mapCliffs(Int x0, Int y0, Int x1, Int y1)
+{
+	Int regions = 0;
+	for (Int y=y0; y<=y1; y++) {
+		for (Int x=x0; x<=x1; x++) {
+			if (!isCliffCell(x, y) || m_cliffInfoNdxes[(y*m_width)+x]) continue;
+			// A cell without a known texture is left out.
+			if (doCliffAdjustment(x, y)) regions++;
+		}
+	}
+	return regions;
+}
+
+void WorldHeightMapEdit::clearCliffMapping(Int x0, Int y0, Int x1, Int y1)
+{
+	for (Int y=y0; y<=y1; y++) {
+		for (Int x=x0; x<=x1; x++) {
+			m_cliffInfoNdxes[(y*m_width)+x] = 0;
+		}
+	}
+	Bool anyLeft = false;
+	for (Int ndx=0; ndx<m_dataSize && !anyLeft; ndx++) {
+		anyLeft = m_cliffInfoNdxes[ndx] != 0;
+	}
+	if (!anyLeft) m_numCliffInfo = 1;
+}
+
+Bool WorldHeightMapEdit::getCliffCell(Int xIndex, Int yIndex, TCliffInfo *pInfo, Int *pClass, Real *pExtent)
+{
+	Int cliffNdx = m_cliffInfoNdxes[(yIndex*m_width)+xIndex];
+	if (cliffNdx==0) return false;
+	*pInfo = m_cliffInfo[cliffNdx];
+	*pClass = getTextureClassFromNdx(pInfo->tileIndex);
+	if (*pClass<0) return false;
+	*pExtent = m_globalTextureClasses[*pClass].width*TILE_PIXEL_EXTENT;
+	*pExtent /= TEXTURE_WIDTH;
+	return true;
+}
+
+void WorldHeightMapEdit::setCliffCell(Int xIndex, Int yIndex, const TCliffInfo &info)
+{
+	Int cliffNdx = m_cliffInfoNdxes[(yIndex*m_width)+xIndex];
+	if (cliffNdx) m_cliffInfo[cliffNdx] = info;
 }
 
 /******************************************************************
@@ -3375,6 +4065,7 @@ void WorldHeightMapEdit::findBoundaryNear(Coord3D *pt, float okDistance, Int *ou
 
 	if (!pt) {
 		(*outNdx) = -1;
+		return;
 	}
 
 	int numBoundaries = m_boundaries.size();

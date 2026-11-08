@@ -114,6 +114,9 @@ void GameWindowManager::processDestroyList()
 		if( m_grabWindow == doDestroy )
 			m_grabWindow = nullptr;
 
+		if( m_popupWindow == doDestroy )
+			m_popupWindow = nullptr;
+
 		// send the destroy message to the window we're about to kill
 		winSendSystemMsg( doDestroy, GWM_DESTROY, 0, 0 );
 
@@ -192,6 +195,8 @@ GameWindowManager::GameWindowManager()
 	m_modalHead = nullptr;			// top of windows in the modal stack
 	m_grabWindow = nullptr;			// window that grabbed the last down event
 	m_loneWindow = nullptr;		// Set if we just opened a combo box
+	m_popupWindow = nullptr;
+	m_drawingPopup = FALSE;
 
 	m_cursorBitmap = nullptr;
 	m_captureFlags = 0;
@@ -1000,7 +1005,11 @@ WinInputReturnCode GameWindowManager::winProcessMouseEvent( GameWindowMessage ms
 		else
 		{
 
-			if( m_modalHead && m_modalHead->window )
+			window = popupWindowAt( mousePos->x, mousePos->y, FALSE );
+			if( window )
+			{
+			}
+			else if( m_modalHead && m_modalHead->window )
 			{
 				window = m_modalHead->window->winPointInChild( mousePos->x, mousePos->y );
 			}
@@ -1279,6 +1288,10 @@ Int GameWindowManager::drawWindow( GameWindow *window )
 	if( window == nullptr )
 		return WIN_ERR_INVALID_WINDOW;
 
+	// The popup is drawn by winRepaint after everything else.
+	if( window == m_popupWindow && !m_drawingPopup )
+		return WIN_ERR_OK;
+
 	if( BitIsSet( window->m_status, WIN_STATUS_HIDDEN ) == FALSE )
 	{
 
@@ -1348,6 +1361,14 @@ void GameWindowManager::winRepaint()
 
 		if( BitIsSet( window->m_status, WIN_STATUS_ABOVE ) )
 			drawWindow( window );
+	}
+
+	// draw the popup on top of all
+	if( isPopupShown() )
+	{
+		m_drawingPopup = TRUE;
+		drawWindow( m_popupWindow );
+		m_drawingPopup = FALSE;
 	}
 
 	if(TheTransitionHandler)
@@ -3586,6 +3607,31 @@ UnicodeString GameWindowManager::winTextLabelToText( AsciiString label )
 }
 
 //-------------------------------------------------------------------------------------------------
+Bool GameWindowManager::isPopupShown()
+{
+	for( GameWindow *window = m_popupWindow; window; window = window->m_parent )
+		if( BitIsSet( window->m_status, WIN_STATUS_HIDDEN | WIN_STATUS_DESTROYED ) )
+			return FALSE;
+	return m_popupWindow != nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+GameWindow *GameWindowManager::popupWindowAt( Int x, Int y, Bool ignoreEnabled )
+{
+	if( !isPopupShown() )
+		return nullptr;
+	if( !ignoreEnabled && !BitIsSet( m_popupWindow->m_status, WIN_STATUS_ENABLED ) )
+		return nullptr;
+
+	ICoord2D origin;
+	m_popupWindow->winGetScreenPosition( &origin.x, &origin.y );
+	if( x < origin.x || x > origin.x + m_popupWindow->m_size.x ||
+			y < origin.y || y > origin.y + m_popupWindow->m_size.y )
+		return nullptr;
+	return m_popupWindow->winPointInChild( x, y, ignoreEnabled );
+}
+
+//-------------------------------------------------------------------------------------------------
 /** find the top window at the given coordinates */
 //-------------------------------------------------------------------------------------------------
 GameWindow *GameWindowManager::getWindowUnderCursor( Int x, Int y, Bool ignoreEnabled )
@@ -3602,7 +3648,10 @@ GameWindow *GameWindowManager::getWindowUnderCursor( Int x, Int y, Bool ignoreEn
 		return m_grabWindow->winPointInChild( x, y, ignoreEnabled );
 	}
 
-	GameWindow *window = nullptr;
+	GameWindow *window = popupWindowAt( x, y, ignoreEnabled );
+	if( window )
+		return window;
+
 	if( m_modalHead && m_modalHead->window )
 	{
 		return m_modalHead->window->winPointInChild( x, y, ignoreEnabled );

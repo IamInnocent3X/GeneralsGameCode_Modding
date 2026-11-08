@@ -33,6 +33,7 @@
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/FramePacer.h"
 #include "Common/GameAudio.h"
+#include "Common/GameUtility.h"
 #include "Common/MapObject.h"							// For MAP_XY_FACTOR
 #include "Common/PartitionSolver.h"
 #include "Common/Player.h"
@@ -81,6 +82,7 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/ScriptActions.h"
+#include "GameClient/PostProcess.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Weapon.h"
 #include "GameLogic/VictoryConditions.h"
@@ -3857,16 +3859,8 @@ void ScriptActions::doPlayerExitAllBuildings(const AsciiString& playerName)
 //-------------------------------------------------------------------------------------------------
 void ScriptActions::doLetterBoxMode(Bool startLetterbox)
 {
-	if (startLetterbox)
-	{
-		HideControlBar(TRUE);
-		TheDisplay->enableLetterBox(TRUE);
-	}
-	else
-	{
-		ShowControlBar(FALSE);
-		TheDisplay->enableLetterBox(FALSE);
-	}
+	TheScriptEngine->friend_notifyLetterBoxActive(startLetterbox);
+	rts::enableLetterBox(startLetterbox);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3913,6 +3907,25 @@ void ScriptActions::doSkyBox(Bool startDraw)
 void ScriptActions::doWeather(Bool showWeather)
 {
 	TheSnowManager->setVisible(showWeather);
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Sets or fades a parameter of a post-processing pass; values are 1 to 4 numbers separated by spaces. */
+//-------------------------------------------------------------------------------------------------
+void ScriptActions::doPostProcessSetParameter(const AsciiString& pass, const AsciiString& name, const AsciiString& values, Real seconds)
+{
+	Real numbers[4];
+	Int count = 0;
+	AsciiString rest = values;
+	AsciiString token;
+	while (count < 4 && rest.nextToken(&token, " ,\t"))
+		numbers[count++] = (Real)atof(token.str());
+	if (count == 0)
+	{
+		DEBUG_LOG(("POSTPROCESS_SET_PARAMETER %s %s: no numbers in '%s'", pass.str(), name.str(), values.str()));
+		return;
+	}
+	ThePostProcessControl.setParameter(pass, name, numbers, count, seconds);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5337,6 +5350,13 @@ void ScriptActions::doMoveUnitTowardsNearest( const AsciiString& unitName, const
 		}
 	}
 
+	// Without an object the move goes to the cleared goal position (0,0), and the unit searches a path
+	// to the map corner again and again.
+	if( !bestObj )
+	{
+		return;
+	}
+
 	ai->chooseLocomotorSet( LOCOMOTORSET_NORMAL );
 	ai->aiMoveToObject( bestObj, CMD_FROM_SCRIPT );
 }
@@ -5424,6 +5444,11 @@ void ScriptActions::doMoveTeamTowardsNearest( const AsciiString& teamName, const
 				}
 			}
 		}
+	}
+	// See doMoveUnitTowardsNearest: no object means a move to (0,0).
+	if( !bestObj )
+	{
+		return;
 	}
 	for( iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
 	{
@@ -6636,6 +6661,19 @@ void ScriptActions::executeAction( ScriptAction *pAction )
 			return;
 		case ScriptAction::SKIRMISH_BUILD_SHIPYARD:
 			doBuildShipyard(pAction->getParameter(0)->getString());
+			return;
+		case ScriptAction::POSTPROCESS_SET_PARAMETER:
+			doPostProcessSetParameter(pAction->getParameter(0)->getString(), pAction->getParameter(1)->getString(),
+				pAction->getParameter(2)->getString(), pAction->getParameter(3)->getReal());
+			return;
+		case ScriptAction::POSTPROCESS_ENABLE_PASS:
+			ThePostProcessControl.enablePass(pAction->getParameter(0)->getString(), pAction->getParameter(1)->getInt() != 0);
+			return;
+		case ScriptAction::POSTPROCESS_USE_CHAIN:
+			ThePostProcessControl.useChain(pAction->getParameter(0)->getString());
+			return;
+		case ScriptAction::SHADOWMAP_SET_DARKNESS:
+			ThePostProcessControl.setShadowDarkness(pAction->getParameter(0)->getReal(), pAction->getParameter(1)->getReal());
 			return;
 		case ScriptAction::RECRUIT_TEAM:
 			doRecruitTeam(pAction->getParameter(0)->getString(), pAction->getParameter(1)->getReal());

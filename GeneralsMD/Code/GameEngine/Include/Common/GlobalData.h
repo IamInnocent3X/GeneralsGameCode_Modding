@@ -59,6 +59,8 @@ constexpr const Int MAX_GLOBAL_LIGHTS = 3;
 constexpr const Int SIMULATE_REPLAYS_SEQUENTIAL = -1;
 
 //-------------------------------------------------------------------------------------------------
+// Command-line parsing state is stored here instead of in CommandLine because
+// the parsing result belongs to the GlobalData instance created during startup.
 class CommandLineData
 {
 	friend class CommandLine;
@@ -71,6 +73,7 @@ class CommandLineData
 
 	Bool m_hasParsedCommandLineForStartup;
 	Bool m_hasParsedCommandLineForEngineInit;
+	BoolVector m_parsedArguments;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -132,8 +135,10 @@ public:
 	Bool m_useDrawModuleLOD;
 	Bool m_useHeatEffects;
 	Bool m_useFpsLimit;
+	Bool m_useRenderInterpolation;	///< draw objects between their last two logic positions, for smooth motion above the logic frame rate
 	Bool m_dumpAssetUsage;
 	Int m_framesPerSecondLimit;
+	Int m_renderFramesPerSecondLimit;	///< single player render fps cap independent of the game speed; 0 = the game speed is the render fps cap
 	Int	m_chipSetType;	///<See W3DShaderManager::ChipsetType for options
 
 	// TheSuperHackers @feature helmutbuhler 11/04/2025
@@ -375,6 +380,8 @@ public:
 	Bool m_buildMapCache;
 	AsciiString m_initialFile;				///< If this is specified, load a specific map from the command-line
 	AsciiString m_pendingFile;				///< If this is specified, use this map at the next game start
+	AsciiString m_loadSaveGame;				///< If this is specified, load a save game file from the command-line
+	AsciiString m_loadReplayGame;			///< If this is specified, play a replay file from the command-line
 
 	std::vector<AsciiString> m_simulateReplays; ///< If not empty, simulate this list of replays and exit.
 	Int m_simulateReplayJobs; ///< Maximum number of processes to use for simulation, or SIMULATE_REPLAYS_SEQUENTIAL for sequential simulation
@@ -424,6 +431,7 @@ public:
 																			 smaller area within the rectangle to order the gather. */
 
 	UnsignedInt m_antiAliasLevel;          ///< value of selected antialias level in the game options
+	Bool m_postProcessing;                 ///< run the PostProcess chain of the INI (Direct3D 12 renderer only)
 	UnsignedInt m_textureFilteringMode;       ///< value related to TextureFilterClass::TextureFilterModeEnum
 	UnsignedInt m_textureAnisotropyLevel;     ///< value related to TextureFilterClass::AnisotropicFilterMode
 

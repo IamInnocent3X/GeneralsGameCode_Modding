@@ -1,0 +1,322 @@
+# WorldBuilder MCP server
+
+Lets an MCP client (Claude Code, Claude Desktop, ...) edit the map that is open in Zero Hour
+WorldBuilder: terrain heights and textures, objects, players, waypoints, water and trigger areas,
+roads, scripts and teams, map settings, save/load and 3D screenshots.
+
+```
+MCP client  <-- stdio -->  server.py  <-- TCP 127.0.0.1:47800, JSON lines -->  WorldBuilderZH.exe -mcp
+```
+
+The C++ side lives in `GeneralsMD/Code/Tools/WorldBuilder/src/mcp/`. WorldBuilder runs every command
+on its UI thread and records each edit as a normal undo step.
+
+## Setup
+
+1. Build `z_worldbuilder` and start it with the bridge enabled:
+
+   ```
+   WorldBuilderZH.exe -mcp              # port 47800
+   WorldBuilderZH.exe -mcpport:47801    # custom port
+   ```
+
+   Setting the `WB_MCP_PORT` environment variable also enables it. The bridge only listens on
+   localhost.
+
+   Add `-ignoreAsserts` to log debug-build assertions instead of showing blocking dialogs. A
+   dialog opened during a command stalls the bridge until the command times out.
+
+2. Install [uv](https://docs.astral.sh/uv/) (`winget install astral-sh.uv`). The dependencies are
+   declared in `pyproject.toml`. uv creates `scripts/worldbuilder-mcp/.venv` and keeps it in sync
+   on first run, and `uv.lock` pins the exact versions.
+
+   ```
+   uv sync --directory scripts/worldbuilder-mcp
+   ```
+
+3. Register the server. The repo root `.mcp.json` already does this for Claude Code
+   (`uv run --directory scripts/worldbuilder-mcp server.py`). Other clients can use the same
+   command over stdio. Set `WB_MCP_PORT` in the server's environment if you use a custom port.
+
+## Checking the bridge without MCP
+
+```
+uv run --directory scripts/worldbuilder-mcp smoke_test.py
+```
+
+The bridge serves one client at a time, so run this before an MCP client has connected to
+WorldBuilder (or with the MCP server stopped). Otherwise it waits for the connection.
+
+This creates a new map and discards unsaved changes in the open one. It then exercises every
+command area, saves the map to a temp folder, reopens it and verifies it.
+
+## Protocol
+
+Each request is one line: `{"id": 1, "cmd": "map.info", "args": {}}`. The reply is
+`{"id": 1, "ok": true, "result": {...}}` or `{"id": 1, "ok": false, "error": "..."}`.
+`list_commands` lists every command with a short argument summary.
+
+WorldBuilder rejects commands while a modal dialog is open or a mouse drag is in progress.
+
+## Notes
+
+- **World coordinates.** One terrain cell is 10 world units. (0,0) is the lower-left corner of the
+  playable area.
+- **Heights.** Raw heights are 0..255; world height is raw × 0.625.
+  - A `map.ini` next to the map can set `HeightMapScale` for taller terrain. Raw heights then go up to 255 × scale.
+  - The map file still stores bytes, so heights are always multiples of the scale. Edits snap to them.
+  - Heightmap PNGs hold the stored bytes (raw ÷ scale).
+- **Undo.** WorldBuilder keeps 15 undo steps. Waypoint links are not undoable (same as in the UI).
+- **Screenshots.** They render the 3D view, so the WorldBuilder window must not be minimized.
+- **Direct3D 12 effects.** Started with `-dx12`, WorldBuilder shows the game's post-processing, materials and shadow maps (same INI files, plus the map's `map.ini` render blocks). View > Show Post-Processing (DX12) turns post-processing off; View > Reload Post-Processing and Materials (DX12) reads the INI files, shaders and the map's `map.ini` again after editing them (new files need a restart). `view_render` switches each effect on or off and reports what runs; without `-dx12` they do nothing.
+- **Symmetry.** `map_transform` mirrors or rotates the whole map. `map_symmetrize` copies one half or quarter onto the rest.
+  - Both carry heights, textures with correctly oriented blends, passability, objects, waypoints with their links, and areas.
+  - Player numbers in names and owners are renumbered for each copy.
+  - Cliff texture mapping is reset on copied cells.
+  - The mirroring approach follows the Genesis map tools (The CWC Team, Apache-2.0).
+- **Resize.** `map_resize` grows or crops the map, by a new size with an anchor or by cells per side.
+  - Terrain, textures, passability, objects, waypoints, roads, areas, water and build lists keep their place on the terrain.
+  - New cells continue the old edge, or get a fixed height and texture.
+  - Objects and waypoints that fall off the map can be removed. Areas that cover the whole map, like Default Water, are refit.
+  - Unlike WorldBuilder's own File > Resize it also moves areas and updates the map boundary.
+- **Usage and bulk replace.** `map_usage` lists what a map uses; `map_replace` swaps names everywhere in one undo step.
+  - `map_usage` lists textures, object templates and road types, and flags templates the game does not know.
+  - `map_replace` takes `{from: to}` mappings for textures (blends are kept), object templates and road types.
+  - It can also read Genesis-style "from to" list files, and has a dry run.
+- **Road routing.** `roads_route` finds its own way from A to B, optionally through via points.
+  - It goes around cliffs, water, structures and named areas, prefers gentle slopes and refuses steep steps.
+  - Unneeded bends are removed, but a shortcut is never allowed to be noticeably steeper than the routed path.
+  - By default it levels the ground under the road to a smoothed profile.
+  - Road and terrain change are one undo step.
+- **Scattering.** `objects_scatter` places decoration such as trees and rocks at random.
+  - It takes weighted templates and a count or density, and can group objects into noise-driven groves.
+  - It keeps clear of roads, building footprints, start positions, cliffs and water.
+  - Optional filters limit it by texture, slope or named area.
+- **Start positions.** `map_generate_starts` places `Player_<N>_Start` waypoints for 2 to 8 players, evenly spaced around the map center.
+  - The first player sits in the lower-left corner unless an angle is given; `distance` pulls all starts toward the center.
+  - Each base area is flattened with a feathered edge, and lifted above water if needed.
+  - Existing start waypoints are replaced. It fails if the bases would overlap.
+- **Skirmish AI.** `ai_skirmish_setup` creates what the AI looks up by name for every `Player_<N>_Start`. `ai_skirmish_check` reports what is missing.
+  - Areas: `InnerPerimeter<N>` and `OuterPerimeter<N>`, plus a `CombatZone`.
+  - Paths: approach paths into each base, labelled `Center<N>`, `Flank<N>` and `Backdoor<N>`.
+- **Scripts and teams.** The `scripts_*` tools do what the script editor (Edit > Scripts) does, without its window.
+  - `scripts_list` and `scripts_get` read; `scripts_add`, `scripts_update`, `scripts_delete` and `scripts_move` write. Groups have their own tools.
+  - A script is JSON: flags, `conditions` (a list of OR clauses, each a list of ANDed conditions), `actions` and `false_actions`.
+  - `scripts_list_actions` and `scripts_list_conditions` list the types with their parameter types. Parameters are given in order.
+  - `scripts_list_values` lists what a parameter accepts (upgrades, sciences, special powers, command buttons, object types, ...); `teams_list_properties` lists the team properties with their types.
+  - `scripts_copy`, `teams_copy` and `scripts_clone_player` duplicate; the last one derives a whole faction's scripts and teams from another, with name replacements.
+  - `scripts_rename` renames a script, group, team, flag, counter or any named value together with its references in scripts and teams.
+  - `scripts_build_order`, `scripts_trace` and `scripts_by_difficulty` read a set from one angle: what is built when, what a team or script sets in motion, what belongs to which difficulty.
+  - `objects_info` gives unit and structure stats (cost, KindOf, where it is built); `buildlist_*` edits the players' build lists.
+  - `faction_generate` writes a planning description of a faction to `worldbuilder_factions/` next to the WorldBuilder executable, so it stays with the game data it describes (`WB_MCP_FACTION_DIR` or `directory` name another folder, relative to the executable): `<Faction>.generated.json` with the cleaned facts plus tiers, build paths, combat numbers and guessed roles; `<Faction>.overrides.yaml` for hand tuning (slots, roles, phases, notes), written once and then left alone; `<Faction>.doctrine.md` for prose. `faction_get` reads it back in views (overview, tree, units, naval, single types, upgrades, sciences, special powers). Ships and shipyards have roles and slots of their own, and every unit's damage is also given against ship and submarine armor.
+  - `ai_framework_generate` compares the AI players of the open map and writes the skeleton they share to `ai_framework.generated.json`: scripts that are identical everywhere, scripts that differ only in some parameters (kept as templates), shared flags, counters and timers with their writers and readers, team roster and hooks, object lists, and the waypoint paths and areas expected of a map. `ai_framework_get` reads it in views.
+  - `faction_map` finds the counterparts of one faction's types, upgrades, sciences, special powers and buttons in another; `ai_scaffold` uses it to derive a new player's AI from an existing one, keeping the shared framework scripts and translating the rest. It is a dry run unless told otherwise and lists what has no counterpart.
+  - `aidata_get` reads `AIData.ini`: global AI settings and per side the gatherer counts, base defense structure, science skill sets and the `SkirmishBuildList`, the base layout that decides where build scripts place structures. `buildlist_from_aidata` loads a side's layout into a map player's build list for viewing and editing; `buildlist_export` writes a player's build list as a `SkirmishBuildList` block, optionally into an `AIData.ini` (with a backup). `aidata_set_side` changes a side's `SideInfo` (gatherers, base defense, skill sets) line by line, so comments and untouched lines stay; it shows a diff and writes only when given the file to change.
+  - `ai_match_run` lets the game play a skirmish between AI players on its own (`generalszh.exe -aiMatch -headless`: no window, only the game logic, as fast as the machine allows; a window on request) and writes a log; It can play with the scripts open in WorldBuilder or another `.scb` file, and with a changed `AIData.ini`, without installing either. `ai_match_report` reads it: per player the build timeline, what was never built, teams started, sciences and upgrades bought, scripts and teams that never ran, and what the script engine reported.
+  - Ships: `map_info` shows and `map_set_info` sets `EnableShips` of the map's `map.ini`; `ai_skirmish_check` reports the shipyard waypoints, naval areas and naval paths per player; `faction_check` knows `SKIRMISH_BUILD_SHIPYARD` and wants naval scripts and teams to ask `SKIRMISH_SHIPS_ENABLED`.
+  - `faction_check` checks a player's teams and build scripts against that description: types the faction cannot build, structures a team needs but no script builds, build limits, foreign upgrades, sciences and buttons, and what the AI never uses.
+  - `faction_describe` gives a faction's tech tree and unit stats from the game data: what builds what, prerequisites, cost, build time, health, armor, weapons with damage per second, movement, upgrades, sciences and special powers. With `path` it writes a JSON file.
+  - `scripts_list_templates` and `scripts_apply_template` create ready-made script and team combinations from `presets/script_templates.json`.
+  - `scripts_report` writes a Markdown report of one player's AI.
+  - `scripts_compare` shows how two players' scripts and teams differ, or how the map differs from a dump file.
+  - `scripts_set_values` and `teams_set_many` change one kind of value in many scripts or teams (set, add, multiply), with a dry run.
+  - `teams_summary` gives a faction's army in numbers: unit usage with costs, team sizes, priorities.
+  - `scripts_missing` groups broken references by the missing name and suggests the closest existing ones.
+  - `scripts_batch` runs many edits as one undo step, all or nothing.
+  - `scripts_dump` and `scripts_load` write and read everything as readable JSON, for review, diffs and bulk edits.
+  - `scripts_analyze` looks for dead logic: unused subroutines, flags and counters used one-sided, teams never built.
+  - `sides_set` and `sides_delete` change, rename and remove players.
+  - `scripts_find` searches inside scripts and team properties: by parameter value, wording, type or parameter type.
+  - `scripts_verify` runs the editor's checks for references to things that do not exist. Edits report the same warnings.
+  - `scripts_export` and `scripts_import` write and read `.scb` files with scripts, players and teams, and on request the waypoints, areas and units they need. An existing file is only replaced on request, and a dated backup is kept.
+  - AI script sets such as `SkirmishScripts.scb` are edited by importing them into a map, changing them and exporting again.
+  - `teams_list` shows teams in short form (units with counts, priority, the scripts they name); `teams_get`, `teams_set` and `teams_delete` edit team templates as property dicts.
+  - On large sets `scripts_list` reduces its detail by itself; `detail`, `player` and `group` control it.
+  - Like the editor, each edit replaces the whole sides list as one undo step. Edits are refused while the script editor window is open, because its OK would overwrite them.
+- **Procedural terrain.** A typical sequence is `terrain_generate`, then `terrain_limit_slope`, then `terrain_auto_texture`.
+  - `terrain_generate` builds heights from layered, seeded Perlin noise. It can protect spots such as base locations.
+  - `terrain_limit_slope` turns spikes into walkable slopes.
+  - `terrain_auto_texture` textures cells as ground, cliff or water, scatters noise overlays and blends the edges.
+  - `terrain_reblend` removes all blends and blends all textures again from the cell corners, as the Genesis map tools do: the usual last step after painting, with smooth diagonals. `terrain_blend_all` blends chosen textures outward and keeps existing blends, and `terrain_remove_blends` only removes them.
+  - `terrain_blend_report` counts blended cells, 3-way tiles (cells with a second blend layer, drawn in an extra pass) and hard edges that neither side blends across.
+  - `terrain_cliff_map` maps textures onto steep cells so walls are not stretched, as WorldBuilder's cliff tool does, for the whole map at once. Run it last: painting removes mapping, and height edits leave it out of date. `terrain_cliff_report` counts cells that leave their texture, `terrain_cliff_repair` fixes mapping that exists, `terrain_cliff_clear` removes it. See "Why cliff mapping shows black gaps" below.
+  - Layouts and sceneries are JSON presets in `presets/` (`terrain_list_presets`), taken from Genesis. See `NOTICE`.
+- **Terrain images.** Heightmap and mask PNGs have north at the top.
+  - Heightmaps have one pixel per heightmap vertex, and the pixel value is the raw height. 16-bit images are accepted on import.
+  - Masks have one pixel per cell.
+  - Relative paths are resolved by the Python server, not by WorldBuilder.
+
+# Game MCP server
+
+`game_server.py` drives the running game the same way: Claude starts a skirmish as the local
+player, alone in a sandbox or against AI players, pauses and steps it, looks at every object and
+player, gives orders, changes things for a test and takes screenshots.
+
+```
+MCP client  <-- stdio -->  game_server.py  <-- TCP 127.0.0.1:47801, JSON lines -->  generalszh.exe -mcp
+```
+
+The C++ side lives in `GeneralsMD/Code/GameEngine/Source/Common/Mcp/`. It is compiled only with the
+CMake option `RTS_BUILD_OPTION_GAME_MCP` (default ON) and listens only when the game is started with
+`-mcp`. Commands run on the game's main thread between two logic frames.
+
+## Starting the game
+
+`game_launch` starts `generalszh.exe` from the mod folder in the `GAME_DIR` environment variable (set
+it per user in the git-ignored `.claude/settings.local.json`, under `env`; set `GAME_EXE` for another
+executable name) and waits until the map has loaded. By hand:
+
+```
+generalszh.exe -mcp -mcpGame "armed neighbors" -mcpPlayers FactionAmerica,FactionChina:hard -mcpStartPaused -win -quickstart -ignoreAsserts
+```
+
+| Option | Meaning |
+|---|---|
+| `-mcp` / `-mcpport:N` | Enable the bridge on port 47801 / N. |
+| `-mcpGame <map>` | Start a skirmish on that map (map name or part of its path). |
+| `-mcpPlayers <list>` | `Faction[:team]` of the local player (or `Observer`), then AI players as `Faction:difficulty[:team]`. Only the local player: a sandbox in which nobody wins or loses. |
+| `-mcpCash <n>` | Starting money. |
+| `-mcpStartPaused` | Pause as soon as the game has started. |
+| `-seed <n>` | Random seed (start positions, everything random). |
+| `-headless` | Only the game logic: no window, no screenshots, as fast as allowed by `game_set_speed`. |
+
+`-mcp` also works with `-aiMatch` (to look into an AI match) or a game started from the menu.
+
+## Tools
+
+- **Time:** `game_status`, `game_pause`, `game_resume`, `game_step` (frames or seconds, then pause; waits until done), `game_set_speed` (30 = normal, 0 = as fast as possible; `render_fps` renders at its own rate while the logic keeps `fps`, 0 = uncapped; without it, `RenderFramesPerSecondLimit` in GameData.ini already renders single player games at its own rate, shown as `render_fps_limit` in `game_status`), `game_save` / `game_load` (save files in the save directory, like the in-game menu; windowed games only; load pauses), `game_quit`.
+- **Looking:** `objects_list` (filter by player, template, kindof, status, area), `objects_get` (status, disabled, kindof, veterancy, AI state, weapons, upgrades, bonuses such as weapon bonus conditions and armor/sight/speed scalars, special powers, production, passengers, behavior modules, model conditions), `objects_templates`, `players_list`, `players_get` (also battle plan counts), `game_messages` (what the script engine and the AI reported).
+- **Orders** (as the owning player would click them; recorded in the replay; carried out on the next logic frame): `orders_move`, `orders_attack`, `orders_stop`, `orders_guard`, `orders_sell`, `orders_build`, `orders_produce`, `orders_upgrade`, `orders_special_power`, `orders_purchase_science`.
+- **Test changes** (direct, not in the replay): `objects_spawn`, `objects_destroy`, `objects_set` (health, position, veterancy, upgrade, status), `players_set` (money, rank, points, sciences, upgrades, instant build, special power delays).
+- **Scripts:** `scripts_run`, `scripts_set_active`, `scripts_flags`, `scripts_counters`; `scripts_action` runs a single script action by internal name with its parameters, without a script.
+- **View** (window only, not minimized): `view_camera`, `view_screenshot`, `view_display_mode` (resolution or windowed mode, not saved; resets the graphics device).
+- **Post-processing** (Direct3D 12 renderer, `game_launch(..., extra_args=["-dx12"])`): `render_postprocess` turns the chain on or off, reloads `Data\INI\PostProcess.ini` and the shaders, or tunes a parameter of a running pass live. The chain is a list of `PostProcessPass` blocks (HLSL pixel shaders from `Data\Shaders\PostProcess\<Shader>.hlsl` or the built-in `PP_Copy`, `PP_BloomExtract`, `PP_Blur`, `PP_ColorGrade`, `PP_EdgeAA`, `PP_SharpenVignette`, `PP_Luminance` and `PP_AutoExposure` (auto exposure into `PP_ColorGrade`'s Input4), and on the scene depth `PP_SSAO`, `PP_DepthBlur`, `PP_Fog`, `PP_DepthOfField`, `PP_DepthView`; inputs are `Scene`, `Depth`, `None`, `Previous` (the pass's own output of the frame before), earlier passes or `Texture:<file>`, up to six; `Scale = 0` makes a one-pixel output) and a `PostProcess` block with `Passes = ...` (and `HDRScene = Yes` to draw the scene in 16 bit float for `PP_ColorGrade`'s `Tonemap`); the format is described in `Core/GameEngine/Include/GameClient/PostProcess.h`. The player option is `PostProcessing = yes/no` in Options.ini (gadget `OptionsMenu.wnd:CheckPostProcessing`). Per map and over time: a map's `map.ini` can hold `PostProcessPass`, `PostProcess`, `PostProcessChain` and `ShadowMap` blocks for that map only (the mod's settings come back when the game ends); `ParamMorning`/`ParamAfternoon`/`ParamEvening`/`ParamNight` replace a pass's `Param` at that time of day; script actions under Map/Post-processing (`POSTPROCESS_SET_PARAMETER` pass, param, values, seconds to fade; `POSTPROCESS_ENABLE_PASS` (a pass that is off hands its first input on); `POSTPROCESS_USE_CHAIN` (a `PostProcessChain` or `Default`); `SHADOWMAP_SET_DARKNESS` value, seconds). Save games keep the script changes.
+- **GPU timing** (Direct3D 12 renderer): `render_timing(enabled=true)` starts timestamp queries; each later call returns the average GPU milliseconds per frame since the previous call (whole frame, shadow map, shadow apply, post-processing and each pass) plus draws, pipeline changes and table changes per frame. The render rate itself is a poor measure (an outside limit throttles the window at times); compare main-thread CPU time per frame instead.
+- **Materials** (Direct3D 12 renderer): `Material` blocks in `Data\INI\Material.ini` give every model mesh drawn with one of their `Textures` a pixel shader: the built-in `MAT_Standard` (per-pixel lighting that matches the fixed-function look; normal, specular and emissive maps found as `<texture>_nrm`, `_spec`, `_emis`; `HeightFromColor` bumps without maps; emissive `ScrollSpeed`, `PulseRate`, `FlickerRate`) or `Data\Shaders\Material\<Shader>.hlsl`, which includes `Material.hlsli` (format in `Core/GameEngine/Include/GameClient/PostProcess.h`, shader interface in `Core/Libraries/Source/D3D8on12/d3d8on12_ext.h`). Translucent (sorted) meshes get their material too. `Use = Particles` matches particle textures (`MAT_Particle`: `SoftDistance` soft edges against the scene, `EmissiveStrength` glow for bloom, `PulseRate`, `ScrollSpeed`, `Distortion` heat haze); `Use = Water` draws standing water and rivers (`MAT_Water`: waves, sun glints, sky reflection, soft shores with foam and deep colour from the scene depth; maps are file names: NormalMap waves, SpecularMap foam, EmissiveMap sky); `Use = Terrain` draws the terrain (`MAT_Terrain`: bumps from `Art\Terrain\<texture>_nrm.tga` or the texture brightness, highlights from `_spec.tga`, clouds and light map kept; at the low terrain detail, whose tiles are pre-drawn, only brightness bumps). `render_materials` turns them on or off, reloads the INI and shaders, sets parameters live, and (`textures=true`) lists the base textures being drawn, to find names for `Textures =`. New files need a game restart; edits to existing ones reload.
+- **Shadow maps** (Direct3D 12 renderer): a `ShadowMap` block in the PostProcess INI (`Enabled`, `Size`, `Softness`, `Bias`, `DepthBias`, `SlopeBias`, `Darkness`, `MinSunElevation`, `Terrain`, `Trees`, `MaxUpdateRate`, `DetailCascade`, `DetailCoverage`, `DetailSize`) makes the casters of the stencil shadow volumes (`Shadow = SHADOW_VOLUME`), the terrain and the trees draw into a depth map from the sun, which then darkens the scene with soft edges in place of the volumes and the tree decals; infantry decal shadows stay. A second, smaller detail map around the middle of the view (`DetailCascade`, on by default) makes the shadows there sharper. Needs the 3D shadows option. `render_shadows` changes those values live, shows the amount of shadow as grey (`debug=true`, `debug_cascades=true` tints the detail area green) and returns the state (active, casters, covered width, sun elevation).
+- `game_command` runs any bridge command; `list_commands` lists them.
+
+## Checking the bridge without MCP
+
+```
+python game_smoke_test.py --exe generalszh.exe [--windowed]
+```
+
+It starts the game headless in a sandbox and goes through every command area, then closes it.
+
+# FX Editor
+
+`fx_server.py` drives the FX Editor (`FXEditorZH.exe`, CMake target `z_fxeditor`): a separate
+program that runs the whole game engine on a flat preview map and edits `ParticleSystem` and
+`FXList` INI blocks with an ImGui interface on top of the game view. What it shows is the game's own
+particle renderer (Direct3D 8, or 12 with `-dx12`), FXList nuggets and Miles audio.
+
+```
+MCP client  <-- stdio -->  fx_server.py  <-- TCP 127.0.0.1:47802, JSON lines -->  FXEditorZH.exe
+```
+
+The C++ side lives in `GeneralsMD/Code/Tools/FXEditor/`. The editor has its own `WinMain` and
+`CreateGameEngine()`; it adds `-win -quickstart -noshellmap -ignoreAsserts`, starts the preview map
+as a single player game (`-file`, no skirmish setup and no starting units; the local player is the
+map's human player) and opens the game MCP bridge (`-mcpport:47802`), so every `game.*`, `view.*`
+and `objects.*` command works there too, next to the editor's `fx.*` commands. Its ImGui renderer is `Core/Libraries/Source/ImGuiDX8` (the D3D8 interface, which the
+Direct3D 12 renderer implements as well); the engine draws it through `W3DDisplay::m_overlayDraw`.
+It needs `RTS_BUILD_OPTION_GAME_MCP` and fetches ImGui (`cmake/imgui.cmake`).
+
+## Starting the editor
+
+Copy `FXEditorZH.exe` into the mod folder. `fx_launch` starts it from `GAME_DIR` (`FX_EXE` for another
+name) and installs the preview map from `GeneralsMD/Code/Tools/FXEditor/Data/Maps/FXEditorPreview`
+into `Documents\Command and Conquer Generals Zero Hour Data\Maps` when it is missing or older. By hand:
+
+```
+FXEditorZH.exe [-dx12] [-map "<map name or .map path>"] [-xres 1600 -yres 900] [-mcpport:N]
+```
+
+`-map` takes a name, looked up as `Maps\<name>\<name>.map` in the mod folder, then in the user data
+folder, then in the game's archives, or a path to a `.map` file in a folder of the same name. Any map
+works, scenario or multiplayer; on a map without a human player (multiplayer maps) the local player
+is an observer.
+
+Another map is loaded while the editor runs with **Map > Load map...** (or `fx_load_map`): a list of
+all maps of the map cache with a filter, and a faction. Multiplayer maps (two or more start
+positions) run as a sandbox skirmish with a local player of that faction, whose starting units are
+removed; other maps run as a single player game with the map's own player and ignore the faction.
+Edits are kept and what played plays again on the new map. **Map > Empty preview map** goes back to
+the default map, **Reload map** starts the current one again.
+
+The editor does not take the game's single-instance lock, so it runs next to the game and
+WorldBuilder. Its window layout is kept in `FXEditorLayout.ini` in the user data folder.
+
+## How editing works
+
+- Every `ParticleSystem` and `FXList` block of the files the game reads (`Data\INI\ParticleSystem.ini`
+  and `ParticleSystem\*.ini`, `Data\INI\Default\FXList.ini`, `Data\INI\FXList.ini` and `FXList\*.ini`,
+  loose or in `.big` archives) is kept as its text. Edits change lines of that text (other lines and
+  comments stay), and the block is parsed by the game's INI code into the live template at once; a
+  particle template is reset to its defaults first (`ParticleSystemTemplate::resetToDefaults`), so
+  removed fields go back to their defaults. What plays restarts.
+- A text that does not parse is refused (the game keeps the last good one); the editor's text tab
+  can keep such a text to fix it, but it cannot be saved.
+- Saving puts only the changed blocks back into their files and keeps `<file>.fxeditor.bak` of the
+  first save of each file in a session. A block from an archive is written into a loose copy of its
+  whole file. New blocks (copies) are added at the end of the file.
+- The inspector shows typed controls: particle fields come from the game's parse table
+  (`ParticleSystemTemplate::getFieldParse`), FXList nugget fields from `FieldSchema.cpp`. Fields of
+  other velocity, volume and wind types are hidden unless asked.
+
+## Direct3D 12: post-processing, materials, shadow map
+
+With `-dx12` the editor has a **Direct3D 12** window (a tab next to the inspector) for the blocks of
+`Data\INI\Default\PostProcess`, `PostProcess`, `Default\Material` and `Material` (`.ini` and folders):
+`PostProcessPass`, `PostProcess`, `PostProcessChain`, `ShadowMap` and `Material`. Tabs:
+
+- **Post-processing**: turn the chain on or off (not saved), whether it runs and its error; the passes
+  (`*` = in `Passes` of `PostProcess`, dimmed = not), chains and the `PostProcess` block. A pass can
+  be put into or taken out of the chain; new passes (copies) get a name.
+- **Materials**: turn materials on or off (not saved); each material with its `Use` and how many base
+  textures got it so far.
+- **Shadows**: the `ShadowMap` block.
+
+Each block has typed fields (dimmed: not set, the default shown) and its `Param` lines as sliders, plus
+a text tab. Edits work like the particle ones: the block is parsed into the game at once
+(`PostProcessPass`, `PostProcessChain` and `Material` are replaced as a whole; `ShadowMap` and
+`PostProcess` are reset first), the renderer builds the chain again (`PostProcessControl::settingsReloaded`)
+or the materials (`W3DMaterials::settingsChanged`), a text that does not parse is refused, undo, redo,
+revert and **Save** (with `.fxeditor.bak`) are per block. A `Param` slider sets the running pass or
+material directly while it is dragged and writes the text when it is let go. **Reload shaders** reads
+the HLSL and INI files again (after editing a shader) and puts the changes not saved back on top.
+Time-of-day parameters (`ParamNight` ...) are edited in the text.
+
+## Tools
+
+- **Editor:** `fx_launch` (`dx12`, `map`), `fx_status`, `fx_quit`, `fx_log`.
+- **Looking up:** `fx_list` (particle, fxlist, sound), `fx_get` (text, file, fields or nuggets), `fx_schema` (field types, allowed values, help), `fx_validate` (unknown fields, missing textures, systems, FXLists, sounds, objects).
+- **Editing:** `fx_set_fields` (null removes a field; `nugget` for FXList nuggets), `fx_set_text`, `fx_nugget` (add, remove, move, duplicate), `fx_create` (copy under a new name), `fx_undo` (undo, redo, revert), `fx_save` (needs `overwrite=true`), `fx_reload`.
+- **Map:** `fx_maps` (maps and factions), `fx_load_map(map, faction)` (waits until the new map is ready).
+- **Direct3D 12:** `fx_render_status` (on/off, what runs, errors, the blocks), `fx_render_get`, `fx_render_set` (`fields`, `params` by name, `text`), `fx_render_create` (pass, chain, material), `fx_render_undo`, `fx_render_save` (needs `overwrite=true`), `fx_render_reload` (shaders).
+- **Playing:** `fx_play` (repeat, height, moving in a circle, on a spawned object with `attach_to`), `fx_select` (as a click in the library: while an effect plays, the selected one plays instead, in the editor as well), `fx_stop` (stop, restart, clear), `fx_time` (pause, step frames, speed for slow motion), `fx_stats` (particle counts, live systems), `fx_center` (preview point and camera; each start of an effect (play, restart, repeat) happens where the camera looks if the camera moved since, unless `fx_play(follow_camera=false)`; what already runs stays), `fx_capture` (game view without the interface), `fx_capture_sequence` (contact sheet of the effect over time).
+- `fx_command` runs any bridge command of the editor.
+
+## Checking the editor without MCP
+
+```
+python fx_smoke_test.py [--dx12] [--save]
+```
+
+It starts the editor, lists, plays, edits, undoes, captures and plays a sound, then closes it.
+`--save` also saves a copy of a particle system and puts the INI file back afterwards.
+
+## Why cliff mapping shows black gaps
+
+WorldBuilder's cliff tool maps one connected region of steep cells of one texture, at 32 texels per cell and the same per 10 world units of height. It centres V once for the whole region and never limits it, while U is wrapped per cell. All terrain textures share one atlas, so a region whose height range exceeds its texture samples outside that texture's rectangle: another texture (stripes) or empty atlas (black). A 256 px texture is exhausted after 80 world units of height range, 384 px after 120. What counts is the range of the whole connected region, not the height of one wall, so it also happens to low walls on rising ground.
+
+Seen in WorldBuilder and in the game on test maps from `town/cliff_map_test.py`; the gaps appear on exactly these cells, and `outside_v` in `terrain_cliff_report` counts them. Repairs:
+
+| repair | what it does | looks like |
+|---|---|---|
+| `fit` | squeezes V of each connected region to fit the texture once | continuous, no streaks; texture finer vertically, up to 2.2 times on the test map |
+| `slide` | moves cells by whole repeats, shifts those crossing a repeat | keeps the scale; visible jumps on tall walls |
+| `fold` | moves cells by whole repeats, clamps those crossing a repeat | smears tall walls |
+
+`fit` looked best and is the default, judged on `CliffMediumType2` in the game and in WorldBuilder only. Not tested: blended cliff edges, several textures on one wall, and how far a tall region can be squeezed before it looks wrong. `mutant` cells (mapping that crosses the texture edge in U) stay as WorldBuilder makes them.

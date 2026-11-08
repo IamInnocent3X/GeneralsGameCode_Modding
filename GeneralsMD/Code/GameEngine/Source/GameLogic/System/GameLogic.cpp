@@ -81,6 +81,7 @@
 #include "GameClient/GameWindowTransitions.h"
 
 #include "GameLogic/AI.h"
+#include "GameLogic/AIMatch.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/CaveSystem.h"
 #include "GameLogic/CrateSystem.h"
@@ -96,6 +97,7 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/ScriptActions.h"
+#include "GameClient/PostProcess.h"
 #include "GameLogic/ScriptConditions.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
@@ -329,6 +331,9 @@ void GameLogic::destroyAllObjectsImmediate()
 	processDestroyList();
 	DEBUG_ASSERTCRASH( m_objList == nullptr, ("destroyAllObjectsImmediate: Object list not cleared") );
 
+//	m_objHash.clear();
+	m_objVector.clear();
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -421,12 +426,8 @@ void GameLogic::reset()
 {
 	m_thingTemplateBuildableOverrides.clear();
 	m_controlBarOverrides.clear();
-
-	// set the hash to be rather large. We need to optimize this value later.
-//	m_objHash.clear();
-//	m_objHash.resize(OBJ_HASH_SIZE);
-	m_objVector.clear();
-	m_objVector.resize(OBJ_HASH_SIZE, nullptr);
+	// The post-processing and shadow map settings of the mod, without the map's or the scripts' changes.
+	ThePostProcessControl.endGame();
 
 	m_pauseFrame = 0;
 	m_pauseSound = FALSE;
@@ -441,6 +442,10 @@ void GameLogic::reset()
 
 	// destroy all objects
 	destroyAllObjectsImmediate();
+
+	// set the hash to be rather large. We need to optimize this value later.
+//	m_objHash.resize(OBJ_HASH_SIZE);
+	m_objVector.resize(OBJ_HASH_SIZE, nullptr);
 
 	m_nextObjID = (ObjectID)1;
 
@@ -2502,6 +2507,8 @@ static void findAndSelectCommandCenter(Object *obj, void* alreadyFound)
 void GameLogic::loadMapINI( AsciiString mapName )
 {
 	TheWriteableMapData->reset();
+	// A map.ini can change the post-processing and shadow map settings; endGame() restores them.
+	ThePostProcessControl.beginMap();
 
 	if (!TheMapCache) {
 		// Need the map cache to get the map and user map directories.
@@ -3844,6 +3851,10 @@ void GameLogic::update()
 	// update (execute) scripts
 	{
 		TheScriptEngine->UPDATE();
+	}
+
+	if (TheAIMatch) {
+		TheAIMatch->update();
 	}
 
 	// TheSuperHackers @info Updates the frozen time status because it may have changed after the script engine update.

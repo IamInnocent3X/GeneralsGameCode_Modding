@@ -29,9 +29,11 @@
 #include "WorldBuilderView.h"
 #include "WBFrameWnd.h"
 #include "wbview3d.h"
+#include "mcp/McpServer.h"
 
 //#include <wsys/StdFileSystem.h>
 #include "W3DDevice/GameClient/W3DFileSystem.h"
+#include "Common/CommandLine.h"
 #include "Common/FramePacer.h"
 #include "Common/GlobalData.h"
 #include "Common/MapData.h"
@@ -40,6 +42,7 @@
 #include "Common/FileSystem.h"
 #include "Common/ArchiveFileSystem.h"
 #include "Common/LocalFileSystem.h"
+#include "Common/CriticalSection.h"
 #include "Common/Debug.h"
 #include "Common/StackDump.h"
 #include "Common/GameMemory.h"
@@ -81,6 +84,8 @@
 #include "Win32Device/GameClient/Win32Mouse.h"
 #include "Win32Device/Common/Win32LocalFileSystem.h"
 #include "Win32Device/Common/Win32BIGFileSystem.h"
+
+extern int DX8Wrapper_UseDX12;
 
 
 static SubsystemInterfaceList TheSubsystemListRecord;
@@ -152,8 +157,31 @@ FileClass * WB_W3DFileSystem::Get_File( char const *filename )
 	return pFile;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// MFC parses the command line again to select a document to open. Skip the
+// arguments already handled by the startup parser so option values are not
+// mistaken for map filenames.
 
+class WBCommandLineInfo : public CCommandLineInfo
+{
+public:
+	WBCommandLineInfo() : m_argIndex(0) {}
 
+	virtual void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast) override
+	{
+		if (CommandLine::wasCommandLineArgumentParsed(m_argIndex++))
+		{
+			// MFC uses bLast to finalize its shell command, even when the final argument is skipped.
+			ParseLast(bLast);
+			return;
+		}
+
+		CCommandLineInfo::ParseParam(pszParam, bFlag, bLast);
+	}
+
+private:
+	int m_argIndex;
+};
 
 /////////////////////////////////////////////////////////////////////////////
 // The one and only CWorldBuilderApp object
@@ -269,6 +297,10 @@ static LONG WINAPI UnHandledExceptionFilter(struct _EXCEPTION_POINTERS* e_info)
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
+// The memory manager and strings only lock when these are set. WorldBuilder allocates from other
+// threads too (texture loader, MCP bridge), so without them the memory pools get corrupted.
+static CriticalSection critSec1, critSec2, critSec3, critSec4, critSec5;
+
 /////////////////////////////////////////////////////////////////////////////
 // CWorldBuilderApp initialization
 
@@ -279,8 +311,16 @@ BOOL CWorldBuilderApp::InitInstance()
 	// initialization
 	SetUnhandledExceptionFilter(UnHandledExceptionFilter);
 
+	TheAsciiStringCriticalSection = &critSec1;
+	TheUnicodeStringCriticalSection = &critSec2;
+	TheDmaCriticalSection = &critSec3;
+	TheMemoryPoolCriticalSection = &critSec4;
+	TheDebugLogCriticalSection = &critSec5;
+
 	// initialize the memory manager early
 	initMemoryManager();
+
+	CommandLine::parseCommandLineForStartup();
 
 #ifdef DEBUG_LOGGING
 	// Turn on console output jba [3/20/2003]
@@ -316,14 +356,6 @@ BOOL CWorldBuilderApp::InitInstance()
 	Enable3dControlsStatic();	// Call this when linking to MFC statically
 #endif
 
-	// Set the current directory to the app directory.
-	char buf[_MAX_PATH];
-	GetModuleFileName(nullptr, buf, sizeof(buf));
-	if (char *pEnd = strrchr(buf, '\\')) {
-		*pEnd = 0;
-	}
-	::SetCurrentDirectory(buf);
-
 	TheFileSystem = new FileSystem;
 
 	initSubsystem(TheLocalFileSystem, (LocalFileSystem*)new Win32LocalFileSystem);
@@ -335,7 +367,23 @@ BOOL CWorldBuilderApp::InitInstance()
 
 	INI ini;
 
-	initSubsystem(TheWritableGlobalData, new GlobalData(), "Data\\INI\\Default\\GameData", "Data\\INI\\GameData");
+	// -ignoreAsserts works like in the game: asserts are only logged instead of opening a blocking dialog.
+	// It must be set before GameData.ini is parsed, since mod data can already assert there.
+	Bool ignoreAsserts = false;
+	for (Int arg = 1; arg < __argc; arg++) {
+		if (_stricmp(__argv[arg], "-ignoreAsserts") == 0) {
+			ignoreAsserts = true;
+		}
+		// Renders with Direct3D 12 instead of Direct3D 8, in builds with RTS_BUILD_OPTION_DX12.
+		if (_stricmp(__argv[arg], "-dx12") == 0) {
+			DX8Wrapper_UseDX12 = 1;
+		}
+	}
+	DEBUG_ASSERTCRASH(TheWritableGlobalData, ("TheWritableGlobalData expected to be created"));
+#ifdef DEBUG_CRASHING
+	TheWritableGlobalData->m_debugIgnoreAsserts = ignoreAsserts;
+#endif
+	initSubsystem(TheWritableGlobalData, TheWritableGlobalData, "Data\\INI\\Default\\GameData", "Data\\INI\\GameData");
 	initSubsystem(TheWriteableMapData, new MapData());
 
 	TheFramePacer = new FramePacer();
@@ -345,10 +393,11 @@ BOOL CWorldBuilderApp::InitInstance()
 #endif
 
 #ifdef DEBUG_CRASHING
-	TheWritableGlobalData->m_debugIgnoreAsserts = false;
+	TheWritableGlobalData->m_debugIgnoreAsserts = ignoreAsserts;
 #endif
 
 	DEBUG_LOG(("TheWritableGlobalData %x", TheWritableGlobalData));
+	char buf[_MAX_PATH];
 #if 1
 	// srj sez: put INI into our user data folder, not the ap dir
 	free((void*)m_pszProfileName);
@@ -446,7 +495,7 @@ BOOL CWorldBuilderApp::InitInstance()
 #endif
 
 	// Parse command line for standard shell commands, DDE, file open
-	CCommandLineInfo cmdInfo;
+	WBCommandLineInfo cmdInfo;
 	ParseCommandLine(cmdInfo);
 
 	// Dispatch commands specified on the command line
@@ -469,6 +518,14 @@ BOOL CWorldBuilderApp::InitInstance()
 
 	CString openDir = this->GetProfileString(APP_SECTION, OPEN_FILE_DIR);
 	m_currentDirectory = openDir;
+
+	// Optional localhost command bridge used by the WorldBuilder MCP server (scripts/worldbuilder-mcp).
+	Int mcpPort = McpServer::getRequestedPort();
+	if (mcpPort > 0 && !McpServer::start(mcpPort)) {
+		CString msg;
+		msg.Format("Could not start the MCP bridge on port %d. Is another WorldBuilder already using it?", mcpPort);
+		::AfxMessageBox(msg, MB_OK | MB_ICONEXCLAMATION);
+	}
 
 	return TRUE;
 }
@@ -629,6 +686,7 @@ void CWorldBuilderApp::OnAppAbout()
 
 int CWorldBuilderApp::ExitInstance()
 {
+	McpServer::stop();
 
 	WriteProfileString(APP_SECTION, OPEN_FILE_DIR, m_currentDirectory.str());
 	m_currentDirectory.clear();
@@ -661,6 +719,12 @@ int CWorldBuilderApp::ExitInstance()
 		TheMemoryPoolFactory->debugMemoryReport(REPORT_POOLINFO | REPORT_POOL_OVERFLOW | REPORT_SIMPLE_LEAKS, 0, 0);
 	#endif
 	shutdownMemoryManager();
+
+	TheAsciiStringCriticalSection = nullptr;
+	TheUnicodeStringCriticalSection = nullptr;
+	TheDmaCriticalSection = nullptr;
+	TheMemoryPoolCriticalSection = nullptr;
+	TheDebugLogCriticalSection = nullptr;
 
 	return CWinApp::ExitInstance();
 }

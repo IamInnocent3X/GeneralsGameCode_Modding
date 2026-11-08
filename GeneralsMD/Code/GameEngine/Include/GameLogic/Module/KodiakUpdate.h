@@ -51,6 +51,9 @@ public:
 	UnsignedInt           m_numSideTurrets;
 	UnsignedInt           m_numAATurrets;
 
+	Bool									m_mainTurretsFireInSequence;	///< main turrets take turns firing one shot each
+	UnsignedInt						m_mainTurretSequenceDelay;		///< min frames between consecutive main turret shots in sequence mode
+
 	Real								 m_missileScatterRadius;
 	std::vector<Coord2D> m_scatterTargets;	///< targets for missile attack, amount of targets should match clip size of primary weapon
 
@@ -119,6 +122,9 @@ protected:
 
   void friend_enableAfterburners(Bool v);
 
+	void resetMainTurretSequence(const std::vector<Object*>& turrets);
+	void updateMainTurretSequence(const std::vector<Object*>& turrets);
+
 
 
 
@@ -132,6 +138,9 @@ protected:
 
   UnsignedInt     m_orbitEscapeFrame;
   UnsignedInt	  m_delayFrame;
+
+	UnsignedInt			m_seqTurretIndex;				///< main turret that currently has the turn (MainTurretsFireInSequence)
+	UnsignedInt			m_seqHolderShotFrame;		///< turn holder's last shot frame when it got the turn; a change means it fired
 
 	RadiusDecal			m_attackAreaDecal;
 	RadiusDecal			m_targetingReticleDecal;

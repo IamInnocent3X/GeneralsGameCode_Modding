@@ -47,6 +47,7 @@
 
 //-----------------------------------------------------------------------------
 #include "GameLogic/Module/UpgradeModule.h"
+#include "GameLogic/Module/CostModifierUpgrade.h"	// for BonusStackingType + TheBonusStackingTypeNames
 
 //-----------------------------------------------------------------------------
 class Thing;
@@ -67,7 +68,8 @@ public:
 	std::vector<AsciiString> m_templateNames;
 	Real m_costPercentage;
 	Real m_timePercentage;
-	// Bool m_isOneShot;
+	Bool m_isOneShot;					///< if true, permanent (never removed on death/capture)
+	BonusStackingType m_stackingType;	///< how the bonus stacks across source units (default NO_STACKING)
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -84,14 +86,16 @@ public:
 	UnitProductionBonusUpgrade(Thing* thing, const ModuleData* moduleData);
 	// virtual destructor prototype defined by MemoryPoolObject
 
-	// virtual void onDelete();																///< we have some work to do when this module goes away
-	// virtual void onCapture(Player* oldOwner, Player* newOwner);
+	virtual void onDelete() override;								///< remove the bonus when the granting unit is destroyed
+	virtual void onCapture(Player* oldOwner, Player* newOwner) override;	///< transfer the bonus on capture
 
 protected:
 
 	virtual void upgradeImplementation() override; ///< Here's the actual work of Upgrading
 	virtual Bool isSubObjectsUpgrade() override { return false; }
 	virtual Bool hasUpgradeRefresh() override { return false; }
+
+	void applyBonus( Player *player, Bool add );	///< add/remove this module's bonus on a player
 
 };
 

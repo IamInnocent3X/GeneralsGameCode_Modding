@@ -394,6 +394,7 @@ const char* const KindOfMaskType::s_bitNameList[] =
 	"TARGET_DESIGNATOR",
 
 	"NO_ATTACK_WARNING",
+	"IMMUNE_TO_PULL",
 
 	nullptr
 };

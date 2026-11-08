@@ -35,6 +35,7 @@
 #include "Common/WellKnownKeys.h"
 #include "Common/MapData.h"
 
+#include "GameClient/PostProcess.h"
 #include "GameClient/Line2D.h"
 #include "GameClient/View.h"
 #include "GameClient/GameText.h"
@@ -98,6 +99,7 @@ BEGIN_MESSAGE_MAP(CWorldBuilderDoc, CDocument)
 	ON_COMMAND(ID_TS_INFO, OnTsInfo)
 	ON_COMMAND(ID_TS_CANONICAL, OnTsCanonical)
 	ON_UPDATE_COMMAND_UI(ID_TS_CANONICAL, OnUpdateTsCanonical)
+	ON_COMMAND(ID_TOOLS_REBLENDALLTILES, OnToolsReblendAllTiles)
 	ON_COMMAND(ID_FILE_RESIZE, OnFileResize)
 	ON_COMMAND(ID_FILE_JUMPTOGAME, OnJumpToGame)
 	ON_COMMAND(ID_TS_REMAP, OnTsRemap)
@@ -1066,6 +1068,22 @@ void CWorldBuilderDoc::OnUpdateTsCanonical(CCmdUI* pCmdUI)
 {
 }
 
+void CWorldBuilderDoc::OnToolsReblendAllTiles()
+{
+	if (m_heightMap) {
+		WorldHeightMapEdit *htMapEditCopy = GetHeightMap()->duplicate();
+		if (htMapEditCopy == nullptr) return;
+		// Same as the MCP command terrain.reblend over the whole map.
+		htMapEditCopy->blendCorners(0, 0, htMapEditCopy->getXExtent() - 1, htMapEditCopy->getYExtent() - 1);
+		IRegion2D partialRange = {0,0,0,0};
+		updateHeightMap(htMapEditCopy, false, partialRange);
+		WBDocUndoable *pUndo = new WBDocUndoable(this, htMapEditCopy);
+		this->AddAndDoUndoable(pUndo);
+		REF_PTR_RELEASE(pUndo); // belongs to this now.
+		REF_PTR_RELEASE(htMapEditCopy);
+	}
+}
+
 void CWorldBuilderDoc::OnFileResize()
 {
 	TNewHeightInfo hi;
@@ -1224,6 +1242,19 @@ void CWorldBuilderDoc::Create3DView()
 }
 
 
+static Bool s_haveNewMapOverride = false;
+static TNewHeightInfo s_newMapOverride;
+
+void CWorldBuilderDoc::setNewMapOverride(Int xExtent, Int yExtent, Int initialHeight, Int border)
+{
+	s_newMapOverride.xExtent = xExtent;
+	s_newMapOverride.yExtent = yExtent;
+	s_newMapOverride.initialHeight = initialHeight;
+	s_newMapOverride.borderWidth = border;
+	s_newMapOverride.forResize = false;
+	s_haveNewMapOverride = true;
+}
+
 BOOL CWorldBuilderDoc::OnNewDocument()
 {
 #ifdef ONLY_ONE_AT_A_TIME
@@ -1239,14 +1270,24 @@ BOOL CWorldBuilderDoc::OnNewDocument()
 	// clear out map-specific text
 	TheGameText->reset();
 	TheWriteableMapData->reset();
+	// the mod's post-processing and shadow map settings, without the last map's
+	ThePostProcessControl.endGame();
 
 	TNewHeightInfo hi;
 	hi.initialHeight = AfxGetApp()->GetProfileInt("GameOptions", "Default Map Height", 16);
 	hi.xExtent = AfxGetApp()->GetProfileInt("GameOptions", "Default Map X-size", 100);
 	hi.yExtent = AfxGetApp()->GetProfileInt("GameOptions", "Default Map Y-size", 100);
 	hi.borderWidth = AfxGetApp()->GetProfileInt("GameOptions", "Default Map Border", 30);
+	if (!WorldHeightMapEdit::isValidPlayableMapSize(hi.xExtent, hi.yExtent, hi.borderWidth)) {
+		hi.xExtent = 100;
+		hi.yExtent = 100;
+		hi.borderWidth = 30;
+	}
 	hi.forResize = false;
-	if (!firstTime) {
+	if (s_haveNewMapOverride) {
+		hi = s_newMapOverride;
+		s_haveNewMapOverride = false;
+	} else if (!firstTime) {
 		CString label;
 		label.LoadString(IDS_NEW);
 		CNewHeightMap htDialog(&hi, label);
@@ -1376,7 +1417,7 @@ void CWorldBuilderDoc::updateAllViews()
 	}
 }
 
-void CWorldBuilderDoc::updateHeightMap(WorldHeightMap *htMap, Bool partial, const IRegion2D &partialRange)
+void CWorldBuilderDoc::updateHeightMap(WorldHeightMap *htMap, Bool partial, const IRegion2D &partialRange, Bool invalObjects)
 {
 	POSITION pos = GetFirstViewPosition();
 	while (pos != nullptr)
@@ -1384,8 +1425,31 @@ void CWorldBuilderDoc::updateHeightMap(WorldHeightMap *htMap, Bool partial, cons
 		CView* pView = GetNextView(pos);
 		WbView* pWView = (WbView *)pView;
 		ASSERT_VALID(pWView);
-		pWView->updateHeightMapInView(htMap, partial, partialRange);
+		pWView->updateHeightMapInView(htMap, partial, partialRange, invalObjects);
 		pWView->Invalidate();
+	}
+}
+
+void CWorldBuilderDoc::updateHeightStroke(WorldHeightMap *htMap, const IRegion2D &partialRange)
+{
+	POSITION pos = GetFirstViewPosition();
+	while (pos != nullptr)
+	{
+		WbView* pWView = (WbView *)GetNextView(pos);
+		ASSERT_VALID(pWView);
+		pWView->updateHeightStrokeInView(htMap, partialRange);
+	}
+}
+
+void CWorldBuilderDoc::finishHeightStroke()
+{
+	POSITION pos = GetFirstViewPosition();
+	while (pos != nullptr)
+	{
+		WbView* pWView = (WbView *)GetNextView(pos);
+		ASSERT_VALID(pWView);
+		pWView->finishHeightStrokeInView();
+		pWView->Invalidate(false);
 	}
 }
 
@@ -1419,7 +1483,10 @@ BOOL CWorldBuilderDoc::OnOpenDocument(LPCTSTR lpszPathName)
 	TheGameText->initMapStringFile(s);
 
 	s_mapini.concat("map.ini");
-	if (TheFileSystem->doesFileExist(s_mapini.str()))
+	// No doesFileExist() check: the file system caches that a file is missing, so a map.ini
+	// created while WorldBuilder runs would never be seen. The load is optional anyway.
+	// Its post-processing and shadow map blocks replace the last map's.
+	ThePostProcessControl.beginMap();
 	{
 		INI ini;
 		ini.load(s_mapini, INI_LOAD_MAPDATA_ONLY, nullptr, true);

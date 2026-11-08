@@ -98,6 +98,7 @@ const char* const DamageTypeFlags::s_bitNameList[] =
 	"JET_TORPEDO",
 	"ANTI_SHIP",
 	"CRYO",
+	"BLACK_HOLE",
 	// Specific damage types with special logic attached
 	"TORPEDO",
 	"ANTI_TORPEDO",
@@ -173,8 +174,7 @@ void DamageInfoInput::xfer( Xfer *xfer )
 	// amount
 	xfer->xferReal( &m_amount );
 
-	// kill no matter what (old versions default to FALSE).
-	if( currentVersion >= 2 )
+	if( version >= 2 )
 	{
 		xfer->xferBool( &m_kill );
 	}

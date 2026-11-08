@@ -120,7 +120,11 @@ public:
 	void invalCell(int xIndex, int yIndex);
 
 	void updateAllViews();
-	void updateHeightMap(WorldHeightMap *htMap, Bool partial, const IRegion2D &partialRange);
+	void updateHeightMap(WorldHeightMap *htMap, Bool partial, const IRegion2D &partialRange, Bool invalObjects = true);
+
+	/// Fast update for each mouse move of a height tool. Call finishHeightStroke when the stroke ends.
+	void updateHeightStroke(WorldHeightMap *htMap, const IRegion2D &partialRange);
+	void finishHeightStroke();
 
 	/// Gets an xy index into the height map from a pixel location.
 	Bool getCellIndexFromCoord(Coord3D pt, CPoint *ndxP);
@@ -149,6 +153,11 @@ public:
 
 	void autoSave();
 	void validate();
+
+	/// Makes the next OnNewDocument use these settings instead of asking with the New Map dialog.
+	static void setNewMapOverride(Int xExtent, Int yExtent, Int initialHeight, Int border);
+	/// Makes MFC treat the next open of the same file as a new document, so it is read again.
+	void forgetPathName() { m_strPathName.Empty(); }
 // Operations
 public:
 
@@ -179,6 +188,7 @@ protected:
 	afx_msg void OnUpdateEditUndo(CCmdUI* pCmdUI);
 	afx_msg void OnTsInfo();
 	afx_msg void OnTsCanonical();
+	afx_msg void OnToolsReblendAllTiles();
 	afx_msg void OnUpdateTsCanonical(CCmdUI* pCmdUI);
 	afx_msg void OnFileResize();
 	afx_msg void OnJumpToGame();

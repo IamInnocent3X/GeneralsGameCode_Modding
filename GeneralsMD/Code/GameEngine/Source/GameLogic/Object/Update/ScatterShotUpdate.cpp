@@ -236,6 +236,13 @@ UpdateSleepTime ScatterShotUpdate::update()
 		return UPDATE_SLEEP_FOREVER;
 	}
 
+	// Our projectile has already detonated and only lingers for its trail (DumbProjectile KillSelfDelay); don't trigger anymore.
+	if (getObject()->isKindOf(KINDOF_PROJECTILE)) {
+		const ProjectileUpdateInterface* pui = getObject()->getProjectileUpdateInterface();
+		if (pui && pui->projectileIsLingering())
+			return UPDATE_SLEEP_FOREVER;
+	}
+
 	// Instant Trigger
 	if (data->m_triggerInstantly) {
 		triggerScatterShot();

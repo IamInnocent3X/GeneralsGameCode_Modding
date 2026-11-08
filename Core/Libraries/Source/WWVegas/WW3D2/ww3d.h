@@ -179,6 +179,8 @@ public:
 	// Total sync time in milliseconds. Advances in full logic time steps only.
 	static unsigned int		Get_Sync_Time() { return SyncTime; }
 
+	static unsigned int		Get_Previous_Sync_Time() { return PreviousSyncTime; }
+
 	// Current sync frame time in milliseconds. Can be zero when the logic has not stepped forward in the current render update.
 	static unsigned int		Get_Sync_Frame_Time() { return SyncTime - PreviousSyncTime; }
 
@@ -307,6 +309,9 @@ public:
 	** default sort list must be restored.
 	*/
 	static void					Enable_Static_Sort_Lists(bool onoff)	{ AreStaticSortListsEnabled = onoff; }
+	// While only depth is drawn (shadow maps), translucent meshes are left out.
+	static void					Set_Depth_Only_Pass(bool onoff)		{ IsDepthOnlyPass = onoff; }
+	static bool					Is_Depth_Only_Pass()					{ return IsDepthOnlyPass; }
 	static bool					Are_Static_Sort_Lists_Enabled()		{ return AreStaticSortListsEnabled; }
 	static void					Enable_Munge_Sort_On_Load(bool onoff)	{ MungeSortOnLoad=onoff; }
 	static bool					Is_Munge_Sort_On_Load_Enabled()		{ return MungeSortOnLoad; }
@@ -374,6 +379,7 @@ private:
 	static bool							IsRendering;
 	static bool							IsCapturing;
 	static bool							IsSortingEnabled;
+	static bool							IsDepthOnlyPass;
 	static bool							IsScreenUVBiased;
 	static bool							IsBackfaceDebugEnabled;
 

@@ -206,7 +206,7 @@ private:
 	Vector3							m_decayRate;			///< step amount to make tint turn off slow or fast
 	Vector3							m_peakColor;			///< um, the peak color, what color we are headed toward during attack
 	Vector3							m_currentColor;		///< um, the current color, how we are colored, now
-	Real								m_sustainCounter;
+	double							m_sustainCounter;
 	Byte								m_envState;				///< a randomly switchable SUSTAIN state, release is compliment
 	Bool								m_affect;         ///< set TRUE if this has any effect (has a non 0,0,0 color).
 };
@@ -234,6 +234,7 @@ enum DrawableStatus CPP_11(: DrawableStatusBits)
 	DRAWABLE_STATUS_NONE									= 0x00000000,		///< no status
 	DRAWABLE_STATUS_DRAWS_IN_MIRROR				=	0x00000001,		///< drawable can reflect
 	DRAWABLE_STATUS_SHADOWS								=	0x00000002,		///< use setShadowsEnabled() access method
+	DRAWABLE_STATUS_KEEP_PARTICLES_WHEN_HIDDEN = 0x00000004,		///< model-condition particle systems keep emitting while the drawable is hidden
 	DRAWABLE_STATUS_NO_STATE_PARTICLES		= 0x00000008,		///< do *not* auto-create particle systems based on model condition
 	DRAWABLE_STATUS_NO_SAVE								= 0x00000010,		///< do *not* save this drawable (UI fluff only). ignored (error, actually) if attached to an object
 
@@ -334,6 +335,7 @@ public:
 	DrawableInfo *getDrawableInfo() {return &m_drawableInfo;}
 
 	void setDrawableHidden( Bool hidden );																		///< hide or unhide drawable
+	void setKeepParticlesWhenHidden( Bool keep );															///< let model-condition particle systems keep emitting while hidden
 	//
 	// note that this is not necessarily the 'get' reflection of setDrawableHidden, since drawables
 	// can spontaneously hide via stealth. (srj)
@@ -357,6 +359,7 @@ public:
 	void setPosition( const Coord3D *pos );
 	void reactToGeometryChange();
 	void reactToTeleport();	///< object was instantly relocated - break interpolated visuals (tread marks)
+	void captureInterpolationTransform();	///< remember the object's transform before a logic step, for render interpolation
 
 	const GeometryInfo& getDrawableGeometryInfo() const;
 
@@ -418,7 +421,7 @@ public:
 	const Matrix3D *getTransformMatrix() const;	///< return the world transform
 
 	void draw();													///< render the drawable to the given view
-	void updateDrawable();														///< update the drawable
+	void updateDrawable(Real timeScale);														///< update the drawable
 
 	void drawIconUI();													///< draw "icon"(s) needed on drawable (health bars, veterency, etc)
 
@@ -661,7 +664,23 @@ protected:
 		Real m_totalYaw;						///< Current total yaw for this frame
 		Real m_totalZ;
 
-		PhysicsXformInfo() : m_totalPitch(0), m_totalRoll(0), m_totalYaw(0), m_totalZ(0) { }
+		Real m_prevTotalPitch;
+		Real m_prevTotalRoll;
+		Real m_prevTotalYaw;
+		Real m_prevTotalZ;
+
+		UnsignedInt m_syncTime;			///< WW3D sync time of the last calculation.
+
+		PhysicsXformInfo() : m_totalPitch(0), m_totalRoll(0), m_totalYaw(0), m_totalZ(0),
+			m_prevTotalPitch(0), m_prevTotalRoll(0), m_prevTotalYaw(0), m_prevTotalZ(0), m_syncTime(~0u) { }
+
+		void setPrevTotals()
+		{
+			m_prevTotalPitch = m_totalPitch;
+			m_prevTotalRoll = m_totalRoll;
+			m_prevTotalYaw = m_totalYaw;
+			m_prevTotalZ = m_totalZ;
+		}
 	};
 
 	Bool calcPhysicsXform(PhysicsXformInfo& info);
@@ -738,7 +757,7 @@ private:
 		FADING_OUT
 	};
 	FadingMode		m_fadeMode;
-	UnsignedInt		m_timeElapsedFade;			///< for how many frames have i been fading
+	Real			m_timeElapsedFade;			///< for how many logic frames - incl. fractional ones - have i been fading
 	UnsignedInt		m_timeToFade;						///< how slowly am I fading
 
 	UnsignedInt		m_shroudClearFrame;						///< Last frame the local player saw this drawable "OBJECTSHROUD_CLEAR"
@@ -757,6 +776,7 @@ private:
 	Color m_flashColor;					///< color to flash the drawable
 
 	Matrix3D m_instance;				///< The instance matrix that holds the initial/default position & orientation
+	Matrix3D m_interpolationTransform;	///< The object's transform before the last logic step, for render interpolation
 	Real m_instanceScale;				///< the uniform scale factor applied to the instance matrix before it is sent to W3D.
 
 	DrawableInfo				m_drawableInfo;		///< structure pointed to by W3D render objects so they know which drawable they belong to.
@@ -776,6 +796,7 @@ private:
 	Bool m_hidden;							///< drawable is "hidden" or not (overrides stealth effects)
 	Bool m_hiddenByStealth;			///< drawable is hidden due to stealth
 	Bool m_instanceIsIdentity;	///< If true, instance matrix can be skipped
+	Bool m_interpolationTransformValid;	///< If false, there is no previous transform to interpolate from
 	Bool m_drawableFullyObscuredByShroud;	///<drawable is hidden by shroud/fog
   Bool m_ambientSoundEnabled;
   Bool m_ambientSoundEnabledFromScript;

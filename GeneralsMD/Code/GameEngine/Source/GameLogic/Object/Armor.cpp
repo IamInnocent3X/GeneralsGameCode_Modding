@@ -300,6 +300,30 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 	return damage;
 }
 
+//-------------------------------------------------------------------------------------------------
+static Int scanIndexList(const char* token, ConstCharPtrArray nameList)
+{
+	if( nameList == nullptr || nameList[ 0 ] == nullptr )
+	{
+
+		DEBUG_CRASH( ("INTERNAL ERROR! scanIndexList, invalid name list") );
+		throw INI_INVALID_NAME_LIST;
+
+	}
+
+	// search for matching name
+	Int count = 0;
+	for(ConstCharPtrArray name = nameList; *name; name++, count++ )
+	{
+		if( stricmp( *name, token ) == 0 )
+		{
+			return count;
+		}
+	}
+
+	return 0;	// never executed, but keeps compiler happy
+}
+
 //-------------------------------------------------------------------------------------------Static
 /*static*/ void ArmorTemplate::parseArmorCoefficients( INI* ini, void *instance, void* /* store */, const void* userData )
 {
@@ -320,7 +344,7 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage, const AsciiString& c
 		return;
 	}
 
-	DamageType dt = (DamageType)DamageTypeFlags::getSingleBitFromName(damageName);
+	DamageType dt = (DamageType)scanIndexList(damageName, DamageTypeFlags::getBitNames());
 	if (dt >= 0)
 	{
 		self->m_damageCoefficient[dt] = pct;
@@ -515,6 +539,19 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(const AsciiString& name) cons
 const ArmorTemplate* ArmorStore::findArmorTemplate(const char* name) const
 {
 	return findArmorTemplate(TheNameKeyGenerator->nameToKey(name));
+}
+
+//-------------------------------------------------------------------------------------------------
+AsciiString ArmorStore::friend_findArmorTemplateName(const ArmorTemplate* tmpl) const
+{
+	for (ArmorTemplateMap::const_iterator it = m_armorTemplates.begin(); it != m_armorTemplates.end(); ++it)
+	{
+		if (&(*it).second == tmpl)
+		{
+			return TheNameKeyGenerator->keyToName((*it).first);
+		}
+	}
+	return AsciiString::TheEmptyString;
 }
 
 //-------------------------------------------------------------------------------------------------

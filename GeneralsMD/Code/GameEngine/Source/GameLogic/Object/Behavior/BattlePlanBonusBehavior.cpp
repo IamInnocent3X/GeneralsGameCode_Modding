@@ -35,6 +35,7 @@
 #include "Common/INI.h"
 #include "Common/Xfer.h"
 #include "Common/Player.h"
+#include "Common/ThingTemplate.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/BattlePlanBonusBehavior.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
@@ -58,7 +59,7 @@ BattlePlanBonusBehaviorModuleData::BattlePlanBonusBehaviorModuleData()
 		m_armorSetFlagEntries[i] = ARMORSET_NONE;
 		m_armorDamageScalarEntries[i] = 1.0;
 		m_sightRangeScalarEntries[i] = 1.0;
-		//m_movementSpeedScalarEntries[i] = 1.0;
+		m_movementSpeedScalarEntries[i] = 1.0;
 		m_statusToSetEntries[i] = OBJECT_STATUS_NONE;
 		m_statusToClearEntries[i] = OBJECT_STATUS_NONE;
 		m_customWeaponBonusEntries[i].clear();
@@ -117,15 +118,15 @@ void BattlePlanBonusBehaviorModuleData::parseBPSightRangeScalar(INI* ini, void* 
 	self->m_sightRangeScalarEntries[plan - 1] = INI::scanReal(ini->getNextToken());
 }
 //-------------------------------------------------------------------------------------------------
-//void BattlePlanBonusBehaviorModuleData::parseBPMovementSpeedScalar(INI* ini, void* instance, void* store, const void* userData)
-//{
-//	BattlePlanBonusBehaviorModuleData* self = (BattlePlanBonusBehaviorModuleData*)instance;
-//	BattlePlanStatus plan = (BattlePlanStatus)INI::scanIndexList(ini->getNextToken(), TheBattlePlanStatusNames);
-//	if ((plan) == PLANSTATUS_NONE)
-//		return;
-//
-//	self->m_movementSpeedScalarEntries[plan - 1] = INI::scanReal(ini->getNextToken());
-//}
+void BattlePlanBonusBehaviorModuleData::parseBPMovementSpeedScalar(INI* ini, void* instance, void* store, const void* userData)
+{
+	BattlePlanBonusBehaviorModuleData* self = (BattlePlanBonusBehaviorModuleData*)instance;
+	BattlePlanStatus plan = (BattlePlanStatus)INI::scanIndexList(ini->getNextToken(), TheBattlePlanStatusNames);
+	if ((plan) == PLANSTATUS_NONE)
+		return;
+
+	self->m_movementSpeedScalarEntries[plan - 1] = INI::scanReal(ini->getNextToken());
+}
 //-------------------------------------------------------------------------------------------------
 void BattlePlanBonusBehaviorModuleData::parseBPStatusToSet(INI* ini, void* instance, void* store, const void* userData)
 {
@@ -193,7 +194,7 @@ void BattlePlanBonusBehaviorModuleData::parseBPCustomStatusToClear(INI* ini, voi
 		{ "ArmorSet",	parseBPArmorSetFlag, nullptr, 0 },
 		{ "ArmorDamageScalar",	parseBPArmorDamageScalar, nullptr, 0 },
 		{ "SightRangeScalar",	parseBPSightRangeScalar, nullptr, 0 },
-		//{ "MovementSpeedScalar",	parseBPMovementSpeedScalar, nullptr, 0 },
+		{ "MovementSpeedScalar",	parseBPMovementSpeedScalar, nullptr, 0 },
 		{ "StatusToSet",	parseBPStatusToSet, nullptr, 0 },
 		{ "StatusToClear",	parseBPStatusToClear, nullptr, 0 },
 
@@ -233,6 +234,8 @@ void BattlePlanBonusBehavior::upgradeImplementation()
 
 	// Get other BattlePlanBonusBehavior and remove their active effects if they are conflicting
 	Object* obj = getObject();
+	DEBUG_LOG(("BattlePlanBonusBehavior(%s) object %d (%s): upgrade activated, reapplying battle plan bonuses",
+		KEYNAME(getModuleTagNameKey()).str(), obj->getID(), obj->getTemplate()->getName().str()));
 
 	for (BehaviorModule** b = obj->getBehaviorModules(); *b; ++b)
 	{
@@ -305,7 +308,6 @@ void BattlePlanBonusBehavior::applyBonus(const BattlePlanBonusesData* bonus, boo
 	/*else {
 		DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::applyBonus - Not Valid.", KEYNAME(getModuleTagNameKey()).str()));
 	}*/
-	DEBUG_LOG(("---\n"));
 }
 
 
@@ -313,16 +315,20 @@ void BattlePlanBonusBehavior::applyBonus(const BattlePlanBonusesData* bonus, boo
 //-------------------------------------------------------------------------------------------------
 void BattlePlanBonusBehavior::addBonusForType(BattlePlanStatus plan)
 {
-	// DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::addBonusForType %d", KEYNAME(getModuleTagNameKey()).str(), plan));
 	const BattlePlanBonusBehaviorModuleData* d = getBattlePlanBonusBehaviorModuleData();
 	Object* obj = getObject();
 	int idx = plan - 1;
 
-	//Sanity check:
-	DEBUG_ASSERTCRASH(!m_effectApplied[idx], ("BattlePlanBonusBehavior::addBonusForType -- Bonus is currently active!"));
-
 	if (idx > BATTLE_PLAN_COUNT)
 		return;
+	// Applying twice would stack the scalars, so only add a plan that is not applied yet.
+	if (m_effectApplied[idx]) {
+		DEBUG_LOG(("BattlePlanBonusBehavior(%s) object %d (%s): add %s skipped, already applied",
+			KEYNAME(getModuleTagNameKey()).str(), obj->getID(), obj->getTemplate()->getName().str(), TheBattlePlanStatusNames[plan]));
+		return;
+	}
+	DEBUG_LOG(("BattlePlanBonusBehavior(%s) object %d (%s): add %s",
+		KEYNAME(getModuleTagNameKey()).str(), obj->getID(), obj->getTemplate()->getName().str(), TheBattlePlanStatusNames[plan]));
 	if (d->m_weaponBonusEntries[idx] != -1) {
 		obj->setWeaponBonusCondition(d->m_weaponBonusEntries[idx]);
 	}
@@ -343,17 +349,19 @@ void BattlePlanBonusBehavior::addBonusForType(BattlePlanStatus plan)
 		obj->setVisionRange(obj->getVisionRange() * d->m_sightRangeScalarEntries[idx]);
 		obj->setShroudClearingRange(obj->getShroudClearingRange() * d->m_sightRangeScalarEntries[idx]);
 	}
-	/*if (d->m_movementSpeedScalarEntries[idx] != 1.0) {
+	if (d->m_movementSpeedScalarEntries[idx] != 1.0) {
+		// Apply through the AIUpdate rather than the current Locomotor directly: AIUpdateInterface
+		// keeps the accumulated multiplier and re-applies it whenever the locomotor changes, so the
+		// bonus survives locomotor set changes.
 		AIUpdateInterface* ai = obj->getAI();
 		if (ai) {
-			Locomotor* loco = ai->getCurLocomotor();
-			loco->applySpeedMultiplier(d->m_movementSpeedScalarEntries[idx]);
+			ai->applySpeedMultiplier(d->m_movementSpeedScalarEntries[idx]);
 		}
-	}*/
-	if (d->m_statusToSetEntries[idx] != -1) {
+	}
+	if (d->m_statusToSetEntries[idx] != OBJECT_STATUS_NONE) {
 		obj->setStatus(MAKE_OBJECT_STATUS_MASK(d->m_statusToSetEntries[idx]));
 	}
-	if (d->m_statusToClearEntries[idx] != -1) {
+	if (d->m_statusToClearEntries[idx] != OBJECT_STATUS_NONE) {
 		obj->setStatus(MAKE_OBJECT_STATUS_MASK(d->m_statusToClearEntries[idx]), FALSE);
 	}
 	if (!d->m_customWeaponBonusEntries[idx].isEmpty()) {
@@ -373,16 +381,21 @@ void BattlePlanBonusBehavior::addBonusForType(BattlePlanStatus plan)
 //-------------------------------------------------------------------------------------------------
 void BattlePlanBonusBehavior::removeBonusForType(BattlePlanStatus plan)
 {
-	// DEBUG_LOG(("### BattlePlanBonusBehavior(%s)::removeBonusForType %d", KEYNAME(getModuleTagNameKey()).str(), plan));
-
 	const BattlePlanBonusBehaviorModuleData* d = getBattlePlanBonusBehaviorModuleData();
 	Object* obj = getObject();
 	int idx = plan - 1;
 
-	DEBUG_ASSERTCRASH(m_effectApplied[idx], ("BattlePlanBonusBehavior::removeBonusForType -- Bonus is currently NOT active!"));
-
 	if (idx > BATTLE_PLAN_COUNT)
 		return;
+	// Removal is also requested for plans that were never applied (e.g. -ALL_PLANS in
+	// Player::removeBattlePlanBonusesForObject); undoing those would invert scalars that were never set.
+	if (!m_effectApplied[idx]) {
+		DEBUG_LOG(("BattlePlanBonusBehavior(%s) object %d (%s): remove %s skipped, not applied",
+			KEYNAME(getModuleTagNameKey()).str(), obj->getID(), obj->getTemplate()->getName().str(), TheBattlePlanStatusNames[plan]));
+		return;
+	}
+	DEBUG_LOG(("BattlePlanBonusBehavior(%s) object %d (%s): remove %s",
+		KEYNAME(getModuleTagNameKey()).str(), obj->getID(), obj->getTemplate()->getName().str(), TheBattlePlanStatusNames[plan]));
 	if (d->m_weaponBonusEntries[idx] != -1) {
 		obj->clearWeaponBonusCondition(d->m_weaponBonusEntries[idx]);
 	}
@@ -404,17 +417,17 @@ void BattlePlanBonusBehavior::removeBonusForType(BattlePlanStatus plan)
 		obj->setVisionRange(obj->getVisionRange() * sightRangeScalar);
 		obj->setShroudClearingRange(obj->getShroudClearingRange() * sightRangeScalar);
 	}
-	/*if (d->m_movementSpeedScalarEntries[idx] != 1.0) {
+	if (d->m_movementSpeedScalarEntries[idx] != 1.0) {
+		// Undo by applying the reciprocal, matching the other scalars above.
 		AIUpdateInterface* ai = obj->getAI();
 		if (ai) {
-			Locomotor* loco = ai->getCurLocomotor();
-			loco->applySpeedMultiplier(d->m_movementSpeedScalarEntries[idx]);
+			ai->applySpeedMultiplier(1.0f / __max(d->m_movementSpeedScalarEntries[idx], 0.01f));
 		}
-	}*/
-	if (d->m_statusToSetEntries[idx] != -1) {
+	}
+	if (d->m_statusToSetEntries[idx] != OBJECT_STATUS_NONE) {
 		obj->setStatus(MAKE_OBJECT_STATUS_MASK(d->m_statusToSetEntries[idx]), FALSE);
 	}
-	if (d->m_statusToClearEntries[idx] != -1) {
+	if (d->m_statusToClearEntries[idx] != OBJECT_STATUS_NONE) {
 		obj->setStatus(MAKE_OBJECT_STATUS_MASK(d->m_statusToClearEntries[idx]));
 	}
 	if (!d->m_customWeaponBonusEntries[idx].isEmpty()) {

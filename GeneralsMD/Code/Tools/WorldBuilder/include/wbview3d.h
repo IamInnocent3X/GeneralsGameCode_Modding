@@ -34,6 +34,8 @@
 #include "Common/GlobalData.h"
 #include "Common/ModelState.h"
 #include "WW3D2/dx8wrapper.h"
+#include <map>
+#include <string>
 
 //#include "GameLogic/Module/BodyModule.h" -- Yikes... not necessary to include this! (KM)
 enum BodyDamageType CPP_11(: Int); //Ahhhh much better!
@@ -113,6 +115,13 @@ protected:
 	afx_msg void OnUpdateViewShowshadows(CCmdUI* pCmdUI);
 	afx_msg void OnViewShowSoftWater();
 	afx_msg void OnUpdateViewShowSoftWater(CCmdUI* pCmdUI);
+	afx_msg void OnViewShowPostProcessing();
+	afx_msg void OnUpdateViewShowPostProcessing(CCmdUI* pCmdUI);
+	afx_msg void OnViewReloadRendering();
+	afx_msg void OnUpdateViewReloadRendering(CCmdUI* pCmdUI);
+public:
+	void reloadRendering();	///< reads the post-processing and material INI files and shaders again, and the map's map.ini
+protected:
 	afx_msg void OnViewExtraBlends();
 	afx_msg void OnUpdateViewShowExtraBlends(CCmdUI* pCmdUI);
 	afx_msg void OnEditShadows();
@@ -180,6 +189,8 @@ private:
 	Vector3									m_cameraTarget;							// for camera tool display only
 	Int											m_time;
 	Int											m_updateCount;
+	Bool										m_heightStrokePending;			///< Terrain changed in a stroke; roads, lights etc. not yet refitted.
+	IRegion2D								m_heightStrokeRange;				///< Heightmap index range the pending stroke changed.
 	UINT										m_timer;
 	DrawObject							*m_drawObject;
 	RefRenderObjListClass		m_lightList;
@@ -189,6 +200,10 @@ private:
 	Bool										m_showWireframe;
 	Bool										m_ww3dInited;
 	Bool										m_needToLoadRoads;
+	const char							*m_capturePath;		///< When set, render() writes the frame to this image file.
+	Bool										m_captureOk;
+	Int											m_captureWidth;
+	Int											m_captureHeight;
 	LightClass							*m_globalLight[MAX_GLOBAL_LIGHTS];
 	RenderObjClass						*m_lightFeedbackMesh[MAX_GLOBAL_LIGHTS];
 
@@ -213,6 +228,9 @@ private:
 
 
 	ID3DXFont*							m3DFont;
+	/// Labels drawn with a W3D font where D3DX has none (the Direct3D 12 renderer); one built sentence per text.
+	class FontCharsClass*		m_labelFont;
+	std::map<std::string, class Render2DSentenceClass*> m_labelSentences;
 	Int											m_pickPixels;
 	Int											m_partialMapSize;
 
@@ -225,6 +243,8 @@ protected:
   void drawCircle( HDC hdc, const Coord3D & centerPoint, Real radius, COLORREF color );
 	void drawLabels(HDC hdc);
 	void drawLabels();
+	void drawLabelText(const AsciiString &text, Int x, Int y, UnsignedInt color);
+	void releaseLabelText();
 	void shutdownWW3D();
 	void killTheTimer();
 	void render();
@@ -233,12 +253,15 @@ protected:
 	void updateLights();
 	void updateScorches();
 	void updateTrees();
+	void refitObjectsInRange(WorldHeightMap *htMap, const IRegion2D &partialRange);
 
 public:
 	virtual Bool viewToDocCoords(CPoint curPt, Coord3D *newPt, Bool constrain=true) override;
 	virtual Bool docToViewCoords(Coord3D curPt, CPoint* newPt) override;
 
-	virtual void updateHeightMapInView(WorldHeightMap *htMap, Bool partial, const IRegion2D &partialRange) override;
+	virtual void updateHeightMapInView(WorldHeightMap *htMap, Bool partial, const IRegion2D &partialRange, Bool invalObjects = true) override;
+	virtual void updateHeightStrokeInView(WorldHeightMap *htMap, const IRegion2D &partialRange) override;
+	virtual void finishHeightStrokeInView() override;
 
 	/// Invalidates an object. Pass null to inval all objects.
 	virtual void invalObjectInView(MapObject *pObj) override;
@@ -265,6 +288,12 @@ public:
 	Vector3 getCameraSource() { return m_cameraSource; }
 	Vector3 getCameraTarget() { return m_cameraTarget; }
 	Real getCameraAngle() { return m_cameraAngle; }
+	void setCameraAngle(Real angle) { m_cameraAngle = angle; }
+	Real getZoomOffset() { return m_mouseWheelOffset; }
+	void setZoomOffset(Real offset) { m_mouseWheelOffset = offset; }
+	/// Renders one frame and writes it to an image file before it is presented (see mcpSetScreenshotOptions).
+	/// Returns false if the view could not render.
+	Bool captureToFile(const char *path, Int *width, Int *height);
 	CPoint getActualWinSize() {return m_actualWinSize;}
 
 	virtual MapObject *picked3dObjectInView(CPoint viewPt) override;

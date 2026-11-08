@@ -1035,6 +1035,10 @@ Bool AIPlayer::isLocationSafe(const Coord3D *pos, const ThingTemplate *tthing )
 
 	PartitionFilterRejectByKindOf	filterDozer(MAKE_KINDOF_MASK(KINDOF_DOZER), KINDOFMASK_NONE);
 
+	// Inert objects such as the reveal marker of a spy satellite belong to the enemy but are no
+	// threat; counting them let one satellite scan stop the AI from building in its own base.
+	PartitionFilterRejectByKindOf	filterInert(MAKE_KINDOF_MASK(KINDOF_INERT), KINDOFMASK_NONE);
+
 	PartitionFilter *filters[16];
 	Int numFilters = 0;
 
@@ -1045,6 +1049,7 @@ Bool AIPlayer::isLocationSafe(const Coord3D *pos, const ThingTemplate *tthing )
 	filters[numFilters++] = &filterInsignificant;
 	filters[numFilters++] = &filterHarvesters;
 	filters[numFilters++] = &filterDozer;
+	filters[numFilters++] = &filterInert;
 	filters[numFilters] = nullptr;
 
 	Object *enemy = ThePartitionManager->getClosestObject(  pos, radius, FROM_BOUNDINGSPHERE_2D, filters );
@@ -3868,10 +3873,7 @@ void AIPlayer::getPlayerStructureBounds( Region2D *bounds, Int playerNdx, Bool c
 					}
 					else
 					{
-						if (objBounds.lo.x>pos.x) objBounds.lo.x = pos.x;
-						if (objBounds.lo.y>pos.y) objBounds.lo.y = pos.y;
-						if (objBounds.hi.x<pos.x) objBounds.hi.x = pos.x;
-						if (objBounds.hi.y<pos.y) objBounds.hi.y = pos.y;
+						objBounds.uniteWith(pos.asCoord2D());
 					}
 					if (firstStructure)
 					{
@@ -3881,10 +3883,7 @@ void AIPlayer::getPlayerStructureBounds( Region2D *bounds, Int playerNdx, Bool c
 					}
 					else
 					{
-						if (bounds->lo.x>pos.x) bounds->lo.x = pos.x;
-						if (bounds->lo.y>pos.y) bounds->lo.y = pos.y;
-						if (bounds->hi.x<pos.x) bounds->hi.x = pos.x;
-						if (bounds->hi.y<pos.y) bounds->hi.y = pos.y;
+						bounds->uniteWith(pos.asCoord2D());
 					}
 				}
 			}

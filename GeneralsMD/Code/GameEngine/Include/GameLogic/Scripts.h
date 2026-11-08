@@ -548,6 +548,10 @@ public:
 		SHOW_WEATHER,															///< show map defined weather.
 		AI_PLAYER_BUILD_TYPE_NEAREST_TEAM,				///< Tell the ai player to build an object nearest team.
 		SKIRMISH_BUILD_SHIPYARD,                  ///< Tell the ai player to build a shipyard
+		POSTPROCESS_SET_PARAMETER,								///< Set or fade a post-processing pass parameter (Direct3D 12)
+		POSTPROCESS_ENABLE_PASS,									///< Switch a post-processing pass on or off (Direct3D 12)
+		POSTPROCESS_USE_CHAIN,										///< Run another PostProcessChain (Direct3D 12)
+		SHADOWMAP_SET_DARKNESS,										///< Set or fade the shadow map darkness (Direct3D 12)
 		// add new items here, please
 		NUM_ITEMS
 	};
@@ -629,9 +633,9 @@ protected:	// Note - If you add any member vars, you must take them into account
 	ScriptAction *m_action;			///< First in a list of actions executed if the conditions are true.
 	ScriptAction *m_actionFalse;///< First in a list of actions executed if the conditions are false.
 	Script			*m_nextScript;	///< Next in the list of scripts.
+	UnsignedInt m_frameToEvaluateAt; ///< When to evaluate the conditions next, if m_delayEvaluationSeconds>0.
 
 // Runtime fields - not saved or read.
-	UnsignedInt m_frameToEvaluateAt; ///< When to evaluate the conditions next, if m_delayEvaluationSeconds>0.
 	Bool				m_hasWarnings; ///< Runtime flag used by the editor only.
 	AsciiString	m_conditionTeamName; ///< Runtime name used by ScriptEngine only.
 	Real				m_conditionTime;		///< Amount of time (cum) to evaluate conditions.

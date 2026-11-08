@@ -107,6 +107,7 @@ enum DamageType CPP_11(: Int)
 	DAMAGE_JET_TORPEDO,
 	DAMAGE_ANTI_SHIP,
 	DAMAGE_CRYO,
+	DAMAGE_BLACK_HOLE,
 	
 	// Specific damage types with special logic attached
 	DAMAGE_TORPEDO, ///< can only attack units over water
@@ -255,6 +256,7 @@ enum DeathType CPP_11(: Int)
 	//New Death Types
 	DEATH_CHRONO,
 	DEATH_CRYO,
+	DEATH_BLACK_HOLE,
 	
 	DEATH_NUM_TYPES
 };
@@ -286,7 +288,7 @@ static const char *const TheDeathNames[] =
 	//New:
 	"CHRONO",
 	"CRYO",
-
+	"BLACK_HOLE",
 	nullptr
 };
 static_assert(ARRAY_SIZE(TheDeathNames) == DEATH_NUM_TYPES + 1, "Incorrect array size");
@@ -303,19 +305,21 @@ typedef std::pair<DeathTypeFlags, AsciiString>		DeathFlagsCustom;
 const DeathTypeFlags DEATH_TYPE_FLAGS_ALL = 0xffffffff;
 const DeathTypeFlags DEATH_TYPE_FLAGS_NONE = 0x00000000;
 
+static_assert(DEATH_NUM_TYPES <= 32, "DeathTypeFlags has 32 bits");
+
 inline Bool getDeathTypeFlag(DeathTypeFlags flags, DeathType dt)
 {
-	return (flags & (1UL << (dt - 1))) != 0;
+	return (flags & (1UL << dt)) != 0;
 }
 
 inline DeathTypeFlags setDeathTypeFlag(DeathTypeFlags flags, DeathType dt)
 {
-	return (flags | (1UL << (dt - 1)));
+	return (flags | (1UL << dt));
 }
 
 inline DeathTypeFlags clearDeathTypeFlag(DeathTypeFlags flags, DeathType dt)
 {
-	return (flags & ~(1UL << (dt - 1)));
+	return (flags & ~(1UL << dt));
 }
 
 

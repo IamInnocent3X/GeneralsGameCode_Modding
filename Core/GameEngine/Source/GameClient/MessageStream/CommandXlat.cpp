@@ -184,6 +184,26 @@ Bool hasThingsInProduction(PlayerType playerType)
 
 bool changeMaxRenderFps(FpsValueChange change)
 {
+	// With a separate render limit the fps limit is the game speed, so change the render limit instead.
+	if (TheFramePacer->getRenderFramesPerSecondLimit() > 0)
+	{
+		UnsignedInt renderFps = TheFramePacer->getRenderFramesPerSecondLimit();
+		renderFps = RenderFpsPreset::changeFpsValue(renderFps, change);
+		TheFramePacer->setRenderFramesPerSecondLimit(renderFps);
+
+		UnicodeString renderMessage;
+		if (renderFps != RenderFpsPreset::UncappedFpsValue)
+		{
+			renderMessage = TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:SetMaxRenderFps", L"Max Render FPS is %u", renderFps);
+		}
+		else
+		{
+			renderMessage = TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:SetUncappedRenderFps", L"Max Render FPS is uncapped");
+		}
+		TheInGameUI->messageNoFormat(renderMessage);
+		return true;
+	}
+
 	UnsignedInt maxRenderFps = TheFramePacer->getFramesPerSecondLimit();
 	maxRenderFps = RenderFpsPreset::changeFpsValue(maxRenderFps, change);
 
@@ -403,6 +423,10 @@ static CanAttackResult canObjectForceAttack( Object *obj, const Object *victim, 
 //-------------------------------------------------------------------------------------------------
 static CanAttackResult canAnyForceAttack(const DrawableList *allSelected, const Object *victim, const Coord3D *pos )
 {
+	// TheSuperHackers @bugfix WebbontheWeb 06/10/2026 Checks all selected units instead of just first one,
+	// so a unit without a weapon doesn't prevent the entire group from force attacking.
+	CanAttackResult bestResult = ATTACKRESULT_NOT_POSSIBLE;
+
 	// check to make sure that allSelected can attack obj.
 	CanAttackResult result = ATTACKRESULT_NOT_POSSIBLE;
 	
@@ -426,10 +450,18 @@ static CanAttackResult canAnyForceAttack(const DrawableList *allSelected, const 
 			continue;
 		}
 
-		return canObjectForceAttack( obj, victim, pos );
+		const CanAttackResult result = canObjectForceAttack( obj, victim, pos );
+		if (result > bestResult)
+		{
+			bestResult = result;
+			if (bestResult == ATTACKRESULT_POSSIBLE)
+			{
+				break;
+			}
+		}
 	}
 
-	return result;
+	return bestResult;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2033,8 +2065,8 @@ GameMessage::Type CommandTranslator::handleGuiCommand( const CommandButton *comm
 			}
 
 			// null out the GUI command if we're actually doing something.
-			// Exception: an N-point (chronosphere) power keeps the command pending between
-			// clicks so the remaining clicks (or a right-click cancel) can still be handled.
+			// Exception: an N-point (chronosphere) power keeps the command pending between clicks
+			// so the remaining clicks (or a right-click cancel) can still be handled.
 			if( type == DO_COMMAND && !TheInGameUI->hasPendingSpecialPowerLocations() )
 			{
 				TheInGameUI->setGUICommand( nullptr );

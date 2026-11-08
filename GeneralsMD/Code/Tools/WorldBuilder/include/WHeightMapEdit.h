@@ -24,6 +24,8 @@
 
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 
+#include <set>
+
 class DataChunkOutput;
 class TerrainType;
 
@@ -57,6 +59,20 @@ typedef struct
 } TGlobalTextureClass;
 
 
+/// Describes a mirror or rotation for WorldHeightMapEdit::copyTransformedFrom by mapping destination
+/// vertices and cells back to their source.
+class HeightMapTransform
+{
+public:
+	virtual ~HeightMapTransform() {}
+	/// Returns false to leave the destination vertex unchanged.
+	virtual Bool sourceVertex(Int x, Int y, Int *srcX, Int *srcY) const = 0;
+	/// Same for cells; a cell is addressed by its lower left vertex.
+	virtual Bool sourceCell(Int x, Int y, Int *srcX, Int *srcY) const = 0;
+	/// Maps a direction (components -1, 0 or 1) from source to destination orientation for a destination cell.
+	virtual void mapDirection(Int x, Int y, Int *dx, Int *dy) const = 0;
+};
+
 class WorldHeightMapEdit : public WorldHeightMap
 {
 protected:
@@ -77,6 +93,10 @@ protected:
 	Int allocateTiles(Int textureClass);
 	Int allocateEdgeTiles(Int textureClass);
 	void blendToThisClass(Int xIndex, Int yIndex, Int textureClass, Int edgeClass);
+	void blendCellToClass(Int xIndex, Int yIndex, Int textureClass, Int sides, Int edgeClass, const Int *baseClasses);
+	Int getBlendLayerClass(Int blendNdx);
+	void addCornerBlend(Int xIndex, Int yIndex, Int textureClass, Int blendKind);
+	void blendCellFromCorners(Int xIndex, Int yIndex, Int *corners);
 	void blendSpecificTiles(Int xIndex, Int yIndex, Int srcXIndex, Int srcYIndex,
 									Int curTileNdx, Int blendTileNdx, Bool longDiagonal, Int edgeClass);
 	Int findOrCreateBlendTile(TBlendTileInfo *pBlendInfo);
@@ -116,10 +136,33 @@ public: // Editing methods.
 	void blendTile(Int xIndex, Int yIndex, Int srcXIndex, Int srcYIndex, Int srcClass, Int edgeClass);
 	void autoBlendOut(Int xIndex, Int yIndex, Int edgeIndex = -1);
 	Int getTextureClass(Int xIndex, Int yIndex, Bool baseClass=false);
-	void setHeight(Int xIndex, Int yIndex, UnsignedByte height);
+	/// Sets a height, limited to the valid range and snapped with snapHeight().
+	void setHeight(Int xIndex, Int yIndex, Int height);
+	/// Heights are saved as bytes and multiplied by the map's HeightMapScale when loaded, so only
+	/// multiples of the scale survive a save. Returns the nearest such height in the valid range.
+	/// A height exactly between two steps moves away from currentHeight, so that a small change
+	/// has an effect in both directions.
+	static Int snapHeight(Int height, Int currentHeight);
 	void setCliff(Int xIndex, Int yIndex, Bool impassable) {setCliffState(xIndex, yIndex, impassable);}
 	Bool setTileNdx(Int xIndex, Int yIndex, Int textureClass, Bool singleTile);
-	Bool floodFill(Int xIndex, Int yIndex, Int textureClass, Bool doReplace);
+	Bool floodFill(Int xIndex, Int yIndex, Int textureClass, Bool doReplace, Bool askToConfirm = true);
+	/// Copies heights, textures (including blends) and passability from a same-sized map through a
+	/// mirror or rotation. Cliff texture mapping is reset on the copied cells.
+	void copyTransformedFrom(WorldHeightMapEdit *src, const HeightMapTransform &xf, Bool heights, Bool textures, Bool passability);
+	/// Removes both blend layers from the cells in the inclusive index range.
+	void clearBlends(Int x0, Int y0, Int x1, Int y1);
+	/// Blends every edge of the given texture classes into the neighbouring cells of the inclusive
+	/// index range. Unlike autoBlendOut it decides from the base textures only, so the result does
+	/// not depend on the order and thin regions are blended like wide ones.
+	void blendAllEdges(const std::set<Int> &classes, Int globalEdgeClass, Int x0, Int y0, Int x1, Int y1);
+	/// Removes the blends in the inclusive index range and blends again, treating each cell's
+	/// texture as the texture at its lower left corner. Every boundary gets one blend, so edges
+	/// that step diagonally come out smooth. Textures do not move except where three or four meet.
+	void blendCorners(Int x0, Int y0, Int x1, Int y1);
+	/// Counts the blended cells, the cells with a second blend layer, and the edges between
+	/// different textures that neither side blends across.
+	void getBlendStats(Int x0, Int y0, Int x1, Int y1, Int *pBlended, Int *pThreeWay, Int *pHardEdges);
+	Int getNumBlendTilesUsed() {return m_numBlendedTiles;}
 	static Int getNumTexClasses() {return m_numGlobalTextureClasses;};
 	static AsciiString getTexClassName(int ndx) {return m_globalTextureClasses[ndx].name;}
 	static AsciiString getTexClassUiName(int ndx) ;
@@ -143,6 +186,11 @@ public: // Editing methods.
 
 	Bool resize(Int newXSize, Int newYSize, Int newHeight, Int newBorder, Bool anchorTop, Bool anchorBottom,
 							Bool anchorLeft, Bool anchorRight, Coord3D *pObjOffset);
+	/// Changes the map size by adding cells on each side (negative values remove cells). New cells
+	/// continue the old edge: its height (or fillHeight if that is not negative) and its base texture
+	/// (or fillTextureClass if that is not negative).
+	/// Unlike resize() it keeps manual passability and updates the boundaries. Never shows a dialog.
+	Bool resizeBySides(Int addLeft, Int addBottom, Int addRight, Int addTop, Int newBorder, Int fillHeight, Int fillTextureClass);
 	Bool remapTextures(); ///< returns true if the operation had an effect.
 	void reloadTextures(); ///< Reloads textures from disk.
 	void resetResources(); ///< Releases textures in preparation for device reset.
@@ -150,6 +198,17 @@ public: // Editing methods.
 	void dbgVerifyAfterUndo(); ///< Verifies the structures are still consistent.
 	Bool doCliffAdjustment(Int xIndex, Int yIndex);
 	Bool removeCliffMapping();
+	/// True if the cell is steep enough for doCliffAdjustment to map it.
+	Bool isCliffCell(Int xIndex, Int yIndex);
+	/// Runs doCliffAdjustment from every steep cell of the inclusive index range that has no mapping
+	/// yet. A region continues outside the range. Returns the number of regions mapped.
+	Int mapCliffs(Int x0, Int y0, Int x1, Int y1);
+	/// Removes the cliff mapping of the cells in the inclusive index range.
+	void clearCliffMapping(Int x0, Int y0, Int x1, Int y1);
+	/// Reads a cell's mapping, its texture class and the height of that texture in texture coordinates.
+	/// Mapped V runs from -extent to 0, U from 0 to extent. Returns false if the cell has no mapping.
+	Bool getCliffCell(Int xIndex, Int yIndex, TCliffInfo *pInfo, Int *pClass, Real *pExtent);
+	void setCliffCell(Int xIndex, Int yIndex, const TCliffInfo &info);
 
 	Int getNumBoundaries() const ;
 	void getBoundary(Int ndx, ICoord2D* border) const;

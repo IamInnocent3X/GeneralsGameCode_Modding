@@ -47,6 +47,8 @@ public:
 	Bool isFramesPerSecondLimitEnabled() const; ///< Returns whether the fps limit is enabled here.
 	Bool isActualFramesPerSecondLimitEnabled() const; ///< Returns whether the fps limit is actually enabled when considering all game settings and setups.
 	Int  getActualFramesPerSecondLimit() const; // Get the actual update fps limit.
+	void setRenderFramesPerSecondLimit( Int fps ); ///< Set a render fps limit separate from the update fps limit. When set (> 0) it limits the rendering in all games, and outside of network games the update fps limit becomes the logic rate.
+	Int  getRenderFramesPerSecondLimit() const; ///< Get the separate render fps limit, 0 if not set.
 
 	Real getUpdateTime() const; ///< Get the last update delta time in seconds.
 	Real getUpdateFps() const; ///< Get the last update fps.
@@ -67,14 +69,27 @@ public:
 	Real getLogicTimeStepSeconds(LogicTimeQueryFlags flags = 0) const; ///< Get the logic time step in seconds
 	Real getLogicTimeStepMilliseconds(LogicTimeQueryFlags flags = 0) const; ///< Get the logic time step in milliseconds
 
+	void markLogicUpdate(); ///< Signal that a logic step was just done. Anchors the render interpolation.
+	void updateLogicInterpolation(); ///< Compute the render interpolation factor for the coming render update.
+	Real getLogicInterpolation() const { return m_logicInterpolation; } ///< How far the render update is between the previous and the last logic step, 0..1.
+	Real getLogicFramePhase() const; ///< Get how far the current render step reaches into the current logic frame, in [0,1]. Used to interpolate render updates between logic updates.
+
 protected:
+
+	Bool isRenderDecoupled() const; ///< Whether the separate render fps limit applies
 
 	FrameRateLimit m_frameRateLimit;
 
 	Int m_maxFPS; ///< Maximum frames per second for rendering
+	Int m_renderFpsLimit; ///< Separate render fps limit, 0 if not set
 	Int m_logicTimeScaleFPS; ///< Maximum frames per second for logic time scale
 
+	Int64 m_perfFreq; ///< Performance counter frequency
+	Int64 m_lastLogicUpdate; ///< Performance counter tick of the last logic step
+
 	Real m_updateTime; ///< Last update delta time in seconds
+	Real m_logicInterpolation; ///< Render interpolation factor between the previous and the last logic step
+	Real m_logicFramePhase; ///< How far the current render step reaches into the current logic frame, ranging 0 to 1.
 
 	Bool m_enableFpsLimit;
 	Bool m_enableLogicTimeScale;

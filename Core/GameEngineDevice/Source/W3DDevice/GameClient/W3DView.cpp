@@ -86,6 +86,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DView.h"
+#include "W3DDevice/GameClient/W3DPostProcess.h"
 #include "d3dx8math.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
@@ -2083,6 +2084,10 @@ void W3DView::draw()
   }
 #endif // RTS_DEBUG
 
+	// Post-process the world before health bars, text and the 2D scene, which belong to the interface.
+	if (TheW3DPostProcess)
+		TheW3DPostProcess->run(m_3DCamera);
+
 	Region3D axisAlignedRegion;
 	getAxisAlignedViewRegion(axisAlignedRegion);
 
@@ -2724,8 +2729,7 @@ void W3DView::lookAt( const Coord3D *o )
 		}
 	}
 
-	Coord2D pos2D = { pos.x, pos.y };
-	setPosition2D(pos2D);
+	setPosition2D(pos.asCoord2D());
 
 	resetPivotToGround();
 

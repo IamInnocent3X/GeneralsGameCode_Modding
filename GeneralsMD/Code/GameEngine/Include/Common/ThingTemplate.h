@@ -646,6 +646,7 @@ public:
 
 	/// Used only by Skirmish AI. Everyone else should call calcCostToBuild.
 	Int friend_getBuildCost() const { return m_buildCost; }
+	Real friend_getBuildTime() const { return m_buildTime; }	///< seconds, before any player modifiers
 
 	const AsciiString& getDefaultOwningSide() const { return m_defaultOwningSide; }
 
@@ -683,6 +684,7 @@ public:
 	AsciiString getUpgradeCameoName( Int n)const{ return m_upgradeCameoUpgradeNames[n];	}
 
 	const WeaponTemplateSetVector& getWeaponTemplateSets() const {return m_weaponTemplateSets;}
+	const ArmorTemplateSetVector& getArmorTemplateSets() const {return m_armorTemplateSets;}
 
 	Int getMaxPathFindingCellRadius() const { return static_cast<Int>(m_maxPathfindingCellRadius); };
 
@@ -915,6 +917,7 @@ private:
 	Bool					m_isForbidden;								///< useful when overriding in <mapfile>.ini
 	Bool					m_armorCopiedFromDefault;
 	Bool					m_weaponsCopiedFromDefault;
+	Bool					m_prereqsCopiedFromExtended;	///< prerequisites came with ObjectExtend; the object's own replace them
 	Bool					m_useMyGetRepairAtCursor;
 	Bool					m_useMyDockCursor;
 	Bool					m_useMyGetHealedCursor;

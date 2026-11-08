@@ -36,8 +36,19 @@ FramePacer::FramePacer()
 	timeBeginPeriod(1);
 
 	m_maxFPS = BaseFps;
+	m_renderFpsLimit = 0;
 	m_logicTimeScaleFPS = LOGICFRAMES_PER_SECOND;
 	m_updateTime = 1.0f / (Real)BaseFps; // initialized to something to avoid division by zero on first use
+	m_logicInterpolation = 1.0f;
+
+	LARGE_INTEGER freq;
+	LARGE_INTEGER tick;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&tick);
+	m_perfFreq = freq.QuadPart;
+	m_lastLogicUpdate = tick.QuadPart;
+
+	m_logicFramePhase = 1.0f;
 	m_enableFpsLimit = FALSE;
 	m_enableLogicTimeScale = FALSE;
 	m_isTimeFrozen = FALSE;
@@ -52,16 +63,33 @@ FramePacer::~FramePacer()
 
 void FramePacer::update()
 {
-	// TheSuperHackers @bugfix xezon 05/08/2025 Re-implements the frame rate limiter
-	// with higher resolution counters to cap the frame rate more accurately to the desired limit.
-	const UnsignedInt maxFps = getActualFramesPerSecondLimit();// allowFpsLimit ? getFramesPerSecondLimit() : RenderFpsPreset::UncappedFpsValue;
+	// Uses a high resolution counter to cap the frame rate more accurately to the desired limit than retail did.
+	const UnsignedInt maxFps = getActualFramesPerSecondLimit();
 	m_updateTime = m_frameRateLimit.wait(maxFps);
+
+	if (TheGameLogic != nullptr)
+	{
+		// Set or advance the logic frame phase by the render step that the next update will draw.
+		// It is capped at a whole logic frame, because the render steps in between can add up to more than one.
+		// Consumers are expected to interpolate towards the next logic frame and not extrapolate past it.
+		const Real timeScale = getActualLogicTimeScaleOverFpsRatio();
+
+		if (TheGameLogic->hasUpdated())
+		{
+			m_logicFramePhase = timeScale;
+		}
+		else
+		{
+			m_logicFramePhase = min(1.0f, m_logicFramePhase + timeScale);
+		}
+	}
 }
 
 void FramePacer::reset()
 {
 	m_frameRateLimit.reset();
 	m_updateTime = 1.0f / (Real)getActualFramesPerSecondLimit();
+	m_logicFramePhase = 1.0f;
 }
 
 void FramePacer::setFramesPerSecondLimit( Int fps )
@@ -111,7 +139,40 @@ Bool FramePacer::isActualFramesPerSecondLimitEnabled() const
 
 Int FramePacer::getActualFramesPerSecondLimit() const
 {
-	return isActualFramesPerSecondLimitEnabled() ? getFramesPerSecondLimit() : RenderFpsPreset::UncappedFpsValue;
+	// Network games turn the regular fps limit off; the separate render limit still applies there.
+	// The logic steps at most once per render update, so never render slower than the network frame rate.
+	if (m_renderFpsLimit > 0 && TheNetwork != nullptr)
+	{
+		return std::max(m_renderFpsLimit, (Int)TheNetwork->getFrameRate());
+	}
+
+	if (!isActualFramesPerSecondLimitEnabled())
+	{
+		return RenderFpsPreset::UncappedFpsValue;
+	}
+
+	// The logic steps at most once per render update, so never render slower than the game speed.
+	if (isRenderDecoupled())
+	{
+		return std::max(m_renderFpsLimit, getFramesPerSecondLimit());
+	}
+
+	return getFramesPerSecondLimit();
+}
+
+void FramePacer::setRenderFramesPerSecondLimit( Int fps )
+{
+	m_renderFpsLimit = std::max(fps, 0);
+}
+
+Int FramePacer::getRenderFramesPerSecondLimit() const
+{
+	return m_renderFpsLimit;
+}
+
+Bool FramePacer::isRenderDecoupled() const
+{
+	return m_renderFpsLimit > 0 && TheNetwork == nullptr;
 }
 
 Real FramePacer::getUpdateTime()  const
@@ -193,6 +254,13 @@ Int FramePacer::getActualLogicTimeScaleFps(LogicTimeQueryFlags flags) const
 		return getLogicTimeScaleFps();
 	}
 
+	// With a separate render limit the update fps limit is the game speed, so the logic runs at it.
+	// Fast forward and an unlocked fps limit still step the logic once per render update.
+	if (isRenderDecoupled() && isActualFramesPerSecondLimitEnabled())
+	{
+		return getFramesPerSecondLimit();
+	}
+
 	// Returns uncapped value to align with the render update as per the original game behavior.
 	return RenderFpsPreset::UncappedFpsValue;
 }
@@ -204,8 +272,7 @@ Real FramePacer::getActualLogicTimeScaleRatio(LogicTimeQueryFlags flags) const
 
 Real FramePacer::getActualLogicTimeScaleOverFpsRatio(LogicTimeQueryFlags flags) const
 {
-	// TheSuperHackers @info Clamps ratio to min 1, because the logic
-	// frame rate is currently capped by the render frame rate.
+	// Clamps ratio to min 1, because the logic frame rate is currently capped by the render frame rate.
 	return min(1.0f, (Real)getActualLogicTimeScaleFps(flags) / getUpdateFps());
 }
 
@@ -217,4 +284,34 @@ Real FramePacer::getLogicTimeStepSeconds(LogicTimeQueryFlags flags) const
 Real FramePacer::getLogicTimeStepMilliseconds(LogicTimeQueryFlags flags) const
 {
 	return MSEC_PER_LOGICFRAME_REAL * getActualLogicTimeScaleOverFpsRatio(flags);
+}
+
+void FramePacer::markLogicUpdate()
+{
+	LARGE_INTEGER tick;
+	QueryPerformanceCounter(&tick);
+	m_lastLogicUpdate = tick.QuadPart;
+}
+
+void FramePacer::updateLogicInterpolation()
+{
+	// Frozen, halted or stalled logic does not advance, so show the last logic step as is.
+	const Int logicFps = getActualLogicTimeScaleFps();
+	if (logicFps <= 0)
+	{
+		m_logicInterpolation = 1.0f;
+		return;
+	}
+
+	// When the logic steps once per render update (uncapped logic time scale), the
+	// elapsed time always covers a full logic step and this resolves to 1.
+	LARGE_INTEGER tick;
+	QueryPerformanceCounter(&tick);
+	const double elapsedSeconds = static_cast<double>(tick.QuadPart - m_lastLogicUpdate) / m_perfFreq;
+	m_logicInterpolation = (Real)std::min(elapsedSeconds * logicFps, 1.0);
+}
+
+Real FramePacer::getLogicFramePhase() const
+{
+	return m_logicFramePhase;
 }

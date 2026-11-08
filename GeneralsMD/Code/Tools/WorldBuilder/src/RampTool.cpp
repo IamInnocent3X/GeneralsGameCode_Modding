@@ -161,14 +161,14 @@ void RampTool::applyRamp(CWorldBuilderDoc* pDoc)
 		pDoc->getCoordFromCellIndex(indices[i], &pt);
 
 		Real uVal;
-		Coord2D start = { mStartPoint.x, mStartPoint.y };
-		Coord2D end = { mEndPoint.x, mEndPoint.y };
-		Coord2D pt2D = { pt.x, pt.y };
+		Coord2D start = mStartPoint.asCoord2D();
+		Coord2D end = mEndPoint.asCoord2D();
+		Coord2D pt2D = pt.asCoord2D();
 
 		ShortestDistancePointToSegment2D(&start, &end, &pt2D, nullptr, nullptr, &uVal);
 		Real height = mStartPoint.z + uVal * (mEndPoint.z - mStartPoint.z);
 
-		worldHeightDup->setHeight(indices[i].x, indices[i].y, (UnsignedByte) (height / MAP_HEIGHT_SCALE));
+		worldHeightDup->setHeight(indices[i].x, indices[i].y, (Int) (height / MAP_HEIGHT_SCALE));
 	}
 
 	IRegion2D partialRange = {0,0,0,0};

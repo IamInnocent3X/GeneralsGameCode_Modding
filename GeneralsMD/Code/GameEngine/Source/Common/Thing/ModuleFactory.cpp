@@ -160,6 +160,7 @@
 #include "GameLogic/Module/KodiakDeploymentUpdate.h"
 #include "GameLogic/Module/BaikonurLaunchPower.h"
 #include "GameLogic/Module/BattlePlanUpdate.h"
+#include "GameLogic/Module/AllBattlePlansUpdate.h"
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/Module/RadiusDecalUpdate.h"
 #include "GameLogic/Module/RadiusDecalBehavior.h"
@@ -326,6 +327,8 @@
 #include "GameClient/Module/DynamicGeometryClientUpdate.h"
 #include "GameClient/Module/BeaconClientUpdate.h"
 
+#include "GameLogic/Module/RiftSlowDeathUpdate.h"
+
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 ModuleFactory *TheModuleFactory = nullptr;  ///< the module factory singleton
 
@@ -384,6 +387,7 @@ void ModuleFactory::init()
 	addModule( HelicopterSlowDeathBehavior );
 	addModule( ShipSlowDeathBehavior );
 	addModule( NeutronMissileSlowDeathBehavior );
+	addModule( RiftSlowDeathBehavior );
 	addModule( CaveContain );
 	addModule( OpenContain );
 	addModule( OverchargeBehavior );
@@ -499,6 +503,7 @@ void ModuleFactory::init()
 	addModule( KodiakDeploymentUpdate );
 	addModule( BaikonurLaunchPower );
 	addModule( BattlePlanUpdate );
+	addModule( AllBattlePlansUpdate );
 	addModule( ProjectileStreamUpdate );
 	addModule( QueueProductionExitUpdate );
 	addModule( RepairDockUpdate );

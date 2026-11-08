@@ -1265,12 +1265,18 @@ void AssaultTransportAIUpdate::crc( Xfer *xfer )
 //-------------------------------------------------------------------------------------------------
 /** Xfer method
 	* Version Info:
-	* 1: Initial version */
+	* 1: Initial version
+	* 2: TheSuperHackers @bugfix bobtista 14/08/2026 Save m_newMember and m_newOccupantsAreNewMembers.
+	*/
 //-------------------------------------------------------------------------------------------------
 void AssaultTransportAIUpdate::xfer( Xfer *xfer )
 {
   // version
+#if RETAIL_COMPATIBLE_XFER_SAVE
   XferVersion currentVersion = 1;
+#else
+  XferVersion currentVersion = 2;
+#endif
   XferVersion version = currentVersion;
   xfer->xferVersion( &version, currentVersion );
 
@@ -1283,8 +1289,12 @@ void AssaultTransportAIUpdate::xfer( Xfer *xfer )
 	{
 		xfer->xferObjectID( &(m_memberIDs[ i ]) );
 		xfer->xferBool( &(m_memberHealing[ i ]) );
-		xfer->xferBool( &(m_countedSlotMember[ i ]) );
-		xfer->xferBool( &(m_countedAssaultingMember[ i ]) );
+		if( version >= 2 )
+		{
+			xfer->xferBool( &(m_newMember[ i ]) );
+			xfer->xferBool( &(m_countedSlotMember[ i ]) );
+			xfer->xferBool( &(m_countedAssaultingMember[ i ]) );
+		}
 	}
 
 	xfer->xferCoord3D( &m_attackMoveGoalPos );
@@ -1298,8 +1308,12 @@ void AssaultTransportAIUpdate::xfer( Xfer *xfer )
 	xfer->xferBool( &m_isAttackMove );
 	xfer->xferBool( &m_isAttackObject );
 
-	xfer->xferInt( &m_maxNumInTransport );
-	xfer->xferInt( &m_maxNumAttacking );
+	if( version >= 2 )
+	{
+		xfer->xferBool( &m_newOccupantsAreNewMembers );
+		xfer->xferInt( &m_maxNumInTransport );
+		xfer->xferInt( &m_maxNumAttacking );
+	}
 
 }
 

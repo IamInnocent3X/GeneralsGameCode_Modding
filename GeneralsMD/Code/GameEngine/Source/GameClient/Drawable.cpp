@@ -460,6 +460,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatusBits statu
 
 	m_instance.Make_Identity();
 	m_instanceIsIdentity = true;
+	m_interpolationTransformValid = false;
 
 	//Real scaleFuzziness = thingTemplate->getInstanceScaleFuzziness();
 	//Real fuzzyScale = ( 1.0f + GameClientRandomValueReal( -scaleFuzziness, scaleFuzziness ));
@@ -679,10 +680,26 @@ Bool Drawable::isVisible()
 	* interpolate between frames (e.g. terrain tread marks) don't stretch across the jump. */
 void Drawable::reactToTeleport()
 {
+	m_interpolationTransformValid = false;
+
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		(*dm)->reactToTeleport();
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void Drawable::captureInterpolationTransform()
+{
+	const Object *obj = getObject();
+	if (obj == nullptr)
+	{
+		m_interpolationTransformValid = false;
+		return;
+	}
+
+	m_interpolationTransform = *obj->getTransformMatrix();
+	m_interpolationTransformValid = true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1394,7 +1411,7 @@ void Drawable::imitateStealthLook( Drawable& otherDraw )
 /** update is called once per frame */
 //-------------------------------------------------------------------------------------------------
 //DECLARE_PERF_TIMER(updateDrawable)
-void Drawable::updateDrawable()
+void Drawable::updateDrawable(Real timeScale)
 {
 	//USE_PERF_TIMER(updateDrawable)
 
@@ -1411,15 +1428,23 @@ void Drawable::updateDrawable()
 	{
 
 		// handle fading in or out
+		// TheSuperHackers @tweak bobtista 15/09/2026 Decouple Drawable fade timing from render updates.
 		if (m_fadeMode != FADING_NONE)
 		{
-			Real numer = (m_fadeMode == FADING_IN) ? (m_timeElapsedFade) : (m_timeToFade-m_timeElapsedFade);
+			m_timeElapsedFade += timeScale;
 
-			setDrawableOpacity(numer/(Real)m_timeToFade);
-			++m_timeElapsedFade;
-
-			if (m_timeElapsedFade > m_timeToFade)
+			Real opacity;
+			if (m_timeElapsedFade >= m_timeToFade)
+			{
+				opacity = m_fadeMode == FADING_IN ? 1.0f : 0.0f;
 				m_fadeMode = FADING_NONE;
+			}
+			else
+			{
+				Real numer = (m_fadeMode == FADING_IN) ? (m_timeElapsedFade) : (m_timeToFade-m_timeElapsedFade);
+				opacity = numer/(Real)m_timeToFade;
+			}
+			setDrawableOpacity(opacity);
 		}
 	}
 
@@ -1430,11 +1455,11 @@ void Drawable::updateDrawable()
 
 		if (*dm)
 		{
+			// TheSuperHackers @tweak bobtista 15/09/2026 Decouple decal opacity fade timing from render updates.
 			if (m_decalOpacityFadeRate != 0)
 			{
 				//LERP
-				(*dm)->setTerrainDecalOpacity(m_decalOpacity);
-				m_decalOpacity += m_decalOpacityFadeRate;
+				m_decalOpacity += m_decalOpacityFadeRate * timeScale;
 			}
 			//---------------
 
@@ -1448,6 +1473,10 @@ void Drawable::updateDrawable()
 			{
 				m_decalOpacity = 1.0f;
 				m_decalOpacityFadeRate = 0.0f;
+				(*dm)->setTerrainDecalOpacity(m_decalOpacity);
+			}
+			else if (m_decalOpacityFadeRate != 0)
+			{
 				(*dm)->setTerrainDecalOpacity(m_decalOpacity);
 			}
 
@@ -1784,17 +1813,33 @@ void Drawable::applyPhysicsXform(Matrix3D* mtx)
 {
 	if (m_physicsXform != nullptr)
 	{
-		// TheSuperHackers @tweak Update the physics transform on every WW Sync only.
-		// All calculations are originally catered to a 30 fps logic step.
+		// TheSuperHackers @tweak Advance physics only on WW Sync frames.
 		if (WW3D::Get_Sync_Frame_Time() != 0)
 		{
+			m_physicsXform->setPrevTotals();
 			calcPhysicsXform(*m_physicsXform);
+
+			// New or previously undrawn objects have no result from the previous logic step.
+			if (m_physicsXform->m_syncTime != WW3D::Get_Previous_Sync_Time())
+			{
+				m_physicsXform->setPrevTotals();
+			}
+			m_physicsXform->m_syncTime = WW3D::Get_Sync_Time();
 		}
 
-		mtx->Translate(0.0f, 0.0f, m_physicsXform->m_totalZ);
-		mtx->Rotate_Y( m_physicsXform->m_totalPitch );
-		mtx->Rotate_X( -m_physicsXform->m_totalRoll );
-		mtx->Rotate_Z( m_physicsXform->m_totalYaw );
+		// TheSuperHackers @tweak bobtista 14/09/2026 Interpolate the rendered transform between
+		// logic frames, so the motion stays smooth when the render rate is above the logic rate.
+		const Real t = TheFramePacer->getLogicFramePhase();
+
+		const Real interpPitch = WWMath::Lerp(m_physicsXform->m_prevTotalPitch, m_physicsXform->m_totalPitch, t);
+		const Real interpRoll = WWMath::Lerp(m_physicsXform->m_prevTotalRoll, m_physicsXform->m_totalRoll, t);
+		const Real interpYaw = WWMath::Lerp(m_physicsXform->m_prevTotalYaw, m_physicsXform->m_totalYaw, t);
+		const Real interpZ = WWMath::Lerp(m_physicsXform->m_prevTotalZ, m_physicsXform->m_totalZ, t);
+
+		mtx->Translate(0.0f, 0.0f, interpZ);
+		mtx->Rotate_Y( interpPitch );
+		mtx->Rotate_X( -interpRoll );
+		mtx->Rotate_Z( interpYaw );
 	}
 }
 
@@ -3072,6 +3117,29 @@ void Drawable::draw()
 
 	// call the database defined draw action method
 	Matrix3D transformMtx = *getTransformMatrix();
+
+	// Draw between the transforms of the previous and the last logic step, so that motion stays
+	// smooth when rendering faster than the logic runs (always the case in network games).
+	if (m_interpolationTransformValid && TheGlobalData->m_useRenderInterpolation)
+	{
+		const Real interpolation = TheFramePacer->getLogicInterpolation();
+		if (interpolation < 1.0f && !(m_interpolationTransform == transformMtx))
+		{
+			// A jump this far within one logic step is a relocation, not motion; don't slide across it.
+			const Real MAX_INTERPOLATION_DISTANCE_SQR = sqr(100.0f);
+			const Vector3 delta = transformMtx.Get_Translation() - m_interpolationTransform.Get_Translation();
+			// The rotation is interpolated as a quaternion, which would drop any scale in the matrix.
+			const Bool isUnscaled = fabs(transformMtx.Get_X_Vector().Length2() - 1.0f) < 0.01f
+				&& fabs(transformMtx.Get_Z_Vector().Length2() - 1.0f) < 0.01f;
+			if (delta.Length2() <= MAX_INTERPOLATION_DISTANCE_SQR && isUnscaled)
+			{
+				Matrix3D interpolatedMtx;
+				Matrix3D::Lerp(m_interpolationTransform, transformMtx, interpolation, interpolatedMtx);
+				transformMtx = interpolatedMtx;
+			}
+		}
+	}
+
 	if (!isInstanceIdentity())
 	{
 #ifdef ALLOW_TEMPORARIES
@@ -5390,6 +5458,23 @@ void Drawable::setDrawableHidden( Bool hidden )
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Allow model-condition particle systems to keep emitting while the drawable is hidden */
+//-------------------------------------------------------------------------------------------------
+void Drawable::setKeepParticlesWhenHidden( Bool keep )
+{
+	if (keep == testDrawableStatus(DRAWABLE_STATUS_KEEP_PARTICLES_WHEN_HIDDEN))
+		return;
+
+	if (keep)
+		setDrawableStatus(DRAWABLE_STATUS_KEEP_PARTICLES_WHEN_HIDDEN);
+	else
+		clearDrawableStatus(DRAWABLE_STATUS_KEEP_PARTICLES_WHEN_HIDDEN);
+
+	// let the draw modules re-evaluate whether their particle systems run
+	updateHiddenStatus();
+}
+
+//-------------------------------------------------------------------------------------------------
 void Drawable::updateDrawableClipStatus( UnsignedInt shotsRemaining, UnsignedInt maxShots, WeaponSlotType slot )
 {
 	for (DrawModule** dm = getDrawModulesNonDirty(); *dm; ++dm)
@@ -5632,6 +5717,7 @@ void Drawable::xferDrawableModules( Xfer *xfer )
 	* 6: Added m_ambientSoundEnabledFromScript flag (Added in Zero Hour)
 	* 7: Save the customize ambient sound info (Added in Zero Hour)
 	* 8: TheSuperHackers @bugfix Removed m_prevTintStatus because loading its value is unnecessary and undesirable
+	* 9: TheSuperHackers @tweak m_timeElapsedFade is now serialized as Real instead of UnsignedInt
 	*/
 // ------------------------------------------------------------------------------------------------
 void Drawable::xfer( Xfer *xfer )
@@ -5643,7 +5729,7 @@ void Drawable::xfer( Xfer *xfer )
 #elif RETAIL_COMPATIBLE_XFER_SAVE
 	const XferVersion currentVersion = 7;
 #else
-	const XferVersion currentVersion = 8;
+	const XferVersion currentVersion = 9;
 #endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
@@ -5875,7 +5961,19 @@ void Drawable::xfer( Xfer *xfer )
 	xfer->xferUser( &m_fadeMode, sizeof( FadingMode ) );
 
 	// time elapsed fade
-	xfer->xferUnsignedInt( &m_timeElapsedFade );
+	if (version >= 9)
+	{
+		xfer->xferReal( &m_timeElapsedFade );
+	}
+	else
+	{
+		UnsignedInt timeElapsedFadeFrames = static_cast<UnsignedInt>(m_timeElapsedFade);
+		xfer->xferUnsignedInt( &timeElapsedFadeFrames );
+		if (xfer->getXferMode() == XFER_LOAD)
+		{
+			m_timeElapsedFade = static_cast<Real>(timeElapsedFadeFrames);
+		}
+	}
 
 	// time to fade
 	xfer->xferUnsignedInt( &m_timeToFade );
@@ -6412,7 +6510,7 @@ void TintEnvelope::crc( Xfer *xfer )
 /** Xfer Method
 	* Version Info;
 	* 1: Initial version
-	* 2: TheSuperHackers @tweak Serialize sustain counter as float instead of integer
+	* 2: TheSuperHackers @tweak Serialize sustain counter as double instead of integer
 	*/
 // ------------------------------------------------------------------------------------------------
 void TintEnvelope::xfer( Xfer *xfer )
@@ -6442,13 +6540,17 @@ void TintEnvelope::xfer( Xfer *xfer )
 	// sustain counter
 	if (version <= 1)
 	{
+		// TheSuperHackers @info bobtista 23/09/2026 The double counter can represent SUSTAIN_INDEFINITELY exactly.
 		UnsignedInt sustainCounter = (UnsignedInt)m_sustainCounter;
 		xfer->xferUnsignedInt( &sustainCounter );
-		m_sustainCounter = (Real)sustainCounter;
+		if( xfer->getXferMode() == XFER_LOAD )
+		{
+			m_sustainCounter = sustainCounter;
+		}
 	}
 	else
 	{
-		xfer->xferReal( &m_sustainCounter );
+		xfer->xferDouble( &m_sustainCounter );
 	}
 
 	// affect

@@ -104,6 +104,8 @@
 #include "GameClient/Drawable.h"
 #include "GameClient/GUICallbacks.h"
 
+#include "GameLogic/AIMatch.h"
+#include "Common/GameMcp.h"
 #include "GameNetwork/NetworkInterface.h"
 #include "GameNetwork/WOLBrowser/WebBrowser.h"
 #include "GameNetwork/LANAPI.h"
@@ -282,6 +284,14 @@ GameEngine::~GameEngine()
 
 	delete TheSkirmishGameInfo;
 	TheSkirmishGameInfo = nullptr;
+
+	delete TheAIMatch;
+	TheAIMatch = nullptr;
+
+#ifdef RTS_GAME_MCP
+	delete TheGameMcp;
+	TheGameMcp = nullptr;
+#endif
 
 	delete TheChallengeGameInfo;
 	TheChallengeGameInfo = nullptr;
@@ -674,6 +684,14 @@ void GameEngine::init()
 		TheSubsystemList->postProcessLoadAll();
 
 		TheFramePacer->setFramesPerSecondLimit(TheGlobalData->m_framesPerSecondLimit);
+		// The player's options override the render fps limit of the game data. It only affects this client.
+		{
+			OptionPreferences optionPref;
+			Int renderFpsLimit = optionPref.getRenderFpsLimit();
+			if (renderFpsLimit < 0)
+				renderFpsLimit = TheGlobalData->m_renderFramesPerSecondLimit;
+			TheFramePacer->setRenderFramesPerSecondLimit(renderFpsLimit);
+		}
 
 		TheAudio->setOn(TheGlobalData->m_audioOn && TheGlobalData->m_musicOn, AudioAffect_Music);
 		TheAudio->setOn(TheGlobalData->m_audioOn && TheGlobalData->m_soundsOn, AudioAffect_Sound);
@@ -740,6 +758,22 @@ void GameEngine::init()
 				//DEBUG_LOG(("Playing Game. Random Type: %s. Seed: %d", TheGlobalData->m_initRandomType.str(), GetGameLogicRandomSeed()));
 			}
 		}
+
+		// A skirmish between AI players, asked for on the command line.
+		TheAIMatch = AIMatch::createFromCommandLine();
+		if (TheAIMatch)
+		{
+			TheAIMatch->start();
+		}
+
+#ifdef RTS_GAME_MCP
+		// The bridge for tools that drive the game, asked for on the command line.
+		TheGameMcp = GameMcp::createFromCommandLine();
+		if (TheGameMcp)
+		{
+			TheGameMcp->startGameFromCommandLine();
+		}
+#endif
 
 		//
 		if (TheMapCache && TheGlobalData->m_shellMapOn)
@@ -906,6 +940,12 @@ void GameEngine::update()
 {
 	USE_PERF_TIMER(GameEngine_update)
 	{
+		const Bool useRenderInterpolation = TheGlobalData->m_useRenderInterpolation && !TheGlobalData->m_headless;
+		if (useRenderInterpolation)
+		{
+			TheFramePacer->updateLogicInterpolation();
+		}
+
 		{
 			// VERIFY CRC needs to be in this code block.  Please to not pull TheGameLogic->update() inside this block.
 			VERIFY_CRC
@@ -924,10 +964,29 @@ void GameEngine::update()
 			}
 		}
 
+#ifdef RTS_GAME_MCP
+		// Between the client and the logic, outside of the CRC check above because commands may change
+		// the game; orders from the bridge go out with this logic frame.
+		if (TheGameMcp)
+		{
+			TheGameMcp->poll();
+		}
+#endif
+
 		// TheSuperHackers @info Ignores frozen time because the script engine needs updating in the logic update regardless.
 		if (canUpdateGameLogic(FramePacer::IgnoreFrozenTime))
 		{
+			if (useRenderInterpolation)
+			{
+				TheGameClient->captureInterpolationTransforms();
+			}
+
 			TheGameLogic->UPDATE();
+
+			if (useRenderInterpolation)
+			{
+				TheFramePacer->markLogicUpdate();
+			}
 
 			if (!TheFramePacer->isTimeFrozen())
 			{

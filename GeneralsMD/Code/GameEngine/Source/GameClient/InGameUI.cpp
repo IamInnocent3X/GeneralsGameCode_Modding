@@ -143,8 +143,6 @@ static UnicodeString formatIncomeValue(UnsignedInt cashPerMin)
 /// The InGameUI singleton instance.
 InGameUI *TheInGameUI = nullptr;
 
-GameWindow *m_replayWindow = nullptr;
-
 // ------------------------------------------------------------------------------------------------
 struct KindOfSelectionData
 {
@@ -258,38 +256,6 @@ static Bool similarUnitSelection( Drawable *test, void *userData )
 		}
 	}
 	return FALSE;
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-void showReplayControls()
-{
-	if (m_replayWindow)
-	{
-		Bool show = TheGameLogic->isInReplayGame();
-		m_replayWindow->winHide(!show);
-	}
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-void hideReplayControls()
-{
-	if (m_replayWindow)
-	{
-		m_replayWindow->winHide(TRUE);
-	}
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
-void toggleReplayControls()
-{
-	if (m_replayWindow)
-	{
-		Bool show = TheGameLogic->isInReplayGame() && m_replayWindow->winIsHidden();
-		m_replayWindow->winHide(!show);
-	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -473,7 +439,7 @@ void InGameUI::xfer( Xfer *xfer )
 					xfer->xferBool(&swInfo->m_hiddenByScript);
 					xfer->xferBool(&swInfo->m_hiddenByScience);
 					xfer->xferBool(&swInfo->m_ready);
-          if ( currentVersion >= 3 )
+          if ( version >= 3 )
           {
             xfer->xferBool( &swInfo->m_evaReadyPlayed );
           }
@@ -520,7 +486,7 @@ void InGameUI::xfer( Xfer *xfer )
 			xfer->xferBool(&hiddenByScript);
 			xfer->xferBool(&hiddenByScience);
 			xfer->xferBool(&ready);
-      if ( currentVersion >= 3 )
+      if ( version >= 3 )
       {
         xfer->xferBool( &evaReadyPlayed );
       }
@@ -1082,6 +1048,7 @@ const FieldParse InGameUI::s_fieldParseTable[] =
 	{ "RenderFpsBold",          INI::parseBool,         nullptr, offsetof( InGameUI, m_renderFpsBold ) },
 	{ "RenderFpsPosition",      INI::parseCoord2D,      nullptr, offsetof( InGameUI, m_renderFpsPosition ) },
 	{ "RenderFpsColor",         INI::parseColorInt,     nullptr, offsetof( InGameUI, m_renderFpsColor ) },
+	{ "RenderFpsLowColor",      INI::parseColorInt,     nullptr, offsetof( InGameUI, m_renderFpsLowColor ) },
 	{ "RenderFpsLimitColor",    INI::parseColorInt,     nullptr, offsetof( InGameUI, m_renderFpsLimitColor ) },
 	{ "RenderFpsDropColor",     INI::parseColorInt,     nullptr, offsetof( InGameUI, m_renderFpsDropColor ) },
 	{ "RenderFpsRefreshMs",     INI::parseUnsignedInt,  nullptr, offsetof( InGameUI, m_renderFpsRefreshMs ) },
@@ -1349,6 +1316,7 @@ InGameUI::InGameUI()
 
 	}
 
+	m_controlBarWindow = nullptr;
 	m_replayWindow = nullptr;
 	m_messagesOn = TRUE;
 
@@ -1364,6 +1332,7 @@ InGameUI::InGameUI()
 	m_lastNetworkLatencyFrames = ~0u;
 
 	m_renderFpsString = nullptr;
+	m_renderFpsLowString = nullptr;
 	m_renderFpsLimitString = nullptr;
 	m_renderFpsFont = "Tahoma";
 	m_renderFpsPointSize = TheGlobalData->m_renderFpsFontSize;
@@ -1371,10 +1340,12 @@ InGameUI::InGameUI()
 	m_renderFpsPosition.x = kHudAnchorX;
 	m_renderFpsPosition.y = kHudAnchorY;
 	m_renderFpsColor = GameMakeColor( 255, 255, 0, 255 );
+	m_renderFpsLowColor = GameMakeColor( 190, 180, 130, 255 );
 	m_renderFpsLimitColor = GameMakeColor(119, 119, 119, 255);
 	m_renderFpsDropColor = GameMakeColor( 0, 0, 0, 255 );
 	m_renderFpsRefreshMs = 1000;
 	m_lastRenderFps = ~0u;
+	m_lastRenderFpsLow = ~0u;
 	m_lastRenderFpsLimit = ~0u;
 	m_lastRenderFpsUpdateMs = 0u;
 
@@ -1504,6 +1475,9 @@ InGameUI::~InGameUI()
 	// clear world animations
 	clearWorldAnimations();
 	resetIdleWorker();
+
+	destroyReplayControl();
+	destroyControlBar();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2366,6 +2340,15 @@ void InGameUI::update()
 
 	GameWindow *moneyWin = TheWindowManager->winGetWindowFromId( nullptr, moneyWindowKey );
 	GameWindow *powerWin = TheWindowManager->winGetWindowFromId( nullptr, powerWindowKey );
+
+	// a recreated control bar (resolution change) has a new money window that shows nothing yet
+	static GameWindow *lastMoneyWin = nullptr;
+	if( moneyWin != lastMoneyWin )
+	{
+		lastMoney = ~0u;
+		lastIncome = ~0u;
+		lastMoneyWin = moneyWin;
+	}
 //	if( moneyWin == nullptr )
 //	{
 //		NameKeyType moneyWindowKey = TheNameKeyGenerator->nameToKey( "ControlBar.wnd:MoneyDisplay" );
@@ -2615,6 +2598,8 @@ void InGameUI::freeCustomUiResources()
 	m_networkLatencyString = nullptr;
 	TheDisplayStringManager->freeDisplayString(m_renderFpsString);
 	m_renderFpsString = nullptr;
+	TheDisplayStringManager->freeDisplayString(m_renderFpsLowString);
+	m_renderFpsLowString = nullptr;
 	TheDisplayStringManager->freeDisplayString(m_renderFpsLimitString);
 	m_renderFpsLimitString = nullptr;
 	TheDisplayStringManager->freeDisplayString(m_systemTimeString);
@@ -4903,6 +4888,12 @@ void InGameUI::postDraw()
 				{
 					SuperweaponInfo *info = *listIt;
 					DEBUG_ASSERTCRASH(info, ("No superweapon info!"));
+					// Owner-only timers are drawn only for the player they belong to.
+					if (info && info->getSpecialPowerTemplate()->isOwnerOnlyTimer() &&
+							(ThePlayerList->getLocalPlayer() == nullptr || i != ThePlayerList->getLocalPlayer()->getPlayerIndex()))
+					{
+						continue;
+					}
 					if (info && !info->m_hiddenByScript && !info->m_hiddenByScience)
 					{
 						//enforce bottom margin of tactical view
@@ -5036,6 +5027,9 @@ void InGameUI::postDraw()
                     info->m_evaReadyPlayed = false; // Reset Eva for next time
                 }
 
+                // A flashing timer is drawn like a ready one while it counts down.
+                const Bool drawReady = isReady || module->getSpecialPowerTemplate()->isFlashingTimer();
+
                 // draw the text
                 if ( !m_superweaponHiddenByScript && !marginExceeded )
                 {
@@ -5043,7 +5037,7 @@ void InGameUI::postDraw()
  								  Bool changeBolding = (readySecs != info->m_timestamp) || (isReady != info->m_ready) || info->m_forceUpdateText;
  								  if (changeBolding)
  								  {
- 									  if (isReady)
+ 									  if (drawReady)
 									  {
 										  // go bold - we're good to go
 										  info->setFont( m_superweaponReadyFont, m_superweaponReadyPointSize, m_superweaponReadyBold );
@@ -5071,7 +5065,7 @@ void InGameUI::postDraw()
                     info->setText(name, time);
                   }
 
-                  if (isReady)
+                  if (drawReady)
 								  {
 									  if ( m_superweaponFlashDuration != 0.0f )
 									  {
@@ -5260,7 +5254,7 @@ void InGameUI::expireHint( HintType type, UnsignedInt hintIndex )
 void InGameUI::createControlBar()
 {
 
-	TheWindowManager->winCreateFromScript( "ControlBar.wnd" );
+	m_controlBarWindow = TheWindowManager->winCreateFromScript( "ControlBar.wnd" );
 	HideControlBar();
 /*
 	// hide all windows created from this layout
@@ -5269,6 +5263,16 @@ void InGameUI::createControlBar()
 		window->winHide( TRUE );
 */
 
+}
+
+void InGameUI::destroyControlBar()
+{
+	if (m_controlBarWindow != nullptr)
+	{
+		TheWindowManager->winDestroy(m_controlBarWindow);
+		m_controlBarWindow = nullptr;
+		m_idleWorkerWin = nullptr; // This window belongs to the Control Bar and is implicitly deleted as well.
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5286,6 +5290,41 @@ void InGameUI::createReplayControl()
 		window->winHide( TRUE );
 */
 
+}
+
+void InGameUI::destroyReplayControl()
+{
+	if (m_replayWindow != nullptr)
+	{
+		TheWindowManager->winDestroy(m_replayWindow);
+		m_replayWindow = nullptr;
+	}
+}
+
+void InGameUI::showReplayControls()
+{
+	if (m_replayWindow)
+	{
+		Bool show = TheGameLogic->isInReplayGame();
+		m_replayWindow->winHide(!show);
+	}
+}
+
+void InGameUI::hideReplayControls()
+{
+	if (m_replayWindow)
+	{
+		m_replayWindow->winHide(TRUE);
+	}
+}
+
+void InGameUI::toggleReplayControls()
+{
+	if (m_replayWindow)
+	{
+		Bool show = TheGameLogic->isInReplayGame() && m_replayWindow->winIsHidden();
+		m_replayWindow->winHide(!show);
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -7066,16 +7105,38 @@ void InGameUI::resetIdleWorker()
 
 void InGameUI::recreateControlBar()
 {
-	GameWindow *win = TheWindowManager->winGetWindowFromId(nullptr, TheNameKeyGenerator->nameToKey("ControlBar.wnd"));
-	deleteInstance(win);
+	Player *observedPlayer = TheControlBar ? TheControlBar->getObservedPlayer() : nullptr;
+	Player *observerLookAtPlayer = TheControlBar ? TheControlBar->getObserverLookAtPlayer() : nullptr;
 
-	m_idleWorkerWin = nullptr;
+	// The build tooltip remembers the command button it is shown for, which is destroyed below.
+	if (TheControlBar)
+		TheControlBar->deleteBuildTooltipLayout();
 
+	destroyControlBar();
 	createControlBar();
 
 	delete TheControlBar;
 	TheControlBar = NEW ControlBar;
 	TheControlBar->init();
+
+	// the radar draws into a window of the control bar
+	if (TheRadar)
+		TheRadar->refreshRadarWindow();
+
+	// In a game, the new control bar still needs what the start of the game gave the old one: without
+	// the player's scheme it has no background and keeps the layout of the old resolution.
+	Player *localPlayer = ThePlayerList ? ThePlayerList->getLocalPlayer() : nullptr;
+	if (TheGameLogic->isInGame() && !TheGameLogic->isInShellGame() && localPlayer != nullptr)
+	{
+		if (localPlayer->isPlayerActive() || localPlayer->isPlayerObserver())
+			TheControlBar->setControlBarSchemeByPlayer(localPlayer);
+		else
+			TheControlBar->setControlBarSchemeByPlayerTemplate(ThePlayerTemplateStore->findPlayerTemplate(NAMEKEY("FactionObserver")));
+		TheControlBar->initSpecialPowershortcutBar(localPlayer);
+		TheControlBar->setObservedPlayer(observedPlayer);
+		TheControlBar->setObserverLookAtPlayer(observerLookAtPlayer);
+		TheControlBar->markUIDirty();	// show what is selected
+	}
 }
 
 void InGameUI::refreshCustomUiResources()
@@ -7110,6 +7171,12 @@ void InGameUI::refreshRenderFpsResources()
 		m_lastRenderFpsUpdateMs = 0u;
 	}
 
+	if (!m_renderFpsLowString)
+	{
+		m_renderFpsLowString = TheDisplayStringManager->newDisplayString();
+		m_lastRenderFpsLow = ~0u;
+	}
+
 	if (!m_renderFpsLimitString)
 	{
 		m_renderFpsLimitString = TheDisplayStringManager->newDisplayString();
@@ -7120,6 +7187,7 @@ void InGameUI::refreshRenderFpsResources()
 	Int adjustedRenderFpsFontSize = TheGlobalLanguageData->adjustFontSize(m_renderFpsPointSize);
 	GameFont *fpsFont = TheWindowManager->winFindFont(m_renderFpsFont, adjustedRenderFpsFontSize, m_renderFpsBold);
 	m_renderFpsString->setFont(fpsFont);
+	m_renderFpsLowString->setFont(fpsFont);
 	m_renderFpsLimitString->setFont(fpsFont);
 
 	if (m_renderFpsPointSize > 0)
@@ -7232,6 +7300,15 @@ void InGameUI::updateRenderFpsString()
 		m_renderFpsString->setText(fpsStr);
 		m_lastRenderFps = renderFps;
 	}
+
+	const UnsignedInt renderFpsLow = (UnsignedInt)(TheDisplay->getLow1PercentFPS() + 0.5f);
+	if (renderFpsLow != m_lastRenderFpsLow)
+	{
+		UnicodeString fpsLowStr;
+		fpsLowStr.format(L"\x25BC%u", renderFpsLow);
+		m_renderFpsLowString->setText(fpsLowStr);
+		m_lastRenderFpsLow = renderFpsLow;
+	}
 }
 
 void InGameUI::drawNetworkLatency(Int &x, Int &y)
@@ -7275,19 +7352,19 @@ void InGameUI::drawRenderFps(Int &x, Int &y)
 		updateRenderFpsString();
 	}
 
-	UnsignedInt renderFpsLimit = 0u;
-	if (TheGlobalData->m_useFpsLimit)
-	{
-		renderFpsLimit = (UnsignedInt)TheFramePacer->getFramesPerSecondLimit();
-		if (renderFpsLimit == RenderFpsPreset::UncappedFpsValue)
-		{
-			renderFpsLimit = 0u;
-		}
-	}
+	// The actual limit covers a disabled fps limit as uncapped and the separate render limit of network games.
+	const UnsignedInt renderFpsLimit = (UnsignedInt)TheFramePacer->getActualFramesPerSecondLimit();
 	if (renderFpsLimit != m_lastRenderFpsLimit)
 	{
 		UnicodeString fpsLimitStr;
-		fpsLimitStr.format(L"[%u]", renderFpsLimit);
+		if (renderFpsLimit == RenderFpsPreset::UncappedFpsValue)
+		{
+			fpsLimitStr.format(L"\x25B2X");
+		}
+		else
+		{
+			fpsLimitStr.format(L"\x25B2%u", renderFpsLimit);
+		}
 		m_renderFpsLimitString->setText(fpsLimitStr);
 		m_lastRenderFpsLimit = renderFpsLimit;
 	}
@@ -7298,14 +7375,20 @@ void InGameUI::drawRenderFps(Int &x, Int &y)
 		const Int drawY = kHudAnchorY + y;
 
 		m_renderFpsString->draw(kHudAnchorX + x, drawY, m_renderFpsColor, m_renderFpsDropColor);
-		x += m_renderFpsString->getWidth();
+		x += m_renderFpsString->getWidth() + kHudGapPx / 2;
+		m_renderFpsLowString->draw(kHudAnchorX + x, drawY, m_renderFpsLowColor, m_renderFpsDropColor);
+		x += m_renderFpsLowString->getWidth() + kHudGapPx / 2;
 		m_renderFpsLimitString->draw(kHudAnchorX + x, drawY, m_renderFpsLimitColor, m_renderFpsDropColor);
 		x += m_renderFpsLimitString->getWidth() + kHudGapPx;
 	}
 	else
 	{
-		m_renderFpsString->draw(m_renderFpsPosition.x, m_renderFpsPosition.y, m_renderFpsColor, m_renderFpsDropColor);
-		m_renderFpsLimitString->draw(m_renderFpsPosition.x + m_renderFpsString->getWidth(), m_renderFpsPosition.y, m_renderFpsLimitColor, m_renderFpsDropColor);
+		Int currentX = m_renderFpsPosition.x;
+		m_renderFpsString->draw(currentX, m_renderFpsPosition.y, m_renderFpsColor, m_renderFpsDropColor);
+		currentX += m_renderFpsString->getWidth() + kHudGapPx / 2;
+		m_renderFpsLowString->draw(currentX, m_renderFpsPosition.y, m_renderFpsLowColor, m_renderFpsDropColor);
+		currentX += m_renderFpsLowString->getWidth() + kHudGapPx / 2;
+		m_renderFpsLimitString->draw(currentX, m_renderFpsPosition.y, m_renderFpsLimitColor, m_renderFpsDropColor);
 	}
 }
 

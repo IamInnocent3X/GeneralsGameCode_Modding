@@ -281,6 +281,8 @@ BEGIN
         MENUITEM "Show Clouds\tCtrl+U",         ID_VIEW_SHOWCLOUDS
         MENUITEM "Show Soft Water",             ID_VIEW_SHOWSOFTWATER
         MENUITEM "Show Macrotexture",           ID_VIEW_SHOWMACROTEXTURE
+        MENUITEM "Show Post-Processing (DX12)", ID_VIEW_SHOWPOSTPROCESSING
+        MENUITEM "Reload Post-Processing and Materials (DX12)", ID_VIEW_RELOADRENDERING
         MENUITEM SEPARATOR
         MENUITEM "Change Time Of Day\tCtrl+D",  ID_VIEW_TIME_OF_DAY
         MENUITEM SEPARATOR
@@ -295,9 +297,13 @@ BEGIN
         MENUITEM "Layers List",                 ID_VIEW_LAYERS_LIST
         MENUITEM SEPARATOR
     END
+    POPUP "&Tools"
+    BEGIN
+        MENUITEM "Re-blend All Tiles",          ID_TOOLS_REBLENDALLTILES
+    END
     POPUP "&Window"
     BEGIN
-        MENUITEM "640x480",                     ID_WINDOW_PREVIEW640X480
+        MENUITEM "640x480",                    ID_WINDOW_PREVIEW640X480
         MENUITEM "800x600",                     ID_WINDOW_PREVIEW800X600
         MENUITEM "1024x768",                    ID_WINDOW_PREVIEW1024X768
         MENUITEM SEPARATOR

@@ -245,6 +245,7 @@ void WeaponSet::crc( Xfer *xfer )
 	* 1: Initial version
 	* 2: TheSuperHackers @tweak Upgrade damage type flags from integer to BitFlags for Generals.
 	*    Zero Hour already had this at version 1.
+	* 3: TheSuperHackers @bugfix bobtista 14/08/2026 Now serialize m_hasPitchLimit instead of m_hasDamageWeapon twice
 	*/
 // ------------------------------------------------------------------------------------------------
 void WeaponSet::xfer( Xfer *xfer )
@@ -253,7 +254,7 @@ void WeaponSet::xfer( Xfer *xfer )
 #if RETAIL_COMPATIBLE_XFER_SAVE
 	const XferVersion currentVersion = 1;
 #else
-	const XferVersion currentVersion = 2;
+	const XferVersion currentVersion = 3;
 #endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
@@ -335,7 +336,7 @@ void WeaponSet::xfer( Xfer *xfer )
 	}
 #endif
 
-	xfer->xferBool(&m_hasDamageWeapon);
+	xfer->xferBool(version >= 3 ? &m_hasPitchLimit : &m_hasDamageWeapon);
 	xfer->xferBool(&m_hasDamageWeapon);
 	xfer->xferBool(&m_restricted);
 
@@ -965,10 +966,23 @@ CanAttackResult WeaponSet::getAbleToUseWeaponAgainstTarget( AbleToAttackType att
 			last = PRIMARY_WEAPON;
 		}
 
+		// When the weapon is picked automatically, skip the weapons chooseBestWeaponForTarget would skip.
+		// Otherwise a weapon it never picks makes the target look attackable, and the AI keeps choosing a
+		// target whose attack fails at once (Marines with their mine clearing grenade against buildings).
+		const Bool autoChoose = first != last;
+
 		//Check each weapon, until we find one that can do damage (or fail)
 		for( Int i = first; i >= last ; --i )
 		{
 			Weapon *weapon = m_weapons[ i ];
+			if (weapon && autoChoose)
+			{
+				CommandSourceMask okSrcs = m_curWeaponTemplateSet->getNthCommandSourceMask((WeaponSlotType)i);
+				if( ( okSrcs & (1 << commandSource) ) == 0 && !( okSrcs & CMD_DEFAULT_SWITCH_WEAPON ) )
+					continue;
+				if (!(weapon->getAntiMask() & targetAntiMask))
+					continue;
+			}
 			if (weapon && !victim->hasRejectKey(weapon->getTemplate()->getRejectKeys()) && weapon->getTemplate()->passRequirements(source) && weapon->estimateWeaponDamage( source, victim ))
 			{
 				//Kris: Aug 22, 2003
@@ -1597,6 +1611,11 @@ Bool WeaponSet::setWeaponLock( WeaponSlotType weaponSlot, WeaponLockType lockTyp
 	if (lockType == NOT_LOCKED)
 	{
 		DEBUG_CRASH(("calling setWeaponLock with NOT_LOCKED, so I am doing nothing... did you mean to use releaseWeaponLock()?\n"));
+		return false;
+	}
+
+	if (static_cast<UnsignedInt>(weaponSlot) >= ARRAY_SIZE(m_weapons))
+	{
 		return false;
 	}
 

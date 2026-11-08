@@ -167,6 +167,7 @@ float															WW3D::FractionalSyncMs = 0.0f;
 unsigned int											WW3D::SyncTime = 0;
 unsigned int											WW3D::PreviousSyncTime = 0;
 bool														WW3D::IsSortingEnabled = true;
+bool														WW3D::IsDepthOnlyPass = false;
 
 float														WW3D::PixelCenterX = 0.0f;
 float														WW3D::PixelCenterY = 0.0f;
@@ -811,7 +812,7 @@ WW3DErrorType WW3D::Begin_Render(bool clear,bool clearz,const Vector3 & color, f
 	SNAPSHOT_SAY(("========== WW3D::Begin_Render ============"));
 	SNAPSHOT_SAY(("==========================================\n"));
 
-	if (DX8Wrapper::_Get_D3D_Device8() && (hr=DX8Wrapper::_Get_D3D_Device8()->TestCooperativeLevel()) != D3D_OK)
+	if (DX8Wrapper::Has_Device() && (hr=DX8Wrapper::Test_Cooperative_Level()) != D3D_OK)
 	{
         // If the device was lost, do not render until we get it back
         if( D3DERR_DEVICELOST == hr )
@@ -1371,7 +1372,7 @@ void WW3D::Make_Screen_Shot( const char * filename_base , const float gamma, con
 	SurfaceClass::SurfaceDescription surfaceDesc;
 	surface->Get_Description(surfaceDesc);
 
-	SurfaceClass* surfaceCopy = NEW_REF(SurfaceClass, (DX8Wrapper::_Create_DX8_Surface(surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format)));
+	SurfaceClass* surfaceCopy = NEW_REF(SurfaceClass, (surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format));
 	DX8Wrapper::_Copy_DX8_Rects(surface->Peek_D3D_Surface(), nullptr, 0, surfaceCopy->Peek_D3D_Surface(), nullptr);
 
 	surface->Release_Ref();
@@ -1721,7 +1722,7 @@ void WW3D::Update_Movie_Capture()
 	SurfaceClass::SurfaceDescription surfaceDesc;
 	surface->Get_Description(surfaceDesc);
 
-	SurfaceClass* surfaceCopy = NEW_REF(SurfaceClass, (DX8Wrapper::_Create_DX8_Surface(surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format)));
+	SurfaceClass* surfaceCopy = NEW_REF(SurfaceClass, (surfaceDesc.Width, surfaceDesc.Height, surfaceDesc.Format));
 	DX8Wrapper::_Copy_DX8_Rects(surface->Peek_D3D_Surface(), nullptr, 0, surfaceCopy->Peek_D3D_Surface(), nullptr);
 
 	surface->Release_Ref();

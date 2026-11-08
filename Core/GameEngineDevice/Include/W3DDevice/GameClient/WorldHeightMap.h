@@ -102,6 +102,7 @@ class WorldHeightMap : public RefCountClass,
                        public WorldHeightMapInterfaceClass
 {
 	friend class TerrainTextureClass;
+	friend class TerrainMapAtlasClass;
 	friend class AlphaTerrainTextureClass;
 	friend class AlphaEdgeTextureClass;
 
@@ -181,6 +182,9 @@ protected:
 	 texture. */
 	TerrainTextureClass *m_terrainTex;
 	Int	m_terrainTexHeight; /// Height of m_terrainTex allocated.
+	TextureClass *m_terrainMapTex[2];	///< normal and specular maps laid out like m_terrainTex, for terrain materials
+	AsciiString m_terrainMapSuffix[2];
+	Bool m_terrainMapFound[2];
 	/** The texture that contains the alpha edge tiles that get blended on
 			top of the base texture. getAlphaUVData does the mapping. */
 	AlphaTerrainTextureClass *m_alphaTerrainTex;
@@ -208,6 +212,9 @@ protected:
 	Bool getUVForTileIndex(Int ndx, Short tileNdx, float U[4], float V[4]);
 	Int getTextureClassFromNdx(Int tileNdx);
 	void readTexClass(TXTextureClass *texClass, TileData **tileData);
+	/// Reads Art/Terrain/<texture of the class><suffix>.tga into tiles like readTexClass; returns the tiles per
+	/// row, 0 when there is no such file or it does not fit.
+	Int readTexClassMap(const TXTextureClass &texClass, const char *suffix, TileData **tileData);
 	Int updateTileTexturePositions(Int *edgeHeight); ///< Places each tile in the texture.
 	void initCliffFlagsFromHeights();
 	void setCellCliffFlagFromHeights(Int xIndex, Int yIndex);
@@ -237,13 +244,26 @@ public:  // Boundary info
 
 public:  // height map info.
 	static Int getMinHeightValue() {return K_MIN_HEIGHT;}
-	static Int getMaxHeightValue() {return K_MAX_HEIGHT;}
+	/// Highest value a height sample can have: K_MAX_HEIGHT times the HeightMapScale of the map.
+	static Int getMaxHeightValue();
+	static Bool isValidTotalMapSize(Int width, Int height, Int borderSize); ///< Within MAX_MAP_DIMENSION and MAX_MAP_AREA, width and height include the border
+	static Bool isValidPlayableMapSize(Int width, Int height, Int borderSize); ///< Width and height exclude the border
 
 	HeightSampleType *getDataPtr() {return m_data;}
 
 
 	Int getXExtent() const {return m_width;}	///<number of vertices in x
 	Int getYExtent() const {return m_height;}	///<number of vertices in y
+
+	IRegion2D getLogicalBounds() const
+	{
+		IRegion2D bounds;
+		bounds.lo.x = -m_borderSize;
+		bounds.lo.y = -m_borderSize;
+		bounds.hi.x = m_width - m_borderSize;
+		bounds.hi.y = m_height - m_borderSize;
+		return bounds;
+	}
 
 	Region2D getDrawRegion2D();
 
@@ -269,6 +289,15 @@ public:  // height map info.
 			return(0);
 	};
 
+	///Faster version of above function without all the safety checks
+	HeightSampleType getQuickHeight(Int xIndex, Int yIndex) const
+	{
+		return m_data[yIndex * m_width + xIndex];
+	}
+
+	///Check that the map is flat within logical bounds
+	Bool isTerrainFlat(const IRegion2D& bounds) const;
+
 	void getUVForBlend(Int edgeClass, Region2D *range);
 
 	DrawArea createDrawArea(Int xOrg, Int yOrg);
@@ -284,6 +313,9 @@ public:  // height map info.
 public:  // tile and texture info.
 	void setTextureLOD(Int lod);	///< set maximum lod level sent to the hardware.
 	TextureClass *getTerrainTexture();  //< generates if needed and returns the terrain texture
+	/// The normal (0) or specular (1) maps of the terrain textures, laid out like the terrain texture;
+	/// null when no terrain texture has one.
+	TextureClass *getTerrainMapTexture(Int which, const AsciiString& suffix);
 	TextureClass *getAlphaTerrainTexture(); //< generates if needed and returns alpha terrain texture
 	TextureClass *getEdgeTerrainTexture(); //< generates if needed and returns blend edge texture
 	/// UV mapping data for a cell to map into the terrain texture.  Returns true if the textures had to be stretched for cliffs.

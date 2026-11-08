@@ -93,6 +93,11 @@ AIUpdateModuleData::AIUpdateModuleData()
 	m_useAttackAngle = FALSE;
 	m_attackAngles.clear();
 	//m_attackAngleMirrored = FALSE;
+	m_minRangeRetreatStraight = FALSE;
+	m_aimByReversing = FALSE;
+	m_aimByReversingMaxAngle = PI/2;
+	m_aimByReversingMargin = PATHFIND_CELL_SIZE_F;
+	m_aimByReversingTurnFactor = 1.0f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -157,6 +162,11 @@ struct AttackAngleData
     { "ForbidPlayerCommands",				INI::parseBool,										nullptr, offsetof(AIUpdateModuleData, m_forbidPlayerCommands) },
     { "TurretsLinked",							INI::parseBool,										nullptr, offsetof( AIUpdateModuleData, m_turretsLinked ) },
 		{ "PreferredAttackAngle",				AIUpdateModuleData::parseAttackAngle,					nullptr, 0 },
+		{ "MinRangeRetreatStraight",		INI::parseBool,										nullptr, offsetof( AIUpdateModuleData, m_minRangeRetreatStraight ) },
+		{ "AimByReversing",							INI::parseBool,										nullptr, offsetof( AIUpdateModuleData, m_aimByReversing ) },
+		{ "AimByReversingMaxAngle",			INI::parseAngleReal,							nullptr, offsetof( AIUpdateModuleData, m_aimByReversingMaxAngle ) },
+		{ "AimByReversingMargin",				INI::parseReal,										nullptr, offsetof( AIUpdateModuleData, m_aimByReversingMargin ) },
+		{ "AimByReversingTurnFactor",		INI::parseReal,										nullptr, offsetof( AIUpdateModuleData, m_aimByReversingTurnFactor ) },
 
 		{ nullptr, nullptr, nullptr, 0 }
 	};
@@ -317,6 +327,11 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_requestedDestination.zero();
 	m_requestedDestination2.zero();
 	m_pathTimestamp = 0;
+	m_lastPathRequestFrame = 0;
+	m_lastPathRequestCell.x = m_lastPathRequestCell.y = -1;
+	m_lastPathRequestGoalCell.x = m_lastPathRequestGoalCell.y = -1;
+	m_repeatedPathRequests = 0;
+	m_lastPathQueueFrame = 0;
 	m_ignoreObstacleID = INVALID_ID;
 	m_pathExtraDistance = 0;
 	m_pathfindGoalCell.x = m_pathfindGoalCell.y = -1;
@@ -336,6 +351,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 	m_curLocomotor = nullptr;
 	m_curLocomotorSet = LOCOMOTORSET_INVALID;
 	m_locomotorGoalType = NONE;
+	m_locomotorGoalTurnByReversing = FALSE;
 	m_locomotorGoalData.zero();
 	m_lastPos.zero();
 	m_lastRequestedDestination.zero();
@@ -633,6 +649,33 @@ void AIUpdateInterface::requestPath( Coord3D *destination, Bool isFinalGoal )
 		}
 		return;
 	}
+
+	// A unit can ask for the same path every few frames without ever moving, for example when attack move
+	// keeps picking a target it cannot attack and drops the new path each time. Each request is a full search,
+	// so after a few repeats search at most once a second.
+	ICoord2D cell, goalCell;
+	TheAI->pathfinder()->worldToCell(getObject()->getPosition(), &cell);
+	TheAI->pathfinder()->worldToCell(destination, &goalCell);
+	const UnsignedInt now = TheGameLogic->getFrame();
+	if (now - m_lastPathRequestFrame <= LOGICFRAMES_PER_SECOND &&
+			cell.x == m_lastPathRequestCell.x && cell.y == m_lastPathRequestCell.y &&
+			goalCell.x == m_lastPathRequestGoalCell.x && goalCell.y == m_lastPathRequestGoalCell.y) {
+		m_repeatedPathRequests++;
+	} else {
+		m_repeatedPathRequests = 0;
+	}
+	m_lastPathRequestFrame = now;
+	m_lastPathRequestCell = cell;
+	m_lastPathRequestGoalCell = goalCell;
+	if (m_repeatedPathRequests >= 2 && now - m_lastPathQueueFrame < LOGICFRAMES_PER_SECOND) {
+		// Ending a move cancels this wait, so a unit stuck in such a loop gets its next search
+		// from a later request, once the second is up.
+		if (m_queueForPathFrame == 0) {
+			setQueueForPathTime(m_lastPathQueueFrame + LOGICFRAMES_PER_SECOND - now);
+		}
+		return;
+	}
+	m_lastPathQueueFrame = now;
 	TheAI->pathfinder()->queueForPath(getObject()->getID());
 
 }
@@ -1341,6 +1384,7 @@ UpdateSleepTime AIUpdateInterface::update()
 		if (now >= m_queueForPathFrame)
 		{
 			TheAI->pathfinder()->queueForPath(getObject()->getID());
+			m_lastPathQueueFrame = now;
 			setQueueForPathTime(0);
 		}
 		else
@@ -2203,6 +2247,62 @@ Bool AIUpdateInterface::computeAttackPath( PathfindServicesInterface *pathServic
 
 	localVictimPos.z = TheTerrainLogic->getLayerHeight( localVictimPos.x, localVictimPos.y, victimLayer );
 
+	// MinRangeRetreatStraight: we're inside our minimum range. Back off straight away from the target,
+	// just far enough, instead of letting the pathfinder pick the nearest valid cell (often to the side,
+	// which is a long arc for slow-turning vehicles and leaves us facing the wrong way).
+	if (isMinRangeRetreatStraight() && landBound && !source->isAboveTerrain()
+		&& (victim ? weapon->isTooClose(source, victim) : weapon->isTooClose(source, &localVictimPos)))
+	{
+		const Coord3D* srcPos = source->getPosition();
+		Coord3D dir;
+		dir.set(srcPos->x - localVictimPos.x, srcPos->y - localVictimPos.y, 0.0f);
+		Real curDist = dir.length();
+		if (curDist < 0.01f)
+		{
+			// on top of the target: back off along our reversed heading
+			const Coord3D* fwd = source->getUnitDirectionVector2D();
+			dir.set(-fwd->x, -fwd->y, 0.0f);
+			curDist = 0.0f;
+		}
+		else
+		{
+			dir.x /= curDist;
+			dir.y /= curDist;
+		}
+
+		// attack range is measured between bounding circles (ATTACK_RANGE_IS_2D), plus a margin of one cell
+		Real wantedDist = weapon->getTemplate()->getMinimumAttackRange() + PATHFIND_CELL_SIZE_F
+			+ source->getGeometryInfo().getBoundingCircleRadius();
+		if (victim && !victim->isKindOf(KINDOF_BRIDGE))
+			wantedDist += victim->getGeometryInfo().getBoundingCircleRadius();
+
+		Coord3D goal;
+		goal.x = srcPos->x + dir.x * (wantedDist - curDist);
+		goal.y = srcPos->y + dir.y * (wantedDist - curDist);
+		goal.z = TheTerrainLogic->getLayerHeight(goal.x, goal.y, source->getLayer());
+
+		if (TheAI->pathfinder()->isValidAttackGoal(source, m_locomotorSet, goal, victim, &localVictimPos, weapon))
+		{
+			destroyPath();
+			m_path = newInstance(Path);
+			m_path->prependNode(&goal, source->getLayer());
+			Coord3D pos = *srcPos;
+			m_path->prependNode(&pos, source->getLayer());
+			m_path->getFirstNode()->setNextOptimized(m_path->getFirstNode()->getNext());
+			if (TheGlobalData->m_debugAI == AI_DEBUG_PATHS)
+			{
+				TheAI->pathfinder()->setDebugPath(m_path);
+			}
+			TheAI->pathfinder()->updateGoal(source, &goal, source->getLayer());
+
+			m_pathTimestamp = TheGameLogic->getFrame();
+			m_blockedFrames = 0;
+			m_isBlockedAndStuck = FALSE;
+			return TRUE;
+		}
+		// blocked: fall through to the normal attack pathfinding
+	}
+
 	if (getObject()->isAboveTerrain() && !landBound)
 	{
 		// for now, airborne objects don't pathfind
@@ -2576,7 +2676,7 @@ UpdateSleepTime AIUpdateInterface::doLocomotor()
 
 				case ANGLE:
 					{
-						m_curLocomotor->locoUpdate_moveTowardsAngle(getObject(), m_locomotorGoalData.x);
+						m_curLocomotor->locoUpdate_moveTowardsAngle(getObject(), m_locomotorGoalData.x, m_locomotorGoalTurnByReversing);
 						m_doFinalPosition = FALSE;
 					}
 					break;
@@ -2891,6 +2991,24 @@ void AIUpdateInterface::setLocomotorGoalOrientation(Real angle)
 {
 	m_locomotorGoalType = ANGLE;
 	m_locomotorGoalData.x = angle;
+	m_locomotorGoalTurnByReversing = FALSE;
+
+	getObject()->doMovingUpdate();
+#ifdef RTS_DEBUG
+if (_isnan(m_locomotorGoalData.x) || _isnan(m_locomotorGoalData.y) || _isnan(m_locomotorGoalData.z))
+{
+	DEBUG_CRASH(("NAN in setLocomotorGoalOrientation"));
+}
+#endif
+}
+
+//-------------------------------------------------------------------------------------------------
+void AIUpdateInterface::setLocomotorGoalOrientationByReversing(Real angle)
+{
+	m_locomotorGoalType = ANGLE;
+	m_locomotorGoalData.x = angle;
+	// Not saved/CRC'd (keeps retail CRC): the aim state re-issues this goal every update.
+	m_locomotorGoalTurnByReversing = TRUE;
 
 	getObject()->doMovingUpdate();
 #ifdef RTS_DEBUG
@@ -2905,6 +3023,7 @@ if (_isnan(m_locomotorGoalData.x) || _isnan(m_locomotorGoalData.y) || _isnan(m_l
 void AIUpdateInterface::setLocomotorGoalNone()
 {
 	m_locomotorGoalType = NONE;
+	m_locomotorGoalTurnByReversing = FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -5176,6 +5295,22 @@ void AIUpdateInterface::applySpeedMultiplier(Real scalar) {
 }
 
 
+//-------------------------------------------------------------------------------------------------
+// A computer player does not chase aircraft that are out of range, unless hunting or retaliating
+// (AIAttackApproachTargetState::onEnter). Such a target makes the attack fail as soon as it starts,
+// and the unit picks the same target again every few frames instead of moving on.
+static Bool isAircraftNotChased( const Object *obj, const AIUpdateInterface *ai, Object *victim )
+{
+	if (!victim->isKindOf(KINDOF_AIRCRAFT) || !victim->isAirborneTarget())
+		return FALSE;
+	if (!obj->getControllingPlayer() || obj->getControllingPlayer()->getPlayerType() == PLAYER_HUMAN)
+		return FALSE;
+	StateID state = ai->getCurrentStateID();
+	if (state == AI_HUNT || state == AI_GUARD_RETALIATE)
+		return FALSE;
+	return obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, victim, CMD_FROM_AI ) == ATTACKRESULT_POSSIBLE_AFTER_MOVING;
+}
+
 //----------------------------------------------------------------------------------------------
 /**
  * Return the next object that our mood suggests we should attack.
@@ -5240,6 +5375,9 @@ Object* AIUpdateInterface::getNextMoodTarget( Bool calledByAI, Bool calledDuring
 			CanAttackResult result = obj->getAbleToAttackSpecificObject( ATTACK_NEW_TARGET, teamVictim, CMD_FROM_AI, (WeaponSlotType)-1, TRUE );
 			if( result != ATTACKRESULT_POSSIBLE && result != ATTACKRESULT_POSSIBLE_AFTER_MOVING ) {
 				teamVictim = nullptr; // Can't attack him. jba [8/27/2003]
+			}
+			else if( isAircraftNotChased( obj, this, teamVictim ) ) {
+				teamVictim = nullptr;
 			}
 		}
 
@@ -5329,6 +5467,8 @@ Object* AIUpdateInterface::getNextMoodTarget( Bool calledByAI, Bool calledDuring
 	}
 
 	Object *newVictim = TheAI->findClosestEnemy(obj, rangeToFindWithin, flags, getAttackInfo());
+	if (newVictim && isAircraftNotChased(obj, this, newVictim))
+		newVictim = nullptr;
 
 /*
 DEBUG_LOG(("GNMT frame %d: %s %08lx (con %s %08lx) uses range %f, flags %08lx, %s finds %s %08lx",
@@ -6099,6 +6239,12 @@ void AIUpdateInterface::loadPostProcess()
 		}
 	}
 
+	// TheSuperHackers @bugfix bobtista 11/10/2026 The pathfind queue is not saved, so queue the pending request again.
+	if (m_waitingForPath && m_queueForPathFrame == 0)
+	{
+		TheAI->pathfinder()->queueForPath(getObject()->getID());
+	}
+
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -6138,9 +6284,10 @@ Bool AIUpdateInterface::arePathLayersStillValid() {
 		//Check if going below bridges and if these are still opened/destroyed
 		if (path->needCheckBridges()) {
 			for (UnsignedShort i = PathfindLayerEnum::LAYER_GROUND + 1U; i < PathfindLayerEnum::LAYER_WALL; ++i) {
-				if (path->isPathBelowBridge(i)) {
-					// Path is below bridge -> if Bridge layer is now Passable, no longer valid -> recheck
-					return TheAI->pathfinder()->isPathfindLayerPassable(static_cast<PathfindLayerEnum>(i));
+				// Path is below bridge -> if Bridge layer is now Passable, no longer valid -> recheck.
+				// Keep looking otherwise, a still open bridge must not cut the remaining checks short.
+				if (path->isPathBelowBridge(i) && TheAI->pathfinder()->isPathfindLayerPassable(static_cast<PathfindLayerEnum>(i))) {
+					return false;
 				}
 			}
 		}

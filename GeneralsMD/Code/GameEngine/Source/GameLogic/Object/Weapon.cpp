@@ -4097,13 +4097,17 @@ void Weapon::rebuildScatterTargets(Bool recenter/* = false*/)
 			// Recenter case is relevant when we have "sweep" target set up in a line around the target.
 			// When we reset, we want to keep the next shots around the target, which would be the
 			// indices in the center of the list.
-			UnsignedInt startIndex = REAL_TO_INT_FLOOR((m_template->getClipSize() - m_ammoInClip) / 2);
-			for (Int targetIndex = startIndex + m_ammoInClip - 1; targetIndex > startIndex; targetIndex--) {
-
-				m_scatterTargetsUnused.push_back(targetIndex);
+			// One target per shot left in the clip. startIndex is signed so that the loop ends at 0.
+			Int startIndex = REAL_TO_INT_FLOOR((m_template->getClipSize() - m_ammoInClip) / 2);
+			for (Int targetIndex = startIndex + m_ammoInClip - 1; targetIndex >= startIndex; targetIndex--) {
+				// The clip can hold more shots than the pattern has targets.
+				if (targetIndex < scatterTargetsCount)
+					m_scatterTargetsUnused.push_back(targetIndex);
 			}
 		}
-		else {
+
+		// Firing takes a target from this list, so it must never be left empty.
+		if (m_scatterTargetsUnused.empty()) {
 			// When I reload, I need to rebuild the list of ScatterTargets to shoot at.
 			for (Int targetIndex = scatterTargetsCount - 1; targetIndex >= 0; targetIndex--)
 				m_scatterTargetsUnused.push_back(targetIndex);
@@ -5429,6 +5433,19 @@ Object* Weapon::forceFireWeapon( const Object *source, const Coord3D *pos)
 	std::vector<AsciiString> dummy;
 	privateFireWeapon(source, nullptr, pos, false, ignoreRange, 0, &projectileID, TRUE, dummy );
 	return TheGameLogic->findObjectByID( projectileID );
+}
+
+//-------------------------------------------------------------------------------------------------
+void Weapon::holdFiringUntil( UnsignedInt frameNum )
+{
+	if( m_whenWeCanFireAgain >= frameNum )
+		return;
+
+	// getStatus() keeps returning a cached READY_TO_FIRE until m_whenWeCanFireAgain, so the status
+	// must change too (same as shared reload time). Reloading / out of ammo keep their status.
+	if( getStatus() == READY_TO_FIRE )
+		setStatus( BETWEEN_FIRING_SHOTS );
+	m_whenWeCanFireAgain = frameNum;
 }
 
 //-------------------------------------------------------------------------------------------------

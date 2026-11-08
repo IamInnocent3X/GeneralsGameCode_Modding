@@ -30,6 +30,7 @@
 
 #include "windows.h"
 #include "stdlib.h"
+#include <limits.h>
 #include "Common/STLTypedefs.h"
 
 #include "Common/DataChunk.h"
@@ -413,6 +414,8 @@ WorldHeightMap::~WorldHeightMap()
 	REF_PTR_RELEASE(m_terrainTex);
 	REF_PTR_RELEASE(m_alphaTerrainTex);
 	REF_PTR_RELEASE(m_alphaEdgeTex);
+	REF_PTR_RELEASE(m_terrainMapTex[0]);
+	REF_PTR_RELEASE(m_terrainMapTex[1]);
 }
 
 void WorldHeightMap::freeListOfMapObjects()
@@ -444,6 +447,8 @@ WorldHeightMap::WorldHeightMap():
 	m_numCliffInfo(1),
 	m_terrainTex(nullptr), m_alphaTerrainTex(nullptr), m_numBitmapTiles(0), m_numBlendedTiles(1)
 {
+	m_terrainMapTex[0] = m_terrainMapTex[1] = nullptr;
+	m_terrainMapFound[0] = m_terrainMapFound[1] = FALSE;
 	Int i;
 	for (i=0; i<NUM_SOURCE_TILES; i++) {
 		m_sourceTiles[i] = nullptr;
@@ -483,6 +488,8 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *pStrm, Bool logicalDataOnly):
 	m_numCliffInfo(1),
 	m_terrainTex(nullptr), m_alphaTerrainTex(nullptr), m_numBitmapTiles(0), m_numBlendedTiles(1)
 {
+	m_terrainMapTex[0] = m_terrainMapTex[1] = nullptr;
+	m_terrainMapFound[0] = m_terrainMapFound[1] = FALSE;
 
 	int i;
 	for (i=0; i<NUM_SOURCE_TILES; i++) {
@@ -537,6 +544,31 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *pStrm, Bool logicalDataOnly):
 
 	TheSidesList->validateSides();
 	setupAlphaTiles();
+}
+
+Bool WorldHeightMap::isTerrainFlat(const IRegion2D& bounds) const
+{
+	DEBUG_ASSERTCRASH(bounds.lo.x >= -m_borderSize && bounds.lo.y >= -m_borderSize && bounds.hi.x <= m_width - m_borderSize && bounds.hi.y <= m_height - m_borderSize,
+		("WorldHeightMap::isTerrainFlat must use a region contained by the logical map bounds."));
+
+	const Int width = bounds.width();
+	const Int height = bounds.height();
+	if (width <= 0 || height <= 0)
+		return true;
+
+	const HeightSampleType* firstRow = m_data + (bounds.lo.y + m_borderSize) * m_width + bounds.lo.x + m_borderSize;
+	const HeightSampleType referenceHeight = firstRow[0];
+	for (Int j = 0; j < height; j++)
+	{
+		const HeightSampleType* row = firstRow + j * m_width;
+		for (Int i = 0; i < width; i++)
+		{
+			if (row[i] != referenceHeight)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 void WorldHeightMap::getScaledDrawArea(Int &width, Int &height)
@@ -850,6 +882,44 @@ Bool WorldHeightMap::ParseObjectsDataChunk(DataChunkInput &file, DataChunkInfo *
 	return (file.parse(userData));
 }
 
+Bool WorldHeightMap::isValidTotalMapSize(Int width, Int height, Int borderSize)
+{
+	if (width <= 0 || width > MAX_MAP_DIMENSION)
+		return false;
+	if (height <= 0 || height > MAX_MAP_DIMENSION)
+		return false;
+
+	if (borderSize < 0 ||
+		borderSize > (width - 1) / 2 ||
+		borderSize > (height - 1) / 2)
+		return false;
+
+	if (width * height > MAX_MAP_AREA)
+		return false;
+
+	return true;
+}
+
+Bool WorldHeightMap::isValidPlayableMapSize(Int width, Int height, Int borderSize)
+{
+	if (width <= 0 || height <= 0 || borderSize < 0)
+		return false;
+
+	if (borderSize > (INT_MAX - width) / 2 ||
+		borderSize > (INT_MAX - height) / 2)
+		return false;
+
+	return isValidTotalMapSize(
+		width + 2 * borderSize,
+		height + 2 * borderSize,
+		borderSize);
+}
+
+static Bool isValidHeightDataSize(DataChunkInput &file, Int dataSize, Int width, Int height)
+{
+	return dataSize > 0 && dataSize == width * height && (UnsignedInt)dataSize <= file.getChunkDataSizeLeft();
+}
+
 /**
 * WorldHeightMap::ParseHeightMapData - read a height map chunk.
 * Format is the newer CHUNKY format.
@@ -880,6 +950,10 @@ Bool WorldHeightMap::ParseHeightMapData(DataChunkInput &file, DataChunkInfo *inf
 		m_borderSize = 0;
 	}
 
+	if (!isValidTotalMapSize(m_width, m_height, m_borderSize)) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
+
 	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
 		Int numBorders = file.readInt();
 		m_boundaries.resize(numBorders);
@@ -894,10 +968,11 @@ Bool WorldHeightMap::ParseHeightMapData(DataChunkInput &file, DataChunkInfo *inf
 	}
 
 	m_dataSize = file.readInt();
-	m_data = MSGNEW("WorldHeightMap_ParseHeightMapData") HeightSampleType[m_dataSize];
-	if (m_dataSize <= 0 || (m_dataSize != (m_width*m_height))) {
+	if (!isValidHeightDataSize(file, m_dataSize, m_width, m_height)) {
 		throw ERROR_CORRUPT_FILE_FORMAT	;
 	}
+
+	m_data = MSGNEW("WorldHeightMap_ParseHeightMapData") HeightSampleType[m_dataSize];
 
 	Int numBytesX = (m_width+7)/8;	//how many bytes to fit all bitflags
 	Int numBytesY = m_height;
@@ -960,6 +1035,10 @@ Bool WorldHeightMap::ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, vo
 		m_borderSize = 0;
 	}
 
+	if (!isValidTotalMapSize(m_width, m_height, m_borderSize)) {
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	}
+
 	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
 		Int numBorders = file.readInt();
 		m_boundaries.resize(numBorders);
@@ -974,10 +1053,11 @@ Bool WorldHeightMap::ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, vo
 	}
 
 	m_dataSize = file.readInt();
-	m_data = MSGNEW("WorldHeightMap_ParseSizeOnly") HeightSampleType[m_dataSize];
-	if (m_dataSize <= 0 || (m_dataSize != (m_width*m_height))) {
+	if (!isValidHeightDataSize(file, m_dataSize, m_width, m_height)) {
 		throw ERROR_CORRUPT_FILE_FORMAT	;
 	}
+
+	m_data = MSGNEW("WorldHeightMap_ParseSizeOnly") HeightSampleType[m_dataSize];
 
 	//load as bytes first
 	std::vector<UnsignedByte> loaded_data(m_dataSize);
@@ -1057,6 +1137,41 @@ void WorldHeightMap::readTexClass(TXTextureClass *texClass, TileData **tileData)
 	}
 }
 
+Int WorldHeightMap::readTexClassMap(const TXTextureClass &texClass, const char *suffix, TileData **tileData)
+{
+	TerrainType *terrain = TheTerrainTypes->findTerrain( texClass.name );
+	if (terrain == nullptr)
+		return 0;
+	AsciiString texture = terrain->getTexture();
+	const char *dot = strrchr(texture.str(), '.');
+	AsciiString base = texture;
+	if (dot != nullptr)
+		base.set(texture.str(), (Int)(dot - texture.str()));
+	AsciiString path;
+	path.format("%s%s%s.tga", TERRAIN_TGA_DIR_PATH, base.str(), suffix);
+	File *theFile = TheFileSystem->openFile( path.str(), File::READ|File::BINARY);
+	if (theFile == nullptr)
+		return 0;
+	Int width = 0;
+	GDIFileStream theStream(theFile);
+	InputStream *pStr = &theStream;
+	Int numTiles = WorldHeightMap::countTiles(pStr);
+	theFile->seek(0, File::START);
+	if (numTiles >= texClass.numTiles) {
+		numTiles = texClass.numTiles;
+		for (width = 10; width >= 1; width--) {
+			if (numTiles >= width*width)
+				break;
+		}
+		if (width < 1 || !WorldHeightMap::readTiles(pStr, tileData, width))
+			width = 0;
+	}
+	theFile->close();
+	if (width == 0)
+		DEBUG_LOG(("Terrain material: %s does not fit %s", path.str(), texture.str()));
+	return width;
+}
+
 /**
 * WorldHeightMap::ParseBlendTileData - read a blend tile info chunk.
 * Format is the newer CHUNKY format.
@@ -1110,6 +1225,7 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 					m_cellCliffState[j*m_flipStateWidth + i] = data[j*byteWidth + i];
 				}
 			}
+			delete[] data;
 		} else {
 			file.readArrayOfBytes((char*)m_cellCliffState, m_height*m_flipStateWidth);
 		}
@@ -2148,6 +2264,20 @@ void WorldHeightMap::setTextureLOD(Int lod)
 		m_terrainTex->setLOD(lod);
 }
 
+TextureClass *WorldHeightMap::getTerrainMapTexture(Int which, const AsciiString& suffix)
+{
+	if (which < 0 || which > 1 || suffix.isEmpty() || getTerrainTexture() == nullptr)
+		return nullptr;
+	if (m_terrainMapTex[which] == nullptr || m_terrainMapSuffix[which] != suffix) {
+		REF_PTR_RELEASE(m_terrainMapTex[which]);
+		TerrainMapAtlasClass *atlas = MSGNEW("WorldHeightMap_getTerrainMapTexture") TerrainMapAtlasClass(m_terrainTex->Get_Height());
+		m_terrainMapFound[which] = atlas->update(this, suffix.str());
+		m_terrainMapTex[which] = atlas;
+		m_terrainMapSuffix[which] = suffix;
+	}
+	return m_terrainMapFound[which] ? m_terrainMapTex[which] : nullptr;
+}
+
 TextureClass *WorldHeightMap::getTerrainTexture()
 {
 	if (m_terrainTex == nullptr) {
@@ -2158,6 +2288,8 @@ TextureClass *WorldHeightMap::getTerrainTexture()
 			pow2Height *=2;
 		}
 		REF_PTR_RELEASE(m_terrainTex);
+		REF_PTR_RELEASE(m_terrainMapTex[0]);
+		REF_PTR_RELEASE(m_terrainMapTex[1]);
 		m_terrainTex = MSGNEW("WorldHeightMap_getTerrainTexture") TerrainTextureClass(pow2Height);
 		m_terrainTexHeight = m_terrainTex->update(this);
 		char buf[64];
@@ -2279,6 +2411,13 @@ Bool WorldHeightMap::setDrawArea(const DrawArea& area)
 		return true;
 	}
 	return false;
+}
+
+Int WorldHeightMap::getMaxHeightValue()
+{
+	// Heights are stored as bytes in the map file and multiplied by the scale when loaded.
+	const Real scale = TheMapData ? TheMapData->m_HeightmapScale : 1.0f;
+	return (Int)std::round(K_MAX_HEIGHT * scale);
 }
 
 Bool WorldHeightMap::setDrawOrg(Int xOrg, Int yOrg)

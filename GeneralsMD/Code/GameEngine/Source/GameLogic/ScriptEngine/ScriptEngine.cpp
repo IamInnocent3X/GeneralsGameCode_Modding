@@ -33,6 +33,7 @@
 #include "Common/FileSystem.h"
 #include "Common/FramePacer.h"
 #include "Common/GameState.h"
+#include "Common/GameUtility.h"
 #include "Common/LatchRestore.h"
 #include "Common/MessageStream.h"
 #include "Common/PerfTimer.h"
@@ -54,6 +55,8 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptActions.h"
 #include "GameLogic/ScriptConditions.h"
+#include "Common/GameMcp.h"
+#include "GameLogic/AIMatch.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
 
@@ -446,6 +449,7 @@ m_fade(FADE_NONE),
 m_freezeByScript(FALSE),
 m_frameObjectCountChanged(0),
 m_closeWindowTimer(0),
+m_letterBoxActive(FALSE),
 m_curFadeFrame(0),
 m_curFadeValue(0.0f),
 m_endGameTimer(0),
@@ -4098,6 +4102,53 @@ void ScriptEngine::init()
 	curTemplate->m_uiStrings[0] = "Build a shipyard ";
 	curTemplate->m_uiStrings[1] = ", at next free shipyard waypoint.";
 
+	// Post-processing and shadow maps exist only in the Direct3D 12 renderer; elsewhere these do nothing.
+	curTemplate = &m_actionTemplates[ScriptAction::POSTPROCESS_SET_PARAMETER];
+	curTemplate->m_internalName = "POSTPROCESS_SET_PARAMETER";
+	curTemplate->m_uiName = "Map/Post-processing/Set or fade a pass parameter.";
+	curTemplate->m_numParameters = 4;
+	curTemplate->m_parameters[0] = Parameter::TEXT_STRING;
+	curTemplate->m_parameters[1] = Parameter::TEXT_STRING;
+	curTemplate->m_parameters[2] = Parameter::TEXT_STRING;
+	curTemplate->m_parameters[3] = Parameter::REAL;
+	curTemplate->m_numUiStrings = 5;
+	curTemplate->m_uiStrings[0] = "Post-processing pass ";
+	curTemplate->m_uiStrings[1] = ": set parameter ";
+	curTemplate->m_uiStrings[2] = " to ";
+	curTemplate->m_uiStrings[3] = " (1 to 4 numbers) over ";
+	curTemplate->m_uiStrings[4] = " seconds (0 = at once).";
+
+	curTemplate = &m_actionTemplates[ScriptAction::POSTPROCESS_ENABLE_PASS];
+	curTemplate->m_internalName = "POSTPROCESS_ENABLE_PASS";
+	curTemplate->m_uiName = "Map/Post-processing/Switch a pass on or off.";
+	curTemplate->m_numParameters = 2;
+	curTemplate->m_parameters[0] = Parameter::TEXT_STRING;
+	curTemplate->m_parameters[1] = Parameter::BOOLEAN;
+	curTemplate->m_numUiStrings = 3;
+	curTemplate->m_uiStrings[0] = "Post-processing pass ";
+	curTemplate->m_uiStrings[1] = " on: ";
+	curTemplate->m_uiStrings[2] = " (a pass that is off hands its first input on).";
+
+	curTemplate = &m_actionTemplates[ScriptAction::POSTPROCESS_USE_CHAIN];
+	curTemplate->m_internalName = "POSTPROCESS_USE_CHAIN";
+	curTemplate->m_uiName = "Map/Post-processing/Run another chain.";
+	curTemplate->m_numParameters = 1;
+	curTemplate->m_parameters[0] = Parameter::TEXT_STRING;
+	curTemplate->m_numUiStrings = 2;
+	curTemplate->m_uiStrings[0] = "Run the post-processing chain ";
+	curTemplate->m_uiStrings[1] = " (a PostProcessChain, or Default).";
+
+	curTemplate = &m_actionTemplates[ScriptAction::SHADOWMAP_SET_DARKNESS];
+	curTemplate->m_internalName = "SHADOWMAP_SET_DARKNESS";
+	curTemplate->m_uiName = "Map/Post-processing/Set or fade the shadow darkness.";
+	curTemplate->m_numParameters = 2;
+	curTemplate->m_parameters[0] = Parameter::REAL;
+	curTemplate->m_parameters[1] = Parameter::REAL;
+	curTemplate->m_numUiStrings = 3;
+	curTemplate->m_uiStrings[0] = "Shadow map darkness to ";
+	curTemplate->m_uiStrings[1] = " (1 = the map's shadow color, 0 = none) over ";
+	curTemplate->m_uiStrings[2] = " seconds (0 = at once).";
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 
 	/* Recipe for adding a condition:
@@ -5296,6 +5347,7 @@ void ScriptEngine::reset()
 	m_numFlags = 1;
 	m_endGameTimer = -1;
 	m_closeWindowTimer = -1;
+	m_letterBoxActive = FALSE;
 
 	m_callingTeam = nullptr;
 	m_callingObject = nullptr;
@@ -6181,6 +6233,59 @@ const TCounter *ScriptEngine::getCounter(const AsciiString& counterName)
 		}
 	}
 	return nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+const TFlag *ScriptEngine::getFlag(const AsciiString& flagName)
+{
+	// Note - flags start at 1.  0 means not assigned.
+	for (Int i=1; i<m_numFlags; i++)
+	{
+		if (flagName == m_flags[i].name)
+		{
+			return &(m_flags[i]);
+		}
+	}
+	return nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+void ScriptEngine::setFlagValue(const AsciiString& flagName, Bool value)
+{
+	const Int flagNdx = allocateFlag(flagName);
+	if (flagNdx > 0)
+	{
+		m_flags[flagNdx].value = value;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void ScriptEngine::setCounterValue(const AsciiString& counterName, Int value)
+{
+	const Int counterNdx = allocateCounter(counterName);
+	if (counterNdx > 0)
+	{
+		m_counters[counterNdx].value = value;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+Bool ScriptEngine::setScriptActive(const AsciiString& name, Bool active)
+{
+	Bool found = FALSE;
+	ScriptGroup *pGroup = findGroup(name);
+	if (pGroup)
+	{
+		pGroup->setActive(active);
+		found = TRUE;
+	}
+	Script *pScript = findScript(name);
+	if (pScript)
+	{
+		pScript->setActive(active);
+		found = TRUE;
+	}
+	return found;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -7812,6 +7917,13 @@ void ScriptEngine::removeAllSequentialScripts(Object *obj)
 		}
 		if (seqScript->m_objectID == id) {
 			it = cleanupSequentialScript(it, TRUE);
+
+#if RTS_GENERALS && RETAIL_COMPATIBLE_CRC
+			// TheSuperHackers @info Preserve the original (bugged) traversal behavior by skipping the next element, if any.
+			if (it != m_sequentialScripts.end()) {
+				++it;
+			}
+#endif
 		}
     else
 		  ++it;
@@ -8454,6 +8566,22 @@ void ScriptEngine::doUnfreezeTime()
 }
 
 //-------------------------------------------------------------------------------------------------
+/** Report the scripted letterbox opening or closing. */
+//-------------------------------------------------------------------------------------------------
+void ScriptEngine::friend_notifyLetterBoxActive(Bool active)
+{
+	m_letterBoxActive = active;
+}
+
+//-------------------------------------------------------------------------------------------------
+/** Is the letterbox active right now? */
+//-------------------------------------------------------------------------------------------------
+Bool ScriptEngine::isLetterBoxActive() const
+{
+	return m_letterBoxActive;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** For Debug and Internal builds, returns whether to continue (!pause), for release, returns false */
 //-------------------------------------------------------------------------------------------------
 Bool ScriptEngine::isTimeFrozenDebug()
@@ -8520,6 +8648,14 @@ void ScriptEngine::forceUnfreezeTime()
 
 void ScriptEngine::AppendDebugMessage(const AsciiString& strToAdd, Bool forcePause)
 {
+	if (TheAIMatch) {
+		TheAIMatch->scriptMessage(strToAdd);
+	}
+#ifdef RTS_GAME_MCP
+	if (TheGameMcp) {
+		TheGameMcp->scriptMessage(strToAdd);
+	}
+#endif
 #ifdef INTENSE_DEBUG
 	DEBUG_LOG(("-SCRIPT- %d %s", TheGameLogic->getFrame(), strToAdd.str()));
 #endif
@@ -8861,6 +8997,7 @@ void ScriptEngine::setGlobalDifficulty( GameDifficulty difficulty )
 	* 3: Added m_objectsShouldReceiveDifficultyBonus (JKMCD)
 	* 4: current music track info
 	* 5: add ChooseVictimAlwaysUsesNormal
+	* 6: TheSuperHackers @tweak Serialize m_letterBoxActive
 	*/
 // ------------------------------------------------------------------------------------------------
 void ScriptEngine::xfer( Xfer *xfer )
@@ -8868,7 +9005,11 @@ void ScriptEngine::xfer( Xfer *xfer )
 	Int i;
 
 	// version
+#if RETAIL_COMPATIBLE_XFER_SAVE
 	const XferVersion currentVersion = 5;
+#else
+	const XferVersion currentVersion = 6;
+#endif
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
@@ -9327,6 +9468,18 @@ void ScriptEngine::xfer( Xfer *xfer )
 		m_ChooseVictimAlwaysUsesNormal = false;
 	}
 
+	if (version >= 6)
+	{
+		xfer->xferBool(&m_letterBoxActive);
+	}
+	else
+	{
+		if (xfer->getXferMode() == XFER_LOAD)
+		{
+			m_letterBoxActive = FALSE;
+		}
+	}
+
 	if( xfer->getXferMode() == XFER_LOAD ) {
 		// We are doing a load.  If there is no fade active, do a black fade in to start.
 		if (m_fade == FADE_NONE) {
@@ -9359,6 +9512,8 @@ void ScriptEngine::loadPostProcess()
 		TheAudio->addAudioEvent(&event);
 	}
 
+	rts::enableLetterBox(isLetterBoxActive());
+
 }
 
 //#if defined(RTS_DEBUG)
@@ -9385,6 +9540,9 @@ void ScriptEngine::markMPLocalDefeatWindowShown()
 
 void _appendMessage(const AsciiString& str, Bool isTrueMessage, Bool shouldPause)
 {
+	if (TheAIMatch) {
+		TheAIMatch->scriptFired(str, isTrueMessage);
+	}
 	typedef void (*funcptr)(const char*);
 
 	AsciiString msg;
@@ -9749,6 +9907,7 @@ static const std::string F_SIZE =					"Size";
 static const std::string F_STARTSIZERATE ="StartSizeRate";
 static const std::string F_SIZERATE =			"SizeRate";
 static const std::string F_SIZERATEDAMP =	"SizeRateDamping";
+static const std::string F_VOLPARTICLEDEPTH = "VolParticleDepth";
 
 static const std::string F_ALPHA1 =				"Alpha1";
 static const std::string F_ALPHA2 =				"Alpha2";
@@ -9799,7 +9958,7 @@ static const std::string F_VOLSPHERERAD	=	"VolSphereRadius";
 static const std::string F_VOLCYLRAD =		"VolCylinderRadius";
 static const std::string F_VOLCYLLEN =		"VolCylinderLength";
 static const std::string F_ISHOLLOW =			"IsHollow";
-static const std::string F_ISXYPLANAR =		"IsGroundAligned";
+static const std::string F_PARTICLEALIGNMENT =		"IsGroundAligned";
 static const std::string F_ISEMITABOVEGROUNDONLY
 																			=		"IsEmitAboveGroundOnly";
 static const std::string F_ISPARTICLEUPTOWARDSEMITTER
@@ -9910,6 +10069,9 @@ void _writeSingleParticleSystem( File *out, ParticleSystemTemplate *templ )
 	sprintf(buff1, FORMAT_STRING, templ->m_sizeRateDamping.getMinimumValue());
 	sprintf(buff2, FORMAT_STRING, templ->m_sizeRateDamping.getMaximumValue());
 	thisEntry.append(SEP_HEAD).append(F_SIZERATEDAMP).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
+
+	sprintf(buff1, "%d", templ->m_volumeParticleDepth);
+	thisEntry.append(SEP_HEAD).append(F_VOLPARTICLEDEPTH).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
 
 	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[0].var.getMinimumValue());
 	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[0].var.getMaximumValue());
@@ -10098,7 +10260,7 @@ void _writeSingleParticleSystem( File *out, ParticleSystemTemplate *templ )
 	}
 
 	thisEntry.append(SEP_HEAD).append(F_ISHOLLOW).append(EQ_WITH_SPACES).append((templ->m_isEmissionVolumeHollow ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_ISXYPLANAR).append(EQ_WITH_SPACES).append((templ->m_isGroundAligned ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
+	thisEntry.append(SEP_HEAD).append(F_PARTICLEALIGNMENT).append(EQ_WITH_SPACES).append(GroundAlignmentTypeNames[templ->m_particleAlignment]).append(SEP_EOL);
 	thisEntry.append(SEP_HEAD).append(F_ISEMITABOVEGROUNDONLY).append(EQ_WITH_SPACES).append((templ->m_isEmitAboveGroundOnly ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
 	thisEntry.append(SEP_HEAD).append(F_ISPARTICLEUPTOWARDSEMITTER).append(EQ_WITH_SPACES).append((templ->m_isParticleUpTowardsEmitter ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
 

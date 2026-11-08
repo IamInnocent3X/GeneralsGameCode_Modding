@@ -310,6 +310,9 @@ public:
 	void doFreezeTime();
 	void doUnfreezeTime();
 
+	void friend_notifyLetterBoxActive(Bool active);
+	Bool isLetterBoxActive() const; ///< Ask whether the letterbox has been activated by a script; indicates an active cinematic
+
 	/// The following functions are used to update and query the debug window
 	Bool isTimeFrozenDebug();		///< Ask whether the debug window has requested a pause.
 	Bool isTimeFast();		///< Ask whether the debug window has requested a fast forward.
@@ -334,6 +337,17 @@ public:
 	const AttackPriorityInfo *getAttackInfo(const AsciiString& name);
 
 	const TCounter *getCounter(const AsciiString& counterName);
+
+	/// Named flags and counters for tools that test scripts. Setting one creates it if needed.
+	const TFlag *getFlag(const AsciiString& flagName);
+	void setFlagValue(const AsciiString& flagName, Bool value);
+	void setCounterValue(const AsciiString& counterName, Int value);
+	Int friend_getNumFlags() const { return m_numFlags; }	///< flags start at 1
+	const TFlag *friend_getNthFlag(Int ndx) const { return &m_flags[ndx]; }
+	Int friend_getNumCounters() const { return m_numCounters; }	///< counters start at 1
+	const TCounter *friend_getNthCounter(Int ndx) const { return &m_counters[ndx]; }
+	/// Enables or disables a script or script group by name; false if there is none.
+	Bool setScriptActive(const AsciiString& name, Bool active);
 
 	void createNamedMapReveal(const AsciiString& revealName, const AsciiString& waypointName, Real radiusToReveal, const AsciiString& playerName);
 	void doNamedMapReveal(const AsciiString& revealName);
@@ -433,6 +447,7 @@ protected:
 	Int								m_numAttackInfo;
 	Int								m_endGameTimer;
 	Int								m_closeWindowTimer;
+	Bool							m_letterBoxActive; ///< A scripted letterbox sequence is running
 	Team							*m_callingTeam;					///< Team that is calling script, used for THIS_TEAM
 	Object						*m_callingObject;					///< Object that is calling script, used for THIS_OBJECT
 	Team							*m_conditionTeam;				///< Team that is being used to evaluate conditions, used for THIS_TEAM
