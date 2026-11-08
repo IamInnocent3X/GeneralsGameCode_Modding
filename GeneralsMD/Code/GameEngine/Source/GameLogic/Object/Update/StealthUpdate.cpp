@@ -1709,7 +1709,7 @@ void StealthUpdate::changeVisualDisguiseFlicker(Bool doFlick)
 			draw->setPosition( self->getPosition() );
 			draw->setOrientation( self->getOrientation() );
 			draw->setModelConditionFlags( flags );
-			draw->updateDrawable();
+			draw->updateDrawable(TheFramePacer->getActualLogicTimeScaleOverFpsRatio());
 			//self->getPhysics()->resetDynamicPhysics();
 			if( selected )
 			{

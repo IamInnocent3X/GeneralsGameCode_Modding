@@ -244,6 +244,7 @@ McpJson cmdPlayerSet(const McpJson &args)
 		}
 		player->addUpgrade(upgrade, UPGRADE_STATUS_COMPLETE);
 	}
+#if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	if (args.has("instant_build") && gameMcpArgBool(args, "instant_build", false) != (player->buildsInstantly() != FALSE)) {
 		player->toggleInstantBuild();
 	}
@@ -253,6 +254,10 @@ McpJson cmdPlayerSet(const McpJson &args)
 	}
 	return McpJson::makeObject().set("player", gameMcpPlayerName(player)).set("money", money->countMoney())
 		.set("instant_build", player->buildsInstantly() != FALSE).set("special_power_delays", TheGlobalData->m_specialPowerUsesDelay != FALSE);
+#else
+	return McpJson::makeObject().set("player", gameMcpPlayerName(player)).set("money", money->countMoney())
+		.set("instant_build", FALSE).set("special_power_delays", FALSE);
+#endif
 }
 
 } // namespace

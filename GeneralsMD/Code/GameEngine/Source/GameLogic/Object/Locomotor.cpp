@@ -1028,7 +1028,10 @@ Real Locomotor::getMaxSpeedOverride() const
 //-------------------------------------------------------------------------------------------------
 Real Locomotor::getMinSpeed() const
 {
-	return m_template->getActualMinSpeed();
+	if(m_template->m_minReverseSpeed == 0.0f)
+		return m_template->getActualMinSpeed();
+
+	return isMovingBackwards() ? m_template->getActualReverseMinSpeed() * m_template->m_backwardsMoveSpeedFactor : m_template->getActualMinSpeed();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2274,15 +2277,6 @@ void Locomotor::fixAccelStuck(Real &acceleration, Real lastActualSpeed, Real act
 }
 
 //-------------------------------------------------------------------------------------------------
-Real Locomotor::getMinSpeed() const
-{
-	if(m_template->m_minReverseSpeed == 0.0f)
-		return m_template->m_minSpeed;
-
-	return isMovingBackwards() ? m_template->m_minReverseSpeed * m_template->m_backwardsMoveSpeedFactor : m_template->m_minSpeed;
-}
-
-//-------------------------------------------------------------------------------------------------
 Real Locomotor::calcMinTurnRadius(BodyDamageType condition, Real* timeToTravelThatDist) const
 {
 	Real minSpeed = getMinSpeed();								// in dist/frame
@@ -3363,8 +3357,6 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 	if (physics->isMotive())	// no need to stop something that isn't moving.
 	{
 		BodyDamageType bdt = obj->getBodyModule()->getDamageState();
-		Real minSpeed = getMinSpeed();
-		DEBUG_ASSERTCRASH(minSpeed == 0.0f, ("HOVER should always have zero minSpeeds (otherwise, they WING)"));
 
 		//BodyDamageType bdt = obj->getBodyModule()->getDamageState();
 		Real maxAcceleration = getMaxAcceleration(bdt);

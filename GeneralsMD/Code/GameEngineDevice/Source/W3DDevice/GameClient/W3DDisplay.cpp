@@ -117,6 +117,8 @@ static void drawFramerateBar();
 #include "GameLogic/GameLogic.h"
 #ifdef DUMP_PERF_STATS
 #include "GameLogic/PartitionManager.h"
+#endif
+#if defined(DUMP_PERF_STATS) || defined(RTS_GAME_MCP)
 #include "Common/GameMcp.h"
 #endif
 

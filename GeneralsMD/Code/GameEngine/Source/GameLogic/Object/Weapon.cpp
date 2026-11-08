@@ -42,6 +42,7 @@
 
 #include "Common/crc.h"
 #include "Common/CRCDebug.h"
+#include "Common/FramePacer.h"
 #include "Common/GameAudio.h"
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
@@ -5909,7 +5910,7 @@ static const ModelConditionFlags s_allWeaponFireFlags[WEAPONSLOT_COUNT] =
 
 	draw->setPosition( launcher->getPosition() );
 	draw->setOrientation( launcher->getOrientation() );
-	draw->updateDrawable();
+	draw->updateDrawable(TheFramePacer->getActualLogicTimeScaleOverFpsRatio());
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
+#include "Common/FramePacer.h"
 #include "Common/GlobalData.h"
 #include "Common/GameUtility.h"
 #include "Common/Player.h"
@@ -162,7 +163,7 @@ void LaserUpdate::updateStartPos()
 				Weapon::setFirePositionForDrawable(parent, parentDraw, parent->getCurrentWeaponSlot(), parent->getCurrentSpecificBarrel());
 				parentDraw->setPosition( parent->getPosition() );
 				parentDraw->setOrientation( parent->getOrientation() );
-				parentDraw->updateDrawable();
+				parentDraw->updateDrawable( TheFramePacer->getActualLogicTimeScaleOverFpsRatio() );
 				if(TheGlobalData->m_useEfficientDrawableScheme)
 					TheGameClient->informClientNewDrawable(parentDraw);
 			//}
