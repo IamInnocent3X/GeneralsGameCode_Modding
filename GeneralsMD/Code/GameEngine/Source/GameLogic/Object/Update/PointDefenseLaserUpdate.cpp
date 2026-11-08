@@ -51,7 +51,7 @@
 //-------------------------------------------------------------------------------------------------
 PointDefenseLaserUpdateModuleData::PointDefenseLaserUpdateModuleData()
 {
-	m_initiallyActive		= false;
+	//m_initiallyActive		= false;
 	m_weaponTemplate		= nullptr;
 	m_scanFrames				= 0;
 	m_scanRange					= 0.0f;
@@ -71,7 +71,7 @@ PointDefenseLaserUpdateModuleData::PointDefenseLaserUpdateModuleData()
 		{ "ScanRate",							INI::parseDurationUnsignedInt,	nullptr, offsetof( PointDefenseLaserUpdateModuleData, m_scanFrames ) },
 		{ "ScanRange",						INI::parseReal,									nullptr, offsetof( PointDefenseLaserUpdateModuleData, m_scanRange ) },
 		{ "PredictTargetVelocityFactor", INI::parseReal,					nullptr, offsetof( PointDefenseLaserUpdateModuleData, m_velocityFactor ) },
-		{ "StartsActive",					INI::parseBool,									nullptr, offsetof( PointDefenseLaserUpdateModuleData, m_initiallyActive ) },
+		//{ "StartsActive",					INI::parseBool,									nullptr, offsetof( PointDefenseLaserUpdateModuleData, m_initiallyActive ) },
 		{ nullptr, nullptr, nullptr, 0 }
 	};
 	p.add(dataFieldParse);
@@ -85,8 +85,9 @@ PointDefenseLaserUpdate::PointDefenseLaserUpdate( Thing *thing, const ModuleData
 	m_nextScanFrames = 0;
 	m_nextShotAvailableInFrames = 0;
 	m_inRange  					= false;
-	if( getPointDefenseLaserUpdateModuleData()->m_initiallyActive )
-		giveSelfUpgrade();
+	// IamInnocent - Implemented in the reworked UpgradeMux
+	//if( getPointDefenseLaserUpdateModuleData()->m_initiallyActive )
+	//	giveSelfUpgrade();
 	setWakeFrame(getObject(), isUpgradeActive() ? UPDATE_SLEEP_NONE : UPDATE_SLEEP_FOREVER);// No starting sleep, but we want to sleep later.
 }
 

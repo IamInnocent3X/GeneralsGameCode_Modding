@@ -76,9 +76,9 @@ void StealthDetectorUpdateModuleData::buildFieldParse(MultiIniFieldParse& p)
 		{ "CanDetectWhileContained",		INI::parseBool,											nullptr, offsetof( StealthDetectorUpdateModuleData, m_canDetectWhileTransported ) },
 		//{ "StartsActive",								INI::parseBool,											nullptr, offsetof( StealthDetectorUpdateModuleData, m_initiallyActive ) },
 		{ "RequiresPlayerOwner",				INI::parseBool,											nullptr, offsetof( StealthDetectorUpdateModuleData, m_requiresPlayerOwner ) },
-		{ "TriggeredBy",							INI::parseAsciiStringVector, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_activationUpgradeNames ) },
-		{ "ConflictsWith",							INI::parseAsciiStringVector, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_conflictingUpgradeNames ) },
-		{ "RequiresAllTriggers",					INI::parseBool, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_requiresAllTriggers ) },
+		//{ "TriggeredBy",							INI::parseAsciiStringVector, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_activationUpgradeNames ) },
+		//{ "ConflictsWith",							INI::parseAsciiStringVector, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_conflictingUpgradeNames ) },
+		//{ "RequiresAllTriggers",					INI::parseBool, 				nullptr, 		offsetof( StealthDetectorUpdateModuleData, m_requiresAllTriggers ) },
 		{ "ExtraRequiredStatus",				ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthDetectorUpdateModuleData, m_extraRequiredStatus ) },
 		{ "ExtraForbiddenStatus",				ObjectStatusMaskType::parseFromINI,	nullptr, offsetof( StealthDetectorUpdateModuleData, m_extraForbiddenStatus ) },
 		{ "ExtraRequiredCustomStatus",	INI::parseAsciiStringVector, nullptr, 	offsetof( StealthDetectorUpdateModuleData, m_extraRequiredCustomStatus ) },
@@ -189,62 +189,13 @@ void StealthDetectorUpdate::doUpgrade()
 //-------------------------------------------------------------------------------------------------
 Bool StealthDetectorUpdate::testUpgrade()
 {
-	const StealthDetectorUpdateModuleData *data = getStealthDetectorUpdateModuleData();
 	Object* self = getObject();
+	const UpgradeMaskType& objectMask = self->getObjectCompletedUpgradeMask();
+	const UpgradeMaskType& playerMask = self->getControllingPlayer()->getCompletedUpgradeMask();
+	UpgradeMaskType maskToCheck = playerMask;
+	maskToCheck.set( objectMask );
 
-	if(!data->m_conflictingUpgradeNames.empty())
-	{
-		std::vector<AsciiString>::const_iterator it_c;
-		for( it_c = data->m_conflictingUpgradeNames.begin(); it_c != data->m_conflictingUpgradeNames.end(); it_c++)
-		{
-			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_c );
-			if( !ut )
-			{
-				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_c->str()));
-				throw INI_INVALID_DATA;
-			}
-			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
-			{
-				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
-					return FALSE;
-			}
-			else if( self->hasUpgrade(ut) )
-			{
-				return FALSE;
-			}
-		}
-	}
-
-	if(!data->m_activationUpgradeNames.empty())
-	{
-		Bool gotUpgrade = FALSE;
-		std::vector<AsciiString>::const_iterator it_a;
-		for( it_a = data->m_activationUpgradeNames.begin(); it_a != data->m_activationUpgradeNames.end(); it_a++)
-		{
-			const UpgradeTemplate* ut = TheUpgradeCenter->findUpgrade( *it_a );
-			if( !ut )
-			{
-				DEBUG_CRASH(("An upgrade module references '%s', which is not an Upgrade", it_a->str()));
-				throw INI_INVALID_DATA;
-			}
-			if ( ut->getUpgradeType() == UPGRADE_TYPE_PLAYER )
-			{
-				if(self->getControllingPlayer()->hasUpgradeComplete(ut))
-					gotUpgrade = TRUE;
-			}
-			else if( self->hasUpgrade(ut) )
-			{
-				gotUpgrade = TRUE;
-			}
-			if(!data->m_requiresAllTriggers && gotUpgrade)
-				return TRUE;
-			else if(data->m_requiresAllTriggers && !gotUpgrade)
-				return FALSE;
-		}
-		return gotUpgrade;
-	}
-
-	return TRUE;
+	return testUpgradeConditions( maskToCheck );
 }
 
 //-------------------------------------------------------------------------------------------------

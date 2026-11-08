@@ -57,13 +57,13 @@ public:
 	Bool														m_canDetectWhileGarrisoned;
 	Bool														m_canDetectWhileTransported;
 	Bool														m_requiresPlayerOwner;		///< inactive while owned by a non-playable side (neutral, civilian)
-	Bool														m_requiresAllTriggers;
+	//Bool														m_requiresAllTriggers;
 	ObjectStatusMaskType										m_extraRequiredStatus;
 	ObjectStatusMaskType										m_extraForbiddenStatus;
 	std::vector<AsciiString>									m_extraRequiredCustomStatus;
   	std::vector<AsciiString>									m_extraForbiddenCustomStatus;
-	std::vector<AsciiString>									m_activationUpgradeNames;
-	std::vector<AsciiString>									m_conflictingUpgradeNames;
+	//std::vector<AsciiString>									m_activationUpgradeNames;
+	//std::vector<AsciiString>									m_conflictingUpgradeNames;
 
 	StealthDetectorUpdateModuleData()
 	{
@@ -77,14 +77,14 @@ public:
 		m_IRGridParticleSysTmpl = nullptr;
 		m_extraDetectKindof.clear();
 		m_extraDetectKindofNot.clear();
-		m_activationUpgradeNames.clear();
-		m_conflictingUpgradeNames.clear();
+		//m_activationUpgradeNames.clear();
+		//m_conflictingUpgradeNames.clear();
 		m_extraRequiredCustomStatus.clear();
 		m_extraForbiddenCustomStatus.clear();
 		m_canDetectWhileGarrisoned = false;
 		m_canDetectWhileTransported = false;
 		m_requiresPlayerOwner = false;
-		m_requiresAllTriggers = false;
+		//m_requiresAllTriggers = false;
 	}
 
 	static void buildFieldParse(MultiIniFieldParse& p);
@@ -142,7 +142,6 @@ protected:
 	{
 		return getStealthDetectorUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
-
 	virtual Bool checkStartsActive() const override
 	{
 		return getStealthDetectorUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());

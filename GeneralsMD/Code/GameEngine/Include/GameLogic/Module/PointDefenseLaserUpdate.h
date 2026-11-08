@@ -45,7 +45,7 @@ class PointDefenseLaserUpdateModuleData : public ModuleData
 {
 public:
 	UpgradeMuxData	m_upgradeMuxData;
-	Bool						m_initiallyActive;	///< only matters with TriggeredBy; without it the laser is always active
+	//Bool						m_initiallyActive;	///< only matters with TriggeredBy; without it the laser is always active
 	WeaponTemplate	*m_weaponTemplate;
 	KindOfMaskType	m_primaryTargetKindOf;
 	KindOfMaskType  m_secondaryTargetKindOf;
@@ -100,6 +100,10 @@ protected:
 	{
 		getPointDefenseLaserUpdateModuleData()->m_upgradeMuxData.performUpgradeFX(getObject());
 	}
+	virtual void processUpgradeGrant() override
+	{
+		getPointDefenseLaserUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeGrant(getObject());
+	}
 	virtual void processUpgradeRemoval() override
 	{
 		getPointDefenseLaserUpdateModuleData()->m_upgradeMuxData.muxDataProcessUpgradeRemoval(getObject());
@@ -108,10 +112,15 @@ protected:
 	{
 		return getPointDefenseLaserUpdateModuleData()->m_upgradeMuxData.m_requiresAllTriggers;
 	}
+	virtual Bool checkStartsActive() const override
+	{
+		return getPointDefenseLaserUpdateModuleData()->m_upgradeMuxData.muxDataCheckStartsActive(getObject());
+	}
 	virtual Bool isSubObjectsUpgrade() override { return false; }
 
 	/// Without TriggeredBy the laser needs no upgrade.
 	Bool isUpgradeActive() const { return getPointDefenseLaserUpdateModuleData()->m_upgradeMuxData.m_activationUpgradeNames.empty() || isAlreadyUpgraded(); }
+	virtual Bool hasUpgradeRefresh() override { return false; }
 
 	ObjectID m_bestTargetID;
 	Bool m_inRange;
