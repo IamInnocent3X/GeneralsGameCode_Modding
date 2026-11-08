@@ -2924,19 +2924,18 @@ void W3DModelDraw::handleClientTurretPositioning()
 	@todo fix me someday (srj)
 	// IamInnocent = Done for the two functions above
 */
+// TheSuperHackers @performance IamInnocent 01/01/26 - Adjust Turret Positioning, Recoil, and Muzzle to only Update when Necessary
 void W3DModelDraw::handleClientRecoil()
 {
-	if (!m_curState || !m_curState || !(m_curState->m_validStuff & ModelConditionInfo::BARRELS_VALID))
+	if (!m_curState || !(m_curState->m_validStuff & ModelConditionInfo::BARRELS_VALID) || !m_doHandleRecoil)
 	{
 		return;
 	}
 
-	const W3DModelDrawModuleData* d = getW3DModelDrawModuleData();
-
-	if(!m_doHandleRecoil && TheGlobalData->m_useEfficientDrawableScheme)
-		return;
-
+	// Set the Requirement of Recoil Update to False first, if there is any recoil while checking, it is set to True.
 	m_doHandleRecoil = FALSE;
+
+	const W3DModelDrawModuleData* d = getW3DModelDrawModuleData();
 
 	// Multiple weapon slots may reference the same recoil / muzzle-flash bone name (hence the
 	// same bone index). Applying per-slot directly to the bone makes the last processed slot
@@ -3001,12 +3000,14 @@ void W3DModelDraw::handleClientRecoil()
 
 					case WeaponRecoilInfo::SETTLE:
 						recoils[i].m_shift -= d->m_recoilSettle;
-						m_doHandleRecoil = TRUE; // There's more recoil, need to update
 						if (recoils[i].m_shift <= 0.0f)
 						{
 							recoils[i].m_shift = 0.0f;
 							recoils[i].m_state = WeaponRecoilInfo::IDLE;
-							m_doHandleRecoil = FALSE; // Setting to IDLE, no more recoil
+						}
+						else
+						{
+							m_doHandleRecoil = TRUE; // There's more recoil, need to update
 						}
 						break;
 				}
@@ -4720,6 +4721,7 @@ Bool W3DModelDraw::handleWeaponFireRecoil(WeaponSlotType wslot, Int specificBarr
 	if (info.m_recoilBone || info.m_muzzleFlashBone)
 	{
 		m_doHandleRecoil = TRUE;
+
 		//DEBUG_LOG(("START muzzleflash %08lx for Draw %08lx state %s at frame %d",info.m_muzzleFlashBone,this,m_curState->m_description.str(),TheGameLogic->getFrame()));
 		WeaponRecoilInfo& recoil = m_weaponRecoilInfoVec[wslot][specificBarrelToUse];
 		recoil.m_state = WeaponRecoilInfo::RECOIL_START;
