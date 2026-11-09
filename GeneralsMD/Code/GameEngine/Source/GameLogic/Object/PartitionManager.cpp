@@ -3920,13 +3920,14 @@ Object *PartitionManager::getClosestObjects(
 				Coord3D distVec;
 
 				// TheSuperHackers @fix IamInnocent 31/12/2025 Added boundary box checks for structures to get an accurate hitbox instead of a hitcircle.
-				Bool checkForBoxStructure = false;
-				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (dc == FROM_BOUNDINGSPHERE_2D || dc == FROM_BOUNDINGSPHERE_3D))
+				Bool checkedForBoxDamageBoundary = false;
+				Bool doCheckForBoundaryDamage = thisObj->isKindOf(KINDOF_STRUCTURE) ? TheGlobalData->m_useAccurateDamageBoundariesForStructures : TheGlobalData->m_useAccurateDamageBoundariesForUnits;
+				if(doCheckForBoundaryDamage && (dc == FROM_BOUNDINGSPHERE_2D || dc == FROM_BOUNDINGSPHERE_3D))
 				{
 					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
 					if(geomInfo.getGeomType() == GEOMETRY_BOX)
 					{
-						checkForBoxStructure = true;
+						checkedForBoxDamageBoundary = true;
 						const GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
 						if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 							continue;
@@ -3935,7 +3936,7 @@ Object *PartitionManager::getClosestObjects(
 						//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 					}
 				}
-				if (!checkForBoxStructure && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
+				if (!checkedForBoxDamageBoundary && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, thisDistSqr, distVec, closestDistSqr))
 					continue;
 
 				//if(thisObj->isKindOf(KINDOF_STRUCTURE))
@@ -4017,19 +4018,23 @@ Object *PartitionManager::getClosestObjects(
 			// hmm, ok, calc the distance.
 			Real thisDistSqr;
 			Coord3D distVec;
-			Bool useNewStructureCheck = FALSE;
-			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			Bool checkedForBoxDamageBoundary = false;
+			Bool doCheckForBoundaryDamage = thisObj->isKindOf(KINDOF_STRUCTURE) ? TheGlobalData->m_useAccurateDamageBoundariesForStructures : TheGlobalData->m_useAccurateDamageBoundariesForUnits;
+			if(doCheckForBoundaryDamage && (dc == FROM_BOUNDINGSPHERE_2D || dc == FROM_BOUNDINGSPHERE_3D))
 			{
 				const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
 				if(geomInfo.getGeomType() == GEOMETRY_BOX)
 				{
-					useNewStructureCheck = TRUE;
-					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
+					checkedForBoxDamageBoundary = true;
+					const GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, maxDist, maxDist, maxDist );
 					if(!geomCollidesWithGeom(objPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 						continue;
+						//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+
+					//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 				}
 			}
-			if (!useNewStructureCheck && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
+			if (!checkedForBoxDamageBoundary && !(*distProc)(objPos, objToUse, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, closestDistSqr))
 				continue;
 
 			// ok, guess this is a winner!
@@ -4939,19 +4944,23 @@ Int PartitionManager::checkObjectsAlongLine(
 				Real checkDistSqr = thisObj->isKindOf(KINDOF_INFANTRY) && infantryRadius ? infantryRadius * infantryRadius : closestDistSqr;
 				Real thisDistSqr;
 				Coord3D distVec;
-				Bool useNewStructureCheck = FALSE;
-				if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+				Bool checkedForBoxDamageBoundary = false;
+				Bool doCheckForBoundaryDamage = thisObj->isKindOf(KINDOF_STRUCTURE) ? TheGlobalData->m_useAccurateDamageBoundariesForStructures : TheGlobalData->m_useAccurateDamageBoundariesForUnits;
+				if(doCheckForBoundaryDamage && (dc == FROM_BOUNDINGSPHERE_2D || dc == FROM_BOUNDINGSPHERE_3D))
 				{
 					const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
 					if(geomInfo.getGeomType() == GEOMETRY_BOX)
 					{
-						useNewStructureCheck = TRUE;
-						GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
+						checkedForBoxDamageBoundary = true;
+						const GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
 						if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 							continue;
+							//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+
+						//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 					}
 				}
-				if (!useNewStructureCheck && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
+				if (!checkedForBoxDamageBoundary && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, thisDistSqr, distVec, checkDistSqr))
 					continue;
 
 				//if( setContinue )
@@ -5128,19 +5137,23 @@ Int PartitionManager::checkObjectsAlongLine(
 			Real thisDistSqr;
 			Coord3D distVec;
 
-			Bool useNewStructureCheck = FALSE;
-			if(TheGlobalData->m_checkBoxBoundariesForDistCalc && thisObj->isKindOf(KINDOF_STRUCTURE) && (distProc == distCalcProc_BoundaryAndBoundary_2D || distProc == distCalcProc_BoundaryAndBoundary_3D))
+			Bool checkedForBoxDamageBoundary = false;
+			Bool doCheckForBoundaryDamage = thisObj->isKindOf(KINDOF_STRUCTURE) ? TheGlobalData->m_useAccurateDamageBoundariesForStructures : TheGlobalData->m_useAccurateDamageBoundariesForUnits;
+			if(doCheckForBoundaryDamage && (dc == FROM_BOUNDINGSPHERE_2D || dc == FROM_BOUNDINGSPHERE_3D))
 			{
 				const GeometryInfo& geomInfo = thisObj->getGeometryInfo();
 				if(geomInfo.getGeomType() == GEOMETRY_BOX)
 				{
-					useNewStructureCheck = TRUE;
-					GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
+					checkedForBoxDamageBoundary = true;
+					const GeometryInfo geometry( GEOMETRY_SPHERE, TRUE, radius, radius, radius );
 					if(!geomCollidesWithGeom(&currentPos, geometry, 0.0f, thisObj->getPosition(), geomInfo, thisObj->getOrientation(), distProc == distCalcProc_BoundaryAndBoundary_2D ? SKIP_HEIGHT_CHECK : BOUNDARY_HEIGHT_CHECK, &thisDistSqr))
 						continue;
+						//DEBUG_LOG(("geomCollidesWithGeom Not Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
+
+					//DEBUG_LOG(("Passed. Object: %s Radius: %f, DistSqr: %f", thisObj->getTemplate()->getName().str(), maxDist, thisDistSqr));
 				}
 			}
-			if (!useNewStructureCheck && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
+			if (!checkedForBoxDamageBoundary && !(*distProc)(&currentPos, nullptr, thisObj->getPosition(), thisObj, &thisDistSqr, &distVec, checkDistSqr))
 				continue;
 
 			//if( setContinue )

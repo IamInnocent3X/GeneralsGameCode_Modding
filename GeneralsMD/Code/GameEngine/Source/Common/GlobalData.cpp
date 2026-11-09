@@ -712,7 +712,8 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 
 	{ "UseDynamicTargetingForWeapons",	INI::parseBool, nullptr, offsetof(GlobalData, m_dynamicTargeting) },
 	{ "UseAccurateSphereToRectCollision",	INI::parseBool, nullptr, offsetof(GlobalData, m_useAccurateSphereToRectCollision) },
-	{ "CheckBoxBoundariesForDistCalc",	INI::parseBool, nullptr, offsetof(GlobalData, m_checkBoxBoundariesForDistCalc) },
+	{ "UseAccurateDamageBoundariesForUnits",	INI::parseBool, nullptr, offsetof(GlobalData, m_useAccurateDamageBoundariesForUnits) },
+	{ "UseAccurateDamageBoundariesForStructures",	INI::parseBool, nullptr, offsetof(GlobalData, m_useAccurateDamageBoundariesForStructures) },
 
 	{ "EnableDoubleClick",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableDoubleClick) },
 	{ "EnableKillPilotForStructures",	INI::parseBool, nullptr, offsetof(GlobalData, m_enableKillPilotForStructures) },
@@ -1326,7 +1327,8 @@ GlobalData::GlobalData()
 	m_fixHulksFreezingAboveTerrain = FALSE;
 	m_dynamicTargeting = FALSE;
 	m_useAccurateSphereToRectCollision = FALSE;
-	m_checkBoxBoundariesForDistCalc = FALSE;
+	m_useAccurateDamageBoundariesForStructures = FALSE;
+	m_useAccurateDamageBoundariesForUnits = FALSE;
 	m_enableDoubleClick = FALSE;
 	m_enableKillPilotForStructures = FALSE;
 	m_enableNestedStructures = FALSE;

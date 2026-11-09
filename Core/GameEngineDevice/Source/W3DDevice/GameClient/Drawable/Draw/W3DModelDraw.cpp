@@ -2932,7 +2932,7 @@ void W3DModelDraw::handleClientRecoil()
 		return;
 	}
 
-	// Set the Requirement of Recoil Update to False first, if there is any recoil while checking, it is set to True.
+	// Set the Requirement of Recoil Update to False first, if there is any recoil left while checking, it is set to True.
 	m_doHandleRecoil = FALSE;
 
 	const W3DModelDrawModuleData* d = getW3DModelDrawModuleData();

@@ -665,7 +665,8 @@ public:
 	Bool m_useNonRetailAIPathfindReverseTransverseInsertion; // Credits to: Mauller*/
 	Bool m_dynamicTargeting;
 	Bool m_useAccurateSphereToRectCollision;
-	Bool m_checkBoxBoundariesForDistCalc;
+	Bool m_useAccurateDamageBoundariesForStructures;
+	Bool m_useAccurateDamageBoundariesForUnits;
 	Bool m_enableDoubleClick;
 	Bool m_enableKillPilotForStructures;
 	Bool m_enableNestedStructures;
