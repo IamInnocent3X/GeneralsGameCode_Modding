@@ -1487,7 +1487,7 @@ void GlobalData::reset()
 	{
 
 		// get next instance
-		GlobalData* next = m_next;
+		GlobalData* next = TheWritableGlobalData->m_next;
 
 		// delete the head of the global data list (the latest override)
 		delete TheWritableGlobalData;
