@@ -2867,11 +2867,11 @@ void W3DShaderManager::startRenderToTexture()
 			DX8Wrapper::Set_Material(vmat);
 			REF_PTR_RELEASE(vmat);	//no need to keep a reference since it's a preset.
 
-			drawViewport(0x00ffffff | (((Int)(TheWaterTransparency->m_minWaterOpacity*255.0f)) <<24));
+			drawViewport(0x00ffffff | (((Int)(TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity*255.0f)) <<24));
 			DX8Wrapper::Set_DX8_Render_State(D3DRS_COLORWRITEENABLE,D3DCOLORWRITEENABLE_RED|D3DCOLORWRITEENABLE_GREEN|D3DCOLORWRITEENABLE_BLUE);	//disable writes to alpha
 		}
 		else	//normal clear that overwrites everything.
-			DX8Wrapper::Clear(true, false, Vector3( 0.0f, 0.0f, 0.0f ), TheWaterTransparency->m_minWaterOpacity);
+			DX8Wrapper::Clear(true, false, Vector3( 0.0f, 0.0f, 0.0f ), TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity);
 	}
 }
 

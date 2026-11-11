@@ -500,6 +500,10 @@ void GameLogic::reset()
 	WeatherSetting *ws = (WeatherSetting*) TheWeatherSetting.getNonOverloadedPointer();
 	TheWeatherSetting = (WeatherSetting*) ws->deleteOverrides();
 
+	// Clean up any water settings overrides that were generated for this map.
+	WaterSetting *wa = (WaterSetting*) TheWaterSettings.getNonOverloadedPointer();
+	TheWaterSettings = (WaterSetting*) wa->deleteOverrides();
+
 	m_rankPointsToAddAtGameStart = 0;
 }
 

@@ -2277,7 +2277,7 @@ void WbView3d::render()
 	if (TheW3DShadowMap)
 		TheW3DShadowMap->update(m_camera);
 
-	if (WW3D::Begin_Render(true,true,Vector3(0.5f,0.5f,0.5f), TheWaterTransparency->m_minWaterOpacity) == WW3D_ERROR_OK)
+	if (WW3D::Begin_Render(true,true,Vector3(0.5f,0.5f,0.5f), TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity) == WW3D_ERROR_OK)
 	{
 
 		DEBUG_ASSERTCRASH((m_heightMapRenderObj),("oops"));

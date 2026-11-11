@@ -1697,7 +1697,7 @@ void BaseHeightMapRenderObjClass::updateShorelineTile(Int i, Int j, Int border, 
 	//Figure out maximum depth of water before we reach the m_minWaterOpacity value.  Depths greater than this don't need
 	//custom shoreline tiles because they will get their opacity from the default value stored in the frame buffer during
 	//a screen clear operation.
-	Real transparentDepth=TheWaterTransparency->m_transparentWaterDepth*TheWaterTransparency->m_minWaterOpacity;
+	Real transparentDepth=TheWaterTransparency->getWaterTransparencyData()->m_transparentWaterDepth*TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity;
 	Real depthScaleFactor = 1.0f/transparentDepth;
 
 	Real X0=(i-border)*MAP_XY_FACTOR;
@@ -1780,7 +1780,7 @@ void BaseHeightMapRenderObjClass::updateShorelineTiles(Int minX, Int minY, Int m
 	}
 	m_numShoreLineTiles=numKept;
 
-	if (TheWaterTransparency->m_transparentWaterDepth == 0 || !TheGlobalData->m_showSoftWaterEdge)
+	if (TheWaterTransparency->getWaterTransparencyData()->m_transparentWaterDepth == 0 || !TheGlobalData->m_showSoftWaterEdge)
 		return;
 
 	//we want to add the tiles in a certain order to make culling faster
@@ -1848,7 +1848,7 @@ void BaseHeightMapRenderObjClass::initDestAlphaLUT()
 		Int pitch;
 		UnsignedInt *pData=(UnsignedInt*)surf->Lock(&pitch);
 
-		Int maxOpacity=(Int)(TheWaterTransparency->m_minWaterOpacity * 255.0f);
+		Int maxOpacity=(Int)(TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity * 255.0f);
 		Int alpha;
 
 		if (pData)
@@ -1868,7 +1868,7 @@ void BaseHeightMapRenderObjClass::initDestAlphaLUT()
 		m_destAlphaTexture->Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
 		m_destAlphaTexture->Get_Filter().Set_V_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
 		REF_PTR_RELEASE(surf);
-		m_currentMinWaterOpacity = TheWaterTransparency->m_minWaterOpacity;
+		m_currentMinWaterOpacity = TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity;
 	}
 }
 
@@ -1930,7 +1930,7 @@ Int BaseHeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *pM
 
 			//Find all shoreline tiles so they can get extra alpha blend
 			updateShorelineTiles(0,0,m_mapDX-1,m_mapDY-1,pMap);
-			if (TheWaterTransparency->m_minWaterOpacity != m_currentMinWaterOpacity)
+			if (TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity != m_currentMinWaterOpacity)
 				initDestAlphaLUT();
 		}
 	}
@@ -2316,6 +2316,11 @@ void BaseHeightMapRenderObjClass::staticLightingChanged()
 void BaseHeightMapRenderObjClass::setTimeOfDay( TimeOfDay tod )
 {
 	staticLightingChanged();
+	// IamInnocent - Edited for WaterRendering
+	if (m_map && TheWaterTransparency->getWaterTransparencyData()->m_minWaterOpacity != m_currentMinWaterOpacity)
+	{
+		this->initHeightData(m_x,m_y,m_map, nullptr);
+	}
 }
 
 //=============================================================================
@@ -2394,7 +2399,7 @@ void BaseHeightMapRenderObjClass::renderShoreLines(CameraClass *pCamera)
 
 	m_numVisibleShoreLineTiles=0;
 
-	if (!TheGlobalData->m_showSoftWaterEdge || TheWaterTransparency->m_transparentWaterDepth==0 || m_numShoreLineTiles == 0)
+	if (!TheGlobalData->m_showSoftWaterEdge || TheWaterTransparency->getWaterTransparencyData()->m_transparentWaterDepth==0 || m_numShoreLineTiles == 0)
 		return;
 
 	//Check if video card is capable of using this effect
@@ -2557,7 +2562,7 @@ void BaseHeightMapRenderObjClass::renderShoreLinesSorted(CameraClass *pCamera)
 {
 	m_numVisibleShoreLineTiles=0;
 
-	if (!TheGlobalData->m_showSoftWaterEdge || TheWaterTransparency->m_transparentWaterDepth==0 || m_numShoreLineTiles == 0)
+	if (!TheGlobalData->m_showSoftWaterEdge || TheWaterTransparency->getWaterTransparencyData()->m_transparentWaterDepth==0 || m_numShoreLineTiles == 0)
 		return;
 
 	//Check if video card is capable of using this effect

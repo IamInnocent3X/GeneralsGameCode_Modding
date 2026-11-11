@@ -1057,9 +1057,9 @@ void W3DRadar::buildTerrainTexture( TerrainLogic *terrain )
 	m_reconstructViewBox = TRUE;
 
 	// setup our water color
-	waterColor.red = TheWaterTransparency->m_radarColor.red;
-	waterColor.green = TheWaterTransparency->m_radarColor.green;
-	waterColor.blue = TheWaterTransparency->m_radarColor.blue;
+	waterColor.red = TheWaterTransparency->getWaterTransparencyData()->m_radarColor.red;
+	waterColor.green = TheWaterTransparency->getWaterTransparencyData()->m_radarColor.green;
+	waterColor.blue = TheWaterTransparency->getWaterTransparencyData()->m_radarColor.blue;
 
 	// get the terrain surface to draw in
 	surface = m_terrainTexture->Get_Surface_Level();

@@ -36,22 +36,9 @@
 
 //-------------------------------------------------------------------------------------------------
 struct FieldParse;
-
-//-------------------------------------------------------------------------------------------------
-/** This structures keeps the settings for how our water will look */
-//-------------------------------------------------------------------------------------------------
-class WaterSetting
+class WaterSettingData
 {
-
 public:
-
-	WaterSetting();
-	virtual ~WaterSetting();
-
-	/// Get the INI parsing table for loading
-	const FieldParse *getFieldParse() { return m_waterSettingFieldParseTable; }
-
-	static const FieldParse m_waterSettingFieldParseTable[];		///< the parse table for INI definition
 	AsciiString m_skyTextureFile;
 	AsciiString m_waterTextureFile;
 	Int m_waterRepeatCount;
@@ -65,7 +52,59 @@ public:
 	Real m_uScrollPerMs;
 	Real m_vScrollPerMs;
 
+public:
+	/// Get the INI parsing table for loading
+	const FieldParse *getFieldParse() { return m_waterSettingFieldParseTable; }
+
+	static const FieldParse m_waterSettingFieldParseTable[];		///< the parse table for INI definition
+
 };
+
+class WaterTransparencyData
+{
+public:
+	Real m_transparentWaterDepth;
+	Real m_minWaterOpacity;
+	RGBColor m_standingWaterColor;
+	RGBColor m_radarColor;
+	Bool m_additiveBlend;
+	AsciiString m_standingWaterTexture;
+
+	AsciiString m_skyboxTextureN;
+	AsciiString m_skyboxTextureE;
+	AsciiString m_skyboxTextureS;
+	AsciiString m_skyboxTextureW;
+	AsciiString m_skyboxTextureT;
+
+public:
+	static const FieldParse m_waterTransparencySettingFieldParseTable[];		///< the parse table for INI definition
+
+	/// Get the INI parsing table for loading
+	const FieldParse *getFieldParse() const { return m_waterTransparencySettingFieldParseTable; }
+};
+
+//-------------------------------------------------------------------------------------------------
+/** This structures keeps the settings for how our water will look */
+//-------------------------------------------------------------------------------------------------
+class WaterSetting : public Overridable
+{
+	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( WaterSetting, "WaterSetting"  )
+
+private:
+	WaterSettingData m_waterSettingData[ TIME_OF_DAY_COUNT ];
+
+public:
+
+	WaterSetting();
+	//virtual ~WaterSetting();
+
+	static void parseWaterSettingDefinition( INI* ini );
+
+	const WaterSettingData *getWaterSettingData(Int timeofday) const;
+
+};
+
+EMPTY_DTOR(WaterSetting)
 
 //-------------------------------------------------------------------------------------------------
 /** This structure keeps the transparency and vertex settings, which are the same regardless of the
@@ -75,50 +114,41 @@ class WaterTransparencySetting : public Overridable
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( WaterTransparencySetting, "WaterTransparencySetting"  )
 
-	public:
-		Real m_transparentWaterDepth;
-		Real m_minWaterOpacity;
-		RGBColor m_standingWaterColor;
-		RGBColor m_radarColor;
-		Bool m_additiveBlend;
-		AsciiString m_standingWaterTexture;
-
-		AsciiString m_skyboxTextureN;
-		AsciiString m_skyboxTextureE;
-		AsciiString m_skyboxTextureS;
-		AsciiString m_skyboxTextureW;
-		AsciiString m_skyboxTextureT;
+	private:
+		WaterTransparencyData m_waterTransparencyData[ TIME_OF_DAY_COUNT ];
 
 	public:
 		WaterTransparencySetting()
 		{
-			m_transparentWaterDepth = 3.0f;
-			m_minWaterOpacity = 1.0f;
-			m_standingWaterColor.red = 1.0f;
-			m_standingWaterColor.green = 1.0f;
-			m_standingWaterColor.blue = 1.0f;
-			m_radarColor.red = 0.55f;
-			m_radarColor.green = 0.55f;
-			m_radarColor.blue = 1.0f;
-			m_standingWaterTexture = "TWWater01.tga";
-			m_additiveBlend = FALSE;
+			for(int i = 0; i < TIME_OF_DAY_COUNT; i++)
+			{
+				m_waterTransparencyData[i].m_transparentWaterDepth = 3.0f;
+				m_waterTransparencyData[i].m_minWaterOpacity = 1.0f;
+				m_waterTransparencyData[i].m_standingWaterColor.red = 1.0f;
+				m_waterTransparencyData[i].m_standingWaterColor.green = 1.0f;
+				m_waterTransparencyData[i].m_standingWaterColor.blue = 1.0f;
+				m_waterTransparencyData[i].m_radarColor.red = 0.55f;
+				m_waterTransparencyData[i].m_radarColor.green = 0.55f;
+				m_waterTransparencyData[i].m_radarColor.blue = 1.0f;
+				m_waterTransparencyData[i].m_standingWaterTexture = "TWWater01.tga";
+				m_waterTransparencyData[i].m_additiveBlend = FALSE;
 
-			m_skyboxTextureN = "TSMorningN.tga";
-			m_skyboxTextureE = "TSMorningE.tga";
-			m_skyboxTextureS = "TSMorningS.tga";
-			m_skyboxTextureW = "TSMorningW.tga";
-			m_skyboxTextureT = "TSMorningT.tga";
+				m_waterTransparencyData[i].m_skyboxTextureN = "TSMorningN.tga";
+				m_waterTransparencyData[i].m_skyboxTextureE = "TSMorningE.tga";
+				m_waterTransparencyData[i].m_skyboxTextureS = "TSMorningS.tga";
+				m_waterTransparencyData[i].m_skyboxTextureW = "TSMorningW.tga";
+				m_waterTransparencyData[i].m_skyboxTextureT = "TSMorningT.tga";
+			}
 		}
 
-		static const FieldParse m_waterTransparencySettingFieldParseTable[];		///< the parse table for INI definition
-
-		/// Get the INI parsing table for loading
-		const FieldParse *getFieldParse() const { return m_waterTransparencySettingFieldParseTable; }
+		static void parseWaterTransparencyDefinition( INI* ini );
+	
+		const WaterTransparencyData *getWaterTransparencyData(Int timeofday = -1) const;
 };
 
 EMPTY_DTOR(WaterTransparencySetting)
 
 // EXTERNAL ///////////////////////////////////////////////////////////////////////////////////////
-extern WaterSetting WaterSettings[ TIME_OF_DAY_COUNT ];
+extern OVERRIDE<WaterSetting> TheWaterSettings;
 
 extern OVERRIDE<WaterTransparencySetting> TheWaterTransparency;

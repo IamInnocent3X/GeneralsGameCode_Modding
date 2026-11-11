@@ -48,8 +48,13 @@
 //-------------------------------------------------------------------------------------------------
 void INI::parseWaterSettingDefinition( INI* ini )
 {
+	WaterSetting::parseWaterSettingDefinition(ini);
+}
+
+void WaterSetting::parseWaterSettingDefinition( INI* ini )
+{
 	AsciiString name;
-	WaterSetting *waterSetting = nullptr;
+	//WaterSetting *waterSetting = nullptr;
 
 	// read the name
 	const char* token = ini->getNextToken();
@@ -65,7 +70,7 @@ void INI::parseWaterSettingDefinition( INI* ini )
 		if( stricmp( *timeOfDayName, name.str() ) == 0 )
 		{
 
-			waterSetting = &WaterSettings[ timeOfDayIndex ];
+			//waterSetting = &WaterSettings[ timeOfDayIndex ];
 			break;
 
 		}
@@ -77,36 +82,119 @@ void INI::parseWaterSettingDefinition( INI* ini )
 	}
 
 	// check for no time of day match
-	if( waterSetting == nullptr )
+	//if( waterSetting == nullptr )
+	if( timeOfDayIndex <= TIME_OF_DAY_INVALID || timeOfDayIndex >= TIME_OF_DAY_COUNT )
 		throw INI_INVALID_DATA;
 
 	// parse the data
-	ini->initFromINI( waterSetting, waterSetting->getFieldParse() );
+	//ini->initFromINI( waterSetting, waterSetting->getFieldParse() );
 
+	if (TheWaterSettings == nullptr) {
+		TheWaterSettings = newInstance(WaterSetting);
+	} else if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+		if(TheWaterSettings.getNonOverloadedPointer()->getNextOverride() == nullptr) {
+			WaterSetting* ws = (WaterSetting*) (TheWaterSettings.getNonOverloadedPointer());
+			WaterSetting* wsOverride = newInstance(WaterSetting);
+			*wsOverride = *ws;
+
+			// Mark that it is an override.
+			wsOverride->markAsOverride();
+
+			// Copy all respective data before overwriting
+			for(int i = TIME_OF_DAY_FIRST; i < TIME_OF_DAY_COUNT; i++)
+			{
+				wsOverride->m_waterSettingData[i]=ws->m_waterSettingData[i];
+			}
+
+			ws->friend_getFinalOverride()->setNextOverride(wsOverride);
+		}
+	}
+
+	WaterSetting* waterSet = (WaterSetting*) (TheWaterSettings.getNonOverloadedPointer());
+	waterSet = (WaterSetting*) (waterSet->friend_getFinalOverride());
+
+	// parse the data
+	ini->initFromINI( &waterSet->m_waterSettingData[timeOfDayIndex], waterSet->m_waterSettingData[timeOfDayIndex].getFieldParse() );
 }
 
 //-------------------------------------------------------------------------------------------------
 void INI::parseWaterTransparencyDefinition( INI *ini )
 {
+	WaterTransparencySetting::parseWaterTransparencyDefinition(ini);
+}
+
+//-------------------------------------------------------------------------------------------------
+void WaterTransparencySetting::parseWaterTransparencyDefinition( INI *ini )
+{
+	AsciiString name;
+
+	const char* token = ini->getNextTokenOrNull();
+	Int timeOfDayIndex = 0;
+	Bool firstDeclared = false;
+
+	if(token != nullptr) {
+		name.set( token );
+
+		// get the water setting we want to load based on name
+		const char *const *timeOfDayName = TimeOfDayNames;
+		while( timeOfDayName && *timeOfDayName )
+		{
+
+			if( stricmp( *timeOfDayName, name.str() ) == 0 )
+			{
+
+				break;
+
+			}
+
+			// next name
+			timeOfDayName++;
+			timeOfDayIndex++;
+
+		}
+	}
+
+	// check for no time of day match
+	if( timeOfDayIndex >= TIME_OF_DAY_COUNT )
+		throw INI_INVALID_DATA;
+
 	if (TheWaterTransparency == nullptr) {
 		TheWaterTransparency = newInstance(WaterTransparencySetting);
+		if (ini->getLoadType() != INI_LOAD_CREATE_OVERRIDES) firstDeclared = true;
 	} else if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
-		WaterTransparencySetting* wt = (WaterTransparencySetting*) (TheWaterTransparency.getNonOverloadedPointer());
-		WaterTransparencySetting* wtOverride = newInstance(WaterTransparencySetting);
-		*wtOverride = *wt;
+		if(TheWaterTransparency.getNonOverloadedPointer()->getNextOverride() == nullptr) {
+			WaterTransparencySetting* wt = (WaterTransparencySetting*) (TheWaterTransparency.getNonOverloadedPointer());
+			WaterTransparencySetting* wtOverride = newInstance(WaterTransparencySetting);
+			*wtOverride = *wt;
 
-		// Mark that it is an override.
-		wtOverride->markAsOverride();
+			// Copy all respective data towards all day and night sources
+			for(int i = TIME_OF_DAY_FIRST; i < TIME_OF_DAY_COUNT; i++)
+			{
+				wtOverride->m_waterTransparencyData[i]=wt->m_waterTransparencyData[i];
+			}
 
-		wt->friend_getFinalOverride()->setNextOverride(wtOverride);
-	} else {
+			// Mark that it is an override.
+			wtOverride->markAsOverride();
+
+			wt->friend_getFinalOverride()->setNextOverride(wtOverride);
+		}
+	} else if(token == nullptr) {
 		throw INI_INVALID_DATA;
 	}
 
 	WaterTransparencySetting* waterTrans = (WaterTransparencySetting*) (TheWaterTransparency.getNonOverloadedPointer());
 	waterTrans = (WaterTransparencySetting*) (waterTrans->friend_getFinalOverride());
 	// parse the data
-	ini->initFromINI( waterTrans, TheWaterTransparency->getFieldParse() );
+	//ini->initFromINI( waterTrans, TheWaterTransparency->getFieldParse() );
+	ini->initFromINI( &waterTrans->m_waterTransparencyData[timeOfDayIndex], waterTrans->m_waterTransparencyData[timeOfDayIndex].getFieldParse() );
+
+	if(timeOfDayIndex == 0 || firstDeclared) {
+		// Copy all respective data from the first source towards all day and night sources
+		for(int i = TIME_OF_DAY_FIRST; i < TIME_OF_DAY_COUNT; i++)
+		{
+			waterTrans->m_waterTransparencyData[i]=waterTrans->m_waterTransparencyData[timeOfDayIndex];
+		}
+	}
 
 	// If we overrode any skybox textures, then call the W3D Water stuff.
 	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
@@ -125,19 +213,28 @@ void INI::parseWaterTransparencyDefinition( INI *ini )
 
 		const AsciiString *oldTextures[5],*newTextures[5];
 
-		//Copy current texture names into arrays
-		oldTextures[0]=&wtOriginal->m_skyboxTextureN;
-		newTextures[0]=&wtOverride->m_skyboxTextureN;
-		oldTextures[1]=&wtOriginal->m_skyboxTextureE;
-		newTextures[1]=&wtOverride->m_skyboxTextureE;
-		oldTextures[2]=&wtOriginal->m_skyboxTextureS;
-		newTextures[2]=&wtOverride->m_skyboxTextureS;
-		oldTextures[3]=&wtOriginal->m_skyboxTextureW;
-		newTextures[3]=&wtOverride->m_skyboxTextureW;
-		oldTextures[4]=&wtOriginal->m_skyboxTextureT;
-		newTextures[4]=&wtOverride->m_skyboxTextureT;
+		Int timeofday = TheGlobalData ? TheGlobalData->m_timeOfDay : 0;
 
-		TheTerrainVisual->replaceSkyboxTextures(oldTextures, newTextures);
+		//Copy current texture names into arrays
+		oldTextures[0]=&wtOriginal->m_waterTransparencyData[timeofday].m_skyboxTextureN;
+		newTextures[0]=&wtOverride->m_waterTransparencyData[timeofday].m_skyboxTextureN;
+		oldTextures[1]=&wtOriginal->m_waterTransparencyData[timeofday].m_skyboxTextureE;
+		newTextures[1]=&wtOverride->m_waterTransparencyData[timeofday].m_skyboxTextureE;
+		oldTextures[2]=&wtOriginal->m_waterTransparencyData[timeofday].m_skyboxTextureS;
+		newTextures[2]=&wtOverride->m_waterTransparencyData[timeofday].m_skyboxTextureS;
+		oldTextures[3]=&wtOriginal->m_waterTransparencyData[timeofday].m_skyboxTextureW;
+		newTextures[3]=&wtOverride->m_waterTransparencyData[timeofday].m_skyboxTextureW;
+		oldTextures[4]=&wtOriginal->m_waterTransparencyData[timeofday].m_skyboxTextureT;
+		newTextures[4]=&wtOverride->m_waterTransparencyData[timeofday].m_skyboxTextureT;
+
+		for(int i=0; i<5; i++)
+		{
+			if(oldTextures[i]->compareNoCase(*newTextures[i]) != 0)
+			{
+				TheTerrainVisual->replaceSkyboxTextures(oldTextures, newTextures);
+				break;
+			}
+		}
 	}
 }
 

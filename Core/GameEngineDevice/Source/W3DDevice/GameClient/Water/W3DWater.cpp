@@ -57,6 +57,7 @@
 #include "Common/GameLOD.h"
 
 #include "GameClient/Color.h"
+#include "GameClient/TerrainVisual.h"
 #include "GameClient/Water.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/PolygonTrigger.h"
@@ -208,7 +209,7 @@ static Bool wireframeForDebug = 0;
 
 void WaterRenderObjClass::setupJbaWaterShader()
 {
-	if (!TheWaterTransparency->m_additiveBlend)
+	if (!TheWaterTransparency->getWaterTransparencyData()->m_additiveBlend)
 		DX8Wrapper::Set_Shader(ShaderClass::_PresetAlphaShader);
 	else
 		DX8Wrapper::Set_Shader(ShaderClass::_PresetAdditiveShader);
@@ -320,12 +321,16 @@ WaterRenderObjClass::~WaterRenderObjClass()
 	m_meshDataSize = 0;
 
 	//Release strings allocated inside global water settings.
-	for  (i=0; i<TIME_OF_DAY_COUNT; i++)
-	{	WaterSettings[i].m_skyTextureFile.clear();
-		WaterSettings[i].m_waterTextureFile.clear();
-	}
+	//for  (i=0; i<TIME_OF_DAY_COUNT; i++)
+	//{	WaterSettings[i].m_skyTextureFile.clear();
+	//	WaterSettings[i].m_waterTextureFile.clear();
+	//}
 	deleteInstance((WaterTransparencySetting*)TheWaterTransparency.getNonOverloadedPointer());
 	TheWaterTransparency = nullptr;
+	
+	deleteInstance((WaterSetting*)TheWaterSettings.getNonOverloadedPointer());
+	TheWaterSettings=nullptr;
+
 	ReleaseResources();
 
 	delete m_waterTrackSystem;
@@ -1095,7 +1100,7 @@ Int WaterRenderObjClass::init(Real waterLevel, Real dx, Real dy, SceneClass *par
 		REF_PTR_RELEASE(material);
 	}
 
-	m_riverTexture=WW3DAssetManager::Get_Instance()->Get_Texture(TheWaterTransparency->m_standingWaterTexture.str());
+	m_riverTexture=WW3DAssetManager::Get_Instance()->Get_Texture(TheWaterTransparency->getWaterTransparencyData()->m_standingWaterTexture.str());
 
 	//For some reason setting a null texture does not result in 0xffffffff for pixel shaders so using explicit "white" texture.
 	m_whiteTexture=MSGNEW("TextureClass") TextureClass(1,1,WW3D_FORMAT_A4R4G4B4,MIP_LEVELS_1);
@@ -1118,12 +1123,26 @@ Int WaterRenderObjClass::init(Real waterLevel, Real dx, Real dy, SceneClass *par
 	return 0;
 }
 
-void WaterRenderObjClass::updateMapOverrides()
+void WaterRenderObjClass::updateMapOverrides(Bool overrideWaterSettings)
 {
-	if (m_riverTexture && TheWaterTransparency->m_standingWaterTexture.compareNoCase(m_riverTexture->Get_Texture_Name()) != 0)
+	if (m_riverTexture && TheWaterTransparency->getWaterTransparencyData()->m_standingWaterTexture.compareNoCase(m_riverTexture->Get_Texture_Name()) != 0)
 	{
 		REF_PTR_RELEASE(m_riverTexture);
-		m_riverTexture = WW3DAssetManager::Get_Instance()->Get_Texture(TheWaterTransparency->m_standingWaterTexture.str());
+		m_riverTexture = WW3DAssetManager::Get_Instance()->Get_Texture(TheWaterTransparency->getWaterTransparencyData()->m_standingWaterTexture.str());
+	}
+	if (overrideWaterSettings)
+	{
+		for( Int i = TIME_OF_DAY_FIRST; i < TIME_OF_DAY_COUNT; i++ )
+		{
+			if( m_settings[i].skyTexture && TheWaterSettings->getWaterSettingData(i)->m_skyTextureFile.compareNoCase(m_settings[i].skyTexture->Get_Texture_Name()) != 0 )
+				REF_PTR_RELEASE(m_settings[i].skyTexture);
+			if( m_settings[i].waterTexture && TheWaterSettings->getWaterSettingData(i)->m_waterTextureFile.compareNoCase(m_settings[i].waterTexture->Get_Texture_Name()) != 0 )
+				REF_PTR_RELEASE(m_settings[i].waterTexture);
+		}
+		loadSetting( &m_settings[ TIME_OF_DAY_MORNING ], TIME_OF_DAY_MORNING );
+		loadSetting( &m_settings[ TIME_OF_DAY_AFTERNOON ], TIME_OF_DAY_AFTERNOON );
+		loadSetting( &m_settings[ TIME_OF_DAY_EVENING ], TIME_OF_DAY_EVENING );
+		loadSetting( &m_settings[ TIME_OF_DAY_NIGHT ], TIME_OF_DAY_NIGHT );
 	}
 }
 
@@ -1328,7 +1347,42 @@ void WaterRenderObjClass::replaceSkyboxTexture(const AsciiString& oldTexName, co
 //-------------------------------------------------------------------------------------------------
 void WaterRenderObjClass::setTimeOfDay(TimeOfDay tod)
 {
+	if(m_tod != tod) {
+		updateMapOverrides(FALSE);
+		{
+			const AsciiString *oldTextures[5],*newTextures[5];
+
+			//Copy current texture names into arrays
+			oldTextures[0]=&TheWaterTransparency->getWaterTransparencyData(m_tod)->m_skyboxTextureN;
+			newTextures[0]=&TheWaterTransparency->getWaterTransparencyData(tod)->m_skyboxTextureN;
+			oldTextures[1]=&TheWaterTransparency->getWaterTransparencyData(m_tod)->m_skyboxTextureE;
+			newTextures[1]=&TheWaterTransparency->getWaterTransparencyData(tod)->m_skyboxTextureE;
+			oldTextures[2]=&TheWaterTransparency->getWaterTransparencyData(m_tod)->m_skyboxTextureS;
+			newTextures[2]=&TheWaterTransparency->getWaterTransparencyData(tod)->m_skyboxTextureS;
+			oldTextures[3]=&TheWaterTransparency->getWaterTransparencyData(m_tod)->m_skyboxTextureW;
+			newTextures[3]=&TheWaterTransparency->getWaterTransparencyData(tod)->m_skyboxTextureW;
+			oldTextures[4]=&TheWaterTransparency->getWaterTransparencyData(m_tod)->m_skyboxTextureT;
+			newTextures[4]=&TheWaterTransparency->getWaterTransparencyData(tod)->m_skyboxTextureT;
+
+			for(int i=0; i<5; i++)
+			{
+				if(oldTextures[i]->compareNoCase(*newTextures[i]) != 0)
+				{
+					TheTerrainVisual->replaceSkyboxTextures(oldTextures, newTextures);
+					break;
+				}
+			}
+		}
+	}
+
+	Setting *setting1=&m_settings[m_tod];
+	Setting *setting2=&m_settings[tod];
+
 	m_tod=tod;
+
+	if(setting1->transparentWaterDiffuse != setting2->transparentWaterDiffuse)
+		ReAcquireResources();
+
 	if (m_waterType == WATER_TYPE_2_PVSHADER)
 		generateVertexBuffer(PATCH_SIZE,PATCH_SIZE,sizeof(SEA_PATCH_VERTEX),true);	//update the water mesh with new lighting/alpha
 }
@@ -1345,52 +1399,52 @@ void WaterRenderObjClass::loadSetting( Setting *setting, TimeOfDay timeOfDay )
 	DEBUG_ASSERTCRASH( setting, ("WaterRenderObjClass::loadSetting, null setting") );
 
 	// textures
-	setting->skyTexture = WW3DAssetManager::Get_Instance()->Get_Texture( WaterSettings[ timeOfDay ].m_skyTextureFile.str() );
-	setting->waterTexture = WW3DAssetManager::Get_Instance()->Get_Texture( WaterSettings[ timeOfDay ].m_waterTextureFile.str() );
+	setting->skyTexture = WW3DAssetManager::Get_Instance()->Get_Texture( TheWaterSettings->getWaterSettingData(timeOfDay)->m_skyTextureFile.str() );
+	setting->waterTexture = WW3DAssetManager::Get_Instance()->Get_Texture( TheWaterSettings->getWaterSettingData(timeOfDay)->m_waterTextureFile.str() );
 
 	// texelss per unit
-	setting->skyTexelsPerUnit = WaterSettings[ timeOfDay ].m_skyTexelsPerUnit;
+	setting->skyTexelsPerUnit = TheWaterSettings->getWaterSettingData(timeOfDay)->m_skyTexelsPerUnit;
 	setting->waterTexture->Get_Level_Description( surfaceDesc, 0 );
 	setting->skyTexelsPerUnit /= (Real)surfaceDesc.Width;
 
 	// water repeat
-	setting->waterRepeatCount = WaterSettings[ timeOfDay ].m_waterRepeatCount;
+	setting->waterRepeatCount = TheWaterSettings->getWaterSettingData(timeOfDay)->m_waterRepeatCount;
 
 	// U and V scroll per ms
-	setting->uScrollPerMs = WaterSettings[ timeOfDay ].m_uScrollPerMs;
-	setting->vScrollPerMs = WaterSettings[ timeOfDay ].m_vScrollPerMs;
+	setting->uScrollPerMs = TheWaterSettings->getWaterSettingData(timeOfDay)->m_uScrollPerMs;
+	setting->vScrollPerMs = TheWaterSettings->getWaterSettingData(timeOfDay)->m_vScrollPerMs;
 
 	//
 	// vertex colors
 	//
 	// bottom left
-	setting->vertex00Diffuse = (WaterSettings[ timeOfDay ].m_vertex00Diffuse.red << 16) |
-														 (WaterSettings[ timeOfDay ].m_vertex00Diffuse.green << 8) |
-														  WaterSettings[ timeOfDay ].m_vertex00Diffuse.blue;
+	setting->vertex00Diffuse = (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex00Diffuse.red << 16) |
+														 (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex00Diffuse.green << 8) |
+														  TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex00Diffuse.blue;
 	// top left
-	setting->vertex01Diffuse = (WaterSettings[ timeOfDay ].m_vertex01Diffuse.red << 16) |
-														 (WaterSettings[ timeOfDay ].m_vertex01Diffuse.green << 8) |
-														  WaterSettings[ timeOfDay ].m_vertex01Diffuse.blue;
+	setting->vertex01Diffuse = (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex01Diffuse.red << 16) |
+														 (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex01Diffuse.green << 8) |
+														  TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex01Diffuse.blue;
 	// bottom right
-	setting->vertex10Diffuse = (WaterSettings[ timeOfDay ].m_vertex10Diffuse.red << 16) |
-														 (WaterSettings[ timeOfDay ].m_vertex10Diffuse.green << 8) |
-														  WaterSettings[ timeOfDay ].m_vertex10Diffuse.blue;
+	setting->vertex10Diffuse = (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex10Diffuse.red << 16) |
+														 (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex10Diffuse.green << 8) |
+														  TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex10Diffuse.blue;
 	// top right
-	setting->vertex11Diffuse = (WaterSettings[ timeOfDay ].m_vertex11Diffuse.red << 16) |
-														 (WaterSettings[ timeOfDay ].m_vertex11Diffuse.green << 8) |
-														  WaterSettings[ timeOfDay ].m_vertex11Diffuse.blue;
+	setting->vertex11Diffuse = (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex11Diffuse.red << 16) |
+														 (TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex11Diffuse.green << 8) |
+														  TheWaterSettings->getWaterSettingData(timeOfDay)->m_vertex11Diffuse.blue;
 
 	// diffuse water color
-	setting->waterDiffuse = (WaterSettings[ timeOfDay ].m_waterDiffuseColor.alpha << 24) |
-												  (WaterSettings[ timeOfDay ].m_waterDiffuseColor.red		<< 16) |
-													(WaterSettings[ timeOfDay ].m_waterDiffuseColor.green << 8) |
-												   WaterSettings[ timeOfDay ].m_waterDiffuseColor.blue;
+	setting->waterDiffuse = (TheWaterSettings->getWaterSettingData(timeOfDay)->m_waterDiffuseColor.alpha << 24) |
+												  (TheWaterSettings->getWaterSettingData(timeOfDay)->m_waterDiffuseColor.red		<< 16) |
+													(TheWaterSettings->getWaterSettingData(timeOfDay)->m_waterDiffuseColor.green << 8) |
+												   TheWaterSettings->getWaterSettingData(timeOfDay)->m_waterDiffuseColor.blue;
 
 	// transparent water color
-	setting->transparentWaterDiffuse = (WaterSettings[ timeOfDay ].m_transparentWaterDiffuse.alpha << 24) |
-																		 (WaterSettings[ timeOfDay ].m_transparentWaterDiffuse.red	 << 16) |
-																		 (WaterSettings[ timeOfDay ].m_transparentWaterDiffuse.green << 8) |
-																		  WaterSettings[ timeOfDay ].m_transparentWaterDiffuse.blue;
+	setting->transparentWaterDiffuse = (TheWaterSettings->getWaterSettingData(timeOfDay)->m_transparentWaterDiffuse.alpha << 24) |
+																		 (TheWaterSettings->getWaterSettingData(timeOfDay)->m_transparentWaterDiffuse.red	 << 16) |
+																		 (TheWaterSettings->getWaterSettingData(timeOfDay)->m_transparentWaterDiffuse.green << 8) |
+																		  TheWaterSettings->getWaterSettingData(timeOfDay)->m_transparentWaterDiffuse.blue;
 
 }
 
@@ -2731,9 +2785,9 @@ void WaterRenderObjClass::drawRiverWater(PolygonTrigger *pTrig)
 	}
 
 
-	Real shadeR=TheWaterTransparency->m_standingWaterColor.red;
-	Real shadeG=TheWaterTransparency->m_standingWaterColor.green;
-	Real shadeB=TheWaterTransparency->m_standingWaterColor.blue;
+	Real shadeR=TheWaterTransparency->getWaterTransparencyData()->m_standingWaterColor.red;
+	Real shadeG=TheWaterTransparency->getWaterTransparencyData()->m_standingWaterColor.green;
+	Real shadeB=TheWaterTransparency->getWaterTransparencyData()->m_standingWaterColor.blue;
 
 	//If the water color is not overridden, use legacy lighting code.
 	if ( shadeR==1.0f && shadeG==1.0f && shadeB==1.0f)
@@ -2890,7 +2944,7 @@ void WaterRenderObjClass::drawRiverWater(PolygonTrigger *pTrig)
 
 	//In additive blending we need to use the alpha at the edges of river to darken
 	//rgb instead.
-	if (TheWaterTransparency->m_additiveBlend)
+	if (TheWaterTransparency->getWaterTransparencyData()->m_additiveBlend)
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 
 	if ((m_riverWaterPixelShader && !m_materialActive)) DX8Wrapper::Set_Pixel_Shader(m_riverWaterPixelShader);
@@ -2926,7 +2980,7 @@ void WaterRenderObjClass::drawRiverWater(PolygonTrigger *pTrig)
 	if ((m_riverWaterPixelShader && !m_materialActive)) DX8Wrapper::Set_Pixel_Shader(0);
 
 	//restore blend mode to what W3D expects.
-	if (TheWaterTransparency->m_additiveBlend)
+	if (TheWaterTransparency->getWaterTransparencyData()->m_additiveBlend)
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_SRCBLEND, D3DBLEND_ONE );
 
 	DX8Wrapper::Set_DX8_Render_State(D3DRS_CULLMODE, cull);
@@ -2938,7 +2992,7 @@ void WaterRenderObjClass::setupFlatWaterShader()
 {
 
 	DX8Wrapper::Set_Texture(0,m_riverTexture);
-	if (!TheWaterTransparency->m_additiveBlend)
+	if (!TheWaterTransparency->getWaterTransparencyData()->m_additiveBlend)
 		DX8Wrapper::Set_Shader(ShaderClass::_PresetAlphaShader);
 	else
 		DX8Wrapper::Set_Shader(ShaderClass::_PresetAdditiveShader);
@@ -3086,9 +3140,9 @@ void WaterRenderObjClass::drawTrapezoidWater(Vector3 points[4])
 	}
 
 	Real	waterFactor=150;
-	Real shadeR=TheWaterTransparency->m_standingWaterColor.red;
-	Real shadeG=TheWaterTransparency->m_standingWaterColor.green;
-	Real shadeB=TheWaterTransparency->m_standingWaterColor.blue;
+	Real shadeR=TheWaterTransparency->getWaterTransparencyData()->m_standingWaterColor.red;
+	Real shadeG=TheWaterTransparency->getWaterTransparencyData()->m_standingWaterColor.green;
+	Real shadeB=TheWaterTransparency->getWaterTransparencyData()->m_standingWaterColor.blue;
 
 	//If the water color is not overridden, use legacy lighting code.
 	if ( shadeR==1.0f && shadeG==1.0f && shadeB==1.0f)
@@ -3267,9 +3321,9 @@ void WaterRenderObjClass::drawTrapezoidWater(Vector3 points[4])
 
 	//If video card supports it and it's enabled, feather the water edge using destination alpha
 	//(the water material fades its shores from the scene depth instead)
-	if (!m_materialActive && DX8Wrapper::getBackBufferFormat() == WW3D_FORMAT_A8R8G8B8 && TheGlobalData->m_showSoftWaterEdge && TheWaterTransparency->m_transparentWaterDepth !=0)
+	if (!m_materialActive && DX8Wrapper::getBackBufferFormat() == WW3D_FORMAT_A8R8G8B8 && TheGlobalData->m_showSoftWaterEdge && TheWaterTransparency->getWaterTransparencyData()->m_transparentWaterDepth !=0)
 	{		DX8Wrapper::Set_DX8_Render_State(D3DRS_SRCBLEND, D3DBLEND_DESTALPHA );
-			if (!TheWaterTransparency->m_additiveBlend)
+			if (!TheWaterTransparency->getWaterTransparencyData()->m_additiveBlend)
 				DX8Wrapper::Set_DX8_Render_State(D3DRS_DESTBLEND, D3DBLEND_INVDESTALPHA );
 	}
 
@@ -3322,7 +3376,7 @@ void WaterRenderObjClass::drawTrapezoidWater(Vector3 points[4])
 
 	if ((m_riverWaterPixelShader && !m_materialActive)) DX8Wrapper::Set_Pixel_Shader(0);
 	//Restore alpha blend to default values since we may have changed them to feather edges.
-	if (!TheWaterTransparency->m_additiveBlend)
+	if (!TheWaterTransparency->getWaterTransparencyData()->m_additiveBlend)
 	{	DX8Wrapper::Set_DX8_Render_State(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 	}

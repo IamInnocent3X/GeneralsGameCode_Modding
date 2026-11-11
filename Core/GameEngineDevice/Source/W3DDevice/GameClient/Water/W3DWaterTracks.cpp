@@ -854,7 +854,7 @@ Try improving the fit to vertical surfaces like cliffs.
 */
 	Int	diffuseLight;
 
-	if (!TheGlobalData->m_showSoftWaterEdge || TheWaterTransparency->m_transparentWaterDepth ==0 )
+	if (!TheGlobalData->m_showSoftWaterEdge || TheWaterTransparency->getWaterTransparencyData()->m_transparentWaterDepth ==0 )
 		return;
 
 	if (TheGlobalData->m_usingWaterTrackEditor)
