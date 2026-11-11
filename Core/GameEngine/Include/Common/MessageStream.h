@@ -643,6 +643,8 @@ public:
 		MSG_DO_SMART_GARRISON,											///< (target objectID) distribute the selected group across the target and nearby transports
 		MSG_SPAWN_OBJECT_AT_POSITION,					///< (thingTemplate NameKey, location) debug/cheat spawn of one object for the local player; must run in the logic so the drawable is initialized correctly
 
+		MSG_META_DEMO_TIME_OF_DAY_TEST,									///< change time-of-day lighting
+
 		MSG_BEGIN_DEBUG_NETWORK_MESSAGES = 1900,		///< network messages that exist only in debug/internal builds. all grouped separately.
 
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)

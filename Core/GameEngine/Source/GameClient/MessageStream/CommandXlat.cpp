@@ -4769,6 +4769,36 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			break;
 		}
 
+		//------------------------------------------------------------------------------- DEMO MESSAGES
+		//-----------------------------------------------------------------------------------------
+		case GameMessage::MSG_META_DEMO_TIME_OF_DAY_TEST:
+		{
+			TimeOfDay tod = TimeOfDay((Int) TheGlobalData->m_timeOfDay + 1);
+			if (tod < TIME_OF_DAY_FIRST || tod >= TIME_OF_DAY_COUNT)
+				tod = TIME_OF_DAY_FIRST;
+			if (TheWritableGlobalData->setTimeOfDay(tod))
+			{
+				TheGameClient->setTimeOfDay(TheGlobalData->m_timeOfDay);
+				if (TheGlobalData->m_forceModelsToFollowTimeOfDay)
+				{
+					for (Object *obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject())
+					{
+						Drawable* d = obj->getDrawable();
+						if (d)
+						{
+							// this just forces a refresh.
+							ModelConditionFlags empty;
+							d->clearAndSetModelConditionFlags(empty, empty);
+						}
+					}
+				}
+				TheInGameUI->messageNoFormat( TheGameText->FETCH_OR_SUBSTITUTE_FORMAT("GUI:DebugTimeOfDay", L"Time of Day set to %hs", TimeOfDayNames[tod]) );
+			}
+			disp = DESTROY_MESSAGE;
+			break;
+		}
+
+
 #if defined(RTS_DEBUG)
 		//------------------------------------------------------------------------------- DEMO MESSAGES
 		//-----------------------------------------------------------------------------------------

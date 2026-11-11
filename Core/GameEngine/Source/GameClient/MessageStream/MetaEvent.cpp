@@ -192,6 +192,7 @@ static const LookupListRec GameMessageMetaTypeNames[] =
 	{ "STEP_FRAME",																GameMessage::MSG_META_STEP_FRAME },
 	{ "STEP_FRAME_ALT",														GameMessage::MSG_META_STEP_FRAME_ALT },
 	{ "DEMO_INSTANT_QUIT",												GameMessage::MSG_META_DEMO_INSTANT_QUIT },
+	{ "DEMO_TIME_OF_DAY_TEST",													GameMessage::MSG_META_DEMO_TIME_OF_DAY_TEST },
 
 	{ "COMMAND_SET_MODIFIER",												GameMessage::MSG_META_COMMAND_SET_MODIFIER },
 
