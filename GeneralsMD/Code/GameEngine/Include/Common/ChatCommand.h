@@ -59,6 +59,7 @@ public:
 	Int getAddSalvageTier() const { return m_addSalvageTier; }
 	const AsciiString& getAddSalvageCrateName() const { return m_addSalvageCrate; }
 	Real getProductionSpeedMultiplier() const { return m_productionSpeedMultiplier; }
+	Bool getRevealMap() const { return m_revealMap; }
 
 	/** Run this command's effects. Inspects the parsed members and acts accordingly. */
 	void execute() const;
@@ -76,6 +77,7 @@ private:
 	Int m_addSalvageTier = 0;				///< "AddSalvageTier" attribute; change selected salvagers' crate-upgrade tier by this much (negative removes), capped 0..2.
 	AsciiString m_addSalvageCrate;			///< "AddSalvageCrateName" attribute; ObjectTemplate name to take in place of Salvage Tiers. 'AddSalvageTier' contributes to the number of crates granted. Requires the template to declared with 'SalvageCrateCollide' module. 
 	Real m_productionSpeedMultiplier = 0.0f;	///< "ProductionSpeedMultiplier" attribute; build-speed multiplier for the local player (>1 builds faster). 0 means the field was absent (no change).
+	Bool m_revealMap = FALSE;				///< "RevealMap" attribute; when TRUE, permanently reveals the whole map for the local player (no shroud or fog for the rest of the game).
 
 	static const FieldParse s_fieldParseTable[];
 };

@@ -45,6 +45,7 @@
 #include "GameClient/Drawable.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/WeaponSetType.h"
 #include "GameLogic/ArmorSet.h"
@@ -71,6 +72,7 @@ const FieldParse ChatCommand::s_fieldParseTable[] =
 	{ "AddSalvageTier",			INI::parseInt,			nullptr,	offsetof( ChatCommand, m_addSalvageTier ) },
 	{ "AddSalvageCrateName",	INI::parseAsciiString,			nullptr,	offsetof( ChatCommand, m_addSalvageCrate ) },
 	{ "ProductionSpeedMultiplier",	INI::parseReal,		nullptr,	offsetof( ChatCommand, m_productionSpeedMultiplier ) },
+	{ "RevealMap",				INI::parseBool,			nullptr,	offsetof( ChatCommand, m_revealMap ) },
 	{ NULL, NULL, 0, 0 }  // keep this last
 };
 
@@ -403,6 +405,16 @@ void ChatCommand::execute() const
 			if (TheControlBar)
 				TheControlBar->markUIDirty();
 		}
+	}
+
+	// RevealMap: reveal the whole map for the local player for the rest of the game, like the
+	// MAP_REVEAL_ALL_PERM script action and observers. The one-time reveal (revealMapForPlayer)
+	// only turns shroud into fog, and skirmish games already start fogged, so it showed nothing.
+	if (m_revealMap)
+	{
+		Player *player = ThePlayerList ? ThePlayerList->getLocalPlayer() : nullptr;
+		if (player && ThePartitionManager)
+			ThePartitionManager->revealMapForPlayerPermanently( player->getPlayerIndex() );
 	}
 
 	// Notify the player that the command ran.
