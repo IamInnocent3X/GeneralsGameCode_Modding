@@ -766,6 +766,8 @@ public:  // ********************************************************************
 
 	void getCurrentSelectedObjectIDs( std::vector<ObjectID>& objectIDs );
 
+	void doPostOverride();
+
 private:
 	virtual Int getIdleWorkerCount();
 	virtual Object *findIdleWorker( Object *obj);

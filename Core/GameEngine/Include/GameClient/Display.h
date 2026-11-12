@@ -197,6 +197,8 @@ public:
 	virtual Real getCurrentFPS() = 0;	///< returns the current FPS.
 	virtual Int getLastFrameDrawCalls() = 0;  ///< returns the number of draw calls issued in the previous frame
 
+	virtual void doPostOverride() = 0;
+
 protected:
 	virtual void onBeginBatch() { }
 	virtual void onEndBatch() { }

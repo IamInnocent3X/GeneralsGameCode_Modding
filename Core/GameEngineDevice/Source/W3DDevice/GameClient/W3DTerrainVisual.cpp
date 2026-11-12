@@ -320,6 +320,39 @@ void W3DTerrainVisual::reset()
 }
 
 //-------------------------------------------------------------------------------------------------
+void W3DTerrainVisual::doPostOverride()
+{
+	if (!TheGlobalData->m_headless)
+	{
+		if (TheGlobalData->m_useCloudPlane)
+			m_waterRenderObject->toggleCloudLayer(true);
+		else
+			m_waterRenderObject->toggleCloudLayer(false);
+	}
+
+	// set the vertex animated water properties
+	Int waterSettingIndex = 0;  // use index 0 settings by default
+	TheTerrainVisual->setWaterGridHeightClamps( nullptr,
+																							TheGlobalData->m_vertexWaterHeightClampLow[ waterSettingIndex ],
+																							TheGlobalData->m_vertexWaterHeightClampHi[ waterSettingIndex ] );
+	TheTerrainVisual->setWaterTransform( nullptr,
+																			 TheGlobalData->m_vertexWaterAngle[ waterSettingIndex ],
+																			 TheGlobalData->m_vertexWaterXPosition[ waterSettingIndex ],
+																			 TheGlobalData->m_vertexWaterYPosition[ waterSettingIndex ],
+																			 TheGlobalData->m_vertexWaterZPosition[ waterSettingIndex ] );
+	TheTerrainVisual->setWaterGridResolution( nullptr,
+																						TheGlobalData->m_vertexWaterXGridCells[ waterSettingIndex ],
+																						TheGlobalData->m_vertexWaterYGridCells[ waterSettingIndex ],
+																						TheGlobalData->m_vertexWaterGridSize[ waterSettingIndex ] );
+	TheTerrainVisual->setWaterAttenuationFactors( nullptr,
+																								TheGlobalData->m_vertexWaterAttenuationA[ waterSettingIndex ],
+																								TheGlobalData->m_vertexWaterAttenuationB[ waterSettingIndex ],
+																								TheGlobalData->m_vertexWaterAttenuationC[ waterSettingIndex ],
+																								TheGlobalData->m_vertexWaterAttenuationRange[ waterSettingIndex ] );
+	m_isWaterGridRenderingEnabled = FALSE;
+}
+
+//-------------------------------------------------------------------------------------------------
 /** update */
 //-------------------------------------------------------------------------------------------------
 void W3DTerrainVisual::update()

@@ -278,6 +278,8 @@ public:
 
 	virtual void setUpdateEfficient(void) {}
 
+	virtual void doPostOverride() = 0;
+
 protected:
 
 	friend class Display;
@@ -422,6 +424,7 @@ public:
 	virtual void setGuardBandBias( const Coord2D *gb ) override {}
 	virtual Bool isDoingScriptedCamera() override { return false; }
 	virtual void stopDoingScriptedCamera() override {}
+	virtual void doPostOverride() override {}
 
 	// Do not override View::xfer(). The base implementation must run to serialize valid view state for save file compatibility.
 };

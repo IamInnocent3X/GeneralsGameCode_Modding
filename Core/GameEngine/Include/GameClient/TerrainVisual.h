@@ -289,6 +289,8 @@ public:
 	/// Replace the skybox texture
 	virtual void replaceSkyboxTextures(const AsciiString *oldTexName[NumSkyboxTextures], const AsciiString *newTexName[NumSkyboxTextures])=0;
 
+	virtual void doPostOverride()=0;
+
 protected:
 
 	// snapshot methods

@@ -546,6 +546,39 @@ void GameClient::registerDrawable( Drawable *draw )
 
 }
 
+
+//-------------------------------------------------------------------------------------------------
+/** Reload Resources After Overriding GameData INI */
+//-------------------------------------------------------------------------------------------------
+void GameClient::doPostOverride()
+{
+	TheInGameUI->doPostOverride();
+
+	// set the limits of the mouse now that we've created the display and such
+	if( TheMouse )
+	{
+		// finish initializing the mouse.
+		TheMouse->init();
+		TheMouse->initCapture();
+		TheMouse->setPosition( 0, 0 );
+		TheMouse->setMouseLimits();
+	}
+
+	// create the language filter.
+	//TheLanguageFilter = createLanguageFilter();
+	//if (TheLanguageFilter)
+	//{
+	//	TheLanguageFilter->init();
+ 	//	TheLanguageFilter->setName("TheLanguageFilter");
+	//}
+
+	if (TheSnowManager)
+	{
+		TheSnowManager->init();
+	}
+
+}
+
 /** -----------------------------------------------------------------------------------------------
  * Redraw all views, update the GUI, play sound effects, etc.
  */

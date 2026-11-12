@@ -1582,6 +1582,27 @@ void InGameUI::init()
 }
 
 //-------------------------------------------------------------------------------------------------
+void InGameUI::doPostOverride()
+{
+	if (TheTacticalView && TheDisplay)
+	{
+		TheDisplay->doPostOverride();
+		TheTacticalView->doPostOverride();
+
+		// make the tactical display the full screen width and height
+		TheTacticalView->setWidth( TheDisplay->getWidth() );
+		TheTacticalView->setHeight( TheDisplay->getHeight() );
+		TheTacticalView->setDefaultView(
+			DEG_TO_RADF(TheGlobalData->m_cameraPitch),
+			DEG_TO_RADF(TheGlobalData->m_cameraYaw),
+			1.0f);
+	}
+
+	setDrawRMBScrollAnchor(TheGlobalData->m_drawScrollAnchor);
+	setMoveRMBScrollAnchor(TheGlobalData->m_moveScrollAnchor);
+}
+
+//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 /** Phase-aware mouse-follow radius cursor for a NEED_N_TARGET_POS power. Only ANCHORED_AREA differs:

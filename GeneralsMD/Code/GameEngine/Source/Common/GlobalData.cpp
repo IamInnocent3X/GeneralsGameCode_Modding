@@ -64,6 +64,8 @@
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/TintStatus.h"
 
+#include "GameClient/GameClient.h"
+
 #include "GameNetwork/FirewallHelper.h"
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
@@ -1496,12 +1498,12 @@ void GlobalData::reset()
 	// delete	any data instances that were loaded as an override and set the original
 	// global data instance as the singleton TheWritableGlobalData once again
 	//
-	Bool doResetWeaponBonus = false;
+	Bool doResetOverride = false;
 	while (TheWritableGlobalData != GlobalData::m_theOriginal)
 	{
 
 		// Reset Weapon Bonus after overriding
-		doResetWeaponBonus = true;
+		doResetOverride = true;
 
 		// get next instance
 		GlobalData* next = TheWritableGlobalData->m_next;
@@ -1514,8 +1516,10 @@ void GlobalData::reset()
 
 	}
 
-	if(doResetWeaponBonus)
+	if(doResetOverride) {
 		m_weaponBonusSet->resetToOriginal();
+		TheGameClient->doPostOverride();
+	}
 
 	//
 	// we now have the one single global data in TheWritableGlobalData singleton, lets sanity check
@@ -1607,6 +1611,11 @@ void GlobalData::parseGameDataDefinition( INI* ini )
 	TheWritableGlobalData->m_yResolution = yres;
 
 	//DEBUG_LOG(("Finished Parsing Global Data"));
+
+	if(ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	{
+		TheGameClient->doPostOverride();
+	}
 }
 
 void GlobalData::parseCustomDefinition()

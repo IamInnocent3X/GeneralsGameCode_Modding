@@ -158,6 +158,8 @@ public:
 	virtual void notifyTerrainObjectMoved(Object *obj) = 0;
 	virtual const AsciiString& findTreeNameInPos(const Coord3D* loc) const = 0;
 
+	virtual void doPostOverride();
+
 	void informClientNewDrawable(Drawable *draw);
 	void addDrawableToEfficientList(Drawable *draw);
 	void removeDrawableFromEfficientList(Drawable *draw);

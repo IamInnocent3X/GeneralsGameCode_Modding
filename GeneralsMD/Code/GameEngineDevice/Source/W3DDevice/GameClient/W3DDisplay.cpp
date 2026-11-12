@@ -1147,6 +1147,146 @@ void W3DDisplay::reset()
 		TheWritableGlobalData->m_drawSkyBox =0;
 }
 
+//=============================================================================
+void W3DDisplay::doPostOverride()
+{
+	for (Int j=0; j<LightEnvironmentClass::MAX_LIGHTS; j++)
+		REF_PTR_RELEASE( m_myLight[j] );
+
+	Int lindex;
+	for (lindex=0; lindex<TheGlobalData->m_numGlobalLights; lindex++)
+	{	m_myLight[lindex] = NEW_REF( LightClass, (LightClass::DIRECTIONAL) );
+	}
+
+	setTimeOfDay( TheGlobalData->m_timeOfDay );	//set each light to correct values for given time
+
+	for (lindex=0; lindex<TheGlobalData->m_numGlobalLights; lindex++)
+	{	m_3DScene->setGlobalLight( m_myLight[lindex], lindex );
+	}
+
+	if (!TheGlobalData->m_headless)
+	{
+
+		if (TheGlobalData->m_incrementalAGPBuf)
+		{
+			SortingRendererClass::SetMinVertexBufferSize(1);
+		}
+
+		WW3D::Set_Prelit_Mode( WW3D::PRELIT_MODE_LIGHTMAP_MULTI_PASS );
+		WW3D::Set_Collision_Box_Display_Mask(0x00);	///<set to 0xff to make collision boxes visible
+		WW3D::Enable_Static_Sort_Lists(true);
+		WW3D::Set_Thumbnail_Enabled(false);
+		WW3D::Set_Screen_UV_Bias( TRUE );  ///< this makes text look good :)
+
+		/*setWindowed( TheGlobalData->m_windowed );
+
+		WW3DErrorType renderDeviceError;
+		Int attempt = 0;
+		do
+		{
+			switch (attempt)
+			{
+			case 0:
+			{
+				// set our default width and height and bit depth
+				setWidth( TheGlobalData->m_xResolution );
+				setHeight( TheGlobalData->m_yResolution );
+				setBitDepth( DEFAULT_DISPLAY_BIT_DEPTH );
+				break;
+			}
+			case 1:
+			{
+				// Getting the device at the default bit depth (32) didn't work, so try
+				// getting a 16 bit display.  (Voodoo 1-3 only supported 16 bit.) jba.
+				setBitDepth( MIN_DISPLAY_BIT_DEPTH );
+				break;
+			}
+			case 2:
+			{
+				// TheSuperHackers @bugfix xezon 11/06/2025 Now tries a safe default resolution
+				// if the custom resolution did not succeed. This is unlikely to happen but is possible
+				// if the user writes an unsupported resolution in the Option Preferences or if the
+				// graphics adapter does not support the minimum display resolution to begin with.
+				Int xres = DEFAULT_DISPLAY_WIDTH;
+				Int yres = DEFAULT_DISPLAY_HEIGHT;
+				Int bitDepth = DEFAULT_DISPLAY_BIT_DEPTH;
+				Int displayModeCount = getDisplayModeCount();
+				Int displayModeIndex = 0;
+				for (; displayModeIndex < displayModeCount; ++displayModeIndex)
+				{
+					getDisplayModeDescription(displayModeIndex, &xres, &yres, &bitDepth);
+					if (xres * yres >= DEFAULT_DISPLAY_WIDTH * DEFAULT_DISPLAY_HEIGHT)
+						break; // Is good enough. Use it.
+				}
+				TheWritableGlobalData->m_xResolution = xres;
+				TheWritableGlobalData->m_yResolution = yres;
+				setWidth( xres );
+				setHeight( yres );
+				setBitDepth( bitDepth );
+				break;
+			}
+			}
+
+			// TheSuperHackers @feature Mauller 13/03/2026 Add native MSAA support, must be set before creating render device
+			WW3D::Set_MSAA_Mode((WW3D::MultiSampleModeEnum)TheWritableGlobalData->m_antiAliasLevel);
+
+			renderDeviceError = WW3D::Set_Render_Device(
+				0,
+				getWidth(),
+				getHeight(),
+				getBitDepth(),
+				getWindowed(),
+				true );
+
+			// TheSuperHackers @info Update the MSAA mode that was set as some GPU's may not support certain levels
+			// Texture filtering must also be updated after render device initialization
+			if (renderDeviceError == WW3D_ERROR_OK) {
+				TheWritableGlobalData->m_antiAliasLevel = (UnsignedInt)WW3D::Get_MSAA_Mode();
+				WW3D::Set_Texture_Filter(TheWritableGlobalData->m_textureFilteringMode);
+				TheWritableGlobalData->m_textureFilteringMode = WW3D::Get_Texture_Filter();
+				WW3D::Set_Anisotropy_Level(TheWritableGlobalData->m_textureAnisotropyLevel);
+				TheWritableGlobalData->m_textureAnisotropyLevel = WW3D::Get_Anisotropy_Level();
+			}
+
+			++attempt;
+		}
+		while (attempt < 3 && renderDeviceError != WW3D_ERROR_OK);
+
+		if (renderDeviceError != WW3D_ERROR_OK)
+		{
+			WW3D::Shutdown();
+			WWMath::Shutdown();
+			throw ERROR_INVALID_D3D;	//failed to initialize.  User probably doesn't have DX 8.1
+			DEBUG_CRASH( ("Unable to set render device") );
+			return;
+		}*/
+		WW3D::Set_Texture_Bitdepth(getBitDepth());
+
+		//Check if level was never set and default to setting most suitable for system.
+		if (TheGameLODManager->getStaticLODLevel() == STATIC_GAME_LOD_UNKNOWN)
+		{
+			TheGameLODManager->setStaticLODLevel(TheGameLODManager->getRecommendedStaticLODLevel());
+		}
+		else
+		{
+			//Static LOD level was applied during GameLOD manager init except for texture reduction
+			//which needs to be applied here.
+			TheGameClient->setTextureLOD(TheWritableGlobalData->m_textureReductionFactor);
+		}
+
+		if (TheGlobalData->m_displayGamma != 1.0f)
+			setGamma(TheGlobalData->m_displayGamma,0.0f,1.0f,FALSE);
+	}
+
+	// we're now online
+	m_initialized = true;
+	m_lastUpdateTime64 = getPerformanceCounter();
+	if( TheGlobalData->m_displayDebug )
+	{
+		m_debugDisplayCallback = StatDebugDisplay;
+	}
+}
+
 const UnsignedInt START_CUMU_FRAME = LOGICFRAMES_PER_SECOND / 2;	// skip first half-sec
 
 void W3DDisplay::addFpsSample(Real elapsedSeconds)

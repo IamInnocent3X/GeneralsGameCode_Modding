@@ -252,6 +252,8 @@ public:
 
 	virtual void setUpdateEfficient(void) { m_updateEfficient = TRUE; }
 
+	virtual void doPostOverride() override;
+
 private:
 
 	CameraClass *m_3DCamera;												///< camera representation for 3D scene

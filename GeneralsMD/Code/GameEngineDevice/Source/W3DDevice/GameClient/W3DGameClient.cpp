@@ -48,6 +48,7 @@
 #include "GameClient/GameClient.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/RayEffect.h"
+#include "GameClient/TerrainVisual.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DGameClient.h"
 #include "W3DDevice/GameClient/W3DStatusCircle.h"
@@ -230,3 +231,18 @@ const AsciiString& W3DGameClient::findTreeNameInPos(const Coord3D* loc) const
 
 }
 
+//-------------------------------------------------------------------------------------------------
+void W3DGameClient::doPostOverride()
+{
+	GameClient::doPostOverride();
+
+	if (TheTerrainRenderObject) {
+		TheTerrainRenderObject->ReAcquireResources();
+	}
+
+	// set the vertex animated water properties
+	if(TheTerrainVisual) {
+		TheTerrainVisual->doPostOverride();
+	}
+
+}

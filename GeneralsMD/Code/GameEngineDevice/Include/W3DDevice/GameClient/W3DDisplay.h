@@ -194,6 +194,8 @@ public:
 	virtual Real getCurrentFPS() override;						///< return the current FPS.
 	virtual Int getLastFrameDrawCalls() override;				///< returns the number of draw calls issued in the previous frame
 
+	virtual void doPostOverride() override;
+
 protected:
 
 	void initAssets();									///< init assets for WW3D

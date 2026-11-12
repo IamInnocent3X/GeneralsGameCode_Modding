@@ -898,6 +898,29 @@ void W3DView::init()
 }
 
 //-------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+void W3DView::doPostOverride()
+{
+	// extend View functionality
+	View::init();
+	// set default camera "look at" point
+	Coord3D pos;
+	pos.x = 87.0f * MAP_XY_FACTOR;
+	pos.y = 77.0f * MAP_XY_FACTOR;
+	pos.z = 10.0f;
+
+	setPosition(pos);
+
+	m_2DCamera->Set_Position( Vector3( 0, 0, 1 ) );
+	Vector2 min = Vector2( -1, -0.75f );
+	Vector2 max = Vector2( +1, +0.75f );
+	m_2DCamera->Set_View_Plane( min, max );
+	m_2DCamera->Set_Clip_Planes( 0.995f, 2.0f );
+
+	m_scrollAmountCutoffSqr = sqr(TheGlobalData->m_scrollAmountCutoff);
+}
+
+//-------------------------------------------------------------------------------------------------
 Coord3D W3DView::get3DCameraPosition() const
 {
 	Vector3 camera = m_3DCamera->Get_Position();
