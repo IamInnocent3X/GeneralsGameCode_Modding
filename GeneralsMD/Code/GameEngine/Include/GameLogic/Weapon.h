@@ -342,9 +342,20 @@ class WeaponBonusSet : public MemoryPoolObject
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( WeaponBonusSet, "WeaponBonusSet" )
 private:
 	WeaponBonus m_bonus[WEAPONBONUSCONDITION_COUNT];
+	WeaponBonus m_bonusOriginal[WEAPONBONUSCONDITION_COUNT];
 	CustomWeaponBonusMap m_customBonus;
+	CustomWeaponBonusMap m_customBonusOriginal;
+	Bool firstDeclared;
 
 public:
+
+	WeaponBonusSet();
+	void reset();
+
+	void setFirstDeclared();
+	void registerWeaponBonusOriginal();
+	void resetToOriginal();
+
 	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus, const std::vector<AsciiString>& customFlags) const;
 	//void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const;
 

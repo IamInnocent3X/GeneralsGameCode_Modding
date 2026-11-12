@@ -770,6 +770,7 @@ GlobalData* GlobalData::m_theOriginal = nullptr;
 GlobalData::GlobalData()
 {
 	Int i, j;
+	Bool first = false;
 
 	//
 	// we have now instanced a global data instance, if theOriginal is null, this is
@@ -778,7 +779,10 @@ GlobalData::GlobalData()
 	// in m_theOriginal
 	//
 	if( m_theOriginal == nullptr )
+	{
+		first = true;
 		m_theOriginal = this;
+	}
 	m_next = nullptr;
 
 #if defined(RTS_DEBUG) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
@@ -1236,7 +1240,10 @@ GlobalData::GlobalData()
 	}
 
 	m_defaultStructureRubbleHeight = 1.0f;
-	m_weaponBonusSet = newInstance(WeaponBonusSet);
+	if(first) {
+		m_weaponBonusSet = newInstance(WeaponBonusSet);
+		m_weaponBonusSet->setFirstDeclared();
+	}
 	m_statusWeaponBonus.clear();
 	m_statusCustomWeaponBonus.clear();
 
@@ -1408,9 +1415,12 @@ GlobalData::~GlobalData()
 {
 	DEBUG_ASSERTCRASH( TheWritableGlobalData->m_next == nullptr, ("~GlobalData: theOriginal is not original") );
 
-	deleteInstance(m_weaponBonusSet);
-
 	if( m_theOriginal == this )	{
+		// Quitting an overriden game will delete the whole weaponBonusSet, and will not reinitiated on next game.
+		// Causing the game to have memory errors and crashes the game. 
+		m_weaponBonusSet->reset();
+		deleteInstance(m_weaponBonusSet);
+
 		m_theOriginal = nullptr;
 		TheWritableGlobalData = nullptr;
 	}
@@ -1458,6 +1468,9 @@ GlobalData *GlobalData::newOverride()
 	//
 	overrideData->m_next = TheWritableGlobalData;
 
+	// Register original data first
+	m_weaponBonusSet->registerWeaponBonusOriginal();
+
 	// set this new instance as the 'most current override' where we will access all data from
 	TheWritableGlobalData = overrideData;
 
@@ -1483,8 +1496,12 @@ void GlobalData::reset()
 	// delete	any data instances that were loaded as an override and set the original
 	// global data instance as the singleton TheWritableGlobalData once again
 	//
+	Bool doResetWeaponBonus = false;
 	while (TheWritableGlobalData != GlobalData::m_theOriginal)
 	{
+
+		// Reset Weapon Bonus after overriding
+		doResetWeaponBonus = true;
 
 		// get next instance
 		GlobalData* next = TheWritableGlobalData->m_next;
@@ -1496,6 +1513,9 @@ void GlobalData::reset()
 		TheWritableGlobalData = next;
 
 	}
+
+	if(doResetWeaponBonus)
+		m_weaponBonusSet->resetToOriginal();
 
 	//
 	// we now have the one single global data in TheWritableGlobalData singleton, lets sanity check

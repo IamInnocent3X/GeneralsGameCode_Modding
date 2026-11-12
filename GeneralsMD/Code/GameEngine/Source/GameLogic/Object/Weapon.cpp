@@ -6520,6 +6520,55 @@ void WeaponBonus::appendBonuses(WeaponBonus& bonus) const
 }*/
 
 //-------------------------------------------------------------------------------------------------
+WeaponBonusSet::WeaponBonusSet()
+{
+	firstDeclared = false;
+	reset();
+}
+
+//-------------------------------------------------------------------------------------------------
+void WeaponBonusSet::reset()
+{
+	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+	{
+		this->m_bonus[i].clear();
+		this->m_bonusOriginal[i].clear();
+	}
+	this->m_customBonus.clear();
+	this->m_customBonusOriginal.clear();
+}
+
+//-------------------------------------------------------------------------------------------------
+void WeaponBonusSet::setFirstDeclared()
+{
+	firstDeclared = true;
+}
+
+//-------------------------------------------------------------------------------------------------
+void WeaponBonusSet::resetToOriginal()
+{
+	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+	{
+		m_bonus[i] = m_bonusOriginal[i];
+	}
+	m_customBonus = m_customBonusOriginal;
+}
+
+//-------------------------------------------------------------------------------------------------
+void WeaponBonusSet::registerWeaponBonusOriginal()
+{
+	if(firstDeclared)
+	{
+		firstDeclared = false;
+		for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
+		{
+			m_bonusOriginal[i] = m_bonus[i];
+		}
+		m_customBonusOriginal = m_customBonus;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 /*static*/ void WeaponBonusSet::parseWeaponBonusSet(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
 {
 	WeaponBonusSet* self = (WeaponBonusSet*)store;
@@ -6558,13 +6607,12 @@ void WeaponBonusSet::parseWeaponBonusSet(INI* ini)
 //-------------------------------------------------------------------------------------------------
 void WeaponBonusSet::parseCustomWeaponBonusSet(INI* ini)
 {
-	
 	//WeaponBonusConditionType wb = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), WeaponBonusConditionFlags::getBitNames());
 	AsciiString customStatus = ini->getNextQuotedAsciiString();
 	WeaponBonus::Field wf = (WeaponBonus::Field)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusFieldNames);
 	// So now we have a 3D array. One for checking DamageTypes, and one for checking CustomDamageTypes.
 	NameKeyType namekey = TheNameKeyGenerator->nameToKey( customStatus );
-	this->m_customBonus[namekey].setField(wf, INI::scanPercentToReal(ini->getNextToken()));
+	m_customBonus[namekey].setField(wf, INI::scanPercentToReal(ini->getNextToken()));
 }
 
 //-------------------------------------------------------------------------------------------------
